@@ -154,7 +154,7 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
   {
     "id": "S7-ci-wiring",
     "title": "package.json check:markdown-cli in test:ts and test:docs; tests.yml installs the pinned toolchain with rust-cache in the gate and docs jobs; changes.test.ts proves a rename diff (crates + docs/cli/commands.json) turns on docs",
-    "check": "bun test --timeout 60000 tooling/src/ci-paths/__tests__/changes.test.ts tooling/src/ci-paths/__tests__/workflows.test.ts && bun run check:ci-paths && bun run check:markdown-cli",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; bun test --timeout 60000 tooling/src/ci-paths/__tests__/changes.test.ts tooling/src/ci-paths/__tests__/workflows.test.ts && bun run check:ci-paths && bun run check:markdown-cli",
     "ac_refs": [
       "AC-6",
       "AC-9"
@@ -187,15 +187,16 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
       "docs/markdown-cli.md",
       "AGENTS.md",
       "tooling/conventions/markdown-cli.json",
-      "tooling/conventions/markdown-cli"
+      "tooling/conventions/markdown-cli",
+      "tools/toolu-opencode/generated/skills/ast-grep-ast-grep/references/ast-grep-advanced.md"
     ],
     "input": "the new page and AGENTS.md as scanned by the gate itself",
     "model": "inherit"
   },
   {
     "id": "S9-full-gates",
-    "title": "Full quality gates: cargo xtask gate (Rust bar incl. coverage, jscpd, docs-cli, inventory) and bun run test, through the job lease; failures compared with origin/main",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; bun /root/.claude/plugins/cache/toolu/epic-orchestrator/7.9.0/scripts/job.ts -- cargo xtask gate --base origin/main --title 'feat(xtask): Markdown–CLI drift gate (#444)' && bun /root/.claude/plugins/cache/toolu/epic-orchestrator/7.9.0/scripts/job.ts -- bun run test:docs",
+    "title": "Full quality gates: cargo xtask gate (Rust bar incl. coverage, jscpd, docs-cli, inventory) and bun run test:docs under the ledger's own job lease; bun run test recorded against an origin/main baseline",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo xtask gate --base origin/main --title 'feat(xtask): Markdown–CLI drift gate (#444)' && bun run test:docs",
     "ac_refs": [
       "AC-3",
       "AC-9"
@@ -245,4 +246,6 @@ Shell lexer → Markdown scan → tree judge → command names and removed surfa
 
 - **Per-plugin allowlists live in `tooling/conventions/markdown-cli/<plugin>.json`, not `plugins/<plugin>/markdown-cli.json`.** `cargo xtask guardrails` rejects a new file at a plugin root: the plugin folder allowlist is `structure.plugin` in `rules.json`, gate data that changes only in its own `chore(gates):` PR. The tooling location was Jev's runner-up (0.44) and also keeps the file out of the shipped plugin. A file there must be named after a directory under `plugins/`.
 - **`markdown_cli/words.rs`** holds `Command`, `Lexed`, `unquote` and the command-start rule, split from `shell.rs` to keep it under 300 code lines (rule 1).
+- **The OpenCode generated surface** copies the ast-grep advanced reference, so `bun run generate:opencode-surface` regenerates it with the `mod.sh` fix (`check:opencode-surface` in S8).
+- **S9 runs its gates without `job.ts`:** the ledger already holds the epic's job lease for each check, and the job capacity is 1, so a nested `job.ts` would always be refused.
 - **Real findings settled in S6:** the ast-grep advanced reference's stale `mod.sh ast-grep …` became `plugins/ast-grep/hooks/dist/ast-grep.js …` (the form `docs/ast-grep/README.md` uses); the ast-grep skill's Strictness block, a list of flag values in a `bash` fence, has a per-plugin allowance; `docs/cli/installer.md` names the Node installer's own `toolu` bin twice and gets two repository allowances beside the planned two. Functions defined in one block count for the file's later blocks (the Jev problem-solving reference defines `judge()` once).

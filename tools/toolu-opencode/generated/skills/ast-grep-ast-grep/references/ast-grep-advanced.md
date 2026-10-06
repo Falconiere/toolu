@@ -5,7 +5,7 @@
 For patterns beyond simple `--pattern`, use `scan` with inline YAML:
 
 ```bash
-mod.sh ast-grep scan 'id: find-async
+plugins/ast-grep/hooks/dist/ast-grep.js scan 'id: find-async
 language: rust
 rule:
   kind: function_item
@@ -25,20 +25,20 @@ rule:
 
 ```bash
 # Rust: impl blocks for a trait
-mod.sh ast-grep search 'impl $TRAIT for $TYPE { $$$BODY }' --lang rust
+plugins/ast-grep/hooks/dist/ast-grep.js search 'impl $TRAIT for $TYPE { $$$BODY }' --lang rust
 
 # Rust: async functions
-mod.sh ast-grep search 'async fn $NAME($$$ARGS)' --lang rust
+plugins/ast-grep/hooks/dist/ast-grep.js search 'async fn $NAME($$$ARGS)' --lang rust
 
 # Rust: functions returning Result
-mod.sh ast-grep search 'fn $NAME($$$ARGS) -> Result<$$$>' --lang rust
+plugins/ast-grep/hooks/dist/ast-grep.js search 'fn $NAME($$$ARGS) -> Result<$$$>' --lang rust
 
 # TypeScript: console.log calls
-mod.sh ast-grep search 'console.log($$$ARGS)' --lang typescript
+plugins/ast-grep/hooks/dist/ast-grep.js search 'console.log($$$ARGS)' --lang typescript
 
 # File paths only (no content)
-mod.sh ast-grep files 'impl $TRAIT for $TYPE { $$$BODY }' --lang rust
+plugins/ast-grep/hooks/dist/ast-grep.js files 'impl $TRAIT for $TYPE { $$$BODY }' --lang rust
 
 # Debug pattern parsing
-mod.sh ast-grep debug 'fn $NAME($$$ARGS)' --lang rust
+plugins/ast-grep/hooks/dist/ast-grep.js debug 'fn $NAME($$$ARGS)' --lang rust
 ```

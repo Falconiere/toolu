@@ -218,7 +218,7 @@ impl Lexer {
   }
 }
 
-/// Redirections and heredocs.
+/// Redirections and heredocs, split from the main block to keep both small.
 impl Lexer {
   /// `<name>` is a placeholder word; `<<` opens a heredoc; any other `<` or
   /// `>` redirects, dropping a numeric descriptor before it and its target.
