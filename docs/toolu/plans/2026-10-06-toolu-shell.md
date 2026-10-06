@@ -442,4 +442,9 @@ Dependencies and records → option parser → parse and words → wrappers → 
   - `broken_test` reads only the gaps between `[`'s words.
   - A heredoc body starts on the line after the delimiter's, keeping the first line's indentation.
   - The limits tests are sized for a coverage-instrumented debug build.
+- Vendoring review (2026-10-06):
+  - release-please wraps TOML values as `{ value }` nodes, so the `Cargo.lock` filter is `@.name.value != 'tree-sitter-bash'`. Checked with release-please's own `GenericToml`: 20 crates bumped, the vendored crate kept.
+  - `check-reach` leaves out crates that `[workspace] exclude` names under `vendor/`; any other excluded directory is still judged.
+  - A heredoc body starts after the first newline no `\` escapes.
+  - The overflow regressions assert unknown with commands.
 

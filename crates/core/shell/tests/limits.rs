@@ -104,8 +104,11 @@ fn heredoc_state_that_overflowed_the_scanner_is_parsed_without_a_crash() {
   for length in 1_005..=1_011 {
     sources.push(format!("\"\"''\"\"\"\\\"\"\\<<'E'{{{}", "a".repeat(length)));
   }
+  // Each is malformed bash: unknown, with what it read still reported.
   for source in &sources {
-    analyze(source);
+    let analysis = analyze(source);
+    assert!(analysis.unknown, "{:?}", source.get(..30));
+    assert!(!analysis.commands.is_empty(), "{:?}", source.get(..30));
   }
   // Ten heredocs, one file each, are an ordinary command.
   let files: Vec<String> = (0..10)

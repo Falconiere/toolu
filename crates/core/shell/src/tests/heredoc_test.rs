@@ -106,3 +106,15 @@ fn a_lone_dash_before_a_heredoc_is_kept() {
     );
   }
 }
+
+#[test]
+fn a_body_starts_after_the_first_newline_no_backslash_escapes() {
+  assert_eq!(super::body_start("<<EOF\n  x\nEOF", 5), Some(6));
+  // `foo \` continues the delimiter's line onto the next one.
+  assert_eq!(
+    super::body_start("<<EOF | foo \\\n\nbody\nEOF", 5),
+    Some(15)
+  );
+  assert_eq!(super::body_start("<<EOF \\\\\nbody", 5), Some(9));
+  assert_eq!(super::body_start("<<EOF", 5), None);
+}

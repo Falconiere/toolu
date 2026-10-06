@@ -36,15 +36,19 @@ function releaseTracks(release: unknown, path: string): boolean {
   );
 }
 
-/** The release-please TOML entries that keep the Cargo workspace in lockstep (#407). */
-/** Path crates in `Cargo.lock` that are vendored third-party code, not workspace crates (#416). */
+/**
+ * Path crates in `Cargo.lock` that are vendored third-party code, not workspace
+ * crates (#416). release-please reads TOML values as `{ value }` nodes, so its
+ * filter names them through `@.name.value`.
+ */
 const VENDORED = new Set(["tree-sitter-bash"]);
 
+/** The release-please TOML entries that keep the Cargo workspace in lockstep (#407). */
 const CARGO_RELEASE = [
   { path: "Cargo.toml", jsonpath: "$.workspace.package.version" },
   {
     path: "Cargo.lock",
-    jsonpath: "$.package[?(!@.source && @.name != 'tree-sitter-bash')].version",
+    jsonpath: "$.package[?(!@.source && @.name.value != 'tree-sitter-bash')].version",
   },
 ];
 

@@ -70,6 +70,19 @@ pub(crate) fn split_body(node: Node<'_>, source: &str) -> bool {
     .is_some_and(|(_, later)| !later.trim().is_empty())
 }
 
+/// The offset after the first newline from `from` that a backslash does not escape.
+fn body_start(source: &str, from: usize) -> Option<usize> {
+  let mut escaped = false;
+  for (at, c) in source.get(from..)?.char_indices() {
+    match c {
+      '\n' if !escaped => return Some(from + at + 1),
+      '\\' => escaped = !escaped,
+      _ => escaped = false,
+    }
+  }
+  None
+}
+
 impl<'t> Heredoc<'t> {
   /// Read a `heredoc_redirect` node.
   pub(crate) fn read(node: Node<'t>, source: &str) -> Heredoc<'t> {
@@ -131,12 +144,10 @@ impl<'t> Heredoc<'t> {
   /// `<<-`; `None` when an unquoted body expands.
   pub(crate) fn content(&self, source: &str) -> Option<String> {
     // tree-sitter starts the body node after the first line's indentation; the
-    // body starts on the line after the delimiter's.
+    // body starts after the newline ending the delimiter's line, past any `\`
+    // continuation.
     let body = self.body.map_or("", |node| {
-      let line = source
-        .get(self.line_end..)
-        .and_then(|rest| rest.find('\n'))
-        .map_or(node.start_byte(), |at| self.line_end + at + 1);
+      let line = body_start(source, self.line_end).unwrap_or(node.start_byte());
       source
         .get(line.min(node.start_byte())..node.end_byte())
         .unwrap_or_default()
