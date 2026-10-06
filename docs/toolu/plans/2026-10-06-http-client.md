@@ -120,17 +120,17 @@ The TypeScript final-removal gate rejects tracked shell files, so the musl
 check moved from a Bash helper to a Bun tooling script with the same real
 transport test, static linkage, size, and dependency checks.
 
-The full Rust gate stops at `cargo deny`: the required rustls stack adds ISC,
-BSD-3-Clause, and CDLA-Permissive-2.0 dependencies that `deny.toml` does not
-allow. `AGENTS.md` requires gate-data changes in a separate `chore(gates)` PR,
-so this issue branch does not edit that policy. The orchestrator must arrange
-that policy decision before this branch can pass the full gate.
+The required rustls stack adds ISC, BSD-3-Clause, and CDLA-Permissive-2.0
+dependencies. `AGENTS.md` requires gate-data changes in a separate
+`chore(gates)` PR. PR #487 updated `deny.toml` and merged as `b63d3bf1`; this
+issue branch was rebased onto it without editing gate data.
 
 This root-run host also has DAC and ptrace capabilities that defeat existing
 permission-denial tests. Dropping `cap_dac_override`, `cap_dac_read_search`, and
-`cap_sys_ptrace` makes all affected tests pass. Two full Bun runs then each had
-one unrelated process or latency test fail under shared-machine load; the same
-tests passed in isolation. The full Bun gate has no green result yet.
+`cap_sys_ptrace` makes all affected tests pass. Two earlier full Bun runs each
+had one unrelated process or latency test fail under shared-machine load; the
+same tests passed in isolation. Final verification runs the full Bun gate with
+those capabilities dropped.
 
 ## Delivery
 
