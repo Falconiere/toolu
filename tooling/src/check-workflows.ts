@@ -56,7 +56,7 @@ function checkTriggers(docs: ReadonlyMap<string, ObjectMap>, errors: string[]): 
 
 function checkActionsAndPermissions(name: string, doc: ObjectMap, errors: string[]): void {
   const allowedWrites = new Set([
-    "release-please.yml:*",
+    "release-please.yml:release-please",
     "release-please.yml:native",
     "release-native.yml:upload",
     "release-native.yml:publish",
@@ -65,7 +65,7 @@ function checkActionsAndPermissions(name: string, doc: ObjectMap, errors: string
   const defaultContents = at(doc, "permissions", "contents");
   need(
     errors,
-    defaultContents === (name === "release-please.yml" ? "write" : "read"),
+    defaultContents === "read",
     `${name} must declare least-privilege default contents permission`,
   );
   const holders: [string, ObjectMap][] = [

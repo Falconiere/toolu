@@ -51,6 +51,13 @@ for (const scenario of [
     finding: "unnecessary contents: write",
   },
   {
+    name: "release workflow default write permission",
+    file: ".github/workflows/release-please.yml",
+    before: "permissions:\n  contents: read",
+    after: "permissions:\n  contents: write",
+    finding: "least-privilege default contents permission",
+  },
+  {
     name: "unpinned action",
     file: ".github/workflows/tests.yml",
     before: "actions/checkout@v4",

@@ -17,8 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
@@ -26,6 +25,9 @@ jobs:
     if: vars.TOOLU_RELEASE_DISABLED != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       # The action reads config/manifest and edits files via the GitHub API,
       # but checkout is the standard release-please-action pattern and a cheap
