@@ -16,5 +16,10 @@ toolu-runtime = { path = "../runtime" }
 [dev-dependencies]
 toolu-protocol = { path = "../protocol" }
 
+# Runs itself as each Rust writer, beside TypeScript writers (#415).
+[[test]]
+name = "interleave"
+harness = false
+
 [lints]
 workspace = true
