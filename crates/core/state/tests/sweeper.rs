@@ -16,7 +16,9 @@ use toolu_protocol::host::Host;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::ctx::StateCtx;
 use toolu_state::gate_schema::GLOBAL_GATE_KEY;
-use toolu_state::sweeper::sweep_state;
+use toolu_state::sweeper::{
+  SWEEP_BRANCH_DIRS, SWEEP_DEFAULT_RETENTION_DAYS, SWEEP_DEFAULT_TTL_HOURS, sweep_state,
+};
 use toolu_state::time::iso_seconds;
 
 /// A repository on `feat/current` with `feat/merged` (merged into `main`),
@@ -55,7 +57,8 @@ fn sweep(sb: &Sandbox) -> Vec<String> {
 }
 
 const FRESH: Duration = Duration::from_secs(60);
-const OLD: Duration = Duration::from_hours(48);
+/// Past the default TTL.
+const OLD: Duration = Duration::from_hours(SWEEP_DEFAULT_TTL_HOURS * 2);
 
 #[test]
 fn branch_state_of_spent_branches_is_reclaimed() {
@@ -78,6 +81,27 @@ fn branch_state_of_spent_branches_is_reclaimed() {
   for (name, _, kept) in files {
     assert_eq!(state.join(name).exists(), kept, "{name}");
   }
+}
+
+#[test]
+fn every_branch_state_dir_is_swept_and_telemetry_keeps_its_default_window() {
+  let (sb, state) = repo("{\"version\":1}").unwrap();
+  for dir in SWEEP_BRANCH_DIRS {
+    put(&state.join(dir).join("feat_gone.json"), "{}", FRESH).unwrap();
+  }
+  let days = |n: u64| iso_seconds(SystemTime::now() - Duration::from_hours(24 * n));
+  let (inside, outside) = (
+    days(SWEEP_DEFAULT_RETENTION_DAYS - 1),
+    days(SWEEP_DEFAULT_RETENTION_DAYS + 1),
+  );
+  let lines = format!("{{\"t\":\"{outside}\"}}\n{{\"t\":\"{inside}\"}}\n");
+  put(&state.join("telemetry/feat_x.jsonl"), &lines, FRESH).unwrap();
+  sweep(&sb);
+  for dir in SWEEP_BRANCH_DIRS {
+    assert!(!state.join(dir).join("feat_gone.json").exists(), "{dir}");
+  }
+  let kept = std::fs::read_to_string(state.join("telemetry/feat_x.jsonl")).unwrap();
+  assert_eq!(kept, format!("{{\"t\":\"{inside}\"}}\n"));
 }
 
 #[test]

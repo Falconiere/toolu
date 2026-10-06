@@ -8,7 +8,7 @@ use std::path::Path;
 
 use serde_json::{Value, json};
 use toolu_state::edit_records::{
-  EditRecord, EditRecords, format_edit_records, normalize_edit_records,
+  EDIT_TOOLS, EditRecord, EditRecords, format_edit_records, normalize_edit_records,
 };
 
 type Res<T> = Result<T, String>;
@@ -63,4 +63,19 @@ fn every_golden_payload_normalizes_as_typescript_does() {
       case["name"]
     );
   }
+}
+
+#[test]
+fn the_golden_edit_tools_are_exactly_the_edit_tools() {
+  let cases = cases().unwrap();
+  let mut tools: Vec<&str> = cases
+    .iter()
+    .filter(|case| case["expect"]["kind"] != "not-edit")
+    .filter_map(|case| case["tool"].as_str())
+    .collect();
+  tools.sort_unstable();
+  tools.dedup();
+  let mut known = EDIT_TOOLS.to_vec();
+  known.sort_unstable();
+  assert_eq!(tools, known);
 }

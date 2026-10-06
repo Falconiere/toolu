@@ -201,7 +201,7 @@ Runtime discovery and raw stdout → state foundation (ctx, time, atomic write, 
   {
     "id": "state-cases",
     "title": "Rust consumer of fixtures/state/cases.json: schema, telemetry-events, telemetry-extras, gate-file, io (jq text vs real jq, jq sort, iso, atomic, lock scenarios), branch-slug, base-branch, current-branch, branch-slugs, diff-sha; the package case is TypeScript-only and asserted absent from the run list by name; split across tests/state_cases.rs, tests/io_cases.rs and tests/gate_cases.rs (300-line file limit)",
-    "check": "o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --test state_cases --test io_cases --test gate_cases 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'",
+    "check": "o=$(PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-state --test state_cases --test diff_cases --test io_cases --test gate_cases 2>&1) && printf '%s' \"$o\" | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'",
     "ac_refs": [
       "AC-4",
       "AC-11"

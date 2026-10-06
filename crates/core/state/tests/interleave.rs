@@ -10,6 +10,8 @@
 
 #[path = "helpers/cases.rs"]
 mod cases;
+#[path = "helpers/race.rs"]
+mod race;
 #[path = "helpers/sandbox.rs"]
 mod sandbox;
 #[path = "helpers/writers.rs"]
@@ -21,6 +23,7 @@ use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
 use cases::{cases_of, text};
+use race::Race;
 use sandbox::Res;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
@@ -28,7 +31,7 @@ use toolu_runtime::host::roots::Roots;
 use toolu_state::ctx::StateCtx;
 use toolu_state::gate_file::{ClearOutcome, GateFailure, clear_gate_file, record_gate_failure};
 use toolu_state::lock::{LockOptions, with_lock};
-use writers::{Race, Writer};
+use writers::Writer;
 
 fn main() -> ExitCode {
   let args: Vec<String> = std::env::args().skip(1).collect();
