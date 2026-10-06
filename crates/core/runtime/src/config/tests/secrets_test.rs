@@ -4,7 +4,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
-use super::{load, path, redact_json, redact_text, rotate_status_token};
+use super::{SecretError, load, path, redact_json, redact_text, rotate_status_token};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -24,6 +24,25 @@ fn write(path: &Path, value: &Value, mode: u32) {
   std::fs::set_permissions(path, std::fs::Permissions::from_mode(mode)).unwrap();
 }
 
+fn assert_all_sources_redacted(secrets: &super::Secrets) {
+  let shown = redact_text(
+    "file-status file-notify file-alpha file-beta old-alias primary env-notify env-alpha",
+    secrets,
+  );
+  for secret in [
+    "file-status",
+    "file-notify",
+    "file-alpha",
+    "file-beta",
+    "old-alias",
+    "primary",
+    "env-notify",
+    "env-alpha",
+  ] {
+    assert!(!shown.contains(secret), "{shown}");
+  }
+}
+
 #[test]
 fn unsafe_modes_symlink_and_malformed_bytes_fail_without_leaking() {
   let dir = tempfile::tempdir().unwrap();
@@ -34,7 +53,8 @@ fn unsafe_modes_symlink_and_malformed_bytes_fail_without_leaking() {
     &json!({"version":1,"status_token":"canary-mode"}),
     0o644,
   );
-  let error = load(&roots).unwrap_err().to_string();
+  let rejected: SecretError = load(&roots).unwrap_err();
+  let error = rejected.to_string();
   assert!(error.contains("chmod 600"), "{error}");
   assert!(!error.contains("canary-mode"));
 
@@ -76,22 +96,7 @@ fn env_overrides_file_per_field_and_rejects_bad_peer_json() {
   assert_eq!(resolved.notify_url(), Some("env-notify"));
   assert_eq!(resolved.peer_token("alpha"), Some("env-alpha"));
   assert_eq!(resolved.peer_token("beta"), Some("file-beta"));
-  let shown = redact_text(
-    "file-status file-notify file-alpha file-beta old-alias primary env-notify env-alpha",
-    &resolved,
-  );
-  for secret in [
-    "file-status",
-    "file-notify",
-    "file-alpha",
-    "file-beta",
-    "old-alias",
-    "primary",
-    "env-notify",
-    "env-alpha",
-  ] {
-    assert!(!shown.contains(secret), "{shown}");
-  }
+  assert_all_sources_redacted(&resolved);
 
   let alias = roots.env().clone().with("TOOLU_EPIC_TOKEN", "old-alias");
   assert_eq!(

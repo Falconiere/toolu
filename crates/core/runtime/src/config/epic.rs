@@ -93,7 +93,7 @@ fn reject_credentials(value: &Value, path: &str) -> Result<(), EpicError> {
         reject_credentials(item, &format!("{path}[{index}]"))?;
       }
     }
-    _ => {}
+    Value::Null | Value::Bool(_) | Value::Number(_) | Value::String(_) => {}
   }
   Ok(())
 }
@@ -133,7 +133,8 @@ fn peer_url(value: &Value, path: &str) -> Result<String, EpicError> {
   let raw = value
     .as_str()
     .ok_or_else(|| bad(path, "expected a credential-free HTTP(S) origin"))?;
-  let url = Url::parse(raw).map_err(|_| bad(path, "expected a credential-free HTTP(S) origin"))?;
+  let url =
+    Url::parse(raw).map_err(|_error| bad(path, "expected a credential-free HTTP(S) origin"))?;
   let safe = matches!(url.scheme(), "http" | "https")
     && url.host_str().is_some()
     && url.username().is_empty()

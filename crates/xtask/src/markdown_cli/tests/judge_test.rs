@@ -32,12 +32,12 @@ fn fails(command: &str, origin: Origin, wanted: &[&str]) {
 fn an_unknown_verb_names_the_closest_and_the_valid_ones() {
   for origin in [Origin::Fenced, Origin::Inline] {
     fails(
-      "toolu epic strat",
+      "toolu epic planed",
       origin,
       &[
-        "unknown command `strat` under `toolu epic`",
+        "unknown command `planed` under `toolu epic`",
         "closest: `planned`",
-        "valid: planned",
+        "valid: planned, token",
       ],
     );
   }

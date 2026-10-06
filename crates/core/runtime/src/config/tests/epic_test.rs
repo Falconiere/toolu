@@ -1,7 +1,7 @@
 use serde_json::{Map, Value, json};
 use toolu_protocol::host::Host;
 
-use super::{EpicSettings, parse};
+use super::{EpicError, EpicSettings, Peer, parse};
 use crate::config::load::LoadedConfig;
 
 fn config(epic: Value) -> LoadedConfig {
@@ -17,7 +17,7 @@ fn defaults_and_safe_unknown_keys_resolve() {
   assert_eq!(defaults.http_bind, "127.0.0.1");
   assert_eq!(defaults.http_port, 7717);
   assert!(!defaults.attention_enabled);
-  assert!(defaults.peers.is_empty());
+  assert_eq!(defaults.peers, []);
 
   let settings = parse(&config(json!({
     "http": {"bind": "0.0.0.0", "port": 8123, "future": true},
@@ -30,6 +30,7 @@ fn defaults_and_safe_unknown_keys_resolve() {
   assert_eq!(settings.http_port, 8123);
   assert!(settings.attention_enabled);
   assert_eq!(settings.peers.len(), 1);
+  let _: &Peer = &settings.peers[0];
   assert_eq!(settings.peers[0].name, "remote");
   assert_eq!(settings.peers[0].url, "https://peer.example:8443/");
 }
@@ -62,7 +63,8 @@ fn credentials_and_bad_settings_are_rejected_without_values() {
     ),
   ];
   for (value, path) in cases {
-    let error = parse(&config(value)).unwrap_err().to_string();
+    let rejected: EpicError = parse(&config(value)).unwrap_err();
+    let error = rejected.to_string();
     assert!(error.contains(path), "{error}");
     for secret in ["sentinel-one", "sentinel-two", "a-secret", "user:pass"] {
       assert!(!error.contains(secret), "{error}");

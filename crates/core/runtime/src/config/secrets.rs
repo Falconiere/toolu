@@ -90,14 +90,14 @@ fn read_file(path: &Path) -> Result<Option<Map<String, Value>>, SecretError> {
     Ok(meta) if !meta.file_type().is_file() => return Err(file_error()),
     Ok(_) => {}
   }
-  let mut file = OpenOptions::new()
+  let file = OpenOptions::new()
     .read(true)
     .custom_flags(nix::libc::O_NOFOLLOW)
     .open(path)
-    .map_err(|_| file_error())?;
+    .map_err(|_error| file_error())?;
   let mode = file
     .metadata()
-    .map_err(|_| file_error())?
+    .map_err(|_error| file_error())?
     .permissions()
     .mode()
     & 0o777;
@@ -106,9 +106,7 @@ fn read_file(path: &Path) -> Result<Option<Map<String, Value>>, SecretError> {
       "epic secrets: unsafe permissions; run chmod 600 on secrets.json",
     ));
   }
-  let mut text = String::new();
-  file.read_to_string(&mut text).map_err(|_| file_error())?;
-  let value: Value = serde_json::from_str(&text).map_err(|_| invalid_file())?;
+  let value: Value = serde_json::from_reader(file).map_err(|_error| invalid_file())?;
   let map = value.as_object().ok_or_else(invalid_file)?.clone();
   if map.get("version").and_then(Value::as_u64) != Some(1) {
     return Err(invalid_file());
@@ -160,7 +158,7 @@ fn env_peer_tokens(roots: &Roots) -> Result<BTreeMap<String, String>, SecretErro
     return Ok(BTreeMap::new());
   };
   let value: Value = serde_json::from_str(raw)
-    .map_err(|_| SecretError("epic secrets: invalid TOOLU_EPIC_PEER_TOKENS object"))?;
+    .map_err(|_error| SecretError("epic secrets: invalid TOOLU_EPIC_PEER_TOKENS object"))?;
   let map = value.as_object().ok_or(SecretError(
     "epic secrets: invalid TOOLU_EPIC_PEER_TOKENS object",
   ))?;
@@ -168,7 +166,7 @@ fn env_peer_tokens(roots: &Roots) -> Result<BTreeMap<String, String>, SecretErro
     "peer_tokens".to_owned(),
     Value::Object(map.clone()),
   )]))
-  .map_err(|_| SecretError("epic secrets: invalid TOOLU_EPIC_PEER_TOKENS object"))
+  .map_err(|_error| SecretError("epic secrets: invalid TOOLU_EPIC_PEER_TOKENS object"))
 }
 
 /// Read file credentials, then apply environment overrides per field.
@@ -217,15 +215,16 @@ pub fn load(roots: &Roots) -> Result<Secrets, SecretError> {
 
 fn random_token() -> Result<String, SecretError> {
   let mut random = File::open("/dev/urandom")
-    .map_err(|_| SecretError("epic secrets: OS random source unavailable"))?;
+    .map_err(|_error| SecretError("epic secrets: OS random source unavailable"))?;
   let mut bytes = [0_u8; 32];
   random
     .read_exact(&mut bytes)
-    .map_err(|_| SecretError("epic secrets: OS random source unavailable"))?;
+    .map_err(|_error| SecretError("epic secrets: OS random source unavailable"))?;
   let mut token = String::with_capacity(64);
   for byte in bytes {
     use std::fmt::Write as _;
-    write!(token, "{byte:02x}").map_err(|_| SecretError("epic secrets: token encoding failed"))?;
+    write!(token, "{byte:02x}")
+      .map_err(|_error| SecretError("epic secrets: token encoding failed"))?;
   }
   Ok(token)
 }
@@ -241,7 +240,7 @@ fn temp_path(path: &Path) -> PathBuf {
 
 fn write_file(path: &Path, map: &Map<String, Value>) -> Result<(), SecretError> {
   let parent = path.parent().ok_or_else(file_error)?;
-  fs::create_dir_all(parent).map_err(|_| file_error())?;
+  fs::create_dir_all(parent).map_err(|_error| file_error())?;
   let temp = temp_path(path);
   let result = (|| {
     let mut file = OpenOptions::new()
@@ -249,12 +248,14 @@ fn write_file(path: &Path, map: &Map<String, Value>) -> Result<(), SecretError> 
       .create_new(true)
       .mode(0o600)
       .open(&temp)
-      .map_err(|_| file_error())?;
+      .map_err(|_error| file_error())?;
     let text = Value::Object(map.clone()).to_string();
-    file.write_all(text.as_bytes()).map_err(|_| file_error())?;
-    file.write_all(b"\n").map_err(|_| file_error())?;
-    file.sync_all().map_err(|_| file_error())?;
-    fs::rename(&temp, path).map_err(|_| file_error())
+    file
+      .write_all(text.as_bytes())
+      .map_err(|_error| file_error())?;
+    file.write_all(b"\n").map_err(|_error| file_error())?;
+    file.sync_all().map_err(|_error| file_error())?;
+    fs::rename(&temp, path).map_err(|_error| file_error())
   })();
   if result.is_err() {
     let _ = fs::remove_file(temp);
@@ -322,7 +323,7 @@ pub fn redact_json(value: &Value, secrets: &Secrets) -> Value {
         .collect(),
     ),
     Value::String(text) => Value::String(redact_text(text, secrets)),
-    _ => value.clone(),
+    Value::Null | Value::Bool(_) | Value::Number(_) => value.clone(),
   }
 }
 
