@@ -111,9 +111,7 @@ function isNativeHook(hook: Hook): boolean {
 function isLauncherHook(hook: Hook): boolean {
   const command = hook.command ?? "";
   return (
-    hook.commandWindows !== undefined ||
-    command.includes("hooks/dist/") ||
-    /\bbun\b/u.test(command)
+    hook.commandWindows !== undefined || command.includes("hooks/dist/") || /\bbun\b/u.test(command)
   );
 }
 
@@ -234,10 +232,16 @@ function checkFile(root: string, plugin: string): HooksJsonProblem[] {
               hook,
             )
           : isNativeLikeHook(hook)
-            ? [{ file, where: `${event}[${i}].hooks[${j}]`, problem: "unsupported native hook command" }]
-          : isLauncherHook(hook)
-            ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
-            : [],
+            ? [
+                {
+                  file,
+                  where: `${event}[${i}].hooks[${j}]`,
+                  problem: "unsupported native hook command",
+                },
+              ]
+            : isLauncherHook(hook)
+              ? checkHook({ root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` }, hook)
+              : [],
       ),
     ),
   );

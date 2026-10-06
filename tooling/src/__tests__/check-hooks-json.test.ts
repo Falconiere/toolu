@@ -151,9 +151,7 @@ test("a hand-written toolu hook command without the generated launcher fails", (
         "",
       ),
   );
-  expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
-    "unsupported native hook command",
-  ]);
+  expect(checkHooksJson(root).map((p) => p.problem)).toEqual(["unsupported native hook command"]);
 });
 
 test("an invalid entry name and malformed JSON are reported", () => {
