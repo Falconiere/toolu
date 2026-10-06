@@ -11,7 +11,7 @@ bounded, proxy-aware requests or test them without TypeScript fixtures.
 ## Non-Goals
 
 1. Porting `@toolu/core/rest` or implementing GitHub/Jev endpoints (#460).
-2. Async execution, streaming uploads, cookies, or public runtime CA overrides.
+2. Async execution, streaming uploads, cookies, or general-purpose CA management.
 3. Preserving authorization across redirects; redirect requests drop it.
 
 ## Architecture
@@ -23,7 +23,7 @@ environment snapshot. HTTPS prefers `HTTPS_PROXY`/`https_proxy`, HTTP prefers
 scheme settings outrank the fallback. A missing proxy means direct transport.
 Requests have a nonzero global deadline and a bounded response body. Ureq
 follows at most five redirects and drops `Authorization` on each hop; HTTP
-errors are examined after bounded body reading. A private test-CA option
+errors are examined after bounded body reading. A test-only CA field
 provides exact trusted roots to the test fixture; production uses WebPKI roots.
 
 `crates/http-test-support` is a workspace crate consumed as a dev-dependency.
