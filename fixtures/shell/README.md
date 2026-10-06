@@ -24,6 +24,16 @@ Real command lines for `@toolu/core/shell` (#284). The tests live in
 - `unbash-baseline.json` records the raw parse result for all 203 distinct
   commands under pinned `unbash@4.0.11`. `bun run tooling/src/check-unbash-baseline.ts`
   verifies the parser version, exact input set and every result for #416.
+- `analysis.json` holds the projected analysis TypeScript gives for each of
+  those 203 inputs, in the same order: commands, compound redirects, write
+  targets, git invocations, pushes, commit messages and `runsGitSubcommand`.
+  Parser error text and offsets are left out. It was captured once from
+  `projectAnalysis` in
+  `packages/toolu-core/src/shell/__tests__/analysis-projection.ts`.
+  `analysis-fixture.test.ts` checks that TypeScript reproduces every case.
+  `crates/core/shell/tests/analysis_fixture.rs` checks the Rust port (#416),
+  which must give `expect`, or `rust.expect` where a `rust.reason` records an
+  intended difference. Every such reason is listed in `docs/shell-analysis.md`.
 
 `bash-oracle.test.ts` sources `plugins/toolu/hooks/lib/detect.sh` unmodified and
 re-derives every live `bash` value except `bash_commands_decide`, whose module
