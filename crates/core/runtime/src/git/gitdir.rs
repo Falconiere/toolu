@@ -7,8 +7,8 @@ use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt as _;
 use std::path::{Path, PathBuf};
 
-/// The bytes of `file` without trailing newlines and carriage returns, as a
-/// path: git paths are bytes, not UTF-8.
+/// `bytes` without trailing newlines and carriage returns, as a path: git
+/// paths are bytes, not UTF-8.
 fn path_line(bytes: &[u8]) -> &OsStr {
   let end = bytes
     .iter()

@@ -190,8 +190,15 @@ fn a_linked_worktree_ignores_the_shared_core_bare_and_core_worktree_as_git_does(
     run_git(&wt, &["rev-parse", "--show-toplevel"]),
     real(&wt).display().to_string()
   );
-  assert_eq!(toplevel(&env(), &wt), Some(real(&wt)));
+  let Discovery::Repo(found) = discover(&env(), &wt) else {
+    panic!("the walk deferred to git");
+  };
+  assert_eq!(found.toplevel, Some(real(&wt)));
   run_git(&bare, &["config", "core.worktree", "/nonexistent"]);
+  assert!(
+    matches!(discover(&env(), &wt), Discovery::Repo(_)),
+    "still answered by the walk"
+  );
   assert_eq!(
     run_git(&wt, &["rev-parse", "--show-toplevel"]),
     real(&wt).display().to_string()

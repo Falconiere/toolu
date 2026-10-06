@@ -2,7 +2,7 @@
 //! `concurrency` cases of `fixtures/state/cases.json`). This test binary has
 //! no libtest harness: run plainly it is the parent; `interleave writer …`
 //! is one Rust writer process (TypeScript's `gate-writer.ts`, in Rust), and
-//! `interleave hold <gate>` takes the lock and never lets go, to be killed.
+//! `interleave hold <gate>` takes the lock and holds it for a minute, to be killed.
 //! Readers poll the file throughout; it must parse under the strict schema
 //! after every write, keep every slot, and leave no temp file or lock.
 //!
@@ -10,6 +10,8 @@
 
 #[path = "helpers/cases.rs"]
 mod cases;
+#[path = "helpers/fleet.rs"]
+mod fleet;
 #[path = "helpers/race.rs"]
 mod race;
 #[path = "helpers/sandbox.rs"]

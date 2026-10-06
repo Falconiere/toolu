@@ -212,10 +212,12 @@ fn symlinked_state_is_never_followed_out_of_the_repository() {
   );
   let (other, tmp) = repo("{\"version\":1}").unwrap();
   std::fs::remove_dir_all(&tmp).unwrap();
-  std::os::unix::fs::symlink(&victim, &tmp).unwrap();
+  let elsewhere = sb.home.join("elsewhere");
+  put(&elsewhere.join("push-review/feat_gone.json"), "{}", OLD).unwrap();
+  std::os::unix::fs::symlink(&elsewhere, &tmp).unwrap();
   assert_eq!(sweep(&other), Vec::<String>::new());
   assert!(
-    victim.join("feat_gone.json").exists(),
+    elsewhere.join("push-review/feat_gone.json").exists(),
     "a symlinked tmp dir is not swept"
   );
 }

@@ -129,7 +129,7 @@ pub fn branch_slugs(env: &Env, root: &Path, merged_into: Option<&str>) -> BTreeS
 
 /// [`branch_slugs`], or `None` when `git branch` fails, so a caller can tell an
 /// unlistable repository from one without branches.
-pub fn local_branches(
+pub(crate) fn local_branches(
   env: &Env,
   root: &Path,
   merged_into: Option<&str>,

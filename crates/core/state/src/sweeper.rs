@@ -79,13 +79,13 @@ pub fn slug_of_state_file(file: &Path) -> String {
   name.strip_suffix(".waiver").unwrap_or(name).to_owned()
 }
 
-/// Removes `file`, or warns that it could not.
 /// Whether `path` is a directory itself, not a symlink to one: state the sweeper
 /// deletes or rewrites must lie inside the repository.
 pub(crate) fn real_dir(path: &Path) -> bool {
   std::fs::symlink_metadata(path).is_ok_and(|meta| meta.is_dir())
 }
 
+/// Removes `file`, or warns that it could not.
 pub(crate) fn remove(file: &Path, warnings: &mut Vec<String>) {
   if std::fs::remove_file(file).is_err() {
     warnings.push(format!("toolu-sweep: could not remove {}", file.display()));

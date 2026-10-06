@@ -250,4 +250,11 @@ fn a_bare_relative_gate_path_still_has_a_root() {
     super::gate_root(Path::new("/p/.claude/tmp/q.json")),
     Path::new("/p")
   );
+  for shallow in ["/q.json", "/x/q.json", "/"] {
+    assert_eq!(
+      super::gate_root(Path::new(shallow)),
+      Path::new("/"),
+      "{shallow}"
+    );
+  }
 }

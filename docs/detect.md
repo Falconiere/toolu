@@ -53,16 +53,23 @@ The push and commit questions, which need the shell parser, follow in #418.
 - filesystem boundaries;
 - `core.bare` and `core.worktree`.
 
-`toolu_state::git` reads the branch (`HEAD`, loose refs and `packed-refs`), the linked-worktree test, the common dir and origin's HEAD the same way. So `Roots::project_root` and these facts spawn no process. These cases ask git, as TypeScript always does:
-- the `GIT_DIR` family of variables, even when empty;
-- `sudo` as root;
-- a path owned by another user (`safe.directory`);
-- a config with an include, a malformed section header, a quoted or escaped value, a valueless `core.worktree`, or a repository format above 1;
-- a config that is not UTF-8 or cannot be read, and a `config.worktree` file;
-- a `core.worktree` that does not resolve;
-- reftable repositories;
-- a symlinked `HEAD` or `refs/remotes/origin/HEAD`, and a `HEAD` that names a ref outside `refs/heads/`;
-- a branch name that git would lengthen because a tag or a remote shares it.
+`toolu_state::git` reads the branch (`HEAD`, loose refs and `packed-refs`), the linked-worktree test, the common dir and origin's HEAD the same way. So `Roots::project_root` and these facts spawn no process. As in git, a linked worktree ignores the shared config's `core.bare` and `core.worktree`.
+
+These cases ask git, as TypeScript always does:
+- **Environment:** a `GIT_DIR`, `GIT_WORK_TREE`, `GIT_COMMON_DIR`, `GIT_OBJECT_DIRECTORY`, `GIT_CEILING_DIRECTORIES`, `GIT_DISCOVERY_ACROSS_FILESYSTEM` or `GIT_CONFIG*` variable, even an empty one, and `sudo` as root.
+- **Ownership:** a worktree, `.git` file or git dir owned by another user (`safe.directory`).
+- **Config:**
+  - an include or a malformed section header;
+  - a quoted or escaped `core.bare`, `core.worktree` or `core.repositoryformatversion`;
+  - an empty or valueless `core.worktree`, or one that does not resolve;
+  - a repository format above 1;
+  - a config that is not UTF-8 or cannot be read;
+  - a `config.worktree` file.
+- **Refs:**
+  - reftable repositories;
+  - a `HEAD` that is a symlink, cannot be read, or names a ref outside `refs/heads/`;
+  - a symlinked `refs/remotes/origin/HEAD`;
+  - a branch whose short name git would lengthen: one shared by a file at the git dir's root, `refs/<name>`, a tag, a remote, or `refs/remotes/<name>/HEAD`.
 
 Git is still spawned for history and index questions, which run once per session:
 - `diff_sha` (`git diff`, `git hash-object`);

@@ -1,10 +1,9 @@
 //! Repository discovery from the filesystem (#415): the toplevel, git dir and
 //! common dir holding a directory, found by walking up for `.git` as git's
 //! `setup_git_directory_gently_1` does, so no process is spawned. `core.bare`
-//! removes the worktree and `core.worktree` moves it, as in git. Where the walk
-//! cannot answer as git would (the `GIT_DIR` variables, `sudo`, another owner,
-//! includes, `config.worktree`, quoted values), the answer is
-//! [`Discovery::AskGit`].
+//! removes the worktree and `core.worktree` moves it, except in a linked
+//! worktree, which ignores both, as in git. Where the walk cannot answer as git
+//! would, the answer is [`Discovery::AskGit`]; `docs/detect.md` lists the cases.
 
 mod defer;
 mod gitdir;

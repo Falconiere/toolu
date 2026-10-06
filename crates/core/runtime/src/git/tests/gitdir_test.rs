@@ -102,9 +102,9 @@ fn gitfile_and_commondir_paths_are_bytes_not_utf8() {
   let admin = target.join("worktrees/w");
   std::fs::create_dir_all(&admin).unwrap();
   std::fs::write(admin.join("HEAD"), "ref: refs/heads/w\n").unwrap();
-  let mut up = b"../../".to_vec();
-  up.push(b'\n');
-  std::fs::write(admin.join("commondir"), up).unwrap();
+  let mut named = target.as_os_str().as_bytes().to_vec();
+  named.push(b'\n');
+  std::fs::write(admin.join("commondir"), named).unwrap();
   assert_eq!(
     common_dir_of(&admin),
     std::fs::canonicalize(&target).unwrap()
