@@ -142,6 +142,34 @@ fn rotation_refuses_an_active_status_environment_override() {
 }
 
 #[test]
+fn empty_environment_values_leave_file_credentials_active() {
+  let dir = tempfile::tempdir().unwrap();
+  let roots = roots(dir.path());
+  write(
+    &path(&roots),
+    &json!({
+      "version":1,"status_token":"file-status","notify_url":"file-notify",
+      "peer_tokens":{"alpha":"file-alpha"}
+    }),
+    0o600,
+  );
+  let env = roots
+    .env()
+    .clone()
+    .with("TOOLU_EPIC_STATUS_TOKEN", "")
+    .with("TOOLU_EPIC_TOKEN", "")
+    .with("TOOLU_EPIC_NOTIFY_URL", "")
+    .with("TOOLU_EPIC_PEER_TOKENS", "");
+  let empty_roots = Roots::new(env, Some(Host::Codex));
+  let resolved = load(&empty_roots).unwrap();
+  assert_eq!(resolved.status_token(), Some("file-status"));
+  assert_eq!(resolved.notify_url(), Some("file-notify"));
+  assert_eq!(resolved.peer_token("alpha"), Some("file-alpha"));
+  rotate_status_token(&empty_roots).unwrap();
+  assert_ne!(load(&roots).unwrap().status_token(), Some("file-status"));
+}
+
+#[test]
 fn redacted_documents_and_debug_never_contain_canaries() {
   let dir = tempfile::tempdir().unwrap();
   let roots = roots(dir.path());

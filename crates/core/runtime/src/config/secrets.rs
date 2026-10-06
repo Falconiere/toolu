@@ -150,7 +150,11 @@ fn peer_tokens(map: &Map<String, Value>) -> Result<BTreeMap<String, String>, Sec
 }
 
 fn env_peer_tokens(roots: &Roots) -> Result<BTreeMap<String, String>, SecretError> {
-  let Some(raw) = roots.env().get("TOOLU_EPIC_PEER_TOKENS") else {
+  let Some(raw) = roots
+    .env()
+    .get("TOOLU_EPIC_PEER_TOKENS")
+    .filter(|value| !value.is_empty())
+  else {
     return Ok(BTreeMap::new());
   };
   let value: Value = serde_json::from_str(raw)
@@ -174,15 +178,23 @@ pub fn load(roots: &Roots) -> Result<Secrets, SecretError> {
   let env = roots.env();
   let status_token = env
     .get("TOOLU_EPIC_STATUS_TOKEN")
-    .or_else(|| env.get("TOOLU_EPIC_TOKEN"))
+    .filter(|value| !value.is_empty())
+    .or_else(|| {
+      env
+        .get("TOOLU_EPIC_TOKEN")
+        .filter(|value| !value.is_empty())
+    })
     .map_or_else(
       || optional_string(&map, "status_token"),
       |value| Ok(Some(value.to_owned())),
     )?;
-  let notify_url = env.get("TOOLU_EPIC_NOTIFY_URL").map_or_else(
-    || optional_string(&map, "notify_url"),
-    |value| Ok(Some(value.to_owned())),
-  )?;
+  let notify_url = env
+    .get("TOOLU_EPIC_NOTIFY_URL")
+    .filter(|value| !value.is_empty())
+    .map_or_else(
+      || optional_string(&map, "notify_url"),
+      |value| Ok(Some(value.to_owned())),
+    )?;
   let mut tokens = peer_tokens(&map)?;
   tokens.extend(env_peer_tokens(roots)?);
   Ok(Secrets {
@@ -245,7 +257,11 @@ fn write_file(path: &Path, map: &Map<String, Value>) -> Result<(), SecretError> 
 /// Refuses an unsafe existing file, random-source failure or failed write.
 pub fn rotate_status_token(roots: &Roots) -> Result<PathBuf, SecretError> {
   for variable in ["TOOLU_EPIC_STATUS_TOKEN", "TOOLU_EPIC_TOKEN"] {
-    if roots.env().get(variable).is_some() {
+    if roots
+      .env()
+      .get(variable)
+      .is_some_and(|value| !value.is_empty())
+    {
       return Err(SecretError(match variable {
         "TOOLU_EPIC_STATUS_TOKEN" => {
           "epic secrets: unset TOOLU_EPIC_STATUS_TOKEN before token rotation"

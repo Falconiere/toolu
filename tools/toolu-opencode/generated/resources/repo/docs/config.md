@@ -65,7 +65,9 @@ back to "all enabled".
                   "routing": { "<host>": [{ "model": "<id>", "effort": "<level>" }, "…4 tiers"] },
                   "unattended": true,
                   "jev": true },
-  "epic":       { "…": "reserved for the epic engine (#463)" }
+  "epic":       { "http": { "bind": "127.0.0.1", "port": 7717 },
+                  "attention": { "enabled": false },
+                  "peers": [{ "name": "server", "url": "https://server.example:7717" }] }
 }
 ```
 
@@ -106,6 +108,69 @@ The Rust loader (`toolu_runtime::config::load`,
 [#414](https://github.com/Falconiere/toolu/issues/414)) applies the same
 envelope with the same messages; `fixtures/config/expected.json` holds the
 results both loaders must reproduce.
+
+## Epic engine settings and secrets
+
+Put only non-secret engine settings under `epic` in `toolu.config.json`. The
+Rust settings reader defaults to `127.0.0.1:7717`, notifications off, and no
+peers. `http.bind` is a nonempty string, `http.port` is an integer from 1 to
+65535, `attention.enabled` is a boolean, and each peer has a unique nonempty
+`name` and an HTTP(S) origin `url`. A peer URL may include a port but no user
+info, path beyond `/`, query or fragment. Unknown safe keys under `epic` are
+ignored so older binaries can read newer settings. A key named like a token,
+secret, password or notification URL is rejected by the Rust reader. The
+TypeScript hook loader accepts and ignores the whole `epic` section during the
+transition, while it still rejects unknown top-level keys.
+
+Credentials live in `<config>/toolu/secrets.json`, where `<config>` is the
+host config root (`TOOLU_CONFIG_DIR` overrides it). This file is never a
+project `toolu.config.json` and should not be committed. Its shape is:
+
+```json
+{
+  "version": 1,
+  "status_token": "<bearer token>",
+  "notify_url": "<outgoing notification URL>",
+  "peer_tokens": { "server": "<peer bearer token>" }
+}
+```
+
+Each credential field is optional until its consumer requires it. All
+notification URLs use this secret source, even when the URL appears to have no
+credential, because a credential may be hidden in its path or query. The
+reader refuses a symlink, malformed JSON, or a file accessible to group or
+other users; a permission error tells you to run `chmod 600` on
+`secrets.json`. An invalid file fails even when an environment override is
+present. Token rotation writes a new file with mode `0600` atomically and
+preserves its notification and peer fields:
+
+```bash
+toolu epic token new
+```
+
+The command does not display the token. Read it from your own user-only file
+when configuring a client. A second successful run changes the token;
+consumers must reread it for each authentication decision so the old token
+stops working immediately. Rotation refuses while either status-token
+environment override is set, because the command cannot change its parent
+environment.
+
+Environment variables override the matching file fields:
+
+| Variable | Field | Notes |
+|---|---|---|
+| `TOOLU_EPIC_STATUS_TOKEN` | `status_token` | Primary status bearer token. |
+| `TOOLU_EPIC_TOKEN` | `status_token` | Compatibility alias, used only if the primary variable is unset. |
+| `TOOLU_EPIC_NOTIFY_URL` | `notify_url` | Entire outgoing URL; treat it as a secret. |
+| `TOOLU_EPIC_PEER_TOKENS` | `peer_tokens` | JSON object of peer name to token; each entry overrides that file entry. |
+
+Empty environment values count as unset. A malformed peer-token JSON object is
+an error. The shared Rust module `toolu_runtime::config::secrets` supplies the
+only file and environment reader plus redacted JSON/text helpers. The future
+config and doctor commands, journal, status page, notification sender and fleet
+client must use this module and test their actual outputs with secret canaries;
+the shared redactor already replaces credential fields and loaded secret
+substrings with `"<redacted>"`.
 
 ### Gate modes (`gates`)
 

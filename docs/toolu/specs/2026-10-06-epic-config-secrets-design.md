@@ -56,7 +56,7 @@ Every value is optional until a consumer requires it. `TOOLU_EPIC_STATUS_TOKEN` 
 
 | AC | Real input and expected result | Boundary | Runnable check |
 |---|---|---|---|
-| AC-1 | one temporary config file read by `parseTooluConfig` and `load`, valid `epic` then invalid sibling | unknown nested versus top-level | `bun test packages/toolu-core/src/config/__tests__/config-fixture.test.ts`; `cargo test -p toolu-runtime --test config_fixture` |
+| AC-1 | the same shared fixture cases staged as temporary config files for the TypeScript and Rust loaders, valid `epic` then invalid sibling | unknown nested versus top-level | `bun test packages/toolu-core/src/config/__tests__/config-fixture.test.ts`; `cargo test -p toolu-runtime --test config_fixture` |
 | AC-2 | temporary files with Unix modes `0600`, `0644`, a symlink and malformed bytes; safe load or sanitized error | bad permissions, symlink, malformed | `cargo test -p toolu-runtime --lib -- config::secrets::` |
 | AC-3 | a real temp file and an explicit `Env` snapshot, resolved accessors | primary/alias and per-peer precedence, malformed env JSON | `cargo test -p toolu-runtime --lib -- config::secrets::` |
 | AC-4 | real `toolu epic token new` subprocess twice against a temp config dir; complete JSON file and no token in either output | rotation, `--json`, unsafe existing file, active environment override | `cargo test -p toolu-cli --test epic_token` and epic plugin unit tests |

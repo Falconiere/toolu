@@ -1029,6 +1029,40 @@
           "placeholder": true
         },
         {
+          "about": "Manage the status bearer token",
+          "aliases": [],
+          "args": [],
+          "commands": [
+            {
+              "about": "Rotate the status bearer token in secrets.json",
+              "aliases": [],
+              "args": [],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "new",
+              "owner": "epic-orchestrator",
+              "path": [
+                "epic",
+                "token",
+                "new"
+              ],
+              "placeholder": false
+            }
+          ],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "token",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "token"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Run a hook entry; hooks.json calls it (internal)",
           "aliases": [],
           "args": [

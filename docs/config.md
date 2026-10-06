@@ -100,6 +100,14 @@ The TypeScript loader validates each file's envelope, and bash never did:
   older toolu, while an unknown top-level key next to it still does.
 - Malformed JSON is still ignored with a warning, as in bash: a half-typed
   file does not lock you out.
+- An invalid value under a known key (a mode that is not a mode, a
+  non-numeric threshold) still warns, where bash warns, and falls back for that
+  key only.
+
+The Rust loader (`toolu_runtime::config::load`,
+[#414](https://github.com/Falconiere/toolu/issues/414)) applies the same
+envelope with the same messages; `fixtures/config/expected.json` holds the
+results both loaders must reproduce.
 
 ## Epic engine settings and secrets
 
@@ -163,14 +171,6 @@ config and doctor commands, journal, status page, notification sender and fleet
 client must use this module and test their actual outputs with secret canaries;
 the shared redactor already replaces credential fields and loaded secret
 substrings with `"<redacted>"`.
-- An invalid value under a known key (a mode that is not a mode, a
-  non-numeric threshold) still warns, where bash warns, and falls back for that
-  key only.
-
-The Rust loader (`toolu_runtime::config::load`,
-[#414](https://github.com/Falconiere/toolu/issues/414)) applies the same
-envelope with the same messages; `fixtures/config/expected.json` holds the
-results both loaders must reproduce.
 
 ### Gate modes (`gates`)
 
