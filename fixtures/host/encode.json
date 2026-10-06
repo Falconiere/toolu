@@ -1,0 +1,3665 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "claude session/start: allow",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude session/start: ask",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: deny",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: advisory",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: post_block",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: runtime_failure",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: ask from a guardrail gate",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/start: ask from a judgement gate",
+      "host": "claude",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: allow",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude session/unload: ask",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: deny",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: advisory",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: post_block",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: runtime_failure",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: ask from a guardrail gate",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude session/unload: ask from a judgement gate",
+      "host": "claude",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude prompt: allow",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude prompt: ask",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude prompt: deny",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "claude prompt: advisory",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "claude prompt: post_block",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "claude prompt: runtime_failure",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "claude prompt: ask from a guardrail gate",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude prompt: ask from a judgement gate",
+      "host": "claude",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: allow",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude pre_compact: ask",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: deny",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: advisory",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: post_block",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: runtime_failure",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: ask from a guardrail gate",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude pre_compact: ask from a judgement gate",
+      "host": "claude",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: allow",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude permission/evaluate: ask",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude permission/evaluate: deny",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"protected file\"}}}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: advisory",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: post_block",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"lint failed\"}}}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: runtime_failure",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"gate crashed\"}}}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: ask from a guardrail gate",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude permission/evaluate: ask from a judgement gate",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude tool/pre: allow",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude tool/pre: ask",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: deny",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: advisory",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: post_block",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: runtime_failure",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: ask from a guardrail gate",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/pre: ask from a judgement gate",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: allow",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude shell/pre: ask",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: deny",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: advisory",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: post_block",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: runtime_failure",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: ask from a guardrail gate",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude shell/pre: ask from a judgement gate",
+      "host": "claude",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: allow",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude tool/post: ask",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: deny",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: advisory",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: post_block",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: runtime_failure",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: ask from a guardrail gate",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "claude tool/post: ask from a judgement gate",
+      "host": "claude",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: allow",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex session/start: ask",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: deny",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: advisory",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: post_block",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: runtime_failure",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: ask from a guardrail gate",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/start: ask from a judgement gate",
+      "host": "codex",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"SessionStart\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: allow",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex session/unload: ask",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: deny",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: advisory",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: post_block",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: runtime_failure",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: ask from a guardrail gate",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex session/unload: ask from a judgement gate",
+      "host": "codex",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex prompt: allow",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex prompt: ask",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex prompt: deny",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "codex prompt: advisory",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "codex prompt: post_block",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "codex prompt: runtime_failure",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "codex prompt: ask from a guardrail gate",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex prompt: ask from a judgement gate",
+      "host": "codex",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: allow",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex pre_compact: ask",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: deny",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: advisory",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: post_block",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: runtime_failure",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: ask from a guardrail gate",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex pre_compact: ask from a judgement gate",
+      "host": "codex",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex permission/evaluate: allow",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex permission/evaluate: ask",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex permission/evaluate: deny",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"protected file\"}}}\n"
+      }
+    },
+    {
+      "name": "codex permission/evaluate: advisory",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "codex permission/evaluate: post_block",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"lint failed\"}}}\n"
+      }
+    },
+    {
+      "name": "codex permission/evaluate: runtime_failure",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"gate crashed\"}}}\n"
+      }
+    },
+    {
+      "name": "codex permission/evaluate: ask from a guardrail gate",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex permission/evaluate: ask from a judgement gate",
+      "host": "codex",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex tool/pre: allow",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex tool/pre: ask",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: deny",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: advisory",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: post_block",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: runtime_failure",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: ask from a guardrail gate",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/pre: ask from a judgement gate",
+      "host": "codex",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: allow",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex shell/pre: ask",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: deny",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"protected file\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: advisory",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: post_block",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"lint failed\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: runtime_failure",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: ask from a guardrail gate",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex shell/pre: ask from a judgement gate",
+      "host": "codex",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: allow",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "codex tool/post: ask",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: deny",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: advisory",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"run the tests\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: post_block",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: runtime_failure",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"gate crashed\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: ask from a guardrail gate",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: ask from a judgement gate",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"confirm .env write\"}}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: allow",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: ask",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: deny",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: advisory",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: post_block",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: runtime_failure",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/start: ask from a judgement gate",
+      "host": "cursor",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: allow",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: ask",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: deny",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: advisory",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: post_block",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: runtime_failure",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor session/unload: ask from a judgement gate",
+      "host": "cursor",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: allow",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{\"continue\":true}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: ask",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"continue\":true}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: deny",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"continue\":false,\"user_message\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: advisory",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"continue\":true}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: post_block",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"continue\":false,\"user_message\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: runtime_failure",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"continue\":true}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"continue\":false,\"user_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: ask from a judgement gate",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"continue\":true}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: allow",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: ask",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: deny",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: advisory",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: post_block",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: runtime_failure",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor pre_compact: ask from a judgement gate",
+      "host": "cursor",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor permission/evaluate: no native event",
+      "host": "cursor",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "error": "cursor has no native event for permission/evaluate"
+      }
+    },
+    {
+      "name": "cursor tool/pre: allow",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"allow\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: ask",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"confirm .env write\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: deny",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"protected file\",\"agent_message\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: advisory",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"allow\",\"agent_message\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: post_block",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"lint failed\",\"agent_message\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: runtime_failure",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"gate crashed\",\"agent_message\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"confirm .env write\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/pre: ask from a judgement gate",
+      "host": "cursor",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"permission\":\"allow\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: allow",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"allow\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: ask",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"ask\",\"user_message\":\"confirm .env write\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: deny",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"protected file\",\"agent_message\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: advisory",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"allow\",\"agent_message\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: post_block",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"lint failed\",\"agent_message\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: runtime_failure",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"deny\",\"user_message\":\"gate crashed\",\"agent_message\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"permission\":\"ask\",\"user_message\":\"confirm .env write\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: ask from a judgement gate",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"permission\":\"ask\",\"user_message\":\"confirm .env write\",\"agent_message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: allow",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": "{}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: ask",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: deny",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: advisory",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: post_block",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: runtime_failure",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"additional_context\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: ask from a guardrail gate",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "cursor tool/post: ask from a judgement gate",
+      "host": "cursor",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"additional_context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "opencode session/start: allow",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: ask",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: deny",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: advisory",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: post_block",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: runtime_failure",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode session/start: ask from a judgement gate",
+      "host": "opencode",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: allow",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: ask",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: deny",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: advisory",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: post_block",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: runtime_failure",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode session/unload: ask from a judgement gate",
+      "host": "opencode",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: allow",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: ask",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: deny",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: advisory",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: post_block",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: runtime_failure",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode prompt: ask from a judgement gate",
+      "host": "opencode",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: allow",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: ask",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: deny",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: advisory",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: post_block",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: runtime_failure",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode pre_compact: ask from a judgement gate",
+      "host": "opencode",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode permission/evaluate: no native event",
+      "host": "opencode",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "error": "opencode has no native event for permission/evaluate"
+      }
+    },
+    {
+      "name": "opencode tool/pre: allow",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: ask",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: deny",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: advisory",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: post_block",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: runtime_failure",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode tool/pre: ask from a judgement gate",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: allow",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: ask",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: deny",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: advisory",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: post_block",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: runtime_failure",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode shell/pre: ask from a judgement gate",
+      "host": "opencode",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: allow",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: ask",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: deny",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: advisory",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: post_block",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: runtime_failure",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: ask from a guardrail gate",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "opencode tool/post: ask from a judgement gate",
+      "host": "opencode",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
+      }
+    },
+    {
+      "name": "hermes session/start: allow",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: ask",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: deny",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: advisory",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: post_block",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: runtime_failure",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/start: ask from a judgement gate",
+      "host": "hermes",
+      "event": "session/start",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: allow",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: ask",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: deny",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: advisory",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: post_block",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: runtime_failure",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes session/unload: ask from a judgement gate",
+      "host": "hermes",
+      "event": "session/unload",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes prompt: allow",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes prompt: ask",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: deny",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: advisory",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"run the tests\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: post_block",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: runtime_failure",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: ask from a judgement gate",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"context\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes pre_compact: no native event",
+      "host": "hermes",
+      "event": "pre_compact",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "error": "hermes has no native event for pre_compact"
+      }
+    },
+    {
+      "name": "hermes permission/evaluate: no native event",
+      "host": "hermes",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "error": "hermes has no native event for permission/evaluate"
+      }
+    },
+    {
+      "name": "hermes tool/pre: allow",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/pre: ask",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes tool/pre: deny",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "hermes tool/pre: advisory",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/pre: post_block",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "hermes tool/pre: runtime_failure",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "hermes tool/pre: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes tool/pre: ask from a judgement gate",
+      "host": "hermes",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes shell/pre: allow",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes shell/pre: ask",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes shell/pre: deny",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"protected file\"}\n"
+      }
+    },
+    {
+      "name": "hermes shell/pre: advisory",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes shell/pre: post_block",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"lint failed\"}\n"
+      }
+    },
+    {
+      "name": "hermes shell/pre: runtime_failure",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"gate crashed\"}\n"
+      }
+    },
+    {
+      "name": "hermes shell/pre: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"action\":\"block\",\"message\":\"confirm .env write\"}\n"
+      }
+    },
+    {
+      "name": "hermes shell/pre: ask from a judgement gate",
+      "host": "hermes",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: allow",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "allow"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: ask",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: deny",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "deny",
+        "reason": "protected file"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: advisory",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "run the tests"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: post_block",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "post_block",
+        "reason": "lint failed"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: runtime_failure",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "runtime_failure",
+        "reason": "gate crashed",
+        "code": "nonzero"
+      },
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: ask from a guardrail gate",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "hermes tool/post: ask from a judgement gate",
+      "host": "hermes",
+      "event": "tool/post",
+      "decision": {
+        "kind": "ask",
+        "reason": "confirm .env write"
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": ""
+      }
+    },
+    {
+      "name": "claude tool/pre: deny escapes JSON text",
+      "host": "claude",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}\n"
+      }
+    },
+    {
+      "name": "codex tool/post: advisory escapes JSON text",
+      "host": "codex",
+      "event": "tool/post",
+      "decision": {
+        "kind": "advisory",
+        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}\n"
+      }
+    },
+    {
+      "name": "claude permission/evaluate: deny escapes JSON text",
+      "host": "claude",
+      "event": "permission/evaluate",
+      "decision": {
+        "kind": "deny",
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}}\n"
+      }
+    },
+    {
+      "name": "cursor shell/pre: ask escapes JSON text",
+      "host": "cursor",
+      "event": "shell/pre",
+      "decision": {
+        "kind": "ask",
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"permission\":\"ask\",\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\",\"agent_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
+      }
+    },
+    {
+      "name": "cursor prompt: deny escapes JSON text",
+      "host": "cursor",
+      "event": "prompt",
+      "decision": {
+        "kind": "deny",
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"continue\":false,\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
+      }
+    },
+    {
+      "name": "hermes prompt: advisory escapes JSON text",
+      "host": "hermes",
+      "event": "prompt",
+      "decision": {
+        "kind": "advisory",
+        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "stdout": "{\"context\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
+      }
+    },
+    {
+      "name": "opencode tool/pre: deny escapes JSON text",
+      "host": "opencode",
+      "event": "tool/pre",
+      "decision": {
+        "kind": "deny",
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+      },
+      "expect": {
+        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}"
+      }
+    }
+  ]
+}
