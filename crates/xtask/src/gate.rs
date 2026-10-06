@@ -6,7 +6,10 @@ use std::process::Command;
 use std::time::Instant;
 
 use crate::options::Options;
-use crate::{Verdict, check_hooks, coverage, data, gate_change, guardrails, layers_check, output};
+use crate::{
+  Verdict, check_hooks, check_workflows, coverage, data, gate_change, guardrails, layers_check,
+  output,
+};
 use crate::{cli_compat, docs_cli, reach, unused_pub};
 
 /// The clippy invocation: every target, warnings denied.
@@ -32,6 +35,7 @@ pub(crate) const STEPS: &[&str] = &[
   "machete",
   "unused-pub",
   "hooks",
+  "workflows",
   "docs-cli",
   "cli-compat",
   "jscpd",
@@ -101,6 +105,7 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     }
     "unused-pub" => unused_pub::run(options),
     "hooks" => check_hooks::run(options),
+    "workflows" => check_workflows::run(options),
     "docs-cli" => docs_cli::check(options),
     "cli-compat" => cli_compat::run(options),
     "jscpd" => jscpd(root),

@@ -79,17 +79,46 @@ test.concurrent("the docs job runs only the documentation checks (AC-1)", () => 
 
 test.concurrent("review runs for any non-release change and fails open on a broken changes job (AC-1, AC-2)", () => {
   expect(workflow("toolu-review.yml").jobs.review?.if).toBe(
-    "${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false') }}",
+    "${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false' || github.event.pull_request.head.repo.full_name != github.repository) && (github.head_ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository) }}",
   );
 });
 
 test.concurrent("the aggregate receives every needed job's result", () => {
-  const judge = steps("tests.yml", "typescript").find((step) => step.run?.includes("ci-aggregate"));
-  expect(judge?.env?.NEEDS).toBe("${{ toJSON(needs) }}");
+  for (const id of ["gate", "typescript"]) {
+    const judge = steps("tests.yml", id).find((step) => step.run?.includes("ci-aggregate"));
+    expect(judge?.env?.NEEDS).toBe("${{ toJSON(needs) }}");
+  }
 });
 
 test.concurrent("the full gate runs the CI path check", () => {
   expect(scripts["test:ts"]).toContain("bun run check:ci-paths");
+});
+
+test.concurrent("both required aggregates and Rust OS checks retain their status names", () => {
+  const tests = workflow("tests.yml");
+  const needed = [
+    "changes",
+    "ts",
+    "opencode",
+    "docs",
+    "rust",
+    "rust-musl",
+    "rust-conformance",
+    "hook-bench",
+  ];
+  expect(tests.jobs.gate?.needs).toEqual(needed);
+  expect(tests.jobs.typescript?.needs).toEqual(needed);
+  const RustMatrix = z.looseObject({
+    strategy: z.looseObject({
+      matrix: z.looseObject({
+        include: z.array(z.looseObject({ os: z.string(), check: z.string() })),
+      }),
+    }),
+  });
+  expect(RustMatrix.parse(tests.jobs.rust).strategy.matrix.include).toEqual([
+    { os: "ubuntu-latest", check: "rust" },
+    { os: "macos-14", check: "rust-macos" },
+  ]);
 });
 
 test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 AC-5, AC-7; #455)", () => {
@@ -98,16 +127,6 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
     expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
     expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
   }
-  expect(tests.jobs.typescript?.needs).toEqual([
-    "changes",
-    "gate",
-    "opencode",
-    "docs",
-    "rust",
-    "rust-musl",
-    "rust-conformance",
-    "hook-bench",
-  ]);
   const Matrix = z.looseObject({
     strategy: z.looseObject({
       matrix: z.looseObject({
@@ -116,16 +135,14 @@ test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 
       }),
     }),
   });
-  expect(Matrix.parse(tests.jobs.rust).strategy.matrix.os).toEqual([
-    "ubuntu-latest",
-    "macos-latest",
-  ]);
   expect(Matrix.parse(tests.jobs["rust-musl"]).strategy.matrix.include).toEqual([
     { target: "x86_64-unknown-linux-musl", os: "ubuntu-latest" },
     { target: "aarch64-unknown-linux-musl", os: "ubuntu-24.04-arm" },
   ]);
   const rust = steps("tests.yml", "rust");
   const cargo = rust.map((step) => step.run ?? "");
+  const mac = rust.find((step) => step.run === "cargo xtask gate --only clippy --only tests");
+  expect(mac?.if).toBe("matrix.os == 'macos-14'");
   expect(cargo).toContain("rustup toolchain install");
   expect(cargo).toContain("bun install --frozen-lockfile");
   expect(cargo).toContain("npm install -g @ast-grep/cli");

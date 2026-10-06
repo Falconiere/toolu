@@ -344,7 +344,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, `@toolu/core` / `@toolu/opencode` / `@toolu/conformance`, and every Claude and Codex plugin manifest to the new version, updates `CHANGELOG.md`, tags `vX.Y.Z`, and publishes the GitHub Release. The marketplace re-extracts a plugin when its manifest version changes.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the Bun packages, `Cargo.toml` / `Cargo.lock`, and every Claude and Codex plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run in the same workflow; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
 
 ## References
 

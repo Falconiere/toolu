@@ -1,0 +1,3 @@
+# Rust workspace review
+
+Report only actionable correctness, security, or reliability findings introduced by the PR. Check the Rust crate layer and capability boundaries in `AGENTS.md`, error propagation, the no-suppression and no-panic rules, host hook fail-closed behavior, and parity with the existing Bun hooks. For workflows, examine job dependencies, required-check conclusions, permissions, fork behavior, draft-release visibility, and recovery after a partial publish. Treat generated CLI docs and fixture bytes as check inputs rather than code to redesign. State a concrete failing scenario and the changed line for each finding.

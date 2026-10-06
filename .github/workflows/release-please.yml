@@ -2,8 +2,9 @@ name: Release Please
 
 # Conventional commits merged to main accumulate into a single batched Release PR
 # (release-please manifest mode, whole-repo single version). Merging that PR bumps
-# the repo version in package.json + every plugin's plugin.json, updates the
-# CHANGELOG, tags vX.Y.Z, and publishes the GitHub Release. See the "Releases"
+# the repo version in package.json, Cargo and every plugin.json, updates the
+# CHANGELOG, tags vX.Y.Z, and creates a draft GitHub Release. Native finalization
+# publishes it after npm and platform checks. See the "Releases"
 # section of README.md for the contributor-facing flow.
 
 on:
@@ -11,15 +12,22 @@ on:
     branches: [main]
   workflow_dispatch: {} # allow manual runs (validation / re-trigger if a push event is missed)
 
+concurrency:
+  group: release-please-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   release-please:
-    name: Release PR / publish
+    name: Release PR / draft
+    if: vars.TOOLU_RELEASE_DISABLED != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       # The action reads config/manifest and edits files via the GitHub API,
       # but checkout is the standard release-please-action pattern and a cheap
@@ -33,14 +41,14 @@ jobs:
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ github.token }} # default token. tests.yml and toolu-review.yml skip their jobs (through job-level `if`) for a diff that only bumps versions and CHANGELOG; this workflow still runs on the merge so the tag publishes
+          token: ${{ github.token }} # default token; release-only PR checks still report through job-level `if`
 
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
 
   # Publishing is chained here rather than triggered by `release: published`.
-  # release-please creates the Release with the default GITHUB_TOKEN, and GitHub
+  # release-please creates the draft Release with the default GITHUB_TOKEN, and GitHub
   # does not start a workflow run from an event created by that token, so a
   # `release:` trigger never fires. Chaining keeps it in the same run that cut
   # the tag and needs no App token.
@@ -54,4 +62,19 @@ jobs:
     uses: ./.github/workflows/npm-publish.yml
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
-    secrets: inherit
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  native:
+    name: Build native toolu release
+    needs: [release-please, publish]
+    if: needs.release-please.outputs.releases_created == 'true' && needs.publish.result == 'success'
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      actions: read
+    uses: ./.github/workflows/release-native.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+      publish: true

@@ -8,8 +8,6 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
 
 concurrency:
   group: toolu-review-${{ github.ref }}
@@ -51,8 +49,14 @@ jobs:
   # for a missing decision.
   review:
     needs: changes
-    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false') }}
+    # A fork with the generated branch name is still reviewed, even if it copies
+    # a release-only diff. Only this repository's own release PR is exempt.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.changed != 'false' || github.event.pull_request.head.repo.full_name != github.repository) && (github.head_ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -66,8 +70,31 @@ jobs:
           FAIL_ON: none
           JEV_ENABLED: 'true'
           JEV_MODEL_ID: typesafe/jev-1.13
+          RULES_MAX_BYTES: '65536'
+          REVIEW_PROMPT_FILE: .github/code-review-prompt.md
+          CODEBASE_OVERVIEW: |
+            One toolu Rust binary in crates/cli links plugin libraries and
+            layered core crates: protocol, runtime, shell/http/state, then
+            engine/github/jev. Only the CLI builds a binary. Cargo xtask gate
+            enforces no suppressions, panic-free source, crate layers,
+            coverage, documentation, and the generated CLI contract.
+            Plugin Markdown and hooks remain under plugins/ during the port.
+          EXCLUDE_GLOBS: |
+            fixtures/**
+            docs/cli/**
           # Custom App identity. Requires APP_ID + APP_PRIVATE_KEY secrets on
           # THIS repo and the App installed here; otherwise falls back to
           # github-actions[bot].
           APP_ID: ${{ secrets.APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+
+  merge-gate:
+    needs: review
+    if: ${{ !cancelled() && !github.event.pull_request.draft && (github.head_ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: falconiere/toolu-ghactions/merge-gate@v8

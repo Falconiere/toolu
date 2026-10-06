@@ -1,0 +1,87 @@
+name: Finalize native release
+
+# Smoke-test each actual target archive. Published runs download the draft
+# release assets; manual dry runs use the assembled artifact from this run.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      published:
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  smoke-test:
+    name: smoke-test (${{ matrix.os }}-${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            os: darwin
+            arch: arm64
+          - runner: macos-15-intel
+            os: darwin
+            arch: amd64
+          - runner: ubuntu-24.04
+            os: linux
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      TAG: ${{ inputs.tag }}
+      TARBALL: toolu-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
+      PUBLISHED: ${{ inputs.published }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Download uploaded release assets
+        if: inputs.published == true
+        run: gh release download "$TAG" -p "$TARBALL" -p SHA256SUMS -p toolu.spdx.json -D dist
+      - name: Download dry-run build assets
+        if: inputs.published != true
+        uses: actions/download-artifact@v4
+        with:
+          name: native-release
+          path: dist
+      - name: Verify checksum, layout, version, and SBOM
+        run: |
+          set -euo pipefail
+          test -s dist/toolu.spdx.json
+          if [ "$PUBLISHED" = true ]; then
+            python3 .github/scripts/release_native.py verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted
+          else
+            python3 .github/scripts/release_native.py verify-package "$TAG" "dist/$TARBALL" dist/SHA256SUMS extracted --test-tag
+          fi
+      - name: Verify Darwin code signature
+        if: matrix.os == 'darwin'
+        run: codesign --verify --verbose=2 extracted/toolu
+      - name: Verify static Linux linkage
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          info=$(file extracted/toolu)
+          echo "$info"
+          echo "$info" | grep -Eq '(static-pie|statically) linked'
+      - name: Run on Alpine and Debian
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          expected=${TAG#v}
+          if [ "$PUBLISHED" != true ]; then expected=${expected%%-test*}; fi
+          for image in alpine:3.20 debian:bookworm-slim; do
+            version=$(docker run --rm -v "$PWD/extracted:/package:ro" --entrypoint /package/toolu "$image" --version)
+            test "$version" = "toolu $expected"
+          done
