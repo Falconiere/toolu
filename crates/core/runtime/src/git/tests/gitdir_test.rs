@@ -87,7 +87,14 @@ fn a_gitfile_names_a_git_dir_or_is_invalid() {
 fn gitfile_and_commondir_paths_are_bytes_not_utf8() {
   use std::os::unix::ffi::OsStrExt as _;
   let root = tempfile::tempdir().unwrap();
-  let name = std::ffi::OsStr::from_bytes(b"st\xe9re.git");
+  let latin1 = std::ffi::OsStr::from_bytes(b"st\xe9re.git");
+  // APFS refuses names that are not UTF-8 (EILSEQ); there the name is still
+  // read as bytes, through its UTF-8 spelling.
+  let name = if std::fs::create_dir(root.path().join(latin1)).is_ok() {
+    latin1
+  } else {
+    std::ffi::OsStr::new("stère.git")
+  };
   let target = root.path().join(name);
   bare_layout(&target, "ref: refs/heads/main\n");
   let file = root.path().join(".git");
