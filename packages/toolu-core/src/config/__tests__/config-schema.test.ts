@@ -58,3 +58,9 @@ test.concurrent("every docs/config.md example fixture parses", () => {
 test.concurrent("prBabysit rejects keys pr-babysit does not read", () => {
   expect(() => parseTooluConfig({ prBabysit: { dispatch: "herdr", colour: "red" } })).toThrow();
 });
+
+test.concurrent("the namespaced epic section accepts keys this schema does not know", () => {
+  const cfg = parseTooluConfig({ version: 1, epic: { futureKnob: true, nested: { x: 1 } } });
+  expect(cfg.epic).toEqual({ futureKnob: true, nested: { x: 1 } });
+  expect(() => parseTooluConfig({ version: 1, epic: {}, nope: 1 })).toThrow();
+});

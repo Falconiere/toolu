@@ -1,7 +1,7 @@
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
-use super::{codex_plugin_list, git_toplevel};
+use super::{codex_plugin_list, git_toplevel, is_git_repo};
 use crate::env::Env;
 
 fn path_env() -> Env {
@@ -24,6 +24,15 @@ fn the_toplevel_of_a_real_repository_is_found_from_a_subdirectory() {
   std::fs::create_dir(dir.path().join("src")).unwrap();
   let top = git_toplevel(&path_env(), &dir.path().join("src")).unwrap();
   assert_eq!(top, std::fs::canonicalize(dir.path()).unwrap());
+}
+
+#[test]
+fn a_repository_is_recognised_by_its_git_dir() {
+  let dir = tempfile::tempdir().unwrap();
+  let env = path_env().with("GIT_CEILING_DIRECTORIES", &dir.path().display().to_string());
+  assert!(!is_git_repo(&env, dir.path()));
+  git(dir.path(), &["init", "-q"]);
+  assert!(is_git_repo(&env, dir.path()));
 }
 
 #[test]

@@ -4,6 +4,7 @@
 
 pub mod cli;
 pub mod cli_args;
+pub mod config;
 pub mod env;
 pub mod host;
 pub mod install;

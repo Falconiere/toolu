@@ -24,12 +24,13 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Shared quality runner | `quality/runner.json` | 16 → 16 | `packages/toolu-core/src/quality/__tests__` | #459 |
 | Host roots | `host/root.json` | 18 → 18 | `packages/toolu-core/src/host/__tests__/host-roots.test.ts` | #414 |
 | Host output encoders | `host/encode.json` | new, 299 | `packages/toolu-core/src/host/__tests__/host-encode-fixture.test.ts` | #413 (`crates/core/protocol/tests/encode_fixture.rs`) |
+| Config resolution | `config/expected.json` | new, 35 | `packages/toolu-core/src/config/__tests__/config-fixture.test.ts` | #414 (`crates/core/runtime/tests/config_fixture.rs`) |
 | State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 |
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |
 | OpenCode permission/evaluate | `opencode/permission-evaluate.json` | 17 → 17 | `tools/toolu-opencode/src/adapter/__tests__` | #462 |
 | OpenCode lifecycle tests | `opencode/lifecycle-events.json` | 2 → 2 tests, 11 events | `tools/toolu-opencode/src/lifecycle/__tests__` | #462 |
 
-The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, and #413's host encoder suite adds 299 more, for 1,491 indexed cases in 20 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
+The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, and #414's config resolution suite adds 35, for 1,526 indexed cases in 21 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
 
 ## Case fields and setup
 
@@ -55,7 +56,7 @@ The shared harness `tools/toolu-conformance/src/harness/json-cases.ts` accepts o
 ## Existing contract trees
 
 - `shell/bats-parity.json` and `shell/issue-283.json` retain the command inputs and Bash/TypeScript outcomes used by `packages/toolu-core/src/shell/__tests__`. `shell/parser-errors.json` adds two malformed inputs. `shell/unbash-baseline.json` records `{ "version": 1, "parser": "unbash@4.0.11", "cases": [{ "input": ..., "result": ... }] }` for all 203 distinct inputs. `bun run tooling/src/check-unbash-baseline.ts` checks exact coverage and parser output for #416. See [shell/README.md](shell/README.md).
-- `config/*.json` are complete `toolu.config.json` envelopes, including valid examples and fail-closed inputs for `packages/toolu-core/src/config/__tests__`. See [config/README.md](config/README.md).
+- `config/*.json` are complete `toolu.config.json` envelopes, including valid examples and fail-closed inputs for `packages/toolu-core/src/config/__tests__`. `config/expected.json` is the loader golden both implementations reproduce. See [config/README.md](config/README.md).
 - `portable-core/protected-files-pre.json` is a protocol v1 pre-tool event for the protected-file conformance suite (#409).
 - `gate-coverage/inventory.json` is an array of hook registrations with source path, plugin, event, matcher and command/module identity, used by the gate coverage checker.
 - `codex-hook-schemas/*.schema.json` are JSON Schemas for the five Codex hook command outputs, read by the host/launcher schema test.

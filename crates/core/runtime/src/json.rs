@@ -1,26 +1,23 @@
 //! JSON text as TypeScript prints it: `JSON.stringify` (compact or two-space
 //! pretty), JavaScript's `Number#toString` for numbers, and jq's bytes
-//! (`toJqJson` in `packages/toolu-core/src/state/state-io.ts`). Objects print
-//! in `serde_json::Map` order, which sorts keys where JavaScript keeps
-//! insertion order. Also the top-level keys of a document in document order,
-//! which a `Map` loses.
+//! (`toJqJson` in `packages/toolu-core/src/state/state-io.ts`). A
+//! `serde_json::Value` prints in `Map` order, which sorts keys where JavaScript
+//! keeps insertion order; [`ordered::Ordered`] keeps document order.
 
-use serde::Deserializer as _;
-use serde::de::{IgnoredAny, MapAccess, Visitor};
+pub mod ordered;
+
 use serde_json::Value;
+
+use ordered::Ordered;
 
 /// `JSON.stringify(value)`.
 pub fn stringify(value: &Value) -> String {
-  let mut out = String::new();
-  write_value(&mut out, value, None, 0);
-  out
+  Ordered::from(value).to_text(false)
 }
 
 /// `JSON.stringify(value, null, 2)`.
 pub fn stringify_pretty(value: &Value) -> String {
-  let mut out = String::new();
-  write_value(&mut out, value, Some(2), 0);
-  out
+  Ordered::from(value).to_text(true)
 }
 
 /// `value` as `jq` (pretty) or `jq -c` (compact) prints it: `JSON.stringify`
@@ -32,6 +29,12 @@ pub fn jq_text(value: &Value, pretty: bool) -> String {
     stringify(value)
   };
   text.replace('\u{7f}', "\\u007f")
+}
+
+/// JavaScript's white space (`\s`, what `String#trim` removes): Unicode white
+/// space without U+0085, plus the byte-order mark.
+pub(crate) fn is_js_space(c: char) -> bool {
+  (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}'
 }
 
 /// JavaScript's `Number#toString` for a finite or non-finite number.
@@ -88,88 +91,17 @@ fn place(digits: &str, point: i64) -> String {
   }
 }
 
-fn write_value(out: &mut String, value: &Value, indent: Option<usize>, depth: usize) {
-  match value {
-    Value::Null => out.push_str("null"),
-    Value::Bool(flag) => out.push_str(if *flag { "true" } else { "false" }),
-    Value::Number(number) => out.push_str(
-      &number
-        .as_f64()
-        .map_or_else(|| number.to_string(), js_number),
-    ),
-    Value::String(text) => out.push_str(&Value::from(text.as_str()).to_string()),
-    Value::Array(items) => {
-      let items = items.iter().map(|item| (None, item));
-      write_block(out, ('[', ']'), items, indent, depth);
-    }
-    Value::Object(map) => {
-      let entries = map.iter().map(|(key, item)| (Some(key.as_str()), item));
-      write_block(out, ('{', '}'), entries, indent, depth);
-    }
-  }
-}
-
-fn write_block<'a>(
-  out: &mut String,
-  (open, close): (char, char),
-  entries: impl Iterator<Item = (Option<&'a str>, &'a Value)>,
-  indent: Option<usize>,
-  depth: usize,
-) {
-  out.push(open);
-  let mut empty = true;
-  for (key, item) in entries {
-    if !empty {
-      out.push(',');
-    }
-    empty = false;
-    newline(out, indent, depth + 1);
-    if let Some(key) = key {
-      out.push_str(&Value::from(key).to_string());
-      out.push_str(if indent.is_some() { ": " } else { ":" });
-    }
-    write_value(out, item, indent, depth + 1);
-  }
-  if !empty {
-    newline(out, indent, depth);
-  }
-  out.push(close);
-}
-
-fn newline(out: &mut String, indent: Option<usize>, depth: usize) {
-  if let Some(width) = indent {
-    out.push('\n');
-    out.push_str(&" ".repeat(width * depth));
-  }
-}
-
 /// The top-level keys of the JSON object `text`, in document order, each once
 /// at its first position (`Object.keys(JSON.parse(text))`); `None` when `text`
 /// is not a JSON object.
 pub fn top_level_keys(text: &str) -> Option<Vec<String>> {
-  let mut deserializer = serde_json::Deserializer::from_str(text);
-  deserializer.deserialize_any(KeyOrder).ok()
-}
-
-/// Collects an object's keys and skips its values.
-struct KeyOrder;
-
-impl<'de> Visitor<'de> for KeyOrder {
-  type Value = Vec<String>;
-
-  fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    formatter.write_str("a JSON object")
-  }
-
-  fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<Vec<String>, A::Error> {
-    let mut keys: Vec<String> = Vec::new();
-    while let Some(key) = map.next_key::<String>()? {
-      map.next_value::<IgnoredAny>()?;
-      if !keys.contains(&key) {
-        keys.push(key);
-      }
-    }
-    Ok(keys)
+  match Ordered::parse(text).ok()? {
+    Ordered::Object(entries) => Some(entries.into_iter().map(|(key, _)| key).collect()),
+    Ordered::Null
+    | Ordered::Bool(_)
+    | Ordered::Number(_)
+    | Ordered::String(_)
+    | Ordered::Array(_) => None,
   }
 }
 

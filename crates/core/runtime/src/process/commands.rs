@@ -17,6 +17,18 @@ pub fn git_toplevel(env: &Env, cwd: &Path) -> Option<PathBuf> {
   (!top.is_empty()).then(|| PathBuf::from(top))
 }
 
+/// Whether `git -C <dir> rev-parse --git-dir` succeeds with exactly `env`.
+pub fn is_git_repo(env: &Env, dir: &Path) -> bool {
+  let mut spec = Spec::new(["git", "-C"]);
+  spec.argv.extend([
+    dir.display().to_string(),
+    "rev-parse".to_owned(),
+    "--git-dir".to_owned(),
+  ]);
+  spec.env = Some(env.clone());
+  run(&spec).is_ok_and(|output| output.exit_code == 0)
+}
+
 /// The stdout of `codex plugin list --json` run with exactly `env`, or `None`
 /// when the CLI is missing or exits non-zero.
 pub fn codex_plugin_list(env: &Env) -> Option<String> {
