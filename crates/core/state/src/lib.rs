@@ -10,8 +10,12 @@
 //!   read from `.git`; `detect`: project markers, linters, tools and line counts.
 
 pub mod ctx;
+mod gate_doc;
+pub mod gate_file;
+pub mod gate_schema;
 pub mod git;
 pub mod io;
+mod js_order;
 pub mod lock;
 pub mod telemetry;
 pub mod telemetry_schema;
