@@ -22,6 +22,8 @@ const ALLOWED: Record<string, string> = {
   "tooling/src/__tests__/pack-closure.test.ts": "checks published tarball contents",
   "tooling/src/__tests__/pack-inventory.test.ts": "checks published tarball file lists",
   "tooling/src/__tests__/check-hooks-json.test.ts": "checks hooks.json launcher text",
+  "tooling/src/__tests__/gate-coverage-inventory.test.ts":
+    "uses launcher text as inventory fixture data without running a bundle",
   "packages/toolu-core/src/launcher/__tests__/launcher.test.ts":
     "checks the generated launcher text and its fail-closed behavior",
   "packages/toolu-core/src/startup/__tests__/publish.test.ts":

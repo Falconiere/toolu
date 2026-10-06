@@ -2,13 +2,20 @@
  * One startup entry as a child process (#342): stdin is the SessionStart
  * payload, stdout and stderr are read to a byte bound, and a deadline or an
  * abort kills the child. Every way the child cannot finish is a reason. Bun
- * runs it with `--no-env-file`, so a project `.env` never reaches it (#350).
+ * runs it with `--no-env-file`, including the native launcher's Bun fallback,
+ * so a project `.env` never reaches it (#350).
  */
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 const MAX_OUTPUT_BYTES = 512_000;
 
 export type SpawnRequest = {
   bun: string;
   bundle: string;
+  /** The #412 generated POSIX command; absent means the Bun launcher. */
+  command?: string;
   cwd: string;
   env: Record<string, string>;
   stdin: string;
@@ -82,16 +89,37 @@ async function collect(
 export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   if (request.signal?.aborted === true) return { status: "failed", reason: "startup cancelled" };
   let proc: Bun.Subprocess<Blob, "pipe", "pipe">;
+  let wrapperDir: string | undefined;
   try {
-    // Every variable an entry needs is in `env`; a project .env must not add to it.
-    proc = Bun.spawn([request.bun, "--no-env-file", request.bundle], {
+    // The #412 native command executes TOOLU_BUN without flags on fallback. Keep its
+    // command intact while making that Bun invocation honor OpenCode's .env boundary.
+    let env = request.env;
+    if (request.command !== undefined) {
+      wrapperDir = mkdtempSync(join(tmpdir(), "toolu-native-bun-"));
+      chmodSync(wrapperDir, 0o700);
+      const wrapper = join(wrapperDir, "bun");
+      writeFileSync(wrapper, '#!/bin/sh\nexec "$TOOLU_OPENCODE_NATIVE_BUN" --no-env-file "$@"\n', {
+        mode: 0o700,
+      });
+      env = {
+        ...request.env,
+        TOOLU_BUN: wrapper,
+        TOOLU_OPENCODE_NATIVE_BUN: request.bun,
+      };
+    }
+    const argv =
+      request.command === undefined
+        ? [request.bun, "--no-env-file", request.bundle]
+        : ["/bin/sh", "-c", request.command];
+    proc = Bun.spawn(argv, {
       cwd: request.cwd,
-      env: request.env,
+      env,
       stdin: new Blob([request.stdin]),
       stdout: "pipe",
       stderr: "pipe",
     });
   } catch (error) {
+    if (wrapperDir !== undefined) rmSync(wrapperDir, { recursive: true, force: true });
     return { status: "failed", reason: `cannot start: ${message(error)}` };
   }
   const stop: Stop = { reason: undefined, halted: Promise.withResolvers<void>() };
@@ -111,5 +139,6 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
   } finally {
     clearTimeout(timer);
     request.signal?.removeEventListener("abort", onAbort);
+    if (wrapperDir !== undefined) rmSync(wrapperDir, { recursive: true, force: true });
   }
 }

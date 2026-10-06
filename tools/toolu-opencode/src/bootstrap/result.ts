@@ -1,7 +1,12 @@
 /** Bootstrap Ready / NotReady union (#211), with what each plugin's startup contributed (#342). */
 
 /** One startup entry that ran, with the context it produced for lifecycle delivery (OP-07). */
-export type EntryOutcome = { entry: string; additionalContext?: string; systemMessage?: string };
+export type EntryOutcome = {
+  entry: string;
+  native?: true;
+  additionalContext?: string;
+  systemMessage?: string;
+};
 
 /** One selected plugin whose startup completed, in startup order. */
 export type PluginStartup = { plugin: string; entries: EntryOutcome[]; artifacts: string[] };

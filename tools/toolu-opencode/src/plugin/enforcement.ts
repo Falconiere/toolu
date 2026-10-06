@@ -89,6 +89,8 @@ function deliveryPlan(
     for (const entry of plugin.entries) {
       if (entry.additionalContext !== undefined) startupLines.push(entry.additionalContext);
       if (entry.systemMessage !== undefined) {
+        // Native install guidance reaches the model once; notices go only to the host log.
+        if (entry.native === true) startupLines.push(entry.systemMessage);
         notices.push(`toolu: ${plugin.plugin}/${entry.entry}: ${entry.systemMessage}`);
       }
     }

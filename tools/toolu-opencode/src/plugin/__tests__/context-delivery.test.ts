@@ -19,7 +19,6 @@ const tmpBase = process.env.TMPDIR ?? "/tmp";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const RENAME = "Rename: find all refs (ast-grep + Grep on configs) before rewriting.";
 const VAGUE = "Prompt too vague - specify what file/feature/error needs attention";
-
 type Logged = { level: LogLevel; message: string };
 
 const MODEL: Model = {

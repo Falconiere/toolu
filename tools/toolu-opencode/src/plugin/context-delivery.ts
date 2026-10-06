@@ -7,7 +7,12 @@ import { realpathSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import type { Hooks } from "@opencode-ai/plugin";
 import type { Part, TextPart } from "@opencode-ai/sdk";
-import { matcherCovers, pluginHookEntries, type HookEventName } from "../bootstrap/entrypoint.ts";
+import {
+  matcherCovers,
+  pluginHookEntries,
+  type HookEventName,
+  type StartupEntry,
+} from "../bootstrap/entrypoint.ts";
 import {
   parseHookContext,
   type HookContextBody,
@@ -20,10 +25,8 @@ import { deletedSessionId, sessionSignals, type SessionSignals } from "./context
 /** One bundle spawn, long enough for session-start and short enough not to stall a turn. */
 const DELIVERY_DEADLINE_MS = 30_000;
 
-export type HookJob = {
+export type HookJob = StartupEntry & {
   plugin: string;
-  name: string;
-  bundle: string;
   pluginDir: string;
   event: HookContextEvent;
 };
@@ -92,13 +95,7 @@ function jobsFor(
     );
     if (!plan.ok) return `${plugin.name}: ${plan.reason}`;
     for (const entry of plan.entries) {
-      jobs.push({
-        plugin: plugin.name,
-        name: entry.name,
-        bundle: entry.bundle,
-        pluginDir: plugin.pluginDir,
-        event,
-      });
+      jobs.push({ ...entry, plugin: plugin.name, pluginDir: plugin.pluginDir, event });
     }
   }
   return jobs;
@@ -145,6 +142,7 @@ async function deliverJob(
     spawned = await spawn({
       bun: plan.bun,
       bundle: job.bundle,
+      ...(job.command === undefined ? {} : { command: job.command }),
       cwd: plan.projectRoot,
       env,
       stdin,

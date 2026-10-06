@@ -2,6 +2,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { z } from "zod";
+import { isNativeLikeCommand } from "../check-hooks-json.ts";
 import { fail, listDirNames, makeId, normalizeCommand, rel } from "./fs-util.ts";
 import { NATIVE_MODULES } from "../../../plugins/toolu/hooks/src/pre-tools/builtins.ts";
 import { ROOT } from "./paths.ts";
@@ -39,6 +40,9 @@ function discoverHooksJson(plugin: string, add: AddFn): void {
         commands.push(entry.command);
       }
       for (const command of commands) {
+        const native = command.includes("--hook-protocol");
+        if (!native && isNativeLikeCommand(command))
+          fail(`${rel(hooksJson)}: native launcher is missing --hook-protocol`);
         const commandOrModule = normalizeCommand(command);
         add({
           id: makeId(plugin, "hooks.json", event, commandOrModule, matcher),
@@ -48,6 +52,7 @@ function discoverHooksJson(plugin: string, add: AddFn): void {
           event,
           matcher,
           commandOrModule,
+          hostMechanism: native ? "native" : "bun-bundle",
           parentId: null,
         });
       }
@@ -72,6 +77,7 @@ function discoverNativeBuiltins(add: AddFn): void {
       event: "PreToolUse",
       matcher: "",
       commandOrModule: name,
+      hostMechanism: "bun-bundle",
       parentId:
         "toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep",
     });
@@ -91,6 +97,7 @@ function discoverBuiltinModules(add: AddFn): void {
       event: "PostToolUse",
       matcher: "",
       commandOrModule: name,
+      hostMechanism: "bun-bundle",
       parentId:
         "toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh",
     });
@@ -105,6 +112,7 @@ function discoverBuiltinModules(add: AddFn): void {
       event: "PreToolUse",
       matcher: "",
       commandOrModule: "agent-tier",
+      hostMechanism: "bun-bundle",
       parentId: "toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task",
     });
   }

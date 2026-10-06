@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { cpSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { run } from "@toolu/conformance/harness/spawn";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
@@ -22,6 +23,53 @@ const HooksRow = z.looseObject({
   event: z.string().optional(),
   commandOrModule: z.string().optional(),
 });
+const DiscoveredFixture = z.array(
+  z.looseObject({ id: z.string(), commandOrModule: z.string(), hostMechanism: z.string() }),
+);
+
+function fixtureHooks(root: string): string {
+  const hooksFile = join(root, "plugins/toolu/hooks/hooks.json");
+  mkdirSync(join(root, "plugins/toolu/hooks/src"), { recursive: true });
+  mkdirSync(join(root, "packages/toolu-core/src"), { recursive: true });
+  mkdirSync(join(root, "docs"));
+  cpSync(join(ROOT, "plugins/toolu/hooks/hooks.json"), hooksFile);
+  symlinkSync(
+    join(ROOT, "plugins/toolu/hooks/src/agent-tier.ts"),
+    join(root, "plugins/toolu/hooks/src/agent-tier.ts"),
+  );
+  symlinkSync(
+    join(ROOT, "packages/toolu-core/src/gates"),
+    join(root, "packages/toolu-core/src/gates"),
+  );
+  return hooksFile;
+}
+
+async function discoverFixture(env: Record<string, string>) {
+  const result = await run([process.execPath, "run", CLI, "discover"], { cwd: ROOT, env });
+  expect(result.exitCode).toBe(0);
+  return DiscoveredFixture.parse(JSON.parse(result.stdout));
+}
+
+function switchFixtureHook(hooksFile: string): void {
+  const document = z
+    .looseObject({
+      hooks: z.looseObject({
+        SessionStart: z.array(
+          z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(hooksFile, "utf8")));
+  const target = document.hooks.SessionStart.flatMap((group) => group.hooks).find((hook) =>
+    hook.command.includes("hooks/dist/session-start.js"),
+  );
+  if (target === undefined) throw new Error("fixture SessionStart hook missing");
+  const native: unknown = JSON.parse(
+    readFileSync(join(ROOT, "tooling/fixtures/native-launcher/session-start.json"), "utf8"),
+  );
+  Object.assign(target, native);
+  writeFileSync(hooksFile, JSON.stringify(document));
+}
 
 async function committedInventory(): Promise<z.infer<typeof Rows>> {
   return Rows.parse(JSON.parse(await Bun.file(INVENTORY).text()));
@@ -51,7 +99,60 @@ test.concurrent("discover emits native built-ins and a Bun launcher entry", asyn
   );
 });
 
-test.concurrent("final inventory and matrix contain only native Bun hooks", async () => {
+test.concurrent("a native launcher switch keeps the inventory ID and records its host mechanism", async () => {
+  using sb = createSandbox();
+  const root = sb.project;
+  const hooksFile = fixtureHooks(root);
+  const env = { GATE_COVERAGE_ROOT: root };
+  const before = await discoverFixture(env);
+  const id = before.find((row) =>
+    row.id.startsWith("toolu:hooks.json:SessionStart:session-start.js:"),
+  )?.id;
+  expect(id).toBeDefined();
+  switchFixtureHook(hooksFile);
+  const after = await discoverFixture(env);
+  expect(after.find((row) => row.id === id)).toMatchObject({
+    id,
+    commandOrModule: "hooks/dist/session-start.js",
+    hostMechanism: "native",
+  });
+  const seeded = await run([process.execPath, "run", CLI, "seed"], { cwd: ROOT, env });
+  expect(seeded.exitCode).toBe(0);
+  const checked = await run([process.execPath, "run", CLI, "check"], { cwd: ROOT, env });
+  expect(checked.exitCode).toBe(0);
+  expect(readFileSync(join(root, "docs/gate-coverage-matrix.md"), "utf8")).toContain(
+    " | native | ",
+  );
+  const inventory = join(root, "fixtures/gate-coverage/inventory.json");
+  const rows = z
+    .array(z.looseObject({ id: z.string(), hostMechanism: z.string() }))
+    .parse(JSON.parse(readFileSync(inventory, "utf8")));
+  const switched = rows.find((row) => row.id === id);
+  if (switched === undefined) throw new Error("seeded native row missing");
+  switched.hostMechanism = "bun-bundle";
+  writeFileSync(inventory, JSON.stringify(rows));
+  const stale = await run([process.execPath, "run", CLI, "check"], { cwd: ROOT, env });
+  expect(stale.exitCode).toBe(1);
+  expect(stale.stderr).toContain(`${id}: hostMechanism differs from discovery`);
+});
+
+test.concurrent("a native-shaped launcher missing its protocol marker fails discovery", async () => {
+  using sb = createSandbox();
+  const hooksFile = fixtureHooks(sb.project);
+  switchFixtureHook(hooksFile);
+  writeFileSync(
+    hooksFile,
+    readFileSync(hooksFile, "utf8").replace("--hook-protocol", "--wrong-protocol"),
+  );
+  const result = await run([process.execPath, "run", CLI, "discover"], {
+    cwd: ROOT,
+    env: { GATE_COVERAGE_ROOT: sb.project },
+  });
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("native launcher is missing --hook-protocol");
+});
+
+test.concurrent("final inventory and matrix record each hook's launch mechanism", async () => {
   const rows = z
     .array(
       z.looseObject({
@@ -68,10 +169,10 @@ test.concurrent("final inventory and matrix contain only native Bun hooks", asyn
   for (const row of rows) {
     expect(row).toMatchObject({
       classification: "port-native",
-      hostMechanism: "bun-bundle",
       implementationStatus: "done",
       bashRequired: false,
     });
+    expect(["bun-bundle", "native"]).toContain(row.hostMechanism);
     expect(row.sourcePath.endsWith(".sh")).toBe(false);
   }
   const matrix = await Bun.file(MATRIX).text();

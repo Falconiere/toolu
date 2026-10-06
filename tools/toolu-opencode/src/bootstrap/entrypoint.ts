@@ -1,16 +1,15 @@
 /**
  * A plugin's hook entries (#342, #341), read from the `hooks.json` routing
- * that Claude Code and Codex already run. Each must be the generated Bun
- * launcher (`check:hooks-json` enforces the same form), so the entry is the
- * committed `hooks/dist/<entry>.js` bundle it names. Anything else is not a
- * hook this host can run, and says so instead of being skipped.
+ * that Claude Code and Codex already run. An entry is either the generated Bun
+ * launcher or the #412 native launcher, which still names its fallback bundle.
+ * Anything else is reported instead of being skipped.
  */
 import { readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
 import { z } from "zod";
 
-export type StartupEntry = { name: string; bundle: string };
+export type StartupEntry = { name: string; bundle: string; command?: string };
 
 export type EntryPlan = { ok: true; entries: StartupEntry[] } | { ok: false; reason: string };
 
@@ -36,6 +35,23 @@ const HooksFile = z.looseObject({
 });
 
 const LAUNCHED_BUNDLE = /"\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/dist\/([a-z0-9-]+)\.js"/u;
+const NATIVE_TEMPLATE = readFileSync(join(import.meta.dir, "native-launcher.txt"), "utf8");
+const NATIVE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+
+/** Only the #412 generated command is executable; its target fields may vary. */
+function nativeEntry(command: string, plugin: string, event: HookEventName): string | undefined {
+  const bundle = LAUNCHED_BUNDLE.exec(command)?.[1];
+  if (bundle === undefined || !NATIVE_NAME.test(plugin) || !NATIVE_NAME.test(bundle))
+    return undefined;
+  const prefix = plugin === "toolu" ? "" : `${plugin} `;
+  const expected = NATIVE_TEMPLATE.replace(
+    "hook session-start --event SessionStart",
+    `${prefix}hook ${bundle} --event ${event}`,
+  )
+    .replaceAll("hooks/dist/session-start.js", `hooks/dist/${bundle}.js`)
+    .replaceAll("toolu plugin:", `${plugin} plugin:`);
+  return command === expected ? bundle : undefined;
+}
 
 /** An absent, empty or `*` matcher covers every token; otherwise the token must be listed. */
 export function matcherCovers(matcher: string | undefined, token: string): boolean {
@@ -66,7 +82,7 @@ function entryOf(
   hook: z.infer<typeof SessionStartHook>,
   plugin: string,
   event: HookEventName,
-): { ok: true; name: string } | { ok: false; reason: string } {
+): { ok: true; name: string; command?: string } | { ok: false; reason: string } {
   if (hook.type !== "command") {
     return { ok: false, reason: `unsupported ${event} hook type ${JSON.stringify(hook.type)}` };
   }
@@ -78,6 +94,10 @@ function entryOf(
     ok: false as const,
     reason: `unsupported ${event} command ${JSON.stringify(quoted)}; regenerate it with \`bun run tooling/src/check-hooks-json.ts --print ${plugin} ${event} <entry>\``,
   };
+  if (command.includes("--hook-protocol")) {
+    const native = nativeEntry(command, plugin, event);
+    return native === undefined ? unsupported : { ok: true, name: native, command };
+  }
   if (name === undefined) return unsupported;
   try {
     const expected = launcherCommand({ plugin, event, entry: name });
@@ -116,7 +136,11 @@ export function pluginHookEntries(
       const missing =
         event === "SessionStart" ? "missing startup bundle" : `missing ${event} bundle`;
       if (!isFile(bundle)) return { ok: false, reason: `${entry.name}: ${missing}` };
-      entries.push({ name: entry.name, bundle });
+      entries.push(
+        entry.command === undefined
+          ? { name: entry.name, bundle }
+          : { name: entry.name, bundle, command: entry.command },
+      );
     }
   }
   return { ok: true, entries };
