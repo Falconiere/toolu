@@ -3624,7 +3624,8 @@ var TooluConfigSchema = object({
     indexCap: number2().int().positive().optional()
   }).strict().optional(),
   prBabysit: PrBabysitSchema.optional(),
-  comemory: record(string2(), unknown()).optional()
+  comemory: record(string2(), unknown()).optional(),
+  epic: record(string2(), unknown()).optional()
 }).strict();
 // packages/toolu-core/src/config/config-load.ts
 import { readFileSync } from "fs";

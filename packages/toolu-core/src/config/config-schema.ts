@@ -125,6 +125,11 @@ export const TooluConfigSchema = z
     prBabysit: PrBabysitSchema.optional(),
     /** Legacy: written by the comemory setup toolu no longer owns; read by nothing. */
     comemory: z.record(z.string(), z.unknown()).optional(),
+    /**
+     * Namespaced: the epic engine's section (#463). Its contents are never
+     * checked here, so a newer plugin's settings never fail-close an older loader.
+     */
+    epic: z.record(z.string(), z.unknown()).optional(),
   })
   .strict();
 

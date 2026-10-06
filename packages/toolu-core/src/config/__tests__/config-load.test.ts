@@ -114,6 +114,16 @@ for (const [name, reason] of [
   });
 }
 
+test.concurrent("an epic section loads whatever it holds; an unknown sibling key fails closed", () => {
+  using sb = createSandbox();
+  const open = load(sb, { project: '{"version":1,"epic":{"futureKnob":true}}' });
+  expect(open.config.invalid).toBeUndefined();
+  expect(section(open.config, "epic")).toEqual({ futureKnob: true });
+  using other = createSandbox();
+  const closed = load(other, { project: '{"version":1,"epic":{},"nope":1}' });
+  expect(closed.config.invalid).toEndWith(": unknown top-level key 'nope'");
+});
+
 test.concurrent("a string version fails closed; a missing version is 1", () => {
   using sb = createSandbox();
   expect(load(sb, { project: '{"version":"1"}' }).config.invalid).toContain(

@@ -4199,7 +4199,8 @@ var init_config_schema = __esm(() => {
       indexCap: number2().int().positive().optional()
     }).strict().optional(),
     prBabysit: PrBabysitSchema.optional(),
-    comemory: record(string2(), unknown()).optional()
+    comemory: record(string2(), unknown()).optional(),
+    epic: record(string2(), unknown()).optional()
   }).strict();
 });
 

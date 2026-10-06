@@ -64,7 +64,8 @@ back to "all enabled".
                   "prefer": { "<tier>": ["<host>"] },
                   "routing": { "<host>": [{ "model": "<id>", "effort": "<level>" }, "…4 tiers"] },
                   "unattended": true,
-                  "jev": true }
+                  "jev": true },
+  "epic":       { "…": "reserved for the epic engine (#463)" }
 }
 ```
 
@@ -91,11 +92,20 @@ The TypeScript loader validates each file's envelope, and bash never did:
   gate resolves to `block` until the file is fixed. Other settings take their
   defaults, and the one-time permission write is skipped. `comemory`, a key left
   by an older toolu, is accepted and ignored.
+- `epic` is a namespaced section reserved for the epic engine
+  ([#463](https://github.com/Falconiere/toolu/issues/463)). The loader never
+  looks inside it, so a newer plugin's engine settings never fail-close an
+  older toolu, while an unknown top-level key next to it still does.
 - Malformed JSON is still ignored with a warning, as in bash: a half-typed
   file does not lock you out.
 - An invalid value under a known key (a mode that is not a mode, a
   non-numeric threshold) still warns, where bash warns, and falls back for that
   key only.
+
+The Rust loader (`toolu_runtime::config::load`,
+[#414](https://github.com/Falconiere/toolu/issues/414)) applies the same
+envelope with the same messages; `fixtures/config/expected.json` holds the
+results both loaders must reproduce.
 
 ### Gate modes (`gates`)
 
