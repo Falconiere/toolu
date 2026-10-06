@@ -27,9 +27,9 @@ const CaseSchema = z.strictObject({
 });
 type Case = z.infer<typeof CaseSchema>;
 
-const cases = readCaseFile(resolve(import.meta.dir, "../../../../../fixtures/host/encode.json")).map(
-  (raw) => CaseSchema.parse(raw),
-);
+const cases = readCaseFile(
+  resolve(import.meta.dir, "../../../../../fixtures/host/encode.json"),
+).map((raw) => CaseSchema.parse(raw));
 
 function encoded(c: Case): z.infer<typeof ExpectSchema> {
   const decision: Decision =
