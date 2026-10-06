@@ -93,3 +93,17 @@ fn heredocs_past_the_scanner_state_are_unknown_not_a_crash() {
   let ten = "cat <<EOF\nx\nEOF\n".repeat(10);
   assert!(!analyze(&ten).unknown);
 }
+
+/// tree-sitter-bash reads a delimiter to whitespace, `<` included; at 1,013 to
+/// 1,015 characters its state passes the scanner's check and overflows the
+/// 1024-byte buffer, which aborted the process before the bound (fuzz, #416).
+#[test]
+fn a_delimiter_in_the_scanner_overflow_window_is_unknown_not_an_abort() {
+  for length in 1_008..=1_020 {
+    let delimiter: String = "A<".chars().cycle().take(length).collect();
+    let analysis = analyze(&format!("cat <<{delimiter}\nx\n"));
+    assert!(analysis.unknown, "{length}");
+  }
+  let json = format!("gh api -X POST --input - <<< '{}'", "x".repeat(4_000));
+  assert!(!analyze(&json).unknown);
+}

@@ -146,7 +146,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
   {
     "id": "ts-projection",
     "title": "projectAnalysis in parity-helpers.ts, analysis-fixture.test.ts (inputs equal unbash-baseline.json in order; TS reproduces every expect), fixtures/shell/analysis.json captured once from TypeScript for the 203 baseline inputs",
-    "check": "bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts && bun run tooling/src/check-unbash-baseline.ts && bun x oxfmt --check packages/toolu-core/src/shell/__tests__/ && bun x oxlint packages/toolu-core/src/shell/__tests__/",
+    "check": "bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts && bun run tooling/src/check-unbash-baseline.ts && bun x oxfmt --check packages/toolu-core/src/shell/__tests__/ && bun run typecheck",
     "ac_refs": [
       "AC-2"
     ],
@@ -305,7 +305,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
   {
     "id": "docs",
     "title": "docs/shell-analysis.md Rust section (crate API, parser decision, limits, fuzzing, intended differences), docs/rust-quality-bar.md fuzzer decision, fixtures/shell/README.md and fixtures/README.md analysis.json, AGENTS.md key file row and CI table rows",
-    "check": "bun run test:docs && bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts",
+    "check": "PATH=\"$HOME/.cargo/bin:$PATH\" bun run test:docs && bun test packages/toolu-core/src/shell/__tests__/analysis-fixture.test.ts",
     "ac_refs": [
       "AC-2",
       "AC-5",
@@ -329,7 +329,7 @@ Dependencies and records → option parser → parse and words → wrappers → 
   {
     "id": "gate",
     "title": "Full quality gate: cargo xtask gate (coverage ≥90% toolu-shell, deny, guardrails, unused-pub, jscpd), the TypeScript conventions and the TS suites this PR touches; the full bun run test is run separately and compared with an origin/main baseline because five root-only and PATH tests fail on this host (comemory be52369e), and CI runs it in full",
-    "check": "PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --base origin/main --title 'feat(shell): Bash/Shell command analysis in Rust (#416)' && bun run test:conventions && bun test --timeout 60000 packages/toolu-core/src/shell tooling/src/__tests__/check-unbash-baseline.test.ts tooling/src/ci-paths && bun run check:ci-paths && bun run test:docs",
+    "check": "PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --base origin/main --title 'feat(shell): Bash/Shell command analysis in Rust (#416)' && bun run test:conventions && bun test --timeout 60000 packages/toolu-core/src/shell tooling/src/__tests__/check-unbash-baseline.test.ts tooling/src/ci-paths && bun run check:ci-paths && PATH=\"$HOME/.cargo/bin:$PATH\" bun run test:docs",
     "ac_refs": [
       "AC-8"
     ],
@@ -401,3 +401,11 @@ Dependencies and records → option parser → parse and words → wrappers → 
 - `deps-records` (2026-10-06): `tree-sitter` 0.27 with `tree-sitter-bash` 0.25 failed `cargo deny` licences inside the workspace, though they passed in an isolated probe. The cause is `foldhash` (Zlib). It reaches a non-dev path through `tree-sitter`'s non-optional `serde_json/preserve_order` build dependency, then `indexmap`, then `hashbrown`, whose default features the `jsonschema` dev-dependency turns on. Every `tree-sitter` from 0.25 to 0.27 has that build dependency, and 0.24.7 does not. The pair is now `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3 (ABI 14), which gives `bans ok, licenses ok, sources ok`. A re-probe gave identical results on the 203 fixture inputs. Only `(( … ))` maps differently, and the spec covers it. The budget uses `set_timeout_micros`. The spec is updated, and no gate data changes.
 - `latency` (2026-10-06): the timed set is now the 235 real commands that `bench:shell`'s `fixtureCommands` reads, not the 203 baseline inputs. The baseline includes the two synthetic malformed inputs, and tree-sitter's error recovery takes about 100 µs on `echo $(unterminated`, which alone set the old p99 at 100–102 µs. AC-6 says "real-command fixture set", and the spec is updated to name it.
 - `ts-projection` (2026-10-06): the projection lives in `__tests__/analysis-projection.ts`, not in `parity-helpers.ts`, which other suites import.
+- `docs`, `gate` (2026-10-06): `bun run test:docs` now runs `cargo xtask check-markdown-cli`, which needs the pinned toolchain. Both checks put `$HOME/.cargo/bin` first on `PATH`, as the Rust checks already do, because the host's system `cargo` is 1.93.
+- `ts-projection` (2026-10-06): the check typechecks instead of running `bun x oxlint` on `__tests__`. Core tests are a declared oxlint gap in `tooling/gate-reach.json`, and the house plugin cannot load from the repository root, so that segment could never pass and would lint nothing.
+- `fuzz-long` (2026-10-06): the 600 s run of `analyze` found a second scanner-state abort. The old estimate ended a delimiter at `|&;<>()` and skipped `<` runs three at a time. tree-sitter-bash reads a delimiter up to whitespace and stores a NUL after it. The bound now lives in `src/scanner.rs`:
+  - one 7-byte push per run of `<` not followed by `=`;
+  - each delimiter the scanner can read after a `<<` token left by a lexer, with its NUL.
+
+  Here-string text is not counted, so the real `gh api … <<< '{…}'` fixture command stays known (Jev: 0.86 for this bound over counting every overlapping `<<`). `tests/limits.rs` now pins the overflow window (1,013 to 1,015 characters aborted before the change). The crash input, the window and 16 here-string probes replay clean.
+- `gate` (2026-10-06): `crates/xtask/tests/no_exemptions.rs` walked untracked build output under `crates/`, which a local `cargo fuzz` build puts in `crates/core/shell/fuzz/target`. It now skips directories cargo tags with `CACHEDIR.TAG`, and a test pins that.

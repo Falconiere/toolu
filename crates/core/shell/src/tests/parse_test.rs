@@ -66,27 +66,17 @@ fn a_spent_budget_cancels_every_parse() {
 }
 
 #[test]
-fn heredoc_state_counts_operators_and_delimiters() {
-  assert_eq!(super::heredoc_state("git push"), (0, 4));
-  assert_eq!(
-    super::heredoc_state("cat <<EOF >x <<-'END'"),
-    (2, 4 + 10 + 12)
-  );
-  assert_eq!(super::heredoc_state("cat <<< x"), (0, 4));
-}
-
-#[test]
 fn more_heredoc_state_than_the_scanner_can_hold_is_not_parsed() {
   let mut syntax = Syntax::new(Duration::from_secs(5)).unwrap();
   let pending = format!("{}\n", "cat <<EOF ".repeat(150));
   assert_eq!(
     syntax.script(&pending).map(|_| ()),
-    Err(ParseFailure::Heredocs(150))
+    Err(ParseFailure::Heredocs)
   );
-  let long = format!("cat <<{}\nx\n", "A".repeat(1_100));
+  let long = format!("cat <<{}\nx\n", "A<".repeat(550));
   assert_eq!(
     syntax.script(&long).map(|_| ()),
-    Err(ParseFailure::Heredocs(1))
+    Err(ParseFailure::Heredocs)
   );
-  assert!(ParseFailure::Heredocs(3).message().contains("3 heredocs"));
+  assert!(ParseFailure::Heredocs.message().contains("heredoc state"));
 }

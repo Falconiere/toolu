@@ -106,9 +106,14 @@ fn relaxed_lints(manifest: &toml::Table) -> Vec<String> {
   found
 }
 
+/// Every file under `dir` except build caches, which cargo tags with
+/// `CACHEDIR.TAG` (a local `cargo fuzz` build lands in `crates/core/shell/fuzz/target`).
 fn files(dir: &Path, out: &mut Vec<PathBuf>) -> Res<()> {
   for entry in fs::read_dir(dir)? {
     let path = entry?.path();
+    if path.join("CACHEDIR.TAG").is_file() {
+      continue;
+    }
     if path.is_dir() {
       files(&path, out)?;
     } else {
@@ -262,4 +267,16 @@ fn an_added_banned_construct_is_found() {
   assert_eq!(found.len(), 2, "{found:?}");
   fs::write(src.join("lib.rs"), ["// see ", "build", ".rs\n"].concat()).unwrap();
   assert_eq!(banned_in_crates(dir.path()).unwrap().len(), 2);
+}
+
+#[test]
+fn only_a_tagged_build_cache_is_left_out() {
+  let dir = tempfile::tempdir().unwrap();
+  let target = dir.path().join("crates/demo/fuzz/target/debug/build");
+  fs::create_dir_all(&target).unwrap();
+  fs::write(target.join("out.d"), ["src/", "mod", ".rs"].concat()).unwrap();
+  assert_eq!(banned_in_crates(dir.path()).unwrap().len(), 1);
+  let tag = "Signature: 8a477f597d28d172789f06886806bc55\n";
+  fs::write(dir.path().join("crates/demo/fuzz/target/CACHEDIR.TAG"), tag).unwrap();
+  assert_eq!(banned_in_crates(dir.path()).unwrap(), Vec::<String>::new());
 }

@@ -13,6 +13,7 @@ use tree_sitter::{Language, Node, Parser, Tree};
 
 use crate::analysis::{CommandOrigin, ShellError};
 use crate::fixup::{self, Fixups};
+use crate::scanner::{SCANNER_STATE_LIMIT, heredoc_state};
 
 /// How many times a script is parsed again for `fixup`'s changes.
 const FIXUP_PASSES: usize = 3;
@@ -31,7 +32,7 @@ pub(crate) enum ParseFailure {
   /// The shared deadline passed.
   Cancelled,
   /// More heredoc state than tree-sitter-bash's scanner can serialize.
-  Heredocs(usize),
+  Heredocs,
 }
 
 impl ParseFailure {
@@ -43,8 +44,8 @@ impl ParseFailure {
         "parser: cancelled after the {} ms parse budget",
         PARSE_BUDGET.as_millis()
       ),
-      ParseFailure::Heredocs(count) => {
-        format!("parser: {count} heredocs are more than tree-sitter-bash can track")
+      ParseFailure::Heredocs => {
+        "parser: more heredoc state than tree-sitter-bash can track".to_owned()
       }
     }
   }
@@ -90,9 +91,8 @@ impl Syntax {
 
   /// Parse `source` within what remains of the deadline.
   fn parse(&mut self, source: &str) -> Result<Tree, ParseFailure> {
-    let (count, size) = heredoc_state(source);
-    if count > MAX_HEREDOCS || size >= SCANNER_STATE_LIMIT {
-      return Err(ParseFailure::Heredocs(count));
+    if heredoc_state(source).1 >= SCANNER_STATE_LIMIT {
+      return Err(ParseFailure::Heredocs);
     }
     let left = self.deadline.saturating_duration_since(Instant::now());
     let micros = u64::try_from(left.as_micros()).unwrap_or(u64::MAX);
@@ -121,36 +121,6 @@ pub(crate) fn preorder<'t>(node: Node<'t>, mut visit: impl FnMut(Node<'t>) -> bo
       }
     }
   }
-}
-
-/// What tree-sitter-bash's scanner may serialize without overflowing: its
-/// buffer is 1024 bytes and its own bounds check is short by four.
-const SCANNER_STATE_LIMIT: usize = 1000;
-
-/// The scanner stores the number of pending heredocs in one byte.
-const MAX_HEREDOCS: usize = 200;
-
-/// The `<<` operators of `source` and an upper bound of the scanner state they
-/// can need: 4 bytes, then 7 bytes and the delimiter for each heredoc. Only
-/// heredocs still pending are stored, so a script under the bound is safe.
-pub(crate) fn heredoc_state(source: &str) -> (usize, usize) {
-  let (mut count, mut size, mut at) = (0, 4, 0);
-  while let Some(found) = source.get(at..).and_then(|rest| rest.find("<<")) {
-    at += found + 2;
-    let rest = source.get(at..).unwrap_or_default();
-    if rest.starts_with('<') {
-      at += 1;
-      continue;
-    }
-    let word = rest
-      .strip_prefix('-')
-      .unwrap_or(rest)
-      .trim_start_matches([' ', '\t']);
-    let end = word.find(|c: char| c.is_whitespace() || "|&;<>()".contains(c));
-    count += 1;
-    size += 7 + end.unwrap_or(word.len());
-  }
-  (count, size)
 }
 
 /// The length TypeScript reports for `source`: UTF-16 code units.

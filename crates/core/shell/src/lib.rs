@@ -14,6 +14,7 @@ mod options;
 mod parse;
 mod redirect;
 pub mod rules;
+mod scanner;
 mod walk;
 mod words;
 pub mod writes;

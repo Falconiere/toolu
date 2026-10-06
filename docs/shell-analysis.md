@@ -174,7 +174,7 @@ Table measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple
 **Limits.** All of these make the analysis `unknown`, which a guardrail treats as "ask":
 - `MAX_NESTING` (64): nested scripts and compound bodies past this depth. unbash stops at 256 `$(…)` levels without marking the line unknown.
 - `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse): tree-sitter's error recovery takes about 4 s on 1 MiB of `${`.
-- More heredoc state than tree-sitter-bash's scanner can serialize (more than 200 `<<`, or 1,000 bytes of delimiters). Its own bounds check is short by four, so fuzzing could make it abort.
+- More heredoc state than tree-sitter-bash's scanner can serialize: an upper bound of 1,000 bytes (`scanner.rs`). The scanner's own bounds check is short by four, so a state of 1,021 to 1,027 bytes aborts the process in tree-sitter's assertion. Fuzzing found two ways there. The bound counts 7 bytes for each run of `<` that can push a heredoc. It adds each delimiter as the scanner reads it: up to whitespace, `<`, `>` and `;` included, plus its NUL. A here-string's text is not a delimiter, so a long `<<< '…'` stays known.
 
 **Parity.** `fixtures/shell/analysis.json` holds TypeScript's projected analysis of every input of `unbash-baseline.json`. `analysis-fixture.test.ts` and `crates/core/shell/tests/analysis_fixture.rs` must both reproduce it. Intended differences in the fixture:
 
