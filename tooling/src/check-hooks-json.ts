@@ -70,6 +70,15 @@ const NATIVE_EXAMPLES = {
   },
 } as const;
 
+function expectedHook(plugin: string, event: string, entry: string): LauncherHook | string {
+  try {
+    return launcherHook({ plugin, event, entry });
+  } catch (error) {
+    if (error instanceof Error) return error.message;
+    throw error;
+  }
+}
+
 /** The Rust generator's checked-in command, with only its target fields changed. */
 function expectedNativeCommand(plugin: string, event: string, entry: string): string | undefined {
   if (!/^[A-Z][A-Za-z]+$/u.test(event) || typeof expectedHook(plugin, event, entry) === "string")
@@ -125,15 +134,6 @@ export function isNativeLikeCommand(command: string): boolean {
 
 function entryOf(hook: Hook): string | undefined {
   return (DIST.exec(hook.command ?? "") ?? DIST.exec(hook.commandWindows ?? ""))?.[1];
-}
-
-function expectedHook(plugin: string, event: string, entry: string): LauncherHook | string {
-  try {
-    return launcherHook({ plugin, event, entry });
-  } catch (error) {
-    if (error instanceof Error) return error.message;
-    throw error;
-  }
 }
 
 interface HookSite {
