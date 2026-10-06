@@ -78,11 +78,12 @@ only direct TLS capability owner. The feature is absent from release builds.
   transport produce their distinct typed errors from real fixture behavior.
 - **AC-4:** A redirected byte download reaches a second origin, and its
   captured request has no `Authorization` header.
-- **AC-5:** A static musl release-profile probe that links `toolu-http` makes
-  a TLS request with `ring` and stays at or below 4 MiB stripped size; the
-  current `toolu` release binary also stays within 4 MiB. `cargo tree -p
-  toolu-http` has neither Tokio nor Hyper. The production CLI does not yet
-  link this crate; #460 must repeat its final linked-binary measurement.
+- **AC-5:** The static musl release-profile transport test links `toolu-http`
+  and makes TLS requests with `ring`. A separate stripped release probe that
+  links the production client stays at or below 4 MiB; the current `toolu`
+  release binary also stays within 4 MiB. `cargo tree -p toolu-http` has
+  neither Tokio nor Hyper. The production CLI does not yet link this crate;
+  #460 must repeat its final linked-binary measurement.
 - **AC-6:** The full Rust quality gate passes with the reusable fixture
   crate registered and no gate-data exception.
 
@@ -94,7 +95,7 @@ only direct TLS capability owner. The feature is absent from release builds.
 | AC-2 | CONNECT proxy receives `api.example.test:<fixture-port>`; supplied CA validates its TLS certificate | Same call without CA fails TLS | `cargo test -p toolu-http` |
 | AC-3 | Delayed, large, 404, malformed, and refused loopback responses map to named error variants | Error body over limit | `cargo test -p toolu-http` |
 | AC-4 | 302 to a different loopback TLS origin returns bytes; target capture lacks authorization | Changed port with same hostname | `cargo test -p toolu-http` |
-| AC-5 | Release-profile musl probe links the client, makes an HTTPS call via the fixture, is static and ≤4 MiB; current CLI is ≤4 MiB | Future CLI linkage belongs to #460 | Build/run linked probe with fixture; `cargo build --release --target x86_64-unknown-linux-musl -p toolu-cli`; `file`; `stat`; `cargo tree -p toolu-http` |
+| AC-5 | Release-profile musl transport test makes HTTPS calls through the fixture; stripped linked client probe and current CLI are each static and ≤4 MiB | Future CLI linkage belongs to #460 | `cargo test --release --target x86_64-unknown-linux-musl -p toolu-http --test transport`; build both binaries; `file`; `stat`; `cargo tree -p toolu-http` |
 | AC-6 | Gate exits 0 on this branch | New crate layout and coverage | `cargo xtask gate` |
 
 ## Documentation impact
