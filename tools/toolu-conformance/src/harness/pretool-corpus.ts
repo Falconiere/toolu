@@ -19,7 +19,7 @@ const CASE = z.strictObject({
   fixture: z.unknown().optional(),
   stdin: z.string().optional(),
   config: z.record(z.string(), z.json()).optional(),
-  settings: z.record(z.string(), z.string()).optional(),
+  settings: z.record(z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/), z.string()).optional(),
   setupByHost: HostSetupSchema,
   expect: z.strictObject({ claude: OUTCOME, codex: OUTCOME.optional() }),
 });

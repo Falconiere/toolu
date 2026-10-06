@@ -179,15 +179,25 @@ function symlinkTarget(sb: Sandbox, target: unknown, host: HostName): string {
   return resolveFixturePath(sb, path, host);
 }
 
-function mutationPath(sb: Sandbox, path: string, host: HostName): string {
+/** Resolve a sandbox mutation path and refuse symlink traversal. */
+export function mutationPath(
+  sb: Sandbox,
+  path: string,
+  host: HostName = "claude",
+  allowFinalSymlink = false,
+): string {
   const abs = resolveFixturePath(sb, path, host);
   const back = relative(sb.root, abs);
   if (back.startsWith("..") || isAbsolute(back))
     throw new Error(`fixture path escapes sandbox: ${path}`);
   let current = sb.root;
-  for (const part of back.split(sep)) {
+  const parts = back.split(sep);
+  for (const [index, part] of parts.entries()) {
     current = resolve(current, part);
-    if (lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink()) {
+    if (
+      lstatSync(current, { throwIfNoEntry: false })?.isSymbolicLink() &&
+      !(allowFinalSymlink && index === parts.length - 1)
+    ) {
       throw new Error(`fixture mutation follows symlink: ${path}`);
     }
   }
@@ -206,7 +216,7 @@ export function applyCaseSetup(sb: Sandbox, actions: unknown, host: HostName = "
         );
         break;
       case "remove":
-        rmSync(mutationPath(sb, action.path, host), { recursive: true, force: true });
+        rmSync(mutationPath(sb, action.path, host, true), { recursive: true, force: true });
         break;
       case "mkdir":
         mkdirSync(mutationPath(sb, action.path, host), { recursive: true });

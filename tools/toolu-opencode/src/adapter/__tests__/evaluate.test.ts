@@ -66,6 +66,14 @@ const GateEnvSchema = z.strictObject({
   }),
   expected: z.record(z.string(), z.string()),
 });
+const KindSchema = z.enum([
+  "map",
+  "decision",
+  "evaluate-protected",
+  "evaluate-bad-root",
+  "evaluate-registry",
+  "evaluate-gate-env",
+]);
 const cases = readCaseFile(
   resolve(import.meta.dir, "../../../../../fixtures/opencode/permission-evaluate.json"),
 );
@@ -114,7 +122,8 @@ function evalEvent(
 }
 
 for (const raw of cases) {
-  if (raw.kind === "evaluate-protected" || raw.kind === "evaluate-bad-root") {
+  const kind = KindSchema.parse(raw.kind);
+  if (kind === "evaluate-protected" || kind === "evaluate-bad-root") {
     const c =
       raw.kind === "evaluate-protected" ? ProtectedSchema.parse(raw) : BadRootSchema.parse(raw);
     test(c.name, async () => {
@@ -146,7 +155,7 @@ for (const raw of cases) {
       if (c.kind === "evaluate-bad-root" && c.expected.messageNonempty)
         expect(event.message?.length).toBeGreaterThan(0);
     });
-  } else if (raw.kind === "evaluate-registry") {
+  } else if (kind === "evaluate-registry") {
     const c = RegistrySchema.parse(raw);
     test(c.name, async () => {
       const packageRoot = await mkdtemp(join(tmpBase, "toolu-oc-package-"));
@@ -198,7 +207,7 @@ for (const raw of cases) {
       expect(event.effect).toBe(c.expected.effect);
       expect(event.message).toBeUndefined();
     });
-  } else if (raw.kind === "evaluate-gate-env") {
+  } else if (kind === "evaluate-gate-env") {
     const c = GateEnvSchema.parse(raw);
     test(c.name, () => {
       const poisoned = Object.fromEntries(FOREIGN_HOST_VARS.map((key) => [key, `/poison/${key}`]));

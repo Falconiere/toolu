@@ -65,6 +65,14 @@ const DecisionCaseSchema = z.strictObject({
     )
     .min(1),
 });
+const KindSchema = z.enum([
+  "map",
+  "decision",
+  "evaluate-protected",
+  "evaluate-bad-root",
+  "evaluate-registry",
+  "evaluate-gate-env",
+]);
 const cases = readCaseFile(
   resolve(import.meta.dir, "../../../../../fixtures/opencode/permission-evaluate.json"),
 );
@@ -82,12 +90,13 @@ function eventOf(value: z.infer<typeof EventSchema>): PermissionEvaluationEvent 
 }
 
 for (const raw of cases) {
-  if (raw.kind === "map") {
+  const kind = KindSchema.parse(raw.kind);
+  if (kind === "map") {
     const c = MapSchema.parse(raw);
     test(c.name, () => {
       expect(mapPermissionEventToTool(eventOf(c.event), ctx)).toEqual(c.expected);
     });
-  } else if (raw.kind === "decision") {
+  } else if (kind === "decision") {
     const c = DecisionCaseSchema.parse(raw);
     test(c.name, () => {
       for (const check of c.checks) {
