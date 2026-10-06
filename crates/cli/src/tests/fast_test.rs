@@ -34,6 +34,10 @@ fn the_toolu_and_plugin_forms_parse() {
     panic!("not a hook")
   };
   assert_eq!(review.plugin, "toolu-review");
+  let Some(Fast::Hook(newer)) = parsed("newer-plugin hook check --event Stop") else {
+    panic!("not a hook")
+  };
+  assert_eq!(newer.plugin, "newer-plugin");
 }
 
 #[test]
@@ -68,7 +72,8 @@ fn everything_else_is_left_to_clap() {
     "commands hook x",
     "ledger hook x",
     "toolu hook x",
-    "bogus hook x",
+    "hook x --event --plugin-root",
+    "hook x --plugin-root -foo",
     "hook x --event A --event B",
     "jev hook x --plugin-root /a --plugin-root /b",
   ] {
@@ -107,6 +112,8 @@ fn the_clap_mirror_rejects_what_the_fast_path_declines() {
     &["hook", "x", "--nope", "y"],
     &["hook", "x", "--event"],
     &["hook", "x", "--event", "A", "--event", "B"],
+    &["hook", "x", "--event", "--plugin-root"],
+    &["hook", "x", "--plugin-root", "-foo"],
   ] {
     assert!(command().try_get_matches_from(argv).is_err(), "{argv:?}");
   }

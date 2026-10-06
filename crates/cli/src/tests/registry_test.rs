@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 
-use super::{Action, BUILTIN, NAMESPACES, find, is_hook_owner, is_leaf_plugin};
+use super::{Action, BUILTIN, NAMESPACES, find, is_leaf_plugin, starts_hook_line};
 
 #[test]
 fn every_top_level_name_is_unique() {
@@ -42,19 +42,27 @@ fn only_plugins_other_than_toolu_are_leaves() {
 }
 
 #[test]
-fn only_a_leaf_plugin_s_own_name_starts_a_plugin_hook_line() {
-  for owner in [
+fn a_plugin_s_own_name_or_an_unknown_name_starts_a_plugin_hook_line() {
+  for word in [
     "jev",
     "toolu-review",
     "pr-babysit",
     "ts-quality",
     "epic-orchestrator",
+    "newer-plugin",
   ] {
-    assert!(is_hook_owner(owner), "{owner}");
+    assert!(starts_hook_line(word), "{word}");
   }
   for word in [
-    "review", "babysit", "toolu", BUILTIN, "commands", "ledger", "bogus",
+    "review", "babysit", "epic", "toolu", BUILTIN, "commands", "ledger", "hook",
   ] {
-    assert!(!is_hook_owner(word), "{word}");
+    assert!(!starts_hook_line(word), "{word}");
+  }
+}
+
+#[test]
+fn every_static_name_is_its_command_s_name() {
+  for namespace in NAMESPACES {
+    assert_eq!((namespace.command)().get_name(), namespace.name);
   }
 }

@@ -50,10 +50,15 @@ pub(crate) fn envelope(exit: Exit, message: &str, suggestion: Option<&str>) -> S
   .to_string()
 }
 
-/// The one-line `message` of a usage error: a missing verb shows the help, whose
-/// first paragraph is only the namespace's about, so it names the usage instead.
+/// The one-line `message` of a usage error. A missing verb names the usage:
+/// with no other argument clap shows the help, whose first paragraph is only the
+/// namespace's about, and after a flag (`toolu epic --json`) clap's own message
+/// lists hidden verbs.
 fn message(kind: ErrorKind, text: &str) -> String {
-  if kind == ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand {
+  if matches!(
+    kind,
+    ErrorKind::DisplayHelpOnMissingArgumentOrSubcommand | ErrorKind::MissingSubcommand
+  ) {
     let usage = text
       .lines()
       .find_map(|line| line.strip_prefix("Usage: "))

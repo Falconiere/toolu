@@ -27,7 +27,14 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let root = options.root.as_path();
   let base_ref = options.base.as_deref().unwrap_or(DEFAULT_BASE);
   let base = git(root, &["merge-base", base_ref, "HEAD"])
-    .map_err(|err| format!("{err} — pass --base <ref>, a revision this repository has"))?
+    .map_err(|err| {
+      // A git that ran and failed means the base is wrong; one that cannot run is not.
+      if err.starts_with("git ") {
+        format!("{err} — pass --base <ref>, a revision this repository has")
+      } else {
+        err
+      }
+    })?
     .trim()
     .to_owned();
   let Some(before) = show(root, &base, Path::new(TREE))? else {

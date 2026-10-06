@@ -222,3 +222,34 @@ fn every_generated_hook_form_is_in_the_clap_tree() {
       .starts_with("toolu review is not ported yet")
   );
 }
+
+#[test]
+fn a_plugin_newer_than_the_binary_gets_the_upgrade_advice_not_a_usage_error() {
+  let root = tempfile::tempdir().unwrap();
+  let manifest = root.path().join(".claude-plugin");
+  std::fs::create_dir_all(&manifest).unwrap();
+  std::fs::write(
+    manifest.join("plugin.json"),
+    r#"{"name":"newer-plugin","version":"0.0.1","hookProtocol":99}"#,
+  )
+  .unwrap();
+  let plugin_root = root.path().to_str().unwrap();
+  for (event, code) in [("SessionStart", 0), ("PreToolUse", 2)] {
+    let args = [
+      "newer-plugin",
+      "hook",
+      "x",
+      "--event",
+      event,
+      "--plugin-root",
+      plugin_root,
+    ];
+    let output = toolu(&args).unwrap();
+    assert_eq!(output.status.code(), Some(code), "{event}");
+    let shown = format!("{}{}", stdout(&output).unwrap(), stderr(&output).unwrap());
+    assert!(
+      shown.contains("newer-plugin plugin: hook protocol 99 needs a newer toolu"),
+      "{event}: {shown}"
+    );
+  }
+}

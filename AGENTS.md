@@ -18,7 +18,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 ## Plugin layout
 
-A plugin is a Rust crate plus Markdown. `crates/<name>` is a library that contributes one namespace, `toolu <namespace>`; the toolu hub, `crates/toolu`, contributes several and re-exports the rule crates. `plugins/<name>/` holds the skills, commands, agents, `hooks.json` and `plugin.json` that run `toolu …`. Until its port lands, a crate's namespace has one placeholder verb, `planned`, and its hooks are the Bun bundles below. Plugin packages are `toolu-<dir>` (the hub is `toolu-hub`), so `toolu-jev` is the jev plugin's: the core Jev client of #460 takes another package name.
+A plugin is a Rust crate plus Markdown. `crates/<name>` is a library that contributes one namespace, `toolu <namespace>`; the toolu hub, `crates/toolu`, contributes several and re-exports the rule crates. `plugins/<name>/` holds the skills, commands, agents, `hooks.json` and `plugin.json` that run `toolu …`. Until its port lands, a crate's namespace has one placeholder verb, `planned`, and its hooks are the Bun bundles below. Plugin packages are `toolu-<dir>`, except `toolu-review` (its directory already has the prefix) and the hub, `toolu-hub`. So `toolu-jev` is the jev plugin's, and the core Jev client of #460 takes another package name.
 
 The plugin directory is self-contained under `plugins/<name>/`. No symlinks out.
 

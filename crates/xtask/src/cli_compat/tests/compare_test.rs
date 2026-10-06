@@ -142,9 +142,14 @@ fn a_free_form_value_that_gains_a_list_narrows_the_input() {
     edited(|tree| flag_of(tree, None, "config-dir")["possibleValues"] = json!(["a", "b"])),
     ["`--config-dir` on `toolu` now accepts only listed values"]
   );
-  // A flag that takes no value has nothing to narrow.
+  // A flag that takes no value has nothing to narrow, and a list that becomes
+  // free-form widens the input.
   assert_eq!(
     edited(|tree| flag_of(tree, None, "json")["possibleValues"] = json!(["x"])),
+    Vec::<String>::new()
+  );
+  assert_eq!(
+    edited(|tree| flag_of(tree, None, "host")["possibleValues"] = json!([])),
     Vec::<String>::new()
   );
 }

@@ -65,11 +65,14 @@ fn the_message_is_clap_s_whole_first_paragraph_on_one_line() {
 }
 
 #[test]
-fn a_missing_verb_names_the_usage_not_the_namespace_about() {
-  assert_eq!(
-    message_of(&["toolu", "--json", "epic"])["message"],
-    "a command is required: toolu epic [OPTIONS] <COMMAND>"
-  );
+fn a_missing_verb_names_the_usage_wherever_json_stands() {
+  for argv in [&["toolu", "--json", "epic"], &["toolu", "epic", "--json"]] {
+    assert_eq!(
+      message_of(argv)["message"],
+      "a command is required: toolu epic [OPTIONS] <COMMAND>",
+      "{argv:?}"
+    );
+  }
 }
 
 #[test]

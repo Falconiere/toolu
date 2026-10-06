@@ -164,10 +164,14 @@ fn flag(path: &str, old: &Value, new: &Value, found: &mut Vec<String>) {
   values(path, old, new, found);
 }
 
-/// The values `old` accepts that `new` no longer does.
+/// The values `old` accepts that `new` no longer does. A list that becomes
+/// free-form (`new` takes a value and lists none) still accepts every value.
 fn values(path: &str, old: &Value, new: &Value, found: &mut Vec<String>) {
   let long = text(old, "long");
   let listed = list(new, "possibleValues");
+  if listed.is_empty() && flag_set(new, "takesValue") {
+    return;
+  }
   if list(old, "possibleValues").is_empty() {
     if flag_set(old, "takesValue") && !listed.is_empty() {
       found.push(format!(
