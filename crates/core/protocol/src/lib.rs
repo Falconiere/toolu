@@ -4,12 +4,18 @@
 //! enforce, the install commands, the generated `hooks.json` launcher (#412), and
 //! the exit codes and host names of the `toolu` CLI (#442).
 
+pub mod decision;
 pub mod event;
 pub mod exit;
 pub mod host;
 pub mod install;
 pub mod launcher;
+pub mod native;
+pub mod normalize;
+pub mod normalized;
+pub mod payload;
 pub mod stdin;
+pub mod text;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "protocol";

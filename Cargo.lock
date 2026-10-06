@@ -945,6 +945,7 @@ dependencies = [
 name = "toolu-protocol"
 version = "7.11.0"
 dependencies = [
+ "serde",
  "serde_json",
 ]
 
