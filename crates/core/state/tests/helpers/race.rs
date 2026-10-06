@@ -2,6 +2,7 @@
 //! both implementations, a reader polling the file meanwhile, and the checks.
 
 use std::fs::File;
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use std::process::{Child, Output, Stdio};
 use std::time::{Duration, Instant, SystemTime};
@@ -57,19 +58,19 @@ impl Race {
   /// Runs `writers` at once while a reader polls; checks every outcome.
   pub(crate) fn run(&self, writers: &[Writer], case: &Ordered) -> Res<()> {
     let (count, mode) = (number(case, "iterations")?, text(case, "mode")?);
-    let mut children = Vec::new();
+    let mut fleet = Fleet(Vec::new());
     for writer in writers {
-      children.push((writer, self.spawn(writer, count, &mode)?));
+      fleet.0.push((writer, self.spawn(writer, count, &mode)?));
     }
-    let (reads, bad) = self.watch(&mut children)?;
+    let (reads, bad) = self.watch(&mut fleet)?;
     if reads <= number(case, "minReads")? || !bad.is_empty() {
       return Err(format!("{reads} reads, bad: {bad:?}"));
     }
-    for (writer, child) in children {
-      check_writer(
-        writer,
-        &child.wait_with_output().map_err(|err| err.to_string())?,
-      )?;
+    // With TypeScript writers in the race, every Rust writer must have kept
+    // writing until the last of them exited: that is the interleaving.
+    let overlap = writers.iter().any(Writer::is_typescript);
+    for (writer, child) in &mut fleet.0 {
+      check_writer(writer, &finished(child)?, overlap)?;
     }
     let kept = numbers(field(case, "keptIndices")?);
     let expected: Vec<String> = writers
@@ -83,8 +84,10 @@ impl Race {
     self.check_final(expected)
   }
 
-  /// Polls the file until every child exits: reads made, and reads that failed.
-  fn watch(&self, children: &mut [(&Writer, Child)]) -> Res<(usize, Vec<String>)> {
+  /// Polls the file until every child exits; tells the Rust writers to stop
+  /// cycling once every TypeScript writer is done. Reads made, and reads failed.
+  fn watch(&self, fleet: &mut Fleet<'_>) -> Res<(usize, Vec<String>)> {
+    let stop = PathBuf::from(format!("{}.stop", self.gate.display()));
     let (mut reads, mut bad) = (0, Vec::new());
     loop {
       match read_gate_file(&self.gate) {
@@ -93,14 +96,45 @@ impl Race {
         GateRead::Unrecognized { reason, .. } => bad.push(format!("unrecognized: {reason}")),
       }
       reads += 1;
-      let mut running = false;
-      for (_, child) in children.iter_mut() {
-        running |= child.try_wait().map_err(|err| err.to_string())?.is_none();
+      let (mut running, mut typescript) = (false, false);
+      for (writer, child) in &mut fleet.0 {
+        let live = child.try_wait().map_err(|err| err.to_string())?.is_none();
+        running |= live;
+        typescript |= live && writer.is_typescript();
+      }
+      if !typescript && !stop.exists() {
+        std::fs::write(&stop, "").map_err(|err| err.to_string())?;
       }
       if !running {
+        std::fs::remove_file(&stop).map_err(|err| err.to_string())?;
         return Ok((reads, bad));
       }
       std::thread::sleep(Duration::from_millis(1));
+    }
+  }
+
+  /// Tells Rust writers not to cycle: no TypeScript writer runs beside them.
+  fn stop_cycling(&self) -> Res<()> {
+    std::fs::write(format!("{}.stop", self.gate.display()), "").map_err(|err| err.to_string())
+  }
+
+  /// Every slot of `slots` is in the file.
+  pub(crate) fn has_slots(&self, slots: &[&str]) -> Res<()> {
+    let GateRead::Ok(GateFile::Failing {
+      entries: Some(entries),
+      ..
+    }) = read_gate_file(&self.gate)
+    else {
+      return Err("no slots".into());
+    };
+    let missing: Vec<&&str> = slots
+      .iter()
+      .filter(|slot| !entries.iter().any(|(key, _)| key == **slot))
+      .collect();
+    if missing.is_empty() {
+      Ok(())
+    } else {
+      Err(format!("missing {missing:?}"))
     }
   }
 
@@ -162,12 +196,14 @@ impl Race {
     file
       .set_modified(SystemTime::now() - age)
       .map_err(|err| err.to_string())?;
+    self.stop_cycling()?;
     let started = Instant::now();
     let writer = Writer::rust(&text(case, "writerId")?);
     let child = self.spawn(&writer, number(case, "iterations")?, &text(case, "mode")?)?;
     check_writer(
       &writer,
       &child.wait_with_output().map_err(|err| err.to_string())?,
+      false,
     )?;
     let max = u64::try_from(number(case, "maxMs")?).map_err(|err| err.to_string())?;
     if started.elapsed() >= Duration::from_millis(max) || lock.exists() {
@@ -208,11 +244,13 @@ impl Race {
     }
     held.kill().map_err(|err| err.to_string())?;
     held.wait().map_err(|err| err.to_string())?;
+    self.stop_cycling()?;
     let started = Instant::now();
     let child = self.spawn(after, 2, "strict")?;
     check_writer(
       after,
       &child.wait_with_output().map_err(|err| err.to_string())?,
+      false,
     )?;
     if started.elapsed() >= STALL || lock.exists() {
       return Err(format!(
@@ -272,7 +310,44 @@ fn numbers(value: &Ordered) -> Vec<String> {
 }
 
 /// A writer exited 0 with nothing on stderr; a Rust writer never stalled.
-fn check_writer(writer: &Writer, out: &Output) -> Res<()> {
+/// Writer processes that are killed and reaped if a check fails before they exit.
+pub(crate) struct Fleet<'a>(Vec<(&'a Writer, Child)>);
+
+impl Drop for Fleet<'_> {
+  fn drop(&mut self) {
+    for (_, child) in &mut self.0 {
+      if child.try_wait().ok().flatten().is_none() {
+        child.kill().ok();
+      }
+      child.wait().ok();
+    }
+  }
+}
+
+/// The output of a child that has exited.
+fn finished(child: &mut Child) -> Res<Output> {
+  let (mut stdout, mut stderr) = (Vec::new(), Vec::new());
+  if let Some(mut out) = child.stdout.take() {
+    out
+      .read_to_end(&mut stdout)
+      .map_err(|err| err.to_string())?;
+  }
+  if let Some(mut err) = child.stderr.take() {
+    err
+      .read_to_end(&mut stderr)
+      .map_err(|err| err.to_string())?;
+  }
+  let status = child.wait().map_err(|err| err.to_string())?;
+  Ok(Output {
+    status,
+    stdout,
+    stderr,
+  })
+}
+
+/// A writer exited 0 with nothing on stderr; a Rust writer never stalled and,
+/// when `overlap` is required, cycled at least once.
+fn check_writer(writer: &Writer, out: &Output, overlap: bool) -> Res<()> {
   let stderr = String::from_utf8_lossy(&out.stderr);
   if !out.status.success() || !stderr.is_empty() {
     return Err(format!(
@@ -281,16 +356,26 @@ fn check_writer(writer: &Writer, out: &Output) -> Res<()> {
       out.status
     ));
   }
+  let Writer::Rust(id) = writer else {
+    return Ok(());
+  };
   let stdout = String::from_utf8_lossy(&out.stdout);
-  let slowest = stdout
-    .trim()
-    .strip_prefix("slowest_ms=")
-    .and_then(|ms| ms.parse::<u64>().ok());
-  match (writer, slowest) {
-    (Writer::Rust(id), Some(ms)) if Duration::from_millis(ms) >= STALL => {
-      Err(format!("writer {id} stalled {ms} ms"))
-    }
-    (Writer::Rust(id), None) => Err(format!("writer {id} printed {stdout:?}")),
-    _ => Ok(()),
+  let field = |key: &str| {
+    let found = stdout
+      .split_whitespace()
+      .find_map(|pair| pair.strip_prefix(key));
+    found.and_then(|value| value.parse::<u64>().ok())
+  };
+  let (Some(ms), Some(cycles)) = (field("slowest_ms="), field("cycles=")) else {
+    return Err(format!("writer {id} printed {stdout:?}"));
+  };
+  if Duration::from_millis(ms) >= STALL {
+    return Err(format!("writer {id} stalled {ms} ms"));
   }
+  if overlap && cycles == 0 {
+    return Err(format!(
+      "writer {id} stopped before the TypeScript writers ran"
+    ));
+  }
+  Ok(())
 }

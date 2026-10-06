@@ -52,60 +52,101 @@ fn main() -> ExitCode {
   }
 }
 
-/// One Rust writer: records `/w/<id>/0..count`, then clears the even ones,
-/// and prints its slowest operation in milliseconds.
+/// One Rust writer's state: its context, file and slowest operation so far.
+struct RustWriter<'a> {
+  ctx: StateCtx,
+  gate: &'a Path,
+  source: String,
+  reason: String,
+  slowest: Duration,
+}
+
+impl RustWriter<'_> {
+  fn record(&mut self, file: &str, violations: &str) {
+    let started = Instant::now();
+    let failure = GateFailure {
+      file,
+      source: &self.source,
+      reason: &self.reason,
+      violations,
+    };
+    record_gate_failure(&mut self.ctx, self.gate, &failure);
+    self.slowest = self.slowest.max(started.elapsed());
+  }
+
+  fn clear(&mut self, file: &str) -> ClearOutcome {
+    let started = Instant::now();
+    let outcome = clear_gate_file(&mut self.ctx, self.gate, file, &self.source);
+    self.slowest = self.slowest.max(started.elapsed());
+    outcome
+  }
+}
+
+/// One Rust writer: records `/w/<id>/0..count`, clears the even ones, then
+/// records and clears `/w/<id>/cycle` until `<stop>` exists, so it is still
+/// writing for as long as any TypeScript writer runs. Prints its slowest
+/// operation and how many cycles it ran.
 fn writer(args: &[String]) -> Res<()> {
-  let [gate, id, count, mode] = args else {
-    return Err("usage: writer <gate> <id> <count> <mode>".into());
+  let [gate, id, count, mode, stop] = args else {
+    return Err("usage: writer <gate> <id> <count> <mode> <stop>".into());
   };
   let count: usize = count
     .parse()
     .map_err(|err| format!("bad count {count}: {err}"))?;
-  let mut ctx = StateCtx::new(Roots::new(Env::process(), Some(Host::Claude)));
-  let gate = Path::new(gate);
-  let (source, reason) = (format!("writer-{id}"), format!("reason {id}"));
-  let mut slowest = Duration::ZERO;
+  let mut w = RustWriter {
+    ctx: StateCtx::new(Roots::new(Env::process(), Some(Host::Claude))),
+    gate: Path::new(gate),
+    source: format!("writer-{id}"),
+    reason: format!("reason {id}"),
+    slowest: Duration::ZERO,
+  };
   for n in 0..count {
-    let (file, violations) = (format!("/w/{id}/{n}"), format!("{id}/{n}\n"));
-    let started = Instant::now();
-    let failure = GateFailure {
-      file: &file,
-      source: &source,
-      reason: &reason,
-      violations: &violations,
-    };
-    record_gate_failure(&mut ctx, gate, &failure);
-    slowest = slowest.max(started.elapsed());
+    w.record(&format!("/w/{id}/{n}"), &format!("{id}/{n}\n"));
   }
   for n in (0..count).step_by(2) {
-    let started = Instant::now();
-    let outcome = clear_gate_file(&mut ctx, gate, &format!("/w/{id}/{n}"), &source);
-    slowest = slowest.max(started.elapsed());
-    if outcome == ClearOutcome::Noop && mode == "strict" {
+    if w.clear(&format!("/w/{id}/{n}")) == ClearOutcome::Noop && mode == "strict" {
       return Err(format!("writer {id}: clear of {n} was a no-op"));
     }
   }
-  if !ctx.warnings.is_empty() {
-    return Err(format!("writer {id} warned: {:?}", ctx.warnings));
+  let (cycle, deadline) = (
+    format!("/w/{id}/cycle"),
+    Instant::now() + Duration::from_secs(60),
+  );
+  let mut cycles = 0_u32;
+  while !Path::new(stop).exists() && Instant::now() < deadline {
+    w.record(&cycle, "cycle\n");
+    if w.clear(&cycle) == ClearOutcome::Noop {
+      return Err(format!("writer {id}: a cycle's clear was a no-op"));
+    }
+    cycles += 1;
+    std::thread::sleep(Duration::from_millis(2));
   }
+  if !w.ctx.warnings.is_empty() {
+    return Err(format!("writer {id} warned: {:?}", w.ctx.warnings));
+  }
+  let line = format!("slowest_ms={} cycles={cycles}\n", w.slowest.as_millis());
   std::io::stdout()
-    .write_all(format!("slowest_ms={}\n", slowest.as_millis()).as_bytes())
+    .write_all(line.as_bytes())
     .map_err(|err| err.to_string())
 }
 
-/// Takes the gate's lock and holds it until killed.
+/// Takes the gate's lock and holds it until killed (or a minute passes).
 fn hold(args: &[String]) -> Res<()> {
   let [gate] = args else {
     return Err("usage: hold <gate>".into());
   };
+  let until = Instant::now() + Duration::from_secs(60);
   with_lock(
     Path::new(gate),
     LockOptions::default(),
     &mut Vec::new(),
-    || loop {
-      std::thread::sleep(Duration::from_secs(1));
+    || {
+      while Instant::now() < until {
+        std::thread::sleep(Duration::from_millis(100));
+      }
     },
-  )
+  );
+  Ok(())
 }
 
 fn parent() -> Res<()> {
@@ -156,5 +197,6 @@ fn mixed_race() -> Res<()> {
 fn crashed_holders() -> Res<()> {
   let race = Race::new("feat/crash")?;
   race.crash_then(&Writer::rust_holder(), &Writer::typescript("ts-after-rust"))?;
-  race.crash_then(&Writer::typescript_holder(), &Writer::rust("rust-after-ts"))
+  race.crash_then(&Writer::typescript_holder(), &Writer::rust("rust-after-ts"))?;
+  race.has_slots(&["/w/ts-after-rust/1", "/w/rust-after-ts/1"])
 }

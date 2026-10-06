@@ -56,7 +56,13 @@ impl Writer {
     }
   }
 
-  /// The process for `gate`: `count` records then even clears, in `mode`.
+  /// Whether this writer is the TypeScript `gate-writer.ts`.
+  pub(crate) fn is_typescript(&self) -> bool {
+    matches!(self, Writer::TypeScript(_))
+  }
+
+  /// The process for `gate`: `count` records then even clears, in `mode`; a
+  /// Rust writer then cycles until `<gate>.stop` exists.
   pub(crate) fn command(&self, gate: &Path, count: usize, mode: &str) -> Res<Command> {
     let me = std::env::current_exe().map_err(|err| err.to_string())?;
     let gate = gate.display().to_string();
@@ -65,7 +71,10 @@ impl Writer {
       Writer::TypeScript(_) | Writer::TypeScriptHolder => Command::new("bun"),
     };
     match self {
-      Writer::Rust(id) => command.args(["writer", &gate, id, &count.to_string(), mode]),
+      Writer::Rust(id) => {
+        let stop = format!("{gate}.stop");
+        command.args(["writer", &gate, id, &count.to_string(), mode, &stop])
+      }
       Writer::TypeScript(id) => {
         let script = repo_file("packages/toolu-core/src/state/__tests__/gate-writer.ts");
         command
@@ -78,7 +87,7 @@ impl Writer {
           .display()
           .to_string();
         let script = format!(
-          "import {{ withLock }} from {io:?}; withLock(process.argv[1] ?? \"\", () => Bun.sleepSync(600000));"
+          "import {{ withLock }} from {io:?}; withLock(process.argv[1] ?? \"\", () => Bun.sleepSync(60000));"
         );
         command.args(["-e", &script, &gate])
       }
