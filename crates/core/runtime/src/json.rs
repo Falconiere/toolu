@@ -22,13 +22,8 @@ pub fn stringify_pretty(value: &Value) -> String {
 
 /// `value` as `jq` (pretty) or `jq -c` (compact) prints it: `JSON.stringify`
 /// with DEL escaped, which only a string can hold.
-pub fn jq_text(value: &Value, pretty: bool) -> String {
-  let text = if pretty {
-    stringify_pretty(value)
-  } else {
-    stringify(value)
-  };
-  text.replace('\u{7f}', "\\u007f")
+pub fn jq_text(value: &Ordered, pretty: bool) -> String {
+  value.to_text(pretty).replace('\u{7f}', "\\u007f")
 }
 
 /// JavaScript's white space (`\s`, what `String#trim` removes): Unicode white

@@ -1,5 +1,6 @@
 use serde_json::{Value, json};
 
+use super::ordered::Ordered;
 use super::{jq_text, js_number, stringify, stringify_pretty, top_level_keys};
 
 #[test]
@@ -49,7 +50,7 @@ fn pretty_text_indents_two_spaces_and_keeps_empty_containers_inline() {
 
 #[test]
 fn jq_text_escapes_del_only() {
-  let value = json!({ "a": "x\u{7f}y" });
+  let value = Ordered::from(&json!({ "a": "x\u{7f}y" }));
   assert_eq!(jq_text(&value, false), r#"{"a":"x\u007fy"}"#);
   assert_eq!(jq_text(&value, true), "{\n  \"a\": \"x\\u007fy\"\n}");
 }

@@ -13,7 +13,9 @@ pub mod json;
 pub mod manifest;
 pub mod namespace;
 pub mod process;
+pub mod registry;
 pub mod skew;
+pub mod startup;
 pub mod version;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
