@@ -131,21 +131,12 @@ test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
   });
 });
 
-test.concurrent("a CLI verb rename turns on docs, where the Markdown drift gate runs (#444)", async () => {
-  // A rename edits a crate and regenerates docs/cli/commands.json; a skill
-  // still naming the old verb is caught by `bun run test:docs`.
-  const outputs = await prOutputs({
+test.concurrent("a CLI verb rename turns on docs, which runs the Markdown drift gate (#444)", async () => {
+  const rename = {
     "crates/core/runtime/src/lib.rs": "//! renamed\n",
     "docs/cli/commands.json": "{}\n",
-  });
-  expect(outputs).toEqual({
-    ts: "false",
-    opencode: "false",
-    docs: "true",
-    rust: "true",
-    ports: "true",
-    changed: "true",
-  });
+  };
+  expect(await prOutputs(rename)).toEqual({ ...ALL_ON, ts: "false", opencode: "false" });
 });
 
 test.concurrent("a release-please version bump turns every output off (AC-2)", async () => {
