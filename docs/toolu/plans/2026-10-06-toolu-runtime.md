@@ -179,3 +179,12 @@ Real inputs are the committed fixtures, real `git` repositories, real child proc
   - gate: 🔵 consider: the ledger check runs the targeted Bun suites, not the whole `bun run test`. Kept: the whole suite runs in Verification against a clean `origin/main` baseline, and CI's `typescript` job is the authority.
   - Filters: each `--lib` filter is an anchored module path (`process::tests::` is not a substring of `process::group::tests::`), and the helper requires at least one passing test.
 - **Status:** Approved.
+
+## Deviations
+
+Interfaces settled during execution; behaviour is the spec's:
+- `config::load::load(roots, cwd)` and `exists(roots, cwd)` take a `Roots`, not `ConfigOptions`: the binding carries the one host-detection warning, which the caller prints without the `toolu-config: ` prefix. `LoadedConfig::from_data` builds a config a host merged itself (and the resolver tests).
+- `json::ordered::Ordered` was added: an insertion-ordered JSON value. The permissions write rewrites the user's `settings.local.json` and the SessionStart context prints `hookEventName` before `additionalContext`, both in TypeScript's key order, which `serde_json::Map` would sort. Values printed through a `serde_json::Value` (a `version` object in a message, an object inside `docsSync`) still print sorted, as the spec's known divergences say.
+- `config::settings::read_list` returns `Result`: TypeScript throws on an unreadable list, which fails the hook closed; an empty list would fail open.
+- `quality_threshold(config, lang, key, root)`: `root` `None` is the git toplevel of the process directory, as TypeScript's default.
+- `docs_sync_globs(config, DocsSyncKey)` replaces the three named functions; `settings_dir(roots, plugin_root)`; `permissions_autowrite(config, env, root, cwd)`; `host::snapshot::codex_plugin_snapshot_path`.
