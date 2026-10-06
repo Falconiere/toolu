@@ -4,6 +4,8 @@
 //! Claude permissions write and the plugin settings files.
 
 pub mod docs_sync;
+/// Non-secret epic settings with forward-compatible nested keys.
+pub mod epic;
 pub mod gate_mode;
 pub mod load;
 pub mod permissions;
