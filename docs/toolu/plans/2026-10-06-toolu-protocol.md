@@ -122,7 +122,7 @@ Text, event and native names → decision → normalized event → payloads → 
   {
     "id": "encode",
     "title": "supports_ask, degrade_ask, decision normalization and the Claude/Codex, Cursor, Hermes and OpenCode encoders with unit tests ported from host-encode.test.ts",
-    "check": "t() { PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-protocol --lib -- \"$@\" 2>&1 | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'; }; t encode::tests:: && t encode::hook::tests:: && t encode::cursor::tests:: && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --only fmt --only clippy --only guardrails --only unused-pub",
+    "check": "t() { PATH=\"$HOME/.cargo/bin:$PATH\" cargo test -q -p toolu-protocol --lib -- \"$@\" 2>&1 | grep -Eq 'test result: ok\\. [1-9][0-9]* passed'; }; t encode::tests:: && t encode::hook::tests:: && t encode::cursor::tests:: && t encode::hermes::tests:: && t encode::opencode::tests:: && t encode::object::tests:: && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --only fmt --only clippy --only guardrails --only unused-pub",
     "ac_refs": [
       "AC-8"
     ],
@@ -295,3 +295,8 @@ The real inputs are the committed fixtures and a real child process on real stdi
   - boundary inputs on every step.
 - **Round 2: Needs changes.** One should-fix: `hook::tests::` is a substring of `payload::hook::tests::` and `encode::hook::tests::`. Fix: the helper passes every argument through, and `run-hook` adds `--skip payload:: --skip encode::`. A consider was also taken: the crate-doc check now matches `//!` lines.
 - **Round 3: Approved.** Both fixes were confirmed under sh, and the run-hook and deps-docs checks are red until their work lands.
+
+## Deviations
+
+- **The encoders write JSON with an ordered writer (`encode/object.rs`), not `Serialize` structs.** `serde_json::to_string` returns a `Result` that cannot fail for these shapes. The quality bar forbids `unwrap`, and falling back to `""` would turn an impossible error into a silent allow. The writer escapes every string through `serde_json::Value`'s infallible `Display`, so the bytes are the same.
+- **`encode/hermes.rs`, `encode/opencode.rs` and `encode/object.rs` are their own modules, each with a rule-7 test file.** This keeps `src/tests/encode_test.rs` under the 300-line limit. The `encode` step's check now requires each module's tests too.

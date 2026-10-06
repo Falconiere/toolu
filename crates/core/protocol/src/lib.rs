@@ -5,6 +5,7 @@
 //! the exit codes and host names of the `toolu` CLI (#442).
 
 pub mod decision;
+pub mod encode;
 pub mod event;
 pub mod exit;
 pub mod host;
