@@ -83,19 +83,32 @@ fn check(context: &Context, file: &str, markdown: &str) -> Vec<Finding> {
   let plugin = file
     .strip_prefix("plugins/")
     .and_then(|rest| rest.split('/').next());
-  let external = allow::external(&context.lists, file);
   let scanned = scan::scan(markdown);
-  let mut found = Vec::new();
-  let mut finding = |line: usize, subject: String, problem: String| {
-    found.push(Finding {
+  let mut found = in_blocks(context, file, plugin, &scanned.blocks);
+  found.extend(in_spans(context, plugin, &scanned.spans));
+  found
+    .into_iter()
+    .map(|(line, subject, problem)| Finding {
       file: file.to_owned(),
       line,
       subject,
       problem,
-    });
-  };
-  let lexed: Vec<Lexed> = scanned
-    .blocks
+    })
+    .collect()
+}
+
+/// A finding before its file is attached: line, subject, problem.
+type Found = (usize, String, String);
+
+/// The findings in a file's shell fences.
+fn in_blocks(
+  context: &Context,
+  file: &str,
+  plugin: Option<&str>,
+  blocks: &[scan::Block],
+) -> Vec<Found> {
+  let external = allow::external(&context.lists, file);
+  let lexed: Vec<Lexed> = blocks
     .iter()
     .map(|block| shell::lex(&block.text, block.line))
     .collect();
@@ -104,33 +117,38 @@ fn check(context: &Context, file: &str, markdown: &str) -> Vec<Finding> {
     .iter()
     .flat_map(|block| block.functions.iter().cloned())
     .collect();
-  for (block, lexed) in scanned.blocks.iter().zip(&lexed) {
+  let mut found = Vec::new();
+  for (block, lexed) in blocks.iter().zip(&lexed) {
     for command in &lexed.commands {
-      if let Some((subject, problem)) = fenced(context, command, &functions, &external) {
-        finding(command.line, subject, problem);
-      }
       let script = plugin.and_then(|_| surfaces::bun_script(&context.patterns, command));
-      if let Some((subject, problem)) =
-        script.and_then(|reference| removed(context, reference, plugin))
-      {
-        finding(command.line, subject, problem);
-      }
+      let problems = fenced(context, command, &functions, &external)
+        .into_iter()
+        .chain(script.and_then(|reference| removed(context, reference, plugin)));
+      found.extend(problems.map(|(subject, problem)| (command.line, subject, problem)));
     }
     for (offset, text) in block.text.lines().enumerate() {
-      for (subject, problem) in surface_problems(context, text, plugin) {
-        finding(block.line + offset, subject, problem);
-      }
-    }
-  }
-  for span in &scanned.spans {
-    for (subject, problem) in inline(context, &span.text) {
-      finding(span.line, subject, problem);
-    }
-    for (subject, problem) in surface_problems(context, &span.text, plugin) {
-      finding(span.line, subject, problem);
+      let problems = surface_problems(context, text, plugin);
+      found.extend(
+        problems
+          .into_iter()
+          .map(|(subject, problem)| (block.line + offset, subject, problem)),
+      );
     }
   }
   found
+}
+
+/// The findings in a file's inline code spans.
+fn in_spans(context: &Context, plugin: Option<&str>, spans: &[scan::Span]) -> Vec<Found> {
+  spans
+    .iter()
+    .flat_map(|span| {
+      inline(context, &span.text)
+        .into_iter()
+        .chain(surface_problems(context, &span.text, plugin))
+        .map(|(subject, problem)| (span.line, subject, problem))
+    })
+    .collect()
 }
 
 /// A fenced command: `toolu` against the tree, anything else by name.
