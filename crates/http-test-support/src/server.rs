@@ -101,7 +101,9 @@ fn serve_https(
   if !reply.delay.is_zero() {
     thread::sleep(reply.delay);
   }
-  write_reply(reader.get_mut(), &reply).map_err(error)
+  write_reply(reader.get_mut(), &reply).map_err(error)?;
+  reader.get_mut().conn.send_close_notify();
+  reader.get_mut().flush().map_err(error)
 }
 
 fn read_request<R: BufRead>(reader: &mut R) -> Result<ObservedRequest, Error> {
