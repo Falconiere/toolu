@@ -971,6 +971,8 @@ name = "toolu-runtime"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "nix",
+ "serde",
  "serde_json",
  "tempfile",
  "toolu-protocol",

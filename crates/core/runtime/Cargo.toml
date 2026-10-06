@@ -9,6 +9,8 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+nix.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 toolu-protocol = { path = "../protocol" }
 

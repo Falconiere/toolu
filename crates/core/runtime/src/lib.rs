@@ -3,10 +3,15 @@
 //! rule of #411), and what a `toolu` verb receives and returns (#442).
 
 pub mod cli;
+pub mod cli_args;
+pub mod env;
+pub mod host;
 pub mod install;
 pub mod invocation;
+pub mod json;
 pub mod manifest;
 pub mod namespace;
+pub mod process;
 pub mod skew;
 pub mod version;
 
