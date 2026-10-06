@@ -3,6 +3,7 @@
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
 mod check_hooks;
+mod check_workflows;
 mod cli_compat;
 mod command_tree;
 mod coverage;
@@ -57,6 +58,7 @@ const TASKS: &[(&str, Task)] = &[
   ("measure", measure::run),
   ("print-hook", print_hook::run),
   ("check-hooks", check_hooks::run),
+  ("check-workflows", check_workflows::run),
   ("launcher-e2e", launcher_e2e::run),
   ("docs-cli", docs_cli::run),
   ("check-cli-compat", cli_compat::run),
@@ -69,7 +71,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   [--only STEP]... [--timeout N] [--bin PATH] [--home DIR] [--check] [ARG]...\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
-  check-coverage, measure, print-hook, check-hooks, launcher-e2e, docs-cli, check-cli-compat, \
+  check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.

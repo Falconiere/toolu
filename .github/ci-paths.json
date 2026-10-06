@@ -93,10 +93,10 @@
   },
   "workflows": {
     "tests.yml": {
-      "aggregate": "typescript",
-      "required": [],
+      "aggregate": "gate",
+      "required": ["typescript"],
       "jobs": {
-        "gate": "ts",
+        "ts": "ts",
         "opencode": "opencode",
         "docs": "docs",
         "rust": "rust",
@@ -107,7 +107,7 @@
     },
     "toolu-review.yml": {
       "aggregate": null,
-      "required": ["review"],
+      "required": ["review", "merge-gate"],
       "jobs": { "review": "changed" }
     }
   }

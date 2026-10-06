@@ -1,0 +1,26 @@
+name: Merge Gate
+
+# Re-evaluate the merge-approved label and review-thread replies without a push.
+on:
+  pull_request:
+    types: [labeled, unlabeled]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  pull_request_review_comment:
+    types: [created, edited, deleted]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: merge-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  merge-gate:
+    if: ${{ github.event.pull_request.base.ref == 'main' && !github.event.pull_request.draft && (github.event.pull_request.head.ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: falconiere/toolu-ghactions/merge-gate@v8

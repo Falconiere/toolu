@@ -1,0 +1,244 @@
+name: Native release
+
+# Called by release-please in the same run that creates the draft and tag.
+# Manual dispatch runs the identical build and smoke chain without release writes.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+      publish:
+        required: true
+        type: boolean
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing test tag to build
+        required: true
+        type: string
+      publish:
+        description: Retry publication of an existing draft release
+        required: true
+        type: boolean
+        default: false
+
+concurrency:
+  group: native-release-${{ inputs.tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+          fetch-depth: 0
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1,cargo-nextest@0.9.146
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - name: Install gate dependencies
+        run: |
+          npm install -g @ast-grep/cli
+          bun install --frozen-lockfile
+      - name: Verify tag and versions
+        env:
+          TAG: ${{ inputs.tag }}
+          PUBLISH: ${{ inputs.publish }}
+        run: |
+          if [ "$PUBLISH" = true ]; then
+            bash .github/scripts/release-native.sh verify-tag "$TAG"
+          else
+            bash .github/scripts/release-native.sh verify-tag "$TAG" --test-tag
+          fi
+      - name: Require published npm packages before native publication
+        if: inputs.publish == true
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          version=${TAG#v}
+          for package in @toolu/core @toolu/opencode @toolu/plugins; do
+            test "$(npm view "$package@$version" version)" = "$version"
+          done
+      - name: Gate released source
+        run: cargo xtask gate
+
+  build:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14
+            os: darwin
+            arch: arm64
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            os: darwin
+            arch: amd64
+            target: x86_64-apple-darwin
+          - runner: ubuntu-24.04
+            os: linux
+            arch: amd64
+            target: x86_64-unknown-linux-musl
+          - runner: ubuntu-24.04-arm
+            os: linux
+            arch: arm64
+            target: aarch64-unknown-linux-musl
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Install target toolchain
+        run: |
+          rustup toolchain install
+          rustup target add "${{ matrix.target }}"
+      - name: Install musl C toolchain
+        if: matrix.os == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y musl-tools
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+      - name: Build locked release binary
+        run: cargo build --release --locked --bin toolu --target "${{ matrix.target }}"
+      - name: Verify native architecture and static Linux linkage
+        env:
+          TARGET: ${{ matrix.target }}
+          OS: ${{ matrix.os }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          actual=$(uname -m)
+          if [ "$ARCH" = arm64 ]; then test "$actual" = aarch64 -o "$actual" = arm64; else test "$actual" = x86_64; fi
+          if [ "$OS" = linux ]; then
+            info=$(file "target/$TARGET/release/toolu")
+            echo "$info"
+            echo "$info" | grep -Eq '(static-pie|statically) linked'
+          fi
+      - name: Sign and verify Darwin binary
+        if: matrix.os == 'darwin'
+        run: |
+          codesign --force --sign - "target/${{ matrix.target }}/release/toolu"
+          codesign --verify --verbose=2 "target/${{ matrix.target }}/release/toolu"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: binary-${{ matrix.os }}-${{ matrix.arch }}
+          path: target/${{ matrix.target }}/release/toolu
+          if-no-files-found: error
+
+  package:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: binary-*
+          path: binaries
+      - name: Package four binaries and checksums
+        run: |
+          set -euo pipefail
+          for item in darwin-arm64 darwin-amd64 linux-amd64 linux-arm64; do
+            os=${item%-*}
+            arch=${item#*-}
+            bash .github/scripts/release-native.sh package "$os" "$arch" "binaries/binary-$item/toolu" dist
+          done
+          (cd dist && shasum -a 256 -- *.tar.gz > SHA256SUMS)
+          test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 4
+      - name: Generate SPDX SBOM
+        uses: anchore/sbom-action@v0.24.3
+        with:
+          path: .
+          output-file: dist/toolu.spdx.json
+          format: spdx-json
+          upload-artifact: false
+          upload-release-assets: false
+      - name: Require SBOM
+        run: test -s dist/toolu.spdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-release
+          path: dist/
+          if-no-files-found: error
+
+  upload:
+    needs: package
+    if: inputs.publish == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: native-release
+          path: dist
+      - name: Require the draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true
+      - name: Attest native archives
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: dist/toolu-*.tar.gz
+      - name: Upload assets to the draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/toolu.spdx.json --clobber
+
+  finalize:
+    needs: [package, upload]
+    if: ${{ always() && needs.package.result == 'success' && (inputs.publish != true || needs.upload.result == 'success') }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/release-finalize.yml
+    with:
+      tag: ${{ inputs.tag }}
+      published: ${{ inputs.publish == true }}
+
+  publish:
+    needs: finalize
+    if: inputs.publish == true
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Publish verified release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          if [[ "$TAG" == *-* ]]; then
+            gh release edit "$TAG" --draft=false --prerelease
+          else
+            gh release edit "$TAG" --draft=false
+          fi
