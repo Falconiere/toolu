@@ -39,6 +39,8 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
   assert_eq!(
     report.violations,
     [
+      "crates/core/protocol (toolu-protocol) depends on serde_json: only toolu-http may link a \
+       `json` crate",
       "crates/core/runtime (toolu-runtime) depends on serde_json: only toolu-http may link a \
        `json` crate",
       "crates/cli (toolu-cli) depends on serde_json: only toolu-http may link a `json` crate",
