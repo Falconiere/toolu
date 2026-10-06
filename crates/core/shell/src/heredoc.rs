@@ -42,6 +42,31 @@ fn connector(token: &str) -> Option<&'static str> {
   }
 }
 
+/// Whether tree-sitter-bash read part of the body of the heredoc `node` into
+/// the line of its delimiter. The text between the delimiter and the body is
+/// one line in bash; a body line that starts with `\\` (`\\x`, or a lone `\\`
+/// joining the next line) was read as words there, and the body lost it.
+pub(crate) fn split_body(node: Node<'_>, source: &str) -> bool {
+  let mut cursor = node.walk();
+  let mut start = None;
+  let mut body = node.end_byte();
+  for child in node.children(&mut cursor) {
+    match child.kind() {
+      "heredoc_start" => start = Some(child.end_byte()),
+      "heredoc_body" | "heredoc_end" => {
+        body = child.start_byte();
+        break;
+      }
+      _ => {}
+    }
+  }
+  let header = start
+    .and_then(|from| source.get(from..body))
+    .unwrap_or_default();
+  let line = header.strip_suffix('\n').unwrap_or(header);
+  line.contains('\n')
+}
+
 impl<'t> Heredoc<'t> {
   /// Read a `heredoc_redirect` node.
   pub(crate) fn read(node: Node<'t>, source: &str) -> Heredoc<'t> {
@@ -81,6 +106,7 @@ impl<'t> Heredoc<'t> {
         self.line_end = line;
       }
       ("heredoc_body", _) => self.body = Some(child),
+      (_, Some("right")) => self.continuation = pending.take().map(|op| (op, child)),
       ("pipeline", _) => self.continuation = Some(("|", child)),
       (_, Some("redirect")) => {
         self.redirects.push(child);
@@ -90,7 +116,6 @@ impl<'t> Heredoc<'t> {
         self.arguments.push(child);
         self.line_end = line;
       }
-      (_, Some("right")) => self.continuation = pending.take().map(|op| (op, child)),
       (kind, _) => {
         if let Some(op) = connector(kind) {
           *pending = Some(op);

@@ -10,6 +10,7 @@
 use tree_sitter::Node;
 
 use crate::heredoc::Heredoc;
+use crate::walk::redirects_of;
 
 /// One command of a pipeline, and redirects an enclosing statement adds to it.
 pub(crate) struct Element<'t> {
@@ -57,15 +58,6 @@ fn link(token: &str) -> Option<&'static str> {
     "||" => Some("||"),
     _ => None,
   }
-}
-
-/// The `redirect` children of a `redirected_statement`.
-fn redirects_of(node: Node<'_>) -> Vec<Node<'_>> {
-  let mut cursor = node.walk();
-  let found: Vec<Node<'_>> = node
-    .children_by_field_name("redirect", &mut cursor)
-    .collect();
-  found
 }
 
 /// What follows the heredoc delimiter of a `redirected_statement`, if anything.

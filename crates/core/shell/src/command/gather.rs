@@ -211,6 +211,11 @@ fn fold_heredocs<'t>(
     let heredoc = Heredoc::read(*redirect, source);
     gathered.end = gathered.end.max(heredoc.line_end);
     nodes.extend(heredoc.arguments);
+    for inner in &heredoc.redirects {
+      if inner.kind() == "file_redirect" {
+        nodes.extend(redirect::split_targets(*inner, source).1);
+      }
+    }
     extra.extend(heredoc.redirects);
   }
   gathered.redirects.extend(extra);
@@ -220,10 +225,11 @@ fn fold_heredocs<'t>(
 /// A word glued to the redirect after it that bash reads as its descriptor:
 /// `{name}` (a variable, no number) or digits.
 fn glued_fd(node: Node<'_>, redirects: &[Node<'_>], source: &str) -> Option<(usize, Option<u32>)> {
-  let redirect = redirects
-    .iter()
-    .find(|redirect| redirect.start_byte() == node.end_byte())?;
-  if redirect.kind() == "heredoc_redirect" || redirect.child_by_field_name("descriptor").is_some() {
+  let at = redirects
+    .binary_search_by_key(&node.end_byte(), Node::start_byte)
+    .ok()?;
+  let redirect = redirects.get(at)?;
+  if redirect.child_by_field_name("descriptor").is_some() {
     return None;
   }
   let text = text_of(node, source);

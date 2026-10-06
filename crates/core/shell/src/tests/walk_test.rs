@@ -2,7 +2,10 @@
 //! right origin, quoted heredoc bodies stay data, compound redirects are
 //! reported, and the exit-status rule holds per position.
 
+use std::time::Duration;
+
 use crate::analysis::CommandOrigin;
+use crate::parse::Syntax;
 use crate::{MAX_NESTING, analyze};
 
 fn pushes(source: &str) -> Vec<CommandOrigin> {
@@ -285,4 +288,21 @@ fn a_bare_redirect_is_a_command_without_words() {
     analysis.commands[0].redirects[0].target.as_deref(),
     Some("file")
   );
+}
+
+#[test]
+fn a_walk_past_the_deadline_stops_with_one_error() {
+  let (tree, text) = Syntax::new(Duration::from_secs(5))
+    .unwrap()
+    .script("a; b | c; d")
+    .unwrap();
+  let mut walker = super::Walker::new(Syntax::new(Duration::ZERO).unwrap());
+  walker.walk_script(&tree, super::Ctx::line(&text));
+  assert_eq!(walker.commands.len(), 0);
+  let messages: Vec<&str> = walker
+    .errors
+    .iter()
+    .map(|error| error.message.as_str())
+    .collect();
+  assert_eq!(messages, ["walk: stopped after the 1000 ms budget"]);
 }

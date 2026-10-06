@@ -35,8 +35,11 @@ pub(crate) fn is_simple(node: Node<'_>) -> bool {
   }
 }
 
+/// `[[ … ]]`, or `(( … ))` read as a test command (`((x++)) 2>&1`).
 fn is_double_bracket(node: Node<'_>) -> bool {
-  node.child(0).is_some_and(|first| first.kind() == "[[")
+  node
+    .child(0)
+    .is_some_and(|first| matches!(first.kind(), "[[" | "(("))
 }
 
 /// `(( … ))`, which tree-sitter-bash 0.23 reads as a command named by an arithmetic expansion.
@@ -47,6 +50,29 @@ fn is_arithmetic(node: Node<'_>, source: &str) -> bool {
   name.is_some_and(|inner| {
     inner.kind() == "arithmetic_expansion" && text_of(inner, source).starts_with("((")
   })
+}
+
+/// Whether `[` has an unescaped newline between its tokens: bash ends the
+/// command there, but tree-sitter-bash reads the lines up to `]` as its
+/// arguments (`[` newline `rm -rf x` newline `]`).
+fn broken_test(node: Node<'_>, source: &str) -> bool {
+  if node.kind() != "test_command" || is_double_bracket(node) {
+    return false;
+  }
+  let mut end = None;
+  let mut broken = false;
+  crate::parse::preorder(node, |next| {
+    if next.child_count() > 0 {
+      return true;
+    }
+    if let Some(previous) = end {
+      let gap = source.get(previous..next.start_byte()).unwrap_or_default();
+      broken |= gap.replace("\\\n", "").contains('\n');
+    }
+    end = Some(next.end_byte());
+    false
+  });
+  broken
 }
 
 /// A command no static reading can name (`bash -c "$CMD"`, recursion too deep).
@@ -90,7 +116,11 @@ fn read_redirects(
       for nested in &found.nested {
         walker.visit_nested(*nested, ctx);
       }
-      let glued = gathered.fds.iter().find(|(at, _)| *at == node.start_byte());
+      let glued = gathered
+        .fds
+        .binary_search_by_key(&node.start_byte(), |(at, _)| *at)
+        .ok()
+        .and_then(|at| gathered.fds.get(at));
       found.record.fd = found.record.fd.or(glued.map(|(_, fd)| *fd));
       records.push(found.record);
     }
@@ -147,11 +177,14 @@ fn run_string(walker: &mut Walker, command: &ShellCommand, ctx: Ctx<'_>) {
   }
 }
 
-/// Drop `coproc`, which unbash reads apart from the command: the command runs
-/// in the background, so it proves nothing. (`time` is blanked before parsing.)
-fn strip_coproc<'w, 't>(words: &'w [WordNodes<'t>], ctx: &mut Ctx<'_>) -> &'w [WordNodes<'t>] {
+/// Drop `coproc`, which unbash reads apart from the command or the compound
+/// body after it (`coproc (git push)`): it runs in the background, so it
+/// proves nothing. (`time` is blanked before parsing.)
+fn strip_coproc<'w, 't>(gathered: &'w Gathered<'t>, ctx: &mut Ctx<'_>) -> &'w [WordNodes<'t>] {
+  let words = &gathered.words;
   let first = words.first().and_then(|word| word.keyword(ctx.source));
-  if words.len() < 2 || first != Some("coproc") {
+  let body = words.len() > 1 || !gathered.others.is_empty();
+  if !body || first != Some("coproc") {
     return words;
   }
   *ctx = ctx.off();
@@ -162,9 +195,18 @@ fn strip_coproc<'w, 't>(words: &'w [WordNodes<'t>], ctx: &mut Ctx<'_>) -> &'w [W
 pub(crate) fn emit(walker: &mut Walker, node: Node<'_>, statement: &[Node<'_>], ctx: Ctx<'_>) {
   if is_double_bracket(node) || is_arithmetic(node, ctx.source) {
     walker.visit_nested(node, ctx);
+    walker.compound_redirects(statement, ctx);
     return;
   }
+  if broken_test(node, ctx.source) {
+    walker.errors.push(ShellError {
+      message: "test: a newline ends `[` before its `]`".to_owned(),
+      pos: node.start_byte(),
+      origin: ctx.origin,
+    });
+  }
   let gathered = gather::gather(node, statement, ctx.source);
+  walker.split_bodies(&gathered.redirects, ctx);
   if let Some(closer) = gathered
     .words
     .first()
@@ -183,7 +225,7 @@ pub(crate) fn emit(walker: &mut Walker, node: Node<'_>, statement: &[Node<'_>], 
     walker.visit_nested(*assignment, ctx);
   }
   let mut ctx = ctx;
-  let words = strip_coproc(&gathered.words, &mut ctx);
+  let words = strip_coproc(&gathered, &mut ctx);
   let empty = words.is_empty() && gathered.assignments.is_empty() && gathered.redirects.is_empty();
   if empty {
     walk_others(walker, &gathered, ctx);

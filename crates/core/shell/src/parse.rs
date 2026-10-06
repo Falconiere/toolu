@@ -7,6 +7,8 @@
 //! could read around them, which is how a `git push` before an unterminated
 //! quote is still reported.
 
+use std::sync::mpsc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use tree_sitter::{Language, Node, Parser, Tree};
@@ -24,6 +26,13 @@ pub const PARSE_BUDGET: Duration = Duration::from_secs(1);
 /// Longest command analyzed, in UTF-16 code units as TypeScript counts `length` (1 MiB).
 pub const MAX_SHELL_INPUT: usize = 1024 * 1024;
 
+/// Scripts this long are parsed on a worker thread the analysis stops waiting
+/// for at the deadline: tree-sitter does not check its timeout everywhere, and
+/// some inputs (a trailing `|` after 20,000 commands, one long heredoc line)
+/// take time quadratic in their length. Below it the worst case is far inside
+/// the budget, so real commands keep their latency.
+const OFF_THREAD: usize = 4 * 1024;
+
 /// Why a script could not be parsed at all.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum ParseFailure {
@@ -33,6 +42,8 @@ pub(crate) enum ParseFailure {
   Cancelled,
   /// More heredoc state than tree-sitter-bash's scanner can serialize.
   Heredocs,
+  /// No worker thread could be started for a long script.
+  Worker(String),
 }
 
 impl ParseFailure {
@@ -47,26 +58,39 @@ impl ParseFailure {
       ParseFailure::Heredocs => {
         "parser: more heredoc state than tree-sitter-bash can track".to_owned()
       }
+      ParseFailure::Worker(reason) => format!("parser: no worker thread: {reason}"),
     }
   }
 }
 
-/// The bash parser and the deadline it shares across one analysis.
+/// The bash parser and the deadline it shares across one analysis. The parser
+/// is gone once a worker thread kept it past the deadline.
 pub(crate) struct Syntax {
-  parser: Parser,
+  parser: Option<Parser>,
   deadline: Instant,
+}
+
+/// A parser for bash.
+fn bash() -> Result<Parser, ParseFailure> {
+  let mut parser = Parser::new();
+  let language = Language::new(tree_sitter_bash::LANGUAGE);
+  parser
+    .set_language(&language)
+    .map_err(|error| ParseFailure::Language(error.to_string()))?;
+  Ok(parser)
 }
 
 impl Syntax {
   /// A parser for one analysis, due `budget` from now.
   pub(crate) fn new(budget: Duration) -> Result<Syntax, ParseFailure> {
-    let mut parser = Parser::new();
-    let language = Language::new(tree_sitter_bash::LANGUAGE);
-    parser
-      .set_language(&language)
-      .map_err(|error| ParseFailure::Language(error.to_string()))?;
+    let parser = Some(bash()?);
     let deadline = Instant::now() + budget;
     Ok(Syntax { parser, deadline })
+  }
+
+  /// Whether the analysis is past its deadline.
+  pub(crate) fn expired(&self) -> bool {
+    Instant::now() >= self.deadline
   }
 
   /// Parse a script, then again with `fixup`'s changes until none is left.
@@ -91,7 +115,7 @@ impl Syntax {
 
   /// Parse `source` within what remains of the deadline.
   fn parse(&mut self, source: &str) -> Result<Tree, ParseFailure> {
-    if heredoc_state(source).1 >= SCANNER_STATE_LIMIT {
+    if heredoc_state(source) >= SCANNER_STATE_LIMIT {
       return Err(ParseFailure::Heredocs);
     }
     let left = self.deadline.saturating_duration_since(Instant::now());
@@ -99,11 +123,31 @@ impl Syntax {
     if micros == 0 {
       return Err(ParseFailure::Cancelled);
     }
-    self.parser.set_timeout_micros(micros);
-    self
-      .parser
-      .parse(source, None)
-      .ok_or(ParseFailure::Cancelled)
+    let mut parser = match self.parser.take() {
+      Some(parser) => parser,
+      None => bash()?,
+    };
+    parser.set_timeout_micros(micros);
+    if source.len() < OFF_THREAD {
+      let tree = parser.parse(source, None);
+      self.parser = Some(parser);
+      return tree.ok_or(ParseFailure::Cancelled);
+    }
+    let (sender, receiver) = mpsc::channel();
+    let script = source.to_owned();
+    thread::Builder::new()
+      .name("toolu-shell-parse".to_owned())
+      .spawn(move || {
+        let tree = parser.parse(&script, None);
+        // The analysis may have stopped waiting; then nobody reads this.
+        sender.send((parser, tree)).ok();
+      })
+      .map_err(|error| ParseFailure::Worker(error.to_string()))?;
+    let (parser, tree) = receiver
+      .recv_timeout(left)
+      .map_err(|_timeout| ParseFailure::Cancelled)?;
+    self.parser = Some(parser);
+    tree.ok_or(ParseFailure::Cancelled)
   }
 }
 

@@ -1,6 +1,8 @@
 //! Quote removal, ANSI-C decoding (unbash's `decodeAnsiCQuoted`), backtick
 //! bodies, and the pathname-pattern and brace-expansion tests.
 
+use std::time::{Duration, Instant};
+
 use super::{ansi_c, backticks, double_quoted, has_brace, has_glob, unquoted};
 
 #[test]
@@ -63,4 +65,16 @@ fn brace_expansion_needs_a_comma_or_a_range() {
   for raw in ["{}", "{a}", "a,b", r"\{a,b\}", "{a", "a}", "}{"] {
     assert!(!has_brace(raw), "{raw}");
   }
+}
+
+#[test]
+fn nested_braces_are_read_in_linear_time() {
+  let nested = format!("{}{}", "{".repeat(300_000), "}".repeat(300_000));
+  let started = Instant::now();
+  assert!(!has_brace(&nested));
+  assert!(has_brace(&format!("{{a..b{nested}}}")));
+  let elapsed = started.elapsed();
+  assert!(elapsed < Duration::from_secs(1), "{elapsed:?}");
+  assert!(has_brace("{a\\..b}"));
+  assert!(!has_brace("{a.\\.b}"));
 }

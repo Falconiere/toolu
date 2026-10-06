@@ -18,7 +18,7 @@ The pre-tool and post-tool gates that #418–#423 port to Rust all ask one quest
 
 ## Architecture
 
-**Parser.** `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3, which is language ABI 14 (`[workspace.dependencies]`). Only `toolu-shell` may link them, under the `shell-parser` capability in `rules.json`.
+**Parser.** `tree-sitter` 0.24.7 with `tree-sitter-bash` 0.23.3, which is language ABI 14 (`[workspace.dependencies]`). Only `toolu-shell` may link `tree-sitter-bash`, under the `shell-parser` capability in `rules.json`. The `tree-sitter` runtime is not a parser by itself and has no capability entry; `toolu-shell` is its only user.
 
 The versions are forced by `deny.toml`. Every `tree-sitter` from 0.25 to 0.27 build-depends on `serde_json` with `preserve_order`, which pulls in `indexmap` and then `hashbrown`. In this workspace `hashbrown` is unified with default features, because the `jsonschema` dev-dependency's `referencing` enables them. That brings `foldhash`, licensed Zlib, onto a non-dev path, and `cargo deny` licences fails, as measured during execution. 0.24.7 has no such build dependency, and `tree-sitter-bash` 0.25 needs ABI 15, which 0.24 cannot load. The 0.23.3 grammar was re-probed: it gives the same result on all 203 fixture inputs and the same construct trees, except `(( … ))`, which it reads as a `command` whose name is an `arithmetic_expansion` (see the table).
 
@@ -71,15 +71,15 @@ Rules that cut across these nodes:
 - the nesting limit;
 - a cancelled parse.
 
-A line with errors has every `exitProves` false. It is `unknown` when it has errors and no command, when the parse was cancelled, or when nesting overflowed. Input over `MAX_SHELL_INPUT` (1,048,576 UTF-16 code units, counted as TypeScript counts `length`) is not parsed. It reports `oversize: N characters exceeds the 1048576 cap`, the TypeScript message, and is `unknown`.
+A line with errors has every `exitProves` false, and it is `unknown`. TypeScript is unknown only when it has errors and no command, but tree-sitter-bash reports ERROR nodes for valid bash too (`cat <<EOF; git push`), so the commands read around one may be merged or missing. The commands are still reported (AC-3); this was decided in the pre-push review (Jev 0.99) and replaces the TypeScript rule. Input over `MAX_SHELL_INPUT` (1,048,576 UTF-16 code units, counted as TypeScript counts `length`) is not parsed. It reports `oversize: N characters exceeds the 1048576 cap`, the TypeScript message, and is `unknown`.
 
 **Git, writes and rules** port `shell-options.ts`, `shell-git.ts`, `shell-writes.ts` and `shell-rules.ts` line for line: getopt-style `parse_args`, `git_invocation` with the `-C` chain, `runs_git_subcommand`, `push_targets` with the refspec destination, `commit_messages`, `write_targets` (redirects, `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` with `DEST/basename(SRC)`, `dd of=` and python `open(…)`), and `matches_rule`. TypeScript's regular expressions with a backreference (the Python string literal) are matched by hand. The rest use hand-written scanners, which add no new dependency.
 
-**Parity oracle.** `fixtures/shell/analysis.json` holds TypeScript's projected analysis of every input in `unbash-baseline.json`, in the same order. It was captured once from `projectAnalysis` in `packages/toolu-core/src/shell/__tests__/parity-helpers.ts`. `analysis-fixture.test.ts` requires the inputs to equal the baseline's and TypeScript to reproduce every `expect`. `crates/core/shell/tests/analysis_fixture.rs` requires Rust to reproduce every `expect`, or the case's `rust.expect` where `rust.reason` records an intended difference. A second Rust test, `fixture_cases.rs`, replays every case of `bats-parity.json` and `issue-283.json` through the crate's API (Interfaces).
+**Parity oracle.** `fixtures/shell/analysis.json` holds TypeScript's projected analysis of every input in `unbash-baseline.json`, in the same order. It was captured once from `projectAnalysis` in `packages/toolu-core/src/shell/__tests__/analysis-projection.ts`. `analysis-fixture.test.ts` requires the inputs to equal the baseline's and TypeScript to reproduce every `expect`. `crates/core/shell/tests/analysis_fixture.rs` requires Rust to reproduce every `expect`, or the case's `rust.expect` where `rust.reason` records an intended difference. A second Rust test, `fixture_cases.rs`, replays every case of `bats-parity.json` and `issue-283.json` through the crate's API (Interfaces).
 
 **Fuzzing.** `crates/core/shell/fuzz/` is the package #455 admitted: `Cargo.toml` with its own `[workspace]`, a nightly `rust-toolchain.toml`, `fuzz_targets/`, and `.gitignore` covering `target`, `corpus`, `artifacts` and `Cargo.lock`. It has two targets, matching the issue's "both paths" now that there is one parser:
 - `analyze`: arbitrary bytes, as UTF-8, go through `analyze`, then `write_targets`, `push_targets`, `runs_git_subcommand` and `commit_messages`. This fuzzes tree-sitter's C parser, its error recovery and the walk.
-- `nested`: the bytes choose and nest fragments (`$(`, backticks, `"`, `'`, `<<EOF`, `bash -c '`, `eval "`, `{`, `(`, `if`, `case`, `[[`, `$((`, `${x:-`, redirects and wrappers). This fuzzes the re-parse, the nesting limit and the word decoder past what random bytes reach.
+- `nested`: the bytes choose and nest fragments (`$(`, backticks, `"`, `'`, `<<EOF`, `<(`, `bash -c '`, `eval "`, `{`, `(`, `if`, `for`, `time`, `[[`, `$((`, `${x:-`, and words such as `git push`, `node -e`, `> .env`, `2>&1`, globs and braces). This fuzzes the re-parse, the nesting limit and the word decoder past what random bytes reach.
 
 CI has two parts:
 - **Per PR:** a `fuzz` job in `tests.yml`, in path group `rust` and among the `typescript` aggregate's needs. It installs nightly and cargo-fuzz, copies the root `Cargo.lock` into `fuzz/` to pin the shared versions, seeds a corpus from the fixture inputs, and runs each target for 60 s with `-timeout=10`.
@@ -181,7 +181,7 @@ The fields:
 | `git push origin main; echo "unterminated` | both commands reported, `errors` non-empty, every `exitProves` false, `runs_git_subcommand(push) == Yes` |
 | `)`, `if` | no command, errors, `unknown: true` |
 | `"$(".repeat(10_000) + "node -e x" + ")".repeat(10_000)` | no stack overflow on a 2 MiB test thread. `unknown: true` with a `nesting` error, so a gate asks rather than allows |
-| `$((1+1+…))` × 100,000, `true && … && true` × 100,000 | iterative, no overflow. The first is not unknown, and the second keeps every command |
+| `$((1+1+…))` × 100,000, `true && … && true` × 20,000 | iterative, no overflow. The first is not unknown, and the second keeps every command. The analysis budget is wall clock and covers the walk (pre-push review), so the and-list is sized for a debug build; release walks 100,000 terms within it |
 | More than 1 MiB of UTF-16 units | not parsed. `unknown`, with the TypeScript oversize message |
 | 1 MiB of `${` | cancelled at `PARSE_BUDGET`. `unknown` with a `parser: … budget` error |
 | `bash -c "$CMD"`, `curl … \| bash`, recursion past depth 4 | an unknown command, `argv: [None]` |

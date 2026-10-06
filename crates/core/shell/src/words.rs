@@ -78,6 +78,14 @@ fn between(node: Node<'_>, source: &str, open: usize, close: &str) -> String {
   inner.strip_suffix(close).unwrap_or(inner).to_owned()
 }
 
+/// Whether a `$` before `rest` starts an expansion in bash.
+fn expands(rest: &str) -> bool {
+  rest
+    .chars()
+    .next()
+    .is_some_and(|c| c.is_ascii_alphanumeric() || "_{(@*#?$!-".contains(c))
+}
+
 /// Split one node of a word into pieces.
 fn pieces_of(node: Node<'_>, source: &str, pieces: &mut Vec<Piece>) {
   match node.kind() {
@@ -92,6 +100,10 @@ fn pieces_of(node: Node<'_>, source: &str, pieces: &mut Vec<Piece>) {
     "raw_string" => pieces.push(Piece::Quoted(between(node, source, 1, "'"))),
     "ansi_c_string" => pieces.push(Piece::Quoted(quote::ansi_c(&between(node, source, 2, "'")))),
     "extglob_pattern" => pieces.push(Piece::Glob(text_of(node, source).to_owned())),
+    // A bare `$` tree-sitter split from the name after it (`\"$b\e`) still expands.
+    "$" if expands(source.get(node.end_byte()..).unwrap_or_default()) => {
+      pieces.push(Piece::Dynamic("$".to_owned()));
+    }
     "simple_expansion"
     | "expansion"
     | "command_substitution"
@@ -107,16 +119,19 @@ fn pieces_of(node: Node<'_>, source: &str, pieces: &mut Vec<Piece>) {
 /// Join pieces: merged unquoted literal runs decide whether the word globs.
 fn join(pieces: Vec<Piece>) -> Resolved {
   let (mut value, mut text) = (Some(String::new()), String::new());
-  let (mut glob, mut braces, mut run) = (false, false, String::new());
+  let (mut glob, mut run) = (false, String::new());
+  // Braces expand across quotes (`{"git","push"}`), so they are read on the
+  // whole word with each other piece as one plain character.
+  let mut skeleton = String::new();
   for piece in pieces {
     if !matches!(piece, Piece::Literal(_)) {
-      let flushed = std::mem::take(&mut run);
-      glob |= quote::has_glob(&flushed);
-      braces |= quote::has_brace(&flushed);
+      glob |= quote::has_glob(&std::mem::take(&mut run));
+      skeleton.push('x');
     }
     let (part, shown) = match piece {
       Piece::Literal(raw) => {
         run.push_str(&raw);
+        skeleton.push_str(&raw);
         let plain = quote::unquoted(&raw);
         (Some(plain.clone()), plain)
       }
@@ -135,8 +150,7 @@ fn join(pieces: Vec<Piece>) -> Resolved {
     });
   }
   glob |= quote::has_glob(&run);
-  braces |= quote::has_brace(&run);
-  if braces {
+  if quote::has_brace(&skeleton) {
     value = None;
   }
   match value {

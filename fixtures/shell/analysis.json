@@ -3829,6 +3829,76 @@
           "push": "no",
           "commit": "no"
         }
+      },
+      "rust": {
+        "expect": {
+          "unknown": true,
+          "errored": true,
+          "commands": [
+            {
+              "words": [
+                "unterminated"
+              ],
+              "argv": [
+                "unterminated"
+              ],
+              "patterns": [
+                null
+              ],
+              "texts": [
+                "unterminated"
+              ],
+              "wrappers": [],
+              "redirects": [],
+              "pipeline": {
+                "index": 0,
+                "size": 1
+              },
+              "exitProves": false,
+              "origin": "substitution",
+              "depth": 0,
+              "text": "unterminated"
+            },
+            {
+              "words": [
+                "echo",
+                null
+              ],
+              "argv": [
+                "echo",
+                null
+              ],
+              "patterns": [
+                null,
+                null
+              ],
+              "texts": [
+                "echo",
+                "$(unterminated"
+              ],
+              "wrappers": [],
+              "redirects": [],
+              "pipeline": {
+                "index": 0,
+                "size": 1
+              },
+              "exitProves": false,
+              "origin": "line",
+              "depth": 0,
+              "text": "echo $(unterminated"
+            }
+          ],
+          "compoundRedirects": [],
+          "writes": [],
+          "git": [],
+          "pushes": [],
+          "commitMessages": [],
+          "runs": {
+            "push": "unknown",
+            "commit": "unknown"
+          }
+        },
+        "reason": "Any parse error makes the Rust analysis unknown, where TypeScript trusts the commands it read: tree-sitter-bash reports ERROR nodes for valid bash too (`cat <<EOF; git push`), so the commands read around one may be merged or missing. They are still reported, and bash runs nothing from a line it cannot parse."
       }
     },
     {
@@ -3924,7 +3994,7 @@
       },
       "rust": {
         "expect": {
-          "unknown": false,
+          "unknown": true,
           "errored": true,
           "commands": [
             {
@@ -3958,11 +4028,11 @@
           "pushes": [],
           "commitMessages": [],
           "runs": {
-            "push": "no",
-            "commit": "no"
+            "push": "unknown",
+            "commit": "unknown"
           }
         },
-        "reason": "tree-sitter-bash leaves an unterminated quote in an ERROR node instead of folding it into the command's last word. Bash runs nothing from a line it cannot parse, and the command is still reported, without the broken word."
+        "reason": "tree-sitter-bash leaves an unterminated quote in an ERROR node instead of folding it into the command's last word, so the command is reported without the broken word. Like every parse error, it makes the Rust analysis unknown."
       }
     },
     {

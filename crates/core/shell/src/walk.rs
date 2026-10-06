@@ -12,7 +12,7 @@ use tree_sitter::{Node, Tree};
 
 use crate::analysis::{CommandOrigin, PipelinePosition, ShellCommand, ShellError, ShellRedirect};
 use crate::command;
-use crate::parse::{Syntax, syntax_errors};
+use crate::parse::{PARSE_BUDGET, Syntax, syntax_errors};
 
 /// How deep nested scripts and compound bodies are followed before the line is unknown.
 pub const MAX_NESTING: usize = 64;
@@ -64,8 +64,8 @@ pub(crate) struct Walker {
   pub(crate) errors: Vec<ShellError>,
   /// A nesting level past `MAX_NESTING` was cut off.
   pub(crate) overflow: bool,
-  /// A script could not be parsed (budget, heredoc state).
-  pub(crate) failed: bool,
+  /// The walk stopped at the analysis deadline.
+  late: bool,
 }
 
 /// The tokens that end a `case` arm; anywhere else they are a syntax error.
@@ -97,7 +97,7 @@ impl Walker {
       compound_redirects: Vec::new(),
       errors: Vec::new(),
       overflow: false,
-      failed: false,
+      late: false,
     }
   }
 
@@ -193,10 +193,31 @@ impl Walker {
     }
   }
 
+  /// Whether the analysis is past its deadline, recorded once as an error: a
+  /// walk that slow on some input stops rather than stall the hook.
+  fn late(&mut self, ctx: Ctx<'_>) -> bool {
+    if !self.late && self.syntax.expired() {
+      self.late = true;
+      let message = format!(
+        "walk: stopped after the {} ms budget",
+        PARSE_BUDGET.as_millis()
+      );
+      self.errors.push(ShellError {
+        message,
+        pos: 0,
+        origin: ctx.origin,
+      });
+    }
+    self.late
+  }
+
   /// The commands of one pipeline: only the last of a non-negated one proves.
   fn walk_pipeline(&mut self, pipeline: &chain::Pipeline<'_>, ctx: Ctx<'_>) {
     let size = pipeline.elements.len();
     for (index, element) in pipeline.elements.iter().enumerate() {
+      if self.late(ctx) {
+        return;
+      }
       let proves = ctx.proves && !pipeline.negated && index + 1 == size;
       let position = if size > 1 {
         PipelinePosition { index, size }
@@ -235,16 +256,24 @@ impl Walker {
   /// A statement with redirects: on a simple command they are the command's;
   /// on anything else they are compound redirects.
   fn redirected<'t>(&mut self, node: Node<'t>, extra: &[Node<'t>], ctx: Ctx<'_>) {
-    let mut cursor = node.walk();
-    let mut redirects: Vec<Node<'t>> = node
-      .children_by_field_name("redirect", &mut cursor)
-      .collect();
+    let mut redirects = redirects_of(node);
     redirects.extend_from_slice(extra);
     match node.child_by_field_name("body") {
       None => command::emit(self, node, &redirects, ctx),
       Some(body) => self.walk_element(body, &redirects, ctx),
     }
   }
+}
+
+/// The redirects of a `redirected_statement`, by kind: tree-sitter-bash leaves
+/// a herestring on a compound statement (`done <<< x`) without the `redirect` field.
+pub(crate) fn redirects_of(node: Node<'_>) -> Vec<Node<'_>> {
+  let mut cursor = node.walk();
+  let found: Vec<Node<'_>> = node
+    .children(&mut cursor)
+    .filter(|child| child.kind().ends_with("_redirect"))
+    .collect();
+  found
 }
 
 #[cfg(test)]

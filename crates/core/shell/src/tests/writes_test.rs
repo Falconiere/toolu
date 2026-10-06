@@ -14,6 +14,15 @@ pub(crate) fn paths(source: &str) -> Vec<Option<String>> {
     .collect()
 }
 
+/// `(path, pattern, text)` of every target.
+pub(crate) fn targets(source: &str) -> Vec<(Option<String>, Option<String>, String)> {
+  let analysis = analyze(source);
+  write_targets(&analysis)
+    .into_iter()
+    .map(|target| (target.path, target.pattern, target.text))
+    .collect()
+}
+
 /// `(path, text)` of every target.
 fn texts(source: &str) -> Vec<(Option<String>, String)> {
   let analysis = analyze(source);
@@ -47,8 +56,7 @@ fn every_output_redirection_writes_its_target() {
     "{ echo x; } >.env",
     "(echo x) > .env",
   ] {
-    let found: Vec<Option<String>> = paths(source).into_iter().flatten().map(Some).collect();
-    assert_eq!(found, some(&[".env"]), "{source}");
+    assert_eq!(paths(source), some(&[".env"]), "{source}");
   }
 }
 

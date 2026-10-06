@@ -2,7 +2,7 @@
 //! script; cp, mv and install write their destination and each
 //! `DEST/basename(SRC)`, since `DEST` may be a directory.
 
-use crate::writes::tests::{paths, some};
+use crate::writes::tests::{paths, some, targets};
 
 #[test]
 fn sed_and_perl_write_their_files_only_in_place() {
@@ -53,6 +53,27 @@ fn cp_mv_and_install_write_their_destination() {
   assert_eq!(paths("/usr/bin/install -d .env"), some(&[".env"]));
   assert_eq!(paths("cp onlyone"), Vec::<Option<String>>::new());
   assert_eq!(paths("cp"), Vec::<Option<String>>::new());
+}
+
+#[test]
+fn a_dynamic_directory_or_a_pattern_destination_keeps_its_text_and_pattern() {
+  assert_eq!(
+    targets("cp -t \"$D\" src/.env"),
+    [(None, None, "$D/.env".to_owned())]
+  );
+  let pattern = |text: &str| (None, Some(text.to_owned()), text.to_owned());
+  assert_eq!(
+    targets("cp src .en[v]"),
+    [pattern(".en[v]"), pattern(".en[v]/src")]
+  );
+}
+
+#[test]
+fn sources_inside_a_huge_destination_are_one_unknown_target() {
+  let dest = "d".repeat(100_000);
+  let found = targets(&format!("cp {}{dest}", "a ".repeat(50)));
+  let whole = (Some(dest.clone()), None, dest.clone());
+  assert_eq!(found, [whole, (None, None, dest)]);
 }
 
 #[test]

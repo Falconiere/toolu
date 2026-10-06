@@ -224,5 +224,5 @@ test.concurrent("toolu-shell is fuzzed on every Rust change and on a schedule (#
   const latency = steps("tests.yml", "rust").map((step) => step.run ?? "");
   expect(latency.some((run) => run.includes("--test latency"))).toBe(true);
   const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
-  expect(musl.some((run) => run.includes("musl-tools"))).toBe(true);
+  expect(musl.some((run) => run.includes('=musl-gcc" >> "$GITHUB_ENV"'))).toBe(true);
 });

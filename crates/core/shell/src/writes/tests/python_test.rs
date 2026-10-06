@@ -2,6 +2,8 @@
 //! in every literal form; any write the scan cannot read statically is an
 //! unknown target, never silence; reads stay out.
 
+use std::time::{Duration, Instant};
+
 use crate::writes::tests::{paths, some};
 
 fn script(code: &str) -> Vec<Option<String>> {
@@ -44,6 +46,18 @@ fn every_literal_form_is_read() {
   assert_eq!(script("open(b'.env', mode='wb')"), some(&[".env"]));
   assert_eq!(script("open('''.env''', 'a')"), some(&[".env"]));
   assert_eq!(script("open(\"\"\"x/.env\"\"\", \"w\")"), some(&["x/.env"]));
+}
+
+#[test]
+fn a_mode_that_does_not_close_at_its_first_quote_is_an_unknown_write() {
+  assert_eq!(script("open('.env', 'w' if a else 'r')"), [None]);
+  assert_eq!(script("open('.env', 'r' if a else 'rb')"), [None]);
+  // TypeScript's regex retries every later quote; 40,000 such calls stay linear here.
+  let code = "open('a',\"".repeat(40_000);
+  let started = Instant::now();
+  assert_eq!(super::written(&code).len(), 40_000);
+  let elapsed = started.elapsed();
+  assert!(elapsed < Duration::from_secs(1), "{elapsed:?}");
 }
 
 #[test]

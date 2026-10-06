@@ -52,23 +52,19 @@ fn is_word(c: char) -> bool {
   c.is_ascii_alphanumeric() || c == '_'
 }
 
-/// The first `quote` in `inside` for which `accept` takes what follows: the
-/// body before it and the rest after what `accept` took.
+/// The first `quote` in `inside`, if `accept` takes what follows: the body
+/// before it and the rest after what `accept` took. TypeScript's regex tries
+/// later quotes too, which is quadratic over many `open(` calls; a mode that
+/// does not close at its first quote is unreadable here, an unknown write.
 fn close<'s>(
   inside: &'s str,
   quote: &str,
   accept: &impl Fn(&str) -> Option<usize>,
 ) -> Option<(&'s str, &'s str)> {
-  let mut from = 0;
-  while let Some(found) = inside.get(from..).and_then(|tail| tail.find(quote)) {
-    let at = from + found;
-    let tail = inside.get(at + quote.len()..)?;
-    if let Some(used) = accept(tail) {
-      return Some((inside.get(..at)?, tail.get(used..)?));
-    }
-    from = at + 1;
-  }
-  None
+  let at = inside.find(quote)?;
+  let tail = inside.get(at + quote.len()..)?;
+  let used = accept(tail)?;
+  Some((inside.get(..at)?, tail.get(used..)?))
 }
 
 /// A literal with a prefix of up to two of `rRbBuUfF` and any python quote,

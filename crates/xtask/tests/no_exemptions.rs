@@ -5,6 +5,7 @@
 use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 type Res<T> = Result<T, Box<dyn Error>>;
 
@@ -106,12 +107,25 @@ fn relaxed_lints(manifest: &toml::Table) -> Vec<String> {
   found
 }
 
-/// Every file under `dir` except build caches, which cargo tags with
-/// `CACHEDIR.TAG` (a local `cargo fuzz` build lands in `crates/core/shell/fuzz/target`).
+/// A build cache: cargo tagged it with `CACHEDIR.TAG` and git tracks nothing
+/// in it, like a local `cargo fuzz` build in `crates/core/shell/fuzz/target`.
+fn untracked_cache(dir: &Path) -> bool {
+  if !dir.join("CACHEDIR.TAG").is_file() {
+    return false;
+  }
+  let listed = Command::new("git")
+    .arg("-C")
+    .arg(dir)
+    .args(["ls-files", "--", "."])
+    .output();
+  listed.is_ok_and(|out| !out.status.success() || out.stdout.is_empty())
+}
+
+/// Every file under `dir` except untracked build caches.
 fn files(dir: &Path, out: &mut Vec<PathBuf>) -> Res<()> {
   for entry in fs::read_dir(dir)? {
     let path = entry?.path();
-    if path.join("CACHEDIR.TAG").is_file() {
+    if untracked_cache(&path) {
       continue;
     }
     if path.is_dir() {
@@ -270,13 +284,25 @@ fn an_added_banned_construct_is_found() {
 }
 
 #[test]
-fn only_a_tagged_build_cache_is_left_out() {
+fn only_an_untracked_tagged_build_cache_is_left_out() {
   let dir = tempfile::tempdir().unwrap();
-  let target = dir.path().join("crates/demo/fuzz/target/debug/build");
-  fs::create_dir_all(&target).unwrap();
-  fs::write(target.join("out.d"), ["src/", "mod", ".rs"].concat()).unwrap();
+  let target = dir.path().join("crates/demo/fuzz/target");
+  fs::create_dir_all(target.join("debug")).unwrap();
+  fs::write(target.join("debug/out.d"), ["src/", "mod", ".rs"].concat()).unwrap();
   assert_eq!(banned_in_crates(dir.path()).unwrap().len(), 1);
   let tag = "Signature: 8a477f597d28d172789f06886806bc55\n";
-  fs::write(dir.path().join("crates/demo/fuzz/target/CACHEDIR.TAG"), tag).unwrap();
+  fs::write(target.join("CACHEDIR.TAG"), tag).unwrap();
   assert_eq!(banned_in_crates(dir.path()).unwrap(), Vec::<String>::new());
+  let git = |args: &[&str]| {
+    let status = Command::new("git")
+      .arg("-C")
+      .arg(dir.path())
+      .args(args)
+      .status()
+      .unwrap();
+    assert!(status.success(), "git {args:?}");
+  };
+  git(&["init", "-q"]);
+  git(&["add", "-f", "crates/demo/fuzz/target"]);
+  assert_eq!(banned_in_crates(dir.path()).unwrap().len(), 1);
 }

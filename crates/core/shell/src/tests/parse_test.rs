@@ -73,10 +73,14 @@ fn more_heredoc_state_than_the_scanner_can_hold_is_not_parsed() {
     syntax.script(&pending).map(|_| ()),
     Err(ParseFailure::Heredocs)
   );
-  let long = format!("cat <<{}\nx\n", "A<".repeat(550));
+  let long = format!("cat <<{}\nx\n", "A<".repeat(507));
   assert_eq!(
     syntax.script(&long).map(|_| ()),
     Err(ParseFailure::Heredocs)
   );
   assert!(ParseFailure::Heredocs.message().contains("heredoc state"));
+  assert_eq!(
+    ParseFailure::Worker("no threads".to_owned()).message(),
+    "parser: no worker thread: no threads"
+  );
 }

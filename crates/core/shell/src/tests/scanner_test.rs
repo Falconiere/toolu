@@ -1,63 +1,91 @@
-//! The heredoc-state bound: one push per run of `<`, the delimiter as
-//! tree-sitter-bash's `advance_word` reads it (with its NUL), and the limit.
+//! The heredoc-state bound: one push per run of `<`, every word a `<<` token
+//! can append (with its NUL) at any alignment, times the heredoc count (at
+//! least `RELEX`), and the limit.
 
-use super::{SCANNER_STATE_LIMIT, heredoc_state};
+use super::{HUGE, RELEX, SCANNER_STATE_LIMIT, heredoc_state};
+
+fn bound(bytes: usize) -> usize {
+  4 + RELEX * bytes
+}
 
 #[test]
 fn a_command_without_heredocs_needs_only_the_header() {
-  assert_eq!(heredoc_state("git push"), (0, 4));
-  assert_eq!(heredoc_state("sort < in > out"), (0, 4));
+  assert_eq!(heredoc_state("git push"), 4);
+  assert_eq!(heredoc_state("sort < in > out"), 4);
 }
 
 #[test]
 fn each_heredoc_costs_seven_bytes_its_delimiter_and_a_nul() {
-  // `EOF` is 7 + 1 + 3; `<<-'END'` is 7, the dash, then `'END'` read unquoted.
-  assert_eq!(heredoc_state("cat <<EOF >x <<-'END'"), (2, 4 + 11 + 14));
-  assert_eq!(heredoc_state("cat <<'a b c'"), (1, 4 + 7 + 1 + 5));
-  assert_eq!(heredoc_state("cat <<a\\ b"), (1, 4 + 7 + 1 + 3));
-  assert_eq!(heredoc_state("cat <<ab\0cd"), (1, 4 + 7 + 1 + 2));
+  assert_eq!(heredoc_state("cat <<EOF"), bound(7 + 4));
+  // `<<-'END'` reads `-'END'` unquoted, or `END` after the dash.
+  assert_eq!(
+    heredoc_state("cat <<EOF >x <<-'END'"),
+    bound(11 + 7 + 7 + 4)
+  );
+  assert_eq!(heredoc_state("cat <<'a b c'"), bound(7 + 6));
+  assert_eq!(heredoc_state("cat <<a\\ b"), bound(7 + 4));
+  assert_eq!(heredoc_state("cat <<ab\0cd"), bound(7 + 3));
 }
 
 #[test]
 fn a_delimiter_runs_to_whitespace_through_redirect_characters() {
-  assert_eq!(heredoc_state("cat <<EOF>out"), (1, 4 + 7 + 1 + 7));
-  let long = format!("cat <<{}\nx\n", "A<".repeat(600));
-  assert!(heredoc_state(&long).1 >= SCANNER_STATE_LIMIT);
+  assert_eq!(heredoc_state("cat <<EOF>out"), bound(7 + 8));
+  let window = format!("cat <<{}\nx\n", "A<".repeat(507));
+  assert!(heredoc_state(&window) >= SCANNER_STATE_LIMIT);
 }
 
 #[test]
-fn a_here_string_pushes_a_heredoc_but_appends_no_delimiter() {
-  assert_eq!(heredoc_state("cat <<< x"), (1, 11));
+fn every_alignment_of_a_run_of_angle_brackets_counts() {
+  // `<<<<<<<<5`: the pairs before the last read `<…<5`, the last reads `5`.
+  let inner: usize = (1..=6).map(|left| left + 2).sum();
+  assert_eq!(heredoc_state("<<<<<<<<5"), bound(7 + inner + 2));
+  assert_eq!(heredoc_state("cat \\<<<'AAA'"), bound(7 + 7 + 4));
+  assert_eq!(heredoc_state("cat <<< x"), bound(7 + 2 + 2));
+}
+
+#[test]
+fn a_delimiter_sure_to_fail_the_scanner_check_counts_nothing() {
   let json = format!("gh api -X POST --input - <<< '{}'", "x".repeat(4_000));
-  assert_eq!(heredoc_state(&json), (1, 11));
+  assert_eq!(heredoc_state(&json), bound(7 + 2));
+  let long = format!("cat <<{}", "A".repeat(HUGE));
+  assert_eq!(heredoc_state(&long), bound(7));
+  let one_less = format!("cat <<{}", "A".repeat(HUGE - 1));
+  assert!(heredoc_state(&one_less) >= SCANNER_STATE_LIMIT);
 }
 
 #[test]
-fn runs_of_angle_brackets_push_once_and_read_a_word_after_a_trailing_pair() {
-  assert_eq!(heredoc_state("<<<<"), (1, 11));
-  assert_eq!(heredoc_state("<<<<<<<<5"), (1, 4 + 7 + 1 + 1));
-  assert_eq!(heredoc_state("cat \\<<<'AAA'"), (1, 4 + 7 + 1 + 5));
-  assert_eq!(heredoc_state("cat \\\\<<<x"), (1, 11));
+fn words_count_only_once_something_pushes() {
+  assert_eq!(heredoc_state("(( a <<= 1 ))"), 4);
+  assert_eq!(heredoc_state("(( a <<= 1 )); cat <<EOF"), bound(2 + 7 + 4));
 }
 
 #[test]
-fn shift_assignment_pushes_nothing_but_its_word_still_counts() {
-  assert_eq!(heredoc_state("(( a <<= 1 ))"), (0, 4 + 1 + 1));
+fn whitespace_the_c_library_may_keep_makes_no_length_sure() {
+  assert_eq!(heredoc_state("cat <<\u{2003}\"a b\""), bound(7 + 5));
+  // A word with non-ASCII whitespace in it may end there: it is not sure to be huge.
+  let spaced = format!("cat <<{}\u{2003}{}", "A".repeat(500), "B".repeat(600));
+  assert!(heredoc_state(&spaced) >= SCANNER_STATE_LIMIT);
 }
 
 #[test]
-fn whitespace_the_c_library_may_keep_counts_toward_the_delimiter() {
+fn more_heredocs_multiply_the_state_error_recovery_can_reach() {
+  // Five heredocs: five pushes and words, each assumed to reach the stack five times.
   assert_eq!(
-    heredoc_state("cat <<\u{2003}\"a b\""),
-    (1, 4 + 7 + 1 + 1 + 3)
+    heredoc_state(&"cat <<EOF\nx\nEOF\n".repeat(5)),
+    4 + 5 * 5 * 11
   );
+  // Measured: this reached 1,027 bytes, with stale entries appended again.
+  let recovered = format!("x=<<'{}'a|", "E".repeat(30)).repeat(10);
+  assert!(heredoc_state(&recovered) >= SCANNER_STATE_LIMIT);
 }
 
 #[test]
-fn counting_stops_at_the_limit() {
-  let (count, size) = heredoc_state(&"cat <<EOF ".repeat(150));
-  assert!(size >= SCANNER_STATE_LIMIT);
-  assert!(count < 150, "{count}");
-  let (_, long) = heredoc_state(&format!("cat <<{}", "A".repeat(5_000)));
-  assert_eq!(long, 4 + 7 + 1 + SCANNER_STATE_LIMIT);
+fn counting_stops_at_the_limit_and_stays_linear() {
+  assert!(heredoc_state(&"cat <<EOF ".repeat(150)) >= SCANNER_STATE_LIMIT);
+  let started = std::time::Instant::now();
+  // `<<=` pushes nothing, and each word runs to the end: nothing can be stored.
+  assert_eq!(heredoc_state(&"<<=a".repeat(250_000)), 4);
+  assert!(heredoc_state(&"<".repeat(1_000_000)) >= SCANNER_STATE_LIMIT);
+  let elapsed = started.elapsed();
+  assert!(elapsed < std::time::Duration::from_secs(2), "{elapsed:?}");
 }

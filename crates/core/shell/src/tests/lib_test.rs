@@ -2,7 +2,7 @@
 //! errors come from every nested script, a line with no command at all is
 //! unknown, and oversize or slow input is not analyzed.
 
-use crate::analysis::CommandOrigin;
+use crate::analysis::{CommandOrigin, ShellError};
 use crate::{MAX_SHELL_INPUT, analyze};
 
 fn argvs(source: &str) -> Vec<Vec<Option<String>>> {
@@ -27,7 +27,8 @@ fn a_valid_command_followed_by_a_syntax_error_is_still_reported() {
       .any(|c| c.argv == words(&["git", "push"]))
   );
   assert_ne!(analysis.errors, Vec::<crate::analysis::ShellError>::new());
-  assert!(!analysis.unknown);
+  // Any error fails closed, unlike TypeScript: the commands are still reported.
+  assert!(analysis.unknown);
 }
 
 #[test]
@@ -52,19 +53,21 @@ fn errors_with_no_command_at_all_make_the_line_unknown() {
 }
 
 #[test]
-fn errors_inside_a_substitution_belong_to_it() {
+fn an_unterminated_substitution_is_one_error_on_the_line() {
+  // tree-sitter wraps the whole `$(…)` in one ERROR node; TypeScript reports
+  // the substitution and the quote inside it. Both lines are unknown here.
   let analysis = analyze("echo $(git push; echo \"oops)");
-  assert!(analysis.errors.iter().any(
-    |error| error.origin == CommandOrigin::Substitution || error.origin == CommandOrigin::Line
-  ));
+  let error = ShellError {
+    message: "syntax error near '$(git push; echo \"oops)'".to_owned(),
+    pos: 5,
+    origin: CommandOrigin::Line,
+  };
+  assert_eq!(analysis.errors, [error]);
+  assert!(analysis.unknown);
   assert!(argvs("echo $(git push; echo \"oops)").contains(&words(&["git", "push"])));
   let inner = analyze("bash -c 'echo \"x'");
-  assert!(
-    inner
-      .errors
-      .iter()
-      .any(|error| error.origin == CommandOrigin::Shell)
-  );
+  let origins: Vec<CommandOrigin> = inner.errors.iter().map(|error| error.origin).collect();
+  assert_eq!(origins, [CommandOrigin::Shell]);
 }
 
 #[test]

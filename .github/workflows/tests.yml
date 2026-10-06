@@ -334,23 +334,18 @@ jobs:
           rustup toolchain install
           rustup target add "${{ matrix.target }}"
 
-      # toolu-shell compiles tree-sitter's C sources (#416), which needs a musl C compiler.
-      - name: Install the musl C compiler
-        run: |
-          set -euo pipefail
-          sudo apt-get update -q
-          sudo apt-get install -y -q musl-tools
-          echo "CC_$(echo '${{ matrix.target }}' | tr - _)=musl-gcc" >> "$GITHUB_ENV"
-
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.target }}
 
+      # toolu-shell compiles tree-sitter's C sources (#416) with musl-gcc, which
+      # cc-rs would not pick for aarch64 on its own.
       - name: Install musl C toolchain
         run: |
           sudo apt-get update -y
           sudo apt-get install -y musl-tools
+          echo "CC_$(echo '${{ matrix.target }}' | tr - _)=musl-gcc" >> "$GITHUB_ENV"
 
       - name: Release build
         run: cargo build --workspace --release --locked --target "${{ matrix.target }}"
@@ -399,6 +394,11 @@ jobs:
           for target in analyze nested; do
             python3 -c 'import json, os, sys; d = sys.argv[1]; os.makedirs(d, exist_ok=True); [open(os.path.join(d, "seed-%03d" % i), "w").write(c["input"]) for i, c in enumerate(json.load(open("../../../../fixtures/shell/unbash-baseline.json"))["cases"])]' "corpus/$target"
           done
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: crates/core/shell/fuzz -> target
 
       - name: Fuzz analyze for 60 seconds
         run: cargo fuzz run analyze -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096

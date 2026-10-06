@@ -169,27 +169,42 @@ Table measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple
   - only the first word after `>` is the target (`echo x > .env y`);
   - `<>`, a descriptor glued to its redirect (`0<file`, `{fd}>file`) and a `-` dropped before `<<` are restored;
   - a redirect tree-sitter puts on a whole list (`a && b 2>&1 | c`) goes to its last command;
-  - a backtick body that escapes a backtick is decoded and parsed again.
+  - a backtick body that escapes a backtick is decoded and parsed again;
+  - `(( … ))` read as a test command (`((x++)) 2>&1`) runs nothing, and the redirects of `(( … ))` and `[[ … ]]` are compound redirects (`(( 1 )) > .env` writes `.env`);
+  - a here-string tree-sitter leaves unlabelled on a compound statement (`done <<< "$(git push)"`) is still its redirect;
+  - `coproc` before a compound body (`coproc (git push)`) runs the body in the background;
+  - a digit glued to `<<` is the heredoc's descriptor (`0<<EOF git push`);
+  - a heredoc line keeps the words after a redirect (`a=1 <<-EOF >f rm -rf x`) and the whole pipeline after `&&` (`cat <<EOF && a | git push`);
+  - a bare `$` tree-sitter split from the name after it (`\"$b`) still expands;
+  - braces expand across quotes (`{"git","push"}` is two dynamic words).
+
+**Fail closed.** Any ERROR or MISSING node left after the fixups makes the analysis `unknown`; the commands read are still reported. TypeScript is unknown only when it read no command, but tree-sitter-bash reports ERROR nodes for valid bash too, and the commands around one can be merged or missing: `cat <<'EOF'; git push` put `git push` into `cat`'s arguments, `3<<EOF git push` named the command `EOF`, `echo "a``" > .env` lost the write. Some misreads carry no ERROR node and are errors too:
+- two backtick substitutions tree-sitter reads as one (`` echo `ls` `git push` ``);
+- a `[` whose lines run on to `]` (bash ends `[` at the newline and runs the next line);
+- a heredoc body line starting with `\` that tree-sitter reads into the delimiter's line, losing it from the body (`bash <<EOF`, then `\git push`).
 
 **Limits.** All of these make the analysis `unknown`, which a guardrail treats as "ask":
 - `MAX_NESTING` (64): nested scripts and compound bodies past this depth. unbash stops at 256 `$(…)` levels without marking the line unknown.
-- `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse): tree-sitter's error recovery takes about 4 s on 1 MiB of `${`.
-- More heredoc state than tree-sitter-bash's scanner can serialize: an upper bound of 1,000 bytes (`scanner.rs`). The scanner's own bounds check is short by four, so a state of 1,021 to 1,027 bytes aborts the process in tree-sitter's assertion. Fuzzing found two ways there. The bound counts 7 bytes for each run of `<` that can push a heredoc. It adds each delimiter as the scanner reads it: up to whitespace, `<`, `>` and `;` included, plus its NUL. A here-string's text is not a delimiter, so a long `<<< '…'` stays known.
+- `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse and the walk): tree-sitter does not check its timeout everywhere, and some inputs take time quadratic in their length (20,000 commands then a trailing `|` took 11 s, one 80 KB heredoc line 20 s). A script of 4 KiB or more is parsed on a worker thread the analysis stops waiting for at the deadline; the walk stops there too.
+- More heredoc state than tree-sitter-bash's scanner can serialize (`scanner.rs`). The scanner writes 4 bytes, then 7 and the delimiter with its NUL for each heredoc it holds. Its bounds check is short by four, so 1,025 to 1,027 bytes abort the process in tree-sitter's assertion; fuzzing found it twice. The stack keeps stale entries when the parser restores an earlier version, and error recovery lexes a `<<` again, so the state follows the parser's path: `x=<<'E…'a|` ten times reached 1,027 bytes from 380 bytes of delimiters. The bound counts 7 bytes for each run of `<` that can push. It adds every word a `<<` token can append, at any alignment of the run, read to whitespace (`<`, `>` and `;` included) with its NUL. The sum is multiplied by the number of heredocs, at least 2. A delimiter of 1,017 characters always fails the scanner's check, which ends serialization safely, so it counts nothing, and a long `<<< '…'` stays known. A bound of 1,000 bytes makes the input unknown. Measured against a scanner patched to record the bytes it writes, over 73,010 distinct inputs in two runs, no input the bound accepts reaches 1,000 bytes or exceeds its bound (the largest is 460), and no real command is refused (the largest real bound is 58). The inputs were 1,729 real commands and fixtures, the 7,436-input fuzz corpus, 23,845 targeted heredoc families and 40,000 random ones.
 
 **Parity.** `fixtures/shell/analysis.json` holds TypeScript's projected analysis of every input of `unbash-baseline.json`. `analysis-fixture.test.ts` and `crates/core/shell/tests/analysis_fixture.rs` must both reproduce it. Intended differences in the fixture:
 
-- `echo 'unterminated`: tree-sitter-bash leaves an unterminated quote in an ERROR node instead of folding it into the command's last word. Bash runs nothing from a line it cannot parse, and the command is still reported, without the broken word.
+- `echo $(unterminated`: Any parse error makes the Rust analysis unknown, where TypeScript trusts the commands it read: tree-sitter-bash reports ERROR nodes for valid bash too (`cat <<EOF; git push`), so the commands read around one may be merged or missing. They are still reported, and bash runs nothing from a line it cannot parse.
+- `echo 'unterminated`: tree-sitter-bash leaves an unterminated quote in an ERROR node instead of folding it into the command's last word, so the command is reported without the broken word. Like every parse error, it makes the Rust analysis unknown.
 
 Other known differences, found by a differential run over 1,526 inputs (the fixtures, every string literal in the TypeScript shell, detect and gate tests, and adversarial cases). Each is malformed input or a form tree-sitter-bash 0.23 cannot read, and each leaves Rust no less cautious:
 
-- Error recovery: the words of a command broken by a syntax error, and the order or origin of commands inside a broken substitution.
+- Error recovery: the words of a command broken by a syntax error, and the order or origin of commands inside a broken substitution. Rust marks such a line unknown.
 - Extended globs (`@(…)`, `!(…)`), and a pathname or brace pattern as a command name that tree-sitter cannot read (`a?c`, `[[:alpha:]]*`): Rust reports an error or `unknown` where unbash reads a pattern.
-- Two heredocs on one command, a heredoc body that starts with `\`, an unterminated heredoc, or `0<<EOF`.
+- Two heredocs on one command, or an unterminated heredoc.
 - A carriage return: tree-sitter treats it as whitespace, while bash and unbash keep it in the word.
 - After a swapped heredoc, the command's `text` and redirect order follow the rewritten line.
+- A python `open()` whose mode does not close at its first quote (`'w' if a else 'r'`) is a write to an unknown path; TypeScript tries every later quote, which is quadratic.
+- More than 4 MiB of copy targets (many sources into a long destination) are the destination and one unknown target.
 - Error messages and offsets are tree-sitter's (offsets are bytes, not UTF-16 units). The oversize message is TypeScript's.
 
-**Latency.** `cargo test --release -p toolu-shell --test latency` runs `analyze` plus the git and write helpers over the 235 real commands `bench:shell` times. Measured on 2026-10-06 on a shared Linux x86_64 host: p50 13.6 µs, p99 57.8 µs, against a 100 µs budget.
+**Latency.** `cargo test --release -p toolu-shell --test latency` runs `analyze` plus the git and write helpers over the 235 real commands `bench:shell` times. Measured on 2026-10-06 on a shared Linux x86_64 host: p50 12.5 µs, p99 48.6 µs, against a 100 µs budget.
 
 **Fuzzing.** `crates/core/shell/fuzz` is a cargo-fuzz (libFuzzer) package on nightly. It has two targets:
 - `analyze`: arbitrary input, then every helper a gate calls.

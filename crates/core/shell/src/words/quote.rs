@@ -199,11 +199,20 @@ pub(crate) fn backticks(body: &str) -> String {
 /// has no static value. `{}` and `{a}` stay literal.
 pub(crate) fn has_brace(raw: &str) -> bool {
   let mut opens: Vec<(usize, bool)> = Vec::new();
-  let mut chars = raw.char_indices();
-  while let Some((at, c)) = chars.next() {
+  // Where the last `..` began (escaped dots too), so each body is tested in constant time.
+  let (mut pair, mut dot, mut escaped) = (None, None, false);
+  for (at, c) in raw.char_indices() {
+    if c == '.' {
+      pair = dot.filter(|previous| previous + 1 == at).or(pair);
+      dot = Some(at);
+    }
+    if escaped {
+      escaped = false;
+      continue;
+    }
     let closed = match c {
       '\\' => {
-        chars.next();
+        escaped = true;
         None
       }
       '{' => {
@@ -214,16 +223,10 @@ pub(crate) fn has_brace(raw: &str) -> bool {
         opens.last_mut().into_iter().for_each(|open| open.1 = true);
         None
       }
-      '}' => opens.pop().map(|(open, comma)| (open, at, comma)),
+      '}' => opens.pop(),
       _ => None,
     };
-    let expands = closed.is_some_and(|(open, close, comma)| {
-      comma
-        || raw
-          .get(open + 1..close)
-          .is_some_and(|inside| inside.contains(".."))
-    });
-    if expands {
+    if closed.is_some_and(|(open, comma)| comma || pair.is_some_and(|start| start > open)) {
       return true;
     }
   }

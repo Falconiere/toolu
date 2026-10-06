@@ -4,6 +4,7 @@
 use crate::analysis::ShellCommand;
 use crate::argv::basename;
 use crate::options::{OptionSpec, named, parse_args};
+use crate::parse::MAX_SHELL_INPUT;
 use crate::writes::{Target, arg_at, operands};
 
 const MOVE: OptionSpec = OptionSpec {
@@ -54,6 +55,33 @@ fn in_dir(dir: &Target, source: &Target) -> Target {
   }
 }
 
+/// The most bytes the sources inside one directory may take. Each copies the
+/// directory's name, so many sources and a long name would grow without bound;
+/// past this they are one unknown target, as cautious as any path.
+const MAX_INSIDE_BYTES: usize = 4 * MAX_SHELL_INPUT;
+
+fn size(target: &Target) -> usize {
+  let path = target.path.as_ref().map_or(0, String::len);
+  path + target.pattern.as_ref().map_or(0, String::len) + target.text.len()
+}
+
+/// Each of `sources` inside the directory `dir`.
+fn inside(dir: &Target, sources: &[Target]) -> Vec<Target> {
+  let total: usize = sources
+    .iter()
+    .map(|source| size(dir) + size(source) + 3)
+    .sum();
+  if total > MAX_INSIDE_BYTES {
+    let text = dir.text.clone();
+    return vec![Target {
+      path: None,
+      pattern: None,
+      text,
+    }];
+  }
+  sources.iter().map(|source| in_dir(dir, source)).collect()
+}
+
 /// cp/mv/install: the destination and each source inside it, or each source inside `-t DIR`.
 pub(super) fn copy_targets(command: &ShellCommand, install: bool) -> Vec<Target> {
   let parsed = parse_args(&command.argv, 1, if install { &INSTALL } else { &MOVE });
@@ -76,7 +104,7 @@ pub(super) fn copy_targets(command: &ShellCommand, install: bool) -> Vec<Target>
       }
     };
     let into = dir.at.map_or_else(attached, |at| arg_at(command, at));
-    return files.iter().map(|source| in_dir(&into, source)).collect();
+    return inside(&into, &files);
   }
   let Some(dest) = files.pop() else {
     return Vec::new();
@@ -89,8 +117,8 @@ pub(super) fn copy_targets(command: &ShellCommand, install: bool) -> Vec<Target>
   if dest.path.is_none() && dest.pattern.is_none() {
     return vec![dest];
   }
-  let inside: Vec<Target> = files.iter().map(|source| in_dir(&dest, source)).collect();
-  std::iter::once(dest).chain(inside).collect()
+  let within = inside(&dest, &files);
+  std::iter::once(dest).chain(within).collect()
 }
 
 /// sed/perl edit files only in place; their first operand is the script unless

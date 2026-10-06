@@ -44,17 +44,20 @@ fn unknown(source: &str, message: String, pos: usize) -> ShellAnalysis {
   }
 }
 
-/// The analysis once the walk is done: a line with errors exits non-zero in
-/// bash, so a zero status proves nothing about its commands.
+/// The analysis once the walk is done. Any error makes it unknown, unlike
+/// TypeScript, which trusts the commands it read: tree-sitter-bash reports
+/// ERROR nodes for valid bash too (`cat <<EOF; git push`), and the commands
+/// around them may be merged or missing. Bash runs nothing from a line it
+/// cannot parse, so the commands are still reported, and their exit status
+/// proves nothing.
 fn finish(source: &str, walker: Walker) -> ShellAnalysis {
   let mut commands = walker.commands;
-  let errored = !walker.errors.is_empty();
-  if errored {
+  let unknown = !walker.errors.is_empty();
+  if unknown {
     for command in &mut commands {
       command.exit_proves = false;
     }
   }
-  let unknown = errored && (commands.is_empty() || walker.overflow || walker.failed);
   ShellAnalysis {
     source: source.to_owned(),
     commands,

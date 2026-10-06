@@ -409,3 +409,30 @@ Dependencies and records → option parser → parse and words → wrappers → 
 
   Here-string text is not counted, so the real `gh api … <<< '{…}'` fixture command stays known (Jev: 0.86 for this bound over counting every overlapping `<<`). `tests/limits.rs` now pins the overflow window (1,013 to 1,015 characters aborted before the change). The crash input, the window and 16 here-string probes replay clean.
 - `gate` (2026-10-06): `crates/xtask/tests/no_exemptions.rs` walked untracked build output under `crates/`, which a local `cargo fuzz` build puts in `crates/core/shell/fuzz/target`. It now skips directories cargo tags with `CACHEDIR.TAG`, and a test pins that.
+- Pre-push review (2026-10-06): four reviewers found misreads, an unsound scanner bound and super-linear paths. The changes are:
+  - **Fail closed** (Jev 0.99). Any ERROR or MISSING node makes the analysis unknown; the two malformed fixture cases are intended differences. tree-sitter-bash reports ERROR nodes for valid bash too, and 24 of the 38 reviewer inputs were unsafe that way.
+  - **Misreads without an ERROR node**, now read as TypeScript reads them:
+    - `(( ))` and `[[ ]]` redirects;
+    - unlabelled here-strings on compound statements;
+    - `coproc (…)`;
+    - `0<<EOF cmd`;
+    - words after a redirect on a heredoc line;
+    - `&& a | b` after a heredoc;
+    - a bare `$`;
+    - braces across quotes.
+
+    Merged backticks, `[` across lines and split heredoc bodies fail closed. Over the 1,526-input corpus, 18 differences remain, all in documented classes.
+  - **Wall clock.** `PARSE_BUDGET` covers the parse and the walk. Scripts of 4 KiB or more parse on a worker thread; tree-sitter's timeout missed quadratic parses of 11 s and 20 s. The 100,000-term and-list test is 20,000 terms, since a debug walk of 100,000 passes the budget. tree-sitter is built at `opt-level = 3` in dev.
+  - **Scanner bound**, a third model after two failed estimates:
+    - 7 bytes per run of `<` that can push, plus every word a `<<` token can append at any alignment;
+    - times the number of heredocs, at least 2 (Jev chose 2 over 3 and 4);
+    - nothing when no heredoc is pushed.
+
+    Measured against a patched scanner over 73,010 inputs: no accepted input reaches 1,000 bytes, and no real command is refused.
+  - **Linear time:**
+    - the python mode literal closes at its first quote;
+    - glued-fd lookups binary-search;
+    - `has_brace` tracks the last `..`;
+    - copy targets are capped at 4 MiB.
+  - **Tests and CI.** Tests are tightened (exact write paths, copy tuples, exact error origin). In CI, the musl `CC_` export moved into #485's step, and the fuzz job gained a cargo cache.
+

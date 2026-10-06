@@ -5,6 +5,7 @@
 use tree_sitter::Node;
 
 use crate::analysis::{CommandOrigin, PipelinePosition, ShellError};
+use crate::heredoc;
 use crate::parse::{ParseFailure, preorder};
 use crate::walk::{Ctx, Walker};
 use crate::words::{self, quote};
@@ -19,6 +20,26 @@ fn escaped_backticks<'s>(node: Node<'_>, source: &'s str) -> Option<&'s str> {
   let body = text.strip_prefix('`')?;
   let body = body.strip_suffix('`').unwrap_or(body);
   body.contains('\\').then_some(body)
+}
+
+/// Whether the backtick substitution `node` holds an unescaped backtick:
+/// tree-sitter-bash reads `` `a` `b` `` as one substitution, `a` `b`.
+fn merged_backticks(node: Node<'_>, source: &str) -> bool {
+  let text = words::text_of(node, source);
+  let Some(body) = text.strip_prefix('`') else {
+    return false;
+  };
+  let mut chars = body.strip_suffix('`').unwrap_or(body).chars();
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' => {
+        chars.next();
+      }
+      '`' => return true,
+      _ => {}
+    }
+  }
+  false
 }
 
 impl Walker {
@@ -51,7 +72,6 @@ impl Walker {
 
   /// Record a script that could not be parsed.
   pub(crate) fn fail(&mut self, failure: &ParseFailure, origin: CommandOrigin) {
-    self.failed = true;
     self.errors.push(ShellError {
       message: failure.message(),
       pos: 0,
@@ -60,7 +80,21 @@ impl Walker {
   }
 
   /// Redirects on a compound command, and the scripts their targets run.
+  /// Record an error for each heredoc whose body tree-sitter split (`split_body`).
+  pub(crate) fn split_bodies(&mut self, redirects: &[Node<'_>], ctx: Ctx<'_>) {
+    for node in redirects {
+      if node.kind() == "heredoc_redirect" && heredoc::split_body(*node, ctx.source) {
+        self.errors.push(ShellError {
+          message: "heredoc: the body's first line was read as a word".to_owned(),
+          pos: node.start_byte(),
+          origin: ctx.origin,
+        });
+      }
+    }
+  }
+
   pub(crate) fn compound_redirects(&mut self, redirects: &[Node<'_>], ctx: Ctx<'_>) {
+    self.split_bodies(redirects, ctx);
     for node in redirects {
       let Some(redirect) = crate::redirect::read(*node, ctx.source) else {
         continue;
@@ -82,6 +116,15 @@ impl Walker {
       ..ctx
     };
     preorder(node, |next| {
+      let substitution = next.kind() == "command_substitution";
+      if substitution && merged_backticks(next, ctx.source) {
+        self.errors.push(ShellError {
+          message: "backticks: two substitutions read as one".to_owned(),
+          pos: next.start_byte(),
+          origin: ctx.origin,
+        });
+        return false;
+      }
       if let Some(body) = escaped_backticks(next, ctx.source) {
         self.parse_and_walk(&quote::backticks(body), nested);
         return false;
