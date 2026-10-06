@@ -89,3 +89,25 @@ test("a missing TOOLU_BIN reports both install commands as startup context", asy
   expect(message).toContain("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash");
   expect(message).toContain("brew install falconiere/tap/toolu");
 });
+
+test("the native launcher's Bun fallback does not load the project .env", async () => {
+  using root = tempRoot("toolu-native-fallback-env-");
+  const plugin = nativePlugin(root.path);
+  const projectRoot = project(root.path);
+  writeFileSync(join(projectRoot, ".env"), "TOOLU_NATIVE_FALLBACK_SECRET=from-project\n");
+  writeFileSync(
+    join(plugin.pluginDir, "hooks", "dist", "session-start.js"),
+    'console.log(JSON.stringify({hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:process.env.TOOLU_NATIVE_FALLBACK_SECRET ?? "absent"}}));\n',
+  );
+  const result = await bootstrapRuntime({
+    repoRoot: REPO_ROOT,
+    projectRoot,
+    dataRoot: join(root.path, "data"),
+    plugins: [plugin],
+    env: { TOOLU_BIN: "", TOOLU_BUN: process.execPath, HOME: root.path, PATH: "/usr/bin:/bin" },
+  });
+  expect(result.status).toBe("ready");
+  if (result.status !== "ready") throw new Error(result.reason);
+  expect(result.plugins[0]?.entries[0]?.additionalContext).toBe("absent");
+  expect(result.diagnostics.some((line) => line.includes("running the Bun bundle"))).toBe(true);
+});

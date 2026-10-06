@@ -33,6 +33,7 @@ Coverage discovery normalizes Bun and native commands to the same `hooks/dist/<e
 - Unsupported hook types, hand-written commands, mismatched plugin/event/entry, malformed JSON, and absent fallback bundle produce a named startup failure. The TypeScript launcher gate also catches a native command with its protocol marker removed.
 - Native shell startup failures, nonzero exits, invalid JSON output, timeouts, oversized output, and cancellation use the existing failure and cleanup path.
 - With `TOOLU_BIN` explicitly set to a nonexistent path, #412 emits a `systemMessage` naming both install commands and exits 0; OpenCode treats it as session context and continues. With no override and Bun available, #412 retains its Bun fallback.
+- OpenCode supplies a short-lived `TOOLU_BUN` wrapper to native children so #412's transitional Bun fallback also runs with `--no-env-file`; the declared launcher command remains unchanged and project `.env` values cannot enter the hook process.
 - Native `commandWindows` is checked by `cargo xtask check-hooks`; OpenCode's Linux and macOS bootstrap runs the POSIX command.
 
 ## Acceptance criteria
