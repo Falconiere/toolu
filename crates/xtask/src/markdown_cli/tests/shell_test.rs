@@ -176,3 +176,11 @@ rm \"${files[@]}\"
     Vec::<(String, usize)>::new()
   );
 }
+
+#[test]
+fn a_multi_line_array_is_one_assignment() {
+  assert_eq!(
+    names("files=(\n  a.txt\n  b.txt\n)\nls\n"),
+    owned(&[("ls", 5)])
+  );
+}

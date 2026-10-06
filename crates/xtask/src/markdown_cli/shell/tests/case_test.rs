@@ -14,3 +14,9 @@ fn a_semicolon_outside_a_case_only_ends_the_command() {
   assert_eq!(names("gh a;; git b\n"), owned(&[("gh", 1), ("git", 1)]));
   assert_eq!(names("case x in\n  esac\nls\n"), owned(&[("ls", 3)]));
 }
+
+#[test]
+fn a_comment_between_arms_is_not_a_pattern() {
+  let text = "case $x in\n  # (see above)\n  foo) gh a ;;\nesac\n";
+  assert_eq!(names(text), owned(&[("gh", 3)]));
+}

@@ -18,7 +18,7 @@ use super::words::{Command, unquote};
 const PATTERNS: &[&str] = &[
   r"(?P<path>hooks/dist/(?P<stem>[A-Za-z0-9_.-]+)\.js)\b",
   r"(?P<path>scripts/(?:[A-Za-z0-9_.-]+/)*(?P<stem>[A-Za-z0-9_.-]+)\.ts)\b",
-  r#"(?:^|[/\s"'=`])(?P<path>(?P<stem>jev|write-state|search|statusline)\.sh)\b"#,
+  r#"(?:^|[/\s"'=`(|;])(?P<path>(?P<stem>jev|write-state|search|statusline)\.sh)\b"#,
 ];
 
 /// Stems whose namespace is not the one their plugin owns: exact, or a
@@ -67,15 +67,13 @@ pub(crate) fn bun_script(patterns: &[Regex], command: &Command) -> Option<(Strin
   if !(name == "bun" || name.ends_with("/bun") || name.contains("BUN")) {
     return None;
   }
-  let mut words = words.skip_while(|word| word.starts_with('-')).peekable();
-  // `bun test` and `bun build` take files they do not run.
-  if words
-    .peek()
-    .is_some_and(|word| word == "test" || word == "build")
-  {
-    return None;
+  // `bun [run] <file>`: the file is the first operand after `run`; `bun test`,
+  // `bun build` and `bun run <script name>` run no file of their own.
+  let mut first = operand(&mut words)?;
+  if first == "run" {
+    first = operand(&mut words)?;
   }
-  let script = words.find(|word| {
+  let script = Some(first).filter(|word| {
     Path::new(word)
       .extension()
       .is_some_and(|ext| ext.eq_ignore_ascii_case("ts") || ext.eq_ignore_ascii_case("js"))
@@ -86,6 +84,18 @@ pub(crate) fn bun_script(patterns: &[Regex], command: &Command) -> Option<(Strin
     .into_owned();
   let caught = patterns.iter().any(|pattern| pattern.is_match(&script));
   (!caught).then_some((script, stem))
+}
+
+/// The next word that is not a flag; `--cwd` takes the word after it.
+fn operand(words: &mut impl Iterator<Item = String>) -> Option<String> {
+  loop {
+    let word = words.next()?;
+    if word == "--cwd" {
+      words.next();
+    } else if !word.starts_with('-') {
+      return Some(word);
+    }
+  }
 }
 
 /// Why the reference to `stem` in plugin `plugin`'s Markdown is removed, if it is.

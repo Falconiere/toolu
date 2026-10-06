@@ -42,6 +42,8 @@ struct Fence {
   marker: char,
   len: usize,
   console: bool,
+  /// Opened inside a blockquote: its lines carry `>` markers.
+  quoted: bool,
   block: Option<Block>,
 }
 
@@ -52,19 +54,27 @@ pub(crate) fn scan(markdown: &str) -> Scanned {
   let mut fence: Option<Fence> = None;
   for (index, raw) in markdown.lines().enumerate() {
     let line = index + 1;
-    let trimmed = unblockquote(raw);
+    let plain = raw.trim_start();
+    let unquoted = unblockquote(raw);
+    let text = |quoted: bool| if quoted { unquoted } else { plain };
     match fence.as_mut() {
-      Some(open) if closes(trimmed, open.marker, open.len) => {
+      Some(open) if closes(text(open.quoted), open.marker, open.len) => {
         out.blocks.extend(fence.take().and_then(|open| open.block));
       }
       Some(open) => {
         if let Some(block) = open.block.as_mut() {
-          block.text.push_str(&content(trimmed, open.console));
+          block
+            .text
+            .push_str(&content(text(open.quoted), open.console));
           block.text.push('\n');
         }
       }
-      None => match opens(trimmed) {
-        Some((marker, len, info)) => fence = Some(open_fence(marker, len, &info, line)),
+      None => match opens(unquoted) {
+        Some((marker, len, info)) => {
+          let mut opened = open_fence(marker, len, &info, line);
+          opened.quoted = plain.starts_with('>');
+          fence = Some(opened);
+        }
         None => out.spans.extend(spans(raw, line)),
       },
     }
@@ -84,6 +94,7 @@ fn open_fence(marker: char, len: usize, info: &str, line: usize) -> Fence {
     marker,
     len,
     console: tag == "console",
+    quoted: false,
     block: shell.then(|| Block {
       line: line + 1,
       text: String::new(),

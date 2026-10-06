@@ -21,6 +21,7 @@ impl Lexer {
       || self.word.is_some()
       || !self.words.is_empty()
       || c.is_whitespace()
+      || c == '#'
     {
       return false;
     }

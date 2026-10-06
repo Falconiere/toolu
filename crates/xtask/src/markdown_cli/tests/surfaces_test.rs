@@ -89,6 +89,8 @@ fn bun_running_a_script_is_a_reference_unless_a_path_pattern_caught_it() {
     Some(("route.ts".to_owned(), "route".to_owned()))
   );
   for text in [
+    "bun run lint src/x.ts",
+    "bun run test foo.test.ts",
     "bun test packages/x.test.ts",
     "bun build src/x.ts --outdir dist",
     "bun run test",
@@ -130,4 +132,12 @@ fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
   assert!(problem(&ported("babysit"), "babysit-route-fix", "toolu").is_some());
   // an unknown plugin owns nothing.
   assert_eq!(problem(&tree(), "anything", "nope"), None);
+}
+
+#[test]
+fn stable_scripts_after_a_substitution_or_separator_are_found() {
+  let patterns = patterns().unwrap();
+  let found = references(&patterns, "y=$(jev.sh ask);search.sh x|statusline.sh");
+  let stems: Vec<&str> = found.iter().map(|(_, stem)| stem.as_str()).collect();
+  assert_eq!(stems, ["jev", "search", "statusline"]);
 }

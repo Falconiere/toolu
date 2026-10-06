@@ -129,3 +129,9 @@ fn listing_errors_other_than_absence_are_setup_errors() {
   let err = super::entries(&dir.path().join("plugins\0bad")).unwrap_err();
   assert!(err.starts_with("cannot list "), "{err}");
 }
+
+#[test]
+fn only_a_quoted_fence_loses_its_markers() {
+  let scanned = scan("```bash\ntoolu x \\\n  > out.txt\n```\n");
+  assert_eq!(scanned.blocks[0].text, "toolu x \\\n> out.txt\n");
+}

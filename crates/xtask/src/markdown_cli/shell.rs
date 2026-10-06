@@ -189,63 +189,10 @@ impl Lexer {
       self.pos += 1;
     }
   }
-
-  /// `name()` defines a function, `name=(…)` assigns an array; any other
-  /// `(` starts a command.
-  fn open_paren(&mut self) {
-    if self
-      .word
-      .as_ref()
-      .is_some_and(|(word, _)| word.ends_with('='))
-    {
-      self.push('(');
-      self.push_through(')');
-      return;
-    }
-    self.end_word();
-    if self.peek(0) == Some(')') {
-      self.pos += 1;
-      if let Some((name, _)) = self.words.pop() {
-        self.out.functions.push(name);
-      }
-    } else {
-      self.subshells += 1;
-    }
-    self.end_command();
-  }
-
-  /// Run the inner command of a substitution, then return to the outer one.
-  fn open_substitution(&mut self) {
-    self.end_word();
-    self.outer.push(std::mem::take(&mut self.words));
-  }
-
-  fn close_paren(&mut self) {
-    self.end_command();
-    if self.subshells > 0 {
-      self.subshells -= 1;
-    } else if let Some(words) = self.outer.pop() {
-      self.words = words;
-    }
-  }
-
-  /// `$(` starts a command; `${…}` and `$name` stay in the word.
-  fn dollar(&mut self) {
-    match self.peek(0) {
-      Some('(') => {
-        self.pos += 1;
-        self.open_substitution();
-      }
-      Some('{') => {
-        self.push('$');
-        self.push_through('}');
-      }
-      _ => self.push('$'),
-    }
-  }
 }
 
 mod case;
+mod group;
 mod redirect;
 
 #[cfg(test)]
