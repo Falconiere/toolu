@@ -174,3 +174,60 @@ fn deferred_cases_ask_git_and_get_its_answer() {
   assert_eq!(discover(&env(), &top), Discovery::AskGit);
   assert_eq!(toplevel(&env(), &top), Some(real(&top)));
 }
+
+#[test]
+fn a_linked_worktree_ignores_the_shared_core_bare_and_core_worktree_as_git_does() {
+  let dir = tempfile::tempdir().unwrap();
+  let bare = dir.path().join("bare.git");
+  std::fs::create_dir(&bare).unwrap();
+  run_git(&bare, &["init", "-q", "--bare"]);
+  let tree = run_git(&bare, &["mktree"]);
+  let commit = run_git(&bare, &["commit-tree", &tree, "-m", "c"]);
+  run_git(&bare, &["update-ref", "refs/heads/main", &commit]);
+  run_git(&bare, &["worktree", "add", "-q", "../wt", "main"]);
+  let wt = dir.path().join("wt");
+  assert_eq!(
+    run_git(&wt, &["rev-parse", "--show-toplevel"]),
+    real(&wt).display().to_string()
+  );
+  assert_eq!(toplevel(&env(), &wt), Some(real(&wt)));
+  run_git(&bare, &["config", "core.worktree", "/nonexistent"]);
+  assert_eq!(
+    run_git(&wt, &["rev-parse", "--show-toplevel"]),
+    real(&wt).display().to_string()
+  );
+  assert_eq!(toplevel(&env(), &wt), Some(real(&wt)));
+}
+
+#[test]
+fn per_worktree_config_and_unreadable_config_ask_git() {
+  let dir = tempfile::tempdir().unwrap();
+  let top = dir.path().join("repo");
+  std::fs::create_dir(&top).unwrap();
+  run_git(&top, &["init", "-q"]);
+  std::fs::write(top.join(".git/config.worktree"), "").unwrap();
+  assert_eq!(discover(&env(), &top), Discovery::AskGit);
+  std::fs::remove_file(top.join(".git/config.worktree")).unwrap();
+  let mut config = std::fs::read(top.join(".git/config")).unwrap();
+  config.extend_from_slice(b"[user]\n\tname = Jos\xe9\n");
+  std::fs::write(top.join(".git/config"), config).unwrap();
+  assert_eq!(
+    discover(&env(), &top),
+    Discovery::AskGit,
+    "a config that is not UTF-8"
+  );
+  assert_eq!(toplevel(&env(), &top), Some(real(&top)));
+}
+
+#[test]
+fn a_repository_owned_by_someone_else_is_left_to_git() {
+  let dir = tempfile::tempdir().unwrap();
+  let top = dir.path().join("repo");
+  std::fs::create_dir(&top).unwrap();
+  run_git(&top, &["init", "-q"]);
+  assert_eq!(discover(&env(), &top), Discovery::Repo(repo_at(&top)));
+  if nix::unistd::geteuid().is_root() {
+    std::os::unix::fs::chown(&top, Some(65534), None).unwrap();
+    assert_eq!(discover(&env(), &top), Discovery::AskGit);
+  }
+}

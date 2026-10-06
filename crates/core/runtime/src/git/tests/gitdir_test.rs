@@ -82,3 +82,31 @@ fn a_gitfile_names_a_git_dir_or_is_invalid() {
   }
   assert_eq!(read_gitfile(&work.join("absent")), None);
 }
+
+#[test]
+fn gitfile_and_commondir_paths_are_bytes_not_utf8() {
+  use std::os::unix::ffi::OsStrExt as _;
+  let root = tempfile::tempdir().unwrap();
+  let name = std::ffi::OsStr::from_bytes(b"st\xe9re.git");
+  let target = root.path().join(name);
+  bare_layout(&target, "ref: refs/heads/main\n");
+  let file = root.path().join(".git");
+  let mut body = b"gitdir: ".to_vec();
+  body.extend_from_slice(name.as_bytes());
+  body.extend_from_slice(b"\r\n");
+  std::fs::write(&file, &body).unwrap();
+  assert_eq!(
+    read_gitfile(&file),
+    Some(std::fs::canonicalize(&target).unwrap())
+  );
+  let admin = target.join("worktrees/w");
+  std::fs::create_dir_all(&admin).unwrap();
+  std::fs::write(admin.join("HEAD"), "ref: refs/heads/w\n").unwrap();
+  let mut up = b"../../".to_vec();
+  up.push(b'\n');
+  std::fs::write(admin.join("commondir"), up).unwrap();
+  assert_eq!(
+    common_dir_of(&admin),
+    std::fs::canonicalize(&target).unwrap()
+  );
+}

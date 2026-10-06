@@ -4,7 +4,7 @@ use super::{Core, core_config, env_defers, foreign_owner, parse_core, truthy};
 use crate::env::Env;
 
 #[test]
-fn redirecting_variables_defer_and_empty_ones_do_not() {
+fn redirecting_variables_defer_even_when_empty() {
   let base = Env::from_pairs([("PATH", "/usr/bin"), ("HOME", "/h")]);
   assert!(!env_defers(&base));
   for key in [
@@ -16,8 +16,8 @@ fn redirecting_variables_defer_and_empty_ones_do_not() {
     assert!(env_defers(&base.clone().with(key, "x")), "{key}");
   }
   assert!(
-    !env_defers(&base.clone().with("GIT_DIR", "")),
-    "empty is unset"
+    env_defers(&base.clone().with("GIT_DIR", "")),
+    "git treats an empty GIT_DIR as set"
   );
   let sudo = base.with("SUDO_UID", "1000");
   assert_eq!(env_defers(&sudo), nix::unistd::geteuid().is_root());

@@ -111,8 +111,9 @@ fn repo(toplevel: Option<&Path>, git_dir: PathBuf) -> Repo {
   }
 }
 
-/// `repo` with the worktree its config gives it (`core.bare`, `core.worktree`),
-/// unless its owner or its config leaves the answer to git.
+/// `repo` with the worktree its config gives it (`core.bare`, `core.worktree`,
+/// which a linked worktree ignores), unless its owner or its config leaves the
+/// answer to git.
 fn checked(mut repo: Repo, gitfile: Option<&Path>) -> Discovery {
   let owned: Vec<&Path> = [repo.toplevel.as_deref(), gitfile]
     .into_iter()
@@ -125,14 +126,16 @@ fn checked(mut repo: Repo, gitfile: Option<&Path>) -> Discovery {
   let Some(core) = defer::core_config(&repo.git_dir, &repo.common_dir) else {
     return Discovery::AskGit;
   };
+  // A linked worktree ignores the shared config's `core.bare` and `core.worktree`, as git does.
+  if repo.git_dir != repo.common_dir {
+    return Discovery::Repo(repo);
+  }
   if core.bare {
     repo.toplevel = None;
   } else if let Some(worktree) = core.worktree {
-    // A linked worktree with `core.worktree` set is git's to untangle.
-    let explicit = std::fs::canonicalize(repo.git_dir.join(worktree));
-    match explicit {
-      Ok(top) if repo.git_dir == repo.common_dir => repo.toplevel = Some(top),
-      _ => return Discovery::AskGit,
+    match std::fs::canonicalize(repo.git_dir.join(worktree)) {
+      Ok(top) => repo.toplevel = Some(top),
+      Err(_) => return Discovery::AskGit,
     }
   }
   Discovery::Repo(repo)

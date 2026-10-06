@@ -389,7 +389,7 @@ Then the Bun suites for state and detect, plus the fixture inventory. `bun run t
   - `core.bare = true` means no toplevel;
   - otherwise `core.worktree`, resolved against the git dir, is the toplevel.
   
-  It still asks git for a linked worktree with `core.worktree`, a quoted or escaped value, includes, `config.worktree`, and a repository format above 1.
+  A linked worktree ignores the shared config's `core.bare` and `core.worktree`, as git does (`!has_common`), so a bare main with `git worktree add` keeps its toplevel; this was a review finding. Git is still asked for a quoted or escaped value, includes, `config.worktree`, a repository format above 1, and a config that cannot be read as UTF-8. Git paths in a `.git` file or `commondir` are read as bytes.
 - **state-cases.** The 76 Rust-run cases are split over three files to stay under the 300-line limit: `tests/state_cases.rs` (schema, telemetry, branch, diff), `tests/io_cases.rs` and `tests/gate_cases.rs`. The step's check runs all three.
 - **edit-records.** The shared `EditRecordSchema` cases need a strict reader, so `toolu_state::edit_records::parse_edit_record` was added. `toolu_state::telemetry::TELEMETRY_EVENTS` lists the closed event set for the `telemetry-events` case.
 - **gate-file.** `record_gate_failure` takes a `GateFailure` struct (file, source, reason, violations) rather than four strings, which keeps it within the five-parameter limit.

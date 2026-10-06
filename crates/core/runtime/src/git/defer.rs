@@ -24,7 +24,8 @@ const REDIRECTING: [&str; 9] = [
 /// judges ownership against `SUDO_UID`.
 pub(crate) fn env_defers(env: &Env) -> bool {
   let sudo = nix::unistd::geteuid().is_root() && env.get("SUDO_UID").is_some();
-  sudo || REDIRECTING.iter().any(|key| env.get(key).is_some())
+  // Git treats an empty `GIT_DIR` or `GIT_WORK_TREE` as set, so presence is what counts.
+  sudo || env.vars().any(|(key, _)| REDIRECTING.contains(&key))
 }
 
 /// Whether any of `paths` (the worktree, the `.git` file, the git dir) is
@@ -48,14 +49,17 @@ pub(crate) struct Core {
 
 /// The `[core]` worktree settings, or `None` when only git can read them: a
 /// `config.worktree` file, an include, a malformed header, a quoted or escaped
-/// value, a valueless `worktree`, or a repository format above 1.
+/// value, a valueless `worktree`, a repository format above 1, or a config
+/// that cannot be read as UTF-8.
 pub(crate) fn core_config(git_dir: &Path, common_dir: &Path) -> Option<Core> {
   if git_dir.join("config.worktree").exists() || common_dir.join("config.worktree").exists() {
     return None;
   }
   match std::fs::read_to_string(common_dir.join("config")) {
     Ok(text) => parse_core(&text),
-    Err(_) => Some(Core::default()),
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Some(Core::default()),
+    // Unreadable or not UTF-8: only git can read it.
+    Err(_) => None,
   }
 }
 

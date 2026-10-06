@@ -3,15 +3,27 @@
 //! holds a valid `HEAD`, and its common dir holds `objects/` and `refs/`; a
 //! `.git` file names one with `gitdir: <path>`.
 
+use std::ffi::OsStr;
+use std::os::unix::ffi::OsStrExt as _;
 use std::path::{Path, PathBuf};
+
+/// The bytes of `file` without trailing newlines and carriage returns, as a
+/// path: git paths are bytes, not UTF-8.
+fn path_line(bytes: &[u8]) -> &OsStr {
+  let end = bytes
+    .iter()
+    .rposition(|byte| !matches!(byte, b'\n' | b'\r'))
+    .map_or(0, |at| at + 1);
+  OsStr::from_bytes(bytes.get(..end).unwrap_or_default())
+}
 
 /// The common dir of `git_dir`: its `commondir` file resolved against it
 /// (a linked worktree's admin dir), else `git_dir` itself.
 pub(crate) fn common_dir_of(git_dir: &Path) -> PathBuf {
-  let Ok(text) = std::fs::read_to_string(git_dir.join("commondir")) else {
+  let Ok(bytes) = std::fs::read(git_dir.join("commondir")) else {
     return git_dir.to_path_buf();
   };
-  let named = git_dir.join(text.trim_end_matches(['\n', '\r']));
+  let named = git_dir.join(path_line(&bytes));
   std::fs::canonicalize(&named).unwrap_or(named)
 }
 
@@ -50,10 +62,8 @@ pub(crate) fn is_object_id(text: &str) -> bool {
 /// The git dir a `.git` file names, made absolute and real, or `None` when
 /// the file is not `gitdir: <path>` naming a git directory (git dies then).
 pub(crate) fn read_gitfile(file: &Path) -> Option<PathBuf> {
-  let text = std::fs::read_to_string(file).ok()?;
-  let named = text
-    .strip_prefix("gitdir: ")?
-    .trim_end_matches(['\n', '\r']);
+  let bytes = std::fs::read(file).ok()?;
+  let named = path_line(bytes.strip_prefix(b"gitdir: ")?);
   if named.is_empty() {
     return None;
   }
