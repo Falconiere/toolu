@@ -1,0 +1,9 @@
+{
+  "allow": [
+    {
+      "file": "plugins/ast-grep/skills/ast-grep/SKILL.md",
+      "subject": "--strictness",
+      "reason": "The Strictness block lists the flag's values for ast-grep run, one per line; it is not a command."
+    }
+  ]
+}

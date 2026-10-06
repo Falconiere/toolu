@@ -131,6 +131,14 @@ test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
   });
 });
 
+test.concurrent("a CLI verb rename turns on docs, which runs the Markdown drift gate (#444)", async () => {
+  const rename = {
+    "crates/core/runtime/src/lib.rs": "//! renamed\n",
+    "docs/cli/commands.json": "{}\n",
+  };
+  expect(await prOutputs(rename)).toEqual({ ...ALL_ON, ts: "false", opencode: "false" });
+});
+
 test.concurrent("a release-please version bump turns every output off (AC-2)", async () => {
   expect(RELEASE_ONLY).toContain("tools/toolu-cli/npm/package.json");
   for (const path of ["Cargo.toml", "Cargo.lock"]) {

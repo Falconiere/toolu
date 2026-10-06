@@ -1,0 +1,49 @@
+{
+  "external": [
+    "ast-grep",
+    "bash",
+    "brew",
+    "bun",
+    "cat",
+    "claude",
+    "codex",
+    "comemory",
+    "cp",
+    "curl",
+    "gh",
+    "git",
+    "grep",
+    "jq",
+    "mkdir",
+    "mktemp",
+    "mv",
+    "npm",
+    "npx",
+    "opencode",
+    "rm",
+    "tar",
+    "touch"
+  ],
+  "allow": [
+    {
+      "file": "AGENTS.md",
+      "subject": "toolu install",
+      "reason": "The Node installer's bin (tools/toolu-cli, npm @toolu/plugins) is also named toolu; toolu plugins replaces it in #438."
+    },
+    {
+      "file": "docs/cli/installer.md",
+      "subject": "toolu install",
+      "reason": "The Node installer guide: a global npm install gives its own toolu bin this verb, until toolu plugins (#438)."
+    },
+    {
+      "file": "docs/cli/installer.md",
+      "subject": "toolu plugins install",
+      "reason": "The grammar of the retired @toolu/cli package, named to explain why it is gone."
+    },
+    {
+      "file": "docs/resource-budgets.md",
+      "subject": "toolu statusline render",
+      "reason": "The budget for the render verb that #431 adds; the entry goes stale when it lands."
+    }
+  ]
+}

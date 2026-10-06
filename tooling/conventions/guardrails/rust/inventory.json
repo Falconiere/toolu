@@ -83,6 +83,12 @@
       "id": "check-startup",
       "pass": "crates/xtask/src/tests/startup_test.rs::a_fast_binary_passes",
       "fail": "crates/xtask/src/tests/startup_test.rs::a_slow_binary_fails_naming_the_budget"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-markdown-cli",
+      "pass": "crates/xtask/tests/markdown_cli.rs::this_repository_passes_in_under_five_seconds",
+      "fail": "crates/xtask/tests/markdown_cli.rs::an_unknown_verb_names_the_file_line_and_closest_verb"
     }
   ]
 }

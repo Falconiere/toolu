@@ -6,6 +6,8 @@
 
 use serde_json::Value;
 
+use crate::command_tree::{flag_set, list, text};
+
 /// One line per break of `before` by `after`.
 pub(super) fn breaks(before: &Value, after: &Value) -> Vec<String> {
   let mut found = exit_codes(before, after);
@@ -58,21 +60,6 @@ fn is_breaking(title: &str) -> bool {
   title
     .split_once(':')
     .is_some_and(|(head, _)| head.ends_with('!') && !head.contains(' '))
-}
-
-fn list<'a>(node: &'a Value, key: &str) -> &'a [Value] {
-  node
-    .get(key)
-    .and_then(Value::as_array)
-    .map_or(&[], Vec::as_slice)
-}
-
-fn text<'a>(node: &'a Value, key: &str) -> &'a str {
-  node.get(key).and_then(Value::as_str).unwrap_or_default()
-}
-
-fn flag_set(node: &Value, key: &str) -> bool {
-  node.get(key) == Some(&Value::Bool(true))
 }
 
 fn exit_codes(before: &Value, after: &Value) -> Vec<String> {
