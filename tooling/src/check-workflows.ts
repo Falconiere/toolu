@@ -104,6 +104,7 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
       "docs",
       "rust",
       "rust-musl",
+      "fuzz",
       "rust-conformance",
       "hook-bench",
     ].toSorted();
