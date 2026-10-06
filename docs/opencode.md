@@ -170,9 +170,9 @@ Host events without an OpenCode hook remain outside this scope; see the [host co
 - **Environment:**
   - Entries run with your own `HOME` and toolu's roots (see [Roots and helper environment](#roots-and-helper-environment)).
   - Inherited Claude Code, Codex, Cursor and Hermes root variables (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `PLUGIN_ROOT`, `CLAUDE_PLUGIN_DATA`, …) are removed first, so no other host's home is read or written ([#343](https://github.com/Falconiere/toolu/issues/343)).
-   - OpenCode passes the same environment and deadline to Bun and native entries. Direct Bun entries and the native launcher's transitional Bun fallback run with `--no-env-file`, at startup and for prompt and compaction context. A project `.env` therefore never adds variables to those entries, and a credential check sees only the environment OpenCode started with ([#350](https://github.com/Falconiere/toolu/issues/350)).
+  - OpenCode passes the same environment and deadline to Bun and native entries. Direct Bun entries and the native launcher's transitional Bun fallback run with `--no-env-file`, at startup and for prompt and compaction context. A project `.env` therefore never adds variables to those entries, and a credential check sees only the environment OpenCode started with ([#350](https://github.com/Falconiere/toolu/issues/350)).
 - **Context:**
-   - Each entry's SessionStart context is collected for delivery to the model: toolu's session protocol and Jev's mandate. If `TOOLU_BIN` points to a missing executable, a native launcher sends both install commands as session context and OpenCode still starts. With no override, the transitional Bun fallback remains available. Bun entries keep their existing startup notices in the host log.
+  - Each entry's SessionStart context is collected for delivery to the model: toolu's session protocol and Jev's mandate. If `TOOLU_BIN` points to a missing executable, a native launcher sends both install commands as session context and OpenCode still starts. With no override, the transitional Bun fallback remains available. Bun entries keep their existing startup notices in the host log.
 
 ### Skills, agents and commands
 

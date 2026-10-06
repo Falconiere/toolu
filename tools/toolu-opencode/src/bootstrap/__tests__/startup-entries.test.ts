@@ -67,6 +67,17 @@ test.concurrent("a generated native SessionStart retains its declared shell comm
       },
     ],
   });
+  const hooksFile = join(plugin.pluginDir, "hooks", "hooks.json");
+  writeFileSync(
+    hooksFile,
+    readFileSync(hooksFile, "utf8").replace(
+      JSON.stringify(NATIVE_SESSION_START),
+      JSON.stringify(`${NATIVE_SESSION_START}; printf extra`),
+    ),
+  );
+  const edited = pluginStartupEntries(plugin.pluginDir);
+  expect(edited.ok).toBe(false);
+  if (!edited.ok) expect(edited.reason).toContain("unsupported SessionStart command");
 });
 
 test.concurrent("a deleted declared bundle fails the plan before anything runs", () => {

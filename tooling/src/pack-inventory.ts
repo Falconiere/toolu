@@ -70,6 +70,7 @@ export function expectations(root: string): readonly Expectation[] {
         "README.md",
         "LICENSE",
         "src/plugin/toolu.ts",
+        "src/bootstrap/native-launcher.txt",
         "plugins/toolu/hooks/hooks.json",
         "plugins/rust-quality/.claude-plugin/plugin.json",
         "plugins/toolu/settings/protected-files.txt",

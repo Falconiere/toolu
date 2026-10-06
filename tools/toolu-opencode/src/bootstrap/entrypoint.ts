@@ -35,26 +35,21 @@ const HooksFile = z.looseObject({
 });
 
 const LAUNCHED_BUNDLE = /"\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/dist\/([a-z0-9-]+)\.js"/u;
-const NATIVE_RUN =
-  /(?:exec )?"\$t" (?:(?<plugin>[a-z0-9]+(?:-[a-z0-9]+)*) )?hook (?<name>[a-z0-9]+(?:-[a-z0-9]+)*) --event (?<event>[A-Z][A-Za-z]+) --plugin-root "\$\{CLAUDE_PLUGIN_ROOT\}"/u;
+const NATIVE_TEMPLATE = readFileSync(join(import.meta.dir, "native-launcher.txt"), "utf8");
+const NATIVE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
-/** The native command's identity is its binary invocation and fallback bundle. */
+/** Only the #412 generated command is executable; its target fields may vary. */
 function nativeEntry(command: string, plugin: string, event: HookEventName): string | undefined {
-  if (
-    !command.startsWith('t=; if [ -n "$TOOLU_BIN" ]; then') ||
-    !command.includes("--hook-protocol") ||
-    !command.includes('if [ -z "$TOOLU_BIN" ]; then b=;')
-  )
-    return undefined;
-  const invoked = NATIVE_RUN.exec(command)?.groups;
   const bundle = LAUNCHED_BUNDLE.exec(command)?.[1];
-  if (
-    invoked?.plugin !== (plugin === "toolu" ? undefined : plugin) ||
-    invoked?.event !== event ||
-    invoked?.name !== bundle
+  if (bundle === undefined || !NATIVE_NAME.test(plugin)) return undefined;
+  const prefix = plugin === "toolu" ? "" : `${plugin} `;
+  const expected = NATIVE_TEMPLATE.replace(
+    "hook session-start --event SessionStart",
+    `${prefix}hook ${bundle} --event ${event}`,
   )
-    return undefined;
-  return bundle;
+    .replaceAll("hooks/dist/session-start.js", `hooks/dist/${bundle}.js`)
+    .replaceAll("toolu plugin:", `${plugin} plugin:`);
+  return command === expected ? bundle : undefined;
 }
 
 /** An absent, empty or `*` matcher covers every token; otherwise the token must be listed. */

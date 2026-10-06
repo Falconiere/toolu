@@ -8,6 +8,8 @@ const PRE_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/pre-tool-use.json");
 const STATUSLINE_SESSION_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/statusline-session-start.json");
+const OPENCODE_LAUNCHER: &str =
+  include_str!("../../../../../tools/toolu-opencode/src/bootstrap/native-launcher.txt");
 
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {
@@ -31,6 +33,7 @@ fn enforcing_and_context_commands_match_the_committed_goldens() {
     generated("toolu", "SessionStart", "session-start").command,
     SESSION_START
   );
+  assert_eq!(OPENCODE_LAUNCHER, SESSION_START);
 }
 
 #[test]

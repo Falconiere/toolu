@@ -14,7 +14,7 @@ OpenCode currently starts only Bun launcher entries from `hooks.json`. A plugin 
 
 ## Architecture
 
-`bootstrap/entrypoint.ts` recognizes the generated Bun launcher exactly, and recognizes a native entry by the #412 protocol marker, fallback bundle path, and matching plugin, event, entry, and plugin-root invocation. It returns the command to run with the entry identity. `spawn.ts` runs Bun entries as before and native entries through `/bin/sh -c <hooks.json command>` under the same cwd, environment, stdin, timeout, cancellation, output bound, report ledger, and result parser. Unknown commands remain named startup failures.
+`bootstrap/entrypoint.ts` recognizes the generated Bun launcher exactly, and compares a native entry to a packaged copy of the #412 Rust command golden with only plugin, event, and entry substituted. A Rust test pins that copy to the generator. It returns the command to run with the entry identity. `spawn.ts` runs Bun entries as before and native entries through `/bin/sh -c <hooks.json command>` under the same cwd, environment, stdin, timeout, cancellation, output bound, report ledger, and result parser. Unknown commands remain named startup failures.
 
 `check:hooks-json` checks native POSIX commands against the Rust launcher's committed goldens with controlled target substitutions, checks the generated Windows fallback and timeout, and checks Bun commands against `@toolu/core/launcher` as before. Rust tests pin two complete native hook fixtures to its generator; `cargo xtask check-hooks` remains the exact check over committed native entries. Together they reject hand edits without making the TypeScript gate require Cargo or duplicating the large POSIX shell generator in the OpenCode runtime.
 
