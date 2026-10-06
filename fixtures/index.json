@@ -1587,6 +1587,29 @@
       ]
     },
     {
+      "id": "state-gate-bytes",
+      "fixture": "fixtures/state/gate-bytes.json",
+      "source": "packages/toolu-core/src/state/__tests__/gate-bytes.test.ts",
+      "names": [
+        "a first record writes a one-slot failing document",
+        "a second file adds a slot and joins violations oldest first",
+        "a re-record replaces its slot in place and moves its violations last",
+        "clearing promotes the latest remaining slot",
+        "clearing the last slot writes passing",
+        "a legacy single-slot document seeds the entries",
+        "a legacy single-slot document clears to passing",
+        "an explicit version 1 is not written back",
+        "an integer-like entry key is ordered first, as JavaScript orders it",
+        "DEL, control and non-ASCII text are escaped as jq escapes them",
+        "equal timestamps order the violations by key bytes",
+        "a clear by another gate leaves the file as it is",
+        "an empty source clears a missing slot and rewrites the document",
+        "an unrecognized document is replaced and the drop is logged",
+        "a clear of an unrecognized document leaves it byte for byte",
+        "the global key is a slot like any other"
+      ]
+    },
+    {
       "id": "statusline",
       "fixture": "fixtures/statusline/cases.json",
       "source": "plugins/statusline/hooks/src/__tests__",
