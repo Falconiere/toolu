@@ -247,12 +247,13 @@ fn version(object: &Ordered) -> Result<(), String> {
   }
 }
 
-/// A strict object's unknown keys, in document order.
+/// A strict object's unknown keys, in JavaScript key order.
 fn closed(object: &Ordered, at: &str, known: &[&str]) -> Result<(), String> {
   let Ordered::Object(fields) = object else {
     return Ok(());
   };
-  let unknown: Vec<String> = fields
+  // zod names them in JavaScript key order: integer-like keys first.
+  let unknown: Vec<String> = js_order(fields.clone())
     .iter()
     .filter(|(key, _)| !known.contains(&key.as_str()))
     .map(|(key, _)| format!("\"{key}\""))

@@ -1,5 +1,6 @@
 //! Bounded line reading for the detect layer (`detect-read.ts`): a file is read in
-//! 64 KiB chunks, so memory stays flat whatever its size, and every line is bytes, so
+//! 64 KiB chunks, so memory stays flat whatever its size but for its longest line
+//! (TypeScript also holds one line at a time), and every line is bytes, so
 //! the awk and grep byte semantics the bash functions had hold for any encoding.
 
 use std::fs::File;

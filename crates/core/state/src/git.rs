@@ -121,19 +121,32 @@ pub fn branch_slug(branch: &str) -> String {
 }
 
 /// Slugs of the local branches of `root`, only those merged into
-/// `merged_into` when given (`git branch --merged`, which needs ancestry).
+/// `merged_into` when given (`git branch --merged`, which needs ancestry); empty
+/// when git cannot list them.
 pub fn branch_slugs(env: &Env, root: &Path, merged_into: Option<&str>) -> BTreeSet<String> {
+  local_branches(env, root, merged_into).unwrap_or_default()
+}
+
+/// [`branch_slugs`], or `None` when `git branch` fails, so a caller can tell an
+/// unlistable repository from one without branches.
+pub fn local_branches(
+  env: &Env,
+  root: &Path,
+  merged_into: Option<&str>,
+) -> Option<BTreeSet<String>> {
   let mut args = vec!["branch", "--format=%(refname:short)"];
   if let Some(base) = merged_into {
     args.extend(["--merged", base]);
   }
-  let out = git(env, root, &args).filter(|out| out.exit_code == 0);
-  let names = out.map(|out| out.stdout).unwrap_or_default();
-  names
-    .lines()
-    .filter(|name| !name.is_empty())
-    .map(branch_slug)
-    .collect()
+  let out = git(env, root, &args).filter(|out| out.exit_code == 0)?;
+  Some(
+    out
+      .stdout
+      .lines()
+      .filter(|name| !name.is_empty())
+      .map(branch_slug)
+      .collect(),
+  )
 }
 
 /// `git --version` runs (bash `command -v git`).

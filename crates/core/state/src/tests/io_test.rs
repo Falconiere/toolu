@@ -30,7 +30,7 @@ fn a_new_file_is_created_0600() {
 }
 
 #[test]
-fn a_missing_directory_or_a_bare_name_fails_without_litter() {
+fn a_missing_directory_or_the_root_fails_without_litter() {
   let dir = tempfile::tempdir().unwrap();
   assert!(!write_atomic(&dir.path().join("missing/gate.json"), "x"));
   assert_eq!(listing(dir.path()), std::collections::BTreeSet::new());

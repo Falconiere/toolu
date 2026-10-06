@@ -106,3 +106,12 @@ fn a_document_round_trips_in_the_writers_key_order() {
     passing
   );
 }
+
+#[test]
+fn unknown_keys_are_named_in_javascript_key_order() {
+  let text = r#"{"status":"passing","source":"s","updatedAt":"u","b":1,"5":2}"#;
+  assert_eq!(
+    validate_gate_file(&json(text)),
+    Err(r#"(root): Unrecognized keys: "5", "b""#.to_owned())
+  );
+}

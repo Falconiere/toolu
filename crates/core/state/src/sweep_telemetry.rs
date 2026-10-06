@@ -11,7 +11,7 @@ use toolu_runtime::json::ordered::Ordered;
 
 use crate::ctx::StateCtx;
 use crate::io::write_atomic;
-use crate::sweeper::{glob_files, remove};
+use crate::sweeper::{glob_files, real_dir, remove};
 use crate::time::iso_seconds;
 
 const DAY: Duration = Duration::from_hours(24);
@@ -51,9 +51,13 @@ pub(crate) fn sweep_telemetry(ctx: &mut StateCtx, dir: &Path, retention_days: u6
       .checked_sub(window)
       .unwrap_or(std::time::UNIX_EPOCH),
   );
+  if !real_dir(dir) {
+    return;
+  }
   for file in glob_files(dir, ".jsonl") {
-    let content = match std::fs::read_to_string(&file) {
-      Ok(content) => content,
+    // Decoded as TypeScript decodes it: invalid UTF-8 becomes U+FFFD.
+    let content = match std::fs::read(&file) {
+      Ok(bytes) => String::from_utf8_lossy(&bytes).into_owned(),
       Err(err) => {
         ctx.warnings.push(format!(
           "toolu-sweep: could not read {}: {err}",

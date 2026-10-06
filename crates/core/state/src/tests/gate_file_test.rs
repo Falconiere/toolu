@@ -176,10 +176,11 @@ fn an_unrecognized_document_is_replaced_on_record_and_kept_on_clear() {
     ctx.warnings
   );
   record(&mut ctx, &gate, ["/c", "s", "r", "c\n"]);
-  assert!(ctx.warnings[1].starts_with(&format!(
-    "gate-file: unrecognized gate file at {} (",
+  let replaced = format!(
+    "gate-file: unrecognized gate file at {} ((root): Unrecognized key: \"owner\"); replacing it",
     gate.display()
-  )));
+  );
+  assert_eq!(ctx.warnings[1], replaced);
   let log = read(&PathBuf::from(format!("{}.dropped.log", gate.display())));
   assert_eq!(
     log,
@@ -236,4 +237,17 @@ fn a_clear_with_nothing_to_clear_never_waits_on_a_live_lock() {
   );
   assert!(started.elapsed() < std::time::Duration::from_millis(500));
   assert_eq!(read(&lock_path(&gate)), lock);
+}
+
+#[test]
+fn a_bare_relative_gate_path_still_has_a_root() {
+  assert_eq!(super::gate_root(Path::new("q.json")), Path::new("."));
+  assert_eq!(
+    super::gate_root(Path::new(".claude/tmp/q.json")),
+    Path::new(".")
+  );
+  assert_eq!(
+    super::gate_root(Path::new("/p/.claude/tmp/q.json")),
+    Path::new("/p")
+  );
 }

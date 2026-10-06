@@ -184,3 +184,78 @@ fn a_disabled_sweep_or_a_missing_state_root_touches_nothing() {
   std::fs::remove_dir_all(&state).unwrap();
   assert_eq!(sweep(&bare), Vec::<String>::new());
 }
+
+#[test]
+fn symlinked_state_is_never_followed_out_of_the_repository() {
+  let (sb, state) = repo("{\"version\":1}").unwrap();
+  let victim = sb.home.join("victim");
+  put(&victim.join("feat_gone.json"), "{}", OLD).unwrap();
+  put(
+    &victim.join("feat_x.jsonl"),
+    "{\"t\":\"2000-01-01T00:00:00Z\"}\n",
+    OLD,
+  )
+  .unwrap();
+  std::os::unix::fs::symlink(&victim, state.join("push-review")).unwrap();
+  std::os::unix::fs::symlink(&victim, state.join("telemetry")).unwrap();
+  std::fs::create_dir_all(state.join("plan-ledger")).unwrap();
+  std::os::unix::fs::symlink(
+    victim.join("feat_gone.json"),
+    state.join("plan-ledger/feat_gone.json"),
+  )
+  .unwrap();
+  assert_eq!(sweep(&sb), Vec::<String>::new());
+  assert!(victim.join("feat_gone.json").exists() && victim.join("feat_x.jsonl").exists());
+  assert!(
+    state.join("plan-ledger/feat_gone.json").exists(),
+    "the link itself is not judged"
+  );
+  let (other, tmp) = repo("{\"version\":1}").unwrap();
+  std::fs::remove_dir_all(&tmp).unwrap();
+  std::os::unix::fs::symlink(&victim, &tmp).unwrap();
+  assert_eq!(sweep(&other), Vec::<String>::new());
+  assert!(
+    victim.join("feat_gone.json").exists(),
+    "a symlinked tmp dir is not swept"
+  );
+}
+
+#[test]
+fn branch_state_is_kept_when_git_cannot_list_the_branches() {
+  let (sb, state) = repo("{\"version\":1}").unwrap();
+  put(&state.join("push-review/feat_gone.json"), "{}", OLD).unwrap();
+  let env = sb.env().with("GIT_DIR", "/nonexistent");
+  let mut ctx = StateCtx::new(Roots::new(env, Some(Host::Claude)));
+  sweep_state(&mut ctx, Some(&sb.project));
+  assert!(state.join("push-review/feat_gone.json").exists());
+  let warning = format!(
+    "toolu-sweep: cannot list the branches of {}; branch state kept",
+    sb.project.display()
+  );
+  assert_eq!(ctx.warnings, [warning]);
+}
+
+#[test]
+fn telemetry_is_decoded_lossily_and_an_untrimmable_file_warns() {
+  let (sb, state) = repo("{\"version\":1}").unwrap();
+  let dir = state.join("telemetry");
+  let new = iso_seconds(SystemTime::now());
+  let mut bytes = format!("{{\"t\":\"{new}\",\"n\":\"").into_bytes();
+  bytes.extend_from_slice(b"\xff\"}\n{\"t\":\"2000-01-01T00:00:00Z\"}\n");
+  put(&dir.join("feat_x.jsonl"), "", FRESH).unwrap();
+  std::fs::write(dir.join("feat_x.jsonl"), bytes).unwrap();
+  let long = dir.join(format!("{}.jsonl", "q".repeat(245)));
+  put(
+    &long,
+    &format!("{{\"t\":\"{new}\"}}\n{{\"t\":\"2000-01-01T00:00:00Z\"}}\n"),
+    FRESH,
+  )
+  .unwrap();
+  let warnings = sweep(&sb);
+  let kept = std::fs::read_to_string(dir.join("feat_x.jsonl")).unwrap();
+  assert_eq!(kept, format!("{{\"t\":\"{new}\",\"n\":\"\u{fffd}\"}}\n"));
+  assert_eq!(
+    warnings,
+    [format!("toolu-sweep: could not trim {}", long.display())]
+  );
+}

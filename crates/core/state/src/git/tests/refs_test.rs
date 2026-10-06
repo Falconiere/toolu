@@ -100,3 +100,16 @@ fn origin_head_is_a_symbolic_ref_or_nothing() {
     Some("")
   );
 }
+
+#[test]
+fn a_symlinked_origin_head_asks_git() {
+  let dir = tempfile::tempdir().unwrap();
+  let repo = layout(dir.path(), "ref: refs/heads/main\n");
+  std::fs::create_dir_all(dir.path().join("refs/remotes/origin")).unwrap();
+  std::os::unix::fs::symlink(
+    "refs/remotes/origin/develop",
+    dir.path().join("refs/remotes/origin/HEAD"),
+  )
+  .unwrap();
+  assert_eq!(symbolic_target(&repo, "refs/remotes/origin/HEAD"), None);
+}

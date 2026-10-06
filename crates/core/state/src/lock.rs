@@ -147,13 +147,19 @@ fn break_if_stale(lock: &Path, stale: Duration) {
   if !holder_dead(&held) && age <= stale {
     return;
   }
+  claim(lock, &held);
+}
+
+/// Takes the lock judged stale away by renaming it; a lock that turns out not
+/// to be the one judged (`held`) was taken meanwhile and is linked back.
+fn claim(lock: &Path, held: &str) {
   let mut claimed = lock.as_os_str().to_owned();
   claimed.push(format!(".{}.broken", token()));
   let claimed = PathBuf::from(claimed);
   if std::fs::rename(lock, &claimed).is_err() {
     return;
   }
-  if content(&claimed).as_deref() != Some(held.as_str()) {
+  if content(&claimed).as_deref() != Some(held) {
     let _relinked = std::fs::hard_link(&claimed, lock);
   }
   let _gone = std::fs::remove_file(&claimed);

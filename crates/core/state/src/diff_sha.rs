@@ -2,7 +2,9 @@
 //! `git diff --no-color <base>...HEAD`. It survives amend and rebase because it
 //! hashes content, not commit ids; an empty diff is the empty-blob id. The diff
 //! goes to `git hash-object` as the bytes git wrote, with no output budget, so
-//! a large or non-UTF-8 diff hashes exactly.
+//! a large or non-UTF-8 diff hashes exactly. Each step runs under the default
+//! deadline of `toolu_runtime::process` (30 s); past it there is no hash, which
+//! TypeScript (no deadline) would still have computed.
 
 use std::path::Path;
 

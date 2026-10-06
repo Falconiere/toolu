@@ -73,7 +73,10 @@ pub fn read_gate_file(gate: &Path) -> GateRead {
 /// The root owning `<root>/<host dir>/tmp/quality-gate-status.json`.
 fn gate_root(gate: &Path) -> &Path {
   let root = gate.parent().and_then(Path::parent).and_then(Path::parent);
-  root.unwrap_or_else(|| Path::new(""))
+  // `dirname` of a bare relative name is `.`, never the empty path.
+  root
+    .filter(|root| !root.as_os_str().is_empty())
+    .unwrap_or_else(|| Path::new("."))
 }
 
 /// A durable line beside the gate file; logging never blocks the write.

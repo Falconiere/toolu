@@ -8,7 +8,11 @@
 //!   files that no longer exist; an unrecognized document is kept;
 //! - `telemetry/*.jsonl`: trimmed to the retention window (`sweep_telemetry`).
 //!
-//! Best effort: failures become `toolu-sweep: …` warnings, never errors.
+//! Best effort: failures become `toolu-sweep: …` warnings, never errors. Two
+//! deliberate departures from TypeScript (#415 review): when git cannot list the
+//! branches the branch state is kept, not judged all spent; and a symlinked
+//! state dir or entry is never followed, so nothing outside the repository is
+//! deleted or rewritten.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -20,7 +24,7 @@ use toolu_runtime::config::read::enabled;
 use crate::ctx::StateCtx;
 use crate::gate_file::{GateRead, read_gate_file};
 use crate::gate_schema::{GLOBAL_GATE_KEY, GateFile};
-use crate::git::{base_branch, branch_slug, branch_slugs, current_branch, has_git};
+use crate::git::{base_branch, branch_slug, branch_slugs, current_branch, has_git, local_branches};
 use crate::lock::{LockOptions, with_lock};
 pub use crate::sweep_telemetry::kept_telemetry_lines;
 use crate::sweep_telemetry::sweep_telemetry;
@@ -45,7 +49,8 @@ fn positive_gate(config: &LoadedConfig, key: &str, fallback: u64) -> u64 {
   })
 }
 
-/// Non-dot regular files in `dir` ending in `suffix` (`*.suffix` plus `[ -f ]`).
+/// Non-dot regular files in `dir` ending in `suffix` (`*.suffix` plus `[ -f ]`,
+/// but a symlinked entry is skipped where bash would follow it).
 pub(crate) fn glob_files(dir: &Path, suffix: &str) -> Vec<PathBuf> {
   let Ok(entries) = std::fs::read_dir(dir) else {
     return Vec::new();
@@ -55,7 +60,8 @@ pub(crate) fn glob_files(dir: &Path, suffix: &str) -> Vec<PathBuf> {
     .map(|entry| entry.file_name().to_string_lossy().into_owned())
     .filter(|name| name.ends_with(suffix) && !name.starts_with('.'))
     .map(|name| dir.join(name))
-    .filter(|file| file.is_file())
+    // A symlink is never followed: it could point out of the repository.
+    .filter(|file| std::fs::symlink_metadata(file).is_ok_and(|meta| meta.is_file()))
     .collect();
   files.sort();
   files
@@ -74,6 +80,12 @@ pub fn slug_of_state_file(file: &Path) -> String {
 }
 
 /// Removes `file`, or warns that it could not.
+/// Whether `path` is a directory itself, not a symlink to one: state the sweeper
+/// deletes or rewrites must lie inside the repository.
+pub(crate) fn real_dir(path: &Path) -> bool {
+  std::fs::symlink_metadata(path).is_ok_and(|meta| meta.is_dir())
+}
+
 pub(crate) fn remove(file: &Path, warnings: &mut Vec<String>) {
   if std::fs::remove_file(file).is_err() {
     warnings.push(format!("toolu-sweep: could not remove {}", file.display()));
@@ -105,28 +117,38 @@ fn reclaimable(
 
 fn sweep_branch_state(ctx: &mut StateCtx, root: &Path, state_root: &Path, ttl_hours: u64) {
   let env = ctx.roots.env().clone();
+  // Without the live branches every file would look spent, the current branch's too.
+  let Some(live) = local_branches(&env, root, None) else {
+    ctx.warnings.push(format!(
+      "toolu-sweep: cannot list the branches of {}; branch state kept",
+      root.display()
+    ));
+    return;
+  };
   let branches = Branches {
     current: branch_slug(&current_branch(&env, root)),
-    live: branch_slugs(&env, root, None),
+    live,
     // `--merged` sees ancestry only; squash-merged branches age out through the TTL.
     merged: branch_slugs(&env, root, Some(&base_branch(&env, Some(root), root))),
   };
   let ttl = HOUR.saturating_mul(u32::try_from(ttl_hours).unwrap_or(u32::MAX));
   let now = ctx.now();
-  for dir in SWEEP_BRANCH_DIRS {
-    for file in glob_files(&state_root.join(dir), ".json") {
-      let slug = slug_of_state_file(&file);
-      if slug == branches.current {
-        continue;
-      }
-      match reclaimable(&file, &slug, &branches, ttl, now) {
-        Ok(true) => remove(&file, &mut ctx.warnings),
-        Ok(false) => {}
-        Err(err) => ctx.warnings.push(format!(
-          "toolu-sweep: could not judge {}: {err}",
-          file.display()
-        )),
-      }
+  let dirs = SWEEP_BRANCH_DIRS
+    .iter()
+    .map(|dir| state_root.join(dir))
+    .filter(|dir| real_dir(dir));
+  for file in dirs.flat_map(|dir| glob_files(&dir, ".json")) {
+    let slug = slug_of_state_file(&file);
+    if slug == branches.current {
+      continue;
+    }
+    match reclaimable(&file, &slug, &branches, ttl, now) {
+      Ok(true) => remove(&file, &mut ctx.warnings),
+      Ok(false) => {}
+      Err(err) => ctx.warnings.push(format!(
+        "toolu-sweep: could not judge {}: {err}",
+        file.display()
+      )),
     }
   }
 }
@@ -196,11 +218,10 @@ pub fn sweep_state(ctx: &mut StateCtx, root: Option<&Path>) {
   if !enabled(config, "gates", "sweep") || !has_git(ctx.roots.env()) {
     return;
   }
-  let Some(state_root) = ctx
-    .roots
-    .project_state_root(None, Some(&root))
-    .filter(|dir| dir.is_dir())
-  else {
+  let state_root = ctx.roots.project_state_root(None, Some(&root));
+  // The host dir and its `tmp` must be real directories of the repository.
+  let inside = |dir: &Path| dir.parent().is_some_and(real_dir) && real_dir(dir);
+  let Some(state_root) = state_root.filter(|dir| inside(dir)) else {
     return;
   };
   sweep_branch_state(ctx, &root, &state_root, ttl);

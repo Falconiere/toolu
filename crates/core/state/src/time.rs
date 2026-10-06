@@ -62,6 +62,15 @@ pub fn parse_iso(text: &str) -> Option<SystemTime> {
   let (clock, fraction) = clock.split_once('.').unwrap_or((clock, ""));
   let [year, month, day] = fields(date, '-')?;
   let [hour, minute, second] = fields(clock, ':')?;
+  let in_range = (1..=12).contains(&month)
+    && (1..=31).contains(&day)
+    && (0..24).contains(&hour)
+    && (0..60).contains(&minute)
+    && (0..60).contains(&second)
+    && fraction.bytes().all(|byte| byte.is_ascii_digit());
+  if !in_range {
+    return None;
+  }
   let millis = match fraction {
     "" => 0,
     digits => format!("{digits:0<3}").get(..3)?.parse::<u64>().ok()?,

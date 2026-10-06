@@ -46,12 +46,17 @@ pub(crate) fn abbrev_head(repo: &Repo) -> Option<String> {
 }
 
 /// The target of the symbolic ref `refname` (`git symbolic-ref`), `Some("")`
-/// when it is absent or not symbolic, `None` to ask git.
+/// when it is absent or not symbolic, `None` to ask git (reftable, or a
+/// symlinked ref, which `core.preferSymlinkRefs` writes).
 pub(crate) fn symbolic_target(repo: &Repo, refname: &str) -> Option<String> {
   if repo.common_dir.join("reftable").exists() {
     return None;
   }
-  let Ok(text) = std::fs::read_to_string(repo.common_dir.join(refname)) else {
+  let path = repo.common_dir.join(refname);
+  if std::fs::symlink_metadata(&path).is_ok_and(|meta| meta.file_type().is_symlink()) {
+    return None;
+  }
+  let Ok(text) = std::fs::read_to_string(path) else {
     return Some(String::new());
   };
   Some(

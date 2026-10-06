@@ -206,3 +206,22 @@ fn numbers_print_as_javascript_does() {
   };
   assert!(assemble(&round, "b", "t").unwrap().contains("\"round\":3,"));
 }
+
+#[test]
+fn the_cap_is_3900_bytes_counted_in_utf8() {
+  let line = |decision: String| assemble(&TelemetryEvent::DocsAttested { decision }, "feat/x", "t");
+  let base = line(String::new()).unwrap().len();
+  let fits = TELEMETRY_MAX_LINE_BYTES - base;
+  assert_eq!(
+    line("x".repeat(fits)).unwrap().len(),
+    TELEMETRY_MAX_LINE_BYTES
+  );
+  let over =
+    "telemetry: assembled line for event \"docs_attested\" is 3901 bytes (>3900); skipping append";
+  assert_eq!(line("x".repeat(fits + 1)), Err(over.to_owned()));
+  let wide = "é".repeat(fits / 2 + 1);
+  assert!(
+    wide.chars().count() < fits && line(wide).is_err(),
+    "bytes, not characters"
+  );
+}

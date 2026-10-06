@@ -37,4 +37,14 @@ fn parse_reads_milliseconds_and_rejects_other_shapes() {
     assert_eq!(parse_iso(bad), None, "{bad}");
   }
   assert_eq!(parse_iso("2026-09-28T10:00:00:01Z"), None);
+  for out_of_range in [
+    "2026-13-01T00:00:00Z",
+    "2026-01-32T00:00:00Z",
+    "2026-01-01T24:00:00Z",
+    "2026-01-01T00:60:00Z",
+    "2026-01-01T00:00:60Z",
+    "2026-01-01T00:00:00.+5Z",
+  ] {
+    assert_eq!(parse_iso(out_of_range), None, "{out_of_range}");
+  }
 }

@@ -150,3 +150,21 @@ fn tokens_are_version_4_uuids_and_differ() {
     Some('8' | '9' | 'a' | 'b')
   ));
 }
+
+#[test]
+fn a_claimed_lock_that_changed_hands_is_linked_back() {
+  use super::claim;
+  let dir = tempfile::tempdir().unwrap();
+  let lock = lock_path(&dir.path().join("gate.json"));
+  std::fs::write(&lock, "4242 newer-holder\n").unwrap();
+  claim(&lock, "99999 judged-stale\n");
+  assert_eq!(
+    std::fs::read_to_string(&lock).unwrap(),
+    "4242 newer-holder\n"
+  );
+  claim(&lock, "4242 newer-holder\n");
+  assert!(!lock.exists());
+  assert_eq!(leftovers(dir.path()), Vec::<String>::new());
+  claim(&lock, "gone\n");
+  assert!(!lock.exists(), "nothing to claim is a no-op");
+}
