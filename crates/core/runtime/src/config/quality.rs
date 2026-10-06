@@ -12,8 +12,8 @@ use super::load::{LoadedConfig, is_file};
 use super::read::section;
 use crate::cli_args::is_number_text;
 use crate::env::Env;
+use crate::git;
 use crate::json::is_js_space;
-use crate::process::commands::git_toplevel;
 
 /// A language with quality thresholds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -130,7 +130,7 @@ fn active_linter_config(root: &Path) -> Option<PathBuf> {
 fn project_root(root: Option<&Path>) -> Option<PathBuf> {
   match root {
     Some(root) => Some(root.to_path_buf()),
-    None => git_toplevel(&Env::process(), &std::env::current_dir().ok()?),
+    None => git::toplevel(&Env::process(), &std::env::current_dir().ok()?),
   }
 }
 

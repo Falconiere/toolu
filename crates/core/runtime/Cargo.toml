@@ -9,7 +9,8 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
-nix.workspace = true
+# `geteuid` for the ownership rule of `git` discovery (#415).
+nix = { workspace = true, features = ["user"] }
 serde.workspace = true
 serde_json.workspace = true
 toolu-protocol = { path = "../protocol" }

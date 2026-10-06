@@ -43,6 +43,8 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
        `json` crate",
       "crates/core/runtime (toolu-runtime) depends on serde_json: only toolu-http may link a \
        `json` crate",
+      "crates/core/state (toolu-state) depends on serde_json: only toolu-http may link a \
+       `json` crate",
       "crates/cli (toolu-cli) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/toolu (toolu-hub) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/xtask (xtask) depends on serde_json: only toolu-http may link a `json` crate",

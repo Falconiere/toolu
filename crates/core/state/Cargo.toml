@@ -7,5 +7,19 @@ rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
 
+[dependencies]
+nix = { workspace = true, features = ["fs"] }
+serde_json.workspace = true
+tempfile.workspace = true
+toolu-runtime = { path = "../runtime" }
+
+[dev-dependencies]
+toolu-protocol = { path = "../protocol" }
+
+# Runs itself as each Rust writer, beside TypeScript writers (#415).
+[[test]]
+name = "interleave"
+harness = false
+
 [lints]
 workspace = true

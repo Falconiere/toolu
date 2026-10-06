@@ -66,6 +66,8 @@ pub struct Output {
   pub pid: u32,
   /// Stdout, decoded lossily.
   pub stdout: String,
+  /// Stdout exactly as the child wrote it, for output that is not text.
+  pub stdout_bytes: Vec<u8>,
   /// Stderr, decoded lossily.
   pub stderr: String,
   /// The exit status, or 128 plus the signal that ended the child.
@@ -126,6 +128,7 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
   Ok(Output {
     pid,
     stdout: stdout.text(),
+    stdout_bytes: stdout.bytes(),
     stderr: stderr.text(),
     exit_code: exit_code(status),
     duration: started.elapsed(),

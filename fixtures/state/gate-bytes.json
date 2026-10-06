@@ -1,0 +1,500 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "a first record writes a one-slot failing document",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a second file adds a slot and joins violations oldest first",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/b.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/b.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a re-record replaces its slot in place and moves its violations last",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/b.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/b.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "a again\n",
+          "now": "2026-09-28T10:00:02.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/b.ts\\na again\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"a again\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:02Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:02Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "clearing promotes the latest remaining slot",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/b.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/b.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/c.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/c.ts\n",
+          "now": "2026-09-28T10:00:02.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/c.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n/r/c.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    },\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:02Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:02Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "/r/c.ts",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:03.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:03Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:04.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:04Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "clearing the last slot writes passing",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a legacy single-slot document seeds the entries",
+      "initial": "{\n  \"status\": \"failing\",\n  \"reason\": \"legacy\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\n\",\n  \"updatedAt\": \"2020-01-01T00:00:00Z\"\n}\n",
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/b.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/b.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"a\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"legacy\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a legacy single-slot document clears to passing",
+      "initial": "{\n  \"status\": \"failing\",\n  \"reason\": \"legacy\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\n\",\n  \"updatedAt\": \"2020-01-01T00:00:00Z\"\n}\n",
+      "steps": [
+        {
+          "op": "clear",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"passing\",\n  \"source\": \"ts-quality-hook\",\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "an explicit version 1 is not written back",
+      "initial": "{\n  \"version\": 1,\n  \"status\": \"failing\",\n  \"reason\": \"r\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\nb\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2020-01-01T00:00:00Z\"\n}\n",
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/c.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/c.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/c.ts\",\n  \"violations\": \"a\\nb\\n/r/c.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "an integer-like entry key is ordered first, as JavaScript orders it",
+      "initial": "{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"ts-quality-hook\",\"file\":\"b\",\"violations\":\"b\\n10\\n\",\"entries\":{\"b\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"b\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"},\"10\":{\"source\":\"ts-quality-hook\",\"reason\":\"r\",\"violations\":\"10\\n\",\"updatedAt\":\"2020-01-01T00:00:00Z\"}},\"updatedAt\":\"2020-01-01T00:00:00Z\"}",
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/c.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/c.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/c.ts\",\n  \"violations\": \"10\\nb\\n/r/c.ts\\n\",\n  \"entries\": {\n    \"10\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"10\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"b\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "b",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/c.ts\",\n  \"violations\": \"10\\n/r/c.ts\\n\",\n  \"entries\": {\n    \"10\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"10\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "DEL, control and non-ASCII text are escaped as jq escapes them",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/ü.ts",
+          "source": "src",
+          "reason": "reason \u001f",
+          "violations": "del  tab\t cr\r nul-ish \u0001 quote\" back\\ é 😀 ～\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"reason \\u001f\",\n  \"source\": \"src\\u007f\",\n  \"file\": \"/r/ü.ts\",\n  \"violations\": \"del \\u007f tab\\t cr\\r nul-ish \\u0001 quote\\\" back\\\\ é 😀 ～\\n\",\n  \"entries\": {\n    \"/r/ü.ts\": {\n      \"source\": \"src\\u007f\",\n      \"reason\": \"reason \\u001f\",\n      \"violations\": \"del \\u007f tab\\t cr\\r nul-ish \\u0001 quote\\\" back\\\\ é 😀 ～\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "equal timestamps order the violations by key bytes",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "é",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "e\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"é\",\n  \"violations\": \"e\\n\",\n  \"entries\": {\n    \"é\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"e\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "z",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "z\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"z\",\n  \"violations\": \"z\\ne\\n\",\n  \"entries\": {\n    \"é\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"e\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"z\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"z\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "a",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "a\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"a\",\n  \"violations\": \"a\\nz\\ne\\n\",\n  \"entries\": {\n    \"é\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"e\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"z\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"z\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"a\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "Z",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "Z\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"Z\",\n  \"violations\": \"Z\\na\\nz\\ne\\n\",\n  \"entries\": {\n    \"é\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"e\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"z\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"z\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"a\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"Z\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"Z\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "a clear by another gate leaves the file as it is",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "/r/a.ts",
+          "source": "py-quality-hook",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "outcome": "noop",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "an empty source clears a missing slot and rewrites the document",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/b.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/b.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "/r/missing.ts",
+          "source": "",
+          "now": "2026-09-28T10:00:02.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/b.ts\",\n  \"violations\": \"/r/a.ts\\n/r/b.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/b.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:02Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "an unrecognized document is replaced and the drop is logged",
+      "initial": "{\n  \"status\": \"failing\",\n  \"reason\": \"r\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\nb\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2020-01-01T00:00:00Z\",\n  \"owner\": \"someone\"\n}\n",
+      "steps": [
+        {
+          "op": "record",
+          "file": "/r/c.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/c.ts\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/c.ts\",\n  \"violations\": \"/r/c.ts\\n\",\n  \"entries\": {\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": "2026-09-28T10:00:00Z unrecognized gate file replaced; dropped 2 entry(ies)\n"
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/d.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/d.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/d.ts\",\n  \"violations\": \"/r/c.ts\\n/r/d.ts\\n\",\n  \"entries\": {\n    \"/r/c.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/c.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/d.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/d.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": "2026-09-28T10:00:00Z unrecognized gate file replaced; dropped 2 entry(ies)\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "a clear of an unrecognized document leaves it byte for byte",
+      "initial": "{\n  \"status\": \"failing\",\n  \"reason\": \"r\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\nb\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2020-01-01T00:00:00Z\",\n  \"version\": 2\n}\n",
+      "steps": [
+        {
+          "op": "clear",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"r\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"a\\nb\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"a\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    },\n    \"/r/b.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"r\",\n      \"violations\": \"b\\n\",\n      \"updatedAt\": \"2020-01-01T00:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2020-01-01T00:00:00Z\",\n  \"version\": 2\n}\n",
+            "outcome": "noop",
+            "dropLog": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "the global key is a slot like any other",
+      "initial": null,
+      "steps": [
+        {
+          "op": "record",
+          "file": "__global__",
+          "source": "tsc",
+          "reason": "too long",
+          "violations": "tsc failed\n",
+          "now": "2026-09-28T10:00:00.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"tsc\",\n  \"file\": \"__global__\",\n  \"violations\": \"tsc failed\\n\",\n  \"entries\": {\n    \"__global__\": {\n      \"source\": \"tsc\",\n      \"reason\": \"too long\",\n      \"violations\": \"tsc failed\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:00Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "record",
+          "file": "/r/a.ts",
+          "source": "ts-quality-hook",
+          "reason": "too long",
+          "violations": "/r/a.ts\n",
+          "now": "2026-09-28T10:00:01.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"tsc failed\\n/r/a.ts\\n\",\n  \"entries\": {\n    \"__global__\": {\n      \"source\": \"tsc\",\n      \"reason\": \"too long\",\n      \"violations\": \"tsc failed\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:00Z\"\n    },\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:01Z\"\n}\n",
+            "dropLog": null
+          }
+        },
+        {
+          "op": "clear",
+          "file": "__global__",
+          "source": "tsc",
+          "now": "2026-09-28T10:00:02.500Z",
+          "expect": {
+            "bytes": "{\n  \"status\": \"failing\",\n  \"reason\": \"too long\",\n  \"source\": \"ts-quality-hook\",\n  \"file\": \"/r/a.ts\",\n  \"violations\": \"/r/a.ts\\n\",\n  \"entries\": {\n    \"/r/a.ts\": {\n      \"source\": \"ts-quality-hook\",\n      \"reason\": \"too long\",\n      \"violations\": \"/r/a.ts\\n\",\n      \"updatedAt\": \"2026-09-28T10:00:01Z\"\n    }\n  },\n  \"updatedAt\": \"2026-09-28T10:00:02Z\"\n}\n",
+            "outcome": "cleared",
+            "dropLog": null
+          }
+        }
+      ]
+    }
+  ]
+}
