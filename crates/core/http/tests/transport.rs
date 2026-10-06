@@ -29,7 +29,15 @@ fn get_json_sends_basic_auth_through_connect() {
     username: "alice".into(),
     password: "secret".into(),
   };
-  let result: Value = client.get_json(&fixture.url("/get"), &auth).expect("GET");
+  let result: Value = client
+    .get_json(&fixture.url("/get"), &auth)
+    .unwrap_or_else(|err| {
+      panic!(
+        "GET: {err:?}; CONNECTs: {:?}; HTTPS requests: {:?}",
+        fixture.connects(),
+        fixture.requests()
+      )
+    });
   assert_eq!(result["kind"], "get");
   let requests: Vec<toolu_http_test_support::ObservedRequest> =
     fixture.requests().expect("requests");
