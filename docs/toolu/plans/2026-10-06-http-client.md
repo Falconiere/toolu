@@ -63,10 +63,10 @@ the full gate.
   {
     "id": "musl-size",
     "title": "Build/run the TLS transport test on static musl, build a release-profile client probe and the CLI, measure both against 4 MiB, and inspect the dependency tree",
-    "check": "bash crates/core/http/tests/helpers/check_musl.sh",
+    "check": "bun tooling/src/check-http-musl.ts",
     "ac_refs": ["AC-5"],
     "depends_on": ["transport"],
-    "paths": ["crates/core/http/", "crates/http-test-support/", "crates/cli/", "Cargo.toml", "Cargo.lock", "docs/resource-budgets.md"],
+    "paths": ["crates/core/http/", "crates/http-test-support/", "crates/cli/", "Cargo.toml", "Cargo.lock", "docs/resource-budgets.md", "tooling/src/check-http-musl.ts"],
     "input": "Static musl release test makes a real HTTPS request to the fixture; stripped CLI and linked client probe sizes are measured in bytes; dependency tree is inspected",
     "model": "inherit"
   },
@@ -85,7 +85,7 @@ the full gate.
 ## Critical files
 
 - `crates/core/http/Cargo.toml`, `src/*.rs`, `src/tests/*_test.rs`,
-  `tests/transport.rs`, `tests/helpers/check_musl.sh`, `README.md`.
+  `tests/transport.rs`, `README.md`, `tooling/src/check-http-musl.ts`.
 - `crates/http-test-support/Cargo.toml`, `src/*.rs`, `src/tests/*_test.rs`,
   `README.md`.
 - `Cargo.toml`, `Cargo.lock`, `tooling/conventions/guardrails/rust/folders.json`.
@@ -105,7 +105,7 @@ test` covers workspace drift from the new member.
 The `pl_check_ac_refs` helper is unavailable in this shell, so a direct
 JSON/Markdown check confirmed exact AC-1 through AC-6 coverage and nonempty
 step checks. The initial musl/size step omitted its linked probe; it now runs
-`tests/helpers/check_musl.sh`, which must build and measure that probe as well
+`tooling/src/check-http-musl.ts`, which must build and measure that probe as well
 as the CLI. Jev judged the revised ledger's criterion coverage strong (0.97).
 **Status: Approved.**
 
@@ -113,8 +113,12 @@ as the CLI. Jev judged the revised ledger's criterion coverage strong (0.97).
 
 The host's `/usr/bin/cargo` is Rust 1.93.1 while `rust-toolchain.toml` requires
 1.99.0. All ledger Cargo checks now put the installed rustup proxy first on
-`PATH`; `check_musl.sh` does the same. This changes the runner environment,
+`PATH`; `check-http-musl.ts` does the same. This changes the runner environment,
 not the approved behavior or acceptance criteria.
+
+The TypeScript final-removal gate rejects tracked shell files, so the musl
+check moved from a Bash helper to a Bun tooling script with the same real
+transport test, static linkage, size, and dependency checks.
 
 The full Rust gate stops at `cargo deny`: the required rustls stack adds ISC,
 BSD-3-Clause, and CDLA-Permissive-2.0 dependencies that `deny.toml` does not
