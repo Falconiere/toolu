@@ -50,6 +50,7 @@ async function start(root: string): Promise<ReadyResult> {
     dataRoot: join(root, "data"),
     plugins: selected.plugins,
     isolatedHome: join(root, "home"),
+    env: { HOME: join(root, "home"), PATH: "/usr/bin:/bin", TOOLU_BUN: process.execPath },
   });
   if (result.status !== "ready") throw new Error(result.reason);
   return result;
@@ -100,6 +101,12 @@ test("all 12 plugins start in dependency order with every contribution verified"
   expect(entries["python-quality"]).toEqual(["register", "check-toolu"]);
   expect(entries["rust-quality"]).toEqual(["register", "check-toolu"]);
   expect(entries["brainstorm"]).toEqual([]);
+  const notices = result.plugins
+    .flatMap((plugin) => plugin.entries)
+    .flatMap((entry) => (entry.additionalContext === undefined ? [] : [entry.additionalContext]))
+    .filter((line) => line.includes("native binary not found in the agent command shell"));
+  expect(notices).toHaveLength(1);
+  expect(notices[0]).toContain("brew install falconiere/tap/toolu");
   expectCatalogContributions(join(root.path, "data"), result);
   const context = (name: string): string =>
     result.plugins.find((plugin) => plugin.plugin === name)?.entries[0]?.additionalContext ?? "";

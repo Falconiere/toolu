@@ -10,6 +10,16 @@
             "commandWindows": "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" \"%PLUGIN_ROOT%\\hooks\\dist\\session-start.js\") else (where /q bun& if not errorlevel 1 (bun \"%PLUGIN_ROOT%\\hooks\\dist\\session-start.js\") else if exist \"%USERPROFILE%\\.bun\\bin\\bun.exe\" (\"%USERPROFILE%\\.bun\\bin\\bun.exe\" \"%PLUGIN_ROOT%\\hooks\\dist\\session-start.js\") else (echo {\"systemMessage\":\"statusline plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.\"}))"
           }
         ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "b=; for c in \"$TOOLU_BUN\" \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ]; then exec \"$b\" \"${CLAUDE_PLUGIN_ROOT}/hooks/dist/check-binary.js\"; fi; printf '%s\\n' '{\"systemMessage\":\"statusline plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.\"}'; exit 0",
+            "commandWindows": "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" \"%PLUGIN_ROOT%\\hooks\\dist\\check-binary.js\") else (where /q bun& if not errorlevel 1 (bun \"%PLUGIN_ROOT%\\hooks\\dist\\check-binary.js\") else if exist \"%USERPROFILE%\\.bun\\bin\\bun.exe\" (\"%USERPROFILE%\\.bun\\bin\\bun.exe\" \"%PLUGIN_ROOT%\\hooks\\dist\\check-binary.js\") else (echo {\"systemMessage\":\"statusline plugin: Bun runtime not found, checked TOOLU_BUN, PATH and ~/.bun/bin/bun. Install Bun 1.4.x from https://bun.sh and restart the session. See docs/runtime.md.\"}))"
+          }
+        ]
       }
     ]
   }

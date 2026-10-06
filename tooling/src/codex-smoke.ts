@@ -25,7 +25,7 @@ import { basename, dirname, join, resolve } from "node:path";
 import { get, isNullish, list } from "./json-path.ts";
 import { envOr } from "./env.ts";
 
-const EXPECTED = { plugins: 12, sessionStart: 13 };
+const EXPECTED = { plugins: 12, sessionStart: 20 };
 const LAUNCHER = /hooks\/dist\/|\bbun\b/;
 const SESSION_START = '{"hook_event_name":"SessionStart","source":"startup"}\n';
 

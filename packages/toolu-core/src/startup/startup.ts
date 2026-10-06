@@ -27,6 +27,7 @@ export {
   type PublishOptions,
   type PublishResult,
 } from "./publish.ts";
+export { nativeTooluAdvice, runNativeTooluCheck, type NativeTooluOptions } from "./native-toolu.ts";
 export {
   STARTUP_REPORT_ENV,
   reportStartup,

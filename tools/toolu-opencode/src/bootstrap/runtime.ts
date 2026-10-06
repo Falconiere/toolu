@@ -6,6 +6,7 @@
  * published for them. Readiness is this run's verdict only. Entries run with
  * the user's HOME and toolu's roots, never another host's (#343).
  */
+import { randomUUID } from "node:crypto";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -86,7 +87,7 @@ function bootstrapEnv(
     userConfigRoot: options.userConfigRoot ?? opencodeConfigRoot({ env: host }),
     repoRoot: options.repoRoot,
   };
-  const env = { ...tooluProcessEnv(host, roots), TOOLU_BUN: bun };
+  const env = { ...tooluProcessEnv(host, roots), TOOLU_BUN: bun, TOOLU_SESSION_ID: randomUUID() };
   return options.isolatedHome === undefined ? env : { ...env, HOME: options.isolatedHome };
 }
 

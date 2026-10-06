@@ -27,6 +27,15 @@ that pinned copy. The package declares a single command, `toolu`, and npx passes
 `install` straight to it. A global install (`npm install -g @toolu/plugins`)
 gives you `toolu install`.
 
+That `toolu` is the Node plugin-installer wrapper, not the native Rust CLI. Until
+#438 gives the wrapper a different bin name, a global npm install can shadow
+the native binary in an agent command shell. The plugins' SessionStart check
+rejects the wrapper with the native CLI's `--hook-protocol` probe and provides
+an absolute native path when one is installed in a known directory. Run
+the native CLI's `doctor` command to check whether plain `toolu` reaches it.
+When the wrapper shadows it, invoke `doctor` using the absolute native path
+supplied by SessionStart. See [Installing toolu](../install.md#agent-command-shell).
+
 The package is scoped because npm rejects the unscoped name `toolu` as too
 similar to the existing package `toml`. It replaces `@toolu/cli`, which used a
 `toolu plugins install` grammar and is no longer published. If you installed

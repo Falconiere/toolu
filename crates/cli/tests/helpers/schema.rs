@@ -66,7 +66,6 @@ fn every_other_json_document_validates_against_its_definition() {
     (&["--json", "--help"], "help"),
     (&["--json", "epic", "--help"], "help"),
     (&["--json", "epic", "planned"], "planned"),
-    (&["--json", "doctor", "planned"], "planned"),
     (&["--json", "brainstorm"], "guide"),
   ] {
     let document = one_document(&toolu(args).unwrap()).unwrap();
@@ -90,7 +89,7 @@ fn every_other_json_document_validates_against_its_definition() {
 fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
-      "hook" | "commands" => continue,
+      "hook" | "commands" | "doctor" => continue,
       "brainstorm" | "delivery-flow" => (vec!["--json", name.as_str()], "guide"),
       _ => (vec!["--json", name.as_str(), "planned"], "planned"),
     };

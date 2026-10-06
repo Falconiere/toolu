@@ -1,6 +1,14 @@
 {
   "version": 1,
   "entries": {
+    "ast-grep/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
     "ast-grep/register": {
       "stdin": {
         "session_id": "hook-bench",
@@ -9,7 +17,23 @@
         "source": "startup"
       }
     },
+    "epic-orchestrator/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
     "epic-orchestrator/check-deps": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "jev/check-binary": {
       "stdin": {
         "session_id": "hook-bench",
         "cwd": "${PROJECT}",
@@ -31,6 +55,14 @@
         "cwd": "${PROJECT}",
         "hook_event_name": "UserPromptSubmit",
         "prompt": "Summarise README.md in one sentence."
+      }
+    },
+    "pr-babysit/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
       }
     },
     "pr-babysit/check-toolu": {
@@ -73,6 +105,14 @@
         "source": "startup"
       }
     },
+    "statusline/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
     "statusline/session-start": {
       "stdin": {
         "session_id": "hook-bench",
@@ -81,7 +121,23 @@
         "source": "startup"
       }
     },
+    "toolu-review/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
     "toolu-review/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "toolu/check-binary": {
       "stdin": {
         "session_id": "hook-bench",
         "cwd": "${PROJECT}",

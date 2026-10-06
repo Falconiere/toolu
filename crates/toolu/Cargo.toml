@@ -11,10 +11,12 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+serde_json.workspace = true
 toolu-ast-grep = { path = "../ast-grep" }
 toolu-python-quality = { path = "../python-quality" }
 toolu-rust-quality = { path = "../rust-quality" }
 toolu-ts-quality = { path = "../ts-quality" }
+toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
 
 [lints]
