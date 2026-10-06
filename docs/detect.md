@@ -57,7 +57,7 @@ The push and commit questions, which need the shell parser, follow in #418.
 - the `GIT_DIR` family of variables;
 - `sudo` as root;
 - a path owned by another user (`safe.directory`);
-- config includes, `config.worktree` and quoted values;
+- config includes, `config.worktree`, quoted values, and a config that is not UTF-8 or cannot be read;
 - reftable repositories;
 - a branch name that git would lengthen because a tag or a remote shares it.
 
