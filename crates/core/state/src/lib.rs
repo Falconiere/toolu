@@ -20,6 +20,8 @@ pub mod git;
 pub mod io;
 mod js_order;
 pub mod lock;
+mod sweep_telemetry;
+pub mod sweeper;
 pub mod telemetry;
 pub mod telemetry_schema;
 pub mod time;
