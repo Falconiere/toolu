@@ -2,7 +2,7 @@
 
 This guide covers the Node installer published to npm as `@toolu/plugins`, which
 installs toolu's plugins on each host. The commands of the Rust `toolu` binary
-are generated in [README.md](README.md); `toolu plugins` replaces this installer
+are generated in [docs/cli/README.md](README.md); `toolu plugins` replaces this installer
 in #438.
 
 The commands below work against Claude Code, Codex and OpenCode, and the
