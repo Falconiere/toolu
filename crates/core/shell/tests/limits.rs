@@ -18,7 +18,7 @@ fn on_small_stack(source: String) -> Result<ShellAnalysis, String> {
     .map_err(|err| err.to_string())?;
   handle
     .join()
-    .map_err(|_| "the analysis panicked".to_owned())
+    .map_err(|panic| format!("the analysis panicked: {panic:?}"))
 }
 
 #[test]

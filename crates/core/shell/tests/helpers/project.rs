@@ -4,9 +4,10 @@
 use serde_json::{Value, json};
 use toolu_shell::analysis::{ShellAnalysis, ShellCommand, ShellRedirect};
 use toolu_shell::git::{
-  Refspec, commit_messages, git_invocation, push_targets, runs_git_subcommand,
+  GitInvocation, GitPush, Refspec, commit_messages, git_invocation, push_targets,
+  runs_git_subcommand,
 };
-use toolu_shell::writes::write_targets;
+use toolu_shell::writes::{WriteTarget, write_targets};
 
 fn redirect(r: &ShellRedirect) -> Value {
   let heredoc = r
@@ -48,7 +49,7 @@ fn index(analysis: &ShellAnalysis, target: &ShellCommand) -> Option<usize> {
 }
 
 fn writes(analysis: &ShellAnalysis) -> Vec<Value> {
-  let targets = write_targets(analysis);
+  let targets: Vec<WriteTarget<'_>> = write_targets(analysis);
   let shown = targets.iter().map(|w| {
     let at = w.command.and_then(|c| index(analysis, c));
     json!({ "path": w.path, "pattern": w.pattern, "text": w.text, "via": w.via.as_str(), "command": at })
@@ -59,7 +60,8 @@ fn writes(analysis: &ShellAnalysis) -> Vec<Value> {
 fn git(analysis: &ShellAnalysis) -> (Vec<Value>, Vec<Value>) {
   let (mut invocations, mut messages) = (Vec::new(), Vec::new());
   for (at, c) in analysis.commands.iter().enumerate() {
-    let Some(g) = git_invocation(c) else {
+    let found: Option<GitInvocation<'_>> = git_invocation(c);
+    let Some(g) = found else {
       continue;
     };
     invocations.push(
@@ -73,7 +75,7 @@ fn git(analysis: &ShellAnalysis) -> (Vec<Value>, Vec<Value>) {
 }
 
 fn pushes(analysis: &ShellAnalysis) -> Vec<Value> {
-  let targets = push_targets(analysis);
+  let targets: Vec<GitPush<'_>> = push_targets(analysis);
   let shown = targets.iter().map(|p| {
     let at = index(analysis, p.invocation.command);
     let mut push = serde_json::Map::new();
