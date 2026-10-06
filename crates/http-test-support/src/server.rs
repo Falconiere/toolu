@@ -81,6 +81,7 @@ fn serve_https(
   config: Arc<rustls::ServerConfig>,
   data: &ServerData,
 ) -> Result<(), Error> {
+  socket.set_nonblocking(false).map_err(error)?;
   socket
     .set_read_timeout(Some(Duration::from_secs(2)))
     .map_err(error)?;

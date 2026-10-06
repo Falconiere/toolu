@@ -60,11 +60,12 @@ panic = "unwind"
 const PROBE_SOURCE = `use toolu_http::{Auth, Client, Config};
 use toolu_runtime::env::Env;
 
-fn main() {
-  let url = std::env::args().nth(1).unwrap_or_else(|| "https://api.example.test/".into());
-  let client = Client::new(Config::default(), &Env::process()).expect("client");
-  let body = client.get_bytes(&url, &Auth::None).expect("request");
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+  let url = std::env::args().nth(1).unwrap_or_else(|| String::from("https://api.example.test/"));
+  let client = Client::new(Config::default(), &Env::process())?;
+  let body = client.get_bytes(&url, &Auth::None)?;
   println!("{}", body.len());
+  Ok(())
 }
 `;
 

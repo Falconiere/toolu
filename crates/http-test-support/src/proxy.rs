@@ -52,6 +52,7 @@ fn serve_proxy(
   origins: [SocketAddr; 2],
   connects: &Arc<Mutex<Vec<String>>>,
 ) -> Result<(), Error> {
+  socket.set_nonblocking(false).map_err(error)?;
   socket
     .set_read_timeout(Some(Duration::from_secs(2)))
     .map_err(error)?;
