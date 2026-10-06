@@ -16,6 +16,7 @@
 //! - `registry`: registry events, file names, the module manifest and the `Rule` trait;
 //! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments.
 
+pub mod atomic;
 pub mod cli;
 pub mod cli_args;
 pub mod config;

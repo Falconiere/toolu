@@ -91,8 +91,28 @@ fn unusable_specs_fail_before_spawning() {
   let mut zero = Spec::new(["true"]);
   zero.timeout = Duration::ZERO;
   assert_eq!(run(&zero), Err(RunError::ZeroTimeout));
+  let mut endless = Spec::new(["true"]);
+  endless.timeout = Duration::MAX;
+  assert_eq!(run(&endless), Err(RunError::TimeoutTooLong));
   let missing = run(&Spec::new(["/nonexistent/toolu-no-such-program"]));
   assert!(
     matches!(missing, Err(RunError::Spawn(message)) if message.contains("toolu-no-such-program"))
+  );
+}
+
+#[test]
+fn a_process_that_left_the_group_holding_stdin_does_not_block_the_run() {
+  let script =
+    "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; sleep 2' <&3 >/dev/null 2>&1 & exit 0";
+  let mut spec = sh(script);
+  spec.stdin = vec![b'x'; 1024 * 1024];
+  spec.timeout = Duration::from_millis(300);
+  let started = std::time::Instant::now();
+  let output = run(&spec).unwrap();
+  assert_eq!(output.exit_code, 0);
+  assert!(
+    started.elapsed() < Duration::from_millis(1500),
+    "{:?}",
+    started.elapsed()
   );
 }

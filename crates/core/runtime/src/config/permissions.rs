@@ -12,6 +12,7 @@ use toolu_protocol::host::Host;
 
 use super::load::LoadedConfig;
 use super::read::{flag_false, section};
+use crate::atomic::write_atomic;
 use crate::env::Env;
 use crate::host::roots::Roots;
 use crate::json::ordered::Ordered;
@@ -141,35 +142,6 @@ fn existing_allow(settings: &Ordered) -> Option<Vec<String>> {
     Some(Ordered::Object(entries)) => strings(entries.iter().map(|(_, item)| item).collect()),
     Some(Ordered::Bool(true) | Ordered::Number(_) | Ordered::String(_)) => None,
   }
-}
-
-/// A temp file beside `file`, created exclusively (a planted symlink is
-/// refused), then renamed over it.
-fn write_atomic(file: &Path, body: &str) -> bool {
-  let mut tmp = file.as_os_str().to_owned();
-  tmp.push(format!(".{}.{}.tmp", std::process::id(), unique()));
-  let tmp = PathBuf::from(tmp);
-  let created = file
-    .parent()
-    .is_none_or(|dir| std::fs::create_dir_all(dir).is_ok())
-    && std::fs::OpenOptions::new()
-      .write(true)
-      .create_new(true)
-      .open(&tmp)
-      .and_then(|mut out| std::io::Write::write_all(&mut out, body.as_bytes()))
-      .is_ok();
-  if created && std::fs::rename(&tmp, file).is_ok() {
-    return true;
-  }
-  let _gone = std::fs::remove_file(&tmp);
-  false
-}
-
-/// Nanoseconds since the epoch: unguessable enough beside the process id.
-fn unique() -> u128 {
-  std::time::SystemTime::now()
-    .duration_since(std::time::UNIX_EPOCH)
-    .map_or(0, |since| since.as_nanos())
 }
 
 /// The settings with the missing rules appended to `permissions.allow`, and

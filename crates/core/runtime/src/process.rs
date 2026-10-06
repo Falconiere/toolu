@@ -85,6 +85,8 @@ pub enum RunError {
   EmptyArgv,
   /// The timeout is zero.
   ZeroTimeout,
+  /// The deadline lies past what the clock can represent.
+  TimeoutTooLong,
   /// The program could not be started.
   Spawn(String),
   /// The child could not be waited for.
@@ -106,6 +108,9 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
     return Err(RunError::ZeroTimeout);
   }
   let started = Instant::now();
+  let deadline = started
+    .checked_add(spec.timeout)
+    .ok_or(RunError::TimeoutTooLong)?;
   let mut child = command(program, spec)
     .spawn()
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
@@ -114,10 +119,8 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
   let budget = Budget::new(spec.max_output_bytes);
   let stdout = Drain::start(child.stdout.take(), &budget);
   let stderr = Drain::start(child.stderr.take(), &budget);
-  let deadline = started + spec.timeout;
   let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline)?;
-  let fed = feeder.map(JoinHandle::join);
-  if let Some(Ok(Err(err))) = fed {
+  if let Some(Err(err)) = feeder.and_then(fed) {
     return Err(RunError::Stdin(err));
   }
   Ok(Output {
@@ -158,6 +161,21 @@ fn feed(child: &mut Child, input: Vec<u8>) -> Option<JoinHandle<Result<(), Strin
   }))
 }
 
+/// The feeder's result once it ends, waiting at most [`FINAL_DRAIN`]: a process
+/// that left the group may hold stdin open without reading it, and that writer
+/// is left behind rather than waited for.
+fn fed(feeder: JoinHandle<Result<(), String>>) -> Option<Result<(), String>> {
+  let deadline = Instant::now() + FINAL_DRAIN;
+  while !feeder.is_finished() && Instant::now() < deadline {
+    std::thread::sleep(POLL);
+  }
+  if feeder.is_finished() {
+    feeder.join().ok()
+  } else {
+    None
+  }
+}
+
 /// Waits for the child, its group and both streams until `deadline`; past it,
 /// terminates the group and gives the streams a last moment to close.
 fn settle(
@@ -170,9 +188,7 @@ fn settle(
   let mut next_group_check = Instant::now();
   loop {
     if status.is_none() {
-      status = child
-        .try_wait()
-        .map_err(|err| RunError::Wait(err.to_string()))?;
+      status = child.try_wait().map_err(|err| abandon(pid, &err))?;
     }
     let now = Instant::now();
     let streams_done = drains.iter().all(|drain| drain.finished());
@@ -187,12 +203,14 @@ fn settle(
     }
     std::thread::sleep(POLL.min(deadline - now));
   }
-  let terminated = group::terminate(pid);
+  let terminated = group::terminate_reaping(pid, &mut || {
+    if status.is_none() {
+      status = child.try_wait().ok().flatten();
+    }
+  });
   let status = match status {
     Some(status) => status,
-    None => child
-      .wait()
-      .map_err(|err| RunError::Wait(err.to_string()))?,
+    None => child.wait().map_err(|err| abandon(pid, &err))?,
   };
   terminated.map_err(RunError::Wait)?;
   let drain_deadline = Instant::now() + FINAL_DRAIN;
@@ -200,6 +218,15 @@ fn settle(
     std::thread::sleep(POLL);
   }
   Ok((status, true))
+}
+
+/// A child that cannot be waited for: its group is stopped before the error returns.
+fn abandon(pid: u32, err: &std::io::Error) -> RunError {
+  let stopped = group::terminate(pid)
+    .err()
+    .map(|why| format!("; {why}"))
+    .unwrap_or_default();
+  RunError::Wait(format!("{err}{stopped}"))
 }
 
 fn exit_code(status: ExitStatus) -> i32 {

@@ -3,13 +3,14 @@
 //! paths never spawn the CLI, and read as a tri-state where a stale or failed
 //! snapshot is unknown, never absent. Byte-identical to the bash writer.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::Serialize;
 use serde_json::{Map, Value};
 use toolu_protocol::host::Host;
 
 use super::roots::Roots;
+use crate::atomic::write_atomic;
 use crate::process::commands::codex_plugin_list;
 
 /// Whether the snapshot could be trusted when it was taken.
@@ -116,24 +117,6 @@ fn canonical(listing: Option<&str>) -> CodexPluginSnapshot {
   }
 }
 
-/// Writes `body` beside `path` under a per-process name, then renames it over.
-fn write_atomically(path: &Path, body: &str) -> bool {
-  let mut tmp = path.as_os_str().to_owned();
-  tmp.push(format!(".tmp.{}", std::process::id()));
-  let tmp = PathBuf::from(tmp);
-  let parent_ready = path
-    .parent()
-    .is_none_or(|dir| std::fs::create_dir_all(dir).is_ok());
-  let written = parent_ready && std::fs::write(&tmp, body).is_ok();
-  if written && std::fs::rename(&tmp, path).is_ok() {
-    return true;
-  }
-  if written {
-    let _gone = std::fs::remove_file(&tmp);
-  }
-  false
-}
-
 /// Refreshes the snapshot on Codex; `None`, with nothing written, on any other host.
 pub fn snapshot_codex_plugins(roots: &Roots) -> Option<SnapshotResult> {
   if roots.host() != Host::Codex {
@@ -142,7 +125,7 @@ pub fn snapshot_codex_plugins(roots: &Roots) -> Option<SnapshotResult> {
   let path = codex_plugin_snapshot_path(roots);
   let snapshot = canonical(codex_plugin_list(roots.env()).as_deref());
   let body = serde_json::to_string(&snapshot).ok()? + "\n";
-  let written = write_atomically(&path, &body);
+  let written = write_atomic(&path, &body);
   Some(SnapshotResult {
     path,
     snapshot,

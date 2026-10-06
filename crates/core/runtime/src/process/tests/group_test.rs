@@ -3,7 +3,7 @@ use std::process::Command;
 
 use nix::sys::signal::Signal;
 
-use super::{alive, signal, terminate};
+use super::{alive, signal, signal_probe, terminate, terminate_reaping};
 
 fn sleeper() -> std::process::Child {
   Command::new("sleep")
@@ -52,4 +52,26 @@ fn a_non_positive_or_huge_id_is_refused() {
   );
   assert!(signal(u32::MAX, Signal::SIGTERM).is_err());
   assert!(!alive(0));
+}
+
+#[test]
+fn a_reaped_leader_leaves_a_group_the_signal_probe_alone_calls_dead() {
+  let mut child = sleeper();
+  let group = child.id();
+  assert!(signal_probe(group));
+  signal(group, Signal::SIGKILL).unwrap();
+  child.wait().unwrap();
+  assert!(!signal_probe(group));
+  assert!(!signal_probe(0));
+}
+
+#[test]
+fn terminate_reaping_calls_the_reaper_and_ends_the_leader() {
+  use std::os::unix::process::ExitStatusExt as _;
+  let mut child = sleeper();
+  let group = child.id();
+  let mut calls = 0;
+  terminate_reaping(group, &mut || calls += 1).unwrap();
+  assert!(calls >= 1);
+  assert_eq!(child.wait().unwrap().signal(), Some(15));
 }

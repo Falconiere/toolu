@@ -2,6 +2,7 @@
 //! detached command's whole group, tell whether a live member remains, and stop
 //! it gently, then forcibly.
 
+use std::io::Read as _;
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -15,6 +16,10 @@ const POLL: Duration = Duration::from_millis(25);
 const TERMINATE_GRACE: Duration = Duration::from_millis(250);
 /// How long a group gets to exit after `SIGKILL`.
 const KILL_GRACE: Duration = Duration::from_secs(1);
+/// How long `ps` may take to list the process table.
+const PS_TIMEOUT: Duration = Duration::from_secs(2);
+/// The process-table bytes read from `ps`.
+const PS_MAX_BYTES: u64 = 8 * 1024 * 1024;
 
 fn group_pid(group: u32) -> Result<Pid, String> {
   match i32::try_from(group) {
@@ -37,26 +42,50 @@ pub fn signal(group: u32, signal: Signal) -> Result<(), String> {
 /// Whether `group` holds a process that is not a zombie. The process table
 /// decides when it can be read; otherwise a signal probe does.
 pub fn alive(group: u32) -> bool {
-  let Ok(pid) = group_pid(group) else {
-    return false;
-  };
-  match killpg(pid, None) {
-    Err(Errno::ESRCH) => false,
-    Ok(()) | Err(_) => listed_live(group).unwrap_or(true),
+  signal_probe(group) && listed_live(group).unwrap_or(true)
+}
+
+/// `kill(-group, 0)`: whether any process, zombies included, is in `group`.
+fn signal_probe(group: u32) -> bool {
+  match group_pid(group) {
+    Ok(pid) => !matches!(killpg(pid, None), Err(Errno::ESRCH)),
+    Err(_) => false,
   }
 }
 
 /// `ps -axo pgid=,stat=`: whether a row of `group` has a non-zombie state, or
-/// `None` when `ps` cannot be run.
+/// `None` when `ps` cannot be run, fails, or takes longer than [`PS_TIMEOUT`].
 fn listed_live(group: u32) -> Option<bool> {
-  let table = Command::new("ps")
+  let mut ps = Command::new("ps")
     .args(["-axo", "pgid=,stat="])
     .stdin(Stdio::null())
+    .stdout(Stdio::piped())
     .stderr(Stdio::null())
-    .output()
-    .ok()
-    .filter(|table| table.status.success())?;
-  let text = String::from_utf8_lossy(&table.stdout);
+    .spawn()
+    .ok()?;
+  let mut stdout = ps.stdout.take()?;
+  let reader = std::thread::spawn(move || {
+    let mut table = Vec::new();
+    stdout
+      .by_ref()
+      .take(PS_MAX_BYTES)
+      .read_to_end(&mut table)
+      .map(|_| table)
+  });
+  let deadline = Instant::now() + PS_TIMEOUT;
+  let status = loop {
+    match ps.try_wait() {
+      Ok(Some(status)) => break status,
+      Ok(None) if Instant::now() < deadline => std::thread::sleep(POLL),
+      Ok(None) | Err(_) => {
+        let _killed = ps.kill();
+        let _reaped = ps.wait();
+        return None;
+      }
+    }
+  };
+  let table = reader.join().ok()?.ok().filter(|_| status.success())?;
+  let text = String::from_utf8_lossy(&table);
   let wanted = group.to_string();
   Some(text.lines().any(|row| {
     let mut columns = row.split_whitespace();
@@ -65,8 +94,9 @@ fn listed_live(group: u32) -> Option<bool> {
   }))
 }
 
-fn dead_by(group: u32, deadline: Instant) -> bool {
+fn dead_by(group: u32, deadline: Instant, reap: &mut dyn FnMut()) -> bool {
   loop {
+    reap();
     if !alive(group) {
       return true;
     }
@@ -84,12 +114,19 @@ fn dead_by(group: u32, deadline: Instant) -> bool {
 /// # Errors
 /// When a signal cannot be sent, or a member survives `SIGKILL`.
 pub fn terminate(group: u32) -> Result<(), String> {
+  terminate_reaping(group, &mut || {})
+}
+
+/// [`terminate`], calling `reap` before each look at the group, so the caller
+/// can reap its own child: an unreaped leader stays in the group as a zombie,
+/// which only `ps` can tell from a live process.
+pub(super) fn terminate_reaping(group: u32, reap: &mut dyn FnMut()) -> Result<(), String> {
   signal(group, Signal::SIGTERM)?;
-  if dead_by(group, Instant::now() + TERMINATE_GRACE) {
+  if dead_by(group, Instant::now() + TERMINATE_GRACE, reap) {
     return Ok(());
   }
   signal(group, Signal::SIGKILL)?;
-  if dead_by(group, Instant::now() + KILL_GRACE) {
+  if dead_by(group, Instant::now() + KILL_GRACE, reap) {
     Ok(())
   } else {
     Err(format!("process group {group} survived SIGKILL"))
