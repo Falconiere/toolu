@@ -8,9 +8,11 @@ import {
   chmodSync,
   cpSync,
   existsSync,
+  lstatSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -237,11 +239,17 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
 async function nativeStatuslineFallback(ctx: EntryContext): Promise<EntryResult> {
   return withNativeCatalog("statusline", async (catalog) => {
     using s = shimmedSession(ctx, ["statusline"], ALLOWED_SCRIPT, catalog);
+    s.env.TOOLU_BIN = "";
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
+    const helper = join(s.sb.project, DATA_ROOT, "statusline/statusline.sh");
+    const source = join(catalog, "plugins/statusline/hooks/dist/statusline.js");
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      helper: s.exists(`${DATA_ROOT}/statusline/statusline.sh`),
+      helper:
+        existsSync(helper) &&
+        lstatSync(helper).isSymbolicLink() &&
+        realpathSync(helper) === realpathSync(source),
     };
     return {
       pass: observed.hostExit === 0 && observed.ready === 1 && observed.helper,

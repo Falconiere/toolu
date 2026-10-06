@@ -249,6 +249,31 @@ test("a generated native entry passes beside Bun entries and a hand edit fails",
   ]);
 });
 
+test("generated native prompt and pre-compaction entries pass the launcher check", () => {
+  const root = copyOfRepo();
+  const path = join(root, TOOLU);
+  const doc = z
+    .looseObject({
+      hooks: z.looseObject({
+        UserPromptSubmit: z.array(z.looseObject({ hooks: z.array(z.unknown()) })),
+        PreCompact: z.array(z.looseObject({ hooks: z.array(z.unknown()) })),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(path, "utf8")));
+  for (const [event, filename] of [
+    ["UserPromptSubmit", "user-prompt-submit.json"],
+    ["PreCompact", "pre-compact.json"],
+  ] as const) {
+    const hook = doc.hooks[event][0]?.hooks;
+    if (hook === undefined || hook.length === 0) throw new Error(`${event} hook missing`);
+    hook[0] = NativeHook.parse(
+      JSON.parse(readFileSync(join(ROOT, "tooling/fixtures/native-launcher", filename), "utf8")),
+    );
+  }
+  writeFileSync(path, JSON.stringify(doc));
+  expect(checkHooksJson(root)).toEqual([]);
+});
+
 test("a native command with its protocol marker kept but its shell body edited fails", () => {
   const root = copyOfRepo();
   switchSessionStart(root);

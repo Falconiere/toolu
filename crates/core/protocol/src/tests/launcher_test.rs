@@ -8,6 +8,10 @@ const PRE_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/pre-tool-use.json");
 const STATUSLINE_SESSION_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/statusline-session-start.json");
+const PROMPT_HOOK: &str =
+  include_str!("../../../../../tooling/fixtures/native-launcher/user-prompt-submit.json");
+const COMPACT_HOOK: &str =
+  include_str!("../../../../../tooling/fixtures/native-launcher/pre-compact.json");
 const OPENCODE_LAUNCHER: &str =
   include_str!("../../../../../tools/toolu-opencode/src/bootstrap/native-launcher.txt");
 
@@ -41,6 +45,13 @@ fn typescript_checker_fixtures_match_the_rust_generator() {
   for (plugin, event, name, fixture) in [
     ("toolu", "SessionStart", "session-start", SESSION_HOOK),
     ("toolu", "PreToolUse", "pre-tools", PRE_HOOK),
+    (
+      "toolu",
+      "UserPromptSubmit",
+      "user-prompt-submit",
+      PROMPT_HOOK,
+    ),
+    ("toolu", "PreCompact", "pre-compact", COMPACT_HOOK),
     (
       "statusline",
       "SessionStart",
