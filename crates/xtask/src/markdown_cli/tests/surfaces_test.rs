@@ -33,7 +33,7 @@ fn paths_of_removed_surfaces_are_found_with_their_stems() {
   let patterns = patterns().unwrap();
   let found = references(
     &patterns,
-    r#"bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run x; "$TOOLU_BUN" --no-env-file scripts/jira-issue.ts get K; "$X/jev/jev.sh" ask"#,
+    r#"bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run x; "$TOOLU_BUN" --no-env-file scripts/epic-graph.ts 402; "$X/jev/jev.sh" ask"#,
   );
   assert_eq!(
     found,
@@ -42,7 +42,7 @@ fn paths_of_removed_surfaces_are_found_with_their_stems() {
         "hooks/dist/plan-ledger.js".to_owned(),
         "plan-ledger".to_owned()
       ),
-      ("scripts/jira-issue.ts".to_owned(), "jira-issue".to_owned()),
+      ("scripts/epic-graph.ts".to_owned(), "epic-graph".to_owned()),
       ("jev.sh".to_owned(), "jev".to_owned()),
     ]
   );
