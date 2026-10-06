@@ -36,10 +36,10 @@ for (const raw of cases) {
       using sb = createSandbox();
       await applyFixtureActions(sb, c.actions);
       const env = {
-        TOOLU_HOST_OVERRIDE: c.host,
         ...Object.fromEntries(
           Object.entries(c.env ?? {}).map(([key, value]) => [key, value ?? undefined]),
         ),
+        TOOLU_HOST_OVERRIDE: c.host,
       };
       const out = await report(sb, fixtureString(sb, c.dir), env);
       for (const check of c.checks) {
