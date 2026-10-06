@@ -111,3 +111,23 @@ fn braces_expand_across_quotes() {
     [words(&["echo", "{a,b}"])]
   );
 }
+
+#[test]
+fn indented_heredoc_bodies_and_multi_line_test_strings_stay_known() {
+  for source in [
+    "cat <<EOF\n  x\nEOF",
+    "cat <<-EOF\n\tbody\nEOF",
+    "cat <<EOF\n\nEOF",
+    "[ x = \"a\nb\" ]",
+    "[ -n \"$(\ngit status\n)\" ]",
+  ] {
+    let analysis = analyze(source);
+    assert!(!analysis.unknown, "{source:?} {:?}", analysis.errors);
+  }
+  // tree-sitter starts the body after the indentation; bash keeps it.
+  let commit = analyze("git commit -m \"$(cat <<'EOF'\n  Subject\nEOF\n)\"");
+  assert_eq!(
+    argvs(&commit).last(),
+    Some(&words(&["git", "commit", "-m", "  Subject"]))
+  );
+}

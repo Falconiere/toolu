@@ -72,7 +72,7 @@ pub(super) struct Gathered<'t> {
 }
 
 /// The words of a `[ … ]` test, in source order, brackets included.
-fn test_words(node: Node<'_>) -> Vec<Node<'_>> {
+pub(super) fn test_words(node: Node<'_>) -> Vec<Node<'_>> {
   let mut found = Vec::new();
   let mut stack = vec![node];
   while let Some(next) = stack.pop() {

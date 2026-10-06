@@ -220,8 +220,8 @@ pub struct ShellAnalysis {
   pub compound_redirects: Vec<ShellRedirect>,
   /// Errors from the line and from every nested script.
   pub errors: Vec<ShellError>,
-  /// Nothing reliable is known: the input was oversize, the parse was cancelled,
-  /// nesting passed the limit, or it had errors and no command at all.
+  /// Nothing reliable is known: the input was oversize, the parse or walk ran
+  /// past the budget, nesting passed the limit, or the line had any error.
   pub unknown: bool,
 }
 

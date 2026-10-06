@@ -1,7 +1,9 @@
 //! tree-sitter-bash parsing (#416). One `Syntax` serves a whole analysis: the
-//! line and every `bash -c`/`eval` string are parsed by the same parser under
-//! one shared deadline, so pathological input cannot stall a hook. A parse that
-//! runs past the deadline is cancelled and the analysis becomes unknown.
+//! line and every `bash -c`/`eval` string are parsed under one shared deadline
+//! of wall-clock time, which the fixups and the walk check too. A long script
+//! parses on a worker thread the analysis stops waiting for, since tree-sitter
+//! does not check its own timeout everywhere. Past the deadline the analysis is
+//! unknown.
 //!
 //! Syntax errors are `ERROR` and `MISSING` nodes. tree-sitter keeps the nodes it
 //! could read around them, which is how a `git push` before an unterminated
@@ -15,7 +17,6 @@ use tree_sitter::{Language, Node, Parser, Tree};
 
 use crate::analysis::{CommandOrigin, ShellError};
 use crate::fixup::{self, Fixups};
-use crate::scanner::{SCANNER_STATE_LIMIT, heredoc_state};
 
 /// How many times a script is parsed again for `fixup`'s changes.
 const FIXUP_PASSES: usize = 3;
@@ -40,8 +41,6 @@ pub(crate) enum ParseFailure {
   Language(String),
   /// The shared deadline passed.
   Cancelled,
-  /// More heredoc state than tree-sitter-bash's scanner can serialize.
-  Heredocs,
   /// No worker thread could be started for a long script.
   Worker(String),
 }
@@ -55,9 +54,6 @@ impl ParseFailure {
         "parser: cancelled after the {} ms parse budget",
         PARSE_BUDGET.as_millis()
       ),
-      ParseFailure::Heredocs => {
-        "parser: more heredoc state than tree-sitter-bash can track".to_owned()
-      }
       ParseFailure::Worker(reason) => format!("parser: no worker thread: {reason}"),
     }
   }
@@ -100,6 +96,9 @@ impl Syntax {
     let mut glued = Vec::new();
     let mut tree = self.parse(&text)?;
     for pass in 0..FIXUP_PASSES {
+      if self.expired() {
+        return Err(ParseFailure::Cancelled);
+      }
       let found = fixup::find(&tree, &text, pass == 0);
       if found == Fixups::default() {
         break;
@@ -115,9 +114,6 @@ impl Syntax {
 
   /// Parse `source` within what remains of the deadline.
   fn parse(&mut self, source: &str) -> Result<Tree, ParseFailure> {
-    if heredoc_state(source) >= SCANNER_STATE_LIMIT {
-      return Err(ParseFailure::Heredocs);
-    }
     let left = self.deadline.saturating_duration_since(Instant::now());
     let micros = u64::try_from(left.as_micros()).unwrap_or(u64::MAX);
     if micros == 0 {

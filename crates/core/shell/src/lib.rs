@@ -14,7 +14,6 @@ mod options;
 mod parse;
 mod redirect;
 pub mod rules;
-mod scanner;
 mod walk;
 mod words;
 pub mod writes;
@@ -68,8 +67,8 @@ fn finish(source: &str, walker: Walker) -> ShellAnalysis {
 }
 
 /// Analyze one command line (`analyzeShell`). It never panics: input over
-/// `MAX_SHELL_INPUT`, a parse past `PARSE_BUDGET`, nesting past `MAX_NESTING`,
-/// and errors with no command at all are `unknown`.
+/// `MAX_SHELL_INPUT`, work past `PARSE_BUDGET`, nesting past `MAX_NESTING`,
+/// and any syntax error are `unknown`; the commands read are still reported.
 pub fn analyze(source: &str) -> ShellAnalysis {
   if source.len() > MAX_SHELL_INPUT {
     let length = parse::utf16_len(source);

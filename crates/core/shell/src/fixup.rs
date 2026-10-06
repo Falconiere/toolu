@@ -33,23 +33,13 @@ pub(crate) struct Fixups {
   pub(crate) swaps: Vec<(usize, usize, usize)>,
 }
 
-/// Whether `command` starts a pipeline: `time` is a keyword only there.
-fn starts_pipeline(command: Node<'_>) -> bool {
-  match command.parent() {
-    Some(parent) if parent.kind() == "pipeline" => parent
-      .named_child(0)
-      .is_some_and(|first| first.id() == command.id()),
-    _ => true,
-  }
-}
-
 /// The bytes of `time` and a following `-p` in `command`, if it starts with the keyword.
 fn time_of(command: Node<'_>, source: &str) -> Option<Range<usize>> {
   let name = command.child_by_field_name("name")?;
   let word = name
     .named_child(0)
     .filter(|_| name.named_child_count() == 1)?;
-  if word.kind() != "word" || text_of(word, source) != "time" || !starts_pipeline(command) {
+  if word.kind() != "word" || text_of(word, source) != "time" {
     return None;
   }
   let mut cursor = command.walk();
@@ -62,17 +52,10 @@ fn time_of(command: Node<'_>, source: &str) -> Option<Range<usize>> {
   Some(name.start_byte()..end)
 }
 
-/// The offset of `token` when it is a `[`, `[[` or `{` that tree-sitter took
-/// for an opener (of a test, a group, or inside an error) with no whitespace after it.
+/// The offset of `token`, a child of an opener's parent (a test, a group, or
+/// an error), when it is a `[`, `[[` or `{` with no whitespace after it.
 fn glued_of(token: Node<'_>, source: &str) -> Option<usize> {
   if token.is_named() || !matches!(token.kind(), "[" | "[[" | "{") {
-    return None;
-  }
-  let parent = token.parent()?;
-  if !matches!(
-    parent.kind(),
-    "test_command" | "compound_statement" | "ERROR"
-  ) {
     return None;
   }
   let after = source
@@ -85,7 +68,8 @@ fn glued_of(token: Node<'_>, source: &str) -> Option<usize> {
 
 /// The `<<TAG` of a heredoc tree-sitter failed to read, and the rest of its
 /// line, when that rest is only words and redirects of the same command.
-fn swap_of(node: Node<'_>, source: &str) -> Option<(usize, usize, usize)> {
+/// `newlines` holds every newline offset of `source`.
+fn swap_of(node: Node<'_>, source: &str, newlines: &[usize]) -> Option<(usize, usize, usize)> {
   if node.kind() != "heredoc_redirect" || !node.has_error() {
     return None;
   }
@@ -97,8 +81,7 @@ fn swap_of(node: Node<'_>, source: &str) -> Option<(usize, usize, usize)> {
     .children(&mut cursor)
     .find(|child| child.kind() == "heredoc_start")?;
   let middle = start.end_byte();
-  let rest = source.get(middle..)?;
-  let end = middle + rest.find('\n')?;
+  let end = *newlines.get(newlines.partition_point(|at| *at < middle))?;
   let line = source.get(middle..end)?;
   let simple = !line.trim().is_empty() && !line.contains(['|', '&', ';', '#', '`', '(']);
   simple.then_some((operator.start_byte(), middle, end))
@@ -111,12 +94,23 @@ pub(crate) fn find(tree: &Tree, source: &str, time: bool) -> Fixups {
   if !time && !source.contains(['[', '{', '<']) {
     return found;
   }
+  let newlines: Vec<usize> = source.match_indices('\n').map(|(at, _)| at).collect();
   preorder(tree.root_node(), |node| {
-    if time && node.kind() == "command" {
-      found.blank.extend(time_of(node, source));
+    let opener = matches!(node.kind(), "test_command" | "compound_statement" | "ERROR");
+    // `time` is a keyword only at the start of a pipeline.
+    let pipeline = node.kind() == "pipeline";
+    let mut first = true;
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+      if opener {
+        found.glued.extend(glued_of(child, source));
+      }
+      if time && child.kind() == "command" && (first || !pipeline) {
+        found.blank.extend(time_of(child, source));
+      }
+      first &= !child.is_named();
     }
-    found.glued.extend(glued_of(node, source));
-    found.swaps.extend(swap_of(node, source));
+    found.swaps.extend(swap_of(node, source, &newlines));
     true
   });
   found

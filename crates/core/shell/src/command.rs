@@ -59,20 +59,13 @@ fn broken_test(node: Node<'_>, source: &str) -> bool {
   if node.kind() != "test_command" || is_double_bracket(node) {
     return false;
   }
-  let mut end = None;
-  let mut broken = false;
-  crate::parse::preorder(node, |next| {
-    if next.child_count() > 0 {
-      return true;
-    }
-    if let Some(previous) = end {
-      let gap = source.get(previous..next.start_byte()).unwrap_or_default();
-      broken |= gap.replace("\\\n", "").contains('\n');
-    }
-    end = Some(next.end_byte());
-    false
-  });
-  broken
+  // Only the gaps between its words: a newline in a string or substitution is no break.
+  gather::test_words(node).windows(2).any(|pair| match pair {
+    [before, after] => source
+      .get(before.end_byte()..after.start_byte())
+      .is_some_and(|gap| gap.replace("\\\n", "").contains('\n')),
+    _ => false,
+  })
 }
 
 /// A command no static reading can name (`bash -c "$CMD"`, recursion too deep).

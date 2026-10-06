@@ -79,7 +79,6 @@ impl Walker {
     });
   }
 
-  /// Redirects on a compound command, and the scripts their targets run.
   /// Record an error for each heredoc whose body tree-sitter split (`split_body`).
   pub(crate) fn split_bodies(&mut self, redirects: &[Node<'_>], ctx: Ctx<'_>) {
     for node in redirects {
@@ -93,6 +92,7 @@ impl Walker {
     }
   }
 
+  /// Redirects on a compound command, and the scripts their targets run.
   pub(crate) fn compound_redirects(&mut self, redirects: &[Node<'_>], ctx: Ctx<'_>) {
     self.split_bodies(redirects, ctx);
     for node in redirects {

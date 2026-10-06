@@ -37,14 +37,21 @@ function releaseTracks(release: unknown, path: string): boolean {
 }
 
 /** The release-please TOML entries that keep the Cargo workspace in lockstep (#407). */
+/** Path crates in `Cargo.lock` that are vendored third-party code, not workspace crates (#416). */
+const VENDORED = new Set(["tree-sitter-bash"]);
+
 const CARGO_RELEASE = [
   { path: "Cargo.toml", jsonpath: "$.workspace.package.version" },
-  { path: "Cargo.lock", jsonpath: "$.package[?(!@.source)].version" },
+  {
+    path: "Cargo.lock",
+    jsonpath: "$.package[?(!@.source && @.name != 'tree-sitter-bash')].version",
+  },
 ];
 
 /**
  * `Cargo.toml`'s workspace version and every workspace crate in `Cargo.lock`
- * (the entries without a `source`) equal `version`, and release-please bumps both.
+ * (the entries without a `source`, less the vendored ones) equal `version`,
+ * and release-please bumps both.
  */
 function checkCargo(repo: Repo, version: string, release: unknown): void {
   for (const want of CARGO_RELEASE) {
@@ -60,7 +67,7 @@ function checkCargo(repo: Repo, version: string, release: unknown): void {
     fail("Cargo.toml [workspace.package] version differs from package.json");
   }
   const local = list(get(repo.toml("Cargo.lock"), "package")).filter(
-    (pkg) => get(pkg, "source") === undefined,
+    (pkg) => get(pkg, "source") === undefined && !VENDORED.has(String(get(pkg, "name"))),
   );
   if (local.length === 0) fail("Cargo.lock lists no workspace crate");
   for (const pkg of local) {

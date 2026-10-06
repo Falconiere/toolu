@@ -45,6 +45,7 @@
       "deny.toml",
       "lefthook.yml",
       "crates/**",
+      "vendor/**",
       ".cargo/**",
       ".claude/toolu.config.json",
       ".codex/toolu.config.json",
@@ -74,7 +75,8 @@
       "Cargo.toml",
       "Cargo.lock",
       "rust-toolchain.toml",
-      "crates/**"
+      "crates/**",
+      "vendor/**"
     ]
   },
   "runEverything": [".github/**", "bun.lock"],

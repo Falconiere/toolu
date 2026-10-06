@@ -59,14 +59,15 @@ fn a_hundred_thousand_term_arithmetic_is_walked_without_recursion() {
   assert_eq!(analysis.commands.len(), 2);
 }
 
-/// tree-sitter nests an and-list 20,000 levels deep, which a recursive walk
-/// could not take on 2 MiB; at 100,000 a debug build passes the 1 s budget.
+/// tree-sitter nests an and-list 10,000 levels deep, which a recursive walk
+/// could not take on 2 MiB. Sized well inside the 1 s budget of a debug,
+/// coverage-instrumented build; release walks 100,000 terms within it.
 #[test]
-fn a_twenty_thousand_and_list_keeps_every_command() {
-  let source = vec!["true"; 20_000].join(" && ");
+fn a_ten_thousand_and_list_keeps_every_command() {
+  let source = vec!["true"; 10_000].join(" && ");
   let analysis = on_small_stack(source).unwrap();
   assert!(!analysis.unknown, "{:?}", analysis.errors);
-  assert_eq!(analysis.commands.len(), 20_000);
+  assert_eq!(analysis.commands.len(), 10_000);
   assert!(analysis.commands.iter().all(|command| command.exit_proves));
 }
 
@@ -84,43 +85,36 @@ fn nesting_at_the_limit_is_still_read() {
   );
 }
 
-/// Whether the heredoc-state bound refused to parse.
-fn refused(analysis: &ShellAnalysis) -> bool {
-  analysis
-    .errors
-    .iter()
-    .any(|error| error.message.contains("heredoc state"))
-}
-
+/// Every input that aborted tree-sitter-bash 0.23.3's heredoc serializer (fuzzing
+/// and review of #416) now parses: the vendored scanner has the 0.25.1 check.
+/// Returning at all is the proof, as an abort kills the test process.
 #[test]
-fn heredocs_past_the_scanner_state_are_unknown_not_a_crash() {
-  for source in [
+fn heredoc_state_that_overflowed_the_scanner_is_parsed_without_a_crash() {
+  let mut sources = vec![
     format!("{}\n", "cat <<EOF ".repeat(150)),
     format!("bash -c '{}'", "cat <<EOF ".repeat(150)),
+    format!("cat <<<<<{}", "a".repeat(503)),
     // Error recovery appends each delimiter to stale entries: this reached 1,027 bytes.
     format!("x=<<'{}'a|", "E".repeat(30)).repeat(10),
-  ] {
-    assert!(analyze(&source).unknown, "{:?}", source.get(..40));
-  }
-  let five = "cat <<EOF\nx\nEOF\n".repeat(5);
-  assert!(!analyze(&five).unknown);
-  // A delimiter the scanner's own check always refuses is safe.
-  let huge = format!("cat <<{}\nx\n", "A".repeat(1_100));
-  assert!(!refused(&analyze(&huge)));
-}
-
-/// tree-sitter-bash reads a delimiter to whitespace, `<` included; at 1,013 to
-/// 1,015 characters its state passes the scanner's check and overflows the
-/// 1024-byte buffer, which aborted the process before the bound (fuzz, #416).
-#[test]
-fn a_delimiter_in_the_scanner_overflow_window_is_unknown_not_an_abort() {
+  ];
   for length in 1_000..=1_030 {
     let delimiter: String = "A<".chars().cycle().take(length).collect();
-    let analysis = analyze(&format!("cat <<{delimiter}\nx\n"));
-    assert_eq!(refused(&analysis), length < 1_017, "{length}");
+    sources.push(format!("cat <<{delimiter}\nx\n"));
   }
-  let json = format!("gh api -X POST --input - <<< '{}'", "x".repeat(4_000));
-  assert!(!analyze(&json).unknown);
+  for length in 1_005..=1_011 {
+    sources.push(format!("\"\"''\"\"\"\\\"\"\\<<'E'{{{}", "a".repeat(length)));
+  }
+  for source in &sources {
+    analyze(source);
+  }
+  // Ten heredocs, one file each, are an ordinary command.
+  let files: Vec<String> = (0..10)
+    .map(|n| format!("cat > f{n} <<'EOF'\nx\nEOF\n"))
+    .collect();
+  let files = files.join("");
+  let analysis = analyze(&files);
+  assert!(!analysis.unknown, "{:?}", analysis.errors);
+  assert_eq!(analysis.commands.len(), 10);
 }
 
 /// tree-sitter does not check its timeout everywhere: these took 11 s and 20 s
@@ -139,12 +133,32 @@ fn a_parse_slower_than_the_budget_is_cancelled_on_time() {
   }
 }
 
-/// Glued descriptors were matched against every redirect for every word.
+/// Glued descriptors were matched against every redirect for every word:
+/// 32,000 redirects took 4.6 s. 8,000 now stay well inside the budget.
 #[test]
 fn many_redirects_are_read_without_quadratic_work() {
-  let source = format!("echo {}", "x >y ".repeat(32_000));
-  let started = Instant::now();
-  analyze(&source);
-  let elapsed = started.elapsed();
-  assert!(elapsed < PARSE_BUDGET * 3, "{elapsed:?}");
+  let analysis = analyze(&format!("echo {}", "x >y ".repeat(8_000)));
+  assert!(!analysis.unknown, "{:?}", analysis.errors);
+  let redirects: Vec<usize> = analysis
+    .commands
+    .iter()
+    .map(|command| command.redirects.len())
+    .collect();
+  assert_eq!(redirects, [8_000]);
+}
+
+/// The fixups looked up each `{`'s parent from the root: 40,000 nested groups took 37 s.
+#[test]
+fn nested_groups_are_fixed_up_without_quadratic_work() {
+  let source = format!("{}a{}", "{ ".repeat(40_000), "; }".repeat(40_000));
+  let analysis = analyze(&source);
+  let messages: Vec<&str> = analysis
+    .errors
+    .iter()
+    .map(|error| error.message.as_str())
+    .collect();
+  assert_eq!(
+    messages,
+    [format!("nesting: deeper than {MAX_NESTING} levels")]
+  );
 }

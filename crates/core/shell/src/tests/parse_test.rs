@@ -66,19 +66,15 @@ fn a_spent_budget_cancels_every_parse() {
 }
 
 #[test]
-fn more_heredoc_state_than_the_scanner_can_hold_is_not_parsed() {
+fn heredoc_state_past_the_scanner_buffer_parses_with_the_vendored_fix() {
+  // 0.23.3's serializer overran its buffer here; the vendored fix stops short.
   let mut syntax = Syntax::new(Duration::from_secs(5)).unwrap();
-  let pending = format!("{}\n", "cat <<EOF ".repeat(150));
-  assert_eq!(
-    syntax.script(&pending).map(|_| ()),
-    Err(ParseFailure::Heredocs)
-  );
-  let long = format!("cat <<{}\nx\n", "A<".repeat(507));
-  assert_eq!(
-    syntax.script(&long).map(|_| ()),
-    Err(ParseFailure::Heredocs)
-  );
-  assert!(ParseFailure::Heredocs.message().contains("heredoc state"));
+  for source in [
+    format!("{}\n", "cat <<EOF ".repeat(150)),
+    format!("cat <<{}\nx\n", "A<".repeat(507)),
+  ] {
+    assert!(syntax.script(&source).is_ok(), "{:?}", source.get(..20));
+  }
   assert_eq!(
     ParseFailure::Worker("no threads".to_owned()).message(),
     "parser: no worker thread: no threads"

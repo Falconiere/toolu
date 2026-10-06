@@ -1,0 +1,30 @@
+# tree-sitter-bash 0.23.3 from crates.io (upstream commit 487734f8), vendored
+# with one fix backported from 0.25.1: see README.md.
+[package]
+name = "tree-sitter-bash"
+version = "0.23.3"
+edition = "2021"
+authors = ["Max Brunsfeld <maxbrunsfeld@gmail.com>", "Amaan Qureshi <amaanq12@gmail.com>"]
+description = "Bash grammar for tree-sitter"
+license = "MIT"
+repository = "https://github.com/tree-sitter/tree-sitter-bash"
+build = "bindings/rust/build.rs"
+publish = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
+# Its own workspace root: the toolu workspace excludes it, and cargo must not
+# look further up for one.
+[workspace]
+
+[lib]
+name = "tree_sitter_bash"
+path = "bindings/rust/lib.rs"
+
+[dependencies]
+tree-sitter-language = "0.1"
+
+[build-dependencies]
+cc = "1.1"

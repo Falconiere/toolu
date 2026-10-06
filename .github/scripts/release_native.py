@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import NoReturn
 
 
+# Path crates in Cargo.lock that are vendored third-party code (vendor/), not
+# workspace crates: they keep their upstream version (#416).
+VENDORED = {"tree-sitter-bash"}
+
+
 def fail(message: str) -> NoReturn:
     raise SystemExit(message)
 
@@ -27,7 +32,8 @@ def verify_tag(tag: str, test_tag: bool) -> None:
         fail(f"tag {tag} does not match workspace v{version}")
     lock = tomllib.loads((root / "Cargo.lock").read_text())
     for package in lock["package"]:
-        if "source" not in package and package["version"] != version:
+        local = "source" not in package and package["name"] not in VENDORED
+        if local and package["version"] != version:
             fail(
                 f"Cargo.lock {package['name']} version {package['version']} "
                 f"does not match {version}"

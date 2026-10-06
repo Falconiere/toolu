@@ -435,4 +435,11 @@ Dependencies and records → option parser → parse and words → wrappers → 
     - `has_brace` tracks the last `..`;
     - copy targets are capped at 4 MiB.
   - **Tests and CI.** Tests are tightened (exact write paths, copy tuples, exact error origin). In CI, the musl `CC_` export moved into #485's step, and the fuzz job gained a cargo cache.
+- Re-review (2026-10-06): a fourth reviewer broke the measured scanner bound. An input of about 1 KB aborted with a bound of 22, because error recovery reads a delimiter after a quoted one's closing quote. That is the third failed text bound, so the hypothesis changed (Jev 0.99):
+  - `vendor/tree-sitter-bash` is 0.23.3 with the 0.25.1 `serialize` check backported. `scanner.rs` and the 1,000-byte refusal are deleted, so ten heredocs are no longer unknown, and every abort input is a regression in `tests/limits.rs`.
+  - The fixups judge tokens from their parent (40,000 nested groups took 37 s, now 0.13 s) and check the deadline between passes.
+  - `split_body` ignores indentation and blank first lines.
+  - `broken_test` reads only the gaps between `[`'s words.
+  - A heredoc body starts on the line after the delimiter's, keeping the first line's indentation.
+  - The limits tests are sized for a coverage-instrumented debug build.
 

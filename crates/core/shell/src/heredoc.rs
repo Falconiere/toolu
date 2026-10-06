@@ -44,7 +44,7 @@ fn connector(token: &str) -> Option<&'static str> {
 
 /// Whether tree-sitter-bash read part of the body of the heredoc `node` into
 /// the line of its delimiter. The text between the delimiter and the body is
-/// one line in bash; a body line that starts with `\\` (`\\x`, or a lone `\\`
+/// one line in bash; a body line that starts with `\` (`\x`, or a lone `\`
 /// joining the next line) was read as words there, and the body lost it.
 pub(crate) fn split_body(node: Node<'_>, source: &str) -> bool {
   let mut cursor = node.walk();
@@ -63,8 +63,11 @@ pub(crate) fn split_body(node: Node<'_>, source: &str) -> bool {
   let header = start
     .and_then(|from| source.get(from..body))
     .unwrap_or_default();
-  let line = header.strip_suffix('\n').unwrap_or(header);
-  line.contains('\n')
+  // tree-sitter starts a body after its first line's indentation, or after a
+  // blank line: only words on a later line mean a split.
+  header
+    .split_once('\n')
+    .is_some_and(|(_, later)| !later.trim().is_empty())
 }
 
 impl<'t> Heredoc<'t> {
@@ -127,7 +130,17 @@ impl<'t> Heredoc<'t> {
   /// The body as the command reads it (`heredocContent`): tabs stripped for
   /// `<<-`; `None` when an unquoted body expands.
   pub(crate) fn content(&self, source: &str) -> Option<String> {
-    let body = self.body.map_or("", |node| text_of(node, source));
+    // tree-sitter starts the body node after the first line's indentation; the
+    // body starts on the line after the delimiter's.
+    let body = self.body.map_or("", |node| {
+      let line = source
+        .get(self.line_end..)
+        .and_then(|rest| rest.find('\n'))
+        .map_or(node.start_byte(), |at| self.line_end + at + 1);
+      source
+        .get(line.min(node.start_byte())..node.end_byte())
+        .unwrap_or_default()
+    });
     if !self.quoted && body.contains(['$', '`', '\\']) {
       return None;
     }
