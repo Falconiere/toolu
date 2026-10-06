@@ -1,8 +1,8 @@
 //! `fixtures/state/cases.json` against the Rust state layer (AC-4, AC-11):
 //! the schema, telemetry, branch and diff families here, the I/O family in
 //! `io_cases.rs`, the gate-file family in `gate_cases.rs`, the concurrency
-//! family in `interleave.rs`. The one `package` case checks TypeScript's
-//! module exports and has no Rust counterpart.
+//! family in `interleave.rs`. Of the `package` case, which checks
+//! TypeScript's module exports, the version and sample document hold in Rust.
 
 #[path = "helpers/cases.rs"]
 mod cases;
@@ -17,10 +17,10 @@ use sandbox::{Res, Sandbox};
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::diff_sha::diff_sha;
 use toolu_state::edit_records::parse_edit_record;
-use toolu_state::gate_schema::validate_gate_file;
+use toolu_state::gate_schema::{GATE_FILE_VERSION, validate_gate_file};
 use toolu_state::git::{base_branch, branch_slug, branch_slugs, current_branch};
-use toolu_state::telemetry::TELEMETRY_EVENTS;
-use toolu_state::telemetry_schema::{parse_telemetry_extras, parse_telemetry_line};
+use toolu_state::telemetry::{TELEMETRY_EVENTS, TELEMETRY_VERSION};
+use toolu_state::telemetry_schema::{TelemetryLine, parse_telemetry_extras, parse_telemetry_line};
 
 const CASES: &str = "state/cases.json";
 
@@ -83,6 +83,16 @@ fn every_case_has_a_rust_runner_but_the_typescript_package_one() {
 }
 
 #[test]
+fn the_package_case_version_and_sample_document_hold_in_rust() {
+  let [case] = &cases_of(CASES, "package").unwrap()[..] else {
+    panic!("one case")
+  };
+  let version = Ordered::Number(GATE_FILE_VERSION.into());
+  assert_eq!(field(case, "gateFileVersion").unwrap(), &version);
+  assert!(validate_gate_file(field(case, "validGateFile").unwrap()).is_ok());
+}
+
+#[test]
 fn schema_cases_accept_and_reject_as_zod_does() {
   let cases = cases_of(CASES, "schema").unwrap();
   assert_eq!(cases.len(), 22);
@@ -105,9 +115,15 @@ fn every_event_line_parses_and_the_event_set_is_closed() {
   let Ordered::Array(lines) = field(case, "lines").unwrap() else {
     panic!("lines")
   };
-  let mut seen: Vec<String> = lines
+  let parsed: Vec<TelemetryLine> = lines
     .iter()
-    .map(|line| parse_telemetry_line(line).unwrap().event.name().to_owned())
+    .map(|line| parse_telemetry_line(line).unwrap())
+    .collect();
+  let version = Ordered::Number(TELEMETRY_VERSION.into());
+  assert!(lines.iter().all(|line| line.get("v") == Some(&version)));
+  let mut seen: Vec<String> = parsed
+    .iter()
+    .map(|line| line.event.name().to_owned())
     .collect();
   seen.sort();
   let mut known: Vec<String> = TELEMETRY_EVENTS

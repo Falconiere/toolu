@@ -55,7 +55,9 @@ fn writer(args: &[String]) -> Res<()> {
   let [gate, id, count, mode] = args else {
     return Err("usage: writer <gate> <id> <count> <mode>".into());
   };
-  let count: usize = count.parse().map_err(|_| format!("bad count {count}"))?;
+  let count: usize = count
+    .parse()
+    .map_err(|err| format!("bad count {count}: {err}"))?;
   let mut ctx = StateCtx::new(Roots::new(Env::process(), Some(Host::Claude)));
   let gate = Path::new(gate);
   let (source, reason) = (format!("writer-{id}"), format!("reason {id}"));

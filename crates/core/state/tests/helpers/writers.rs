@@ -210,7 +210,11 @@ impl Race {
       .map_err(|err| err.to_string())?
       .flatten()
       .map(|entry| entry.file_name().to_string_lossy().into_owned())
-      .filter(|name| name.ends_with(".tmp") || name.ends_with(".lock"))
+      .filter(|name| {
+        Path::new(name)
+          .extension()
+          .is_some_and(|ext| ext == "tmp" || ext == "lock")
+      })
       .collect();
     if leftovers.is_empty() {
       Ok(())

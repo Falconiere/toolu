@@ -15,6 +15,7 @@ use sandbox::{Res, Sandbox};
 use toolu_protocol::host::Host;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::ctx::StateCtx;
+use toolu_state::gate_schema::GLOBAL_GATE_KEY;
 use toolu_state::sweeper::sweep_state;
 use toolu_state::time::iso_seconds;
 
@@ -109,7 +110,7 @@ fn gate_files_go_only_when_spent() {
     ("{\"status\":\"passing\",\"source\":\"s\",\"updatedAt\":\"u\"}".to_owned(), false),
     (failing(&entry("/nowhere/a.ts")), false),
     (failing(&format!("{},{}", entry("/nowhere/a.ts"), entry(&live_file))), true),
-    (failing(&entry("__global__")), true),
+    (failing(&entry(GLOBAL_GATE_KEY)), true),
     ("{\"status\":\"failing\",\"reason\":\"r\",\"source\":\"s\",\"file\":\"/nowhere\",\"violations\":\"v\",\"updatedAt\":\"u\"}".to_owned(), false),
     ("{\"status\":\"passing\",\"source\":\"s\",\"updatedAt\":\"u\",\"owner\":\"x\"}".to_owned(), true),
   ];
