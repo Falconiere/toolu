@@ -997,6 +997,7 @@ name = "toolu-state"
 version = "7.11.0"
 dependencies = [
  "nix",
+ "serde_json",
  "tempfile",
  "toolu-protocol",
  "toolu-runtime",

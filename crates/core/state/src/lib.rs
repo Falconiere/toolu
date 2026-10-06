@@ -13,6 +13,8 @@ pub mod ctx;
 pub mod git;
 pub mod io;
 pub mod lock;
+pub mod telemetry;
+pub mod telemetry_schema;
 pub mod time;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
