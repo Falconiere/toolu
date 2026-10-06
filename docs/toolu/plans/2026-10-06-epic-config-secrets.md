@@ -34,7 +34,7 @@ Typed non-secret settings → secure secret store and redaction → token CLI �
   {
     "id": "cli",
     "title": "toolu epic token new through the shared store, with no secret in either output mode; regenerate CLI reference and snapshot",
-    "check": "cargo test -p toolu-epic-orchestrator && cargo test -p toolu-cli --test contract && cargo xtask docs-cli --check",
+    "check": "cargo test -p toolu-epic-orchestrator && cargo test -p toolu-cli --test epic_token && cargo test -p toolu-cli --test contract && cargo xtask docs-cli --check",
     "ac_refs": ["AC-4", "AC-5"],
     "depends_on": ["secrets"],
     "paths": ["crates/epic-orchestrator/", "crates/cli/", "crates/core/runtime/src/config/", "docs/cli/", "Cargo.toml", "Cargo.lock"],
@@ -75,8 +75,10 @@ Keep scoped conventional commits and push this branch after affected tests. Run 
 
 ## Plan review
 
-Jev rated step-to-AC alignment 1.65/2 (0.47 confidence) and flagged that the CLI step must invoke a real binary and compare both output modes against the generated token. `crates/cli/tests/contract.rs` already uses the real binary through `helpers/cli.rs`; its new test will read the temp secret file, run rotation twice and assert both token values are absent from stdout/stderr. The `cli` step covers that integration test. All AC-1 through AC-7 have ledger references, the file and environment failures are explicit, and docs and delivery checks are in order. No remaining blocker. **Status:** Approved.
+Jev rated step-to-AC alignment 1.65/2 (0.47 confidence) and flagged that the CLI step must invoke a real binary and compare both output modes against the generated token. The CLI step adds a real-binary test that reads the temp secret file, runs rotation twice and asserts both token values are absent from stdout/stderr. All AC-1 through AC-7 have ledger references, the file and environment failures are explicit, and docs and delivery checks are in order. No remaining blocker. **Status:** Approved.
 
 ## Deviations
 
 The secret-store and CLI input cases now require rotation to refuse when a status-token environment override is active. Without refusal, a successful file rotation would leave the effective old token valid. This follows the approved spec's immediate invalidation outcome; Jev favored refusal (0.94).
+
+The real-binary token tests moved to `crates/cli/tests/epic_token.rs` after adding them to `contract.rs` exceeded the repository's 300-code-line test-file limit. The CLI ledger check runs both integration suites. The behavior and AC references are unchanged.

@@ -16,6 +16,7 @@ Usage: toolu epic [OPTIONS] <COMMAND>
 
 Commands:
   planned  Not ported yet (#434, #435, #448): show the planned verbs
+  token    Manage the status bearer token
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -32,6 +33,40 @@ Options:
 Not ported yet (#434, #435, #448): show the planned verbs
 
 Usage: toolu epic planned [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic token`
+
+```text
+Manage the status bearer token
+
+Usage: toolu epic token [OPTIONS] <COMMAND>
+
+Commands:
+  new   Rotate the status bearer token in secrets.json
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic token new`
+
+```text
+Rotate the status bearer token in secrets.json
+
+Usage: toolu epic token new [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
