@@ -80,6 +80,33 @@ test.concurrent("a generated native SessionStart retains its declared shell comm
   if (!edited.ok) expect(edited.reason).toContain("unsupported SessionStart command");
 });
 
+test.concurrent("a native command rejects an invalid extracted bundle name", () => {
+  using root = tempRoot("toolu-entries-native-name-");
+  const plugin = fixturePlugin(root.path, "toolu", {
+    entries: { "session-start": "process.exit(0);\n" },
+  });
+  writeFileSync(
+    join(plugin.pluginDir, "hooks", "hooks.json"),
+    JSON.stringify({
+      hooks: {
+        SessionStart: [
+          {
+            hooks: [
+              {
+                type: "command",
+                command: NATIVE_SESSION_START.replaceAll("session-start", "session--start"),
+              },
+            ],
+          },
+        ],
+      },
+    }),
+  );
+  const plan = pluginStartupEntries(plugin.pluginDir);
+  expect(plan.ok).toBe(false);
+  if (!plan.ok) expect(plan.reason).toContain("unsupported SessionStart command");
+});
+
 test.concurrent("a deleted declared bundle fails the plan before anything runs", () => {
   using root = tempRoot("toolu-entries-missing-");
   const plugin = copiedPlugin(root.path, "ts-quality");

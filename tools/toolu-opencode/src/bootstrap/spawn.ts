@@ -5,7 +5,7 @@
  * runs it with `--no-env-file`, including the native launcher's Bun fallback,
  * so a project `.env` never reaches it (#350).
  */
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -96,6 +96,7 @@ export async function spawnEntry(request: SpawnRequest): Promise<SpawnOutcome> {
     let env = request.env;
     if (request.command !== undefined) {
       wrapperDir = mkdtempSync(join(tmpdir(), "toolu-native-bun-"));
+      chmodSync(wrapperDir, 0o700);
       const wrapper = join(wrapperDir, "bun");
       writeFileSync(wrapper, '#!/bin/sh\nexec "$TOOLU_OPENCODE_NATIVE_BUN" --no-env-file "$@"\n', {
         mode: 0o700,

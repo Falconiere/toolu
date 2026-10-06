@@ -45,7 +45,6 @@ const DIST = /hooks[/\\]dist[/\\]([^"'\s/\\]+)\.js/;
 
 /** The marker of a native launcher entry (`toolu_protocol::launcher::MARKER`). */
 const NATIVE_MARKER = "--hook-protocol";
-const NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const NATIVE_EXAMPLES = {
   enforcing: {
     event: "PreToolUse",
@@ -73,7 +72,8 @@ const NATIVE_EXAMPLES = {
 
 /** The Rust generator's checked-in command, with only its target fields changed. */
 function expectedNativeCommand(plugin: string, event: string, entry: string): string | undefined {
-  if (!NAME.test(plugin) || !NAME.test(entry) || !/^[A-Z][A-Za-z]+$/u.test(event)) return undefined;
+  if (!/^[A-Z][A-Za-z]+$/u.test(event) || typeof expectedHook(plugin, event, entry) === "string")
+    return undefined;
   const example = isEnforcingEvent(event) ? NATIVE_EXAMPLES.enforcing : NATIVE_EXAMPLES.context;
   const prefix = plugin === "toolu" ? "" : `${plugin} `;
   return example.command
@@ -116,8 +116,7 @@ function isLauncherHook(hook: Hook): boolean {
 }
 
 /** A hand-written native call must fail even when its generated marker is missing. */
-function isNativeLikeHook(hook: Hook): boolean {
-  const command = hook.command ?? "";
+export function isNativeLikeCommand(command: string): boolean {
   return (
     /\btoolu(?:\s+[a-z0-9-]+)?\s+hook\s+[a-z0-9-]+/u.test(command) ||
     /\bhook\s+[a-z0-9-]+\s+--event\s+[A-Z][A-Za-z]+/u.test(command)
@@ -231,7 +230,7 @@ function checkFile(root: string, plugin: string): HooksJsonProblem[] {
               { root, plugin, event, file, where: `${event}[${i}].hooks[${j}]` },
               hook,
             )
-          : isNativeLikeHook(hook)
+          : isNativeLikeCommand(hook.command ?? "")
             ? [
                 {
                   file,

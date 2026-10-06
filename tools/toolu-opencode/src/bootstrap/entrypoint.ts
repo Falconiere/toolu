@@ -41,7 +41,8 @@ const NATIVE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 /** Only the #412 generated command is executable; its target fields may vary. */
 function nativeEntry(command: string, plugin: string, event: HookEventName): string | undefined {
   const bundle = LAUNCHED_BUNDLE.exec(command)?.[1];
-  if (bundle === undefined || !NATIVE_NAME.test(plugin)) return undefined;
+  if (bundle === undefined || !NATIVE_NAME.test(plugin) || !NATIVE_NAME.test(bundle))
+    return undefined;
   const prefix = plugin === "toolu" ? "" : `${plugin} `;
   const expected = NATIVE_TEMPLATE.replace(
     "hook session-start --event SessionStart",

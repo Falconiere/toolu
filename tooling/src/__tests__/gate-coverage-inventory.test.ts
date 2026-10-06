@@ -50,6 +50,27 @@ async function discoverFixture(env: Record<string, string>) {
   return DiscoveredFixture.parse(JSON.parse(result.stdout));
 }
 
+function switchFixtureHook(hooksFile: string): void {
+  const document = z
+    .looseObject({
+      hooks: z.looseObject({
+        SessionStart: z.array(
+          z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(readFileSync(hooksFile, "utf8")));
+  const target = document.hooks.SessionStart.flatMap((group) => group.hooks).find((hook) =>
+    hook.command.includes("hooks/dist/session-start.js"),
+  );
+  if (target === undefined) throw new Error("fixture SessionStart hook missing");
+  const native: unknown = JSON.parse(
+    readFileSync(join(ROOT, "tooling/fixtures/native-launcher/session-start.json"), "utf8"),
+  );
+  Object.assign(target, native);
+  writeFileSync(hooksFile, JSON.stringify(document));
+}
+
 async function committedInventory(): Promise<z.infer<typeof Rows>> {
   return Rows.parse(JSON.parse(await Bun.file(INVENTORY).text()));
 }
@@ -88,25 +109,7 @@ test.concurrent("a native launcher switch keeps the inventory ID and records its
     row.id.startsWith("toolu:hooks.json:SessionStart:session-start.js:"),
   )?.id;
   expect(id).toBeDefined();
-  const document = z
-    .looseObject({
-      hooks: z.looseObject({
-        SessionStart: z.array(
-          z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
-        ),
-      }),
-    })
-    .parse(JSON.parse(readFileSync(hooksFile, "utf8")));
-  const target = document.hooks.SessionStart.flatMap((group) => group.hooks).find(
-    (hook) =>
-      typeof hook.command === "string" && hook.command.includes("hooks/dist/session-start.js"),
-  );
-  if (target === undefined) throw new Error("fixture SessionStart hook missing");
-  const native: unknown = JSON.parse(
-    readFileSync(join(ROOT, "tooling/fixtures/native-launcher/session-start.json"), "utf8"),
-  );
-  Object.assign(target, native);
-  writeFileSync(hooksFile, JSON.stringify(document));
+  switchFixtureHook(hooksFile);
   const after = await discoverFixture(env);
   expect(after.find((row) => row.id === id)).toMatchObject({
     id,
@@ -131,6 +134,22 @@ test.concurrent("a native launcher switch keeps the inventory ID and records its
   const stale = await run([process.execPath, "run", CLI, "check"], { cwd: ROOT, env });
   expect(stale.exitCode).toBe(1);
   expect(stale.stderr).toContain(`${id}: hostMechanism differs from discovery`);
+});
+
+test.concurrent("a native-shaped launcher missing its protocol marker fails discovery", async () => {
+  using sb = createSandbox();
+  const hooksFile = fixtureHooks(sb.project);
+  switchFixtureHook(hooksFile);
+  writeFileSync(
+    hooksFile,
+    readFileSync(hooksFile, "utf8").replace("--hook-protocol", "--wrong-protocol"),
+  );
+  const result = await run([process.execPath, "run", CLI, "discover"], {
+    cwd: ROOT,
+    env: { GATE_COVERAGE_ROOT: sb.project },
+  });
+  expect(result.exitCode).toBe(1);
+  expect(result.stderr).toContain("native launcher is missing --hook-protocol");
 });
 
 test.concurrent("final inventory and matrix record each hook's launch mechanism", async () => {

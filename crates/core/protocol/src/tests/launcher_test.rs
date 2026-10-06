@@ -33,11 +33,9 @@ fn enforcing_and_context_commands_match_the_committed_goldens() {
     generated("toolu", "PreToolUse", "pre-tools").command,
     PRE_TOOL_USE
   );
-  assert_eq!(
-    generated("toolu", "SessionStart", "session-start").command,
-    SESSION_START
-  );
-  assert_eq!(OPENCODE_LAUNCHER, SESSION_START);
+  let generated_session = generated("toolu", "SessionStart", "session-start").command;
+  assert_eq!(generated_session, SESSION_START);
+  assert_eq!(generated_session, OPENCODE_LAUNCHER);
 }
 
 #[test]

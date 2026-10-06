@@ -97,7 +97,7 @@ test("the native launcher's Bun fallback does not load the project .env", async 
   writeFileSync(join(projectRoot, ".env"), "TOOLU_NATIVE_FALLBACK_SECRET=from-project\n");
   writeFileSync(
     join(plugin.pluginDir, "hooks", "dist", "session-start.js"),
-    'console.log(JSON.stringify({hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:process.env.TOOLU_NATIVE_FALLBACK_SECRET ?? "absent"}}));\n',
+    'import { statSync } from "node:fs"; import { dirname } from "node:path";\nconst mode = (statSync(dirname(process.env.TOOLU_BUN ?? "")).mode & 0o777).toString(8);\nconsole.log(JSON.stringify({hookSpecificOutput:{hookEventName:"SessionStart",additionalContext:(process.env.TOOLU_NATIVE_FALLBACK_SECRET ?? "absent")+":"+mode}}));\n',
   );
   const result = await bootstrapRuntime({
     repoRoot: REPO_ROOT,
@@ -108,6 +108,6 @@ test("the native launcher's Bun fallback does not load the project .env", async 
   });
   expect(result.status).toBe("ready");
   if (result.status !== "ready") throw new Error(result.reason);
-  expect(result.plugins[0]?.entries[0]?.additionalContext).toBe("absent");
+  expect(result.plugins[0]?.entries[0]?.additionalContext).toBe("absent:700");
   expect(result.diagnostics.some((line) => line.includes("running the Bun bundle"))).toBe(true);
 });
