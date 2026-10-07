@@ -4,8 +4,9 @@
  * spec and plan docs, and the ledger and verdict commands the generated
  * delivery skill tells the model to run.
  */
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { installTooluShim } from "@toolu/conformance/harness/entry-command";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { GENERATED, PASSING_TEST } from "./core-fixtures.ts";
 import { gitProject } from "./workflow-fixtures.ts";
@@ -19,16 +20,27 @@ export const REMEDY = 'skill({ name: "delivery-flow-delivery-flow" })';
 
 type Status = "Draft" | "Approved";
 
-/** The generated execution reference's `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/<entry>.js"` prefix. */
-function generatedCommand(entry: "plan-ledger" | "verdict"): string {
+/** A command the generated execution reference tells the model to run. */
+function generatedCommand(command: string): string {
   const text = readFileSync(join(SKILL_DIR, "references", "execution.md"), "utf8");
-  const command = `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/${entry}.js"`;
-  if (!text.includes(`\`${command} `)) throw new Error(`no ${entry} command in execution.md`);
+  if (!text.includes(`\`${command}`)) throw new Error(`no ${command} command in execution.md`);
   return command;
 }
 
-export const PLAN_LEDGER = generatedCommand("plan-ledger");
-export const VERDICT = `${generatedCommand("verdict")} status`;
+export const PLAN_LEDGER = generatedCommand("toolu ledger");
+export const VERDICT = generatedCommand("toolu ledger verdict status");
+
+/**
+ * A directory holding the `TOOLU_IMPL` seam's `toolu` shim (#421), for the
+ * bash `PATH`: `toolu ledger …` reaches the Bun bundles by default and the
+ * Rust binary when the seam selects it.
+ */
+export function tooluBin(sb: Sandbox): string {
+  const dir = join(sb.root, "toolu-bin");
+  mkdirSync(dir, { recursive: true });
+  installTooluShim(dir);
+  return dir;
+}
 
 export const specDoc = (status: Status): string =>
   `# Math\n\n**Status:** ${status}\n\n- **AC-1:** two numbers add.\n`;

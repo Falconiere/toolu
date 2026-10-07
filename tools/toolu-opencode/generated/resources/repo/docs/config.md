@@ -396,7 +396,7 @@ you need a fixed tier that differs from the routing table.
 
 Plan steps can pin their own tier: a step in a `## Steps (machine-readable)`
 block may carry `"model": "<alias>"`, validated at parse time and surfaced by
-`bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status` as `model=<alias>` on the summary line for the next step.
+`toolu ledger status` as `model=<alias>` on the summary line for the next step.
 
 ### Docs-sync surfaces (`docsSync`)
 
@@ -474,7 +474,7 @@ feature produces (model-routing analytics), not a side effect of the nudge.
 from advisory to blocking in `packages/toolu-core/src/gates/plan-ledger.ts`.
 Either way, every push check appends an `ac_coverage` telemetry event with
 `covered`/`uncovered` counts (reusing `pl_ac_coverage_lines`). With the default
-`false`, an uncovered AC only shows up in that count and in `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status`'s AC-coverage report. With `true`, `git push` is denied naming the
+`false`, an uncovered AC only shows up in that count and in `toolu ledger status`'s AC-coverage report. With `true`, `git push` is denied naming the
 uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 
 ### PR babysit fixers (`prBabysit`)

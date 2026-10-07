@@ -32,6 +32,7 @@ import {
   SKILL_DIR,
   deliveryProject,
   planDoc,
+  tooluBin,
 } from "./delivery-fixtures.ts";
 
 const PROMPT = "PROBE:delivery.workflows load, preflight, verify and push";
@@ -65,6 +66,8 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const remote = deliveryProject(session.sb);
     session.sb.write(DRAFT_PLAN, planDoc("Draft"));
     installShim(session);
+    // The skill's `toolu ledger …` resolves to the TOOLU_IMPL seam's shim (#421).
+    session.env.PATH = `${tooluBin(session.sb)}:${process.env.PATH ?? ""}`;
     session.env.TOOLU_BUN = process.execPath;
     session.env.TOOLU_REPO_ROOT = ROOT;
 

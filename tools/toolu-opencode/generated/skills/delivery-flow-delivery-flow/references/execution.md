@@ -19,7 +19,7 @@ no approved plan, return to `plan` and `plan-review` before editing.
 Use the mandatory [Jev workflow](semantic-judgments.md) to triage
 evidence, including local review. Correctness requires the checks below.
 
-Before the first step run `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" preflight` — it refuses to start unless the plan is `Approved` and its declared spec is `Approved`. Then read progress with `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status` to find the next non-fresh-green step, do the loop below for it, then record it with `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. `status` also prints an AC-coverage report (report-only): read it to confirm every spec `AC-<n>` is covered by a fresh-green step — an uncovered AC is surfaced, not yet a push blocker, but it means the goal isn't proven done.
+Before the first step run `toolu ledger preflight` — it refuses to start unless the plan is `Approved` and its declared spec is `Approved`. Then read progress with `toolu ledger status` to find the next non-fresh-green step, do the loop below for it, then record it with `toolu ledger run <plan_doc> --step <id>` — the engine requires the plan-doc positional arg, and stamps green from mechanical truth, you cannot claim it. On plan deviation, edit the steps block and note it under `## Deviations`, then re-run. Re-run any stale step (a `green` step whose diff has since changed) before calling the plan done. `status` also prints an AC-coverage report (report-only): read it to confirm every spec `AC-<n>` is covered by a fresh-green step — an uncovered AC is surfaced, not yet a push blocker, but it means the goal isn't proven done.
 
 1. **Take one step** from the plan — the smallest shippable unit.
 2. **Produce per-step real-data evidence** (use `test`) — map the relevant AC or risk to a representative real input/fixture, observable result, applicable boundary/failure case, and runner command. For a bugfix, reproduce first; record the passing output before the ledger step is stamped green.
@@ -62,11 +62,11 @@ unrelated work.
 After that scoped commit and before pushing, establish all of the following
 against the committed branch diff with command output, not assertion:
 
-1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status` and resolve every missing or stale AC coverage entry.
-2. Run `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
+1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `toolu ledger status` and resolve every missing or stale AC coverage entry.
+2. Run `toolu ledger run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
 3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker.
 4. Load `skill({ name: "toolu-review-review" })` and run it against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers.
-5. Run `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js" status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
+5. Run `toolu ledger verdict status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
 
 ## PR delivery
 

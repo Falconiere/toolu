@@ -7589,7 +7589,7 @@
       "command": "git push origin feat/example",
       "name": "plan-ledger: ledger with a red step denies and names it",
       "expect": "deny",
-      "has": ["s1", "red", "run: bun \"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\" run"],
+      "has": ["s1", "red", "run: toolu ledger run"],
       "setup": [
         {
           "op": "write",

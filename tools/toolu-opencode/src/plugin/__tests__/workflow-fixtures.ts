@@ -57,9 +57,14 @@ export async function refusal(hooks: Hooks, command: string): Promise<string> {
   return "allowed";
 }
 
-/** `command` run in the agent's bash, with its result shown to the after hook as OpenCode would. */
-export async function bash(hooks: Hooks, sb: Sandbox, command: string) {
-  const res = await inShell(sb, command, await bashEnv(hooks, sb));
+/**
+ * `command` run in the agent's bash, with its result shown to the after hook as
+ * OpenCode would; `bin`, when given, goes first on the bash `PATH`.
+ */
+export async function bash(hooks: Hooks, sb: Sandbox, command: string, bin?: string) {
+  const env = await bashEnv(hooks, sb);
+  if (bin !== undefined) env.PATH = `${bin}:${env.PATH ?? ""}`;
+  const res = await inShell(sb, command, env);
   const input = { tool: "bash", ...CALL, args: { command } };
   const output = {
     title: "bash",

@@ -167,7 +167,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
 - **brainstorm** (owner OP-21 (#355))
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-21 (#355).
 - **delivery-flow** (owner OP-21 (#355))
-  - **tools** — plan-ledger and verdict CLIs run through bash with TOOLU_PLUGIN_ROOT. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-21 (#355), OP-09 (#343).
+  - **tools** — toolu ledger and toolu ledger verdict run through bash with the shell.env host environment. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-21 (#355), OP-09 (#343).
   - **task** — Phases delegate bounded work to subagents. `task tool + child sessions` (tool): supported; evidence `deny.task-child`. Owner: OP-21 (#355).
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-21 (#355).
 - **epic-orchestrator** (owner OP-22 (#356))

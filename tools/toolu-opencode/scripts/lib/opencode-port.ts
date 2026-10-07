@@ -109,21 +109,13 @@ export const OPENCODE_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
       `On OpenCode it is ${skill("delivery-flow-delivery-flow")}.`,
     ],
     [
-      `Before running ledger or verdict commands, locate the enabled, installed
-\`toolu@toolu\` plugin and set \`TOOLU_PLUGIN_ROOT\` to its plugin root. Claude
-Code exposes \`installPath\` in \`claude plugin list --json\`; Codex exposes
-\`source.path\` in \`codex plugin list --json\`. Prefer an enabled project install
-for the current repository, then an enabled user install. Confirm
-\`$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\` and \`$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js\` exist. In a toolu source
-checkout, \`plugins/toolu\` is also valid. The task repository need
-not contain toolu's source tree.`,
-      `Before running ledger or verdict commands, confirm \`TOOLU_PLUGIN_ROOT\` is set.
-On OpenCode, toolu's \`shell.env\` sets it in every bash call to the enabled toolu
-plugin's directory, from the npm package or a local clone; enabling delivery-flow
-enables toolu. When it is unset, toolu is not ready in this session: stop and name that
-prerequisite. Confirm \`$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\` and
-\`$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js\` exist. The task repository need not
-contain toolu's source tree.`,
+      `When
+\`toolu\` is not on the agent's \`PATH\`, the toolu plugin's session start names the
+absolute path or the install command to use instead.`,
+      `On
+OpenCode, enabling delivery-flow enables toolu, whose session start reports a
+missing \`toolu\`. When bash cannot run \`toolu\`, toolu is not ready in this
+session: stop and name that prerequisite.`,
     ],
     [
       "Invoke the active host's `brainstorm:brainstorm` (`/brainstorm:brainstorm` or `$brainstorm:brainstorm`) in its Delivery mode",
@@ -135,7 +127,7 @@ contain toolu's source tree.`,
     ],
     [
       "the installed `brainstorm`, `toolu`, `toolu-review`, and `pr-babysit` skills",
-      `a set \`TOOLU_PLUGIN_ROOT\`, the ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT} skills in the \`skill\` tool's list`,
+      `a \`toolu\` that bash can run, the ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT} skills in the \`skill\` tool's list`,
     ],
   ],
   [`${DELIVERY}/references/execution.md`]: [
