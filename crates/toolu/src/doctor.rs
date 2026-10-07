@@ -1,10 +1,13 @@
 //! `toolu doctor`: prove the native binary is reachable from an agent's
 //! non-login command shell. #445 adds the other installation diagnostics.
 
+use std::path::Path;
+
 use clap::{ArgMatches, Command};
 use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::install::upgrade_command;
 use toolu_runtime::process::commands::native_toolu_on_path;
 
 /// Check the native binary selected by `sh -c 'command -v toolu'`.
@@ -21,10 +24,7 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
           json!({ "namespace": "doctor", "reachable": true, "path": path }).to_string(),
         )
       } else {
-        Outcome::data(format!(
-          "toolu doctor: native toolu reachable from a non-login shell at {}",
-          path.display()
-        ))
+        Outcome::data(reachable(&path))
       }
     }
     Ok(None) => Outcome::failed(
@@ -33,6 +33,15 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     ),
     Err(error) => Outcome::failed(Exit::Failure, format!("toolu doctor: {error}")),
   }
+}
+
+/// The human report for a reachable binary: where it is and how to upgrade it.
+fn reachable(path: &Path) -> String {
+  format!(
+    "toolu doctor: native toolu reachable from a non-login shell at {}\nupgrade with: {}",
+    path.display(),
+    upgrade_command(path)
+  )
 }
 
 #[cfg(test)]

@@ -17,6 +17,7 @@ function fixture(): string {
     join(root, ".github/code-review-prompt.md"),
   );
   cpSync(join(source, "release-please-config.json"), join(root, "release-please-config.json"));
+  cpSync(join(source, "install.sh"), join(root, "install.sh"));
   return root;
 }
 
@@ -129,6 +130,58 @@ for (const scenario of [
     before: "cancel-in-progress: false",
     after: "cancel-in-progress: true",
     finding: "must not cancel an in-flight publication",
+  },
+  {
+    name: "tap updated for a prerelease",
+    file: ".github/workflows/release-homebrew.yml",
+    before: "if: ${{ !contains(inputs.tag, '-') }}",
+    after: "if: ${{ !contains(github.ref_name, '-') }}",
+    finding: "must skip prerelease tags by inputs.tag",
+  },
+  {
+    name: "tap token for every repository",
+    file: ".github/workflows/release-homebrew.yml",
+    before: "repositories: homebrew-tap",
+    after: "repositories: toolu",
+    finding: "scoped to homebrew-tap",
+  },
+  {
+    name: "inherited Homebrew secrets",
+    file: ".github/workflows/release-please.yml",
+    before:
+      "    secrets:\n      HOMEBREW_APP_ID: ${{ secrets.HOMEBREW_APP_ID }}\n      HOMEBREW_APP_PRIVATE_KEY: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}",
+    after: "    secrets: inherit",
+    finding: "Homebrew App secrets explicitly",
+  },
+  {
+    name: "tap racing the native release",
+    file: ".github/workflows/release-please.yml",
+    before: "needs: [release-please, native]",
+    after: "needs: [release-please]",
+    finding: "only after the native release succeeds",
+  },
+  {
+    name: "unsigned SHA256SUMS upload",
+    file: ".github/workflows/release-native.yml",
+    before: "dist/SHA256SUMS dist/SHA256SUMS.minisig dist/toolu.spdx.json",
+    after: "dist/SHA256SUMS dist/toolu.spdx.json",
+    finding: "must upload SHA256SUMS.minisig",
+  },
+  {
+    name: "signing minisign differs from the installer pin",
+    file: "install.sh",
+    before:
+      'MINISIGN_LINUX_SHA256="f0a0954413df8531befed169e447a66da6868d79052ed7e892e50a4291af7ae0"',
+    after:
+      'MINISIGN_LINUX_SHA256="0000000000000000000000000000000000000000000000000000000000000000"',
+    finding: "the minisign archive install.sh pins",
+  },
+  {
+    name: "inherited minisign secret",
+    file: ".github/workflows/release-please.yml",
+    before: "      TOOLU_MINISIGN_SECRET_KEY: ${{ secrets.TOOLU_MINISIGN_SECRET_KEY }}\n",
+    after: "",
+    finding: "TOOLU_MINISIGN_SECRET_KEY to the native release explicitly",
   },
   {
     name: "prerelease moving npm latest",

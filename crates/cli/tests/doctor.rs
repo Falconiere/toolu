@@ -64,6 +64,30 @@ fn doctor_finds_the_real_binary_that_sh_resolves() {
 }
 
 #[test]
+fn doctor_prints_brew_upgrade_only_for_a_cellar_binary() {
+  let temp = tempfile::tempdir().unwrap();
+  let cellar = temp.path().join("Cellar/toolu/9.0.0/bin");
+  let plain = temp.path().join("plain/bin");
+  for (dir, brew) in [(&cellar, true), (&plain, false)] {
+    std::fs::create_dir_all(dir).unwrap();
+    copy_toolu(dir).unwrap();
+    let output = run(&format!("{}:/usr/bin:/bin", dir.display()), &["doctor"]).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert_eq!(
+      stdout.contains("upgrade with: brew upgrade toolu"),
+      brew,
+      "{stdout}"
+    );
+    assert_eq!(
+      stdout.contains("upgrade with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
+      !brew,
+      "{stdout}"
+    );
+  }
+}
+
+#[test]
 fn doctor_fails_when_the_non_login_shell_has_no_toolu() {
   let missing = run("/usr/bin:/bin", &["doctor"]).unwrap();
   assert_eq!(missing.status.code(), Some(1));

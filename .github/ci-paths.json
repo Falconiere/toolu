@@ -17,6 +17,7 @@
       "guardrails.workspace.json",
       "release-please-config.json",
       "LICENSE",
+      "install.sh",
       ".claude-plugin/**",
       ".agents/**"
     ],

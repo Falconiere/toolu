@@ -11,6 +11,10 @@ on:
       publish:
         required: true
         type: boolean
+    secrets:
+      TOOLU_MINISIGN_SECRET_KEY:
+        description: minisign secret key whose public half is TOOLU_PUBLIC_KEY in install.sh.
+        required: true
   workflow_dispatch:
     inputs:
       tag:
@@ -166,6 +170,27 @@ jobs:
           done
           (cd dist && shasum -a 256 -- *.tar.gz > SHA256SUMS)
           test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 4
+      # install.sh refuses a SHA256SUMS without this signature. The verifier is
+      # the minisign 0.11 archive install.sh pins, checked by the same digest,
+      # and the signature must verify against the key install.sh embeds.
+      - name: Sign SHA256SUMS
+        env:
+          MINISIGN_SECRET_KEY: ${{ secrets.TOOLU_MINISIGN_SECRET_KEY }}
+          MINISIGN_SHA256: f0a0954413df8531befed169e447a66da6868d79052ed7e892e50a4291af7ae0
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          test -n "$MINISIGN_SECRET_KEY" || { echo "::error::TOOLU_MINISIGN_SECRET_KEY is not set"; exit 1; }
+          work=$(mktemp -d)
+          curl -fsSL -o "$work/minisign.tar.gz" https://github.com/jedisct1/minisign/releases/download/0.11/minisign-0.11-linux.tar.gz
+          echo "$MINISIGN_SHA256  $work/minisign.tar.gz" | sha256sum -c -
+          tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign
+          minisign="$work/minisign-linux/x86_64/minisign"
+          (umask 077 && printf '%s\n' "$MINISIGN_SECRET_KEY" > "$work/toolu.key")
+          "$minisign" -S -s "$work/toolu.key" -m dist/SHA256SUMS -x dist/SHA256SUMS.minisig -t "toolu $TAG"
+          rm -f "$work/toolu.key"
+          public_key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)
+          "$minisign" -Vm dist/SHA256SUMS -x dist/SHA256SUMS.minisig -P "$public_key"
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@v0.24.3
         with:
@@ -212,7 +237,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
-        run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/toolu.spdx.json --clobber
+        run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/SHA256SUMS.minisig dist/toolu.spdx.json --clobber
 
   finalize:
     needs: [package, upload]
