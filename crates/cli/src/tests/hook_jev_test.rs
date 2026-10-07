@@ -46,6 +46,9 @@ fn shim(dir: &Path, version: &str) {
 fn run_jev(env: &Env, name: &str, event: &str, root: &Path, stdin: &'static str) -> Outcome {
   let exe = || None;
   let read = move || Ok(stdin.to_owned());
+  let env_fn = || env.clone();
+  let cwd = root.to_path_buf();
+  let cwd_fn = move || cwd.clone();
   let request = HookRequest {
     plugin: "jev".to_owned(),
     name: name.to_owned(),
@@ -57,7 +60,8 @@ fn run_jev(env: &Env, name: &str, event: &str, root: &Path, stdin: &'static str)
     &Context {
       exe: &exe,
       stdin: &read,
-      env: Some(env),
+      env: &env_fn,
+      cwd: &cwd_fn,
     },
   )
 }
@@ -116,6 +120,8 @@ fn a_missing_plugin_root_stays_quiet_instead_of_reading_the_working_directory() 
   let (_dir, env) = jev_home();
   let exe = || None;
   let read = || Ok("{}".to_owned());
+  let env_fn = || env.clone();
+  let cwd_fn = || Path::new(".").to_path_buf();
   let request = HookRequest {
     plugin: "jev".to_owned(),
     name: "session-start".to_owned(),
@@ -127,7 +133,8 @@ fn a_missing_plugin_root_stays_quiet_instead_of_reading_the_working_directory() 
     &Context {
       exe: &exe,
       stdin: &read,
-      env: Some(&env),
+      env: &env_fn,
+      cwd: &cwd_fn,
     },
   );
   assert_eq!(outcome.exit, Exit::Success);

@@ -9,7 +9,7 @@ import { chmodSync, mkdirSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { PERMISSIONS_SENTINEL } from "@toolu/core/config";
 import { z } from "zod";
-import { entryArgv } from "@toolu/conformance/harness/entry-command";
+import { entryArgv, entryImplementation } from "@toolu/conformance/harness/entry-command";
 import { readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch, type RunResult } from "@toolu/conformance/harness/spawn";
@@ -230,7 +230,12 @@ export async function launchCount(event: string, entry: string): Promise<number>
     .filter((hook) => hook.command.includes(bundle)).length;
 }
 
-/** The committed bundle for `hook`, run by the Bun running the tests, or its selected Rust command. */
+/** The committed bundle for `hook`, run by the Bun running the tests, or its selected Rust command.
+ * Rust gets the real plugin root so docs stay the installed plugin's, while a synthetic
+ * `CLAUDE_PLUGIN_ROOT` still supplies dependency manifests.
+ */
 export function bundleArgv(hook: LifecycleHook): string[] {
-  return entryArgv("toolu", hook, PLUGIN);
+  const argv = entryArgv("toolu", hook, PLUGIN);
+  if (entryImplementation("toolu", hook) !== "rust") return argv;
+  return [...argv, "--plugin-root", PLUGIN];
 }

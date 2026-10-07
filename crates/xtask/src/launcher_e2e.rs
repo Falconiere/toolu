@@ -59,17 +59,8 @@ fn check(
   let mut found = Vec::new();
   manifest(root, version, protocol)?;
   let start = launch(home, root, "SessionStart")?;
-  let expected = format!(
-    "{{\"systemMessage\":\"toolu runtime: native {version} at {}\"}}",
-    canonical.display()
-  );
-  if start.status.code() != Some(0) || text(&start.stdout).trim_end() != expected {
-    found.push(format!(
-      "SessionStart: expected exit 0 and {expected}, got {:?}: {}{}",
-      start.status.code(),
-      text(&start.stdout),
-      text(&start.stderr)
-    ));
+  if let Some(finding) = session_finding(&start, version, &canonical) {
+    found.push(finding);
   }
   manifest(root, version, protocol + 1)?;
   let pre = launch(home, root, "PreToolUse")?;
@@ -137,9 +128,13 @@ fn manifest(root: &Path, version: &str, protocol: u32) -> Result<(), String> {
   std::fs::write(dir.join("plugin.json"), json).map_err(|err| err.to_string())
 }
 
-/// The generated toolu launcher for `event`, run as a host would, with only
-/// `HOME`, `PATH=/usr/bin:/bin` and `CLAUDE_PLUGIN_ROOT`.
+/// The generated toolu launcher for `event`, run as a host would. `HOME` stays
+/// the install home so `~/.local/bin` resolution works. The working directory,
+/// `CLAUDE_PROJECT_DIR` and `TOOLU_CONFIG_DIR` stay on `root`, so session-start
+/// cannot write the caller's project or config.
 fn launch(home: &Path, root: &Path, event: &str) -> Result<Output, String> {
+  let config = root.join("config");
+  std::fs::create_dir_all(&config).map_err(|err| err.to_string())?;
   let target = Target {
     plugin: "toolu",
     event,
@@ -153,6 +148,9 @@ fn launch(home: &Path, root: &Path, event: &str) -> Result<Output, String> {
     .env("HOME", home)
     .env("PATH", "/usr/bin:/bin")
     .env("CLAUDE_PLUGIN_ROOT", root)
+    .env("CLAUDE_PROJECT_DIR", root)
+    .env("TOOLU_CONFIG_DIR", &config)
+    .current_dir(root)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
@@ -167,6 +165,37 @@ fn launch(home: &Path, root: &Path, event: &str) -> Result<Output, String> {
 
 fn text(bytes: &[u8]) -> String {
   String::from_utf8_lossy(bytes).into_owned()
+}
+
+/// `SessionStart` must exit 0 with a `systemMessage` that starts `Toolu is on!`
+/// and names this binary on the native runtime line.
+fn session_finding(start: &Output, version: &str, canonical: &Path) -> Option<String> {
+  let runtime = format!("toolu runtime: native {version} at {}", canonical.display());
+  let message = system_message(&text(&start.stdout));
+  let started = start.status.code() == Some(0)
+    && message
+      .as_ref()
+      .is_ok_and(|body| body.starts_with("Toolu is on!") && body.contains(&runtime));
+  if started {
+    return None;
+  }
+  Some(format!(
+    "SessionStart: expected exit 0 and a systemMessage starting with \"Toolu is on!\" \
+     and containing {runtime}, got {:?}: {}{}",
+    start.status.code(),
+    text(&start.stdout),
+    text(&start.stderr)
+  ))
+}
+
+fn system_message(stdout: &str) -> Result<String, String> {
+  let json: serde_json::Value =
+    serde_json::from_str(stdout.trim()).map_err(|err| err.to_string())?;
+  json
+    .get("systemMessage")
+    .and_then(serde_json::Value::as_str)
+    .map(ToOwned::to_owned)
+    .ok_or_else(|| "no systemMessage".to_owned())
 }
 
 #[cfg(test)]

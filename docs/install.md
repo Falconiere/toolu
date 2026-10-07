@@ -97,7 +97,7 @@ A candidate counts only if `toolu --hook-protocol` prints an integer. The npm wr
 
 The fallback is skipped when `TOOLU_BIN` is set, and #440 removes it. The command string carries no version, so it stays the same across releases and Codex does not ask for hook trust again. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` keeps the Bun chain and prints the install hint, because Windows has no binary yet.
 
-On session start and resume, toolu's `session-start` hook prints `toolu runtime: native <version> at <path>`.
+On session start and resume, toolu's native `session-start` hook prints `Toolu is on!` and then `toolu runtime: native <version> at <path>`. `plugins/toolu/hooks/hooks.json` keeps the Bun bundle until #425.
 
 **Verifying.** `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in one of the fixed directories, under `PATH=/usr/bin:/bin`. CI runs it at Homebrew's bin and at `/usr/local/bin` on Linux and macOS. The launcher tests (`cargo test -p toolu-cli --test launcher`, and `launcher-e2e`'s own tests) fail on purpose when a real `toolu` sits in `/opt/homebrew/bin`, `/usr/local/bin` or `/home/linuxbrew/.linuxbrew/bin`, because that binary would win. On such a machine, move it aside or run the tests in a container.
 

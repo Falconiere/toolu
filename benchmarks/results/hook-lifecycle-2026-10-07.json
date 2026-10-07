@@ -1,0 +1,73 @@
+{
+  "schema": "toolu.hook-resources/v1",
+  "provenance": {
+    "date": "2026-10-07",
+    "commit": "6728ac92329d595d4c557674230b2a724023f358",
+    "platform": "linux",
+    "arch": "x64",
+    "cpu": "AMD EPYC 9354P 32-Core Processor",
+    "bun": "1.4.2",
+    "runner": "local",
+    "runs": 10,
+    "warmup": 2,
+    "elapsedMs": 1353,
+    "floor": {
+      "maxRssBytes": 3809280,
+      "cpuUs": 953,
+      "wallUs": 1043
+    }
+  },
+  "entries": [
+    {
+      "entry": "toolu/pre-compact",
+      "event": "PreCompact",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 4018176,
+        "p90": 4136960
+      },
+      "cpuUs": {
+        "p50": 2965,
+        "p90": 3476
+      },
+      "wallUs": {
+        "p50": 3061,
+        "p90": 3661
+      }
+    },
+    {
+      "entry": "toolu/session-start",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 5070848,
+        "p90": 5177344
+      },
+      "cpuUs": {
+        "p50": 33847,
+        "p90": 35805
+      },
+      "wallUs": {
+        "p50": 76163,
+        "p90": 78540
+      }
+    },
+    {
+      "entry": "toolu/user-prompt-submit",
+      "event": "UserPromptSubmit",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 5763072,
+        "p90": 5939200
+      },
+      "cpuUs": {
+        "p50": 12622,
+        "p90": 14334
+      },
+      "wallUs": {
+        "p50": 19730,
+        "p90": 21372
+      }
+    }
+  ]
+}
