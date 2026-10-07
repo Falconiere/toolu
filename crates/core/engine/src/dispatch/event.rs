@@ -180,27 +180,36 @@ fn fields(
     .filter(|command| !command.is_empty())
     .map(str::to_owned);
   put("toolInput", input);
-  match (session.phase, command) {
+  let shell = matches!(tool, "Bash" | "Shell");
+  wire.extend(typed(session.phase, command.filter(|_| shell), raw));
+  wire
+}
+
+/// The `type` and its fields: `tool/post` with `toolOutput` (`tool_response ??
+/// tool_output`, so a null response falls through), `shell/pre` with the
+/// command of a `Bash` or `Shell` call, else `tool/pre`.
+fn typed(
+  phase: Phase,
+  shell_command: Option<String>,
+  raw: &Map<String, Value>,
+) -> Vec<(String, Value)> {
+  let field = |key: &str, value: Value| (key.to_owned(), value);
+  match (phase, shell_command) {
     (Phase::Post, _) => {
-      put("type", "tool/post".into());
-      // `tool_response ?? tool_output`: a null response falls through.
       let output = match raw.get("tool_response") {
         Some(response) if !response.is_null() => Some(response),
         Some(_) | None => raw.get("tool_output"),
       };
-      if let Some(output) = output {
-        put("toolOutput", output.clone());
-      }
+      let mut fields = vec![field("type", "tool/post".into())];
+      fields.extend(output.map(|output| field("toolOutput", output.clone())));
+      fields
     }
-    (Phase::Pre, Some(command)) if matches!(tool, "Bash" | "Shell") => {
-      put("type", "shell/pre".into());
-      put("command", command.into());
-    }
-    (Phase::Pre, _) => {
-      put("type", "tool/pre".into());
-    }
+    (Phase::Pre, Some(command)) => vec![
+      field("type", "shell/pre".into()),
+      field("command", command.into()),
+    ],
+    (Phase::Pre, None) => vec![field("type", "tool/pre".into())],
   }
-  wire
 }
 
 /// `toolContext` for the bridge, without `env`, which the runner takes from its process.
