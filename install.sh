@@ -47,6 +47,7 @@ usage: install.sh [--version <tag>] [--install-dir <dir>] [--check | --uninstall
 
 environment:
   TOOLU_REPO           owner/name to install from (default Falconiere/toolu)
+  TOOLU_GITHUB_TOKEN   optional token for the releases API (else GITHUB_TOKEN)
 
 Roll back with --version <older-tag>.
 EOF
@@ -204,9 +205,14 @@ release_fields() {
 latest_tag() {
   local url="$API/repos/$REPO/releases?per_page=100" page=0 next
   local body="$WORK/releases.json" headers="$WORK/releases.headers"
+  # An optional token lifts the API's 60 requests per hour per address. It goes
+  # to curl in a file, never on the command line, and only to the API.
+  local request="$WORK/request.headers" token="${TOOLU_GITHUB_TOKEN:-${GITHUB_TOKEN:-}}"
+  (umask 077 && printf 'Accept: application/vnd.github+json\n' >"$request")
+  if [ -n "$token" ]; then printf 'Authorization: Bearer %s\n' "$token" >>"$request"; fi
   while [ -n "$url" ] && [ "$page" -lt "$MAX_PAGES" ]; do
     page=$((page + 1))
-    curl -fsSL --retry 2 -H "Accept: application/vnd.github+json" -D "$headers" -o "$body" "$url" ||
+    curl -fsSL --retry 2 -H "@$request" -D "$headers" -o "$body" "$url" ||
       die 1 "cannot list releases: $url"
     local tag="" skip=0 have=0 field value
     while IFS=' ' read -r field value; do

@@ -2,7 +2,7 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdirSync, readlinkSync, readdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { ASSET, archive, disposeSigner, signedSums } from "./install-fixture.ts";
-import { install, runInstalled, sandboxed, stable } from "./install-runner.ts";
+import { REPO, install, runInstalled, sandboxed, stable } from "./install-runner.ts";
 
 afterAll(disposeSigner);
 
@@ -68,5 +68,30 @@ test.concurrent(
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("has a member that is not a regular file");
     expect(readdirSync(dir)).toEqual([]);
+  }),
+);
+
+test.concurrent(
+  "a GitHub token reaches only the releases API, TOOLU_GITHUB_TOKEN first",
+  sandboxed(async ({ scratch, serve }) => {
+    const release = await stable("9.0.0");
+    const api = `/api/repos/${REPO}/releases`;
+    const cases = [
+      [{ GITHUB_TOKEN: "gh-token" }, [`${api} Bearer gh-token`]],
+      [
+        { GITHUB_TOKEN: "gh-token", TOOLU_GITHUB_TOKEN: "toolu-token" },
+        [`${api} Bearer toolu-token`],
+      ],
+      [{}, []],
+    ] as const;
+    await Promise.all(
+      cases.map(async ([env, expected]) => {
+        const server = serve([[release]]);
+        const result = await install(server, ["--install-dir", scratch()], env);
+        expect(result.exitCode).toBe(0);
+        expect(server.authorized).toEqual([...expected]);
+        expect(result.stdout + result.stderr).not.toContain("token");
+      }),
+    );
   }),
 );

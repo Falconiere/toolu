@@ -173,18 +173,23 @@ function releaseJson(release: Release, base: string): object {
 export interface ReleaseServer {
   url: string;
   requests: string[];
+  /** `<path> <Authorization header>` for every request that carried one. */
+  authorized: string[];
   stop(): void;
 }
 
 /** Serve `pages` of releases for `repo` under `/api` and their files under `/dl`. */
 export function serveReleases(repo: string, pages: Release[][]): ReleaseServer {
   const requests: string[] = [];
+  const authorized: string[] = [];
   const server = Bun.serve({
     port: 0,
     hostname: "127.0.0.1",
     fetch(request) {
       const url = new URL(request.url);
       requests.push(url.pathname + url.search);
+      const auth = request.headers.get("authorization");
+      if (auth !== null) authorized.push(`${url.pathname} ${auth}`);
       if (url.pathname === `/api/repos/${repo}/releases`) {
         const page = Number(url.searchParams.get("page") ?? "1");
         const body = (pages[page - 1] ?? []).map((release) => releaseJson(release, url.origin));
@@ -208,6 +213,7 @@ export function serveReleases(repo: string, pages: Release[][]): ReleaseServer {
   return {
     url: `http://127.0.0.1:${server.port}`,
     requests,
+    authorized,
     stop: () => {
       void server.stop(true);
     },

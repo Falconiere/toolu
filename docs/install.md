@@ -36,6 +36,8 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --version v1.2.2
 curl -fsSL https://get.toolu.sh/pkg/toolu/install | TOOLU_REPO=example/toolu bash
 ```
 
+**Rate limits.** Finding the newest release asks GitHub's API, which allows 60 unauthenticated requests per hour per address. Behind a shared address, set `TOOLU_GITHUB_TOKEN` (or `GITHUB_TOKEN`) for that call; the installer sends it only to the API, never on its command line. `--version` skips the API altogether.
+
 Exit codes: 0 installed, checked or removed; 1 a network, signature, checksum, archive or permission failure; 2 a usage error, a bad tag or `TOOLU_REPO`, or an unsupported platform (only Darwin and Linux, on arm64 or amd64).
 
 The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh` at a pinned commit of this repository, never at `main` ([CodaSignal/toolu.sh#79](https://github.com/CodaSignal/toolu.sh/pull/79); the URL returns 404 until that change is deployed). The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
