@@ -45,6 +45,7 @@ fn run(project: &Path, raw: &Map<String, Value>) -> (Result<Decision, String>, V
     config_root: &project.join("home/.claude"),
     project_root: project,
     cwd: Some(project),
+    plugin_root: None,
     raw,
     edit: None,
   };

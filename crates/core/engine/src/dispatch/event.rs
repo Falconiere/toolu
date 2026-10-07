@@ -133,6 +133,11 @@ impl View {
       config_root: &session.config_root,
       project_root: &session.project_root,
       cwd: Some(session.cwd()),
+      plugin_root: session
+        .options
+        .lib_dir
+        .parent()
+        .and_then(std::path::Path::parent),
       raw: &self.raw,
       edit: payload.edit.as_ref().map(|edit| EditSplit {
         operation: runtime_operation(edit.operation),

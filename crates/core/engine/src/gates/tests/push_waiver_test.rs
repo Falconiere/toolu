@@ -54,6 +54,7 @@ fn anything_but_a_landed_shell_push_is_allowed_without_touching_disk() {
       config_root: Path::new("/nonexistent/.claude"),
       project_root: dir.path(),
       cwd: None,
+      plugin_root: None,
       raw: &raw,
       edit: None,
     };

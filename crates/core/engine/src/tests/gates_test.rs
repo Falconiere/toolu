@@ -51,6 +51,7 @@ fn the_analysis_is_of_the_reported_command() {
     config_root: Path::new("/h/.claude"),
     project_root: Path::new("/p"),
     cwd: None,
+    plugin_root: None,
     raw: &raw,
     edit: None,
   };

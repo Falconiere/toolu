@@ -51,6 +51,8 @@ pub struct RuleContext<'a> {
   pub project_root: &'a Path,
   /// The hook process's working directory.
   pub cwd: Option<&'a Path>,
+  /// The explicit plugin root, when a hook command supplied one.
+  pub plugin_root: Option<&'a Path>,
   /// The host's raw hook payload, for ports that must match bash byte for byte.
   pub raw: &'a Map<String, Value>,
   /// Set when the runner split a multi-file patch into one event per path.
