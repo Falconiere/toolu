@@ -71,3 +71,8 @@ fn the_codex_listing_is_its_stdout_on_success_only() {
   let missing = Env::from_pairs([("PATH", empty.path().display().to_string())]);
   assert_eq!(codex_plugin_list(&missing), None);
 }
+
+#[test]
+fn the_native_toolu_probe_waits_one_second() {
+  assert_eq!(super::PROBE_TIMEOUT, std::time::Duration::from_secs(1));
+}

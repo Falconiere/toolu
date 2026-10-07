@@ -1,8 +1,7 @@
 use std::path::PathBuf;
-use std::time::Duration;
 
 use super::super::checks::Status;
-use super::{PROBE_TIMEOUT, Probe, binary, reachability};
+use super::{Probe, binary, reachability};
 use toolu_protocol::install::{BREW_UPGRADE, INSTALLER};
 
 #[test]
@@ -40,9 +39,4 @@ fn a_shadowed_path_is_not_native() {
   assert_eq!(check.details["shadowed"], true);
   assert_eq!(check.details["reachable"], false);
   assert_eq!(check.details["path"], "/tmp/toolu");
-}
-
-#[test]
-fn the_shell_probe_deadline_is_one_second() {
-  assert_eq!(PROBE_TIMEOUT, Duration::from_secs(1));
 }
