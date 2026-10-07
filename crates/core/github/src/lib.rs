@@ -121,9 +121,9 @@ impl Client {
   pub fn new(mut config: Config, env: &Env) -> Result<Client, Error> {
     let trimmed = config.api_url.trim_end_matches('/').len();
     config.api_url.truncate(trimmed);
-    let host = config.api_url.strip_prefix("https://").unwrap_or_default();
+    let host = config.api_url.strip_prefix("https://");
     let unusable = toolu_http::check_url(&format!("{}/", config.api_url)).is_err();
-    if host.is_empty() || host.contains(['/', '?', '#']) || unusable {
+    if host.is_none_or(|host| host.is_empty() || host.contains(['/', '?', '#'])) || unusable {
       return Err(Error::Config(format!(
         "the API URL must be an https:// origin, not {}",
         config.api_url

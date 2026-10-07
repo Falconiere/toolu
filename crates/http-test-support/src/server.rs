@@ -89,12 +89,8 @@ fn serve_https(
   let stream = rustls::StreamOwned::new(connection, socket);
   let mut reader = BufReader::new(stream);
   let request = read_request(&mut reader)?;
-  let reply = data
-    .routes
-    .lock()
-    .map_err(error)?
-    .next(&request.path)
-    .unwrap_or_else(|| Reply::new(404, "missing route"));
+  let routed = data.routes.lock().map_err(error)?.next(&request.path);
+  let reply = or_missing(routed);
   if reply.dropped {
     return Ok(());
   }
@@ -105,6 +101,14 @@ fn serve_https(
   write_reply(reader.get_mut(), &reply).map_err(error)?;
   reader.get_mut().conn.send_close_notify();
   reader.get_mut().flush().map_err(error)
+}
+
+/// The routed reply, or a 404 for a path with no route.
+fn or_missing(routed: Option<Reply>) -> Reply {
+  let Some(reply) = routed else {
+    return Reply::new(404, "missing route");
+  };
+  reply
 }
 
 fn read_request<R: BufRead>(reader: &mut R) -> Result<ObservedRequest, Error> {

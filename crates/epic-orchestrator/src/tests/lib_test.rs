@@ -19,7 +19,9 @@ impl BabysitTick for Unported {
 fn the_epic_orchestrator_crate_is_its_plugin_and_lists_the_planned_verbs() {
   let dir = Path::new(env!("CARGO_MANIFEST_DIR")).file_name();
   assert_eq!(dir.and_then(|name| name.to_str()), Some(PLUGIN));
-  let matches = command().try_get_matches_from(["epic", "planned"]).unwrap();
+  let matches = command()
+    .try_get_matches_from(["epic", "planned"])
+    .expect("epic planned matches");
   let outcome = run(&matches, &Ctx::default(), &Unported);
   assert_eq!(
     outcome.stdout.as_deref(),

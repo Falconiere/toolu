@@ -39,8 +39,10 @@ impl Retry {
 
   /// The wait after failed attempt `attempt` (1-based).
   pub(crate) fn backoff(&self, attempt: u32) -> Duration {
-    let index = usize::try_from(attempt.saturating_sub(1)).unwrap_or(usize::MAX);
-    self.backoff.get(index).copied().unwrap_or(FALLBACK_BACKOFF)
+    usize::try_from(attempt.saturating_sub(1))
+      .ok()
+      .and_then(|index| self.backoff.get(index))
+      .map_or(FALLBACK_BACKOFF, |wait| *wait)
   }
 }
 
@@ -55,16 +57,14 @@ pub(crate) fn one_shot(env: &Env) -> Result<(Retry, Duration), Error> {
       .filter(|attempts| *attempts > 0)
       .ok_or_else(|| Error::Config("PB_GH_ATTEMPTS must be a positive integer".into()))?,
   };
-  let backoff = env
-    .get("PB_GH_BACKOFF")
-    .unwrap_or("2 4 8")
+  let backoff = setting(env, "PB_GH_BACKOFF", "2 4 8")
     .split_whitespace()
     .map(|word| seconds(word, false))
     .collect::<Option<Vec<_>>>()
     .ok_or_else(|| {
       Error::Config("PB_GH_BACKOFF must list non-negative numbers of seconds".into())
     })?;
-  let timeout = seconds(env.get("PB_GH_TIMEOUT").unwrap_or("60"), true)
+  let timeout = seconds(setting(env, "PB_GH_TIMEOUT", "60"), true)
     .ok_or_else(|| Error::Config("PB_GH_TIMEOUT must be a positive number of seconds".into()))?;
   let retry = Retry {
     attempts,
@@ -72,6 +72,14 @@ pub(crate) fn one_shot(env: &Env) -> Result<(Retry, Duration), Error> {
     max_wait: ONE_SHOT_MAX_WAIT,
   };
   Ok((retry, timeout))
+}
+
+/// `name`'s value in `env`, or `default` when it is unset.
+fn setting<'a>(env: &'a Env, name: &str, default: &'a str) -> &'a str {
+  let Some(value) = env.get(name) else {
+    return default;
+  };
+  value
 }
 
 /// `word` as a duration in seconds: non-negative, or positive when `positive`.

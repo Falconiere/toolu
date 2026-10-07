@@ -61,8 +61,7 @@ pub(crate) fn errors(document: &Value) -> Option<Vec<String>> {
         error
           .get("message")
           .and_then(Value::as_str)
-          .unwrap_or("GraphQL error")
-          .to_owned()
+          .map_or_else(|| "GraphQL error".to_owned(), str::to_owned)
       })
       .collect(),
   )

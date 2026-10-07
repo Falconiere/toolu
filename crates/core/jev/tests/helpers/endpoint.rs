@@ -55,10 +55,13 @@ impl Endpoint {
 
   /// The last body received, parsed.
   pub(crate) fn last(&self) -> Value {
-    self
+    let parsed = self
       .bodies()
       .last()
-      .and_then(|body| serde_json::from_str(body).ok())
-      .unwrap_or(Value::Null)
+      .and_then(|body| serde_json::from_str(body).ok());
+    let Some(value) = parsed else {
+      return Value::Null;
+    };
+    value
   }
 }
