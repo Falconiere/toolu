@@ -107,7 +107,7 @@ fn the_version_is_the_workspace_version() {
 
 #[test]
 fn a_hook_run_goes_through_the_hook_module() {
-  let (outcome, _) = counted("hook pre-tools --event PreToolUse");
+  let (outcome, _) = counted("hook no-such-hook --event PreToolUse");
   assert_eq!(outcome.exit, Exit::Blocked);
   assert!(
     outcome

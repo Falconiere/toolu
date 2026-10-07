@@ -114,13 +114,13 @@ fn without_a_plugin_root_the_prelude_is_skipped() {
 #[test]
 fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones() {
   for event in [Some("PreToolUse"), None] {
-    let outcome = run_hook(&request("pre-tools", event, None));
+    let outcome = run_hook(&request("no-such-hook", event, None));
     assert_eq!(outcome.exit.code(), 2, "{event:?}");
     assert!(
       outcome
         .stderr
         .unwrap()
-        .contains("has no hook pre-tools; upgrade it: curl")
+        .contains("has no hook no-such-hook; upgrade it: curl")
     );
   }
   let context_event = run_hook(&request("pre-compact", Some("PreCompact"), None));
@@ -179,4 +179,33 @@ fn another_plugins_session_start_advises_and_never_blocks() {
   assert!(message(outcome.stdout).starts_with(&format!(
     "jev plugin: toolu {VERSION} has no hook session-start"
   )));
+}
+
+#[test]
+fn toolus_pre_and_post_tools_are_the_engines_tool_hooks() {
+  use toolu_hub::tool_hook::Phase;
+  assert_eq!(
+    super::tool_phase(&request("pre-tools", None, None)),
+    Some(Phase::Pre)
+  );
+  assert_eq!(
+    super::tool_phase(&request("post-tools", None, None)),
+    Some(Phase::Post)
+  );
+  assert_eq!(
+    super::tool_phase(&request("session-start", None, None)),
+    None
+  );
+  let mut other = request("pre-tools", None, None);
+  other.plugin = "jev".to_owned();
+  assert_eq!(super::tool_phase(&other), None);
+}
+
+#[test]
+fn a_protocol_mismatch_blocks_a_tool_hook_before_it_runs() {
+  let root = plugin(VERSION, "999");
+  let path = root.path().to_str().unwrap();
+  let out = run_hook(&request("pre-tools", Some("PreToolUse"), Some(path)));
+  assert_eq!(out.exit, toolu_protocol::exit::Exit::Blocked);
+  assert!(out.stderr.unwrap().starts_with("blocked: "));
 }

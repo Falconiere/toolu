@@ -19,6 +19,8 @@ use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
 
+use toolu_hub::tool_hook::{Phase, tool_hook};
+
 use crate::fast::HookRequest;
 use crate::{Context, VERSION, session_start};
 
@@ -53,13 +55,27 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
     Skew::Advise(text) if request.event.as_deref() == Some("SessionStart") => Some(text),
     Skew::Advise(_) | Skew::Same => None,
   };
+  if let Some(phase) = tool_phase(request) {
+    let plugin_root = request.plugin_root.as_deref().map(Path::new);
+    return tool_hook(phase, (context.stdin)(), plugin_root);
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
 }
 
-/// The named hook. Only toolu's `session-start` is native so far, as the spec
-/// of #412 sets: it carries the runtime diagnostic that toolu's Bun
-/// `session-start` prints today. Every other hook, another plugin's
+/// The tool hook `request` names: toolu's `pre-tools` or `post-tools` (#418),
+/// the engine's dispatch, which writes its own output.
+fn tool_phase(request: &HookRequest) -> Option<Phase> {
+  match (request.plugin.as_str(), request.name.as_str()) {
+    ("toolu", "pre-tools") => Some(Phase::Pre),
+    ("toolu", "post-tools") => Some(Phase::Post),
+    _ => None,
+  }
+}
+
+/// The named hook. Besides the tool hooks above, only toolu's `session-start`
+/// is native so far, as the spec of #412 sets: it carries the runtime
+/// diagnostic that toolu's Bun `session-start` prints today. Every other hook, another plugin's
 /// `session-start` included, is ported by its own issue (#424, #430-#432);
 /// until then a native entry for it reports "has no hook" — a `systemMessage`
 /// on a context event such as `SessionStart`, a block on an enforcing one.
