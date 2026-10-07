@@ -199,6 +199,52 @@ fn an_unreadable_payload_blocks_and_a_disabled_hook_is_silent() {
 }
 
 #[test]
+fn a_removed_working_directory_blocks_before_and_after_a_tool() {
+  let sb = Sandbox::new().unwrap();
+  sb.module("pre-tools.d", "x@t__deny.sh", "exit 2").unwrap();
+  let gone = sb.root.join("gone");
+  let removed = |name: &str, event: &str| {
+    std::fs::create_dir_all(&gone).unwrap();
+    let script = r#"cd "$1" && rmdir "$1" && exec "$2" hook "$3" --event "$4""#;
+    let mut sh = assert_cmd::Command::new("/bin/sh");
+    sh.args(["-c", script, "sh"])
+      .arg(&gone)
+      .args([TOOLU, name, event])
+      .env_clear()
+      .env("PATH", std::env::var("PATH").unwrap())
+      .env("HOME", sb.root.join("home"))
+      .env("CLAUDE_PROJECT_DIR", sb.root.join("project"));
+    // Under coverage the profile's default path is relative to the removed directory.
+    if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
+      sh.env("LLVM_PROFILE_FILE", profile);
+    }
+    sh.write_stdin(BASH).output().unwrap()
+  };
+  let failed = "hook failed: the working directory could not be read: \
+                No such file or directory (os error 2)\n";
+  assert_eq!(
+    streams(&removed("pre-tools", "PreToolUse")),
+    (
+      String::new(),
+      format!("blocked: toolu PreToolUse {failed}"),
+      Some(2)
+    )
+  );
+  assert_eq!(
+    streams(&removed("post-tools", "PostToolUse")),
+    (
+      String::new(),
+      format!("toolu PostToolUse {failed}"),
+      Some(2)
+    )
+  );
+  assert!(
+    !gone.exists(),
+    "control: the hook ran in a removed directory"
+  );
+}
+
+#[test]
 fn the_plugin_root_gives_modules_their_lib_dir() {
   let sb = Sandbox::new().unwrap();
   let root = sb.root.join("plugin");

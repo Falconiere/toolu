@@ -13,7 +13,7 @@ use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::registry::rule::RuleContext;
 
-use super::{Given, Phase, RULES, hook_main, lib_dir, line, tool_hook};
+use super::{Given, Phase, RULES, cwd_error, hook_main, lib_dir, line, tool_hook};
 
 /// A built-in gate with a bug.
 struct Panics;
@@ -111,16 +111,38 @@ fn a_panicking_gate_blocks_before_and_after_a_tool() {
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   };
   let payload = || Ok(r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#.to_owned());
-  let pre = hook_main(Phase::Pre, payload(), Host::Claude, &options);
+  let pre = hook_main(Phase::Pre, payload(), Host::Claude, Ok(&options));
   assert_eq!((pre.exit, pre.stdout), (Exit::Blocked, None));
   assert_eq!(
     pre.stderr.as_deref(),
     Some("blocked: toolu PreToolUse hook panicked: gate bug")
   );
-  let post = hook_main(Phase::Post, payload(), Host::Claude, &options);
+  let post = hook_main(Phase::Post, payload(), Host::Claude, Ok(&options));
   assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
   assert_eq!(
     post.stderr.as_deref(),
     Some("toolu PostToolUse hook panicked: gate bug")
+  );
+}
+
+#[test]
+fn a_working_directory_the_os_cannot_give_blocks_before_and_after_a_tool() {
+  let gone = std::io::Error::from(std::io::ErrorKind::NotFound);
+  let payload = || Ok(r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#.to_owned());
+  let pre = hook_main(Phase::Pre, payload(), Host::Claude, Err(cwd_error(&gone)));
+  assert_eq!((pre.exit, pre.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    pre.stderr.as_deref(),
+    Some(
+      "blocked: toolu PreToolUse hook failed: the working directory could not be read: entity not found"
+    )
+  );
+  let post = hook_main(Phase::Post, payload(), Host::Claude, Err(cwd_error(&gone)));
+  assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    post.stderr.as_deref(),
+    Some(
+      "toolu PostToolUse hook failed: the working directory could not be read: entity not found"
+    )
   );
 }

@@ -17,9 +17,14 @@ pub fn current_exe() -> Option<PathBuf> {
   std::env::current_exe().and_then(std::fs::canonicalize).ok()
 }
 
-/// The process working directory, or `.` when the OS cannot say.
-pub fn current_dir() -> PathBuf {
-  std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+/// The process working directory.
+///
+/// # Errors
+///
+/// The OS error when there is none (the directory was removed, say); a caller
+/// fails rather than guess one.
+pub fn current_dir() -> std::io::Result<PathBuf> {
+  std::env::current_dir()
 }
 
 #[cfg(test)]

@@ -12,7 +12,7 @@ use toolu_engine::dispatch::{DEFAULT_MODULE_TIMEOUT, dispatch};
 use toolu_engine::{DispatchOptions, Phase as EnginePhase};
 use toolu_protocol::event::HostEvent;
 use toolu_protocol::exit::Exit;
-use toolu_protocol::hook::{Io, Raw, Reply, run_hook_io};
+use toolu_protocol::hook::{HookError, Io, Raw, Reply, run_hook_io};
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
@@ -59,6 +59,13 @@ fn lib_dir(plugin_root: Option<&Path>, roots: &Roots) -> PathBuf {
     .unwrap_or_default()
 }
 
+/// The hook's failure when the OS cannot give its working directory: the
+/// modules would run in no directory, so the hook fails closed, as TypeScript
+/// does when `process.cwd()` throws.
+fn cwd_error(err: &std::io::Error) -> HookError {
+  HookError::new(format!("the working directory could not be read: {err}"))
+}
+
 /// Run the `phase` tool hook over `payload`, as read from stdin.
 pub fn tool_hook(
   phase: Phase,
@@ -66,12 +73,12 @@ pub fn tool_hook(
   plugin_root: Option<&Path>,
 ) -> Outcome {
   let env = Env::process();
-  let cwd = current_dir();
   let host = detect(&env, None).host;
   let lib = lib_dir(plugin_root, &Roots::new(env.clone(), Some(host)));
-  let options = DispatchOptions {
+  let cwd = current_dir();
+  let options = cwd.as_ref().map_err(cwd_error).map(|cwd| DispatchOptions {
     env: &env,
-    cwd: &cwd,
+    cwd,
     lib_dir: &lib,
     builtins: match phase {
       EnginePhase::Pre => PRE_TOOL,
@@ -81,16 +88,17 @@ pub fn tool_hook(
     selected_specs: None,
     continue_post_blocks: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
-  };
-  hook_main(phase, payload, host, &options)
+  });
+  hook_main(phase, payload, host, options.as_ref().map_err(Clone::clone))
 }
 
-/// The dispatch inside `run_hook_io`, over in-memory streams.
+/// The dispatch inside `run_hook_io`, over in-memory streams; an `options`
+/// error fails the hook once its payload is read.
 fn hook_main(
   phase: Phase,
   payload: std::io::Result<String>,
   host: Host,
-  options: &DispatchOptions<'_>,
+  options: Result<&DispatchOptions<'_>, HookError>,
 ) -> Outcome {
   let event = match phase {
     EnginePhase::Pre => HostEvent::ToolPre,
@@ -108,7 +116,7 @@ fn hook_main(
     stderr: &mut stderr,
   };
   let code = run_hook_io(io, event, host, |text| {
-    let result = dispatch(phase, text, options).result;
+    let result = dispatch(phase, text, options?).result;
     let exit = if result.exit_code == 2 {
       Exit::Blocked
     } else {

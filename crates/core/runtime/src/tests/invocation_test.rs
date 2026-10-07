@@ -15,5 +15,5 @@ fn argv_is_every_word_after_the_program_name() {
 
 #[test]
 fn the_working_directory_is_the_process_one() {
-  assert_eq!(current_dir(), std::env::current_dir().unwrap());
+  assert_eq!(current_dir().unwrap(), std::env::current_dir().unwrap());
 }
