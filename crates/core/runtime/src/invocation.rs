@@ -1,4 +1,5 @@
-//! The process environment a command reads: its argv and its own path. Only this
+//! The process environment a command reads: its argv, its own path and its
+//! working directory. Only this
 //! crate reads `std::env` (rule 14).
 
 use std::path::PathBuf;
@@ -14,6 +15,11 @@ pub fn args() -> Vec<String> {
 /// This executable's canonical path, or `None` when the OS cannot say.
 pub fn current_exe() -> Option<PathBuf> {
   std::env::current_exe().and_then(std::fs::canonicalize).ok()
+}
+
+/// The process working directory, or `.` when the OS cannot say.
+pub fn current_dir() -> PathBuf {
+  std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
 #[cfg(test)]

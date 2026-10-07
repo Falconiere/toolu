@@ -76,4 +76,62 @@ fn a_rule_decides_from_the_event_and_its_context() {
     moved_to: "",
   });
   assert_eq!(rule.run(&event, &ctx), Decision::Allow);
+  assert!(
+    rule.applies(&event, &ctx),
+    "a rule applies unless it says otherwise"
+  );
+}
+
+/// Applies only to the `.ts` path its split names, as a language rule would.
+struct TypeScriptOnly;
+
+impl Rule for TypeScriptOnly {
+  fn spec(&self) -> &'static str {
+    "ts-quality@toolu"
+  }
+
+  fn name(&self) -> &'static str {
+    "ts-quality"
+  }
+
+  fn event(&self) -> RegistryEvent {
+    RegistryEvent::ToolPost
+  }
+
+  fn applies(&self, _event: &NormalizedEvent, ctx: &RuleContext<'_>) -> bool {
+    ctx
+      .edit
+      .is_some_and(|split| Path::new(split.from).extension() == Some("ts".as_ref()))
+  }
+
+  fn run(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Decision {
+    Decision::Allow
+  }
+}
+
+#[test]
+fn a_rule_can_decline_an_event_before_it_runs() {
+  let event: NormalizedEvent = serde_json::from_value(json!({
+    "type": "tool/post", "sessionId": "s", "cwd": "/p", "projectRoot": "/p", "worktree": "/p",
+    "toolCallId": "c", "toolName": "Edit", "toolInput": {}
+  }))
+  .unwrap();
+  let env = Env::from_pairs([("HOME", "/h")]);
+  let raw = Map::new();
+  let split = |from| EditSplit {
+    operation: EditOperation::Update,
+    from,
+    moved_to: "",
+  };
+  let ctx = |from| RuleContext {
+    host: Host::Claude,
+    env: &env,
+    config_root: Path::new("/h/.claude"),
+    project_root: Path::new("/p"),
+    cwd: None,
+    raw: &raw,
+    edit: Some(split(from)),
+  };
+  assert!(TypeScriptOnly.applies(&event, &ctx("/p/a.ts")));
+  assert!(!TypeScriptOnly.applies(&event, &ctx("/p/a.py")));
 }

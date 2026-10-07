@@ -19,7 +19,7 @@ pub mod gate_file;
 pub mod gate_schema;
 pub mod git;
 pub mod io;
-mod js_order;
+pub mod js_order;
 pub mod lock;
 mod sweep_telemetry;
 pub mod sweeper;
