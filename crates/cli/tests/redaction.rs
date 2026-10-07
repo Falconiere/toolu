@@ -73,9 +73,7 @@ fn loaded_secrets_are_redacted_in_get_and_doctor() {
   assert!(write_config(&box_));
   for args in [
     &["config", "get"][..],
-    &["config", "get", "epic.statusToken"][..],
     &["--json", "config", "get"][..],
-    &["--json", "config", "get", "epic.statusToken"][..],
     &["doctor"][..],
     &["--json", "doctor"][..],
   ] {
@@ -90,16 +88,6 @@ fn loaded_secrets_are_redacted_in_get_and_doctor() {
     panic!("spawn");
   };
   assert!(text(&get).contains("<redacted>"), "{}", text(&get));
-  let Some(keyed) = toolu(&box_, &["config", "get", "epic.statusToken"]) else {
-    panic!("spawn");
-  };
-  assert_eq!(String::from_utf8_lossy(&keyed.stdout).trim(), "<redacted>");
-  let Some(keyed_json) = toolu(&box_, &["--json", "config", "get", "epic.statusToken"]) else {
-    panic!("spawn");
-  };
-  let keyed_doc: Value =
-    serde_json::from_str(&String::from_utf8_lossy(&keyed_json.stdout)).expect("json");
-  assert_eq!(keyed_doc["value"], "<redacted>");
   let Some(doctor) = toolu(&box_, &["--json", "doctor"]) else {
     panic!("spawn");
   };
@@ -124,6 +112,27 @@ fn loaded_secrets_are_redacted_in_get_and_doctor() {
     "{}",
     config["details"]["merged"]
   );
+}
+
+#[test]
+fn keyed_get_redacts_the_status_token() {
+  let box_ = sandbox().expect("sandbox");
+  assert!(write_secrets(&box_, 0o600));
+  assert!(write_config(&box_));
+  let Some(keyed) = toolu(&box_, &["config", "get", "epic.statusToken"]) else {
+    panic!("spawn");
+  };
+  let shown = text(&keyed);
+  assert!(!shown.contains(CANARY) && !shown.contains(TOKEN), "{shown}");
+  assert_eq!(String::from_utf8_lossy(&keyed.stdout).trim(), "<redacted>");
+  let Some(keyed_json) = toolu(&box_, &["--json", "config", "get", "epic.statusToken"]) else {
+    panic!("spawn");
+  };
+  let json_shown = text(&keyed_json);
+  assert!(!json_shown.contains(TOKEN), "{json_shown}");
+  let keyed_doc: Value =
+    serde_json::from_str(&String::from_utf8_lossy(&keyed_json.stdout)).expect("json");
+  assert_eq!(keyed_doc["value"], "<redacted>");
 }
 
 #[test]
