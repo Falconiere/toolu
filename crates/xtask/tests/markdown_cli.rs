@@ -103,7 +103,7 @@ fn skill_running(command: &str) -> String {
 fn an_unknown_verb_names_the_file_line_and_closest_verb() {
   let dir = root(
     &real_tree().unwrap(),
-    &[(SKILL, &skill_running("toolu epic strat"))],
+    &[(SKILL, &skill_running("toolu epic planed"))],
   )
   .unwrap();
   let (code, stderr) = check(dir.path()).unwrap();
@@ -111,7 +111,7 @@ fn an_unknown_verb_names_the_file_line_and_closest_verb() {
   assert_has(
     &stderr,
     &[
-      &format!("{SKILL}:12: `toolu epic strat`: unknown command `strat`"),
+      &format!("{SKILL}:12: `toolu epic planed`: unknown command `planed`"),
       "closest: `planned`",
     ],
   );

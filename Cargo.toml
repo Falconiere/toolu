@@ -54,6 +54,7 @@ serde_json = "1"
 syn = { version = "3", features = ["full", "visit"] }
 tempfile = "3"
 toml = "1"
+url = { version = "2", default-features = false }
 
 # The quality bar (#455): gate data. A change here is its own `chore(gates):` PR
 # (`cargo xtask check-gate-change`); the reasons are in docs/rust-quality-bar.md.
