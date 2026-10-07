@@ -27,10 +27,10 @@ pub const PARSE_BUDGET: Duration = Duration::from_secs(1);
 /// Longest command analyzed, in UTF-16 code units as TypeScript counts `length` (1 MiB).
 pub const MAX_SHELL_INPUT: usize = 1024 * 1024;
 
-/// Scripts this long are parsed on a worker thread the analysis stops waiting
+/// Scripts longer than this are parsed on a worker thread the analysis stops waiting
 /// for at the deadline: tree-sitter does not check its timeout everywhere, and
 /// some inputs (a trailing `|` after 20,000 commands, one long heredoc line)
-/// take time quadratic in their length. Below it the worst case is far inside
+/// take time quadratic in their length. Up to it the worst case is far inside
 /// the budget, so real commands keep their latency.
 const OFF_THREAD: usize = 4 * 1024;
 
@@ -124,7 +124,7 @@ impl Syntax {
       None => bash()?,
     };
     parser.set_timeout_micros(micros);
-    if source.len() < OFF_THREAD {
+    if source.len() <= OFF_THREAD {
       let tree = parser.parse(source, None);
       self.parser = Some(parser);
       return tree.ok_or(ParseFailure::Cancelled);

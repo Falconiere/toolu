@@ -390,7 +390,7 @@ jobs:
       - name: Seed the corpora from the shell fixtures
         run: |
           set -euo pipefail
-          cp ../../../../Cargo.lock .
+          cp ../../../../Cargo.lock . || { echo "::error::Cargo.lock not found at the repository root"; exit 1; }
           for target in analyze nested; do
             python3 -c 'import json, os, sys; d = sys.argv[1]; os.makedirs(d, exist_ok=True); [open(os.path.join(d, "seed-%03d" % i), "w").write(c["input"]) for i, c in enumerate(json.load(open("../../../../fixtures/shell/unbash-baseline.json"))["cases"])]' "corpus/$target"
           done
