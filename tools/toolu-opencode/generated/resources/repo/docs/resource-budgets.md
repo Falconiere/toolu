@@ -8,6 +8,9 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 |---|---|---|---|---|
 | `toolu hook pre-tools` | ≤ 6 MiB max RSS, ≤ 5 ms CPU (p50) | prototype: 3.6 MiB, 2.5 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
+| `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `bun run bench:hooks`, release `toolu`, `sh` launcher included | #424 |
+| `toolu hook session-start` | ≤ 8 MiB max RSS, ≤ 43 ms CPU (p50) | native: 4.8 MiB, 33.8 ms | as above | #424 |
+| `toolu hook user-prompt-submit` | ≤ 9 MiB max RSS, ≤ 16 ms CPU (p50) | native: 5.5 MiB, 12.6 ms | as above | #424 |
 | Binary size | ≤ 4 MiB | prototype: 2.75 MiB | size of the stripped release `toolu` (fat LTO, one codegen unit), Linux x86_64 | #417 |
 | `toolu --version` startup | ≤ 4 ms wall (p50) | prototype: 2.3 ms | `cargo xtask check-startup --bin <toolu>`: wall time from spawn to reap of one `toolu --version`, 30 runs after 3 warm-up, nearest-rank p50; the Linux `rust` CI job gates the release binary | #442 |
 | One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | one `toolu statusline render` with a session payload through `cargo xtask measure` | #431 |
@@ -37,7 +40,7 @@ Rule:
   - The prototype pays only the fixed cost: payload, config, registry, gate and `.git` reads, plus the shell parse. It runs none of the gate or rule work, so the hook CPU budgets keep the epic's 5 ms and 10 ms, which the prototype meets with room for that work. Had it exceeded them, they would have been raised to its p50 × 1.25.
   - Every other time budget is its measurement × 1.5, rounded up to a whole ms or s.
 
-A budget changes only together with a new measurement committed under `benchmarks/results/`, in a PR of its own.
+A budget changes only together with a new measurement committed under `benchmarks/results/`, in a PR of its own. The session lifecycle rows (#424) — `toolu/session-start`, `toolu/user-prompt-submit` and `toolu/pre-compact` — come from `benchmarks/results/hook-lifecycle-2026-10-07.json`: RSS is that run's p50 × 1.5, rounded up to a whole MiB, and CPU is its p50 × 1.25, rounded up to a whole millisecond.
 
 ## Requirements the budgets rest on
 
