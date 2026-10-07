@@ -65,7 +65,15 @@ fn a_dropped_reply_closes_the_connection_and_records_nothing() {
   fixture
     .sequence("/drop", vec![Reply::dropped(), Reply::new(200, "ok")])
     .expect("sequence");
-  let client = client(&fixture);
+  // Shorter than the proxy's 2 s read timeout: only the half-close it sends
+  // when the origin closes can end this request with `Transport`, not `Timeout`.
+  let config = Config {
+    timeout: std::time::Duration::from_secs(1),
+    test_root_ca_der: Some(fixture.root_ca_der().to_vec()),
+    ..Config::default()
+  };
+  let env = Env::from_pairs([("HTTPS_PROXY", fixture.proxy_url())]);
+  let client = Client::new(config, &env).expect("client");
   let url = fixture.url("/drop");
   assert!(matches!(
     client.get_bytes(&url, &Auth::None),

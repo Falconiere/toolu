@@ -196,6 +196,10 @@ fn count(value: Option<&Value>) -> Result<u64, Error> {
     .as_f64()
     .filter(|number| number.is_finite() && *number >= 0.0 && number.fract() == 0.0)
     .ok_or(Error::InvalidResponse)?;
+  if number < 1.0 {
+    // 0 and -0, which `Number.isInteger` accepts and `{:.0}` prints as "-0".
+    return Ok(0);
+  }
   Ok(format!("{number:.0}").parse().unwrap_or(u64::MAX))
 }
 

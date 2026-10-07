@@ -26,7 +26,8 @@ pub struct TickRequest {
 pub enum TickDecision {
   /// Something is still running or there is something to fix.
   KeepGoing,
-  /// CI is green, no thread is unresolved and the review verdict is clean.
+  /// CI is green and no thread is unresolved, and the review verdict is clean
+  /// or could not be read (pr-babysit's degraded success; verify it by hand).
   Success,
   /// A human or the worker has to look.
   Escalate,

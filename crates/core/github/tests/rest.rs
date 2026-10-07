@@ -96,20 +96,25 @@ fn a_pagination_link_on_the_same_origin_is_followed() {
 fn a_path_off_the_api_sends_nothing() {
   let api = Api::start().expect("api");
   let client = api.client(Config::scheduled(), &env()).expect("client");
+  let origin = api.fixture.url("");
   for path in ["https://api.github.com.evil.example/x", "//evil.example/x"] {
-    assert!(
-      matches!(client.get(path, None), Err(Error::Config(_))),
-      "{path}"
+    assert_eq!(
+      client.get(path, None).map(|_| ()),
+      Err(Error::Config(format!(
+        "{path} is not a path under {origin}"
+      )))
     );
   }
   let http = Config {
     api_url: "http://api.example.test".into(),
     ..Config::scheduled()
   };
-  assert!(matches!(
-    toolu_github::Client::new(http, &env()),
-    Err(Error::Config(_))
-  ));
+  assert_eq!(
+    toolu_github::Client::new(http, &env()).map(|_| ()),
+    Err(Error::Config(
+      "the API URL must be an https:// origin, not http://api.example.test".into()
+    ))
+  );
   assert_eq!(api.fixture.requests().expect("requests").len(), 0);
 }
 

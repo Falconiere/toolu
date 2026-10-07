@@ -77,22 +77,24 @@ impl fmt::Debug for Token {
 /// Read the token from `env`: `GH_TOKEN`, else `gh auth token` run with `env`
 /// as its whole environment.
 pub(crate) fn resolve(env: &Env) -> Result<Token, TokenError> {
+  resolve_within(env, GH_DEADLINE)
+}
+
+/// [`resolve`], with `gh` given `deadline`.
+pub(crate) fn resolve_within(env: &Env, deadline: Duration) -> Result<Token, TokenError> {
   if let Some(value) = env.get("GH_TOKEN") {
     return checked(value, Source::Env);
   }
   let spec = Spec {
     env: Some(env.clone()),
-    timeout: GH_DEADLINE,
+    timeout: deadline,
     max_output_bytes: 64 * 1024,
     ..Spec::new(["gh", "auth", "token"])
   };
   let unavailable = |gh: String| TokenError::Unavailable { gh };
   let output = process::run(&spec).map_err(|err| unavailable(run_error(&err)))?;
   if output.timed_out {
-    return Err(unavailable(format!(
-      "timed out after {}s",
-      GH_DEADLINE.as_secs()
-    )));
+    return Err(unavailable(format!("timed out after {deadline:?}")));
   }
   if output.exit_code != 0 {
     let line = output
@@ -151,15 +153,17 @@ impl Tokens {
     self.current.clone()
   }
 
-  /// Make `token` current; whether it differs from the one it replaces.
-  pub(crate) fn replace(&mut self, token: Token) -> bool {
-    if token == self.current {
+  /// After a `401` to `sent`, make `fresh` current: whether it differs from
+  /// `sent`, so a retry can succeed. Another thread may have made `fresh`
+  /// current already; the retry is still worth it.
+  pub(crate) fn refresh(&mut self, sent: &Token, fresh: Token) -> bool {
+    if fresh == *sent {
       return false;
     }
-    if !self.seen.contains(&token) {
-      self.seen.push(token.clone());
+    if !self.seen.contains(&fresh) {
+      self.seen.push(fresh.clone());
     }
-    self.current = token;
+    self.current = fresh;
     true
   }
 

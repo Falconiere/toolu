@@ -15,9 +15,11 @@ impl State {
     State(Ordered::String(text.to_owned()))
   }
 
-  /// `text` as JSON when it is an object or an array, else as a string, the
-  /// way `jev.ts` reads `--state @FILE` and stdin.
+  /// File or stdin text as `jev.ts` reads `--state @FILE` and `-s -`: trailing
+  /// line feeds removed, then JSON when it is an object or an array, else a
+  /// string.
   pub fn structured(text: &str) -> State {
+    let text = text.trim_end_matches('\n');
     match Ordered::parse(text) {
       Ok(value @ (Ordered::Object(_) | Ordered::Array(_))) => State(value),
       Ok(Ordered::Null | Ordered::Bool(_) | Ordered::Number(_) | Ordered::String(_)) | Err(_) => {

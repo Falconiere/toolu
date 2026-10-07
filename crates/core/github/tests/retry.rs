@@ -70,14 +70,20 @@ fn a_not_found_and_a_plain_forbidden_are_permanent() {
     )
     .expect("route");
   let client = one_shot(&api).expect("client");
-  assert!(matches!(
-    client.get("/missing", None),
-    Err(Error::Status { status: 404, .. })
-  ));
-  assert!(matches!(
-    client.get("/forbidden", None),
-    Err(Error::Status { status: 403, .. })
-  ));
+  assert_eq!(
+    client.get("/missing", None).map(|_| ()),
+    Err(Error::Status {
+      status: 404,
+      message: "Not Found".into()
+    })
+  );
+  assert_eq!(
+    client.get("/forbidden", None).map(|_| ()),
+    Err(Error::Status {
+      status: 403,
+      message: "Resource not accessible".into()
+    })
+  );
   assert_eq!(requests(&api), 2);
 }
 
@@ -209,4 +215,99 @@ fn an_invalid_variable_is_named() {
     };
     assert!(message.starts_with(name), "{message}");
   }
+}
+
+#[test]
+fn a_dropped_connection_is_retried() {
+  let api = Api::start().expect("api");
+  api
+    .fixture
+    .sequence("/x", vec![Reply::dropped(), Reply::new(200, "{}")])
+    .expect("route");
+  assert_eq!(
+    one_shot(&api)
+      .expect("client")
+      .get("/x", None)
+      .expect("reply")
+      .attempts,
+    2
+  );
+  assert_eq!(api.fixture.connects().expect("connects").len(), 2);
+  assert_eq!(requests(&api), 1);
+}
+
+#[test]
+fn connections_dropped_every_time_end_in_a_transport_error() {
+  let api = Api::start().expect("api");
+  api.fixture.route("/x", Reply::dropped()).expect("route");
+  assert!(matches!(
+    one_shot(&api).expect("client").get("/x", None),
+    Err(Error::Transport(toolu_http::Error::Transport(_)))
+  ));
+  assert_eq!(api.fixture.connects().expect("connects").len(), 3);
+}
+
+#[test]
+fn a_reply_slower_than_the_timeout_times_out_every_attempt() {
+  let api = Api::start().expect("api");
+  api
+    .fixture
+    .route(
+      "/slow",
+      Reply::new(200, "{}").delayed(Duration::from_millis(600)),
+    )
+    .expect("route");
+  let mut config = Config::one_shot(&env()).expect("config");
+  config.http.timeout = Duration::from_millis(150);
+  let client = api.client(config, &env()).expect("client");
+  assert_eq!(
+    client.get("/slow", None).map(|_| ()),
+    Err(Error::Transport(toolu_http::Error::Timeout))
+  );
+  assert_eq!(requests(&api), 3);
+}
+
+#[test]
+fn a_rate_limit_that_persists_ends_with_the_attempts() {
+  let api = Api::start().expect("api");
+  api
+    .fixture
+    .route(
+      "/x",
+      Reply::new(403, r#"{"message":"API rate limit exceeded"}"#),
+    )
+    .expect("route");
+  let env = env().with("PB_GH_ATTEMPTS", "2");
+  let client = api
+    .client(Config::one_shot(&env).expect("config"), &env)
+    .expect("client");
+  assert_eq!(
+    client.get("/x", None).map(|_| ()),
+    Err(Error::RateLimited {
+      status: 403,
+      retry_after: None
+    })
+  );
+  assert_eq!(requests(&api), 2);
+}
+
+#[test]
+fn a_bad_path_or_etag_sends_nothing_and_never_waits() {
+  let api = Api::start().expect("api");
+  let client = one_shot(&api).expect("client");
+  let started = Instant::now();
+  assert_eq!(
+    client.get("/repos/o/r/contents/a b", None).map(|_| ()),
+    Err(Error::Config(
+      "\"/repos/o/r/contents/a b\" is not a URL path: percent-encode spaces, controls and \
+       non-ASCII"
+        .into()
+    ))
+  );
+  assert_eq!(
+    client.get("/x", Some("\"a\nb\"")).map(|_| ()),
+    Err(Error::Config(r#""\"a\nb\"" is not an ETag"#.into()))
+  );
+  assert!(started.elapsed() < Duration::from_secs(1));
+  assert_eq!(requests(&api), 0);
 }

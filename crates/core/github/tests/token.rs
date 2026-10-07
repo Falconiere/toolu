@@ -6,6 +6,10 @@ mod api;
 #[path = "helpers/gh.rs"]
 mod gh;
 
+use std::sync::Barrier;
+use std::thread;
+use std::time::Duration;
+
 use api::Api;
 use gh::Gh;
 use toolu_github::{Config, Error, Rest, Source, TokenError};
@@ -85,7 +89,7 @@ fn a_missing_gh_names_both_sources() {
   else {
     panic!("expected Unavailable");
   };
-  assert!(gh.starts_with("gh: "), "{gh}");
+  assert_eq!(gh, "gh: No such file or directory (os error 2)");
 }
 
 #[test]
@@ -99,4 +103,81 @@ fn a_malformed_gh_token_sends_nothing() {
     );
   }
   assert_eq!(api.fixture.requests().expect("requests").len(), 0);
+}
+
+#[test]
+fn a_rotated_token_that_is_refused_too_is_unauthorized_after_two_requests() {
+  let api = Api::start().expect("api");
+  let gh = Gh::new().expect("gh");
+  gh.token("token-before").expect("hosts");
+  let client = api.client(Config::scheduled(), &gh.env()).expect("client");
+  gh.token("token-after").expect("rotate");
+  api
+    .fixture
+    .route("/user", Reply::new(401, "{}"))
+    .expect("route");
+  assert_eq!(client.get("/user", None), Err(Error::Unauthorized));
+  assert_eq!(
+    authorizations(&api),
+    ["Bearer token-before", "Bearer token-after"]
+  );
+}
+
+#[test]
+fn a_token_that_cannot_be_reread_is_unauthorized_after_one_request() {
+  let api = Api::start().expect("api");
+  let gh = Gh::new().expect("gh");
+  gh.token("token-before").expect("hosts");
+  let client = api.client(Config::scheduled(), &gh.env()).expect("client");
+  gh.broken("gone").expect("break");
+  api
+    .fixture
+    .route("/user", Reply::new(401, "{}"))
+    .expect("route");
+  assert_eq!(client.get("/user", None), Err(Error::Unauthorized));
+  assert_eq!(authorizations(&api), ["Bearer token-before"]);
+}
+
+#[test]
+fn two_threads_refused_together_both_retry_with_the_rotated_token() {
+  let api = Api::start().expect("api");
+  let gh = Gh::new().expect("gh");
+  gh.token("token-before").expect("hosts");
+  let client = api.client(Config::scheduled(), &gh.env()).expect("client");
+  gh.token("token-after").expect("rotate");
+  let refused = Reply::new(401, "{}").delayed(Duration::from_millis(300));
+  api
+    .fixture
+    .sequence(
+      "/user",
+      vec![refused.clone(), refused, Reply::new(200, "{}")],
+    )
+    .expect("route");
+  let start = Barrier::new(2);
+  let results: Vec<bool> = thread::scope(|scope| {
+    let calls: Vec<_> = (0..2)
+      .map(|_| {
+        scope.spawn(|| {
+          start.wait();
+          client.get("/user", None).is_ok()
+        })
+      })
+      .collect();
+    calls
+      .into_iter()
+      .map(|call| call.join().unwrap_or(false))
+      .collect()
+  });
+  assert_eq!(results, [true, true]);
+  let mut seen = authorizations(&api);
+  seen.sort();
+  assert_eq!(
+    seen,
+    [
+      "Bearer token-after",
+      "Bearer token-after",
+      "Bearer token-before",
+      "Bearer token-before"
+    ]
+  );
 }

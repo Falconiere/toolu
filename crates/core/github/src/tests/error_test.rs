@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use crate::Error;
+use crate::error::decode;
 use crate::token::TokenError;
 
 #[test]
@@ -71,4 +72,24 @@ fn status_graphql_transport_and_decode_errors_have_messages() {
   for (error, expected) in cases {
     assert_eq!(error.to_string(), expected);
   }
+}
+
+#[test]
+fn a_decode_error_names_its_kind_and_place_but_never_the_value() {
+  let err = serde_json::from_str::<u32>(r#""secret-value""#).expect_err("type mismatch");
+  assert!(err.to_string().contains("secret-value"));
+  assert_eq!(
+    decode(&err),
+    Error::Decode("unexpected data error at line 1 column 14".into())
+  );
+  let eof = serde_json::from_str::<u32>("").expect_err("eof");
+  assert_eq!(
+    decode(&eof),
+    Error::Decode("end of input error at line 1 column 0".into())
+  );
+  let syntax = serde_json::from_str::<u32>("x").expect_err("syntax");
+  assert_eq!(
+    decode(&syntax),
+    Error::Decode("syntax error at line 1 column 1".into())
+  );
 }

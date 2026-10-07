@@ -55,7 +55,7 @@ impl Default for Config {
   }
 }
 
-/// The API key. Its `Debug` hides it.
+/// The API key. It has no `Debug`, so nothing can print it.
 struct Key(String);
 
 /// A Jev client. Its `Debug` shows the endpoint and timeout only.
@@ -126,11 +126,12 @@ impl Jev {
   }
 }
 
-/// `JEV_TIMEOUT` seconds; 60 when unset, negative, not a number or too large.
+/// `JEV_TIMEOUT` seconds; 60 when unset, negative, not a number, or over
+/// `u32::MAX` seconds, past which a deadline overflows the clock.
 fn timeout(value: Option<&str>) -> Duration {
   value
     .and_then(|text| text.trim().parse::<f64>().ok())
-    .filter(|seconds| seconds.is_finite() && *seconds >= 0.0)
+    .filter(|seconds| (0.0..=f64::from(u32::MAX)).contains(seconds))
     .and_then(|seconds| Duration::try_from_secs_f64(seconds).ok())
     .unwrap_or(DEFAULT_TIMEOUT)
 }

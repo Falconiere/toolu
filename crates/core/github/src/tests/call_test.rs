@@ -1,3 +1,5 @@
+use std::thread;
+
 use toolu_runtime::env::Env;
 
 use crate::{Client, Config, Error};
@@ -52,4 +54,32 @@ fn an_error_message_is_read_from_json_and_redacted() {
   );
   assert_eq!(client.message(b"<html>"), "");
   assert_eq!(client.message(br#"{"message":3}"#), "");
+}
+
+#[test]
+fn a_path_with_spaces_controls_or_non_ascii_is_refused() {
+  let client = client("https://api.github.com");
+  for path in ["/repos/o/r/contents/a b", "/x\ny", "/caf\u{e9}"] {
+    assert_eq!(
+      client.url(path),
+      Err(Error::Config(format!(
+        "{path:?} is not a URL path: percent-encode spaces, controls and non-ASCII"
+      )))
+    );
+  }
+}
+
+#[test]
+fn a_poisoned_token_lock_is_recovered() {
+  let client = client("https://api.github.com");
+  let poisoned = thread::scope(|scope| {
+    scope
+      .spawn(|| {
+        let _held = client.tokens();
+        panic!("poison the token lock");
+      })
+      .join()
+  });
+  assert!(poisoned.is_err());
+  assert_eq!(client.tokens().current().expose(), "t-460");
 }

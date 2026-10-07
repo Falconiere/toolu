@@ -24,7 +24,7 @@ impl Client {
       etag: None,
     })?;
     let mut document: Value =
-      serde_json::from_slice(&response.body).map_err(|err| Error::Decode(err.to_string()))?;
+      serde_json::from_slice(&response.body).map_err(|err| crate::error::decode(&err))?;
     if let Some(messages) = errors(&document) {
       let tokens = self.tokens();
       return Err(Error::GraphQl(

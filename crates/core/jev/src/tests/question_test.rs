@@ -17,6 +17,12 @@ fn state_is_text_unless_it_is_a_json_object_or_array() {
     r#"{"ticket":"Payouts failing"}"#
   );
   assert_eq!(State::structured("[1,2]").value().to_text(false), "[1,2]");
+  assert_eq!(State::structured("123\n"), State::text("123"));
+  assert_eq!(
+    State::structured("Payouts failing\n\n"),
+    State::text("Payouts failing")
+  );
+  assert_eq!(State::structured("[1]\n").value().to_text(false), "[1]");
   for scalar in ["123", "true", "null", "\"quoted\"", "not json"] {
     assert_eq!(State::structured(scalar), State::text(scalar), "{scalar}");
   }
@@ -95,6 +101,14 @@ fn builders_refuse_bad_shapes_before_any_request() {
       "score accepts at most 10 levels",
     ),
     (Question::noul("", None, None), "noul needs instructions"),
+    (
+      Question::choice("", &[("a", None), ("b", None)]),
+      "choice needs instructions",
+    ),
+    (
+      Question::score("", &["low", "high"]),
+      "score needs instructions",
+    ),
   ];
   for (result, message) in cases {
     assert_eq!(result, Err(Error::InvalidQuestion(message.to_owned())));

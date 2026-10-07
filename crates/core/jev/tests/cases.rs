@@ -218,7 +218,7 @@ fn malformed_success_cannot_become_a_judgment() {
     .to_string(),
     json!({ "model": "m", "answers": {}, "usage": { "input_tokens": 3, "output_tokens": 2 } })
       .to_string(),
-    json!({ "model": "m", "answers": { "q": { "type": "choice", "choice": "a" } },
+    json!({ "model": "m", "answers": { "q": { "type": "score", "noul": 0.5 } },
             "usage": { "input_tokens": 3, "output_tokens": 2 } })
     .to_string(),
     negative.to_string(),

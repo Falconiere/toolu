@@ -32,9 +32,12 @@ fn the_api_url_must_be_an_https_origin() {
       api_url: api_url.to_owned(),
       ..Config::scheduled()
     };
-    assert!(
-      matches!(Client::new(config, &env()), Err(Error::Config(_))),
-      "{api_url}"
+    assert_eq!(
+      Client::new(config, &env()).map(|_| ()),
+      Err(Error::Config(format!(
+        "the API URL must be an https:// origin, not {}",
+        api_url.trim_end_matches('/')
+      )))
     );
   }
 }

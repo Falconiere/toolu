@@ -17,3 +17,17 @@ fn a_fresh_body_decodes_or_names_the_failure() {
   };
   assert!(matches!(broken.json::<Value>(), Err(Error::Decode(_))));
 }
+
+#[test]
+fn a_decode_error_does_not_quote_the_body() {
+  let fresh = Fresh {
+    status: 200,
+    etag: None,
+    headers: Vec::new(),
+    body: br#""token-like-value""#.to_vec(),
+  };
+  let Err(Error::Decode(message)) = fresh.json::<u64>() else {
+    panic!("expected a decode error");
+  };
+  assert_eq!(message, "unexpected data error at line 1 column 18");
+}

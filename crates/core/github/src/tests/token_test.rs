@@ -1,8 +1,9 @@
 use std::fs;
+use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
-use crate::token::{Source, Token, TokenError, Tokens, checked, resolve};
+use crate::token::{Source, Token, TokenError, Tokens, checked, resolve, resolve_within};
 
 fn token(value: &str) -> Token {
   checked(value, Source::Env).expect("token")
@@ -51,7 +52,7 @@ fn gh_token_wins_and_an_empty_one_counts_as_unset() {
   let Err(TokenError::Unavailable { gh }) = resolve(&env) else {
     panic!("expected Unavailable");
   };
-  assert!(gh.starts_with("gh: "), "{gh}");
+  assert_eq!(gh, "gh: No such file or directory (os error 2)");
 }
 
 #[test]
@@ -82,13 +83,31 @@ fn set_executable(path: &std::path::Path) {
 }
 
 #[test]
-fn tokens_track_the_current_one_and_redact_every_one_read() {
+fn a_refresh_retries_with_any_token_other_than_the_one_refused() {
   let mut tokens = Tokens::new(token("old-token"));
-  assert!(!tokens.replace(token("old-token")));
-  assert!(tokens.replace(token("new-token")));
+  assert!(!tokens.refresh(&token("old-token"), token("old-token")));
+  assert!(tokens.refresh(&token("old-token"), token("new-token")));
   assert_eq!(tokens.current().expose(), "new-token");
+  // Another thread refused with the old token sees the new one as worth a retry.
+  assert!(tokens.refresh(&token("old-token"), token("new-token")));
+  assert!(!tokens.refresh(&token("new-token"), token("new-token")));
   assert_eq!(
     tokens.redact("old-token then new-token"),
     "<redacted> then <redacted>"
+  );
+}
+
+#[test]
+fn a_gh_past_its_deadline_is_named() {
+  let dir = tempfile::tempdir().expect("dir");
+  let slow = dir.path().join("gh");
+  fs::write(&slow, "#!/bin/sh\nexec /bin/sleep 5\n").expect("script");
+  set_executable(&slow);
+  let env = Env::from_pairs([("PATH", dir.path().to_str().expect("utf-8"))]);
+  assert_eq!(
+    resolve_within(&env, Duration::from_millis(200)),
+    Err(TokenError::Unavailable {
+      gh: "timed out after 200ms".into()
+    })
   );
 }

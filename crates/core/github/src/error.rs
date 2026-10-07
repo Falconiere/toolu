@@ -68,6 +68,22 @@ impl fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
+/// A JSON decoding failure, described by its kind and place only: serde's own
+/// message may quote the value it rejected.
+pub(crate) fn decode(err: &serde_json::Error) -> Error {
+  let kind = match err.classify() {
+    serde_json::error::Category::Io => "I/O",
+    serde_json::error::Category::Syntax => "syntax",
+    serde_json::error::Category::Data => "unexpected data",
+    serde_json::error::Category::Eof => "end of input",
+  };
+  Error::Decode(format!(
+    "{kind} error at line {} column {}",
+    err.line(),
+    err.column()
+  ))
+}
+
 impl From<TokenError> for Error {
   fn from(err: TokenError) -> Error {
     Error::Token(err)

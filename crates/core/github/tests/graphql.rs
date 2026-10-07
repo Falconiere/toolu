@@ -82,8 +82,8 @@ fn a_reply_without_data_cannot_be_decoded() {
     .fixture
     .route("/graphql", Reply::new(200, "{}"))
     .expect("route");
-  assert!(matches!(
-    client.graphql(QUERY, &json!({})),
-    Err(Error::Decode(_))
-  ));
+  assert_eq!(
+    client.graphql(QUERY, &json!({})).map(|reply| reply.data),
+    Err(Error::Decode("the GraphQL reply has no data".into()))
+  );
 }

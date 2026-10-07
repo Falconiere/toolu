@@ -9,7 +9,7 @@ use serde_json::Value;
 use toolu_http::{Auth, Method, Request, Response};
 
 use crate::policy::{self, Class};
-use crate::token::{self, Tokens};
+use crate::token::{self, Token, Tokens};
 use crate::{Client, Error};
 
 /// The `User-Agent` GitHub requires on every request.
@@ -40,21 +40,12 @@ impl Client {
   /// and the attempts used.
   pub(crate) fn call(&self, call: &Call<'_>) -> Result<(Response, u32), Error> {
     let url = self.url(call.path)?;
-    let mut headers = vec![
-      ("accept", "application/vnd.github+json"),
-      ("x-github-api-version", "2022-11-28"),
-      ("user-agent", USER_AGENT),
-    ];
-    if let Some(etag) = call.etag {
-      headers.push(("if-none-match", etag));
-    }
-    if call.body.is_some() {
-      headers.push(("content-type", "application/json"));
-    }
+    let headers = headers(call)?;
     let (mut attempt, mut reread) = (0, false);
     loop {
       attempt += 1;
-      let auth = Auth::Bearer(self.tokens().current().expose().to_owned());
+      let sent = self.tokens().current();
+      let auth = Auth::Bearer(sent.expose().to_owned());
       let outcome = self.http.send(&Request {
         method: call.method,
         url: &url,
@@ -63,7 +54,8 @@ impl Client {
         body: call.body.as_deref(),
       });
       let class = policy::classify(&outcome);
-      if class == Class::Unauthorized && !std::mem::replace(&mut reread, true) && self.reread() {
+      if class == Class::Unauthorized && !std::mem::replace(&mut reread, true) && self.reread(&sent)
+      {
         attempt -= 1;
         continue;
       }
@@ -130,6 +122,11 @@ impl Client {
   /// starts with the API URL and `/` is used as is.
   pub(crate) fn url(&self, path: &str) -> Result<String, Error> {
     let api = &self.config.api_url;
+    if !path.chars().all(|ch| ch.is_ascii_graphic()) {
+      return Err(Error::Config(format!(
+        "{path:?} is not a URL path: percent-encode spaces, controls and non-ASCII"
+      )));
+    }
     if path.starts_with('/') && !path.starts_with("//") {
       return Ok(format!("{api}{path}"));
     }
@@ -147,14 +144,34 @@ impl Client {
     self.tokens.lock().unwrap_or_else(PoisonError::into_inner)
   }
 
-  /// Read the token again; whether a different one is now current. The lock
-  /// is not held while `gh` runs.
-  fn reread(&self) -> bool {
+  /// Read the token again after a `401` to `sent`: whether the token to retry
+  /// with differs from `sent`. A failed read is no new token. The lock is not
+  /// held while `gh` runs.
+  fn reread(&self, sent: &Token) -> bool {
     match token::resolve(&self.env) {
-      Ok(fresh) => self.tokens().replace(fresh),
-      Err(_) => false,
+      Ok(fresh) => self.tokens().refresh(sent, fresh),
+      Err(_unreadable) => false,
     }
   }
+}
+
+/// The request headers for `call`.
+fn headers<'a>(call: &Call<'a>) -> Result<Vec<(&'a str, &'a str)>, Error> {
+  let mut headers = vec![
+    ("accept", "application/vnd.github+json"),
+    ("x-github-api-version", "2022-11-28"),
+    ("user-agent", USER_AGENT),
+  ];
+  if let Some(etag) = call.etag {
+    if !etag.chars().all(|ch| ch.is_ascii_graphic()) {
+      return Err(Error::Config(format!("{etag:?} is not an ETag")));
+    }
+    headers.push(("if-none-match", etag));
+  }
+  if call.body.is_some() {
+    headers.push(("content-type", "application/json"));
+  }
+  Ok(headers)
 }
 
 #[cfg(test)]

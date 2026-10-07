@@ -73,14 +73,15 @@ fn a_retry_after_over_60_returns_the_status_without_waiting() {
 }
 
 #[test]
-fn retry_after_ms_is_rounded_up_to_pause_units() {
+fn retry_after_and_retry_after_ms_count_pause_units() {
   let endpoint = Endpoint::start().expect("endpoint");
   endpoint
     .fixture
     .sequence(
       PATH,
       vec![
-        Reply::new(503, "").header("Retry-After-Ms", "1500"),
+        Reply::new(503, "").header("Retry-After-Ms", "29001"),
+        Reply::new(503, "").header("Retry-After", "30"),
         Reply::new(200, answer()),
       ],
     )
@@ -93,8 +94,9 @@ fn retry_after_ms_is_rounded_up_to_pause_units() {
       .ask(&State::text("x"), DEFAULT_MODEL, &noul().expect("noul"))
       .is_ok()
   );
-  assert!(started.elapsed() >= Duration::from_millis(20));
-  assert_eq!(endpoint.bodies().len(), 2);
+  // 30 units each (29001 ms rounds up), of 10 ms: unreachable by the base pause.
+  assert!(started.elapsed() >= Duration::from_millis(600));
+  assert_eq!(endpoint.bodies().len(), 3);
 }
 
 #[test]
@@ -123,10 +125,13 @@ fn a_zero_timeout_times_out_every_attempt_unsent() {
     .route(PATH, Reply::new(200, answer()))
     .expect("route");
   let jev = endpoint.jev(&[("JEV_TIMEOUT", "0")]).expect("jev");
+  let started = Instant::now();
   assert_eq!(
     jev.ask(&State::text("x"), DEFAULT_MODEL, &noul().expect("noul")),
     Err(Error::Timeout)
   );
+  // Three attempts: pauses of 1 and 2 units of 10 ms between them.
+  assert!(started.elapsed() >= Duration::from_millis(30));
   assert_eq!(endpoint.fixture.connects().expect("connects").len(), 0);
 }
 
@@ -182,4 +187,52 @@ fn the_key_is_in_no_error_or_debug_output() {
       .is_some_and(|value| value.ends_with(&key))
   );
   assert!(!shown.contains(&key), "{shown}");
+}
+
+#[test]
+fn a_status_that_stays_retryable_ends_after_three_attempts() {
+  let endpoint = Endpoint::start().expect("endpoint");
+  endpoint
+    .fixture
+    .route(PATH, Reply::new(503, "down"))
+    .expect("route");
+  let result =
+    endpoint
+      .jev(&[])
+      .expect("jev")
+      .ask(&State::text("x"), DEFAULT_MODEL, &noul().expect("noul"));
+  assert_eq!(
+    result,
+    Err(Error::Http {
+      status: 503,
+      body: "down".into()
+    })
+  );
+  assert_eq!(endpoint.bodies().len(), 3);
+}
+
+#[test]
+fn a_redirect_is_returned_not_followed() {
+  let endpoint = Endpoint::start().expect("endpoint");
+  let elsewhere = endpoint.fixture.second_url(PATH);
+  endpoint
+    .fixture
+    .route(
+      PATH,
+      Reply::new(302, "moved").header("Location", &elsewhere),
+    )
+    .expect("route");
+  let result =
+    endpoint
+      .jev(&[])
+      .expect("jev")
+      .ask(&State::text("x"), DEFAULT_MODEL, &noul().expect("noul"));
+  assert_eq!(
+    result,
+    Err(Error::Http {
+      status: 302,
+      body: "moved".into()
+    })
+  );
+  assert_eq!(endpoint.bodies().len(), 1);
 }

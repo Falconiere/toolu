@@ -25,7 +25,7 @@ fn jev_timeout_is_seconds_with_a_60_second_default() {
   assert_eq!(timeout(Some("1.5")), Duration::from_millis(1500));
   assert_eq!(timeout(Some(" 5 ")), Duration::from_secs(5));
   assert_eq!(timeout(Some("0")), Duration::ZERO);
-  for bad in ["-1", "soon", "inf", "1e400"] {
+  for bad in ["-1", "soon", "inf", "1e400", "1e19"] {
     assert_eq!(timeout(Some(bad)), Duration::from_secs(60), "{bad}");
   }
 }
@@ -49,4 +49,13 @@ fn the_default_config_targets_jev_with_one_second_pauses() {
   assert_eq!(config.endpoint, "https://api.typesafe.ai/v1/systemone");
   assert_eq!(config.pause, Duration::from_secs(1));
   assert_eq!(DEFAULT_MODEL, "jev-latest");
+}
+
+#[test]
+fn a_transport_setting_toolu_http_refuses_is_a_transport_error() {
+  let env = Env::from_pairs([("TYPESAFE_API_KEY", "k"), ("HTTPS_PROXY", "not a proxy")]);
+  assert!(matches!(
+    Jev::from_env(&env, Config::default()),
+    Err(Error::Transport(toolu_http::Error::InvalidConfig(_)))
+  ));
 }

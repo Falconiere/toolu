@@ -51,7 +51,7 @@ impl Fresh {
   /// # Errors
   /// `Decode` when the body is not `T`.
   pub fn json<T: DeserializeOwned>(&self) -> Result<T, Error> {
-    serde_json::from_slice(&self.body).map_err(|err| Error::Decode(err.to_string()))
+    serde_json::from_slice(&self.body).map_err(|err| crate::error::decode(&err))
   }
 }
 
