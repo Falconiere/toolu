@@ -18,15 +18,15 @@ const CODEX_LIST_TIMEOUT: Duration = Duration::from_secs(10);
 /// One installed toolu plugin. `OpenCode` rows are names only.
 pub(super) struct Plugin {
   pub(super) name: String,
-  version: Option<String>,
-  root: Option<PathBuf>,
-  names_only: bool,
+  pub(super) version: Option<String>,
+  pub(super) root: Option<PathBuf>,
+  pub(super) names_only: bool,
 }
 
 /// Plugins the host could list, plus a warning when the inventory is incomplete.
 pub(super) struct Inventory {
   pub(super) plugins: Vec<Plugin>,
-  warning: Option<String>,
+  pub(super) warning: Option<String>,
 }
 
 impl Inventory {
@@ -34,23 +34,6 @@ impl Inventory {
     Inventory {
       plugins: Vec::new(),
       warning: Some(warning.into()),
-    }
-  }
-
-  /// Plugins named `names`, with no roots.
-  #[cfg(test)]
-  pub(super) fn named(names: &[&str]) -> Inventory {
-    Inventory {
-      plugins: names
-        .iter()
-        .map(|name| Plugin {
-          name: (*name).to_owned(),
-          version: None,
-          root: None,
-          names_only: false,
-        })
-        .collect(),
-      warning: None,
     }
   }
 
