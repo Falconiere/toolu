@@ -13,7 +13,8 @@
 //! - `trace`: what a dispatch did with each module;
 //! - `detect`: the git operations a parsed command performs (push, commit, the
 //!   pushed repository and branch);
-//! - `ledger` (#421): the delivery-flow plan ledger behind `toolu ledger`.
+//! - `ledger` (#421): the delivery-flow plan ledger behind `toolu ledger`;
+//! - `resources` (#421): machine-wide leases and the managed job runner.
 //!
 //! Cross-plugin traits (#460): plugin logic one plugin owns and another uses
 //! is a trait here. The owner implements it and `crates/cli` passes that
@@ -33,6 +34,7 @@ pub mod gate;
 mod gates;
 pub mod ledger;
 pub mod registry;
+pub mod resources;
 pub mod status;
 pub mod trace;
 
