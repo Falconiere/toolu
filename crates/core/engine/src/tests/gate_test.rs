@@ -1,10 +1,9 @@
 use std::path::Path;
 
-use serde_json::Map;
+use serde_json::{Map, json};
 use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session};
-use toolu_protocol::text::Text;
+use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 
@@ -25,21 +24,17 @@ impl Gate for Plain {
 
 #[test]
 fn by_default_run_warning_is_run_with_no_warnings() {
-  let text = |value: &str| Text::new(value).unwrap();
-  let event = NormalizedEvent::SessionStart(Session {
-    session_id: text("s"),
-    cwd: text("/p"),
-    project_root: text("/p"),
-    worktree: text("/p"),
-  });
-  let env = Env::from_pairs([("HOME", "/h")]);
+  let event: NormalizedEvent =
+    serde_json::from_value(json!({"type": "session/start", "sessionId": "s", "cwd": "/c", "projectRoot": "/c", "worktree": "/c"}))
+      .unwrap();
+  let env = Env::from_pairs([("CODEX_HOME", "/codex")]);
   let raw = Map::new();
   let ctx = RuleContext {
-    host: Host::Claude,
+    host: Host::Codex,
     env: &env,
-    config_root: Path::new("/h/.claude"),
-    project_root: Path::new("/p"),
-    cwd: None,
+    config_root: Path::new("/codex"),
+    project_root: Path::new("/c"),
+    cwd: Some(Path::new("/c")),
     raw: &raw,
     edit: None,
   };

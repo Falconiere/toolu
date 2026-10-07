@@ -1,35 +1,22 @@
 use std::path::Path;
 
-use serde_json::{Map, json};
+use serde_json::json;
 use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
-use toolu_protocol::text::Text;
+use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 
 use super::{PUSH_WAIVER, push_failed};
 use crate::gate::Gate;
 
-fn text(value: &str) -> Text {
-  Text::new(value).unwrap()
-}
-
+/// A `tool/post` event of `tool`, as the dispatcher normalizes it.
 fn event(tool: &str) -> NormalizedEvent {
-  NormalizedEvent::ToolPost {
-    session: Session {
-      session_id: text("s"),
-      cwd: text("/p"),
-      project_root: text("/p"),
-      worktree: text("/p"),
-    },
-    tool: Tool {
-      call_id: text("c"),
-      name: text(tool),
-      input: Map::new(),
-    },
-    output: None,
-  }
+  serde_json::from_value(json!({
+    "type": "tool/post", "sessionId": "s", "cwd": "/w", "projectRoot": "/w", "worktree": "/w",
+    "toolCallId": "call", "toolName": tool, "toolInput": {}
+  }))
+  .unwrap()
 }
 
 #[test]
