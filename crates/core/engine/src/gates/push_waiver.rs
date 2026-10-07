@@ -23,10 +23,10 @@ use crate::gate::Gate;
 
 /// The built-in `push-waiver.sh`.
 #[derive(Debug, Clone, Copy)]
-pub struct PushWaiver;
+pub(crate) struct PushWaiver;
 
 /// The one `push-waiver.sh` built-in.
-pub static PUSH_WAIVER: PushWaiver = PushWaiver;
+pub(crate) static PUSH_WAIVER: PushWaiver = PushWaiver;
 
 /// A reported exit status other than 0 means the push did not land.
 fn push_failed(status: &str) -> bool {

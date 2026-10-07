@@ -5,9 +5,9 @@
 //! parsed command through `quality_command` and `crate::detect`.
 
 /// `gate-status.sh`: the quality gate's command channel.
-pub mod gate_status;
+pub(crate) mod gate_status;
 /// `push-waiver.sh`: a landed push promotes its pending waiver.
-pub mod push_waiver;
+pub(crate) mod push_waiver;
 /// Quality commands in a parsed command line.
 pub(crate) mod quality_command;
 /// The command, exit status and interrupt flag of the payload.

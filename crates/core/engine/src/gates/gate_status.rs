@@ -33,10 +33,10 @@ const SOURCE: &str = "gate-status-hook";
 
 /// The built-in `gate-status.sh`.
 #[derive(Debug, Clone, Copy)]
-pub struct GateStatus;
+pub(crate) struct GateStatus;
 
 /// The one `gate-status.sh` built-in.
-pub static GATE_STATUS: GateStatus = GateStatus;
+pub(crate) static GATE_STATUS: GateStatus = GateStatus;
 
 /// The advisory bash prints. Its `\n` is two characters: bash passes the
 /// double-quoted `\n` to `jq --arg` unexpanded.

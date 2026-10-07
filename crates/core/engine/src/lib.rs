@@ -28,7 +28,7 @@ pub mod builtins;
 pub mod detect;
 pub mod dispatch;
 pub mod gate;
-pub mod gates;
+mod gates;
 pub mod registry;
 pub mod status;
 pub mod trace;
