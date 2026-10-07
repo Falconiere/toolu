@@ -36,7 +36,7 @@ permissions:
 jobs:
   formula:
     name: Push Formula/toolu.rb
-    if: ${{ !contains(inputs.tag, '-') }}
+    if: ${{ inputs.tag != '' && !contains(inputs.tag, '-') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
@@ -65,6 +65,7 @@ jobs:
           echo "$MINISIGN_SHA256  $work/minisign.tar.gz" | sha256sum -c -
           tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign
           public_key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)
+          test -n "$public_key" || { echo "::error::TOOLU_PUBLIC_KEY not found in install.sh"; exit 1; }
           verified=$("$work/minisign-linux/x86_64/minisign" -Vm dist/SHA256SUMS -x dist/SHA256SUMS.minisig -P "$public_key")
           echo "$verified"
           grep -qxF "Trusted comment: toolu $TAG" <<<"$verified"

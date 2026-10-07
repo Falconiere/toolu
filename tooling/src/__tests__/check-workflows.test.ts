@@ -134,9 +134,16 @@ for (const scenario of [
   {
     name: "tap updated for a prerelease",
     file: ".github/workflows/release-homebrew.yml",
-    before: "if: ${{ !contains(inputs.tag, '-') }}",
-    after: "if: ${{ !contains(github.ref_name, '-') }}",
-    finding: "must skip prerelease tags by inputs.tag",
+    before: "if: ${{ inputs.tag != '' && !contains(inputs.tag, '-') }}",
+    after: "if: ${{ inputs.tag != '' && !contains(github.ref_name, '-') }}",
+    finding: "must skip prerelease and empty tags by inputs.tag",
+  },
+  {
+    name: "tap updated for an empty tag",
+    file: ".github/workflows/release-homebrew.yml",
+    before: "if: ${{ inputs.tag != '' && !contains(inputs.tag, '-') }}",
+    after: "if: ${{ !contains(inputs.tag, '-') }}",
+    finding: "must skip prerelease and empty tags by inputs.tag",
   },
   {
     name: "tap formula from unverified sums",

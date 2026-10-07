@@ -85,7 +85,7 @@ jobs:
   homebrew:
     name: Update Homebrew tap
     needs: [release-please, native]
-    if: needs.release-please.outputs.releases_created == 'true' && needs.native.result == 'success'
+    if: needs.release-please.outputs.releases_created == 'true' && needs.native.result == 'success' && needs.release-please.outputs.tag_name != ''
     permissions:
       contents: read
     uses: ./.github/workflows/release-homebrew.yml

@@ -96,8 +96,10 @@ function checkTap(root: string, tap: ObjectMap, errors: string[]): void {
   const condition = string(at(job, "if"));
   need(
     errors,
-    condition.includes("!contains(inputs.tag, '-')") && !condition.includes("github.ref_name"),
-    "release-homebrew.yml must skip prerelease tags by inputs.tag",
+    condition.includes("!contains(inputs.tag, '-')") &&
+      condition.includes("inputs.tag != ''") &&
+      !condition.includes("github.ref_name"),
+    "release-homebrew.yml must skip prerelease and empty tags by inputs.tag",
   );
   const token = steps(job).find((step) => includes(step.uses, "create-github-app-token@"));
   need(

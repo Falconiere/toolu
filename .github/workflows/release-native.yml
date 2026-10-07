@@ -187,9 +187,11 @@ jobs:
           tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign
           minisign="$work/minisign-linux/x86_64/minisign"
           (umask 077 && printf '%s\n' "$MINISIGN_SECRET_KEY" > "$work/toolu.key")
+          test -s "$work/toolu.key" || { echo "::error::could not write the signing key"; exit 1; }
           "$minisign" -S -s "$work/toolu.key" -m dist/SHA256SUMS -x dist/SHA256SUMS.minisig -t "toolu $TAG"
           rm -f "$work/toolu.key"
           public_key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)
+          test -n "$public_key" || { echo "::error::TOOLU_PUBLIC_KEY not found in install.sh"; exit 1; }
           "$minisign" -Vm dist/SHA256SUMS -x dist/SHA256SUMS.minisig -P "$public_key"
       - name: Generate SPDX SBOM
         uses: anchore/sbom-action@v0.24.3
