@@ -159,6 +159,23 @@ fn a_read_with_nothing_that_fits_prints_nothing_and_spawns_nothing() {
     .unwrap();
   assert_eq!(streams(&out), (String::new(), String::new(), Some(0)));
   assert!(!log.exists(), "no module process may be spawned");
+  sb.module("pre-tools.d", "y@t__probe.sh", "exit 0").unwrap();
+  std::fs::write(
+    sb.registry("pre-tools.d").join("z@t__probe.js"),
+    "export default 42;",
+  )
+  .unwrap();
+  let out = sb
+    .hook("pre-tools", READ, Some(&sb.root.join("bin")))
+    .unwrap();
+  let failed = "toolu-registry: module z@t__probe.js failed: bridge exited 1; output skipped\n\
+                toolu-dispatch: module y@t__probe.sh exited 1; output skipped\n";
+  assert_eq!(streams(&out), (String::new(), failed.to_owned(), Some(0)));
+  let spawned = std::fs::read_to_string(&log).unwrap();
+  assert_eq!(
+    spawned, "bash\nbun\n",
+    "control: the sentinels see a .sh and a .js module run"
+  );
 }
 
 #[test]
@@ -186,8 +203,9 @@ fn the_plugin_root_gives_modules_their_lib_dir() {
   let sb = Sandbox::new().unwrap();
   let root = sb.root.join("plugin");
   let manifest = format!(
-    r#"{{"name":"toolu","version":"{}","hookProtocol":1}}"#,
-    env!("CARGO_PKG_VERSION")
+    r#"{{"name":"toolu","version":"{}","hookProtocol":{}}}"#,
+    env!("CARGO_PKG_VERSION"),
+    toolu_protocol::HOOK_PROTOCOL
   );
   std::fs::create_dir_all(root.join(".claude-plugin")).unwrap();
   std::fs::write(root.join(".claude-plugin/plugin.json"), manifest).unwrap();

@@ -170,7 +170,7 @@ fn an_environment_past_the_kernels_limit_is_skipped_as_127() {
   hook
     .sh(Phase::Pre, "x@t__a.sh", &advice("unreachable"))
     .unwrap();
-  let content = "x".repeat(200 * 1024);
+  let content = "x".repeat(2 * 1024 * 1024);
   let file = hook.sb.text("project/big.txt");
   let write = format!(
     r#"{{"tool_name":"Write","tool_input":{{"file_path":"{file}","content":"{content}"}}}}"#
@@ -182,7 +182,7 @@ fn an_environment_past_the_kernels_limit_is_skipped_as_127() {
       "",
       "toolu-dispatch: module x@t__a.sh exited 127; output skipped\n"
     ),
-    "a 200 KiB `input` is past Linux's per-string limit, as for TypeScript's spawn"
+    "a 2 MiB `input` is past Linux's per-string and macOS's total limit, as for TypeScript's spawn"
   );
 }
 
