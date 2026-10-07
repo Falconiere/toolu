@@ -95,6 +95,9 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
   if let Err(err) = register(&paths, dir) {
     return failed("toolu epic start", &err);
   }
+  if live(&paths.lock()) {
+    return Outcome::data(String::new());
+  }
   match detach_engine(env) {
     Ok(()) => Outcome::data(String::new()),
     Err(err) => failed("toolu epic start", &err),

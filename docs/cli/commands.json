@@ -1360,7 +1360,7 @@
           "placeholder": false
         },
         {
-          "about": "Clear one attention item",
+          "about": "Clear a stall attention item",
           "aliases": [],
           "args": [
             {
@@ -1383,7 +1383,7 @@
           "placeholder": false
         },
         {
-          "about": "Send text to the worker for one issue",
+          "about": "Record an answer on the journal for one issue",
           "aliases": [],
           "args": [
             {

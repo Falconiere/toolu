@@ -34,7 +34,7 @@ pub(crate) fn command() -> Command {
       "resume",
       "Resume effects for every epic, or one epic",
     ))
-    .subcommand(key_command("ack", "Clear one attention item"))
+    .subcommand(key_command("ack", "Clear a stall attention item"))
     .subcommand(answer_command())
     .subcommand(wait_command())
     .subcommand(report_command())
@@ -128,7 +128,7 @@ fn key_command(name: &'static str, about: &'static str) -> Command {
 
 fn answer_command() -> Command {
   Command::new("answer")
-    .about("Send text to the worker for one issue")
+    .about("Record an answer on the journal for one issue")
     .arg(
       Arg::new("key")
         .value_name("KEY")

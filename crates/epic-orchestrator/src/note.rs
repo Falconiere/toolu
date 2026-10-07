@@ -4,6 +4,17 @@
 /// The longest note stored, in Unicode scalar values.
 pub(crate) const NOTE_CAP: usize = 1024;
 
+const PREFIXES: &[&str] = &[
+  "ghp_",
+  "gho_",
+  "ghs_",
+  "ghu_",
+  "ghr_",
+  "github_pat_",
+  "TYPESAFE_API_KEY",
+  "Bearer ",
+];
+
 /// `note` as a single journal line. A recognized token prefix becomes
 /// `[redacted]`. Longer notes are cut at [`NOTE_CAP`].
 pub(crate) fn bounded_note(note: &str) -> String {
@@ -11,7 +22,7 @@ pub(crate) fn bounded_note(note: &str) -> String {
     .chars()
     .map(|ch| if ch == '\n' || ch == '\r' { ' ' } else { ch })
     .collect();
-  if flat.contains("ghp_") || flat.contains("github_pat_") || flat.contains("TYPESAFE_API_KEY") {
+  if PREFIXES.iter().any(|prefix| flat.contains(prefix)) {
     return "[redacted]".to_owned();
   }
   flat.chars().take(NOTE_CAP).collect()

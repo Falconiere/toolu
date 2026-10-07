@@ -20,8 +20,8 @@ Commands:
   status   Print the engine, issues and attention
   pause    Pause effects for every epic, or one epic
   resume   Resume effects for every epic, or one epic
-  ack      Clear one attention item
-  answer   Send text to the worker for one issue
+  ack      Clear a stall attention item
+  answer   Record an answer on the journal for one issue
   wait     Wait for a judgment, or return when the limit passes
   report   Record a worker phase
   job      Run a command under the worktree's resource lease
@@ -130,7 +130,7 @@ Options:
 ## `toolu epic ack`
 
 ```text
-Clear one attention item
+Clear a stall attention item
 
 Usage: toolu epic ack [OPTIONS] <KEY>
 
@@ -148,7 +148,7 @@ Options:
 ## `toolu epic answer`
 
 ```text
-Send text to the worker for one issue
+Record an answer on the journal for one issue
 
 Usage: toolu epic answer [OPTIONS] <KEY> <TEXT>
 

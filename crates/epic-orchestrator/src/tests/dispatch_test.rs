@@ -119,11 +119,10 @@ fn wait_replies_expires_or_returns_a_judgment() {
   let stop = dispatch(
     &mut engine,
     &json!({"op": "wait", "max_seconds": 30}),
-    tx,
+    &tx,
     &mut waiters,
     PROTOCOL,
-  )
-  .expect("wait");
+  );
   assert!(!stop);
   assert!(rx.try_recv().is_err());
   assert_eq!(waiters.len(), 1);
@@ -148,11 +147,10 @@ fn a_later_waiter_can_expire_before_an_earlier_one() {
     dispatch(
       &mut engine,
       &json!({"op": "wait", "max_seconds": seconds}),
-      tx,
+      &tx,
       &mut waiters,
       PROTOCOL,
-    )
-    .expect("wait");
+    );
   }
   waiters[1].deadline = Instant::now();
   expire(&mut engine, &mut waiters);
@@ -170,11 +168,10 @@ fn a_huge_wait_does_not_panic() {
   dispatch(
     &mut engine,
     &json!({"op": "wait", "max_seconds": u64::MAX}),
-    tx,
+    &tx,
     &mut waiters,
     PROTOCOL,
-  )
-  .expect("wait");
+  );
   assert_eq!(waiters.len(), 1);
   assert!(waiters[0].deadline <= Instant::now());
   expire(&mut engine, &mut waiters);
@@ -191,8 +188,9 @@ fn ingest_applies_a_new_spool_and_skips_a_seen_token() {
   let spool = tmp.path().join("spool");
   std::fs::create_dir_all(&spool).expect("spool");
   std::fs::write(spool.join("bad.json"), "not-json\n").expect("bad");
-  assert!(ingest(&mut engine).is_err());
-  std::fs::remove_file(spool.join("bad.json")).expect("remove bad");
+  ingest(&mut engine).expect("quarantine");
+  assert!(spool.join("bad.bad").is_file());
+  assert!(!spool.join("bad.json").is_file());
   std::fs::write(spool.join("empty.json"), "{}\n").expect("empty");
   ingest(&mut engine).expect("empty token");
   assert!(!spool.join("empty.json").is_file());
@@ -220,6 +218,6 @@ fn open(root: &std::path::Path) -> Engine {
 fn round(engine: &mut Engine, request: &Value) -> (bool, Value) {
   let (tx, rx) = mpsc::channel();
   let mut waiters = Vec::new();
-  let stop = dispatch(engine, request, tx, &mut waiters, PROTOCOL).expect("dispatch");
+  let stop = dispatch(engine, request, &tx, &mut waiters, PROTOCOL);
   (stop, rx.try_recv().unwrap_or(Value::Null))
 }

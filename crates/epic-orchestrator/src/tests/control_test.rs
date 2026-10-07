@@ -107,6 +107,19 @@ fn ensure_waits_out_a_replace_and_stays_idle() {
 }
 
 #[test]
+fn start_leaves_a_live_engine_in_place() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let env = env_at(tmp.path());
+  let epic = tmp.path().join("epic");
+  std::fs::create_dir_all(&epic).expect("epic");
+  let paths = Paths::from_env(&env);
+  std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
+  let outcome = start(&verb(&["epic", "start", &epic.display().to_string()]), &env);
+  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
+  assert!(paths.registry().is_file());
+}
+
+#[test]
 fn start_rejects_a_missing_directory_and_a_bad_registry() {
   let tmp = tempfile::tempdir().expect("temp");
   let env = env_at(tmp.path());

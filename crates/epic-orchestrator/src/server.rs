@@ -146,6 +146,7 @@ impl Engine {
   /// A step or the watch file fails.
   pub(crate) fn tick(&mut self) -> Result<Stop, String> {
     self.refresh_clock();
+    crate::snapshot::adopt_new_epics(&mut self.world, &self.paths)?;
     on_tick(&mut self.world);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;

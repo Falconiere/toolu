@@ -44,6 +44,20 @@ impl Record {
   }
 }
 
+fn journal_held(lock: &Path) -> Result<Held, String> {
+  let start = std::time::Instant::now();
+  let limit = Duration::from_secs(2);
+  loop {
+    match Held::acquire(lock, "journal-busy") {
+      Ok(held) => return Ok(held),
+      Err(err) if err == "journal-busy" && start.elapsed() < limit => {
+        std::thread::sleep(Duration::from_millis(20));
+      }
+      Err(err) => return Err(err),
+    }
+  }
+}
+
 /// Append `record` under `lock`, returning the sequence it was given.
 ///
 /// # Errors
@@ -54,7 +68,7 @@ pub(crate) fn append(
   record: &Record,
   now: SystemTime,
 ) -> Result<Record, String> {
-  let _held = Held::acquire(lock, "journal-busy")?;
+  let _held = journal_held(lock)?;
   std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
   let seq = last_seq(dir, now)?.saturating_add(1);
   let mut stored = record.clone();

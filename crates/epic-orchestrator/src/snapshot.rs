@@ -176,6 +176,29 @@ fn rank(stage: &str) -> u8 {
   }
 }
 
+/// Add epics that were registered after this process opened.
+///
+/// # Errors
+/// A new epic's graph or status file cannot be read.
+pub(crate) fn adopt_new_epics(world: &mut World, paths: &Paths) -> Result<(), String> {
+  let registry = read_value(&paths.registry())?;
+  let Some(epics) = registry.get("epics").and_then(Value::as_array) else {
+    return Ok(());
+  };
+  let mut stages = BTreeMap::new();
+  for epic in epics {
+    let key = epic.get("key").and_then(Value::as_str).unwrap_or("");
+    let dir = epic.get("state_dir").and_then(Value::as_str).unwrap_or("");
+    let known = world.issues.values().any(|issue| issue.epic == key);
+    if key.is_empty() || dir.is_empty() || known {
+      continue;
+    }
+    load_epic(world, key, Path::new(dir), &mut stages)?;
+  }
+  overlay_stages(world, &stages);
+  Ok(())
+}
+
 /// Issue snapshot path.
 pub(crate) fn issue_path(state_dir: &str, key: &str) -> PathBuf {
   Path::new(state_dir)

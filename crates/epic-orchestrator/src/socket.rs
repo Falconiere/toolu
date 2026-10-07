@@ -134,7 +134,7 @@ fn state_loop(engine: &mut Engine, rx: &Receiver<Msg>, protocol: u64) -> Result<
     match rx.recv_timeout(wake) {
       Ok(Msg::Line { request, reply }) => {
         engine.refresh_clock();
-        if dispatch(engine, &request, reply, &mut waiters, protocol)? {
+        if dispatch(engine, &request, &reply, &mut waiters, protocol) {
           return Ok(());
         }
       }

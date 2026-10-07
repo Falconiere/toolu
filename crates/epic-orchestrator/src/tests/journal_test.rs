@@ -35,3 +35,25 @@ fn append_is_ordered_and_a_partial_line_is_ignored() {
   );
   retain(&journal, 0, now).unwrap();
 }
+
+#[test]
+fn append_waits_for_a_brief_holder() {
+  let dir = tempfile::tempdir().unwrap();
+  let lock = dir.path().join("journal.lock");
+  let journal = dir.path().join("journal");
+  let held = crate::lock::Held::acquire(&lock, "journal-busy").expect("hold");
+  let worker = std::thread::spawn(move || {
+    std::thread::sleep(std::time::Duration::from_millis(80));
+    drop(held);
+  });
+  let now = UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  let stored = append(
+    &journal,
+    &lock,
+    &Record::new("action", "merge-intent", "a", "t1", "ok"),
+    now,
+  )
+  .expect("append");
+  worker.join().expect("join");
+  assert_eq!(stored.seq, 1);
+}

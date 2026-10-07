@@ -8,11 +8,27 @@ use serde_json::{Value, json};
 use crate::journal::{self, Record};
 use crate::model::Report;
 use crate::schedule::{ack, note_event};
-use crate::server::{Engine, wait_body};
+use crate::server::{Engine, Stop, wait_body};
 use crate::socket::Waiter;
 use crate::status::document;
 
 pub(crate) fn dispatch(
+  engine: &mut Engine,
+  request: &Value,
+  reply: &Sender<Value>,
+  waiters: &mut Vec<Waiter>,
+  protocol: u64,
+) -> bool {
+  match operate(engine, request, reply.clone(), waiters, protocol) {
+    Ok(stop) => stop,
+    Err(err) => {
+      let _sent = reply.send(json!({"error": err}));
+      false
+    }
+  }
+}
+
+fn operate(
   engine: &mut Engine,
   request: &Value,
   reply: Sender<Value>,
@@ -31,8 +47,8 @@ pub(crate) fn dispatch(
   match op {
     "stop" | "replace" => finish(engine, &reply, op == "replace"),
     "status" => Ok(reply_status(engine, request, &reply)),
-    "pause" => Ok(reply_pause(engine, request, &reply, true)),
-    "resume" => Ok(reply_pause(engine, request, &reply, false)),
+    "pause" => reply_pause(engine, request, &reply, true),
+    "resume" => reply_pause(engine, request, &reply, false),
     "ack" => Ok(reply_ack(engine, request, &reply)),
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),
@@ -60,7 +76,12 @@ fn reply_status(engine: &Engine, request: &Value, reply: &Sender<Value>) -> bool
   false
 }
 
-fn reply_pause(engine: &mut Engine, request: &Value, reply: &Sender<Value>, pause: bool) -> bool {
+fn reply_pause(
+  engine: &mut Engine,
+  request: &Value,
+  reply: &Sender<Value>,
+  pause: bool,
+) -> Result<bool, String> {
   let epic = request.get("epic").and_then(Value::as_str);
   let result = if pause {
     engine.pause(epic)
@@ -68,7 +89,7 @@ fn reply_pause(engine: &mut Engine, request: &Value, reply: &Sender<Value>, paus
     engine.resume(epic)
   };
   let _sent = reply.send(result_value(result));
-  false
+  if pause { Ok(false) } else { pump_after(engine) }
 }
 
 fn reply_ack(engine: &mut Engine, request: &Value, reply: &Sender<Value>) -> bool {
@@ -90,7 +111,7 @@ fn reply_event(
   note_event(&mut engine.world, key, event);
   engine.flush()?;
   let _sent = reply.send(json!({"ok": true}));
-  Ok(false)
+  pump_after(engine)
 }
 
 fn reply_report(
@@ -103,7 +124,11 @@ fn reply_report(
   remember_spool(engine, request)?;
   satisfy(engine, waiters);
   let _sent = reply.send(json!({"ok": true}));
-  Ok(false)
+  pump_after(engine)
+}
+
+fn pump_after(engine: &mut Engine) -> Result<bool, String> {
+  Ok(engine.pump()? == Stop::Fault)
 }
 
 fn reply_wait(
@@ -230,7 +255,7 @@ fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
     &record,
     engine.now,
   )?;
-  let path = engine.paths.spool().join(format!("{token}.json"));
+  let path = crate::client::spool_path(&engine.paths.root, token)?;
   if path.is_file() {
     std::fs::remove_file(path).map_err(|err| err.to_string())?;
   }
@@ -260,7 +285,10 @@ fn spool_files(dir: &std::path::Path) -> Result<Vec<std::path::PathBuf>, String>
 }
 
 fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String> {
-  let value = crate::disk::read_value(path)?;
+  let Ok(value) = crate::disk::read_value(path) else {
+    let _quarantined = std::fs::rename(path, path.with_extension("bad"));
+    return Ok(());
+  };
   let token = value.get("token").and_then(Value::as_str).unwrap_or("");
   if token.is_empty() || spool_seen(engine, token)? {
     let _gone = std::fs::remove_file(path);

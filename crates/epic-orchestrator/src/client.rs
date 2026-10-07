@@ -77,7 +77,7 @@ fn spool(paths: &Paths, request: &Value) -> Result<(), String> {
     .get("token")
     .and_then(Value::as_str)
     .unwrap_or("report");
-  write_value(&spool_path(&paths.root, token), request)
+  write_value(&spool_path(&paths.root, token)?, request)
 }
 
 fn read_line(stream: &mut UnixStream) -> Result<String, String> {
@@ -97,8 +97,15 @@ fn read_line(stream: &mut UnixStream) -> Result<String, String> {
 }
 
 /// The spool path a client writes before `replace`. Exposed for tests.
-pub(crate) fn spool_path(root: &Path, token: &str) -> std::path::PathBuf {
-  root.join("spool").join(format!("{token}.json"))
+pub(crate) fn spool_path(root: &Path, token: &str) -> Result<std::path::PathBuf, String> {
+  let safe = !token.is_empty()
+    && token
+      .chars()
+      .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'));
+  if !safe {
+    return Err("spool token rejected".to_owned());
+  }
+  Ok(root.join("spool").join(format!("{token}.json")))
 }
 
 #[cfg(test)]

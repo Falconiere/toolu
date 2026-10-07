@@ -58,15 +58,27 @@ fn create_new(path: &Path, body: &str) -> Result<(), Take> {
   {
     return Err(Take::Io(format!("could not create {}", parent.display())));
   }
-  let mut file = match std::fs::OpenOptions::new()
-    .write(true)
-    .create_new(true)
-    .open(path)
-  {
-    Ok(file) => file,
-    Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => return Err(Take::Busy),
-    Err(err) => return Err(Take::Io(err.to_string())),
+  let Some(name) = path.file_name().and_then(|name| name.to_str()) else {
+    return Err(Take::Io(format!("could not create {}", path.display())));
   };
+  let tmp = path.with_file_name(format!(".{name}.{}.tmp", std::process::id()));
+  write_tmp(&tmp, body)?;
+  let linked = std::fs::hard_link(&tmp, path);
+  let _removed = std::fs::remove_file(&tmp);
+  match linked {
+    Ok(()) => Ok(()),
+    Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => Err(Take::Busy),
+    Err(err) => Err(Take::Io(err.to_string())),
+  }
+}
+
+fn write_tmp(tmp: &Path, body: &str) -> Result<(), Take> {
+  let mut file = std::fs::OpenOptions::new()
+    .write(true)
+    .create(true)
+    .truncate(true)
+    .open(tmp)
+    .map_err(|err| Take::Io(err.to_string()))?;
   std::io::Write::write_all(&mut file, body.as_bytes()).map_err(|err| Take::Io(err.to_string()))
 }
 

@@ -103,13 +103,13 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `start <state-dir>` | Register that epic directory and ensure the engine. |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, and `attention` as one JSON document. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
-| `ack <key>` | Clear one attention item. |
-| `answer <key> <text>` | Record an answer and clear that prompt. |
+| `ack <key>` | Clear a stall attention item. |
+| `answer <key> <text>` | Record an answer on the journal. |
 | `wait [--max-seconds N]` | Block until a judgment, or print `{"state":"waiting"}`. |
 | `report <phase> --status-file <file> [--pr N] [--note TEXT]` | Update one issue. Ensures the engine when the registry is non-empty. |
 | `job <argv...>` | Run a command under the worktree's resource lease. The engine stays stopped. |
 | `service install` | Write the user unit. It does not start systemd. |
-| `token new` | Mint a worker token. |
+| `token new` | Rotate the status bearer token in secrets.json. |
 | `planned` | Lists `graph`, `route`, `launch`, `finish`, `close`, `release`, `jira`, `probe`, `gate`, and `queue` (#435, #448). |
 
 ## State directory
