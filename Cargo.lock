@@ -1396,6 +1396,12 @@ dependencies = [
 [[package]]
 name = "toolu-jev-client"
 version = "7.11.0"
+dependencies = [
+ "serde_json",
+ "toolu-http",
+ "toolu-http-test-support",
+ "toolu-runtime",
+]
 
 [[package]]
 name = "toolu-pr-babysit"
