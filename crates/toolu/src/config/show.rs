@@ -2,12 +2,12 @@
 
 use std::path::Path;
 
-use serde_json::{Map, Value, json};
+use serde_json::{Value, json};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::config::epic;
 use toolu_runtime::config::load::{self, ConfigFiles, LoadedConfig, check_text};
-use toolu_runtime::config::secrets::{self, Secrets};
+use toolu_runtime::config::secrets;
 
 use super::place;
 
@@ -26,8 +26,9 @@ pub(super) fn get(ctx: &Ctx, key: Option<&str>) -> Outcome {
     Err(err) => return Outcome::failed(Exit::Failure, err.to_string()),
   };
   let loaded = load::load(&roots, Some(&cwd));
-  match selected(&loaded.data, key) {
-    Ok(value) => present(ctx, key, &files, &value, &secrets),
+  let document = secrets::redact_json(&Value::Object(loaded.data), &secrets);
+  match selected(&document, key) {
+    Ok(value) => present(ctx, key, &files, &value),
     Err(message) => Outcome::failed(Exit::Failure, message),
   }
 }
@@ -57,12 +58,11 @@ pub(super) fn render_value(value: &Value) -> String {
   }
 }
 
-fn selected(data: &Map<String, Value>, key: Option<&str>) -> Result<Value, String> {
-  let value = Value::Object(data.clone());
+fn selected(document: &Value, key: Option<&str>) -> Result<Value, String> {
   let Some(key) = key else {
-    return Ok(value);
+    return Ok(document.clone());
   };
-  lookup(&value, key)
+  lookup(document, key)
     .cloned()
     .ok_or_else(|| format!("toolu config get: no such key '{key}'"))
 }
@@ -75,14 +75,7 @@ fn lookup<'a>(value: &'a Value, key: &str) -> Option<&'a Value> {
   Some(cursor)
 }
 
-fn present(
-  ctx: &Ctx,
-  key: Option<&str>,
-  files: &ConfigFiles,
-  value: &Value,
-  secrets: &Secrets,
-) -> Outcome {
-  let value = secrets::redact_json(value, secrets);
+fn present(ctx: &Ctx, key: Option<&str>, files: &ConfigFiles, value: &Value) -> Outcome {
   if ctx.json {
     let document = json!({
       "namespace": "config",
@@ -92,7 +85,7 @@ fn present(
     });
     return Outcome::data(document.to_string());
   }
-  Outcome::data(render_value(&value))
+  Outcome::data(render_value(value))
 }
 
 fn problem(files: &ConfigFiles, loaded: &LoadedConfig) -> Option<String> {

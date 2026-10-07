@@ -73,7 +73,9 @@ fn loaded_secrets_are_redacted_in_get_and_doctor() {
   assert!(write_config(&box_));
   for args in [
     &["config", "get"][..],
+    &["config", "get", "epic.statusToken"][..],
     &["--json", "config", "get"][..],
+    &["--json", "config", "get", "epic.statusToken"][..],
     &["doctor"][..],
     &["--json", "doctor"][..],
   ] {
@@ -88,6 +90,16 @@ fn loaded_secrets_are_redacted_in_get_and_doctor() {
     panic!("spawn");
   };
   assert!(text(&get).contains("<redacted>"), "{}", text(&get));
+  let Some(keyed) = toolu(&box_, &["config", "get", "epic.statusToken"]) else {
+    panic!("spawn");
+  };
+  assert_eq!(String::from_utf8_lossy(&keyed.stdout).trim(), "<redacted>");
+  let Some(keyed_json) = toolu(&box_, &["--json", "config", "get", "epic.statusToken"]) else {
+    panic!("spawn");
+  };
+  let keyed_doc: Value =
+    serde_json::from_str(&String::from_utf8_lossy(&keyed_json.stdout)).expect("json");
+  assert_eq!(keyed_doc["value"], "<redacted>");
   let Some(doctor) = toolu(&box_, &["--json", "doctor"]) else {
     panic!("spawn");
   };
