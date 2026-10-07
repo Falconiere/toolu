@@ -137,6 +137,7 @@ impl Gate for McpBlocker {
     } else {
       format!("disabled in your toolu config (mcp.{server}=false)")
     };
+    // Only mcp__ tool names reach here; Bash and Shell return above. TypeScript uses tool/pre.
     let mode = pre_mode(&config, "mcpBlocker", ctx, false);
     let block = Block {
       tool: tool.name.as_str(),
