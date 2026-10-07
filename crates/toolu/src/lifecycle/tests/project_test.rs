@@ -46,7 +46,8 @@ fn facts_come_from_the_toplevel_and_an_empty_root_is_blank() {
   assert!(!quiet.ts);
   let outside = project_facts(None, &env, true);
   assert_eq!(outside.name, "");
-  assert_eq!(git_toplevel(&env, &repo), repo.to_string_lossy());
+  let canonical = std::fs::canonicalize(&repo).unwrap();
+  assert_eq!(git_toplevel(&env, &repo), canonical.to_str().unwrap());
   assert_eq!(branch_line(&env, &repo).as_deref(), Some("Branch: feature"));
   let blind = Env::from_pairs([("PATH", dir.path().to_str().unwrap())]);
   assert_eq!(branch_line(&blind, &repo), None);
