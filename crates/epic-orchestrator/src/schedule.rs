@@ -19,6 +19,10 @@ fn stall(world: &mut World, key: &str) {
   };
   if due {
     push_attention(world, "stall", key, "stall survived a nudge");
+    // One stall judgment per nudge. Ack, or a phase change, starts the next.
+    if let Some(issue) = world.issues.get_mut(key) {
+      issue.nudge_at_ms = u64::MAX;
+    }
     return;
   }
   if let Some(issue) = world.issues.get_mut(key) {

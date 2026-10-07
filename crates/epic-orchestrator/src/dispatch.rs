@@ -121,8 +121,11 @@ fn reply_wait(
     drop(reply);
     return false;
   }
+  let now = Instant::now();
   waiters.push(Waiter {
-    deadline: Instant::now() + Duration::from_secs(max_seconds),
+    deadline: now
+      .checked_add(Duration::from_secs(max_seconds))
+      .unwrap_or(now),
     reply,
   });
   false
@@ -199,13 +202,16 @@ pub(crate) fn satisfy(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
     let _sent = reply.send(body);
     return;
   }
-  while waiters
-    .first()
-    .is_some_and(|waiter| waiter.deadline <= Instant::now())
-  {
-    let reply = waiters.remove(0).reply;
-    let _sent = reply.send(json!({"state": "waiting"}));
+  let now = Instant::now();
+  let mut staying = Vec::new();
+  for waiter in waiters.drain(..) {
+    if waiter.deadline <= now {
+      let _sent = waiter.reply.send(json!({"state": "waiting"}));
+    } else {
+      staying.push(waiter);
+    }
   }
+  *waiters = staying;
 }
 
 pub(crate) fn expire(engine: &mut Engine, waiters: &mut Vec<Waiter>) {

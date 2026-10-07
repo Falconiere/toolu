@@ -45,6 +45,10 @@ fn a_stall_nudges_once_then_becomes_a_judgment() {
   world.now_ms = 20;
   on_tick(&mut world);
   assert!(world.attention.iter().any(|item| item.kind == "stall"));
+  let raised = world.attention.len();
+  world.now_ms = 10_000;
+  on_tick(&mut world);
+  assert_eq!(world.attention.len(), raised);
 }
 
 #[test]

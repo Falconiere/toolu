@@ -134,11 +134,18 @@ impl Engine {
     self.persist_pause()
   }
 
+  /// Move the engine clock to wall time. Ticks and socket messages call this.
+  pub(crate) fn refresh_clock(&mut self) {
+    self.now = SystemTime::now();
+    self.world.now_ms = toolu_state::time::epoch_millis(self.now);
+  }
+
   /// Checkpoint wave, then whatever it armed.
   ///
   /// # Errors
   /// A step or the watch file fails.
   pub(crate) fn tick(&mut self) -> Result<Stop, String> {
+    self.refresh_clock();
     on_tick(&mut self.world);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;

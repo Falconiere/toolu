@@ -138,6 +138,50 @@ fn wait_replies_expires_or_returns_a_judgment() {
 }
 
 #[test]
+fn a_later_waiter_can_expire_before_an_earlier_one() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = open(tmp.path());
+  let mut waiters = Vec::new();
+  let (early_tx, early_rx) = mpsc::channel();
+  let (late_tx, late_rx) = mpsc::channel();
+  for (tx, seconds) in [(early_tx, 600), (late_tx, 1)] {
+    dispatch(
+      &mut engine,
+      &json!({"op": "wait", "max_seconds": seconds}),
+      tx,
+      &mut waiters,
+      PROTOCOL,
+    )
+    .expect("wait");
+  }
+  waiters[1].deadline = Instant::now();
+  expire(&mut engine, &mut waiters);
+  assert!(early_rx.try_recv().is_err());
+  assert_eq!(late_rx.recv().expect("late")["state"], "waiting");
+  assert_eq!(waiters.len(), 1);
+}
+
+#[test]
+fn a_huge_wait_does_not_panic() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = open(tmp.path());
+  let (tx, rx) = mpsc::channel();
+  let mut waiters = Vec::new();
+  dispatch(
+    &mut engine,
+    &json!({"op": "wait", "max_seconds": u64::MAX}),
+    tx,
+    &mut waiters,
+    PROTOCOL,
+  )
+  .expect("wait");
+  assert_eq!(waiters.len(), 1);
+  assert!(waiters[0].deadline <= Instant::now());
+  expire(&mut engine, &mut waiters);
+  assert_eq!(rx.recv().expect("capped")["state"], "waiting");
+}
+
+#[test]
 fn ingest_applies_a_new_spool_and_skips_a_seen_token() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = tmp.path().join("epic");
