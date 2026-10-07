@@ -20,11 +20,33 @@ fn index<'v>(value: Option<&'v Value>, key: &str) -> Result<Option<&'v Value>, J
   }
 }
 
+/// A jq input: the hook payload, borrowed rather than copied, or a parsed value.
+#[derive(Clone, Copy)]
+enum Doc<'v> {
+  Payload(&'v Map<String, Value>),
+  Parsed(&'v Value),
+}
+
+impl<'v> Doc<'v> {
+  /// jq `.key` of the input.
+  fn index(self, key: &str) -> Result<Option<&'v Value>, JqError> {
+    match self {
+      Doc::Payload(payload) => Ok(payload.get(key)),
+      Doc::Parsed(value) => index(Some(value), key),
+    }
+  }
+}
+
 /// `<path> // <path> // …`: the first value that is neither null nor false,
 /// `None` when every path falls through, an error when a path raises.
-fn first_of<'v>(doc: &'v Value, paths: &[&[&str]]) -> Result<Option<&'v Value>, JqError> {
+fn first_of<'v>(doc: Doc<'v>, paths: &[&[&str]]) -> Result<Option<&'v Value>, JqError> {
   for path in paths {
-    let value = path.iter().try_fold(Some(doc), |at, key| index(at, key))?;
+    let Some((first, rest)) = path.split_first() else {
+      continue;
+    };
+    let value = rest
+      .iter()
+      .try_fold(doc.index(first)?, |at, key| index(at, key))?;
     if !matches!(value, None | Some(Value::Null | Value::Bool(false))) {
       return Ok(value);
     }
@@ -46,7 +68,7 @@ fn printed(value: &Value) -> String {
 
 /// `$(jq -r '<paths> // <fallback>' || echo "")`: `fallback` when every path
 /// falls through, "" when jq raises.
-fn read(doc: &Value, paths: &[&[&str]], fallback: &str) -> String {
+fn read(doc: Doc<'_>, paths: &[&[&str]], fallback: &str) -> String {
   match first_of(doc, paths) {
     Ok(Some(value)) => printed(value),
     Ok(None) => fallback.to_owned(),
@@ -54,14 +76,9 @@ fn read(doc: &Value, paths: &[&[&str]], fallback: &str) -> String {
   }
 }
 
-/// The payload as one jq document.
-fn document(payload: &Map<String, Value>) -> Value {
-  Value::Object(payload.clone())
-}
-
 /// `.tool_input.command // ""`.
 pub(crate) fn tool_command(payload: &Map<String, Value>) -> String {
-  read(&document(payload), &[&["tool_input", "command"]], "")
+  read(Doc::Payload(payload), &[&["tool_input", "command"]], "")
 }
 
 const EXIT_PATHS: [&[&str]; 3] = [
@@ -75,17 +92,17 @@ const EXIT_PATHS: [&[&str]; 3] = [
 /// empty or the text `null`, `exitCode`/`exit_code` inside `tool_output` (a
 /// JSON string or object). "" when the host reported none.
 pub(crate) fn tool_exit_status(payload: &Map<String, Value>) -> String {
-  let doc = document(payload);
-  let status = read(&doc, &EXIT_PATHS, "");
+  let doc = Doc::Payload(payload);
+  let status = read(doc, &EXIT_PATHS, "");
   if !status.is_empty() && status != "null" {
     return status;
   }
-  let output = read(&doc, &[&["tool_output"]], "");
+  let output = read(doc, &[&["tool_output"]], "");
   if output.is_empty() {
     return status;
   }
   match serde_json::from_str::<Value>(&output) {
-    Ok(inner) => read(&inner, &[&["exitCode"], &["exit_code"]], ""),
+    Ok(inner) => read(Doc::Parsed(&inner), &[&["exitCode"], &["exit_code"]], ""),
     Err(_) => String::new(),
   }
 }
@@ -93,7 +110,7 @@ pub(crate) fn tool_exit_status(payload: &Map<String, Value>) -> String {
 /// `.tool_response.interrupted // false` printed as `true`.
 pub(crate) fn tool_interrupted(payload: &Map<String, Value>) -> bool {
   read(
-    &document(payload),
+    Doc::Payload(payload),
     &[&["tool_response", "interrupted"]],
     "false",
   ) == "true"
