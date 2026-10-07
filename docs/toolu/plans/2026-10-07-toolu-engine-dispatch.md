@@ -1,6 +1,6 @@
 # toolu-engine: registry runner and dispatch — Plan
 
-**Date:** 2026-10-07   **Status:** Approved (revision 2; plan review rounds 1–2)   **Spec:** docs/toolu/specs/2026-10-07-toolu-engine-dispatch-design.md   **Topic:** #418. Port `@toolu/core/dispatch` and `@toolu/core/registry` to `crates/core/engine`: compiled-in rules behind manifests, `.sh` executables with a deadline, a batched Bun bridge for `.js`, gating, shadowing, the Codex prune and command detection. Also wire `toolu hook pre-tools` and `toolu hook post-tools`.
+**Date:** 2026-10-07   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-07-toolu-engine-dispatch-design.md   **Topic:** #418. Port `@toolu/core/dispatch` and `@toolu/core/registry` to `crates/core/engine`: compiled-in rules behind manifests, `.sh` executables with a deadline, a batched Bun bridge for `.js`, gating, shadowing, the Codex prune and command detection. Also wire `toolu hook pre-tools` and `toolu hook post-tools`.
 
 ## Evidence and approach
 

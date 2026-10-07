@@ -1,6 +1,6 @@
 # toolu-engine: registry runner and dispatch — Design
 
-**Date:** 2026-10-07   **Status:** Approved (revision 4; spec review rounds 1–4)   **Author:** epic worker (#418)   **Topic:** port `@toolu/core/dispatch` and `@toolu/core/registry` to `crates/core/engine`, with compiled-in rules, executable modules and a temporary Bun bridge
+**Date:** 2026-10-07   **Status:** Approved   **Author:** epic worker (#418)   **Topic:** port `@toolu/core/dispatch` and `@toolu/core/registry` to `crates/core/engine`, with compiled-in rules, executable modules and a temporary Bun bridge
 
 ## Problem
 
