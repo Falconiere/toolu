@@ -7,7 +7,7 @@ use std::time::Duration;
 use clap::ArgMatches;
 use serde_json::{Value, json};
 use toolu_protocol::exit::Exit;
-use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::invocation::current_exe;
 use toolu_runtime::process::{Spec, detach};
@@ -19,24 +19,23 @@ use crate::lock::live;
 use crate::paths::Paths;
 use crate::server::Fault;
 use crate::socket::serve;
-use crate::verbs::{env_of, failed, text};
+use crate::verbs::{failed, text};
 
-pub(crate) fn engine(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
-  let env = env_of(ctx);
+pub(crate) fn engine(matches: &ArgMatches, env: &Env) -> Outcome {
   if matches.get_flag("replace") {
-    let paths = Paths::from_env(&env);
+    let paths = Paths::from_env(env);
     if paths.socket().exists() {
       let _replaced = exchange_retry(&paths, PROTOCOL, &json!({"op": "replace"}));
       wait_until_free(&paths);
     }
   }
   if matches.get_flag("ensure") {
-    return match ensure(&env) {
+    return match ensure(env) {
       Ok(()) => Outcome::data(String::new()),
       Err(err) => failed("toolu epic engine", &err),
     };
   }
-  foreground(&env)
+  foreground(env)
 }
 
 pub(crate) fn foreground(env: &Env) -> Outcome {
@@ -88,16 +87,15 @@ fn wait_until_free(paths: &Paths) {
   }
 }
 
-pub(crate) fn start(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
+pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
   let Some(dir) = text(matches, "state-dir") else {
     return failed("toolu epic start", "state-dir is required");
   };
-  let env = env_of(ctx);
-  let paths = Paths::from_env(&env);
+  let paths = Paths::from_env(env);
   if let Err(err) = register(&paths, dir) {
     return failed("toolu epic start", &err);
   }
-  match detach_engine(&env) {
+  match detach_engine(env) {
     Ok(()) => Outcome::data(String::new()),
     Err(err) => failed("toolu epic start", &err),
   }

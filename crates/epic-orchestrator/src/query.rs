@@ -8,6 +8,7 @@ use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 use toolu_runtime::atomic::write_atomic;
 use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::env::Env;
 use toolu_runtime::invocation::{current_dir, current_exe};
 use toolu_state::time::epoch_millis;
 
@@ -20,14 +21,13 @@ use crate::lock::live;
 use crate::model::World;
 use crate::paths::Paths;
 use crate::status::document;
-use crate::verbs::{env_of, failed, json_out, text};
+use crate::verbs::{failed, json_out, text};
 
-pub(crate) fn status(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
-  let env = env_of(ctx);
-  if let Err(err) = ensure(&env) {
+pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
+  if let Err(err) = ensure(env) {
     return failed("toolu epic status", &err);
   }
-  let paths = Paths::from_env(&env);
+  let paths = Paths::from_env(env);
   let epic = text(matches, "epic");
   if !registry_nonempty(&paths) {
     return json_out(&document(&World::new(0), false, epic));
@@ -42,46 +42,45 @@ pub(crate) fn status(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
   }
 }
 
-pub(crate) fn pause(ctx: &Ctx, matches: &ArgMatches, pausing: bool) -> Outcome {
+pub(crate) fn pause(matches: &ArgMatches, env: &Env, pausing: bool) -> Outcome {
   let op = if pausing { "pause" } else { "resume" };
   let request = match text(matches, "epic") {
     Some(epic) => json!({"op": op, "epic": epic}),
     None => json!({"op": op}),
   };
-  ask(ctx, op, &request)
+  ask(env, op, &request)
 }
 
-pub(crate) fn ack(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
+pub(crate) fn ack(matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let request = json!({"op": "ack", "key": key});
-  ask(ctx, "ack", &request)
+  ask(env, "ack", &request)
 }
 
-pub(crate) fn answer(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
+pub(crate) fn answer(matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let body = text(matches, "text").unwrap_or("");
   let request = json!({"op": "answer", "key": key, "text": body});
-  ask(ctx, "answer", &request)
+  ask(env, "answer", &request)
 }
 
-pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
+pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   let max = matches
     .get_one::<u64>("max-seconds")
     .copied()
     .unwrap_or_else(|| wait_default(ctx.host));
-  let env = env_of(ctx);
-  if let Err(err) = ensure(&env) {
+  if let Err(err) = ensure(env) {
     return failed("toolu epic wait", &err);
   }
-  let paths = Paths::from_env(&env);
+  let paths = Paths::from_env(env);
   if !live(&paths.lock()) {
     return json_out(&json!({"state": "waiting"}));
   }
   let request = json!({"op": "wait", "max_seconds": max});
-  ask(ctx, "wait", &request)
+  ask(env, "wait", &request)
 }
 
-pub(crate) fn report(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
+pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
   let Some(phase) = text(matches, "phase") else {
     return failed("toolu epic report", "phase is required");
   };
@@ -93,11 +92,10 @@ pub(crate) fn report(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
     Err(err) => return failed("toolu epic report", &err),
   };
   let token = format!("r{}-{key}", epoch_millis(SystemTime::now()));
-  let env = env_of(ctx);
-  if let Err(err) = ensure(&env) {
+  if let Err(err) = ensure(env) {
     return failed("toolu epic report", &err);
   }
-  let paths = Paths::from_env(&env);
+  let paths = Paths::from_env(env);
   let request = json!({
     "op": "report",
     "token": token,
@@ -108,15 +106,14 @@ pub(crate) fn report(ctx: &Ctx, matches: &ArgMatches) -> Outcome {
     "pr": matches.get_one::<u64>("pr").copied(),
     "note": text(matches, "note").unwrap_or(""),
   });
-  ask(ctx, "report", &request)
+  ask(env, "report", &request)
 }
 
-pub(crate) fn ask(ctx: &Ctx, verb: &str, request: &Value) -> Outcome {
-  let env = env_of(ctx);
-  if let Err(err) = ensure(&env) {
+pub(crate) fn ask(env: &Env, verb: &str, request: &Value) -> Outcome {
+  if let Err(err) = ensure(env) {
     return failed(&format!("toolu epic {verb}"), &err);
   }
-  match exchange_retry(&Paths::from_env(&env), PROTOCOL, request) {
+  match exchange_retry(&Paths::from_env(env), PROTOCOL, request) {
     Ok(doc) => json_out(&doc),
     Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }
@@ -140,9 +137,8 @@ pub(crate) fn job(matches: &ArgMatches) -> Outcome {
   run_job(&argv, &cwd)
 }
 
-pub(crate) fn service(ctx: &Ctx) -> Outcome {
-  let env = env_of(ctx);
-  let paths = Paths::from_env(&env);
+pub(crate) fn service(env: &Env) -> Outcome {
+  let paths = Paths::from_env(env);
   let Some(exe) = current_exe() else {
     return failed("toolu epic service", "cannot find the current executable");
   };

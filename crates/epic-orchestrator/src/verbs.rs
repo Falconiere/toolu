@@ -55,19 +55,20 @@ pub(crate) fn command() -> Command {
 }
 
 pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
+  let env = env_of(ctx);
   match matches.subcommand() {
-    Some(("engine", args)) => crate::control::engine(ctx, args),
-    Some(("start", args)) => crate::control::start(ctx, args),
-    Some(("status", args)) => crate::query::status(ctx, args),
-    Some(("pause", args)) => crate::query::pause(ctx, args, true),
-    Some(("resume", args)) => crate::query::pause(ctx, args, false),
-    Some(("ack", args)) => crate::query::ack(ctx, args),
-    Some(("answer", args)) => crate::query::answer(ctx, args),
-    Some(("wait", args)) => crate::query::wait(ctx, args),
-    Some(("report", args)) => crate::query::report(ctx, args),
+    Some(("engine", args)) => crate::control::engine(args, &env),
+    Some(("start", args)) => crate::control::start(args, &env),
+    Some(("status", args)) => crate::query::status(args, &env),
+    Some(("pause", args)) => crate::query::pause(args, &env, true),
+    Some(("resume", args)) => crate::query::pause(args, &env, false),
+    Some(("ack", args)) => crate::query::ack(args, &env),
+    Some(("answer", args)) => crate::query::answer(args, &env),
+    Some(("wait", args)) => crate::query::wait(ctx, args, &env),
+    Some(("report", args)) => crate::query::report(args, &env),
     Some(("job", args)) => crate::query::job(args),
     Some(("service", args)) if args.subcommand_name() == Some("install") => {
-      crate::query::service(ctx)
+      crate::query::service(&env)
     }
     Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
     _ => LATER.run(ctx),
