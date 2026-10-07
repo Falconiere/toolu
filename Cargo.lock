@@ -1319,6 +1319,7 @@ dependencies = [
  "tempfile",
  "toolu-protocol",
  "toolu-runtime",
+ "toolu-shell",
  "toolu-state",
 ]
 

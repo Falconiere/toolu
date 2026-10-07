@@ -8,9 +8,12 @@
 //! - `registry`: the `<config>/toolu/{pre,post}-tools.d` listing, installed-plugin
 //!   gating and the Codex prune; manifests enable compiled-in rules, `.sh` modules
 //!   run as executables and `.js` modules through a temporary Bun bridge;
-//! - `trace`: what a dispatch did with each module.
+//! - `trace`: what a dispatch did with each module;
+//! - `detect`: the git operations a parsed command performs (push, commit, the
+//!   pushed repository and branch).
 
 pub mod builtins;
+pub mod detect;
 pub mod dispatch;
 pub mod gate;
 pub mod registry;
