@@ -36,7 +36,7 @@ fn statusline_gets_the_hubs_status_snapshot() {
 fn the_linked_namespaces_keep_their_placeholder_output() {
   let epic_matches = toolu_epic_orchestrator::command()
     .try_get_matches_from(["epic", "planned"])
-    .expect("epic matches");
+    .expect("epic planned matches");
   let epic_out = epic(&epic_matches, &Ctx::default())
     .stdout
     .unwrap_or_default();
@@ -46,7 +46,7 @@ fn the_linked_namespaces_keep_their_placeholder_output() {
   );
   let status_matches = toolu_statusline::command()
     .try_get_matches_from(["statusline", "planned"])
-    .expect("statusline matches");
+    .expect("statusline planned matches");
   let status_out = statusline(&status_matches, &Ctx::default())
     .stdout
     .unwrap_or_default();

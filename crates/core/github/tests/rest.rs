@@ -29,11 +29,16 @@ fn an_etag_makes_the_next_get_conditional_and_free() {
     )
     .expect("route");
   let first = client.get("/repos/o/r/pulls/1", None).expect("first");
-  let Rest::Fresh(fresh) = &first.data else {
-    panic!("expected a body: {:?}", first.data);
-  };
-  assert_eq!(fresh.etag.as_deref(), Some("\"v1\""));
-  assert_eq!(fresh.json::<Value>().expect("json")["number"], 1);
+  assert!(
+    matches!(
+      &first.data,
+      Rest::Fresh(fresh)
+        if fresh.etag.as_deref() == Some("\"v1\"")
+          && fresh.json::<Value>().is_ok_and(|body| body["number"] == 1)
+    ),
+    "{:?}",
+    first.data
+  );
   assert_eq!(first.cost.points, Some(1));
   assert_eq!(first.cost.rate.remaining, Some(4999));
   api
@@ -41,7 +46,7 @@ fn an_etag_makes_the_next_get_conditional_and_free() {
     .route("/repos/o/r/pulls/1", Reply::new(304, ""))
     .expect("route");
   let second = client
-    .get("/repos/o/r/pulls/1", fresh.etag.as_deref())
+    .get("/repos/o/r/pulls/1", Some("\"v1\""))
     .expect("second");
   assert_eq!(
     (second.data, second.cost.points),
@@ -51,17 +56,33 @@ fn an_etag_makes_the_next_get_conditional_and_free() {
   let header = |index: usize, name: &str| requests[index].headers.get(name).cloned();
   assert_eq!(header(0, "if-none-match"), None);
   assert_eq!(header(1, "if-none-match").as_deref(), Some("\"v1\""));
+}
+
+#[test]
+fn every_request_carries_githubs_headers_and_the_token() {
+  let api = Api::start().expect("api");
+  let client = api.client(Config::scheduled(), &env()).expect("client");
+  api
+    .fixture
+    .route("/user", Reply::new(200, "{}"))
+    .expect("route");
+  client.get("/user", None).expect("reply");
+  let requests = api.fixture.requests().expect("requests");
+  let header = |name: &str| requests[0].headers.get(name).cloned();
   assert_eq!(
-    header(0, "accept").as_deref(),
+    header("accept").as_deref(),
     Some("application/vnd.github+json")
   );
   assert_eq!(
-    header(0, "x-github-api-version").as_deref(),
+    header("x-github-api-version").as_deref(),
     Some("2022-11-28")
   );
-  assert!(header(0, "user-agent").is_some_and(|agent| agent.starts_with("toolu/")));
   assert_eq!(
-    header(0, "authorization").as_deref(),
+    header("user-agent"),
+    Some(format!("toolu/{}", env!("CARGO_PKG_VERSION")))
+  );
+  assert_eq!(
+    header("authorization").as_deref(),
     Some("Bearer rest-token")
   );
 }

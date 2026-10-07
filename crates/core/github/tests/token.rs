@@ -70,14 +70,18 @@ fn a_failing_gh_names_both_sources() {
   let api = Api::start().expect("api");
   let gh = Gh::new().expect("gh");
   gh.broken("not yaml").expect("hosts");
-  let Err(Error::Token(TokenError::Unavailable { gh: reason })) =
-    api.client(Config::scheduled(), &gh.env())
-  else {
-    panic!("expected Unavailable");
-  };
-  assert!(reason.contains("invalid"), "{reason}");
-  let message = TokenError::Unavailable { gh: reason }.to_string();
-  assert!(message.starts_with("no GitHub token: GH_TOKEN is unset and `gh auth token` failed: "));
+  let result = api.client(Config::scheduled(), &gh.env()).map(|_| ());
+  assert!(
+    matches!(
+      &result,
+      Err(err @ Error::Token(TokenError::Unavailable { gh }))
+        if gh.contains("invalid")
+          && err.to_string().starts_with(
+            "no GitHub token: GH_TOKEN is unset and `gh auth token` failed: "
+          )
+    ),
+    "{result:?}"
+  );
 }
 
 #[test]
@@ -85,11 +89,12 @@ fn a_missing_gh_names_both_sources() {
   let api = Api::start().expect("api");
   let empty = tempfile::tempdir().expect("dir");
   let env = Env::from_pairs([("PATH", empty.path().to_string_lossy().into_owned())]);
-  let Err(Error::Token(TokenError::Unavailable { gh })) = api.client(Config::scheduled(), &env)
-  else {
-    panic!("expected Unavailable");
-  };
-  assert_eq!(gh, "gh: No such file or directory (os error 2)");
+  assert_eq!(
+    api.client(Config::scheduled(), &env).map(|_| ()),
+    Err(Error::Token(TokenError::Unavailable {
+      gh: "gh: No such file or directory (os error 2)".into()
+    }))
+  );
 }
 
 #[test]

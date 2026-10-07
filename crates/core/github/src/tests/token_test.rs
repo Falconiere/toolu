@@ -49,10 +49,12 @@ fn gh_token_wins_and_an_empty_one_counts_as_unset() {
     ("GH_TOKEN", ""),
     ("PATH", empty_path.path().to_str().expect("utf-8")),
   ]);
-  let Err(TokenError::Unavailable { gh }) = resolve(&env) else {
-    panic!("expected Unavailable");
-  };
-  assert_eq!(gh, "gh: No such file or directory (os error 2)");
+  assert_eq!(
+    resolve(&env),
+    Err(TokenError::Unavailable {
+      gh: "gh: No such file or directory (os error 2)".into()
+    })
+  );
 }
 
 #[test]

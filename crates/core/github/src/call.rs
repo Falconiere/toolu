@@ -131,7 +131,7 @@ impl Client {
     };
     // Refused once here, a URL no attempt could send is never retried. The
     // URI parser accepts non-ASCII, which GitHub paths must percent-encode.
-    let ascii = path.chars().all(|ch| ch.is_ascii_graphic());
+    let ascii = url.chars().all(|ch| ch.is_ascii_graphic());
     toolu_http::check_url(&url)
       .ok()
       .filter(|()| ascii)

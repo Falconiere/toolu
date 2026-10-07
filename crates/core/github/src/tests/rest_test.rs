@@ -26,8 +26,10 @@ fn a_decode_error_does_not_quote_the_body() {
     headers: Vec::new(),
     body: br#""token-like-value""#.to_vec(),
   };
-  let Err(Error::Decode(message)) = fresh.json::<u64>() else {
-    panic!("expected a decode error");
-  };
-  assert_eq!(message, "unexpected data error at line 1 column 18");
+  assert_eq!(
+    fresh.json::<u64>(),
+    Err(Error::Decode(
+      "unexpected data error at line 1 column 18".into()
+    ))
+  );
 }

@@ -168,14 +168,15 @@ fn a_long_wait_is_returned_at_once() {
       retry_after: Some(Duration::from_secs(120))
     })
   );
-  let Err(Error::RateLimited {
-    retry_after: Some(wait),
-    ..
-  }) = client.get("/exhausted", None)
-  else {
-    panic!("expected a rate limit");
-  };
-  assert!((3590..=3600).contains(&wait.as_secs()), "{wait:?}");
+  let exhausted = client.get("/exhausted", None).map(|_| ());
+  assert!(
+    matches!(
+      &exhausted,
+      Err(Error::RateLimited { status: 403, retry_after: Some(wait) })
+        if (3590..=3600).contains(&wait.as_secs())
+    ),
+    "{exhausted:?}"
+  );
   assert_eq!(requests(&api), 2);
 }
 
@@ -210,10 +211,11 @@ fn an_invalid_variable_is_named() {
     ("PB_GH_BACKOFF", "x"),
     ("PB_GH_TIMEOUT", "0"),
   ] {
-    let Err(Error::Config(message)) = Config::one_shot(&Env::from_pairs([(name, value)])) else {
-      panic!("{name}={value} was accepted");
-    };
-    assert!(message.starts_with(name), "{message}");
+    let result = Config::one_shot(&Env::from_pairs([(name, value)])).map(|_| ());
+    assert!(
+      matches!(&result, Err(Error::Config(message)) if message.starts_with(name)),
+      "{name}={value}: {result:?}"
+    );
   }
 }
 
