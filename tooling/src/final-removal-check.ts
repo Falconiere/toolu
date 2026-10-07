@@ -13,6 +13,12 @@ const Row = z.object({
   bashRequired: z.boolean(),
 });
 
+/**
+ * The one shell file the cutover keeps: the curl installer users pipe into
+ * bash before toolu or Bun exist on their machine (#457).
+ */
+const INSTALLER = "install.sh";
+
 function trackedShellFiles(): string[] {
   const result = spawnSync("git", ["ls-files", "-z", "*.sh", "*.bash", "*.bats"], {
     cwd: ROOT,
@@ -21,7 +27,7 @@ function trackedShellFiles(): string[] {
   if (result.status !== 0) {
     throw new Error(`git ls-files failed: ${result.stderr.trim()}`);
   }
-  return result.stdout.split("\0").filter(Boolean);
+  return result.stdout.split("\0").filter((file) => file !== "" && file !== INSTALLER);
 }
 
 function check(): void {
@@ -83,7 +89,9 @@ function check(): void {
     for (const problem of problems) process.stderr.write(`final-removal: ${problem}\n`);
     process.exitCode = 1;
   } else {
-    process.stdout.write(`final-removal: ok (${inventory.length} native rows, zero shell files)\n`);
+    process.stdout.write(
+      `final-removal: ok (${inventory.length} native rows, no shell file but ${INSTALLER})\n`,
+    );
   }
 }
 
