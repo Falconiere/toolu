@@ -120,6 +120,13 @@ fn reply_report(
   reply: &Sender<Value>,
   waiters: &mut Vec<Waiter>,
 ) -> Result<bool, String> {
+  if let Some(token) = request.get("token").and_then(Value::as_str)
+    && !token.is_empty()
+    && spool_seen(engine, token)?
+  {
+    let _sent = reply.send(json!({"ok": true}));
+    return Ok(false);
+  }
   engine.report(&report_from(request))?;
   remember_spool(engine, request)?;
   satisfy(engine, waiters);

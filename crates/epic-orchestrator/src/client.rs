@@ -16,7 +16,7 @@ use crate::paths::Paths;
 /// # Errors
 /// The socket cannot be reached or the reply is not JSON.
 pub(crate) fn exchange(paths: &Paths, protocol: u64, request: &Value) -> Result<Value, String> {
-  let mut stream = UnixStream::connect(paths.socket()).map_err(|err| err.to_string())?;
+  let mut stream = UnixStream::connect(paths.socket()).map_err(|err| format!("connect: {err}"))?;
   let hello = read_json(&mut stream)?;
   let server = hello.get("protocol").and_then(Value::as_u64).unwrap_or(0);
   if server != protocol {
@@ -44,7 +44,8 @@ pub(crate) fn exchange_retry(
   for _ in 0..50 {
     match exchange(paths, protocol, request) {
       Ok(value) => return Ok(value),
-      Err(err) => last = err,
+      Err(err) if err.starts_with("connect:") => last = err,
+      Err(err) => return Err(err),
     }
     thread::sleep(Duration::from_millis(20));
   }

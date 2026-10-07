@@ -179,6 +179,33 @@ fn a_huge_wait_does_not_panic() {
 }
 
 #[test]
+fn a_repeated_report_token_is_applied_once() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let epic = tmp.path().join("epic");
+  std::fs::create_dir_all(epic.join("status")).expect("status");
+  let mut engine = open(tmp.path());
+  let body = json!({
+    "op": "report",
+    "token": "t9",
+    "key": "a",
+    "epic": "one",
+    "state_dir": epic.display().to_string(),
+    "phase": "execution",
+  });
+  let (_, first) = round(&mut engine, &body);
+  assert_eq!(first["ok"], true);
+  let lines = crate::journal::tail(&engine.paths.journal_dir(), engine.now)
+    .expect("tail")
+    .len();
+  let (_, second) = round(&mut engine, &body);
+  assert_eq!(second["ok"], true);
+  let again = crate::journal::tail(&engine.paths.journal_dir(), engine.now)
+    .expect("tail")
+    .len();
+  assert_eq!(again, lines);
+}
+
+#[test]
 fn ingest_applies_a_new_spool_and_skips_a_seen_token() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = tmp.path().join("epic");
