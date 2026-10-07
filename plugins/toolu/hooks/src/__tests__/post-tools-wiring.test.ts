@@ -6,15 +6,17 @@
  * one stderr line instead of passing silently.
  */
 import { expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync, type SpawnSyncReturns } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { launcherCommand } from "@toolu/core/launcher";
+import { implementationTag, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { BUILTIN_MODULES, builtins } from "../post-tools/builtins.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
 const LAUNCHER = launcherCommand({ plugin: "toolu", event: "PostToolUse", entry: "post-tools" });
+const TAG = implementationTag("toolu", "post-tools");
 
 function withTempDir<T>(work: (dir: string) => T): T {
   const dir = mkdtempSync(join(tmpdir(), "toolu-posttools-"));
@@ -75,36 +77,65 @@ test.concurrent("a post dispatcher that throws exits 2 with one stderr line", ()
   });
 });
 
-test.concurrent("the launcher runs a failing quality command end to end", () => {
+/** The launcher, or under `TOOLU_IMPL` the Rust binary, after `bun test` exited 1 in `dir`. */
+function failingBunTest(dir: string): SpawnSyncReturns<string> {
+  const [command = "", ...args] = launchedArgv(
+    { plugin: "toolu", event: "PostToolUse", entry: "post-tools" },
+    PLUGIN,
+  );
+  return spawnSync(command, args, {
+    cwd: dir,
+    env: {
+      PATH: process.env.PATH ?? "/usr/bin:/bin",
+      HOME: dir,
+      TOOLU_HOST_OVERRIDE: "claude",
+      TOOLU_BUN: process.execPath,
+      CLAUDE_PLUGIN_ROOT: PLUGIN,
+    },
+    input: JSON.stringify({
+      tool_name: "Bash",
+      tool_input: { command: "bun test" },
+      tool_response: { exit_code: 1 },
+    }),
+    encoding: "utf8",
+  });
+}
+
+const FAILING = {
+  hookSpecificOutput: {
+    hookEventName: "PostToolUse",
+    additionalContext:
+      "Global quality gate failing. Fix all errors/warnings/tests before new tasks.\\nFailed: bun test (exit 1)",
+  },
+};
+
+test.concurrent(`the launcher runs a failing quality command end to end${TAG}`, () => {
   withTempDir((dir) => {
     spawnSync("git", ["init", "-q", dir]);
-    const result = spawnSync("/bin/sh", ["-c", LAUNCHER], {
-      cwd: dir,
-      env: {
-        PATH: process.env.PATH ?? "/usr/bin:/bin",
-        HOME: dir,
-        TOOLU_HOST_OVERRIDE: "claude",
-        TOOLU_BUN: process.execPath,
-        CLAUDE_PLUGIN_ROOT: PLUGIN,
-      },
-      input: JSON.stringify({
-        tool_name: "Bash",
-        tool_input: { command: "bun test" },
-        tool_response: { exit_code: 1 },
-      }),
-      encoding: "utf8",
-    });
+    const result = failingBunTest(dir);
     expect(result.status).toBe(0);
-    expect(JSON.parse(result.stdout)).toEqual({
-      hookSpecificOutput: {
-        hookEventName: "PostToolUse",
-        additionalContext:
-          "Global quality gate failing. Fix all errors/warnings/tests before new tasks.\\nFailed: bun test (exit 1)",
-      },
-    });
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual(FAILING);
     const gate: unknown = JSON.parse(
       readFileSync(join(dir, ".claude/tmp/quality-gate-status.json"), "utf8"),
     );
     expect(gate).toMatchObject({ status: "failing", source: "gate-status-hook" });
+  });
+});
+
+test.concurrent(`an unrecognized gate file warns once on stderr and is replaced${TAG}`, () => {
+  withTempDir((dir) => {
+    spawnSync("git", ["init", "-q", dir]);
+    const gateFile = join(dir, ".claude/tmp/quality-gate-status.json");
+    mkdirSync(dirname(gateFile), { recursive: true });
+    writeFileSync(gateFile, "[]\n");
+    const result = failingBunTest(dir);
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toEqual(FAILING);
+    // The issue text is zod's: the bundle has no locale, the source and Rust say more.
+    const line =
+      /^gate-file: unrecognized gate file at (.+) \(\(root\): Invalid input[^)]*\); replacing it\n$/;
+    expect(line.exec(result.stderr)?.[1]).toBe(gateFile);
+    expect(JSON.parse(readFileSync(gateFile, "utf8"))).toMatchObject({ status: "failing" });
   });
 });
