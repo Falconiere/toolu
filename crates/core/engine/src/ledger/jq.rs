@@ -14,6 +14,14 @@ use toolu_state::js_order::js_ordered;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JqError(pub String);
 
+impl std::fmt::Display for JqError {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.write_str(&self.0)
+  }
+}
+
+impl std::error::Error for JqError {}
+
 /// `null`, for lookups that find nothing.
 pub static NULL: Ordered = Ordered::Null;
 
