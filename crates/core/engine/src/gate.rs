@@ -30,3 +30,7 @@ pub trait Gate: Sync {
     self.run(event, ctx)
   }
 }
+
+#[cfg(test)]
+#[path = "tests/gate_test.rs"]
+mod tests;
