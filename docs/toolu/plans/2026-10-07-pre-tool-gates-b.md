@@ -66,7 +66,7 @@ Port the three gates in existing order, prove fixture parity and cross-runtime s
     "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo xtask check-markdown-cli && bun run test:docs",
     "ac_refs": ["AC-1", "AC-4"],
     "depends_on": ["state-interleaving"],
-    "paths": ["docs/registry.md", "docs/toolu/brainstorms/2026-10-07-pre-tool-gates-b.md", "docs/toolu/specs/2026-10-07-pre-tool-gates-b-design.md", "docs/toolu/plans/2026-10-07-pre-tool-gates-b.md"],
+    "paths": ["docs/registry.md", "tools/toolu-opencode/generated/resources/repo/docs/registry.md", "docs/toolu/brainstorms/2026-10-07-pre-tool-gates-b.md", "docs/toolu/specs/2026-10-07-pre-tool-gates-b-design.md", "docs/toolu/plans/2026-10-07-pre-tool-gates-b.md"],
     "input": "The documented current native-engine built-in table and the existing Bun host entry"
   },
   {
@@ -84,12 +84,18 @@ Port the three gates in existing order, prove fixture parity and cross-runtime s
 ## Critical files
 
 - `crates/core/engine/src/{builtins,gates}.rs`, `gates/{bash_commands,commit_gate,quality_gate}.rs`, and their colocated `gates/tests/*_test.rs`.
-- `crates/core/engine/tests/pre_gates_interleave.rs`; existing sandbox helpers and the committed B fixture runner.
-- `docs/registry.md` and the force-added design artifacts under `docs/toolu/`.
+- `crates/core/engine/tests/{pre_gates,pre_gates_interleave}.rs`; existing sandbox helpers and the committed B fixture runner.
+- `docs/registry.md`, its generated OpenCode copy at `tools/toolu-opencode/generated/resources/repo/docs/registry.md`, and the force-added design artifacts under `docs/toolu/`.
 
 ## Verification
 
 The fixture seam must pass all named outcomes and exact non-deviation goldens on the Rust binary. The interleaving test must show both write/read directions and a clear. Each module's unit tests must cover allow and deny, modes, malformed/absent inputs, and wrapper boundaries. Documentation must state which path is native today. Run `cargo xtask gate` with the PR title and `bun run test` through the epic lease before delivery.
+
+## Deviations
+
+Added `crates/core/engine/tests/pre_gates.rs` as a shared real-dispatch red-to-green check for the three modules. It exercises the same AC-2/AC-4 behavior already planned; the seven ledger steps and their checks are unchanged.
+
+The documentation gate requires its generated OpenCode copy to be updated with `docs/registry.md`; the docs step declares both paths.
 
 ## Delivery
 
