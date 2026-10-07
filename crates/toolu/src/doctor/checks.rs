@@ -94,9 +94,7 @@ pub(super) fn text(checks: &[Check]) -> String {
       lines.push(format!("  fix: {hint}"));
     }
   }
-  let mut text = lines.join("\n");
-  text.push('\n');
-  text
+  lines.join("\n")
 }
 
 /// The `--json` document before redaction.

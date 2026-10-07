@@ -21,7 +21,10 @@ fn text_lists_a_hint_under_the_check() {
     serde_json::json!({}),
   )];
   let rendered = text(&checks);
-  assert!(rendered.starts_with("fail tools: pr-babysit needs gh\n  fix: install gh\n"));
+  assert_eq!(
+    rendered,
+    "fail tools: pr-babysit needs gh\n  fix: install gh"
+  );
 }
 
 #[test]
