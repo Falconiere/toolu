@@ -6,6 +6,7 @@
 //!   the `<file>.lock` protocol of `lock`;
 //! - `telemetry`: closed-schema JSONL events; `sweeper`: spent-state reclaim;
 //! - `edit_records`: `Edit`, `Write`, `MultiEdit` and `apply_patch` payloads as records;
+//! - `push_waiver`: push-review waivers, promoted from their pending marker;
 //! - `diff_sha`: the branch-diff hash; `git`: branch, worktree and origin facts
 //!   read from `.git`; `detect`: project markers, linters, tools and line counts.
 
@@ -21,6 +22,7 @@ pub mod git;
 pub mod io;
 pub mod js_order;
 pub mod lock;
+pub mod push_waiver;
 mod sweep_telemetry;
 pub mod sweeper;
 pub mod telemetry;
