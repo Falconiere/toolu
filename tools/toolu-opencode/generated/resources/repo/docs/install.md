@@ -7,6 +7,39 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 brew install falconiere/tap/toolu
 ```
 
+## Install, upgrade and remove
+
+The installer needs `bash`, `curl`, `tar`, and `sha256sum` or `shasum` (macOS also uses `unzip`). It installs the newest stable release that has assets for your platform into `/usr/local/bin`. Before it writes anything, it checks that `SHA256SUMS` carries the toolu release key's minisign signature made for that tag, that the archive matches its line, and that the archive holds exactly `toolu` and `LICENSE`. The new binary replaces the old one with a single `mv`, so a failed install leaves the previous binary in place. It never runs `sudo`, and it refuses to replace or remove a `toolu` that is Homebrew's link into its `Cellar` (Intel Homebrew also uses `/usr/local/bin`); use `brew upgrade toolu` or `brew uninstall toolu` for that one. When `/usr/local/bin` is not writable, it exits and names `--install-dir`:
+
+```bash
+curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --install-dir ~/.local/bin
+```
+
+| Task | Homebrew | Installer |
+|------|----------|-----------|
+| Upgrade | `brew upgrade toolu` | re-run `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash` |
+| Uninstall | `brew uninstall toolu` | `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash -s -- --uninstall` |
+| Pin a version | — | `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash -s -- --version v1.2.3` |
+| See the plan | — | `--check` prints the platform, version, directory and download URL, and downloads nothing |
+
+Pass the same `--install-dir` to `--uninstall` when you installed elsewhere. `--version` accepts a `vX.Y.Z` tag and installs that tag only.
+
+**Rollback.** Install the previous release over the current one:
+
+```bash
+curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --version v1.2.2
+```
+
+**From a fork.** `TOOLU_REPO=<owner>/<name>` installs a fork's releases. It goes on the `bash` side of the pipe, and the fork's `SHA256SUMS` must still be signed by the toolu release key:
+
+```bash
+curl -fsSL https://get.toolu.sh/pkg/toolu/install | TOOLU_REPO=example/toolu bash
+```
+
+Exit codes: 0 installed, checked or removed; 1 a network, signature, checksum, archive or permission failure; 2 a usage error, a bad tag or `TOOLU_REPO`, or an unsupported platform (only Darwin and Linux, on arm64 or amd64).
+
+The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh` at a pinned commit of this repository, never at `main` ([CodaSignal/toolu.sh#79](https://github.com/CodaSignal/toolu.sh/pull/79); the URL returns 404 until that change is deployed). The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
+
 ## Why this way
 
 - Neither Claude Code nor Codex has a mechanism for per-platform binaries; a plugin is a directory tree.
