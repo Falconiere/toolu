@@ -11,6 +11,7 @@ publish.workspace = true
 serde_json.workspace = true
 toolu-protocol = { path = "../protocol" }
 toolu-runtime = { path = "../runtime" }
+toolu-state = { path = "../state" }
 
 [dev-dependencies]
 tempfile.workspace = true

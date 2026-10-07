@@ -3,7 +3,11 @@
 //! them, regular files or symlinks to them only, and a module name without the
 //! `<spec>__` namespace rejected rather than run.
 
+pub(crate) mod bridge;
+mod executable;
 pub mod gate;
+mod manifests;
+pub(crate) mod phase;
 pub mod prune;
 
 use std::path::{Path, PathBuf};
