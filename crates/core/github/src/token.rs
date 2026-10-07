@@ -127,7 +127,10 @@ pub(crate) fn checked(value: &str, source: Source) -> Result<Token, TokenError> 
 
 fn run_error(err: &RunError) -> String {
   match err {
-    RunError::Spawn(reason) | RunError::Wait(reason) | RunError::Stdin(reason) => reason.clone(),
+    RunError::Spawn(reason)
+    | RunError::Wait(reason)
+    | RunError::Stdin(reason)
+    | RunError::Callback(reason) => reason.clone(),
     RunError::EmptyArgv | RunError::ZeroTimeout | RunError::TimeoutTooLong => format!("{err:?}"),
   }
 }

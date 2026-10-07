@@ -3,7 +3,11 @@ use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
-use crate::token::{Source, Token, TokenError, Tokens, checked, resolve, resolve_within};
+use toolu_runtime::process::RunError;
+
+use crate::token::{
+  Source, Token, TokenError, Tokens, checked, resolve, resolve_within, run_error,
+};
 
 fn token(value: &str) -> Token {
   checked(value, Source::Env).expect("token")
@@ -111,5 +115,13 @@ fn a_gh_past_its_deadline_is_named() {
     Err(TokenError::Unavailable {
       gh: "timed out after 200ms".into()
     })
+  );
+}
+
+#[test]
+fn a_spawn_callback_failure_is_its_reason() {
+  assert_eq!(
+    run_error(&RunError::Callback("lease lost".to_owned())),
+    "lease lost"
   );
 }
