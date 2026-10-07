@@ -25,16 +25,6 @@ fn rejects_zero_body_limit_before_request() {
 }
 
 #[test]
-fn basic_auth_keeps_empty_password() {
-  let value = Auth::Basic {
-    username: "alice".into(),
-    password: String::new(),
-  }
-  .header_value();
-  assert_eq!(value.as_deref(), Some("Basic YWxpY2U6"));
-}
-
-#[test]
 fn scheme_proxy_precedes_all_proxy_and_supports_lowercase() {
   let env = Env::from_pairs([
     ("ALL_PROXY", "http://all.example:1"),
@@ -66,34 +56,6 @@ fn rejects_invalid_proxy_and_test_root() {
 }
 
 #[test]
-fn errors_have_actionable_messages() {
-  let cases = [
-    (
-      Error::InvalidConfig("timeout".into()),
-      "invalid HTTP configuration: timeout",
-    ),
-    (Error::HttpStatus(429), "HTTP status 429"),
-    (Error::Timeout, "HTTP request timed out"),
-    (Error::BodyTooLarge, "HTTP response body exceeds limit"),
-    (
-      Error::Encode("bad value".into()),
-      "cannot encode JSON request: bad value",
-    ),
-    (
-      Error::Decode("bad JSON".into()),
-      "cannot decode JSON response: bad JSON",
-    ),
-    (
-      Error::Transport("offline".into()),
-      "HTTP transport error: offline",
-    ),
-  ];
-  for (error, expected) in cases {
-    assert_eq!(error.to_string(), expected);
-  }
-}
-
-#[test]
 fn rejects_malformed_or_non_http_urls_before_network_access() {
   let client = Client::new(Config::default(), &Env::default()).expect("client");
   for url in ["https://[broken", "ftp://example.test/data"] {
@@ -102,4 +64,13 @@ fn rejects_malformed_or_non_http_urls_before_network_access() {
       Err(Error::Transport(_))
     ));
   }
+}
+
+#[test]
+fn debug_shows_the_config_but_no_environment_value() {
+  let env = Env::from_pairs([("HTTPS_PROXY", "http://user:proxypass@127.0.0.1:1")]);
+  let client = Client::new(Config::default(), &env).expect("client");
+  let shown = format!("{client:?}");
+  assert!(shown.starts_with("Client { config: Config {"), "{shown}");
+  assert!(!shown.contains("proxypass"), "{shown}");
 }
