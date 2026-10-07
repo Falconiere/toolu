@@ -9,7 +9,7 @@ brew install falconiere/tap/toolu
 
 ## Install, upgrade and remove
 
-The installer needs `bash`, `curl`, `tar`, and `sha256sum` or `shasum` (macOS also uses `unzip`). It installs the newest stable release that has assets for your platform into `/usr/local/bin`. Before it writes anything, it checks that `SHA256SUMS` carries the toolu release key's minisign signature, that the archive matches its line, and that the archive holds exactly `toolu` and `LICENSE`. The new binary replaces the old one with a single `mv`, so a failed install leaves the previous binary in place. It never runs `sudo`. When `/usr/local/bin` is not writable, it exits and names `--install-dir`:
+The installer needs `bash`, `curl`, `tar`, and `sha256sum` or `shasum` (macOS also uses `unzip`). It installs the newest stable release that has assets for your platform into `/usr/local/bin`. Before it writes anything, it checks that `SHA256SUMS` carries the toolu release key's minisign signature made for that tag, that the archive matches its line, and that the archive holds exactly `toolu` and `LICENSE`. The new binary replaces the old one with a single `mv`, so a failed install leaves the previous binary in place. It never runs `sudo`, and it refuses to replace or remove a `toolu` that is Homebrew's link into its `Cellar` (Intel Homebrew also uses `/usr/local/bin`); use `brew upgrade toolu` or `brew uninstall toolu` for that one. When `/usr/local/bin` is not writable, it exits and names `--install-dir`:
 
 ```bash
 curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --install-dir ~/.local/bin

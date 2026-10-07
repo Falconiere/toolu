@@ -11,6 +11,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -72,9 +73,11 @@ async function downloadMinisign(): Promise<string> {
 let signer: Promise<{ minisign: string; pub: string; key: string }> | undefined;
 let signerDir: string | undefined;
 
-/** Remove the fixture keypair; the cached minisign binary stays. */
+/** Remove the fixture keypair, so the next file makes a new one; the cached minisign stays. */
 export function disposeSigner(): void {
   if (signerDir !== undefined) rmSync(signerDir, { recursive: true, force: true });
+  signer = undefined;
+  signerDir = undefined;
 }
 
 /** The pinned minisign and a fixture keypair, made once per test process. */
@@ -91,9 +94,13 @@ export function fixtureSigner(): Promise<{ minisign: string; pub: string; key: s
 }
 
 /** A `toolu` that prints `toolu <version>`, plus LICENSE, in the layout release_native.py packs. */
-export function archive(version: string, members = ["toolu", "LICENSE"]): Uint8Array {
+export function archive(version: string, members = ["toolu", "LICENSE"], link = false): Uint8Array {
   const dir = mkdtempSync(join(tmpdir(), "toolu-archive-"));
-  writeFileSync(join(dir, "toolu"), `#!/bin/sh\necho "toolu ${version}"\n`, { mode: 0o755 });
+  if (link) {
+    symlinkSync("/bin/sh", join(dir, "toolu"));
+  } else {
+    writeFileSync(join(dir, "toolu"), `#!/bin/sh\necho "toolu ${version}"\n`, { mode: 0o755 });
+  }
   writeFileSync(join(dir, "LICENSE"), "MIT\n");
   run(["tar", "-czf", "out.tar.gz", ...members], dir);
   const bytes = new Uint8Array(readFileSync(join(dir, "out.tar.gz")));
@@ -101,9 +108,10 @@ export function archive(version: string, members = ["toolu", "LICENSE"]): Uint8A
   return bytes;
 }
 
-/** A signed `SHA256SUMS` over `files`, and its `.minisig`. */
+/** A `SHA256SUMS` over `files` and its `.minisig`, signed for `tag` as release-native.yml does. */
 export async function signedSums(
   files: Record<string, Uint8Array>,
+  tag: string,
 ): Promise<{ sums: Uint8Array; minisig: Uint8Array }> {
   const { minisign, key } = await fixtureSigner();
   const text = Object.entries(files)
@@ -111,7 +119,21 @@ export async function signedSums(
     .join("");
   const dir = mkdtempSync(join(tmpdir(), "toolu-sums-"));
   writeFileSync(join(dir, "SHA256SUMS"), text);
-  run([minisign, "-S", "-s", key, "-m", "SHA256SUMS", "-x", "SHA256SUMS.minisig"], dir);
+  run(
+    [
+      minisign,
+      "-S",
+      "-s",
+      key,
+      "-m",
+      "SHA256SUMS",
+      "-x",
+      "SHA256SUMS.minisig",
+      "-t",
+      `toolu ${tag}`,
+    ],
+    dir,
+  );
   const read = (name: string) => new Uint8Array(readFileSync(join(dir, name)));
   const signed = { sums: read("SHA256SUMS"), minisig: read("SHA256SUMS.minisig") };
   rmSync(dir, { recursive: true, force: true });
@@ -121,7 +143,7 @@ export async function signedSums(
 /** A complete release: the platform archive, SHA256SUMS and its signature. */
 export async function releaseFiles(version: string): Promise<Record<string, Uint8Array>> {
   const tarball = archive(version);
-  const { sums, minisig } = await signedSums({ [ASSET]: tarball });
+  const { sums, minisig } = await signedSums({ [ASSET]: tarball }, `v${version}`);
   return { [ASSET]: tarball, SHA256SUMS: sums, "SHA256SUMS.minisig": minisig };
 }
 

@@ -117,8 +117,23 @@ detect_platform() {
   ASSET="toolu-$OS-$ARCH.tar.gz"
 }
 
+# Refuse a target this script does not own: Homebrew's link into its Cellar
+# (Intel Homebrew's prefix is /usr/local) or a directory.
+check_target() {
+  local target="$INSTALL_DIR/toolu"
+  if [ -L "$target" ]; then
+    case "$(readlink "$target")" in
+      *Cellar/*) die 1 "$target belongs to Homebrew; use brew upgrade toolu or brew uninstall toolu" ;;
+    esac
+  fi
+  if [ -d "$target" ] && [ ! -L "$target" ]; then
+    die 1 "$target is a directory; remove it or pass --install-dir"
+  fi
+}
+
 uninstall() {
   local target="$INSTALL_DIR/toolu"
+  check_target
   if [ ! -e "$target" ] && [ ! -L "$target" ]; then
     echo "toolu is not installed in $INSTALL_DIR"
     return
@@ -151,14 +166,16 @@ release_fields() {
   awk '
     { text = text $0 "\n" }
     END {
-      n = length(text); depth = 0
+      # One split, then indexing: substr per character is quadratic in
+      # macOS and busybox awk, which measure the whole string on every call.
+      n = split(text, ch, ""); depth = 0
       for (i = 1; i <= n; i++) {
-        c = substr(text, i, 1)
+        c = ch[i]
         if (c == "\"") {
           j = i + 1; s = ""
           while (j <= n) {
-            d = substr(text, j, 1)
-            if (d == "\\") { s = s d substr(text, j + 1, 1); j += 2; continue }
+            d = ch[j]
+            if (d == "\\") { s = s d ch[j + 1]; j += 2; continue }
             if (d == "\"") break
             s = s d; j++
           }
@@ -173,7 +190,7 @@ release_fields() {
           depth--
         } else if (c == ",") {
           if (kind[depth] == "{") want[depth] = 1
-        } else if (c == "t" && substr(text, i, 4) == "true" && depth == 2) {
+        } else if (c == "t" && ch[i + 1] ch[i + 2] ch[i + 3] == "rue" && depth == 2) {
           if (key[2] == "draft") print "D"
           if (key[2] == "prerelease") print "P"
           i += 3
@@ -256,14 +273,18 @@ minisign_bin() {
 
 # Verify the signature, then the archive digest, then the archive layout.
 verify() {
-  local tag="$1" minisign="$2" pub expected actual listing
+  local tag="$1" minisign="$2" pub verified expected actual listing
   pub="${TOOLU_MINISIGN_PUB:-}"
   if [ -z "$pub" ]; then
     pub="$WORK/toolu.pub"
     printf 'untrusted comment: toolu release key\n%s\n' "$TOOLU_PUBLIC_KEY" >"$pub"
   fi
-  "$minisign" -q -Vm "$WORK/SHA256SUMS" -x "$WORK/SHA256SUMS.minisig" -p "$pub" >/dev/null 2>&1 ||
+  verified="$("$minisign" -Vm "$WORK/SHA256SUMS" -x "$WORK/SHA256SUMS.minisig" -p "$pub" 2>&1)" ||
     die 1 "SHA256SUMS of $tag is not signed by the toolu release key; refusing to install"
+  # The release workflow signs with the trusted comment `toolu <tag>`, so the
+  # signed files of an older release cannot be replayed under a newer tag.
+  grep -qxF "Trusted comment: toolu $tag" <<<"$verified" ||
+    die 1 "SHA256SUMS signature is for another release than $tag; refusing to install"
   expected="$(awk -v name="$ASSET" '
     $1 ~ /^[0-9a-fA-F]+$/ && length($1) == 64 && ($2 == name || $2 == "*" name) && NF == 2 { print $1; exit }
   ' "$WORK/SHA256SUMS")"
@@ -310,6 +331,7 @@ main() {
     print_plan
     return
   fi
+  check_target
   if [ "$OS" = darwin ] && [ -z "${TOOLU_MINISIGN:-}" ] && ! command -v unzip >/dev/null 2>&1; then
     die 1 "unzip is required on macOS to unpack the minisign verifier"
   fi

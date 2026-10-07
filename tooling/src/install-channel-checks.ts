@@ -75,8 +75,24 @@ function checkCaller(caller: ObjectMap, errors: string[]): void {
   );
 }
 
-function checkTap(tap: ObjectMap, errors: string[]): void {
+function checkTap(root: string, tap: ObjectMap, errors: string[]): void {
   const job = at(tap, "jobs", "formula");
+  const verify = steps(job).find((step) => step.name === "Verify the SHA256SUMS signature");
+  const digest = installerMinisignDigest(root);
+  need(
+    errors,
+    digest !== "" &&
+      at(verify, "env", "MINISIGN_SHA256") === digest &&
+      includes(verify?.run, "TOOLU_PUBLIC_KEY") &&
+      includes(verify?.run, "Trusted comment: toolu $TAG") &&
+      runs(job).includes("--pattern SHA256SUMS.minisig"),
+    "release-homebrew.yml must verify the SHA256SUMS signature for the tag before the formula",
+  );
+  need(
+    errors,
+    at(tap, "on", "workflow_dispatch", "inputs", "tag", "required") === true,
+    "release-homebrew.yml must allow a manual run for a tag",
+  );
   const condition = string(at(job, "if"));
   need(
     errors,
@@ -106,5 +122,5 @@ export function checkInstallChannels(
   const get = (name: string): ObjectMap => docs.get(name) ?? {};
   checkSigning(root, get("release-native.yml"), errors);
   checkCaller(get("release-please.yml"), errors);
-  checkTap(get("release-homebrew.yml"), errors);
+  checkTap(root, get("release-homebrew.yml"), errors);
 }

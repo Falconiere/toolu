@@ -21,7 +21,7 @@ fn doctor_names_the_upgrade_command_for_the_install_location() {
     brew.ends_with(&format!("\nupgrade with: {BREW_UPGRADE}")),
     "{brew}"
   );
-  let plain = reachable(Path::new("/usr/local/bin/toolu"));
+  let plain = reachable(Path::new("/nonexistent/plain/bin/toolu"));
   assert!(
     plain.ends_with(&format!("\nupgrade with: {INSTALLER}")),
     "{plain}"

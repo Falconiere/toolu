@@ -213,7 +213,7 @@ test.concurrent(
     await Promise.all(
       [["toolu"], ["LICENSE", "toolu"]].map(async (members) => {
         const tarball = archive("9.0.0", members);
-        const { sums, minisig } = await signedSums({ [ASSET]: tarball });
+        const { sums, minisig } = await signedSums({ [ASSET]: tarball }, "v9.0.0");
         const files = { [ASSET]: tarball, SHA256SUMS: sums, "SHA256SUMS.minisig": minisig };
         const dir = scratch();
         const result = await install(serve([[{ tag: "v9.0.0", files }]]), ["--install-dir", dir]);

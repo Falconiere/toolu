@@ -139,6 +139,13 @@ for (const scenario of [
     finding: "must skip prerelease tags by inputs.tag",
   },
   {
+    name: "tap formula from unverified sums",
+    file: ".github/workflows/release-homebrew.yml",
+    before: 'grep -qxF "Trusted comment: toolu $TAG" <<<"$verified"',
+    after: 'echo "$verified"',
+    finding: "verify the SHA256SUMS signature for the tag",
+  },
+  {
     name: "tap token for every repository",
     file: ".github/workflows/release-homebrew.yml",
     before: "repositories: homebrew-tap",
