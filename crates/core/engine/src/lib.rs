@@ -8,7 +8,8 @@
 //! - `registry`: the `<config>/toolu/{pre,post}-tools.d` listing, installed-plugin
 //!   gating and the Codex prune; manifests enable compiled-in rules, `.sh` modules
 //!   run as executables and `.js` modules through a temporary Bun bridge;
-//! - `gates`: the native built-ins: after a tool, `gate_status` and `push_waiver`;
+//! - `gates`: private implementations of the post-tool `gate_status` and
+//!   `push_waiver` built-ins, exposed through `builtins::POST_TOOL`;
 //! - `trace`: what a dispatch did with each module;
 //! - `detect`: the git operations a parsed command performs (push, commit, the
 //!   pushed repository and branch).
