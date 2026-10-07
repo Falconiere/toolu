@@ -149,8 +149,7 @@ pub fn run_with(
   let deadline = started
     .checked_add(spec.timeout)
     .ok_or(RunError::TimeoutTooLong)?;
-  let mut child = command(program, spec)
-    .spawn()
+  let mut child = guard::unblocked(|| command(program, spec).spawn())
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
   let pid = child.id();
   if let Err(err) = on_spawn(pid) {

@@ -74,8 +74,7 @@ pub fn run_to_file(spec: &FileSpec, on_spawn: &mut dyn FnMut(u32)) -> Result<Fil
   if let Some(env) = &spec.env {
     command.env_clear().envs(env.vars());
   }
-  let mut child = command
-    .spawn()
+  let mut child = super::guard::unblocked(|| command.spawn())
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
   let pid = child.id();
   on_spawn(pid);
