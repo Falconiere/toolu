@@ -1,17 +1,17 @@
 //! `Client::send` against the real loopback TLS origin and CONNECT proxy:
 //! every status comes back as a `Response`, with its headers and body.
 
-use toolu_http::{Auth, Client, Config, Method, Request};
+use toolu_http::{Auth, Client, Config, Error, Method, Request};
 use toolu_http_test_support::{Fixture, Reply};
 use toolu_runtime::env::Env;
 
-fn client(fixture: &Fixture) -> Client {
+fn client(fixture: &Fixture) -> Result<Client, Error> {
   let config = Config {
     test_root_ca_der: Some(fixture.root_ca_der().to_vec()),
     ..Config::default()
   };
   let env = Env::from_pairs([("HTTPS_PROXY", fixture.proxy_url())]);
-  Client::new(config, &env).expect("client")
+  Client::new(config, &env)
 }
 
 fn get<'a>(url: &'a str, headers: &'a [(&'a str, &'a str)]) -> Request<'a> {
@@ -34,6 +34,7 @@ fn an_error_status_is_a_response_with_headers_and_body() {
     )
     .expect("route");
   let response = client(&fixture)
+    .expect("client")
     .send(&get(&fixture.url("/missing"), &[("x-trace", "460")]))
     .expect("send");
   assert_eq!(response.status, 404);
@@ -56,6 +57,7 @@ fn not_modified_has_an_empty_body_and_the_request_carries_the_condition() {
     )
     .expect("route");
   let response = client(&fixture)
+    .expect("client")
     .send(&get(&fixture.url("/etag"), &[("If-None-Match", "\"v1\"")]))
     .expect("send");
   assert_eq!((response.status, response.body.len()), (304, 0));
@@ -74,6 +76,7 @@ fn a_body_goes_out_with_the_callers_content_type_and_a_patch_method() {
     .route("/patch", Reply::new(200, b"{}".to_vec()))
     .expect("route");
   let response = client(&fixture)
+    .expect("client")
     .send(&Request {
       method: Method::Patch,
       url: &fixture.url("/patch"),
