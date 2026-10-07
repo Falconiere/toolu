@@ -1338,6 +1338,14 @@ dependencies = [
 [[package]]
 name = "toolu-github"
 version = "7.11.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toolu-http",
+ "toolu-http-test-support",
+ "toolu-runtime",
+]
 
 [[package]]
 name = "toolu-http"
