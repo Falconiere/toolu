@@ -90,7 +90,7 @@ export function fixtureSigner(): Promise<{ minisign: string; pub: string; key: s
   return signer;
 }
 
-/** A `toolu` that prints `toolu <version>`, plus LICENSE, as release_native.py packs them. */
+/** A `toolu` that prints `toolu <version>`, plus LICENSE, in the layout release_native.py packs. */
 export function archive(version: string, members = ["toolu", "LICENSE"]): Uint8Array {
   const dir = mkdtempSync(join(tmpdir(), "toolu-archive-"));
   writeFileSync(join(dir, "toolu"), `#!/bin/sh\necho "toolu ${version}"\n`, { mode: 0o755 });
@@ -132,7 +132,7 @@ export interface Release {
   files: Record<string, Uint8Array>;
 }
 
-/** One release as the GitHub API shapes it, with the nesting the parser must skip. */
+/** One release in the GitHub API shape, with the nesting the parser must skip. */
 function releaseJson(release: Release, base: string): object {
   const user = { login: "toolu-bot", id: 1, type: "Bot", site_admin: false };
   return {

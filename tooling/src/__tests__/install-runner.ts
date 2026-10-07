@@ -56,7 +56,7 @@ export interface Run {
   stderr: string;
 }
 
-/** `bash install.sh <args>` with the fixture verifier and the server as GitHub. */
+/** `bash install.sh <args>` with the fixture verifier, the server standing in for GitHub. */
 export async function install(
   server: ReleaseServer | undefined,
   args: string[],
