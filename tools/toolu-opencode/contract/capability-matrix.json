@@ -141,7 +141,7 @@
       "owner": ["OP-21"],
       "axes": {
         "tools": {
-          "use": "plan-ledger and verdict CLIs run through bash with TOOLU_PLUGIN_ROOT",
+          "use": "toolu ledger and toolu ledger verdict run through bash with the shell.env host environment",
           "required": true,
           "enforcement": false,
           "mechanism": "bash tool + shell.env (helper path and environment)",

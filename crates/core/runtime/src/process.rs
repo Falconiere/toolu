@@ -2,10 +2,17 @@
 //! command in its own process group, both streams drained into one byte budget,
 //! and a deadline after which the whole group is terminated. Only this module
 //! spawns processes (rule 14).
+//!
+//! - `file`: a command whose stdout and stderr share one file (the plan
+//!   ledger's unmanaged check);
+//! - `guard`: a detached group that dies with its runner on SIGINT, SIGTERM or
+//!   SIGHUP.
 
 pub mod commands;
 mod drain;
+pub mod file;
 pub mod group;
+pub mod guard;
 
 use std::io::{ErrorKind, Write as _};
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};
@@ -108,6 +115,8 @@ pub enum RunError {
   Wait(String),
   /// Stdin could not be written for a reason other than the child closing it.
   Stdin(String),
+  /// The spawn callback of [`run_with`] failed; the group was stopped.
+  Callback(String),
 }
 
 /// Run `spec` and return once the child exited and its group has no live
@@ -118,6 +127,20 @@ pub enum RunError {
 /// [`RunError`] when the spec is unusable, the program cannot start, or the
 /// child cannot be waited for.
 pub fn run(spec: &Spec) -> Result<Output, RunError> {
+  run_with(spec, &mut |_| Ok(()))
+}
+
+/// [`run`], calling `on_spawn` with the child's process-group id once it
+/// started and before its stdin is written (`runCommand`'s `onSpawn`). When the
+/// callback fails, the group is stopped and its error returned. Arming a
+/// `GroupGuard` belongs in that callback. `run` passes an empty one.
+///
+/// # Errors
+/// As [`run`], plus [`RunError::Callback`].
+pub fn run_with(
+  spec: &Spec,
+  on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
+) -> Result<Output, RunError> {
   let program = spec.argv.first().filter(|program| !program.is_empty());
   let program = program.ok_or(RunError::EmptyArgv)?;
   if spec.timeout.is_zero() {
@@ -127,10 +150,16 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
   let deadline = started
     .checked_add(spec.timeout)
     .ok_or(RunError::TimeoutTooLong)?;
-  let mut child = command(program, spec)
-    .spawn()
+  let mut child = guard::unblocked(|| command(program, spec).spawn())
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
   let pid = child.id();
+  if let Err(err) = on_spawn(pid) {
+    let _stopped = group::terminate_reaping(pid, &mut || {
+      let _reaped = child.try_wait();
+    });
+    let _waited = child.wait();
+    return Err(RunError::Callback(err));
+  }
   let feeder = feed(&mut child, spec.stdin.clone());
   let budget = Budget::new(spec.max_output_bytes);
   let stdout = Drain::start(child.stdout.take(), &budget);
@@ -250,7 +279,8 @@ fn abandon(pid: u32, err: &std::io::Error) -> RunError {
   RunError::Wait(format!("{err}{stopped}"))
 }
 
-fn exit_code(status: ExitStatus) -> i32 {
+/// The exit status, or 128 plus the signal that ended the child.
+pub(crate) fn exit_code(status: ExitStatus) -> i32 {
   match (status.code(), status.signal()) {
     (Some(code), _) => code,
     (None, Some(signal)) => 128 + signal,

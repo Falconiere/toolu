@@ -13,6 +13,6 @@ Optional fields preserve the existing ledger contract:
 
 `paths` narrows iteration freshness to what the check actually reads. Declare
 all such paths: under-declaring can leave a stale green result. Before delivery,
-`bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run <plan_doc> --verify` judges every step against the whole
+`toolu ledger run <plan_doc> --verify` judges every step against the whole
 branch diff, so
 scoped freshness never replaces final verification.

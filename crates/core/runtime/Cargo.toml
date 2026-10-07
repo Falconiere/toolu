@@ -19,5 +19,9 @@ url.workspace = true
 [dev-dependencies]
 tempfile.workspace = true
 
+[[test]]
+name = "process_guard"
+harness = false
+
 [lints]
 workspace = true

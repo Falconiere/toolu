@@ -75,3 +75,18 @@ fn terminate_reaping_calls_the_reaper_and_ends_the_leader() {
   assert!(calls >= 1);
   assert_eq!(child.wait().unwrap().signal(), Some(15));
 }
+
+#[test]
+fn pid_alive_probes_a_process_and_rejects_impossible_ids() {
+  use super::pid_alive;
+  let mut child = sleeper();
+  let pid = i64::from(child.id());
+  assert_eq!(pid_alive(pid), Ok(true));
+  terminate(child.id()).unwrap();
+  child.wait().unwrap();
+  assert_eq!(pid_alive(pid), Ok(false));
+  assert_eq!(pid_alive(0), Ok(false));
+  assert_eq!(pid_alive(-3), Ok(false));
+  assert_eq!(pid_alive(i64::from(i32::MAX) + 1), Ok(false));
+  assert_eq!(pid_alive(i64::from(std::process::id())), Ok(true));
+}

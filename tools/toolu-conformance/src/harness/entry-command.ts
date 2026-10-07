@@ -1,5 +1,13 @@
 /** Resolve a committed hook entry to its Bun bundle or selected Rust CLI command. */
-import { accessSync, existsSync, readFileSync, statSync, constants } from "node:fs";
+import {
+  accessSync,
+  chmodSync,
+  existsSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+  constants,
+} from "node:fs";
 import { basename, join, resolve } from "node:path";
 import { launcherCommand, type LauncherTarget } from "@toolu/core/launcher";
 import { z } from "zod";
@@ -19,6 +27,20 @@ export type ResolvedCommand = {
 type SelectorEnv = Record<string, string | undefined>;
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const ENTRY_NAME = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * Skill CLI entries the Rust binary serves as a namespace verb rather than a
+ * hook (#421): `<plugin>/<entry>` → the `toolu` words before the CLI's own argv.
+ */
+const CLI_ENTRIES: Readonly<Record<string, readonly string[]>> = {
+  "toolu/plan-ledger": ["ledger"],
+  "toolu/verdict": ["ledger", "verdict"],
+};
+
+/** Whether `<plugin>/<entry>` is a skill CLI entry rather than a hooks.json entry. */
+export function isCliEntry(id: string): boolean {
+  return Object.hasOwn(CLI_ENTRIES, id);
+}
 
 function selectedEntries(value: string | undefined): Set<string> | "all" | null {
   if (value === undefined || value === "") return null;
@@ -152,7 +174,8 @@ export function resolveEntryCommand(
   if (!ENTRY_NAME.test(plugin) || !ENTRY_NAME.test(entry)) {
     throw new Error(`invalid hook entry: ${plugin}/${entry} at ${bundle}`);
   }
-  const args = plugin === "toolu" ? ["hook", entry] : [plugin, "hook", entry];
+  const cli = CLI_ENTRIES[`${plugin}/${entry}`];
+  const args = cli ?? (plugin === "toolu" ? ["hook", entry] : [plugin, "hook", entry]);
   return { argv: [rustBinary(plugin, entry, env), ...args], implementation: "rust" };
 }
 
@@ -174,4 +197,35 @@ export function launchedArgv(
     },
     env,
   ).argv;
+}
+
+/** One argv word as a POSIX shell word. */
+function shellWord(word: string): string {
+  return `'${word.replaceAll("'", "'\\''")}'`;
+}
+
+/**
+ * A `toolu` executable in `dir` for tests that run Markdown commands (#421):
+ * `toolu ledger verdict …` and `toolu ledger …` go through this seam, so they
+ * reach the Bun bundles by default and the Rust binary under `TOOLU_IMPL`.
+ * Any other command fails with 127. Returns the shim's path.
+ */
+export function installTooluShim(dir: string, env: SelectorEnv = process.env): string {
+  const line = (entry: string) =>
+    entryArgv("toolu", entry, pluginRoot("toolu"), env).map(shellWord).join(" ");
+  const body = [
+    "#!/bin/sh",
+    "# toolu test shim: toolu ledger through the TOOLU_IMPL seam.",
+    'if [ "$1" = ledger ] && [ "$2" = verdict ]; then shift 2; exec ' +
+      line("verdict") +
+      ' "$@"; fi',
+    'if [ "$1" = ledger ]; then shift; exec ' + line("plan-ledger") + ' "$@"; fi',
+    'echo "toolu test shim: unsupported command: $*" >&2',
+    "exit 127",
+    "",
+  ].join("\n");
+  const shim = join(dir, "toolu");
+  writeFileSync(shim, body);
+  chmodSync(shim, 0o755);
+  return shim;
 }

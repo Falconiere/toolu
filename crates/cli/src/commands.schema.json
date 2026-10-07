@@ -150,6 +150,104 @@
       "description": "A successful command under --json that has no data.",
       "type": "object",
       "maxProperties": 0
+    },
+    "ledger": {
+      "description": "A plan ledger (version 1) as toolu ledger run and status write it.",
+      "type": "object",
+      "required": ["version", "branch", "base_branch", "plan_doc", "updated_at", "summary", "next", "steps"],
+      "properties": {
+        "version": { "const": 1 },
+        "next": { "type": ["string", "null"] },
+        "steps": { "type": "array", "items": { "type": "object" } }
+      }
+    },
+    "ledgerRun": {
+      "description": "toolu ledger run --json once a ledger was written.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "ledger"],
+      "properties": {
+        "summary": { "type": ["string", "null"] },
+        "ledger": { "$ref": "#/$defs/ledger" }
+      }
+    },
+    "ledgerStatus": {
+      "description": "toolu ledger status --json once a ledger was rewritten.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["summary", "ledger", "ac_coverage"],
+      "properties": {
+        "summary": { "type": ["string", "null"] },
+        "ledger": { "$ref": "#/$defs/ledger" },
+        "ac_coverage": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "covered", "steps"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^AC-[0-9]+$" },
+              "covered": { "type": "boolean" },
+              "steps": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        }
+      }
+    },
+    "ledgerPath": {
+      "description": "toolu ledger path --json.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path"],
+      "properties": { "path": { "type": "string", "minLength": 1 } }
+    },
+    "ledgerRoot": {
+      "description": "toolu ledger root --json.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root"],
+      "properties": { "root": { "type": "string", "minLength": 1 } }
+    },
+    "ledgerSelfTest": {
+      "description": "toolu ledger self-test --json when the self-test passes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ok"],
+      "properties": { "ok": { "const": true } }
+    },
+    "gate": {
+      "description": "One verdict gate: its state, its reason, and gate-specific extras.",
+      "type": "object",
+      "required": ["state", "reason"],
+      "properties": {
+        "state": { "enum": ["pass", "fail", "skip", "advise", "escalate"] },
+        "reason": { "type": "string" }
+      }
+    },
+    "verdict": {
+      "description": "toolu ledger verdict json, and verdict status under --json: the four push gates.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "branch", "base_branch", "diff_sha", "overall", "gates", "generated_at"],
+      "properties": {
+        "version": { "const": 1 },
+        "branch": { "type": "string" },
+        "base_branch": { "type": "string" },
+        "diff_sha": { "type": "string" },
+        "overall": { "enum": ["ready", "blocked"] },
+        "gates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["quality", "plan", "review", "docs"],
+          "properties": {
+            "quality": { "$ref": "#/$defs/gate" },
+            "plan": { "$ref": "#/$defs/gate" },
+            "review": { "$ref": "#/$defs/gate" },
+            "docs": { "$ref": "#/$defs/gate" }
+          }
+        },
+        "generated_at": { "type": "string" }
+      }
     }
   }
 }

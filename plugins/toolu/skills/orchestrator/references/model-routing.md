@@ -84,7 +84,7 @@ A machine-readable plan step may declare `"model": "<alias>"`:
 ```
 
 `plan` assigns it while the complexity is still fresh; `execution` reads it back
-(`bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" status` prints `model=<alias>` for the next step) and delegates
+(`toolu ledger status` prints `model=<alias>` for the next step) and delegates
 at that tier without re-deriving the judgment. The field is optional — a legacy
 step without it is still valid, and the executor falls back to this rubric.
 

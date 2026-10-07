@@ -148,30 +148,32 @@ fn this_repository_passes_in_under_five_seconds() {
 fn an_unported_namespace_has_only_its_placeholder_verb() {
   let dir = root(
     &real_tree().unwrap(),
-    &[(SKILL, &skill_running("toolu ledger run plan.md --verify"))],
+    &[(SKILL, &skill_running("toolu babysit run --pr 1"))],
   )
   .unwrap();
   let (code, stderr) = check(dir.path()).unwrap();
   assert_eq!(code, 1, "{stderr}");
-  assert_has(&stderr, &["unknown command `run` under `toolu ledger`"]);
+  assert_has(&stderr, &["unknown command `run` under `toolu babysit`"]);
 }
 
 #[test]
-fn delivery_flow_runs_the_plan_ledger_until_ledger_is_ported() {
+fn delivery_flow_runs_toolu_ledger_and_the_bundle_is_a_removed_surface() {
   let execution = "plugins/delivery-flow/skills/delivery-flow/references/execution.md";
-  let brainstorm = "plugins/brainstorm/skills/brainstorm/SKILL.md";
-  let files = [
-    (execution, real(execution).unwrap()),
-    (brainstorm, real(brainstorm).unwrap()),
-  ];
-  let files: Vec<(&str, &str)> = files
-    .iter()
-    .map(|(path, text)| (*path, text.as_str()))
-    .collect();
-  let (code, stderr) = check(root(&real_tree().unwrap(), &files).unwrap().path()).unwrap();
-  assert_eq!(code, 0, "{stderr}");
+  let text = real(execution).unwrap();
+  assert!(text.contains("`toolu ledger run <plan_doc> --verify`"));
   let (code, stderr) = check(
-    root(&ported("ledger", "run").unwrap(), &files)
+    root(&real_tree().unwrap(), &[(execution, &text)])
+      .unwrap()
+      .path(),
+  )
+  .unwrap();
+  assert_eq!(code, 0, "{stderr}");
+  let before = text.replace(
+    "`toolu ledger ",
+    "`bun \"$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js\" ",
+  );
+  let (code, stderr) = check(
+    root(&real_tree().unwrap(), &[(execution, &before)])
       .unwrap()
       .path(),
   )

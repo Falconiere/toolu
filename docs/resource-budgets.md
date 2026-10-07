@@ -53,7 +53,7 @@ A budget changes only together with a new measurement committed under `benchmark
 3. Spawns each entry `--warmup` times (default 2), then `--runs` times (default 10), one at a time.
 4. Reports p50 and p90 of max RSS, CPU (user + sys, children included) and wall per entry.
 
-`--assert` measures the entries listed in `fixtures/rust-ported.json` as Rust and fails, naming the entry, the metric, the measured value and the budget, when one exceeds its p50 budget. It also fails when a ported entry has no budget, or when the measured phase takes over 60 s. The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
+`--assert` measures the entries listed in `fixtures/rust-ported.json` as Rust and fails, naming the entry, the metric, the measured value and the budget, when one exceeds its p50 budget. It also fails when a ported entry has no budget, or when the measured phase takes over 60 s. The ported skill CLIs `toolu/plan-ledger` and `toolu/verdict` have no `hooks.json` launcher, so the bench neither measures nor budgets them ([#421](https://github.com/Falconiere/toolu/issues/421)). The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
 
 Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`. That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
 

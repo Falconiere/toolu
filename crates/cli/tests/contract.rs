@@ -17,7 +17,14 @@ use serde_json::json;
 /// The visible namespaces that are not ported yet: all but the hook runner, the
 /// command export and the two Markdown-only guides.
 fn unported(names: &[String]) -> Vec<&String> {
-  let ported = ["hook", "commands", "doctor", "brainstorm", "delivery-flow"];
+  let ported = [
+    "hook",
+    "ledger",
+    "commands",
+    "doctor",
+    "brainstorm",
+    "delivery-flow",
+  ];
   names
     .iter()
     .filter(|name| !ported.contains(&name.as_str()))

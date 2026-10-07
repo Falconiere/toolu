@@ -144,7 +144,9 @@ test("the committed budgets file is strict", () => {
 
 test("a ported entry with no hooks.json launcher fails before anything is measured", async () => {
   using sb = createSandbox();
-  const manifest = sb.write("rust-ported.json", { entries: ["toolu/pre-tools", "toolu/nope"] });
+  const manifest = sb.write("rust-ported.json", {
+    entries: ["toolu/pre-tools", "toolu/plan-ledger", "toolu/nope"],
+  });
   const result = await run(
     [
       process.execPath,
@@ -157,7 +159,8 @@ test("a ported entry with no hooks.json launcher fails before anything is measur
     { cwd: ROOT, env: { CARGO: "/no/such/cargo" } },
   );
   expect(result.exitCode).toBe(2);
-  expect(result.stderr).toContain("ported entries with no hooks.json launcher: toolu/nope");
+  // A skill CLI entry is ported without a launcher; only the unknown one is named.
+  expect(result.stderr).toContain("ported entries with no hooks.json launcher: toolu/nope\n");
 });
 
 test("a malformed hooks.json or measurer report is a setup error naming the file", () => {

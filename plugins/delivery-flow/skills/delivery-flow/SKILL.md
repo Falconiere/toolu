@@ -7,13 +7,10 @@ description: Use to implement and deliver a repository task end to end. Runs bra
 
 Invoking this skill authorizes commit, push, PR creation, and the `pr-babysit:babysit` handoff once the checks below pass. Run the complete sequence for every task, including small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → `pr-babysit:babysit`. This skill is the only public entry point; the phase files in `references/` are private procedures. Read each one when entering its phase. Use the active host's `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` invocation as appropriate.
 
-Before running ledger or verdict commands, locate the enabled, installed
-`toolu@toolu` plugin and set `TOOLU_PLUGIN_ROOT` to its plugin root. Claude
-Code exposes `installPath` in `claude plugin list --json`; Codex exposes
-`source.path` in `codex plugin list --json`. Prefer an enabled project install
-for the current repository, then an enabled user install. Confirm
-`$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js` and `$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js` exist. In a toolu source
-checkout, `plugins/toolu` is also valid. The task repository need
+The plan ledger and the push verdict are verbs of the native `toolu` binary:
+`toolu ledger …` and `toolu ledger verdict …`. Run them as plain `toolu`. When
+`toolu` is not on the agent's `PATH`, the toolu plugin's session start names the
+absolute path or the install command to use instead. The task repository need
 not contain toolu's source tree.
 
 ## Sequence
@@ -23,8 +20,8 @@ not contain toolu's source tree.
 3. **Spec review:** Read [spec-review.md](references/spec-review.md). Review against the authored contract. If `Status: Needs changes`, fix the findings and repeat this phase until `Status: Approved`. Do not plan against a rejected spec.
 4. **Plan:** Read [plan.md](references/plan.md) and [ledger.md](references/ledger.md). Write a machine-readable plan with runnable checks, paths, dependencies, and AC references. A small fix still gets a compact ledger plan.
 5. **Plan review:** Read [plan-review.md](references/plan-review.md). Correct and repeat until `Status: Approved`. Do not execute a rejected plan.
-6. **Execution:** Read [execution.md](references/execution.md) and use [test.md](references/test.md) during each behavior step. Run `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" preflight` before editing. Produce real-data red → green evidence, stamp each step, keep docs synchronized, and run the full quality gate. A failed check stops progress; fix it and resume from that phase. No new runtime state gate is needed.
-7. **Delivery:** The execution reference owns the exact order: scoped commit; final ledger `run <plan_doc> --verify`; `toolu-review:review` with complete version: 2 state; `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/verdict.js" status` reporting `overall: ready`; push; locate or create and verify the default-branch PR; invoke `pr-babysit:babysit` with no arguments.
+6. **Execution:** Read [execution.md](references/execution.md) and use [test.md](references/test.md) during each behavior step. Run `toolu ledger preflight` before editing. Produce real-data red → green evidence, stamp each step, keep docs synchronized, and run the full quality gate. A failed check stops progress; fix it and resume from that phase. No new runtime state gate is needed.
+7. **Delivery:** The execution reference owns the exact order: scoped commit; final ledger `run <plan_doc> --verify`; `toolu-review:review` with complete version: 2 state; `toolu ledger verdict status` reporting `overall: ready`; push; locate or create and verify the default-branch PR; invoke `pr-babysit:babysit` with no arguments.
 
 ## Blockers and resume
 

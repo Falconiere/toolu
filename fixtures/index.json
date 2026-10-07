@@ -1806,6 +1806,40 @@
         "pre: registry files run in byte order of their names",
         "pre: JSON stdin with trailing newlines walks as written"
       ]
+    },
+    {
+      "id": "ledger-cases",
+      "fixture": "fixtures/ledger/cases.json",
+      "source": "plugins/toolu/hooks/src/__tests__/ledger-cases.test.ts",
+      "names": [
+        "ledger: self-test parses the built-in plan",
+        "ledger: path and root name the branch ledger and the repository",
+        "ledger: run stamps a green and a red step",
+        "ledger: a second run skips the fresh step and archives the red attempt",
+        "ledger: --step s3 after a red s2 runs s3 and leaves s2 next",
+        "ledger: --step marks the step running while its check runs",
+        "ledger: --force re-runs a fresh step",
+        "ledger: --verify stamps the verified hash and a later run keeps it",
+        "ledger: a scoped step stays fresh after an edit outside its paths until --verify",
+        "ledger: a check past PLAN_LEDGER_STEP_TIMEOUT is red with exit 124",
+        "ledger: an invalid PLAN_LEDGER_STEP_TIMEOUT is a red 125",
+        "ledger: a corrupt prior ledger stops run with exit 2",
+        "ledger: a missing plan, a bad model and bad paths stop run with exit 2",
+        "ledger: --activity without --step and an empty --step stop run with exit 2",
+        "ledger: status heals an orphaned running step and reports AC coverage",
+        "ledger: status without a ledger exits 2",
+        "ledger: preflight refuses Draft plans and specs with each host's remedy",
+        "ledger: preflight without a doc reads the ledger's plan_doc",
+        "ledger: preflight refuses a missing plan, a missing header and a missing spec",
+        "ledger: outside a repository path, root and status exit 2",
+        "ledger: without git on PATH every command stops with exit 2",
+        "verdict: a fresh feature branch is blocked by its review and docs gates",
+        "verdict: a fresh ledger, a v2 review and a doc change make the branch ready",
+        "verdict: review states fail on schema, reviewer, stale diff, coverage and findings, and escalate past five rounds",
+        "verdict: a failing quality gate, a stale plan and docsSync block mode fail the verdict",
+        "verdict: an unparseable or other-version ledger fails the plan gate",
+        "verdict: outside a repository exits 2"
+      ]
     }
   ]
 }

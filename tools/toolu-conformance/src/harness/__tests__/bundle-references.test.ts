@@ -31,7 +31,7 @@ const ALLOWED: Record<string, string> = {
   "tools/toolu-opencode/":
     "the OpenCode bootstrap itself spawns bundles; its Rust shim is a later epic issue",
   "plugins/delivery-flow/skills/__tests__/delivery-flow-contract.test.ts":
-    "skill text that names the plan-ledger bundle",
+    "skill text that must no longer name the ledger and verdict bundles (#421)",
   "tooling/src/__tests__/workspace-skeleton.test.ts": "asserts release-only paths exclude bundles",
   "plugins/toolu/hooks/src/__tests__/lifecycle-cases.ts":
     "matches bundle text in hooks.json commands to count launcher entries",

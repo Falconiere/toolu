@@ -1,8 +1,6 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "bun:test";
-import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { stagePlugins } from "../bundle-plugins.ts";
 import {
   HOST_CELLS,
   ROOT,
@@ -71,10 +69,7 @@ test.each(CLOSURE.filter((rel) => rel !== HOST_MAPPING))(
   },
 );
 
-test("every skill, agent and toolu path the skills name resolves", () => {
-  using sb = createSandbox();
-  const staged = join(sb.root, "staged");
-  stagePlugins(join(ROOT, "plugins"), staged);
+test("every skill and agent the skills name resolves, and toolu runs as a binary", () => {
   const { skills, agents } = generatedIds();
   const text = CLOSURE.map(read).join("\n");
 
@@ -95,11 +90,11 @@ test("every skill, agent and toolu path the skills name resolves", () => {
   expect(new Set(quoted)).toContain("toolu-deep-explore");
   expect(quoted.filter((id) => !agents.has(id) && !skills.has(id))).toEqual([]);
 
-  const tooluPaths = [...text.matchAll(/\$TOOLU_PLUGIN_ROOT\/([^\s`"]+)/g)].map(([, p = ""]) => p);
-  expect(new Set(tooluPaths)).toEqual(
-    new Set(["hooks/dist/plan-ledger.js", "hooks/dist/verdict.js"]),
-  );
-  for (const path of tooluPaths) expect(existsSync(join(staged, "toolu", path))).toBe(true);
+  // The ledger and verdict are `toolu ledger` verbs (#421), never a bundle path.
+  expect(text).not.toContain("$TOOLU_PLUGIN_ROOT");
+  for (const command of ["toolu ledger preflight", "toolu ledger verdict status"]) {
+    expect(text).toContain(command);
+  }
 });
 
 test("both skills carry frontmatter the host accepts", () => {
@@ -108,10 +103,12 @@ test("both skills carry frontmatter the host accepts", () => {
   expect(read(`${DELIVERY}/SKILL.md`)).toContain("babysit on OpenCode.");
 });
 
-test("delivery-flow finds toolu through shell.env and stops when it is missing", () => {
+test("delivery-flow runs toolu ledger and stops when bash cannot run toolu", () => {
   const skill = read(`${DELIVERY}/SKILL.md`);
-  expect(skill).toContain("toolu's `shell.env` sets it in every bash call");
-  expect(skill).toContain("stop and name that\nprerequisite");
+  expect(skill).toContain("`toolu ledger …` and `toolu ledger verdict …`");
+  expect(skill).toContain(
+    "When bash cannot run `toolu`, toolu is not ready in this\nsession: stop and name that prerequisite.",
+  );
 });
 
 test.each(["references/ledger.md", "references/execution.md"])(

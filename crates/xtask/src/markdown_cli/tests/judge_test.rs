@@ -134,10 +134,12 @@ fn todays_documented_hook_forms_pass() {
 #[test]
 fn unported_namespaces_have_only_their_placeholder_verb() {
   fails(
-    "toolu ledger run",
+    "toolu babysit run",
     Origin::Fenced,
-    &["unknown command `run` under `toolu ledger`"],
+    &["unknown command `run` under `toolu babysit`"],
   );
+  passes("toolu ledger run plan.md --verify", Origin::Fenced);
+  passes("toolu ledger verdict status", Origin::Inline);
   fails(
     "toolu ast-grep run",
     Origin::Inline,

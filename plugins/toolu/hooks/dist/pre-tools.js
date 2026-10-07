@@ -13039,7 +13039,7 @@ function acBlockers(ledger, cur, root, ctx, config) {
 }
 
 // packages/toolu-core/src/gates/plan-ledger.ts
-var RUN = 'bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" run';
+var RUN = "toolu ledger run";
 function blockers(ledger, cur) {
   const lines = [];
   try {

@@ -8,6 +8,8 @@ import {
   bundlePath,
   entryArgv,
   implementationTag,
+  installTooluShim,
+  isCliEntry,
   launchedArgv,
   pluginName,
   pluginRoot,
@@ -169,4 +171,51 @@ test("a relative bundle path no longer blocks a selected Rust entry", () => {
   const relative = { ...ENTRY, bundle: bundlePath("plugins/toolu", "pre-tools") };
   const env = { TOOLU_IMPL: "rust:toolu/pre-tools", TOOLU_RUST_BIN_DIR: sb.path("bin") };
   expect(resolveEntryCommand(relative, env).argv).toEqual([bin, "hook", "pre-tools"]);
+});
+
+test("a selected skill CLI entry runs its toolu ledger verb instead of a hook", () => {
+  using sb = createSandbox();
+  const bin = sb.write("bin/toolu", "#!/bin/sh\nexit 0\n");
+  chmodSync(bin, 0o755);
+  const env = {
+    TOOLU_IMPL: "rust:toolu/plan-ledger,toolu/verdict",
+    TOOLU_RUST_BIN_DIR: sb.path("bin"),
+  };
+  const ledger = {
+    plugin: "toolu",
+    entry: "plan-ledger",
+    bundle: bundlePath(pluginRoot("toolu"), "plan-ledger"),
+  };
+  expect(resolveEntryCommand(ledger, env).argv).toEqual([bin, "ledger"]);
+  const verdict = {
+    ...ledger,
+    entry: "verdict",
+    bundle: bundlePath(pluginRoot("toolu"), "verdict"),
+  };
+  expect(resolveEntryCommand(verdict, env).argv).toEqual([bin, "ledger", "verdict"]);
+  expect([
+    isCliEntry("toolu/plan-ledger"),
+    isCliEntry("toolu/verdict"),
+    isCliEntry("toolu/pre-tools"),
+  ]).toEqual([true, true, false]);
+});
+
+test("the toolu shim sends ledger commands through the seam and refuses others", async () => {
+  using sb = createSandbox();
+  const shim = installTooluShim(sb.root, {});
+  const selfTest = await run([shim, "ledger", "--self-test"]);
+  expect({ code: selfTest.exitCode, out: selfTest.stdout }).toEqual({
+    code: 0,
+    out: "plan-ledger --self-test: ok\n",
+  });
+  const verdict = await run([shim, "ledger", "verdict", "table"]);
+  expect({ code: verdict.exitCode, err: verdict.stderr }).toEqual({
+    code: 2,
+    err: "verdict: usage: status | json\n",
+  });
+  const other = await run([shim, "doctor"]);
+  expect({ code: other.exitCode, err: other.stderr }).toEqual({
+    code: 127,
+    err: "toolu test shim: unsupported command: doctor\n",
+  });
 });

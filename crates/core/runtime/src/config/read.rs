@@ -18,8 +18,8 @@ pub const MODEL_CLASSES: [&str; 6] = [
   "architecture",
 ];
 
-/// The model aliases a tier may name.
-const MODEL_ALIASES: [&str; 5] = ["haiku", "sonnet", "opus", "fable", "inherit"];
+/// The model aliases a tier may name (`MODEL_ALIASES` in `config-read.ts`).
+pub const MODEL_ALIASES: [&str; 5] = ["haiku", "sonnet", "opus", "fable", "inherit"];
 
 /// The reasoning efforts a Codex tier may name.
 const CODEX_REASONING_EFFORTS: [&str; 6] = ["low", "medium", "high", "xhigh", "max", "ultra"];

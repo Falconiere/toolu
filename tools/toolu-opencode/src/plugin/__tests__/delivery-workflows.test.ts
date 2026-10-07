@@ -21,6 +21,7 @@ import {
   deliveryProject,
   planDoc,
   specDoc,
+  tooluBin,
 } from "./delivery-fixtures.ts";
 import { binding, hook } from "./jev-fixtures.ts";
 import { bash, refusal, remoteHead, withHooks } from "./workflow-fixtures.ts";
@@ -42,16 +43,17 @@ test.concurrent("preflight refuses a Draft spec or plan by the generated skill's
   using sb = createSandbox({ git: true });
   deliveryProject(sb);
   const preflight = `${PLAN_LEDGER} preflight ${PLAN}`;
+  const bin = tooluBin(sb);
   await withHooks(binding(sb, [], ""), async (hooks) => {
     sb.write(SPEC, specDoc("Draft"));
-    const draftSpec = await bash(hooks, sb, preflight);
+    const draftSpec = await bash(hooks, sb, preflight, bin);
     expect(draftSpec.exitCode).toBe(1);
     expect(draftSpec.stderr).toContain(
       `preflight: spec ${SPEC} not approved (Status: Draft) — load ${REMEDY} (spec review phase)`,
     );
 
     sb.write(PLAN, planDoc("Draft"));
-    const draftPlan = await bash(hooks, sb, preflight);
+    const draftPlan = await bash(hooks, sb, preflight, bin);
     expect(draftPlan.exitCode).toBe(1);
     expect(draftPlan.stderr).toContain(
       `preflight: plan not approved (Status: Draft) — load ${REMEDY} (plan review phase)`,
@@ -59,7 +61,7 @@ test.concurrent("preflight refuses a Draft spec or plan by the generated skill's
 
     sb.write(SPEC, specDoc("Approved"));
     sb.write(PLAN, planDoc("Approved"));
-    expect(await bash(hooks, sb, preflight)).toMatchObject({ exitCode: 0, stderr: "" });
+    expect(await bash(hooks, sb, preflight, bin)).toMatchObject({ exitCode: 0, stderr: "" });
   });
 });
 
@@ -67,14 +69,15 @@ test.concurrent("a push waits for every step, the verify stamp and the review", 
   using sb = createSandbox({ git: true });
   const remote = deliveryProject(sb);
   const push = `git push origin ${BRANCH}`;
+  const bin = tooluBin(sb);
   await withHooks(binding(sb, [], ""), async (hooks) => {
-    const step = await bash(hooks, sb, `${PLAN_LEDGER} run ${PLAN} --step test`);
+    const step = await bash(hooks, sb, `${PLAN_LEDGER} run ${PLAN} --step test`, bin);
     expect(step.stderr).toContain("plan-ledger: [1/2] test: green");
     expect(step.stdout).toContain("1/2 fresh-green, next=docs");
     const ledger: unknown = JSON.parse(sb.read(LEDGER));
     expect(ledger).toMatchObject({ version: 1, plan_doc: PLAN });
 
-    const blocked = await bash(hooks, sb, VERDICT);
+    const blocked = await bash(hooks, sb, VERDICT, bin);
     expect(blocked.exitCode).toBe(1);
     expect(blocked.stdout).toContain("overall: blocked");
     expect(await refusal(hooks, push)).toContain(
@@ -82,9 +85,9 @@ test.concurrent("a push waits for every step, the verify stamp and the review", 
     );
     expect(remoteHead(sb, remote, BRANCH)).toBe("");
 
-    expect((await bash(hooks, sb, `${PLAN_LEDGER} run ${PLAN} --verify`)).exitCode).toBe(0);
+    expect((await bash(hooks, sb, `${PLAN_LEDGER} run ${PLAN} --verify`, bin)).exitCode).toBe(0);
     expect((await bash(hooks, sb, writeStateCommand(0))).exitCode).toBe(0);
-    const ready = await bash(hooks, sb, VERDICT);
+    const ready = await bash(hooks, sb, VERDICT, bin);
     expect(ready.stdout).toContain("overall: ready");
     expect(ready.exitCode).toBe(0);
 

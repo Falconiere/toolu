@@ -28,7 +28,7 @@ pub fn jq_text(value: &Ordered, pretty: bool) -> String {
 
 /// JavaScript's white space (`\s`, what `String#trim` removes): Unicode white
 /// space without U+0085, plus the byte-order mark.
-pub(crate) fn is_js_space(c: char) -> bool {
+pub fn is_js_space(c: char) -> bool {
   (c.is_whitespace() && c != '\u{85}') || c == '\u{feff}'
 }
 

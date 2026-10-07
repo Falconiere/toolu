@@ -166,7 +166,7 @@ fn claim(lock: &Path, held: &str) {
 }
 
 /// A random version 4 UUID, as `crypto.randomUUID()` prints one.
-pub(crate) fn token() -> String {
+pub fn token() -> String {
   let half = |salt: u8| RandomState::new().hash_one((salt, std::process::id(), SystemTime::now()));
   let (high, low) = (half(0), half(1));
   let high = (high & !0xf000) | 0x4000;

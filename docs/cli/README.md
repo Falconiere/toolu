@@ -15,7 +15,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | Command | Owner | Status | About |
 |---|---|---|---|
 | [`hook`](hook.md) | `plugins/toolu` | available | Run a hook entry; hooks.json calls it (internal) |
-| [`ledger`](ledger.md) | `plugins/toolu` | planned | The plan ledger, verdicts and push waivers |
+| [`ledger`](ledger.md) | `plugins/toolu` | available | The plan ledger, verdicts and push waivers |
 | [`debug`](debug.md) | `plugins/toolu` | planned | Debugging helpers: I/O capture, logs, stacks and failing tests |
 | [`setup`](setup.md) | `plugins/toolu` | planned | Preview, install or remove toolu's agent profiles |
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Check that the agent command shell finds native toolu |

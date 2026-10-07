@@ -52,20 +52,182 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#421): show the planned verbs",
+          "about": "Run the plan's step checks and stamp the branch ledger",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The plan doc",
+              "multiple": false,
+              "name": "DOC",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Run only this step",
+              "hidden": false,
+              "long": "step",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            },
+            {
+              "global": false,
+              "help": "What the running step is doing; needs --step",
+              "hidden": false,
+              "long": "activity",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "LABEL"
+            },
+            {
+              "global": false,
+              "help": "Re-run steps that are already fresh-green",
+              "hidden": false,
+              "long": "force",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Judge every step on the whole branch diff, and stamp the verified hash",
+              "hidden": false,
+              "long": "verify",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "run",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "run"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Heal, recompute and print the branch ledger without running checks",
           "aliases": [],
           "args": [],
           "commands": [],
           "flags": [],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "status",
           "owner": "toolu",
           "path": [
             "ledger",
-            "planned"
+            "status"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "Refuse unless the plan and its declared spec are Approved",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The plan doc; the ledger's plan_doc by default",
+              "multiple": false,
+              "name": "DOC",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "preflight",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "preflight"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Print the branch ledger's path",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "path",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "path"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Print the project root",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "root",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "root"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Parse a built-in two-step plan and check the result",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "self-test",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "self-test"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Judge the four push gates: quality, plan, review and docs",
+          "aliases": [],
+          "args": [
+            {
+              "help": "status prints a table, json the report",
+              "multiple": false,
+              "name": "MODE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "verdict",
+          "owner": "toolu",
+          "path": [
+            "ledger",
+            "verdict"
+          ],
+          "placeholder": false
         }
       ],
       "flags": [],
