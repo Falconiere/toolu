@@ -30,12 +30,12 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 | `toolu:builtin-module:PostToolUse:gate-status` | `packages/toolu-core/src/gates/gate-status.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
 | `toolu:builtin-module:PostToolUse:push-waiver` | `packages/toolu-core/src/gates/push-waiver.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:bash-commands` | `packages/toolu-core/src/gates/bash-commands.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:code-edit-rules` | `packages/toolu-core/src/gates/code-edit-rules.ts` | toolu | PreToolUse | port-native | required | #260/done | bun-bundle | no | — |
+| `toolu:builtin-module:PreToolUse:code-edit-rules` | `packages/toolu-core/src/gates/code-edit-rules.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:commit-gate` | `packages/toolu-core/src/gates/commit-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:docs-sync` | `packages/toolu-core/src/gates/docs-sync.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:mcp-blocker` | `packages/toolu-core/src/gates/mcp-blocker.ts` | toolu | PreToolUse | port-native | required | #260/done | bun-bundle | no | — |
+| `toolu:builtin-module:PreToolUse:mcp-blocker` | `packages/toolu-core/src/gates/mcp-blocker.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:plan-ledger` | `packages/toolu-core/src/gates/plan-ledger.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:protected-files` | `packages/toolu-core/src/gates/protected-files.ts` | toolu | PreToolUse | port-native | required | #260/done | bun-bundle | no | — |
+| `toolu:builtin-module:PreToolUse:protected-files` | `packages/toolu-core/src/gates/protected-files.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:push-review` | `packages/toolu-core/src/gates/push-review.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:quality-gate` | `packages/toolu-core/src/gates/quality-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
 | `toolu:entrypoint:PreToolUse:agent-tier` | `plugins/toolu/hooks/src/agent-tier.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |

@@ -7,7 +7,11 @@
  * capture must differ.
  */
 import { describe, expect, test } from "bun:test";
-import { implementationTag, launchedArgv } from "@toolu/conformance/harness/entry-command";
+import {
+  entryImplementation,
+  implementationTag,
+  launchedArgv,
+} from "@toolu/conformance/harness/entry-command";
 import {
   decisionOf,
   MODULE_CASES,
@@ -44,6 +48,16 @@ describe("pre-tool modules A", () => {
       if (want === undefined) throw new Error(`no golden capture for ${c.name}`);
       const got = await runCase(c, bundle);
       intent(c, got.stdout);
+      if (c.entry === "pre-tools" && entryImplementation("toolu", c.entry) === "rust") {
+        const typescript = await runCase(c, () =>
+          launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" }, undefined, {
+            ...process.env,
+            TOOLU_IMPL: "",
+          }),
+        );
+        expect(decisionOf(got.stdout).text).toBe(decisionOf(typescript.stdout).text);
+        expect(got.exitCode).toBe(typescript.exitCode);
+      }
       if (c.deviation === undefined) {
         expect(comparable(got)).toEqual(comparable(want));
       } else {

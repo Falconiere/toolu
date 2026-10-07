@@ -133,7 +133,7 @@ export function render(rows: InventoryRow[]): void {
 
 **Check:** \`bun run tooling/src/gate-coverage-inventory.ts check\`
 
-Every live hook and built-in gate in this inventory is \`port-native\`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files.
+Every live hook and built-in gate in this inventory is \`port-native\`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer \`install.sh\` (#457).
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|

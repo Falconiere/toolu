@@ -35,6 +35,7 @@ fn by_default_run_warning_is_run_with_no_warnings() {
     config_root: Path::new("/codex"),
     project_root: Path::new("/c"),
     cwd: Some(Path::new("/c")),
+    plugin_root: None,
     raw: &raw,
     edit: None,
   };

@@ -53,6 +53,7 @@ fn a_rule_decides_from_the_event_and_its_context() {
     config_root: Path::new("/h/.codex"),
     project_root: Path::new("/p"),
     cwd: Some(Path::new("/p")),
+    plugin_root: None,
     raw: &raw,
     edit: Some(EditSplit {
       operation: EditOperation::Move,
@@ -126,6 +127,7 @@ fn a_rule_can_decline_an_event_before_it_runs() {
     config_root: Path::new("/h/.claude"),
     project_root: Path::new("/p"),
     cwd: None,
+    plugin_root: None,
     raw: &raw,
     edit: None,
   };
