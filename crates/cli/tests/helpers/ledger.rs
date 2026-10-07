@@ -1,29 +1,18 @@
 //! A project for the `toolu ledger` black-box tests: a git repository on
 //! `feat/x` one commit (`a.ts`) ahead of `main`, a home beside it, and the
 //! environment every command of a test runs with (Claude host,
-//! `PUSH_REVIEW_BASE=main`, a committer identity).
+//! `PUSH_REVIEW_BASE=main`, a committer identity), the one
+//! `plugins/toolu/hooks/src/__tests__/ledger-cases.ts` gives the Bun suite.
 
 use std::error::Error;
 use std::path::{Path, PathBuf};
-use std::process::Output;
-
-use serde_json::Value;
+use std::process::Command;
 
 /// A helper's result; the tests unwrap it.
 pub(crate) type Res<T> = Result<T, Box<dyn Error>>;
 
 /// The `toolu` binary under test.
 pub(crate) const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
-
-/// Standard output as exactly one JSON document.
-pub(crate) fn one_document(output: &Output) -> Res<Value> {
-  let mut documents = serde_json::Deserializer::from_slice(&output.stdout).into_iter::<Value>();
-  let first = documents.next().ok_or("stdout holds no JSON document")??;
-  if documents.next().is_some() {
-    return Err("stdout holds more than one JSON document".into());
-  }
-  Ok(first)
-}
 
 /// The project and the temporary root that holds it.
 pub(crate) struct Project {
@@ -77,7 +66,7 @@ impl Project {
 
   /// `bash -c script` in the repository; a failing script is an error.
   pub(crate) fn sh(&self, script: &str) -> Res<String> {
-    let output = std::process::Command::new("bash")
+    let output = Command::new("bash")
       .args(["-c", script])
       .current_dir(&self.root)
       .env_clear()
@@ -99,21 +88,11 @@ impl Project {
     Ok(())
   }
 
-  /// `toolu <args>` in the repository with the project's environment.
-  pub(crate) fn toolu(&self, args: &[&str]) -> Res<Output> {
-    self.toolu_in(&self.root, args)
-  }
-
-  /// `toolu <args>` in `cwd` with the project's environment.
-  pub(crate) fn toolu_in(&self, cwd: &Path, args: &[&str]) -> Res<Output> {
-    Ok(
-      assert_cmd::Command::new(TOOLU)
-        .args(args)
-        .current_dir(cwd)
-        .env_clear()
-        .envs(self.env())
-        .output()?,
-    )
+  /// `toolu`, not yet run, in `cwd` with the project's environment.
+  pub(crate) fn command(&self, cwd: &Path) -> Command {
+    let mut command = Command::new(TOOLU);
+    command.current_dir(cwd).env_clear().envs(self.env());
+    command
   }
 
   /// The branch ledger's file.
