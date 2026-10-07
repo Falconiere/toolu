@@ -58,7 +58,7 @@ fn read_document(path: &Path) -> Result<Map<String, Value>, String> {
     document.insert("version".to_owned(), json!(1));
     return Ok(document);
   }
-  let text = std::fs::read_to_string(path).unwrap_or_default();
+  let text = std::fs::read_to_string(path).map_err(|err| format!("{}: {err}", path.display()))?;
   check_text(&text).map_err(|reason| format!("{}: {reason}", path.display()))
 }
 

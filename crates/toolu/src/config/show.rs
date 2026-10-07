@@ -98,7 +98,10 @@ fn file_error(path: &Path) -> Option<String> {
   if !load::is_file(path) {
     return None;
   }
-  let text = std::fs::read_to_string(path).unwrap_or_default();
+  let text = match std::fs::read_to_string(path) {
+    Ok(text) => text,
+    Err(err) => return Some(format!("{}: {err}", path.display())),
+  };
   check_text(&text)
     .err()
     .map(|reason| format!("{}: {reason}", path.display()))
