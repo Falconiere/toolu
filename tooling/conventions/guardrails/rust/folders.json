@@ -39,7 +39,8 @@
     "tooling",
     "tools",
     "tsconfig.base.json",
-    "tsconfig.json"
+    "tsconfig.json",
+    "vendor"
   ],
   "crates": [
     "cli",

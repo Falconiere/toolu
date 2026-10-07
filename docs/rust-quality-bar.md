@@ -92,7 +92,10 @@ A crate may hold an admitted `fuzz/` package (folder allowlist): its own
 `[workspace]` and nightly `rust-toolchain.toml`, targets in `fuzz_targets/`.
 It is not a workspace member, so the binary rule, layers, deny, coverage and
 co-located tests do not apply; the guardrails still read its files. The
-`fuzz/clean` fixture proves the gate accepts it (#416 decides the fuzzer).
+`fuzz/clean` fixture proves the gate accepts it. The fuzzer is cargo-fuzz
+(libFuzzer), chosen in #416: `crates/core/shell/fuzz` runs for 60 seconds per
+target in the `fuzz` job of `tests.yml` and for 30 minutes in the scheduled
+`fuzz.yml` (`docs/shell-analysis.md`).
 
 ## Budget
 

@@ -154,6 +154,6 @@ test.concurrent("plugin packaging validator rejects a release config without the
   const res = await validate(sb.project);
   expect(res.exitCode).not.toBe(0);
   expect(res.stdout + res.stderr).toContain(
-    "release-please is missing Cargo.lock ($.package[?(!@.source)].version)",
+    "release-please is missing Cargo.lock ($.package[?(!@.source && @.name.value != 'tree-sitter-bash')].version)",
   );
 });

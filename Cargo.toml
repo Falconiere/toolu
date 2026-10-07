@@ -4,6 +4,8 @@
 # `cargo xtask check-layers` fails when a crate directory is not listed here.
 [workspace]
 resolver = "3"
+# Vendored third-party code is built as a dependency, never as a member.
+exclude = ["vendor/tree-sitter-bash"]
 members = [
   "crates/core/protocol",
   "crates/core/runtime",
@@ -58,6 +60,12 @@ syn = { version = "3", features = ["full", "visit"] }
 tempfile = "3"
 toml = "1"
 url = { version = "2", default-features = false }
+# The shell parser (#416): only toolu-shell links tree-sitter-bash (rules.json `shell-parser`).
+# 0.24 is the last tree-sitter without a serde_json/preserve_order build dependency, which
+# pulls the Zlib foldhash into the graph; brush-parser fails deny.toml too (docs/shell-analysis.md).
+# tree-sitter-bash is vendored with the 0.25.1 fix to its heredoc serializer (vendor/).
+tree-sitter = "0.24"
+tree-sitter-bash = { path = "vendor/tree-sitter-bash", version = "0.23.3" }
 
 # The quality bar (#455): gate data. A change here is its own `chore(gates):` PR
 # (`cargo xtask check-gate-change`); the reasons are in docs/rust-quality-bar.md.
@@ -125,6 +133,14 @@ flat_map_option = "deny"
 # The kit's two relaxations of the noisiest pedantic lints, for every crate.
 module_name_repetitions = "allow"
 must_use_candidate = "allow"
+
+# tree-sitter's C parser (#416) at -O0 is many times slower, and toolu-shell's
+# parse budget is wall clock, so debug builds and tests compile it optimized.
+[profile.dev.package.tree-sitter]
+opt-level = 3
+
+[profile.dev.package.tree-sitter-bash]
+opt-level = 3
 
 # Hooks wrap their main in catch_unwind (#413), so panics must unwind.
 [profile.release]

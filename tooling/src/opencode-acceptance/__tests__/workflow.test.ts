@@ -75,6 +75,7 @@ test.concurrent("the required typescript status needs every gated job, always ru
   expect([required.needs ?? []].flat().toSorted()).toEqual([
     "changes",
     "docs",
+    "fuzz",
     "hook-bench",
     "opencode",
     "rust",

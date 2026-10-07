@@ -103,6 +103,7 @@ test.concurrent("both required aggregates and Rust OS checks retain their status
     "docs",
     "rust",
     "rust-musl",
+    "fuzz",
     "rust-conformance",
     "hook-bench",
   ];
@@ -123,7 +124,7 @@ test.concurrent("both required aggregates and Rust OS checks retain their status
 
 test.concurrent("the Rust jobs run cargo xtask gate and both musl targets (#407 AC-5, AC-7; #455)", () => {
   const tests = workflow("tests.yml");
-  for (const id of ["rust", "rust-musl"]) {
+  for (const id of ["rust", "rust-musl", "fuzz"]) {
     expect(tests.jobs[id]?.if).toBe("needs.changes.outputs.rust == 'true'");
     expect(config.workflows["tests.yml"]?.jobs[id]).toBe("rust");
   }
@@ -209,4 +210,19 @@ test.concurrent("hook-bench measures on Linux and macOS and asserts budgets on L
   expect(bench).toContain('--out "$RESULT" $assert');
   expect(scripts["bench:hooks"]).toBe("bun run tooling/src/benchmarks/hook-resources.ts");
   expect(JSON.stringify(all)).toContain("actions/upload-artifact@v4");
+});
+
+test.concurrent("toolu-shell is fuzzed on every Rust change and on a schedule (#416 AC-5)", () => {
+  const perChange = steps("tests.yml", "fuzz").map((step) => step.run ?? "");
+  for (const target of ["analyze", "nested"]) {
+    expect(perChange).toContain(
+      `cargo fuzz run ${target} --target x86_64-unknown-linux-gnu -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096`,
+    );
+  }
+  const scheduled = workflow("fuzz.yml");
+  expect(JSON.stringify(scheduled)).toContain("max_total_time=1800");
+  const latency = steps("tests.yml", "rust").map((step) => step.run ?? "");
+  expect(latency.some((run) => run.includes("--test latency"))).toBe(true);
+  const musl = steps("tests.yml", "rust-musl").map((step) => step.run ?? "");
+  expect(musl.some((run) => run.includes('=musl-gcc" >> "$GITHUB_ENV"'))).toBe(true);
 });

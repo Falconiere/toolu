@@ -143,3 +143,78 @@ Table measured on 2026-09-29 with Bun 1.4.2 on macOS 26.6.2 (darwin arm64, Apple
 - `writeTargets`, the largest single-consumer piece, moved to its own entry.
 - The shell option reader now reuses `parseArgs` rather than duplicating it (−239 B), which also makes `bash +c` analyzed like `-c`.
 - Both entries together stay above 200 KB: unbash leaves the analyzer about 25 KB, and structural work cannot recover the rest without shortening names or dropping coverage. The product owner set that bundle's budget at 205,000 B; each entry alone stays within 200,000 B.
+
+## The Rust port: `toolu-shell`
+
+`crates/core/shell` ([#416](https://github.com/Falconiere/toolu/issues/416)) gives the Rust hooks of epic #402 the same answers. The table below maps the TypeScript API to the crate:
+
+| TypeScript | Rust |
+|---|---|
+| `analyzeShell`, `MAX_SHELL_INPUT`, `MAX_RUN_DEPTH` | `toolu_shell::analyze`, `MAX_SHELL_INPUT`, `MAX_RUN_DEPTH` |
+| `ShellAnalysis`, `ShellCommand`, `ShellRedirect`, … | `toolu_shell::analysis` (fields in snake case; a dynamic word is `None`) |
+| `gitInvocation`, `runsGitSubcommand`, `pushTargets`, `commitMessages` | `toolu_shell::git` (`Refspec::{Absent, Dynamic, Static}` for `undefined`/`null`/string) |
+| `writeTargets` | `toolu_shell::writes::write_targets` |
+| `matchesRule` | `toolu_shell::rules::matches_rule` |
+
+`shellAnalysisOf`, the per-event cache, belongs to the engine (#418). `pushTargetRoot` and `pushTargetBranch` spawn git and stay with the detect port; `crates/core/shell/tests/fixture_cases.rs` replays them over real repositories from the crate's answers.
+
+**Parser.** The crate uses tree-sitter 0.24.7 with tree-sitter-bash 0.23.3. `brush-parser`, the issue's first choice, fails `deny.toml` in every release: it brings syn 2 beside the workspace's syn 3, duplicate darling and hashbrown versions, and the Zlib-licensed `foldhash`. Every tree-sitter from 0.25 to 0.27 build-depends on `serde_json` with `preserve_order`. In this workspace that reaches the same `foldhash` through `indexmap` and `hashbrown`. 0.24.7 is the last release without it, and tree-sitter-bash 0.23.3 is the last grammar it can load (ABI 14).
+
+**Vendored grammar.** `vendor/tree-sitter-bash` is 0.23.3 with one fix backported from 0.25.1. The scanner serializes its heredoc stack (4 bytes, then 7 and the delimiter with its NUL per heredoc) into tree-sitter's 1024-byte buffer, and its bounds check leaves out the 4-byte length. A state of 1,025 to 1,027 bytes then fails tree-sitter's assertion, which aborts the process, or overruns the buffer. Fuzzing found it twice. The stack also keeps stale entries when the parser restores an earlier version, and error recovery reads delimiters again at other offsets, so no bound computed from the text holds: three such bounds failed, the last after measuring 73,010 inputs. With the fix, `serialize` stops before the buffer is full, and every input that aborted 0.23.3 parses (`tests/limits.rs`). The vendored crate is excluded from the workspace and builds only as `toolu-shell`'s dependency. `cargo xtask check-reach` leaves out a crate the root manifest excludes under `vendor/`, and release-please, `validate-plugin-packaging` and `release_native.py` leave its lockfile version at 0.23.3. Drop it once a tree-sitter-bash with the fix fits `deny.toml`. The walk maps tree-sitter's nodes to unbash's semantics. Where tree-sitter reads a script differently from bash, the crate corrects it:
+
+- **Before parsing** (`fixup.rs`), the script is parsed again with the difference removed, at the same length so every offset holds:
+  - one `time [-p]` before a pipeline is blanked, as bash reads it as a keyword;
+  - a `[`, `[[` or `{` glued to the next character (`[g]it push`, `{node,} -e x`) is a pattern or brace word, not a test or group;
+  - words and redirects after a heredoc delimiter (`cat <<EOF a > .env`) swap places with `<<EOF`.
+- **While walking:**
+  - a word split at an escaped separator (`node -\` and a newline then `e`, `'node'\ '-e x'`) is one word;
+  - only the first word after `>` is the target (`echo x > .env y`);
+  - `<>`, a descriptor glued to its redirect (`0<file`, `{fd}>file`) and a `-` dropped before `<<` are restored;
+  - a redirect tree-sitter puts on a whole list (`a && b 2>&1 | c`) goes to its last command;
+  - a backtick body that escapes a backtick is decoded and parsed again;
+  - `(( … ))` read as a test command (`((x++)) 2>&1`) runs nothing, and the redirects of `(( … ))` and `[[ … ]]` are compound redirects (`(( 1 )) > .env` writes `.env`);
+  - a here-string tree-sitter leaves unlabelled on a compound statement (`done <<< "$(git push)"`) is still its redirect;
+  - `coproc` before a compound body (`coproc (git push)`) runs the body in the background;
+  - a digit glued to `<<` is the heredoc's descriptor (`0<<EOF git push`);
+  - a heredoc line keeps the words after a redirect (`a=1 <<-EOF >f rm -rf x`) and the whole pipeline after `&&` (`cat <<EOF && a | git push`);
+  - a bare `$` tree-sitter split from the name after it (`\"$b`) still expands;
+  - braces expand across quotes (`{"git","push"}` is two dynamic words).
+
+**Fail closed.** Any ERROR or MISSING node left after the fixups makes the analysis `unknown`; the commands read are still reported. TypeScript is unknown only when it read no command, but tree-sitter-bash reports ERROR nodes for valid bash too, and the commands around one can be merged or missing: `cat <<'EOF'; git push` put `git push` into `cat`'s arguments, `3<<EOF git push` named the command `EOF`, `echo "a``" > .env` lost the write. Some misreads carry no ERROR node and are errors too:
+- two backtick substitutions tree-sitter reads as one (`` echo `ls` `git push` ``);
+- a `[` whose lines run on to `]` (bash ends `[` at the newline and runs the next line);
+- a heredoc body line starting with `\` that tree-sitter reads into the delimiter's line, losing it from the body (`bash <<EOF`, then `\git push`).
+
+**Limits.** All of these make the analysis `unknown`, which a guardrail treats as "ask":
+- `MAX_NESTING` (64): nested scripts and compound bodies past this depth. unbash stops at 256 `$(…)` levels without marking the line unknown.
+- `PARSE_BUDGET` (1 s, wall clock, shared by every nested parse and the walk): tree-sitter does not check its timeout everywhere, and some inputs take time quadratic in their length (20,000 commands then a trailing `|` took 11 s, one 80 KB heredoc line 20 s). A script of 4 KiB or more is parsed on a worker thread the analysis stops waiting for at the deadline; the walk stops there too.
+
+**Parity.** `fixtures/shell/analysis.json` holds TypeScript's projected analysis of every input of `unbash-baseline.json`. `analysis-fixture.test.ts` and `crates/core/shell/tests/analysis_fixture.rs` must both reproduce it. Intended differences in the fixture:
+
+- `echo $(unterminated`: Any parse error makes the Rust analysis unknown, where TypeScript trusts the commands it read: tree-sitter-bash reports ERROR nodes for valid bash too (`cat <<EOF; git push`), so the commands read around one may be merged or missing. They are still reported, and bash runs nothing from a line it cannot parse.
+- `echo 'unterminated`: tree-sitter-bash leaves an unterminated quote in an ERROR node instead of folding it into the command's last word, so the command is reported without the broken word. Like every parse error, it makes the Rust analysis unknown.
+
+Other known differences, found by a differential run over 1,526 inputs (the fixtures, every string literal in the TypeScript shell, detect and gate tests, and adversarial cases). Each is malformed input or a form tree-sitter-bash 0.23 cannot read, and each leaves Rust no less cautious:
+
+- Error recovery: the words of a command broken by a syntax error, and the order or origin of commands inside a broken substitution. Rust marks such a line unknown.
+- Extended globs (`@(…)`, `!(…)`), and a pathname or brace pattern as a command name that tree-sitter cannot read (`a?c`, `[[:alpha:]]*`): Rust reports an error or `unknown` where unbash reads a pattern.
+- Two heredocs on one command, or an unterminated heredoc.
+- A carriage return: tree-sitter treats it as whitespace, while bash and unbash keep it in the word.
+- After a swapped heredoc, the command's `text` and redirect order follow the rewritten line.
+- A python `open()` whose mode does not close at its first quote (`'w' if a else 'r'`) is a write to an unknown path; TypeScript tries every later quote, which is quadratic.
+- More than 4 MiB of copy targets (many sources into a long destination) are the destination and one unknown target.
+- Error messages and offsets are tree-sitter's (offsets are bytes, not UTF-16 units). The oversize message is TypeScript's.
+
+**Latency.** `cargo test --release -p toolu-shell --test latency` runs `analyze` plus the git and write helpers over the 235 real commands `bench:shell` times. Measured on 2026-10-06 on a shared Linux x86_64 host: p50 12.5 µs, p99 48.6 µs, against a 100 µs budget.
+
+**Fuzzing.** `crates/core/shell/fuzz` is a cargo-fuzz (libFuzzer) package on nightly. It has two targets:
+- `analyze`: arbitrary input, then every helper a gate calls.
+- `nested`: the input bytes open, fill and close quotes, substitutions, groups, heredocs and shell strings.
+
+To run a target from that directory:
+
+```bash
+CC=clang CFLAGS="-fsanitize=fuzzer-no-link,address" cargo fuzz run analyze -- -max_total_time=60
+```
+
+clang instruments tree-sitter's C sources for coverage and AddressSanitizer. The `fuzz` job in `tests.yml` runs each target for 60 seconds on every Rust change. `.github/workflows/fuzz.yml` runs each for 30 minutes, daily and on demand. Both seed the corpus from the shell fixtures.
