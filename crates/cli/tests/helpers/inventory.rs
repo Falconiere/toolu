@@ -30,7 +30,7 @@ fn manifests() -> Res<BTreeSet<String>> {
   dirs_with(&root().join("plugins"), ".claude-plugin/plugin.json")
 }
 
-/// `crates/<name>/Cargo.toml`, without the binary and tooling crates of `layers.json`.
+/// `crates/<name>/Cargo.toml`, without non-plugin crates.
 fn plugin_crates() -> Res<BTreeSet<String>> {
   let layers: Value = serde_json::from_str(&std::fs::read_to_string(
     root().join("tooling/conventions/guardrails/rust/layers.json"),
@@ -40,6 +40,7 @@ fn plugin_crates() -> Res<BTreeSet<String>> {
     let name = layers.get(role).and_then(Value::as_str);
     crates.remove(name.ok_or("layers.json lacks a role")?);
   }
+  crates.remove("http-test-support");
   Ok(crates)
 }
 

@@ -1,0 +1,19 @@
+[package]
+name = "toolu-http-test-support"
+description = "In-process HTTPS and CONNECT fixture for toolu Rust tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+rcgen = { version = "0.14", default-features = false, features = ["ring"] }
+toolu-http = { path = "../core/http", features = ["test-support"] }
+
+[dev-dependencies]
+serde_json.workspace = true
+toolu-runtime = { path = "../core/runtime" }
+
+[lints]
+workspace = true
