@@ -100,7 +100,7 @@ fn project_context_appends_the_script_stdout() {
   std::fs::write(claude.join("context.sh"), "printf '%s\\n\\n' \"$PROMPT\"\n").unwrap();
   let bin = dir.path().join("bin");
   std::fs::create_dir_all(&bin).unwrap();
-  std::os::unix::fs::symlink("/usr/bin/bash", bin.join("bash")).unwrap();
+  std::os::unix::fs::symlink("/bin/bash", bin.join("bash")).unwrap();
   let env = env(dir.path(), &bin);
   let text = context(&document(
     &env,
