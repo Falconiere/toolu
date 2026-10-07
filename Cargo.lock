@@ -1303,6 +1303,7 @@ dependencies = [
  "toolu-protocol",
  "toolu-review",
  "toolu-runtime",
+ "toolu-state",
  "toolu-statusline",
 ]
 

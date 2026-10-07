@@ -200,6 +200,92 @@
         "project": { "type": ["string", "null"] }
       }
     },
+    "status": {
+      "description": "toolu status --json, the same document StatusSnapshot returns.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "host",
+        "cwd",
+        "repo_root",
+        "branch",
+        "ahead",
+        "behind",
+        "working_tree",
+        "gate",
+        "push_review",
+        "waivers"
+      ],
+      "properties": {
+        "namespace": { "const": "status" },
+        "host": { "type": "string" },
+        "cwd": { "type": "string" },
+        "repo_root": { "type": "string" },
+        "branch": { "type": "string" },
+        "ahead": { "type": "integer", "minimum": 0 },
+        "behind": { "type": "integer", "minimum": 0 },
+        "working_tree": { "$ref": "#/$defs/statusTree" },
+        "gate": { "$ref": "#/$defs/statusGate" },
+        "push_review": { "$ref": "#/$defs/statusReview" },
+        "waivers": { "$ref": "#/$defs/statusWaivers" }
+      }
+    },
+    "statusTree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staged", "unstaged", "untracked"],
+      "properties": {
+        "staged": { "type": "integer", "minimum": 0 },
+        "unstaged": { "type": "integer", "minimum": 0 },
+        "untracked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "statusGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "entries"],
+      "properties": {
+        "status": { "enum": ["passing", "failing", "missing", "invalid"] },
+        "reason": { "type": ["string", "null"] },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/statusGateEntry" }
+        }
+      }
+    },
+    "statusGateEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "source", "reason", "violations", "updatedAt"],
+      "properties": {
+        "file": { "type": "string" },
+        "source": { "type": "string" },
+        "reason": { "type": "string" },
+        "violations": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "statusReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "state", "reason", "document"],
+      "properties": {
+        "path": { "type": "string" },
+        "state": { "enum": ["missing", "recorded", "invalid"] },
+        "reason": { "type": ["string", "null"] },
+        "document": { "type": ["object", "null"] }
+      }
+    },
+    "statusWaivers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["waiver", "pending"],
+      "properties": {
+        "waiver": { "type": ["object", "null"] },
+        "pending": { "type": ["object", "null"] }
+      }
+    },
     "guide": {
       "description": "toolu <namespace> --json, for a Markdown-only plugin.",
       "type": "object",

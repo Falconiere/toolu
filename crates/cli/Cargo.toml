@@ -33,6 +33,7 @@ jsonschema.workspace = true
 regex.workspace = true
 serde.workspace = true
 tempfile.workspace = true
+toolu-state = { path = "../core/state" }
 
 [lints]
 workspace = true
