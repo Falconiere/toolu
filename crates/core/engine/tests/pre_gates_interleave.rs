@@ -80,7 +80,7 @@ fn sandbox() -> Hook {
   let config = hook.sb.path("project/.claude/toolu.config.json");
   sandbox::write(
     &config,
-    "{\"version\":1,\"gates\":{\"qualityGate\":{\"mode\":\"block\"}}",
+    "{\"version\":1,\"gates\":{\"qualityGate\":{\"mode\":\"block\"}}}",
   )
   .expect("config");
   assert!(hook.dir(Phase::Post).starts_with(hook.config_root()));
