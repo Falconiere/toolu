@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
-use crate::{Config, Error, Jev, timeout};
+use crate::{Config, DEFAULT_MODEL, ENDPOINT, Error, Jev, timeout};
 
 #[test]
 fn the_key_is_required_and_refused_with_a_line_break() {
@@ -40,4 +40,13 @@ fn debug_shows_the_endpoint_and_timeout_but_never_the_key() {
     "{shown}"
   );
   assert!(!shown.contains("secret-key-460"), "{shown}");
+}
+
+#[test]
+fn the_default_config_targets_jev_with_one_second_pauses() {
+  let config = Config::default();
+  assert_eq!(config.endpoint, ENDPOINT);
+  assert_eq!(config.endpoint, "https://api.typesafe.ai/v1/systemone");
+  assert_eq!(config.pause, Duration::from_secs(1));
+  assert_eq!(DEFAULT_MODEL, "jev-latest");
 }
