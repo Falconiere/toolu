@@ -25,7 +25,7 @@ import {
 import { bashEnv, binding, hook, inShell } from "./jev-fixtures.ts";
 import { bash, refusal, remoteHead, withHooks } from "./workflow-fixtures.ts";
 
-test.concurrent("toolu and toolu-review register 7 skills, 5 agents and 2 commands", async () => {
+test.concurrent("toolu and toolu-review register 7 skills, 5 agents and 4 commands", async () => {
   using sb = createSandbox({ git: true });
   reviewProject(sb);
   await withHooks(binding(sb, [], ""), async (hooks) => {
@@ -48,7 +48,7 @@ test.concurrent("toolu and toolu-review register 7 skills, 5 agents and 2 comman
       "toolu-quick-task",
       "toolu-research-agent",
     ]);
-    expect(Object.keys(config.command ?? {})).toHaveLength(2);
+    expect(Object.keys(config.command ?? {})).toHaveLength(4);
   });
 });
 

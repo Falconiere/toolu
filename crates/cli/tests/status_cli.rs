@@ -170,6 +170,8 @@ fn status_matches_the_snapshot_on_a_real_repository() {
   let Some((repo, home)) = committed_repo() else {
     panic!("repo");
   };
+  // macOS reports `/private/var` for a `/var` cwd. Use one path for both sides.
+  let repo = std::fs::canonicalize(&repo).unwrap_or(repo);
   let Some(bound) = write_state(&repo, &home) else {
     panic!("state");
   };
