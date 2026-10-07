@@ -91,6 +91,26 @@ plugin; an uncommitted project selection does not reach worktrees.
   `epic-close.ts`, `finish-issue.ts`, `report.ts`. Tracker adapters live
   in `scripts/trackers/`.
 - **Codex SessionStart** — warns when `delivery-flow` or its dependencies are missing.
+- **SessionStart `engine-ensure`** — runs `toolu epic engine --ensure` when a native `toolu` is on `PATH`. An empty registry does nothing. A live engine is left alone.
+
+## Native `toolu epic`
+
+The resident engine is `toolu epic engine` (foreground). `--ensure` starts it only when `registry.json` lists an epic and the lock is free. `--replace` asks the current process to exit, then starts again.
+
+| Verb | What it does |
+| --- | --- |
+| `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
+| `start <state-dir>` | Register that epic directory and ensure the engine. |
+| `status [epic]` | `engine`, `paused`, `epics`, `issues`, and `attention` as one JSON document. |
+| `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
+| `ack <key>` | Clear a stall attention item. |
+| `answer <key> <text>` | Record an answer on the journal. |
+| `wait [--max-seconds N]` | Block until a judgment, or print `{"state":"waiting"}`. |
+| `report <phase> --status-file <file> [--pr N] [--note TEXT]` | Update one issue. Ensures the engine when the registry is non-empty. |
+| `job <argv...>` | Run a command under the worktree's resource lease. The engine stays stopped. |
+| `service install` | Write the user unit. It does not start systemd. |
+| `token new` | Rotate the status bearer token in secrets.json. |
+| `planned` | Lists `graph`, `route`, `launch`, `finish`, `close`, `release`, `jira`, `probe`, `gate`, and `queue` (#435, #448). |
 
 ## State directory
 
