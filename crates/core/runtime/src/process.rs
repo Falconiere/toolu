@@ -132,7 +132,8 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
 
 /// [`run`], calling `on_spawn` with the child's process-group id once it
 /// started and before its stdin is written (`runCommand`'s `onSpawn`). When the
-/// callback fails, the group is stopped and its error returned.
+/// callback fails, the group is stopped and its error returned. Arming a
+/// `GroupGuard` belongs in that callback. `run` passes an empty one.
 ///
 /// # Errors
 /// As [`run`], plus [`RunError::Callback`].

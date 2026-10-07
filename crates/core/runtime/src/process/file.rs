@@ -4,7 +4,8 @@
 //! gets `SIGTERM`, then `SIGKILL` once the grace period ends, and a last
 //! `SIGKILL` after the leader exits. The run is over when the leader exits, as
 //! Bun's `proc.exited` is; descendants that left the group, or outlive an
-//! unbounded run, keep running.
+//! unbounded run, keep running. This function does not arm a `GroupGuard`.
+//! The caller does, from `on_spawn`, when the run should die with this process.
 
 use std::fs::File;
 use std::os::unix::process::CommandExt as _;

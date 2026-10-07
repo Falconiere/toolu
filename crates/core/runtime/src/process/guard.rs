@@ -6,7 +6,9 @@
 //! blocked instead and one `sigwait` thread takes them for the life of the
 //! process. A child inherits its spawning thread's mask, so every spawn runs
 //! inside `unblocked`, and the child starts with the signals unblocked. A
-//! guard dropped while unwinding kills its group too.
+//! normal drop only disarms, as `guardGroup`'s `release()` does on the success
+//! path, and leaves the group running. A drop while unwinding kills it. The
+//! caller arms a group from `on_spawn`; `run` and `run_to_file` do not.
 
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -39,6 +41,9 @@ fn kill_armed() {
 
 /// Takes each forwarded signal: kills the armed group, then lets the signal end
 /// the process from this thread, the only one that no longer blocks it.
+/// `raise` follows a successful unblock. Raising while this thread still blocks
+/// the signal only queues it, and `sigwait` would take it again, so the process
+/// would not end. The check is `is_ok()`, not `unwrap`.
 fn watch(signals: SigSet) {
   loop {
     let Ok(signal) = signals.wait() else {
@@ -111,7 +116,8 @@ impl GroupGuard {
 }
 
 impl Drop for GroupGuard {
-  /// Disarms; a guard dropped while unwinding kills its group first.
+  /// Disarms without signalling. A drop while unwinding kills the armed group
+  /// first. A normal drop leaves it running, as `guardGroup`'s `release()` does.
   fn drop(&mut self) {
     if std::thread::panicking() {
       kill_armed();

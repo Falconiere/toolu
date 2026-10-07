@@ -232,8 +232,7 @@ impl RunContext<'_> {
 #[path = "tests/context_test.rs"]
 mod tests;
 
-/// The repository the ledger's unit tests run in.
-/// The sandboxed repository the engine's unit tests share.
+/// The sandboxed repository the ledger's unit tests share.
 #[cfg(test)]
 #[path = "tests/repo_test.rs"]
 pub mod test_repo;
