@@ -1314,6 +1314,14 @@ dependencies = [
 [[package]]
 name = "toolu-engine"
 version = "7.11.0"
+dependencies = [
+ "serde_json",
+ "tempfile",
+ "toolu-protocol",
+ "toolu-runtime",
+ "toolu-shell",
+ "toolu-state",
+]
 
 [[package]]
 name = "toolu-epic-orchestrator"
@@ -1355,6 +1363,7 @@ dependencies = [
  "clap",
  "serde_json",
  "toolu-ast-grep",
+ "toolu-engine",
  "toolu-protocol",
  "toolu-python-quality",
  "toolu-runtime",

@@ -1,11 +1,21 @@
 [package]
 name = "toolu-engine"
-description = "toolu core: the engine layer"
+description = "toolu core: the engine layer (registry runner and tool dispatch)"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+toolu-protocol = { path = "../protocol" }
+toolu-runtime = { path = "../runtime" }
+toolu-shell = { path = "../shell" }
+toolu-state = { path = "../state" }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

@@ -30,8 +30,8 @@ fn an_enforcing_event_runs_the_hook_and_passes_its_status_through() {
       .starts_with("toolu runtime: native")
   );
   let blocked = sandbox
-    .launch("PreToolUse", "pre-tools", "{}", &[])
+    .launch("PreToolUse", "no-such-hook", "{}", &[])
     .unwrap();
   assert_eq!(blocked.code, 2, "{blocked:?}");
-  assert!(blocked.stderr.contains("has no hook pre-tools"));
+  assert!(blocked.stderr.contains("has no hook no-such-hook"));
 }

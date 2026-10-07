@@ -106,7 +106,7 @@ fn a_plugin_name_alias_reaches_its_namespace() {
 
 #[test]
 fn hooks_through_clap_keep_their_own_protocol() {
-  let blocked = dispatched("--json hook pre-tools --event PreToolUse");
+  let blocked = dispatched("--json hook no-such-hook --event PreToolUse");
   assert_eq!(blocked.exit, Exit::Blocked);
   assert_eq!(blocked.stdout, None);
   let context = dispatched("--quiet jev hook session-start --event SessionStart");

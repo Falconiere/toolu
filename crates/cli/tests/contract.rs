@@ -152,7 +152,7 @@ fn a_missing_verb_exits_64_with_help_on_stderr() {
 
 #[test]
 fn a_denied_hook_exits_2_with_blocked_on_stderr() {
-  let output = toolu(&["hook", "pre-tools", "--event", "PreToolUse"]).unwrap();
+  let output = toolu(&["hook", "no-such-hook", "--event", "PreToolUse"]).unwrap();
   assert_eq!(output.status.code(), Some(2));
   assert_eq!(stdout(&output).unwrap(), "");
   assert!(

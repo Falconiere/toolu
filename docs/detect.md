@@ -45,7 +45,7 @@ The git questions take a `ShellAnalysis`, not a command string. A gate parses on
 - the PATH cases and the snippet table;
 - a check that compares Rust and TypeScript line counts on every tracked `*.ts`, `*.rs`, `*.py` and `*.sh` file of the repository (`crates/core/state/tests/detect.rs`).
 
-The push and commit questions, which need the shell parser, follow in #418.
+The push and commit questions need the shell parser, so they live one layer up in `toolu_engine::detect` (#418, `crates/core/engine/src/detect.rs`): `is_git_push`, `is_git_commit`, `push_target_root` and `push_target_branch`, on `toolu_shell::git`. The `-C` chain is replayed from the cwd, each step relative to the last, and its toplevel is read from `.git`, so no git process is spawned unless the walk defers to git. `crates/core/engine/tests/detect.rs` checks them on real repositories, including a linked worktree in a directory with a space and detached and unborn HEADs.
 
 **Git facts without git.** The toplevel comes from `toolu_runtime::git`, which walks up from the physical cwd for `.git` as git's own discovery does. It handles:
 - linked worktrees, submodules and `--separate-git-dir` pointers;

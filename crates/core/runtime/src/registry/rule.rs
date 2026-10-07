@@ -32,9 +32,9 @@ pub enum EditOperation {
 pub struct EditSplit<'a> {
   /// What the patch did to the path.
   pub operation: EditOperation,
-  /// The path before a move, else the path.
+  /// The record's `from` (a move destination's source), else empty: `TOOLU_EDIT_FROM`.
   pub from: &'a str,
-  /// The path after a move, else empty.
+  /// The record's `moved_to` (a move source's destination), else empty: `TOOLU_EDIT_MOVED_TO`.
   pub moved_to: &'a str,
 }
 
@@ -65,6 +65,11 @@ pub trait Rule: Send + Sync {
   fn name(&self) -> &str;
   /// The event it runs on.
   fn event(&self) -> RegistryEvent;
+  /// Whether the rule has anything to say about this event, such as a file it
+  /// owns; the runner calls [`Rule::run`] only when it does. Every event by default.
+  fn applies(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> bool {
+    true
+  }
   /// Decides one event.
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Decision;
 }

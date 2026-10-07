@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{RunError, Spec, group, run};
+use super::{RunError, Spec, Wait, group, run};
 use crate::env::Env;
 
 fn sh(script: &str) -> Spec {
@@ -122,4 +122,36 @@ fn stdout_bytes_keep_what_the_lossy_text_replaces() {
   let output = run(&sh("printf 'a\\377\\376b'")).unwrap();
   assert_eq!(output.stdout_bytes, b"a\xff\xfeb".to_vec());
   assert_eq!(output.stdout, "a\u{fffd}\u{fffd}b");
+}
+
+#[test]
+fn streams_mode_returns_once_the_child_exited_and_its_streams_closed() {
+  let mut spec = sh("sleep 30 >/dev/null 2>&1 & echo started");
+  spec.wait = Wait::Streams;
+  spec.timeout = Duration::from_secs(10);
+  let output = run(&spec).unwrap();
+  assert_eq!(output.stdout, "started\n");
+  assert!(!output.timed_out);
+  assert!(
+    output.duration < Duration::from_secs(5),
+    "{:?}",
+    output.duration
+  );
+  group::terminate(output.pid).unwrap();
+}
+
+#[test]
+fn streams_mode_still_waits_for_a_descendant_holding_stdout_and_kills_it_at_the_deadline() {
+  let mut spec = sh("sleep 30 & echo started");
+  spec.wait = Wait::Streams;
+  spec.timeout = Duration::from_millis(300);
+  let output = run(&spec).unwrap();
+  assert!(output.timed_out);
+  assert_eq!(output.stdout, "started\n");
+  assert!(!group::alive(output.pid));
+}
+
+#[test]
+fn group_mode_is_the_default() {
+  assert_eq!(Spec::new(["true"]).wait, Wait::Group);
 }

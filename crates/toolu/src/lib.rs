@@ -1,6 +1,7 @@
-//! The toolu plugin's crate, the hub: the toolu namespaces (`hook` lives in
-//! `crates/cli` until #418) and the rule crates, which only the hub may link
-//! (#460), re-exported so `crates/cli` can register their namespaces.
+//! The toolu plugin's crate, the hub: the toolu namespaces, the tool hooks
+//! (`toolu hook pre-tools` and `post-tools`, which `crates/cli` routes here) and
+//! the rule crates, which only the hub may link (#460), re-exported so
+//! `crates/cli` can register their namespaces.
 
 /// `toolu config`.
 pub mod config;
@@ -16,6 +17,8 @@ pub mod serve;
 pub mod setup;
 /// `toolu status`.
 pub mod status;
+/// `toolu hook pre-tools` and `toolu hook post-tools`.
+pub mod tool_hook;
 
 pub use toolu_ast_grep as ast_grep;
 pub use toolu_python_quality as python_quality;

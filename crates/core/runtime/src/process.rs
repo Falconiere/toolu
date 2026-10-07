@@ -28,6 +28,16 @@ const POLL: Duration = Duration::from_millis(10);
 /// The wait between two looks at a group whose leader exited.
 const GROUP_POLL: Duration = Duration::from_millis(250);
 
+/// When a run is over, short of its deadline.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Wait {
+  /// The child exited, its streams closed and its process group has no live member.
+  Group,
+  /// The child exited and its streams closed, as `Bun.spawnSync` returns; a process it
+  /// started with its streams redirected is left running.
+  Streams,
+}
+
 /// One command to run.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Spec {
@@ -43,6 +53,8 @@ pub struct Spec {
   pub timeout: Duration,
   /// The bytes of stdout and stderr kept, together.
   pub max_output_bytes: usize,
+  /// When the run is over; the deadline terminates the whole group either way.
+  pub wait: Wait,
 }
 
 impl Spec {
@@ -55,6 +67,7 @@ impl Spec {
       stdin: Vec::new(),
       timeout: DEFAULT_TIMEOUT,
       max_output_bytes: DEFAULT_MAX_OUTPUT_BYTES,
+      wait: Wait::Group,
     }
   }
 }
@@ -98,7 +111,8 @@ pub enum RunError {
 }
 
 /// Run `spec` and return once the child exited and its group has no live
-/// member, or the deadline passed and the group was terminated.
+/// member (or, with [`Wait::Streams`], once its streams closed), or the
+/// deadline passed and the group was terminated.
 ///
 /// # Errors
 /// [`RunError`] when the spec is unusable, the program cannot start, or the
@@ -121,7 +135,7 @@ pub fn run(spec: &Spec) -> Result<Output, RunError> {
   let budget = Budget::new(spec.max_output_bytes);
   let stdout = Drain::start(child.stdout.take(), &budget);
   let stderr = Drain::start(child.stderr.take(), &budget);
-  let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline)?;
+  let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline, spec.wait)?;
   if let Some(Err(err)) = feeder.and_then(fed) {
     return Err(RunError::Stdin(err));
   }
@@ -179,13 +193,14 @@ fn fed(feeder: JoinHandle<Result<(), String>>) -> Option<Result<(), String>> {
   }
 }
 
-/// Waits for the child, its group and both streams until `deadline`; past it,
-/// terminates the group and gives the streams a last moment to close.
+/// Waits for the child, both streams and (with [`Wait::Group`]) its group until
+/// `deadline`; past it, terminates the group and gives the streams a last moment to close.
 fn settle(
   child: &mut Child,
   pid: u32,
   drains: [&Drain; 2],
   deadline: Instant,
+  wait: Wait,
 ) -> Result<(ExitStatus, bool), RunError> {
   let mut status = None;
   let mut next_group_check = Instant::now();
@@ -195,6 +210,9 @@ fn settle(
     }
     let now = Instant::now();
     let streams_done = drains.iter().all(|drain| drain.finished());
+    if let Some(status) = status.filter(|_| streams_done && wait == Wait::Streams) {
+      return Ok((status, false));
+    }
     if let Some(status) = status.filter(|_| streams_done && now >= next_group_check) {
       if !group::alive(pid) {
         return Ok((status, false));
