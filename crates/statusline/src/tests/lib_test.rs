@@ -23,7 +23,7 @@ fn the_statusline_crate_is_its_plugin_and_lists_the_planned_verbs() {
   assert_eq!(dir.and_then(|name| name.to_str()), Some(PLUGIN));
   let matches = command()
     .try_get_matches_from(["statusline", "planned"])
-    .unwrap();
+    .expect("statusline planned matches");
   let outcome = run(&matches, &Ctx::default(), &Unported);
   assert_eq!(
     outcome.stdout.as_deref(),

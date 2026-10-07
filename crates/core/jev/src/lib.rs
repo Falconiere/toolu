@@ -129,11 +129,14 @@ impl Jev {
 /// `JEV_TIMEOUT` seconds; 60 when unset, negative, not a number, or over
 /// `u32::MAX` seconds, past which a deadline overflows the clock.
 fn timeout(value: Option<&str>) -> Duration {
-  value
+  let parsed = value
     .and_then(|text| text.trim().parse::<f64>().ok())
     .filter(|seconds| (0.0..=f64::from(u32::MAX)).contains(seconds))
-    .and_then(|seconds| Duration::try_from_secs_f64(seconds).ok())
-    .unwrap_or(DEFAULT_TIMEOUT)
+    .and_then(|seconds| Duration::try_from_secs_f64(seconds).ok());
+  let Some(timeout) = parsed else {
+    return DEFAULT_TIMEOUT;
+  };
+  timeout
 }
 
 #[cfg(test)]

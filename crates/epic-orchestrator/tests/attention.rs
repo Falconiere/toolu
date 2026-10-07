@@ -46,19 +46,21 @@ fn a_failing_gh_becomes_an_attention_item_naming_both_sources() {
   fs::write(dir.path().join("hosts.yml"), "github.com: [broken\n").expect("hosts");
   let home = dir.path().to_string_lossy().into_owned();
   let env = Env::from_pairs([
-    ("PATH", std::env::var("PATH").unwrap_or_default()),
+    (
+      "PATH",
+      Env::process()
+        .get("PATH")
+        .map_or_else(String::new, str::to_owned),
+    ),
     ("HOME", home.clone()),
     ("GH_CONFIG_DIR", home),
   ]);
-  let Next::Attention(message) = step(env) else {
-    panic!("expected an attention item");
-  };
+  let next = step(env);
+  let expected = "babysit tick for Falconiere/toolu#460 failed: no GitHub token: GH_TOKEN is \
+                  unset and `gh auth token` failed: ";
   assert!(
-    message.starts_with(
-      "babysit tick for Falconiere/toolu#460 failed: no GitHub token: GH_TOKEN is unset and \
-       `gh auth token` failed: "
-    ),
-    "{message}"
+    matches!(&next, Next::Attention(message) if message.starts_with(expected)),
+    "{next:?}"
   );
 }
 
@@ -66,11 +68,13 @@ fn a_failing_gh_becomes_an_attention_item_naming_both_sources() {
 fn a_missing_gh_becomes_an_attention_item_naming_both_sources() {
   let empty = tempfile::tempdir().expect("dir");
   let env = Env::from_pairs([("PATH", empty.path().to_string_lossy().into_owned())]);
-  let Next::Attention(message) = step(env) else {
-    panic!("expected an attention item");
-  };
+  let next = step(env);
   assert!(
-    message.contains("GH_TOKEN is unset and `gh auth token` failed: gh: "),
-    "{message}"
+    matches!(
+      &next,
+      Next::Attention(message)
+        if message.ends_with("`gh auth token` failed: gh: No such file or directory (os error 2)")
+    ),
+    "{next:?}"
   );
 }

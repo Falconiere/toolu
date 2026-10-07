@@ -200,7 +200,11 @@ fn count(value: Option<&Value>) -> Result<u64, Error> {
     // 0 and -0, which `Number.isInteger` accepts and `{:.0}` prints as "-0".
     return Ok(0);
   }
-  Ok(format!("{number:.0}").parse().unwrap_or(u64::MAX))
+  let Ok(count) = format!("{number:.0}").parse::<u64>() else {
+    // Integral and above `u64::MAX`: saturate, as TypeScript accepts it.
+    return Ok(u64::MAX);
+  };
+  Ok(count)
 }
 
 #[cfg(test)]
