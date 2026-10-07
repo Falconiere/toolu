@@ -80,7 +80,8 @@ fn a_leader_that_ignores_sigterm_is_killed_after_the_grace() {
 fn death_by_a_signal_reports_128_plus_its_number() {
   let dir = tempfile::tempdir().unwrap();
   let output = run_to_file(&spec(dir.path(), "kill -USR1 $$", None), &mut |_| {}).unwrap();
-  assert_eq!(output.exit_code, 128 + 10);
+  let sigusr1 = nix::sys::signal::Signal::SIGUSR1 as i32;
+  assert_eq!(output.exit_code, 128 + sigusr1);
 }
 
 #[test]
