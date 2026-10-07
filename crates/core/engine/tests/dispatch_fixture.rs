@@ -64,19 +64,17 @@ impl Paths {
       let (before, after) = rest.split_at(at);
       out.push_str(before);
       let tail = after.get(1..).unwrap_or_default();
-      let hit = self.0.iter().find(|(token, _)| {
-        tail.starts_with(token)
-          && !tail[token.len()..].starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+      let hit = self.0.iter().find_map(|(token, path)| {
+        let next = tail.strip_prefix(token)?;
+        let longer = next.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_');
+        (!longer).then_some((path, next))
       });
-      match hit {
-        Some((token, path)) => {
-          out.push_str(path);
-          rest = &tail[token.len()..];
-        }
-        None => {
-          out.push('$');
-          rest = tail;
-        }
+      if let Some((path, next)) = hit {
+        out.push_str(path);
+        rest = next;
+      } else {
+        out.push('$');
+        rest = tail;
       }
     }
     out.push_str(rest);
@@ -132,6 +130,37 @@ fn builtins(case: &Value) -> Res<Vec<Builtin>> {
     .collect()
 }
 
+/// Writes the case's install record: Claude's, or a ready Codex snapshot.
+fn install(hook: &Hook, case: &Value) -> Res<()> {
+  let installed = case.get("installed").and_then(Value::as_array);
+  let record = hook.sb.path("home/.claude/plugins/installed_plugins.json");
+  match (installed, hook.host) {
+    (Some(specs), Host::Codex) => {
+      let snapshot = serde_json::json!({"version": 1, "status": "ready", "plugins": specs});
+      write(
+        &hook.config_root().join("toolu/codex-plugins.json"),
+        &snapshot.to_string(),
+      )?;
+    }
+    (Some(specs), _) => {
+      let plugins: serde_json::Map<String, Value> = specs
+        .iter()
+        .filter_map(Value::as_str)
+        .map(|spec| (spec.to_owned(), serde_json::json!([{"scope": "user"}])))
+        .collect();
+      write(
+        &record,
+        &serde_json::json!({"version": 2, "plugins": plugins}).to_string(),
+      )?;
+    }
+    (None, _) => {}
+  }
+  if let Some(raw) = case.get("installedRaw").and_then(Value::as_str) {
+    write(&record, raw)?;
+  }
+  Ok(())
+}
+
 /// Writes the case's registry, config and install record.
 fn setup(hook: &mut Hook, case: &Value, phase: Phase, paths: &Paths) -> Res<()> {
   for module in case
@@ -163,32 +192,7 @@ fn setup(hook: &mut Hook, case: &Value, phase: Phase, paths: &Paths) -> Res<()> 
       &config.to_string(),
     )?;
   }
-  let installed = case.get("installed").and_then(Value::as_array);
-  let record = hook.sb.path("home/.claude/plugins/installed_plugins.json");
-  match (installed, hook.host) {
-    (Some(specs), Host::Codex) => {
-      let snapshot = serde_json::json!({"version": 1, "status": "ready", "plugins": specs});
-      write(
-        &hook.config_root().join("toolu/codex-plugins.json"),
-        &snapshot.to_string(),
-      )?;
-    }
-    (Some(specs), _) => {
-      let plugins: serde_json::Map<String, Value> = specs
-        .iter()
-        .filter_map(Value::as_str)
-        .map(|spec| (spec.to_owned(), serde_json::json!([{"scope": "user"}])))
-        .collect();
-      write(
-        &record,
-        &serde_json::json!({"version": 2, "plugins": plugins}).to_string(),
-      )?;
-    }
-    (None, _) => {}
-  }
-  if let Some(raw) = case.get("installedRaw").and_then(Value::as_str) {
-    write(&record, raw)?;
-  }
+  install(hook, case)?;
   hook.continue_blocks = case.get("continuePostBlocks") == Some(&Value::Bool(true));
   Ok(())
 }
@@ -208,9 +212,10 @@ fn check(case: &Value, stdin: &Ordered) -> Res<()> {
   let mut hook = Hook::new(host)?;
   let paths = Paths::of(&hook);
   setup(&mut hook, case, phase, &paths)?;
-  let stdin = match stdin {
-    Ordered::String(raw) => paths.expand(raw),
-    other => paths.expand_ordered(other).to_text(false),
+  let stdin = if let Ordered::String(raw) = stdin {
+    paths.expand(raw)
+  } else {
+    paths.expand_ordered(stdin).to_text(false)
   };
   let gates = builtins(case)?;
   let gates: Vec<&dyn Gate> = gates.iter().map(|gate| gate as &dyn Gate).collect();
@@ -238,17 +243,13 @@ fn the_engine_reproduces_every_dispatch_case() {
   let doc: Value = serde_json::from_str(&source).unwrap();
   let ordered = Ordered::parse(&source).unwrap();
   let cases = doc["cases"].as_array().unwrap();
-  let Some(Ordered::Array(stdins)) = ordered.get("cases").map(|cases| match cases {
-    Ordered::Array(items) => Ordered::Array(
-      items
-        .iter()
-        .filter_map(|case| case.get("stdin").cloned())
-        .collect(),
-    ),
-    other => other.clone(),
-  }) else {
+  let Some(Ordered::Array(items)) = ordered.get("cases") else {
     panic!("cases is not an array");
   };
+  let stdins: Vec<Ordered> = items
+    .iter()
+    .filter_map(|case| case.get("stdin").cloned())
+    .collect();
   assert_eq!(cases.len(), stdins.len());
   assert!(cases.len() >= 50, "{} cases", cases.len());
   let failures: Vec<String> = cases
