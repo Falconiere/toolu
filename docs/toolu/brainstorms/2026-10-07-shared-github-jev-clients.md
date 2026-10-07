@@ -35,7 +35,7 @@
 | Token sources | `GH_TOKEN`, then `gh auth token`; re-read once on `401` | Issue text; `gh auth token` itself honours `GITHUB_TOKEN` | A missing `gh` is a typed error, never a panic |
 | Retry | One-shot: `PB_GH_ATTEMPTS`, `PB_GH_BACKOFF`, `PB_GH_TIMEOUT` and `gh.ts`'s classes; scheduled: one attempt, rate limits returned with their wait | `gh.ts:50-55`; the engine checks every 3 minutes and never backs off (#447) | A long `retry-after` must not block a one-shot call: over 60 s it returns `RateLimited` |
 | Cost | REST: 0 points for `304`, else 1, plus the `x-ratelimit-*` headers; GraphQL: `data.rateLimit.cost` when the query selects it, plus the headers | GitHub documents that a `304` is free; the engine design measured it on PR #454 | A GraphQL query without `rateLimit` reports no points |
-| Jev key order | Questions and state kept as raw JSON text (`serde_json` `raw_value`) | serde_json's `preserve_order` pulls `foldhash`, which cargo-deny rejects; the TypeScript client keeps option order (`__proto__` test) | Structured instructions and unknown question fields pass through untouched, as in TypeScript |
+| Jev key order | Questions and state held as `toolu_runtime::json::ordered::Ordered`, printed as `JSON.stringify` text | serde_json's `preserve_order` pulls `foldhash`, which cargo-deny rejects; the TypeScript client keeps option order (`__proto__` test); `Ordered` already keeps document order and collapses repeated keys as JavaScript does (Jev chose raw JSON text at 0.99; the spec review found `Ordered`, which keeps that choice's order and adds `JSON.stringify` parity) | Structured instructions and unknown question fields pass through untouched, as in TypeScript; integer-like keys keep insertion order where JavaScript moves them first |
 
 ## Alternatives rejected
 
@@ -54,6 +54,9 @@
   reads it, and the issue names two sources.
 - **Typed Jev questions only** (Jev: 0.01): `ask` accepts structured
   instructions and criteria (`plugins/jev/skills/jev/SKILL.md`).
+- **Raw JSON text (`serde_json` `raw_value`)**: keeps order, but sends a
+  repeated key twice and the reader's whitespace and number text, where
+  `jev.ts` sends `JSON.stringify` text; `Ordered` matches that.
 - **`toolu-state` as a GitHub dependency:** the caller keeps the ETag, so the
   client has no state to store; cargo-machete rejects an unused dependency.
 
