@@ -78,3 +78,19 @@ jobs:
     with:
       tag: ${{ needs.release-please.outputs.tag_name }}
       publish: true
+    secrets:
+      TOOLU_MINISIGN_SECRET_KEY: ${{ secrets.TOOLU_MINISIGN_SECRET_KEY }}
+
+  # Stable tags only: release-homebrew.yml skips a tag that contains '-'.
+  homebrew:
+    name: Update Homebrew tap
+    needs: [release-please, native]
+    if: needs.release-please.outputs.releases_created == 'true' && needs.native.result == 'success' && needs.release-please.outputs.tag_name != ''
+    permissions:
+      contents: read
+    uses: ./.github/workflows/release-homebrew.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+    secrets:
+      HOMEBREW_APP_ID: ${{ secrets.HOMEBREW_APP_ID }}
+      HOMEBREW_APP_PRIVATE_KEY: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}

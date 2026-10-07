@@ -71,6 +71,20 @@ The rule isn't "warn and move on" — it's a hard gate: **no new task while the 
 
 ## Install
 
+Install the native `toolu` binary with the installer or Homebrew, then the plugins:
+
+```bash
+curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash   # macOS and Linux, arm64 and amd64
+brew install falconiere/tap/toolu                          # or Homebrew, macOS and Linux
+toolu plugins install
+```
+
+The installer verifies the release's minisign signature and the archive's
+checksum before it writes anything. Upgrade, uninstall, a pinned version,
+rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
+Until `toolu plugins` lands (#438), install the plugins with
+`npx @toolu/plugins install`, as below.
+
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 

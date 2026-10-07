@@ -1,0 +1,107 @@
+name: Homebrew tap
+
+# Called by release-please after the native release is published. Generates
+# Formula/toolu.rb from the release's SHA256SUMS with `cargo xtask
+# homebrew-formula` and pushes it to Falconiere/homebrew-tap with a short-lived
+# token minted from the tap's GitHub App, scoped to that repository only.
+#
+# The prerelease guard reads `inputs.tag`, not `github.ref_name`: under
+# workflow_call from a push to main, ref_name is `main`. It lives here so it
+# travels with what it guards: the tap only ever points at a stable release.
+# Manual dispatch updates the tap for a release that was published by a manual
+# release-native.yml run.
+on:
+  workflow_call:
+    inputs:
+      tag:
+        required: true
+        type: string
+    secrets:
+      HOMEBREW_APP_ID:
+        description: GitHub App id with Contents write on Falconiere/homebrew-tap.
+        required: true
+      HOMEBREW_APP_PRIVATE_KEY:
+        description: Private key PEM of the same App.
+        required: true
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Published stable release tag (vX.Y.Z)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  formula:
+    name: Push Formula/toolu.rb
+    if: ${{ inputs.tag != '' && !contains(inputs.tag, '-') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      TAG: ${{ inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+      - uses: Swatinem/rust-cache@v2
+      - name: Download SHA256SUMS from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: gh release download "$TAG" --pattern SHA256SUMS --pattern SHA256SUMS.minisig --dir dist
+      # The formula's hashes come from SHA256SUMS, so it gets the same check as
+      # install.sh: the release key's signature, made for this tag.
+      - name: Verify the SHA256SUMS signature
+        env:
+          MINISIGN_SHA256: f0a0954413df8531befed169e447a66da6868d79052ed7e892e50a4291af7ae0
+        run: |
+          set -euo pipefail
+          work=$(mktemp -d)
+          curl -fsSL -o "$work/minisign.tar.gz" https://github.com/jedisct1/minisign/releases/download/0.11/minisign-0.11-linux.tar.gz
+          echo "$MINISIGN_SHA256  $work/minisign.tar.gz" | sha256sum -c -
+          tar -xzf "$work/minisign.tar.gz" -C "$work" minisign-linux/x86_64/minisign
+          public_key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)
+          test -n "$public_key" || { echo "::error::TOOLU_PUBLIC_KEY not found in install.sh"; exit 1; }
+          verified=$("$work/minisign-linux/x86_64/minisign" -Vm dist/SHA256SUMS -x dist/SHA256SUMS.minisig -P "$public_key")
+          echo "$verified"
+          grep -qxF "Trusted comment: toolu $TAG" <<<"$verified"
+      - name: Generate Formula/toolu.rb
+        run: cargo xtask homebrew-formula "$TAG" dist/SHA256SUMS > dist/toolu.rb
+      - name: Mint a homebrew-tap token
+        id: tap-token
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.HOMEBREW_APP_ID }}
+          private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
+          owner: Falconiere
+          repositories: homebrew-tap
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: Falconiere/homebrew-tap
+          path: tap
+          token: ${{ steps.tap-token.outputs.token }}
+          persist-credentials: false
+      - name: Push the formula
+        env:
+          TAP_TOKEN: ${{ steps.tap-token.outputs.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p tap/Formula
+          cp dist/toolu.rb tap/Formula/toolu.rb
+          cd tap
+          git config user.name "toolu release bot"
+          git config user.email "actions@users.noreply.github.com"
+          # Stage first: a first formula is untracked, which `git diff` ignores.
+          git add Formula/toolu.rb
+          if git diff --cached --quiet -- Formula/toolu.rb; then
+            echo "::notice::Formula/toolu.rb unchanged, nothing to push"
+            exit 0
+          fi
+          git commit -m "toolu ${TAG}"
+          header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$TAP_TOKEN" | base64 -w0)"
+          git -c http.https://github.com/.extraheader="$header" push

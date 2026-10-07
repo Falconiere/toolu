@@ -15,6 +15,7 @@ import {
   checkRelease,
   checkReviewRefresh,
 } from "./workflow-checks.ts";
+import { checkInstallChannels } from "./install-channel-checks.ts";
 
 function workflow(root: string, name: string): ObjectMap {
   return object(Bun.YAML.parse(readFileSync(join(root, ".github/workflows", name), "utf8")));
@@ -253,6 +254,7 @@ export function checkWorkflows(root: string): string[] {
     "merge-gate.yml",
     "release-please.yml",
     "release-native.yml",
+    "release-homebrew.yml",
     "release-finalize.yml",
     "advisory-audit.yml",
     "npm-publish.yml",
@@ -275,6 +277,7 @@ export function checkWorkflows(root: string): string[] {
   checkReview(root, get("toolu-review.yml"), get("merge-gate.yml"), errors);
   try {
     checkRelease(root, docs, errors);
+    checkInstallChannels(root, docs, errors);
   } catch (error) {
     errors.push(`release-please-config.json: cannot read or parse: ${String(error)}`);
   }
