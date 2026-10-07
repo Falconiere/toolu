@@ -24,7 +24,7 @@ fn the_repository_has_no_violation() {
     "{:?}",
     report.violations
   );
-  assert_eq!(report.crates, 21);
+  assert_eq!(report.crates, 23);
 }
 
 #[test]
@@ -46,6 +46,10 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
       "crates/core/state (toolu-state) depends on serde_json: only toolu-http may link a \
        `json` crate",
       "crates/core/engine (toolu-engine) depends on serde_json: only toolu-http may link a \
+       `json` crate",
+      "crates/core/github (toolu-github) depends on serde_json: only toolu-http may link a \
+       `json` crate",
+      "crates/core/jev (toolu-jev-client) depends on serde_json: only toolu-http may link a \
        `json` crate",
       "crates/cli (toolu-cli) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/epic-orchestrator (toolu-epic-orchestrator) depends on serde_json: only toolu-http may link a `json` crate",

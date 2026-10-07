@@ -1293,6 +1293,7 @@ dependencies = [
  "tempfile",
  "toolu-brainstorm",
  "toolu-delivery-flow",
+ "toolu-engine",
  "toolu-epic-orchestrator",
  "toolu-hub",
  "toolu-jev",
@@ -1329,7 +1330,22 @@ version = "7.11.0"
 dependencies = [
  "clap",
  "serde_json",
+ "tempfile",
+ "toolu-engine",
+ "toolu-github",
  "toolu-protocol",
+ "toolu-runtime",
+]
+
+[[package]]
+name = "toolu-github"
+version = "7.11.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toolu-http",
+ "toolu-http-test-support",
  "toolu-runtime",
 ]
 
@@ -1380,10 +1396,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "toolu-jev-client"
+version = "7.11.0"
+dependencies = [
+ "serde_json",
+ "toolu-http",
+ "toolu-http-test-support",
+ "toolu-runtime",
+]
+
+[[package]]
 name = "toolu-pr-babysit"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "toolu-engine",
  "toolu-runtime",
 ]
 
@@ -1459,6 +1486,8 @@ name = "toolu-statusline"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "serde_json",
+ "toolu-engine",
  "toolu-runtime",
 ]
 

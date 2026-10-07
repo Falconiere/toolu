@@ -1,0 +1,19 @@
+[package]
+name = "toolu-jev-client"
+description = "toolu core: the Jev HTTP client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true
+toolu-http = { path = "../http" }
+toolu-runtime = { path = "../runtime" }
+
+[dev-dependencies]
+toolu-http-test-support = { path = "../../http-test-support" }
+
+[lints]
+workspace = true

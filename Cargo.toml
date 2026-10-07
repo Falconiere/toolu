@@ -13,6 +13,8 @@ members = [
   "crates/core/http",
   "crates/core/state",
   "crates/core/engine",
+  "crates/core/github",
+  "crates/core/jev",
   "crates/http-test-support",
   "crates/cli",
   "crates/xtask",

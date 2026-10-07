@@ -11,12 +11,24 @@
 //! - `trace`: what a dispatch did with each module;
 //! - `detect`: the git operations a parsed command performs (push, commit, the
 //!   pushed repository and branch).
+//!
+//! Cross-plugin traits (#460): plugin logic one plugin owns and another uses
+//! is a trait here. The owner implements it and `crates/cli` passes that
+//! implementation to the user, so no plugin crate depends on another:
+//!
+//! - [`babysit::BabysitTick`]: owned by pr-babysit, run by the epic engine;
+//! - [`status::StatusSnapshot`]: owned by the hub (`crates/toolu`), rendered by
+//!   statusline.
 
+use std::fmt;
+
+pub mod babysit;
 pub mod builtins;
 pub mod detect;
 pub mod dispatch;
 pub mod gate;
 pub mod registry;
+pub mod status;
 pub mod trace;
 
 pub use dispatch::{
@@ -25,3 +37,30 @@ pub use dispatch::{
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "engine";
+
+/// Why a cross-plugin call gave no answer.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LinkError {
+  /// The owning plugin has not ported this logic to Rust yet.
+  NotPorted {
+    /// The issue that ports it.
+    issue: u32,
+  },
+  /// The owner ran and failed; the message is fit to show a user.
+  Failed(String),
+}
+
+impl fmt::Display for LinkError {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    match self {
+      Self::NotPorted { issue } => write!(f, "not ported yet (#{issue})"),
+      Self::Failed(message) => f.write_str(message),
+    }
+  }
+}
+
+impl std::error::Error for LinkError {}
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

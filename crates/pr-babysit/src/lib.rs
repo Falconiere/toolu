@@ -1,6 +1,8 @@
 //! The pr-babysit plugin's crate: the `toolu babysit` namespace, not ported yet (#433).
 
 use clap::{ArgMatches, Command};
+use toolu_engine::LinkError;
+use toolu_engine::babysit::{BabysitTick, TickReport, TickRequest};
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Planned;
 
@@ -30,6 +32,17 @@ pub fn command() -> Command {
 /// Run a `toolu babysit` verb: until its port, the placeholder.
 pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   NAMESPACE.run(ctx)
+}
+
+/// pr-babysit's [`BabysitTick`], which `crates/cli` hands the epic engine. The
+/// tick is not ported yet (#433).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Tick;
+
+impl BabysitTick for Tick {
+  fn tick(&self, _request: &TickRequest) -> Result<TickReport, LinkError> {
+    Err(LinkError::NotPorted { issue: 433 })
+  }
 }
 
 #[cfg(test)]

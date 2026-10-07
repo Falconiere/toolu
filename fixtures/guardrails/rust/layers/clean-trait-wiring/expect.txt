@@ -1,0 +1,3 @@
+step layers
+exit 0
+contains check-layers: 5 crates, 5 edges, ok

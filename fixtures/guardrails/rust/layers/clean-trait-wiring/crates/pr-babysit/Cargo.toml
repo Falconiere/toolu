@@ -1,0 +1,13 @@
+[package]
+name = "toolu-pr-babysit"
+description = "A fixture plugin"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+toolu-engine = { path = "../core/engine" }
+
+[lints]
+workspace = true

@@ -110,6 +110,16 @@ fn layers_violating() {
 }
 
 #[test]
+fn layers_clean_trait_wiring() {
+  fixture::check("layers", "clean-trait-wiring").unwrap();
+}
+
+#[test]
+fn layers_violating_epic_babysit() {
+  fixture::check("layers", "violating-epic-babysit").unwrap();
+}
+
+#[test]
 fn real_tests_clean() {
   fixture::check("real-tests", "clean").unwrap();
 }

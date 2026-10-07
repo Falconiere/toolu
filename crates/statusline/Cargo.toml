@@ -9,7 +9,11 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+toolu-engine = { path = "../core/engine" }
 toolu-runtime = { path = "../core/runtime" }
+
+[dev-dependencies]
+serde_json.workspace = true
 
 [lints]
 workspace = true

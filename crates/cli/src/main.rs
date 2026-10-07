@@ -11,6 +11,7 @@ mod dispatch;
 mod export;
 mod fast;
 mod hook;
+mod links;
 mod output;
 mod registry;
 mod session_start;

@@ -7,12 +7,14 @@ use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
-use std::time::Duration;
-
 mod proxy;
+mod reply;
+mod routes;
 mod server;
 
 use proxy::spawn_proxy;
+pub use reply::Reply;
+use routes::Routes;
 use server::{bind, spawn_https, tls_server_config};
 
 /// A fixture setup failure.
@@ -31,45 +33,6 @@ fn error(value: impl fmt::Display) -> Error {
   Error(value.to_string())
 }
 
-/// A response emitted by the HTTPS server for an exact path.
-#[derive(Debug, Clone)]
-pub struct Reply {
-  /// HTTP status code.
-  pub status: u16,
-  /// Response headers.
-  pub headers: Vec<(String, String)>,
-  /// Response bytes.
-  pub body: Vec<u8>,
-  /// Delay before writing the response.
-  pub delay: Duration,
-}
-
-impl Reply {
-  /// A status and body without extra headers or delay.
-  pub fn new(status: u16, body: impl Into<Vec<u8>>) -> Self {
-    Self {
-      status,
-      headers: Vec::new(),
-      body: body.into(),
-      delay: Duration::ZERO,
-    }
-  }
-
-  /// Add one response header.
-  #[must_use]
-  pub fn header(mut self, name: &str, value: &str) -> Self {
-    self.headers.push((name.into(), value.into()));
-    self
-  }
-
-  /// Delay the response to exercise a client deadline.
-  #[must_use]
-  pub fn delayed(mut self, delay: Duration) -> Self {
-    self.delay = delay;
-    self
-  }
-}
-
 /// One HTTP request observed after the TLS handshake.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObservedRequest {
@@ -85,14 +48,14 @@ pub struct ObservedRequest {
 
 /// Shared HTTPS server state for the two fixture origins.
 pub(crate) struct ServerData {
-  pub(crate) routes: Arc<Mutex<BTreeMap<String, Reply>>>,
+  pub(crate) routes: Arc<Mutex<Routes>>,
   pub(crate) requests: Arc<Mutex<Vec<ObservedRequest>>>,
   pub(crate) diagnostics: Arc<Mutex<Vec<String>>>,
 }
 
 impl ServerData {
   fn new(
-    routes: &Arc<Mutex<BTreeMap<String, Reply>>>,
+    routes: &Arc<Mutex<Routes>>,
     requests: &Arc<Mutex<Vec<ObservedRequest>>>,
     diagnostics: &Arc<Mutex<Vec<String>>>,
   ) -> Arc<Self> {
@@ -110,7 +73,7 @@ pub struct Fixture {
   first_origin: SocketAddr,
   second_origin: SocketAddr,
   proxy: SocketAddr,
-  routes: Arc<Mutex<BTreeMap<String, Reply>>>,
+  routes: Arc<Mutex<Routes>>,
   requests: Arc<Mutex<Vec<ObservedRequest>>>,
   connects: Arc<Mutex<Vec<String>>>,
   diagnostics: Arc<Mutex<Vec<String>>>,
@@ -126,7 +89,7 @@ impl Fixture {
   /// loopback binding fails.
   pub fn start() -> Result<Self, Error> {
     let (cert_der, config) = tls_server_config()?;
-    let routes = Arc::new(Mutex::new(BTreeMap::new()));
+    let routes = Arc::new(Mutex::new(Routes::default()));
     let requests = Arc::new(Mutex::new(Vec::new()));
     let connects = Arc::new(Mutex::new(Vec::new()));
     let diagnostics = Arc::new(Mutex::new(Vec::new()));
@@ -199,11 +162,16 @@ impl Fixture {
   /// # Errors
   /// Returns an error if the route table lock is poisoned.
   pub fn route(&self, path: &str, reply: Reply) -> Result<(), Error> {
-    self
-      .routes
-      .lock()
-      .map_err(error)?
-      .insert(path.into(), reply);
+    self.sequence(path, vec![reply])
+  }
+
+  /// Answer `path`'s requests with `replies` in order; the last one repeats
+  /// once the others are used. An empty sequence removes the route.
+  ///
+  /// # Errors
+  /// Returns an error if the route table lock is poisoned.
+  pub fn sequence(&self, path: &str, replies: Vec<Reply>) -> Result<(), Error> {
+    self.routes.lock().map_err(error)?.set(path, replies);
     Ok(())
   }
 

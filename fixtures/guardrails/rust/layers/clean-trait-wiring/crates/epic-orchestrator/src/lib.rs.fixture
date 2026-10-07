@@ -1,0 +1,6 @@
+//! The epic-orchestrator fixture plugin: it runs whatever tick it is given.
+
+/// Run one tick.
+pub fn run(tick: &dyn toolu_engine::BabysitTick) -> bool {
+  tick.tick()
+}

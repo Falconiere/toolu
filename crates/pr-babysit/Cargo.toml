@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+toolu-engine = { path = "../core/engine" }
 toolu-runtime = { path = "../core/runtime" }
 
 [lints]

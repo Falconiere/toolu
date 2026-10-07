@@ -1,7 +1,7 @@
 //! Real HTTP CONNECT relay to the fixture's TLS origins.
 
 use std::io::{self, BufRead, BufReader, Write};
-use std::net::{SocketAddr, TcpListener, TcpStream};
+use std::net::{Shutdown, SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
@@ -83,15 +83,25 @@ fn serve_proxy(
     .into_iter()
     .find(|origin| origin.port() == port)
     .ok_or_else(|| error("unregistered CONNECT port"))?;
-  let mut upstream = TcpStream::connect(addr).map_err(error)?;
+  let upstream = TcpStream::connect(addr).map_err(error)?;
   let mut client = reader.into_inner();
   client
     .write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
     .map_err(error)?;
+  relay(client, upstream)
+}
+
+/// Copy bytes both ways until the origin closes, then let the client see the
+/// close at once instead of after the read timeout.
+fn relay(mut client: TcpStream, mut upstream: TcpStream) -> Result<(), Error> {
   let mut client_read = client.try_clone().map_err(error)?;
   let mut upstream_write = upstream.try_clone().map_err(error)?;
   let forward = thread::spawn(move || io::copy(&mut client_read, &mut upstream_write));
   io::copy(&mut upstream, &mut client).map_err(error)?;
+  match client.shutdown(Shutdown::Write) {
+    Err(err) if err.kind() != io::ErrorKind::NotConnected => return Err(error(err)),
+    Ok(()) | Err(_) => {}
+  }
   forward
     .join()
     .map_err(|_panic| error("CONNECT copy thread panicked"))?

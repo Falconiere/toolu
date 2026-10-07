@@ -1,0 +1,6 @@
+//! The cli fixture: it hands pr-babysit's tick to epic-orchestrator.
+
+fn main() {
+  let tick: &dyn toolu_engine::BabysitTick = &toolu_pr_babysit::Tick;
+  assert!(toolu_epic_orchestrator::run(tick));
+}

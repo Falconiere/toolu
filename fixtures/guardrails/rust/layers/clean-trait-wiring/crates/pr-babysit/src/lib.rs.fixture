@@ -1,0 +1,10 @@
+//! The pr-babysit fixture plugin: it owns the tick.
+
+/// pr-babysit's tick.
+pub struct Tick;
+
+impl toolu_engine::BabysitTick for Tick {
+  fn tick(&self) -> bool {
+    true
+  }
+}

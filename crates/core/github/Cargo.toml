@@ -1,0 +1,25 @@
+[package]
+name = "toolu-github"
+description = "toolu core: the GitHub REST and GraphQL client"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+toolu-http = { path = "../http" }
+toolu-runtime = { path = "../runtime" }
+
+[dev-dependencies]
+tempfile.workspace = true
+toolu-http-test-support = { path = "../../http-test-support" }
+
+[[test]]
+name = "token_leak"
+harness = false
+
+[lints]
+workspace = true
