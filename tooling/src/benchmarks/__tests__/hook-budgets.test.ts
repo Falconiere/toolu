@@ -41,8 +41,8 @@ function rule(start: number, measured: number, tighten: boolean): number {
 const proto = loadJson(join(ROOT, "benchmarks/results/hook-prototype-2026-10-05.json"), Prototype);
 const budgets = loadJson(join(ROOT, "benchmarks/hook-budgets.json"), Budgets);
 
-test("every hook budget is the rule applied to the prototype's p50", () => {
-  expect(Object.keys(budgets.entries).toSorted()).toEqual(Object.keys(START).toSorted());
+test("every prototype hook budget is the rule applied to the prototype's p50", () => {
+  for (const id of Object.keys(START)) expect(budgets.entries[id], id).toBeDefined();
   for (const [entry, start] of Object.entries(START)) {
     const measured = proto.hooks.fastPath[entry];
     expect(measured, entry).toBeDefined();

@@ -1,8 +1,11 @@
 use std::cell::Cell;
+use std::path::{Path, PathBuf};
+use std::sync::OnceLock;
 
 use serde_json::Value;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 
 use super::{Context, VERSION, run, tree};
 
@@ -24,8 +27,35 @@ pub(crate) fn context() -> Context<'static> {
   Context {
     exe: &no_exe,
     stdin: &no_stdin,
-    env: None,
+    env: &scratch_env,
+    cwd: &scratch_cwd,
   }
+}
+
+fn scratch() -> &'static Path {
+  static DIR: OnceLock<PathBuf> = OnceLock::new();
+  DIR.get_or_init(|| {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.into_path();
+    std::fs::create_dir_all(path.join("home")).unwrap();
+    std::fs::create_dir_all(path.join("cfg")).unwrap();
+    std::fs::create_dir_all(path.join("bin")).unwrap();
+    path
+  })
+}
+
+fn scratch_env() -> Env {
+  let root = scratch();
+  Env::from_pairs([
+    ("HOME", root.join("home").to_str().unwrap()),
+    ("PATH", root.join("bin").to_str().unwrap()),
+    ("TOOLU_CONFIG_DIR", root.join("cfg").to_str().unwrap()),
+    ("CLAUDE_PROJECT_DIR", root.to_str().unwrap()),
+  ])
+}
+
+fn scratch_cwd() -> PathBuf {
+  scratch().to_path_buf()
 }
 
 /// Run `line` with a tree builder that counts its calls.

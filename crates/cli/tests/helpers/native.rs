@@ -12,7 +12,10 @@ fn session_start_reports_the_native_runtime_at_its_path() {
   assert_eq!(run.code, 0, "{run:?}");
   assert_eq!(
     system_message(&run).unwrap(),
-    format!("toolu runtime: native {VERSION} at {}", bin.display())
+    format!(
+      "Toolu is on!\ntoolu runtime: native {VERSION} at {}",
+      bin.display()
+    )
   );
 }
 
@@ -27,7 +30,7 @@ fn an_enforcing_event_runs_the_hook_and_passes_its_status_through() {
   assert!(
     system_message(&ran)
       .unwrap()
-      .starts_with("toolu runtime: native")
+      .starts_with("Toolu is on!\ntoolu runtime: native")
   );
   let blocked = sandbox
     .launch("PreToolUse", "no-such-hook", "{}", &[])

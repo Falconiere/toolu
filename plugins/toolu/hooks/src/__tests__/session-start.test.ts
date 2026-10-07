@@ -10,11 +10,13 @@ import {
   lstatSync,
   mkdirSync,
   readFileSync,
+  realpathSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import { launcherHook, missingRuntimeMessage, runtimeDiagnostic } from "@toolu/core/launcher";
+import { entryImplementation } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { hookCommand } from "@toolu/conformance/harness/startup";
@@ -22,6 +24,17 @@ import { z } from "zod";
 import { PLUGIN, bundleArgv, launchCount, prepare, type LifecycleCase } from "./lifecycle-cases.ts";
 
 const RUNTIME = runtimeDiagnostic(process.execPath, Bun.version).systemMessage;
+
+/** The runtime line the selected implementation prints under the startup title. */
+function startupRuntime(): string {
+  if (entryImplementation("toolu", "session-start") === "bun") return RUNTIME;
+  const binary = bundleArgv("session-start")[0];
+  if (binary === undefined) throw new Error("rust session-start has no binary");
+  const manifest = z
+    .object({ version: z.string() })
+    .parse(JSON.parse(readFileSync(join(PLUGIN, "../../package.json"), "utf8")));
+  return `toolu runtime: native ${manifest.version} at ${realpathSync(binary)}`;
+}
 const COMMAND = hookCommand(PLUGIN, "SessionStart", "session-start");
 const OutputSchema = z.strictObject({
   hookSpecificOutput: z.strictObject({
@@ -122,7 +135,9 @@ test("disabled context reports the runtime on startup only and writes no readine
   const off: LifecycleCase = { ...START, userConfig: { hooks: { "session-start": false } } };
   const { outputs, prepared } = await runTimes(off, 1);
   using _sb = prepared.sb;
-  expect(JSON.parse(outputs[0] ?? "")).toEqual({ systemMessage: `Toolu is on!\n${RUNTIME}` });
+  expect(JSON.parse(outputs[0] ?? "")).toEqual({
+    systemMessage: `Toolu is on!\n${startupRuntime()}`,
+  });
   expect(existsSync(join(prepared.sb.home, ".claude", "toolu", ".session-start-ready"))).toBe(
     false,
   );
