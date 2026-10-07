@@ -1332,7 +1332,6 @@ name = "toolu-epic-orchestrator"
 version = "7.11.0"
 dependencies = [
  "clap",
- "nix",
  "serde_json",
  "tempfile",
  "toolu-engine",

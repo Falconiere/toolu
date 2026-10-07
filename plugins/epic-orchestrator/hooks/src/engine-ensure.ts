@@ -19,8 +19,13 @@ function native(path: string): boolean {
   return result.status === 0 && /^[1-9][0-9]*$/u.test(result.stdout.trim());
 }
 
+function absolute(path: string): string | undefined {
+  return path.startsWith("/") ? path : undefined;
+}
+
 await Bun.stdin.text();
-const candidate = process.env["TOOLU_BIN"] ?? shellToolu();
+const fromEnv = process.env["TOOLU_BIN"];
+const candidate = fromEnv === undefined ? shellToolu() : absolute(fromEnv);
 if (candidate !== undefined && native(candidate)) {
   const ran = spawnSync(candidate, ["epic", "engine", "--ensure"], {
     timeout: ENSURE_MS,

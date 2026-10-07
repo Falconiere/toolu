@@ -17,8 +17,12 @@ function native(path) {
   const result = spawnSync(path, ["--hook-protocol"], { timeout: PROBE_MS, encoding: "utf8" });
   return result.status === 0 && /^[1-9][0-9]*$/u.test(result.stdout.trim());
 }
+function absolute(path) {
+  return path.startsWith("/") ? path : undefined;
+}
 await Bun.stdin.text();
-var candidate = process.env["TOOLU_BIN"] ?? shellToolu();
+var fromEnv = process.env["TOOLU_BIN"];
+var candidate = fromEnv === undefined ? shellToolu() : absolute(fromEnv);
 if (candidate !== undefined && native(candidate)) {
   const ran = spawnSync(candidate, ["epic", "engine", "--ensure"], {
     timeout: ENSURE_MS,

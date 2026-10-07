@@ -3,9 +3,7 @@
 
 use std::path::{Path, PathBuf};
 
-use nix::errno::Errno;
-use nix::sys::signal::kill;
-use nix::unistd::Pid;
+use toolu_runtime::process::group::pid_alive;
 
 /// A lock file this process created.
 #[derive(Debug)]
@@ -111,7 +109,8 @@ fn pid_of(text: &str) -> Option<i32> {
 }
 
 fn process_alive(pid: i32) -> bool {
-  pid > 0 && !matches!(kill(Pid::from_raw(pid), None), Err(Errno::ESRCH))
+  // A probe that cannot tell (another user, for example) leaves the lock held.
+  pid_alive(i64::from(pid)).unwrap_or(true)
 }
 
 #[cfg(test)]

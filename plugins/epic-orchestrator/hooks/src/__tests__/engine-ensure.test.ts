@@ -1,6 +1,6 @@
 /** SessionStart runs `toolu epic engine --ensure` against a native binary on PATH. */
 import { expect, test } from "bun:test";
-import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { runStartupHook } from "@toolu/conformance/harness/startup";
@@ -49,6 +49,20 @@ test.concurrent("a failing ensure is a session message and exit 0", async () => 
   });
   expect(res.exitCode).toBe(0);
   expect(res.stdout).toContain("epic engine:");
+});
+
+test.concurrent("a relative TOOLU_BIN is not executed", async () => {
+  using sb = createSandbox();
+  const record = join(sb.root, "record");
+  const res = await runStartupHook(PLUGIN, "engine-ensure", sb, {
+    HOME: sb.home,
+    PATH: `${tooluBin(sb, NATIVE)}:${process.env["PATH"] ?? ""}`,
+    CLAUDE_PLUGIN_ROOT: PLUGIN,
+    TOOLU_RECORD: record,
+    TOOLU_BIN: "toolu",
+  });
+  expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
+  expect(existsSync(record)).toBe(false);
 });
 
 test.concurrent("stays silent when no native toolu is on PATH", async () => {
