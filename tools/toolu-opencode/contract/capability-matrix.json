@@ -644,7 +644,7 @@
       },
       "surfaces": {
         "skills": 6,
-        "commands": 2,
+        "commands": 4,
         "agents": 5,
         "owner": ["OP-10", "OP-11"]
       }

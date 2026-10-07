@@ -155,7 +155,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
 | python-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 | rust-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 | statusline | ✅ | — | ✅ | — | — | — | — | — | — | 1/1/0 |
-| toolu | ✅🔒 | 🟡🔒 | ✅ | ✅ | ✅ | 🟡 | ✅🔒 | ✅🔒 | — | 6/2/5 |
+| toolu | ✅🔒 | 🟡🔒 | ✅ | ✅ | ✅ | 🟡 | ✅🔒 | ✅🔒 | — | 6/4/5 |
 | toolu-review | ✅ | — | ✅ | — | — | — | — | — | — | 1/0/0 |
 | ts-quality | — | — | ✅ | — | — | ✅ | — | — | — | 0/0/0 |
 
@@ -208,7 +208,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
   - **postTool** — gate-status, push-waiver and post-tools.d quality feedback after edits and bash. `tool.execute.after (append to output)` (hook): partial; evidence `post.feedback`, `post.bash-exit`, `post.tool-error`. Alternative: A thrown tool error has no side effect to check; it reaches the model as the tool error and the event bus as message.part.updated. Owner: OP-06 (#340).
   - **mcp** — mcp-blocker denies blocklisted MCP servers before the call. `tool.execute.before on <server>_<tool>` (hook): supported; evidence `deny.mcp`. Owner: OP-03 (#337), OP-04 (#338).
   - **task** — agent-tier gates delegated agents, and gates also apply inside child sessions. `tool.execute.before on task + child sessions` (hook): supported; evidence `deny.task-child`. Owner: OP-03 (#337), OP-04 (#338).
-  - **surfaces** — 6 skills, 2 commands, 5 agents. Owner: OP-10 (#344), OP-11 (#345).
+  - **surfaces** — 6 skills, 4 commands, 5 agents. Owner: OP-10 (#344), OP-11 (#345).
 - **toolu-review** (owner OP-24 (#358))
   - **tools** — review skill writes push-review state through the helper. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-24 (#358), OP-09 (#343).
   - **startup** — SessionStart publishes the push-review state writer. `plugin init (bootstrap)` (hook): supported; evidence `load.local-file`. Owner: OP-24 (#358), OP-08 (#342).
