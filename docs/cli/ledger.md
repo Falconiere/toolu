@@ -14,8 +14,53 @@ The plan ledger, verdicts and push waivers
 Usage: toolu ledger [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#421): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  run                     Run the plan's step checks and stamp the branch ledger
+  status                  Heal, recompute and print the branch ledger without running checks
+  preflight               Refuse unless the plan and its declared spec are Approved
+  path                    Print the branch ledger's path
+  root                    Print the project root
+  self-test, --self-test  Parse a built-in two-step plan and check the result
+  verdict                 Judge the four push gates: quality, plan, review and docs
+  help                    Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+
+Exit codes of run and status: 0 every step is fresh-green, 1 a step is not, 2 an error (nothing is written). preflight exits 0 when the plan and its spec are Approved, 1 when not, 2 when the plan cannot be read. verdict exits 0 when ready, 1 when blocked, 2 outside a repository.
+```
+
+## `toolu ledger run`
+
+```text
+Run the plan's step checks and stamp the branch ledger
+
+Usage: toolu ledger run [OPTIONS] <DOC>
+
+Arguments:
+  <DOC>  The plan doc
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --step <ID>         Run only this step
+      --activity <LABEL>  What the running step is doing; needs --step
+  -q, --quiet             Drop the diagnostics of a successful run
+      --force             Re-run steps that are already fresh-green
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --verify            Judge every step on the whole branch diff, and stamp the verified hash
+  -h, --help              Print help
+```
+
+## `toolu ledger status`
+
+```text
+Heal, recompute and print the branch ledger without running checks
+
+Usage: toolu ledger status [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,12 +70,78 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu ledger planned`
+## `toolu ledger preflight`
 
 ```text
-Not ported yet (#421): show the planned verbs
+Refuse unless the plan and its declared spec are Approved
 
-Usage: toolu ledger planned [OPTIONS]
+Usage: toolu ledger preflight [OPTIONS] [DOC]
+
+Arguments:
+  [DOC]  The plan doc; the ledger's plan_doc by default
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ledger path`
+
+```text
+Print the branch ledger's path
+
+Usage: toolu ledger path [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ledger root`
+
+```text
+Print the project root
+
+Usage: toolu ledger root [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ledger self-test`
+
+```text
+Parse a built-in two-step plan and check the result
+
+Usage: toolu ledger {self-test|--self-test} [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ledger verdict`
+
+```text
+Judge the four push gates: quality, plan, review and docs
+
+Usage: toolu ledger verdict [OPTIONS] <MODE>
+
+Arguments:
+  <MODE>  status prints a table, json the report [possible values: status, json]
 
 Options:
       --json              Print exactly one JSON document on stdout
