@@ -4,7 +4,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
-use super::{SecretError, load, path, redact_json, redact_text, rotate_status_token};
+use super::{SecretError, Secrets, load, path, redact_json, redact_text, rotate_status_token};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -188,6 +188,19 @@ fn empty_environment_values_leave_file_credentials_active() {
   assert_eq!(resolved.peer_token("alpha"), Some("file-alpha"));
   rotate_status_token(&empty_roots).unwrap();
   assert_ne!(load(&roots).unwrap().status_token(), Some("file-status"));
+}
+
+#[test]
+fn secrets_none_redacts_credential_keys_and_keeps_other_strings() {
+  let shown = redact_json(
+    &json!({"epic": {"statusToken": "TOKEN_VALUE", "label": "CANARY_LABEL"}}),
+    &Secrets::none(),
+  );
+  let text = shown.to_string();
+  assert!(!text.contains("TOKEN_VALUE"), "{text}");
+  assert!(text.contains("statusToken"), "{text}");
+  assert!(text.contains("<redacted>"), "{text}");
+  assert!(text.contains("CANARY_LABEL"), "{text}");
 }
 
 #[test]

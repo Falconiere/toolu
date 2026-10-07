@@ -140,6 +140,27 @@ enum Layer {
   Object(Map<String, Value>),
 }
 
+/// Malformed JSON, which the loader ignores. Every other [`check_text`] error
+/// is an envelope rejection.
+const MALFORMED: &str = "malformed JSON";
+
+/// The per-file rule: malformed JSON, a non-object top level, an unknown
+/// top-level key, or a `version` other than 1.
+///
+/// # Errors
+/// `malformed JSON` when the text is not usable JSON (`null` and `false`
+/// included). Any other error is the envelope reason, with the loader's exact
+/// wording.
+pub fn check_text(text: &str) -> Result<Map<String, Value>, String> {
+  match serde_json::from_str::<Value>(text) {
+    Ok(Value::Null | Value::Bool(false)) | Err(_) => Err(MALFORMED.to_owned()),
+    Ok(Value::Object(map)) => envelope_error(text, &map).map_or(Ok(map), Err),
+    Ok(Value::Bool(true) | Value::Number(_) | Value::String(_) | Value::Array(_)) => {
+      Err("top level is not a JSON object".to_owned())
+    }
+  }
+}
+
 /// `jq -e .` over the file: unreadable, unparsable, `null` and `false` are malformed.
 fn read_layer(path: &Path) -> Layer {
   if !is_file(path) {
@@ -149,15 +170,10 @@ fn read_layer(path: &Path) -> Layer {
     return Layer::Malformed;
   };
   let text = String::from_utf8_lossy(&bytes);
-  match serde_json::from_str::<Value>(&text) {
-    Ok(Value::Null | Value::Bool(false)) | Err(_) => Layer::Malformed,
-    Ok(Value::Object(map)) => match envelope_error(&text, &map) {
-      Some(reason) => Layer::Invalid(reason),
-      None => Layer::Object(map),
-    },
-    Ok(Value::Bool(true) | Value::Number(_) | Value::String(_) | Value::Array(_)) => {
-      Layer::Invalid("top level is not a JSON object".to_owned())
-    }
+  match check_text(&text) {
+    Ok(map) => Layer::Object(map),
+    Err(reason) if reason == MALFORMED => Layer::Malformed,
+    Err(reason) => Layer::Invalid(reason),
   }
 }
 

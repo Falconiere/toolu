@@ -42,6 +42,17 @@ impl fmt::Debug for Secrets {
 }
 
 impl Secrets {
+  /// No resolved values. Key-name redaction still applies; substring redaction
+  /// has nothing to replace.
+  pub fn none() -> Self {
+    Secrets {
+      status_token: None,
+      notify_url: None,
+      peer_tokens: BTreeMap::new(),
+      shadowed_values: Vec::new(),
+    }
+  }
+
   /// The token required for a non-loopback status listener, if configured.
   pub fn status_token(&self) -> Option<&str> {
     self.status_token.as_deref()
