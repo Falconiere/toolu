@@ -1380,12 +1380,14 @@ version = "7.11.0"
 dependencies = [
  "clap",
  "serde_json",
+ "tempfile",
  "toolu-ast-grep",
  "toolu-engine",
  "toolu-protocol",
  "toolu-python-quality",
  "toolu-runtime",
  "toolu-rust-quality",
+ "toolu-state",
  "toolu-ts-quality",
 ]
 

@@ -124,15 +124,33 @@
         "issues": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1 } }
       }
     },
-    "doctor": {
-      "description": "toolu doctor --json when native toolu is reachable in a non-login shell.",
+    "doctorCheck": {
+      "description": "One toolu doctor check.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["namespace", "reachable", "path"],
+      "required": ["id", "status", "summary", "hint", "details"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["ok", "warn", "fail"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "hint": { "type": ["string", "null"] },
+        "details": { "type": "object" }
+      }
+    },
+    "doctor": {
+      "description": "toolu doctor --json. The report is on stdout even when a check failed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "ok", "checks"],
       "properties": {
         "namespace": { "const": "doctor" },
-        "reachable": { "const": true },
-        "path": { "type": "string", "minLength": 1 }
+        "ok": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": { "$ref": "#/$defs/doctorCheck" }
+        }
       }
     },
     "guide": {
