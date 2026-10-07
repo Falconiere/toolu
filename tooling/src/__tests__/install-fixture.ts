@@ -108,7 +108,7 @@ export function archive(version: string, members = ["toolu", "LICENSE"], link = 
   return bytes;
 }
 
-/** A `SHA256SUMS` over `files` and its `.minisig`, signed for `tag` as release-native.yml does. */
+/** A `SHA256SUMS` over `files` and its `.minisig`, signed for `tag` the way release-native.yml signs. */
 export async function signedSums(
   files: Record<string, Uint8Array>,
   tag: string,
