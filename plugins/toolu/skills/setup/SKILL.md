@@ -5,20 +5,20 @@ description: Use when installing, previewing, updating, backing up, or removing 
 
 # Set up toolu agents
 
-Use the bundled [installer](scripts/setup.ts); run it with `bun`. It manages `quick-task`,
-`deep-explore`, `research-agent`, `implementer`, and `architect` under
-`${CODEX_HOME:-$HOME/.codex}/agents`.
+`toolu setup agents` manages `quick-task`, `deep-explore`, `research-agent`, `implementer`, and `architect`.
 
-1. Run `bun <installer-path> preview` and show the exact plan.
-2. For installs and managed upgrades, run `bun <installer-path> install`.
+1. Run `toolu setup agents preview` and show the exact plan.
+2. For installs and managed upgrades, run `toolu setup agents install`.
 3. If preview reports an unmanaged conflict, inspect only the named file and
-   ask for explicit confirmation before `install --force`. The script creates a
-   timestamped backup before replacement.
+   ask for explicit confirmation before running `toolu setup agents install`
+   with `--force`. The command creates a timestamped backup before replacement.
 4. For removal, show preview and ask for explicit confirmation before
-   `remove --yes`. Use `--force` only after separately confirming any unmanaged
-   conflict. Removal moves profiles into a timestamped backup.
+   `toolu setup agents remove` with `--yes`. Add `--force` only after separately
+   confirming any unmanaged conflict. Removal moves profiles into a timestamped
+   backup.
 5. Report the backup path and tell the user to restart Codex so agent profiles
    reload.
+6. Run `toolu doctor` and `toolu config validate`, and present their output.
 
 Never edit agent files by hand or infer confirmation from the original setup
 request when a conflict or removal is involved.

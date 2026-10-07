@@ -2,14 +2,14 @@
 
 # `toolu doctor`
 
-Check that the agent command shell finds native toolu.
+Report binary, config, plugin and tool health.
 
 Owner: `plugins/toolu`.
 
 ## `toolu doctor`
 
 ```text
-Check that the agent command shell finds native toolu
+Report binary, config, plugin and tool health
 
 Usage: toolu doctor [OPTIONS]
 

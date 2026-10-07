@@ -286,6 +286,41 @@
         "pending": { "type": ["object", "null"] }
       }
     },
+    "setupAgents": {
+      "description": "toolu setup agents prints text lines (TARGET, PLAN, then a summary or NOTICE). Refusals exit 2. Stdout is text, not JSON.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "command", "target", "plans"],
+      "properties": {
+        "namespace": { "const": "setup" },
+        "command": { "enum": ["preview", "install", "remove"] },
+        "target": { "type": "string", "minLength": 1 },
+        "plans": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "action"],
+            "properties": {
+              "name": {
+                "enum": [
+                  "quick-task",
+                  "deep-explore",
+                  "research-agent",
+                  "implementer",
+                  "architect"
+                ]
+              },
+              "action": {
+                "enum": ["install", "unchanged", "update", "conflict", "absent", "remove"]
+              }
+            }
+          }
+        }
+      }
+    },
     "guide": {
       "description": "toolu <namespace> --json, for a Markdown-only plugin.",
       "type": "object",

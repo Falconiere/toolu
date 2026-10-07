@@ -278,20 +278,27 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#445): show the planned verbs",
+          "about": "Preview, install or remove Codex agent profiles",
           "aliases": [],
-          "args": [],
+          "args": [
+            {
+              "help": "preview, install [--force], or remove --yes [--force]",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
           "commands": [],
           "flags": [],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "agents",
           "owner": "toolu",
           "path": [
             "setup",
-            "planned"
+            "agents"
           ],
-          "placeholder": true
+          "placeholder": false
         }
       ],
       "flags": [],
@@ -305,7 +312,7 @@
       "placeholder": false
     },
     {
-      "about": "Check that the agent command shell finds native toolu",
+      "about": "Report binary, config, plugin and tool health",
       "aliases": [],
       "args": [],
       "commands": [],
@@ -325,20 +332,84 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#445): show the planned verbs",
+          "about": "Print one key or the redacted merged config",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Dotted key",
+              "multiple": false,
+              "name": "KEY",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "get",
+          "owner": "toolu",
+          "path": [
+            "config",
+            "get"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Set one key in the user config, or the project config with --project",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Dotted key",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            },
+            {
+              "help": "JSON value, or a string when it is not JSON",
+              "multiple": false,
+              "name": "VALUE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Write the project file",
+              "hidden": false,
+              "long": "project",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "set",
+          "owner": "toolu",
+          "path": [
+            "config",
+            "set"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Validate the merged config and epic settings",
           "aliases": [],
           "args": [],
           "commands": [],
           "flags": [],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "validate",
           "owner": "toolu",
           "path": [
             "config",
-            "planned"
+            "validate"
           ],
-          "placeholder": true
+          "placeholder": false
         }
       ],
       "flags": [],
@@ -352,27 +423,10 @@
       "placeholder": false
     },
     {
-      "about": "Show the repository, gate and plugin status",
+      "about": "Show the repository, gate and push-review status",
       "aliases": [],
       "args": [],
-      "commands": [
-        {
-          "about": "Not ported yet (#445): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "toolu",
-          "path": [
-            "status",
-            "planned"
-          ],
-          "placeholder": true
-        }
-      ],
+      "commands": [],
       "flags": [],
       "hidden": false,
       "longAbout": null,

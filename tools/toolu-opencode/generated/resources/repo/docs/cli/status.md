@@ -2,35 +2,16 @@
 
 # `toolu status`
 
-Show the repository, gate and plugin status.
+Show the repository, gate and push-review status.
 
 Owner: `plugins/toolu`.
 
 ## `toolu status`
 
 ```text
-Show the repository, gate and plugin status
+Show the repository, gate and push-review status
 
-Usage: toolu status [OPTIONS] <COMMAND>
-
-Commands:
-  planned  Not ported yet (#445): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu status planned`
-
-```text
-Not ported yet (#445): show the planned verbs
-
-Usage: toolu status planned [OPTIONS]
+Usage: toolu status [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
