@@ -3,6 +3,13 @@
 //! the rule crates, which only the hub may link (#460), re-exported so
 //! `crates/cli` can register their namespaces.
 
+use std::path::PathBuf;
+
+use toolu_runtime::cli::Ctx;
+use toolu_runtime::env::Env;
+use toolu_runtime::host::roots::Roots;
+use toolu_runtime::invocation::current_dir;
+
 /// `toolu config`.
 pub mod config;
 /// `toolu debug`.
@@ -27,6 +34,16 @@ pub use toolu_ts_quality as ts_quality;
 
 /// The plugin this crate belongs to: `plugins/toolu`.
 pub const PLUGIN: &str = "toolu";
+
+/// Roots for `ctx`, with `--config-dir` overlaid, and the working directory.
+pub(crate) fn overlaid_roots(ctx: &Ctx) -> (Roots, PathBuf) {
+  let mut env = Env::process();
+  if let Some(dir) = ctx.config_dir.as_deref().and_then(|dir| dir.to_str()) {
+    env = env.with("TOOLU_CONFIG_DIR", dir);
+  }
+  let cwd = current_dir().unwrap_or_else(|_| PathBuf::from("."));
+  (Roots::new(env, ctx.host), cwd)
+}
 
 #[cfg(test)]
 #[path = "tests/lib_test.rs"]

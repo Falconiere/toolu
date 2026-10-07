@@ -1,14 +1,12 @@
 //! `toolu status`: the repository, gate and push-review snapshot (#445).
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use clap::{ArgMatches, Command};
 use serde_json::{Value, json};
 use toolu_engine::status::StatusSnapshot;
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::invocation::current_dir;
 
 mod gate;
 mod repo;
@@ -20,7 +18,7 @@ pub fn command() -> Command {
 
 /// Print the same document [`Snapshot`] gives statusline.
 pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  let (roots, cwd) = place(ctx);
+  let (roots, cwd) = crate::overlaid_roots(ctx);
   match Snapshot.snapshot(&roots, &cwd) {
     Ok(document) => Outcome::data(render(&document, ctx.json)),
     Err(error) => Outcome::failed(toolu_protocol::exit::Exit::Failure, error.to_string()),
@@ -70,15 +68,6 @@ fn render(document: &Value, json_out: bool) -> String {
   } else {
     serde_json::to_string_pretty(document).unwrap_or_else(|_err| document.to_string())
   }
-}
-
-fn place(ctx: &Ctx) -> (Roots, PathBuf) {
-  let mut env = Env::process();
-  if let Some(dir) = ctx.config_dir.as_deref().and_then(|dir| dir.to_str()) {
-    env = env.with("TOOLU_CONFIG_DIR", dir);
-  }
-  let cwd = current_dir().unwrap_or_else(|_| PathBuf::from("."));
-  (Roots::new(env, ctx.host), cwd)
 }
 
 #[cfg(test)]

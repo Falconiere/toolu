@@ -5,9 +5,7 @@ use std::path::PathBuf;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::invocation::current_dir;
 
 mod edit;
 mod show;
@@ -57,12 +55,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
 
 /// Roots for `ctx`, with `--config-dir` overlaid, and the working directory.
 pub(super) fn place(ctx: &Ctx) -> (Roots, PathBuf) {
-  let mut env = Env::process();
-  if let Some(dir) = ctx.config_dir.as_deref().and_then(|dir| dir.to_str()) {
-    env = env.with("TOOLU_CONFIG_DIR", dir);
-  }
-  let cwd = current_dir().unwrap_or_else(|_| PathBuf::from("."));
-  (Roots::new(env, ctx.host), cwd)
+  crate::overlaid_roots(ctx)
 }
 
 #[cfg(test)]

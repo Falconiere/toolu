@@ -1,14 +1,9 @@
 //! `toolu doctor`: installation, config, plugin and tool health (#445).
 
-use std::path::PathBuf;
-
 use clap::{ArgMatches, Command};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::config::secrets::{self, Secrets};
-use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
-use toolu_runtime::invocation::current_dir;
 
 mod binary;
 mod checks;
@@ -26,7 +21,7 @@ pub fn command() -> Command {
 /// Run every check and print one report. A failing check exits 1 with the report
 /// still on stdout.
 pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  let (roots, cwd) = diagnose(ctx);
+  let (roots, cwd) = crate::overlaid_roots(ctx);
   let probed = binary::probe();
   let found = inventory::collect(&roots, &cwd);
   let secrets = secrets::load(&roots);
@@ -42,16 +37,6 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     tools::check(&found, roots.env()),
   ];
   outcome(&report, &secrets, ctx.json)
-}
-
-/// Roots for `ctx`, with `--config-dir` overlaid on the process environment.
-fn diagnose(ctx: &Ctx) -> (Roots, PathBuf) {
-  let mut env = Env::process();
-  if let Some(dir) = ctx.config_dir.as_deref().and_then(|dir| dir.to_str()) {
-    env = env.with("TOOLU_CONFIG_DIR", dir);
-  }
-  let cwd = current_dir().unwrap_or_else(|_| PathBuf::from("."));
-  (Roots::new(env, ctx.host), cwd)
 }
 
 /// The redacted report. Stderr is the failure count only when a check failed.
