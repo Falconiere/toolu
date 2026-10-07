@@ -153,6 +153,53 @@
         }
       }
     },
+    "config": {
+      "description": "toolu config get|set|validate --json.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "key", "value", "files"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "key": { "type": ["string", "null"] },
+            "value": {},
+            "files": { "$ref": "#/$defs/configFiles" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "key", "value", "file"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "key": { "type": "string", "minLength": 1 },
+            "value": {},
+            "file": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "valid", "files", "warnings"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "valid": { "type": "boolean" },
+            "files": { "$ref": "#/$defs/configFiles" },
+            "warnings": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    },
+    "configFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user", "project"],
+      "properties": {
+        "user": { "type": "string" },
+        "project": { "type": ["string", "null"] }
+      }
+    },
     "guide": {
       "description": "toolu <namespace> --json, for a Markdown-only plugin.",
       "type": "object",

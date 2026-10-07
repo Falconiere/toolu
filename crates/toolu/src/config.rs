@@ -1,24 +1,68 @@
-//! `toolu config`: the toolu.config.json verbs, not ported yet (#445).
+//! `toolu config`: read, change and validate toolu.config.json (#445).
 
-use clap::{ArgMatches, Command};
+use std::path::PathBuf;
+
+use clap::{Arg, ArgAction, ArgMatches, Command};
+use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::namespace::Planned;
+use toolu_runtime::env::Env;
+use toolu_runtime::host::roots::Roots;
+use toolu_runtime::invocation::current_dir;
 
-const NAMESPACE: Planned = Planned {
-  name: "config",
-  about: "Read, change and validate toolu.config.json",
-  verbs: &["get", "set", "validate"],
-  issues: &[445],
-};
+mod edit;
+mod show;
 
-/// The `toolu config` namespace.
+/// Read, change and validate toolu.config.json.
 pub fn command() -> Command {
-  NAMESPACE.command()
+  Command::new("config")
+    .about("Read, change and validate toolu.config.json")
+    .subcommand(
+      Command::new("get")
+        .about("Print one key or the redacted merged config")
+        .arg(Arg::new("key").help("Dotted key")),
+    )
+    .subcommand(
+      Command::new("set")
+        .about("Set one key in the user config, or the project config with --project")
+        .arg(Arg::new("key").required(true).help("Dotted key"))
+        .arg(
+          Arg::new("value")
+            .required(true)
+            .help("JSON value, or a string when it is not JSON"),
+        )
+        .arg(
+          Arg::new("project")
+            .long("project")
+            .action(ArgAction::SetTrue)
+            .help("Write the project file"),
+        ),
+    )
+    .subcommand(Command::new("validate").about("Validate the merged config and epic settings"))
 }
 
-/// Run a `toolu config` verb: until its port, the placeholder.
-pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  NAMESPACE.run(ctx)
+/// Run `get`, `set` or `validate`.
+pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
+  match matches.subcommand() {
+    Some(("get", sub)) => show::get(ctx, sub.get_one::<String>("key").map(String::as_str)),
+    Some(("set", sub)) => edit::set(
+      ctx,
+      sub.get_one::<String>("key").map_or("", String::as_str),
+      sub.get_one::<String>("value").map_or("", String::as_str),
+      sub.get_flag("project"),
+    ),
+    Some(("validate", _)) => show::validate(ctx),
+    _ => Outcome::failed(Exit::Usage, "toolu config: a verb is required".to_owned()),
+  }
+}
+
+/// Roots for `ctx`, with `--config-dir` overlaid, and the working directory.
+pub(super) fn place(ctx: &Ctx) -> (Roots, PathBuf) {
+  let mut env = Env::process();
+  if let Some(dir) = ctx.config_dir.as_deref().and_then(|dir| dir.to_str()) {
+    env = env.with("TOOLU_CONFIG_DIR", dir);
+  }
+  let cwd = current_dir().unwrap_or_else(|_| PathBuf::from("."));
+  (Roots::new(env, ctx.host), cwd)
 }
 
 #[cfg(test)]
