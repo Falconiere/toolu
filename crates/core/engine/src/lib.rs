@@ -12,7 +12,8 @@
 //!   `push_waiver` built-ins, exposed through `builtins::POST_TOOL`;
 //! - `trace`: what a dispatch did with each module;
 //! - `detect`: the git operations a parsed command performs (push, commit, the
-//!   pushed repository and branch).
+//!   pushed repository and branch);
+//! - `ledger` (#421): the delivery-flow plan ledger behind `toolu ledger`.
 //!
 //! Cross-plugin traits (#460): plugin logic one plugin owns and another uses
 //! is a trait here. The owner implements it and `crates/cli` passes that
@@ -30,6 +31,7 @@ pub mod detect;
 pub mod dispatch;
 pub mod gate;
 mod gates;
+pub mod ledger;
 pub mod registry;
 pub mod status;
 pub mod trace;

@@ -18,6 +18,23 @@ pub fn iso_seconds(t: SystemTime) -> String {
   )
 }
 
+/// `t` as `Date#toISOString` prints it, with milliseconds: `2026-09-28T12:34:56.789Z`.
+/// A time before the epoch keeps whole seconds.
+pub fn iso_millis(t: SystemTime) -> String {
+  let millis = t
+    .duration_since(UNIX_EPOCH)
+    .map_or(0, |after| after.subsec_millis());
+  let seconds = iso_seconds(t);
+  format!("{}.{millis:03}Z", seconds.trim_end_matches('Z'))
+}
+
+/// `Date.now()` for `t`: milliseconds since the epoch, 0 before it.
+pub fn epoch_millis(t: SystemTime) -> u64 {
+  t.duration_since(UNIX_EPOCH).map_or(0, |after| {
+    u64::try_from(after.as_millis()).unwrap_or(u64::MAX)
+  })
+}
+
 /// Whole seconds since the epoch, rounded down (before it, too).
 fn epoch_seconds(t: SystemTime) -> i64 {
   match t.duration_since(UNIX_EPOCH) {

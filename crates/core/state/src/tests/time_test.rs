@@ -48,3 +48,16 @@ fn parse_reads_milliseconds_and_rejects_other_shapes() {
     assert_eq!(parse_iso(out_of_range), None, "{out_of_range}");
   }
 }
+
+#[test]
+fn iso_millis_and_epoch_millis_print_like_date() {
+  use super::{epoch_millis, iso_millis};
+  let t = UNIX_EPOCH + Duration::from_millis(1_791_351_198_161);
+  assert_eq!(iso_millis(t), "2026-10-07T05:33:18.161Z");
+  assert_eq!(epoch_millis(t), 1_791_351_198_161);
+  assert_eq!(
+    iso_millis(UNIX_EPOCH + Duration::from_secs(1)),
+    "1970-01-01T00:00:01.000Z"
+  );
+  assert_eq!(epoch_millis(UNIX_EPOCH - Duration::from_secs(1)), 0);
+}
