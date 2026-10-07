@@ -6,7 +6,7 @@ use clap::{ArgMatches, Command};
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Planned;
 
-use crate::{commands, fast};
+use crate::{commands, fast, links};
 
 /// The owner of the commands `crates/cli` provides itself.
 pub(crate) const BUILTIN: &str = "toolu-cli";
@@ -169,7 +169,7 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     "statusline",
     toolu_statusline::PLUGIN,
     toolu_statusline::command,
-    toolu_statusline::run,
+    links::statusline,
   ),
   verb(
     "babysit",
@@ -181,7 +181,7 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     "epic",
     toolu_epic_orchestrator::PLUGIN,
     toolu_epic_orchestrator::command,
-    toolu_epic_orchestrator::run,
+    links::epic,
   ),
   Namespace {
     name: "commands",

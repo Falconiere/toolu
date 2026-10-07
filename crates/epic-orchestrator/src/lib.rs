@@ -3,12 +3,15 @@
 
 use clap::{ArgMatches, Command};
 use serde_json::json;
+use toolu_engine::babysit::BabysitTick;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::config::secrets;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::namespace::Planned;
+
+pub mod babysit;
 
 /// The plugin this crate belongs to: `plugins/epic-orchestrator`.
 pub const PLUGIN: &str = "epic-orchestrator";
@@ -52,8 +55,9 @@ fn token_new(ctx: &Ctx) -> Outcome {
   }
 }
 
-/// Run `toolu epic token new` or the planned-verb placeholder.
-pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
+/// Run `toolu epic token new` or the planned-verb placeholder. `crates/cli`
+/// passes pr-babysit's tick, which the engine runs once it lands (#434).
+pub fn run(matches: &ArgMatches, ctx: &Ctx, _tick: &dyn BabysitTick) -> Outcome {
   match matches.subcommand() {
     Some(("token", token)) if token.subcommand_name() == Some("new") => token_new(ctx),
     _ => NAMESPACE.run(ctx),

@@ -1,6 +1,7 @@
 //! The statusline plugin's crate: the `toolu statusline` namespace, not ported yet (#431).
 
 use clap::{ArgMatches, Command};
+use toolu_engine::status::StatusSnapshot;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Planned;
 
@@ -19,8 +20,9 @@ pub fn command() -> Command {
   NAMESPACE.command()
 }
 
-/// Run a `toolu statusline` verb: until its port, the placeholder.
-pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
+/// Run a `toolu statusline` verb with the status snapshot `crates/cli` passes
+/// in (the hub's): until the port renders it (#431), the placeholder.
+pub fn run(_matches: &ArgMatches, ctx: &Ctx, _status: &dyn StatusSnapshot) -> Outcome {
   NAMESPACE.run(ctx)
 }
 
