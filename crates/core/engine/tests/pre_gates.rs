@@ -72,12 +72,12 @@ fn an_unknown_static_commit_prefix_is_blocked() {
     PRE_TOOL,
     &[],
   );
-  assert!(
-    got
-      .result
-      .stdout
-      .contains("Unknown Conventional Commits prefix: \\\"wibble\\\"")
-  );
+  let output: serde_json::Value =
+    serde_json::from_str(&got.result.stdout).expect("hook output JSON");
+  let reason = output["hookSpecificOutput"]["permissionDecisionReason"]
+    .as_str()
+    .expect("permission decision reason");
+  assert!(reason.contains("Unknown Conventional Commits prefix: \"wibble\""));
 }
 
 #[test]

@@ -19,7 +19,7 @@ pub(crate) struct CommitGate;
 pub(crate) static COMMIT_GATE: CommitGate = CommitGate;
 
 fn commit_prefix(message: &str) -> Option<&str> {
-  let subject = message.lines().next().unwrap_or_default();
+  let subject = message.lines().next().unwrap_or("");
   let len = subject.bytes().take_while(u8::is_ascii_lowercase).count();
   let (prefix, rest) = (subject.get(..len)?, subject.get(len..)?);
   if prefix.is_empty() || !(rest.starts_with(':') || rest.starts_with('(') && rest.contains("):")) {
