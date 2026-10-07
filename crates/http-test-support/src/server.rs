@@ -93,9 +93,11 @@ fn serve_https(
     .routes
     .lock()
     .map_err(error)?
-    .get(&request.path)
-    .cloned()
+    .next(&request.path)
     .unwrap_or_else(|| Reply::new(404, "missing route"));
+  if reply.dropped {
+    return Ok(());
+  }
   data.requests.lock().map_err(error)?.push(request);
   if !reply.delay.is_zero() {
     thread::sleep(reply.delay);
