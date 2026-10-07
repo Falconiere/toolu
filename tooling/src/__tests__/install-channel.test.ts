@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { afterAll, expect, test } from "bun:test";
 import {
   chmodSync,
   existsSync,
@@ -9,10 +9,19 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { ASSET, archive, releaseFiles, sha256, signedSums } from "./install-fixture.ts";
+import {
+  ASSET,
+  archive,
+  disposeSigner,
+  releaseFiles,
+  sha256,
+  signedSums,
+} from "./install-fixture.ts";
 import { REPO, fakeUname, install, runInstalled, sandboxed, stable } from "./install-runner.ts";
 
 const IS_ROOT = process.getuid?.() === 0;
+
+afterAll(disposeSigner);
 
 test.concurrent(
   "a no-flag install writes the verified toolu with mode 0755 (AC-1, AC-9)",

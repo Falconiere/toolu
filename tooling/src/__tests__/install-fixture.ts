@@ -70,11 +70,18 @@ async function downloadMinisign(): Promise<string> {
 }
 
 let signer: Promise<{ minisign: string; pub: string; key: string }> | undefined;
+let signerDir: string | undefined;
+
+/** Remove the fixture keypair; the cached minisign binary stays. */
+export function disposeSigner(): void {
+  if (signerDir !== undefined) rmSync(signerDir, { recursive: true, force: true });
+}
 
 /** The pinned minisign and a fixture keypair, made once per test process. */
 export function fixtureSigner(): Promise<{ minisign: string; pub: string; key: string }> {
   signer ??= downloadMinisign().then((minisign) => {
     const dir = mkdtempSync(join(tmpdir(), "toolu-signer-"));
+    signerDir = dir;
     const pub = join(dir, "fixture.pub");
     const key = join(dir, "fixture.key");
     run([minisign, "-G", "-W", "-p", pub, "-s", key]);
