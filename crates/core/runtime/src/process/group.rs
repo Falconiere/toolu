@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use nix::errno::Errno;
-use nix::sys::signal::{Signal, killpg};
+use nix::sys::signal::{Signal, kill, killpg};
 use nix::unistd::Pid;
 
 /// The wait between two looks at a group being stopped.
@@ -36,6 +36,22 @@ pub fn signal(group: u32, signal: Signal) -> Result<(), String> {
   match killpg(group_pid(group)?, signal) {
     Ok(()) | Err(Errno::ESRCH) => Ok(()),
     Err(errno) => Err(format!("cannot signal process group {group}: {errno}")),
+  }
+}
+
+/// Whether process `pid` exists (`processAlive` in `resources/lock.ts`): the
+/// probe `kill(pid, 0)`, where a non-positive or out-of-range id is no process.
+///
+/// # Errors
+/// Any probe failure but "no such process", such as another user's process.
+pub fn pid_alive(pid: i64) -> Result<bool, String> {
+  let Some(raw) = i32::try_from(pid).ok().filter(|raw| *raw > 0) else {
+    return Ok(false);
+  };
+  match kill(Pid::from_raw(raw), None) {
+    Ok(()) => Ok(true),
+    Err(Errno::ESRCH) => Ok(false),
+    Err(errno) => Err(format!("cannot probe process {pid}: {errno}")),
   }
 }
 

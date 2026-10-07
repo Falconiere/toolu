@@ -155,3 +155,34 @@ fn streams_mode_still_waits_for_a_descendant_holding_stdout_and_kills_it_at_the_
 fn group_mode_is_the_default() {
   assert_eq!(Spec::new(["true"]).wait, Wait::Group);
 }
+
+#[test]
+fn run_with_calls_back_with_the_group_before_stdin_is_written() {
+  let dir = tempfile::tempdir().unwrap();
+  let marker = dir.path().join("marker");
+  let mut spec = sh(&format!(
+    "read -r go; echo \"$go $(cat {})\"",
+    marker.display()
+  ));
+  spec.stdin = b"go\n".to_vec();
+  let mut seen = 0;
+  let output = super::run_with(&spec, &mut |pid| {
+    seen = pid;
+    std::fs::write(&marker, "after-callback").map_err(|err| err.to_string())
+  })
+  .unwrap();
+  assert_eq!(seen, output.pid);
+  assert_eq!(output.stdout, "go after-callback\n");
+}
+
+#[test]
+fn a_failed_callback_stops_the_group_and_is_returned() {
+  let spec = sh("sleep 30");
+  let mut group_id = 0;
+  let result = super::run_with(&spec, &mut |pid| {
+    group_id = pid;
+    Err("lease lost".to_owned())
+  });
+  assert_eq!(result, Err(RunError::Callback("lease lost".to_owned())));
+  assert!(!group::alive(group_id));
+}
