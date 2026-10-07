@@ -69,10 +69,10 @@ fn typescript(hook: &Hook, bundle: &str, stdin: &str) -> Result<String, String> 
   String::from_utf8(result.stdout).map_err(|err| err.to_string())
 }
 
-fn sandbox() -> Hook {
-  let mut hook = Hook::new(Host::Claude).expect("sandbox");
+fn sandbox() -> Result<Hook, String> {
+  let mut hook = Hook::new(Host::Claude)?;
   let settings = hook.sb.path("settings");
-  std::fs::create_dir_all(&settings).expect("settings");
+  std::fs::create_dir_all(&settings).map_err(|err| err.to_string())?;
   hook.extra.push((
     "TOOLU_SETTINGS_DIR".to_owned(),
     settings.display().to_string(),
@@ -81,13 +81,12 @@ fn sandbox() -> Hook {
   sandbox::write(
     &config,
     "{\"version\":1,\"gates\":{\"qualityGate\":{\"mode\":\"block\"}}}",
-  )
-  .expect("config");
-  assert!(hook.dir(Phase::Post).starts_with(hook.config_root()));
-  hook
-    .sh(Phase::Post, "x@t__noop.sh", "exit 0")
-    .expect("module");
-  hook
+  )?;
+  if !hook.dir(Phase::Post).starts_with(hook.config_root()) {
+    return Err("post registry directory is outside config root".to_owned());
+  }
+  hook.sh(Phase::Post, "x@t__noop.sh", "exit 0")?;
+  Ok(hook)
 }
 
 fn gate_status(hook: &Hook) -> Option<String> {
@@ -98,7 +97,7 @@ fn gate_status(hook: &Hook) -> Option<String> {
 
 #[test]
 fn typescript_failure_and_clear_are_seen_by_rust_pre_tool() {
-  let hook = sandbox();
+  let hook = sandbox().expect("sandbox");
   typescript(&hook, POST_BUNDLE, &post_quality(1)).expect("TS failure");
   assert_eq!(gate_status(&hook).as_deref(), Some("failing"));
   let blocked = hook.run(Phase::Pre, &pre_commit(), PRE_TOOL, &[]);
@@ -121,7 +120,7 @@ fn typescript_failure_and_clear_are_seen_by_rust_pre_tool() {
 
 #[test]
 fn rust_failure_and_clear_are_seen_by_typescript_pre_tool() {
-  let hook = sandbox();
+  let hook = sandbox().expect("sandbox");
   let failed = hook.run(Phase::Post, &post_quality(1), POST_TOOL, &[]);
   assert_eq!(failed.result.exit_code, 0);
   assert_eq!(gate_status(&hook).as_deref(), Some("failing"));
