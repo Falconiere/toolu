@@ -5,6 +5,10 @@
 
 #[path = "helpers/bins.rs"]
 mod bins;
+#[path = "helpers/counting.rs"]
+mod counting;
+#[path = "helpers/expect.rs"]
+mod expect;
 #[path = "helpers/hook.rs"]
 mod hook;
 #[path = "helpers/modules.rs"]
@@ -12,102 +16,33 @@ mod modules;
 #[path = "helpers/sandbox.rs"]
 mod sandbox;
 
-use std::path::Path;
-use std::sync::atomic::{AtomicUsize, Ordering};
-
+use counting::{Counting, payload};
 use hook::Hook;
 use toolu_engine::Phase;
 use toolu_engine::trace::{Skip, StepStatus};
-use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::NormalizedEvent;
-use toolu_protocol::text::Text;
 use toolu_runtime::registry::RegistryEvent;
-use toolu_runtime::registry::rule::{Rule, RuleContext};
+use toolu_runtime::registry::rule::Rule;
 
-/// A rule that counts its `applies` and `run` calls and advises its name.
-struct Counting {
-  spec: &'static str,
-  name: &'static str,
-  event: RegistryEvent,
-  /// Only paths with this extension apply; every event when `None`.
-  extension: Option<&'static str>,
-  checks: AtomicUsize,
-  runs: AtomicUsize,
-}
-
-impl Counting {
-  fn new(spec: &'static str, name: &'static str, event: RegistryEvent) -> Counting {
-    Counting {
-      spec,
-      name,
-      event,
-      extension: None,
-      checks: AtomicUsize::new(0),
-      runs: AtomicUsize::new(0),
-    }
+/// A hook whose `bash` and `bun` log each spawn to the returned file, then run the real ones.
+fn sentinels() -> sandbox::Res<(Hook, std::path::PathBuf)> {
+  let mut hook = Hook::new(Host::Claude)?;
+  let log = hook.sb.path("spawned");
+  for name in ["bash", "bun"] {
+    let real = bins::which(name)?;
+    let body = format!("echo {name} >> {}\nexec {real} \"$@\"", log.display());
+    bins::script(&hook.sb.path(&format!("bin/{name}")), &body)?;
   }
-
-  fn calls(&self) -> (usize, usize) {
-    (
-      self.checks.load(Ordering::SeqCst),
-      self.runs.load(Ordering::SeqCst),
-    )
-  }
-}
-
-impl Rule for Counting {
-  fn spec(&self) -> &str {
-    self.spec
-  }
-
-  fn name(&self) -> &str {
-    self.name
-  }
-
-  fn event(&self) -> RegistryEvent {
-    self.event
-  }
-
-  fn applies(&self, _event: &NormalizedEvent, ctx: &RuleContext<'_>) -> bool {
-    self.checks.fetch_add(1, Ordering::SeqCst);
-    let path = ctx
-      .raw
-      .get("tool_input")
-      .and_then(|input| input.get("file_path")?.as_str());
-    self
-      .extension
-      .is_none_or(|ext| path.is_some_and(|path| Path::new(path).extension() == Some(ext.as_ref())))
-  }
-
-  fn run(&self, event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Decision {
-    self.runs.fetch_add(1, Ordering::SeqCst);
-    let tool = event
-      .tool()
-      .map(|tool| tool.name.as_str().to_owned())
-      .unwrap_or_default();
-    Text::new(format!("{} saw {tool}", self.name))
-      .map_or(Decision::Allow, |message| Decision::Advisory { message })
-  }
-}
-
-fn payload(tool: &str, input: &str) -> String {
-  format!(r#"{{"tool_name":"{tool}","tool_input":{input},"session_id":"s1"}}"#)
+  let path = std::env::var("PATH").map_err(|err| err.to_string())?;
+  hook
+    .extra
+    .push(("PATH".to_owned(), format!("{}:{path}", hook.sb.text("bin"))));
+  Ok((hook, log))
 }
 
 #[test]
 fn a_read_with_no_fitting_manifest_runs_no_rule_and_spawns_nothing() {
-  let mut hook = Hook::new(Host::Claude).unwrap();
-  let log = hook.sb.path("spawned");
-  for name in ["bash", "bun"] {
-    let real = bins::which(name).unwrap_or_else(|_| "/bin/false".to_owned());
-    let body = format!("echo {name} >> {}\nexec {real} \"$@\"", log.display());
-    bins::script(&hook.sb.path(&format!("bin/{name}")), &body).unwrap();
-  }
-  let path = std::env::var("PATH").unwrap();
-  hook
-    .extra
-    .push(("PATH".to_owned(), format!("{}:{path}", hook.sb.text("bin"))));
+  let (hook, log) = sentinels().unwrap();
   modules::manifest(&hook, Phase::Pre, "x@t", "r", "Write|Edit").unwrap();
   modules::manifest(&hook, Phase::Pre, "y@t", "s", "mcp__*").unwrap();
   let r = Counting::new("x@t", "r", RegistryEvent::ToolPre);
@@ -127,13 +62,28 @@ fn a_read_with_no_fitting_manifest_runs_no_rule_and_spawns_nothing() {
   assert!(!log.exists(), "no module process may be spawned");
   modules::manifest(&hook, Phase::Pre, "x@t", "r", "*").unwrap();
   let out = hook.run(Phase::Pre, &read, &[], &[&r, &s]).result;
-  assert!(
-    out.stdout.contains("r saw Read"),
-    "a `*` manifest runs: {}",
-    out.stdout
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("r saw Read"), None),
+    "a `*` manifest runs"
   );
   assert_eq!(r.calls(), (1, 1));
   assert!(!log.exists());
+  hook.sh(Phase::Pre, "w@t__probe.sh", "exit 0").unwrap();
+  modules::js(
+    &hook,
+    Phase::Pre,
+    "z@t",
+    "probe",
+    r#"return { kind: "allow" };"#,
+  )
+  .unwrap();
+  hook.run(Phase::Pre, &read, &[], &[&r, &s]);
+  let spawned = std::fs::read_to_string(&log).unwrap();
+  assert_eq!(
+    spawned, "bash\nbun\n",
+    "control: the sentinels see a .sh and a .js module run"
+  );
 }
 
 #[test]
@@ -158,7 +108,10 @@ fn edits_reach_rules_as_edit_and_matchers_fit_names_and_prefixes() {
       &rules,
     )
     .result;
-  assert!(out.stdout.contains("edit saw Edit"), "{}", out.stdout);
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("edit saw Edit"), None)
+  );
   let patch =
     format!(r#"{{"command":"*** Begin Patch\n*** Add File: {file}\n+x\n*** End Patch"}}"#);
   hook.run(Phase::Pre, &payload("apply_patch", &patch), &[], &rules);
@@ -166,7 +119,10 @@ fn edits_reach_rules_as_edit_and_matchers_fit_names_and_prefixes() {
   let out = hook
     .run(Phase::Pre, &payload("mcp__x__y", "{}"), &[], &rules)
     .result;
-  assert!(out.stdout.contains("mcp saw mcp__x__y"), "{}", out.stdout);
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("mcp saw mcp__x__y"), None)
+  );
   hook.run(Phase::Pre, &payload("mcp_x", "{}"), &[], &rules);
   assert_eq!(mcp.calls(), (1, 1));
 }
@@ -198,10 +154,9 @@ fn a_rule_that_does_not_apply_is_not_run() {
     .run(Phase::Post, &edit("project/a.ts"), &[], &[&rule])
     .result;
   assert_eq!(rule.calls(), (2, 1));
-  assert!(
-    out.stdout.contains("\"hookEventName\": \"PostToolUse\""),
-    "{}",
-    out.stdout
+  assert_eq!(
+    out.stdout,
+    expect::merged("PostToolUse", Some("ts-quality saw Edit"), None)
   );
 }
 
@@ -213,7 +168,7 @@ fn manifest_problems_are_one_line_each_and_the_walk_goes_on() {
     &hook,
     pre,
     "a@t__v2.json",
-    r#"{"version":2,"spec":"a@t","name":"v2","event":"tool/pre","matcher":"*"}"#,
+    r#"{"version":2,"spec":"a@t","name":"v2","event":"tool/pre","matcher":"Write"}"#,
   )
   .unwrap();
   modules::file(
@@ -244,10 +199,10 @@ fn manifest_problems_are_one_line_each_and_the_walk_goes_on() {
        toolu-registry: manifest c@t__gone.json skipped: no rule c@t__gone in toolu {version}\n"
     )
   );
-  assert!(
-    out.stdout.contains("\"systemMessage\": \"after\""),
-    "{}",
-    out.stdout
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", None, Some("after")),
+    "a bad manifest, even one whose matcher does not fit, is reported and the walk goes on"
   );
 }
 
@@ -269,17 +224,10 @@ fn a_usable_manifest_shadows_its_specs_modules_and_gating_still_applies() {
   modules::install(&hook, &["x@t"]).unwrap();
   let rule = Counting::new("x@t", "r", RegistryEvent::ToolPre);
   let off = Counting::new("z@t", "off", RegistryEvent::ToolPre);
-  let dispatched = hook.run(
-    pre,
-    &payload("Bash", r#"{"command":"ls"}"#),
-    &[],
-    &[&rule, &off],
-  );
-  assert!(
-    dispatched.result.stdout.contains("r saw Bash"),
-    "{}",
-    dispatched.result.stdout
-  );
+  let bash = payload("Bash", r#"{"command":"ls"}"#);
+  let dispatched = hook.run(pre, &bash, &[], &[&rule, &off]);
+  let advice = expect::merged("PreToolUse", Some("r saw Bash"), None);
+  assert_eq!(dispatched.result.stdout, advice);
   let steps: Vec<String> = dispatched
     .trace
     .iter()
@@ -295,4 +243,39 @@ fn a_usable_manifest_shadows_its_specs_modules_and_gating_still_applies() {
     ]
   );
   assert_eq!(off.calls(), (0, 0));
+}
+
+#[test]
+fn a_usable_manifest_shadows_whatever_the_tool() {
+  let hook = Hook::new(Host::Claude).unwrap();
+  modules::manifest(&hook, Phase::Pre, "v@t", "w", "Write").unwrap();
+  modules::js(
+    &hook,
+    Phase::Pre,
+    "v@t",
+    "old",
+    r#"return { kind: "deny", reason: "stale" };"#,
+  )
+  .unwrap();
+  let write = Counting::new("v@t", "w", RegistryEvent::ToolPre);
+  let dispatched = hook.run(
+    Phase::Pre,
+    &payload("Bash", r#"{"command":"ls"}"#),
+    &[],
+    &[&write],
+  );
+  assert_eq!(dispatched.result.stdout, "", "the stale .js never ran");
+  let steps: Vec<String> = dispatched
+    .trace
+    .iter()
+    .map(|step| format!("{} {:?}", step.module, step.status))
+    .collect();
+  assert_eq!(
+    steps,
+    [
+      "v@t__old.js Skipped(Shadowed)",
+      "v@t__w.json Skipped(NotMatching)"
+    ]
+  );
+  assert_eq!(write.calls(), (0, 0));
 }

@@ -10,7 +10,7 @@ use toolu_state::edit_records::{EditRecord, EditRecords, normalize_edit_records}
 
 use super::event::{EditFields, Payload};
 use super::fold::{Folded, WalkState};
-use super::output::{Unreadable, parse_document, read_field, sanitize_surrogates, substituted};
+use super::output::{Unreadable, parse_document, plain, read_field, substituted};
 use super::session::Session;
 use super::walk::walk;
 use super::{ModuleResult, Phase};
@@ -55,15 +55,16 @@ pub(crate) fn dispatch_input(
     Err(Unreadable::NotJson) => None,
   };
   let tool_name = read_field(doc.as_ref(), &["tool_name"]);
-  let value = serde_json::from_str::<Value>(&sanitize_surrogates(text)).unwrap_or(Value::Null);
+  let value = doc.as_ref().map_or(Value::Null, plain);
   let malformed = || match session.phase {
     Phase::Pre => reply(MALFORMED_PATCH_DENY.to_owned()),
     Phase::Post => reply(MALFORMED_PATCH_BLOCK.to_owned()),
   };
   match (normalize_edit_records(&value, &tool_name), doc) {
-    (EditRecords::NotEdit, _) => {
+    (EditRecords::NotEdit, doc) => {
       let payload = Payload {
         text: text.to_owned(),
+        doc,
         tool_name,
         edit: None,
       };
@@ -77,7 +78,7 @@ pub(crate) fn dispatch_input(
 }
 
 /// The synthetic single-path `Edit` payload `toolu_dispatch_hook` builds with `jq -c`.
-fn synthetic_edit(doc: &Ordered, record: &EditRecord) -> String {
+fn synthetic_edit(doc: &Ordered, record: &EditRecord) -> Ordered {
   let mut input = match doc.get("tool_input") {
     Some(input @ Ordered::Object(_)) => input.clone(),
     Some(_) | None => Ordered::Object(Vec::new()),
@@ -97,7 +98,7 @@ fn synthetic_edit(doc: &Ordered, record: &EditRecord) -> String {
   let mut out = doc.clone();
   out.set("tool_name", text("Edit"));
   out.set("tool_input", input);
-  jq_text(&out, false)
+  out
 }
 
 /// Walk every record, sequentially by contract: no path is walked after a deny.
@@ -111,12 +112,7 @@ fn fold_records(
   let mut outer = WalkState::new(session.phase);
   let mut blocks: Vec<String> = Vec::new();
   for record in records {
-    let payload = Payload {
-      text: synthetic_edit(doc, record),
-      tool_name: "Edit".to_owned(),
-      edit: Some(EditFields::of(record)),
-    };
-    let result = walk(&payload, session, trace);
+    let result = walk_path(doc, record, session, trace);
     outer.stderr.push_str(&result.stderr);
     if collect_blocks && result.exit_code != 0 {
       return ModuleResult {
@@ -124,14 +120,11 @@ fn fold_records(
         ..result
       };
     }
-    let parsed = parse_document(&result.stdout).ok();
-    if collect_blocks && read_field(parsed.as_ref(), &["decision"]) == "block" {
-      let reason = read_field(parsed.as_ref(), &["reason"]);
-      blocks.push(if reason.is_empty() {
-        "check blocked".to_owned()
-      } else {
-        reason
-      });
+    if let Some(reason) = collect_blocks
+      .then(|| block_reason(&result.stdout))
+      .flatten()
+    {
+      blocks.push(reason);
       continue;
     }
     let folded = Folded {
@@ -151,6 +144,37 @@ fn fold_records(
     return outer.settle();
   }
   joined_block(&blocks, outer.stderr)
+}
+
+/// One path's walk over its synthetic `Edit` payload.
+fn walk_path(
+  doc: &Ordered,
+  record: &EditRecord,
+  session: &Session<'_>,
+  trace: &mut Vec<Step>,
+) -> ModuleResult {
+  let synthetic = synthetic_edit(doc, record);
+  let payload = Payload {
+    text: jq_text(&synthetic, false),
+    doc: Some(synthetic),
+    tool_name: "Edit".to_owned(),
+    edit: Some(EditFields::of(record)),
+  };
+  walk(&payload, session, trace)
+}
+
+/// The reason of a path's `{"decision":"block"}` output, or `check blocked` when it has none.
+fn block_reason(stdout: &str) -> Option<String> {
+  let parsed = parse_document(stdout).ok();
+  if read_field(parsed.as_ref(), &["decision"]) != "block" {
+    return None;
+  }
+  let reason = read_field(parsed.as_ref(), &["reason"]);
+  Some(if reason.is_empty() {
+    "check blocked".to_owned()
+  } else {
+    reason
+  })
 }
 
 /// Every collected block reason in one `{"decision":"block"}` line.

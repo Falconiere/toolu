@@ -10,7 +10,6 @@ import { CaseSchema, FIXTURE, expand, runCase } from "./dispatch-fixture-harness
 const cases = readCaseFile(FIXTURE).map((raw) => CaseSchema.parse(raw));
 
 test.concurrent.each(cases.map((c) => [c.name, c] as const))("%s", async (_name, c) => {
-  if (c.expect === undefined) throw new Error(`${c.name}: no expect`);
   const { result, paths } = await runCase(c);
   expect({ stdout: result.stdout, stderr: result.stderr, exitCode: result.exitCode }).toEqual({
     stdout: expand(c.expect.stdout, paths),

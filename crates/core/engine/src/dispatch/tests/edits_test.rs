@@ -1,3 +1,4 @@
+use toolu_runtime::json::jq_text;
 use toolu_state::edit_records::{EditOperation, EditRecord};
 
 use super::{MALFORMED_PATCH_BLOCK, MALFORMED_PATCH_DENY, refusal, synthetic_edit};
@@ -17,7 +18,7 @@ fn a_split_path_is_an_edit_payload_in_javascript_key_order() {
     from: Some("/p/old.ts".to_owned()),
   };
   assert_eq!(
-    synthetic_edit(&doc, &record),
+    jq_text(&synthetic_edit(&doc, &record), false),
     r#"{"session_id":"s","tool_name":"Edit","tool_input":{"1":true,"path":"/p/new.ts","command":"p","file_path":"/p/new.ts","toolu_edit_operation":"move","toolu_edit_from":"/p/old.ts","toolu_edit_moved_to":""},"cwd":"/p"}"#
   );
   let bare = parse_document(r#"{"tool_name":"Write","tool_input":false}"#).unwrap();
@@ -27,7 +28,10 @@ fn a_split_path_is_an_edit_payload_in_javascript_key_order() {
     moved_to: None,
     from: None,
   };
-  assert!(synthetic_edit(&bare, &write).contains(r#""tool_input":{"file_path":"a","path":"a""#));
+  assert!(
+    jq_text(&synthetic_edit(&bare, &write), false)
+      .contains(r#""tool_input":{"file_path":"a","path":"a""#)
+  );
 }
 
 #[test]

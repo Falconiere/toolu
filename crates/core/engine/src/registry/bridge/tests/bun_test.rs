@@ -19,7 +19,8 @@ fn bun_is_looked_for_in_toolu_bun_then_path_then_home() {
   executable(&d.join("explicit/bun"));
   executable(&d.join("path/bun"));
   executable(&d.join("home/.bun/bin/bun"));
-  std::fs::write(d.join("plain/bun"), "").unwrap_or(());
+  std::fs::create_dir_all(d.join("plain")).unwrap();
+  std::fs::write(d.join("plain/bun"), "#!/bin/sh\n").unwrap();
   let env = |pairs: &[(&str, String)]| Env::from_pairs(pairs.iter().cloned());
   let all = env(&[
     ("TOOLU_BUN", text("explicit/bun")),
@@ -38,6 +39,15 @@ fn bun_is_looked_for_in_toolu_bun_then_path_then_home() {
     Some(d.join("home/.bun/bin/bun"))
   );
   assert_eq!(find_bun(&env(&[("HOME", text("none"))])), None);
+  let plain_first = env(&[
+    ("PATH", format!("{}:{}", text("plain"), text("path"))),
+    ("HOME", text("none")),
+  ]);
+  assert_eq!(
+    find_bun(&plain_first),
+    Some(d.join("path/bun")),
+    "a bun that is not executable is passed over"
+  );
   let mut state = BunState::default();
   assert_eq!(state.bun(&all), Some(d.join("explicit/bun")));
   assert_eq!(

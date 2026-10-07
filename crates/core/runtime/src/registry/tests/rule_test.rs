@@ -98,10 +98,10 @@ impl Rule for TypeScriptOnly {
     RegistryEvent::ToolPost
   }
 
-  fn applies(&self, _event: &NormalizedEvent, ctx: &RuleContext<'_>) -> bool {
-    ctx
-      .edit
-      .is_some_and(|split| Path::new(split.from).extension() == Some("ts".as_ref()))
+  fn applies(&self, event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> bool {
+    let tool = event.tool();
+    let path = tool.and_then(|tool| tool.input.get("file_path")?.as_str());
+    path.is_some_and(|path| Path::new(path).extension() == Some("ts".as_ref()))
   }
 
   fn run(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Decision {
@@ -111,27 +111,24 @@ impl Rule for TypeScriptOnly {
 
 #[test]
 fn a_rule_can_decline_an_event_before_it_runs() {
-  let event: NormalizedEvent = serde_json::from_value(json!({
-    "type": "tool/post", "sessionId": "s", "cwd": "/p", "projectRoot": "/p", "worktree": "/p",
-    "toolCallId": "c", "toolName": "Edit", "toolInput": {}
-  }))
-  .unwrap();
+  let edit = |path: &str| -> NormalizedEvent {
+    serde_json::from_value(json!({
+      "type": "tool/post", "sessionId": "s", "cwd": "/p", "projectRoot": "/p", "worktree": "/p",
+      "toolCallId": "c", "toolName": "Edit", "toolInput": {"file_path": path}
+    }))
+    .unwrap()
+  };
   let env = Env::from_pairs([("HOME", "/h")]);
   let raw = Map::new();
-  let split = |from| EditSplit {
-    operation: EditOperation::Update,
-    from,
-    moved_to: "",
-  };
-  let ctx = |from| RuleContext {
+  let ctx = RuleContext {
     host: Host::Claude,
     env: &env,
     config_root: Path::new("/h/.claude"),
     project_root: Path::new("/p"),
     cwd: None,
     raw: &raw,
-    edit: Some(split(from)),
+    edit: None,
   };
-  assert!(TypeScriptOnly.applies(&event, &ctx("/p/a.ts")));
-  assert!(!TypeScriptOnly.applies(&event, &ctx("/p/a.py")));
+  assert!(TypeScriptOnly.applies(&edit("/p/a.ts"), &ctx));
+  assert!(!TypeScriptOnly.applies(&edit("/p/a.py"), &ctx));
 }

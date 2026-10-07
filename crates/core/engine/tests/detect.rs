@@ -81,11 +81,33 @@ fn the_c_chain_names_the_pushed_repository_and_dynamic_steps_fall_back() {
   );
   assert_eq!(at("git -C \"$D\" push"), project);
   assert_eq!(at("git -C missing push"), project);
+  sandbox::write(&project.join("sub/file"), "x").unwrap();
+  assert_eq!(
+    at("git -C sub push"),
+    project,
+    "a -C into a subdirectory names its toplevel"
+  );
   let outside = sb.path("outside");
   sandbox::write(&outside.join("note"), "not a repository").unwrap();
   assert_eq!(
     push_target_root(&analyze("git push"), &roots(&sb), &outside),
     outside
+  );
+}
+
+#[test]
+fn outside_any_repository_the_host_project_root_comes_before_the_cwd() {
+  let sb = Sandbox::new().unwrap();
+  let outside = sb.path("outside");
+  sandbox::write(&outside.join("note"), "not a repository").unwrap();
+  let env = Env::from_pairs([
+    ("HOME", sb.text("home")),
+    ("CLAUDE_PROJECT_DIR", sb.text("declared")),
+  ]);
+  let claude = Roots::new(env, Some(Host::Claude));
+  assert_eq!(
+    push_target_root(&analyze("git push"), &claude, &outside),
+    sb.path("declared")
   );
 }
 

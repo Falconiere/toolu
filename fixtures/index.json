@@ -1803,6 +1803,7 @@
         "post: a disabled post-tools hook prints nothing",
         "pre: registry warnings come before registry exit lines",
         "pre: an ask from one patch path takes the other paths' advice",
+        "pre: registry files run in byte order of their names",
         "pre: JSON stdin with trailing newlines walks as written"
       ]
     }

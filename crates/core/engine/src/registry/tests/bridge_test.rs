@@ -47,6 +47,18 @@ fn only_marked_lines_for_the_expected_modules_count() {
 }
 
 #[test]
+fn a_line_with_a_lone_surrogate_still_reads() {
+  let entry = entry("a.js");
+  let line = "toolu-bridge:{\"file\":\"a.js\",\"decision\":{\"kind\":\"deny\",\"reason\":\"cut \\ud83d\"}}\n";
+  let reason = Text::new("cut \u{fffd}").unwrap();
+  assert_eq!(
+    parse_lines(line, &[&entry]),
+    [("a.js".to_owned(), Line::Decision(Decision::Deny { reason }))],
+    "a deny whose reason JavaScript sliced through an emoji still denies"
+  );
+}
+
+#[test]
 fn a_stop_line_and_a_failure_say_what_happened() {
   let deny = Line::Decision(Decision::Deny {
     reason: Text::new("no").unwrap(),

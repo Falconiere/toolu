@@ -6,6 +6,7 @@ use toolu_protocol::decision::Decision;
 use toolu_protocol::text::Text;
 
 use super::{Run, registry_event};
+use crate::dispatch::event::ordered_ctx;
 use crate::dispatch::fold::Folded;
 use crate::dispatch::walk::encoded;
 use crate::dispatch::{ModuleResult, Phase};
@@ -39,7 +40,8 @@ pub(super) fn flush(run: &mut Run<'_>, batch: &mut Vec<&Entry>) {
   }
   let modules = std::mem::take(batch);
   let session = run.walk.session;
-  let bun = session.bun.borrow_mut().bun(&session.env);
+  // The hook's own PATH, not the post-tool one with `node_modules/.bin` first.
+  let bun = session.bun.borrow_mut().bun(session.options.env);
   let result = match &bun {
     Some(bun) => {
       let launch = Launch {
@@ -48,6 +50,8 @@ pub(super) fn flush(run: &mut Run<'_>, batch: &mut Vec<&Entry>) {
         cwd: session.cwd(),
         module_timeout: session.options.module_timeout,
       };
+      let event = run.walk.view.ordered_event(run.walk.payload);
+      let ctx = ordered_ctx(run.walk.payload, session);
       let request = Request {
         stop: if session.phase == Phase::Pre {
           "deny"
@@ -55,8 +59,8 @@ pub(super) fn flush(run: &mut Run<'_>, batch: &mut Vec<&Entry>) {
           "post_block"
         },
         registry_event: registry_event(session.phase).slug(),
-        event: &run.walk.view.ordered_event,
-        ctx: &run.walk.view.ordered_ctx,
+        event: &event,
+        ctx: &ctx,
       };
       run_batch(&launch, &request, &modules)
     }

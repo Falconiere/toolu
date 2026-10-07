@@ -2,6 +2,8 @@
 //! the registry phase runs before its results fold, a built-in's failure is an
 //! exit 1, shadowing and selection skip modules, and a patch folds per path.
 
+#[path = "helpers/expect.rs"]
+mod expect;
 #[path = "helpers/hook.rs"]
 mod hook;
 #[path = "helpers/modules.rs"]
@@ -116,10 +118,8 @@ fn a_js_module_shadows_its_specs_sh_and_selection_gates_specs() {
   modules::manifest(&hook, pre, "z@t", "w", "Write").unwrap();
   modules::install(&hook, &["x@t", "y@t"]).unwrap();
   let dispatched = hook.run(pre, BASH, &[], &[]);
-  assert!(
-    dispatched.result.stdout.contains("fresh js")
-      && dispatched.result.stdout.contains("other spec")
-  );
+  let both = expect::merged("PreToolUse", Some("fresh js"), Some("other spec"));
+  assert_eq!(dispatched.result.stdout, both);
   let old = dispatched
     .trace
     .iter()
@@ -128,11 +128,8 @@ fn a_js_module_shadows_its_specs_sh_and_selection_gates_specs() {
   assert_eq!(old.status, StepStatus::Skipped(Skip::Shadowed));
   hook.selected = Some(BTreeSet::from(["y@t".to_owned()]));
   let dispatched = hook.run(pre, BASH, &[], &[]);
-  assert!(
-    !dispatched.result.stdout.contains("fresh js"),
-    "{}",
-    dispatched.result.stdout
-  );
+  let selected = expect::merged("PreToolUse", None, Some("other spec"));
+  assert_eq!(dispatched.result.stdout, selected);
   let skipped = dispatched
     .trace
     .iter()

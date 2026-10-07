@@ -43,6 +43,17 @@ impl Sandbox {
 
   /// `toolu hook <name>` with `stdin`, `path` first on `PATH`.
   fn hook(&self, name: &str, stdin: impl Into<Vec<u8>>, path: Option<&Path>) -> Res<Output> {
+    self.hook_args(name, stdin, path, &[])
+  }
+
+  /// [`Sandbox::hook`] with `extra` flags after `--event`.
+  fn hook_args(
+    &self,
+    name: &str,
+    stdin: impl Into<Vec<u8>>,
+    path: Option<&Path>,
+    extra: &[&str],
+  ) -> Res<Output> {
     let system = std::env::var("PATH")?;
     let path = path.map_or(system.clone(), |first| {
       format!("{}:{system}", first.display())
@@ -55,6 +66,7 @@ impl Sandbox {
     Ok(
       assert_cmd::Command::new(TOOLU)
         .args(["hook", name, "--event", event])
+        .args(extra)
         .env_clear()
         .env("PATH", path)
         .env("HOME", self.root.join("home"))
@@ -155,9 +167,9 @@ fn an_unreadable_payload_blocks_and_a_disabled_hook_is_silent() {
   let (stdout, stderr, code) =
     streams(&sb.hook("pre-tools", vec![0xff, 0xfe, b'{'], None).unwrap());
   assert_eq!((stdout.as_str(), code), ("", Some(2)));
-  assert!(
-    stderr.starts_with("blocked: toolu PreToolUse hook failed: the hook payload could not be read"),
-    "{stderr}"
+  assert_eq!(
+    stderr,
+    "blocked: toolu PreToolUse hook failed: the hook payload could not be read: stream did not contain valid UTF-8\n"
   );
   sb.module("pre-tools.d", "x@t__deny.sh", "exit 2").unwrap();
   let config = sb.root.join("project/.claude/toolu.config.json");
@@ -167,4 +179,28 @@ fn an_unreadable_payload_blocks_and_a_disabled_hook_is_silent() {
     streams(&sb.hook("pre-tools", BASH, None).unwrap()),
     (String::new(), String::new(), Some(0))
   );
+}
+
+#[test]
+fn the_plugin_root_gives_modules_their_lib_dir() {
+  let sb = Sandbox::new().unwrap();
+  let root = sb.root.join("plugin");
+  let manifest = format!(
+    r#"{{"name":"toolu","version":"{}","hookProtocol":1}}"#,
+    env!("CARGO_PKG_VERSION")
+  );
+  std::fs::create_dir_all(root.join(".claude-plugin")).unwrap();
+  std::fs::write(root.join(".claude-plugin/plugin.json"), manifest).unwrap();
+  sb.module(
+    "pre-tools.d",
+    "x@t__lib.sh",
+    "printf '%s\\n' \"$TOOLU_LIB_DIR\" >&2\nexit 2",
+  )
+  .unwrap();
+  let flag = root.to_str().unwrap();
+  let out = sb
+    .hook_args("pre-tools", BASH, None, &["--plugin-root", flag])
+    .unwrap();
+  let lib = format!("{flag}/hooks/lib\n");
+  assert_eq!(streams(&out), (String::new(), lib, Some(2)));
 }

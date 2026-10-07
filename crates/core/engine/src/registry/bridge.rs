@@ -15,6 +15,7 @@ use toolu_protocol::decision::Decision;
 use toolu_runtime::process::{RunError, Spec, Wait, run};
 
 use crate::dispatch::MAX_OUTPUT_BYTES;
+use crate::dispatch::output::sanitize_surrogates;
 use runner::{MARK, RUNNER, Request, request_text};
 
 use super::Entry;
@@ -56,7 +57,8 @@ fn parse_lines(stdout: &str, modules: &[&Entry]) -> Vec<(String, Line)> {
     .split('\n')
     .filter_map(|line| line.strip_prefix(MARK));
   for (text, entry) in marked.zip(modules) {
-    let Ok(Value::Object(fields)) = serde_json::from_str::<Value>(text) else {
+    let Ok(Value::Object(fields)) = serde_json::from_str::<Value>(&sanitize_surrogates(text))
+    else {
       break;
     };
     if fields.get("file").and_then(Value::as_str) != Some(entry.file.as_str()) {

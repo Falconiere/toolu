@@ -5,7 +5,33 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 
-use super::{Given, Phase, RULES, lib_dir, line, tool_hook};
+use toolu_engine::DispatchOptions;
+use toolu_engine::dispatch::DEFAULT_MODULE_TIMEOUT;
+use toolu_engine::gate::Gate;
+use toolu_protocol::decision::Decision;
+use toolu_protocol::host::Host;
+use toolu_protocol::normalized::NormalizedEvent;
+use toolu_runtime::registry::rule::RuleContext;
+
+use super::{Given, Phase, RULES, hook_main, lib_dir, line, tool_hook};
+
+/// A built-in gate with a bug.
+struct Panics;
+
+impl Gate for Panics {
+  fn name(&self) -> &'static str {
+    "panics"
+  }
+
+  fn run(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Result<Decision, String> {
+    Ok(bug())
+  }
+}
+
+/// The gate's bug.
+fn bug() -> Decision {
+  panic!("gate bug")
+}
 
 #[test]
 fn one_trailing_newline_goes_and_an_empty_stream_is_none() {
@@ -51,17 +77,50 @@ fn the_lib_dir_comes_from_the_plugin_root() {
 }
 
 #[test]
-fn an_unreadable_payload_blocks_before_a_tool() {
-  let out = tool_hook(
-    Phase::Pre,
-    Err(std::io::Error::other("stream did not contain valid UTF-8")),
-    None,
+fn an_unreadable_payload_blocks_before_and_after_a_tool() {
+  let unreadable = || Err(std::io::Error::other("stream did not contain valid UTF-8"));
+  let pre = tool_hook(Phase::Pre, unreadable(), None);
+  assert_eq!((pre.exit, pre.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    pre.stderr.as_deref(),
+    Some(
+      "blocked: toolu PreToolUse hook failed: the hook payload could not be read: stream did not contain valid UTF-8"
+    )
   );
-  assert_eq!(out.exit, Exit::Blocked);
-  assert_eq!(out.stdout, None);
-  let stderr = out.stderr.unwrap_or_default();
-  assert!(
-    stderr.starts_with("blocked: toolu PreToolUse hook failed: the hook payload could not be read"),
-    "{stderr}"
+  let post = tool_hook(Phase::Post, unreadable(), None);
+  assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    post.stderr.as_deref(),
+    Some(
+      "toolu PostToolUse hook failed: the hook payload could not be read: stream did not contain valid UTF-8"
+    )
+  );
+}
+
+#[test]
+fn a_panicking_gate_blocks_before_and_after_a_tool() {
+  let env = Env::from_pairs([("HOME", "/nonexistent/toolu-home")]);
+  let options = DispatchOptions {
+    env: &env,
+    cwd: Path::new("/"),
+    lib_dir: Path::new("/lib"),
+    builtins: &[&Panics],
+    rules: RULES,
+    selected_specs: None,
+    continue_post_blocks: false,
+    module_timeout: DEFAULT_MODULE_TIMEOUT,
+  };
+  let payload = || Ok(r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#.to_owned());
+  let pre = hook_main(Phase::Pre, payload(), Host::Claude, &options);
+  assert_eq!((pre.exit, pre.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    pre.stderr.as_deref(),
+    Some("blocked: toolu PreToolUse hook panicked: gate bug")
+  );
+  let post = hook_main(Phase::Post, payload(), Host::Claude, &options);
+  assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
+  assert_eq!(
+    post.stderr.as_deref(),
+    Some("toolu PostToolUse hook panicked: gate bug")
   );
 }

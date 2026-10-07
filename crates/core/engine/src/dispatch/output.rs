@@ -3,6 +3,9 @@
 //! `$(jq -r '<path> // empty' <<<"$result")` reads it, and merged results are
 //! printed the way `jq -n` prints them, so the bytes match TypeScript's.
 
+use std::borrow::Cow;
+
+use serde_json::{Map, Value};
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::js_order::js_ordered;
@@ -29,7 +32,7 @@ pub(crate) enum Unreadable {
 /// `JSON.parse(text)` with JavaScript key order. Lone surrogate escapes, which
 /// `JSON.parse` accepts and serde rejects, read as U+FFFD.
 pub(crate) fn parse_document(text: &str) -> Result<Ordered, Unreadable> {
-  match Ordered::parse(&sanitize_surrogates(text)) {
+  match Ordered::parse(sanitize_surrogates(text).as_ref()) {
     Ok(value) => Ok(js_ordered(value)),
     Err(message) if message.starts_with("recursion limit exceeded") => Err(Unreadable::TooDeep),
     Err(_) => Err(Unreadable::NotJson),
@@ -44,7 +47,10 @@ fn code_unit(bytes: &[u8], at: usize) -> Option<u32> {
 
 /// `text` with every escape of an unpaired UTF-16 surrogate inside a JSON string
 /// replaced by `\ufffd`; a valid pair, other escapes and non-string text are kept.
-pub(crate) fn sanitize_surrogates(text: &str) -> String {
+pub(crate) fn sanitize_surrogates(text: &str) -> Cow<'_, str> {
+  if !text.contains("\\u") {
+    return Cow::Borrowed(text);
+  }
   let bytes = text.as_bytes();
   let mut out = String::with_capacity(text.len());
   let (mut copied, mut at, mut in_string) = (0, 0, false);
@@ -75,7 +81,24 @@ pub(crate) fn sanitize_surrogates(text: &str) -> String {
     at += 1;
   }
   out.push_str(text.get(copied..).unwrap_or_default());
-  out
+  Cow::Owned(out)
+}
+
+/// `value` as a `serde_json::Value`, for readers that need no key order.
+pub(crate) fn plain(value: &Ordered) -> Value {
+  match value {
+    Ordered::Null => Value::Null,
+    Ordered::Bool(flag) => Value::Bool(*flag),
+    Ordered::Number(number) => Value::Number(number.clone()),
+    Ordered::String(text) => Value::String(text.clone()),
+    Ordered::Array(items) => Value::Array(items.iter().map(plain).collect()),
+    Ordered::Object(entries) => Value::Object(
+      entries
+        .iter()
+        .map(|(key, item)| (key.clone(), plain(item)))
+        .collect::<Map<String, Value>>(),
+    ),
+  }
 }
 
 /// `$(jq -r '.<path> // empty' <<<"$result")`: "" when the document is absent,

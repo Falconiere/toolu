@@ -85,11 +85,17 @@ fn lone_surrogates_read_as_replacement_characters_and_modules_get_the_raw_text()
 fn nesting_past_serdes_limit_fails_closed_before_and_after_a_tool() {
   let hook = Hook::new(Host::Claude).unwrap();
   let refused = |phase| hook.run(phase, &nested(126), &[], &[]).result;
-  let deepest = hook.run(Phase::Pre, &nested(125), &[], &[]).result;
+  let seen = Seen(Mutex::new(Vec::new()));
+  let deepest = hook.run(Phase::Pre, &nested(125), &[&seen], &[]).result;
   assert_eq!(
     (deepest.stdout.as_str(), deepest.exit_code),
     ("", 0),
     "125 arrays (127 levels) walk; serde refuses the 128th"
+  );
+  assert_eq!(
+    *seen.0.lock().unwrap(),
+    ["ls"],
+    "the deepest payload reached the gates as Bash"
   );
   assert_eq!(
     refused(Phase::Pre).stdout,

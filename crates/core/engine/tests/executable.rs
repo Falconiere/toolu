@@ -1,6 +1,8 @@
 //! `.sh` registry modules (AC-2, AC-3): the stdin, environment and exit-status
 //! contract of `dispatch.sh`, and the deadline and isolation TypeScript lacks.
 
+#[path = "helpers/expect.rs"]
+mod expect;
 #[path = "helpers/hook.rs"]
 mod hook;
 #[path = "helpers/sandbox.rs"]
@@ -63,10 +65,9 @@ fn other_failures_are_reported_their_stderr_dropped_and_the_walk_goes_on() {
     out.stderr,
     "toolu-dispatch: module x@t__a.sh exited 3; output skipped\ntoolu-dispatch: module x@t__c.sh exited 139; output skipped\n"
   );
-  assert!(
-    out.stdout.contains("\"additionalContext\": \"after\""),
-    "{}",
-    out.stdout
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("after"), None)
   );
   assert_eq!(out.exit_code, 0);
   let statuses: Vec<&StepStatus> = dispatched.trace.iter().map(|step| &step.status).collect();
@@ -101,7 +102,10 @@ fn a_module_past_its_deadline_is_killed_and_reported_never_denying() {
     out.stderr,
     "toolu-dispatch: module x@t__a.sh exited 124; output skipped\ntoolu-dispatch: module x@t__b.sh exited 124; output skipped\n"
   );
-  assert!(out.stdout.contains("still runs"), "{}", out.stdout);
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("still runs"), None)
+  );
   assert_eq!(out.exit_code, 0);
   assert!(
     started.elapsed() < Duration::from_secs(8),
@@ -118,7 +122,10 @@ fn a_backgrounded_process_with_redirected_streams_is_not_waited_for() {
   hook.sh(Phase::Pre, "x@t__a.sh", &body).unwrap();
   let out = hook.run(Phase::Pre, BASH, &[], &[]).result;
   assert_eq!(out.stderr, "");
-  assert!(out.stdout.contains("backgrounded"), "{}", out.stdout);
+  assert_eq!(
+    out.stdout,
+    expect::merged("PreToolUse", Some("backgrounded"), None)
+  );
 }
 
 #[test]
@@ -148,9 +155,34 @@ fn output_past_the_budget_is_skipped_unless_the_module_denies() {
     .unwrap();
   let out = hook.run(Phase::Pre, BASH, &[], &[]).result;
   assert_eq!(out.exit_code, 2);
-  assert!(
-    out.stderr.ends_with("yyyy"),
+  let kept = out.stderr.rsplit('\n').next().unwrap_or_default();
+  assert_eq!(
+    kept.len(),
+    8_388_608,
     "the deny keeps its stderr, cut at the budget"
+  );
+  assert!(kept.bytes().all(|byte| byte == b'y'));
+}
+
+#[test]
+fn an_environment_past_the_kernels_limit_is_skipped_as_127() {
+  let hook = Hook::new(Host::Claude).unwrap();
+  hook
+    .sh(Phase::Pre, "x@t__a.sh", &advice("unreachable"))
+    .unwrap();
+  let content = "x".repeat(200 * 1024);
+  let file = hook.sb.text("project/big.txt");
+  let write = format!(
+    r#"{{"tool_name":"Write","tool_input":{{"file_path":"{file}","content":"{content}"}}}}"#
+  );
+  let out = hook.run(Phase::Pre, &write, &[], &[]).result;
+  assert_eq!(
+    (out.stdout.as_str(), out.stderr.as_str()),
+    (
+      "",
+      "toolu-dispatch: module x@t__a.sh exited 127; output skipped\n"
+    ),
+    "a 200 KiB `input` is past Linux's per-string limit, as for TypeScript's spawn"
   );
 }
 

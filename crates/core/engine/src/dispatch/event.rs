@@ -11,7 +11,7 @@ use toolu_runtime::registry::rule::{EditOperation, EditSplit, RuleContext};
 use toolu_state::edit_records::EditRecord;
 
 use super::Phase;
-use super::output::{parse_document, sanitize_surrogates};
+use super::output::plain;
 use super::session::Session;
 
 /// One path of a split patch: what `TOOLU_EDIT_*` and `ctx.edit` carry.
@@ -36,9 +36,11 @@ impl EditFields {
 }
 
 /// The text every module of one walk reads, and what it was built from.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct Payload {
   pub(crate) text: String,
+  /// `text` as `JSON.parse` reads it, keys in JavaScript order; `None` when it is not JSON.
+  pub(crate) doc: Option<Ordered>,
   /// The walk's tool name: `"Edit"` for a split path, `""` when stdin is not JSON.
   pub(crate) tool_name: String,
   pub(crate) edit: Option<EditFields>,
@@ -48,9 +50,8 @@ pub(crate) struct Payload {
 pub(crate) struct View {
   pub(crate) event: NormalizedEvent,
   pub(crate) raw: Map<String, Value>,
-  /// The event and context as the Bun bridge sends them.
-  pub(crate) ordered_event: Ordered,
-  pub(crate) ordered_ctx: Ordered,
+  /// The event's fields in `toolEvent`'s key order, for the Bun bridge.
+  fields: Vec<(String, Value)>,
 }
 
 /// A non-empty string field, else `fallback`.
@@ -84,36 +85,40 @@ impl View {
   /// # Errors
   /// When the event does not form, which the fallbacks rule out.
   pub(crate) fn of(payload: &Payload, session: &Session<'_>) -> Result<View, String> {
-    let sanitized = sanitize_surrogates(&payload.text);
-    let raw = match serde_json::from_str::<Value>(&sanitized) {
-      Ok(Value::Object(map)) => map,
-      Ok(_) | Err(_) => Map::new(),
-    };
-    let ordered_raw = match parse_document(&payload.text) {
-      Ok(doc @ Ordered::Object(_)) => doc,
-      Ok(_) | Err(_) => Ordered::Object(Vec::new()),
+    let raw = match payload.doc.as_ref().map(plain) {
+      Some(Value::Object(map)) => map,
+      Some(_) | None => Map::new(),
     };
     let fields = fields(payload, session, &raw);
     let wire = Value::Object(fields.iter().cloned().collect());
     let event: NormalizedEvent = serde_json::from_value(wire).map_err(|err| err.to_string())?;
-    let mut ordered_event = Ordered::Object(
-      fields
+    Ok(View { event, raw, fields })
+  }
+
+  /// The event as the Bun bridge sends it: `toolEvent`'s key order, with
+  /// `toolInput` and `toolOutput` in the payload's own key order.
+  pub(crate) fn ordered_event(&self, payload: &Payload) -> Ordered {
+    let mut event = Ordered::Object(
+      self
+        .fields
         .iter()
         .map(|(key, value)| (key.clone(), Ordered::from(value)))
         .collect(),
     );
-    let input = match ordered_raw.get("tool_input") {
-      Some(input @ Ordered::Object(_)) => input.clone(),
-      Some(_) | None => Ordered::Object(Vec::new()),
-    };
-    ordered_event.set("toolInput", input);
-    let ordered_ctx = ordered_ctx(payload, session, ordered_raw);
-    Ok(View {
-      event,
-      raw,
-      ordered_event,
-      ordered_ctx,
-    })
+    let doc = payload.doc.as_ref();
+    let field = |key: &str| doc.and_then(|doc| doc.get(key));
+    let input = field("tool_input").filter(|input| matches!(input, Ordered::Object(_)));
+    event.set(
+      "toolInput",
+      input.cloned().unwrap_or(Ordered::Object(Vec::new())),
+    );
+    if self.fields.iter().any(|(key, _)| key == "toolOutput") {
+      let output = field("tool_response")
+        .filter(|response| **response != Ordered::Null)
+        .or_else(|| field("tool_output"));
+      event.set("toolOutput", output.cloned().unwrap_or(Ordered::Null));
+    }
+    event
   }
 
   /// The context a gate or rule sees for this view.
@@ -213,7 +218,11 @@ fn typed(
 }
 
 /// `toolContext` for the bridge, without `env`, which the runner takes from its process.
-fn ordered_ctx(payload: &Payload, session: &Session<'_>, raw: Ordered) -> Ordered {
+pub(crate) fn ordered_ctx(payload: &Payload, session: &Session<'_>) -> Ordered {
+  let raw = match &payload.doc {
+    Some(doc @ Ordered::Object(_)) => doc.clone(),
+    Some(_) | None => Ordered::Object(Vec::new()),
+  };
   let path = |path: &std::path::Path| Ordered::String(path.to_string_lossy().into_owned());
   let mut ctx = vec![
     (

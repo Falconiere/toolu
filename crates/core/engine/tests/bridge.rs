@@ -67,7 +67,7 @@ fn consecutive_modules_share_one_bun_and_a_deny_stops_the_batch() {
   )
   .unwrap();
   modules::manifest(&hook, pre, "b@t", "rule", "Write").unwrap();
-  modules::file(&hook, pre, "bb@t__off.js", "export default 42;").unwrap();
+  modules::file(&hook, pre, "ab@t__off.js", "export default 42;").unwrap();
   modules::install(&hook, &["a@t", "b@t", "c@t"]).unwrap();
   let out = hook.run(pre, BASH, &[], &[]).result;
   assert_eq!(
@@ -139,6 +139,36 @@ fn a_module_that_hangs_or_exits_fails_alone() {
   assert_eq!(spawns(&hook), 3);
 }
 
+#[test]
+fn a_project_bun_is_not_the_bridges_and_nothing_follows_a_stop() {
+  let hook = logged().unwrap();
+  bins::script(
+    &hook.sb.path("project/node_modules/.bin/bun"),
+    "echo local >> ../spawns\nexit 1",
+  )
+  .unwrap();
+  modules::js(&hook, Phase::Post, "x@t", "m", &advise("from js")).unwrap();
+  let edit = r#"{"tool_name":"Bash","tool_input":{"command":"ls"},"tool_response":{}}"#;
+  let out = hook.run(Phase::Post, edit, &[], &[]).result;
+  let advice = "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"from js\"\n  }\n}\n";
+  assert_eq!((out.stdout.as_str(), out.stderr.as_str()), (advice, ""));
+  assert_eq!(
+    std::fs::read_to_string(hook.sb.path("spawns")).unwrap(),
+    "spawn\n"
+  );
+  modules::js(
+    &hook,
+    Phase::Pre,
+    "a@t",
+    "deny",
+    r#"return { kind: "deny", reason: "no" };"#,
+  )
+  .unwrap();
+  modules::file(&hook, Phase::Pre, "b@t__bad.json", "{").unwrap();
+  let out = hook.run(Phase::Pre, BASH, &[], &[]).result;
+  assert_eq!(out.stderr, "", "the walk stopped before the bad manifest");
+}
+
 /// A hook with no Bun anywhere: an empty `PATH` and a home without `.bun`.
 fn bunless(host: Host) -> sandbox::Res<Hook> {
   let mut hook = Hook::new(host)?;
@@ -153,12 +183,9 @@ fn without_bun_a_pre_tool_module_fails_closed() {
   let dispatched = hook.run(Phase::Pre, BASH, &[], &[]);
   let doc: serde_json::Value = serde_json::from_str(&dispatched.result.stdout).unwrap();
   assert_eq!(doc["hookSpecificOutput"]["permissionDecision"], "deny");
-  let reason = doc["hookSpecificOutput"]["permissionDecisionReason"]
-    .as_str()
-    .unwrap();
-  assert!(
-    reason.starts_with("toolu-registry: module x@t__m.js needs Bun 1.4.x"),
-    "{reason}"
+  assert_eq!(
+    doc["hookSpecificOutput"]["permissionDecisionReason"],
+    "toolu-registry: module x@t__m.js needs Bun 1.4.x, which was not found (checked TOOLU_BUN, PATH and ~/.bun/bin/bun); install it from https://bun.sh or remove the module"
   );
   assert_eq!(
     dispatched.trace.last().unwrap().status,
@@ -179,25 +206,27 @@ fn without_bun_a_post_tool_session_is_told_once() {
     hook.run(Phase::Post, &payload, &[], &[]).result.stdout
   };
   let first = post(r#","session_id":"s1""#);
-  let doc: serde_json::Value = serde_json::from_str(&first).unwrap();
-  assert_eq!(
-    doc["hookSpecificOutput"]["additionalContext"],
-    "toolu-registry: 2 registry module(s) did not run because Bun was not found: x@t__m.js, y@t__n.js. Install Bun 1.4.x from https://bun.sh."
+  let told = format!(
+    "{{\n  \"hookSpecificOutput\": {{\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": {}\n  }}\n}}\n",
+    serde_json::Value::from(
+      "toolu-registry: 2 registry module(s) did not run because Bun was not found: x@t__m.js, y@t__n.js. Install Bun 1.4.x from https://bun.sh."
+    )
   );
+  assert_eq!(first, told);
   assert_eq!(post(r#","session_id":"s1""#), "", "once per session");
-  assert_ne!(
+  assert_eq!(
     post(""),
-    "",
+    told,
     "no session id counts as `unknown`, a session of its own"
   );
   assert_eq!(post(""), "");
   let markers = hook.sb.path("project/.claude/tmp/registry-bridge");
   std::fs::remove_dir_all(&markers).unwrap();
   std::fs::write(&markers, "in the way").unwrap();
-  assert_ne!(post(r#","session_id":"s2""#), "");
-  assert_ne!(
+  assert_eq!(post(r#","session_id":"s2""#), told);
+  assert_eq!(
     post(r#","session_id":"s2""#),
-    "",
+    told,
     "an unwritable marker repeats the advisory"
   );
 }

@@ -207,5 +207,10 @@ fn a_protocol_mismatch_blocks_a_tool_hook_before_it_runs() {
   let path = root.path().to_str().unwrap();
   let out = run_hook(&request("pre-tools", Some("PreToolUse"), Some(path)));
   assert_eq!(out.exit, toolu_protocol::exit::Exit::Blocked);
-  assert!(out.stderr.unwrap().starts_with("blocked: "));
+  assert!(
+    out
+      .stderr
+      .unwrap()
+      .starts_with("blocked: toolu plugin: hook protocol 999 needs a newer")
+  );
 }

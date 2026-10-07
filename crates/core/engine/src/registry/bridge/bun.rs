@@ -1,6 +1,6 @@
 //! Finding Bun for the bridge, and the once-per-session note that it is missing.
-//! Bun is looked for the way the generated launcher looks: `TOOLU_BUN`, `bun` on
-//! `PATH`, then `~/.bun/bin/bun`.
+//! Bun is looked for the way the generated launcher looks, in the hook's own
+//! environment: `TOOLU_BUN`, `bun` on `PATH`, then `~/.bun/bin/bun`.
 
 use std::io::ErrorKind;
 use std::os::unix::fs::PermissionsExt as _;

@@ -1009,8 +1009,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1044,8 +1044,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1079,8 +1079,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1123,8 +1123,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1157,8 +1157,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1188,8 +1188,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1309,8 +1309,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1344,8 +1344,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1357,7 +1357,7 @@
         }
       ],
       "expect": {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"tool/post|{\\\"filePath\\\":\\\"$PROJECT/README.md\\\",\\\"success\\\":true}|true\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"tool/post|{\\\"success\\\":true,\\\"filePath\\\":\\\"$PROJECT/README.md\\\"}|true\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0
       }
@@ -1375,8 +1375,8 @@
           "new_string": "b"
         },
         "tool_response": {
-          "filePath": "$PROJECT/README.md",
-          "success": true
+          "success": true,
+          "filePath": "$PROJECT/README.md"
         },
         "session_id": "s1",
         "cwd": "$PROJECT"
@@ -1457,6 +1457,42 @@
       ],
       "expect": {
         "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"first path asks\\n\\nsecond ctx\"\n  },\n  \"systemMessage\": \"second msg\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: registry files run in byte order of their names",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "a@t__lower.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"lower\"}}'"
+        },
+        {
+          "file": "B@t__upper.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"upper\"}}'"
+        },
+        {
+          "file": "a.b@t__dot.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"dot\"}}'"
+        },
+        {
+          "file": "a-b@t__dash.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"dash\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"upper\\n\\ndash\\n\\ndot\\n\\nlower\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0
       }

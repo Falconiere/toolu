@@ -28,12 +28,12 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | State | `state/cases.json` | 77 → 77 | `packages/toolu-core/src/state/__tests__` | #415 (`crates/core/state/tests/{state_cases,diff_cases,io_cases,gate_cases,interleave}.rs`) |
 | State gate-file bytes | `state/gate-bytes.json` | new, 16 | `packages/toolu-core/src/state/__tests__/gate-bytes.test.ts` | #415 (`crates/core/state/tests/gate_bytes.rs`) |
 | State edit records | `state/edit-records.json` | new, 42 | `packages/toolu-core/src/state/__tests__/edit-records.test.ts` | #415 (`crates/core/state/tests/edit_records.rs`) |
-| Dispatch walk | `dispatch/cases.json` | new, 51 | `packages/toolu-core/src/dispatch/__tests__/dispatch-fixture.test.ts` | #418 (`crates/core/engine/tests/dispatch_fixture.rs`) |
+| Dispatch walk | `dispatch/cases.json` | new, 52 | `packages/toolu-core/src/dispatch/__tests__/dispatch-fixture.test.ts` | #418 (`crates/core/engine/tests/dispatch_fixture.rs`) |
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |
 | OpenCode permission/evaluate | `opencode/permission-evaluate.json` | 17 → 17 | `tools/toolu-opencode/src/adapter/__tests__` | #462 |
 | OpenCode lifecycle tests | `opencode/lifecycle-events.json` | 2 → 2 tests, 11 events | `tools/toolu-opencode/src/lifecycle/__tests__` | #462 |
 
-The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, #414's config resolution suite adds 35, #415's gate-file byte and edit-record goldens add 16 and 42, and #418's dispatch walk adds 51, for 1,635 indexed cases in 24 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
+The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, #414's config resolution suite adds 35, #415's gate-file byte and edit-record goldens add 16 and 42, and #418's dispatch walk adds 52, for 1,636 indexed cases in 24 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
 
 ## Case fields and setup
 

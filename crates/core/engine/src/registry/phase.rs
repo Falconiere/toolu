@@ -238,6 +238,9 @@ fn manifest(run: &mut Run<'_>, batch: &mut Vec<&Entry>, manifests: &Manifests<'_
 /// A manifest that cannot enable its rule: one stderr line, never an error.
 fn problem(run: &mut Run<'_>, batch: &mut Vec<&Entry>, entry: &Entry, reason: String) {
   flush(run, batch);
+  if run.stopped {
+    return;
+  }
   run.warn(&format!(
     "toolu-registry: manifest {} skipped: {reason}",
     entry.file

@@ -42,7 +42,7 @@ export const CaseSchema = z.strictObject({
   installed: z.array(z.string()).optional(),
   installedRaw: z.string().optional(),
   continuePostBlocks: z.boolean().optional(),
-  expect: ExpectSchema.optional(),
+  expect: ExpectSchema,
 });
 export type DispatchCase = z.infer<typeof CaseSchema>;
 
@@ -65,12 +65,6 @@ function expandValue(value: unknown, paths: Paths): unknown {
   return value;
 }
 
-/** Sandbox paths back to their tokens, the longest first. */
-export function tokenize(text: string, paths: Paths): string {
-  const order = ["CONFIG", "LIB", "CODEX", "PROJECT", "HOME"] as const;
-  return order.reduce((out, key) => out.replaceAll(paths[key], `$${key}`), text);
-}
-
 function pathsOf(sb: Sandbox, host: DispatchCase["host"]): Paths {
   const config = host === "codex" ? sb.codexHome : join(sb.home, ".claude");
   const lib = join(sb.root, "plugin", "hooks", "lib");
@@ -82,7 +76,7 @@ function writeAt(path: string, body: string): void {
   writeFileSync(path, body);
 }
 
-function setup(sb: Sandbox, c: DispatchCase, paths: Paths): void {
+function setup(sb: Sandbox, c: Omit<DispatchCase, "expect">, paths: Paths): void {
   const dir = join(paths.CONFIG, "toolu", c.phase === "pre" ? "pre-tools.d" : "post-tools.d");
   for (const module of c.registry ?? []) {
     const path = join(dir, module.file);
@@ -107,7 +101,7 @@ function setup(sb: Sandbox, c: DispatchCase, paths: Paths): void {
   if (c.installedRaw !== undefined) writeAt(record, c.installedRaw);
 }
 
-function builtinsOf(c: DispatchCase): ToolModule[] {
+function builtinsOf(c: Omit<DispatchCase, "expect">): ToolModule[] {
   return (c.builtins ?? []).map((b) => ({
     kind: "native",
     name: b.name,
@@ -118,12 +112,14 @@ function builtinsOf(c: DispatchCase): ToolModule[] {
 function envOf(sb: Sandbox, host: DispatchCase["host"]): Record<string, string> {
   const base = { PATH: process.env.PATH ?? "/usr/bin:/bin", HOME: sb.home };
   return host === "codex"
-    ? { ...base, PLUGIN_ROOT: sb.root, CODEX_HOME: sb.codexHome }
+    ? { ...base, PLUGIN_ROOT: join(sb.root, "plugin"), CODEX_HOME: sb.codexHome }
     : { ...base, CLAUDE_PROJECT_DIR: sb.project };
 }
 
 /** Run `c` in a fresh sandbox; the result's paths are the sandbox's own. */
-export async function runCase(c: DispatchCase): Promise<{ result: ModuleResult; paths: Paths }> {
+export async function runCase(
+  c: Omit<DispatchCase, "expect">,
+): Promise<{ result: ModuleResult; paths: Paths }> {
   using sb = createSandbox({ git: true });
   const paths = pathsOf(sb, c.host);
   setup(sb, c, paths);
