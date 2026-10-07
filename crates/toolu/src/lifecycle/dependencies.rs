@@ -20,9 +20,7 @@ pub(crate) fn dependency_warning(
   project_root: &str,
 ) -> Option<String> {
   let path = manifest_path(plugin_root, project_root, host)?;
-  let Some(doc) = read_json(&path) else {
-    return None;
-  };
+  let doc = read_json(&path)?;
   let mut missing = Vec::new();
   for spec in dependency_specs(&doc) {
     match presence(&spec, env, host) {
