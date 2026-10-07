@@ -13,7 +13,11 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { arch, cpus, platform } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { bundlePath, resolveEntryCommand } from "@toolu/conformance/harness/entry-command";
+import {
+  bundlePath,
+  isCliEntry,
+  resolveEntryCommand,
+} from "@toolu/conformance/harness/entry-command";
 import { pretoolEnv } from "@toolu/conformance/harness/pretool";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { PortsError, portSelector, readPorted } from "../rust-conformance.ts";
@@ -116,7 +120,8 @@ function implEnv(args: BenchArgs, known: ReadonlySet<string>): { env: Env; porte
     if (error instanceof PortsError) throw new BenchError(error.message, 2, { cause: error });
     throw error;
   }
-  const absent = ported.filter((id) => !known.has(id));
+  // A skill CLI entry (`toolu/plan-ledger`) is ported too, but no hook spawns it.
+  const absent = ported.filter((id) => !known.has(id) && !isCliEntry(id));
   if (absent.length > 0) {
     throw new BenchError(`ported entries with no hooks.json launcher: ${absent.join(", ")}`);
   }

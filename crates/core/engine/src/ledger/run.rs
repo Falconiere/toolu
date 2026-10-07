@@ -2,7 +2,8 @@
 //! the plan, run each step's check, stamp the mechanical status and the
 //! content-addressed hashes, and write the per-branch ledger. Exit 0 when every
 //! step is fresh-green, 1 otherwise, and 2 on a parse or I/O error, when
-//! nothing is written. The check's exit code decides green, never the agent.
+//! nothing is written. The check's exit code decides green, never the agent;
+//! one step's run is `super::step`.
 
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::git::branch_slug;

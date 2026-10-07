@@ -1,0 +1,1295 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "ledger: self-test parses the built-in plan",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "--self-test"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger --self-test: ok\n",
+            "stderr": "",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: path and root name the branch ledger and the repository",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "path"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "$PROJECT/.claude/tmp/plan-ledger/feat_x.json\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "root"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "$PROJECT\n",
+            "stderr": "",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: run stamps a green and a red step",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"echo ok\"\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"echo boom >&2; false\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/2 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"echo ok\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"ok\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"echo boom >&2; false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"boom\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: a second run skips the fresh step and archives the red attempt",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"echo boom; exit 3\",\n    \"model\": \"haiku\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/2 fresh-green, next=s2 model=haiku\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"echo boom; exit 3\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 3,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"boom\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": \"haiku\",\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/2 fresh-green, next=s2 model=haiku\n",
+            "stderr": "plan-ledger: [1/2] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 1\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"echo boom; exit 3\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 3,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"boom\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": \"haiku\",\n      \"retries\": [\n        {\n          \"attempt\": 1,\n          \"exit_code\": 3,\n          \"diff_sha\": \"<SHA>\",\n          \"evidence_tail\": \"boom\",\n          \"at\": \"<TS>\"\n        }\n      ],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --step s3 after a red s2 runs s3 and leaves s2 next",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"false\",\n    \"depends_on\": [\n      \"s1\"\n    ]\n  },\n  {\n    \"id\": \"s3\",\n    \"title\": \"step s3\",\n    \"check\": \"true\",\n    \"depends_on\": [\n      \"s2\"\n    ]\n  },\n  {\n    \"id\": \"s4\",\n    \"title\": \"step s4\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--step",
+            "s1"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/4 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/4] s1: running check\nplan-ledger: [1/4] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 4,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 3,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s1\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s2\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    },\n    {\n      \"id\": \"s4\",\n      \"title\": \"step s4\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--step",
+            "s2"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/4 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/4] s2: running check\nplan-ledger: [1/4] s2: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 4,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 2,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s1\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s2\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s4\",\n      \"title\": \"step s4\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--step",
+            "s3"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 2/4 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/4] s3: running check\nplan-ledger: [1/4] s3: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 4,\n    \"green\": 2,\n    \"red\": 1,\n    \"pending\": 1,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s1\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s3\",\n      \"title\": \"step s3\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [\n        \"s2\"\n      ],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s4\",\n      \"title\": \"step s4\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --step marks the step running while its check runs",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"grep -c '\\\"status\\\": \\\"running\\\"' .claude/tmp/plan-ledger/feat_x.json\"\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--step",
+            "s1",
+            "--activity",
+            "build"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/2 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 1,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"grep -c '\\\"status\\\": \\\"running\\\"' .claude/tmp/plan-ledger/feat_x.json\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"1\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": null,\n      \"evidence_tail\": null,\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --force re-runs a fresh step",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"echo once\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"echo once\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"once\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--force"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"echo once\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"once\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --verify stamps the verified hash and a later run keeps it",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: fresh-green, skipped (--force re-runs)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: a scoped step stays fresh after an edit outside its paths until --verify",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"docs\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "echo more >> a.ts && git commit -qam edit"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/2] s1: fresh-green, skipped (--force re-runs)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: fresh-green, skipped (--force re-runs)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": \"<SHA>\"\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: a check past PLAN_LEDGER_STEP_TIMEOUT is red with exit 124",
+      "env": {
+        "PLAN_LEDGER_STEP_TIMEOUT": "1"
+      },
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"slow\",\n    \"title\": \"step slow\",\n    \"check\": \"echo started; sleep 5\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 0/1 fresh-green, next=slow\n",
+            "stderr": "plan-ledger: [1/1] slow: running check\nplan-ledger: [1/1] slow: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 0,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 0,\n    \"retried\": 0\n  },\n  \"next\": \"slow\",\n  \"steps\": [\n    {\n      \"id\": \"slow\",\n      \"title\": \"step slow\",\n      \"check\": \"echo started; sleep 5\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 124,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"timed out after 1s (PLAN_LEDGER_STEP_TIMEOUT)\\n\\\"started\\\"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: an invalid PLAN_LEDGER_STEP_TIMEOUT is a red 125",
+      "env": {
+        "PLAN_LEDGER_STEP_TIMEOUT": "soon"
+      },
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 0/1 fresh-green, next=s1\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 0,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 0,\n    \"retried\": 0\n  },\n  \"next\": \"s1\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 125,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"plan-ledger: invalid PLAN_LEDGER_STEP_TIMEOUT 'soon'\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: a corrupt prior ledger stops run with exit 2",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "write",
+          "path": ".claude/tmp/plan-ledger/feat_x.json",
+          "body": "{oops"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: corrupt prior ledger at $PROJECT/.claude/tmp/plan-ledger/feat_x.json\n",
+            "ledger": "{oops"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: a missing plan, a bad model and bad paths stop run with exit 2",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "missing.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger-parse: plan doc not found: missing.md\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "model.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"model\": \"gpt\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "model.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger-parse: invalid step model in model.md (s1=gpt); allowed: haiku sonnet opus fable inherit\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "paths.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"paths\": [\n      \"\"\n    ]\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "paths.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger-parse: invalid step paths in paths.md (s1); expected an array of non-empty strings\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "empty.md",
+          "body": "# no steps\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "empty.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger-parse: no '## Steps (machine-readable)' json block in empty.md\n",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: --activity without --step and an empty --step stop run with exit 2",
+      "steps": [
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--activity",
+            "x"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: --activity requires --step\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--step",
+            ""
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: --step requires an id\n",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: status heals an orphaned running step and reports AC coverage",
+      "steps": [
+        {
+          "op": "write",
+          "path": "spec.md",
+          "body": "# Spec\n\n**Status:** Approved\n\n## Acceptance criteria\n\n- **AC-1:** one\n- **AC-2:** two\n- **AC-3:** three\n"
+        },
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** spec.md\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\",\n    \"ac_refs\": [\n      \"AC-1\"\n    ]\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"true\",\n    \"ac_refs\": [\n      \"AC-2\"\n    ]\n  }\n]\n```\n"
+        },
+        {
+          "op": "write",
+          "path": ".claude/tmp/plan-ledger/feat_x.json",
+          "body": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"2020-01-01T00:00:00Z\",\n  \"summary\": {},\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"running\",\n      \"started_at\": \"2020-01-01T00:00:00Z\",\n      \"activity\": \"build\",\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": \"2020-01-01T00:00:00Z\",\n      \"evidence_tail\": null,\n      \"ac_refs\": [\n        \"AC-1\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"0000000000000000000000000000000000000000\",\n      \"last_run\": \"2020-01-01T00:00:00Z\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-2\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": \"opus\",\n      \"retries\": []\n    }\n  ]\n}"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 0/2 fresh-green, next=s1\nAC coverage (report-only):\n  AC-1: UNCOVERED (s1 not fresh-green)\n  AC-2: UNCOVERED (s2 not fresh-green)\n  AC-3: UNCOVERED (no step references it)\n",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 1,\n    \"running\": 0,\n    \"stale\": 1,\n    \"fresh_green\": 0,\n    \"retried\": 0\n  },\n  \"next\": \"s1\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"pending\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": null,\n      \"diff_sha\": null,\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": null,\n      \"ac_refs\": [\n        \"AC-1\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": []\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-2\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": \"opus\",\n      \"retries\": []\n    }\n  ]\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-1\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-2\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 2/2 fresh-green, next=none\nAC coverage (report-only):\n  AC-1: covered by s1\n  AC-2: covered by s2\n  AC-3: UNCOVERED (no step references it)\n",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 2,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 2,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-1\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [\n        \"AC-2\"\n      ],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: status without a ledger exits 2",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: no ledger at $PROJECT/.claude/tmp/plan-ledger/feat_x.json\n",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: preflight refuses Draft plans and specs with each host's remedy",
+      "steps": [
+        {
+          "op": "write",
+          "path": "spec.md",
+          "body": "# S\n\n**Date:** 2031   **Status:** Draft\n"
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "# P\n\n**Status:** Approved   **Spec:** spec.md\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: spec spec.md not approved (Status: Draft) — run /delivery-flow:delivery-flow (spec review phase)\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: spec spec.md not approved (Status: Draft) — load skill({ name: \"delivery-flow-delivery-flow\" }) (spec review phase)\n",
+            "ledger": null
+          },
+          "env": {
+            "TOOLU_HOST_OVERRIDE": "opencode"
+          }
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "# P\n\n**Status:** Draft   **Spec:** spec.md\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: plan not approved (Status: Draft) — run /delivery-flow:delivery-flow (plan review phase)\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: plan not approved (Status: Draft) — load the delivery-flow skill (plan review phase)\n",
+            "ledger": null
+          },
+          "env": {
+            "TOOLU_HOST_OVERRIDE": "cursor"
+          }
+        },
+        {
+          "op": "write",
+          "path": "spec.md",
+          "body": "# S\n\n**Status:** approved\n"
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "# P\n\n**Status:** APPROVED   **Spec:** spec.md\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: preflight without a doc reads the ledger's plan_doc",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "preflight: no plan doc given and no ledger plan_doc to resolve\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: preflight refuses a missing plan, a missing header and a missing spec",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "absent.md"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "preflight: plan doc not found or unreadable: absent.md\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "# P\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: plan has no **Status:** header (p.md) — run /delivery-flow:delivery-flow (plan review phase) to stamp it\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "**Status:** Approved **Spec:** gone.md\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: declared spec not found or unreadable: gone.md\n",
+            "ledger": null
+          }
+        },
+        {
+          "op": "write",
+          "path": "p.md",
+          "body": "**Status:** Approved **Spec:** s.md\n"
+        },
+        {
+          "op": "write",
+          "path": "s.md",
+          "body": "# no status\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "preflight",
+            "p.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "",
+            "stderr": "preflight: spec s.md not approved (Status: none) — run /delivery-flow:delivery-flow (spec review phase)\n",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "ledger: outside a repository path, root and status exit 2",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "path"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: cannot resolve ledger path\n",
+            "ledger": null
+          },
+          "cwd": "$HOME"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "root"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: not in a git repo\n",
+            "ledger": null
+          },
+          "cwd": "$HOME"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: cannot resolve ledger path\n",
+            "ledger": null
+          },
+          "cwd": "$HOME"
+        }
+      ]
+    },
+    {
+      "name": "ledger: without git on PATH every command stops with exit 2",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "path"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "plan-ledger: git is required\n",
+            "ledger": null
+          },
+          "env": {
+            "PATH": "/nonexistent"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "verdict: git is required\n",
+            "ledger": null
+          },
+          "env": {
+            "PATH": "/nonexistent"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: a fresh feature branch is blocked by its review and docs gates",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "verdict: feat/x vs main (diff <SHA>)\nGATE     STATE     REASON\nquality  pass      no quality-gate failure recorded\nplan     advise    no plan ledger for this change; if non-trivial, run plan\nreview   fail      no push-review state file; run a reviewer and write the state\ndocs     advise    code changed without a doc update\noverall: blocked\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"no push-review state file; run a reviewer and write the state\",\n      \"reason_code\": \"no-state\",\n      \"round\": null\n    },\n    \"docs\": {\n      \"state\": \"advise\",\n      \"reason\": \"code changed without a doc update\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: a fresh ledger, a v2 review and a doc change make the branch ready",
+      "steps": [
+        {
+          "op": "sh",
+          "script": "echo docs > README.md && git add README.md && git commit -qm docs"
+        },
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md",
+            "--verify"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "plan-ledger feat_x: 1/1 fresh-green, next=none\n",
+            "stderr": "plan-ledger: [1/1] s1: running check\nplan-ledger: [1/1] s1: green (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"]}\" > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "verdict: feat/x vs main (diff <SHA>)\nGATE     STATE     REASON\nquality  pass      no quality-gate failure recorded\nplan     pass      all plan-ledger steps fresh-green\nreview   pass      review satisfied\ndocs     pass      doc surface in sync\noverall: ready\n",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 0,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"ready\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"pass\",\n      \"reason\": \"all plan-ledger steps fresh-green\",\n      \"summary\": {\n        \"total\": 1,\n        \"fresh_green\": 1\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"pass\",\n      \"reason\": \"review satisfied\",\n      \"reason_code\": \"pass\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 1,\n    \"green\": 1,\n    \"red\": 0,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": null,\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": \"<SHA>\"\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: review states fail on schema, reviewer, stale diff, coverage and findings, and escalate past five rounds",
+      "steps": [
+        {
+          "op": "sh",
+          "script": "echo docs > README.md && git add README.md && git commit -qm docs"
+        },
+        {
+          "op": "sh",
+          "script": "mkdir -p .claude/tmp/push-review && echo '{\"version\":1}' > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"push-review state is schema v1; harness v2 requires reviewed_files — re-run the review to regenerate the state file\",\n      \"reason_code\": \"schema-v1\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"],\\\"reviewers\\\":[\\\"me\\\"]}\" > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"state file lists no accepted reviewer\",\n      \"reason_code\": \"reviewer\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"],\\\"review_round\\\":6}\" > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"escalate\",\n      \"reason\": \"review loop hit 6 rounds (max 5) on an unchanged diff\",\n      \"reason_code\": \"round-cap\",\n      \"round\": 6\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"],\\\"findings_count\\\":2}\" > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"code review has open findings (2)\",\n      \"reason_code\": \"findings\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"],\\\"reviewed_files\\\":[\\\"a.ts\\\"]}\" > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"reviewed_files does not match the current diff's changed paths\",\n      \"reason_code\": \"file-coverage\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "sha=$(git diff --no-color main...HEAD | git hash-object --stdin); mkdir -p .claude/tmp/push-review && printf '%s' \"{\\\"version\\\":2,\\\"diff_sha\\\":\\\"$sha\\\",\\\"findings_count\\\":0,\\\"reviewers\\\":[\\\"toolu-review:review\\\"],\\\"reviewed_files\\\":[\\\"README.md\\\",\\\"a.ts\\\"]}\" > .claude/tmp/push-review/feat_x.json && echo more >> a.ts && git commit -qam more"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"diff changed since review (state stale)\",\n      \"reason_code\": \"stale-diff\",\n      \"round\": 1\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        },
+        {
+          "op": "sh",
+          "script": "echo '{oops' > .claude/tmp/push-review/feat_x.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"advise\",\n      \"reason\": \"no plan ledger for this change; if non-trivial, run plan\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"push-review state file is unparseable at $PROJECT/.claude/tmp/push-review/feat_x.json\",\n      \"reason_code\": \"schema\",\n      \"round\": null\n    },\n    \"docs\": {\n      \"state\": \"pass\",\n      \"reason\": \"doc surface in sync\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": null
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: a failing quality gate, a stale plan and docsSync block mode fail the verdict",
+      "steps": [
+        {
+          "op": "sh",
+          "script": "mkdir -p .claude/tmp && printf '%s' '{\"status\":\"failing\",\"reason\":\"lint failed\\n\"}' > .claude/tmp/quality-gate-status.json"
+        },
+        {
+          "op": "sh",
+          "script": "printf '%s' '{\"version\":1,\"docsSync\":{\"mode\":\"block\"}}' > .claude/toolu.config.json"
+        },
+        {
+          "op": "write",
+          "path": "plan.md",
+          "body": "# Plan\n\n**Status:** Approved   **Spec:** none\n\n## Steps (machine-readable)\n\n```json\n[\n  {\n    \"id\": \"s1\",\n    \"title\": \"step s1\",\n    \"check\": \"true\"\n  },\n  {\n    \"id\": \"s2\",\n    \"title\": \"step s2\",\n    \"check\": \"false\"\n  }\n]\n```\n"
+        },
+        {
+          "op": "run",
+          "cli": "plan-ledger",
+          "argv": [
+            "run",
+            "plan.md"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "plan-ledger feat_x: 1/2 fresh-green, next=s2\n",
+            "stderr": "plan-ledger: [1/2] s1: running check\nplan-ledger: [1/2] s1: green (<N>s)\nplan-ledger: [2/2] s2: running check\nplan-ledger: [2/2] s2: red (<N>s)\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "echo more >> a.ts && git commit -qam more"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "verdict: feat/x vs main (diff <SHA>)\nGATE     STATE     REASON\nquality  fail      lint failed\nplan     fail      steps not fresh-green: s1: stale,s2: red\nreview   fail      no push-review state file; run a reviewer and write the state\ndocs     fail      code changed without a doc update (docsSync.mode=block)\noverall: blocked\n",
+            "stderr": "",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        },
+        {
+          "op": "sh",
+          "script": "printf '%s' '{\"version\":1,\"docsSync\":{\"mode\":\"loud\"}}' > .claude/toolu.config.json"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "verdict: feat/x vs main (diff <SHA>)\nGATE     STATE     REASON\nquality  fail      lint failed\nplan     fail      steps not fresh-green: s1: stale,s2: red\nreview   fail      no push-review state file; run a reviewer and write the state\ndocs     advise    code changed without a doc update\noverall: blocked\n",
+            "stderr": "docsSync.mode: 'loud' is not an allowed value (advise block off); using advise\n",
+            "ledger": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"plan_doc\": \"plan.md\",\n  \"updated_at\": \"<TS>\",\n  \"summary\": {\n    \"total\": 2,\n    \"green\": 1,\n    \"red\": 1,\n    \"pending\": 0,\n    \"running\": 0,\n    \"stale\": 0,\n    \"fresh_green\": 1,\n    \"retried\": 0\n  },\n  \"next\": \"s2\",\n  \"steps\": [\n    {\n      \"id\": \"s1\",\n      \"title\": \"step s1\",\n      \"check\": \"true\",\n      \"status\": \"green\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 0,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    },\n    {\n      \"id\": \"s2\",\n      \"title\": \"step s2\",\n      \"check\": \"false\",\n      \"status\": \"red\",\n      \"started_at\": null,\n      \"activity\": null,\n      \"exit_code\": 1,\n      \"diff_sha\": \"<SHA>\",\n      \"last_run\": \"<TS>\",\n      \"evidence_tail\": \"\",\n      \"ac_refs\": [],\n      \"depends_on\": [],\n      \"input\": null,\n      \"model\": null,\n      \"retries\": [],\n      \"scope_sha\": null\n    }\n  ],\n  \"verified_sha\": null\n}\n"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: an unparseable or other-version ledger fails the plan gate",
+      "steps": [
+        {
+          "op": "write",
+          "path": ".claude/tmp/plan-ledger/feat_x.json",
+          "body": "{oops"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"fail\",\n      \"reason\": \"unparseable ledger at $PROJECT/.claude/tmp/plan-ledger/feat_x.json\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"no push-review state file; run a reviewer and write the state\",\n      \"reason_code\": \"no-state\",\n      \"round\": null\n    },\n    \"docs\": {\n      \"state\": \"advise\",\n      \"reason\": \"code changed without a doc update\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": "{oops"
+          }
+        },
+        {
+          "op": "write",
+          "path": ".claude/tmp/plan-ledger/feat_x.json",
+          "body": "{\"version\":2,\"steps\":[]}"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 1,
+            "stdout": "{\n  \"version\": 1,\n  \"branch\": \"feat/x\",\n  \"base_branch\": \"main\",\n  \"diff_sha\": \"<SHA>\",\n  \"overall\": \"blocked\",\n  \"gates\": {\n    \"quality\": {\n      \"state\": \"pass\",\n      \"reason\": \"no quality-gate failure recorded\"\n    },\n    \"plan\": {\n      \"state\": \"fail\",\n      \"reason\": \"ledger schema mismatch at $PROJECT/.claude/tmp/plan-ledger/feat_x.json (version=\\\"2\\\", expected 1)\",\n      \"summary\": {\n        \"total\": 0,\n        \"fresh_green\": 0\n      },\n      \"ac_uncovered\": 0\n    },\n    \"review\": {\n      \"state\": \"fail\",\n      \"reason\": \"no push-review state file; run a reviewer and write the state\",\n      \"reason_code\": \"no-state\",\n      \"round\": null\n    },\n    \"docs\": {\n      \"state\": \"advise\",\n      \"reason\": \"code changed without a doc update\"\n    }\n  },\n  \"generated_at\": \"<TS>\"\n}\n",
+            "stderr": "",
+            "ledger": "{\"version\":2,\"steps\":[]}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "verdict: outside a repository exits 2",
+      "steps": [
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "status"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "verdict: not a git repository\n",
+            "ledger": null
+          },
+          "cwd": "$HOME"
+        },
+        {
+          "op": "run",
+          "cli": "verdict",
+          "argv": [
+            "json"
+          ],
+          "expect": {
+            "exitCode": 2,
+            "stdout": "",
+            "stderr": "verdict: not a git repository\n",
+            "ledger": null
+          },
+          "cwd": "$HOME"
+        }
+      ]
+    }
+  ]
+}
