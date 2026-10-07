@@ -27,6 +27,7 @@ fn the_api_url_must_be_an_https_origin() {
     "https://",
     "https://api.example.test/v3",
     "ftp://x",
+    "https://bad host",
   ] {
     let config = Config {
       api_url: api_url.to_owned(),

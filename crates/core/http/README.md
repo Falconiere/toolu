@@ -26,7 +26,9 @@ configuration, timeout, body cap and transport failures are errors. The caller
 owns `Content-Type`. `send` refuses `Authorization`, `Proxy-Authorization` and
 `Cookie` headers with `InvalidConfig`: credentials go through `Auth`, which
 redirects drop. The JSON and byte helpers are built on `send` and turn a status
-of 400 or more into `HttpStatus`.
+of 400 or more into `HttpStatus`. `check_url(url)` parses a URL as `send` does,
+so a caller with a retry policy can refuse one that no attempt could send
+before it retries anything.
 
 `Auth` and `Client` have hand-written `Debug`: a password or bearer prints as
 `<redacted>`, and a client shows its `Config` but no environment value. `Error` distinguishes

@@ -32,8 +32,8 @@ snapshot as its whole environment and a 10-second deadline. `gh` itself honours
   `Rest::NotModified`.
 - A path starts with `/`, or with the API URL and `/` (a pagination link). Any
   other path, `//host` included, is `Error::Config` with no request sent, and so
-  is a path or `ETag` with a space, a control character or non-ASCII text.
-  Percent-encode those. The API URL must be an `https://` origin.
+  is a path or `ETag` with a space, a control character or non-ASCII text, or a
+  path the URI parser refuses (`<`, a backtick). Percent-encode those. The API URL must be an `https://` origin.
 - `graphql(query, variables)` posts to `<api>/graphql` and returns the body's
   `data`. A non-empty `errors[]` is `Error::GraphQl`, whose messages are
   redacted.

@@ -1,6 +1,6 @@
 use toolu_runtime::env::Env;
 
-use crate::{Auth, Client, Config, Error, Method, Request, Response};
+use crate::{Auth, Client, Config, Error, Method, Request, Response, check_url};
 
 fn response() -> Response {
   Response {
@@ -72,6 +72,30 @@ fn a_url_without_an_http_scheme_and_host_is_a_transport_error() {
     assert!(
       matches!(result, Err(Error::Transport(_))),
       "{url}: {result:?}"
+    );
+  }
+}
+
+#[test]
+fn check_url_accepts_what_send_can_send_and_names_the_rest() {
+  assert_eq!(check_url("https://api.example.test:8443/x?page=2"), Ok(()));
+  assert_eq!(
+    check_url("ftp://example.test/x"),
+    Err(Error::Transport(
+      "URL must have an HTTP(S) scheme and host".into()
+    ))
+  );
+  for url in [
+    "https://api.example.test/x<y>",
+    "https://bad host/",
+    "https://a/x`y`",
+  ] {
+    assert_eq!(
+      check_url(url),
+      Err(Error::Transport(
+        "invalid URL: invalid uri character".into()
+      )),
+      "{url}"
     );
   }
 }

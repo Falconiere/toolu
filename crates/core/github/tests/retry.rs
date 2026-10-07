@@ -296,14 +296,15 @@ fn a_bad_path_or_etag_sends_nothing_and_never_waits() {
   let api = Api::start().expect("api");
   let client = one_shot(&api).expect("client");
   let started = Instant::now();
-  assert_eq!(
-    client.get("/repos/o/r/contents/a b", None).map(|_| ()),
-    Err(Error::Config(
-      "\"/repos/o/r/contents/a b\" is not a URL path: percent-encode spaces, controls and \
-       non-ASCII"
-        .into()
-    ))
-  );
+  for path in ["/repos/o/r/contents/a b", "/x<y>"] {
+    assert_eq!(
+      client.get(path, None).map(|_| ()),
+      Err(Error::Config(format!(
+        "{path:?} is not a URL path: percent-encode spaces, controls, non-ASCII and reserved \
+         characters"
+      )))
+    );
+  }
   assert_eq!(
     client.get("/x", Some("\"a\nb\"")).map(|_| ()),
     Err(Error::Config(r#""\"a\nb\"" is not an ETag"#.into()))

@@ -122,21 +122,29 @@ impl Client {
   /// starts with the API URL and `/` is used as is.
   pub(crate) fn url(&self, path: &str) -> Result<String, Error> {
     let api = &self.config.api_url;
-    if !path.chars().all(|ch| ch.is_ascii_graphic()) {
-      return Err(Error::Config(format!(
-        "{path:?} is not a URL path: percent-encode spaces, controls and non-ASCII"
-      )));
-    }
-    if path.starts_with('/') && !path.starts_with("//") {
-      return Ok(format!("{api}{path}"));
-    }
-    if path
+    let url = if path.starts_with('/') && !path.starts_with("//") {
+      format!("{api}{path}")
+    } else if path
       .strip_prefix(api.as_str())
       .is_some_and(|rest| rest.starts_with('/'))
     {
-      return Ok(path.to_owned());
-    }
-    Err(Error::Config(format!("{path} is not a path under {api}")))
+      path.to_owned()
+    } else {
+      return Err(Error::Config(format!("{path} is not a path under {api}")));
+    };
+    // Refused once here, a URL no attempt could send is never retried. The
+    // URI parser accepts non-ASCII, which GitHub paths must percent-encode.
+    let ascii = path.chars().all(|ch| ch.is_ascii_graphic());
+    toolu_http::check_url(&url)
+      .ok()
+      .filter(|()| ascii)
+      .ok_or_else(|| {
+        Error::Config(format!(
+          "{path:?} is not a URL path: percent-encode spaces, controls, non-ASCII and \
+         reserved characters"
+        ))
+      })?;
+    Ok(url)
   }
 
   /// The token store, recovered if a panicking thread poisoned it.

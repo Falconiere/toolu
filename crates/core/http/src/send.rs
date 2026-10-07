@@ -89,18 +89,7 @@ impl Client {
         "header {name} is refused; credentials go through Auth"
       )));
     }
-    let uri: ureq::http::Uri =
-      request
-        .url
-        .parse()
-        .map_err(|err: ureq::http::uri::InvalidUri| {
-          Error::Transport(format!("invalid URL: {err}"))
-        })?;
-    let scheme = uri
-      .scheme_str()
-      .filter(|scheme| matches!(*scheme, "http" | "https") && uri.host().is_some())
-      .ok_or_else(|| Error::Transport("URL must have an HTTP(S) scheme and host".into()))?
-      .to_owned();
+    let (uri, scheme) = parse(request.url)?;
     let agent = self.agent(&scheme)?;
     let mut builder = ureq::http::Request::builder()
       .method(request.method.http())
@@ -118,6 +107,29 @@ impl Client {
     .map_err(|err| map_ureq(&err))?;
     self.read_response(response)
   }
+}
+
+/// Check `url` as [`Client::send`] parses it, so a caller can refuse a URL
+/// that no attempt could send before it retries anything.
+///
+/// # Errors
+/// `Transport` naming why the URL is unusable: not a URI, or no `http` or
+/// `https` scheme and host.
+pub fn check_url(url: &str) -> Result<(), Error> {
+  parse(url).map(|_| ())
+}
+
+/// `url` as a URI, with its scheme.
+fn parse(url: &str) -> Result<(ureq::http::Uri, String), Error> {
+  let uri: ureq::http::Uri = url
+    .parse()
+    .map_err(|err: ureq::http::uri::InvalidUri| Error::Transport(format!("invalid URL: {err}")))?;
+  let scheme = uri
+    .scheme_str()
+    .filter(|scheme| matches!(*scheme, "http" | "https") && uri.host().is_some())
+    .ok_or_else(|| Error::Transport("URL must have an HTTP(S) scheme and host".into()))?
+    .to_owned();
+  Ok((uri, scheme))
 }
 
 #[cfg(test)]

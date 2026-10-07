@@ -57,13 +57,20 @@ fn an_error_message_is_read_from_json_and_redacted() {
 }
 
 #[test]
-fn a_path_with_spaces_controls_or_non_ascii_is_refused() {
+fn a_path_no_request_could_carry_is_refused() {
   let client = client("https://api.github.com");
-  for path in ["/repos/o/r/contents/a b", "/x\ny", "/caf\u{e9}"] {
+  for path in [
+    "/repos/o/r/contents/a b",
+    "/x\ny",
+    "/caf\u{e9}",
+    "/x<y>",
+    "/x`y`",
+  ] {
     assert_eq!(
       client.url(path),
       Err(Error::Config(format!(
-        "{path:?} is not a URL path: percent-encode spaces, controls and non-ASCII"
+        "{path:?} is not a URL path: percent-encode spaces, controls, non-ASCII and reserved \
+         characters"
       )))
     );
   }

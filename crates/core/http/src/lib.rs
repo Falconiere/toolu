@@ -20,7 +20,7 @@ mod send;
 pub use auth::Auth;
 pub use error::Error;
 use error::map_io;
-pub use send::{Method, Request, Response};
+pub use send::{Method, Request, Response, check_url};
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "http";
