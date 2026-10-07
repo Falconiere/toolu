@@ -45,6 +45,11 @@
       "file": "docs/resource-budgets.md",
       "subject": "toolu statusline render",
       "reason": "The budget for the render verb that #431 adds; the entry goes stale when it lands."
+    },
+    {
+      "file": "plugins/statusline/commands/setup.md",
+      "subject": "hooks/dist/setup.js",
+      "reason": "statusline's settings.json wiring bundle shares the setup stem; it is not toolu setup agents (#445)."
     }
   ]
 }

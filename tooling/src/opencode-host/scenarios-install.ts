@@ -57,7 +57,9 @@ const PR_BABYSIT_SKILLS = [
 const PR_BABYSIT_COMMANDS = [
   "pr-babysit-babysit-ff6e5a3d",
   "toolu-commit-1e9b92d5",
+  "toolu-doctor",
   "toolu-review-and-commit-db159d0c",
+  "toolu-status",
 ];
 
 async function npmClean(ctx: EntryContext): Promise<EntryResult> {

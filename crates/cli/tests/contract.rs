@@ -22,6 +22,9 @@ fn unported(names: &[String]) -> Vec<&String> {
     "ledger",
     "commands",
     "doctor",
+    "config",
+    "status",
+    "setup",
     "brainstorm",
     "delivery-flow",
   ];

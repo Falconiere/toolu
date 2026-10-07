@@ -12,7 +12,7 @@ function plan(selected: string[], dir = GENERATED) {
   return result.plan;
 }
 
-test("pr-babysit with its toolu dependency plans 7 skills, 5 agents and 3 commands in catalog order", () => {
+test("pr-babysit with its toolu dependency plans 7 skills, 5 agents and 5 commands in catalog order", () => {
   const planned = plan(["toolu", "pr-babysit"]);
   expect(planned.plugins).toEqual(["pr-babysit", "toolu"]);
   expect(planned.skills.map((s) => s.id)).toEqual([
@@ -29,7 +29,9 @@ test("pr-babysit with its toolu dependency plans 7 skills, 5 agents and 3 comman
   expect(planned.commands.map((c) => c.id)).toEqual([
     "pr-babysit-babysit-ff6e5a3d",
     "toolu-commit-1e9b92d5",
+    "toolu-doctor",
     "toolu-review-and-commit-db159d0c",
+    "toolu-status",
   ]);
   expect(planned.notes).toEqual([]);
 });

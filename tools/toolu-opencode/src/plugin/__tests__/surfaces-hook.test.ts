@@ -81,7 +81,9 @@ test("ready: the config hook adds the selection's skills, agents and commands an
   expect(Object.keys(rec(config.agent))).toHaveLength(5);
   expect(Object.keys(rec(config.command))).toEqual([
     "toolu-commit-1e9b92d5",
+    "toolu-doctor",
     "toolu-review-and-commit-db159d0c",
+    "toolu-status",
   ]);
   expect(rec(config.permission)).toEqual({
     external_directory: { [`${GENERATED}/resources/*`]: "allow" },
@@ -92,7 +94,7 @@ test("ready: the config hook adds the selection's skills, agents and commands an
       "skills toolu-commit-e11d9d00, toolu-debug, toolu-deep-research, toolu-orchestrator, " +
       "toolu-review-and-commit-1a591621, toolu-setup; " +
       "agents toolu-architect, toolu-deep-explore, toolu-implementer, toolu-quick-task, " +
-      "toolu-research-agent; commands toolu-commit-1e9b92d5, toolu-review-and-commit-db159d0c",
+      "toolu-research-agent; commands toolu-commit-1e9b92d5, toolu-doctor, toolu-review-and-commit-db159d0c, toolu-status",
   );
   expect(logged.some((l) => l.message.startsWith("toolu: surface notes"))).toBe(false);
   await hooks.dispose?.();

@@ -17,10 +17,10 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`hook`](hook.md) | `plugins/toolu` | available | Run a hook entry; hooks.json calls it (internal) |
 | [`ledger`](ledger.md) | `plugins/toolu` | available | The plan ledger, verdicts and push waivers |
 | [`debug`](debug.md) | `plugins/toolu` | planned | Debugging helpers: I/O capture, logs, stacks and failing tests |
-| [`setup`](setup.md) | `plugins/toolu` | planned | Preview, install or remove toolu's agent profiles |
-| [`doctor`](doctor.md) | `plugins/toolu` | available | Check that the agent command shell finds native toolu |
-| [`config`](config.md) | `plugins/toolu` | planned | Read, change and validate toolu.config.json |
-| [`status`](status.md) | `plugins/toolu` | planned | Show the repository, gate and plugin status |
+| [`setup`](setup.md) | `plugins/toolu` | available | Preview, install or remove toolu's agent profiles |
+| [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
+| [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
+| [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
 | [`serve`](serve.md) | `plugins/toolu` | planned | Serve the OpenCode shim over standard I/O |
 | [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | planned | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | planned | Python quality rules that run after each edit |
@@ -52,9 +52,9 @@ Commands:
   ledger          The plan ledger, verdicts and push waivers
   debug           Debugging helpers: I/O capture, logs, stacks and failing tests
   setup           Preview, install or remove toolu's agent profiles
-  doctor          Check that the agent command shell finds native toolu
+  doctor          Report binary, config, plugin and tool health
   config          Read, change and validate toolu.config.json
-  status          Show the repository, gate and plugin status
+  status          Show the repository, gate and push-review status
   serve           Serve the OpenCode shim over standard I/O
   ts-quality      TypeScript quality rules that run after each edit
   python-quality  Python quality rules that run after each edit

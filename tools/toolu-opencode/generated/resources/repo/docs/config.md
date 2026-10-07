@@ -26,6 +26,15 @@ Requires `jq` (already a hard dependency of every toolu hook). With `jq`
 absent or the JSON malformed, the loader warns once on stderr and falls
 back to "all enabled".
 
+## CLI
+
+`toolu config get` prints the redacted merged document. `toolu config get <key>`
+prints one dotted key. `toolu config set <key> <value>` writes the user file.
+`toolu config set <key> <value> --project` writes the project file. A value that parses as JSON is stored as
+that value, and any other value is stored as a string. `toolu config validate`
+exits 1 with the loader's message when a file is invalid. A credential-named
+key under `epic` is refused: it belongs in `toolu/secrets.json`.
+
 ## Schema
 
 ```json

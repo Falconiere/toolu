@@ -11,11 +11,13 @@ Owner: `plugins/toolu`.
 ```text
 Read, change and validate toolu.config.json
 
-Usage: toolu config [OPTIONS] <COMMAND>
+Usage: toolu config [OPTIONS] [COMMAND]
 
 Commands:
-  planned  Not ported yet (#445): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  get       Print one key or the redacted merged config
+  set       Set one key in the user config, or the project config with --project
+  validate  Validate the merged config and epic settings
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,12 +27,50 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu config planned`
+## `toolu config get`
 
 ```text
-Not ported yet (#445): show the planned verbs
+Print one key or the redacted merged config
 
-Usage: toolu config planned [OPTIONS]
+Usage: toolu config get [OPTIONS] [key]
+
+Arguments:
+  [key]  Dotted key
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu config set`
+
+```text
+Set one key in the user config, or the project config with --project
+
+Usage: toolu config set [OPTIONS] <key> <value>
+
+Arguments:
+  <key>    Dotted key
+  <value>  JSON value, or a string when it is not JSON
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --project           Write the project file
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu config validate`
+
+```text
+Validate the merged config and epic settings
+
+Usage: toolu config validate [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout

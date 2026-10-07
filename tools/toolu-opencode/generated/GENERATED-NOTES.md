@@ -15,7 +15,7 @@ The catalog covers all 12 plugin manifests. At runtime the plugin's `config` hoo
 - `python-quality`: no-surface; 0 skill(s), 0 agent(s), 0 command(s) — Plugin provides hooks only; no skill, agent, or command source.
 - `rust-quality`: no-surface; 0 skill(s), 0 agent(s), 0 command(s) — Plugin provides hooks only; no skill, agent, or command source.
 - `statusline`: generated; 1 skill(s), 0 agent(s), 0 command(s)
-- `toolu`: generated; 6 skill(s), 5 agent(s), 2 command(s)
+- `toolu`: generated; 6 skill(s), 5 agent(s), 4 command(s)
 - `toolu-review`: generated; 1 skill(s), 0 agent(s), 0 command(s)
 - `ts-quality`: no-surface; 0 skill(s), 0 agent(s), 0 command(s) — Plugin provides hooks only; no skill, agent, or command source.
 

@@ -17,5 +17,5 @@ Tell the user that, then offer the OpenCode equivalents:
 - **Drop an agent:** set `agent.<id>.disable` to `true`.
 - **Update:** `npx @toolu/plugins update --host opencode`, then restart OpenCode.
 
-The bundled [installer](scripts/setup.ts) refuses to run on OpenCode: it exits 2
+`toolu setup agents` refuses to run on OpenCode: it exits 2
 with this explanation and writes nothing. Do not edit Codex profiles from here.

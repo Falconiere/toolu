@@ -207,9 +207,19 @@
           "source": "plugins/toolu/commands/commit.md"
         },
         {
+          "id": "toolu-doctor",
+          "path": "commands/toolu-doctor.md",
+          "source": "plugins/toolu/commands/doctor.md"
+        },
+        {
           "id": "toolu-review-and-commit-db159d0c",
           "path": "commands/toolu-review-and-commit-db159d0c.md",
           "source": "plugins/toolu/commands/review-and-commit.md"
+        },
+        {
+          "id": "toolu-status",
+          "path": "commands/toolu-status.md",
+          "source": "plugins/toolu/commands/status.md"
         }
       ]
     },

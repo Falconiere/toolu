@@ -19,6 +19,10 @@ toolu-ts-quality = { path = "../ts-quality" }
 toolu-engine = { path = "../core/engine" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-state = { path = "../core/state" }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

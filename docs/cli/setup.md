@@ -11,11 +11,11 @@ Owner: `plugins/toolu`.
 ```text
 Preview, install or remove toolu's agent profiles
 
-Usage: toolu setup [OPTIONS] <COMMAND>
+Usage: toolu setup [OPTIONS] [COMMAND]
 
 Commands:
-  planned  Not ported yet (#445): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  agents  Preview, install or remove Codex agent profiles
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,12 +25,15 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu setup planned`
+## `toolu setup agents`
 
 ```text
-Not ported yet (#445): show the planned verbs
+Preview, install or remove Codex agent profiles
 
-Usage: toolu setup planned [OPTIONS]
+Usage: toolu setup agents [OPTIONS] [args]...
+
+Arguments:
+  [args]...  preview, install [--force], or remove --yes [--force]
 
 Options:
       --json              Print exactly one JSON document on stdout

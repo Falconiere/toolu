@@ -3,7 +3,7 @@ use std::path::Path;
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 
-use super::{ConfigFiles, LoadedConfig, WARN_PREFIX, exists, load, merge};
+use super::{ConfigFiles, LoadedConfig, WARN_PREFIX, check_text, exists, load, merge};
 use crate::env::Env;
 use crate::host::roots::Roots;
 
@@ -238,6 +238,31 @@ fn codex_and_toolu_user_config_dir_choose_their_files() {
 #[test]
 fn warnings_are_printed_after_the_config_prefix() {
   assert_eq!(WARN_PREFIX, "toolu-config: ");
+}
+
+#[test]
+fn check_text_matches_the_loader_rule() {
+  assert_eq!(
+    check_text(r#"{"bogus":1}"#).unwrap_err(),
+    "unknown top-level key 'bogus'"
+  );
+  assert_eq!(
+    check_text(r#"{"version":2}"#).unwrap_err(),
+    "unsupported version 2 (supported: 1)"
+  );
+  assert_eq!(
+    check_text("[1]").unwrap_err(),
+    "top level is not a JSON object"
+  );
+  assert_eq!(
+    check_text("true").unwrap_err(),
+    "top level is not a JSON object"
+  );
+  for text in ["{", "", "null", "false"] {
+    assert_eq!(check_text(text).unwrap_err(), "malformed JSON", "{text}");
+  }
+  let ok = check_text(r#"{"version":1,"gates":{"pushReview":"off"}}"#).unwrap();
+  assert_eq!(ok["gates"]["pushReview"], json!("off"));
 }
 
 #[test]

@@ -32,7 +32,7 @@ pub fn plugin_active(spec: &str, roots: &Roots) -> bool {
 
 /// Claude Code's install record: `CLAUDE_PLUGINS_REGISTRY`, else
 /// `<TOOLU_CONFIG_DIR | CLAUDE_CONFIG_DIR | $HOME/.claude>/plugins/installed_plugins.json`.
-fn installed_plugins_path(env: &Env) -> PathBuf {
+pub fn installed_plugins_path(env: &Env) -> PathBuf {
   if let Some(path) = env.get("CLAUDE_PLUGINS_REGISTRY") {
     return PathBuf::from(path);
   }

@@ -75,8 +75,8 @@ test("the host mapping adds an OpenCode column and keeps the other cells", () =>
   expect(opencode).toContain("`websearch` / `webfetch`");
 });
 
-test("the audit covers 14 surfaces and the resources they link", () => {
-  expect(SURFACES.length).toBe(14);
+test("the audit covers 16 surfaces and the resources they link", () => {
+  expect(SURFACES.length).toBe(16);
   expect(CLOSURE).toContain(HOST_MAPPING);
   expect(CLOSURE).toContain("resources/toolu/workflows/semantic-judgments.md");
   expect(CLOSURE).toContain("skills/toolu-orchestrator/references/model-routing.md");
@@ -126,8 +126,12 @@ test("every surface has frontmatter the host accepts", () => {
   );
   expect(plan.plan.agents.map((agent) => agent.id).toSorted()).toEqual(AGENTS);
   for (const agent of plan.plan.agents) expect(agent.entry.mode).toBe("subagent");
-  expect(plan.plan.commands.length).toBe(2);
-  for (const command of plan.plan.commands) {
+  expect(plan.plan.commands.length).toBe(4);
+  const loading = plan.plan.commands.filter((command) =>
+    /Load the `[^`]+` skill/.test(String(command.entry.template)),
+  );
+  expect(loading).toHaveLength(2);
+  for (const command of loading) {
     const loads = /Load the `([^`]+)` skill/.exec(String(command.entry.template))?.[1] ?? "";
     expect(existsSync(join(GENERATED, "skills", loads, "SKILL.md"))).toBe(true);
   }

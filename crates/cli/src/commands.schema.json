@@ -124,15 +124,201 @@
         "issues": { "type": "array", "minItems": 1, "items": { "type": "integer", "minimum": 1 } }
       }
     },
-    "doctor": {
-      "description": "toolu doctor --json when native toolu is reachable in a non-login shell.",
+    "doctorCheck": {
+      "description": "One toolu doctor check.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["namespace", "reachable", "path"],
+      "required": ["id", "status", "summary", "hint", "details"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "status": { "enum": ["ok", "warn", "fail"] },
+        "summary": { "type": "string", "minLength": 1 },
+        "hint": { "type": ["string", "null"] },
+        "details": { "type": "object" }
+      }
+    },
+    "doctor": {
+      "description": "toolu doctor --json. The report is on stdout even when a check failed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "ok", "checks"],
       "properties": {
         "namespace": { "const": "doctor" },
-        "reachable": { "const": true },
-        "path": { "type": "string", "minLength": 1 }
+        "ok": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "minItems": 9,
+          "maxItems": 9,
+          "items": { "$ref": "#/$defs/doctorCheck" }
+        }
+      }
+    },
+    "config": {
+      "description": "toolu config get|set|validate --json.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "key", "value", "files"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "key": { "type": ["string", "null"] },
+            "value": {},
+            "files": { "$ref": "#/$defs/configFiles" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "key", "value", "file"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "key": { "type": "string", "minLength": 1 },
+            "value": {},
+            "file": { "type": "string", "minLength": 1 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["namespace", "valid", "files", "warnings"],
+          "properties": {
+            "namespace": { "const": "config" },
+            "valid": { "type": "boolean" },
+            "files": { "$ref": "#/$defs/configFiles" },
+            "warnings": { "type": "array", "items": { "type": "string" } }
+          }
+        }
+      ]
+    },
+    "configFiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["user", "project"],
+      "properties": {
+        "user": { "type": "string" },
+        "project": { "type": ["string", "null"] }
+      }
+    },
+    "status": {
+      "description": "toolu status --json, the same document StatusSnapshot returns.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "namespace",
+        "host",
+        "cwd",
+        "repo_root",
+        "branch",
+        "ahead",
+        "behind",
+        "working_tree",
+        "gate",
+        "push_review",
+        "waivers"
+      ],
+      "properties": {
+        "namespace": { "const": "status" },
+        "host": { "type": "string" },
+        "cwd": { "type": "string" },
+        "repo_root": { "type": "string" },
+        "branch": { "type": "string" },
+        "ahead": { "type": "integer", "minimum": 0 },
+        "behind": { "type": "integer", "minimum": 0 },
+        "working_tree": { "$ref": "#/$defs/statusTree" },
+        "gate": { "$ref": "#/$defs/statusGate" },
+        "push_review": { "$ref": "#/$defs/statusReview" },
+        "waivers": { "$ref": "#/$defs/statusWaivers" }
+      }
+    },
+    "statusTree": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["staged", "unstaged", "untracked"],
+      "properties": {
+        "staged": { "type": "integer", "minimum": 0 },
+        "unstaged": { "type": "integer", "minimum": 0 },
+        "untracked": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "statusGate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason", "entries"],
+      "properties": {
+        "status": { "enum": ["passing", "failing", "missing", "invalid"] },
+        "reason": { "type": ["string", "null"] },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/statusGateEntry" }
+        }
+      }
+    },
+    "statusGateEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "source", "reason", "violations", "updatedAt"],
+      "properties": {
+        "file": { "type": "string" },
+        "source": { "type": "string" },
+        "reason": { "type": "string" },
+        "violations": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      }
+    },
+    "statusReview": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "state", "reason", "document"],
+      "properties": {
+        "path": { "type": "string" },
+        "state": { "enum": ["missing", "recorded", "invalid"] },
+        "reason": { "type": ["string", "null"] },
+        "document": { "type": ["object", "null"] }
+      }
+    },
+    "statusWaivers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["waiver", "pending"],
+      "properties": {
+        "waiver": { "type": ["object", "null"] },
+        "pending": { "type": ["object", "null"] }
+      }
+    },
+    "setupAgents": {
+      "description": "toolu setup agents prints text lines (TARGET, PLAN, then a summary or NOTICE). Refusals exit 2. Stdout is text, not JSON.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "command", "target", "plans"],
+      "properties": {
+        "namespace": { "const": "setup" },
+        "command": { "enum": ["preview", "install", "remove"] },
+        "target": { "type": "string", "minLength": 1 },
+        "plans": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "action"],
+            "properties": {
+              "name": {
+                "enum": [
+                  "quick-task",
+                  "deep-explore",
+                  "research-agent",
+                  "implementer",
+                  "architect"
+                ]
+              },
+              "action": {
+                "enum": ["install", "unchanged", "update", "conflict", "absent", "remove"]
+              }
+            }
+          }
+        }
       }
     },
     "guide": {

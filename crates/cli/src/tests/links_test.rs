@@ -1,6 +1,5 @@
 use std::path::{Path, PathBuf};
 
-use toolu_engine::LinkError;
 use toolu_engine::babysit::TickRequest;
 use toolu_epic_orchestrator::babysit::{Next, next};
 use toolu_runtime::cli::Ctx;
@@ -26,10 +25,10 @@ fn the_epic_engine_runs_the_injected_pr_babysit_tick() {
 #[test]
 fn statusline_gets_the_hubs_status_snapshot() {
   let roots = Roots::new(Env::default(), None);
-  assert_eq!(
-    STATUS_SNAPSHOT.snapshot(&roots, Path::new("/repo")),
-    Err(LinkError::NotPorted { issue: 445 })
-  );
+  let document = STATUS_SNAPSHOT
+    .snapshot(&roots, Path::new("/repo"))
+    .expect("ported snapshot");
+  assert_eq!(document["namespace"], "status");
 }
 
 #[test]

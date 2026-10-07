@@ -379,7 +379,7 @@ test("full catalog includes all plugins and explicitly classifies empty surfaces
   ).toHaveLength(3);
   expect(plan.catalog.plugins.flatMap((plugin) => plugin.skills)).toHaveLength(14);
   expect(plan.catalog.plugins.flatMap((plugin) => plugin.agents)).toHaveLength(5);
-  expect(plan.catalog.plugins.flatMap((plugin) => plugin.commands)).toHaveLength(4);
+  expect(plan.catalog.plugins.flatMap((plugin) => plugin.commands)).toHaveLength(6);
   expect(plan.catalog.plugins.find((plugin) => plugin.name === "statusline")?.excluded).toEqual([
     expect.objectContaining({ source: "plugins/statusline/commands/setup.md" }),
   ]);
