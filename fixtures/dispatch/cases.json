@@ -1,0 +1,1482 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "pre: an empty registry and no built-ins print nothing",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a built-in deny is printed and later modules never run",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "first",
+          "decision": {
+            "kind": "deny",
+            "reason": "native says no"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__later.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"later ran\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"native says no\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a built-in ask is held and gets the registry's advisories",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "a",
+          "decision": {
+            "kind": "ask",
+            "reason": "confirm?"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__ctx.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"from bash\"}}'"
+        },
+        {
+          "file": "x@t__msg.sh",
+          "sh": "printf '%s\\n' '{\"systemMessage\":\"note\"}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"confirm?\\n\\nfrom bash\"\n  },\n  \"systemMessage\": \"note\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: built-in and registry advisories merge in table order",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "a",
+          "decision": {
+            "kind": "advisory",
+            "message": "from native"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"from bash\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"from native\\n\\nfrom bash\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a throwing built-in is reported and the walk goes on",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "boom",
+          "throws": "exploded"
+        },
+        {
+          "name": "fine",
+          "decision": {
+            "kind": "advisory",
+            "message": "still here"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__after.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"bash after\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"still here\\n\\nbash after\"\n  }\n}\n",
+        "stderr": "toolu-dispatch: module boom exited 1; output skipped\n",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a built-in runtime failure fails closed",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "broken",
+          "decision": {
+            "kind": "runtime_failure",
+            "reason": "gate crashed",
+            "code": "nonzero"
+          }
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"gate crashed\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a .sh exit 2 blocks with the stderr collected so far",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf 'dropped\\n' >&2\nexit 3"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf 'denied by module\\n' >&2\nexit 2"
+        },
+        {
+          "file": "x@t__c.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"never\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu-dispatch: module x@t__a.sh exited 3; output skipped\ndenied by module\n",
+        "exitCode": 2
+      }
+    },
+    {
+      "name": "pre: a crashed .sh is reported with 128 plus the signal",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "kill -SEGV $$"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"after the crash\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"after the crash\"\n  }\n}\n",
+        "stderr": "toolu-dispatch: module x@t__a.sh exited 139; output skipped\n",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: the first ask is held and receives later advisories",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"maybe\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"second\"}}'"
+        },
+        {
+          "file": "x@t__c.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"ctx\"},\"systemMessage\":\"msg\"}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"maybe\\n\\nctx\"\n  },\n  \"systemMessage\": \"msg\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a deny after an ask wins",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"maybe\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"no way\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"no way\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a comemory .sh ask loses to a built-in deny",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "gate",
+          "decision": {
+            "kind": "deny",
+            "reason": "built-in denies"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "comemory@comemory__recall.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"recall first?\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"built-in denies\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: advisories are deduplicated by exact text",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"same\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"same\"}}'"
+        },
+        {
+          "file": "x@t__c.sh",
+          "sh": "printf '%s\\n' '{\"systemMessage\":\"one\"}'"
+        },
+        {
+          "file": "x@t__d.sh",
+          "sh": "printf '%s\\n' '{\"systemMessage\":\"two\"}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"same\"\n  },\n  \"systemMessage\": \"one\\n\\ntwo\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: output that is not a decision is ignored",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "echo hello"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"permissionDecision\":false,\"additionalContext\":null},\"systemMessage\":7}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"7\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a deny's trailing newlines are stripped before it is printed",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"spaced\"}}'\nprintf '\\n\\n'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"spaced\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an ask whose reason is not a string is printed as written",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":5}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"lost\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":5}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: modules receive the payload on stdin and the documented environment",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__probe.sh",
+          "sh": "s=$(cat; printf x); s=${s%x}\njq -cn --arg s \"$s\" --arg i \"$input\" --arg t \"$tool_name\" --arg l \"$TOOLU_LIB_DIR\" --arg c \"$TOOLU_CONFIG_DIR\" --arg o \"${TOOLU_EDIT_OPERATION-unset}\" --arg f \"${TOOLU_EDIT_FROM-unset}\" --arg m \"${TOOLU_EDIT_MOVED_TO-unset}\" '{systemMessage: ([$s,$i,$t,$l,$c,$o,$f,$m]|join(\"|\"))}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"git status\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}\\n|{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"git status\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}|Bash|$LIB|$CONFIG|unset|unset|unset\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an un-namespaced module is warned about and never runs",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "noname.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"unnamespaced\"}}'"
+        },
+        {
+          "file": "__lead.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"empty spec\"}}'"
+        },
+        {
+          "file": "x@t__ok.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"namespaced\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"namespaced\"\n  }\n}\n",
+        "stderr": "toolu-registry: registry module __lead.sh lacks <plugin-spec>__<name> namespace; skipped\ntoolu-registry: registry module noname.sh lacks <plugin-spec>__<name> namespace; skipped\n",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a .js module shadows its spec's .sh",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__old.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"stale sh\"}}'"
+        },
+        {
+          "file": "x@t__new.js",
+          "js": "export default { spec: \"x@t\", name: \"new\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"advisory\", message: \"fresh js\" }; } };"
+        },
+        {
+          "file": "y@t__other.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"other spec\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"fresh js\\n\\nother spec\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: modules of a plugin that is not installed are skipped",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "installed": [
+        "y@t"
+      ],
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"not installed\"}}'"
+        },
+        {
+          "file": "y@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"installed\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"installed\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an unreadable install record fails open",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "installedRaw": "not json",
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"ran\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"ran\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an ESM deny wins over a built-in ask",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "a",
+          "decision": {
+            "kind": "ask",
+            "reason": "maybe"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__esm.js",
+          "js": "export default { spec: \"x@t\", name: \"esm\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"deny\", reason: \"esm denies\" }; } };"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"esm denies\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: ESM failures are reported and skipped",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "a@t__throws.js",
+          "js": "export default { spec: \"a@t\", name: \"throws\", event: \"tool/pre\", async run(event, ctx) { throw new Error(\"boom\"); } };"
+        },
+        {
+          "file": "b@t__mismatch.js",
+          "js": "export default { spec: \"b@t\", name: \"other\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"allow\" }; } };"
+        },
+        {
+          "file": "c@t__invalid.js",
+          "js": "export default { spec: \"c@t\", name: \"invalid\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"advisory\", message: \"\" }; } };"
+        },
+        {
+          "file": "d@t__number.js",
+          "js": "export default 42;"
+        },
+        {
+          "file": "e@t__wrongdir.js",
+          "js": "export default { spec: \"e@t\", name: \"wrongdir\", event: \"tool/post\", async run(event, ctx) { return { kind: \"allow\" }; } };"
+        },
+        {
+          "file": "f@t__ok.js",
+          "js": "export default { spec: \"f@t\", name: \"ok\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"advisory\", message: \"survivor\" }; } };"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"survivor\"\n  }\n}\n",
+        "stderr": "toolu-registry: module a@t__throws.js failed: boom; output skipped\ntoolu-registry: module b@t__mismatch.js failed: contract mismatch: exports {\"spec\":\"b@t\",\"name\":\"other\",\"event\":\"tool/pre\"}, file and directory want {\"spec\":\"b@t\",\"name\":\"mismatch\",\"event\":\"tool/pre\"}; output skipped\ntoolu-registry: module c@t__invalid.js failed: invalid decision: { kind: 'advisory', message: '' }; output skipped\ntoolu-registry: module d@t__number.js failed: default export is not a registry module; output skipped\ntoolu-registry: module e@t__wrongdir.js failed: contract mismatch: exports {\"spec\":\"e@t\",\"name\":\"wrongdir\",\"event\":\"tool/post\"}, file and directory want {\"spec\":\"e@t\",\"name\":\"wrongdir\",\"event\":\"tool/pre\"}; output skipped\n",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an ESM module sees the shell event and its context",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__probe.js",
+          "js": "export default { spec: \"x@t\", name: \"probe\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"advisory\", message: [event.type, event.command, event.toolName, event.sessionId, event.toolCallId, ctx.raw.tool_name, ctx.host, ctx.projectRoot === ctx.cwd, typeof ctx.env.PATH, ctx.edit === undefined].join(\"|\") }; } };"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"shell/pre|git status|Bash|s1|unknown|Bash|claude|true|string|true\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a Write is walked as one synthetic Edit",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Write",
+        "tool_input": {
+          "file_path": "$PROJECT/src/a.ts",
+          "content": "export const a = 1;\n"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__probe.sh",
+          "sh": "s=$(cat; printf x); s=${s%x}\njq -cn --arg s \"$s\" --arg i \"$input\" --arg t \"$tool_name\" --arg l \"$TOOLU_LIB_DIR\" --arg c \"$TOOLU_CONFIG_DIR\" --arg o \"${TOOLU_EDIT_OPERATION-unset}\" --arg f \"${TOOLU_EDIT_FROM-unset}\" --arg m \"${TOOLU_EDIT_MOVED_TO-unset}\" '{systemMessage: ([$s,$i,$t,$l,$c,$o,$f,$m]|join(\"|\"))}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"{\\\"tool_name\\\":\\\"Edit\\\",\\\"tool_input\\\":{\\\"file_path\\\":\\\"$PROJECT/src/a.ts\\\",\\\"content\\\":\\\"export const a = 1;\\\\n\\\",\\\"path\\\":\\\"$PROJECT/src/a.ts\\\",\\\"toolu_edit_operation\\\":\\\"write\\\",\\\"toolu_edit_from\\\":\\\"\\\",\\\"toolu_edit_moved_to\\\":\\\"\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}\\n|{\\\"tool_name\\\":\\\"Edit\\\",\\\"tool_input\\\":{\\\"file_path\\\":\\\"$PROJECT/src/a.ts\\\",\\\"content\\\":\\\"export const a = 1;\\\\n\\\",\\\"path\\\":\\\"$PROJECT/src/a.ts\\\",\\\"toolu_edit_operation\\\":\\\"write\\\",\\\"toolu_edit_from\\\":\\\"\\\",\\\"toolu_edit_moved_to\\\":\\\"\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}|Edit|$LIB|$CONFIG|write||\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: each apply_patch path walks with its edit environment",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** Update File: $PROJECT/old.ts\n*** Move to: $PROJECT/new.ts\n@@\n-a\n+b\n*** Delete File: $PROJECT/gone.ts\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__probe.sh",
+          "sh": "jq -cn --arg f \"$(jq -r .tool_input.file_path <<<\"$input\")\" --arg e \"$TOOLU_EDIT_OPERATION $TOOLU_EDIT_FROM $TOOLU_EDIT_MOVED_TO\" '{systemMessage: ($f + \" \" + $e)}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"$PROJECT/one.ts add  \\n\\n$PROJECT/old.ts update  $PROJECT/new.ts\\n\\n$PROJECT/new.ts move $PROJECT/old.ts \\n\\n$PROJECT/gone.ts delete  \"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a deny on the second patch path denies the whole patch",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** Add File: $PROJECT/two.ts\n+second\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "case \"$(jq -r .tool_input.file_path <<<\"$input\")\" in *two.ts) printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"two is protected\"}}';; *) printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"one is fine\"}}';; esac"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"two is protected\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a Codex built-in ask is degraded for every patch path",
+      "phase": "pre",
+      "host": "codex",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "a",
+          "decision": {
+            "kind": "ask",
+            "reason": "confirm?"
+          }
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm?\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: unparseable apply_patch headers are denied",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "garbage"
+        }
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"never\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed.\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an edit without a path is denied as malformed",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Edit",
+        "tool_input": {
+          "old_string": "a"
+        }
+      },
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed.\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: a disabled pre-tools hook prints nothing",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "config": {
+        "version": 1,
+        "hooks": {
+          "pre-tools": false
+        }
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"disabled\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: stdin that is not JSON walks once as raw text",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": "not json\n\n",
+      "registry": [
+        {
+          "file": "x@t__probe.sh",
+          "sh": "s=$(cat; printf x); s=${s%x}\njq -cn --arg s \"$s\" --arg i \"$input\" --arg t \"$tool_name\" --arg l \"$TOOLU_LIB_DIR\" --arg c \"$TOOLU_CONFIG_DIR\" --arg o \"${TOOLU_EDIT_OPERATION-unset}\" --arg f \"${TOOLU_EDIT_FROM-unset}\" --arg m \"${TOOLU_EDIT_MOVED_TO-unset}\" '{systemMessage: ([$s,$i,$t,$l,$c,$o,$f,$m]|join(\"|\"))}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"not json\\n|not json||$LIB|$CONFIG|unset|unset|unset\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "codex pre: a built-in ask cannot prompt, so it is a deny",
+      "phase": "pre",
+      "host": "codex",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "a",
+          "decision": {
+            "kind": "ask",
+            "reason": "confirm?"
+          }
+        }
+      ],
+      "expect": {
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"confirm?\"}}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "codex pre: a .sh ask is passed through as written",
+      "phase": "pre",
+      "host": "codex",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"raw ask\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"raw ask\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "codex pre: a plugin absent from the ready snapshot is skipped",
+      "phase": "pre",
+      "host": "codex",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "installed": [
+        "y@t"
+      ],
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"absent\"}}'"
+        },
+        {
+          "file": "y@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"present\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"present\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "codex pre: without a snapshot every module runs",
+      "phase": "pre",
+      "host": "codex",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"ran\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "s=$(cat; printf x); s=${s%x}\njq -cn --arg s \"$s\" --arg i \"$input\" --arg t \"$tool_name\" --arg l \"$TOOLU_LIB_DIR\" --arg c \"$TOOLU_CONFIG_DIR\" --arg o \"${TOOLU_EDIT_OPERATION-unset}\" --arg f \"${TOOLU_EDIT_FROM-unset}\" --arg m \"${TOOLU_EDIT_MOVED_TO-unset}\" '{systemMessage: ([$s,$i,$t,$l,$c,$o,$f,$m]|join(\"|\"))}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"ran\"\n  },\n  \"systemMessage\": \"{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"git status\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}\\n|{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"git status\\\"},\\\"session_id\\\":\\\"s1\\\",\\\"cwd\\\":\\\"$PROJECT\\\"}|Bash|$LIB|$CONFIG|unset|unset|unset\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: a block is printed as written and ends the walk",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"decision\":\"block\",\"reason\":\"bad edit\"}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"never\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"bad edit\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: a deny means nothing after the tool",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"too late\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"after\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"after\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: advisories merge under PostToolUse",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "gate",
+          "decision": {
+            "kind": "advisory",
+            "message": "native note"
+          }
+        }
+      ],
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"bash note\"}}'"
+        },
+        {
+          "file": "x@t__b.sh",
+          "sh": "printf '%s\\n' '{\"systemMessage\":\"system\"}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"native note\\n\\nbash note\"\n  },\n  \"systemMessage\": \"system\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: a built-in block is encoded for the host",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "gate",
+          "decision": {
+            "kind": "post_block",
+            "reason": "native block"
+          }
+        }
+      ],
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"native block\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: modules see PROJECT_ROOT and node_modules/.bin first on PATH",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "jq -cn --arg r \"$PROJECT_ROOT\" --arg p \"${PATH%%:*}\" --arg c \"$TOOLU_CONFIG_DIR\" '{systemMessage: ($r + \" \" + $p + \" \" + $c)}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"$PROJECT $PROJECT/node_modules/.bin $CONFIG\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: a .sh exit 2 exits 2",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf 'post check failed\\n' >&2\nexit 2"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "post check failed\n",
+        "exitCode": 2
+      }
+    },
+    {
+      "name": "post: unparseable apply_patch headers block",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "garbage"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"Unable to parse apply_patch file headers; per-file post-edit quality checks could not run.\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: by default the walk stops at the first patch path that blocks",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** Add File: $PROJECT/two.ts\n+second\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "jq -cn --arg f \"$(jq -r .tool_input.file_path <<<\"$input\")\" '{decision: \"block\", reason: (\"invalid \" + $f)}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"invalid $PROJECT/one.ts\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: continuePostBlocks collects every path's block",
+      "phase": "post",
+      "host": "claude",
+      "continuePostBlocks": true,
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** Add File: $PROJECT/two.ts\n+second\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "jq -cn --arg f \"$(jq -r .tool_input.file_path <<<\"$input\")\" '{decision: \"block\", reason: (\"invalid \" + $f)}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"invalid $PROJECT/one.ts\\n\\ninvalid $PROJECT/two.ts\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: continuePostBlocks still stops on an exit 2",
+      "phase": "post",
+      "host": "claude",
+      "continuePostBlocks": true,
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+a\n*** Add File: $PROJECT/two.ts\n+b\n*** Add File: $PROJECT/three.ts\n+c\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "case \"$(jq -r .tool_input.file_path <<<\"$input\")\" in *one.ts) printf '%s\\n' '{\"decision\":\"block\",\"reason\":\"first blocked\"}';; *two.ts) printf 'fatal check\\n' >&2; exit 2;; esac"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "fatal check\n",
+        "exitCode": 2
+      }
+    },
+    {
+      "name": "post: an ESM post_block ends the walk",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__esm.js",
+          "js": "export default { spec: \"x@t\", name: \"esm\", event: \"tool/post\", async run(event, ctx) { return { kind: \"post_block\", reason: \"esm blocks\" }; } };"
+        },
+        {
+          "file": "y@t__after.sh",
+          "sh": "printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"never\"}}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"esm blocks\"}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: an ESM module sees the tool output",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__probe.js",
+          "js": "export default { spec: \"x@t\", name: \"probe\", event: \"tool/post\", async run(event, ctx) { return { kind: \"advisory\", message: [event.type, JSON.stringify(event.toolOutput), event.toolInput.file_path === ctx.raw.tool_input.file_path].join(\"|\") }; } };"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"tool/post|{\\\"filePath\\\":\\\"$PROJECT/README.md\\\",\\\"success\\\":true}|true\"\n  }\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "post: a disabled post-tools hook prints nothing",
+      "phase": "post",
+      "host": "claude",
+      "stdin": {
+        "hook_event_name": "PostToolUse",
+        "tool_name": "Edit",
+        "tool_input": {
+          "file_path": "$PROJECT/README.md",
+          "old_string": "a",
+          "new_string": "b"
+        },
+        "tool_response": {
+          "filePath": "$PROJECT/README.md",
+          "success": true
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "config": {
+        "version": 1,
+        "hooks": {
+          "post-tools": false
+        }
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "printf '%s\\n' '{\"decision\":\"block\",\"reason\":\"disabled\"}'"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: registry warnings come before registry exit lines",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "Bash",
+        "tool_input": {
+          "command": "git status"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "builtins": [
+        {
+          "name": "native",
+          "throws": "exploded"
+        }
+      ],
+      "registry": [
+        {
+          "file": "a@t__first.sh",
+          "sh": "exit 1"
+        },
+        {
+          "file": "b@t__boom.js",
+          "js": "export default { spec: \"b@t\", name: \"boom\", event: \"tool/pre\", async run(event, ctx) { throw new Error(\"boom\"); } };"
+        },
+        {
+          "file": "noname.sh",
+          "sh": "exit 2"
+        }
+      ],
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu-dispatch: module native exited 1; output skipped\ntoolu-registry: registry module noname.sh lacks <plugin-spec>__<name> namespace; skipped\ntoolu-registry: module b@t__boom.js failed: boom; output skipped\ntoolu-dispatch: module a@t__first.sh exited 1; output skipped\n",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: an ask from one patch path takes the other paths' advice",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": {
+        "tool_name": "apply_patch",
+        "tool_input": {
+          "command": "*** Begin Patch\n*** Add File: $PROJECT/one.ts\n+first\n*** Add File: $PROJECT/two.ts\n+second\n*** End Patch"
+        },
+        "session_id": "s1",
+        "cwd": "$PROJECT"
+      },
+      "registry": [
+        {
+          "file": "x@t__a.sh",
+          "sh": "case \"$(jq -r .tool_input.file_path <<<\"$input\")\" in *one.ts) printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":\"first path asks\"}}';; *) printf '%s\\n' '{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"additionalContext\":\"second ctx\"},\"systemMessage\":\"second msg\"}';; esac"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"first path asks\\n\\nsecond ctx\"\n  },\n  \"systemMessage\": \"second msg\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    },
+    {
+      "name": "pre: JSON stdin with trailing newlines walks as written",
+      "phase": "pre",
+      "host": "claude",
+      "stdin": "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\"},\"session_id\":\"s1\"}\n\n\n",
+      "registry": [
+        {
+          "file": "x@t__probe.sh",
+          "sh": "s=$(cat; printf x); s=${s%x}\njq -cn --arg s \"$s\" --arg i \"$input\" --arg t \"$tool_name\" --arg l \"$TOOLU_LIB_DIR\" --arg c \"$TOOLU_CONFIG_DIR\" --arg o \"${TOOLU_EDIT_OPERATION-unset}\" --arg f \"${TOOLU_EDIT_FROM-unset}\" --arg m \"${TOOLU_EDIT_MOVED_TO-unset}\" '{systemMessage: ([$s,$i,$t,$l,$c,$o,$f,$m]|join(\"|\"))}'"
+        }
+      ],
+      "expect": {
+        "stdout": "{\n  \"systemMessage\": \"{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"ls\\\"},\\\"session_id\\\":\\\"s1\\\"}\\n|{\\\"tool_name\\\":\\\"Bash\\\",\\\"tool_input\\\":{\\\"command\\\":\\\"ls\\\"},\\\"session_id\\\":\\\"s1\\\"}|Bash|$LIB|$CONFIG|unset|unset|unset\"\n}\n",
+        "stderr": "",
+        "exitCode": 0
+      }
+    }
+  ]
+}
