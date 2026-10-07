@@ -12,7 +12,8 @@ depends on `toolu-runtime` and `toolu-http` only. The package is not
   request. The key is sent as `Authorization: Bearer`, and neither `Jev`'s
   `Debug` nor any error prints it. An error body that echoes it is redacted.
 - **Timeout:** `JEV_TIMEOUT` is the per-attempt deadline in seconds, 60 by
-  default. A negative, non-numeric or unrepresentable value also gives 60. `0`
+  default. A negative or non-numeric value, or one over `u32::MAX` seconds
+  (where a deadline would overflow the clock), also gives 60. `0`
   makes every attempt time out without connecting. An empty value counts as
   unset (the `Env` rule), whereas TypeScript reads it as 0.
 
@@ -34,8 +35,9 @@ in its first place with its last value.
 - **`ask` payloads:** `Questions::parse` takes a non-empty JSON object and sends
   it as given. Structured instructions, structured criteria and unknown fields
   pass through.
-- **State:** `State::text` sends a string. `State::structured` keeps a JSON
-  object or array and sends any other text as a string.
+- **State:** `State::text` sends a string. `State::structured` reads file or
+  stdin text as `jev.ts` does: it removes trailing line feeds, keeps a JSON
+  object or array, and sends any other text as a string.
 
 One difference from TypeScript: a choice option whose key looks like an integer
 (`"1"`) keeps its place, where JavaScript would move it first.

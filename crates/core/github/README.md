@@ -16,9 +16,10 @@ snapshot as its whole environment and a 10-second deadline. `gh` itself honours
 - A token with whitespace or a control character inside it is refused before
   any request.
 - The token goes out as `Authorization: Bearer`.
-- On a `401` it is read again once. The request is retried only if the new
-  token differs, so a fixed `GH_TOKEN` gives `Error::Unauthorized` after one
-  request.
+- On a `401` it is read again once. The request is retried only if the token
+  read differs from the one refused, so a fixed `GH_TOKEN` gives
+  `Error::Unauthorized` after one request. Threads sharing a client and refused
+  together all retry with the new token.
 - The token is never written to disk. `Client`'s `Debug` shows only the API URL
   and the retry policy.
 - Every token the client has read is redacted from error messages taken from a
@@ -30,8 +31,9 @@ snapshot as its whole environment and a 10-second deadline. `gh` itself honours
   makes it conditional (`If-None-Match`); an unchanged resource answers
   `Rest::NotModified`.
 - A path starts with `/`, or with the API URL and `/` (a pagination link). Any
-  other path, `//host` included, is `Error::Config` with no request sent. The
-  API URL must be an `https://` origin.
+  other path, `//host` included, is `Error::Config` with no request sent, and so
+  is a path or `ETag` with a space, a control character or non-ASCII text.
+  Percent-encode those. The API URL must be an `https://` origin.
 - `graphql(query, variables)` posts to `<api>/graphql` and returns the body's
   `data`. A non-empty `errors[]` is `Error::GraphQl`, whose messages are
   redacted.
