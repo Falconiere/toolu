@@ -168,6 +168,25 @@ rust-quality (#267) is the third: `plugins/rust-quality/hooks/src/post-tool-use.
 | long method inside an impl | 315.3 ms | 135.2 ms |
 | clean file | 288.0 ms | 119.1 ms |
 
+## Native engine (Rust)
+
+`toolu_engine` (`crates/core/engine`, #418) runs the same walk natively, and `toolu hook pre-tools` and `toolu hook post-tools` run it. `hooks.json` keeps the Bun bundles until #425, and the built-in gate tables stay empty until #419–#423 port the gates. `fixtures/dispatch/cases.json` holds the shared cases: the TypeScript dispatcher and the engine must both reproduce them byte for byte.
+
+**Walk.** The built-ins run first, in table order, and each is folded as it decides. Then the registry phase runs every entry of the event directory in byte order of file names, until one stops the walk. Only after that are its results folded, as `runRegistry` and `walkRegistry` do. So stderr carries the built-in `exited` lines, then the `toolu-registry:` lines in walk order, then the registry `exited` lines. A module's own stderr is kept only when it exits 2.
+
+**Manifests.** `<spec>__<name>.json` enables the rule of that spec and name compiled into the binary. The manifest format is `{"version":1,"spec","name","event","matcher"}` (`toolu_runtime::registry::manifest`). The matcher is tested against the walk's tool name, which is `Edit` for every path of a split edit. The rule then runs only if its `applies` holds. Nothing else costs anything: a `Read` with no fitting manifest calls no rule code and spawns no process. A manifest that cannot be read, has an unknown field, has another `version`, or names a rule the binary lacks prints one `toolu-registry: manifest <file> skipped: <reason>` line and is never an error. A usable manifest shadows its spec's `.js` and `.sh` modules, as a `.js` module shadows its spec's `.sh` one.
+
+**Executables.** A `.sh` module keeps the TypeScript contract:
+- it runs as `bash <path>` in the hook's cwd, with the payload plus a newline on stdin;
+- its environment adds `input`, `tool_name`, `TOOLU_LIB_DIR`, `TOOLU_CONFIG_DIR` and `TOOLU_EDIT_*`;
+- exit 2 is a hard deny, and any other status is skipped with `toolu-dispatch: module <file> exited <status>; output skipped`.
+
+What is new is a deadline of 30 s per module. Past it, the module's process group is killed and it is reported as `exited 124`, even if it exits 2 while being killed. A crash reports 128 plus the signal. A process the module backgrounds with its streams redirected is not waited for. Output past 8 MiB is cut off: a deny still denies, and anything else is skipped with `printed more than 8388608 bytes`.
+
+**Bun bridge.** A `.js` module runs through a temporary bridge, which #440 removes. A run of consecutive `.js` modules shares one `bun --no-install -e` process. That process imports each module in order, checks the default export and the decision as `runContract` and `DecisionSchema` do (with the same failure messages), and stops after a deny before a tool or a block after it. A batch's deadline is 30 s per module in it. A module that hangs, exits the process or garbles its line fails alone (`timed out after <ms> ms`, `bridge exited <status>`, `bridge output unreadable`), and the modules after it run in a fresh process. A module that hangs first in a batch of four therefore holds the other three for the batch's whole deadline before they re-run. The hook timeout in `hooks.json` (#425) bounds that. Bun is looked for in `TOOLU_BUN`, then on `PATH`, then in `~/.bun/bin/bun`. Without it, the first applicable pre-tool `.js` module is a deny that names the module and the install. After a tool, the modules are skipped and one advisory per session says which ones did not run; a marker under `<project>/.claude/tmp/registry-bridge/` records that.
+
+**Payload.** The payload is parsed as `JSON.parse` would read it. Lone surrogate escapes read as U+FFFD, so gates still see the tool, while modules get the raw text. A payload nested past serde's limit (128 levels) is denied before a tool and blocked after it, because the engine cannot read what the gates would check.
+
 ## Import cost
 
 Measured by `packages/toolu-core/src/registry/__tests__/registry-import-cost.test.ts` on an Apple M2 Max, macOS 26.6.2, Bun 1.4.2. The test runs 20 modules, each a separate 112.8 KB bundle that inlines the state layer and zod, through `runRegistry` in a fresh `bun` process, over 15 measured runs of the whole set.
