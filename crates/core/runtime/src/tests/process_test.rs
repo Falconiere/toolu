@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use super::{RunError, Spec, Wait, group, run};
+use super::{RunError, Spec, Wait, detach, group, run};
 use crate::env::Env;
 
 fn sh(script: &str) -> Spec {
@@ -185,4 +185,24 @@ fn a_failed_callback_stops_the_group_and_is_returned() {
   });
   assert_eq!(result, Err(RunError::Callback("lease lost".to_owned())));
   assert!(!group::alive(group_id));
+}
+
+#[test]
+fn detach_leaves_the_child_running_after_the_call_returns() {
+  assert_eq!(
+    detach(&Spec::new(["", "x"])).unwrap_err(),
+    RunError::EmptyArgv
+  );
+  let pid = detach(&Spec::new(["sleep", "30"])).unwrap();
+  assert!(group::alive(pid));
+  let raw = i32::try_from(pid).unwrap();
+  let _ = nix::sys::signal::killpg(
+    nix::unistd::Pid::from_raw(raw),
+    nix::sys::signal::Signal::SIGTERM,
+  );
+  let start = std::time::Instant::now();
+  while group::alive(pid) && start.elapsed() < Duration::from_secs(2) {
+    std::thread::sleep(Duration::from_millis(20));
+  }
+  assert!(!group::alive(pid));
 }

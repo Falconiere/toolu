@@ -34,6 +34,24 @@ server and a real linked Git worktree.
 8. Save machine-readable measurements under `docs/toolu/evidence/` and state
    which acceptance criteria and host lifecycle cases remain outside the probe.
 
+## Resident engine
+
+Use this after the TypeScript watcher procedure when the change is the resident
+`toolu epic engine`.
+
+1. Point `TOOLU_RESOURCE_HOME` at a disposable root. Register epic directories
+   only under that root.
+2. Run `toolu epic engine` in the foreground for that root. A second start must
+   exit with `engine-busy` and must leave the owner's lock in place.
+3. Do not start the user systemd unit. `toolu epic service install` only writes
+   unit files. Do not `herdr session attach`, and do not stop the default
+   Herdr session. An absent-session probe is `herdr --session <name> agent list`.
+4. Checkpoint a dirty worktree with `GIT_TRACE2_EVENT`. Count `start` events for
+   `read-tree`, `add -A`, `write-tree`, `commit-tree`, and `update-ref`. An
+   immediate reload of the same root must add no Git processes.
+5. SessionStart `engine-ensure` runs `toolu epic engine --ensure` and stays
+   silent when no native `toolu` is on `PATH`.
+
 ## Pitfalls
 
 - Do not use or close another agent's Herdr workspace.

@@ -9,10 +9,12 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+nix.workspace = true
 serde_json.workspace = true
 toolu-engine = { path = "../core/engine" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-state = { path = "../core/state" }
 
 [dev-dependencies]
 tempfile.workspace = true

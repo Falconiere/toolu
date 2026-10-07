@@ -15,9 +15,235 @@ Drive an epic to merged PRs: the resident engine, merge queue and trackers
 Usage: toolu epic [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#434, #435, #448): show the planned verbs
+  engine   Run the resident engine in the foreground
+  start    Register an epic state directory and start the engine
+  status   Print the engine, issues and attention
+  pause    Pause effects for every epic, or one epic
+  resume   Resume effects for every epic, or one epic
+  ack      Clear one attention item
+  answer   Send text to the worker for one issue
+  wait     Wait for a judgment, or return when the limit passes
+  report   Record a worker phase
+  job      Run a command under the worktree's resource lease
+  service  Install the user service unit
+  planned  Not ported yet (#435, #448): show the planned verbs
   token    Manage the status bearer token
   help     Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic engine`
+
+```text
+Run the resident engine in the foreground
+
+Usage: toolu epic engine [OPTIONS]
+
+Options:
+      --ensure            Start the engine when the registry is non-empty and the lock is free
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --replace           Ask a running engine to drain, then take its place
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic start`
+
+```text
+Register an epic state directory and start the engine
+
+Usage: toolu epic start [OPTIONS] <STATE_DIR>
+
+Arguments:
+  <STATE_DIR>  The epic state directory
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic status`
+
+```text
+Print the engine, issues and attention
+
+Usage: toolu epic status [OPTIONS] [EPIC]
+
+Arguments:
+  [EPIC]  Epic key, or a trailing issue number
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic pause`
+
+```text
+Pause effects for every epic, or one epic
+
+Usage: toolu epic pause [OPTIONS] [EPIC]
+
+Arguments:
+  [EPIC]  One epic key; every epic when omitted
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic resume`
+
+```text
+Resume effects for every epic, or one epic
+
+Usage: toolu epic resume [OPTIONS] [EPIC]
+
+Arguments:
+  [EPIC]  One epic key; every epic when omitted
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic ack`
+
+```text
+Clear one attention item
+
+Usage: toolu epic ack [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>  Issue key
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic answer`
+
+```text
+Send text to the worker for one issue
+
+Usage: toolu epic answer [OPTIONS] <KEY> <TEXT>
+
+Arguments:
+  <KEY>   Issue key
+  <TEXT>  The answer
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic wait`
+
+```text
+Wait for a judgment, or return when the limit passes
+
+Usage: toolu epic wait [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --max-seconds <N>   Stop after this many seconds; 0 returns immediately
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic report`
+
+```text
+Record a worker phase
+
+Usage: toolu epic report [OPTIONS] --status-file <FILE> <PHASE>
+
+Arguments:
+  <PHASE>  The phase to record
+
+Options:
+      --json                Print exactly one JSON document on stdout
+      --status-file <FILE>  The issue status snapshot
+      --pr <N>              Pull request number
+  -q, --quiet               Drop the diagnostics of a successful run
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --note <TEXT>         Note stored with the phase
+      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
+  -h, --help                Print help
+```
+
+## `toolu epic job`
+
+```text
+Run a command under the worktree's resource lease
+
+Usage: toolu epic job [OPTIONS] <ARGV>...
+
+Arguments:
+  <ARGV>...  The command and its arguments
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic service`
+
+```text
+Install the user service unit
+
+Usage: toolu epic service [OPTIONS] <COMMAND>
+
+Commands:
+  install  Write the systemd user unit without starting it
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic service install`
+
+```text
+Write the systemd user unit without starting it
+
+Usage: toolu epic service install [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -30,7 +256,7 @@ Options:
 ## `toolu epic planned`
 
 ```text
-Not ported yet (#434, #435, #448): show the planned verbs
+Not ported yet (#435, #448): show the planned verbs
 
 Usage: toolu epic planned [OPTIONS]
 

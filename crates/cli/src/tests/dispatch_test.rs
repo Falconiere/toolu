@@ -50,10 +50,11 @@ fn under_json_a_usage_error_is_also_one_document() {
 }
 
 #[test]
-fn json_after_an_unknown_verb_still_gives_one_document() {
+fn json_status_is_one_document() {
   let outcome = dispatched("epic status 402 --json");
-  assert_eq!(outcome.exit, Exit::Usage);
-  assert_eq!(document(&outcome)["error"]["code"], 64);
+  assert_eq!(outcome.exit, Exit::Success);
+  assert!(document(&outcome).get("engine").is_some());
+  assert!(document(&outcome).get("issues").is_some());
 }
 
 #[test]

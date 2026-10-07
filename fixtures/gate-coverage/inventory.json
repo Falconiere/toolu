@@ -80,6 +80,26 @@
     "bashRequired": false
   },
   {
+    "id": "epic-orchestrator:hooks.json:SessionStart:engine-ensure.js:startup|resume|clear|compact",
+    "sourcePath": "plugins/epic-orchestrator/hooks/hooks.json",
+    "plugin": "epic-orchestrator",
+    "kind": "hooks.json",
+    "event": "SessionStart",
+    "matcher": "startup|resume|clear|compact",
+    "commandOrModule": "hooks/dist/engine-ensure.js",
+    "parentId": null,
+    "semantics": "SessionStart runs toolu epic engine --ensure when a native toolu binary is on PATH (#434).",
+    "classification": "port-native",
+    "hostMechanism": "bun-bundle",
+    "support": "required",
+    "implementationIssue": 434,
+    "implementationStatus": "done",
+    "verificationBaseline": "none",
+    "verificationConformance": "bun run test:conformance",
+    "limits": "",
+    "bashRequired": false
+  },
+  {
     "id": "jev:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact",
     "sourcePath": "plugins/jev/hooks/hooks.json",
     "plugin": "jev",
