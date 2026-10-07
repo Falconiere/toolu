@@ -83,16 +83,21 @@ fn serve_proxy(
     .into_iter()
     .find(|origin| origin.port() == port)
     .ok_or_else(|| error("unregistered CONNECT port"))?;
-  let mut upstream = TcpStream::connect(addr).map_err(error)?;
+  let upstream = TcpStream::connect(addr).map_err(error)?;
   let mut client = reader.into_inner();
   client
     .write_all(b"HTTP/1.1 200 Connection Established\r\n\r\n")
     .map_err(error)?;
+  relay(client, upstream)
+}
+
+/// Copy bytes both ways until the origin closes, then let the client see the
+/// close at once instead of after the read timeout.
+fn relay(mut client: TcpStream, mut upstream: TcpStream) -> Result<(), Error> {
   let mut client_read = client.try_clone().map_err(error)?;
   let mut upstream_write = upstream.try_clone().map_err(error)?;
   let forward = thread::spawn(move || io::copy(&mut client_read, &mut upstream_write));
   io::copy(&mut upstream, &mut client).map_err(error)?;
-  // The origin closed: the client sees it now, not after the read timeout.
   match client.shutdown(Shutdown::Write) {
     Err(err) if err.kind() != io::ErrorKind::NotConnected => return Err(error(err)),
     Ok(()) | Err(_) => {}
