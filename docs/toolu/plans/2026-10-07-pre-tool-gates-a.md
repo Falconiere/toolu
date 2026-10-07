@@ -70,7 +70,7 @@ Context plumbing and pattern semantics → three gates in table order → shared
   {
     "id": "full-gates",
     "title": "Run the repository's full Rust and TypeScript quality gates with no exemption",
-    "check": "cargo xtask gate --base origin/main && capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c 'bun run test'",
+    "check": "env -u PUSH_REVIEW_BASE cargo xtask gate --base origin/main && env -u PUSH_REVIEW_BASE capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c 'bun run test'",
     "ac_refs": ["AC-1", "AC-5"],
     "depends_on": ["inventory-docs"],
     "paths": ["crates/core/engine/src/", "crates/core/runtime/src/registry/rule.rs", "crates/cli/tests/pre_tool_gates.rs", "plugins/toolu/hooks/src/__tests__/pre-tool-modules-a.test.ts", "fixtures/gate-coverage/inventory.json", "docs/registry.md"],
@@ -88,6 +88,8 @@ Context plumbing and pattern semantics → three gates in table order → shared
 The path matcher and pathname expansion landed in separate engine files to keep each under the Rust file limit. The `context-patterns` check and paths now cover both modules.
 
 On this root host, the Bun gate runs with DAC and ptrace capabilities dropped so unreadable-file and `/proc` permission fixtures exercise their intended behavior. The `full-gates` check records that environment explicitly.
+
+When the ledger uses `PUSH_REVIEW_BASE=origin/main` to judge the PR diff, the full-gates check clears that override from its child processes. The Rust gate still receives `--base origin/main` explicitly; Bun tests can exercise their default-base behavior without an inherited override.
 
 ## Verification
 
