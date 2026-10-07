@@ -216,7 +216,7 @@ test.concurrent("toolu-shell is fuzzed on every Rust change and on a schedule (#
   const perChange = steps("tests.yml", "fuzz").map((step) => step.run ?? "");
   for (const target of ["analyze", "nested"]) {
     expect(perChange).toContain(
-      `cargo fuzz run ${target} -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096`,
+      `cargo fuzz run ${target} --target x86_64-unknown-linux-gnu -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096`,
     );
   }
   const scheduled = workflow("fuzz.yml");

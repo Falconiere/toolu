@@ -46,11 +46,11 @@ jobs:
 
       - name: Fuzz analyze for 30 minutes
         if: matrix.target == 'analyze'
-        run: cargo fuzz run analyze -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
+        run: cargo fuzz run analyze --target x86_64-unknown-linux-gnu -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
 
       - name: Fuzz nested for 30 minutes
         if: matrix.target == 'nested'
-        run: cargo fuzz run nested -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
+        run: cargo fuzz run nested --target x86_64-unknown-linux-gnu -- -max_total_time=1800 -timeout=10 -rss_limit_mb=4096
 
       - name: Upload the failing inputs
         if: failure()

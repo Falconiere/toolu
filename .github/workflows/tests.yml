@@ -400,11 +400,13 @@ jobs:
         with:
           workspaces: crates/core/shell/fuzz -> target
 
+      # cargo-fuzz builds for the triple it was built for, and the prebuilt one is
+      # musl, where AddressSanitizer cannot run: name the host triple.
       - name: Fuzz analyze for 60 seconds
-        run: cargo fuzz run analyze -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
+        run: cargo fuzz run analyze --target x86_64-unknown-linux-gnu -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
 
       - name: Fuzz nested for 60 seconds
-        run: cargo fuzz run nested -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
+        run: cargo fuzz run nested --target x86_64-unknown-linux-gnu -- -max_total_time=60 -timeout=10 -rss_limit_mb=4096
 
       - name: Upload the failing inputs
         if: failure()
