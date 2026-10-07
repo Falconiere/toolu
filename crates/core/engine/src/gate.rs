@@ -15,4 +15,22 @@ pub trait Gate: Sync {
   /// # Errors
   /// Why the gate could not decide; the dispatcher reports it as an exit 1.
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String>;
+  /// [`Gate::run`], also collecting the warnings TypeScript prints to stderr
+  /// as it goes (`stderrWarn`). The walk prints each on its own line before
+  /// folding the decision. By default, `run` with no warnings.
+  ///
+  /// # Errors
+  /// As [`Gate::run`].
+  fn run_warning(
+    &self,
+    event: &NormalizedEvent,
+    ctx: &RuleContext<'_>,
+    _warnings: &mut Vec<String>,
+  ) -> Result<Decision, String> {
+    self.run(event, ctx)
+  }
 }
+
+#[cfg(test)]
+#[path = "tests/gate_test.rs"]
+mod tests;

@@ -199,3 +199,52 @@ fn on_codex_a_built_in_ask_is_a_deny() {
   let doc: serde_json::Value = serde_json::from_str(&out.stdout).unwrap();
   assert_eq!(doc["hookSpecificOutput"]["permissionDecision"], "deny");
 }
+
+/// A built-in that warns twice, then answers as `Fixed` does.
+struct Warning(Fixed);
+
+impl Gate for Warning {
+  fn name(&self) -> &str {
+    self.0.name()
+  }
+
+  fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String> {
+    self.0.run(event, ctx)
+  }
+
+  fn run_warning(
+    &self,
+    event: &NormalizedEvent,
+    ctx: &RuleContext<'_>,
+    warnings: &mut Vec<String>,
+  ) -> Result<Decision, String> {
+    warnings.extend([format!("{}: first", self.name()), "second".to_owned()]);
+    self.run(event, ctx)
+  }
+}
+
+#[test]
+fn a_built_ins_warnings_print_as_it_runs_before_later_lines() {
+  let hook = Hook::new(Host::Claude).unwrap();
+  hook.sh(Phase::Post, "a@t__late.sh", "exit 1").unwrap();
+  let warns = Warning(Fixed("warns", Ok(Decision::Allow)));
+  let fails = Warning(Fixed("fails", Err("broken".to_owned())));
+  let dispatched = hook.run(Phase::Post, BASH, &[&warns, &fails], &[]);
+  assert_eq!(
+    dispatched.result.stderr,
+    "warns: first\nsecond\nfails: first\nsecond\n\
+     toolu-dispatch: module fails exited 1; output skipped\n\
+     toolu-dispatch: module a@t__late.sh exited 1; output skipped\n"
+  );
+  let quiet = Fixed("quiet", Ok(Decision::Allow));
+  assert_eq!(
+    hook
+      .run(Phase::Post, BASH, &[&quiet], &[])
+      .result
+      .stderr
+      .lines()
+      .count(),
+    1,
+    "only the registry line"
+  );
+}

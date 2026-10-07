@@ -45,15 +45,22 @@ fn failed(phase: Phase, message: &str) -> ModuleResult {
   }
 }
 
-/// One built-in's result: its decision encoded, or exit 1 when it failed.
+/// One built-in's result: its decision encoded, or exit 1 when it failed. Its
+/// warnings go to `stderr` first, as TypeScript prints them while it runs.
 fn run_gate(
   gate: &dyn Gate,
-  view: &View,
-  ctx: &RuleContext<'_>,
+  (view, ctx): (&View, &RuleContext<'_>),
   (host, event): (Host, HostEvent),
+  stderr: &mut String,
   trace: &mut Vec<Step>,
 ) -> Folded {
-  let (result, status) = match gate.run(&view.event, ctx) {
+  let mut warnings = Vec::new();
+  let decided = gate.run_warning(&view.event, ctx, &mut warnings);
+  for warning in warnings {
+    stderr.push_str(&warning);
+    stderr.push('\n');
+  }
+  let (result, status) = match decided {
     Ok(decision) => (
       ModuleResult {
         stdout: encoded(host, event, &decision),
@@ -95,7 +102,13 @@ pub(crate) fn walk(
   let event = host_event(&view.event);
   let mut state = WalkState::new(session.phase);
   for gate in session.options.builtins {
-    let folded = run_gate(*gate, &view, &ctx, (session.host, event), trace);
+    let folded = run_gate(
+      *gate,
+      (&view, &ctx),
+      (session.host, event),
+      &mut state.stderr,
+      trace,
+    );
     if let Some(done) = state.consume(&folded) {
       return done;
     }
