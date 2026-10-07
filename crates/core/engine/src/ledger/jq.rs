@@ -2,8 +2,8 @@
 //! (`packages/toolu-core/src/ledger/ledger-jq.ts`). The bash libraries ran jq
 //! over plain JSON, so a legacy or hand-edited file is accepted wherever jq
 //! accepts it and fails exactly where jq raises a type error. `.key` and `.[]`
-//! return [`JqError`] on the shapes jq rejects, `//` treats `false` like
-//! `null`, and [`raw`] renders a value the way `jq -r` prints it.
+//! return `JqError` on the shapes jq rejects, `//` treats `false` like
+//! `null`, and `raw` renders a value the way `jq -r` prints it.
 
 use serde_json::Number;
 use toolu_runtime::json::jq_text;
@@ -23,10 +23,10 @@ impl std::fmt::Display for JqError {
 impl std::error::Error for JqError {}
 
 /// `null`, for lookups that find nothing.
-pub static NULL: Ordered = Ordered::Null;
+pub(crate) static NULL: Ordered = Ordered::Null;
 
 /// jq's `type`.
-pub fn type_name(value: &Ordered) -> &'static str {
+pub(crate) fn type_name(value: &Ordered) -> &'static str {
   match value {
     Ordered::Null => "null",
     Ordered::Bool(_) => "boolean",
@@ -83,7 +83,7 @@ pub fn each(value: &Ordered) -> Result<Vec<&Ordered>, JqError> {
 }
 
 /// jq `.[]?`: like [`each`], but an un-iterable input yields nothing.
-pub fn each_optional(value: &Ordered) -> Vec<&Ordered> {
+pub(crate) fn each_optional(value: &Ordered) -> Vec<&Ordered> {
   each(value).unwrap_or_default()
 }
 

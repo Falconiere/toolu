@@ -2,7 +2,7 @@
 
 use crate::ledger::context::test_repo::Repo;
 
-use super::{CommandFail, RunFlags, base_for, or_fail, prepare};
+use super::{CommandFail, RunContext, RunFlags, base_for, or_fail, prepare};
 use crate::ledger::jq::JqError;
 
 fn fail(line: &str) -> CommandFail {
@@ -46,7 +46,7 @@ fn the_context_resolves_the_repository_hash_and_prior_entries() {
   ).unwrap();
   let opts = repo.opts();
   let flags = RunFlags::default();
-  let ctx = prepare("plan.md", &flags, &opts).unwrap();
+  let ctx: RunContext<'_> = prepare("plan.md", &flags, &opts).unwrap();
   assert_eq!(
     (ctx.base.as_str(), ctx.branch.as_str(), ctx.timeout.as_str()),
     ("main", "feat/x", "1800")

@@ -9,12 +9,13 @@ use toolu_protocol::host::Host;
 use toolu_runtime::json::jq_text;
 
 use super::commands::{cutoff, node_join};
+use super::doc::{doc_field, is_specless};
 use super::io::{
   CommandResult, LedgerOptions, Output, ledger_path, project_root, read_ledger, write_ledger,
 };
 use super::jq::{alt, get, raw, string};
 use super::model::heal_orphans;
-use super::parse::{doc_field, is_specless, resolve};
+use super::parse::resolve;
 
 /// Heal the branch ledger in place when that changes it; its `plan_doc`, or `""`.
 fn heal_ledger_for(opts: &LedgerOptions) -> String {

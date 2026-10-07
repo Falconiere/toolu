@@ -17,7 +17,7 @@ use toolu_state::time::iso_seconds;
 use crate::ledger::jq::{alt, get, number, parse_json, raw, string};
 
 /// The waiver file version.
-pub const PUSH_WAIVER_VERSION: u32 = 1;
+pub(crate) const PUSH_WAIVER_VERSION: u32 = 1;
 
 /// One branch's waiver files.
 #[derive(Debug, Clone, Copy)]

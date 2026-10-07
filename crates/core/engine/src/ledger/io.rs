@@ -110,14 +110,14 @@ pub fn head_branch(env: &Env, cwd: &Path) -> Option<String> {
 }
 
 /// `toolu_project_state_root ROOT`: `<root>/<host dir>/tmp`.
-pub fn state_root_for(root: &Path, roots: &Roots) -> PathBuf {
+pub(crate) fn state_root_for(root: &Path, roots: &Roots) -> PathBuf {
   roots
     .project_state_root(None, Some(root))
     .unwrap_or_else(|| root.join("tmp"))
 }
 
 /// `toolu_project_state_dir NAME ROOT`.
-pub fn state_dir_for(name: &str, root: &Path, roots: &Roots) -> PathBuf {
+pub(crate) fn state_dir_for(name: &str, root: &Path, roots: &Roots) -> PathBuf {
   state_root_for(root, roots).join(name)
 }
 

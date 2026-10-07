@@ -19,6 +19,8 @@ pub mod commands;
 pub mod context;
 /// The AC-coverage report.
 pub mod coverage;
+/// Plan and spec header fields and acceptance-criterion ids.
+pub mod doc;
 /// Ledger step entries.
 pub mod entries;
 /// Ledger I/O and location.

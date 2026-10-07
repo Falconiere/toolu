@@ -158,7 +158,7 @@ fn unmanaged(run: &CheckRun, seconds: f64) -> Result<i32, String> {
 }
 
 /// `$(...)` capture: NUL bytes dropped, trailing newlines stripped.
-pub fn command_substitution(bytes: &[u8]) -> Vec<u8> {
+pub(crate) fn command_substitution(bytes: &[u8]) -> Vec<u8> {
   let mut kept: Vec<u8> = bytes.iter().copied().filter(|b| *b != 0).collect();
   while kept.last() == Some(&b'\n') {
     kept.pop();

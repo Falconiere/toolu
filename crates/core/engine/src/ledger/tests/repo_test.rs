@@ -11,6 +11,7 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::process::{Spec, run};
 
 use crate::ledger::io::{LedgerOptions, head_branch};
+use crate::verdict::gates::GateContext;
 
 /// A helper's result; the tests unwrap it.
 pub(crate) type Res<T> = Result<T, Box<dyn std::error::Error>>;
@@ -67,6 +68,19 @@ impl Repo {
       return Err(format!("{script}: {}", output.stderr).into());
     }
     Ok(output.stdout)
+  }
+
+  /// A verdict gate's context at the root: `branch` against `main`, at `cur`.
+  pub(crate) fn gate<'a>(&self, roots: &'a Roots, branch: &str, cur: &str) -> GateContext<'a> {
+    GateContext {
+      roots,
+      root: self.root.clone(),
+      branch: branch.to_owned(),
+      base: "main".to_owned(),
+      cur: cur.to_owned(),
+      cwd: self.root.clone(),
+      warnings: Vec::new(),
+    }
   }
 
   /// The ledger options of a command run at the root.

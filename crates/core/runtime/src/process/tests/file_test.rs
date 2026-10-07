@@ -1,7 +1,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use super::{FileSpec, run_to_file};
+use super::{FileOutput, FileSpec, run_to_file};
 use crate::env::Env;
 use crate::process::{RunError, group};
 
@@ -27,9 +27,14 @@ fn stdout_and_stderr_interleave_into_one_file_and_the_exit_code_is_kept() {
   let script = "echo one; echo two >&2; echo three; exit 3";
   let output = run_to_file(&spec(dir.path(), script, None), &mut |pid| seen = pid).unwrap();
   assert_eq!(read(dir.path()), "one\ntwo\nthree\n");
-  assert_eq!(output.exit_code, 3);
-  assert_eq!(seen, output.pid);
-  assert!(!output.timed_out);
+  assert_eq!(
+    output,
+    FileOutput {
+      pid: seen,
+      exit_code: 3,
+      timed_out: false
+    }
+  );
 }
 
 #[test]

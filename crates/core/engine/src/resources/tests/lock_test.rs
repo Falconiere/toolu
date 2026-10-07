@@ -6,7 +6,8 @@ use std::time::Duration;
 use toolu_runtime::json::ordered::Ordered;
 
 use super::{
-  acquire_lock, process_alive, read_json_file, whole, with_resource_lock, write_json_atomic,
+  LockHandle, acquire_lock, process_alive, read_json_file, whole, with_resource_lock,
+  write_json_atomic,
 };
 use crate::ledger::jq::parse_json;
 
@@ -18,7 +19,7 @@ fn owner(pid: &str, token: &str) -> Ordered {
 fn a_lock_is_exclusive_token_safe_and_recovers_a_dead_owner() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("resource.lock");
-  let first = acquire_lock(&path, Duration::ZERO).unwrap().unwrap();
+  let first: LockHandle = acquire_lock(&path, Duration::ZERO).unwrap().unwrap();
   assert_eq!(
     acquire_lock(&path, Duration::ZERO)
       .unwrap()

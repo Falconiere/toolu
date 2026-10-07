@@ -4,25 +4,8 @@ use toolu_runtime::json::ordered::Ordered;
 
 use super::review_gate;
 use crate::ledger::context::test_repo::Repo;
-use crate::verdict::gates::GateContext;
 
 const STATE: &str = ".claude/tmp/push-review/feat_x.json";
-
-fn ctx<'a>(
-  repo: &Repo,
-  roots: &'a toolu_runtime::host::roots::Roots,
-  cur: &str,
-) -> GateContext<'a> {
-  GateContext {
-    roots,
-    root: repo.root.clone(),
-    branch: "feat/x".to_owned(),
-    base: "main".to_owned(),
-    cur: cur.to_owned(),
-    cwd: repo.root.clone(),
-    warnings: Vec::new(),
-  }
-}
 
 fn verdict(gate: &Ordered) -> String {
   let text = |key| match gate.get(key) {
@@ -54,26 +37,26 @@ fn v2(extra: &str) -> String {
 fn the_review_gate_skips_or_fails_before_reading_a_state() {
   let repo = Repo::new().unwrap();
   let opts = repo.opts();
-  let mut on_base = ctx(&repo, &opts.roots, "C");
+  let mut on_base = repo.gate(&opts.roots, "feat/x", "C");
   on_base.branch = "main".to_owned();
   assert_eq!(
     verdict(&review_gate(&on_base)),
     "skip current branch is the base branch [null null]"
   );
   assert_eq!(
-    verdict(&review_gate(&ctx(&repo, &opts.roots, ""))),
+    verdict(&review_gate(&repo.gate(&opts.roots, "feat/x", ""))),
     "skip could not compute diff against main [null null]"
   );
-  let empty = review_gate(&ctx(
-    &repo,
+  let empty = review_gate(&repo.gate(
     &opts.roots,
+    "feat/x",
     "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
   ));
   assert_eq!(
     verdict(&empty),
     "fail diff against main is empty; verify intent before pushing [empty-diff null]"
   );
-  let missing = review_gate(&ctx(&repo, &opts.roots, "C"));
+  let missing = review_gate(&repo.gate(&opts.roots, "feat/x", "C"));
   assert_eq!(
     verdict(&missing),
     "fail no push-review state file; run a reviewer and write the state [no-state null]"
@@ -81,7 +64,7 @@ fn the_review_gate_skips_or_fails_before_reading_a_state() {
   state(&repo, "false");
   let file = repo.root.join(STATE).display().to_string();
   assert_eq!(
-    verdict(&review_gate(&ctx(&repo, &opts.roots, "C"))),
+    verdict(&review_gate(&repo.gate(&opts.roots, "feat/x", "C"))),
     format!("fail push-review state file is unparseable at {file} [schema null]")
   );
 }
@@ -105,7 +88,7 @@ fn a_v2_state_passes_only_when_current_complete_and_clean() {
   for (body, expected) in cases {
     state(&repo, &body);
     assert_eq!(
-      verdict(&review_gate(&ctx(&repo, &opts.roots, "C"))),
+      verdict(&review_gate(&repo.gate(&opts.roots, "feat/x", "C"))),
       expected,
       "{body}"
     );

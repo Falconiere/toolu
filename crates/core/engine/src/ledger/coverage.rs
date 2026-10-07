@@ -6,9 +6,9 @@ use std::path::Path;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
 
+use super::doc::{is_specless, parse_acs};
 use super::jq::{JqError, alt, each, get, holds, is_str, type_name};
 use super::model::status_is;
-use super::parse::{is_specless, parse_acs};
 
 /// One AC's coverage, for `--json`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,7 +51,7 @@ fn id_texts(ids: &[&Ordered]) -> Result<Vec<String>, JqError> {
 ///
 /// # Errors
 /// [`JqError`] where jq fails on the ledger's shape.
-pub fn ac_coverage_line(
+pub(crate) fn ac_coverage_line(
   ledger: &Ordered,
   cur: &str,
   ac: &str,

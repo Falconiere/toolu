@@ -12,13 +12,14 @@ use toolu_state::lock::token;
 
 use super::context::{CommandFail, base_for, or_fail};
 use super::coverage::{CoverageReport, ac_coverage};
+use super::doc::{doc_field, is_specless};
 use super::io::{
   CommandResult, LedgerOptions, Output, head_branch, ledger_path, project_root, read_ledger,
   write_ledger,
 };
 use super::jq::{NULL, alt, get, raw, string};
 use super::model::{all_fresh, heal_orphans, orphan_cutoff, recompute, summary_line};
-use super::parse::{doc_field, is_file, is_specless, parse_steps, resolve};
+use super::parse::{is_file, parse_steps, resolve};
 
 const DEFAULT_STUCK_SECONDS: i64 = 300;
 

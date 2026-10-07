@@ -2,21 +2,9 @@
 
 use toolu_runtime::json::ordered::Ordered;
 
-use super::{GateContext, field_or, gate, quality_gate, raw_or, read_json};
+use super::{field_or, gate, quality_gate, raw_or, read_json};
 use crate::ledger::context::test_repo::Repo;
 use crate::ledger::jq::{get, parse_json, string};
-
-fn ctx<'a>(repo: &Repo, roots: &'a toolu_runtime::host::roots::Roots) -> GateContext<'a> {
-  GateContext {
-    roots,
-    root: repo.root.clone(),
-    branch: "feat/x".to_owned(),
-    base: "main".to_owned(),
-    cur: String::new(),
-    cwd: repo.root.clone(),
-    warnings: Vec::new(),
-  }
-}
 
 fn reason(gate: &Ordered) -> (String, String) {
   let field = |key| match gate.get(key) {
@@ -30,7 +18,7 @@ fn reason(gate: &Ordered) -> (String, String) {
 fn the_quality_gate_reads_the_gate_file() {
   let repo = Repo::new().unwrap();
   let opts = repo.opts();
-  let ctx = ctx(&repo, &opts.roots);
+  let ctx = repo.gate(&opts.roots, "feat/x", "");
   let pair = |state: &str, text: &str| (state.to_owned(), text.to_owned());
   assert_eq!(
     reason(&quality_gate(&ctx)),
@@ -66,7 +54,7 @@ fn a_linked_worktree_skips_the_quality_gate() {
   let repo = Repo::new().unwrap();
   repo.sh("git worktree add -q ../linked -b feat/y").unwrap();
   let opts = repo.opts();
-  let mut linked = ctx(&repo, &opts.roots);
+  let mut linked = repo.gate(&opts.roots, "feat/x", "");
   linked.root = repo.root.join("../linked");
   assert_eq!(
     reason(&quality_gate(&linked)).1,
@@ -78,7 +66,7 @@ fn a_linked_worktree_skips_the_quality_gate() {
 fn helpers_read_json_like_jq() {
   let repo = Repo::new().unwrap();
   let opts = repo.opts();
-  let ctx = ctx(&repo, &opts.roots);
+  let ctx = repo.gate(&opts.roots, "feat/x", "");
   assert_eq!(
     ctx.git(&["rev-parse", "--abbrev-ref", "HEAD"]).as_deref(),
     Some("feat/x\n")

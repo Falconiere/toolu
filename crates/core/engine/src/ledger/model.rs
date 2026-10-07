@@ -1,6 +1,6 @@
 //! The pure half of the ledger (`packages/toolu-core/src/ledger/ledger-model.ts`):
 //! summary recompute, the summary line and orphan healing. Each function is a
-//! direct port of its jq program, so it fails with [`JqError`] wherever jq
+//! direct port of its jq program, so it fails with `JqError` wherever jq
 //! fails on a malformed ledger.
 
 use std::collections::HashMap;
@@ -18,7 +18,7 @@ use super::jq::{
 ///
 /// # Errors
 /// [`JqError`] when `step` is neither an object nor null.
-pub fn status_is(step: &Ordered, status: &str) -> Result<bool, JqError> {
+pub(crate) fn status_is(step: &Ordered, status: &str) -> Result<bool, JqError> {
   Ok(is_str(get(step, "status")?, status))
 }
 

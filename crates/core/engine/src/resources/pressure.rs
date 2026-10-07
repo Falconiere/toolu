@@ -8,11 +8,11 @@ use super::store::safe_integer;
 use crate::ledger::jq::number;
 
 /// How old a sample may be before a new one is taken.
-pub const PRESSURE_SAMPLE_MS: f64 = 30_000.0;
+pub(crate) const PRESSURE_SAMPLE_MS: f64 = 30_000.0;
 /// How long pressure must last before new work is held.
-pub const PRESSURE_HOLD_MS: f64 = 60_000.0;
+pub(crate) const PRESSURE_HOLD_MS: f64 = 60_000.0;
 /// How long the machine must be calm before the hold lifts.
-pub const PRESSURE_RECOVERY_MS: f64 = 120_000.0;
+pub(crate) const PRESSURE_RECOVERY_MS: f64 = 120_000.0;
 
 /// `/proc/stat` CPU ticks: the total and the steal share.
 #[derive(Debug, Clone, Copy, PartialEq)]

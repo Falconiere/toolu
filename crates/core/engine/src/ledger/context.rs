@@ -4,7 +4,7 @@
 //! its tagged lines.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use toolu_runtime::json::ordered::Ordered;
@@ -126,6 +126,24 @@ pub fn base_for(opts: &LedgerOptions, root: Option<&PathBuf>) -> String {
   }
 }
 
+/// The prior ledger at `file` and its entries by id; a file that is not
+/// empty but does not read as a ledger is corrupt.
+fn prior_ledger(
+  file: &Path,
+) -> Result<(Option<ReadLedger>, HashMap<String, Ordered>), CommandFail> {
+  let prior = read_ledger(file);
+  let corrupt = format!("plan-ledger: corrupt prior ledger at {}", file.display());
+  let non_empty = std::fs::metadata(file).is_ok_and(|meta| meta.len() > 0);
+  if prior.is_none() && non_empty {
+    return Err(CommandFail::line(corrupt));
+  }
+  let existing = match &prior {
+    Some(read) => or_fail(entries_by_id(&read.value), &corrupt)?,
+    None => HashMap::new(),
+  };
+  Ok((prior, existing))
+}
+
 /// Resolve the run context of `doc`.
 ///
 /// # Errors
@@ -152,19 +170,7 @@ pub fn prepare<'a>(
     head_branch(opts.env(), &root),
     "plan-ledger: cannot resolve HEAD branch".to_owned(),
   )?;
-  let prior = read_ledger(&ledger_file);
-  let corrupt = format!(
-    "plan-ledger: corrupt prior ledger at {}",
-    ledger_file.display()
-  );
-  let non_empty = std::fs::metadata(&ledger_file).is_ok_and(|meta| meta.len() > 0);
-  if prior.is_none() && non_empty {
-    return Err(CommandFail::line(corrupt));
-  }
-  let existing = match &prior {
-    Some(read) => or_fail(entries_by_id(&read.value), &corrupt)?,
-    None => HashMap::new(),
-  };
+  let (prior, existing) = prior_ledger(&ledger_file)?;
   let timeout = opts
     .env()
     .get("PLAN_LEDGER_STEP_TIMEOUT")
@@ -227,6 +233,7 @@ impl RunContext<'_> {
 mod tests;
 
 /// The repository the ledger's unit tests run in.
+/// The sandboxed repository the engine's unit tests share.
 #[cfg(test)]
 #[path = "tests/repo_test.rs"]
-pub(crate) mod test_repo;
+pub mod test_repo;

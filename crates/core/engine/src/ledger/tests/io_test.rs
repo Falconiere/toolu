@@ -9,7 +9,9 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::process::{Spec, run};
 
-use super::{LedgerOptions, Output, head_branch, ledger_path, read_ledger, write_ledger};
+use super::{
+  LedgerOptions, Output, ReadLedger, head_branch, ledger_path, read_ledger, write_ledger,
+};
 use crate::ledger::jq::parse_json;
 
 fn env(home: &Path) -> Env {
@@ -107,10 +109,8 @@ fn reading_skips_absent_empty_unparseable_and_falsy_documents() {
     ("[]", "[]"),
   ] {
     std::fs::write(&file, body).unwrap();
-    assert_eq!(
-      read_ledger(&file).map(|read| read.text).as_deref(),
-      Some(text)
-    );
+    let read: Option<ReadLedger> = read_ledger(&file);
+    assert_eq!(read.map(|read| read.text).as_deref(), Some(text));
   }
   let as_dir = dir.path().join("d.json");
   std::fs::create_dir_all(as_dir.join("x")).unwrap();

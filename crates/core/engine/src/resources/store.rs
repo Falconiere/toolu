@@ -1,6 +1,6 @@
 //! The persisted resource state and its policy (`packages/toolu-core/src/resources/resource-store.ts`):
 //! `<home>/state.json` (`{version: 1, leases, cooldowns, pressure?}`), strict on
-//! read, and `<home>/policy.json`. The state stays an [`Ordered`] document, so
+//! read, and `<home>/policy.json`. The state stays an `Ordered` document, so
 //! a rewrite keeps every key TypeScript or a newer writer put there, in order.
 
 use std::path::{Path, PathBuf};
@@ -57,6 +57,29 @@ fn or_default<'a>(policy: &'a Ordered, key: &str, fallback: &'a Ordered) -> &'a 
   }
 }
 
+/// The policy's `hosts`, each with a number for its capacity.
+fn policy_hosts(policy: &Ordered) -> Result<Vec<(String, Ordered)>, String> {
+  let entries = match policy.get("hosts") {
+    None => return Ok(Vec::new()),
+    Some(Ordered::Object(entries)) => entries,
+    Some(
+      Ordered::Null
+      | Ordered::Bool(_)
+      | Ordered::Number(_)
+      | Ordered::String(_)
+      | Ordered::Array(_),
+    ) => return Err("invalid resource hosts".to_owned()),
+  };
+  let mut hosts = Vec::new();
+  for (host, cap) in entries {
+    if !matches!(cap, Ordered::Number(_)) {
+      return Err(format!("invalid resource capacity {host}"));
+    }
+    hosts.push((host.clone(), cap.clone()));
+  }
+  Ok(hosts)
+}
+
 /// `resourcePolicy(root)`: `<root>/policy.json`, every key optional.
 ///
 /// # Errors
@@ -67,25 +90,7 @@ pub fn resource_policy(root: &Path) -> Result<ResourcePolicy, String> {
   let Ordered::Object(_) = policy else {
     return Err("invalid resource policy".to_owned());
   };
-  let mut hosts = Vec::new();
-  match policy.get("hosts") {
-    None => {}
-    Some(Ordered::Object(entries)) => {
-      for (host, cap) in entries {
-        if !matches!(cap, Ordered::Number(_)) {
-          return Err(format!("invalid resource capacity {host}"));
-        }
-        hosts.push((host.clone(), cap.clone()));
-      }
-    }
-    Some(
-      Ordered::Null
-      | Ordered::Bool(_)
-      | Ordered::Number(_)
-      | Ordered::String(_)
-      | Ordered::Array(_),
-    ) => return Err("invalid resource hosts".to_owned()),
-  }
+  let hosts = policy_hosts(&policy)?;
   let (three, one, yes) = (
     Ordered::Number(3.into()),
     Ordered::Number(1.into()),
@@ -124,7 +129,7 @@ fn positive_integer(value: Option<&Ordered>) -> bool {
 }
 
 /// `isLease`: the fields every lease needs, with their types.
-pub fn is_lease(lease: &Ordered) -> bool {
+pub(crate) fn is_lease(lease: &Ordered) -> bool {
   let string = |key: &str| matches!(lease.get(key), Some(Ordered::String(_)));
   matches!(lease, Ordered::Object(_))
     && matches!(lease.get("token"), Some(Ordered::String(token)) if !token.is_empty())
@@ -148,7 +153,7 @@ fn is_cooldown(value: &Ordered) -> bool {
 }
 
 /// `isResourceState`.
-pub fn is_resource_state(state: &Ordered) -> bool {
+pub(crate) fn is_resource_state(state: &Ordered) -> bool {
   let version_one =
     matches!(state.get("version"), Some(Ordered::Number(n)) if n.as_f64() == Some(1.0));
   let leases =
@@ -198,7 +203,7 @@ pub fn update_resources<T>(
 }
 
 /// `state.leases`, mutably.
-pub fn leases_mut(state: &mut Ordered) -> Option<&mut Vec<Ordered>> {
+pub(crate) fn leases_mut(state: &mut Ordered) -> Option<&mut Vec<Ordered>> {
   match field_mut(state, "leases") {
     Some(Ordered::Array(items)) => Some(items),
     _ => None,
@@ -214,18 +219,12 @@ pub fn leases(state: &Ordered) -> &[Ordered] {
 }
 
 /// `object[key]`, mutably.
-pub fn field_mut<'a>(object: &'a mut Ordered, key: &str) -> Option<&'a mut Ordered> {
-  match object {
-    Ordered::Object(entries) => entries
-      .iter_mut()
-      .find(|(name, _)| name == key)
-      .map(|(_, value)| value),
-    Ordered::Null
-    | Ordered::Bool(_)
-    | Ordered::Number(_)
-    | Ordered::String(_)
-    | Ordered::Array(_) => None,
-  }
+pub(crate) fn field_mut<'a>(object: &'a mut Ordered, key: &str) -> Option<&'a mut Ordered> {
+  let Ordered::Object(entries) = object else {
+    return None;
+  };
+  let (_, value) = entries.iter_mut().find(|(name, _)| name == key)?;
+  Some(value)
 }
 
 #[cfg(test)]

@@ -95,7 +95,7 @@ fn keep(lease: &Ordered) -> Result<bool, String> {
 ///
 /// # Errors
 /// A process probe failure other than "no such process".
-pub fn reconcile_jobs(state: &mut Ordered) -> Result<usize, String> {
+pub(crate) fn reconcile_jobs(state: &mut Ordered) -> Result<usize, String> {
   let Some(items) = leases_mut(state) else {
     return Ok(0);
   };
@@ -122,7 +122,7 @@ pub fn reconcile_resource_jobs(root: &Path) -> Result<usize, String> {
 ///
 /// # Errors
 /// An invalid or backwards sample.
-pub fn fresh_pressure(state: &mut Ordered, now: SystemTime) -> Result<Pressure, String> {
+pub(crate) fn fresh_pressure(state: &mut Ordered, now: SystemTime) -> Result<Pressure, String> {
   let now_ms = epoch_ms(now);
   let stored = state.get("pressure").and_then(pressure_of);
   if let Some(pressure) = stored
@@ -146,7 +146,7 @@ pub fn epoch_ms(now: SystemTime) -> f64 {
 ///
 /// # Errors
 /// `resource hold: <reason>` during a hold, or a sampling failure.
-pub fn admit_pressure(
+pub(crate) fn admit_pressure(
   state: &mut Ordered,
   policy: &ResourcePolicy,
   now: SystemTime,

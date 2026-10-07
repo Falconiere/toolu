@@ -5,7 +5,7 @@
 //! signal. Catching a signal needs `unsafe` in Rust, so the three signals are
 //! blocked instead and one `sigwait` thread takes them for the life of the
 //! process. A child inherits its spawning thread's mask, so every spawn runs
-//! inside [`unblocked`], and the child starts with the signals unblocked. A
+//! inside `unblocked`, and the child starts with the signals unblocked. A
 //! guard dropped while unwinding kills its group too.
 
 use std::sync::OnceLock;
