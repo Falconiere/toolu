@@ -14,8 +14,8 @@ pub struct Reply {
   /// Delay before writing the response.
   pub delay: Duration,
   /// Close the connection after reading the request, without a response and
-  /// without recording the request.
-  pub dropped: bool,
+  /// without recording the request; set by [`Reply::dropped`].
+  pub(crate) dropped: bool,
 }
 
 impl Reply {

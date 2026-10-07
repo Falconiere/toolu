@@ -101,7 +101,7 @@ impl Client {
       builder = builder.header(*name, *value);
     }
     let response = match request.body {
-      Some(bytes) => agent.run(builder.body(bytes.to_vec()).map_err(|err| map_http(&err))?),
+      Some(bytes) => agent.run(builder.body(bytes).map_err(|err| map_http(&err))?),
       None => agent.run(builder.body(()).map_err(|err| map_http(&err))?),
     }
     .map_err(|err| map_ureq(&err))?;

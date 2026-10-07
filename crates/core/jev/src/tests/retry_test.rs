@@ -3,7 +3,7 @@ use toolu_http::Response;
 use crate::retry::{delay, retryable};
 
 /// Response headers, the attempt, and the expected pause units.
-type Case<'a> = (&'a [(&'a str, &'a str)], u32, Option<u64>);
+type Case<'a> = (&'a [(&'a str, &'a str)], u32, Option<u32>);
 
 fn response(headers: &[(&str, &str)]) -> Response {
   Response {

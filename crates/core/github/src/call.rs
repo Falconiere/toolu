@@ -1,7 +1,7 @@
 //! One GitHub call: the URL, the headers, and the attempts the retry policy
 //! allows, with one token re-read on a `401`.
 
-use std::sync::{MutexGuard, PoisonError};
+use std::sync::MutexGuard;
 use std::thread;
 use std::time::Duration;
 
@@ -106,15 +106,12 @@ impl Client {
 
   /// A JSON error body's `message`, redacted, or empty.
   pub(crate) fn message(&self, body: &[u8]) -> String {
-    let message = serde_json::from_slice::<Value>(body)
-      .ok()
-      .and_then(|value| {
-        value
-          .get("message")
-          .and_then(Value::as_str)
-          .map(str::to_owned)
-      })
-      .unwrap_or_default();
+    let parsed = serde_json::from_slice::<Value>(body).ok();
+    let message = parsed
+      .as_ref()
+      .and_then(|value| value.get("message"))
+      .and_then(Value::as_str)
+      .map_or_else(String::new, str::to_owned);
     self.tokens().redact(&message)
   }
 
@@ -149,7 +146,10 @@ impl Client {
 
   /// The token store, recovered if a panicking thread poisoned it.
   pub(crate) fn tokens(&self) -> MutexGuard<'_, Tokens> {
-    self.tokens.lock().unwrap_or_else(PoisonError::into_inner)
+    match self.tokens.lock() {
+      Ok(tokens) => tokens,
+      Err(poisoned) => poisoned.into_inner(),
+    }
   }
 
   /// Read the token again after a `401` to `sent`: whether the token to retry

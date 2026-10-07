@@ -41,7 +41,12 @@ impl Gh {
   pub(crate) fn env(&self) -> Env {
     let dir = self.dir.path().to_string_lossy().into_owned();
     Env::from_pairs([
-      ("PATH", std::env::var("PATH").unwrap_or_default()),
+      (
+        "PATH",
+        Env::process()
+          .get("PATH")
+          .map_or_else(String::new, str::to_owned),
+      ),
       ("HOME", dir.clone()),
       ("GH_CONFIG_DIR", dir),
     ])
