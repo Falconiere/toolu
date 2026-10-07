@@ -1,0 +1,19 @@
+[package]
+name = "toolu-cli"
+description = "A fixture binary that wires the plugins together"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "toolu"
+path = "src/main.rs"
+
+[dependencies]
+toolu-engine = { path = "../core/engine" }
+toolu-epic-orchestrator = { path = "../epic-orchestrator" }
+toolu-pr-babysit = { path = "../pr-babysit" }
+
+[lints]
+workspace = true

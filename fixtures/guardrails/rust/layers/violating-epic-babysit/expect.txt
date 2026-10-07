@@ -1,0 +1,3 @@
+step layers
+exit 1
+contains check-layers: crates/epic-orchestrator (toolu-epic-orchestrator, plugin crate) depends on toolu-pr-babysit (crates/pr-babysit, plugin crate): a plugin crate may not depend on another plugin crate

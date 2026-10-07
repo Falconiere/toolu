@@ -1,0 +1,17 @@
+# A minimal workspace for the quality-bar fixtures (#455). The test harness
+# appends this repository's [workspace.lints] tables.
+[workspace]
+resolver = "3"
+members = [
+  "crates/demo",
+  "crates/core/engine",
+  "crates/pr-babysit",
+  "crates/epic-orchestrator",
+  "crates/cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false

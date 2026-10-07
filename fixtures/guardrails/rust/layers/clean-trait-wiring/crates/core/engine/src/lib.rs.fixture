@@ -1,0 +1,7 @@
+//! The engine fixture: a trait one plugin implements and another uses.
+
+/// One babysit check.
+pub trait BabysitTick {
+  /// Whether the pull request is green.
+  fn tick(&self) -> bool;
+}

@@ -1336,6 +1336,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "toolu-github"
+version = "7.11.0"
+
+[[package]]
 name = "toolu-http"
 version = "7.11.0"
 dependencies = [
@@ -1380,6 +1384,10 @@ dependencies = [
  "clap",
  "toolu-runtime",
 ]
+
+[[package]]
+name = "toolu-jev-client"
+version = "7.11.0"
 
 [[package]]
 name = "toolu-pr-babysit"
