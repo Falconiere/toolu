@@ -343,7 +343,7 @@ jobs:
       # cc-rs would not pick for aarch64 on its own.
       - name: Install musl C toolchain
         run: |
-          bash .github/scripts/configure-musl-apt-mirror.sh "${{ matrix.target }}"
+          python3 .github/scripts/configure_musl_apt_mirror.py "${{ matrix.target }}"
           sudo apt-get update -y
           sudo apt-get install -y musl-tools
           echo "CC_$(echo '${{ matrix.target }}' | tr - _)=musl-gcc" >> "$GITHUB_ENV"
