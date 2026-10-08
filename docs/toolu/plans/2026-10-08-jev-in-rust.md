@@ -170,7 +170,21 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
       "tooling/src/check-hooks-json.ts",
       "tooling/src/__tests__/check-hooks-json.test.ts",
       "tooling/src/opencode-host/scenarios-paths.ts",
-      "plugins/.oxlintrc.json"
+      "plugins/.oxlintrc.json",
+      "packages/toolu-core/src/startup/",
+      "plugins/statusline/hooks/",
+      "plugins/pr-babysit/hooks/dist/check-binary.js",
+      "plugins/toolu/hooks/dist/check-binary.js",
+      "plugins/toolu-review/hooks/dist/check-binary.js",
+      "plugins/epic-orchestrator/",
+      "plugins/ast-grep/hooks/dist/check-binary.js",
+      "plugins/ts-quality/hooks/src/__tests__/read-failure.test.ts",
+      "plugins/python-quality/hooks/src/__tests__/read-failure.test.ts",
+      "plugins/rust-quality/hooks/src/__tests__/read-failure.test.ts",
+      "tooling/src/__tests__/host-paths.test.ts",
+      "tooling/src/__tests__/pack-closure.test.ts",
+      "tooling/src/__tests__/npx-invocation.test.ts",
+      "tooling/src/opencode-acceptance/__tests__/workflow.test.ts"
     ],
     "input": "this branch against origin/main, with target/debug/toolu on PATH",
     "model": "inherit"
@@ -211,4 +225,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 - `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`. The tool-hook payload test names the detected host's event, so it still passes when `TOOLU_HOST_OVERRIDE` is `cursor`.
 - `docs`: plugin Markdown may not name `jev.sh` once the namespace is ported, so the skill and the babysit helper say `toolu jev`. Exit `22` and `28` in the plugin README become `1` and `75`.
 - `switch`: a native hook runs when its fallback `hooks/dist` bundle is gone. The catalog test sets `TOOLU_BIN` to the built binary and expects no install notice. The loopback fixture serves a leaf signed by a CA, and `NODE_EXTRA_CA_CERTS` is that CA, because rustls rejects a CA certificate presented as the server certificate. `knip.json` drops the deleted helpers. The status-record test removes `scripts/jev.sh`.
-- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file. The deleted hook sources drop their oxlint exemptions. The full-gate check unsets `PUSH_REVIEW_BASE` and `TOOLU_HOST_OVERRIDE` so the TypeScript suite does not inherit the stamp's base.
+- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file. The deleted hook sources drop their oxlint exemptions. The full-gate check unsets `PUSH_REVIEW_BASE` and `TOOLU_HOST_OVERRIDE` so the TypeScript suite does not inherit the stamp's base. Statusline and the Codex publisher test run the debug `toolu` when the Jev bundle is gone, and copy `scripts/jev.sh`. The TypeScript notice filename is the same FNV-1a hex as the runtime, and the six `check-binary` bundles were rebuilt so a later Bun plugin stays silent. The acceptance job's expected command includes the `PATH` export. A root process still reads a mode-000 file and a mode-0555 directory, so those cases return early or mark the directory immutable. The OpenCode tarball's executable-bundle floor is 13 after `jev.js` left it. Arborist is taken from the npm binary's install when `npm root -g` does not contain it.

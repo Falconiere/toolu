@@ -168,7 +168,6 @@ function configRoot(options = {}) {
 }
 // packages/toolu-core/src/startup/native-toolu.ts
 import { spawnSync } from "child_process";
-import { createHash } from "crypto";
 import { accessSync, closeSync, constants, mkdirSync, openSync, statSync } from "fs";
 import { isAbsolute, join as join2, resolve } from "path";
 var INSTALLER = "curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash";
@@ -226,11 +225,20 @@ function knownToolu(env) {
   ];
   return candidates.filter((path) => path !== undefined).map((path) => resolve(path)).find((path) => native(path, env));
 }
+function noticeName(sessionId) {
+  let hash = 0xcbf29ce484222325n;
+  const mask = 0xffffffffffffffffn;
+  for (const byte of new TextEncoder().encode(sessionId)) {
+    hash ^= BigInt(byte);
+    hash = hash * 0x100000001b3n & mask;
+  }
+  return hash.toString(16).padStart(16, "0");
+}
 function firstNotice(sessionId, env) {
   if (sessionId === undefined || sessionId === "")
     return true;
   const dir = join2(configRoot({ env }), "toolu", "native-notices");
-  const name = createHash("sha256").update(sessionId).digest("hex");
+  const name = noticeName(sessionId);
   try {
     mkdirSync(dir, { recursive: true, mode: 448 });
     closeSync(openSync(join2(dir, name), "wx", 384));

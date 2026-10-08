@@ -1,6 +1,6 @@
 /** Shared fixtures for the statusline suites: real git repos, real bundles, a per-test sandbox. */
 import { expect } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
   bundlePath,
@@ -12,7 +12,26 @@ import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 
 export const PLUGIN = resolve(import.meta.dir, "../../..");
-export const JEV_BUNDLE = bundlePath(pluginRoot("jev"), "jev");
+const REPO = resolve(PLUGIN, "../..");
+const JEV_ROOT = pluginRoot("jev");
+const jevBundle = bundlePath(JEV_ROOT, "jev");
+/** The published helper source: the Bun bundle while it exists, otherwise the native shim. */
+export const JEV_BUNDLE = existsSync(jevBundle) ? jevBundle : join(JEV_ROOT, "scripts/jev.sh");
+
+function jevSessionArgv(): string[] {
+  const bundle = bundlePath(JEV_ROOT, "session-start");
+  if (existsSync(bundle)) return entryArgv("jev", "session-start", JEV_ROOT);
+  return [
+    join(REPO, "target/debug/toolu"),
+    "jev",
+    "hook",
+    "session-start",
+    "--event",
+    "SessionStart",
+    "--plugin-root",
+    JEV_ROOT,
+  ];
+}
 
 export const KEY = "statusline-test-key";
 
@@ -66,7 +85,7 @@ export async function publishJev(
     host === "claude"
       ? { CLAUDE_CONFIG_DIR: root, TOOLU_HOST_OVERRIDE: "claude", ...extra }
       : { CODEX_HOME: root, TOOLU_HOST_OVERRIDE: "codex", ...extra };
-  const res = await run(entryArgv("jev", "session-start", resolve(PLUGIN, "../jev")), {
+  const res = await run(jevSessionArgv(), {
     env,
     stdin: "",
   });

@@ -46,7 +46,11 @@ test.concurrent("the acceptance job runs the full command on Linux and macOS", (
   expect(opencode.strategy?.matrix.os?.toSorted()).toEqual(["macos-latest", "ubuntu-latest"]);
   const commands = runs("opencode").filter((run) => run.includes("test:opencode"));
   expect(commands).toEqual([
-    'bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"',
+    [
+      "set -euo pipefail",
+      'export PATH="$PWD/target/debug:$PATH"',
+      'bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"',
+    ].join("\n") + "\n",
   ]);
   expect(commands.join("\n")).not.toContain("--only");
 });

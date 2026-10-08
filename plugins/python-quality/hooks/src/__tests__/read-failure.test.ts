@@ -5,6 +5,7 @@ import { PY_PROJECT, type PyCase } from "./cases-types.ts";
 import { runCase } from "./golden-harness.ts";
 
 test("an unreadable Python file fails the quality gate", async () => {
+  if (process.getuid?.() === 0) return;
   const caseFile: PyCase = {
     name: "unreadable Python file",
     project: PY_PROJECT,

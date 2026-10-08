@@ -5,6 +5,8 @@ import { TS_PROJECT, type TsCase } from "./cases-types.ts";
 import { runCase } from "./golden-harness.ts";
 
 test("an unreadable TypeScript file fails the quality gate", async () => {
+  // Root ignores the mode bit, so the file is not unreadable in this process.
+  if (process.getuid?.() === 0) return;
   const caseFile: TsCase = {
     name: "unreadable TypeScript file",
     project: TS_PROJECT,

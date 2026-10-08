@@ -13,7 +13,7 @@
  */
 import { expect, test } from "bun:test";
 import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { z } from "zod";
@@ -52,10 +52,22 @@ async function markdownHits(pattern: RegExp): Promise<Hit[]> {
  * the Arborist that ships inside npm, so it cannot drift from what npx does.
  * Resolves to the locations of every local package with that name, in JSON text.
  */
-async function localMatches(name: string): Promise<{ exitCode: number; output: string }> {
+async function arboristDir(): Promise<string> {
   const root = await run(["npm", "root", "-g"]);
   expect(root.exitCode).toBe(0);
-  const arborist = join(root.stdout.trim(), "npm/node_modules/@npmcli/arborist");
+  const fromPrefix = join(root.stdout.trim(), "npm/node_modules/@npmcli/arborist");
+  if (existsSync(fromPrefix)) return fromPrefix;
+  // A redirected npm prefix is not the install that ships Arborist.
+  const bin = await run(["bash", "-lc", "command -v npm"]);
+  expect(bin.exitCode).toBe(0);
+  return resolve(
+    dirname(bin.stdout.trim()),
+    "../lib/node_modules/npm/node_modules/@npmcli/arborist",
+  );
+}
+
+async function localMatches(name: string): Promise<{ exitCode: number; output: string }> {
+  const arborist = await arboristDir();
   const script = `
     const Arborist = require(process.argv[1]);
     new Arborist({ path: process.argv[2] }).loadActual().then((tree) => {

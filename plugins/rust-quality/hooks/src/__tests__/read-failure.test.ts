@@ -5,6 +5,7 @@ import { RUST_PROJECT, type RsCase } from "./cases-types.ts";
 import { runCase } from "./golden-harness.ts";
 
 test("an unreadable Rust file fails the quality gate", async () => {
+  if (process.getuid?.() === 0) return;
   const caseFile: RsCase = {
     name: "unreadable Rust file",
     project: RUST_PROJECT,
