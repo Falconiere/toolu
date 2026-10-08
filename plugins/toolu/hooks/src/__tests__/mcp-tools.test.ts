@@ -55,11 +55,14 @@ async function hook(
     stdin ??
     JSON.stringify(toStdin(host, mcpFixture(server ?? "x", "search", {}), { cwd: sb.project }));
   const env = pretoolEnv(sb, host, { TOOLU_SETTINGS_DIR: settings(sb) });
-  return await run(launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" }, PLUGIN), {
-    cwd: sb.project,
-    env,
-    stdin: payload,
-  });
+  return await run(
+    launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" }, PLUGIN),
+    {
+      cwd: sb.project,
+      env,
+      stdin: payload,
+    },
+  );
 }
 
 const Decision = z.object({
