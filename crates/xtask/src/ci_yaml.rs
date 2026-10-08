@@ -127,7 +127,7 @@ fn path_filters(on: Option<&Value>) -> Vec<String> {
 }
 
 fn yaml_to_json(text: &str) -> Result<Value, String> {
-  let mut child = Command::new(bun()?)
+  let mut child = Command::new(bun_binary()?)
     .args(["-e", "const fs=require('fs'); const text=fs.readFileSync(0,'utf8'); process.stdout.write(JSON.stringify(Bun.YAML.parse(text)))"])
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
@@ -155,7 +155,7 @@ fn yaml_file(name: &str) -> bool {
     .is_some_and(|ext| ext.eq_ignore_ascii_case("yml") || ext.eq_ignore_ascii_case("yaml"))
 }
 
-fn bun() -> Result<PathBuf, String> {
+pub(crate) fn bun_binary() -> Result<PathBuf, String> {
   if let Some(path) = std::env::var_os("TOOLU_BUN") {
     return Ok(PathBuf::from(path));
   }

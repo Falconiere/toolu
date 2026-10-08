@@ -17,6 +17,7 @@ mod command_tree;
 mod context_budget;
 mod coverage;
 mod data;
+mod dist;
 mod docs_cli;
 mod gate;
 mod gate_change;
@@ -79,6 +80,7 @@ const TASKS: &[(&str, Task)] = &[
   ("ci-changes", ci_changes::run),
   ("check-ci-paths", ci_check::run),
   ("ci-aggregate", ci_aggregate::run),
+  ("dist", dist::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -88,7 +90,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate";
+  check-ci-paths, ci-aggregate, dist";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
