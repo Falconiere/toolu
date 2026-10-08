@@ -74,13 +74,18 @@ pub(crate) fn git_toplevel(env: &Env, cwd: &Path) -> String {
   strip_trailing_newlines(&output.stdout).to_owned()
 }
 
-/// `Branch: <name>` from `git rev-parse --abbrev-ref HEAD`. An unborn branch is `HEAD`.
+/// `Branch: <name>` from `git rev-parse --abbrev-ref HEAD`. An unborn branch
+/// prints `HEAD` and exits 128; that name is kept. A non-zero exit that prints
+/// nothing, as outside a repository, is no line.
 pub(crate) fn branch_line(env: &Env, cwd: &Path) -> Option<String> {
   if !on_path("git", env.get("PATH").unwrap_or("")) {
     return None;
   }
   let output = git_output(env, cwd, &["rev-parse", "--abbrev-ref", "HEAD"])?;
   let branch = strip_trailing_newlines(&output.stdout);
+  if output.exit_code != 0 && branch.is_empty() {
+    return None;
+  }
   (!branch.is_empty()).then(|| format!("Branch: {branch}"))
 }
 
