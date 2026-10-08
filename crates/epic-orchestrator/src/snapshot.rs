@@ -12,6 +12,7 @@ use crate::logic::{arm_ready, ensure_issue};
 use crate::model::{Cycle, World};
 use crate::paths::Paths;
 use crate::recover::{observe, reconcile_stages};
+use crate::watch::{self, Watch};
 
 /// Issues, pause and watch deadlines for one resource root.
 ///
@@ -27,6 +28,7 @@ pub(crate) fn load(paths: &Paths, now: SystemTime) -> Result<World, String> {
     observe(&mut world, &record);
   }
   overlay_stages(&mut world, &stages);
+  watch::sync(&mut world);
   reconcile_stages(&mut world);
   arm_ready(&mut world);
   Ok(world)
@@ -57,6 +59,13 @@ fn apply_watch(world: &mut World, watch: &Value) {
   if let Some(next) = watch.get("nextCheckpointAt").and_then(Value::as_u64) {
     world.checkpoint_at_ms = next;
   }
+  if let Some(rows) = watch.get("github").and_then(Value::as_object) {
+    for (key, row) in rows {
+      if let Ok(saved) = serde_json::from_value::<Watch>(row.clone()) {
+        world.watches.insert(key.clone(), saved);
+      }
+    }
+  }
 }
 
 fn load_registry(world: &mut World, registry: &Value) -> Result<BTreeMap<String, String>, String> {
@@ -82,6 +91,11 @@ fn load_epic(
   stages: &mut BTreeMap<String, String>,
 ) -> Result<(), String> {
   let graph = read_value(&dir.join("graph.json"))?;
+  if let Some(reference) = graph.pointer("/epic/ref").and_then(Value::as_str) {
+    world
+      .epic_refs
+      .insert(epic.to_owned(), reference.to_owned());
+  }
   if graph_cycle(&graph) && world.cycle == Cycle::Clear {
     world.cycle = Cycle::Open;
   }
@@ -140,6 +154,9 @@ fn load_issue(
     phase.clone_into(&mut issue.phase);
   }
   issue.pr = status.get("pr").and_then(Value::as_u64);
+  if let Some(repo) = item.get("repo").and_then(Value::as_str) {
+    repo.clone_into(&mut issue.repo);
+  }
   if let Some(note) = status.get("note").and_then(Value::as_str) {
     note.clone_into(&mut issue.note);
   }

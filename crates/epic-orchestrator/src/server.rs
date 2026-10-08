@@ -15,6 +15,7 @@ use crate::model::{Action, Report, Step, World};
 use crate::paths::Paths;
 use crate::schedule::{note_herdr, on_tick, set_pause};
 use crate::snapshot::{issue_path, load, status_path};
+use crate::watch;
 
 /// Where a scripted merge is killed so recovery can be tested.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -112,6 +113,13 @@ impl Engine {
     for step in apply_report(&mut self.world, report) {
       let _applied = self.apply(step)?;
     }
+    watch::sync(&mut self.world);
+    for watched in self.world.watches.values_mut() {
+      if matches!(&watched.kind, watch::Kind::Pr { key, .. } if key == &report.key) {
+        watched.request_immediate();
+      }
+    }
+    self.persist_watch()?;
     crate::limit::on_failed(self, &report.phase, &report.note, &report.key)
   }
 
@@ -158,7 +166,9 @@ impl Engine {
   pub(crate) fn tick(&mut self) -> Result<Stop, String> {
     self.refresh_clock();
     crate::snapshot::adopt_new_epics(&mut self.world, &self.paths)?;
+    watch::sync(&mut self.world);
     on_tick(&mut self.world);
+    watch::take_due(&mut self.world);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;
     if !crate::source::prompt_enabled() {
@@ -201,6 +211,7 @@ impl Engine {
         "budgetHoldUntil": 0,
         "herdrFailures": self.world.herdr_failures,
         "herdrRetryAt": self.world.herdr_retry_at_ms,
+        "github": self.world.watches,
       }),
     )
   }
