@@ -1,0 +1,39 @@
+{
+  "repository": "Falconiere/toolu",
+  "pr": 454,
+  "prState": "MERGED",
+  "prUpdatedAt": "2026-10-05T02:28:42Z",
+  "method": "One authenticated conditional PR GET and one GraphQL review-thread query per 180-second slot. This raw series shows that absolute primary used headers can change between 304 replies when a token is shared.",
+  "startedAt": "2026-10-08T13:17:59Z",
+  "endedAt": "2026-10-08T13:27:59Z",
+  "checks": [
+    {
+      "at": "2026-10-08T13:18:00Z",
+      "restStatus": 200,
+      "restNotModified": 0,
+      "restUsed": 2,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:21:00Z",
+      "restStatus": 304,
+      "restNotModified": 1,
+      "restUsed": 2,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:24:00Z",
+      "restStatus": 304,
+      "restNotModified": 1,
+      "restUsed": 3,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:27:00Z",
+      "restStatus": 304,
+      "restNotModified": 1,
+      "restUsed": 5,
+      "graphqlCost": 1
+    }
+  ]
+}
