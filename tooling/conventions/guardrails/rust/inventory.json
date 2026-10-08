@@ -101,6 +101,30 @@
       "id": "homebrew-formula",
       "pass": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_prints_the_four_checksums",
       "fail": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_missing_checksum_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "context-budget",
+      "pass": "crates/xtask/src/tests/context_budget_test.rs::an_under_budget_doc_passes",
+      "fail": "crates/xtask/src/tests/context_budget_test.rs::an_over_budget_skill_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "ci-changes",
+      "pass": "crates/xtask/src/tests/ci_changes_test.rs::a_docs_only_file_turns_docs_on_and_rust_off",
+      "fail": "crates/xtask/src/tests/ci_changes_test.rs::a_missing_data_file_is_an_error"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-ci-paths",
+      "pass": "crates/xtask/src/tests/ci_check_test.rs::this_repository_is_consistent",
+      "fail": "crates/xtask/src/tests/ci_check_test.rs::a_missing_workflow_file_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "ci-aggregate",
+      "pass": "crates/xtask/src/tests/ci_aggregate_test.rs::a_docs_only_run_passes",
+      "fail": "crates/xtask/src/tests/ci_aggregate_test.rs::a_failed_changes_job_exits_1"
     }
   ]
 }
