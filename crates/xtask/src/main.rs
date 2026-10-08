@@ -2,6 +2,8 @@
 //!
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
+mod bench;
+mod bench_result;
 mod bun_launcher;
 mod check_hooks;
 mod check_workflows;
@@ -95,6 +97,7 @@ const TASKS: &[(&str, Task)] = &[
   ("final-removal", final_removal::run),
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
+  ("bench", bench::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -105,7 +108,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
   check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
-  final-removal, gate-coverage, packaging";
+  final-removal, gate-coverage, packaging, bench";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
