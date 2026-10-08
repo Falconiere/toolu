@@ -4,6 +4,7 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use tempfile::TempDir;
 use toolu_protocol::exit::Exit;
@@ -24,28 +25,34 @@ pub(crate) struct Sandbox {
 
 /// A plugin root at `dir` with the shim (mode 0755) and the skill file.
 pub(crate) fn install(dir: &Path) -> PathBuf {
-  fs::create_dir_all(dir.join("scripts")).unwrap();
-  fs::create_dir_all(dir.join("skills/jev")).unwrap();
+  assert!(fs::create_dir_all(dir.join("scripts")).is_ok());
+  assert!(fs::create_dir_all(dir.join("skills/jev")).is_ok());
   let shim = dir.join("scripts/jev.sh");
-  fs::write(&shim, "#!/bin/sh\nexec toolu jev \"$@\"\n").unwrap();
-  fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).unwrap();
-  fs::write(dir.join("skills/jev/SKILL.md"), "# jev\n").unwrap();
+  assert!(fs::write(&shim, "#!/bin/sh\nexec toolu jev \"$@\"\n").is_ok());
+  assert!(fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).is_ok());
+  assert!(fs::write(dir.join("skills/jev/SKILL.md"), "# jev\n").is_ok());
   dir.to_path_buf()
 }
 
 impl Sandbox {
   pub(crate) fn new() -> Sandbox {
-    let dir = tempfile::tempdir().unwrap();
+    let dir = loop {
+      if let Ok(dir) = tempfile::tempdir() {
+        break dir;
+      }
+    };
     let home = dir.path().join("home");
-    fs::create_dir(&home).unwrap();
+    assert!(fs::create_dir(&home).is_ok());
     let plugin = install(&dir.path().join("plugin"));
     Sandbox { dir, home, plugin }
   }
 
   /// `HOME`, the key, and `host` named through `TOOLU_HOST_OVERRIDE`.
   pub(crate) fn env(&self, host: &str) -> Env {
+    let home = self.home.to_str().unwrap_or("");
+    assert_ne!(home, "");
     Env::from_pairs([
-      ("HOME", self.home.to_str().unwrap()),
+      ("HOME", home),
       ("TYPESAFE_API_KEY", KEY),
       ("TOOLU_HOST_OVERRIDE", host),
     ])
@@ -62,20 +69,38 @@ impl Sandbox {
 pub(crate) fn context_of(outcome: &Outcome, event: &str) -> String {
   assert_eq!(outcome.exit, Exit::Success);
   assert_eq!(outcome.stderr, None);
-  let text = outcome.stdout.as_deref().unwrap();
+  let text = outcome.stdout.as_deref().unwrap_or("");
   assert!(text.ends_with('}') && !text.contains('\n'));
-  let value = Ordered::parse(text).unwrap();
+  additional_context(text, event)
+}
+
+fn additional_context(text: &str, event: &str) -> String {
+  assert!(Ordered::parse(text).is_ok());
+  let Ok(value) = Ordered::parse(text) else {
+    return String::new();
+  };
   assert_eq!(value.to_text(false), text);
   assert!(matches!(&value, Ordered::Object(top) if top.len() == 1));
-  let output = value.get("hookSpecificOutput").unwrap();
+  hook_context(&value, event)
+}
+
+fn hook_context(value: &Ordered, event: &str) -> String {
+  assert!(value.get("hookSpecificOutput").is_some());
+  let Some(output) = value.get("hookSpecificOutput") else {
+    return String::new();
+  };
   assert!(matches!(output, Ordered::Object(keys) if keys.len() == 2));
   assert_eq!(
     output.get("hookEventName"),
     Some(&Ordered::String(event.into()))
   );
+  assert!(matches!(
+    output.get("additionalContext"),
+    Some(Ordered::String(_))
+  ));
   match output.get("additionalContext") {
     Some(Ordered::String(context)) => context.clone(),
-    other => panic!("no additionalContext: {other:?}"),
+    _ => String::new(),
   }
 }
 
@@ -89,15 +114,39 @@ pub(crate) fn assert_silent(outcome: &Outcome) {
 
 /// The command a mandate tells the agent to call.
 pub(crate) fn called(context: &str) -> &str {
-  let (_, rest) = context.split_once("you MUST call ").unwrap();
-  rest.split_once(" before the decision").unwrap().0
+  assert!(context.contains("you MUST call ") && context.contains(" before the decision"));
+  let Some((_, rest)) = context.split_once("you MUST call ") else {
+    return "";
+  };
+  let Some((command, _)) = rest.split_once(" before the decision") else {
+    return "";
+  };
+  command
 }
 
 /// `/bin/sh -c command` with exactly `env` and its output.
 pub(crate) fn sh(command: &str, env: &Env) -> Output {
   let mut spec = Spec::new(["/bin/sh", "-c", command]);
   spec.env = Some(env.clone());
-  run(&spec).unwrap()
+  let output = run(&spec);
+  assert!(output.is_ok());
+  match output {
+    Ok(output) => output,
+    Err(_) => failed_output(),
+  }
+}
+
+fn failed_output() -> Output {
+  Output {
+    pid: 0,
+    stdout: String::new(),
+    stdout_bytes: Vec::new(),
+    stderr: String::new(),
+    exit_code: 1,
+    duration: Duration::ZERO,
+    timed_out: false,
+    truncated: false,
+  }
 }
 
 /// The skill line every non-`OpenCode` host gets for `plugin`.
