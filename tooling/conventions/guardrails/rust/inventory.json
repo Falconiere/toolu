@@ -131,6 +131,36 @@
       "id": "dist",
       "pass": "crates/xtask/src/tests/dist_test.rs::a_matching_bundle_passes",
       "fail": "crates/xtask/src/tests/dist_test.rs::a_stale_bundle_names_the_path"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-portable-core",
+      "pass": "crates/xtask/src/tests/portable_core_test.rs::the_committed_doc_passes",
+      "fail": "crates/xtask/src/tests/portable_core_test.rs::a_missing_heading_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-workspace",
+      "pass": "crates/xtask/src/tests/package_workspace_test.rs::this_checkout_passes",
+      "fail": "crates/xtask/src/tests/package_workspace_test.rs::a_missing_package_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "final-removal",
+      "pass": "crates/xtask/src/tests/final_removal_test.rs::this_repository_passes",
+      "fail": "crates/xtask/src/tests/final_removal_test.rs::a_shellcheckrc_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "gate-coverage",
+      "pass": "crates/xtask/src/tests/gate_coverage_test.rs::this_repository_matches_inventory",
+      "fail": "crates/xtask/src/tests/gate_coverage_test.rs::an_orphan_inventory_id_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "packaging",
+      "pass": "crates/xtask/src/tests/packaging_test.rs::this_repository_is_packaged",
+      "fail": "crates/xtask/src/tests/packaging_test.rs::a_mismatched_manifest_version_is_a_finding"
     }
   ]
 }

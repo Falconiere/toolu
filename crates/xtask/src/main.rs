@@ -19,8 +19,12 @@ mod coverage;
 mod data;
 mod dist;
 mod docs_cli;
+mod final_removal;
 mod gate;
 mod gate_change;
+mod gate_coverage;
+mod gate_coverage_discover;
+mod gate_coverage_names;
 mod guardrails;
 mod homebrew_formula;
 mod hooks_entries;
@@ -34,6 +38,11 @@ mod measure;
 mod metadata;
 mod options;
 mod output;
+mod package_workspace;
+mod packaging;
+mod packaging_assets;
+mod packaging_catalog;
+mod portable_core;
 mod print_hook;
 mod reach;
 mod source;
@@ -81,6 +90,11 @@ const TASKS: &[(&str, Task)] = &[
   ("check-ci-paths", ci_check::run),
   ("ci-aggregate", ci_aggregate::run),
   ("dist", dist::run),
+  ("check-portable-core", portable_core::run),
+  ("check-workspace", package_workspace::run),
+  ("final-removal", final_removal::run),
+  ("gate-coverage", gate_coverage::run),
+  ("packaging", packaging::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -90,7 +104,8 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist";
+  check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
+  final-removal, gate-coverage, packaging";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
