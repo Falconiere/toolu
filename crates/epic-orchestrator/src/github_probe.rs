@@ -227,6 +227,9 @@ fn page(
       if array && !body.is_array() {
         return Err(Error::Decode("GitHub page is not a JSON array".into()));
       }
+      if !array && !body.is_object() {
+        return Err(Error::Decode("GitHub page is not a JSON object".into()));
+      }
       report.fresh = report.fresh.saturating_add(1);
       match fresh.etag {
         Some(etag) => {
@@ -253,7 +256,9 @@ fn page(
 fn next_link(headers: &[(String, String)]) -> Option<String> {
   let links = headers.iter().find(|(name, _)| name == "link")?.1.as_str();
   for part in links.split(',') {
-    let (url, relation) = part.trim().split_once(';')?;
+    let Some((url, relation)) = part.trim().split_once(';') else {
+      continue;
+    };
     if relation.trim() == "rel=\"next\"" {
       return url
         .trim()

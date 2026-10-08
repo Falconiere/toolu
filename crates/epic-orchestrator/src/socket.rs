@@ -101,8 +101,18 @@ pub(crate) fn serve(
       },
     )
   };
+  join_threads(&socket, &stop, accept, herdr);
+  result
+}
+
+fn join_threads(
+  socket: &std::path::Path,
+  stop: &AtomicBool,
+  accept: thread::JoinHandle<()>,
+  herdr: Option<thread::JoinHandle<()>>,
+) {
   stop.store(true, Ordering::Relaxed);
-  let _wake = UnixStream::connect(&socket);
+  let _wake = UnixStream::connect(socket);
   if let Err(err) = accept.join() {
     let _panic = err;
   }
@@ -111,7 +121,6 @@ pub(crate) fn serve(
   {
     let _panic = err;
   }
-  result
 }
 
 fn spawn_herdr(

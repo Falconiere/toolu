@@ -204,24 +204,6 @@ impl Engine {
     )
   }
 
-  fn persist_watch(&self) -> Result<(), String> {
-    write_value(
-      &self.paths.watch(),
-      &json!({
-        "version": 1,
-        "nextCheckpointAt": self.world.checkpoint_at_ms,
-        "checkpointQueue": [],
-        "nextBudgetAt": self.world.now_ms,
-        "budgetAlertReset": 0,
-        "budgetHoldUntil": 0,
-        "herdrFailures": self.world.herdr_failures,
-        "herdrRetryAt": self.world.herdr_retry_at_ms,
-        "github": self.world.watches,
-        "githubHoldUntil": self.world.github_hold_until_ms,
-      }),
-    )
-  }
-
   fn apply(&mut self, step: Step) -> Result<Applied, String> {
     match step {
       Step::Journal(record) => self.apply_journal(record),

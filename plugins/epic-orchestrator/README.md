@@ -101,7 +101,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | --- | --- |
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
 | `start <state-dir>` | Register that epic directory and ensure the engine. |
-| `status [epic]` | `engine`, `paused`, `epics`, `issues`, and `attention` as one JSON document. |
+| `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
 | `ack <key>` | Clear a stall attention item. |
 | `answer <key> <text>` | Record an answer on the journal. |
@@ -111,6 +111,28 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `service install` | Write the user unit. It does not start systemd. |
 | `token new` | Rotate the status bearer token in secrets.json. |
 | `planned` | Lists `graph`, `route`, `launch`, `finish`, `close`, `release`, `jira`, `probe`, `gate`, and `queue` (#435, #448). |
+
+### Fixed GitHub checks
+
+The resident engine checks registered babysit PRs, their queued base branches,
+the registered epic's sub-issues and open blockers every 180 seconds. A worker
+report adds an immediate check while leaving the next scheduled slot in place.
+The clock, REST `ETag`s and rate observations survive restart in `watch.json`.
+An idle engine with no watched PR sends no GitHub requests.
+
+Each PR check probes pull request state, head checks and status, comments and
+reviews with conditional REST requests. An unchanged `304` costs no REST
+primary point. The engine also calls the full `BabysitTick` for every watched
+babysit PR; its GraphQL cost is separate from REST cost in the journal and in
+`toolu epic status`. The production tick remains pending in #433, so its
+current `NotPorted` result raises attention instead of claiming clearance.
+
+`Retry-After` pauses GitHub calls for the requested duration, then the fixed
+clock resumes. A low primary remaining budget pauses launches and merges while
+checks continue: the native floors preserve the existing watcher defaults of
+1,000 REST and 500 GraphQL points. Status includes each watched PR's last and
+next check times and the latest separate budget counters. The engine creates
+no webhook or GitHub listener.
 
 ## State directory
 

@@ -439,10 +439,38 @@
       "description": "toolu epic status --json.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["engine", "paused", "epics", "issues", "attention"],
+      "required": ["engine", "paused", "epics", "issues", "attention", "github"],
       "properties": {
         "engine": { "enum": ["running", "down"] },
         "paused": { "type": "boolean" },
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["rest", "graphql", "holdUntil", "effectsHeld"],
+          "properties": {
+            "rest": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["rate", "points"],
+              "properties": {
+                "rate": { "type": ["object", "null"] },
+                "points": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "graphql": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["remaining", "resetAt", "points"],
+              "properties": {
+                "remaining": { "type": ["integer", "null"], "minimum": 0 },
+                "resetAt": { "type": ["integer", "null"], "minimum": 0 },
+                "points": { "type": "integer", "minimum": 0 }
+              }
+            },
+            "holdUntil": { "type": "integer", "minimum": 0 },
+            "effectsHeld": { "type": "boolean" }
+          }
+        },
         "epics": {
           "type": "array",
           "items": {
@@ -457,12 +485,21 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["key", "epic", "phase", "stage"],
+            "required": ["key", "epic", "phase", "stage", "github"],
             "properties": {
               "key": { "type": "string" },
               "epic": { "type": "string" },
               "phase": { "type": "string" },
-              "stage": { "type": "string" }
+              "stage": { "type": "string" },
+              "github": {
+                "type": ["object", "null"],
+                "additionalProperties": false,
+                "required": ["lastCheckAt", "nextCheckAt"],
+                "properties": {
+                  "lastCheckAt": { "type": ["integer", "null"], "minimum": 0 },
+                  "nextCheckAt": { "type": "integer", "minimum": 0 }
+                }
+              }
             }
           }
         },

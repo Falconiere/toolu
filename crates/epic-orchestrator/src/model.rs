@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::journal::Record;
 use crate::watch::Watch;
+use toolu_github::RateLimit;
 
 /// What the engine asks the outside world to do.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -156,6 +157,16 @@ pub(crate) struct World {
   pub watches: BTreeMap<String, Watch>,
   /// All GitHub requests pause until this deadline after `retry-after`.
   pub github_hold_until_ms: u64,
+  /// Latest REST primary budget from a GitHub response.
+  pub rest_rate: Option<RateLimit>,
+  /// Latest GraphQL primary points remaining.
+  pub graphql_remaining: Option<u64>,
+  /// GraphQL primary reset in Unix seconds.
+  pub graphql_reset_at: Option<u64>,
+  /// REST primary points recorded by this engine.
+  pub rest_points: u64,
+  /// GraphQL points recorded by babysit ticks.
+  pub graphql_points: u64,
   /// Judgment queue.
   pub attention: Vec<Attention>,
   /// Local counter for tokens and attention.
@@ -220,6 +231,11 @@ impl World {
       epic_refs: BTreeMap::new(),
       watches: BTreeMap::new(),
       github_hold_until_ms: 0,
+      rest_rate: None,
+      graphql_remaining: None,
+      graphql_reset_at: None,
+      rest_points: 0,
+      graphql_points: 0,
       attention: Vec::new(),
       seq: 0,
       paused_all: false,

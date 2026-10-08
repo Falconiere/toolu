@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::model::World;
+use crate::model::{Issue, World};
 
 /// One interval for every GitHub watch, with no adaptive backoff (#447).
 pub(crate) const CHECK_MS: u64 = 180_000;
@@ -142,44 +142,7 @@ pub(crate) fn take_due(world: &mut World) -> Vec<(String, Cause)> {
 pub(crate) fn sync(world: &mut World) {
   let mut wanted = BTreeMap::new();
   for issue in world.issues.values() {
-    if issue.pr.is_none() || issue.repo.is_empty() || !waiting(&issue.phase, &issue.stage) {
-      continue;
-    }
-    if let Some(pr) = issue.pr {
-      let kind = Kind::Pr {
-        key: issue.key.clone(),
-        repo: issue.repo.clone(),
-        number: pr,
-      };
-      wanted.insert(id(&kind), kind);
-    }
-    if issue.phase == "ready" && !issue.base.is_empty() {
-      let kind = Kind::Base {
-        repo: issue.repo.clone(),
-        branch: issue.base.clone(),
-      };
-      wanted.insert(id(&kind), kind);
-    }
-    if let Some(reference) = world.epic_refs.get(&issue.epic)
-      && let Some((repo, number)) = reference_parts(reference)
-    {
-      let kind = Kind::Epic {
-        key: issue.epic.clone(),
-        repo: repo.to_owned(),
-        number,
-      };
-      wanted.insert(id(&kind), kind);
-    }
-    for reference in &issue.blockers {
-      if let Some((repo, number)) = reference_parts(reference) {
-        let kind = Kind::Blocker {
-          key: issue.epic.clone(),
-          repo: repo.to_owned(),
-          number,
-        };
-        wanted.insert(id(&kind), kind);
-      }
-    }
+    insert_issue(world, issue, &mut wanted);
   }
   world.watches.retain(|key, _| wanted.contains_key(key));
   for (key, kind) in wanted {
@@ -188,6 +151,60 @@ pub(crate) fn sync(world: &mut World) {
       .entry(key)
       .or_insert_with(|| Watch::new(kind, world.now_ms));
   }
+}
+
+fn insert_issue(world: &World, issue: &Issue, wanted: &mut BTreeMap<String, Kind>) {
+  if issue.pr.is_none() || issue.repo.is_empty() || !waiting(&issue.phase, &issue.stage) {
+    return;
+  }
+  if let Some(pr) = issue.pr {
+    let kind = Kind::Pr {
+      key: issue.key.clone(),
+      repo: issue.repo.clone(),
+      number: pr,
+    };
+    wanted.insert(id(&kind), kind);
+  }
+  if issue.phase == "ready"
+    && let Some(base) = base_for(world, issue)
+    && !base.is_empty()
+  {
+    let kind = Kind::Base {
+      repo: issue.repo.clone(),
+      branch: base.to_owned(),
+    };
+    wanted.insert(id(&kind), kind);
+  }
+  if let Some(reference) = world.epic_refs.get(&issue.epic)
+    && let Some((repo, number)) = reference_parts(reference)
+  {
+    let kind = Kind::Epic {
+      key: issue.epic.clone(),
+      repo: repo.to_owned(),
+      number,
+    };
+    wanted.insert(id(&kind), kind);
+  }
+  for reference in &issue.blockers {
+    if let Some((repo, number)) = reference_parts(reference) {
+      let kind = Kind::Blocker {
+        key: issue.epic.clone(),
+        repo: repo.to_owned(),
+        number,
+      };
+      wanted.insert(id(&kind), kind);
+    }
+  }
+}
+
+fn base_for<'a>(world: &'a World, issue: &'a Issue) -> Option<&'a str> {
+  if !issue.base.is_empty() {
+    return Some(&issue.base);
+  }
+  world.watches.values().find_map(|watch| match &watch.kind {
+    Kind::Pr { key, .. } if key == &issue.key => Some(watch.base_ref.as_str()),
+    Kind::Pr { .. } | Kind::Base { .. } | Kind::Epic { .. } | Kind::Blocker { .. } => None,
+  })
 }
 
 fn waiting(phase: &str, stage: &str) -> bool {

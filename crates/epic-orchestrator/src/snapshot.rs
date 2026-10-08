@@ -69,6 +69,19 @@ fn apply_watch(world: &mut World, watch: &Value) {
   if let Some(until) = watch.get("githubHoldUntil").and_then(Value::as_u64) {
     world.github_hold_until_ms = until;
   }
+  world.rest_rate = watch
+    .get("githubRestRate")
+    .and_then(|rate| serde_json::from_value(rate.clone()).ok());
+  world.graphql_remaining = watch.get("githubGraphqlRemaining").and_then(Value::as_u64);
+  world.graphql_reset_at = watch.get("githubGraphqlResetAt").and_then(Value::as_u64);
+  world.rest_points = watch
+    .get("githubRestPoints")
+    .and_then(Value::as_u64)
+    .unwrap_or(0);
+  world.graphql_points = watch
+    .get("githubGraphqlPoints")
+    .and_then(Value::as_u64)
+    .unwrap_or(0);
 }
 
 fn load_registry(world: &mut World, registry: &Value) -> Result<BTreeMap<String, String>, String> {

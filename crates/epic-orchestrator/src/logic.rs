@@ -145,10 +145,11 @@ fn pending_step(world: &World) -> Option<Step> {
     if paused(world, issue) {
       return None;
     }
-    issue
-      .pending
-      .as_ref()
-      .map(|pending| step_for(issue, pending))
+    issue.pending.as_ref().and_then(|pending| {
+      (!crate::github_budget::low(world)
+        || !matches!(pending.action, Action::Launch | Action::Merge))
+      .then(|| step_for(issue, pending))
+    })
   })
 }
 
@@ -235,7 +236,7 @@ fn chain(stage: &mut String, pending: &Pending) -> Option<Action> {
 }
 
 fn arm_launch(world: &mut World) {
-  if world.draining || world.paused_all || busy(world) {
+  if world.draining || world.paused_all || crate::github_budget::low(world) || busy(world) {
     return;
   }
   let Some(key) = launchable(world) else {
