@@ -70,7 +70,7 @@ Port shared push targeting and the three workflow gates, then add the two standa
   {
     "id": "docs",
     "title": "Document completed native built-ins and standalone hooks while retaining the #425 switch boundary",
-    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo xtask check-markdown-cli && bun run test:docs",
+    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo xtask check-markdown-cli && PATH=/root/.cargo/bin:/root/.local/bin:$PATH bun run test:docs",
     "ac_refs": ["AC-3", "AC-4"],
     "depends_on": ["fixture-parity"],
     "paths": ["docs/registry.md", "tools/toolu-opencode/generated/resources/repo/docs/registry.md", "docs/toolu/brainstorms/2026-10-08-pre-tool-gates-c.md", "docs/toolu/specs/2026-10-08-pre-tool-gates-c-design.md", "docs/toolu/plans/2026-10-08-pre-tool-gates-c.md"],
