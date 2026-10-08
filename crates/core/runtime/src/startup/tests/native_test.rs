@@ -42,11 +42,26 @@ fn a_binary_outside_path_is_quoted_once() {
   let (dir, env) = sandbox();
   let local = dir.path().join("home with 'quote'").join(".local/bin");
   fs::create_dir_all(&local).unwrap();
-  script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
+  let binary = script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
+  let quoted = format!("'{}'", binary.to_str().unwrap().replace('\'', r"'\''"));
   let first = native_toolu_advice(&env, Some("local")).unwrap();
-  assert!(first.contains(".local/bin/toolu"));
-  assert!(first.contains("native binary for this session:"));
-  assert!(first.contains("quote'\"'\"'"));
+  assert_eq!(
+    first,
+    format!(
+      "toolu: native binary for this session: {quoted}. Use that absolute path for toolu commands."
+    )
+  );
+  let notice = dir.path().join("config/toolu/native-notices");
+  assert_eq!(
+    fs::metadata(&notice).unwrap().permissions().mode() & 0o777,
+    0o700
+  );
+  let marker = notice.join("249f1fb6f3a680e8");
+  assert!(marker.is_file());
+  assert_eq!(
+    fs::metadata(&marker).unwrap().permissions().mode() & 0o777,
+    0o600
+  );
   assert_eq!(native_toolu_advice(&env, Some("local")), None);
 }
 
@@ -56,16 +71,17 @@ fn no_binary_prints_both_install_commands_once() {
   let first = native_toolu_advice(&env, Some("missing")).unwrap();
   assert_eq!(
     first,
-    "toolu: native binary not found. Install it with `curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash` or `brew install falconiere/tap/toolu`, then use `toolu` directly."
+    "toolu: native binary not found in the agent command shell. Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash or brew install falconiere/tap/toolu. Restart the session."
   );
   assert_eq!(native_toolu_advice(&env, Some("missing")), None);
 }
 
 #[test]
 fn a_missing_session_id_prints_every_time() {
-  let (_dir, env) = sandbox();
+  let (dir, env) = sandbox();
   let first = native_toolu_advice(&env, None).unwrap();
   assert_eq!(native_toolu_advice(&env, Some("")), Some(first));
+  assert!(!dir.path().join("config/toolu/native-notices").exists());
 }
 
 #[test]
@@ -74,9 +90,13 @@ fn a_wrapper_on_path_yields_to_a_known_native_binary() {
   script(&dir.path().join("bin"), "exit 1");
   let local = dir.path().join("home with 'quote'").join(".local/bin");
   fs::create_dir_all(&local).unwrap();
-  script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
+  let binary = script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
   env = env.with("PATH", dir.path().join("bin").to_str().unwrap());
-  let advice = native_toolu_advice(&env, Some("wrapper")).unwrap();
-  assert!(advice.contains(".local/bin/toolu"));
-  assert!(!advice.contains("not found"));
+  let quoted = format!("'{}'", binary.to_str().unwrap().replace('\'', r"'\''"));
+  assert_eq!(
+    native_toolu_advice(&env, Some("wrapper")).unwrap(),
+    format!(
+      "toolu: native binary for this session: {quoted}. Use that absolute path for toolu commands."
+    )
+  );
 }

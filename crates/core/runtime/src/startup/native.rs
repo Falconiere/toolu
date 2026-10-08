@@ -2,8 +2,9 @@
 //! (`packages/toolu-core/src/startup/native-toolu.ts`). A probe error is not a
 //! native binary, so the caller still gets the install line.
 
-use std::fs::OpenOptions;
+use std::fs::{DirBuilder, OpenOptions};
 use std::io::ErrorKind;
+use std::os::unix::fs::{DirBuilderExt as _, OpenOptionsExt as _};
 use std::path::{Path, PathBuf};
 
 use crate::env::Env;
@@ -33,14 +34,14 @@ fn advice_line(env: &Env) -> String {
       shell_quote(&path)
     ),
     None => format!(
-      "toolu: native binary not found. Install it with `{INSTALLER}` or `{HOMEBREW}`, \
-then use `toolu` directly."
+      "toolu: native binary not found in the agent command shell. \
+Install it with: {INSTALLER} or {HOMEBREW}. Restart the session."
     ),
   }
 }
 
 fn shell_quote(path: &Path) -> String {
-  format!("'{}'", path.to_string_lossy().replace('\'', r#"'"'"'"#))
+  format!("'{}'", path.to_string_lossy().replace('\'', r"'\''"))
 }
 
 /// `true` when this call may print. A missing id prints every time. A present
@@ -53,12 +54,18 @@ fn claim_notice(env: &Env, session_id: Option<&str>) -> bool {
     .config_root()
     .join("toolu")
     .join("native-notices");
-  if std::fs::create_dir_all(&dir).is_err() {
+  if DirBuilder::new()
+    .recursive(true)
+    .mode(0o700)
+    .create(&dir)
+    .is_err()
+  {
     return true;
   }
   match OpenOptions::new()
     .write(true)
     .create_new(true)
+    .mode(0o600)
     .open(dir.join(notice_name(id)))
   {
     Err(error) if error.kind() == ErrorKind::AlreadyExists => false,

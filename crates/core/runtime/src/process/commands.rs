@@ -100,7 +100,7 @@ fn command_v(env: &Env) -> Result<Option<PathBuf>, String> {
 fn known_candidates(env: &Env) -> Vec<PathBuf> {
   let mut paths = Vec::new();
   if let Some(bin) = env.get("TOOLU_BIN") {
-    paths.push(PathBuf::from(bin));
+    paths.push(absolute(PathBuf::from(bin)));
   }
   paths.extend([
     PathBuf::from("/opt/homebrew/bin/toolu"),
@@ -108,9 +108,19 @@ fn known_candidates(env: &Env) -> Vec<PathBuf> {
     PathBuf::from("/home/linuxbrew/.linuxbrew/bin/toolu"),
   ]);
   if let Some(home) = env.get("HOME") {
-    paths.push(PathBuf::from(home).join(".local/bin/toolu"));
+    paths.push(absolute(PathBuf::from(home).join(".local/bin/toolu")));
   }
   paths
+}
+
+fn absolute(path: PathBuf) -> PathBuf {
+  if path.is_absolute() {
+    return path;
+  }
+  match std::env::current_dir() {
+    Ok(cwd) => cwd.join(path),
+    Err(_) => path,
+  }
 }
 
 fn protocol_is_native(env: &Env, path: &Path) -> Result<bool, String> {
