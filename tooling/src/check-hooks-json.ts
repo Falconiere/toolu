@@ -207,9 +207,6 @@ function checkNativeHook(site: HookSite, hook: Hook): HooksJsonProblem[] {
     hook.timeout > 600
   )
     problems.push({ file, where, problem: "timeout must be an integer from 1 to 600" });
-  const bundle = `plugins/${site.plugin}/hooks/dist/${entry}.js`;
-  if (!existsSync(join(site.root, bundle)))
-    problems.push({ file, where, problem: `bundle ${bundle} is not committed` });
   return problems;
 }
 

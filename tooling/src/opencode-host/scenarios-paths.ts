@@ -2,8 +2,8 @@
  * Live path and environment scenarios (#343) on the pinned host.
  *
  * - `entry.helper-env`: the project and the plugin catalog sit under paths with
- *   spaces and `bun` is not on PATH. The agent's bash still runs a published
- *   Jev helper through the resolved Bun, a toolu core
+ *   spaces and `bun` is not on PATH. The agent's bash still runs the published
+ *   Jev helper, which execs `toolu jev`, a toolu core
  *   CLI through `$TOOLU_PLUGIN_ROOT`, and finds a leaf plugin's own root.
  * - `entry.worktree-state`: a main checkout and its linked worktree enable
  *   different plugins. Each keeps its own data root, and the main checkout's
@@ -55,7 +55,7 @@ function git(cwd: string, args: string[]): void {
 
 function helperScript(): Scripts {
   const command = [
-    `TYPESAFE_API_KEY= "$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jev/jev.sh" --help > jev.txt 2>&1; echo "jev=$?" >> markers.txt`,
+    `TYPESAFE_API_KEY= "$TOOLU_CONFIG_DIR/jev/jev.sh" --help > jev.txt 2>&1; echo "jev=$?" >> markers.txt`,
     `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" path > ledger.txt 2>&1; echo "ledger=$?" >> markers.txt`,
     `test -f "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts"; echo "epic=$?" >> markers.txt`,
     `printf %s "$HOME" > home.txt`,
@@ -82,7 +82,7 @@ async function helperEnv(ctx: EntryContext): Promise<EntryResult> {
     writeFileSync(join(project, SELECTION), selection(["jev", "epic-orchestrator"]));
     installShim(s, project);
     s.env.TOOLU_REPO_ROOT = catalog;
-    s.env.PATH = "/usr/bin:/bin";
+    s.env.PATH = `${join(ROOT, "target/debug")}:/usr/bin:/bin`;
     const hostRun = await runHost(
       ctx.bin,
       s,

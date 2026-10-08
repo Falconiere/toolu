@@ -44,7 +44,7 @@ One difference from TypeScript: a choice option whose key looks like an integer
 
 ## Retries
 
-A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does.
+A call makes up to three attempts.
 
 - **Retried statuses:** 408, 429 and 5xx, after a delay in pause units
   (`Config::pause`, 1 s):
@@ -60,7 +60,7 @@ A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does.
 
 ## Replies
 
-The reply is checked as `jev/response.ts` checks it, and anything else is
+The reply is checked the way the TypeScript client checked it, and anything else is
 `Error::InvalidResponse`:
 
 - a non-empty model;
@@ -78,6 +78,6 @@ the CLI prints unchanged.
 ## Tests
 
 `tests/cases.rs` and `tests/retries.rs` replay the request and response cases
-of `plugins/jev/hooks/src/__tests__/jev.test.ts` that do not concern argv. They
+that do not concern argv. They
 run against `toolu-http-test-support`'s real TLS origin and CONNECT proxy, with
 a 10 ms pause unit.

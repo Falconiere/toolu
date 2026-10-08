@@ -302,21 +302,23 @@ test("generated status skill runs the selected plugin's report under shell.env",
   expect(statusline?.commands).toEqual([]);
 });
 
-test("generated Jev skill and its examples name only the OpenCode wrapper and ignore .env", () => {
+test("generated Jev skill and its examples name toolu jev and ignore .env", () => {
   const root = repoRoot();
   const out = mkdtempSync(join(tmpBase, "toolu-surface-jev-"));
   const selected = selectPluginsByEnabledNames(join(root, "plugins"), ["jev"]);
   if (!selected.ok) throw new Error(selected.reason);
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
-  const wrapper =
-    '# OpenCode\nJEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"\n';
-  for (const file of ["SKILL.md", "references/problem-solving.md"]) {
-    const text = plan.files.get(join(out, "skills/jev-jev", file)) ?? "";
-    expect(text).toContain(wrapper);
+  const skill = plan.files.get(join(out, "skills/jev-jev/SKILL.md")) ?? "";
+  const patterns = plan.files.get(join(out, "skills/jev-jev/references/problem-solving.md")) ?? "";
+  expect(skill).toContain("does not load a project `.env` file");
+  expect(patterns).toContain("never read `.env`");
+  for (const text of [skill, patterns]) {
+    expect(text).toContain("toolu jev");
     expect(text).not.toContain("CODEX_HOME");
     expect(text).not.toContain("Claude Code");
-    expect(text).toContain('"$JEV_BUN" --no-env-file "$JEV"');
-    expect(text).not.toContain('"$JEV_BUN" "$JEV"');
+    expect(text).not.toContain("jev.sh");
+    expect(text).not.toContain("hooks/dist");
+    expect(text).not.toContain("--no-env-file");
   }
 });
 
@@ -444,8 +446,8 @@ test("resource links in generated skills resolve inside the output tree", () => 
     true,
   );
   const jevReference = plan.files.get(join(out, "skills/jev-jev/references/problem-solving.md"));
-  expect(jevReference).toContain("# OpenCode\nJEV=");
-  expect(jevReference).toContain("${XDG_CONFIG_HOME:-$HOME/.config}/opencode");
+  expect(jevReference).toContain("toolu jev");
+  expect(jevReference).not.toContain("jev.sh");
   expect(jevReference).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
 });
 
