@@ -18,6 +18,8 @@ pub struct Ctx {
   pub host: Option<Host>,
   /// `--config-dir`: where the toolu config lives instead of the host's default.
   pub config_dir: Option<PathBuf>,
+  /// Stdin text when a verb reads `-`. `None` when it does not, or the read failed.
+  pub stdin: Option<String>,
 }
 
 /// What a verb produced: the exit, the data for stdout and the diagnostic for stderr.

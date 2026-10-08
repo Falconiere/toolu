@@ -15,6 +15,7 @@ use toolu_protocol::event::is_enforcing;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
@@ -68,8 +69,50 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
       request.plugin_root.as_deref().map(Path::new),
     );
   }
+  if let Some(outcome) = jev_hook(request, context) {
+    return prefix(advisory, outcome);
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
+}
+
+/// The three jev hooks. Anything else stays the "has no hook" path.
+fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "jev" {
+    return None;
+  }
+  let owned;
+  let env = if let Some(env) = context.env {
+    env
+  } else {
+    owned = Env::process();
+    &owned
+  };
+  let stdin = (context.stdin)().ok();
+  let root = Path::new(request.plugin_root.as_deref().unwrap_or(""));
+  let text = stdin.as_deref();
+  let outcome = match request.name.as_str() {
+    "session-start" => toolu_jev::session_start(env, root, text),
+    "user-prompt-submit" => toolu_jev::user_prompt_submit(env, root, text),
+    "check-binary" => toolu_jev::check_binary(env, text),
+    _ => return None,
+  };
+  Some(outcome)
+}
+
+/// A `SessionStart` skew advisory is its own `systemMessage` line, before the hook JSON.
+fn prefix(advisory: Option<String>, outcome: Outcome) -> Outcome {
+  let Some(text) = advisory else {
+    return outcome;
+  };
+  let line = system_message(&text);
+  Outcome {
+    stdout: Some(match outcome.stdout {
+      Some(body) => format!("{line}\n{body}"),
+      None => line,
+    }),
+    ..outcome
+  }
 }
 
 /// The tool hook `request` names: toolu's `pre-tools` or `post-tools` (#418),
@@ -82,12 +125,9 @@ fn tool_phase(request: &HookRequest) -> Option<Phase> {
   }
 }
 
-/// The named hook. Besides the tool hooks above, only toolu's `session-start`
-/// is native so far, as the spec of #412 sets: it carries the runtime
-/// diagnostic that toolu's Bun `session-start` prints today. Every other hook, another plugin's
-/// `session-start` included, is ported by its own issue (#424, #430-#432);
-/// until then a native entry for it reports "has no hook" — a `systemMessage`
-/// on a context event such as `SessionStart`, a block on an enforcing one.
+/// The named hook. toolu's `session-start` carries the runtime diagnostic.
+/// jev's three hooks are dispatched above. Every other name reports "has no hook":
+/// a `systemMessage` on a context event such as `SessionStart`, a block on an enforcing one.
 fn dispatch(
   request: &HookRequest,
   context: &Context<'_>,

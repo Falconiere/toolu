@@ -1,6 +1,9 @@
-use std::path::PathBuf;
+use std::fs;
+use std::os::unix::fs::PermissionsExt as _;
+use std::path::{Path, PathBuf};
 
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 
 use super::run;
 use crate::fast::HookRequest;
@@ -40,6 +43,7 @@ fn run_hook(request: &HookRequest) -> Outcome {
     &Context {
       exe: &exe,
       stdin: &startup,
+      env: None,
     },
   )
 }
@@ -135,6 +139,7 @@ fn a_session_start_with_nothing_to_say_prints_nothing() {
   let context = Context {
     exe: &no_exe,
     stdin: &quiet,
+    env: None,
   };
   let outcome = run(
     &request("session-start", Some("SessionStart"), None),
@@ -151,6 +156,7 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
   let context = Context {
     exe: &no_exe,
     stdin: &broken,
+    env: None,
   };
   let outcome = run(
     &request("session-start", Some("SessionStart"), None),
@@ -172,6 +178,7 @@ fn agent_tier_fails_open_when_payload_is_unreadable() {
   let context = Context {
     exe: &no_exe,
     stdin: &broken,
+    env: None,
   };
   let outcome = run(&request("agent-tier", Some("PreToolUse"), None), &context);
   assert_eq!(outcome.exit.code(), 0);
@@ -186,6 +193,7 @@ fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
   let context = Context {
     exe: &no_exe,
     stdin: &payload,
+    env: None,
   };
   let outcome = run(&request("mcp-tools", Some("PreToolUse"), None), &context);
   assert_eq!(outcome.exit.code(), 0);
@@ -195,18 +203,128 @@ fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
 
 #[test]
 fn another_plugins_session_start_advises_and_never_blocks() {
-  let jev = HookRequest {
-    plugin: "jev".to_owned(),
+  let other = HookRequest {
+    plugin: "statusline".to_owned(),
     name: "session-start".to_owned(),
     event: Some("SessionStart".to_owned()),
     plugin_root: None,
   };
-  let outcome = run_hook(&jev);
+  let outcome = run_hook(&other);
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stderr, None);
   assert!(message(outcome.stdout).starts_with(&format!(
-    "jev plugin: toolu {VERSION} has no hook session-start"
+    "statusline plugin: toolu {VERSION} has no hook session-start"
   )));
+}
+
+fn jev_home() -> (tempfile::TempDir, Env) {
+  let dir = tempfile::tempdir().unwrap();
+  let home = dir.path().join("home");
+  let config = dir.path().join("config");
+  fs::create_dir(&home).unwrap();
+  let env = Env::from_pairs([
+    ("HOME", home.to_str().unwrap()),
+    ("TOOLU_CONFIG_DIR", config.to_str().unwrap()),
+    ("PATH", dir.path().to_str().unwrap()),
+  ]);
+  (dir, env)
+}
+
+fn shim(dir: &Path, version: &str) {
+  fs::create_dir_all(dir.join("scripts")).unwrap();
+  fs::create_dir_all(dir.join(".claude-plugin")).unwrap();
+  fs::write(
+    dir.join("scripts/jev.sh"),
+    "#!/bin/sh\nexec toolu jev \"$@\"\n",
+  )
+  .unwrap();
+  fs::set_permissions(
+    dir.join("scripts/jev.sh"),
+    fs::Permissions::from_mode(0o755),
+  )
+  .unwrap();
+  fs::write(
+    dir.join(".claude-plugin/plugin.json"),
+    format!(r#"{{"name":"jev","version":"{version}","hookProtocol":1}}"#),
+  )
+  .unwrap();
+}
+
+fn run_jev(env: &Env, name: &str, event: &str, root: &Path, stdin: &'static str) -> Outcome {
+  let exe = || None;
+  let read = move || Ok(stdin.to_owned());
+  let request = HookRequest {
+    plugin: "jev".to_owned(),
+    name: name.to_owned(),
+    event: Some(event.to_owned()),
+    plugin_root: Some(root.display().to_string()),
+  };
+  run(
+    &request,
+    &Context {
+      exe: &exe,
+      stdin: &read,
+      env: Some(env),
+    },
+  )
+}
+
+#[test]
+fn jev_session_start_prints_context_and_a_skew_line_before_it() {
+  let (dir, env) = jev_home();
+  shim(dir.path(), "999.0.0");
+  let outcome = run_jev(&env, "session-start", "SessionStart", dir.path(), "{}");
+  let stdout = outcome.stdout.unwrap();
+  let mut lines = stdout.lines();
+  let advisory: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+  let body: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
+  assert!(
+    advisory["systemMessage"]
+      .as_str()
+      .unwrap()
+      .contains("999.0.0")
+  );
+  let context = body["hookSpecificOutput"]["additionalContext"]
+    .as_str()
+    .unwrap();
+  assert!(context.contains("toolu jev") && lines.next().is_none());
+}
+
+#[test]
+fn jev_prompt_and_check_binary_go_through_the_same_dispatch() {
+  let (dir, env) = jev_home();
+  let root = dir.path();
+  shim(root, VERSION);
+  let payload = r#"{"prompt":"rank these approaches"}"#;
+  run_jev(&env, "session-start", "SessionStart", root, "{}");
+  let prompt = run_jev(
+    &env,
+    "user-prompt-submit",
+    "UserPromptSubmit",
+    root,
+    payload,
+  );
+  assert!(prompt.stdout.unwrap().contains("toolu jev"));
+  let id = r#"{"session_id":"s"}"#;
+  assert!(
+    run_jev(&env, "check-binary", "SessionStart", root, id)
+      .stdout
+      .unwrap()
+      .contains("toolu:")
+  );
+  assert_eq!(
+    run_jev(&env, "check-binary", "SessionStart", root, id).stdout,
+    None
+  );
+}
+
+#[test]
+fn an_unknown_jev_hook_is_still_reported() {
+  let mut jev = request("not-a-hook", Some("SessionStart"), None);
+  jev.plugin = "jev".to_owned();
+  let outcome = run_hook(&jev);
+  assert_eq!((outcome.exit.code(), outcome.stderr.is_none()), (0, true));
+  assert!(message(outcome.stdout).contains("has no hook not-a-hook"));
 }
 
 #[test]

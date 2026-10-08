@@ -35,7 +35,13 @@ pub fn command() -> Command {
 /// Run a `toolu jev` verb against Jev's endpoint with the process environment.
 /// It reads no stdin; `needs_stdin` tells the caller when `execute` needs it.
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  execute(matches, ctx, &Env::process(), Config::default(), None)
+  execute(
+    matches,
+    ctx,
+    &Env::process(),
+    Config::default(),
+    ctx.stdin.as_deref(),
+  )
 }
 
 /// Whether the verb in `matches` reads stdin: `--state -`, or `ask -`.
