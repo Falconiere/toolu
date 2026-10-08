@@ -1,8 +1,7 @@
 //! The user-prompt-submit ladder (`prompt-hints.ts`). Patterns are the bash
-//! `=~` forms: they anchor where the script anchored, and `WB`/`WE` keep
-//! `move` out of `remove`.
-
-use regex::Regex;
+//! `=~` forms: they anchor where the script anchored, and a non-letter keeps
+//! `move` out of `remove`. The terms are a closed list, so this module does
+//! not link the `regex` crate.
 
 const STRUCTURAL_HINT: &str = "Structural pattern: use `ast-grep run --pattern` (not Grep).";
 const MISSING_AST_GREP: &str =
@@ -11,8 +10,96 @@ const SCALE_HINT: &str = "Possibly large task — if it splits into genuinely in
 const BRAINSTORM_HINT: &str = "Scope may be unresolved — consider the `brainstorm` skill for material design choices; skip it when the request is already bounded or mechanical.";
 const RESEARCH_HINT: &str = "External research — delegate to the research-agent subagent (uses native web search and fetch) to keep main context lean.";
 
-const TRIVIAL: &str = r"^(y|n|yes|no|ok|sure|thanks|thank you|go ahead|looks good|lgtm|correct|exactly|right|done|nah|nope|yep|yup|continue)[.!?]?$";
-const VAGUE: &str = r"^(fix|help|debug|check|look|see|run|do|try)[ \t\n\v\f\r]*$";
+const TRIVIAL: &[&str] = &[
+  "y",
+  "n",
+  "yes",
+  "no",
+  "ok",
+  "sure",
+  "thanks",
+  "thank you",
+  "go ahead",
+  "looks good",
+  "lgtm",
+  "correct",
+  "exactly",
+  "right",
+  "done",
+  "nah",
+  "nope",
+  "yep",
+  "yup",
+  "continue",
+];
+const VAGUE: &[&str] = &[
+  "fix", "help", "debug", "check", "look", "see", "run", "do", "try",
+];
+const GATE: &[&str] = &[
+  "fix", "resolve", "error", "warning", "test", "lint", "check", "type",
+];
+const STRUCTURAL: &[&str] = &[
+  "pattern",
+  "struct",
+  "trait",
+  "interface",
+  "all functions",
+  "all methods",
+  "every function",
+  "every method",
+  "syntax",
+  "code structure",
+  "signature",
+  "return type",
+  "where clause",
+  "lifetime",
+  "closure",
+  "macro",
+  "decorator",
+  "annotation",
+];
+const RENAME: &[&str] = &["rename", "move", "extract", "split"];
+const TESTS: &[&str] = &["test", "spec", "coverage"];
+const FIX: &[&str] = &["fix", "debug", "error", "bug", "issue"];
+const DELETE: &[&str] = &["delete", "remove", "clean up"];
+const REVIEW: &[&str] = &["review", "audit"];
+const SCALE: &[&str] = &["migrate", "codebase-wide", "throughout", "end-to-end"];
+const DESIGNED: &[&str] = &[
+  "brainstorm",
+  "brainstorms",
+  "design",
+  "designs",
+  "scope",
+  "scopes",
+  "approach",
+  "approaches",
+  "architecture",
+  "architectures",
+  "tradeoff",
+  "tradeoffs",
+  "trade-off",
+  "trade-offs",
+  "redesign",
+  "redesigns",
+  "overhaul",
+  "overhauls",
+];
+const NEW_TAILS: &[&str] = &["feature", "workflow", "system"];
+const RESEARCH: &[&str] = &[
+  "latest",
+  "docs for",
+  "library docs",
+  "api reference",
+  "api docs",
+  "changelog",
+  "release notes",
+  "best practice",
+  "best practices",
+  "look up",
+  "search the web",
+  "web search",
+  "how to use",
+];
 
 /// What a lowered prompt should receive.
 #[derive(Debug, PartialEq, Eq)]
@@ -35,9 +122,9 @@ pub(crate) struct HintOptions {
 
 /// Trivial replies and slash commands get nothing; a one-word verb is blocked.
 pub(crate) fn prompt_gate(lower: &str) -> PromptGate {
-  if is_match(TRIVIAL, lower) || lower.starts_with('/') {
+  if is_trivial(lower) || lower.starts_with('/') {
     PromptGate::Skip
-  } else if is_match(VAGUE, lower) {
+  } else if is_vague(lower) {
     PromptGate::Block
   } else {
     PromptGate::Hint
@@ -46,10 +133,7 @@ pub(crate) fn prompt_gate(lower: &str) -> PromptGate {
 
 /// A failing gate is worth mentioning unless the prompt is already about fixing.
 pub(crate) fn mentions_gate_topic(lower: &str) -> bool {
-  is_match(
-    &words("fix|resolve|error|warning|test|lint|check|type"),
-    lower,
-  )
+  contains_any(lower, GATE)
 }
 
 /// The intent hint, then the independent nudges, in the bash order.
@@ -66,10 +150,7 @@ pub(crate) fn prompt_hints(lower: &str, options: &HintOptions) -> Vec<String> {
 }
 
 fn intent_hint(lower: &str, ast_grep: bool) -> Option<String> {
-  let structural = words(
-    "pattern|struct|trait|interface|all functions|all methods|every function|every method|syntax|code structure|signature|return type|where clause|lifetime|closure|macro|decorator|annotation",
-  );
-  if is_match(&structural, lower) {
+  if contains_any(lower, STRUCTURAL) {
     let text = if ast_grep {
       STRUCTURAL_HINT
     } else {
@@ -81,56 +162,103 @@ fn intent_hint(lower: &str, ast_grep: bool) -> Option<String> {
 }
 
 fn intent_line(lower: &str) -> Option<String> {
-  const LINES: &[(&str, &str)] = &[
+  const LINES: &[(&[&str], &str)] = &[
     (
-      "rename|move|extract|split",
+      RENAME,
       "Rename: find all refs (ast-grep + Grep on configs) before rewriting.",
     ),
+    (TESTS, "Tests: real-world data only, NO mocks."),
+    (FIX, "Fix in code. Never suppress with disable comments."),
+    (DELETE, "Verify no deps before removing."),
     (
-      "test|spec|coverage",
-      "Tests: real-world data only, NO mocks.",
-    ),
-    (
-      "fix|debug|error|bug|issue",
-      "Fix in code. Never suppress with disable comments.",
-    ),
-    ("delete|remove|clean up", "Verify no deps before removing."),
-    (
-      "review|audit",
+      REVIEW,
       "Review: forbidden syntax, quality gates, test coverage.",
     ),
   ];
-  LINES.iter().find_map(|(alternation, text)| {
-    is_match(&words(alternation), lower).then(|| (*text).to_owned())
-  })
+  LINES
+    .iter()
+    .find_map(|(terms, text)| contains_any(lower, terms).then(|| (*text).to_owned()))
 }
 
 fn scale_hint(lower: &str) -> Option<String> {
-  is_match(&words("migrate|codebase-wide|throughout|end-to-end"), lower)
-    .then(|| SCALE_HINT.to_owned())
+  contains_any(lower, SCALE).then(|| SCALE_HINT.to_owned())
 }
 
 fn brainstorm_hint(lower: &str) -> Option<String> {
-  let designed = words(
-    r"brainstorms?|designs?|scopes?|approach(es)?|architectures?|trade-?offs?|redesigns?|overhauls?",
-  );
-  let new_thing = r"(^|[^a-z])new[ \t\n\v\f\r]+(feature|workflow|system)([^a-z]|$)";
-  (is_match(&designed, lower) || is_match(new_thing, lower)).then(|| BRAINSTORM_HINT.to_owned())
+  (contains_any(lower, DESIGNED) || new_thing(lower)).then(|| BRAINSTORM_HINT.to_owned())
 }
 
 fn research_hint(lower: &str, enabled: bool) -> Option<String> {
-  let pattern = words(
-    r"latest|docs for|library docs|api reference|api docs|changelog|release notes|best practices?|look up|search the web|web search|how to use",
-  );
-  (enabled && is_match(&pattern, lower)).then(|| RESEARCH_HINT.to_owned())
+  (enabled && contains_any(lower, RESEARCH)).then(|| RESEARCH_HINT.to_owned())
 }
 
-fn words(alternation: &str) -> String {
-  format!("(^|[^a-z])({alternation})([^a-z]|$)")
+fn is_trivial(lower: &str) -> bool {
+  TRIVIAL.contains(&without_final_punct(lower))
 }
 
-fn is_match(pattern: &str, text: &str) -> bool {
-  Regex::new(pattern).is_ok_and(|re| re.is_match(text))
+fn without_final_punct(lower: &str) -> &str {
+  match lower.as_bytes().last().copied() {
+    Some(b'.' | b'!' | b'?') => {
+      let Some(end) = lower.len().checked_sub(1) else {
+        return lower;
+      };
+      lower.get(..end).unwrap_or(lower)
+    }
+    _ => lower,
+  }
+}
+
+fn is_vague(lower: &str) -> bool {
+  VAGUE.contains(&lower.trim_end_matches(is_prompt_space))
+}
+
+fn new_thing(text: &str) -> bool {
+  text
+    .match_indices("new")
+    .any(|(at, word)| !letter_before(text, at) && spaced_tail(text, at.saturating_add(word.len())))
+}
+
+fn spaced_tail(text: &str, at: usize) -> bool {
+  let Some(rest) = text.get(at..) else {
+    return false;
+  };
+  let trimmed = rest.trim_start_matches(is_prompt_space);
+  if trimmed.len() == rest.len() {
+    return false;
+  }
+  NEW_TAILS.iter().any(|tail| starts_bounded(trimmed, tail))
+}
+
+fn is_prompt_space(ch: char) -> bool {
+  matches!(ch, ' ' | '\t' | '\n' | '\u{000b}' | '\u{000c}' | '\r')
+}
+
+fn contains_any(text: &str, terms: &[&str]) -> bool {
+  terms.iter().any(|term| contains_term(text, term))
+}
+
+fn contains_term(text: &str, term: &str) -> bool {
+  text
+    .match_indices(term)
+    .any(|(at, _)| !letter_before(text, at) && !letter_after(text, at.saturating_add(term.len())))
+}
+
+fn starts_bounded(text: &str, term: &str) -> bool {
+  text.starts_with(term) && !letter_after(text, term.len())
+}
+
+fn letter_before(text: &str, at: usize) -> bool {
+  text
+    .get(..at)
+    .and_then(|prefix| prefix.chars().next_back())
+    .is_some_and(|ch| ch.is_ascii_lowercase())
+}
+
+fn letter_after(text: &str, at: usize) -> bool {
+  text
+    .get(at..)
+    .and_then(|rest| rest.chars().next())
+    .is_some_and(|ch| ch.is_ascii_lowercase())
 }
 
 #[cfg(test)]

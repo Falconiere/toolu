@@ -50,3 +50,18 @@ fn a_new_feature_asks_for_brainstorm_and_a_fix_is_a_gate_topic() {
   assert!(hints.iter().any(|hint| hint.contains("brainstorm")));
   assert!(mentions_gate_topic("fix the parser"));
 }
+
+#[test]
+fn optional_bash_forms_keep_their_boundaries() {
+  assert_eq!(prompt_gate("thanks!"), PromptGate::Skip);
+  assert_eq!(prompt_gate("thanks!!"), PromptGate::Hint);
+  assert_eq!(prompt_gate("fix\t"), PromptGate::Block);
+  assert_eq!(prompt_gate("fix."), PromptGate::Hint);
+  let trade = hints("weigh the trade-offs of this approach", false, false);
+  assert!(trade.iter().any(|hint| hint.contains("brainstorm")));
+  let redesign = hints("redesign stays a word of its own", false, false);
+  assert!(redesign.iter().any(|hint| hint.contains("brainstorm")));
+  let research = hints("look up the best practices", false, true);
+  assert!(research.iter().any(|hint| hint.contains("research-agent")));
+  assert!(!mentions_gate_topic("typescript"));
+}
