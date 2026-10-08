@@ -201,3 +201,7 @@ fn system_message(text: &str) -> String {
 #[cfg(test)]
 #[path = "tests/hook_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/hook_jev_test.rs"]
+mod jev_tests;
