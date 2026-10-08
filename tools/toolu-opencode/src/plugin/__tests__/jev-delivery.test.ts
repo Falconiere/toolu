@@ -143,11 +143,12 @@ test.concurrent("a typed judgment runs through the published wrapper in the agen
     await hook(hooks, "config")(config);
     expect(skillPaths(config)).toContain(join(GENERATED, "skills/jev-jev"));
 
+    const shell = await bashEnv(hooks, sb);
     const env = {
-      ...(await bashEnv(hooks, sb)),
+      ...shell,
       ...fixture.env,
       TYPESAFE_API_KEY: KEY,
-      PATH: `${join(REPO_ROOT, "target/debug")}:${(await bashEnv(hooks, sb)).PATH}`,
+      PATH: `${join(REPO_ROOT, "target/debug")}:${shell.PATH}`,
     };
     fixture.plan([{ body: JSON.stringify(ANSWER) }]);
     const judged = await inShell(sb, `${command} noul probe -s evidence`, env);
