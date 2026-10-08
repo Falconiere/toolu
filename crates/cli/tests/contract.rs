@@ -82,7 +82,7 @@ fn every_namespace_answers_help_on_stdout() {
   }
   let epic = stdout(&toolu(&["epic", "--help"]).unwrap()).unwrap();
   assert!(
-    epic.contains("planned  Not ported yet (#434, #435, #448)"),
+    epic.contains("planned  Not ported yet (#435, #448)"),
     "{epic}"
   );
 }
@@ -138,17 +138,11 @@ fn json_on_a_usage_error_is_one_document_and_a_diagnostic() {
 #[test]
 fn a_skill_running_epic_status_with_json_gets_one_document() {
   let output = toolu(&["epic", "status", "402", "--json"]).unwrap();
-  assert_eq!(output.status.code(), Some(64));
-  assert_eq!(
-    one_document(&output).unwrap(),
-    json!({ "error": { "code": 64, "name": "usage",
-      "message": "unrecognized subcommand 'status'", "suggestion": null } })
-  );
-  assert!(
-    stderr(&output)
-      .unwrap()
-      .starts_with("error: unrecognized subcommand 'status'\n")
-  );
+  assert_eq!(output.status.code(), Some(0));
+  let document = one_document(&output).unwrap();
+  assert!(document.get("engine").is_some(), "{document}");
+  assert!(document.get("issues").is_some(), "{document}");
+  assert_eq!(stderr(&output).unwrap(), "");
 }
 
 #[test]

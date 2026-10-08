@@ -37,7 +37,7 @@ fn an_unknown_verb_names_the_closest_and_the_valid_ones() {
       &[
         "unknown command `planed` under `toolu epic`",
         "closest: `planned`",
-        "valid: planned, token",
+        "valid: engine, start, status, pause, resume, ack, answer, wait, report, job, service, planned, token",
       ],
     );
   }

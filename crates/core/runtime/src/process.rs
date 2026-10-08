@@ -180,6 +180,40 @@ pub fn run_with(
   })
 }
 
+/// Spawn `spec` in its own process group and return its pid without waiting.
+/// A reaper thread waits so a long-lived parent does not leave a zombie; when
+/// the parent exits first, the child is reparented and keeps running.
+///
+/// # Errors
+/// [`RunError::EmptyArgv`] or [`RunError::Spawn`].
+pub fn detach(spec: &Spec) -> Result<u32, RunError> {
+  let program = spec
+    .argv
+    .first()
+    .filter(|program| !program.is_empty())
+    .ok_or(RunError::EmptyArgv)?;
+  let mut command = Command::new(program);
+  command
+    .args(spec.argv.iter().skip(1))
+    .process_group(0)
+    .stdin(Stdio::null())
+    .stdout(Stdio::null())
+    .stderr(Stdio::null());
+  if let Some(cwd) = &spec.cwd {
+    command.current_dir(cwd);
+  }
+  if let Some(env) = &spec.env {
+    command.env_clear().envs(env.vars());
+  }
+  let mut child = guard::unblocked(|| command.spawn())
+    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
+  let pid = child.id();
+  std::thread::spawn(move || {
+    let _reaped = child.wait();
+  });
+  Ok(pid)
+}
+
 fn command(program: &str, spec: &Spec) -> Command {
   let mut command = Command::new(program);
   command

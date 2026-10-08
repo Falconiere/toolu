@@ -434,6 +434,61 @@
         },
         "generated_at": { "type": "string" }
       }
+    },
+    "epicStatus": {
+      "description": "toolu epic status --json.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["engine", "paused", "epics", "issues", "attention"],
+      "properties": {
+        "engine": { "enum": ["running", "down"] },
+        "paused": { "type": "boolean" },
+        "epics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key"],
+            "properties": { "key": { "type": "string" } }
+          }
+        },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["key", "epic", "phase", "stage"],
+            "properties": {
+              "key": { "type": "string" },
+              "epic": { "type": "string" },
+              "phase": { "type": "string" },
+              "stage": { "type": "string" }
+            }
+          }
+        },
+        "attention": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "key", "epic", "note", "seq"],
+            "properties": {
+              "kind": { "type": "string" },
+              "key": { "type": "string" },
+              "epic": { "type": "string" },
+              "note": { "type": "string" },
+              "seq": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "epicWaiting": {
+      "description": "toolu epic wait --json when the limit passes with no judgment.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["state"],
+      "properties": { "state": { "const": "waiting" } }
     }
   }
 }

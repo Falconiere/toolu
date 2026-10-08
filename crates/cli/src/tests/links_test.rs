@@ -40,7 +40,7 @@ fn the_linked_namespaces_keep_their_placeholder_output() {
     .stdout
     .unwrap_or_default();
   assert!(
-    epic_out.starts_with("toolu epic is not ported yet (#434, #435, #448)"),
+    epic_out.starts_with("toolu epic is not ported yet (#435, #448)"),
     "{epic_out}"
   );
   let status_matches = toolu_statusline::command()

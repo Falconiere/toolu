@@ -61,7 +61,7 @@ fn a_snapshot_pins_the_command_tree() {
 fn every_other_json_document_validates_against_its_definition() {
   for (args, def) in [
     (&["--json", "epik", "start"][..], "error"),
-    (&["epic", "status", "402", "--json"], "error"),
+    (&["epic", "status", "402", "--json"], "epicStatus"),
     (&["--json", "--version"], "version"),
     (&["--json", "--help"], "help"),
     (&["--json", "epic", "--help"], "help"),

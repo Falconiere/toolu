@@ -1232,7 +1232,332 @@ source: crates/cli/tests/helpers/schema.rs
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#434, #435, #448): show the planned verbs",
+          "about": "Run the resident engine in the foreground",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Start the engine when the registry is non-empty and the lock is free",
+              "hidden": false,
+              "long": "ensure",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Ask a running engine to drain, then take its place",
+              "hidden": false,
+              "long": "replace",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "engine",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "engine"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Register an epic state directory and start the engine",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The epic state directory",
+              "multiple": false,
+              "name": "STATE_DIR",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "start",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "start"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Print the engine, issues and attention",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Epic key, or a trailing issue number",
+              "multiple": false,
+              "name": "EPIC",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Pause effects for every epic, or one epic",
+          "aliases": [],
+          "args": [
+            {
+              "help": "One epic key; every epic when omitted",
+              "multiple": false,
+              "name": "EPIC",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "pause",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "pause"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Resume effects for every epic, or one epic",
+          "aliases": [],
+          "args": [
+            {
+              "help": "One epic key; every epic when omitted",
+              "multiple": false,
+              "name": "EPIC",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "resume",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "resume"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Clear a stall attention item",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Issue key",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "ack",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "ack"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Record an answer on the journal for one issue",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Issue key",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            },
+            {
+              "help": "The answer",
+              "multiple": false,
+              "name": "TEXT",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "answer",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "answer"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Wait for a judgment, or return when the limit passes",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Stop after this many seconds; 0 returns immediately",
+              "hidden": false,
+              "long": "max-seconds",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "wait",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "wait"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Record a worker phase",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The phase to record",
+              "multiple": false,
+              "name": "PHASE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The issue status snapshot",
+              "hidden": false,
+              "long": "status-file",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "Pull request number",
+              "hidden": false,
+              "long": "pr",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Note stored with the phase",
+              "hidden": false,
+              "long": "note",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "TEXT"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "report",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "report"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a command under the worktree's resource lease",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The command and its arguments",
+              "multiple": true,
+              "name": "ARGV",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "job",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "job"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Install the user service unit",
+          "aliases": [],
+          "args": [],
+          "commands": [
+            {
+              "about": "Write the systemd user unit without starting it",
+              "aliases": [],
+              "args": [],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "install",
+              "owner": "epic-orchestrator",
+              "path": [
+                "epic",
+                "service",
+                "install"
+              ],
+              "placeholder": false
+            }
+          ],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "service",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "service"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Not ported yet (#435, #448): show the planned verbs",
           "aliases": [],
           "args": [],
           "commands": [],
