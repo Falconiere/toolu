@@ -104,7 +104,8 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
       "crates/cli/src/tests/dispatch_test.rs",
       "crates/cli/src/tests/hook_test.rs",
       "crates/cli/tests/jev_cli.rs",
-      "crates/jev/src/lib.rs"
+      "crates/jev/src/lib.rs",
+      "crates/toolu/src/tests/tool_hook_test.rs"
     ],
     "input": "spawned target/debug/toolu jev noul -s STATE Urgent? with TYPESAFE_API_KEY unset; a jev SessionStart payload {\"source\":\"startup\"} through hook dispatch",
     "model": "sonnet"
@@ -195,4 +196,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 - `native-advice`: `shell_toolu` takes the caller's `Env` so the probe does not see the process `PATH`. `native_toolu_on_path()` still uses `Env::process()`. The session-id fallback (`session_id`, else `TOOLU_SESSION_ID`) stays in the hook, as in `runNativeTooluCheck`.
 - `jev-cli`: clap cannot count repeated `-o`/`-l` flags, so too few options, too few levels, and `ask - -s -` exit 1 from the client. Unknown flags and a missing `--state` stay clap usage (exit 64) in `crates/cli`. The command-tree snapshot, `docs/cli`, and the tests that named `jev planned` move in this step because that verb is gone.
 - `jev-hooks`: a failed `TOOLU_STARTUP_REPORT` write sets exit 1 after the context, as `publish` documents. The published shim is probed with a fake `toolu` on `PATH`; the binary spawn is `cli-wire`. A refused link is a path past `PATH_MAX`, which fails for root as well as a mode-555 directory.
-- `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`.
+- `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`. The tool-hook payload test names the detected host's event, so it still passes when `TOOLU_HOST_OVERRIDE` is `cursor`.
