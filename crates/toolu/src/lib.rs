@@ -10,6 +10,8 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::invocation::current_dir;
 
+/// The standalone delegation model-tier hook.
+pub mod agent_tier;
 /// `toolu config`.
 pub mod config;
 /// `toolu debug`.
@@ -18,6 +20,8 @@ pub mod debug;
 pub mod doctor;
 /// `toolu ledger`.
 pub mod ledger;
+/// The standalone MCP blocker hook.
+pub mod mcp_hook;
 /// `toolu serve`.
 pub mod serve;
 /// `toolu setup`.

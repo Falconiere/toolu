@@ -59,6 +59,15 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
     let plugin_root = request.plugin_root.as_deref().map(Path::new);
     return tool_hook(phase, (context.stdin)(), plugin_root);
   }
+  if request.plugin == "toolu" && request.name == "agent-tier" {
+    return toolu_hub::agent_tier::hook((context.stdin)());
+  }
+  if request.plugin == "toolu" && request.name == "mcp-tools" {
+    return toolu_hub::mcp_hook::hook(
+      (context.stdin)(),
+      request.plugin_root.as_deref().map(Path::new),
+    );
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
 }

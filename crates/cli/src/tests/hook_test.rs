@@ -166,6 +166,34 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
 }
 
 #[test]
+fn agent_tier_fails_open_when_payload_is_unreadable() {
+  let broken = || Err(std::io::Error::other("stdin is closed"));
+  let no_exe = || None;
+  let context = Context {
+    exe: &no_exe,
+    stdin: &broken,
+  };
+  let outcome = run(&request("agent-tier", Some("PreToolUse"), None), &context);
+  assert_eq!(outcome.exit.code(), 0);
+  assert_eq!(outcome.stdout, None);
+  assert_eq!(outcome.stderr, None);
+}
+
+#[test]
+fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
+  let payload = || Ok(r#"{"tool_name":"Bash"}"#.to_owned());
+  let no_exe = || None;
+  let context = Context {
+    exe: &no_exe,
+    stdin: &payload,
+  };
+  let outcome = run(&request("mcp-tools", Some("PreToolUse"), None), &context);
+  assert_eq!(outcome.exit.code(), 0);
+  assert_eq!(outcome.stdout, None);
+  assert_eq!(outcome.stderr, None);
+}
+
+#[test]
 fn another_plugins_session_start_advises_and_never_blocks() {
   let jev = HookRequest {
     plugin: "jev".to_owned(),

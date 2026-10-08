@@ -4,12 +4,41 @@
 //! tool (#423), `gate_status` records quality-command results and `push_waiver`
 //! cashes in a push-review waiver once the push lands.
 
+macro_rules! impl_pre_gate {
+  ($gate:ident, $name:literal, $evaluate:ident) => {
+    impl crate::gate::Gate for $gate {
+      fn name(&self) -> &'static str {
+        $name
+      }
+
+      fn run(
+        &self,
+        event: &toolu_protocol::normalized::NormalizedEvent,
+        ctx: &toolu_runtime::registry::rule::RuleContext<'_>,
+      ) -> Result<toolu_protocol::decision::Decision, String> {
+        $evaluate(event, ctx, &mut Vec::new())
+      }
+
+      fn run_warning(
+        &self,
+        event: &toolu_protocol::normalized::NormalizedEvent,
+        ctx: &toolu_runtime::registry::rule::RuleContext<'_>,
+        warnings: &mut Vec<String>,
+      ) -> Result<toolu_protocol::decision::Decision, String> {
+        $evaluate(event, ctx, warnings)
+      }
+    }
+  };
+}
+
 /// The bash-commands PreToolUse built-in.
 pub(crate) mod bash_commands;
 /// The code-edit-rules PreToolUse built-in.
 pub(crate) mod code_edit_rules;
 /// The commit-gate PreToolUse built-in.
 pub(crate) mod commit_gate;
+/// The docs-sync PreToolUse built-in.
+pub(crate) mod docs_sync;
 /// Repo-relative gate paths and pathname expansion.
 pub(crate) mod gate_paths;
 /// `gate-status.sh`: the quality gate's command channel.
@@ -18,8 +47,18 @@ pub(crate) mod gate_status;
 pub(crate) mod mcp_blocker;
 /// Bash-style path matching for the settings-driven pre-tool gates.
 pub(crate) mod pattern;
+/// The plan-ledger PreToolUse built-in.
+pub(crate) mod plan_ledger;
+/// Optional push-time AC coverage and telemetry.
+pub(crate) mod plan_ledger_ac;
 /// The protected-files PreToolUse built-in.
 pub(crate) mod protected_files;
+/// The push-review PreToolUse built-in.
+pub(crate) mod push_review;
+/// The push-review v2 state checks.
+pub(crate) mod push_review_state;
+/// The shared target repository and branch of a parsed push.
+pub(crate) mod push_target;
 /// `push-waiver.sh`: a landed push promotes its pending waiver.
 pub(crate) mod push_waiver;
 /// Quality commands in a parsed command line.
