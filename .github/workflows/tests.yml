@@ -343,9 +343,7 @@ jobs:
       # cc-rs would not pick for aarch64 on its own.
       - name: Install musl C toolchain
         run: |
-          if [ "${{ matrix.target }}" = x86_64-unknown-linux-musl ] && [ -f /etc/apt/apt-mirrors.txt ]; then
-            sudo sed -i 's|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g' /etc/apt/apt-mirrors.txt
-          fi
+          bash .github/scripts/configure-musl-apt-mirror.sh "${{ matrix.target }}"
           sudo apt-get update -y
           sudo apt-get install -y musl-tools
           echo "CC_$(echo '${{ matrix.target }}' | tr - _)=musl-gcc" >> "$GITHUB_ENV"
