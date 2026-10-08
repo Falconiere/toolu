@@ -20,6 +20,8 @@ pub mod debug;
 pub mod doctor;
 /// `toolu ledger`.
 pub mod ledger;
+/// The standalone MCP blocker hook.
+pub mod mcp_hook;
 /// `toolu serve`.
 pub mod serve;
 /// `toolu setup`.

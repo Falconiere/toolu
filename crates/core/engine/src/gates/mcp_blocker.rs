@@ -95,57 +95,78 @@ fn reason(mode: GateMode, block: &Block<'_>) -> String {
   }
 }
 
+fn candidate(
+  list: Option<&std::path::PathBuf>,
+  config: &LoadedConfig,
+  server: &str,
+) -> Result<Option<(McpBlockEntry, bool)>, String> {
+  let from_file = match list {
+    Some(path) if is_file(path) => {
+      first_match(&mcp_blocklist(path.parent().unwrap_or(path))?, server).cloned()
+    }
+    Some(_) | None => None,
+  };
+  if let Some(found) = from_file {
+    return Ok(Some((found, true)));
+  }
+  let disabled: Vec<_> = mcp_section(config)
+    .into_iter()
+    .filter(|(_, value)| *value == Value::Bool(false))
+    .map(|(key, _)| config_entry(&key))
+    .collect();
+  Ok(
+    first_match(&disabled, server)
+      .cloned()
+      .map(|found| (found, false)),
+  )
+}
+
+/// Evaluate the blocklist while collecting the config warnings the standalone hook prints.
+pub(crate) fn evaluate(
+  event: &NormalizedEvent,
+  ctx: &RuleContext<'_>,
+  warnings: &mut Vec<String>,
+) -> Result<Decision, String> {
+  let Some(tool) = event.tool() else {
+    return Ok(Decision::Allow);
+  };
+  let Some(server) = server(tool.name.as_str()) else {
+    return Ok(Decision::Allow);
+  };
+  let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
+  let list = gate_settings_dir(ctx).map(|dir| dir.join(MCP_BLOCKLIST));
+  if !list.as_deref().is_some_and(is_file) && !exists(&roots, ctx.cwd) {
+    return Ok(Decision::Allow);
+  }
+  let config = gate_config(ctx);
+  let Some((found, file)) = candidate(list.as_ref(), &config, server)? else {
+    warnings.extend(config.take_warnings());
+    return Ok(Decision::Allow);
+  };
+  let origin = if file {
+    "listed in settings/mcp-blocklist.txt".to_owned()
+  } else {
+    format!("disabled in your toolu config (mcp.{server}=false)")
+  };
+  let mode = pre_mode(&config, "mcpBlocker", ctx, false);
+  let block = Block {
+    tool: tool.name.as_str(),
+    server,
+    origin,
+    redirect: found.redirect,
+  };
+  let decision = decided(mode, reason(mode, &block));
+  warnings.extend(config.take_warnings());
+  decision
+}
+
 impl Gate for McpBlocker {
   fn name(&self) -> &'static str {
     "mcp-blocker"
   }
 
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String> {
-    let Some(tool) = event.tool() else {
-      return Ok(Decision::Allow);
-    };
-    let Some(server) = server(tool.name.as_str()) else {
-      return Ok(Decision::Allow);
-    };
-    let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
-    let list = gate_settings_dir(ctx).map(|dir| dir.join(MCP_BLOCKLIST));
-    if !list.as_deref().is_some_and(is_file) && !exists(&roots, ctx.cwd) {
-      return Ok(Decision::Allow);
-    }
-    let from_file = match list.as_ref() {
-      Some(path) if is_file(path) => {
-        first_match(&mcp_blocklist(path.parent().unwrap_or(path))?, server).cloned()
-      }
-      Some(_) | None => None,
-    };
-    let config = gate_config(ctx);
-    let disabled: Vec<_> = mcp_section(&config)
-      .into_iter()
-      .filter(|(_, value)| *value == Value::Bool(false))
-      .map(|(key, _)| config_entry(&key))
-      .collect();
-    let from_config = if from_file.is_none() {
-      first_match(&disabled, server)
-    } else {
-      None
-    };
-    let Some(found) = from_file.as_ref().or(from_config) else {
-      return Ok(Decision::Allow);
-    };
-    let origin = if from_file.is_some() {
-      "listed in settings/mcp-blocklist.txt".to_owned()
-    } else {
-      format!("disabled in your toolu config (mcp.{server}=false)")
-    };
-    // Only mcp__ tool names reach here; Bash and Shell return above. TypeScript uses tool/pre.
-    let mode = pre_mode(&config, "mcpBlocker", ctx, false);
-    let block = Block {
-      tool: tool.name.as_str(),
-      server,
-      origin,
-      redirect: found.redirect.clone(),
-    };
-    decided(mode, reason(mode, &block))
+    evaluate(event, ctx, &mut Vec::new())
   }
 }
 

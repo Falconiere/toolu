@@ -7,7 +7,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundlePath } from "@toolu/conformance/harness/entry-command";
+import { bundlePath, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { mcpFixture, toStdin } from "@toolu/conformance/harness/fixtures";
 import { pretoolEnv, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -55,7 +55,11 @@ async function hook(
     stdin ??
     JSON.stringify(toStdin(host, mcpFixture(server ?? "x", "search", {}), { cwd: sb.project }));
   const env = pretoolEnv(sb, host, { TOOLU_SETTINGS_DIR: settings(sb) });
-  return await run(["/bin/sh", "-c", mcpCommand()], { cwd: sb.project, env, stdin: payload });
+  return await run(launchedArgv({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" }, PLUGIN), {
+    cwd: sb.project,
+    env,
+    stdin: payload,
+  });
 }
 
 const Decision = z.object({
@@ -92,6 +96,7 @@ for (const [name, server, stdin] of [
 }
 
 test("the bundle does not inline the shell parser", () => {
+  expect(mcpCommand()).toContain("mcp-tools");
   const bundle = readFileSync(bundlePath(PLUGIN, "mcp-tools"), "utf8");
   expect(bundle).not.toContain("analyzeShell");
   expect(bundle).not.toContain("unbash");
