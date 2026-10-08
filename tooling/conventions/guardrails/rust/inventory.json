@@ -125,6 +125,12 @@
       "id": "ci-aggregate",
       "pass": "crates/xtask/src/tests/ci_aggregate_test.rs::a_docs_only_run_passes",
       "fail": "crates/xtask/src/tests/ci_aggregate_test.rs::a_failed_changes_job_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "dist",
+      "pass": "crates/xtask/src/tests/dist_test.rs::a_matching_bundle_passes",
+      "fail": "crates/xtask/src/tests/dist_test.rs::a_stale_bundle_names_the_path"
     }
   ]
 }
