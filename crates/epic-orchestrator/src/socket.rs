@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{
-  Arc,
+  Arc, Mutex,
   mpsc::{self, Receiver, RecvTimeoutError, Sender},
 };
 use std::thread;
@@ -17,8 +17,11 @@ use crate::TICK;
 use crate::client::{read_json, write_json};
 use crate::dispatch::{dispatch, expire, ingest, satisfy};
 use crate::lock::Held;
+use crate::model::World;
 use crate::paths::Paths;
+use crate::schedule::next_stall_ms;
 use crate::server::{Engine, Fault, Stop};
+use crate::source::{self, Fact, Pace};
 
 pub(crate) struct Waiter {
   pub(crate) deadline: Instant,
@@ -30,6 +33,7 @@ enum Msg {
     request: Value,
     reply: Sender<Value>,
   },
+  Herdr(Fact),
 }
 
 /// Sets the accept-loop stop flag if `state_loop` unwinds before `serve` joins it.
@@ -65,17 +69,82 @@ pub(crate) fn serve(
   let (tx, rx) = mpsc::channel();
   let stop = Arc::new(AtomicBool::new(false));
   let flag = Arc::clone(&stop);
+  let shared = Arc::new(Mutex::new(engine.world.clone()));
+  let wake = Arc::new(AtomicBool::new(false));
+  let herdr = spawn_herdr(
+    tx.clone(),
+    Arc::clone(&shared),
+    Arc::clone(&stop),
+    Arc::clone(&wake),
+  );
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
     let _stop_accept = StopAccept { stop: &stop };
-    state_loop(&mut engine, &rx, protocol)
+    state_loop(&mut engine, &rx, protocol, &shared, &wake)
   };
   stop.store(true, Ordering::Relaxed);
   let _wake = UnixStream::connect(&socket);
   if let Err(err) = accept.join() {
     let _panic = err;
   }
+  if let Some(herdr) = herdr
+    && let Err(err) = herdr.join()
+  {
+    let _panic = err;
+  }
   result
+}
+
+fn spawn_herdr(
+  tx: Sender<Msg>,
+  shared: Arc<Mutex<World>>,
+  stop: Arc<AtomicBool>,
+  wake: Arc<AtomicBool>,
+) -> Option<thread::JoinHandle<()>> {
+  if !source::prompt_enabled() {
+    return None;
+  }
+  let env = Env::process();
+  Some(thread::spawn(move || {
+    herdr_loop(&tx, &shared, &stop, &env, &wake);
+  }))
+}
+
+fn herdr_loop(
+  tx: &Sender<Msg>,
+  shared: &Arc<Mutex<World>>,
+  stop: &Arc<AtomicBool>,
+  env: &Env,
+  wake: &Arc<AtomicBool>,
+) {
+  while !stop.load(Ordering::Relaxed) {
+    let world = shared
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner)
+      .clone();
+    let pace = Pace {
+      idle: Some(Duration::from_secs(1)),
+      return_on_idle: false,
+      stop: Some(Arc::clone(stop)),
+      resubscribe: Some(Arc::clone(wake)),
+    };
+    let missing = !crate::herdr::socket_path(env).exists();
+    let _ran = source::session(env, &world, &pace, |fact| {
+      tx.send(Msg::Herdr(fact)).map_err(|err| err.to_string())
+    });
+    if missing {
+      pause(stop);
+    }
+  }
+}
+
+fn pause(stop: &Arc<AtomicBool>) {
+  for _ in 0..30 {
+    if stop.load(Ordering::Relaxed) {
+      return;
+    }
+    thread::sleep(Duration::from_secs(1));
+  }
 }
 
 fn apply_env(engine: &mut Engine) {
@@ -140,11 +209,18 @@ fn hold_before_ack() {
   }
 }
 
-fn state_loop(engine: &mut Engine, rx: &Receiver<Msg>, protocol: u64) -> Result<(), String> {
+fn state_loop(
+  engine: &mut Engine,
+  rx: &Receiver<Msg>,
+  protocol: u64,
+  shared: &Mutex<World>,
+  resub: &AtomicBool,
+) -> Result<(), String> {
   let mut waiters = Vec::new();
   let mut next_tick = Instant::now() + TICK;
   loop {
-    let wake = wake_after(&waiters, next_tick);
+    publish(shared, engine);
+    let wake = wake_after(engine, &waiters, next_tick);
     match rx.recv_timeout(wake) {
       Ok(Msg::Line { request, reply }) => {
         engine.refresh_clock();
@@ -152,10 +228,24 @@ fn state_loop(engine: &mut Engine, rx: &Receiver<Msg>, protocol: u64) -> Result<
           return Ok(());
         }
       }
+      Ok(Msg::Herdr(fact)) => {
+        engine.refresh_clock();
+        source::apply(engine, &Env::process(), fact)?;
+        if engine.resubscribe {
+          engine.resubscribe = false;
+          resub.store(true, Ordering::Relaxed);
+        }
+      }
       Err(RecvTimeoutError::Timeout) => on_timeout(engine, &mut waiters, &mut next_tick)?,
       Err(RecvTimeoutError::Disconnected) => return Ok(()),
     }
   }
+}
+
+fn publish(shared: &Mutex<World>, engine: &Engine) {
+  *shared
+    .lock()
+    .unwrap_or_else(std::sync::PoisonError::into_inner) = engine.world.clone();
 }
 
 fn on_timeout(
@@ -166,6 +256,10 @@ fn on_timeout(
   expire(engine, waiters);
   if Instant::now() >= *next_tick {
     tick(engine, next_tick)?;
+  } else if stall_ready(engine) {
+    engine.refresh_clock();
+    crate::schedule::on_tick(&mut engine.world);
+    let _pump = engine.pump()?;
   }
   satisfy(engine, waiters);
   Ok(())
@@ -175,17 +269,25 @@ fn tick(engine: &mut Engine, next_tick: &mut Instant) -> Result<(), String> {
   if engine.tick()? == Stop::Fault {
     return Err("fault".to_owned());
   }
-  engine.probe_herdr()?;
   *next_tick = Instant::now() + TICK;
   Ok(())
 }
 
-fn wake_after(waiters: &[Waiter], next_tick: Instant) -> Duration {
+fn stall_ready(engine: &Engine) -> bool {
+  next_stall_ms(&engine.world).is_some_and(|at| at <= engine.world.now_ms)
+}
+
+fn wake_after(engine: &Engine, waiters: &[Waiter], next_tick: Instant) -> Duration {
   let until_tick = next_tick.saturating_duration_since(Instant::now());
-  let Some(nearest) = waiters.iter().map(|waiter| waiter.deadline).min() else {
-    return until_tick;
-  };
-  until_tick.min(nearest.saturating_duration_since(Instant::now()))
+  let until_wait = waiters
+    .iter()
+    .map(|waiter| waiter.deadline)
+    .min()
+    .map(|deadline| deadline.saturating_duration_since(Instant::now()));
+  let until_stall = next_stall_ms(&engine.world)
+    .map(|at| Duration::from_millis(at.saturating_sub(engine.world.now_ms)));
+  let wake = until_wait.map_or(until_tick, |wait| until_tick.min(wait));
+  until_stall.map_or(wake, |stall| wake.min(stall))
 }
 
 #[cfg(test)]

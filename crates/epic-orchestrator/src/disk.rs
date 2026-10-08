@@ -59,20 +59,41 @@ pub(crate) fn write_status(
   let mut map = object(read_value(path)?);
   let note = bounded_note(note);
   let stamp = iso_seconds(now);
+  let duplicate = recorded(&map, phase, pr, &note);
   map.insert("phase".to_owned(), json!(phase));
   if let Some(pr) = pr {
     map.insert("pr".to_owned(), json!(pr));
   }
   map.insert("note".to_owned(), json!(note));
   map.insert("updated_at".to_owned(), json!(stamp));
-  let mut history = map
-    .get("history")
-    .and_then(Value::as_array)
-    .cloned()
-    .unwrap_or_default();
-  history.push(json!({"phase": phase, "at": stamp, "note": note}));
-  map.insert("history".to_owned(), Value::Array(history));
+  if !duplicate {
+    let mut history = map
+      .get("history")
+      .and_then(Value::as_array)
+      .cloned()
+      .unwrap_or_default();
+    history.push(json!({"phase": phase, "at": stamp, "note": note}));
+    map.insert("history".to_owned(), Value::Array(history));
+  }
   write_value(path, &Value::Object(map))
+}
+
+/// A row with this phase and note already exists, and `pr` is unchanged.
+fn recorded(map: &Map<String, Value>, phase: &str, pr: Option<u64>, note: &str) -> bool {
+  let same_pr = match pr {
+    None => true,
+    Some(pr) => map.get("pr").and_then(Value::as_u64) == Some(pr),
+  };
+  same_pr
+    && map
+      .get("history")
+      .and_then(Value::as_array)
+      .is_some_and(|rows| {
+        rows.iter().any(|row| {
+          row.get("phase").and_then(Value::as_str) == Some(phase)
+            && row.get("note").and_then(Value::as_str) == Some(note)
+        })
+      })
 }
 
 /// Set `stage` on an issue record, keeping every other key.

@@ -39,8 +39,26 @@ fn stall(world: &mut World, key: &str) {
   });
 }
 
+/// Absolute time of the soonest stall deadline.
+pub(crate) fn next_stall_ms(world: &World) -> Option<u64> {
+  world
+    .issues
+    .keys()
+    .filter_map(|key| {
+      let (since, limit, _) = stall_clock(world, key)?;
+      Some(since.saturating_add(limit))
+    })
+    .min()
+}
+
 /// `Some(true)` when the nudge already happened, `Some(false)` for the first nudge.
 fn stall_due(world: &World, key: &str) -> Option<bool> {
+  let (since, limit, nudged) = stall_clock(world, key)?;
+  (world.now_ms.saturating_sub(since) >= limit).then_some(nudged)
+}
+
+/// `(since, limit, already nudged)` when the phase has a stall deadline.
+fn stall_clock(world: &World, key: &str) -> Option<(u64, u64, bool)> {
   let issue = world.issues.get(key)?;
   if issue.phase.is_empty() || issue.phase == "ready" || judgment(&issue.phase) {
     return None;
@@ -55,7 +73,7 @@ fn stall_due(world: &World, key: &str) -> Option<bool> {
   } else {
     issue.phase_at_ms
   };
-  (world.now_ms.saturating_sub(since) >= limit).then_some(issue.stall_nudged)
+  Some((since, limit, issue.stall_nudged))
 }
 
 fn judgment(phase: &str) -> bool {
@@ -92,6 +110,17 @@ fn next_checkpoint(world: &World) -> Option<String> {
     let due = issue.stage == "running" && !tree.is_empty() && !world.checkpointed.contains(tree);
     due.then(|| issue.key.clone())
   })
+}
+
+/// `pane_closed` for a running issue bound to `pane_id` is `gone`.
+pub(crate) fn map_pane_closed(world: &mut World, pane_id: &str) {
+  let Some(key) = world.issues.values().find_map(|issue| {
+    let bound = issue.pane.as_deref() == Some(pane_id) && issue.stage == "running";
+    bound.then(|| issue.key.clone())
+  }) else {
+    return;
+  };
+  note_event(world, &key, "gone");
 }
 
 /// A source event from #446.

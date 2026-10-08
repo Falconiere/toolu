@@ -1,6 +1,9 @@
-use super::{ack, note_event, note_herdr, on_tick, set_pause, take_judgment};
-use crate::logic::ensure_issue;
-use crate::model::{Action, Attention, World, fresh};
+use super::{
+  ack, map_pane_closed as close_pane, next_stall_ms, note_event, note_herdr, on_tick, set_pause,
+  take_judgment,
+};
+use crate::logic::{apply_report, ensure_issue};
+use crate::model::{Action, Attention, Report, World, fresh};
 
 #[test]
 fn herdr_backoff_doubles_from_thirty_seconds() {
@@ -151,6 +154,88 @@ fn pause_applies_to_every_epic_or_one() {
   note_event(&mut world, "a", "blocked");
   assert_eq!(take_judgment(&mut world).expect("item").kind, "blocked");
   assert!(take_judgment(&mut world).is_none());
+}
+
+#[test]
+fn stall_deadline() {
+  let mut world = World::new(0);
+  {
+    let issue = ensure_issue(&mut world, "a", "one", "/epic");
+    issue.phase = "execution".to_owned();
+    issue.phase_at_ms = 0;
+  }
+  assert_eq!(next_stall_ms(&world), Some(45 * 60 * 1000));
+  world.now_ms = 30_000;
+  on_tick(&mut world);
+  assert!(!nudged(&world));
+  world.now_ms = 45 * 60 * 1000;
+  on_tick(&mut world);
+  assert!(nudged(&world));
+  assert!(prompted(&world));
+  replace_phase(&mut world);
+  world.now_ms += 30_000;
+  on_tick(&mut world);
+  assert!(!nudged(&world));
+  babysit_waits(&mut world);
+}
+
+#[test]
+fn map_pane_closed() {
+  let mut world = World::new(0);
+  {
+    let issue = ensure_issue(&mut world, "a", "one", "/epic");
+    issue.stage = "running".to_owned();
+    issue.pane = Some("w1:p1".to_owned());
+  }
+  close_pane(&mut world, "w9:p9");
+  assert_eq!(world.issues["a"].launches, 0);
+  close_pane(&mut world, "w1:p1");
+  assert_eq!(world.issues["a"].launches, 1);
+  let pending = world.issues["a"].pending.clone().expect("checkpoint");
+  assert_eq!(pending.action, Action::Checkpoint);
+  assert_eq!(pending.follow, Some(Action::Launch));
+}
+
+fn nudged(world: &World) -> bool {
+  world.issues["a"].stall_nudged
+}
+
+fn prompted(world: &World) -> bool {
+  world
+    .outbox
+    .iter()
+    .any(|step| matches!(step, crate::model::Step::Journal(record) if record.note == "STATUS?"))
+}
+
+fn replace_phase(world: &mut World) {
+  world.outbox.clear();
+  let _steps = apply_report(
+    world,
+    &Report {
+      key: "a".to_owned(),
+      epic: "one".to_owned(),
+      state_dir: "/epic".to_owned(),
+      phase: "spec".to_owned(),
+      pr: None,
+      note: String::new(),
+    },
+  );
+  world.outbox.clear();
+}
+
+fn babysit_waits(world: &mut World) {
+  {
+    let issue = world.issues.get_mut("a").expect("issue");
+    issue.phase = "babysit".to_owned();
+    issue.phase_at_ms = world.now_ms;
+    issue.stall_nudged = false;
+  }
+  world.now_ms += 45 * 60 * 1000;
+  on_tick(world);
+  assert!(!nudged(world));
+  world.now_ms += 75 * 60 * 1000;
+  on_tick(world);
+  assert!(nudged(world));
 }
 
 fn stall(key: &str) -> Attention {
