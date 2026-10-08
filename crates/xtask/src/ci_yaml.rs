@@ -23,8 +23,14 @@ pub(crate) struct Workflow {
   pub(crate) filtered: Vec<String>,
 }
 
-/// Read every workflow in `dir`.
-pub(crate) fn read_workflows(dir: &Path) -> Result<Vec<Workflow>, String> {
+/// Workflows that parsed, plus one error line per file that did not.
+pub(crate) struct Workflows {
+  pub(crate) workflows: Vec<Workflow>,
+  pub(crate) errors: Vec<String>,
+}
+
+/// Read every workflow in `dir`. A missing directory is an error; a bad file is a finding.
+pub(crate) fn read_workflows(dir: &Path) -> Result<Workflows, String> {
   let mut names = std::fs::read_dir(dir)
     .map_err(|err| format!("cannot list {}: {err}", dir.display()))?
     .filter_map(Result::ok)
@@ -33,14 +39,21 @@ pub(crate) fn read_workflows(dir: &Path) -> Result<Vec<Workflow>, String> {
     .collect::<Vec<_>>();
   names.sort();
   let mut workflows = Vec::new();
+  let mut errors = Vec::new();
   for name in names {
-    let text = std::fs::read_to_string(dir.join(&name))
-      .map_err(|err| format!("{name}: not valid YAML: {err}"))?;
-    let value = yaml_to_json(&text).map_err(|err| format!("{name}: not valid YAML: {err}"))?;
-    workflows
-      .push(parse_workflow(&name, &value).map_err(|err| format!("{name}: not a workflow: {err}"))?);
+    match read_one(dir, &name) {
+      Ok(workflow) => workflows.push(workflow),
+      Err(err) => errors.push(err),
+    }
   }
-  Ok(workflows)
+  Ok(Workflows { workflows, errors })
+}
+
+fn read_one(dir: &Path, name: &str) -> Result<Workflow, String> {
+  let text = std::fs::read_to_string(dir.join(name))
+    .map_err(|err| format!("{name}: not valid YAML: {err}"))?;
+  let value = yaml_to_json(&text).map_err(|err| format!("{name}: not valid YAML: {err}"))?;
+  parse_workflow(name, &value).map_err(|err| format!("{name}: not a workflow: {err}"))
 }
 
 fn parse_workflow(file: &str, value: &Value) -> Result<Workflow, String> {
@@ -69,11 +82,16 @@ fn parse_job(value: &Value) -> Result<Job, String> {
   let needs = match obj.get("needs") {
     None => Vec::new(),
     Some(Value::String(one)) => vec![one.clone()],
-    Some(Value::Array(items)) => items
-      .iter()
-      .filter_map(Value::as_str)
-      .map(ToOwned::to_owned)
-      .collect(),
+    Some(Value::Array(items)) => {
+      let mut needs = Vec::new();
+      for item in items {
+        let Some(text) = item.as_str() else {
+          return Err("needs is not a string or list".to_owned());
+        };
+        needs.push(text.to_owned());
+      }
+      needs
+    }
     Some(_) => return Err("needs is not a string or list".to_owned()),
   };
   let condition = match obj.get("if") {
@@ -81,11 +99,11 @@ fn parse_job(value: &Value) -> Result<Job, String> {
     Some(Value::String(text)) => text.clone(),
     Some(other) => other.to_string(),
   };
-  let outputs = obj
-    .get("outputs")
-    .and_then(Value::as_object)
-    .map(|outputs| outputs.keys().cloned().collect())
-    .unwrap_or_default();
+  let outputs = match obj.get("outputs") {
+    None => Vec::new(),
+    Some(Value::Object(outputs)) => outputs.keys().cloned().collect(),
+    Some(_) => return Err("outputs is not an object".to_owned()),
+  };
   Ok(Job {
     name,
     needs,

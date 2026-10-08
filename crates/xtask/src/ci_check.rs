@@ -14,8 +14,9 @@ const CHANGES: &str = "changes";
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let config = load_repo(&options.root)?;
   let tracked = tracked(&options.root)?;
-  let workflows = read_workflows(&options.root.join(".github/workflows"))?;
-  let problems = check(&config, &workflows, &tracked);
+  let read = read_workflows(&options.root.join(".github/workflows"))?;
+  let mut problems = read.errors;
+  problems.extend(check(&config, &read.workflows, &tracked));
   Ok(output::findings("check-ci-paths", &problems))
 }
 
@@ -144,13 +145,18 @@ fn check_changes(file: &str, entry: &WorkflowSpec, workflow: &Workflow) -> Vec<S
   else {
     return vec![format!("{file}: has no {CHANGES} job")];
   };
-  entry
-    .jobs
-    .iter()
-    .map(|(_, group)| group)
-    .filter(|group| !job.outputs.iter().any(|output| output == *group))
-    .map(|group| format!("{file}: {CHANGES} job does not output {group}"))
-    .collect()
+  let mut seen = Vec::new();
+  let mut missing = Vec::new();
+  for (_, group) in &entry.jobs {
+    if seen.iter().any(|item: &String| item == group) {
+      continue;
+    }
+    seen.push(group.clone());
+    if !job.outputs.iter().any(|output| output == group) {
+      missing.push(format!("{file}: {CHANGES} job does not output {group}"));
+    }
+  }
+  missing
 }
 
 fn check_unmapped(workflow: &Workflow, entry: Option<&WorkflowSpec>) -> Vec<String> {
