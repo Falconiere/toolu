@@ -138,6 +138,24 @@ pub(crate) fn take_due(world: &mut World) -> Vec<(String, Cause)> {
   due
 }
 
+/// Check inputs affected by an engine merge without moving their fixed slots.
+pub(crate) fn after_merge(world: &mut World, issue_key: &str) {
+  let Some(issue) = world.issues.get(issue_key) else {
+    return;
+  };
+  let repo = issue.repo.clone();
+  let epic = issue.epic.clone();
+  for watch in world.watches.values_mut() {
+    let related = match &watch.kind {
+      Kind::Pr { repo: watched, .. } | Kind::Base { repo: watched, .. } => watched == &repo,
+      Kind::Epic { key, .. } | Kind::Blocker { key, .. } => key == &epic,
+    };
+    if related {
+      watch.request_immediate();
+    }
+  }
+}
+
 /// Reconcile saved watches with the currently registered, waiting PRs.
 pub(crate) fn sync(world: &mut World) {
   let mut wanted = BTreeMap::new();

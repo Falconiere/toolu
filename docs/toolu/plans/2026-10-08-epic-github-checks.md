@@ -42,12 +42,12 @@ Build the persisted clock and watch discovery, then the HTTPS detectors and rate
   },
   {
     "id": "live-and-docs",
-    "title": "Observe an unchanged sandbox PR for ten minutes, record REST 304 primary counters and GraphQL points, document the fixed schedule, budget and pending #433 verdict boundary, and regenerate CLI reference",
-    "check": "jq -e '(.endedAt | fromdateiso8601) - (.startedAt | fromdateiso8601) >= 600 and (.checks | length >= 4) and ([.checks[] | .graphqlCost] | all(. > 0)) and ([.checks[1:][] | .restNotModified] | all(. > 0)) and ([.checks[1:][] | .restUsed] | unique | length == 1)' docs/toolu/evidence/2026-10-08-github-live-watch.json && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --only docs-cli && /root/.bun/bin/bun run test:docs",
+    "title": "Observe an unchanged PR for ten minutes, record paired REST 304 primary counters and GraphQL points, document the fixed schedule, budget and pending #433 verdict boundary, and regenerate CLI reference",
+    "check": "jq -e '(.endedAt | fromdateiso8601) - (.startedAt | fromdateiso8601) >= 600 and (.checks | length >= 4) and ([.checks[] | .graphqlCost] | all(. > 0)) and ([.checks[1:][] | .restNotModified] | all(. >= 2)) and ([.checks[1:][] | .restUsedDelta] | all(. == 0))' docs/toolu/evidence/2026-10-08-github-live-watch.json && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask gate --only docs-cli && /root/.bun/bin/bun run test:docs",
     "ac_refs": ["AC-3", "AC-7", "AC-8"],
     "depends_on": ["engine-check"],
     "paths": ["crates/epic-orchestrator/", "docs/cli/", "docs/toolu/", "plugins/epic-orchestrator/README.md"],
-    "input": "authenticated sandbox PR checked every 180 seconds for at least ten minutes; saved report of response status, REST x-ratelimit-used and GraphQL rateLimit.cost"
+    "input": "authenticated unchanged PR checked every 180 seconds for at least ten minutes; saved report of paired response statuses, REST x-ratelimit-used and GraphQL rateLimit.cost"
   },
   {
     "id": "full-gate",
@@ -70,8 +70,10 @@ Build the persisted clock and watch discovery, then the HTTPS detectors and rate
 
 ## Verification
 
-The isolated HTTPS service proves real ETag, retry, GraphQL and state transitions; virtual time proves the exact schedule and idle behavior. A live ten-minute watch produces `docs/toolu/evidence/2026-10-08-github-live-watch.json` with the UTC start/end times and one row per check (`restNotModified`, `restUsed`, `graphqlCost`). The step check validates duration, at least four checks, positive GraphQL cost per check, conditional `304`s after warm-up, and flat REST primary usage on those checks. The Rust gate enforces the repository's size, layout, coverage, CLI and quality rules. `bun run test` covers the TypeScript and documentation gates. Delivery makes a scoped commit, verifies the final ledger across the whole branch, runs the version-2 review and ready verdict, then pushes and opens the authorized PR before babysit.
+The isolated HTTPS service proves real ETag, retry, GraphQL and state transitions; virtual time proves the exact schedule and idle behavior. A live ten-minute watch produces `docs/toolu/evidence/2026-10-08-github-live-watch.json` with the UTC start/end times and one row per check (`restNotModified`, raw `restUsed`, adjacent `restUsedDelta`, `graphqlCost`). The step check validates duration, at least four checks, positive GraphQL cost per check, paired conditional `304`s after warm-up, and a zero REST primary counter delta within those pairs. The Rust gate enforces the repository's size, layout, coverage, CLI and quality rules. `bun run test` covers the TypeScript and documentation gates. Delivery makes a scoped commit, verifies the final ledger across the whole branch, runs the version-2 review and ready verdict, then pushes and opens the authorized PR before babysit.
 
 ## Deviations
 
 - The `watch-clock` check now runs every `github_` test, including the registered-graph discovery and restart case. This strengthens the evidence for the same step without changing its scope.
+- The live watch uses the unchanged, merged `Falconiere/toolu#454` PR. No authorized sandbox PR was available; #454 was already the read-only PR used for the spec's GraphQL cost observation. The report records its identity and response counters without changing that PR.
+- The authenticated token's absolute REST `used` counter rose from 2 to 3 to 5 across `304` slots while another worker was active. [GitHub's REST guidance](https://docs.github.com/en/rest/using-the-rest-api/best-practices-for-using-the-rest-api#use-conditional-requests) says an authorized `304` costs no primary point; its [rate-limit guidance](https://docs.github.com/en/rest/using-the-rest-api/rate-limits-for-the-rest-api#checking-the-status-of-your-rate-limit) says counters can vary by region. The live check therefore records raw counters and verifies a zero `used` delta across two adjacent conditional `304` replies in each scheduled slot.

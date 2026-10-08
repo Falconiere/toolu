@@ -1,149 +1,14 @@
-use serde_json::{Value, json};
-use toolu_engine::LinkError;
-use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickReport, TickRequest};
-use toolu_github::{Client, Config};
+use serde_json::Value;
 use toolu_http_test_support::{Fixture, Reply};
-use toolu_runtime::env::Env;
 
 use super::{cause_name, rearm};
 use crate::disk::read_value;
 use crate::journal;
 use crate::model::{Issue, Step, World};
-use crate::paths::Paths;
-use crate::server::{Engine, Fault};
 use crate::status;
 use crate::watch::{self, Cause, Kind, Watch};
 
-const QUERY: &str = "query($owner: String!, $repo: String!, $number: Int!) { \
-  rateLimit { cost } repository(owner: $owner, name: $repo) { \
-  pullRequest(number: $number) { reviewThreads(first: 100) { nodes { isResolved } } \
-  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } } \
-  comments(last: 20) { nodes { body } } } } }";
-
-struct FullTick(Client);
-
-impl BabysitTick for FullTick {
-  fn tick(&self, request: &TickRequest) -> Result<TickReport, LinkError> {
-    let (owner, repo) = request
-      .repo
-      .split_once('/')
-      .ok_or_else(|| LinkError::Failed("repo".into()))?;
-    let reply = self
-      .0
-      .graphql(
-        QUERY,
-        &json!({"owner":owner,"repo":repo,"number":request.number}),
-      )
-      .map_err(|err| LinkError::Failed(err.to_string()))?;
-    let pr = reply
-      .data
-      .pointer("/repository/pullRequest")
-      .ok_or_else(|| LinkError::Failed("PR".into()))?;
-    let green = pr
-      .pointer("/commits/nodes/0/commit/statusCheckRollup/state")
-      .and_then(Value::as_str)
-      == Some("SUCCESS");
-    let approved = pr
-      .pointer("/comments/nodes")
-      .and_then(Value::as_array)
-      .is_some_and(|rows| {
-        rows.iter().any(|row| {
-          row["body"]
-            .as_str()
-            .is_some_and(|body| body.contains("approved, 0 findings"))
-        })
-      });
-    let resolved = pr
-      .pointer("/reviewThreads/nodes")
-      .and_then(Value::as_array)
-      .is_some_and(|rows| rows.iter().all(|row| row["isResolved"] == true));
-    Ok(TickReport {
-      decision: if green && approved && resolved {
-        TickDecision::Success
-      } else {
-        TickDecision::KeepGoing
-      },
-      result: reply.data,
-      graphql: reply.cost.points.map(|points| GraphQlUsage {
-        points,
-        remaining: reply.cost.rate.remaining,
-        reset_at: reply.cost.rate.reset,
-      }),
-    })
-  }
-}
-
-fn client(fixture: &Fixture) -> Client {
-  let mut config = Config::scheduled();
-  config.api_url = fixture.url("");
-  config.http.test_root_ca_der = Some(fixture.root_ca_der().to_vec());
-  Client::new(
-    config,
-    &Env::from_pairs([
-      ("GH_TOKEN", "engine-token"),
-      ("HTTPS_PROXY", &fixture.proxy_url()),
-    ]),
-  )
-  .expect("client")
-}
-
-fn pr_reply() -> String {
-  json!({"state":"open","merged":false,"head":{"sha":"abc"},"base":{"ref":"main"}}).to_string()
-}
-
-fn rest_routes(fixture: &Fixture) {
-  let root = "/repos/o/r";
-  for (path, body) in [
-    (format!("{root}/pulls/1"), pr_reply()),
-    (
-      format!("{root}/commits/abc/check-runs?per_page=100"),
-      r#"{"check_runs":[]}"#.into(),
-    ),
-    (format!("{root}/commits/abc/status"), "{}".into()),
-    (
-      format!("{root}/issues/1/comments?per_page=100"),
-      "[]".into(),
-    ),
-    (format!("{root}/pulls/1/comments?per_page=100"), "[]".into()),
-    (format!("{root}/pulls/1/reviews?per_page=100"), "[]".into()),
-  ] {
-    fixture
-      .sequence(
-        &path,
-        vec![
-          Reply::new(200, body)
-            .header("ETag", &format!("\"{}\"", path.len()))
-            .header("X-RateLimit-Used", "6"),
-          Reply::new(304, "").header("X-RateLimit-Used", "6"),
-        ],
-      )
-      .expect("REST route");
-  }
-}
-
-fn graphql_body(green: bool) -> String {
-  json!({"data": {"rateLimit":{"cost":1}, "repository":{"pullRequest":{
-    "reviewThreads":{"nodes":[{"isResolved":green}]},
-    "commits":{"nodes":[{"commit":{"statusCheckRollup":{"state":if green {"SUCCESS"} else {"PENDING"}}}}]},
-    "comments":{"nodes":[{"body":if green {"approved, 0 findings"} else {"review running"}}]}
-  }}}}).to_string()
-}
-
-fn engine(fixture: &Fixture) -> (tempfile::TempDir, Engine, FullTick) {
-  let temp = tempfile::tempdir().expect("temp");
-  std::fs::create_dir_all(temp.path().join("status")).expect("status dir");
-  let mut engine = Engine::open(Paths::at(temp.path()), None, Fault::None).expect("open");
-  engine.world.now_ms = 0;
-  let mut issue = Issue::blank("one", "epic", &temp.path().display().to_string(), 0);
-  issue.repo = "o/r".into();
-  issue.phase = "babysit".into();
-  issue.stage = "running".into();
-  issue.pr = Some(1);
-  engine.world.issues.insert("one".into(), issue);
-  watch::sync(&mut engine.world);
-  engine.github = Some(client(fixture));
-  (temp, engine, FullTick(client(fixture)))
-}
+use super::fixture::{engine, graphql_body, pr_reply, rest_routes};
 
 #[test]
 fn github_watch_full_tick_promotes_green_pr_without_worker_prompt() {
@@ -282,6 +147,111 @@ fn github_retry_after_suppresses_requests_until_the_next_fixed_slot() {
   }
   assert_eq!(engine.world.watches["pr:o/r#1"].next_at_ms, 540_000);
   assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-error" && row.note.contains("\"retryAfter\":60"))));
+}
+
+#[test]
+fn github_retry_after_from_graphql_holds_other_pr_watches() {
+  let fixture = Fixture::start().expect("fixture");
+  rest_routes(&fixture);
+  fixture
+    .route(
+      "/graphql",
+      Reply::new(429, r#"{"message":"secondary rate limit"}"#)
+        .header("Retry-After", "60")
+        .header("X-RateLimit-Remaining", "40"),
+    )
+    .expect("GraphQL throttle");
+  let (temp, mut engine, tick) = engine(&fixture);
+  let mut other = Issue::blank("two", "epic", &temp.path().display().to_string(), 0);
+  other.repo = "o/r".into();
+  other.phase = "babysit".into();
+  other.stage = "running".into();
+  other.pr = Some(2);
+  engine.world.issues.insert("two".into(), other);
+  watch::sync(&mut engine.world);
+  engine.github_tick(&tick);
+  assert_eq!(engine.world.github_hold_until_ms, 60_000);
+  assert_eq!(engine.world.graphql_remaining, Some(40));
+  assert!(engine.world.watches["pr:o/r#2"].immediate);
+  let count = fixture.requests().expect("requests").len();
+  assert_eq!(count, 7);
+  engine.world.now_ms = 59_999;
+  engine.github_tick(&tick);
+  assert_eq!(fixture.requests().expect("requests").len(), count);
+  assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-check" && row.note.contains("\"graphqlRetryAfter\":60") && row.note.contains("\"graphqlRemaining\":40"))));
+}
+
+#[test]
+fn incomplete_rest_probe_retries_changed_pr_and_records_partial_cost() {
+  let fixture = Fixture::start().expect("fixture");
+  rest_routes(&fixture);
+  let merged = r#"{"state":"closed","merged":true,"head":{"sha":"abc"},"base":{"ref":"main"}}"#;
+  fixture
+    .sequence(
+      "/repos/o/r/pulls/1",
+      vec![
+        Reply::new(200, merged).header("ETag", "\"merged\""),
+        Reply::new(200, merged).header("ETag", "\"merged\""),
+      ],
+    )
+    .expect("PR route");
+  fixture
+    .sequence(
+      "/repos/o/r/commits/abc/check-runs?per_page=100",
+      vec![
+        Reply::new(500, "{}"),
+        Reply::new(200, r#"{"check_runs":[]}"#),
+      ],
+    )
+    .expect("checks route");
+  let (_temp, mut engine, tick) = engine(&fixture);
+  engine.github_tick(&tick);
+  assert_eq!(engine.world.issues["one"].stage, "running");
+  assert_eq!(engine.world.rest_points, 1);
+  assert!(engine.world.watches["pr:o/r#1"].etags.is_empty());
+  assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-error" && row.note.contains("\"restPoints\":1"))));
+  engine.world.now_ms = 180_000;
+  engine.github_tick(&tick);
+  assert_eq!(engine.world.issues["one"].stage, "merged");
+  let requests = fixture.requests().expect("requests");
+  let pr_requests: Vec<_> = requests
+    .iter()
+    .filter(|request| request.path == "/repos/o/r/pulls/1")
+    .collect();
+  assert_eq!(pr_requests.len(), 2);
+  assert!(!pr_requests[1].headers.contains_key("if-none-match"));
+}
+
+#[test]
+fn partial_probe_rate_limit_keeps_the_latest_response_counters() {
+  let fixture = Fixture::start().expect("fixture");
+  rest_routes(&fixture);
+  fixture
+    .route(
+      "/repos/o/r/pulls/1",
+      Reply::new(200, pr_reply()).header("X-RateLimit-Remaining", "1200"),
+    )
+    .expect("PR route");
+  fixture
+    .route(
+      "/repos/o/r/commits/abc/check-runs?per_page=100",
+      Reply::new(429, r#"{"message":"secondary rate limit"}"#)
+        .header("Retry-After", "60")
+        .header("X-RateLimit-Remaining", "40"),
+    )
+    .expect("checks route");
+  let (_temp, mut engine, tick) = engine(&fixture);
+  engine.github_tick(&tick);
+  assert_eq!(engine.world.rest_points, 1);
+  assert_eq!(
+    engine
+      .world
+      .rest_rate
+      .as_ref()
+      .and_then(|rate| rate.remaining),
+    Some(40)
+  );
+  assert_eq!(engine.world.github_hold_until_ms, 60_000);
 }
 
 #[test]

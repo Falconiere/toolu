@@ -33,9 +33,9 @@ Extend the shared GitHub client's rate-limit error with typed rate headers and s
 
 ## Failure modes and edge cases
 
-- A `429` or rate-limited `403` with `retry-after` prevents all GitHub calls for the requested duration and records the hold. The anchored 180-second schedule is not reset; the next eligible slot resumes it. A `5xx`, transport failure, or error without `retry-after` is recorded and retried at the next scheduled slot. Local engine work continues.
+- A `429` or rate-limited `403` with `retry-after` prevents GitHub checks, launches and merges for the requested duration and records the hold. Cleanup and local reporting continue. The anchored 180-second schedule is not reset; the next eligible slot resumes it. A `5xx`, transport failure, or error without `retry-after` is recorded and retried at the next scheduled slot.
 - If a probe lacks an ETag, it remains unconditional and its REST cost is recorded. A `304` leaves its cached identity and ETag unchanged. Head-SHA changes invalidate head-specific ETags before probing the new SHA.
-- A malformed or partial reply produces an error event rather than a false state transition. A vanished or closed PR ends its watch after the terminal event. Empty registered epics and a process with no waiting PR send no GitHub request.
+- A malformed or partial reply produces an error event rather than a false state transition. An incomplete multi-call probe restores its earlier ETags and identity so the next fixed slot retries the changed input; completed-call REST cost is still journaled. A vanished or closed PR ends its watch after the terminal event. Empty registered epics and a process with no waiting PR send no GitHub request.
 - A low REST or GraphQL primary budget holds new launches and merges, while checks continue. An immediate check during a retry-after hold waits for the hold; it does not move the scheduled deadline.
 - The native low-budget floors preserve the documented watcher defaults: REST remaining below 1,000 or GraphQL remaining below 500. Only launches and merges wait; cleanup, checkpoints and local reporting continue. A reset deadline expires a stale low observation.
 - Multi-page sub-issues, comments, and reviews must be complete before a detector concludes that nothing changed. All request paths are derived from validated `owner/repo` and numeric issue or PR IDs.
@@ -44,7 +44,7 @@ Extend the shared GitHub client's rate-limit error with typed rate headers and s
 
 - **AC-1:** In a loopback HTTPS scripted epic, a verdict and green CI on a watched PR trigger a babysit tick at the next check within 180 seconds; a successful trait result enters the merge queue without a worker prompt. The production verdict parser is supplied by #433.
 - **AC-2:** Over an idle scripted hour, at least 95% of conditional REST probes return `304` after warm-up; REST primary `used` stays flat on those replies, while the journal separately records every GraphQL tick and its `rateLimit.cost`, and the 20-point hourly cap is enforced.
-- **AC-3:** A live 10-minute unchanged-PR watch in a sandbox repository records flat REST `used` across `304`s and reports actual GraphQL points for its scheduled ticks.
+- **AC-3:** A live 10-minute unchanged-PR watch records raw REST `used` counters and a zero counter delta across adjacent authorized `304`s in each slot, plus actual GraphQL points for scheduled ticks. This pairwise measurement isolates the watch from other requests using the same token.
 - **AC-4:** A virtual-clock six-hour wait has 180-second scheduled gaps, including after restart and immediate extra checks, with no interval backoff.
 - **AC-5:** A loopback `429` with `retry-after: 60` causes no GitHub request during that 60 seconds, is journaled, and leaves subsequent scheduled gaps at 180 seconds.
 - **AC-6:** An engine with no waiting PR sends zero GitHub requests during ten virtual minutes.

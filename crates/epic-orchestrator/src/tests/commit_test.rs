@@ -1,6 +1,7 @@
 use super::commit_effect;
 use crate::logic::ensure_issue;
 use crate::model::{Action, World, fresh};
+use crate::watch::{Kind, Watch};
 
 #[test]
 fn an_applied_merge_moves_to_cleaning() {
@@ -12,6 +13,57 @@ fn an_applied_merge_moves_to_cleaning() {
   }
   let _steps = commit_effect(&mut world, "a", "applied");
   assert_eq!(world.issues.get("a").expect("a").stage, "cleaning");
+}
+
+#[test]
+fn an_applied_merge_requests_related_checks_without_moving_the_clock() {
+  let mut world = World::new(0);
+  let issue = ensure_issue(&mut world, "a", "one", "/tmp");
+  issue.repo = "o/r".into();
+  issue.pending = Some(fresh(Action::Merge, "t1".into()));
+  for (id, kind) in [
+    (
+      "pr",
+      Kind::Pr {
+        key: "a".into(),
+        repo: "o/r".into(),
+        number: 1,
+      },
+    ),
+    (
+      "base",
+      Kind::Base {
+        repo: "o/r".into(),
+        branch: "main".into(),
+      },
+    ),
+    (
+      "epic",
+      Kind::Epic {
+        key: "one".into(),
+        repo: "o/r".into(),
+        number: 402,
+      },
+    ),
+    (
+      "other",
+      Kind::Pr {
+        key: "b".into(),
+        repo: "other/repo".into(),
+        number: 2,
+      },
+    ),
+  ] {
+    let mut watch = Watch::new(kind, 0);
+    assert!(watch.take_due(0).is_some());
+    world.watches.insert(id.into(), watch);
+  }
+  let _steps = commit_effect(&mut world, "a", "applied");
+  for id in ["pr", "base", "epic"] {
+    assert!(world.watches[id].immediate);
+    assert_eq!(world.watches[id].next_at_ms, 180_000);
+  }
+  assert!(!world.watches["other"].immediate);
 }
 
 #[test]
@@ -51,7 +103,18 @@ fn a_recovered_effect_reconciles_or_defers() {
   let _steps = commit_effect(&mut world, "a", "deferred");
   assert!(world.issues.get("a").expect("a").pending.is_none());
   arm(&mut world, Action::Merge, true);
+  let mut epic_watch = Watch::new(
+    Kind::Epic {
+      key: "one".into(),
+      repo: "o/r".into(),
+      number: 402,
+    },
+    0,
+  );
+  assert!(epic_watch.take_due(0).is_some());
+  world.watches.insert("epic".into(), epic_watch);
   let _steps = commit_effect(&mut world, "a", "merged");
+  assert!(world.watches["epic"].immediate);
   let pending = world
     .issues
     .get("a")
