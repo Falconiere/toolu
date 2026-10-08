@@ -21,6 +21,7 @@ impl BabysitTick for Fixed {
     Ok(TickReport {
       decision: self.0,
       result: json!({ "slot": format!("{}#{}", request.repo, request.number) }),
+      graphql: None,
     })
   }
 }

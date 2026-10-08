@@ -1338,6 +1338,7 @@ dependencies = [
  "tempfile",
  "toolu-engine",
  "toolu-github",
+ "toolu-http-test-support",
  "toolu-protocol",
  "toolu-runtime",
  "toolu-state",

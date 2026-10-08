@@ -22,6 +22,7 @@ impl BabysitTick for GithubTick {
       .map(|_client| TickReport {
         decision: TickDecision::KeepGoing,
         result: Value::Null,
+        graphql: None,
       })
       .map_err(|err| LinkError::Failed(err.to_string()))
   }

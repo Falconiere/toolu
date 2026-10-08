@@ -14,6 +14,8 @@ mod control;
 mod disk;
 mod dispatch;
 mod effects;
+mod github_engine;
+mod github_probe;
 mod herdr;
 mod herdr_argv;
 mod job;
@@ -30,6 +32,7 @@ mod schedule;
 mod server;
 mod snapshot;
 mod socket;
+mod socket_deadline;
 mod source;
 mod source_apply;
 #[cfg(test)]
@@ -54,8 +57,8 @@ pub fn command() -> Command {
 
 /// Run a `toolu epic` verb. `crates/cli` passes pr-babysit's tick; `babysit::next`
 /// turns a tick failure into attention (#433).
-pub fn run(matches: &ArgMatches, ctx: &Ctx, _tick: &dyn BabysitTick) -> Outcome {
-  verbs::run(matches, ctx)
+pub fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Outcome {
+  verbs::run(matches, ctx, tick)
 }
 
 #[cfg(test)]

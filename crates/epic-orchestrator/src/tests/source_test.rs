@@ -85,7 +85,7 @@ fn herdr_idle() {
     .expect("status")
     .modified()
     .expect("mtime");
-  engine.tick().expect("tick");
+  engine.tick(&()).expect("tick");
   assert_eq!(std::fs::read_to_string(&log).unwrap_or_default(), before);
   assert_eq!(
     std::fs::metadata(&status)

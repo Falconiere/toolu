@@ -10,7 +10,7 @@ use toolu_http::{Auth, Method, Request, Response};
 
 use crate::policy::{self, Class};
 use crate::token::{self, Token, Tokens};
-use crate::{Client, Error};
+use crate::{Client, Error, RateLimit};
 
 /// The `User-Agent` GitHub requires on every request.
 const USER_AGENT: &str = concat!("toolu/", env!("CARGO_PKG_VERSION"));
@@ -80,10 +80,12 @@ impl Client {
       (Class::RateLimited { wait }, outcome) => {
         let pause = wait.unwrap_or_else(|| retry.backoff(attempt));
         if pause > retry.max_wait || attempt >= retry.attempts {
-          let status = outcome.map_or(0, |response| response.status);
+          let (status, rate, secondary) = rate_detail(&outcome);
           return Err(Error::RateLimited {
             status,
             retry_after: wait,
+            rate,
+            secondary,
           });
         }
         Ok(Step::Wait(pause))
@@ -160,6 +162,17 @@ impl Client {
       Ok(fresh) => self.tokens().refresh(sent, fresh),
       Err(_unreadable) => false,
     }
+  }
+}
+
+fn rate_detail(outcome: &Result<Response, toolu_http::Error>) -> (u16, RateLimit, bool) {
+  match outcome {
+    Ok(response) => (
+      response.status,
+      RateLimit::of(response),
+      policy::secondary(response),
+    ),
+    Err(_) => (0, RateLimit::default(), false),
   }
 }
 

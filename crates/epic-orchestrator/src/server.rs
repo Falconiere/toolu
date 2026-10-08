@@ -16,6 +16,8 @@ use crate::paths::Paths;
 use crate::schedule::{note_herdr, on_tick, set_pause};
 use crate::snapshot::{issue_path, load, status_path};
 use crate::watch;
+use toolu_engine::babysit::BabysitTick;
+use toolu_github::Client;
 
 /// Where a scripted merge is killed so recovery can be tested.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -59,6 +61,8 @@ pub(crate) struct Engine {
   pub(crate) now: SystemTime,
   /// A new pane matched a running worktree, so the subscription should reopen.
   pub resubscribe: bool,
+  /// Shared GitHub client, created only when a watch first becomes due.
+  pub(crate) github: Option<Client>,
 }
 
 impl Engine {
@@ -78,6 +82,7 @@ impl Engine {
       herdr_session: None,
       now,
       resubscribe: false,
+      github: None,
     })
   }
 
@@ -163,12 +168,12 @@ impl Engine {
   ///
   /// # Errors
   /// A step or the watch file fails.
-  pub(crate) fn tick(&mut self) -> Result<Stop, String> {
+  pub(crate) fn tick(&mut self, babysit: &dyn BabysitTick) -> Result<Stop, String> {
     self.refresh_clock();
     crate::snapshot::adopt_new_epics(&mut self.world, &self.paths)?;
     watch::sync(&mut self.world);
     on_tick(&mut self.world);
-    watch::take_due(&mut self.world);
+    self.github_tick(babysit);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;
     if !crate::source::prompt_enabled() {
@@ -212,6 +217,7 @@ impl Engine {
         "herdrFailures": self.world.herdr_failures,
         "herdrRetryAt": self.world.herdr_retry_at_ms,
         "github": self.world.watches,
+        "githubHoldUntil": self.world.github_hold_until_ms,
       }),
     )
   }

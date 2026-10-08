@@ -8,7 +8,7 @@ fn planned_lists_only_the_later_verbs() {
   let matches = command()
     .try_get_matches_from(["epic", "planned"])
     .expect("planned");
-  let outcome = run(&matches, &Ctx::default());
+  let outcome = run(&matches, &Ctx::default(), &());
   assert_eq!(
     outcome.stdout.as_deref(),
     Some(

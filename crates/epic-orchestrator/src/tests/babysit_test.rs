@@ -14,6 +14,7 @@ impl BabysitTick for Answer {
     self.0.clone().map(|decision| TickReport {
       decision,
       result: json!({ "slot": format!("{}#{}", request.repo, request.number) }),
+      graphql: None,
     })
   }
 }
