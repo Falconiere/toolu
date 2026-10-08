@@ -1,4 +1,5 @@
 use std::process::Command;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -154,6 +155,17 @@ fn assert_restart(paths: &Paths, epic: &std::path::Path) {
   assert!(!paths.spool().join("t8.json").is_file());
   stop(paths, PROTOCOL);
   handle.join().expect("restart");
+}
+
+#[test]
+fn a_panic_in_the_state_loop_sets_the_accept_stop_flag() {
+  let stop = AtomicBool::new(false);
+  let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+    let _stop_accept = super::StopAccept { stop: &stop };
+    panic!("state_loop");
+  }));
+  assert!(caught.is_err());
+  assert!(stop.load(Ordering::Relaxed));
 }
 
 fn wait_socket(paths: &Paths, log: &std::path::Path) -> std::os::unix::net::UnixStream {

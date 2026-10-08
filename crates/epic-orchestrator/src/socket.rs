@@ -32,6 +32,17 @@ enum Msg {
   },
 }
 
+/// Sets the accept-loop stop flag if `state_loop` unwinds before `serve` joins it.
+struct StopAccept<'a> {
+  stop: &'a AtomicBool,
+}
+
+impl Drop for StopAccept<'_> {
+  fn drop(&mut self) {
+    self.stop.store(true, Ordering::Relaxed);
+  }
+}
+
 /// Listen until `stop` or `replace`. The lock is released when this returns.
 ///
 /// # Errors
@@ -55,7 +66,10 @@ pub(crate) fn serve(
   let stop = Arc::new(AtomicBool::new(false));
   let flag = Arc::clone(&stop);
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
-  let result = state_loop(&mut engine, &rx, protocol);
+  let result = {
+    let _stop_accept = StopAccept { stop: &stop };
+    state_loop(&mut engine, &rx, protocol)
+  };
   stop.store(true, Ordering::Relaxed);
   let _wake = UnixStream::connect(&socket);
   if let Err(err) = accept.join() {
