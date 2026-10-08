@@ -2,22 +2,12 @@
 
 use std::path::Path;
 
+use super::value_text;
 use toolu_engine::ledger::io::read_ledger;
-use toolu_engine::ledger::jq::{get, raw};
+use toolu_engine::ledger::jq::get;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::git::{branch_slug, current_branch};
-
-fn text(value: &Ordered) -> String {
-  match value {
-    Ordered::Null | Ordered::Bool(false) => String::new(),
-    Ordered::Bool(_)
-    | Ordered::Number(_)
-    | Ordered::String(_)
-    | Ordered::Array(_)
-    | Ordered::Object(_) => raw(value).trim_end_matches('\n').to_owned(),
-  }
-}
 
 fn steps(ledger: &Ordered) -> Vec<&Ordered> {
   let Some(value) = get(ledger, "steps").ok() else {
@@ -35,10 +25,10 @@ fn step_join(ledger: &Ordered) -> (String, String) {
   let running = steps.iter().find(|step| {
     get(step, "status").is_ok_and(|status| *status == Ordered::String("running".to_owned()))
   });
-  let next = get(ledger, "next").map(text).unwrap_or_default();
+  let next = get(ledger, "next").map(value_text).unwrap_or_default();
   let id = running
     .and_then(|step| get(step, "id").ok())
-    .map(text)
+    .map(value_text)
     .filter(|id| !id.is_empty())
     .unwrap_or(next);
   if id.is_empty() {
@@ -46,9 +36,9 @@ fn step_join(ledger: &Ordered) -> (String, String) {
   }
   let tier = steps
     .iter()
-    .find(|step| get(step, "id").is_ok_and(|value| text(value) == id))
+    .find(|step| get(step, "id").is_ok_and(|value| value_text(value) == id))
     .and_then(|step| get(step, "model").ok())
-    .map(text)
+    .map(value_text)
     .unwrap_or_default();
   (id, tier)
 }

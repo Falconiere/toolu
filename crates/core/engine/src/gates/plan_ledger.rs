@@ -13,10 +13,9 @@ use toolu_state::ctx::StateCtx;
 use toolu_state::diff_sha::diff_sha;
 use toolu_state::git::{base_branch, branch_slug};
 
+use super::decided;
 use super::plan_ledger_ac::{AcCheck, ac_blockers};
-use super::push_target::{PushTarget, git_at, push_target};
-use super::{decided, gate_config, pre_mode};
-use crate::gate::Gate;
+use super::push_target::{PushTarget, active_push, git_at};
 use crate::ledger::io::read_ledger;
 use crate::ledger::jq::{JqError, alt, concat, each, get, is_str, length, number, raw, string};
 use crate::ledger::parse::is_file;
@@ -219,15 +218,11 @@ fn evaluate(
   ctx: &RuleContext<'_>,
   warnings: &mut Vec<String>,
 ) -> Result<Decision, String> {
-  let Some(PushTarget { root, branch }) = push_target(event, ctx) else {
+  let Some((PushTarget { root, branch }, config, mode)) =
+    active_push(event, ctx, "planLedger", warnings)
+  else {
     return Ok(Decision::Allow);
   };
-  let config = gate_config(ctx);
-  let mode = pre_mode(&config, "planLedger", ctx, true);
-  warnings.extend(config.take_warnings());
-  if mode == GateMode::Off {
-    return Ok(Decision::Allow);
-  }
   let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
   let base = ctx
     .env
@@ -249,24 +244,7 @@ fn evaluate(
   result
 }
 
-impl Gate for PlanLedger {
-  fn name(&self) -> &'static str {
-    "plan-ledger"
-  }
-
-  fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String> {
-    evaluate(event, ctx, &mut Vec::new())
-  }
-
-  fn run_warning(
-    &self,
-    event: &NormalizedEvent,
-    ctx: &RuleContext<'_>,
-    warnings: &mut Vec<String>,
-  ) -> Result<Decision, String> {
-    evaluate(event, ctx, warnings)
-  }
-}
+impl_pre_gate!(PlanLedger, "plan-ledger", evaluate);
 
 #[cfg(test)]
 #[path = "tests/plan_ledger_test.rs"]

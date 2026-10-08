@@ -4,6 +4,33 @@
 //! tool (#423), `gate_status` records quality-command results and `push_waiver`
 //! cashes in a push-review waiver once the push lands.
 
+macro_rules! impl_pre_gate {
+  ($gate:ident, $name:literal, $evaluate:ident) => {
+    impl crate::gate::Gate for $gate {
+      fn name(&self) -> &'static str {
+        $name
+      }
+
+      fn run(
+        &self,
+        event: &toolu_protocol::normalized::NormalizedEvent,
+        ctx: &toolu_runtime::registry::rule::RuleContext<'_>,
+      ) -> Result<toolu_protocol::decision::Decision, String> {
+        $evaluate(event, ctx, &mut Vec::new())
+      }
+
+      fn run_warning(
+        &self,
+        event: &toolu_protocol::normalized::NormalizedEvent,
+        ctx: &toolu_runtime::registry::rule::RuleContext<'_>,
+        warnings: &mut Vec<String>,
+      ) -> Result<toolu_protocol::decision::Decision, String> {
+        $evaluate(event, ctx, warnings)
+      }
+    }
+  };
+}
+
 /// The bash-commands PreToolUse built-in.
 pub(crate) mod bash_commands;
 /// The code-edit-rules PreToolUse built-in.

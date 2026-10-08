@@ -13,10 +13,9 @@ use toolu_state::diff_sha::diff_sha;
 use toolu_state::git::{base_branch, branch_slug};
 use toolu_state::telemetry::{TelemetryEvent, telemetry_append};
 
+use super::decided;
 use super::push_review_state::{state_failure, state_round};
-use super::push_target::{PushTarget, changed_names, push_target, ref_exists};
-use super::{decided, gate_config, pre_mode};
-use crate::gate::Gate;
+use super::push_target::{PushTarget, active_push, changed_names, ref_exists};
 use crate::verdict::gates::read_json;
 use crate::waiver::Waivers;
 
@@ -149,15 +148,11 @@ fn evaluate(
   ctx: &RuleContext<'_>,
   warnings: &mut Vec<String>,
 ) -> Result<Decision, String> {
-  let Some(PushTarget { root, branch }) = push_target(event, ctx) else {
+  let Some((PushTarget { root, branch }, _config, mode)) =
+    active_push(event, ctx, "pushReview", warnings)
+  else {
     return Ok(Decision::Allow);
   };
-  let config = gate_config(ctx);
-  let mode = pre_mode(&config, "pushReview", ctx, true);
-  warnings.extend(config.take_warnings());
-  if mode == GateMode::Off {
-    return Ok(Decision::Allow);
-  }
   let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
   let slug = branch_slug(&branch);
   let base = ctx
@@ -179,24 +174,7 @@ fn evaluate(
   result
 }
 
-impl Gate for PushReview {
-  fn name(&self) -> &'static str {
-    "push-review"
-  }
-
-  fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String> {
-    evaluate(event, ctx, &mut Vec::new())
-  }
-
-  fn run_warning(
-    &self,
-    event: &NormalizedEvent,
-    ctx: &RuleContext<'_>,
-    warnings: &mut Vec<String>,
-  ) -> Result<Decision, String> {
-    evaluate(event, ctx, warnings)
-  }
-}
+impl_pre_gate!(PushReview, "push-review", evaluate);
 
 #[cfg(test)]
 #[path = "tests/push_review_test.rs"]

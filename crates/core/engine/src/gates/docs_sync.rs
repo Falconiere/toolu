@@ -16,7 +16,6 @@ use toolu_state::telemetry::{TelemetryEvent, telemetry_append};
 
 use super::push_target::{PushTarget, git_at, push_target, ref_exists};
 use super::{decided, gate_config, pre_mode};
-use crate::gate::Gate;
 use crate::ledger::parse::is_file;
 use crate::verdict::gates::{field_or, read_json};
 use crate::verdict::glob::matches_any;
@@ -163,24 +162,7 @@ fn evaluate(
   )
 }
 
-impl Gate for DocsSync {
-  fn name(&self) -> &'static str {
-    "docs-sync"
-  }
-
-  fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<Decision, String> {
-    evaluate(event, ctx, &mut Vec::new())
-  }
-
-  fn run_warning(
-    &self,
-    event: &NormalizedEvent,
-    ctx: &RuleContext<'_>,
-    warnings: &mut Vec<String>,
-  ) -> Result<Decision, String> {
-    evaluate(event, ctx, warnings)
-  }
-}
+impl_pre_gate!(DocsSync, "docs-sync", evaluate);
 
 #[cfg(test)]
 #[path = "tests/docs_sync_test.rs"]
