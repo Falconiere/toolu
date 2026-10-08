@@ -54,7 +54,7 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const proxy = Object.entries(fixture.env)
       .map(([name, value]) => `${name}='${value}'`)
       .join(" ");
-    const judge = `${proxy} "$TOOLU_BUN" --no-env-file "$TOOLU_CONFIG_DIR/jev/jev.sh" noul probe -s evidence`;
+    const judge = `${proxy} toolu jev noul probe -s evidence`;
     try {
       using session = openSession(cacheRoot, {
         config: () => ({ permission: { bash: "allow" } }),
@@ -66,6 +66,7 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
         scripts: { "jev.judge": [{ tool: "bash", args: { command: judge, description: "jev" } }] },
       });
       installShim(session);
+      session.env.PATH = `${join(ROOT, "target/debug")}:${process.env.PATH ?? ""}`;
       session.env.TOOLU_BUN = process.execPath;
       session.env.TOOLU_REPO_ROOT = ROOT;
       session.env.TYPESAFE_API_KEY = KEY;
@@ -76,7 +77,7 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
       const system = messagesText(session, "system");
       const user = messagesText(session, "user");
       expect(system).toContain(MANDATE);
-      expect(system).toContain("--no-env-file");
+      expect(system).toContain("toolu jev");
       expect(system).toContain("jev-jev");
       expect(user).toContain(REMINDER);
       expect(toolStates(hostRun)).toEqual([{ tool: "bash", status: "completed", error: null }]);

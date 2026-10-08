@@ -1,8 +1,8 @@
 /**
  * Private loopback HTTPS fixture for REST skill CLIs (#270). The real CLI runs
  * as a subprocess with `env` applied: its fetch goes through a CONNECT proxy to
- * a local TLS server whose throwaway self-signed certificate names the real API
- * hosts and is trusted through NODE_EXTRA_CA_CERTS. TLS verification stays on.
+ * a local TLS server. A throwaway CA signs the leaf the server presents, and
+ * NODE_EXTRA_CA_CERTS trusts that CA. TLS verification stays on.
  * Every request is recorded; responses follow a plan whose last entry repeats.
  */
 import { spawnSync } from "node:child_process";
@@ -48,16 +48,71 @@ export interface HttpsFixture {
 
 const DEFAULT_RESPONSE: PlannedResponse = { status: 200, body: "{}" };
 
-function selfSigned(dir: string, hosts: readonly string[]): { cert: string; key: string } {
-  const cert = join(dir, "cert.pem");
-  const key = join(dir, "key.pem");
-  const san = hosts.map((host) => `DNS:${host}`).join(",");
-  const args = ["req", "-x509", "-newkey", "rsa:2048"];
-  args.push("-nodes", "-keyout", key, "-out", cert, "-days", "1");
-  args.push("-subj", `/CN=${hosts[0] ?? "localhost"}`, "-addext", `subjectAltName=${san}`);
+function openssl(args: readonly string[]): void {
   const run = spawnSync("openssl", args, { encoding: "utf8" });
   if (run.status !== 0) throw new Error(`openssl failed: ${run.stderr || String(run.error)}`);
-  return { cert, key };
+}
+
+/** A CA plus a leaf the server presents. `ca` is what `NODE_EXTRA_CA_CERTS` trusts. */
+function selfSigned(
+  dir: string,
+  hosts: readonly string[],
+): { ca: string; cert: string; key: string } {
+  const ca = join(dir, "ca.pem");
+  const caKey = join(dir, "ca.key");
+  const cert = join(dir, "cert.pem");
+  const key = join(dir, "key.pem");
+  const csr = join(dir, "leaf.csr");
+  const san = hosts.map((host) => `DNS:${host}`).join(",");
+  openssl([
+    "req",
+    "-x509",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-keyout",
+    caKey,
+    "-out",
+    ca,
+    "-days",
+    "1",
+    "-subj",
+    "/CN=toolu-fixture-ca",
+    "-addext",
+    "basicConstraints=critical,CA:TRUE",
+  ]);
+  openssl([
+    "req",
+    "-newkey",
+    "rsa:2048",
+    "-nodes",
+    "-keyout",
+    key,
+    "-out",
+    csr,
+    "-subj",
+    `/CN=${hosts[0] ?? "localhost"}`,
+    "-addext",
+    `subjectAltName=${san}`,
+  ]);
+  openssl([
+    "x509",
+    "-req",
+    "-in",
+    csr,
+    "-CA",
+    ca,
+    "-CAkey",
+    caKey,
+    "-CAcreateserial",
+    "-out",
+    cert,
+    "-days",
+    "1",
+    "-copy_extensions",
+    "copy",
+  ]);
+  return { ca, cert, key };
 }
 
 interface Recorder {
@@ -115,7 +170,7 @@ export async function startHttpsFixture(hosts: readonly string[]): Promise<Https
   const recorder: Recorder = { connects: [], requests: [], queue: [] };
   let tls: Server | undefined;
   try {
-    const { cert, key } = selfSigned(dir, hosts);
+    const { ca, cert, key } = selfSigned(dir, hosts);
     const server = serveTls(cert, key, recorder);
     tls = server;
     const proxy = await startConnectProxy(server.port ?? 0, (authority) => {
@@ -125,7 +180,7 @@ export async function startHttpsFixture(hosts: readonly string[]): Promise<Https
       return false;
     });
     return {
-      env: fixtureEnv(proxy.port, cert),
+      env: fixtureEnv(proxy.port, ca),
       connects: recorder.connects,
       requests: recorder.requests,
       plan(responses) {

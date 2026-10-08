@@ -14,10 +14,14 @@ const Row = z.object({
 });
 
 /**
- * The one shell file the cutover keeps: the curl installer users pipe into
- * bash before toolu or Bun exist on their machine (#457).
+ * Shell files the cutover keeps. `install.sh` is the curl installer users pipe
+ * into bash before toolu or Bun exist (#457). The Jev shim is one `exec` line
+ * until the launcher stops publishing it (#440).
  */
-const INSTALLER = "install.sh";
+const SHELL_KEEP = new Set(["install.sh", "plugins/jev/scripts/jev.sh"]);
+
+/** A row may still be a Bun bundle, or the generated native launcher. */
+const HOST_MECHANISMS = new Set(["bun-bundle", "native"]);
 
 function trackedShellFiles(): string[] {
   const result = spawnSync("git", ["ls-files", "-z", "*.sh", "*.bash", "*.bats"], {
@@ -27,7 +31,7 @@ function trackedShellFiles(): string[] {
   if (result.status !== 0) {
     throw new Error(`git ls-files failed: ${result.stderr.trim()}`);
   }
-  return result.stdout.split("\0").filter((file) => file !== "" && file !== INSTALLER);
+  return result.stdout.split("\0").filter((file) => file !== "" && !SHELL_KEEP.has(file));
 }
 
 function check(): void {
@@ -62,7 +66,7 @@ function check(): void {
     if (row.classification !== "port-native")
       problems.push(`${row.id}: classification ${row.classification}`);
     if (row.bashRequired) problems.push(`${row.id}: bashRequired=true`);
-    if (row.hostMechanism !== "bun-bundle")
+    if (!HOST_MECHANISMS.has(row.hostMechanism))
       problems.push(`${row.id}: hostMechanism ${row.hostMechanism}`);
     if (row.implementationStatus !== "done")
       problems.push(`${row.id}: implementationStatus ${row.implementationStatus}`);
@@ -81,7 +85,8 @@ function check(): void {
       continue;
     }
     if (fields[1]?.trim() !== "port-native") problems.push(`matrix row is not native: ${line}`);
-    if (fields[2]?.trim() !== "bun-bundle") problems.push(`matrix row is not Bun: ${line}`);
+    if (!HOST_MECHANISMS.has(fields[2]?.trim() ?? ""))
+      problems.push(`matrix row is not Bun or native: ${line}`);
     if (fields[3]?.trim() !== "no") problems.push(`matrix row requires Bash: ${line}`);
   }
 
@@ -90,7 +95,7 @@ function check(): void {
     process.exitCode = 1;
   } else {
     process.stdout.write(
-      `final-removal: ok (${inventory.length} native rows, no shell file but ${INSTALLER})\n`,
+      `final-removal: ok (${inventory.length} native rows, shell kept: ${[...SHELL_KEEP].join(", ")})\n`,
     );
   }
 }

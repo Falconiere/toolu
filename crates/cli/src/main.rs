@@ -24,6 +24,7 @@ use clap::Command;
 use fast::Fast;
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 
 /// This binary's version.
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -35,6 +36,8 @@ pub(crate) struct Context<'a> {
   pub(crate) exe: &'a dyn Fn() -> Option<PathBuf>,
   /// The hook payload, read only by hooks that need it.
   pub(crate) stdin: &'a dyn Fn() -> std::io::Result<String>,
+  /// Hooks use this snapshot when a test supplies one. `None` reads the process.
+  pub(crate) env: Option<&'a Env>,
 }
 
 /// Run `words` (argv after the program name). `tree` builds the clap tree; the
@@ -51,6 +54,7 @@ fn main() -> ExitCode {
   let context = Context {
     exe: &toolu_runtime::invocation::current_exe,
     stdin: &toolu_protocol::stdin::read_stdin,
+    env: None,
   };
   let outcome = run(&toolu_runtime::invocation::args(), &context, &tree::command);
   output::emit(&outcome);

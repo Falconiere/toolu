@@ -54,7 +54,7 @@ fn leaf_plugins_get_a_hidden_hook_verb_and_their_plugin_alias() {
   );
   let jev = root.find_subcommand("jev").unwrap();
   assert_eq!(jev.get_visible_aliases().count(), 0);
-  assert_eq!(names(jev), ["planned", "hook"]);
+  assert_eq!(names(jev), ["noul", "choice", "score", "ask", "hook"]);
   let ledger = root.find_subcommand("ledger").unwrap();
   assert_eq!(
     names(ledger),

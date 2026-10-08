@@ -5,5 +5,8 @@
 
 pub mod context;
 pub mod dependencies;
+pub mod native;
 pub mod publish;
 pub mod report;
+
+pub use native::native_toolu_advice;

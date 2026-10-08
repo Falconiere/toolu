@@ -40,6 +40,7 @@ fn run_hook(request: &HookRequest) -> Outcome {
     &Context {
       exe: &exe,
       stdin: &startup,
+      env: None,
     },
   )
 }
@@ -135,6 +136,7 @@ fn a_session_start_with_nothing_to_say_prints_nothing() {
   let context = Context {
     exe: &no_exe,
     stdin: &quiet,
+    env: None,
   };
   let outcome = run(
     &request("session-start", Some("SessionStart"), None),
@@ -151,6 +153,7 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
   let context = Context {
     exe: &no_exe,
     stdin: &broken,
+    env: None,
   };
   let outcome = run(
     &request("session-start", Some("SessionStart"), None),
@@ -172,6 +175,7 @@ fn agent_tier_fails_open_when_payload_is_unreadable() {
   let context = Context {
     exe: &no_exe,
     stdin: &broken,
+    env: None,
   };
   let outcome = run(&request("agent-tier", Some("PreToolUse"), None), &context);
   assert_eq!(outcome.exit.code(), 0);
@@ -186,6 +190,7 @@ fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
   let context = Context {
     exe: &no_exe,
     stdin: &payload,
+    env: None,
   };
   let outcome = run(&request("mcp-tools", Some("PreToolUse"), None), &context);
   assert_eq!(outcome.exit.code(), 0);
@@ -195,18 +200,27 @@ fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
 
 #[test]
 fn another_plugins_session_start_advises_and_never_blocks() {
-  let jev = HookRequest {
-    plugin: "jev".to_owned(),
+  let other = HookRequest {
+    plugin: "statusline".to_owned(),
     name: "session-start".to_owned(),
     event: Some("SessionStart".to_owned()),
     plugin_root: None,
   };
-  let outcome = run_hook(&jev);
+  let outcome = run_hook(&other);
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stderr, None);
   assert!(message(outcome.stdout).starts_with(&format!(
-    "jev plugin: toolu {VERSION} has no hook session-start"
+    "statusline plugin: toolu {VERSION} has no hook session-start"
   )));
+}
+
+#[test]
+fn an_unknown_jev_hook_is_still_reported() {
+  let mut jev = request("not-a-hook", Some("SessionStart"), None);
+  jev.plugin = "jev".to_owned();
+  let outcome = run_hook(&jev);
+  assert_eq!((outcome.exit.code(), outcome.stderr.is_none()), (0, true));
+  assert!(message(outcome.stdout).contains("has no hook not-a-hook"));
 }
 
 #[test]

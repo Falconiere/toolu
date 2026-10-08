@@ -1,4 +1,5 @@
 /** Stable-path publishing against real config roots, links and files (#269). */
+import { spawnSync } from "node:child_process";
 import { afterAll, expect, test } from "bun:test";
 import {
   chmodSync,
@@ -159,12 +160,18 @@ test.concurrent("a directory that refuses the link reports link-failed and leave
   const env = { HOME: root, TOOLU_CONFIG_DIR: join(root, "cfg") };
   const dir = join(root, "cfg/jev");
   mkdirSync(dir, { recursive: true });
-  chmodSync(dir, 0o555);
+  // Root creates a symlink in a mode-0555 directory. The immutable flag stops it.
+  const rootUser = process.getuid?.() === 0;
+  if (rootUser) {
+    const marked = spawnSync("chattr", ["+i", dir]);
+    expect(marked.status).toBe(0);
+  } else chmodSync(dir, 0o555);
   try {
     const result = publishWrapper({ ...base, source, env });
     expect(result).toEqual({ status: "link-failed", path: join(dir, "jev.sh") });
     expect(readdirSync(dir)).toEqual([]);
   } finally {
-    chmodSync(dir, 0o755);
+    if (rootUser) spawnSync("chattr", ["-i", dir]);
+    else chmodSync(dir, 0o755);
   }
 });

@@ -102,7 +102,7 @@ test("Linux inventory reads current-user processes without requiring root", asyn
 });
 
 test("an unrelated unreadable Linux cwd does not block inventory or empty verification", async () => {
-  if (process.platform !== "linux") return;
+  if (process.platform !== "linux" || process.getuid?.() === 0) return;
   const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-unrelated-"));
   const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-outside-"));
   temporary.push(root, outside);
@@ -116,7 +116,7 @@ test("an unrelated unreadable Linux cwd does not block inventory or empty verifi
 });
 
 test("a known descendant remains owned when its Linux cwd becomes unreadable", async () => {
-  if (process.platform !== "linux") return;
+  if (process.platform !== "linux" || process.getuid?.() === 0) return;
   const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-owned-"));
   const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-child-"));
   temporary.push(root, outside);
@@ -142,7 +142,7 @@ test("a known descendant remains owned when its Linux cwd becomes unreadable", a
 });
 
 test("an unreadable Linux cwd in an owned process group keeps ownership uncertain", async () => {
-  if (process.platform !== "linux") return;
+  if (process.platform !== "linux" || process.getuid?.() === 0) return;
   const root = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-group-"));
   const outside = mkdtempSync(join(tmpdir(), "toolu-workload-hidden-group-outside-"));
   temporary.push(root, outside);

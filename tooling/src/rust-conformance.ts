@@ -9,7 +9,7 @@
  */
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import { entryImplementation } from "@toolu/conformance/harness/entry-command";
 import { z } from "zod";
 import { envOr } from "./env.ts";
@@ -46,6 +46,12 @@ export function readPorted(file: string): string[] {
   const parsed = Manifest.safeParse(doc);
   if (!parsed.success) throw new PortsError(`${file} must be { "entries": [<plugin>/<entry>...] }`);
   return parsed.data.entries;
+}
+
+/** Suites see the release `toolu` that this script just built, via `command -v`. */
+export function conformanceEnv(base: NodeJS.ProcessEnv, releaseDir: string): NodeJS.ProcessEnv {
+  const path = base.PATH ?? "";
+  return { ...base, PATH: path === "" ? releaseDir : `${releaseDir}${delimiter}${path}` };
 }
 
 function step(argv: string[], env: NodeJS.ProcessEnv): number {
@@ -85,7 +91,10 @@ function main(argv: string[]): number {
     process.stderr.write("rust-conformance: cargo build of the toolu binary failed\n");
     return 1;
   }
-  const env = { ...process.env, TOOLU_IMPL: selector };
+  const env = conformanceEnv(
+    { ...process.env, TOOLU_IMPL: selector },
+    resolve(ROOT, "target/release"),
+  );
   const failed = SUITES.filter((suite) => step([process.execPath, "run", suite], env) !== 0);
   if (failed.length > 0) {
     process.stderr.write(`rust-conformance: ${failed.join(", ")} failed under ${selector}\n`);

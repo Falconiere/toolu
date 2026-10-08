@@ -11,23 +11,15 @@ Sources: TypeSafe [semantic search](https://docs.typesafe.ai/cookbooks/semantic_
 
 ## Setup and failure handling
 
-Run setup + selected example in one Bash shell. Requires Bun 1.4.x, `jq` for the example processing, environment
+Run setup + selected example in one Bash shell. Requires `toolu jev` and `jq` for the example processing, environment
 `TYPESAFE_API_KEY`; never read `.env`.
 
 ```bash
-# OpenCode
-JEV="${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/jev/jev.sh"
-# Repository development, from the repository root, if not installed:
-if [ ! -x "$JEV" ]; then JEV="$PWD/plugins/jev/hooks/dist/jev.js"; fi
-JEV_BUN=
-for candidate in "${TOOLU_BUN:-}" "$(command -v bun 2>/dev/null)" "$HOME/.bun/bin/bun"; do
-  if [ -n "$candidate" ] && [ -f "$candidate" ] && [ -x "$candidate" ]; then JEV_BUN="$candidate"; break; fi
-done
 JEV_EXAMPLES=$(mktemp -d)
 
 judge() {
   local name="$1"
-  if "$JEV_BUN" --no-env-file "$JEV" ask "$JEV_EXAMPLES/$name.questions.json" \
+  if toolu jev ask "$JEV_EXAMPLES/$name.questions.json" \
       -s "@$JEV_EXAMPLES/$name.state.json" --raw >"$JEV_EXAMPLES/$name.result.json"; then
     jq '.answers' "$JEV_EXAMPLES/$name.result.json"
   else

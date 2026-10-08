@@ -245,6 +245,12 @@ async function nativeStatuslineFallback(ctx: EntryContext): Promise<EntryResult>
   return withNativeCatalog("statusline", async (catalog) => {
     using s = shimmedSession(ctx, ["statusline"], ALLOWED_SCRIPT, catalog);
     s.env.TOOLU_BIN = "";
+    // An empty TOOLU_BIN still searches PATH. Drop any directory that holds toolu
+    // so this case runs the transition bundle instead of the native binary.
+    s.env.PATH = (s.env.PATH ?? process.env.PATH ?? "")
+      .split(":")
+      .filter((dir) => dir.length > 0 && !existsSync(join(dir, "toolu")))
+      .join(":");
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
     const helper = join(s.sb.project, DATA_ROOT, "statusline/statusline.sh");
     const source = join(catalog, "plugins/statusline/hooks/dist/statusline.js");

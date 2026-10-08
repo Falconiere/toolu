@@ -122,7 +122,7 @@ test("commandWindows on a legacy script command fails", () => {
   edit(root, "plugins/jev/hooks/hooks.json", (text) =>
     text.replace(
       /"command": [^\n]+,\n\s*"commandWindows": [^\n]+/,
-      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/legacy.sh\\"", "commandWindows": "x"',
+      '"command": "\\"${CLAUDE_PLUGIN_ROOT}/hooks/legacy.sh\\"", "commandWindows": "x",',
     ),
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
@@ -232,6 +232,13 @@ function switchSessionStart(root: string): void {
   Object.assign(hook, NATIVE_SESSION_HOOK);
   writeFileSync(path, JSON.stringify(doc));
 }
+
+test("a native launcher does not need its transition bundle on disk", () => {
+  const root = copyOfRepo();
+  switchSessionStart(root);
+  rmSync(join(root, "plugins/toolu/hooks/dist/session-start.js"));
+  expect(checkHooksJson(root)).toEqual([]);
+});
 
 test("a generated native entry passes beside Bun entries and a hand edit fails", () => {
   expect(NATIVE_COMMAND).toContain("--hook-protocol");

@@ -6,7 +6,7 @@
 
 **Check:** `bun run tooling/src/gate-coverage-inventory.ts check`
 
-Every live hook and built-in gate in this inventory is `port-native`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457).
+Every live hook and built-in gate in this inventory is `port-native`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457) and the one-line Jev shim `plugins/jev/scripts/jev.sh` (#440).
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
@@ -15,9 +15,9 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 | `epic-orchestrator:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:engine-ensure.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #434/done | bun-bundle | no | — |
-| `jev:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
-| `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
-| `jev:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | bun-bundle | no | — |
+| `jev:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #443/done | native | no | — |
+| `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | native | no | — |
+| `jev:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | native | no | — |
 | `pr-babysit:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
 | `pr-babysit:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `python-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #269/done | bun-bundle | no | — |

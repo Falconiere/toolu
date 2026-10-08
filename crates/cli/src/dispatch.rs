@@ -21,7 +21,10 @@ pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Co
     Ok(matches) => matches,
     Err(err) => return clap_error::outcome(&err, wants_json(words)),
   };
-  let ctx = ctx_of(&matches);
+  let mut ctx = ctx_of(&matches);
+  if reads_stdin(&matches) {
+    ctx.stdin = (context.stdin)().ok();
+  }
   let outcome = route(&matches, &ctx, context, tree);
   // Hooks speak their host's protocol, so the output contract leaves them alone.
   if is_hook(&matches) {
@@ -53,7 +56,15 @@ fn ctx_of(matches: &ArgMatches) -> Ctx {
       .get_one::<String>("host")
       .and_then(|name| Host::parse(name)),
     config_dir: matches.get_one::<PathBuf>("config-dir").cloned(),
+    stdin: None,
   }
+}
+
+/// `toolu jev` reads stdin only for `--state -` or `ask -`.
+fn reads_stdin(matches: &ArgMatches) -> bool {
+  matches
+    .subcommand()
+    .is_some_and(|(name, sub)| name == "jev" && toolu_jev::needs_stdin(sub))
 }
 
 fn route(

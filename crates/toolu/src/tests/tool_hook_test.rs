@@ -76,25 +76,29 @@ fn the_lib_dir_comes_from_the_plugin_root() {
   assert_eq!(RULES.len(), 0);
 }
 
+fn native(event: toolu_protocol::event::HostEvent) -> &'static str {
+  let host = toolu_runtime::host::detect::detect(&Env::process(), None).host;
+  toolu_protocol::native::native_event(host, event).unwrap_or_else(|| event.slug())
+}
+
 #[test]
 fn an_unreadable_payload_blocks_before_and_after_a_tool() {
   let unreadable = || Err(std::io::Error::other("stream did not contain valid UTF-8"));
+  let tail = "hook failed: the hook payload could not be read: stream did not contain valid UTF-8";
   let pre = tool_hook(Phase::Pre, unreadable(), None);
+  let pre_line = format!(
+    "blocked: toolu {} {tail}",
+    native(toolu_protocol::event::HostEvent::ToolPre)
+  );
   assert_eq!((pre.exit, pre.stdout), (Exit::Blocked, None));
-  assert_eq!(
-    pre.stderr.as_deref(),
-    Some(
-      "blocked: toolu PreToolUse hook failed: the hook payload could not be read: stream did not contain valid UTF-8"
-    )
-  );
+  assert_eq!(pre.stderr.as_deref(), Some(pre_line.as_str()));
   let post = tool_hook(Phase::Post, unreadable(), None);
-  assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
-  assert_eq!(
-    post.stderr.as_deref(),
-    Some(
-      "toolu PostToolUse hook failed: the hook payload could not be read: stream did not contain valid UTF-8"
-    )
+  let post_line = format!(
+    "toolu {} {tail}",
+    native(toolu_protocol::event::HostEvent::ToolPost)
   );
+  assert_eq!((post.exit, post.stdout), (Exit::Blocked, None));
+  assert_eq!(post.stderr.as_deref(), Some(post_line.as_str()));
 }
 
 #[test]

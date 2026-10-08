@@ -14,8 +14,11 @@ Typed judgments from Jev: yes/no probabilities, choices and scores
 Usage: toolu jev [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#430): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  noul    Yes/no judgment: the probability of yes
+  choice  Pick one option: a choice, probabilities, confidence
+  score   Rate on ordered levels: a score, legend, confidence
+  ask     Many typed questions in one call
+  help    Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,17 +28,93 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu jev planned`
+## `toolu jev noul`
 
 ```text
-Not ported yet (#430): show the planned verbs
+Yes/no judgment: the probability of yes
 
-Usage: toolu jev planned [OPTIONS]
+Usage: toolu jev noul [OPTIONS] --state <STATE> <INSTRUCTIONS>
+
+Arguments:
+  <INSTRUCTIONS>  What to judge
 
 Options:
       --json              Print exactly one JSON document on stdout
+  -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
+  -m, --model <MODEL>     The Jev model [default: jev-latest]
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --raw               Print the whole response body instead of its answers
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --true <DESC>       What a yes means
+      --false <DESC>      What a no means
+      --id <ID>           The question id in the answer map [default: q]
+  -h, --help              Print help
+```
+
+## `toolu jev choice`
+
+```text
+Pick one option: a choice, probabilities, confidence
+
+Usage: toolu jev choice [OPTIONS] --state <STATE> <INSTRUCTIONS>
+
+Arguments:
+  <INSTRUCTIONS>  What to judge
+
+Options:
+      --json                 Print exactly one JSON document on stdout
+  -s, --state <STATE>        State to judge: text, @FILE, or - for stdin
+  -m, --model <MODEL>        The Jev model [default: jev-latest]
+  -q, --quiet                Drop the diagnostics of a successful run
+      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --raw                  Print the whole response body instead of its answers
+      --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
+  -o, --option <KEY[=DESC]>  An option and what it means; repeat 2 to 255 times
+      --id <ID>              The question id in the answer map [default: q]
+  -h, --help                 Print help
+```
+
+## `toolu jev score`
+
+```text
+Rate on ordered levels: a score, legend, confidence
+
+Usage: toolu jev score [OPTIONS] --state <STATE> <INSTRUCTIONS>
+
+Arguments:
+  <INSTRUCTIONS>  What to judge
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
+  -m, --model <MODEL>     The Jev model [default: jev-latest]
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --raw               Print the whole response body instead of its answers
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -l, --level <DESC>      A level, lowest first; repeat 2 to 10 times
+      --id <ID>           The question id in the answer map [default: q]
+  -h, --help              Print help
+```
+
+## `toolu jev ask`
+
+```text
+Many typed questions in one call
+
+Usage: toolu jev ask [OPTIONS] --state <STATE> <QUESTIONS.JSON>
+
+Arguments:
+  <QUESTIONS.JSON>  A JSON file of questions by id, or - for stdin
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -s, --state <STATE>     State to judge: text, @FILE, or - for stdin
+  -m, --model <MODEL>     The Jev model [default: jev-latest]
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --raw               Print the whole response body instead of its answers
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

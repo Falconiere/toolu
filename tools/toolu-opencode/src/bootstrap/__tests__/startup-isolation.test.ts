@@ -87,7 +87,7 @@ test("two sessions starting at once in one project are both ready with a valid l
         helpers: [
           {
             path: join(data, "jev", "jev.sh"),
-            source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js"),
+            source: join(PLUGINS_ROOT, "jev/scripts/jev.sh"),
           },
         ],
       },

@@ -82,20 +82,22 @@ impl Jev {
   ///
   /// # Errors
   /// `MissingKey` or `KeyLineBreak` for the key, before any request;
-  /// `Transport` for a transport setting toolu-http refuses.
+  /// `Transport` for a transport setting toolu-http refuses, such as a
+  /// `NODE_EXTRA_CA_CERTS` file that is missing or holds no certificate.
   pub fn from_env(env: &Env, config: Config) -> Result<Jev, Error> {
     let key = env.get("TYPESAFE_API_KEY").ok_or(Error::MissingKey)?;
     if key.contains(['\r', '\n']) {
       return Err(Error::KeyLineBreak);
     }
     let timeout = timeout(env.get("JEV_TIMEOUT"));
+    let root = trusted_root(env, config.test_root_ca_der)?;
     let http = if timeout.is_zero() {
       None
     } else {
       let http = toolu_http::Config {
         timeout,
         max_redirects: 0,
-        test_root_ca_der: config.test_root_ca_der,
+        test_root_ca_der: root,
         ..toolu_http::Config::default()
       };
       Some(toolu_http::Client::new(http, env).map_err(Error::Transport)?)
@@ -124,6 +126,20 @@ impl Jev {
     let text = self.post(body.as_bytes())?;
     reply::parse(&text, questions)
   }
+}
+
+/// The one root the client trusts: the loopback test root, else the first
+/// certificate of the PEM file `NODE_EXTRA_CA_CERTS` names, else none (the
+/// webpki roots). Not an endpoint override.
+fn trusted_root(env: &Env, test_root: Option<Vec<u8>>) -> Result<Option<Vec<u8>>, Error> {
+  if test_root.is_some() {
+    return Ok(test_root);
+  }
+  env
+    .get("NODE_EXTRA_CA_CERTS")
+    .map(toolu_http::pem_file_to_der)
+    .transpose()
+    .map_err(Error::Transport)
 }
 
 /// `JEV_TIMEOUT` seconds; 60 when unset, negative, not a number, or over

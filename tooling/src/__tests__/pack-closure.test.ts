@@ -194,7 +194,8 @@ test("the real @toolu/opencode, packed through its own prepack, is closed", () =
     .filter((file) => isExecutable(statSync(join(ROOT, file.path)).mode))
     .map((file) => file.path);
   expect(sourceExecutable).toContain("plugins/toolu/hooks/dist/verdict.js");
-  expect(sourceExecutable.length).toBeGreaterThanOrEqual(14);
+  // jev.js left the tarball; plugins/jev/scripts/jev.sh is the remaining executable shim.
+  expect(sourceExecutable.length).toBeGreaterThanOrEqual(13);
   const packedExecutable = files.filter((file) => isExecutable(file.mode)).map((file) => file.path);
   expect(packedExecutable).toEqual(sourceExecutable);
 }, 180_000);

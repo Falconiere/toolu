@@ -59,3 +59,40 @@ fn a_transport_setting_toolu_http_refuses_is_a_transport_error() {
     Err(Error::Transport(toolu_http::Error::InvalidConfig(_)))
   ));
 }
+
+#[test]
+fn a_node_extra_ca_certs_file_that_is_missing_or_holds_no_certificate_is_a_transport_error() {
+  let dir = std::env::temp_dir().join(format!("toolu-jev-ca-{}", std::process::id()));
+  std::fs::create_dir_all(&dir).unwrap();
+  let empty = dir.join("empty.pem");
+  std::fs::write(&empty, "no certificate here").unwrap();
+  let absent = dir.join("absent.pem");
+  for path in [empty, absent] {
+    let env = Env::from_pairs([
+      ("TYPESAFE_API_KEY", "k"),
+      ("NODE_EXTRA_CA_CERTS", path.to_str().unwrap()),
+    ]);
+    assert!(matches!(
+      Jev::from_env(&env, Config::default()),
+      Err(Error::Transport(toolu_http::Error::InvalidConfig(_)))
+    ));
+  }
+  std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[test]
+fn the_loopback_test_root_wins_over_node_extra_ca_certs() {
+  let env = Env::from_pairs([
+    ("TYPESAFE_API_KEY", "k"),
+    ("NODE_EXTRA_CA_CERTS", "/nonexistent/ca.pem"),
+  ]);
+  let config = Config {
+    test_root_ca_der: Some(vec![0, 1, 2]),
+    ..Config::default()
+  };
+  // The invalid test root is what toolu-http refuses, not the missing PEM file.
+  assert!(matches!(
+    Jev::from_env(&env, config),
+    Err(Error::Transport(toolu_http::Error::InvalidConfig(reason))) if reason.contains("test root")
+  ));
+}

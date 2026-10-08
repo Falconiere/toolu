@@ -31,6 +31,10 @@ function stagePluginExtras(plugin: string, source: string, target: string): void
     const brief = join("skills", "babysit", "references", "fixer-brief.md");
     copy(join(source, brief), join(target, brief));
   }
+  if (plugin === "jev") {
+    // The one-line shim stays until #440. The hook publishes this path.
+    copy(join(source, "scripts/jev.sh"), join(target, "scripts/jev.sh"));
+  }
   if (plugin === "toolu") {
     copyDirectory(
       join(source, "settings"),

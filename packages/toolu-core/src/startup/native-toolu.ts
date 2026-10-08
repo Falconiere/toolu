@@ -1,6 +1,5 @@
 /** SessionStart advice for the native CLI in an agent's non-login command shell. */
 import { spawnSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { accessSync, closeSync, constants, mkdirSync, openSync, statSync } from "node:fs";
 import { isAbsolute, join, resolve } from "node:path";
 import { childEnv, envValue, type HostEnv } from "../host/host-name.ts";
@@ -73,11 +72,22 @@ function knownToolu(env: HostEnv): string | undefined {
     .find((path) => native(path, env));
 }
 
+/** FNV-1a 64, matching `toolu_runtime::startup` notice filenames. */
+function noticeName(sessionId: string): string {
+  let hash = 0xcbf29ce484222325n;
+  const mask = 0xffffffffffffffffn;
+  for (const byte of new TextEncoder().encode(sessionId)) {
+    hash ^= BigInt(byte);
+    hash = (hash * 0x100000001b3n) & mask;
+  }
+  return hash.toString(16).padStart(16, "0");
+}
+
 /** True only for the first notice under one host config root and session ID. */
 function firstNotice(sessionId: string | undefined, env: HostEnv): boolean {
   if (sessionId === undefined || sessionId === "") return true;
   const dir = join(configRoot({ env }), "toolu", "native-notices");
-  const name = createHash("sha256").update(sessionId).digest("hex");
+  const name = noticeName(sessionId);
   try {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     closeSync(openSync(join(dir, name), "wx", 0o600));

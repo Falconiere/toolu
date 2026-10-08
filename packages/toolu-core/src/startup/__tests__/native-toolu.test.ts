@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import { cpSync, existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
-import { entryArgv } from "@toolu/conformance/harness/entry-command";
+import { bundlePath, entryArgv, pluginRoot } from "@toolu/conformance/harness/entry-command";
 import { nativeTooluAdvice } from "../native-toolu.ts";
 
 const root = resolve(import.meta.dir, "../../../../..");
@@ -49,7 +49,11 @@ function stage(source: string, dir: string): string {
 }
 
 function hook(plugin: string, env: Record<string, string>, input: unknown): string {
-  const argv = entryArgv(plugin, "check-binary");
+  const root = pluginRoot(plugin);
+  const bundle = bundlePath(root, "check-binary");
+  const argv = existsSync(bundle)
+    ? entryArgv(plugin, "check-binary")
+    : [binary, plugin, "hook", "check-binary", "--event", "SessionStart", "--plugin-root", root];
   const run = spawnSync(argv[0] ?? "", argv.slice(1), {
     env,
     input: JSON.stringify(input),

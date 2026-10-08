@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { lstatSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
+import { builtTooluBinary, bundlePath, entryArgv } from "@toolu/conformance/harness/entry-command";
 import { run } from "@toolu/conformance/harness/spawn";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
@@ -36,11 +36,14 @@ async function codexHook(
 ): Promise<{ exitCode: number; codexHome: string }> {
   const codexHome = join(sb.root, `codex-${item.plugin}`);
   const pluginRoot = join(ROOT, "plugins", item.plugin);
-  // A ported hook is a committed bundle (#269); the rest are still bash.
+  // A ported hook is a committed bundle (#269); a native hook runs `toolu`; the rest are bash.
   const entry = script.replace(/\.sh$/, "");
+  const binary = builtTooluBinary();
   const argv = exists(bundlePath(pluginRoot, entry))
     ? entryArgv(item.plugin, entry, pluginRoot)
-    : ["bash", join(pluginRoot, "hooks", script)];
+    : binary !== undefined && !exists(join(pluginRoot, "hooks", script))
+      ? [binary, item.plugin, "hook", entry, "--event", "SessionStart", "--plugin-root", pluginRoot]
+      : ["bash", join(pluginRoot, "hooks", script)];
   const res = await run(argv, {
     cwd: sb.project,
     env: {

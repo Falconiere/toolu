@@ -24,6 +24,7 @@ pub(crate) fn context() -> Context<'static> {
   Context {
     exe: &no_exe,
     stdin: &no_stdin,
+    env: None,
   }
 }
 

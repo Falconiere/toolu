@@ -60,7 +60,7 @@ test.concurrent("a partial registration is NotReady even though its other module
 test.concurrent("a missing helper source is NotReady", async () => {
   using root = tempRoot("toolu-ready-helper-");
   const jev = copiedPlugin(root.path, "jev");
-  const source = join(jev.pluginDir, "hooks/dist/jev.js");
+  const source = join(jev.pluginDir, "scripts/jev.sh");
   rmSync(source);
   expect(reasonOf(await boot(root.path, [jev]))).toBe(
     `jev/session-start: helper ${source}: source-missing`,

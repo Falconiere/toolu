@@ -9,6 +9,7 @@ import { realpathSync } from "node:fs";
 import { join } from "node:path";
 import type { Config, Hooks } from "@opencode-ai/plugin";
 import type { Part, UserMessage } from "@opencode-ai/sdk";
+import { builtTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
@@ -74,10 +75,12 @@ test.concurrent("a project .env never reaches a Jev hook the adapter spawns", as
     TOOLU_HOST_OVERRIDE: "opencode",
     TOOLU_CONFIG_DIR: join(sb.project, ".opencode/toolu/state"),
   };
-  const spawn = (bundle: string, stdin: object) =>
+  const toolu = builtTooluBinary() ?? join(REPO_ROOT, "target/debug/toolu");
+  const spawn = (name: string, event: string, stdin: object) =>
     spawnEntry({
       bun: process.execPath,
-      bundle: join(JEV, "hooks/dist", bundle),
+      bundle: toolu,
+      command: `"${toolu}" jev hook ${name} --event ${event} --plugin-root "${JEV}"`,
       cwd: sb.project,
       env,
       stdin: JSON.stringify(stdin),
@@ -85,8 +88,8 @@ test.concurrent("a project .env never reaches a Jev hook the adapter spawns", as
       signal: undefined,
     });
   for (const outcome of [
-    await spawn("session-start.js", { source: "startup" }),
-    await spawn("user-prompt-submit.js", { prompt: "rank these two designs" }),
+    await spawn("session-start", "SessionStart", { source: "startup" }),
+    await spawn("user-prompt-submit", "UserPromptSubmit", { prompt: "rank these two designs" }),
   ]) {
     expect(outcome).toMatchObject({ status: "exited", exitCode: 0, stderr: "" });
     const stdout = outcome.status === "exited" ? outcome.stdout : "";
@@ -130,9 +133,8 @@ test.concurrent("a typed judgment runs through the published wrapper in the agen
   try {
     const mandate = (await systemLines(hooks, "ses_a")).find((line) => line.includes(MANDATE));
     if (mandate === undefined) throw new Error("no Jev mandate");
-    const wrapper = join(sb.project, ".opencode/toolu/state/jev/jev.sh");
     const command = calledCommand(mandate);
-    expect(command).toBe(`'${process.execPath}' --no-env-file '${wrapper}'`);
+    expect(command).toBe("toolu jev");
     expect(mandate).toContain(SKILL);
     expect(mandate).not.toContain(NOTICE);
     const prompt = await reminders(hooks, "ses_a", "msg_1", "rank these two designs");
@@ -141,7 +143,13 @@ test.concurrent("a typed judgment runs through the published wrapper in the agen
     await hook(hooks, "config")(config);
     expect(skillPaths(config)).toContain(join(GENERATED, "skills/jev-jev"));
 
-    const env = { ...(await bashEnv(hooks, sb)), ...fixture.env, TYPESAFE_API_KEY: KEY };
+    const shell = await bashEnv(hooks, sb);
+    const env = {
+      ...shell,
+      ...fixture.env,
+      TYPESAFE_API_KEY: KEY,
+      PATH: `${join(REPO_ROOT, "target/debug")}:${shell.PATH}`,
+    };
     fixture.plan([{ body: JSON.stringify(ANSWER) }]);
     const judged = await inShell(sb, `${command} noul probe -s evidence`, env);
     expect(judged).toMatchObject({ exitCode: 0, stderr: "" });
@@ -150,7 +158,7 @@ test.concurrent("a typed judgment runs through the published wrapper in the agen
 
     fixture.plan([{ status: 401, body: '{"error":"invalid key"}' }]);
     const refused = await inShell(sb, `${command} noul probe -s evidence`, env);
-    expect(refused.exitCode).toBe(22);
+    expect(refused.exitCode).toBe(1);
     expect(refused.stdout).not.toContain('"noul"');
   } finally {
     await hooks.dispose?.();
@@ -175,7 +183,12 @@ test.concurrent("credentials are checked for presence only and never read from .
     expect(seen).not.toContain(SECRET);
 
     fixture.plan([{ body: JSON.stringify(ANSWER) }]);
-    const env = { ...(await bashEnv(hooks, sb)), ...fixture.env, TYPESAFE_API_KEY: undefined };
+    const env = {
+      ...(await bashEnv(hooks, sb)),
+      ...fixture.env,
+      TYPESAFE_API_KEY: undefined,
+      PATH: `${join(REPO_ROOT, "target/debug")}:${(await bashEnv(hooks, sb)).PATH}`,
+    };
     const res = await inShell(sb, `${calledCommand(mandate)} noul probe -s evidence`, env);
     expect(res).toMatchObject({ exitCode: 1, stdout: "", stderr: "jev: TYPESAFE_API_KEY unset\n" });
     expect(fixture.requests).toHaveLength(0);

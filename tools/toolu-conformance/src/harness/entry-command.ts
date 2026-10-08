@@ -26,6 +26,15 @@ export type ResolvedCommand = {
 
 type SelectorEnv = Record<string, string | undefined>;
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
+
+/** A built `toolu`: debug when that binary exists, otherwise release. */
+export function builtTooluBinary(): string | undefined {
+  for (const profile of ["debug", "release"]) {
+    const path = join(REPO_ROOT, "target", profile, "toolu");
+    if (existsSync(path)) return path;
+  }
+  return undefined;
+}
 const ENTRY_NAME = /^[a-z0-9][a-z0-9-]*$/;
 
 /**

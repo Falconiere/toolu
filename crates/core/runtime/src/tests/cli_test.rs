@@ -22,5 +22,12 @@ fn failed_carries_its_exit_and_a_diagnostic_but_no_data() {
 fn the_default_context_has_no_flag_set() {
   let ctx = Ctx::default();
   assert!(!ctx.json && !ctx.quiet);
-  assert_eq!((ctx.host, ctx.config_dir), (None, None));
+  assert_eq!(
+    (
+      ctx.host.as_ref(),
+      ctx.config_dir.as_ref(),
+      ctx.stdin.as_ref()
+    ),
+    (None, None, None)
+  );
 }

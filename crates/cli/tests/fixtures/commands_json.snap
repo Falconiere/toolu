@@ -994,20 +994,309 @@ source: crates/cli/tests/helpers/schema.rs
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#430): show the planned verbs",
+          "about": "Yes/no judgment: the probability of yes",
           "aliases": [],
-          "args": [],
+          "args": [
+            {
+              "help": "What to judge",
+              "multiple": false,
+              "name": "INSTRUCTIONS",
+              "required": true
+            }
+          ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "State to judge: text, @FILE, or - for stdin",
+              "hidden": false,
+              "long": "state",
+              "possibleValues": [],
+              "required": true,
+              "short": "s",
+              "takesValue": true,
+              "valueName": "STATE"
+            },
+            {
+              "global": false,
+              "help": "The Jev model",
+              "hidden": false,
+              "long": "model",
+              "possibleValues": [],
+              "required": false,
+              "short": "m",
+              "takesValue": true,
+              "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "Print the whole response body instead of its answers",
+              "hidden": false,
+              "long": "raw",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "What a yes means",
+              "hidden": false,
+              "long": "true",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DESC"
+            },
+            {
+              "global": false,
+              "help": "What a no means",
+              "hidden": false,
+              "long": "false",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DESC"
+            },
+            {
+              "global": false,
+              "help": "The question id in the answer map",
+              "hidden": false,
+              "long": "id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            }
+          ],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "noul",
           "owner": "jev",
           "path": [
             "jev",
-            "planned"
+            "noul"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "Pick one option: a choice, probabilities, confidence",
+          "aliases": [],
+          "args": [
+            {
+              "help": "What to judge",
+              "multiple": false,
+              "name": "INSTRUCTIONS",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "State to judge: text, @FILE, or - for stdin",
+              "hidden": false,
+              "long": "state",
+              "possibleValues": [],
+              "required": true,
+              "short": "s",
+              "takesValue": true,
+              "valueName": "STATE"
+            },
+            {
+              "global": false,
+              "help": "The Jev model",
+              "hidden": false,
+              "long": "model",
+              "possibleValues": [],
+              "required": false,
+              "short": "m",
+              "takesValue": true,
+              "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "Print the whole response body instead of its answers",
+              "hidden": false,
+              "long": "raw",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "An option and what it means; repeat 2 to 255 times",
+              "hidden": false,
+              "long": "option",
+              "possibleValues": [],
+              "required": false,
+              "short": "o",
+              "takesValue": true,
+              "valueName": "KEY[=DESC]"
+            },
+            {
+              "global": false,
+              "help": "The question id in the answer map",
+              "hidden": false,
+              "long": "id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "choice",
+          "owner": "jev",
+          "path": [
+            "jev",
+            "choice"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Rate on ordered levels: a score, legend, confidence",
+          "aliases": [],
+          "args": [
+            {
+              "help": "What to judge",
+              "multiple": false,
+              "name": "INSTRUCTIONS",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "State to judge: text, @FILE, or - for stdin",
+              "hidden": false,
+              "long": "state",
+              "possibleValues": [],
+              "required": true,
+              "short": "s",
+              "takesValue": true,
+              "valueName": "STATE"
+            },
+            {
+              "global": false,
+              "help": "The Jev model",
+              "hidden": false,
+              "long": "model",
+              "possibleValues": [],
+              "required": false,
+              "short": "m",
+              "takesValue": true,
+              "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "Print the whole response body instead of its answers",
+              "hidden": false,
+              "long": "raw",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "A level, lowest first; repeat 2 to 10 times",
+              "hidden": false,
+              "long": "level",
+              "possibleValues": [],
+              "required": false,
+              "short": "l",
+              "takesValue": true,
+              "valueName": "DESC"
+            },
+            {
+              "global": false,
+              "help": "The question id in the answer map",
+              "hidden": false,
+              "long": "id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "score",
+          "owner": "jev",
+          "path": [
+            "jev",
+            "score"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Many typed questions in one call",
+          "aliases": [],
+          "args": [
+            {
+              "help": "A JSON file of questions by id, or - for stdin",
+              "multiple": false,
+              "name": "QUESTIONS.JSON",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "State to judge: text, @FILE, or - for stdin",
+              "hidden": false,
+              "long": "state",
+              "possibleValues": [],
+              "required": true,
+              "short": "s",
+              "takesValue": true,
+              "valueName": "STATE"
+            },
+            {
+              "global": false,
+              "help": "The Jev model",
+              "hidden": false,
+              "long": "model",
+              "possibleValues": [],
+              "required": false,
+              "short": "m",
+              "takesValue": true,
+              "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "Print the whole response body instead of its answers",
+              "hidden": false,
+              "long": "raw",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "ask",
+          "owner": "jev",
+          "path": [
+            "jev",
+            "ask"
+          ],
+          "placeholder": false
         },
         {
           "about": "Run a hook entry; hooks.json calls it (internal)",

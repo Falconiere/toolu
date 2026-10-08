@@ -119,7 +119,7 @@ test("a not-ready startup records and logs the bounded bootstrap reason", async 
   using sb = createSandbox();
   const catalog = sb.path("catalog");
   cpSync(join(REPO_ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-  rmSync(join(catalog, "plugins/jev/hooks/dist/session-start.js"));
+  rmSync(join(catalog, "plugins/jev/scripts/jev.sh"));
   select(sb, ["statusline", "jev"]);
   const entries: Entry[] = [];
   const hooks = await createTooluHooks(hostBinding(sb, entries, catalog));
@@ -127,7 +127,7 @@ test("a not-ready startup records and logs the bounded bootstrap reason", async 
     const read = readOpencodeStatus(recordPath(sb));
     if (!read.ok) throw new Error(`record ${read.reason}`);
     expect(read.record).toMatchObject({ status: "not-ready", plugins: [], notes: [] });
-    expect(read.record.reason).toStartWith("bootstrap: jev: session-start: ");
+    expect(read.record.reason).toStartWith("bootstrap: jev/session-start: ");
     expect(read.record.selection).toBeUndefined();
     const [status] = statusEntries(entries);
     expect(status?.level).toBe("error");

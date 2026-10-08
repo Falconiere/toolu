@@ -93,9 +93,9 @@ fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
       .unwrap()
       .starts_with("toolu epic is not ported yet")
   );
-  for line in ["--json jev planned", "jev planned --json"] {
+  for line in ["--json pr-babysit planned", "pr-babysit planned --json"] {
     let outcome = dispatched(line);
-    assert_eq!(document(&outcome)["namespace"], "jev", "{line}");
+    assert_eq!(document(&outcome)["namespace"], "babysit", "{line}");
   }
 }
 
@@ -110,11 +110,11 @@ fn hooks_through_clap_keep_their_own_protocol() {
   let blocked = dispatched("--json hook no-such-hook --event PreToolUse");
   assert_eq!(blocked.exit, Exit::Blocked);
   assert_eq!(blocked.stdout, None);
-  let context = dispatched("--quiet jev hook session-start --event SessionStart");
+  let context = dispatched("--quiet jev hook not-a-hook --event SessionStart");
   assert_eq!(context.exit, Exit::Success);
   let message: Value = serde_json::from_str(&context.stdout.unwrap()).unwrap();
   let message = message["systemMessage"].as_str().unwrap().to_owned();
-  assert!(message.starts_with("jev plugin: toolu "), "{message}");
+  assert!(message.contains("has no hook not-a-hook"), "{message}");
 }
 
 #[test]
@@ -137,6 +137,7 @@ fn the_global_flags_become_the_verb_context() {
       quiet: true,
       host: Some(Host::Codex),
       config_dir: Some(PathBuf::from("/tmp/cfg")),
+      stdin: None,
     }
   );
 }
