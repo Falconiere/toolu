@@ -3,6 +3,7 @@ import { expect } from "bun:test";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import {
+  builtTooluBinary,
   bundlePath,
   entryArgv,
   pluginRoot,
@@ -22,7 +23,7 @@ function jevSessionArgv(): string[] {
   const bundle = bundlePath(JEV_ROOT, "session-start");
   if (existsSync(bundle)) return entryArgv("jev", "session-start", JEV_ROOT);
   return [
-    join(REPO, "target/debug/toolu"),
+    builtTooluBinary() ?? join(REPO, "target/debug/toolu"),
     "jev",
     "hook",
     "session-start",
