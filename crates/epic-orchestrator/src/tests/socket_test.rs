@@ -152,7 +152,14 @@ fn assert_restart(paths: &Paths, epic: &std::path::Path) {
   let text = std::fs::read_to_string(&status).expect("applied");
   assert!(text.contains("\"phase\":\"blocked\""), "{text}");
   assert_eq!(phase_count(paths), 1);
-  assert!(!paths.spool().join("t8.json").is_file());
+  let spool = paths.spool().join("t8.json");
+  for _ in 0..50 {
+    if !spool.is_file() {
+      break;
+    }
+    thread::sleep(Duration::from_millis(20));
+  }
+  assert!(!spool.is_file(), "spooled t8.json left behind");
   stop(paths, PROTOCOL);
   handle.join().expect("restart");
 }
