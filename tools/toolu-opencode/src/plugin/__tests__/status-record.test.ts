@@ -119,7 +119,7 @@ test("a not-ready startup records and logs the bounded bootstrap reason", async 
   using sb = createSandbox();
   const catalog = sb.path("catalog");
   cpSync(join(REPO_ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-  rmSync(join(catalog, "plugins/jev/hooks/dist/session-start.js"));
+  rmSync(join(catalog, "plugins/jev/scripts/jev.sh"));
   select(sb, ["statusline", "jev"]);
   const entries: Entry[] = [];
   const hooks = await createTooluHooks(hostBinding(sb, entries, catalog));

@@ -119,7 +119,11 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
     "paths": [
       "plugins/jev/skills/",
       "plugins/jev/README.md",
+      "plugins/pr-babysit/skills/babysit/references/helper.md",
       "tools/toolu-opencode/generated/skills/jev-jev/",
+      "tools/toolu-opencode/generated/skills/pr-babysit-babysit-73c340c6/references/helper.md",
+      "tools/toolu-opencode/generated/resources/jev/README.md",
+      "tools/toolu-opencode/generated/GENERATED-NOTES.md",
       "docs/cli/"
     ],
     "input": "toolu jev --help and toolu commands --json after the verbs exist; the skill files as the markdown-cli scan input",
@@ -138,9 +142,13 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
       "fixtures/gate-coverage/inventory.json",
       "docs/gate-coverage-matrix.md",
       ".github/workflows/tests.yml",
+      "tools/toolu-opencode/src/bootstrap/entrypoint.ts",
       "tools/toolu-opencode/src/bootstrap/__tests__/",
       "tools/toolu-opencode/src/plugin/__tests__/jev-delivery.test.ts",
-      "tools/toolu-opencode/src/plugin/__tests__/jev-delivery.live.test.ts"
+      "tools/toolu-opencode/src/plugin/__tests__/jev-delivery.live.test.ts",
+      "tools/toolu-opencode/src/plugin/__tests__/status-record.test.ts",
+      "tools/toolu-conformance/src/https-fixture/https-fixture.ts",
+      "knip.json"
     ],
     "input": "the real plugins/jev tree after deletion; startup-catalog's helper map jev/jev.sh -> jev/scripts/jev.sh; a built toolu on PATH for the bootstrap subprocess",
     "model": "sonnet"
@@ -198,3 +206,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 - `jev-hooks`: a failed `TOOLU_STARTUP_REPORT` write sets exit 1 after the context, as `publish` documents. The published shim is probed with a fake `toolu` on `PATH`; the binary spawn is `cli-wire`. A refused link is a path past `PATH_MAX`, which fails for root as well as a mode-555 directory.
 - `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`. The tool-hook payload test names the detected host's event, so it still passes when `TOOLU_HOST_OVERRIDE` is `cursor`.
 - `docs`: plugin Markdown may not name `jev.sh` once the namespace is ported, so the skill and the babysit helper say `toolu jev`. Exit `22` and `28` in the plugin README become `1` and `75`.
+- `switch`: a native hook runs when its fallback `hooks/dist` bundle is gone. The catalog test sets `TOOLU_BIN` to the built binary and expects no install notice. The loopback fixture serves a leaf signed by a CA, and `NODE_EXTRA_CA_CERTS` is that CA, because rustls rejects a CA certificate presented as the server certificate. `knip.json` drops the deleted helpers. The status-record test removes `scripts/jev.sh`.

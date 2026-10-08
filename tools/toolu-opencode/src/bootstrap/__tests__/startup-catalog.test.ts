@@ -23,7 +23,7 @@ const MODULES = {
 };
 
 const HELPERS = {
-  "jev/jev.sh": "jev/hooks/dist/jev.js",
+  "jev/jev.sh": "jev/scripts/jev.sh",
   "statusline/statusline.sh": "statusline/hooks/dist/statusline.js",
   "toolu-review/write-state.sh": "toolu-review/hooks/dist/write-state.js",
 };
@@ -50,7 +50,12 @@ async function start(root: string): Promise<ReadyResult> {
     dataRoot: join(root, "data"),
     plugins: selected.plugins,
     isolatedHome: join(root, "home"),
-    env: { HOME: join(root, "home"), PATH: "/usr/bin:/bin", TOOLU_BUN: process.execPath },
+    env: {
+      HOME: join(root, "home"),
+      PATH: "/usr/bin:/bin",
+      TOOLU_BIN: join(REPO_ROOT, "target/debug/toolu"),
+      TOOLU_BUN: process.execPath,
+    },
   });
   if (result.status !== "ready") throw new Error(result.reason);
   return result;
@@ -105,8 +110,7 @@ test("all 12 plugins start in dependency order with every contribution verified"
     .flatMap((plugin) => plugin.entries)
     .flatMap((entry) => (entry.additionalContext === undefined ? [] : [entry.additionalContext]))
     .filter((line) => line.includes("native binary not found in the agent command shell"));
-  expect(notices).toHaveLength(1);
-  expect(notices[0]).toContain("brew install falconiere/tap/toolu");
+  expect(notices).toHaveLength(0);
   expectCatalogContributions(join(root.path, "data"), result);
   const context = (name: string): string =>
     result.plugins.find((plugin) => plugin.plugin === name)?.entries[0]?.additionalContext ?? "";

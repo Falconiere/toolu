@@ -59,7 +59,7 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
     version: 1,
     plugins: {
       jev: {
-        helpers: [{ path: helper, source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js") }],
+        helpers: [{ path: helper, source: join(PLUGINS_ROOT, "jev/scripts/jev.sh") }],
       },
     },
   });
@@ -91,7 +91,7 @@ test.concurrent("a user file at a deselected plugin's helper path is kept and re
 test.concurrent("a selected plugin's helper it no longer publishes is retired", async () => {
   using root = tempRoot("toolu-ledger-stale-");
   await start(root.path, ["toolu", "jev"]);
-  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
+  const source = join(PLUGINS_ROOT, "jev/scripts/jev.sh");
   const old = join(root.path, "data/jev/old-jev.sh");
   symlinkSync(source, old);
   const path = join(root.path, "data/toolu/startup-ledger.json");
@@ -121,7 +121,7 @@ test.concurrent("an invalid ledger is ignored with a diagnostic and rewritten", 
         helpers: [
           {
             path: join(root.path, "data/jev/jev.sh"),
-            source: join(PLUGINS_ROOT, "jev/hooks/dist/jev.js"),
+            source: join(PLUGINS_ROOT, "jev/scripts/jev.sh"),
           },
         ],
       },
@@ -138,7 +138,7 @@ function writeLedger(root: string, plugins: Record<string, unknown>): void {
 
 test.concurrent("a ledger path whose real location leaves the data root is never removed", async () => {
   using root = tempRoot("toolu-ledger-outside-");
-  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
+  const source = join(PLUGINS_ROOT, "jev/scripts/jev.sh");
   const outside = join(root.path, "outside");
   mkdirSync(outside);
   const direct = join(outside, "direct.sh");
@@ -213,7 +213,7 @@ test.concurrent("a failed plugin keeps owning the helpers it published before", 
   const before = ledger(root.path);
   const copies = join(root.path, "copies");
   const broken = copiedPlugin(copies, "jev");
-  rmSync(join(broken.pluginDir, "hooks/dist/jev.js"));
+  rmSync(join(broken.pluginDir, "scripts/jev.sh"));
   mkdirSync(join(root.path, "project"), { recursive: true });
   const result = await bootstrapRuntime({
     repoRoot: REPO_ROOT,
@@ -296,7 +296,7 @@ test.concurrent("a ledger path that cannot exist is treated as gone, never a las
   const file = join(root.path, "data/not-a-dir");
   mkdirSync(join(root.path, "data"), { recursive: true });
   writeFileSync(file, "plain file\n");
-  const source = join(PLUGINS_ROOT, "jev/hooks/dist/jev.js");
+  const source = join(PLUGINS_ROOT, "jev/scripts/jev.sh");
   writeLedger(root.path, { jev: { helpers: [{ path: join(file, "jev.sh"), source }] } });
   await start(root.path, ["toolu"]);
   expect(readFileSync(file, "utf8")).toBe("plain file\n");

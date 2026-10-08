@@ -133,9 +133,12 @@ export function pluginHookEntries(
       const entry = entryOf(hook, plugin, event);
       if (!entry.ok) return entry;
       const bundle = join(pluginDir, "hooks", "dist", `${entry.name}.js`);
-      const missing =
-        event === "SessionStart" ? "missing startup bundle" : `missing ${event} bundle`;
-      if (!isFile(bundle)) return { ok: false, reason: `${entry.name}: ${missing}` };
+      // A native command runs `toolu` and only falls back to the bundle while that file exists.
+      if (entry.command === undefined && !isFile(bundle)) {
+        const missing =
+          event === "SessionStart" ? "missing startup bundle" : `missing ${event} bundle`;
+        return { ok: false, reason: `${entry.name}: ${missing}` };
+      }
       entries.push(
         entry.command === undefined
           ? { name: entry.name, bundle }
