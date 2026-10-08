@@ -2,6 +2,7 @@
 //!
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
+mod bun_launcher;
 mod check_hooks;
 mod check_workflows;
 mod ci_aggregate;
