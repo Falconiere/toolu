@@ -10,6 +10,7 @@ use crate::gates::code_edit_rules::CODE_EDIT;
 use crate::gates::commit_gate::COMMIT_GATE;
 use crate::gates::gate_status::GATE_STATUS;
 use crate::gates::mcp_blocker::MCP_BLOCKER;
+use crate::gates::plan_ledger::PLAN_LEDGER;
 use crate::gates::protected_files::PROTECTED;
 use crate::gates::push_review::PUSH_REVIEW;
 use crate::gates::push_waiver::PUSH_WAIVER;
@@ -21,6 +22,7 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
   &CODE_EDIT,
   &COMMIT_GATE,
   &MCP_BLOCKER,
+  &PLAN_LEDGER,
   &PROTECTED,
   &PUSH_REVIEW,
   &QUALITY_GATE,

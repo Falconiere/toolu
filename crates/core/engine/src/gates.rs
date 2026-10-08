@@ -18,6 +18,10 @@ pub(crate) mod gate_status;
 pub(crate) mod mcp_blocker;
 /// Bash-style path matching for the settings-driven pre-tool gates.
 pub(crate) mod pattern;
+/// The plan-ledger PreToolUse built-in.
+pub(crate) mod plan_ledger;
+/// Optional push-time AC coverage and telemetry.
+pub(crate) mod plan_ledger_ac;
 /// The protected-files PreToolUse built-in.
 pub(crate) mod protected_files;
 /// The push-review PreToolUse built-in.
