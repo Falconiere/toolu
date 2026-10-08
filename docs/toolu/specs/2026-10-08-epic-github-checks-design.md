@@ -44,7 +44,7 @@ Extend the shared GitHub client's rate-limit error with typed rate headers and s
 
 - **AC-1:** In a loopback HTTPS scripted epic, a verdict and green CI on a watched PR trigger a babysit tick at the next check within 180 seconds; a successful trait result enters the merge queue without a worker prompt. The production verdict parser is supplied by #433.
 - **AC-2:** Over an idle scripted hour, at least 95% of conditional REST probes return `304` after warm-up; REST primary `used` stays flat on those replies, while the journal separately records every GraphQL tick and its `rateLimit.cost`, and the 20-point hourly cap is enforced.
-- **AC-3:** A live 10-minute unchanged-PR watch records raw REST `used` counters and a zero counter delta across adjacent authorized `304`s in each slot, plus actual GraphQL points for scheduled ticks. This pairwise measurement isolates the watch from other requests using the same token.
+- **AC-3:** A live 10-minute unchanged-PR watch records raw REST `used` counters and a zero counter delta between adjacent requests ending in an authorized `304` in each slot, plus actual GraphQL points for scheduled ticks. At least two post-warm-up slots return paired `304`s. This pairwise measurement isolates the watch from other requests using the same token.
 - **AC-4:** A virtual-clock six-hour wait has 180-second scheduled gaps, including after restart and immediate extra checks, with no interval backoff.
 - **AC-5:** A loopback `429` with `retry-after: 60` causes no GitHub request during that 60 seconds, is journaled, and leaves subsequent scheduled gaps at 180 seconds.
 - **AC-6:** An engine with no waiting PR sends zero GitHub requests during ten virtual minutes.
@@ -57,7 +57,7 @@ Extend the shared GitHub client's rate-limit error with typed rate headers and s
 |---|---|---|
 | AC-1 | HTTPS fixture changes verdict, checks, and GraphQL thread state; a test trait adapter backed by the real GitHub client returns success, engine queues the PR at the next deadline, journal has no worker prompt. #433 repeats with the production tick | `cargo test -p toolu-epic-orchestrator github_watch` |
 | AC-2 | Fixture repeats unchanged ETags for one hour and returns explicit GraphQL `rateLimit.cost`; counters and cap match journal | `cargo test -p toolu-epic-orchestrator github_budget` |
-| AC-3 | Authenticated sandbox PR, four scheduled checks over ten minutes; saved live report contains both counters | documented live watch command and report in PR verification |
+| AC-3 | Authenticated read-only watch of unchanged `Falconiere/toolu#454`, four scheduled checks over ten minutes; saved live report contains REST headers and GraphQL cost. No authorized sandbox PR was available | documented live watch report in PR verification |
 | AC-4 | Virtual clock over six hours, restart and immediate report injected; deadline sequence remains anchored | `cargo test -p toolu-epic-orchestrator github_cadence` |
 | AC-5 | Fixture answers 429 with 60-second retry header; request timestamps and journal show hold and resumed slots | `cargo test -p toolu-epic-orchestrator github_retry_after` |
 | AC-6 | Empty registered epic and no waiting PR; fixture receives zero requests | `cargo test -p toolu-epic-orchestrator github_idle` |

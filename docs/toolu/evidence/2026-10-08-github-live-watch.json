@@ -1,0 +1,47 @@
+{
+  "repository": "Falconiere/toolu",
+  "pr": 454,
+  "prState": "MERGED",
+  "prUpdatedAt": "2026-10-05T02:28:42Z",
+  "method": "Each slot sends two authenticated GETs for the PR. restStatus and restUsedBefore describe the first reply; restUsed describes the second reply, which returned 304 in every slot. restUsedDelta is the difference between their primary used headers. One GraphQL review-thread query follows each pair.",
+  "startedAt": "2026-10-08T13:26:11Z",
+  "endedAt": "2026-10-08T13:36:11Z",
+  "checks": [
+    {
+      "at": "2026-10-08T13:26:12Z",
+      "restStatus": 200,
+      "restNotModified": 1,
+      "restUsed": 5,
+      "restUsedBefore": 5,
+      "restUsedDelta": 0,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:29:12Z",
+      "restStatus": 304,
+      "restNotModified": 2,
+      "restUsed": 5,
+      "restUsedBefore": 5,
+      "restUsedDelta": 0,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:32:12Z",
+      "restStatus": 304,
+      "restNotModified": 2,
+      "restUsed": 5,
+      "restUsedBefore": 5,
+      "restUsedDelta": 0,
+      "graphqlCost": 1
+    },
+    {
+      "at": "2026-10-08T13:35:12Z",
+      "restStatus": 200,
+      "restNotModified": 1,
+      "restUsed": 6,
+      "restUsedBefore": 6,
+      "restUsedDelta": 0,
+      "graphqlCost": 1
+    }
+  ]
+}
