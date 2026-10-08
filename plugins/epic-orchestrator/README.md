@@ -127,12 +127,12 @@ babysit PR; its GraphQL cost is separate from REST cost in the journal and in
 `toolu epic status`. The production tick remains pending in #433, so its
 current `NotPorted` result raises attention instead of claiming clearance.
 
-`Retry-After` pauses GitHub calls for the requested duration, then the fixed
-clock resumes. A low primary remaining budget pauses launches and merges while
-checks continue: the native floors preserve the existing watcher defaults of
-1,000 REST and 500 GraphQL points. Status includes each watched PR's last and
-next check times and the latest separate budget counters. The engine creates
-no webhook or GitHub listener.
+`Retry-After` pauses GitHub checks, launches and merges for the requested
+duration, then the fixed clock resumes. A low primary remaining budget pauses
+launches and merges while checks continue. The native floors preserve the
+existing watcher defaults of 1,000 REST and 500 GraphQL points. Status shows
+each watched PR's last and next check times and separate budget counters. The
+engine creates no webhook or GitHub listener.
 
 ## State directory
 

@@ -1,5 +1,7 @@
 //! Feed fixed GitHub checks into the resident engine's state thread.
 
+use std::time::Duration;
+
 use serde_json::json;
 use toolu_engine::babysit::{BabysitTick, TickRequest};
 use toolu_github::{Client, Config, Error};
@@ -29,7 +31,7 @@ impl Engine {
     }
     if let Err(err) = self.ensure_github() {
       for (key, cause) in due {
-        note_error(&mut self.world, &key, cause, &err);
+        note_error(&mut self.world, &key, cause, &err, &Report::default());
       }
       return;
     }
@@ -59,13 +61,18 @@ impl Engine {
 }
 
 fn check_one(world: &mut World, key: &str, cause: Cause, checks: &Checks<'_>) -> bool {
+  let original = world.watches.get(key).cloned();
   let result = world
     .watches
     .get_mut(key)
     .map(|watched| github_probe::probe(checks.client, watched));
   match result {
-    Some(Ok(report)) => note_report(world, key, cause, report, checks),
-    Some(Err(err)) => {
+    Some(Ok(report)) => return note_report(world, key, cause, report, checks),
+    Some(Err(failure)) => {
+      let (report, err) = *failure;
+      if let Some(watch) = original {
+        world.watches.insert(key.to_owned(), watch);
+      }
       let limited = matches!(
         err,
         Error::RateLimited {
@@ -73,7 +80,7 @@ fn check_one(world: &mut World, key: &str, cause: Cause, checks: &Checks<'_>) ->
           ..
         }
       );
-      note_error(world, key, cause, &err);
+      note_error(world, key, cause, &err, &report);
       return limited;
     }
     None => {}
@@ -89,7 +96,13 @@ fn rearm(world: &mut World, due: &[(String, Cause)], from: usize) {
   }
 }
 
-fn note_report(world: &mut World, key: &str, cause: Cause, report: Report, checks: &Checks<'_>) {
+fn note_report(
+  world: &mut World,
+  key: &str,
+  cause: Cause,
+  report: Report,
+  checks: &Checks<'_>,
+) -> bool {
   let rest_rate = report.rate.clone();
   let rest_points = report.rest_points;
   for change in report.changes {
@@ -97,16 +110,12 @@ fn note_report(world: &mut World, key: &str, cause: Cause, report: Report, check
   }
   let checked = babysit_request(world, key, checks.paths)
     .map(|request| babysit::check(checks.babysit, &request));
-  let graphql = checked.as_ref().and_then(|result| result.graphql);
   world.rest_points = world.rest_points.saturating_add(rest_points);
   if let Some(rate) = &rest_rate {
     world.rest_rate = Some(rate.clone());
   }
-  if let Some(usage) = graphql {
-    world.graphql_points = world.graphql_points.saturating_add(usage.points);
-    world.graphql_remaining = usage.remaining;
-    world.graphql_reset_at = usage.reset_at;
-  }
+  let retry_after = observe_graphql(world, checked.as_ref());
+  let graphql = checked.as_ref().and_then(|result| result.graphql);
   let note = json!({
     "cause": cause_name(cause),
     "restFresh": report.fresh,
@@ -115,13 +124,37 @@ fn note_report(world: &mut World, key: &str, cause: Cause, report: Report, check
     "restRate": rest_rate,
     "graphqlTick": u8::from(checked.is_some()),
     "graphqlPoints": graphql.map(|usage| usage.points),
-    "graphqlRemaining": graphql.and_then(|usage| usage.remaining),
-    "graphqlResetAt": graphql.and_then(|usage| usage.reset_at),
+    "graphqlRemaining": world.graphql_remaining,
+    "graphqlResetAt": world.graphql_reset_at,
+    "graphqlRetryAfter": retry_after.map(|wait| wait.as_secs()),
   });
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
     note_babysit(world, key, checked.next);
   }
+  retry_after.is_some()
+}
+
+fn observe_graphql(world: &mut World, checked: Option<&babysit::Checked>) -> Option<Duration> {
+  let graphql = checked.and_then(|result| result.graphql);
+  if let Some(usage) = graphql {
+    world.graphql_points = world.graphql_points.saturating_add(usage.points);
+    world.graphql_remaining = usage.remaining;
+    world.graphql_reset_at = usage.reset_at;
+  }
+  let throttle = checked.and_then(|result| result.throttle.as_ref());
+  let retry_after = throttle.and_then(|limit| limit.retry_after);
+  if let Some(limit) = throttle {
+    world.graphql_remaining = limit.remaining;
+    world.graphql_reset_at = limit.reset_at;
+  }
+  if let Some(wait) = retry_after {
+    let millis = u64::try_from(wait.as_millis()).unwrap_or(u64::MAX);
+    world.github_hold_until_ms = world
+      .github_hold_until_ms
+      .max(world.now_ms.saturating_add(millis));
+  }
+  retry_after
 }
 
 fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest> {
@@ -168,7 +201,11 @@ fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
   }
 }
 
-fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error) {
+fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
+  world.rest_points = world.rest_points.saturating_add(report.rest_points);
+  if let Some(counters) = report.rate.as_ref() {
+    world.rest_rate = Some(counters.clone());
+  }
   let mut retry = None;
   let mut secondary = false;
   let mut rate = None;
@@ -193,6 +230,8 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error) {
   let note = json!({
     "cause": cause_name(cause), "error": err.to_string(),
     "retryAfter": retry, "secondary": secondary, "rate": rate,
+    "restFresh": report.fresh, "restNotModified": report.not_modified,
+    "restPoints": report.rest_points,
   });
   journal(world, key, "github-error", &note.to_string());
 }
@@ -248,6 +287,10 @@ fn journal(world: &mut World, key: &str, name: &str, note: &str) {
     note,
   )));
 }
+
+#[cfg(test)]
+#[path = "tests/github_engine_fixture_test.rs"]
+mod fixture;
 
 #[cfg(test)]
 #[path = "tests/github_engine_test.rs"]

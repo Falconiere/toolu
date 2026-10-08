@@ -51,6 +51,9 @@ fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
       "running".clone_into(&mut issue.stage);
     }
   }
+  if action == Some(Action::Merge) {
+    crate::watch::after_merge(world, key);
+  }
   vec![Step::Issue {
     key: key.to_owned(),
   }]
@@ -104,6 +107,7 @@ fn mark_recovered_done(world: &mut World, key: &str) -> Vec<Step> {
   {
     "cleaning".clone_into(&mut issue.stage);
   }
+  crate::watch::after_merge(world, key);
   vec![Step::Issue {
     key: key.to_owned(),
   }]

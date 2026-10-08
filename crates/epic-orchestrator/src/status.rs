@@ -24,7 +24,7 @@ pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Valu
         "points": world.graphql_points,
       },
       "holdUntil": world.github_hold_until_ms,
-      "effectsHeld": crate::github_budget::low(world),
+      "effectsHeld": crate::github_budget::effects_held(world),
     },
     "issues": issues.iter().map(|issue| json!({
       "key": issue.key,

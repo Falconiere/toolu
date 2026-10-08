@@ -45,16 +45,23 @@ pub(crate) struct Report {
 ///
 /// # Errors
 /// The client, a malformed reply, or an incomplete pagination chain fails.
-pub(crate) fn probe(client: &Client, watch: &mut Watch) -> Result<Report, Error> {
+pub(crate) fn probe(client: &Client, watch: &mut Watch) -> Result<Report, Box<(Report, Error)>> {
   let mut report = Report::default();
+  match probe_into(client, watch, &mut report) {
+    Ok(()) => Ok(report),
+    Err(err) => Err(Box::new((report, err))),
+  }
+}
+
+fn probe_into(client: &Client, watch: &mut Watch, report: &mut Report) -> Result<(), Error> {
   let kind = watch.kind.clone();
   match &kind {
-    Kind::Pr { .. } => pr(client, watch, &mut report, &kind)?,
-    Kind::Base { repo, branch } => base(client, watch, &mut report, repo, branch)?,
+    Kind::Pr { .. } => pr(client, watch, report, &kind)?,
+    Kind::Base { repo, branch } => base(client, watch, report, repo, branch)?,
     Kind::Epic { key, repo, number } => {
       let root = root(repo)?;
       let path = format!("{root}/issues/{number}/sub_issues?per_page=100");
-      let _pages = pages(client, watch, &mut report, &path, true)?;
+      let _pages = pages(client, watch, report, &path, true)?;
       if report.fresh > 0 {
         report
           .changes
@@ -64,7 +71,7 @@ pub(crate) fn probe(client: &Client, watch: &mut Watch) -> Result<Report, Error>
     Kind::Blocker { key, repo, number } => {
       let root = root(repo)?;
       let path = format!("{root}/issues/{number}");
-      let _reply = pages(client, watch, &mut report, &path, false)?;
+      let _reply = pages(client, watch, report, &path, false)?;
       if report.fresh > 0 {
         report
           .changes
@@ -72,7 +79,7 @@ pub(crate) fn probe(client: &Client, watch: &mut Watch) -> Result<Report, Error>
       }
     }
   }
-  Ok(report)
+  Ok(())
 }
 
 fn pr(client: &Client, watch: &mut Watch, report: &mut Report, kind: &Kind) -> Result<(), Error> {
