@@ -156,7 +156,7 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
   {
     "id": "full-gate",
     "title": "cargo xtask gate for this branch and the TypeScript gate that the jev and OpenCode edits reach",
-    "check": "set -e; export PATH=\"$HOME/.cargo/bin:$PWD/target/debug:$HOME/.cargo/bin:$PATH\"; cargo xtask gate --base origin/main --title 'feat(jev): native toolu jev namespace and hooks (#430)'; bun run test:ts; TOOLU_LIVE_OPENCODE=1 bun test --timeout 180000 tools/toolu-opencode/src/plugin/__tests__/jev-delivery.live.test.ts",
+    "check": "set -e; unset PUSH_REVIEW_BASE TOOLU_HOST_OVERRIDE; export PATH=\"$HOME/.cargo/bin:$PWD/target/debug:$HOME/.cargo/bin:$PATH\"; cargo xtask gate --base origin/main --title 'feat(jev): native toolu jev namespace and hooks (#430)'; bun run test:ts; TOOLU_LIVE_OPENCODE=1 bun test --timeout 180000 tools/toolu-opencode/src/plugin/__tests__/jev-delivery.live.test.ts",
     "ac_refs": ["AC-1", "AC-7"],
     "depends_on": ["switch", "cli-wire"],
     "paths": [
@@ -211,4 +211,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 - `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`. The tool-hook payload test names the detected host's event, so it still passes when `TOOLU_HOST_OVERRIDE` is `cursor`.
 - `docs`: plugin Markdown may not name `jev.sh` once the namespace is ported, so the skill and the babysit helper say `toolu jev`. Exit `22` and `28` in the plugin README become `1` and `75`.
 - `switch`: a native hook runs when its fallback `hooks/dist` bundle is gone. The catalog test sets `TOOLU_BIN` to the built binary and expects no install notice. The loopback fixture serves a leaf signed by a CA, and `NODE_EXTRA_CA_CERTS` is that CA, because rustls rejects a CA certificate presented as the server certificate. `knip.json` drops the deleted helpers. The status-record test removes `scripts/jev.sh`.
-- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file. The deleted hook sources drop their oxlint exemptions.
+- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file. The deleted hook sources drop their oxlint exemptions. The full-gate check unsets `PUSH_REVIEW_BASE` and `TOOLU_HOST_OVERRIDE` so the TypeScript suite does not inherit the stamp's base.

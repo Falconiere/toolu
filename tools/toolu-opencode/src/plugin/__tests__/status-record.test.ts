@@ -127,7 +127,7 @@ test("a not-ready startup records and logs the bounded bootstrap reason", async 
     const read = readOpencodeStatus(recordPath(sb));
     if (!read.ok) throw new Error(`record ${read.reason}`);
     expect(read.record).toMatchObject({ status: "not-ready", plugins: [], notes: [] });
-    expect(read.record.reason).toStartWith("bootstrap: jev: session-start: ");
+    expect(read.record.reason).toStartWith("bootstrap: jev/session-start: ");
     expect(read.record.selection).toBeUndefined();
     const [status] = statusEntries(entries);
     expect(status?.level).toBe("error");

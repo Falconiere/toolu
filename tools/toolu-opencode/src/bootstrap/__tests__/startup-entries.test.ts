@@ -32,15 +32,17 @@ test.concurrent("every catalog SessionStart launcher is an entry, in file order"
   expect(entryNames("jev")).toEqual(["session-start", "check-binary"]);
 });
 
-test.concurrent("Jev SessionStart resolves its shipped bundle", () => {
+test.concurrent("Jev SessionStart resolves its native launcher", () => {
   const plugin = join(PLUGINS_ROOT, "jev");
-  expect(pluginStartupEntries(plugin)).toEqual({
-    ok: true,
-    entries: [
-      { name: "session-start", bundle: join(plugin, "hooks", "dist", "session-start.js") },
-      { name: "check-binary", bundle: join(plugin, "hooks", "dist", "check-binary.js") },
-    ],
-  });
+  const plan = pluginStartupEntries(plugin);
+  expect(plan.ok).toBe(true);
+  if (!plan.ok) return;
+  expect(plan.entries.map((entry) => entry.name)).toEqual(["session-start", "check-binary"]);
+  for (const entry of plan.entries) {
+    expect(entry.bundle).toBe(join(plugin, "hooks", "dist", `${entry.name}.js`));
+    expect(entry.command).toContain(`jev hook ${entry.name} --event SessionStart`);
+    expect(entry.command).toContain("--hook-protocol");
+  }
 });
 
 test.concurrent("a generated native SessionStart retains its declared shell command", () => {
