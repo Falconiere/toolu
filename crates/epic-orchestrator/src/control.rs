@@ -132,8 +132,7 @@ pub(crate) fn epic_key(state_dir: &Path) -> String {
   state_dir
     .file_name()
     .and_then(|name| name.to_str())
-    .unwrap_or("epic")
-    .to_owned()
+    .map_or_else(|| state_dir.display().to_string(), str::to_owned)
 }
 
 pub(crate) fn registry_nonempty(paths: &Paths) -> bool {

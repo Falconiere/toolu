@@ -16,6 +16,13 @@ fn a_directory_name_is_the_epic_key_without_a_graph() {
 }
 
 #[test]
+fn a_path_without_a_file_name_uses_the_full_path() {
+  let path = Path::new("/no-such-epic-434/..");
+  assert!(path.file_name().is_none());
+  assert_eq!(epic_key(path), "/no-such-epic-434/..");
+}
+
+#[test]
 fn a_graph_epic_names_the_key() {
   let tmp = tempfile::tempdir().expect("temp");
   let dir = tmp.path().join("falconiere-toolu-402");
