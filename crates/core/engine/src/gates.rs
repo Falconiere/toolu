@@ -10,6 +10,8 @@ pub(crate) mod bash_commands;
 pub(crate) mod code_edit_rules;
 /// The commit-gate PreToolUse built-in.
 pub(crate) mod commit_gate;
+/// The docs-sync PreToolUse built-in.
+pub(crate) mod docs_sync;
 /// Repo-relative gate paths and pathname expansion.
 pub(crate) mod gate_paths;
 /// `gate-status.sh`: the quality gate's command channel.
