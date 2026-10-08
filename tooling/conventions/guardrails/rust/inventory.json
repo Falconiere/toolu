@@ -161,6 +161,12 @@
       "id": "packaging",
       "pass": "crates/xtask/src/tests/packaging_test.rs::this_repository_is_packaged",
       "fail": "crates/xtask/src/tests/packaging_test.rs::a_mismatched_manifest_version_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "bench",
+      "pass": "crates/xtask/src/tests/bench_test.rs::this_repository_writes_bytes_div_4",
+      "fail": "crates/xtask/src/tests/bench_test.rs::a_set_api_key_writes_nothing"
     }
   ]
 }
