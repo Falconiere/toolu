@@ -16,7 +16,7 @@ def configure(target: str, mirrors: Path) -> None:
                 "sudo",
                 "sed",
                 "-i",
-                "s|http://azure.archive.ubuntu.com/ubuntu|https://archive.ubuntu.com/ubuntu|g",
+                r"s|https\?://azure\.archive\.ubuntu\.com/ubuntu|https://archive.ubuntu.com/ubuntu|g",
                 str(mirrors),
             ],
             check=True,
