@@ -111,6 +111,16 @@ pub(crate) struct Issue {
   pub nudge_at_ms: u64,
   /// Worktree to checkpoint.
   pub worktree: Option<String>,
+  /// Pane bound by the last snapshot.
+  pub pane: Option<String>,
+  /// Herdr agent name. Defaults to the issue key.
+  pub agent: String,
+  /// Host kind for a cooldown. Empty writes no cooldown.
+  pub kind: String,
+  /// Status stayed `blocked` since the last change.
+  pub blocked: bool,
+  /// `phase_at_ms` of the last limit scan.
+  pub scanned_at: Option<u64>,
   /// Issue keys that still block this one.
   pub blockers: Vec<String>,
   /// The action in progress.
@@ -231,6 +241,11 @@ impl Issue {
       phase_at_ms: now_ms,
       nudge_at_ms: 0,
       worktree: None,
+      pane: None,
+      agent: key.to_owned(),
+      kind: String::new(),
+      blocked: false,
+      scanned_at: None,
       blockers: Vec::new(),
       pending: None,
       deferred: None,

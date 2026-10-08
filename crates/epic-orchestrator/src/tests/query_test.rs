@@ -234,7 +234,7 @@ fn assert_wait_ack_and_answer(env: &Env) {
   );
 }
 
-fn root(tmp: &Path) -> (Paths, Env) {
+pub(super) fn root(tmp: &Path) -> (Paths, Env) {
   let resources = tmp.join("resources");
   let home = tmp.join("home");
   std::fs::create_dir_all(&resources).expect("resources");
@@ -246,14 +246,14 @@ fn root(tmp: &Path) -> (Paths, Env) {
   (Paths::from_env(&env), env)
 }
 
-fn parse(argv: &[&str]) -> clap::ArgMatches {
+pub(super) fn parse(argv: &[&str]) -> clap::ArgMatches {
   let matches = crate::verbs::command()
     .try_get_matches_from(argv)
     .expect("parse");
   matches.subcommand().expect("subcommand").1.clone()
 }
 
-fn wait_live(paths: &Paths) {
+pub(super) fn wait_live(paths: &Paths) {
   for _ in 0..100 {
     if crate::lock::live(&paths.lock()) {
       return;

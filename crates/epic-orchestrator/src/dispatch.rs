@@ -8,9 +8,10 @@ use serde_json::{Value, json};
 use crate::journal::{self, Record};
 use crate::model::Report;
 use crate::schedule::{ack, note_event};
-use crate::server::{Engine, Stop, wait_body};
+use crate::server::{Engine, Stop};
 use crate::socket::Waiter;
 use crate::status::document;
+use crate::status::wait_body;
 
 pub(crate) fn dispatch(
   engine: &mut Engine,

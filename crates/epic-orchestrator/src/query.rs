@@ -15,7 +15,7 @@ use toolu_state::time::epoch_millis;
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::control::{ensure, registry_nonempty};
-use crate::disk::read_value;
+use crate::disk::{read_value, write_status, write_value};
 use crate::job::run_job;
 use crate::lock::live;
 use crate::model::World;
@@ -91,11 +91,17 @@ pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
     Ok(pair) => pair,
     Err(err) => return failed("toolu epic report", &err),
   };
-  let token = format!("r{}-{key}", epoch_millis(SystemTime::now()));
   if let Err(err) = ensure(env) {
     return failed("toolu epic report", &err);
   }
   let paths = Paths::from_env(env);
+  let pr = matches.get_one::<u64>("pr").copied();
+  let note = text(matches, "note").unwrap_or("");
+  let token = report_token(&key);
+  let written = write_status(Path::new(file), phase, pr, note, SystemTime::now());
+  if let Err(err) = written {
+    return failed("toolu epic report", &err);
+  }
   let request = json!({
     "op": "report",
     "token": token,
@@ -103,10 +109,36 @@ pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
     "epic": epic_for(&paths, &state_dir),
     "state_dir": state_dir,
     "phase": phase,
-    "pr": matches.get_one::<u64>("pr").copied(),
-    "note": text(matches, "note").unwrap_or(""),
+    "pr": pr,
+    "note": note,
   });
-  ask(env, "report", &request)
+  let path = match crate::client::spool_path(&paths.root, &token) {
+    Ok(path) => path,
+    Err(err) => return failed("toolu epic report", &err),
+  };
+  if let Err(err) = write_value(&path, &request) {
+    return failed("toolu epic report", &err);
+  }
+  if !paths.socket().exists() {
+    return json_out(&json!({"ok": true}));
+  }
+  match exchange_retry(&paths, PROTOCOL, &request) {
+    Ok(doc) => json_out(&doc),
+    Err(err) if err.starts_with("connect:") => json_out(&json!({"ok": true})),
+    Err(err) => failed("toolu epic report", &err),
+  }
+}
+
+fn report_token(key: &str) -> String {
+  use std::sync::atomic::{AtomicU32, Ordering};
+  static NEXT: AtomicU32 = AtomicU32::new(0);
+  let n = NEXT.fetch_add(1, Ordering::Relaxed);
+  let millis = epoch_millis(SystemTime::now());
+  let safe: String = key
+    .chars()
+    .filter(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
+    .collect();
+  format!("r{millis:013}-{}-{n:04}-{safe}", std::process::id())
 }
 
 pub(crate) fn ask(env: &Env, verb: &str, request: &Value) -> Outcome {
@@ -207,3 +239,7 @@ pub(crate) fn wait_default(host: Option<Host>) -> u64 {
 #[cfg(test)]
 #[path = "tests/query_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/report_test.rs"]
+mod report_tests;

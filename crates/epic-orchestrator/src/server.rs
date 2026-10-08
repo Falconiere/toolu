@@ -3,7 +3,7 @@
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use serde_json::{Value, json};
+use serde_json::json;
 
 use crate::checkpoint::snapshot;
 use crate::commit::commit_effect;
@@ -11,9 +11,9 @@ use crate::disk::{write_stage, write_status, write_value};
 use crate::effects::invoke;
 use crate::journal::{self, Record};
 use crate::logic::{apply_report, arm_ready, commit_journal, next};
-use crate::model::{Action, Attention, Report, Step, World};
+use crate::model::{Action, Report, Step, World};
 use crate::paths::Paths;
-use crate::schedule::{note_herdr, on_tick, set_pause, take_judgment};
+use crate::schedule::{note_herdr, on_tick, set_pause};
 use crate::snapshot::{issue_path, load, status_path};
 
 /// Where a scripted merge is killed so recovery can be tested.
@@ -56,6 +56,8 @@ pub(crate) struct Engine {
   /// `herdr --session` name. Empty uses the default server.
   pub herdr_session: Option<String>,
   pub(crate) now: SystemTime,
+  /// A new pane matched a running worktree, so the subscription should reopen.
+  pub resubscribe: bool,
 }
 
 impl Engine {
@@ -74,7 +76,16 @@ impl Engine {
       git_trace: None,
       herdr_session: None,
       now,
+      resubscribe: false,
     })
+  }
+
+  /// Write `watch.json`, including the herdr backoff.
+  ///
+  /// # Errors
+  /// The watch file cannot be replaced.
+  pub(crate) fn save_watch(&self) -> Result<(), String> {
+    self.persist_watch()
   }
 
   /// Run until idle or a fault.
@@ -101,7 +112,7 @@ impl Engine {
     for step in apply_report(&mut self.world, report) {
       let _applied = self.apply(step)?;
     }
-    Ok(())
+    crate::limit::on_failed(self, &report.phase, &report.note, &report.key)
   }
 
   /// Journal steps sitting in the outbox.
@@ -150,6 +161,9 @@ impl Engine {
     on_tick(&mut self.world);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;
+    if !crate::source::prompt_enabled() {
+      self.probe_herdr()?;
+    }
     self.pump()
   }
 
@@ -224,7 +238,17 @@ impl Engine {
 
   fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
     if action == Action::Prompt {
-      let _outcome = invoke(self.scripts.as_deref(), action, "{}");
+      if self.scripts.is_none() && crate::source::prompt_enabled() {
+        let target = self
+          .world
+          .issues
+          .get(key)
+          .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
+        let _sent =
+          crate::source::ask_status(&self.paths, &toolu_runtime::env::Env::process(), &target);
+      } else {
+        let _outcome = invoke(self.scripts.as_deref(), action, "{}");
+      }
       return Ok(Applied::Continue);
     }
     if self.fault == Fault::BeforeMerge && action == Action::Merge && !recovered(&self.world, key) {
@@ -329,28 +353,6 @@ fn herdr_ok(session: Option<&str>) -> bool {
   let mut spec = toolu_runtime::process::Spec::new(argv);
   spec.timeout = std::time::Duration::from_secs(10);
   toolu_runtime::process::run(&spec).is_ok_and(|output| output.exit_code == 0)
-}
-
-/// `wait` when a judgment is already queued, otherwise the timeout body.
-pub(crate) fn wait_body(world: &mut World, max_seconds: u64) -> Value {
-  match take_judgment(world) {
-    Some(item) => attention_value(&item),
-    None => waiting(max_seconds),
-  }
-}
-
-fn attention_value(item: &Attention) -> Value {
-  json!({
-    "kind": item.kind,
-    "key": item.key,
-    "epic": item.epic,
-    "note": item.note,
-    "seq": item.seq,
-  })
-}
-
-fn waiting(_max_seconds: u64) -> Value {
-  json!({"state": "waiting"})
 }
 
 #[cfg(test)]

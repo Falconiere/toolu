@@ -133,6 +133,9 @@ fn load_issue(
   if let Some(tree) = issue_doc.get("worktree").and_then(Value::as_str) {
     issue.worktree = Some(tree.to_owned());
   }
+  if let Some(kind) = issue_doc.get("kind").and_then(Value::as_str) {
+    kind.clone_into(&mut issue.kind);
+  }
   if let Some(phase) = status.get("phase").and_then(Value::as_str) {
     phase.clone_into(&mut issue.phase);
   }

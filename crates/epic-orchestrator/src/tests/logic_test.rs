@@ -5,7 +5,8 @@ use crate::journal;
 use crate::model::Report;
 use crate::paths::Paths;
 use crate::schedule::note_event;
-use crate::server::{Engine, Fault, Stop, wait_body};
+use crate::server::{Engine, Fault, Stop};
+use crate::status::wait_body;
 
 struct Sandbox {
   _tmp: tempfile::TempDir,

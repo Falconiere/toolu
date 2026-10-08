@@ -48,3 +48,11 @@ Scripts (invoked by the skill via `${CLAUDE_PLUGIN_ROOT}/scripts`):
 | `report.ts`       | Worker phase reporter                                                                       |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
+
+## Engine events
+
+The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
+`toolu epic report` writes the status file and, when the engine is down, a spool
+the next start applies in order. Stall deadlines belong to each issue: 45
+minutes, or 120 minutes while the phase is babysit. The 30-second tick is for
+checkpoints, not for herdr.

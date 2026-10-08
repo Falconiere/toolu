@@ -2,7 +2,8 @@
 
 use serde_json::{Value, json};
 
-use crate::model::{Issue, World};
+use crate::model::{Attention, Issue, World};
+use crate::schedule::take_judgment;
 
 /// One status document. `epic` keeps issues for that epic key when set.
 pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Value {
@@ -47,6 +48,28 @@ fn epic_keys(issues: &[&Issue]) -> Vec<Value> {
     }
   }
   keys
+}
+
+/// `wait` when a judgment is already queued, otherwise the timeout body.
+pub(crate) fn wait_body(world: &mut World, max_seconds: u64) -> Value {
+  match take_judgment(world) {
+    Some(item) => attention_value(&item),
+    None => waiting(max_seconds),
+  }
+}
+
+fn attention_value(item: &Attention) -> Value {
+  json!({
+    "kind": item.kind,
+    "key": item.key,
+    "epic": item.epic,
+    "note": item.note,
+    "seq": item.seq,
+  })
+}
+
+fn waiting(_max_seconds: u64) -> Value {
+  json!({"state": "waiting"})
 }
 
 #[cfg(test)]

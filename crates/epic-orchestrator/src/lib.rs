@@ -13,8 +13,11 @@ mod control;
 mod disk;
 mod dispatch;
 mod effects;
+mod herdr;
+mod herdr_argv;
 mod job;
 mod journal;
+mod limit;
 mod lock;
 mod logic;
 mod model;
@@ -26,6 +29,10 @@ mod schedule;
 mod server;
 mod snapshot;
 mod socket;
+mod source;
+mod source_apply;
+#[cfg(test)]
+mod source_fix;
 mod status;
 mod verbs;
 
