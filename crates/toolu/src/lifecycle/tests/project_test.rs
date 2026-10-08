@@ -29,8 +29,15 @@ fn facts_come_from_the_toplevel_and_an_empty_root_is_blank() {
   let repo = dir.path().join("repo");
   std::fs::create_dir_all(&repo).unwrap();
   git(&repo, &["init", "-b", "feature"]);
-  let env = Env::from_pairs([("PATH", "/usr/bin:/bin")]);
+  let ceiling = std::fs::canonicalize(dir.path()).unwrap();
+  let env = Env::from_pairs([
+    ("PATH", "/usr/bin:/bin"),
+    ("GIT_CEILING_DIRECTORIES", ceiling.to_str().unwrap()),
+  ]);
   assert_eq!(branch_line(&env, &repo).as_deref(), Some("Branch: HEAD"));
+  let outside_dir = dir.path().join("outside");
+  std::fs::create_dir_all(&outside_dir).unwrap();
+  assert_eq!(branch_line(&env, &outside_dir), None);
   std::fs::write(repo.join("bun.lock"), "").unwrap();
   std::fs::write(repo.join("Cargo.toml"), "").unwrap();
   std::fs::write(repo.join("tsconfig.json"), "{}").unwrap();
