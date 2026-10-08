@@ -29,7 +29,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`brainstorm`](brainstorm.md) | `plugins/brainstorm` | available | Think a change through before building (a Markdown-only plugin) |
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
 | [`review`](review.md) | `plugins/toolu-review` | planned | Pre-push code review that mirrors the CI review bot |
-| [`jev`](jev.md) | `plugins/jev` | planned | Typed judgments from Jev: yes/no probabilities, choices and scores |
+| [`jev`](jev.md) | `plugins/jev` | available | Typed judgments from Jev: yes/no probabilities, choices and scores |
 | [`statusline`](statusline.md) | `plugins/statusline` | planned | Project status for the host's status line |
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | planned | Babysit a PR until CI, review threads and the review-bot verdict are clear |
 | [`epic`](epic.md) | `plugins/epic-orchestrator` | planned | Drive an epic to merged PRs: the resident engine, merge queue and trackers |

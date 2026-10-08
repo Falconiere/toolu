@@ -13,6 +13,7 @@ toolu-http = { path = "../http" }
 toolu-runtime = { path = "../runtime" }
 
 [dev-dependencies]
+base64 = { version = "0.23", default-features = false, features = ["alloc"] }
 toolu-http-test-support = { path = "../../http-test-support" }
 
 [lints]

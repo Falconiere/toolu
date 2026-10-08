@@ -9,7 +9,14 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+toolu-jev-client = { path = "../core/jev" }
+toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+
+[dev-dependencies]
+serde_json.workspace = true
+tempfile.workspace = true
+toolu-http-test-support = { path = "../http-test-support" }
 
 [lints]
 workspace = true

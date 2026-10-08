@@ -185,3 +185,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 ## Deviations
 
 - `native-advice`: `shell_toolu` takes the caller's `Env` so the probe does not see the process `PATH`. `native_toolu_on_path()` still uses `Env::process()`. The session-id fallback (`session_id`, else `TOOLU_SESSION_ID`) stays in the hook, as in `runNativeTooluCheck`.
+- `jev-cli`: clap cannot count repeated `-o`/`-l` flags, so too few options, too few levels, and `ask - -s -` exit 1 from the client. Unknown flags and a missing `--state` stay clap usage (exit 64) in `crates/cli`. The command-tree snapshot, `docs/cli`, and the tests that named `jev planned` move in this step because that verb is gone.

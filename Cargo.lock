@@ -1399,6 +1399,11 @@ name = "toolu-jev"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "serde_json",
+ "tempfile",
+ "toolu-http-test-support",
+ "toolu-jev-client",
+ "toolu-protocol",
  "toolu-runtime",
 ]
 
@@ -1406,6 +1411,7 @@ dependencies = [
 name = "toolu-jev-client"
 version = "7.11.0"
 dependencies = [
+ "base64 0.23.1",
  "serde_json",
  "toolu-http",
  "toolu-http-test-support",

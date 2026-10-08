@@ -83,15 +83,15 @@ fn namespaces_carry_owner_aliases_placeholders_and_hidden_hooks() {
 #[test]
 fn subcommands_repeat_neither_globals_nor_the_help_command() {
   let doc = exported();
-  let planned = command(&doc, &["jev", "planned"]);
-  assert_eq!(longs(planned), Vec::<&str>::new());
+  let noul = command(&doc, &["jev", "noul"]);
+  assert!(longs(noul).contains(&"state"));
   let names: Vec<&str> = command(&doc, &["jev"])["commands"]
     .as_array()
     .unwrap()
     .iter()
     .map(|child| child["name"].as_str().unwrap())
     .collect();
-  assert_eq!(names, ["planned", "hook"]);
+  assert_eq!(names, ["noul", "choice", "score", "ask", "hook"]);
   assert_eq!(command(&doc, &["commands"])["owner"], "toolu-cli");
   assert_eq!(command(&doc, &["hook"])["owner"], "toolu");
 }

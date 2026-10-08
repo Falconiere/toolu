@@ -27,6 +27,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "setup",
     "brainstorm",
     "delivery-flow",
+    "jev",
   ];
   names
     .iter()
@@ -170,7 +171,7 @@ fn a_denied_hook_exits_2_with_blocked_on_stderr() {
 fn a_successful_verb_leaves_stderr_empty() {
   for args in [
     &["epic", "planned"][..],
-    &["--json", "jev", "planned"],
+    &["jev", "--help"],
     &["brainstorm"],
     &["commands"],
   ] {

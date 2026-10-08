@@ -79,7 +79,7 @@ fn an_unknown_flag_lists_the_valid_flags() {
 #[test]
 fn global_flags_reach_every_command_and_values_are_checked() {
   passes("toolu epic planned --json -q", Origin::Fenced);
-  passes("toolu --json jev planned", Origin::Fenced);
+  passes("toolu --json jev noul --help", Origin::Fenced);
   passes("toolu --host <h> commands", Origin::Fenced);
   passes("toolu --host=$HOST commands", Origin::Fenced);
   passes("toolu commands --host codex --schema", Origin::Fenced);

@@ -15,11 +15,13 @@ use ureq::tls::{Certificate, RootCerts, TlsConfig, TlsProvider};
 
 mod auth;
 mod error;
+mod pem;
 mod send;
 
 pub use auth::Auth;
 pub use error::Error;
 use error::map_io;
+pub use pem::{pem_file_to_der, pem_to_der};
 pub use send::{Method, Request, Response, check_url};
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
