@@ -169,7 +169,8 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
       "tools/toolu-opencode/",
       "tooling/src/check-hooks-json.ts",
       "tooling/src/__tests__/check-hooks-json.test.ts",
-      "tooling/src/opencode-host/scenarios-paths.ts"
+      "tooling/src/opencode-host/scenarios-paths.ts",
+      "plugins/.oxlintrc.json"
     ],
     "input": "this branch against origin/main, with target/debug/toolu on PATH",
     "model": "inherit"
@@ -210,4 +211,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 - `cli-wire`: `Context` carries an optional `Env` so a hook test does not publish into the process home. A failed stdin read leaves `Ctx.stdin` empty, and the verb reports `jev: cannot read stdin`. The tool-hook payload test names the detected host's event, so it still passes when `TOOLU_HOST_OVERRIDE` is `cursor`.
 - `docs`: plugin Markdown may not name `jev.sh` once the namespace is ported, so the skill and the babysit helper say `toolu jev`. Exit `22` and `28` in the plugin README become `1` and `75`.
 - `switch`: a native hook runs when its fallback `hooks/dist` bundle is gone. The catalog test sets `TOOLU_BIN` to the built binary and expects no install notice. The loopback fixture serves a leaf signed by a CA, and `NODE_EXTRA_CA_CERTS` is that CA, because rustls rejects a CA certificate presented as the server certificate. `knip.json` drops the deleted helpers. The status-record test removes `scripts/jev.sh`.
-- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file.
+- `full-gate`: the hooks.json check does not require a native entry's transition bundle. The OpenCode surface test expects `toolu jev`. The path scenario runs the published shim, with the built `toolu` on `PATH`. Hook test helpers in `src/hooks.rs` use `assert` because rust-quality scans that file. The deleted hook sources drop their oxlint exemptions.
