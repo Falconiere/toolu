@@ -11,7 +11,7 @@ const PREFIXES: &[&str] = &[
   "ghu_",
   "ghr_",
   "github_pat_",
-  "TYPESAFE_API_KEY",
+  "tsak_",
   "Bearer ",
 ];
 
