@@ -43,7 +43,7 @@ Port shared push targeting and the three workflow gates, then add the two standa
   {
     "id": "agent-tier-hook",
     "title": "Route native agent-tier hook and preserve delegation telemetry and fail-open model advice",
-    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-hub --lib agent_tier::tests:: && PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-cli --lib hook::tests::",
+    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-hub --lib agent_tier::tests:: && PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-cli --bin toolu hook::tests::",
     "ac_refs": ["AC-2", "AC-5"],
     "depends_on": ["docs-sync-gate"],
     "paths": ["crates/toolu/src/", "crates/cli/src/", "crates/core/engine/src/ledger/", "crates/core/state/src/telemetry.rs", "crates/core/runtime/src/"],
@@ -52,7 +52,7 @@ Port shared push targeting and the three workflow gates, then add the two standa
   {
     "id": "mcp-hook",
     "title": "Route native standalone MCP hook through mcp-blocker and adapt functional tests to the launcher seam",
-    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-hub --lib mcp_hook::tests:: && PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-cli --lib hook::tests::",
+    "check": "PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-hub --lib mcp_hook::tests:: && PATH=/root/.cargo/bin:/root/.local/bin:$PATH cargo test -p toolu-cli --bin toolu hook::tests::",
     "ac_refs": ["AC-3", "AC-5"],
     "depends_on": ["agent-tier-hook"],
     "paths": ["crates/toolu/src/", "crates/cli/src/", "crates/core/engine/src/gates/mcp_blocker.rs", "plugins/toolu/hooks/src/__tests__/mcp-tools.test.ts", "tools/toolu-conformance/src/harness/entry-command.ts"],

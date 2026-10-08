@@ -166,6 +166,20 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
 }
 
 #[test]
+fn agent_tier_fails_open_when_payload_is_unreadable() {
+  let broken = || Err(std::io::Error::other("stdin is closed"));
+  let no_exe = || None;
+  let context = Context {
+    exe: &no_exe,
+    stdin: &broken,
+  };
+  let outcome = run(&request("agent-tier", Some("PreToolUse"), None), &context);
+  assert_eq!(outcome.exit.code(), 0);
+  assert_eq!(outcome.stdout, None);
+  assert_eq!(outcome.stderr, None);
+}
+
+#[test]
 fn another_plugins_session_start_advises_and_never_blocks() {
   let jev = HookRequest {
     plugin: "jev".to_owned(),

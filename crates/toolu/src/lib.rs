@@ -10,6 +10,8 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::invocation::current_dir;
 
+/// The standalone delegation model-tier hook.
+pub mod agent_tier;
 /// `toolu config`.
 pub mod config;
 /// `toolu debug`.
