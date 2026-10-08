@@ -12,7 +12,7 @@ table picks the model and effort per host.
 
 ## Install
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../repo/docs/runtime.md).
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `bun`, `gh`, and `herdr`
 (with `HERDR_ENV=1` inside a herdr pane).
@@ -61,7 +61,7 @@ selection, for example:
 
 Wire OpenCode to the generated surface under
 `tools/toolu-opencode/generated/` (shipped in `@toolu/opencode`); see
-[docs/opencode.md](../../docs/opencode.md). The generated skill runs its
+[docs/opencode.md](../repo/docs/opencode.md). The generated skill runs its
 scripts from `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`, which the OpenCode
 plugin's `shell.env` sets to the installed `plugins/epic-orchestrator`
 directory while the plugin is enabled.
