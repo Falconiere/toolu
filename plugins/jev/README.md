@@ -4,7 +4,7 @@ Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — 
 
 ## Install
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x, resolved from `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun`. See [docs/runtime.md](../../docs/runtime.md).
+**Prerequisite:** the native `toolu` binary. See [docs/install.md](../../docs/install.md).
 
 Claude Code:
 
@@ -31,21 +31,21 @@ OpenCode: add `jev` to `.opencode/toolu/plugins.json` (see [docs/opencode.md](..
 - The wrapper is published at `$TOOLU_CONFIG_DIR/jev/jev.sh`, the project's data root that `shell.env` gives every bash call.
 - The skill is listed as `jev-jev`.
 - The mandate is in every request's system prompt, and each substantive prompt gets one reminder. Compaction only relinks the wrapper.
-- The command the hooks name runs Bun with `--no-env-file`, so a project `.env` never supplies the key.
+- The command is `toolu jev` and does not load a project `.env` file.
 
 Standalone, no plugin dependencies.
 
 ## What it provides
 
 - **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
-- **Jev CLI** — the executable Bun bundle published at the stable `jev.sh` path provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
-- **SessionStart hook** — publishes the bundle at `<config-dir>/jev/jev.sh` and injects the full mandate on startup, resume, clear, and compaction with a command using the hook's resolved Bun executable. It makes no API call.
-- **UserPromptSubmit hook** — restates the mandate and resolved Bun command on substantive prompts so they survive long sessions; silent for trivial confirmations and unpublished wrappers. An absent hook key prompts command-environment verification. No API call.
+- **Jev CLI** — `toolu jev` provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
+- **SessionStart hook** — publishes `<config-dir>/jev/jev.sh` and injects the mandate to run `toolu jev` on startup, resume, clear, and compaction. It makes no API call.
+- **UserPromptSubmit hook** — restates that mandate on substantive prompts so it survives long sessions; silent for trivial confirmations and unpublished wrappers. An absent hook key prompts command-environment verification. No API call.
 
 ## Wiring
 
-The wrapper calls TypeSafe's single evaluation endpoint,
-`POST https://api.typesafe.ai/v1/systemone`, through the bundled Bun CLI.
+`toolu jev` calls TypeSafe's single evaluation endpoint,
+`POST https://api.typesafe.ai/v1/systemone`.
 
 Set `TYPESAFE_API_KEY` in your environment (keys: `https://console.typesafe.ai/settings/keys`);
 it is never read from a `.env` file. `JEV_TIMEOUT` overrides the 60-second timeout
@@ -58,8 +58,8 @@ Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).
 A regular file already at `jev.sh` is a user-provided executable override. It is
 preserved and invoked directly using its own shebang/interpreter; this supports
 both shell scripts and JavaScript executables. Raw JavaScript without an
-executable shebang is not an executable override. The published bundle symlink
-uses the resolved Bun command supplied by the hooks.
+executable shebang is not an executable override. The published link means
+`toolu jev`.
 
 ## Wrapper reference
 
@@ -74,5 +74,5 @@ Retries: at most three attempts for timeout, connection failure, HTTP 408/429/5x
 1s then 2s backoff. `Retry-After` seconds or `retry-after-ms` up to 60s is honored;
 longer waits surface the error. Other 4xx, including 401/422, are not retried.
 
-Exit codes: `1` usage/config/invalid response; `22` HTTP error (body on stderr);
-`28` timeout. `JEV_TIMEOUT` sets timeout per attempt (default 60s).
+Exit codes: `1` failure (including an HTTP body on stderr); `64` usage;
+`75` timeout. `JEV_TIMEOUT` sets the timeout per attempt (default 60s).

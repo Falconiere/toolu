@@ -68,7 +68,7 @@ browser experiment and worker capacity checks were proposed, not executed.
 ## Repository verification
 
 The 25 Jev hook tests passed locally, including host paths, prerequisite failures,
-confirmation suppression, and JSON output. The full `bun run test` passed in an
+confirmation suppression, and JSON output. The full test suite passed in an
 Ubuntu 24.04 ARM container with GNU awk: 1,841 passed and 99 skipped
 (including missing Cargo, platform-specific checks, and opt-in live checks). All Jev hook
 and offline wrapper tests ran; live scenarios were evaluated separately above. Shellcheck and context-budget checks passed. A fresh-context review

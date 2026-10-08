@@ -191,7 +191,7 @@ bun "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed 
   no host left → `dispatch: inline` with a `note`. `dispatch: herdr` means fixer agents through
   `babysit-dispatch-fix.js`, whatever their transport. With `--host opencode` the config is
   `$TOOLU_USER_CONFIG_DIR/toolu.config.json` plus `.opencode/toolu.config.json`, and Jev is only
-  `$TOOLU_CONFIG_DIR/jev/jev.sh`, run with `--no-env-file`. `--jev-answers-in` replays a captured Jev answer map
+  `toolu jev`, which does not load a project `.env` file. `--jev-answers-in` replays a captured Jev answer map
   (tests, debugging — the workflow never passes it).
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
   `round` that is not a positive integer), each group's host and model/effort (`config_invalid`), an
