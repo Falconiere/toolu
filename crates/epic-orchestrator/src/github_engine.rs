@@ -98,6 +98,15 @@ fn note_report(world: &mut World, key: &str, cause: Cause, report: Report, check
   let checked = babysit_request(world, key, checks.paths)
     .map(|request| babysit::check(checks.babysit, &request));
   let graphql = checked.as_ref().and_then(|result| result.graphql);
+  world.rest_points = world.rest_points.saturating_add(rest_points);
+  if let Some(rate) = &rest_rate {
+    world.rest_rate = Some(rate.clone());
+  }
+  if let Some(usage) = graphql {
+    world.graphql_points = world.graphql_points.saturating_add(usage.points);
+    world.graphql_remaining = usage.remaining;
+    world.graphql_reset_at = usage.reset_at;
+  }
   let note = json!({
     "cause": cause_name(cause),
     "restFresh": report.fresh,
@@ -107,6 +116,7 @@ fn note_report(world: &mut World, key: &str, cause: Cause, report: Report, check
     "graphqlTick": u8::from(checked.is_some()),
     "graphqlPoints": graphql.map(|usage| usage.points),
     "graphqlRemaining": graphql.and_then(|usage| usage.remaining),
+    "graphqlResetAt": graphql.and_then(|usage| usage.reset_at),
   });
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
@@ -172,6 +182,7 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error) {
     retry = retry_after.map(|duration| duration.as_secs());
     secondary = *is_secondary;
     rate = Some(counters);
+    world.rest_rate = Some(counters.clone());
     if let Some(wait) = retry_after {
       let until = world
         .now_ms
@@ -202,12 +213,14 @@ fn note_change(world: &mut World, change: Change) {
     Change::PrMerged { key } => {
       if let Some(issue) = world.issues.get_mut(&key) {
         "merged".clone_into(&mut issue.stage);
+        world.outbox.push_back(Step::Issue { key: key.clone() });
       }
       journal(world, &key, "github-pr-merged", "");
     }
     Change::PrClosed { key } => {
       if let Some(issue) = world.issues.get_mut(&key) {
         "closed".clone_into(&mut issue.stage);
+        world.outbox.push_back(Step::Issue { key: key.clone() });
       }
       push_attention(world, "pr-closed", &key, "pull request closed");
     }

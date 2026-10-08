@@ -51,6 +51,8 @@ pub struct GraphQlUsage {
   pub points: u64,
   /// Latest `x-ratelimit-remaining` value, when GitHub sent it.
   pub remaining: Option<u64>,
+  /// `x-ratelimit-reset`, in Unix seconds, when GitHub sent it.
+  pub reset_at: Option<u64>,
 }
 
 /// One babysit check of a pull request.

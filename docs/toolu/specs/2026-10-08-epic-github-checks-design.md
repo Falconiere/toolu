@@ -37,6 +37,7 @@ Extend the shared GitHub client's rate-limit error with typed rate headers and s
 - If a probe lacks an ETag, it remains unconditional and its REST cost is recorded. A `304` leaves its cached identity and ETag unchanged. Head-SHA changes invalidate head-specific ETags before probing the new SHA.
 - A malformed or partial reply produces an error event rather than a false state transition. A vanished or closed PR ends its watch after the terminal event. Empty registered epics and a process with no waiting PR send no GitHub request.
 - A low REST or GraphQL primary budget holds new launches and merges, while checks continue. An immediate check during a retry-after hold waits for the hold; it does not move the scheduled deadline.
+- The native low-budget floors preserve the documented watcher defaults: REST remaining below 1,000 or GraphQL remaining below 500. Only launches and merges wait; cleanup, checkpoints and local reporting continue. A reset deadline expires a stale low observation.
 - Multi-page sub-issues, comments, and reviews must be complete before a detector concludes that nothing changed. All request paths are derived from validated `owner/repo` and numeric issue or PR IDs.
 
 ## Acceptance criteria
@@ -70,3 +71,7 @@ Update `docs/cli/` from the real command tree, `plugins/epic-orchestrator/README
 ## Open Questions
 
 None. #433 supplies the complete production babysit tick implementation through the already defined trait; #447 owns its schedule and call site. The #447 tests prove integration at the trait boundary with a real HTTPS service and the actual GitHub client; #433's own acceptance owns production verdict parsing.
+
+## Implementation notes
+
+The shared `TickReport` now carries optional typed GraphQL points, remaining and reset metadata. This keeps the native journal and status independent of pr-babysit's result JSON and lets #433 supply its measured query cost when ported. The current production `NotPorted` tick creates attention rather than marking a PR ready. The loopback adapter queries review threads, check rollup and review comments through the real HTTPS client to prove the schedule-to-trait boundary. The per-PR 20-point hourly assertion covers the 20 scheduled slots; an extra immediate check is counted separately.

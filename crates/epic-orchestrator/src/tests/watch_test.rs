@@ -143,3 +143,38 @@ fn github_idle_has_no_watches_or_requests_after_ten_virtual_minutes() {
   assert!(engine.world.watches.is_empty());
   assert!(engine.world.outbox.is_empty());
 }
+
+#[test]
+fn github_ready_base_watch_survives_restart_from_cached_pr_identity() {
+  let tmp = tempfile::tempdir().expect("temporary root");
+  let paths = Paths::at(tmp.path());
+  let state = tmp.path().join("epic");
+  registered(&paths, &state);
+  write_value(
+    &state.join("status/toolu-447.json"),
+    &json!({"phase":"ready","pr":501}),
+  )
+  .expect("ready status");
+  let mut engine = Engine::open(paths.clone(), None, Fault::None).expect("engine");
+  engine
+    .world
+    .watches
+    .get_mut("pr:Falconiere/toolu#501")
+    .expect("PR")
+    .base_ref = "main".into();
+  super::sync(&mut engine.world);
+  assert!(
+    engine
+      .world
+      .watches
+      .contains_key("base:Falconiere/toolu@main")
+  );
+  engine.save_watch().expect("snapshot");
+  let restored = Engine::open(paths, None, Fault::None).expect("restart");
+  assert!(
+    restored
+      .world
+      .watches
+      .contains_key("base:Falconiere/toolu@main")
+  );
+}
