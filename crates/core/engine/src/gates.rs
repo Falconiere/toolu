@@ -1,10 +1,15 @@
 //! The native built-in gates (`@toolu/core/gates`). The first three pre-tool
-//! gates (#419) check edit advice, MCP servers and protected writes. After a
+//! gates (#419) check edit advice, MCP servers and protected writes. #420 adds
+//! the command-driven gates. After a
 //! tool (#423), `gate_status` records quality-command results and `push_waiver`
 //! cashes in a push-review waiver once the push lands.
 
+/// The bash-commands PreToolUse built-in.
+pub(crate) mod bash_commands;
 /// The code-edit-rules PreToolUse built-in.
 pub(crate) mod code_edit_rules;
+/// The commit-gate PreToolUse built-in.
+pub(crate) mod commit_gate;
 /// Repo-relative gate paths and pathname expansion.
 pub(crate) mod gate_paths;
 /// `gate-status.sh`: the quality gate's command channel.
@@ -19,6 +24,8 @@ pub(crate) mod protected_files;
 pub(crate) mod push_waiver;
 /// Quality commands in a parsed command line.
 pub(crate) mod quality_command;
+/// The quality-gate PreToolUse built-in.
+pub(crate) mod quality_gate;
 /// The command, exit status and interrupt flag of the payload.
 pub(crate) mod tool_exit;
 
