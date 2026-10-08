@@ -48,7 +48,7 @@ fn run_jev(env: &Env, name: &str, event: &str, root: &Path, stdin: &'static str)
   let read = move || Ok(stdin.to_owned());
   let env_fn = || env.clone();
   let cwd = root.to_path_buf();
-  let cwd_fn = move || cwd.clone();
+  let cwd_fn = move || Ok(cwd.clone());
   let request = HookRequest {
     plugin: "jev".to_owned(),
     name: name.to_owned(),
@@ -121,7 +121,7 @@ fn a_missing_plugin_root_stays_quiet_instead_of_reading_the_working_directory() 
   let exe = || None;
   let read = || Ok("{}".to_owned());
   let env_fn = || env.clone();
-  let cwd_fn = || Path::new(".").to_path_buf();
+  let cwd_fn = || Ok(Path::new(".").to_path_buf());
   let request = HookRequest {
     plugin: "jev".to_owned(),
     name: "session-start".to_owned(),

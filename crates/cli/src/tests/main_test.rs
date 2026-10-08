@@ -54,8 +54,10 @@ fn scratch_env() -> Env {
   ])
 }
 
-fn scratch_cwd() -> PathBuf {
-  scratch().to_path_buf()
+fn scratch_cwd() -> std::io::Result<PathBuf> {
+  let path = scratch().to_path_buf();
+  std::fs::metadata(&path)?;
+  Ok(path)
 }
 
 /// Run `line` with a tree builder that counts its calls.
