@@ -1,7 +1,7 @@
 /** SessionStart runs `toolu epic engine --ensure` against a native binary on PATH. */
 import { expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { runStartupHook } from "@toolu/conformance/harness/startup";
 
@@ -69,7 +69,7 @@ test.concurrent("stays silent when no native toolu is on PATH", async () => {
   using sb = createSandbox();
   const res = await runStartupHook(PLUGIN, "engine-ensure", sb, {
     HOME: sb.home,
-    PATH: "/root/.bun/bin:/usr/bin:/bin",
+    PATH: `${dirname(process.execPath)}:/usr/bin:/bin`,
     CLAUDE_PLUGIN_ROOT: PLUGIN,
     TOOLU_BIN: undefined,
   });
