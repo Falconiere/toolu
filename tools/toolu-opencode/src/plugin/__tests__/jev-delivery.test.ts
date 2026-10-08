@@ -9,6 +9,7 @@ import { realpathSync } from "node:fs";
 import { join } from "node:path";
 import type { Config, Hooks } from "@opencode-ai/plugin";
 import type { Part, UserMessage } from "@opencode-ai/sdk";
+import { builtTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { startHttpsFixture } from "@toolu/conformance/https-fixture";
 import { REPO_ROOT } from "../../bootstrap/__tests__/fixtures.ts";
@@ -74,7 +75,7 @@ test.concurrent("a project .env never reaches a Jev hook the adapter spawns", as
     TOOLU_HOST_OVERRIDE: "opencode",
     TOOLU_CONFIG_DIR: join(sb.project, ".opencode/toolu/state"),
   };
-  const toolu = join(REPO_ROOT, "target/debug/toolu");
+  const toolu = builtTooluBinary() ?? join(REPO_ROOT, "target/debug/toolu");
   const spawn = (name: string, event: string, stdin: object) =>
     spawnEntry({
       bun: process.execPath,

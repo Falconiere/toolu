@@ -1,9 +1,15 @@
 import { expect, test } from "bun:test";
 import { chmodSync, existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
-import { DEFAULT_MANIFEST, PortsError, portSelector, readPorted } from "../rust-conformance.ts";
+import {
+  DEFAULT_MANIFEST,
+  PortsError,
+  conformanceEnv,
+  portSelector,
+  readPorted,
+} from "../rust-conformance.ts";
 
 const SCRIPT = resolve(import.meta.dir, "../rust-conformance.ts");
 
@@ -73,6 +79,16 @@ test.concurrent("a populated list builds the toolu binary and stops when the bui
   );
   expect(result.stderr).toContain("cargo build of the toolu binary failed");
   expect(readFileSync(calls, "utf8")).toBe("build --release --locked --bin toolu\n");
+});
+
+test.concurrent("the suite environment finds the release binary first", () => {
+  const env = conformanceEnv(
+    { PATH: "/usr/bin", TOOLU_IMPL: "rust:toolu/verdict" },
+    "/build/release",
+  );
+  expect(env.PATH).toBe(`/build/release${delimiter}/usr/bin`);
+  expect(env.TOOLU_IMPL).toBe("rust:toolu/verdict");
+  expect(conformanceEnv({}, "/build/release").PATH).toBe("/build/release");
 });
 
 test.concurrent("the selector is the exact entry list", () => {

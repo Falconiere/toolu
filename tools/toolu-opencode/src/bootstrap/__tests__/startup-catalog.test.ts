@@ -6,6 +6,7 @@
 import { expect, test } from "bun:test";
 import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync } from "node:fs";
 import { join } from "node:path";
+import { builtTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { listPluginManifests } from "../../inventory/scan.ts";
 import { selectPluginsByEnabledNames } from "../../select/resolve.ts";
 import { bootstrapRuntime } from "../runtime.ts";
@@ -53,7 +54,7 @@ async function start(root: string): Promise<ReadyResult> {
     env: {
       HOME: join(root, "home"),
       PATH: "/usr/bin:/bin",
-      TOOLU_BIN: join(REPO_ROOT, "target/debug/toolu"),
+      TOOLU_BIN: builtTooluBinary() ?? join(REPO_ROOT, "target/debug/toolu"),
       TOOLU_BUN: process.execPath,
     },
   });

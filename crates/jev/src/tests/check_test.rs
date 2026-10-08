@@ -81,7 +81,7 @@ fn a_shadowing_non_native_toolu_still_gets_the_line_with_the_known_path() {
   toolu(&known, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
   let env = env(&sb, &bin).with("TOOLU_BIN", known.join("toolu").to_str().unwrap());
   let line = context_of(&check_binary(&env, Some("{}")), "SessionStart");
-  let path = known.join("toolu").canonicalize().unwrap();
+  let path = known.join("toolu");
   assert!(line.contains(&format!(
     "native binary for this session: '{}'",
     path.display()

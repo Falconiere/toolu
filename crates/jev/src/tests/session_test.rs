@@ -240,11 +240,19 @@ fn an_uncreatable_config_dir_reports_once_and_emits_no_context() {
   assert_eq!(outcome.stderr, Some(message));
 }
 
+fn path_max() -> usize {
+  if cfg!(target_os = "macos") {
+    1024
+  } else {
+    4096
+  }
+}
+
 /// A config root so deep that `<root>/jev/jev.sh` fits `PATH_MAX` but its temporary link
 /// beside it does not, which refuses the link even for a user who may write anywhere.
 fn too_deep_root(base: &Path) -> std::path::PathBuf {
   let mut root = base.to_path_buf();
-  let target = 4085 - "/jev/jev.sh".len();
+  let target = path_max() - 11 - "/jev/jev.sh".len();
   while root.as_os_str().len() + 201 < target {
     root.push("d".repeat(200));
   }
