@@ -20,6 +20,12 @@ pub(crate) mod mcp_blocker;
 pub(crate) mod pattern;
 /// The protected-files PreToolUse built-in.
 pub(crate) mod protected_files;
+/// The push-review PreToolUse built-in.
+pub(crate) mod push_review;
+/// The push-review v2 state checks.
+pub(crate) mod push_review_state;
+/// The shared target repository and branch of a parsed push.
+pub(crate) mod push_target;
 /// `push-waiver.sh`: a landed push promotes its pending waiver.
 pub(crate) mod push_waiver;
 /// Quality commands in a parsed command line.

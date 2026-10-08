@@ -11,6 +11,7 @@ use crate::gates::commit_gate::COMMIT_GATE;
 use crate::gates::gate_status::GATE_STATUS;
 use crate::gates::mcp_blocker::MCP_BLOCKER;
 use crate::gates::protected_files::PROTECTED;
+use crate::gates::push_review::PUSH_REVIEW;
 use crate::gates::push_waiver::PUSH_WAIVER;
 use crate::gates::quality_gate::QUALITY_GATE;
 
@@ -21,6 +22,7 @@ pub const PRE_TOOL: &[&dyn Gate] = &[
   &COMMIT_GATE,
   &MCP_BLOCKER,
   &PROTECTED,
+  &PUSH_REVIEW,
   &QUALITY_GATE,
 ];
 
