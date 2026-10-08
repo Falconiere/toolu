@@ -49,7 +49,7 @@ fn execute(
   let env = isolated_env(dir.path());
   let cwd = dir.path().to_path_buf();
   let env_fn = || env.clone();
-  let cwd_fn = || cwd.clone();
+  let cwd_fn = || Ok(cwd.clone());
   run(
     request,
     &Context {
@@ -181,6 +181,50 @@ fn an_empty_payload_is_startup() {
     message(outcome.stdout),
     format!("Toolu is on!\ntoolu runtime: native {VERSION} at an unknown path")
   );
+}
+
+fn gone() -> std::io::Result<PathBuf> {
+  Err(std::io::Error::other("gone"))
+}
+
+#[test]
+fn an_unreadable_working_directory_does_not_run_the_hook() {
+  let detail = "the working directory could not be read: gone";
+  let start = run_cwd(&request("session-start", Some("SessionStart"), None));
+  assert_eq!(start.exit.code(), 0);
+  assert_eq!(
+    message(start.stdout),
+    format!("toolu runtime: native {VERSION}, but {detail}")
+  );
+  let prompt = run_cwd(&request(
+    "user-prompt-submit",
+    Some("UserPromptSubmit"),
+    None,
+  ));
+  let prompt_err = format!("toolu user-prompt-submit: {detail}");
+  assert_eq!(prompt.exit.code(), 0);
+  assert_eq!(prompt.stdout, None);
+  assert_eq!(prompt.stderr.as_deref(), Some(prompt_err.as_str()));
+  let compact = run_cwd(&request("pre-compact", Some("PreCompact"), None));
+  let compact_err = format!("toolu pre-compact: {detail}");
+  assert_eq!(compact.exit.code(), 0);
+  assert_eq!(compact.stdout, None);
+  assert_eq!(compact.stderr.as_deref(), Some(compact_err.as_str()));
+}
+
+fn run_cwd(request: &HookRequest) -> Outcome {
+  let dir = isolated_dir();
+  let env = isolated_env(dir.path());
+  let env_fn = || env.clone();
+  run(
+    request,
+    &Context {
+      exe: &|| None,
+      stdin: &startup,
+      env: &env_fn,
+      cwd: &gone,
+    },
+  )
 }
 
 #[test]

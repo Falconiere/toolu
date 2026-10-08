@@ -37,8 +37,9 @@ pub(crate) struct Context<'a> {
   pub(crate) stdin: &'a dyn Fn() -> std::io::Result<String>,
   /// The environment a hook resolves. Production reads the process.
   pub(crate) env: &'a dyn Fn() -> Env,
-  /// The directory the hook was started in.
-  pub(crate) cwd: &'a dyn Fn() -> PathBuf,
+  /// The directory the hook was started in. `Err` when the OS cannot say;
+  /// a lifecycle hook fails closed rather than guess one.
+  pub(crate) cwd: &'a dyn Fn() -> std::io::Result<PathBuf>,
 }
 
 /// Run `words` (argv after the program name). `tree` builds the clap tree; the
@@ -51,8 +52,8 @@ pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Co
   }
 }
 
-fn cwd() -> PathBuf {
-  toolu_runtime::invocation::current_dir().unwrap_or_else(|_| PathBuf::new())
+fn cwd() -> std::io::Result<PathBuf> {
+  toolu_runtime::invocation::current_dir()
 }
 
 fn main() -> ExitCode {

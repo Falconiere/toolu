@@ -151,7 +151,13 @@ fn a_project_bun_is_not_the_bridges_and_nothing_follows_a_stop() {
   let edit = r#"{"tool_name":"Bash","tool_input":{"command":"ls"},"tool_response":{}}"#;
   let out = hook.run(Phase::Post, edit, &[], &[]).result;
   let advice = "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"from js\"\n  }\n}\n";
-  assert_eq!((out.stdout.as_str(), out.stderr.as_str()), (advice, ""));
+  assert_eq!(
+    (out.stdout.as_str(), out.stderr.as_str()),
+    (advice, ""),
+    "path {:?} spawns {:?}",
+    hook.env().get("PATH"),
+    std::fs::read_to_string(hook.sb.path("spawns")).ok()
+  );
   assert_eq!(
     std::fs::read_to_string(hook.sb.path("spawns")).unwrap(),
     "spawn\n"

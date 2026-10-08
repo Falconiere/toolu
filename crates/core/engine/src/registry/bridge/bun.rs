@@ -35,7 +35,17 @@ fn executable(path: &Path) -> bool {
   std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
 }
 
+/// `bun` installed as a project's own tool. The post-tool `PATH` puts
+/// `<project>/node_modules/.bin` first; that file is not the bridge.
+fn project_bin(path: &Path) -> bool {
+  let dir = path.parent();
+  let modules = dir.and_then(Path::parent);
+  dir.is_some_and(|dir| dir.file_name().is_some_and(|name| name == ".bin"))
+    && modules.is_some_and(|dir| dir.file_name().is_some_and(|name| name == "node_modules"))
+}
+
 /// `TOOLU_BUN`, then `bun` on `PATH`, then `$HOME/.bun/bin/bun`.
+/// A `node_modules/.bin/bun` on `PATH` is skipped.
 pub(crate) fn find_bun(env: &Env) -> Option<PathBuf> {
   let explicit = env.get("TOOLU_BUN").map(PathBuf::from);
   let on_path = env.get("PATH").and_then(|path| {
@@ -43,7 +53,7 @@ pub(crate) fn find_bun(env: &Env) -> Option<PathBuf> {
       .split(':')
       .filter(|dir| !dir.is_empty())
       .map(|dir| Path::new(dir).join("bun"))
-      .find(|candidate| executable(candidate))
+      .find(|candidate| executable(candidate) && !project_bin(candidate))
   });
   let home = env.home().join(".bun/bin/bun");
   [explicit, on_path, Some(home)]
