@@ -39,7 +39,7 @@ fn the_same_version_runs_without_advice() {
   assert!(
     start(&sandbox)
       .unwrap()
-      .starts_with("toolu runtime: native")
+      .starts_with("Toolu is on!\ntoolu runtime: native")
   );
 }
 

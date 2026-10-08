@@ -1,3 +1,9 @@
 {
-  "entries": ["toolu/plan-ledger", "toolu/verdict"]
+  "entries": [
+    "toolu/plan-ledger",
+    "toolu/pre-compact",
+    "toolu/session-start",
+    "toolu/user-prompt-submit",
+    "toolu/verdict"
+  ]
 }

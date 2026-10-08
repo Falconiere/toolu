@@ -1,6 +1,7 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
 
 use super::run;
 use crate::fast::HookRequest;
@@ -34,15 +35,47 @@ fn request(name: &str, event: Option<&str>, root: Option<&str>) -> HookRequest {
 
 /// Run `request` as the binary installed at `/usr/local/bin/toolu`, on a startup payload.
 fn run_hook(request: &HookRequest) -> Outcome {
-  let exe = || Some(PathBuf::from("/usr/local/bin/toolu"));
+  execute(request, startup, || {
+    Some(PathBuf::from("/usr/local/bin/toolu"))
+  })
+}
+
+fn execute(
+  request: &HookRequest,
+  stdin: impl Fn() -> std::io::Result<String>,
+  exe: impl Fn() -> Option<PathBuf>,
+) -> Outcome {
+  let dir = isolated_dir();
+  let env = isolated_env(dir.path());
+  let cwd = dir.path().to_path_buf();
+  let env_fn = || env.clone();
+  let cwd_fn = || Ok(cwd.clone());
   run(
     request,
     &Context {
       exe: &exe,
-      stdin: &startup,
-      env: None,
+      stdin: &stdin,
+      env: &env_fn,
+      cwd: &cwd_fn,
     },
   )
+}
+
+fn isolated_dir() -> tempfile::TempDir {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::create_dir_all(dir.path().join("home")).unwrap();
+  std::fs::create_dir_all(dir.path().join("cfg")).unwrap();
+  std::fs::create_dir_all(dir.path().join("bin")).unwrap();
+  dir
+}
+
+fn isolated_env(root: &Path) -> Env {
+  Env::from_pairs([
+    ("HOME", root.join("home").to_str().unwrap()),
+    ("PATH", root.join("bin").to_str().unwrap()),
+    ("TOOLU_CONFIG_DIR", root.join("cfg").to_str().unwrap()),
+    ("CLAUDE_PROJECT_DIR", root.to_str().unwrap()),
+  ])
 }
 
 fn message(stdout: Option<String>) -> String {
@@ -51,14 +84,14 @@ fn message(stdout: Option<String>) -> String {
 }
 
 #[test]
-fn the_same_version_prints_only_the_diagnostic() {
+fn the_same_version_prints_the_startup_line() {
   let dir = plugin(VERSION, "1");
   let root = dir.path().to_str().unwrap();
   let outcome = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(
     message(outcome.stdout),
-    format!("toolu runtime: native {VERSION} at /usr/local/bin/toolu")
+    format!("Toolu is on!\ntoolu runtime: native {VERSION} at /usr/local/bin/toolu")
   );
 }
 
@@ -109,7 +142,7 @@ fn an_empty_plugin_root_is_a_mismatch_not_a_bypass() {
 fn without_a_plugin_root_the_prelude_is_skipped() {
   let outcome = run_hook(&request("session-start", Some("SessionStart"), None));
   assert_eq!(outcome.exit.code(), 0);
-  assert!(message(outcome.stdout).starts_with("toolu runtime: native"));
+  assert!(message(outcome.stdout).starts_with("Toolu is on!"));
 }
 
 #[test]
@@ -124,40 +157,82 @@ fn an_unknown_hook_blocks_enforcing_and_missing_events_and_reports_context_ones(
         .contains("has no hook no-such-hook; upgrade it: curl")
     );
   }
-  let context_event = run_hook(&request("pre-compact", Some("PreCompact"), None));
+  let context_event = run_hook(&request("session-end", Some("SessionEnd"), None));
   assert_eq!(context_event.exit.code(), 0);
-  assert!(message(context_event.stdout).contains("has no hook pre-compact"));
+  assert!(message(context_event.stdout).contains("has no hook session-end"));
 }
 
 #[test]
-fn a_session_start_with_nothing_to_say_prints_nothing() {
-  let quiet = || Ok("{}".to_owned());
-  let no_exe = || None;
-  let context = Context {
-    exe: &no_exe,
-    stdin: &quiet,
-    env: None,
-  };
-  let outcome = run(
-    &request("session-start", Some("SessionStart"), None),
-    &context,
-  );
-  assert_eq!(outcome.stdout, None);
+fn pre_compact_prints_nothing() {
+  let outcome = run_hook(&request("pre-compact", Some("PreCompact"), None));
   assert_eq!(outcome.exit.code(), 0);
+  assert_eq!(outcome.stdout, None);
+}
+
+#[test]
+fn an_empty_payload_is_startup() {
+  let outcome = execute(
+    &request("session-start", Some("SessionStart"), None),
+    || Ok("{}".to_owned()),
+    || None,
+  );
+  assert_eq!(outcome.exit.code(), 0);
+  assert_eq!(
+    message(outcome.stdout),
+    format!("Toolu is on!\ntoolu runtime: native {VERSION} at an unknown path")
+  );
+}
+
+fn gone() -> std::io::Result<PathBuf> {
+  Err(std::io::Error::other("gone"))
+}
+
+#[test]
+fn an_unreadable_working_directory_does_not_run_the_hook() {
+  let detail = "the working directory could not be read: gone";
+  let start = run_cwd(&request("session-start", Some("SessionStart"), None));
+  assert_eq!(start.exit.code(), 0);
+  assert_eq!(
+    message(start.stdout),
+    format!("toolu runtime: native {VERSION}, but {detail}")
+  );
+  let prompt = run_cwd(&request(
+    "user-prompt-submit",
+    Some("UserPromptSubmit"),
+    None,
+  ));
+  let prompt_err = format!("toolu user-prompt-submit: {detail}");
+  assert_eq!(prompt.exit.code(), 0);
+  assert_eq!(prompt.stdout, None);
+  assert_eq!(prompt.stderr.as_deref(), Some(prompt_err.as_str()));
+  let compact = run_cwd(&request("pre-compact", Some("PreCompact"), None));
+  let compact_err = format!("toolu pre-compact: {detail}");
+  assert_eq!(compact.exit.code(), 0);
+  assert_eq!(compact.stdout, None);
+  assert_eq!(compact.stderr.as_deref(), Some(compact_err.as_str()));
+}
+
+fn run_cwd(request: &HookRequest) -> Outcome {
+  let dir = isolated_dir();
+  let env = isolated_env(dir.path());
+  let env_fn = || env.clone();
+  run(
+    request,
+    &Context {
+      exe: &|| None,
+      stdin: &startup,
+      env: &env_fn,
+      cwd: &gone,
+    },
+  )
 }
 
 #[test]
 fn an_unreadable_payload_is_reported_not_swallowed() {
-  let broken = || Err(std::io::Error::other("stdin is closed"));
-  let no_exe = || None;
-  let context = Context {
-    exe: &no_exe,
-    stdin: &broken,
-    env: None,
-  };
-  let outcome = run(
+  let outcome = execute(
     &request("session-start", Some("SessionStart"), None),
-    &context,
+    || Err(std::io::Error::other("stdin is closed")),
+    || None,
   );
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(
@@ -170,14 +245,11 @@ fn an_unreadable_payload_is_reported_not_swallowed() {
 
 #[test]
 fn agent_tier_fails_open_when_payload_is_unreadable() {
-  let broken = || Err(std::io::Error::other("stdin is closed"));
-  let no_exe = || None;
-  let context = Context {
-    exe: &no_exe,
-    stdin: &broken,
-    env: None,
-  };
-  let outcome = run(&request("agent-tier", Some("PreToolUse"), None), &context);
+  let outcome = execute(
+    &request("agent-tier", Some("PreToolUse"), None),
+    || Err(std::io::Error::other("stdin is closed")),
+    || None,
+  );
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stdout, None);
   assert_eq!(outcome.stderr, None);
@@ -185,14 +257,11 @@ fn agent_tier_fails_open_when_payload_is_unreadable() {
 
 #[test]
 fn mcp_tools_routes_a_non_mcp_payload_to_silent_success() {
-  let payload = || Ok(r#"{"tool_name":"Bash"}"#.to_owned());
-  let no_exe = || None;
-  let context = Context {
-    exe: &no_exe,
-    stdin: &payload,
-    env: None,
-  };
-  let outcome = run(&request("mcp-tools", Some("PreToolUse"), None), &context);
+  let outcome = execute(
+    &request("mcp-tools", Some("PreToolUse"), None),
+    || Ok(r#"{"tool_name":"Bash"}"#.to_owned()),
+    || None,
+  );
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stdout, None);
   assert_eq!(outcome.stderr, None);

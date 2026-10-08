@@ -54,7 +54,7 @@ Without Bun the launcher itself answers, with no bundle involved:
 
 `systemMessage` is shown to the user and costs no model context. The payloads are checked against Codex's own output schemas (`fixtures/codex-hook-schemas/`).
 
-**Diagnostic.** On session start and resume, toolu's `hooks/dist/session-start.js` reports which runtime the hooks use on the second line of its `systemMessage`, after the event title: `Toolu is on!\ntoolu runtime: bun <version> at <path>`. With `hooks.session-start` set to `false` it prints that line alone: `{"systemMessage":"toolu runtime: bun <version> at <path>"}`.
+**Diagnostic.** On session start and resume, the second `systemMessage` line names the runtime, after the event title. `hooks.json` still launches the Bun bundle until #425, which prints `Toolu is on!\ntoolu runtime: bun <version> at <path>`. The native hook prints `Toolu is on!\ntoolu runtime: native <version> at <path>`. With `hooks.session-start` set to `false`, startup and resume print that title and runtime line and nothing else; clear and compact print nothing.
 
 ## Native launcher
 

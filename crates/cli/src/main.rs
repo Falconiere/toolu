@@ -14,7 +14,6 @@ mod hook;
 mod links;
 mod output;
 mod registry;
-mod session_start;
 mod tree;
 
 use std::path::PathBuf;
@@ -36,8 +35,11 @@ pub(crate) struct Context<'a> {
   pub(crate) exe: &'a dyn Fn() -> Option<PathBuf>,
   /// The hook payload, read only by hooks that need it.
   pub(crate) stdin: &'a dyn Fn() -> std::io::Result<String>,
-  /// Hooks use this snapshot when a test supplies one. `None` reads the process.
-  pub(crate) env: Option<&'a Env>,
+  /// The environment a hook resolves. Production reads the process.
+  pub(crate) env: &'a dyn Fn() -> Env,
+  /// The directory the hook was started in. `Err` when the OS cannot say;
+  /// a lifecycle hook fails closed rather than guess one.
+  pub(crate) cwd: &'a dyn Fn() -> std::io::Result<PathBuf>,
 }
 
 /// Run `words` (argv after the program name). `tree` builds the clap tree; the
@@ -50,11 +52,16 @@ pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Co
   }
 }
 
+fn cwd() -> std::io::Result<PathBuf> {
+  toolu_runtime::invocation::current_dir()
+}
+
 fn main() -> ExitCode {
   let context = Context {
     exe: &toolu_runtime::invocation::current_exe,
     stdin: &toolu_protocol::stdin::read_stdin,
-    env: None,
+    env: &Env::process,
+    cwd: &cwd,
   };
   let outcome = run(&toolu_runtime::invocation::args(), &context, &tree::command);
   output::emit(&outcome);

@@ -149,6 +149,7 @@ impl Sandbox {
       .env("PATH", REDUCED_PATH)
       .env("CLAUDE_PLUGIN_ROOT", &self.root)
       .envs(extra.iter().copied())
+      .current_dir(&self.home)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
@@ -171,12 +172,10 @@ impl Sandbox {
   }
 }
 
-/// The `systemMessage` of a run's single stdout JSON line.
+/// The `systemMessage` of a run's one stdout JSON document.
 pub(crate) fn system_message(run: &Run) -> Res<String> {
-  if run.stdout.lines().count() != 1 {
-    return Err(format!("expected one stdout line: {run:?}").into());
-  }
-  let json: serde_json::Value = serde_json::from_str(&run.stdout)?;
+  let json: serde_json::Value = serde_json::from_str(run.stdout.trim())
+    .map_err(|err| format!("stdout is not one JSON document ({err}): {run:?}"))?;
   let message = json
     .get("systemMessage")
     .and_then(serde_json::Value::as_str)

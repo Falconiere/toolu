@@ -7,12 +7,18 @@ import { expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { launcherHook } from "@toolu/core/launcher";
+import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
-import { hookCommand } from "@toolu/conformance/harness/startup";
 import { PLUGIN } from "./lifecycle-cases.ts";
 
-const COMMAND = hookCommand(PLUGIN, "PreCompact", "pre-compact");
+function preCompactArgv(): string[] {
+  return entryArgv("toolu", "pre-compact", PLUGIN);
+}
+
+function shellQuote(word: string): string {
+  return `'${word.replaceAll("'", "'\\''")}'`;
+}
 
 function env(home: string, extra: EnvPatch = {}): EnvPatch {
   return {
@@ -40,7 +46,7 @@ test("hooks.json runs the launcher on auto compaction", async () => {
 
 test("silent for Codex auto-compaction input", async () => {
   using sb = createSandbox();
-  const res = await run(["sh", "-c", COMMAND], {
+  const res = await run(preCompactArgv(), {
     cwd: sb.project,
     env: env(sb.home, { TOOLU_HOST_OVERRIDE: "codex", CODEX_HOME: sb.codexHome }),
     stdin: '{"hook_event_name":"PreCompact","trigger":"auto"}',
@@ -50,16 +56,18 @@ test("silent for Codex auto-compaction input", async () => {
 
 test("drains 1 MiB of stdin without closing the producer pipe", async () => {
   using sb = createSandbox();
-  const script = `set -o pipefail; head -c 1048576 /dev/zero | { ${COMMAND}; }`;
+  const command = preCompactArgv().map(shellQuote).join(" ");
+  const script = `set -o pipefail; head -c 1048576 /dev/zero | { ${command}; }`;
   const res = await run(["bash", "-c", script], { cwd: sb.project, env: env(sb.home) });
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
 });
 
 test("silent with empty stdin", async () => {
   using sb = createSandbox();
-  const res = await run(["sh", "-c", `${COMMAND} < /dev/null`], {
+  const res = await run(preCompactArgv(), {
     cwd: sb.project,
     env: env(sb.home),
+    stdin: "",
   });
   expect(res).toMatchObject({ exitCode: 0, stdout: "", stderr: "" });
 });
@@ -69,7 +77,7 @@ test("stays silent with the hook disabled in config", async () => {
   const config = join(sb.root, "config");
   mkdirSync(config, { recursive: true });
   writeFileSync(join(config, "toolu.config.json"), '{"hooks":{"pre-compact":false}}\n');
-  const res = await run(["sh", "-c", COMMAND], {
+  const res = await run(preCompactArgv(), {
     cwd: sb.project,
     env: env(sb.home, { TOOLU_CONFIG_DIR: config, TOOLU_PROJECT_DIR: sb.project }),
     stdin: '{"hook_event_name":"PreCompact","trigger":"auto"}',

@@ -11,7 +11,7 @@ fn stand_in(home: &Path, at: &str) -> PathBuf {
   let text = format!(
     "#!/bin/sh\ncase \"$1\" in\n--version) echo 'toolu 9.9.9';;\n--hook-protocol) echo 1;;\n\
      *) cat >/dev/null; if [ \"$4\" = PreToolUse ]; then echo 'blocked: toolu plugin: hook protocol 2 needs a newer toolu - toolu 9.9.9 speaks protocol 1; upgrade it: x' >&2; exit 2; fi\n\
-     printf '%s\\n' '{{\"systemMessage\":\"toolu runtime: native 9.9.9 at {at}\"}}';;\nesac\n"
+     printf '%s\\n' '{{\"systemMessage\":\"Toolu is on!\\ntoolu runtime: native 9.9.9 at {at}\"}}';;\nesac\n"
   );
   install(&bin, &text);
   bin
