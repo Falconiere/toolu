@@ -1333,6 +1333,7 @@ version = "7.11.0"
 dependencies = [
  "clap",
  "regex",
+ "serde",
  "serde_json",
  "tempfile",
  "toolu-engine",

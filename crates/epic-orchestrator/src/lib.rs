@@ -5,6 +5,7 @@ use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::cli::{Ctx, Outcome};
 
+/// Shared babysit tick routing for the resident engine.
 pub mod babysit;
 mod checkpoint;
 mod client;
@@ -35,6 +36,7 @@ mod source_apply;
 mod source_fix;
 mod status;
 mod verbs;
+mod watch;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
 pub(crate) const PROTOCOL: u64 = 1;

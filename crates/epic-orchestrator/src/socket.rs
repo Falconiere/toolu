@@ -23,6 +23,7 @@ use crate::schedule::next_stall_ms;
 use crate::server::{Engine, Fault, Stop};
 use crate::source::{self, Fact, Pace};
 
+/// A pending `toolu epic wait` reply.
 pub(crate) struct Waiter {
   pub(crate) deadline: Instant,
   pub(crate) reply: Sender<Value>,
@@ -256,10 +257,9 @@ fn on_timeout(
   expire(engine, waiters);
   if Instant::now() >= *next_tick {
     tick(engine, next_tick)?;
-  } else if stall_ready(engine) {
+  } else if stall_ready(engine) || github_ready(engine) {
     engine.refresh_clock();
-    crate::schedule::on_tick(&mut engine.world);
-    let _pump = engine.pump()?;
+    let _tick = engine.tick()?;
   }
   satisfy(engine, waiters);
   Ok(())
@@ -277,6 +277,14 @@ fn stall_ready(engine: &Engine) -> bool {
   next_stall_ms(&engine.world).is_some_and(|at| at <= engine.world.now_ms)
 }
 
+fn github_ready(engine: &Engine) -> bool {
+  engine
+    .world
+    .watches
+    .values()
+    .any(|watch| watch.due_at_ms(engine.world.now_ms) <= engine.world.now_ms)
+}
+
 fn wake_after(engine: &Engine, waiters: &[Waiter], next_tick: Instant) -> Duration {
   let until_tick = next_tick.saturating_duration_since(Instant::now());
   let until_wait = waiters
@@ -287,7 +295,15 @@ fn wake_after(engine: &Engine, waiters: &[Waiter], next_tick: Instant) -> Durati
   let until_stall = next_stall_ms(&engine.world)
     .map(|at| Duration::from_millis(at.saturating_sub(engine.world.now_ms)));
   let wake = until_wait.map_or(until_tick, |wait| until_tick.min(wait));
-  until_stall.map_or(wake, |stall| wake.min(stall))
+  let wake = until_stall.map_or(wake, |stall| wake.min(stall));
+  let until_github = engine
+    .world
+    .watches
+    .values()
+    .map(|watch| watch.due_at_ms(engine.world.now_ms))
+    .min()
+    .map(|at| Duration::from_millis(at.saturating_sub(engine.world.now_ms)));
+  until_github.map_or(wake, |github| wake.min(github))
 }
 
 #[cfg(test)]
