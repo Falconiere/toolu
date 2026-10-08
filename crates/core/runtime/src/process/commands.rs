@@ -52,38 +52,75 @@ pub enum ShellToolu {
   Shadowed(PathBuf),
 }
 
-/// The native `toolu` selected by a non-login command shell, if any.
+/// The native `toolu` selected by a non-login command shell of the process environment.
 ///
 /// # Errors
 /// When the shell or protocol probe cannot run, or the selected path cannot be resolved.
 pub fn native_toolu_on_path() -> Result<ShellToolu, String> {
-  let mut shell = Spec::new(["/bin/sh", "-c", "command -v toolu"]);
-  shell.timeout = PROBE_TIMEOUT;
-  shell.max_output_bytes = 4096;
-  let found = run(&shell).map_err(|error| format!("cannot start non-login shell: {error:?}"))?;
-  if found.exit_code != 0 || found.timed_out || found.truncated {
+  shell_toolu(&Env::process())
+}
+
+/// The same probe as [`native_toolu_on_path`], using exactly `env`.
+///
+/// # Errors
+/// When the shell or protocol probe cannot run, or the selected path cannot be resolved.
+pub(crate) fn shell_toolu(env: &Env) -> Result<ShellToolu, String> {
+  let Some(selected) = command_v(env)? else {
     return Ok(ShellToolu::Missing);
-  }
-  let selected = PathBuf::from(found.stdout.trim());
-  if !selected.is_file() {
-    return Ok(ShellToolu::Missing);
-  }
+  };
   let path = std::fs::canonicalize(selected)
     .map_err(|error| format!("cannot resolve toolu from non-login shell: {error}"))?;
-  if protocol_is_native(&path)? {
+  if protocol_is_native(env, &path)? {
     Ok(ShellToolu::Native(path))
   } else {
     Ok(ShellToolu::Shadowed(path))
   }
 }
 
-fn protocol_is_native(path: &Path) -> Result<bool, String> {
+/// The first install-path binary whose `--hook-protocol` is a positive integer.
+pub(crate) fn known_native_toolu(env: &Env) -> Option<PathBuf> {
+  known_candidates(env)
+    .into_iter()
+    .find(|path| path.is_file() && protocol_is_native(env, path).unwrap_or(false))
+}
+
+fn command_v(env: &Env) -> Result<Option<PathBuf>, String> {
+  let mut shell = Spec::new(["/bin/sh", "-c", "command -v toolu"]);
+  shell.timeout = PROBE_TIMEOUT;
+  shell.max_output_bytes = 4096;
+  shell.env = Some(env.clone());
+  let found = run(&shell).map_err(|error| format!("cannot start non-login shell: {error:?}"))?;
+  if found.exit_code != 0 || found.timed_out || found.truncated {
+    return Ok(None);
+  }
+  let selected = PathBuf::from(found.stdout.trim());
+  Ok(selected.is_file().then_some(selected))
+}
+
+fn known_candidates(env: &Env) -> Vec<PathBuf> {
+  let mut paths = Vec::new();
+  if let Some(bin) = env.get("TOOLU_BIN") {
+    paths.push(PathBuf::from(bin));
+  }
+  paths.extend([
+    PathBuf::from("/opt/homebrew/bin/toolu"),
+    PathBuf::from("/usr/local/bin/toolu"),
+    PathBuf::from("/home/linuxbrew/.linuxbrew/bin/toolu"),
+  ]);
+  if let Some(home) = env.get("HOME") {
+    paths.push(PathBuf::from(home).join(".local/bin/toolu"));
+  }
+  paths
+}
+
+fn protocol_is_native(env: &Env, path: &Path) -> Result<bool, String> {
   let program = path
     .to_str()
     .ok_or_else(|| "non-login shell returned a non-UTF-8 toolu path".to_owned())?;
   let mut probe = Spec::new([program, "--hook-protocol"]);
   probe.timeout = PROBE_TIMEOUT;
   probe.max_output_bytes = 32;
+  probe.env = Some(env.clone());
   let output = run(&probe).map_err(|error| format!("cannot probe toolu: {error:?}"))?;
   Ok(
     output.exit_code == 0

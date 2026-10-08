@@ -39,6 +39,7 @@ Runtime notice, then the jev CLI and its hook functions while the TypeScript ora
       "crates/core/runtime/src/startup.rs",
       "crates/core/runtime/src/startup/native.rs",
       "crates/core/runtime/src/startup/tests/native_test.rs",
+      "crates/core/runtime/src/process/commands.rs",
       "packages/toolu-core/src/startup/native-toolu.ts"
     ],
     "input": "temp PATH with a real executable whose --hook-protocol prints 1; empty PATH; two calls with session_id s1; a call with no session id",
@@ -183,4 +184,4 @@ Delivery, after `full-gate` is green, follows the execution reference:
 
 ## Deviations
 
-None yet.
+- `native-advice`: `shell_toolu` takes the caller's `Env` so the probe does not see the process `PATH`. `native_toolu_on_path()` still uses `Env::process()`. The session-id fallback (`session_id`, else `TOOLU_SESSION_ID`) stays in the hook, as in `runNativeTooluCheck`.
