@@ -1,8 +1,9 @@
 //! The jev plugin's crate: `toolu jev noul|choice|score|ask`, typed judgments
 //! from the Jev client of `toolu-jev-client` (#430). `cli` is the clap tree,
 //! `call` turns its matches into a state and questions, and `present` turns the
-//! reply or the error into an `Outcome`. This crate never reads stdin: the binary
-//! hands it over when `needs_stdin` says a verb wants it.
+//! reply or the error into an `Outcome`. `session`, `prompt` and `check` are the three hooks.
+//! This crate never reads stdin: the binary hands it over when `needs_stdin` says a verb
+//! wants it.
 
 use clap::{ArgMatches, Command};
 use toolu_jev_client::{Config, Jev};
@@ -10,8 +11,18 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 
 mod call;
+mod check;
 mod cli;
 mod present;
+mod prompt;
+mod session;
+
+pub use check::check_binary;
+pub use prompt::user_prompt_submit;
+pub use session::session_start;
+
+#[cfg(test)]
+mod hooks;
 
 /// The plugin this crate belongs to: `plugins/jev`.
 pub const PLUGIN: &str = "jev";

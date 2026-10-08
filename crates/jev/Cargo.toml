@@ -9,6 +9,7 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+regex.workspace = true
 toolu-jev-client = { path = "../core/jev" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
