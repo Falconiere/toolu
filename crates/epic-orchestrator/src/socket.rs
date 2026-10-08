@@ -11,6 +11,7 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
+use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::env::Env;
 
 use crate::TICK;
@@ -19,8 +20,8 @@ use crate::dispatch::{dispatch, expire, ingest, satisfy};
 use crate::lock::Held;
 use crate::model::World;
 use crate::paths::Paths;
-use crate::schedule::next_stall_ms;
 use crate::server::{Engine, Fault, Stop};
+use crate::socket_deadline::{github_ready, stall_ready, wake_after};
 use crate::source::{self, Fact, Pace};
 
 /// A pending `toolu epic wait` reply.
@@ -42,6 +43,13 @@ struct StopAccept<'a> {
   stop: &'a AtomicBool,
 }
 
+struct StateContext<'a> {
+  protocol: u64,
+  shared: &'a Mutex<World>,
+  resub: &'a AtomicBool,
+  babysit: &'a dyn BabysitTick,
+}
+
 impl Drop for StopAccept<'_> {
   fn drop(&mut self) {
     self.stop.store(true, Ordering::Relaxed);
@@ -57,6 +65,7 @@ pub(crate) fn serve(
   scripts: Option<std::path::PathBuf>,
   fault: Fault,
   protocol: u64,
+  tick: &dyn BabysitTick,
 ) -> Result<(), String> {
   let socket = paths.socket();
   let _held = Held::acquire(&paths.lock(), "engine-busy")?;
@@ -81,7 +90,16 @@ pub(crate) fn serve(
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
     let _stop_accept = StopAccept { stop: &stop };
-    state_loop(&mut engine, &rx, protocol, &shared, &wake)
+    state_loop(
+      &mut engine,
+      &rx,
+      &StateContext {
+        protocol,
+        shared: &shared,
+        resub: &wake,
+        babysit: tick,
+      },
+    )
   };
   stop.store(true, Ordering::Relaxed);
   let _wake = UnixStream::connect(&socket);
@@ -213,19 +231,17 @@ fn hold_before_ack() {
 fn state_loop(
   engine: &mut Engine,
   rx: &Receiver<Msg>,
-  protocol: u64,
-  shared: &Mutex<World>,
-  resub: &AtomicBool,
+  context: &StateContext<'_>,
 ) -> Result<(), String> {
   let mut waiters = Vec::new();
   let mut next_tick = Instant::now() + TICK;
   loop {
-    publish(shared, engine);
-    let wake = wake_after(engine, &waiters, next_tick);
+    publish(context.shared, engine);
+    let wake = wake_after(&engine.world, &waiters, next_tick);
     match rx.recv_timeout(wake) {
       Ok(Msg::Line { request, reply }) => {
         engine.refresh_clock();
-        if dispatch(engine, &request, &reply, &mut waiters, protocol) {
+        if dispatch(engine, &request, &reply, &mut waiters, context.protocol) {
           return Ok(());
         }
       }
@@ -234,10 +250,12 @@ fn state_loop(
         source::apply(engine, &Env::process(), fact)?;
         if engine.resubscribe {
           engine.resubscribe = false;
-          resub.store(true, Ordering::Relaxed);
+          context.resub.store(true, Ordering::Relaxed);
         }
       }
-      Err(RecvTimeoutError::Timeout) => on_timeout(engine, &mut waiters, &mut next_tick)?,
+      Err(RecvTimeoutError::Timeout) => {
+        on_timeout(engine, &mut waiters, &mut next_tick, context.babysit)?;
+      }
       Err(RecvTimeoutError::Disconnected) => return Ok(()),
     }
   }
@@ -253,57 +271,29 @@ fn on_timeout(
   engine: &mut Engine,
   waiters: &mut Vec<Waiter>,
   next_tick: &mut Instant,
+  babysit: &dyn BabysitTick,
 ) -> Result<(), String> {
   expire(engine, waiters);
   if Instant::now() >= *next_tick {
-    tick(engine, next_tick)?;
-  } else if stall_ready(engine) || github_ready(engine) {
+    tick(engine, next_tick, babysit)?;
+  } else if stall_ready(&engine.world) || github_ready(&engine.world) {
     engine.refresh_clock();
-    let _tick = engine.tick()?;
+    let _tick = engine.tick(babysit)?;
   }
   satisfy(engine, waiters);
   Ok(())
 }
 
-fn tick(engine: &mut Engine, next_tick: &mut Instant) -> Result<(), String> {
-  if engine.tick()? == Stop::Fault {
+fn tick(
+  engine: &mut Engine,
+  next_tick: &mut Instant,
+  babysit: &dyn BabysitTick,
+) -> Result<(), String> {
+  if engine.tick(babysit)? == Stop::Fault {
     return Err("fault".to_owned());
   }
   *next_tick = Instant::now() + TICK;
   Ok(())
-}
-
-fn stall_ready(engine: &Engine) -> bool {
-  next_stall_ms(&engine.world).is_some_and(|at| at <= engine.world.now_ms)
-}
-
-fn github_ready(engine: &Engine) -> bool {
-  engine
-    .world
-    .watches
-    .values()
-    .any(|watch| watch.due_at_ms(engine.world.now_ms) <= engine.world.now_ms)
-}
-
-fn wake_after(engine: &Engine, waiters: &[Waiter], next_tick: Instant) -> Duration {
-  let until_tick = next_tick.saturating_duration_since(Instant::now());
-  let until_wait = waiters
-    .iter()
-    .map(|waiter| waiter.deadline)
-    .min()
-    .map(|deadline| deadline.saturating_duration_since(Instant::now()));
-  let until_stall = next_stall_ms(&engine.world)
-    .map(|at| Duration::from_millis(at.saturating_sub(engine.world.now_ms)));
-  let wake = until_wait.map_or(until_tick, |wait| until_tick.min(wait));
-  let wake = until_stall.map_or(wake, |stall| wake.min(stall));
-  let until_github = engine
-    .world
-    .watches
-    .values()
-    .map(|watch| watch.due_at_ms(engine.world.now_ms))
-    .min()
-    .map(|at| Duration::from_millis(at.saturating_sub(engine.world.now_ms)));
-  until_github.map_or(wake, |github| wake.min(github))
 }
 
 #[cfg(test)]

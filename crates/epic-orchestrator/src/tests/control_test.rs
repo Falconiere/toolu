@@ -94,10 +94,10 @@ fn a_held_lock_makes_the_foreground_engine_busy() {
   let env = env_at(tmp.path());
   let paths = Paths::from_env(&env);
   std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
-  let outcome = foreground(&env);
+  let outcome = foreground(&env, &());
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(outcome.stderr.expect("err").contains("engine-busy"));
-  let outcome = engine(&verb(&["epic", "engine"]), &env);
+  let outcome = engine(&verb(&["epic", "engine"]), &env, &());
   assert_eq!(outcome.exit, Exit::Failure);
 }
 
@@ -108,7 +108,11 @@ fn ensure_waits_out_a_replace_and_stays_idle() {
   let paths = Paths::from_env(&env);
   std::fs::write(paths.socket(), b"").expect("socket");
   std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
-  let outcome = engine(&verb(&["epic", "engine", "--replace", "--ensure"]), &env);
+  let outcome = engine(
+    &verb(&["epic", "engine", "--replace", "--ensure"]),
+    &env,
+    &(),
+  );
   assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
   assert_eq!(outcome.stdout.as_deref(), Some(""));
 }

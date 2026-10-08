@@ -3,6 +3,7 @@
 use std::fmt;
 use std::time::Duration;
 
+use crate::RateLimit;
 use crate::token::TokenError;
 
 /// A GitHub call's failure.
@@ -22,6 +23,10 @@ pub enum Error {
     status: u16,
     /// How long GitHub asked to wait, when it said.
     retry_after: Option<Duration>,
+    /// The final reply's primary rate-limit headers.
+    rate: RateLimit,
+    /// The response identifies a secondary throttle.
+    secondary: bool,
   },
   /// A permanent HTTP error, or the last of the attempts.
   Status {
@@ -49,6 +54,7 @@ impl fmt::Display for Error {
       Self::RateLimited {
         status,
         retry_after: Some(wait),
+        ..
       } => write!(
         f,
         "GitHub rate limit (HTTP {status}): retry in {}s",

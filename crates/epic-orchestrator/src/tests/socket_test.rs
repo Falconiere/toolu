@@ -30,7 +30,7 @@ fn report(epic: &std::path::Path, token: &str, phase: &str) -> Value {
 }
 
 fn serve_until_stopped(paths: Paths, protocol: u64) {
-  let handle = thread::spawn(move || serve(paths, None, Fault::None, protocol));
+  let handle = thread::spawn(move || serve(paths, None, Fault::None, protocol, &()));
   handle.join().expect("serve thread").expect("serve");
 }
 
@@ -93,7 +93,7 @@ fn protocol_replace() {
 fn spool_survives() {
   if std::env::var("TOOLU_EPIC_CHILD").ok().as_deref() == Some("serve") {
     let root = std::env::var("TOOLU_EPIC_ROOT").expect("root");
-    let _ran = serve(Paths::at(root), None, Fault::None, PROTOCOL);
+    let _ran = serve(Paths::at(root), None, Fault::None, PROTOCOL, &());
     return;
   }
   let tmp = tempfile::tempdir().expect("temp");

@@ -21,7 +21,8 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
-  fn of(response: &Response) -> RateLimit {
+  /// Read the primary rate-limit counters from response headers.
+  pub(crate) fn of(response: &Response) -> RateLimit {
     let number = |name: &str| {
       response
         .header(name)

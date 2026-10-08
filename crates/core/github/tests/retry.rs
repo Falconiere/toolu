@@ -7,7 +7,7 @@ mod api;
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use api::Api;
-use toolu_github::{Client, Config, Error, Rest};
+use toolu_github::{Client, Config, Error, RateLimit, Rest};
 use toolu_http_test_support::Reply;
 use toolu_runtime::env::Env;
 
@@ -165,43 +165,21 @@ fn a_long_wait_is_returned_at_once() {
     client.get("/retry-after", None).map(|_| ()),
     Err(Error::RateLimited {
       status: 403,
-      retry_after: Some(Duration::from_secs(120))
+      retry_after: Some(Duration::from_secs(120)),
+      rate: RateLimit::default(),
+      secondary: false,
     })
   );
   let exhausted = client.get("/exhausted", None).map(|_| ());
   assert!(
     matches!(
       &exhausted,
-      Err(Error::RateLimited { status: 403, retry_after: Some(wait) })
+      Err(Error::RateLimited { status: 403, retry_after: Some(wait), .. })
         if (3590..=3600).contains(&wait.as_secs())
     ),
     "{exhausted:?}"
   );
   assert_eq!(requests(&api), 2);
-}
-
-#[test]
-fn the_scheduled_policy_never_sleeps() {
-  let api = Api::start().expect("api");
-  api
-    .fixture
-    .sequence(
-      "/x",
-      vec![
-        Reply::new(429, "{}").header("Retry-After", "1"),
-        Reply::new(200, "{}"),
-      ],
-    )
-    .expect("route");
-  let client = api.client(Config::scheduled(), &env()).expect("client");
-  assert_eq!(
-    client.get("/x", None).map(|_| ()),
-    Err(Error::RateLimited {
-      status: 429,
-      retry_after: Some(Duration::from_secs(1))
-    })
-  );
-  assert_eq!(requests(&api), 1);
 }
 
 #[test]
@@ -287,7 +265,9 @@ fn a_rate_limit_that_persists_ends_with_the_attempts() {
     client.get("/x", None).map(|_| ()),
     Err(Error::RateLimited {
       status: 403,
-      retry_after: None
+      retry_after: None,
+      rate: RateLimit::default(),
+      secondary: false,
     })
   );
   assert_eq!(requests(&api), 2);

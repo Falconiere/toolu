@@ -4,8 +4,6 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::journal::Record;
-use crate::model::Step;
 use crate::model::World;
 
 /// One interval for every GitHub watch, with no adaptive backoff (#447).
@@ -62,6 +60,15 @@ pub(crate) struct Watch {
   pub immediate: bool,
   /// Conditional REST `ETag` values by request path.
   pub etags: BTreeMap<String, String>,
+  /// The next page URL from an earlier response, kept across `304`s.
+  #[serde(default)]
+  pub page_links: BTreeMap<String, String>,
+  /// Last observed PR head, for checks and status probes.
+  #[serde(default)]
+  pub head_sha: String,
+  /// Last observed PR base branch.
+  #[serde(default)]
+  pub base_ref: String,
 }
 
 impl Watch {
@@ -74,6 +81,9 @@ impl Watch {
       retry_after_until_ms: 0,
       immediate: true,
       etags: BTreeMap::new(),
+      page_links: BTreeMap::new(),
+      head_sha: String::new(),
+      base_ref: String::new(),
     }
   }
 
@@ -114,19 +124,18 @@ impl Watch {
   }
 }
 
-/// Record the due inputs; the detector consumes them in the next workstream.
-pub(crate) fn take_due(world: &mut World) {
+/// Consume all due inputs while keeping their fixed deadlines anchored.
+pub(crate) fn take_due(world: &mut World) -> Vec<(String, Cause)> {
+  let mut due = Vec::new();
+  if world.now_ms < world.github_hold_until_ms {
+    return due;
+  }
   for (key, watch) in &mut world.watches {
     if let Some(cause) = watch.take_due(world.now_ms) {
-      let name = match cause {
-        Cause::Immediate => "github-immediate",
-        Cause::Scheduled => "github-scheduled",
-      };
-      world
-        .outbox
-        .push_back(Step::Journal(Record::new("transition", name, key, "", "")));
+      due.push((key.clone(), cause));
     }
   }
+  due
 }
 
 /// Reconcile saved watches with the currently registered, waiting PRs.

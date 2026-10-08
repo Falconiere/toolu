@@ -40,6 +40,17 @@ pub struct TickReport {
   pub decision: TickDecision,
   /// The tick's result as `toolu babysit tick --json` prints it.
   pub result: Value,
+  /// GraphQL points and primary limit observed by this tick, when available.
+  pub graphql: Option<GraphQlUsage>,
+}
+
+/// The GraphQL budget observed by one babysit tick.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct GraphQlUsage {
+  /// Points reported by `rateLimit.cost` across the tick's GraphQL calls.
+  pub points: u64,
+  /// Latest `x-ratelimit-remaining` value, when GitHub sent it.
+  pub remaining: Option<u64>,
 }
 
 /// One babysit check of a pull request.
@@ -50,6 +61,12 @@ pub trait BabysitTick: Send + Sync {
   /// [`LinkError`] when the tick could not run, which the engine turns into an
   /// attention item.
   fn tick(&self, request: &TickRequest) -> Result<TickReport, LinkError>;
+}
+
+impl BabysitTick for () {
+  fn tick(&self, _request: &TickRequest) -> Result<TickReport, LinkError> {
+    Err(LinkError::NotPorted { issue: 433 })
+  }
 }
 
 #[cfg(test)]

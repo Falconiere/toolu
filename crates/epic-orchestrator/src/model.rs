@@ -154,6 +154,8 @@ pub(crate) struct World {
   pub epic_refs: BTreeMap<String, String>,
   /// GitHub checks and their saved deadlines.
   pub watches: BTreeMap<String, Watch>,
+  /// All GitHub requests pause until this deadline after `retry-after`.
+  pub github_hold_until_ms: u64,
   /// Judgment queue.
   pub attention: Vec<Attention>,
   /// Local counter for tokens and attention.
@@ -217,6 +219,7 @@ impl World {
       issues: BTreeMap::new(),
       epic_refs: BTreeMap::new(),
       watches: BTreeMap::new(),
+      github_hold_until_ms: 0,
       attention: Vec::new(),
       seq: 0,
       paused_all: false,

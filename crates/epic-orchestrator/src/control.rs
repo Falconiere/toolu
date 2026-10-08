@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use clap::ArgMatches;
 use serde_json::{Value, json};
+use toolu_engine::babysit::BabysitTick;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
@@ -21,7 +22,7 @@ use crate::server::Fault;
 use crate::socket::serve;
 use crate::verbs::{failed, text};
 
-pub(crate) fn engine(matches: &ArgMatches, env: &Env) -> Outcome {
+pub(crate) fn engine(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> Outcome {
   if matches.get_flag("replace") {
     let paths = Paths::from_env(env);
     if paths.socket().exists() {
@@ -35,13 +36,13 @@ pub(crate) fn engine(matches: &ArgMatches, env: &Env) -> Outcome {
       Err(err) => failed("toolu epic engine", &err),
     };
   }
-  foreground(env)
+  foreground(env, tick)
 }
 
-pub(crate) fn foreground(env: &Env) -> Outcome {
+pub(crate) fn foreground(env: &Env, tick: &dyn BabysitTick) -> Outcome {
   let paths = Paths::from_env(env);
   let scripts = env.get("TOOLU_EPIC_SCRIPTS").map(PathBuf::from);
-  match serve(paths, scripts, fault_of(env), PROTOCOL) {
+  match serve(paths, scripts, fault_of(env), PROTOCOL, tick) {
     Ok(()) => Outcome::data(String::new()),
     Err(err) if err == "fault" => {
       Outcome::failed(Exit::TempFail, "toolu epic engine: fault".to_owned())

@@ -66,6 +66,9 @@ fn apply_watch(world: &mut World, watch: &Value) {
       }
     }
   }
+  if let Some(until) = watch.get("githubHoldUntil").and_then(Value::as_u64) {
+    world.github_hold_until_ms = until;
+  }
 }
 
 fn load_registry(world: &mut World, registry: &Value) -> Result<BTreeMap<String, String>, String> {

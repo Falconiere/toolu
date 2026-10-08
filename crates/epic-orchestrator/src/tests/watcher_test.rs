@@ -71,7 +71,7 @@ fn assert_busy(root: &std::path::Path) {
   let paths = Paths::at(root);
   std::fs::create_dir_all(&paths.root).expect("root");
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL));
+  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, &()));
   let lock = paths.lock();
   for _ in 0..50 {
     if crate::lock::live(&lock) {
@@ -80,7 +80,7 @@ fn assert_busy(root: &std::path::Path) {
     thread::sleep(Duration::from_millis(20));
   }
   assert!(crate::lock::live(&lock), "engine did not lock");
-  let err = serve(paths.clone(), None, Fault::None, PROTOCOL).expect_err("second");
+  let err = serve(paths.clone(), None, Fault::None, PROTOCOL, &()).expect_err("second");
   assert!(err.contains("engine-busy"), "{err}");
   let _stopped = exchange_retry(&paths, PROTOCOL, &serde_json::json!({"op": "stop"}));
   handle.join().expect("engine").expect("serve");

@@ -2,7 +2,7 @@
 //! `crates/cli` passes in (pr-babysit's), turned into what the engine does
 //! next. A tick that fails is an attention item, never a crash.
 
-use toolu_engine::babysit::{BabysitTick, TickDecision, TickRequest};
+use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickRequest};
 
 /// What the engine does after one babysit tick.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,16 +15,35 @@ pub enum Next {
   Attention(String),
 }
 
+/// A babysit decision with the GraphQL usage supplied by the tick.
+pub(crate) struct Checked {
+  /// The state-machine input.
+  pub next: Next,
+  /// Separate GraphQL budget observation.
+  pub graphql: Option<GraphQlUsage>,
+}
+
 /// Run one tick of `request`'s pull request and decide the engine's next step.
 pub fn next(tick: &dyn BabysitTick, request: &TickRequest) -> Next {
+  check(tick, request).next
+}
+
+/// Run the full tick, preserving its GraphQL usage for the engine journal.
+pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
   let slot = format!("{}#{}", request.repo, request.number);
   match tick.tick(request) {
-    Ok(report) => match report.decision {
-      TickDecision::KeepGoing => Next::KeepGoing,
-      TickDecision::Success => Next::MergeQueue,
-      TickDecision::Escalate => Next::Attention(format!("babysit escalated {slot}")),
+    Ok(report) => Checked {
+      next: match report.decision {
+        TickDecision::KeepGoing => Next::KeepGoing,
+        TickDecision::Success => Next::MergeQueue,
+        TickDecision::Escalate => Next::Attention(format!("babysit escalated {slot}")),
+      },
+      graphql: report.graphql,
     },
-    Err(err) => Next::Attention(format!("babysit tick for {slot} failed: {err}")),
+    Err(err) => Checked {
+      next: Next::Attention(format!("babysit tick for {slot} failed: {err}")),
+      graphql: None,
+    },
   }
 }
 

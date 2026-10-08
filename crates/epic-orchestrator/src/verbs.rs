@@ -2,6 +2,7 @@
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
+use toolu_engine::babysit::BabysitTick;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::config::secrets;
@@ -54,10 +55,10 @@ pub(crate) fn command() -> Command {
     .subcommand(token_command())
 }
 
-pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
+pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Outcome {
   let env = env_of(ctx);
   match matches.subcommand() {
-    Some(("engine", args)) => crate::control::engine(args, &env),
+    Some(("engine", args)) => crate::control::engine(args, &env, tick),
     Some(("start", args)) => crate::control::start(args, &env),
     Some(("status", args)) => crate::query::status(args, &env),
     Some(("pause", args)) => crate::query::pause(args, &env, true),
