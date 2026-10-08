@@ -89,15 +89,38 @@ fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
     &owned
   };
   let stdin = (context.stdin)().ok();
-  let root = Path::new(request.plugin_root.as_deref().unwrap_or(""));
   let text = stdin.as_deref();
   let outcome = match request.name.as_str() {
-    "session-start" => toolu_jev::session_start(env, root, text),
-    "user-prompt-submit" => toolu_jev::user_prompt_submit(env, root, text),
+    "session-start" => match plugin_root(request) {
+      Some(root) => toolu_jev::session_start(env, root, text),
+      None => quiet(),
+    },
+    "user-prompt-submit" => match plugin_root(request) {
+      Some(root) => toolu_jev::user_prompt_submit(env, root, text),
+      None => quiet(),
+    },
     "check-binary" => toolu_jev::check_binary(env, text),
     _ => return None,
   };
   Some(outcome)
+}
+
+/// The plugin directory the launcher passed. Empty is absent: it would
+/// resolve the shim against the working directory.
+fn plugin_root(request: &HookRequest) -> Option<&Path> {
+  request
+    .plugin_root
+    .as_deref()
+    .filter(|root| !root.is_empty())
+    .map(Path::new)
+}
+
+fn quiet() -> Outcome {
+  Outcome {
+    exit: Exit::Success,
+    stdout: None,
+    stderr: None,
+  }
 }
 
 /// A `SessionStart` skew advisory is its own `systemMessage` line, before the hook JSON.

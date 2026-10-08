@@ -2,6 +2,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
+use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 
@@ -108,4 +109,28 @@ fn jev_prompt_and_check_binary_go_through_the_same_dispatch() {
     run_jev(&env, "check-binary", "SessionStart", root, id).stdout,
     None
   );
+}
+
+#[test]
+fn a_missing_plugin_root_stays_quiet_instead_of_reading_the_working_directory() {
+  let (_dir, env) = jev_home();
+  let exe = || None;
+  let read = || Ok("{}".to_owned());
+  let request = HookRequest {
+    plugin: "jev".to_owned(),
+    name: "session-start".to_owned(),
+    event: Some("SessionStart".to_owned()),
+    plugin_root: None,
+  };
+  let outcome = run(
+    &request,
+    &Context {
+      exe: &exe,
+      stdin: &read,
+      env: Some(&env),
+    },
+  );
+  assert_eq!(outcome.exit, Exit::Success);
+  assert_eq!(outcome.stdout, None);
+  assert_eq!(outcome.stderr, None);
 }
