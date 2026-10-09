@@ -29,7 +29,7 @@ jobs:
   changes:
     name: changes
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     outputs:
       opencode: ${{ steps.groups.outputs.opencode }}
       docs: ${{ steps.groups.outputs.docs }}
@@ -138,6 +138,12 @@ jobs:
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
+
+      # ci-paths parses workflow YAML through Bun.
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.4.2"
 
       - name: Documentation checks
         run: |
