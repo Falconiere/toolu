@@ -15,7 +15,7 @@ Use when changing toolu's OpenCode pre-tool decisions, native permission behavio
 1. Read `docs/opencode-host-contract.md` and the pin in `tools/toolu-opencode/contract/pin.json`. Check relevant `tool.execute.before`, `tool.execute.after`, and permission behavior in the probe evidence before changing the adapter.
 2. Keep `opencode.json` permission decisions authoritative. A toolu allow returns normally; a deny throws before effects. Degrade a gate ask by class: guardrails block and judgement gates advise. Deliver advice only through the matching successful `tool.execute.after` result.
 3. Run focused adapter, plugin, host encoding, and gate-mode tests. Then run `bun run smoke:opencode-permissions` against the pinned CLI. Inspect the scripted provider's tool-result content and marker files, including repeated native ask rejection and a second plugin's denial in both load orders.
-4. Run `bun run smoke:opencode-pretool`, `bun run smoke:opencode-entry`, `bun run check:opencode-host`, and the repository's required gate. Update `docs/opencode.md`, `docs/portable-core.md`, and `docs/opencode-host-contract.md` when behavior changes; regenerate the committed OpenCode resource mirror.
+4. Run `bun run smoke:opencode-pretool`, `bun run smoke:opencode-entry`, `bun run check:opencode-host`, and `cargo xtask gate`. `bun run check:opencode-docs` and the OpenCode smokes stay on Bun. Update `docs/opencode.md`, `docs/portable-core.md`, and `docs/opencode-host-contract.md` when behavior changes; regenerate the committed OpenCode resource mirror.
 
 ## Pitfalls
 

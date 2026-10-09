@@ -16,7 +16,7 @@ startup behavior in both Codex and Claude Code.
 1. Recall relevant repo decisions. Compare the branch against its base, including
    untracked files, and inspect both manifests, marketplace entries, release
    configuration, hooks, skills, and docs.
-   Run `bun run tooling/src/validate-plugin-packaging.ts` after manifest edits: Claude
+   Run `cargo xtask gate --only packaging` after manifest edits: Claude
    marketplace descriptions must exactly match their plugin manifests.
 2. Read the service's live API documentation and the hosts' hook contracts.
    Distinguish installing a skill from injecting mandatory session instructions.
@@ -29,7 +29,7 @@ startup behavior in both Codex and Claude Code.
    separately configured profiles. Invoke hook commands from the installed
    caches, including a path containing spaces. Verify host-specific published
    paths and startup context with and without credentials.
-5. Run `bun run test`, the deterministic benchmark and its validation, and the
+5. Run `cargo xtask gate`, including the deterministic `bench` step, and the
    colocated-test check from `.github/workflows/tests.yml`. Inspect every result.
 
 ## Pitfalls

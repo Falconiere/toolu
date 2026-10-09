@@ -94,9 +94,9 @@ test.concurrent("release-only files skip jobs through the data file, not path fi
 test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate (#458)", () => {
   const agents = readText("AGENTS.md");
   for (const row of [
-    /^\| `ts` \(`bun run test`\) \| `ts` \|/m,
+    /^\| `changes` \| — \| `cargo xtask ci-changes`/m,
     /^\| `opencode \(ubuntu-latest\)`, `opencode \(macos-latest\)` \| `opencode` \|/m,
-    /^\| `docs` \| `docs` \| `bun run test:docs`/m,
+    /^\| `docs` \| `docs` \| `cargo xtask gate --only context-budget/m,
     /^\| `review` \| `changed` \|/m,
     /^\| `gate`, `typescript` \| aggregate, `if: always\(\)` \|/m,
   ]) {
@@ -107,8 +107,8 @@ test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate 
 });
 
 test.concurrent("contributor guidance names the Bun default", () => {
-  expect(readText("AGENTS.md")).toContain("`bun run test` runs the TypeScript gate");
-  expect(readText("docs/testing.md")).toContain("`bun run test` runs the TypeScript gate");
+  expect(readText("AGENTS.md")).toContain("The gate is `cargo xtask gate`.");
+  expect(readText("docs/testing.md")).toContain("The quality gate is `cargo xtask gate`.");
   expect(readText("plugins/toolu-review/skills/review/SKILL.md")).not.toContain("missing bats");
 });
 

@@ -338,7 +338,7 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 The hook engine and language gates are covered by Bun tests and conformance suites, all run in CI on every push. Install smoke tests use temporary host configuration roots:
 
 ```sh
-bun run test              # full TypeScript quality gate
+cargo xtask gate          # the quality gate
 bun run test:unit         # focused Bun tests
 bun run test:conformance  # host and gate conformance
 ```
