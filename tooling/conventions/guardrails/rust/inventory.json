@@ -167,6 +167,12 @@
       "id": "bench",
       "pass": "crates/xtask/src/tests/bench_test.rs::this_repository_writes_bytes_div_4",
       "fail": "crates/xtask/src/tests/bench_test.rs::a_set_api_key_writes_nothing"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "pack",
+      "pass": "crates/xtask/src/tests/pack_test.rs::this_repository_packs",
+      "fail": "crates/xtask/src/tests/pack_test.rs::a_hook_source_is_a_finding"
     }
   ]
 }

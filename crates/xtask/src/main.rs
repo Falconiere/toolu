@@ -40,6 +40,10 @@ mod measure;
 mod metadata;
 mod options;
 mod output;
+mod pack;
+mod pack_closure;
+mod pack_npm;
+mod pack_scan;
 mod package_workspace;
 mod packaging;
 mod packaging_assets;
@@ -98,6 +102,7 @@ const TASKS: &[(&str, Task)] = &[
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
   ("bench", bench::run),
+  ("pack", pack::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -108,7 +113,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
   check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
-  final-removal, gate-coverage, packaging, bench";
+  final-removal, gate-coverage, packaging, bench, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
