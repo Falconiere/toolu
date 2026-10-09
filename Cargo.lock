@@ -1270,7 +1270,14 @@ name = "toolu-ast-grep"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "regex",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "toolu-protocol",
  "toolu-runtime",
+ "toolu-shell",
+ "toolu-state",
 ]
 
 [[package]]

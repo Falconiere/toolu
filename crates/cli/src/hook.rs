@@ -16,6 +16,7 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
+use toolu_runtime::host::detect::detect;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
@@ -75,8 +76,41 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   if let Some(outcome) = review_hook(request, context) {
     return prefix(advisory, outcome);
   }
+  if let Some(outcome) = ast_grep_hook(request, context) {
+    return prefix(advisory, outcome);
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
+}
+
+/// ast-grep's manifest-publishing `SessionStart` hook.
+fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "ast-grep" {
+    return None;
+  }
+  let phase = match request.name.as_str() {
+    "pre-tools" => Some(Phase::Pre),
+    "post-tools" => Some(Phase::Post),
+    _ => None,
+  };
+  if let Some(phase) = phase {
+    return Some(toolu_hub::tool_hook::ast_grep_tool_hook(
+      phase,
+      (context.stdin)(),
+      request.plugin_root.as_deref().map(Path::new),
+    ));
+  }
+  if request.name != "register" {
+    return None;
+  }
+  let owned;
+  let env = if let Some(env) = context.env {
+    env
+  } else {
+    owned = Env::process();
+    &owned
+  };
+  Some(toolu_hub::ast_grep::register(env, detect(env, None).host))
 }
 
 /// The three jev hooks. Anything else stays the "has no hook" path.

@@ -709,20 +709,143 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#429): show the planned verbs",
+          "about": "Search for a structural pattern",
           "aliases": [],
-          "args": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "PATTERN_OR_RULE",
+              "required": false
+            },
+            {
+              "help": "",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
           "commands": [],
           "flags": [],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "search",
           "owner": "ast-grep",
           "path": [
             "ast-grep",
-            "planned"
+            "search"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "List matching files",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "PATTERN_OR_RULE",
+              "required": false
+            },
+            {
+              "help": "",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "files",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "files"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Scan with inline YAML or a rule file",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "PATTERN_OR_RULE",
+              "required": false
+            },
+            {
+              "help": "",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "scan",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "scan"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Print a pattern's syntax tree",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "PATTERN_OR_RULE",
+              "required": false
+            },
+            {
+              "help": "",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "debug",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "debug"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Summarize a byte-savings JSONL ledger",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "LEDGER.jsonl",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "savings",
+          "owner": "ast-grep",
+          "path": [
+            "ast-grep",
+            "savings"
+          ],
+          "placeholder": false
         },
         {
           "about": "Run a hook entry; hooks.json calls it (internal)",

@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { BUILTIN_MODULES } from "../../../../../plugins/toolu/hooks/src/pre-tools/builtins.ts";
 import { createGateDecider, nativeGates } from "../evaluate.ts";
 import { createDenyAllToolBefore, createToolBeforeHandler, mapToolCall } from "../tool-before.ts";
+import { registerAstGrep } from "./ast-grep-fixture.ts";
 
 const tmpBase = process.env.TMPDIR ?? "/tmp";
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
@@ -238,15 +239,10 @@ test("opencode.json mcp keys gate probe_touch and a missing mcp object does not"
   await skipped({ tool: "probe_touch", ...CALL }, { args: null });
 });
 
-test("OpenCode dispatch runs a selected real registry bundle but skips its stale disabled copy", async () => {
+test("OpenCode dispatch runs a selected native ast-grep manifest and skips a disabled copy", async () => {
   const root = await mkdtemp(join(tmpBase, "toolu-oc-registry-"));
   const configRoot = join(root, "state");
-  const registry = join(configRoot, "toolu/pre-tools.d");
-  await mkdir(registry, { recursive: true });
-  await copyFile(
-    join(REPO_ROOT, "plugins/ast-grep/hooks/dist/search-nudge.js"),
-    join(registry, "ast-grep@toolu__search-nudge.js"),
-  );
+  registerAstGrep(root, configRoot);
   const options = {
     repoRoot: REPO_ROOT,
     configRoot,

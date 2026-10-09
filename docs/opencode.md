@@ -271,7 +271,7 @@ With `ast-grep` selected, its two registry modules run on OpenCode's own tools (
 - **byte-savings** appends one line per completed `read`, `grep`, `glob` and bash `ast-grep`/`sg` run to `$TOOLU_CONFIG_DIR/toolu/byte-savings/<session>.jsonl` (the project's data root). It measures the host's result text before toolu appends anything. An interrupted call, or a shell call without a confirmed exit, is not recorded. After each `ast-grep` run, the result ends with the session's report under `[toolu post-check after execution]`; `read`, `grep` and `glob` results get no extra text. OpenCode's `read` output includes line numbers and tags, so a read's `returned` can exceed the file's `full` size. The same report on demand, from the session's bash. The data root keeps one ledger per session, and the most recently written one is the current session's:
 
   ```bash
-  bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$(ls -t "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl | head -n 1)"
+  toolu ast-grep savings "$(ls -t "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl | head -n 1)"
   ```
 
 The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run as written in bash.

@@ -6,6 +6,7 @@ import { gateStatusModule, pushWaiverModule } from "@toolu/core/gates";
 import { gateEnv, type PermissionEvaluateHandlerOptions } from "./evaluate.ts";
 import { mapToolCall, mcpServerNames, type ToolCall } from "./tool-before.ts";
 import type { ToolAdviceStore } from "./tool-advice.ts";
+import { astGrepRule } from "./ast-grep-native.ts";
 
 type ToolAfter = NonNullable<Hooks["tool.execute.after"]>;
 type AfterOutput = Parameters<ToolAfter>[1];
@@ -141,7 +142,16 @@ async function dispatchMessage(
       ? {}
       : { selectedRegistrySpecs: context.opts.selectedPluginSpecs }),
   });
-  return resultMessage(result);
+  const native = await astGrepRule("post-tools", payload, {
+    configRoot: context.opts.configRoot,
+    cwd: typeof request.cwd === "string" ? request.cwd : context.opts.permissionContext.cwd,
+    env: context.env,
+    selectedPluginSpecs: context.opts.selectedPluginSpecs,
+  });
+  const messages = [resultMessage(result), resultMessage(native)].filter(
+    (message): message is string => message !== undefined,
+  );
+  return messages.length === 0 ? undefined : messages.join("\n\n");
 }
 
 /** Every after call is matched to its before call; a duplicate cannot re-run post checks. */

@@ -9,7 +9,14 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+regex.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-shell = { path = "../core/shell" }
+toolu-state = { path = "../core/state" }
 
 [lints]
 workspace = true

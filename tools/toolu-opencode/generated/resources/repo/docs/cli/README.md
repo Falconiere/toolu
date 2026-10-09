@@ -25,7 +25,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | planned | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | planned | Python quality rules that run after each edit |
 | [`rust-quality`](rust-quality.md) | `plugins/rust-quality` | planned | Rust quality rules that run after each edit |
-| [`ast-grep`](ast-grep.md) | `plugins/ast-grep` | planned | Structural code search and rewrite with ast-grep |
+| [`ast-grep`](ast-grep.md) | `plugins/ast-grep` | available | Structural code search and rewrite with ast-grep |
 | [`brainstorm`](brainstorm.md) | `plugins/brainstorm` | available | Think a change through before building (a Markdown-only plugin) |
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
 | [`review`](review.md) | `plugins/toolu-review` | available | Pre-push code review state for the native push-review gate |
