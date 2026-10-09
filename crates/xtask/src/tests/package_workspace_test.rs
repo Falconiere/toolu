@@ -1,22 +1,12 @@
-use std::path::PathBuf;
-
 use crate::Verdict;
-use crate::options::Options;
-
-fn repo() -> PathBuf {
-  PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn options(root: PathBuf) -> Options {
-  Options {
-    root,
-    ..Options::default()
-  }
-}
+use crate::task_options::{test_options, test_root};
 
 #[test]
 fn this_checkout_passes() {
-  assert_eq!(super::run(&options(repo())).unwrap(), Verdict::Clean);
+  assert_eq!(
+    super::run(&test_options(test_root())).unwrap(),
+    Verdict::Clean
+  );
 }
 
 #[test]

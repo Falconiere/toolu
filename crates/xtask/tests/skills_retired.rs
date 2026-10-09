@@ -87,9 +87,8 @@ fn skills_retired_allows_a_longer_bun_script() {
   .unwrap();
   assert_eq!(retired_hits(root).unwrap(), Vec::<String>::new());
   std::fs::write(&skill, "Run `bun run test`, then stop.\n").unwrap();
-  let hits = retired_hits(root).unwrap();
-  assert!(
-    hits.iter().any(|hit| hit.contains("bun run test")),
-    "{hits:?}"
+  assert_eq!(
+    retired_hits(root).unwrap(),
+    vec![".toolu/skills/sample/SKILL.md: bun run test".to_owned()]
   );
 }

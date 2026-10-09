@@ -1,30 +1,17 @@
-use std::path::PathBuf;
-
 use crate::Verdict;
-use crate::options::Options;
-
-fn repo() -> PathBuf {
-  PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn options(root: PathBuf) -> Options {
-  Options {
-    root,
-    ..Options::default()
-  }
-}
+use crate::task_options::{test_options, test_root};
 
 #[test]
 fn the_committed_doc_passes() {
-  let root = repo();
+  let root = test_root();
   let doc = root.join("docs/portable-core.md");
   assert_eq!(super::problems(&root, &doc).unwrap(), None);
-  assert_eq!(super::run(&options(root)).unwrap(), Verdict::Clean);
+  assert_eq!(super::run(&test_options(root)).unwrap(), Verdict::Clean);
 }
 
 #[test]
 fn a_missing_heading_is_a_finding() {
-  let root = repo();
+  let root = test_root();
   let doc = std::fs::read_to_string(root.join("docs/portable-core.md")).unwrap();
   let kept = doc
     .lines()
