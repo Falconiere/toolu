@@ -1,11 +1,12 @@
 /**
  * Whether each gate reaches a file, read from that gate's own committed
- * config: the root tsconfig, the `format:check` script, every .oxlintrc.json
- * with its lint targets (the same discovery `lint:ts` runs), .jscpd.json and
- * knip.json. An exact-path ignore entry is a legacy exemption and leaves the
- * file reached.
+ * config: the root tsconfig, the `format:check` script or the xtask fmt step
+ * when that script is gone, every .oxlintrc.json with its lint targets (the
+ * same discovery `lint:ts` runs), .jscpd.json and knip.json. An exact-path
+ * ignore entry is a legacy exemption and leaves the file reached.
  */
-import { relative } from "node:path";
+import { readFileSync } from "node:fs";
+import { join, relative } from "node:path";
 import { lintDirs } from "../lint-ts.ts";
 import { covers, isExactPath, jscpdIgnore, matches, plainGlobs } from "./reach-files.ts";
 import {
@@ -28,8 +29,32 @@ function typecheck(root: string): Reached {
     include.some((glob) => covers(glob, file)) && !exclude.some((glob) => covers(glob, file));
 }
 
-function format(root: string): Reached {
-  const script = readJson(root, "package.json", PackageJsonSchema).scripts["format:check"] ?? "";
+const FMT_GATE = "crates/xtask/src/gate.rs";
+const FMT_STEP = '"fmt" => cargo(root, &["fmt", "--all", "--check"]),';
+
+/** Format left the TypeScript script. The replacement is the xtask fmt step. */
+function requireFmtReplacement(root: string): void {
+  let text: string;
+  try {
+    text = readFileSync(join(root, FMT_GATE), "utf8");
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    fatal(`${FMT_GATE}: unreadable (${detail})`);
+  }
+  if (!text.includes(FMT_STEP)) {
+    fatal(
+      `package.json: format:check is absent; ${FMT_GATE} must run \`cargo fmt --all --check\``,
+    );
+  }
+}
+
+function format(root: string): Reached | undefined {
+  const scripts = readJson(root, "package.json", PackageJsonSchema).scripts;
+  if (!Object.hasOwn(scripts, "format:check")) {
+    requireFmtReplacement(root);
+    return undefined;
+  }
+  const script = scripts["format:check"] ?? "";
   const words = script.split(/\s+/).filter(Boolean);
   const flag = words.indexOf("--check");
   if (words[0] !== "oxfmt" || flag === -1) {
@@ -96,11 +121,9 @@ function knip(root: string): Reached {
 
 /** One reach test per tool, in report order. */
 export function loadReach(root: string): ReadonlyArray<readonly [Tool, Reached]> {
-  return [
-    ["typecheck", typecheck(root)],
-    ["format", format(root)],
-    ["oxlint", oxlint(root)],
-    ["jscpd", jscpd(root)],
-    ["knip", knip(root)],
-  ];
+  const formatReach = format(root);
+  const tools: Array<readonly [Tool, Reached]> = [["typecheck", typecheck(root)]];
+  if (formatReach !== undefined) tools.push(["format", formatReach]);
+  tools.push(["oxlint", oxlint(root)], ["jscpd", jscpd(root)], ["knip", knip(root)]);
+  return tools;
 }

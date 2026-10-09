@@ -1,8 +1,11 @@
 /**
  * Gate reach (`bun run check:gate-reach`): every tracked TypeScript file is
- * reached by typecheck, format, oxlint, jscpd and knip, or tooling/gate-reach.json
- * allows the gap, and every check a guardrails package hands to the linter is a
- * rule the linter runs. Exit 0 clean, 1 findings, 3 misconfigured.
+ * reached by typecheck, oxlint, jscpd and knip, and by format when
+ * `format:check` is an oxfmt script. A missing script must be the xtask
+ * `cargo fmt --all --check` step, which does not cover TypeScript.
+ * tooling/gate-reach.json allows the gap, and every check a guardrails
+ * package hands to the linter is a rule the linter runs. Exit 0 clean, 1
+ * findings, 3 misconfigured.
  * `GATE_REACH_ROOT` points it elsewhere.
  */
 import { gateMain } from "./gate-reach/gate-main.ts";
