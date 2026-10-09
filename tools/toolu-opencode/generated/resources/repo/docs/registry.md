@@ -111,6 +111,8 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
 
 ## Language-quality modules
 
+The Rust ports of ts-quality, python-quality and rust-quality (#426–#428) use `toolu_engine::quality` (#459). Each crate implements `QualityRule`: language and extensions, project enablement, gate source and reason, linked-worktree policy, structural YAML directories, and a per-file check. `run_quality` accepts normalized `toolu-state` edit records for one event; `run_quality_event` handles a single legacy post-tool edit. The engine selects owners, scans the live files once with ast-grep, passes each check only its file's matches, and records or clears that rule's gate entry through `toolu-state`. Decisions stay in file and rule order for the caller's normal PostToolUse merge; state warnings are returned to the caller. A move clears the source's entry and checks the destination, while a permitted linked-worktree edit writes state under that worktree. The exported parity cases live in `fixtures/quality/runner.json`.
+
 A language-quality plugin is one `tool/post` module that checks the edited file and owns that file's entry in the quality gate. `@toolu/core/quality` (#265) holds what every such module shares, ported from the preamble and finalize fragments the bash modules repeated:
 
 - `editedFile(event, ctx)`: `FILE_PATH` from `CLAUDE_FILE_PATHS`, else the Write/Edit/MultiEdit input (`path`, `file_path`, `target_file`), and whether a split patch deleted or moved it away.
