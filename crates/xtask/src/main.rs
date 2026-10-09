@@ -143,5 +143,9 @@ fn main() -> ExitCode {
 }
 
 #[cfg(test)]
+#[path = "tests/task_options_test.rs"]
+mod task_options;
+
+#[cfg(test)]
 #[path = "tests/main_test.rs"]
 mod tests;
