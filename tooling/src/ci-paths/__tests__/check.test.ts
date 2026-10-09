@@ -65,7 +65,7 @@ test.concurrent("deleting a job's group from the data file fails (AC-5)", async 
     "tests.yml: job docs reads needs.changes.outputs but has no group in the data file",
   );
   expect(res.out).toContain(
-    "tests.yml: aggregate gate needs [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench], expected [changes, ts, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
+    "tests.yml: aggregate gate needs [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench], expected [changes, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
   );
 });
 
@@ -73,14 +73,14 @@ test.concurrent("an aggregate whose needs miss a gated job fails (AC-7)", async 
   const res = await check((dir) =>
     edit(dir, "workflows/tests.yml", (text) =>
       text.replace(
-        "needs: [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
-        "needs: [changes, ts, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
+        "needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
+        "needs: [changes, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench]",
       ),
     ),
   );
   expect(res).toEqual({
     exitCode: 1,
-    out: "check:ci-paths: tests.yml: aggregate gate needs [changes, ts, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench], expected [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]\n",
+    out: "check:ci-paths: tests.yml: aggregate gate needs [changes, opencode, rust, rust-musl, fuzz, rust-conformance, hook-bench], expected [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]\n",
   });
 });
 
@@ -100,14 +100,14 @@ test.concurrent("a gated job reading another group fails (AC-7)", async () => {
   const res = await check((dir) =>
     edit(dir, "workflows/tests.yml", (text) =>
       text.replace(
-        "if: needs.changes.outputs.ts == 'true'",
+        "if: needs.changes.outputs.opencode == 'true'",
         "if: needs.changes.outputs.docs == 'true'",
       ),
     ),
   );
   expect(res).toEqual({
     exitCode: 1,
-    out: "check:ci-paths: tests.yml: job ts is not gated on needs.changes.outputs.ts\n",
+    out: "check:ci-paths: tests.yml: job opencode is not gated on needs.changes.outputs.opencode\n",
   });
 });
 

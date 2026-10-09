@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      ts: ${{ steps.groups.outputs.ts }}
       opencode: ${{ steps.groups.outputs.opencode }}
       docs: ${{ steps.groups.outputs.docs }}
       rust: ${{ steps.groups.outputs.rust }}
@@ -43,77 +42,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Classify the changed paths
-        id: groups
-        run: bun run tooling/src/ci-changes.ts
-
-  ts:
-    name: bun run test
-    needs: changes
-    if: needs.changes.outputs.ts == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      # The suites exercise real host and analysis tools.
-      - name: Install test tools
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-
-      - name: Install Codex CLI
-        run: npm install -g @openai/codex
-
-      # The guardrails pattern checks and the retrieval benchmark drive real ast-grep.
-      - name: Install ast-grep
-        run: npm install -g @ast-grep/cli
-
-      # cargo xtask check-markdown-cli (#444) judges every skill, command, agent
-      # and doc against the toolu command tree; test:ts runs it.
       - name: Install the pinned toolchain
         run: rustup toolchain install
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Build toolu
-        run: cargo build -p toolu-cli
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: TypeScript quality gate
-        # This Ubuntu runner records the measured cold-start delta in its log
-        # and GITHUB_STEP_SUMMARY. The 5 ms cold-start budget is report-only on
-        # Linux; bench:shell --assert still fails for all bundle-size and parser
-        # p99 budgets. macOS Apple Silicon and TOOLU_LATENCY_ENFORCE=1 enforce
-        # the 5 ms budget as a hard assertion.
-        env:
-          TOOLU_LATENCY_ENFORCE: "0"
-        run: |
-          set -euo pipefail
-          export PATH="$PWD/target/debug:$PATH"
-          # Local `bun run test` delegates here. Includes format, lint, typecheck,
-          # guardrails, unit and conformance, bundle/launcher drift, context and
-          # latency measurement, hard size/parser budgets, and deterministic
-          # benchmarks. bench:shell appends its measured table to the job summary.
-          bun run test:ts
+      - name: Classify the changed paths
+        id: groups
+        run: cargo xtask ci-changes
 
   # Real OpenCode acceptance (#362): the pinned opencode-ai host runs every
   # catalog plugin's checks in isolated profiles against a scripted loopback
@@ -185,8 +122,7 @@ jobs:
           path: ${{ runner.temp }}/opencode-acceptance.json
           if-no-files-found: warn
 
-  # The documentation checks a docs-only change needs, without the whole gate:
-  # the doc-reading checks and tests that `test:ts` also runs (`test:docs`).
+  # The documentation checks a docs-only change needs, without the whole gate.
   docs:
     name: docs
     needs: changes
@@ -197,28 +133,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      # The guardrails pattern checks drive real ast-grep.
-      - name: Install ast-grep
-        run: npm install -g @ast-grep/cli
-
-      # cargo xtask check-markdown-cli (#444) judges every skill, command, agent
-      # and doc against the toolu command tree; test:docs runs it.
       - name: Install the pinned toolchain
         run: rustup toolchain install
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
       - name: Documentation checks
-        run: bun run test:docs
+        run: |
+          set -euo pipefail
+          cargo xtask gate --only context-budget --only portable-core --only ci-paths
+          cargo xtask check-markdown-cli
 
   # The Rust workspace gate (#407): format, clippy with warnings denied, build,
   # tests and the layer graph, on both declared platforms. The toolchain comes
@@ -280,10 +205,8 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: cargo xtask gate --only layers
 
-      # The quality bar (#455): format, clippy, guardrails, layers, reach, deny,
-      # machete, unused-pub, hooks, docs-cli, cli-compat, jscpd, rust-quality, tests,
-      # coverage, docs, and
-      # check-gate-change against the PR base (or the pushed range).
+      # The quality bar: every cargo xtask gate step, including check-gate-change
+      # against the PR base (or the pushed range).
       - name: cargo xtask gate
         if: matrix.os == 'ubuntu-latest'
         env:
@@ -543,7 +466,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   gate:
     name: gate
-    needs: [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -551,37 +474,36 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
 
       - name: Require every needed job
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: bun run tooling/src/ci-aggregate.ts tests.yml
+        run: cargo xtask ci-aggregate tests.yml
 
   # Branch protection currently requires `typescript`. Keep it equivalent to
   # `gate` until the repository setting is migrated to the new check name.
   typescript:
     name: typescript
-    needs: [changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+
       - name: Require every needed job
         env:
           NEEDS: ${{ toJSON(needs) }}
-        run: bun run tooling/src/ci-aggregate.ts tests.yml
+        run: cargo xtask ci-aggregate tests.yml
