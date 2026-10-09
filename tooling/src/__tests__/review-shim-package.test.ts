@@ -7,7 +7,12 @@ import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { packInto, stageOpencode } from "../npm-pack.ts";
 
 const ROOT = resolve(import.meta.dir, "../../..");
-const BIN = join(ROOT, "target/debug/toolu");
+const BIN = join(
+  ROOT,
+  "target",
+  process.env.TOOLU_IMPL?.startsWith("rust:") ? "release" : "debug",
+  "toolu",
+);
 
 function reviewRepo(sb: Sandbox): void {
   sb.write(".gitignore", ".opencode/\n");
