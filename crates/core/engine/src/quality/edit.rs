@@ -82,7 +82,8 @@ pub(crate) fn edited_record(record: &EditRecord, ctx: &RuleContext<'_>) -> Optio
   Some(EditedFile {
     path: record.path.clone(),
     absolute: absolute(cwd, &record.path),
-    removed: record.operation == EditOperation::Delete || record.moved_to.is_some(),
+    removed: record.operation == EditOperation::Delete
+      || record.moved_to.as_deref().is_some_and(|to| !to.is_empty()),
   })
 }
 
