@@ -168,23 +168,12 @@ session: stop and name that prerequisite.`,
   [`${DELIVERY}/references/semantic-judgments.md`]: SEMANTIC_JUDGMENTS_PORT,
   "plugins/toolu-review/skills/review/SKILL.md": [
     [
-      `   # Codex
-   TOOLU_HOST_OVERRIDE=codex \\
-     "\${TOOLU_CONFIG_DIR:-\${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \\
-     --findings-count 0 --reviewers '["toolu-review:review"]'
-
-   # Claude Code
-   TOOLU_HOST_OVERRIDE=claude \\
-     "\${TOOLU_CONFIG_DIR:-\${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \\
-     --findings-count 0 --reviewers '["toolu-review:review"]'`,
-      `   # OpenCode
-   TOOLU_HOST_OVERRIDE=opencode \\
-     "\${TOOLU_CONFIG_DIR:-\${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \\
-     --findings-count 0 --reviewers '["toolu-review:review"]'`,
+      "   toolu review write-state --findings-count 0 \\",
+      "   # OpenCode\n   TOOLU_HOST_OVERRIDE=opencode toolu review write-state --findings-count 0 \\",
     ],
     [
-      "   the active host's `<repo root>/.claude/tmp/push-review/` or\n   `<repo root>/.codex/tmp/push-review/` path atomically as",
-      "   `<repo root>/.opencode/tmp/push-review/<branch>.json` atomically as",
+      "the active host's `<repo root>/.claude/tmp/push-review/`,\n   `<repo root>/.codex/tmp/push-review/` or\n   `<repo root>/.opencode/tmp/push-review/` path atomically",
+      "OpenCode's `<repo root>/.opencode/tmp/push-review/` path atomically",
     ],
   ],
   "plugins/toolu/skills/debug/SKILL.md": [

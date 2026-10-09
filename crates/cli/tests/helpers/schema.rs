@@ -90,7 +90,8 @@ fn every_other_json_document_validates_against_its_definition() {
 fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
-      "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev" => continue,
+      "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev"
+      | "review" => continue,
       "brainstorm" | "delivery-flow" => (vec!["--json", name.as_str()], "guide"),
       _ => (vec!["--json", name.as_str(), "planned"], "planned"),
     };

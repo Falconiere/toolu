@@ -52,31 +52,21 @@ git diff --no-color main...HEAD
 
 # Fix accepted findings in code, commit, re-review until none remain
 
-# Record the clean state on Codex (lifecycle variables are not exported to
-# ordinary shell calls, so the host and default root are explicit).
-TOOLU_HOST_OVERRIDE=codex \
-  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
-  --findings-count 0 --reviewers '["toolu-review:review"]'
+# Record the clean state with the native binary.
+toolu review write-state --findings-count 0 \
+  --reviewers '["toolu-review:review"]'
 
-# Claude Code equivalent.
-TOOLU_HOST_OVERRIDE=claude \
-  "${TOOLU_CONFIG_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}}/toolu-review/write-state.sh" \
-  --findings-count 0 --reviewers '["toolu-review:review"]'
-
-# OpenCode equivalent (the generated toolu-review-review skill names only this one).
-TOOLU_HOST_OVERRIDE=opencode \
-  "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \
-  --findings-count 0 --reviewers '["toolu-review:review"]'
+# In a shell without host markers, set the host explicitly.
+TOOLU_HOST_OVERRIDE=opencode toolu review write-state --findings-count 0
 ```
 
 When reviewing a worktree from a session rooted elsewhere, append
-`--repo /path/to/worktree` to the active-host command; the gate only reads the
+`--repo /path/to/worktree` to the command; the gate only reads the
 state file under the pushed repository's own root.
 
-`write-state.sh` is an executable Bun CLI (`hooks/src/write-state.ts`, bundled to
-`hooks/dist/write-state.js`) that the SessionStart hook publishes at the paths
-above; run the path itself with `bun` on PATH, not through `bash`. It needs `git`,
-not `jq`. It computes the gate's exact `diff_sha`/`base`/`slug`, sets
+`toolu review write-state` needs Git. The SessionStart hook retains the old
+stable helper as a compatibility shim until #440. The native writer computes
+the gate's exact `diff_sha`/`base`/`slug`, sets
 `review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`,
 `<repo root>/.codex/tmp/push-review/` or `<repo root>/.opencode/tmp/push-review/`
 state atomically as schema version 2.
@@ -90,13 +80,11 @@ for tests and explicit integrations.
 If findings remain that need a human decision:
 
 ```bash
-TOOLU_HOST_OVERRIDE=codex \
-  "${TOOLU_CONFIG_DIR:-${CODEX_HOME:-$HOME/.codex}}/toolu-review/write-state.sh" \
-  --findings-count 3 --findings '[{"path":"src/auth.ts","severity":"blocker","text":"Needs product decision on session timeout"}]'
+toolu review write-state --findings-count 3 \
+  --findings '[{"path":"src/auth.ts","severity":"blocker","text":"Needs product decision on session timeout"}]'
 ```
 
-Use the Claude host/root pair shown above when running on Claude Code. The gate
-keeps blocking — open findings mean the code is not ready to push.
+The gate keeps blocking — open findings mean the code is not ready to push.
 
 ### Integration with pr-babysit
 

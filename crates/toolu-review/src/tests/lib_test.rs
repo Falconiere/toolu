@@ -1,19 +1,13 @@
 use std::path::Path;
 
-use toolu_runtime::cli::Ctx;
-
-use super::{PLUGIN, command, run};
+use super::{PLUGIN, command};
 
 #[test]
-fn the_toolu_review_crate_is_its_plugin_and_lists_the_planned_verbs() {
+fn the_toolu_review_crate_owns_the_native_writer() {
   let dir = Path::new(env!("CARGO_MANIFEST_DIR")).file_name();
   assert_eq!(dir.and_then(|name| name.to_str()), Some(PLUGIN));
   let matches = command()
-    .try_get_matches_from(["review", "planned"])
+    .try_get_matches_from(["review", "write-state", "--findings-count", "0"])
     .unwrap();
-  let outcome = run(&matches, &Ctx::default());
-  assert_eq!(
-    outcome.stdout.as_deref(),
-    Some("toolu review is not ported yet (#432). Planned verbs: write-state, status")
-  );
+  assert_eq!(matches.subcommand_name(), Some("write-state"));
 }

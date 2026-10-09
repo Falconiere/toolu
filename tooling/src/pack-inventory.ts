@@ -28,9 +28,11 @@ const ROOT = resolve(import.meta.dir, "../..");
 export const HOOK_SOURCES = /(^|\/)hooks\/src\//;
 /** Tests and their fixtures import the private harness, so no installed copy can run them. */
 export const TEST_FILES = /(^|\/)(__tests__|fixtures)\//;
-/** The Jev shim stays in the package until #440. Every other shell file stays out. */
+/** The two stable-path native shims stay until #440. Every other shell file stays out. */
 export const JEV_SHIM = "plugins/jev/scripts/jev.sh";
-const SHELL_FILES = /^(?!plugins\/jev\/scripts\/jev\.sh$).*\.(?:sh|bash|bats)$/;
+const REVIEW_SHIM = "plugins/toolu-review/scripts/write-state.sh";
+const SHELL_FILES =
+  /^(?!(?:plugins\/jev\/scripts\/jev\.sh|plugins\/toolu-review\/scripts\/write-state\.sh)$).*\.(?:sh|bash|bats)$/;
 
 export interface Expectation {
   readonly dir: string;
@@ -83,6 +85,7 @@ export function expectations(root: string): readonly Expectation[] {
         "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md",
         "plugins/pr-babysit/skills/babysit/references/fixer-brief.md",
         JEV_SHIM,
+        REVIEW_SHIM,
         ...committedBundles(root),
       ],
       forbidden: ["node_modules/", ".env"],

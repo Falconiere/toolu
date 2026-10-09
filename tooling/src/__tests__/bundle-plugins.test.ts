@@ -167,7 +167,10 @@ test.concurrent("no bash, bats or shell files enter the staged catalog", async (
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
   const staged = readdirSync(dest, { recursive: true, encoding: "utf8" });
-  expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file))).toEqual(["jev/scripts/jev.sh"]);
+  expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file))).toEqual([
+    "jev/scripts/jev.sh",
+    "toolu-review/scripts/write-state.sh",
+  ]);
 });
 
 test.concurrent("a legacy-only plugin stages its hooks.json routing without its shell hook", () => {
