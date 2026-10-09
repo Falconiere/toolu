@@ -58,10 +58,14 @@ impl Project {
       ("GIT_COMMITTER_EMAIL", "t@t".to_owned()),
       ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
     ];
-    pairs
+    let mut env: Vec<(String, String)> = pairs
       .into_iter()
       .map(|(key, value)| (key.to_owned(), value))
-      .collect()
+      .collect();
+    if let Ok(tmpdir) = std::env::var("TMPDIR") {
+      env.push(("TMPDIR".to_owned(), tmpdir));
+    }
+    env
   }
 
   /// `bash -c script` in the repository; a failing script is an error.
