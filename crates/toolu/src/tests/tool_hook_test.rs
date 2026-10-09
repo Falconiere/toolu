@@ -73,7 +73,16 @@ fn the_lib_dir_comes_from_the_plugin_root() {
     lib_dir(None, &Roots::new(Env::default(), None)),
     Path::new("")
   );
-  assert_eq!(RULES.len(), 0);
+  assert_eq!(
+    RULES
+      .iter()
+      .map(|rule| (rule.spec(), rule.name()))
+      .collect::<Vec<_>>(),
+    [
+      ("ast-grep@toolu", "search-nudge"),
+      ("ast-grep@toolu", "byte-savings")
+    ]
+  );
 }
 
 fn native(event: toolu_protocol::event::HostEvent) -> &'static str {
