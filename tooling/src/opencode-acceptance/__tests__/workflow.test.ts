@@ -39,7 +39,7 @@ function job(id: string): z.infer<typeof Job> {
 
 const runs = (id: string): string[] => job(id).steps.flatMap((step) => step.run ?? []);
 
-const GROUP_OF: Record<string, string> = { ts: "ts", opencode: "opencode" };
+const GROUP_OF: Record<string, string> = { opencode: "opencode" };
 
 test.concurrent("the acceptance job runs the full command on Linux and macOS", () => {
   const opencode = job("opencode");
@@ -55,8 +55,8 @@ test.concurrent("the acceptance job runs the full command on Linux and macOS", (
   expect(commands.join("\n")).not.toContain("--only");
 });
 
-// #458: the ts and acceptance jobs skip only through their path group; no step soft-fails.
-test.concurrent("no acceptance or ts step may soft-fail or be skipped except by its path group", () => {
+// #458: the acceptance job skips only through its path group; no step soft-fails.
+test.concurrent("no acceptance step may soft-fail or be skipped except by its path group", () => {
   for (const [id, group] of Object.entries(GROUP_OF)) {
     expect(job(id)["continue-on-error"]).toBeUndefined();
     expect(job(id).steps.filter((step) => step["continue-on-error"] !== undefined)).toEqual([]);
@@ -65,7 +65,6 @@ test.concurrent("no acceptance or ts step may soft-fail or be skipped except by 
   }
   const acceptance = job("opencode").steps.find((step) => step.run?.includes("test:opencode"));
   expect(acceptance?.if).toBeUndefined();
-  expect(runs("ts").join("\n")).toContain("bun run test:ts");
 });
 
 test.concurrent("the acceptance job installs ast-grep beyond runner-provided tools", () => {
@@ -85,10 +84,9 @@ test.concurrent("the required typescript status needs every gated job, always ru
     "rust",
     "rust-conformance",
     "rust-musl",
-    "ts",
   ]);
   expect(required.if).toBe("${{ always() }}");
-  expect(runs("typescript")).toContain("bun run tooling/src/ci-aggregate.ts tests.yml");
+  expect(runs("typescript")).toContain("cargo xtask ci-aggregate tests.yml");
   const names = Object.entries(workflow.jobs).filter(([, item]) => item.name === "typescript");
   expect(names.map(([id]) => id)).toEqual(["typescript"]);
 });

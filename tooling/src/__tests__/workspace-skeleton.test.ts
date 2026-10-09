@@ -34,58 +34,33 @@ test.concurrent("workspaces list core, opencode, conformance, and cli packages",
   }
 });
 
-test.concurrent("CI workflow defines a ts job running test:ts", () => {
-  // The `gate` and compatibility `typescript` aggregates both need this job.
-  let inJob = false;
-  let foundJob = false;
-  let foundRun = false;
-  for (const line of readText(".github/workflows/tests.yml").split("\n")) {
-    if (line.startsWith("  ts:")) {
-      inJob = true;
-      foundJob = true;
-    } else if (/^ {2}[a-z]/.test(line)) {
-      inJob = false;
-    } else if (inJob && line.includes("bun run test:ts")) {
-      foundRun = true;
-    }
-  }
-  expect({ foundJob, foundRun }).toEqual({ foundJob: true, foundRun: true });
+test.concurrent("CI workflow no longer runs the TypeScript gate", () => {
+  const workflow = readText(".github/workflows/tests.yml");
+  expect(workflow).not.toMatch(/^  ts:/m);
+  expect(workflow).not.toContain("bun run test:ts");
+  expect(workflow).toContain("cargo xtask ci-changes");
+  expect(workflow).toContain("cargo xtask ci-aggregate tests.yml");
 });
 
-test.concurrent("root test delegates to the complete Bun-only lane", () => {
+test.concurrent("root scripts keep the product suites and drop the TypeScript gate", () => {
   const scripts = rootPackage.scripts;
-  expect(scripts["test"]).toBe("bun run test:ts");
-  for (const gate of [
-    "test:conventions",
-    "test:unit",
-    "test:portable-core",
-    "test:gate-coverage",
-    "test:final-removal",
-    "check:plugin-bundles",
-    "check:hooks-json",
-    "test:workspace",
-    "test:pack",
-    "test:conformance",
-    "test:context-budget",
-    "benchmarks --tier deterministic",
-    "bench:shell --assert",
-  ]) {
-    expect(scripts["test:ts"]).toContain(gate);
-  }
+  expect(scripts["test"]).toBeUndefined();
+  expect(scripts["test:ts"]).toBeUndefined();
+  expect(scripts["test:unit"]).toBeTruthy();
+  expect(scripts["test:conformance"]).toBeTruthy();
+  expect(scripts["test:rust-conformance"]).toBeTruthy();
+  expect(scripts["test:opencode"]).toBeTruthy();
   expect(scripts["lint:shell"]).toBeUndefined();
   expect(scripts["test:shell"]).toBeUndefined();
   expect(scripts["test:shell:serial"]).toBeUndefined();
 });
 
-test.concurrent("CI runs the Bun lane without retired shell jobs", () => {
+test.concurrent("CI runs the Rust gate without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
-  expect(workflow).toMatch(/  ts:\n    name: bun run test[\s\S]*?bun run test:ts/);
-  expect(workflow).toMatch(
-    /  gate:\n    name: gate\n    needs: \[changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench\]/,
-  );
-  expect(workflow).toMatch(
-    /  typescript:\n    name: typescript\n    needs: \[changes, ts, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench\]/,
-  );
+  const needs =
+    "needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]";
+  expect(workflow).toContain(`  gate:\n    name: gate\n    ${needs}`);
+  expect(workflow).toContain(`  typescript:\n    name: typescript\n    ${needs}`);
   expect(workflow).not.toMatch(/^  shellcheck:/m);
   expect(workflow).not.toMatch(/^  bats:/m);
   expect(readText(".github/workflows/toolu-review.yml")).toContain("  review:");

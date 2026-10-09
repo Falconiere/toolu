@@ -10,10 +10,9 @@ fn repo() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn outputs(docs: bool, ts: bool) -> Value {
+fn outputs(docs: bool, opencode: bool) -> Value {
   json!({
-    "ts": if ts { "true" } else { "false" },
-    "opencode": "false",
+    "opencode": if opencode { "true" } else { "false" },
     "docs": if docs { "true" } else { "false" },
     "rust": "false",
     "ports": "false",
@@ -21,11 +20,10 @@ fn outputs(docs: bool, ts: bool) -> Value {
   })
 }
 
-fn suite(changes_outputs: &Value, ts: &str, docs: &str) -> String {
+fn suite(changes_outputs: &Value, opencode: &str, docs: &str) -> String {
   json!({
     "changes": { "result": "success", "outputs": changes_outputs },
-    "ts": { "result": ts },
-    "opencode": { "result": "skipped" },
+    "opencode": { "result": opencode },
     "docs": { "result": docs },
     "rust": { "result": "skipped" },
     "rust-musl": { "result": "skipped" },
@@ -45,12 +43,6 @@ fn a_docs_only_run_passes() {
     report
       .lines
       .iter()
-      .any(|line| line == "ts (ts off): skipped")
-  );
-  assert!(
-    report
-      .lines
-      .iter()
       .any(|line| line == "docs (docs on): success")
   );
 }
@@ -59,7 +51,6 @@ fn a_docs_only_run_passes() {
 fn a_failed_changes_job_exits_1() {
   let raw = json!({
     "changes": { "result": "failure" },
-    "ts": { "result": "skipped" },
     "docs": { "result": "skipped" }
   })
   .to_string();
@@ -77,7 +68,7 @@ fn a_job_skipped_while_its_group_is_on_fails() {
   let report = evaluate(&repo(), "tests.yml", Some(&raw)).unwrap();
   assert_eq!(
     report.lines,
-    vec!["ts (ts on): skipped, but its group is on".to_owned()]
+    vec!["opencode (opencode on): skipped, but its group is on".to_owned()]
   );
 }
 
