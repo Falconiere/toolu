@@ -63,6 +63,7 @@ test.concurrent("the docs job runs the documentation gate steps (AC-1)", () => {
   );
   expect(run).toContain("cargo xtask check-markdown-cli");
   expect(run).not.toContain("bun run test:docs");
+  expect(steps("tests.yml", "docs").map((step) => step.uses)).toContain("oven-sh/setup-bun@v2");
 });
 
 test.concurrent("review runs for any non-release change and fails open on a broken changes job (AC-1, AC-2)", () => {
