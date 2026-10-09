@@ -77,7 +77,7 @@ fn native_writer_uses_each_hosts_project_state_directory() {
     let file = dir.join(format!(".{host}/tmp/push-review/feature.json"));
     assert_eq!(
       String::from_utf8_lossy(&output.stdout).trim(),
-      file.display().to_string()
+      file.canonicalize().unwrap().display().to_string()
     );
     let doc: Value = serde_json::from_slice(&fs::read(file).unwrap()).unwrap();
     assert_eq!(doc["version"], 2, "{host}");
@@ -93,7 +93,10 @@ fn native_writer_json_reports_the_written_file() {
   assert_eq!(output.status.code(), Some(0));
   let reply: Value = serde_json::from_slice(&output.stdout).unwrap();
   let file = dir.join(".codex/tmp/push-review/feature.json");
-  assert_eq!(reply, json!({"path":file.display().to_string()}));
+  assert_eq!(
+    reply,
+    json!({"path":file.canonicalize().unwrap().display().to_string()})
+  );
   assert!(file.is_file());
 }
 
@@ -162,7 +165,7 @@ fn native_writer_allows_the_reviewed_diff_and_resets_after_a_commit() {
   let file = dir.join(".codex/tmp/push-review/feature.json");
   assert_eq!(
     String::from_utf8_lossy(&output.stdout).trim(),
-    file.display().to_string()
+    file.canonicalize().unwrap().display().to_string()
   );
   let first = state(&dir).unwrap();
   let legacy: Value = serde_json::from_str(include_str!("fixtures/review_legacy.json")).unwrap();
@@ -249,7 +252,7 @@ fn native_writer_keys_a_detached_worktree_to_the_requested_branch() {
   let file = worktree.join(".codex/tmp/push-review/feature.json");
   assert_eq!(
     String::from_utf8_lossy(&recorded.stdout).trim(),
-    file.display().to_string()
+    file.canonicalize().unwrap().display().to_string()
   );
   let doc: Value = serde_json::from_slice(&fs::read(file).unwrap()).unwrap();
   assert_eq!(doc["branch"], "feature");
