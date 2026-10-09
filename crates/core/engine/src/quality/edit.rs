@@ -74,7 +74,7 @@ fn absolute(cwd: &Path, path: &str) -> PathBuf {
 }
 
 /// Resolve one normalized edit record for the shared batch runner.
-pub fn edited_record(record: &EditRecord, ctx: &RuleContext<'_>) -> Option<EditedFile> {
+pub(crate) fn edited_record(record: &EditRecord, ctx: &RuleContext<'_>) -> Option<EditedFile> {
   let cwd = ctx.cwd.unwrap_or(ctx.project_root);
   if record.path.is_empty() {
     return None;

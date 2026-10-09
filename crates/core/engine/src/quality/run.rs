@@ -12,10 +12,9 @@ use toolu_state::ctx::StateCtx;
 use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
+use super::edit::edited_record;
 use super::scan::scan_rule_dirs;
-use super::{
-  AstGrepScan, EditedFile, edited_file, edited_record, in_linked_worktree, is_regular_file,
-};
+use super::{AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file};
 
 /// Violations and nonblocking advice in check order.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]

@@ -8,7 +8,9 @@ mod tests {
   use std::process::Command;
 
   use serde_json::{Map, Value, json};
-  use toolu_engine::quality::{AstGrepScan, EditedFile, ScanStage, scan_inline, scan_rule_dirs};
+  use toolu_engine::quality::{
+    AstGrepHit, AstGrepScan, EditedFile, ScanFailure, ScanStage, scan_inline, scan_rule_dirs,
+  };
   use toolu_runtime::env::Env;
   use toolu_runtime::registry::rule::RuleContext;
 
@@ -84,6 +86,8 @@ mod tests {
       panic!("{scan:?}")
     };
     assert_eq!(*empty, expected["empty"].as_bool().unwrap());
+    let first: &AstGrepHit = hits.first().unwrap();
+    assert_ne!(first.rule_id, "");
     assert_eq!(
       hits.len(),
       usize::try_from(expected["count"].as_u64().unwrap()).unwrap()
@@ -122,6 +126,7 @@ mod tests {
     let AstGrepScan::Failed(failure) = scan else {
       panic!("{scan:?}")
     };
+    let failure: &ScanFailure = failure;
     let stage = if failure.stage == ScanStage::Parse {
       "parse"
     } else {

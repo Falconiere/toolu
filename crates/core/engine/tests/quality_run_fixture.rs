@@ -11,7 +11,8 @@ mod tests {
 
   use serde_json::{Map, Value, json};
   use toolu_engine::quality::{
-    AstGrepScan, EditedFile, QualityFindings, QualityRule, run_quality, run_quality_event,
+    AstGrepScan, EditedFile, QualityFindings, QualityOutcome, QualityRule, run_quality,
+    run_quality_event,
   };
   use toolu_protocol::decision::merge;
   use toolu_protocol::host::Host;
@@ -178,7 +179,7 @@ mod tests {
     );
     let env = project.env();
     let raw = Map::new();
-    let outcome = run_quality_event(
+    let outcome: QualityOutcome = run_quality_event(
       &event(&step["call"], &project.repo),
       &project.context(&env, &raw),
       &[&rule],
