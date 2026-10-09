@@ -121,6 +121,9 @@ fn writer(args: &[String]) -> Res<()> {
       return Err(format!("writer {id}: a cycle's clear was a no-op"));
     }
     cycles += 1;
+    if cycles == 1 {
+      std::fs::write(format!("{stop}.ready-{id}"), "").map_err(|err| err.to_string())?;
+    }
     std::thread::sleep(Duration::from_millis(2));
   }
   if !w.ctx.warnings.is_empty() {

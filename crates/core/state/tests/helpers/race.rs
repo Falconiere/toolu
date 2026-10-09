@@ -56,7 +56,16 @@ impl Race {
   pub(crate) fn run(&self, writers: &[Writer], case: &Ordered) -> Res<()> {
     let (count, mode) = (number(case, "iterations")?, text(case, "mode")?);
     let mut fleet = Fleet(Vec::new());
-    for writer in writers {
+    let ordered = writers
+      .iter()
+      .filter(|writer| !writer.is_typescript())
+      .chain(writers.iter().filter(|writer| writer.is_typescript()));
+    let mut started_typescript = false;
+    for writer in ordered {
+      if writer.is_typescript() && !started_typescript {
+        self.wait_rust_ready(&mut fleet)?;
+        started_typescript = true;
+      }
       fleet.0.push((writer, self.spawn(writer, count, &mode)?));
     }
     let (reads, bad) = self.watch(&mut fleet)?;
@@ -79,6 +88,36 @@ impl Race {
       })
       .collect();
     self.check_final(expected)
+  }
+
+  /// Each Rust writer has reached its cycle before the short TypeScript writers start.
+  fn wait_rust_ready(&self, fleet: &mut Fleet<'_>) -> Res<()> {
+    let deadline = Instant::now() + Duration::from_secs(20);
+    for (writer, child) in &mut fleet.0 {
+      self.wait_writer_ready(writer, child, deadline)?;
+    }
+    Ok(())
+  }
+
+  fn wait_writer_ready(&self, writer: &Writer, child: &mut Child, deadline: Instant) -> Res<()> {
+    let ready = PathBuf::from(format!(
+      "{}.stop.ready-{}",
+      self.gate.display(),
+      writer.id()
+    ));
+    while !ready.exists() {
+      if child.try_wait().map_err(|err| err.to_string())?.is_some() {
+        return Err(format!(
+          "writer {} exited before the mixed race",
+          writer.id()
+        ));
+      }
+      if Instant::now() >= deadline {
+        return Err(format!("writer {} never became ready", writer.id()));
+      }
+      std::thread::sleep(Duration::from_millis(1));
+    }
+    std::fs::remove_file(ready).map_err(|err| err.to_string())
   }
 
   /// Polls the file until every child exits; tells the Rust writers to stop
