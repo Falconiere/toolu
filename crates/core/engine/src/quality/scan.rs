@@ -123,23 +123,23 @@ fn match_lines(value: &Value) -> Option<Vec<AstGrepHit>> {
   } else {
     lines.split('\n').collect()
   };
-  Some(
-    texts
-      .into_iter()
-      .enumerate()
-      .map(|(index, text)| {
-        let line = start + 1 + i64::try_from(index).unwrap_or(i64::MAX - start - 1);
-        AstGrepHit {
-          rule_id: rule_id.clone(),
-          file: file.clone(),
-          line,
-          excerpt: format!("{file}:{line}:{text}"),
-          text: text.to_owned(),
-          first: index == 0,
-        }
+  texts
+    .into_iter()
+    .enumerate()
+    .map(|(index, text)| {
+      let line = start
+        .checked_add(1)?
+        .checked_add(i64::try_from(index).ok()?)?;
+      Some(AstGrepHit {
+        rule_id: rule_id.clone(),
+        file: file.clone(),
+        line,
+        excerpt: format!("{file}:{line}:{text}"),
+        text: text.to_owned(),
+        first: index == 0,
       })
-      .collect(),
-  )
+    })
+    .collect()
 }
 
 fn parse(output: &Output) -> AstGrepScan {
@@ -205,8 +205,12 @@ fn rule_text(dirs: &[&Path]) -> Result<String, String> {
   for dir in dirs {
     let entries = std::fs::read_dir(dir).map_err(|err| format!("{}: {err}", dir.display()))?;
     let mut files: Vec<PathBuf> = entries
-      .filter_map(|entry| entry.ok().map(|entry| entry.path()))
-      .collect();
+      .map(|entry| {
+        entry
+          .map(|entry| entry.path())
+          .map_err(|err| format!("{}: {err}", dir.display()))
+      })
+      .collect::<Result<_, _>>()?;
     files.sort();
     for path in files {
       if !matches!(
@@ -215,7 +219,10 @@ fn rule_text(dirs: &[&Path]) -> Result<String, String> {
       ) {
         continue;
       }
-      if !std::fs::metadata(&path).is_ok_and(|meta| meta.is_file()) {
+      if !std::fs::metadata(&path)
+        .map_err(|err| format!("{}: {err}", path.display()))?
+        .is_file()
+      {
         continue;
       }
       all.push(std::fs::read_to_string(&path).map_err(|err| format!("{}: {err}", path.display()))?);

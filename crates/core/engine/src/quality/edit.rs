@@ -7,6 +7,7 @@ use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::invocation::current_dir;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::registry::rule::RuleContext;
+use toolu_state::edit_records::{EditOperation, EditRecord};
 
 /// The hook's original path, its absolute path, and whether it was removed.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -70,6 +71,19 @@ fn absolute(cwd: &Path, path: &str) -> PathBuf {
     }
   }
   out
+}
+
+/// Resolve one normalized edit record for the shared batch runner.
+pub fn edited_record(record: &EditRecord, ctx: &RuleContext<'_>) -> Option<EditedFile> {
+  let cwd = ctx.cwd.unwrap_or(ctx.project_root);
+  if record.path.is_empty() {
+    return None;
+  }
+  Some(EditedFile {
+    path: record.path.clone(),
+    absolute: absolute(cwd, &record.path),
+    removed: record.operation == EditOperation::Delete || record.moved_to.is_some(),
+  })
 }
 
 /// Identify the edited file of a post-tool event, if one was named.
