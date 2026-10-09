@@ -14,15 +14,69 @@ fn options(root: PathBuf, only: &[&str]) -> Options {
 
 #[test]
 fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
-  assert_eq!(STEPS.len(), 18);
-  for step in ["hooks", "workflows", "docs-cli", "cli-compat"] {
-    assert!(STEPS.contains(&step), "{step}");
-  }
+  assert_eq!(
+    STEPS,
+    &[
+      "gate-change",
+      "fmt",
+      "clippy",
+      "guardrails",
+      "layers",
+      "reach",
+      "deny",
+      "machete",
+      "unused-pub",
+      "hooks",
+      "workflows",
+      "docs-cli",
+      "cli-compat",
+      "jscpd",
+      "rust-quality",
+      "tests",
+      "coverage",
+      "docs",
+      "context-budget",
+      "portable-core",
+      "workspace",
+      "final-removal",
+      "gate-coverage",
+      "packaging",
+      "ci-paths",
+      "dist",
+      "bench",
+      "pack",
+    ]
+  );
   let err = run(&options(PathBuf::from("."), &["nope"])).unwrap_err();
   assert!(
     err.starts_with("unknown gate step nope; steps: gate-change, fmt"),
     "{err}"
   );
+}
+
+#[test]
+fn context_budget_step_uses_the_task() {
+  let mut opts = options(PathBuf::from("."), &["context-budget"]);
+  opts.files.push(PathBuf::from("nope"));
+  let err = run(&opts).unwrap_err();
+  assert!(
+    err.starts_with("usage: cargo xtask context-budget"),
+    "{err}"
+  );
+}
+
+#[test]
+fn dist_step_checks_an_empty_tree_without_a_mode_word() {
+  let dir = tempfile::tempdir().unwrap();
+  let verdict = run(&options(dir.path().to_path_buf(), &["dist"])).unwrap();
+  assert_eq!(verdict, Verdict::Clean);
+}
+
+#[test]
+fn bench_step_runs_the_deterministic_tier() {
+  let dir = tempfile::tempdir().unwrap();
+  let err = run(&options(dir.path().to_path_buf(), &["bench"])).unwrap_err();
+  assert!(err.contains("queries file not found"), "{err}");
 }
 
 #[test]

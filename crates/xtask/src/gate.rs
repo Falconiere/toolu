@@ -1,16 +1,17 @@
 //! `cargo xtask gate`: every check of the quality bar, in a fixed order,
 //! stopping at the first failure. CI requires it; it is what runs locally.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
 
 use crate::options::Options;
 use crate::{
-  Verdict, check_hooks, check_workflows, coverage, data, gate_change, guardrails, layers_check,
-  output,
+  Verdict, bench, check_hooks, check_workflows, ci_check, context_budget, coverage, data, dist,
+  docs_cli, final_removal, gate_change, gate_coverage, guardrails, layers_check, output, pack,
+  package_workspace, packaging, portable_core,
 };
-use crate::{cli_compat, docs_cli, reach, unused_pub};
+use crate::{cli_compat, reach, unused_pub};
 
 /// The clippy invocation: every target, warnings denied.
 const CLIPPY: &[&str] = &[
@@ -43,6 +44,16 @@ pub(crate) const STEPS: &[&str] = &[
   "tests",
   "coverage",
   "docs",
+  "context-budget",
+  "portable-core",
+  "workspace",
+  "final-removal",
+  "gate-coverage",
+  "packaging",
+  "ci-paths",
+  "dist",
+  "bench",
+  "pack",
 ];
 
 /// Run every step, or the `--only` ones, in order.
@@ -112,7 +123,34 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     "rust-quality" => rust_quality(root),
     "tests" => tests(root),
     "coverage" => coverage_step(options),
-    _ => docs(root),
+    "docs" => docs(root),
+    _ => ported(step, options),
+  }
+}
+
+/// The checks ported from the TypeScript gate. `dist` and `bench` run one mode.
+fn ported(step: &str, options: &Options) -> Result<Verdict, String> {
+  match step {
+    "context-budget" => context_budget::run(options),
+    "portable-core" => portable_core::run(options),
+    "workspace" => package_workspace::run(options),
+    "final-removal" => final_removal::run(options),
+    "gate-coverage" => gate_coverage::run(options),
+    "packaging" => packaging::run(options),
+    "ci-paths" => ci_check::run(options),
+    "dist" => dist::run(&positional(options, "check")),
+    "bench" => bench::run(&positional(options, "deterministic")),
+    "pack" => pack::run(options),
+    _ => Err(format!("unknown gate step {step}")),
+  }
+}
+
+/// `options` with one positional, which is how `dist check` and `bench deterministic` are selected.
+fn positional(options: &Options, word: &str) -> Options {
+  Options {
+    root: options.root.clone(),
+    files: vec![PathBuf::from(word)],
+    ..Options::default()
   }
 }
 
