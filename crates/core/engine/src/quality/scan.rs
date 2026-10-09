@@ -93,7 +93,7 @@ fn binary(ctx: &RuleContext<'_>) -> Option<PathBuf> {
     let path = dir.join("ast-grep");
     std::fs::metadata(&path)
       .ok()
-      .filter(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
+      .filter(|meta| meta.is_file() && (meta.permissions().mode() & 0o111) != 0)
       .map(|_| path)
   })
 }
