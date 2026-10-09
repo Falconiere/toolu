@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use serde_json::{Map, Value};
 use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
 use toolu_protocol::text::Text;
@@ -6,6 +8,19 @@ use toolu_runtime::registry::rule::RuleContext;
 use toolu_state::edit_records::{EditOperation, EditRecord};
 
 use super::{edited_file, edited_record};
+
+fn context<'a>(env: &'a Env, raw: &'a Map<String, Value>, root: &'a Path) -> RuleContext<'a> {
+  RuleContext {
+    host: toolu_protocol::host::Host::Claude,
+    env,
+    config_root: root,
+    project_root: root,
+    cwd: Some(root),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
 
 #[test]
 fn quality_edit_prefers_the_edit_path_and_resolves_it() {
@@ -31,16 +46,7 @@ fn quality_edit_prefers_the_edit_path_and_resolves_it() {
   let env = Env::default();
   let raw = Map::new();
   let root = std::path::Path::new("/tmp/project");
-  let ctx = RuleContext {
-    host: toolu_protocol::host::Host::Claude,
-    env: &env,
-    config_root: root,
-    project_root: root,
-    cwd: Some(root),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(&env, &raw, root);
   let file = edited_file(&event, &ctx).expect("Edit names a file");
   assert_eq!(file.path, "src/a.ts");
   assert_eq!(file.absolute, root.join("src/a.ts"));
@@ -52,16 +58,7 @@ fn quality_edit_empty_move_target_keeps_the_source_live() {
   let env = Env::default();
   let raw = Map::new();
   let root = std::path::Path::new("/tmp/project");
-  let ctx = RuleContext {
-    host: toolu_protocol::host::Host::Claude,
-    env: &env,
-    config_root: root,
-    project_root: root,
-    cwd: Some(root),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(&env, &raw, root);
   let record = EditRecord {
     path: "src/a.ts".to_owned(),
     operation: EditOperation::Update,
