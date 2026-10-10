@@ -114,7 +114,7 @@ test.concurrent("a gated job reading another group fails (AC-7)", async () => {
 test.concurrent("a required review check that loses its job fails", async () => {
   const res = await check((dir) =>
     edit(dir, "ci-paths.json", (text) =>
-      text.replace('"required": ["review", "merge-gate"]', '"required": ["reviews", "merge-gate"]'),
+      text.replace('"required": ["review"]', '"required": ["reviews"]'),
     ),
   );
   expect(res).toEqual({

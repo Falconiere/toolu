@@ -13,7 +13,6 @@ import {
   includes,
   need,
   checkRelease,
-  checkReviewRefresh,
 } from "./workflow-checks.ts";
 import { checkInstallChannels } from "./install-channel-checks.ts";
 
@@ -199,22 +198,16 @@ function checkMuslCi(jobs: ObjectMap, errors: string[]): void {
   }
 }
 
-function checkReview(root: string, review: ObjectMap, refresh: ObjectMap, errors: string[]): void {
+function checkReview(root: string, review: ObjectMap, errors: string[]): void {
   const jobs = object(review.jobs);
   const condition = string(at(jobs, "review", "if"));
-  const mergeCondition = string(at(jobs, "merge-gate", "if"));
   const branch = "release-please--branches--main--components--toolu";
   const sameRepo = "github.event.pull_request.head.repo.full_name != github.repository";
-  for (const [id, value] of [
-    ["review", condition],
-    ["merge-gate", mergeCondition],
-  ] as const) {
-    need(
-      errors,
-      value.includes(`github.head_ref != '${branch}' || ${sameRepo}`),
-      `toolu-review.yml:${id} must exempt only the same-repo release PR`,
-    );
-  }
+  need(
+    errors,
+    condition.includes(`github.head_ref != '${branch}' || ${sameRepo}`),
+    "toolu-review.yml:review must exempt only the same-repo release PR",
+  );
   const action = steps(jobs.review).find((step) => includes(step.uses, "code-review@v8"));
   need(
     errors,
@@ -238,12 +231,6 @@ function checkReview(root: string, review: ObjectMap, refresh: ObjectMap, errors
       `toolu-review.yml:review lacks ${key} ${value}`,
     );
   }
-  need(
-    errors,
-    steps(jobs["merge-gate"]).some((step) => includes(step.uses, "merge-gate@v8")),
-    "toolu-review.yml lacks merge-gate action",
-  );
-  checkReviewRefresh(refresh, errors);
 }
 
 /** Return one finding per violated invariant, so fixture mutations name the break. */
@@ -251,7 +238,6 @@ export function checkWorkflows(root: string): string[] {
   const names = [
     "tests.yml",
     "toolu-review.yml",
-    "merge-gate.yml",
     "release-please.yml",
     "release-native.yml",
     "release-homebrew.yml",
@@ -274,7 +260,7 @@ export function checkWorkflows(root: string): string[] {
   checkTriggers(docs, errors);
   checkCiAggregates(get("tests.yml"), errors);
   checkRustCi(get("tests.yml"), errors);
-  checkReview(root, get("toolu-review.yml"), get("merge-gate.yml"), errors);
+  checkReview(root, get("toolu-review.yml"), errors);
   try {
     checkRelease(root, docs, errors);
     checkInstallChannels(root, docs, errors);

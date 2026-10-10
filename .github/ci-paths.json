@@ -113,7 +113,7 @@
     },
     "toolu-review.yml": {
       "aggregate": null,
-      "required": ["review", "merge-gate"],
+      "required": ["review"],
       "jobs": { "review": "changed" }
     }
   }
