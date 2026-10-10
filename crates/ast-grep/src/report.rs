@@ -1,8 +1,28 @@
 //! The JSONL byte-savings ledger and the human report format.
 
 use std::collections::BTreeMap;
+use std::fs::File;
+use std::io::{self, Read};
+use std::path::Path;
 
 use serde::Deserialize;
+
+/// Maximum byte size accepted from a savings ledger.
+pub(crate) const MAX_LEDGER_BYTES: u64 = 16 * 1024 * 1024;
+
+/// Read a ledger without allowing a file to consume unbounded memory.
+pub(crate) fn read_ledger(path: &Path) -> io::Result<String> {
+  let file = File::open(path)?;
+  let mut bytes = Vec::new();
+  file.take(MAX_LEDGER_BYTES + 1).read_to_end(&mut bytes)?;
+  if bytes.len() as u64 > MAX_LEDGER_BYTES {
+    return Err(io::Error::new(
+      io::ErrorKind::InvalidData,
+      format!("ledger exceeds {MAX_LEDGER_BYTES} bytes"),
+    ));
+  }
+  String::from_utf8(bytes).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+}
 
 /// One recorded tool response's byte counts.
 #[derive(Clone, Debug, Deserialize)]

@@ -1,4 +1,23 @@
-use super::{parse, render};
+use super::{MAX_LEDGER_BYTES, parse, read_ledger, render};
+
+#[test]
+fn ledger_reader_accepts_normal_jsonl_and_rejects_oversized_file() {
+  let file = tempfile::NamedTempFile::new().expect("temporary ledger");
+  let line = b"{\"kind\":\"grep\",\"returned\":8,\"full\":0}\n";
+  std::fs::write(file.path(), line).expect("write ledger");
+  assert_eq!(
+    read_ledger(file.path()).expect("normal ledger"),
+    String::from_utf8_lossy(line)
+  );
+
+  file
+    .as_file()
+    .set_len(MAX_LEDGER_BYTES + 1)
+    .expect("extend ledger");
+  let error = read_ledger(file.path()).expect_err("oversized ledger rejected");
+  assert_eq!(error.kind(), std::io::ErrorKind::InvalidData);
+  assert!(error.to_string().contains("ledger exceeds 16777216 bytes"));
+}
 
 #[test]
 fn savings_report_matches_every_recorded_fixture_ledger() {

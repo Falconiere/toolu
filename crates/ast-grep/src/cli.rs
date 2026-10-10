@@ -10,7 +10,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run as run_process};
 use toolu_state::detect::tools::tool_available;
 
-use crate::report::{parse, render};
+use crate::report::{parse, read_ledger, render};
 
 const LANGS: &[(&str, &str)] = &[
   ("ts", "typescript"),
@@ -200,7 +200,7 @@ fn savings(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       "usage: toolu ast-grep savings <ledger.jsonl>".to_owned(),
     );
   }
-  match std::fs::read_to_string(path) {
+  match read_ledger(path) {
     Ok(text) => match parse(&text) {
       Ok(records) => result("savings", &render(&records), "", 0, ctx.json),
       Err(line) => Outcome::failed(

@@ -13,7 +13,7 @@ use toolu_runtime::registry::RegistryEvent;
 use toolu_runtime::registry::rule::{Rule, RuleContext};
 
 use crate::launched::{program_at, program_indexes};
-use crate::report::{parse, render};
+use crate::report::{parse, read_ledger, render};
 
 fn jq_or<'a>(value: Option<&'a Value>, fallback: &'a Value) -> &'a Value {
   match value {
@@ -159,7 +159,7 @@ fn append(path: &Path, kind: &str, returned: usize, full: u64) -> bool {
 }
 
 fn session_report(path: &Path) -> String {
-  match fs::read_to_string(path) {
+  match read_ledger(path) {
     Ok(text) => match parse(&text) {
       Ok(records) => render(&records),
       Err(line) => format!(

@@ -1,4 +1,14 @@
-use super::{kind, returned_bytes, session_id};
+use super::{kind, returned_bytes, session_id, session_report};
+
+#[test]
+fn session_report_reports_oversized_ledger() {
+  let file = tempfile::NamedTempFile::new().expect("temporary ledger");
+  file
+    .as_file()
+    .set_len(crate::report::MAX_LEDGER_BYTES + 1)
+    .expect("extend ledger");
+  assert!(session_report(file.path()).contains("ledger exceeds 16777216 bytes"));
+}
 
 #[test]
 fn savings_response_projection_matches_every_recorded_fixture_case() {
