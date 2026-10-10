@@ -1,6 +1,6 @@
 /**
- * #347: a temp git project whose data root holds the modules ast-grep's real
- * `register.js` publishes, driven by the same before/after handlers the plugin
+ * #347: a temp git project whose data root holds ast-grep's native manifests,
+ * driven by the same before/after handlers the plugin
  * wires (`enforcement.ts`). Each call returns the model-visible result text.
  */
 import { expect } from "bun:test";
@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { delimiter, join } from "node:path";
+import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { z } from "zod";
 import { definedEnv, tooluProcessEnv } from "../../host/runtime-env.ts";
 import { createToolAdviceStore } from "../tool-advice.ts";
@@ -62,7 +63,7 @@ function pathWithoutAstGrep(root: string): string {
     .join(delimiter);
 }
 
-function register(root: string, dataRoot: string): void {
+export function registerAstGrep(root: string, dataRoot: string): void {
   const env = tooluProcessEnv(definedEnv(process.env), {
     projectRoot: root,
     dataRoot,
@@ -70,8 +71,16 @@ function register(root: string, dataRoot: string): void {
     repoRoot: REPO_ROOT,
   });
   const res = spawnSync(
-    process.execPath,
-    [join(REPO_ROOT, "plugins/ast-grep/hooks/dist/register.js")],
+    env.TOOLU_BIN ?? requiredBuiltTooluBinary(),
+    [
+      "ast-grep",
+      "hook",
+      "register",
+      "--event",
+      "SessionStart",
+      "--plugin-root",
+      join(REPO_ROOT, "plugins/ast-grep"),
+    ],
     { cwd: root, env, input: "{}", encoding: "utf8" },
   );
   expect(res.status).toBe(0);
@@ -96,7 +105,7 @@ export function astGrepProject(
     );
   }
   const dataRoot = join(root, ".opencode/toolu/state");
-  register(root, dataRoot);
+  registerAstGrep(root, dataRoot);
   const path = options.astGrep === "missing" ? pathWithoutAstGrep(root) : (process.env.PATH ?? "");
   const gate = {
     repoRoot: REPO_ROOT,

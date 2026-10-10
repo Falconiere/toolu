@@ -27,6 +27,16 @@ export type RegistryStartupRecord = {
   error?: string | undefined;
 };
 
+/** A compiled registry rule whose manifest was written by a native SessionStart hook. */
+export type NativeRegistryStartupRecord = {
+  kind: "native-registry";
+  spec: string;
+  name: string;
+  event: RegistryEvent;
+  matcher: string;
+  target: string;
+};
+
 /** One stable-path helper, as `publishWrapper` left it; `path` is absent when there was no source. */
 export type HelperStartupRecord = {
   kind: "helper";
@@ -39,7 +49,11 @@ export type HelperStartupRecord = {
 /** A failure outside any one contribution, e.g. a stale module that could not be pruned. */
 export type ErrorStartupRecord = { kind: "error"; origin: string; message: string };
 
-export type StartupRecord = RegistryStartupRecord | HelperStartupRecord | ErrorStartupRecord;
+export type StartupRecord =
+  | RegistryStartupRecord
+  | NativeRegistryStartupRecord
+  | HelperStartupRecord
+  | ErrorStartupRecord;
 
 /**
  * Append `record` to the report file, if one is named. A record that cannot be

@@ -19,7 +19,7 @@ const SESSION_START: readonly Publisher[] = [
 ];
 
 const REGISTRY: readonly Publisher[] = [
-  { plugin: "ast-grep", published: "pre-tools.d/ast-grep@toolu__search-nudge.js" },
+  { plugin: "ast-grep", published: "pre-tools.d/ast-grep@toolu__search-nudge.json" },
   {
     plugin: "python-quality",
     published: "post-tools.d/python-quality@toolu__python-quality.js",

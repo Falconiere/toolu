@@ -80,8 +80,8 @@ export function modules(s: ProbeSession): string[] {
 
 /** The registry modules the retained catalog publishes. */
 export const MODULES = [
-  "pre-tools.d/ast-grep@toolu__search-nudge.js",
-  "post-tools.d/ast-grep@toolu__byte-savings.js",
+  "pre-tools.d/ast-grep@toolu__search-nudge.json",
+  "post-tools.d/ast-grep@toolu__byte-savings.json",
   "post-tools.d/python-quality@toolu__python-quality.js",
   "post-tools.d/rust-quality@toolu__rust-quality.js",
   "post-tools.d/ts-quality@toolu__ts-quality.js",

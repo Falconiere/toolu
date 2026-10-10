@@ -28,12 +28,21 @@ type SelectorEnv = Record<string, string | undefined>;
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 
 /** A built `toolu`: debug when that binary exists, otherwise release. */
-export function builtTooluBinary(): string | undefined {
+export function builtTooluBinary(root = REPO_ROOT): string | undefined {
   for (const profile of ["debug", "release"]) {
-    const path = join(REPO_ROOT, "target", profile, "toolu");
+    const path = join(root, "target", profile, "toolu");
     if (existsSync(path)) return path;
   }
   return undefined;
+}
+
+/** Fail before spawning when a native hook test has no built `toolu`. */
+export function requiredBuiltTooluBinary(root = REPO_ROOT): string {
+  const binary = builtTooluBinary(root);
+  if (binary === undefined) {
+    throw new Error(`toolu binary not found under ${join(root, "target")}; build it first`);
+  }
+  return binary;
 }
 const ENTRY_NAME = /^[a-z0-9][a-z0-9-]*$/;
 

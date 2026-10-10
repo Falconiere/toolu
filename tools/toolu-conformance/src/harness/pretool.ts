@@ -5,7 +5,7 @@
  */
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { launchedArgv } from "./entry-command.ts";
+import { launchedArgv, requiredBuiltTooluBinary } from "./entry-command.ts";
 import type { Sandbox } from "./sandbox.ts";
 import { hostEnv, run, type EnvPatch, type RunResult } from "./spawn.ts";
 
@@ -44,7 +44,7 @@ export function installPlugins(sb: Sandbox, ...specs: string[]): void {
 
 /**
  * Run a plugin's real SessionStart register hook, syncing its modules into the
- * registry through the `hooks/dist/register.js` bundle behind its launcher.
+ * registry through its launcher. ast-grep has a native-only register hook.
  */
 export async function registerPlugin(
   sb: Sandbox,
@@ -56,7 +56,19 @@ export async function registerPlugin(
     CLAUDE_PLUGIN_ROOT: root,
     ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
   });
-  const argv = launchedArgv({ plugin, event: "SessionStart", entry: "register" }, root);
+  const argv =
+    plugin === "ast-grep"
+      ? [
+          requiredBuiltTooluBinary(),
+          "ast-grep",
+          "hook",
+          "register",
+          "--event",
+          "SessionStart",
+          "--plugin-root",
+          root,
+        ]
+      : launchedArgv({ plugin, event: "SessionStart", entry: "register" }, root);
   const result = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (result.exitCode !== 0) {
     throw new Error(`register ${plugin} exited ${String(result.exitCode)}: ${result.stderr}`);

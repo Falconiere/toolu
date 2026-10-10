@@ -14,9 +14,29 @@ import type { ReadyResult } from "../result.ts";
 import { PLUGINS_ROOT, REPO_ROOT, tempRoot } from "./fixtures.ts";
 
 const MODULES = {
-  "pre-tools.d": { "ast-grep@toolu__search-nudge.js": "ast-grep/hooks/dist/search-nudge.js" },
+  "pre-tools.d": {
+    "ast-grep@toolu__search-nudge.json": {
+      version: 1,
+      spec: "ast-grep@toolu",
+      name: "search-nudge",
+      event: "tool/pre",
+      matcher: "Grep|Bash|Shell",
+    },
+  },
   "post-tools.d": {
-    "ast-grep@toolu__byte-savings.js": "ast-grep/hooks/dist/byte-savings.js",
+    "ast-grep@toolu__byte-savings.json": {
+      version: 1,
+      spec: "ast-grep@toolu",
+      name: "byte-savings",
+      event: "tool/post",
+      matcher: "Read|Grep|Glob|Bash|Shell",
+    },
+  },
+};
+
+const BUNDLES: Record<string, Record<string, string>> = {
+  "pre-tools.d": {},
+  "post-tools.d": {
     "python-quality@toolu__python-quality.js": "python-quality/hooks/dist/post-tool-use.js",
     "rust-quality@toolu__rust-quality.js": "rust-quality/hooks/dist/post-tool-use.js",
     "ts-quality@toolu__ts-quality.js": "ts-quality/hooks/dist/post-tool-use.js",
@@ -64,10 +84,17 @@ async function start(root: string): Promise<ReadyResult> {
 
 function expectCatalogContributions(data: string, result: ReadyResult): void {
   for (const [dir, modules] of Object.entries(MODULES)) {
-    expect(readdirSync(join(data, "toolu", dir)).toSorted()).toEqual(Object.keys(modules));
-    for (const [file, bundle] of Object.entries(modules)) {
+    expect(readdirSync(join(data, "toolu", dir)).toSorted()).toEqual(
+      [...Object.keys(modules), ...Object.keys(BUNDLES[dir] ?? {})].toSorted(),
+    );
+    for (const [file, expected] of Object.entries(modules)) {
+      expect(JSON.parse(readFileSync(join(data, "toolu", dir, file), "utf8"))).toEqual(expected);
+    }
+  }
+  for (const [dir, bundles] of Object.entries(BUNDLES)) {
+    for (const [file, source] of Object.entries(bundles)) {
       const bytes = readFileSync(join(data, "toolu", dir, file));
-      expect(bytes.equals(readFileSync(join(PLUGINS_ROOT, bundle)))).toBe(true);
+      expect(bytes.equals(readFileSync(join(PLUGINS_ROOT, source)))).toBe(true);
     }
   }
   for (const [path, source] of Object.entries(HELPERS)) {
@@ -76,6 +103,9 @@ function expectCatalogContributions(data: string, result: ReadyResult): void {
   const expected = [
     ...Object.entries(MODULES).flatMap(([dir, modules]) =>
       Object.keys(modules).map((file) => join(data, "toolu", dir, file)),
+    ),
+    ...Object.entries(BUNDLES).flatMap(([dir, bundles]) =>
+      Object.keys(bundles).map((file) => join(data, "toolu", dir, file)),
     ),
     ...Object.keys(HELPERS).map((path) => join(data, path)),
   ];

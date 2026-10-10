@@ -24,6 +24,7 @@ import {
 } from "./permission-map.ts";
 import { definedEnv, withoutForeignHostVars } from "../host/runtime-env.ts";
 import { decisionFromDispatch } from "./result.ts";
+import { astGrepRule } from "./ast-grep-native.ts";
 
 export type PermissionEvaluateHandlerOptions = {
   repoRoot: string;
@@ -122,11 +123,22 @@ export function createGateDecider(opts: PermissionEvaluateHandlerOptions): GateD
           : { selectedRegistrySpecs: opts.selectedPluginSpecs }),
       });
       const core = decisionFromDispatch(result);
-      if (request.tool_name !== "Task") return core;
+      if (core.kind === "runtime_failure" || core.kind === "deny" || core.kind === "post_block")
+        return core;
+      const native = decisionFromDispatch(
+        await astGrepRule("pre-tools", request, {
+          configRoot: opts.configRoot,
+          cwd: opts.permissionContext.cwd,
+          env,
+          selectedPluginSpecs: opts.selectedPluginSpecs,
+        }),
+      );
+      const combined = strongerDecision(core, native);
+      if (request.tool_name !== "Task") return combined;
       const tier = decisionFromDispatch(
         agentTierHook(payload, { env, cwd: opts.permissionContext.cwd }),
       );
-      return strongerDecision(core, tier);
+      return strongerDecision(combined, tier);
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       return { kind: "runtime_failure", reason: `toolu dispatch: ${reason}`, code: "parse" };

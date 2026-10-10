@@ -1,14 +1,6 @@
 {
   "version": 1,
   "entries": {
-    "ast-grep/check-binary": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
-      }
-    },
     "ast-grep/register": {
       "stdin": {
         "session_id": "hook-bench",

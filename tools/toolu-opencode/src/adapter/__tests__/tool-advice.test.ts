@@ -1,9 +1,10 @@
 import { expect, test } from "bun:test";
-import { copyFile, mkdir, mkdtemp } from "node:fs/promises";
+import { mkdtemp } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createToolAdviceStore } from "../tool-advice.ts";
 import { createToolBeforeHandler } from "../tool-before.ts";
+import { registerAstGrep } from "./ast-grep-fixture.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
 const tmpBase = process.env.TMPDIR ?? "/tmp";
@@ -11,12 +12,7 @@ const tmpBase = process.env.TMPDIR ?? "/tmp";
 test("a real registry advisory reaches only its matching model-visible tool result", async () => {
   const root = await mkdtemp(join(tmpBase, "toolu-oc-advice-"));
   const configRoot = join(root, "state");
-  const registry = join(configRoot, "toolu/pre-tools.d");
-  await mkdir(registry, { recursive: true });
-  await copyFile(
-    join(REPO_ROOT, "plugins/ast-grep/hooks/dist/search-nudge.js"),
-    join(registry, "ast-grep@toolu__search-nudge.js"),
-  );
+  registerAstGrep(root, configRoot);
   const advice = createToolAdviceStore();
   const before = createToolBeforeHandler(
     {

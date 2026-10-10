@@ -6,7 +6,7 @@
  * or another plugin's module can never stand in for a missing contribution.
  */
 import { lstatSync, readFileSync, readlinkSync, realpathSync, statSync } from "node:fs";
-import { join, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep } from "node:path";
 import { registryEventDir, registryFileName } from "@toolu/core/registry";
 import type { StartupRecord } from "@toolu/core/startup";
 import { z } from "zod";
@@ -27,6 +27,14 @@ const RecordSchema: z.ZodType<StartupRecord> = z.discriminatedUnion("kind", [
     error: z.string().optional(),
   }),
   z.strictObject({
+    kind: z.literal("native-registry"),
+    spec: z.string().min(1),
+    name: z.string().min(1),
+    event: z.enum(["tool/pre", "tool/post"]),
+    matcher: z.string().min(1),
+    target: z.string().min(1),
+  }),
+  z.strictObject({
     kind: z.literal("helper"),
     plugin: z.string().min(1),
     source: z.string().min(1),
@@ -35,6 +43,14 @@ const RecordSchema: z.ZodType<StartupRecord> = z.discriminatedUnion("kind", [
   }),
   z.strictObject({ kind: z.literal("error"), origin: z.string().min(1), message: z.string() }),
 ]);
+
+const NativeManifest = z.strictObject({
+  version: z.literal(1),
+  spec: z.string().min(1),
+  name: z.string().min(1),
+  event: z.enum(["tool/pre", "tool/post"]),
+  matcher: z.string().min(1),
+});
 
 export type ReportRead = { ok: true; records: StartupRecord[] } | { ok: false; reason: string };
 
@@ -118,6 +134,43 @@ function verifyRegistry(
   out.artifacts.push(record.target);
 }
 
+function verifyNativeRegistry(
+  record: Extract<StartupRecord, { kind: "native-registry" }>,
+  scope: Scope,
+  out: Verified,
+): void {
+  const { plugin, dataRoot } = scope;
+  const dir = record.event === "tool/pre" ? "pre-tools.d" : "post-tools.d";
+  const expected = join(dataRoot, "toolu", dir, `${plugin.spec}__${record.name}.json`);
+  if (record.spec !== plugin.spec || resolve(record.target) !== resolve(expected)) {
+    out.failures.push(`${record.target}: contribution outside ${plugin.name}`);
+    return;
+  }
+  try {
+    if (
+      !inside(realpathSync(dirname(record.target)), realpathSync(dataRoot)) ||
+      !lstatSync(record.target).isFile()
+    ) {
+      out.failures.push(`${record.target}: native manifest is outside the data root or not a file`);
+      return;
+    }
+    const manifest = NativeManifest.parse(JSON.parse(readFileSync(record.target, "utf8")));
+    if (
+      manifest.spec !== record.spec ||
+      manifest.name !== record.name ||
+      manifest.event !== record.event ||
+      manifest.matcher !== record.matcher
+    ) {
+      out.failures.push(`${record.target} is not the reported native manifest`);
+      return;
+    }
+  } catch (error) {
+    out.failures.push(`${record.target}: ${String(error)}`);
+    return;
+  }
+  out.artifacts.push(record.target);
+}
+
 function isLinkTo(path: string, source: string): boolean {
   try {
     return lstatSync(path).isSymbolicLink() && readlinkSync(path) === source;
@@ -168,6 +221,7 @@ export function verifyRecords(
   const scope: Scope = { plugin, dataRoot, pluginReal };
   for (const record of records) {
     if (record.kind === "registry") verifyRegistry(record, scope, out);
+    else if (record.kind === "native-registry") verifyNativeRegistry(record, scope, out);
     else if (record.kind === "helper") verifyHelper(record, scope, out);
     else out.failures.push(`${record.origin}: ${record.message}`);
   }

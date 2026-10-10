@@ -15,8 +15,6 @@
         "plugins/*/skills/**/*.ts"
       ],
       "ignore": [
-        "plugins/ast-grep/hooks/src/lib/savings-measure.ts",
-        "plugins/ast-grep/hooks/src/lib/savings-report.ts",
         "plugins/epic-orchestrator/scripts/trackers/jira.ts",
         "plugins/epic-orchestrator/scripts/trackers/linear.ts",
         "plugins/epic-orchestrator/scripts/watch/state.ts",
@@ -39,7 +37,6 @@
     },
     "tooling": {
       "entry": [
-        "src/benchmarks/ast-grep-latency.ts",
         "src/benchmarks/python-quality-latency.ts",
         "src/benchmarks/rust-quality-latency.ts",
         "src/benchmarks/ts-quality-latency.ts",

@@ -3,6 +3,7 @@
 //! main, so a panic or an unreadable payload blocks with exit 2 rather than
 //! allowing. No `hooks.json` entry calls these until #425.
 
+use std::collections::BTreeSet;
 use std::io::{Cursor, Read};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -24,8 +25,8 @@ use toolu_runtime::registry::rule::Rule;
 /// Which tool hook runs.
 pub use toolu_engine::Phase;
 
-/// The compiled-in rules a manifest may enable; the rule crates add theirs (#426–#429).
-pub const RULES: &[&dyn Rule] = &[];
+/// The compiled-in rules a manifest may enable.
+pub const RULES: &[&dyn Rule] = &[toolu_ast_grep::SEARCH_NUDGE, toolu_ast_grep::BYTE_SAVINGS];
 
 /// The payload `crates/cli` read, as the stream the hook main reads it from.
 struct Given(Result<Cursor<Vec<u8>>, Option<std::io::Error>>);
@@ -72,20 +73,40 @@ pub fn tool_hook(
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
 ) -> Outcome {
+  run(phase, payload, plugin_root, false)
+}
+
+/// Run only the ast-grep manifest rules for a host that dispatches core gates itself.
+pub fn ast_grep_tool_hook(
+  phase: Phase,
+  payload: std::io::Result<String>,
+  plugin_root: Option<&Path>,
+) -> Outcome {
+  run(phase, payload, plugin_root, true)
+}
+
+fn run(
+  phase: Phase,
+  payload: std::io::Result<String>,
+  plugin_root: Option<&Path>,
+  ast_only: bool,
+) -> Outcome {
   let env = Env::process();
   let host = detect(&env, None).host;
   let lib = lib_dir(plugin_root, &Roots::new(env.clone(), Some(host)));
   let cwd = current_dir();
+  let selected = BTreeSet::from(["ast-grep@toolu".to_owned()]);
   let options = cwd.as_ref().map_err(cwd_error).map(|cwd| DispatchOptions {
     env: &env,
     cwd,
     lib_dir: &lib,
-    builtins: match phase {
-      EnginePhase::Pre => PRE_TOOL,
-      EnginePhase::Post => POST_TOOL,
+    builtins: match (ast_only, phase) {
+      (true, _) => &[],
+      (false, EnginePhase::Pre) => PRE_TOOL,
+      (false, EnginePhase::Post) => POST_TOOL,
     },
     rules: RULES,
-    selected_specs: None,
+    selected_specs: ast_only.then_some(&selected),
     continue_post_blocks: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   });

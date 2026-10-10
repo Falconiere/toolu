@@ -14,7 +14,11 @@ Structural code search and rewrite with ast-grep
 Usage: toolu ast-grep [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#429): show the planned verbs
+  search   Search for a structural pattern
+  files    List matching files
+  scan     Scan with inline YAML or a rule file
+  debug    Print a pattern's syntax tree
+  savings  Summarize a byte-savings JSONL ledger
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -25,12 +29,91 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu ast-grep planned`
+## `toolu ast-grep search`
 
 ```text
-Not ported yet (#429): show the planned verbs
+Search for a structural pattern
 
-Usage: toolu ast-grep planned [OPTIONS]
+Usage: toolu ast-grep search [OPTIONS] [PATTERN_OR_RULE] [args]...
+
+Arguments:
+  [PATTERN_OR_RULE]
+  [args]...
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ast-grep files`
+
+```text
+List matching files
+
+Usage: toolu ast-grep files [OPTIONS] [PATTERN_OR_RULE] [args]...
+
+Arguments:
+  [PATTERN_OR_RULE]
+  [args]...
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ast-grep scan`
+
+```text
+Scan with inline YAML or a rule file
+
+Usage: toolu ast-grep scan [OPTIONS] [PATTERN_OR_RULE] [args]...
+
+Arguments:
+  [PATTERN_OR_RULE]
+  [args]...
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ast-grep debug`
+
+```text
+Print a pattern's syntax tree
+
+Usage: toolu ast-grep debug [OPTIONS] [PATTERN_OR_RULE] [args]...
+
+Arguments:
+  [PATTERN_OR_RULE]
+  [args]...
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu ast-grep savings`
+
+```text
+Summarize a byte-savings JSONL ledger
+
+Usage: toolu ast-grep savings [OPTIONS] <LEDGER.jsonl>
+
+Arguments:
+  <LEDGER.jsonl>
 
 Options:
       --json              Print exactly one JSON document on stdout

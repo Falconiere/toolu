@@ -6,6 +6,7 @@ name: "ast-grep-ast-grep"
 # ast-grep Structural Search & Rewrite Protocol
 
 You have ast-grep (tree-sitter AST pattern matcher + rewriter) via the `ast-grep` / `sg` CLI.
+`toolu ast-grep search|files|scan|debug` wraps the external binary when you need inferred language or a fixed no-color output; `toolu ast-grep savings <ledger.jsonl>` summarizes session accounting.
 This protocol is **MANDATORY and ALWAYS ACTIVE**.
 
 ## Hard Constraints

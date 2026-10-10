@@ -31,6 +31,11 @@ startup behavior in both Codex and Claude Code.
    paths and startup context with and without credentials.
 5. Run `bun run test`, the deterministic benchmark and its validation, and the
    colocated-test check from `.github/workflows/tests.yml`. Inspect every result.
+6. When a plugin's Bun registry bundle becomes a native manifest, check the
+   OpenCode startup report and readiness verifier, deselection cleanup, hook
+   inventory, packed catalog, and pinned-host scenarios. Replay the focused
+   actual-host cases before the full acceptance run. A repeated SessionStart
+   must preserve byte-identical manifest files and their timestamps.
 
 ## Pitfalls
 
@@ -53,6 +58,9 @@ startup behavior in both Codex and Claude Code.
   request and no key in model-visible output.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
   Update relevant counts together when adding a plugin.
+- A native registry manifest has a `.json` name and no source bundle to compare.
+  Startup readiness must validate its exact contents and location; deleting the
+  old `.js` bundle requires updating live package and worktree assertions too.
 - Keep host overrides scoped to the operation being verified. A Codex override
   inherited by the full suite redirects Claude fixtures away from their temporary
   configuration directories. Unset it in the test subprocess when running a
