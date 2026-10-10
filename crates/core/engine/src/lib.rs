@@ -37,6 +37,7 @@ mod gates;
 pub mod ledger;
 /// Run only the MCP blocker for the standalone hook.
 pub mod mcp_hook;
+pub mod quality;
 pub mod registry;
 pub mod resources;
 pub mod review_state;
