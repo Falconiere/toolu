@@ -46,9 +46,8 @@ the pre-fix tree, so committing staleifies it and the push denies.
 
    ```bash
    # OpenCode
-   TOOLU_HOST_OVERRIDE=opencode \
-     "${TOOLU_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/opencode}/toolu-review/write-state.sh" \
-     --findings-count 0 --reviewers '["toolu-review:review"]'
+   TOOLU_HOST_OVERRIDE=opencode toolu review write-state --findings-count 0 \
+     --reviewers '["toolu-review:review"]'
    ```
 
    Pass `--branch <name>` on a detached checkout — pr-babysit's
@@ -59,20 +58,19 @@ the pre-fix tree, so committing staleifies it and the push denies.
    Pass `--repo <path>` when the reviewed checkout is not the session's cwd —
    a worktree, say. The gate reads the state file under the **pushed repo's own
    root**, so a file written anywhere else is invisible to it. `--repo` defaults
-   to the cwd's repo root and the script fails with "not inside a git repo" when
+   to the cwd's repo root and the command fails with "not inside a git repo" when
    the path given is not one. `$STATE_DIR`, when set, overrides the directory for
    the writer and the gate alike.
 
-   `write-state.sh` is published below the active host's explicit config root,
-   as shown above, by the plugin's SessionStart hook. It is an executable Bun
-   CLI: run the path itself (it needs `bun` on PATH), never `bash write-state.sh`.
-   Always pass the matching host override in the same command: plugin-root
-   variables are lifecycle context and are not reliable in ordinary shell calls.
+   The native `toolu` binary detects the host. If the command shell has no host
+   markers, set `TOOLU_HOST_OVERRIDE=codex`, `claude` or `opencode` on this
+   command. SessionStart keeps the former stable helper as a compatibility shim
+   until #440; new calls use `toolu review write-state`.
 
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
    caps at 5 rounds on an unchanged diff), and writes
-   `<repo root>/.opencode/tmp/push-review/<branch>.json` atomically as
+   OpenCode's `<repo root>/.opencode/tmp/push-review/` path atomically as
    schema `version: 2`, including `reviewed_files` — auto-computed from
    `git diff --name-only <base>...HEAD` (sorted, unique); pass
    `--reviewed-files a.ts,b.rs` only if the review genuinely covered a

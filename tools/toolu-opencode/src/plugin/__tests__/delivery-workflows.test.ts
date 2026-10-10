@@ -8,7 +8,7 @@ import { expect, test } from "bun:test";
 import type { Config } from "@opencode-ai/plugin";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { isPlainRecord } from "../../surfaces/merge.ts";
-import { GENERATED, writeStateCommand } from "./core-fixtures.ts";
+import { GENERATED, NATIVE_BIN, writeStateCommand } from "./core-fixtures.ts";
 import {
   BRANCH,
   LEDGER,
@@ -86,7 +86,7 @@ test.concurrent("a push waits for every step, the verify stamp and the review", 
     expect(remoteHead(sb, remote, BRANCH)).toBe("");
 
     expect((await bash(hooks, sb, `${PLAN_LEDGER} run ${PLAN} --verify`, bin)).exitCode).toBe(0);
-    expect((await bash(hooks, sb, writeStateCommand(0))).exitCode).toBe(0);
+    expect((await bash(hooks, sb, writeStateCommand(0), NATIVE_BIN)).exitCode).toBe(0);
     const ready = await bash(hooks, sb, VERDICT, bin);
     expect(ready.stdout).toContain("overall: ready");
     expect(ready.exitCode).toBe(0);

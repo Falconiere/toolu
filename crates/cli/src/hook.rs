@@ -72,6 +72,9 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   if let Some(outcome) = jev_hook(request, context) {
     return prefix(advisory, outcome);
   }
+  if let Some(outcome) = review_hook(request, context) {
+    return prefix(advisory, outcome);
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
 }
@@ -103,6 +106,31 @@ fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
     _ => return None,
   };
   Some(outcome)
+}
+
+/// The two toolu-review `SessionStart` entries.
+fn review_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "toolu-review" {
+    return None;
+  }
+  let owned;
+  let env = if let Some(env) = context.env {
+    env
+  } else {
+    owned = Env::process();
+    &owned
+  };
+  match request.name.as_str() {
+    "session-start" => Some(match plugin_root(request) {
+      Some(root) => toolu_review::session_start(env, root),
+      None => quiet(),
+    }),
+    "check-binary" => {
+      let stdin = (context.stdin)().ok();
+      Some(toolu_review::check_binary(env, stdin.as_deref()))
+    }
+    _ => None,
+  }
 }
 
 /// The plugin directory the launcher passed. Empty is absent: it would

@@ -6,7 +6,7 @@
 
 **Check:** `bun run tooling/src/gate-coverage-inventory.ts check`
 
-Every live hook and built-in gate in this inventory is `port-native`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457) and the one-line Jev shim `plugins/jev/scripts/jev.sh` (#440).
+Every live hook and built-in gate in this inventory is `port-native`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457) and the one-line native shims `plugins/jev/scripts/jev.sh` and `plugins/toolu-review/scripts/write-state.sh` (#440).
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
@@ -26,8 +26,8 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 | `rust-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #267/done | bun-bundle | no | — |
 | `statusline:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
 | `statusline:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
-| `toolu-review:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
-| `toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
+| `toolu-review:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | native | no | — |
+| `toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | native | no | — |
 | `toolu:builtin-module:PostToolUse:gate-status` | `packages/toolu-core/src/gates/gate-status.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
 | `toolu:builtin-module:PostToolUse:push-waiver` | `packages/toolu-core/src/gates/push-waiver.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:bash-commands` | `packages/toolu-core/src/gates/bash-commands.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |

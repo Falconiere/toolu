@@ -27,6 +27,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "setup",
     "brainstorm",
     "delivery-flow",
+    "review",
     "jev",
   ];
   names
@@ -206,6 +207,7 @@ fn every_generated_hook_form_is_in_the_clap_tree() {
     &["jev", "hook", "--help"],
     &["pr-babysit", "hook", "--help"],
     &["epic-orchestrator", "hook", "--help"],
+    &["toolu-review", "hook", "--help"],
   ] {
     let output = toolu(args).unwrap();
     assert_eq!(output.status.code(), Some(0), "{args:?}");
@@ -214,11 +216,11 @@ fn every_generated_hook_form_is_in_the_clap_tree() {
       "{args:?}"
     );
   }
-  let alias = toolu(&["toolu-review", "planned"]).unwrap();
+  let alias = toolu(&["toolu-review", "write-state", "--help"]).unwrap();
   assert!(
     stdout(&alias)
       .unwrap()
-      .starts_with("toolu review is not ported yet")
+      .contains("Usage: toolu review write-state")
   );
 }
 

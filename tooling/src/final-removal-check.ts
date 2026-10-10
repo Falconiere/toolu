@@ -1,8 +1,8 @@
 /** Structural gate for the final Bun-only cutover (#279). */
-import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { z } from "zod";
+import { SHELL_KEEP, shellProblems } from "./final-removal-shell.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const Row = z.object({
@@ -13,30 +13,11 @@ const Row = z.object({
   bashRequired: z.boolean(),
 });
 
-/**
- * Shell files the cutover keeps. `install.sh` is the curl installer users pipe
- * into bash before toolu or Bun exist (#457). The Jev shim is one `exec` line
- * until the launcher stops publishing it (#440).
- */
-const SHELL_KEEP = new Set(["install.sh", "plugins/jev/scripts/jev.sh"]);
-
 /** A row may still be a Bun bundle, or the generated native launcher. */
 const HOST_MECHANISMS = new Set(["bun-bundle", "native"]);
 
-function trackedShellFiles(): string[] {
-  const result = spawnSync("git", ["ls-files", "-z", "*.sh", "*.bash", "*.bats"], {
-    cwd: ROOT,
-    encoding: "utf8",
-  });
-  if (result.status !== 0) {
-    throw new Error(`git ls-files failed: ${result.stderr.trim()}`);
-  }
-  return result.stdout.split("\0").filter((file) => file !== "" && !SHELL_KEEP.has(file));
-}
-
 function check(): void {
-  const problems: string[] = [];
-  for (const file of trackedShellFiles()) problems.push(`tracked shell file: ${file}`);
+  const problems = shellProblems(ROOT);
   if (existsSync(resolve(ROOT, ".shellcheckrc"))) problems.push(".shellcheckrc remains");
   if (existsSync(resolve(ROOT, "tooling/testdata/bats")))
     problems.push("tooling/testdata/bats remains");

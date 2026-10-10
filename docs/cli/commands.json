@@ -906,27 +906,94 @@
       "placeholder": false
     },
     {
-      "about": "Pre-push code review that mirrors the CI review bot",
+      "about": "Pre-push code review state for the native push-review gate",
       "aliases": [
         "toolu-review"
       ],
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#432): show the planned verbs",
+          "about": "Record a review of the committed branch diff",
           "aliases": [],
           "args": [],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Number of open findings (zero for a clean review)",
+              "hidden": false,
+              "long": "findings-count",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "JSON list of reviewers; defaults to toolu-review:review",
+              "hidden": false,
+              "long": "reviewers",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "JSON list of findings; defaults to []",
+              "hidden": false,
+              "long": "findings",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Repository or worktree to review; defaults to the current directory",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Target branch for a detached worktree",
+              "hidden": false,
+              "long": "branch",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Comma-separated reviewed paths instead of the Git diff",
+              "hidden": false,
+              "long": "reviewed-files",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            }
+          ],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "write-state",
           "owner": "toolu-review",
           "path": [
             "review",
-            "planned"
+            "write-state"
           ],
-          "placeholder": true
+          "placeholder": false
         },
         {
           "about": "Run a hook entry; hooks.json calls it (internal)",

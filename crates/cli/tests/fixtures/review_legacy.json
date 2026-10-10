@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "branch": "feature",
+  "diff_sha": "7a5c56e4fd64c9c583b3c647b4eb12ea0fa690e7",
+  "base_branch": "main",
+  "reviewed_at": "2026-10-09T15:21:06Z",
+  "reviewers": [
+    "toolu-review:review"
+  ],
+  "findings_count": 0,
+  "findings": [],
+  "review_round": 1,
+  "reviewed_files": [
+    "feature.txt"
+  ]
+}

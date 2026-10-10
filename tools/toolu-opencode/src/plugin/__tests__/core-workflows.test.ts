@@ -17,6 +17,7 @@ import {
   FAILING_NAME,
   FAILING_TEST,
   GENERATED,
+  NATIVE_BIN,
   PASSING_TEST,
   debugTestfailCommand,
   reviewProject,
@@ -60,10 +61,10 @@ test.concurrent("the review skill's write-state command is what lets a blocked p
     expect(await refusal(hooks, push)).toContain("Code review required before push");
     expect(remoteHead(sb, remote, BRANCH)).toBe("");
 
-    expect((await bash(hooks, sb, writeStateCommand(1))).exitCode).toBe(0);
+    expect((await bash(hooks, sb, writeStateCommand(1), NATIVE_BIN)).exitCode).toBe(0);
     expect(await refusal(hooks, push)).toContain("Code review has open findings (1)");
 
-    const written = await bash(hooks, sb, writeStateCommand(0));
+    const written = await bash(hooks, sb, writeStateCommand(0), NATIVE_BIN);
     expect(written).toMatchObject({ exitCode: 0 });
     const state: unknown = JSON.parse(sb.read(".opencode/tmp/push-review/feat_review.json"));
     expect(state).toMatchObject({

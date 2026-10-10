@@ -269,9 +269,9 @@ test("generated review skill labels its OpenCode config example", () => {
   const plan = planSurface({ repoRoot: root, outDir: out, plugins: selected.plugins });
   const skill = plan.files.get(join(out, "skills/toolu-review-review/SKILL.md"));
   expect(skill).toContain("# OpenCode\n");
-  expect(skill).toContain("/opencode}/toolu-review/write-state.sh");
+  expect(skill).toContain("toolu review write-state --findings-count 0");
   expect(skill).toContain("TOOLU_HOST_OVERRIDE=opencode");
-  expect(skill).not.toContain("${CLAUDE_CONFIG_DIR:-$HOME/.claude}");
+  expect(skill).not.toContain("write-state.sh");
 });
 
 test("generated status skill runs the selected plugin's report under shell.env", () => {

@@ -2,7 +2,7 @@
 
 # `toolu review`
 
-Pre-push code review that mirrors the CI review bot.
+Pre-push code review state for the native push-review gate.
 
 Owner: `plugins/toolu-review`.
 Alias: `toolu-review`.
@@ -10,13 +10,13 @@ Alias: `toolu-review`.
 ## `toolu review`
 
 ```text
-Pre-push code review that mirrors the CI review bot
+Pre-push code review state for the native push-review gate
 
 Usage: toolu review [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#432): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  write-state  Record a review of the committed branch diff
+  help         Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -26,17 +26,23 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu review planned`
+## `toolu review write-state`
 
 ```text
-Not ported yet (#432): show the planned verbs
+Record a review of the committed branch diff
 
-Usage: toolu review planned [OPTIONS]
+Usage: toolu review write-state [OPTIONS] --findings-count <VALUE>
 
 Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --findings-count <VALUE>  Number of open findings (zero for a clean review)
+      --json                    Print exactly one JSON document on stdout
+  -q, --quiet                   Drop the diagnostics of a successful run
+      --reviewers <VALUE>       JSON list of reviewers; defaults to toolu-review:review
+      --findings <VALUE>        JSON list of findings; defaults to []
+      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
+      --repo <VALUE>            Repository or worktree to review; defaults to the current directory
+      --branch <VALUE>          Target branch for a detached worktree
+      --reviewed-files <VALUE>  Comma-separated reviewed paths instead of the Git diff
+  -h, --help                    Print help
 ```

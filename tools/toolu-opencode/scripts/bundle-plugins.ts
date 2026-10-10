@@ -35,6 +35,9 @@ function stagePluginExtras(plugin: string, source: string, target: string): void
     // The one-line shim stays until #440. The hook publishes this path.
     copy(join(source, "scripts/jev.sh"), join(target, "scripts/jev.sh"));
   }
+  if (plugin === "toolu-review") {
+    copy(join(source, "scripts/write-state.sh"), join(target, "scripts/write-state.sh"));
+  }
   if (plugin === "toolu") {
     copyDirectory(
       join(source, "settings"),

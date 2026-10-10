@@ -11,6 +11,7 @@ import { gitProject } from "./workflow-fixtures.ts";
 
 export const BRANCH = "feat/review";
 export const GENERATED = join(REPO_ROOT, "tools/toolu-opencode/generated");
+export const NATIVE_BIN = join(REPO_ROOT, "target/debug");
 export const SELECTION = { version: 1, enabled: ["toolu", "toolu-review"] };
 export const FAILING_NAME = "adds two numbers";
 export const FAILING_TEST = `import { expect, test } from "bun:test";\n\ntest("${FAILING_NAME}", () => {\n  expect(1 + 1).toBe(3);\n});\n`;

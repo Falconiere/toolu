@@ -26,7 +26,7 @@ const MODULES = {
 const HELPERS = {
   "jev/jev.sh": "jev/scripts/jev.sh",
   "statusline/statusline.sh": "statusline/hooks/dist/statusline.js",
-  "toolu-review/write-state.sh": "toolu-review/hooks/dist/write-state.js",
+  "toolu-review/write-state.sh": "toolu-review/scripts/write-state.sh",
 };
 
 const CATALOG = (listPluginManifests(PLUGINS_ROOT) ?? []).map((plugin) => plugin.name).toSorted();
