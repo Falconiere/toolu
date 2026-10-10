@@ -223,31 +223,3 @@ export function checkRelease(
     "npm-publish.yml prereleases must leave the latest dist-tag untouched",
   );
 }
-
-export function checkReviewRefresh(refresh: ObjectMap, errors: string[]): void {
-  const events = object(refresh.on);
-  for (const [event, type] of [
-    ["pull_request", "labeled"],
-    ["pull_request_review", "submitted"],
-    ["pull_request_review_comment", "created"],
-  ] as const) {
-    need(
-      errors,
-      array(at(events, event, "types")).includes(type),
-      `merge-gate.yml lacks ${event}:${type}`,
-    );
-  }
-  need(
-    errors,
-    includes(
-      at(refresh, "jobs", "merge-gate", "if"),
-      "github.event.pull_request.head.ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository",
-    ),
-    "merge-gate.yml must keep fork guard",
-  );
-  need(
-    errors,
-    steps(at(refresh, "jobs", "merge-gate")).some((step) => includes(step.uses, "merge-gate@v8")),
-    "merge-gate.yml must run merge-gate action",
-  );
-}

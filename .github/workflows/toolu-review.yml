@@ -87,14 +87,3 @@ jobs:
           # github-actions[bot].
           APP_ID: ${{ secrets.APP_ID }}
           APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
-
-  merge-gate:
-    needs: review
-    if: ${{ !cancelled() && !github.event.pull_request.draft && (github.head_ref != 'release-please--branches--main--components--toolu' || github.event.pull_request.head.repo.full_name != github.repository) }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: read
-      pull-requests: read
-    steps:
-      - uses: falconiere/toolu-ghactions/merge-gate@v8

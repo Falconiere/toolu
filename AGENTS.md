@@ -58,8 +58,7 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 | `release-native.yml` / `release-finalize.yml` | called by release-please or native dry-run dispatch | Four native archives, minisign-signed checksums, SPDX SBOM, provenance, OS smoke checks, then publish the draft |
 | `release-homebrew.yml` | called by release-please after the native release | `cargo xtask homebrew-formula` from the release `SHA256SUMS`, pushed to `Falconiere/homebrew-tap` with a tap-scoped App token; skipped for a tag containing `-` |
 | `advisory-audit.yml` | weekly schedule or manual | `cargo deny check advisories` against the latest stable tag |
-| `toolu-review.yml` | PR opened/synchronize. No workflow-level path filter | `changes`, then `review` (required) with Rust prompt and Jev, followed by `merge-gate`; a same-repo generated Release PR is exempt |
-| `merge-gate.yml` | PR label or review activity | Refreshes `merge-gate` after a reply or `merge-approved` label without a push |
+| `toolu-review.yml` | PR opened/synchronize. No workflow-level path filter | `changes`, then `review` (required) with Rust prompt and Jev; a same-repo generated Release PR is exempt |
 | `fuzz.yml` | daily schedule, or a manual run | Each `toolu-shell` fuzz target for 30 minutes (#416); failing inputs are uploaded as artifacts |
 
 Path groups live in `.github/ci-paths.json` (#458). A `changes` job runs `tooling/src/ci-changes.ts`, which turns on the groups the diff touches:
