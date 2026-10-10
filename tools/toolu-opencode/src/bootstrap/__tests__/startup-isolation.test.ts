@@ -13,9 +13,21 @@ import { bootstrapRuntime } from "../runtime.ts";
 import type { BootstrapResult } from "../result.ts";
 import { PLUGINS_ROOT, REPO_ROOT, tempRoot } from "./fixtures.ts";
 
-const AST_GREP_MODULES: Record<string, string> = {
-  "pre-tools.d/ast-grep@toolu__search-nudge.js": "ast-grep/hooks/dist/search-nudge.js",
-  "post-tools.d/ast-grep@toolu__byte-savings.js": "ast-grep/hooks/dist/byte-savings.js",
+const AST_GREP_MODULES = {
+  "pre-tools.d/ast-grep@toolu__search-nudge.json": {
+    version: 1,
+    spec: "ast-grep@toolu",
+    name: "search-nudge",
+    event: "tool/pre",
+    matcher: "Grep|Bash|Shell",
+  },
+  "post-tools.d/ast-grep@toolu__byte-savings.json": {
+    version: 1,
+    spec: "ast-grep@toolu",
+    name: "byte-savings",
+    event: "tool/post",
+    matcher: "Read|Grep|Glob|Bash|Shell",
+  },
 };
 
 function start(
@@ -60,9 +72,8 @@ test("under one TOOLU_CONFIG_DIR, a later project cannot prune an earlier one's 
   const dataA = opencodeDataRoot({ projectRoot: a, env });
   const dataB = opencodeDataRoot({ projectRoot: b, env });
   expect(dataA).not.toBe(dataB);
-  for (const [file, bundle] of Object.entries(AST_GREP_MODULES)) {
-    const bytes = readFileSync(join(dataA, "toolu", file));
-    expect(bytes.equals(readFileSync(join(PLUGINS_ROOT, bundle)))).toBe(true);
+  for (const [file, expected] of Object.entries(AST_GREP_MODULES)) {
+    expect(JSON.parse(readFileSync(join(dataA, "toolu", file), "utf8"))).toEqual(expected);
   }
   expect(modules(dataB).filter((file) => file.includes("ast-grep@toolu__"))).toEqual([]);
   expect(readdirSync(join(root.path, "shared"))).toEqual(["toolu"]);

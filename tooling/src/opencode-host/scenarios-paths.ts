@@ -40,8 +40,8 @@ const SELECTION = ".opencode/toolu/plugins.json";
 const GATE = ".opencode/tmp/quality-gate-status.json";
 const GATE_BYTES = JSON.stringify({ status: "failing", reason: "main checkout is failing" });
 const AST_GREP_MODULES = [
-  "pre-tools.d/ast-grep@toolu__search-nudge.js",
-  "post-tools.d/ast-grep@toolu__byte-savings.js",
+  "pre-tools.d/ast-grep@toolu__search-nudge.json",
+  "post-tools.d/ast-grep@toolu__byte-savings.json",
 ];
 
 function selection(names: readonly string[]): string {

@@ -48,12 +48,14 @@ function reasonOf(result: BootstrapResult): string {
 test.concurrent("a partial registration is NotReady even though its other module was written", async () => {
   using root = tempRoot("toolu-ready-partial-");
   const astGrep = copiedPlugin(root.path, "ast-grep");
-  rmSync(join(astGrep.pluginDir, "hooks/dist/byte-savings.js"));
+  const blocked = join(root.path, "data/toolu/post-tools.d/ast-grep@toolu__byte-savings.json");
+  mkdirSync(join(root.path, "data/toolu/post-tools.d"), { recursive: true });
+  mkdirSync(blocked);
   const reason = reasonOf(await boot(root.path, [astGrep]));
-  const target = join(root.path, "data/toolu/post-tools.d/ast-grep@toolu__byte-savings.js");
-  expect(reason).toStartWith(`ast-grep/register: ${target}: bundle unreadable`);
+  expect(reason).toContain("ast-grep/register:");
+  expect(reason).toContain("Is a directory");
   expect(
-    existsSync(join(root.path, "data/toolu/pre-tools.d/ast-grep@toolu__search-nudge.js")),
+    existsSync(join(root.path, "data/toolu/pre-tools.d/ast-grep@toolu__search-nudge.json")),
   ).toBe(true);
 });
 

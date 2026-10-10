@@ -1,6 +1,6 @@
 //! `SessionStart` manifest registration for the two compiled ast-grep rules.
 
-use std::fs;
+use std::fs::{self, OpenOptions};
 use std::io::{ErrorKind, Write as _};
 use std::path::Path;
 
@@ -52,13 +52,15 @@ fn write_one(
     matcher: matcher.to_owned(),
   };
   let body = serde_json::to_vec(&manifest).map_err(|error| error.to_string())?;
+  let mut body = body;
+  body.push(b'\n');
+  if fs::read(dir.join(&file)).is_ok_and(|existing| existing == body) {
+    return remove_old(&dir, name);
+  }
   let mut temporary =
     tempfile::NamedTempFile::new_in(&dir).map_err(|error| format!("{}: {error}", dir.display()))?;
   temporary
     .write_all(&body)
-    .map_err(|error| error.to_string())?;
-  temporary
-    .write_all(b"\n")
     .map_err(|error| error.to_string())?;
   temporary
     .persist(dir.join(file))
@@ -66,12 +68,42 @@ fn write_one(
   remove_old(&dir, name)
 }
 
+fn report_one(
+  env: &Env,
+  roots: &Roots,
+  event: RegistryEvent,
+  name: &str,
+  matcher: &str,
+) -> Result<(), String> {
+  let Some(report) = env.get("TOOLU_STARTUP_REPORT") else {
+    return Ok(());
+  };
+  let file = file_name(SPEC, name, ModuleKind::Manifest).map_err(|error| error.0)?;
+  let target = event_dir(roots, event).join(file);
+  let record = serde_json::json!({
+    "kind": "native-registry",
+    "spec": SPEC,
+    "name": name,
+    "event": event,
+    "matcher": matcher,
+    "target": target,
+  });
+  let mut output = OpenOptions::new()
+    .append(true)
+    .open(report)
+    .map_err(|error| format!("cannot open startup report {report}: {error}"))?;
+  writeln!(output, "{record}")
+    .map_err(|error| format!("cannot write startup report {report}: {error}"))
+}
+
 /// Write native manifests and remove this plugin's old JS and shell modules.
 pub fn register(env: &Env, host: Host) -> Outcome {
   let roots = Roots::new(env.clone(), Some(host));
   let mut migrated = false;
   for &(event, name, matcher) in RULES {
-    match write_one(&roots, event, name, matcher) {
+    let result = write_one(&roots, event, name, matcher)
+      .and_then(|removed| report_one(env, &roots, event, name, matcher).map(|()| removed));
+    match result {
       Ok(removed) => migrated |= removed,
       Err(error) => return Outcome::failed(Exit::Failure, error),
     }

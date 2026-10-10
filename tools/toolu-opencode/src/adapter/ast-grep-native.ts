@@ -51,18 +51,15 @@ export async function astGrepRule(
       stderr: `ast-grep native rule could not start: ${String(error)}`,
     };
   }
-  let timedOut = false;
-  const timer = setTimeout(() => {
-    timedOut = true;
-    proc.kill();
-  }, TIMEOUT_MS);
+  const deadline = performance.now() + TIMEOUT_MS;
+  const timer = setTimeout(() => proc.kill(), TIMEOUT_MS);
   try {
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(proc.stdout).text(),
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
-    return timedOut
+    return performance.now() >= deadline
       ? { exitCode: 1, stdout: "", stderr: `ast-grep native rule timed out after ${TIMEOUT_MS} ms` }
       : { exitCode, stdout, stderr };
   } finally {

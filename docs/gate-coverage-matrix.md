@@ -10,8 +10,7 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
-| `ast-grep:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
-| `ast-grep:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #268/done | bun-bundle | no | — |
+| `ast-grep:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #429/done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #269/done | bun-bundle | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:engine-ensure.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #434/done | bun-bundle | no | — |

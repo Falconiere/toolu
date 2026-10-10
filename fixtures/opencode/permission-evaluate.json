@@ -366,12 +366,12 @@
       }
     },
     {
-      "name": "#276: bundled ast-grep registry runs from isolated OpenCode root without bash",
+      "name": "#429: native ast-grep registry runs from isolated OpenCode root without bash",
       "kind": "evaluate-registry",
       "plugins": ["toolu", "ast-grep"],
       "pathTools": ["git", "bun"],
       "command": "rg TODO src",
-      "artifactSuffix": "ast-grep@toolu__search-nudge.js",
+      "artifactSuffix": "ast-grep@toolu__search-nudge.json",
       "advisoryContains": "grep/rg in Bash detected",
       "expected": {
         "effect": "allow"

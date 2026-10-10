@@ -20,7 +20,7 @@ const LEDGER_DIR = ".opencode/toolu/state/toolu/byte-savings";
 /** An earlier session's ledger, older and sorted first: the report must skip it. */
 const OLD_LEDGER = "aaa-earlier-session.jsonl";
 const REPORT_CLI =
-  'bun "$TOOLU_PLUGIN_ROOT_AST_GREP/hooks/dist/byte-savings-report.js" "$(ls -t "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl | head -n 1)"';
+  'toolu ast-grep savings "$(ls -t "$TOOLU_CONFIG_DIR"/toolu/byte-savings/*.jsonl | head -n 1)"';
 
 function bash(command: string) {
   return { tool: "bash", args: { command, description: "ast-grep smoke" } };

@@ -44,3 +44,30 @@ fn register_replaces_stale_module_with_migration_hint_once() {
   );
   assert!(register(&env, Host::Claude).stdout.is_none());
 }
+
+#[test]
+fn register_reports_native_manifests_to_startup_verifier() {
+  let dir = tempfile::tempdir().expect("config root");
+  let report = dir.path().join("startup.jsonl");
+  std::fs::write(&report, "").expect("report");
+  let env = Env::from_pairs([
+    ("TOOLU_CONFIG_DIR", dir.path().display().to_string()),
+    ("TOOLU_STARTUP_REPORT", report.display().to_string()),
+  ]);
+  assert_eq!(register(&env, Host::Opencode).exit.code(), 0);
+  let lines = std::fs::read_to_string(&report).expect("report lines");
+  let records: Vec<serde_json::Value> = lines
+    .lines()
+    .map(|line| serde_json::from_str(line).expect("record JSON"))
+    .collect();
+  assert_eq!(records.len(), 2);
+  assert_eq!(records[0]["kind"], "native-registry");
+  assert_eq!(records[0]["name"], "search-nudge");
+  assert_eq!(records[0]["event"], "tool/pre");
+  assert_eq!(records[1]["name"], "byte-savings");
+  assert_eq!(records[1]["event"], "tool/post");
+  for record in records {
+    let path = record["target"].as_str().expect("target");
+    assert!(std::path::Path::new(path).is_file());
+  }
+}

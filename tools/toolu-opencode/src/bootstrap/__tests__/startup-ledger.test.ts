@@ -51,7 +51,7 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
   writeFileSync(unrelated, "export default {};\n");
   await start(root.path, ["toolu", "ast-grep", "jev"]);
   expect(readdirSync(join(data, "toolu/pre-tools.d")).toSorted()).toEqual([
-    "ast-grep@toolu__search-nudge.js",
+    "ast-grep@toolu__search-nudge.json",
     "custom@local__extra.js",
   ]);
   const helper = join(data, "jev/jev.sh");
@@ -70,7 +70,7 @@ test.concurrent("deselected plugins lose their modules and helpers; other files 
   expect(existsSync(helper)).toBe(false);
   expect(second.diagnostics).toContain(`jev: removed helper ${helper}`);
   expect(second.diagnostics).toContain(
-    `ast-grep: removed module ${join(data, "toolu/post-tools.d/ast-grep@toolu__byte-savings.js")}`,
+    `ast-grep: removed module ${join(data, "toolu/post-tools.d/ast-grep@toolu__byte-savings.json")}`,
   );
   expect(ledger(root.path)).toEqual({ version: 1, plugins: {} });
 });
@@ -196,7 +196,7 @@ test.concurrent("only regular files under a deselected prefix are removed", asyn
   await start(root.path, ["toolu", "ast-grep"]);
   const dir = join(root.path, "data/toolu/pre-tools.d");
   symlinkSync(
-    join(PLUGINS_ROOT, "ast-grep/hooks/dist/search-nudge.js"),
+    join(PLUGINS_ROOT, "ast-grep/hooks/hooks.json"),
     join(dir, "ast-grep@toolu__linked.js"),
   );
   mkdirSync(join(dir, "ast-grep@toolu__dir.js"));

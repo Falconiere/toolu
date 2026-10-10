@@ -25,7 +25,7 @@ test.concurrent("every catalog SessionStart launcher is an entry, in file order"
   expect(entryNames("ts-quality")).toEqual(["register", "check-toolu"]);
   expect(entryNames("python-quality")).toEqual(["register", "check-toolu"]);
   expect(entryNames("rust-quality")).toEqual(["register", "check-toolu"]);
-  expect(entryNames("ast-grep")).toEqual(["register", "check-binary"]);
+  expect(entryNames("ast-grep")).toEqual(["register"]);
   expect(entryNames("toolu")).toEqual(["session-start", "check-binary"]);
   expect(entryNames("epic-orchestrator")).toEqual(["check-deps", "check-binary", "engine-ensure"]);
   expect(entryNames("brainstorm")).toEqual([]);

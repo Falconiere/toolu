@@ -1,13 +1,15 @@
 /**
  * AC-1 (#258): every PreToolUse fixture, rendered as Claude Code and as Codex
- * deliver it, receives the expected decision from the committed bundle.
+ * deliver it, receives the expected decision from the committed dispatcher or
+ * the compiled ast-grep rule after its native registration.
  * Captured Bash output for ported gates is replayed by the A, B and C golden
  * suites; this corpus also exercises registry and dispatcher-only cases.
  */
 import { expect, test } from "bun:test";
-import { implementationTag } from "@toolu/conformance/harness/entry-command";
+import { builtTooluBinary, implementationTag } from "@toolu/conformance/harness/entry-command";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
+import { run } from "@toolu/conformance/harness/spawn";
 import {
   PRETOOL_CORPUS,
   prepare,
@@ -58,7 +60,19 @@ for (const fixture of PRETOOL_CORPUS) {
         );
         return;
       }
-      const bundle = await runBundle(call);
+      const bundle = fixture.name.startsWith("ast-grep registry:")
+        ? await run(
+            [
+              builtTooluBinary() ?? "target/debug/toolu",
+              "ast-grep",
+              "hook",
+              "pre-tools",
+              "--event",
+              "PreToolUse",
+            ],
+            call,
+          )
+        : await runBundle(call);
       expect(outcomeOf(bundle.stdout, bundle.exitCode)).toBe(
         fixture.expect[host] ?? fixture.expect.claude,
       );

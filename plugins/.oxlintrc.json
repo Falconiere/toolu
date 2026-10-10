@@ -69,9 +69,6 @@
     ]
   },
   "overrides": [
-    {"files":["ast-grep/hooks/src/byte-savings.ts"],"rules":{"import/no-default-export":"off","typescript/prefer-nullish-coalescing":"off"}},
-    {"files":["ast-grep/hooks/src/lib/jq-text.ts"],"rules":{"typescript/no-unnecessary-condition":"off"}},
-    {"files":["ast-grep/hooks/src/search-nudge.ts"],"rules":{"import/no-default-export":"off"}},
     {"files":["epic-orchestrator/scripts/admission.ts"],"rules":{"import/no-duplicates":"off","max-lines-per-function":"off"}},
     {"files":["epic-orchestrator/scripts/checkouts.ts"],"rules":{"typescript/consistent-type-assertions":"off","typescript/no-unsafe-type-assertion":"off","typescript/prefer-optional-chain":"off"}},
     {"files":["epic-orchestrator/scripts/checkpoint.ts"],"rules":{"import/no-duplicates":"off","max-lines":"off","max-lines-per-function":"off","no-await-in-loop":"off"}},

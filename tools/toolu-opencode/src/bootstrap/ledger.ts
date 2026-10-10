@@ -199,7 +199,7 @@ function isRegularFile(path: string): boolean {
 function moduleFiles(dir: string, spec: string): string[] {
   try {
     return readdirSync(dir)
-      .filter((name) => name.startsWith(`${spec}__`) && /\.(?:js|sh)$/u.test(name))
+      .filter((name) => name.startsWith(`${spec}__`) && /\.(?:js|sh|json)$/u.test(name))
       .map((name) => join(dir, name));
   } catch {
     return [];
