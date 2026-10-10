@@ -58,7 +58,7 @@ export async function astGrepRule(
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  return proc.killed
+  return proc.signalCode === "SIGKILL"
     ? { exitCode: 1, stdout: "", stderr: `ast-grep native rule timed out after ${TIMEOUT_MS} ms` }
     : { exitCode, stdout, stderr };
 }
