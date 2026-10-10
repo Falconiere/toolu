@@ -54,8 +54,8 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
       "crates/cli (toolu-cli) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/epic-orchestrator (toolu-epic-orchestrator) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/toolu (toolu-hub) depends on serde_json: only toolu-http may link a `json` crate",
-      "crates/toolu-review (toolu-review) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/ast-grep (toolu-ast-grep) depends on serde_json: only toolu-http may link a `json` crate",
+      "crates/toolu-review (toolu-review) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/xtask (xtask) depends on serde_json: only toolu-http may link a `json` crate",
     ]
   );
