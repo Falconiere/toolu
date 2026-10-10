@@ -3,7 +3,7 @@ import { expect, test } from "bun:test";
 import { mkdir, mkdtemp, symlink, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { builtTooluBinary } from "@toolu/conformance/harness/entry-command";
+import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { readCaseFile } from "@toolu/conformance/harness/json-cases";
 import { z } from "zod";
 import { FOREIGN_HOST_VARS } from "../../host/runtime-env.ts";
@@ -177,7 +177,7 @@ for (const raw of cases) {
       const env = {
         PATH: await toolPath(c.pathTools),
         TOOLU_HOST_OVERRIDE: "opencode",
-        TOOLU_BIN: builtTooluBinary() ?? join(root, "target/debug/toolu"),
+        TOOLU_BIN: requiredBuiltTooluBinary(),
       };
       const boot = await bootstrapRuntime({
         repoRoot: packageRoot,

@@ -15,6 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { delimiter, join } from "node:path";
+import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { z } from "zod";
 import { definedEnv, tooluProcessEnv } from "../../host/runtime-env.ts";
 import { createToolAdviceStore } from "../tool-advice.ts";
@@ -70,7 +71,7 @@ export function registerAstGrep(root: string, dataRoot: string): void {
     repoRoot: REPO_ROOT,
   });
   const res = spawnSync(
-    env.TOOLU_BIN ?? "toolu",
+    env.TOOLU_BIN ?? requiredBuiltTooluBinary(),
     [
       "ast-grep",
       "hook",
