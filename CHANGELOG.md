@@ -6,6 +6,46 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.0.0](https://github.com/Falconiere/toolu/compare/v7.11.0...v8.0.0) (2026-10-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove deprecated standalone plugins ([#474](https://github.com/Falconiere/toolu/issues/474))
+
+### Features
+
+* **ast-grep:** port rules and CLI to Rust ([#508](https://github.com/Falconiere/toolu/issues/508)) ([e483c03](https://github.com/Falconiere/toolu/commit/e483c03d0920ee6535fb681725925fd8fe63f9e7))
+* **benchmarks:** hook resource benchmark and budget gate ([#475](https://github.com/Falconiere/toolu/issues/475)) ([bd47c5d](https://github.com/Falconiere/toolu/commit/bd47c5d40e795527242f61891dbaf4de9e15433a))
+* **ci:** add Rust workspace and native release workflows ([#485](https://github.com/Falconiere/toolu/issues/485)) ([20bea32](https://github.com/Falconiere/toolu/commit/20bea32ec6f1b598923bdae53a0aa206f891ac2f))
+* **cli:** make native toolu reachable in agent shells ([#483](https://github.com/Falconiere/toolu/issues/483)) ([34541e7](https://github.com/Falconiere/toolu/commit/34541e785fe0838deae0477ec7898adb6d453cd2))
+* **cli:** the toolu CLI contract, one binary with a namespace per plugin ([#442](https://github.com/Falconiere/toolu/issues/442)) ([#478](https://github.com/Falconiere/toolu/issues/478)) ([ae61ce5](https://github.com/Falconiere/toolu/commit/ae61ce5de171db5d1111d138389208985137542e))
+* **core:** shared GitHub and Jev clients; cross-plugin traits wired by crates/cli ([#460](https://github.com/Falconiere/toolu/issues/460)) ([#493](https://github.com/Falconiere/toolu/issues/493)) ([b333b9f](https://github.com/Falconiere/toolu/commit/b333b9f7a92f25ece66fd7a6a19786cb44388ff7))
+* **engine:** plan ledger, verdict and push waivers in Rust ([#495](https://github.com/Falconiere/toolu/issues/495)) ([893de9c](https://github.com/Falconiere/toolu/commit/893de9c790fbed7e7296dc41f33be4ea99d55022))
+* **engine:** port pre-tool gates A to Rust ([#496](https://github.com/Falconiere/toolu/issues/496)) ([6a0113b](https://github.com/Falconiere/toolu/commit/6a0113b3b93a09cd481f6104e4e981d4e4b675c2))
+* **engine:** port pre-tool gates B to Rust ([#420](https://github.com/Falconiere/toolu/issues/420)) ([#498](https://github.com/Falconiere/toolu/issues/498)) ([d7347f3](https://github.com/Falconiere/toolu/commit/d7347f390989a4402d36677d15f82c3b5778d312))
+* **engine:** port pre-tool gates C to Rust ([#422](https://github.com/Falconiere/toolu/issues/422)) ([#501](https://github.com/Falconiere/toolu/issues/501)) ([219dd3e](https://github.com/Falconiere/toolu/commit/219dd3e3f059d8de8a5f893b333c02606b57658b))
+* **engine:** post-tool gates gate-status and push-waiver in Rust ([#423](https://github.com/Falconiere/toolu/issues/423)) ([#494](https://github.com/Falconiere/toolu/issues/494)) ([9879e7a](https://github.com/Falconiere/toolu/commit/9879e7a4fd91867816399f11ca4be883ccb645bc))
+* **engine:** registry runner and dispatch in Rust ([#418](https://github.com/Falconiere/toolu/issues/418)) ([#492](https://github.com/Falconiere/toolu/issues/492)) ([35a9f06](https://github.com/Falconiere/toolu/commit/35a9f06edd04fd9aacab775ec8f26176364bbb64))
+* **engine:** share post-edit quality runner ([#506](https://github.com/Falconiere/toolu/issues/506)) ([7f2153f](https://github.com/Falconiere/toolu/commit/7f2153ff2d8fbe297862f4623f2f695f918c905a))
+* **epic:** add engine config and secret storage ([#488](https://github.com/Falconiere/toolu/issues/488)) ([d24ee44](https://github.com/Falconiere/toolu/commit/d24ee44c491a1a32f84d156f8bcec9c00269c6cb))
+* **epic:** follow herdr events instead of polling ([#502](https://github.com/Falconiere/toolu/issues/502)) ([96629e7](https://github.com/Falconiere/toolu/commit/96629e77067e5eeb19c64114f28b2d0be5e4b0a5))
+* **epic:** resident engine, journal and crash recovery ([#500](https://github.com/Falconiere/toolu/issues/500)) ([edc0cab](https://github.com/Falconiere/toolu/commit/edc0cab474cde94835fc32fabe0bf5a410bdd084))
+* **fixtures:** share language-neutral parity cases for Rust ports ([#479](https://github.com/Falconiere/toolu/issues/479)) ([0f9776d](https://github.com/Falconiere/toolu/commit/0f9776d04b1fc2a4c715752404b01d7dc79cb6db))
+* **http:** add small HTTPS client ([#489](https://github.com/Falconiere/toolu/issues/489)) ([0e1cd41](https://github.com/Falconiere/toolu/commit/0e1cd415f831737c54b8cc3b0b371778592c05d9))
+* **install:** verified curl installer and Homebrew tap for the native toolu binary ([#491](https://github.com/Falconiere/toolu/issues/491)) ([62db8c4](https://github.com/Falconiere/toolu/commit/62db8c4346fc3ee567dc82647ba7d5603b4c3119))
+* **jev:** native toolu jev namespace and hooks ([#504](https://github.com/Falconiere/toolu/issues/504)) ([a7a4d05](https://github.com/Falconiere/toolu/commit/a7a4d05312ac9474a022885114cca6db52741cd4))
+* **launcher:** native hook launcher finds the installed toolu ([#412](https://github.com/Falconiere/toolu/issues/412)) ([#476](https://github.com/Falconiere/toolu/issues/476)) ([1822d65](https://github.com/Falconiere/toolu/commit/1822d65605c8fc697232d5be45d44845b028a36d))
+* **opencode:** accept native lifecycle launchers ([#481](https://github.com/Falconiere/toolu/issues/481)) ([4d735a5](https://github.com/Falconiere/toolu/commit/4d735a59315fc3f4478d3cd27be7f60d44e3dbca))
+* **protocol:** host payloads, events, decisions and output encoders ([#413](https://github.com/Falconiere/toolu/issues/413)) ([#482](https://github.com/Falconiere/toolu/issues/482)) ([21a01a8](https://github.com/Falconiere/toolu/commit/21a01a841935df2f3fe209a1551d63737af971d1))
+* remove deprecated standalone plugins ([#474](https://github.com/Falconiere/toolu/issues/474)) ([e7bc646](https://github.com/Falconiere/toolu/commit/e7bc646fe0e7850cdf8ac09ff2d3e2ff45d51c8e))
+* **review:** port toolu-review to Rust ([#507](https://github.com/Falconiere/toolu/issues/507)) ([316300c](https://github.com/Falconiere/toolu/commit/316300ca3badc524be65918ade297f3c5da1841f))
+* **runtime:** host roots, config, settings, process, startup publish, registry types ([#414](https://github.com/Falconiere/toolu/issues/414)) ([#484](https://github.com/Falconiere/toolu/issues/484)) ([78a059c](https://github.com/Falconiere/toolu/commit/78a059c90a1777047773412ecd169f8950d28aba))
+* **shell:** Bash/Shell command analysis in Rust ([#416](https://github.com/Falconiere/toolu/issues/416)) ([#490](https://github.com/Falconiere/toolu/issues/490)) ([eda82dc](https://github.com/Falconiere/toolu/commit/eda82dcfe4789aa301dfb343a0c702f86b91009a))
+* **state:** gate file, telemetry, edit records and git facts without spawning git ([#415](https://github.com/Falconiere/toolu/issues/415)) ([#486](https://github.com/Falconiere/toolu/issues/486)) ([c1aa2d5](https://github.com/Falconiere/toolu/commit/c1aa2d511b02edac12130cc8e47376d75027c4ab))
+* **toolu:** doctor, config, status and setup agents ([#445](https://github.com/Falconiere/toolu/issues/445)) ([#497](https://github.com/Falconiere/toolu/issues/497)) ([6728ac9](https://github.com/Falconiere/toolu/commit/6728ac92329d595d4c557674230b2a724023f358))
+* **xtask:** Markdown–CLI drift gate, cargo xtask check-markdown-cli ([#444](https://github.com/Falconiere/toolu/issues/444)) ([#480](https://github.com/Falconiere/toolu/issues/480)) ([0755be2](https://github.com/Falconiere/toolu/commit/0755be25f12c2269a42aa493cad126c4a31671aa))
+
 ## [7.11.0](https://github.com/Falconiere/toolu/compare/v7.10.0...v7.11.0) (2026-10-05)
 
 
