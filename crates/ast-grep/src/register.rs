@@ -92,7 +92,10 @@ fn report_one(
     .append(true)
     .open(report)
     .map_err(|error| format!("cannot open startup report {report}: {error}"))?;
-  writeln!(output, "{record}")
+  let mut line = record.to_string().into_bytes();
+  line.push(b'\n');
+  output
+    .write_all(&line)
     .map_err(|error| format!("cannot write startup report {report}: {error}"))
 }
 
