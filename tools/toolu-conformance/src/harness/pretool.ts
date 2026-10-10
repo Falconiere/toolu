@@ -5,7 +5,7 @@
  */
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { builtTooluBinary, launchedArgv } from "./entry-command.ts";
+import { launchedArgv, requiredBuiltTooluBinary } from "./entry-command.ts";
 import type { Sandbox } from "./sandbox.ts";
 import { hostEnv, run, type EnvPatch, type RunResult } from "./spawn.ts";
 
@@ -59,7 +59,7 @@ export async function registerPlugin(
   const argv =
     plugin === "ast-grep"
       ? [
-          builtTooluBinary() ?? join(REPO_ROOT, "target", "debug", "toolu"),
+          requiredBuiltTooluBinary(),
           "ast-grep",
           "hook",
           "register",

@@ -14,11 +14,21 @@ import {
   pluginName,
   pluginRoot,
   publishedArgv,
+  requiredBuiltTooluBinary,
   resolveEntryCommand,
 } from "../entry-command.ts";
 
 const SAMPLE = bundlePath(pluginRoot("toolu"), "sample");
 const ENTRY = { plugin: "toolu", entry: "pre-tools", bundle: SAMPLE };
+
+test("native hook binary resolution fails clearly before spawn", () => {
+  using sb = createSandbox();
+  expect(() => requiredBuiltTooluBinary(sb.project)).toThrow(
+    `toolu binary not found under ${join(sb.project, "target")}; build it first`,
+  );
+  const binary = sb.write("target/debug/toolu", "#!/bin/sh\nexit 0\n");
+  expect(requiredBuiltTooluBinary(sb.project)).toBe(binary);
+});
 
 test("unset selector executes the committed Bun bundle unchanged", async () => {
   const command = resolveEntryCommand(ENTRY, {});

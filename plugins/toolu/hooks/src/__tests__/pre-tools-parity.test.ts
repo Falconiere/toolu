@@ -6,7 +6,10 @@
  * suites; this corpus also exercises registry and dispatcher-only cases.
  */
 import { expect, test } from "bun:test";
-import { builtTooluBinary, implementationTag } from "@toolu/conformance/harness/entry-command";
+import {
+  implementationTag,
+  requiredBuiltTooluBinary,
+} from "@toolu/conformance/harness/entry-command";
 import { pretoolEnv, runBundle, type PretoolHost } from "@toolu/conformance/harness/pretool";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -62,14 +65,7 @@ for (const fixture of PRETOOL_CORPUS) {
       }
       const bundle = fixture.name.startsWith("ast-grep registry:")
         ? await run(
-            [
-              builtTooluBinary() ?? "target/debug/toolu",
-              "ast-grep",
-              "hook",
-              "pre-tools",
-              "--event",
-              "PreToolUse",
-            ],
+            [requiredBuiltTooluBinary(), "ast-grep", "hook", "pre-tools", "--event", "PreToolUse"],
             call,
           )
         : await runBundle(call);

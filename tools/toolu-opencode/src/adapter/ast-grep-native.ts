@@ -42,6 +42,8 @@ export async function astGrepRule(
         stdin: new Blob([JSON.stringify(payload)]),
         stdout: "pipe",
         stderr: "pipe",
+        timeout: TIMEOUT_MS,
+        killSignal: "SIGKILL",
       },
     );
   } catch (error) {
@@ -51,18 +53,12 @@ export async function astGrepRule(
       stderr: `ast-grep native rule could not start: ${String(error)}`,
     };
   }
-  const deadline = performance.now() + TIMEOUT_MS;
-  const timer = setTimeout(() => proc.kill(), TIMEOUT_MS);
-  try {
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-    return performance.now() >= deadline
-      ? { exitCode: 1, stdout: "", stderr: `ast-grep native rule timed out after ${TIMEOUT_MS} ms` }
-      : { exitCode, stdout, stderr };
-  } finally {
-    clearTimeout(timer);
-  }
+  const [stdout, stderr, exitCode] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  return proc.killed
+    ? { exitCode: 1, stdout: "", stderr: `ast-grep native rule timed out after ${TIMEOUT_MS} ms` }
+    : { exitCode, stdout, stderr };
 }
