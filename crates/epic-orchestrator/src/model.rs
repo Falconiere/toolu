@@ -3,6 +3,8 @@
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 use crate::journal::Record;
+use crate::watch::Watch;
+use toolu_github::RateLimit;
 
 /// What the engine asks the outside world to do.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -99,6 +101,10 @@ pub(crate) struct Issue {
   pub stage: String,
   /// Pull request, when reported.
   pub pr: Option<u64>,
+  /// Repository that owns this issue and its pull request.
+  pub repo: String,
+  /// Base branch reported by the last pull request probe.
+  pub base: String,
   /// Last note.
   pub note: String,
   /// Launch attempts.
@@ -145,6 +151,22 @@ pub(crate) enum Cycle {
 pub(crate) struct World {
   /// Issues by key.
   pub issues: BTreeMap<String, Issue>,
+  /// Registered epic references by epic key.
+  pub epic_refs: BTreeMap<String, String>,
+  /// GitHub checks and their saved deadlines.
+  pub watches: BTreeMap<String, Watch>,
+  /// All GitHub requests pause until this deadline after `retry-after`.
+  pub github_hold_until_ms: u64,
+  /// Latest REST primary budget from a GitHub response.
+  pub rest_rate: Option<RateLimit>,
+  /// Latest GraphQL primary points remaining.
+  pub graphql_remaining: Option<u64>,
+  /// GraphQL primary reset in Unix seconds.
+  pub graphql_reset_at: Option<u64>,
+  /// REST primary points recorded by this engine.
+  pub rest_points: u64,
+  /// GraphQL points recorded by babysit ticks.
+  pub graphql_points: u64,
   /// Judgment queue.
   pub attention: Vec<Attention>,
   /// Local counter for tokens and attention.
@@ -206,6 +228,14 @@ impl World {
   pub(crate) fn new(now_ms: u64) -> Self {
     Self {
       issues: BTreeMap::new(),
+      epic_refs: BTreeMap::new(),
+      watches: BTreeMap::new(),
+      github_hold_until_ms: 0,
+      rest_rate: None,
+      graphql_remaining: None,
+      graphql_reset_at: None,
+      rest_points: 0,
+      graphql_points: 0,
       attention: Vec::new(),
       seq: 0,
       paused_all: false,
@@ -227,6 +257,7 @@ impl World {
 }
 
 impl Issue {
+  /// An issue before its registered graph and worker status are overlaid.
   pub(crate) fn blank(key: &str, epic: &str, state_dir: &str, now_ms: u64) -> Self {
     Self {
       key: key.to_owned(),
@@ -235,6 +266,8 @@ impl Issue {
       phase: String::new(),
       stage: String::new(),
       pr: None,
+      repo: String::new(),
+      base: String::new(),
       note: String::new(),
       launches: 0,
       stall_nudged: false,
@@ -253,6 +286,7 @@ impl Issue {
   }
 }
 
+/// Start a journaled engine action.
 pub(crate) fn fresh(action: Action, token: String) -> Pending {
   Pending {
     action,

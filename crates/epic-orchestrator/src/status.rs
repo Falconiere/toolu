@@ -16,11 +16,22 @@ pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Valu
     "engine": if running { "running" } else { "down" },
     "paused": world.paused_all || !world.paused.is_empty(),
     "epics": epic_keys(&issues),
+    "github": {
+      "rest": {"rate": world.rest_rate, "points": world.rest_points},
+      "graphql": {
+        "remaining": world.graphql_remaining,
+        "resetAt": world.graphql_reset_at,
+        "points": world.graphql_points,
+      },
+      "holdUntil": world.github_hold_until_ms,
+      "effectsHeld": crate::github_budget::effects_held(world),
+    },
     "issues": issues.iter().map(|issue| json!({
       "key": issue.key,
       "epic": issue.epic,
       "phase": issue.phase,
       "stage": issue.stage,
+      "github": pr_times(world, issue),
     })).collect::<Vec<_>>(),
     "attention": world.attention.iter().filter(|item| !item.delivered).map(|item| json!({
       "kind": item.kind,
@@ -30,6 +41,17 @@ pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Valu
       "seq": item.seq,
     })).collect::<Vec<_>>(),
   })
+}
+
+fn pr_times(world: &World, issue: &Issue) -> Value {
+  let watch = world
+    .watches
+    .values()
+    .find(|watch| matches!(&watch.kind, crate::watch::Kind::Pr { key, .. } if key == &issue.key));
+  match watch {
+    Some(watch) => json!({"lastCheckAt": watch.last_at_ms, "nextCheckAt": watch.next_at_ms}),
+    None => Value::Null,
+  }
 }
 
 fn wanted(epic: Option<&str>, issue: &Issue) -> bool {

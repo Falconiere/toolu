@@ -1,12 +1,12 @@
 //! `Cost`: what a call spent of GitHub's rate limits, for the engine's budget
 //! and journal.
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use toolu_http::Response;
 
 /// The `x-ratelimit-*` headers of a response.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RateLimit {
   /// `x-ratelimit-resource`: `core`, `graphql`, …
   pub resource: Option<String>,
@@ -21,7 +21,8 @@ pub struct RateLimit {
 }
 
 impl RateLimit {
-  fn of(response: &Response) -> RateLimit {
+  /// Read the primary rate-limit counters from response headers.
+  pub(crate) fn of(response: &Response) -> RateLimit {
     let number = |name: &str| {
       response
         .header(name)

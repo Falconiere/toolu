@@ -5,6 +5,7 @@ use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::cli::{Ctx, Outcome};
 
+/// Shared babysit tick routing for the resident engine.
 pub mod babysit;
 mod checkpoint;
 mod client;
@@ -13,6 +14,9 @@ mod control;
 mod disk;
 mod dispatch;
 mod effects;
+mod github_budget;
+mod github_engine;
+mod github_probe;
 mod herdr;
 mod herdr_argv;
 mod job;
@@ -27,14 +31,17 @@ mod query;
 mod recover;
 mod schedule;
 mod server;
+mod server_snapshot;
 mod snapshot;
 mod socket;
+mod socket_deadline;
 mod source;
 mod source_apply;
 #[cfg(test)]
 mod source_fix;
 mod status;
 mod verbs;
+mod watch;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
 pub(crate) const PROTOCOL: u64 = 1;
@@ -52,8 +59,8 @@ pub fn command() -> Command {
 
 /// Run a `toolu epic` verb. `crates/cli` passes pr-babysit's tick; `babysit::next`
 /// turns a tick failure into attention (#433).
-pub fn run(matches: &ArgMatches, ctx: &Ctx, _tick: &dyn BabysitTick) -> Outcome {
-  verbs::run(matches, ctx)
+pub fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Outcome {
+  verbs::run(matches, ctx, tick)
 }
 
 #[cfg(test)]

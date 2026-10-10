@@ -157,6 +157,17 @@ fn mentions_rate_limit(response: &Response) -> bool {
     .contains("rate limit")
 }
 
+/// Whether GitHub named a secondary limit or primary points remain.
+pub(crate) fn secondary(response: &Response) -> bool {
+  response
+    .header("x-ratelimit-remaining")
+    .and_then(|value| value.parse::<u64>().ok())
+    .is_some_and(|remaining| remaining > 0)
+    || String::from_utf8_lossy(&response.body)
+      .to_ascii_lowercase()
+      .contains("secondary rate limit")
+}
+
 fn now() -> u64 {
   SystemTime::now()
     .duration_since(UNIX_EPOCH)

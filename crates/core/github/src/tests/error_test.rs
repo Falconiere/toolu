@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use crate::Error;
+use crate::RateLimit;
 use crate::error::decode;
 use crate::token::TokenError;
 
@@ -23,6 +24,8 @@ fn every_error_has_a_message() {
       Error::RateLimited {
         status: 403,
         retry_after: Some(Duration::from_secs(120)),
+        rate: RateLimit::default(),
+        secondary: false,
       },
       "GitHub rate limit (HTTP 403): retry in 120s",
     ),
@@ -30,6 +33,8 @@ fn every_error_has_a_message() {
       Error::RateLimited {
         status: 429,
         retry_after: None,
+        rate: RateLimit::default(),
+        secondary: false,
       },
       "GitHub rate limit (HTTP 429)",
     ),
