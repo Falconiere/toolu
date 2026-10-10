@@ -1,6 +1,6 @@
 {
   "name": "toolu-review",
-  "version": "7.11.0",
+  "version": "8.0.0",
   "hookProtocol": 1,
   "description": "Project-tuned pre-push code review mirroring CI falconiere/toolu-ghactions/code-review@v8 (Jev-enabled), writing the toolu push-review state so the gate passes. Standalone.",
   "skills": "./skills/",
