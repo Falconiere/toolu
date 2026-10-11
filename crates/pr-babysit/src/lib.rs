@@ -7,6 +7,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Planned;
 
 mod collect;
+mod dispatch;
 mod error;
 mod fixer;
 #[cfg(test)]
