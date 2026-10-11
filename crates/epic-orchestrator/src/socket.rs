@@ -61,10 +61,17 @@ struct Threads {
   http: Option<http::Running>,
 }
 
-/// HTTP binding and babysit integration for one engine run.
+/// HTTP binding, babysit integration and attention settings for one engine run.
 pub(crate) struct ServeOptions<'a> {
   pub(crate) http: Option<HttpConfig>,
   pub(crate) tick: &'a dyn BabysitTick,
+  pub(crate) attention: AttentionOptions,
+}
+
+/// The first reminder delay and the notifier, when notifications are on.
+pub(crate) struct AttentionOptions {
+  pub(crate) remind_ms: u64,
+  pub(crate) notify: Option<crate::notify::Settings>,
 }
 
 impl Drop for StopAccept<'_> {
@@ -86,7 +93,7 @@ pub(crate) fn serve_with_http(
 ) -> Result<(), String> {
   let socket = paths.socket();
   let _held = Held::acquire(&paths.lock(), "engine-busy")?;
-  let mut engine = open_engine(paths, scripts, fault)?;
+  let mut engine = open_engine(paths, scripts, fault, options.attention)?;
   let listener = bind(&engine.paths)?;
   let (tx, rx) = mpsc::channel();
   let stop = Arc::new(AtomicBool::new(false));
@@ -94,6 +101,9 @@ pub(crate) fn serve_with_http(
   let changed = Arc::new(Condvar::new());
   let wake = Arc::new(AtomicBool::new(false));
   let http = start_http(options.http, &engine, &shared, &changed, &stop)?;
+  if let (Some(notifier), Some(running)) = (engine.notifier.as_mut(), http.as_ref()) {
+    notifier.set_dashboard(running.addr);
+  }
   let herdr = socket_herdr::spawn(
     tx.clone(),
     Arc::clone(&shared),
@@ -147,8 +157,14 @@ fn open_engine(
   paths: Paths,
   scripts: Option<std::path::PathBuf>,
   fault: Fault,
+  attention: AttentionOptions,
 ) -> Result<Engine, String> {
   let mut engine = Engine::open(paths, scripts, fault)?;
+  engine.world.remind_ms = attention.remind_ms;
+  let journal = engine.paths.clone();
+  engine.notifier = attention
+    .notify
+    .map(|settings| crate::notify::Notifier::spawn(settings, journal));
   apply_env(&mut engine);
   ingest(&mut engine)?;
   if engine.pump()? == Stop::Fault {

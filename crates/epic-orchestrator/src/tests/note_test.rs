@@ -18,7 +18,10 @@ fn notes_are_one_line_capped_and_redacted() {
 
 #[test]
 fn screen_lines_keep_the_last_ten_non_empty_lines_capped_from_the_end() {
-  let tail = (1..=14).map(|n| format!("line {n}\n")).collect::<Vec<_>>().join("\n");
+  let tail = (1..=14)
+    .map(|n| format!("line {n}\n"))
+    .collect::<Vec<_>>()
+    .join("\n");
   let lines = super::screen_lines(&format!("{tail}Do you want to run rm -rf build? (y/n)  \n"));
   let kept: Vec<&str> = lines.lines().collect();
   assert_eq!(kept.len(), 10);

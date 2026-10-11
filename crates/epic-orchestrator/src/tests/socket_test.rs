@@ -41,6 +41,10 @@ fn serve_until_stopped(paths: Paths, protocol: u64) {
       ServeOptions {
         http: None,
         tick: &(),
+        attention: crate::socket::AttentionOptions {
+          remind_ms: crate::model::REMIND_MS,
+          notify: None,
+        },
       },
     )
   });
@@ -114,6 +118,10 @@ fn spool_survives() {
       ServeOptions {
         http: None,
         tick: &(),
+        attention: crate::socket::AttentionOptions {
+          remind_ms: crate::model::REMIND_MS,
+          notify: None,
+        },
       },
     );
     return;
@@ -200,7 +208,12 @@ fn a_panic_in_the_state_loop_sets_the_accept_stop_flag() {
 #[test]
 fn poisoned_snapshot_publish_returns_error() {
   let root = tempfile::tempdir().expect("root");
-  let engine = super::open_engine(Paths::at(root.path()), None, Fault::None).expect("engine");
+  let quiet = super::AttentionOptions {
+    remind_ms: crate::model::REMIND_MS,
+    notify: None,
+  };
+  let engine =
+    super::open_engine(Paths::at(root.path()), None, Fault::None, quiet).expect("engine");
   let shared = Mutex::new(World::new(0));
   let _poisoned = std::panic::catch_unwind(|| {
     let _guard = shared.lock().expect("shared lock");

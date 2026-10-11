@@ -34,6 +34,8 @@ mod lock;
 mod logic;
 mod model;
 mod note;
+mod notify;
+mod notify_notice;
 mod paths;
 mod query;
 mod recover;

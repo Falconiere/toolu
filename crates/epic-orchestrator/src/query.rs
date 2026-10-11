@@ -89,8 +89,10 @@ pub(crate) fn answer(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
 
 /// `--by`, else the `--host` name, else `user`.
 pub(crate) fn answerer(ctx: &Ctx, by: Option<&str>) -> String {
-  by.filter(|by| !by.is_empty())
-    .map_or_else(|| ctx.host.map_or("user", Host::name).to_owned(), str::to_owned)
+  by.filter(|by| !by.is_empty()).map_or_else(
+    || ctx.host.map_or("user", Host::name).to_owned(),
+    str::to_owned,
+  )
 }
 
 /// Wait for a bounded engine judgment.

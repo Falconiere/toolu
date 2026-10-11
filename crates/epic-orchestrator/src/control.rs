@@ -23,7 +23,7 @@ use crate::http::Config as HttpConfig;
 use crate::lock::live;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::{ServeOptions, serve_with_http};
+use crate::socket::{AttentionOptions, ServeOptions, serve_with_http};
 use crate::verbs::{failed, text};
 
 /// Run, ensure or replace the resident engine.
@@ -52,8 +52,10 @@ pub(crate) fn serve(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> 
 fn foreground_with_http(env: &Env, matches: &ArgMatches, tick: &dyn BabysitTick) -> Outcome {
   let paths = Paths::from_env(env);
   let scripts = env.get("TOOLU_EPIC_SCRIPTS").map(PathBuf::from);
-  let http = match http_config(env, matches) {
-    Ok(http) => http,
+  let (http, attention) = match http_config(env, matches)
+    .and_then(|http| attention_options(env, http.as_ref()).map(|attention| (http, attention)))
+  {
+    Ok(options) => options,
     Err(err) => return failed("toolu epic engine", &err),
   };
   match serve_with_http(
@@ -61,7 +63,11 @@ fn foreground_with_http(env: &Env, matches: &ArgMatches, tick: &dyn BabysitTick)
     scripts,
     fault_of(env),
     PROTOCOL,
-    ServeOptions { http, tick },
+    ServeOptions {
+      http,
+      tick,
+      attention,
+    },
   ) {
     Ok(()) => Outcome::data(String::new()),
     Err(err) if err == "fault" => {
@@ -91,6 +97,24 @@ fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, St
   };
   let secrets = secrets::load(&roots).map_err(|err| err.to_string())?;
   Ok(Some(HttpConfig { addr, secrets }))
+}
+
+/// Reminder delay and notifier settings from `epic.attention`.
+pub(crate) fn attention_options(
+  env: &Env,
+  http: Option<&HttpConfig>,
+) -> Result<AttentionOptions, String> {
+  let roots = Roots::new(env.clone(), None);
+  let settings = epic::parse(&load::load(&roots, None)).map_err(|err| err.to_string())?;
+  let herdr = settings.attention_herdr && crate::source::prompt_enabled();
+  let notify = (herdr || settings.attention_enabled).then(|| crate::notify::Settings {
+    dashboard: http.map(|config| crate::notify_notice::dashboard(config.addr)),
+    ..crate::notify::Settings::new(env.clone(), herdr, settings.attention_enabled)
+  });
+  Ok(AttentionOptions {
+    remind_ms: settings.remind_after_minutes.saturating_mul(60_000),
+    notify,
+  })
 }
 
 /// Interpret the scripted test fault selector.

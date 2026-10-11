@@ -190,6 +190,10 @@ fn serve_default(paths: Paths) -> Result<(), String> {
     ServeOptions {
       http: None,
       tick: &(),
+      attention: crate::socket::AttentionOptions {
+        remind_ms: crate::model::REMIND_MS,
+        notify: None,
+      },
     },
   )
 }

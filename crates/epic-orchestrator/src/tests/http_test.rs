@@ -295,6 +295,10 @@ fn live_fixture(
           secrets: Secrets::none(),
         }),
         tick: &(),
+        attention: crate::socket::AttentionOptions {
+          remind_ms: crate::model::REMIND_MS,
+          notify: None,
+        },
       },
     )
   });

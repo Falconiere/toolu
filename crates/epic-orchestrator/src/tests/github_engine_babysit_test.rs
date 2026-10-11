@@ -93,10 +93,10 @@ fn journal(engine: &Engine) -> Vec<&Record> {
   let rows = engine.world.outbox.iter().filter_map(|step| match step {
     Step::Journal(row) => Some(row),
     Step::Call { .. }
-      | Step::Status { .. }
-      | Step::Issue { .. }
-      | Step::Prompt { .. }
-      | Step::Notify { .. } => None,
+    | Step::Status { .. }
+    | Step::Issue { .. }
+    | Step::Prompt { .. }
+    | Step::Notify { .. } => None,
   });
   rows.collect()
 }

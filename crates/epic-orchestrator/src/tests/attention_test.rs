@@ -171,7 +171,12 @@ fn ack_by_key_or_by_kind_for_a_keyless_item() {
   assert!(world.outbox.is_empty());
   ack(&mut world, "dependency-cycle", "codex");
   ack(&mut world, "a", "user");
-  assert!(world.attention.iter().all(|item| item.state == Ack::Acknowledged));
+  assert!(
+    world
+      .attention
+      .iter()
+      .all(|item| item.state == Ack::Acknowledged)
+  );
   assert!(world.attention.iter().all(|item| item.delivered));
   let steps: Vec<Step> = world.outbox.drain(..).collect();
   let acks = journals(&steps, "acknowledged");
@@ -225,19 +230,42 @@ fn attention_rebuild_restores_open_and_acknowledged_items_only() {
     Record::new("judgment", "stall", "b", "a2-2", "stalled"),
     Record::new("judgment", "acknowledged", "b", "a2-2", "by=user"),
     Record::new("judgment", "failed", "c", "a3-3", "boom"),
-    Record::new("judgment", "closed", "c", "a3-3", "kind=failed waited_ms=1 by=report"),
+    Record::new(
+      "judgment",
+      "closed",
+      "c",
+      "a3-3",
+      "kind=failed waited_ms=1 by=report",
+    ),
     Record::new("judgment", "needs-human", "d", "", "legacy"),
-    Record::new("judgment", "reminder", "a", "a1-1", "kind=needs-human reminders=1"),
+    Record::new(
+      "judgment",
+      "reminder",
+      "a",
+      "a1-1",
+      "kind=needs-human reminders=1",
+    ),
     Record::new("judgment", "acknowledged", "z", "a9-9", "by=user"),
   ];
   for row in &rows {
     journal::append(&paths.journal_dir(), &paths.journal_lock(), row, now).expect("append");
   }
   let world = crate::snapshot::load(&paths, now).expect("load");
+  assert_rebuilt(&world);
+}
+
+fn assert_rebuilt(world: &World) {
   let items: Vec<(&str, &str, &str, Ack)> = world
     .attention
     .iter()
-    .map(|item| (item.key.as_str(), item.kind.as_str(), item.note.as_str(), item.state))
+    .map(|item| {
+      (
+        item.key.as_str(),
+        item.kind.as_str(),
+        item.note.as_str(),
+        item.state,
+      )
+    })
     .collect();
   assert_eq!(
     items,
@@ -249,5 +277,10 @@ fn attention_rebuild_restores_open_and_acknowledged_items_only() {
   assert_eq!(world.attention[0].seq, 1);
   assert_eq!(world.attention[0].reminders, 1);
   assert!(!world.attention[0].delivered);
-  assert!(world.outbox.iter().all(|step| !matches!(step, Step::Notify { .. })));
+  assert!(
+    world
+      .outbox
+      .iter()
+      .all(|step| !matches!(step, Step::Notify { .. }))
+  );
 }

@@ -41,6 +41,8 @@ pub(crate) enum Call {
   },
   /// `worktree.remove`.
   Remove { workspace_id: String, force: bool },
+  /// `notification.show` with the `request` sound.
+  Notify { title: String, body: String },
 }
 
 /// Protocol decision for one engine process.
@@ -204,6 +206,7 @@ impl Call {
       Self::Read { .. } => "agent.read",
       Self::Create { .. } => "worktree.create",
       Self::Remove { .. } => "worktree.remove",
+      Self::Notify { .. } => "notification.show",
     }
   }
 
@@ -248,6 +251,7 @@ impl Call {
         workspace_id,
         force,
       } => json!({"workspace_id": workspace_id, "force": force}),
+      Self::Notify { title, body } => json!({"title": title, "body": body, "sound": "request"}),
     }
   }
 }
