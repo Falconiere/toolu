@@ -20,13 +20,14 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
-use toolu_runtime::host::detect::detect;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
 
 use crate::fast::HookRequest;
 use crate::{Context, VERSION};
+
+mod plugins;
 
 /// What a native hook decided before the prelude's advisory is added.
 struct HookResult {
@@ -63,20 +64,8 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
     let plugin_root = request.plugin_root.as_deref().map(Path::new);
     return tool_hook(phase, (context.stdin)(), plugin_root);
   }
-  if let Some(outcome) = routed_hook(request, context.stdin) {
+  if let Some(outcome) = plugins::dispatch(request, context, advisory.as_ref()) {
     return outcome;
-  }
-  if let Some(outcome) = jev_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = review_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = ast_grep_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = statusline_hook(request, context) {
-    return prefix(advisory, outcome);
   }
   let env = (context.env)();
   let call = HookCall {
@@ -92,121 +81,6 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   }
   let result = dispatch(request, enforcing, upgrade);
   compose(advisory, result)
-}
-
-/// toolu's `agent-tier` and `mcp-tools`. They write their own output.
-fn routed_hook(
-  request: &HookRequest,
-  stdin: &dyn Fn() -> std::io::Result<String>,
-) -> Option<Outcome> {
-  if request.plugin != "toolu" {
-    return None;
-  }
-  let root = request.plugin_root.as_deref().map(Path::new);
-  match request.name.as_str() {
-    "agent-tier" => Some(toolu_hub::agent_tier::hook(stdin())),
-    "mcp-tools" => Some(toolu_hub::mcp_hook::hook(stdin(), root)),
-    _ => None,
-  }
-}
-
-/// ast-grep's manifest-publishing `SessionStart` hook.
-fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "ast-grep" {
-    return None;
-  }
-  let phase = match request.name.as_str() {
-    "pre-tools" => Some(Phase::Pre),
-    "post-tools" => Some(Phase::Post),
-    _ => None,
-  };
-  if let Some(phase) = phase {
-    return Some(toolu_hub::tool_hook::ast_grep_tool_hook(
-      phase,
-      (context.stdin)(),
-      request.plugin_root.as_deref().map(Path::new),
-    ));
-  }
-  if request.name != "register" {
-    return None;
-  }
-  let env = (context.env)();
-  Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
-}
-
-/// The statusline's native `SessionStart` entry.
-fn statusline_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "statusline"
-    || request.name != "session-start"
-    || request.event.as_deref() != Some("SessionStart")
-  {
-    return None;
-  }
-  let env = (context.env)();
-  Some(toolu_statusline::session_start(
-    &env,
-    request.plugin_root.as_deref().map(Path::new),
-  ))
-}
-
-/// The three jev hooks. Anything else stays the "has no hook" path.
-fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "jev" {
-    return None;
-  }
-  let env = (context.env)();
-  let stdin = (context.stdin)().ok();
-  let text = stdin.as_deref();
-  let outcome = match request.name.as_str() {
-    "session-start" => match plugin_root(request) {
-      Some(root) => toolu_jev::session_start(&env, root, text),
-      None => quiet(),
-    },
-    "user-prompt-submit" => match plugin_root(request) {
-      Some(root) => toolu_jev::user_prompt_submit(&env, root, text),
-      None => quiet(),
-    },
-    "check-binary" => toolu_jev::check_binary(&env, text),
-    _ => return None,
-  };
-  Some(outcome)
-}
-
-/// The two toolu-review `SessionStart` entries.
-fn review_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "toolu-review" {
-    return None;
-  }
-  let env = (context.env)();
-  match request.name.as_str() {
-    "session-start" => Some(match plugin_root(request) {
-      Some(root) => toolu_review::session_start(&env, root),
-      None => quiet(),
-    }),
-    "check-binary" => {
-      let stdin = (context.stdin)().ok();
-      Some(toolu_review::check_binary(&env, stdin.as_deref()))
-    }
-    _ => None,
-  }
-}
-
-/// The plugin directory the launcher passed. Empty is absent: it would
-/// resolve the shim against the working directory.
-fn plugin_root(request: &HookRequest) -> Option<&Path> {
-  request
-    .plugin_root
-    .as_deref()
-    .filter(|root| !root.is_empty())
-    .map(Path::new)
-}
-
-fn quiet() -> Outcome {
-  Outcome {
-    exit: Exit::Success,
-    stdout: None,
-    stderr: None,
-  }
 }
 
 /// A `SessionStart` skew advisory is its own `systemMessage` line, before the hook JSON.
