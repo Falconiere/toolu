@@ -201,7 +201,7 @@ fn route_fix_plans_inline_from_the_project_config() {
     "2026-09-28T12:00:00Z",
     "--no-jev",
   ];
-  for args in [&args[..], &args[..6]] {
+  for args in [&args[..], &args[..5]] {
     let (exit, plan) = run(args, &world(&env, None));
     assert_eq!(exit, Exit::Success, "{plan}");
     assert_eq!(

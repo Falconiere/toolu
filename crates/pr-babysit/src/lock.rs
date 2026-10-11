@@ -84,7 +84,9 @@ impl SlotLock {
       }
       match inspect(&path, stale_after) {
         Seen::Retry if attempt == 0 => {}
-        Seen::Stale(_, _, seen) if attempt == 0 && identity_of(&path) == Some(seen) => {
+        Seen::Stale(_, _, seen)
+          if attempt == 0 && identity_of(&path).is_none_or(|now| now == seen) =>
+        {
           let _gone = std::fs::remove_dir_all(&path);
         }
         Seen::Held(pid, since) | Seen::Stale(pid, since, _) => return Err(locked(pid, since)),
