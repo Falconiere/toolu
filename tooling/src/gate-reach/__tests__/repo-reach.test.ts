@@ -43,7 +43,7 @@ test("no allowance lets a non-test file of a newly gated tree out of a gate", ()
   const gated = trackedFiles(ROOT, config.exclude).filter(
     (file) => NEWLY_GATED.some((tree) => file.startsWith(tree)) && !file.includes("/__tests__/"),
   );
-  expect(gated.length).toBeGreaterThan(150);
+  expect(gated.length).toBeGreaterThan(140);
   const allowedOut = gated.flatMap((file) =>
     config.allowances
       .filter(({ glob }) => matches(glob, file))

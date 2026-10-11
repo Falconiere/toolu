@@ -2,8 +2,9 @@
 //! `pid` and `since` files inside. A lock whose pid is dead, that is older than
 //! `PB_LOCK_STALE_SECONDS` (600), or that has stayed incomplete for a second is
 //! reclaimed once, unless the directory changed since it was judged; anything
-//! else is `locked`. Only the directory this process made is ever removed on
-//! release.
+//! else is `locked`. Only the directory this process made, still holding its
+//! own `pid` and `since`, is ever removed on release: a new directory can reuse
+//! the inode of a removed one.
 
 use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
@@ -20,6 +21,7 @@ use crate::error::{Failure, Result};
 pub(crate) struct SlotLock {
   path: PathBuf,
   identity: Option<(u64, u64)>,
+  since: u64,
 }
 
 fn now_secs() -> u64 {
@@ -103,9 +105,10 @@ impl SlotLock {
     let lock = SlotLock {
       path,
       identity: Some(identity),
+      since: now_secs(),
     };
     std::fs::write(lock.path.join("pid"), format!("{}\n", std::process::id()))
-      .and_then(|()| std::fs::write(lock.path.join("since"), format!("{}\n", now_secs())))
+      .and_then(|()| std::fs::write(lock.path.join("since"), format!("{}\n", lock.since)))
       .map_err(|err| claim_error(&err))?;
     Ok(lock)
   }
@@ -114,7 +117,10 @@ impl SlotLock {
     let Some(identity) = self.identity.take() else {
       return;
     };
-    if identity_of(&self.path) == Some(identity) {
+    let ours = identity_of(&self.path) == Some(identity)
+      && read_number(&self.path.join("pid")) == Some(u64::from(std::process::id()))
+      && read_number(&self.path.join("since")) == Some(self.since);
+    if ours {
       let _gone = std::fs::remove_dir_all(&self.path);
     }
   }
