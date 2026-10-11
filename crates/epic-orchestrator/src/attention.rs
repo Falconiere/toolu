@@ -12,7 +12,7 @@ use crate::note::bounded_note;
 const REPEAT_MS: u64 = 60 * 60 * 1000;
 
 /// Journal names that change an item rather than raise one.
-const CONTROL: [&str; 4] = ["acknowledged", "answered", "reminder", "closed"];
+const CONTROL: [&str; 5] = ["acknowledged", "answered", "reminder", "reopened", "closed"];
 
 /// Raise `kind` for `key`, or refresh the note of its live item of that kind.
 /// Returns the item token.
@@ -43,6 +43,35 @@ pub(crate) fn raise(world: &mut World, kind: &str, key: &str, note: &str) -> Str
     reminder: false,
   });
   token
+}
+
+/// Raise `kind` for `key` as a new event (a stall past its full clock, a new
+/// blocked spell): an item a waiter already saw, or one acknowledged or
+/// answered, reopens and is announced again. Returns the item token.
+pub(crate) fn reraise(world: &mut World, kind: &str, key: &str, note: &str) -> String {
+  let now = world.now_ms;
+  let Some(item) = world.attention.iter_mut().find(|item| {
+    item.key == key && item.kind == kind && (item.delivered || item.state != Ack::Open)
+  }) else {
+    return raise(world, kind, key, note);
+  };
+  reopen(item, &bounded_note(note), now);
+  let record = Record::new("judgment", "reopened", key, &item.token, &item.note);
+  let token = item.token.clone();
+  world.outbox.push_back(Step::Journal(record));
+  world.outbox.push_back(Step::Notify {
+    token: token.clone(),
+    reminder: false,
+  });
+  token
+}
+
+fn reopen(item: &mut Attention, note: &str, at: u64) {
+  item.state = Ack::Open;
+  item.delivered = false;
+  note.clone_into(&mut item.note);
+  item.announced_ms = at;
+  item.reminders = 0;
 }
 
 fn item(seq: u64, record: &Record, epic: String, raised_ms: u64) -> Attention {
@@ -131,13 +160,12 @@ pub(crate) fn answered(world: &mut World, key: &str, by: &str, text: &str) {
 }
 
 fn due_at(item: &Attention, first_ms: u64) -> Option<u64> {
-  (item.state == Ack::Open).then(|| {
-    if item.reminders == 0 {
-      item.raised_ms.saturating_add(first_ms)
-    } else {
-      item.announced_ms.saturating_add(REPEAT_MS)
-    }
-  })
+  let wait = if item.reminders == 0 {
+    first_ms
+  } else {
+    REPEAT_MS
+  };
+  (item.state == Ack::Open).then(|| item.announced_ms.saturating_add(wait))
 }
 
 /// Announce again every open item whose reminder is due.
@@ -240,6 +268,7 @@ fn replay(item: &mut Attention, record: &Record, at: u64) {
       item.reminders = item.reminders.saturating_add(1);
       item.announced_ms = at;
     }
+    "reopened" => reopen(item, &record.note, at),
     _ => record.note.clone_into(&mut item.note),
   }
 }

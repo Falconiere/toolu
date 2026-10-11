@@ -263,4 +263,24 @@ fn ack_silences_a_stall_until_its_full_length_passes_again() {
   assert_eq!(world.attention.len(), 1);
   assert_eq!(world.attention[0].state, Ack::Acknowledged);
   assert_eq!(world.attention[0].reminders, 0);
+  world.now_ms = 30 * 60 * 1000 + 299;
+  on_tick(&mut world);
+  assert_eq!(world.attention.len(), 1);
+  assert_eq!(world.attention[0].state, Ack::Open);
+  let reopened: Vec<&str> = world
+    .outbox
+    .iter()
+    .filter_map(|step| {
+      if let Step::Journal(record) = step {
+        (record.kind == "judgment").then_some(record.name.as_str())
+      } else {
+        matches!(step, Step::Notify { .. }).then_some("notify")
+      }
+    })
+    .collect();
+  assert_eq!(reopened, ["reopened", "notify"]);
+  assert_eq!(
+    take_judgment(&mut world).map(|item| item.kind),
+    Some("stall".to_owned())
+  );
 }

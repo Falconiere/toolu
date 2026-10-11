@@ -62,7 +62,7 @@ fn report(engine: &mut Engine, phase: &str) {
 
 fn answer(engine: &mut Engine, request: &Value) -> Value {
   let (tx, rx) = channel();
-  assert!(!reply_answer(engine, request, &tx));
+  assert_eq!(reply_answer(engine, request, &tx), Ok(false));
   rx.recv().expect("reply")
 }
 
@@ -185,16 +185,16 @@ fn live(root: &Path, fixture: &Fixture) -> Live {
     ..crate::notify::Settings::new(env, false, true)
   };
   let paths = Paths::at(root.join("resources"));
-  let reserved = std::net::TcpListener::bind("127.0.0.1:0").expect("port");
-  let addr = reserved.local_addr().expect("address");
-  drop(reserved);
+  let addr = std::net::TcpListener::bind("127.0.0.1:0")
+    .and_then(|port| port.local_addr())
+    .expect("port");
   let background = paths.clone();
   let engine = thread::spawn(move || {
-    let http = Some(crate::http::Config { addr, secrets });
     let attention = AttentionOptions {
-      remind_ms: crate::model::REMIND_MS,
       notify: Some(notify),
+      ..AttentionOptions::default()
     };
+    let http = Some(crate::http::Config { addr, secrets });
     let options = ServeOptions {
       http,
       tick: &(),

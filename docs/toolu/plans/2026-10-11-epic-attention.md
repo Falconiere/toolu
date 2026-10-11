@@ -230,6 +230,8 @@ Config keys, then the queue in the state machine, then the notifier thread and h
 
 - `engine`: the `ack` and `answer` socket operations live in a new `attention_ops.rs` (with `tests/attention_ops_test.rs`, which holds the `answer_` tests), because moving them into `dispatch.rs` or `server.rs` put either file over the 300-code-line limit.
 - `answer --by` defaults to the `--host` name, else `user`. Environment detection always names a host, so it cannot tell a person at a terminal from an agent.
+- Pre-push review: a stall that returns after `ack`, or a new `blocked` spell, merged silently into the seen item. These edge-triggered raises now go through `attention::reraise`, which reopens an item a waiter saw, or one acknowledged or answered, journals `judgment reopened` and announces it again. Level-triggered repeats (babysit every tick) keep plain dedup. Jev chose this over reopening on every raise (0.96).
+- Pre-push review: `answer` propagates a journal failure after delivery as an engine error, as `ack` does.
 
 ## Plan review
 

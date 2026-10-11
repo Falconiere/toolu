@@ -10,8 +10,8 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 
 use super::{
-  ack, answer, ask, epic_for, install_unit, job, located, pause, report, service, status, wait,
-  wait_default,
+  ack, answer, answerer, ask, epic_for, install_unit, job, located, pause, report, service, status,
+  wait, wait_default,
 };
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
@@ -285,4 +285,16 @@ pub(super) fn wait_live(paths: &Paths) {
     thread::sleep(Duration::from_millis(20));
   }
   panic!("engine did not lock");
+}
+
+#[test]
+fn answerer_prefers_by_then_the_host_flag_then_user() {
+  let cursor = Ctx {
+    host: Some(Host::Cursor),
+    ..Ctx::default()
+  };
+  assert_eq!(answerer(&Ctx::default(), None), "user");
+  assert_eq!(answerer(&cursor, None), "cursor");
+  assert_eq!(answerer(&cursor, Some("")), "cursor");
+  assert_eq!(answerer(&cursor, Some("ana")), "ana");
 }

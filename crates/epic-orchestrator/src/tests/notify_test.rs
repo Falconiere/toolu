@@ -141,8 +141,15 @@ fn notify_without_a_url_posts_nothing_and_a_bad_secrets_file_is_journaled() {
   let tmp = tempfile::tempdir().expect("temp");
   let fixture = Fixture::start().expect("fixture");
   let paths = Paths::at(tmp.path());
-  let quiet = Notifier::spawn(settings(env(tmp.path(), None), &fixture), paths.clone());
-  quiet.tx.try_send(notice("which?")).expect("send");
+  let (tx, rx) = std::sync::mpsc::sync_channel(1);
+  tx.send(notice("which?")).expect("send");
+  drop(tx);
+  super::run(&rx, &settings(env(tmp.path(), None), &fixture), &paths);
+  assert_eq!(fixture.requests().expect("requests").len(), 0);
+  assert_eq!(
+    journal::tail(&paths.journal_dir(), SystemTime::now()).expect("tail"),
+    []
+  );
   let broken = env(tmp.path(), None).with("TOOLU_EPIC_PEER_TOKENS", "not json");
   let notifier = Notifier::spawn(settings(broken, &fixture), paths.clone());
   notifier.tx.try_send(notice("which?")).expect("send");

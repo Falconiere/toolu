@@ -20,7 +20,7 @@ Brainstorm: `docs/toolu/brainstorms/2026-10-11-epic-attention.md`.
 
 The queue stays in `World.attention`; a new `attention` module owns it. Every raise goes through `attention::raise`. `logic::push_attention` keeps its signature and calls it. The module also owns close-on-report, ack, answer, reminders and the rebuild from the journal.
 
-- **Identity and dedup.** Each item has a token `a<raised_ms>-<seq>`. A raise for a key and kind that already has a live item updates its note and sends nothing new.
+- **Identity and dedup.** Each item has a token `a<raised_ms>-<seq>`. A raise for a key and kind that already has a live item updates its note and sends nothing new. A stall past its full clock or a new `blocked` spell is a new event: it reopens an item a waiter already saw, or one acknowledged or answered, journals `reopened` and announces it again.
 - **States.** `open`, `acknowledged` (`toolu epic ack`), `answered` (`toolu epic answer`). Closed items leave the queue.
 - **Close.** A worker report for a key closes every live item of that key before the report's own judgment, if any, is raised. Each close is journaled with the kind and the wait in milliseconds.
 - **Delivery to `wait`.** `wait` returns each item once (`delivered`). The status overview, `toolu epic status` and `/api/v1/attention` list every live item until it closes, with its state and age.
@@ -56,6 +56,7 @@ Journal records (closed keys unchanged):
 | `judgment` | `acknowledged` | item token | `by=<who>` |
 | `judgment` | `answered` | item token | `by=<who>` |
 | `judgment` | `reminder` | item token | `kind=<kind> reminders=<n>` |
+| `judgment` | `reopened` | item token | the bounded note |
 | `judgment` | `closed` | item token | `kind=<kind> waited_ms=<n> by=report` |
 | `prompt` | `answer` | item token | the answer text |
 | `action` | `notify` / `notify-failed` / `notify-dropped` | item token | `channel=<herdr\|url> attempts=<n> status=<code\|timeout\|transport\|refused\|secrets>` |
@@ -80,7 +81,7 @@ herdr call: `notification.show {"title":"toolu epic: <key> <kind>","body":"<note
 
 CLI:
 
-- `toolu epic answer <key> <text> [--by NAME]` prompts the worker, marks the item answered and journals who answered. `--by` defaults to the detected agent host name (`claude`, `codex`, `cursor`, `opencode`, `hermes`), else `user`.
+- `toolu epic answer <key> <text> [--by NAME]` prompts the worker, marks the item answered and journals who answered. `--by` defaults to the `--host` name (`claude`, `codex`, `cursor`, `opencode`, `hermes`), else `user`; environment detection always names a host, so it would record a person at a terminal as `claude`.
 - `toolu epic ack <key>` acknowledges every live item of the key. It still resets the stall clock, so the stall is not raised again until it has run its full length once more. An item with no key (a dependency cycle) is acknowledged by its kind: `toolu epic ack dependency-cycle`.
 
 Rust: `model::Attention` gains `raised_ms`, `state: Ack` (`Open`, `Acknowledged`, `Answered`), `announced_ms`, `reminders`, `token` and `pending: Option<String>`. `World` gains `remind_ms`. `Step` gains `Notify { token: String, reminder: bool }`. `socket::ServeOptions` gains `attention: AttentionOptions { remind_ms, notify: Option<notify::Settings> }`. New modules: `attention.rs`, `notify.rs` (thread, POST, retry) and `notify_notice.rs` (notice and payload), each with `tests/<module>_test.rs`.

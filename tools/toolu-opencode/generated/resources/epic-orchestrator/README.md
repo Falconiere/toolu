@@ -116,7 +116,8 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 
 Judgment events (`needs-human`, `failed`, `blocked`, `stall`, `babysit`, …)
 become attention items. Each item is `open`, `acknowledged` or `answered`, and
-the key's next worker report closes it. `toolu epic status`, `/api/v1/attention`
+the key's next worker report closes it. A returning stall or a new blocked spell
+reopens a seen item. `toolu epic status`, `/api/v1/attention`
 and the dashboard list every live item with its state and age. Items survive a
 restart through the journal.
 

@@ -55,7 +55,7 @@ fn operate(
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),
     "wait" => Ok(reply_wait(engine, request, reply, waiters)),
-    "answer" => Ok(crate::attention_ops::reply_answer(engine, request, &reply)),
+    "answer" => crate::attention_ops::reply_answer(engine, request, &reply),
     _ => {
       let _sent = reply.send(json!({"error": "unknown op"}));
       Ok(false)

@@ -250,3 +250,42 @@ fn round(engine: &mut Engine, request: &Value) -> (bool, Value) {
   let stop = dispatch(engine, request, &tx, &mut waiters, PROTOCOL);
   (stop, rx.try_recv().unwrap_or(Value::Null))
 }
+
+fn set_mode(dir: &std::path::Path, mode: u32) {
+  use std::os::unix::fs::PermissionsExt as _;
+  for entry in std::fs::read_dir(dir).expect("journal dir") {
+    let path = entry.expect("entry").path();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(mode & 0o666)).expect("file");
+  }
+  std::fs::set_permissions(dir, std::fs::Permissions::from_mode(mode)).expect("dir");
+}
+
+#[test]
+fn an_answer_whose_journal_fails_after_delivery_replies_the_journal_error() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let scripts = tmp.path().join("scripts");
+  std::fs::create_dir_all(&scripts).expect("scripts");
+  let prompts = tmp.path().join("prompts");
+  let script = format!(
+    "cat >> '{}'\nprintf '{{\"outcome\":\"sent\"}}'\n",
+    prompts.display()
+  );
+  std::fs::write(scripts.join("prompt"), script).expect("script");
+  let mut engine = Engine::open(Paths::at(tmp.path()), Some(scripts), Fault::None).expect("open");
+  let report = json!({"op": "report", "key": "a", "epic": "one", "phase": "needs-human",
+    "state_dir": tmp.path().display().to_string(), "note": "which?"});
+  std::fs::create_dir_all(tmp.path().join("status")).expect("status");
+  assert_eq!(round(&mut engine, &report).1["ok"], true);
+  let journal = engine.paths.journal_dir();
+  set_mode(&journal, 0o555);
+  let answer = json!({"op": "answer", "key": "a", "text": "take B"});
+  let (stop, value) = round(&mut engine, &answer);
+  set_mode(&journal, 0o755);
+  assert!(!stop);
+  let error = value["error"].as_str().expect("error");
+  assert!(!error.starts_with("worker prompt not delivered"), "{error}");
+  assert_eq!(
+    std::fs::read_to_string(&prompts).expect("prompts"),
+    r#"{"key":"a","text":"take B"}"#
+  );
+}

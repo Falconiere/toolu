@@ -116,7 +116,7 @@ fn mark_blocked(engine: &mut Engine, key: &str, tail: &str) {
   if let Some(issue) = engine.world.issues.get_mut(key) {
     issue.blocked = true;
   }
-  let token = crate::attention::raise(&mut engine.world, "blocked", key, "blocked");
+  let token = crate::attention::reraise(&mut engine.world, "blocked", key, "blocked");
   crate::attention::set_pending(&mut engine.world, &token, screen_lines(tail));
 }
 

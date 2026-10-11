@@ -19,7 +19,7 @@ fn stall(world: &mut World, key: &str) {
     return;
   };
   if due {
-    push_attention(world, "stall", key, "stall survived a nudge");
+    let _token = crate::attention::reraise(world, "stall", key, "stall survived a nudge");
     // One stall judgment per nudge. Ack, or a phase change, starts the next.
     if let Some(issue) = world.issues.get_mut(key) {
       issue.nudge_at_ms = u64::MAX;
@@ -120,7 +120,9 @@ pub(crate) fn map_pane_closed(world: &mut World, pane_id: &str) {
 /// A source event from #446.
 pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
   match event {
-    "blocked" => push_attention(world, "blocked", key, "blocked"),
+    "blocked" => {
+      let _token = crate::attention::reraise(world, "blocked", key, "blocked");
+    }
     "host-limited" => world.outbox.push_back(Step::Journal(Record::new(
       "action",
       "host-limited",
