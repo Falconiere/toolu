@@ -64,10 +64,18 @@ pub(crate) fn try_herdr(
   let mut full = vec!["herdr".to_owned()];
   full.extend_from_slice(args);
   let ran = command(env, &full, timeout);
-  let parsed = serde_json::from_str::<Value>(&ran.output)
-    .or_else(|_| serde_json::from_str::<Value>(&ran.errors));
-  let Ok(mut value) = parsed else {
-    let shown: String = ran.output.chars().take(200).collect();
+  let parsed = serde_json::from_str::<Value>(&ran.output).ok().or_else(|| {
+    serde_json::from_str::<Value>(&ran.errors)
+      .ok()
+      .filter(|document| document.get("error").is_some())
+  });
+  let Some(mut value) = parsed else {
+    let output = if ran.output.trim().is_empty() {
+      &ran.errors
+    } else {
+      &ran.output
+    };
+    let shown: String = output.trim().chars().take(200).collect();
     return Err(HerdrError {
       code: "invalid_output".into(),
       message: format!("exit {}: {shown}", ran.status),

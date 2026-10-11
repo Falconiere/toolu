@@ -148,7 +148,8 @@ export function babysitSession(ctx: EntryContext, scripts: (p: Paths) => Scripts
     config: () => ({ plugin: [npmSpec(ctx.tarball)], permission: { bash: "allow" } }),
   });
   // The dispatcher starts `opencode` from PATH: the pinned binary, not one the machine has.
-  s.env.PATH = `${dirname(ctx.bin)}${delimiter}${process.env.PATH ?? ""}`;
+  // `toolu` is this checkout's build, not an installed one.
+  s.env.PATH = [dirname(ctx.bin), join(ROOT, "target/debug"), process.env.PATH ?? ""].join(delimiter);
   const p = paths(s.sb.project);
   const bare = s.outside("origin.git");
   git(s.sb.root, "init", "--quiet", "--bare", "-b", "main", bare);
@@ -215,6 +216,14 @@ export function ledgerUntouched(state: Record<string, unknown>): boolean {
 const RouteGroups = z.object({
   groups: z.array(z.looseObject({ host: z.string(), model: z.string().nullable() })),
 });
+
+const Stopped = z.object({ cleanup: z.looseObject({ worktreeRemoved: z.boolean() }) });
+
+/** `toolu babysit stop` removed the fixer worktree. */
+export function stopRemovedWorktree(document: Record<string, unknown>): boolean {
+  const parsed = Stopped.safeParse(document);
+  return parsed.success && parsed.data.cleanup.worktreeRemoved;
+}
 
 /** A route plan sends a group to `host` on `model`. */
 export function routedTo(plan: Record<string, unknown>, host: string, model: string): boolean {

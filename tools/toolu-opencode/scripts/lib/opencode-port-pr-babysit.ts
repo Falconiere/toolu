@@ -60,6 +60,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
       "- `--max-seconds` — the longest `wait` runs: 55 s by default, under the bash\n  tool's timeout.",
     ],
     [
+      "| `worktree` | Codex's exact worktree path for this slot, or `null`. |",
+      "| `worktree` | A Codex controller's worktree path; `null` on OpenCode. |",
+    ],
+    [
       "--items <file> --host claude|codex|opencode [--state-file <path>]",
       "--items <file> --host opencode [--state-file <path>]",
     ],
@@ -105,10 +109,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
     ],
     {
       cut: [
-        "`toolu babysit record status --status complete`, then Claude",
+        '`toolu babysit record status --state-file "$STATE_FILE" --status complete`, then Claude',
         '\n> "PR #N: all green',
       ],
-      to: "`toolu babysit record status --status complete`, then remove the clean inline worktree, keep the state\nfile as the record, and end this turn's loop.",
+      to: '`toolu babysit record status --state-file "$STATE_FILE" --status complete`, then remove the clean inline worktree, keep the state\nfile as the record, and end this turn\'s loop.',
     },
     [
       "Resume with `/pr-babysit:babysit` on Claude Code, `$pr-babysit:babysit` on Codex or the babysit command on OpenCode once unblocked.",

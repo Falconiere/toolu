@@ -9,4 +9,4 @@ pub mod native;
 pub mod publish;
 pub mod report;
 
-pub use native::native_toolu_advice;
+pub use native::{native_toolu_advice, native_toolu_hook_output};

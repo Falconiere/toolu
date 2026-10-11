@@ -594,7 +594,7 @@ tick and do not count the tick as done.
    writes compatible state. Apply
    findings, then record the reviewer name in `reviewers[]`.
    - Findings that need code changes → amend or add a commit, then re-review. `review_round` restarts whenever the diff changes, and caps at 5 rewrites against an *unchanged* diff.
-   - The state file must live under the worktree's own root — pass `--repo <worktree>` to `write-state.sh` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
+   - The state file must live under the worktree's own root — pass `--repo <worktree>` to `toolu review write-state` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
    - The worktree is **detached** (`git worktree add --detach`), so pass `--branch "$BRANCH"` too: the writer keys the state file to the branch the push targets, and the gate resolves that same branch from the `HEAD:$BRANCH` refspec.
 
 3. **Push from the worktree.** Autonomous — no per-push prompt.
@@ -633,7 +633,7 @@ Exactly TWO stops:
 1. **Success stop** — both green-light conditions met.
 2. **Escalation stop** — physically can't proceed without human.
 
-No time/idle/tick-count stop. Runs as long as PR is open, has unresolved comments, or non-green CI — even for hours. Backoff slows polling; never terminates.
+No time/idle/tick-count stop. Runs as long as PR is open, has unresolved comments, or non-green CI — even for hours. The 180 s schedule never widens and never terminates.
 
 The helper's `decision` is the stop rule already applied to this tick's snapshot: `success`,
 `escalate` (escalation reasons come first in `reasons[]`), or `keep_going`. Act on it; override
@@ -655,7 +655,7 @@ of these held in the same snapshot:
 Any false (even 1 check / 1 comment / 1 finding) → DON'T stop → `wait` again.
 
 On success stop: `toolu babysit dispatch-fix cleanup --state-file "$STATE_FILE"` (the herdr worktree and
-`pr-babysit/<slot>` branch, when present), `toolu babysit record status --status complete`, then remove the clean inline worktree, keep the state
+`pr-babysit/<slot>` branch, when present), `toolu babysit record status --state-file "$STATE_FILE" --status complete`, then remove the clean inline worktree, keep the state
 file as the record, and end this turn's loop.
 > "PR #N: all green and no unresolved comments. Babysit done. Ready to merge."
 
@@ -672,7 +672,7 @@ Stop with clear flag when can't make forward progress without human — `decisio
 - `merge_conflict` — `mergeable == CONFLICTING`
 - plus your own: **Round cap** (5 fix→re-review rounds on an unchanged diff without reaching zero findings — matches the push-review gate's `MAX_ROUNDS=5`; a new commit restarts the count), a resolve that stayed `resolve_unconfirmed`, or a CI failure that needs human judgment
 
-NOT "done" — "blocked, please look". `toolu babysit record status --status escalated`, then the terminal message:
+NOT "done" — "blocked, please look". `toolu babysit record status --state-file "$STATE_FILE" --status escalated`, then the terminal message:
 > "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with the babysit command once unblocked."
 
 ### Keep going (next tick)

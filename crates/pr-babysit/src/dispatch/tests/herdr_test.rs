@@ -50,6 +50,23 @@ fn a_herdr_error_written_to_stderr_keeps_its_code() {
     (error.code.as_str(), error.message.as_str()),
     ("agent_not_ready", "blocked during startup")
   );
+  std::fs::write(&script, "#!/bin/sh\necho '{}' >&2\nexit 1\n").unwrap();
+  let error = try_herdr(&env, &argv(&["agent", "list"]), SECOND)
+    .err()
+    .unwrap();
+  assert_eq!(
+    (error.code.as_str(), error.message.as_str()),
+    ("invalid_output", "exit 1: {}")
+  );
+  std::fs::write(
+    &script,
+    "#!/bin/sh\necho 'server unreachable' >&2\nexit 1\n",
+  )
+  .unwrap();
+  let error = try_herdr(&env, &argv(&["agent", "list"]), SECOND)
+    .err()
+    .unwrap();
+  assert_eq!(error.message, "exit 1: server unreachable");
 }
 
 #[test]

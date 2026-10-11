@@ -248,15 +248,7 @@ fn a_live_tick_collects_reduces_and_reports_its_graphql_cost() {
   let dir = TempDir::new().unwrap();
   let state = dir.path().join("s.json");
   let fixture = Fixture::start().unwrap();
-  let sha = recorded::snapshot()["head"]["sha"]
-    .as_str()
-    .unwrap()
-    .to_owned();
-  recorded::serve(
-    &fixture,
-    &[&sha, &sha],
-    recorded::replies(&recorded::round()),
-  );
+  recorded::serve_round(&fixture);
   let source = Source::GitHub {
     config: recorded::config(&fixture),
     page_size: 2,
@@ -269,5 +261,5 @@ fn a_live_tick_collects_reduces_and_reports_its_graphql_cost() {
   expected.as_object_mut().unwrap().remove("collectedAt");
   assert_eq!(written, expected);
   assert_eq!(ticked.result["decision"], "escalate");
-  assert_eq!(read(&state)["pr"]["headSha"], sha);
+  assert_eq!(read(&state)["pr"]["headSha"], expected["head"]["sha"]);
 }

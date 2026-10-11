@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde_json::{Value, json};
 use tempfile::TempDir;
@@ -7,18 +7,12 @@ use toolu_runtime::env::Env;
 
 use crate::fixture;
 use crate::reduce::{Paths, reduce};
-use crate::verbs::tests::{run, world};
+use crate::verbs::tests::{initial_state, read, run, world};
 
 const NOW: &str = "2026-09-19T12:00:00Z";
 
-fn read(path: &Path) -> Value {
-  serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
-}
-
 fn state(dir: &TempDir) -> PathBuf {
-  let path = dir.path().join("falconiere-toolu-165.json");
-  std::fs::copy(fixture::path("states/toolu-165-initial.json"), &path).unwrap();
-  path
+  initial_state(dir.path())
 }
 
 fn message(error: &Value) -> &str {

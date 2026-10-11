@@ -32,6 +32,7 @@ import {
   routedTo,
   running,
   startSteps,
+  stopRemovedWorktree,
   text,
   waitStep,
 } from "./babysit-fixture.ts";
@@ -172,9 +173,7 @@ async function cancel(ctx: EntryContext): Promise<EntryResult> {
       wasRunning: before?.status === "running" && before.host === "opencode" && pid > 1,
       groupGone: groupLeft === 0,
       sleepGone: running(SLEEP) === 0,
-      cleaned: JSON.stringify(json(join(p.project, "stop.json"))["cleanup"] ?? "").includes(
-        '"worktreeRemoved":true',
-      ),
+      cleaned: stopRemovedWorktree(json(join(p.project, "stop.json"))),
       worktreeGone: !existsSync(p.worktree),
       fixerCleared: state["fixer"] === null,
       cancelled: state["status"] === "cancelled",

@@ -2,7 +2,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
-use super::native_toolu_advice;
+use super::{native_toolu_advice, native_toolu_hook_output, payload_session_id};
 use crate::env::Env;
 
 fn script(dir: &Path, body: &str) -> PathBuf {
@@ -99,4 +99,30 @@ fn a_wrapper_on_path_yields_to_a_known_native_binary() {
       "toolu: native binary for this session: {quoted}. Use that absolute path for toolu commands."
     )
   );
+}
+
+#[test]
+fn the_payload_session_id_wins_over_the_environment() {
+  let env = Env::from_pairs([("TOOLU_SESSION_ID", "fallback")]);
+  let id = |payload| payload_session_id(&env, payload);
+  assert_eq!(
+    id(Some(r#"{"session_id":"payload"}"#)).as_deref(),
+    Some("payload")
+  );
+  assert_eq!(
+    id(Some(r#"{"session_id":""}"#)).as_deref(),
+    Some("fallback")
+  );
+  assert_eq!(id(Some("invalid")).as_deref(), Some("fallback"));
+}
+
+#[test]
+fn the_hook_output_is_one_session_start_context_document_per_session() {
+  let (_dir, env) = sandbox();
+  let payload = Some(r#"{"session_id":"hook"}"#);
+  let first = native_toolu_hook_output(&env, payload).unwrap();
+  assert!(first.ends_with('\n'), "{first}");
+  assert!(first.contains("SessionStart"), "{first}");
+  assert!(first.contains("toolu: native binary not found"), "{first}");
+  assert_eq!(native_toolu_hook_output(&env, payload), None);
 }

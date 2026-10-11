@@ -38,7 +38,7 @@ OpenCode (only the `--state-file` path differs). Contract:
 | Command | Purpose |
 |---------|---------|
 | `toolu babysit tick` | One check: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `attention`, `nextCheckAt`. |
-| `toolu babysit wait` | Ticks at each `nextCheckAt` (every 180 s) until success, escalation, new work or an active fixer, or until `--max-seconds` (1800 on Claude Code, 55 elsewhere). |
+| `toolu babysit wait` | Ticks at each `nextCheckAt` (every 180 s) until success, escalation, pending work (`attention.needed`) or an active fixer, or until `--max-seconds` (1800 on Claude Code, 55 elsewhere). |
 | `toolu babysit reply` / `toolu babysit resolve` | Write side: idempotent replies; resolves confirmed from the mutation response. |
 | `toolu babysit record` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
 | `toolu babysit route-fix` / `toolu babysit dispatch-fix` | Jev-scored fixer routing, and herdr or OpenCode fixer agents. |

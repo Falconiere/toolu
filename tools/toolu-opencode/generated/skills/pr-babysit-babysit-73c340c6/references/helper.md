@@ -150,7 +150,7 @@ through the result, and writes it only through `toolu babysit record`, `reply`,
 | `schedule` | `{anchor, nextCheckAt}` in Unix seconds: the first scheduled check and the next whole 180 s slot. Moved only by `wait` and the epic engine. |
 | `attention` | `{fingerprint, work[]}` of the last tick, which decides `attention.new`. |
 | `status` | `active` · `complete` · `escalated` · `cancelled` — set only by `toolu babysit record status`. |
-| `worktree` | Codex's exact worktree path for this slot, or `null`. |
+| `worktree` | A Codex controller's worktree path; `null` on OpenCode. |
 | `pr.key`, `ciStatus`, `reviewDecision`, `mergeable`, `unresolvedThreads`, `headSha` | Last observed values (change detection). |
 | `pr.fixAttempts` | Bumped by `toolu babysit record round --fix-pushed`, cap 5. |
 | `pr.botVerdict`, `botState`, `botCommentId`, `botCommentUpdatedAt`, `botFindingKeys` | Last verdict and its run identity. |

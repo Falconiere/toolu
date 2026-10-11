@@ -195,6 +195,12 @@ pub(crate) fn round() -> Vec<Value> {
   pages
 }
 
+/// Serve one unchanged collection of PR 115 at the recorded head.
+pub(crate) fn serve_round(fixture: &Fixture) {
+  let sha = snapshot()["head"]["sha"].as_str().unwrap().to_owned();
+  serve(fixture, &[&sha, &sha], replies(&round()));
+}
+
 #[cfg(test)]
 #[path = "tests/recorded_test.rs"]
 mod tests;

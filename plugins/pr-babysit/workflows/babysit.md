@@ -52,7 +52,7 @@ below are shared; only continuation differs by host.
 
 1. Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` lowercased (e.g. `falconiere-toolu-42`). State: `STATE_FILE=/tmp/pr-babysit-${SLOT}.json`. One slot per agent — see **Isolation invariants**.
 2. Run the first check now with `toolu babysit tick` (Step 1) and act on it (Steps 2–6). The helper creates and initializes the state file on this first tick.
-3. Then wait for work: run `toolu babysit wait --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE"` as a **background** Bash call. It checks every 180 s on a fixed schedule, without a model turn, and ends after at most 1800 s. Its output is either a tick result that needs you (success, escalation, new work, or an active fixer) → Steps 2–6, then wait again; or the waiting document (`"state": "waiting"`) → start the next `wait` at once. Never sleep or poll yourself.
+3. Then wait for work: run `toolu babysit wait --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE"` as a **background** Bash call. It checks every 180 s on a fixed schedule, without a model turn, and ends after at most 1800 s. Its output is either a tick result that needs you (success, escalation, pending work (`attention.needed`), or an active fixer) → Steps 2–6, then wait again; or the waiting document (`"state": "waiting"`) → start the next `wait` at once. Never sleep or poll yourself.
 4. Tell user:
    > "Babysitting PR #N on branch `<branch>`, checking every 3 min. Auto-stops when CI is green and all comments are addressed. Say `/pr-babysit:babysit stop` to cancel."
 
@@ -653,7 +653,7 @@ tick and do not count the tick as done.
    use its native review interface or a read-only review subagent. Apply
    findings, then record the reviewer name in `reviewers[]`.
    - Findings that need code changes → amend or add a commit, then re-review. `review_round` restarts whenever the diff changes, and caps at 5 rewrites against an *unchanged* diff.
-   - The state file must live under the worktree's own root — pass `--repo <worktree>` to `write-state.sh` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
+   - The state file must live under the worktree's own root — pass `--repo <worktree>` to `toolu review write-state` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
    - The worktree is **detached** (`git worktree add --detach`), so pass `--branch "$BRANCH"` too: the writer keys the state file to the branch the push targets, and the gate resolves that same branch from the `HEAD:$BRANCH` refspec.
 
 3. **Push from the worktree.** Autonomous — no per-push prompt.
@@ -692,7 +692,7 @@ Exactly TWO stops:
 1. **Success stop** — both green-light conditions met.
 2. **Escalation stop** — physically can't proceed without human.
 
-No time/idle/tick-count stop. Runs as long as PR is open, has unresolved comments, or non-green CI — even for hours. Backoff slows polling; never terminates.
+No time/idle/tick-count stop. Runs as long as PR is open, has unresolved comments, or non-green CI — even for hours. The 180 s schedule never widens and never terminates.
 
 The helper's `decision` is the stop rule already applied to this tick's snapshot: `success`,
 `escalate` (escalation reasons come first in `reasons[]`), or `keep_going`. Act on it; override
@@ -714,7 +714,7 @@ of these held in the same snapshot:
 Any false (even 1 check / 1 comment / 1 finding) → DON'T stop → `wait` again.
 
 On success stop: `toolu babysit dispatch-fix cleanup --state-file "$STATE_FILE"` (the herdr worktree and
-`pr-babysit/<slot>` branch, when present), `toolu babysit record status --status complete`, then Claude
+`pr-babysit/<slot>` branch, when present), `toolu babysit record status --state-file "$STATE_FILE" --status complete`, then Claude
 removes its `/tmp` state, snapshot and result files; Codex cleans the exact clean worktree and calls
 `update_goal(status="complete")`; OpenCode removes its clean inline worktree, keeps the state file as
 the record, and ends the turn's loop.
@@ -733,7 +733,7 @@ Stop with clear flag when can't make forward progress without human — `decisio
 - `merge_conflict` — `mergeable == CONFLICTING`
 - plus your own: **Round cap** (5 fix→re-review rounds on an unchanged diff without reaching zero findings — matches the push-review gate's `MAX_ROUNDS=5`; a new commit restarts the count), a resolve that stayed `resolve_unconfirmed`, or a CI failure that needs human judgment
 
-NOT "done" — "blocked, please look". `toolu babysit record status --status escalated`, then the terminal message:
+NOT "done" — "blocked, please look". `toolu babysit record status --state-file "$STATE_FILE" --status escalated`, then the terminal message:
 > "PR #N: babysit paused — <reason>. Unresolved comments: <N>. Failing checks: <list>. Resume with `/pr-babysit:babysit` on Claude Code, `$pr-babysit:babysit` on Codex or the babysit command on OpenCode once unblocked."
 
 ### Keep going (next tick)

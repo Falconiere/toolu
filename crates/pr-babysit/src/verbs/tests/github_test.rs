@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
 
 use serde_json::{Value, json};
@@ -8,38 +8,19 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 
 use crate::verbs::World;
-use crate::verbs::tests::{run, world};
+use crate::verbs::tests::{initial_state, read, run, world};
 use crate::{fixture, recorded};
 
 const NOW: &str = "2026-10-11T12:00:00Z";
 
-fn read(path: &Path) -> Value {
-  serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
-}
-
 fn state(dir: &TempDir) -> PathBuf {
-  let path = dir.path().join("falconiere-toolu-165.json");
-  std::fs::copy(fixture::path("states/toolu-165-initial.json"), &path).unwrap();
-  path
+  initial_state(dir.path())
 }
 
 fn on<'a>(fixture: &Fixture, env: &'a Env) -> World<'a> {
   let mut world = world(env, None);
   world.github = Ok(recorded::config(fixture));
   world
-}
-
-/// Serve the recorded Falconiere/toolu#115 round once.
-fn serve_115(fixture: &Fixture) {
-  let sha = recorded::snapshot()["head"]["sha"]
-    .as_str()
-    .unwrap()
-    .to_owned();
-  recorded::serve(
-    fixture,
-    &[&sha, &sha],
-    recorded::replies(&recorded::round()),
-  );
 }
 
 fn pr_115<'a>(verb: &'a str, state: &'a str) -> Vec<&'a str> {
@@ -118,7 +99,7 @@ fn collect_writes_the_snapshot_to_out_and_prints_its_path() {
   let dir = TempDir::new().unwrap();
   let out = dir.path().join("snap.json");
   let fixture = Fixture::start().unwrap();
-  serve_115(&fixture);
+  recorded::serve_round(&fixture);
   let env = recorded::env(&fixture);
   let args = [
     "collect",
@@ -146,7 +127,7 @@ fn wait_with_no_time_checks_github_once_and_returns_what_needs_the_agent() {
   let dir = TempDir::new().unwrap();
   let state = dir.path().join("s.json");
   let fixture = Fixture::start().unwrap();
-  serve_115(&fixture);
+  recorded::serve_round(&fixture);
   let env = recorded::env(&fixture);
   let args = [
     &pr_115("wait", state.to_str().unwrap())[..],

@@ -3,7 +3,7 @@ use std::os::unix::fs::PermissionsExt;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 
-use super::{check_binary, check_toolu, session_id};
+use super::{check_binary, check_toolu};
 
 fn codex_without_core(dir: &tempfile::TempDir) -> Env {
   let codex = dir.path().join("codex");
@@ -32,19 +32,6 @@ fn check_toolu_warns_codex_without_the_core_and_is_silent_elsewhere() {
   assert!(!text.ends_with('\n'));
   let claude = Env::from_pairs([("CLAUDE_PLUGIN_ROOT", "/p")]);
   assert_eq!(check_toolu(&claude).stdout, None);
-}
-
-#[test]
-fn the_payload_session_id_wins_over_the_environment() {
-  let env = Env::from_pairs([("TOOLU_SESSION_ID", "fallback")]);
-  assert_eq!(
-    session_id(&env, Some(r#"{"session_id":"payload"}"#)),
-    Some("payload".to_owned())
-  );
-  assert_eq!(
-    session_id(&env, Some("invalid")),
-    Some("fallback".to_owned())
-  );
 }
 
 #[test]

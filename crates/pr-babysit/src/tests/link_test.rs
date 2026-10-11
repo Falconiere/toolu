@@ -124,15 +124,7 @@ fn a_rate_limit_keeps_its_wait_and_anything_else_fails_with_its_code() {
 fn a_scheduled_tick_reads_github_once_and_reports_decision_and_cost() {
   let dir = TempDir::new().unwrap();
   let fixture = Fixture::start().unwrap();
-  let sha = recorded::snapshot()["head"]["sha"]
-    .as_str()
-    .unwrap()
-    .to_owned();
-  recorded::serve(
-    &fixture,
-    &[&sha, &sha],
-    recorded::replies(&recorded::round()),
-  );
+  recorded::serve_round(&fixture);
   let request = TickRequest {
     repo: "Falconiere/toolu".into(),
     number: 115,

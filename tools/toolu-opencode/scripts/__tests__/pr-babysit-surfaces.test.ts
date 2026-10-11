@@ -56,6 +56,7 @@ const BANNED = [
   "hooks/dist",
   "TOOLU_BUN",
   "backoff.waitSeconds",
+  "Backoff",
   'bun "$PLUGIN_ROOT',
   "`--host` is this controller",
   "Claude cron interval",

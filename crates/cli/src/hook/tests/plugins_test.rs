@@ -48,39 +48,11 @@ fn statusline_session_start_publishes_compat_path_without_blocking() {
   assert!(dir.path().join("statusline/statusline.sh").is_symlink());
 }
 
-#[test]
-fn statusline_session_start_does_not_run_for_a_tool_event() {
-  let other = HookRequest {
-    plugin: "statusline".to_owned(),
-    name: "session-start".to_owned(),
-    event: Some("PreToolUse".to_owned()),
-    plugin_root: None,
-  };
-  let no_exe = || None;
-  let env = Env::default();
-  let env_fn = || env.clone();
-  let fallback = PathBuf::new();
-  let cwd_fn = || Ok(fallback.clone());
-  let context = Context {
-    exe: &no_exe,
-    stdin: &startup,
-    env: &env_fn,
-    cwd: &cwd_fn,
-  };
-  let outcome = run(&other, &context);
-  assert_eq!(outcome.exit, toolu_protocol::exit::Exit::Blocked);
-  assert!(
-    outcome
-      .stderr
-      .is_some_and(|text| text.contains("has no hook session-start"))
-  );
-}
-
-fn babysit(name: &str, env: &Env) -> toolu_runtime::cli::Outcome {
+fn hook(plugin: &str, name: &str, event: &str, env: &Env) -> toolu_runtime::cli::Outcome {
   let request = HookRequest {
-    plugin: "pr-babysit".to_owned(),
+    plugin: plugin.to_owned(),
     name: name.to_owned(),
-    event: Some("SessionStart".to_owned()),
+    event: Some(event.to_owned()),
     plugin_root: None,
   };
   let no_exe = || None;
@@ -94,6 +66,21 @@ fn babysit(name: &str, env: &Env) -> toolu_runtime::cli::Outcome {
     cwd: &cwd_fn,
   };
   run(&request, &context)
+}
+
+#[test]
+fn statusline_session_start_does_not_run_for_a_tool_event() {
+  let outcome = hook("statusline", "session-start", "PreToolUse", &Env::default());
+  assert_eq!(outcome.exit, toolu_protocol::exit::Exit::Blocked);
+  assert!(
+    outcome
+      .stderr
+      .is_some_and(|text| text.contains("has no hook session-start"))
+  );
+}
+
+fn babysit(name: &str, env: &Env) -> toolu_runtime::cli::Outcome {
+  hook("pr-babysit", name, "SessionStart", env)
 }
 
 #[test]

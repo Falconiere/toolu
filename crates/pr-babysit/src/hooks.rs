@@ -6,10 +6,8 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::json::ordered::Ordered;
-use toolu_runtime::startup::context::{render_hook_output, session_context};
 use toolu_runtime::startup::dependencies::{NoticeStyle, codex_dependency_notice};
-use toolu_runtime::startup::native_toolu_advice;
+use toolu_runtime::startup::native_toolu_hook_output;
 
 /// The core plugin pr-babysit needs.
 const CORE_PLUGIN: &str = "toolu@toolu";
@@ -32,24 +30,9 @@ pub fn check_toolu(env: &Env) -> Outcome {
   ))
 }
 
-fn session_id(env: &Env, text: Option<&str>) -> Option<String> {
-  let payload = text.and_then(|text| Ordered::parse(text).ok());
-  match payload
-    .as_ref()
-    .and_then(|payload| payload.get("session_id"))
-  {
-    Some(Ordered::String(id)) if !id.is_empty() => Some(id.clone()),
-    _ => env.get("TOOLU_SESSION_ID").map(str::to_owned),
-  }
-}
-
 /// One context message when the agent's shell cannot find a native `toolu`.
 pub fn check_binary(env: &Env, text: Option<&str>) -> Outcome {
-  let id = session_id(env, text);
-  let output = native_toolu_advice(env, id.as_deref())
-    .and_then(|line| session_context("SessionStart", &line))
-    .map(|context| render_hook_output(&context, false));
-  advisory(output)
+  advisory(native_toolu_hook_output(env, text))
 }
 
 #[cfg(test)]

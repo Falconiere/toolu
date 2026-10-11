@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use serde_json::Value;
@@ -24,6 +24,18 @@ pub(super) fn world<'a>(env: &'a Env, stdin: Option<&'a str>) -> World<'a> {
 }
 
 /// `toolu babysit <args>` in `world`: its exit and stdout document.
+/// The JSON document at `path`.
+pub(super) fn read(path: &Path) -> Value {
+  serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+/// A copy of the recorded PR 165 initial state in `dir`.
+pub(super) fn initial_state(dir: &Path) -> PathBuf {
+  let path = dir.join("falconiere-toolu-165.json");
+  std::fs::copy(fixture::path("states/toolu-165-initial.json"), &path).unwrap();
+  path
+}
+
 pub(super) fn run(args: &[&str], world: &World<'_>) -> (Exit, Value) {
   let line = std::iter::once("babysit").chain(args.iter().copied());
   let matches = crate::cli::command().try_get_matches_from(line).unwrap();

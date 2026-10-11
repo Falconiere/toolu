@@ -24,7 +24,7 @@ codex plugin add pr-babysit@toolu
 Requires the `toolu` plugin. Multi-host fixes need [herdr](https://herdr.dev)
 and the host CLIs you list (`claude`, `codex`, `cursor-agent`); without herdr,
 fixes run in-session as before. OpenCode fixers need only the `opencode` CLI. Jev
-routing needs `TYPESAFE_API_KEY` and the `jev` plugin; without it a task/severity
+routing needs `TYPESAFE_API_KEY`; without it a task/severity
 heuristic picks the tier.
 
 OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../../docs/opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
