@@ -287,10 +287,14 @@ fn statusline_session_start_publishes_compat_path_without_blocking() {
     ),
   };
   let no_exe = || None;
+  let env_fn = || env.clone();
+  let cwd_path = dir.path().to_path_buf();
+  let cwd_fn = || Ok(cwd_path.clone());
   let context = Context {
     exe: &no_exe,
     stdin: &startup,
-    env: Some(&env),
+    env: &env_fn,
+    cwd: &cwd_fn,
   };
   let outcome = run(&other, &context);
   assert_eq!(outcome.exit.code(), 0);
