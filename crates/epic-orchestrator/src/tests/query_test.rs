@@ -244,11 +244,13 @@ fn assert_wait_ack_and_answer(env: &Env) {
     env,
   );
   assert_eq!(waiting.exit, Exit::Success, "{waiting:?}");
-  assert_eq!(ack(&parse(&["epic", "ack", "a"]), env).exit, Exit::Success);
+  let ctx = Ctx::default();
   assert_eq!(
-    answer(&parse(&["epic", "answer", "a", "yes"]), env).exit,
+    ack(&ctx, &parse(&["epic", "ack", "a"]), env).exit,
     Exit::Success
   );
+  let unanswered = answer(&ctx, &parse(&["epic", "answer", "a", "yes"]), env);
+  assert_eq!(unanswered.exit, Exit::Failure, "{unanswered:?}");
   assert_eq!(
     ask(env, "status", &json!({"op": "status"})).exit,
     Exit::Success

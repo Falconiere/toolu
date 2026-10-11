@@ -2,13 +2,20 @@
 
 use std::time::{Duration, Instant};
 
+use crate::attention::next_reminder_ms;
 use crate::model::World;
 use crate::schedule::next_stall_ms;
 use crate::socket::Waiter;
 
-/// Whether a local stall deadline has elapsed.
+/// Whether a local stall or reminder deadline has elapsed.
 pub(crate) fn stall_ready(world: &World) -> bool {
-  next_stall_ms(world).is_some_and(|at| at <= world.now_ms)
+  next_local_ms(world).is_some_and(|at| at <= world.now_ms)
+}
+
+fn next_local_ms(world: &World) -> Option<u64> {
+  let stall = next_stall_ms(world);
+  let reminder = next_reminder_ms(world);
+  stall.into_iter().chain(reminder).min()
 }
 
 /// Whether a GitHub watch may send a request now.
@@ -29,7 +36,7 @@ pub(crate) fn wake_after(world: &World, waiters: &[Waiter], next_tick: Instant) 
     .min()
     .map(|deadline| deadline.saturating_duration_since(Instant::now()));
   let until_stall =
-    next_stall_ms(world).map(|at| Duration::from_millis(at.saturating_sub(world.now_ms)));
+    next_local_ms(world).map(|at| Duration::from_millis(at.saturating_sub(world.now_ms)));
   let wake = until_wait.map_or(until_tick, |wait| until_tick.min(wait));
   let wake = until_stall.map_or(wake, |stall| wake.min(stall));
   let until_github = world

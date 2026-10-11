@@ -227,6 +227,7 @@ impl Engine {
         }
         Ok(Applied::Continue)
       }
+      Step::Notify { .. } => Ok(Applied::Continue),
     }
   }
 
@@ -251,7 +252,7 @@ impl Engine {
   ///
   /// # Errors
   /// herdr fails, or the script fails or is deferred.
-  fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
+  pub(crate) fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
     if self.scripts.is_none() && crate::source::prompt_enabled() {
       let target = self
         .world

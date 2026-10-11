@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 
 use crate::journal::{self, Record};
 use crate::model::Report;
-use crate::schedule::{ack, note_event};
+use crate::schedule::note_event;
 use crate::server::{Engine, Stop};
 use crate::socket::Waiter;
 use crate::status::wait_body;
@@ -51,11 +51,11 @@ fn operate(
     "status" => reply_status(engine, request, &reply),
     "pause" => reply_pause(engine, request, &reply, true),
     "resume" => reply_pause(engine, request, &reply, false),
-    "ack" => Ok(reply_ack(engine, request, &reply)),
+    "ack" => crate::attention_ops::reply_ack(engine, request, &reply),
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),
     "wait" => Ok(reply_wait(engine, request, reply, waiters)),
-    "answer" => reply_answer(engine, request, &reply),
+    "answer" => Ok(crate::attention_ops::reply_answer(engine, request, &reply)),
     _ => {
       let _sent = reply.send(json!({"error": "unknown op"}));
       Ok(false)
@@ -95,15 +95,6 @@ fn reply_pause(
   };
   let _sent = reply.send(result_value(result));
   if pause { Ok(false) } else { pump_after(engine) }
-}
-
-fn reply_ack(engine: &mut Engine, request: &Value, reply: &Sender<Value>) -> bool {
-  ack(
-    &mut engine.world,
-    request.get("key").and_then(Value::as_str).unwrap_or(""),
-  );
-  let _sent = reply.send(json!({"ok": true}));
-  false
 }
 
 fn reply_event(
@@ -173,25 +164,8 @@ fn ready_wait(world: &mut crate::model::World, max_seconds: u64) -> Option<Value
   (max_seconds == 0 || body.get("kind").is_some()).then_some(body)
 }
 
-fn reply_answer(
-  engine: &mut Engine,
-  request: &Value,
-  reply: &Sender<Value>,
-) -> Result<bool, String> {
-  let key = request.get("key").and_then(Value::as_str).unwrap_or("");
-  let text = request.get("text").and_then(Value::as_str).unwrap_or("");
-  let record = Record::new("prompt", "answer", key, "", text);
-  journal::append(
-    &engine.paths.journal_dir(),
-    &engine.paths.journal_lock(),
-    &record,
-    engine.now,
-  )?;
-  let _sent = reply.send(json!({"ok": true}));
-  Ok(false)
-}
-
-fn result_value(result: Result<(), String>) -> Value {
+/// `{"ok":true}`, or `{"error":…}`.
+pub(crate) fn result_value(result: Result<(), String>) -> Value {
   match result {
     Ok(()) => json!({"ok": true}),
     Err(err) => json!({"error": err}),

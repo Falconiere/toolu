@@ -62,19 +62,35 @@ pub(crate) fn pause(matches: &ArgMatches, env: &Env, pausing: bool) -> Outcome {
   ask(env, op, &request)
 }
 
-/// Acknowledge one attention item through the control socket.
-pub(crate) fn ack(matches: &ArgMatches, env: &Env) -> Outcome {
+/// Acknowledge the attention items of one key through the control socket.
+pub(crate) fn ack(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
-  let request = json!({"op": "ack", "key": key});
+  let request = json!({"op": "ack", "key": key, "by": answerer(ctx, None)});
   ask(env, "ack", &request)
 }
 
-/// Submit an answer through the control socket.
-pub(crate) fn answer(matches: &ArgMatches, env: &Env) -> Outcome {
+/// Prompt the worker with an answer through the control socket.
+pub(crate) fn answer(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let body = text(matches, "text").unwrap_or("");
-  let request = json!({"op": "answer", "key": key, "text": body});
-  ask(env, "answer", &request)
+  let by = answerer(ctx, text(matches, "by"));
+  let request = json!({"op": "answer", "key": key, "text": body, "by": by});
+  if let Err(err) = ensure(env) {
+    return failed("toolu epic answer", &err);
+  }
+  match exchange_retry(&Paths::from_env(env), PROTOCOL, &request) {
+    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
+      Some(err) => failed("toolu epic answer", err),
+      None => json_out(&doc),
+    },
+    Err(err) => failed("toolu epic answer", &err),
+  }
+}
+
+/// `--by`, else the `--host` name, else `user`.
+pub(crate) fn answerer(ctx: &Ctx, by: Option<&str>) -> String {
+  by.filter(|by| !by.is_empty())
+    .map_or_else(|| ctx.host.map_or("user", Host::name).to_owned(), str::to_owned)
 }
 
 /// Wait for a bounded engine judgment.

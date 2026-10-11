@@ -117,6 +117,8 @@ Config keys, then the queue in the state machine, then the notifier thread and h
     ],
     "paths": [
       "crates/epic-orchestrator/src/server.rs",
+      "crates/epic-orchestrator/src/attention_ops.rs",
+      "crates/epic-orchestrator/src/tests/attention_ops_test.rs",
       "crates/epic-orchestrator/src/socket.rs",
       "crates/epic-orchestrator/src/socket_deadline.rs",
       "crates/epic-orchestrator/src/control.rs",
@@ -223,6 +225,11 @@ Config keys, then the queue in the state machine, then the notifier thread and h
   4. A rebase on `origin/main` if it moved, with the affected checks re-run.
   5. Push, and a PR to `main` whose body starts with `Closes Falconiere/toolu#450` and `Part of Falconiere/toolu#402`.
   6. `report pr-open`, `report babysit`, then the `pr-babysit:babysit` handoff.
+
+## Deviations
+
+- `engine`: the `ack` and `answer` socket operations live in a new `attention_ops.rs` (with `tests/attention_ops_test.rs`, which holds the `answer_` tests), because moving them into `dispatch.rs` or `server.rs` put either file over the 300-code-line limit.
+- `answer --by` defaults to the `--host` name, else `user`. Environment detection always names a host, so it cannot tell a person at a terminal from an agent.
 
 ## Plan review
 

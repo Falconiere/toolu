@@ -5,6 +5,8 @@ use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::cli::{Ctx, Outcome};
 
+mod attention;
+mod attention_ops;
 /// Cross-plugin babysit integration for the resident engine.
 pub mod babysit;
 mod checkpoint;

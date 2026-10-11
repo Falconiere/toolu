@@ -1,8 +1,8 @@
-//! Stall nudges, checkpoints, pause, and herdr backoff.
+//! Stall nudges, reminders, checkpoints, pause, and herdr backoff.
 
 use crate::journal::Record;
 use crate::logic::{push_attention, token};
-use crate::model::{Action, Attention, Pending, Step, World};
+use crate::model::{Action, Pending, Step, World};
 
 /// Stall nudges and one checkpoint. Steps sit in the outbox or on the issue.
 pub(crate) fn on_tick(world: &mut World) {
@@ -10,6 +10,7 @@ pub(crate) fn on_tick(world: &mut World) {
   for key in keys {
     stall(world, &key);
   }
+  crate::attention::remind(world);
   arm_checkpoint(world);
 }
 
@@ -164,25 +165,15 @@ pub(crate) fn set_pause(world: &mut World, epic: Option<&str>, paused_on: bool) 
   }
 }
 
-/// Acknowledge a stall so `wait` does not return it again yet.
-pub(crate) fn ack(world: &mut World, key: &str) {
-  for item in &mut world.attention {
-    if item.key == key && item.kind == "stall" {
-      item.delivered = true;
-    }
-  }
+/// Acknowledge the key's attention items and restart its stall clock, so a
+/// stall is not raised again until it has run its full length once more.
+pub(crate) fn ack(world: &mut World, key: &str, by: &str) {
+  crate::attention::ack(world, key, by);
   if let Some(issue) = world.issues.get_mut(key) {
     issue.stall_nudged = false;
     issue.nudge_at_ms = world.now_ms;
     issue.phase_at_ms = world.now_ms;
   }
-}
-
-/// The oldest undelivered judgment.
-pub(crate) fn take_judgment(world: &mut World) -> Option<Attention> {
-  let item = world.attention.iter_mut().find(|item| !item.delivered)?;
-  item.delivered = true;
-  Some(item.clone())
 }
 
 /// Herdr probe result. Backoff is 30 seconds, doubling, capped at 5 minutes.

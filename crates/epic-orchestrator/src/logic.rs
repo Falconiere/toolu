@@ -1,7 +1,7 @@
 //! Per-issue transitions. The server performs the steps this module returns.
 
 use crate::journal::Record;
-use crate::model::{Action, Attention, Issue, Pending, Report, Step, World, fresh};
+use crate::model::{Action, Issue, Pending, Report, Step, World, fresh};
 use crate::note::bounded_note;
 
 pub(crate) fn token(world: &mut World) -> String {
@@ -20,6 +20,7 @@ fn judgment_phase(phase: &str) -> bool {
 /// Record a worker report and return the snapshots and journal lines to write.
 pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   let changed = phase_changed(world, report);
+  crate::attention::close_key(world, &report.key);
   let now_ms = world.now_ms;
   let issue = issue_mut(world, report);
   report.phase.clone_into(&mut issue.phase);
@@ -99,24 +100,7 @@ pub(crate) fn arm_ready(world: &mut World) {
 }
 
 pub(crate) fn push_attention(world: &mut World, kind: &str, key: &str, note: &str) {
-  let epic = world
-    .issues
-    .get(key)
-    .map(|issue| issue.epic.clone())
-    .unwrap_or_default();
-  let note = bounded_note(note);
-  world.seq = world.seq.saturating_add(1);
-  world.attention.push(Attention {
-    seq: world.seq,
-    kind: kind.to_owned(),
-    key: key.to_owned(),
-    epic,
-    note: note.clone(),
-    delivered: false,
-  });
-  world
-    .outbox
-    .push_back(Step::Journal(Record::new("judgment", kind, key, "", &note)));
+  let _token = crate::attention::raise(world, kind, key, note);
 }
 
 /// The next thing to do, if the machine is not idle.

@@ -1,9 +1,9 @@
 use super::{
   ack, map_pane_closed as close_pane, next_stall_ms, note_event, note_herdr, on_tick, set_pause,
-  take_judgment,
 };
+use crate::attention::take as take_judgment;
 use crate::logic::{apply_report, ensure_issue};
-use crate::model::{Action, Attention, Report, World, fresh};
+use crate::model::{Ack, Action, Report, Step, World, fresh};
 
 #[test]
 fn herdr_backoff_doubles_from_thirty_seconds() {
@@ -25,8 +25,8 @@ fn ack_clears_a_stall_nudge() {
   let issue = ensure_issue(&mut world, "a", "one", "/epic");
   issue.phase = "running".to_owned();
   issue.stall_nudged = true;
-  world.attention.push(stall("a"));
-  ack(&mut world, "a");
+  let _token = crate::attention::raise(&mut world, "stall", "a", "");
+  ack(&mut world, "a", "user");
   assert!(!world.issues.get("a").expect("issue").stall_nudged);
   assert!(world.attention[0].delivered);
 }
@@ -238,13 +238,29 @@ fn babysit_waits(world: &mut World) {
   assert!(nudged(world));
 }
 
-fn stall(key: &str) -> Attention {
-  Attention {
-    seq: 1,
-    kind: "stall".to_owned(),
-    key: key.to_owned(),
-    epic: "one".to_owned(),
-    note: String::new(),
-    delivered: false,
+#[test]
+fn ack_silences_a_stall_until_its_full_length_passes_again() {
+  let mut world = World::new(0);
+  world.stall_ms = 100;
+  ensure_issue(&mut world, "a", "one", "/epic").phase = "execution".to_owned();
+  world.issues.get_mut("a").expect("issue").phase_at_ms = 0;
+  for now in [100, 200] {
+    world.now_ms = now;
+    on_tick(&mut world);
   }
+  assert_eq!(world.attention.len(), 1);
+  ack(&mut world, "a", "user");
+  world.outbox.clear();
+  for now in [250, 299, 30 * 60 * 1000 + 199] {
+    world.now_ms = now;
+    on_tick(&mut world);
+    let raised = world.outbox.iter().any(|step| {
+      matches!(step, Step::Notify { .. })
+        || matches!(step, Step::Journal(record) if record.kind == "judgment")
+    });
+    assert!(!raised, "at {now}");
+  }
+  assert_eq!(world.attention.len(), 1);
+  assert_eq!(world.attention[0].state, Ack::Acknowledged);
+  assert_eq!(world.attention[0].reminders, 0);
 }
