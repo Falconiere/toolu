@@ -241,6 +241,21 @@ fn posts(fixture: &Fixture, within: Duration) -> Vec<ObservedRequest> {
   }
 }
 
+/// The `/api/v1/attention` items once the published snapshot has `count` of them.
+fn attention_items(addr: SocketAddr, count: usize) -> Vec<Value> {
+  let start = Instant::now();
+  loop {
+    let items = get(addr, "/api/v1/attention")["items"]
+      .as_array()
+      .cloned()
+      .unwrap_or_default();
+    if items.len() == count || start.elapsed() > Duration::from_secs(2) {
+      return items;
+    }
+    thread::sleep(Duration::from_millis(10));
+  }
+}
+
 #[test]
 fn attention_reaches_every_channel() {
   let tmp = tempfile::tempdir().expect("temp");
@@ -256,9 +271,9 @@ fn attention_reaches_every_channel() {
     (&wait["kind"], &wait["state"]),
     (&json!("needs-human"), &json!("open"))
   );
-  let listed = get(live.addr, "/api/v1/attention");
-  assert_eq!(listed["items"][0]["key"], "a");
-  assert!(listed["items"][0]["age_ms"].is_u64(), "{listed}");
+  let listed = attention_items(live.addr, 1);
+  assert_eq!(listed[0]["key"], "a");
+  assert!(listed[0]["age_ms"].is_u64(), "{listed:?}");
   let seen = posts(&fixture, Duration::from_secs(2));
   assert!(start.elapsed() < Duration::from_secs(2));
   assert_post(&seen, live.addr);
@@ -266,7 +281,7 @@ fn attention_reaches_every_channel() {
   assert_eq!(send(&live, &answer), json!({"ok": true}));
   assert_eq!(prompts(tmp.path()), [json!({"key": "a", "text": "take B"})]);
   socket_report(&live, "execution", "working");
-  assert_eq!(get(live.addr, "/api/v1/attention")["items"], json!([]));
+  assert_eq!(attention_items(live.addr, 0), [] as [Value; 0]);
   assert_eq!(send(&live, &json!({"op": "stop"}))["ok"], true);
   live.engine.join().expect("engine").expect("serve");
   assert_journal(&live.paths);
