@@ -38,3 +38,26 @@ fn an_enforcing_event_runs_the_hook_and_passes_its_status_through() {
   assert_eq!(blocked.code, 2, "{blocked:?}");
   assert!(blocked.stderr.contains("has no hook no-such-hook"));
 }
+
+#[test]
+fn check_binary_advises_the_installed_path_once_per_session() {
+  let sandbox = Sandbox::new().unwrap();
+  let bin = sandbox.install().unwrap();
+  let input =
+    r#"{"hook_event_name":"SessionStart","source":"startup","session_id":"native-check"}"#;
+  let first = sandbox
+    .launch("SessionStart", "check-binary", input, &[])
+    .unwrap();
+  assert_eq!(first.code, 0, "{first:?}");
+  assert!(
+    system_message(&first)
+      .unwrap()
+      .contains(&bin.display().to_string()),
+    "{first:?}"
+  );
+  let again = sandbox
+    .launch("SessionStart", "check-binary", input, &[])
+    .unwrap();
+  assert_eq!(again.code, 0, "{again:?}");
+  assert!(again.stdout.is_empty(), "{again:?}");
+}

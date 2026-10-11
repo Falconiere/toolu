@@ -21,7 +21,7 @@ Launcher and startup handler → generated hook inventory and conformance → na
     "title": "Add native check-binary handler and explicit Bun rollback selection to the generated launcher",
     "check": "cargo test -p toolu-cli --test launcher --test tool_hooks && cargo test -p toolu-protocol --lib launcher",
     "ac_refs": ["AC-1", "AC-3"],
-    "paths": ["crates/cli/src/hook.rs", "crates/cli/src/hook/tests", "crates/cli/tests/launcher.rs", "crates/cli/tests/helpers", "crates/core/protocol/src/launcher.rs", "crates/core/protocol/src/tests", "crates/toolu/src/lifecycle", "crates/core/runtime/src/startup/native.rs", "plugins/toolu/hooks/src/check-binary.ts"],
+    "paths": ["crates/cli/src/hook.rs", "crates/cli/src/hook/tests", "crates/cli/tests/launcher.rs", "crates/cli/tests/helpers", "crates/core/protocol/src/launcher.rs", "crates/core/protocol/src/tests", "crates/toolu/src/lifecycle", "crates/core/runtime/src/startup/native.rs", "plugins/toolu/hooks/src/check-binary.ts", "tooling/fixtures/native-launcher", "tools/toolu-opencode/src/bootstrap/native-launcher.txt"],
     "input": "real /bin/sh launcher with installed toolu and committed check-binary bundle; TOOLU_RUNTIME=bun with real Bun; invalid TOOLU_BIN, absent Bun or bundle, and both enforcing/context events assert exit and advice"
   },
   {
@@ -84,6 +84,7 @@ Launcher and startup handler → generated hook inventory and conformance → na
 ## Critical files
 
 - `crates/core/protocol/src/launcher.rs` and its tests; `crates/cli/src/hook.rs` and its tests.
+- The generated launcher goldens under `crates/core/protocol/src/tests/fixtures/` and `tooling/fixtures/native-launcher/`, plus OpenCode's bootstrap launcher text.
 - `plugins/toolu/hooks/hooks.json`, eight fallback entry sources/bundles, `fixtures/rust-ported.json`, and the conformance seam.
 - `crates/toolu/src/debug.rs` and its colocated modules/tests; `crates/cli/tests/debug_cli.rs`; captured inputs under `plugins/toolu/scripts/__tests__/fixtures/debug/`.
 - `package.json`, `tooling/src/native-toolu-host-smoke.ts`, `tooling/src/__tests__/native-toolu-markdown.test.ts`, and only TypeScript files proven unused by knip.
@@ -99,7 +100,7 @@ Commit scoped increments after their affected checks. Before implementation and 
 
 ## Deviations
 
-None.
+The launcher step's `paths` now includes its checked-in generator goldens and OpenCode bootstrap text, discovered while reading the protocol test before implementation. This changes freshness declarations, not behavior or step order.
 
 ## Plan review
 

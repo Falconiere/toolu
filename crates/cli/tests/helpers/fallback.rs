@@ -71,3 +71,44 @@ fn a_set_toolu_bin_never_falls_back() {
   assert_eq!(run.code, 2, "{run:?}");
   assert!(!run.stderr.contains("Bun bundle"));
 }
+
+#[test]
+fn toolu_runtime_bun_uses_the_shipped_bundle_even_when_native_is_installed() {
+  let sandbox = Sandbox::new().unwrap();
+  sandbox.install().unwrap();
+  bundle(
+    &sandbox,
+    "session-start",
+    "console.log(JSON.stringify({ systemMessage: 'forced Bun fallback' }));",
+  )
+  .unwrap();
+  let bun = bun().unwrap();
+  let run = sandbox
+    .launch(
+      "SessionStart",
+      "session-start",
+      STARTUP,
+      &[("TOOLU_RUNTIME", "bun"), ("TOOLU_BUN", &bun)],
+    )
+    .unwrap();
+  assert_eq!(run.code, 0, "{run:?}");
+  assert_eq!(run.stdout, "{\"systemMessage\":\"forced Bun fallback\"}\n");
+  assert!(run.stderr.contains("TOOLU_RUNTIME=bun selected"), "{run:?}");
+}
+
+#[test]
+fn forced_bun_without_a_bundle_does_not_run_the_installed_native_hook() {
+  let sandbox = Sandbox::new().unwrap();
+  sandbox.install().unwrap();
+  let bun = bun().unwrap();
+  let run = sandbox
+    .launch(
+      "PreToolUse",
+      "pre-tools",
+      "{}",
+      &[("TOOLU_RUNTIME", "bun"), ("TOOLU_BUN", &bun)],
+    )
+    .unwrap();
+  assert_eq!(run.code, 2, "{run:?}");
+  assert!(run.stderr.contains("toolu is not installed"));
+}
