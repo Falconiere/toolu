@@ -15,6 +15,9 @@ use crate::model::{Action, Report, Step, World};
 use crate::paths::Paths;
 use crate::schedule::{note_herdr, on_tick, set_pause};
 use crate::snapshot::{issue_path, load, status_path};
+use crate::watch;
+use toolu_engine::babysit::BabysitTick;
+use toolu_github::Client;
 
 /// Where a scripted merge is killed so recovery can be tested.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,6 +61,8 @@ pub(crate) struct Engine {
   pub(crate) now: SystemTime,
   /// A new pane matched a running worktree, so the subscription should reopen.
   pub resubscribe: bool,
+  /// Shared GitHub client, created only when a watch first becomes due.
+  pub(crate) github: Option<Client>,
 }
 
 impl Engine {
@@ -77,6 +82,7 @@ impl Engine {
       herdr_session: None,
       now,
       resubscribe: false,
+      github: None,
     })
   }
 
@@ -112,6 +118,13 @@ impl Engine {
     for step in apply_report(&mut self.world, report) {
       let _applied = self.apply(step)?;
     }
+    watch::sync(&mut self.world);
+    for watched in self.world.watches.values_mut() {
+      if matches!(&watched.kind, watch::Kind::Pr { key, .. } if key == &report.key) {
+        watched.request_immediate();
+      }
+    }
+    self.persist_watch()?;
     crate::limit::on_failed(self, &report.phase, &report.note, &report.key)
   }
 
@@ -155,10 +168,12 @@ impl Engine {
   ///
   /// # Errors
   /// A step or the watch file fails.
-  pub(crate) fn tick(&mut self) -> Result<Stop, String> {
+  pub(crate) fn tick(&mut self, babysit: &dyn BabysitTick) -> Result<Stop, String> {
     self.refresh_clock();
     crate::snapshot::adopt_new_epics(&mut self.world, &self.paths)?;
+    watch::sync(&mut self.world);
     on_tick(&mut self.world);
+    self.github_tick(babysit);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
     self.persist_watch()?;
     if !crate::source::prompt_enabled() {
@@ -186,22 +201,6 @@ impl Engine {
     write_value(
       &self.paths.pause(),
       &json!({"all": self.world.paused_all, "epics": epics}),
-    )
-  }
-
-  fn persist_watch(&self) -> Result<(), String> {
-    write_value(
-      &self.paths.watch(),
-      &json!({
-        "version": 1,
-        "nextCheckpointAt": self.world.checkpoint_at_ms,
-        "checkpointQueue": [],
-        "nextBudgetAt": self.world.now_ms,
-        "budgetAlertReset": 0,
-        "budgetHoldUntil": 0,
-        "herdrFailures": self.world.herdr_failures,
-        "herdrRetryAt": self.world.herdr_retry_at_ms,
-      }),
     )
   }
 

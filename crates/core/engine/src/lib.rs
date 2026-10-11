@@ -63,6 +63,15 @@ pub enum LinkError {
   },
   /// The owner ran and failed; the message is fit to show a user.
   Failed(String),
+  /// GitHub asked the owning plugin to pause requests.
+  RateLimited {
+    /// Delay supplied by `Retry-After`, when present.
+    retry_after: Option<std::time::Duration>,
+    /// Latest GraphQL primary capacity, when present.
+    remaining: Option<u64>,
+    /// Primary reset as Unix seconds, when present.
+    reset_at: Option<u64>,
+  },
 }
 
 impl fmt::Display for LinkError {
@@ -70,6 +79,7 @@ impl fmt::Display for LinkError {
     match self {
       Self::NotPorted { issue } => write!(f, "not ported yet (#{issue})"),
       Self::Failed(message) => f.write_str(message),
+      Self::RateLimited { .. } => f.write_str("GitHub rate limited the tick"),
     }
   }
 }

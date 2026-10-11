@@ -10,7 +10,7 @@ use toolu_http::{Auth, Method, Request, Response};
 
 use crate::policy::{self, Class};
 use crate::token::{self, Token, Tokens};
-use crate::{Client, Error};
+use crate::{Client, Error, RateLimit};
 
 /// The `User-Agent` GitHub requires on every request.
 const USER_AGENT: &str = concat!("toolu/", env!("CARGO_PKG_VERSION"));
@@ -77,18 +77,23 @@ impl Client {
     match (class, outcome) {
       (Class::Success, Ok(response)) => Ok(Step::Done(response)),
       (Class::Unauthorized, _) => Err(Error::Unauthorized),
-      (Class::RateLimited { wait }, outcome) => {
+      (Class::RateLimited { wait }, Ok(response)) => {
         let pause = wait.unwrap_or_else(|| retry.backoff(attempt));
         if pause > retry.max_wait || attempt >= retry.attempts {
-          let status = outcome.map_or(0, |response| response.status);
+          let (status, rate, secondary) = rate_detail(&response);
           return Err(Error::RateLimited {
             status,
             retry_after: wait,
+            rate,
+            secondary,
           });
         }
         Ok(Step::Wait(pause))
       }
       (Class::Transient, _) if attempt < retry.attempts => Ok(Step::Wait(retry.backoff(attempt))),
+      // Unreachable: `classify` never maps a transport error to
+      // `RateLimited`, so no rate detail exists to report.
+      (Class::RateLimited { .. }, Err(err)) => Err(Error::Transport(err)),
       (Class::Success | Class::Transient | Class::Permanent, outcome) => Err(self.failure(outcome)),
     }
   }
@@ -161,6 +166,14 @@ impl Client {
       Err(_unreadable) => false,
     }
   }
+}
+
+fn rate_detail(response: &Response) -> (u16, RateLimit, bool) {
+  (
+    response.status,
+    RateLimit::of(response),
+    policy::secondary(response),
+  )
 }
 
 /// The request headers for `call`.

@@ -173,7 +173,7 @@ fn verbs_round_trip_on_a_local_engine() {
   )
   .expect("registry");
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL));
+  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, &()));
   wait_live(&paths);
   assert_status_pause_and_report(&env, &epic);
   assert_wait_ack_and_answer(&env);

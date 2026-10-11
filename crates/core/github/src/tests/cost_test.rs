@@ -45,6 +45,22 @@ fn rest_costs_one_point_and_a_not_modified_none() {
 }
 
 #[test]
+fn rate_limit_survives_a_json_round_trip() {
+  let rate = RateLimit {
+    resource: Some("graphql".into()),
+    limit: Some(5000),
+    remaining: Some(4997),
+    used: Some(3),
+    reset: Some(1_760_000_000),
+  };
+  let json = serde_json::to_value(&rate).expect("json");
+  assert_eq!(
+    serde_json::from_value::<RateLimit>(json).expect("rate"),
+    rate
+  );
+}
+
+#[test]
 fn graphql_cost_is_the_selected_rate_limit_cost() {
   let data = json!({ "rateLimit": { "cost": 3 }, "repository": {} });
   assert_eq!(Cost::graphql(&response(200), &data).points, Some(3));

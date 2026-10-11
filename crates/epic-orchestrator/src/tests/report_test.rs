@@ -22,7 +22,7 @@ fn report_spool_order() {
   assert_eq!(send_phase(&env, "brainstorm", &path).exit, Exit::Success);
   assert_eq!(send_phase(&env, "spec", &path).exit, Exit::Success);
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL));
+  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, &()));
   wait_live(&paths);
   let rows = wait_phases(&paths);
   let phases: Vec<_> = rows
