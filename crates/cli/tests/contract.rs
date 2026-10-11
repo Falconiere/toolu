@@ -141,7 +141,7 @@ fn json_on_a_usage_error_is_one_document_and_a_diagnostic() {
 
 #[test]
 fn a_skill_running_epic_status_with_json_gets_one_document() {
-  let output = toolu(&["epic", "status", "402", "--json"]).unwrap();
+  let output = toolu(&["epic", "status", "--json"]).unwrap();
   assert_eq!(output.status.code(), Some(0));
   let document = one_document(&output).unwrap();
   assert!(document.get("engine").is_some(), "{document}");

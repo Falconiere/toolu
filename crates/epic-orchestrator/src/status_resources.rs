@@ -11,12 +11,14 @@ use toolu_runtime::json::ordered::Ordered;
 use toolu_state::time::{epoch_millis, iso_millis, parse_iso};
 
 use crate::paths::Paths;
+use crate::waiting_jobs;
 
 /// Resource documents at one observation time.
 pub(crate) struct Snapshot {
   now_ms: u64,
   policy: ResourcePolicy,
   state: Ordered,
+  waiting: Vec<Value>,
 }
 
 impl Snapshot {
@@ -29,6 +31,7 @@ impl Snapshot {
       now_ms,
       policy: resource_policy(&paths.root)?,
       state: read_resource_state(&paths.root)?,
+      waiting: waiting_jobs::list(&paths.root, now_ms)?,
     })
   }
 
@@ -77,7 +80,7 @@ impl Snapshot {
       .filter(|lease| text(lease, "type") == Some("job"))
       .map(|lease| public_lease(lease, self.now_ms))
       .collect();
-    json!({"schema": 1, "running": running, "waiting": []})
+    json!({"schema": 1, "running": running, "waiting": self.waiting})
   }
 
   fn host(&self, host: &str) -> Value {

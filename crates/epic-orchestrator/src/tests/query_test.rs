@@ -162,7 +162,7 @@ fn status_and_pause_fail_when_the_socket_never_opens() {
 }
 
 #[test]
-fn verbs_round_trip_on_a_local_engine() {
+fn status_cli_round_trip_on_a_local_engine() {
   let tmp = tempfile::tempdir().expect("temp");
   let (paths, env) = root(tmp.path());
   let epic = tmp.path().join("epic");
@@ -189,6 +189,14 @@ fn assert_status_pause_and_report(env: &Env, epic: &Path) {
       .stdout
       .expect("status")
       .contains("\"engine\":\"running\"")
+  );
+  let unknown = status(&parse(&["epic", "status", "missing"]), env);
+  assert_eq!(unknown.exit, Exit::Failure);
+  assert!(
+    unknown
+      .stderr
+      .expect("error")
+      .contains("unknown epic or issue")
   );
   assert_eq!(
     pause(&parse(&["epic", "pause", "one"]), env, true).exit,

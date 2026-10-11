@@ -2,8 +2,69 @@
 
 use std::io::{self, Write as _};
 use std::net::TcpStream;
+use std::sync::{Mutex, PoisonError};
+use std::time::{Duration, Instant};
 
 use serde_json::json;
+use toolu_runtime::config::secrets::Secrets;
+
+use crate::model::World;
+use crate::paths::Paths;
+use crate::status_api;
+
+/// Briefly reuse an overview while its world sequence is unchanged.
+pub(crate) struct OverviewCache {
+  current: Mutex<Option<CachedOverview>>,
+}
+
+struct CachedOverview {
+  seq: u64,
+  at: Instant,
+  body: Vec<u8>,
+}
+
+impl OverviewCache {
+  /// Create an empty cache for one listener.
+  pub(crate) fn new() -> Self {
+    Self {
+      current: Mutex::new(None),
+    }
+  }
+
+  /// Return the current overview or a recent response for the same sequence.
+  pub(crate) fn response(&self, world: &World, paths: &Paths, secrets: &Secrets) -> Response {
+    let mut current = self.current.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(entry) = current.as_ref()
+      && entry.seq == world.seq
+      && entry.at.elapsed() < Duration::from_millis(100)
+    {
+      return Response {
+        status: 200,
+        content_type: "application/json; charset=utf-8",
+        body: entry.body.clone(),
+        head: false,
+        close: false,
+      };
+    }
+    let value = match status_api::document(world, paths, None, secrets) {
+      Ok(value) => value,
+      Err(_err) => return Response::error(500, "status_unavailable"),
+    };
+    let body = value.to_string().into_bytes();
+    *current = Some(CachedOverview {
+      seq: world.seq,
+      at: Instant::now(),
+      body: body.clone(),
+    });
+    Response {
+      status: 200,
+      content_type: "application/json; charset=utf-8",
+      body,
+      head: false,
+      close: false,
+    }
+  }
+}
 
 /// One finite response to a GET or HEAD request.
 pub(crate) struct Response {

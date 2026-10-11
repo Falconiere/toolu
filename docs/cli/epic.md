@@ -16,6 +16,7 @@ Usage: toolu epic [OPTIONS] <COMMAND>
 
 Commands:
   engine   Run the resident engine in the foreground
+  serve    Run the resident engine with its HTTP status listener
   start    Register an epic state directory and start the engine
   status   Print the engine, issues and attention
   pause    Pause effects for every epic, or one epic
@@ -50,6 +51,25 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --replace           Ask a running engine to drain, then take its place
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --http <ADDR>       Bind status HTTP to this IP address and port
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --no-http           Disable the status listener
+  -h, --help              Print help
+```
+
+## `toolu epic serve`
+
+```text
+Run the resident engine with its HTTP status listener
+
+Usage: toolu epic serve [OPTIONS]
+
+Options:
+      --http <ADDR>       Bind status HTTP to this IP address and port
+      --json              Print exactly one JSON document on stdout
+      --no-http           Disable the status listener
+  -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help

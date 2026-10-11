@@ -11,6 +11,7 @@ use toolu_runtime::process::Spec;
 
 use crate::journal::{self, Record};
 use crate::paths::Paths;
+use crate::waiting_jobs;
 
 /// Run `argv` in `cwd`'s bound worktree. The engine does not need to be up.
 pub(crate) fn run_job(argv: &[String], cwd: &Path) -> Outcome {
@@ -31,12 +32,23 @@ pub(crate) fn run_job(argv: &[String], cwd: &Path) -> Outcome {
   spec.timeout = Duration::from_secs(3600);
   spec.cwd = Some(binding.worktree.clone());
   match run_managed_job(argv, &binding, &spec) {
-    Ok(output) if output.exit_code == 0 => Outcome::data(output.stdout),
-    Ok(output) => Outcome::failed(
-      Exit::Failure,
-      format!("toolu epic job: command exited {}", output.exit_code),
-    ),
-    Err(err) => Outcome::failed(Exit::Failure, format!("toolu epic job: {err}")),
+    Ok(output) if output.exit_code == 0 => {
+      waiting_jobs::clear(&binding);
+      Outcome::data(output.stdout)
+    }
+    Ok(output) => {
+      waiting_jobs::clear(&binding);
+      Outcome::failed(
+        Exit::Failure,
+        format!("toolu epic job: command exited {}", output.exit_code),
+      )
+    }
+    Err(err) => {
+      if err.starts_with("job capacity exhausted") || err.starts_with("resource hold:") {
+        let _marked = waiting_jobs::mark(&binding, SystemTime::now());
+      }
+      Outcome::failed(Exit::Failure, format!("toolu epic job: {err}"))
+    }
   }
 }
 

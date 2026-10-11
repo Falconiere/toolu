@@ -31,7 +31,7 @@ pub(crate) fn document(
   }
   if let Some(selector) = selector {
     let mut value = status_epics::detail(world, paths, selector)?
-      .unwrap_or_else(|| status::document(world, true, Some(selector)));
+      .ok_or_else(|| format!("unknown epic or issue: {selector}"))?;
     if let Some(map) = value.as_object_mut() {
       map.insert("engine".to_owned(), json!("running"));
     }

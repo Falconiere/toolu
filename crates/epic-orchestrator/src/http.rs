@@ -10,8 +10,9 @@ use std::time::{Duration, Instant};
 use toolu_runtime::config::secrets::Secrets;
 
 use crate::dashboard::HTML;
+use crate::http_access::{authorized, host_allowed};
 use crate::http_request::{ReadError, Request, read_request};
-use crate::http_response::{Response, send, stream_headers};
+use crate::http_response::{OverviewCache, Response, send, stream_headers};
 use crate::http_stream;
 use crate::model::World;
 use crate::paths::Paths;
@@ -42,6 +43,7 @@ struct Context {
   started: Instant,
   connections: AtomicUsize,
   streams: AtomicUsize,
+  overview: OverviewCache,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -76,6 +78,7 @@ pub(crate) fn start(
     started: Instant::now(),
     connections: AtomicUsize::new(0),
     streams: AtomicUsize::new(0),
+    overview: OverviewCache::new(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running { addr, thread })
@@ -85,6 +88,9 @@ fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
   while !context.stop.load(Ordering::Relaxed) {
     match listener.accept() {
       Ok((mut stream, _)) => {
+        if stream.set_nodelay(true).is_err() {
+          continue;
+        }
         let count = context.connections.fetch_add(1, Ordering::AcqRel);
         if count >= CONNECTIONS {
           context.connections.fetch_sub(1, Ordering::AcqRel);
@@ -166,12 +172,34 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     .target
     .split_once('?')
     .unwrap_or((request.target.as_str(), ""));
-  if path == "/api/v1/events/stream" && request.method == "GET" {
-    return serve_events(stream, context, request, query);
+  if path == "/api/v1/events/stream" {
+    return if request.method == "GET" {
+      serve_events(stream, context, request, query)
+    } else {
+      stream_head(stream, request, query)
+    };
   }
   let mut response = finite_response(context, path, query, request);
   response.head = request.method == "HEAD";
   response.close = request.close || response.close;
+  let close = response.close;
+  let _sent = send(stream, &response);
+  close
+}
+
+fn stream_head(stream: &mut TcpStream, request: &Request, query: &str) -> bool {
+  let mut response = if http_stream::cursor(query, request.last_event_id.as_deref()).is_ok() {
+    Response {
+      status: 200,
+      content_type: "text/event-stream; charset=utf-8",
+      body: Vec::new(),
+      head: true,
+      close: request.close,
+    }
+  } else {
+    Response::error(400, "bad_cursor")
+  };
+  response.head = true;
   let close = response.close;
   let _sent = send(stream, &response);
   close
@@ -186,6 +214,12 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       head: request.method == "HEAD",
       close: false,
     };
+  }
+  if path == "/api/v1/overview" {
+    let world = context.world.lock().unwrap_or_else(PoisonError::into_inner);
+    return context
+      .overview
+      .response(&world, &context.paths, &context.secrets);
   }
   let world = context
     .world
@@ -250,27 +284,6 @@ fn serve_events(stream: &mut TcpStream, context: &Context, request: &Request, qu
   }
   context.streams.fetch_sub(1, Ordering::AcqRel);
   true
-}
-
-fn host_allowed(host: &str, local: SocketAddr) -> bool {
-  host.eq_ignore_ascii_case(&local.to_string())
-    || (local.ip().is_loopback()
-      && (host.eq_ignore_ascii_case(&format!("localhost:{}", local.port()))
-        || host.eq_ignore_ascii_case(&format!("127.0.0.1:{}", local.port()))))
-}
-
-fn authorized(secrets: &Secrets, header: Option<&str>) -> bool {
-  let Some(expected) = secrets.status_token() else {
-    return false;
-  };
-  let Some(given) = header.and_then(|header| header.strip_prefix("Bearer ")) else {
-    return false;
-  };
-  let mut difference = expected.len() ^ given.len();
-  for (index, byte) in expected.bytes().enumerate() {
-    difference |= usize::from(byte ^ given.as_bytes().get(index).copied().unwrap_or(0));
-  }
-  difference == 0
 }
 
 #[cfg(test)]

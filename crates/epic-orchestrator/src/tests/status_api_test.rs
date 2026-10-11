@@ -82,6 +82,9 @@ fn status_api_overview_counts_registered_epic_without_excerpt() {
   assert_eq!(detail["graph"]["issues"][0]["key"], "repo-449");
   assert_eq!(detail["graph"]["waves"][0]["wave"], 2);
   assert!(!detail.to_string().contains("PRIVATE-EXCERPT-CANARY"));
+  let missing =
+    document(&world, &paths, Some("missing"), &Secrets::none()).expect_err("unknown selector");
+  assert_eq!(missing, "unknown epic or issue: missing");
 }
 
 #[test]

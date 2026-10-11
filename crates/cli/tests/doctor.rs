@@ -48,7 +48,9 @@ fn doctor(home: &Path, path: &str, json_out: bool) -> Command {
 
 fn copy_toolu(dir: &Path) -> std::io::Result<PathBuf> {
   let path = dir.join("toolu");
-  std::fs::copy(TOOLU, &path).map(|_| path)
+  std::fs::hard_link(TOOLU, &path)
+    .or_else(|_error| std::fs::copy(TOOLU, &path).map(|_bytes| ()))?;
+  Ok(path)
 }
 
 fn schema_accepts(document: &Value) -> bool {

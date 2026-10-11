@@ -1,6 +1,6 @@
 //! Foreground engine, ensure, start and the service unit.
 
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::{Path, PathBuf};
 use std::thread;
 use std::time::Duration;
@@ -87,9 +87,13 @@ fn http_config(env: &Env, matches: Option<&ArgMatches>) -> Result<Option<HttpCon
     Some(addr) => addr
       .parse()
       .map_err(|_err| "invalid --http address".to_owned())?,
-    None => format!("{}:{}", settings.http_bind, settings.http_port)
-      .parse()
-      .map_err(|_err| "invalid epic.http bind address".to_owned())?,
+    None => SocketAddr::new(
+      settings
+        .http_bind
+        .parse::<IpAddr>()
+        .map_err(|_err| "invalid epic.http bind address".to_owned())?,
+      settings.http_port,
+    ),
   };
   let secrets = secrets::load(&roots).map_err(|err| err.to_string())?;
   Ok(Some(HttpConfig { addr, secrets }))

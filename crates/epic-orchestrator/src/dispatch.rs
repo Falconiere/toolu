@@ -74,12 +74,9 @@ fn finish(engine: &mut Engine, reply: &Sender<Value>, draining: bool) -> Result<
 
 fn reply_status(engine: &Engine, request: &Value, reply: &Sender<Value>) -> Result<bool, String> {
   let epic = request.get("epic").and_then(Value::as_str);
-  let doc = document(
-    &engine.world,
-    &engine.paths,
-    epic,
-    &toolu_runtime::config::secrets::Secrets::none(),
-  )?;
+  let roots = toolu_runtime::host::roots::Roots::new(toolu_runtime::env::Env::process(), None);
+  let secrets = toolu_runtime::config::secrets::load(&roots).map_err(|err| err.to_string())?;
+  let doc = document(&engine.world, &engine.paths, epic, &secrets)?;
   let _sent = reply.send(doc);
   Ok(false)
 }

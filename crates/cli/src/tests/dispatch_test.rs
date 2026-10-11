@@ -51,10 +51,21 @@ fn under_json_a_usage_error_is_also_one_document() {
 
 #[test]
 fn json_status_is_one_document() {
-  let outcome = dispatched("epic status 402 --json");
+  let outcome = dispatched("epic status --json");
   assert_eq!(outcome.exit, Exit::Success);
   assert!(document(&outcome).get("engine").is_some());
   assert!(document(&outcome).get("issues").is_some());
+}
+
+#[test]
+fn json_status_reports_an_unknown_key_as_a_failure() {
+  let outcome = dispatched("epic status missing --json");
+  assert_eq!(outcome.exit, Exit::Failure);
+  assert!(
+    document(&outcome)["error"]["message"]
+      .as_str()
+      .is_some_and(|message| message.contains("unknown epic or issue: missing"))
+  );
 }
 
 #[test]

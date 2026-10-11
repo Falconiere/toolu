@@ -49,7 +49,7 @@ fn status_pause_ack_and_answer_reply() {
   let mut engine = open(tmp.path());
   let (stop, value) = round(&mut engine, &json!({"op": "status", "epic": "one"}));
   assert!(!stop);
-  assert_eq!(value["engine"], "running");
+  assert_eq!(value["error"], "unknown epic or issue: one");
   let (stop, value) = round(&mut engine, &json!({"op": "pause", "epic": "one"}));
   assert!(!stop);
   assert_eq!(value["ok"], true);

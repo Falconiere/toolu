@@ -21,6 +21,7 @@ mod github_probe;
 mod herdr;
 mod herdr_argv;
 mod http;
+mod http_access;
 mod http_request;
 mod http_response;
 mod http_stream;
@@ -50,8 +51,11 @@ mod status_api;
 mod status_epics;
 mod status_events;
 mod status_resources;
+#[cfg(test)]
+mod status_schema;
 mod verbs;
 mod watch;
+mod waiting_jobs;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
 pub(crate) const PROTOCOL: u64 = 1;
