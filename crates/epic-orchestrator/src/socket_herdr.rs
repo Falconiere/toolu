@@ -35,10 +35,10 @@ fn run(
   wake: &Arc<AtomicBool>,
 ) {
   while !stop.load(Ordering::Relaxed) {
-    let world = shared
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .clone();
+    let Ok(world) = shared.lock() else {
+      break;
+    };
+    let world = world.clone();
     let pace = Pace {
       idle: Some(Duration::from_secs(1)),
       return_on_idle: false,

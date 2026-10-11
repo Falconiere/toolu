@@ -20,6 +20,19 @@ fn overview_cache_refreshes_when_world_sequence_changes() {
 }
 
 #[test]
+fn poisoned_overview_cache_returns_unavailable() {
+  let cache = OverviewCache::new();
+  let _poisoned = std::panic::catch_unwind(|| {
+    let _guard = cache.current.lock().expect("cache lock");
+    panic!("poison cache");
+  });
+  let root = tempfile::tempdir().expect("resource root");
+  let response = cache.response(&World::new(0), &Paths::at(root.path()), &Secrets::none());
+  assert_eq!(response.status, 500);
+  assert!(String::from_utf8_lossy(&response.body).contains("status_unavailable"));
+}
+
+#[test]
 fn http_boundary_error_has_no_cors_and_is_not_cached() {
   let response = socket_response(|stream| {
     send(stream, &Response::error(403, "foreign_host")).expect("send");

@@ -2,7 +2,7 @@
 
 use std::io::{self, Write as _};
 use std::net::TcpStream;
-use std::sync::{Mutex, PoisonError};
+use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
 use serde_json::json;
@@ -33,7 +33,9 @@ impl OverviewCache {
 
   /// Return the current overview or a recent response for the same sequence.
   pub(crate) fn response(&self, world: &World, paths: &Paths, secrets: &Secrets) -> Response {
-    let mut current = self.current.lock().unwrap_or_else(PoisonError::into_inner);
+    let Ok(mut current) = self.current.lock() else {
+      return Response::error(500, "status_unavailable");
+    };
     if let Some(entry) = current.as_ref()
       && entry.seq == world.seq
       && entry.at.elapsed() < Duration::from_millis(100)

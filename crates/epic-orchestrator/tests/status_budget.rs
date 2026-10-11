@@ -2,7 +2,7 @@
 
 #![cfg(target_os = "linux")]
 
-use std::io::{BufRead as _, BufReader, Read as _, Write as _};
+use std::io::{self, BufRead as _, BufReader, Read as _, Write as _};
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -22,85 +22,99 @@ struct Server {
 }
 
 impl Server {
-  fn start() -> Self {
-    let root = tempfile::tempdir().expect("isolated resource root");
+  fn start() -> io::Result<Self> {
+    let root = contextual(tempfile::tempdir(), "create isolated resource root")?;
     let resources = root.path().join("resources");
-    std::fs::create_dir_all(&resources).expect("resource directory");
-    let reserved = TcpListener::bind("127.0.0.1:0").expect("reserve port");
-    let addr = reserved.local_addr().expect("reserved address");
+    contextual(
+      std::fs::create_dir_all(&resources),
+      "create resource directory",
+    )?;
+    let reserved = contextual(TcpListener::bind("127.0.0.1:0"), "reserve port")?;
+    let addr = contextual(reserved.local_addr(), "read reserved address")?;
     drop(reserved);
-    let bin = release_binary();
+    let bin = release_binary()?;
     let child = Command::new(bin)
       .args(["epic", "serve", "--http", &addr.to_string()])
       .env("TOOLU_RESOURCE_HOME", &resources)
       .env("HOME", root.path())
       .stdout(Stdio::null())
       .stderr(Stdio::piped())
-      .spawn()
-      .expect("launch release engine");
+      .spawn();
+    let child = contextual(child, "launch release engine")?;
     let mut server = Self {
       child,
       addr,
       _root: root,
       streams: Vec::new(),
     };
-    server.wait_ready();
-    server
+    server.wait_ready()?;
+    Ok(server)
   }
 
-  fn wait_ready(&mut self) {
+  fn wait_ready(&mut self) -> io::Result<()> {
     for _ in 0..200 {
       if TcpStream::connect(self.addr).is_ok() {
-        return;
+        return Ok(());
       }
-      if let Some(exit) = self.child.try_wait().expect("poll engine") {
-        panic!("engine exited before listener: {exit}");
+      if let Some(exit) = contextual(self.child.try_wait(), "poll release engine")? {
+        return Err(io::Error::other(format!(
+          "engine exited before listener: {exit}"
+        )));
       }
       thread::sleep(Duration::from_millis(10));
     }
-    panic!("status listener did not start");
+    Err(io::Error::other("status listener did not start"))
   }
 
-  fn open_streams(&mut self) {
+  fn open_streams(&mut self) -> io::Result<()> {
     for _ in 0..STREAMS {
-      let mut stream = TcpStream::connect(self.addr).expect("SSE connect");
-      stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .expect("SSE timeout");
+      let mut stream = contextual(TcpStream::connect(self.addr), "connect SSE reader")?;
+      contextual(
+        stream.set_read_timeout(Some(Duration::from_secs(5))),
+        "set SSE read timeout",
+      )?;
       let request = format!(
         "GET /api/v1/events/stream HTTP/1.1\r\nHost: {}\r\n\r\n",
         self.addr
       );
-      stream.write_all(request.as_bytes()).expect("SSE request");
+      contextual(stream.write_all(request.as_bytes()), "send SSE request")?;
       let mut line = String::new();
-      BufReader::new(stream.try_clone().expect("SSE clone"))
-        .read_line(&mut line)
-        .expect("SSE response");
-      assert!(line.starts_with("HTTP/1.1 200"), "{line}");
+      let clone = contextual(stream.try_clone(), "clone SSE socket")?;
+      contextual(
+        BufReader::new(clone).read_line(&mut line),
+        "read SSE response",
+      )?;
+      assert_http_ok(&line);
       self.streams.push(stream);
     }
+    Ok(())
   }
 
-  fn high_water_kib(&self) -> u64 {
-    let status = std::fs::read_to_string(format!("/proc/{}/status", self.child.id()))
-      .expect("Linux process status");
+  fn high_water_kib(&self) -> io::Result<u64> {
+    let status = contextual(
+      std::fs::read_to_string(format!("/proc/{}/status", self.child.id())),
+      "read Linux process status",
+    )?;
     status
       .lines()
       .find_map(|line| line.strip_prefix("VmHWM:"))
       .and_then(|line| line.split_whitespace().next())
-      .and_then(|value| value.parse::<u64>().ok())
-      .expect("VmHWM in KiB")
+      .ok_or_else(|| io::Error::other("VmHWM missing from Linux process status"))
+      .and_then(|value| contextual(value.parse::<u64>(), "parse VmHWM in KiB"))
   }
 }
 
-fn release_binary() -> PathBuf {
+fn contextual<T, E: std::fmt::Display>(result: Result<T, E>, action: &str) -> io::Result<T> {
+  result.map_err(|error| io::Error::other(format!("{action}: {error}")))
+}
+
+fn release_binary() -> io::Result<PathBuf> {
   if let Some(path) = std::env::var_os("TOOLU_RELEASE_BIN") {
-    return PathBuf::from(path);
+    return Ok(PathBuf::from(path));
   }
   let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
   let target = std::env::var_os("CARGO_TARGET_DIR")
-    .map(PathBuf::from)
-    .unwrap_or_else(|| root.join("target"))
+    .map_or_else(|| root.join("target"), PathBuf::from)
     .join("status-budget");
   let output = Command::new("cargo")
     .args(["build", "--release", "--locked", "-p", "toolu-cli"])
@@ -110,14 +124,15 @@ fn release_binary() -> PathBuf {
     .arg(&target)
     .env_remove("RUSTFLAGS")
     .env_remove("CARGO_ENCODED_RUSTFLAGS")
-    .output()
-    .expect("build release status binary");
-  assert!(
-    output.status.success(),
-    "release build failed: {}",
-    String::from_utf8_lossy(&output.stderr)
-  );
-  target.join("release/toolu")
+    .output();
+  let output = contextual(output, "build release status binary")?;
+  if !output.status.success() {
+    return Err(io::Error::other(format!(
+      "release build failed: {}",
+      String::from_utf8_lossy(&output.stderr)
+    )));
+  }
+  Ok(target.join("release/toolu"))
 }
 
 impl Drop for Server {
@@ -127,73 +142,107 @@ impl Drop for Server {
   }
 }
 
-fn poll(addr: SocketAddr, barrier: Arc<Barrier>) -> Vec<Duration> {
-  let stream = TcpStream::connect(addr).expect("poll connect");
-  stream
-    .set_read_timeout(Some(Duration::from_secs(10)))
-    .expect("poll timeout");
+fn poll(addr: SocketAddr, barrier: &Barrier) -> io::Result<Vec<Duration>> {
+  let stream = TcpStream::connect(addr);
+  barrier.wait();
+  let stream = contextual(stream, "connect polling client")?;
+  contextual(
+    stream.set_read_timeout(Some(Duration::from_secs(10))),
+    "set polling read timeout",
+  )?;
   let mut reader = BufReader::new(stream);
   let request =
     format!("GET /api/v1/overview HTTP/1.1\r\nHost: {addr}\r\nConnection: keep-alive\r\n\r\n");
-  barrier.wait();
   let mut samples = Vec::with_capacity(REQUESTS);
   for _ in 0..REQUESTS {
     let start = Instant::now();
-    reader
-      .get_mut()
-      .write_all(request.as_bytes())
-      .expect("poll request");
-    read_response(&mut reader);
+    contextual(
+      reader.get_mut().write_all(request.as_bytes()),
+      "send poll request",
+    )?;
+    read_response(&mut reader)?;
     samples.push(start.elapsed());
   }
-  samples
+  Ok(samples)
 }
 
-fn read_response(reader: &mut BufReader<TcpStream>) {
+fn read_response(reader: &mut BufReader<TcpStream>) -> io::Result<()> {
   let mut line = String::new();
-  reader.read_line(&mut line).expect("status line");
-  assert!(line.starts_with("HTTP/1.1 200"), "{line}");
+  contextual(reader.read_line(&mut line), "read HTTP status line")?;
+  assert_http_ok(&line);
   let mut length = None;
   loop {
     line.clear();
-    reader.read_line(&mut line).expect("header line");
+    let read = contextual(reader.read_line(&mut line), "read HTTP header line")?;
+    if read == 0 {
+      return Err(io::Error::new(
+        io::ErrorKind::UnexpectedEof,
+        "HTTP headers ended before the blank line",
+      ));
+    }
     if line == "\r\n" {
       break;
     }
     if let Some(value) = line.strip_prefix("Content-Length: ") {
-      length = Some(value.trim().parse::<usize>().expect("body length"));
+      length = Some(contextual(
+        value.trim().parse::<usize>(),
+        "parse HTTP body length",
+      )?);
     }
   }
-  let mut body = vec![0; length.expect("content length")];
-  reader.read_exact(&mut body).expect("status body");
+  let length = length.ok_or_else(|| io::Error::other("HTTP content length missing"))?;
+  let mut body = vec![0; length];
+  contextual(reader.read_exact(&mut body), "read HTTP status body")?;
+  assert_json_body(&body);
+  Ok(())
+}
+
+fn assert_http_ok(line: &str) {
+  assert!(line.starts_with("HTTP/1.1 200"), "{line}");
+}
+
+fn assert_json_body(body: &[u8]) {
   assert!(body.starts_with(b"{"));
 }
 
+fn assert_budget(p90: Duration, high_water_kib: u64) {
+  assert!(p90 <= Duration::from_millis(7), "poll p90 exceeded 7 ms");
+  assert!(high_water_kib <= 13 * 1024, "VmHWM exceeded 13 MiB");
+}
+
 #[test]
-fn status_server_meets_linux_polling_budget() {
-  let mut server = Server::start();
-  server.open_streams();
+fn status_server_meets_linux_polling_budget() -> io::Result<()> {
+  let mut server = Server::start()?;
+  server.open_streams()?;
   let barrier = Arc::new(Barrier::new(CLIENTS));
   let handles: Vec<_> = (0..CLIENTS)
     .map(|_| {
       let barrier = Arc::clone(&barrier);
       let addr = server.addr;
-      thread::spawn(move || poll(addr, barrier))
+      thread::spawn(move || poll(addr, &barrier))
     })
     .collect();
   let mut samples = Vec::with_capacity(CLIENTS * REQUESTS);
   for handle in handles {
-    samples.extend(handle.join().expect("poll client"));
+    let client = handle.join().map_err(|panic| {
+      let message = panic
+        .downcast_ref::<String>()
+        .map(String::as_str)
+        .or_else(|| panic.downcast_ref::<&str>().copied())
+        .unwrap_or("non-string panic payload");
+      io::Error::other(format!("poll client thread panicked: {message}"))
+    })?;
+    samples.extend(client?);
   }
   samples.sort_unstable();
   let p90 = samples[(samples.len() * 9).div_ceil(10) - 1];
-  let high_water_kib = server.high_water_kib();
+  let high_water_kib = server.high_water_kib()?;
   println!(
     "status budget: p90={} ms; VmHWM={} KiB; samples={}",
     p90.as_secs_f64() * 1_000.0,
     high_water_kib,
     samples.len()
   );
-  assert!(p90 <= Duration::from_millis(7), "poll p90 exceeded 7 ms");
-  assert!(high_water_kib <= 13 * 1024, "VmHWM exceeded 13 MiB");
+  assert_budget(p90, high_water_kib);
+  Ok(())
 }

@@ -3,7 +3,7 @@
 use std::io::Write as _;
 use std::net::TcpStream;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
@@ -115,9 +115,31 @@ pub(crate) fn serve(stream: &mut TcpStream, mut cursor: Cursor, feed: &Feed<'_>)
       }
       heartbeat = Instant::now();
     }
-    let guard = feed.world.lock().unwrap_or_else(PoisonError::into_inner);
-    let _waited = feed.changed.wait_timeout(guard, Duration::from_secs(1));
+    if !wait_for_change(stream, feed) {
+      return;
+    }
   }
+}
+
+fn wait_for_change(stream: &mut TcpStream, feed: &Feed<'_>) -> bool {
+  let Ok(guard) = feed.world.lock() else {
+    send_status_error(stream);
+    return false;
+  };
+  if feed
+    .changed
+    .wait_timeout(guard, Duration::from_secs(1))
+    .is_err()
+  {
+    send_status_error(stream);
+    return false;
+  }
+  true
+}
+
+fn send_status_error(stream: &mut TcpStream) {
+  let _sent =
+    stream.write_all(b"event: error\ndata: {\"schema\":1,\"error\":\"status_unavailable\"}\n\n");
 }
 
 fn send_rows<'a>(

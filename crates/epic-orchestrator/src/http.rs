@@ -3,7 +3,7 @@
 use std::io::BufReader;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
+use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
@@ -216,7 +216,9 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
     };
   }
   if path == "/api/v1/overview" {
-    let world = context.world.lock().unwrap_or_else(PoisonError::into_inner);
+    let Ok(world) = context.world.lock() else {
+      return Response::error(500, "status_unavailable");
+    };
     return context
       .overview
       .response(&world, &context.paths, &context.secrets);
@@ -224,11 +226,10 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   if path == "/api/v1/events" {
     return events_page(context, query, request);
   }
-  let world = context
-    .world
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .clone();
+  let Ok(world) = context.world.lock() else {
+    return Response::error(500, "status_unavailable");
+  };
+  let world = world.clone();
   let document = status_api::route(
     &world,
     &context.paths,

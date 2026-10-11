@@ -247,7 +247,7 @@ fn state_loop(
   let mut waiters = Vec::new();
   let mut next_tick = Instant::now() + TICK;
   loop {
-    publish(context.shared, context.changed, engine);
+    publish(context.shared, context.changed, engine)?;
     let wake = wake_after(&engine.world, &waiters, next_tick);
     match rx.recv_timeout(wake) {
       Ok(Msg::Line { request, reply }) => {
@@ -272,11 +272,12 @@ fn state_loop(
   }
 }
 
-fn publish(shared: &Mutex<World>, changed: &Condvar, engine: &Engine) {
+fn publish(shared: &Mutex<World>, changed: &Condvar, engine: &Engine) -> Result<(), String> {
   *shared
     .lock()
-    .unwrap_or_else(std::sync::PoisonError::into_inner) = engine.world.clone();
+    .map_err(|_err| "status_unavailable".to_owned())? = engine.world.clone();
   changed.notify_all();
+  Ok(())
 }
 
 fn on_timeout(

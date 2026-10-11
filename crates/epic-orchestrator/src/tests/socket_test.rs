@@ -1,5 +1,6 @@
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -9,6 +10,7 @@ use super::{ServeOptions, serve_with_http};
 use crate::PROTOCOL;
 use crate::client::{exchange_retry, read_json, write_json};
 use crate::journal;
+use crate::model::World;
 use crate::paths::Paths;
 use crate::server::Fault;
 
@@ -193,6 +195,22 @@ fn a_panic_in_the_state_loop_sets_the_accept_stop_flag() {
   }));
   assert!(caught.is_err());
   assert!(stop.load(Ordering::Relaxed));
+}
+
+#[test]
+fn poisoned_snapshot_publish_returns_error() {
+  let root = tempfile::tempdir().expect("root");
+  let engine = super::open_engine(Paths::at(root.path()), None, Fault::None).expect("engine");
+  let shared = Mutex::new(World::new(0));
+  let _poisoned = std::panic::catch_unwind(|| {
+    let _guard = shared.lock().expect("shared lock");
+    panic!("poison snapshot");
+  });
+  let changed = Condvar::new();
+  assert_eq!(
+    super::publish(&shared, &changed, &engine),
+    Err("status_unavailable".to_owned())
+  );
 }
 
 fn wait_socket(paths: &Paths, log: &std::path::Path) -> std::os::unix::net::UnixStream {

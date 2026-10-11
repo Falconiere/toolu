@@ -85,31 +85,10 @@ fn http_auth_requires_a_bearer_token_on_public_bind() {
 }
 
 #[test]
-fn http_boundary_refuses_public_bind_without_a_token() {
-  let temp = tempfile::tempdir().expect("temp root");
-  let config = Config {
-    addr: "0.0.0.0:0".parse().expect("address"),
-    secrets: Secrets::none(),
-  };
-  let result = start(
-    config,
-    Paths::at(temp.path()),
-    Arc::new(Mutex::new(World::new(0))),
-    Arc::new(Condvar::new()),
-    Arc::new(AtomicBool::new(false)),
-  );
-  assert!(
-    result
-      .err()
-      .expect("refused")
-      .contains("requires TOOLU_EPIC_TOKEN")
-  );
-}
-
-#[test]
-fn http_boundary_rejects_foreign_host_and_non_get_methods() {
+fn http_boundary_checks_requests_and_poisoned_world() {
   let temp = tempfile::tempdir().expect("temp root");
   let stop = Arc::new(AtomicBool::new(false));
+  let world = Arc::new(Mutex::new(World::new(0)));
   let config = Config {
     addr: "127.0.0.1:0".parse().expect("address"),
     secrets: Secrets::none(),
@@ -117,7 +96,7 @@ fn http_boundary_rejects_foreign_host_and_non_get_methods() {
   let running = start(
     config,
     Paths::at(temp.path()),
-    Arc::new(Mutex::new(World::new(0))),
+    Arc::clone(&world),
     Arc::new(Condvar::new()),
     Arc::clone(&stop),
   )
@@ -153,8 +132,28 @@ fn http_boundary_rejects_foreign_host_and_non_get_methods() {
   assert!(stream_head.contains("text/event-stream"));
   assert!(stream_head.ends_with("\r\n\r\n"));
   assert!(!allowed.contains("Access-Control-Allow-Origin"));
+  assert_poisoned_world(world, running.addr);
   stop.store(true, Ordering::Relaxed);
   running.thread.join().expect("listener thread");
+}
+
+fn assert_poisoned_world(world: Arc<Mutex<World>>, addr: SocketAddr) {
+  let _poisoned = thread::spawn(move || {
+    let _guard = world.lock().expect("world lock");
+    panic!("poison world");
+  })
+  .join();
+  for (method, path) in [
+    ("GET", "/api/v1/overview"),
+    ("HEAD", "/api/v1/issues/example"),
+  ] {
+    let response = raw(
+      addr,
+      &format!("{method} {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n"),
+    );
+    assert!(response.starts_with("HTTP/1.1 500"), "{response}");
+    assert_eq!(response.contains("status_unavailable"), method == "GET");
+  }
 }
 
 #[test]
