@@ -75,3 +75,42 @@ fn statusline_session_start_does_not_run_for_a_tool_event() {
       .is_some_and(|text| text.contains("has no hook session-start"))
   );
 }
+
+fn babysit(name: &str, env: &Env) -> toolu_runtime::cli::Outcome {
+  let request = HookRequest {
+    plugin: "pr-babysit".to_owned(),
+    name: name.to_owned(),
+    event: Some("SessionStart".to_owned()),
+    plugin_root: None,
+  };
+  let no_exe = || None;
+  let env_fn = || env.clone();
+  let fallback = PathBuf::new();
+  let cwd_fn = || Ok(fallback.clone());
+  let context = Context {
+    exe: &no_exe,
+    stdin: &startup,
+    env: &env_fn,
+    cwd: &cwd_fn,
+  };
+  run(&request, &context)
+}
+
+#[test]
+fn pr_babysit_session_start_checks_never_block_and_others_are_unknown() {
+  let env = Env::default().with("TOOLU_HOST_OVERRIDE", "claude");
+  let core = babysit("check-toolu", &env);
+  assert_eq!(core.exit.code(), 0);
+  assert_eq!(
+    core.stdout, None,
+    "Claude resolves plugin dependencies itself"
+  );
+  assert_eq!(babysit("check-binary", &env).exit.code(), 0);
+  let other = babysit("babysit-tick", &env);
+  assert_eq!(other.exit.code(), 0, "a context event is never blocked");
+  assert!(
+    other
+      .stdout
+      .is_some_and(|text| text.contains("has no hook babysit-tick"))
+  );
+}

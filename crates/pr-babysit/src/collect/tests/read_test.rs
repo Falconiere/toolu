@@ -120,6 +120,7 @@ fn github_failures_map_to_codes_classes_and_exits() {
       retry_after: Some(Duration::from_secs(60)),
       rate: RateLimit {
         reset: Some(1_760_000_000),
+        remaining: Some(0),
         ..RateLimit::default()
       },
       secondary: false,
@@ -128,5 +129,6 @@ fn github_failures_map_to_codes_classes_and_exits() {
   assert_eq!(limited.extra["class"], "rate_limited");
   assert_eq!(limited.extra["resetAt"], 1_760_000_000);
   assert_eq!(limited.extra["retryAfter"], 60);
+  assert_eq!(limited.extra["remaining"], 0);
   assert_eq!(limited.exit(), toolu_protocol::exit::Exit::TempFail);
 }

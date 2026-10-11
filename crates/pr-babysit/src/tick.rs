@@ -191,7 +191,7 @@ fn snapshot(request: &Request<'_>, source: Source<'_>, env: &Env) -> Result<Read
   }
 }
 
-fn valid(snapshot: &Value) -> Result<()> {
+pub(crate) fn valid(snapshot: &Value) -> Result<()> {
   let ok = snapshot.get("version").and_then(Value::as_u64) == Some(1)
     && snapshot.get("repo").is_some_and(Value::is_string)
     && snapshot.get("number").is_some_and(Value::is_number)

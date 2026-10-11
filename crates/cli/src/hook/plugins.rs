@@ -14,7 +14,7 @@ use crate::Context;
 use crate::fast::HookRequest;
 
 /// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev,
-/// toolu-review, ast-grep and the statusline. Each reports through the
+/// toolu-review, ast-grep, the statusline and pr-babysit. Each reports through the
 /// prelude's advisory.
 pub(super) fn dispatch(
   request: &HookRequest,
@@ -34,6 +34,9 @@ pub(super) fn dispatch(
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   if let Some(outcome) = statusline_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = babysit_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   None
@@ -131,6 +134,22 @@ pub(super) fn review_hook(request: &HookRequest, context: &Context<'_>) -> Optio
     "check-binary" => {
       let stdin = (context.stdin)().ok();
       Some(toolu_review::check_binary(&env, stdin.as_deref()))
+    }
+    _ => None,
+  }
+}
+
+/// pr-babysit's two `SessionStart` entries.
+pub(super) fn babysit_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != toolu_pr_babysit::PLUGIN {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "check-toolu" => Some(toolu_pr_babysit::check_toolu(&env)),
+    "check-binary" => {
+      let stdin = (context.stdin)().ok();
+      Some(toolu_pr_babysit::check_binary(&env, stdin.as_deref()))
     }
     _ => None,
   }

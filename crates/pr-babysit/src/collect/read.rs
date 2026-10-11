@@ -146,6 +146,7 @@ pub(crate) fn failure(source: &str, err: &Error) -> Failure {
   {
     failure = failure
       .with("resetAt", json!(rate.reset))
+      .with("remaining", json!(rate.remaining))
       .with("retryAfter", json!(retry_after.map(|wait| wait.as_secs())));
   }
   failure

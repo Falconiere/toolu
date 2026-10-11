@@ -29,11 +29,23 @@ fn fixer_argv_matches_the_recorded_host_contract_for_32_combinations() {
   }
 }
 
+/// `{model?, effort?}`, the routing table's shape.
+fn choice(choice: &super::Choice) -> Value {
+  let mut out = serde_json::Map::new();
+  if let Some(model) = &choice.model {
+    out.insert("model".into(), Value::from(model.as_str()));
+  }
+  if let Some(effort) = &choice.effort {
+    out.insert("effort".into(), Value::from(effort.as_str()));
+  }
+  Value::Object(out)
+}
+
 #[test]
 fn defaults_and_aliases_match_the_recorded_routing_table() {
   let golden = fixture::json("hosts/fixer-hosts.json");
   for host in Fixer::ALL {
-    let table: Vec<Value> = host.defaults().iter().map(super::Choice::json).collect();
+    let table: Vec<Value> = host.defaults().iter().map(choice).collect();
     assert_eq!(
       Value::from(table),
       golden["routing"][host.name()],

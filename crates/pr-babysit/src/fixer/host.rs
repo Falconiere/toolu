@@ -2,8 +2,6 @@
 //! approval, name, model and effort flags a fixer pane is launched with —
 //! the same contract the epic orchestrator launches workers with.
 
-use serde_json::{Value, json};
-
 use crate::error::{Failure, Result};
 use crate::pattern::{is, pattern};
 
@@ -37,18 +35,6 @@ impl Choice {
       model: Some(model.to_owned()),
       effort: effort.map(str::to_owned),
     }
-  }
-
-  /// `{model?, effort?}`.
-  pub(crate) fn json(&self) -> Value {
-    let mut out = serde_json::Map::new();
-    if let Some(model) = &self.model {
-      out.insert("model".into(), json!(model));
-    }
-    if let Some(effort) = &self.effort {
-      out.insert("effort".into(), json!(effort));
-    }
-    Value::Object(out)
   }
 }
 
