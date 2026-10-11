@@ -11,7 +11,7 @@ fn moved_children(parent: u32) -> Vec<u32> {
   loop {
     let moved: Vec<u32> = table()
       .iter()
-      .filter(|row| row.ppid == parent && row.pgid != parent)
+      .filter(|row| row.parent == parent && row.group != parent)
       .map(|row| row.pid)
       .collect();
     if !moved.is_empty() || started.elapsed() > Duration::from_secs(10) {

@@ -1,4 +1,4 @@
-//! OpenCode fixers (#357): a detached `opencode run` in the slot worktree, not
+//! `OpenCode` fixers (#357): a detached `opencode run` in the slot worktree, not
 //! a herdr pane. Its agent comes in through `OPENCODE_CONFIG_CONTENT` with
 //! `task` and the plain push and `gh` command forms denied, and its environment
 //! has no GitHub login and lets git reach only local (`file`) remotes.
@@ -16,7 +16,7 @@ use crate::error::{Failure, Result};
 use crate::fixer::host::Fixer;
 use crate::route::on_path;
 
-/// The fixer agent's name in OpenCode's config.
+/// The fixer agent's name in `OpenCode`'s config.
 pub(crate) const FIXER_AGENT: &str = "pr-babysit-fixer";
 
 const GITHUB_TOKENS: [&str; 4] = [
@@ -26,7 +26,7 @@ const GITHUB_TOKENS: [&str; 4] = [
   "GITHUB_ENTERPRISE_TOKEN",
 ];
 
-/// One OpenCode fixer launch.
+/// One `OpenCode` fixer launch.
 pub(crate) struct Run<'a> {
   /// The model id, or the user's default.
   pub(crate) model: Option<&'a str>,

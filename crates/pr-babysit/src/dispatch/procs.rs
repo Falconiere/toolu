@@ -1,4 +1,4 @@
-//! An OpenCode fixer's process group: its leader's start time, which tells a
+//! An `OpenCode` fixer's process group: its leader's start time, which tells a
 //! reused pid from the fixer, whether it still runs, and how it is stopped
 //! with every descendant, including those that moved to a group of their own.
 
@@ -12,14 +12,14 @@ const POLL: Duration = Duration::from_millis(100);
 
 struct Row {
   pid: u32,
-  ppid: u32,
-  pgid: u32,
+  parent: u32,
+  group: u32,
 }
 
 fn ps(args: &[&str]) -> Option<String> {
-  let mut argv = vec!["ps"];
-  argv.extend_from_slice(args);
-  let output = run(&Spec::new(argv)).ok()?;
+  let mut command = vec!["ps"];
+  command.extend_from_slice(args);
+  let output = run(&Spec::new(command)).ok()?;
   (output.exit_code == 0).then_some(output.stdout)
 }
 
@@ -35,32 +35,32 @@ fn table() -> Vec<Row> {
   let listed = ps(&["-A", "-o", "pid=,ppid=,pgid=,stat="]).unwrap_or_default();
   let rows = listed.lines().filter_map(|line| {
     let fields: Vec<&str> = line.split_whitespace().collect();
-    let [pid, ppid, pgid, stat] = fields.as_slice() else {
+    let [pid, parent, group, stat] = fields.as_slice() else {
       return None;
     };
     let number = |text: &str| text.parse::<u32>().ok();
     (!stat.starts_with('Z')).then_some(Row {
       pid: number(pid)?,
-      ppid: number(ppid)?,
-      pgid: number(pgid)?,
+      parent: number(parent)?,
+      group: number(group)?,
     })
   });
   rows.collect()
 }
 
-/// The group's members and every descendant, whatever its group: OpenCode
+/// The group's members and every descendant, whatever its group: `OpenCode`
 /// starts each bash tool call in a process group of its own.
-fn family(pgid: u32) -> BTreeSet<u32> {
+fn family(leader: u32) -> BTreeSet<u32> {
   let rows = table();
   let mut found: BTreeSet<u32> = rows
     .iter()
-    .filter(|row| row.pgid == pgid)
+    .filter(|row| row.group == leader)
     .map(|row| row.pid)
     .collect();
   loop {
     let more: Vec<u32> = rows
       .iter()
-      .filter(|row| !found.contains(&row.pid) && found.contains(&row.ppid))
+      .filter(|row| !found.contains(&row.pid) && found.contains(&row.parent))
       .map(|row| row.pid)
       .collect();
     if more.is_empty() {
@@ -80,7 +80,7 @@ pub(crate) fn group_alive(pid: u32, start: &str) -> bool {
   if !leader.is_empty() && !start.is_empty() && leader != start {
     return false;
   }
-  table().iter().any(|row| row.pgid == pid)
+  table().iter().any(|row| row.group == pid)
 }
 
 fn send(pid: u32, pids: &BTreeSet<u32>, signal: Signal) {

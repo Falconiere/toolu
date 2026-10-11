@@ -99,14 +99,13 @@ fn under_the_fixer_env_git_refuses_network_remotes_and_tokens_are_gone() {
     ("PATH", "/usr/bin:/bin"),
   ]);
   let env = fixer_env(&base, Path::new("/w"), Path::new("/gh")).unwrap();
-  for key in [
+  let tokens = [
     "GH_TOKEN",
     "GITHUB_TOKEN",
     "GH_ENTERPRISE_TOKEN",
     "GITHUB_ENTERPRISE_TOKEN",
-  ] {
-    assert_eq!(env.get(key), None);
-  }
+  ];
+  assert!(tokens.iter().all(|key| env.get(key).is_none()));
   assert_eq!(
     (env.get("KEEP"), env.get("PWD"), env.get("GH_CONFIG_DIR")),
     (Some("yes"), Some("/w"), Some("/gh"))

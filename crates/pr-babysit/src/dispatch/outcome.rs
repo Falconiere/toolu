@@ -1,5 +1,5 @@
 //! How a fixer ended: its report, a provider limit in its output, the Claude
-//! trust prompt it may stop at, and the host errors in an OpenCode log.
+//! trust prompt it may stop at, and the host errors in an `OpenCode` log.
 
 use std::io::{Read as _, Seek as _, SeekFrom};
 use std::path::Path;

@@ -18,7 +18,9 @@ pub(crate) fn cksum(bytes: &[u8]) -> u32 {
       };
     }
   };
-  bytes.iter().for_each(|byte| step(*byte));
+  for byte in bytes {
+    step(*byte);
+  }
   let mut length = bytes.len();
   while length > 0 {
     step(length.to_le_bytes().first().copied().unwrap_or_default());
@@ -40,7 +42,7 @@ pub(crate) fn group_file(state: &Path, round: u64, seq: u64, suffix: &str) -> Pa
   sibling(state, &format!(".fixer-r{round}g{seq}{suffix}"))
 }
 
-/// An OpenCode fixer's `GH_CONFIG_DIR`: never created, so `gh` has no login.
+/// An `OpenCode` fixer's `GH_CONFIG_DIR`: never created, so `gh` has no login.
 pub(crate) fn gh_config(state: &Path) -> PathBuf {
   sibling(state, ".fixer-gh")
 }
