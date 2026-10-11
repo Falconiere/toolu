@@ -44,6 +44,8 @@ startup behavior in Codex and Claude Code, and in OpenCode when supported.
    on macOS with the checkout binary. It installs temporary host profiles and
    checks a denied protected-file write, a post-edit quality failure, a denied
    commit, and an allowed shell command in actual Claude Code and Codex sessions.
+   For OpenCode acceptance, point `TOOLU_BIN` at that binary and put its directory
+   first on `PATH`: scripted agent commands can call `toolu` by name.
 
 ## Pitfalls
 
