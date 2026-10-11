@@ -89,18 +89,17 @@ pub(crate) fn serve_with_http(
   let listener = bind(&engine.paths)?;
   let (tx, rx) = mpsc::channel();
   let stop = Arc::new(AtomicBool::new(false));
-  let flag = Arc::clone(&stop);
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
   let wake = Arc::new(AtomicBool::new(false));
   let http = start_http(options.http, &engine, &shared, &changed, &stop)?;
-  let _http_addr = http.as_ref().map(|service| service.addr);
   let herdr = socket_herdr::spawn(
     tx.clone(),
     Arc::clone(&shared),
     Arc::clone(&stop),
     Arc::clone(&wake),
   );
+  let flag = Arc::clone(&stop);
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
     let _stop_accept = StopAccept { stop: &stop };
@@ -116,16 +115,12 @@ pub(crate) fn serve_with_http(
       },
     )
   };
-  join_threads(
-    &socket,
-    &stop,
-    &changed,
-    Threads {
-      accept,
-      herdr,
-      http,
-    },
-  );
+  let threads = Threads {
+    accept,
+    herdr,
+    http,
+  };
+  join_threads(&socket, &stop, &changed, threads);
   result
 }
 
