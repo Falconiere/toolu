@@ -81,5 +81,5 @@ fn a_wait_that_runs_out_leaves_the_fixer_running() {
   assert_eq!(running["status"], "running");
   let group = sb.state()["fixer"]["groups"][0].clone();
   let pid = u32::try_from(group["pid"].as_u64().unwrap()).unwrap();
-  assert!(stop_group(pid, group["pidStart"].as_str().unwrap()));
+  assert!(stop_group(pid, group["pidStart"].as_str().unwrap()).unwrap());
 }

@@ -42,18 +42,20 @@ impl BabysitTick for GitHubTick {
   }
 }
 
-/// `success`, new attention (`Act`), `escalate`, else keep going.
+/// `success`; with new attention `escalate` or `Act`; else keep going, so an
+/// escalation is reported once.
 fn decision(result: &Value) -> TickDecision {
   let new = result.pointer("/attention/new") == Some(&Value::Bool(true));
   match result.get("decision").and_then(Value::as_str) {
     Some("success") => TickDecision::Success,
-    _ if new => TickDecision::Act,
+    _ if !new => TickDecision::KeepGoing,
     Some("escalate") => TickDecision::Escalate,
-    _ => TickDecision::KeepGoing,
+    _ => TickDecision::Act,
   }
 }
 
-/// One line per actionable thread, conversation comment and review.
+/// One line per actionable thread, conversation comment and review. A path is
+/// the PR author's text, so its control characters are escaped.
 fn items(result: &Value) -> Vec<String> {
   let class = |item: &Value| text(item, "authorClass").to_owned();
   let id = |item: &Value| item.get("id").map(ToString::to_string).unwrap_or_default();
@@ -66,7 +68,7 @@ fn items(result: &Value) -> Vec<String> {
         .map(ToString::to_string);
       let at = format!(
         "{}:{}",
-        text(thread, "path"),
+        text(thread, "path").escape_debug(),
         line.as_deref().unwrap_or("?")
       );
       format!("- thread {} {at} ({})", text(thread, "id"), class(thread))
@@ -149,7 +151,8 @@ pub(crate) fn tick(
   };
   let ticked = tick::tick(&run, source, env).map_err(|failure| link_error(&failure))?;
   let decision = decision(&ticked.result);
-  let prompt = (decision == TickDecision::Act).then(|| prompt(request, &ticked.result));
+  let prompt = matches!(decision, TickDecision::Act | TickDecision::Escalate)
+    .then(|| prompt(request, &ticked.result));
   Ok(TickReport {
     decision,
     result: ticked.result,

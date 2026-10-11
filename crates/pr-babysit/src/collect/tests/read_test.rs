@@ -16,21 +16,18 @@ fn link(value: &str) -> Vec<(String, String)> {
 }
 
 #[test]
-fn link_next_returns_the_next_pages_path_and_query() {
+fn link_next_returns_the_next_pages_url() {
   let header = "<https://api.github.com/repositories/1/issues/2/comments?per_page=2&page=3>; \
                 rel=\"next\", <https://api.github.com/repositories/1/issues/2/comments?page=9>; \
                 rel=\"last\"";
   assert_eq!(
     link_next(&link(header)).as_deref(),
-    Some("/repositories/1/issues/2/comments?per_page=2&page=3")
+    Some("https://api.github.com/repositories/1/issues/2/comments?per_page=2&page=3")
   );
   let last_page = "<https://api.github.com/x?page=1>; rel=\"prev\"";
   assert_eq!(link_next(&link(last_page)), None);
   assert_eq!(link_next(&[]), None);
-  assert_eq!(
-    link_next(&link("<https://api.github.com>; rel=\"next\"")),
-    None
-  );
+  assert_eq!(link_next(&link("rel=\"next\"")), None);
 }
 
 #[test]
@@ -131,4 +128,27 @@ fn github_failures_map_to_codes_classes_and_exits() {
   assert_eq!(limited.extra["retryAfter"], 60);
   assert_eq!(limited.extra["remaining"], 0);
   assert_eq!(limited.exit(), toolu_protocol::exit::Exit::TempFail);
+}
+
+#[test]
+fn pagination_that_never_ends_is_invalid_json() {
+  let fixture = Fixture::start().unwrap();
+  let next = format!("<{}>; rel=\"next\"", fixture.url("/loop"));
+  let reply = Reply::new(200, "[]")
+    .header("content-type", "application/json")
+    .header("link", &next);
+  fixture.route("/loop", reply).unwrap();
+  let page = r#"{"data":{"c":{"pageInfo":{"hasNextPage":true,"endCursor":"same"}}}}"#;
+  fixture.route("/graphql", Reply::new(200, page)).unwrap();
+  let client = recorded::client(&fixture);
+  let mut reader = Reader::new(&client);
+  let rest = reader.rest_pages("comments", "/loop").err().unwrap();
+  let graphql = reader
+    .graphql_pages("threads", "q", &json!({}), "/c")
+    .err()
+    .unwrap();
+  for failure in [rest, graphql] {
+    assert_eq!(failure.code, "invalid_json");
+    assert!(failure.message.contains("did not end within 100 pages"));
+  }
 }

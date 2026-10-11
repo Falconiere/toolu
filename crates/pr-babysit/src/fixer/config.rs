@@ -169,10 +169,10 @@ fn flag(raw: &Map<String, Value>, key: &str) -> Result<bool> {
 /// # Errors
 /// `config_invalid` naming the first field that fails.
 pub(crate) fn parse(raw: &Map<String, Value>, controller: Fixer) -> Result<Settings> {
-  let inline = match raw.get("dispatch").and_then(Value::as_str) {
-    None if raw.get("dispatch").is_none() => false,
-    Some("herdr") => false,
-    Some("inline") => true,
+  let dispatch = raw.get("dispatch").filter(|value| !value.is_null());
+  let inline = match dispatch.map(Value::as_str) {
+    None | Some(Some("herdr")) => false,
+    Some(Some("inline")) => true,
     _ => return Err(invalid("prBabysit: dispatch must be herdr or inline")),
   };
   let hosts = match raw.get("hosts") {

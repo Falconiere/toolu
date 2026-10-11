@@ -44,6 +44,31 @@ fn each_decision_becomes_the_engines_next_step() {
   }
 }
 
+/// A tick that escalates with a prompt for the worker.
+struct Escalated;
+
+impl BabysitTick for Escalated {
+  fn tick(&self, _request: &TickRequest) -> Result<TickReport, LinkError> {
+    Ok(TickReport {
+      decision: TickDecision::Escalate,
+      result: json!({}),
+      graphql: None,
+      prompt: Some("pr-babysit: merged".into()),
+    })
+  }
+}
+
+#[test]
+fn an_escalation_with_a_prompt_tells_a_human_and_the_worker() {
+  assert_eq!(
+    next(&Escalated, &request()),
+    Next::Escalate {
+      note: "babysit escalated Falconiere/toolu#460".into(),
+      prompt: "pr-babysit: merged".into(),
+    }
+  );
+}
+
 #[test]
 fn a_failed_tick_is_an_attention_item_not_a_crash() {
   let failed = Answer(Err(LinkError::Failed("no GitHub token".into())));

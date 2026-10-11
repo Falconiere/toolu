@@ -6,6 +6,22 @@ use serde_json::Value;
 
 const EMPTY: &[Value] = &[];
 
+/// An items document's `round`: 1 when absent or null, `None` unless a whole
+/// number of at least 1, as TypeScript's `Number.isInteger(round ?? 1)`.
+pub(crate) fn round(document: &Value) -> Option<u64> {
+  match document.get("round") {
+    None | Some(Value::Null) => Some(1),
+    Some(round) => round
+      .as_u64()
+      .or_else(|| {
+        round
+          .as_f64()
+          .and_then(|whole| whole.to_string().parse().ok())
+      })
+      .filter(|round| *round >= 1),
+  }
+}
+
 /// `value` unless it is absent, `null` or `false`.
 pub(crate) fn nil(value: Option<&Value>) -> Option<&Value> {
   value.filter(|value| !matches!(value, Value::Null | Value::Bool(false)))

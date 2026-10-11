@@ -100,11 +100,7 @@ fn shaped(plan: &Value) -> Result<&[Value]> {
 
 /// Every item the groups name is in `items` and none is injection-flagged.
 fn known_items(groups: &[Value], items: &Value, state: &Value) -> Result<()> {
-  if items
-    .get("round")
-    .map_or(Some(1), Value::as_u64)
-    .is_none_or(|round| round < 1)
-  {
+  if crate::json::round(items).is_none() {
     return Err(invalid("round must be a positive integer"));
   }
   let known: BTreeSet<&str> = items

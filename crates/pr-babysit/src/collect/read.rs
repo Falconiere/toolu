@@ -8,6 +8,9 @@ use toolu_github::{Client, Error, Reply, Rest};
 
 use crate::error::{Failure, Result};
 
+/// The most pages one list is read in; a reply that never ends is an error.
+const MAX_PAGES: usize = 100;
+
 /// A client and the GraphQL budget its reads have spent so far.
 pub(crate) struct Reader<'a> {
   client: &'a Client,
@@ -51,7 +54,7 @@ impl<'a> Reader<'a> {
   ) -> Result<Vec<Value>> {
     let mut variables = variables.clone();
     let mut pages = Vec::new();
-    loop {
+    while pages.len() < MAX_PAGES {
       let page = self.graphql(source, query, &variables)?;
       let info = page.pointer(&format!("{connection}/pageInfo")).cloned();
       pages.push(page);
@@ -64,6 +67,7 @@ impl<'a> Reader<'a> {
         _ => return Ok(pages),
       }
     }
+    Err(too_many(source))
   }
 
   /// Every page of a REST list, following `Link: rel="next"`.
@@ -71,6 +75,9 @@ impl<'a> Reader<'a> {
     let mut pages = Vec::new();
     let mut next = Some(path.to_owned());
     while let Some(path) = next {
+      if pages.len() == MAX_PAGES {
+        return Err(too_many(source));
+      }
       let reply = self
         .client
         .get(&path, None)
@@ -98,7 +105,8 @@ impl<'a> Reader<'a> {
   }
 }
 
-/// The path and query of the `rel="next"` URL in a `Link` header.
+/// The `rel="next"` URL in a `Link` header; the client refuses one outside
+/// its API URL.
 pub(crate) fn link_next(headers: &[(String, String)]) -> Option<String> {
   let link = headers
     .iter()
@@ -106,11 +114,14 @@ pub(crate) fn link_next(headers: &[(String, String)]) -> Option<String> {
     .map(|(_, value)| value)?;
   let target = link.split(',').find(|part| part.contains("rel=\"next\""))?;
   let url = target.split_once('<')?.1.split_once('>')?.0;
-  let after_scheme = url.split_once("://").map_or(url, |(_, rest)| rest);
-  after_scheme
-    .find('/')
-    .and_then(|start| after_scheme.get(start..))
-    .map(str::to_owned)
+  Some(url.to_owned())
+}
+
+fn too_many(source: &str) -> Failure {
+  invalid(
+    source,
+    &format!("pagination did not end within {MAX_PAGES} pages"),
+  )
 }
 
 fn invalid(source: &str, message: &str) -> Failure {

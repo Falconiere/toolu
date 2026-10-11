@@ -148,6 +148,12 @@ impl Dispatcher<'_> {
   /// # Errors
   /// Plan, config, herdr and git failures, each before the step it guards.
   pub(crate) fn start(&mut self, start: &Start<'_>) -> Result<Value> {
+    if [start.base, start.branch]
+      .iter()
+      .any(|name| name.starts_with('-'))
+    {
+      return Err(Failure::usage("--base and --branch must not start with -"));
+    }
     let (plan, items) = self.checked(start)?;
     let groups = plan
       .get("groups")
@@ -170,7 +176,7 @@ impl Dispatcher<'_> {
       format!("git fetch origin {base} failed in {root}"),
     )?;
     let worktree = self.worktree(root, start.branch, needs_pane)?;
-    let round = items.get("round").and_then(Value::as_u64).unwrap_or(1);
+    let round = crate::json::round(&items).unwrap_or(1);
     let context = self.context(start, &worktree, round, groups.len());
     let items_file = self.copy_items(start)?;
     self.record_round(&plan, &context, &sibling(self.file, ".fixer-items.json"))?;

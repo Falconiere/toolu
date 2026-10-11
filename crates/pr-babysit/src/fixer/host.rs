@@ -160,10 +160,10 @@ impl Fixer {
     if self == Fixer::Claude {
       args.extend(["-n".to_owned(), name.to_owned()]);
     }
-    if let Some(model) = model {
+    if let Some(model) = model.filter(|model| !model.is_empty()) {
       args.extend(["--model".to_owned(), model.to_owned()]);
     }
-    if let Some(effort) = effort {
+    if let Some(effort) = effort.filter(|effort| !effort.is_empty()) {
       args.extend(self.effort(effort));
     }
     if let Some(bad) = args.iter().find(|arg| !safe(arg)) {

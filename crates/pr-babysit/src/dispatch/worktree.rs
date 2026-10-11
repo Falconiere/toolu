@@ -224,7 +224,13 @@ impl Dispatcher<'_> {
     let path = created
       .pointer("/worktree/path")
       .and_then(Value::as_str)
-      .unwrap_or_default();
+      .filter(|path| !path.is_empty())
+      .ok_or_else(|| {
+        Failure::new(
+          "herdr_error",
+          "herdr worktree create returned no worktree.path",
+        )
+      })?;
     let pane = Pane {
       workspace: id(&created, "/workspace/workspace_id"),
       pane: id(&created, "/root_pane/pane_id"),

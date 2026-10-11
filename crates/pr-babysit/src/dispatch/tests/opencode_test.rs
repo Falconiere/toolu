@@ -185,7 +185,7 @@ fn a_started_fixer_runs_detached_until_its_group_is_stopped() {
   ]);
   let log = dir.path().join("fixer.log");
   let (pid, start) = spawn(&fixer(dir.path()), &log, &env, &dir.path().join("gh")).unwrap();
-  assert!(group_alive(pid, &start));
+  assert!(group_alive(pid, &start).unwrap());
   let started = Instant::now();
   while !std::fs::read_to_string(&log).unwrap().contains("start")
     && started.elapsed() < Duration::from_secs(5)
@@ -197,6 +197,6 @@ fn a_started_fixer_runs_detached_until_its_group_is_stopped() {
       .unwrap()
       .contains(&dir.path().display().to_string())
   );
-  assert!(stop_group(pid, &start));
-  assert!(!group_alive(pid, &start));
+  assert!(stop_group(pid, &start).unwrap());
+  assert!(!group_alive(pid, &start).unwrap());
 }

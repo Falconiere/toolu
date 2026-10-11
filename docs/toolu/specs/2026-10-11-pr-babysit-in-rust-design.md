@@ -289,3 +289,57 @@ item scored 0.87–0.94 (covered).
 - Failure modes: no blocker; locked, head_moved, malformed state and rate limits all state their exit and state effect.
 
 **Status:** Approved
+
+## Implementation decisions (2026-10-11)
+
+Decided from the issue, the epic and the code; nobody answers questions in the
+worker pane, so each carries its reason.
+
+- **REST pagination** follows `Link: rel="next"` and passes the URL through
+  unchanged, which the GitHub client accepts only under its API URL (so GitHub
+  Enterprise `/api/v3` keeps its prefix). GraphQL and REST reads stop with
+  `invalid_json` after 100 pages, so a reply that never ends cannot hang a tick.
+- **Head read** is one REST `pulls/<n>` call, and a null `reviewDecision` is
+  `""`, as the TypeScript collector produced.
+- **Collection is sequential.** One controller per slot holds the lock, and the
+  engine's GitHub budget already paces calls; parallel reads would add a
+  thread pool to save little.
+- **Config paths** come from `toolu_runtime::host::Roots`, the owner every native
+  hook uses; Jev runs in process through `toolu-jev-client`; the report command
+  a fixer runs is `toolu babysit fixer-report`, located through `current_exe`.
+- **`GitHubTick`** is the public, configurable tick (config, environment, page
+  size) so the engine's tests drive the real tick against loopback GitHub;
+  `Tick` keeps the engine's `Config::scheduled` default.
+- **Decision mapping.** `success` is Success. Otherwise only new attention is
+  reported: `escalate` becomes Escalate (an attention item for a human, and the
+  prompt goes to the worker), anything else Act (the prompt only). Attention
+  that is not new is KeepGoing, so an escalation is raised once, not every
+  180 s.
+- **The engine's clock is the tick's `now`**, so the 6-hour virtual-clock run
+  (AC-6) schedules from engine time.
+- **Attention newness is the stored work set** (`attention.work` in the state):
+  attention is new when an item is not in the previous tick's work. A one-tick
+  code such as `review_changes` dropping out therefore does not prompt again
+  (AC-3). A state written before this field compares fingerprints.
+- **Prompt delivery.** The babysit prompt and the `STATUS?` nudge share
+  `Step::Prompt`; the `prompt` effect script now reads `{"key","text"}` instead
+  of `{}`. A babysit prompt that herdr or the script cannot deliver (or that is
+  deferred for lack of both) raises a `babysit` attention item, because the
+  tick has already recorded the work as seen; the nudge keeps its own fallback
+  (a stall that survives it is an attention item).
+- **`rate_limited`** carries `remaining` beside `retryAfter` and `resetAt`.
+- **Fail closed on the process table.** When `ps` fails, stopping or waiting on
+  an OpenCode fixer is `process_error`, never "gone", so cleanup does not
+  remove the worktree of a fixer that may still run.
+- **Detached fixers** get their own process group and null stdin, not a new
+  session: `setsid` needs `unsafe` `pre_exec`, which the workspace forbids. The
+  fixer has no terminal input, so job-control stops do not apply to it.
+- **Inherited limits kept as in TypeScript**: SIGKILL goes to the pids taken
+  before SIGTERM (a pid reused within those 10 s could be hit). The stale-lock
+  reclaim now removes the directory only if it is still the one it judged
+  stale, which narrows TypeScript's race but does not close it.
+- **Inputs TypeScript accepted** stay accepted: `dispatch: null`, a whole-number
+  `round` such as `2.0` or `null`, and an empty model or effort (unset).
+  `prBabysit.jev: false` turns Jev off as `--no-jev` does, and a replayed
+  answers file wins over both. `--base`/`--branch` starting with `-` are
+  refused before any `git` call.

@@ -77,8 +77,7 @@ pub(crate) fn parse(document: &Value, raised: &[String]) -> Result<Vec<Item>> {
       "item kind must be thread, conversation, review or ci",
     ));
   }
-  let round = document.get("round").map_or(Some(1), Value::as_u64);
-  if round.is_none_or(|round| round < 1) {
+  if crate::json::round(document).is_none() {
     return Err(invalid("round must be a positive integer"));
   }
   if raised.iter().any(|id| !ids.contains(id.as_str())) {

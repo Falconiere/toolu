@@ -10,6 +10,7 @@ fn moved_children(parent: u32) -> Vec<u32> {
   let started = Instant::now();
   loop {
     let moved: Vec<u32> = table()
+      .unwrap()
       .iter()
       .filter(|row| row.parent == parent && row.group != parent)
       .map(|row| row.pid)
@@ -29,13 +30,17 @@ fn stop_group_ends_the_group_and_a_descendant_that_left_it() {
   assert_ne!(start, "");
   let moved = moved_children(pid);
   assert_eq!(moved.len(), 1);
-  assert!(group_alive(pid, &start));
-  assert!(!group_alive(pid, OLD), "a different start is a reused pid");
-  assert!(stop_group(pid, OLD));
-  assert!(group_alive(pid, &start));
-  assert!(stop_group(pid, &start));
-  assert!(!group_alive(pid, &start));
+  assert!(group_alive(pid, &start).unwrap());
+  assert!(
+    !group_alive(pid, OLD).unwrap(),
+    "a different start is a reused pid"
+  );
+  assert!(stop_group(pid, OLD).unwrap());
+  assert!(group_alive(pid, &start).unwrap());
+  assert!(stop_group(pid, &start).unwrap());
+  assert!(!group_alive(pid, &start).unwrap());
   let live: Vec<u32> = table()
+    .unwrap()
     .iter()
     .map(|row| row.pid)
     .filter(|pid| moved.contains(pid))
@@ -45,8 +50,8 @@ fn stop_group_ends_the_group_and_a_descendant_that_left_it() {
 
 #[test]
 fn no_process_is_neither_alive_nor_started() {
-  assert!(!group_alive(0, ""));
-  assert!(!group_alive(1, ""));
+  assert!(!group_alive(0, "").unwrap());
+  assert!(!group_alive(1, "").unwrap());
   assert_eq!(process_start(u32::MAX / 2), "");
-  assert!(stop_group(u32::MAX / 2, ""));
+  assert!(stop_group(u32::MAX / 2, "").unwrap());
 }

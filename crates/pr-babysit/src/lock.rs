@@ -1,8 +1,9 @@
 //! The slot lock: `<state>.lock`, a directory made atomically by `mkdir`, with
 //! `pid` and `since` files inside. A lock whose pid is dead, that is older than
 //! `PB_LOCK_STALE_SECONDS` (600), or that has stayed incomplete for a second is
-//! reclaimed once; anything else is `locked`. Only the directory this process
-//! made is ever removed on release.
+//! reclaimed once, unless the directory changed since it was judged; anything
+//! else is `locked`. Only the directory this process made is ever removed on
+//! release.
 
 use std::os::unix::fs::MetadataExt as _;
 use std::path::{Path, PathBuf};
@@ -57,7 +58,7 @@ fn read_number(path: &Path) -> Option<u64> {
 
 enum Seen {
   Retry,
-  Stale(Option<u64>, Option<u64>),
+  Stale(Option<u64>, Option<u64>, (u64, u64)),
   Held(Option<u64>, Option<u64>),
 }
 
@@ -83,10 +84,10 @@ impl SlotLock {
       }
       match inspect(&path, stale_after) {
         Seen::Retry if attempt == 0 => {}
-        Seen::Stale(..) if attempt == 0 => {
+        Seen::Stale(_, _, seen) if attempt == 0 && identity_of(&path) == Some(seen) => {
           let _gone = std::fs::remove_dir_all(&path);
         }
-        Seen::Held(pid, since) | Seen::Stale(pid, since) => return Err(locked(pid, since)),
+        Seen::Held(pid, since) | Seen::Stale(pid, since, _) => return Err(locked(pid, since)),
         Seen::Retry => return Err(locked(None, None)),
       }
     }
@@ -111,9 +112,7 @@ impl SlotLock {
     let Some(identity) = self.identity.take() else {
       return;
     };
-    let owned =
-      std::fs::metadata(&self.path).is_ok_and(|meta| (meta.dev(), meta.ino()) == identity);
-    if owned {
+    if identity_of(&self.path) == Some(identity) {
       let _gone = std::fs::remove_dir_all(&self.path);
     }
   }
@@ -125,10 +124,18 @@ impl Drop for SlotLock {
   }
 }
 
+fn identity_of(path: &Path) -> Option<(u64, u64)> {
+  std::fs::metadata(path)
+    .ok()
+    .map(|meta| (meta.dev(), meta.ino()))
+}
+
+/// The lock as found. A stale lock carries the identity of the directory that
+/// was judged, so a lock another controller made since is never removed.
 fn inspect(path: &Path, stale_after: Option<u64>) -> Seen {
-  if !path.exists() {
+  let Some(seen) = identity_of(path) else {
     return Seen::Retry;
-  }
+  };
   let pid = read_number(&path.join("pid"));
   let since = read_number(&path.join("since"));
   let stale = if let (Some(pid), Some(since)) = (pid, since) {
@@ -143,7 +150,7 @@ fn inspect(path: &Path, stale_after: Option<u64>) -> Seen {
       .is_ok_and(|age| age >= Duration::from_secs(1))
   };
   if stale {
-    Seen::Stale(pid, since)
+    Seen::Stale(pid, since, seen)
   } else {
     Seen::Held(pid, since)
   }

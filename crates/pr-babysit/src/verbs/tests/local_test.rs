@@ -181,7 +181,7 @@ fn route_fix_plans_inline_from_the_project_config() {
   let dir = TempDir::new().unwrap();
   let project = dir.path().join("project");
   std::fs::create_dir_all(project.join(".claude")).unwrap();
-  let config = json!({"prBabysit": {"dispatch": "inline"}});
+  let config = json!({"prBabysit": {"dispatch": "inline", "jev": false}});
   std::fs::write(
     project.join(".claude/toolu.config.json"),
     config.to_string(),
@@ -197,16 +197,19 @@ fn route_fix_plans_inline_from_the_project_config() {
     "route-fix",
     "--items",
     items.to_str().unwrap(),
-    "--no-jev",
     "--now",
     "2026-09-28T12:00:00Z",
+    "--no-jev",
   ];
-  let (exit, plan) = run(&args, &world(&env, None));
-  assert_eq!(exit, Exit::Success, "{plan}");
-  assert_eq!(
-    plan,
-    fixture::json("route/route-plans.json")["heuristicInline"]
-  );
+  for args in [&args[..], &args[..6]] {
+    let (exit, plan) = run(args, &world(&env, None));
+    assert_eq!(exit, Exit::Success, "{plan}");
+    assert_eq!(
+      plan,
+      fixture::json("route/route-plans.json")["heuristicInline"],
+      "`prBabysit.jev: false` is --no-jev"
+    );
+  }
 }
 
 #[test]

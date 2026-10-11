@@ -85,6 +85,8 @@ pub fn run_to_file(spec: &FileSpec, on_spawn: &mut dyn FnMut(u32)) -> Result<Fil
 /// `/dev/null` and both streams written to `log` (created or truncated), and
 /// return its pid without waiting. A reaper thread waits so a long-lived
 /// caller keeps no zombie; when the caller exits first, the child keeps running.
+/// When no thread can start, the child still runs and is reaped by `init` once
+/// the caller exits.
 ///
 /// # Errors
 /// [`RunError`] when the argv is empty, the log cannot be created, or the
@@ -92,7 +94,7 @@ pub fn run_to_file(spec: &FileSpec, on_spawn: &mut dyn FnMut(u32)) -> Result<Fil
 pub fn spawn_logged(argv: &[String], cwd: &Path, env: &Env, log: &Path) -> Result<u32, RunError> {
   let mut child = spawn(argv, Some(cwd), Some(env), log)?;
   let pid = child.id();
-  std::thread::spawn(move || {
+  let _reaper = std::thread::Builder::new().spawn(move || {
     let _reaped = child.wait();
   });
   Ok(pid)

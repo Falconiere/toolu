@@ -28,7 +28,7 @@ impl Dispatcher<'_> {
       .iter()
       .find(|group| matches!(text(group, "status"), "running" | "launching" | "blocked"));
     if let Some(active) = active.filter(|_| !self.dry) {
-      let stopped = self.stop_fixer(active);
+      let stopped = self.stop_fixer(active)?;
       if !stopped && text(active, "host") == "opencode" {
         let seq = active.get("seq").cloned().unwrap_or(Value::Null);
         return Err(

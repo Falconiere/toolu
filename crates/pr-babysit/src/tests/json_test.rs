@@ -1,6 +1,22 @@
 use serde_json::{Value, json};
 
-use super::{array, has_key, jq_string, nil, or, text};
+use super::{array, has_key, jq_string, nil, or, round, text};
+
+#[test]
+fn a_round_is_a_whole_number_of_at_least_one() {
+  for (document, expected) in [
+    (json!({}), Some(1)),
+    (json!({"round": null}), Some(1)),
+    (json!({"round": 2}), Some(2)),
+    (json!({"round": 2.0}), Some(2)),
+    (json!({"round": 2.5}), None),
+    (json!({"round": 0}), None),
+    (json!({"round": -1}), None),
+    (json!({"round": "2"}), None),
+  ] {
+    assert_eq!(round(&document), expected, "{document}");
+  }
+}
 
 #[test]
 fn null_false_and_absent_fall_back() {

@@ -112,7 +112,14 @@ pub(super) fn record(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
     ));
   };
   let entry = match name {
-    "flag-injection" => Entry::FlagInjection(text(sub, "thread").unwrap_or_default()),
+    "flag-injection" => match text(sub, "thread").filter(|thread| !thread.is_empty()) {
+      Some(thread) => Entry::FlagInjection(thread),
+      None => {
+        return Err(Failure::usage(
+          "record flag-injection: --thread <graphqlId> required",
+        ));
+      }
+    },
     "round" => Entry::Round {
       had_rejection: text(sub, "had-rejection") == Some("true"),
       fix_pushed: sub.get_flag("fix-pushed"),
@@ -150,8 +157,8 @@ pub(super) fn route_fix(matches: &ArgMatches, world: &World<'_>) -> Result<Value
     now,
   };
   let scoring = match path(matches, "jev-answers-in") {
-    _ if matches.get_flag("no-jev") => Scoring::Off,
     Some(answers) => Scoring::Replay(answers),
+    None if matches.get_flag("no-jev") || !settings.jev => Scoring::Off,
     None => Scoring::Ask(world.env, world.jev.clone()),
   };
   route(&request, &settings, world.env, scoring)

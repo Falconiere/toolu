@@ -68,7 +68,12 @@ pub(crate) fn tick(request: &Request<'_>, source: Source<'_>, env: &Env) -> Resu
     .ok_or_else(|| Failure::usage("--now must be YYYY-MM-DDTHH:MM:SSZ"))?;
   let _lock = SlotLock::acquire(request.state_file, env)?;
   let previous = previous(request)?;
-  let read = snapshot(request, source, env).and_then(|read| valid(&read.0).map(|()| read));
+  let collected = matches!(source, Source::GitHub { .. });
+  let read = match snapshot(request, source, env) {
+    Ok(read) => valid(&read.0).map(|()| read),
+    Err(failure) if !collected => return Err(failure),
+    Err(failure) => Err(failure),
+  };
   let (snapshot, raw, graphql) = match read {
     Ok(read) => read,
     Err(failure) => {
@@ -106,12 +111,18 @@ pub(crate) fn tick(request: &Request<'_>, source: Source<'_>, env: &Env) -> Resu
 
 fn previous(request: &Request<'_>) -> Result<Option<Value>> {
   let path = request.state_file;
-  let Ok(text) = std::fs::read_to_string(path) else {
-    return Ok(None);
-  };
   let malformed =
     |message: String| Failure::new("state_malformed", message).with("source", "state");
   let file = path.display();
+  let text = match std::fs::read_to_string(path) {
+    Ok(text) => text,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+    Err(err) => {
+      return Err(malformed(format!(
+        "state file cannot be read: {file}: {err}"
+      )));
+    }
+  };
   let value: Value = serde_json::from_str(&text)
     .ok()
     .ok_or_else(|| malformed(format!("state file is not valid JSON: {file}")))?;
@@ -226,3 +237,7 @@ fn stamp(request: &Request<'_>, previous: Option<Value>, failure: &Failure) {
 #[cfg(test)]
 #[path = "tests/tick_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/tick_state_test.rs"]
+mod state_tests;

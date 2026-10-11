@@ -79,9 +79,9 @@ fn a_detached_fixer_survives_start_and_cleanup_reaps_its_group() {
   let pid = u32::try_from(group["pid"].as_u64().unwrap()).unwrap();
   let since = group["pidStart"].as_str().unwrap().to_owned();
   std::thread::sleep(std::time::Duration::from_millis(300));
-  assert!(group_alive(pid, &since));
+  assert!(group_alive(pid, &since).unwrap());
   assert_eq!(cleaned(&sb).unwrap()["status"], "cleaned");
-  assert!(!group_alive(pid, &since));
+  assert!(!group_alive(pid, &since).unwrap());
 }
 
 #[test]

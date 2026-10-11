@@ -148,7 +148,7 @@ impl Dispatcher<'_> {
         let patch = json!({"status": "running", "pid": pid, "pidStart": start, "log": log.display().to_string()});
         let recorded = self.patch_group(seq, &patch);
         if recorded.is_err() {
-          stop_group(pid, &start);
+          let _stopped = stop_group(pid, &start);
         }
         recorded
       }

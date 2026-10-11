@@ -29,7 +29,7 @@ fn stall(world: &mut World, key: &str) {
     issue.stall_nudged = true;
     issue.nudge_at_ms = world.now_ms;
   }
-  crate::github_engine::prompt(world, key, "status", "STATUS?".to_owned());
+  crate::babysit::prompt(world, key, "status", "STATUS?".to_owned(), None);
 }
 
 /// Absolute time of the soonest stall deadline.

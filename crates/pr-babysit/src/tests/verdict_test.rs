@@ -117,3 +117,12 @@ fn every_verdict_pattern_compiles() {
     assert!(crate::pattern::compiles(pattern));
   }
 }
+
+#[test]
+fn a_crlf_finding_line_is_no_finding_as_in_typescript() {
+  let text = fixture::text("verdicts/pr31-verdict.txt");
+  let crlf = text.replace('\n', "\r\n");
+  let lf = parse(&text)["findings"].as_array().unwrap().len();
+  assert!(lf > 0);
+  assert_eq!(parse(&crlf)["findings"], serde_json::json!([]));
+}

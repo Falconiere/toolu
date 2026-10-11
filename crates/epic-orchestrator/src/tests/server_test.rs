@@ -44,3 +44,57 @@ fn a_tick_moves_the_clock_off_its_open_time() {
   assert_eq!(engine.tick(&()).expect("tick"), Stop::Idle);
   assert!(engine.world.now_ms > 1_000_000_000_000);
 }
+
+fn prompt(key: &str, fallback: Option<&str>) -> crate::model::Step {
+  crate::model::Step::Prompt {
+    key: key.to_owned(),
+    text: "fix the thread".to_owned(),
+    fallback: fallback.map(str::to_owned),
+  }
+}
+
+#[test]
+fn an_undelivered_prompt_raises_its_fallback_attention_item() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = Engine::open(Paths::at(tmp.path()), None, Fault::None).expect("open");
+  engine.world.outbox.push_back(prompt("a", Some("babysit")));
+  engine.world.outbox.push_back(prompt("b", None));
+  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
+  let raised: Vec<(&str, &str, &str)> = engine
+    .world
+    .attention
+    .iter()
+    .map(|item| (item.kind.as_str(), item.key.as_str(), item.note.as_str()))
+    .collect();
+  assert_eq!(
+    raised,
+    [(
+      "babysit",
+      "a",
+      "worker prompt not delivered: prompt deferred"
+    )]
+  );
+}
+
+#[test]
+fn a_prompt_script_gets_the_key_and_text_and_its_outcome_counts() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let scripts = tmp.path().join("scripts");
+  std::fs::create_dir_all(&scripts).expect("scripts");
+  let seen = tmp.path().join("seen.json");
+  let script = format!(
+    "cat > '{}'\nprintf '{{\"outcome\":\"sent\"}}'\n",
+    seen.display()
+  );
+  std::fs::write(scripts.join("prompt"), script).expect("script");
+  let mut engine = Engine::open(Paths::at(tmp.path()), Some(scripts), Fault::None).expect("open");
+  engine.world.outbox.push_back(prompt("a", Some("babysit")));
+  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
+  assert_eq!(engine.world.attention.len(), 0);
+  let body: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(seen).expect("seen")).expect("json");
+  assert_eq!(
+    body,
+    serde_json::json!({"key": "a", "text": "fix the thread"})
+  );
+}

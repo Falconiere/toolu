@@ -29,8 +29,11 @@ pattern::pattern!(APPROVED_BOLD, r"(?i)\*\*Approved\*\*");
 pattern::pattern!(PROVIDER, r"(?i)review incomplete|provider error");
 pattern::pattern!(FINDINGS_HEAD, r"^### Findings(?:\s|$)");
 pattern::pattern!(ANY_HEAD, r"^### ");
-pattern::pattern!(FINDING, r"^`([^`]+)`: (blocker|high|medium|low|nit): (.*)$");
-pattern::pattern!(PATH_LINE, r"^(.+):([0-9]+)$");
+pattern::pattern!(
+  FINDING,
+  r"^`([^`]+)`: (blocker|high|medium|low|nit): ([^\r\n]*)$"
+);
+pattern::pattern!(PATH_LINE, r"^([^\r\n]+):([0-9]+)$");
 pattern::pattern!(TOP_N_HEAD, r"(?i)^###\s+Top-N\s+must-fix(?:\s|$)");
 pattern::pattern!(TOP_N_END, r"^### |^<details>");
 pattern::pattern!(BULLET, r"^[-*] ");

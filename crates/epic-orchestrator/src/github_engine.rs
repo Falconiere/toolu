@@ -200,19 +200,12 @@ fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
       }
     }
     Next::Attention(note) => push_attention(world, "babysit", &key, &note),
-    Next::Prompt(text) => prompt(world, &key, "babysit", text),
+    Next::Prompt(text) => crate::babysit::prompt(world, &key, "babysit", text, Some("babysit")),
+    Next::Escalate { note, prompt: text } => {
+      push_attention(world, "babysit", &key, &note);
+      crate::babysit::prompt(world, &key, "babysit", text, None);
+    }
   }
-}
-
-/// Journal `text` as a `prompt` record, then send it to the worker.
-pub(crate) fn prompt(world: &mut World, key: &str, name: &str, text: String) {
-  world
-    .outbox
-    .push_back(Step::Journal(Record::new("prompt", name, key, "", &text)));
-  world.outbox.push_back(Step::Prompt {
-    key: key.to_owned(),
-    text,
-  });
 }
 
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {

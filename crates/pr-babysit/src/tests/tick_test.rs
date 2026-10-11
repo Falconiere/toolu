@@ -8,9 +8,9 @@ use toolu_runtime::env::Env;
 use super::{Request, Source, tick};
 use crate::{fixture, recorded};
 
-const NOW: &str = "2026-09-19T12:00:00Z";
+pub(super) const NOW: &str = "2026-09-19T12:00:00Z";
 
-fn request<'a>(state: &'a Path, now: &'a str, number: u64) -> Request<'a> {
+pub(super) fn request<'a>(state: &'a Path, now: &'a str, number: u64) -> Request<'a> {
   Request {
     repo: "Falconiere/toolu",
     number,
@@ -21,11 +21,11 @@ fn request<'a>(state: &'a Path, now: &'a str, number: u64) -> Request<'a> {
   }
 }
 
-fn recorded_165() -> PathBuf {
+pub(super) fn recorded_165() -> PathBuf {
   fixture::path("snapshots/toolu-165.json")
 }
 
-fn read(path: &Path) -> Value {
+pub(super) fn read(path: &Path) -> Value {
   serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
 }
 
@@ -82,41 +82,6 @@ fn scheduled_ticks_report_the_next_whole_slot() {
   let ticked = tick(&late, Source::File(&snapshot), &Env::default()).unwrap();
   assert_eq!(ticked.result["nextCheckAt"], "2026-09-19T12:06:00Z");
   assert_eq!(read(&state)["schedule"]["nextCheckAt"], 1_789_819_560_u64);
-}
-
-#[test]
-fn malformed_and_foreign_state_fail_before_replacing_bytes() {
-  let dir = TempDir::new().unwrap();
-  let state = dir.path().join("s.json");
-  let snapshot = recorded_165();
-  std::fs::write(&state, "bad JSON").unwrap();
-  let failure = tick(
-    &request(&state, NOW, 165),
-    Source::File(&snapshot),
-    &Env::default(),
-  );
-  assert_eq!(failure.err().unwrap().code, "state_malformed");
-  assert_eq!(std::fs::read_to_string(&state).unwrap(), "bad JSON");
-  std::fs::write(&state, r#"{"version":1}"#).unwrap();
-  let old = tick(
-    &request(&state, NOW, 165),
-    Source::File(&snapshot),
-    &Env::default(),
-  );
-  assert_eq!(old.err().unwrap().extra["version"], 1);
-  std::fs::write(&state, r#"{"version":2,"repo":"Other/repo","number":165}"#).unwrap();
-  let foreign = tick(
-    &request(&state, NOW, 165),
-    Source::File(&snapshot),
-    &Env::default(),
-  );
-  let failure = foreign.err().unwrap();
-  assert_eq!(failure.code, "slot_mismatch");
-  assert_eq!(
-    failure.extra["state"],
-    json!({"repo": "Other/repo", "number": 165})
-  );
-  assert!(!dir.path().join("s.json.lock").exists());
 }
 
 #[test]

@@ -96,18 +96,23 @@ impl Dispatcher<'_> {
   }
 
   /// Ends a group's fixer before it is launched again or cleaned up.
-  pub(super) fn stop_fixer(&self, group: &Value) -> bool {
+  ///
+  /// # Errors
+  /// `process_error` when the `OpenCode` fixer's processes cannot be listed.
+  pub(super) fn stop_fixer(&self, group: &Value) -> Result<bool> {
     if text(group, "host") == "opencode" {
       let pid = group
         .get("pid")
         .and_then(Value::as_u64)
         .and_then(|pid| u32::try_from(pid).ok());
-      return pid.is_none_or(|pid| stop_group(pid, text(group, "pidStart")));
+      return pid.map_or(Ok(true), |pid| stop_group(pid, text(group, "pidStart")));
     }
-    group
-      .get("agent")
-      .and_then(Value::as_str)
-      .is_none_or(|agent| stop_agent(self.env, agent))
+    Ok(
+      group
+        .get("agent")
+        .and_then(Value::as_str)
+        .is_none_or(|agent| stop_agent(self.env, agent)),
+    )
   }
 
   fn unblock(&mut self) -> Result<()> {
@@ -137,7 +142,7 @@ impl Dispatcher<'_> {
   }
 
   fn relaunch(&mut self, seq: u64, group: &Value) -> Result<()> {
-    self.stop_fixer(group);
+    self.stop_fixer(group)?;
     let items_file = self
       .fixer_field("itemsFile")
       .and_then(Value::as_str)
@@ -160,19 +165,19 @@ impl Dispatcher<'_> {
 
 impl Dispatcher<'_> {
   /// Whether the `OpenCode` group's process group exited before `deadline`.
-  fn exited(group: &Value, deadline: Instant) -> bool {
+  fn exited(group: &Value, deadline: Instant) -> Result<bool> {
     let pid = group
       .get("pid")
       .and_then(Value::as_u64)
       .and_then(|pid| u32::try_from(pid).ok());
     let pid = pid.unwrap_or_default();
-    while group_alive(pid, text(group, "pidStart")) {
+    while group_alive(pid, text(group, "pidStart"))? {
       if Instant::now() >= deadline {
-        return false;
+        return Ok(false);
       }
       std::thread::sleep(SECOND);
     }
-    true
+    Ok(true)
   }
 
   /// The herdr agent's status after `herdr agent wait`; `None` on its timeout.
@@ -219,7 +224,7 @@ impl Dispatcher<'_> {
     }
     *fresh = false;
     if text(&group, "host") == "opencode" {
-      if !Self::exited(&group, deadline) {
+      if !Self::exited(&group, deadline)? {
         return Ok(false);
       }
     } else {

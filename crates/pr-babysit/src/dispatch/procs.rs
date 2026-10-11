@@ -8,6 +8,8 @@ use std::time::{Duration, Instant};
 use toolu_runtime::process::group::{self, Signal};
 use toolu_runtime::process::{Spec, run};
 
+use crate::error::{Failure, Result};
+
 const POLL: Duration = Duration::from_millis(100);
 
 struct Row {
@@ -30,9 +32,13 @@ pub(crate) fn process_start(pid: u32) -> String {
     .unwrap_or_default()
 }
 
-/// Every live (non-zombie) process; empty when `ps` fails.
-fn table() -> Vec<Row> {
-  let listed = ps(&["-A", "-o", "pid=,ppid=,pgid=,stat="]).unwrap_or_default();
+/// Every live (non-zombie) process.
+///
+/// # Errors
+/// `process_error` when `ps` fails, so no fixer is taken for gone.
+fn table() -> Result<Vec<Row>> {
+  let listed = ps(&["-A", "-o", "pid=,ppid=,pgid=,stat="])
+    .ok_or_else(|| Failure::new("process_error", "ps failed to list processes"))?;
   let rows = listed.lines().filter_map(|line| {
     let fields: Vec<&str> = line.split_whitespace().collect();
     let [pid, parent, group, stat] = fields.as_slice() else {
@@ -45,13 +51,13 @@ fn table() -> Vec<Row> {
       group: number(group)?,
     })
   });
-  rows.collect()
+  Ok(rows.collect())
 }
 
 /// The group's members and every descendant, whatever its group: `OpenCode`
 /// starts each bash tool call in a process group of its own.
-fn family(leader: u32) -> BTreeSet<u32> {
-  let rows = table();
+fn family(leader: u32) -> Result<BTreeSet<u32>> {
+  let rows = table()?;
   let mut found: BTreeSet<u32> = rows
     .iter()
     .filter(|row| row.group == leader)
@@ -64,7 +70,7 @@ fn family(leader: u32) -> BTreeSet<u32> {
       .map(|row| row.pid)
       .collect();
     if more.is_empty() {
-      return found;
+      return Ok(found);
     }
     found.extend(more);
   }
@@ -72,15 +78,18 @@ fn family(leader: u32) -> BTreeSet<u32> {
 
 /// Whether the fixer group started as `pid` at `start` still runs. A reused
 /// pid (a different recorded start) is not the fixer.
-pub(crate) fn group_alive(pid: u32, start: &str) -> bool {
+///
+/// # Errors
+/// `process_error` when `ps` fails.
+pub(crate) fn group_alive(pid: u32, start: &str) -> Result<bool> {
   if pid <= 1 {
-    return false;
+    return Ok(false);
   }
   let leader = process_start(pid);
   if !leader.is_empty() && !start.is_empty() && leader != start {
-    return false;
+    return Ok(false);
   }
-  table().iter().any(|row| row.group == pid)
+  Ok(table()?.iter().any(|row| row.group == pid))
 }
 
 fn send(pid: u32, pids: &BTreeSet<u32>, signal: Signal) {
@@ -90,14 +99,14 @@ fn send(pid: u32, pids: &BTreeSet<u32>, signal: Signal) {
   }
 }
 
-fn gone_by(pids: &BTreeSet<u32>, deadline: Instant) -> bool {
+fn gone_by(pids: &BTreeSet<u32>, deadline: Instant) -> Result<bool> {
   loop {
-    let live: BTreeSet<u32> = table().iter().map(|row| row.pid).collect();
+    let live: BTreeSet<u32> = table()?.iter().map(|row| row.pid).collect();
     if pids.is_disjoint(&live) {
-      return true;
+      return Ok(true);
     }
     if Instant::now() >= deadline {
-      return false;
+      return Ok(false);
     }
     std::thread::sleep(POLL);
   }
@@ -106,14 +115,17 @@ fn gone_by(pids: &BTreeSet<u32>, deadline: Instant) -> bool {
 /// Ends the fixer: its group and every descendant (taken before any signal,
 /// so none is lost to reparenting), `SIGTERM`, up to 10 s, then `SIGKILL`.
 /// True when nothing of it is left.
-pub(crate) fn stop_group(pid: u32, start: &str) -> bool {
-  if !group_alive(pid, start) {
-    return true;
+///
+/// # Errors
+/// `process_error` when `ps` fails.
+pub(crate) fn stop_group(pid: u32, start: &str) -> Result<bool> {
+  if !group_alive(pid, start)? {
+    return Ok(true);
   }
-  let pids = family(pid);
+  let pids = family(pid)?;
   send(pid, &pids, Signal::SIGTERM);
-  if gone_by(&pids, Instant::now() + Duration::from_secs(10)) {
-    return true;
+  if gone_by(&pids, Instant::now() + Duration::from_secs(10))? {
+    return Ok(true);
   }
   send(pid, &pids, Signal::SIGKILL);
   gone_by(&pids, Instant::now() + Duration::from_secs(5))
