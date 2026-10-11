@@ -17,7 +17,7 @@ The toolu plugin still launches eight Bun hook entries even though their native 
 
 Generate all eight existing `plugins/toolu/hooks/hooks.json` commands with `cargo xtask print-hook`, retaining their matchers and explicit timeouts. `toolu hook check-binary` uses the existing `toolu_runtime::startup::native_toolu_advice` so the separate SessionStart entry can be native; the other seven names already route to native handlers. The generated launcher selects the native binary first and supports `TOOLU_RUNTIME=bun` as an explicit rollback path. Its existing Bun fallback remains for at least one switched release, so the eight corresponding source and dist bundles remain shipped for that period. A missing native binary gives the existing install advisory, and a bad explicit `TOOLU_BIN` still fails closed.
 
-Replace the planned `toolu debug` namespace with native `io`, `log`, `stack`, and `testfail` verbs. `io` reports the byte and line count of a file or stdin so an agent can size a captured input before summarizing it; the other verbs emit bounded text or one JSON document. Reuse the captured real Bun, Cargo, stack, and long-log fixtures. Update the debug skill and generated CLI reference. Remove only Bun sources, bundles, and TypeScript tests that have no transition, OpenCode, conformance, or tooling consumer, based on import and pack checks. Move ported hook entries into `fixtures/rust-ported.json` so the shared suites require Rust. The notice-release commit #483 must be published before the switch release is merged; it is not yet contained in tag `v7.11.0`.
+Replace the planned `toolu debug` namespace with native `io`, `log`, `stack`, and `testfail` verbs. `io` reports the byte and line count of a file or stdin so an agent can size a captured input before summarizing it; the other verbs emit bounded text or one JSON document. Reuse the captured real Bun, Cargo, stack, and long-log fixtures. Update the debug skill and generated CLI reference. Remove only Bun sources, bundles, and TypeScript tests that have no transition, OpenCode, conformance, or tooling consumer, based on import and pack checks. Move ported hook entries into `fixtures/rust-ported.json` so the shared suites require Rust. Add the issue's `bun run test` command as an alias that runs the existing `test:unit` and `test:conformance` product suites. The notice-release commit #483 must be published before the switch release is merged; it is not yet contained in tag `v7.11.0`.
 
 ## Interfaces / Schema
 
@@ -43,7 +43,7 @@ Replace the planned `toolu debug` namespace with native `io`, `log`, `stack`, an
 - **AC-5:** `toolu hook pre-tools` and `post-tools` satisfy the resource budgets measured by the hook benchmark on CI.
 - **AC-6:** The debug skill's real log, stack, and Bun/Cargo failure transcripts produce byte/line counts or bounded native summaries and valid JSON through `toolu debug io|log|stack|testfail`; bad paths fail visibly.
 - **AC-7:** `plugins/toolu` agent-facing Markdown names native `toolu` commands, the generated CLI reference and docs describe the transition, and the Markdown–CLI drift gate passes.
-- **AC-8:** `bun run test`, the full Rust gate, and real OpenCode acceptance pass with remaining plugins using their own Bun bundles.
+- **AC-8:** `bun run test` runs both existing Bun product suites, the full Rust gate and real OpenCode acceptance pass, and remaining plugins use their own Bun bundles.
 
 ## Acceptance evidence
 
