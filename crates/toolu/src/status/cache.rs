@@ -147,7 +147,11 @@ fn ref_oid(repo: &GitRepo, name: &str) -> Option<String> {
 }
 
 fn now_ms() -> u64 {
-  SystemTime::now()
+  millis_since_epoch(SystemTime::now())
+}
+
+fn millis_since_epoch(time: SystemTime) -> u64 {
+  time
     .duration_since(UNIX_EPOCH)
     .ok()
     .and_then(|time| u64::try_from(time.as_millis()).ok())
@@ -155,8 +159,11 @@ fn now_ms() -> u64 {
 }
 
 fn fresh(written_at_ms: u64) -> bool {
-  let now = now_ms();
-  now >= written_at_ms && now - written_at_ms <= TTL_MS
+  fresh_at(written_at_ms, now_ms())
+}
+
+fn fresh_at(written_at_ms: u64, now_ms: u64) -> bool {
+  written_at_ms != 0 && now_ms != 0 && now_ms >= written_at_ms && now_ms - written_at_ms <= TTL_MS
 }
 
 fn read_record(path: &Path) -> Option<Record> {

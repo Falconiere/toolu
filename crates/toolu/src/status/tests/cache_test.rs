@@ -1,12 +1,25 @@
 use std::fs;
 use std::path::Path;
 use std::process::Command;
+use std::time::{Duration, UNIX_EPOCH};
 
 use toolu_runtime::env::Env;
 use toolu_runtime::git::{Discovery, discover};
 use toolu_runtime::host::roots::Roots;
 
-use super::{acquire, paths, read, read_record, refresh, release};
+use super::{acquire, fresh_at, millis_since_epoch, paths, read, read_record, refresh, release};
+
+#[test]
+fn invalid_clock_and_zero_timestamp_never_make_a_cache_record_fresh() {
+  let before_epoch = UNIX_EPOCH - Duration::from_millis(1);
+  let invalid_now = millis_since_epoch(before_epoch);
+  assert_eq!(invalid_now, 0);
+  assert!(!fresh_at(0, invalid_now));
+  assert!(!fresh_at(0, 1_000));
+  assert!(!fresh_at(1_000, invalid_now));
+  assert!(fresh_at(1_000, 3_000));
+  assert!(!fresh_at(1_000, 3_001));
+}
 
 fn git(dir: &Path, args: &[&str]) {
   let result = Command::new("git")
