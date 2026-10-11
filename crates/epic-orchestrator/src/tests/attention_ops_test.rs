@@ -277,6 +277,7 @@ fn attention_reaches_every_channel() {
   let seen = posts(&fixture, Duration::from_secs(2));
   assert!(start.elapsed() < Duration::from_secs(2));
   assert_post(&seen, live.addr);
+  await_notify_record(&live.paths);
   let answer = json!({"op": "answer", "key": "a", "text": "take B", "by": "user"});
   assert_eq!(send(&live, &answer), json!({"ok": true}));
   assert_eq!(prompts(tmp.path()), [json!({"key": "a", "text": "take B"})]);
@@ -284,7 +285,10 @@ fn attention_reaches_every_channel() {
   assert_eq!(attention_items(live.addr, 0), [] as [Value; 0]);
   assert_eq!(send(&live, &json!({"op": "stop"}))["ok"], true);
   live.engine.join().expect("engine").expect("serve");
-  assert_journal(&live.paths);
+  assert_eq!(
+    journal_names(&live.paths),
+    ["needs-human", "notify", "answered", "closed"]
+  );
   assert_eq!(fixture.requests().expect("requests").len(), 1);
 }
 
@@ -306,12 +310,18 @@ fn assert_post(seen: &[ObservedRequest], addr: SocketAddr) {
   );
 }
 
-fn assert_journal(paths: &Paths) {
-  let rows = journal::tail(&paths.journal_dir(), std::time::SystemTime::now()).expect("tail");
-  let names: Vec<&str> = rows
-    .iter()
+fn journal_names(paths: &Paths) -> Vec<String> {
+  journal::tail(&paths.journal_dir(), std::time::SystemTime::now())
+    .expect("tail")
+    .into_iter()
     .filter(|row| row.kind == "judgment" || row.name == "notify")
-    .map(|row| row.name.as_str())
-    .collect();
-  assert_eq!(names, ["needs-human", "notify", "answered", "closed"]);
+    .map(|row| row.name)
+    .collect()
+}
+
+fn await_notify_record(paths: &Paths) {
+  let deadline = Instant::now() + Duration::from_secs(5);
+  while !journal_names(paths).iter().any(|name| name == "notify") && Instant::now() < deadline {
+    thread::sleep(Duration::from_millis(20));
+  }
 }
