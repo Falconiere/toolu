@@ -99,9 +99,10 @@ fn protocol_replace() {
   let second = paths.clone();
   let newer = thread::spawn(move || serve_until_stopped(second, 2));
   let status = epic.join("status").join("a.json");
-  settle(|| status.is_file() && phase_count(&paths) > 0);
+  settle(|| status.is_file() && !spool.is_file() && phase_count(&paths) > 0);
   let text = std::fs::read_to_string(&status).expect("status");
   assert!(text.contains("\"phase\":\"running\""), "{text}");
+  assert!(!spool.is_file(), "spooled t9.json left behind");
   assert_eq!(phase_count(&paths), 1);
   stop(&paths, 2);
   newer.join().expect("new engine");
@@ -171,13 +172,12 @@ fn assert_restart(paths: &Paths, epic: &std::path::Path) {
   let background = paths.clone();
   let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
   let status = epic.join("status").join("a.json");
-  settle(|| status.is_file() && phase_count(paths) > 0);
+  let spool = paths.spool().join("t8.json");
+  settle(|| status.is_file() && !spool.is_file() && phase_count(paths) > 0);
   let text = std::fs::read_to_string(&status).expect("applied");
   assert!(text.contains("\"phase\":\"blocked\""), "{text}");
-  assert_eq!(phase_count(paths), 1);
-  let spool = paths.spool().join("t8.json");
-  settle(|| !spool.is_file());
   assert!(!spool.is_file(), "spooled t8.json left behind");
+  assert_eq!(phase_count(paths), 1);
   stop(paths, PROTOCOL);
   handle.join().expect("restart");
 }
