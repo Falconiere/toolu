@@ -33,11 +33,8 @@ fn prompt_scripts(root: &Path, outcome: &str) -> PathBuf {
     root.join("prompts").display(),
   );
   std::fs::write(scripts.join("prompt"), script).expect("script");
-  std::fs::write(
-    scripts.join("launch"),
-    "printf '{\"outcome\":\"applied\"}'\n",
-  )
-  .expect("launch");
+  let launch = "printf '{\"outcome\":\"applied\"}'\n";
+  std::fs::write(scripts.join("launch"), launch).expect("launch");
   scripts
 }
 
@@ -108,11 +105,8 @@ fn answer_reaches_the_prompt_script_and_the_next_report_closes_it() {
     .find(|row| row.name == "closed")
     .expect("closed");
   assert_eq!(closed.token, token);
-  assert!(
-    closed.note.starts_with("kind=needs-human waited_ms="),
-    "{}",
-    closed.note
-  );
+  let note = closed.note.as_str();
+  assert!(note.starts_with("kind=needs-human waited_ms="), "{note}");
 }
 
 #[test]
