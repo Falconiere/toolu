@@ -70,6 +70,33 @@ for (const [label, tool, unreach] of UNREACHED) {
   });
 }
 
+const FMT_STEP = '"fmt" => cargo(root, &["fmt", "--all", "--check"]),';
+const FMT_ABSENT =
+  "gate-reach: package.json: format:check is absent; crates/xtask/src/gate.rs must run `cargo fmt --all --check`";
+
+test.concurrent("a missing format:check is the xtask fmt step", async () => {
+  const configs = reachedConfigs();
+  delete configs.formatCheck;
+  const files = repoFiles(configs);
+  files["crates/xtask/src/gate.rs"] = `    ${FMT_STEP}\n`;
+  using sb = createSandbox({ git: true, files });
+  const res = await runReach(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr }).toEqual({ exitCode: 0, stderr: "" });
+});
+
+test.concurrent("a missing format:check without the xtask fmt step is misconfiguration", async () => {
+  const configs = reachedConfigs();
+  delete configs.formatCheck;
+  const files = repoFiles(configs);
+  files["crates/xtask/src/gate.rs"] = "fn step() {}\n";
+  using sb = createSandbox({ git: true, files });
+  const res = await runReach(sb);
+  expect({ exitCode: res.exitCode, stderr: res.stderr.trim() }).toEqual({
+    exitCode: 3,
+    stderr: FMT_ABSENT,
+  });
+});
+
 for (const [label, misconfigure, line] of MISCONFIGURED) {
   test.concurrent(`${label} is misconfiguration`, async () => {
     const configs = reachedConfigs();

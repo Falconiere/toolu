@@ -11,7 +11,6 @@ const SCRIPT = join(ROOT, "tooling/src/ci-aggregate.ts");
 type Job = { result: string; outputs?: Record<string, string> };
 
 function changes(on: {
-  ts: boolean;
   opencode: boolean;
   docs: boolean;
   rust?: boolean;
@@ -46,18 +45,16 @@ async function aggregate(needs: Record<string, Job>, workflow = "tests.yml") {
   return { exitCode: res.exitCode, out: res.stdout + res.stderr };
 }
 
-const DOCS_ONLY = changes({ ts: false, opencode: false, docs: true });
-const EVERYTHING = changes({ ts: true, opencode: true, docs: true });
+const DOCS_ONLY = changes({ opencode: false, docs: true });
+const EVERYTHING = changes({ opencode: true, docs: true });
 
-test.concurrent("a docs-only run passes with ts and opencode skipped (AC-1)", async () => {
+test.concurrent("a docs-only run passes with opencode skipped (AC-1)", async () => {
   const res = await aggregate({
     changes: DOCS_ONLY,
-    ts: { result: "skipped", outputs: {} },
     opencode: { result: "skipped", outputs: {} },
     docs: { result: "success", outputs: {} },
   });
   expect(res.exitCode).toBe(0);
-  expect(res.out).toContain("ts (ts off): skipped");
   expect(res.out).toContain("docs (docs on): success");
 });
 
@@ -65,7 +62,6 @@ test.concurrent("a release-only run passes with every gated job skipped (AC-2)",
   const off = {
     result: "success",
     outputs: {
-      ts: "false",
       opencode: "false",
       docs: "false",
       rust: "false",
@@ -74,7 +70,7 @@ test.concurrent("a release-only run passes with every gated job skipped (AC-2)",
     },
   };
   const skipped = { result: "skipped", outputs: {} };
-  const res = await aggregate({ changes: off, ts: skipped, opencode: skipped, docs: skipped });
+  const res = await aggregate({ changes: off, opencode: skipped, docs: skipped });
   expect(res.exitCode).toBe(0);
 });
 
@@ -82,7 +78,6 @@ test.concurrent("a failed changes job fails the aggregate and names it (AC-5)", 
   const skipped = { result: "skipped", outputs: {} };
   const res = await aggregate({
     changes: { result: "failure", outputs: {} },
-    ts: skipped,
     opencode: skipped,
     docs: skipped,
   });
@@ -93,7 +88,6 @@ for (const result of ["failure", "cancelled"]) {
   test.concurrent(`a needed job that ends ${result} fails the aggregate (AC-5)`, async () => {
     const res = await aggregate({
       changes: EVERYTHING,
-      ts: { result: "success", outputs: {} },
       opencode: { result, outputs: {} },
       docs: { result: "success", outputs: {} },
     });
@@ -104,17 +98,15 @@ for (const result of ["failure", "cancelled"]) {
 test.concurrent("a job skipped while its group is on fails the aggregate (AC-5)", async () => {
   const res = await aggregate({
     changes: EVERYTHING,
-    ts: { result: "skipped", outputs: {} },
     opencode: { result: "success", outputs: {} },
-    docs: { result: "success", outputs: {} },
+    docs: { result: "skipped", outputs: {} },
   });
-  expect(res).toEqual({ exitCode: 1, out: "ts (ts on): skipped, but its group is on\n" });
+  expect(res).toEqual({ exitCode: 1, out: "docs (docs on): skipped, but its group is on\n" });
 });
 
 test.concurrent("needs that differ from the gated jobs fail the aggregate", async () => {
   const res = await aggregate({
     changes: EVERYTHING,
-    ts: { result: "success", outputs: {} },
     opencode: { result: "success", outputs: {} },
     lint: { result: "success", outputs: {} },
   });
@@ -140,23 +132,21 @@ test.concurrent("missing or malformed NEEDS never passes", async () => {
 test.concurrent("a changes job that succeeded without group outputs never passes (AC-5)", async () => {
   const skipped = { result: "skipped", outputs: {} };
   const res = await aggregate({
-    changes: { result: "success", outputs: { ts: "", opencode: "false" } },
-    ts: skipped,
+    changes: { result: "success", outputs: { opencode: "false" } },
     opencode: skipped,
     docs: skipped,
   });
   expect(res).toEqual({
     exitCode: 1,
-    out: 'changes: output ts is "", not true or false\nchanges: output docs is "", not true or false\nchanges: output rust is "", not true or false\nchanges: output ports is "", not true or false\n',
+    out: 'changes: output docs is "", not true or false\nchanges: output rust is "", not true or false\nchanges: output ports is "", not true or false\n',
   });
 });
 
-const RUST_ONLY = changes({ ts: false, opencode: false, docs: false, rust: true });
+const RUST_ONLY = changes({ opencode: false, docs: false, rust: true });
 
 test.concurrent("a Rust-only run passes with the TypeScript jobs skipped (#407 AC-5)", async () => {
   const res = await aggregate({
     changes: RUST_ONLY,
-    ts: SKIPPED,
     opencode: SKIPPED,
     docs: SKIPPED,
     rust: SUCCESS,
@@ -172,7 +162,6 @@ test.concurrent("a Rust-only run passes with the TypeScript jobs skipped (#407 A
 test.concurrent("a failed Rust job fails the required aggregate (#407 AC-5)", async () => {
   const res = await aggregate({
     changes: RUST_ONLY,
-    ts: SKIPPED,
     opencode: SKIPPED,
     docs: SKIPPED,
     rust: { result: "failure", outputs: {} },
@@ -185,7 +174,6 @@ test.concurrent("a failed Rust job fails the required aggregate (#407 AC-5)", as
 test.concurrent("a musl job skipped while rust is on fails the aggregate (#407 AC-5)", async () => {
   const res = await aggregate({
     changes: RUST_ONLY,
-    ts: SKIPPED,
     opencode: SKIPPED,
     docs: SKIPPED,
     rust: SUCCESS,
@@ -195,10 +183,9 @@ test.concurrent("a musl job skipped while rust is on fails the aggregate (#407 A
 });
 
 test.concurrent("the Rust conformance leg skipped while ports is on fails the aggregate (#409 AC-5)", async () => {
-  const ports = changes({ ts: true, opencode: true, docs: false, ports: true });
+  const ports = changes({ opencode: true, docs: false, ports: true });
   const passed = await aggregate({
     changes: ports,
-    ts: SUCCESS,
     opencode: SUCCESS,
     docs: SKIPPED,
     "rust-conformance": SUCCESS,
@@ -209,7 +196,6 @@ test.concurrent("the Rust conformance leg skipped while ports is on fails the ag
   expect(passed.out).toContain("hook-bench (ports on): success");
   const skipped = await aggregate({
     changes: ports,
-    ts: SUCCESS,
     opencode: SUCCESS,
     docs: SKIPPED,
     "hook-bench": SUCCESS,

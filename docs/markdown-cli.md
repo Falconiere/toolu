@@ -1,6 +1,6 @@
 # Markdown–CLI drift gate
 
-Skills, commands and agents tell the agent which command to run, so they are the `toolu` CLI's user interface. `cargo xtask check-markdown-cli` (#444) fails when that Markdown names a command, verb, flag, flag value or argument count the CLI lacks, runs an unknown external command, or still runs a surface a ported namespace replaced. `bun run test` and `bun run test:docs` run it; #439 moves it into `cargo xtask gate`. It reads `docs/cli/commands.json`, which the gate's `docs-cli` step proves equal to the binary, so it needs no build of `toolu` and finishes in milliseconds.
+Skills, commands and agents tell the agent which command to run, so they are the `toolu` CLI's user interface. `cargo xtask check-markdown-cli` (#444) fails when that Markdown names a command, verb, flag, flag value or argument count the CLI lacks, runs an unknown external command, or still runs a surface a ported namespace replaced. The docs CI job runs `cargo xtask check-markdown-cli`. It reads `docs/cli/commands.json`, which the gate's `docs-cli` step proves equal to the binary, so it needs no build of `toolu` and finishes in milliseconds.
 
 ## What is scanned
 

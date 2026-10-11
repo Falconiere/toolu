@@ -1,6 +1,7 @@
 //! `cargo xtask check-hooks`: every native `hooks.json` entry equals the launcher
-//! generator's output and declares a `timeout`, and every `plugin.json` declares
-//! the binary's `hookProtocol` (#412). Bun entries are `check:hooks-json`'s.
+//! generator's output and declares a `timeout`, every Bun bundle entry equals
+//! the `@toolu/core/launcher` command pair, and every `plugin.json` declares
+//! the binary's `hookProtocol` (#412).
 
 use std::fmt;
 use std::path::Path;

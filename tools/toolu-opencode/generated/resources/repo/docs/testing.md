@@ -1,12 +1,10 @@
 # Testing with bun test
 
-toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247](https://github.com/Falconiere/toolu/issues/247)). `bun run test` runs the TypeScript gate: conventions, real-subprocess unit and conformance tests, portable-core and gate-coverage checks, final-removal checks, bundle and launcher drift, package/workspace checks, context budget, deterministic benchmarks, and the shell-analysis latency measurement.
+toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247](https://github.com/Falconiere/toolu/issues/247)). The quality gate is `cargo xtask gate`. `bun run test:unit`, `bun run test:conformance`, and `bun run test:rust-conformance` stay product suites.
 
-CI runs `bun run test` in the `bun run test` job (`gate`) when the change touches the `ts` path group of `.github/ci-paths.json`. Its shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
+CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate --only context-budget --only portable-core --only ci-paths` and `cargo xtask check-markdown-cli`. See the CI section of AGENTS.md. The shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
 
-A docs-only change runs `bun run test:docs` instead: the checks and tests from `test:ts` that read `docs/**` or root Markdown. `bun run check:ci-paths` keeps the workflows and path groups consistent; see the CI section of AGENTS.md.
-
-OpenCode acceptance (`bun run test:opencode`) runs in its own CI jobs, `opencode (ubuntu-latest)` and `opencode (macos-latest)` ([#362](https://github.com/Falconiere/toolu/issues/362)). It installs the pinned `opencode-ai` CLI and drives it in isolated profiles against a scripted loopback provider, through every live check, regression control and budget. They run when the change touches the `opencode` path group. The required `typescript` status fails when a needed job fails or is cancelled, and when a job is skipped although its group is on. Every `bun run test` also runs `bun run check:opencode-host`, which checks the committed evidence; see [opencode-host-contract.md](opencode-host-contract.md).
+OpenCode acceptance (`bun run test:opencode`) runs in its own CI jobs, `opencode (ubuntu-latest)` and `opencode (macos-latest)` ([#362](https://github.com/Falconiere/toolu/issues/362)). It installs the pinned `opencode-ai` CLI and drives it in isolated profiles against a scripted loopback provider, through every live check, regression control and budget. They run when the change touches the `opencode` path group. The required `typescript` status fails when a needed job fails or is cancelled, and when a job is skipped although its group is on. `bun run test:portable-core` runs `bun run check:opencode-host` and `bun run check:opencode-docs`, which check the committed evidence; see [opencode-host-contract.md](opencode-host-contract.md). `bun run check:opencode-docs` and the OpenCode smokes stay on Bun.
 
 A test spawns the real thing: a hook bundle, `git`, `npm`, or a host CLI. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
 
@@ -84,7 +82,7 @@ bats ran files in parallel and tests within a file serially, because suites shar
 
 The suites pass under `bun test --parallel --concurrent --timeout 60000`. Every `bun test` in the package scripts passes `--timeout 60000`, because real subprocesses under concurrency outrun bun's 5 s default on a loaded CI runner. Pass it too when you run several suite files by hand.
 
-On macOS, put Homebrew OpenSSL 3 before `/usr/bin` on `PATH` when running the HTTPS fixture or the full TypeScript gate: `PATH=/opt/homebrew/bin:$PATH bun run test:ts`. Apple's `/usr/bin/openssl` is LibreSSL and its generated EC key fails to load in Bun 1.4.2.
+On macOS, put Homebrew OpenSSL 3 before `/usr/bin` on `PATH` when running the HTTPS fixture: `PATH=/opt/homebrew/bin:$PATH`. Apple's `/usr/bin/openssl` is LibreSSL and its generated EC key fails to load in Bun 1.4.2.
 
 ## Adding coverage
 

@@ -99,7 +99,6 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
     const deps = array(job.needs).map(string).toSorted();
     const expected = [
       "changes",
-      "ts",
       "opencode",
       "docs",
       "rust",
@@ -115,10 +114,23 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
     );
     need(errors, job.name === id, `tests.yml:${id} must report the ${id} check`);
   }
+  need(errors, !("ts" in jobs), "tests.yml must not keep the ts job");
   need(
     errors,
-    at(jobs, "ts", "name") === "bun run test",
-    "tests.yml:ts must retain the bun run test check",
+    runs(object(jobs.changes)).includes("cargo xtask ci-changes"),
+    "tests.yml:changes must run cargo xtask ci-changes",
+  );
+  for (const id of ["gate", "typescript"]) {
+    need(
+      errors,
+      runs(object(jobs[id])).includes("cargo xtask ci-aggregate tests.yml"),
+      `tests.yml:${id} must run cargo xtask ci-aggregate`,
+    );
+  }
+  need(
+    errors,
+    !JSON.stringify(tests).includes("bun run test:ts"),
+    "tests.yml must not run bun run test:ts",
   );
 }
 

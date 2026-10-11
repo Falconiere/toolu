@@ -101,6 +101,78 @@
       "id": "homebrew-formula",
       "pass": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_prints_the_four_checksums",
       "fail": "crates/xtask/src/tests/homebrew_formula_test.rs::homebrew_formula_missing_checksum_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "context-budget",
+      "pass": "crates/xtask/src/tests/context_budget_test.rs::an_under_budget_doc_passes",
+      "fail": "crates/xtask/src/tests/context_budget_test.rs::an_over_budget_skill_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "ci-changes",
+      "pass": "crates/xtask/src/tests/ci_changes_test.rs::a_docs_only_file_turns_docs_on_and_rust_off",
+      "fail": "crates/xtask/src/tests/ci_changes_test.rs::a_missing_data_file_is_an_error"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-ci-paths",
+      "pass": "crates/xtask/src/tests/ci_check_test.rs::this_repository_is_consistent",
+      "fail": "crates/xtask/src/tests/ci_check_test.rs::a_missing_workflow_file_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "ci-aggregate",
+      "pass": "crates/xtask/src/tests/ci_aggregate_test.rs::a_docs_only_run_passes",
+      "fail": "crates/xtask/src/tests/ci_aggregate_test.rs::a_failed_changes_job_exits_1"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "dist",
+      "pass": "crates/xtask/src/tests/dist_test.rs::a_matching_bundle_passes",
+      "fail": "crates/xtask/src/tests/dist_test.rs::a_stale_bundle_names_the_path"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-portable-core",
+      "pass": "crates/xtask/src/tests/portable_core_test.rs::the_committed_doc_passes",
+      "fail": "crates/xtask/src/tests/portable_core_test.rs::a_missing_heading_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "check-workspace",
+      "pass": "crates/xtask/src/tests/package_workspace_test.rs::this_checkout_passes",
+      "fail": "crates/xtask/src/tests/package_workspace_test.rs::a_missing_package_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "final-removal",
+      "pass": "crates/xtask/src/tests/final_removal_test.rs::this_repository_passes",
+      "fail": "crates/xtask/src/tests/final_removal_test.rs::a_shellcheckrc_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "gate-coverage",
+      "pass": "crates/xtask/src/tests/gate_coverage_test.rs::this_repository_matches_inventory",
+      "fail": "crates/xtask/src/tests/gate_coverage_test.rs::an_orphan_inventory_id_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "packaging",
+      "pass": "crates/xtask/src/tests/packaging_test.rs::this_repository_is_packaged",
+      "fail": "crates/xtask/src/tests/packaging_test.rs::a_mismatched_manifest_version_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "bench",
+      "pass": "crates/xtask/src/tests/bench_test.rs::this_repository_writes_bytes_div_4",
+      "fail": "crates/xtask/src/tests/bench_test.rs::a_set_api_key_writes_nothing"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "pack",
+      "pass": "crates/xtask/src/tests/pack_test.rs::this_repository_packs",
+      "fail": "crates/xtask/src/tests/pack_test.rs::a_hook_source_is_a_finding"
     }
   ]
 }

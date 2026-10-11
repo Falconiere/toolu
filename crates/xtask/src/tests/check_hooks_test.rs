@@ -33,8 +33,30 @@ fn copy_plugins() -> tempfile::TempDir {
         std::fs::copy(&from, &to).unwrap();
       }
     }
+    let dist = plugin.join("hooks/dist");
+    if dist.is_dir() {
+      let to = dir
+        .path()
+        .join("plugins")
+        .join(plugin.file_name().unwrap())
+        .join("hooks/dist");
+      copy_tree(&dist, &to);
+    }
   }
   dir
+}
+
+fn copy_tree(from: &Path, to: &Path) {
+  std::fs::create_dir_all(to).unwrap();
+  for entry in std::fs::read_dir(from).unwrap() {
+    let entry = entry.unwrap();
+    let dest = to.join(entry.file_name());
+    if entry.path().is_dir() {
+      copy_tree(&entry.path(), &dest);
+    } else {
+      std::fs::copy(entry.path(), dest).unwrap();
+    }
+  }
 }
 
 /// Add the generated native toolu `PreToolUse` entry, edited by `edit`.
