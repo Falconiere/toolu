@@ -5,7 +5,7 @@ use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::cli::{Ctx, Outcome};
 
-/// Shared babysit tick routing for the resident engine.
+/// Cross-plugin babysit integration for the resident engine.
 pub mod babysit;
 mod checkpoint;
 mod client;
@@ -40,6 +40,8 @@ mod source_apply;
 #[cfg(test)]
 mod source_fix;
 mod status;
+mod status_api;
+mod status_events;
 mod verbs;
 mod watch;
 

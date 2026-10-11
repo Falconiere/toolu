@@ -57,3 +57,27 @@ fn append_waits_for_a_brief_holder() {
   worker.join().expect("join");
   assert_eq!(stored.seq, 1);
 }
+
+#[test]
+fn status_journal_sequence_survives_a_day_without_events() {
+  let dir = tempfile::tempdir().expect("temp root");
+  let journal = dir.path().join("journal");
+  let lock = dir.path().join("journal.lock");
+  let first_day = UNIX_EPOCH + std::time::Duration::from_secs(1_700_000_000);
+  let later_day = first_day + std::time::Duration::from_hours(72);
+  let first = append(
+    &journal,
+    &lock,
+    &Record::new("transition", "brainstorm", "issue-a", "private", "first"),
+    first_day,
+  )
+  .expect("first record");
+  let later = append(
+    &journal,
+    &lock,
+    &Record::new("transition", "execution", "issue-a", "private", "later"),
+    later_day,
+  )
+  .expect("later record");
+  assert_eq!(later.seq, first.seq + 1);
+}

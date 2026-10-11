@@ -10,9 +10,10 @@ use crate::model::Report;
 use crate::schedule::{ack, note_event};
 use crate::server::{Engine, Stop};
 use crate::socket::Waiter;
-use crate::status::document;
 use crate::status::wait_body;
+use crate::status_api::document;
 
+/// Apply one control-socket request and send its response.
 pub(crate) fn dispatch(
   engine: &mut Engine,
   request: &Value,
@@ -47,7 +48,7 @@ fn operate(
   }
   match op {
     "stop" | "replace" => finish(engine, &reply, op == "replace"),
-    "status" => Ok(reply_status(engine, request, &reply)),
+    "status" => reply_status(engine, request, &reply),
     "pause" => reply_pause(engine, request, &reply, true),
     "resume" => reply_pause(engine, request, &reply, false),
     "ack" => Ok(reply_ack(engine, request, &reply)),
@@ -71,10 +72,16 @@ fn finish(engine: &mut Engine, reply: &Sender<Value>, draining: bool) -> Result<
   Ok(true)
 }
 
-fn reply_status(engine: &Engine, request: &Value, reply: &Sender<Value>) -> bool {
+fn reply_status(engine: &Engine, request: &Value, reply: &Sender<Value>) -> Result<bool, String> {
   let epic = request.get("epic").and_then(Value::as_str);
-  let _sent = reply.send(document(&engine.world, true, epic));
-  false
+  let doc = document(
+    &engine.world,
+    &engine.paths,
+    epic,
+    &toolu_runtime::config::secrets::Secrets::none(),
+  )?;
+  let _sent = reply.send(doc);
+  Ok(false)
 }
 
 fn reply_pause(
@@ -225,6 +232,7 @@ fn report_from(request: &Value) -> Report {
   }
 }
 
+/// Reply to waiters whose judgment has become available.
 pub(crate) fn satisfy(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
   if waiters.is_empty() {
     return;
@@ -247,6 +255,7 @@ pub(crate) fn satisfy(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
   *waiters = staying;
 }
 
+/// Reply to waiters whose deadlines have passed.
 pub(crate) fn expire(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
   satisfy(engine, waiters);
 }
@@ -270,6 +279,7 @@ fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
   Ok(())
 }
 
+/// Ingest reports spooled while the engine was unavailable.
 pub(crate) fn ingest(engine: &mut Engine) -> Result<(), String> {
   let mut files = spool_files(&engine.paths.spool())?;
   files.sort();
