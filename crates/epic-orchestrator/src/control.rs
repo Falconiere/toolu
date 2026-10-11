@@ -41,27 +41,15 @@ pub(crate) fn engine(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) ->
       Err(err) => failed("toolu epic engine", &err),
     };
   }
-  if matches.get_one::<String>("http").is_none() && !matches.get_flag("no-http") {
-    return foreground(env, tick);
-  }
-  foreground_with_http(env, Some(matches), tick)
-}
-
-/// Run the engine with its configured HTTP listener.
-pub(crate) fn foreground(env: &Env, tick: &dyn BabysitTick) -> Outcome {
-  foreground_with_http(env, None, tick)
+  foreground_with_http(env, matches, tick)
 }
 
 /// Run the explicit `epic serve` entry.
 pub(crate) fn serve(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> Outcome {
-  foreground_with_http(env, Some(matches), tick)
+  foreground_with_http(env, matches, tick)
 }
 
-fn foreground_with_http(
-  env: &Env,
-  matches: Option<&ArgMatches>,
-  tick: &dyn BabysitTick,
-) -> Outcome {
+fn foreground_with_http(env: &Env, matches: &ArgMatches, tick: &dyn BabysitTick) -> Outcome {
   let paths = Paths::from_env(env);
   let scripts = env.get("TOOLU_EPIC_SCRIPTS").map(PathBuf::from);
   let http = match http_config(env, matches) {
@@ -83,13 +71,13 @@ fn foreground_with_http(
   }
 }
 
-fn http_config(env: &Env, matches: Option<&ArgMatches>) -> Result<Option<HttpConfig>, String> {
-  if matches.is_some_and(|matches| matches.get_flag("no-http")) {
+fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, String> {
+  if matches.get_flag("no-http") {
     return Ok(None);
   }
   let roots = Roots::new(env.clone(), None);
   let settings = epic::parse(&load::load(&roots, None)).map_err(|err| err.to_string())?;
-  let addr: SocketAddr = match matches.and_then(|matches| matches.get_one::<String>("http")) {
+  let addr: SocketAddr = match matches.get_one::<String>("http") {
     Some(addr) => addr
       .parse()
       .map_err(|_err| "invalid --http address".to_owned())?,

@@ -4,7 +4,7 @@ use clap::{Arg, Command};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 
-use super::{engine, ensure, epic_key, fault_of, foreground, register, registry_nonempty, start};
+use super::{engine, ensure, epic_key, fault_of, http_config, register, registry_nonempty, start};
 use crate::disk::read_value;
 use crate::paths::Paths;
 use crate::server::Fault;
@@ -94,11 +94,30 @@ fn a_held_lock_makes_the_foreground_engine_busy() {
   let env = env_at(tmp.path());
   let paths = Paths::from_env(&env);
   std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
-  let outcome = foreground(&env, &());
-  assert_eq!(outcome.exit, Exit::Failure);
-  assert!(outcome.stderr.expect("err").contains("engine-busy"));
   let outcome = engine(&verb(&["epic", "engine"]), &env, &());
   assert_eq!(outcome.exit, Exit::Failure);
+  assert!(outcome.stderr.expect("err").contains("engine-busy"));
+}
+
+#[test]
+fn engine_http_defaults_on_and_no_http_turns_it_off() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let env = Env::from_pairs([
+    ("HOME", tmp.path().display().to_string()),
+    (
+      "TOOLU_CONFIG_DIR",
+      tmp.path().join("config").display().to_string(),
+    ),
+  ]);
+  let http = http_config(&env, &verb(&["epic", "engine"]))
+    .expect("default HTTP config")
+    .expect("listener enabled by default");
+  assert_eq!(http.addr.to_string(), "127.0.0.1:7717");
+  assert!(
+    http_config(&env, &verb(&["epic", "engine", "--no-http"]))
+      .expect("disabled HTTP config")
+      .is_none()
+  );
 }
 
 #[test]
