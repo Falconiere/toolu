@@ -1,5 +1,6 @@
 //! The resident control socket: one accept thread, one state thread, a 30s tick.
 
+use std::net::TcpStream;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -137,6 +138,7 @@ fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, 
     let _panic = err;
   }
   if let Some(http) = threads.http {
+    let _wake_http = TcpStream::connect(http.addr);
     let _http = http.thread.join();
   }
 }
