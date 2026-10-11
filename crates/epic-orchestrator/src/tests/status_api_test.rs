@@ -117,6 +117,16 @@ fn status_api_static_routes_have_versioned_safe_documents() {
     .expect("queue")
     .expect("document");
   assert_eq!(queue["repositories"][0]["repo"], "Falconiere/toolu");
+  let worker = route(
+    &world,
+    &paths,
+    "/api/v1/issues/repo-449",
+    500,
+    &Secrets::none(),
+  )
+  .expect("worker")
+  .expect("document");
+  assert_eq!(worker["queue_position"], 1);
 }
 
 fn status_api_fixture() -> (tempfile::TempDir, Paths, World) {

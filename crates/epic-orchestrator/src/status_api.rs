@@ -180,7 +180,7 @@ fn issue_document(
     "effort": effort,
     "pr": issue.pr,
     "last_gate_verdict": last_gate,
-    "queue_position": null,
+    "queue_position": queue_position(world, paths, &issue.key)?,
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
@@ -209,6 +209,26 @@ fn issue_events(
       .filter(|row| row.get("key").and_then(Value::as_str) == Some(&issue.key))
       .cloned()
       .collect(),
+  )
+}
+
+fn queue_position(world: &World, paths: &Paths, key: &str) -> Result<Option<u64>, String> {
+  let queue = status_epics::queue(world, paths)?;
+  Ok(
+    queue
+      .get("repositories")
+      .and_then(Value::as_array)
+      .into_iter()
+      .flatten()
+      .flat_map(|repo| {
+        repo
+          .get("items")
+          .and_then(Value::as_array)
+          .into_iter()
+          .flatten()
+      })
+      .find(|item| item.get("key").and_then(Value::as_str) == Some(key))
+      .and_then(|item| item.get("position").and_then(Value::as_u64)),
   )
 }
 

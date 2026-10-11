@@ -126,6 +126,13 @@ fn http_boundary_rejects_foreign_host_and_non_get_methods() {
   let denied = request(running.addr, "POST", &running.addr.to_string());
   let allowed = request(running.addr, "GET", &running.addr.to_string());
   let head = request(running.addr, "HEAD", &running.addr.to_string());
+  let bad_cursor = raw(
+    running.addr,
+    &format!(
+      "GET /api/v1/events?since=bad HTTP/1.1\r\nHost: {}\r\n\r\n",
+      running.addr
+    ),
+  );
   let stream_head = raw(
     running.addr,
     &format!(
@@ -140,6 +147,8 @@ fn http_boundary_rejects_foreign_host_and_non_get_methods() {
   assert!(allowed.contains("\"schema\":1"));
   assert!(head.starts_with("HTTP/1.1 200"));
   assert!(head.ends_with("\r\n\r\n"));
+  assert!(bad_cursor.starts_with("HTTP/1.1 400"));
+  assert!(bad_cursor.contains("\"error\":\"bad_cursor\""));
   assert!(stream_head.starts_with("HTTP/1.1 200"));
   assert!(stream_head.contains("text/event-stream"));
   assert!(stream_head.ends_with("\r\n\r\n"));

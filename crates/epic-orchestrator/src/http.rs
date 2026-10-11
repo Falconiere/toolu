@@ -221,28 +221,40 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       .overview
       .response(&world, &context.paths, &context.secrets);
   }
+  if path == "/api/v1/events" {
+    return events_page(context, query, request);
+  }
   let world = context
     .world
     .lock()
     .unwrap_or_else(PoisonError::into_inner)
     .clone();
-  let document = if path == "/api/v1/events" {
+  let document = status_api::route(
+    &world,
+    &context.paths,
+    path,
+    u64::try_from(context.started.elapsed().as_millis()).unwrap_or(u64::MAX),
+    &context.secrets,
+  );
+  json_response(document)
+}
+
+fn events_page(context: &Context, query: &str, request: &Request) -> Response {
+  if http_stream::cursor(query, request.last_event_id.as_deref()).is_err() {
+    return Response::error(400, "bad_cursor");
+  }
+  json_response(
     http_stream::page(
       &context.paths,
       query,
       request.last_event_id.as_deref(),
       &context.secrets,
     )
-    .map(Some)
-  } else {
-    status_api::route(
-      &world,
-      &context.paths,
-      path,
-      u64::try_from(context.started.elapsed().as_millis()).unwrap_or(u64::MAX),
-      &context.secrets,
-    )
-  };
+    .map(Some),
+  )
+}
+
+fn json_response(document: Result<Option<serde_json::Value>, String>) -> Response {
   match document {
     Ok(Some(value)) => Response {
       status: 200,
