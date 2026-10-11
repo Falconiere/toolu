@@ -7,6 +7,9 @@ use crate::pattern::{is, pattern};
 
 pattern!(SAFE, r"^[A-Za-z0-9_./:=,@%+#-]+$");
 
+/// The word that opens a rejected argument's message.
+const UNSAFE: &str = "unsafe";
+
 /// A host that can run a fixer agent.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum Fixer {
@@ -170,7 +173,7 @@ impl Fixer {
       return Err(
         Failure::new(
           "config_invalid",
-          format!("unsafe {} arg for the pane shell: {bad}", self.name()),
+          format!("{UNSAFE} {} arg for the pane shell: {bad}", self.name()),
         )
         .with("arg", bad.clone()),
       );

@@ -205,6 +205,18 @@ fn inline_reason(
   Some(why.join(" "))
 }
 
+fn items_document(path: &Path) -> Result<Value> {
+  let text = std::fs::read_to_string(path).unwrap_or_default();
+  serde_json::from_str::<Value>(&text).map_err(|error| {
+    let file = path.display();
+    Failure::new(
+      "plan_invalid",
+      format!("items file is missing or not JSON: {file}"),
+    )
+    .with("cause", error.to_string())
+  })
+}
+
 /// The route plan for `request` under `settings`.
 ///
 /// # Errors
@@ -215,16 +227,7 @@ pub(crate) fn route(
   env: &Env,
   scoring: Scoring<'_>,
 ) -> Result<Value> {
-  let text = std::fs::read_to_string(request.items).unwrap_or_default();
-  let document = serde_json::from_str::<Value>(&text).map_err(|error| {
-    let file = request.items.display();
-    Failure::new(
-      "plan_invalid",
-      format!("items file is missing or not JSON: {file}"),
-    )
-    .with("cause", error.to_string())
-  })?;
-  let items = items::parse(&document, request.raise)?;
+  let items = items::parse(&items_document(request.items)?, request.raise)?;
   let missing: Vec<Fixer> = settings
     .hosts
     .iter()

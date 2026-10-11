@@ -121,7 +121,7 @@ fn the_hook_output_is_one_session_start_context_document_per_session() {
   let (_dir, env) = sandbox();
   let payload = Some(r#"{"session_id":"hook"}"#);
   let first = native_toolu_hook_output(&env, payload).unwrap();
-  assert!(first.ends_with('\n'), "{first}");
+  assert!(!first.ends_with('\n'), "{first}");
   assert!(first.contains("SessionStart"), "{first}");
   assert!(first.contains("toolu: native binary not found"), "{first}");
   assert_eq!(native_toolu_hook_output(&env, payload), None);

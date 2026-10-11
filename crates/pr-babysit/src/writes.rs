@@ -66,6 +66,15 @@ pub(crate) struct Slot<'a> {
   pub(crate) now: &'a str,
 }
 
+fn reply_path(repo: &str, number: u64, to: &Target<'_>) -> String {
+  match to {
+    Target::Thread { root, .. } => format!("/repos/{repo}/pulls/{number}/comments/{root}/replies"),
+    Target::Conversation(_) | Target::Review(_) => {
+      format!("/repos/{repo}/issues/{number}/comments")
+    }
+  }
+}
+
 /// Post `body` as the one reply to `to`, and record it.
 ///
 /// # Errors
@@ -91,12 +100,7 @@ pub(crate) fn reply(
     );
   }
   let (repo, number, head) = target(&state);
-  let path = match to {
-    Target::Thread { root, .. } => format!("/repos/{repo}/pulls/{number}/comments/{root}/replies"),
-    Target::Conversation(_) | Target::Review(_) => {
-      format!("/repos/{repo}/issues/{number}/comments")
-    }
-  };
+  let path = reply_path(repo, number, to);
   let payload = json!({ "body": body });
   let request = RestRequest {
     method: Method::Post,

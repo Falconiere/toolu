@@ -98,14 +98,7 @@ impl Dispatcher<'_> {
     let host = Fixer::parse(text(&group, "host").unwrap_or_default())?;
     let (model, effort) = (text(&group, "model"), text(&group, "effort"));
     let args = host.args(&agent, model, effort, launch.unattended)?;
-    if !self.dry {
-      let _absent = std::fs::remove_file(&report);
-      write_text(&brief, &rendered, "brief")?;
-    }
-    self.patch_fixer(&json!({"current": seq}))?;
-    let patch = json!({"agent": agent, "brief": brief.display().to_string(), "report": report.display().to_string(),
-      "status": "launching", "reason": null, "startedAt": now()});
-    self.patch_group(seq, &patch)?;
+    self.record_launch(seq, &agent, (&brief, &report), &rendered)?;
     let message = format!(
       "You are a pr-babysit fixer. Read {} and follow it exactly.",
       brief.display()
@@ -131,6 +124,24 @@ impl Dispatcher<'_> {
       self.launch_agent(seq, &started)?;
     }
     Ok(rendered)
+  }
+
+  /// Writes the brief (not in a dry run) and marks group `seq` launching.
+  fn record_launch(
+    &mut self,
+    seq: u64,
+    agent: &str,
+    (brief, report): (&Path, &Path),
+    rendered: &str,
+  ) -> Result<()> {
+    if !self.dry {
+      let _absent = std::fs::remove_file(report);
+      write_text(brief, rendered, "brief")?;
+    }
+    self.patch_fixer(&json!({"current": seq}))?;
+    let patch = json!({"agent": agent, "brief": brief.display().to_string(), "report": report.display().to_string(),
+      "status": "launching", "reason": null, "startedAt": now()});
+    self.patch_group(seq, &patch)
   }
 
   fn launch_opencode(&mut self, seq: u64, round: u64, run: &Run<'_>) -> Result<()> {

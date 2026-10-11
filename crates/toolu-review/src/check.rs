@@ -9,7 +9,7 @@ use toolu_runtime::startup::native_toolu_hook_output;
 pub fn check_binary(env: &Env, text: Option<&str>) -> Outcome {
   Outcome {
     exit: Exit::Success,
-    stdout: native_toolu_hook_output(env, text).map(|line| line.trim_end_matches('\n').to_owned()),
+    stdout: native_toolu_hook_output(env, text),
     stderr: None,
   }
 }

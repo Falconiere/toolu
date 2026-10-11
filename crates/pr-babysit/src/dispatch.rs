@@ -17,7 +17,8 @@ pub(crate) mod outcome;
 pub(crate) mod plan;
 pub(crate) mod procs;
 #[cfg(test)]
-pub(crate) mod sandbox;
+#[path = "tests/sandbox_test.rs"]
+mod sandbox;
 pub(crate) mod start;
 pub(crate) mod watch;
 pub(crate) mod worktree;

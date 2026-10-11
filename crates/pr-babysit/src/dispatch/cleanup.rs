@@ -132,7 +132,9 @@ impl Dispatcher<'_> {
       )),
     )
   }
+}
 
+impl Dispatcher<'_> {
   fn clear(&mut self, key: &str) -> Result<()> {
     self.save(|state| {
       if let Value::Object(root) = state {

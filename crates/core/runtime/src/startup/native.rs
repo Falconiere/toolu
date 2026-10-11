@@ -25,13 +25,14 @@ pub fn native_toolu_advice(env: &Env, session_id: Option<&str>) -> Option<String
   claim_notice(env, session_id).then_some(advice_line(env))
 }
 
-/// The `SessionStart` hook output carrying [`native_toolu_advice`] as context,
-/// keyed by the payload's `session_id`, else `TOOLU_SESSION_ID`.
+/// The `SessionStart` hook output, without a trailing newline, carrying
+/// [`native_toolu_advice`] as context, keyed by the payload's `session_id`,
+/// else `TOOLU_SESSION_ID`.
 pub fn native_toolu_hook_output(env: &Env, payload: Option<&str>) -> Option<String> {
   let id = payload_session_id(env, payload);
   native_toolu_advice(env, id.as_deref())
     .and_then(|line| session_context("SessionStart", &line))
-    .map(|context| render_hook_output(&context, false))
+    .map(|context| render_hook_output(&context, false).trim_end().to_owned())
 }
 
 fn payload_session_id(env: &Env, payload: Option<&str>) -> Option<String> {

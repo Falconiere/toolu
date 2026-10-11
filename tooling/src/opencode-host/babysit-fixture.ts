@@ -149,6 +149,8 @@ export function babysitSession(ctx: EntryContext, scripts: (p: Paths) => Scripts
   });
   // The dispatcher starts `opencode` from PATH: the pinned binary, not one the machine has.
   // `toolu` is this checkout's build, not an installed one.
+  const toolu = join(ROOT, "target/debug/toolu");
+  if (!existsSync(toolu)) throw new Error(`babysit scenario: build ${toolu} first (cargo build -p toolu-cli)`);
   s.env.PATH = [dirname(ctx.bin), join(ROOT, "target/debug"), process.env.PATH ?? ""].join(delimiter);
   const p = paths(s.sb.project);
   const bare = s.outside("origin.git");

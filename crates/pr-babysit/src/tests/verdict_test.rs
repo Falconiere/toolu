@@ -114,7 +114,7 @@ fn every_verdict_pattern_compiles() {
     &super::BULLET,
     &super::NUMBERED,
   ] {
-    assert!(crate::pattern::compiles(pattern));
+    assert!(pattern.is_some());
   }
 }
 

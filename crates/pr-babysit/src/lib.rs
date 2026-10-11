@@ -27,6 +27,7 @@ mod lock;
 mod pattern;
 mod record;
 #[cfg(test)]
+#[path = "tests/recorded_test.rs"]
 mod recorded;
 mod reduce;
 mod route;

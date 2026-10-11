@@ -32,12 +32,6 @@ pub(crate) fn group(pattern: &Pattern, text: &str, group: usize) -> Option<Strin
   captures(pattern, text).and_then(|caps| caps.get(group).map(|found| found.as_str().to_owned()))
 }
 
-/// Whether `pattern` compiled.
-#[cfg(test)]
-pub(crate) fn compiles(pattern: &Pattern) -> bool {
-  pattern.is_some()
-}
-
 #[cfg(test)]
 #[path = "tests/pattern_test.rs"]
 mod tests;
