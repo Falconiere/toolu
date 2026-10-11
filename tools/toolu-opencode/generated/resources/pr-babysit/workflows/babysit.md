@@ -135,10 +135,15 @@ Rules:
 
 ## Step 1 — Read the tick result
 
-The first check runs now; every later one comes from `wait`:
+The first check runs now:
 
 ```bash
 RESULT=$(toolu babysit tick --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE")
+```
+
+Every later check comes from `wait`:
+
+```bash
 RESULT=$(toolu babysit wait --repo "$OWNER/$REPO" --pr "$NUMBER" --state-file "$STATE_FILE")
 ```
 
