@@ -28,8 +28,13 @@ of the plugin README.
 # Dry-run: show waves, blockers, and the first launch batch
 # (or ask the agent: "dry-run epic owner/repo#N")
 
-# Status / stop while a run is live
-# status — graph table + watcher peek
+# Read the resident engine's versioned overview while a run is live
+toolu epic status --json
+# Start a foreground engine and local dashboard when no engine is running
+# (default: http://127.0.0.1:7717/)
+toolu epic serve
+# Disable HTTP while keeping the control socket
+toolu epic engine --no-http
 # stop — stop the background watcher only
 ```
 
@@ -52,6 +57,12 @@ Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 ## Engine events
 
 The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
+The engine starts its read-only dashboard at `http://127.0.0.1:7717/` by default.
+It shows registered epics,
+workers, hosts, jobs, machine capacity, queue and attention, and follows the
+journal without polling the watcher. `toolu epic status --json <key>` returns
+one epic or worker through the local control socket. The versioned HTTP
+contract and token rules are in [`docs/epic-status-api.md`](../epic-status-api.md).
 `toolu epic report` writes the status file and, when the engine is down, a spool
 the next start applies in order. Stall deadlines belong to each issue: 45
 minutes, or 120 minutes while the phase is babysit. The 30-second tick is for

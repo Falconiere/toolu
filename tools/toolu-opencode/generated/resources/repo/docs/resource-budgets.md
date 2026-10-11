@@ -20,6 +20,8 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 
 Linux CI is the gating platform. macOS is never gated: the hook bench measures and reports there, and the startup check runs on Linux only.
 
+The status-server check is `cargo test -p toolu-epic-orchestrator --test status_budget` after a release build of `toolu`. It keeps eight SSE connections open while 50 clients each send 40 sequential keep-alive requests to `/api/v1/overview`; the test reads the server process's `/proc/<pid>/status` `VmHWM` and calculates nearest-rank client p90. A Rust 1.99 aarch64 Linux container run on 2026-10-11 measured 0.199 ms p90 across 2,000 requests and 5,984 KiB high-water RSS. CI runners can produce different values, so the test enforces the published limits there too.
+
 ## Where the numbers come from
 
 The hook rows come from `benchmarks/results/hook-prototype-2026-10-05.json`. The prototype was a single `toolu` binary with the planned shape:

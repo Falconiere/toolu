@@ -6,6 +6,7 @@
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use toolu_protocol::launcher::{DEFAULT_TIMEOUT, Target, hook};
 
@@ -20,6 +21,7 @@ const SYSTEM_DIRS: &[&str] = &[
 ];
 
 const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
+static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
 
 /// Run the end-to-end check for `--bin`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
@@ -41,7 +43,11 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let protocol: u32 = probe(bin, "--hook-protocol")?
     .parse()
     .map_err(|err| format!("--hook-protocol is not an integer: {err}"))?;
-  let root = std::env::temp_dir().join(format!("toolu-launcher-e2e-{}", std::process::id()));
+  let root = std::env::temp_dir().join(format!(
+    "toolu-launcher-e2e-{}-{}",
+    std::process::id(),
+    NEXT_ROOT.fetch_add(1, Ordering::Relaxed)
+  ));
   let found = check(bin, &home, &root, version, protocol);
   std::fs::remove_dir_all(&root).ok();
   Ok(output::findings("launcher-e2e", &found?))
