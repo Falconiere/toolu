@@ -6,6 +6,20 @@ use toolu_engine::babysit::{BabysitTick, TickReport, TickRequest};
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Planned;
 
+mod collect;
+mod error;
+#[cfg(test)]
+mod fixture;
+mod json;
+mod lock;
+mod pattern;
+#[cfg(test)]
+mod recorded;
+mod reduce;
+mod sha1;
+mod state;
+mod verdict;
+
 /// The plugin this crate belongs to: `plugins/pr-babysit`.
 pub const PLUGIN: &str = "pr-babysit";
 
