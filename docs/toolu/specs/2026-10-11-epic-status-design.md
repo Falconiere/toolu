@@ -1,6 +1,6 @@
 # Epic status server and dashboard — Design
 
-**Date:** 2026-10-11   **Status:** Draft   **Author:** Codex   **Topic:** Issue #449, read-only epic status
+**Date:** 2026-10-11   **Status:** Approved   **Author:** Codex   **Topic:** Issue #449, read-only epic status
 
 ## Problem
 
@@ -17,6 +17,8 @@ The resident engine has a local control socket and journal, but no view across r
 The existing state thread remains the only `World` writer. After every state step it publishes a snapshot and notifies stream readers. A small HTTP/1.1 listener reads that snapshot, registered epic files, journal records and the shared resource store outside the state lock. It owns no other network listener and starts with `epic engine` by default; `epic serve` is the explicit foreground entry. `--http <ADDR>` overrides the configured bind and port; `--no-http` disables it. The existing `epic.http.bind` and `epic.http.port` from #463 provide defaults, and #463's `Secrets` resolves the bearer token. The local control socket uses the same read-only projection functions for `epic status`.
 
 Each accepted connection gets a bounded blocking handler with read/write deadlines. The listener caps simultaneous connections at 64 and streams at 8. Excess clients receive `503` and close. Keep-alive supports 50 polling clients without creating 50 long-lived idle handlers. A stream reads retained journal records after its cursor, then waits no more than one second for new records; it sends comment heartbeats at least every 15 seconds. Journal sequence stays monotonic across day boundaries and process restarts.
+
+The existing resource state contains only admitted leases. The Rust `toolu epic job` runner and the shipped Bun managed-job wrapper write a bounded `<resource-root>/waiting-jobs.json` record when the single expensive-job slot refuses admission, with key, worktree and first-wait timestamp. They clear it on admission or completion, and the status reader drops entries whose owner is gone or whose last attempt is stale. This reports waiting work without changing the lease-admission policy or blocking a worker indefinitely.
 
 Every response is assembled from allow-listed fields. Worker notes are cut to 160 characters and redacted with #463's resolved secrets. Journal tokens, graph excerpts, worker brief contents, environment, notification URLs and pane text never enter the projection. Any `401`, `403`, `404`, `405`, `413`, `429`, `503` or `500` body is a fixed error code and contains no user data.
 
@@ -52,6 +54,7 @@ The listener accepts a `Host` matching the actual local socket address and port;
 - No registered epics produces empty arrays and zero counts; `healthz` still works.
 - Missing optional route, agent, pressure, queue or gate data produces `null` or empty fields. Invalid required resource state or registered graph returns a fixed `500` response and a diagnostic on stderr, never partial raw data.
 - Malformed HTTP, duplicate `Host` or `Authorization`, unsupported transfer encoding, an overlong request, and an over-cap connection are rejected before reading private data.
+- A request key must match a registered epic or issue key exactly; it is never used as an unchecked filesystem path segment.
 - Listener bind failure stops `epic engine` with the bind address and an error, without printing credentials. `--no-http` still allows the control socket to run.
 - A stream disconnect releases its slot; a slow reader cannot retain unlimited events or delay the state thread. `Last-Event-ID` replay preserves order across journal rotation and engine restart within the 90-day retention window.
 - Secrets rotated while the engine is running take effect on restart; public fields remain redacted with the startup-resolved set until then.
@@ -79,7 +82,7 @@ The listener accepts a `Host` matching the actual local socket address and port;
 | 5 | Raw TCP requests with hostile Host and methods; inspect status and headers. | `cargo test -p toolu-epic-orchestrator http_boundary` |
 | 6 | Plant distinct canaries in environment and brief, request every route and stream event, inspect response bytes. | `cargo test -p toolu-epic-orchestrator public_canaries` |
 | 7 | Release binary on Linux, 50 keep-alive clients × 40 requests plus eight streams; read `VmHWM` and calculate client p90. | `cargo test -p toolu-epic-orchestrator --test status_budget` in a Linux job lease. |
-| 8 | Real policy and resource state fixture with cooldown and job waiter, inspected over HTTP. | `cargo test -p toolu-epic-orchestrator resource_status` |
+| 8 | Run two real managed-job commands against one slot; the second refusal writes a waiting record with a measurable age, while a seeded cooldown appears for its host. | `cargo test -p toolu-epic-orchestrator resource_status` |
 | 9 | Regenerate docs from binary and Rust schema, then run drift gates. | `cargo xtask docs-cli && cargo xtask check-markdown-cli && cargo xtask gate` |
 
 ## Documentation impact
