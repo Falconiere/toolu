@@ -167,7 +167,7 @@ test.concurrent("only the approved shell helpers enter the staged catalog", asyn
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
   const staged = readdirSync(dest, { recursive: true, encoding: "utf8" });
-  expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file)).sort()).toEqual([
+  expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file)).toSorted()).toEqual([
     "jev/scripts/jev.sh",
     "statusline/scripts/statusline.sh",
     "toolu-review/scripts/write-state.sh",
