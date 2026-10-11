@@ -145,5 +145,5 @@ pub(super) fn summarize(lines: &[&str], json: bool, env: &Env) -> String {
 }
 
 #[cfg(test)]
-#[path = "../tests/stack_test.rs"]
+#[path = "tests/stack_test.rs"]
 mod tests;

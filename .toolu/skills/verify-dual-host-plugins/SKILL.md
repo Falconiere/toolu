@@ -40,6 +40,10 @@ startup behavior in Codex and Claude Code, and in OpenCode when supported.
    inside the selected plugin and stage that file in the `@toolu/opencode`
    tarball. Require it in the pack inventory, then run focused pinned-host
    enabled, missing-binary, and clean-install scenarios before full acceptance.
+8. For native hook acceptance, run `bun tooling/src/native-toolu-host-smoke.ts`
+   on macOS with the checkout binary. It installs temporary host profiles and
+   checks a denied protected-file write, a post-edit quality failure, a denied
+   commit, and an allowed shell command in actual Claude Code and Codex sessions.
 
 ## Pitfalls
 
@@ -47,6 +51,11 @@ startup behavior in Codex and Claude Code, and in OpenCode when supported.
   should publish their own bounded context without relying on hook ordering.
 - Codex installation does not grant hook trust. Do not bypass the user's trust
   controls or claim that manually invoking a hook verifies a full agent session.
+  A private smoke profile with only reviewed checkout plugins can explicitly
+  grant trust for that run. Close a spawned `codex exec` process's stdin so it
+  does not wait for more input. Stage a fixture outside Codex's workspace-write
+  sandbox before testing a `git commit` hook, since that sandbox blocks writes
+  to `.git/index.lock`.
 - Claude-compatible `hookSpecificOutput` is not valid for every Codex event.
   Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report

@@ -39,7 +39,7 @@ Launcher and startup handler → generated hook inventory and conformance → na
     "check": "cargo test -p toolu-cli --test debug_cli && cargo test -p toolu-hub --lib debug",
     "ac_refs": ["AC-6"],
     "depends_on": ["launcher"],
-    "paths": ["Cargo.lock", "crates/toolu/Cargo.toml", "crates/toolu/src/debug.rs", "crates/toolu/src/debug", "crates/toolu/src/tests/debug_test.rs", "crates/toolu/src/tests/log_test.rs", "crates/toolu/src/tests/stack_test.rs", "crates/toolu/src/tests/testfail_test.rs", "crates/cli/tests/debug_cli.rs", "crates/cli/tests/native_toolu_manifest.rs", "crates/cli/src/dispatch.rs", "crates/cli/src/hook.rs", "plugins/toolu/scripts/__tests__/fixtures/debug", "plugins/toolu/scripts/debug-io.ts", "plugins/toolu/scripts/debug-log.ts", "plugins/toolu/scripts/debug-stack.ts", "plugins/toolu/scripts/debug-testfail.ts"],
+    "paths": ["Cargo.lock", "crates/toolu/Cargo.toml", "crates/toolu/src/debug.rs", "crates/toolu/src/debug", "crates/toolu/src/tests/debug_test.rs", "crates/cli/tests/debug_cli.rs", "crates/cli/tests/native_toolu_manifest.rs", "crates/cli/src/dispatch.rs", "crates/cli/src/hook.rs", "plugins/toolu/scripts/__tests__/fixtures/debug", "plugins/toolu/scripts/debug-io.ts", "plugins/toolu/scripts/debug-log.ts", "plugins/toolu/scripts/debug-stack.ts", "plugins/toolu/scripts/debug-testfail.ts"],
     "input": "captured big.log, Node and Rust stack traces, and Bun and Cargo failing test transcripts; empty stdin, missing --file, low caps and unrecognized text exercise failure and boundary behavior"
   },
   {
