@@ -142,7 +142,7 @@ fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
   })
 }
 
-/// The former second SessionStart entry, now using the shared native notice.
+/// The former second `SessionStart` entry, now using the shared native notice.
 fn check_binary(call: &HookCall<'_>) -> Outcome {
   let session_id = (call.stdin)()
     .ok()

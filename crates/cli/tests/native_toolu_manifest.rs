@@ -8,13 +8,10 @@ fn root() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-#[test]
-fn every_shipped_toolu_hook_is_native_and_keeps_its_transition_bundle() {
-  let plugin = root().join("plugins/toolu");
-  let text = std::fs::read_to_string(plugin.join("hooks/hooks.json")).unwrap();
-  let document: serde_json::Value = serde_json::from_str(&text).unwrap();
-  let hooks = document["hooks"].as_object().unwrap();
-  let expected = [
+type Entries = Vec<(&'static str, Option<&'static str>)>;
+
+fn expected() -> [(&'static str, Entries); 5] {
+  [
     (
       "SessionStart",
       vec![
@@ -42,7 +39,16 @@ fn every_shipped_toolu_hook_is_native_and_keeps_its_transition_bundle() {
         Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep"),
       )],
     ),
-  ];
+  ]
+}
+
+#[test]
+fn every_shipped_toolu_hook_is_native_and_keeps_its_transition_bundle() {
+  let plugin = root().join("plugins/toolu");
+  let text = std::fs::read_to_string(plugin.join("hooks/hooks.json")).unwrap();
+  let document: serde_json::Value = serde_json::from_str(&text).unwrap();
+  let hooks = document["hooks"].as_object().unwrap();
+  let expected = expected();
   assert_eq!(hooks.len(), expected.len());
   let ported: serde_json::Value = serde_json::from_str(
     &std::fs::read_to_string(root().join("fixtures/rust-ported.json")).unwrap(),
