@@ -30,7 +30,8 @@ of the plugin README.
 
 # Read the resident engine's versioned overview while a run is live
 toolu epic status --json
-# Serve the local read-only dashboard (default: http://127.0.0.1:7717/)
+# Start a foreground engine and local dashboard when no engine is running
+# (default: http://127.0.0.1:7717/)
 toolu epic serve
 # Disable HTTP while keeping the control socket
 toolu epic engine --no-http
@@ -56,7 +57,8 @@ Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 ## Engine events
 
 The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
-The read-only dashboard at `http://127.0.0.1:7717/` shows registered epics,
+The engine starts its read-only dashboard at `http://127.0.0.1:7717/` by default.
+It shows registered epics,
 workers, hosts, jobs, machine capacity, queue and attention, and follows the
 journal without polling the watcher. `toolu epic status --json <key>` returns
 one epic or worker through the local control socket. The versioned HTTP
