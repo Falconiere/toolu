@@ -17,7 +17,6 @@ const AGENT_LIST =
 const MODEL_NOTE =
   "On OpenCode the `task` tool takes no model argument: each agent runs `agent.<id>.model` from your `opencode.json`, else the session's model.";
 
-const TOOLU_SCRIPTS = '"$TOOLU_PLUGIN_ROOT_TOOLU/scripts';
 
 const skill = (id: string): string => `\`skill({ name: "${id}" })\``;
 const BABYSIT = skill("pr-babysit-babysit-73c340c6");
@@ -181,9 +180,6 @@ session: stop and name that prerequisite.`,
       "in the toolu layout — see the `test` skill (TS `__tests__/`, Rust `tests/`).",
       "in the toolu layout (TS `__tests__/`, Rust `tests/`).",
     ],
-    ["plugins/toolu/scripts/debug-testfail.ts", `${TOOLU_SCRIPTS}/debug-testfail.ts"`, 3],
-    ["plugins/toolu/scripts/debug-stack.ts", `${TOOLU_SCRIPTS}/debug-stack.ts"`, 2],
-    ["plugins/toolu/scripts/debug-log.ts", `${TOOLU_SCRIPTS}/debug-log.ts"`],
     [
       "1. The Sentry MCP's fetch tools only appear **after** OAuth — discover them at runtime with `ToolSearch` (e.g. query `+Sentry issue event`); do not assume tool names. If only `mcp__claude_ai_Sentry__authenticate` is present, the user hasn't connected it.",
       "1. OpenCode lists MCP tools with the others, named `<server>_<tool>` for each server under `mcp` in `opencode.json`; there is no tool search. Look for a Sentry server's fetch tools by that prefix; do not assume tool names. If none is listed, the user hasn't configured or authenticated it (`opencode mcp auth <server>`).",

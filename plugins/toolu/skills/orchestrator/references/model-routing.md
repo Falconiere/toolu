@@ -79,7 +79,7 @@ Leaving routing unset inherits host defaults.
 A machine-readable plan step may declare `"model": "<alias>"`:
 
 ```json
-{ "id": "s3", "title": "Add the resolver", "check": "bun test packages/toolu-core/src/config/__tests__/settings.test.ts",
+{ "id": "s3", "title": "Add the resolver", "check": "cargo test -p toolu-hub",
   "model": "sonnet" }
 ```
 

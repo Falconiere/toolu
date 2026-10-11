@@ -284,7 +284,7 @@ The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run
 - **Setup.** There are no Codex profiles to install. The `toolu-setup` skill explains the overrides above, and its `setup.ts` exits 2 with that message when `TOOLU_HOST_OVERRIDE=opencode`.
 - **Questions.** Workflow skills use OpenCode's `question` tool when the client offers it, and otherwise ask one concise question.
 - **Review.** `toolu-review-review` runs `TOOLU_HOST_OVERRIDE=opencode toolu review write-state --findings-count 0` after reviewing the committed diff. That writes `<project>/.opencode/tmp/push-review/<branch>.json`, the file the push-review gate reads.
-- **Debug.** `toolu-debug` runs its collectors as `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` (also `debug-stack.ts` and `debug-log.ts`). `@toolu/opencode` ships them. MCP tools are named `<server>_<tool>`; there is no tool search.
+- **Debug.** `toolu-debug` runs its collectors through the native `toolu debug io|log|stack|testfail` commands. MCP tools are named `<server>_<tool>`; there is no tool search.
 
 `tools/toolu-opencode/src/plugin/__tests__/core-workflows.test.ts` proves the review, commit-gate and debug paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/core-workflows.live.test.ts` repeats them on the pinned host with a scripted provider.
 

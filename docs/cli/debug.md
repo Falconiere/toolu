@@ -2,20 +2,23 @@
 
 # `toolu debug`
 
-Debugging helpers: I/O capture, logs, stacks and failing tests.
+Count or summarize logs, stacks and failing tests.
 
 Owner: `plugins/toolu`.
 
 ## `toolu debug`
 
 ```text
-Debugging helpers: I/O capture, logs, stacks and failing tests
+Count or summarize logs, stacks and failing tests
 
 Usage: toolu debug [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#425): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  io        Count input bytes and lines
+  log       Summarize error lines and a log tail
+  stack     Show app frames and collapse runtime frames
+  testfail  Summarize failed tests, errors and locations
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,14 +28,63 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu debug planned`
+## `toolu debug io`
 
 ```text
-Not ported yet (#425): show the planned verbs
+Count input bytes and lines
 
-Usage: toolu debug planned [OPTIONS]
+Usage: toolu debug io [OPTIONS]
 
 Options:
+      --file <PATH>       Read a file instead of standard input
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu debug log`
+
+```text
+Summarize error lines and a log tail
+
+Usage: toolu debug log [OPTIONS]
+
+Options:
+      --file <PATH>       Read a file instead of standard input
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu debug stack`
+
+```text
+Show app frames and collapse runtime frames
+
+Usage: toolu debug stack [OPTIONS]
+
+Options:
+      --file <PATH>       Read a file instead of standard input
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu debug testfail`
+
+```text
+Summarize failed tests, errors and locations
+
+Usage: toolu debug testfail [OPTIONS]
+
+Options:
+      --file <PATH>       Read a file instead of standard input
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]

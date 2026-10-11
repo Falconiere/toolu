@@ -48,7 +48,7 @@ Launcher and startup handler → generated hook inventory and conformance → na
     "check": "cargo xtask gate --only final-removal --only dist --only pack && bun run test:unit && bun run test:conformance",
     "ac_refs": ["AC-4", "AC-8"],
     "depends_on": ["hook-switch", "debug-cli"],
-    "paths": ["plugins/toolu/hooks/src", "plugins/toolu/hooks/dist", "plugins/toolu/scripts", "packages/toolu-core/src", "tools/toolu-opencode", "tooling/src", "package.json", "fixtures/rust-ported.json"],
+    "paths": ["plugins/.oxlintrc.json", "plugins/toolu/hooks/src", "plugins/toolu/hooks/dist", "plugins/toolu/scripts", "packages/toolu-core/src", "tools/toolu-opencode", "tooling/src", "package.json", "fixtures/rust-ported.json"],
     "input": "knip and pack closure over the actual workspace imports and published plugin files; the unit and conformance suites run against remaining TypeScript/OpenCode consumers"
   },
   {
@@ -57,7 +57,7 @@ Launcher and startup handler → generated hook inventory and conformance → na
     "check": "cargo xtask gate --only docs-cli --only context-budget --only packaging && cargo xtask check-markdown-cli && bun test tooling/src/__tests__/native-toolu-markdown.test.ts",
     "ac_refs": ["AC-7"],
     "depends_on": ["hook-switch", "debug-cli", "cleanup"],
-    "paths": ["docs/cli", "docs/runtime.md", "docs/registry.md", "docs/install.md", "plugins/toolu/README.md", "plugins/toolu/skills", "plugins/toolu/commands", "plugins/toolu/agents", "tooling/src/__tests__/native-toolu-markdown.test.ts", "AGENTS.md", "crates/toolu/src/debug.rs", "crates/cli/src/commands.schema.json"],
+    "paths": ["docs/cli", "docs/runtime.md", "docs/registry.md", "docs/install.md", "plugins/delivery-flow/skills/delivery-flow/references/model-routing.md", "plugins/toolu/README.md", "plugins/toolu/skills", "plugins/toolu/commands", "plugins/toolu/agents", "tooling/src/__tests__/native-toolu-markdown.test.ts", "AGENTS.md", "crates/toolu/src/debug.rs", "crates/cli/src/commands.schema.json"],
     "input": "the generated command tree and every toolu skill, command and agent Markdown; a stale CLI verb fails the drift check and a Bun or script invocation fails the native-Markdown test"
   },
   {

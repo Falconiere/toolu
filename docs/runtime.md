@@ -1,12 +1,12 @@
 # Runtime contract
 
-Every toolu plugin runs on one runtime: **Bun**. This page is the contract; other docs link here instead of restating it. It retires the [#203](https://github.com/Falconiere/toolu/issues/203) constraint that Claude Code and Codex gain no mandatory Bun dependency. Epic: [#247](https://github.com/Falconiere/toolu/issues/247).
+The core toolu plugin launches its hooks through the installed native `toolu` binary. Other plugins still use Bun bundles until their Rust ports land. This page records both runtime paths; installation and rollback are in [install.md](install.md).
 
-> **Native binary.** Under the Rust rebuild (epic #402) the `toolu` binary is installed once with the get.toolu.sh installer or Homebrew, and Bun stops being a prerequisite on Claude Code and Codex when the last TypeScript hook is gone. See [install.md](install.md) for the targets, location, version-skew policy and rollback.
+> **Core plugin.** Install the `toolu` binary once with the get.toolu.sh installer or Homebrew before enabling the toolu plugin. Its eight hook entries use native launchers. A temporary Bun bundle fallback remains for one transition release, and `TOOLU_RUNTIME=bun` selects that rollback path. See [install.md](install.md) for targets, version skew and resolution.
 
-> **Migration status.** Plugins move from bash to TypeScript one at a time (epic #247). Until a plugin's port merges, its bash hooks still ship and still need `bash` and `jq`. Bun is a prerequisite for every host now, so installs do not change again as ports land.
+> **Migration status.** Leaf plugins still using TypeScript hooks or `.js` registry modules need Bun. Their own launchers continue to use the Bun path described below. OpenCode continues to enforce its adapter's TypeScript gates until #437.
 
-## Prerequisite
+## Bun prerequisite for remaining TypeScript hooks
 
 Install Bun 1.4.x and put it on `PATH`:
 
@@ -15,7 +15,7 @@ curl -fsSL https://bun.sh/install | bash   # or: brew install oven-sh/bun/bun
 bun --version                              # 1.4.x
 ```
 
-Supported range: `>=1.4.0 <1.5.0` (docs baseline `1.4.2`). This applies to Claude Code, Codex, Cursor, OpenCode, and Hermes alike.
+Supported range: `>=1.4.0 <1.5.0` (docs baseline `1.4.2`). This applies when a leaf plugin or registry module still runs Bun.
 
 ## Resolution order
 
@@ -34,7 +34,7 @@ A hook launcher finds Bun in this order and uses the first that exists:
 
 ## Launcher
 
-`hooks.json` never calls `bun` directly. Every TypeScript hook uses the command that `@toolu/core/launcher` generates (`packages/toolu-core/src/launcher/launcher.ts`), and `bun run check:hooks-json` (`tooling/src/check-hooks-json.ts`, part of `bun run test`) fails when a launcher entry differs from it. Print the entry to paste instead of writing it by hand:
+`hooks.json` never calls `bun` directly. Remaining TypeScript hooks use the command that `@toolu/core/launcher` generates (`packages/toolu-core/src/launcher/launcher.ts`), and `cargo xtask check-hooks` rejects drift. Print the entry to paste instead of writing it by hand:
 
 ```bash
 bun run tooling/src/check-hooks-json.ts --print <plugin> <Event> <entry>   # entry = hooks/dist/<entry>.js
@@ -54,11 +54,11 @@ Without Bun the launcher itself answers, with no bundle involved:
 
 `systemMessage` is shown to the user and costs no model context. The payloads are checked against Codex's own output schemas (`fixtures/codex-hook-schemas/`).
 
-**Diagnostic.** On session start and resume, the second `systemMessage` line names the runtime, after the event title. `hooks.json` still launches the Bun bundle until #425, which prints `Toolu is on!\ntoolu runtime: bun <version> at <path>`. The native hook prints `Toolu is on!\ntoolu runtime: native <version> at <path>`. With `hooks.session-start` set to `false`, startup and resume print that title and runtime line and nothing else; clear and compact print nothing.
+**Diagnostic.** On session start and resume, toolu's native hook prints `Toolu is on!\ntoolu runtime: native <version> at <path>`. The temporary Bun fallback prints the Bun path and version. With `hooks.session-start` set to `false`, startup and resume print that title and runtime line and nothing else; clear and compact print nothing.
 
 ## Native launcher
 
-A hook ported to Rust runs the installed `toolu` binary through its own generated launcher, not this Bun one. The launcher looks in `TOOLU_BIN`, the install directories and `PATH`, checks `toolu --hook-protocol`, and falls back to the shipped bundle through the Bun chain above while #425 is open. Print an entry with `cargo xtask print-hook <plugin> <Event> <name>` (`crates/core/protocol/src/launcher.rs`); `cargo xtask check-hooks` gates native entries and every manifest's `hookProtocol`, and `bun run check:hooks-json` leaves those entries alone. Resolution, messages and the version-skew rule: [install.md](install.md#hook-launcher).
+A native hook runs the installed `toolu` binary through its generated launcher. The launcher looks in `TOOLU_BIN`, the install directories and `PATH`, checks `toolu --hook-protocol`, and falls back to the shipped Bun bundle when the binary is absent during this transition. For the core plugin, `TOOLU_RUNTIME=bun` also selects the rollback bundle when the binary is present. Print an entry with `cargo xtask print-hook <plugin> <Event> <name>` (`crates/core/protocol/src/launcher.rs`); `cargo xtask check-hooks` gates native entries and every manifest's `hookProtocol`. Resolution, messages and version skew: [install.md](install.md#hook-launcher).
 
 Agent command tools use a non-login shell. Their plain `toolu` reachability and the SessionStart absolute-path advice are checked separately; see [Agent command shell](install.md#agent-command-shell).
 
@@ -97,8 +97,8 @@ There is no `node` fallback. Measured warm hook startup on macOS: bash plus jq 6
 
 ## Decision record
 
-- **Decision:** run every plugin, hook, gate, script, and test on TypeScript under Bun; remove bash and bats when nothing remains.
+- **Historical decision (#247):** run plugins, hooks, gates, scripts and tests on TypeScript under Bun while retiring bash and bats. Epic #402 supersedes this for ported hooks, starting with toolu's native entries in #425.
 - **Why:** every host except OpenCode spawns command hooks in any language, and OpenCode loads TypeScript in-process, so TypeScript on Bun is the one language every host can run. The measurements show parity, not a speed-up: Bun (5.2 ms) is within 1.1 ms of bash plus jq (6.3 ms), so the rewrite does not slow hooks. The reason to migrate is one language across all hosts, not speed.
 - **Evidence:** the latency measurements above (macOS, recorded in [epic #247](https://github.com/Falconiere/toolu/issues/247)) support only that Bun does not regress hook startup and that node is 8x slower than Bun; they do not by themselves justify the rewrite.
-- **Consequence:** Bun 1.4.x is a documented prerequisite for every host; a missing runtime fails closed on enforcing events.
+- **Current consequence:** Bun 1.4.x remains necessary for unported leaf hooks, registry modules and the temporary rollback path. The core toolu hooks default to the native binary.
 - **Supersedes:** the #203 non-goal of keeping Claude Code and Codex free of a mandatory Bun dependency.

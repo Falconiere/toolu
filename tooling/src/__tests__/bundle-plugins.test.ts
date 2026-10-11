@@ -71,26 +71,15 @@ test.concurrent("the staged tree carries native bundles and required settings", 
   expect(statSync(join(dest, "toolu/settings")).isDirectory()).toBe(true);
 });
 
-test.concurrent("the debug skill's helpers ship and run from the staged copy", async () => {
+test.concurrent("the staged debug skill names the native command and ships no retired scripts", async () => {
   using sb = createSandbox();
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
-  expect(readdirSync(join(dest, "toolu/scripts")).toSorted()).toEqual([
-    "debug-io.ts",
-    "debug-log.ts",
-    "debug-stack.ts",
-    "debug-testfail.ts",
-  ]);
-  const transcript = join(ROOT, "plugins/toolu/scripts/__tests__/fixtures/debug/bun-testfail.txt");
-  const res = await run(
-    ["bun", join(dest, "toolu/scripts/debug-testfail.ts"), "--file", transcript],
-    {
-      cwd: sb.root,
-    },
-  );
-  expect(res.exitCode).toBe(0);
-  expect(res.stdout).toContain("  - add sums two numbers\n");
-  expect(res.stdout).toContain("math.test.ts:4:21");
+  const staged = readdirSync(dest, { recursive: true, encoding: "utf8" });
+  expect(staged.filter((path) => path.startsWith("toolu/scripts/"))).toEqual([]);
+  const skill = readFileSync(join(ROOT, "tools/toolu-opencode/generated/skills/toolu-debug/SKILL.md"), "utf8");
+  expect(skill).toContain("toolu debug testfail");
+  expect(skill).not.toContain("debug-testfail.ts");
 });
 
 test.concurrent("the epic orchestrator ships its references and no scripts", async () => {

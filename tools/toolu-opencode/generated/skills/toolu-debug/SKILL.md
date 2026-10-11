@@ -33,11 +33,12 @@ Reproduction/tests establish causes.
 
 ## Evidence helpers (the Observe step)
 
-Three language-agnostic collectors turn raw failure output into a compact, capped summary so Observe doesn't flood context. Run each with `bun`; each reads stdin or `--file <path>`, takes `--json`, and degrades to a capped raw passthrough on input it doesn't recognize. Caps are env-overridable (`DEBUG_MAX_*`).
+Four language-agnostic native commands turn raw failure output into a compact, capped summary so Observe doesn't flood context. Each reads stdin or `--file <path>`; put the global `--json` before `debug` for structured output. Caps are env-overridable (`DEBUG_MAX_*`).
 
-- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. `bun test 2>&1 | bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"` or `cargo test 2>&1 | bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-testfail.ts"`.
-- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-stack.ts"` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
-- `"$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-log.ts"` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
+- `toolu debug io` — count input bytes and lines before summarizing a large capture.
+- `toolu debug testfail` — failing-test transcript → failed test names, error/assertion lines, code `file:line` locations. For example, `cargo test 2>&1 | toolu debug testfail`.
+- `toolu debug stack` — stack trace / backtrace → app frames first, framework/runtime frames collapsed.
+- `toolu debug log` — large log → deduped error/warn lines + a tail, hard-capped in lines and bytes.
 
 Use them to *seed* the investigation; they observe, they don't diagnose.
 
@@ -46,7 +47,7 @@ Use them to *seed* the investigation; they observe, they don't diagnose.
 When the bug originates from a Sentry issue and the Sentry MCP is authenticated, you can pull the event to seed Reproduce + Observe:
 
 1. OpenCode lists MCP tools with the others, named `<server>_<tool>` for each server under `mcp` in `opencode.json`; there is no tool search. Look for a Sentry server's fetch tools by that prefix; do not assume tool names. If none is listed, the user hasn't configured or authenticated it (`opencode mcp auth <server>`).
-2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `bun "$TOOLU_PLUGIN_ROOT_TOOLU/scripts/debug-stack.ts"`, then proceed from Observe.
+2. Fetch the issue/event the user names (URL or short-id), extract the exception + stack + breadcrumbs, pipe the stack through `toolu debug stack`, then proceed from Observe.
 3. **If Sentry is unavailable, unauthed, or exposes no fetch tool:** say so in one line ("Sentry unavailable, proceeding manually") and continue — ask the user to paste the stack/error. The loop never depends on Sentry.
 
 ## Return to the chain

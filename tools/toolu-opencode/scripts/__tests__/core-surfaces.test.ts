@@ -108,8 +108,8 @@ test("every skill, agent and generated path the surfaces name resolves", () => {
   const scripts = [...text.matchAll(/\$TOOLU_PLUGIN_ROOT_TOOLU\/([^\s`"]+)/g)].map(
     ([, p = ""]) => p,
   );
-  expect(scripts.length).toBeGreaterThan(0);
   expect(scripts.filter((path) => !existsSync(join(staged, "toolu", path)))).toEqual([]);
+  expect(text).toContain("toolu debug testfail");
 
   const generated = [...text.matchAll(/\$\{TOOLU_OPENCODE_ROOT\}\/generated\/([^\s`")]+)/g)].map(
     ([, p = ""]) => p,
