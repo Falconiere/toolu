@@ -1,6 +1,6 @@
 # Epic attention queue and notifications — Design
 
-**Date:** 2026-10-11   **Status:** Draft   **Author:** epic worker (Cursor)   **Topic:** #450, judgment events as a queue with answers, acknowledgements, reminders and notifications
+**Date:** 2026-10-11   **Status:** Approved   **Author:** epic worker (Cursor)   **Topic:** #450, judgment events as a queue with answers, acknowledgements, reminders and notifications
 
 Brainstorm: `docs/toolu/brainstorms/2026-10-11-epic-attention.md`.
 
@@ -32,7 +32,7 @@ The queue stays in `World.attention`; a new `attention` module owns it. Every ra
 - **Reminders.** On each engine tick, an `open` item announced `remind_after_minutes` ago (default 30) is announced again, then at most once an hour. Reminders reach the notifier only, never `wait`. Acknowledged and answered items get none. The socket's wake deadline includes the next reminder.
 - **Answer.** The `answer` op requires a live item for the key. It sends the text through the existing worker prompt path (herdr `agent.prompt`, or the `prompt` script under `TOOLU_EPIC_SCRIPTS`). Only after delivery does it journal the answer and mark the key's live items answered, noting who answered. A failed delivery is an error to the caller, and the item stays as it was.
 - **Blocked.** When herdr reports `blocked`, the engine always reads the agent tail, even when the phase was already scanned. It stores the last 10 non-empty lines, at most 1024 characters, as the item's `pending`, behind the same token-prefix redaction as notes. Only `wait` shows `pending`.
-- **Rebuild.** `recover::observe` passes each journal record to `attention::observe`. A `judgment` record with an item token reopens the item, with its raise time taken from `at`. `acknowledged`, `answered` and `closed` records then replay the item's state. A rebuilt item counts as undelivered, so `wait` may return it once more after a restart.
+- **Rebuild.** `recover::observe` passes each journal record to `attention::observe`. A `judgment` record with an item token reopens the item, with its raise time taken from `at`. `acknowledged`, `answered`, `reminder` and `closed` records then replay the item's state, its last announcement and its reminder count. A rebuilt item sends no notification. It counts as undelivered, so `wait` may return it once more after a restart.
 
 Reused: `Step::Prompt`'s send path (`Engine::send_prompt`), `herdr::Client`, `toolu-http`, `secrets::{load, redact_text}`, `note::bounded_note`, `journal::append`, and `toolu_state::time::parse_iso`.
 
@@ -81,7 +81,7 @@ herdr call: `notification.show {"title":"toolu epic: <key> <kind>","body":"<note
 CLI:
 
 - `toolu epic answer <key> <text> [--by NAME]` prompts the worker, marks the item answered and journals who answered. `--by` defaults to the detected agent host name (`claude`, `codex`, `cursor`, `opencode`, `hermes`), else `user`.
-- `toolu epic ack <key>` acknowledges every live item of the key. It still resets the stall clock, so the stall is not raised again until it has run its full length once more.
+- `toolu epic ack <key>` acknowledges every live item of the key. It still resets the stall clock, so the stall is not raised again until it has run its full length once more. An item with no key (a dependency cycle) is acknowledged by its kind: `toolu epic ack dependency-cycle`.
 
 Rust: `model::Attention` gains `raised_ms`, `state: Ack` (`Open`, `Acknowledged`, `Answered`), `announced_ms`, `reminders`, `token` and `pending: Option<String>`. `World` gains `remind_ms`. `Step` gains `Notify { token: String, reminder: bool }`. `socket::ServeOptions` gains `attention: AttentionOptions { remind_ms, notify: Option<notify::Settings> }`. New modules: `attention.rs`, `notify.rs` (thread, POST, retry) and `notify_notice.rs` (notice and payload), each with `tests/<module>_test.rs`.
 
@@ -99,7 +99,9 @@ Rust: `model::Attention` gains `raised_ms`, `state: Ack` (`Open`, `Acknowledged`
 - **Restart:** live items come back from the journal tail, which covers today and yesterday; older items are not rebuilt. Records without an item token, written by engines before this change, are ignored.
 - **Clock skew:** a raise time after `now` counts as age 0.
 - **Secrets in notes:** the known token prefixes become `[redacted]` (existing). Resolved secret values become `<redacted>` in the POST body and the herdr body.
-- **Cycle items** (`key` empty): `ack` with an empty key is refused by the CLI; reminders and listing work as for other items.
+- **Cycle items** (`key` empty): acknowledged by kind (`ack dependency-cycle`); no report closes them, so they stay listed until the engine restarts past the journal tail.
+- **Items whose worker is gone** (`cleanup-incomplete`, `relaunch-limit`, `pr-closed`): they stay listed until a report for the key arrives. `ack` stops their reminders.
+- **Ack of an unknown key:** `{"ok":true}` with nothing changed, as today, so a repeated ack is harmless.
 
 ## Acceptance criteria
 
@@ -120,6 +122,7 @@ Rust: `model::Attention` gains `raised_ms`, `state: Ack` (`Open`, `Acknowledged`
 - **AC-7:** An open item and an acknowledged item survive an engine restart with their kind, note and state, and a closed item does not come back.
 - **AC-8:** With herdr enabled against a scripted herdr socket, a raise sends one `notification.show` with the title `toolu epic: <key> <kind>` and `sound` `request`.
 - **AC-9:** `epic.attention.herdr` and `epic.attention.remind_after_minutes` parse with their defaults, reject a wrong type or a value out of range with a path-only error, and still reject a `notify_url` key.
+- **AC-11:** After `toolu epic ack <key>` on a raised stall, ticks before the full stall length has passed again raise no second stall item and no reminder, and the item shows `state=acknowledged`.
 - **AC-10:** The skill has an engine attention table that lists only judgment events and names `toolu epic wait`, `toolu epic answer`, `toolu epic ack` and `toolu epic pause`. `cargo xtask check-markdown-cli` passes, and `docs/cli/` and the command snapshot match the binary.
 
 ## Acceptance evidence
@@ -135,6 +138,7 @@ Rust: `model::Attention` gains `raised_ms`, `state: Ack` (`Open`, `Acknowledged`
 | AC-7 | An engine journal with raise, acknowledge and close records; `snapshot::load` on the same root | Records without a token are ignored | `cargo test -p toolu-epic-orchestrator attention_rebuild` |
 | AC-8 | A `UnixListener` speaking herdr protocol 22 (as `herdr_test.rs` does) that records methods | herdr disabled: no connection | `cargo test -p toolu-epic-orchestrator herdr_notification` |
 | AC-9 | `LoadedConfig::from_data` with valid, default and invalid `epic.attention` values | Range 0 and 10081; string type | `cargo test -p toolu-runtime --lib -- config::epic::` |
+| AC-11 | A real `World` with a running issue whose phase passed the stall limit after its nudge; `schedule::ack`, then `on_tick` at later clocks | Before and after the full stall length | `cargo test -p toolu-epic-orchestrator ack_silences_` |
 | AC-10 | The edited Markdown and the rebuilt binary | A planned verb named as a command fails the gate | `cargo xtask check-markdown-cli`; `cargo xtask gate --only docs-cli`; `cargo test -p toolu-cli --test contract` |
 
 ## Documentation impact
@@ -155,3 +159,14 @@ None blocking. Decisions taken from the issue, the epic and the code, with Jev w
 - Reminders go to notifications only (Jev 0.57, low confidence). This rests on the epic's target of zero orchestrator wake-ups without a judgment.
 - Any later report closes the key's items (Jev 0.72).
 - `pending` appears in `wait` only (Jev 0.66), because the HTTP server must not serve pane text.
+
+## Spec review
+
+Round 1. Jev scored issue coverage 2.37 out of 3 (0.60 on full coverage) and was uncertain about unjustified deviation (0.39); it saw the criteria only, while the skill-table deviation is justified under Non-Goals and Open Questions. The agent's own pass against the code found four gaps, all fixed in place:
+
+- Interfaces: 🟡 should-fix: acknowledging a keyless cycle item was undefined. It is now acknowledged by kind.
+- Architecture: 🟡 should-fix: the rebuild did not replay reminders, so the hourly cap could reset after a restart. `reminder` records now replay.
+- Failure modes: 🔵 consider: items whose worker is gone, and an ack of an unknown key, were unstated. Both are stated now.
+- Acceptance: 🟡 should-fix: "ack silences repeats of a stall" had no criterion. AC-11 covers it.
+
+No blocker remains. **Status:** Approved.
