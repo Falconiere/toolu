@@ -22,6 +22,13 @@ struct Expectation {
 const PLUGINS_PATTERNS: &[fn(&str) -> bool] = &[hook_source];
 const OPENCODE_PATTERNS: &[fn(&str) -> bool] = &[hook_source, test_file, shell_file];
 
+/// The stable-path native shims stay until #440. Every other shell file stays out.
+const SHELL_SHIMS: [&str; 3] = [
+  "plugins/jev/scripts/jev.sh",
+  "plugins/statusline/scripts/statusline.sh",
+  "plugins/toolu-review/scripts/write-state.sh",
+];
+
 /// Pack each published package and apply its required and forbidden lists.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let mut problems = Vec::new();
@@ -203,7 +210,7 @@ fn test_file(path: &str) -> bool {
 }
 
 fn shell_file(path: &str) -> bool {
-  if path == "plugins/jev/scripts/jev.sh" {
+  if SHELL_SHIMS.contains(&path) {
     return false;
   }
   has_ext(path, "sh") || has_ext(path, "bash") || has_ext(path, "bats")

@@ -10,7 +10,12 @@ use serde_json::Value;
 use crate::options::Options;
 use crate::{Verdict, output};
 
-const SHELL_KEEP: [&str; 2] = ["install.sh", "plugins/jev/scripts/jev.sh"];
+const SHELL_KEEP: [&str; 4] = [
+  "install.sh",
+  "plugins/jev/scripts/jev.sh",
+  "plugins/statusline/scripts/statusline.sh",
+  "plugins/toolu-review/scripts/write-state.sh",
+];
 const HOSTS: [&str; 2] = ["bun-bundle", "native"];
 const SHELL_SCRIPTS: [&str; 3] = ["lint:shell", "test:shell", "test:shell:serial"];
 

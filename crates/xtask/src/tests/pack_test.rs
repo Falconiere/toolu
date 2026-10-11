@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{Expectation, check_one, hook_source, run};
+use super::{Expectation, check_one, hook_source, run, shell_file};
 use crate::Verdict;
 use crate::options::Options;
 
@@ -16,6 +16,18 @@ fn this_repository_packs() {
   })
   .expect("pack");
   assert_eq!(verdict, Verdict::Clean);
+}
+
+#[test]
+fn native_shims_are_not_shell_files() {
+  for shim in [
+    "plugins/jev/scripts/jev.sh",
+    "plugins/statusline/scripts/statusline.sh",
+    "plugins/toolu-review/scripts/write-state.sh",
+  ] {
+    assert!(!shell_file(shim), "{shim}");
+  }
+  assert!(shell_file("plugins/x/scripts/run.sh"));
 }
 
 #[test]

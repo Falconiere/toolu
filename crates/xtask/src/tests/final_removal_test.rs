@@ -12,6 +12,40 @@ fn this_repository_passes() {
 }
 
 #[test]
+fn native_shims_are_kept() {
+  let tmp = tempfile::tempdir().unwrap();
+  let root = tmp.path();
+  assert!(
+    Command::new("git")
+      .arg("init")
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  for shim in [
+    "plugins/jev/scripts/jev.sh",
+    "plugins/statusline/scripts/statusline.sh",
+    "plugins/toolu-review/scripts/write-state.sh",
+  ] {
+    write(root, shim, "#!/bin/sh\nexec toolu\n");
+  }
+  write(root, "plugins/x/scripts/run.sh", "#!/bin/sh\n");
+  assert!(
+    Command::new("git")
+      .args(["add", "."])
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  assert_eq!(
+    super::tracked_shell(root).unwrap(),
+    vec!["plugins/x/scripts/run.sh".to_owned()]
+  );
+}
+
+#[test]
 fn a_shellcheckrc_is_a_finding() {
   let tmp = tempfile::tempdir().unwrap();
   let root = tmp.path();
