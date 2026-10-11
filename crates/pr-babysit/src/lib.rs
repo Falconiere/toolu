@@ -8,6 +8,7 @@ use toolu_runtime::namespace::Planned;
 
 mod collect;
 mod error;
+mod fixer;
 #[cfg(test)]
 mod fixture;
 mod json;
@@ -17,6 +18,7 @@ mod record;
 #[cfg(test)]
 mod recorded;
 mod reduce;
+mod route;
 mod schedule;
 mod sha1;
 mod state;

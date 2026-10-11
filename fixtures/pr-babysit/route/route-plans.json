@@ -1,0 +1,477 @@
+{
+  "heuristicInline": {
+    "version": 1,
+    "dispatch": "inline",
+    "unattended": true,
+    "source": "heuristic",
+    "note": "jev disabled; heuristic tiers used; prBabysit.dispatch is inline",
+    "items": [
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6Au",
+        "tier": "critical",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy5_u",
+        "tier": "complex",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6nEk",
+        "tier": "complex",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6d2Ypf",
+        "tier": "standard",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6BF",
+        "tier": "trivial",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6VND",
+        "tier": "standard",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      }
+    ],
+    "groups": [
+      {
+        "seq": 1,
+        "tier": "critical",
+        "class": "architecture",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6Au"
+        ]
+      },
+      {
+        "seq": 2,
+        "tier": "complex",
+        "class": "architecture",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzYYFc6jy5_u",
+          "PRRT_kwDOSzUwAc6K6nEk"
+        ]
+      },
+      {
+        "seq": 3,
+        "tier": "standard",
+        "class": "implementation",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzUwAc6d2Ypf",
+          "PRRT_kwDOSzUwAc6K6VND"
+        ]
+      },
+      {
+        "seq": 4,
+        "tier": "trivial",
+        "class": "mechanical",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6BF"
+        ]
+      }
+    ]
+  },
+  "jevInline": {
+    "version": 1,
+    "dispatch": "inline",
+    "unattended": true,
+    "source": "jev",
+    "note": "prBabysit.dispatch is inline",
+    "items": [
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6Au",
+        "tier": "complex",
+        "score": 1.92,
+        "confidence": 0.08,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy5_u",
+        "tier": "complex",
+        "score": 1.9,
+        "confidence": 0.8,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6nEk",
+        "tier": "trivial",
+        "score": 0.11,
+        "confidence": 0.89,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6d2Ypf",
+        "tier": "trivial",
+        "score": 0.05,
+        "confidence": 0.95,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6BF",
+        "tier": "trivial",
+        "score": 0.01,
+        "confidence": 0.99,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6VND",
+        "tier": "trivial",
+        "score": 0.02,
+        "confidence": 0.98,
+        "raised": false,
+        "source": "jev"
+      }
+    ],
+    "groups": [
+      {
+        "seq": 1,
+        "tier": "complex",
+        "class": "architecture",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6Au",
+          "PRRT_kwDOSzYYFc6jy5_u"
+        ]
+      },
+      {
+        "seq": 2,
+        "tier": "trivial",
+        "class": "mechanical",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzUwAc6K6nEk",
+          "PRRT_kwDOSzUwAc6d2Ypf",
+          "PRRT_kwDOSzYYFc6jy6BF",
+          "PRRT_kwDOSzUwAc6K6VND"
+        ]
+      }
+    ]
+  },
+  "raised": {
+    "version": 1,
+    "dispatch": "inline",
+    "unattended": true,
+    "source": "jev",
+    "note": "prBabysit.dispatch is inline",
+    "items": [
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6Au",
+        "tier": "complex",
+        "score": 1.92,
+        "confidence": 0.08,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy5_u",
+        "tier": "complex",
+        "score": 1.9,
+        "confidence": 0.8,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6nEk",
+        "tier": "trivial",
+        "score": 0.11,
+        "confidence": 0.89,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6d2Ypf",
+        "tier": "standard",
+        "score": 0.05,
+        "confidence": 0.95,
+        "raised": true,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6BF",
+        "tier": "trivial",
+        "score": 0.01,
+        "confidence": 0.99,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6VND",
+        "tier": "trivial",
+        "score": 0.02,
+        "confidence": 0.98,
+        "raised": false,
+        "source": "jev"
+      }
+    ],
+    "groups": [
+      {
+        "seq": 1,
+        "tier": "complex",
+        "class": "architecture",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6Au",
+          "PRRT_kwDOSzYYFc6jy5_u"
+        ]
+      },
+      {
+        "seq": 2,
+        "tier": "standard",
+        "class": "implementation",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzUwAc6d2Ypf"
+        ]
+      },
+      {
+        "seq": 3,
+        "tier": "trivial",
+        "class": "mechanical",
+        "host": null,
+        "model": null,
+        "effort": null,
+        "items": [
+          "PRRT_kwDOSzUwAc6K6nEk",
+          "PRRT_kwDOSzYYFc6jy6BF",
+          "PRRT_kwDOSzUwAc6K6VND"
+        ]
+      }
+    ]
+  },
+  "herdr": {
+    "version": 1,
+    "dispatch": "herdr",
+    "unattended": false,
+    "source": "heuristic",
+    "note": "jev disabled; heuristic tiers used; dropped (CLI not on PATH): cursor; cooling: claude",
+    "items": [
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6Au",
+        "tier": "critical",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy5_u",
+        "tier": "complex",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6nEk",
+        "tier": "complex",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6d2Ypf",
+        "tier": "standard",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6BF",
+        "tier": "trivial",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6VND",
+        "tier": "standard",
+        "score": null,
+        "confidence": null,
+        "raised": false,
+        "source": "heuristic"
+      }
+    ],
+    "groups": [
+      {
+        "seq": 1,
+        "tier": "critical",
+        "class": "architecture",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "xhigh",
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6Au"
+        ]
+      },
+      {
+        "seq": 2,
+        "tier": "complex",
+        "class": "architecture",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "items": [
+          "PRRT_kwDOSzYYFc6jy5_u",
+          "PRRT_kwDOSzUwAc6K6nEk"
+        ]
+      },
+      {
+        "seq": 3,
+        "tier": "standard",
+        "class": "implementation",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "medium",
+        "items": [
+          "PRRT_kwDOSzUwAc6d2Ypf",
+          "PRRT_kwDOSzUwAc6K6VND"
+        ]
+      },
+      {
+        "seq": 4,
+        "tier": "trivial",
+        "class": "mechanical",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "low",
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6BF"
+        ]
+      }
+    ]
+  },
+  "herdrJev": {
+    "version": 1,
+    "dispatch": "herdr",
+    "unattended": false,
+    "source": "jev",
+    "note": "dropped (CLI not on PATH): cursor",
+    "items": [
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6Au",
+        "tier": "complex",
+        "score": 1.92,
+        "confidence": 0.08,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy5_u",
+        "tier": "complex",
+        "score": 1.9,
+        "confidence": 0.8,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6nEk",
+        "tier": "trivial",
+        "score": 0.11,
+        "confidence": 0.89,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6d2Ypf",
+        "tier": "trivial",
+        "score": 0.05,
+        "confidence": 0.95,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzYYFc6jy6BF",
+        "tier": "trivial",
+        "score": 0.01,
+        "confidence": 0.99,
+        "raised": false,
+        "source": "jev"
+      },
+      {
+        "id": "PRRT_kwDOSzUwAc6K6VND",
+        "tier": "trivial",
+        "score": 0.02,
+        "confidence": 0.98,
+        "raised": false,
+        "source": "jev"
+      }
+    ],
+    "groups": [
+      {
+        "seq": 1,
+        "tier": "complex",
+        "class": "architecture",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "items": [
+          "PRRT_kwDOSzYYFc6jy6Au",
+          "PRRT_kwDOSzYYFc6jy5_u"
+        ]
+      },
+      {
+        "seq": 2,
+        "tier": "trivial",
+        "class": "mechanical",
+        "host": "codex",
+        "model": "gpt-6-sol",
+        "effort": "low",
+        "items": [
+          "PRRT_kwDOSzUwAc6K6nEk",
+          "PRRT_kwDOSzUwAc6d2Ypf",
+          "PRRT_kwDOSzYYFc6jy6BF",
+          "PRRT_kwDOSzUwAc6K6VND"
+        ]
+      }
+    ]
+  }
+}
