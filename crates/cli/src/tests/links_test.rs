@@ -6,7 +6,7 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 
-use super::{BABYSIT_TICK, STATUS_SNAPSHOT, epic, statusline};
+use super::{BABYSIT_TICK, STATUS_SNAPSHOT, epic};
 
 #[test]
 fn the_epic_engine_runs_the_injected_pr_babysit_tick() {
@@ -32,7 +32,7 @@ fn statusline_gets_the_hubs_status_snapshot() {
 }
 
 #[test]
-fn the_linked_namespaces_keep_their_placeholder_output() {
+fn epic_keeps_its_placeholder_output() {
   let epic_matches = toolu_epic_orchestrator::command()
     .try_get_matches_from(["epic", "planned"])
     .expect("epic planned matches");
@@ -42,15 +42,5 @@ fn the_linked_namespaces_keep_their_placeholder_output() {
   assert!(
     epic_out.starts_with("toolu epic is not ported yet (#435, #448)"),
     "{epic_out}"
-  );
-  let status_matches = toolu_statusline::command()
-    .try_get_matches_from(["statusline", "planned"])
-    .expect("statusline planned matches");
-  let status_out = statusline(&status_matches, &Ctx::default())
-    .stdout
-    .unwrap_or_default();
-  assert!(
-    status_out.starts_with("toolu statusline is not ported yet (#431)"),
-    "{status_out}"
   );
 }

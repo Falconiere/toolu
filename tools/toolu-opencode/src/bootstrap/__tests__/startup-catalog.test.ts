@@ -45,7 +45,7 @@ const BUNDLES: Record<string, Record<string, string>> = {
 
 const HELPERS = {
   "jev/jev.sh": "jev/scripts/jev.sh",
-  "statusline/statusline.sh": "statusline/hooks/dist/statusline.js",
+  "statusline/statusline.sh": "statusline/scripts/statusline.sh",
   "toolu-review/write-state.sh": "toolu-review/scripts/write-state.sh",
 };
 

@@ -16,6 +16,24 @@ pub trait StatusSnapshot: Send + Sync {
   /// # Errors
   /// [`LinkError`] when the snapshot could not be taken.
   fn snapshot(&self, roots: &Roots, dir: &Path) -> Result<Value, LinkError>;
+
+  /// The statusline document using cached Git counts; the default is the direct snapshot.
+  ///
+  /// # Errors
+  /// [`LinkError`] when the snapshot could not be taken.
+  fn snapshot_cached(&self, roots: &Roots, dir: &Path) -> Result<Value, LinkError> {
+    self.snapshot(roots, dir)
+  }
+
+  /// Refresh the statusline's Git-count cache for `dir`.
+  ///
+  /// # Errors
+  /// [`LinkError`] when the cache cannot be refreshed.
+  fn refresh_cache(&self, _roots: &Roots, _dir: &Path) -> Result<(), LinkError> {
+    Err(LinkError::Failed(
+      "status cache refresh unavailable".to_owned(),
+    ))
+  }
 }
 
 #[cfg(test)]

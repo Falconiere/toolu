@@ -25,7 +25,6 @@
         "plugins/pr-babysit/hooks/src/babysit/verdict.ts",
         "plugins/python-quality/hooks/src/rules/py-file.ts",
         "plugins/rust-quality/hooks/src/rules/layout-rules.ts",
-        "plugins/statusline/hooks/src/statusline/collect.ts",
         "plugins/toolu/hooks/src/lifecycle/bash-compat.ts",
         "plugins/toolu/hooks/src/lifecycle/dependency-warning.ts",
         "plugins/toolu/hooks/src/lifecycle/prompt-hints.ts",

@@ -72,7 +72,7 @@
     {
       "name": "statusline",
       "source": "./plugins/statusline",
-      "description": "Host-native project status: a persistent Claude Code statusline plus an explicit Codex status skill for repository, gate, git, comemory, and Jev readiness. Standalone, no dependencies.",
+      "description": "Native Claude Code statusline and Codex/OpenCode status skills for repository and gate status. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["statusline", "quality-gate", "hooks"],

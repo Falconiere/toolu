@@ -1,155 +1,59 @@
 # statusline
 
-Host-native project status. Claude Code gets an optional persistent one-line
-statusline assembled defensively from the JSON Claude sends on stdin (Codex and
-OpenCode get an explicit status skill instead):
+Native project status through `toolu statusline`. Claude Code can show a persistent
+one-line bar; Codex and OpenCode use their status skills to run `toolu status`.
 
-```
+```text
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [JEV:READY]
 ```
 
-| Segment | Source | Shows when |
-|---------|--------|------------|
-| model | `.model.display_name` | always |
-| effort | `.effort.level` | the model reports an effort level |
-| ctx | `.context_window.*` | always |
-| `example.com` | `.oauthAccount.emailAddress` in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`) | logged in via Claude OAuth — shows only the email domain, not the full address |
-| `✗ gate:failing` | host-native `.claude/tmp/quality-gate-status.json` at the git root | a **gate writer** (e.g. the `rust-quality` / `ts-quality` / `python-quality` / `toolu` plugins) marks the gate failing |
-| folder + branch + status | git, from the workspace dir | inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
-| `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/comemory-status/<repo>.json` | the **comemory** plugin published a memory count this session |
-| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | `<config-dir>/jev/jev.sh`, Bun, and `TYPESAFE_API_KEY` in the environment | Jev published a wrapper; green when locally ready, yellow with the reason when unavailable |
+The Claude bar takes model, effort and context from Claude's status payload. The
+account segment shows only the OAuth email domain. Repository branch and gate
+facts come from `toolu status`; dirty counts, comemory and Jev appear when
+available. The renderer reads branch and worktree location from `.git` and runs
+`git status` only for working-tree counts. Missing payload fields and unreadable
+optional files leave their segments out.
 
-Codex exposes `$statusline:status` instead of a persistent bar. It reports the
-repository, branch/ahead/behind state, working-tree counts, quality gate from
-`<repo>/.codex/tmp/quality-gate-status.json`, comemory count, and Jev readiness
-(`Jev: ready` or `Jev: unavailable — reason`). It deliberately
-omits account, model, effort, and context-window fields that Codex does not make
-available to the skill.
+Jev is locally ready when `TYPESAFE_API_KEY` is set without line breaks and a
+native `toolu jev` command is reachable on `PATH`. The bar makes no Jev API
+request. A missing prerequisite appears as `[JEV:UNAVAILABLE: reason]`; no key
+value is displayed.
 
-Jev readiness uses the active host's config directory (`CLAUDE_CONFIG_DIR` or
-`CODEX_HOME`, with `TOOLU_CONFIG_DIR` taking priority). It checks for an executable
-wrapper, Bun, and a nonempty API key without line breaks. It never prints the
-key, reads `.env`, executes the wrapper, or makes an API call. **Ready means local
-prerequisites are present**; it does not verify authentication or service health.
-An unpublished wrapper hides the segment; a broken published wrapper shows
-`missing executable wrapper`. Other reasons include `missing bun`,
-`missing TYPESAFE_API_KEY`, and `invalid TYPESAFE_API_KEY`. Multiple reasons are
-separated by semicolons.
+## Claude Code
 
-The account, gate, comemory, and git status segments degrade gracefully — if the file
-they read is absent, the segment simply doesn't render. So statusline is
-**standalone**: it declares no plugin dependencies. Those segments just light up
-automatically when the relevant plugins are also installed (or, for the account
-segment, when you're logged in via Claude OAuth rather than an API key).
+Install the statusline plugin and run `/statusline:setup`. It writes this block
+to the user's Claude `settings.json`:
 
-## Install
-
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
-
-## Codex install
-
-```bash
-codex plugin add statusline@toolu
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "toolu statusline render"
+  }
+}
 ```
 
-Run `$statusline:status` whenever you want a current report. No setup or
-persistent renderer is required.
+Restart the session or run `/clear` so Claude loads the setting. `setup` keeps
+other settings, saves `settings.json.bak` before changing an existing file, and
+refuses to replace a custom status line unless you explicitly pass `--force`.
+It prints `CREATED`, `WIRED`, `ALREADY`, `REFUSED` or `ERROR` as its first word.
 
-## OpenCode
+The native SessionStart hook publishes a compatibility command at
+`<config root>/statusline/statusline.sh` for settings written by older versions.
+When it sees that path in Claude's `statusLine`, it saves a backup, rewrites the
+setting to `toolu statusline render`, and shows a one-time notice. A user-owned
+regular file at the compatibility path is left alone. The compatibility path
+stays through #440; `toolu statusline refresh` republishes it and applies the
+same migration when needed.
 
-On OpenCode the native `statusline-status` skill is the status surface. OpenCode
-has no `statusLine` setting, so the persistent statusline and
-`/statusline:setup` are Claude Code-only: toolu does not generate the setup
-command for OpenCode and never writes a `statusLine` key into OpenCode
-configuration. The skill runs
-`"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"`.
-`shell.env` sets both variables in every bash call. The report starts with toolu's
-own readiness:
+## Codex and OpenCode
 
-```
-Host: OpenCode
-toolu: ready — 2 plugins (project selection), 2 startup artifacts
-Plugins: jev (session-start), statusline (session-start)
-Startup record: <project>/.opencode/toolu/state/toolu/opencode-status.json, written <time> for <project>
-Repository: …
-```
+In Codex, run `$statusline:status`; it calls `toolu --host codex status`. In
+OpenCode, use the `statusline-status` skill; it calls `toolu --host opencode status`.
+These hosts provide the repository, working-tree, gate, push-review
+and waiver document. Claude's account, model, effort and context fields are
+not present in their skill shell.
 
-Every startup of the toolu OpenCode plugin writes that record
-(`<data root>/toolu/opencode-status.json`). It also sends one structured
-`toolu: status` entry to the host log (`opencode --print-logs`) with `status`,
-`plugins`, `selection`, `artifacts`, `record` and, when toolu is not ready,
-`reason`. Neither holds environment values. A missing or unreadable record prints
-a line naming the next step. When toolu is not ready, it denies every tool call,
-bash included. Its reason then reaches you through the denial and the host log,
-and the record keeps it for a later `status.js` run with `TOOLU_CONFIG_DIR` set to
-the data root.
-
-## Claude Code install & wire up
-
-Claude Code does not let a plugin declare `statusLine` in its manifest, so the
-SessionStart hook symlinks the Bun renderer to a stable, version-independent
-path:
-
-```
-~/.claude/statusline/statusline.sh   (→ the installed plugin's hooks/dist/statusline.js)
-```
-
-The link keeps its `.sh` name so existing `settings.json` entries stay valid,
-but it is a Bun program: run it by path, never through `bash`.
-
-1. Install the plugin:
-
-   ```
-   /plugin install statusline@toolu
-   ```
-
-2. Wire it once. Easiest — run the bundled command:
-
-   ```
-   /statusline:setup
-   ```
-
-   It adds the `statusLine` key below to your `settings.json` idempotently:
-   it backs the file up first, never clobbers an existing custom statusLine
-   (re-run `/statusline:setup --force` if you do want to replace one), and is a
-   no-op once wired. Restart the session afterwards for the bar to appear.
-
-   Or wire it by hand:
-
-   ```json
-   {
-     "statusLine": {
-       "type": "command",
-       "command": "~/.claude/statusline/statusline.sh"
-     }
-   }
-   ```
-
-   (Use `"$CLAUDE_CONFIG_DIR/statusline/statusline.sh"` if you run with a custom
-   config dir.) The symlink is refreshed every session, so plugin updates are
-   picked up automatically with no settings change. The hook never clobbers a
-   real file you place at that path — it only owns its own symlink.
-
-## Migrating from the bash statusline
-
-Before the Bun port, the wired command was `bash ~/.claude/statusline/statusline.sh`.
-`bash` cannot run the Bun renderer, so the SessionStart hook prints a one-line
-notice while `settings.json` still holds that value. Run `/statusline:setup`
-once: it recognises the old command, backs `settings.json` up and rewrites it
-to the path form above (no `--force` needed). jq and python3 are no longer
-used.
-
-## Migrating from toolu ≤ 1.5.0
-
-The statusline used to ship inside the `toolu` plugin and auto-symlinked to
-`~/.claude/toolu/statusline.sh`. It now lives here. To keep your statusline:
-
-- `/plugin install statusline@toolu`, and
-- re-point `settings.json` from `~/.claude/toolu/statusline.sh` to
-  `~/.claude/statusline/statusline.sh` — `/statusline:setup --force` does this
-  for you (the old path is a custom value to it, so plain `/statusline:setup`
-  would refuse).
-
-Toolu no longer creates the old symlink and sweeps away the dangling one it
-used to own, so an un-migrated `settings.json` will fail loudly (missing file)
-rather than silently pointing into a cleaned plugin cache.
+The plugin's SessionStart hook and commands use the installed native `toolu`
+binary. Follow [installation instructions](../../docs/install.md) if it is not
+available in the agent command shell.

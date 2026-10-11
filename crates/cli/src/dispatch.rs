@@ -60,11 +60,13 @@ fn ctx_of(matches: &ArgMatches) -> Ctx {
   }
 }
 
-/// `toolu jev` reads stdin only for `--state -` or `ask -`.
+/// Verbs that read a caller payload rather than using only argv and the environment.
 fn reads_stdin(matches: &ArgMatches) -> bool {
-  matches
-    .subcommand()
-    .is_some_and(|(name, sub)| name == "jev" && toolu_jev::needs_stdin(sub))
+  matches.subcommand().is_some_and(|(name, sub)| match name {
+    "jev" => toolu_jev::needs_stdin(sub),
+    "statusline" => toolu_statusline::needs_stdin(sub),
+    _ => false,
+  })
 }
 
 fn route(

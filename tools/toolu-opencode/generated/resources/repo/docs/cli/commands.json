@@ -1543,25 +1543,92 @@
       "placeholder": false
     },
     {
-      "about": "Project status for the host's status line",
+      "about": "Render and set up the native Claude status line",
       "aliases": [],
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#431): show the planned verbs",
+          "about": "Render one Claude status-line JSON payload from stdin",
           "aliases": [],
           "args": [],
           "commands": [],
           "flags": [],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "render",
           "owner": "statusline",
           "path": [
             "statusline",
-            "planned"
+            "render"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "Wire Claude settings.json to the native renderer",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Replace an existing custom statusLine after backing it up",
+              "hidden": false,
+              "long": "force",
+              "possibleValues": [],
+              "required": false,
+              "short": "f",
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "setup",
+          "owner": "statusline",
+          "path": [
+            "statusline",
+            "setup"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Refresh the compatibility shim and old settings",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "refresh",
+          "owner": "statusline",
+          "path": [
+            "statusline",
+            "refresh"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Refresh cached Git counts for a statusline worktree (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "WORKTREE",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "refresh-cache",
+          "owner": "statusline",
+          "path": [
+            "statusline",
+            "refresh-cache"
+          ],
+          "placeholder": false
         },
         {
           "about": "Run a hook entry; hooks.json calls it (internal)",

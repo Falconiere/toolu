@@ -34,6 +34,15 @@ pub fn current_branch(env: &Env, root: &Path) -> String {
   })
 }
 
+/// Read the branch without starting Git; `None` for layouts only Git can resolve.
+pub fn current_branch_without_git(env: &Env, root: &Path) -> Option<String> {
+  match discover(env, root) {
+    Discovery::Repo(repo) => refs::abbrev_head(&repo),
+    Discovery::NotFound => Some(String::new()),
+    Discovery::AskGit => None,
+  }
+}
+
 /// Whether `dir` sits in a linked worktree: its git dir and common dir differ.
 pub fn linked_worktree(env: &Env, dir: &Path) -> bool {
   match discover(env, dir) {
@@ -71,6 +80,14 @@ pub fn common_dir(env: &Env, dir: &Path) -> Option<PathBuf> {
       let path = out.stdout.trim_end();
       (!path.is_empty()).then(|| PathBuf::from(path))
     }
+  }
+}
+
+/// The common Git dir from native `.git` readers only; unsupported layouts return `None`.
+pub fn common_dir_without_git(env: &Env, dir: &Path) -> Option<PathBuf> {
+  match discover(env, dir) {
+    Discovery::Repo(repo) => Some(repo.common_dir),
+    Discovery::NotFound | Discovery::AskGit => None,
   }
 }
 

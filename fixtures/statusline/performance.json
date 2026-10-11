@@ -1,0 +1,13 @@
+{
+  "model": {
+    "display_name": "Opus"
+  },
+  "context_window": {
+    "context_window_size": 200000,
+    "total_input_tokens": 45000,
+    "used_percentage": 22.5
+  },
+  "workspace": {
+    "current_dir": "$REPO"
+  }
+}

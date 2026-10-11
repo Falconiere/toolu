@@ -62,6 +62,8 @@ pub struct Spec {
   pub max_output_bytes: usize,
   /// When the run is over; the deadline terminates the whole group either way.
   pub wait: Wait,
+  /// The interval between nonblocking waits; shorter for latency-sensitive commands.
+  pub poll_interval: Duration,
 }
 
 impl Spec {
@@ -75,6 +77,7 @@ impl Spec {
       timeout: DEFAULT_TIMEOUT,
       max_output_bytes: DEFAULT_MAX_OUTPUT_BYTES,
       wait: Wait::Group,
+      poll_interval: POLL,
     }
   }
 }
@@ -164,7 +167,7 @@ pub fn run_with(
   let budget = Budget::new(spec.max_output_bytes);
   let stdout = Drain::start(child.stdout.take(), &budget);
   let stderr = Drain::start(child.stderr.take(), &budget);
-  let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline, spec.wait)?;
+  let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline, spec)?;
   if let Some(Err(err)) = feeder.and_then(fed) {
     return Err(RunError::Stdin(err));
   }
@@ -187,6 +190,25 @@ pub fn run_with(
 /// # Errors
 /// [`RunError::EmptyArgv`] or [`RunError::Spawn`].
 pub fn detach(spec: &Spec) -> Result<u32, RunError> {
+  let mut child = detached_child(spec)?;
+  let pid = child.id();
+  std::thread::spawn(move || {
+    let _reaped = child.wait();
+  });
+  Ok(pid)
+}
+
+/// Start a one-shot child in its own group and leave it for init to reap when
+/// this short-lived caller exits. The caller must never wait for the child.
+///
+/// # Errors
+/// [`RunError::EmptyArgv`] or [`RunError::Spawn`].
+pub fn spawn_orphan(spec: &Spec) -> Result<u32, RunError> {
+  let child = detached_child(spec)?;
+  Ok(child.id())
+}
+
+fn detached_child(spec: &Spec) -> Result<Child, RunError> {
   let program = spec
     .argv
     .first()
@@ -205,13 +227,7 @@ pub fn detach(spec: &Spec) -> Result<u32, RunError> {
   if let Some(env) = &spec.env {
     command.env_clear().envs(env.vars());
   }
-  let mut child = guard::unblocked(|| command.spawn())
-    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
-  let pid = child.id();
-  std::thread::spawn(move || {
-    let _reaped = child.wait();
-  });
-  Ok(pid)
+  guard::unblocked(|| command.spawn()).map_err(|err| RunError::Spawn(format!("{program}: {err}")))
 }
 
 fn command(program: &str, spec: &Spec) -> Command {
@@ -235,6 +251,9 @@ fn command(program: &str, spec: &Spec) -> Command {
 /// that closed its stdin first is not an error.
 fn feed(child: &mut Child, input: Vec<u8>) -> Option<JoinHandle<Result<(), String>>> {
   let mut pipe = child.stdin.take()?;
+  if input.is_empty() {
+    return None;
+  }
   Some(std::thread::spawn(move || match pipe.write_all(&input) {
     Err(err) if err.kind() != ErrorKind::BrokenPipe => Err(err.to_string()),
     Ok(()) | Err(_) => Ok(()),
@@ -263,7 +282,7 @@ fn settle(
   pid: u32,
   drains: [&Drain; 2],
   deadline: Instant,
-  wait: Wait,
+  spec: &Spec,
 ) -> Result<(ExitStatus, bool), RunError> {
   let mut status = None;
   let mut next_group_check = Instant::now();
@@ -273,7 +292,7 @@ fn settle(
     }
     let now = Instant::now();
     let streams_done = drains.iter().all(|drain| drain.finished());
-    if let Some(status) = status.filter(|_| streams_done && wait == Wait::Streams) {
+    if let Some(status) = status.filter(|_| streams_done && spec.wait == Wait::Streams) {
       return Ok((status, false));
     }
     if let Some(status) = status.filter(|_| streams_done && now >= next_group_check) {
@@ -285,7 +304,7 @@ fn settle(
     if now >= deadline {
       break;
     }
-    std::thread::sleep(POLL.min(deadline - now));
+    std::thread::sleep(spec.poll_interval.min(deadline - now));
   }
   let terminated = group::terminate_reaping(pid, &mut || {
     if status.is_none() {

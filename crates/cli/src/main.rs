@@ -45,6 +45,9 @@ pub(crate) struct Context<'a> {
 pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Command) -> Outcome {
   match fast::parse(words) {
     Some(Fast::HookProtocol) => Outcome::data(HOOK_PROTOCOL.to_string()),
+    Some(Fast::StatuslineRender) => {
+      toolu_statusline::render((context.stdin)().ok(), links::STATUS_SNAPSHOT)
+    }
     Some(Fast::Hook(request)) => hook::run(&request, context),
     None => dispatch::run(words, context, tree),
   }
@@ -56,9 +59,35 @@ fn main() -> ExitCode {
     stdin: &toolu_protocol::stdin::read_stdin,
     env: None,
   };
-  let outcome = run(&toolu_runtime::invocation::args(), &context, &tree::command);
-  output::emit(&outcome);
+  let words = toolu_runtime::invocation::args();
+  let outcome = run(&words, &context, &tree::command);
+  if raw_statusline(&words) {
+    output::emit_raw(&outcome);
+  } else {
+    output::emit(&outcome);
+  }
   ExitCode::from(outcome.exit.code())
+}
+
+fn raw_statusline(words: &[String]) -> bool {
+  if words.iter().any(|word| word == "--json") {
+    return false;
+  }
+  let mut positional = Vec::new();
+  let mut words = words.iter();
+  while let Some(word) = words.next() {
+    match word.as_str() {
+      "--host" | "--config-dir" => {
+        if words.next().is_none() {
+          return false;
+        }
+      }
+      "--quiet" | "-q" => {}
+      value if value.starts_with("--host=") || value.starts_with("--config-dir=") => {}
+      value => positional.push(value),
+    }
+  }
+  positional == ["statusline", "render"]
 }
 
 #[cfg(test)]

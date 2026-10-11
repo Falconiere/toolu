@@ -4,7 +4,8 @@ use std::process::Command;
 use toolu_runtime::env::Env;
 
 use super::{
-  base_branch, branch_slug, branch_slugs, common_dir, current_branch, has_git, linked_worktree,
+  base_branch, branch_slug, branch_slugs, common_dir, common_dir_without_git, current_branch,
+  has_git, linked_worktree,
 };
 
 fn env() -> Env {
@@ -60,6 +61,8 @@ fn the_redirected_paths_ask_git_for_the_same_answers() {
   assert!(linked_worktree(&env(), &wt));
   assert!(!linked_worktree(&redirected, &main));
   assert_eq!(common_dir(&redirected, &main), Some(git_dir.clone()));
+  assert_eq!(common_dir_without_git(&env(), &wt), Some(git_dir.clone()));
+  assert_eq!(common_dir_without_git(&redirected, &main), None);
   assert_eq!(common_dir(&env(), &wt), Some(git_dir));
   let worktree_env = env().with("GIT_CEILING_DIRECTORIES", "/nonexistent");
   assert!(

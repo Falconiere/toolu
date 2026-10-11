@@ -87,7 +87,7 @@ test("a ready startup records the selected plugins and logs one structured statu
     expect(record.selection).toBe("project");
     expect(record.plugins).toEqual([
       { name: "jev", entries: ["session-start", "check-binary"], artifacts: 1 },
-      { name: "statusline", entries: ["session-start", "check-binary"], artifacts: 1 },
+      { name: "statusline", entries: ["session-start"], artifacts: 1 },
     ]);
     expect(Date.now() - Date.parse(record.written)).toBeLessThan(120_000);
     expect(statusEntries(entries)).toEqual([

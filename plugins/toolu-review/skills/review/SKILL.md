@@ -24,8 +24,8 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
    Bats coverage for legacy scripts until #279 removes them.
 5. **Doc/comment accuracy** — comments must match behavior; e.g. no "one-time" on
    a block that runs every invocation; no stale paths after a move.
-6. **Tight test assertions** — assert the full identity, not a loose suffix
-   (`*/statusline/statusline.sh`, not `*/statusline.sh`).
+6. **Tight test assertions** — assert the full path and command identity, not a
+   loose basename suffix.
 7. **In-session migration WARNs** — a breaking change (moved path, removed symlink)
    must surface an actionable in-session hint, not a silent failure later.
 8. **Convention adherence** — follow `AGENTS.md` / related convention files the CI

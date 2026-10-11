@@ -7,18 +7,21 @@ import { shellProblems } from "../final-removal-shell.ts";
 
 const JEV = "plugins/jev/scripts/jev.sh";
 const REVIEW = "plugins/toolu-review/scripts/write-state.sh";
+const STATUSLINE = "plugins/statusline/scripts/statusline.sh";
 
 function trackedShims(sb: Sandbox): string {
   const review = join(sb.project, REVIEW);
   sb.write(JEV, '#!/bin/sh\nexec toolu jev "$@"\n');
   sb.write(REVIEW, '#!/bin/sh\nexec toolu review write-state "$@"\n');
+  sb.write(STATUSLINE, '#!/bin/sh\nexec toolu statusline render "$@"\n');
   chmodSync(join(sb.project, JEV), 0o755);
   chmodSync(review, 0o755);
+  chmodSync(join(sb.project, STATUSLINE), 0o755);
   sb.git("add", "-A");
   return review;
 }
 
-test.concurrent("the two exact native shims pass with real tracked files", () => {
+test.concurrent("the three exact native shims pass with real tracked files", () => {
   using sb = createSandbox({ git: true });
   trackedShims(sb);
   expect(shellProblems(sb.project)).toEqual([]);

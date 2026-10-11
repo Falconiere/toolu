@@ -79,6 +79,9 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   if let Some(outcome) = ast_grep_hook(request, context) {
     return prefix(advisory, outcome);
   }
+  if let Some(outcome) = statusline_hook(request, context) {
+    return prefix(advisory, outcome);
+  }
   let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
   compose(advisory, result)
 }
@@ -111,6 +114,27 @@ fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome
     &owned
   };
   Some(toolu_hub::ast_grep::register(env, detect(env, None).host))
+}
+
+/// The statusline's native `SessionStart` entry.
+fn statusline_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "statusline"
+    || request.name != "session-start"
+    || request.event.as_deref() != Some("SessionStart")
+  {
+    return None;
+  }
+  let owned;
+  let env = if let Some(env) = context.env {
+    env
+  } else {
+    owned = Env::process();
+    &owned
+  };
+  Some(toolu_statusline::session_start(
+    env,
+    request.plugin_root.as_deref().map(Path::new),
+  ))
 }
 
 /// The three jev hooks. Anything else stays the "has no hook" path.

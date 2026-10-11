@@ -105,14 +105,6 @@
         "source": "startup"
       }
     },
-    "statusline/check-binary": {
-      "stdin": {
-        "session_id": "hook-bench",
-        "cwd": "${PROJECT}",
-        "hook_event_name": "SessionStart",
-        "source": "startup"
-      }
-    },
     "statusline/session-start": {
       "stdin": {
         "session_id": "hook-bench",

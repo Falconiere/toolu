@@ -16,6 +16,8 @@ use crate::registry::starts_hook_line;
 pub(crate) enum Fast {
   /// `toolu --hook-protocol`: the native signature the launcher checks.
   HookProtocol,
+  /// The host's exact `toolu statusline render` refresh command.
+  StatuslineRender,
   /// `toolu [<plugin>] hook <name> …`.
   Hook(HookRequest),
 }
@@ -38,6 +40,7 @@ pub(crate) fn parse(words: &[String]) -> Option<Fast> {
   let strs: Vec<&str> = words.iter().map(String::as_str).collect();
   match strs.as_slice() {
     ["--hook-protocol"] => Some(Fast::HookProtocol),
+    ["statusline", "render"] => Some(Fast::StatuslineRender),
     ["hook", name, rest @ ..] => hook("toolu", name, rest),
     [plugin, "hook", name, rest @ ..] if is_name(plugin) && starts_hook_line(plugin) => {
       hook(plugin, name, rest)

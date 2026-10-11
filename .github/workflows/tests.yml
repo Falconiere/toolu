@@ -324,6 +324,10 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo xtask check-startup --bin target/release/toolu
 
+      - name: statusline render budget
+        if: runner.os == 'Linux'
+        run: bun tooling/src/benchmarks/statusline.ts --assert
+
   # Static Linux builds (#411) from the first Rust PR, not first at release
   # time: a release build per musl target, and the binary must be static.
   rust-musl:

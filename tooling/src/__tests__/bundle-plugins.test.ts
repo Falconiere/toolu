@@ -162,12 +162,13 @@ test.concurrent("hook sources are excluded while their built bundles ship", asyn
   expect(isFile(join(ROOT, "plugins/toolu/hooks/src/sample.ts"))).toBe(true);
 });
 
-test.concurrent("no bash, bats or shell files enter the staged catalog", async () => {
+test.concurrent("only the approved shell helpers enter the staged catalog", async () => {
   using sb = createSandbox();
   const { dest, bundle } = stage(sb);
   expect((await bundle()).exitCode).toBe(0);
   const staged = readdirSync(dest, { recursive: true, encoding: "utf8" });
   expect(staged.filter((file) => /\.(sh|bash|bats)$/.test(file))).toEqual([
+    "statusline/scripts/statusline.sh",
     "jev/scripts/jev.sh",
     "toolu-review/scripts/write-state.sh",
   ]);

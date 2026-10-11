@@ -8,11 +8,9 @@ import {
   chmodSync,
   cpSync,
   existsSync,
-  lstatSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
-  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -241,29 +239,33 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
   });
 }
 
-async function nativeStatuslineFallback(ctx: EntryContext): Promise<EntryResult> {
+async function nativeStatuslineMissingBinary(ctx: EntryContext): Promise<EntryResult> {
   return withNativeCatalog("statusline", async (catalog) => {
     using s = shimmedSession(ctx, ["statusline"], ALLOWED_SCRIPT, catalog);
     s.env.TOOLU_BIN = "";
     // An empty TOOLU_BIN still searches PATH. Drop any directory that holds toolu
-    // so this case runs the transition bundle instead of the native binary.
+    // so this case exercises the install advisory without a native binary.
     s.env.PATH = (s.env.PATH ?? process.env.PATH ?? "")
       .split(":")
       .filter((dir) => dir.length > 0 && !existsSync(join(dir, "toolu")))
       .join(":");
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
     const helper = join(s.sb.project, DATA_ROOT, "statusline/statusline.sh");
-    const source = join(catalog, "plugins/statusline/hooks/dist/statusline.js");
+    const context = messagesText(s, "system");
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      helper:
-        existsSync(helper) &&
-        lstatSync(helper).isSymbolicLink() &&
-        realpathSync(helper) === realpathSync(source),
+      installNotice: context.includes("statusline plugin: toolu is not installed"),
+      installer: context.includes("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
+      helperAbsent: !existsSync(helper),
     };
     return {
-      pass: observed.hostExit === 0 && observed.ready === 1 && observed.helper,
+      pass:
+        observed.hostExit === 0 &&
+        observed.ready === 1 &&
+        observed.installNotice &&
+        observed.installer &&
+        observed.helperAbsent,
       observed,
     };
   });
@@ -299,9 +301,8 @@ export const STARTUP_SCENARIOS: EntryScenario[] = [
     run: nativeMissingBinary,
   },
   {
-    id: "entry.native-statusline-fallback",
-    claim:
-      "A generated native statusline launcher publishes its helper through the transition bundle",
-    run: nativeStatuslineFallback,
+    id: "entry.native-statusline-missing-binary",
+    claim: "Without native toolu, statusline advises installation and publishes no stale helper",
+    run: nativeStatuslineMissingBinary,
   },
 ];
