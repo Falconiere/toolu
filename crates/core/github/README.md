@@ -47,8 +47,7 @@ holds the `x-ratelimit-*` headers. `Cost` serializes for the engine's journal.
 
 ## Retry policies
 
-- `Config::one_shot(&Env)` keeps pr-babysit's gh semantics
-  (`plugins/pr-babysit/hooks/src/babysit/gh.ts`):
+- `Config::one_shot(&Env)` keeps pr-babysit's gh semantics:
   - `PB_GH_ATTEMPTS`: attempts, default 3;
   - `PB_GH_BACKOFF`: the wait after each failed attempt, default `2 4 8`, and
     2 s past the list;

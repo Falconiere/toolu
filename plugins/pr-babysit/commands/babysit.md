@@ -2,12 +2,12 @@
 
 Read `${CLAUDE_PLUGIN_ROOT}/workflows/babysit.md` completely and execute its
 Claude Code controller plus the shared strict-clearance workflow. Pass
-`$ARGUMENTS` as the workflow input. Claude Code retains the cron-driven
-continuation mechanism defined there.
+`$ARGUMENTS` as the workflow input. Between cycles, Claude Code runs
+`toolu babysit wait` as a background Bash call, as defined there.
 
-Each tick is one command: `bun "${CLAUDE_PLUGIN_ROOT}/hooks/dist/babysit-tick.js"`
-with `--state-file /tmp/pr-babysit-<slot>.json`; its result contract is
+Every check is `toolu babysit tick` or `toolu babysit wait` with
+`--state-file /tmp/pr-babysit-<slot>.json`; its result contract is
 `${CLAUDE_PLUGIN_ROOT}/skills/babysit/references/helper.md`. Trust that
 result — never write a polling script or controller of your own, and
 never re-fetch with ad-hoc `gh` calls what it already reports — and act through
-`babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`.
+`toolu babysit reply`, `toolu babysit resolve` and `toolu babysit record`.

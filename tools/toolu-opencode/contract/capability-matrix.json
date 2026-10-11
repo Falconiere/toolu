@@ -311,10 +311,10 @@
       "owner": ["OP-23"],
       "axes": {
         "tools": {
-          "use": "Tick, collect, reply, resolve and record bundles run through bash",
+          "use": "toolu babysit tick, wait, reply, resolve and record run through bash",
           "required": true,
           "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "mechanism": "bash tool + shell.env (native toolu on PATH)",
           "kind": "tool",
           "status": "supported",
           "evidence": ["env.shell"],
@@ -367,7 +367,7 @@
       },
       "notes": [
         {
-          "need": "Tick scheduling: the documented plugin API has no cron or loop primitive, so the OpenCode controller runs bounded ticks in the invoking turn (bash sleep of backoff.waitSeconds, at most 60 s) and resumes from the slot state file when invoked again",
+          "need": "Tick scheduling: the documented plugin API has no cron or loop primitive, so the OpenCode controller runs toolu babysit wait (at most 55 s) again and again in the invoking turn and resumes from the slot state file when invoked again",
           "owner": "OP-23"
         }
       ]

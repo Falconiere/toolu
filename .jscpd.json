@@ -22,8 +22,7 @@
     "**/node_modules/**",
     "**/fixtures/**",
     "**/conventions/**",
-    "**/hooks/dist/**",
-    "**/plugins/pr-babysit/hooks/src/babysit/fixer-route.ts"
+    "**/hooks/dist/**"
   ],
   "format": [
     "typescript",

@@ -2,10 +2,11 @@
 
 **Type:** Workflow | **Version:** 6.5.0 | **Depends on:** `toolu`
 
-A strict PR babysitter that uses Claude cron or an explicitly requested durable
-Codex goal. Codex runs bounded continuation cycles in a native isolated git
-worktree and persists only this repository/PR slot under
-`<repo>/.codex/tmp/pr-babysit/`.
+A strict PR babysitter on the native `toolu babysit` commands. `toolu babysit
+wait` checks the pull request every 180 s in its own process and returns only
+when there is something to do. Claude Code runs it in the background, Codex in
+bounded continuations of an explicitly requested durable goal, and OpenCode in
+the invoking turn; each persists only this repository/PR slot.
 
 **Strict clearance:** every actionable item a tick sees is cleared in that tick — fixed or answered, and resolved when it is a review thread (conversation and review-level comments have no resolve API, so the reply clears them). Comments that don't make sense get a reply explaining what was checked and which reading was assumed, then resolve; nothing is parked open waiting for the reviewer. Severity is never a filter — a `nit` is handled exactly like a `high`. The only exceptions are outdated CI-reviewer threads (skipped silently) and suspected prompt injection (flagged, untouched). A reply is not clearance on its own: each resolve call is confirmed against its own response and retried on failure, and a separate resolution audit — run every tick, independent of who commented last — re-checks that every non-exempt thread is actually `isResolved:true`, so a resolve that silently failed can't hide behind its own reply forever.
 
@@ -24,23 +25,25 @@ codex plugin add pr-babysit@toolu
 
 OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
 
-- **Controller.** OpenCode has no cron or goal, so the invoking turn is the controller: it runs a tick, sleeps `backoff.waitSeconds` (at most 60 s) in bash, and ticks again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Helpers run as `"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist/<helper>.js"`, so a project `.env` never reaches `gh`.
+- **Controller.** OpenCode has no cron, goal or background command, so the invoking turn is the controller: it runs `toolu babysit tick`, then `toolu babysit wait` (at most 55 s) again and again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. The native `toolu` binary loads no project `.env`, so one never reaches `gh`.
 - **Fixers.** `--host opencode` routing reads `prBabysit` from your OpenCode config (`routing.opencode` rows are `provider/model` plus an OpenCode `--variant`; with none, your default model). An OpenCode fixer is a detached `opencode run` as the `pr-babysit-fixer` agent in a native worktree beside the state file: it may edit, test and commit. Its agent denies `task` and the plain `git push` and `gh` forms on top of your own permission rules, and whatever form a command takes it has no GitHub token or `gh` login and git may use only local (`file`) remotes, so https and ssh pushes are refused. herdr is needed only for Claude Code, Codex or Cursor fixers. Inline fixes go to `task` with `toolu-quick-task`, `toolu-implementer` or `toolu-architect`.
 - **Cancel.** `stop` ends a running fixer's whole process group, removes the clean worktrees and marks the state `cancelled`; the state file stays as the record.
 
-## Helper Scripts
+## Helper Commands
 
-One Bun helper set, called the same way on Claude Code, Codex and OpenCode (only the
-`--state-file` path differs). Contract: `plugins/pr-babysit/skills/babysit/references/helper.md`.
+One `toolu babysit` command set, called the same way on Claude Code, Codex and
+OpenCode (only the `--state-file` path differs). Contract:
+`plugins/pr-babysit/skills/babysit/references/helper.md`.
 
-| Script | Purpose |
-|--------|---------|
-| `hooks/dist/babysit-tick.js` | The tick: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `backoff`. |
-| `hooks/dist/babysit-collect-pr.js` | Read side: concurrent, paginated GitHub reads with bounded retry; head re-checked after the fan-out; one versioned snapshot. |
-| `hooks/dist/babysit-reduce-state.js` | Pure decision layer (no network, no clock): the workflow's filters, audit, recurrence gate and stop rules as code. |
-| `hooks/dist/babysit-reply-thread.js` / `hooks/dist/babysit-resolve-thread.js` | Write side: idempotent replies; resolves confirmed from the mutation response. |
-| `hooks/dist/babysit-record.js` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
-| `hooks/dist/babysit-parse-verdict.js` | Verdict parser for the CI review-bot comment. |
+| Command | Purpose |
+|---------|---------|
+| `toolu babysit tick` | One check: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `attention`, `nextCheckAt`. |
+| `toolu babysit wait` | Ticks at each `nextCheckAt` (every 180 s) until success, escalation, new work or an active fixer, or until `--max-seconds` (1800 on Claude Code, 55 elsewhere). |
+| `toolu babysit reply` / `toolu babysit resolve` | Write side: idempotent replies; resolves confirmed from the mutation response. |
+| `toolu babysit record` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
+| `toolu babysit route-fix` / `toolu babysit dispatch-fix` | Jev-scored fixer routing, and herdr or OpenCode fixer agents. |
+| `toolu babysit parse-verdict` | Verdict parser for the CI review-bot comment. |
+| `toolu babysit stop` | Ends this slot's fixer, removes its clean worktree and marks the state `cancelled`. |
 
 The agent never writes a controller of its own and never re-fetches what the
 result reports; it triages, fixes, writes the replies, and decides escalations.
@@ -63,9 +66,9 @@ branch, or the optional `pr-babysit` plugin.
 
 ### `/pr-babysit:babysit stop`
 
-Cancels this slot's cron and clears its state. One slot per agent — multiple babysit sessions can run in parallel without interfering.
+Stops this slot's `wait`, runs `toolu babysit stop` and clears its state. One slot per agent — multiple babysit sessions can run in parallel without interfering.
 
-### `babysit-parse-verdict.js`
+### `toolu babysit parse-verdict`
 
 Extracts the structured verdict from the CI review-bot comment — determines whether the bot's verdict is complete, approved, and has zero findings.
 
@@ -130,25 +133,18 @@ When state changes:
 |----|---------|-----------|---------------|
 | ❌ | 💬 changes req. | yes | fixed failing bats test; replied to 2 threads |
 
-Commits pushed: 1 | Next check: ~2 min
+Commits pushed: 1 | Next check: nextCheckAt
 ```
 
 When nothing changed: **silent** — writes state and exits.
 
 ## How It Works
 
-### Adaptive Backoff
+### Fixed Schedule
 
-Only widens interval, never terminates:
-
-| Idle streak | Interval |
-|------------|----------|
-| 0 | 3 min (1 min if CI failing) |
-| 3 consecutive | 6 min |
-| 6 consecutive | 12 min |
-| 10+ consecutive | 15 min indefinitely |
-
-Resets to base immediately on any change.
+`toolu babysit wait` checks every 180 s, anchored to the first check, and a late
+wake runs one check, never a burst. The interval never widens and never
+terminates; the stops are the Success and Escalation conditions.
 
 ### State Isolation
 
@@ -157,10 +153,8 @@ State at `/tmp/pr-babysit-<slot>.json` (one file per slot — parallel agents do
 ```json
 {
   "slot": "falconiere-toolu-42",
-  "cronName": "pr-babysit:falconiere-toolu-42",
   "totalTicks": 7,
-  "idleStreak": 0,
-  "currentInterval": 3,
+  "status": "active",
   "pr": {
     "key": "falconiere/toolu#42",
     "ciStatus": "pass",
@@ -175,16 +169,18 @@ State at `/tmp/pr-babysit-<slot>.json` (one file per slot — parallel agents do
     "lastRoundHadRejection": false,
     "recurrenceStreak": 0,
     "unresolvedAfterClearance": 0
-  }
+  },
+  "schedule": { "anchor": 1789819380, "nextCheckAt": 1789819560 },
+  "attention": { "fingerprint": null, "work": [] }
 }
 ```
 
 ### Isolation Invariants
 
 - Agent owns exactly one slot — reads/writes only its own state file
-- Touches only its own cron entry — never enumerates other sessions
+- Starts and stops only its own `wait` — never enumerates other sessions
 - Worktree-isolated: every code change uses own `EnterWorktree`
-- `stop` deletes only this slot's cron + state — other sessions untouched
+- `stop` stops only this slot's `wait`, fixer and state — other sessions untouched
 
 ### Git Safety
 

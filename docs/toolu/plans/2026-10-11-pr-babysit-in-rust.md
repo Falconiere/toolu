@@ -151,7 +151,7 @@ engine prompt → Markdown, OpenCode generator, tooling, deletion → full gate.
   {
     "id": "docs-delete",
     "title": "Rewrite plugins/pr-babysit Markdown to toolu babysit (no cron, no backoff, wait loop), OpenCode generator and acceptance scenarios, herdr smoke, tooling references, AGENTS.md, docs/pr-babysit; delete plugins/pr-babysit/hooks/src and hooks/dist",
-    "check": "test ! -e plugins/pr-babysit/hooks/src && test ! -e plugins/pr-babysit/hooks/dist && ! rg -n 'hooks/dist|scripts/|\\bbun\\b|CronCreate' plugins/pr-babysit && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli && bun test tools/toolu-opencode tooling/src/__tests__/pr-babysit-herdr-smoke.test.ts",
+    "check": "test ! -e plugins/pr-babysit/hooks/src && test ! -e plugins/pr-babysit/hooks/dist && ! rg -n -g '*.md' 'hooks/dist|scripts/|\\bbun\\b|CronCreate' plugins/pr-babysit && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli && bun test --timeout 60000 tools/toolu-opencode tooling/src/__tests__/pr-babysit-herdr-smoke.test.ts",
     "ac_refs": ["AC-9", "AC-10"],
     "depends_on": ["hooks-cli", "engine"],
     "paths": ["plugins/pr-babysit/", "tools/toolu-opencode/", "tooling/", "AGENTS.md", "docs/"],
@@ -214,5 +214,6 @@ pr-babysit skills.
 - Steps: 🟡 should-fix: AC-7 had no ledger step. Fixed: `live-tick` on a real merged PR; clearing proven on this PR in babysit.
 - Verification: 🟡 should-fix: delivery sequence missing. Fixed above.
 - Paths: 🔵 consider: TS sources are not declared because the `docs-delete` step removes them; the Rust tests carry the goldens.
+- Execution (2026-10-11): the `docs-delete` check scans only the plugin's Markdown. `hooks/hooks.json` is the generated native launcher (`cargo xtask print-hook`, gated by `check-hooks`), whose shared Bun fallback names `hooks/dist` and `bun` until #440, as in every ported plugin (`jev`, `toolu-review`); AC-9 is about the skills, commands, agents and workflow. Its `bun test` takes `test:unit`'s `--timeout 60000`, because `ast-grep-native.test.ts` waits out a 30 s rule deadline.
 
 **Status:** Approved

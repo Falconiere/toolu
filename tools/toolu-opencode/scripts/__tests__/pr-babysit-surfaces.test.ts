@@ -51,8 +51,11 @@ const BANNED = [
   "--host claude",
   "--host codex",
   "CLAUDE_PLUGIN_ROOT",
-  "### Claude Code scheduling",
+  "### Claude Code",
   "### Codex",
+  "hooks/dist",
+  "TOOLU_BUN",
+  "backoff.waitSeconds",
   'bun "$PLUGIN_ROOT',
   "`--host` is this controller",
   "Claude cron interval",
@@ -83,10 +86,9 @@ test("the skill and workflow name the OpenCode controller, routing, state and he
   for (const needle of [
     "--host opencode",
     "$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json",
-    '"$TOOLU_PLUGIN_ROOT_PR_BABYSIT"',
-    '"$TOOLU_BUN" --no-env-file',
-    "sleep <backoff.waitSeconds>",
-    "wait --timeout-seconds 45",
+    "toolu babysit wait",
+    "toolu babysit route-fix --host opencode",
+    "dispatch-fix wait --timeout-seconds 45",
   ])
     expect(skill).toContain(needle);
   expect(skill).toContain('description: "Use when the user explicitly asks, or an authorized');
@@ -94,7 +96,6 @@ test("the skill and workflow name the OpenCode controller, routing, state and he
   for (const needle of [
     "### OpenCode start or resume",
     "### OpenCode cancel",
-    "`PLUGIN_ROOT` = `$TOOLU_PLUGIN_ROOT_PR_BABYSIT`",
     "--host opencode \\",
     '`task` with `subagent_type: "toolu-implementer"`',
     "$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.inline",
@@ -119,10 +120,8 @@ test("the shared authorization and execution handoff section is kept verbatim", 
 test("a moved anchor fails generation and names the source", () => {
   const source = readFileSync(join(ROOT, SOURCE_WORKFLOW), "utf8");
   expect(() =>
-    applyPort(SOURCE_WORKFLOW, source.replace("### Claude Code scheduling", "### Claude")),
-  ).toThrow(
-    `opencode port: ${SOURCE_WORKFLOW}: expected 1 match(es), found 0: ### Claude Code scheduling`,
-  );
+    applyPort(SOURCE_WORKFLOW, source.replace("### Claude Code\n", "### Claude\n")),
+  ).toThrow(`opencode port: ${SOURCE_WORKFLOW}: expected 1 match(es), found 0: ### Claude Code`);
   expect(() =>
     applyPort(SOURCE_WORKFLOW, source.replace("### OpenCode start or resume\n", "")),
   ).toThrow("found 0: ### OpenCode start or resume");
