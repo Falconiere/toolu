@@ -21,9 +21,10 @@ use crate::client::exchange_retry;
 use crate::disk::{read_value, write_value};
 use crate::http::Config as HttpConfig;
 use crate::lock::live;
+use crate::notify::AttentionOptions;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::{AttentionOptions, ServeOptions, serve_with_http};
+use crate::socket::{ServeOptions, serve_with_http};
 use crate::verbs::{failed, text};
 
 /// Run, ensure or replace the resident engine.

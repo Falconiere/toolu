@@ -22,6 +22,22 @@ const QUEUE: usize = 64;
 /// POST attempts per notice.
 const ATTEMPTS: u32 = 5;
 
+/// The first reminder delay and the notifier, when notifications are on.
+pub(crate) struct AttentionOptions {
+  pub(crate) remind_ms: u64,
+  pub(crate) notify: Option<Settings>,
+}
+
+impl Default for AttentionOptions {
+  /// Reminders after 30 minutes and no notifier.
+  fn default() -> Self {
+    Self {
+      remind_ms: crate::model::REMIND_MS,
+      notify: None,
+    }
+  }
+}
+
 /// How the notifier thread delivers.
 #[derive(Debug, Clone)]
 pub(crate) struct Settings {

@@ -21,6 +21,7 @@ use crate::dispatch::{dispatch, expire, ingest, satisfy};
 use crate::http::{self, Config as HttpConfig};
 use crate::lock::Held;
 use crate::model::World;
+use crate::notify::AttentionOptions;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault, Stop};
 use crate::socket_deadline::{github_ready, stall_ready, wake_after};
@@ -66,12 +67,6 @@ pub(crate) struct ServeOptions<'a> {
   pub(crate) http: Option<HttpConfig>,
   pub(crate) tick: &'a dyn BabysitTick,
   pub(crate) attention: AttentionOptions,
-}
-
-/// The first reminder delay and the notifier, when notifications are on.
-pub(crate) struct AttentionOptions {
-  pub(crate) remind_ms: u64,
-  pub(crate) notify: Option<crate::notify::Settings>,
 }
 
 impl Drop for StopAccept<'_> {

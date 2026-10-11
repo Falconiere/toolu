@@ -59,6 +59,16 @@ fn outcome(paths: &Paths, names: &[&str]) -> Record {
   panic!("no {names:?} record");
 }
 
+/// Send one notice to a notifier posting to the fixture's `/hook`, until it is journaled.
+fn post_once(root: &Path, fixture: &Fixture) -> Paths {
+  let paths = Paths::at(root);
+  let url = fixture.url("/hook");
+  let notifier = Notifier::spawn(settings(env(root, Some(&url)), fixture), paths.clone());
+  notifier.tx.try_send(notice("which?")).expect("send");
+  let _row = outcome(&paths, &["notify", "notify-failed"]);
+  paths
+}
+
 #[test]
 fn notify_retries_server_errors_then_succeeds_with_a_redacted_body() {
   let tmp = tempfile::tempdir().expect("temp");
@@ -101,13 +111,7 @@ fn notify_retries_dropped_connections_five_times_then_fails() {
   let tmp = tempfile::tempdir().expect("temp");
   let fixture = Fixture::start().expect("fixture");
   fixture.route("/hook", Reply::dropped()).expect("route");
-  let paths = Paths::at(tmp.path());
-  let url = fixture.url("/hook");
-  let notifier = Notifier::spawn(
-    settings(env(tmp.path(), Some(&url)), &fixture),
-    paths.clone(),
-  );
-  notifier.tx.try_send(notice("which?")).expect("send");
+  let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
   assert_eq!(row.name, "notify-failed");
   assert_eq!(row.note, "channel=url attempts=5 status=transport");
@@ -120,13 +124,7 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
   fixture
     .route("/hook", Reply::new(404, "gone"))
     .expect("route");
-  let paths = Paths::at(tmp.path());
-  let url = fixture.url("/hook");
-  let notifier = Notifier::spawn(
-    settings(env(tmp.path(), Some(&url)), &fixture),
-    paths.clone(),
-  );
-  notifier.tx.try_send(notice("which?")).expect("send");
+  let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
   assert_eq!(row.note, "channel=url attempts=1 status=404");
   let other = tempfile::tempdir().expect("temp");

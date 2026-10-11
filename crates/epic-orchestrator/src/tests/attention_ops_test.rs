@@ -16,9 +16,10 @@ use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::journal::{self, Record};
 use crate::model::{Ack, Report};
+use crate::notify::AttentionOptions;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault};
-use crate::socket::{AttentionOptions, ServeOptions, serve_with_http};
+use crate::socket::{ServeOptions, serve_with_http};
 
 const CANARY: &str = "canary-status-token-450";
 
