@@ -143,6 +143,51 @@ pub(crate) fn serve(fixture: &Fixture, heads: &[&str], graphql: Vec<Reply>) {
   );
 }
 
+/// The head SHA of the open pull request [`serve_open`] serves.
+pub(crate) const OPEN_SHA: &str = "0123456789abcdef0123456789abcdef01234567";
+
+/// A GraphQL check-run node.
+pub(crate) fn check_run(name: &str, status: &str, conclusion: Option<&str>) -> Value {
+  json!({"__typename": "CheckRun", "name": name, "status": status, "conclusion": conclusion,
+    "detailsUrl": format!("https://github.com/Falconiere/toolu/actions/{name}"),
+    "startedAt": "2026-10-11T12:00:00Z", "completedAt": null,
+    "checkSuite": {"workflowRun": {"workflow": {"name": "tests"}}}})
+}
+
+/// Serve an open PR 115 at page size 100 with no review threads, `checks` as
+/// its head commit's checks and `verdict` as the review bot's comment, last
+/// updated at `updated`. One GraphQL reply answers both the PR and the
+/// threads query.
+pub(crate) fn serve_open(fixture: &Fixture, checks: &[Value], verdict: &str, updated: &str) {
+  let pr = json!({
+    "number": 115, "title": "feat: open", "url": "https://github.com/Falconiere/toolu/pull/115",
+    "author": {"login": "Falconiere"}, "state": "OPEN", "baseRefName": "main",
+    "headRefName": "feat/open", "headRefOid": OPEN_SHA, "mergeable": "MERGEABLE",
+    "reviewDecision": null,
+    "commits": {"nodes": [{"commit": {"statusCheckRollup": {"contexts": {"nodes": checks}}}}]},
+    "reviewThreads": {"pageInfo": {"hasNextPage": false, "endCursor": null}, "nodes": []},
+  });
+  let page = json!({"data": {"rateLimit": {"cost": 1}, "repository": {"pullRequest": pr}}});
+  fixture
+    .route("/graphql", Reply::new(200, page.to_string()))
+    .unwrap();
+  let head = json!({"head": {"sha": OPEN_SHA}}).to_string();
+  fixture
+    .route(&format!("{ROOT}/pulls/115"), Reply::new(200, head))
+    .unwrap();
+  let comment = json!([{
+    "id": 1, "body": verdict, "user": {"login": "github-actions[bot]", "type": "Bot"},
+    "created_at": "2026-10-11T12:00:00Z", "updated_at": updated,
+    "html_url": "https://github.com/Falconiere/toolu/pull/115#issuecomment-1",
+  }]);
+  let comments = format!("{ROOT}/issues/115/comments?per_page=100");
+  fixture
+    .route(&comments, Reply::new(200, comment.to_string()))
+    .unwrap();
+  let reviews = format!("{ROOT}/pulls/115/reviews?per_page=100");
+  fixture.route(&reviews, Reply::new(200, "[]")).unwrap();
+}
+
 /// The GraphQL replies of one unchanged collection.
 pub(crate) fn round() -> Vec<Value> {
   let mut pages = vec![pr_page()];

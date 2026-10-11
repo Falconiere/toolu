@@ -13,15 +13,16 @@ mod fixture;
 mod json;
 mod lock;
 mod pattern;
+mod record;
 #[cfg(test)]
 mod recorded;
-mod record;
 mod reduce;
 mod schedule;
 mod sha1;
 mod state;
 mod tick;
 mod verdict;
+mod wait;
 mod writes;
 
 /// The plugin this crate belongs to: `plugins/pr-babysit`.

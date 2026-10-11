@@ -23,7 +23,10 @@ fn read(path: &PathBuf) -> Value {
 
 fn resolved(is_resolved: bool) -> Reply {
   let thread = json!({"id": "PRRT_a", "isResolved": is_resolved});
-  Reply::new(200, json!({"data": {"resolveReviewThread": {"thread": thread}}}).to_string())
+  Reply::new(
+    200,
+    json!({"data": {"resolveReviewThread": {"thread": thread}}}).to_string(),
+  )
 }
 
 #[test]
@@ -33,11 +36,21 @@ fn a_thread_reply_posts_once_records_its_id_and_refuses_a_duplicate() {
   let fixture = Fixture::start().unwrap();
   let posted = json!({"id": 7234, "html_url": "https://github.com/Falconiere/toolu/pull/165#c"});
   let endpoint = "/repos/Falconiere/toolu/pulls/165/comments/41/replies";
-  fixture.route(endpoint, Reply::new(201, posted.to_string())).unwrap();
+  fixture
+    .route(endpoint, Reply::new(201, posted.to_string()))
+    .unwrap();
   let client = recorded::client(&fixture);
   let env = Env::default();
-  let slot = Slot { path: &path, env: &env, now: NOW };
-  let to = Target::Thread { thread: "PRRT_a", root: 41, in_reply_to: 42 };
+  let slot = Slot {
+    path: &path,
+    env: &env,
+    now: NOW,
+  };
+  let to = Target::Thread {
+    thread: "PRRT_a",
+    root: 41,
+    in_reply_to: 42,
+  };
   let done = reply(&client, &slot, &to, "Fixed the empty case.\n").unwrap();
   assert_eq!(done["key"], "thread:PRRT_a@42");
   assert_eq!(done["commentId"], 7234);
@@ -62,10 +75,16 @@ fn conversation_and_review_replies_post_issue_comments_under_their_own_keys() {
   let path = state(&dir);
   let fixture = Fixture::start().unwrap();
   let endpoint = "/repos/Falconiere/toolu/issues/165/comments";
-  fixture.route(endpoint, Reply::new(201, r#"{"id": 9}"#)).unwrap();
+  fixture
+    .route(endpoint, Reply::new(201, r#"{"id": 9}"#))
+    .unwrap();
   let client = recorded::client(&fixture);
   let env = Env::default();
-  let slot = Slot { path: &path, env: &env, now: NOW };
+  let slot = Slot {
+    path: &path,
+    env: &env,
+    now: NOW,
+  };
   reply(&client, &slot, &Target::Conversation(5), "ok").unwrap();
   let done = reply(&client, &slot, &Target::Review(6), "ok").unwrap();
   assert_eq!(done["url"], Value::Null);
@@ -80,11 +99,22 @@ fn a_reply_without_a_comment_id_records_nothing() {
   let path = state(&dir);
   let original = std::fs::read(&path).unwrap();
   let fixture = Fixture::start().unwrap();
-  fixture.route("/repos/Falconiere/toolu/issues/165/comments", Reply::new(201, "{}")).unwrap();
+  fixture
+    .route(
+      "/repos/Falconiere/toolu/issues/165/comments",
+      Reply::new(201, "{}"),
+    )
+    .unwrap();
   let client = recorded::client(&fixture);
   let env = Env::default();
-  let slot = Slot { path: &path, env: &env, now: NOW };
-  let failure = reply(&client, &slot, &Target::Conversation(5), "ok").err().unwrap();
+  let slot = Slot {
+    path: &path,
+    env: &env,
+    now: NOW,
+  };
+  let failure = reply(&client, &slot, &Target::Conversation(5), "ok")
+    .err()
+    .unwrap();
   assert_eq!(failure.code, "invalid_json");
   assert_eq!(std::fs::read(&path).unwrap(), original);
 }
@@ -97,10 +127,20 @@ fn resolve_records_only_a_confirmed_mutation_and_skips_a_repeat() {
   fixture.route("/graphql", resolved(true)).unwrap();
   let client = recorded::client(&fixture);
   let env = Env::default();
-  let slot = Slot { path: &path, env: &env, now: NOW };
+  let slot = Slot {
+    path: &path,
+    env: &env,
+    now: NOW,
+  };
   let done = resolve(&client, &slot, "PRRT_a", Duration::ZERO).unwrap();
-  assert_eq!(done, json!({"ok": true, "thread": "PRRT_a", "confirmed": true, "attempts": 1}));
-  assert_eq!(read(&path)["actions"]["resolved"]["PRRT_a"]["confirmed"], true);
+  assert_eq!(
+    done,
+    json!({"ok": true, "thread": "PRRT_a", "confirmed": true, "attempts": 1})
+  );
+  assert_eq!(
+    read(&path)["actions"]["resolved"]["PRRT_a"]["confirmed"],
+    true
+  );
   let again = resolve(&client, &slot, "PRRT_a", Duration::ZERO).unwrap();
   assert_eq!(again["alreadyResolved"], true);
   assert_eq!(again["at"], NOW);
@@ -116,8 +156,14 @@ fn an_unconfirmed_resolve_tries_three_times_and_leaves_the_state_unchanged() {
   fixture.route("/graphql", resolved(false)).unwrap();
   let client = recorded::client(&fixture);
   let env = Env::default();
-  let slot = Slot { path: &path, env: &env, now: NOW };
-  let failure = resolve(&client, &slot, "PRRT_a", Duration::ZERO).err().unwrap();
+  let slot = Slot {
+    path: &path,
+    env: &env,
+    now: NOW,
+  };
+  let failure = resolve(&client, &slot, "PRRT_a", Duration::ZERO)
+    .err()
+    .unwrap();
   assert_eq!(failure.code, "resolve_unconfirmed");
   assert_eq!(failure.exit(), toolu_protocol::exit::Exit::TempFail);
   assert_eq!(failure.extra["lastResponse"]["isResolved"], false);
