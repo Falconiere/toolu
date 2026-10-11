@@ -17,7 +17,7 @@ use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::serve;
+use crate::socket::{ServeOptions, serve_with_http as serve};
 
 #[test]
 fn a_status_path_yields_the_issue_key_and_state_dir() {
@@ -162,7 +162,7 @@ fn status_and_pause_fail_when_the_socket_never_opens() {
 }
 
 #[test]
-fn verbs_round_trip_on_a_local_engine() {
+fn status_cli_round_trip_on_a_local_engine() {
   let tmp = tempfile::tempdir().expect("temp");
   let (paths, env) = root(tmp.path());
   let epic = tmp.path().join("epic");
@@ -173,12 +173,25 @@ fn verbs_round_trip_on_a_local_engine() {
   )
   .expect("registry");
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, &()));
+  let handle = thread::spawn(move || serve_default(background));
   wait_live(&paths);
   assert_status_pause_and_report(&env, &epic);
   assert_wait_ack_and_answer(&env);
   exchange_retry(&paths, PROTOCOL, &json!({"op": "stop"})).expect("stop");
   handle.join().expect("engine").expect("serve");
+}
+
+fn serve_default(paths: Paths) -> Result<(), String> {
+  serve(
+    paths,
+    None,
+    Fault::None,
+    PROTOCOL,
+    ServeOptions {
+      http: None,
+      tick: &(),
+    },
+  )
 }
 
 fn assert_status_pause_and_report(env: &Env, epic: &Path) {
@@ -189,6 +202,14 @@ fn assert_status_pause_and_report(env: &Env, epic: &Path) {
       .stdout
       .expect("status")
       .contains("\"engine\":\"running\"")
+  );
+  let unknown = status(&parse(&["epic", "status", "missing"]), env);
+  assert_eq!(unknown.exit, Exit::Failure);
+  assert!(
+    unknown
+      .stderr
+      .expect("error")
+      .contains("unknown epic or issue")
   );
   assert_eq!(
     pause(&parse(&["epic", "pause", "one"]), env, true).exit,

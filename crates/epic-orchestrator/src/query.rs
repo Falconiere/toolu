@@ -23,6 +23,7 @@ use crate::paths::Paths;
 use crate::status::document;
 use crate::verbs::{failed, json_out, text};
 
+/// Read one status document through the engine or report that its key is unknown.
 pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
   if let Err(err) = ensure(env) {
     return failed("toolu epic status", &err);
@@ -30,6 +31,12 @@ pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
   let paths = Paths::from_env(env);
   let epic = text(matches, "epic");
   if !registry_nonempty(&paths) {
+    if let Some(key) = epic {
+      return failed(
+        "toolu epic status",
+        &format!("unknown epic or issue: {key}"),
+      );
+    }
     return json_out(&document(&World::new(0), false, epic));
   }
   let request = match epic {
@@ -37,11 +44,15 @@ pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
     None => json!({"op": "status"}),
   };
   match exchange_retry(&paths, PROTOCOL, &request) {
-    Ok(doc) => json_out(&doc),
+    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
+      Some(err) => failed("toolu epic status", err),
+      None => json_out(&doc),
+    },
     Err(err) => failed("toolu epic status", &err),
   }
 }
 
+/// Set the pause state through the control socket.
 pub(crate) fn pause(matches: &ArgMatches, env: &Env, pausing: bool) -> Outcome {
   let op = if pausing { "pause" } else { "resume" };
   let request = match text(matches, "epic") {
@@ -51,12 +62,14 @@ pub(crate) fn pause(matches: &ArgMatches, env: &Env, pausing: bool) -> Outcome {
   ask(env, op, &request)
 }
 
+/// Acknowledge one attention item through the control socket.
 pub(crate) fn ack(matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let request = json!({"op": "ack", "key": key});
   ask(env, "ack", &request)
 }
 
+/// Submit an answer through the control socket.
 pub(crate) fn answer(matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let body = text(matches, "text").unwrap_or("");
@@ -64,6 +77,7 @@ pub(crate) fn answer(matches: &ArgMatches, env: &Env) -> Outcome {
   ask(env, "answer", &request)
 }
 
+/// Wait for a bounded engine judgment.
 pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   let max = matches
     .get_one::<u64>("max-seconds")
@@ -80,6 +94,7 @@ pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   ask(env, "wait", &request)
 }
 
+/// Persist and submit a worker phase report.
 pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
   let Some(phase) = text(matches, "phase") else {
     return failed("toolu epic report", "phase is required");
@@ -141,6 +156,7 @@ fn report_token(key: &str) -> String {
   format!("r{millis:013}-{}-{n:04}-{safe}", std::process::id())
 }
 
+/// Exchange a control request and format its response.
 pub(crate) fn ask(env: &Env, verb: &str, request: &Value) -> Outcome {
   if let Err(err) = ensure(env) {
     return failed(&format!("toolu epic {verb}"), &err);
@@ -151,6 +167,7 @@ pub(crate) fn ask(env: &Env, verb: &str, request: &Value) -> Outcome {
   }
 }
 
+/// Run one managed expensive job.
 pub(crate) fn job(matches: &ArgMatches) -> Outcome {
   let cwd = match current_dir() {
     Ok(cwd) => cwd,
@@ -169,6 +186,7 @@ pub(crate) fn job(matches: &ArgMatches) -> Outcome {
   run_job(&argv, &cwd)
 }
 
+/// Install the engine's user service unit.
 pub(crate) fn service(env: &Env) -> Outcome {
   let paths = Paths::from_env(env);
   let Some(exe) = current_exe() else {
@@ -180,6 +198,7 @@ pub(crate) fn service(env: &Env) -> Outcome {
   }
 }
 
+/// Write the service unit to the resource and user configuration roots.
 pub(crate) fn install_unit(paths: &Paths, home: &Path, exe: &Path) -> Result<(), String> {
   let body = format!(
     "[Unit]\nDescription=toolu epic engine\n\n[Service]\nExecStart={} epic engine\nEnvironment=TOOLU_RESOURCE_HOME={}\n\n[Install]\nWantedBy=default.target\n",
@@ -196,6 +215,7 @@ pub(crate) fn install_unit(paths: &Paths, home: &Path, exe: &Path) -> Result<(),
   Ok(())
 }
 
+/// Resolve a status file to its issue key and state directory.
 pub(crate) fn located(path: &Path) -> Result<(String, String), String> {
   let key = path
     .file_stem()
@@ -208,6 +228,7 @@ pub(crate) fn located(path: &Path) -> Result<(String, String), String> {
   Ok((key.to_owned(), state.display().to_string()))
 }
 
+/// Find the registered epic for a state directory.
 pub(crate) fn epic_for(paths: &Paths, state_dir: &str) -> String {
   let Ok(value) = read_value(&paths.registry()) else {
     return String::new();
@@ -229,6 +250,7 @@ pub(crate) fn epic_for(paths: &Paths, state_dir: &str) -> String {
     .unwrap_or_default()
 }
 
+/// Return the host's default judgment wait in seconds.
 pub(crate) fn wait_default(host: Option<Host>) -> u64 {
   match host {
     Some(Host::Codex | Host::Opencode | Host::Cursor | Host::Hermes) => 480,

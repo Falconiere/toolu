@@ -1801,6 +1801,28 @@
               "short": null,
               "takesValue": false,
               "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Bind status HTTP to this IP address and port",
+              "hidden": false,
+              "long": "http",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ADDR"
+            },
+            {
+              "global": false,
+              "help": "Disable the status listener",
+              "hidden": false,
+              "long": "no-http",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
             }
           ],
           "hidden": false,
@@ -1810,6 +1832,45 @@
           "path": [
             "epic",
             "engine"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run the resident engine with its HTTP status listener",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Bind status HTTP to this IP address and port",
+              "hidden": false,
+              "long": "http",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ADDR"
+            },
+            {
+              "global": false,
+              "help": "Disable the status listener",
+              "hidden": false,
+              "long": "no-http",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "serve",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "serve"
           ],
           "placeholder": false
         },

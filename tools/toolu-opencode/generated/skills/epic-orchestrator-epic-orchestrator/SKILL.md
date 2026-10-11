@@ -284,10 +284,11 @@ The epic is complete when every sub-issue is closed and its workload cleanup has
   sends a resume prompt that continues from the last reported phase. Then start
   the watcher.
   The state dir is the source of truth. If you lose track (context
-  compaction), re-run the graph and `bun "$S/epic-watch.ts" --state-dir <state_dir> --peek`.
-- **Status.** Print the graph table plus
-  `bun "$S/epic-watch.ts" --state-dir <state_dir> --peek` (per-issue stage,
-  phase, PR and agent state). This consumes no events.
+  compaction), re-run the graph and `toolu epic status --json`.
+- **Status.** Print the graph table plus `toolu epic status --json` (per-issue
+  stage, phase, PR and agent state). For one epic or worker, run
+  `toolu epic status --json <key>`. The dashboard at
+  `http://127.0.0.1:7717/` follows the journal without consuming events.
 - **Stop.** Stop running the watcher (interrupt a watcher bash call in flight). Agents finish their current step and
   go idle. To tear down one issue, run
   `bun "$S/finish-issue.ts" <state_dir> <key> --abandon`, which keeps the branch.

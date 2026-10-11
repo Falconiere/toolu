@@ -19,12 +19,14 @@ const LATER: Planned = Planned {
   issues: &[435, 448],
 };
 
+/// The complete `toolu epic` command tree.
 pub(crate) fn command() -> Command {
   Command::new("epic")
     .about("Drive an epic to merged PRs: the resident engine, merge queue and trackers")
     .subcommand_required(true)
     .arg_required_else_help(true)
     .subcommand(engine_command())
+    .subcommand(serve_command())
     .subcommand(start_command())
     .subcommand(status_command())
     .subcommand(pause_command(
@@ -55,10 +57,12 @@ pub(crate) fn command() -> Command {
     .subcommand(token_command())
 }
 
+/// Dispatch one epic subcommand.
 pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Outcome {
   let env = env_of(ctx);
   match matches.subcommand() {
     Some(("engine", args)) => crate::control::engine(args, &env, tick),
+    Some(("serve", args)) => crate::control::serve(args, &env, tick),
     Some(("start", args)) => crate::control::start(args, &env),
     Some(("status", args)) => crate::query::status(args, &env),
     Some(("pause", args)) => crate::query::pause(args, &env, true),
@@ -87,6 +91,22 @@ fn engine_command() -> Command {
       "replace",
       "Ask a running engine to drain, then take its place",
     ))
+    .arg(http_arg())
+    .arg(flag("no-http", "Disable the status listener").conflicts_with("http"))
+}
+
+fn serve_command() -> Command {
+  Command::new("serve")
+    .about("Run the resident engine with its HTTP status listener")
+    .arg(http_arg())
+    .arg(flag("no-http", "Disable the status listener").conflicts_with("http"))
+}
+
+fn http_arg() -> Arg {
+  Arg::new("http")
+    .long("http")
+    .value_name("ADDR")
+    .help("Bind status HTTP to this IP address and port")
 }
 
 fn start_command() -> Command {
@@ -216,6 +236,7 @@ fn flag(name: &'static str, help: &'static str) -> Arg {
     .help(help)
 }
 
+/// Rotate the status token without exposing its value.
 pub(crate) fn token_new(ctx: &Ctx) -> Outcome {
   let mut env = Env::process();
   if let Some(dir) = &ctx.config_dir {
@@ -233,6 +254,7 @@ pub(crate) fn token_new(ctx: &Ctx) -> Outcome {
   }
 }
 
+/// The command environment with an explicit config override.
 pub(crate) fn env_of(ctx: &Ctx) -> Env {
   let mut env = Env::process();
   if let Some(dir) = &ctx.config_dir {
@@ -241,10 +263,12 @@ pub(crate) fn env_of(ctx: &Ctx) -> Env {
   env
 }
 
+/// Read one string argument.
 pub(crate) fn text<'a>(matches: &'a ArgMatches, id: &str) -> Option<&'a str> {
   matches.get_one::<String>(id).map(String::as_str)
 }
 
+/// Encode one JSON document as CLI output.
 pub(crate) fn json_out(value: &Value) -> Outcome {
   match serde_json::to_string(value) {
     Ok(text) => Outcome::data(text),
@@ -255,6 +279,7 @@ pub(crate) fn json_out(value: &Value) -> Outcome {
   }
 }
 
+/// Return a prefixed CLI failure without source bytes.
 pub(crate) fn failed(prefix: &str, err: &str) -> Outcome {
   Outcome::failed(Exit::Failure, format!("{prefix}: {err}"))
 }

@@ -15,6 +15,8 @@ use crate::note::bounded_note;
 pub(crate) struct Record {
   /// Monotonic sequence.
   pub seq: u64,
+  /// UTC journal timestamp.
+  pub at: String,
   /// `transition`, `action`, `prompt`, `judgment`, `admission` or `recovery`.
   pub kind: String,
   /// What happened, for example `merge-intent`.
@@ -34,6 +36,7 @@ impl Record {
   pub(crate) fn new(kind: &str, name: &str, key: &str, token: &str, note: &str) -> Self {
     Self {
       seq: 0,
+      at: String::new(),
       kind: kind.to_owned(),
       name: name.to_owned(),
       epic: String::new(),
@@ -70,13 +73,14 @@ pub(crate) fn append(
 ) -> Result<Record, String> {
   let _held = journal_held(lock)?;
   std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
-  let seq = last_seq(dir, now)?.saturating_add(1);
+  let seq = last_seq(dir)?.saturating_add(1);
   let mut stored = record.clone();
   stored.seq = seq;
+  stored.at = iso_millis(now);
   stored.note = bounded_note(&stored.note);
   let line = json!({
     "seq": seq,
-    "at": iso_millis(now),
+    "at": stored.at,
     "kind": stored.kind,
     "name": stored.name,
     "epic": stored.epic,
@@ -155,9 +159,19 @@ fn file_name(path: &Path) -> Option<String> {
     .map(|name| name.to_string_lossy().into_owned())
 }
 
-fn last_seq(dir: &Path, now: SystemTime) -> Result<u64, String> {
-  let rows = read_file(&dir.join(format!("{}.jsonl", day(now))))?;
-  Ok(rows.last().map_or(0, |row| row.seq))
+fn last_seq(dir: &Path) -> Result<u64, String> {
+  let entries = std::fs::read_dir(dir).map_err(|err| err.to_string())?;
+  let mut newest = 0;
+  for entry in entries {
+    let path = entry.map_err(|err| err.to_string())?.path();
+    if path.extension().is_none_or(|ext| ext != "jsonl") {
+      continue;
+    }
+    for row in read_file(&path)? {
+      newest = newest.max(row.seq);
+    }
+  }
+  Ok(newest)
 }
 
 fn read_file(path: &Path) -> Result<Vec<Record>, String> {
@@ -167,8 +181,11 @@ fn read_file(path: &Path) -> Result<Vec<Record>, String> {
     Err(err) => return Err(err.to_string()),
   };
   let mut rows = Vec::new();
-  for line in text.lines() {
-    if let Some(row) = parse(line) {
+  for line in text
+    .split_inclusive('\n')
+    .filter(|line| line.ends_with('\n'))
+  {
+    if let Some(row) = parse(line.trim_end_matches('\n')) {
       rows.push(row);
     }
   }
@@ -187,6 +204,7 @@ fn parse(line: &str) -> Option<Record> {
   let seq = value.get("seq").and_then(Value::as_u64)?;
   Some(Record {
     seq,
+    at: field("at"),
     kind: field("kind"),
     name: field("name"),
     epic: field("epic"),
@@ -194,6 +212,39 @@ fn parse(line: &str) -> Option<Record> {
     token: field("token"),
     note: field("note"),
   })
+}
+
+/// Retained records after `since`, in sequence order, and the oldest retained sequence.
+///
+/// # Errors
+/// A journal directory or file cannot be read.
+pub(crate) fn page(
+  dir: &Path,
+  since: u64,
+  limit: usize,
+) -> Result<(Option<u64>, Vec<Record>), String> {
+  let entries = match std::fs::read_dir(dir) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok((None, Vec::new())),
+    Err(err) => return Err(err.to_string()),
+  };
+  let mut rows = Vec::new();
+  for entry in entries {
+    let path = entry.map_err(|err| err.to_string())?.path();
+    if path.extension().is_some_and(|ext| ext == "jsonl") {
+      rows.extend(read_file(&path)?);
+    }
+  }
+  rows.sort_by_key(|row| row.seq);
+  let oldest = rows.first().map(|row| row.seq);
+  Ok((
+    oldest,
+    rows
+      .into_iter()
+      .filter(|row| row.seq > since)
+      .take(limit)
+      .collect(),
+  ))
 }
 
 /// The path of a journal file, exposed for tests that plant a partial line.

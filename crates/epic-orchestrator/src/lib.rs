@@ -5,12 +5,13 @@ use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::cli::{Ctx, Outcome};
 
-/// Shared babysit tick routing for the resident engine.
+/// Cross-plugin babysit integration for the resident engine.
 pub mod babysit;
 mod checkpoint;
 mod client;
 mod commit;
 mod control;
+mod dashboard;
 mod disk;
 mod dispatch;
 mod effects;
@@ -19,6 +20,11 @@ mod github_engine;
 mod github_probe;
 mod herdr;
 mod herdr_argv;
+mod http;
+mod http_access;
+mod http_request;
+mod http_response;
+mod http_stream;
 mod job;
 mod journal;
 mod limit;
@@ -35,12 +41,20 @@ mod server_snapshot;
 mod snapshot;
 mod socket;
 mod socket_deadline;
+mod socket_herdr;
 mod source;
 mod source_apply;
 #[cfg(test)]
 mod source_fix;
 mod status;
+mod status_api;
+mod status_epics;
+mod status_events;
+mod status_resources;
+#[cfg(test)]
+mod status_schema;
 mod verbs;
+mod waiting_jobs;
 mod watch;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
