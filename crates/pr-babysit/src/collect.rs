@@ -13,6 +13,7 @@ use toolu_github::Client;
 use crate::error::{Failure, Result};
 use crate::json::array;
 use read::Reader;
+pub(crate) use read::failure;
 
 const PR_QUERY: &str = "query($owner:String!,$repo:String!,$number:Int!){
   rateLimit{cost}

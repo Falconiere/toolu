@@ -15,10 +15,14 @@ mod lock;
 mod pattern;
 #[cfg(test)]
 mod recorded;
+mod record;
 mod reduce;
+mod schedule;
 mod sha1;
 mod state;
+mod tick;
 mod verdict;
+mod writes;
 
 /// The plugin this crate belongs to: `plugins/pr-babysit`.
 pub const PLUGIN: &str = "pr-babysit";

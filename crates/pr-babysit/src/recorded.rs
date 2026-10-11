@@ -11,16 +11,25 @@ use crate::fixture;
 /// The recorded pull request's REST root.
 pub(crate) const ROOT: &str = "/repos/Falconiere/toolu";
 
-/// A one-attempt client of `fixture`'s API.
-pub(crate) fn client(fixture: &Fixture) -> Client {
+/// A one-attempt client configuration for `fixture`'s API.
+pub(crate) fn config(fixture: &Fixture) -> Config {
   let mut config = Config::scheduled();
   config.api_url = fixture.url("");
   config.http.test_root_ca_der = Some(fixture.root_ca_der().to_vec());
-  let env = Env::from_pairs([
+  config
+}
+
+/// An environment with a token that reaches `fixture` through its proxy.
+pub(crate) fn env(fixture: &Fixture) -> Env {
+  Env::from_pairs([
     ("GH_TOKEN", "recorded-token"),
     ("HTTPS_PROXY", &fixture.proxy_url()),
-  ]);
-  Client::new(config, &env).unwrap()
+  ])
+}
+
+/// A one-attempt client of `fixture`'s API.
+pub(crate) fn client(fixture: &Fixture) -> Client {
+  Client::new(config(fixture), &env(fixture)).unwrap()
 }
 
 /// The recorded snapshot the replies reproduce.
