@@ -103,16 +103,7 @@ fn a_recovered_effect_reconciles_or_defers() {
   let _steps = commit_effect(&mut world, "a", "deferred");
   assert!(world.issues.get("a").expect("a").pending.is_none());
   arm(&mut world, Action::Merge, true);
-  let mut epic_watch = Watch::new(
-    Kind::Epic {
-      key: "one".into(),
-      repo: "o/r".into(),
-      number: 402,
-    },
-    0,
-  );
-  assert!(epic_watch.take_due(0).is_some());
-  world.watches.insert("epic".into(), epic_watch);
+  world.watches.insert("epic".into(), epic_watch());
   let _steps = commit_effect(&mut world, "a", "merged");
   assert!(world.watches["epic"].immediate);
   let pending = world
@@ -124,18 +115,6 @@ fn a_recovered_effect_reconciles_or_defers() {
     .expect("pending");
   assert!(!pending.recovered);
   assert_eq!(pending.phase, 2);
-  arm(&mut world, Action::Merge, true);
-  assert!(
-    world
-      .watches
-      .get_mut("epic")
-      .expect("epic")
-      .take_due(0)
-      .is_some()
-  );
-  let _steps = commit_effect(&mut world, "a", "already");
-  assert!(world.watches["epic"].immediate);
-  assert_eq!(world.watches["epic"].next_at_ms, 180_000);
   arm(&mut world, Action::Merge, true);
   let _steps = commit_effect(&mut world, "a", "open");
   assert!(
@@ -152,6 +131,29 @@ fn a_recovered_effect_reconciles_or_defers() {
   let _steps = commit_effect(&mut world, "a", "nope");
   assert!(world.attention.iter().any(|item| item.kind == "failed"));
   let _steps = commit_effect(&mut world, "missing", "applied");
+}
+
+fn epic_watch() -> Watch {
+  let mut watch = Watch::new(
+    Kind::Epic {
+      key: "one".into(),
+      repo: "o/r".into(),
+      number: 402,
+    },
+    0,
+  );
+  assert!(watch.take_due(0).is_some());
+  watch
+}
+
+#[test]
+fn a_recovered_already_still_requests_an_immediate_check() {
+  let mut world = World::new(0);
+  arm(&mut world, Action::Merge, true);
+  world.watches.insert("epic".into(), epic_watch());
+  let _steps = commit_effect(&mut world, "a", "already");
+  assert!(world.watches["epic"].immediate);
+  assert_eq!(world.watches["epic"].next_at_ms, 180_000);
 }
 
 fn arm(world: &mut World, action: Action, recovered: bool) {
