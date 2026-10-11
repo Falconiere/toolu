@@ -125,3 +125,31 @@ fn an_unusable_spec_is_an_error() {
     Err(RunError::Spawn(_))
   ));
 }
+
+#[test]
+fn a_logged_spawn_returns_at_once_and_keeps_writing_its_log() {
+  let dir = tempfile::tempdir().unwrap();
+  let log = dir.path().join("fixer.log");
+  std::fs::write(&log, "stale\n").unwrap();
+  let path = std::env::var("PATH").unwrap();
+  let env = Env::from_pairs([("PATH", path.as_str()), ("WHO", "fixer")]);
+  let argv: Vec<String> = ["sh", "-c", "echo \"$WHO out\"; echo err >&2; exec sleep 30"]
+    .iter()
+    .map(|arg| (*arg).to_owned())
+    .collect();
+  let started = Instant::now();
+  let pid = super::spawn_logged(&argv, dir.path(), &env, &log).unwrap();
+  assert!(started.elapsed() < Duration::from_secs(2));
+  let logged = || std::fs::read_to_string(&log).unwrap();
+  while !logged().contains("err") && started.elapsed() < Duration::from_secs(5) {
+    std::thread::sleep(Duration::from_millis(20));
+  }
+  assert_eq!(logged(), "fixer out\nerr\n");
+  assert!(group::alive(pid));
+  group::terminate(pid).unwrap();
+  assert!(!group::alive(pid));
+  assert_eq!(
+    super::spawn_logged(&[], dir.path(), &env, &log),
+    Err(RunError::EmptyArgv)
+  );
+}

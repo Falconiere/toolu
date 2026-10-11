@@ -21,6 +21,13 @@ pub(crate) enum Step {
   Status { key: String },
   /// Rewrite the issue `stage`.
   Issue { key: String },
+  /// Send `text` to the issue's worker; when it cannot be delivered, raise a
+  /// `fallback` attention item if one is named.
+  Prompt {
+    key: String,
+    text: String,
+    fallback: Option<String>,
+  },
 }
 
 /// An effect the scripts or a later issue perform.

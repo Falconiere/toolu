@@ -9,7 +9,7 @@
 
 use std::fs::File;
 use std::os::unix::process::CommandExt as _;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::time::{Duration, Instant};
 
@@ -55,28 +55,12 @@ pub struct FileOutput {
 /// [`RunError`] when the argv is empty, the file cannot be created, the
 /// program cannot start, or the leader cannot be waited for.
 pub fn run_to_file(spec: &FileSpec, on_spawn: &mut dyn FnMut(u32)) -> Result<FileOutput, RunError> {
-  let program = spec.argv.first().filter(|program| !program.is_empty());
-  let program = program.ok_or(RunError::EmptyArgv)?;
-  let out = File::create(&spec.out)
-    .map_err(|err| RunError::Spawn(format!("{}: {err}", spec.out.display())))?;
-  let err = out
-    .try_clone()
-    .map_err(|err| RunError::Spawn(format!("{}: {err}", spec.out.display())))?;
-  let mut command = Command::new(program);
-  command
-    .args(spec.argv.iter().skip(1))
-    .process_group(0)
-    .stdin(Stdio::null())
-    .stdout(out)
-    .stderr(err);
-  if let Some(cwd) = &spec.cwd {
-    command.current_dir(cwd);
-  }
-  if let Some(env) = &spec.env {
-    command.env_clear().envs(env.vars());
-  }
-  let mut child = super::guard::unblocked(|| command.spawn())
-    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
+  let mut child = spawn(
+    &spec.argv,
+    spec.cwd.as_deref(),
+    spec.env.as_ref(),
+    &spec.out,
+  )?;
   let pid = child.id();
   on_spawn(pid);
   let deadline = spec
@@ -95,6 +79,55 @@ pub fn run_to_file(spec: &FileSpec, on_spawn: &mut dyn FnMut(u32)) -> Result<Fil
     exit_code: exit_code(status),
     timed_out: true,
   })
+}
+
+/// Start `argv` in `cwd` with exactly `env`, in its own process group, stdin on
+/// `/dev/null` and both streams written to `log` (created or truncated), and
+/// return its pid without waiting. A reaper thread waits so a long-lived
+/// caller keeps no zombie; when the caller exits first, the child keeps running.
+/// When no thread can start, the child still runs and is reaped by `init` once
+/// the caller exits.
+///
+/// # Errors
+/// [`RunError`] when the argv is empty, the log cannot be created, or the
+/// program cannot start.
+pub fn spawn_logged(argv: &[String], cwd: &Path, env: &Env, log: &Path) -> Result<u32, RunError> {
+  let mut child = spawn(argv, Some(cwd), Some(env), log)?;
+  let pid = child.id();
+  let _reaper = std::thread::Builder::new().spawn(move || {
+    let _reaped = child.wait();
+  });
+  Ok(pid)
+}
+
+fn spawn(
+  argv: &[String],
+  cwd: Option<&Path>,
+  env: Option<&Env>,
+  out: &Path,
+) -> Result<Child, RunError> {
+  let program = argv.first().filter(|program| !program.is_empty());
+  let program = program.ok_or(RunError::EmptyArgv)?;
+  let opened = |file: std::io::Result<File>| {
+    file.map_err(|err| RunError::Spawn(format!("{}: {err}", out.display())))
+  };
+  let stdout = opened(File::create(out))?;
+  let stderr = opened(stdout.try_clone())?;
+  let mut command = Command::new(program);
+  command
+    .args(argv.iter().skip(1))
+    .process_group(0)
+    .stdin(Stdio::null())
+    .stdout(stdout)
+    .stderr(stderr);
+  if let Some(cwd) = cwd {
+    command.current_dir(cwd);
+  }
+  if let Some(env) = env {
+    command.env_clear().envs(env.vars());
+  }
+  super::guard::unblocked(|| command.spawn())
+    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))
 }
 
 /// The leader's status once it exits, or `None` when `deadline` passes first.

@@ -14,11 +14,14 @@ fn the_epic_engine_runs_the_injected_pr_babysit_tick() {
     repo: "Falconiere/toolu".into(),
     number: 460,
     state_file: PathBuf::from("/state/460.json"),
-    now: None,
+    now: Some("soon".into()),
   };
   assert_eq!(
     next(BABYSIT_TICK, &request),
-    Next::Attention("babysit tick for Falconiere/toolu#460 failed: not ported yet (#433)".into())
+    Next::Attention(
+      "babysit tick for Falconiere/toolu#460 failed: usage: --now must be YYYY-MM-DDTHH:MM:SSZ"
+        .into()
+    )
   );
 }
 

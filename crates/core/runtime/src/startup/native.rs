@@ -7,8 +7,10 @@ use std::io::ErrorKind;
 use std::os::unix::fs::{DirBuilderExt as _, OpenOptionsExt as _};
 use std::path::{Path, PathBuf};
 
+use super::context::{render_hook_output, session_context};
 use crate::env::Env;
 use crate::host::roots::Roots;
+use crate::json::ordered::Ordered;
 use crate::process::commands::{ShellToolu, known_native_toolu, shell_toolu};
 
 const INSTALLER: &str = "curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash";
@@ -21,6 +23,24 @@ pub fn native_toolu_advice(env: &Env, session_id: Option<&str>) -> Option<String
     return None;
   }
   claim_notice(env, session_id).then_some(advice_line(env))
+}
+
+/// The `SessionStart` hook output, without a trailing newline, carrying
+/// [`native_toolu_advice`] as context, keyed by the payload's `session_id`,
+/// else `TOOLU_SESSION_ID`.
+pub fn native_toolu_hook_output(env: &Env, payload: Option<&str>) -> Option<String> {
+  let id = payload_session_id(env, payload);
+  native_toolu_advice(env, id.as_deref())
+    .and_then(|line| session_context("SessionStart", &line))
+    .map(|context| render_hook_output(&context, false).trim_end().to_owned())
+}
+
+fn payload_session_id(env: &Env, payload: Option<&str>) -> Option<String> {
+  let parsed = payload.and_then(|text| Ordered::parse(text).ok());
+  match parsed.as_ref().and_then(|parsed| parsed.get("session_id")) {
+    Some(Ordered::String(id)) if !id.is_empty() => Some(id.clone()),
+    _ => env.get("TOOLU_SESSION_ID").map(str::to_owned),
+  }
 }
 
 fn shell_is_native(env: &Env) -> bool {

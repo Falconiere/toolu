@@ -1,4 +1,4 @@
-<!-- Template, rendered per fixer group by hooks/dist/babysit-dispatch-fix.js, which strips
+<!-- Template, rendered per fixer group by toolu babysit dispatch-fix, which strips
 this comment. The body below uses {{NAME}} placeholders. This comment lists
 the names bare, without braces, so the renderer never rewrites the comment
 itself: PR, ROUND, GROUP, GROUPS, TIER, WORKTREE, SLOT_BRANCH, BRANCH, BASE,

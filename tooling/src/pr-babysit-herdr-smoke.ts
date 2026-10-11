@@ -1,7 +1,7 @@
 /**
  * Real-session smoke for pr-babysit's herdr fixer dispatch (spec AC-10).
  *
- * Runs the shipped babysit-route-fix.js and babysit-dispatch-fix.js against a live herdr server
+ * Runs `toolu babysit tick`, `route-fix` and `dispatch-fix` against a live herdr server
  * and a real Claude Code fixer, inside a throwaway local git topology (a bare
  * "origin" plus a clone). Nothing is pushed to GitHub. Proves: start creates the
  * pr-babysit/<slot> herdr worktree and starts the fixer; a second start is
@@ -9,7 +9,8 @@
  * exactly two commits touching only the smoke file; cleanup leaves no worktree,
  * branch or agent behind.
  *
- * Manual runner (needs herdr, claude, git) — like tooling/src/codex-smoke.ts.
+ * Manual runner (needs herdr, claude, git, toolu) — like tooling/src/codex-smoke.ts.
+ * TOOLU_BIN picks the binary (default: this checkout's target/debug/toolu).
  * PB_SMOKE_MODEL / PB_SMOKE_EFFORT pick the fixer model (default haiku / low).
  */
 import { spawnSync } from "node:child_process";
@@ -31,9 +32,8 @@ import { get, list, text } from "./json-path.ts";
 import { envOr } from "./env.ts";
 
 const ROOT = realpathSync(resolve(import.meta.dir, "../.."));
-const SCRIPTS = join(ROOT, "plugins/pr-babysit/scripts");
-const DIST = join(ROOT, "plugins/pr-babysit/hooks/dist");
-const SNAPSHOT = join(SCRIPTS, "__tests__/fixtures/snapshots/toolu-165.json");
+const SNAPSHOT = join(ROOT, "fixtures/pr-babysit/snapshots/toolu-165.json");
+const TOOLU = envOr("TOOLU_BIN", join(ROOT, "target/debug/toolu"));
 /** Two Fix items in two tiers (standard, trivial), each a one-line edit to smoke.txt. */
 const ITEMS = join(ROOT, "tooling/fixtures/pr-babysit-herdr-smoke/items.json");
 const Snapshot = z.looseObject({ pr: z.looseObject({}) });
@@ -84,8 +84,8 @@ function json(raw: string): unknown {
   return doc === null ? fail(`expected JSON, got: ${raw}`) : doc;
 }
 
-function babysit(script: string, args: string[], env: Record<string, string> = {}): Out {
-  return sh(["bun", join(DIST, script), ...args], { env });
+function babysit(verb: string, args: string[], env: Record<string, string> = {}): Out {
+  return sh([TOOLU, "babysit", verb, ...args], { env });
 }
 
 /** A throwaway "PR": bare origin, main + feat/smoke, a clone on the PR branch. */
@@ -115,7 +115,7 @@ function route(tmp: string, state: string): void {
     pr: { ...snap.pr, state: "OPEN" },
   };
   writeFileSync(join(tmp, "snap.json"), JSON.stringify(reidentified));
-  const tick = babysit("babysit-tick.js", [
+  const tick = babysit("tick", [
     "--repo",
     "local/pb-smoke",
     "--pr",
@@ -125,7 +125,7 @@ function route(tmp: string, state: string): void {
     "--snapshot-in",
     join(tmp, "snap.json"),
   ]);
-  if (tick.status !== 0) fail(`babysit-tick failed: ${tick.stdout}`);
+  if (tick.status !== 0) fail(`tick failed: ${tick.stdout}`);
   const slot = get(json(readFileSync(state, "utf8")), "slot");
   if (slot !== "local-pb-smoke-1") fail(`unexpected slot ${String(slot)}`);
   copyFileSync(ITEMS, join(tmp, "items.json"));
@@ -140,7 +140,7 @@ function route(tmp: string, state: string): void {
   writeFileSync(join(tmp, "cfg/toolu.config.json"), JSON.stringify(config));
   const cfgEnv = { TOOLU_CONFIG_DIR: join(tmp, "cfg"), TOOLU_PROJECT_DIR: join(tmp, "cfg") };
   const routed = babysit(
-    "babysit-route-fix.js",
+    "route-fix",
     ["--items", join(tmp, "items.json"), "--host", "claude", "--no-jev"],
     cfgEnv,
   );
@@ -184,7 +184,7 @@ function dispatch(
   state: string,
   clone: string,
 ): { worktree: string; agent: string; out: unknown } {
-  const started = babysit("babysit-dispatch-fix.js", startArgs(tmp, state, clone));
+  const started = babysit("dispatch-fix", startArgs(tmp, state, clone));
   const start = json(started.stdout);
   if (started.status !== 0 || get(start, "status") !== "running")
     fail(`start status is not running: ${started.stdout}`);
@@ -200,14 +200,14 @@ function dispatch(
   ) {
     fail("worktree is not on pr-babysit/local-pb-smoke-1");
   }
-  const again = babysit("babysit-dispatch-fix.js", startArgs(tmp, state, clone));
-  if (again.status !== 3 || get(json(again.stdout), "errors", 0, "code") !== "fixer_running") {
+  const again = babysit("dispatch-fix", startArgs(tmp, state, clone));
+  if (again.status !== 1 || get(json(again.stdout), "errors", 0, "code") !== "fixer_running") {
     fail(`second start was not refused: rc=${String(again.status)} ${again.stdout}`);
   }
-  step("second start: fixer_running (exit 3)");
+  step("second start: fixer_running (exit 1)");
   let out: unknown = null;
   for (let i = 0; i < 6; i += 1) {
-    const waited = babysit("babysit-dispatch-fix.js", [
+    const waited = babysit("dispatch-fix", [
       "wait",
       "--state-file",
       state,
@@ -255,7 +255,7 @@ function verifyFixes(worktree: string, out: unknown): void {
 
 function verifyCleanup(state: string, clone: string, worktree: string, agent: string): void {
   must(["git", "-C", worktree, "push", "--quiet", "origin", "HEAD:feat/smoke"]);
-  const cleaned = babysit("babysit-dispatch-fix.js", ["cleanup", "--state-file", state]);
+  const cleaned = babysit("dispatch-fix", ["cleanup", "--state-file", state]);
   if (cleaned.status !== 0) fail(`cleanup failed: ${cleaned.stdout}`);
   step(`cleanup: ${cleaned.stdout.trim()}`);
   const result = json(cleaned.stdout);
@@ -295,7 +295,7 @@ function hasLiveWorktree(state: string): boolean {
 function finish(tmp: string, state: string): void {
   try {
     if (hasLiveWorktree(state))
-      babysit("babysit-dispatch-fix.js", ["cleanup", "--state-file", state]);
+      babysit("dispatch-fix", ["cleanup", "--state-file", state]);
     const listed = sh(["herdr", "workspace", "list"]);
     const workspaces = listed.status === 0 ? parseOrNull(listed.stdout) : null;
     for (const ws of list(get(workspaces, "result", "workspaces"))) {
@@ -309,7 +309,7 @@ function finish(tmp: string, state: string): void {
 }
 
 function main(): number {
-  for (const tool of ["herdr", "claude", "git"]) {
+  for (const tool of ["herdr", "claude", "git", TOOLU]) {
     if (Bun.which(tool) === null) {
       console.error(`pr-babysit-herdr-smoke: FAIL: ${tool} is required`);
       return 1;

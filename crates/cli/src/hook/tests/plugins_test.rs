@@ -48,16 +48,14 @@ fn statusline_session_start_publishes_compat_path_without_blocking() {
   assert!(dir.path().join("statusline/statusline.sh").is_symlink());
 }
 
-#[test]
-fn statusline_session_start_does_not_run_for_a_tool_event() {
-  let other = HookRequest {
-    plugin: "statusline".to_owned(),
-    name: "session-start".to_owned(),
-    event: Some("PreToolUse".to_owned()),
+fn hook(plugin: &str, name: &str, event: &str, env: &Env) -> toolu_runtime::cli::Outcome {
+  let request = HookRequest {
+    plugin: plugin.to_owned(),
+    name: name.to_owned(),
+    event: Some(event.to_owned()),
     plugin_root: None,
   };
   let no_exe = || None;
-  let env = Env::default();
   let env_fn = || env.clone();
   let fallback = PathBuf::new();
   let cwd_fn = || Ok(fallback.clone());
@@ -67,11 +65,46 @@ fn statusline_session_start_does_not_run_for_a_tool_event() {
     env: &env_fn,
     cwd: &cwd_fn,
   };
-  let outcome = run(&other, &context);
+  run(&request, &context)
+}
+
+#[test]
+fn statusline_session_start_does_not_run_for_a_tool_event() {
+  let outcome = hook("statusline", "session-start", "PreToolUse", &Env::default());
   assert_eq!(outcome.exit, toolu_protocol::exit::Exit::Blocked);
   assert!(
     outcome
       .stderr
       .is_some_and(|text| text.contains("has no hook session-start"))
+  );
+}
+
+fn babysit(name: &str, env: &Env) -> toolu_runtime::cli::Outcome {
+  hook("pr-babysit", name, "SessionStart", env)
+}
+
+#[test]
+fn pr_babysit_session_start_checks_never_block_and_others_are_unknown() {
+  let env = Env::default().with("TOOLU_HOST_OVERRIDE", "claude");
+  let core = babysit("check-toolu", &env);
+  assert_eq!(core.exit.code(), 0);
+  assert_eq!(
+    core.stdout, None,
+    "Claude resolves plugin dependencies itself"
+  );
+  assert_eq!(babysit("check-binary", &env).exit.code(), 0);
+  let other = babysit("babysit-tick", &env);
+  assert_eq!(other.exit.code(), 0, "a context event is never blocked");
+  assert!(
+    other
+      .stdout
+      .is_some_and(|text| text.contains("has no hook babysit-tick"))
+  );
+  let tool = hook("pr-babysit", "check-toolu", "PreToolUse", &env);
+  assert_eq!(tool.exit, toolu_protocol::exit::Exit::Blocked);
+  assert!(
+    tool
+      .stderr
+      .is_some_and(|text| text.contains("has no hook check-toolu"))
   );
 }

@@ -1346,6 +1346,7 @@ dependencies = [
  "toolu-engine",
  "toolu-github",
  "toolu-http-test-support",
+ "toolu-pr-babysit",
  "toolu-protocol",
  "toolu-runtime",
  "toolu-state",
@@ -1433,8 +1434,16 @@ name = "toolu-pr-babysit"
 version = "7.11.0"
 dependencies = [
  "clap",
+ "regex",
+ "serde_json",
+ "tempfile",
  "toolu-engine",
+ "toolu-github",
+ "toolu-http-test-support",
+ "toolu-jev-client",
+ "toolu-protocol",
  "toolu-runtime",
+ "toolu-state",
 ]
 
 [[package]]

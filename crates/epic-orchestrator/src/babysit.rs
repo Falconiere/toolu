@@ -5,6 +5,9 @@
 use toolu_engine::LinkError;
 use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickRequest};
 
+use crate::journal::Record;
+use crate::model::{Step, World};
+
 /// What the engine does after one babysit tick.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Next {
@@ -14,6 +17,15 @@ pub enum Next {
   MergeQueue,
   /// Raise an attention item with this message.
   Attention(String),
+  /// Send the worker this prompt.
+  Prompt(String),
+  /// Raise an attention item with `note` and send the worker `prompt`.
+  Escalate {
+    /// The attention item's message.
+    note: String,
+    /// The worker's prompt.
+    prompt: String,
+  },
 }
 
 /// A babysit decision with the GraphQL usage supplied by the tick.
@@ -49,7 +61,17 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
       next: match report.decision {
         TickDecision::KeepGoing => Next::KeepGoing,
         TickDecision::Success => Next::MergeQueue,
-        TickDecision::Escalate => Next::Attention(format!("babysit escalated {slot}")),
+        TickDecision::Escalate => match report.prompt {
+          Some(prompt) => Next::Escalate {
+            note: format!("babysit escalated {slot}"),
+            prompt,
+          },
+          None => Next::Attention(format!("babysit escalated {slot}")),
+        },
+        TickDecision::Act => match report.prompt {
+          Some(text) => Next::Prompt(text),
+          None => Next::Attention(format!("babysit needs the worker on {slot}")),
+        },
       },
       graphql: report.graphql,
       throttle: None,
@@ -73,6 +95,25 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
       throttle: None,
     },
   }
+}
+
+/// Journal `text` as a `prompt` record, then send it to the worker. An
+/// undelivered prompt raises a `fallback` attention item, if one is named.
+pub(crate) fn prompt(
+  world: &mut World,
+  key: &str,
+  name: &str,
+  text: String,
+  fallback: Option<&str>,
+) {
+  world
+    .outbox
+    .push_back(Step::Journal(Record::new("prompt", name, key, "", &text)));
+  world.outbox.push_back(Step::Prompt {
+    key: key.to_owned(),
+    text,
+    fallback: fallback.map(str::to_owned),
+  });
 }
 
 #[cfg(test)]

@@ -29,14 +29,7 @@ fn stall(world: &mut World, key: &str) {
     issue.stall_nudged = true;
     issue.nudge_at_ms = world.now_ms;
   }
-  world.outbox.push_back(Step::Journal(Record::new(
-    "prompt", "status", key, "", "STATUS?",
-  )));
-  world.outbox.push_back(Step::Call {
-    key: key.to_owned(),
-    action: Action::Prompt,
-    token: String::new(),
-  });
+  crate::babysit::prompt(world, key, "status", "STATUS?".to_owned(), None);
 }
 
 /// Absolute time of the soonest stall deadline.

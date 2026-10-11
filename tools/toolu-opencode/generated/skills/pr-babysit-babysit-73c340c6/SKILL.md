@@ -13,23 +13,22 @@ introduce handoff arguments. Read [the canonical workflow](../../resources/pr-ba
 completely and follow its OpenCode controller plus every shared strict-clearance
 step.
 
-In every bash call, `PLUGIN_ROOT="$TOOLU_PLUGIN_ROOT_PR_BABYSIT"` and each helper
-runs as `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/<helper>.js"`, so a project `.env` never
-reaches `gh`. Each tick is one command, `babysit-tick.js` with
+Each check is one command, `toolu babysit wait` (or `toolu babysit tick` for a
+check right now) with
 `--state-file "$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json"`; its output
 contract is [references/helper.md](references/helper.md). Trust that result:
 never write a polling script or controller of your own, never re-fetch with
 ad-hoc `gh` calls what the result already reports, and act through
-`babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`.
-Fix items go through `babysit-route-fix.js --host opencode` and, when it
-dispatches fixer agents, `babysit-dispatch-fix.js start` then
-`babysit-dispatch-fix.js wait --timeout-seconds 45` — one bounded wait per tick.
+`toolu babysit reply`, `toolu babysit resolve` and `toolu babysit record`.
+Fix items go through `toolu babysit route-fix --host opencode` and, when it
+dispatches fixer agents, `toolu babysit dispatch-fix start` then
+`toolu babysit dispatch-fix wait --timeout-seconds 45` — one bounded wait per cycle.
 
-OpenCode has no cron or goal, so this turn is the controller. After a cycle that
-ends `keep_going`, run `sleep <backoff.waitSeconds>` (never more than 60) in one
-bash call and tick again, until the Success or Escalation stop. Pending checks are
-neither completion nor blockage. If the turn ends first, invoking this again
-resumes from the state file.
+OpenCode has no cron, goal or background command, so this turn is the
+controller. After each cycle, run `toolu babysit wait` again (it returns within
+55 s), until the Success or Escalation stop. Pending checks are neither
+completion nor blockage. If the turn ends first, invoking this again resumes
+from the state file.
 
 Stop with success only after the same-cycle success audit proves CI green, zero
 unresolved threads, and an approved zero-finding bot verdict; escalate only for a

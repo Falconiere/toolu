@@ -11,21 +11,21 @@ when execution already confirmed delivery authorization, GitHub
 auth, a non-default branch, and this installed plugin; do not ask again or
 introduce handoff arguments. Read [the canonical workflow](../../workflows/babysit.md)
 completely and follow only its Codex controller branches plus every shared
-strict-clearance step. Each tick is one command — the shipped
-`hooks/dist/babysit-tick.js` under this plugin's root (`../../hooks/dist/babysit-tick.js`
-relative to this file), with `--state-file` set to the Codex slot path; its output contract is [references/helper.md](references/helper.md).
+strict-clearance step. Each check is one command — `toolu babysit wait` (or
+`toolu babysit tick` for a check right now) with `--state-file` set to the Codex
+slot path; its output contract is [references/helper.md](references/helper.md).
 Trust that result: never write a polling script or controller of your own,
 never re-fetch with ad-hoc `gh` calls what the result already reports, and act
-through `babysit-reply-thread.js`, `babysit-resolve-thread.js` and `babysit-record.js`. Fix items go
-through `babysit-route-fix.js --host codex` and, when it dispatches to herdr,
-`babysit-dispatch-fix.js start` then `babysit-dispatch-fix.js wait --timeout-seconds 45` — one
+through `toolu babysit reply`, `toolu babysit resolve` and `toolu babysit record`. Fix items go
+through `toolu babysit route-fix --host codex` and, when it dispatches to herdr,
+`toolu babysit dispatch-fix start` then `toolu babysit dispatch-fix wait --timeout-seconds 45` — one
 bounded wait per continuation. A fixer launch that is due runs first in the
 call; it normally takes seconds and is bounded when an agent fails to start.
 
 Use `get_goal` before `create_goal`; keep one active goal for the resolved
-repository/PR. Continue with bounded cycles: use the native `wait` mechanism for
-at most 60 seconds, persist the exact slot state, and allow later goal
-continuations to resume. Pending checks are not completion or blockage.
+repository/PR. Continue with bounded cycles: `toolu babysit wait` returns
+within 55 seconds, the slot state persists, and later goal continuations
+resume by running it again. Pending checks are not completion or blockage.
 
 Call `update_goal` with `complete` only after the same-cycle success audit proves
 CI green, zero unresolved threads, and an approved zero-finding bot verdict.

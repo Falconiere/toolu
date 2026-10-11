@@ -65,6 +65,7 @@ fn reads_stdin(matches: &ArgMatches) -> bool {
   matches.subcommand().is_some_and(|(name, sub)| match name {
     "jev" => toolu_jev::needs_stdin(sub),
     "statusline" => toolu_statusline::needs_stdin(sub),
+    "babysit" => toolu_pr_babysit::needs_stdin(sub),
     _ => false,
   })
 }

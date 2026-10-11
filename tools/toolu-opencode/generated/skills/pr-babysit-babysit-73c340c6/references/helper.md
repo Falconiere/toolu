@@ -1,53 +1,75 @@
 # pr-babysit helper contract
 
-The tick helper is the deterministic half of babysitting. Its Bun bundle lives
-under the plugin's `hooks/dist/` directory and runs the same way on Claude Code,
-Codex and OpenCode — only `--state-file` differs by host. The fixer commands use the same bundled Bun path.
-Read this file instead of the script sources: every field the agent may act
-on is listed here. Fields not listed are not part of the contract.
+The tick helper is the deterministic half of babysitting. It is the
+`toolu babysit` namespace of the native `toolu` binary and runs the same way on
+Claude Code, Codex and OpenCode — only `--state-file` differs by host. Read this
+file instead of the sources: every field the agent may act on is listed here.
+Fields not listed are not part of the contract.
 
-## Scripts
+## Commands
 
-| Script | Role | Exit codes |
-|---|---|---|
-| `babysit-tick.js` | **The tick.** Lock the slot → collect → reduce → persist → print the result. The only read-side command the workflow runs. | `0` result · `2` usage · `3` structured error (state preserved, `pr.lastError` stamped) · `75` slot locked |
-| `babysit-collect-pr.js` | Read side: PR metadata, review threads (paginated, nested comment pages), issue comments, reviews; head re-checked after the fan-out; bot verdict via `babysit-parse-verdict.js`. Writes one snapshot. | `0` · `2` · `3` |
-| `babysit-reduce-state.js` | Pure decision layer: snapshot + prior state + `--now` → next state + result. No network, no clock. | `0` · `2` · `3` |
-| `babysit-reply-thread.js` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. | `0` · `2` · `3` · `4` duplicate_reply · `75` |
-| `babysit-resolve-thread.js` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. | `0` · `2` · `3` · `5` resolve_unconfirmed · `75` |
-| `babysit-record.js` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. | `0` · `2` · `3` · `75` |
-| `babysit-parse-verdict.js` | Parse the CI review-bot comment from stdin. | `0` |
-| `babysit-route-fix.js` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. | `0` · `2` · `3` |
-| `babysit-dispatch-fix.js` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents (herdr panes, or `opencode run` processes). | `0` · `2` · `3` · `75` |
-| `babysit-fixer-report.js` | Run by a fixer agent, never by the controller: writes its done/failed report. | `0` · `2` |
+| Command | Role |
+|---|---|
+| `toolu babysit tick` | **One check.** Lock the slot → collect → reduce → persist → print the result. |
+| `toolu babysit wait` | **The read side the workflow runs.** Ticks every 180 s on the slot's fixed schedule, in its own process, and prints the first result that needs the agent — or the waiting document at its deadline. |
+| `toolu babysit collect` | Read side: PR metadata, review threads (paginated, nested comment pages), issue comments, reviews; head re-checked after the fan-out; bot verdict parsed. Prints or writes one snapshot. |
+| `toolu babysit reduce-state` | Pure decision layer: snapshot + prior state + `--now` → next state + result. No network, no clock. |
+| `toolu babysit reply` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. |
+| `toolu babysit resolve` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. |
+| `toolu babysit record` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. |
+| `toolu babysit stop` | `dispatch-fix cleanup`, then `record status --status cancelled`. |
+| `toolu babysit parse-verdict` | Parse the CI review-bot comment from stdin. |
+| `toolu babysit route-fix` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. |
+| `toolu babysit dispatch-fix` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents (herdr panes, or `opencode run` processes). |
+| `toolu babysit fixer-report` | Run by a fixer agent, never by the controller: writes its done/failed report. |
+
+Exit codes, for every command: `0` result · `64` usage · `69`
+`gh_unavailable` (no GitHub token) or `herdr_unavailable` · `75` `locked`,
+`api_error`, `head_moved` or `resolve_unconfirmed` (try again later) · `1`
+every other structured error.
 
 Structured errors are one JSON document on stdout:
 `{"version":1,"errors":[{"code":"…","message":"…", …}]}`. `code` is a closed set:
-`usage`, `gh_unavailable`, `jq_required`, `api_error`, `invalid_json`,
+`usage`, `gh_unavailable`, `api_error`, `invalid_json`, `io_error`,
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
-`resolve_unconfirmed` — plus, from fixer dispatch (all exit `3`):
+`resolve_unconfirmed` — plus, from fixer routing and dispatch:
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
 `herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`, `process_error`.
+An `api_error` carries `source`, `class` and `lastMessage`; a rate limit is
+class `rate_limited` with `retryAfter`, `remaining` and `resetAt`.
 
-## `babysit-tick.js`
+## `toolu babysit tick` and `wait`
 
 ```
-babysit-tick.js --repo <owner/repo> --pr <n> --state-file <path>
-                [--snapshot-out <path>] [--snapshot-in <path>]
-                [--page-size N] [--timeout SECONDS] [--now <iso8601>]
+toolu babysit tick --repo <owner/repo> --pr <n> --state-file <path>
+                   [--snapshot-out <path>] [--snapshot-in <path>]
+                   [--page-size N] [--timeout SECONDS] [--now <iso8601>]
+toolu babysit wait --repo <owner/repo> --pr <n> --state-file <path>
+                   [--max-seconds N] [--page-size N] [--timeout SECONDS]
 ```
 
 - `--state-file` — the slot path, verbatim:
   `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Created on the first tick,
   resumed after.
 - `--snapshot-out` — full snapshot (default `<state-file minus .json>.snapshot.json`).
+  The result is always written beside it, to `<stem>.result.json`.
 - `--snapshot-in` — replay a captured snapshot instead of collecting (tests,
   debugging). The workflow never passes it.
-- `--timeout` — per `gh` call (default 60 s); every call retries 3× with 2 s /
-  4 s waits on timeouts, 5xx, 429, rate-limit 403 and connection errors, and
-  never on other 4xx.
+- `--timeout` — per GitHub call (default 60 s, `PB_GH_TIMEOUT`); a call is tried
+  `PB_GH_ATTEMPTS` times (3) with `PB_GH_BACKOFF` waits (`2 4 8` s) on timeouts,
+  5xx, 429, rate-limit 403 and connection errors, and never on other 4xx. The
+  token comes from `GH_TOKEN`, else `gh auth token`.
 - `--page-size` — GraphQL/REST page size (default 100). Exists so pagination is
   testable on small real PRs.
+- `--max-seconds` — the longest `wait` runs: 55 s by default, under the bash
+  tool's timeout.
+
+`wait` checks whenever the slot's `schedule.nextCheckAt` is due and sleeps
+until the next slot otherwise. It prints the tick result as soon as one has
+`decision` `success` or `escalate`, `attention.needed`, or an active fixer
+(`fixer_running`), and returns any error at once. At its deadline it prints the
+waiting document:
+`{"version":1,"state":"waiting","slot":…,"nextCheckAt":…,"statePath":…,"resultPath":…}`.
 
 The PR head is read before and after the fan-out; if it moved the collection
 runs once more, then fails with `head_moved`. A tick never writes a partial
@@ -56,18 +78,18 @@ crash leaves the previous state and no temp file.
 
 ## Result (`version: 1`)
 
-What the agent acts on. Printed on stdout by `babysit-tick.js`.
+What the agent acts on. Printed on stdout by `tick` and `wait`, and written to `resultPath`.
 
 | Field | Meaning |
 |---|---|
 | `slot` | `<owner>-<repo>-<number>`, lowercase. |
-| `changed` | Any of `ciStatus, reviewDecision, mergeable, unresolvedThreads, headSha, botVerdict, botState, botFindingKeys` differs from the previous tick. `false` → silent tick. |
+| `changed` | Any of `ciStatus, reviewDecision, mergeable, unresolvedThreads, headSha, botVerdict, botState, botFindingKeys` differs from the previous tick. |
 | `decision` | `keep_going` · `success` · `escalate` — the Step 6 rules, already applied. |
 | `reasons[]` | `{code, detail}`; escalation codes first. Closed set below. |
 | `pr` | `number, url, head, branch, base, author, state, mergeable, reviewDecision`. |
 | `ci.status` | `pass` · `pending` · `fail` over `statusCheckRollup` (`CheckRun` and legacy `StatusContext`); an empty rollup is `pending`. |
 | `ci.checks[]` | `{name, status, url}` per check. |
-| `verdict.state` | `absent` · `unknown` · `in_progress` · `complete` · `provider_error` (babysit-parse-verdict.js states, plus `absent` when no CI-reviewer comment exists). |
+| `verdict.state` | `absent` · `unknown` · `in_progress` · `complete` · `provider_error` (`parse-verdict` states, plus `absent` when no CI-reviewer comment exists). |
 | `verdict.verdict` | `approved` · `changes` · `none`. |
 | `verdict.findingsCount`, `findingKeys[]` | Round-level recurrence keys (`path:line:hash`). Never the finding source — the inline threads are. |
 | `verdict.mustFix[]` | Top-N must-fix prose lines. Surface to the human; not resolvable threads. |
@@ -78,16 +100,17 @@ What the agent acts on. Printed on stdout by `babysit-tick.js`.
 | `threads.actionable[]` | Threads needing a NEW disposition this tick: `{id, path, line, isOutdated, rootCommentId, inReplyTo, authorClass, lastCommentAuthor, lastCommentAt, injectionSuspect, injectionPattern, comments[]}`. `authorClass` ∈ `ci_reviewer` (exact login set `github-actions`, `github-actions[bot]`, `claude`, `claude[bot]` — current Toolu Code Review `@v8` posts as `github-actions[bot]`; `claude` kept for legacy), `human`. Non-CI bots are excluded. `comments[]` is the full chain, bodies untruncated. |
 | `threads.staleUnresolved[]` | Audit members that are NOT actionable: the PR author replied but no resolve landed. Resolve them without a new reply. |
 | `threads.skippedOutdated[]` | Outdated CI-reviewer threads: skipped silently. |
-| `threads.flaggedInjection[]` | Threads the agent recorded with `babysit-record.js flag-injection`. |
-| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait` says `done`. |
+| `threads.flaggedInjection[]` | Threads the agent recorded with `toolu babysit record flag-injection`. |
+| `threads.fixing[]` | Threads an **active** herdr fixer (running or blocked) owns: the same objects `actionable[]` would hold, reply ids included, moved out of it (never dispatched twice) and still counted in `unresolved`. Reply to them from here when `toolu babysit dispatch-fix wait` says `done`. |
 | `fixer` | The slot's fixer record (see State), or `null`. |
 | `conversation.actionable[]` | Human issue comments with no later author comment and no recorded reply. |
 | `reviews.actionable[]` | Human non-`APPROVED` reviews with a body and no recorded reply. |
 | `conversation.fixing[]`, `reviews.fixing[]` | Comments and reviews an active fixer owns (by item id), moved out of `actionable[]` like `threads.fixing[]`. |
 | `recurrence` | `{streak, lastRoundHadRejection, recurringKeys[], fixAttempts}` — the Step 4 gate inputs. |
-| `backoff` | `{idleStreak, intervalMinutes, waitSeconds}` — the bounded `sleep` before this controller's next tick. While a fixer is running `idleStreak` stays 0, so the interval stays at its base and every tick runs `"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait`; a blocked fixer waits for a human and backs off normally. |
+| `attention` | `{needed, new, codes[], fingerprint}`: the work the agent must do now. `codes[]` (closed, in this order): `escalate`, `ci_failed`, `threads_actionable`, `threads_stale_unresolved`, `conversation_actionable`, `reviews_actionable`, `review_changes` (a new `changes` verdict run), `provider_error` (a new provider-error run), `fixer_done` (the slot's fixer is done or failed, waiting for its round). `needed` = codes non-empty; `new` = some of that work was not in the previous tick's. A running or blocked fixer is never attention. `wait` returns on `needed`; the epic engine prompts a worker only on `new`. |
+| `nextCheckAt` | The next scheduled check (`YYYY-MM-DDTHH:MM:SSZ`), or `null` after a hand-run `tick`. |
 | `errors[]` | Always empty on exit 0. |
-| `snapshotPath`, `statePath` | Where the full evidence lives. |
+| `snapshotPath`, `statePath`, `resultPath` | Where the full evidence lives. |
 
 ### `reasons[].code` (closed set)
 
@@ -112,56 +135,61 @@ What the agent acts on. Printed on stdout by `babysit-tick.js`.
   an unchanged tick, and `mergeable == UNKNOWN`.
 
 Recurrence only advances on a NEW verdict run (`sameRunAsLastTick: false`) and
-only against the keys the agent rotated with `babysit-record.js round`.
+only against the keys the agent rotated with `toolu babysit record round`.
 
 ## State (`version: 2`)
 
 Persisted at `--state-file`; owned by the helper. The agent reads it only
-through the result, and writes it only through `babysit-record.js`, `babysit-reply-thread.js`
-and `babysit-resolve-thread.js`.
+through the result, and writes it only through `toolu babysit record`, `reply`,
+`resolve`, `dispatch-fix` and `stop`.
 
 | Field | Meaning |
 |---|---|
-| `slot`, `repo`, `number`, `cronName` | Slot identity; a state for another PR is refused (`slot_mismatch`). |
-| `lastUpdate`, `totalTicks`, `idleStreak`, `currentInterval`, `waitSeconds` | Tick bookkeeping and backoff. |
-| `status` | `active` · `complete` · `escalated` · `cancelled` — set only by `babysit-record.js status`. |
-| `worktree` | Codex's exact worktree path for this slot, or `null`. |
+| `slot`, `repo`, `number` | Slot identity; a state for another PR is refused (`slot_mismatch`). |
+| `lastUpdate`, `totalTicks` | Tick bookkeeping. |
+| `schedule` | `{anchor, nextCheckAt}` in Unix seconds: the first scheduled check and the next whole 180 s slot. Moved only by `wait` and the epic engine. |
+| `attention` | `{fingerprint, work[]}` of the last tick, which decides `attention.new`. |
+| `status` | `active` · `complete` · `escalated` · `cancelled` — set only by `toolu babysit record status`. |
+| `worktree` | A Codex controller's worktree path; `null` on OpenCode. |
 | `pr.key`, `ciStatus`, `reviewDecision`, `mergeable`, `unresolvedThreads`, `headSha` | Last observed values (change detection). |
-| `pr.fixAttempts` | Bumped by `babysit-record.js round --fix-pushed`, cap 5. |
+| `pr.fixAttempts` | Bumped by `toolu babysit record round --fix-pushed`, cap 5. |
 | `pr.botVerdict`, `botState`, `botCommentId`, `botCommentUpdatedAt`, `botFindingKeys` | Last verdict and its run identity. |
-| `pr.lastRoundFindingKeys`, `lastRoundHadRejection`, `recurrenceStreak` | Step 4 gate memory; rotated by `babysit-record.js round`. |
+| `pr.lastRoundFindingKeys`, `lastRoundHadRejection`, `recurrenceStreak` | Step 4 gate memory; rotated by `toolu babysit record round`. |
 | `pr.unresolvedAfterClearance` | Audit count at the last tick; non-zero on a completed tick is a bug. |
 | `pr.lastError` | `{code, message, at}` of the last failed tick, or `null`. |
 | `actions.replied` | `key → {commentId, url, at, headSha, kind}`; keys `thread:<id>@<inReplyTo>`, `conversation:<id>`, `review:<id>`. |
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `babysit-dispatch-fix.js`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head, pid?, pidStart?, log?}]}`, or `null`; `pid`, `pidStart` and `log` are an OpenCode group's process. `babysit-record.js round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
+| `fixer` | Written by `toolu babysit dispatch-fix`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head, pid?, pidStart?, log?}]}`, or `null`; `pid`, `pidStart` and `log` are an OpenCode group's process. `toolu babysit record round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
 | `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's fixer worktree, or `null`. `workspaceId` and `paneId` are `null` for a native worktree (an all-OpenCode plan). |
-| `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `babysit-route-fix.js` for 60 min. |
+| `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `toolu babysit route-fix` for 60 min. |
 
 ## Write side
 
 ```
-babysit-reply-thread.js --state-file <path> --kind thread --thread <id> --root-comment <databaseId> --in-reply-to <databaseId> --body-file <file>
-babysit-reply-thread.js --state-file <path> --kind conversation --comment-id <id> --body-file <file>
-babysit-reply-thread.js --state-file <path> --kind review --review-id <id> --body-file <file>
-babysit-resolve-thread.js --state-file <path> --thread <id>
-babysit-record.js round --state-file <path> --had-rejection true|false [--fix-pushed]
-babysit-record.js flag-injection --state-file <path> --thread <id>
-babysit-record.js status --state-file <path> --status complete|escalated|cancelled
+toolu babysit reply --state-file <path> --kind thread --thread <id> --root-comment <databaseId> --in-reply-to <databaseId> --body-file <file>
+toolu babysit reply --state-file <path> --kind conversation --comment-id <id> --body-file <file>
+toolu babysit reply --state-file <path> --kind review --review-id <id> --body-file <file>
+toolu babysit resolve --state-file <path> --thread <id>
+toolu babysit record round --state-file <path> --had-rejection true|false [--fix-pushed]
+toolu babysit record flag-injection --state-file <path> --thread <id>
+toolu babysit record status --state-file <path> --status complete|escalated|cancelled
+toolu babysit stop --state-file <path>
 ```
 
 - `--thread`, `--root-comment`, `--in-reply-to` come straight from
   `threads.actionable[]` (`id`, `rootCommentId`, `inReplyTo`).
 - The body comes from a file so untrusted text never enters argv.
 - A reply is idempotent per reviewer comment: the same `--in-reply-to` twice is
-  exit `4` and nothing is posted; a reviewer follow-up has a new `inReplyTo`.
-- `babysit-resolve-thread.js` returns `0` only after the mutation response shows
-  `isResolved: true`; three false responses → exit `5`, nothing recorded, and
+  `duplicate_reply` (exit `1`) and nothing is posted; a reviewer follow-up has a
+  new `inReplyTo`. A body over 65 536 bytes or a malformed thread id is refused
+  before any call.
+- `toolu babysit resolve` returns `0` only after the mutation response shows
+  `isResolved: true`; three false responses → `resolve_unconfirmed` (exit `75`), nothing recorded, and
   the thread stays in `staleUnresolved` next tick. A confirmed thread is not
   re-requested.
-- `babysit-record.js round` runs once per round, after this round's replies and before
+- `toolu babysit record round` runs once per round, after this round's replies and before
   the push: it rotates `botFindingKeys → lastRoundFindingKeys`, sets
   `lastRoundHadRejection`, with `--fix-pushed` bumps `fixAttempts`, and clears
   a done or failed `fixer` record.
@@ -169,31 +197,32 @@ babysit-record.js status --state-file <path> --status complete|escalated|cancell
 ## Fixer dispatch
 
 ```
-"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-route-fix.js" --items <file> --host opencode [--state-file <path>] [--raise <itemId>]... [--no-jev]
-             [--jev-answers-in <file>] [--now <iso8601>]
-"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
-"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" wait    --state-file <p> [--timeout-seconds N]
-"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-dispatch-fix.js" cleanup --state-file <p> [--dry-run]
-"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/babysit-fixer-report.js" <report-file> done|failed [--note <text>]
+toolu babysit route-fix --items <file> --host opencode [--state-file <path>] [--raise <itemId>]... [--no-jev]
+                        [--jev-answers-in <file>] [--now <iso8601>]
+toolu babysit dispatch-fix start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
+toolu babysit dispatch-fix wait    --state-file <p> [--timeout-seconds N]
+toolu babysit dispatch-fix cleanup --state-file <p> [--dry-run]
+toolu babysit fixer-report <report-file> done|failed [--note <text>]
 ```
 
 - **Items file** (the agent writes it): `{round, items:[{id, kind: thread|conversation|review|ci,
   task, path?, line?, severity?, quote?}]}`. `task` is the agent's instruction; `quote` is the
   reviewer's text, which reaches a fixer only inside an untrusted-data fence and never reaches Jev
   or the heuristic.
-- **Route** (`babysit-route-fix.js` stdout): `{version:1, dispatch: herdr|inline, unattended, source:
+- **Route** (`toolu babysit route-fix` stdout): `{version:1, dispatch: herdr|inline, unattended, source:
   jev|heuristic|mixed, note, items:[{id, tier, score, confidence, raised, source}], groups:[{seq,
   tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
   `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·
   implementation · architecture · architecture`). A host is dropped when cooling
   (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`, `opencode`) is not on `PATH`;
   no host left → `dispatch: inline` with a `note`. `dispatch: herdr` means fixer agents through
-  `babysit-dispatch-fix.js`, whatever their transport. With `--host opencode` the config is
-  `$TOOLU_USER_CONFIG_DIR/toolu.config.json` plus `.opencode/toolu.config.json`, and Jev is only
-  `toolu jev`, which does not load a project `.env` file. `--jev-answers-in` replays a captured Jev answer map
-  (tests, debugging — the workflow never passes it).
+  `toolu babysit dispatch-fix`, whatever their transport. With `--host opencode` the config is
+  `$TOOLU_USER_CONFIG_DIR/toolu.config.json` plus `.opencode/toolu.config.json`. Jev runs in
+  process with `TYPESAFE_API_KEY` and never loads a project `.env` file; `prBabysit.jev: false`
+  turns it off like `--no-jev`. `--jev-answers-in` replays a captured Jev answer map
+  (tests, debugging — the workflow never passes it) and wins over both.
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
-  `round` that is not a positive integer), each group's host and model/effort (`config_invalid`), an
+  `round` that is not a positive integer, and a `--base` or `--branch` starting with `-`), each group's host and model/effort (`config_invalid`), an
   active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`) when a group
   needs a pane: an all-`opencode` plan does not, and gets a native `git worktree` at
   `<state>.worktree` instead. It fetches
@@ -276,8 +305,9 @@ babysit-record.js status --state-file <path> --status complete|escalated|cancell
  "threads":{"total":6,"unresolved":0,"actionable":[],"staleUnresolved":[],"skippedOutdated":[],"flaggedInjection":[]},
  "conversation":{"actionable":[]},"reviews":{"actionable":[]},
  "recurrence":{"streak":0,"lastRoundHadRejection":false,"recurringKeys":[],"fixAttempts":0},
- "backoff":{"idleStreak":0,"intervalMinutes":3,"waitSeconds":15},
- "errors":[],"snapshotPath":"/tmp/pr-babysit-falconiere-toolu-165.snapshot.json","statePath":"/tmp/pr-babysit-falconiere-toolu-165.json"}
+ "attention":{"needed":false,"new":false,"codes":[],"fingerprint":null},"nextCheckAt":"2026-09-19T12:03:00Z",
+ "errors":[],"snapshotPath":"/tmp/pr-babysit-falconiere-toolu-165.snapshot.json","statePath":"/tmp/pr-babysit-falconiere-toolu-165.json",
+ "resultPath":"/tmp/pr-babysit-falconiere-toolu-165.result.json"}
 ```
 
 `decision: keep_going` — review still running, one CI-reviewer thread open (comment bodies trimmed here):

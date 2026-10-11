@@ -7,7 +7,8 @@ use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
 use nix::errno::Errno;
-use nix::sys::signal::{Signal, kill, killpg};
+pub use nix::sys::signal::Signal;
+use nix::sys::signal::{kill, killpg};
 use nix::unistd::Pid;
 
 /// The wait between two looks at a group being stopped.
@@ -36,6 +37,18 @@ pub fn signal(group: u32, signal: Signal) -> Result<(), String> {
   match killpg(group_pid(group)?, signal) {
     Ok(()) | Err(Errno::ESRCH) => Ok(()),
     Err(errno) => Err(format!("cannot signal process group {group}: {errno}")),
+  }
+}
+
+/// Sends `signal` to process `pid` alone, whatever its group; a process that
+/// already exited is success.
+///
+/// # Errors
+/// When `pid` is not a positive process id, or the signal cannot be sent.
+pub fn signal_pid(pid: u32, signal: Signal) -> Result<(), String> {
+  match kill(group_pid(pid)?, signal) {
+    Ok(()) | Err(Errno::ESRCH) => Ok(()),
+    Err(errno) => Err(format!("cannot signal process {pid}: {errno}")),
   }
 }
 

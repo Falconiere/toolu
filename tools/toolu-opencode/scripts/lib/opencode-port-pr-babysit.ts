@@ -14,12 +14,6 @@ const SKILL = "plugins/pr-babysit/skills/babysit/SKILL.md";
 const HELPER = "plugins/pr-babysit/skills/babysit/references/helper.md";
 const WORKFLOW = "plugins/pr-babysit/workflows/babysit.md";
 
-const RUN_HELPER = '"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/<helper>.js"';
-
-/** Every helper command, run by the adapter's Bun with `.env` loading off. */
-const BUN_HELPER = 'bun "$PLUGIN_ROOT/hooks/dist/';
-const NO_ENV_HELPER = '"$TOOLU_BUN" --no-env-file "$PLUGIN_ROOT/hooks/dist/';
-
 const SKILL_BODY = `This no-argument invocation explicitly authorizes babysitting the current
 repository's pull request. A verified execution handoff is sufficient authorization
 when execution already confirmed delivery authorization, GitHub
@@ -28,23 +22,22 @@ introduce handoff arguments. Read [the canonical workflow](../../workflows/babys
 completely and follow its OpenCode controller plus every shared strict-clearance
 step.
 
-In every bash call, \`PLUGIN_ROOT="$TOOLU_PLUGIN_ROOT_PR_BABYSIT"\` and each helper
-runs as \`${RUN_HELPER}\`, so a project \`.env\` never
-reaches \`gh\`. Each tick is one command, \`babysit-tick.js\` with
+Each check is one command, \`toolu babysit wait\` (or \`toolu babysit tick\` for a
+check right now) with
 \`--state-file "$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json"\`; its output
 contract is [references/helper.md](references/helper.md). Trust that result:
 never write a polling script or controller of your own, never re-fetch with
 ad-hoc \`gh\` calls what the result already reports, and act through
-\`babysit-reply-thread.js\`, \`babysit-resolve-thread.js\` and \`babysit-record.js\`.
-Fix items go through \`babysit-route-fix.js --host opencode\` and, when it
-dispatches fixer agents, \`babysit-dispatch-fix.js start\` then
-\`babysit-dispatch-fix.js wait --timeout-seconds 45\` — one bounded wait per tick.
+\`toolu babysit reply\`, \`toolu babysit resolve\` and \`toolu babysit record\`.
+Fix items go through \`toolu babysit route-fix --host opencode\` and, when it
+dispatches fixer agents, \`toolu babysit dispatch-fix start\` then
+\`toolu babysit dispatch-fix wait --timeout-seconds 45\` — one bounded wait per cycle.
 
-OpenCode has no cron or goal, so this turn is the controller. After a cycle that
-ends \`keep_going\`, run \`sleep <backoff.waitSeconds>\` (never more than 60) in one
-bash call and tick again, until the Success or Escalation stop. Pending checks are
-neither completion nor blockage. If the turn ends first, invoking this again
-resumes from the state file.
+OpenCode has no cron, goal or background command, so this turn is the
+controller. After each cycle, run \`toolu babysit wait\` again (it returns within
+55 s), until the Success or Escalation stop. Pending checks are neither
+completion nor blockage. If the turn ends first, invoking this again resumes
+from the state file.
 
 Stop with success only after the same-cycle success audit proves CI green, zero
 unresolved threads, and an approved zero-finding bot verdict; escalate only for a
@@ -58,14 +51,17 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
     { cut: ["This no-argument invocation explicitly authorizes", null], to: SKILL_BODY },
   ],
   [HELPER]: [
-    [BUN_HELPER, NO_ENV_HELPER, 7],
-    [
-      "— Claude cron interval / Codex bounded wait for this tick.",
-      "— the bounded `sleep` before this controller's next tick.",
-    ],
     [
       "- `--state-file` — the host's slot path, verbatim: `/tmp/pr-babysit-<slot>.json`\n  (Claude), `<repo>/.codex/tmp/pr-babysit/<slot>.json` (Codex) or\n  `<repo>/.opencode/tmp/pr-babysit/<slot>.json` (OpenCode). Created on the\n  first tick, resumed after.",
       "- `--state-file` — the slot path, verbatim:\n  `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. Created on the first tick,\n  resumed after.",
+    ],
+    [
+      "- `--max-seconds` — the longest `wait` runs: 1800 on Claude (a background Bash\n  call), 55 on Codex, OpenCode and any other host.",
+      "- `--max-seconds` — the longest `wait` runs: 55 s by default, under the bash\n  tool's timeout.",
+    ],
+    [
+      "| `worktree` | Codex's exact worktree path for this slot, or `null`. |",
+      "| `worktree` | A Codex controller's worktree path; `null` on OpenCode. |",
     ],
     [
       "--items <file> --host claude|codex|opencode [--state-file <path>]",
@@ -73,17 +69,12 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
     ],
   ],
   [WORKFLOW]: [
-    [BUN_HELPER, NO_ENV_HELPER, 10],
     [
       "Route it (`--host` is this controller: `claude`, `codex` or `opencode`):",
       "Route it with `--host opencode`:",
     ],
     {
-      cut: ["`PLUGIN_ROOT` = the directory holding this plugin", "\n\n---\n\n## Step 0"],
-      to: "`PLUGIN_ROOT` = `$TOOLU_PLUGIN_ROOT_PR_BABYSIT`, which toolu's `shell.env` sets in every bash call.",
-    },
-    {
-      cut: ["### Claude Code scheduling\n", "### OpenCode start or resume\n"],
+      cut: ["### Claude Code\n", "### OpenCode start or resume\n"],
       to: 'Slot: `SLOT="${OWNER}-${REPO}-${NUMBER}"` lowercased (e.g. `falconiere-toolu-42`).\n\n',
     },
     {
@@ -91,7 +82,7 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
       to: "- **Single-slot scope.** Read and write only\n  `$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.json`. Never glob `*.json`, list the\n  state directory, or read another slot. The helper refuses a state file that\n  belongs to another PR (`slot_mismatch`) and a slot another controller holds\n  (`locked`, exit 75).\n",
     },
     {
-      cut: ["- **No leakage in tick prompt.**", "- **Stop is local.**"],
+      cut: ["- **Worktree isolation.**", "- **Stop is local.**"],
       to: "- **Worktree isolation.** Every code-change cycle uses its own worktree. Fixer\n  dispatch uses the slot's worktree on `pr-babysit/<slot>` (native\n  `<state>.worktree` when every group is OpenCode, else a herdr worktree),\n  recorded in state as `herdrWorktree`. Inline fixes use native `git worktree` at\n  `<state>.inline`. Never reuse another slot's worktree or fixer agent.\n",
     },
     [
@@ -107,10 +98,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
     },
     {
       cut: [
-        "works only in the slot's herdr worktree (`babysit-dispatch-fix.js` owns it). Inline,",
+        "works only in the slot's herdr worktree (`toolu babysit dispatch-fix` owns it). Inline,",
         "\nReproduce + verify locally before push.",
       ],
-      to: 'works only in the slot\'s fixer worktree (`babysit-dispatch-fix.js` owns it). Inline,\ncreate one detached worktree at exactly\n`$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.inline`: validate the exact path, then\nrun `git worktree add --detach "$WORKTREE" "$HEAD_SHA"` (`HEAD_SHA` = `pr.head`\nfrom the result). It is inside the project, so neither you nor a `task` subagent\nmeets an `external_directory` prompt; give subagents absolute paths in it. Work on\ndetached HEAD and push with `git -C "$WORKTREE" push origin "HEAD:$BRANCH"`; this\navoids checking out a branch already held by the main checkout. Never reuse it\nfor a different PR.\n',
+      to: 'works only in the slot\'s fixer worktree (`toolu babysit dispatch-fix` owns it). Inline,\ncreate one detached worktree at exactly\n`$REPO_ROOT/.opencode/tmp/pr-babysit/$SLOT.inline`: validate the exact path, then\nrun `git worktree add --detach "$WORKTREE" "$HEAD_SHA"` (`HEAD_SHA` = `pr.head`\nfrom the result). It is inside the project, so neither you nor a `task` subagent\nmeets an `external_directory` prompt; give subagents absolute paths in it. Work on\ndetached HEAD and push with `git -C "$WORKTREE" push origin "HEAD:$BRANCH"`; this\navoids checking out a branch already held by the main checkout. Never reuse it\nfor a different PR.\n',
     },
     [
       "   the active host's `<worktree>/.claude/tmp/push-review/`,\n   `<worktree>/.codex/tmp/push-review/` or `<worktree>/.opencode/tmp/push-review/`\n   directory; push is denied otherwise.",
@@ -118,10 +109,10 @@ export const PR_BABYSIT_PORTS: Readonly<Record<string, readonly PortEdit[]>> = {
     ],
     {
       cut: [
-        "`babysit-record.js status --status complete`, then Claude deletes",
+        '`toolu babysit record status --state-file "$STATE_FILE" --status complete`, then Claude',
         '\n> "PR #N: all green',
       ],
-      to: "`babysit-record.js status --status complete`, then remove the clean inline worktree, keep the state\nfile as the record, and end this turn's loop.",
+      to: '`toolu babysit record status --state-file "$STATE_FILE" --status complete`, then remove the clean inline worktree, keep the state\nfile as the record, and end this turn\'s loop.',
     },
     [
       "Resume with `/pr-babysit:babysit` on Claude Code, `$pr-babysit:babysit` on Codex or the babysit command on OpenCode once unblocked.",

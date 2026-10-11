@@ -1,0 +1,460 @@
+{
+  "name": "pb-3fa2c1-r1g1",
+  "argv": [
+    {
+      "host": "claude",
+      "unattended": true,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": true,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": true,
+      "model": "opus",
+      "effort": null,
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": true,
+      "model": "opus",
+      "effort": "high",
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": false,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": false,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": false,
+      "model": "opus",
+      "effort": null,
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus"
+      ]
+    },
+    {
+      "host": "claude",
+      "unattended": false,
+      "model": "opus",
+      "effort": "high",
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": true,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": true,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": true,
+      "model": "gpt-6-sol",
+      "effort": null,
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--model",
+        "gpt-6-sol"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": true,
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--model",
+        "gpt-6-sol",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": false,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": false,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": false,
+      "model": "gpt-6-sol",
+      "effort": null,
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "--model",
+        "gpt-6-sol"
+      ]
+    },
+    {
+      "host": "codex",
+      "unattended": false,
+      "model": "gpt-6-sol",
+      "effort": "high",
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "--model",
+        "gpt-6-sol",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": true,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": true,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": true,
+      "model": "gpt-5.6-sol-high",
+      "effort": null,
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": true,
+      "model": "gpt-5.6-sol-high",
+      "effort": "high",
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": false,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--trust"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": false,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--trust"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": false,
+      "model": "gpt-5.6-sol-high",
+      "effort": null,
+      "argv": [
+        "--trust",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "host": "cursor",
+      "unattended": false,
+      "model": "gpt-5.6-sol-high",
+      "effort": "high",
+      "argv": [
+        "--trust",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": true,
+      "model": null,
+      "effort": null,
+      "argv": [
+        "--auto"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": true,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--auto",
+        "--variant",
+        "high"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": true,
+      "model": "anthropic/claude-sonnet",
+      "effort": null,
+      "argv": [
+        "--auto",
+        "--model",
+        "anthropic/claude-sonnet"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": true,
+      "model": "anthropic/claude-sonnet",
+      "effort": "high",
+      "argv": [
+        "--auto",
+        "--model",
+        "anthropic/claude-sonnet",
+        "--variant",
+        "high"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": false,
+      "model": null,
+      "effort": null,
+      "argv": []
+    },
+    {
+      "host": "opencode",
+      "unattended": false,
+      "model": null,
+      "effort": "high",
+      "argv": [
+        "--variant",
+        "high"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": false,
+      "model": "anthropic/claude-sonnet",
+      "effort": null,
+      "argv": [
+        "--model",
+        "anthropic/claude-sonnet"
+      ]
+    },
+    {
+      "host": "opencode",
+      "unattended": false,
+      "model": "anthropic/claude-sonnet",
+      "effort": "high",
+      "argv": [
+        "--model",
+        "anthropic/claude-sonnet",
+        "--variant",
+        "high"
+      ]
+    }
+  ],
+  "aliases": {
+    "cursor-agent": "cursor",
+    "Claude-Code": "claude",
+    " Cursor-Agent ": "cursor",
+    "codex": "codex",
+    "OpenCode": "opencode",
+    "claude": "claude"
+  },
+  "routing": {
+    "claude": [
+      {
+        "model": "sonnet",
+        "effort": "low"
+      },
+      {
+        "model": "sonnet",
+        "effort": "medium"
+      },
+      {
+        "model": "opus",
+        "effort": "high"
+      },
+      {
+        "model": "opus",
+        "effort": "xhigh"
+      }
+    ],
+    "codex": [
+      {
+        "model": "gpt-6-sol",
+        "effort": "low"
+      },
+      {
+        "model": "gpt-6-sol",
+        "effort": "medium"
+      },
+      {
+        "model": "gpt-6-sol",
+        "effort": "high"
+      },
+      {
+        "model": "gpt-6-sol",
+        "effort": "xhigh"
+      }
+    ],
+    "cursor": [
+      {
+        "model": "composer-2.5"
+      },
+      {
+        "model": "gpt-5.6-sol-high"
+      },
+      {
+        "model": "claude-opus-5-thinking-high"
+      },
+      {
+        "model": "gpt-5.6-sol-xhigh"
+      }
+    ],
+    "opencode": [
+      {},
+      {},
+      {},
+      {}
+    ]
+  },
+  "hostLimit": "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) ",
+  "hostLimitFlags": "i"
+}

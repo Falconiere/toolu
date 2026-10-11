@@ -29,8 +29,11 @@ pub enum TickDecision {
   /// CI is green and no thread is unresolved, and the review verdict is clean
   /// or could not be read (pr-babysit's degraded success; verify it by hand).
   Success,
-  /// A human or the worker has to look.
+  /// A human has to look; the report's `prompt`, when set, also goes to the
+  /// worker. Reported once, when the escalation is new.
   Escalate,
+  /// New work for the worker: the report's `prompt` says what.
+  Act,
 }
 
 /// A tick's decision and its full result document, kept for the journal.
@@ -42,6 +45,9 @@ pub struct TickReport {
   pub result: Value,
   /// GraphQL points and primary limit observed by this tick, when available.
   pub graphql: Option<GraphQlUsage>,
+  /// The text to send the worker, with [`TickDecision::Act`] or
+  /// [`TickDecision::Escalate`].
+  pub prompt: Option<String>,
 }
 
 /// The GraphQL budget observed by one babysit tick.

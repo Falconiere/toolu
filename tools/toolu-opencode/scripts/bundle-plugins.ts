@@ -27,7 +27,7 @@ function copyDirectory(source: string, target: string, accept: (name: string) =>
 /** The files beyond manifests and hook bundles that a plugin's shipped code reads at runtime. */
 function stagePluginExtras(plugin: string, source: string, target: string): void {
   if (plugin === "pr-babysit") {
-    // babysit-dispatch-fix.js renders each fixer's brief from this template.
+    // The fixer brief template `toolu babysit dispatch-fix` renders, beside its skill.
     const brief = join("skills", "babysit", "references", "fixer-brief.md");
     copy(join(source, brief), join(target, brief));
   }

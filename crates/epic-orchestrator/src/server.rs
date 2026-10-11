@@ -216,6 +216,17 @@ impl Engine {
         self.write_issue(&key)?;
         Ok(Applied::Continue)
       }
+      Step::Prompt {
+        key,
+        text,
+        fallback,
+      } => {
+        if let (Err(err), Some(kind)) = (self.send_prompt(&key, &text), fallback) {
+          let note = format!("worker prompt not delivered: {err}");
+          crate::logic::push_attention(&mut self.world, &kind, &key, &note);
+        }
+        Ok(Applied::Continue)
+      }
     }
   }
 
@@ -235,21 +246,29 @@ impl Engine {
     Ok(Applied::Continue)
   }
 
-  fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
-    if action == Action::Prompt {
-      if self.scripts.is_none() && crate::source::prompt_enabled() {
-        let target = self
-          .world
-          .issues
-          .get(key)
-          .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
-        let _sent =
-          crate::source::ask_status(&self.paths, &toolu_runtime::env::Env::process(), &target);
-      } else {
-        let _outcome = invoke(self.scripts.as_deref(), action, "{}");
-      }
-      return Ok(Applied::Continue);
+  /// Send `text` to `key`'s worker through herdr, or the `prompt` script,
+  /// which reads `{"key","text"}`.
+  ///
+  /// # Errors
+  /// herdr fails, or the script fails or is deferred.
+  fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
+    if self.scripts.is_none() && crate::source::prompt_enabled() {
+      let target = self
+        .world
+        .issues
+        .get(key)
+        .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
+      let env = toolu_runtime::env::Env::process();
+      return crate::source::prompt(&self.paths, &env, &target, text);
     }
+    let body = json!({"key": key, "text": text}).to_string();
+    match invoke(self.scripts.as_deref(), Action::Prompt, &body).as_str() {
+      outcome @ ("failed" | "deferred") => Err(format!("prompt {outcome}")),
+      _ => Ok(()),
+    }
+  }
+
+  fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
     if self.fault == Fault::BeforeMerge && action == Action::Merge && !recovered(&self.world, key) {
       return Ok(Applied::Fault);
     }

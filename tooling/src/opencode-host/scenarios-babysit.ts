@@ -1,6 +1,6 @@
 /**
- * Pinned-host pr-babysit (#357): an OpenCode controller runs the shipped
- * helpers through its own bash, and `babysit-dispatch-fix.js` starts a real
+ * Pinned-host pr-babysit (#357, #433): an OpenCode controller runs
+ * `toolu babysit` through its own bash, and `toolu babysit dispatch-fix` starts a real
  * OpenCode fixer (`opencode run`) in a native worktree of an isolated
  * repository whose PR branch has a failing test. Both sessions talk to the
  * scripted provider: the controller by its `PROBE:` token, the fixer through
@@ -24,12 +24,15 @@ import {
   git,
   helper,
   json,
+  ledgerUntouched,
   originOf,
   paths,
   reap,
   refused,
+  routedTo,
   running,
   startSteps,
+  stopRemovedWorktree,
   text,
   waitStep,
 } from "./babysit-fixture.ts";
@@ -71,7 +74,7 @@ async function fixer(ctx: EntryContext): Promise<EntryResult> {
       ),
       helper(
         "record",
-        `babysit-record.js" round --state-file '${q.state}' --had-rejection false --fix-pushed`,
+        `record round --state-file '${q.state}' --had-rejection false --fix-pushed`,
       ),
     ],
     "*": fixerSteps(q),
@@ -92,9 +95,7 @@ async function fixer(ctx: EntryContext): Promise<EntryResult> {
       exits:
         text(join(p.project, "exits.txt")) ===
         "tick=0\nroute=0\nstart=0\nwait=0\nverify=0\nrecord=0\n",
-      routed: JSON.stringify(json(join(p.project, "route.json"))["groups"] ?? "").includes(
-        '"host":"opencode","model":"probe/scripted"',
-      ),
+      routed: routedTo(json(join(p.project, "route.json")), "opencode", "probe/scripted"),
       done:
         wait["status"] === "done" && firstGroup(wait)?.status === "done" && commits.length === 1,
       testsPass: /\b1 pass\b/.test(text(join(p.project, "verify.txt"))),
@@ -120,7 +121,7 @@ async function noReport(ctx: EntryContext): Promise<EntryResult> {
       ...startSteps(q),
       waitStep(q, "wait"),
       waitStep(q, "again"),
-      helper("cleanup", `babysit-dispatch-fix.js" cleanup --state-file '${q.state}'`),
+      helper("cleanup", `dispatch-fix cleanup --state-file '${q.state}'`),
     ],
   }));
   const p = paths(s.sb.project);
@@ -139,9 +140,7 @@ async function noReport(ctx: EntryContext): Promise<EntryResult> {
       stable: again["status"] === "failed" && again["reason"] === "no_report",
       cleaned: cleanup["status"] === "cleaned" && cleanup["worktreeRemoved"] === true,
       worktreeGone: !existsSync(p.worktree),
-      ledgerUntouched:
-        JSON.stringify(state["actions"]) ===
-        JSON.stringify({ replied: {}, resolved: {}, flagged: {} }),
+      ledgerUntouched: ledgerUntouched(state),
       noReport: !existsSync(p.report),
     };
     return { pass: Object.values(observed).every(Boolean), observed };
@@ -155,8 +154,7 @@ async function cancel(ctx: EntryContext): Promise<EntryResult> {
     "babysit.cancel": [
       ...startSteps(q),
       bash(`sleep 20; cp '${q.state}' running.json`),
-      helper("cleanup", `babysit-dispatch-fix.js" cleanup --state-file '${q.state}'`),
-      helper("status", `babysit-record.js" status --state-file '${q.state}' --status cancelled`),
+      helper("stop", `stop --state-file '${q.state}'`),
     ],
     "*": [bash(SLEEP, 200_000)],
   }));
@@ -171,17 +169,15 @@ async function cancel(ctx: EntryContext): Promise<EntryResult> {
     const state = json(p.state);
     const observed = {
       exits:
-        text(join(p.project, "exits.txt")) === "tick=0\nroute=0\nstart=0\ncleanup=0\nstatus=0\n",
+        text(join(p.project, "exits.txt")) === "tick=0\nroute=0\nstart=0\nstop=0\n",
       wasRunning: before?.status === "running" && before.host === "opencode" && pid > 1,
       groupGone: groupLeft === 0,
       sleepGone: running(SLEEP) === 0,
-      cleaned: json(join(p.project, "cleanup.json"))["worktreeRemoved"] === true,
+      cleaned: stopRemovedWorktree(json(join(p.project, "stop.json"))),
       worktreeGone: !existsSync(p.worktree),
       fixerCleared: state["fixer"] === null,
       cancelled: state["status"] === "cancelled",
-      ledgerUntouched:
-        JSON.stringify(state["actions"]) ===
-        JSON.stringify({ replied: {}, resolved: {}, flagged: {} }),
+      ledgerUntouched: ledgerUntouched(state),
     };
     return { pass: Object.values(observed).every(Boolean), observed };
   } finally {

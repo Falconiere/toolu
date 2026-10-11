@@ -23,6 +23,7 @@ impl BabysitTick for GithubTick {
         decision: TickDecision::KeepGoing,
         result: Value::Null,
         graphql: None,
+        prompt: None,
       })
       .map_err(|err| LinkError::Failed(err.to_string()))
   }

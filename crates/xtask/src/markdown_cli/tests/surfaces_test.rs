@@ -109,10 +109,12 @@ fn bun_running_a_script_is_a_reference_unless_a_path_pattern_caught_it() {
 #[test]
 fn a_reference_fails_only_once_its_namespace_is_ported() {
   let real = tree();
-  assert_eq!(problem(&real, "babysit-tick", "pr-babysit"), None);
-  let message = problem(&ported("babysit"), "babysit-tick", "pr-babysit").unwrap();
-  assert!(message.contains("`toolu babysit` is ported"), "{message}");
-  assert_eq!(problem(&ported("epic"), "babysit-tick", "pr-babysit"), None);
+  assert_eq!(problem(&real, "debug-report", "toolu"), None);
+  let message = problem(&ported("debug"), "debug-report", "toolu").unwrap();
+  assert!(message.contains("`toolu debug` is ported"), "{message}");
+  assert_eq!(problem(&ported("epic"), "debug-report", "toolu"), None);
+  let babysit = problem(&real, "babysit-tick", "pr-babysit").unwrap();
+  assert!(babysit.contains("`toolu babysit` is ported"), "{babysit}");
   let ledger = problem(&real, "plan-ledger", "delivery-flow").unwrap();
   assert!(ledger.contains("`toolu ledger` is ported"), "{ledger}");
 }

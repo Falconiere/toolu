@@ -104,16 +104,19 @@ fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
       .unwrap()
       .starts_with("toolu epic is not ported yet")
   );
-  for line in ["--json pr-babysit planned", "pr-babysit planned --json"] {
+  for line in [
+    "--json epic-orchestrator planned",
+    "epic-orchestrator planned --json",
+  ] {
     let outcome = dispatched(line);
-    assert_eq!(document(&outcome)["namespace"], "babysit", "{line}");
+    assert_eq!(document(&outcome)["namespace"], "epic", "{line}");
   }
 }
 
 #[test]
 fn a_plugin_name_alias_reaches_its_namespace() {
-  let outcome = dispatched("--json pr-babysit planned");
-  assert_eq!(document(&outcome)["namespace"], "babysit");
+  let outcome = dispatched("--json epic-orchestrator planned");
+  assert_eq!(document(&outcome)["namespace"], "epic");
 }
 
 #[test]

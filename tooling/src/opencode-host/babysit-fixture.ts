@@ -8,6 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { SELECTION, selection } from "./install-host.ts";
 import type { ScriptStep, Scripts } from "./provider.ts";
@@ -19,11 +20,7 @@ export const SLOT = "falconiere-toolu-165";
 export const BRANCH = "feat/sum";
 /** A GitHub remote: the fixer's git refuses its transport before any connection. */
 export const GITHUB_REMOTE = "https://github.com/Falconiere/toolu.git";
-const SNAPSHOT = join(
-  ROOT,
-  "plugins/pr-babysit/scripts/__tests__/fixtures/snapshots/toolu-165.json",
-);
-const HELPER = '"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist';
+const SNAPSHOT = join(ROOT, "fixtures/pr-babysit/snapshots/toolu-165.json");
 /** The controller waits for the fixer inside one bash call; the run gets more. */
 const WAIT_SECONDS = 300;
 export const RUN_MS = 900_000;
@@ -70,10 +67,10 @@ export function bash(command: string, timeout?: number): ScriptStep {
   };
 }
 
-/** One helper call: stdout to `<name>.json`, exit status appended to `exits.txt`. */
+/** One `toolu babysit` call: stdout to `<name>.json`, exit status appended to `exits.txt`. */
 export function helper(name: string, args: string, timeout?: number): ScriptStep {
   return bash(
-    `${HELPER}/${args} > ${name}.json; printf '${name}=%s\\n' "$?" >> exits.txt`,
+    `toolu babysit ${args} > ${name}.json; printf '${name}=%s\\n' "$?" >> exits.txt`,
     timeout,
   );
 }
@@ -83,15 +80,15 @@ export function startSteps(p: Paths): ScriptStep[] {
   return [
     helper(
       "tick",
-      `babysit-tick.js" --repo Falconiere/toolu --pr 165 --state-file '${p.state}' --snapshot-in '${p.snapshot}' --now 2026-09-19T12:00:00Z`,
+      `tick --repo Falconiere/toolu --pr 165 --state-file '${p.state}' --snapshot-in '${p.snapshot}' --now 2026-09-19T12:00:00Z`,
     ),
     helper(
       "route",
-      `babysit-route-fix.js" --items '${p.items}' --host opencode --state-file '${p.state}'`,
+      `route-fix --items '${p.items}' --host opencode --state-file '${p.state}'`,
     ),
     helper(
       "start",
-      `babysit-dispatch-fix.js" start --state-file '${p.state}' --plan route.json --items '${p.items}' --repo-root '${p.project}' --branch ${BRANCH} --base main`,
+      `dispatch-fix start --state-file '${p.state}' --plan route.json --items '${p.items}' --repo-root '${p.project}' --branch ${BRANCH} --base main`,
     ),
   ];
 }
@@ -99,7 +96,7 @@ export function startSteps(p: Paths): ScriptStep[] {
 export function waitStep(p: Paths, name: string): ScriptStep {
   return helper(
     name,
-    `babysit-dispatch-fix.js" wait --state-file '${p.state}' --timeout-seconds ${WAIT_SECONDS}`,
+    `dispatch-fix wait --state-file '${p.state}' --timeout-seconds ${WAIT_SECONDS}`,
     (WAIT_SECONDS + 60) * 1000,
   );
 }
@@ -123,9 +120,7 @@ export function fixerSteps(p: Paths): ScriptStep[] {
       args: { description: "push", prompt: "push the fix", subagent_type: "general" },
     },
     bash('git add sum.ts && git commit -q -m "fix(sum): address PR review feedback"'),
-    bash(
-      `"$TOOLU_BUN" "$TOOLU_PLUGIN_ROOT_PR_BABYSIT/hooks/dist/babysit-fixer-report.js" '${p.report}' done --note 'sum adds'`,
-    ),
+    bash(`toolu babysit fixer-report '${p.report}' done --note 'sum adds'`),
   ];
 }
 
@@ -153,7 +148,10 @@ export function babysitSession(ctx: EntryContext, scripts: (p: Paths) => Scripts
     config: () => ({ plugin: [npmSpec(ctx.tarball)], permission: { bash: "allow" } }),
   });
   // The dispatcher starts `opencode` from PATH: the pinned binary, not one the machine has.
-  s.env.PATH = `${dirname(ctx.bin)}${delimiter}${process.env.PATH ?? ""}`;
+  // `toolu` is this checkout's build, not an installed one.
+  const toolu = join(ROOT, "target/debug/toolu");
+  if (!existsSync(toolu)) throw new Error(`babysit scenario: build ${toolu} first (cargo build -p toolu-cli)`);
+  s.env.PATH = [dirname(ctx.bin), join(ROOT, "target/debug"), process.env.PATH ?? ""].join(delimiter);
   const p = paths(s.sb.project);
   const bare = s.outside("origin.git");
   git(s.sb.root, "init", "--quiet", "--bare", "-b", "main", bare);
@@ -211,6 +209,29 @@ const Group = z.looseObject({
   error: z.string().optional(),
   pid: z.number().optional(),
 });
+
+/** The state's write-side ledger is still empty. */
+export function ledgerUntouched(state: Record<string, unknown>): boolean {
+  return isDeepStrictEqual(state["actions"], { replied: {}, resolved: {}, flagged: {} });
+}
+
+const RouteGroups = z.object({
+  groups: z.array(z.looseObject({ host: z.string(), model: z.string().nullable() })),
+});
+
+const Stopped = z.object({ cleanup: z.looseObject({ worktreeRemoved: z.boolean() }) });
+
+/** `toolu babysit stop` removed the fixer worktree. */
+export function stopRemovedWorktree(document: Record<string, unknown>): boolean {
+  const parsed = Stopped.safeParse(document);
+  return parsed.success && parsed.data.cleanup.worktreeRemoved;
+}
+
+/** A route plan sends a group to `host` on `model`. */
+export function routedTo(plan: Record<string, unknown>, host: string, model: string): boolean {
+  const parsed = RouteGroups.safeParse(plan);
+  return parsed.success && parsed.data.groups.some((g) => g.host === host && g.model === model);
+}
 
 /** The first fixer group of a dispatch status or state document. */
 export function firstGroup(record: Record<string, unknown>): z.infer<typeof Group> | undefined {

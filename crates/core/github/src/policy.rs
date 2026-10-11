@@ -1,7 +1,6 @@
 //! When a call is tried again. The one-shot policy keeps pr-babysit's gh
-//! semantics (`PB_GH_ATTEMPTS`, `PB_GH_BACKOFF`, `PB_GH_TIMEOUT`,
-//! `plugins/pr-babysit/hooks/src/babysit/gh.ts`); the scheduled one serves the
-//! engine's fixed 3-minute checks and never waits.
+//! semantics (`PB_GH_ATTEMPTS`, `PB_GH_BACKOFF`, `PB_GH_TIMEOUT`); the scheduled
+//! one serves the engine's fixed 3-minute checks and never waits.
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 

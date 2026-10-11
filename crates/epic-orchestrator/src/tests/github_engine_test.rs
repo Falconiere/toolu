@@ -92,7 +92,7 @@ fn assert_scheduled_budget(world: &World) {
     .iter()
     .filter_map(|step| match step {
       Step::Journal(row) => Some(row),
-      Step::Call { .. } | Step::Status { .. } | Step::Issue { .. } => None,
+      Step::Call { .. } | Step::Status { .. } | Step::Issue { .. } | Step::Prompt { .. } => None,
     })
     .filter(|row| row.name == "github-check" && row.note.contains("\"cause\":\"scheduled\""))
     .collect();

@@ -488,7 +488,7 @@ uncovered spec `AC-<n>` id(s) until a fresh-green step's `ac_refs` covers them.
 
 ### PR babysit fixers (`prBabysit`)
 
-Read by the `pr-babysit` plugin's Bun bundle `hooks/dist/babysit-route-fix.js` (see
+Read by `toolu babysit route-fix` (see
 `plugins/pr-babysit/skills/babysit/references/helper.md`). After triage,
 babysit scores each Fix item with Jev into a tier (`trivial`, `standard`,
 `complex`, `critical`), groups the items by tier, and runs each group as a
@@ -498,7 +498,7 @@ Every key is optional:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `dispatch` | `"herdr"` | `herdr` runs fixers as agents through `babysit-dispatch-fix.js` (herdr panes, or `opencode run` processes for `opencode` groups); `inline` keeps fixes in the controller session. Without a reachable herdr, a round with a Claude Code, Codex or Cursor group runs inline anyway. |
+| `dispatch` | `"herdr"` | `herdr` runs fixers as agents through `toolu babysit dispatch-fix` (herdr panes, or `opencode run` processes for `opencode` groups); `inline` keeps fixes in the controller session. Without a reachable herdr, a round with a Claude Code, Codex or Cursor group runs inline anyway. |
 | `hosts` | `[<controller host>]` | The fixer pool, in preference order: `claude` (`claude-code`), `codex`, `cursor` (`cursor-agent`), `opencode`. A host whose CLI is not on `PATH` is skipped. An unknown name is an error. |
 | `prefer` | `{}` | Per-tier host order, e.g. `{"critical": ["claude"]}`. Only hosts also in `hosts` count. |
 | `routing` | epic-orchestrator's table | Per host, four `{model, effort}` entries (trivial → critical) replacing that host's row. Defaults: claude `sonnet/low`, `sonnet/medium`, `opus/high`, `opus/xhigh`; codex `gpt-6-sol` low → xhigh; cursor `composer-2.5`, `gpt-5.6-sol-high`, `claude-opus-5-thinking-high`, `gpt-5.6-sol-xhigh` (effort lives in the model id); opencode four `{}` (your default model; set `model` to `provider/model` and `effort` to an OpenCode `--variant`). Values must be shell-safe. |
