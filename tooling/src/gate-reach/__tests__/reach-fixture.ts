@@ -11,7 +11,7 @@ export const BIN_PATH = `${resolve(ROOT, "node_modules/.bin")}:${process.env["PA
 type Json = Record<string, unknown>;
 export type RepoConfigs = {
   tsconfig: Json;
-  formatCheck: string;
+  formatCheck?: string;
   oxlint: Json;
   jscpd: Json;
   knip: Json;
@@ -34,10 +34,14 @@ function json(value: unknown): string {
   return `${JSON.stringify(value, null, 2)}\n`;
 }
 
+function packageScripts(configs: RepoConfigs): Record<string, string> {
+  return configs.formatCheck === undefined ? {} : { "format:check": configs.formatCheck };
+}
+
 /** The tracked files of a repo using `configs`, with one module in src/ and one in scripts/. */
 export function repoFiles(configs: RepoConfigs): Record<string, string> {
   return {
-    "package.json": json({ scripts: { "format:check": configs.formatCheck } }),
+    "package.json": json({ scripts: packageScripts(configs) }),
     "tsconfig.json": json(configs.tsconfig),
     ".jscpd.json": json(configs.jscpd),
     "knip.json": json(configs.knip),

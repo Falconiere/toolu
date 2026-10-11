@@ -47,34 +47,23 @@ for (const file of Object.keys(config.workflows)) {
     }
     const checkout = steps(file, "changes").find((step) => step.uses === "actions/checkout@v4");
     expect(checkout?.with?.["fetch-depth"]).toBe(0);
-    expect(steps(file, "changes").map((step) => step.run)).toContain(
-      "bun run tooling/src/ci-changes.ts",
-    );
+    const command =
+      file === "tests.yml" ? "cargo xtask ci-changes" : "bun run tooling/src/ci-changes.ts";
+    expect(steps(file, "changes").map((step) => step.run)).toContain(command);
   });
 }
 
-test.concurrent("the docs job runs only the documentation checks (AC-1)", () => {
+test.concurrent("the docs job runs the documentation gate steps (AC-1)", () => {
   expect(workflow("tests.yml").jobs.docs?.if).toBe("needs.changes.outputs.docs == 'true'");
-  expect(steps("tests.yml", "docs").map((step) => step.run)).toContain("bun run test:docs");
-  const docs = scripts["test:docs"] ?? "";
-  for (const check of ["check-portable-core-doc", "check:opencode-docs"]) {
-    expect(scripts["test:portable-core"]).toContain(check);
-  }
-  for (const part of [
-    "guardrails",
-    "test:portable-core",
-    "test:gate-coverage",
-    "test:final-removal",
-    "check:ci-paths",
-    "check:opencode-surface",
-    "workspace-skeleton.test.ts",
-    "plan-ledger-contract.test.ts",
-    "npx-invocation.test.ts",
-  ]) {
-    expect(docs).toContain(part);
-  }
-  expect(docs).not.toContain("test:unit");
-  expect(docs).not.toContain("test:opencode");
+  const run = steps("tests.yml", "docs")
+    .map((step) => step.run ?? "")
+    .join("\n");
+  expect(run).toContain(
+    "cargo xtask gate --only context-budget --only portable-core --only ci-paths",
+  );
+  expect(run).toContain("cargo xtask check-markdown-cli");
+  expect(run).not.toContain("bun run test:docs");
+  expect(steps("tests.yml", "docs").map((step) => step.uses)).toContain("oven-sh/setup-bun@v2");
 });
 
 test.concurrent("review runs for any non-release change and fails open on a broken changes job (AC-1, AC-2)", () => {
@@ -90,15 +79,17 @@ test.concurrent("the aggregate receives every needed job's result", () => {
   }
 });
 
-test.concurrent("the full gate runs the CI path check", () => {
-  expect(scripts["test:ts"]).toContain("bun run check:ci-paths");
+test.concurrent("the docs job runs the CI path check", () => {
+  const run = steps("tests.yml", "docs")
+    .map((step) => step.run ?? "")
+    .join("\n");
+  expect(run).toContain("--only ci-paths");
 });
 
 test.concurrent("both required aggregates and Rust OS checks retain their status names", () => {
   const tests = workflow("tests.yml");
   const needed = [
     "changes",
-    "ts",
     "opencode",
     "docs",
     "rust",

@@ -1,26 +1,5 @@
 {
   "groups": {
-    "ts": [
-      "packages/**",
-      "plugins/**",
-      "tools/**",
-      "tooling/**",
-      "fixtures/**",
-      "benchmarks/**",
-      "package.json",
-      "bun.lock",
-      "tsconfig*.json",
-      ".oxlintrc.json",
-      ".oxfmtrc.json",
-      "knip.json",
-      ".jscpd.json",
-      "guardrails.workspace.json",
-      "release-please-config.json",
-      "LICENSE",
-      "install.sh",
-      ".claude-plugin/**",
-      ".agents/**"
-    ],
     "opencode": [
       "tools/toolu-opencode/**",
       "tools/toolu-conformance/**",
@@ -101,7 +80,6 @@
       "aggregate": "gate",
       "required": ["typescript"],
       "jobs": {
-        "ts": "ts",
         "opencode": "opencode",
         "docs": "docs",
         "rust": "rust",

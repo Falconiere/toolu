@@ -2,15 +2,31 @@
 //!
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
+mod bench;
+mod bench_result;
+mod bun_launcher;
 mod check_hooks;
 mod check_workflows;
+mod ci_aggregate;
+mod ci_changes;
+mod ci_check;
+mod ci_diff;
+mod ci_glob;
+mod ci_model;
+mod ci_yaml;
 mod cli_compat;
 mod command_tree;
+mod context_budget;
 mod coverage;
 mod data;
+mod dist;
 mod docs_cli;
+mod final_removal;
 mod gate;
 mod gate_change;
+mod gate_coverage;
+mod gate_coverage_discover;
+mod gate_coverage_names;
 mod guardrails;
 mod homebrew_formula;
 mod hooks_entries;
@@ -24,6 +40,15 @@ mod measure;
 mod metadata;
 mod options;
 mod output;
+mod pack;
+mod pack_closure;
+mod pack_npm;
+mod pack_scan;
+mod package_workspace;
+mod packaging;
+mod packaging_assets;
+mod packaging_catalog;
+mod portable_core;
 mod print_hook;
 mod reach;
 mod source;
@@ -66,6 +91,18 @@ const TASKS: &[(&str, Task)] = &[
   ("check-startup", startup::run),
   ("check-markdown-cli", markdown_cli::run),
   ("homebrew-formula", homebrew_formula::run),
+  ("context-budget", context_budget::run),
+  ("ci-changes", ci_changes::run),
+  ("check-ci-paths", ci_check::run),
+  ("ci-aggregate", ci_aggregate::run),
+  ("dist", dist::run),
+  ("check-portable-core", portable_core::run),
+  ("check-workspace", package_workspace::run),
+  ("final-removal", final_removal::run),
+  ("gate-coverage", gate_coverage::run),
+  ("packaging", packaging::run),
+  ("bench", bench::run),
+  ("pack", pack::run),
 ];
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
@@ -74,7 +111,9 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
-  check-startup, check-markdown-cli, homebrew-formula";
+  check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
+  check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
+  final-removal, gate-coverage, packaging, bench, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
@@ -102,6 +141,10 @@ fn main() -> ExitCode {
   let args: Vec<String> = std::env::args().skip(1).collect();
   run(&args)
 }
+
+#[cfg(test)]
+#[path = "tests/task_options_test.rs"]
+mod task_options;
 
 #[cfg(test)]
 #[path = "tests/main_test.rs"]

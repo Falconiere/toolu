@@ -1,5 +1,5 @@
-//! The native entries of one plugin's `hooks/hooks.json`, judged against the
-//! launcher generator.
+//! One plugin's `hooks/hooks.json`, judged against the native launcher and the
+//! Bun launcher.
 
 use std::io::ErrorKind;
 use std::path::Path;
@@ -7,6 +7,7 @@ use std::path::Path;
 use serde_json::{Map, Value};
 use toolu_protocol::launcher::{MARKER, MAX_TIMEOUT, Target, hook, hook_name};
 
+use crate::bun_launcher;
 use crate::check_hooks::Finding;
 
 /// Findings for `plugins/<plugin>/hooks/hooks.json`; none when it does not exist.
@@ -36,7 +37,7 @@ pub(crate) fn check(root: &Path, plugin: &str) -> Vec<Finding> {
   };
   let mut found = Vec::new();
   for (event, at, entry) in entries(&events) {
-    for (problem, expected) in judge(plugin, event, entry) {
+    for (problem, expected) in judge(root, plugin, event, entry) {
       found.push(finding(at.clone(), problem, expected));
     }
   }
@@ -61,15 +62,35 @@ fn entries(events: &Map<String, Value>) -> Vec<(&str, String, &Map<String, Value
     .collect()
 }
 
-/// Problems with one hook object; none for a hook that is not native.
-fn judge(plugin: &str, event: &str, entry: &Map<String, Value>) -> Vec<(String, Option<String>)> {
+/// Problems with one hook object. Legacy script commands are left alone.
+fn judge(
+  root: &Path,
+  plugin: &str,
+  event: &str,
+  entry: &Map<String, Value>,
+) -> Vec<(String, Option<String>)> {
   let command = entry
     .get("command")
     .and_then(Value::as_str)
     .unwrap_or_default();
-  if !command.contains(MARKER) {
+  if command.contains(MARKER) {
+    return judge_native(plugin, event, entry, command);
+  }
+  if bun_launcher::is_native_like(command) {
+    return vec![("unsupported native hook command".to_owned(), None)];
+  }
+  if !bun_launcher::is_launcher(command, entry.contains_key("commandWindows")) {
     return Vec::new();
   }
+  judge_bun(root, plugin, event, entry, command)
+}
+
+fn judge_native(
+  plugin: &str,
+  event: &str,
+  entry: &Map<String, Value>,
+  command: &str,
+) -> Vec<(String, Option<String>)> {
   let Some(name) = hook_name(command) else {
     return vec![("native entry names no `hook <name>`".to_owned(), None)];
   };
@@ -105,6 +126,53 @@ fn judge(plugin: &str, event: &str, entry: &Map<String, Value>) -> Vec<(String, 
   if windows != Some(expected.command_windows.as_str()) {
     let problem = "commandWindows differs from the generated launcher".to_owned();
     problems.push((problem, Some(expected.command_windows)));
+  }
+  problems
+}
+
+fn judge_bun(
+  root: &Path,
+  plugin: &str,
+  event: &str,
+  entry: &Map<String, Value>,
+  command: &str,
+) -> Vec<(String, Option<String>)> {
+  let windows = entry
+    .get("commandWindows")
+    .and_then(Value::as_str)
+    .unwrap_or_default();
+  let Some(name) = bun_launcher::bundle_name(command, windows) else {
+    return vec![(
+      "launcher hook names no hooks/dist/<entry>.js bundle".to_owned(),
+      None,
+    )];
+  };
+  let generated = match bun_launcher::launch(plugin, event, &name) {
+    Ok(generated) => generated,
+    Err(err) => return vec![(err, None)],
+  };
+  let mut problems = Vec::new();
+  if entry.get("type").and_then(Value::as_str) != Some("command") {
+    let got = entry
+      .get("type")
+      .map_or_else(|| "null".to_owned(), ToString::to_string);
+    problems.push((format!("type must be \"command\", got {got}"), None));
+  }
+  if command != generated.command {
+    problems.push((
+      "command differs from the generated launcher".to_owned(),
+      Some(generated.command),
+    ));
+  }
+  if windows != generated.windows {
+    problems.push((
+      "commandWindows differs from the generated launcher".to_owned(),
+      Some(generated.windows),
+    ));
+  }
+  let bundle = format!("plugins/{plugin}/hooks/dist/{name}.js");
+  if !root.join(&bundle).is_file() {
+    problems.push((format!("bundle {bundle} is not committed"), None));
   }
   problems
 }

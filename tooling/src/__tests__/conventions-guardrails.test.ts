@@ -26,11 +26,10 @@ test.concurrent("adoption docs record pin, thresholds, and Lefthook note", () =>
   expect(adoption).toContain("Lefthook");
 });
 
-test.concurrent("package.json wires test:conventions and zod without yup", () => {
+test.concurrent("package.json depends on zod without yup", () => {
   const pkg = RootPackage.parse(JSON.parse(readText("package.json")));
-  expect(pkg.scripts["test:conventions"]).toBeTruthy();
-  expect(pkg.scripts["test:ts"]).toContain("test:conventions");
-  expect(pkg.scripts["test"]).toContain("test:ts");
+  expect(pkg.scripts["test:conventions"]).toBeUndefined();
+  expect(pkg.scripts["test:ts"]).toBeUndefined();
   expect(pkg.dependencies["zod"]).toBeTruthy();
   expect(Object.keys(pkg.dependencies)).not.toContain("yup");
 });
@@ -112,12 +111,9 @@ test.concurrent("lint-suppressions --file fails on unused-vars disable", async (
   expect(res.stdout + res.stderr).toContain("lint-suppressions");
 });
 
-test.concurrent("test:conventions runs the reach and legacy-exemption checks, and the adoption doc names them", () => {
-  const pkg = RootPackage.parse(JSON.parse(readText("package.json")));
+test.concurrent("the adoption doc names the reach and legacy-exemption checks", () => {
   const adoption = readText("docs/conventions-adoption.md");
   for (const script of ["check:gate-reach", "check:legacy-exemptions"]) {
-    expect(pkg.scripts[script]).toBeTruthy();
-    expect(pkg.scripts["test:conventions"]).toContain(`bun run ${script}`);
     expect(adoption).toContain(script);
   }
 });

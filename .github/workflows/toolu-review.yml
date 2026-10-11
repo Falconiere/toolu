@@ -14,8 +14,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Same classifier as tests.yml (.github/ci-paths.json). `changed` is false
-  # only for a release-please version bump.
+  # Same path groups as tests.yml (.github/ci-paths.json). This job runs the
+  # TypeScript classifier; tests.yml runs `cargo xtask ci-changes`. `changed`
+  # is false only for a release-please version bump.
   changes:
     name: changes
     runs-on: ubuntu-latest
