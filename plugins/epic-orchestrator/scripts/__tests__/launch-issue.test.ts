@@ -314,7 +314,7 @@ test.concurrent("a real missing dependency leaves durable uncertain ownership an
   const env = { TOOLU_RESOURCE_HOME: root, PATH: "" };
   const first = await run(argv, { env });
   const record = JSON.parse(readFileSync(join(state, "issues/comemory-255.json"), "utf8"));
-  expect(record.lifecycle_error).toMatch(/^(git -C|gh repo view)/);
+  expect(record.lifecycle_error).toMatch(/^(git -C|gh repo view|Executable not found in \$PATH: "gh")/);
   const reportedError = first.stderr.trim().startsWith("{")
     ? JSON.parse(first.stderr).error
     : first.stderr.trim();
