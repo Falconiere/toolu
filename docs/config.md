@@ -75,7 +75,8 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
                   "unattended": true,
                   "jev": true },
   "epic":       { "http": { "bind": "127.0.0.1", "port": 7717 },
-                  "attention": { "enabled": false },
+                  "attention": { "enabled": false, "herdr": true,
+                                 "remind_after_minutes": 30 },
                   "peers": [{ "name": "server", "url": "https://server.example:7717" }] }
 }
 ```
@@ -123,8 +124,11 @@ results both loaders must reproduce.
 Put only non-secret engine settings under `epic` in `toolu.config.json`. The
 Rust settings reader defaults to `127.0.0.1:7717`, notifications off, and no
 peers. `http.bind` is a nonempty string, `http.port` is an integer from 1 to
-65535, `attention.enabled` is a boolean, and each peer has a unique nonempty
-`name` and an HTTP(S) origin `url`. A peer URL may include a port but no user
+65535, `attention.enabled` (send the outgoing POST) and `attention.herdr`
+(show a herdr notification, default true) are booleans,
+`attention.remind_after_minutes` (first reminder of an open attention item,
+later ones hourly) is an integer from 1 to 10080 with default 30, and each peer
+has a unique nonempty `name` and an HTTP(S) origin `url`. A peer URL may include a port but no user
 info, path beyond `/`, query or fragment. Unknown safe keys under `epic` are
 ignored so older binaries can read newer settings. A key named like a token,
 secret, password or notification URL is rejected by the Rust reader. The

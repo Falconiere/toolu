@@ -225,6 +225,24 @@ Every 15 minutes (`--checkpoint`) the watcher also snapshots each active
 worktree to `refs/epic-wip/<key>` (see Guardrails). Snapshots it took are
 listed under `checkpoints` in its output; no action needed.
 
+### Engine attention
+
+When the native engine runs the epic, `toolu epic wait` returns one judgment
+at a time: `kind`, `key`, `note`, `state`, `age_ms`, and `pending` (the agent's
+screen) for `blocked`. The engine already notified herdr and the configured
+URL, and reminds hourly until the item is acknowledged or answered. A worker
+report closes the key's items. Hold all effects meanwhile with
+`toolu epic pause`, then `toolu epic resume`.
+
+| kind | action |
+|---|---|
+| `needs-human` | Answer from the issue, epic or code with `toolu epic answer <key> "<answer>"`. Otherwise ask the user and relay their answer the same way. |
+| `failed` | Read the note and the agent's screen, then send a new direction with `toolu epic answer <key> "<direction>"`, or escalate. |
+| `blocked` | Read `pending`. Approve with `herdr agent send-keys` only inside the authorization boundary; otherwise ask the user. Then `toolu epic ack <key>`. |
+| `stall` | `toolu epic answer <key> "STATUS?"`, or `toolu epic ack <key>` to wait one more stall length. |
+| `babysit`, `pr-closed`, `relaunch-limit`, `cleanup-incomplete`, `herdr-error` | Read the note, fix or escalate, then `toolu epic ack <key>`. |
+| `dependency-cycle` | Fix the graph, then `toolu epic ack dependency-cycle`. |
+
 For failures in herdr, git or gh, see `references/recovery.md`.
 
 ## 4. Merge gate

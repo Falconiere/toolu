@@ -508,16 +508,34 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["kind", "key", "epic", "note", "seq"],
+            "required": ["kind", "key", "epic", "note", "seq", "state", "age_ms"],
             "properties": {
               "kind": { "type": "string" },
               "key": { "type": "string" },
               "epic": { "type": "string" },
               "note": { "type": "string" },
-              "seq": { "type": "integer", "minimum": 0 }
+              "seq": { "type": "integer", "minimum": 0 },
+              "state": { "enum": ["open", "acknowledged", "answered"] },
+              "age_ms": { "type": "integer", "minimum": 0 }
             }
           }
         }
+      }
+    },
+    "epicJudgment": {
+      "description": "toolu epic wait --json when a judgment is queued.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "key", "epic", "note", "seq", "state", "age_ms"],
+      "properties": {
+        "kind": { "type": "string" },
+        "key": { "type": "string" },
+        "epic": { "type": "string" },
+        "note": { "type": "string" },
+        "seq": { "type": "integer", "minimum": 0 },
+        "state": { "enum": ["open", "acknowledged", "answered"] },
+        "age_ms": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "string" }
       }
     },
     "epicWaiting": {

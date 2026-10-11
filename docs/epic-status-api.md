@@ -18,7 +18,7 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/api/v1/machine` | Shared resources | load, available_memory_bytes, steal, pressure, policy, agent_leases, job_leases |
 | `/api/v1/jobs` | Expensive jobs | running, waiting |
 | `/api/v1/queue` | Ready work by repository | repositories (repo, items) |
-| `/api/v1/attention` | Open attention | items (kind, key, epic, note, seq, age_ms) |
+| `/api/v1/attention` | Live attention | items (kind, key, epic, note, seq, state, age_ms) |
 | `/api/v1/events` | Journal replay | events, oldest_seq, next_seq |
 | `/api/v1/events/stream` | Live journal feed | SSE id, event, data |
 
