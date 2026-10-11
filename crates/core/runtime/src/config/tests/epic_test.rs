@@ -81,6 +81,54 @@ fn malformed_epic_section_and_invalid_envelope_fail_closed() {
 }
 
 #[test]
+fn attention_herdr_and_reminder_settings_resolve_with_defaults() {
+  let defaults = parse(&config(json!({"attention": {}}))).unwrap();
+  assert!(defaults.attention_herdr);
+  assert_eq!(defaults.remind_after_minutes, 30);
+
+  let settings = parse(&config(json!({
+    "attention": {"enabled": true, "herdr": false, "remind_after_minutes": 10080}
+  })))
+  .unwrap();
+  assert!(settings.attention_enabled);
+  assert!(!settings.attention_herdr);
+  assert_eq!(settings.remind_after_minutes, 10080);
+  let one = parse(&config(json!({"attention": {"remind_after_minutes": 1}}))).unwrap();
+  assert_eq!(one.remind_after_minutes, 1);
+}
+
+#[test]
+fn bad_attention_settings_name_their_path_only() {
+  let cases = [
+    (
+      json!({"attention": {"herdr": "sentinel-yes"}}),
+      "epic.attention.herdr",
+    ),
+    (
+      json!({"attention": {"remind_after_minutes": 0}}),
+      "epic.attention.remind_after_minutes",
+    ),
+    (
+      json!({"attention": {"remind_after_minutes": 10081}}),
+      "epic.attention.remind_after_minutes",
+    ),
+    (
+      json!({"attention": {"remind_after_minutes": "sentinel-30"}}),
+      "epic.attention.remind_after_minutes",
+    ),
+    (
+      json!({"attention": {"notify_url": "https://hooks.example/sentinel-url"}}),
+      "epic.attention.notify_url",
+    ),
+  ];
+  for (value, path) in cases {
+    let error = parse(&config(value)).unwrap_err().to_string();
+    assert!(error.contains(path), "{error}");
+    assert!(!error.contains("sentinel"), "{error}");
+  }
+}
+
+#[test]
 fn public_settings_type_is_stable_for_consumers() {
   let _: EpicSettings = parse(&config(json!({}))).unwrap();
 }
