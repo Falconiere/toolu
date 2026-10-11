@@ -60,6 +60,12 @@ struct Threads {
   http: Option<http::Running>,
 }
 
+/// HTTP binding and babysit integration for one engine run.
+pub(crate) struct ServeOptions<'a> {
+  pub(crate) http: Option<HttpConfig>,
+  pub(crate) tick: &'a dyn BabysitTick,
+}
+
 impl Drop for StopAccept<'_> {
   fn drop(&mut self) {
     self.stop.store(true, Ordering::Relaxed);
@@ -75,8 +81,7 @@ pub(crate) fn serve_with_http(
   scripts: Option<std::path::PathBuf>,
   fault: Fault,
   protocol: u64,
-  http_config: Option<HttpConfig>,
-  tick: &dyn BabysitTick,
+  options: ServeOptions<'_>,
 ) -> Result<(), String> {
   let socket = paths.socket();
   let _held = Held::acquire(&paths.lock(), "engine-busy")?;
@@ -88,7 +93,7 @@ pub(crate) fn serve_with_http(
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
   let wake = Arc::new(AtomicBool::new(false));
-  let http = start_http(http_config, &engine, &shared, &changed, &stop)?;
+  let http = start_http(options.http, &engine, &shared, &changed, &stop)?;
   let _http_addr = http.as_ref().map(|service| service.addr);
   let herdr = socket_herdr::spawn(
     tx.clone(),
@@ -107,20 +112,24 @@ pub(crate) fn serve_with_http(
         shared: &shared,
         changed: &changed,
         resub: &wake,
-        babysit: tick,
+        babysit: options.tick,
       },
     )
   };
-  join_threads(&socket, &stop, &changed, Threads { accept, herdr, http });
+  join_threads(
+    &socket,
+    &stop,
+    &changed,
+    Threads {
+      accept,
+      herdr,
+      http,
+    },
+  );
   result
 }
 
-fn join_threads(
-  socket: &std::path::Path,
-  stop: &AtomicBool,
-  changed: &Condvar,
-  threads: Threads,
-) {
+fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, threads: Threads) {
   stop.store(true, Ordering::Relaxed);
   changed.notify_all();
   let _wake = UnixStream::connect(socket);

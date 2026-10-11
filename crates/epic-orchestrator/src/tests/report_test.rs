@@ -11,7 +11,7 @@ use super::tests::{parse, root, wait_live};
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::server::Fault;
-use crate::socket::serve_with_http as serve;
+use crate::socket::{ServeOptions, serve_with_http as serve};
 
 #[test]
 fn report_spool_order() {
@@ -22,7 +22,18 @@ fn report_spool_order() {
   assert_eq!(send_phase(&env, "brainstorm", &path).exit, Exit::Success);
   assert_eq!(send_phase(&env, "spec", &path).exit, Exit::Success);
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, None, &()));
+  let handle = thread::spawn(move || {
+    serve(
+      background,
+      None,
+      Fault::None,
+      PROTOCOL,
+      ServeOptions {
+        http: None,
+        tick: &(),
+      },
+    )
+  });
   wait_live(&paths);
   let rows = wait_phases(&paths);
   let phases: Vec<_> = rows

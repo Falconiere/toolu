@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use serde_json::{Value, json};
 
-use super::serve_with_http;
+use super::{ServeOptions, serve_with_http};
 use crate::PROTOCOL;
 use crate::client::{exchange_retry, read_json, write_json};
 use crate::journal;
@@ -30,7 +30,18 @@ fn report(epic: &std::path::Path, token: &str, phase: &str) -> Value {
 }
 
 fn serve_until_stopped(paths: Paths, protocol: u64) {
-  let handle = thread::spawn(move || serve_with_http(paths, None, Fault::None, protocol, None, &()));
+  let handle = thread::spawn(move || {
+    serve_with_http(
+      paths,
+      None,
+      Fault::None,
+      protocol,
+      ServeOptions {
+        http: None,
+        tick: &(),
+      },
+    )
+  });
   handle.join().expect("serve thread").expect("serve");
 }
 
@@ -93,7 +104,16 @@ fn protocol_replace() {
 fn spool_survives() {
   if std::env::var("TOOLU_EPIC_CHILD").ok().as_deref() == Some("serve") {
     let root = std::env::var("TOOLU_EPIC_ROOT").expect("root");
-    let _ran = serve_with_http(Paths::at(root), None, Fault::None, PROTOCOL, None, &());
+    let _ran = serve_with_http(
+      Paths::at(root),
+      None,
+      Fault::None,
+      PROTOCOL,
+      ServeOptions {
+        http: None,
+        tick: &(),
+      },
+    );
     return;
   }
   let tmp = tempfile::tempdir().expect("temp");

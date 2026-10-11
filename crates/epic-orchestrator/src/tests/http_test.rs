@@ -19,7 +19,7 @@ use crate::journal::{self, Record};
 use crate::model::World;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::serve_with_http;
+use crate::socket::{ServeOptions, serve_with_http};
 
 fn request(addr: SocketAddr, method: &str, host: &str) -> String {
   raw(
@@ -281,11 +281,13 @@ fn live_fixture(
       None,
       Fault::None,
       PROTOCOL,
-      Some(Config {
-        addr,
-        secrets: Secrets::none(),
-      }),
-      &(),
+      ServeOptions {
+        http: Some(Config {
+          addr,
+          secrets: Secrets::none(),
+        }),
+        tick: &(),
+      },
     )
   });
   for _ in 0..100 {

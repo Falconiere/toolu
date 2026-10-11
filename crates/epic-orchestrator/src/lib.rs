@@ -54,8 +54,8 @@ mod status_resources;
 #[cfg(test)]
 mod status_schema;
 mod verbs;
-mod watch;
 mod waiting_jobs;
+mod watch;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
 pub(crate) const PROTOCOL: u64 = 1;

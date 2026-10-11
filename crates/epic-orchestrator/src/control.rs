@@ -23,7 +23,7 @@ use crate::http::Config as HttpConfig;
 use crate::lock::live;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::serve_with_http;
+use crate::socket::{ServeOptions, serve_with_http};
 use crate::verbs::{failed, text};
 
 /// Run, ensure or replace the resident engine.
@@ -68,7 +68,13 @@ fn foreground_with_http(
     Ok(http) => http,
     Err(err) => return failed("toolu epic engine", &err),
   };
-  match serve_with_http(paths, scripts, fault_of(env), PROTOCOL, http, tick) {
+  match serve_with_http(
+    paths,
+    scripts,
+    fault_of(env),
+    PROTOCOL,
+    ServeOptions { http, tick },
+  ) {
     Ok(()) => Outcome::data(String::new()),
     Err(err) if err == "fault" => {
       Outcome::failed(Exit::TempFail, "toolu epic engine: fault".to_owned())
