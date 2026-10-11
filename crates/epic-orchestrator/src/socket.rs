@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{
-  Arc, Mutex,
+  Arc, Condvar, Mutex,
   mpsc::{self, Receiver, RecvTimeoutError, Sender},
 };
 use std::thread;
@@ -17,12 +17,14 @@ use toolu_runtime::env::Env;
 use crate::TICK;
 use crate::client::{read_json, write_json};
 use crate::dispatch::{dispatch, expire, ingest, satisfy};
+use crate::http::{self, Config as HttpConfig};
 use crate::lock::Held;
 use crate::model::World;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault, Stop};
 use crate::socket_deadline::{github_ready, stall_ready, wake_after};
-use crate::source::{self, Fact, Pace};
+use crate::socket_herdr;
+use crate::source::{self, Fact};
 
 /// A pending `toolu epic wait` reply.
 pub(crate) struct Waiter {
@@ -30,7 +32,8 @@ pub(crate) struct Waiter {
   pub(crate) reply: Sender<Value>,
 }
 
-enum Msg {
+/// Request or host event delivered to the state loop.
+pub(crate) enum Msg {
   Line {
     request: Value,
     reply: Sender<Value>,
@@ -46,8 +49,15 @@ struct StopAccept<'a> {
 struct StateContext<'a> {
   protocol: u64,
   shared: &'a Mutex<World>,
+  changed: &'a Condvar,
   resub: &'a AtomicBool,
   babysit: &'a dyn BabysitTick,
+}
+
+struct Threads {
+  accept: thread::JoinHandle<()>,
+  herdr: Option<thread::JoinHandle<()>>,
+  http: Option<http::Running>,
 }
 
 impl Drop for StopAccept<'_> {
@@ -56,32 +66,31 @@ impl Drop for StopAccept<'_> {
   }
 }
 
-/// Listen until `stop` or `replace`. The lock is released when this returns.
+/// Run the engine and optionally its read-only HTTP listener.
 ///
 /// # Errors
-/// The lock is busy, the socket cannot be bound, or a fault fires.
-pub(crate) fn serve(
+/// The state, control socket or HTTP listener cannot start.
+pub(crate) fn serve_with_http(
   paths: Paths,
   scripts: Option<std::path::PathBuf>,
   fault: Fault,
   protocol: u64,
+  http_config: Option<HttpConfig>,
   tick: &dyn BabysitTick,
 ) -> Result<(), String> {
   let socket = paths.socket();
   let _held = Held::acquire(&paths.lock(), "engine-busy")?;
-  let mut engine = Engine::open(paths, scripts, fault)?;
-  apply_env(&mut engine);
-  ingest(&mut engine)?;
-  if engine.pump()? == Stop::Fault {
-    return Err("fault".to_owned());
-  }
+  let mut engine = open_engine(paths, scripts, fault)?;
   let listener = bind(&engine.paths)?;
   let (tx, rx) = mpsc::channel();
   let stop = Arc::new(AtomicBool::new(false));
   let flag = Arc::clone(&stop);
   let shared = Arc::new(Mutex::new(engine.world.clone()));
+  let changed = Arc::new(Condvar::new());
   let wake = Arc::new(AtomicBool::new(false));
-  let herdr = spawn_herdr(
+  let http = start_http(http_config, &engine, &shared, &changed, &stop)?;
+  let _http_addr = http.as_ref().map(|service| service.addr);
+  let herdr = socket_herdr::spawn(
     tx.clone(),
     Arc::clone(&shared),
     Arc::clone(&stop),
@@ -96,83 +105,70 @@ pub(crate) fn serve(
       &StateContext {
         protocol,
         shared: &shared,
+        changed: &changed,
         resub: &wake,
         babysit: tick,
       },
     )
   };
-  join_threads(&socket, &stop, accept, herdr);
+  join_threads(&socket, &stop, &changed, Threads { accept, herdr, http });
   result
 }
 
 fn join_threads(
   socket: &std::path::Path,
   stop: &AtomicBool,
-  accept: thread::JoinHandle<()>,
-  herdr: Option<thread::JoinHandle<()>>,
+  changed: &Condvar,
+  threads: Threads,
 ) {
   stop.store(true, Ordering::Relaxed);
+  changed.notify_all();
   let _wake = UnixStream::connect(socket);
-  if let Err(err) = accept.join() {
+  if let Err(err) = threads.accept.join() {
     let _panic = err;
   }
-  if let Some(herdr) = herdr
+  if let Some(herdr) = threads.herdr
     && let Err(err) = herdr.join()
   {
     let _panic = err;
   }
-}
-
-fn spawn_herdr(
-  tx: Sender<Msg>,
-  shared: Arc<Mutex<World>>,
-  stop: Arc<AtomicBool>,
-  wake: Arc<AtomicBool>,
-) -> Option<thread::JoinHandle<()>> {
-  if !source::prompt_enabled() {
-    return None;
+  if let Some(http) = threads.http {
+    let _http = http.thread.join();
   }
-  let env = Env::process();
-  Some(thread::spawn(move || {
-    herdr_loop(&tx, &shared, &stop, &env, &wake);
-  }))
 }
 
-fn herdr_loop(
-  tx: &Sender<Msg>,
+fn open_engine(
+  paths: Paths,
+  scripts: Option<std::path::PathBuf>,
+  fault: Fault,
+) -> Result<Engine, String> {
+  let mut engine = Engine::open(paths, scripts, fault)?;
+  apply_env(&mut engine);
+  ingest(&mut engine)?;
+  if engine.pump()? == Stop::Fault {
+    return Err("fault".to_owned());
+  }
+  Ok(engine)
+}
+
+fn start_http(
+  config: Option<HttpConfig>,
+  engine: &Engine,
   shared: &Arc<Mutex<World>>,
+  changed: &Arc<Condvar>,
   stop: &Arc<AtomicBool>,
-  env: &Env,
-  wake: &Arc<AtomicBool>,
-) {
-  while !stop.load(Ordering::Relaxed) {
-    let world = shared
-      .lock()
-      .unwrap_or_else(std::sync::PoisonError::into_inner)
-      .clone();
-    let pace = Pace {
-      idle: Some(Duration::from_secs(1)),
-      return_on_idle: false,
-      stop: Some(Arc::clone(stop)),
-      resubscribe: Some(Arc::clone(wake)),
-    };
-    let missing = !crate::herdr::socket_path(env).exists();
-    let _ran = source::session(env, &world, &pace, |fact| {
-      tx.send(Msg::Herdr(fact)).map_err(|err| err.to_string())
-    });
-    if missing {
-      pause(stop);
-    }
-  }
-}
-
-fn pause(stop: &Arc<AtomicBool>) {
-  for _ in 0..30 {
-    if stop.load(Ordering::Relaxed) {
-      return;
-    }
-    thread::sleep(Duration::from_secs(1));
-  }
+) -> Result<Option<http::Running>, String> {
+  config
+    .map(|config| {
+      http::start(
+        config,
+        engine.paths.clone(),
+        Arc::clone(shared),
+        Arc::clone(changed),
+        Arc::clone(stop),
+      )
+    })
+    .transpose()
 }
 
 fn apply_env(engine: &mut Engine) {
@@ -245,7 +241,7 @@ fn state_loop(
   let mut waiters = Vec::new();
   let mut next_tick = Instant::now() + TICK;
   loop {
-    publish(context.shared, engine);
+    publish(context.shared, context.changed, engine);
     let wake = wake_after(&engine.world, &waiters, next_tick);
     match rx.recv_timeout(wake) {
       Ok(Msg::Line { request, reply }) => {
@@ -270,10 +266,11 @@ fn state_loop(
   }
 }
 
-fn publish(shared: &Mutex<World>, engine: &Engine) {
+fn publish(shared: &Mutex<World>, changed: &Condvar, engine: &Engine) {
   *shared
     .lock()
     .unwrap_or_else(std::sync::PoisonError::into_inner) = engine.world.clone();
+  changed.notify_all();
 }
 
 fn on_timeout(

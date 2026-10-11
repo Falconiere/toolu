@@ -17,7 +17,7 @@ use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::paths::Paths;
 use crate::server::Fault;
-use crate::socket::serve;
+use crate::socket::serve_with_http as serve;
 
 #[test]
 fn a_status_path_yields_the_issue_key_and_state_dir() {
@@ -173,7 +173,7 @@ fn verbs_round_trip_on_a_local_engine() {
   )
   .expect("registry");
   let background = paths.clone();
-  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, &()));
+  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, None, &()));
   wait_live(&paths);
   assert_status_pause_and_report(&env, &epic);
   assert_wait_ack_and_answer(&env);
