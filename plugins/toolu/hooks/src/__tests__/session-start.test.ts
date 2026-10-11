@@ -15,7 +15,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { launcherHook, missingRuntimeMessage, runtimeDiagnostic } from "@toolu/core/launcher";
+import { runtimeDiagnostic } from "@toolu/core/launcher";
 import { entryImplementation } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
@@ -36,6 +36,9 @@ function startupRuntime(): string {
   return `toolu runtime: native ${manifest.version} at ${realpathSync(binary)}`;
 }
 const COMMAND = hookCommand(PLUGIN, "SessionStart", "session-start");
+const NATIVE_HOOK: unknown = JSON.parse(
+  readFileSync(join(PLUGIN, "../../tooling/fixtures/native-launcher/session-start.json"), "utf8"),
+);
 const OutputSchema = z.strictObject({
   hookSpecificOutput: z.strictObject({
     hookEventName: z.literal("SessionStart"),
@@ -83,7 +86,7 @@ test("hooks.json runs one launcher entry on every SessionStart source", async ()
       SessionStart: expect.arrayContaining([
         {
           matcher: "startup|resume|clear|compact",
-          hooks: [launcherHook({ plugin: "toolu", event: "SessionStart", entry: "session-start" })],
+          hooks: [NATIVE_HOOK],
         },
       ]),
     },
@@ -91,7 +94,7 @@ test("hooks.json runs one launcher entry on every SessionStart source", async ()
   expect(await launchCount("SessionStart", "session-start")).toBe(1);
 });
 
-test("the launcher reports the title and the Bun that runs it", async () => {
+test("without a native binary the launcher falls back to Bun for session context", async () => {
   using sb = createSandbox({ git: true });
   const env: EnvPatch = {
     PATH: "/usr/bin:/bin",
@@ -128,7 +131,9 @@ test("without Bun the session still starts with an advisory", async () => {
   const env: EnvPatch = { PATH: "/usr/bin:/bin", HOME: sb.home, CLAUDE_PLUGIN_ROOT: PLUGIN };
   const res = await run(["sh", "-c", COMMAND], { cwd: sb.project, env, stdin: "{}" });
   expect(res.exitCode).toBe(0);
-  expect(JSON.parse(res.stdout)).toEqual({ systemMessage: missingRuntimeMessage("toolu") });
+  const message = (JSON.parse(res.stdout) as { systemMessage: string }).systemMessage;
+  expect(message).toContain("toolu is not installed");
+  expect(message).toContain("brew install falconiere/tap/toolu");
 });
 
 test("disabled context reports the runtime on startup only and writes no readiness marker", async () => {

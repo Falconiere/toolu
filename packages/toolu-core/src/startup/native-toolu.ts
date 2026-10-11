@@ -13,7 +13,8 @@ const INSTALL_PATHS = [
   "/usr/local/bin/toolu",
   "/home/linuxbrew/.linuxbrew/bin/toolu",
 ];
-const PROBE_TIMEOUT_MS = 1_000;
+// A first macOS invocation of a freshly installed binary may include code-signature validation.
+const PROBE_TIMEOUT_MS = 10_000;
 
 export type NativeTooluOptions = { env?: HostEnv; sessionId?: string | undefined };
 

@@ -46,27 +46,45 @@ const DIST = /hooks[/\\]dist[/\\]([^"'\s/\\]+)\.js/;
 /** The marker of a native launcher entry (`toolu_protocol::launcher::MARKER`). */
 const NATIVE_MARKER = "--hook-protocol";
 const NATIVE_EXAMPLES = {
-  enforcing: {
-    event: "PreToolUse",
-    entry: "pre-tools",
-    command: readFileSync(
-      join(
-        import.meta.dir,
-        "../../crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt",
+  toolu: {
+    enforcing: {
+      plugin: "toolu",
+      event: "PreToolUse",
+      entry: "pre-tools",
+      command: readFileSync(
+        join(import.meta.dir, "../../crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt"),
+        "utf8",
       ),
-      "utf8",
-    ),
+    },
+    context: {
+      plugin: "toolu",
+      event: "SessionStart",
+      entry: "session-start",
+      command: readFileSync(
+        join(import.meta.dir, "../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt"),
+        "utf8",
+      ),
+    },
   },
-  context: {
-    event: "SessionStart",
-    entry: "session-start",
-    command: readFileSync(
-      join(
-        import.meta.dir,
-        "../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt",
+  leaf: {
+    enforcing: {
+      plugin: "ast-grep",
+      event: "PreToolUse",
+      entry: "pre-tools",
+      command: readFileSync(
+        join(import.meta.dir, "../fixtures/native-launcher/leaf-pre-tool-use.txt"),
+        "utf8",
       ),
-      "utf8",
-    ),
+    },
+    context: {
+      plugin: "statusline",
+      event: "SessionStart",
+      entry: "session-start",
+      command: readFileSync(
+        join(import.meta.dir, "../fixtures/native-launcher/leaf-session-start.txt"),
+        "utf8",
+      ),
+    },
   },
 } as const;
 
@@ -83,21 +101,20 @@ function expectedHook(plugin: string, event: string, entry: string): LauncherHoo
 function expectedNativeCommand(plugin: string, event: string, entry: string): string | undefined {
   if (!/^[A-Z][A-Za-z]+$/u.test(event) || typeof expectedHook(plugin, event, entry) === "string")
     return undefined;
-  const example = isEnforcingEvent(event) ? NATIVE_EXAMPLES.enforcing : NATIVE_EXAMPLES.context;
-  const prefix = plugin === "toolu" ? "" : `${plugin} `;
+  const examples = plugin === "toolu" ? NATIVE_EXAMPLES.toolu : NATIVE_EXAMPLES.leaf;
+  const example = isEnforcingEvent(event) ? examples.enforcing : examples.context;
+  const source = `${example.plugin === "toolu" ? "" : `${example.plugin} `}hook ${example.entry} --event ${example.event}`;
+  const target = `${plugin === "toolu" ? "" : `${plugin} `}hook ${entry} --event ${event}`;
   return example.command
-    .replace(
-      `hook ${example.entry} --event ${example.event}`,
-      `${prefix}hook ${entry} --event ${event}`,
-    )
+    .replace(source, target)
     .replaceAll(`hooks/dist/${example.entry}.js`, `hooks/dist/${entry}.js`)
-    .replaceAll("toolu plugin:", `${plugin} plugin:`);
+    .replaceAll(`${example.plugin} plugin:`, `${plugin} plugin:`);
 }
 
 /** The context golden carries the #412 install text used by both POSIX and Windows. */
 function nativeMissingMessage(plugin: string): string {
   const message = /"systemMessage":"(toolu plugin: [^"]+ is not installed[^"]*)"/u.exec(
-    NATIVE_EXAMPLES.context.command,
+    NATIVE_EXAMPLES.toolu.context.command,
   )?.[1];
   if (message === undefined) throw new Error("native SessionStart golden has no install message");
   return message.replace("toolu plugin:", `${plugin} plugin:`);

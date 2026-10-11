@@ -13,17 +13,13 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { bundlePath } from "@toolu/conformance/harness/entry-command";
-import { launcherCommand } from "@toolu/core/launcher";
+import { hookCommand } from "@toolu/conformance/harness/startup";
 import { BUILTIN_MODULES, builtins, NATIVE_MODULES } from "../pre-tools/builtins.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const LAUNCHER = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "pre-tools" });
-const MCP_LAUNCHER = launcherCommand({ plugin: "toolu", event: "PreToolUse", entry: "mcp-tools" });
-const AGENT_LAUNCHER = launcherCommand({
-  plugin: "toolu",
-  event: "PreToolUse",
-  entry: "agent-tier",
-});
+const LAUNCHER = hookCommand(PLUGIN, "PreToolUse", "pre-tools");
+const MCP_LAUNCHER = hookCommand(PLUGIN, "PreToolUse", "mcp-tools");
+const AGENT_LAUNCHER = hookCommand(PLUGIN, "PreToolUse", "agent-tier");
 
 function withTempDir<T>(work: (dir: string) => T): T {
   const dir = mkdtempSync(join(tmpdir(), "toolu-pretools-"));
@@ -62,7 +58,7 @@ test("the ported modules' bats suites are gone from the index", () => {
   expect(listed.stdout).toBe("");
 });
 
-test("hooks.json runs every PreToolUse bundle through the launcher", () => {
+test("hooks.json runs every PreToolUse entry through the native launcher", () => {
   const hooks: unknown = JSON.parse(readFileSync(join(PLUGIN, "hooks/hooks.json"), "utf8"));
   expect(hooks).toMatchObject({
     hooks: {
@@ -89,7 +85,7 @@ for (const [entry, command, input] of [
   ["mcp-tools", MCP_LAUNCHER, '{"tool_name":"mcp__exampleblocked__search","tool_input":{}}'],
   ["agent-tier", AGENT_LAUNCHER, '{"tool_name":"Agent","tool_input":{"model":"opus"}}'],
 ] as const) {
-  test.concurrent(`the ${entry} launcher blocks with exit 2 when Bun is missing`, () => {
+  test.concurrent(`the ${entry} launcher blocks with exit 2 when both runtimes are missing`, () => {
     withTempDir((home) => {
       const result = spawnSync("/bin/sh", ["-c", command], {
         env: { PATH: "/usr/bin:/bin", HOME: home, CLAUDE_PLUGIN_ROOT: PLUGIN },
@@ -98,7 +94,7 @@ for (const [entry, command, input] of [
       });
       expect(result.status).toBe(2);
       expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("blocked: toolu plugin: Bun runtime not found");
+      expect(result.stderr).toContain("blocked: toolu plugin: toolu is not installed");
     });
   });
 }

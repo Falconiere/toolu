@@ -177,7 +177,7 @@ var INSTALL_PATHS = [
   "/usr/local/bin/toolu",
   "/home/linuxbrew/.linuxbrew/bin/toolu"
 ];
-var PROBE_TIMEOUT_MS = 1000;
+var PROBE_TIMEOUT_MS = 1e4;
 function shellQuote(path) {
   return `'${path.replaceAll("'", "'\\''")}'`;
 }

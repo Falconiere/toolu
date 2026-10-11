@@ -10,12 +10,12 @@ import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { launcherCommand } from "@toolu/core/launcher";
+import { hookCommand } from "@toolu/conformance/harness/startup";
 import { implementationTag, launchedArgv } from "@toolu/conformance/harness/entry-command";
 import { BUILTIN_MODULES, builtins } from "../post-tools/builtins.ts";
 
 const PLUGIN = resolve(import.meta.dir, "../../..");
-const LAUNCHER = launcherCommand({ plugin: "toolu", event: "PostToolUse", entry: "post-tools" });
+const LAUNCHER = hookCommand(PLUGIN, "PostToolUse", "post-tools");
 const TAG = implementationTag("toolu", "post-tools");
 
 function withTempDir<T>(work: (dir: string) => T): T {
@@ -33,7 +33,7 @@ test("the built-in table runs gate status before push waiver", () => {
   expect(builtins().every((m) => m.kind === "native")).toBe(true);
 });
 
-test("hooks.json runs the post dispatcher bundle through the launcher", () => {
+test("hooks.json runs the post dispatcher through the native launcher", () => {
   const hooks: unknown = JSON.parse(readFileSync(join(PLUGIN, "hooks/hooks.json"), "utf8"));
   expect(hooks).toMatchObject({
     hooks: {
@@ -47,7 +47,7 @@ test("hooks.json runs the post dispatcher bundle through the launcher", () => {
   });
 });
 
-test.concurrent("the launcher advises and exits 0 when Bun is missing", () => {
+test.concurrent("the launcher advises and exits 0 when both runtimes are missing", () => {
   withTempDir((home) => {
     const result = spawnSync("/bin/sh", ["-c", LAUNCHER], {
       env: { PATH: "/usr/bin:/bin", HOME: home, CLAUDE_PLUGIN_ROOT: PLUGIN },
@@ -56,7 +56,7 @@ test.concurrent("the launcher advises and exits 0 when Bun is missing", () => {
     });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
-      systemMessage: expect.stringContaining("toolu plugin: Bun runtime not found"),
+      systemMessage: expect.stringContaining("toolu plugin: toolu is not installed"),
     });
   });
 });

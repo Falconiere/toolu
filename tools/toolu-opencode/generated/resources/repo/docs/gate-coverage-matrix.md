@@ -38,14 +38,14 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 | `toolu:builtin-module:PreToolUse:push-review` | `packages/toolu-core/src/gates/push-review.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
 | `toolu:builtin-module:PreToolUse:quality-gate` | `packages/toolu-core/src/gates/quality-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
 | `toolu:entrypoint:PreToolUse:agent-tier` | `plugins/toolu/hooks/src/agent-tier.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | bun-bundle | no | — |
-| `toolu:hooks.json:PreCompact:pre-compact.js:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | bun-bundle | no | — |
-| `toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:hooks.json:PreToolUse:mcp-tools.js:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #260/done | bun-bundle | no | — |
-| `toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | bun-bundle | no | — |
-| `toolu:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | bun-bundle | no | — |
-| `toolu:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | bun-bundle | no | — |
-| `toolu:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | bun-bundle | no | — |
+| `toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | native | no | — |
+| `toolu:hooks.json:PreCompact:pre-compact.js:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:mcp-tools.js:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #260/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |
+| `toolu:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | native | no | — |
+| `toolu:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | native | no | — |
+| `toolu:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | native | no | — |
 | `ts-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
 | `ts-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
 

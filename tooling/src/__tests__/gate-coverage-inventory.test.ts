@@ -264,7 +264,7 @@ test.concurrent("a native built-in module is discovered from its gates source an
   expect(rows.some((row) => row.id.endsWith(":commit-gate.sh"))).toBe(false);
 });
 
-test.concurrent("the #262 gates and launchers use native Bun inventory entries", async () => {
+test.concurrent("the #262 gates retain their inventory rows while toolu launchers turn native", async () => {
   const Classified = z.array(
     z.looseObject({
       id: z.string(),
@@ -293,7 +293,7 @@ test.concurrent("the #262 gates and launchers use native Bun inventory entries",
   ]) {
     expect(rows.find((row) => row.id.startsWith(prefix))).toMatchObject({
       classification: "port-native",
-      hostMechanism: "bun-bundle",
+      hostMechanism: "native",
       bashRequired: false,
     });
   }

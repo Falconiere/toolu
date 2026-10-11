@@ -10,6 +10,7 @@ import { checkHooksJson } from "../check-hooks-json.ts";
 const ROOT = resolve(import.meta.dir, "../../..");
 const CLI = join(ROOT, "tooling/src/check-hooks-json.ts");
 const TOOLU = "plugins/toolu/hooks/hooks.json";
+const BUN_PLUGIN = "plugins/ts-quality/hooks/hooks.json";
 const temps: string[] = [];
 
 afterAll(() => {
@@ -45,10 +46,10 @@ function edit(root: string, path: string, change: (text: string) => string): voi
   writeFileSync(file, after);
 }
 
-const sessionStart = launcherHook({
-  plugin: "toolu",
+const bunStart = launcherHook({
+  plugin: "ts-quality",
   event: "SessionStart",
-  entry: "session-start",
+  entry: "register",
 });
 
 function cli(...args: string[]) {
@@ -67,30 +68,30 @@ test("an unchanged copy passes", () => {
 
 test("a hand-edited launcher command fails and names the expected string", () => {
   const root = copyOfRepo();
-  edit(root, TOOLU, (text) =>
+  edit(root, BUN_PLUGIN, (text) =>
     text.replace(
-      JSON.stringify(sessionStart.command),
-      JSON.stringify(sessionStart.command.replace("exit 0", "exit 1")),
+      JSON.stringify(bunStart.command),
+      JSON.stringify(bunStart.command.replace("exit 0", "exit 1")),
     ),
   );
   const problems = checkHooksJson(root);
   expect(problems).toHaveLength(1);
   expect(problems[0]).toMatchObject({
-    file: TOOLU,
+    file: BUN_PLUGIN,
     problem: "command differs from the generated launcher",
-    expected: sessionStart.command,
+    expected: bunStart.command,
   });
   const result = cli("--root", root);
   expect(result.status).toBe(1);
-  expect(result.stderr).toContain(`expected: ${sessionStart.command}`);
+  expect(result.stderr).toContain(`expected: ${bunStart.command}`);
 });
 
 test("an edited or removed commandWindows fails", () => {
   const edited = copyOfRepo();
-  edit(edited, TOOLU, (text) =>
+  edit(edited, BUN_PLUGIN, (text) =>
     text.replace(
-      JSON.stringify(sessionStart.commandWindows),
-      JSON.stringify(sessionStart.commandWindows.replace("where /q bun", "where bun")),
+      JSON.stringify(bunStart.commandWindows),
+      JSON.stringify(bunStart.commandWindows.replace("where /q bun", "where bun")),
     ),
   );
   expect(checkHooksJson(edited).map((p) => p.problem)).toEqual([
@@ -98,9 +99,9 @@ test("an edited or removed commandWindows fails", () => {
   ]);
 
   const removed = copyOfRepo();
-  edit(removed, TOOLU, (text) =>
+  edit(removed, BUN_PLUGIN, (text) =>
     text.replace(
-      `,\n            "commandWindows": ${JSON.stringify(sessionStart.commandWindows)}`,
+      `,\n            "commandWindows": ${JSON.stringify(bunStart.commandWindows)}`,
       "",
     ),
   );
@@ -111,9 +112,9 @@ test("an edited or removed commandWindows fails", () => {
 
 test("a launcher hook whose bundle is not committed fails", () => {
   const root = copyOfRepo();
-  rmSync(join(root, "plugins/toolu/hooks/dist/session-start.js"));
+  rmSync(join(root, "plugins/ts-quality/hooks/dist/register.js"));
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
-    "bundle plugins/toolu/hooks/dist/session-start.js is not committed",
+    "bundle plugins/ts-quality/hooks/dist/register.js is not committed",
   ]);
 });
 
@@ -132,9 +133,9 @@ test("commandWindows on a legacy script command fails", () => {
 
 test("a hand-written bun command fails even though it names a real bundle", () => {
   const root = copyOfRepo();
-  const bare = 'bun \\"${CLAUDE_PLUGIN_ROOT}/hooks/dist/session-start.js\\"';
-  edit(root, TOOLU, (text) =>
-    text.replace(JSON.stringify(sessionStart.command).slice(1, -1), bare),
+  const bare = 'bun \\"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js\\"';
+  edit(root, BUN_PLUGIN, (text) =>
+    text.replace(JSON.stringify(bunStart.command).slice(1, -1), bare),
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
     "command differs from the generated launcher",
@@ -145,9 +146,9 @@ test("a hand-written toolu hook command without the generated launcher fails", (
   const root = copyOfRepo();
   edit(root, TOOLU, (text) =>
     text
-      .replace(JSON.stringify(sessionStart.command), JSON.stringify("toolu hook session-start"))
+      .replace(JSON.stringify(NATIVE_SESSION_HOOK.command), JSON.stringify("toolu hook session-start"))
       .replace(
-        `,\n            "commandWindows": ${JSON.stringify(sessionStart.commandWindows)}`,
+        `,\n            "commandWindows": ${JSON.stringify(NATIVE_SESSION_HOOK.commandWindows)}`,
         "",
       ),
   );
@@ -156,8 +157,8 @@ test("a hand-written toolu hook command without the generated launcher fails", (
 
 test("an invalid entry name and malformed JSON are reported", () => {
   const badEntry = copyOfRepo();
-  edit(badEntry, TOOLU, (text) =>
-    text.replaceAll("hooks/dist/session-start.js", "hooks/dist/Session.js"),
+  edit(badEntry, BUN_PLUGIN, (text) =>
+    text.replaceAll("hooks/dist/register.js", "hooks/dist/Register.js"),
   );
   expect(checkHooksJson(badEntry)[0]?.problem).toMatch(/^launcher entry must match/);
 
@@ -294,17 +295,11 @@ test("a native command with its protocol marker kept but its shell body edited f
 test("a native entry does not stop the Bun launcher check", () => {
   const root = copyOfRepo();
   expect(NATIVE_PRE_HOOK.command).toBe(NATIVE_PRE_TOOL);
-  edit(root, TOOLU, (text) =>
-    text.replace(
-      '"PreToolUse": [',
-      `"PreToolUse": [${JSON.stringify({ hooks: [NATIVE_PRE_HOOK] })},`,
-    ),
-  );
   expect(checkHooksJson(root)).toEqual([]);
-  edit(root, TOOLU, (text) =>
+  edit(root, BUN_PLUGIN, (text) =>
     text.replace(
-      JSON.stringify(sessionStart.command),
-      JSON.stringify(sessionStart.command.replace("exit 0", "exit 1")),
+      JSON.stringify(bunStart.command),
+      JSON.stringify(bunStart.command.replace("exit 0", "exit 1")),
     ),
   );
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
