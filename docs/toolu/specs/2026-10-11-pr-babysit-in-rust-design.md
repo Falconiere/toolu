@@ -343,3 +343,10 @@ worker pane, so each carries its reason.
   `prBabysit.jev: false` turns Jev off as `--no-jev` does, and a replayed
   answers file wins over both. `--base`/`--branch` starting with `-` are
   refused before any `git` call.
+- **JSON key order** is serde_json's sorted order, not TypeScript's insertion
+  order. No reader depends on it: the Rust tests compare values, and the
+  OpenCode scenarios parse the route plan and the state's `actions` instead of
+  matching their text.
+- **The generated `hooks.json`** keeps `cargo xtask print-hook`'s shared Bun
+  fallback, which names `hooks/dist` and `bun` until #440, as every ported
+  plugin's does; AC-9's scan covers the plugin's Markdown.

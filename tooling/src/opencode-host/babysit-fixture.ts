@@ -8,6 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, dirname, join } from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import { SELECTION, selection } from "./install-host.ts";
 import type { ScriptStep, Scripts } from "./provider.ts";
@@ -205,6 +206,21 @@ const Group = z.looseObject({
   error: z.string().optional(),
   pid: z.number().optional(),
 });
+
+/** The state's write-side ledger is still empty. */
+export function ledgerUntouched(state: Record<string, unknown>): boolean {
+  return isDeepStrictEqual(state["actions"], { replied: {}, resolved: {}, flagged: {} });
+}
+
+const RouteGroups = z.object({
+  groups: z.array(z.looseObject({ host: z.string(), model: z.string().nullable() })),
+});
+
+/** A route plan sends a group to `host` on `model`. */
+export function routedTo(plan: Record<string, unknown>, host: string, model: string): boolean {
+  const parsed = RouteGroups.safeParse(plan);
+  return parsed.success && parsed.data.groups.some((g) => g.host === host && g.model === model);
+}
 
 /** The first fixer group of a dispatch status or state document. */
 export function firstGroup(record: Record<string, unknown>): z.infer<typeof Group> | undefined {

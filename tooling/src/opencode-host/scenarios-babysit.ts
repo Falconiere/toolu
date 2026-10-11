@@ -24,10 +24,12 @@ import {
   git,
   helper,
   json,
+  ledgerUntouched,
   originOf,
   paths,
   reap,
   refused,
+  routedTo,
   running,
   startSteps,
   text,
@@ -92,9 +94,7 @@ async function fixer(ctx: EntryContext): Promise<EntryResult> {
       exits:
         text(join(p.project, "exits.txt")) ===
         "tick=0\nroute=0\nstart=0\nwait=0\nverify=0\nrecord=0\n",
-      routed: JSON.stringify(json(join(p.project, "route.json"))["groups"] ?? "").includes(
-        '"host":"opencode","model":"probe/scripted"',
-      ),
+      routed: routedTo(json(join(p.project, "route.json")), "opencode", "probe/scripted"),
       done:
         wait["status"] === "done" && firstGroup(wait)?.status === "done" && commits.length === 1,
       testsPass: /\b1 pass\b/.test(text(join(p.project, "verify.txt"))),
@@ -139,9 +139,7 @@ async function noReport(ctx: EntryContext): Promise<EntryResult> {
       stable: again["status"] === "failed" && again["reason"] === "no_report",
       cleaned: cleanup["status"] === "cleaned" && cleanup["worktreeRemoved"] === true,
       worktreeGone: !existsSync(p.worktree),
-      ledgerUntouched:
-        JSON.stringify(state["actions"]) ===
-        JSON.stringify({ replied: {}, resolved: {}, flagged: {} }),
+      ledgerUntouched: ledgerUntouched(state),
       noReport: !existsSync(p.report),
     };
     return { pass: Object.values(observed).every(Boolean), observed };
@@ -180,9 +178,7 @@ async function cancel(ctx: EntryContext): Promise<EntryResult> {
       worktreeGone: !existsSync(p.worktree),
       fixerCleared: state["fixer"] === null,
       cancelled: state["status"] === "cancelled",
-      ledgerUntouched:
-        JSON.stringify(state["actions"]) ===
-        JSON.stringify({ replied: {}, resolved: {}, flagged: {} }),
+      ledgerUntouched: ledgerUntouched(state),
     };
     return { pass: Object.values(observed).every(Boolean), observed };
   } finally {

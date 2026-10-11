@@ -37,6 +37,22 @@ fn without_herdr_nothing_is_reachable_and_no_agent_is_live() {
 }
 
 #[test]
+fn a_herdr_error_written_to_stderr_keeps_its_code() {
+  let dir = tempfile::tempdir().unwrap();
+  let env = with_herdr(dir.path(), "");
+  let script = dir.path().join("bin/herdr");
+  let body = r#"{"error":{"code":"agent_not_ready","message":"blocked during startup"}}"#;
+  std::fs::write(&script, format!("#!/bin/sh\necho '{body}' >&2\nexit 1\n")).unwrap();
+  let error = try_herdr(&env, &argv(&["agent", "start", "pb-1"]), SECOND)
+    .err()
+    .unwrap();
+  assert_eq!(
+    (error.code.as_str(), error.message.as_str()),
+    ("agent_not_ready", "blocked during startup")
+  );
+}
+
+#[test]
 fn herdr_results_and_errors_are_unwrapped() {
   let dir = tempfile::tempdir().unwrap();
   let env = with_herdr(

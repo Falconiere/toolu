@@ -13,12 +13,14 @@ use crate::error::{Failure, Result};
 const TIMEOUT: Duration = Duration::from_secs(120);
 const SECOND: Duration = Duration::from_secs(1);
 
-/// A command's exit and stdout.
+/// A command's exit, stdout and stderr.
 pub(crate) struct Ran {
   /// The exit code; 1 when it could not run.
   pub(crate) status: i32,
   /// Its stdout.
   pub(crate) output: String,
+  /// Its stderr, where herdr writes the error document of a failed call.
+  pub(crate) errors: String,
 }
 
 /// Runs `argv` with `env`; a command that cannot start exits 1.
@@ -30,10 +32,12 @@ pub(crate) fn command(env: &Env, argv: &[String], timeout: Duration) -> Ran {
     Ok(output) => Ran {
       status: output.exit_code,
       output: output.stdout,
+      errors: output.stderr,
     },
     Err(error) => Ran {
       status: 1,
       output: format!("{error:?}"),
+      errors: String::new(),
     },
   }
 }
@@ -60,7 +64,9 @@ pub(crate) fn try_herdr(
   let mut full = vec!["herdr".to_owned()];
   full.extend_from_slice(args);
   let ran = command(env, &full, timeout);
-  let Ok(mut value) = serde_json::from_str::<Value>(&ran.output) else {
+  let parsed = serde_json::from_str::<Value>(&ran.output)
+    .or_else(|_| serde_json::from_str::<Value>(&ran.errors));
+  let Ok(mut value) = parsed else {
     let shown: String = ran.output.chars().take(200).collect();
     return Err(HerdrError {
       code: "invalid_output".into(),
