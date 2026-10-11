@@ -1,6 +1,6 @@
 # Epic status server and dashboard
 
-**Date:** 2026-10-11   **Status:** Draft   **Spec:** docs/toolu/specs/2026-10-11-epic-status-design.md   **Topic:** Issue #449 read-only HTTP and control-socket status
+**Date:** 2026-10-11   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-11-epic-status-design.md   **Topic:** Issue #449 read-only HTTP and control-socket status
 
 ## Evidence and approach
 
@@ -30,7 +30,7 @@ First make safe status projections and replayable journal reads. Then wire the b
     "check": "cargo test -p toolu-epic-orchestrator --lib status_api",
     "ac_refs": ["AC-1", "AC-6", "AC-8"],
     "depends_on": ["journal"],
-    "paths": ["crates/epic-orchestrator/src/status.rs", "crates/epic-orchestrator/src/status_api.rs", "crates/epic-orchestrator/src/status_resources.rs", "crates/epic-orchestrator/src/tests/status_api_test.rs", "crates/epic-orchestrator/src/tests/status_resources_test.rs", "crates/core/engine/src/resources/store.rs"],
+    "paths": ["crates/epic-orchestrator/src/lib.rs", "crates/epic-orchestrator/src/status.rs", "crates/epic-orchestrator/src/status_api.rs", "crates/epic-orchestrator/src/status_resources.rs", "crates/epic-orchestrator/src/tests/status_api_test.rs", "crates/epic-orchestrator/src/tests/status_resources_test.rs", "crates/core/engine/src/resources/store.rs"],
     "input": "Registered temporary epic with real graph, issue, status and route JSON plus resource policy, leases, pressure and cooldown"
   },
   {
@@ -39,16 +39,16 @@ First make safe status projections and replayable journal reads. Then wire the b
     "check": "cargo test -p toolu-epic-orchestrator --lib http_boundary",
     "ac_refs": ["AC-4", "AC-5", "AC-6"],
     "depends_on": ["documents"],
-    "paths": ["crates/epic-orchestrator/src/http.rs", "crates/epic-orchestrator/src/http_request.rs", "crates/epic-orchestrator/src/http_response.rs", "crates/epic-orchestrator/src/socket.rs", "crates/epic-orchestrator/src/control.rs", "crates/epic-orchestrator/src/tests/http_test.rs", "crates/epic-orchestrator/src/tests/http_request_test.rs"],
+    "paths": ["crates/epic-orchestrator/Cargo.toml", "crates/epic-orchestrator/src/lib.rs", "crates/epic-orchestrator/src/http.rs", "crates/epic-orchestrator/src/http_request.rs", "crates/epic-orchestrator/src/http_response.rs", "crates/epic-orchestrator/src/socket.rs", "crates/epic-orchestrator/src/control.rs", "crates/epic-orchestrator/src/tests/http_test.rs", "crates/epic-orchestrator/src/tests/http_request_test.rs", "crates/core/runtime/src/config/epic.rs", "crates/core/runtime/src/config/secrets.rs"],
     "input": "Real TCP requests to a loopback and wildcard-bound engine, including foreign Host, missing token, unsupported method and oversize headers"
   },
   {
     "id": "stream",
     "title": "Replay SSE from Last-Event-ID, heartbeat and update the embedded dashboard",
-    "check": "cargo test -p toolu-epic-orchestrator --lib status_stream",
+    "check": "cargo test -p toolu-epic-orchestrator --lib status_stream && cargo test -p toolu-epic-orchestrator --lib dashboard_live",
     "ac_refs": ["AC-2", "AC-3"],
     "depends_on": ["listener"],
-    "paths": ["crates/epic-orchestrator/src/http.rs", "crates/epic-orchestrator/src/http_stream.rs", "crates/epic-orchestrator/src/dashboard.html", "crates/epic-orchestrator/src/socket.rs", "crates/epic-orchestrator/src/tests/http_stream_test.rs"],
+    "paths": ["crates/epic-orchestrator/src/http.rs", "crates/epic-orchestrator/src/http_stream.rs", "crates/epic-orchestrator/src/dashboard.html", "crates/epic-orchestrator/src/socket.rs", "crates/epic-orchestrator/src/tests/http_stream_test.rs", "crates/epic-orchestrator/src/tests/dashboard_test.rs"],
     "input": "A real engine, two HTTP stream clients and a worker report over the Unix control socket"
   },
   {
@@ -81,7 +81,7 @@ First make safe status projections and replayable journal reads. Then wire the b
   {
     "id": "budget",
     "title": "Measure the release listener under 50 keep-alive clients and eight streams",
-    "check": "cargo test -p toolu-epic-orchestrator --test status_budget",
+    "check": "cargo build --release -p toolu-cli && TOOLU_RELEASE_BIN=target/release/toolu cargo test -p toolu-epic-orchestrator --test status_budget",
     "ac_refs": ["AC-2", "AC-7"],
     "depends_on": ["stream", "docs"],
     "paths": ["crates/epic-orchestrator/tests/status_budget.rs", "crates/epic-orchestrator/src/http.rs", "crates/epic-orchestrator/src/http_stream.rs", "docs/resource-budgets.md"],
@@ -92,7 +92,7 @@ First make safe status projections and replayable journal reads. Then wire the b
 
 ## Critical files
 
-- `crates/epic-orchestrator/src/{journal,status,status_api,status_resources,http,http_request,http_response,http_stream,verbs,query,dispatch,socket,control,job}.rs`
+- `crates/epic-orchestrator/src/journal.rs`, `status.rs`, `status_api.rs`, `status_resources.rs`, `http.rs`, `http_request.rs`, `http_response.rs`, `http_stream.rs`, `verbs.rs`, `query.rs`, `dispatch.rs`, `socket.rs`, `control.rs`, `job.rs` and `lib.rs`
 - `crates/epic-orchestrator/src/dashboard.html` and colocated `src/tests/*_test.rs`
 - `crates/epic-orchestrator/tests/status_budget.rs`
 - `plugins/epic-orchestrator/scripts/job.ts` and its real-process test
@@ -100,4 +100,4 @@ First make safe status projections and replayable journal reads. Then wire the b
 
 ## Verification
 
-Each behavior step starts with a failing real-input test and ends green. Run the CLI and HTTP tests against a temporary resource root and a spawned engine; stream and dashboard behavior must be checked in a real browser. On Linux, measure client latency and `VmHWM` through the shared job lease. Regenerate the API and CLI docs, run `cargo xtask check-markdown-cli`, then run the full `cargo xtask gate` under the shared lease. The final ledger verification and review happen after commit, before push.
+Each behavior step starts with a failing real-input test and ends green. Run the CLI and HTTP tests against a temporary resource root and a spawned engine; the dashboard's real JavaScript behavior must also be checked with `agent-browser` against that engine. On Linux, measure client latency and `VmHWM` through the shared job lease. Regenerate the API and CLI docs, run `cargo xtask check-markdown-cli`, then run the full `cargo xtask gate` under the shared lease. The final ledger verification and review happen after a scoped commit and before push; verify the default-branch PR and hand it to babysit only after the verdict is ready.
