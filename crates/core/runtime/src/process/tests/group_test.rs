@@ -90,3 +90,16 @@ fn pid_alive_probes_a_process_and_rejects_impossible_ids() {
   assert_eq!(pid_alive(i64::from(i32::MAX) + 1), Ok(false));
   assert_eq!(pid_alive(i64::from(std::process::id())), Ok(true));
 }
+
+#[test]
+fn signal_pid_reaches_one_process_outside_its_group() {
+  let mut child = sleeper();
+  assert_eq!(super::signal_pid(child.id(), Signal::SIGKILL), Ok(()));
+  let status = child.wait().unwrap();
+  assert_eq!(
+    std::os::unix::process::ExitStatusExt::signal(&status),
+    Some(9)
+  );
+  assert_eq!(super::signal_pid(child.id(), Signal::SIGTERM), Ok(()));
+  assert!(super::signal_pid(0, Signal::SIGTERM).is_err());
+}
