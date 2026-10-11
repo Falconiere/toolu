@@ -20,6 +20,7 @@ fn unported(names: &[String]) -> Vec<&String> {
   let ported = [
     "hook",
     "ledger",
+    "debug",
     "commands",
     "doctor",
     "config",
