@@ -125,6 +125,18 @@ fn a_recovered_effect_reconciles_or_defers() {
   assert!(!pending.recovered);
   assert_eq!(pending.phase, 2);
   arm(&mut world, Action::Merge, true);
+  assert!(
+    world
+      .watches
+      .get_mut("epic")
+      .expect("epic")
+      .take_due(0)
+      .is_some()
+  );
+  let _steps = commit_effect(&mut world, "a", "already");
+  assert!(world.watches["epic"].immediate);
+  assert_eq!(world.watches["epic"].next_at_ms, 180_000);
+  arm(&mut world, Action::Merge, true);
   let _steps = commit_effect(&mut world, "a", "open");
   assert!(
     !world
