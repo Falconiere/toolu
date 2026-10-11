@@ -9,9 +9,10 @@ const SHIMS = new Map([
     "plugins/toolu-review/scripts/write-state.sh",
     '#!/bin/sh\nexec toolu review write-state "$@"\n',
   ],
+  ["plugins/statusline/scripts/statusline.sh", '#!/bin/sh\nexec toolu statusline render "$@"\n'],
 ]);
 
-/** The root installer and two exact native shims; all other shell files fail. */
+/** The root installer and three exact native shims; all other shell files fail. */
 export const SHELL_KEEP = new Set(["install.sh", ...SHIMS.keys()]);
 
 /** Problems in real tracked shell files and the installed shim sources under `root`. */

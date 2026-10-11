@@ -16,7 +16,7 @@ import { envOr } from "./env.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 export const DEFAULT_MANIFEST = resolve(ROOT, "fixtures/rust-ported.json");
-export const SUITES = ["test:unit", "test:conformance"];
+export const SUITES = ["test:unit", "test:conformance", "test:statusline-native"];
 
 const Manifest = z.strictObject({ entries: z.array(z.string()) });
 

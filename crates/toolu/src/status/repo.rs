@@ -4,8 +4,12 @@ use std::path::Path;
 use std::time::Duration;
 
 use toolu_runtime::env::Env;
-use toolu_runtime::process::{Spec, run};
-use toolu_state::git::{current_branch, toplevel};
+use toolu_runtime::git::{Discovery, discover};
+use toolu_runtime::host::roots::Roots;
+use toolu_runtime::process::{Spec, Wait, run};
+use toolu_state::git::{current_branch, current_branch_without_git, toplevel};
+
+use super::cache;
 
 /// Ahead, behind and the working tree. Empty when `dir` is not a repository.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -73,6 +77,27 @@ impl Repo {
   }
 }
 
+/// Repository facts from native readers and the cached working tree, without Git.
+pub(super) fn inspect_cached(roots: &Roots, dir: &Path) -> Repo {
+  let Discovery::Repo(found) = discover(roots.env(), dir) else {
+    return Repo::empty();
+  };
+  let Some(root) = found.toplevel.as_deref() else {
+    return Repo::empty();
+  };
+  let branch = current_branch_without_git(roots.env(), root).unwrap_or_default();
+  let counts = cache::read(roots, &found);
+  Repo {
+    root: root.display().to_string(),
+    branch,
+    ahead: counts.ahead,
+    behind: counts.behind,
+    staged: counts.staged,
+    unstaged: counts.unstaged,
+    untracked: counts.untracked,
+  }
+}
+
 /// Counts from porcelain text. A missing ahead or behind side stays 0.
 pub(super) fn counts(text: &str) -> Counts {
   let mut counts = Counts::default();
@@ -127,6 +152,8 @@ fn porcelain(env: &Env, root: &Path) -> Option<String> {
   spec.cwd = Some(root.to_path_buf());
   spec.env = Some(env.clone());
   spec.timeout = Duration::from_secs(5);
+  spec.wait = Wait::Streams;
+  spec.poll_interval = Duration::from_micros(100);
   let output = run(&spec).ok()?;
   (output.exit_code == 0).then_some(output.stdout)
 }

@@ -10,7 +10,7 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
 | Binary size | ≤ 4 MiB | prototype: 2.75 MiB | size of the stripped release `toolu` (fat LTO, one codegen unit), Linux x86_64 | #417 |
 | `toolu --version` startup | ≤ 4 ms wall (p50) | prototype: 2.3 ms | `cargo xtask check-startup --bin <toolu>`: wall time from spawn to reap of one `toolu --version`, 30 runs after 3 warm-up, nearest-rank p50; the Linux `rust` CI job gates the release binary | #442 |
-| One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | one `toolu statusline render` with a session payload through `cargo xtask measure` | #431 |
+| One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | `bun tooling/src/benchmarks/statusline.ts --assert`: 30 warm-cache release-binary renders after 3 warm-ups through `cargo xtask measure`; render reads cached Git counts; Linux `rust` CI gates it | #431 |
 | Idle engine RSS | ≤ 5 MiB | prototype: 3.9 MiB | resident set (`VmRSS`) of the idle resident engine 2 s after start | #434 |
 | Status server under 50 clients | ≤ 7 ms latency (p90), ≤ 13 MiB max RSS | prototype: 4.4 ms, 9.7 MiB | 50 concurrent keep-alive clients × 40 loopback requests; client-side latency, server `VmHWM` | #449 |
 | Gate duration | ≤ 60 s | 40 s (slowest of three CI runs) | the `cargo xtask gate` step of the `rust (ubuntu-latest)` job, warm cache | #455 |

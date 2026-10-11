@@ -10,8 +10,10 @@ import {
   fixtureString,
   FixtureActionSchema,
   FixturePayloadSchema,
-} from "./fixture-actions.ts";
-import { plain, render } from "./harness.ts";
+} from "../statusline-fixture-actions.ts";
+import { plain, render, runInOrder } from "../statusline-harness.ts";
+
+const JEV_SUFFIX = "\x1b[2m | \x1b[0m\x1b[1m\x1b[32m[JEV:READY]\x1b[0m";
 
 const CaseSchema = z.strictObject({
   name: z.string(),
@@ -45,7 +47,7 @@ for (const c of cases) {
   test.concurrent(c.name, async () => {
     using sb = createSandbox();
     await applyFixtureActions(sb, c.actions);
-    for (const run of c.runs) {
+    await runInOrder(c.runs, async (run) => {
       const body = fixturePayload(sb, run.payload);
       const env =
         run.env === undefined
@@ -57,7 +59,14 @@ for (const c of cases) {
         ...(body === undefined ? {} : { payload: body }),
         ...(env === undefined ? {} : { env }),
       });
-      const out = run.plain ? plain(raw) : raw;
+      expect(raw).toEndWith(JEV_SUFFIX);
+      // #431 changes only Jev readiness; the shared renderer cases remain the
+      // byte oracle for every other segment. The all-segments case checks Jev too.
+      const legacy =
+        c.name === "statusline: every segment in order, colours included"
+          ? raw
+          : raw.slice(0, -JEV_SUFFIX.length);
+      const out = run.plain ? plain(legacy) : legacy;
       for (const check of run.checks) {
         const value = fixtureString(sb, check.value);
         if (check.op === "contains") expect(out).toContain(value);
@@ -66,6 +75,6 @@ for (const c of cases) {
         else if (check.op === "ends") expect(out).toEndWith(value);
         else expect(out).not.toMatch(new RegExp(value));
       }
-    }
+    });
   });
 }

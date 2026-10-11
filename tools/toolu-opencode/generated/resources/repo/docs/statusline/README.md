@@ -1,139 +1,73 @@
-# statusline — Gate-Aware Terminal Statusline
+# statusline
 
-**Type:** Status | **Version:** 6.5.0 | **Standalone** (no plugin dependencies)
+The statusline plugin uses the native `toolu` binary. Claude Code can display a
+persistent one-line bar. Codex and OpenCode offer status skills that run the
+native `toolu status` command for their host.
 
-Host-native status. Claude Code gets an optional persistent statusline; Codex
-gets an explicit `$statusline:status` skill, and OpenCode the native
-`statusline-status` skill. All consume the same repository, git, quality-gate,
-comemory, and Jev readiness collector; OpenCode's report adds toolu's own
-plugin readiness.
+## Install and set up Claude Code
 
-## Install
-
-```text
-/plugin install statusline@toolu
-```
-
-For Codex:
-
-```bash
-codex plugin add statusline@toolu
-```
-
-Run `$statusline:status`. Codex reports only locally available repository,
-branch, working-tree, gate (`<repo>/.codex/tmp/quality-gate-status.json`), and
-comemory and Jev readiness state; it does not fabricate Claude-only model, effort, account, or
-context-window values. The remaining setup below applies only to Claude's
-persistent renderer.
-
-Then wire it once — easiest with the bundled setup command:
-
-```text
-/statusline:setup
-```
-
-This adds the `statusLine` key to your `settings.json` idempotently:
-- Backs the file up first
-- Never clobbers an existing custom `statusLine` (re-run with `--force` to override)
-- Updates the older `bash ~/.claude/statusline/statusline.sh` value, which cannot run the Bun renderer
-- No-op once wired
-
-Restart the session afterwards for the bar to appear.
-
-### Manual Setup
+Install `statusline@toolu`, then run `/statusline:setup`. It writes this setting
+to Claude's `settings.json`:
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "~/.claude/statusline/statusline.sh"
+    "command": "toolu statusline render"
   }
 }
 ```
 
-Use `"$CLAUDE_CONFIG_DIR/statusline/statusline.sh"` if you run with a custom config dir. The path is a symlink to the plugin's Bun renderer (`hooks/dist/statusline.js`), refreshed every session, so plugin updates are picked up automatically. Run it by path, never through `bash`; while `settings.json` still holds the old `bash` form, SessionStart prints a notice to run `/statusline:setup`.
+Restart the session or run `/clear` so Claude loads the setting. `setup` keeps
+other settings and saves `settings.json.bak` before changing an existing file.
+It refuses to replace a custom `statusLine` unless you pass `--force`.
+`toolu statusline setup --json` returns a status and settings path as JSON.
 
-## OpenCode
+Claude sends a JSON payload to `toolu statusline render` on stdin. The command
+prints the colored line without a trailing newline. `--json` returns
+`{"line":"..."}` instead. Missing optional account, gate, comemory, or git
+facts leave their segments out.
 
-On OpenCode the native `statusline-status` skill is the status surface. OpenCode
-has no `statusLine` setting, so the persistent statusline and
-`/statusline:setup` are Claude Code-only: toolu does not generate the setup
-command for OpenCode and never writes a `statusLine` key into OpenCode
-configuration. The skill runs
-`"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"`.
-`shell.env` sets both variables in every bash call. The report starts with toolu's
-own readiness:
-
-```
-Host: OpenCode
-toolu: ready — 2 plugins (project selection), 2 startup artifacts
-Plugins: jev (session-start), statusline (session-start)
-Startup record: <project>/.opencode/toolu/state/toolu/opencode-status.json, written <time> for <project>
-Repository: …
-```
-
-Every startup of the toolu OpenCode plugin writes that record
-(`<data root>/toolu/opencode-status.json`). It also sends one structured
-`toolu: status` entry to the host log (`opencode --print-logs`) with `status`,
-`plugins`, `selection`, `artifacts`, `record` and, when toolu is not ready,
-`reason`. Neither holds environment values. A missing or unreadable record prints
-a line naming the next step. When toolu is not ready, it denies every tool call,
-bash included. Its reason then reaches you through the denial and the host log,
-and the record keeps it for a later `status.js` run with `TOOLU_CONFIG_DIR` set to
-the data root.
-
-## What It Provides
-
-A defensive one-line status bar:
-
-```
+```text
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [JEV:READY]
 ```
 
-### Segments
+The model, effort, and context come from Claude's payload. Only the domain of
+the Claude OAuth email is shown. The repository root and branch come from
+native `.git` readers. Ahead/behind and dirty counts come from a per-worktree
+cache in the toolu config directory. The render never waits for Git: after a
+missing or stale record it shows the last counts, if any, and starts one
+detached refresh. A fresh record expires after two seconds or when HEAD or the
+index changes. The gate comes from its local state file; comemory is read from
+its local marker. Jev is
+locally ready when `toolu` is executable on `PATH` and `TYPESAFE_API_KEY` is
+set without line breaks. The renderer never sends a Jev API request or prints
+the key.
 
-| Segment | Source | Shows When |
-|---------|--------|------------|
-| `model` | `.model.display_name` | Always |
-| `effort` | `.effort.level` | Model reports an effort level |
-| `ctx` | `.context_window.*` | Always — current/total usage + % |
-| `example.com` | `.oauthAccount.emailAddress` in `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json`) | Logged in via Claude OAuth — shows only the email domain, not the full address |
-| `✗ gate:failing` | `.claude/tmp/quality-gate-status.json` at git root | Quality gate is failing |
-| `folder` + `branch` + `↑↓` + `[+~?]` | git, from workspace dir | Inside a git repo — `↑N↓M` shows ahead/behind of the tracked remote, `[+N ~N ?N]` shows staged/unstaged/untracked file counts (both omitted when clean and up-to-date) |
-| `[COMEMORY:N]` | `${CLAUDE_CONFIG_DIR}/comemory-status/<repo>.json` | Comemory plugin published a memory count |
-| `[JEV:READY]` / `[JEV:UNAVAILABLE: reason]` | Published Jev wrapper, Bun, and environment API key | Wrapper is published; green when locally ready, yellow with the reason when unavailable |
+## Existing settings
 
-Jev readiness checks `<config-dir>/jev/jev.sh`, Bun, and a nonempty
-`TYPESAFE_API_KEY` without line breaks. Config resolution honors
-`TOOLU_CONFIG_DIR`, then the active host's `CLAUDE_CONFIG_DIR` or `CODEX_HOME`,
-then its default directory. It never prints the key, reads `.env`, runs the
-wrapper, or calls the API. **Ready means locally configured**, not verified
-authentication or service health. Missing prerequisites show a reason such as
-`missing TYPESAFE_API_KEY`, `invalid TYPESAFE_API_KEY`, `missing bun`, or
-`missing executable wrapper`; multiple reasons are separated by semicolons.
-No published wrapper means no Jev segment. Codex reports the same information
-as `Jev: ready` or `Jev: unavailable — reason`.
+The native SessionStart hook publishes a compatibility symlink at
+`<config root>/statusline/statusline.sh`. It migrates the older path or its
+simple shell form in Claude's `statusLine` to `toolu statusline render`, saves a
+backup, and shows one notice. Later starts are silent. A user-owned regular
+file at the compatibility path is left alone. Run `toolu statusline refresh`
+to republish the path and apply a pending migration outside SessionStart.
 
-### Degradation
+A still older `~/.claude/toolu/statusline.sh` setting is treated as custom;
+run `/statusline:setup --force` to replace it.
 
-The account, gate, comemory, and git status segments degrade gracefully — if the file they read is absent, the segment simply doesn't render. So statusline is **standalone**: it declares no plugin dependencies. Those segments just light up automatically when the relevant plugins are also installed (or, for the account segment, when you're logged in via Claude OAuth rather than an API key).
+## Codex and OpenCode
 
-## Migrating from toolu ≤ 1.5.0
+Run `$statusline:status` in Codex or `statusline-status` in OpenCode. They run
+`toolu --host codex status` and `toolu --host opencode status`, respectively.
+The JSON document includes repository, working-tree, gate, push-review, and
+waiver facts. It has no Claude model, context, or account fields. OpenCode's
+plugin readiness remains in its separate startup record and host log.
 
-The statusline used to ship inside the `toolu` plugin and auto-symlinked to `~/.claude/toolu/statusline.sh`. It now lives here. To keep your statusline:
+## Verification
 
-```text
-/plugin install statusline@toolu
-```
-
-Then re-point `settings.json` from `~/.claude/toolu/statusline.sh` to `~/.claude/statusline/statusline.sh` — `/statusline:setup --force` does this for you (the old path is a custom value to it, so plain `/statusline:setup` would refuse).
-
-## Hooks
-
-| Hook | Event | Purpose |
-|------|-------|--------|
-| `session-start` | SessionStart | Symlinks the Bun renderer to `statusline/statusline.sh`; notices a `bash` statusLine that needs `/statusline:setup` |
-
-## Testing
-
-`bun test plugins/statusline` — real statusline JSON payloads, real git repos and published Jev wrappers, no mocks or API calls.
+The native crate and CLI tests use real repositories, settings files, linked
+worktrees, and hook processes. `bun run test:statusline-native` replays the 31
+render, 15 setup, and five SessionStart cases in
+`fixtures/statusline/cases.json` against the binary. The render budget is
+measured with `bun tooling/src/benchmarks/statusline.ts --assert`.

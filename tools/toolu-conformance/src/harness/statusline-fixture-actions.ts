@@ -3,7 +3,16 @@ import { chmodSync, copyFileSync, mkdirSync, rmSync, symlinkSync } from "node:fs
 import { materializeCaseValue, mutationPath } from "@toolu/conformance/harness/json-cases";
 import type { Sandbox } from "@toolu/conformance/harness/sandbox";
 import { z } from "zod";
-import { JEV_BUNDLE, git, payload, publishJev, put, repo, withRemote } from "./harness.ts";
+import {
+  JEV_BUNDLE,
+  git,
+  payload,
+  publishJev,
+  put,
+  repo,
+  runInOrder,
+  withRemote,
+} from "./statusline-harness.ts";
 
 const TaggedPathSchema = z.strictObject({ $path: z.string() });
 
@@ -41,7 +50,7 @@ export async function applyFixtureActions(
   sb: Sandbox,
   actions: readonly z.infer<typeof FixtureActionSchema>[],
 ): Promise<void> {
-  for (const action of actions) {
+  await runInOrder(actions, async (action) => {
     if (action.op === "repo") repo(mutationPath(sb, action.path.$path));
     else if (action.op === "remote") withRemote(sb, action.branch);
     else if (action.op === "write") put(mutationPath(sb, action.path.$path), action.body);
@@ -64,7 +73,7 @@ export async function applyFixtureActions(
       const found = Bun.which(action.tool);
       if (found !== null) symlinkSync(found, mutationPath(sb, action.path.$path));
     }
-  }
+  });
 }
 
 export function fixturePayload(

@@ -110,8 +110,6 @@
     {"files":["python-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},
     {"files":["rust-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},
     {"files":["rust-quality/hooks/src/rules/size-rules.ts"],"rules":{"no-shadow":"off"}},
-    {"files":["statusline/hooks/src/status.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
-    {"files":["statusline/hooks/src/statusline/report.ts"],"rules":{"typescript/no-unnecessary-condition":"off"}},
     {"files":["toolu/scripts/debug-io.ts"],"rules":{"typescript/prefer-nullish-coalescing":"off"}},
     {"files":["toolu/skills/setup/scripts/setup.ts"],"rules":{"max-lines-per-function":"off","no-console":"off","no-unused-vars":"off","typescript/prefer-nullish-coalescing":"off"}},
     {"files":["ts-quality/hooks/src/post-tool-use.ts"],"rules":{"import/no-default-export":"off"}},

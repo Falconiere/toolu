@@ -4,7 +4,7 @@ use serde_json::Value;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 
-use super::{Context, VERSION, run, tree};
+use super::{Context, VERSION, raw_statusline, run, tree};
 
 /// The words of `line`, as the shell would split a simple command line.
 pub(crate) fn words(line: &str) -> Vec<String> {
@@ -47,6 +47,7 @@ fn the_fast_path_never_builds_the_tree() {
     "jev hook session-start --event SessionStart",
     "pr-babysit hook check-toolu",
     "--hook-protocol",
+    "statusline render",
   ] {
     let (_, calls) = counted(line);
     assert_eq!(calls, 0, "{line}");
@@ -116,4 +117,24 @@ fn a_hook_run_goes_through_the_hook_module() {
       .unwrap()
       .starts_with("blocked: toolu plugin: toolu ")
   );
+}
+
+#[test]
+fn only_the_text_renderer_uses_raw_stdout() {
+  for command in [
+    "statusline render",
+    "--host claude --config-dir /tmp/other statusline render",
+    "statusline --quiet render",
+  ] {
+    assert!(raw_statusline(&words(command)), "{command}");
+  }
+  for command in [
+    "--json statusline render",
+    "statusline render --json",
+    "statusline setup",
+    "commands --json statusline render",
+    "--config-dir statusline commands render",
+  ] {
+    assert!(!raw_statusline(&words(command)), "{command}");
+  }
 }

@@ -1,6 +1,6 @@
 ---
 name: verify-dual-host-plugins
-description: Verify toolu plugin packaging, startup context, and REST wrappers on Codex and Claude Code. Use when adding or reviewing dual-host plugins.
+description: Verify toolu plugin packaging and startup on Codex, Claude Code, and OpenCode when supported. Use when adding or reviewing host plugins.
 metadata:
   toolu:
     origin: agent
@@ -9,7 +9,7 @@ metadata:
 ## When to Use
 
 Use when adding or reviewing a toolu plugin that must install and deliver working
-startup behavior in both Codex and Claude Code.
+startup behavior in Codex and Claude Code, and in OpenCode when supported.
 
 ## Procedure
 
@@ -36,6 +36,10 @@ startup behavior in both Codex and Claude Code.
    inventory, packed catalog, and pinned-host scenarios. Replay the focused
    actual-host cases before the full acceptance run. A repeated SessionStart
    must preserve byte-identical manifest files and their timestamps.
+7. When native SessionStart publishes a helper in OpenCode, keep its source
+   inside the selected plugin and stage that file in the `@toolu/opencode`
+   tarball. Require it in the pack inventory, then run focused pinned-host
+   enabled, missing-binary, and clean-install scenarios before full acceptance.
 
 ## Pitfalls
 
@@ -61,6 +65,10 @@ startup behavior in both Codex and Claude Code.
 - A native registry manifest has a `.json` name and no source bundle to compare.
   Startup readiness must validate its exact contents and location; deleting the
   old `.js` bundle requires updating live package and worktree assertions too.
+- OpenCode rejects a published helper whose source is generated under the data
+  root instead of the selected plugin. A direct CLI refresh may generate a local
+  source when it has no plugin root; an installed SessionStart must publish the
+  plugin-owned file that the tarball carries.
 - Keep host overrides scoped to the operation being verified. A Codex override
   inherited by the full suite redirects Claude fixtures away from their temporary
   configuration directories. Unset it in the test subprocess when running a
@@ -75,7 +83,7 @@ startup behavior in both Codex and Claude Code.
 ## Verification
 
 Require passing packaging, targeted regressions, and CI commands; successful
-isolated installation on both hosts; and cached-hook output that satisfies each
-host's event-specific schema for enabled and disabled branches. Report
+isolated installation on supported hosts; and cached-hook output that satisfies
+each host's event-specific schema for enabled and disabled branches. Report
 live-service and full-session checks separately. Keep user profile configuration
 out of fixture cleanup and preserve unrelated workspace changes.

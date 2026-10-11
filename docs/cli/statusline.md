@@ -2,20 +2,23 @@
 
 # `toolu statusline`
 
-Project status for the host's status line.
+Render and set up the native Claude status line.
 
 Owner: `plugins/statusline`.
 
 ## `toolu statusline`
 
 ```text
-Project status for the host's status line
+Render and set up the native Claude status line
 
 Usage: toolu statusline [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#431): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  render         Render one Claude status-line JSON payload from stdin
+  setup          Wire Claude settings.json to the native renderer
+  refresh        Refresh the compatibility shim and old settings
+  refresh-cache  Refresh cached Git counts for a statusline worktree (internal)
+  help           Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -25,12 +28,61 @@ Options:
   -h, --help              Print help
 ```
 
-## `toolu statusline planned`
+## `toolu statusline render`
 
 ```text
-Not ported yet (#431): show the planned verbs
+Render one Claude status-line JSON payload from stdin
 
-Usage: toolu statusline planned [OPTIONS]
+Usage: toolu statusline render [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu statusline setup`
+
+```text
+Wire Claude settings.json to the native renderer
+
+Usage: toolu statusline setup [OPTIONS]
+
+Options:
+  -f, --force             Replace an existing custom statusLine after backing it up
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu statusline refresh`
+
+```text
+Refresh the compatibility shim and old settings
+
+Usage: toolu statusline refresh [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu statusline refresh-cache`
+
+```text
+Refresh cached Git counts for a statusline worktree (internal)
+
+Usage: toolu statusline refresh-cache [OPTIONS] <WORKTREE>
+
+Arguments:
+  <WORKTREE>
 
 Options:
       --json              Print exactly one JSON document on stdout

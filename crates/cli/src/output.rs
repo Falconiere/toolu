@@ -8,8 +8,21 @@ use toolu_runtime::cli::Outcome;
 
 /// Print the outcome's lines on standard output and standard error.
 pub(crate) fn emit(outcome: &Outcome) {
+  emit_with(outcome, true);
+}
+
+/// Print a statusline result without adding a newline to its stdout.
+pub(crate) fn emit_raw(outcome: &Outcome) {
+  emit_with(outcome, false);
+}
+
+fn emit_with(outcome: &Outcome, newline: bool) {
   if let Some(line) = &outcome.stdout {
-    writeln!(std::io::stdout().lock(), "{line}").ok();
+    if newline {
+      writeln!(std::io::stdout().lock(), "{line}").ok();
+    } else {
+      write!(std::io::stdout().lock(), "{line}").ok();
+    }
   }
   if let Some(line) = &outcome.stderr {
     writeln!(std::io::stderr().lock(), "{line}").ok();

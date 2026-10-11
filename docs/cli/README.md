@@ -30,7 +30,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
 | [`review`](review.md) | `plugins/toolu-review` | available | Pre-push code review state for the native push-review gate |
 | [`jev`](jev.md) | `plugins/jev` | available | Typed judgments from Jev: yes/no probabilities, choices and scores |
-| [`statusline`](statusline.md) | `plugins/statusline` | planned | Project status for the host's status line |
+| [`statusline`](statusline.md) | `plugins/statusline` | available | Render and set up the native Claude status line |
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | planned | Babysit a PR until CI, review threads and the review-bot verdict are clear |
 | [`epic`](epic.md) | `plugins/epic-orchestrator` | planned | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
@@ -64,7 +64,7 @@ Commands:
   delivery-flow   Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin)
   review          Pre-push code review state for the native push-review gate [alias: toolu-review]
   jev             Typed judgments from Jev: yes/no probabilities, choices and scores
-  statusline      Project status for the host's status line
+  statusline      Render and set up the native Claude status line
   babysit         Babysit a PR until CI, review threads and the review-bot verdict are clear [alias: pr-babysit]
   epic            Drive an epic to merged PRs: the resident engine, merge queue and trackers [alias: epic-orchestrator]
   commands        List every toolu command; --json exports the tree for tools and docs

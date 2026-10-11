@@ -480,10 +480,10 @@
       "owner": ["OP-25"],
       "axes": {
         "tools": {
-          "use": "status skill runs the status report through bash",
+          "use": "status skill runs native toolu --host opencode status through bash",
           "required": true,
           "enforcement": false,
-          "mechanism": "bash tool + shell.env (helper path and environment)",
+          "mechanism": "bash tool + shell.env (native toolu on PATH)",
           "kind": "tool",
           "status": "supported",
           "evidence": ["env.shell"],
@@ -493,7 +493,7 @@
           "use": "none"
         },
         "startup": {
-          "use": "SessionStart publishes the status helper",
+          "use": "SessionStart publishes the native compatibility shim",
           "required": true,
           "enforcement": false,
           "mechanism": "plugin init (bootstrap)",
@@ -529,7 +529,7 @@
       },
       "notes": [
         {
-          "need": "A persistent statusline is Claude Code-only (its statusLine setting). The pinned server plugin API has no status bar, and @opencode-ai/plugin/tui slots (home_footer, sidebar_footer) load only in the interactive TUI, which headless probes cannot verify. Alternative: the statusline-status skill reports toolu readiness from <data root>/toolu/opencode-status.json, and each startup sends one structured toolu: status client.app.log entry",
+          "need": "A persistent statusline is Claude Code-only (its statusLine setting). The pinned server plugin API has no status bar, and @opencode-ai/plugin/tui slots (home_footer, sidebar_footer) load only in the interactive TUI, which headless probes cannot verify. The statusline-status skill runs native toolu --host opencode status; toolu readiness remains in <data root>/toolu/opencode-status.json and one structured toolu: status client.app.log entry",
           "owner": "OP-25"
         }
       ]

@@ -8,6 +8,7 @@ use toolu_engine::status::StatusSnapshot;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::host::roots::Roots;
 
+mod cache;
 mod gate;
 mod repo;
 
@@ -33,10 +34,27 @@ impl StatusSnapshot for Snapshot {
   fn snapshot(&self, roots: &Roots, dir: &Path) -> Result<Value, toolu_engine::LinkError> {
     Ok(document(roots, dir))
   }
+
+  fn snapshot_cached(&self, roots: &Roots, dir: &Path) -> Result<Value, toolu_engine::LinkError> {
+    Ok(document_with(roots, dir, &repo::inspect_cached(roots, dir)))
+  }
+
+  fn refresh_cache(&self, roots: &Roots, dir: &Path) -> Result<(), toolu_engine::LinkError> {
+    let toolu_runtime::git::Discovery::Repo(found) = toolu_runtime::git::discover(roots.env(), dir)
+    else {
+      return Err(toolu_engine::LinkError::Failed(
+        "statusline: no supported worktree".to_owned(),
+      ));
+    };
+    cache::refresh(roots, &found).map_err(toolu_engine::LinkError::Failed)
+  }
 }
 
 fn document(roots: &Roots, dir: &Path) -> Value {
-  let found = repo::inspect(roots.env(), dir);
+  document_with(roots, dir, &repo::inspect(roots.env(), dir))
+}
+
+fn document_with(roots: &Roots, dir: &Path, found: &repo::Repo) -> Value {
   let project = roots.project_root(Some(dir));
   let state = roots.project_state_root(Some(dir), project.as_deref());
   let gate_path = state

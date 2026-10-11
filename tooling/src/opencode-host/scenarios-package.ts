@@ -30,11 +30,17 @@ import { ContractError } from "./schema.ts";
 
 const ENV_BYTES = "SECRET=1\n";
 const Exports = z.looseObject({ exports: z.record(z.string(), z.string()) });
+const NativeStatus = z.looseObject({
+  namespace: z.literal("status"),
+  host: z.literal("opencode"),
+  repo_root: z.string(),
+  working_tree: z.object({ staged: z.number(), unstaged: z.number(), untracked: z.number() }),
+});
 
 function helperCommand(): string {
   return [
     `printf '%s\\n%s\\n' "$TOOLU_OPENCODE_ROOT" "$TOOLU_PLUGIN_ROOT" > roots.txt`,
-    `"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js" > status.txt 2>&1; echo "status=$?" >> markers.txt`,
+    `toolu --host opencode status --json > status.txt 2>&1; echo "status=$?" >> markers.txt`,
     `"$TOOLU_BUN" "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts" "$PWD/epic-status.json" brainstorm > report.txt 2>&1; echo "report=$?" >> markers.txt`,
     `"$TOOLU_BUN" "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" path > ledger.txt 2>&1; echo "ledger=$?" >> markers.txt`,
   ].join("\n");
@@ -91,6 +97,14 @@ function read(dir: string, rel: string): string {
   return existsSync(path) ? readFileSync(path, "utf8") : "";
 }
 
+function nativeStatusReady(project: string): boolean {
+  try {
+    return NativeStatus.safeParse(JSON.parse(read(project, "status.txt"))).success;
+  } catch {
+    return false;
+  }
+}
+
 /** What the installed tree and the agent's helper runs show; empty roots mean bash never ran. */
 async function installedObservations(project: string, tarball: string) {
   const [installed = "", pluginRoot = ""] = read(project, "roots.txt").split("\n");
@@ -105,7 +119,7 @@ async function installedObservations(project: string, tarball: string) {
     exportsLoaded: imports.loaded,
     exportsTotal: imports.total,
     markers: read(project, "markers.txt").trim().split("\n").join(","),
-    statusReady: read(project, "status.txt").includes("toolu: ready"),
+    statusReady: nativeStatusReady(project),
     reported: read(project, "report.txt").includes("reported brainstorm"),
   };
 }

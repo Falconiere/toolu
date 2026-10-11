@@ -6,35 +6,35 @@
       "kind": "startup",
       "host": "claude",
       "commands": ["bash ~/.claude/statusline/statusline.sh"],
-      "expected": "{\"systemMessage\":\"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it\"}\n"
+      "expected": "migrated"
     },
     {
       "name": "statusline session-start: an interpreter path counts as a shell",
       "kind": "startup",
       "host": "claude",
       "commands": ["/usr/bin/env bash ~/.claude/statusline/statusline.sh"],
-      "expected": "{\"systemMessage\":\"statusline: settings.json still runs the statusline through a shell, which cannot run the Bun statusline — run /statusline:setup to update it\"}\n"
+      "expected": "migrated"
     },
     {
-      "name": "statusline session-start: a Bun statusLine on Claude is silent",
+      "name": "statusline session-start: a published path migrates to native render",
       "kind": "startup",
       "host": "claude",
       "commands": ["~/.claude/statusline/statusline.sh"],
-      "expected": ""
+      "expected": "migrated"
     },
     {
       "name": "statusline session-start: a custom statusLine on Claude is silent",
       "kind": "startup",
       "host": "claude",
       "commands": ["bash my-custom-bar.sh", "bash -c \"~/.claude/statusline/statusline.sh | cat\""],
-      "expected": ""
+      "expected": "silent"
     },
     {
       "name": "statusline session-start: Codex never reads Claude's settings",
       "kind": "startup",
       "host": "codex",
       "commands": ["bash ~/.claude/statusline/statusline.sh"],
-      "expected": ""
+      "expected": "silent"
     },
     {
       "name": "status: OpenCode lists the plugins toolu started and its readiness",
@@ -63,7 +63,7 @@
           "notes": ["enabled plugin \"nope\" in plugins.json is not installed"]
         }
       ],
-      "gate": "{\"status\":\"passing\"}\n",
+      "gate": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}\n",
       "host": "opencode",
       "checks": [
         {
@@ -301,7 +301,7 @@
           "path": {
             "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"failing\",\"reason\":\"x\"}"
+          "body": "{\"status\":\"failing\",\"reason\":\"x\",\"source\":\"statusline\",\"file\":\"tracked.txt\",\"violations\":\"x\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         }
       ]
     },
@@ -325,7 +325,7 @@
           "path": {
             "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"passing\"}"
+          "body": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         }
       ]
     },
@@ -764,7 +764,7 @@
           "path": {
             "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"failing\",\"reason\":\"x\"}"
+          "body": "{\"status\":\"failing\",\"reason\":\"x\",\"source\":\"statusline\",\"file\":\"tracked.txt\",\"violations\":\"x\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         },
         {
           "op": "mkdir",
@@ -1102,7 +1102,7 @@
           "path": {
             "$path": "$ROOT/repo/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"failing\"}"
+          "body": "{\"status\":\"failing\",\"reason\":\"x\",\"source\":\"statusline\",\"file\":\"tracked.txt\",\"violations\":\"x\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         },
         {
           "op": "write",
@@ -1362,7 +1362,7 @@
           "path": {
             "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"passing\"}\n"
+          "body": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}\n"
         },
         {
           "op": "git",
@@ -1421,7 +1421,7 @@
           "path": {
             "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"passing\"}\n"
+          "body": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}\n"
         }
       ],
       "host": "opencode",
@@ -1532,7 +1532,7 @@
           "path": {
             "$path": "$PROJECT/.claude/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"passing\"}\n"
+          "body": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}\n"
         }
       ],
       "host": "codex",
@@ -1575,7 +1575,7 @@
           "path": {
             "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"passing\"}"
+          "body": "{\"status\":\"passing\",\"source\":\"statusline\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         }
       ],
       "host": "codex",
@@ -1600,7 +1600,7 @@
           "path": {
             "$path": "$PROJECT/.codex/tmp/quality-gate-status.json"
           },
-          "body": "{\"status\":\"failing\"}"
+          "body": "{\"status\":\"failing\",\"reason\":\"x\",\"source\":\"statusline\",\"file\":\"tracked.txt\",\"violations\":\"x\",\"updatedAt\":\"2026-10-09T00:00:00Z\"}"
         }
       ],
       "host": "codex",
@@ -2398,7 +2398,7 @@
         "$template": "CREATED wrote $PROJECT/cfg/settings.json with the statusLine wired. Restart the session to see it.\n"
       },
       "expectedCommand": {
-        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+        "$template": "toolu statusline render"
       }
     },
     {
@@ -2415,7 +2415,7 @@
         "statusLine": {
           "type": "command",
           "command": {
-            "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+            "$template": "toolu statusline render"
           }
         }
       },
@@ -2433,7 +2433,7 @@
       "kind": "setup",
       "scenario": "refuse-custom",
       "initial": "{\n  \"statusLine\": { \"type\": \"command\", \"command\": \"my-custom-bar\" }\n}\n",
-      "expectedExit": 3,
+      "expectedExit": 2,
       "stdoutPrefix": "REFUSED a different statusLine is already set",
       "backupAbsent": true
     },
@@ -2446,7 +2446,7 @@
       "expectedExit": 0,
       "stdoutPrefix": "WIRED ",
       "expectedCommand": {
-        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+        "$template": "toolu statusline render"
       },
       "backupCommand": "my-custom-bar"
     },
@@ -2461,20 +2461,20 @@
       }
     },
     {
-      "name": "setup: wires an explicit config dir as a quoted path, not a bare ~",
+      "name": "setup: wires an explicit config dir to the native command",
       "kind": "setup",
       "scenario": "explicit",
       "expectedExit": 0,
       "expectedCommand": {
-        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+        "$template": "toolu statusline render"
       }
     },
     {
-      "name": "setup: the default config dir is wired as ~/.claude",
+      "name": "setup: the default config dir is wired to native render",
       "kind": "setup",
       "scenario": "default",
       "expectedExit": 0,
-      "expectedCommand": "~/.claude/statusline/statusline.sh"
+      "expectedCommand": "toolu statusline render"
     },
     {
       "name": "setup: upgrades the pre-Bun bash command, then is a no-op",
@@ -2483,12 +2483,12 @@
       "initial": "{\"statusLine\":{\"type\":\"command\",\"command\":\"bash ~/.claude/statusline/statusline.sh\"},\"a\":1}",
       "expectedExit": 0,
       "expectedStdout": {
-        "$template": "WIRED updated statusLine in $HOME/.claude/settings.json to run the Bun statusline directly (backup: settings.json.bak). Restart the session to see it.\n"
+        "$template": "WIRED updated statusLine in $HOME/.claude/settings.json to run toolu statusline render directly (backup: settings.json.bak). Restart the session to see it.\n"
       },
       "expectedDoc": {
         "statusLine": {
           "type": "command",
-          "command": "~/.claude/statusline/statusline.sh"
+          "command": "toolu statusline render"
         },
         "a": 1
       },
@@ -2511,7 +2511,7 @@
         "$template": "WIRED updated statusLine in $PROJECT/cfg/settings.json"
       },
       "expectedCommand": {
-        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+        "$template": "toolu statusline render"
       }
     },
     {
@@ -2524,11 +2524,11 @@
         "$template": "WIRED updated statusLine in $PROJECT/cfg/settings.json"
       },
       "expectedCommand": {
-        "$template": "\"$PROJECT/cfg/statusline/statusline.sh\""
+        "$template": "toolu statusline render"
       }
     },
     {
-      "name": "setup: a shell -c pipeline around the path is already wired, not legacy",
+      "name": "setup: a shell -c pipeline remains custom and is refused",
       "kind": "setup",
       "scenario": "shell-pipelines",
       "commands": [
@@ -2540,8 +2540,8 @@
         "bash -o pipefail -c \"~/.claude/statusline/statusline.sh | cat\"",
         "sh -lc'~/.claude/statusline/statusline.sh'"
       ],
-      "expectedExit": 0,
-      "stdoutPrefix": "ALREADY "
+      "expectedExit": 2,
+      "stdoutPrefix": "REFUSED "
     },
     {
       "name": "setup: an empty settings.json is treated as absent",
@@ -2562,7 +2562,7 @@
       }
     },
     {
-      "name": "setup: the wired command runs the published renderer by path",
+      "name": "setup: the wired command runs the native renderer",
       "kind": "setup",
       "scenario": "wired-command",
       "hookExpected": {
@@ -2572,7 +2572,7 @@
       },
       "rendererExpected": {
         "exitCode": 0,
-        "stdout": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m"
+        "stdout": "\u001b[36mClaude\u001b[0m\u001b[2m | \u001b[0m\u001b[35mctx:0/0\u001b[0m\u001b[2m | \u001b[0m\u001b[1m\u001b[32m[JEV:READY]\u001b[0m"
       },
       "expectedExit": 0
     }

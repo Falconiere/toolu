@@ -1,0 +1,17 @@
+{
+  "schema": "toolu.statusline-benchmark/v1",
+  "platform": "linux",
+  "cpu": "AMD EPYC 9354P 32-Core Processor",
+  "runs": 30,
+  "warmup": 3,
+  "wallUs": 2824,
+  "maxRssBytes": 4743168,
+  "coldFirstRender": {
+    "wallUs": 3762,
+    "maxRssBytes": 4853760
+  },
+  "budget": {
+    "wallUs": 4000,
+    "maxRssBytes": 5242880
+  }
+}

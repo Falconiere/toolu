@@ -1,8 +1,7 @@
 /**
- * Pinned-host status (#359): the native `statusline-status` skill reports the
- * plugins toolu actually started, every startup sends one structured
- * `toolu: status` host-log entry, the JSON protocol stream carries nothing
- * else, and no Claude Code setting reaches any OpenCode configuration.
+ * Pinned-host status (#359, #431): the native `statusline-status` skill runs
+ * `toolu status` for OpenCode, every startup sends one structured `toolu: status`
+ * host-log entry, and no Claude Code setting reaches OpenCode configuration.
  */
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -17,7 +16,7 @@ import {
 import type { ProbeSession } from "./session.ts";
 
 const SKILL = "statusline-status";
-const COMMAND = '"$TOOLU_BUN" --no-env-file "$TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"';
+const COMMAND = "toolu --host opencode status";
 const RECORD = ".opencode/toolu/state/toolu/opencode-status.json";
 const CONFIG_FILE = /^(?:opencode|config|tui)\.jsonc?$/u;
 
@@ -79,17 +78,18 @@ async function enabled(ctx: EntryContext): Promise<EntryResult> {
   const bash = results.find((result) => result.tool === "bash");
   const report = bash?.text ?? "";
   const logged = statusLine(hostRun.stderr);
+  const record = s.exists(RECORD) ? readFileSync(join(s.sb.project, RECORD), "utf8") : "";
   const observed = {
     discovered: discovered.rows.some((row) => row.name === SKILL),
-    skillLoaded:
-      skill?.status === "completed" &&
-      skill.text.includes("TOOLU_PLUGIN_ROOT_STATUSLINE/hooks/dist/status.js"),
+    skillLoaded: skill?.status === "completed" && skill.text.includes(COMMAND),
     bashRan: bash?.status === "completed",
-    ready: report.includes("toolu: ready — 2 plugins (project selection)"),
-    plugins: report.includes(
-      "Plugins: jev (session-start, check-binary), statusline (session-start, check-binary)",
-    ),
-    record: s.exists(RECORD) && report.includes(join(s.sb.project, RECORD)),
+    statusDocument:
+      report.includes("repo_root") &&
+      report.includes("working_tree") &&
+      report.includes("opencode"),
+    ready: record.includes('"status": "ready"'),
+    plugins: record.includes('"name": "jev"') && record.includes('"name": "statusline"'),
+    record: s.exists(RECORD),
     statusEntries: diagnostics(hostRun.stderr, "toolu: status"),
     structured:
       / status=ready(?: |$)/u.test(logged) &&
@@ -103,6 +103,7 @@ async function enabled(ctx: EntryContext): Promise<EntryResult> {
     observed.discovered &&
     observed.skillLoaded &&
     observed.bashRan &&
+    observed.statusDocument &&
     observed.ready &&
     observed.plugins &&
     observed.record &&
@@ -144,7 +145,8 @@ async function disabled(ctx: EntryContext): Promise<EntryResult> {
 export const STATUS_SCENARIOS: EntryScenario[] = [
   {
     id: "status.enabled",
-    claim: "The native status skill reports the started plugins; one structured log entry",
+    claim:
+      "The native status skill runs toolu status; startup still records plugins and one log entry",
     run: enabled,
   },
   {
