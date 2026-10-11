@@ -226,10 +226,10 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   if path == "/api/v1/events" {
     return events_page(context, query, request);
   }
-  let Ok(world) = context.world.lock() else {
-    return Response::error(500, "status_unavailable");
+  let world = match context.world.lock() {
+    Ok(world) => world.clone(),
+    Err(_err) => return Response::error(500, "status_unavailable"),
   };
-  let world = world.clone();
   let document = status_api::route(
     &world,
     &context.paths,
