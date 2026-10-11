@@ -12,7 +12,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use serde_json::Value;
-use statusline::{TOOLU, TestResult, cmd, text};
+use statusline::{TOOLU, TestResult, cmd, isolated_env, text};
 
 #[test]
 fn setup_targets_claude_even_with_another_host_selected() -> TestResult<()> {
@@ -184,10 +184,10 @@ fn shim_line(cfg: &Path, cwd: &Path) -> TestResult<String> {
   let bin_dir = Path::new(TOOLU)
     .parent()
     .ok_or_else(|| std::io::Error::other("binary parent"))?;
-  let mut shim = Command::new(linked)
+  let mut shim = Command::new(linked);
+  isolated_env(&mut shim, cwd, cfg);
+  let mut shim = shim
     .current_dir(cwd)
-    .env("HOME", cwd)
-    .env("CLAUDE_CONFIG_DIR", cfg)
     .env("PATH", format!("{}:/usr/bin:/bin", bin_dir.display()))
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())

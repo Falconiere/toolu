@@ -9,6 +9,23 @@ pub(crate) type TestResult<T> = Result<T, Box<dyn std::error::Error>>;
 /// The binary built for this integration test.
 pub(crate) const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 
+/// Give direct and shim invocations the same isolated test environment.
+pub(crate) fn isolated_env(command: &mut Command, home: &Path, cfg: &Path) {
+  command
+    .env_clear()
+    .env("HOME", home)
+    .env("CLAUDE_CONFIG_DIR", cfg)
+    .env("TOOLU_HOST_OVERRIDE", "claude")
+    .env("TYPESAFE_API_KEY", "test-key")
+    .env(
+      "TMPDIR",
+      std::env::var("TMPDIR").unwrap_or_else(|_| "/tmp".to_owned()),
+    );
+  if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
+    command.env("LLVM_PROFILE_FILE", profile);
+  }
+}
+
 /// Run `toolu` with an isolated home and Claude config root.
 pub(crate) fn cmd(
   home: &Path,
@@ -21,22 +38,11 @@ pub(crate) fn cmd(
   let bin_dir = Path::new(TOOLU)
     .parent()
     .ok_or_else(|| std::io::Error::other("binary has no parent"))?;
+  isolated_env(&mut command, home, cfg);
   command
     .args(args)
     .current_dir(cwd)
-    .env_clear()
-    .env("HOME", home)
-    .env("CLAUDE_CONFIG_DIR", cfg)
-    .env("TOOLU_HOST_OVERRIDE", "claude")
-    .env("TYPESAFE_API_KEY", "test-key")
-    .env("PATH", format!("{}:/usr/bin:/bin", bin_dir.display()))
-    .env(
-      "TMPDIR",
-      std::env::var("TMPDIR").unwrap_or_else(|_| "/tmp".to_owned()),
-    );
-  if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
-    command.env("LLVM_PROFILE_FILE", profile);
-  }
+    .env("PATH", format!("{}:/usr/bin:/bin", bin_dir.display()));
   if let Some(text) = input {
     use std::io::Write as _;
     let mut child = command
