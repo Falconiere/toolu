@@ -1,7 +1,8 @@
 //! What an agent must do now: the attention codes, a fingerprint of that work,
-//! and whether the fingerprint is new since the previous tick. `wait` returns
-//! on any attention; the epic engine prompts only on new attention, so one
-//! piece of work reaches a worker once.
+//! and whether any of it is new since the previous tick. `wait` returns on any
+//! attention; the epic engine prompts only on new attention, so one piece of
+//! work reaches a worker once, even when a one-tick code (a new verdict run)
+//! drops out of the work that follows it.
 
 use serde_json::{Value, json};
 
@@ -110,20 +111,33 @@ impl Work<'_> {
     found
   }
 
-  /// `{needed, new, codes, fingerprint}` against the previous fingerprint.
-  pub(crate) fn attention(&self, previous: Option<&str>) -> Value {
+  /// `{needed, new, codes, fingerprint, work}` against the previous state's
+  /// `attention`: new when an item of the work is not in its `work`, or, for a
+  /// state without one, when the fingerprint differs.
+  pub(crate) fn attention(&self, previous: Option<&Value>) -> Value {
     let found = self.found();
     let codes: Vec<&str> = found.iter().map(|(code, _)| *code).collect();
     let parts: Vec<String> = found.into_iter().flat_map(|(_, parts)| parts).collect();
     let fingerprint = (!codes.is_empty()).then(|| crate::sha1::hex(parts.join("\n").as_bytes()));
-    let new = fingerprint
-      .as_deref()
-      .is_some_and(|print| previous != Some(print));
+    let seen = previous
+      .and_then(|previous| previous.get("work"))
+      .and_then(Value::as_array);
+    let new = if let Some(seen) = seen {
+      parts
+        .iter()
+        .any(|part| !seen.iter().any(|old| old.as_str() == Some(part)))
+    } else {
+      let print = previous.and_then(|previous| previous.get("fingerprint"));
+      fingerprint
+        .as_deref()
+        .is_some_and(|now| print.and_then(Value::as_str) != Some(now))
+    };
     json!({
       "needed": !codes.is_empty(),
       "new": new,
       "codes": codes,
       "fingerprint": fingerprint,
+      "work": parts,
     })
   }
 }

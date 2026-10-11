@@ -21,6 +21,8 @@ pub(crate) enum Step {
   Status { key: String },
   /// Rewrite the issue `stage`.
   Issue { key: String },
+  /// Send `text` to the issue's worker.
+  Prompt { key: String, text: String },
 }
 
 /// An effect the scripts or a later issue perform.

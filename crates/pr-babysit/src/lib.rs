@@ -40,6 +40,7 @@ mod wait;
 mod writes;
 
 pub use hooks::{check_binary, check_toolu};
+pub use link::GitHubTick;
 
 /// The plugin this crate belongs to: `plugins/pr-babysit`.
 pub const PLUGIN: &str = "pr-babysit";

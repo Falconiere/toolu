@@ -175,7 +175,9 @@ fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<Tick
       .root
       .join("babysit")
       .join(format!("{}-{number}.json", repo.replace('/', "__"))),
-    now: None,
+    now: Some(toolu_state::time::iso_seconds(
+      std::time::UNIX_EPOCH + Duration::from_millis(world.now_ms),
+    )),
   })
 }
 
@@ -198,7 +200,19 @@ fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
       }
     }
     Next::Attention(note) => push_attention(world, "babysit", &key, &note),
+    Next::Prompt(text) => prompt(world, &key, "babysit", text),
   }
+}
+
+/// Journal `text` as a `prompt` record, then send it to the worker.
+pub(crate) fn prompt(world: &mut World, key: &str, name: &str, text: String) {
+  world
+    .outbox
+    .push_back(Step::Journal(Record::new("prompt", name, key, "", &text)));
+  world.outbox.push_back(Step::Prompt {
+    key: key.to_owned(),
+    text,
+  });
 }
 
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
@@ -295,3 +309,7 @@ mod fixture;
 #[cfg(test)]
 #[path = "tests/github_engine_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_babysit_test.rs"]
+mod babysit_tests;

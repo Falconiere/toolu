@@ -27,25 +27,54 @@ fn the_fingerprint_follows_the_reply_target_not_the_tick() {
   let one = [json!({"id": "PRRT_a", "inReplyTo": 7})];
   let first = work(&one, &[]).attention(None);
   assert_eq!(first["codes"], json!(["threads_actionable"]));
-  let print = first["fingerprint"].as_str().unwrap();
-  assert_eq!(work(&one, &[]).attention(Some(print))["new"], false);
+  assert_eq!(first["work"], json!(["thread:PRRT_a@7"]));
+  assert_eq!(work(&one, &[]).attention(Some(&first))["new"], false);
   let follow_up = [json!({"id": "PRRT_a", "inReplyTo": 8})];
-  let next = work(&follow_up, &[]).attention(Some(print));
+  let next = work(&follow_up, &[]).attention(Some(&first));
   assert_eq!(next["new"], true);
   assert_ne!(next["fingerprint"], first["fingerprint"]);
 }
 
 #[test]
 fn nothing_to_do_has_no_fingerprint_and_escalations_come_first() {
-  let none = work(&[], &[]).attention(Some("old"));
+  let none = work(&[], &[]).attention(Some(&json!({"fingerprint": "old"})));
   assert_eq!(
     none,
-    json!({"needed": false, "new": false, "codes": [], "fingerprint": null})
+    json!({"needed": false, "new": false, "codes": [], "fingerprint": null, "work": []})
   );
   let escalations = [json!({"code": "merge_conflict", "detail": "x"})];
   let threads = [json!({"id": "t", "inReplyTo": 1})];
   let both = work(&threads, &escalations).attention(None);
   assert_eq!(both["codes"], json!(["escalate", "threads_actionable"]));
+}
+
+#[test]
+fn work_that_shrinks_to_what_was_seen_is_not_new() {
+  let one = [json!({"id": "PRRT_a", "inReplyTo": 7})];
+  let mut verdict = work(&one, &[]);
+  verdict.review_changes = true;
+  let first = verdict.attention(None);
+  assert_eq!(
+    first["codes"],
+    json!(["threads_actionable", "review_changes"])
+  );
+  assert_eq!(first["new"], true);
+  let after = work(&one, &[]).attention(Some(&first));
+  assert_eq!(
+    after["new"], false,
+    "the verdict run's code left; the thread was seen"
+  );
+  assert_ne!(after["fingerprint"], first["fingerprint"]);
+}
+
+#[test]
+fn a_state_without_work_compares_fingerprints() {
+  let one = [json!({"id": "PRRT_a", "inReplyTo": 7})];
+  let first = work(&one, &[]).attention(None);
+  let legacy = json!({"fingerprint": first["fingerprint"]});
+  assert_eq!(work(&one, &[]).attention(Some(&legacy))["new"], false);
+  let other = json!({"fingerprint": "0000"});
+  assert_eq!(work(&one, &[]).attention(Some(&other))["new"], true);
 }
 
 fn attention_codes(reduced: &Reduced) -> Vec<&str> {
@@ -65,7 +94,10 @@ fn a_green_approved_pr_needs_no_attention() {
     reduced.result["attention"],
     json!({"needed": false, "new": false, "codes": [], "fingerprint": null})
   );
-  assert_eq!(reduced.state["attention"], json!({"fingerprint": null}));
+  assert_eq!(
+    reduced.state["attention"],
+    json!({"fingerprint": null, "work": []})
+  );
 }
 
 #[test]

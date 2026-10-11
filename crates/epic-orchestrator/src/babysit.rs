@@ -14,6 +14,8 @@ pub enum Next {
   MergeQueue,
   /// Raise an attention item with this message.
   Attention(String),
+  /// Send the worker this prompt.
+  Prompt(String),
 }
 
 /// A babysit decision with the GraphQL usage supplied by the tick.
@@ -50,6 +52,10 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
         TickDecision::KeepGoing => Next::KeepGoing,
         TickDecision::Success => Next::MergeQueue,
         TickDecision::Escalate => Next::Attention(format!("babysit escalated {slot}")),
+        TickDecision::Act => match report.prompt {
+          Some(text) => Next::Prompt(text),
+          None => Next::Attention(format!("babysit needs the worker on {slot}")),
+        },
       },
       graphql: report.graphql,
       throttle: None,

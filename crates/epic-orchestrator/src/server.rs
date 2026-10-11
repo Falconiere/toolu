@@ -216,6 +216,10 @@ impl Engine {
         self.write_issue(&key)?;
         Ok(Applied::Continue)
       }
+      Step::Prompt { key, text } => {
+        self.send_prompt(&key, &text);
+        Ok(Applied::Continue)
+      }
     }
   }
 
@@ -235,21 +239,23 @@ impl Engine {
     Ok(Applied::Continue)
   }
 
-  fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
-    if action == Action::Prompt {
-      if self.scripts.is_none() && crate::source::prompt_enabled() {
-        let target = self
-          .world
-          .issues
-          .get(key)
-          .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
-        let _sent =
-          crate::source::ask_status(&self.paths, &toolu_runtime::env::Env::process(), &target);
-      } else {
-        let _outcome = invoke(self.scripts.as_deref(), action, "{}");
-      }
-      return Ok(Applied::Continue);
+  /// Send `text` to `key`'s worker through herdr, or the `prompt` script.
+  fn send_prompt(&self, key: &str, text: &str) {
+    if self.scripts.is_none() && crate::source::prompt_enabled() {
+      let target = self
+        .world
+        .issues
+        .get(key)
+        .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
+      let env = toolu_runtime::env::Env::process();
+      let _sent = crate::source::prompt(&self.paths, &env, &target, text);
+    } else {
+      let body = json!({"key": key, "text": text}).to_string();
+      let _outcome = invoke(self.scripts.as_deref(), Action::Prompt, &body);
     }
+  }
+
+  fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
     if self.fault == Fault::BeforeMerge && action == Action::Merge && !recovered(&self.world, key) {
       return Ok(Applied::Fault);
     }

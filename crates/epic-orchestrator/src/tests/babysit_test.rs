@@ -15,6 +15,7 @@ impl BabysitTick for Answer {
       decision,
       result: json!({ "slot": format!("{}#{}", request.repo, request.number) }),
       graphql: None,
+      prompt: None,
     })
   }
 }

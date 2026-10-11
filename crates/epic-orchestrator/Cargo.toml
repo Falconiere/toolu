@@ -21,6 +21,7 @@ toolu-state = { path = "../core/state" }
 [dev-dependencies]
 tempfile.workspace = true
 toolu-http-test-support = { path = "../http-test-support" }
+toolu-pr-babysit = { path = "../pr-babysit" }
 
 [lints]
 workspace = true

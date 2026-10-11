@@ -31,6 +31,8 @@ pub enum TickDecision {
   Success,
   /// A human or the worker has to look.
   Escalate,
+  /// New work for the worker: the report's `prompt` says what.
+  Act,
 }
 
 /// A tick's decision and its full result document, kept for the journal.
@@ -42,6 +44,8 @@ pub struct TickReport {
   pub result: Value,
   /// GraphQL points and primary limit observed by this tick, when available.
   pub graphql: Option<GraphQlUsage>,
+  /// The text to send the worker, with [`TickDecision::Act`].
+  pub prompt: Option<String>,
 }
 
 /// The GraphQL budget observed by one babysit tick.

@@ -211,10 +211,7 @@ fn judge(tick: &mut Tick<'_>, previous: Option<&Value>) {
     ),
     fixer: (!tick.memory.fixer.is_null()).then_some(&tick.memory.fixer),
   };
-  let previous_print = previous
-    .and_then(|prev| prev.pointer("/attention/fingerprint"))
-    .and_then(Value::as_str);
-  let attention = work.attention(previous_print);
+  let attention = work.attention(previous.and_then(|prev| prev.get("attention")));
   let mut reasons = escalations;
   reasons.extend(facts.signals());
   tick.reasons = reasons;

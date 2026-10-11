@@ -162,14 +162,15 @@ fn ping(stream: &mut UnixStream) -> Result<u64, String> {
   )
 }
 
-/// Send `STATUS?` when the stall nudge has no script directory.
+/// Send `text` to `target` when the engine has no script directory.
 ///
 /// # Errors
 /// The herdr socket or the CLI prompt fails.
-pub(crate) fn ask_status(
+pub(crate) fn prompt(
   paths: &crate::paths::Paths,
   env: &Env,
   target: &str,
+  text: &str,
 ) -> Result<(), String> {
   let mut client = Client::new();
   client
@@ -178,7 +179,7 @@ pub(crate) fn ask_status(
       env,
       &Call::Prompt {
         target: target.to_owned(),
-        text: "STATUS?".to_owned(),
+        text: text.to_owned(),
       },
     )
     .map(|_| ())

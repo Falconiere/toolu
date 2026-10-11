@@ -66,7 +66,10 @@ pub(super) fn state(tick: &Tick<'_>) -> Value {
     "herdrWorktree": previous_or(tick, "herdrWorktree", Value::Null),
     "hostCooldowns": previous_or(tick, "hostCooldowns", json!({})),
     "schedule": previous_or(tick, "schedule", Value::Null),
-    "attention": {"fingerprint": field(&tick.attention, "fingerprint")},
+    "attention": {
+      "fingerprint": field(&tick.attention, "fingerprint"),
+      "work": field(&tick.attention, "work"),
+    },
     "pr": {
       "key": format!("{repo}#{number}"),
       "ciStatus": tick.ci,
@@ -143,7 +146,12 @@ pub(super) fn result(tick: &Tick<'_>) -> Value {
     "changed": tick.changed,
     "decision": tick.decision,
     "reasons": tick.reasons,
-    "attention": tick.attention,
+    "attention": {
+      "needed": field(&tick.attention, "needed"),
+      "new": field(&tick.attention, "new"),
+      "codes": field(&tick.attention, "codes"),
+      "fingerprint": field(&tick.attention, "fingerprint"),
+    },
     "pr": pr_doc(tick),
     "ci": {"status": tick.ci, "checks": tick.checks},
     "verdict": verdict_doc(&tick.bot),
