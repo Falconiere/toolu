@@ -100,4 +100,11 @@ fn pr_babysit_session_start_checks_never_block_and_others_are_unknown() {
       .stdout
       .is_some_and(|text| text.contains("has no hook babysit-tick"))
   );
+  let tool = hook("pr-babysit", "check-toolu", "PreToolUse", &env);
+  assert_eq!(tool.exit, toolu_protocol::exit::Exit::Blocked);
+  assert!(
+    tool
+      .stderr
+      .is_some_and(|text| text.contains("has no hook check-toolu"))
+  );
 }

@@ -141,7 +141,8 @@ pub(super) fn review_hook(request: &HookRequest, context: &Context<'_>) -> Optio
 
 /// pr-babysit's two `SessionStart` entries.
 pub(super) fn babysit_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != toolu_pr_babysit::PLUGIN {
+  if request.plugin != toolu_pr_babysit::PLUGIN || request.event.as_deref() != Some("SessionStart")
+  {
     return None;
   }
   let env = (context.env)();

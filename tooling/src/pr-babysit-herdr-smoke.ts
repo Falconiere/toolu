@@ -10,7 +10,7 @@
  * branch or agent behind.
  *
  * Manual runner (needs herdr, claude, git, toolu) — like tooling/src/codex-smoke.ts.
- * TOOLU_BIN picks the binary (default: toolu on PATH).
+ * TOOLU_BIN picks the binary (default: this checkout's target/debug/toolu).
  * PB_SMOKE_MODEL / PB_SMOKE_EFFORT pick the fixer model (default haiku / low).
  */
 import { spawnSync } from "node:child_process";
@@ -33,7 +33,7 @@ import { envOr } from "./env.ts";
 
 const ROOT = realpathSync(resolve(import.meta.dir, "../.."));
 const SNAPSHOT = join(ROOT, "fixtures/pr-babysit/snapshots/toolu-165.json");
-const TOOLU = envOr("TOOLU_BIN", "toolu");
+const TOOLU = envOr("TOOLU_BIN", join(ROOT, "target/debug/toolu"));
 /** Two Fix items in two tiers (standard, trivial), each a one-line edit to smoke.txt. */
 const ITEMS = join(ROOT, "tooling/fixtures/pr-babysit-herdr-smoke/items.json");
 const Snapshot = z.looseObject({ pr: z.looseObject({}) });
