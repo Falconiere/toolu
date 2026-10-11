@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use serde_json::Value;
 use toolu_protocol::decision::Decision;
-use toolu_runtime::process::{RunError, Spec, Wait, run};
+use toolu_runtime::process::{Output, RunError, Spec, Wait, run};
 
 use crate::dispatch::MAX_OUTPUT_BYTES;
 use crate::dispatch::output::sanitize_surrogates;
@@ -118,6 +118,18 @@ fn failure(timed_out: bool, exit_code: i32, deadline: Duration) -> String {
   }
 }
 
+/// Start `spec`, retrying a spawn the OS refuses on the first two tries.
+fn started(spec: &Spec) -> Result<Output, RunError> {
+  let mut index = 0;
+  loop {
+    match run(spec) {
+      Ok(output) => return Ok(output),
+      Err(RunError::Spawn(_)) if index < 2 => index += 1,
+      Err(err) => return Err(err),
+    }
+  }
+}
+
 /// Run `modules` through Bun, re-running the rest after a module that failed the process.
 pub(crate) fn run_batch(launch: &Launch<'_>, request: &Request<'_>, modules: &[&Entry]) -> Batch {
   let mut batch = Batch::default();
@@ -125,9 +137,11 @@ pub(crate) fn run_batch(launch: &Launch<'_>, request: &Request<'_>, modules: &[&
   while !rest.is_empty() {
     let spec = spec_for(launch, request, rest);
     let deadline = spec.timeout;
-    let output = match run(&spec) {
+    let output = match started(&spec) {
       Ok(output) => output,
-      Err(RunError::Spawn(_)) => {
+      Err(RunError::Spawn(err)) => {
+        batch.stderr.push_str(&err);
+        batch.stderr.push('\n');
         batch.no_bun = true;
         return batch;
       }

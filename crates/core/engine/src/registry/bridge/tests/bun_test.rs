@@ -58,6 +58,23 @@ fn bun_is_looked_for_in_toolu_bun_then_path_then_home() {
 }
 
 #[test]
+fn a_project_bun_on_path_is_not_the_bridge() {
+  let dir = tempfile::tempdir().unwrap();
+  let d = dir.path();
+  let text = |rel: &str| d.join(rel).to_string_lossy().into_owned();
+  executable(&d.join("proj/node_modules/.bin/bun"));
+  executable(&d.join("path/bun"));
+  let project_first = Env::from_pairs([
+    (
+      "PATH",
+      format!("{}:{}", text("proj/node_modules/.bin"), text("path")),
+    ),
+    ("HOME", text("none")),
+  ]);
+  assert_eq!(find_bun(&project_first), Some(d.join("path/bun")));
+}
+
+#[test]
 fn session_ids_become_safe_file_names() {
   assert_eq!(session_file("01a0-f1c1_x.y"), "01a0-f1c1_x.y");
   assert_eq!(session_file("../etc/passwd"), ".._etc_passwd");

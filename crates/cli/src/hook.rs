@@ -8,23 +8,26 @@
 //! repeating it on every prompt or tool call would be noise. Enforcement is the
 //! same either way.
 
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+use toolu_hub::lifecycle::pre_compact::{PreCompactInput, pre_compact};
+use toolu_hub::lifecycle::prompt_submit::{PromptInput, prompt_submit};
+use toolu_hub::lifecycle::session::{SessionInput, session_start};
+use toolu_hub::tool_hook::{Phase, tool_hook};
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::event::is_enforcing;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
-use toolu_runtime::host::detect::detect;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
 
-use toolu_hub::tool_hook::{Phase, tool_hook};
-
 use crate::fast::HookRequest;
-use crate::{Context, VERSION, session_start};
+use crate::{Context, VERSION};
+
+mod plugins;
 
 /// What a native hook decided before the prelude's advisory is added.
 struct HookResult {
@@ -61,152 +64,23 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
     let plugin_root = request.plugin_root.as_deref().map(Path::new);
     return tool_hook(phase, (context.stdin)(), plugin_root);
   }
-  if request.plugin == "toolu" && request.name == "agent-tier" {
-    return toolu_hub::agent_tier::hook((context.stdin)());
+  if let Some(outcome) = plugins::dispatch(request, context, advisory.as_ref()) {
+    return outcome;
   }
-  if request.plugin == "toolu" && request.name == "mcp-tools" {
-    return toolu_hub::mcp_hook::hook(
-      (context.stdin)(),
-      request.plugin_root.as_deref().map(Path::new),
-    );
+  let env = (context.env)();
+  let call = HookCall {
+    request,
+    stdin: context.stdin,
+    exe: exe.as_deref(),
+    advisory: advisory.as_deref(),
+    env: &env,
+    cwd: context.cwd,
+  };
+  if let Some(outcome) = toolu_hook(&call) {
+    return outcome;
   }
-  if let Some(outcome) = jev_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = review_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = ast_grep_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  if let Some(outcome) = statusline_hook(request, context) {
-    return prefix(advisory, outcome);
-  }
-  let result = dispatch(request, context, exe.as_deref(), enforcing, upgrade);
+  let result = dispatch(request, enforcing, upgrade);
   compose(advisory, result)
-}
-
-/// ast-grep's manifest-publishing `SessionStart` hook.
-fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "ast-grep" {
-    return None;
-  }
-  let phase = match request.name.as_str() {
-    "pre-tools" => Some(Phase::Pre),
-    "post-tools" => Some(Phase::Post),
-    _ => None,
-  };
-  if let Some(phase) = phase {
-    return Some(toolu_hub::tool_hook::ast_grep_tool_hook(
-      phase,
-      (context.stdin)(),
-      request.plugin_root.as_deref().map(Path::new),
-    ));
-  }
-  if request.name != "register" {
-    return None;
-  }
-  let owned;
-  let env = if let Some(env) = context.env {
-    env
-  } else {
-    owned = Env::process();
-    &owned
-  };
-  Some(toolu_hub::ast_grep::register(env, detect(env, None).host))
-}
-
-/// The statusline's native `SessionStart` entry.
-fn statusline_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "statusline"
-    || request.name != "session-start"
-    || request.event.as_deref() != Some("SessionStart")
-  {
-    return None;
-  }
-  let owned;
-  let env = if let Some(env) = context.env {
-    env
-  } else {
-    owned = Env::process();
-    &owned
-  };
-  Some(toolu_statusline::session_start(
-    env,
-    request.plugin_root.as_deref().map(Path::new),
-  ))
-}
-
-/// The three jev hooks. Anything else stays the "has no hook" path.
-fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "jev" {
-    return None;
-  }
-  let owned;
-  let env = if let Some(env) = context.env {
-    env
-  } else {
-    owned = Env::process();
-    &owned
-  };
-  let stdin = (context.stdin)().ok();
-  let text = stdin.as_deref();
-  let outcome = match request.name.as_str() {
-    "session-start" => match plugin_root(request) {
-      Some(root) => toolu_jev::session_start(env, root, text),
-      None => quiet(),
-    },
-    "user-prompt-submit" => match plugin_root(request) {
-      Some(root) => toolu_jev::user_prompt_submit(env, root, text),
-      None => quiet(),
-    },
-    "check-binary" => toolu_jev::check_binary(env, text),
-    _ => return None,
-  };
-  Some(outcome)
-}
-
-/// The two toolu-review `SessionStart` entries.
-fn review_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
-  if request.plugin != "toolu-review" {
-    return None;
-  }
-  let owned;
-  let env = if let Some(env) = context.env {
-    env
-  } else {
-    owned = Env::process();
-    &owned
-  };
-  match request.name.as_str() {
-    "session-start" => Some(match plugin_root(request) {
-      Some(root) => toolu_review::session_start(env, root),
-      None => quiet(),
-    }),
-    "check-binary" => {
-      let stdin = (context.stdin)().ok();
-      Some(toolu_review::check_binary(env, stdin.as_deref()))
-    }
-    _ => None,
-  }
-}
-
-/// The plugin directory the launcher passed. Empty is absent: it would
-/// resolve the shim against the working directory.
-fn plugin_root(request: &HookRequest) -> Option<&Path> {
-  request
-    .plugin_root
-    .as_deref()
-    .filter(|root| !root.is_empty())
-    .map(Path::new)
-}
-
-fn quiet() -> Outcome {
-  Outcome {
-    exit: Exit::Success,
-    stdout: None,
-    stderr: None,
-  }
 }
 
 /// A `SessionStart` skew advisory is its own `systemMessage` line, before the hook JSON.
@@ -234,29 +108,118 @@ fn tool_phase(request: &HookRequest) -> Option<Phase> {
   }
 }
 
-/// The named hook. toolu's `session-start` carries the runtime diagnostic.
-/// jev's three hooks are dispatched above. Every other name reports "has no hook":
-/// a `systemMessage` on a context event such as `SessionStart`, a block on an enforcing one.
-fn dispatch(
-  request: &HookRequest,
-  context: &Context<'_>,
-  exe: Option<&Path>,
-  enforcing: bool,
-  upgrade: &str,
-) -> HookResult {
-  if request.plugin == "toolu" && request.name == "session-start" {
-    let message = match (context.stdin)() {
-      Ok(payload) => session_start::diagnostic(&payload, VERSION, exe),
-      Err(err) => Some(format!(
-        "toolu runtime: native {VERSION}, but the hook payload could not be read: {err}"
-      )),
-    };
-    return HookResult {
-      exit: Exit::Success,
-      message,
-      stderr: None,
-    };
+struct HookCall<'a> {
+  request: &'a HookRequest,
+  stdin: &'a dyn Fn() -> std::io::Result<String>,
+  exe: Option<&'a Path>,
+  advisory: Option<&'a str>,
+  env: &'a Env,
+  cwd: &'a dyn Fn() -> std::io::Result<PathBuf>,
+}
+
+/// toolu's session lifecycle hooks (#424). The hub renders session-start, including
+/// a skew advisory, so this path does not compose the stdout again.
+fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
+  if call.request.plugin != "toolu" {
+    return None;
   }
+  let name = call.request.name.as_str();
+  if !matches!(name, "session-start" | "user-prompt-submit" | "pre-compact") {
+    return None;
+  }
+  let cwd = match (call.cwd)() {
+    Ok(cwd) => cwd,
+    Err(err) => return Some(cwd_failure(name, call.advisory, &err)),
+  };
+  Some(match name {
+    "session-start" => run_session(call, &cwd),
+    "user-prompt-submit" => run_prompt(call, &cwd),
+    _ => run_compact(call, &cwd),
+  })
+}
+
+/// An unreadable working directory: the hook does not run, so it cannot guess
+/// a root. Session start reports it the way an unreadable payload does; the
+/// other two follow their stdin errors.
+fn cwd_failure(name: &str, advisory: Option<&str>, err: &std::io::Error) -> Outcome {
+  let detail = format!("the working directory could not be read: {err}");
+  if name == "session-start" {
+    return reported(
+      advisory,
+      &format!("toolu runtime: native {VERSION}, but {detail}"),
+    );
+  }
+  Outcome {
+    exit: Exit::Success,
+    stdout: None,
+    stderr: Some(format!("toolu {name}: {detail}")),
+  }
+}
+
+fn run_session(call: &HookCall<'_>, cwd: &Path) -> Outcome {
+  let plugin_root = call.request.plugin_root.as_deref().map(Path::new);
+  match (call.stdin)() {
+    Ok(payload) => session_start(&SessionInput {
+      env: call.env,
+      cwd,
+      plugin_root,
+      version: VERSION,
+      exe: call.exe,
+      advisory: call.advisory,
+      payload: &payload,
+    }),
+    Err(err) => unread_payload(call.advisory, &err),
+  }
+}
+
+fn unread_payload(advisory: Option<&str>, err: &std::io::Error) -> Outcome {
+  let line =
+    format!("toolu runtime: native {VERSION}, but the hook payload could not be read: {err}");
+  reported(advisory, &line)
+}
+
+fn reported(advisory: Option<&str>, line: &str) -> Outcome {
+  let text = match advisory.filter(|line| !line.is_empty()) {
+    Some(advisory) => format!("{advisory}\n{line}"),
+    None => line.to_owned(),
+  };
+  Outcome {
+    exit: Exit::Success,
+    stdout: Some(system_message(&text)),
+    stderr: None,
+  }
+}
+
+fn run_prompt(call: &HookCall<'_>, cwd: &Path) -> Outcome {
+  match (call.stdin)() {
+    Ok(payload) => prompt_submit(&PromptInput {
+      env: call.env,
+      cwd,
+      payload: &payload,
+    }),
+    Err(err) => hook_error("user-prompt-submit", &err),
+  }
+}
+
+fn run_compact(call: &HookCall<'_>, cwd: &Path) -> Outcome {
+  match (call.stdin)() {
+    Ok(_) => pre_compact(&PreCompactInput { env: call.env, cwd }),
+    Err(err) => hook_error("pre-compact", &err),
+  }
+}
+
+fn hook_error(name: &str, err: &std::io::Error) -> Outcome {
+  Outcome {
+    exit: Exit::Success,
+    stdout: None,
+    stderr: Some(format!("toolu {name}: {err}")),
+  }
+}
+
+/// A hook this binary does not run. Another plugin's `session-start` included,
+/// it reports "has no hook": a `systemMessage` on a context event, a block on
+/// an enforcing one.
+fn dispatch(request: &HookRequest, enforcing: bool, upgrade: &str) -> HookResult {
   let text = format!(
     "{} plugin: toolu {VERSION} has no hook {}; upgrade it: {upgrade}",
     request.plugin, request.name

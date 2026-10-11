@@ -1,0 +1,159 @@
+//! The other plugins' native hooks, dispatched by [`super::run`] before the
+//! lifecycle path. Each reports through the prelude's advisory, so they return
+//! an [`Outcome`] directly: `agent-tier` and `mcp-tools` write their own
+//! output, while the rest go through [`super::prefix`].
+
+use std::path::Path;
+
+use toolu_hub::tool_hook::{Phase, ast_grep_tool_hook};
+use toolu_protocol::exit::Exit;
+use toolu_runtime::cli::Outcome;
+use toolu_runtime::host::detect::detect;
+
+use crate::Context;
+use crate::fast::HookRequest;
+
+/// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev,
+/// toolu-review, ast-grep and the statusline. Each reports through the
+/// prelude's advisory.
+pub(super) fn dispatch(
+  request: &HookRequest,
+  context: &Context<'_>,
+  advisory: Option<&String>,
+) -> Option<Outcome> {
+  if let Some(outcome) = routed_hook(request, context.stdin) {
+    return Some(outcome);
+  }
+  if let Some(outcome) = jev_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = review_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = ast_grep_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = statusline_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  None
+}
+
+/// toolu's `agent-tier` and `mcp-tools`. They write their own output.
+pub(super) fn routed_hook(
+  request: &HookRequest,
+  stdin: &dyn Fn() -> std::io::Result<String>,
+) -> Option<Outcome> {
+  if request.plugin != "toolu" {
+    return None;
+  }
+  let root = request.plugin_root.as_deref().map(Path::new);
+  match request.name.as_str() {
+    "agent-tier" => Some(toolu_hub::agent_tier::hook(stdin())),
+    "mcp-tools" => Some(toolu_hub::mcp_hook::hook(stdin(), root)),
+    _ => None,
+  }
+}
+
+/// ast-grep's manifest-publishing `SessionStart` hook.
+pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "ast-grep" {
+    return None;
+  }
+  let phase = match request.name.as_str() {
+    "pre-tools" => Some(Phase::Pre),
+    "post-tools" => Some(Phase::Post),
+    _ => None,
+  };
+  if let Some(phase) = phase {
+    return Some(ast_grep_tool_hook(
+      phase,
+      (context.stdin)(),
+      request.plugin_root.as_deref().map(Path::new),
+    ));
+  }
+  if request.name != "register" {
+    return None;
+  }
+  let env = (context.env)();
+  Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
+}
+
+/// The statusline's native `SessionStart` entry.
+pub(super) fn statusline_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "statusline"
+    || request.name != "session-start"
+    || request.event.as_deref() != Some("SessionStart")
+  {
+    return None;
+  }
+  let env = (context.env)();
+  Some(toolu_statusline::session_start(
+    &env,
+    request.plugin_root.as_deref().map(Path::new),
+  ))
+}
+
+/// The three jev hooks. Anything else stays the "has no hook" path.
+fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "jev" {
+    return None;
+  }
+  let env = (context.env)();
+  let stdin = (context.stdin)().ok();
+  let text = stdin.as_deref();
+  let outcome = match request.name.as_str() {
+    "session-start" => match plugin_root(request) {
+      Some(root) => toolu_jev::session_start(&env, root, text),
+      None => quiet(),
+    },
+    "user-prompt-submit" => match plugin_root(request) {
+      Some(root) => toolu_jev::user_prompt_submit(&env, root, text),
+      None => quiet(),
+    },
+    "check-binary" => toolu_jev::check_binary(&env, text),
+    _ => return None,
+  };
+  Some(outcome)
+}
+
+/// The two toolu-review `SessionStart` entries.
+pub(super) fn review_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "toolu-review" {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "session-start" => Some(match plugin_root(request) {
+      Some(root) => toolu_review::session_start(&env, root),
+      None => quiet(),
+    }),
+    "check-binary" => {
+      let stdin = (context.stdin)().ok();
+      Some(toolu_review::check_binary(&env, stdin.as_deref()))
+    }
+    _ => None,
+  }
+}
+
+/// The plugin directory the launcher passed. Empty is absent: it would
+/// resolve the shim against the working directory.
+pub(super) fn plugin_root(request: &HookRequest) -> Option<&Path> {
+  request
+    .plugin_root
+    .as_deref()
+    .filter(|root| !root.is_empty())
+    .map(Path::new)
+}
+
+pub(super) fn quiet() -> Outcome {
+  Outcome {
+    exit: Exit::Success,
+    stdout: None,
+    stderr: None,
+  }
+}
+
+#[cfg(test)]
+#[path = "tests/plugins_test.rs"]
+mod tests;

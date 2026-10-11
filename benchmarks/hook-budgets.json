@@ -6,9 +6,21 @@
       "maxRssMiB": 6,
       "cpuMs": 10
     },
+    "toolu/pre-compact": {
+      "maxRssMiB": 6,
+      "cpuMs": 4
+    },
     "toolu/pre-tools": {
       "maxRssMiB": 6,
       "cpuMs": 5
+    },
+    "toolu/session-start": {
+      "maxRssMiB": 8,
+      "cpuMs": 43
+    },
+    "toolu/user-prompt-submit": {
+      "maxRssMiB": 9,
+      "cpuMs": 16
     }
   }
 }

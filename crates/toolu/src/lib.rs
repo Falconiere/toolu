@@ -20,6 +20,8 @@ pub mod debug;
 pub mod doctor;
 /// `toolu ledger`.
 pub mod ledger;
+/// Session-start, user-prompt-submit, and pre-compact.
+pub mod lifecycle;
 /// The standalone MCP blocker hook.
 pub mod mcp_hook;
 /// `toolu serve`.
