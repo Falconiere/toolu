@@ -41,7 +41,7 @@ function helperCommand(): string {
   return [
     `printf '%s\\n%s\\n' "$TOOLU_OPENCODE_ROOT" "$TOOLU_PLUGIN_ROOT" > roots.txt`,
     `toolu --host opencode status --json > status.txt 2>&1; echo "status=$?" >> markers.txt`,
-    `"$TOOLU_BUN" "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts" "$PWD/epic-status.json" brainstorm > report.txt 2>&1; echo "report=$?" >> markers.txt`,
+    `toolu epic report brainstorm --status-file "$PWD/epic-status.json" > report.txt 2>&1; echo "report=$?" >> markers.txt`,
     `"$TOOLU_BUN" "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" path > ledger.txt 2>&1; echo "ledger=$?" >> markers.txt`,
   ].join("\n");
 }
@@ -120,7 +120,7 @@ async function installedObservations(project: string, tarball: string) {
     exportsTotal: imports.total,
     markers: read(project, "markers.txt").trim().split("\n").join(","),
     statusReady: nativeStatusReady(project),
-    reported: read(project, "report.txt").includes("reported brainstorm"),
+    reported: read(project, "epic-status.json").includes('"phase":"brainstorm"'),
   };
 }
 

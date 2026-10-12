@@ -3,12 +3,12 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, mpsc::Sender};
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use toolu_runtime::env::Env;
 
 use crate::model::World;
-use crate::socket::Msg;
+use crate::socket_loop::Msg;
 use crate::source::{self, Pace};
 
 /// Spawn the Herdr subscription when prompt events are available.
@@ -46,17 +46,22 @@ fn run(
       resubscribe: Some(Arc::clone(wake)),
     };
     let missing = !crate::herdr::socket_path(env).exists();
+    let started = Instant::now();
     let _ran = source::session(env, &world, &pace, |fact| {
       tx.send(Msg::Herdr(fact)).map_err(|err| err.to_string())
     });
+    // A session that failed at once (an unreadable reply, a refused
+    // connection) is not retried in a tight loop.
     if missing {
-      pause(stop);
+      pause(stop, 30);
+    } else if started.elapsed() < Duration::from_secs(1) {
+      pause(stop, 1);
     }
   }
 }
 
-fn pause(stop: &Arc<AtomicBool>) {
-  for _ in 0..30 {
+fn pause(stop: &Arc<AtomicBool>, seconds: u32) {
+  for _ in 0..seconds {
     if stop.load(Ordering::Relaxed) {
       return;
     }

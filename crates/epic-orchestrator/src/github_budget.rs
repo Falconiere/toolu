@@ -1,20 +1,19 @@
-//! Hold launch and merge effects when GitHub primary capacity is scarce.
+//! Hold launch and merge effects when GitHub primary capacity is scarce:
+//! under `EPIC_GH_CORE_FLOOR` (default 1000) or `EPIC_GH_GRAPHQL_FLOOR`
+//! (default 500), the single owner of the floors.
 
 use crate::model::World;
-
-const REST_FLOOR: u64 = 1_000;
-const GRAPHQL_FLOOR: u64 = 500;
 
 /// A low primary budget or active retry hold pauses launch and merge effects.
 pub(crate) fn effects_held(world: &World) -> bool {
   let rest = world
     .rest_rate
     .as_ref()
-    .is_some_and(|rate| scarce(rate.remaining, rate.reset, REST_FLOOR, world.now_ms));
+    .is_some_and(|rate| scarce(rate.remaining, rate.reset, world.floors.0, world.now_ms));
   let graphql = scarce(
     world.graphql_remaining,
     world.graphql_reset_at,
-    GRAPHQL_FLOOR,
+    world.floors.1,
     world.now_ms,
   );
   rest || graphql || world.now_ms < world.github_hold_until_ms

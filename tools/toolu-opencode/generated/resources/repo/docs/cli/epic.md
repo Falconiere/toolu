@@ -27,8 +27,17 @@ Commands:
   report   Record a worker phase
   job      Run a command under the worktree's resource lease
   service  Install the user service unit
-  planned  Not ported yet (#435, #448): show the planned verbs
+  planned  Not ported yet (#448): show the planned verbs
   token    Manage the status bearer token
+  graph    Build an epic's dependency graph and the next launch batch
+  route    Route sub-issues to worker hosts, models and efforts
+  launch   Launch or resume one sub-issue in its herdr worktree
+  finish   Tear down one sub-issue after its PR merged
+  close    Close a completed epic in its tracker with the merged-PR summary
+  release  Release a coupling hold so the issue launches next
+  gate     Verify a sub-issue PR against the merge policy and optionally merge it
+  jira     Read the epic's Jira issues
+  probe    Validate the committed host-lifecycle evidence
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -87,6 +96,8 @@ Arguments:
 
 Options:
       --json              Print exactly one JSON document on stdout
+      --safe              Keep approval prompts on in this epic's workers, until a start without it
+      --no-jev            Route and check coupling by heuristics only, until a start without it
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
@@ -209,7 +220,7 @@ Record a worker phase
 Usage: toolu epic report [OPTIONS] --status-file <FILE> <PHASE>
 
 Arguments:
-  <PHASE>  The phase to record
+  <PHASE>  The phase to record [possible values: brainstorm, spec, spec-review, plan, plan-review, execution, pr-open, babysit, rebasing, ready, needs-human, failed]
 
 Options:
       --json                Print exactly one JSON document on stdout
@@ -277,7 +288,7 @@ Options:
 ## `toolu epic planned`
 
 ```text
-Not ported yet (#435, #448): show the planned verbs
+Not ported yet (#448): show the planned verbs
 
 Usage: toolu epic planned [OPTIONS]
 
@@ -316,6 +327,233 @@ Rotate the status bearer token in secrets.json
 Usage: toolu epic token new [OPTIONS]
 
 Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic graph`
+
+```text
+Build an epic's dependency graph and the next launch batch
+
+Usage: toolu epic graph [OPTIONS] <EPIC>
+
+Arguments:
+  <EPIC>  The epic: a GitHub issue, Jira key or Linear issue
+
+Options:
+      --json               Print exactly one JSON document on stdout
+      --max <N>            Live issue agents at once [default: 3]
+  -q, --quiet              Drop the diagnostics of a successful run
+      --tracker <TRACKER>  The epic's tracker [possible values: github, jira, linear]
+      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --repo <O/R>         The code repository of Jira and Linear children
+      --config-dir <DIR>   Read the toolu config from DIR instead of the host's default
+      --out <FILE>         Also write graph.json to FILE
+      --save               Write graph.json into the epic's state directory
+      --dry-run            Read the tracker and write nothing
+  -h, --help               Print help
+```
+
+## `toolu epic route`
+
+```text
+Route sub-issues to worker hosts, models and efforts
+
+Usage: toolu epic route [OPTIONS] --graph <FILE>
+
+Options:
+      --graph <FILE>      The epic's graph.json
+      --json              Print exactly one JSON document on stdout
+      --hosts <SPEC>      The host pool, e.g. claude:2,codex:1 [default: claude]
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --issue <REF>       Route this issue (repeatable); default the launch batch
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --no-jev            Use the heuristic tiers only
+      --reroute           Choose a host again even when the saved one is valid
+      --dry-run           Print the routes and write nothing
+  -h, --help              Print help
+```
+
+## `toolu epic launch`
+
+```text
+Launch or resume one sub-issue in its herdr worktree
+
+Usage: toolu epic launch [OPTIONS] --graph <FILE> --issue <REF>
+
+Options:
+      --graph <FILE>            The epic's graph.json
+      --json                    Print exactly one JSON document on stdout
+      --issue <REF>             The sub-issue: reference, key or URL
+  -q, --quiet                   Drop the diagnostics of a successful run
+      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --kind <HOST>             The host: claude, codex, cursor or opencode; default the route's
+      --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
+      --model <MODEL>           The model; default the route's
+      --effort <EFFORT>         The effort; default the route's
+      --permission-mode <MODE>  Claude's permission mode; implies --safe
+      --safe                    Keep approval prompts on
+      --replace                 Exit a live agent first, e.g. to move the issue to another host
+      --force                   Launch a blocked issue, or skip the GitHub budget guard
+      --reprompt                Prompt again after an uncertain attempt
+      --dry-run                 Print the commands and the brief; write nothing
+  -h, --help                    Print help
+```
+
+## `toolu epic finish`
+
+```text
+Tear down one sub-issue after its PR merged
+
+Usage: toolu epic finish [OPTIONS] <STATE_DIR> <KEY>
+
+Arguments:
+  <STATE_DIR>  The epic state directory
+  <KEY>        The issue key
+
+Options:
+      --abandon           Tear down without a merged PR; keep the branch
+      --json              Print exactly one JSON document on stdout
+      --dry-run           Validate and print the planned teardown
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic close`
+
+```text
+Close a completed epic in its tracker with the merged-PR summary
+
+Usage: toolu epic close [OPTIONS] --graph <FILE>
+
+Options:
+      --graph <FILE>      The epic's graph.json
+      --json              Print exactly one JSON document on stdout
+      --dry-run           Print the summary and close nothing
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic release`
+
+```text
+Release a coupling hold so the issue launches next
+
+Usage: toolu epic release [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>  The held issue key
+
+Options:
+      --dry-run           Find the hold and change nothing
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic gate`
+
+```text
+Verify a sub-issue PR against the merge policy and optionally merge it
+
+Usage: toolu epic gate [OPTIONS] --pr <REF>
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --pr <REF>          The pull request
+      --issue <REF>       The sub-issue to close and tick once merged
+  -q, --quiet             Drop the diagnostics of a successful run
+      --epic <REF>        The epic to tick
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --merge             Merge on a merge verdict, pinned to the verified head
+      --auto              Arm auto-merge on a wait verdict
+      --method <METHOD>   squash, merge or rebase; default the repository's [possible values: squash, merge, rebase]
+      --state-dir <DIR>   The epic state directory whose record gets the verdict
+      --key <KEY>         The issue key of that record
+      --dry-run           Assess only
+  -h, --help              Print help
+```
+
+## `toolu epic jira`
+
+```text
+Read the epic's Jira issues
+
+Usage: toolu epic jira [OPTIONS] <COMMAND>
+
+Commands:
+  issue  Jira issues
+  help   Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic jira issue`
+
+```text
+Jira issues
+
+Usage: toolu epic jira issue [OPTIONS] <COMMAND>
+
+Commands:
+  get   Print one Jira issue as JSON
+  help  Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic jira issue get`
+
+```text
+Print one Jira issue as JSON
+
+Usage: toolu epic jira issue get [OPTIONS] <KEY>
+
+Arguments:
+  <KEY>  The issue key, e.g. PAY-12
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic probe`
+
+```text
+Validate the committed host-lifecycle evidence
+
+Usage: toolu epic probe [OPTIONS] --check-evidence [FILE]
+
+Arguments:
+  [FILE]  The evidence file; default the committed record
+
+Options:
+      --check-evidence    Validate the evidence and print every gap
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]

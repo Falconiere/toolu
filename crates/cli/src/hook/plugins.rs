@@ -14,8 +14,8 @@ use crate::Context;
 use crate::fast::HookRequest;
 
 /// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev,
-/// toolu-review, ast-grep, the statusline and pr-babysit. Each reports through the
-/// prelude's advisory.
+/// toolu-review, ast-grep, the statusline, pr-babysit and epic-orchestrator.
+/// Each reports through the prelude's advisory.
 pub(super) fn dispatch(
   request: &HookRequest,
   context: &Context<'_>,
@@ -39,7 +39,30 @@ pub(super) fn dispatch(
   if let Some(outcome) = babysit_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
+  if let Some(outcome) = epic_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
   None
+}
+
+/// The three epic-orchestrator `SessionStart` entries.
+pub(super) fn epic_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != "epic-orchestrator" {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "check-binary" => {
+      let stdin = (context.stdin)().ok();
+      Some(toolu_epic_orchestrator::hook::check_binary(
+        &env,
+        stdin.as_deref(),
+      ))
+    }
+    "check-deps" => Some(toolu_epic_orchestrator::hook::check_deps(&env)),
+    "engine-ensure" => Some(toolu_epic_orchestrator::hook::engine_ensure(&env)),
+    _ => None,
+  }
 }
 
 /// toolu's `agent-tier` and `mcp-tools`. They write their own output.

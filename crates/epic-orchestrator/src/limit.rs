@@ -15,7 +15,7 @@ use crate::schedule::note_event;
 use crate::server::Engine;
 
 /// The watcher expression, case insensitive, including its trailing space.
-const PATTERN: &str = "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) ";
+const PATTERN: &str = crate::hosts::HOST_LIMIT;
 
 /// The last non-empty line that matches the provider-limit pattern, at most 200 chars.
 pub(crate) fn limit_line(tail: &str) -> Option<String> {
@@ -30,7 +30,6 @@ pub(crate) fn limit_line(tail: &str) -> Option<String> {
   Some(truncate(line))
 }
 
-const COOL_MIN: u64 = 60;
 const HOSTS: &[&str] = &[
   "claude",
   "claude-code",
@@ -51,7 +50,12 @@ pub(crate) fn on_failed(
     return Ok(());
   }
   let line = limit_line(note).unwrap_or_else(|| truncate(note));
-  cool(engine, key, &line)
+  if cool(engine, key, &line)? || phase != "failed" {
+    return Ok(());
+  }
+  // No reroute could be armed: the failure is a judgment after all.
+  crate::logic::push_attention(&mut engine.world, "failed", key, note);
+  flush_limit(engine)
 }
 
 /// Scan pane text once per phase when the status is idle, done, or blocked.
@@ -92,7 +96,7 @@ pub(crate) fn on_status(
   let Some(line) = limit_line(tail) else {
     return Ok(());
   };
-  cool(engine, key, &line)
+  cool(engine, key, &line).map(|_rerouted| ())
 }
 
 fn parked(engine: &Engine, key: &str) -> bool {
@@ -120,11 +124,13 @@ fn mark_blocked(engine: &mut Engine, key: &str, tail: &str) {
   crate::attention::set_pending(&mut engine.world, &token, screen_lines(tail));
 }
 
-fn rate_limited(note: &str) -> bool {
+/// Whether a worker note reports a provider rate limit.
+pub(crate) fn rate_limited(note: &str) -> bool {
   note.trim().to_ascii_lowercase().starts_with("rate-limited")
 }
 
-fn cool(engine: &mut Engine, key: &str, line: &str) -> Result<(), String> {
+/// Cool the worker's host and arm its reroute; whether a reroute was armed.
+fn cool(engine: &mut Engine, key: &str, line: &str) -> Result<bool, String> {
   note_event(&mut engine.world, key, "host-limited");
   let kind = engine
     .world
@@ -133,11 +139,37 @@ fn cool(engine: &mut Engine, key: &str, line: &str) -> Result<(), String> {
     .map(|issue| issue.kind.clone())
     .unwrap_or_default();
   if !HOSTS.contains(&kind.as_str()) {
-    return flush_limit(engine);
+    return flush_limit(engine).map(|()| false);
   }
   write_host(engine, key, &kind, line)?;
   write_cooldown(&engine.paths, &engine.world, &kind, line)?;
-  flush_limit(engine)
+  let rerouted = reroute(&mut engine.world, key);
+  flush_limit(engine).map(|()| rerouted)
+}
+
+/// Move a limited worker: route it again (the cooling host is skipped) and
+/// replace its agent in the same worktree; with no free host it waits.
+/// Whether the reroute was armed: not while another action is pending.
+fn reroute(world: &mut World, key: &str) -> bool {
+  let free = world
+    .issues
+    .get(key)
+    .is_some_and(|issue| issue.pending.is_none());
+  if !free {
+    return false;
+  }
+  let token = crate::logic::token(world);
+  let mut pending = crate::model::fresh(crate::model::Action::Launch, token);
+  pending.reroute = true;
+  if let Some(issue) = world.issues.get_mut(key) {
+    issue.pending = Some(pending);
+  }
+  world
+    .outbox
+    .push_back(crate::model::Step::Journal(crate::journal::Record::new(
+      "action", "reroute", key, "", "",
+    )));
+  true
 }
 
 fn flush_limit(engine: &mut Engine) -> Result<(), String> {
@@ -160,7 +192,10 @@ fn write_host(engine: &Engine, key: &str, kind: &str, line: &str) -> Result<(), 
       serde_json::Map::new()
     }
   };
-  let millis = engine.world.now_ms.saturating_add(COOL_MIN * 60 * 1000);
+  let millis = engine
+    .world
+    .now_ms
+    .saturating_add(engine.world.cooldown_min.saturating_mul(60_000));
   let until = UNIX_EPOCH
     .checked_add(Duration::from_millis(millis))
     .map_or_else(String::new, iso_seconds);
@@ -169,7 +204,9 @@ fn write_host(engine: &Engine, key: &str, kind: &str, line: &str) -> Result<(), 
 }
 
 fn write_cooldown(paths: &Paths, world: &World, kind: &str, line: &str) -> Result<(), String> {
-  let until = world.now_ms.saturating_add(COOL_MIN * 60 * 1000);
+  let until = world
+    .now_ms
+    .saturating_add(world.cooldown_min.saturating_mul(60_000));
   let until = serde_json::Number::from(i64::try_from(until).unwrap_or(i64::MAX));
   toolu_engine::resources::store::update_resources(&paths.root, |state| {
     let mut cooldowns = state
@@ -199,3 +236,7 @@ fn truncate(line: &str) -> String {
 #[cfg(test)]
 #[path = "tests/limit_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/limit_reroute_test.rs"]
+mod reroute_tests;

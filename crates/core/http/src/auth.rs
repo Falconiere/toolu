@@ -20,6 +20,9 @@ pub enum Auth {
   },
   /// HTTP bearer authentication.
   Bearer(String),
+  /// A whole `Authorization` value the caller formats, for a service whose
+  /// scheme is neither basic nor bearer (Linear sends a personal key bare).
+  Raw(String),
 }
 
 impl Auth {
@@ -33,6 +36,7 @@ impl Auth {
         Some(format!("Basic {encoded}"))
       }
       Self::Bearer(token) => Some(format!("Bearer {token}")),
+      Self::Raw(value) => Some(value.clone()),
     }
   }
 }
@@ -48,6 +52,7 @@ impl fmt::Debug for Auth {
         .field("password", &redacted)
         .finish(),
       Self::Bearer(_) => f.debug_tuple("Bearer").field(&redacted).finish(),
+      Self::Raw(_) => f.debug_tuple("Raw").field(&redacted).finish(),
     }
   }
 }

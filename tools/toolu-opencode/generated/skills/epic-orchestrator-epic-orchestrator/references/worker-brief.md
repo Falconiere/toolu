@@ -1,20 +1,16 @@
-<!-- Template, rendered per issue by scripts/launch-issue.ts (renderBrief), which
-strips this comment. Workers only ever read the rendered copy. Host- and
-tracker-specific placeholders (written here without braces so they survive):
-- DELIVERY, BABYSIT, DEBUG: the worker host's skill invocation (hosts.ts
-  skillRef); an OpenCode worker gets `skill({ name: "delivery-flow-delivery-flow" })`,
-  the generated skill name from hosts.ts OPENCODE_SKILL_IDS.
-- ISSUE_READ: how to read the issue: `gh issue view N --repo OWNER/REPO
-  --comments` (GitHub), `bun --no-env-file scripts/jira-issue.ts get KEY` from the
-  installed epic-orchestrator plugin (Jira on Claude/Codex/Cursor),
-  `"$TOOLU_BUN" --no-env-file scripts/jira-issue.ts get KEY` (Jira on
-  OpenCode), the issue URL (Linear).
+<!-- Template, rendered per issue by `toolu epic launch` (the binary embeds this
+file), which strips this comment. Workers only ever read the rendered copy.
+Host- and tracker-specific placeholders (written here without braces so they
+survive):
+- DELIVERY, BABYSIT, DEBUG: the worker host's skill invocation; an OpenCode
+  worker gets `skill({ name: "delivery-flow-delivery-flow" })`, the generated skill
+  name the hosts module lists.
+- ISSUE_READ: how to read the issue: `gh issue view URL --comments` (GitHub),
+  `toolu epic jira issue get KEY` (Jira), the issue URL (Linear).
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.
-- JOB: the managed command launcher (`bun scripts/job.ts`) that admits full
-  gates and test jobs under the worktree's shared resources.
-scripts/__tests__/skill-contract.test.ts fails if any placeholder goes unfilled. -->
+The launch tests fail if any placeholder goes unfilled for a host or tracker. -->
 
 # Epic worker brief — {{ISSUE_REF}}
 
@@ -28,7 +24,7 @@ reads the status you report. Work autonomously end to end.
 | Issue | {{ISSUE_URL}} — {{ISSUE_TITLE}} |
 | Epic | {{EPIC_URL}} — {{EPIC_TITLE}} |
 | Worktree / branch | `{{WORKTREE}}` on `{{BRANCH}}` (base `origin/{{BASE}}`) |
-| Report status | `{{REPORT}} {{STATUS_FILE}} <phase> [--pr N] [--note "..."]` |
+| Report status | `toolu epic report <phase> --status-file {{STATUS_FILE}}`, adding `--pr N` or `--note "..."` where a step asks |
 | Closed blockers | {{BLOCKERS}} |
 | Host | {{HOST}} |
 
@@ -38,11 +34,10 @@ The user authorized this epic run. For this issue you may: edit code in this
 worktree, commit, rebase onto `origin/{{BASE}}`, push `{{BRANCH}}` (including
 `--force-with-lease` after a rebase), open the PR, and run {{BABYSIT}}.
 Invoking {{DELIVERY}} also supplies delivery authorization; do not
-stop to ask for it. You run without approval prompts, so these limits are
-yours to keep. You may **not** merge, push to `{{BASE}}`, touch other branches or
-worktrees, or edit other issues.
+stop to ask for it. {{APPROVALS}} You may **not** merge, push to `{{BASE}}`,
+touch other branches or worktrees, or edit other issues.
 
-Nobody answers questions in this pane. When a spec or plan has an open question,
+{{QUESTIONS}} When a spec or plan has an open question,
 decide it from the issue, the epic's agreed decisions, and the code; record the
 decision and its reason in the spec. Report `needs-human` only for something no
 decision can resolve (missing credentials or access, contradictory acceptance
@@ -82,7 +77,7 @@ Report each phase as you enter it — the orchestrator's only view of progress.
 
 This worktree is bound to shared machine resources. Plan-ledger checks acquire
 an expensive-job lease automatically. Run other full gates and test jobs with
-`{{JOB}} -- <command> <args...>`. If capacity or resource
+`toolu epic job -- <command> <args...>`. If capacity or resource
 pressure refuses admission, wait and retry the same check; do not bypass it.
 Background children keep occupying capacity until they exit. Phase reports
 describe meaningful progress; job heartbeats only establish liveness.

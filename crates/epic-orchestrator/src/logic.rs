@@ -23,6 +23,12 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   crate::attention::close_key(world, &report.key);
   let now_ms = world.now_ms;
   let issue = issue_mut(world, report);
+  // A worker that reports is running, whether or not the engine launched it:
+  // never launch a second agent for it.
+  let adopted = issue.stage.is_empty();
+  if adopted {
+    "running".clone_into(&mut issue.stage);
+  }
   report.phase.clone_into(&mut issue.phase);
   issue.note = bounded_note(&report.note);
   if let Some(pr) = report.pr {
@@ -46,7 +52,14 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
       &report.phase,
     )),
   ];
-  if judgment_phase(&report.phase) {
+  if adopted {
+    steps.push(Step::Issue {
+      key: report.key.clone(),
+    });
+  }
+  // A rate-limited failure cools the host and reroutes instead of a judgment.
+  let limited = report.phase == "failed" && crate::limit::rate_limited(&report.note);
+  if judgment_phase(&report.phase) && !limited {
     push_attention(world, &report.phase, &report.key, &report.note);
   } else if report.phase == "ready" {
     arm_merge(world, &report.key);
@@ -112,7 +125,10 @@ pub(crate) fn next(world: &mut World) -> Option<Step> {
   if let Some(step) = pending_step(world) {
     return Some(step);
   }
-  arm_launch(world);
+  crate::refill::refill(world);
+  if let Some(step) = world.outbox.pop_front() {
+    return Some(step);
+  }
   pending_step(world)
 }
 
@@ -125,14 +141,20 @@ fn raise_cycle(world: &mut World) {
 }
 
 fn pending_step(world: &World) -> Option<Step> {
+  issue_step(world).or_else(|| crate::refresh::epic_step(world))
+}
+
+fn issue_step(world: &World) -> Option<Step> {
   world.issues.values().find_map(|issue| {
     if paused(world, issue) {
       return None;
     }
     issue.pending.as_ref().and_then(|pending| {
-      (!crate::github_budget::effects_held(world)
-        || !matches!(pending.action, Action::Launch | Action::Merge))
-      .then(|| step_for(issue, pending))
+      // A call does not start while one runs or the engine drains.
+      let blocked_call = pending.phase == 1 && (world.effect_busy || world.draining);
+      let held = crate::github_budget::effects_held(world)
+        && matches!(pending.action, Action::Launch | Action::Merge);
+      (!blocked_call && !held).then(|| step_for(issue, pending))
     })
   })
 }
@@ -161,12 +183,30 @@ fn call_step(issue: &Issue, action: Action, token: &str) -> Step {
 
 /// The intent or done line was written.
 pub(crate) fn commit_journal(world: &mut World, record: &Record) -> Vec<Step> {
+  if crate::refresh::epic_record(&record.name) {
+    return crate::refresh::commit_journal(world, record);
+  }
   if record.name.ends_with("-intent") {
     advance_phase(world, &record.key, 1);
     return Vec::new();
   }
+  // A launch that ended without a stage change (held, waiting, failed or
+  // uncertain) already cleared or replaced its pending action.
+  if record.name.ends_with("-done") && !record.note.is_empty() {
+    return Vec::new();
+  }
   if record.name.ends_with("-done") {
-    return finish_action(world, &record.key);
+    let steps = finish_action(world, &record.key);
+    // A finished cleanup refreshes its epic, which may then close it.
+    if record.name == "cleanup-done"
+      && let Some(epic) = world
+        .issues
+        .get(&record.key)
+        .map(|issue| issue.epic.clone())
+    {
+      crate::refresh::arm(world, &epic);
+    }
+    return steps;
   }
   Vec::new()
 }
@@ -215,48 +255,8 @@ fn chain(stage: &mut String, pending: &Pending) -> Option<Action> {
       None
     }
     Action::Checkpoint => pending.follow,
-    Action::Reconcile | Action::Prompt => None,
+    Action::Reconcile | Action::Prompt | Action::Refresh | Action::Close => None,
   }
-}
-
-fn arm_launch(world: &mut World) {
-  if world.draining || world.paused_all || crate::github_budget::effects_held(world) || busy(world)
-  {
-    return;
-  }
-  let Some(key) = launchable(world) else {
-    return;
-  };
-  let token = token(world);
-  if let Some(issue) = world.issues.get_mut(&key) {
-    issue.pending = Some(fresh(Action::Launch, token));
-  }
-}
-
-fn busy(world: &World) -> bool {
-  let count = world
-    .issues
-    .values()
-    .filter(|issue| in_flight(issue))
-    .count();
-  count >= usize::try_from(world.max_parallel).unwrap_or(usize::MAX)
-}
-
-fn in_flight(issue: &Issue) -> bool {
-  issue.pending.is_some() || matches!(issue.stage.as_str(), "starting" | "running" | "cleaning")
-}
-
-fn launchable(world: &World) -> Option<String> {
-  world.issues.values().find_map(|issue| {
-    let open = issue.stage.is_empty() || issue.stage == "starting";
-    let clear = issue.blockers.iter().all(|blocker| {
-      world
-        .issues
-        .get(blocker)
-        .is_some_and(|item| item.stage == "merged")
-    });
-    (open && clear && issue.deferred.is_none() && !paused(world, issue)).then(|| issue.key.clone())
-  })
 }
 
 /// Insert a graph issue if the engine has not seen it.

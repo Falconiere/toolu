@@ -171,7 +171,7 @@ The matrix counts source Markdown. The generated OpenCode catalog excludes the s
   - **task** — Phases delegate bounded work to subagents. `task tool + child sessions` (tool): supported; evidence `deny.task-child`. Owner: OP-21 (#355).
   - **surfaces** — 1 skills, 0 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-21 (#355).
 - **epic-orchestrator** (owner OP-22 (#356))
-  - **tools** — Report, watch and tracker scripts run through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-22 (#356), OP-09 (#343).
+  - **tools** — `toolu epic` verbs run through bash. `bash tool + shell.env (helper path and environment)` (tool): supported; evidence `env.shell`. Owner: OP-22 (#356), OP-09 (#343).
   - **startup** — SessionStart reports missing dependency plugins. `plugin init + experimental.chat.system.transform` (hook): supported; evidence `load.local-file`, `context.system`. Owner: OP-22 (#356), OP-08 (#342).
   - **task** — Each worker is an OpenCode session in its own herdr worktree; its delegation goes through task. `herdr agent start --kind opencode + task tool inside the worker` (tool): supported; evidence `surface.files`, `deny.task-child`. Owner: OP-22 (#356).
   - **surfaces** — 1 skills, 1 commands, 0 agents. Owner: OP-10 (#344), OP-11 (#345), OP-22 (#356).

@@ -15,7 +15,7 @@ curl -fsSL https://bun.sh/install | bash   # or: brew install oven-sh/bun/bun
 bun --version                              # 1.4.x
 ```
 
-Supported range: `>=1.4.0 <1.5.0` (docs baseline `1.4.2`). This applies to Claude Code, Codex, Cursor, OpenCode, and Hermes alike. `epic-orchestrator` already requires `bun`.
+Supported range: `>=1.4.0 <1.5.0` (docs baseline `1.4.2`). This applies to Claude Code, Codex, Cursor, OpenCode, and Hermes alike.
 
 ## Resolution order
 
@@ -68,16 +68,15 @@ A TypeScript hook ships as a committed single-file ESM bundle. It is never insta
 
 A legacy skill CLI that starts with `#!/usr/bin/env bun` builds to an executable `hooks/dist/<entry>.js`, and the drift check fails if a committed one loses its exec bit. The native toolu-review writer is `toolu review write-state`; SessionStart keeps its former stable helper as a shell shim until #440.
 
-**Startup hooks.** toolu-review's SessionStart entries use the native launcher. The Codex dependency checks of pr-babysit, python-quality, rust-quality and epic-orchestrator still use bundles on `@toolu/core/startup` (#269). A publisher never replaces a regular file at its stable path, only a symlink. A legacy published Bun CLI still needs `bun` on the agent command shell's `PATH`; the toolu-review shim does not.
+**Startup hooks.** toolu-review's SessionStart entries use the native launcher. The Codex dependency checks of pr-babysit, python-quality and rust-quality still use bundles on `@toolu/core/startup` (#269); epic-orchestrator's three SessionStart entries are native (`toolu epic-orchestrator hook …`, #435). A publisher never replaces a regular file at its stable path, only a symlink. A legacy published Bun CLI still needs `bun` on the agent command shell's `PATH`; the toolu-review shim does not.
 
 ## Managed epic workloads
 
-Epic orchestration uses `@toolu/core/process` for bounded subprocesses with drained
-output, native exit status and process-group cancellation. Shared resource state
-defaults to `~/.local/state/toolu/resources` (`TOOLU_RESOURCE_HOME` overrides it).
-The installed plugin's raw epic scripts load these APIs from the committed
-`hooks/dist/epic-runtime.js` bundle, so they do not require workspace packages
-or an installed `node_modules` tree.
+Epic orchestration runs in the native `toolu epic` engine and verbs (#435), with
+bounded subprocesses, drained output, native exit status and process-group
+cancellation. Shared resource state defaults to `~/.local/state/toolu/resources`
+(`TOOLU_RESOURCE_HOME` overrides it). The plugin ships no scripts or bundles of
+its own.
 Agent slots and expensive-job slots are separate; conservative defaults allow
 three agents and one managed job. Load, available memory and Linux CPU steal
 inform sustained admission holds with recovery hysteresis. On macOS, available
@@ -85,8 +84,8 @@ memory comes from `vm_stat` (free + inactive + speculative pages), and
 `"pressure": false` in the resource root's `policy.json` disables the hold.
 
 A binding in the worktree's Git directory automatically admits plan-ledger checks
-through `@toolu/core/resources/jobs`. Workers use the epic `job.ts -- <command>`
-entry for other expensive commands. These limits cover managed commands; native
+through `@toolu/core/resources/jobs`. Workers use `toolu epic job -- <command>`
+for other expensive commands. These limits cover managed commands; native
 host tools outside that path are checked through workload inventory at teardown.
 Uncertain launches and incomplete cleanup retain ownership. See the
 [epic orchestrator contract](../../epic-orchestrator/README.md) for policy,

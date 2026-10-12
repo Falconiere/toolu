@@ -1,31 +1,17 @@
 //! The `SessionStart` binary check (port of `plugins/jev/hooks/src/check-binary.ts`): advise how
-//! the agent's command shell can run native `toolu`. The advice and its once-per-session
-//! record live in `toolu_runtime::startup`; this only renders it as context.
+//! the agent's command shell can run native `toolu`. The advice, its once-per-session record and
+//! its hook output live in `toolu_runtime::startup`.
 
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
-use toolu_runtime::json::ordered::Ordered;
-use toolu_runtime::startup::native_toolu_advice;
+use toolu_runtime::startup::native_toolu_hook_output;
 
-use crate::session::{context_outcome, payload, silent};
-
-/// The payload's string `session_id`, else `TOOLU_SESSION_ID`. A missing id prints every time.
-fn session_id(env: &Env, stdin: Option<&str>) -> Option<String> {
-  let input = payload(stdin);
-  match input.as_ref().and_then(|input| input.get("session_id")) {
-    Some(Ordered::String(id)) if !id.is_empty() => Some(id.clone()),
-    _ => env.get("TOOLU_SESSION_ID").map(str::to_owned),
-  }
-}
+use crate::session::silent;
 
 /// One `SessionStart` context line, or nothing when plain `toolu` is native in the shell or
 /// this session was already told.
 pub fn check_binary(env: &Env, stdin: Option<&str>) -> Outcome {
-  let id = session_id(env, stdin);
-  match native_toolu_advice(env, id.as_deref()) {
-    Some(line) => context_outcome("SessionStart", &line),
-    None => silent(),
-  }
+  native_toolu_hook_output(env, stdin).map_or_else(silent, Outcome::data)
 }
 
 #[cfg(test)]

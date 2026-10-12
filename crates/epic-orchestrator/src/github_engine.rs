@@ -257,11 +257,8 @@ fn note_change(world: &mut World, change: Change) {
       );
     }
     Change::PrMerged { key } => {
-      if let Some(issue) = world.issues.get_mut(&key) {
-        "merged".clone_into(&mut issue.stage);
-        world.outbox.push_back(Step::Issue { key: key.clone() });
-      }
       journal(world, &key, "github-pr-merged", "");
+      crate::merge_bridge::merged(world, &key);
     }
     Change::PrClosed { key } => {
       if let Some(issue) = world.issues.get_mut(&key) {
@@ -274,7 +271,10 @@ fn note_change(world: &mut World, change: Change) {
       let note = format!("{repo}@{branch}");
       journal(world, &note, "github-base-moved", "");
     }
-    Change::EpicChanged { key } => journal(world, &key, "github-epic-changed", ""),
+    Change::EpicChanged { key } => {
+      journal(world, &key, "github-epic-changed", "");
+      crate::refresh::arm(world, &key);
+    }
   }
 }
 

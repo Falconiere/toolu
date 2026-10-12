@@ -8,7 +8,9 @@ use super::pause;
 #[test]
 fn stopped_subscription_does_not_pause() {
   let stop = Arc::new(AtomicBool::new(true));
-  pause(&stop);
+  let started = std::time::Instant::now();
+  pause(&stop, 30);
+  assert!(started.elapsed() < std::time::Duration::from_secs(1));
 }
 
 #[test]

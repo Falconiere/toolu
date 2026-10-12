@@ -12,6 +12,7 @@ pub(crate) fn on_tick(world: &mut World) {
   }
   crate::attention::remind(world);
   arm_checkpoint(world);
+  crate::refresh::poll(world);
 }
 
 fn stall(world: &mut World, key: &str) {
@@ -131,11 +132,21 @@ pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
       "",
     ))),
     "gone" => gone(world, key),
+    "merged" => crate::merge_bridge::merged(world, key),
     _ => {}
   }
 }
 
 fn gone(world: &mut World, key: &str) {
+  // A waiting relaunch, or any action in flight, already owns the issue: a
+  // snapshot that misses its agent again must not spend the relaunch budget.
+  let owned = world
+    .issues
+    .get(key)
+    .is_some_and(|issue| issue.relaunch.is_some() || issue.pending.is_some());
+  if owned {
+    return;
+  }
   let launches = world.issues.get(key).map_or(0, |issue| issue.launches);
   if launches >= 2 {
     push_attention(world, "relaunch-limit", key, "relaunch limit");
@@ -150,6 +161,7 @@ fn gone(world: &mut World, key: &str) {
       phase: 0,
       recovered: false,
       follow: Some(Action::Launch),
+      reroute: false,
     });
   }
 }
@@ -189,6 +201,20 @@ pub(crate) fn note_herdr(world: &mut World, ok: bool) {
   let exp = world.herdr_failures.saturating_sub(1).min(10);
   let delay = 30_000u64.saturating_mul(1_u64 << exp).min(300_000);
   world.herdr_retry_at_ms = world.now_ms.saturating_add(delay);
+}
+
+/// Whether `herdr agent list` answers.
+pub(crate) fn herdr_ok(session: Option<&str>) -> bool {
+  let mut argv = vec!["herdr".to_owned()];
+  if let Some(session) = session {
+    argv.push("--session".to_owned());
+    argv.push(session.to_owned());
+  }
+  argv.push("agent".to_owned());
+  argv.push("list".to_owned());
+  let mut spec = toolu_runtime::process::Spec::new(argv);
+  spec.timeout = std::time::Duration::from_secs(10);
+  toolu_runtime::process::run(&spec).is_ok_and(|output| output.exit_code == 0)
 }
 
 #[cfg(test)]

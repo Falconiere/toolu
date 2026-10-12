@@ -1,6 +1,5 @@
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Condvar, Mutex};
 use std::thread;
 use std::time::Duration;
 
@@ -10,7 +9,6 @@ use super::{ServeOptions, serve_with_http};
 use crate::PROTOCOL;
 use crate::client::{exchange_retry, read_json, write_json};
 use crate::journal;
-use crate::model::World;
 use crate::paths::Paths;
 use crate::server::Fault;
 
@@ -89,22 +87,22 @@ fn protocol_replace() {
   let epic = epic_dir(tmp.path());
   let paths = Paths::at(tmp.path());
   let first = paths.clone();
-  let old = thread::spawn(move || serve_until_stopped(first, PROTOCOL));
-  let reply = exchange_retry(&paths, 2, &report(&epic, "t9", "running")).expect("replace");
+  let old = thread::spawn(move || serve_until_stopped(first, PROTOCOL - 1));
+  let reply = exchange_retry(&paths, PROTOCOL, &report(&epic, "t9", "running")).expect("replace");
   assert_eq!(reply["ok"], true);
   old.join().expect("old engine");
   let spool = paths.spool().join("t9.json");
   assert!(spool.is_file(), "spool survives replace");
   assert!(!epic.join("status").join("a.json").is_file());
   let second = paths.clone();
-  let newer = thread::spawn(move || serve_until_stopped(second, 2));
+  let newer = thread::spawn(move || serve_until_stopped(second, PROTOCOL));
   let status = epic.join("status").join("a.json");
   settle(|| status.is_file() && !spool.is_file() && phase_count(&paths) > 0);
   let text = std::fs::read_to_string(&status).expect("status");
   assert!(text.contains("\"phase\":\"running\""), "{text}");
   assert!(!spool.is_file(), "spooled t9.json left behind");
   assert_eq!(phase_count(&paths), 1);
-  stop(&paths, 2);
+  stop(&paths, PROTOCOL);
   newer.join().expect("new engine");
 }
 
@@ -191,24 +189,6 @@ fn a_panic_in_the_state_loop_sets_the_accept_stop_flag() {
   }));
   assert!(caught.is_err());
   assert!(stop.load(Ordering::Relaxed));
-}
-
-#[test]
-fn poisoned_snapshot_publish_returns_error() {
-  let root = tempfile::tempdir().expect("root");
-  let quiet = crate::notify::AttentionOptions::default();
-  let engine =
-    super::open_engine(Paths::at(root.path()), None, Fault::None, quiet).expect("engine");
-  let shared = Mutex::new(World::new(0));
-  let _poisoned = std::panic::catch_unwind(|| {
-    let _guard = shared.lock().expect("shared lock");
-    panic!("poison snapshot");
-  });
-  let changed = Condvar::new();
-  assert_eq!(
-    super::publish(&shared, &changed, &engine),
-    Err("status_unavailable".to_owned())
-  );
 }
 
 fn wait_socket(paths: &Paths, log: &std::path::Path) -> std::os::unix::net::UnixStream {

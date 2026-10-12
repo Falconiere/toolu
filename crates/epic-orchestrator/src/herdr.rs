@@ -2,13 +2,13 @@
 
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use serde_json::{Value, json};
 use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run};
 
-use crate::client::{read_json, write_json};
+use crate::client::{read_json, read_text, write_json};
 use crate::journal::{self, Record};
 use crate::paths::Paths;
 
@@ -43,6 +43,37 @@ pub(crate) enum Call {
   Remove { workspace_id: String, force: bool },
   /// `notification.show` with the `request` sound.
   Notify { title: String, body: String },
+  /// `workspace.list`.
+  WorkspaceList,
+  /// `worktree.list` for the repository at `cwd`.
+  WorktreeList { cwd: String },
+  /// `worktree.open` of an existing worktree.
+  WorktreeOpen {
+    cwd: String,
+    path: String,
+    label: String,
+  },
+  /// `pane.list` of one workspace.
+  PaneList { workspace_id: String },
+  /// `pane.process_info`.
+  PaneInfo { pane_id: String },
+  /// `agent.list`.
+  AgentList,
+  /// `agent.send_keys`.
+  SendKeys { target: String, keys: Vec<String> },
+  /// `agent.wait` until one of `until`.
+  Wait {
+    target: String,
+    until: Vec<String>,
+    timeout_ms: u64,
+  },
+  /// `agent.prompt` that waits until one of `until`.
+  PromptWait {
+    target: String,
+    text: String,
+    until: Vec<String>,
+    timeout_ms: u64,
+  },
 }
 
 /// Protocol decision for one engine process.
@@ -51,6 +82,7 @@ pub(crate) struct Client {
   newer: bool,
   warned: bool,
   seq: u64,
+  last_exit: Option<i32>,
 }
 
 impl Client {
@@ -71,18 +103,27 @@ impl Client {
     env: &Env,
     call: &Call,
   ) -> Result<String, String> {
+    self.last_exit = None;
     if self.newer {
-      return Self::cli(paths, env, call);
+      return self.cli(paths, env, call);
     }
     match self.on_socket(paths, env, call) {
       Ok(body) => Ok(body),
-      Err(_) if self.newer => Self::cli(paths, env, call),
+      Err(_) if self.newer => self.cli(paths, env, call),
       Err(err) => Err(err),
     }
   }
 
+  /// The exit status of the last call's CLI form, when it ran through the CLI.
+  pub(crate) fn last_exit(&self) -> Option<i32> {
+    self.last_exit
+  }
+
   fn on_socket(&mut self, paths: &Paths, env: &Env, call: &Call) -> Result<String, String> {
     let mut stream = UnixStream::connect(socket_path(env)).map_err(|err| err.to_string())?;
+    stream
+      .set_read_timeout(Some(call.cli_timeout()))
+      .map_err(|err| err.to_string())?;
     let protocol = ping(&mut stream, &self.next_id())?;
     if protocol > HERDR_PROTOCOL {
       self.newer = true;
@@ -90,22 +131,39 @@ impl Client {
       return Err("newer protocol".to_owned());
     }
     let id = self.next_id();
-    let reply = roundtrip(&mut stream, &id, call.method(), &call.params())?;
-    Ok(reply.to_string())
+    write_json(
+      &mut stream,
+      &json!({"id": id, "method": call.method(), "params": call.params()}),
+    )?;
+    read_text(&mut stream)
   }
 
-  fn cli(paths: &Paths, env: &Env, call: &Call) -> Result<String, String> {
+  fn cli(&mut self, paths: &Paths, env: &Env, call: &Call) -> Result<String, String> {
     let argv = call.argv(env);
     journal_cli(paths, &argv)?;
     let mut spec = Spec::new(argv);
     spec.env = Some(env.clone());
-    spec.timeout = Duration::from_secs(10);
+    spec.timeout = call.cli_timeout();
     let output = run(&spec).map_err(|err| format!("{err:?}"))?;
-    if output.exit_code == 0 {
-      Ok(output.stdout)
-    } else {
-      Err(output.stderr)
+    if output.timed_out {
+      return Err("timed out".to_owned());
     }
+    self.last_exit = Some(output.exit_code);
+    let text = if output.stdout.trim().is_empty() {
+      output.stderr
+    } else {
+      output.stdout
+    };
+    // Non-JSON output and a herdr error object carry their own failure, except
+    // a read's plain text, which is its answer.
+    let parsed = serde_json::from_str::<Value>(text.trim());
+    let plain_read = matches!(call, Call::Read { .. }) && parsed.is_err();
+    let failed_quietly =
+      parsed.is_ok_and(|reply| !reply.get("error").is_some_and(Value::is_object));
+    if output.exit_code != 0 && (failed_quietly || plain_read) {
+      return Err(format!("failed ({}): {}", output.exit_code, text.trim()));
+    }
+    Ok(text)
   }
 
   fn next_id(&mut self) -> String {
@@ -196,64 +254,6 @@ fn append(paths: &Paths, record: &Record) -> Result<(), String> {
     SystemTime::now(),
   )
   .map(|_| ())
-}
-
-impl Call {
-  fn method(&self) -> &'static str {
-    match self {
-      Self::Start { .. } => "agent.start",
-      Self::Prompt { .. } => "agent.prompt",
-      Self::Read { .. } => "agent.read",
-      Self::Create { .. } => "worktree.create",
-      Self::Remove { .. } => "worktree.remove",
-      Self::Notify { .. } => "notification.show",
-    }
-  }
-
-  fn params(&self) -> Value {
-    match self {
-      Self::Start {
-        name,
-        kind,
-        pane_id,
-        args,
-        timeout_ms,
-      } => json!({
-        "name": name,
-        "kind": kind,
-        "pane_id": pane_id,
-        "args": args,
-        "timeout_ms": timeout_ms,
-      }),
-      Self::Prompt { target, text } => json!({"target": target, "text": text}),
-      Self::Read { target } => json!({
-        "target": target,
-        "source": "recent_unwrapped",
-        "lines": 15,
-        "format": "text",
-      }),
-      Self::Create {
-        cwd,
-        branch,
-        base,
-        path,
-        label,
-        workspace,
-      } => json!({
-        "cwd": cwd,
-        "branch": branch,
-        "base": base,
-        "path": path,
-        "label": label,
-        "workspace": workspace,
-      }),
-      Self::Remove {
-        workspace_id,
-        force,
-      } => json!({"workspace_id": workspace_id, "force": force}),
-      Self::Notify { title, body } => json!({"title": title, "body": body, "sound": "request"}),
-    }
-  }
 }
 
 #[cfg(test)]

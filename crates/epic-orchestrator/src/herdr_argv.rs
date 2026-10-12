@@ -40,6 +40,15 @@ impl Call {
         "--sound".into(),
         "request".into(),
       ]),
+      Self::WorkspaceList
+      | Self::WorktreeList { .. }
+      | Self::WorktreeOpen { .. }
+      | Self::PaneList { .. }
+      | Self::PaneInfo { .. }
+      | Self::AgentList
+      | Self::SendKeys { .. }
+      | Self::Wait { .. }
+      | Self::PromptWait { .. } => query_argv(&mut argv, self),
     }
     argv
   }
@@ -103,6 +112,7 @@ fn create_argv(argv: &mut Vec<String>, call: &Call) {
   push_flag(argv, "--path", path.as_deref());
   push_flag(argv, "--label", label.as_deref());
   push_flag(argv, "--workspace", workspace.as_deref());
+  argv.push("--no-focus".into());
 }
 
 fn remove_argv(argv: &mut Vec<String>, call: &Call) {
@@ -122,6 +132,68 @@ fn remove_argv(argv: &mut Vec<String>, call: &Call) {
   if *force {
     argv.push("--force".into());
   }
+}
+
+fn query_argv(argv: &mut Vec<String>, call: &Call) {
+  let words: Vec<String> = match call {
+    Call::WorkspaceList => words(&["workspace", "list"]),
+    Call::AgentList => words(&["agent", "list"]),
+    Call::WorktreeList { cwd } => words(&["worktree", "list", "--cwd", cwd]),
+    Call::WorktreeOpen { cwd, path, label } => words(&[
+      "worktree",
+      "open",
+      "--cwd",
+      cwd,
+      "--path",
+      path,
+      "--label",
+      label,
+      "--no-focus",
+    ]),
+    Call::PaneList { workspace_id } => words(&["pane", "list", "--workspace", workspace_id]),
+    Call::PaneInfo { pane_id } => words(&["pane", "process-info", "--pane", pane_id]),
+    Call::SendKeys { target, keys } => {
+      let mut out = words(&["agent", "send-keys", target]);
+      out.extend(keys.iter().cloned());
+      out
+    }
+    Call::Wait {
+      target,
+      until,
+      timeout_ms,
+    } => waiting(words(&["agent", "wait", target]), until, *timeout_ms),
+    Call::PromptWait {
+      target,
+      text,
+      until,
+      timeout_ms,
+    } => waiting(
+      words(&["agent", "prompt", target, text, "--wait"]),
+      until,
+      *timeout_ms,
+    ),
+    Call::Start { .. }
+    | Call::Prompt { .. }
+    | Call::Read { .. }
+    | Call::Create { .. }
+    | Call::Remove { .. }
+    | Call::Notify { .. } => Vec::new(),
+  };
+  argv.extend(words);
+}
+
+fn words(items: &[&str]) -> Vec<String> {
+  items.iter().map(|item| (*item).to_owned()).collect()
+}
+
+fn waiting(mut argv: Vec<String>, until: &[String], timeout_ms: u64) -> Vec<String> {
+  for state in until {
+    argv.push("--until".to_owned());
+    argv.push(state.clone());
+  }
+  argv.push("--timeout".to_owned());
+  argv.push(timeout_ms.to_string());
+  argv
 }
 
 fn push_flag(argv: &mut Vec<String>, flag: &str, value: Option<&str>) {

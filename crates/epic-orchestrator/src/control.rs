@@ -29,12 +29,8 @@ use crate::verbs::{failed, text};
 
 /// Run, ensure or replace the resident engine.
 pub(crate) fn engine(matches: &ArgMatches, env: &Env, tick: &dyn BabysitTick) -> Outcome {
-  if matches.get_flag("replace") {
-    let paths = Paths::from_env(env);
-    if paths.socket().exists() {
-      let _replaced = exchange_retry(&paths, PROTOCOL, &json!({"op": "replace"}));
-      wait_until_free(&paths);
-    }
+  if matches.get_flag("replace") && !replace_engine(&Paths::from_env(env), REPLACE_WAIT) {
+    return Outcome::data(DRAINING.to_owned());
   }
   if matches.get_flag("ensure") {
     return match ensure(env) {
@@ -128,10 +124,16 @@ pub(crate) fn fault_of(env: &Env) -> Fault {
   }
 }
 
-/// Start the engine when a registry exists and no owner is live.
+/// Start the engine when a registry exists and no owner is live. A
+/// malformed `registry.json` is an error, not an empty registry.
 pub(crate) fn ensure(env: &Env) -> Result<(), String> {
   let paths = Paths::from_env(env);
-  if !registry_nonempty(&paths) || live(&paths.lock()) {
+  let registry = read_value(&paths.registry())?;
+  let registered = registry
+    .get("epics")
+    .and_then(Value::as_array)
+    .is_some_and(|rows| !rows.is_empty());
+  if !registered || live(&paths.lock()) {
     return Ok(());
   }
   detach_engine(env)
@@ -149,13 +151,26 @@ pub(crate) fn detach_engine(env: &Env) -> Result<(), String> {
   detach(&spec).map(|_| ()).map_err(|err| format!("{err:?}"))
 }
 
-fn wait_until_free(paths: &Paths) {
-  for _ in 0..50 {
-    if !live(&paths.lock()) {
-      return;
+/// How long `engine --replace` waits for the old engine's running effect.
+const REPLACE_WAIT: Duration = Duration::from_secs(60);
+
+/// What `engine --replace` prints when the old engine still drains.
+pub(crate) const DRAINING: &str = "engine draining; the new engine starts when it exits";
+
+/// Ask a live engine to drain and wait up to `wait` for its lock to free;
+/// `false` while it still runs an effect (the next `ensure` starts the new one).
+pub(crate) fn replace_engine(paths: &Paths, wait: Duration) -> bool {
+  if paths.socket().exists() {
+    let _replaced = exchange_retry(paths, PROTOCOL, &json!({"op": "replace"}));
+  }
+  let deadline = std::time::Instant::now() + wait;
+  while live(&paths.lock()) {
+    if std::time::Instant::now() >= deadline {
+      return false;
     }
     thread::sleep(Duration::from_millis(20));
   }
+  true
 }
 
 /// Register one epic and launch the engine if needed.
@@ -163,8 +178,20 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
   let Some(dir) = text(matches, "state-dir") else {
     return failed("toolu epic start", "state-dir is required");
   };
+  if !Path::new(dir).is_dir() {
+    return failed(
+      "toolu epic start",
+      &format!("no epic state directory {dir}"),
+    );
+  }
   let paths = Paths::from_env(env);
-  if let Err(err) = register(&paths, dir) {
+  let settings = crate::epics::LaunchSettings {
+    safe: matches.get_flag("safe"),
+    no_jev: matches.get_flag("no-jev"),
+  };
+  let saved = register(&paths, dir)
+    .and_then(|()| crate::epics::write_launch_settings(Path::new(dir), settings));
+  if let Err(err) = saved {
     return failed("toolu epic start", &err);
   }
   if live(&paths.lock()) {
@@ -223,3 +250,7 @@ pub(crate) fn registry_nonempty(paths: &Paths) -> bool {
 #[cfg(test)]
 #[path = "tests/control_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/control_replace_test.rs"]
+mod replace_tests;

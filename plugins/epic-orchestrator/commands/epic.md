@@ -12,10 +12,15 @@ Read `$ROOT/skills/epic-orchestrator/SKILL.md` completely and execute it. Pass
 (`--dry-run`, `--max N`, `--hosts claude:2,codex:2`, `--repo owner/name`,
 `--tracker`, `--safe`, `--no-jev`, `status`, `stop`).
 
-For `status`, use `toolu epic status --json` and show its versioned engine
-overview; `toolu epic status --json <key>` selects one epic or worker. The
+The skill passes `--safe` and `--no-jev` to `toolu epic start <state_dir>`,
+which records them in `<state_dir>/launch.json` for the engine's launches,
+and `--no-jev` also to `toolu epic route` before the start. `--kind`,
+`--model` and `--effort` go to a manual `toolu epic launch`.
+
+For `status`, use `toolu --json epic status` and show its versioned engine
+overview; `toolu --json epic status <key>` selects one epic or worker. The
 read-only dashboard is at `http://127.0.0.1:7717/` while the engine runs.
 
-Scripts live under `$ROOT/scripts` and are all invoked with `bun`. Trust
-script output — do not re-fetch with ad-hoc `gh` what the graph, gate, or
-watcher already reported.
+Every action is a `toolu epic` verb (see `docs/cli/epic.md`). Trust its
+output — do not re-fetch with ad-hoc `gh` what the graph, gate, or engine
+already reported.

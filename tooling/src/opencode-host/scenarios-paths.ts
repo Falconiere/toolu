@@ -57,7 +57,7 @@ function helperScript(): Scripts {
   const command = [
     `TYPESAFE_API_KEY= "$TOOLU_CONFIG_DIR/jev/jev.sh" choice q -s '{}' -o a -o b > jev.txt 2>&1; echo "jev=$?" >> markers.txt`,
     `bun "$TOOLU_PLUGIN_ROOT/hooks/dist/plan-ledger.js" path > ledger.txt 2>&1; echo "ledger=$?" >> markers.txt`,
-    `test -f "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/scripts/report.ts"; echo "epic=$?" >> markers.txt`,
+    `test -f "$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR/skills/epic-orchestrator/references/worker-brief.md"; echo "epic=$?" >> markers.txt`,
     `printf %s "$HOME" > home.txt`,
   ].join("\n");
   return { "paths.helpers": [{ tool: "bash", args: { command, description: "helpers" } }] };

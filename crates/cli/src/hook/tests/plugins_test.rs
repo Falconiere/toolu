@@ -12,6 +12,34 @@ fn startup() -> std::io::Result<String> {
   )
 }
 
+/// The repository's root for `plugin`.
+fn plugin_root(plugin: &str) -> String {
+  std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join("../../plugins")
+    .join(plugin)
+    .display()
+    .to_string()
+}
+
+/// Run `request` on a startup payload with `env`, from `cwd`.
+fn session_start(
+  request: &HookRequest,
+  env: &Env,
+  cwd: &std::path::Path,
+) -> toolu_runtime::cli::Outcome {
+  let no_exe = || None;
+  let env_fn = || env.clone();
+  let cwd_path = cwd.to_path_buf();
+  let cwd_fn = || Ok(cwd_path.clone());
+  let context = Context {
+    exe: &no_exe,
+    stdin: &startup,
+    env: &env_fn,
+    cwd: &cwd_fn,
+  };
+  run(request, &context)
+}
+
 #[test]
 fn statusline_session_start_publishes_compat_path_without_blocking() {
   let dir = tempfile::tempdir().expect("statusline root");
@@ -24,24 +52,9 @@ fn statusline_session_start_publishes_compat_path_without_blocking() {
     plugin: "statusline".to_owned(),
     name: "session-start".to_owned(),
     event: Some("SessionStart".to_owned()),
-    plugin_root: Some(
-      std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../plugins/statusline")
-        .display()
-        .to_string(),
-    ),
+    plugin_root: Some(plugin_root("statusline")),
   };
-  let no_exe = || None;
-  let env_fn = || env.clone();
-  let cwd_path = dir.path().to_path_buf();
-  let cwd_fn = || Ok(cwd_path.clone());
-  let context = Context {
-    exe: &no_exe,
-    stdin: &startup,
-    env: &env_fn,
-    cwd: &cwd_fn,
-  };
-  let outcome = run(&other, &context);
+  let outcome = session_start(&other, &env, dir.path());
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stderr, None);
   assert_eq!(outcome.stdout, None);
@@ -106,5 +119,29 @@ fn pr_babysit_session_start_checks_never_block_and_others_are_unknown() {
     tool
       .stderr
       .is_some_and(|text| text.contains("has no hook check-toolu"))
+  );
+}
+
+#[test]
+fn epic_orchestrator_engine_ensure_runs_in_process_and_reports_a_bad_registry() {
+  let dir = tempfile::tempdir().expect("epic root");
+  let resources = dir.path().join("resources");
+  std::fs::create_dir_all(&resources).expect("resources");
+  std::fs::write(resources.join("registry.json"), "{not json").expect("registry");
+  let env = Env::default()
+    .with("HOME", &dir.path().display().to_string())
+    .with("TOOLU_RESOURCE_HOME", &resources.display().to_string());
+  let request = HookRequest {
+    plugin: "epic-orchestrator".to_owned(),
+    name: "engine-ensure".to_owned(),
+    event: Some("SessionStart".to_owned()),
+    plugin_root: Some(plugin_root("epic-orchestrator")),
+  };
+  let outcome = session_start(&request, &env, dir.path());
+  assert_eq!(outcome.exit.code(), 0);
+  let stdout = outcome.stdout.expect("message");
+  assert!(
+    stdout.contains(r#""systemMessage":"epic engine: "#),
+    "{stdout}"
   );
 }

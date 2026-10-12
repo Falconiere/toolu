@@ -303,11 +303,11 @@ The `ast-grep-ast-grep` skill names only the `ast-grep` CLI, so its examples run
 
 [#356](https://github.com/Falconiere/toolu/issues/356) ports epic-orchestrator. Add `epic-orchestrator` to `enabled`; delivery-flow and its dependencies are selected with it.
 
-- **Skill.** Load `epic-orchestrator-epic-orchestrator`, or run the `epic-orchestrator-epic` command. It runs its scripts from `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR` and stops with `epic-orchestrator is not enabled in this OpenCode session` when the plugin is off.
-- **Watcher.** OpenCode has no background shell, so the orchestrator runs `epic-watch.ts --max-wait 480` in the foreground with a 600000 ms bash timeout and runs it again until no issue is active.
-- **Workers.** An OpenCode worker is `opencode --auto --model provider/model` in its own herdr worktree. Launch refuses an `opencode` whose `--version` is not 1.x, and adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the repository's shared `info/exclude` so worker state stays out of `git status`, `refs/epic-wip/*` snapshots and worktree removal. The worker loads `delivery-flow-delivery-flow` by that id, and its native `task` calls reach agent-tier and delegation telemetry. A worktree reads its committed `.opencode/toolu/plugins.json`, else the global selection, else every installed plugin.
+- **Skill.** Load `epic-orchestrator-epic-orchestrator`, or run the `epic-orchestrator-epic` command. It runs the native `toolu epic` verbs, as on every host.
+- **Engine.** The resident engine does the polling; the orchestrator runs `toolu epic wait --max-seconds 480` in the foreground with a 600000 ms bash timeout and runs it again until no issue is active.
+- **Workers.** An OpenCode worker is `opencode --auto --model provider/model` (without `--auto` under `--safe`) in its own herdr worktree. Launch refuses an `opencode` whose `--version` is not 1.x, and adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the repository's shared `info/exclude` so worker state stays out of `git status`, `refs/epic-wip/*` snapshots and worktree removal. The worker loads `delivery-flow-delivery-flow` by that id, and its native `task` calls reach agent-tier and delegation telemetry. A worktree reads its committed `.opencode/toolu/plugins.json`, else the global selection, else every installed plugin.
 
-`tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, script root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host through a kill, checkpoint, `session list` capture and `--session` resume to a ready report.
+`tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts` proves the selection, plugin root and agent-tier paths hermetically. `TOOLU_LIVE_OPENCODE=1 bun test tools/toolu-opencode/src/plugin/__tests__/epic-worker.live.test.ts` runs a worker on the pinned host, launched from `toolu epic launch --dry-run --json` and reporting through `toolu epic report`, through a kill, `session list` capture and `--session` resume to a ready report.
 
 ### PR babysitting
 

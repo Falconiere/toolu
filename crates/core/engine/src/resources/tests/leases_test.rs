@@ -171,13 +171,17 @@ fn patches_need_a_known_token_and_a_positive_group() {
     group_pid: Some(42),
     stage: Some("running".to_owned()),
     heartbeat_at: Some("H".to_owned()),
+    worktree: Some("/w".to_owned()),
+    pane: Some("p1".to_owned()),
+    session: Some("s1".to_owned()),
   };
   patch_lease(root, &token(&lease), &patch).unwrap();
   let stored = read_resource_state(root).unwrap();
   let text = leases(&stored)[0].to_text(false);
   assert!(text.contains(r#""stage":"running","createdAt":"#), "{text}");
   assert!(
-    text.ends_with(r#""heartbeatAt":"H","groupPid":42}"#),
+    text
+      .ends_with(r#""heartbeatAt":"H","groupPid":42,"worktree":"/w","pane":"p1","session":"s1"}"#),
     "{text}"
   );
   assert_eq!(

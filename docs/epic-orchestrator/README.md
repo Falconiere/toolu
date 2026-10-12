@@ -17,7 +17,7 @@ guardrails.
 npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 ```
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `bun`, `gh`, `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, `herdr`
 (orchestrator session must run inside a herdr pane with `HERDR_ENV=1`).
 OpenCode workers also need `opencode` 1.x on `PATH`; see the OpenCode section
 of the plugin README.
@@ -35,22 +35,24 @@ toolu epic status --json
 toolu epic serve
 # Disable HTTP while keeping the control socket
 toolu epic engine --no-http
-# stop — stop the background watcher only
+# Register an epic and start the engine; wait for its next judgment
+toolu epic start <state_dir>
+toolu --json epic wait --max-seconds 480
 ```
 
-Scripts (invoked by the skill via `${CLAUDE_PLUGIN_ROOT}/scripts`):
+Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic.md)):
 
-| Script            | Role                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------- |
-| `epic-graph.ts`   | Build graph (GitHub, Jira, or Linear), classify issues, pick launch batch                   |
-| `route.ts`        | Jev complexity tier, then host, model, and effort per issue                                 |
-| `launch-issue.ts` | Clone/fetch, herdr worktree + routed host agent, worker brief                               |
-| `epic-watch.ts`   | Background poll; ready/failed/blocked/host-limited/gh-budget-low events; checkpoints        |
-| `merge-gate.ts`   | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks |
-| `checkpoint.ts`   | Snapshot a worktree to `refs/epic-wip/<key>`                                                |
-| `epic-close.ts`   | Post the summary and close the epic in its tracker                                          |
-| `finish-issue.ts` | Snapshot, then tear down agent/worktree after merge                                         |
-| `report.ts`       | Worker phase reporter                                                                       |
+| Verb      | Role                                                                                         |
+| --------- | -------------------------------------------------------------------------------------------- |
+| `graph`   | Build graph (GitHub, Jira, or Linear), classify issues, pick launch batch                    |
+| `route`   | Jev complexity tier, then host, model, and effort per issue                                  |
+| `launch`  | Clone/fetch, herdr worktree + routed host agent, worker brief                                |
+| `gate`    | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks  |
+| `finish`  | Snapshot, then tear down agent/worktree after merge                                          |
+| `close`   | Post the summary and close the epic in its tracker                                           |
+| `release` | Release a coupling hold so the issue launches next                                           |
+| `report`  | Worker phase reporter                                                                        |
+| `wait`    | The orchestrator's next judgment from the resident engine                                    |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
@@ -60,7 +62,7 @@ The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
 The engine starts its read-only dashboard at `http://127.0.0.1:7717/` by default.
 It shows registered epics,
 workers, hosts, jobs, machine capacity, queue and attention, and follows the
-journal without polling the watcher. `toolu epic status --json <key>` returns
+journal without polling. `toolu epic status --json <key>` returns
 one epic or worker through the local control socket. The versioned HTTP
 contract and token rules are in [`docs/epic-status-api.md`](../epic-status-api.md).
 `toolu epic report` writes the status file and, when the engine is down, a spool

@@ -193,7 +193,7 @@
       "owner": ["OP-22"],
       "axes": {
         "tools": {
-          "use": "Report, watch and tracker scripts run through bash",
+          "use": "`toolu epic` verbs run through bash",
           "required": true,
           "enforcement": false,
           "mechanism": "bash tool + shell.env (helper path and environment)",

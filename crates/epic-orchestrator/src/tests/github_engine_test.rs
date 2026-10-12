@@ -3,6 +3,7 @@ use toolu_http_test_support::{Fixture, Reply};
 
 use super::{cause_name, rearm};
 use crate::disk::read_value;
+use crate::epics::Epic;
 use crate::journal;
 use crate::model::{Issue, Step, World};
 use crate::status;
@@ -216,7 +217,15 @@ fn incomplete_rest_probe_retries_changed_pr_and_records_partial_cost() {
   assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-error" && row.note.contains("\"restPoints\":1"))));
   engine.world.now_ms = 180_000;
   engine.github_tick(&tick);
-  assert_eq!(engine.world.issues["one"].stage, "merged");
+  // The merge moves the issue to cleaning and arms its cleanup.
+  assert_eq!(engine.world.issues["one"].stage, "cleaning");
+  assert_eq!(
+    engine.world.issues["one"]
+      .pending
+      .as_ref()
+      .map(|pending| pending.action),
+    Some(crate::model::Action::Cleanup)
+  );
   let requests = fixture.requests().expect("requests");
   let pr_requests: Vec<_> = requests
     .iter()
@@ -280,4 +289,28 @@ fn a_rate_limit_rearms_unprocessed_watches_without_moving_their_deadlines() {
     Some(Cause::Immediate)
   );
   assert_eq!(cause_name(Cause::Scheduled), "scheduled");
+}
+
+#[test]
+fn an_epic_change_arms_a_refresh_of_that_epic() {
+  let fixture = Fixture::start().expect("fixture");
+  rest_routes(&fixture);
+  fixture
+    .route("/graphql", Reply::new(200, graphql_body(false)))
+    .expect("GraphQL route");
+  fixture
+    .route(
+      "/repos/o/r/issues/9/sub_issues?per_page=100",
+      Reply::new(200, "[]").header("ETag", "\"subs\""),
+    )
+    .expect("sub-issues route");
+  let (temp, mut engine, tick) = engine(&fixture);
+  let epic = Epic::new("epic", &temp.path().display().to_string(), 0, None);
+  engine.world.epics.insert("epic".into(), epic);
+  engine.world.epic_refs.insert("epic".into(), "o/r#9".into());
+  watch::sync(&mut engine.world);
+  engine.github_tick(&tick);
+  assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-epic-changed" && row.key == "epic")));
+  let pending = engine.world.epics["epic"].pending.clone().expect("armed");
+  assert_eq!(pending.action, crate::model::Action::Refresh);
 }

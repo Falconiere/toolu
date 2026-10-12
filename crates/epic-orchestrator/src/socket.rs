@@ -6,54 +6,31 @@ use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{
   Arc, Condvar, Mutex,
-  mpsc::{self, Receiver, RecvTimeoutError, Sender},
+  mpsc::{self, Sender},
 };
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use serde_json::{Value, json};
+use serde_json::json;
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::env::Env;
 
-use crate::TICK;
 use crate::client::{read_json, write_json};
-use crate::dispatch::{dispatch, expire, ingest, satisfy};
+use crate::dispatch::ingest;
+use crate::effect_thread::EffectThread;
+use crate::executor::Executor;
 use crate::http::{self, Config as HttpConfig};
 use crate::lock::Held;
 use crate::model::World;
 use crate::notify::AttentionOptions;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault, Stop};
-use crate::socket_deadline::{github_ready, stall_ready, wake_after};
 use crate::socket_herdr;
-use crate::source::{self, Fact};
-
-/// A pending `toolu epic wait` reply.
-pub(crate) struct Waiter {
-  pub(crate) deadline: Instant,
-  pub(crate) reply: Sender<Value>,
-}
-
-/// Request or host event delivered to the state loop.
-pub(crate) enum Msg {
-  Line {
-    request: Value,
-    reply: Sender<Value>,
-  },
-  Herdr(Fact),
-}
+use crate::socket_loop::{Msg, StateContext, state_loop};
 
 /// Sets the accept-loop stop flag if `state_loop` unwinds before `serve` joins it.
 struct StopAccept<'a> {
   stop: &'a AtomicBool,
-}
-
-struct StateContext<'a> {
-  protocol: u64,
-  shared: &'a Mutex<World>,
-  changed: &'a Condvar,
-  resub: &'a AtomicBool,
-  babysit: &'a dyn BabysitTick,
 }
 
 struct Threads {
@@ -88,9 +65,9 @@ pub(crate) fn serve_with_http(
 ) -> Result<(), String> {
   let socket = paths.socket();
   let _held = Held::acquire(&paths.lock(), "engine-busy")?;
-  let mut engine = open_engine(paths, scripts, fault, options.attention)?;
-  let listener = bind(&engine.paths)?;
   let (tx, rx) = mpsc::channel();
+  let mut engine = open_engine(paths, scripts, fault, options.attention, &tx)?;
+  let listener = bind(&engine.paths)?;
   let stop = Arc::new(AtomicBool::new(false));
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
@@ -153,8 +130,10 @@ fn open_engine(
   scripts: Option<std::path::PathBuf>,
   fault: Fault,
   attention: AttentionOptions,
+  effects: &Sender<Msg>,
 ) -> Result<Engine, String> {
   let mut engine = Engine::open(paths, scripts, fault)?;
+  engine.executor = Executor::Thread(EffectThread::spawn(effects.clone()));
   engine.world.remind_ms = attention.remind_ms;
   let journal = engine.paths.clone();
   engine.notifier = attention
@@ -190,6 +169,12 @@ fn start_http(
 
 fn apply_env(engine: &mut Engine) {
   let env = Env::process();
+  let number = |name: &str, fallback: u64| crate::retry::number(&env, name, fallback);
+  engine.world.floors = (
+    number("EPIC_GH_CORE_FLOOR", 1_000),
+    number("EPIC_GH_GRAPHQL_FLOOR", 500),
+  );
+  engine.world.cooldown_min = number("EPIC_HOST_COOLDOWN_MIN", 60);
   engine.herdr_session = env.get("TOOLU_EPIC_HERDR_SESSION").map(str::to_owned);
   engine.git_trace = env
     .get("TOOLU_EPIC_GIT_TRACE")
@@ -248,76 +233,6 @@ fn hold_before_ack() {
   loop {
     thread::sleep(Duration::from_millis(50));
   }
-}
-
-fn state_loop(
-  engine: &mut Engine,
-  rx: &Receiver<Msg>,
-  context: &StateContext<'_>,
-) -> Result<(), String> {
-  let mut waiters = Vec::new();
-  let mut next_tick = Instant::now() + TICK;
-  loop {
-    publish(context.shared, context.changed, engine)?;
-    let wake = wake_after(&engine.world, &waiters, next_tick);
-    match rx.recv_timeout(wake) {
-      Ok(Msg::Line { request, reply }) => {
-        engine.refresh_clock();
-        if dispatch(engine, &request, &reply, &mut waiters, context.protocol) {
-          return Ok(());
-        }
-      }
-      Ok(Msg::Herdr(fact)) => {
-        engine.refresh_clock();
-        source::apply(engine, &Env::process(), fact)?;
-        if engine.resubscribe {
-          engine.resubscribe = false;
-          context.resub.store(true, Ordering::Relaxed);
-        }
-      }
-      Err(RecvTimeoutError::Timeout) => {
-        on_timeout(engine, &mut waiters, &mut next_tick, context.babysit)?;
-      }
-      Err(RecvTimeoutError::Disconnected) => return Ok(()),
-    }
-  }
-}
-
-fn publish(shared: &Mutex<World>, changed: &Condvar, engine: &Engine) -> Result<(), String> {
-  *shared
-    .lock()
-    .map_err(|_err| "status_unavailable".to_owned())? = engine.world.clone();
-  changed.notify_all();
-  Ok(())
-}
-
-fn on_timeout(
-  engine: &mut Engine,
-  waiters: &mut Vec<Waiter>,
-  next_tick: &mut Instant,
-  babysit: &dyn BabysitTick,
-) -> Result<(), String> {
-  expire(engine, waiters);
-  if Instant::now() >= *next_tick {
-    tick(engine, next_tick, babysit)?;
-  } else if stall_ready(&engine.world) || github_ready(&engine.world) {
-    engine.refresh_clock();
-    let _tick = engine.tick(babysit)?;
-  }
-  satisfy(engine, waiters);
-  Ok(())
-}
-
-fn tick(
-  engine: &mut Engine,
-  next_tick: &mut Instant,
-  babysit: &dyn BabysitTick,
-) -> Result<(), String> {
-  if engine.tick(babysit)? == Stop::Fault {
-    return Err("fault".to_owned());
-  }
-  *next_tick = Instant::now() + TICK;
-  Ok(())
 }
 
 #[cfg(test)]

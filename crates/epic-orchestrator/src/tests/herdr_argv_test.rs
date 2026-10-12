@@ -27,3 +27,49 @@ fn argv_names_every_control_verb() {
     ]
   );
 }
+
+#[test]
+fn queries_carry_their_flags_and_no_session_without_one() {
+  use crate::herdr::Call;
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  let open = Call::WorktreeOpen {
+    cwd: "/r".into(),
+    path: "/r/t".into(),
+    label: "k".into(),
+  };
+  assert_eq!(
+    open.argv(&env).join(" "),
+    "herdr worktree open --cwd /r --path /r/t --label k --no-focus"
+  );
+  let start = Call::Start {
+    name: "k".into(),
+    kind: "codex".into(),
+    pane_id: "w1:p1".into(),
+    args: Vec::new(),
+    timeout_ms: None,
+  };
+  assert_eq!(
+    start.argv(&env).join(" "),
+    "herdr agent start k --kind codex --pane w1:p1"
+  );
+  let create = Call::Create {
+    cwd: Some("/r".into()),
+    branch: None,
+    base: None,
+    path: None,
+    label: None,
+    workspace: None,
+  };
+  assert_eq!(
+    create.argv(&env).join(" "),
+    "herdr worktree create --cwd /r --no-focus"
+  );
+  let keys = Call::SendKeys {
+    target: "k".into(),
+    keys: vec!["ctrl+c".into(), "esc".into()],
+  };
+  assert_eq!(
+    keys.argv(&env).join(" "),
+    "herdr agent send-keys k ctrl+c esc"
+  );
+}

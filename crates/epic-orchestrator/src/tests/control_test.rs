@@ -124,19 +124,17 @@ fn engine_http_defaults_on_and_no_http_turns_it_off() {
 }
 
 #[test]
-fn ensure_waits_out_a_replace_and_stays_idle() {
+fn a_replace_that_cannot_drain_reports_it_and_ensure_stays_idle() {
   let tmp = tempfile::tempdir().expect("temp");
   let env = env_at(tmp.path());
   let paths = Paths::from_env(&env);
   std::fs::write(paths.socket(), b"").expect("socket");
   std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
-  let outcome = engine(
-    &verb(&["epic", "engine", "--replace", "--ensure"]),
-    &env,
-    &(),
-  );
-  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
-  assert_eq!(outcome.stdout.as_deref(), Some(""));
+  assert!(!super::replace_engine(
+    &paths,
+    std::time::Duration::from_millis(100)
+  ));
+  assert_eq!(ensure(&env), Ok(()));
 }
 
 #[test]
@@ -150,6 +148,19 @@ fn start_leaves_a_live_engine_in_place() {
   let outcome = start(&verb(&["epic", "start", &epic.display().to_string()]), &env);
   assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
   assert!(paths.registry().is_file());
+  let settings = |safe: bool, no_jev: bool| crate::epics::LaunchSettings { safe, no_jev };
+  assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
+  let dir = epic.display().to_string();
+  let outcome = start(&verb(&["epic", "start", &dir, "--safe", "--no-jev"]), &env);
+  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
+  assert_eq!(crate::epics::launch_settings(&epic), settings(true, true));
+  let again = start(&verb(&["epic", "start", &dir]), &env);
+  assert_eq!(again.exit, Exit::Success, "{again:?}");
+  assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
+  std::fs::remove_file(epic.join("launch.json")).expect("settings");
+  std::fs::create_dir_all(epic.join("launch.json")).expect("a directory in the way");
+  let unwritable = start(&verb(&["epic", "start", &dir, "--safe"]), &env);
+  assert_eq!(unwritable.exit, Exit::Failure, "{unwritable:?}");
 }
 
 #[test]
@@ -166,11 +177,21 @@ fn start_rejects_a_missing_directory_and_a_bad_registry() {
       .expect("err")
       .contains("state-dir is required")
   );
+  let epic = tmp.path().join("epic");
+  let dir = epic.display().to_string();
+  let absent = start(&verb(&["epic", "start", &dir]), &env);
+  assert_eq!(
+    absent.stderr.as_deref(),
+    Some(format!("toolu epic start: no epic state directory {dir}").as_str())
+  );
+  assert!(!epic.exists());
+  std::fs::create_dir_all(&epic).expect("epic");
   let paths = Paths::from_env(&env);
   std::fs::create_dir_all(paths.registry()).expect("dir");
-  let outcome = start(&verb(&["epic", "start", "/tmp/epic"]), &env);
+  let outcome = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(outcome.stderr.expect("err").contains("toolu epic start"));
+  assert!(!epic.join("launch.json").exists());
 }
 
 fn verb(argv: &[&str]) -> clap::ArgMatches {

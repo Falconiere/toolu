@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "herdr": "0.9.3",
+  "protocol": 22,
+  "methods": {
+    "agent.start": {
+      "params": [
+        "args",
+        "kind",
+        "name",
+        "pane_id",
+        "timeout_ms"
+      ],
+      "required": [
+        "kind",
+        "name",
+        "pane_id"
+      ]
+    },
+    "agent.prompt": {
+      "params": [
+        "target",
+        "text",
+        "wait"
+      ],
+      "required": [
+        "target",
+        "text"
+      ]
+    },
+    "agent.read": {
+      "params": [
+        "format",
+        "lines",
+        "source",
+        "strip_ansi",
+        "target"
+      ],
+      "required": [
+        "source",
+        "target"
+      ]
+    },
+    "worktree.create": {
+      "params": [
+        "base",
+        "branch",
+        "cwd",
+        "focus",
+        "label",
+        "path",
+        "trust_repository",
+        "workspace_id"
+      ],
+      "required": []
+    },
+    "worktree.remove": {
+      "params": [
+        "force",
+        "trust_repository",
+        "workspace_id"
+      ],
+      "required": [
+        "workspace_id"
+      ]
+    },
+    "workspace.list": {
+      "params": [],
+      "required": []
+    },
+    "worktree.list": {
+      "params": [
+        "cwd",
+        "trust_repository",
+        "workspace_id"
+      ],
+      "required": []
+    },
+    "worktree.open": {
+      "params": [
+        "branch",
+        "cwd",
+        "focus",
+        "label",
+        "path",
+        "trust_repository",
+        "workspace_id"
+      ],
+      "required": []
+    },
+    "pane.list": {
+      "params": [
+        "workspace_id"
+      ],
+      "required": []
+    },
+    "pane.process_info": {
+      "params": [
+        "pane_id"
+      ],
+      "required": []
+    },
+    "agent.list": {
+      "params": [],
+      "required": []
+    },
+    "agent.send_keys": {
+      "params": [
+        "keys",
+        "target"
+      ],
+      "required": [
+        "keys",
+        "target"
+      ]
+    },
+    "agent.wait": {
+      "params": [
+        "target",
+        "timeout_ms",
+        "until"
+      ],
+      "required": [
+        "target"
+      ]
+    },
+    "notification.show": {
+      "params": [
+        "body",
+        "position",
+        "sound",
+        "title"
+      ],
+      "required": [
+        "title"
+      ]
+    }
+  }
+}

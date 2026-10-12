@@ -16,6 +16,7 @@ import {
   publishedArgv,
   requiredBuiltTooluBinary,
   resolveEntryCommand,
+  rustOnlyArgv,
 } from "../entry-command.ts";
 
 const SAMPLE = bundlePath(pluginRoot("toolu"), "sample");
@@ -208,6 +209,30 @@ test("a selected skill CLI entry runs its toolu ledger verb instead of a hook", 
     isCliEntry("toolu/verdict"),
     isCliEntry("toolu/pre-tools"),
   ]).toEqual([true, true, false]);
+});
+
+test("the epic launch and report entries always run the built toolu, whatever the selector", () => {
+  using sb = createSandbox();
+  const bin = sb.write("bin/toolu", "#!/bin/sh\nexit 0\n");
+  chmodSync(bin, 0o755);
+  for (const selector of [undefined, "", "rust:toolu/verdict"]) {
+    const env = { TOOLU_IMPL: selector, TOOLU_RUST_BIN_DIR: sb.path("bin") };
+    const launch = {
+      plugin: "epic-orchestrator",
+      entry: "launch",
+      bundle: bundlePath(pluginRoot("epic-orchestrator"), "launch"),
+    };
+    expect(resolveEntryCommand(launch, env)).toEqual({
+      argv: [bin, "epic", "launch"],
+      implementation: "rust",
+    });
+    expect(rustOnlyArgv("epic-orchestrator", "report", env)).toEqual([bin, "epic", "report"]);
+  }
+  expect(isCliEntry("epic-orchestrator/launch")).toBe(true);
+  expect(() => rustOnlyArgv("epic-orchestrator", "watch", {})).toThrow("not a Rust-only entry");
+  expect(() => rustOnlyArgv("epic-orchestrator", "launch", { TOOLU_RUST_BIN_DIR: "" })).toThrow(
+    "must not be empty",
+  );
 });
 
 test("the toolu shim sends ledger commands through the seam and refuses others", async () => {

@@ -201,8 +201,14 @@ fn herdr_gone_checkpoint() {
     "{}",
     String::from_utf8_lossy(&reff.stderr)
   );
-  crate::schedule::note_event(&mut engine.world, "a", "gone");
-  crate::schedule::note_event(&mut engine.world, "a", "gone");
+  // Each relaunch ends (its pending action clears) before the agent is lost
+  // again; a miss while one is in flight spends nothing.
+  for _ in 0..2 {
+    if let Some(issue) = engine.world.issues.get_mut("a") {
+      issue.pending = None;
+    }
+    crate::schedule::note_event(&mut engine.world, "a", "gone");
+  }
   assert!(journal_has_limit(&mut engine));
   if let Some(issue) = engine.world.issues.get_mut("a") {
     issue.stage = "idle".to_owned();

@@ -128,8 +128,17 @@ fn events_record_blocked_gone_and_host_limits() {
   note_event(&mut world, "a", "nope");
   assert_eq!(world.outbox.len(), before);
   note_event(&mut world, "a", "gone");
+  // The relaunch in flight owns the issue: a second miss spends nothing.
+  note_event(&mut world, "a", "gone");
+  assert_eq!(world.issues["a"].launches, 1);
+  world.issues.get_mut("a").expect("a").pending = None;
+  world.issues.get_mut("a").expect("a").relaunch = Some("lost".into());
+  note_event(&mut world, "a", "gone");
+  assert_eq!(world.issues["a"].launches, 1);
+  world.issues.get_mut("a").expect("a").relaunch = None;
   note_event(&mut world, "a", "gone");
   assert_eq!(world.issues.get("a").expect("issue").launches, 2);
+  world.issues.get_mut("a").expect("a").pending = None;
   note_event(&mut world, "a", "gone");
   assert!(
     world
@@ -282,5 +291,33 @@ fn ack_silences_a_stall_until_its_full_length_passes_again() {
   assert_eq!(
     take_judgment(&mut world).map(|item| item.kind),
     Some("stall".to_owned())
+  );
+}
+
+#[test]
+fn a_gone_worker_relaunches_twice_then_raises_the_relaunch_limit() {
+  let mut world = World::new(0);
+  let mut issue = crate::model::Issue::blank("a", "one", "/s", 0);
+  issue.stage = "running".to_owned();
+  world.issues.insert("a".into(), issue);
+  for expected in [1, 2] {
+    super::note_event(&mut world, "a", "gone");
+    let pending = world
+      .issues
+      .get_mut("a")
+      .and_then(|issue| issue.pending.take())
+      .expect("relaunch");
+    assert_eq!(
+      (pending.action, pending.follow, world.issues["a"].launches),
+      (Action::Checkpoint, Some(Action::Launch), expected)
+    );
+  }
+  super::note_event(&mut world, "a", "gone");
+  assert!(world.issues["a"].pending.is_none());
+  assert!(
+    world
+      .attention
+      .iter()
+      .any(|item| item.kind == "relaunch-limit")
   );
 }

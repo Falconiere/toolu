@@ -86,10 +86,7 @@ fn every_namespace_answers_help_on_stdout() {
     );
   }
   let epic = stdout(&toolu(&["epic", "--help"]).unwrap()).unwrap();
-  assert!(
-    epic.contains("planned  Not ported yet (#435, #448)"),
-    "{epic}"
-  );
+  assert!(epic.contains("planned  Not ported yet (#448)"), "{epic}");
 }
 
 #[test]

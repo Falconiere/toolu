@@ -2909,7 +2909,30 @@
             }
           ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Keep approval prompts on in this epic's workers, until a start without it",
+              "hidden": false,
+              "long": "safe",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Route and check coupling by heuristics only, until a start without it",
+              "hidden": false,
+              "long": "no-jev",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
           "hidden": false,
           "longAbout": null,
           "name": "start",
@@ -3196,7 +3219,7 @@
           "placeholder": false
         },
         {
-          "about": "Not ported yet (#435, #448): show the planned verbs",
+          "about": "Not ported yet (#448): show the planned verbs",
           "aliases": [],
           "args": [],
           "commands": [],
@@ -3242,6 +3265,662 @@
           "path": [
             "epic",
             "token"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Build an epic's dependency graph and the next launch batch",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The epic: a GitHub issue, Jira key or Linear issue",
+              "multiple": false,
+              "name": "EPIC",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Live issue agents at once",
+              "hidden": false,
+              "long": "max",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "The epic's tracker",
+              "hidden": false,
+              "long": "tracker",
+              "possibleValues": [
+                "github",
+                "jira",
+                "linear"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "TRACKER"
+            },
+            {
+              "global": false,
+              "help": "The code repository of Jira and Linear children",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "O/R"
+            },
+            {
+              "global": false,
+              "help": "Also write graph.json to FILE",
+              "hidden": false,
+              "long": "out",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "Write graph.json into the epic's state directory",
+              "hidden": false,
+              "long": "save",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Read the tracker and write nothing",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "graph",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "graph"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Route sub-issues to worker hosts, models and efforts",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The epic's graph.json",
+              "hidden": false,
+              "long": "graph",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "The host pool, e.g. claude:2,codex:1",
+              "hidden": false,
+              "long": "hosts",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "SPEC"
+            },
+            {
+              "global": false,
+              "help": "Route this issue (repeatable); default the launch batch",
+              "hidden": false,
+              "long": "issue",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "Use the heuristic tiers only",
+              "hidden": false,
+              "long": "no-jev",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Choose a host again even when the saved one is valid",
+              "hidden": false,
+              "long": "reroute",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Print the routes and write nothing",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "route",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "route"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Launch or resume one sub-issue in its herdr worktree",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The epic's graph.json",
+              "hidden": false,
+              "long": "graph",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "The sub-issue: reference, key or URL",
+              "hidden": false,
+              "long": "issue",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "The host: claude, codex, cursor or opencode; default the route's",
+              "hidden": false,
+              "long": "kind",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "HOST"
+            },
+            {
+              "global": false,
+              "help": "The model; default the route's",
+              "hidden": false,
+              "long": "model",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "MODEL"
+            },
+            {
+              "global": false,
+              "help": "The effort; default the route's",
+              "hidden": false,
+              "long": "effort",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EFFORT"
+            },
+            {
+              "global": false,
+              "help": "Claude's permission mode; implies --safe",
+              "hidden": false,
+              "long": "permission-mode",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "MODE"
+            },
+            {
+              "global": false,
+              "help": "Keep approval prompts on",
+              "hidden": false,
+              "long": "safe",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Exit a live agent first, e.g. to move the issue to another host",
+              "hidden": false,
+              "long": "replace",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Launch a blocked issue, or skip the GitHub budget guard",
+              "hidden": false,
+              "long": "force",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Prompt again after an uncertain attempt",
+              "hidden": false,
+              "long": "reprompt",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Print the commands and the brief; write nothing",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "launch",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "launch"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Tear down one sub-issue after its PR merged",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The epic state directory",
+              "multiple": false,
+              "name": "STATE_DIR",
+              "required": true
+            },
+            {
+              "help": "The issue key",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Tear down without a merged PR; keep the branch",
+              "hidden": false,
+              "long": "abandon",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Validate and print the planned teardown",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "finish",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "finish"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Close a completed epic in its tracker with the merged-PR summary",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The epic's graph.json",
+              "hidden": false,
+              "long": "graph",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "Print the summary and close nothing",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "close",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "close"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Release a coupling hold so the issue launches next",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The held issue key",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Find the hold and change nothing",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "release",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "release"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Verify a sub-issue PR against the merge policy and optionally merge it",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The pull request",
+              "hidden": false,
+              "long": "pr",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "The sub-issue to close and tick once merged",
+              "hidden": false,
+              "long": "issue",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "The epic to tick",
+              "hidden": false,
+              "long": "epic",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "Merge on a merge verdict, pinned to the verified head",
+              "hidden": false,
+              "long": "merge",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Arm auto-merge on a wait verdict",
+              "hidden": false,
+              "long": "auto",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "squash, merge or rebase; default the repository's",
+              "hidden": false,
+              "long": "method",
+              "possibleValues": [
+                "squash",
+                "merge",
+                "rebase"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "METHOD"
+            },
+            {
+              "global": false,
+              "help": "The epic state directory whose record gets the verdict",
+              "hidden": false,
+              "long": "state-dir",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            },
+            {
+              "global": false,
+              "help": "The issue key of that record",
+              "hidden": false,
+              "long": "key",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "KEY"
+            },
+            {
+              "global": false,
+              "help": "Assess only",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "gate",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "gate"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Read the epic's Jira issues",
+          "aliases": [],
+          "args": [],
+          "commands": [
+            {
+              "about": "Jira issues",
+              "aliases": [],
+              "args": [],
+              "commands": [
+                {
+                  "about": "Print one Jira issue as JSON",
+                  "aliases": [],
+                  "args": [
+                    {
+                      "help": "The issue key, e.g. PAY-12",
+                      "multiple": false,
+                      "name": "KEY",
+                      "required": true
+                    }
+                  ],
+                  "commands": [],
+                  "flags": [],
+                  "hidden": false,
+                  "longAbout": null,
+                  "name": "get",
+                  "owner": "epic-orchestrator",
+                  "path": [
+                    "epic",
+                    "jira",
+                    "issue",
+                    "get"
+                  ],
+                  "placeholder": false
+                }
+              ],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "issue",
+              "owner": "epic-orchestrator",
+              "path": [
+                "epic",
+                "jira",
+                "issue"
+              ],
+              "placeholder": false
+            }
+          ],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "jira",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "jira"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Validate the committed host-lifecycle evidence",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The evidence file; default the committed record",
+              "multiple": false,
+              "name": "FILE",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Validate the evidence and print every gap",
+              "hidden": false,
+              "long": "check-evidence",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "probe",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "probe"
           ],
           "placeholder": false
         },
