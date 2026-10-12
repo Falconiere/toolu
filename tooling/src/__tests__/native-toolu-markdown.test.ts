@@ -15,15 +15,30 @@ function markdownFiles(dir: string): string[] {
   });
 }
 
+function staleReferences(file: string, markdown: string): string[] {
+  let fence: string | undefined;
+  return markdown.split("\n").flatMap((line, index) => {
+    const marker = /^\s*(`{3,}|~{3,})([^\s`]*)/u.exec(line);
+    if (marker !== null) {
+      fence = fence === undefined ? (marker[2] ?? "").toLowerCase() : undefined;
+      return [];
+    }
+    if (fence === "text" || fence === "ignore") return [];
+    if (fence !== undefined && line.trimStart().startsWith("#")) return [];
+    return RETIRED.test(line) ? [`${file}:${index + 1}: ${line}`] : [];
+  });
+}
+
+test("retired command scan ignores fenced comments and text examples", () => {
+  const markdown = "```sh\n# Avoid using bun here\nbun run test\n```\n```text\nscripts/old.ts\n```";
+  expect(staleReferences("sample.md", markdown)).toEqual(["sample.md:3: bun run test"]);
+});
+
 test("toolu skills, commands and agents name no Bun or retired executable paths", () => {
   const files = ["skills", "commands", "agents"].flatMap((dir) => markdownFiles(join(PLUGIN, dir)));
   expect(files.length).toBeGreaterThan(0);
   const stale = files.flatMap((file) =>
-    readFileSync(file, "utf8")
-      .split("\n")
-      .flatMap((line, index) =>
-        RETIRED.test(line) ? [`${relative(ROOT, file)}:${index + 1}: ${line}`] : [],
-      ),
+    staleReferences(relative(ROOT, file), readFileSync(file, "utf8")),
   );
   expect(stale).toEqual([]);
 });

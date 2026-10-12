@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -87,6 +96,24 @@ test("~/.local/bin outside PATH is named once and the absolute path runs", () =>
   expect(run.status).toBe(0);
   expect(run.stdout.toString()).toStartWith("toolu ");
 }, 20_000);
+
+test("repeated SessionStart skips the native probe for the same session", () => {
+  const box = sandbox();
+  const probeFile = join(box.config, "probe-count");
+  const shellToolu = join(box.bin, "toolu");
+  writeFileSync(shellToolu, '#!/bin/sh\nprintf x >> "$TOOLU_TEST_PROBE_FILE"\n');
+  chmodSync(shellToolu, 0o755);
+  const env = {
+    ...box.env,
+    PATH: `${box.bin}:/usr/bin:/bin`,
+    TOOLU_BIN: binary,
+    TOOLU_TEST_PROBE_FILE: probeFile,
+  };
+  expect(nativeTooluAdvice({ env, sessionId: "one-scan" })).toContain(binary);
+  expect(readFileSync(probeFile, "utf8")).toBe("x");
+  expect(nativeTooluAdvice({ env, sessionId: "one-scan" })).toBeUndefined();
+  expect(readFileSync(probeFile, "utf8")).toBe("x");
+});
 
 test("no native binary emits one advisory with both install commands", () => {
   const box = sandbox();

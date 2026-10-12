@@ -76,7 +76,10 @@ fn io(bytes: &[u8], json: bool) -> String {
   let lines = if bytes.is_empty() {
     0
   } else {
-    bytes.split(|byte| *byte == b'\n').count() - usize::from(bytes.last() == Some(&b'\n'))
+    bytes
+      .split(|byte| *byte == b'\n')
+      .count()
+      .saturating_sub(usize::from(bytes.last() == Some(&b'\n')))
   };
   if json {
     serde_json::json!({"bytes": bytes.len(), "lines": lines}).to_string()

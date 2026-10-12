@@ -84,8 +84,8 @@ function noticeName(sessionId: string): string {
   return hash.toString(16).padStart(16, "0");
 }
 
-/** True only for the first notice under one host config root and session ID. */
-function firstNotice(sessionId: string | undefined, env: HostEnv): boolean {
+/** True only for the first native scan under one host config root and session ID. */
+function firstScan(sessionId: string | undefined, env: HostEnv): boolean {
   if (sessionId === undefined || sessionId === "") return true;
   const dir = join(configRoot({ env }), "toolu", "native-notices");
   const name = noticeName(sessionId);
@@ -103,6 +103,7 @@ function firstNotice(sessionId: string | undefined, env: HostEnv): boolean {
 /** No line when plain `toolu` is native; otherwise one actionable session line. */
 export function nativeTooluAdvice(options: NativeTooluOptions = {}): string | undefined {
   const env = options.env ?? process.env;
+  if (!firstScan(options.sessionId, env)) return undefined;
   const shell = shellToolu(env);
   if (shell !== undefined && native(shell, env)) return undefined;
   const known = knownToolu(env);
@@ -110,7 +111,7 @@ export function nativeTooluAdvice(options: NativeTooluOptions = {}): string | un
     known === undefined
       ? `toolu: native binary not found in the agent command shell. Install it with: ${INSTALLER} or ${HOMEBREW}. Restart the session.`
       : `toolu: native binary for this session: ${shellQuote(known)}. Use that absolute path for toolu commands.`;
-  return firstNotice(options.sessionId, env) ? line : undefined;
+  return line;
 }
 
 function idFromInput(input: string, env: HostEnv): string | undefined {
