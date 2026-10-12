@@ -12,7 +12,7 @@ import type { BootstrapResult } from "../result.ts";
 import { REPO_ROOT, catalogPlugin, copiedPlugin, tempRoot } from "./fixtures.ts";
 
 const OLD_MODULE = "toolu/post-tools.d/ts-quality@toolu__ts-quality.js";
-const OLD_PYTHON = "toolu/post-tools.d/python-quality@toolu__python-quality.js";
+const OLD_RUST = "toolu/post-tools.d/rust-quality@toolu__rust-quality.js";
 const MANIFEST = "toolu/post-tools.d/ts-quality@toolu__ts-quality.json";
 const UNRELATED = "toolu/pre-tools.d/custom@local__extra.js";
 
@@ -23,7 +23,7 @@ function staleDataRoot(root: string): string {
     ["toolu/.session-start-ready", ""],
     [UNRELATED, "export default {};\n"],
     [OLD_MODULE, "// an older ts-quality\n"],
-    [OLD_PYTHON, "// an older python-quality\n"],
+    [OLD_RUST, "// an older rust-quality\n"],
   ];
   for (const [path, body] of seeds) {
     mkdirSync(join(data, path, ".."), { recursive: true });
@@ -74,13 +74,13 @@ test.concurrent("a missing helper source is NotReady", async () => {
 
 test.concurrent("a missing declared entry bundle is NotReady before the plugin runs", async () => {
   using root = tempRoot("toolu-ready-entry-");
-  const pythonQuality = copiedPlugin(root.path, "python-quality");
-  rmSync(join(pythonQuality.pluginDir, "hooks/dist/check-toolu.js"));
-  const result = await boot(root.path, [catalogPlugin("toolu"), pythonQuality]);
-  expect(reasonOf(result)).toBe("python-quality: check-toolu: missing startup bundle");
+  const rustQuality = copiedPlugin(root.path, "rust-quality");
+  rmSync(join(rustQuality.pluginDir, "hooks/dist/check-toolu.js"));
+  const result = await boot(root.path, [catalogPlugin("toolu"), rustQuality]);
+  expect(reasonOf(result)).toBe("rust-quality: check-toolu: missing startup bundle");
   // Its register entry never ran: the old module is still the old one.
-  expect(readFileSync(join(root.path, "data", OLD_PYTHON), "utf8")).toBe(
-    "// an older python-quality\n",
+  expect(readFileSync(join(root.path, "data", OLD_RUST), "utf8")).toBe(
+    "// an older rust-quality\n",
   );
 });
 

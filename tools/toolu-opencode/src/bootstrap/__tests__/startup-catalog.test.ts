@@ -31,6 +31,13 @@ const MODULES = {
       event: "tool/post",
       matcher: "Read|Grep|Glob|Bash|Shell",
     },
+    "python-quality@toolu__python-quality.json": {
+      version: 1,
+      spec: "python-quality@toolu",
+      name: "python-quality",
+      event: "tool/post",
+      matcher: "*",
+    },
     "rust-quality@toolu__rust-quality.json": {
       version: 1,
       spec: "rust-quality@toolu",
@@ -50,14 +57,16 @@ const MODULES = {
 
 /** Bridge modules a native register writes beside its manifest for the Bun dispatcher. */
 const BRIDGES: Record<string, string[]> = {
-  "post-tools.d": ["rust-quality@toolu__rust-quality.sh", "ts-quality@toolu__ts-quality.sh"],
+  "post-tools.d": [
+    "python-quality@toolu__python-quality.sh",
+    "rust-quality@toolu__rust-quality.sh",
+    "ts-quality@toolu__ts-quality.sh",
+  ],
 };
 
 const BUNDLES: Record<string, Record<string, string>> = {
   "pre-tools.d": {},
-  "post-tools.d": {
-    "python-quality@toolu__python-quality.js": "python-quality/hooks/dist/post-tool-use.js",
-  },
+  "post-tools.d": {},
 };
 
 const HELPERS = {

@@ -24,7 +24,10 @@ const REGISTRY: readonly Registered[] = [
   { plugin: "ast-grep", published: ["pre-tools.d/ast-grep@toolu__search-nudge.json"] },
   {
     plugin: "python-quality",
-    published: ["post-tools.d/python-quality@toolu__python-quality.js"],
+    published: [
+      "post-tools.d/python-quality@toolu__python-quality.json",
+      "post-tools.d/python-quality@toolu__python-quality.sh",
+    ],
   },
   {
     plugin: "rust-quality",

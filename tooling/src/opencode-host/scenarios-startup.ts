@@ -80,7 +80,7 @@ export function modules(s: ProbeSession): string[] {
 export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.json",
   "post-tools.d/ast-grep@toolu__byte-savings.json",
-  "post-tools.d/python-quality@toolu__python-quality.js",
+  "post-tools.d/python-quality@toolu__python-quality.json",
   "post-tools.d/rust-quality@toolu__rust-quality.json",
   "post-tools.d/ts-quality@toolu__ts-quality.json",
 ];
@@ -88,6 +88,7 @@ export const MODULES = [
 /** Every registry file on disk: the modules plus the quality plugins' unreported bridges for Bun dispatch. */
 export const REGISTRY_FILES = [
   ...MODULES,
+  "post-tools.d/python-quality@toolu__python-quality.sh",
   "post-tools.d/rust-quality@toolu__rust-quality.sh",
   "post-tools.d/ts-quality@toolu__ts-quality.sh",
 ];
@@ -125,13 +126,13 @@ async function startupFailure(ctx: EntryContext): Promise<EntryResult> {
   const catalog = mkdtempSync(join(tmpdir(), "toolu-startup-catalog-"));
   try {
     cpSync(join(ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-    rmSync(join(catalog, "plugins/python-quality/hooks/dist/post-tool-use.js"));
-    using s = shimmedSession(ctx, ["toolu", "python-quality"], TOUCH_SCRIPT, catalog);
+    rmSync(join(catalog, "plugins/rust-quality/hooks/dist/post-tool-use.js"));
+    using s = shimmedSession(ctx, ["toolu", "rust-quality"], TOUCH_SCRIPT, catalog);
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:entry.touch"]);
     const bash = toolStates(hostRun).find((state) => state.tool === "bash");
     const observed = {
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: python-quality/register: "),
+      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: rust-quality/register: "),
       bashDenied: bash?.status === "error" && (bash.error ?? "").startsWith("toolu: not ready"),
       fileAbsent: !s.exists("denied.txt"),
     };

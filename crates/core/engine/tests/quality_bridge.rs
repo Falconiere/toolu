@@ -1,6 +1,6 @@
-//! A not-yet-ported quality module, python-quality, through the Bun bridge (AC-6): the committed
-//! python-quality bundle, registered as `python-quality@toolu__python-quality.js` beside a
-//! `.sh` module, checks a Python edit with the same output and the same
+//! A not-yet-ported quality module, rust-quality, through the Bun bridge (AC-6): the committed
+//! rust-quality bundle, registered as `rust-quality@toolu__rust-quality.js` beside a
+//! `.sh` module, checks a Rust edit with the same output and the same
 //! gate entry whether the TypeScript dispatcher (run live through
 //! `dispatch-cli.ts`) or the engine runs it, each in its own identical sandbox.
 
@@ -20,9 +20,9 @@ use toolu_protocol::host::Host;
 
 const REPO: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
-/// `n` code lines of Python.
+/// `n` code lines of Rust.
 fn source(n: usize) -> String {
-  "v = 0\n".repeat(n)
+  "const V: u8 = 0;\n".repeat(n)
 }
 
 fn git(hook: &Hook, args: &[&str]) -> Res<()> {
@@ -47,28 +47,28 @@ fn git(hook: &Hook, args: &[&str]) -> Res<()> {
   }
 }
 
-/// A tracked Python project with a 10-line limit, the python-quality bundle and a `.sh` note.
+/// A tracked Rust project with a 10-line limit, the rust-quality bundle and a `.sh` note.
 fn project(edited: &str) -> Res<Hook> {
   let hook = Hook::new(Host::Claude)?;
   write(
-    &hook.sb.path("project/pyproject.toml"),
-    "[project]\nname = \"x\"\n",
+    &hook.sb.path("project/Cargo.toml"),
+    "[package]\nname = \"x\"\nversion = \"0.1.0\"\n",
   )?;
   write(
     &hook.sb.path("project/.claude/toolu.config.json"),
-    r#"{"version":1,"lang":{"python":{"maxFileLines":10}}}"#,
+    r#"{"version":1,"lang":{"rust":{"maxFileLines":10}}}"#,
   )?;
   git(&hook, &["add", "-A"])?;
   git(&hook, &["commit", "-q", "-m", "project"])?;
-  write(&hook.sb.path("project/src/a.py"), edited)?;
+  write(&hook.sb.path("project/src/a.rs"), edited)?;
   let bundle = std::fs::read_to_string(format!(
-    "{REPO}/plugins/python-quality/hooks/dist/post-tool-use.js"
+    "{REPO}/plugins/rust-quality/hooks/dist/post-tool-use.js"
   ))
   .map_err(|err| err.to_string())?;
   write(
     &hook
       .dir(Phase::Post)
-      .join("python-quality@toolu__python-quality.js"),
+      .join("rust-quality@toolu__rust-quality.js"),
     &bundle,
   )?;
   hook.sh(
@@ -80,7 +80,7 @@ fn project(edited: &str) -> Res<Hook> {
 }
 
 fn payload(hook: &Hook) -> String {
-  let file = hook.sb.text("project/src/a.py");
+  let file = hook.sb.text("project/src/a.rs");
   json!({
     "hook_event_name": "PostToolUse", "session_id": "s1", "cwd": hook.sb.text("project"),
     "tool_name": "Edit",
@@ -167,7 +167,7 @@ fn regex_free_timestamps(text: &str) -> String {
 }
 
 #[test]
-fn the_python_quality_bundle_judges_an_edit_the_same_through_the_bridge() {
+fn the_rust_quality_bundle_judges_an_edit_the_same_through_the_bridge() {
   for (edited, violates) in [(source(12), true), (source(3), false)] {
     let bun = project(&edited).unwrap();
     let rust = project(&edited).unwrap();

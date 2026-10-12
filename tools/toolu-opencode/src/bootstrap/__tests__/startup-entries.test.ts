@@ -114,7 +114,7 @@ test.concurrent("a native command rejects an invalid extracted bundle name", () 
 
 test.concurrent("a deleted declared bundle fails the plan before anything runs", () => {
   using root = tempRoot("toolu-entries-missing-");
-  const plugin = copiedPlugin(root.path, "python-quality");
+  const plugin = copiedPlugin(root.path, "rust-quality");
   rmSync(join(plugin.pluginDir, "hooks", "dist", "check-toolu.js"));
   expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
     ok: false,
