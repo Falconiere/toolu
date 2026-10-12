@@ -160,8 +160,8 @@ pub(crate) fn recover(
 
 fn lease_stage(lease: &Lease) -> Result<Option<String>, String> {
   use toolu_runtime::json::ordered::Ordered;
-  let state = toolu_engine::resources::store::read_resource_state(&lease.root)?;
-  let found = toolu_engine::resources::store::leases(&state)
+  let resources = toolu_engine::resources::store::read_resource_state(&lease.root)?;
+  let found = toolu_engine::resources::store::leases(&resources)
     .iter()
     .find(|item| matches!(item.get("token"), Some(Ordered::String(token)) if *token == lease.token))
     .and_then(|item| match item.get("stage") {
