@@ -123,12 +123,35 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `release <key>` | Release a coupling hold so the issue launches next. |
 | `jira issue get <key>` | Print one Jira issue as JSON. |
 | `probe --check-evidence` | Validate the committed host-lifecycle evidence. |
-| `planned` | Lists `queue` (#448). |
+| `queue [<epic>]` | Print each repository's merge queue in merge order (`--json` for the document). |
 
-The engine runs launch, cleanup, checkpoint, the `STATUS?` prompt, graph
-refresh and epic close in process; `TOOLU_EPIC_SCRIPTS` affects only merge,
-its reconcile and worker prompts. Without merge scripts a `ready` worker raises a
-`merge-ready` judgment for the orchestrator's `toolu epic gate … --merge`.
+The engine runs launch, cleanup, checkpoint, the merge queue, the `STATUS?`
+prompt, graph refresh and epic close in process; `TOOLU_EPIC_SCRIPTS`, a test
+seam, replaces only merge, its reconcile and worker prompts (a deferring merge
+script raises a `merge-ready` judgment for `toolu epic gate … --merge`).
+
+### Merge queue
+
+A `ready` worker, or a green babysit tick, queues its PR in its repository's
+queue, ordered by the graph's `unblocks`, then by ready time, then by key.
+Only the head is worked, on each of its PR checks and on a base move:
+
+- behind its base, the engine rebases it with plain git in the worker's
+  worktree, but only while the worker is parked at `ready` and no managed job
+  runs there; the agent lease is fenced (`rebasing`), the worktree is
+  snapshotted to `refs/epic-wip/<key>`, and the branch is pushed with
+  `--force-with-lease`. A conflict is aborted, leaving the worktree as it was,
+  and the worker gets `REBASE`;
+- while its checks run, auto-merge is armed pinned to the head;
+- green, it merges pinned to the verified SHA with the repository's method
+  (squash preferred), with `--admin` only after a protection-only refusal; a
+  push in between makes GitHub refuse, and the head is gated again;
+- a failing check, an unresolved thread or a babysit finding sends it back to
+  babysit, and any auto-merge the engine armed is disarmed.
+
+The journal records each rebase round (`rebase`, `by` engine or worker); the
+issue record keeps `queued_at` and `rebase_rounds`. `toolu epic queue` and
+`/api/v1/queue` show the queue.
 
 ### Attention
 

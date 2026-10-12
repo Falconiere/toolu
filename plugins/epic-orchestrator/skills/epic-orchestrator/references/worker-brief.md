@@ -100,7 +100,9 @@ the branch recoverable:
 
 ## Messages from the orchestrator
 
-- **`REBASE`** — main moved. `report rebasing`; `git fetch origin && git rebase
+- **`REBASE`** — main moved and your branch conflicts with it. The
+  orchestrator rebases clean branches itself while you are parked at `ready`,
+  so this arrives only for a conflict. `report rebasing`; `git fetch origin && git rebase
   origin/{{BASE}}`; resolve conflicts so both sides' intent survives (read the
   other change, don't just pick yours); re-run the gate and affected tests;
   `git push --force-with-lease`; `report babysit --pr <n>`; {{BABYSIT}};
