@@ -38,7 +38,7 @@
     "test:rust-conformance": "bun run tooling/src/rust-conformance.ts",
     "test:statusline-native": "bun test --timeout 60000 tools/toolu-conformance/src/harness/__tests__/statusline-*.native.test.ts",
     "test": "bun run test:unit && bun run test:conformance",
-    "test:unit": "bun test --timeout 60000 --path-ignore-patterns=**/*.native.test.ts tooling/src packages tools plugins",
+    "test:unit": "bun test --timeout 60000 --max-concurrency=4 --path-ignore-patterns=**/*.native.test.ts tooling/src packages tools plugins",
     "test:opencode": "bun run tooling/src/opencode-acceptance.ts"
   },
   "dependencies": {
