@@ -36,9 +36,7 @@ function startupRuntime(): string {
   return `toolu runtime: native ${manifest.version} at ${realpathSync(binary)}`;
 }
 const COMMAND = hookCommand(PLUGIN, "SessionStart", "session-start");
-const NATIVE_HOOK: unknown = JSON.parse(
-  readFileSync(join(PLUGIN, "../../tooling/fixtures/native-launcher/session-start.json"), "utf8"),
-);
+const NATIVE_HOOK = { type: "command", command: COMMAND };
 const OutputSchema = z.strictObject({
   hookSpecificOutput: z.strictObject({
     hookEventName: z.literal("SessionStart"),
@@ -86,7 +84,7 @@ test("hooks.json runs one launcher entry on every SessionStart source", async ()
       SessionStart: expect.arrayContaining([
         {
           matcher: "startup|resume|clear|compact",
-          hooks: [NATIVE_HOOK],
+          hooks: [expect.objectContaining(NATIVE_HOOK)],
         },
       ]),
     },

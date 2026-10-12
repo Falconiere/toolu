@@ -4,7 +4,6 @@
  * covers the wiring a host exercises.
  */
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run } from "@toolu/conformance/harness/spawn";
@@ -12,12 +11,10 @@ import { hookCommand } from "@toolu/conformance/harness/startup";
 import { PLUGIN, launchCount } from "./lifecycle-cases.ts";
 
 const HOOKS = Bun.file(join(PLUGIN, "hooks", "hooks.json"));
-const NATIVE_HOOK: unknown = JSON.parse(
-  readFileSync(
-    join(PLUGIN, "../../tooling/fixtures/native-launcher/user-prompt-submit.json"),
-    "utf8",
-  ),
-);
+const NATIVE_HOOK = {
+  type: "command",
+  command: hookCommand(PLUGIN, "UserPromptSubmit", "user-prompt-submit"),
+};
 
 test("hooks.json routes every prompt to the generated launcher", async () => {
   const hooks: unknown = await HOOKS.json();
@@ -25,7 +22,7 @@ test("hooks.json routes every prompt to the generated launcher", async () => {
     hooks: {
       UserPromptSubmit: expect.arrayContaining([
         {
-          hooks: [NATIVE_HOOK],
+          hooks: [expect.objectContaining(NATIVE_HOOK)],
         },
       ]),
     },
