@@ -79,11 +79,16 @@ fn an_open_pr_and_live_workload_refuse_and_keep_the_lease() {
   ctx.gh = Ok(&client);
   let open = finish_issue(&l.state, "k-1", (false, false), &mut ctx).expect_err("open");
   assert_eq!(open, "PR o/r#7 is OPEN, not MERGED");
-  let mut sleeper = std::process::Command::new("sleep")
-    .arg("30")
-    .current_dir(&l.wt)
-    .spawn()
-    .expect("sleep");
+  // Its own group, as a worker's job has: in the test runner's group, any
+  // exiting process of a parallel test would make ownership unknowable.
+  let mut sleeper = std::os::unix::process::CommandExt::process_group(
+    std::process::Command::new("sleep")
+      .arg("30")
+      .current_dir(&l.wt),
+    0,
+  )
+  .spawn()
+  .expect("sleep");
   let busy = finish_issue(&l.state, "k-1", (true, false), &mut ctx);
   let _killed = sleeper.kill();
   let _reaped = sleeper.wait();

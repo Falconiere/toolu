@@ -145,11 +145,16 @@ fn shutdown_exits_the_agent_and_codex_also_stops_its_jobs() {
 fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   let rig = Rig::new();
   let (worktree, pane) = started(&rig, "opencode");
-  let mut leftover = std::process::Command::new("sleep")
-    .arg("30")
-    .current_dir(&worktree)
-    .spawn()
-    .expect("leftover");
+  // Its own group, as a worker's job has: in the test runner's group, any
+  // exiting process of a parallel test would make ownership unknowable.
+  let mut leftover = std::os::unix::process::CommandExt::process_group(
+    std::process::Command::new("sleep")
+      .arg("30")
+      .current_dir(&worktree),
+    0,
+  )
+  .spawn()
+  .expect("leftover");
   let mut ctx = rig.ctx();
   let outcome = shutdown_agent(
     &mut ctx.herdr,
