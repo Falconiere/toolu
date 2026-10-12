@@ -13,7 +13,7 @@ use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
 use super::edit::edited_record;
-use super::scan::scan_rule_dirs;
+use super::scan::scan_rules;
 use super::{AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file};
 
 /// Violations and nonblocking advice in check order.
@@ -41,6 +41,11 @@ pub trait QualityRule: Send + Sync {
   fn skip_linked_worktrees(&self) -> bool;
   /// Directories of structural rule YAML supplied by the rule crate.
   fn ast_rule_dirs(&self) -> Vec<PathBuf>;
+  /// Structural rule YAML compiled into the rule crate, joined with the
+  /// directories' rules into the event's one scan; empty adds nothing.
+  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
+    String::new()
+  }
   /// Check one file with the batch scan restricted to that file.
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings;
 }
@@ -134,6 +139,25 @@ fn file_scan(scan: &AstGrepScan, file: &EditedFile) -> AstGrepScan {
   }
 }
 
+/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
+fn batch_scan(
+  enabled: &[&dyn QualityRule],
+  live: &[EditedFile],
+  ctx: &RuleContext<'_>,
+) -> AstGrepScan {
+  let dirs: Vec<PathBuf> = enabled
+    .iter()
+    .flat_map(|rule| rule.ast_rule_dirs())
+    .collect();
+  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+  let inline: Vec<String> = enabled
+    .iter()
+    .map(|rule| rule.ast_rules_inline(ctx))
+    .filter(|rules| !rules.is_empty())
+    .collect();
+  scan_rules(live, &paths, &inline, ctx)
+}
+
 fn run_files(
   files: &[EditedFile],
   ctx: &RuleContext<'_>,
@@ -154,12 +178,7 @@ fn run_files(
     })
     .cloned()
     .collect();
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
-  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let scan = scan_rule_dirs(&live, &paths, ctx);
+  let scan = batch_scan(&enabled, &live, ctx);
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
   let mut decisions = Vec::new();
   for file in files {

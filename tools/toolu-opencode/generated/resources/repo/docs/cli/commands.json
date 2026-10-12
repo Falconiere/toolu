@@ -475,22 +475,6 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#426): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "ts-quality",
-          "path": [
-            "ts-quality",
-            "planned"
-          ],
-          "placeholder": true
-        },
-        {
           "about": "Run a hook entry; hooks.json calls it (internal)",
           "aliases": [],
           "args": [
@@ -539,7 +523,7 @@
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": null,
+      "longAbout": "ts-quality has no verbs: its rules run after every edit of a .ts or .tsx file in a TypeScript project with a package manager. Violations (type assertions, console.log, suppression comments, oversized files and functions, swallowed errors, mocks in tests and more) fail the file's quality-gate entry until it is fixed; duplication, JSDoc and unhandled-await findings are advisories.\n\nLimits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.",
       "name": "ts-quality",
       "owner": "ts-quality",
       "path": [

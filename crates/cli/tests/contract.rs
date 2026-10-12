@@ -33,6 +33,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "statusline",
     "babysit",
     "epic",
+    "ts-quality",
   ];
   names
     .iter()

@@ -42,9 +42,19 @@ export function installPlugins(sb: Sandbox, ...specs: string[]): void {
   writeFileSync(file, `${JSON.stringify({ version: 2, plugins })}\n`);
 }
 
+/** Plugins whose SessionStart register hook is native-only. */
+const NATIVE_REGISTER = new Set(["ast-grep", "ts-quality"]);
+
+/** The built `toolu`'s SessionStart register command for a native-only plugin. */
+export function nativeRegisterArgv(plugin: string): string[] {
+  const root = join(REPO_ROOT, "plugins", plugin);
+  const hook = ["hook", "register", "--event", "SessionStart", "--plugin-root", root];
+  return [requiredBuiltTooluBinary(), plugin, ...hook];
+}
+
 /**
  * Run a plugin's real SessionStart register hook, syncing its modules into the
- * registry through its launcher. ast-grep has a native-only register hook.
+ * registry through its launcher, or the built `toolu` for a native-only one.
  */
 export async function registerPlugin(
   sb: Sandbox,
@@ -56,19 +66,9 @@ export async function registerPlugin(
     CLAUDE_PLUGIN_ROOT: root,
     ...(host === "codex" ? { PLUGIN_ROOT: root } : {}),
   });
-  const argv =
-    plugin === "ast-grep"
-      ? [
-          requiredBuiltTooluBinary(),
-          "ast-grep",
-          "hook",
-          "register",
-          "--event",
-          "SessionStart",
-          "--plugin-root",
-          root,
-        ]
-      : launchedArgv({ plugin, event: "SessionStart", entry: "register" }, root);
+  const argv = NATIVE_REGISTER.has(plugin)
+    ? nativeRegisterArgv(plugin)
+    : launchedArgv({ plugin, event: "SessionStart", entry: "register" }, root);
   const result = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (result.exitCode !== 0) {
     throw new Error(`register ${plugin} exited ${String(result.exitCode)}: ${result.stderr}`);

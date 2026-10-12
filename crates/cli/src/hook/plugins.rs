@@ -5,7 +5,7 @@
 
 use std::path::Path;
 
-use toolu_hub::tool_hook::{Phase, ast_grep_tool_hook};
+use toolu_hub::tool_hook::{Phase, plugin_tool_hook};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::host::detect::detect;
@@ -14,7 +14,7 @@ use crate::Context;
 use crate::fast::HookRequest;
 
 /// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev,
-/// toolu-review, ast-grep, the statusline, pr-babysit and epic-orchestrator.
+/// toolu-review, ast-grep, ts-quality, the statusline, pr-babysit and epic-orchestrator.
 /// Each reports through the prelude's advisory.
 pub(super) fn dispatch(
   request: &HookRequest,
@@ -31,6 +31,9 @@ pub(super) fn dispatch(
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   if let Some(outcome) = ast_grep_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = ts_quality_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   if let Some(outcome) = statusline_hook(request, context) {
@@ -92,7 +95,8 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
     _ => None,
   };
   if let Some(phase) = phase {
-    return Some(ast_grep_tool_hook(
+    return Some(plugin_tool_hook(
+      "ast-grep@toolu",
       phase,
       (context.stdin)(),
       request.plugin_root.as_deref().map(Path::new),
@@ -103,6 +107,28 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
   }
   let env = (context.env)();
   Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
+}
+
+/// ts-quality's two `SessionStart` entries and the post-tools run of its bridge module.
+pub(super) fn ts_quality_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != toolu_hub::ts_quality::PLUGIN {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "register" => Some(toolu_hub::ts_quality::register(
+      &env,
+      detect(&env, None).host,
+    )),
+    "check-toolu" => Some(toolu_hub::ts_quality::check_toolu(&env)),
+    "post-tools" => Some(plugin_tool_hook(
+      toolu_hub::ts_quality::SPEC,
+      Phase::Post,
+      (context.stdin)(),
+      plugin_root(request),
+    )),
+    _ => None,
+  }
 }
 
 /// The statusline's native `SessionStart` entry.

@@ -1,6 +1,6 @@
-//! A not-yet-ported quality module through the Bun bridge (AC-6): the committed
-//! ts-quality bundle, registered as `ts-quality@toolu__ts-quality.js` beside a
-//! `.sh` module, checks a TypeScript edit with the same output and the same
+//! A not-yet-ported quality module, python-quality, through the Bun bridge (AC-6): the committed
+//! python-quality bundle, registered as `python-quality@toolu__python-quality.js` beside a
+//! `.sh` module, checks a Python edit with the same output and the same
 //! gate entry whether the TypeScript dispatcher (run live through
 //! `dispatch-cli.ts`) or the engine runs it, each in its own identical sandbox.
 
@@ -20,9 +20,9 @@ use toolu_protocol::host::Host;
 
 const REPO: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../../..");
 
-/// `n` code lines of TypeScript.
+/// `n` code lines of Python.
 fn source(n: usize) -> String {
-  "export const v = 0;\n".repeat(n)
+  "v = 0\n".repeat(n)
 }
 
 fn git(hook: &Hook, args: &[&str]) -> Res<()> {
@@ -47,27 +47,28 @@ fn git(hook: &Hook, args: &[&str]) -> Res<()> {
   }
 }
 
-/// A tracked TypeScript project with a 10-line limit, the ts-quality bundle and a `.sh` note.
+/// A tracked Python project with a 10-line limit, the python-quality bundle and a `.sh` note.
 fn project(edited: &str) -> Res<Hook> {
   let hook = Hook::new(Host::Claude)?;
-  write(&hook.sb.path("project/tsconfig.json"), "{}\n")?;
-  write(&hook.sb.path("project/package.json"), "{\"name\":\"x\"}\n")?;
-  write(&hook.sb.path("project/bun.lock"), "")?;
+  write(
+    &hook.sb.path("project/pyproject.toml"),
+    "[project]\nname = \"x\"\n",
+  )?;
   write(
     &hook.sb.path("project/.claude/toolu.config.json"),
-    r#"{"version":1,"lang":{"ts":{"maxFileLines":10}}}"#,
+    r#"{"version":1,"lang":{"python":{"maxFileLines":10}}}"#,
   )?;
   git(&hook, &["add", "-A"])?;
   git(&hook, &["commit", "-q", "-m", "project"])?;
-  write(&hook.sb.path("project/src/a.ts"), edited)?;
+  write(&hook.sb.path("project/src/a.py"), edited)?;
   let bundle = std::fs::read_to_string(format!(
-    "{REPO}/plugins/ts-quality/hooks/dist/post-tool-use.js"
+    "{REPO}/plugins/python-quality/hooks/dist/post-tool-use.js"
   ))
   .map_err(|err| err.to_string())?;
   write(
     &hook
       .dir(Phase::Post)
-      .join("ts-quality@toolu__ts-quality.js"),
+      .join("python-quality@toolu__python-quality.js"),
     &bundle,
   )?;
   hook.sh(
@@ -79,7 +80,7 @@ fn project(edited: &str) -> Res<Hook> {
 }
 
 fn payload(hook: &Hook) -> String {
-  let file = hook.sb.text("project/src/a.ts");
+  let file = hook.sb.text("project/src/a.py");
   json!({
     "hook_event_name": "PostToolUse", "session_id": "s1", "cwd": hook.sb.text("project"),
     "tool_name": "Edit",
@@ -166,14 +167,14 @@ fn regex_free_timestamps(text: &str) -> String {
 }
 
 #[test]
-fn the_ts_quality_bundle_judges_an_edit_the_same_through_the_bridge() {
+fn the_python_quality_bundle_judges_an_edit_the_same_through_the_bridge() {
   for (edited, violates) in [(source(12), true), (source(3), false)] {
-    let ts = project(&edited).unwrap();
+    let bun = project(&edited).unwrap();
     let rust = project(&edited).unwrap();
-    let ts_result = typescript(&ts).unwrap();
+    let bun_result = typescript(&bun).unwrap();
     let rust_result = rust.run(Phase::Post, &payload(&rust), &[], &[]).result;
-    let (ts_seen, rust_seen) = (observed(&ts, &ts_result), observed(&rust, &rust_result));
-    assert_eq!(rust_seen, ts_seen);
+    let (bun_seen, rust_seen) = (observed(&bun, &bun_result), observed(&rust, &rust_result));
+    assert_eq!(rust_seen, bun_seen);
     assert_eq!(
       rust_seen.0.contains("exceeds 10-line limit"),
       violates,

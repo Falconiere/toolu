@@ -6,7 +6,7 @@
 use serde_json::Value;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
-use toolu_state::edit_records::{EditRecord, EditRecords, normalize_edit_records};
+use toolu_state::edit_records::{EditOperation, EditRecord, EditRecords, normalize_edit_records};
 
 use super::event::{EditFields, Payload};
 use super::fold::{Folded, WalkState};
@@ -43,6 +43,33 @@ fn refusal(phase: Phase, reason: &str) -> ModuleResult {
   })
 }
 
+/// The path a calling dispatcher already split out, from the `TOOLU_EDIT_*` it
+/// exported, when [`DispatchOptions::split_by_caller`](super::DispatchOptions) is set.
+fn caller_split(session: &Session<'_>) -> Option<EditFields> {
+  if !session.options.split_by_caller {
+    return None;
+  }
+  let env = session.options.env;
+  let name = env.get("TOOLU_EDIT_OPERATION")?;
+  let operation = [
+    EditOperation::Add,
+    EditOperation::Update,
+    EditOperation::Delete,
+    EditOperation::Write,
+    EditOperation::Move,
+  ]
+  .into_iter()
+  .find(|operation| operation.name() == name)?;
+  Some(EditFields {
+    operation,
+    from: env.get("TOOLU_EDIT_FROM").unwrap_or_default().to_owned(),
+    moved_to: env
+      .get("TOOLU_EDIT_MOVED_TO")
+      .unwrap_or_default()
+      .to_owned(),
+  })
+}
+
 /// One hook call's input, after its trailing newlines were stripped.
 pub(crate) fn dispatch_input(
   text: &str,
@@ -55,6 +82,15 @@ pub(crate) fn dispatch_input(
     Err(Unreadable::NotJson) => None,
   };
   let tool_name = read_field(doc.as_ref(), &["tool_name"]);
+  if let Some(edit) = caller_split(session) {
+    let payload = Payload {
+      text: text.to_owned(),
+      doc,
+      tool_name,
+      edit: Some(edit),
+    };
+    return walk(&payload, session, trace);
+  }
   let value = doc.as_ref().map_or(Value::Null, plain);
   let malformed = || match session.phase {
     Phase::Pre => reply(MALFORMED_PATCH_DENY.to_owned()),

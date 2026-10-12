@@ -21,7 +21,8 @@ use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_protocol::text::Text;
-use toolu_runtime::registry::rule::RuleContext;
+use toolu_runtime::registry::RegistryEvent;
+use toolu_runtime::registry::rule::{Rule, RuleContext};
 
 /// A built-in with a fixed answer.
 struct Fixed(&'static str, Result<Decision, String>);
@@ -246,5 +247,77 @@ fn a_built_ins_warnings_print_as_it_runs_before_later_lines() {
       .count(),
     1,
     "only the registry line"
+  );
+}
+
+#[test]
+fn a_path_its_caller_split_out_keeps_the_callers_operation() {
+  let mut hook = Hook::new(Host::Claude).unwrap();
+  let body =
+    r#"printf '{"systemMessage":"%s|%s"}\n' "$TOOLU_EDIT_OPERATION" "$TOOLU_EDIT_MOVED_TO""#;
+  hook.sh(Phase::Post, "x@t__a.sh", body).unwrap();
+  let edit =
+    r#"{"tool_name":"Edit","tool_input":{"file_path":"a.ts","toolu_edit_operation":"delete"}}"#;
+  let seen = |hook: &Hook| {
+    let out = hook.run(Phase::Post, edit, &[], &[]).result.stdout;
+    let doc: serde_json::Value = serde_json::from_str(&out).unwrap();
+    doc["systemMessage"].as_str().unwrap_or_default().to_owned()
+  };
+  let pair = |key: &str, value: &str| (key.to_owned(), value.to_owned());
+  hook.extra = vec![pair("TOOLU_EDIT_OPERATION", "delete")];
+  assert_eq!(
+    seen(&hook),
+    "update|",
+    "without the option the Edit is split again"
+  );
+  hook.split_by_caller = true;
+  assert_eq!(seen(&hook), "delete|");
+  hook.extra = vec![
+    pair("TOOLU_EDIT_OPERATION", "update"),
+    pair("TOOLU_EDIT_MOVED_TO", "b.ts"),
+  ];
+  assert_eq!(seen(&hook), "update|b.ts");
+  hook.extra = vec![pair("TOOLU_EDIT_OPERATION", "rename")];
+  assert_eq!(seen(&hook), "update|", "an unknown operation is no split");
+  hook.extra = Vec::new();
+  assert_eq!(seen(&hook), "update|");
+}
+
+/// A rule that could not write its state, as the quality rules report it.
+struct Warns;
+
+impl Rule for Warns {
+  fn spec(&self) -> &'static str {
+    "w@t"
+  }
+  fn name(&self) -> &'static str {
+    "warns"
+  }
+  fn event(&self) -> RegistryEvent {
+    RegistryEvent::ToolPost
+  }
+  fn run(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Decision {
+    Decision::Allow
+  }
+  fn run_warning(
+    &self,
+    _event: &NormalizedEvent,
+    _ctx: &RuleContext<'_>,
+    warnings: &mut Vec<String>,
+  ) -> Decision {
+    warnings.push("w: state not written".to_owned());
+    Decision::Allow
+  }
+}
+
+#[test]
+fn a_rules_warnings_reach_the_hooks_stderr() {
+  let hook = Hook::new(Host::Claude).unwrap();
+  modules::manifest(&hook, Phase::Post, "w@t", "warns", "*").unwrap();
+  let edit = r#"{"tool_name":"Edit","tool_input":{"file_path":"/p/a.ts"}}"#;
+  let out = hook.run(Phase::Post, edit, &[], &[&Warns]).result;
+  assert_eq!(
+    (out.stdout.as_str(), out.stderr.as_str()),
+    ("", "w: state not written\n")
   );
 }

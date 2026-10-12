@@ -13,7 +13,7 @@ use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::registry::rule::RuleContext;
 
-use super::{Given, Phase, RULES, cwd_error, hook_main, lib_dir, line, tool_hook};
+use super::{Given, Phase, RULES, caller_cwd, cwd_error, hook_main, lib_dir, line, tool_hook};
 
 /// A built-in gate with a bug.
 struct Panics;
@@ -80,7 +80,8 @@ fn the_lib_dir_comes_from_the_plugin_root() {
       .collect::<Vec<_>>(),
     [
       ("ast-grep@toolu", "search-nudge"),
-      ("ast-grep@toolu", "byte-savings")
+      ("ast-grep@toolu", "byte-savings"),
+      ("ts-quality@toolu", "ts-quality")
     ]
   );
 }
@@ -121,6 +122,7 @@ fn a_panicking_gate_blocks_before_and_after_a_tool() {
     rules: RULES,
     selected_specs: None,
     continue_post_blocks: false,
+    split_by_caller: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   };
   let payload = || Ok(r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#.to_owned());
@@ -158,4 +160,16 @@ fn a_working_directory_the_os_cannot_give_blocks_before_and_after_a_tool() {
       "toolu PostToolUse hook failed: the working directory could not be read: entity not found"
     )
   );
+}
+
+#[test]
+fn only_an_existing_absolute_payload_cwd_is_the_callers() {
+  let dir = tempfile::tempdir().unwrap();
+  let payload = |cwd: &str| Ok(serde_json::json!({ "cwd": cwd }).to_string());
+  let real = dir.path().display().to_string();
+  assert_eq!(caller_cwd(&payload(&real)), Some(dir.path().to_path_buf()));
+  assert_eq!(caller_cwd(&payload("relative")), None);
+  assert_eq!(caller_cwd(&payload(&format!("{real}/missing"))), None);
+  assert_eq!(caller_cwd(&Ok("not json".to_owned())), None);
+  assert_eq!(caller_cwd(&Err(std::io::Error::other("unread"))), None);
 }

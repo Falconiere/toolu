@@ -18,20 +18,28 @@ const SESSION_START: readonly Publisher[] = [
   { plugin: "toolu-review", published: "toolu-review/write-state.sh" },
 ];
 
-const REGISTRY: readonly Publisher[] = [
-  { plugin: "ast-grep", published: "pre-tools.d/ast-grep@toolu__search-nudge.json" },
+type Registered = { plugin: string; published: readonly string[] };
+
+const REGISTRY: readonly Registered[] = [
+  { plugin: "ast-grep", published: ["pre-tools.d/ast-grep@toolu__search-nudge.json"] },
   {
     plugin: "python-quality",
-    published: "post-tools.d/python-quality@toolu__python-quality.js",
+    published: ["post-tools.d/python-quality@toolu__python-quality.js"],
   },
-  { plugin: "rust-quality", published: "post-tools.d/rust-quality@toolu__rust-quality.js" },
-  { plugin: "ts-quality", published: "post-tools.d/ts-quality@toolu__ts-quality.js" },
+  { plugin: "rust-quality", published: ["post-tools.d/rust-quality@toolu__rust-quality.js"] },
+  {
+    plugin: "ts-quality",
+    published: [
+      "post-tools.d/ts-quality@toolu__ts-quality.json",
+      "post-tools.d/ts-quality@toolu__ts-quality.sh",
+    ],
+  },
 ];
 
 /** Run one plugin hook the way Codex does: HOME isolated, CODEX_HOME per plugin, no Claude root. */
 async function codexHook(
   sb: Sandbox,
-  item: Publisher,
+  item: { plugin: string },
   script: string,
 ): Promise<{ exitCode: number; codexHome: string }> {
   const codexHome = join(sb.root, `codex-${item.plugin}`);
@@ -81,10 +89,12 @@ test.concurrent("Codex registry publishers use the shared CODEX_HOME registry", 
     REGISTRY.map(async (item) => {
       const { exitCode, codexHome } = await codexHook(sb, item, "register.sh");
       expect({ plugin: item.plugin, exitCode }).toEqual({ plugin: item.plugin, exitCode: 0 });
-      expect(
-        statSync(join(codexHome, "toolu", item.published), { throwIfNoEntry: false })?.isFile(),
-      ).toBe(true);
-      expect(exists(join(sb.home, ".claude/toolu", item.published))).toBe(false);
+      for (const published of item.published) {
+        expect(
+          statSync(join(codexHome, "toolu", published), { throwIfNoEntry: false })?.isFile(),
+        ).toBe(true);
+        expect(exists(join(sb.home, ".claude/toolu", published))).toBe(false);
+      }
     }),
   );
 });

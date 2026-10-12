@@ -12,6 +12,8 @@ import type { BootstrapResult } from "../result.ts";
 import { REPO_ROOT, catalogPlugin, copiedPlugin, tempRoot } from "./fixtures.ts";
 
 const OLD_MODULE = "toolu/post-tools.d/ts-quality@toolu__ts-quality.js";
+const OLD_PYTHON = "toolu/post-tools.d/python-quality@toolu__python-quality.js";
+const MANIFEST = "toolu/post-tools.d/ts-quality@toolu__ts-quality.json";
 const UNRELATED = "toolu/pre-tools.d/custom@local__extra.js";
 
 /** A data root left by an earlier session: marker, unrelated module, old-version module. */
@@ -21,6 +23,7 @@ function staleDataRoot(root: string): string {
     ["toolu/.session-start-ready", ""],
     [UNRELATED, "export default {};\n"],
     [OLD_MODULE, "// an older ts-quality\n"],
+    [OLD_PYTHON, "// an older python-quality\n"],
   ];
   for (const [path, body] of seeds) {
     mkdirSync(join(data, path, ".."), { recursive: true });
@@ -71,13 +74,13 @@ test.concurrent("a missing helper source is NotReady", async () => {
 
 test.concurrent("a missing declared entry bundle is NotReady before the plugin runs", async () => {
   using root = tempRoot("toolu-ready-entry-");
-  const tsQuality = copiedPlugin(root.path, "ts-quality");
-  rmSync(join(tsQuality.pluginDir, "hooks/dist/check-toolu.js"));
-  const result = await boot(root.path, [catalogPlugin("toolu"), tsQuality]);
-  expect(reasonOf(result)).toBe("ts-quality: check-toolu: missing startup bundle");
+  const pythonQuality = copiedPlugin(root.path, "python-quality");
+  rmSync(join(pythonQuality.pluginDir, "hooks/dist/check-toolu.js"));
+  const result = await boot(root.path, [catalogPlugin("toolu"), pythonQuality]);
+  expect(reasonOf(result)).toBe("python-quality: check-toolu: missing startup bundle");
   // Its register entry never ran: the old module is still the old one.
-  expect(readFileSync(join(root.path, "data", OLD_MODULE), "utf8")).toBe(
-    "// an older ts-quality\n",
+  expect(readFileSync(join(root.path, "data", OLD_PYTHON), "utf8")).toBe(
+    "// an older python-quality\n",
   );
 });
 
@@ -85,12 +88,8 @@ test.concurrent("the same stale data root with a healthy selection is ready from
   using root = tempRoot("toolu-ready-healthy-");
   const result = await boot(root.path, [catalogPlugin("toolu"), catalogPlugin("ts-quality")]);
   if (result.status !== "ready") throw new Error(result.reason);
-  const module = join(root.path, "data", OLD_MODULE);
-  expect(
-    readFileSync(module).equals(
-      readFileSync(join(REPO_ROOT, "plugins/ts-quality/hooks/dist/post-tool-use.js")),
-    ),
-  ).toBe(true);
-  expect(result.artifacts).toEqual([module]);
+  // The native register replaced the old Bun module with its manifest.
+  expect(existsSync(join(root.path, "data", OLD_MODULE))).toBe(false);
+  expect(result.artifacts).toEqual([join(root.path, "data", MANIFEST)]);
   expect(readFileSync(join(root.path, "data", UNRELATED), "utf8")).toBe("export default {};\n");
 });

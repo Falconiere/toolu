@@ -45,22 +45,103 @@ impl QualityRule for Rule {
   }
 }
 
+struct Inline;
+
+impl QualityRule for Inline {
+  fn language(&self) -> &'static str {
+    "ts"
+  }
+  fn extensions(&self) -> &[&str] {
+    &["ts"]
+  }
+  fn source(&self) -> &'static str {
+    "inline-quality"
+  }
+  fn reason(&self) -> &'static str {
+    "inline failed"
+  }
+  fn project_enabled(&self, _ctx: &RuleContext<'_>) -> bool {
+    true
+  }
+  fn skip_linked_worktrees(&self) -> bool {
+    false
+  }
+  fn ast_rule_dirs(&self) -> Vec<PathBuf> {
+    Vec::new()
+  }
+  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
+    "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: x\nrule:\n  pattern: 'throw \"$S\"'"
+      .to_owned()
+  }
+  fn check(
+    &self,
+    _file: &EditedFile,
+    _ctx: &RuleContext<'_>,
+    scan: &AstGrepScan,
+  ) -> QualityFindings {
+    let errors = match scan {
+      AstGrepScan::Ok { hits, .. } => hits
+        .iter()
+        .map(|hit| format!("{} {}", hit.rule_id, hit.excerpt))
+        .collect(),
+      other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => vec![format!("{other:?}")],
+    };
+    QualityFindings {
+      errors,
+      advisories: Vec::new(),
+    }
+  }
+}
+
+/// A Claude Code context rooted at `dir`.
+fn context<'a>(
+  dir: &'a std::path::Path,
+  env: &'a Env,
+  raw: &'a Map<String, serde_json::Value>,
+) -> RuleContext<'a> {
+  RuleContext {
+    host: Host::Claude,
+    env,
+    config_root: dir,
+    project_root: dir,
+    cwd: Some(dir),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
+
+#[test]
+fn inline_rules_join_the_one_scan() {
+  let temp = tempfile::tempdir().unwrap();
+  std::fs::write(temp.path().join("a.ts"), "throw \"boom\";\n").unwrap();
+  let env = Env::process();
+  let raw = Map::new();
+  let ctx = context(temp.path(), &env, &raw);
+  let records = [EditRecord {
+    path: "a.ts".to_owned(),
+    operation: EditOperation::Write,
+    moved_to: None,
+    from: None,
+  }];
+  let outcome = run_quality(&records, &ctx, &[&Inline, &Rule]);
+  let [toolu_protocol::decision::Decision::Advisory { message }] = outcome.decisions.as_slice()
+  else {
+    panic!("one advisory expected: {:?}", outcome.decisions);
+  };
+  assert_eq!(
+    message.as_str(),
+    "QUALITY VIOLATION — fix before proceeding:\nthrow-string a.ts:1:throw \"boom\";\n"
+  );
+}
+
 #[test]
 fn quality_run_last_record_wins_and_foreign_paths_are_ignored() {
   let temp = tempfile::tempdir().unwrap();
   std::fs::write(temp.path().join("a.fx"), "x\n").unwrap();
   let env = Env::process();
   let raw = Map::new();
-  let ctx = RuleContext {
-    host: Host::Claude,
-    env: &env,
-    config_root: temp.path(),
-    project_root: temp.path(),
-    cwd: Some(temp.path()),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(temp.path(), &env, &raw);
   let records = [
     EditRecord {
       path: "a.fx".to_owned(),

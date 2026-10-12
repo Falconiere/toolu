@@ -233,8 +233,25 @@ fn rule_text(dirs: &[&Path]) -> Result<String, String> {
 
 /// Scan all YAML files in `dirs` over `files` in one process.
 pub fn scan_rule_dirs(files: &[EditedFile], dirs: &[&Path], ctx: &RuleContext<'_>) -> AstGrepScan {
+  scan_rules(files, dirs, &[], ctx)
+}
+
+/// Scan the YAML files in `dirs` and the `inline` rule documents over `files` in one process.
+pub(super) fn scan_rules(
+  files: &[EditedFile],
+  dirs: &[&Path],
+  inline: &[String],
+  ctx: &RuleContext<'_>,
+) -> AstGrepScan {
   match rule_text(dirs) {
-    Ok(rules) => scan_inline(files, &rules, ctx),
+    Ok(rules) => {
+      let all = std::iter::once(rules)
+        .chain(inline.iter().cloned())
+        .filter(|text| !text.is_empty())
+        .collect::<Vec<_>>()
+        .join("\n---\n");
+      scan_inline(files, &all, ctx)
+    }
     Err(error) => failed(ScanStage::AstGrep, 1, &error),
   }
 }

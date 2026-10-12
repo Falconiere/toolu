@@ -1,16 +1,21 @@
 /**
  * Runs one ts-quality golden case (#265) the way a host runs it: a real
- * sandbox repository, the ts-quality module registered into the host's
- * registry, and each tool call dispatched by the committed post-tools bundle
- * behind its hooks.json launcher. Only the registration differs between the
- * bash baseline (the pre-port `register.sh`, from git) and the TypeScript
- * module (`hooks/dist/register.js`), so the module is the one variable.
+ * sandbox repository, ts-quality registered into the host's registry, and each
+ * tool call dispatched by toolu's post-tools hook. The bash baseline (the
+ * pre-port `register.sh`, from git) runs through the Bun post-tools bundle;
+ * the native rule (#426) is registered by the built `toolu` and runs through
+ * either the Bun bundle and its bridge module or the native
+ * `toolu hook post-tools`.
  */
 import { spawnSync } from "node:child_process";
 import { rmSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { isJsonObject } from "@toolu/core/config";
-import { launchedArgv } from "@toolu/conformance/harness/entry-command";
+import {
+  launchedArgv,
+  pluginRoot,
+  requiredBuiltTooluBinary,
+} from "@toolu/conformance/harness/entry-command";
 import { applyCaseSetup } from "@toolu/conformance/harness/json-cases";
 import { qualityCaseEnv } from "@toolu/conformance/harness/quality-cases";
 import {
@@ -20,9 +25,10 @@ import {
   type Fixture,
   type ToolFixture,
 } from "@toolu/conformance/harness/fixtures";
-import { runPostBundle } from "@toolu/conformance/harness/posttool";
+import { projectState } from "@toolu/conformance/harness/posttool";
 import {
   installPlugins,
+  nativeRegisterArgv,
   pretoolEnv,
   registerPlugin,
   type PretoolHost,
@@ -31,13 +37,16 @@ import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox"
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import type { Step, TsCase } from "./cases-types.ts";
 
-export const PLUGIN_ROOT = resolve(import.meta.dir, "../../..");
-export const REPO_ROOT = resolve(PLUGIN_ROOT, "../..");
+export const REPO_ROOT = resolve(import.meta.dir, "../../../..");
+export const PLUGIN_ROOT = join(REPO_ROOT, "plugins", "ts-quality");
 
 /** Which ts-quality module the sandbox registers. */
 export type Registration =
   | { readonly kind: "bash"; readonly register: string }
-  | { readonly kind: "bundle" };
+  | { readonly kind: "native" };
+
+/** Which post-tools hook dispatches: the Bun bundle, or the native `toolu hook post-tools`. */
+export type Leg = "bun" | "native";
 
 export type StepResult = {
   stdout: string;
@@ -82,10 +91,7 @@ export function canonicalGate(text: string): string {
 async function registerTsQuality(sb: Sandbox, host: PretoolHost, reg: Registration) {
   const env = pretoolEnv(sb, host, { CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, PLUGIN_ROOT: undefined });
   if (host === "codex") env.PLUGIN_ROOT = PLUGIN_ROOT;
-  const argv =
-    reg.kind === "bash"
-      ? ["bash", reg.register]
-      : launchedArgv({ plugin: "ts-quality", event: "SessionStart", entry: "register" });
+  const argv = reg.kind === "bash" ? ["bash", reg.register] : nativeRegisterArgv("ts-quality");
   const res = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (res.exitCode !== 0 || res.stdout !== "") {
     throw new Error(`register ts-quality (${reg.kind}): ${String(res.exitCode)} ${res.stderr}`);
@@ -144,16 +150,42 @@ function stepEnv(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step): EnvPatc
   return pretoolEnv(sb, host, deletion ? { ...extra, TOOLU_EDIT_OPERATION: "delete" } : extra);
 }
 
-/** One step dispatched by the post-tools bundle: the raw result, with its duration. */
-export async function dispatchStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step) {
+/** The post-tools hook of `leg`, through the `TOOLU_IMPL` seam. */
+function postToolsArgv(leg: Leg): string[] {
+  const selector =
+    leg === "native"
+      ? {
+          TOOLU_IMPL: "rust:toolu/post-tools",
+          TOOLU_RUST_BIN_DIR: dirname(requiredBuiltTooluBinary()),
+        }
+      : {};
+  const target = { plugin: "toolu", event: "PostToolUse", entry: "post-tools" } as const;
+  return launchedArgv(target, pluginRoot("toolu"), selector);
+}
+
+/** One step dispatched by `leg`'s post-tools hook, with the project state after it. */
+export async function dispatchStep(
+  sb: Sandbox,
+  host: PretoolHost,
+  c: TsCase,
+  step: Step,
+  leg: Leg,
+) {
   for (const [rel, body] of Object.entries(step.write ?? {})) sb.write(rel, body);
   for (const rel of step.remove ?? []) rmSync(sb.path(rel), { force: true });
   const stdin = JSON.stringify(toStdin(host, fixtureFor(sb, host, step), { cwd: sb.project }));
-  return runPostBundle(sb, { cwd: sb.project, env: stepEnv(sb, host, c, step), stdin });
+  const call = { cwd: sb.project, env: stepEnv(sb, host, c, step), stdin };
+  return { ...(await run(postToolsArgv(leg), call)), state: projectState(sb) };
 }
 
-async function runStep(sb: Sandbox, host: PretoolHost, c: TsCase, step: Step): Promise<StepResult> {
-  const res = await dispatchStep(sb, host, c, step);
+async function runStep(
+  sb: Sandbox,
+  host: PretoolHost,
+  c: TsCase,
+  step: Step,
+  leg: Leg,
+): Promise<StepResult> {
+  const res = await dispatchStep(sb, host, c, step, leg);
   const state = Object.fromEntries(
     Object.entries(res.state).map(([k, v]) => [
       normalise(k, sb.root),
@@ -175,16 +207,20 @@ export async function setupCase(sb: Sandbox, host: PretoolHost, c: TsCase, reg: 
   for (const plugin of c.register ?? []) await registerPlugin(sb, host, plugin);
 }
 
-/** Every step's result, in order, for `c` on `host` with the given module registered. */
+/**
+ * Every step's result, in order, for `c` on `host` with the given module
+ * registered and dispatched by `leg`.
+ */
 export async function runCase(
   c: TsCase,
   host: PretoolHost,
   reg: Registration,
+  leg: Leg,
 ): Promise<StepResult[]> {
   using sb = createSandbox({ git: true });
   await setupCase(sb, host, c, reg);
   const results: StepResult[] = [];
-  for (const step of c.steps) results.push(await runStep(sb, host, c, step));
+  for (const step of c.steps) results.push(await runStep(sb, host, c, step, leg));
   return results;
 }
 

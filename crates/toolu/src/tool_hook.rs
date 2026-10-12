@@ -26,7 +26,11 @@ use toolu_runtime::registry::rule::Rule;
 pub use toolu_engine::Phase;
 
 /// The compiled-in rules a manifest may enable.
-pub const RULES: &[&dyn Rule] = &[toolu_ast_grep::SEARCH_NUDGE, toolu_ast_grep::BYTE_SAVINGS];
+pub const RULES: &[&dyn Rule] = &[
+  toolu_ast_grep::SEARCH_NUDGE,
+  toolu_ast_grep::BYTE_SAVINGS,
+  toolu_ts_quality::TS_QUALITY,
+];
 
 /// The payload `crates/cli` read, as the stream the hook main reads it from.
 struct Given(Result<Cursor<Vec<u8>>, Option<std::io::Error>>);
@@ -73,41 +77,57 @@ pub fn tool_hook(
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
 ) -> Outcome {
-  run(phase, payload, plugin_root, false)
+  run(phase, payload, plugin_root, None)
 }
 
-/// Run only the ast-grep manifest rules for a host that dispatches core gates itself.
-pub fn ast_grep_tool_hook(
+/// Run only `spec`'s registry modules, for a host or dispatcher that runs the
+/// core gates itself: ast-grep's on `OpenCode`, ts-quality's from its bridge module.
+/// A path that dispatcher split out of a patch, exported as `TOOLU_EDIT_*`, is
+/// walked as that path, and the payload's `cwd` is the dispatcher's, not this
+/// process's.
+pub fn plugin_tool_hook(
+  spec: &str,
   phase: Phase,
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
 ) -> Outcome {
-  run(phase, payload, plugin_root, true)
+  run(phase, payload, plugin_root, Some(spec))
+}
+
+/// The payload's `cwd`, when it names an existing absolute directory.
+fn caller_cwd(payload: &std::io::Result<String>) -> Option<PathBuf> {
+  let text = payload.as_ref().ok()?;
+  let doc: serde_json::Value = serde_json::from_str(text).ok()?;
+  let cwd = PathBuf::from(doc.get("cwd")?.as_str()?);
+  (cwd.is_absolute() && cwd.is_dir()).then_some(cwd)
 }
 
 fn run(
   phase: Phase,
   payload: std::io::Result<String>,
   plugin_root: Option<&Path>,
-  ast_only: bool,
+  only: Option<&str>,
 ) -> Outcome {
   let env = Env::process();
   let host = detect(&env, None).host;
   let lib = lib_dir(plugin_root, &Roots::new(env.clone(), Some(host)));
-  let cwd = current_dir();
-  let selected = BTreeSet::from(["ast-grep@toolu".to_owned()]);
+  let cwd = only
+    .and_then(|_| caller_cwd(&payload))
+    .map_or_else(current_dir, Ok);
+  let selected: Option<BTreeSet<String>> = only.map(|spec| BTreeSet::from([spec.to_owned()]));
   let options = cwd.as_ref().map_err(cwd_error).map(|cwd| DispatchOptions {
     env: &env,
     cwd,
     lib_dir: &lib,
-    builtins: match (ast_only, phase) {
-      (true, _) => &[],
-      (false, EnginePhase::Pre) => PRE_TOOL,
-      (false, EnginePhase::Post) => POST_TOOL,
+    builtins: match (only, phase) {
+      (Some(_), _) => &[],
+      (None, EnginePhase::Pre) => PRE_TOOL,
+      (None, EnginePhase::Post) => POST_TOOL,
     },
     rules: RULES,
-    selected_specs: ast_only.then_some(&selected),
+    selected_specs: selected.as_ref(),
     continue_post_blocks: false,
+    split_by_caller: only.is_some(),
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   });
   hook_main(phase, payload, host, options.as_ref().map_err(Clone::clone))

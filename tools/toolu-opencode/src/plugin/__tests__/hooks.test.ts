@@ -143,16 +143,16 @@ test("a selected plugin whose startup fails refuses every tool with its plugin a
   const { root } = await project();
   const catalog = await mkdtemp(join(tmpBase, "toolu-oc-hooks-catalog-"));
   await cp(join(REPO_ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-  await rm(join(catalog, "plugins/ts-quality/hooks/dist/post-tool-use.js"));
+  await rm(join(catalog, "plugins/python-quality/hooks/dist/post-tool-use.js"));
   await writeFile(
     join(root, ".opencode/toolu/plugins.json"),
-    JSON.stringify({ version: 1, enabled: ["toolu", "ts-quality"] }),
+    JSON.stringify({ version: 1, enabled: ["toolu", "python-quality"] }),
   );
   const logged: Logged[] = [];
   const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: catalog }));
   const reason = await refusal(hooks, "bash", { command: "touch never.txt" });
-  expect(reason).toStartWith("toolu: not ready: bootstrap: ts-quality/register: ");
-  expect(reason).toContain("ts-quality@toolu__ts-quality.js: bundle unreadable");
+  expect(reason).toStartWith("toolu: not ready: bootstrap: python-quality/register: ");
+  expect(reason).toContain("python-quality@toolu__python-quality.js: bundle unreadable");
   expect(logged).toEqual([
     { level: "error", message: `${reason}; every tool call is denied` },
     { level: "error", message: "toolu: status" },

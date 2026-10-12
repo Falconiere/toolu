@@ -29,6 +29,8 @@ pub(crate) struct Hook {
   pub(crate) selected: Option<BTreeSet<String>>,
   /// `continue_post_blocks` for the next dispatch.
   pub(crate) continue_blocks: bool,
+  /// `split_by_caller` for the next dispatch.
+  pub(crate) split_by_caller: bool,
 }
 
 impl Hook {
@@ -53,6 +55,7 @@ impl Hook {
       timeout: Duration::from_secs(10),
       selected: None,
       continue_blocks: false,
+      split_by_caller: false,
     })
   }
 
@@ -119,6 +122,7 @@ impl Hook {
       rules,
       selected_specs: self.selected.as_ref(),
       continue_post_blocks: self.continue_blocks,
+      split_by_caller: self.split_by_caller,
       module_timeout: self.timeout,
     };
     toolu_engine::dispatch::dispatch(phase, stdin, &options)

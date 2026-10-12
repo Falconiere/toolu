@@ -31,7 +31,19 @@ const MODULES = {
       event: "tool/post",
       matcher: "Read|Grep|Glob|Bash|Shell",
     },
+    "ts-quality@toolu__ts-quality.json": {
+      version: 1,
+      spec: "ts-quality@toolu",
+      name: "ts-quality",
+      event: "tool/post",
+      matcher: "*",
+    },
   },
+};
+
+/** Bridge modules a native register writes beside its manifest for the Bun dispatcher. */
+const BRIDGES: Record<string, string[]> = {
+  "post-tools.d": ["ts-quality@toolu__ts-quality.sh"],
 };
 
 const BUNDLES: Record<string, Record<string, string>> = {
@@ -39,7 +51,6 @@ const BUNDLES: Record<string, Record<string, string>> = {
   "post-tools.d": {
     "python-quality@toolu__python-quality.js": "python-quality/hooks/dist/post-tool-use.js",
     "rust-quality@toolu__rust-quality.js": "rust-quality/hooks/dist/post-tool-use.js",
-    "ts-quality@toolu__ts-quality.js": "ts-quality/hooks/dist/post-tool-use.js",
   },
 };
 
@@ -85,7 +96,11 @@ async function start(root: string): Promise<ReadyResult> {
 function expectCatalogContributions(data: string, result: ReadyResult): void {
   for (const [dir, modules] of Object.entries(MODULES)) {
     expect(readdirSync(join(data, "toolu", dir)).toSorted()).toEqual(
-      [...Object.keys(modules), ...Object.keys(BUNDLES[dir] ?? {})].toSorted(),
+      [
+        ...Object.keys(modules),
+        ...Object.keys(BUNDLES[dir] ?? {}),
+        ...(BRIDGES[dir] ?? []),
+      ].toSorted(),
     );
     for (const [file, expected] of Object.entries(modules)) {
       expect(JSON.parse(readFileSync(join(data, "toolu", dir, file), "utf8"))).toEqual(expected);

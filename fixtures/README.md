@@ -15,7 +15,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Pre-tool modules C | `gates/pre-tool-modules-c.json` | 180 → 180 | `plugins/toolu/hooks/src/__tests__/pre-tool-modules-c-cases.ts` | #402 / #409 |
 | Pre-tool edit/shell corpus | `gates/pretool-corpus.json` | 33 → 33 | `tools/toolu-conformance/src/harness/pretool-corpus.ts` | #402 / #409 |
 | Post-tool corpus | `gates/posttool-corpus.json` | 16 → 16 | `tools/toolu-conformance/src/harness/posttool-corpus.ts` | #402 / #409 |
-| TypeScript quality | `quality/ts.json` | 120 → 120 | `plugins/ts-quality/hooks/src/__tests__/cases.ts` | #426–#429 |
+| TypeScript quality | `quality/ts.json` | 120 → 120 | `tools/toolu-conformance/src/ts-quality/cases.ts` | #426–#429 |
 | Python quality | `quality/python.json` | 96 → 96 | `plugins/python-quality/hooks/src/__tests__/cases.ts` | #426–#429 |
 | Rust quality | `quality/rust.json` | 119 → 119 | `plugins/rust-quality/hooks/src/__tests__/cases.ts` | #426–#429 |
 | Ast-grep nudge | `ast-grep/nudge.json` | 38 → 38 | `plugins/ast-grep/hooks/src/__tests__/cases-nudge.ts` | #426–#429 |
