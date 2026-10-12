@@ -302,3 +302,15 @@ fn full_machine_or_epic_capacity_and_a_pressure_hold_refuse_the_reservation() {
   );
   assert_untouched(&root, &moving);
 }
+
+#[test]
+fn an_agent_lease_is_found_by_token_and_type_together() {
+  let text =
+    r#"{"leases":[{"type":"job","token":"t"},{"type":"agent","token":"t","stage":"running"}]}"#;
+  let mut state = toolu_runtime::json::ordered::Ordered::parse(text).expect("state");
+  let lease = super::agent_mut(&mut state, "t").expect("the agent lease");
+  assert_eq!(
+    crate::resources::leases::text(lease, "stage"),
+    Some("running")
+  );
+}

@@ -47,9 +47,8 @@ fn agent_mut<'a>(state: &'a mut Ordered, token: &str) -> Result<&'a mut Ordered,
     .and_then(|items| {
       items
         .iter_mut()
-        .find(|lease| text(lease, "token") == Some(token))
+        .find(|lease| text(lease, "token") == Some(token) && text(lease, "type") == Some("agent"))
     })
-    .filter(|lease| text(lease, "type") == Some("agent"))
     .ok_or_else(|| "agent resource lease lost".to_owned())
 }
 
