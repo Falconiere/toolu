@@ -121,8 +121,8 @@ fn a_reference_fails_only_once_its_namespace_is_ported() {
 
 #[test]
 fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
-  assert_eq!(problem(&tree(), "check-python", "python-quality"), None);
-  assert!(problem(&ported("python-quality"), "check-python", "python-quality").is_some());
+  assert_eq!(problem(&tree(), "check-rust", "rust-quality"), None);
+  assert!(problem(&ported("rust-quality"), "check-rust", "rust-quality").is_some());
   // epic-orchestrator's namespace is ported, so its old scripts are removed.
   assert!(problem(&tree(), "launch-issue", "epic-orchestrator").is_some());
   // brainstorm owns a namespace with no placeholder verb: already ported.
