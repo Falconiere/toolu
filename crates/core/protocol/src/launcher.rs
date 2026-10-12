@@ -123,13 +123,12 @@ fn abnormal_status(plugin: &str) -> String {
        blocked. See docs/install.md.\" >&2"
     );
   }
-  format!(
-    "if [ \"$s\" -gt 128 ] && [ \"$s\" -le 192 ]; then \
+  "if [ \"$s\" -gt 128 ] && [ \"$s\" -le 192 ]; then \
      printf '%s\\n' \"blocked: toolu plugin: toolu may have terminated on signal \
      $((s - 128)) (status $s), so the action is blocked. See docs/install.md.\" >&2; \
      else printf '%s\\n' \"blocked: toolu plugin: toolu exited with status $s, so the action \
      is blocked. See docs/install.md.\" >&2; fi"
-  )
+    .to_owned()
 }
 
 /// Find a native binary unless toolu's transition rollback selects Bun.
