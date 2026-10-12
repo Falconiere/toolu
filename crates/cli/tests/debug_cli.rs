@@ -83,8 +83,10 @@ fn log_summary_is_bounded_and_reports_the_captured_total() -> Res<()> {
   let path = fixture("big.log");
   let parsed = json(&run("log", Some(&path), true, None)?)?;
   require(
-    parsed["total_lines"].as_u64().unwrap_or(0) > 1000,
-    "missing log total",
+    parsed["total_lines"]
+      .as_u64()
+      .is_some_and(|count| count > 1000),
+    "missing or invalid log total",
   )?;
   require(
     parsed["errors"]
@@ -135,11 +137,15 @@ fn testfail_summary_reads_bun_and_cargo_transcripts() -> Res<()> {
     let parsed = json(&run("testfail", Some(&fixture(file)), true, None)?)?;
     same(&parsed["recognized"], &Value::Bool(true))?;
     require(
-      parsed["failures"].to_string().contains(name),
+      parsed["failures"]
+        .as_array()
+        .is_some_and(|rows| rows.iter().any(|row| row.as_str() == Some(name))),
       "missing failed test",
     )?;
     require(
-      parsed["locations"][0].is_string(),
+      parsed["locations"]
+        .as_array()
+        .is_some_and(|rows| rows.first().is_some_and(Value::is_string)),
       "missing source location",
     )?;
   }
@@ -167,7 +173,7 @@ fn unreadable_file_and_bad_arguments_fail_visibly() -> Res<()> {
 fn low_caps_and_unrecognized_text_stay_bounded() -> Res<()> {
   let log = run_cap("log", &fixture("big.log"), "DEBUG_MAX_LINES", "10")?;
   require(
-    log.stdout.split(|byte| *byte == b'\n').count() <= 11,
+    String::from_utf8_lossy(&log.stdout).lines().count() <= 10,
     "log line cap",
   )?;
   let bytes = run_cap("log", &fixture("big.log"), "DEBUG_MAX_BYTES", "200")?;
@@ -188,7 +194,8 @@ fn low_caps_and_unrecognized_text_stay_bounded() -> Res<()> {
     "1",
   )?;
   require(
-    String::from_utf8_lossy(&tests.stdout).contains("FAILED TESTS (1+):"),
+    String::from_utf8_lossy(&tests.stdout)
+      .starts_with("FAILED TESTS (1+):\n  - add sums two numbers\n  ... (+1 more)"),
     "test cap",
   )?;
   let unknown = run("testfail", None, false, Some("hello\nworld\n"))?;
