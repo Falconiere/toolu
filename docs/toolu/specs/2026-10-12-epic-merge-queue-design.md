@@ -1,6 +1,6 @@
 # Merge queue with mechanical rebase — Design
 
-**Date:** 2026-10-12   **Status:** Draft   **Author:** epic worker (Claude Opus 5.5)   **Topic:** #448: the engine queues, rebases and merges gate-green PRs itself
+**Date:** 2026-10-12   **Status:** Approved   **Author:** epic worker (Claude Opus 5.5)   **Topic:** #448: the engine queues, rebases and merges gate-green PRs itself
 
 ## Problem
 
@@ -63,9 +63,11 @@ The job also runs when the issue left the queue while its auto-merge may be
 armed (`Issue.auto_armed`): then it only disarms → `disarmed`.
 
 **Mechanical rebase (`rebase.rs`).** Runs only when the issue is parked:
-phase `ready` and the last herdr status of its agent is not `working`
-(`Issue.agent_working`, set from `pane_agent_status_changed`). Otherwise the
-outcome is `busy` and no git command runs. Steps, each failure noted:
+phase `ready`, the last herdr status of its agent is not `working`
+(`Issue.agent_working`, refreshed from every herdr agent snapshot and
+`pane_agent_status_changed` event the subscription pushes), and herdr is not
+in an outage (`herdr_failures == 0`). An agent herdr does not list counts as
+parked. Otherwise the outcome is `busy` and no git command runs. Steps, each failure noted:
 
 1. Preconditions in the recorded worktree (`issues/<key>.json` `worktree`):
    current branch equals the PR head ref; the head ref is not the base; local
@@ -137,7 +139,7 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
 
 ## Failure modes and edge cases
 
-- **Worker active** (`working`, or phase not `ready`): `busy`, journal
+- **Worker active** (`working`, phase not `ready`, or herdr in an outage): `busy`, journal
   `rebase-skipped` "worker active"; no git command, the head waits.
 - **Managed job running in the worktree**: lease restored, `busy`.
 - **Dirty tracked files, wrong branch, local commits not on the PR**:
@@ -172,7 +174,9 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
   records; `/api/v1/queue` and `toolu epic queue` print it.
 - **AC-3:** Three scripted PRs A, B, C ready together in one repository (real
   git origin and worktrees, GitHub on the HTTPS fixture) merge in queue order
-  with exactly two engine rebases (B once, C once) and zero `REBASE` prompts.
+  with exactly two engine rebases (B once, C once) and zero `REBASE` prompts;
+  each merged issue moves to stage `cleaning` with its `cleanup` action armed
+  (finish, settle and refill run as today).
 - **AC-4:** A conflicting engine rebase leaves the worktree byte-identical to
   its `refs/epic-wip/<key>` snapshot (HEAD, tracked and untracked files) and
   sends the worker `REBASE` exactly once; the issue leaves the queue.
@@ -190,6 +194,13 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
 - **AC-10:** Given a queued issue whose babysit tick returns `Act`, or whose
   gate says `fix`, the issue leaves the queue for `babysit` and an armed
   auto-merge is disarmed.
+- **AC-12:** Given a head whose checks are pending, the engine arms
+  auto-merge pinned to the gate's head SHA (`expectedHeadOid`) with the
+  repository's method (squash preferred); when the repository refuses
+  auto-merge, the engine merges the head itself at its first `merge` verdict.
+- **AC-13:** While a head is worked, the other queued PRs of its repository
+  are neither gated nor rebased; after an engine rebase `refs/epic-wip/<key>`
+  holds the pre-rebase snapshot and the agent lease is back at `running`.
 - **AC-11:** `toolu epic queue` exists in `docs/cli/`, the CLI-compat and
   Markdown–CLI gates pass, and the worker brief says the engine rebases clean
   branches itself and sends `REBASE` only for conflicts.
@@ -208,6 +219,8 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
 | AC-8 | Scenario of AC-3 and AC-4 | `rebase` records with `by`/`round`; record counts | — | `cargo test -p toolu-epic-orchestrator queue_scenario rebase` |
 | AC-9 | Scenario: C armed, `BaseMoved` | disarm mutation sent before push; new head | — | `cargo test -p toolu-epic-orchestrator queue_scenario` |
 | AC-10 | Babysit tick `Act` on a ready issue; gate `fix` | phase `babysit`; disarm call | tick failure stays queued | `cargo test -p toolu-epic-orchestrator commit_queue github_engine` |
+| AC-12 | Fixture `wait` state; arm mutation refused | arm vars `h` = head, `m` = SQUASH; later `merge` → PUT with `sha` | auto-merge disallowed | `cargo test -p toolu-epic-orchestrator queue_step` |
+| AC-13 | Scenario of AC-3 with a resource root and agent leases | no fixture request for B or C while A is head; snapshot ref = old head tree; lease `running` | lease absent | `cargo test -p toolu-epic-orchestrator queue_scenario rebase` |
 | AC-11 | `toolu epic queue --help`, `docs/cli/` | docs current; gates pass | no registry → empty queue | `cargo xtask gate --only docs-cli --only cli-compat`; `cargo xtask check-markdown-cli` |
 
 ## Documentation impact
