@@ -31,7 +31,9 @@ const LIMITS = {
 };
 
 function run(argv: string[], cwd: string, env: NodeJS.ProcessEnv, log?: string): string {
-  const result = spawnSync(argv[0] ?? "", argv.slice(1), {
+  const command = argv[0];
+  if (!command) throw new Error("run: empty argv");
+  const result = spawnSync(command, argv.slice(1), {
     cwd,
     env,
     encoding: "utf8",
@@ -41,7 +43,7 @@ function run(argv: string[], cwd: string, env: NodeJS.ProcessEnv, log?: string):
   if (log !== undefined) writeFileSync(log, output);
   if (result.error || result.status !== 0) {
     throw new Error(
-      `${argv[0]} exited ${String(result.status)}: ${result.error?.message ?? output.slice(-800)}`,
+      `${command} exited ${String(result.status)}: ${result.error?.message ?? output.slice(-800)}`,
     );
   }
   return output;
@@ -153,12 +155,14 @@ async function codexEdit(
   env: NodeJS.ProcessEnv,
   log: string,
 ): Promise<void> {
+  const command = argv[0];
+  if (!command) throw new Error("codexEdit: empty argv");
   const gate = join(path, ".codex/tmp/quality-gate-status.json");
   const source = join(path, "sample.ts");
   let output = "";
   let failingGate: string | undefined;
   let failingSource: string | undefined;
-  const child = spawn(argv[0] ?? "", argv.slice(1), { cwd: path, env, timeout: 180_000 });
+  const child = spawn(command, argv.slice(1), { cwd: path, env, timeout: 180_000 });
   child.stdin.end();
   child.stdout.on("data", (chunk: Buffer) => {
     output += chunk.toString();
@@ -173,9 +177,9 @@ async function codexEdit(
     failingGate = state;
     failingSource = readFileSync(source, "utf8");
   }, 20);
-  const status = await new Promise<number | null>((resolve, reject) => {
+  const status = await new Promise<number | null>((finish, reject) => {
     child.once("error", reject);
-    child.once("close", resolve);
+    child.once("close", finish);
   }).finally(() => clearInterval(poll));
   writeFileSync(log, output);
   if (status !== 0 || failingGate === undefined || failingSource === undefined) {
