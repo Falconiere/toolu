@@ -233,9 +233,9 @@ fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
   assert_eq!(code, 1, "{stderr}");
   assert_has(
     &stderr,
-    &[
-      &format!("{SKILL}:12: `toolu epic survey --json`: unknown command `survey`"),
-    ],
+    &[&format!(
+      "{SKILL}:12: `toolu epic survey --json`: unknown command `survey`"
+    )],
   );
 }
 
