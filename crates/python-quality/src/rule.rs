@@ -110,6 +110,8 @@ impl QualityRule for PythonQuality {
     Vec::new()
   }
 
+  /// The batch scan is always empty here: no-mocks scans each test file on its
+  /// own (see `no_mocks`), so editing any other Python file spawns no ast-grep.
   fn check(
     &self,
     file: &EditedFile,

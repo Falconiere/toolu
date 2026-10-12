@@ -4,10 +4,11 @@ import { expect, test } from "bun:test";
 import { PY_PROJECT, type PyCase } from "../cases-types.ts";
 import { runCase, type Leg } from "../golden-harness.ts";
 
+// Root ignores the mode bit, so the file is not unreadable in this process.
+const ROOT = process.getuid?.() === 0;
+
 for (const leg of ["native", "bun"] satisfies Leg[]) {
-  test(`an unreadable Python file fails the quality gate [${leg}]`, async () => {
-    // Root ignores the mode bit, so the file is not unreadable in this process.
-    if (process.getuid?.() === 0) return;
+  test.concurrent.skipIf(ROOT)(`an unreadable Python file fails the quality gate [${leg}]`, async () => {
     const caseFile: PyCase = {
       name: "unreadable Python file",
       project: PY_PROJECT,

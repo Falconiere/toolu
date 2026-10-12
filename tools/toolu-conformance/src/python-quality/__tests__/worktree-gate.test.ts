@@ -4,7 +4,7 @@
  * shared Rust runner (#459) gives every quality rule, on both post-tools legs.
  */
 import { expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { OWN_WORKTREE_GATE, PY_CASES } from "../cases.ts";
 import { dispatchStep, setupCase, type Leg } from "../golden-harness.ts";
@@ -18,12 +18,12 @@ for (const leg of ["native", "bun"] satisfies Leg[]) {
     await setupCase(sb, "claude", linked, { kind: "native" });
     for (const step of linked.steps) {
       const res = await dispatchStep(sb, "claude", linked, step, leg);
-      expect(res.stdout).toContain("Forbidden suppression in");
+      expect(res.stdout).toContain(`Forbidden suppression in ${sb.path("wt/bad.py")} — `);
     }
     const gate = JSON.parse(readFileSync(sb.path("wt/.claude/tmp/quality-gate-status.json"), "utf8"));
-    expect(gate).toMatchObject({
-      status: "failing",
-      entries: { [sb.path("wt/bad.py")]: { source: "python-quality-hook" } },
-    });
+    expect(gate.status).toBe("failing");
+    expect(Object.keys(gate.entries)).toEqual([sb.path("wt/bad.py")]);
+    expect(gate.entries[sb.path("wt/bad.py")].source).toBe("python-quality-hook");
+    expect(existsSync(sb.path(".claude/tmp/quality-gate-status.json"))).toBe(false);
   }, 60_000);
 }

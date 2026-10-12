@@ -1,17 +1,27 @@
 //! The size rules: file length in code lines (10-size-file) and the
 //! indent-based function span (50-size-fn), ported from their awk programs.
 
-use toolu_state::detect::lines::count_python_code_lines;
-
 use crate::file::{Ere, PyFile, ere, matches};
 
 static DEF: Ere = Ere::new(|| ere(r"^[ \t]*(async[ \t]+)?def[ \t]"));
 static NAME: Ere = Ere::new(|| ere(r"def[ \t]+[A-Za-z_][A-Za-z0-9_]*"));
 
-/// 10-size-file: non-blank, non-`#` lines over `lang.python.maxFileLines`.
+/// `count_python_code_lines`'s code line: its first byte that is not a space or a
+/// tab exists and is not `#`, so a `\r` alone is code, as awk reads it.
+fn is_code(line: &str) -> bool {
+  line
+    .trim_start_matches([' ', '\t'])
+    .chars()
+    .next()
+    .is_some_and(|first| first != '#')
+}
+
+/// 10-size-file: non-blank, non-`#` lines over `lang.python.maxFileLines`, counted
+/// in the text already read, so the file is never read twice.
 pub(crate) fn file_too_long(f: &PyFile<'_>) -> Option<String> {
   let max = f.limits.file_lines;
-  let count = count_python_code_lines(&f.file.absolute).unwrap_or(0);
+  let code = f.lines.iter().filter(|line| is_code(line)).count();
+  let count = u64::try_from(code).unwrap_or(u64::MAX);
   (count > max).then(|| {
     format!(
       "File exceeds {max}-line limit: {} ({count} code lines, blanks/comments excluded) — split \

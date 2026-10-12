@@ -7,7 +7,6 @@
  * show what the port does right.
  */
 import { expect, test } from "bun:test";
-import { isJsonObject } from "@toolu/core/config";
 import { OWN_WORKTREE_GATE, PY_CASES } from "../cases.ts";
 import type { PyCase } from "../cases-types.ts";
 import { caseKey, runCase, type Leg, type StepResult } from "../golden-harness.ts";
@@ -17,32 +16,6 @@ const golden = readGolden();
 
 /** Each case spawns real git, bash and Bun processes, several times. */
 const CASE_TIMEOUT_MS = 60_000;
-
-/** Every string in `value` as its sorted lines: order dropped, content kept. */
-function linesSorted(value: unknown): unknown {
-  if (typeof value === "string") return value.split("\n").toSorted();
-  if (Array.isArray(value)) return value.map(linesSorted);
-  if (isJsonObject(value)) {
-    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, linesSorted(v)]));
-  }
-  return value;
-}
-
-/** JSON text compared by content with line order dropped; other text by its sorted lines. */
-function unordered(text: string): unknown {
-  try {
-    return linesSorted(JSON.parse(text));
-  } catch {
-    return linesSorted(text);
-  }
-}
-
-/** A step as compared: exact, or with line order dropped for output whose order bash never fixed. */
-function comparable(c: PyCase, step: StepResult) {
-  if (c.unordered !== true) return step;
-  const state = Object.fromEntries(Object.entries(step.state).map(([k, v]) => [k, unordered(v)]));
-  return { ...step, stdout: unordered(step.stdout), state };
-}
 
 const LEGS: readonly Leg[] = ["native", "bun"];
 
@@ -67,9 +40,7 @@ function defineCase(c: PyCase, host: "claude" | "codex", leg: Leg): void {
         expect(last).not.toBe(expected.at(-1)?.stdout);
         return;
       }
-      expect(actual.map((step) => comparable(c, step))).toEqual(
-        expected.map((step) => comparable(c, step)),
-      );
+      expect(actual).toEqual(expected);
     },
     CASE_TIMEOUT_MS,
   );

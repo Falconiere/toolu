@@ -1,4 +1,4 @@
-/** Reader for `fixtures/golden.json`, the bash captures of #266. */
+/** Reader for `fixtures/quality/python-golden.json`, the bash captures of #266. */
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import { GOLDEN_PATH } from "./golden-harness.ts";

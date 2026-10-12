@@ -21,22 +21,30 @@ fn temp_beside(path: &Path) -> PathBuf {
 /// Writes `body` to `path` atomically, creating its directory; `false`, with
 /// no temp file left behind, when any step fails.
 pub fn write_atomic(path: &Path, body: &str) -> bool {
-  let tmp = temp_beside(path);
-  let parent_ready = path
-    .parent()
-    .is_none_or(|dir| std::fs::create_dir_all(dir).is_ok());
-  let created = parent_ready
-    && std::fs::OpenOptions::new()
-      .write(true)
-      .create_new(true)
-      .open(&tmp)
-      .and_then(|mut file| file.write_all(body.as_bytes()))
-      .is_ok();
-  if created && std::fs::rename(&tmp, path).is_ok() {
-    return true;
+  replace_atomic(path, body).is_ok()
+}
+
+/// [`write_atomic`], with the error of the step that failed.
+///
+/// # Errors
+///
+/// Creating the directory, creating or writing the temp file, or renaming it
+/// over `path` failed; the temp file is removed.
+pub fn replace_atomic(path: &Path, body: &str) -> std::io::Result<()> {
+  if let Some(dir) = path.parent() {
+    std::fs::create_dir_all(dir)?;
   }
-  let _gone = std::fs::remove_file(&tmp);
-  false
+  let tmp = temp_beside(path);
+  let written = std::fs::OpenOptions::new()
+    .write(true)
+    .create_new(true)
+    .open(&tmp)
+    .and_then(|mut file| file.write_all(body.as_bytes()))
+    .and_then(|()| std::fs::rename(&tmp, path));
+  if written.is_err() {
+    let _gone = std::fs::remove_file(&tmp);
+  }
+  written
 }
 
 #[cfg(test)]

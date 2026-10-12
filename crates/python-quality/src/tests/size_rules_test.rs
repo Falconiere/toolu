@@ -24,8 +24,9 @@ fn edited(dir: &Path, text: &str) -> EditedFile {
 #[test]
 fn a_file_over_its_code_line_limit_is_reported_and_comments_do_not_count() {
   let dir = tempfile::tempdir().unwrap();
-  let over = edited(dir.path(), "a = 1\n\n# note\nb = 2\nc = 3\nd = 4\n");
-  let found = file_too_long(&PyFile::new(&over, "", TIGHT));
+  let over = edited(dir.path(), "");
+  let text = "a = 1\n\n# note\n\t \n  # indented\nb = 2\nc = 3\nd = 4";
+  let found = file_too_long(&PyFile::new(&over, text, TIGHT));
   assert_eq!(
     found.as_deref(),
     Some(
@@ -33,14 +34,13 @@ fn a_file_over_its_code_line_limit_is_reported_and_comments_do_not_count() {
        submodules. Override via lang.python.maxFileLines."
     )
   );
-  let at = edited(dir.path(), "a = 1\n# c\n\nb = 2\nc = 3\n");
-  assert_eq!(file_too_long(&PyFile::new(&at, "", TIGHT)), None);
-  let gone = EditedFile {
-    path: "gone.py".to_owned(),
-    absolute: dir.path().join("gone.py"),
-    removed: false,
-  };
-  assert_eq!(file_too_long(&PyFile::new(&gone, "", TIGHT)), None);
+  let at = "a = 1\n# c\n\nb = 2\nc = 3\n";
+  assert_eq!(file_too_long(&PyFile::new(&over, at, TIGHT)), None);
+  // awk reads a lone `\r` as content, so CRLF blank lines count.
+  let crlf = "a = 1\r\n\r\nb = 2\r\n";
+  assert!(file_too_long(&PyFile::new(&over, crlf, TIGHT)).is_none());
+  let found = file_too_long(&PyFile::new(&over, &format!("{crlf}\r\n"), TIGHT));
+  assert!(found.is_some_and(|text| text.contains("(4 code lines")));
 }
 
 fn long(text: &str) -> Option<String> {

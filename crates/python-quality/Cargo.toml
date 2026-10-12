@@ -11,13 +11,13 @@ publish.workspace = true
 clap.workspace = true
 regex.workspace = true
 toolu-engine = { path = "../core/engine" }
-toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
 toolu-state = { path = "../core/state" }
 
 [dev-dependencies]
 serde_json.workspace = true
 tempfile.workspace = true
+toolu-protocol = { path = "../core/protocol" }
 
 [lints]
 workspace = true

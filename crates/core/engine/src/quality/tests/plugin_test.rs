@@ -218,3 +218,73 @@ fn codex_without_the_core_is_warned_and_other_hosts_are_silent() {
   let claude = Env::from_pairs([("CLAUDE_PLUGIN_ROOT", "/p")]);
   assert_eq!(check_toolu(&claude).stdout, None);
 }
+
+#[test]
+fn register_removes_only_aged_temp_residue_of_this_plugin() {
+  let dir = tempfile::tempdir().unwrap();
+  let post = dir.path().join("toolu/post-tools.d");
+  std::fs::create_dir_all(&post).unwrap();
+  let hour_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+  let aged = |name: &str| {
+    std::fs::File::create(post.join(name))
+      .unwrap()
+      .set_modified(hour_ago)
+      .unwrap();
+  };
+  aged("ts-quality@toolu__ts-quality.sh.41.1700000000.tmp");
+  aged("ts-quality@toolu__ts-quality.js.tmp.41");
+  aged("rust-quality@toolu__rust-quality.js.42.1700000000.tmp");
+  std::fs::write(post.join("ts-quality@toolu__ts-quality.json.43.1.tmp"), "").unwrap();
+  let outcome = register(&config(dir.path()), Host::Claude);
+  assert_eq!((outcome.exit, outcome.stdout), (Exit::Success, None));
+  let mut left: Vec<String> = std::fs::read_dir(&post)
+    .unwrap()
+    .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+    .collect();
+  left.sort();
+  assert_eq!(
+    left,
+    [
+      "rust-quality@toolu__rust-quality.js.42.1700000000.tmp",
+      "ts-quality@toolu__ts-quality.json",
+      "ts-quality@toolu__ts-quality.json.43.1.tmp",
+      "ts-quality@toolu__ts-quality.sh",
+    ]
+  );
+}
+
+#[test]
+fn register_names_the_write_or_prune_error() {
+  let dir = tempfile::tempdir().unwrap();
+  let post = dir.path().join("toolu/post-tools.d");
+  std::fs::create_dir_all(post.join("ts-quality@toolu__ts-quality.json/inside")).unwrap();
+  let message = register(&config(dir.path()), Host::Claude)
+    .stdout
+    .unwrap_or_default();
+  let target = post.join("ts-quality@toolu__ts-quality.json");
+  assert!(
+    message.contains(&format!(
+      "ts-quality registration failed: {}: ",
+      target.display()
+    )),
+    "{message}"
+  );
+  assert!(message.contains("(os error 21)"), "{message}");
+  std::fs::remove_dir_all(&target).unwrap();
+  let stuck = post.join("ts-quality@toolu__stuck.tmp");
+  std::fs::create_dir(&stuck).unwrap();
+  std::fs::File::open(&stuck)
+    .unwrap()
+    .set_modified(std::time::SystemTime::now() - std::time::Duration::from_secs(3600))
+    .unwrap();
+  let message = register(&config(dir.path()), Host::Claude)
+    .stdout
+    .unwrap_or_default();
+  assert!(
+    message.contains(&format!(
+      "ts-quality registration failed: {}: ",
+      stuck.display()
+    )),
+    "{message}"
+  );
+}
