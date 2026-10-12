@@ -104,7 +104,14 @@ pub(crate) fn arm_merge(world: &mut World, key: &str) {
   let Some(issue) = world.issues.get(key) else {
     return;
   };
-  if issue.pending.is_some() || issue.deferred.is_some() || !crate::queue::is_head(world, key) {
+  // `is_head` implies these stages too; checked here so a merging, merged or
+  // closed issue can never be armed whatever the queue says.
+  let live = matches!(issue.stage.as_str(), "running" | "awaiting_merge");
+  if !live
+    || issue.pending.is_some()
+    || issue.deferred.is_some()
+    || !crate::queue::is_head(world, key)
+  {
     return;
   }
   let token = token(world);

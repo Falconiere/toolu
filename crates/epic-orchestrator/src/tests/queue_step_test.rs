@@ -238,3 +238,14 @@ fn a_github_failure_is_an_error_outcome_with_the_token_redacted() {
   job.repo = "no-slash".to_owned();
   assert_eq!(step(&job)["note"], "bad repository \"no-slash\"");
 }
+
+#[test]
+fn a_moved_head_is_stale_whatever_the_message_casing() {
+  let fixture = served(&PrState::default());
+  let moved = r#"{"message":"HEAD BRANCH WAS MODIFIED. Review and try the merge again."}"#;
+  fixture
+    .route("/repos/o/r/pulls/7/merge", Reply::new(422, moved))
+    .expect("moved");
+  let out = step(&input(&fixture, HEAD));
+  assert_eq!(out["outcome"], "stale", "{out}");
+}

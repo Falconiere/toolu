@@ -145,3 +145,27 @@ fn the_order_survives_a_reload_of_the_records() {
   }
   assert_eq!(keys(&world, "Falconiere/comemory"), before);
 }
+
+#[test]
+fn only_a_running_or_awaiting_merge_head_is_armed() {
+  let mut world = world(&READY);
+  let head = "comemory-252";
+  "awaiting_merge".clone_into(&mut world.issues.get_mut(head).expect("head").stage);
+  crate::logic::arm_merge(&mut world, head);
+  assert!(
+    world.issues[head].pending.is_some(),
+    "an awaiting_merge head is armed"
+  );
+  for stage in ["cleaning", "merged", "closed"] {
+    let mut world = self::world(&READY);
+    stage.clone_into(&mut world.issues.get_mut(head).expect("head").stage);
+    crate::logic::arm_merge(&mut world, head);
+    assert!(world.issues[head].pending.is_none(), "{stage}");
+  }
+  let mut world = self::world(&READY);
+  crate::logic::arm_merge(&mut world, "comemory-256");
+  assert!(
+    world.issues["comemory-256"].pending.is_none(),
+    "not the head"
+  );
+}

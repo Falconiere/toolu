@@ -226,7 +226,11 @@ fn merged(
     "merged"
   } else if done.get("uncertain") == Some(&Value::Bool(true)) {
     "uncertain"
-  } else if status == Some(409) || error.contains("Head branch was modified") {
+  } else if status == Some(409)
+    || error
+      .to_ascii_lowercase()
+      .contains("head branch was modified")
+  {
     "stale"
   } else {
     "refused"
