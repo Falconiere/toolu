@@ -136,11 +136,23 @@ async function measureAll(
 ): Promise<HookResult> {
   const measurer = buildMeasurer(ROOT);
   using sb = await benchSandbox();
+  // The post-tools budget excludes other plugins' quality linters and their
+  // temporary Bun registry bridge. Keep the full fixture for the other rows.
+  using corePost = args.assert && entries.some((entry) => entry.id === "toolu/post-tools")
+    ? await benchSandbox(false)
+    : undefined;
   const started = performance.now();
   const floorSpawn = { argv: ["true"], cwd: sb.project, env: {}, stdin: "" };
   const floor = summarize(await samplesOf(measurer, floorSpawn, "floor (true)", args));
   const rows = await inSequence(entries, (entry) =>
-    measureEntry(measurer, sb, entry, payloads, args, env),
+    measureEntry(
+      measurer,
+      entry.id === "toolu/post-tools" && corePost !== undefined ? corePost : sb,
+      entry,
+      payloads,
+      args,
+      env,
+    ),
   );
   const provenance = {
     date: today(),

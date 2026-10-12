@@ -7,17 +7,32 @@
  * spawns would skew each other's CPU.
  */
 import { expect, test } from "bun:test";
-import { chmodSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
 import { BenchError, HookResult, Payloads, loadJson } from "../lib/hook-data.ts";
 import { buildMeasurer, measureOnce } from "../lib/hook-measurer.ts";
 import { discoverEntries } from "../lib/hook-entries.ts";
+import { benchSandbox } from "../lib/hook-fixture.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../..");
 const BENCH = join(ROOT, "tooling/src/benchmarks/hook-resources.ts");
 const TIMEOUT = 180_000;
+
+test("the core post-tools budget fixture excludes other plugins' registry modules", async () => {
+  using core = await benchSandbox(false);
+  using integrated = await benchSandbox();
+  const registryModule = (root: Sandbox): string =>
+    join(root.configDir("claude", "user"), "toolu/post-tools.d/ts-quality@toolu__ts-quality.js");
+  const installRecord = join(core.configDir("claude", "user"), "plugins/installed_plugins.json");
+  const installed = JSON.parse(readFileSync(installRecord, "utf8")) as {
+    plugins: Record<string, unknown>;
+  };
+  expect(Object.keys(installed.plugins)).toEqual(["toolu@toolu"]);
+  expect(existsSync(registryModule(core))).toBe(false);
+  expect(existsSync(registryModule(integrated))).toBe(true);
+});
 
 function bench(args: string[], env: Record<string, string | undefined> = {}): Promise<RunResult> {
   return run([process.execPath, BENCH, ...args], {

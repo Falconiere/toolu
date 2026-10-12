@@ -42,18 +42,19 @@ fn an_enforcing_event_runs_the_hook_and_passes_its_status_through() {
 #[test]
 fn check_binary_advises_the_installed_path_once_per_session() {
   let sandbox = Sandbox::new().unwrap();
-  let bin = sandbox.install().unwrap();
+  sandbox.install().unwrap();
   let input =
     r#"{"hook_event_name":"SessionStart","source":"startup","session_id":"native-check"}"#;
   let first = sandbox
     .launch("SessionStart", "check-binary", input, &[])
     .unwrap();
   assert_eq!(first.code, 0, "{first:?}");
-  assert!(
-    system_message(&first)
-      .unwrap()
-      .contains(&bin.display().to_string()),
-    "{first:?}"
+  assert_eq!(
+    system_message(&first).unwrap(),
+    format!(
+      "toolu: native binary for this session: '{}'. Use that absolute path for toolu commands.",
+      sandbox.local_bin().display()
+    )
   );
   let again = sandbox
     .launch("SessionStart", "check-binary", input, &[])

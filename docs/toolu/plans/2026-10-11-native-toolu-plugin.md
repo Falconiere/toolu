@@ -104,6 +104,8 @@ The launcher step's `paths` now includes its checked-in generator goldens and Op
 
 Main moved to #512 while #425 was in verification. That port removes `pr-babysit/hooks/dist/check-binary.js`; the rebase keeps its deletion and drops the path from this plan. The CLI dispatcher retains both the new `babysit` and `debug` stdin routes, and its command-tree snapshot includes both namespaces. OpenCode acceptance resolves scripted `toolu` commands from the checkout binary by placing `target/debug` first on `PATH`.
 
+PR CI exposed two platform boundaries. The macOS install-path test now compares the lexical installed path that the shell reports, because `tempfile` uses `/var` while `canonicalize` resolves its `/private/var` symlink. The Linux hook benchmark now measures the unchanged `post-tools` core budget in an explicit toolu-only sandbox, excluding the four unported quality plugins' Bun bridge; the full registry fixture remains the unasserted integration measurement, and the live-host smoke proves quality behavior. The three other newly ported hook entries have initial Linux budgets derived from the committed CI measurement, without changing existing limits.
+
 ## Plan review
 
 **Status:** Approved

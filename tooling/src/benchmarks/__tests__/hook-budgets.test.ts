@@ -6,7 +6,7 @@ import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { Budgets, loadJson } from "../lib/hook-data.ts";
+import { Budgets, HookResult, loadJson } from "../lib/hook-data.ts";
 import { MIB } from "../lib/hook-report.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../..");
@@ -40,6 +40,23 @@ function rule(start: number, measured: number, tighten: boolean): number {
 
 const proto = loadJson(join(ROOT, "benchmarks/results/hook-prototype-2026-10-05.json"), Prototype);
 const budgets = loadJson(join(ROOT, "benchmarks/hook-budgets.json"), Budgets);
+const native = loadJson(
+  join(ROOT, "benchmarks/results/hook-resources-native-linux-x64-ci-2026-10-12.json"),
+  HookResult,
+);
+
+test("newly ported hook budgets follow the measured Linux CI run", () => {
+  expect(native.provenance).toMatchObject({ platform: "linux", runner: "github-actions" });
+  for (const id of ["toolu/agent-tier", "toolu/check-binary", "toolu/mcp-tools"]) {
+    const measured = native.entries.find((entry) => entry.entry === id);
+    expect(measured, id).toBeDefined();
+    if (measured === undefined) continue;
+    expect(budgets.entries[id], id).toEqual({
+      maxRssMiB: Math.ceil((measured.maxRssBytes.p50 / MIB) * 1.5),
+      cpuMs: Math.ceil((measured.cpuUs.p50 / 1000) * 1.25),
+    });
+  }
+});
 
 test("every prototype hook budget is the rule applied to the prototype's p50", () => {
   for (const id of Object.keys(START)) expect(budgets.entries[id], id).toBeDefined();

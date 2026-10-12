@@ -2,6 +2,18 @@
   "version": 1,
   "percentile": 50,
   "entries": {
+    "toolu/agent-tier": {
+      "maxRssMiB": 8,
+      "cpuMs": 4
+    },
+    "toolu/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 3
+    },
+    "toolu/mcp-tools": {
+      "maxRssMiB": 7,
+      "cpuMs": 2
+    },
     "toolu/post-tools": {
       "maxRssMiB": 6,
       "cpuMs": 10
