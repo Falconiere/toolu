@@ -113,11 +113,17 @@ fn stack_summary_finds_app_frames_in_both_real_traces() -> Res<()> {
     let parsed = json(&run("stack", Some(&fixture(file)), true, None)?)?;
     same(&parsed["recognized"], &Value::Bool(true))?;
     require(
-      parsed["noise_frames"].as_u64().unwrap_or(0) > 0,
+      parsed["noise_frames"]
+        .as_u64()
+        .is_some_and(|count| count > 0),
       "no collapsed frames",
     )?;
     require(
-      parsed["app_frames"].to_string().contains(needle),
+      parsed["app_frames"].as_array().is_some_and(|rows| {
+        rows
+          .iter()
+          .any(|row| row.as_str().is_some_and(|frame| frame.contains(needle)))
+      }),
       "missing app frame",
     )?;
   }
