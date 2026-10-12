@@ -1,6 +1,6 @@
 use super::commit_effect;
 use crate::logic::ensure_issue;
-use crate::model::{Action, World, fresh};
+use crate::model::{Action, Seen, Step, World, fresh};
 use crate::watch::{Kind, Watch};
 
 #[test]
@@ -70,7 +70,11 @@ fn an_applied_merge_requests_related_checks_without_moving_the_clock() {
 fn hold_deferred_and_cleanup_become_judgments() {
   let mut world = World::new(0);
   arm(&mut world, Action::Launch, false);
-  let _steps = commit_effect(&mut world, "a", "hold");
+  let _steps = commit_effect(
+    &mut world,
+    "a",
+    r#"{"outcome":"hold","with":"b","score":0.9,"source":"jev"}"#,
+  );
   assert!(
     world
       .attention
@@ -163,4 +167,57 @@ fn arm(world: &mut World, action: Action, recovered: bool) {
   pending.phase = 1;
   issue.pending = Some(pending);
   issue.stage = "running".to_owned();
+}
+
+#[test]
+fn a_refused_cleanup_leaves_cleanup_incomplete_with_its_reason() {
+  let mut world = World::new(0);
+  arm(&mut world, Action::Cleanup, false);
+  let doc = r#"{"outcome":"cleanup-incomplete","note":"owned workload still runs"}"#;
+  let steps = commit_effect(&mut world, "a", doc);
+  let issue = &world.issues["a"];
+  assert_eq!(issue.stage, "cleanup-incomplete");
+  assert!(issue.pending.is_none());
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, Step::Issue { key } if key == "a"))
+  );
+  assert_eq!(world.attention[0].kind, "cleanup-incomplete");
+  assert_eq!(world.attention[0].note, "owned workload still runs");
+}
+
+#[test]
+fn a_finished_cleanup_journals_its_settlement_and_notes_the_closed_item() {
+  let mut world = World::new(0);
+  arm(&mut world, Action::Cleanup, false);
+  crate::logic::push_attention(&mut world, "cleanup-incomplete", "a", "owned workload");
+  let doc = r#"{"outcome":"applied","settle":{"issue":"closed"},"tracker_closed":true}"#;
+  let steps = commit_effect(&mut world, "a", doc);
+  assert!(steps.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "settle" && row.note == r#"{"issue":"closed"}"#)));
+  let issue = &world.issues["a"];
+  assert_eq!(issue.tracker_seen, Seen::Closed);
+  assert_eq!(issue.pending.as_ref().map(|pending| pending.phase), Some(2));
+  assert_eq!(world.attention.len(), 0);
+  arm(&mut world, Action::Cleanup, false);
+  let doc = r#"{"outcome":"applied","settle_error":"JIRA_PAT is not set"}"#;
+  let _steps = commit_effect(&mut world, "a", doc);
+  assert_eq!(world.attention[0].kind, "failed");
+  assert_eq!(world.attention[0].note, "settle: JIRA_PAT is not set");
+}
+
+#[test]
+fn a_deferred_merge_raises_merge_ready() {
+  let mut world = World::new(0);
+  arm(&mut world, Action::Merge, false);
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.repo = "o/r".into();
+  issue.pr = Some(7);
+  let _steps = commit_effect(&mut world, "a", "deferred");
+  assert_eq!(world.issues["a"].deferred.as_deref(), Some("merge"));
+  assert_eq!(world.attention[0].kind, "merge-ready");
+  assert_eq!(
+    world.attention[0].note,
+    "run toolu epic gate --pr o/r#7 --merge"
+  );
 }

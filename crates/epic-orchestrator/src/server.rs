@@ -1,20 +1,20 @@
 //! Apply state-machine steps: journal, snapshots, and scripts.
 
+use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
 use serde_json::json;
 
-use crate::checkpoint::snapshot;
 use crate::commit::commit_effect;
-use crate::disk::{write_stage, write_status, write_value};
-use crate::effects::invoke;
+use crate::disk::{write_status, write_value};
+use crate::executor::{Call, Executor, Submitted};
 use crate::journal::{self, Record};
 use crate::logic::{apply_report, arm_ready, commit_journal, next};
 use crate::model::{Action, Report, Step, World};
 use crate::paths::Paths;
-use crate::schedule::{note_herdr, on_tick, set_pause};
-use crate::snapshot::{issue_path, load, status_path};
+use crate::schedule::{herdr_ok, note_herdr, on_tick, set_pause};
+use crate::snapshot::{load, status_path};
 use crate::watch;
 use toolu_engine::babysit::BabysitTick;
 use toolu_github::Client;
@@ -52,8 +52,14 @@ pub(crate) struct Engine {
   /// Issues and deadlines.
   pub world: World,
   pub(crate) paths: Paths,
-  scripts: Option<PathBuf>,
+  pub(crate) scripts: Option<PathBuf>,
   fault: Fault,
+  /// Where effects run.
+  pub(crate) executor: Executor,
+  /// The call on the effect thread.
+  pub(crate) running: Option<Call>,
+  /// Calls taken from the outbox while the effect thread was busy.
+  pub(crate) parked: VecDeque<Step>,
   /// `GIT_TRACE2_EVENT` for checkpoint git, when a test is counting commands.
   pub git_trace: Option<PathBuf>,
   /// `herdr --session` name. Empty uses the default server.
@@ -65,6 +71,10 @@ pub(crate) struct Engine {
   pub(crate) github: Option<Client>,
   /// The attention notifier thread, when notifications are on.
   pub(crate) notifier: Option<crate::notify::Notifier>,
+  /// The environment effects run with.
+  pub(crate) env: toolu_runtime::env::Env,
+  /// How in-process effects reach GitHub and the trackers.
+  pub(crate) reach: crate::reach::Reach,
 }
 
 impl Engine {
@@ -80,12 +90,17 @@ impl Engine {
       paths,
       scripts,
       fault,
+      executor: Executor::Inline,
+      running: None,
+      parked: VecDeque::new(),
       git_trace: None,
       herdr_session: None,
       now,
       resubscribe: false,
       github: None,
       notifier: None,
+      env: toolu_runtime::env::Env::process(),
+      reach: crate::reach::Reach::live(),
     })
   }
 
@@ -103,7 +118,14 @@ impl Engine {
   /// A step cannot be written, or the machine does not settle.
   pub(crate) fn pump(&mut self) -> Result<Stop, String> {
     for _ in 0..512 {
-      let Some(step) = next(&mut self.world) else {
+      // A draining engine starts no parked call; it exits when the running
+      // effect returns.
+      let parked = if self.running.is_none() && !self.world.draining {
+        self.parked.pop_front()
+      } else {
+        None
+      };
+      let Some(step) = parked.or_else(|| next(&mut self.world)) else {
         return Ok(Stop::Idle);
       };
       if self.apply(step)? == Applied::Fault {
@@ -210,7 +232,7 @@ impl Engine {
   fn apply(&mut self, step: Step) -> Result<Applied, String> {
     match step {
       Step::Journal(record) => self.apply_journal(record),
-      Step::Call { key, action, .. } => self.apply_call(&key, action),
+      Step::Call { key, action, token } => self.apply_call(Call { key, action, token }),
       Step::Status { key } => {
         self.write_status(&key)?;
         Ok(Applied::Continue)
@@ -224,7 +246,8 @@ impl Engine {
         text,
         fallback,
       } => {
-        if let (Err(err), Some(kind)) = (self.send_prompt(&key, &text), fallback) {
+        let sent = crate::attention_ops::send_prompt(self, &key, &text);
+        if let (Err(err), Some(kind)) = (sent, fallback) {
           let note = format!("worker prompt not delivered: {err}");
           crate::logic::push_attention(&mut self.world, &kind, &key, &note);
         }
@@ -253,75 +276,60 @@ impl Engine {
     Ok(Applied::Continue)
   }
 
-  /// Send `text` to `key`'s worker through herdr, or the `prompt` script,
-  /// which reads `{"key","text"}`.
-  ///
-  /// # Errors
-  /// herdr fails, or the script fails or is deferred.
-  pub(crate) fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
-    if self.scripts.is_none() && crate::source::prompt_enabled() {
-      let target = self
-        .world
-        .issues
-        .get(key)
-        .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
-      let env = toolu_runtime::env::Env::process();
-      return crate::source::prompt(&self.paths, &env, &target, text);
+  fn apply_call(&mut self, call: Call) -> Result<Applied, String> {
+    if self.running.is_some() {
+      // A call taken from the outbox while the thread is busy waits its turn.
+      self.parked.push_back(Step::Call {
+        key: call.key,
+        action: call.action,
+        token: call.token,
+      });
+      return Ok(Applied::Continue);
     }
-    let body = json!({"key": key, "text": text}).to_string();
-    match invoke(self.scripts.as_deref(), Action::Prompt, &body).as_str() {
-      outcome @ ("failed" | "deferred") => Err(format!("prompt {outcome}")),
-      _ => Ok(()),
+    if self.fault == Fault::BeforeMerge
+      && call.action == Action::Merge
+      && !recovered(&self.world, &call.key)
+    {
+      return Ok(Applied::Fault);
+    }
+    let job = crate::effects_run::job(self, &call);
+    match self.executor.submit(call.clone(), job) {
+      Submitted::Done(outcome) => self.finish_call(&call, &outcome),
+      Submitted::Sent => {
+        self.running = Some(call);
+        self.world.effect_busy = true;
+        Ok(Applied::Continue)
+      }
     }
   }
 
-  fn apply_call(&mut self, key: &str, action: Action) -> Result<Applied, String> {
-    if self.fault == Fault::BeforeMerge && action == Action::Merge && !recovered(&self.world, key) {
+  /// Commit what the effect thread returned, then run what it unblocked.
+  ///
+  /// # Errors
+  /// A step cannot be written.
+  pub(crate) fn effect_done(&mut self, call: &Call, outcome: &str) -> Result<Stop, String> {
+    self.running = None;
+    self.world.effect_busy = false;
+    if self.finish_call(call, outcome)? == Applied::Fault {
+      return Ok(Stop::Fault);
+    }
+    self.pump()
+  }
+
+  fn finish_call(&mut self, call: &Call, outcome: &str) -> Result<Applied, String> {
+    let merge = call.action == Action::Merge && !recovered(&self.world, &call.key);
+    if self.fault == Fault::AfterMerge && merge {
       return Ok(Applied::Fault);
     }
-    let outcome = self.perform(key, action);
-    if self.fault == Fault::AfterMerge && action == Action::Merge && !recovered(&self.world, key) {
-      return Ok(Applied::Fault);
-    }
-    for step in commit_effect(&mut self.world, key, &outcome) {
+    for step in commit_effect(&mut self.world, &call.key, outcome) {
       if self.apply(step)? == Applied::Fault {
         return Ok(Applied::Fault);
       }
     }
-    if self.fault == Fault::BeforeMergeRecord
-      && action == Action::Merge
-      && !recovered(&self.world, key)
-    {
+    if self.fault == Fault::BeforeMergeRecord && merge {
       return Ok(Applied::Fault);
     }
     Ok(Applied::Continue)
-  }
-
-  fn perform(&self, key: &str, action: Action) -> String {
-    if action == Action::Checkpoint {
-      return self.checkpoint(key);
-    }
-    let body = json!({
-      "key": key,
-      "action": action.name(),
-      "epic": self.world.issues.get(key).map(|issue| issue.epic.clone()).unwrap_or_default(),
-    });
-    invoke(self.scripts.as_deref(), action, &body.to_string())
-  }
-
-  fn checkpoint(&self, key: &str) -> String {
-    let Some(tree) = self
-      .world
-      .issues
-      .get(key)
-      .and_then(|issue| issue.worktree.clone())
-    else {
-      return "applied".to_owned();
-    };
-    match snapshot(&tree, key, self.git_trace.as_deref()) {
-      Ok(()) => "applied".to_owned(),
-      Err(_) => "failed".to_owned(),
-    }
   }
 
   fn write_status(&self, key: &str) -> Result<(), String> {
@@ -338,13 +346,11 @@ impl Engine {
   }
 
   fn write_issue(&self, key: &str) -> Result<(), String> {
-    let Some(issue) = self.world.issues.get(key) else {
-      return Ok(());
-    };
-    if issue.stage.is_empty() {
-      return Ok(());
-    }
-    write_stage(&issue_path(&issue.state_dir, key), &issue.stage)
+    self
+      .world
+      .issues
+      .get(key)
+      .map_or(Ok(()), |issue| crate::disk::write_issue(issue, self.now))
   }
 }
 
@@ -362,22 +368,15 @@ fn stamp(world: &World, mut record: Record) -> Record {
       .issues
       .get(&record.key)
       .map(|issue| issue.epic.clone())
+      .or_else(|| {
+        world
+          .epics
+          .contains_key(&record.key)
+          .then(|| record.key.clone())
+      })
       .unwrap_or_default();
   }
   record
-}
-
-fn herdr_ok(session: Option<&str>) -> bool {
-  let mut argv = vec!["herdr".to_owned()];
-  if let Some(session) = session {
-    argv.push("--session".to_owned());
-    argv.push(session.to_owned());
-  }
-  argv.push("agent".to_owned());
-  argv.push("list".to_owned());
-  let mut spec = toolu_runtime::process::Spec::new(argv);
-  spec.timeout = std::time::Duration::from_secs(10);
-  toolu_runtime::process::run(&spec).is_ok_and(|output| output.exit_code == 0)
 }
 
 #[cfg(test)]

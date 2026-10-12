@@ -1,0 +1,1173 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "args claude bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1"
+      ]
+    },
+    {
+      "name": "args claude bypass=true model=null effort=high",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "name": "args claude bypass=true model=opus effort=null",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "opus",
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus"
+      ]
+    },
+    {
+      "name": "args claude bypass=true model=opus effort=high",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "opus",
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "name": "args claude bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1"
+      ]
+    },
+    {
+      "name": "args claude bypass=false model=null effort=high",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "name": "args claude bypass=false model=opus effort=null",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "opus",
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus"
+      ]
+    },
+    {
+      "name": "args claude bypass=false model=opus effort=high",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "opus",
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "auto",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--model",
+        "opus",
+        "--effort",
+        "high"
+      ]
+    },
+    {
+      "name": "resume claude session=false",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "comemory-255",
+        "--continue"
+      ]
+    },
+    {
+      "name": "resume claude session=true",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+      },
+      "argv": [
+        "--resume",
+        "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "--dangerously-skip-permissions",
+        "-n",
+        "comemory-255"
+      ]
+    },
+    {
+      "name": "safe claude plan mode",
+      "kind": "args",
+      "host": "claude",
+      "opts": {
+        "key": "k",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "plan",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--permission-mode",
+        "plan",
+        "-n",
+        "k"
+      ]
+    },
+    {
+      "name": "skill claude delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`/delivery-flow:delivery-flow`"
+    },
+    {
+      "name": "skill claude pr-babysit:babysit",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`/pr-babysit:babysit`"
+    },
+    {
+      "name": "skill claude toolu:debug",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`/toolu:debug`"
+    },
+    {
+      "name": "args codex bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
+    },
+    {
+      "name": "args codex bypass=true model=null effort=high",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "name": "args codex bypass=true model=gpt-6-sol effort=null",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-6-sol",
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--model",
+        "gpt-6-sol"
+      ]
+    },
+    {
+      "name": "args codex bypass=true model=gpt-6-sol effort=high",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox",
+        "--model",
+        "gpt-6-sol",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "name": "args codex bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write"
+      ]
+    },
+    {
+      "name": "args codex bypass=false model=null effort=high",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "name": "args codex bypass=false model=gpt-6-sol effort=null",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-6-sol",
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "--model",
+        "gpt-6-sol"
+      ]
+    },
+    {
+      "name": "args codex bypass=false model=gpt-6-sol effort=high",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-6-sol",
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write",
+        "--model",
+        "gpt-6-sol",
+        "-c",
+        "model_reasoning_effort=high"
+      ]
+    },
+    {
+      "name": "resume codex session=false",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "resume",
+        "--last",
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
+    },
+    {
+      "name": "resume codex session=true",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+      },
+      "argv": [
+        "resume",
+        "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
+    },
+    {
+      "name": "safe codex plan mode",
+      "kind": "args",
+      "host": "codex",
+      "opts": {
+        "key": "k",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "plan",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--no-daemon",
+        "--ask-for-approval",
+        "on-request",
+        "--sandbox",
+        "workspace-write"
+      ]
+    },
+    {
+      "name": "skill codex delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`$delivery-flow:delivery-flow`"
+    },
+    {
+      "name": "skill codex pr-babysit:babysit",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`$pr-babysit:babysit`"
+    },
+    {
+      "name": "skill codex toolu:debug",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`$toolu:debug`"
+    },
+    {
+      "name": "args cursor bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps"
+      ]
+    },
+    {
+      "name": "args cursor bypass=true model=null effort=high",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps"
+      ]
+    },
+    {
+      "name": "args cursor bypass=true model=gpt-5.6-sol-high effort=null",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-5.6-sol-high",
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "name": "args cursor bypass=true model=gpt-5.6-sol-high effort=high",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-5.6-sol-high",
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "name": "args cursor bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--trust"
+      ]
+    },
+    {
+      "name": "args cursor bypass=false model=null effort=high",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--trust"
+      ]
+    },
+    {
+      "name": "args cursor bypass=false model=gpt-5.6-sol-high effort=null",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-5.6-sol-high",
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--trust",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "name": "args cursor bypass=false model=gpt-5.6-sol-high effort=high",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "gpt-5.6-sol-high",
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--trust",
+        "--model",
+        "gpt-5.6-sol-high"
+      ]
+    },
+    {
+      "name": "resume cursor session=false",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--trust",
+        "--approve-mcps",
+        "--continue"
+      ]
+    },
+    {
+      "name": "resume cursor session=true",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": "0f8fad5b-d9cb-469f-a165-70867728950e"
+      },
+      "argv": [
+        "--resume",
+        "0f8fad5b-d9cb-469f-a165-70867728950e",
+        "--yolo",
+        "--trust",
+        "--approve-mcps"
+      ]
+    },
+    {
+      "name": "safe cursor plan mode",
+      "kind": "args",
+      "host": "cursor",
+      "opts": {
+        "key": "k",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "plan",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--trust"
+      ]
+    },
+    {
+      "name": "skill cursor delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "cursor",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "the `delivery-flow:delivery-flow` skill"
+    },
+    {
+      "name": "skill cursor pr-babysit:babysit",
+      "kind": "skill",
+      "host": "cursor",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "the `pr-babysit:babysit` skill"
+    },
+    {
+      "name": "skill cursor toolu:debug",
+      "kind": "skill",
+      "host": "cursor",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "the `toolu:debug` skill"
+    },
+    {
+      "name": "args opencode bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--auto"
+      ]
+    },
+    {
+      "name": "args opencode bypass=true model=null effort=high",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--auto"
+      ]
+    },
+    {
+      "name": "args opencode bypass=true model=probe/scripted effort=null",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "probe/scripted",
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--auto",
+        "--model",
+        "probe/scripted"
+      ]
+    },
+    {
+      "name": "args opencode bypass=true model=probe/scripted effort=high",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "probe/scripted",
+        "effort": "high",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--auto",
+        "--model",
+        "probe/scripted"
+      ]
+    },
+    {
+      "name": "args opencode bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": []
+    },
+    {
+      "name": "args opencode bypass=false model=null effort=high",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": []
+    },
+    {
+      "name": "args opencode bypass=false model=probe/scripted effort=null",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "probe/scripted",
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--model",
+        "probe/scripted"
+      ]
+    },
+    {
+      "name": "args opencode bypass=false model=probe/scripted effort=high",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "probe/scripted",
+        "effort": "high",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--model",
+        "probe/scripted"
+      ]
+    },
+    {
+      "name": "resume opencode session=false",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "--auto",
+        "--continue"
+      ]
+    },
+    {
+      "name": "resume opencode session=true",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "comemory-255",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "default",
+        "resume": true,
+        "sessionId": "ses_abc123"
+      },
+      "argv": [
+        "--session",
+        "ses_abc123",
+        "--auto"
+      ]
+    },
+    {
+      "name": "safe opencode plan mode",
+      "kind": "args",
+      "host": "opencode",
+      "opts": {
+        "key": "k",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "plan",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": []
+    },
+    {
+      "name": "skill opencode delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "opencode",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`skill({ name: \"delivery-flow-delivery-flow\" })`"
+    },
+    {
+      "name": "skill opencode pr-babysit:babysit",
+      "kind": "skill",
+      "host": "opencode",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`skill({ name: \"pr-babysit-babysit-73c340c6\" })`"
+    },
+    {
+      "name": "skill opencode toolu:debug",
+      "kind": "skill",
+      "host": "opencode",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`skill({ name: \"toolu-debug\" })`"
+    },
+    {
+      "name": "alias \"claude\"",
+      "kind": "alias",
+      "alias": "claude",
+      "host": "claude"
+    },
+    {
+      "name": "alias \"claude-code\"",
+      "kind": "alias",
+      "alias": "claude-code",
+      "host": "claude"
+    },
+    {
+      "name": "alias \"Claude-Code\"",
+      "kind": "alias",
+      "alias": "Claude-Code",
+      "host": "claude"
+    },
+    {
+      "name": "alias \" Cursor-Agent \"",
+      "kind": "alias",
+      "alias": " Cursor-Agent ",
+      "host": "cursor"
+    },
+    {
+      "name": "alias \"cursor-agent\"",
+      "kind": "alias",
+      "alias": "cursor-agent",
+      "host": "cursor"
+    },
+    {
+      "name": "alias \"cursor\"",
+      "kind": "alias",
+      "alias": "cursor",
+      "host": "cursor"
+    },
+    {
+      "name": "alias \"codex\"",
+      "kind": "alias",
+      "alias": "codex",
+      "host": "codex"
+    },
+    {
+      "name": "alias \"OpenCode\"",
+      "kind": "alias",
+      "alias": "OpenCode",
+      "host": "opencode"
+    },
+    {
+      "name": "alias \"gemini\"",
+      "kind": "alias",
+      "alias": "gemini",
+      "host": null
+    },
+    {
+      "name": "alias \"\"",
+      "kind": "alias",
+      "alias": "",
+      "host": null
+    },
+    {
+      "name": "limit \"You've hit your usage limit\"",
+      "kind": "limit",
+      "text": "You've hit your usage limit",
+      "matches": true
+    },
+    {
+      "name": "limit \"rate limit reached\"",
+      "kind": "limit",
+      "text": "rate limit reached",
+      "matches": true
+    },
+    {
+      "name": "limit \"Rate-limited, try again in 5 minutes\"",
+      "kind": "limit",
+      "text": "Rate-limited, try again in 5 minutes",
+      "matches": true
+    },
+    {
+      "name": "limit \"HTTP 429 Too Many Requests\"",
+      "kind": "limit",
+      "text": "HTTP 429 Too Many Requests",
+      "matches": true
+    },
+    {
+      "name": "limit \"quota exceeded\"",
+      "kind": "limit",
+      "text": "quota exceeded",
+      "matches": true
+    },
+    {
+      "name": "limit \"limit will reset at 5pm\"",
+      "kind": "limit",
+      "text": "limit will reset at 5pm",
+      "matches": true
+    },
+    {
+      "name": "limit \"all tests passed\"",
+      "kind": "limit",
+      "text": "all tests passed",
+      "matches": false
+    },
+    {
+      "name": "limit \"ratelimiter module compiled\"",
+      "kind": "limit",
+      "text": "ratelimiter module compiled",
+      "matches": false
+    },
+    {
+      "name": "limit \"processed 4290 records\"",
+      "kind": "limit",
+      "text": "processed 4290 records",
+      "matches": false
+    },
+    {
+      "name": "opencode version \"opencode 1.14.20\"",
+      "kind": "opencode-version",
+      "output": "opencode 1.14.20",
+      "problem": null
+    },
+    {
+      "name": "opencode version \"1.0.0\"",
+      "kind": "opencode-version",
+      "output": "1.0.0",
+      "problem": null
+    },
+    {
+      "name": "opencode version \"0.9.1\"",
+      "kind": "opencode-version",
+      "output": "0.9.1",
+      "problem": "opencode --version reports \"0.9.1\"; toolu's OpenCode plugin targets opencode-ai 1.x. Put a 1.x opencode first on PATH, or route this issue to another host."
+    },
+    {
+      "name": "opencode version \"2.0.0\"",
+      "kind": "opencode-version",
+      "output": "2.0.0",
+      "problem": "opencode --version reports \"2.0.0\"; toolu's OpenCode plugin targets opencode-ai 1.x. Put a 1.x opencode first on PATH, or route this issue to another host."
+    },
+    {
+      "name": "opencode version \"no version\"",
+      "kind": "opencode-version",
+      "output": "no version",
+      "problem": "opencode --version printed no version; toolu's OpenCode plugin targets opencode-ai 1.x. Put a 1.x opencode first on PATH, or route this issue to another host."
+    },
+    {
+      "name": "default routing table",
+      "kind": "table",
+      "hosts": {
+        "claude": [
+          {
+            "model": "sonnet",
+            "effort": "low"
+          },
+          {
+            "model": "sonnet",
+            "effort": "medium"
+          },
+          {
+            "model": "opus",
+            "effort": "high"
+          },
+          {
+            "model": "opus",
+            "effort": "xhigh"
+          }
+        ],
+        "codex": [
+          {
+            "model": "gpt-6-sol",
+            "effort": "low"
+          },
+          {
+            "model": "gpt-6-sol",
+            "effort": "medium"
+          },
+          {
+            "model": "gpt-6-sol",
+            "effort": "high"
+          },
+          {
+            "model": "gpt-6-sol",
+            "effort": "xhigh"
+          }
+        ],
+        "cursor": [
+          {
+            "model": "composer-2.5"
+          },
+          {
+            "model": "gpt-5.6-sol-high"
+          },
+          {
+            "model": "claude-opus-5-thinking-high"
+          },
+          {
+            "model": "gpt-5.6-sol-xhigh"
+          }
+        ],
+        "opencode": [
+          {},
+          {},
+          {},
+          {}
+        ]
+      }
+    }
+  ]
+}

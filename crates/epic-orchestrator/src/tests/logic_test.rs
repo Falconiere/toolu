@@ -26,6 +26,14 @@ fn sandbox(pair: bool) -> Sandbox {
   std::fs::create_dir_all(&counts).expect("counts");
   std::fs::create_dir_all(&scripts).expect("scripts");
   write_graph(&epic, pair);
+  // Launches run in process now; these cases start from launched workers.
+  for key in if pair { vec!["a", "b"] } else { vec!["a"] } {
+    std::fs::write(
+      epic.join("issues").join(format!("{key}.json")),
+      r#"{"stage":"running"}"#,
+    )
+    .expect("record");
+  }
   write_registry(tmp.path(), &epic);
   write_scripts(&scripts, &counts);
   git_init(&epic);
@@ -58,11 +66,6 @@ fn write_registry(root: &Path, epic: &Path) {
 
 fn write_scripts(scripts: &Path, counts: &Path) {
   let counts = counts.display().to_string();
-  write_exe(
-    scripts,
-    "launch",
-    "#!/bin/sh\necho '{\"outcome\":\"applied\"}'\n",
-  );
   write_exe(
     scripts,
     "merge",
@@ -102,7 +105,22 @@ fn git_init(dir: &Path) {
 }
 
 fn open(sandbox: &Sandbox, fault: Fault) -> Engine {
-  Engine::open(sandbox.paths.clone(), Some(sandbox.scripts.clone()), fault).expect("open")
+  let mut engine =
+    Engine::open(sandbox.paths.clone(), Some(sandbox.scripts.clone()), fault).expect("open");
+  engine.env = toolu_runtime::env::Env::from_pairs([
+    ("GH_TOKEN", "fixture-token"),
+    ("HOME", &sandbox.paths.root.display().to_string()),
+  ]);
+  engine
+}
+
+/// Journal lines named `name`.
+fn journaled(sandbox: &Sandbox, name: &str) -> usize {
+  journal::tail(&sandbox.paths.journal_dir(), SystemTime::now())
+    .expect("journal")
+    .iter()
+    .filter(|record| record.name == name)
+    .count()
 }
 
 fn lines(path: &Path) -> usize {
@@ -186,11 +204,19 @@ fn scripted_epic() {
   let sandbox = sandbox(true);
   let mut engine = open(&sandbox, Fault::None);
   settle(&mut engine);
-  assert_eq!(engine.world.issues.get("a").expect("a").stage, "merged");
-  assert_eq!(engine.world.issues.get("b").expect("b").stage, "merged");
+  // Cleanup runs in process, never through the scripts; these bare records
+  // lack the launch evidence a finish trusts, so it refuses.
+  for key in ["a", "b"] {
+    assert_eq!(engine.world.issues[key].stage, "cleanup-incomplete");
+  }
   assert_eq!(lines(&sandbox.counts.join("merge.count")), 2);
-  assert_eq!(lines(&sandbox.counts.join("cleanup.count")), 2);
+  assert_eq!(lines(&sandbox.counts.join("cleanup.count")), 0);
+  assert_eq!(journaled(&sandbox, "cleanup-intent"), 2);
   assert_no_wait(&sandbox);
+  for item in &mut engine.world.attention {
+    assert_eq!(item.kind, "cleanup-incomplete");
+    item.delivered = true;
+  }
   assert_wait(&mut engine, &sandbox.epic);
 }
 
@@ -210,8 +236,8 @@ fn fault_case(fault: Fault) {
   let mut engine = open(&sandbox, Fault::None);
   settle(&mut engine);
   assert_eq!(lines(&sandbox.counts.join("merge.count")), 1, "{fault:?}");
-  assert_eq!(lines(&sandbox.counts.join("cleanup.count")), 1, "{fault:?}");
-  assert_eq!(engine.world.issues.get("a").expect("a").stage, "merged");
+  assert_eq!(journaled(&sandbox, "cleanup-intent"), 1, "{fault:?}");
+  assert_eq!(engine.world.issues["a"].stage, "cleanup-incomplete");
 }
 
 #[test]
@@ -229,4 +255,42 @@ fn pause_survives() {
   engine.resume(None).expect("resume");
   settle(&mut engine);
   assert_eq!(lines(&sandbox.counts.join("merge.count")), 1);
+}
+
+#[test]
+fn a_reporting_worker_the_engine_did_not_launch_is_adopted_as_running() {
+  let mut world = crate::model::World::new(0);
+  let report = Report {
+    key: "a".to_owned(),
+    epic: "one".to_owned(),
+    state_dir: "/state".to_owned(),
+    phase: "spec".to_owned(),
+    pr: None,
+    note: String::new(),
+  };
+  let steps = super::apply_report(&mut world, &report);
+  assert_eq!(world.issues["a"].stage, "running");
+  let persisted = |steps: &[crate::model::Step]| {
+    steps
+      .iter()
+      .any(|step| matches!(step, crate::model::Step::Issue { key } if key == "a"))
+  };
+  assert!(persisted(&steps));
+  crate::refill::refill(&mut world);
+  assert!(world.issues["a"].pending.is_none(), "no second agent");
+  let again = super::apply_report(&mut world, &report);
+  assert!(!persisted(&again));
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.stage = "uncertain".into();
+  let _steps = super::apply_report(&mut world, &report);
+  assert_eq!(world.issues["a"].stage, "running", "a human relaunched it");
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.stage.clear();
+  issue.pending = Some(crate::model::fresh(
+    crate::model::Action::Launch,
+    "t".into(),
+  ));
+  let in_flight = super::apply_report(&mut world, &report);
+  assert_eq!(world.issues["a"].stage, "", "the launch commits the stage");
+  assert!(!persisted(&in_flight));
 }

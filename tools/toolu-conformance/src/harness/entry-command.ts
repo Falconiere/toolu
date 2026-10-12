@@ -55,9 +55,29 @@ const CLI_ENTRIES: Readonly<Record<string, readonly string[]>> = {
   "toolu/verdict": ["ledger", "verdict"],
 };
 
+/**
+ * Skill CLI entries with no Bun bundle left (#435): always the built `toolu`
+ * (`TOOLU_RUST_BIN_DIR`, else `target/debug`, else `target/release`), whatever
+ * `TOOLU_IMPL` says.
+ */
+const RUST_ONLY_ENTRIES: Readonly<Record<string, readonly string[]>> = {
+  "epic-orchestrator/launch": ["epic", "launch"],
+  "epic-orchestrator/report": ["epic", "report"],
+};
+
 /** Whether `<plugin>/<entry>` is a skill CLI entry rather than a hooks.json entry. */
 export function isCliEntry(id: string): boolean {
-  return Object.hasOwn(CLI_ENTRIES, id);
+  return Object.hasOwn(CLI_ENTRIES, id) || Object.hasOwn(RUST_ONLY_ENTRIES, id);
+}
+
+/** argv for a Rust-only skill CLI entry: the built `toolu` and its verb words. */
+export function rustOnlyArgv(plugin: string, entry: string, env: SelectorEnv = process.env): string[] {
+  const words = RUST_ONLY_ENTRIES[`${plugin}/${entry}`];
+  if (words === undefined) throw new Error(`not a Rust-only entry: ${plugin}/${entry}`);
+  const dir = env.TOOLU_RUST_BIN_DIR;
+  if (dir === "") throw new Error("TOOLU_RUST_BIN_DIR must not be empty");
+  const binary = dir === undefined ? requiredBuiltTooluBinary() : join(resolve(dir), "toolu");
+  return [binary, ...words];
 }
 
 function selectedEntries(value: string | undefined): Set<string> | "all" | null {
@@ -185,6 +205,9 @@ export function resolveEntryCommand(
   env: SelectorEnv = process.env,
 ): ResolvedCommand {
   const { plugin, entry, bundle, defaultArgv } = command;
+  if (Object.hasOwn(RUST_ONLY_ENTRIES, `${plugin}/${entry}`)) {
+    return { argv: rustOnlyArgv(plugin, entry, env), implementation: "rust" };
+  }
   if (entryImplementation(plugin, entry, env) === "bun") {
     return { argv: defaultArgv ?? [process.execPath, bundle], implementation: "bun" };
   }

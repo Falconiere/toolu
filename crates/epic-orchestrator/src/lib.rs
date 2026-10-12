@@ -11,34 +11,95 @@ mod attention_ops;
 pub mod babysit;
 mod checkpoint;
 mod client;
+mod close;
 mod commit;
 mod control;
+mod coupling;
 mod dashboard;
 mod disk;
 mod dispatch;
+mod dispatch_ops;
+mod effect_thread;
 mod effects;
+mod effects_cleanup;
+mod effects_epic;
+mod effects_launch;
+mod effects_run;
+mod epic_close;
+mod epics;
+mod executor;
+mod finish;
+#[cfg(test)]
+#[path = "tests/finish_rig_test.rs"]
+mod finish_rig;
+mod gate;
+#[cfg(test)]
+#[path = "tests/gate_rig_test.rs"]
+mod gate_rig;
 mod github_budget;
 mod github_engine;
 mod github_probe;
+mod graph;
 mod herdr;
+#[cfg(test)]
+#[path = "tests/herdr_agents_test.rs"]
+mod herdr_agents;
 mod herdr_argv;
+mod herdr_calls;
+#[cfg(test)]
+#[path = "tests/herdr_fixture_test.rs"]
+mod herdr_fixture;
+#[cfg(test)]
+#[path = "tests/herdr_state_test.rs"]
+mod herdr_state;
+mod holds;
+pub mod hook;
+mod hosts;
 mod http;
 mod http_access;
 mod http_request;
 mod http_response;
 mod http_stream;
+mod jira_cli;
 mod job;
 mod journal;
+mod launch;
+#[cfg(test)]
+#[path = "tests/launch_rig_test.rs"]
+mod launch_rig;
+#[cfg(test)]
+#[path = "tests/leak_test.rs"]
+mod leak;
 mod limit;
 mod lock;
 mod logic;
+mod merge_bridge;
 mod model;
 mod note;
 mod notify;
 mod notify_notice;
 mod paths;
+mod probe_evidence;
 mod query;
+mod reach;
 mod recover;
+mod refill;
+#[cfg(test)]
+#[path = "tests/refill_rig_test.rs"]
+mod refill_rig;
+mod refresh;
+mod refs;
+mod retry;
+mod route;
+#[cfg(test)]
+#[path = "tests/scenario_test.rs"]
+mod scenario;
+#[cfg(test)]
+#[path = "tests/scenario_flow_test.rs"]
+mod scenario_flow;
+#[cfg(test)]
+#[path = "tests/scenario_rig_test.rs"]
+mod scenario_rig;
 mod schedule;
 mod server;
 mod server_snapshot;
@@ -46,6 +107,7 @@ mod snapshot;
 mod socket;
 mod socket_deadline;
 mod socket_herdr;
+mod socket_loop;
 mod source;
 mod source_apply;
 #[cfg(test)]
@@ -57,12 +119,18 @@ mod status_events;
 mod status_resources;
 #[cfg(test)]
 mod status_schema;
+#[cfg(test)]
+#[path = "tests/support_test.rs"]
+mod support;
+mod tracker;
 mod verbs;
+mod verbs_actions;
 mod waiting_jobs;
 mod watch;
+mod workload;
 
 /// Control-socket greeting. A client on another number spools and sends `replace`.
-pub(crate) const PROTOCOL: u64 = 1;
+pub(crate) const PROTOCOL: u64 = 2;
 
 /// Idle wake. Waiters sleep until this or their own deadline.
 pub(crate) const TICK: std::time::Duration = std::time::Duration::from_secs(30);

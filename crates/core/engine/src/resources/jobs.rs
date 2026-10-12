@@ -117,7 +117,7 @@ pub fn run_managed_job(
       let running = LeasePatch {
         group_pid: Some(pid),
         stage: Some("running".to_owned()),
-        heartbeat_at: None,
+        ..LeasePatch::default()
       };
       patch_lease(root, &token, &running)?;
       beating = Some(heartbeat(root, &token, &failure));

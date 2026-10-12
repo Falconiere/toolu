@@ -1,7 +1,7 @@
 //! Machine capacity shared by hosts, epics and both implementations
 //! (`packages/toolu-core/src/resources`, #421): state, policy and lock,
 //! pressure holds, leases, worktree bindings and the managed job a ledger
-//! check runs under. The epic engine (#434) adds agent migration here.
+//! check runs under; agent migration and worktree fences for the epic engine (#435).
 
 /// A worktree's resource binding.
 pub mod binding;
@@ -17,3 +17,5 @@ pub mod pressure;
 pub mod sample;
 /// The resource state and policy.
 pub mod store;
+/// Agent migration and worktree fences.
+pub mod transitions;

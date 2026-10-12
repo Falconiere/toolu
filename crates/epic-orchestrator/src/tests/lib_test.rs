@@ -25,8 +25,6 @@ fn the_epic_orchestrator_crate_is_its_plugin_and_lists_the_planned_verbs() {
   let outcome = run(&matches, &Ctx::default(), &Unported);
   assert_eq!(
     outcome.stdout.as_deref(),
-    Some(
-      "toolu epic is not ported yet (#435, #448). Planned verbs: graph, route, launch, finish, close, release, jira, probe, gate, queue"
-    )
+    Some("toolu epic is not ported yet (#448). Planned verbs: queue")
   );
 }

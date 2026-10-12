@@ -7,6 +7,7 @@ use serde_json::{Map, Value, json};
 use toolu_runtime::atomic::write_atomic;
 use toolu_state::time::iso_seconds;
 
+use crate::model::Issue;
 use crate::note::bounded_note;
 
 /// `path` as JSON, or null when it is absent.
@@ -56,13 +57,21 @@ pub(crate) fn write_status(
   note: &str,
   now: std::time::SystemTime,
 ) -> Result<(), String> {
-  let mut map = object(read_value(path)?);
+  // A corrupt or non-object previous status starts over, as `report.ts` did.
+  let mut map = object(read_value(path).unwrap_or(Value::Null));
   let note = bounded_note(note);
   let stamp = iso_seconds(now);
   let duplicate = recorded(&map, phase, pr, &note);
   map.insert("phase".to_owned(), json!(phase));
-  if let Some(pr) = pr {
-    map.insert("pr".to_owned(), json!(pr));
+  // `pr` is always present, `null` until a report names one, as `report.ts`
+  // wrote it; a report without `--pr` keeps the recorded one.
+  match pr {
+    Some(pr) => {
+      map.insert("pr".to_owned(), json!(pr));
+    }
+    None => {
+      map.entry("pr").or_insert(Value::Null);
+    }
   }
   map.insert("note".to_owned(), json!(note));
   map.insert("updated_at".to_owned(), json!(stamp));
@@ -96,13 +105,90 @@ fn recorded(map: &Map<String, Value>, phase: &str, pr: Option<u64>, note: &str) 
       })
 }
 
-/// Set `stage` on an issue record, keeping every other key.
+/// Write `value` to `path` as pretty JSON with a trailing newline, atomically,
+/// creating the directory.
 ///
 /// # Errors
-/// The file cannot be read or replaced.
-pub(crate) fn write_stage(path: &Path, stage: &str) -> Result<(), String> {
+/// The directory or file cannot be written.
+pub(crate) fn write_pretty<T: serde::Serialize>(path: &Path, value: &T) -> Result<(), String> {
+  if let Some(parent) = path.parent() {
+    std::fs::create_dir_all(parent).map_err(|err| format!("{}: {err}", parent.display()))?;
+  }
+  let mut text = serde_json::to_string_pretty(value).map_err(|err| err.to_string())?;
+  text.push('\n');
+  if write_atomic(path, &text) {
+    Ok(())
+  } else {
+    Err(format!("could not write {}", path.display()))
+  }
+}
+
+/// Write the engine's fields of an issue record: its stage (when known),
+/// its coupling hold, whether a hold was released, and a waiting relaunch.
+///
+/// # Errors
+/// The record cannot be read or written.
+pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), String> {
   let mut map = object(read_value(path)?);
-  map.insert("stage".to_owned(), json!(stage));
+  if !issue.stage.is_empty() {
+    map.insert("stage".to_owned(), json!(issue.stage));
+  }
+  match &issue.hold {
+    Some(hold) => map.insert("hold".to_owned(), hold.clone()),
+    None => map.remove("hold"),
+  };
+  if issue.coupling_released {
+    map.insert("coupling_released".to_owned(), json!(true));
+  } else {
+    map.remove("coupling_released");
+  }
+  match &issue.relaunch {
+    Some(relaunch) => map.insert("relaunch".to_owned(), json!(relaunch)),
+    None => map.remove("relaunch"),
+  };
+  write_value(path, &Value::Object(map))
+}
+
+/// Write `issue`'s engine fields and tracker sighting to its record, unless
+/// it has nothing to record yet.
+///
+/// # Errors
+/// The record cannot be read or written.
+pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(), String> {
+  if issue.stage.is_empty() && issue.hold.is_none() && !issue.coupling_released {
+    return Ok(());
+  }
+  let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
+  write_issue_fields(&path, issue)?;
+  write_tracker_seen(&path, issue.tracker_seen, now)
+}
+
+/// Record what the engine saw of a merged issue's tracker item: when it was
+/// first seen closed, and that its one `reopened` judgment was raised.
+///
+/// # Errors
+/// The record cannot be read or written.
+pub(crate) fn write_tracker_seen(
+  path: &Path,
+  seen: crate::model::Seen,
+  now: std::time::SystemTime,
+) -> Result<(), String> {
+  let mut map = object(read_value(path)?);
+  let changed = match seen {
+    crate::model::Seen::Open => false,
+    crate::model::Seen::Closed => !map.contains_key("tracker_closed_at"),
+    crate::model::Seen::Reopened => map.get("reopened_raised") != Some(&Value::Bool(true)),
+  };
+  if !changed {
+    return Ok(());
+  }
+  if !map.contains_key("tracker_closed_at") {
+    let at = toolu_state::time::iso_millis(now);
+    map.insert("tracker_closed_at".to_owned(), json!(at));
+  }
+  if seen == crate::model::Seen::Reopened {
+    map.insert("reopened_raised".to_owned(), json!(true));
+  }
   write_value(path, &Value::Object(map))
 }
 

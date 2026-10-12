@@ -51,7 +51,7 @@ fn watcher_engine() {
   git(&work, &["commit", "-m", "base"]);
   std::fs::write(work.join("file"), "dirty\n").expect("dirty");
   let trace = tmp.path().join("trace");
-  snapshot(&work.display().to_string(), "a", Some(&trace)).expect("snapshot");
+  assert!(snapshot(&work.display().to_string(), "a", Some(&trace)).changed);
   let got = counts(&trace);
   assert_eq!(
     got,

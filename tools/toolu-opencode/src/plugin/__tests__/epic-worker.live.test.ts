@@ -1,29 +1,22 @@
 /**
- * Live epic worker (#356, AC-3 and AC-9), reported apart from the hermetic
- * suites. `TOOLU_LIVE_OPENCODE=1` runs the pinned host as an epic worker in a
- * linked worktree of an isolated fixture repo, with the launcher's own flags,
- * start prompt, brief and `info/exclude`, and toolu loaded from the global
- * config. The worker reports, loads delivery, delegates through `task`, edits
- * and is killed mid-turn. A checkpoint keeps the edit; `--session` with the id
- * `session list` captured resumes it through commit, review, push and a ready report the watcher sees.
+ * Live epic worker (#356, AC-3 and AC-9; #435 AC-23), reported apart from the
+ * hermetic suites. `TOOLU_LIVE_OPENCODE=1` runs the pinned host as an epic
+ * worker in a linked worktree of an isolated fixture repo, with the flags,
+ * start prompt, brief and `info/exclude` lines `toolu epic launch --dry-run
+ * --json` prints, and toolu loaded from the global config. The worker reports
+ * through `toolu epic report`, loads delivery, delegates through `task`, edits
+ * and is killed mid-turn. The edit survives; `--session` with the id `session
+ * list` captured (the resume `toolu epic launch` plans) resumes it through
+ * commit, review, push and a ready report. Both `toolu` commands resolve
+ * through the conformance seam's Rust-only entries.
  */
 import { expect, test } from "bun:test";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { rustOnlyArgv } from "@toolu/conformance/harness/entry-command";
 import { childEnv, run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
-import { readJson as readEpicJson } from "../../../../../plugins/epic-orchestrator/scripts/common.ts";
-import {
-  agentArgs,
-  opencodeVersionProblem,
-} from "../../../../../plugins/epic-orchestrator/scripts/hosts.ts";
-import {
-  START_PROMPT,
-  findIssue,
-  renderBrief,
-} from "../../../../../plugins/epic-orchestrator/scripts/launch-issue.ts";
-import { excludeOpencodeState } from "../../../../../plugins/epic-orchestrator/scripts/opencode-worker.ts";
 import {
   RUN_TIMEOUT_MS,
   runHost,
@@ -44,20 +37,34 @@ import {
 } from "../../../../../tooling/src/opencode-host/session.ts";
 import { writeStateCommand } from "./core-fixtures.ts";
 
-type Graph = Parameters<typeof findIssue>[0];
-
-const SCRIPTS = join(ROOT, "plugins/epic-orchestrator/scripts");
-const GRAPH = ((): Graph => {
-  const graph = readEpicJson<Graph | null>(join(SCRIPTS, "fixtures/epic248-graph.json"), null);
-  if (graph === null) throw new Error("missing the epic248 graph fixture");
-  return graph;
+const GRAPH_FILE = join(ROOT, "fixtures/epic/epic248-graph.json");
+const GraphIssue = z.looseObject({ ref: z.string(), key: z.string(), branch: z.string() });
+const GRAPH = z.looseObject({ issues: z.array(GraphIssue) }).parse(
+  JSON.parse(readFileSync(GRAPH_FILE, "utf8")),
+);
+const ISSUE = ((): z.infer<typeof GraphIssue> => {
+  const found = GRAPH.issues.find((issue) => issue.ref === "Falconiere/comemory#255");
+  if (found === undefined) throw new Error("the epic248 graph has no comemory#255");
+  return found;
 })();
-const ISSUE = findIssue(GRAPH, "Falconiere/comemory#255");
 const KEY = "comemory-255";
 const MODEL = "probe/scripted";
-const REPORT = `bun "${join(SCRIPTS, "report.ts")}"`;
 const TOOLU_RUNTIME = /\.opencode\/(toolu\/state|tmp)\//;
-const ARGS = { key: KEY, model: MODEL, bypass: true, permissionMode: "default" };
+/** The launch plan `toolu epic launch --dry-run --json` prints. */
+const Plan = z.looseObject({
+  agent_args: z.array(z.string()),
+  brief: z.string(),
+  brief_path: z.string(),
+  prompt: z.string(),
+  exclude: z.array(z.string()),
+  resume: z.boolean(),
+});
+
+/** One argv word as a POSIX shell word. */
+const shellWord = (word: string) => `'${word.replaceAll("'", "'\\''")}'`;
+
+/** `toolu epic report` as a shell command, through the seam. */
+const report = () => rustOnlyArgv("epic-orchestrator", "report").map(shellWord).join(" ");
 
 const Event = z.looseObject({ sessionID: z.string().optional() });
 const Status = z.looseObject({ phase: z.string(), pr: z.number().nullable() });
@@ -81,7 +88,7 @@ function workerScripts(project: string): Scripts {
   return {
     "epic.worker": [
       { tool: "read", args: { filePath: p.brief } },
-      bash(`${REPORT} "${p.status}" execution`),
+      bash(`${report()} execution --status-file "${p.status}"`),
       { tool: "skill", args: { name: "delivery-flow-delivery-flow" } },
       {
         tool: "task",
@@ -99,7 +106,7 @@ function workerScripts(project: string): Scripts {
       bash('git add CHANGE.md && git commit -q -m "feat: bounded change"'),
       bash(writeStateCommand(0)),
       bash(`git push -q -u origin ${ISSUE.branch}`),
-      bash(`${REPORT} "${p.status}" ready --pr 1`),
+      bash(`${report()} ready --pr 1 --status-file "${p.status}"`),
     ],
   };
 }
@@ -109,8 +116,28 @@ function write(path: string, text: string): void {
   writeFileSync(path, text);
 }
 
+/**
+ * `toolu epic launch --dry-run --json` for the issue on OpenCode: the plan a
+ * real launch would follow, with nothing written.
+ */
+async function plan(session: ProbeSession): Promise<z.infer<typeof Plan>> {
+  const p = layout(session.sb.root);
+  const graph = join(session.sb.root, "graph.json");
+  const doc = { ...JSON.parse(readFileSync(GRAPH_FILE, "utf8")), state_dir: p.state };
+  write(graph, JSON.stringify(doc));
+  const [bin = "toolu", ...verb] = rustOnlyArgv("epic-orchestrator", "launch");
+  const flags = ["--graph", graph, "--issue", ISSUE.ref, "--dry-run", "--kind", "opencode"];
+  const planned = await run([bin, "--json", ...verb, ...flags, "--model", MODEL], {
+    cwd: session.sb.root,
+    env: session.env,
+    stdin: "",
+  });
+  expect(planned.exitCode, planned.stderr).toBe(0);
+  return Plan.parse(JSON.parse(planned.stdout));
+}
+
 /** A repo with a bare remote, a committed selection, the worker's linked worktree and epic state. */
-async function epicFixture(session: ProbeSession): Promise<void> {
+async function epicFixture(session: ProbeSession): Promise<z.infer<typeof Plan>> {
   const { sb } = session;
   const p = layout(sb.root);
   const hostConfig: unknown = JSON.parse(sb.read("opencode.json"));
@@ -130,15 +157,25 @@ async function epicFixture(session: ProbeSession): Promise<void> {
   sb.git("remote", "add", "origin", p.remote);
   sb.git("push", "-q", "origin", "main");
   sb.git("worktree", "add", "-q", "-b", ISSUE.branch, p.worktree, "main");
-  await excludeOpencodeState(p.worktree);
-  const record = { ref: ISSUE.ref, kind: "opencode", stage: "running", agent: KEY };
+  const fresh = await plan(session);
+  expect(fresh.resume).toBe(false);
+  expect(fresh.agent_args).toContain("--auto");
+  expect(fresh.brief_path).toBe(p.brief);
+  write(p.brief, fresh.brief);
+  const common = sb.git("-C", p.worktree, "rev-parse", "--path-format=absolute", "--git-common-dir");
+  const exclude = join(common.trim(), "info", "exclude");
+  write(exclude, `${existsSync(exclude) ? readFileSync(exclude, "utf8") : ""}${fresh.exclude.join("\n")}\n`);
+  return fresh;
+}
+
+/** Record the running worker with its captured session, as a launch does. */
+function recordWorker(session: ProbeSession, sessionId: string): void {
+  const p = layout(session.sb.root);
+  const record = { ref: ISSUE.ref, kind: "opencode", stage: "running", agent: KEY, launches: 1 };
   write(
     join(p.state, "issues", `${KEY}.json`),
-    JSON.stringify({ ...record, worktree: p.worktree, branch: ISSUE.branch }),
+    JSON.stringify({ ...record, worktree: p.worktree, branch: ISSUE.branch, session_id: sessionId }),
   );
-  const paths = { worktree: p.worktree, status: p.status, brief: p.brief };
-  write(p.brief, renderBrief(GRAPH, ISSUE, paths, "main", "opencode"));
-  session.env.TOOLU_BUN = process.execPath;
 }
 
 /** Poll for `file` while `proc` runs, up to `deadline`. */
@@ -187,7 +224,7 @@ const sessionIds = (events: Array<z.infer<typeof Event>>) => [
 
 const statusOf = (file: string) => Status.parse(JSON.parse(readFileSync(file, "utf8")));
 
-/** Session ids `session list` attributes to `worktree`: the list launch-issue's session capture reads. */
+/** Session ids `session list` attributes to `worktree`: the list `toolu epic launch` reads to capture the session. */
 async function listedSessions(bin: string, session: ProbeSession, worktree: string) {
   const listed = await run([bin, "session", "list", "--format", "json"], {
     cwd: worktree,
@@ -203,15 +240,10 @@ async function listedSessions(bin: string, session: ProbeSession, worktree: stri
 }
 
 /** The first run: start prompt, delivery, one `task`, an edit, then a kill mid-turn. */
-async function killMidTurn(bin: string, session: ProbeSession) {
+async function killMidTurn(bin: string, session: ProbeSession, fresh: z.infer<typeof Plan>) {
   const p = layout(session.sb.root);
-  const prompt = `${START_PROMPT.replace("{brief}", p.brief)} PROBE:epic.worker`;
-  const killed = await runUntilKilled(
-    bin,
-    session,
-    [...agentArgs("opencode", { ...ARGS, resume: false }), prompt],
-    p.worktree,
-  );
+  const prompt = `${fresh.prompt} PROBE:epic.worker`;
+  const killed = await runUntilKilled(bin, session, [...fresh.agent_args, prompt], p.worktree);
   expect(killed.atKillPoint, killed.stderr.slice(-4000)).toBe(true);
   expect(killed.exitCode).not.toBe(0);
   expect(statusOf(p.status).phase).toBe("execution");
@@ -227,54 +259,33 @@ async function killMidTurn(bin: string, session: ProbeSession) {
   return killed;
 }
 
-/** A real checkpoint keeps the killed worker's edit and none of toolu's runtime state. */
-async function checkpointKeepsEdit(session: ProbeSession): Promise<void> {
+/** The killed worker's edit is still in the worktree, and none of toolu's runtime state shows. */
+function editSurvives(session: ProbeSession): void {
   const p = layout(session.sb.root);
-  const checkpoint = await run(
-    [process.execPath, join(SCRIPTS, "checkpoint.ts"), "--state-dir", p.state, "--key", KEY],
-    { cwd: session.sb.root },
-  );
-  expect(checkpoint.exitCode, checkpoint.stderr).toBe(0);
-  expect(z.array(z.looseObject({})).parse(JSON.parse(checkpoint.stdout))).toMatchObject([
-    { key: KEY, changed: true },
-  ]);
-  const tree = session.sb
-    .git("-C", p.worktree, "ls-tree", "-r", "--name-only", `refs/epic-wip/${KEY}`)
-    .split("\n");
-  expect(tree).toContain("CHANGE.md");
-  expect(tree.filter((path) => TOOLU_RUNTIME.test(path))).toEqual([]);
+  expect(readFileSync(join(p.worktree, "CHANGE.md"), "utf8")).toBe("Bounded.\n");
+  const porcelain = session.sb.git("-C", p.worktree, "status", "--porcelain", "--untracked-files=all");
+  expect(porcelain).toContain("CHANGE.md");
+  expect(porcelain.split("\n").filter((line) => TOOLU_RUNTIME.test(line))).toEqual([]);
   expect(existsSync(join(p.worktree, ".opencode/tmp"))).toBe(true);
 }
 
-/** `--session <captured>` in the same worktree: commit, review state, push, ready, seen by the watcher. */
+/** `--session <captured>` in the same worktree, as the launch plans it: commit, review state, push, ready. */
 async function resumeToReady(bin: string, session: ProbeSession, sessionId: string) {
   const { sb } = session;
   const p = layout(sb.root);
-  const resumed = await runHost(
-    bin,
-    session,
-    [
-      ...agentArgs("opencode", { ...ARGS, resume: true, sessionId }),
-      "PROBE:epic.resume Resume the brief.",
-    ],
-    RUN_TIMEOUT_MS,
-    p.worktree,
-  );
+  recordWorker(session, sessionId);
+  const resume = await plan(session);
+  expect(resume.resume).toBe(true);
+  expect(resume.agent_args).toContain(sessionId);
+  expect(resume.agent_args).toContain("--auto");
+  const args = [...resume.agent_args, "PROBE:epic.resume Resume the brief."];
+  const resumed = await runHost(bin, session, args, RUN_TIMEOUT_MS, p.worktree);
   expect(resumed.exitCode, resumed.stderr.slice(-4000)).toBe(0);
   const states = toolStates(resumed).map(({ tool, status }) => `${tool}:${status}`);
   expect(states).toEqual(["bash:completed", "bash:completed", "bash:completed", "bash:completed"]);
   const pushed = sb.git("--git-dir", p.remote, "rev-parse", `refs/heads/${ISSUE.branch}`).trim();
   expect(pushed).toBe(sb.git("-C", p.worktree, "rev-parse", "HEAD").trim());
   expect(statusOf(p.status)).toMatchObject({ phase: "ready", pr: 1 });
-  const peek = await run(
-    [process.execPath, join(SCRIPTS, "epic-watch.ts"), "--state-dir", p.state, "--peek"],
-    { cwd: sb.root },
-  );
-  expect(peek.exitCode, peek.stderr).toBe(0);
-  const { events } = z
-    .object({ events: z.array(z.looseObject({ type: z.string(), key: z.string().optional() })) })
-    .parse(JSON.parse(peek.stdout));
-  expect(events.filter((e) => e.key === KEY).map((e) => e.type)).toContain("ready");
   return { sessions: sessionIds(resumed.events.map((e) => Event.parse(e))), states, pushed };
 }
 
@@ -284,19 +295,19 @@ test.skipIf(process.env.TOOLU_LIVE_OPENCODE !== "1")(
     const pin = readJson(contractPaths().pin, PinSchema);
     const host = await resolveHostBinary(pin);
     const version = await run([host.bin, "--version"], { stdin: "" });
-    expect(opencodeVersionProblem(version.stdout)).toBeNull();
+    expect(version.stdout).toMatch(/\b1\.\d+\.\d+/);
     const cacheRoot = join(hostCacheDir(pin), "run-cache");
     mkdirSync(cacheRoot, { recursive: true });
     using session = openSession(cacheRoot, { scripts: workerScripts });
-    await epicFixture(session);
+    const fresh = await epicFixture(session);
     const p = layout(session.sb.root);
 
-    const killed = await killMidTurn(host.bin, session);
+    const killed = await killMidTurn(host.bin, session, fresh);
     const listed = await listedSessions(host.bin, session, p.worktree);
     expect(listed).toEqual(sessionIds(killed.events));
     const [captured] = listed;
     if (captured === undefined) throw new Error("session list captured no worker session");
-    await checkpointKeepsEdit(session);
+    editSurvives(session);
     const resumed = await resumeToReady(host.bin, session, captured);
     expect(resumed.sessions).toEqual(sessionIds(killed.events));
 

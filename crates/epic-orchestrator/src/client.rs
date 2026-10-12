@@ -1,6 +1,6 @@
 //! One request on the engine socket.
 
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::thread;
@@ -81,18 +81,41 @@ fn spool(paths: &Paths, request: &Value) -> Result<(), String> {
   write_value(&spool_path(&paths.root, token)?, request)
 }
 
+/// The last reply line on a herdr connection, read in blocks since nothing
+/// follows it, up to 16 MiB. A read deadline that passes reads as `timed out`.
+///
+/// # Errors
+/// The read fails or times out, the line passes 16 MiB, or it is not UTF-8.
+pub(crate) fn read_text(stream: &mut UnixStream) -> Result<String, String> {
+  read_capped(stream, 64 * 1024, 16 * 1024 * 1024)
+}
+
+/// One line, read a byte at a time so a later line stays on the stream; up to
+/// 16 MiB, as a herdr `session.snapshot` or an engine `status` can be large.
 fn read_line(stream: &mut UnixStream) -> Result<String, String> {
+  read_capped(stream, 1, 16 * 1024 * 1024)
+}
+
+fn read_capped(stream: &mut UnixStream, block: usize, cap: usize) -> Result<String, String> {
   let mut buf = Vec::new();
-  let mut byte = [0_u8; 1];
-  while buf.len() < 65_536 {
-    let read = stream.read(&mut byte).map_err(|err| err.to_string())?;
-    let Some(next) = byte.first().copied() else {
-      break;
-    };
-    if read == 0 || next == b'\n' {
-      break;
-    }
-    buf.push(next);
+  let limit = u64::try_from(cap).unwrap_or(u64::MAX).saturating_add(1);
+  BufReader::with_capacity(block, stream)
+    .take(limit)
+    .read_until(b'\n', &mut buf)
+    .map_err(|err| {
+      if matches!(
+        err.kind(),
+        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+      ) {
+        "timed out".to_owned()
+      } else {
+        err.to_string()
+      }
+    })?;
+  if buf.last() == Some(&b'\n') {
+    buf.pop();
+  } else if buf.len() > cap {
+    return Err(format!("reply line exceeds {cap} bytes"));
   }
   String::from_utf8(buf).map_err(|err| err.to_string())
 }

@@ -9,7 +9,7 @@ use crate::journal::{self, Record};
 use crate::model::Report;
 use crate::schedule::note_event;
 use crate::server::{Engine, Stop};
-use crate::socket::Waiter;
+use crate::socket_loop::Waiter;
 use crate::status::wait_body;
 use crate::status_api::document;
 
@@ -56,6 +56,7 @@ fn operate(
     "report" => reply_report(engine, request, &reply, waiters),
     "wait" => Ok(reply_wait(engine, request, reply, waiters)),
     "answer" => crate::attention_ops::reply_answer(engine, request, &reply),
+    "release" => crate::dispatch_ops::reply_release(engine, request, &reply),
     _ => {
       let _sent = reply.send(json!({"error": "unknown op"}));
       Ok(false)
@@ -64,8 +65,9 @@ fn operate(
 }
 
 fn finish(engine: &mut Engine, reply: &Sender<Value>, draining: bool) -> Result<bool, String> {
+  // Both stop issuing calls at once; the loop exits once the running call returns.
+  engine.world.draining = true;
   if draining {
-    engine.world.draining = true;
     let _stop = engine.pump()?;
   }
   let _sent = reply.send(json!({"ok": true}));
@@ -130,7 +132,7 @@ fn reply_report(
   pump_after(engine)
 }
 
-fn pump_after(engine: &mut Engine) -> Result<bool, String> {
+pub(crate) fn pump_after(engine: &mut Engine) -> Result<bool, String> {
   Ok(engine.pump()? == Stop::Fault)
 }
 

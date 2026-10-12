@@ -216,7 +216,15 @@ fn incomplete_rest_probe_retries_changed_pr_and_records_partial_cost() {
   assert!(engine.world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "github-error" && row.note.contains("\"restPoints\":1"))));
   engine.world.now_ms = 180_000;
   engine.github_tick(&tick);
-  assert_eq!(engine.world.issues["one"].stage, "merged");
+  // The merge moves the issue to cleaning and arms its cleanup.
+  assert_eq!(engine.world.issues["one"].stage, "cleaning");
+  assert_eq!(
+    engine.world.issues["one"]
+      .pending
+      .as_ref()
+      .map(|pending| pending.action),
+    Some(crate::model::Action::Cleanup)
+  );
   let requests = fixture.requests().expect("requests");
   let pr_requests: Vec<_> = requests
     .iter()

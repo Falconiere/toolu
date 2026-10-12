@@ -139,7 +139,7 @@ fn handle(mut stream: UnixStream, script: &Script) {
     } else if method == "session.snapshot" {
       json!({"type": "session_snapshot", "snapshot": {"agents": script.agents}})
     } else if method == "agent.read" {
-      json!({"stdout": script.read.clone().unwrap_or_default()})
+      json!({"read": {"text": script.read.clone().unwrap_or_default()}})
     } else {
       json!({})
     };

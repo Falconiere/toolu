@@ -15,9 +15,6 @@
         "plugins/*/skills/**/*.ts"
       ],
       "ignore": [
-        "plugins/epic-orchestrator/scripts/trackers/jira.ts",
-        "plugins/epic-orchestrator/scripts/trackers/linear.ts",
-        "plugins/epic-orchestrator/scripts/watch/state.ts",
         "plugins/python-quality/hooks/src/rules/py-file.ts",
         "plugins/rust-quality/hooks/src/rules/layout-rules.ts",
         "plugins/toolu/hooks/src/lifecycle/bash-compat.ts",

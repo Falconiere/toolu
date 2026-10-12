@@ -1,8 +1,8 @@
 //! Machine-wide leases (`packages/toolu-core/src/resources/resources.ts`):
 //! admission under capacity, host caps, cooldowns and pressure; the lease's
 //! later stages; and reclamation of jobs whose owner and process group are
-//! both provably gone. Agent migration and worktree fences stay in TypeScript
-//! until the epic engine (#434) adds them here.
+//! both provably gone. Agent migration and worktree fences are in
+//! [`crate::resources::transitions`] (#435).
 
 use std::path::Path;
 use std::time::SystemTime;
@@ -16,6 +16,7 @@ use super::lock::{process_alive, whole};
 use super::pressure::{PRESSURE_SAMPLE_MS, Pressure, advance_pressure, pressure_of};
 use super::sample::sample_resources;
 use super::store::{ResourcePolicy, leases, leases_mut, resource_policy, update_resources};
+pub use super::transitions::release_lease;
 use crate::ledger::jq::{number, string};
 
 /// What a lease is for.
@@ -64,16 +65,22 @@ pub struct LeasePatch {
   pub stage: Option<String>,
   /// The last heartbeat, as `toISOString` prints it.
   pub heartbeat_at: Option<String>,
+  /// The worktree the agent works in.
+  pub worktree: Option<String>,
+  /// The herdr pane the agent runs in.
+  pub pane: Option<String>,
+  /// The captured host session.
+  pub session: Option<String>,
 }
 
-fn text<'a>(lease: &'a Ordered, key: &str) -> Option<&'a str> {
+pub(super) fn text<'a>(lease: &'a Ordered, key: &str) -> Option<&'a str> {
   match lease.get(key) {
     Some(Ordered::String(value)) => Some(value),
     _ => None,
   }
 }
 
-fn pid(lease: &Ordered, key: &str) -> Option<f64> {
+pub(super) fn pid(lease: &Ordered, key: &str) -> Option<f64> {
   match lease.get(key) {
     Some(Ordered::Number(n)) => n.as_f64(),
     _ => None,
@@ -174,7 +181,7 @@ fn host_limit(req: &LeaseRequest, policy: &ResourcePolicy, host: &str) -> Result
   Ok(limit)
 }
 
-fn cooling(state: &Ordered, host: &str, now: SystemTime) -> bool {
+pub(super) fn cooling(state: &Ordered, host: &str, now: SystemTime) -> bool {
   let until = state
     .get("cooldowns")
     .and_then(|cooldowns| cooldowns.get(host))
@@ -183,7 +190,7 @@ fn cooling(state: &Ordered, host: &str, now: SystemTime) -> bool {
   until > epoch_ms(now)
 }
 
-fn count(n: usize) -> i64 {
+pub(super) fn count(n: usize) -> i64 {
   i64::try_from(n).unwrap_or(i64::MAX)
 }
 
@@ -331,36 +338,18 @@ pub fn patch_lease(root: &Path, token: &str, patch: &LeasePatch) -> Result<(), S
     if let Some(group) = patch.group_pid {
       lease.set("groupPid", number(f64::from(group)));
     }
-    if let Some(stage) = &patch.stage {
-      lease.set("stage", string(stage));
+    for (key, value) in [
+      ("worktree", &patch.worktree),
+      ("pane", &patch.pane),
+      ("session", &patch.session),
+      ("stage", &patch.stage),
+    ] {
+      if let Some(value) = value {
+        lease.set(key, string(value));
+      }
     }
     if let Some(at) = &patch.heartbeat_at {
       lease.set("heartbeatAt", string(at));
-    }
-    Ok(())
-  })
-}
-
-/// `releaseLease(root, token)`: an agent's lease stays while a job of its worktree runs.
-///
-/// # Errors
-/// `active jobs prevent agent lease release`, or a lock, state or probe failure.
-pub fn release_lease(root: &Path, token: &str) -> Result<(), String> {
-  update_resources(root, |state| {
-    reconcile_jobs(state)?;
-    let all = leases(state);
-    let lease = all.iter().find(|l| text(l, "token") == Some(token));
-    if let Some(worktree) = lease
-      .filter(|l| text(l, "type") == Some("agent"))
-      .and_then(|l| text(l, "worktree"))
-      && all
-        .iter()
-        .any(|l| text(l, "type") == Some("job") && text(l, "worktree") == Some(worktree))
-    {
-      return Err("active jobs prevent agent lease release".to_owned());
-    }
-    if let Some(items) = leases_mut(state) {
-      items.retain(|l| text(l, "token") != Some(token));
     }
     Ok(())
   })

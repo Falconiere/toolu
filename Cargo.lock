@@ -1347,6 +1347,7 @@ dependencies = [
  "toolu-github",
  "toolu-http",
  "toolu-http-test-support",
+ "toolu-jev-client",
  "toolu-pr-babysit",
  "toolu-protocol",
  "toolu-runtime",

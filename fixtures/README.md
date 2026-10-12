@@ -33,8 +33,9 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Statusline states | `statusline/cases.json` | 83 → 83 | `plugins/statusline/hooks/src/__tests__` | #431 |
 | OpenCode permission/evaluate | `opencode/permission-evaluate.json` | 17 → 17 | `tools/toolu-opencode/src/adapter/__tests__` | #462 |
 | OpenCode lifecycle tests | `opencode/lifecycle-events.json` | 2 → 2 tests, 11 events | `tools/toolu-opencode/src/lifecycle/__tests__` | #462 |
+| Epic hosts | `epic/hosts.json` | new, 81 | `crates/epic-orchestrator/src/tests/hosts_test.rs` | #435 |
 
-The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, #414's config resolution suite adds 35, #415's gate-file byte and edit-record goldens add 16 and 42, #418's dispatch walk adds 52, and #421's plan ledger and verdict add 27, for 1,663 indexed cases in 25 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
+The original 13 exported arrays contain 979 names. The six newly extracted families add 213 names, #413's host encoder suite adds 299 more, #414's config resolution suite adds 35, #415's gate-file byte and edit-record goldens add 16 and 42, #418's dispatch walk adds 52, #421's plan ledger and verdict add 27, and #435's epic hosts suite adds 81, for 1,744 indexed cases in 26 suite groups. OpenCode's lifecycle file records all 11 event outcomes across its two tests. The inventory checks names and counts, so swapping or dropping a case fails.
 
 ## Case fields and setup
 
@@ -64,5 +65,6 @@ The shared harness `tools/toolu-conformance/src/harness/json-cases.ts` accepts o
 - `portable-core/protected-files-pre.json` is a protocol v1 pre-tool event for the protected-file conformance suite (#409).
 - `gate-coverage/inventory.json` is an array of hook registrations with source path, plugin, event, matcher and command/module identity, used by the gate coverage checker.
 - `codex-hook-schemas/*.schema.json` are JSON Schemas for the five Codex hook command outputs, read by the host/launcher schema test.
+- `epic/epic248-graph.json`, `epic/epic248-body.md`, `epic/epic203-body.md` and `epic/pr290-rollup.json` are tracker captures the `toolu epic` tests read (moved from the deleted epic scripts in #435). `epic/herdr-calls.json` records the herdr 0.9.3 (protocol 22) method names and param keys every `herdr::Call` must match.
 
 The tooling-only overlays `tooling/fixtures/conventions`, `tooling/fixtures/guardrails`, and `tooling/fixtures/pr-babysit-herdr-smoke` stay with their TypeScript tooling until #439. They are not Rust parity contracts in #408.

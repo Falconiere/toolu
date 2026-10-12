@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 use crate::attention::next_reminder_ms;
 use crate::model::World;
 use crate::schedule::next_stall_ms;
-use crate::socket::Waiter;
+use crate::socket_loop::Waiter;
 
 /// Whether a local stall or reminder deadline has elapsed.
 pub(crate) fn stall_ready(world: &World) -> bool {

@@ -33,8 +33,6 @@ fn prompt_scripts(root: &Path, outcome: &str) -> PathBuf {
     root.join("prompts").display(),
   );
   std::fs::write(scripts.join("prompt"), script).expect("script");
-  let launch = "printf '{\"outcome\":\"applied\"}'\n";
-  std::fs::write(scripts.join("launch"), launch).expect("launch");
   scripts
 }
 
@@ -164,7 +162,8 @@ fn live(root: &Path, fixture: &Fixture) -> Live {
   let scripts = prompt_scripts(root, "sent");
   crate::disk::write_value(
     &epic.join("issues").join("a.json"),
-    &json!({"title": "A", "url": "https://github.com/o/r/issues/1"}),
+    // A running worker: the engine launches nothing for it.
+    &json!({"title": "A", "url": "https://github.com/o/r/issues/1", "stage": "running"}),
   )
   .expect("issue");
   let env = Env::from_pairs([

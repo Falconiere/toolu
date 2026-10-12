@@ -4,6 +4,7 @@ use serde_json::Value;
 use toolu_runtime::env::Env;
 
 use crate::herdr::{Call, Client};
+use crate::herdr_calls::request;
 use crate::journal::Record;
 use crate::limit::on_status;
 use crate::logic::push_attention;
@@ -137,8 +138,12 @@ fn read_tail(engine: &Engine, env: &Env, key: &str) -> String {
     .get(key)
     .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
   let mut client = Client::new();
-  client
-    .execute(&engine.paths, env, &Call::Read { target })
+  request(&mut client, &engine.paths, env, &Call::Read { target })
+    .ok()
+    .and_then(|reply| {
+      let text = reply.pointer("/read/text").and_then(Value::as_str);
+      text.map(str::to_owned)
+    })
     .unwrap_or_default()
 }
 

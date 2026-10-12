@@ -54,16 +54,8 @@ function stagePluginExtras(plugin: string, source: string, target: string): void
       }
     }
   }
-  // The orchestrator skill runs these through $TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR,
-  // and launch-issue.ts renders the worker brief from the references.
+  // The orchestrator skill reads its references; `toolu epic` carries the brief template.
   if (plugin === "epic-orchestrator") {
-    for (const item of readdirSync(join(source, "scripts"), { withFileTypes: true })) {
-      const from = join(source, "scripts", item.name);
-      const to = join(target, "scripts", item.name);
-      if (item.isFile() && item.name.endsWith(".ts")) copy(from, to);
-      else if (item.isDirectory() && item.name !== "__tests__" && item.name !== "fixtures")
-        copyDirectory(from, to, (name) => name.endsWith(".ts"));
-    }
     const references = "skills/epic-orchestrator/references";
     copyDirectory(join(source, references), join(target, references), (name) =>
       name.endsWith(".md"),

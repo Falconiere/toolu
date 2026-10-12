@@ -1,4 +1,4 @@
-//! The `toolu epic` command tree. Later verbs stay on `planned` (#435, #448).
+//! The `toolu epic` command tree. The merge queue stays on `planned` (#448).
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
@@ -13,11 +13,25 @@ use toolu_runtime::namespace::Planned;
 const LATER: Planned = Planned {
   name: "epic",
   about: "Drive an epic to merged PRs: the resident engine, merge queue and trackers",
-  verbs: &[
-    "graph", "route", "launch", "finish", "close", "release", "jira", "probe", "gate", "queue",
-  ],
-  issues: &[435, 448],
+  verbs: &["queue"],
+  issues: &[448],
 };
+
+/// The phases a worker reports, in pipeline order.
+const PHASES: [&str; 12] = [
+  "brainstorm",
+  "spec",
+  "spec-review",
+  "plan",
+  "plan-review",
+  "execution",
+  "pr-open",
+  "babysit",
+  "rebasing",
+  "ready",
+  "needs-human",
+  "failed",
+];
 
 /// The complete `toolu epic` command tree.
 pub(crate) fn command() -> Command {
@@ -54,10 +68,9 @@ pub(crate) fn command() -> Command {
           Command::new("install").about("Write the systemd user unit without starting it"),
         ),
     )
-    .subcommand(
-      Command::new("planned").about("Not ported yet (#435, #448): show the planned verbs"),
-    )
+    .subcommand(Command::new("planned").about("Not ported yet (#448): show the planned verbs"))
     .subcommand(token_command())
+    .subcommands(crate::verbs_actions::commands())
 }
 
 /// Dispatch one epic subcommand.
@@ -79,7 +92,10 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
       crate::query::service(&env)
     }
     Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
-    _ => LATER.run(ctx),
+    Some((name, args)) => {
+      crate::verbs_actions::run(name, args, ctx, &env).unwrap_or_else(|| LATER.run(ctx))
+    }
+    None => LATER.run(ctx),
   }
 }
 
@@ -120,6 +136,18 @@ fn start_command() -> Command {
         .value_name("STATE_DIR")
         .required(true)
         .help("The epic state directory"),
+    )
+    .arg(
+      Arg::new("safe")
+        .long("safe")
+        .action(ArgAction::SetTrue)
+        .help("Keep approval prompts on in this epic's workers, until a start without it"),
+    )
+    .arg(
+      Arg::new("no-jev")
+        .long("no-jev")
+        .action(ArgAction::SetTrue)
+        .help("Route and check coupling by heuristics only, until a start without it"),
     )
 }
 
@@ -192,6 +220,7 @@ fn report_command() -> Command {
       Arg::new("phase")
         .value_name("PHASE")
         .required(true)
+        .value_parser(PHASES)
         .help("The phase to record"),
     )
     .arg(

@@ -147,3 +147,107 @@ fn answer(listener: &UnixListener, protocol: u64, accepts: usize, methods: &Path
     }
   }
 }
+
+/// A linked worktree herdr created for `feat/1-x`: its path, workspace and pane.
+fn created(call: &mut dyn FnMut(Call) -> Value, repo: &Path) -> (PathBuf, String, String) {
+  let created = call(Call::Create {
+    cwd: Some(repo.display().to_string()),
+    branch: Some("feat/1-x".into()),
+    base: Some("main".into()),
+    path: None,
+    label: Some("r-1".into()),
+    workspace: None,
+  });
+  let text = |pointer: &str| {
+    created
+      .pointer(pointer)
+      .and_then(Value::as_str)
+      .expect("field")
+      .to_owned()
+  };
+  (
+    PathBuf::from(text("/worktree/path")),
+    text("/workspace/workspace_id"),
+    text("/root_pane/pane_id"),
+  )
+}
+
+/// `worktree.list` shows `feat/1-x` open in `workspace`.
+fn assert_open(call: &mut dyn FnMut(Call) -> Value, repo: &Path, workspace: &str) {
+  let listed = call(Call::WorktreeList {
+    cwd: repo.display().to_string(),
+  });
+  let rows = listed["worktrees"].as_array().cloned().unwrap_or_default();
+  let row = rows.iter().find(|row| row["branch"] == "feat/1-x");
+  assert_eq!(
+    row.map(|row| row["open_workspace_id"].clone()),
+    Some(json!(workspace))
+  );
+}
+
+#[test]
+fn the_socket_fixture_runs_a_worktree_and_agent_lifecycle() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let repo = tmp.path().join("repo");
+  crate::support::repo_with_origin(&repo, "https://github.com/o/r.git");
+  let herdr = crate::herdr_fixture::HerdrFixture::start();
+  herdr.add_repo(&repo);
+  let env = herdr.env();
+  let mut client = Client::new();
+  let mut call =
+    |call: Call| crate::herdr_calls::request(&mut client, &paths, &env, &call).expect("call");
+  let (worktree, workspace, pane) = created(&mut call, &repo);
+  assert!(worktree.join(".git").is_file());
+  assert_open(&mut call, &repo, &workspace);
+  let start = Call::Start {
+    name: "r-1".into(),
+    kind: "claude".into(),
+    pane_id: pane.clone(),
+    args: vec![],
+    timeout_ms: None,
+  };
+  call(start);
+  assert_eq!(
+    call(Call::AgentList)["agents"][0]["cwd"],
+    json!(worktree.display().to_string())
+  );
+  let info = call(Call::PaneInfo { pane_id: pane });
+  let shell =
+    u32::try_from(info["process_info"]["shell_pid"].as_u64().expect("shell")).expect("pid");
+  let owned = crate::workload::owned_workload(&worktree, Some(shell)).expect("owned");
+  assert_eq!(owned.len(), 1, "{owned:?}");
+  call(Call::Prompt {
+    target: "r-1".into(),
+    text: "/exit".into(),
+  });
+  assert_eq!(call(Call::AgentList)["agents"], json!([]));
+  call(Call::Remove {
+    workspace_id: workspace,
+    force: true,
+  });
+  assert!(!worktree.exists());
+  let methods: Vec<String> = herdr
+    .calls()
+    .into_iter()
+    .map(|(method, _)| method)
+    .collect();
+  assert_eq!(methods.first().map(String::as_str), Some("worktree.create"));
+}
+
+#[test]
+fn a_socket_read_past_its_deadline_reads_as_timed_out() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let sock = tmp.path().join("silent.sock");
+  let listener = UnixListener::bind(&sock).expect("bind");
+  let peer = thread::spawn(move || listener.accept().map(|(stream, _)| stream));
+  let mut stream = std::os::unix::net::UnixStream::connect(&sock).expect("connect");
+  stream
+    .set_read_timeout(Some(std::time::Duration::from_millis(50)))
+    .expect("deadline");
+  assert_eq!(
+    crate::client::read_text(&mut stream),
+    Err("timed out".to_owned())
+  );
+  drop(peer.join());
+}

@@ -16,8 +16,8 @@ import {
 // The epic-orchestrator skill an OpenCode orchestrator loads (#356), audited on
 // the committed generated tree: no Claude-only step (background Bash, turn
 // re-invocation, plugin-root fallbacks, other hosts' skill syntax) survives in
-// the skill, its references or the `epic` command, and every skill and script
-// it names resolves.
+// the skill, its references or the `epic` command, every skill it names
+// resolves, and every action is a `toolu epic` verb (#435).
 
 const EPIC = "skills/epic-orchestrator-epic-orchestrator";
 const SURFACES = [
@@ -54,7 +54,7 @@ test.each(SURFACES)("%s names no Claude-only step or other host's skill syntax",
   expect(text.match(DOUBLE_HYPHEN_ID) ?? []).toEqual([]);
 });
 
-test("every skill and script the orchestrator names resolves", () => {
+test("every skill the orchestrator names resolves, and it runs toolu epic verbs only", () => {
   using sb = createSandbox();
   const staged = join(sb.root, "staged");
   stagePlugins(join(ROOT, "plugins"), staged);
@@ -72,44 +72,48 @@ test("every skill and script the orchestrator names resolves", () => {
   }
   expect([...named].filter((id) => !skills.has(id))).toEqual([]);
 
-  const scripts = new Set([...text.matchAll(/"\$S\/([a-z-]+\.ts)"/g)].map(([, s = ""]) => s));
-  expect(scripts).toContain("epic-watch.ts");
-  expect(scripts).toContain("launch-issue.ts");
-  for (const script of scripts) {
-    expect(existsSync(join(staged, "epic-orchestrator", "scripts", script))).toBe(true);
+  expect(text.match(/\b[a-z-]+\.ts\b/g) ?? []).toEqual([]);
+  expect(text).not.toContain("scripts/");
+  expect(existsSync(join(staged, "epic-orchestrator", "scripts"))).toBe(false);
+  const verbs = new Set([...text.matchAll(/toolu (?:--json )?epic ([a-z]+)/g)].map(([, v = ""]) => v));
+  for (const verb of ["graph", "route", "launch", "start", "wait", "gate", "release", "finish"]) {
+    expect(verbs).toContain(verb);
   }
 });
 
-test("the orchestrator finds its root through shell.env and watches in the foreground", () => {
+test("the orchestrator waits for judgments in the foreground", () => {
   const skill = read(`${EPIC}/SKILL.md`);
   expect(skill).toContain(
-    'ROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?epic-orchestrator is not enabled in this OpenCode session}"\nS="${ROOT}/scripts"',
+    "toolu --json epic wait --max-seconds 480    # Bash tool with a 600000 ms timeout",
   );
-  expect(skill).toContain(
-    'bun "$S/epic-watch.ts" --state-dir <state_dir> --max-wait 480   # bash tool with timeout: 600000',
-  );
-  expect(skill).toContain(
-    "run it again in the same turn, and keep that loop going while any\nissue is active.",
+  expect(skill.replaceAll(/\s+/g, " ")).toContain(
+    "run it again in the same turn, and keep that loop going while any issue is active.",
   );
   expectHostValidSkill(EPIC);
 });
 
 const SKILL = "skills/epic-orchestrator/SKILL.md";
-const WATCH_ANCHOR = "## 3. Watch (background)";
+const DEPENDENCIES = [
+  "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,",
+  "  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as",
+  "  herdr agents and need those plugins installed in every host in `--hosts`",
+  "  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).",
+].join("\n");
+const ANCHOR = DEPENDENCIES.split("\n")[0] ?? "";
 
 test("generation fails naming the source when an epic-orchestrator anchor is gone", () => {
   expect(
-    planEdited("epic-orchestrator", SKILL, (text) => text.replace(WATCH_ANCHOR, "## 3. Watch")),
+    planEdited("epic-orchestrator", SKILL, (text) => text.replace(ANCHOR, "- Skills:")),
   ).toThrow(
-    `opencode port: plugins/epic-orchestrator/${SKILL}: expected 1 match(es), found 0: ${WATCH_ANCHOR}`,
+    `opencode port: plugins/epic-orchestrator/${SKILL}: expected 1 match(es), found 0: ${ANCHOR}`,
   );
 });
 
 test("generation fails naming the source when an epic-orchestrator anchor repeats", () => {
   expect(readFileSync(join(ROOT, "plugins/epic-orchestrator", SKILL), "utf8")).toContain(
-    WATCH_ANCHOR,
+    DEPENDENCIES,
   );
-  expect(planEdited("epic-orchestrator", SKILL, (text) => `${text}\n${WATCH_ANCHOR}\n`)).toThrow(
-    `opencode port: plugins/epic-orchestrator/${SKILL}: expected 1 match(es), found 2: ${WATCH_ANCHOR}`,
+  expect(planEdited("epic-orchestrator", SKILL, (text) => `${text}\n${DEPENDENCIES}\n`)).toThrow(
+    `opencode port: plugins/epic-orchestrator/${SKILL}: expected 1 match(es), found 2: ${ANCHOR}`,
   );
 });

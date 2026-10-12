@@ -12,9 +12,9 @@ table picks the model and effort per host.
 
 ## Install
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../repo/docs/runtime.md).
+**Prerequisite:** the native `toolu` binary on `PATH`. See [docs/install.md](../repo/docs/install.md).
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `bun`, `gh`, and `herdr`
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `toolu`, `gh`, and `herdr`
 (with `HERDR_ENV=1` inside a herdr pane).
 
 Optional: `jev` with `TYPESAFE_API_KEY` (complexity routing; without it tiers
@@ -25,7 +25,7 @@ come from a heuristic), Jira environment credentials (Jira epics), and `LINEAR_A
 For Jira, export `JIRA_BASE_URL` and either `JIRA_PAT` or both `JIRA_EMAIL`
 and `JIRA_API_TOKEN`. `JIRA_API_VERSION` accepts `2` or `3` and defaults to
 `3`. The jira-cli config and keyring are not read. Workers read an item with
-`bun --no-env-file scripts/jira-issue.ts get PAY-12` from the installed plugin.
+`toolu epic jira issue get PAY-12`.
 
 ### Claude Code
 
@@ -61,18 +61,19 @@ selection, for example:
 
 Wire OpenCode to the generated surface under
 `tools/toolu-opencode/generated/` (shipped in `@toolu/opencode`); see
-[docs/opencode.md](../repo/docs/opencode.md). The generated skill runs its
-scripts from `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`, which the OpenCode
-plugin's `shell.env` sets to the installed `plugins/epic-orchestrator`
-directory while the plugin is enabled.
+[docs/opencode.md](../repo/docs/opencode.md). The generated skill runs the same
+`toolu epic` verbs; `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`, which the OpenCode
+plugin's `shell.env` sets while the plugin is enabled, points at its
+references.
 
-OpenCode has no background shell, so on OpenCode the orchestrator runs the
-watcher in the foreground with `--max-wait 480` and runs it again until no
-issue is active.
+On every host the orchestrator waits in the foreground with
+`toolu epic wait --max-seconds 480` and runs it again until no issue is
+active; the engine does the polling.
 
 OpenCode workers need `opencode --version` 1.x on `PATH`; launch refuses
 anything else before creating a worktree. Each worker is an
-`opencode --auto --model provider/model` session in its own herdr worktree.
+`opencode --auto --model provider/model` session (without `--auto` under
+`--safe`) in its own herdr worktree.
 Its `task` calls reach agent-tier like any OpenCode session. Before the agent
 starts, launch adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the
 repository's shared `info/exclude`, so worker state never shows as a change,
@@ -86,12 +87,15 @@ plugin; an uncommitted project selection does not reach worktrees.
 - **Skill `epic-orchestrator` and command `epic`** — orchestrate an epic (or
   `status` / `stop`). Workers run the toolu delivery chain then babysit; the
   orchestrator merges and advances the graph.
-- **Bun CLIs** under `scripts/` — `epic-graph.ts`, `jira-issue.ts`, `route.ts`,
-  `launch-issue.ts`, `epic-watch.ts`, `merge-gate.ts`, `checkpoint.ts`,
-  `epic-close.ts`, `finish-issue.ts`, `report.ts`. Tracker adapters live
-  in `scripts/trackers/`.
-- **Codex SessionStart** — warns when `delivery-flow` or its dependencies are missing.
-- **SessionStart `engine-ensure`** — runs `toolu epic engine --ensure` when a native `toolu` is on `PATH`. An empty registry does nothing. A live engine is left alone.
+- **The `toolu epic` namespace** — the resident engine and every action
+  (graph, route, launch, gate, finish, close, release, Jira read, evidence
+  probe) as native verbs; see [docs/cli/epic.md](../repo/docs/cli/epic.md). The
+  plugin ships no scripts or bundles.
+- **Native SessionStart hooks** (`toolu epic-orchestrator hook …`):
+  `check-deps` warns on Codex when `delivery-flow` or its dependencies are
+  missing; `check-binary` advises once per session when the agent's shell has
+  no native `toolu`; `engine-ensure` starts the engine in process when an epic
+  is registered and none runs, and reports a malformed `registry.json`.
 
 ## Native `toolu epic`
 
@@ -100,7 +104,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | Verb | What it does |
 | --- | --- |
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
-| `start <state-dir>` | Register that epic directory and ensure the engine. |
+| `start <state-dir> [--safe] [--no-jev]` | Register that epic directory, record the two flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic. |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
 | `ack <key>` | Acknowledge the key's attention items (a keyless one by kind) and stop their reminders. |
@@ -110,13 +114,28 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `job <argv...>` | Run a command under the worktree's resource lease. The engine stays stopped. |
 | `service install` | Write the user unit. It does not start systemd. |
 | `token new` | Rotate the status bearer token in secrets.json. |
-| `planned` | Lists `graph`, `route`, `launch`, `finish`, `close`, `release`, `jira`, `probe`, `gate`, and `queue` (#435, #448). |
+| `graph <epic>` | Build the dependency graph and the next launch batch; `--save` writes `graph.json`. |
+| `route --graph <file>` | Score and route issues to hosts, models and efforts; saves routes and `pool.json`. |
+| `launch --graph <file> --issue <ref>` | Launch or resume one issue in its herdr worktree (`--dry-run` plans only). |
+| `gate --pr <ref>` | Verify a PR against the merge policy; `--merge` merges pinned to the head, `--auto` arms auto-merge. |
+| `finish <state-dir> <key>` | Tear down an issue after its merge (`--abandon` keeps the branch). |
+| `close --graph <file>` | Post the merged-PR summary and close a complete epic. |
+| `release <key>` | Release a coupling hold so the issue launches next. |
+| `jira issue get <key>` | Print one Jira issue as JSON. |
+| `probe --check-evidence` | Validate the committed host-lifecycle evidence. |
+| `planned` | Lists `queue` (#448). |
+
+The engine runs launch, cleanup, checkpoint, the `STATUS?` prompt, graph
+refresh and epic close in process; `TOOLU_EPIC_SCRIPTS` affects only merge,
+its reconcile and worker prompts. Without merge scripts a `ready` worker raises a
+`merge-ready` judgment for the orchestrator's `toolu epic gate … --merge`.
 
 ### Attention
 
 Judgment events (`needs-human`, `failed`, `blocked`, `stall`, `babysit`, …)
-become attention items. Each item is `open`, `acknowledged` or `answered`, and
-the key's next worker report closes it. A returning stall or a new blocked spell
+become attention items. Each item is `open`, `acknowledged` or `answered`; the
+key's next worker report closes it, and so does the engine once the item's
+cause settles (a merge, a release, a finished cleanup, a good refresh). A returning stall or a new blocked spell
 reopens a seen item. `toolu epic status`, `/api/v1/attention`
 and the dashboard list every live item with its state and age. Items survive a
 restart through the journal.
@@ -145,8 +164,8 @@ current `NotPorted` result raises attention instead of claiming clearance.
 
 `Retry-After` pauses GitHub checks, launches and merges for the requested
 duration, then the fixed clock resumes. A low primary remaining budget pauses
-launches and merges while checks continue. The native floors preserve the
-existing watcher defaults of 1,000 REST and 500 GraphQL points. Status shows
+launches and merges while checks continue. The floors are 1,000 REST and 500
+GraphQL points (`EPIC_GH_CORE_FLOOR`, `EPIC_GH_GRAPHQL_FLOOR`). Status shows
 each watched PR's last and next check times and separate budget counters. The
 engine creates no webhook or GitHub listener.
 
@@ -180,7 +199,15 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 | Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--resume <captured-id>` |
 | OpenCode | `--auto` | `--model provider/model` (no effort flag) | `--session <captured-id>` |
 
-`--safe` keeps approval prompts on. Default tiers (`trivial`, `standard`,
+`--safe` keeps approval prompts on (Claude runs in its `auto` permission
+mode); pass it as `toolu epic start <state-dir> --safe`, which the engine and
+a manual `toolu epic launch` read from `<state-dir>/launch.json` until a start
+without it. With `--no-jev` the engine sends Jev nothing (workers' babysit
+routing keeps its own `prBabysit.jev` setting): pass it to
+`toolu epic route --graph <file> --hosts <spec> --no-jev` and to
+`toolu epic start <state-dir> --no-jev`, which keeps the engine's own routing
+and coupling check heuristic. `--kind`, `--model` and `--effort` override the route for
+one manual `toolu epic launch`. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
 `gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`, and
 OpenCode's configured model. Override per host and tier in `routing.json`
@@ -216,10 +243,10 @@ every worker.
 
 Launch writes a resource binding in the worktree's Git directory. Plan-ledger
 checks acquire job capacity automatically. Run other expensive tests through
-`bun <plugin>/scripts/job.ts -- <command> <args...>` from that worktree.
+`toolu epic job -- <command> <args...>` from that worktree.
 Admission refusal means wait for capacity and retry the same mandatory check.
 A job runs for at most one hour so it cannot hold a shared slot forever; on
-timeout its process group is stopped and `job.ts` exits 124.
+timeout its process group is stopped and `toolu epic job` exits 124.
 Process groups retain their lease until background descendants exit. A crashed
 job owner is reconciled only after its recorded group is gone; agent ownership
 is never freed merely because its launcher exited.
@@ -229,9 +256,10 @@ CPUs, less than 10% available memory, or Linux steal above 25% starts a pressure
 window. Sixty seconds of pressure holds new work. Recovery requires 120 seconds
 below 0.8 times effective CPUs, above 20% available memory and below 10% steal.
 Existing useful jobs keep running. Available memory is `MemAvailable` on Linux
-and free + inactive + speculative pages from `vm_stat` on macOS (Node's
-`os.freemem()` there omits reclaimable cache), falling back to `os.freemem()`
-when `vm_stat` fails or on other platforms. Non-Linux sampling uses load/memory
+and free + inactive + speculative pages from `vm_stat` on macOS (the free-page
+count alone omits reclaimable cache), falling back to `sysctl`'s free page
+count (`vm.page_free_count` times `hw.pagesize`) when `vm_stat` fails, and
+never more than total memory. Non-Linux sampling uses load/memory
 without claiming to measure steal. Hypervisor starvation is distinct from guest work.
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
@@ -246,8 +274,9 @@ status. Cleanup retries preserve successful removal and branch-deletion steps.
 Removal intent is saved before deleting the workspace, so a crash before the
 success record is written can be reconciled against Git and workload ownership.
 
-Installed-host evidence is in `docs/toolu/evidence/epic-hosts*`; `probe.ts
---check-evidence` validates its recorded contract, not live provider availability.
+Installed-host evidence is in `docs/toolu/evidence/epic-hosts*`; `toolu epic
+probe --check-evidence` validates its recorded contract, not live provider
+availability.
 The October 3 probe verified Codex and OpenCode tool/session lifecycles. Claude's
 expired login and Cursor's locked keychain leave their tool/cancel coverage
 explicitly unverified.
@@ -256,14 +285,14 @@ explicitly unverified.
 
 The merge gate verifies the PR (rebased on base, checks green, zero
 unresolved threads, babysit cleared) and merges pinned to the verified head.
-When only checks are pending it arms GitHub auto-merge
-(`gh pr merge <n> --auto --squash --delete-branch --match-head-commit <sha>`),
-and disarms it whenever the PR needs a rebase or fix. Repos with auto-merge
-disabled fall back to the watcher's periodic recheck.
+When only checks are pending it arms GitHub auto-merge pinned to the verified
+head, and disarms it whenever the PR needs a rebase or fix. The engine's
+180-second PR check sees a merge, from the gate or from auto-merge, and cleans
+up the issue.
 
 ## Guardrails
 
-- **Progress:** workers commit and push each phase; the watcher snapshots
+- **Progress:** workers commit and push each phase; the engine snapshots
   every active worktree to `refs/epic-wip/<key>` every 15 minutes and when an
   agent disappears; teardown snapshots first; relaunches resume the host's
   captured session; one exclusive owner per epic. Unchanged snapshots reuse an
@@ -276,12 +305,9 @@ disabled fall back to the watcher's periodic recheck.
   hosts that hit a provider usage limit cool down (`EPIC_HOST_COOLDOWN_MIN`,
   60) and their issues move to another host.
 
-Watcher deadlines, queued checkpoints and dependency backoff survive restarts
-in `watch-state.json`. Urgent events precede optional checkpoints, which are
-bounded and deduplicated by worktree. `EPIC_CHECKPOINT_BATCH` bounds each pass;
-`EPIC_HERDR_BACKOFF_S` and `EPIC_HERDR_BACKOFF_MAX_S` bound dependency retries.
-Dependency outages preserve existing stall acknowledgements and agent alerts.
-Stale progress is distinct from a job heartbeat or UI `working` status. Alerts
-repeat at `EPIC_STALL_REPEAT_MIN`; acknowledge with `epic-watch.ts --state-dir
-<dir> --ack <key>`. Parked `ready`/`needs-human` workers stay quiet. `--peek`
-consumes no events or persistent state.
+The engine's PR check deadlines, budgets, checkpoint wave and herdr backoff
+survive restarts in `watch.json`, and its journal lets a restart finish what
+was in flight. A stalled worker gets one `STATUS?`, then a `stall` judgment;
+`toolu epic ack <key>` restarts its clock. herdr outages back off from 30
+seconds, doubling to 5 minutes. Parked `ready`/`needs-human` workers stay
+quiet.

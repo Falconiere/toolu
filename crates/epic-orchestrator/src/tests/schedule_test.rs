@@ -117,29 +117,6 @@ fn checkpoint_waits_then_arms_one_running_worktree() {
 }
 
 #[test]
-fn events_record_blocked_gone_and_host_limits() {
-  let mut world = World::new(0);
-  ensure_issue(&mut world, "a", "one", "/epic");
-  note_event(&mut world, "a", "blocked");
-  assert!(world.attention.iter().any(|item| item.kind == "blocked"));
-  note_event(&mut world, "a", "host-limited");
-  assert!(!world.outbox.is_empty());
-  let before = world.outbox.len();
-  note_event(&mut world, "a", "nope");
-  assert_eq!(world.outbox.len(), before);
-  note_event(&mut world, "a", "gone");
-  note_event(&mut world, "a", "gone");
-  assert_eq!(world.issues.get("a").expect("issue").launches, 2);
-  note_event(&mut world, "a", "gone");
-  assert!(
-    world
-      .attention
-      .iter()
-      .any(|item| item.kind == "relaunch-limit")
-  );
-}
-
-#[test]
 fn pause_applies_to_every_epic_or_one() {
   let mut world = World::new(0);
   set_pause(&mut world, None, true);

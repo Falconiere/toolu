@@ -35,3 +35,10 @@ fn debug_never_prints_a_secret() {
   );
   assert_eq!(format!("{:?}", Auth::None), "None");
 }
+
+#[test]
+fn a_raw_value_is_sent_as_given_and_never_printed() {
+  let raw = Auth::Raw("lin_api_secret".into());
+  assert_eq!(raw.header_value().as_deref(), Some("lin_api_secret"));
+  assert_eq!(format!("{raw:?}"), "Raw(<redacted>)");
+}

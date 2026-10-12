@@ -20,10 +20,18 @@ fn loads_blockers_from_the_graph() {
     "epics": [{"key": "one", "state_dir": epic.display().to_string()}]
   });
   std::fs::write(tmp.path().join("registry.json"), registry.to_string()).expect("registry");
+  // A relaunch that was waiting when the engine stopped is written to the
+  // record and comes back with it.
+  let mut waiting = crate::model::Issue::blank("a", "one", "", 0);
+  waiting.stage = "running".into();
+  waiting.relaunch = Some("reroute".into());
+  crate::disk::write_issue_fields(&epic.join("issues/a.json"), &waiting).expect("record");
   let world = load(&Paths::at(tmp.path()), std::time::SystemTime::now()).expect("load");
   let blocked = world.issues.get("b").expect("b");
   assert_eq!(blocked.blockers, vec!["a".to_owned()]);
   assert_eq!(blocked.epic, "one");
+  assert_eq!(world.issues["a"].relaunch.as_deref(), Some("reroute"));
+  assert_eq!(blocked.relaunch, None);
 }
 
 #[test]
@@ -70,17 +78,12 @@ fn adopt_typescript() {
   assert_keeps_agent(&status);
 }
 
+/// The report rewrote the phase and kept the field another writer added.
 fn assert_keeps_agent(status: &std::path::Path) {
-  let common = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/epic-orchestrator/scripts/common.ts");
-  let code = format!(
-    "import {{ readJson }} from \"{}\"; const doc = readJson(\"{}\", {{}}); if (doc.phase !== \"ready\" || doc.agent !== \"kept\") throw new Error(JSON.stringify(doc));",
-    common.display(),
-    status.display()
+  let doc: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(status).expect("status")).expect("json");
+  assert_eq!(
+    (doc["phase"].as_str(), doc["agent"].as_str()),
+    (Some("ready"), Some("kept"))
   );
-  let ran = std::process::Command::new("bun")
-    .args(["-e", &code])
-    .status()
-    .expect("bun");
-  assert!(ran.success());
 }

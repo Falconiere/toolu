@@ -1,16 +1,17 @@
 # Recovery playbook
 
 Read the section that matches the failure. For every case: fix the cause, then
-re-run the same script after checking ownership. A timeout during start/prompt
-is uncertain and is never retried automatically as a fresh session.
+re-run the same `toolu epic` verb after checking ownership. A timeout during
+start/prompt is uncertain and is never retried automatically as a fresh
+session.
 
 ## herdr
 
 - **`HERDR_ENV` unset**: the orchestrator isn't running inside herdr. Stop and
   tell the user to start the session from a herdr pane.
 - **`worktree_create_failed ... already exists`**: a worktree directory for
-  that branch is left over. `launch-issue.ts` reopens worktrees that git knows
-  about. If git doesn't list it (a stale directory), run
+  that branch is left over. `toolu epic launch` reopens worktrees that git
+  knows about. If git doesn't list it (a stale directory), run
   `git -C <checkout> worktree prune` and launch again. Don't delete the
   directory unless `git -C <dir> status` shows no work worth keeping.
 - **An untrusted-repository error**: ask the user to confirm the repo. Only
@@ -58,15 +59,17 @@ is uncertain and is never retried automatically as a fresh session.
 
 ## Hosts and API limits
 
-- **`host-limited`** (usage limit, 429, quota): the host is on cooldown in
-  epic and shared machine resource state. Wait until reset, then reroute and
-  relaunch with `--replace` (see the watcher table).
+- **`host-limited`** (usage limit, 429, quota): the engine put the host on
+  cooldown in epic and shared machine resource state and moves the worker to
+  a free host in the same worktree (`--replace` semantics); with no free host
+  it waits for the cooldown to end. Nothing to do unless every host is out.
 - **Wrong model name** (the agent exits right after start): the routing table
   names a model the host doesn't offer. Check `codex debug models`,
   `cursor-agent --list-models`, or `opencode models`, fix `routing.json`, then
   relaunch with `--replace`.
-- **`RateLimitError` from a script**: the reset is further out than the sleep
-  cap. Wait until the printed time, then re-run the same script.
+- **A rate limit past the sleep cap** (`rate limited until <time>; longer than
+  the 900s cap`): wait until the printed time, then re-run the same verb. The
+  engine retries its own refresh every 3 minutes.
 - **Jira `no-done-transition`**: the workflow has no transition into the Done
   category from the current status. Tell the user; move it by hand.
 

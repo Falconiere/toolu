@@ -309,35 +309,14 @@ with this explanation and writes nothing. Do not edit Codex profiles from here.`
   ],
   [`${EPIC}/SKILL.md`]: [
     [
-      "a background watcher wakes you only when a\ndecision is needed.",
-      "a bounded watcher returns only when a\ndecision is needed.",
-    ],
-    [
-      '# Claude / Cursor Agent: CLAUDE_PLUGIN_ROOT. Codex: PLUGIN_ROOT.\n# OpenCode: TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR (its generated surface rewrites CLAUDE_PLUGIN_ROOT to it).\nROOT="${CLAUDE_PLUGIN_ROOT}"\nROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR}}}"',
-      '# OpenCode\'s bash sets TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR while the plugin is enabled.\nROOT="${TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR:?epic-orchestrator is not enabled in this OpenCode session}"',
-    ],
-    [
       "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,\n  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as\n  herdr agents and need those plugins installed in every host in `--hosts`\n  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).",
       `- These load through the \`skill\` tool: ${skill("delivery-flow-delivery-flow")},\n  ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT}. Workers run as\n  herdr agents and need those plugins installed and enabled in every host in \`--hosts\`.`,
-    ],
-    ["## 3. Watch (background)", "## 3. Watch"],
-    [
-      'bun "$S/epic-watch.ts" --state-dir <state_dir>        # Bash with run_in_background: true\n```\n\nThen end your turn. The watcher polls once a minute and costs nothing while\nit waits. When it exits, you are re-invoked with JSON events. Keep exactly one\nwatcher running. After you handle the events, start it again.',
-      'bun "$S/epic-watch.ts" --state-dir <state_dir> --max-wait 480   # bash tool with timeout: 600000\n```\n\nOpenCode\'s bash tool has no background mode, and nothing wakes a finished\nturn. So run the watcher in the foreground with a bounded wait: it polls once a\nminute and returns JSON events, or a `heartbeat` after 480 seconds. Handle the\nevents, then run it again in the same turn, and keep that loop going while any\nissue is active. Keep exactly one watcher running.',
-    ],
-    [
-      "| `heartbeat` | Re-run the graph (`--save`).",
-      "| `heartbeat` | About every 8 minutes on OpenCode. When about 45 minutes have passed since the last graph run, re-run the graph (`--save`); otherwise just run the watcher again.",
-    ],
-    [
-      "- **Stop.** Stop the watcher task only.",
-      "- **Stop.** Stop running the watcher (interrupt a watcher bash call in flight).",
     ],
   ],
   [`${EPIC}/references/worker-brief.md`]: [
     [
-      '- DELIVERY, BABYSIT, DEBUG: the host\'s skill invocation, e.g. for delivery-flow\n  `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`\n  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent),\n  `skill({ name: "delivery-flow-delivery-flow" })` (OpenCode, the generated\n  skill name from hosts.ts OPENCODE_SKILL_IDS). See hosts.ts skillRef.',
-      `- DELIVERY, BABYSIT, DEBUG: the worker host's skill invocation (hosts.ts\n  skillRef); an OpenCode worker gets ${skill("delivery-flow-delivery-flow")},\n  the generated skill name from hosts.ts OPENCODE_SKILL_IDS.`,
+      '- DELIVERY, BABYSIT, DEBUG: the host\'s skill invocation, e.g. for delivery-flow\n  `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`\n  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent),\n  `skill({ name: "delivery-flow-delivery-flow" })` (OpenCode, the generated\n  skill name the hosts module lists).',
+      `- DELIVERY, BABYSIT, DEBUG: the worker host's skill invocation; an OpenCode\n  worker gets ${skill("delivery-flow-delivery-flow")}, the generated skill\n  name the hosts module lists.`,
     ],
   ],
   "plugins/toolu/agents/research-agent.md": [

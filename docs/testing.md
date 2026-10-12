@@ -71,7 +71,7 @@ A port also has a resource budget ([#410](https://github.com/Falconiere/toolu/is
 
 The bench and its end-to-end tests need the native measurer (`cargo xtask measure`), so they need the Rust toolchain. Test files named `*.native.test.ts` hold such tests: `test:unit` ignores them (`--path-ignore-patterns`), and the `hook-bench` job runs `tooling/src/benchmarks/__tests__/hook-resources.native.test.ts` before the bench.
 
-Epic-orchestrator's `report.test.ts` and `epic-watch.test.ts` test the TypeScript scripts' own behavior and stay as they are: #434 (the resident engine) and #435 (worker reports and actions) replace them with Rust black-box tests, so they have no `toolu epic` mapping here.
+Epic-orchestrator's TypeScript scripts and their tests are gone: #434 (the resident engine) and #435 (worker reports and actions) replaced them with Rust tests (`crates/epic-orchestrator`, `crates/cli/tests/epic_*.rs`). The conformance seam's Rust-only entries `epic-orchestrator/launch` and `epic-orchestrator/report` resolve to the built `toolu` whatever `TOOLU_IMPL` says.
 
 ## Concurrency rule
 

@@ -91,26 +91,37 @@ fn item(seq: u64, record: &Record, epic: String, raised_ms: u64) -> Attention {
   }
 }
 
+/// The epic of an issue key, or the key itself when it names an epic.
 fn epic_of(world: &World, key: &str) -> String {
-  world
-    .issues
-    .get(key)
-    .map(|issue| issue.epic.clone())
-    .unwrap_or_default()
+  match world.issues.get(key) {
+    Some(issue) => issue.epic.clone(),
+    None if world.epics.contains_key(key) => key.to_owned(),
+    None => String::new(),
+  }
 }
 
 /// Close every live item of `key`, journaling its kind and wait.
 pub(crate) fn close_key(world: &mut World, key: &str) {
+  close_where(world, key, None, "report");
+}
+
+/// Close `key`'s live items of `kind` (every kind when `None`) once the engine
+/// saw their cause settle (`by`: the merge, a release, a cleanup, a refresh).
+pub(crate) fn settle(world: &mut World, key: &str, kind: Option<&str>, by: &str) {
+  close_where(world, key, kind, by);
+}
+
+fn close_where(world: &mut World, key: &str, kind: Option<&str>, by: &str) {
   if key.is_empty() {
     return;
   }
   let (closed, kept): (Vec<Attention>, Vec<Attention>) = std::mem::take(&mut world.attention)
     .into_iter()
-    .partition(|item| item.key == key);
+    .partition(|item| item.key == key && kind.is_none_or(|kind| item.kind == kind));
   world.attention = kept;
   for item in closed {
     let waited = world.now_ms.saturating_sub(item.raised_ms);
-    let note = format!("kind={} waited_ms={waited} by=report", item.kind);
+    let note = format!("kind={} waited_ms={waited} by={by}", item.kind);
     let record = Record::new("judgment", "closed", key, &item.token, &note);
     world.outbox.push_back(Step::Journal(record));
   }

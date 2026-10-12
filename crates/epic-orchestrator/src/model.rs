@@ -47,6 +47,10 @@ pub(crate) enum Action {
   Reconcile,
   /// Send text to the worker.
   Prompt,
+  /// Rebuild an epic's graph from its tracker (epic-level).
+  Refresh,
+  /// Post the summary and close a complete epic (epic-level).
+  Close,
 }
 
 impl Action {
@@ -59,6 +63,8 @@ impl Action {
       Self::Checkpoint => "checkpoint",
       Self::Reconcile => "reconcile",
       Self::Prompt => "prompt",
+      Self::Refresh => "refresh",
+      Self::Close => "close",
     }
   }
 }
@@ -127,6 +133,8 @@ pub(crate) struct Pending {
   pub recovered: bool,
   /// Armed after this action finishes.
   pub follow: Option<Action>,
+  /// A launch that routes again and replaces the agent (after a host limit).
+  pub reroute: bool,
 }
 
 /// One issue the engine is driving.
@@ -176,6 +184,32 @@ pub(crate) struct Issue {
   pub pending: Option<Pending>,
   /// An action deferred to a later issue.
   pub deferred: Option<String>,
+  /// A coupling hold: `{kind, with, score, source, at}`; ends only on release.
+  pub hold: Option<serde_json::Value>,
+  /// Released from a hold: the next launch skips the coupling check.
+  pub coupling_released: bool,
+  /// Launch attempts that waited in a row (no host, capacity or budget).
+  pub wait_streak: u32,
+  /// A waiting launch is not tried again before this time.
+  pub retry_at_ms: u64,
+  /// A relaunch of this running issue that waited: `reroute` (a host limit
+  /// moves it) or `lost` (its agent is gone). Refill retries it; the record
+  /// keeps it across a restart.
+  pub relaunch: Option<String>,
+  /// What the engine saw of the tracker item after the merge.
+  pub tracker_seen: Seen,
+}
+
+/// What the engine saw of a merged issue's tracker item.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Seen {
+  /// Not seen closed since the merge.
+  Open,
+  /// Seen closed after the merge (`tracker_closed_at` in the record).
+  Closed,
+  /// Seen open again; its one `reopened` judgment was raised
+  /// (`reopened_raised` in the record).
+  Reopened,
 }
 
 /// Whether a dependency cycle has been announced.
@@ -220,6 +254,8 @@ pub(crate) struct World {
   pub paused_all: bool,
   /// Stop before starting another effect.
   pub draining: bool,
+  /// The effect thread runs a call; no other call starts until it returns.
+  pub effect_busy: bool,
   /// Paused epic keys.
   pub paused: BTreeSet<String>,
   /// Clock, milliseconds.
@@ -236,8 +272,14 @@ pub(crate) struct World {
   pub herdr_failures: u32,
   /// Do not probe before this time.
   pub herdr_retry_at_ms: u64,
-  /// Launches in flight at once.
+  /// Launches in flight at once, for an issue whose epic has no own limit.
   pub max_parallel: u32,
+  /// Per registered epic: its graph, limit and current launch batch.
+  pub epics: BTreeMap<String, crate::epics::Epic>,
+  /// GitHub core and GraphQL floors under which launches and merges wait.
+  pub floors: (u64, u64),
+  /// Minutes a host cools down after a usage limit.
+  pub cooldown_min: u64,
   /// Dependency-cycle announcement.
   pub cycle: Cycle,
   /// Worktrees already snapshotted in this wave.
@@ -288,6 +330,7 @@ impl World {
       seq: 0,
       paused_all: false,
       draining: false,
+      effect_busy: false,
       paused: BTreeSet::new(),
       now_ms,
       stall_ms: STALL_MS,
@@ -297,6 +340,9 @@ impl World {
       herdr_failures: 0,
       herdr_retry_at_ms: 0,
       max_parallel: 1,
+      epics: BTreeMap::new(),
+      floors: (1_000, 500),
+      cooldown_min: 60,
       cycle: Cycle::Clear,
       checkpointed: BTreeSet::new(),
       outbox: VecDeque::new(),
@@ -330,6 +376,12 @@ impl Issue {
       blockers: Vec::new(),
       pending: None,
       deferred: None,
+      hold: None,
+      coupling_released: false,
+      wait_streak: 0,
+      retry_at_ms: 0,
+      relaunch: None,
+      tracker_seen: Seen::Open,
     }
   }
 }
@@ -342,6 +394,7 @@ pub(crate) fn fresh(action: Action, token: String) -> Pending {
     phase: 0,
     recovered: false,
     follow: None,
+    reroute: false,
   }
 }
 

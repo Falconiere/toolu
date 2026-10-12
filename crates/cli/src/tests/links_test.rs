@@ -43,7 +43,7 @@ fn epic_keeps_its_placeholder_output() {
     .stdout
     .unwrap_or_default();
   assert!(
-    epic_out.starts_with("toolu epic is not ported yet (#435, #448)"),
+    epic_out.starts_with("toolu epic is not ported yet (#448). Planned verbs: queue"),
     "{epic_out}"
   );
 }

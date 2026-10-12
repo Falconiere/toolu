@@ -118,11 +118,12 @@ fn load_epic(
   if let Some(limit) = graph.get("max_parallel").and_then(Value::as_u64) {
     world.max_parallel = u32::try_from(limit).unwrap_or(1).max(1);
   }
+  crate::epics::load_epic_state(world, epic, &dir.display().to_string(), &graph);
   let Some(issues) = graph.get("issues").and_then(Value::as_array) else {
     return Ok(());
   };
   for item in issues {
-    load_issue(world, epic, dir, item, stages)?;
+    load_issue(world, epic, dir, (item, &graph), stages)?;
   }
   Ok(())
 }
@@ -140,7 +141,7 @@ fn load_issue(
   world: &mut World,
   epic: &str,
   dir: &Path,
-  item: &Value,
+  (item, graph): (&Value, &Value),
   stages: &mut BTreeMap<String, String>,
 ) -> Result<(), String> {
   let Some(key) = item
@@ -156,15 +157,10 @@ fn load_issue(
   let issue_doc = read_value(&issue_path)?;
   let status = read_value(&status_path)?;
   let issue = ensure_issue(world, key, epic, &state_dir);
-  issue.blockers = strings(item.get("open_blockers"));
+  issue.blockers = crate::epics::blocker_keys(graph, &strings(item.get("open_blockers")));
+  overlay_record(issue, &issue_doc);
   if let Some(stage) = issue_doc.get("stage").and_then(Value::as_str) {
     stages.insert(key.to_owned(), stage.to_owned());
-  }
-  if let Some(tree) = issue_doc.get("worktree").and_then(Value::as_str) {
-    issue.worktree = Some(tree.to_owned());
-  }
-  if let Some(kind) = issue_doc.get("kind").and_then(Value::as_str) {
-    kind.clone_into(&mut issue.kind);
   }
   if let Some(phase) = status.get("phase").and_then(Value::as_str) {
     phase.clone_into(&mut issue.phase);
@@ -177,6 +173,24 @@ fn load_issue(
     note.clone_into(&mut issue.note);
   }
   Ok(())
+}
+
+/// The engine's fields of an issue record: its hold, release, waiting
+/// relaunch, tracker sighting, worktree and host.
+fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
+  issue.hold = record.get("hold").filter(|hold| !hold.is_null()).cloned();
+  issue.coupling_released = record.get("coupling_released") == Some(&Value::Bool(true));
+  issue.relaunch = record
+    .get("relaunch")
+    .and_then(Value::as_str)
+    .map(str::to_owned);
+  issue.tracker_seen = crate::merge_bridge::seen_from(record);
+  if let Some(tree) = record.get("worktree").and_then(Value::as_str) {
+    issue.worktree = Some(tree.to_owned());
+  }
+  if let Some(kind) = record.get("kind").and_then(Value::as_str) {
+    kind.clone_into(&mut issue.kind);
+  }
 }
 
 fn strings(value: Option<&Value>) -> Vec<String> {
@@ -232,6 +246,25 @@ pub(crate) fn adopt_new_epics(world: &mut World, paths: &Paths) -> Result<(), St
     load_epic(world, key, Path::new(dir), &mut stages)?;
   }
   overlay_stages(world, &stages);
+  Ok(())
+}
+
+/// Reload one epic's graph and records after a refresh, keeping its batch.
+///
+/// # Errors
+/// The graph, a record or a status file cannot be read.
+pub(crate) fn reload_epic(world: &mut World, epic: &str) -> Result<(), String> {
+  let Some(dir) = world
+    .epics
+    .get(epic)
+    .map(|found| PathBuf::from(&found.state_dir))
+  else {
+    return Ok(());
+  };
+  let mut stages = BTreeMap::new();
+  load_epic(world, epic, &dir, &mut stages)?;
+  overlay_stages(world, &stages);
+  watch::sync(world);
   Ok(())
 }
 

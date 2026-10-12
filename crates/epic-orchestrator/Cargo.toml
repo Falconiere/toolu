@@ -15,6 +15,7 @@ serde_json.workspace = true
 toolu-engine = { path = "../core/engine" }
 toolu-github = { path = "../core/github" }
 toolu-http = { path = "../core/http" }
+toolu-jev-client = { path = "../core/jev" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
 toolu-state = { path = "../core/state" }
