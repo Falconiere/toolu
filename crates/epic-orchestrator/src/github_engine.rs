@@ -7,7 +7,7 @@ use toolu_engine::babysit::{BabysitTick, TickRequest};
 use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
 
-use crate::babysit::{self, Next};
+use crate::babysit;
 use crate::github_probe::{self, Change, Report};
 use crate::journal::Record;
 use crate::logic::push_attention;
@@ -130,9 +130,11 @@ fn note_report(
   });
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
-    note_babysit(world, key, checked.next);
+    crate::babysit_next::apply(world, key, checked.next);
   }
-  if let Some(crate::watch::Kind::Pr { key: issue, .. }) = world.watches.get(key).map(|w| w.kind.clone()) {
+  if let Some(crate::watch::Kind::Pr { key: issue, .. }) =
+    world.watches.get(key).map(|w| w.kind.clone())
+  {
     crate::logic::arm_merge(world, &issue);
   }
   retry_after.is_some()
@@ -182,46 +184,6 @@ fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<Tick
       std::time::UNIX_EPOCH + Duration::from_millis(world.now_ms),
     )),
   })
-}
-
-fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
-  let Some(crate::watch::Kind::Pr { key, .. }) =
-    world.watches.get(watch_key).map(|watch| &watch.kind)
-  else {
-    return;
-  };
-  let key = key.clone();
-  match next {
-    Next::KeepGoing => {}
-    Next::MergeQueue => {
-      if let Some(issue) = world.issues.get_mut(&key)
-        && issue.phase != "ready"
-      {
-        "ready".clone_into(&mut issue.phase);
-        crate::queue_fields::note_phase(issue, "ready", world.now_ms);
-        world.outbox.push_back(Step::Status { key: key.clone() });
-        world.outbox.push_back(Step::Issue { key: key.clone() });
-        journal(world, &key, "github-babysit-ready", "");
-      }
-    }
-    Next::Attention(note) => push_attention(world, "babysit", &key, &note),
-    Next::Prompt(text) => {
-      leave_queue(world, &key);
-      crate::babysit::prompt(world, &key, "babysit", text, Some("babysit"));
-    }
-    Next::Escalate { note, prompt: text } => {
-      leave_queue(world, &key);
-      push_attention(world, "babysit", &key, &note);
-      crate::babysit::prompt(world, &key, "babysit", text, None);
-    }
-  }
-}
-
-/// A babysit finding on a queued issue sends it back to babysit.
-fn leave_queue(world: &mut World, key: &str) {
-  if world.issues.get(key).is_some_and(crate::queue::queued) {
-    crate::commit_queue::leave(world, key, "babysit", "babysit needs the worker");
-  }
 }
 
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
@@ -329,7 +291,3 @@ mod babysit_tests;
 #[cfg(test)]
 #[path = "tests/github_engine_epic_test.rs"]
 mod epic_tests;
-
-#[cfg(test)]
-#[path = "tests/github_engine_queue_test.rs"]
-mod queue_tests;

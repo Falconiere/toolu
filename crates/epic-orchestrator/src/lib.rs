@@ -9,6 +9,7 @@ mod attention;
 mod attention_ops;
 /// Cross-plugin babysit integration for the resident engine.
 pub mod babysit;
+mod babysit_next;
 mod checkpoint;
 mod client;
 mod close;
@@ -84,13 +85,13 @@ mod paths;
 mod probe_evidence;
 mod query;
 mod queue;
+mod queue_fields;
 #[cfg(test)]
 #[path = "tests/queue_rig_test.rs"]
 mod queue_rig;
 #[cfg(test)]
 #[path = "tests/queue_scenario_test.rs"]
 mod queue_scenario;
-mod queue_fields;
 mod queue_step;
 mod reach;
 mod rebase;

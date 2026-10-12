@@ -32,7 +32,10 @@ fn repo(branch_edit: (&str, &str), main_edit: (&str, &str)) -> Repo {
   git(&work, &["commit", "-qam", "feature"]);
   git(&work, &["push", "-q", "-u", "origin", "feat/x"]);
   let other = tmp.path().join("other");
-  git(tmp.path(), &["clone", "-q", &origin.display().to_string(), "other"]);
+  git(
+    tmp.path(),
+    &["clone", "-q", &origin.display().to_string(), "other"],
+  );
   std::fs::write(other.join(main_edit.0), main_edit.1).expect("main edit");
   git(&other, &["commit", "-qam", "main moves"]);
   git(&other, &["push", "-q", "origin", "main"]);
@@ -63,14 +66,22 @@ impl Repo {
   fn bytes(&self) -> Vec<(String, Vec<u8>)> {
     ["a.txt", "b.txt", "u.txt"]
       .iter()
-      .map(|name| (name.to_string(), std::fs::read(self.work.join(name)).unwrap_or_default()))
+      .map(|name| {
+        (
+          name.to_string(),
+          std::fs::read(self.work.join(name)).unwrap_or_default(),
+        )
+      })
       .collect()
   }
 }
 
 fn env(repo: &Repo) -> Env {
   Env::from_pairs([
-    ("PATH", "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin".to_owned()),
+    (
+      "PATH",
+      "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin".to_owned(),
+    ),
     ("HOME", repo.tmp.path().display().to_string()),
   ])
 }
@@ -111,9 +122,15 @@ fn a_conflict_aborts_and_leaves_the_worktree_byte_identical_to_its_snapshot() {
   assert_eq!(repo.remote("feat/x"), repo.head, "nothing was pushed");
   let snapshot = git(&repo.work, &["show", "refs/epic-wip/k:u.txt"]);
   assert_eq!(snapshot, "untracked work");
-  assert_eq!(git(&repo.work, &["show", "refs/epic-wip/k:a.txt"]), "uno\ntwo");
+  assert_eq!(
+    git(&repo.work, &["show", "refs/epic-wip/k:a.txt"]),
+    "uno\ntwo"
+  );
   let after = git(&repo.work, &["reflog", "--format=%H"]);
-  assert!(after.ends_with(&reflog), "the abort only appends to the reflog");
+  assert!(
+    after.ends_with(&reflog),
+    "the abort only appends to the reflog"
+  );
 }
 
 #[test]
@@ -140,7 +157,14 @@ fn unsafe_worktrees_are_handed_to_the_worker_without_a_git_write() {
   assert_eq!(git(&repo.work, &["rev-parse", "HEAD"]), repo.head);
   assert!(
     std::process::Command::new("git")
-      .args(["-C", &repo.work.display().to_string(), "rev-parse", "--verify", "-q", "refs/epic-wip/k"])
+      .args([
+        "-C",
+        &repo.work.display().to_string(),
+        "rev-parse",
+        "--verify",
+        "-q",
+        "refs/epic-wip/k"
+      ])
       .output()
       .expect("git")
       .stdout
@@ -180,8 +204,8 @@ fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
 }
 
 fn stage(root: &Path, token: &str) -> String {
-  let state = read_resource_state(root).expect("state");
-  leases(&state)
+  let resources = read_resource_state(root).expect("state");
+  leases(&resources)
     .iter()
     .find(|lease| matches!(lease.get("token"), Some(Ordered::String(t)) if t == token))
     .and_then(|lease| match lease.get("stage") {
@@ -202,7 +226,10 @@ fn a_live_job_in_the_worktree_keeps_the_engine_out_and_the_fence_is_lifted() {
   };
   let _job = take(&root, LeaseKind::Job, &repo.work);
   let outcome = rebase(&repo.target(), Some(&lease), &env(&repo), None);
-  assert_eq!(outcome, Rebased::Busy("a managed job runs in the worktree".to_owned()));
+  assert_eq!(
+    outcome,
+    Rebased::Busy("a managed job runs in the worktree".to_owned())
+  );
   assert_eq!(stage(&root, &agent), "running");
   assert_eq!(git(&repo.work, &["rev-parse", "HEAD"]), repo.head);
 }

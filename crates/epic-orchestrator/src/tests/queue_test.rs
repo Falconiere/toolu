@@ -16,7 +16,7 @@ fn world(ready: &[(&str, u64)]) -> World {
     "running".clone_into(&mut issue.stage);
     node.repo.clone_into(&mut issue.repo);
     issue.pr = node.number;
-    issue.queued_at_ms = Some(*at);
+    issue.queue.queued_at_ms = Some(*at);
     world.issues.insert((*key).to_owned(), issue);
   }
   epic.graph = Some(graph);
@@ -44,10 +44,18 @@ fn each_repository_orders_by_unblocks_then_ready_time_then_key() {
   let world = world(&READY);
   assert_eq!(
     keys(&world, "Falconiere/comemory"),
-    ["comemory-252", "comemory-253", "comemory-251", "comemory-256"]
+    [
+      "comemory-252",
+      "comemory-253",
+      "comemory-251",
+      "comemory-256"
+    ]
   );
   assert_eq!(keys(&world, "CodaSignal/comemory.io"), ["comemory-io-184"]);
-  assert_eq!(head(&world, "Falconiere/comemory").as_deref(), Some("comemory-252"));
+  assert_eq!(
+    head(&world, "Falconiere/comemory").as_deref(),
+    Some("comemory-252")
+  );
 }
 
 #[test]
@@ -71,7 +79,7 @@ fn only_ready_running_issues_with_a_pull_request_are_queued() {
   assert_eq!(keys(&world, "Falconiere/comemory"), ["comemory-256"]);
   let mut waiting = issue(&mut world, "comemory-256");
   "awaiting_merge".clone_into(&mut waiting.stage);
-  waiting.queued_at_ms = None;
+  waiting.queue.queued_at_ms = None;
   assert!(queued(&waiting), "awaiting_merge stays queued");
 }
 
@@ -93,6 +101,7 @@ fn the_document_numbers_positions_marks_the_head_and_filters_by_epic() {
     .issues
     .get_mut("comemory-252")
     .expect("issue")
+    .queue
     .rebase_rounds
     .engine = 1;
   let doc = document(&world, None);
@@ -106,7 +115,10 @@ fn the_document_numbers_positions_marks_the_head_and_filters_by_epic() {
   );
   assert_eq!(repo["items"][3]["position"], 4);
   assert_eq!(repo["items"][3]["head"], false);
-  assert_eq!(document(&world, Some("other")), json!({"schema": 1, "repositories": []}));
+  assert_eq!(
+    document(&world, Some("other")),
+    json!({"schema": 1, "repositories": []})
+  );
 }
 
 #[test]
@@ -121,9 +133,14 @@ fn the_order_survives_a_reload_of_the_records() {
   }
   let before = keys(&world, "Falconiere/comemory");
   for issue in world.issues.values_mut() {
-    issue.queued_at_ms = None;
-    let record = crate::disk::read_value(&tmp.path().join("issues").join(format!("{}.json", issue.key)))
-      .expect("record");
+    issue.queue.queued_at_ms = None;
+    let record = crate::disk::read_value(
+      &tmp
+        .path()
+        .join("issues")
+        .join(format!("{}.json", issue.key)),
+    )
+    .expect("record");
     crate::queue_fields::read(issue, &record);
   }
   assert_eq!(keys(&world, "Falconiere/comemory"), before);

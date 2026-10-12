@@ -44,7 +44,11 @@ fn sent(fixture: &Fixture) -> (Vec<Value>, Vec<Value>) {
     .iter()
     .filter(|request| request.path == "/graphql")
     .map(|request| body(&request.body))
-    .filter(|query| query["query"].as_str().is_some_and(|text| text.starts_with("mutation")))
+    .filter(|query| {
+      query["query"]
+        .as_str()
+        .is_some_and(|text| text.starts_with("mutation"))
+    })
     .collect();
   let merges = requests
     .iter()
@@ -61,11 +65,17 @@ fn running_checks_arm_auto_merge_pinned_to_the_head_and_never_merge() {
     ..PrState::default()
   });
   let out = step(&input(&fixture, HEAD));
-  assert_eq!(out, json!({"outcome": "waiting", "auto_merge": "armed", "head": "abc123"}));
+  assert_eq!(
+    out,
+    json!({"outcome": "waiting", "auto_merge": "armed", "head": "abc123"})
+  );
   let (mutations, merges) = sent(&fixture);
   assert_eq!(mutations.len(), 1);
-  assert_eq!(mutations[0]["variables"], json!({"id": "PR_7", "m": "SQUASH", "h": "abc123"}));
-  assert!(merges.is_empty(), "{merges:?}");
+  assert_eq!(
+    mutations[0]["variables"],
+    json!({"id": "PR_7", "m": "SQUASH", "h": "abc123"})
+  );
+  assert_eq!(merges, Vec::<Value>::new());
 }
 
 #[test]
@@ -77,7 +87,10 @@ fn a_repository_without_auto_merge_waits_for_the_engine_to_merge() {
   let fixture = served(&state);
   let refused = r#"{"errors":[{"message":"Auto merge is not allowed for this repository"}]}"#;
   fixture
-    .sequence("/graphql", vec![crate::gate_rig::pr_reply(&state), Reply::new(200, refused)])
+    .sequence(
+      "/graphql",
+      vec![crate::gate_rig::pr_reply(&state), Reply::new(200, refused)],
+    )
     .expect("sequence");
   let out = step(&input(&fixture, HEAD));
   assert_eq!(out["outcome"], "waiting");
@@ -87,30 +100,53 @@ fn a_repository_without_auto_merge_waits_for_the_engine_to_merge() {
 #[test]
 fn a_failing_check_or_thread_disarms_and_hands_back_without_a_merge_call() {
   for state in [
-    PrState { rollup: failing(), armed: true, ..PrState::default() },
-    PrState { unresolved: 1, armed: true, ..PrState::default() },
+    PrState {
+      rollup: failing(),
+      armed: true,
+      ..PrState::default()
+    },
+    PrState {
+      unresolved: 1,
+      armed: true,
+      ..PrState::default()
+    },
   ] {
     let fixture = served(&state);
     let out = step(&input(&fixture, HEAD));
     assert_eq!(out["outcome"], "fix", "{out}");
-    assert!(out["reasons"].as_array().is_some_and(|reasons| !reasons.is_empty()));
+    assert!(
+      out["reasons"]
+        .as_array()
+        .is_some_and(|reasons| !reasons.is_empty())
+    );
     let (mutations, merges) = sent(&fixture);
-    assert!(mutations[0]["query"].as_str().is_some_and(|q| q.contains("disablePullRequestAutoMerge")));
-    assert!(merges.is_empty());
+    assert!(
+      mutations[0]["query"]
+        .as_str()
+        .is_some_and(|q| q.contains("disablePullRequestAutoMerge"))
+    );
+    assert_eq!(merges, Vec::<Value>::new());
   }
+}
+
+/// GitHub accepts the merge of `o/r#7` and then reports it merged.
+fn accept_merge(fixture: &Fixture) {
+  let merged = || Reply::new(200, r#"{"merged":true}"#);
+  fixture
+    .route("/repos/o/r/pulls/7/merge", merged())
+    .expect("merge");
+  fixture.route("/repos/o/r/pulls/7", merged()).expect("pull");
 }
 
 #[test]
 fn a_green_head_merges_pinned_to_its_sha_with_the_preferred_method() {
   let fixture = served(&PrState::default());
-  fixture
-    .route("/repos/o/r/pulls/7/merge", Reply::new(200, r#"{"merged":true}"#))
-    .expect("merge");
-  fixture
-    .route("/repos/o/r/pulls/7", Reply::new(200, r#"{"merged":true}"#))
-    .expect("pull");
+  accept_merge(&fixture);
   let out = step(&input(&fixture, HEAD));
-  assert_eq!(out, json!({"outcome": "merged", "admin_used": false, "head": "abc123"}));
+  assert_eq!(
+    out,
+    json!({"outcome": "merged", "admin_used": false, "head": "abc123"})
+  );
   let (_, merges) = sent(&fixture);
   assert_eq!(merges, [json!({"merge_method": "squash", "sha": "abc123"})]);
 }
@@ -134,12 +170,7 @@ fn a_protection_only_refusal_merges_with_admin() {
     merge_state: "BLOCKED",
     ..PrState::default()
   });
-  fixture
-    .route("/repos/o/r/pulls/7/merge", Reply::new(200, r#"{"merged":true}"#))
-    .expect("merge");
-  fixture
-    .route("/repos/o/r/pulls/7", Reply::new(200, r#"{"merged":true}"#))
-    .expect("pull");
+  accept_merge(&fixture);
   let out = step(&input(&fixture, HEAD));
   assert_eq!(out["outcome"], "merged");
   assert_eq!(out["admin_used"], true);
@@ -156,8 +187,15 @@ fn a_behind_head_disarms_first_then_waits_for_a_parked_worker() {
   let out = step(&input(&fixture, Mode::Head { parked: false }));
   assert_eq!(out["outcome"], "busy");
   assert_eq!(out["note"], "worker active");
-  assert!(sent(&fixture).0[0]["query"].as_str().is_some_and(|q| q.contains("disable")));
-  let fixture = served(&PrState { behind: 2, ..PrState::default() });
+  assert!(
+    sent(&fixture).0[0]["query"]
+      .as_str()
+      .is_some_and(|q| q.contains("disable"))
+  );
+  let fixture = served(&PrState {
+    behind: 2,
+    ..PrState::default()
+  });
   let out = step(&input(&fixture, HEAD));
   assert_eq!(out["outcome"], "handoff");
   assert_eq!(out["note"], "no worktree recorded");
@@ -165,11 +203,20 @@ fn a_behind_head_disarms_first_then_waits_for_a_parked_worker() {
 
 #[test]
 fn disarm_mode_only_disarms_and_closed_or_merged_prs_are_reported() {
-  let fixture = served(&PrState { armed: true, ..PrState::default() });
-  assert_eq!(step(&input(&fixture, Mode::Disarm)), json!({"outcome": "disarmed"}));
+  let fixture = served(&PrState {
+    armed: true,
+    ..PrState::default()
+  });
+  assert_eq!(
+    step(&input(&fixture, Mode::Disarm)),
+    json!({"outcome": "disarmed"})
+  );
   assert_eq!(sent(&fixture).0.len(), 1);
   for state in ["MERGED", "CLOSED"] {
-    let fixture = served(&PrState { state, ..PrState::default() });
+    let fixture = served(&PrState {
+      state,
+      ..PrState::default()
+    });
     let out = job(input(&fixture, HEAD))();
     let out: Value = serde_json::from_str(&out).expect("json");
     assert_eq!(out["outcome"], state.to_lowercase());

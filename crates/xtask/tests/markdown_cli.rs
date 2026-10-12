@@ -103,7 +103,7 @@ fn skill_running(command: &str) -> String {
 fn an_unknown_verb_names_the_file_line_and_closest_verb() {
   let dir = root(
     &real_tree().unwrap(),
-    &[(SKILL, &skill_running("toolu epic planed"))],
+    &[(SKILL, &skill_running("toolu epic queu"))],
   )
   .unwrap();
   let (code, stderr) = check(dir.path()).unwrap();
@@ -111,8 +111,8 @@ fn an_unknown_verb_names_the_file_line_and_closest_verb() {
   assert_has(
     &stderr,
     &[
-      &format!("{SKILL}:12: `toolu epic planed`: unknown command `planed`"),
-      "closest: `planned`",
+      &format!("{SKILL}:12: `toolu epic queu`: unknown command `queu`"),
+      "closest: `queue`",
     ],
   );
 }
@@ -121,7 +121,7 @@ fn an_unknown_verb_names_the_file_line_and_closest_verb() {
 fn an_unknown_flag_lists_the_valid_flags() {
   let dir = root(
     &real_tree().unwrap(),
-    &[(SKILL, "Run `toolu --jsn epic planned`.\n")],
+    &[(SKILL, "Run `toolu --jsn epic queue`.\n")],
   )
   .unwrap();
   let (code, stderr) = check(dir.path()).unwrap();

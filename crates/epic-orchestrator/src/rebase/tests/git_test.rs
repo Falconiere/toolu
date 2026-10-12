@@ -5,7 +5,10 @@ use crate::rebase::Target;
 use crate::support::{git, repo_with_origin};
 
 fn env() -> Env {
-  Env::from_pairs([("PATH", "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin".to_owned())])
+  Env::from_pairs([(
+    "PATH",
+    "/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin".to_owned(),
+  )])
 }
 
 #[test]
@@ -13,7 +16,9 @@ fn a_failed_command_reports_git_s_own_words() {
   let tmp = tempfile::tempdir().expect("temp");
   let env = env();
   let runner = Git::new(tmp.path(), &env);
-  let err = runner.out(&["rev-parse", "HEAD"]).expect_err("not a repository");
+  let err = runner
+    .out(&["rev-parse", "HEAD"])
+    .expect_err("not a repository");
   assert!(err.contains("not a git repository"), "{err}");
 }
 

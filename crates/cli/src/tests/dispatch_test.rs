@@ -97,26 +97,30 @@ fn the_hook_protocol_flag_works_beside_other_flags() {
 
 #[test]
 fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
-  let text = dispatched("epic planned");
+  let text = dispatched("plugins planned");
   assert!(
     text
       .stdout
       .unwrap()
-      .starts_with("toolu epic is not ported yet")
+      .starts_with("toolu plugins is not ported yet")
   );
-  for line in [
-    "--json epic-orchestrator planned",
-    "epic-orchestrator planned --json",
-  ] {
+  for line in ["--json plugins planned", "plugins planned --json"] {
     let outcome = dispatched(line);
-    assert_eq!(document(&outcome)["namespace"], "epic", "{line}");
+    assert_eq!(document(&outcome)["namespace"], "plugins", "{line}");
   }
 }
 
 #[test]
 fn a_plugin_name_alias_reaches_its_namespace() {
-  let outcome = dispatched("--json epic-orchestrator planned");
-  assert_eq!(document(&outcome)["namespace"], "epic");
+  let outcome = dispatched("--json epic-orchestrator gate --pr nonsense");
+  assert_eq!(outcome.exit, Exit::Usage);
+  let message = document(&outcome)["error"]["message"].clone();
+  assert!(
+    message
+      .as_str()
+      .is_some_and(|text| text.starts_with("toolu epic gate: ")),
+    "{message}"
+  );
 }
 
 #[test]
@@ -140,7 +144,7 @@ fn an_unknown_host_is_a_usage_error() {
 
 #[test]
 fn the_global_flags_become_the_verb_context() {
-  let argv = "toolu --host codex --config-dir /tmp/cfg -q epic planned --json";
+  let argv = "toolu --host codex --config-dir /tmp/cfg -q plugins planned --json";
   let matches = tree::command()
     .try_get_matches_from(argv.split(' '))
     .unwrap();

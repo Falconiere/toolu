@@ -65,5 +65,8 @@ fn an_inline_engine_commits_the_queue_step_without_a_thread() {
   assert!(engine.running.is_none());
   let issue = &engine.world.issues["a"];
   assert!(issue.pending.is_none(), "the step ran and closed");
-  assert!(issue.auto_armed, "checks pending: auto-merge armed at the head");
+  assert!(
+    issue.queue.auto_armed,
+    "checks pending: auto-merge armed at the head"
+  );
 }

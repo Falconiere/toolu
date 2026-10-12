@@ -24,5 +24,9 @@ fn the_epic_orchestrator_crate_is_its_plugin_and_dispatches_its_verbs() {
     .try_get_matches_from(["epic", "gate", "--pr", "nonsense"])
     .expect("epic gate matches");
   let outcome = run(&matches, &Ctx::default(), &Unported);
-  assert_eq!(outcome.exit, toolu_protocol::exit::Exit::Usage, "{outcome:?}");
+  assert_eq!(
+    outcome.exit,
+    toolu_protocol::exit::Exit::Usage,
+    "{outcome:?}"
+  );
 }

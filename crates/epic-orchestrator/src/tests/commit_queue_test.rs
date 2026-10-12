@@ -14,7 +14,7 @@ fn world() -> World {
     "running".clone_into(&mut issue.stage);
     "o/r".clone_into(&mut issue.repo);
     issue.pr = Some(if key == "a" { 1 } else { 2 });
-    issue.queued_at_ms = Some(at);
+    issue.queue.queued_at_ms = Some(at);
     world.issues.insert(key.to_owned(), issue);
   }
   if let Some(issue) = world.issues.get_mut("a") {
@@ -37,7 +37,7 @@ fn names(steps: &[Step]) -> Vec<String> {
     .filter_map(|step| match step {
       Step::Journal(record) => Some(format!("{}:{}", record.name, record.note)),
       Step::Prompt { text, .. } => Some(format!("prompt:{text}")),
-      _ => None,
+      Step::Call { .. } | Step::Status { .. } | Step::Issue { .. } | Step::Notify { .. } => None,
     })
     .collect()
 }
@@ -49,13 +49,25 @@ fn an_engine_rebase_keeps_the_head_counts_the_round_and_checks_ci_now() {
   let steps = commit(&mut world, "a", &doc).expect("queue doc");
   assert_eq!(
     names(&steps),
-    ["merge-done:rebased", r#"rebase:{"by":"engine","head":"new","round":1}"#]
+    [
+      "merge-done:rebased",
+      r#"rebase:{"by":"engine","head":"new","round":1}"#
+    ]
   );
   let a = &world.issues["a"];
   assert_eq!((a.pending.is_none(), a.phase.as_str()), (true, "ready"));
-  assert_eq!(a.rebase_rounds, Rounds { engine: 1, worker: 0 });
+  assert_eq!(
+    a.queue.rebase_rounds,
+    Rounds {
+      engine: 1,
+      worker: 0
+    }
+  );
   assert!(world.watches["pr:o/r#1"].immediate);
-  assert!(world.issues["b"].pending.is_none(), "b waits without a rebase");
+  assert!(
+    world.issues["b"].pending.is_none(),
+    "b waits without a rebase"
+  );
 }
 
 #[test]
@@ -67,11 +79,20 @@ fn a_conflict_hands_off_once_leaves_the_queue_and_arms_the_next_head() {
   assert_eq!(names[0], "merge-done:handoff: conflict: a.txt");
   assert_eq!(names[1], r#"rebase:{"by":"worker","round":1}"#);
   assert_eq!(names[2], "queue-left:rebasing: conflict: a.txt");
-  assert_eq!(names.iter().filter(|name| name.starts_with("prompt:")).count(), 1);
+  assert_eq!(
+    names
+      .iter()
+      .filter(|name| name.starts_with("prompt:"))
+      .count(),
+    1
+  );
   assert!(names.contains(&"prompt:REBASE".to_owned()));
   let a = &world.issues["a"];
-  assert_eq!((a.phase.as_str(), a.queued_at_ms), ("rebasing", None));
-  assert_eq!(world.issues["b"].pending.as_ref().map(|p| p.action), Some(Action::Merge));
+  assert_eq!((a.phase.as_str(), a.queue.queued_at_ms), ("rebasing", None));
+  assert_eq!(
+    world.issues["b"].pending.as_ref().map(|p| p.action),
+    Some(Action::Merge)
+  );
 }
 
 #[test]
@@ -79,16 +100,23 @@ fn a_fix_verdict_returns_to_babysit_and_disarms_what_the_engine_armed() {
   let mut world = world();
   let waiting = json!({"outcome": "waiting", "auto_merge": "armed"}).to_string();
   let _ = commit(&mut world, "a", &waiting).expect("waiting");
-  assert!(world.issues["a"].auto_armed);
+  assert!(world.issues["a"].queue.auto_armed);
   leave(&mut world, "a", "babysit", "new thread");
   let a = &world.issues["a"];
   assert_eq!(a.phase, "babysit");
-  assert_eq!(a.pending.as_ref().map(|p| p.action), Some(Action::Merge), "disarm step");
+  assert_eq!(
+    a.pending.as_ref().map(|p| p.action),
+    Some(Action::Merge),
+    "disarm step"
+  );
   let mut world = self::world();
   let fix = json!({"outcome": "fix", "reasons": ["failing: test"]}).to_string();
   let steps = commit(&mut world, "a", &fix).expect("fix");
   assert!(names(&steps).contains(&r#"queue-left:babysit: ["failing: test"]"#.to_owned()));
-  assert!(world.issues["a"].pending.is_none(), "the step already disarmed");
+  assert!(
+    world.issues["a"].pending.is_none(),
+    "the step already disarmed"
+  );
 }
 
 #[test]
@@ -105,21 +133,36 @@ fn waits_refusals_and_stale_merges_keep_the_head_and_never_prompt() {
     doc["outcome"] = json!(outcome);
     let steps = commit(&mut world, "a", &doc.to_string()).expect("doc");
     let names = names(&steps);
-    assert!(names[0].starts_with(&format!("merge-done:{outcome}")), "{names:?}");
-    assert!(!names.iter().any(|name| name.starts_with("prompt:")), "{names:?}");
+    assert!(
+      names[0].starts_with(&format!("merge-done:{outcome}")),
+      "{names:?}"
+    );
+    assert!(
+      !names.iter().any(|name| name.starts_with("prompt:")),
+      "{names:?}"
+    );
     assert_eq!(world.issues["a"].phase, "ready");
     assert!(world.issues["b"].pending.is_none());
-    assert!(!world.issues["a"].auto_armed);
+    assert!(!world.issues["a"].queue.auto_armed);
   }
   let mut world = world();
-  let _ = commit(&mut world, "a", r#"{"outcome":"busy","note":"worker active"}"#);
+  let _ = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"busy","note":"worker active"}"#,
+  );
   assert!(world.outbox.is_empty());
 }
 
 #[test]
 fn an_uncertain_merge_is_held_and_a_closed_pr_frees_the_queue() {
   let mut world = world();
-  let steps = commit(&mut world, "a", r#"{"outcome":"uncertain","note":"timed out"}"#).expect("doc");
+  let steps = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"uncertain","note":"timed out"}"#,
+  )
+  .expect("doc");
   assert_eq!(world.issues["a"].deferred.as_deref(), Some("merge"));
   assert_eq!(world.attention[0].kind, "failed");
   assert!(names(&steps)[0].starts_with("merge-done:uncertain"));
@@ -127,15 +170,26 @@ fn an_uncertain_merge_is_held_and_a_closed_pr_frees_the_queue() {
   let _ = commit(&mut world, "a", r#"{"outcome":"closed"}"#).expect("doc");
   assert_eq!(world.issues["a"].stage, "closed");
   assert_eq!(world.attention[0].kind, "pr-closed");
-  assert_eq!(world.issues["b"].pending.as_ref().map(|p| p.action), Some(Action::Merge));
+  assert_eq!(
+    world.issues["b"].pending.as_ref().map(|p| p.action),
+    Some(Action::Merge)
+  );
 }
 
 #[test]
 fn a_merged_head_moves_to_cleaning_and_plain_outcomes_are_not_queue_docs() {
   let mut world = world();
-  let _ = commit(&mut world, "a", r#"{"outcome":"merged","admin_used":false}"#).expect("doc");
+  let _ = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"merged","admin_used":false}"#,
+  )
+  .expect("doc");
   let a = &world.issues["a"];
-  assert_eq!((a.stage.as_str(), a.pending.as_ref().map(|p| p.phase)), ("cleaning", Some(2)));
+  assert_eq!(
+    (a.stage.as_str(), a.pending.as_ref().map(|p| p.phase)),
+    ("cleaning", Some(2))
+  );
   assert_eq!(commit(&mut world, "a", "applied"), None);
   assert_eq!(commit(&mut world, "a", r#"{"note":"x"}"#), None);
 }

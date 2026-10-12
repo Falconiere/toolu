@@ -110,7 +110,11 @@ fn run(input: &StepJob) -> Result<Map<String, Value>, String> {
     "merged" | "closed" => outcome(&verdict),
     "fix" => {
       disarm(&gh, &facts, armed)?;
-      with(outcome("fix"), "reasons", result.get("reasons").cloned().unwrap_or(json!([])))
+      with(
+        outcome("fix"),
+        "reasons",
+        result.get("reasons").cloned().unwrap_or(json!([])),
+      )
     }
     "rebase" => {
       disarm(&gh, &facts, armed)?;
@@ -144,7 +148,11 @@ pub(crate) fn reconcile(input: &StepJob) -> String {
 }
 
 fn disarm(gh: &Gh, facts: &Facts, armed: bool) -> Result<(), String> {
-  if armed { auto::disarm(gh, facts) } else { Ok(()) }
+  if armed {
+    auto::disarm(gh, facts)
+  } else {
+    Ok(())
+  }
 }
 
 /// The mechanical rebase of a parked worker's worktree.
@@ -162,7 +170,12 @@ fn rebased(input: &StepJob, result: &Map<String, Value>, parked: bool) -> Map<St
     base: text(result, "base"),
     head: text(result, "head"),
   };
-  match rebase(&target, input.lease.as_ref(), &input.env, input.trace.as_deref()) {
+  match rebase(
+    &target,
+    input.lease.as_ref(),
+    &input.env,
+    input.trace.as_deref(),
+  ) {
     Rebased::Pushed(head) => with(outcome("rebased"), "new_head", json!(head)),
     Rebased::Handoff(note) => with(outcome("handoff"), "note", json!(redact(&input.env, &note))),
     Rebased::Busy(note) => with(outcome("busy"), "note", json!(redact(&input.env, &note))),
@@ -170,7 +183,13 @@ fn rebased(input: &StepJob, result: &Map<String, Value>, parked: bool) -> Map<St
 }
 
 /// Checks run: arm auto-merge pinned to the head, unless armed already.
-fn waiting(gh: &Gh, pr: &Pr, facts: &Facts, head: &str, armed: bool) -> Result<Map<String, Value>, String> {
+fn waiting(
+  gh: &Gh,
+  pr: &Pr,
+  facts: &Facts,
+  head: &str,
+  armed: bool,
+) -> Result<Map<String, Value>, String> {
   if armed {
     return Ok(with(outcome("waiting"), "auto_merge", json!("armed")));
   }
@@ -185,7 +204,13 @@ fn waiting(gh: &Gh, pr: &Pr, facts: &Facts, head: &str, armed: bool) -> Result<M
 }
 
 /// Green: merge pinned to the verified head.
-fn merged(gh: &Gh, pr: &Pr, facts: &Facts, head: &str, env: &Env) -> Result<Map<String, Value>, String> {
+fn merged(
+  gh: &Gh,
+  pr: &Pr,
+  facts: &Facts,
+  head: &str,
+  env: &Env,
+) -> Result<Map<String, Value>, String> {
   let method = merge::merge_method(gh, pr, None)?;
   let target = merge::Target {
     pr,
@@ -207,7 +232,11 @@ fn merged(gh: &Gh, pr: &Pr, facts: &Facts, head: &str, env: &Env) -> Result<Map<
     "refused"
   };
   let out = with(outcome(name), "admin_used", json!(admin));
-  Ok(if error.is_empty() { out } else { with(out, "note", json!(error)) })
+  Ok(if error.is_empty() {
+    out
+  } else {
+    with(out, "note", json!(error))
+  })
 }
 
 #[cfg(test)]

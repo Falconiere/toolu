@@ -54,12 +54,17 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
 
 /// The worker may be rebased under: `ready`, not working, herdr reachable.
 fn parked(engine: &Engine, issue: &Issue) -> bool {
-  issue.phase == "ready" && !issue.agent_working && engine.world.herdr_failures == 0
+  issue.phase == "ready" && !issue.queue.agent_working && engine.world.herdr_failures == 0
 }
 
 /// The agent lease the launch recorded.
 fn lease(record: &Value) -> Option<Lease> {
-  let text = |name: &str| record.get(name).and_then(Value::as_str).filter(|value| !value.is_empty());
+  let text = |name: &str| {
+    record
+      .get(name)
+      .and_then(Value::as_str)
+      .filter(|value| !value.is_empty())
+  };
   Some(Lease {
     root: PathBuf::from(text("resource_root")?),
     token: text("lease_token")?.to_owned(),

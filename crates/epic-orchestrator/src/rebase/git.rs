@@ -45,7 +45,11 @@ impl<'a> Git<'a> {
     if out.exit_code != 0 || out.truncated {
       let detail = out.stderr.trim();
       return Err(if detail.is_empty() {
-        format!("git {} exited {}", args.first().unwrap_or(&""), out.exit_code)
+        format!(
+          "git {} exited {}",
+          args.first().unwrap_or(&""),
+          out.exit_code
+        )
       } else {
         detail.to_owned()
       });
@@ -71,7 +75,10 @@ pub(super) fn preconditions(git: &Git<'_>, target: &Target) -> Result<(), String
   }
   let head = git.out(&["rev-parse", "HEAD"])?;
   if head != target.head {
-    return Err(format!("local HEAD {head} is not the PR head {}", target.head));
+    return Err(format!(
+      "local HEAD {head} is not the PR head {}",
+      target.head
+    ));
   }
   let status = git.out(&["status", "--porcelain", "--untracked-files=no"])?;
   if !status.is_empty() {
@@ -91,7 +98,14 @@ pub(super) fn preconditions(git: &Git<'_>, target: &Target) -> Result<(), String
 pub(super) fn pin_head(git: &Git<'_>, key: &str, head: &str) -> Result<(), String> {
   let reference = format!("refs/epic-wip/{key}");
   git
-    .ok(&["update-ref", "--create-reflog", "-m", "epic rebase", &reference, head])
+    .ok(&[
+      "update-ref",
+      "--create-reflog",
+      "-m",
+      "epic rebase",
+      &reference,
+      head,
+    ])
     .map_err(|reason| format!("snapshot failed: {reason}"))
 }
 

@@ -49,7 +49,12 @@ pub(crate) enum Rebased {
 }
 
 /// Rebase `target` onto `origin/<base>` and push it, fenced by `lease`.
-pub(crate) fn rebase(target: &Target, lease: Option<&Lease>, env: &Env, trace: Option<&Path>) -> Rebased {
+pub(crate) fn rebase(
+  target: &Target,
+  lease: Option<&Lease>,
+  env: &Env,
+  trace: Option<&Path>,
+) -> Rebased {
   let git = Git::new(&target.worktree, env);
   if let Err(reason) = git::preconditions(&git, target) {
     return Rebased::Handoff(reason);
@@ -65,7 +70,8 @@ pub(crate) fn rebase(target: &Target, lease: Option<&Lease>, env: &Env, trace: O
   {
     return match outcome {
       Rebased::Pushed(head) => Rebased::Busy(format!("pushed {head}; unfence failed: {reason}")),
-      other => other,
+      Rebased::Handoff(note) => Rebased::Handoff(format!("{note}; unfence failed: {reason}")),
+      Rebased::Busy(note) => Rebased::Busy(format!("{note}; unfence failed: {reason}")),
     };
   }
   outcome
@@ -87,7 +93,10 @@ fn replay(git: &Git<'_>, target: &Target) -> Rebased {
   if new_head == target.head {
     return Rebased::Busy("already up to date locally; waiting for GitHub".to_owned());
   }
-  let lease = format!("--force-with-lease=refs/heads/{}:{}", target.branch, target.head);
+  let lease = format!(
+    "--force-with-lease=refs/heads/{}:{}",
+    target.branch, target.head
+  );
   let refspec = format!("HEAD:refs/heads/{}", target.branch);
   match git.ok(&["push", "--quiet", &lease, "origin", &refspec]) {
     Ok(()) => Rebased::Pushed(new_head),

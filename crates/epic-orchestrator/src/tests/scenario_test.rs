@@ -155,4 +155,3 @@ fn scenario_gone_relaunches_twice_then_raises_relaunch_limit_after_a_reroute() {
     .count();
   assert_eq!(checkpoints, 2);
 }
-

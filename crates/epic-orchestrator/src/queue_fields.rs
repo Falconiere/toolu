@@ -10,6 +10,19 @@ use toolu_state::time::{epoch_millis, iso_millis, parse_iso};
 
 use crate::model::Issue;
 
+/// An issue's merge-queue state.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct QueueState {
+  /// When the issue joined its repository's merge queue, milliseconds.
+  pub queued_at_ms: Option<u64>,
+  /// herdr last reported its agent `working`.
+  pub agent_working: bool,
+  /// The engine armed GitHub auto-merge and has not disarmed it.
+  pub auto_armed: bool,
+  /// Rebase rounds by the engine and by the worker.
+  pub rebase_rounds: Rounds,
+}
+
 /// Rebase rounds of one issue, by who performed them.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct Rounds {
@@ -40,7 +53,7 @@ impl By {
 
 /// Count one round by `by`; the issue's round number for the journal.
 pub(crate) fn count_round(issue: &mut Issue, by: By) -> u32 {
-  let rounds = &mut issue.rebase_rounds;
+  let rounds = &mut issue.queue.rebase_rounds;
   let slot = match by {
     By::Engine => &mut rounds.engine,
     By::Worker => &mut rounds.worker,
@@ -53,15 +66,15 @@ pub(crate) fn count_round(issue: &mut Issue, by: By) -> u32 {
 /// (keeping an earlier time), any other phase leaves it.
 pub(crate) fn note_phase(issue: &mut Issue, phase: &str, now_ms: u64) {
   if phase == "ready" {
-    issue.queued_at_ms.get_or_insert(now_ms);
+    issue.queue.queued_at_ms.get_or_insert(now_ms);
   } else {
-    issue.queued_at_ms = None;
+    issue.queue.queued_at_ms = None;
   }
 }
 
 /// Write the queue fields into the record map.
 pub(crate) fn write(map: &mut Map<String, Value>, issue: &Issue) {
-  match issue.queued_at_ms {
+  match issue.queue.queued_at_ms {
     Some(ms) => {
       let at = UNIX_EPOCH + Duration::from_millis(ms);
       map.insert("queued_at".to_owned(), json!(iso_millis(at)));
@@ -70,7 +83,7 @@ pub(crate) fn write(map: &mut Map<String, Value>, issue: &Issue) {
       map.remove("queued_at");
     }
   }
-  let rounds = issue.rebase_rounds;
+  let rounds = issue.queue.rebase_rounds;
   if rounds == Rounds::default() {
     map.remove("rebase_rounds");
   } else {
@@ -83,7 +96,7 @@ pub(crate) fn write(map: &mut Map<String, Value>, issue: &Issue) {
 
 /// Read the queue fields from a record.
 pub(crate) fn read(issue: &mut Issue, record: &Value) {
-  issue.queued_at_ms = record
+  issue.queue.queued_at_ms = record
     .get("queued_at")
     .and_then(Value::as_str)
     .and_then(parse_iso)
@@ -95,7 +108,7 @@ pub(crate) fn read(issue: &mut Issue, record: &Value) {
       .and_then(|n| u32::try_from(n).ok())
       .unwrap_or(0)
   };
-  issue.rebase_rounds = Rounds {
+  issue.queue.rebase_rounds = Rounds {
     engine: count("engine"),
     worker: count("worker"),
   };

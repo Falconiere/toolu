@@ -16,7 +16,13 @@ use crate::queue_fields::{By, count_round, note_phase};
 pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step>> {
   let doc: Value = serde_json::from_str(doc).ok()?;
   let outcome = doc.get("outcome").and_then(Value::as_str)?.to_owned();
-  let text = |name: &str| doc.get(name).and_then(Value::as_str).unwrap_or("").to_owned();
+  let text = |name: &str| {
+    doc
+      .get(name)
+      .and_then(Value::as_str)
+      .unwrap_or("")
+      .to_owned()
+  };
   let note = text("note");
   if outcome == "merged" {
     return Some(crate::commit::applied(world, key, Some(Action::Merge)));
@@ -31,40 +37,56 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
     "waiting" => set_armed(world, key, text("auto_merge") == "armed"),
     "disarmed" => set_armed(world, key, false),
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
-    "handoff" => {
-      set_armed(world, key, false);
-      round(world, key, By::Worker, "");
-      leave(world, key, "rebasing", &note);
-      crate::babysit::prompt(world, key, "rebase", "REBASE".to_owned(), Some("rebase"));
-    }
+    "handoff" => handoff(world, key, &note),
     "fix" => {
       set_armed(world, key, false);
       let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
       leave(world, key, "babysit", &reasons);
     }
-    "closed" => {
-      if let Some(issue) = world.issues.get_mut(key) {
-        "closed".clone_into(&mut issue.stage);
-      }
-      world.outbox.push_back(Step::Issue { key: key.to_owned() });
-      push_attention(world, "pr-closed", key, "pull request closed");
-      arm_ready(world);
-    }
-    "uncertain" | "refused" => {
-      if let Some(issue) = world.issues.get_mut(key) {
-        issue.deferred = Some("merge".to_owned());
-      }
-      push_attention(world, "failed", key, &format!("merge {outcome}: {note}"));
-    }
+    "closed" => closed(world, key),
+    "uncertain" | "refused" => held(world, key, &outcome, &note),
     _ => {}
   }
   Some(world.outbox.drain(..).collect())
 }
 
+/// A conflict (or an unsafe worktree): the worker rebases, prompted once.
+fn handoff(world: &mut World, key: &str, note: &str) {
+  set_armed(world, key, false);
+  round(world, key, By::Worker, "");
+  leave(world, key, "rebasing", note);
+  crate::babysit::prompt(world, key, "rebase", "REBASE".to_owned(), Some("rebase"));
+}
+
+/// The PR was closed without a merge: the queue moves on.
+fn closed(world: &mut World, key: &str) {
+  if let Some(issue) = world.issues.get_mut(key) {
+    "closed".clone_into(&mut issue.stage);
+  }
+  world.outbox.push_back(Step::Issue {
+    key: key.to_owned(),
+  });
+  push_attention(world, "pr-closed", key, "pull request closed");
+  arm_ready(world);
+}
+
+/// A merge that may have happened, or was refused for another reason, is
+/// never resent: the head is held for a human or the PR detector.
+fn held(world: &mut World, key: &str, outcome: &str, note: &str) {
+  if let Some(issue) = world.issues.get_mut(key) {
+    issue.deferred = Some("merge".to_owned());
+  }
+  push_attention(world, "failed", key, &format!("merge {outcome}: {note}"));
+}
+
 /// End the pending step without a stage change; its done line carries the
 /// outcome, so a restart neither runs it again nor finishes it as a merge.
 fn close(world: &mut World, key: &str, outcome: &str, note: &str) {
-  let Some(pending) = world.issues.get_mut(key).and_then(|issue| issue.pending.take()) else {
+  let Some(pending) = world
+    .issues
+    .get_mut(key)
+    .and_then(|issue| issue.pending.take())
+  else {
     return;
   };
   let done = if note.is_empty() {
@@ -87,17 +109,20 @@ fn round(world: &mut World, key: &str, by: By, head: &str) {
     return;
   };
   let round = count_round(issue, by);
-  let mut note = json!({"by": by.name(), "round": round});
-  if !head.is_empty() {
-    note["head"] = json!(head);
-  }
+  let note = if head.is_empty() {
+    json!({"by": by.name(), "round": round})
+  } else {
+    json!({"by": by.name(), "head": head, "round": round})
+  };
   journal(world, "action", "rebase", key, &note.to_string());
-  world.outbox.push_back(Step::Issue { key: key.to_owned() });
+  world.outbox.push_back(Step::Issue {
+    key: key.to_owned(),
+  });
 }
 
 fn set_armed(world: &mut World, key: &str, armed: bool) {
   if let Some(issue) = world.issues.get_mut(key) {
-    issue.auto_armed = armed;
+    issue.queue.auto_armed = armed;
   }
 }
 
@@ -122,16 +147,26 @@ pub(crate) fn leave(world: &mut World, key: &str, phase: &str, note: &str) {
   issue.phase_at_ms = now;
   issue.stall_nudged = false;
   issue.deferred = None;
-  let disarm = issue.auto_armed && issue.pending.is_none();
+  let disarm = issue.queue.auto_armed && issue.pending.is_none();
   if disarm {
     let token = token(world);
     if let Some(issue) = world.issues.get_mut(key) {
       issue.pending = Some(fresh(Action::Merge, token));
     }
   }
-  world.outbox.push_back(Step::Status { key: key.to_owned() });
-  world.outbox.push_back(Step::Issue { key: key.to_owned() });
-  journal(world, "transition", "queue-left", key, &format!("{phase}: {note}"));
+  world.outbox.push_back(Step::Status {
+    key: key.to_owned(),
+  });
+  world.outbox.push_back(Step::Issue {
+    key: key.to_owned(),
+  });
+  journal(
+    world,
+    "transition",
+    "queue-left",
+    key,
+    &format!("{phase}: {note}"),
+  );
   arm_ready(world);
 }
 

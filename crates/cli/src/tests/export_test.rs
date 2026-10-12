@@ -69,9 +69,11 @@ fn namespaces_carry_owner_aliases_placeholders_and_hidden_hooks() {
   assert_eq!(epic["owner"], "epic-orchestrator");
   assert_eq!(epic["aliases"], serde_json::json!(["epic-orchestrator"]));
   assert_eq!(epic["path"], serde_json::json!(["epic"]));
-  let planned = command(&doc, &["epic", "planned"]);
+  let queue = command(&doc, &["epic", "queue"]);
+  assert_eq!(queue["path"], serde_json::json!(["epic", "queue"]));
+  let planned = command(&doc, &["plugins", "planned"]);
   assert_eq!(planned["placeholder"], true);
-  assert_eq!(planned["path"], serde_json::json!(["epic", "planned"]));
+  assert_eq!(planned["path"], serde_json::json!(["plugins", "planned"]));
   let hook = command(&doc, &["epic", "hook"]);
   assert_eq!(hook["hidden"], true);
   assert_eq!(hook["owner"], "epic-orchestrator");

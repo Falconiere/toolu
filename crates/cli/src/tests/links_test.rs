@@ -35,15 +35,14 @@ fn statusline_gets_the_hubs_status_snapshot() {
 }
 
 #[test]
-fn epic_keeps_its_placeholder_output() {
+fn epic_runs_its_verbs_through_the_link() {
   let epic_matches = toolu_epic_orchestrator::command()
-    .try_get_matches_from(["epic", "planned"])
-    .expect("epic planned matches");
-  let epic_out = epic(&epic_matches, &Ctx::default())
-    .stdout
-    .unwrap_or_default();
-  assert!(
-    epic_out.starts_with("toolu epic is not ported yet (#448). Planned verbs: queue"),
-    "{epic_out}"
+    .try_get_matches_from(["epic", "gate", "--pr", "nonsense"])
+    .expect("epic gate matches");
+  let outcome = epic(&epic_matches, &Ctx::default());
+  assert_eq!(
+    outcome.exit,
+    toolu_protocol::exit::Exit::Usage,
+    "{outcome:?}"
   );
 }

@@ -47,7 +47,10 @@ impl QueueRig {
   }
 
   fn text(&self, number: u64, field: &str) -> String {
-    self.record(number)[field].as_str().unwrap_or_default().to_owned()
+    self.record(number)[field]
+      .as_str()
+      .unwrap_or_default()
+      .to_owned()
   }
 
   /// The worker's worktree.
@@ -79,14 +82,18 @@ impl QueueRig {
   /// Commits of `main` the PR head lacks.
   fn behind(&self, number: u64) -> u64 {
     let range = format!("{}..main", self.head(number));
-    git(&self.origin(), &["rev-list", "--count", &range]).parse().unwrap_or(0)
+    git(&self.origin(), &["rev-list", "--count", &range])
+      .parse()
+      .unwrap_or(0)
   }
 
   /// Serve PR `100 + number` as GitHub sees it now.
   pub(crate) fn serve(&self, number: u64, checks: Checks, armed: bool) {
     let (head, behind) = (self.head(number), self.behind(number));
     let rollup = match checks {
-      Checks::Green => json!([{"__typename": "CheckRun", "name": "ci", "status": "COMPLETED", "conclusion": "SUCCESS"}]),
+      Checks::Green => {
+        json!([{"__typename": "CheckRun", "name": "ci", "status": "COMPLETED", "conclusion": "SUCCESS"}])
+      }
       Checks::Running => json!([{"__typename": "CheckRun", "name": "ci", "status": "IN_PROGRESS"}]),
     };
     let node = json!({
@@ -102,42 +109,60 @@ impl QueueRig {
     let ok = |body: Value| vec![Reply::new(200, body.to_string())];
     let needle = format!("\"n\":{}", 100 + number);
     let pull = json!({"data": {"repository": {"pullRequest": node}}});
-    github.sequence_when("/graphql", &needle, ok(pull)).expect("graphql");
+    github
+      .sequence_when("/graphql", &needle, ok(pull))
+      .expect("graphql");
     let compare = format!("/repos/o/r/compare/main...{head}");
-    github.sequence(&compare, ok(json!({"behind_by": behind}))).expect("compare");
+    github
+      .sequence(&compare, ok(json!({"behind_by": behind})))
+      .expect("compare");
     let workflows = json!({"total_count": 1});
-    github.sequence("/repos/o/r/actions/workflows", ok(workflows)).expect("workflows");
+    github
+      .sequence("/repos/o/r/actions/workflows", ok(workflows))
+      .expect("workflows");
     let repo = json!({"default_branch": "main", "allow_squash_merge": true});
     github.sequence("/repos/o/r", ok(repo)).expect("repo");
     let merge = format!("/repos/o/r/pulls/{}/merge", 100 + number);
-    github.sequence(&merge, ok(json!({"merged": true}))).expect("merge");
+    github
+      .sequence(&merge, ok(json!({"merged": true})))
+      .expect("merge");
+  }
+
+  /// GitHub's own clone, on the origin's current `main`.
+  fn github_main(&self) -> std::path::PathBuf {
+    let clone = self.scenario.tmp.path().join("github-merge");
+    if !clone.exists() {
+      let origin = self.origin().display().to_string();
+      git(
+        self.scenario.tmp.path(),
+        &["clone", "-q", &origin, "github-merge"],
+      );
+    }
+    git(&clone, &["fetch", "-q", "origin"]);
+    git(&clone, &["checkout", "-q", "-B", "main", "origin/main"]);
+    clone
   }
 
   /// GitHub squash-merges PR `100 + number` into `main`.
   pub(crate) fn land(&self, number: u64) {
-    let clone = self.scenario.tmp.path().join("github-merge");
-    if !clone.exists() {
-      let origin = self.origin().display().to_string();
-      git(self.scenario.tmp.path(), &["clone", "-q", &origin, "github-merge"]);
-    }
-    git(&clone, &["fetch", "-q", "origin"]);
-    git(&clone, &["checkout", "-q", "-B", "main", "origin/main"]);
+    let clone = self.github_main();
     let branch = format!("origin/{}", self.text(number, "branch"));
     git(&clone, &["merge", "-q", "--squash", &branch]);
-    git(&clone, &["commit", "-qm", &format!("Issue {number} (#{})", 100 + number)]);
+    git(
+      &clone,
+      &[
+        "commit",
+        "-qm",
+        &format!("Issue {number} (#{})", 100 + number),
+      ],
+    );
     git(&clone, &["push", "-q", "origin", "main"]);
     self.scenario.close(number);
   }
 
   /// A human pushes straight to `main`.
   pub(crate) fn push_main(&self, file: &str) {
-    let clone = self.scenario.tmp.path().join("github-merge");
-    if !clone.exists() {
-      let origin = self.origin().display().to_string();
-      git(self.scenario.tmp.path(), &["clone", "-q", &origin, "github-merge"]);
-    }
-    git(&clone, &["fetch", "-q", "origin"]);
-    git(&clone, &["checkout", "-q", "-B", "main", "origin/main"]);
+    let clone = self.github_main();
     std::fs::write(clone.join(file), "human\n").expect("write");
     git(&clone, &["add", file]);
     git(&clone, &["commit", "-qm", "human push"]);
@@ -173,8 +198,10 @@ impl QueueRig {
       .journal()
       .into_iter()
       .filter(|row| {
-        matches!(row.name.as_str(), "rebase" | "rebase-skipped" | "queue-left")
-          || row.kind == "prompt"
+        matches!(
+          row.name.as_str(),
+          "rebase" | "rebase-skipped" | "queue-left"
+        ) || row.kind == "prompt"
       })
       .map(|row| (row.name, row.key, row.note))
       .collect()

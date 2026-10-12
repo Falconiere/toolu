@@ -159,7 +159,7 @@ pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(
   if issue.stage.is_empty()
     && issue.hold.is_none()
     && !issue.coupling_released
-    && issue.queued_at_ms.is_none()
+    && issue.queue.queued_at_ms.is_none()
   {
     return Ok(());
   }

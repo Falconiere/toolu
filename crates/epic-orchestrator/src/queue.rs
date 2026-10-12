@@ -53,7 +53,7 @@ pub(crate) fn queues(world: &World) -> BTreeMap<String, Vec<Entry>> {
       epic: issue.epic.clone(),
       pr: issue.pr.unwrap_or(0),
       unblocks: unblocks(world, issue),
-      queued_at_ms: issue.queued_at_ms,
+      queued_at_ms: issue.queue.queued_at_ms,
     };
     by_repo.entry(issue.repo.clone()).or_default().push(entry);
   }
@@ -122,7 +122,7 @@ fn item(world: &World, index: usize, entry: &Entry, head: Option<&str>) -> Value
   let rounds = world
     .issues
     .get(&entry.key)
-    .map(|issue| issue.rebase_rounds)
+    .map(|issue| issue.queue.rebase_rounds)
     .unwrap_or_default();
   json!({
     "position": index.saturating_add(1),
