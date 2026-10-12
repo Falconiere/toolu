@@ -11,15 +11,15 @@ use crate::file::{Limits, Place, TsFile};
 /// The type rules for `path` (absolute under `root`) holding `text`.
 fn typed(root: &Path, path: &str, text: &str) -> (Vec<String>, Option<String>) {
   let env = Env::from_pairs([("PATH", "/usr/bin:/bin:/opt/homebrew/bin:/usr/local/bin")]);
-  let file = EditedFile {
-    path: path.to_owned(),
-    absolute: root.join(path),
-    removed: false,
-  };
   let at = Place {
-    env: &env,
-    project_root: root,
     cwd: root,
+    project_root: root,
+    env: &env,
+  };
+  let file = EditedFile {
+    removed: false,
+    absolute: root.join(path),
+    path: path.to_owned(),
   };
   let f = TsFile::new(&file, text, at, Limits::default(), NodePackageManager::Bun);
   (duplicate_types(&f), throw_literal(&f))

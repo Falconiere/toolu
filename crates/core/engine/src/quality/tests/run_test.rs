@@ -93,22 +93,31 @@ impl QualityRule for Inline {
   }
 }
 
+/// A Claude Code context rooted at `dir`.
+fn context<'a>(
+  dir: &'a std::path::Path,
+  env: &'a Env,
+  raw: &'a Map<String, serde_json::Value>,
+) -> RuleContext<'a> {
+  RuleContext {
+    host: Host::Claude,
+    env,
+    config_root: dir,
+    project_root: dir,
+    cwd: Some(dir),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
+
 #[test]
 fn inline_rules_join_the_one_scan() {
   let temp = tempfile::tempdir().unwrap();
   std::fs::write(temp.path().join("a.ts"), "throw \"boom\";\n").unwrap();
   let env = Env::process();
   let raw = Map::new();
-  let ctx = RuleContext {
-    host: Host::Claude,
-    env: &env,
-    config_root: temp.path(),
-    project_root: temp.path(),
-    cwd: Some(temp.path()),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(temp.path(), &env, &raw);
   let records = [EditRecord {
     path: "a.ts".to_owned(),
     operation: EditOperation::Write,
@@ -132,16 +141,7 @@ fn quality_run_last_record_wins_and_foreign_paths_are_ignored() {
   std::fs::write(temp.path().join("a.fx"), "x\n").unwrap();
   let env = Env::process();
   let raw = Map::new();
-  let ctx = RuleContext {
-    host: Host::Claude,
-    env: &env,
-    config_root: temp.path(),
-    project_root: temp.path(),
-    cwd: Some(temp.path()),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(temp.path(), &env, &raw);
   let records = [
     EditRecord {
       path: "a.fx".to_owned(),
