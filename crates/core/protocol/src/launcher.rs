@@ -115,20 +115,12 @@ fn command(target: &Target<'_>) -> String {
   .join("; ")
 }
 
-/// A signal-shaped shell status may also be an ordinary exit code, so name it as possible.
+/// Report only the observed shell status; it cannot identify a signal reliably.
 fn abnormal_status(plugin: &str) -> String {
-  if plugin != "toolu" {
-    return format!(
-      "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
-       blocked. See docs/install.md.\" >&2"
-    );
-  }
-  "if [ \"$s\" -gt 128 ] && [ \"$s\" -le 192 ]; then \
-     printf '%s\\n' \"blocked: toolu plugin: toolu may have terminated on signal \
-     $((s - 128)) (status $s), so the action is blocked. See docs/install.md.\" >&2; \
-     else printf '%s\\n' \"blocked: toolu plugin: toolu exited with status $s, so the action \
-     is blocked. See docs/install.md.\" >&2; fi"
-    .to_owned()
+  format!(
+    "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
+     blocked. See docs/install.md.\" >&2"
+  )
 }
 
 /// Find a native binary unless toolu's transition rollback selects Bun.
