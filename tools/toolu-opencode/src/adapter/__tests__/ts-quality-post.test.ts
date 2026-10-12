@@ -26,11 +26,13 @@ function options(
 ): PermissionEvaluateHandlerOptions {
   const configRoot = join(projectRoot, ".opencode/toolu/state");
   const [bin = "", ...args] = nativeRegisterArgv("ts-quality");
-  execFileSync(bin, args, {
+  const registered = execFileSync(bin, args, {
     cwd: projectRoot,
     env: { ...process.env, TOOLU_CONFIG_DIR: configRoot },
     input: "{}",
+    encoding: "utf8",
   });
+  expect(registered).toBe("");
   return {
     repoRoot: REPO_ROOT,
     configRoot,

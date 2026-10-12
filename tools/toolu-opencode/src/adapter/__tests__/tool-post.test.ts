@@ -269,11 +269,13 @@ test("the native TypeScript quality rule records and clears a per-file gate entr
   await writeFile(join(root, "tsconfig.json"), "{}\n");
   execFileSync("git", ["add", "tsconfig.json"], { cwd: root });
   const [bin = "", ...args] = nativeRegisterArgv("ts-quality");
-  execFileSync(bin, args, {
+  const registered = execFileSync(bin, args, {
     cwd: root,
     env: { ...process.env, TOOLU_CONFIG_DIR: options.configRoot },
     input: "{}",
+    encoding: "utf8",
   });
+  expect(registered).toBe("");
   const post = createToolPostHandler(
     { ...options, selectedPluginSpecs: new Set(["toolu@toolu", "ts-quality@toolu"]) },
     createToolAdviceStore(),
