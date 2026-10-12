@@ -88,9 +88,8 @@ fn command(target: &Target<'_>) -> String {
     (
       format!(
         "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; \
-         printf '%s\\n' \"blocked: {} plugin: toolu ended with status $s, so the action is \
-         blocked. See docs/install.md.\" >&2; exit 2; fi",
-        target.plugin
+         {}; exit 2; fi",
+        abnormal_status(target.plugin)
       ),
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
@@ -114,6 +113,23 @@ fn command(target: &Target<'_>) -> String {
     absent,
   ]
   .join("; ")
+}
+
+/// A signal-shaped shell status may also be an ordinary exit code, so name it as possible.
+fn abnormal_status(plugin: &str) -> String {
+  if plugin != "toolu" {
+    return format!(
+      "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
+       blocked. See docs/install.md.\" >&2"
+    );
+  }
+  format!(
+    "if [ \"$s\" -gt 128 ] && [ \"$s\" -le 192 ]; then \
+     printf '%s\\n' \"blocked: toolu plugin: toolu may have terminated on signal \
+     $((s - 128)) (status $s), so the action is blocked. See docs/install.md.\" >&2; \
+     else printf '%s\\n' \"blocked: toolu plugin: toolu exited with status $s, so the action \
+     is blocked. See docs/install.md.\" >&2; fi"
+  )
 }
 
 /// Find a native binary unless toolu's transition rollback selects Bun.

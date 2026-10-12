@@ -87,11 +87,14 @@ fn io(bytes: &[u8], json: bool) -> String {
 
 /// Read one nonnegative output cap, falling back to its documented default.
 pub(super) fn cap(env: &Env, name: &str, default: usize) -> usize {
-  env
+  match env
     .get(name)
     .filter(|value| !value.is_empty())
     .and_then(|value| value.trim().parse::<usize>().ok())
-    .unwrap_or(default)
+  {
+    Some(value) => value,
+    None => default,
+  }
 }
 
 /// Run a native debug verb.

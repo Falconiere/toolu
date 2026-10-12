@@ -106,6 +106,8 @@ Main moved to #512 while #425 was in verification. That port removes `pr-babysit
 
 PR CI exposed two platform boundaries. The macOS install-path test now compares the lexical installed path that the shell reports, because `tempfile` uses `/var` while `canonicalize` resolves its `/private/var` symlink. The Linux hook benchmark now measures the unchanged `post-tools` core budget in an explicit toolu-only sandbox, excluding the four unported quality plugins' Bun bridge; the full registry fixture remains the unasserted integration measurement, and the live-host smoke proves quality behavior. The three other newly ported hook entries have initial Linux budgets derived from the committed CI measurement, without changing existing limits.
 
+The first PR review found a false positive around the panic-free `Option::unwrap_or` in the debug cap reader; an explicit match now makes the fallback clear. It also asked for signal-aware launcher diagnostics. Toolu's enforcing launcher now names a possible signal for shell statuses 129–192 while retaining exit 2 and leaving other plugins' generated launchers unchanged.
+
 ## Plan review
 
 **Status:** Approved
