@@ -10,12 +10,12 @@ const StepSchema = z.strictObject({
   state: z.record(z.string(), z.string()),
 });
 
-const GoldenSchema = z.strictObject({
+export const GoldenSchema = z.strictObject({
   base: z.string().regex(/^[0-9a-f]{40}$/),
   cases: z.record(z.string(), z.array(StepSchema)),
 });
 
-type Golden = z.infer<typeof GoldenSchema>;
+export type Golden = z.infer<typeof GoldenSchema>;
 
 export function readGolden(): Golden {
   return GoldenSchema.parse(JSON.parse(readFileSync(GOLDEN_PATH, "utf8")));
