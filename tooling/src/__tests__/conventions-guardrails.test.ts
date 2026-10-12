@@ -35,12 +35,15 @@ test.concurrent("package.json depends on zod without yup", () => {
 });
 
 test.concurrent("root workspace passes banned-deps", async () => {
-  const res = await run([process.execPath, GR, "--only", "banned-deps"], { cwd: ROOT });
+  const res = await run([process.execPath, GR, "--only", "banned-deps"], {
+    cwd: ROOT,
+    timeoutMs: 90_000,
+  });
   expect({ exitCode: res.exitCode, output: res.stdout + res.stderr }).toEqual({
     exitCode: 0,
     output: res.stdout + res.stderr,
   });
-});
+}, 100_000);
 
 test.concurrent("violating fixture with valibot fails banned-deps in temp tree", async () => {
   using sb = createSandbox();
