@@ -127,10 +127,11 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
 
 - `issues/<key>.json` gains `queued_at` (ISO-8601 string, absent when not
   queued) and `rebase_rounds` (`{"engine": n, "worker": n}`).
-- `Issue` gains `queued_at_ms: Option<u64>`, `agent_working: bool`,
-  `auto_armed: bool`, `rebase_rounds: (u32, u32)`.
+- `Issue` gains `queue: QueueState` (`queued_at_ms: Option<u64>`,
+  `agent_working: bool`, `auto_armed: bool`, `rebase_rounds: Rounds`).
 - Queue document (`/api/v1/queue`, op `queue`, `toolu epic queue`):
-  `{"schema":1,"repositories":[{"repo":"o/r","items":[{"position":1,"key":"K","epic":"E","pr":7,"unblocks":2,"queued_at":"…","head":true,"last":"waiting"}]}]}`.
+  `{"schema":1,"repositories":[{"repo":"o/r","items":[{"position":1,"key":"K","epic":"E","pr":7,"unblocks":2,"queued_at":"…","head":true,"rebase_rounds":{"engine":1,"worker":0}}]}]}`
+  (`epicQueue` in `commands.schema.json`).
   The existing `position` and `key` fields keep their meaning.
 - `merge` outcome document: `{"outcome":"<name>","head":"<sha>","reasons":[…],"note":"…","auto_merge":"armed|unavailable|off","admin_used":bool}`.
 - Journal records (closed schema, kind `action`): `rebase` (note JSON
