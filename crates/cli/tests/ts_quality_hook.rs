@@ -145,84 +145,90 @@ fn snapshot(dir: &Path) -> Res<Vec<(String, std::time::SystemTime)>> {
 }
 
 #[test]
-fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() -> Res<()> {
-  let sb = sandbox(true)?;
+fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
+  let sb = sandbox(true).unwrap();
   let post = sb.home.join(POST);
-  fs::create_dir_all(&post)?;
-  fs::write(post.join("ts-quality@toolu__ts-quality.js"), "old\n")?;
-  fs::write(post.join("ts-quality@toolu__old-concern.sh"), "old\n")?;
-  let first = register(&sb)?;
+  fs::create_dir_all(&post).unwrap();
+  fs::write(post.join("ts-quality@toolu__ts-quality.js"), "old\n").unwrap();
+  fs::write(post.join("ts-quality@toolu__old-concern.sh"), "old\n").unwrap();
+  let first = register(&sb).unwrap();
   assert!(first.status.success(), "{first:?}");
-  let notice: Value = serde_json::from_slice(&first.stdout)?;
+  let notice: Value = serde_json::from_slice(&first.stdout).unwrap();
   assert_eq!(
     notice["systemMessage"],
     "ts-quality's Bun module was replaced by its native rule in toolu."
   );
-  assert_eq!(listing(&post)?, [MANIFEST, BRIDGE]);
-  let before = snapshot(&post)?;
-  let again = register(&sb)?;
+  assert_eq!(listing(&post).unwrap(), [MANIFEST, BRIDGE]);
+  let before = snapshot(&post).unwrap();
+  let again = register(&sb).unwrap();
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));
-  assert_eq!(snapshot(&post)?, before);
+  assert_eq!(snapshot(&post).unwrap(), before);
 
   let fired = write(
     &sb,
     "src/bad.ts",
     "console.log(\"x\");\n",
-    &std::env::var("PATH")?,
-  )?;
+    &std::env::var("PATH").unwrap(),
+  )
+  .unwrap();
   assert!(fired.status.success(), "{fired:?}");
-  let stdout = String::from_utf8(fired.stdout)?;
+  let stdout = String::from_utf8(fired.stdout).unwrap();
   assert!(stdout.contains("Forbidden console.log"), "{stdout}");
 
-  let doctor = toolu(&sb, &["--json", "doctor"], &std::env::var("PATH")?, "")?;
-  let document: Value = serde_json::from_slice(&doctor.stdout)?;
+  let doctor = toolu(
+    &sb,
+    &["--json", "doctor"],
+    &std::env::var("PATH").unwrap(),
+    "",
+  )
+  .unwrap();
+  let document: Value = serde_json::from_slice(&doctor.stdout).unwrap();
   let registry = document["checks"]
     .as_array()
     .and_then(|checks| checks.iter().find(|check| check["id"] == "registry"))
-    .ok_or("no registry check")?;
+    .expect("no registry check");
   assert_eq!(registry["status"], "ok", "{registry}");
-  Ok(())
 }
 
 #[test]
-fn an_uninstalled_plugin_stays_silent() -> Res<()> {
-  let sb = sandbox(false)?;
-  assert!(register(&sb)?.status.success());
+fn an_uninstalled_plugin_stays_silent() {
+  let sb = sandbox(false).unwrap();
+  assert!(register(&sb).unwrap().status.success());
   let output = write(
     &sb,
     "src/bad.ts",
     "console.log(\"x\");\n",
-    &std::env::var("PATH")?,
-  )?;
+    &std::env::var("PATH").unwrap(),
+  )
+  .unwrap();
   assert!(output.status.success(), "{output:?}");
-  assert_eq!(String::from_utf8(output.stdout)?, "");
-  Ok(())
+  assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
 }
 
 #[test]
-fn non_typescript_edits_spawn_no_tool() -> Res<()> {
-  let sb = sandbox(true)?;
-  assert!(register(&sb)?.status.success());
+fn non_typescript_edits_spawn_no_tool() {
+  let sb = sandbox(true).unwrap();
+  assert!(register(&sb).unwrap().status.success());
   let stubs = sb.home.join("stubs");
-  fs::create_dir_all(&stubs)?;
+  fs::create_dir_all(&stubs).unwrap();
   let log = sb.home.join("spawned.log");
   for tool in TOOLS {
     let stub = stubs.join(tool);
     fs::write(
       &stub,
       format!("#!/bin/sh\necho \"{tool} $*\" >> '{}'\n", log.display()),
-    )?;
-    fs::set_permissions(&stub, fs::Permissions::from_mode(0o755))?;
+    )
+    .unwrap();
+    fs::set_permissions(&stub, fs::Permissions::from_mode(0o755)).unwrap();
   }
   let path = format!("{}:/usr/bin:/bin", stubs.display());
   for (rel, body) in [("src/a.py", "print(1)\n"), ("README.md", "# x\n")] {
-    let output = write(&sb, rel, body, &path)?;
+    let output = write(&sb, rel, body, &path).unwrap();
     assert!(output.status.success(), "{rel}: {output:?}");
-    assert_eq!(String::from_utf8(output.stdout)?, "", "{rel}");
+    assert_eq!(String::from_utf8(output.stdout).unwrap(), "", "{rel}");
   }
-  assert!(!log.exists(), "{}", fs::read_to_string(&log)?);
-  let output = write(&sb, "src/b.ts", "export const b = 1;\n", &path)?;
+  assert!(!log.exists(), "{}", fs::read_to_string(&log).unwrap());
+  let output = write(&sb, "src/b.ts", "export const b = 1;\n", &path).unwrap();
   assert!(output.status.success(), "{output:?}");
   assert!(log.exists(), "a .ts edit reaches its tools");
-  Ok(())
 }
