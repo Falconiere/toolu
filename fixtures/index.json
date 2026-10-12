@@ -747,7 +747,7 @@
     {
       "id": "quality-python",
       "fixture": "fixtures/quality/python.json",
-      "source": "plugins/python-quality/hooks/src/__tests__/cases.ts",
+      "source": "tools/toolu-conformance/src/python-quality/cases.ts",
       "names": [
         "dispatch: no-op outside a Python project",
         "dispatch: Edit extracts the file path",

@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
 
-Python `PostToolUse` quality checks registered into the toolu hook engine. Every Python file the agent edits is checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
+Python `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Python file the agent edits is checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
 
 ## Install
 
@@ -14,9 +14,9 @@ Python `PostToolUse` quality checks registered into the toolu hook engine. Every
 
 ### Post-Edit Quality Checks
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are one bundled TypeScript module, published into toolu's registry at `SessionStart`, and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.**
+Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into the native [`toolu` binary](../install.md) (#427), and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.** The `SessionStart` register hook publishes the rule's manifest (`python-quality@toolu__python-quality.json`) into toolu's registry. Until toolu's own hooks are native (#425), it also writes `python-quality@toolu__python-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice. The `toolu python-quality` namespace has no verbs; its help lists the checks, and `toolu doctor` reports whether the rule is registered.
 
-On OpenCode, enable `python-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.py` writes, edits and patches run the selected module when the git toplevel has a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) and `python3` is on `PATH`. An installed `ast-grep` runs the no-mocks scan with its Python parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Python post-edit quality](../opencode.md#python-post-edit-quality) and run `bun run smoke:opencode-python-quality` in a toolu checkout for pinned-host proof.
+On OpenCode, enable `python-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.py` writes, edits and patches run the rule when the git toplevel has a Python marker (`pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`) and `python3` is on `PATH`. An installed `ast-grep` runs the no-mocks scan with its Python parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Python post-edit quality](../opencode.md#python-post-edit-quality) and run `bun run smoke:opencode-python-quality` in a toolu checkout for pinned-host proof.
 
 ## Checks Enforced
 

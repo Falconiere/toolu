@@ -362,7 +362,7 @@ advisory wording. Resolver: `qualityThreshold` in `packages/toolu-core/src/confi
 `ts-mockito` imports), `crates/rust-quality/src/ast_rules.rs` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`
 — and `tests/`/`*_test.rs`/`*_tests.rs` mock *imports* — `mockall::`/`faux::`),
-and `python-quality/hooks/src/rules/no-mocks.ts` (Python test files —
+and `crates/python-quality/src/no_mocks.rs` (Python test files —
 `unittest.mock`/`mock`/`pytest_mock` imports, which cover `MagicMock`, and
 `mocker`/`monkeypatch` fixture parameters).
 All three run one `ast-grep scan --inline-rules`; a real ast-grep failure
