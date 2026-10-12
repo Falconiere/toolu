@@ -81,6 +81,8 @@ mod notify_notice;
 mod paths;
 mod probe_evidence;
 mod query;
+mod queue;
+mod queue_fields;
 mod reach;
 mod recover;
 mod refill;

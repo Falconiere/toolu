@@ -146,6 +146,7 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
     Some(relaunch) => map.insert("relaunch".to_owned(), json!(relaunch)),
     None => map.remove("relaunch"),
   };
+  crate::queue_fields::write(&mut map, issue);
   write_value(path, &Value::Object(map))
 }
 
@@ -155,7 +156,11 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
 /// # Errors
 /// The record cannot be read or written.
 pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(), String> {
-  if issue.stage.is_empty() && issue.hold.is_none() && !issue.coupling_released {
+  if issue.stage.is_empty()
+    && issue.hold.is_none()
+    && !issue.coupling_released
+    && issue.queued_at_ms.is_none()
+  {
     return Ok(());
   }
   let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);

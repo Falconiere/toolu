@@ -198,6 +198,14 @@ pub(crate) struct Issue {
   pub relaunch: Option<String>,
   /// What the engine saw of the tracker item after the merge.
   pub tracker_seen: Seen,
+  /// When the issue joined its repository's merge queue, milliseconds.
+  pub queued_at_ms: Option<u64>,
+  /// herdr last reported its agent `working`.
+  pub agent_working: bool,
+  /// The engine armed GitHub auto-merge and has not disarmed it.
+  pub auto_armed: bool,
+  /// Rebase rounds by the engine and by the worker.
+  pub rebase_rounds: crate::queue_fields::Rounds,
 }
 
 /// What the engine saw of a merged issue's tracker item.
@@ -382,6 +390,10 @@ impl Issue {
       retry_at_ms: 0,
       relaunch: None,
       tracker_seen: Seen::Open,
+      queued_at_ms: None,
+      agent_working: false,
+      auto_armed: false,
+      rebase_rounds: crate::queue_fields::Rounds::default(),
     }
   }
 }

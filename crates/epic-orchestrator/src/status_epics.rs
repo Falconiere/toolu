@@ -66,7 +66,7 @@ fn summary(world: &World, key: &str) -> Value {
   })
 }
 
-/// One epic's safe graph, live issues and current ready queue.
+/// One epic's safe graph, live issues and its merge-queue entries.
 ///
 /// # Errors
 /// The registry or graph cannot be read.
@@ -83,7 +83,7 @@ pub(crate) fn detail(
     return Ok(None);
   };
   let graph = read_value(&dir.join("graph.json"))?;
-  let (nodes, waves, queue) = project_graph(&graph, world);
+  let (nodes, waves) = project_graph(&graph);
   let issues: Vec<Value> = world
     .issues
     .values()
@@ -104,50 +104,13 @@ pub(crate) fn detail(
     "paused": world.paused_all || world.paused.contains(key),
     "graph": {"issues": nodes, "waves": waves},
     "issues": issues,
-    "queue": queue,
+    "queue": crate::queue::document(world, Some(key)).get("repositories").cloned(),
   })))
 }
 
-/// Ready work grouped by repository in stable epic and graph order.
-///
-/// # Errors
-/// A registered graph cannot be read.
-pub(crate) fn queue(world: &World, paths: &Paths) -> Result<Value, String> {
-  let mut by_repo = BTreeMap::<String, Vec<String>>::new();
-  for (_epic, dir) in registered(paths)? {
-    let graph = read_value(&dir.join("graph.json"))?;
-    let (_nodes, _waves, queued) = project_graph(&graph, world);
-    for item in queued {
-      let Some(repo) = item.get("repo").and_then(Value::as_str) else {
-        continue;
-      };
-      let Some(key) = item.get("key").and_then(Value::as_str) else {
-        continue;
-      };
-      by_repo
-        .entry(repo.to_owned())
-        .or_default()
-        .push(key.to_owned());
-    }
-  }
-  let repositories: Vec<Value> = by_repo
-    .into_iter()
-    .map(|(repo, keys)| {
-      let items: Vec<Value> = keys
-        .into_iter()
-        .enumerate()
-        .map(|(index, key)| json!({"key": key, "position": index + 1}))
-        .collect();
-      json!({"repo": repo, "items": items})
-    })
-    .collect();
-  Ok(json!({"schema": 1, "repositories": repositories}))
-}
-
-fn project_graph(graph: &Value, world: &World) -> (Vec<Value>, Vec<Value>, Vec<Value>) {
+fn project_graph(graph: &Value) -> (Vec<Value>, Vec<Value>) {
   let mut nodes = Vec::new();
   let mut waves = BTreeMap::<u64, Vec<String>>::new();
-  let mut queue = Vec::new();
   for row in graph
     .get("issues")
     .and_then(Value::as_array)
@@ -161,13 +124,6 @@ fn project_graph(graph: &Value, world: &World) -> (Vec<Value>, Vec<Value>, Vec<V
     if let Some(wave) = wave {
       waves.entry(wave).or_default().push(key.to_owned());
     }
-    if world
-      .issues
-      .get(key)
-      .is_some_and(|issue| issue.phase == "ready")
-    {
-      queue.push(json!({"key": key, "repo": row.get("repo").and_then(Value::as_str)}));
-    }
     nodes.push(json!({
       "key": key,
       "title": row.get("title").and_then(Value::as_str),
@@ -179,7 +135,7 @@ fn project_graph(graph: &Value, world: &World) -> (Vec<Value>, Vec<Value>, Vec<V
     .into_iter()
     .map(|(wave, keys)| json!({"wave": wave, "issues": keys}))
     .collect();
-  (nodes, waves, queue)
+  (nodes, waves)
 }
 
 fn safe_strings(value: Option<&Value>) -> Vec<&str> {

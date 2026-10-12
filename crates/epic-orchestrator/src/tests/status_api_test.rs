@@ -161,6 +161,8 @@ fn status_api_fixture() -> (tempfile::TempDir, Paths, World) {
   let mut issue = Issue::blank("repo-449", "repo-402", &epic.display().to_string(), 100);
   issue.stage = "running".to_owned();
   issue.phase = "ready".to_owned();
+  issue.repo = "Falconiere/toolu".to_owned();
+  issue.pr = Some(449);
   world.issues.insert(issue.key.clone(), issue);
   (temp, paths, world)
 }

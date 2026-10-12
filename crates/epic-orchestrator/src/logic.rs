@@ -25,6 +25,7 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   let issue = issue_mut(world, report);
   let adopted = adopt(issue);
   report.phase.clone_into(&mut issue.phase);
+  crate::queue_fields::note_phase(issue, &report.phase, now_ms);
   issue.note = bounded_note(&report.note);
   if let Some(pr) = report.pr {
     issue.pr = Some(pr);
@@ -47,7 +48,7 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
       &report.phase,
     )),
   ];
-  if adopted {
+  if adopted || changed {
     steps.push(Step::Issue {
       key: report.key.clone(),
     });

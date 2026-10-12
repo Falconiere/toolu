@@ -195,7 +195,9 @@ fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
         && issue.phase != "ready"
       {
         "ready".clone_into(&mut issue.phase);
+        crate::queue_fields::note_phase(issue, "ready", world.now_ms);
         world.outbox.push_back(Step::Status { key: key.clone() });
+        world.outbox.push_back(Step::Issue { key: key.clone() });
         journal(world, &key, "github-babysit-ready", "");
       }
     }
