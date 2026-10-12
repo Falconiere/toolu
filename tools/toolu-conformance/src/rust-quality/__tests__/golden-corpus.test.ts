@@ -6,10 +6,10 @@
  * base is ported by a case or named in `NOT_GOLDEN`.
  */
 import { expect, test } from "bun:test";
-import { outcomeOf } from "./golden-outcome.ts";
-import { NOT_GOLDEN, RS_CASES } from "./cases.ts";
-import { caseKey } from "./golden-harness.ts";
-import { readGolden } from "./golden-io.ts";
+import { outcomeOf } from "../golden-outcome.ts";
+import { NOT_GOLDEN, RS_CASES } from "../cases.ts";
+import { caseKey } from "../golden-harness.ts";
+import { readGolden } from "../golden-io.ts";
 
 const golden = readGolden();
 

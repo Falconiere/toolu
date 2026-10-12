@@ -12,7 +12,7 @@ fn the_rust_quality_crate_is_its_plugin_and_prints_its_guide() {
   assert_eq!(SPEC, "rust-quality@toolu");
   assert_eq!(
     (QUALITY_PLUGIN.path_glob, QUALITY_PLUGIN.guard),
-    ("*.rs", "TOOLU_RUST_QUALITY_NATIVE")
+    ("*.rs*", "TOOLU_RUST_QUALITY_NATIVE")
   );
   let bare = command().try_get_matches_from(["rust-quality"]).unwrap();
   let guide = run(&bare, &Ctx::default()).stdout.unwrap_or_default();

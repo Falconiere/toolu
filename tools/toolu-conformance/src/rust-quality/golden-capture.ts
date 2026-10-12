@@ -2,10 +2,10 @@
  * One-time capture of the bash rust-quality module (#267): `git archive` the
  * plugin's hooks at `--base` (default c50c6bd9, the last commit with bash),
  * register that module in each case's sandbox and record every step through
- * the post-tools bundle into `fixtures/golden.json`. Reading git objects keeps
+ * the post-tools bundle into `fixtures/quality/rust-golden.json`. Reading git objects keeps
  * it reproducible after the bash files are deleted.
  *
- * Usage: bun run plugins/rust-quality/hooks/src/__tests__/golden-capture.ts [--base <sha>]
+ * Usage: bun run tools/toolu-conformance/src/rust-quality/golden-capture.ts [--base <sha>]
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -58,7 +58,7 @@ const baseArg = at === -1 ? BASH_BASE : process.argv[at + 1];
 if (baseArg === undefined || baseArg.trim() === "") {
   process.stderr.write("--base requires a non-empty commit\n");
   process.stderr.write(
-    "Usage: bun run plugins/rust-quality/hooks/src/__tests__/golden-capture.ts [--base <sha>]\n",
+    "Usage: bun run tools/toolu-conformance/src/rust-quality/golden-capture.ts [--base <sha>]\n",
   );
   process.exit(2);
 }
@@ -69,7 +69,7 @@ try {
   const jobs = RS_CASES.flatMap((c) =>
     (c.hosts ?? ["claude"]).map((host) => async (): Promise<[string, StepResult[]]> => [
       caseKey(c, host),
-      await runCase(c, host, { kind: "bash", register }),
+      await runCase(c, host, { kind: "bash", register }, "bun"),
     ]),
   );
   const cases = Object.fromEntries(await inBatches(jobs, BATCH));

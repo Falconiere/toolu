@@ -32,7 +32,7 @@ pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: SPEC,
   name: rule::NAME,
-  path_glob: "*.rs",
+  path_glob: "*.rs*",
   guard: "TOOLU_RUST_QUALITY_NATIVE",
   language: "Rust",
 };
