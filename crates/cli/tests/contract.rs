@@ -32,6 +32,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "ast-grep",
     "statusline",
     "babysit",
+    "epic",
   ];
   names
     .iter()
@@ -86,7 +87,8 @@ fn every_namespace_answers_help_on_stdout() {
     );
   }
   let epic = stdout(&toolu(&["epic", "--help"]).unwrap()).unwrap();
-  assert!(epic.contains("planned  Not ported yet (#448)"), "{epic}");
+  assert!(epic.contains("\n  queue "), "{epic}");
+  assert!(!epic.contains("planned"), "{epic}");
 }
 
 #[test]
@@ -171,8 +173,7 @@ fn a_denied_hook_exits_2_with_blocked_on_stderr() {
 #[test]
 fn a_successful_verb_leaves_stderr_empty() {
   for args in [
-    &["epic", "planned"][..],
-    &["jev", "--help"],
+    &["jev", "--help"][..],
     &["brainstorm"],
     &["commands"],
   ] {

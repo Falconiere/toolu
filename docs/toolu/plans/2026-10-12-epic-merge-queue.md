@@ -99,7 +99,7 @@ mechanics → in-process head step → commit and triggers → end-to-end scenar
     "check": "cargo test -p toolu-epic-orchestrator -- verbs query && cargo test -p toolu-cli --test contract && cargo xtask gate --only docs-cli --only cli-compat",
     "ac_refs": ["AC-2", "AC-11"],
     "depends_on": ["S2"],
-    "paths": ["crates/epic-orchestrator/src/verbs.rs", "crates/epic-orchestrator/src/query.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/tests", "crates/cli/tests", "docs/cli"],
+    "paths": ["crates/epic-orchestrator/src/verbs.rs", "crates/epic-orchestrator/src/query.rs", "crates/epic-orchestrator/src/dispatch.rs", "crates/epic-orchestrator/src/tests", "crates/cli/tests", "crates/cli/src/commands.schema.json", "docs/cli"],
     "input": "toolu epic queue with no registry (empty queue) and against a running engine with two ready issues",
     "model": "inherit"
   },

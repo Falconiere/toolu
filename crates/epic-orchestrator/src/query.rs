@@ -52,6 +52,19 @@ pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
   }
 }
 
+/// Print the merge queue through the engine; with no registered epic it is empty.
+pub(crate) fn queue(matches: &ArgMatches, env: &Env) -> Outcome {
+  let epic = text(matches, "epic");
+  if !registry_nonempty(&Paths::from_env(env)) {
+    return json_out(&crate::queue::document(&World::new(0), epic));
+  }
+  let request = match epic {
+    Some(epic) => json!({"op": "queue", "epic": epic}),
+    None => json!({"op": "queue"}),
+  };
+  ask(env, "queue", &request)
+}
+
 /// Set the pause state through the control socket.
 pub(crate) fn pause(matches: &ArgMatches, env: &Env, pausing: bool) -> Outcome {
   let op = if pausing { "pause" } else { "resume" };
@@ -283,3 +296,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/report_test.rs"]
 mod report_tests;
+
+#[cfg(test)]
+#[path = "tests/query_queue_test.rs"]
+mod queue_tests;

@@ -4,15 +4,11 @@ use crate::query::install_unit;
 use toolu_runtime::cli::Ctx;
 
 #[test]
-fn planned_lists_only_the_later_verbs() {
-  let matches = command()
-    .try_get_matches_from(["epic", "planned"])
-    .expect("planned");
-  let outcome = run(&matches, &Ctx::default(), &());
-  assert_eq!(
-    outcome.stdout.as_deref(),
-    Some("toolu epic is not ported yet (#448). Planned verbs: queue")
-  );
+fn queue_parses_and_nothing_is_planned_any_more() {
+  command()
+    .try_get_matches_from(["epic", "queue", "one"])
+    .expect("queue");
+  assert!(command().try_get_matches_from(["epic", "planned"]).is_err());
   command()
     .try_get_matches_from(["epic", "job", "--", "true"])
     .expect("job");

@@ -16,15 +16,13 @@ impl BabysitTick for Unported {
 }
 
 #[test]
-fn the_epic_orchestrator_crate_is_its_plugin_and_lists_the_planned_verbs() {
+fn the_epic_orchestrator_crate_is_its_plugin_and_dispatches_its_verbs() {
   let dir = Path::new(env!("CARGO_MANIFEST_DIR")).file_name();
   assert_eq!(dir.and_then(|name| name.to_str()), Some(PLUGIN));
+  assert!(command().try_get_matches_from(["epic", "planned"]).is_err());
   let matches = command()
-    .try_get_matches_from(["epic", "planned"])
-    .expect("epic planned matches");
+    .try_get_matches_from(["epic", "gate", "--pr", "nonsense"])
+    .expect("epic gate matches");
   let outcome = run(&matches, &Ctx::default(), &Unported);
-  assert_eq!(
-    outcome.stdout.as_deref(),
-    Some("toolu epic is not ported yet (#448). Planned verbs: queue")
-  );
+  assert_eq!(outcome.exit, toolu_protocol::exit::Exit::Usage, "{outcome:?}");
 }

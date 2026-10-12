@@ -49,6 +49,11 @@ fn operate(
   match op {
     "stop" | "replace" => finish(engine, &reply, op == "replace"),
     "status" => reply_status(engine, request, &reply),
+    "queue" => {
+      let epic = request.get("epic").and_then(Value::as_str);
+      let _sent = reply.send(crate::queue::document(&engine.world, epic));
+      Ok(false)
+    }
     "pause" => reply_pause(engine, request, &reply, true),
     "resume" => reply_pause(engine, request, &reply, false),
     "ack" => crate::attention_ops::reply_ack(engine, request, &reply),

@@ -32,7 +32,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`jev`](jev.md) | `plugins/jev` | available | Typed judgments from Jev: yes/no probabilities, choices and scores |
 | [`statusline`](statusline.md) | `plugins/statusline` | available | Render and set up the native Claude status line |
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | available | Babysit a PR until CI, review threads and the review-bot verdict are clear |
-| [`epic`](epic.md) | `plugins/epic-orchestrator` | planned | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
+| [`epic`](epic.md) | `plugins/epic-orchestrator` | available | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
 | [`plugins`](plugins.md) | built into `crates/cli` | planned | Install, list, remove and update toolu plugins on every host |
 

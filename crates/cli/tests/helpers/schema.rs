@@ -65,7 +65,7 @@ fn every_other_json_document_validates_against_its_definition() {
     (&["--json", "--version"], "version"),
     (&["--json", "--help"], "help"),
     (&["--json", "epic", "--help"], "help"),
-    (&["--json", "epic", "planned"], "planned"),
+    (&["epic", "queue", "--json"], "epicQueue"),
     (&["--json", "jev", "noul"], "error"),
     (&["--json", "brainstorm"], "guide"),
   ] {
@@ -106,7 +106,7 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev"
-      | "review" | "ast-grep" | "statusline" | "babysit" => continue,
+      | "review" | "ast-grep" | "statusline" | "babysit" | "epic" => continue,
       "brainstorm" | "delivery-flow" => (vec!["--json", name.as_str()], "guide"),
       _ => (vec!["--json", name.as_str(), "planned"], "planned"),
     };
