@@ -116,7 +116,13 @@ fn a_failed_refresh_keeps_its_graph_and_succeeds_180_s_later() {
       ..
     })
   ));
+  crate::refresh::epic_attention(&mut world, "refresh-failed", "e", "HTTP 502");
   let _steps = commit(&mut world, "e", r#"{"outcome":"applied"}"#);
+  assert_eq!(
+    judgments(&world, "refresh-failed"),
+    0,
+    "a good refresh settles it"
+  );
   assert_eq!(world.epics["e"].refresh_failures, 0);
   assert_eq!(world.epics["e"].refresh_at_ms, u64::MAX);
   assert!(

@@ -126,8 +126,8 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `planned` | Lists `queue` (#448). |
 
 The engine runs launch, cleanup, checkpoint, the `STATUS?` prompt, graph
-refresh and epic close in process; `TOOLU_EPIC_SCRIPTS` affects only merge
-and its reconcile. Without merge scripts a `ready` worker raises a
+refresh and epic close in process; `TOOLU_EPIC_SCRIPTS` affects only merge,
+its reconcile and worker prompts. Without merge scripts a `ready` worker raises a
 `merge-ready` judgment for the orchestrator's `toolu epic gate … --merge`.
 
 ### Attention
@@ -201,7 +201,8 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 `--safe` keeps approval prompts on (Claude runs in its `auto` permission
 mode); pass it as `toolu epic start <state-dir> --safe`, which the engine and
 a manual `toolu epic launch` read from `<state-dir>/launch.json` until a start
-without it. `--no-jev` sends nothing to Jev: pass it to
+without it. With `--no-jev` the engine sends Jev nothing (workers' babysit
+routing keeps its own `prBabysit.jev` setting): pass it to
 `toolu epic route --graph <file> --hosts <spec> --no-jev` and to
 `toolu epic start <state-dir> --no-jev`, which keeps the engine's own routing
 and coupling check heuristic. `--kind`, `--model` and `--effort` override the route for

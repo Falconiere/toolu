@@ -158,24 +158,9 @@ fn load_issue(
   let status = read_value(&status_path)?;
   let issue = ensure_issue(world, key, epic, &state_dir);
   issue.blockers = crate::epics::blocker_keys(graph, &strings(item.get("open_blockers")));
-  issue.hold = issue_doc
-    .get("hold")
-    .filter(|hold| !hold.is_null())
-    .cloned();
-  issue.coupling_released = issue_doc.get("coupling_released") == Some(&Value::Bool(true));
-  issue.relaunch = issue_doc
-    .get("relaunch")
-    .and_then(Value::as_str)
-    .map(str::to_owned);
-  issue.tracker_seen = crate::merge_bridge::seen_from(&issue_doc);
+  overlay_record(issue, &issue_doc);
   if let Some(stage) = issue_doc.get("stage").and_then(Value::as_str) {
     stages.insert(key.to_owned(), stage.to_owned());
-  }
-  if let Some(tree) = issue_doc.get("worktree").and_then(Value::as_str) {
-    issue.worktree = Some(tree.to_owned());
-  }
-  if let Some(kind) = issue_doc.get("kind").and_then(Value::as_str) {
-    kind.clone_into(&mut issue.kind);
   }
   if let Some(phase) = status.get("phase").and_then(Value::as_str) {
     phase.clone_into(&mut issue.phase);
@@ -188,6 +173,24 @@ fn load_issue(
     note.clone_into(&mut issue.note);
   }
   Ok(())
+}
+
+/// The engine's fields of an issue record: its hold, release, waiting
+/// relaunch, tracker sighting, worktree and host.
+fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
+  issue.hold = record.get("hold").filter(|hold| !hold.is_null()).cloned();
+  issue.coupling_released = record.get("coupling_released") == Some(&Value::Bool(true));
+  issue.relaunch = record
+    .get("relaunch")
+    .and_then(Value::as_str)
+    .map(str::to_owned);
+  issue.tracker_seen = crate::merge_bridge::seen_from(record);
+  if let Some(tree) = record.get("worktree").and_then(Value::as_str) {
+    issue.worktree = Some(tree.to_owned());
+  }
+  if let Some(kind) = record.get("kind").and_then(Value::as_str) {
+    kind.clone_into(&mut issue.kind);
+  }
 }
 
 fn strings(value: Option<&Value>) -> Vec<String> {

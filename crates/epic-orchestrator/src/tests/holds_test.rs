@@ -43,7 +43,20 @@ fn release_clears_the_hold_and_journals() {
   world.outbox.clear();
   release(&mut world, "a").expect("release");
   assert!(world.issues["a"].hold.is_none() && world.issues["a"].coupling_released);
-  assert_eq!(journaled(&world), [("release".to_owned(), "z".to_owned())]);
+  assert_eq!(
+    journaled(&world),
+    [
+      (
+        "closed".to_owned(),
+        "kind=coupling-hold waited_ms=0 by=release".to_owned()
+      ),
+      ("release".to_owned(), "z".to_owned())
+    ]
+  );
+  assert!(
+    world.attention.is_empty(),
+    "the release settles the hold's judgment"
+  );
 }
 
 #[test]

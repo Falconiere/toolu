@@ -151,6 +151,7 @@ pub(crate) fn commit(world: &mut World, epic: &str, outcome: &str) -> Vec<Step> 
     return failed(world, epic, &err);
   }
   let now = world.now_ms;
+  crate::attention::settle(world, epic, Some("refresh-failed"), "refresh");
   if let Some(found) = world.epics.get_mut(epic) {
     found.refresh_failures = 0;
     found.refresh_at_ms = found.next_poll(now);
@@ -179,12 +180,9 @@ fn failed(world: &mut World, epic: &str, note: &str) -> Vec<Step> {
   world.outbox.drain(..).collect()
 }
 
-/// A judgment about `epic` itself.
+/// A judgment about `epic` itself; the queue names the epic from its key.
 pub(crate) fn epic_attention(world: &mut World, kind: &str, epic: &str, note: &str) {
   push_attention(world, kind, epic, note);
-  if let Some(item) = world.attention.last_mut() {
-    epic.clone_into(&mut item.epic);
-  }
 }
 
 /// Note what the refreshed graph shows of each merged issue's tracker item.

@@ -149,7 +149,7 @@ fn status_and_reports_stay_live_while_an_effect_blocks_and_its_release_commits()
 }
 
 #[test]
-fn a_prompt_parks_behind_a_running_call_while_journal_and_status_steps_run() {
+fn a_call_parks_behind_a_running_call_while_journal_and_status_steps_run() {
   let tmp = tempfile::tempdir().expect("temp");
   let (tx, rx) = mpsc::channel();
   let (_fix, mut engine, release) = blocked_merge(tmp.path(), tx);
@@ -158,9 +158,9 @@ fn a_prompt_parks_behind_a_running_call_while_journal_and_status_steps_run() {
       .expect("journal")
       .len();
   engine.world.outbox.push_back(Step::Call {
-    key: "a".into(),
-    action: Action::Prompt,
-    token: "p-1".into(),
+    key: "b".into(),
+    action: Action::Merge,
+    token: "m-2".into(),
   });
   engine
     .world
@@ -177,25 +177,24 @@ fn a_prompt_parks_behind_a_running_call_while_journal_and_status_steps_run() {
       .expect("journal")
       .len();
   assert_eq!(journal_after, journal_before + 1);
-  assert!(!tmp.path().join("prompted").exists());
   std::fs::write(&release, "").expect("release");
   let (done, outcome) = effect(&rx);
   engine.effect_done(&done, &outcome).expect("commit");
-  let (prompt, _) = effect(&rx);
-  assert_eq!(prompt.action, Action::Prompt);
-  engine.effect_done(&prompt, "applied").expect("prompted");
-  assert!(tmp.path().join("prompted").exists() && engine.parked.is_empty());
+  let (parked, outcome) = effect(&rx);
+  assert_eq!((parked.key.as_str(), parked.action), ("b", Action::Merge));
+  engine.effect_done(&parked, &outcome).expect("parked call");
+  assert!(engine.parked.is_empty());
 }
 
 #[test]
-fn a_draining_engine_starts_no_parked_prompt_after_the_running_call() {
+fn a_draining_engine_starts_no_parked_call_after_the_running_call() {
   let tmp = tempfile::tempdir().expect("temp");
   let (tx, rx) = mpsc::channel();
   let (_fix, mut engine, release) = blocked_merge(tmp.path(), tx);
   engine.world.outbox.push_back(Step::Call {
-    key: "a".into(),
-    action: Action::Prompt,
-    token: "p-1".into(),
+    key: "b".into(),
+    action: Action::Merge,
+    token: "m-2".into(),
   });
   engine.pump().expect("pump");
   assert_eq!(engine.parked.len(), 1);
@@ -205,5 +204,4 @@ fn a_draining_engine_starts_no_parked_prompt_after_the_running_call() {
   engine.effect_done(&done, &outcome).expect("commit");
   assert!(engine.running.is_none());
   assert_eq!(engine.parked.len(), 1);
-  assert!(!tmp.path().join("prompted").exists());
 }

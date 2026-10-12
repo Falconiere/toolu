@@ -189,8 +189,9 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
     safe: matches.get_flag("safe"),
     no_jev: matches.get_flag("no-jev"),
   };
-  let saved = register(&paths, dir)
-    .and_then(|()| crate::epics::write_launch_settings(Path::new(dir), settings));
+  // The settings first: a registered epic never runs without them.
+  let saved = crate::epics::write_launch_settings(Path::new(dir), settings)
+    .and_then(|()| register(&paths, dir));
   if let Err(err) = saved {
     return failed("toolu epic start", &err);
   }

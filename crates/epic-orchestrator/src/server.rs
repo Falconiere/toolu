@@ -317,9 +317,6 @@ impl Engine {
   }
 
   fn finish_call(&mut self, call: &Call, outcome: &str) -> Result<Applied, String> {
-    if call.action == Action::Prompt {
-      return Ok(Applied::Continue);
-    }
     let merge = call.action == Action::Merge && !recovered(&self.world, &call.key);
     if self.fault == Fault::AfterMerge && merge {
       return Ok(Applied::Fault);

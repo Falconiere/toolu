@@ -88,6 +88,21 @@ fn approval_lines(safe: bool) -> (&'static str, &'static str) {
   }
 }
 
+/// The issue's closed blockers, comma-separated, or `none`.
+fn closed_blockers(issue: &GraphIssue) -> String {
+  let done: Vec<&str> = issue
+    .blockers
+    .iter()
+    .filter(|(_, state)| *state == "closed")
+    .map(|(blocker, _)| blocker.as_str())
+    .collect();
+  if done.is_empty() {
+    "none".to_owned()
+  } else {
+    done.join(", ")
+  }
+}
+
 /// The brief of `issue` for a worker on `host`.
 ///
 /// # Errors
@@ -102,17 +117,6 @@ pub(crate) fn render_brief(
   let kind = host.kind;
   let (approvals, questions) = approval_lines(host.safe);
   let (read, closes) = tracker_lines(graph, issue);
-  let done: Vec<&str> = issue
-    .blockers
-    .iter()
-    .filter(|(_, state)| *state == "closed")
-    .map(|(blocker, _)| blocker.as_str())
-    .collect();
-  let blockers = if done.is_empty() {
-    "none".to_owned()
-  } else {
-    done.join(", ")
-  };
   let values = [
     ("ISSUE_REF", issue.reference.clone()),
     ("ISSUE_URL", issue.url.clone()),
@@ -133,7 +137,7 @@ pub(crate) fn render_brief(
     ("BRANCH", issue.branch.clone()),
     ("BASE", base.to_owned()),
     ("STATUS_FILE", paths.status.clone()),
-    ("BLOCKERS", blockers),
+    ("BLOCKERS", closed_blockers(issue)),
     ("APPROVALS", approvals.to_owned()),
     ("QUESTIONS", questions.to_owned()),
   ];

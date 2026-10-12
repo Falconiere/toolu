@@ -312,8 +312,9 @@ engine_ensure}`:
 
 - `check-binary` — `native_toolu_advice` as `SessionStart` context. The
   session-id extraction and advice-to-output step move into one
-  `toolu_runtime::startup::native_advice_output(env, stdin) -> Option<String>`,
-  and `jev`'s and `toolu-review`'s `check_binary` call it too, so no copy
+  `toolu_runtime::startup::native_toolu_hook_output(env, stdin) -> Option<String>`
+  (main's #512 added it first under that name), and `jev`'s and
+  `toolu-review`'s `check_binary` call it too, so no copy
   exists for jscpd to find; their existing tests keep covering their output.
   Silent when native `toolu` is on the agent's `PATH`.
 - `check-deps` — `codex_dependency_notice` for `toolu@toolu`,

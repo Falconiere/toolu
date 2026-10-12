@@ -154,13 +154,11 @@ impl Client {
     } else {
       output.stdout
     };
-    // Non-JSON output and a herdr error object carry their own failure, except
-    // a read's plain text, which is its answer.
-    let parsed = serde_json::from_str::<Value>(text.trim());
-    let plain_read = matches!(call, Call::Read { .. }) && parsed.is_err();
-    let failed_quietly =
-      parsed.is_ok_and(|reply| !reply.get("error").is_some_and(Value::is_object));
-    if output.exit_code != 0 && (failed_quietly || plain_read) {
+    // A herdr error object carries its own code for the caller to read; any
+    // other non-zero exit fails with the exit status.
+    let error_object = serde_json::from_str::<Value>(text.trim())
+      .is_ok_and(|reply| reply.get("error").is_some_and(Value::is_object));
+    if output.exit_code != 0 && !error_object {
       return Err(format!("failed ({}): {}", output.exit_code, text.trim()));
     }
     Ok(text)

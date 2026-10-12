@@ -6,13 +6,11 @@
 use std::path::PathBuf;
 
 use serde_json::json;
-use toolu_runtime::env::Env;
 
 use crate::checkpoint::snapshot_active;
 use crate::effects::invoke;
 use crate::executor::{Call, Job};
 use crate::model::Action;
-use crate::paths::Paths;
 use crate::server::Engine;
 
 /// The effect body of `call` in `engine`.
@@ -27,10 +25,6 @@ pub(crate) fn job(engine: &Engine, call: &Call) -> Job {
     Action::Checkpoint => {
       let state = issue.map(|issue| PathBuf::from(&issue.state_dir));
       checkpoint_job(state, call.key.clone(), engine.git_trace.clone())
-    }
-    Action::Prompt => {
-      let target = issue.map_or_else(|| call.key.clone(), |issue| issue.agent.clone());
-      prompt_job(engine.scripts.clone(), engine.paths.clone(), target)
     }
     Action::Launch => crate::effects_launch::job(crate::effects_launch::LaunchJob {
       state_dir: issue
@@ -55,6 +49,8 @@ pub(crate) fn job(engine: &Engine, call: &Call) -> Job {
       reach: engine.reach.clone(),
     }),
     Action::Refresh | Action::Close => Box::new(|| "failed: no such epic".to_owned()),
+    // Worker prompts go through `attention_ops::send_prompt`, never a call.
+    Action::Prompt => Box::new(|| "failed: a prompt is no effect".to_owned()),
     Action::Merge | Action::Reconcile => {
       let epic = issue.map(|issue| issue.epic.clone()).unwrap_or_default();
       let body = json!({"key": call.key, "action": call.action.name(), "epic": epic}).to_string();
@@ -94,17 +90,6 @@ fn checkpoint_job(state: Option<PathBuf>, key: String, trace: Option<PathBuf>) -
       "applied"
     }
     .to_owned()
-  })
-}
-
-fn prompt_job(scripts: Option<PathBuf>, paths: Paths, target: String) -> Job {
-  Box::new(move || {
-    if scripts.is_none() && crate::source::prompt_enabled() {
-      let _sent = crate::source::prompt(&paths, &Env::process(), &target, "STATUS?");
-    } else {
-      let _outcome = invoke(scripts.as_deref(), Action::Prompt, "{}");
-    }
-    "applied".to_owned()
   })
 }
 

@@ -12,6 +12,8 @@ survive):
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),
   `Resolves KEY-12` (Jira), `Fixes ENG-12` (Linear).
 - HOST: the worker's host kind.
+- APPROVALS, QUESTIONS: what the worker is told about approval prompts and
+  questions in its pane, which `--safe` changes.
 The launch tests fail if any placeholder goes unfilled for a host or tracker. -->
 
 # Epic worker brief — {{ISSUE_REF}}

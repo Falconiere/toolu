@@ -64,3 +64,21 @@ fn a_gone_worker_relaunches_twice_then_raises_the_relaunch_limit() {
       .any(|item| item.kind == "relaunch-limit")
   );
 }
+
+#[test]
+fn a_loss_during_a_checkpoint_relaunches_after_it_and_a_merge_spends_nothing() {
+  let mut world = World::new(0);
+  let issue = ensure_issue(&mut world, "a", "one", "/epic");
+  issue.stage = "running".into();
+  issue.pending = Some(crate::model::fresh(Action::Checkpoint, "c".into()));
+  note_event(&mut world, "a", "gone");
+  let pending = world.issues["a"].pending.clone().expect("checkpoint");
+  assert_eq!(
+    (pending.action, pending.follow, world.issues["a"].launches),
+    (Action::Checkpoint, Some(Action::Launch), 1)
+  );
+  world.issues.get_mut("a").expect("a").pending =
+    Some(crate::model::fresh(Action::Merge, "m".into()));
+  note_event(&mut world, "a", "gone");
+  assert_eq!(world.issues["a"].launches, 1);
+}

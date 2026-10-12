@@ -37,6 +37,7 @@ pub(crate) fn merged(world: &mut World, key: &str) {
   if let Some(issue) = world.issues.get_mut(key) {
     "cleaning".clone_into(&mut issue.stage);
     issue.deferred = None;
+    issue.relaunch = None;
     match issue.pending.as_mut() {
       Some(checkpoint) => checkpoint.follow = Some(Action::Cleanup),
       None => issue.pending = Some(fresh(Action::Cleanup, token)),

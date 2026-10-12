@@ -182,7 +182,7 @@ pub(crate) fn prompt(
         text: text.to_owned(),
       },
     )
-    .map(|_| ())
+    .and_then(|reply| crate::herdr_calls::delivered("agent.prompt", &reply))
 }
 
 /// The binary subscribes unless `TOOLU_EPIC_HERDR=off`. Tests subscribe only when it is `1`.

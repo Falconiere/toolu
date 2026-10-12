@@ -161,6 +161,13 @@ fn start_leaves_a_live_engine_in_place() {
   std::fs::create_dir_all(epic.join("launch.json")).expect("a directory in the way");
   let unwritable = start(&verb(&["epic", "start", &dir, "--safe"]), &env);
   assert_eq!(unwritable.exit, Exit::Failure, "{unwritable:?}");
+  let other = tmp.path().join("other");
+  std::fs::create_dir_all(other.join("launch.json")).expect("a directory in the way");
+  let other_dir = other.display().to_string();
+  let refused = start(&verb(&["epic", "start", &other_dir]), &env);
+  assert_eq!(refused.exit, Exit::Failure, "{refused:?}");
+  let registry = read_value(&paths.registry()).expect("registry").to_string();
+  assert!(!registry.contains(&other_dir), "{registry}");
 }
 
 #[test]
@@ -191,7 +198,8 @@ fn start_rejects_a_missing_directory_and_a_bad_registry() {
   let outcome = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(outcome.exit, Exit::Failure);
   assert!(outcome.stderr.expect("err").contains("toolu epic start"));
-  assert!(!epic.join("launch.json").exists());
+  // The settings come first, so the epic is never registered without them.
+  assert!(epic.join("launch.json").is_file());
 }
 
 fn verb(argv: &[&str]) -> clap::ArgMatches {

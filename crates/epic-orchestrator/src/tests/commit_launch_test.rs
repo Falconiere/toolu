@@ -64,9 +64,16 @@ fn a_held_waiting_or_failed_launch_closes_its_intent_with_a_note() {
 
 #[test]
 fn a_panicked_launch_fails_like_a_refused_one_and_a_panicked_cleanup_is_incomplete() {
-  let mut world = launching("", false);
-  let _steps = commit_effect(&mut world, "b", "failed: effect panicked");
+  let mut world = launching("running", false);
+  world.issues.get_mut("b").expect("b").relaunch = Some("lost".into());
+  let steps = commit_effect(&mut world, "b", "failed: effect panicked");
   assert_eq!(world.issues["b"].deferred.as_deref(), Some("launch"));
+  assert_eq!(world.issues["b"].relaunch, None);
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, Step::Issue { key } if key == "b"))
+  );
   assert_eq!(world.epics["e"].batch[1].outcome.as_deref(), Some("failed"));
   assert_eq!(world.attention[0].kind, "failed");
   assert_eq!(world.attention[0].note, "failed: effect panicked");
@@ -110,6 +117,22 @@ fn a_relaunch_or_reroute_that_waits_is_marked_and_rearmed_after_its_retry_time()
     let _steps = commit_effect(&mut world, "b", r#"{"outcome":"applied","kind":"codex"}"#);
     assert_eq!(world.issues["b"].relaunch, None);
   }
+}
+
+#[test]
+fn a_waiting_relaunch_of_a_finished_issue_is_never_rearmed() {
+  let mut world = launching("running", false);
+  let _steps = commit_effect(&mut world, "b", r#"{"outcome":"wait","note":"full"}"#);
+  world.issues.get_mut("a").expect("a").stage = "running".into();
+  crate::merge_bridge::merged(&mut world, "b");
+  assert_eq!(world.issues["b"].relaunch, None);
+  let issue = world.issues.get_mut("b").expect("b");
+  issue.pending = None;
+  issue.stage = "merged".into();
+  issue.relaunch = Some("lost".into());
+  world.now_ms = world.issues["b"].retry_at_ms;
+  crate::refill::refill(&mut world);
+  assert!(world.issues["b"].pending.is_none());
 }
 
 #[test]

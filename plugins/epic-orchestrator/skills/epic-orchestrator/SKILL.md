@@ -39,8 +39,9 @@ Options:
 - `--hosts claude:2,codex:2`: worker hosts and per-host caps (default
   `claude`, cap = `--max`). Hosts: `claude`, `codex`, `cursor` (cursor-agent),
   `opencode`.
-- `--no-jev`: send nothing to Jev; routing tiers and the coupling check use
-  heuristics. Pass it to `toolu epic route` (step 2) and to
+- `--no-jev`: the engine's routing tiers and coupling check use heuristics
+  and send it nothing (workers' babysit routing has its own Jev setting,
+  `prBabysit.jev`). Pass it to `toolu epic route` (step 2) and to
   `toolu epic start <state_dir> --no-jev` (step 3), which records it in
   `<state_dir>/launch.json` for every issue the engine routes itself.
 - `--safe`: keep each host's approval prompts on (Claude runs in its `auto`
@@ -175,7 +176,8 @@ toolu epic launch --graph /tmp/epic-graph.json --issue <ref> --dry-run --kind <h
 
 The unsaved route reaches the launch only through `--kind`, `--model` and
 `--effort`: copy them from the route table for each issue (drop `--model` or
-`--effort` where the table shows none). The launch prints the exact clone, fetch, worktree, agent and prompt commands
+`--effort` where the table shows none), and add `--safe` when the user passed
+it, since a dry run has no `launch.json`. The launch prints the exact clone, fetch, worktree, agent and prompt commands
 plus the rendered worker brief, and executes nothing. Show the commands for
 every batch issue, but the brief only once. Then summarize what happens after
 launch: the worker pipeline, the merge policy, and which blocked issues each
@@ -229,26 +231,28 @@ screen). Else it returns `{"state": "waiting"}` when the limit passes. Handle
 it, then run it again in the same turn, and keep that loop going while any
 issue is active. The engine has already notified herdr and the configured
 URL, and reminds until the item is acknowledged or answered; a worker report
-closes its key's items. `toolu epic answer <key> "<text>"` prompts the worker
+closes its key's items, and the engine closes an item once its cause settles
+(a merge, a release, a finished cleanup, a good refresh). Ack the rest with
+`toolu epic ack <key>` once handled. `toolu epic answer <key> "<text>"` prompts the worker
 with the text and records the answer.
 
 | kind | action |
 |---|---|
-| `merge-ready` | The worker reported `ready`. Run the merge gate (below). |
+| `merge-ready` | The worker reported `ready`. Run the merge gate (below); the merge closes the item. |
 | `needs-human` | Read the `note`. If the issue, epic or code answers it, send it with `toolu epic answer <key> "<answer>"`. Otherwise ask the user and relay their answer the same way. |
 | `failed` | Read the note, then `herdr agent read <key> --source recent-unwrapped --lines 80`. Send a concrete new direction with `toolu epic answer <key> "<direction>"`, or escalate to the user. An `uncertain launch` note means the start may have happened: inspect the record and the pane, then `toolu epic launch --graph <state_dir>/graph.json --issue <ref> --reprompt` (a verified session) or `--replace`. `epic close uncertain` means the epic may be closed already: check it in the tracker; never close it twice. |
 | `blocked` | Read `pending`. If the approval is inside the authorization boundary, approve it with `herdr agent send-keys`. Otherwise ask the user. Then `toolu epic ack <key>`. |
 | `stall` | The engine already sent `STATUS?`. Read the reply (`herdr agent read <key> --lines 40`), then nudge the worker with `toolu epic answer <key> "<direction>"`, treat it as `failed`, or `toolu epic ack <key>` to wait one more stall length. |
 | `relaunch-limit` | The agent vanished a third time. Escalate to the user, then `toolu epic ack <key>`. |
-| `coupling-hold` | The issue overlaps the batch member in the note. When that member merges (or you judge the overlap false), `toolu epic release <key>`; the issue launches next without the check. |
-| `cleanup-incomplete` | The teardown refused (see the note and `references/recovery.md`). Fix the cause, then `toolu epic finish <state_dir> <key>`. |
-| `refresh-failed` | The tracker failed three times in a row (often credentials). Fix it; the engine keeps retrying every 3 minutes. |
+| `coupling-hold` | The issue overlaps the batch member in the note. When that member merges (or you judge the overlap false), `toolu epic release <key>`, which closes the item; the issue launches next without the check. |
+| `cleanup-incomplete` | The teardown refused (see the note and `references/recovery.md`). Fix the cause, then `toolu epic finish <state_dir> <key>` and `toolu epic ack <key>`. |
+| `refresh-failed` | The tracker failed three times in a row (often credentials). Fix it; the engine keeps retrying every 3 minutes and closes the item after a good refresh. |
 | `herdr-error` | herdr did not answer. Run `herdr status`. The engine backs off 30 seconds, doubling to 5 minutes, and recovers on its own once herdr answers; then `toolu epic ack <key>`. Escalate to the user if it persists. |
-| `reopened` | A merged sub-issue was reopened. Read the reopening comment; a regression usually deserves a fresh branch: `toolu epic launch --graph <state_dir>/graph.json --issue <ref> --force`. |
+| `reopened` | A merged sub-issue was reopened. Read the reopening comment; a regression usually deserves a fresh branch: `toolu epic launch --graph <state_dir>/graph.json --issue <ref> --force`. Then `toolu epic ack <key>`. |
 | `pr-closed` | The PR was closed without merge. Ask the user, then `toolu epic ack <key>`. |
 | `babysit` | The PR check needs attention (the note says why). Prompt the worker with `toolu epic answer <key> "<direction>"` or escalate, then `toolu epic ack <key>`. |
 | `dependency-cycle` | Ask the user which edge is wrong, fix the graph, then `toolu epic ack dependency-cycle`. |
-| `epic-complete` | Go to step 5. |
+| `epic-complete` | `toolu epic ack <key>` (the epic key), then go to step 5. |
 
 **Merge gate.**
 

@@ -158,6 +158,18 @@ pub(crate) fn request(
   reply.map_err(|err| CallError { exit_code, ..err })
 }
 
+/// Whether a reply `Client::execute` returned means the call happened: plain
+/// CLI text does, and a JSON reply must carry no herdr error object.
+///
+/// # Errors
+/// The reply is a herdr error object.
+pub(crate) fn delivered(name: &str, text: &str) -> Result<(), String> {
+  if serde_json::from_str::<Value>(text.trim()).is_err() {
+    return Ok(());
+  }
+  result_of(name, text).map(|_| ()).map_err(|err| err.message)
+}
+
 /// An `agent.read` reply: the socket's JSON, or the CLI's `--format text`
 /// output as `{"read": {"text": …}}`.
 fn read_result(text: &str) -> Result<Value, CallError> {

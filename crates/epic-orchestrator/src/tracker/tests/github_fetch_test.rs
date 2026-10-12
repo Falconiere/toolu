@@ -120,30 +120,38 @@ fn details_join_native_and_text_blockers_labels_and_closing_prs() {
 }
 
 #[test]
-fn a_failing_dependency_api_falls_back_to_text_blockers() {
-  let fixture = Fixture::start().expect("fixture");
-  fixture
-    .route(
-      "/repos/o/r/issues/2/dependencies/blocked_by",
-      Reply::new(404, "{\"message\":\"Not Found\"}"),
-    )
-    .expect("route");
-  ok(
-    &fixture,
-    "/repos/o/r/issues/2",
-    &issue("o", "r", 2, "open", "no deps"),
-  );
-  closing(&fixture, &json!([]));
-  let sub = SubIssue {
-    reference: "o/r#2".into(),
-    title: "Two".into(),
-    state: "closed".into(),
-    url: String::new(),
-  };
-  let tracked = details(&gh(&fixture), &sub).expect("details");
-  assert_eq!(tracked.deps_source, "text");
-  assert_eq!(tracked.state, "closed");
-  assert_eq!(tracked.blockers.len(), 0);
+fn an_absent_or_closed_dependency_api_falls_back_to_text_blockers() {
+  for (status, body) in [
+    (404, r#"{"message":"Not Found"}"#),
+    (
+      403,
+      r#"{"message":"Resource not accessible by integration"}"#,
+    ),
+  ] {
+    let fixture = Fixture::start().expect("fixture");
+    fixture
+      .route(
+        "/repos/o/r/issues/2/dependencies/blocked_by",
+        Reply::new(status, body),
+      )
+      .expect("route");
+    ok(
+      &fixture,
+      "/repos/o/r/issues/2",
+      &issue("o", "r", 2, "open", "no deps"),
+    );
+    closing(&fixture, &json!([]));
+    let sub = SubIssue {
+      reference: "o/r#2".into(),
+      title: "Two".into(),
+      state: "closed".into(),
+      url: String::new(),
+    };
+    let tracked = details(&gh(&fixture), &sub).expect("details");
+    assert_eq!(tracked.deps_source, "text", "{status}");
+    assert_eq!(tracked.state, "closed");
+    assert_eq!(tracked.blockers.len(), 0);
+  }
 }
 
 #[test]
@@ -179,33 +187,4 @@ fn a_rate_limited_dependency_api_fails_instead_of_dropping_native_blockers() {
   };
   let err = details(&gh(&fixture), &sub).expect_err("rate limited");
   assert!(err.contains("rate limit"), "{err}");
-}
-
-#[test]
-fn a_dependency_api_closed_to_the_token_falls_back_to_text_blockers() {
-  let fixture = Fixture::start().expect("fixture");
-  let closed = Reply::new(
-    403,
-    "{\"message\":\"Resource not accessible by integration\"}",
-  );
-  fixture
-    .route("/repos/o/r/issues/2/dependencies/blocked_by", closed)
-    .expect("route");
-  ok(
-    &fixture,
-    "/repos/o/r/issues/2",
-    &issue("o", "r", 2, "open", "no deps"),
-  );
-  closing(&fixture, &json!([]));
-  let sub = SubIssue {
-    reference: "o/r#2".into(),
-    title: "Two".into(),
-    state: "open".into(),
-    url: String::new(),
-  };
-  let tracked = details(&gh(&fixture), &sub).expect("details");
-  assert_eq!(
-    (tracked.deps_source.as_str(), tracked.blockers.len()),
-    ("text", 0)
-  );
 }

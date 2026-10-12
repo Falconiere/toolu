@@ -174,6 +174,7 @@ pub(crate) fn mark_relaunch(world: &mut World, key: &str, reroute: bool) {
 fn rearm(world: &mut World, epic: &str) -> bool {
   let due = world.issues.values().find(|issue| {
     issue.epic == epic
+      && issue.stage == "running"
       && issue.relaunch.is_some()
       && issue.pending.is_none()
       && issue.hold.is_none()

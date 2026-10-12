@@ -86,6 +86,7 @@ pub(crate) fn release(world: &mut World, key: &str) -> Result<(), String> {
     .and_then(Value::as_str)
     .unwrap_or("")
     .to_owned();
+  crate::attention::settle(world, key, Some("coupling-hold"), "release");
   world.outbox.push_back(Step::Journal(Record::new(
     "action", "release", key, "", &with,
   )));

@@ -183,14 +183,15 @@ pub(crate) fn write_launch_settings(
 }
 
 /// The epic's launch settings. Without a file both are off; a file that
-/// cannot be read, or a setting that is not `true` or `false`, turns that
-/// setting on, so a damaged file never drops prompts or sends text to Jev.
+/// cannot be read or is blank, or a setting that is not `true` or `false`,
+/// turns that setting on, so a damaged file never drops prompts or sends text
+/// to Jev.
 pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
-  let doc = match crate::disk::read_value(&settings_path(state_dir)) {
-    Ok(Value::Null) => return LaunchSettings::default(),
-    Ok(doc) => doc,
-    Err(_unreadable) => Value::Null,
-  };
+  let path = settings_path(state_dir);
+  if !path.exists() {
+    return LaunchSettings::default();
+  }
+  let doc = crate::disk::read_value(&path).unwrap_or(Value::Null);
   let flag = |name: &str| match doc.get(name) {
     Some(Value::Bool(on)) => *on,
     None if doc.is_object() => false,

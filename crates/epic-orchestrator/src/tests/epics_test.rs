@@ -66,6 +66,8 @@ fn launch_settings_default_off_follow_start_and_turn_on_when_damaged() {
   assert_eq!(launch_settings(tmp.path()), on(false, true));
   for (text, expected) in [
     ("{", on(true, true)),
+    ("", on(true, true)),
+    ("null", on(true, true)),
     ("[]", on(true, true)),
     ("{}", on(false, false)),
     (r#"{"safe":"true","no_jev":false}"#, on(true, false)),

@@ -276,3 +276,20 @@ fn a_cli_read_answers_its_plain_text_and_a_failed_read_fails() {
   assert_eq!(err.exit_code, Some(1));
   assert_eq!(crate::launch::Failure::from(err).exit_code, Some(1));
 }
+
+#[test]
+fn a_prompt_is_delivered_by_plain_text_or_a_reply_without_an_error() {
+  use super::delivered;
+  assert_eq!(delivered("agent.prompt", "prompted k\n"), Ok(()));
+  assert_eq!(
+    delivered("agent.prompt", r#"{"result":{"ok":true}}"#),
+    Ok(())
+  );
+  assert_eq!(
+    delivered(
+      "agent.prompt",
+      r#"{"error":{"code":"agent_not_found","message":"no k"}}"#
+    ),
+    Err("herdr agent.prompt: agent_not_found: no k".to_owned())
+  );
+}

@@ -191,6 +191,7 @@ fn a_refused_cleanup_leaves_cleanup_incomplete_with_its_reason() {
 fn a_finished_cleanup_journals_its_settlement_and_notes_the_closed_item() {
   let mut world = World::new(0);
   arm(&mut world, Action::Cleanup, false);
+  crate::logic::push_attention(&mut world, "cleanup-incomplete", "a", "owned workload");
   let doc = r#"{"outcome":"applied","settle":{"issue":"closed"},"tracker_closed":true}"#;
   let steps = commit_effect(&mut world, "a", doc);
   assert!(steps.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "settle" && row.note == r#"{"issue":"closed"}"#)));

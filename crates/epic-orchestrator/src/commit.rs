@@ -95,6 +95,9 @@ fn launch_failed(world: &mut World, key: &str, doc: &Value) -> Vec<Step> {
     issue.deferred = Some("launch".to_owned());
     issue.relaunch = None;
   }
+  world.outbox.push_back(Step::Issue {
+    key: key.to_owned(),
+  });
   let _closed = close_launch(world, key, "failed");
   let note = doc.get("note").and_then(Value::as_str).unwrap_or("");
   fail_pending(world, key, "failed", note)
@@ -131,6 +134,7 @@ fn commit_cleanup(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
   {
     issue.tracker_seen = Seen::Closed;
   }
+  crate::attention::settle(world, key, Some("cleanup-incomplete"), "cleanup");
   let mut steps: Vec<Step> = world.outbox.drain(..).collect();
   steps.extend(applied(world, key, Some(Action::Cleanup)));
   steps

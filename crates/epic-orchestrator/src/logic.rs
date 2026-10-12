@@ -23,12 +23,7 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   crate::attention::close_key(world, &report.key);
   let now_ms = world.now_ms;
   let issue = issue_mut(world, report);
-  // A worker that reports is running, whether or not the engine launched it:
-  // never launch a second agent for it.
-  let adopted = issue.stage.is_empty();
-  if adopted {
-    "running".clone_into(&mut issue.stage);
-  }
+  let adopted = adopt(issue);
   report.phase.clone_into(&mut issue.phase);
   issue.note = bounded_note(&report.note);
   if let Some(pr) = report.pr {
@@ -66,6 +61,26 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   }
   steps.extend(world.outbox.drain(..));
   steps
+}
+
+/// A worker that reports is running, whether the engine launched it, a human
+/// did (`toolu epic launch --reprompt` after an uncertain start), or nobody
+/// recorded it: never launch a second agent for it. A launch still in flight
+/// sets `running` itself when it commits. Whether the stage changed.
+fn adopt(issue: &mut Issue) -> bool {
+  let launching = issue
+    .pending
+    .as_ref()
+    .is_some_and(|pending| pending.action == Action::Launch);
+  let adopted = !launching
+    && matches!(
+      issue.stage.as_str(),
+      "" | "starting" | "uncertain" | "replacing"
+    );
+  if adopted {
+    "running".clone_into(&mut issue.stage);
+  }
+  adopted
 }
 
 fn phase_changed(world: &World, report: &Report) -> bool {

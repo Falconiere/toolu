@@ -280,4 +280,17 @@ fn a_reporting_worker_the_engine_did_not_launch_is_adopted_as_running() {
   assert!(world.issues["a"].pending.is_none(), "no second agent");
   let again = super::apply_report(&mut world, &report);
   assert!(!persisted(&again));
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.stage = "uncertain".into();
+  let _steps = super::apply_report(&mut world, &report);
+  assert_eq!(world.issues["a"].stage, "running", "a human relaunched it");
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.stage.clear();
+  issue.pending = Some(crate::model::fresh(
+    crate::model::Action::Launch,
+    "t".into(),
+  ));
+  let in_flight = super::apply_report(&mut world, &report);
+  assert_eq!(world.issues["a"].stage, "", "the launch commits the stage");
+  assert!(!persisted(&in_flight));
 }

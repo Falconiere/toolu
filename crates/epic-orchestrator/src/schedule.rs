@@ -138,31 +138,41 @@ pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
 }
 
 fn gone(world: &mut World, key: &str) {
-  // A waiting relaunch, or any action in flight, already owns the issue: a
-  // snapshot that misses its agent again must not spend the relaunch budget.
-  let owned = world
-    .issues
-    .get(key)
-    .is_some_and(|issue| issue.relaunch.is_some() || issue.pending.is_some());
-  if owned {
+  let Some(issue) = world.issues.get(key) else {
+    return;
+  };
+  // A relaunch already waiting or in flight owns the loss, and a merge or
+  // cleanup no longer needs the agent: neither spends the relaunch budget.
+  let pending = issue
+    .pending
+    .as_ref()
+    .map(|pending| (pending.action, pending.follow));
+  let checkpointing = pending == Some((Action::Checkpoint, None));
+  if issue.relaunch.is_some() || (pending.is_some() && !checkpointing) {
     return;
   }
-  let launches = world.issues.get(key).map_or(0, |issue| issue.launches);
-  if launches >= 2 {
+  if issue.launches >= 2 {
     push_attention(world, "relaunch-limit", key, "relaunch limit");
     return;
   }
   let token = token(world);
-  if let Some(issue) = world.issues.get_mut(key) {
-    issue.launches = issue.launches.saturating_add(1);
-    issue.pending = Some(Pending {
-      action: Action::Checkpoint,
-      token,
-      phase: 0,
-      recovered: false,
-      follow: Some(Action::Launch),
-      reroute: false,
-    });
+  let Some(issue) = world.issues.get_mut(key) else {
+    return;
+  };
+  issue.launches = issue.launches.saturating_add(1);
+  match issue.pending.as_mut() {
+    // A periodic checkpoint in flight relaunches once it is done.
+    Some(checkpoint) => checkpoint.follow = Some(Action::Launch),
+    None => {
+      issue.pending = Some(Pending {
+        action: Action::Checkpoint,
+        token,
+        phase: 0,
+        recovered: false,
+        follow: Some(Action::Launch),
+        reroute: false,
+      });
+    }
   }
 }
 

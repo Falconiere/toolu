@@ -24,6 +24,16 @@ fn a_deferred_merge_names_the_gate_command() {
 }
 
 #[test]
+fn a_merge_settles_the_issue_s_merge_ready_judgment() {
+  let mut world = World::new(0);
+  running(&mut world);
+  merge_ready(&mut world, "a");
+  merged(&mut world, "a");
+  assert_eq!(world.attention.len(), 0);
+  assert!(world.outbox.iter().any(|step| matches!(step, Step::Journal(row) if row.name == "closed" && row.note.ends_with("by=merge"))));
+}
+
+#[test]
 fn a_merge_seen_or_sent_moves_a_running_issue_to_cleaning_and_arms_cleanup() {
   let mut world = World::new(0);
   running(&mut world);

@@ -138,8 +138,11 @@ pub(crate) fn take_due(world: &mut World) -> Vec<(String, Cause)> {
   due
 }
 
-/// Check inputs affected by an engine merge without moving their fixed slots.
+/// Settle the merged issue's judgments and check the inputs the merge
+/// affected without moving their fixed slots.
 pub(crate) fn after_merge(world: &mut World, issue_key: &str) {
+  // The merge settles every judgment of the issue (`merge-ready` among them).
+  crate::attention::settle(world, issue_key, None, "merge");
   let Some(issue) = world.issues.get(issue_key) else {
     return;
   };
