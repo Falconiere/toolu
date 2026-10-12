@@ -63,8 +63,15 @@ pub(crate) fn write_status(
   let stamp = iso_seconds(now);
   let duplicate = recorded(&map, phase, pr, &note);
   map.insert("phase".to_owned(), json!(phase));
-  if let Some(pr) = pr {
-    map.insert("pr".to_owned(), json!(pr));
+  // `pr` is always present, `null` until a report names one, as `report.ts`
+  // wrote it; a report without `--pr` keeps the recorded one.
+  match pr {
+    Some(pr) => {
+      map.insert("pr".to_owned(), json!(pr));
+    }
+    None => {
+      map.entry("pr").or_insert(Value::Null);
+    }
   }
   map.insert("note".to_owned(), json!(note));
   map.insert("updated_at".to_owned(), json!(stamp));
