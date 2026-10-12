@@ -26,7 +26,13 @@ const REGISTRY: readonly Registered[] = [
     plugin: "python-quality",
     published: ["post-tools.d/python-quality@toolu__python-quality.js"],
   },
-  { plugin: "rust-quality", published: ["post-tools.d/rust-quality@toolu__rust-quality.js"] },
+  {
+    plugin: "rust-quality",
+    published: [
+      "post-tools.d/rust-quality@toolu__rust-quality.json",
+      "post-tools.d/rust-quality@toolu__rust-quality.sh",
+    ],
+  },
   {
     plugin: "ts-quality",
     published: [

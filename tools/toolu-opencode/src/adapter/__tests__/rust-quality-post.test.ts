@@ -1,24 +1,17 @@
-/** Real rust-quality bundle through OpenCode's completed-tool adapter (#354). */
+/** rust-quality, registered by the built `toolu`, through OpenCode's completed-tool adapter (#354, #428). */
 import { expect, test } from "bun:test";
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { nativeRegisterArgv } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { createGateDecider, type PermissionEvaluateHandlerOptions } from "../evaluate.ts";
 import { createToolAdviceStore } from "../tool-advice.ts";
 import { createToolPostHandler } from "../tool-post.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
-const MODULE = join(REPO_ROOT, "plugins/rust-quality/hooks/dist/post-tool-use.js");
 const Gate = z.object({
   status: z.string(),
   entries: z
@@ -40,9 +33,14 @@ function options(
   env: NodeJS.ProcessEnv = process.env,
 ): PermissionEvaluateHandlerOptions {
   const configRoot = join(projectRoot, ".opencode/toolu/state");
-  const registry = join(configRoot, "toolu/post-tools.d");
-  mkdirSync(registry, { recursive: true });
-  copyFileSync(MODULE, join(registry, "rust-quality@toolu__rust-quality.js"));
+  const [bin = "", ...args] = nativeRegisterArgv("rust-quality");
+  const registered = execFileSync(bin, args, {
+    cwd: projectRoot,
+    env: { ...process.env, TOOLU_CONFIG_DIR: configRoot },
+    input: "{}",
+    encoding: "utf8",
+  });
+  expect(registered).toBe("");
   return {
     repoRoot: REPO_ROOT,
     configRoot,
@@ -159,11 +157,11 @@ test("a Rust patch keeps both violations while move and delete clear old entries
 
 type Mode = "selected" | "disabled" | "no-marker" | "no-cargo";
 
-/** A PATH holding git and ast-grep but no cargo, so the module's own prerequisite decides. */
+/** A PATH holding bash (for the bridge), git and ast-grep but no cargo, so the rule's own prerequisite decides. */
 function pathWithoutCargo(sb: Sandbox): NodeJS.ProcessEnv {
   const bin = join(sb.root, "bin-no-cargo");
   mkdirSync(bin, { recursive: true });
-  for (const tool of ["git", "ast-grep"]) {
+  for (const tool of ["bash", "git", "ast-grep"]) {
     const found = Bun.which(tool);
     if (found === null) throw new Error(`${tool} is required on PATH`);
     symlinkSync(found, join(bin, tool));

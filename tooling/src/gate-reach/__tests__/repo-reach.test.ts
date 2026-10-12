@@ -43,7 +43,7 @@ test("no allowance lets a non-test file of a newly gated tree out of a gate", ()
   const gated = trackedFiles(ROOT, config.exclude).filter(
     (file) => NEWLY_GATED.some((tree) => file.startsWith(tree)) && !file.includes("/__tests__/"),
   );
-  // The epic scripts (#435), pr-babysit's TypeScript (#512) and ts-quality's hooks (#426)
+  // The epic scripts (#435), pr-babysit's TypeScript (#512) and ts-quality's (#426) and rust-quality's (#428) hooks
   // left these trees; the floor only proves the scan still finds them.
   expect(gated.length).toBeGreaterThan(80);
   const allowedOut = gated.flatMap((file) =>

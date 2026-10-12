@@ -615,20 +615,27 @@
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#428): show the planned verbs",
+          "about": "Run the blocking Rust quality rules over a repository's .rs files",
           "aliases": [],
-          "args": [],
+          "args": [
+            {
+              "help": "Directories or files to check, relative to the working directory",
+              "multiple": true,
+              "name": "PATH",
+              "required": false
+            }
+          ],
           "commands": [],
           "flags": [],
           "hidden": false,
-          "longAbout": null,
-          "name": "planned",
+          "longAbout": "Run the blocking Rust quality rules over every tracked or untracked, not ignored .rs file under the paths (the whole repository by default), with the limits of lang.rust in toolu.config.json. Prints one block per finding. Exits 1 with findings or when git fails, 69 without ast-grep.",
+          "name": "check",
           "owner": "rust-quality",
           "path": [
             "rust-quality",
-            "planned"
+            "check"
           ],
-          "placeholder": true
+          "placeholder": false
         },
         {
           "about": "Run a hook entry; hooks.json calls it (internal)",
@@ -679,7 +686,7 @@
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": null,
+      "longAbout": "rust-quality's rules run after every edit of a .rs file in a Cargo project with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are advisories.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt. toolu rust-quality check runs the same blocking rules over a whole repository. Run toolu doctor to see whether the rule is registered and compiled in.",
       "name": "rust-quality",
       "owner": "rust-quality",
       "path": [

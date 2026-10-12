@@ -9,33 +9,61 @@ Owner: `plugins/rust-quality`.
 ## `toolu rust-quality`
 
 ```text
-Rust quality rules that run after each edit
+rust-quality's rules run after every edit of a .rs file in a Cargo project with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are advisories.
 
-Usage: toolu rust-quality [OPTIONS] <COMMAND>
+Limits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, maxImplLines, noMocks); crates allowed to use unsafe are listed in settings/rust-unsafe-exemptions.txt. toolu rust-quality check runs the same blocking rules over a whole repository. Run toolu doctor to see whether the rule is registered and compiled in.
+
+Usage: toolu rust-quality [OPTIONS] [COMMAND]
 
 Commands:
-  planned  Not ported yet (#428): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+  check  Run the blocking Rust quality rules over a repository's .rs files
+  help   Print this message or the help of the given subcommand(s)
 
 Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --json
+          Print exactly one JSON document on stdout
+
+  -q, --quiet
+          Drop the diagnostics of a successful run
+
+      --host <HOST>
+          The host to act for, instead of the detected one
+
+          [possible values: claude, codex, opencode, cursor, hermes]
+
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```
 
-## `toolu rust-quality planned`
+## `toolu rust-quality check`
 
 ```text
-Not ported yet (#428): show the planned verbs
+Run the blocking Rust quality rules over every tracked or untracked, not ignored .rs file under the paths (the whole repository by default), with the limits of lang.rust in toolu.config.json. Prints one block per finding. Exits 1 with findings or when git fails, 69 without ast-grep.
 
-Usage: toolu rust-quality planned [OPTIONS]
+Usage: toolu rust-quality check [OPTIONS] [PATH]...
+
+Arguments:
+  [PATH]...
+          Directories or files to check, relative to the working directory
 
 Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --json
+          Print exactly one JSON document on stdout
+
+  -q, --quiet
+          Drop the diagnostics of a successful run
+
+      --host <HOST>
+          The host to act for, instead of the detected one
+
+          [possible values: claude, codex, opencode, cursor, hermes]
+
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```

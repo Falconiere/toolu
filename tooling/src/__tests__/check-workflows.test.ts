@@ -69,9 +69,9 @@ for (const scenario of [
     name: "missing ast-grep install",
     file: ".github/workflows/tests.yml",
     before:
-      "# The rust-quality step runs the plugin's ast-grep rules and fails closed without it.\n      - name: Install ast-grep\n        run: npm install -g @ast-grep/cli",
+      "# The rust-quality step's `toolu rust-quality check` fails closed without ast-grep.\n      - name: Install ast-grep\n        run: npm install -g @ast-grep/cli",
     after:
-      "# The rust-quality step runs the plugin's ast-grep rules and fails closed without it.\n      - name: Install ast-grep\n        run: npm install -g @example/unused",
+      "# The rust-quality step's `toolu rust-quality check` fails closed without ast-grep.\n      - name: Install ast-grep\n        run: npm install -g @example/unused",
     finding: "lacks @ast-grep/cli",
   },
   {
