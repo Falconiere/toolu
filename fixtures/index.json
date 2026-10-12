@@ -850,7 +850,7 @@
     {
       "id": "quality-rust",
       "fixture": "fixtures/quality/rust.json",
-      "source": "plugins/rust-quality/hooks/src/__tests__/cases.ts",
+      "source": "tools/toolu-conformance/src/rust-quality/cases.ts",
       "names": [
         "gating: outside a Rust project",
         "gating: cargo not on PATH",

@@ -81,12 +81,16 @@ export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.json",
   "post-tools.d/ast-grep@toolu__byte-savings.json",
   "post-tools.d/python-quality@toolu__python-quality.js",
-  "post-tools.d/rust-quality@toolu__rust-quality.js",
+  "post-tools.d/rust-quality@toolu__rust-quality.json",
   "post-tools.d/ts-quality@toolu__ts-quality.json",
 ];
 
-/** Every registry file on disk: the modules plus ts-quality's unreported bridge for Bun dispatch. */
-export const REGISTRY_FILES = [...MODULES, "post-tools.d/ts-quality@toolu__ts-quality.sh"];
+/** Every registry file on disk: the modules plus the quality plugins' unreported bridges for Bun dispatch. */
+export const REGISTRY_FILES = [
+  ...MODULES,
+  "post-tools.d/rust-quality@toolu__rust-quality.sh",
+  "post-tools.d/ts-quality@toolu__ts-quality.sh",
+];
 
 /** The helper symlinks the retained catalog publishes into the data root. */
 export const HELPERS = ["jev/jev.sh", "statusline/statusline.sh", "toolu-review/write-state.sh"];

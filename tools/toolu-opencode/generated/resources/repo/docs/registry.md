@@ -1,6 +1,6 @@
 # Hook module registry
 
-Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports the bundled ESM contributions in process. Both dispatchers and all shipped built-in gates are native TypeScript. ts-quality (#265), python-quality (#266), rust-quality (#267) and ast-grep (#268) are bundled registry modules.
+Domain plugins (ast-grep and the language-quality plugins) add rules to toolu's core `PreToolUse` and `PostToolUse` dispatchers through a runtime registry in the host's config directory. `@toolu/core/registry` ([#257](https://github.com/Falconiere/toolu/issues/257)) imports the bundled ESM contributions in process. Both dispatchers and all shipped built-in gates are native TypeScript. python-quality (#266) is a bundled registry module; ts-quality (#426), rust-quality (#428) and ast-grep (#429) register manifests for rules compiled into `toolu`.
 
 ## Layout
 
@@ -101,7 +101,7 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
   - push-waiver detects pushes through the same layer (#283 item 8).
 
   Historical Bash versions are available at tag `v7.2.0` for parity checks.
-- **Registry.** `post-tools.d` runs after the built-ins. python-quality (#266) and rust-quality (#267) run there in process; ts-quality runs through its bridge module (#426).
+- **Registry.** `post-tools.d` runs after the built-ins. python-quality (#266) runs there in process; ts-quality (#426) and rust-quality (#428) run through their bridge modules.
 - **Parity.**
   - `plugins/toolu/hooks/src/__tests__/post-tools-283.test.ts` and the colocated native tests exercise the PostToolUse corpus on Claude Code and Codex. Historical Bash behavior remains available from tag `v7.2.0`; each language-quality plugin retains its captured golden suite (see below).
   - `post-tools-283.test.ts` pins the named #283 fixtures: there the bundle is right and bash is recorded as the known-wrong baseline.
@@ -146,19 +146,13 @@ The shared PostToolUse corpus and the language-quality golden suites cover multi
 | def at the fn-length limit | 146.0 ms | 88.4 ms |
 | clean file | 144.3 ms | 90.7 ms |
 
-rust-quality (#267) is the third: `plugins/rust-quality/hooks/src/post-tool-use.ts`, with its rules under `hooks/src/rules/` in the order of the bash fragments. It runs in a project with `Cargo.toml` at the toplevel and `cargo` on `PATH`, checks `.rs` files including those in linked worktrees, and reads `rust-unsafe-exemptions.txt` from the settings directory through `@toolu/core/config`.
+rust-quality (#267) was the third and is the second native one (#428): the `toolu-rust-quality` crate (`crates/rust-quality`), one Rust file per rule family in the order of the TypeScript module it replaces: file size, test layout, suppression, `unsafe`, function and `impl` size, error handling and no-mocks (ast-grep), then the docs advisory. It runs in a project with `Cargo.toml` at the toplevel and `cargo` on `PATH`, checks `.rs` files including those in linked worktrees, and reads `rust-unsafe-exemptions.txt` from the settings directory. Its structural rules are inline YAML, scanned per file as the TypeScript module did. Its SessionStart register writes `rust-quality@toolu__rust-quality.json` and, until #425, the bridge `rust-quality@toolu__rust-quality.sh`. `toolu rust-quality check [<path>...]` runs the same rules over the git-listed `.rs` files and is the gate's `rust-quality` step.
 
-**Parity.** `plugins/rust-quality/hooks/src/__tests__/fixtures/golden.json` holds 120 captures from the bash module at `c50c6bd9`: every fixture of the nine concern bats suites, plus gating, Codex patches, deletes and moves, `CLAUDE_FILE_PATHS`, linked worktrees, the clippy hint, the exemption list, and ast-grep crash, non-JSON, empty and absent. `golden-corpus.test.ts` requires every bats test at the base, whose titles the capture records, to map to a case, and `golden.test.ts` replays each case with the TypeScript module and requires identical stdout, stderr, exit code and gate and telemetry files. Hits are filtered per rule, which keeps ast-grep's order stable, so no case needs reordering. Two things differ, each with a test: with no `jq` on `PATH` the module still checks the file (`DEV-1`), and an unreadable file is a violation (`read-failure.test.ts`).
+**Parity.** `fixtures/quality/rust-golden.json` holds 120 captures from the bash module at `c50c6bd9`: every fixture of the nine concern bats suites, plus gating, Codex patches, deletes and moves, `CLAUDE_FILE_PATHS`, linked worktrees, the clippy hint, the exemption list, and ast-grep crash, non-JSON, empty and absent. `tools/toolu-conformance/src/rust-quality/__tests__/golden-corpus.test.ts` requires every bats test at the base, whose titles the capture records, to map to a case, and `golden.test.ts` there registers rust-quality with the built `toolu` and replays each case through the native `toolu hook post-tools` and the Bun bundle through the bridge, requiring the same stdout, stderr, exit code and gate and telemetry files. Three things differ from bash, and each has a test:
 
-**Latency.** `bun run tooling/src/benchmarks/rust-quality-latency.ts [--runs N] [--assert]` makes the same comparison against the bash module from `c50c6bd9`. On an Apple M2 Max with Bun 1.4.2 (7 runs, load average 14 to 16), the TypeScript module was 169 to 226 ms faster on every fixture:
-
-| Fixture | bash module p50 | TS module p50 |
-|---|---|---|
-| two violations in rule order | 361.4 ms | 139.6 ms |
-| `.unwrap()` in `src/` (ast-grep) | 347.4 ms | 131.2 ms |
-| `#[automock]` in `src/` (ast-grep) | 354.4 ms | 128.5 ms |
-| long method inside an impl | 315.3 ms | 135.2 ms |
-| clean file | 288.0 ms | 119.1 ms |
+- With no `jq` on `PATH`, bash exited silently. The rule checks the file (`DEV-1`).
+- If a regular file cannot be read, the rule records a quality violation (`read-failure.test.ts`).
+- A file in a linked worktree is recorded in that worktree's own gate file, as the shared runner records it for every rule, where bash used the hook's project root; the output is unchanged (`worktree-gate.test.ts`).
 
 ## Native engine (Rust)
 

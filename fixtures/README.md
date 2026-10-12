@@ -17,7 +17,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Post-tool corpus | `gates/posttool-corpus.json` | 16 → 16 | `tools/toolu-conformance/src/harness/posttool-corpus.ts` | #402 / #409 |
 | TypeScript quality | `quality/ts.json` | 120 → 120 | `tools/toolu-conformance/src/ts-quality/cases.ts` | #426–#429 |
 | Python quality | `quality/python.json` | 96 → 96 | `plugins/python-quality/hooks/src/__tests__/cases.ts` | #426–#429 |
-| Rust quality | `quality/rust.json` | 119 → 119 | `plugins/rust-quality/hooks/src/__tests__/cases.ts` | #426–#429 |
+| Rust quality | `quality/rust.json` | 119 → 119 | `tools/toolu-conformance/src/rust-quality/cases.ts` | #426–#429 |
 | Ast-grep nudge | `ast-grep/nudge.json` | 38 → 38 | `plugins/ast-grep/hooks/src/__tests__/cases-nudge.ts` | #426–#429 |
 | Ast-grep savings | `ast-grep/savings.json` | 35 → 35 | `plugins/ast-grep/hooks/src/__tests__/cases-savings.ts` | #426–#429 |
 | Ast-grep report | `ast-grep/report.json` | 6 → 6 | `plugins/ast-grep/hooks/src/__tests__/cases-report.ts` | #426–#429 |

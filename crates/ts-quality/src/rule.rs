@@ -4,25 +4,20 @@
 
 use std::path::PathBuf;
 
-use toolu_engine::quality::{
-  AstGrepScan, EditedFile, QualityFindings, QualityRule, edited_file, run_quality_event,
-};
-use toolu_protocol::decision::Decision;
-use toolu_protocol::normalized::NormalizedEvent;
+use toolu_engine::quality::{AstGrepScan, EditedFile, ManifestRule, QualityFindings, QualityRule};
 use toolu_runtime::config::load::load;
 use toolu_runtime::config::quality::{
   QualityLang, quality_flag, quality_threshold, ts_max_file_lines_resolved,
 };
 use toolu_runtime::git::toplevel;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::registry::RegistryEvent;
 use toolu_runtime::registry::rule::{Rule, RuleContext};
 use toolu_state::detect::project::{NodePackageManager, detect_ts, node_package_manager};
 use toolu_state::detect::tools::tool_available;
 
 use crate::advisories::{docs, duplication, unhandled_await};
 use crate::ast_rules::{error_handling, inline_rules, mock_doubles};
-use crate::file::{Limits, Place, TsFile, has_extension};
+use crate::file::{Limits, Place, TsFile};
 use crate::layout_rules::{parent_import, test_placement};
 use crate::line_rules::{
   catch_toast, component_file_name, confirm_alert, console_log, factories, manual_type_guard,
@@ -35,7 +30,11 @@ use crate::type_rules::{duplicate_types, throw_literal};
 pub(crate) struct TsQuality;
 
 /// The rule its `ts-quality@toolu__ts-quality.json` manifest enables.
-pub const TS_QUALITY: &dyn Rule = &TsQuality;
+pub const TS_QUALITY: &dyn Rule = &ManifestRule {
+  spec: SPEC,
+  name: NAME,
+  rule: TsQuality,
+};
 
 /// The manifest spec.
 pub(crate) const SPEC: &str = "ts-quality@toolu";
@@ -165,43 +164,6 @@ impl QualityRule for TsQuality {
       errors,
       advisories: vec![duplicated, docs(&f), unhandled_await(&f)],
     }
-  }
-}
-
-impl Rule for TsQuality {
-  fn spec(&self) -> &str {
-    SPEC
-  }
-
-  fn name(&self) -> &str {
-    NAME
-  }
-
-  fn event(&self) -> RegistryEvent {
-    RegistryEvent::ToolPost
-  }
-
-  fn applies(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> bool {
-    edited_file(event, ctx).is_some_and(|file| has_extension(&file.path, &["ts", "tsx"]))
-  }
-
-  fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Decision {
-    self.run_warning(event, ctx, &mut Vec::new())
-  }
-
-  fn run_warning(
-    &self,
-    event: &NormalizedEvent,
-    ctx: &RuleContext<'_>,
-    warnings: &mut Vec<String>,
-  ) -> Decision {
-    let outcome = run_quality_event(event, ctx, &[self]);
-    warnings.extend(outcome.warnings);
-    outcome
-      .decisions
-      .into_iter()
-      .next()
-      .unwrap_or(Decision::Allow)
   }
 }
 

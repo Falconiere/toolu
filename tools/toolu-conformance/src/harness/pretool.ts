@@ -43,7 +43,7 @@ export function installPlugins(sb: Sandbox, ...specs: string[]): void {
 }
 
 /** Plugins whose SessionStart register hook is native-only. */
-const NATIVE_REGISTER = new Set(["ast-grep", "ts-quality"]);
+const NATIVE_REGISTER = new Set(["ast-grep", "rust-quality", "ts-quality"]);
 
 /** The built `toolu`'s SessionStart register command for a native-only plugin. */
 export function nativeRegisterArgv(plugin: string): string[] {

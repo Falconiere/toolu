@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
 
-Rust `PostToolUse` quality checks registered into the toolu hook engine. Every Rust file the agent edits is checked on the spot.
+Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Rust file the agent edits is checked on the spot.
 
 ## Install
 
@@ -14,9 +14,11 @@ Rust `PostToolUse` quality checks registered into the toolu hook engine. Every R
 
 ### Post-Edit Quality Checks
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are one bundled registry module that `SessionStart` publishes to the registry, and they run only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.**
+Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into the native [`toolu` binary](../install.md) (#428). The `SessionStart` register hook publishes the rule's manifest (`rust-quality@toolu__rust-quality.json`) into toolu's registry, and the rule runs only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.** Until toolu's own hooks are native (#425), the register hook also writes `rust-quality@toolu__rust-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice.
 
-On OpenCode, enable `rust-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.rs` writes, edits and patches run the selected module when the git toplevel has `Cargo.toml` and `cargo` is on `PATH`; `cargo` itself is never run. An installed `ast-grep` runs the error-handling and no-mocks scans with its Rust parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Rust post-edit quality](../opencode.md#rust-post-edit-quality) and run `bun run smoke:opencode-rust-quality` in a toolu checkout for pinned-host proof.
+`toolu rust-quality check [<path>...]` runs the same rules over the git-listed `.rs` files under each path (the whole repository by default) and exits 1 with one line per finding, or prints them as JSON under `--json`. This repository's gate runs `toolu rust-quality check crates` at its own limits.
+
+On OpenCode, enable `rust-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.rs` writes, edits and patches run the rule when the git toplevel has `Cargo.toml` and `cargo` is on `PATH`; `cargo` itself is never run. An installed `ast-grep` runs the error-handling and no-mocks scans with its Rust parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Rust post-edit quality](../opencode.md#rust-post-edit-quality) and run `bun run smoke:opencode-rust-quality` in a toolu checkout for pinned-host proof.
 
 ## Checks Enforced
 
@@ -119,7 +121,7 @@ Every public item must carry a concise doc line.
 ## How the Gate Works
 
 1. **Agent edits a `.rs` file** — `Write` or `Edit` tool call
-2. **PostToolUse hook fires** — the registry module checks the file
+2. **PostToolUse hook fires** — the compiled rule checks the file
 3. **Violation found** → gate goes **failing**, new task blocked until fixed
 4. **Fix the violation** → gate clears, continue working
 
@@ -169,7 +171,7 @@ Agent: *writes the function*
 
 ## Hooks
 
-The module runs in the core toolu dispatcher only while this plugin is installed. Uninstalling immediately removes the Rust rules:
+The rule runs in the core toolu dispatcher only while this plugin is installed. Uninstalling immediately removes the Rust rules:
 
 ```text
 /plugin uninstall rust-quality@toolu

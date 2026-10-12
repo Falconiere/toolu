@@ -273,18 +273,18 @@ flowchart TD
         D["hook dispatcher<br/>PreToolUse · PostToolUse · SessionStart …"]
     end
     subgraph plugins["domain plugins"]
-        RQ["rust-quality<br/>register.js"]
+        RQ["rust-quality<br/>toolu rust-quality"]
         TQ["ts-quality<br/>toolu ts-quality"]
         AG["ast-grep<br/>register.js"]
     end
-    RQ -- "one bundled ESM module, run in process" --> R[("registry<br/>host config dir/toolu/")]
+    RQ -- "a manifest for its compiled-in rule" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "a manifest for its compiled-in rule" --> R
     AG -- "bundled ESM modules, run in process" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `python-quality` and `rust-quality` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process, and `ts-quality` and `ast-grep` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `python-quality` registers a bundled ESM module (`<plugin-spec>__<name>.js`) that the core imports in-process, and `ts-quality`, `rust-quality` and `ast-grep` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -303,7 +303,7 @@ At `SessionStart`, `python-quality` and `rust-quality` register bundled ESM modu
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
-    ├── rust-quality/           # Rust PostToolUse quality checks, one bundled registry module
+    ├── rust-quality/           # Rust PostToolUse quality checks, a native rule manifest
     ├── ts-quality/             # TypeScript PostToolUse quality checks, a native rule manifest
     ├── python-quality/         # Python PostToolUse quality checks, one bundled registry module
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook

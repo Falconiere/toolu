@@ -31,7 +31,6 @@
       ".codex/toolu.config.json",
       "fixtures/**",
       "tooling/conventions/guardrails/rust/**",
-      "tooling/src/check-rust-quality.ts",
       "plugins/rust-quality/**",
       "plugins/*/hooks/hooks.json",
       "plugins/*/.claude-plugin/plugin.json",

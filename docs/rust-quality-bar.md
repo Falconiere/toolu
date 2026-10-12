@@ -20,7 +20,7 @@ reasons.
    `maxFnLines` disagree, or when `.codex/toolu.config.json` repeats
    `lang.rust` differently.
 3. **We pass what we ship.** The gate runs the rust-quality plugin's own rules
-   over every crate file (`bun run check:rust-quality`) at the same limits an
+   over every crate file (`toolu rust-quality check crates`) at the same limits an
    agent sees after each edit, and toolu's quality gate refuses a commit while
    that post-edit check fails (in a main checkout; a linked worktree keeps its
    quality state on the main checkout, so there `lefthook.yml` and CI hold the
