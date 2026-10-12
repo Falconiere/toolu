@@ -1,4 +1,4 @@
-//! A not-yet-ported quality module through the Bun bridge (AC-6): the committed
+//! A not-yet-ported quality module, python-quality, through the Bun bridge (AC-6): the committed
 //! python-quality bundle, registered as `python-quality@toolu__python-quality.js` beside a
 //! `.sh` module, checks a Python edit with the same output and the same
 //! gate entry whether the TypeScript dispatcher (run live through
@@ -169,12 +169,12 @@ fn regex_free_timestamps(text: &str) -> String {
 #[test]
 fn the_python_quality_bundle_judges_an_edit_the_same_through_the_bridge() {
   for (edited, violates) in [(source(12), true), (source(3), false)] {
-    let ts = project(&edited).unwrap();
+    let bun = project(&edited).unwrap();
     let rust = project(&edited).unwrap();
-    let ts_result = typescript(&ts).unwrap();
+    let bun_result = typescript(&bun).unwrap();
     let rust_result = rust.run(Phase::Post, &payload(&rust), &[], &[]).result;
-    let (ts_seen, rust_seen) = (observed(&ts, &ts_result), observed(&rust, &rust_result));
-    assert_eq!(rust_seen, ts_seen);
+    let (bun_seen, rust_seen) = (observed(&bun, &bun_result), observed(&rust, &rust_result));
+    assert_eq!(rust_seen, bun_seen);
     assert_eq!(
       rust_seen.0.contains("exceeds 10-line limit"),
       violates,
