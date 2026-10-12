@@ -133,8 +133,9 @@ its reconcile and worker prompts. Without merge scripts a `ready` worker raises 
 ### Attention
 
 Judgment events (`needs-human`, `failed`, `blocked`, `stall`, `babysit`, …)
-become attention items. Each item is `open`, `acknowledged` or `answered`, and
-the key's next worker report closes it. A returning stall or a new blocked spell
+become attention items. Each item is `open`, `acknowledged` or `answered`; the
+key's next worker report closes it, and so does the engine once the item's
+cause settles (a merge, a release, a finished cleanup, a good refresh). A returning stall or a new blocked spell
 reopens a seen item. `toolu epic status`, `/api/v1/attention`
 and the dashboard list every live item with its state and age. Items survive a
 restart through the journal.

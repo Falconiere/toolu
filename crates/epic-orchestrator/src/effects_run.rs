@@ -1,7 +1,8 @@
 //! The body of each engine effect, built on the state thread from what the
-//! effect needs and run by the executor: the checkpoint and the `STATUS?`
-//! prompt, the launch, the cleanup and the epic refresh and close in process,
-//! and the script seam (`TOOLU_EPIC_SCRIPTS`) for merge and its reconcile.
+//! effect needs and run by the executor: the checkpoint, the launch, the
+//! cleanup and the epic refresh and close in process, and the script seam
+//! (`TOOLU_EPIC_SCRIPTS`) for merge and its reconcile. Worker prompts are no
+//! effect: `attention_ops::send_prompt` sends them.
 
 use std::path::PathBuf;
 

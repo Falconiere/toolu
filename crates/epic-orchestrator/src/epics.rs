@@ -188,7 +188,9 @@ pub(crate) fn write_launch_settings(
 /// to Jev.
 pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
   let path = settings_path(state_dir);
-  if !path.exists() {
+  // Only a file that is certainly absent means the defaults; a state dir that
+  // cannot be inspected reads as damaged.
+  if matches!(path.try_exists(), Ok(false)) {
     return LaunchSettings::default();
   }
   let doc = crate::disk::read_value(&path).unwrap_or(Value::Null);

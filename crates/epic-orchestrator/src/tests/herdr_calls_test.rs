@@ -237,7 +237,7 @@ fn socket_error_objects_and_non_json_replies_are_typed_failures() {
 }
 
 #[test]
-fn a_cli_read_answers_its_plain_text_and_a_failed_read_fails() {
+fn a_cli_read_answers_its_plain_text_and_a_failed_read_or_prompt_fails() {
   use std::os::unix::fs::PermissionsExt;
   use std::os::unix::net::UnixListener;
   let tmp = tempfile::tempdir().expect("temp");
@@ -250,11 +250,14 @@ fn a_cli_read_answers_its_plain_text_and_a_failed_read_fails() {
   std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).expect("chmod");
   let sock = tmp.path().join("herdr.sock");
   let listener = UnixListener::bind(&sock).expect("bind");
+  // Two clients each ping once, learn protocol 99, and go to the CLI.
   let peer = std::thread::spawn(move || {
-    let (mut stream, _) = listener.accept().expect("accept");
-    let ping = crate::client::read_json(&mut stream).expect("ping");
-    let reply = json!({"id": ping.get("id"), "result": {"protocol": 99}});
-    crate::client::write_json(&mut stream, &reply).expect("pong");
+    for _ in 0..2 {
+      let (mut stream, _) = listener.accept().expect("accept");
+      let ping = crate::client::read_json(&mut stream).expect("ping");
+      let reply = json!({"id": ping.get("id"), "result": {"protocol": 99}});
+      crate::client::write_json(&mut stream, &reply).expect("pong");
+    }
   });
   let env = Env::from_pairs([
     ("PATH", format!("{}:/usr/bin:/bin", bin.display())),
@@ -270,11 +273,14 @@ fn a_cli_read_answers_its_plain_text_and_a_failed_read_fails() {
     request(&mut client, &paths, &env, &read("k")),
     Ok(json!({"read": {"text": "line one\nusage limit reached\n"}}))
   );
-  peer.join().expect("peer");
   let err = request(&mut client, &paths, &env, &read("gone")).expect_err("gone");
   assert_eq!(err.message, "herdr agent.read: failed (1): agent not found");
   assert_eq!(err.exit_code, Some(1));
   assert_eq!(crate::launch::Failure::from(err).exit_code, Some(1));
+  // A prompt whose CLI exits non-zero with plain text was not delivered.
+  let prompt = crate::source::prompt(&paths, &env, "gone", "STATUS?");
+  assert_eq!(prompt, Err("failed (1): agent not found".to_owned()));
+  peer.join().expect("peer");
 }
 
 #[test]
