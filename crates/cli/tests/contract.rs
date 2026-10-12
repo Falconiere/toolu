@@ -172,7 +172,12 @@ fn a_denied_hook_exits_2_with_blocked_on_stderr() {
 
 #[test]
 fn a_successful_verb_leaves_stderr_empty() {
-  for args in [&["jev", "--help"][..], &["brainstorm"], &["commands"]] {
+  for args in [
+    &["jev", "--help"][..],
+    &["brainstorm"],
+    &["commands"],
+    &["epic", "queue", "--help"],
+  ] {
     let output = toolu(args).unwrap();
     assert_eq!(output.status.code(), Some(0), "{args:?}");
     assert_eq!(stderr(&output).unwrap(), "", "{args:?}");

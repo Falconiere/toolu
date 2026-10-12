@@ -12,10 +12,19 @@ use crate::logic::{arm_ready, push_attention};
 use crate::model::{Action, Step, World};
 use crate::queue_fields::{By, count_round, note_phase};
 
-/// Commit `doc`, the head step's outcome, or `None` when it is not one.
-pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step>> {
-  let doc: Value = serde_json::from_str(doc).ok()?;
-  let outcome = doc.get("outcome").and_then(Value::as_str)?.to_owned();
+/// Commit `doc`, the head step's outcome document.
+///
+/// # Errors
+/// `doc` is not a JSON object with an `outcome`: the step's output is
+/// unreadable, and the caller fails the step with this reason.
+pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step>, String> {
+  let doc: Value =
+    serde_json::from_str(doc).map_err(|err| format!("merge step outcome unreadable: {err}"))?;
+  let outcome = doc
+    .get("outcome")
+    .and_then(Value::as_str)
+    .ok_or("merge step outcome names no outcome")?
+    .to_owned();
   let text = |name: &str| {
     doc
       .get(name)
@@ -25,7 +34,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
   };
   let note = text("note");
   if outcome == "merged" {
-    return Some(crate::commit::applied(world, key, Some(Action::Merge)));
+    return Ok(crate::commit::applied(world, key, Some(Action::Merge)));
   }
   close(world, key, &outcome, &note);
   match outcome.as_str() {
@@ -51,7 +60,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
     _ => {}
   }
   release_held(world, key);
-  Some(world.outbox.drain(..).collect())
+  Ok(world.outbox.drain(..).collect())
 }
 
 /// A conflict (or an unsafe worktree): the worker rebases, prompted once.

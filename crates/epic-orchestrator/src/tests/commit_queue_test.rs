@@ -186,8 +186,11 @@ fn a_merged_head_moves_to_cleaning_and_plain_outcomes_are_not_queue_docs() {
     (a.stage.as_str(), a.pending.as_ref().map(|p| p.phase)),
     ("cleaning", Some(2))
   );
-  assert_eq!(commit(&mut world, "a", "applied"), None);
-  assert_eq!(commit(&mut world, "a", r#"{"note":"x"}"#), None);
+  assert!(commit(&mut world, "a", "applied").is_err());
+  let err = commit(&mut world, "a", r#"{"note":"x"}"#).expect_err("no outcome");
+  assert_eq!(err, "merge step outcome names no outcome");
+  let err = commit(&mut world, "a", "{not json").expect_err("unreadable");
+  assert!(err.starts_with("merge step outcome unreadable: "), "{err}");
 }
 
 #[test]

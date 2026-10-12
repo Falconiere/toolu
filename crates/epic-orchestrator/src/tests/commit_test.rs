@@ -235,3 +235,27 @@ fn a_deferred_merge_raises_merge_ready() {
     "run toolu epic gate --pr o/r#7 --merge"
   );
 }
+
+#[test]
+fn an_unreadable_merge_step_outcome_fails_closed_with_its_parse_error() {
+  let mut world = World::new(0);
+  arm(&mut world, Action::Merge, false);
+  let _steps = commit_effect(&mut world, "a", "{\"outcome\": ");
+  assert!(world.issues["a"].pending.is_none());
+  let item = world
+    .attention
+    .iter()
+    .find(|item| item.kind == "failed")
+    .expect("failed");
+  assert!(
+    item.note.starts_with("merge step outcome unreadable: "),
+    "{}",
+    item.note
+  );
+  arm(&mut world, Action::Merge, false);
+  let _steps = commit_effect(&mut world, "a", "failed");
+  assert!(
+    world.attention.iter().any(|item| item.note == "failed"),
+    "a script's plain text"
+  );
+}

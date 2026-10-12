@@ -23,13 +23,12 @@ pub(crate) fn commit_effect(world: &mut World, key: &str, outcome: &str) -> Vec<
     return defer(world, key, action);
   }
   // Any other launch or cleanup outcome, a panic's text included, is read
-  // as its outcome document; so is the in-process merge-queue step's.
+  // as its outcome document; so is the in-process merge-queue step's (a JSON
+  // object), whose unreadable output fails the step with the parse error.
   let plain = matches!(outcome, "applied" | "already");
-  if action == Some(Action::Merge)
-    && !plain
-    && let Some(steps) = crate::commit_queue::commit(world, key, outcome)
-  {
-    return steps;
+  if action == Some(Action::Merge) && outcome.trim_start().starts_with('{') {
+    return crate::commit_queue::commit(world, key, outcome)
+      .unwrap_or_else(|reason| fail_pending(world, key, "failed", &reason));
   }
   match action {
     Some(Action::Launch) if !plain => commit_launch(world, key, outcome),
