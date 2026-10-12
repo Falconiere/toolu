@@ -6,22 +6,17 @@ mod advisories;
 mod ast_rules;
 mod ast_yaml;
 mod file;
-mod hooks;
 mod layout_rules;
 mod line_rules;
-mod register;
 mod rule;
 mod size_rules;
 mod type_rules;
 
 use clap::{ArgMatches, Command};
+use toolu_engine::quality::QualityPlugin;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Guide;
 
-/// The Codex warning when the toolu core is missing.
-pub use hooks::check_toolu;
-/// Publish the manifest and its bridge at `SessionStart`.
-pub use register::register;
 /// The rule the manifest enables.
 pub use rule::TS_QUALITY;
 
@@ -30,6 +25,16 @@ pub const PLUGIN: &str = "ts-quality";
 
 /// The registry spec of the rule.
 pub const SPEC: &str = rule::SPEC;
+
+/// Its `SessionStart` registration and the bridge for `.ts`/`.tsx` edits.
+pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
+  plugin: PLUGIN,
+  spec: SPEC,
+  name: rule::NAME,
+  path_glob: "*.ts*",
+  guard: "TOOLU_TS_QUALITY_NATIVE",
+  language: "TypeScript",
+};
 
 const GUIDE: Guide = Guide {
   name: "ts-quality",

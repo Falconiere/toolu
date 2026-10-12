@@ -6,7 +6,25 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 
-use super::{BRIDGE_GUARD, bridge_script, quoted, register};
+use super::{QualityPlugin, check_toolu, quoted};
+
+const TS: QualityPlugin = QualityPlugin {
+  plugin: "ts-quality",
+  spec: "ts-quality@toolu",
+  name: "ts-quality",
+  path_glob: "*.ts*",
+  guard: "TOOLU_TS_QUALITY_NATIVE",
+  language: "TypeScript",
+};
+const BRIDGE_GUARD: &str = TS.guard;
+
+fn register(env: &Env, host: Host) -> toolu_runtime::cli::Outcome {
+  TS.register(env, host)
+}
+
+fn bridge_script(bin: &Path) -> String {
+  TS.bridge_script(bin)
+}
 
 const MANIFEST: &str = "toolu/post-tools.d/ts-quality@toolu__ts-quality.json";
 const BRIDGE: &str = "toolu/post-tools.d/ts-quality@toolu__ts-quality.sh";
@@ -175,4 +193,28 @@ fn the_bridge_falls_back_only_to_a_native_toolu_on_path() {
     String::from_utf8_lossy(&ran.stdout),
     "native:ts-quality hook post-tools --event PostToolUse\n"
   );
+}
+
+#[test]
+fn codex_without_the_core_is_warned_and_other_hosts_are_silent() {
+  let dir = tempfile::tempdir().unwrap();
+  let stub = dir.path().join("codex");
+  let plugins = r#"{"installed":[{"pluginId":"ts-quality@toolu"}]}"#;
+  std::fs::write(&stub, format!("#!/bin/sh\nprintf '%s\\n' '{plugins}'\n")).unwrap();
+  std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let search = format!("{}:/usr/bin:/bin", dir.path().display());
+  let codex = Env::from_pairs([
+    ("PATH", search.as_str()),
+    ("CODEX_HOME", "/c"),
+    ("PLUGIN_ROOT", "/p"),
+  ]);
+  let warned = check_toolu(&codex);
+  assert_eq!(warned.exit, Exit::Success);
+  let text = warned.stdout.unwrap_or_default();
+  assert!(
+    text.contains("toolu@toolu") && !text.ends_with('\n'),
+    "{text}"
+  );
+  let claude = Env::from_pairs([("CLAUDE_PLUGIN_ROOT", "/p")]);
+  assert_eq!(check_toolu(&claude).stdout, None);
 }
