@@ -11,6 +11,7 @@ import { chmodSync, existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
+import { z } from "zod";
 import { BenchError, HookResult, Payloads, loadJson } from "../lib/hook-data.ts";
 import { buildMeasurer, measureOnce } from "../lib/hook-measurer.ts";
 import { discoverEntries } from "../lib/hook-entries.ts";
@@ -26,9 +27,9 @@ test("the core post-tools budget fixture excludes other plugins' registry module
   const registryModule = (root: Sandbox): string =>
     join(root.configDir("claude", "user"), "toolu/post-tools.d/ts-quality@toolu__ts-quality.js");
   const installRecord = join(core.configDir("claude", "user"), "plugins/installed_plugins.json");
-  const installed = JSON.parse(readFileSync(installRecord, "utf8")) as {
-    plugins: Record<string, unknown>;
-  };
+  const installed = z
+    .object({ plugins: z.record(z.string(), z.unknown()) })
+    .parse(JSON.parse(readFileSync(installRecord, "utf8")));
   expect(Object.keys(installed.plugins)).toEqual(["toolu@toolu"]);
   expect(existsSync(registryModule(core))).toBe(false);
   expect(existsSync(registryModule(integrated))).toBe(true);

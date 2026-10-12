@@ -41,7 +41,7 @@ function rule(start: number, measured: number, tighten: boolean): number {
 const proto = loadJson(join(ROOT, "benchmarks/results/hook-prototype-2026-10-05.json"), Prototype);
 const budgets = loadJson(join(ROOT, "benchmarks/hook-budgets.json"), Budgets);
 const native = loadJson(
-  join(ROOT, "benchmarks/results/hook-resources-native-linux-x64-ci-2026-10-12.json"),
+  join(ROOT, "benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json"),
   HookResult,
 );
 

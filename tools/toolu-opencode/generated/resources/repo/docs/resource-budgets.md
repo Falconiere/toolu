@@ -38,7 +38,7 @@ The original pre/post hook rows come from `benchmarks/results/hook-prototype-202
 
 It was built out of tree, because Rust outside a workspace member fails `cargo xtask check-reach`. The result file records its exact shape and dependency versions.
 
-The three hook budgets introduced with #425 use the measured Linux CI run in `benchmarks/results/hook-resources-native-linux-x64-ci-2026-10-12.json`, with RSS at p50 × 1.5 and CPU at p50 × 1.25, each rounded up. Existing budgets are unchanged.
+The three hook budgets introduced with #425 use the measured Linux CI run in `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json`, with RSS at p50 × 1.5 and CPU at p50 × 1.25, each rounded up. Existing budgets are unchanged.
 
 Rule:
 
