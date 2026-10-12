@@ -72,3 +72,23 @@ fn a_record_without_or_with_bad_fields_reads_as_not_queued() {
   assert_eq!(issue.queue.queued_at_ms, None);
   assert_eq!(issue.queue.rebase_rounds, Rounds::default());
 }
+
+#[test]
+fn leaving_ready_with_auto_merge_armed_is_due_a_disarm_that_survives_a_restart() {
+  let mut issue = issue();
+  note_phase(&mut issue, "ready", 1);
+  issue.queue.auto_armed = true;
+  note_phase(&mut issue, "babysit", 2);
+  assert!(issue.queue.disarm_due);
+  let mut map = Map::new();
+  write(&mut map, &issue);
+  assert_eq!(
+    (map["auto_armed"].clone(), map["disarm_due"].clone()),
+    (json!(true), json!(true))
+  );
+  let mut back = Issue::blank("k", "e", "/state", 0);
+  read(&mut back, &Value::Object(map));
+  assert!(back.queue.auto_armed && back.queue.disarm_due);
+  note_phase(&mut back, "ready", 3);
+  assert!(!back.queue.disarm_due, "the head step owns it again");
+}

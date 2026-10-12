@@ -8,8 +8,8 @@
 use serde_json::{Value, json};
 
 use crate::journal::Record;
-use crate::logic::{arm_ready, push_attention, token};
-use crate::model::{Action, Step, World, fresh};
+use crate::logic::{arm_ready, push_attention};
+use crate::model::{Action, Step, World};
 use crate::queue_fields::{By, count_round, note_phase};
 
 /// Commit `doc`, the head step's outcome, or `None` when it is not one.
@@ -35,9 +35,15 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
     }
     "stale" => check_now(world, key),
     "waiting" => set_armed(world, key, text("auto_merge") == "armed"),
-    "disarmed" => set_armed(world, key, false),
+    "disarmed" => crate::disarm::committed(world, key, None),
+    "error" if crate::disarm::disarming(world, key) => {
+      crate::disarm::committed(world, key, Some(&note));
+    }
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
-    "handoff" => handoff(world, key, &note),
+    "handoff" => {
+      drop_held(world, key);
+      handoff(world, key, &note);
+    }
     "fix" => {
       set_armed(world, key, false);
       let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
@@ -47,6 +53,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
     "uncertain" | "refused" => held(world, key, &outcome, &note),
     _ => {}
   }
+  release_held(world, key);
   Some(world.outbox.drain(..).collect())
 }
 
@@ -120,10 +127,42 @@ fn round(world: &mut World, key: &str, by: By, head: &str) {
   });
 }
 
+/// Record whether auto-merge is armed; armed on an issue that already left
+/// the queue, it is due a disarm.
 fn set_armed(world: &mut World, key: &str, armed: bool) {
   if let Some(issue) = world.issues.get_mut(key) {
     issue.queue.auto_armed = armed;
+    if armed && !crate::queue::queued(issue) {
+      issue.queue.disarm_due = true;
+    }
   }
+}
+
+/// The worker rebases now: a held babysit prompt would only compete.
+fn drop_held(world: &mut World, key: &str) {
+  if let Some(issue) = world.issues.get_mut(key) {
+    issue.queue.held = None;
+  }
+}
+
+/// The step committed: send the babysit prompt it held back, taking the
+/// issue out of the queue first.
+fn release_held(world: &mut World, key: &str) {
+  let Some(held) = world
+    .issues
+    .get_mut(key)
+    .and_then(|issue| issue.queue.held.take())
+  else {
+    return;
+  };
+  if world.issues.get(key).is_some_and(crate::queue::queued) {
+    leave(world, key, "babysit", "babysit needs the worker");
+  }
+  if let Some(note) = &held.note {
+    push_attention(world, "babysit", key, note);
+  }
+  let fallback = held.note.is_none().then_some("babysit");
+  crate::babysit::prompt(world, key, "babysit", held.prompt, fallback);
 }
 
 /// Check the head's pull request again now; its fixed slot stays.
@@ -135,8 +174,8 @@ fn check_now(world: &mut World, key: &str) {
   }
 }
 
-/// Take `key` out of its queue at `phase`, disarm any auto-merge the engine
-/// armed, and arm the repository's next head.
+/// Take `key` out of its queue at `phase` (an armed auto-merge becomes due
+/// a disarm, see `disarm`), and arm the repository's next head.
 pub(crate) fn leave(world: &mut World, key: &str, phase: &str, note: &str) {
   let now = world.now_ms;
   let Some(issue) = world.issues.get_mut(key) else {
@@ -147,13 +186,6 @@ pub(crate) fn leave(world: &mut World, key: &str, phase: &str, note: &str) {
   issue.phase_at_ms = now;
   issue.stall_nudged = false;
   issue.deferred = None;
-  let disarm = issue.queue.auto_armed && issue.pending.is_none();
-  if disarm {
-    let token = token(world);
-    if let Some(issue) = world.issues.get_mut(key) {
-      issue.pending = Some(fresh(Action::Merge, token));
-    }
-  }
   world.outbox.push_back(Step::Status {
     key: key.to_owned(),
   });

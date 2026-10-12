@@ -253,3 +253,36 @@ fn a_fenced_rebase_runs_and_restores_the_agent_stage() {
   assert!(matches!(outcome, Rebased::Pushed(_)), "{outcome:?}");
   assert_eq!(stage(&root, &agent), "running");
 }
+
+#[test]
+fn a_restart_aborts_a_cut_short_rebase_and_lifts_the_fence() {
+  let repo = repo(("a.txt", "uno\ntwo\n"), ("a.txt", "ONE\ntwo\n"));
+  let root = resources(&repo);
+  let agent = take(&root, LeaseKind::Agent, &repo.work);
+  let lease = Lease {
+    root: root.clone(),
+    token: agent.clone(),
+  };
+  super::set_stage(&lease, "rebasing").expect("fence");
+  git(&repo.work, &["fetch", "-q", "origin"]);
+  let stopped = std::process::Command::new("git")
+    .args([
+      "-C",
+      &repo.work.display().to_string(),
+      "rebase",
+      "origin/main",
+    ])
+    .output()
+    .expect("git");
+  assert!(
+    !stopped.status.success(),
+    "the rebase stops on its conflict"
+  );
+  super::recover(Some(&repo.work), Some(&lease), &env(&repo)).expect("recover");
+  assert_eq!(stage(&root, &agent), "running");
+  assert_eq!(git(&repo.work, &["rev-parse", "HEAD"]), repo.head);
+  assert!(!repo.work.join(".git/rebase-merge").exists());
+  super::recover(Some(&repo.work), Some(&lease), &env(&repo))
+    .expect("a running lease is left alone");
+  super::recover(None, None, &env(&repo)).expect("no lease");
+}

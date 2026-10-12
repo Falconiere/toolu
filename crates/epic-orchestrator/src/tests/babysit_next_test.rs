@@ -40,8 +40,13 @@ fn a_babysit_finding_takes_a_queued_issue_back_to_babysit_and_disarms() {
     (issue.phase.as_str(), issue.queue.queued_at_ms),
     ("babysit", None)
   );
+  assert!(
+    issue.queue.disarm_due,
+    "the armed auto-merge is due a disarm"
+  );
+  crate::disarm::arm(&mut world);
   assert_eq!(
-    issue.pending.as_ref().map(|p| p.action),
+    world.issues["k"].pending.as_ref().map(|p| p.action),
     Some(Action::Merge),
     "disarm step"
   );
@@ -109,4 +114,40 @@ fn a_green_tick_queues_the_issue_once() {
   apply(&mut world, "pr:o/r#7", Next::KeepGoing);
   apply(&mut world, "nobody", Next::MergeQueue);
   assert_eq!(world.outbox.len(), steps);
+}
+
+#[test]
+fn a_finding_during_a_queue_step_is_held_not_sent() {
+  let mut world = world();
+  world.issues.get_mut("k").expect("k").pending =
+    Some(crate::model::fresh(Action::Merge, "t".to_owned()));
+  apply(&mut world, "pr:o/r#7", Next::Prompt("fix it".to_owned()));
+  let issue = &world.issues["k"];
+  assert_eq!(issue.phase, "ready", "still queued until the step commits");
+  assert_eq!(
+    issue.queue.held.as_ref().map(|held| held.prompt.as_str()),
+    Some("fix it")
+  );
+  assert!(
+    !world
+      .outbox
+      .iter()
+      .any(|step| matches!(step, crate::model::Step::Prompt { .. }))
+  );
+  apply(
+    &mut world,
+    "pr:o/r#7",
+    Next::Escalate {
+      note: "n".into(),
+      prompt: "p".into(),
+    },
+  );
+  assert_eq!(
+    world.issues["k"]
+      .queue
+      .held
+      .as_ref()
+      .and_then(|h| h.note.as_deref()),
+    Some("n")
+  );
 }

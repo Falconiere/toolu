@@ -104,11 +104,7 @@ fn a_fix_verdict_returns_to_babysit_and_disarms_what_the_engine_armed() {
   leave(&mut world, "a", "babysit", "new thread");
   let a = &world.issues["a"];
   assert_eq!(a.phase, "babysit");
-  assert_eq!(
-    a.pending.as_ref().map(|p| p.action),
-    Some(Action::Merge),
-    "disarm step"
-  );
+  assert!(a.queue.disarm_due, "the armed auto-merge is due a disarm");
   let mut world = self::world();
   let fix = json!({"outcome": "fix", "reasons": ["failing: test"]}).to_string();
   let steps = commit(&mut world, "a", &fix).expect("fix");
@@ -192,4 +188,64 @@ fn a_merged_head_moves_to_cleaning_and_plain_outcomes_are_not_queue_docs() {
   );
   assert_eq!(commit(&mut world, "a", "applied"), None);
   assert_eq!(commit(&mut world, "a", r#"{"note":"x"}"#), None);
+}
+
+#[test]
+fn a_late_armed_wait_on_an_issue_that_left_is_due_a_disarm() {
+  let mut world = world();
+  "babysit".clone_into(&mut world.issues.get_mut("a").expect("a").phase);
+  let waiting = json!({"outcome": "waiting", "auto_merge": "armed"}).to_string();
+  let _ = commit(&mut world, "a", &waiting).expect("waiting");
+  assert!(world.issues["a"].queue.disarm_due);
+  let mut world = self::world();
+  world.issues.get_mut("a").expect("a").queue.disarm_due = true;
+  "babysit".clone_into(&mut world.issues.get_mut("a").expect("a").phase);
+  let _ = commit(&mut world, "a", r#"{"outcome":"error","note":"502"}"#).expect("error");
+  assert_eq!(
+    world.issues["a"].queue.disarm_errors, 1,
+    "a failed disarm is retried"
+  );
+}
+
+#[test]
+fn a_held_babysit_prompt_goes_out_once_the_step_commits() {
+  let mut world = world();
+  world.issues.get_mut("a").expect("a").queue.held = Some(crate::queue_fields::Held {
+    prompt: "fix the thread".to_owned(),
+    note: Some("escalated".to_owned()),
+  });
+  let steps = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"busy","note":"worker active"}"#,
+  )
+  .expect("doc");
+  let sent = names(&steps);
+  assert!(
+    sent.contains(&"prompt:fix the thread".to_owned()),
+    "{sent:?}"
+  );
+  assert!(
+    sent
+      .iter()
+      .any(|name| name.starts_with("queue-left:babysit"))
+  );
+  assert_eq!(world.attention[0].kind, "babysit");
+  assert!(world.issues["a"].queue.held.is_none());
+  let mut world = self::world();
+  world.issues.get_mut("a").expect("a").queue.held = Some(crate::queue_fields::Held {
+    prompt: "fix the thread".to_owned(),
+    note: None,
+  });
+  let steps = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"handoff","note":"conflict"}"#,
+  )
+  .expect("doc");
+  let prompts: Vec<String> = names(&steps)
+    .into_iter()
+    .filter(|n| n.starts_with("prompt:"))
+    .collect();
+  assert_eq!(prompts, ["prompt:REBASE"], "only the rebase prompt");
 }

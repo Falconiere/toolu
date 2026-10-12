@@ -18,6 +18,7 @@ mod commit_queue;
 mod control;
 mod coupling;
 mod dashboard;
+mod disarm;
 mod disk;
 mod dispatch;
 mod dispatch_ops;

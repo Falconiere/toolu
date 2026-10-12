@@ -37,15 +37,38 @@ pub(crate) fn apply(world: &mut World, watch_key: &str, next: Next) {
     }
     Next::Attention(note) => push_attention(world, "babysit", &key, &note),
     Next::Prompt(text) => {
-      leave_queue(world, &key);
-      crate::babysit::prompt(world, &key, "babysit", text, Some("babysit"));
+      if !hold(world, &key, &text, None) {
+        leave_queue(world, &key);
+        crate::babysit::prompt(world, &key, "babysit", text, Some("babysit"));
+      }
     }
     Next::Escalate { note, prompt: text } => {
-      leave_queue(world, &key);
-      push_attention(world, "babysit", &key, &note);
-      crate::babysit::prompt(world, &key, "babysit", text, None);
+      if !hold(world, &key, &text, Some(&note)) {
+        leave_queue(world, &key);
+        push_attention(world, "babysit", &key, &note);
+        crate::babysit::prompt(world, &key, "babysit", text, None);
+      }
     }
   }
+}
+
+/// A queue step (possibly a rebase in the worktree) is armed or running:
+/// hold the prompt until it commits, so the worker never edits under it.
+fn hold(world: &mut World, key: &str, prompt: &str, note: Option<&str>) -> bool {
+  let Some(issue) = world.issues.get_mut(key) else {
+    return false;
+  };
+  let stepping = issue
+    .pending
+    .as_ref()
+    .is_some_and(|pending| pending.action == crate::model::Action::Merge);
+  if stepping {
+    issue.queue.held = Some(crate::queue_fields::Held {
+      prompt: prompt.to_owned(),
+      note: note.map(str::to_owned),
+    });
+  }
+  stepping
 }
 
 /// A babysit finding on a queued issue sends it back to babysit.

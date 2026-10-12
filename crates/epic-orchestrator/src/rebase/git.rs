@@ -85,13 +85,22 @@ pub(super) fn preconditions(git: &Git<'_>, target: &Target) -> Result<(), String
     return Err("uncommitted changes to tracked files".to_owned());
   }
   for marker in ["rebase-merge", "rebase-apply", "MERGE_HEAD"] {
-    let path = git.out(&["rev-parse", "--git-path", marker])?;
-    let path = Path::new(&git.worktree).join(path);
-    if path.exists() {
+    if in_progress(git, marker)? {
       return Err(format!("a {marker} is in progress"));
     }
   }
   Ok(())
+}
+
+/// Whether git's `marker` (a rebase directory, `MERGE_HEAD`) exists.
+fn in_progress(git: &Git<'_>, marker: &str) -> Result<bool, String> {
+  let path = git.out(&["rev-parse", "--git-path", marker])?;
+  Ok(Path::new(&git.worktree).join(path).exists())
+}
+
+/// Whether a rebase is in progress.
+pub(super) fn rebasing(git: &Git<'_>) -> Result<bool, String> {
+  Ok(in_progress(git, "rebase-merge")? || in_progress(git, "rebase-apply")?)
 }
 
 /// Point `refs/epic-wip/<key>` at `head` (with a reflog entry).

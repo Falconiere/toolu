@@ -47,7 +47,13 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
     trace: engine.git_trace.clone(),
   };
   if action == Action::Reconcile {
-    return Box::new(move || crate::queue_step::reconcile(&input));
+    return Box::new(move || {
+      let lease = input.lease.as_ref();
+      match crate::rebase::recover(input.worktree.as_deref(), lease, &input.env) {
+        Ok(()) => crate::queue_step::reconcile(&input),
+        Err(_) => "failed".to_owned(),
+      }
+    });
   }
   crate::queue_step::job(input)
 }

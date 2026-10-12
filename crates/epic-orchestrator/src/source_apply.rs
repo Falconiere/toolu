@@ -67,6 +67,10 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
     }
     return;
   }
+  // An agent herdr does not list cannot be working in the worktree.
+  if let Some(issue) = engine.world.issues.get_mut(key) {
+    issue.queue.agent_working = false;
+  }
   if running {
     note_event(&mut engine.world, key, "gone");
   }

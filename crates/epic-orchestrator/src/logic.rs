@@ -139,6 +139,7 @@ pub(crate) fn next(world: &mut World) -> Option<Step> {
   if let Some(step) = world.outbox.pop_front() {
     return Some(step);
   }
+  crate::disarm::arm(world);
   if let Some(step) = pending_step(world) {
     return Some(step);
   }

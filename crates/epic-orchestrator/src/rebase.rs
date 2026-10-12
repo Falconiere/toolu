@@ -132,6 +132,45 @@ fn snapshot(git: &Git<'_>, target: &Target, trace: Option<&Path>) -> Result<(), 
   }
 }
 
+/// After an engine restart: a lease the engine left fenced (`rebasing`) means
+/// a rebase was cut short. Abort a rebase still in progress in the worktree,
+/// then lift the fence.
+///
+/// # Errors
+/// The lease cannot be read or restored, or the abort fails.
+pub(crate) fn recover(
+  worktree: Option<&Path>,
+  lease: Option<&Lease>,
+  env: &Env,
+) -> Result<(), String> {
+  let Some(lease) = lease else {
+    return Ok(());
+  };
+  if lease_stage(lease)?.as_deref() != Some("rebasing") {
+    return Ok(());
+  }
+  if let Some(tree) = worktree.filter(|tree| tree.is_dir()) {
+    let git = Git::new(tree, env);
+    if git::rebasing(&git)? {
+      git.ok(&["rebase", "--abort"])?;
+    }
+  }
+  set_stage(lease, "running")
+}
+
+fn lease_stage(lease: &Lease) -> Result<Option<String>, String> {
+  use toolu_runtime::json::ordered::Ordered;
+  let state = toolu_engine::resources::store::read_resource_state(&lease.root)?;
+  let found = toolu_engine::resources::store::leases(&state)
+    .iter()
+    .find(|item| matches!(item.get("token"), Some(Ordered::String(token)) if *token == lease.token))
+    .and_then(|item| match item.get("stage") {
+      Some(Ordered::String(stage)) => Some(stage.clone()),
+      _ => None,
+    });
+  Ok(found)
+}
+
 /// Stop new managed jobs in `worktree`, then refuse while one still runs.
 fn fence(lease: &Lease, worktree: &Path) -> Result<(), String> {
   set_stage(lease, "rebasing")?;
