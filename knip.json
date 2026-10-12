@@ -21,16 +21,13 @@
         "plugins/toolu/hooks/src/lifecycle/dependency-warning.ts",
         "plugins/toolu/hooks/src/lifecycle/prompt-hints.ts",
         "plugins/toolu/hooks/src/lifecycle/session-docs.ts",
-        "plugins/toolu/hooks/src/lifecycle/tool-mandates.ts",
-        "plugins/ts-quality/hooks/src/rules/advisories.ts",
-        "plugins/ts-quality/hooks/src/rules/ts-file.ts"
+        "plugins/toolu/hooks/src/lifecycle/tool-mandates.ts"
       ]
     },
     "tooling": {
       "entry": [
         "src/benchmarks/python-quality-latency.ts",
         "src/benchmarks/rust-quality-latency.ts",
-        "src/benchmarks/ts-quality-latency.ts",
         "src/codex-smoke.ts",
         "src/opencode-host/mcp-server.ts",
         "src/opencode-tool-capture.ts",

@@ -8,8 +8,7 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
-import { installPlugins, pretoolEnv } from "@toolu/conformance/harness/pretool";
+import { installPlugins, nativeRegisterArgv } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { TS_PROJECT, type TsCase } from "../cases-types.ts";
@@ -38,17 +37,7 @@ const ROOTS: Root[] = [
 ];
 
 function register(sb: Sandbox, env: EnvPatch = {}) {
-  const argv = [
-    requiredBuiltTooluBinary(),
-    "ts-quality",
-    "hook",
-    "register",
-    "--event",
-    "SessionStart",
-    "--plugin-root",
-    PLUGIN_ROOT,
-  ];
-  return run(argv, {
+  return run(nativeRegisterArgv("ts-quality"), {
     cwd: sb.project,
     env: { HOME: sb.home, CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, ...env },
     stdin: "{}",

@@ -28,6 +28,7 @@ import {
 import { projectState } from "@toolu/conformance/harness/posttool";
 import {
   installPlugins,
+  nativeRegisterArgv,
   pretoolEnv,
   registerPlugin,
   type PretoolHost,
@@ -90,19 +91,7 @@ export function canonicalGate(text: string): string {
 async function registerTsQuality(sb: Sandbox, host: PretoolHost, reg: Registration) {
   const env = pretoolEnv(sb, host, { CLAUDE_PLUGIN_ROOT: PLUGIN_ROOT, PLUGIN_ROOT: undefined });
   if (host === "codex") env.PLUGIN_ROOT = PLUGIN_ROOT;
-  const argv =
-    reg.kind === "bash"
-      ? ["bash", reg.register]
-      : [
-          requiredBuiltTooluBinary(),
-          "ts-quality",
-          "hook",
-          "register",
-          "--event",
-          "SessionStart",
-          "--plugin-root",
-          PLUGIN_ROOT,
-        ];
+  const argv = reg.kind === "bash" ? ["bash", reg.register] : nativeRegisterArgv("ts-quality");
   const res = await run(argv, { cwd: sb.project, env, stdin: "{}" });
   if (res.exitCode !== 0 || res.stdout !== "") {
     throw new Error(`register ts-quality (${reg.kind}): ${String(res.exitCode)} ${res.stderr}`);

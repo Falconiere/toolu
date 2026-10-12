@@ -13,7 +13,7 @@ use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::registry::rule::RuleContext;
 
-use super::{Given, Phase, RULES, cwd_error, hook_main, lib_dir, line, tool_hook};
+use super::{Given, Phase, RULES, caller_cwd, cwd_error, hook_main, lib_dir, line, tool_hook};
 
 /// A built-in gate with a bug.
 struct Panics;
@@ -160,4 +160,16 @@ fn a_working_directory_the_os_cannot_give_blocks_before_and_after_a_tool() {
       "toolu PostToolUse hook failed: the working directory could not be read: entity not found"
     )
   );
+}
+
+#[test]
+fn only_an_existing_absolute_payload_cwd_is_the_callers() {
+  let dir = tempfile::tempdir().unwrap();
+  let payload = |cwd: &str| Ok(serde_json::json!({ "cwd": cwd }).to_string());
+  let real = dir.path().display().to_string();
+  assert_eq!(caller_cwd(&payload(&real)), Some(dir.path().to_path_buf()));
+  assert_eq!(caller_cwd(&payload("relative")), None);
+  assert_eq!(caller_cwd(&payload(&format!("{real}/missing"))), None);
+  assert_eq!(caller_cwd(&Ok("not json".to_owned())), None);
+  assert_eq!(caller_cwd(&Err(std::io::Error::other("unread"))), None);
 }

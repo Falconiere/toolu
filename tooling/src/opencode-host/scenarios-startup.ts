@@ -76,14 +76,17 @@ export function modules(s: ProbeSession): string[] {
   });
 }
 
-/** The registry modules the retained catalog publishes. */
+/** The registry modules the retained catalog publishes and reports. */
 export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.json",
   "post-tools.d/ast-grep@toolu__byte-savings.json",
   "post-tools.d/python-quality@toolu__python-quality.js",
   "post-tools.d/rust-quality@toolu__rust-quality.js",
-  "post-tools.d/ts-quality@toolu__ts-quality.js",
+  "post-tools.d/ts-quality@toolu__ts-quality.json",
 ];
+
+/** Every registry file on disk: the modules plus ts-quality's unreported bridge for Bun dispatch. */
+export const REGISTRY_FILES = [...MODULES, "post-tools.d/ts-quality@toolu__ts-quality.sh"];
 
 /** The helper symlinks the retained catalog publishes into the data root. */
 export const HELPERS = ["jev/jev.sh", "statusline/statusline.sh", "toolu-review/write-state.sh"];
@@ -100,7 +103,7 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
       `toolu: ready (${names.length} plugins, ${MODULES.length + HELPERS.length} startup artifacts)`,
     ),
     notReady: diagnostics(hostRun.stderr, "toolu: not ready"),
-    modules: modules(s).toSorted().join(",") === MODULES.toSorted().join(","),
+    modules: modules(s).toSorted().join(",") === REGISTRY_FILES.toSorted().join(","),
     helpers: HELPERS.filter((path) => existsSync(join(s.sb.project, DATA_ROOT, path))).length,
     bashRan: bash?.status === "completed" && s.exists("allowed.txt"),
   };
@@ -118,13 +121,13 @@ async function startupFailure(ctx: EntryContext): Promise<EntryResult> {
   const catalog = mkdtempSync(join(tmpdir(), "toolu-startup-catalog-"));
   try {
     cpSync(join(ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-    rmSync(join(catalog, "plugins/ts-quality/hooks/dist/post-tool-use.js"));
-    using s = shimmedSession(ctx, ["toolu", "ts-quality"], TOUCH_SCRIPT, catalog);
+    rmSync(join(catalog, "plugins/python-quality/hooks/dist/post-tool-use.js"));
+    using s = shimmedSession(ctx, ["toolu", "python-quality"], TOUCH_SCRIPT, catalog);
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:entry.touch"]);
     const bash = toolStates(hostRun).find((state) => state.tool === "bash");
     const observed = {
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: ts-quality/register: "),
+      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: python-quality/register: "),
       bashDenied: bash?.status === "error" && (bash.error ?? "").startsWith("toolu: not ready"),
       fileAbsent: !s.exists("denied.txt"),
     };

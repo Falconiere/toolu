@@ -1,10 +1,11 @@
 import { expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { nativeRegisterArgv } from "@toolu/conformance/harness/pretool";
 import { createGateDecider, type PermissionEvaluateHandlerOptions } from "../evaluate.ts";
 import { createToolAdviceStore } from "../tool-advice.ts";
 import { createToolPostHandler } from "../tool-post.ts";
@@ -261,16 +262,18 @@ test("a registry module crash reaches the model as a post-check warning", async 
   post.clear();
 });
 
-test("the shipped TypeScript quality bundle records and clears a per-file gate entry", async () => {
+test("the native TypeScript quality rule records and clears a per-file gate entry", async () => {
   const { root, options } = await project();
   await writeFile(join(root, "package.json"), '{"name":"post-quality","private":true}\n');
   await writeFile(join(root, "bun.lock"), "lock marker\n");
   await writeFile(join(root, "tsconfig.json"), "{}\n");
   execFileSync("git", ["add", "tsconfig.json"], { cwd: root });
-  await copyFile(
-    join(REPO_ROOT, "plugins/ts-quality/hooks/dist/post-tool-use.js"),
-    join(root, ".opencode/toolu/state/toolu/post-tools.d/ts-quality@toolu__ts-quality.js"),
-  );
+  const [bin = "", ...args] = nativeRegisterArgv("ts-quality");
+  execFileSync(bin, args, {
+    cwd: root,
+    env: { ...process.env, TOOLU_CONFIG_DIR: options.configRoot },
+    input: "{}",
+  });
   const post = createToolPostHandler(
     { ...options, selectedPluginSpecs: new Set(["toolu@toolu", "ts-quality@toolu"]) },
     createToolAdviceStore(),

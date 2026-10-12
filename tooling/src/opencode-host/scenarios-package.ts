@@ -25,7 +25,7 @@ import {
   type EntryResult,
   type EntryScenario,
 } from "./scenarios-entry.ts";
-import { DATA_ROOT, HELPERS, MODULES, modules } from "./scenarios-startup.ts";
+import { DATA_ROOT, HELPERS, MODULES, REGISTRY_FILES, modules } from "./scenarios-startup.ts";
 import { ContractError } from "./schema.ts";
 
 const ENV_BYTES = "SECRET=1\n";
@@ -150,7 +150,7 @@ async function cleanInstall(ctx: EntryContext): Promise<EntryResult> {
       `toolu: ready (${names.length} plugins, ${MODULES.length + HELPERS.length} startup artifacts)`,
     ),
     notReady: diagnostics(hostRun.stderr, "toolu: not ready"),
-    modules: modules(s).toSorted().join(",") === MODULES.toSorted().join(","),
+    modules: modules(s).toSorted().join(",") === REGISTRY_FILES.toSorted().join(","),
     writeDenied: write?.status === "error" && /protected/i.test(write.error ?? ""),
     envUnchanged: s.sb.read(".env") === ENV_BYTES,
     ...(await installedObservations(s.sb.project, ctx.tarball)),

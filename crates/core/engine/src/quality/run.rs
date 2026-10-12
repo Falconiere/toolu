@@ -139,6 +139,25 @@ fn file_scan(scan: &AstGrepScan, file: &EditedFile) -> AstGrepScan {
   }
 }
 
+/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
+fn batch_scan(
+  enabled: &[&dyn QualityRule],
+  live: &[EditedFile],
+  ctx: &RuleContext<'_>,
+) -> AstGrepScan {
+  let dirs: Vec<PathBuf> = enabled
+    .iter()
+    .flat_map(|rule| rule.ast_rule_dirs())
+    .collect();
+  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+  let inline: Vec<String> = enabled
+    .iter()
+    .map(|rule| rule.ast_rules_inline(ctx))
+    .filter(|rules| !rules.is_empty())
+    .collect();
+  scan_rules(live, &paths, &inline, ctx)
+}
+
 fn run_files(
   files: &[EditedFile],
   ctx: &RuleContext<'_>,
@@ -159,17 +178,7 @@ fn run_files(
     })
     .cloned()
     .collect();
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
-  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_inline(ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
-  let scan = scan_rules(&live, &paths, &inline, ctx);
+  let scan = batch_scan(&enabled, &live, ctx);
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
   let mut decisions = Vec::new();
   for file in files {

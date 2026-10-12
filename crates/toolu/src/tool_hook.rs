@@ -83,7 +83,8 @@ pub fn tool_hook(
 /// Run only `spec`'s registry modules, for a host or dispatcher that runs the
 /// core gates itself: ast-grep's on `OpenCode`, ts-quality's from its bridge module.
 /// A path that dispatcher split out of a patch, exported as `TOOLU_EDIT_*`, is
-/// walked as that path.
+/// walked as that path, and the payload's `cwd` is the dispatcher's, not this
+/// process's.
 pub fn plugin_tool_hook(
   spec: &str,
   phase: Phase,
@@ -91,6 +92,14 @@ pub fn plugin_tool_hook(
   plugin_root: Option<&Path>,
 ) -> Outcome {
   run(phase, payload, plugin_root, Some(spec))
+}
+
+/// The payload's `cwd`, when it names an existing absolute directory.
+fn caller_cwd(payload: &std::io::Result<String>) -> Option<PathBuf> {
+  let text = payload.as_ref().ok()?;
+  let doc: serde_json::Value = serde_json::from_str(text).ok()?;
+  let cwd = PathBuf::from(doc.get("cwd")?.as_str()?);
+  (cwd.is_absolute() && cwd.is_dir()).then_some(cwd)
 }
 
 fn run(
@@ -102,7 +111,9 @@ fn run(
   let env = Env::process();
   let host = detect(&env, None).host;
   let lib = lib_dir(plugin_root, &Roots::new(env.clone(), Some(host)));
-  let cwd = current_dir();
+  let cwd = only
+    .and_then(|_| caller_cwd(&payload))
+    .map_or_else(current_dir, Ok);
   let selected: Option<BTreeSet<String>> = only.map(|spec| BTreeSet::from([spec.to_owned()]));
   let options = cwd.as_ref().map_err(cwd_error).map(|cwd| DispatchOptions {
     env: &env,

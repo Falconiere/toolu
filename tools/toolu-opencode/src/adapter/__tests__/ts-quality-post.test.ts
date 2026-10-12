@@ -1,16 +1,17 @@
-/** Real ts-quality bundle through OpenCode's completed-tool adapter (#352). */
+/** ts-quality, registered by the built `toolu`, through OpenCode's completed-tool adapter (#352, #426). */
 import { expect, test } from "bun:test";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
+import { nativeRegisterArgv } from "@toolu/conformance/harness/pretool";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
 import { createGateDecider, type PermissionEvaluateHandlerOptions } from "../evaluate.ts";
 import { createToolAdviceStore } from "../tool-advice.ts";
 import { createToolPostHandler } from "../tool-post.ts";
 
 const REPO_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../../../../..");
-const MODULE = join(REPO_ROOT, "plugins/ts-quality/hooks/dist/post-tool-use.js");
 const Gate = z.object({
   status: z.string(),
   entries: z
@@ -24,9 +25,12 @@ function options(
   selected = true,
 ): PermissionEvaluateHandlerOptions {
   const configRoot = join(projectRoot, ".opencode/toolu/state");
-  const registry = join(configRoot, "toolu/post-tools.d");
-  mkdirSync(registry, { recursive: true });
-  copyFileSync(MODULE, join(registry, "ts-quality@toolu__ts-quality.js"));
+  const [bin = "", ...args] = nativeRegisterArgv("ts-quality");
+  execFileSync(bin, args, {
+    cwd: projectRoot,
+    env: { ...process.env, TOOLU_CONFIG_DIR: configRoot },
+    input: "{}",
+  });
   return {
     repoRoot: REPO_ROOT,
     configRoot,
