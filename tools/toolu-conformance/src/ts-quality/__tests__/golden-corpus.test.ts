@@ -5,10 +5,10 @@
  * expectations — the assertions the deleted bats files made.
  */
 import { expect, test } from "bun:test";
-import { outcomeOf } from "./golden-outcome.ts";
-import { TS_CASES } from "./cases.ts";
-import { caseKey } from "./golden-harness.ts";
-import { readGolden } from "./golden-io.ts";
+import { outcomeOf } from "../golden-outcome.ts";
+import { TS_CASES } from "../cases.ts";
+import { caseKey } from "../golden-harness.ts";
+import { readGolden } from "../golden-io.ts";
 
 const golden = readGolden();
 

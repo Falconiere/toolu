@@ -53,6 +53,9 @@ pub struct DispatchOptions<'a> {
   pub selected_specs: Option<&'a BTreeSet<String>>,
   /// After a tool, check every patch path past a block (`continuePostBlocks`).
   pub continue_post_blocks: bool,
+  /// The caller is a dispatcher that already split a multi-file patch and
+  /// exported the path's `TOOLU_EDIT_*`: walk the payload as that one path.
+  pub split_by_caller: bool,
   /// How long one module may run.
   pub module_timeout: Duration,
 }

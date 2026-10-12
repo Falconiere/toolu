@@ -82,6 +82,8 @@ pub fn tool_hook(
 
 /// Run only `spec`'s registry modules, for a host or dispatcher that runs the
 /// core gates itself: ast-grep's on OpenCode, ts-quality's from its bridge module.
+/// A path that dispatcher split out of a patch, exported as `TOOLU_EDIT_*`, is
+/// walked as that path.
 pub fn plugin_tool_hook(
   spec: &str,
   phase: Phase,
@@ -114,6 +116,7 @@ fn run(
     rules: RULES,
     selected_specs: selected.as_ref(),
     continue_post_blocks: false,
+    split_by_caller: only.is_some(),
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   });
   hook_main(phase, payload, host, options.as_ref().map_err(Clone::clone))

@@ -121,6 +121,7 @@ fn a_panicking_gate_blocks_before_and_after_a_tool() {
     rules: RULES,
     selected_specs: None,
     continue_post_blocks: false,
+    split_by_caller: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   };
   let payload = || Ok(r#"{"tool_name":"Bash","tool_input":{"command":"ls"}}"#.to_owned());

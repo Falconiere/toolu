@@ -119,6 +119,7 @@ impl Hook {
       rules,
       selected_specs: self.selected.as_ref(),
       continue_post_blocks: self.continue_blocks,
+      split_by_caller: false,
       module_timeout: self.timeout,
     };
     toolu_engine::dispatch::dispatch(phase, stdin, &options)

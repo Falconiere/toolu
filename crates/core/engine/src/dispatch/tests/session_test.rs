@@ -14,6 +14,7 @@ fn options<'a>(env: &'a Env, cwd: &'a Path) -> DispatchOptions<'a> {
     rules: &[],
     selected_specs: None,
     continue_post_blocks: false,
+    split_by_caller: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   }
 }

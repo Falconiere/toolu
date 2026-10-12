@@ -21,6 +21,7 @@ fn invalid_config_warnings_come_first_and_an_empty_registry_says_nothing() {
     rules: &[],
     selected_specs: None,
     continue_post_blocks: false,
+    split_by_caller: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
   };
   let pre = dispatch_pre_tool("{\"tool_name\":\"Read\"}\n", &options);
