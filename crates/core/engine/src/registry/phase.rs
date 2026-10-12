@@ -230,7 +230,11 @@ fn manifest(run: &mut Run<'_>, batch: &mut Vec<&Entry>, manifests: &Manifests<'_
   }
   flush(run, batch);
   if !run.stopped {
-    let decision = rule.run(&run.walk.view.event, run.walk.ctx);
+    let mut warnings = Vec::new();
+    let decision = rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings);
+    for line in &warnings {
+      run.warn(line);
+    }
     run.decided(entry, StepKind::Rule, &decision);
   }
 }

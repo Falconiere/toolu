@@ -74,6 +74,16 @@ pub trait Rule: Send + Sync {
   }
   /// Decides one event.
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Decision;
+  /// [`Rule::run`], pushing lines for the hook's stderr onto `warnings`, such
+  /// as a state file it could not write. The runner calls this one.
+  fn run_warning(
+    &self,
+    event: &NormalizedEvent,
+    ctx: &RuleContext<'_>,
+    _warnings: &mut Vec<String>,
+  ) -> Decision {
+    self.run(event, ctx)
+  }
 }
 
 #[cfg(test)]

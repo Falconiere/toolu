@@ -1,6 +1,6 @@
 [package]
 name = "toolu-ts-quality"
-description = "toolu ts-quality plugin: the `toolu ts-quality` namespace"
+description = "toolu ts-quality plugin: the `toolu ts-quality` namespace and its post-edit rules"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
@@ -9,7 +9,13 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+regex.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+toolu-engine = { path = "../core/engine" }
+toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-state = { path = "../core/state" }
 
 [lints]
 workspace = true
