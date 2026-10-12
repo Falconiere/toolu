@@ -23,8 +23,14 @@ pub(crate) fn commit_effect(world: &mut World, key: &str, outcome: &str) -> Vec<
     return defer(world, key, action);
   }
   // Any other launch or cleanup outcome, a panic's text included, is read
-  // as its outcome document.
+  // as its outcome document; so is the in-process merge-queue step's.
   let plain = matches!(outcome, "applied" | "already");
+  if action == Some(Action::Merge)
+    && !plain
+    && let Some(steps) = crate::commit_queue::commit(world, key, outcome)
+  {
+    return steps;
+  }
   match action {
     Some(Action::Launch) if !plain => commit_launch(world, key, outcome),
     Some(Action::Cleanup) if !plain => commit_cleanup(world, key, outcome),
@@ -172,7 +178,7 @@ fn pending_recovered(world: &World, key: &str) -> bool {
     .is_some_and(|pending| pending.recovered)
 }
 
-fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
+pub(crate) fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
   if let Some(issue) = world.issues.get_mut(key) {
     if let Some(pending) = issue.pending.as_mut() {
       pending.phase = 2;
@@ -186,6 +192,8 @@ fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
   }
   if action == Some(Action::Merge) {
     crate::watch::after_merge(world, key);
+    // The merged issue left its queue: the next head goes.
+    crate::logic::arm_ready(world);
   }
   vec![Step::Issue {
     key: key.to_owned(),

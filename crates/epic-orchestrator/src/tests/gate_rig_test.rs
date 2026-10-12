@@ -37,8 +37,8 @@ impl Default for PrState {
   }
 }
 
-/// Serve `pr` as `o/r#7` at head `abc123`.
-pub(crate) fn serve_pr(fixture: &Fixture, pr: &PrState) {
+/// The GraphQL reply that describes `pr` as `o/r#7` at head `abc123`.
+pub(crate) fn pr_reply(pr: &PrState) -> Reply {
   let threads: Vec<Value> = (0..pr.unresolved)
     .map(|_| json!({"isResolved": false, "isOutdated": false}))
     .collect();
@@ -56,12 +56,13 @@ pub(crate) fn serve_pr(fixture: &Fixture, pr: &PrState) {
     "commits": {"nodes": [{"commit": {"statusCheckRollup": rollup}}]},
   });
   let reply = |body: Value| Reply::new(200, body.to_string());
-  fixture
-    .route(
-      "/graphql",
-      reply(json!({"data": {"repository": {"pullRequest": node}}})),
-    )
-    .expect("graphql");
+  reply(json!({"data": {"repository": {"pullRequest": node}}}))
+}
+
+/// Serve `pr` as `o/r#7` at head `abc123`.
+pub(crate) fn serve_pr(fixture: &Fixture, pr: &PrState) {
+  let reply = |body: Value| Reply::new(200, body.to_string());
+  fixture.route("/graphql", pr_reply(pr)).expect("graphql");
   fixture
     .route(
       "/repos/o/r/compare/main...abc123",

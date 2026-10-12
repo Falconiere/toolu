@@ -156,27 +156,3 @@ fn scenario_gone_relaunches_twice_then_raises_relaunch_limit_after_a_reroute() {
   assert_eq!(checkpoints, 2);
 }
 
-#[test]
-fn scenario_merge_bridge_defers_to_the_gate_then_cleans_up_on_event_merged() {
-  let scenario = Scenario::new(&[(2, &[])], 1);
-  let mut engine = scenario.engine_with(None);
-  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
-  scenario.close(2);
-  scenario.report(&mut engine, 2, "ready");
-  let ready = &engine.world.attention[0];
-  assert_eq!(
-    (ready.kind.as_str(), ready.note.as_str()),
-    ("merge-ready", "run toolu epic gate --pr o/r#102 --merge")
-  );
-  assert_eq!(stage(&engine, 2), "running");
-  crate::schedule::note_event(&mut engine.world, &key(2), "merged");
-  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
-  assert_eq!(scenario.record(2)["stage"], "merged");
-  let journal = scenario.journal();
-  for name in ["cleanup-done", "settle", "refresh-done", "epic-closed"] {
-    assert!(
-      journal.iter().any(|row| row.name == name),
-      "{name}: {journal:?}"
-    );
-  }
-}

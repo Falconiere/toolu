@@ -1,7 +1,7 @@
-//! Between the merge and the cleanup. Without merge scripts the engine does
-//! not merge: it raises `merge-ready` with the gate command. A merge the PR
-//! detector sees, or `toolu epic gate --merge --key K` sends as `event
-//! merged`, moves a running issue to `cleaning` and arms its cleanup.
+//! Between the merge and the cleanup. A merge script that defers raises
+//! `merge-ready` with the gate command. A merge the PR detector sees (an
+//! armed auto-merge among them), or `toolu epic gate --merge --key K` sends as
+//! `event merged`, moves a running issue to `cleaning` and arms its cleanup.
 
 use serde_json::Value;
 

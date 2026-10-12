@@ -86,6 +86,16 @@ pub(crate) fn head(world: &World, repo: &str) -> Option<String> {
     .map(|entry| entry.key)
 }
 
+/// Whether `key` is the head of its repository's queue.
+pub(crate) fn is_head(world: &World, key: &str) -> bool {
+  world
+    .issues
+    .get(key)
+    .filter(|issue| queued(issue))
+    .and_then(|issue| head(world, &issue.repo))
+    .is_some_and(|head| head == key)
+}
+
 /// The queue document of `/api/v1/queue` and `toolu epic queue`, optionally
 /// limited to one epic's entries.
 pub(crate) fn document(world: &World, epic: Option<&str>) -> Value {

@@ -175,6 +175,21 @@ impl Fixture {
     Ok(())
   }
 
+  /// Answer `path`'s requests whose body contains `needle` with `replies`,
+  /// ahead of the path's plain route; the last reply repeats. An empty
+  /// sequence removes the route.
+  ///
+  /// # Errors
+  /// Returns an error if the route table lock is poisoned.
+  pub fn sequence_when(&self, path: &str, needle: &str, replies: Vec<Reply>) -> Result<(), Error> {
+    self
+      .routes
+      .lock()
+      .map_err(error)?
+      .set_when(path, needle, replies);
+    Ok(())
+  }
+
   /// Requests observed after TLS decryption.
   ///
   /// # Errors

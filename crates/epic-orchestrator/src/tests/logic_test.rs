@@ -48,9 +48,9 @@ fn sandbox(pair: bool) -> Sandbox {
 
 fn write_graph(epic: &Path, pair: bool) {
   let issues = if pair {
-    r#"[{"key":"a","open_blockers":[]},{"key":"b","open_blockers":["a"]}]"#
+    r#"[{"key":"a","repo":"o/r","open_blockers":[]},{"key":"b","repo":"o/r","open_blockers":["a"]}]"#
   } else {
-    r#"[{"key":"a","open_blockers":[]}]"#
+    r#"[{"key":"a","repo":"o/r","open_blockers":[]}]"#
   };
   let body = format!(r#"{{"epic":"one","issues":{issues}}}"#);
   std::fs::write(epic.join("graph.json"), body).expect("graph");

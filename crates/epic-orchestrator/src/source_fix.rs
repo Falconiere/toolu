@@ -36,7 +36,7 @@ fn write_epic(epic: &std::path::Path) -> Result<(), String> {
   std::fs::create_dir_all(epic.join("status")).map_err(|err| err.to_string())?;
   std::fs::write(
     epic.join("graph.json"),
-    r#"{"epic":"one","issues":[{"key":"a","open_blockers":[]}]}"#,
+    r#"{"epic":"one","issues":[{"key":"a","repo":"o/r","open_blockers":[]}]}"#,
   )
   .map_err(|err| err.to_string())?;
   std::fs::write(

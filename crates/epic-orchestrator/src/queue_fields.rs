@@ -19,6 +19,36 @@ pub(crate) struct Rounds {
   pub worker: u32,
 }
 
+/// Who performed a rebase round.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum By {
+  /// The engine's mechanical rebase.
+  Engine,
+  /// The worker, after a `REBASE` prompt.
+  Worker,
+}
+
+impl By {
+  /// Journal name.
+  pub(crate) fn name(self) -> &'static str {
+    match self {
+      Self::Engine => "engine",
+      Self::Worker => "worker",
+    }
+  }
+}
+
+/// Count one round by `by`; the issue's round number for the journal.
+pub(crate) fn count_round(issue: &mut Issue, by: By) -> u32 {
+  let rounds = &mut issue.rebase_rounds;
+  let slot = match by {
+    By::Engine => &mut rounds.engine,
+    By::Worker => &mut rounds.worker,
+  };
+  *slot = slot.saturating_add(1);
+  rounds.engine.saturating_add(rounds.worker)
+}
+
 /// The phase is now `phase`: a `ready` issue joins the queue at `now_ms`
 /// (keeping an earlier time), any other phase leaves it.
 pub(crate) fn note_phase(issue: &mut Issue, phase: &str, now_ms: u64) {

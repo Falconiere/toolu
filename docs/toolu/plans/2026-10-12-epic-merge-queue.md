@@ -86,10 +86,10 @@ mechanics → in-process head step → commit and triggers → end-to-end scenar
   {
     "id": "S6",
     "title": "End-to-end queue scenario on real git and the fixture",
-    "check": "cargo test -p toolu-epic-orchestrator -- queue_scenario",
+    "check": "cargo test -p toolu-epic-orchestrator -- queue_scenario && cargo test -p toolu-http-test-support",
     "ac_refs": ["AC-3", "AC-4", "AC-8", "AC-9", "AC-13"],
     "depends_on": ["S5"],
-    "paths": ["crates/epic-orchestrator/src"],
+    "paths": ["crates/epic-orchestrator/src", "crates/http-test-support/src"],
     "input": "Scenario rig: epic o/r#1 with children 2, 3, 4 launched into real worktrees, each pushing a branch to the local origin; GitHub fixture PR states per step; a conflicting fourth child; a base move while waiting",
     "model": "inherit"
   },
@@ -163,3 +163,12 @@ mechanics → in-process head step → commit and triggers → end-to-end scenar
 Plan review (2026-10-12): 🟡 delivery steps missing from Verification —
 fixed above. Every AC maps to a step (`AC-1`…`AC-13`); Jev alignment 0.78
 for full coverage. Approved.
+
+## Deviations
+
+- S6: the HTTPS fixture (`crates/http-test-support`) gained body-matched
+  routes (`Fixture::sequence_when`), because one `/graphql` path must answer
+  three pull requests differently in one engine pump. Its own test covers it;
+  S6's check runs that crate's tests.
+- S1/S3: `By`/`count_round` and `queue::is_head` landed with S5 (their first
+  caller), since dead code fails the build.

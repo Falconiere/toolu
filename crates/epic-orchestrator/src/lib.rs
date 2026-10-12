@@ -1,5 +1,5 @@
-//! The epic-orchestrator plugin's crate: the resident `toolu epic` engine (#434).
-//! Graph, route, launch and the merge queue stay on `planned` (#435, #448).
+//! The epic-orchestrator plugin's crate: the resident `toolu epic` engine (#434),
+//! its graph, route and launch actions (#435) and its merge queue (#448).
 
 use clap::{ArgMatches, Command};
 use toolu_engine::babysit::BabysitTick;
@@ -13,6 +13,7 @@ mod checkpoint;
 mod client;
 mod close;
 mod commit;
+mod commit_queue;
 mod control;
 mod coupling;
 mod dashboard;
@@ -24,6 +25,7 @@ mod effects;
 mod effects_cleanup;
 mod effects_epic;
 mod effects_launch;
+mod effects_queue;
 mod effects_run;
 mod epic_close;
 mod epics;
@@ -82,8 +84,16 @@ mod paths;
 mod probe_evidence;
 mod query;
 mod queue;
+#[cfg(test)]
+#[path = "tests/queue_rig_test.rs"]
+mod queue_rig;
+#[cfg(test)]
+#[path = "tests/queue_scenario_test.rs"]
+mod queue_scenario;
 mod queue_fields;
+mod queue_step;
 mod reach;
+mod rebase;
 mod recover;
 mod refill;
 #[cfg(test)]

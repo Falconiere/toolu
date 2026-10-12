@@ -132,6 +132,9 @@ fn note_report(
   if let Some(checked) = checked {
     note_babysit(world, key, checked.next);
   }
+  if let Some(crate::watch::Kind::Pr { key: issue, .. }) = world.watches.get(key).map(|w| w.kind.clone()) {
+    crate::logic::arm_merge(world, &issue);
+  }
   retry_after.is_some()
 }
 
@@ -202,11 +205,22 @@ fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
       }
     }
     Next::Attention(note) => push_attention(world, "babysit", &key, &note),
-    Next::Prompt(text) => crate::babysit::prompt(world, &key, "babysit", text, Some("babysit")),
+    Next::Prompt(text) => {
+      leave_queue(world, &key);
+      crate::babysit::prompt(world, &key, "babysit", text, Some("babysit"));
+    }
     Next::Escalate { note, prompt: text } => {
+      leave_queue(world, &key);
       push_attention(world, "babysit", &key, &note);
       crate::babysit::prompt(world, &key, "babysit", text, None);
     }
+  }
+}
+
+/// A babysit finding on a queued issue sends it back to babysit.
+fn leave_queue(world: &mut World, key: &str) {
+  if world.issues.get(key).is_some_and(crate::queue::queued) {
+    crate::commit_queue::leave(world, key, "babysit", "babysit needs the worker");
   }
 }
 
@@ -245,7 +259,7 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &
   journal(world, key, "github-error", &note.to_string());
 }
 
-fn note_change(world: &mut World, change: Change) {
+pub(crate) fn note_change(world: &mut World, change: Change) {
   match change {
     Change::PrChanged { key, head, base } => {
       if let Some(issue) = world.issues.get_mut(&key) {
@@ -272,6 +286,9 @@ fn note_change(world: &mut World, change: Change) {
     Change::BaseMoved { repo, branch } => {
       let note = format!("{repo}@{branch}");
       journal(world, &note, "github-base-moved", "");
+      if let Some(head) = crate::queue::head(world, &repo) {
+        crate::logic::arm_merge(world, &head);
+      }
     }
     Change::EpicChanged { key } => {
       journal(world, &key, "github-epic-changed", "");
@@ -312,3 +329,7 @@ mod babysit_tests;
 #[cfg(test)]
 #[path = "tests/github_engine_epic_test.rs"]
 mod epic_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_queue_test.rs"]
+mod queue_tests;

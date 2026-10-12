@@ -1,6 +1,6 @@
 use serde_json::{Map, Value, json};
 
-use super::{Rounds, note_phase, read, write};
+use super::{By, Rounds, count_round, note_phase, read, write};
 use crate::model::Issue;
 
 fn issue() -> Issue {
@@ -17,6 +17,16 @@ fn ready_joins_the_queue_once_and_any_other_phase_leaves_it() {
   assert_eq!(issue.queued_at_ms, None);
   note_phase(&mut issue, "ready", 40);
   assert_eq!(issue.queued_at_ms, Some(40));
+}
+
+#[test]
+fn rounds_count_by_who_and_number_every_round() {
+  let mut issue = issue();
+  assert_eq!(count_round(&mut issue, By::Engine), 1);
+  assert_eq!(count_round(&mut issue, By::Worker), 2);
+  assert_eq!(count_round(&mut issue, By::Engine), 3);
+  assert_eq!(issue.rebase_rounds, Rounds { engine: 2, worker: 1 });
+  assert_eq!((By::Engine.name(), By::Worker.name()), ("engine", "worker"));
 }
 
 #[test]

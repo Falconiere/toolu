@@ -4,7 +4,7 @@ use crate::model::Action;
 use crate::server::{Engine, Fault};
 
 #[test]
-fn a_checkpoint_without_a_worktree_applies_and_a_script_action_defers_without_scripts() {
+fn a_checkpoint_without_a_worktree_applies_and_a_merge_without_scripts_runs_in_process() {
   let fix = crate::source_fix::fixture(true).expect("fixture");
   let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
   if let Some(issue) = engine.world.issues.get_mut("a") {
@@ -21,5 +21,5 @@ fn a_checkpoint_without_a_worktree_applies_and_a_script_action_defers_without_sc
     action: Action::Merge,
     token: "t".into(),
   };
-  assert_eq!(job(&engine, &merge)(), "deferred");
+  assert_eq!(job(&engine, &merge)(), "failed: no pull request");
 }

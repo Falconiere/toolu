@@ -49,11 +49,21 @@ fn a_stopped_thread_fails_every_later_call() {
 }
 
 #[test]
-fn an_inline_engine_commits_a_script_outcome_without_a_thread() {
+fn an_inline_engine_commits_the_queue_step_without_a_thread() {
   let fix = crate::source_fix::fixture(true).expect("fixture");
+  let github = toolu_http_test_support::Fixture::start().expect("github");
+  let pending = serde_json::json!([{"__typename": "CheckRun", "name": "ci", "status": "QUEUED"}]);
+  let state = crate::gate_rig::PrState {
+    rollup: pending,
+    ..crate::gate_rig::PrState::default()
+  };
+  crate::gate_rig::serve_pr(&github, &state);
   let mut engine =
     crate::server::Engine::open(fix.engine_paths, None, crate::server::Fault::None).expect("open");
+  engine.reach = crate::support::reach(&github, crate::support::FAST);
   crate::support::report_ready(&mut engine);
   assert!(engine.running.is_none());
-  assert_eq!(engine.world.issues["a"].deferred.as_deref(), Some("merge"));
+  let issue = &engine.world.issues["a"];
+  assert!(issue.pending.is_none(), "the step ran and closed");
+  assert!(issue.auto_armed, "checks pending: auto-merge armed at the head");
 }

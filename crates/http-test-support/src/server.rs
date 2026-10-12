@@ -89,7 +89,11 @@ fn serve_https(
   let stream = rustls::StreamOwned::new(connection, socket);
   let mut reader = BufReader::new(stream);
   let request = read_request(&mut reader)?;
-  let routed = data.routes.lock().map_err(error)?.next(&request.path);
+  let routed = data
+    .routes
+    .lock()
+    .map_err(error)?
+    .next(&request.path, &request.body);
   let reply = or_missing(routed);
   if reply.dropped {
     return Ok(());

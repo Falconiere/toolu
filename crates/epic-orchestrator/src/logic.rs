@@ -99,11 +99,12 @@ fn issue_mut<'a>(world: &'a mut World, report: &Report) -> &'a mut Issue {
     .or_insert_with(|| Issue::blank(&report.key, &report.epic, &report.state_dir, now))
 }
 
+/// Arm the merge-queue step for `key` when it heads its repository's queue.
 pub(crate) fn arm_merge(world: &mut World, key: &str) {
   let Some(issue) = world.issues.get(key) else {
     return;
   };
-  if issue.stage != "running" || issue.pending.is_some() || issue.deferred.is_some() {
+  if issue.pending.is_some() || issue.deferred.is_some() || !crate::queue::is_head(world, key) {
     return;
   }
   let token = token(world);
