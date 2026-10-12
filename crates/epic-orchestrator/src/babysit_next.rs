@@ -67,6 +67,9 @@ fn hold(world: &mut World, key: &str, prompt: &str, note: Option<&str>) -> bool 
       prompt: prompt.to_owned(),
       note: note.map(str::to_owned),
     });
+    world.outbox.push_back(crate::model::Step::Issue {
+      key: key.to_owned(),
+    });
   }
   stepping
 }

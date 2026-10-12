@@ -92,3 +92,24 @@ fn leaving_ready_with_auto_merge_armed_is_due_a_disarm_that_survives_a_restart()
   note_phase(&mut back, "ready", 3);
   assert!(!back.queue.disarm_due, "the head step owns it again");
 }
+
+#[test]
+fn a_held_prompt_survives_a_restart() {
+  let mut issue = issue();
+  issue.queue.held = Some(super::Held {
+    prompt: "fix the thread".to_owned(),
+    note: Some("escalated".to_owned()),
+  });
+  let mut map = Map::new();
+  write(&mut map, &issue);
+  assert_eq!(
+    map["held_prompt"],
+    json!({"prompt": "fix the thread", "note": "escalated"})
+  );
+  let mut back = Issue::blank("k", "e", "/state", 0);
+  read(&mut back, &Value::Object(map.clone()));
+  assert_eq!(back.queue.held, issue.queue.held);
+  issue.queue.held = None;
+  write(&mut map, &issue);
+  assert!(!map.contains_key("held_prompt"));
+}

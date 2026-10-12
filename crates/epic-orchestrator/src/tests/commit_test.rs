@@ -133,7 +133,21 @@ fn a_recovered_effect_reconciles_or_defers() {
   );
   arm(&mut world, Action::Merge, true);
   let _steps = commit_effect(&mut world, "a", "nope");
-  assert!(world.attention.iter().any(|item| item.kind == "failed"));
+  assert!(
+    world
+      .attention
+      .iter()
+      .any(|item| item.kind == "failed" && item.note == "outcome unknown")
+  );
+  arm(&mut world, Action::Merge, true);
+  let _steps = commit_effect(&mut world, "a", "failed: recover: lease lost");
+  assert!(
+    world
+      .attention
+      .iter()
+      .any(|item| item.note == "recover: lease lost"),
+    "the reason is kept"
+  );
   let _steps = commit_effect(&mut world, "missing", "applied");
 }
 

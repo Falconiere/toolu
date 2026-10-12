@@ -163,14 +163,15 @@ an empty queue. The `planned` verb is removed (it listed only `queue`).
   finishes.
 - **A babysit finding while the head step runs**: its prompt (and the move
   to `babysit`) is held until the step commits, so the worker never edits
-  under an engine rebase (Jev 0.98); a hand-off drops it for `REBASE`.
+  under an engine rebase (Jev 0.98). It is persisted (`held_prompt`), and a
+  hand-off appends it to the one `REBASE` prompt and raises its attention.
 - **Leaving the queue with auto-merge armed** (worker report, babysit, a
   late `waiting`): `disarm_due` is persisted and a disarm step runs once
   nothing else is pending; a failed disarm retries after `CHECK_MS`, and the
   third failure in a row is a `failed` judgment.
 - **Engine crash mid-rebase**: the recovered step finds the lease still
   `rebasing`, aborts a rebase left in progress, and lifts the fence before it
-  asks GitHub.
+  asks GitHub; a recovery that fails is a `failed` judgment naming why.
 - **Agent missing from a herdr snapshot**: it is not working, so the head is
   not stuck on `busy`.
 - **Two issues readied in the same millisecond**: key order.

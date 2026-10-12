@@ -51,7 +51,10 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
       let lease = input.lease.as_ref();
       match crate::rebase::recover(input.worktree.as_deref(), lease, &input.env) {
         Ok(()) => crate::queue_step::reconcile(&input),
-        Err(_) => "failed".to_owned(),
+        Err(err) => format!(
+          "failed: recover: {}",
+          crate::reach::redact(&input.env, &err)
+        ),
       }
     });
   }

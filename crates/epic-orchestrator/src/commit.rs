@@ -233,7 +233,10 @@ fn commit_reconcile(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
       clear_recovered(world, key);
       Vec::new()
     }
-    _ => fail_pending(world, key, "failed", "outcome unknown"),
+    other => {
+      let note = other.strip_prefix("failed: ").unwrap_or("outcome unknown");
+      fail_pending(world, key, "failed", note)
+    }
   }
 }
 

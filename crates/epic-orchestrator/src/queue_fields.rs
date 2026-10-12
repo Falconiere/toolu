@@ -1,8 +1,9 @@
 //! The merge-queue fields of an issue (#448): when it joined its repository's
 //! queue, and how many rebase rounds the engine and its worker performed.
 //! It also tracks the auto-merge the engine armed, so an issue that leaves
-//! the queue is disarmed. `queued_at`, `rebase_rounds`, `auto_armed` and
-//! `disarm_due` live in `issues/<key>.json`, so they survive a restart.
+//! the queue is disarmed, and a babysit prompt held during a queue step.
+//! `queued_at`, `rebase_rounds`, `auto_armed`, `disarm_due` and
+//! `held_prompt` live in `issues/<key>.json`, so they survive a restart.
 
 use std::time::{Duration, UNIX_EPOCH};
 
@@ -117,6 +118,17 @@ pub(crate) fn write(map: &mut Map<String, Value>, issue: &Issue) {
       map.remove(name);
     }
   }
+  match &issue.queue.held {
+    Some(held) => {
+      map.insert(
+        "held_prompt".to_owned(),
+        json!({"prompt": held.prompt, "note": held.note}),
+      );
+    }
+    None => {
+      map.remove("held_prompt");
+    }
+  }
   let rounds = issue.queue.rebase_rounds;
   if rounds == Rounds::default() {
     map.remove("rebase_rounds");
@@ -148,6 +160,12 @@ pub(crate) fn read(issue: &mut Issue, record: &Value) {
   };
   issue.queue.auto_armed = record.get("auto_armed") == Some(&Value::Bool(true));
   issue.queue.disarm_due = record.get("disarm_due") == Some(&Value::Bool(true));
+  issue.queue.held = record.get("held_prompt").and_then(|held| {
+    Some(Held {
+      prompt: held.get("prompt")?.as_str()?.to_owned(),
+      note: held.get("note").and_then(Value::as_str).map(str::to_owned),
+    })
+  });
 }
 
 #[cfg(test)]

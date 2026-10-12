@@ -247,5 +247,33 @@ fn a_held_babysit_prompt_goes_out_once_the_step_commits() {
     .into_iter()
     .filter(|n| n.starts_with("prompt:"))
     .collect();
-  assert_eq!(prompts, ["prompt:REBASE"], "only the rebase prompt");
+  assert_eq!(prompts.len(), 1, "one prompt: {prompts:?}");
+  assert!(prompts[0].starts_with("prompt:REBASE\n\n"), "{prompts:?}");
+  assert!(
+    prompts[0].ends_with("fix the thread"),
+    "the finding rides along"
+  );
+}
+
+#[test]
+fn arming_auto_merge_is_written_to_the_record_at_once() {
+  let mut world = world();
+  let waiting = json!({"outcome": "waiting", "auto_merge": "armed"}).to_string();
+  let steps = commit(&mut world, "a", &waiting).expect("waiting");
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, Step::Issue { key } if key == "a"))
+  );
+  let mut world = self::world();
+  let steps = commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"waiting","auto_merge":"unavailable"}"#,
+  )
+  .expect("waiting");
+  assert!(
+    !steps.iter().any(|step| matches!(step, Step::Issue { .. })),
+    "nothing changed"
+  );
 }

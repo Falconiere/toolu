@@ -40,10 +40,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
       crate::disarm::committed(world, key, Some(&note));
     }
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
-    "handoff" => {
-      drop_held(world, key);
-      handoff(world, key, &note);
-    }
+    "handoff" => handoff(world, key, &note),
     "fix" => {
       set_armed(world, key, false);
       let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
@@ -58,11 +55,27 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Option<Vec<Step
 }
 
 /// A conflict (or an unsafe worktree): the worker rebases, prompted once.
+/// A babysit finding held during the step rides along with `REBASE`, so it
+/// is neither lost nor sent as a second, competing prompt.
 fn handoff(world: &mut World, key: &str, note: &str) {
   set_armed(world, key, false);
   round(world, key, By::Worker, "");
   leave(world, key, "rebasing", note);
-  crate::babysit::prompt(world, key, "rebase", "REBASE".to_owned(), Some("rebase"));
+  let held = world
+    .issues
+    .get_mut(key)
+    .and_then(|issue| issue.queue.held.take());
+  let mut text = "REBASE".to_owned();
+  if let Some(held) = held {
+    if let Some(attention) = &held.note {
+      push_attention(world, "babysit", key, attention);
+    }
+    text = format!(
+      "REBASE\n\nAfter the rebase, babysit also reported:\n{}",
+      held.prompt
+    );
+  }
+  crate::babysit::prompt(world, key, "rebase", text, Some("rebase"));
 }
 
 /// The PR was closed without a merge: the queue moves on.
@@ -130,18 +143,18 @@ fn round(world: &mut World, key: &str, by: By, head: &str) {
 /// Record whether auto-merge is armed; armed on an issue that already left
 /// the queue, it is due a disarm.
 fn set_armed(world: &mut World, key: &str, armed: bool) {
-  if let Some(issue) = world.issues.get_mut(key) {
-    issue.queue.auto_armed = armed;
-    if armed && !crate::queue::queued(issue) {
-      issue.queue.disarm_due = true;
-    }
+  let Some(issue) = world.issues.get_mut(key) else {
+    return;
+  };
+  let before = (issue.queue.auto_armed, issue.queue.disarm_due);
+  issue.queue.auto_armed = armed;
+  if armed && !crate::queue::queued(issue) {
+    issue.queue.disarm_due = true;
   }
-}
-
-/// The worker rebases now: a held babysit prompt would only compete.
-fn drop_held(world: &mut World, key: &str) {
-  if let Some(issue) = world.issues.get_mut(key) {
-    issue.queue.held = None;
+  if before != (issue.queue.auto_armed, issue.queue.disarm_due) {
+    world.outbox.push_back(Step::Issue {
+      key: key.to_owned(),
+    });
   }
 }
 
@@ -155,6 +168,9 @@ fn release_held(world: &mut World, key: &str) {
   else {
     return;
   };
+  world.outbox.push_back(Step::Issue {
+    key: key.to_owned(),
+  });
   if world.issues.get(key).is_some_and(crate::queue::queued) {
     leave(world, key, "babysit", "babysit needs the worker");
   }
