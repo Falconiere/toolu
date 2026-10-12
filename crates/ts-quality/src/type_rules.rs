@@ -2,6 +2,8 @@
 //! duplicate lookup is the same `git grep` the bash fragment ran, so git's index
 //! and pathspec rules decide which files count.
 
+use std::time::Duration;
+
 use toolu_runtime::process::{Spec, run};
 
 use crate::file::{Pattern, TsFile, head};
@@ -24,6 +26,7 @@ fn defined_elsewhere(f: &TsFile<'_>, name: &str, relative: &str) -> String {
   spec.argv.extend(PATHSPECS.map(str::to_owned));
   spec.cwd = Some(f.at.cwd.to_path_buf());
   spec.env = Some(f.at.env.clone());
+  spec.timeout = Duration::from_secs(10);
   let Ok(output) = run(&spec) else {
     return String::new();
   };

@@ -96,37 +96,83 @@ fn register_reports_its_manifest_and_survives_a_bad_root() {
   );
 }
 
-fn bridge(script: &Path, envs: &[(&str, &str)]) -> Output {
+fn bridge(script: &Path, path: &str, envs: &[(&str, &str)]) -> Output {
   let mut command = Command::new("/bin/sh");
-  command.arg(script).env_clear().env("PATH", "/usr/bin:/bin");
+  command.arg(script).env_clear().env("PATH", path);
+  command.current_dir(script.parent().unwrap());
   command.envs(envs.iter().copied()).output().unwrap()
 }
 
+fn stub(path: &Path, body: &str) {
+  std::fs::write(path, format!("#!/bin/sh\n{body}\n")).unwrap();
+  std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
+}
+
+const SYSTEM: &str = "/usr/bin:/bin";
+const WRITE_TS: [(&str, &str); 2] = [("tool_name", "Write"), ("input", r#"{"file_path":"a.ts"}"#)];
+
 #[test]
-fn the_bridge_runs_the_native_hook_once_for_typescript_payloads() {
+fn the_bridge_runs_the_native_hook_once_for_typescript_edits() {
   let dir = tempfile::tempdir().unwrap();
   let bin = dir.path().join("it's toolu");
-  std::fs::write(&bin, format!("#!/bin/sh\necho \"${BRIDGE_GUARD}:$*\"\n")).unwrap();
-  std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+  stub(&bin, &format!("echo \"${BRIDGE_GUARD}:$*\""));
   assert_eq!(quoted("it's"), r"'it'\''s'");
   let script = dir.path().join("bridge.sh");
   std::fs::write(&script, bridge_script(&bin)).unwrap();
-  let ran = bridge(&script, &[("input", r#"{"file_path":"a.ts"}"#)]);
+  let ran = bridge(&script, SYSTEM, &WRITE_TS);
   assert_eq!(
     String::from_utf8_lossy(&ran.stdout),
     "1:ts-quality hook post-tools --event PostToolUse\n"
   );
-  let paths = bridge(&script, &[("CLAUDE_FILE_PATHS", "b.tsx")]);
+  let paths = bridge(&script, SYSTEM, &[("CLAUDE_FILE_PATHS", "b.tsx")]);
   assert_ne!(paths.stdout.len(), 0);
-  let python = bridge(&script, &[("input", r#"{"file_path":"a.py"}"#)]);
+  let python = bridge(&script, SYSTEM, &[("tool_name", "Edit"), ("input", "a.py")]);
   assert_eq!(python.stdout.len(), 0);
-  let nested = bridge(&script, &[("input", "a.ts"), (BRIDGE_GUARD, "1")]);
+  let shell = bridge(
+    &script,
+    SYSTEM,
+    &[("tool_name", "Bash"), ("input", "cat a.ts")],
+  );
+  assert_eq!(shell.stdout.len(), 0);
+  let nested = bridge(
+    &script,
+    SYSTEM,
+    &[WRITE_TS[0], WRITE_TS[1], (BRIDGE_GUARD, "1")],
+  );
   assert_eq!(nested.stdout.len(), 0);
-  std::fs::write(&script, bridge_script(&dir.path().join("missing"))).unwrap();
-  let lost = bridge(&script, &[("input", "a.ts")]);
-  assert_eq!(lost.status.code(), Some(1));
+}
+
+#[test]
+fn the_bridge_falls_back_only_to_a_native_toolu_on_path() {
+  let dir = tempfile::tempdir().unwrap();
+  let script = dir.path().join("bridge.sh");
+  std::fs::write(&script, bridge_script(Path::new(""))).unwrap();
+  let shelf = dir.path().join("bin");
+  std::fs::create_dir(&shelf).unwrap();
+  stub(
+    &shelf.join("toolu"),
+    "echo 'usage: toolu install' >&2; exit 2",
+  );
+  stub(&dir.path().join("toolu"), "echo cwd");
+  let path = format!("{}:{SYSTEM}", shelf.display());
+  for lost in [
+    bridge(&script, &path, &WRITE_TS),
+    bridge(&script, SYSTEM, &WRITE_TS),
+  ] {
+    assert_eq!(lost.status.code(), Some(1));
+    assert_eq!(lost.stdout.len(), 0);
+    assert_eq!(
+      String::from_utf8_lossy(&lost.stderr),
+      "ts-quality: toolu not found; TypeScript checks skipped\n"
+    );
+  }
+  stub(
+    &shelf.join("toolu"),
+    r#"[ "$1" = --hook-protocol ] && echo 1 || echo "native:$*""#,
+  );
+  let ran = bridge(&script, &path, &WRITE_TS);
   assert_eq!(
-    String::from_utf8_lossy(&lost.stderr),
-    "ts-quality: toolu not found; TypeScript checks skipped\n"
+    String::from_utf8_lossy(&ran.stdout),
+    "native:ts-quality hook post-tools --event PostToolUse\n"
   );
 }
