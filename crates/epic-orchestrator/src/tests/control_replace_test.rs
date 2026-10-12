@@ -24,6 +24,7 @@ fn replace_returns_at_once_without_a_live_engine() {
 fn replace_waits_for_a_running_effect_and_the_old_engine_exits_after_it() {
   use std::os::unix::fs::PermissionsExt;
   let fix = crate::source_fix::fixture(true).expect("fixture");
+  crate::source_fix::in_repo(&fix).expect("repo");
   let (scripts, release) = (
     fix.tmp.path().join("scripts"),
     fix.tmp.path().join("release"),

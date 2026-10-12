@@ -198,6 +198,8 @@ pub(crate) struct Issue {
   pub relaunch: Option<String>,
   /// What the engine saw of the tracker item after the merge.
   pub tracker_seen: Seen,
+  /// Its place in the merge queue and its rebase rounds.
+  pub queue: crate::queue_fields::QueueState,
 }
 
 /// What the engine saw of a merged issue's tracker item.
@@ -382,6 +384,7 @@ impl Issue {
       retry_at_ms: 0,
       relaunch: None,
       tracker_seen: Seen::Open,
+      queue: crate::queue_fields::QueueState::default(),
     }
   }
 }

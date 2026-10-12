@@ -1,7 +1,7 @@
 //! Verify a sub-issue PR against the epic merge policy and optionally merge it
 //! (`merge-gate.ts`), then close and tick the delivered item and record the
-//! verdict on the issue. The engine never merges unattended: a ready issue
-//! raises `merge-ready` and the orchestrator runs this gate.
+//! verdict on the issue. This is the manual gate; the engine's merge queue
+//! (`queue_step`) reuses its verdicts, auto-merge and merge.
 
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -9,9 +9,9 @@ use std::time::Duration;
 use serde_json::{Map, Value, json};
 use toolu_engine::resources::lock::acquire_lock;
 
-mod assess;
-mod auto;
-mod merge;
+pub(crate) mod assess;
+pub(crate) mod auto;
+pub(crate) mod merge;
 mod settle;
 
 pub(crate) use assess::Pr;

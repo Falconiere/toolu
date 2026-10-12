@@ -19,6 +19,7 @@ Commands:
   serve    Run the resident engine with its HTTP status listener
   start    Register an epic state directory and start the engine
   status   Print the engine, issues and attention
+  queue    Print the merge queue of every repository, in merge order
   pause    Pause effects for every epic, or one epic
   resume   Resume effects for every epic, or one epic
   ack      Acknowledge an issue's attention items, or a keyless one by kind
@@ -27,7 +28,6 @@ Commands:
   report   Record a worker phase
   job      Run a command under the worktree's resource lease
   service  Install the user service unit
-  planned  Not ported yet (#448): show the planned verbs
   token    Manage the status bearer token
   graph    Build an epic's dependency graph and the next launch batch
   route    Route sub-issues to worker hosts, models and efforts
@@ -113,6 +113,24 @@ Usage: toolu epic status [OPTIONS] [EPIC]
 
 Arguments:
   [EPIC]  Epic key, or a trailing issue number
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic queue`
+
+```text
+Print the merge queue of every repository, in merge order
+
+Usage: toolu epic queue [OPTIONS] [EPIC]
+
+Arguments:
+  [EPIC]  Only this epic's entries
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -276,21 +294,6 @@ Options:
 Write the systemd user unit without starting it
 
 Usage: toolu epic service install [OPTIONS]
-
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
-
-## `toolu epic planned`
-
-```text
-Not ported yet (#448): show the planned verbs
-
-Usage: toolu epic planned [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout

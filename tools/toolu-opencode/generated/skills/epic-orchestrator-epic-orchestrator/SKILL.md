@@ -237,7 +237,8 @@ with the text and records the answer.
 
 | kind | action |
 |---|---|
-| `merge-ready` | The worker reported `ready`. Run the merge gate (below); the merge closes the item. |
+| `merge-ready` | Raised only when a `TOOLU_EPIC_SCRIPTS` merge script defers (a test seam). Run the merge gate (below); the merge closes the item. |
+| `rebase` | The engine's rebase of a queue head conflicted and its `REBASE` prompt to the worker was not delivered. Send it with `toolu epic answer <key> "REBASE"`. |
 | `needs-human` | Read the `note`. If the issue, epic or code answers it, send it with `toolu epic answer <key> "<answer>"`. Otherwise ask the user and relay their answer the same way. |
 | `failed` | Read the note, then `herdr agent read <key> --source recent-unwrapped --lines 80`. Send a concrete new direction with `toolu epic answer <key> "<direction>"`, or escalate to the user. An `uncertain launch` note means the start may have happened: inspect the record and the pane, then `toolu epic launch --graph <state_dir>/graph.json --issue <ref> --reprompt` (a verified session) or `--replace`. `epic close uncertain` means the epic may be closed already: check it in the tracker; never close it twice. |
 | `blocked` | Read `pending`. If the approval is inside the authorization boundary, approve it with `herdr agent send-keys`. Otherwise ask the user. Then `toolu epic ack <key>`. |
@@ -253,7 +254,18 @@ with the text and records the answer.
 | `dependency-cycle` | Ask the user which edge is wrong, fix the graph, then `toolu epic ack dependency-cycle`. |
 | `epic-complete` | `toolu epic ack <key>` (the epic key), then go to step 5. |
 
-**Merge gate.**
+**Merge queue.** The engine merges on its own: a worker's `ready` (or a green
+babysit tick) puts its PR in its repository's queue, ordered by how much work
+the merge unblocks, then by ready time. Only the head is worked. Behind its
+base, the engine rebases it itself in the parked worker's worktree (after a
+snapshot to `refs/epic-wip/<key>`) and pushes with `--force-with-lease`; it
+prompts the worker with `REBASE` only on a conflict. While checks run it arms
+auto-merge pinned to the head; green, it merges pinned to the verified SHA. A
+failing check, thread or finding sends the issue back to babysit. A merge it
+could not confirm (`failed`, note `merge uncertain`) is never resent: check the
+PR, then `toolu epic ack <key>`. `toolu epic queue` prints the queue.
+
+**Merge gate.** For manual use and dry runs (`--dry-run`), the same gate:
 
 ```bash
 toolu epic gate --pr <repo>#<pr> --issue <ref> --epic <epic> --state-dir <state_dir> --key <key>
@@ -273,9 +285,8 @@ gate runs only after `ready`.
 | `wait` | Only checks are pending. Re-run the gate with `--auto`: it arms GitHub auto-merge pinned to the head, so GitHub merges the moment checks pass. The engine's PR check sees the merge and cleans up. |
 | `merged` / `closed` | Something outside the run merged or closed it. The engine cleans up a merge; ask the user about a close without merge. |
 
-Merge one PR at a time per repo. Each merge moves main forward, so every other
-open PR in that repo will get `rebase` at its own gate. This is how "rebase on
-main before merge" holds for all of them without extra bookkeeping.
+One PR merges at a time per repository: only the queue head is gated, so the
+other queued PRs wait without rebasing until they reach the head.
 
 For failures in herdr, git or gh, see `references/recovery.md`.
 

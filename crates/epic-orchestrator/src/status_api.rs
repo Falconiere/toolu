@@ -79,7 +79,7 @@ pub(crate) fn route(
     "/api/v1/hosts" => Some(Snapshot::open(paths, world.now_ms)?.hosts()),
     "/api/v1/machine" => Some(Snapshot::open(paths, world.now_ms)?.machine()),
     "/api/v1/jobs" => Some(Snapshot::open(paths, world.now_ms)?.jobs()),
-    "/api/v1/queue" => Some(status_epics::queue(world, paths)?),
+    "/api/v1/queue" => Some(crate::queue::document(world, None)),
     "/api/v1/attention" => Some(attention(world)),
     _ => dynamic_route(world, paths, path, secrets)?,
   };
@@ -172,7 +172,7 @@ fn issue_document(
     "effort": effort,
     "pr": issue.pr,
     "last_gate_verdict": last_gate,
-    "queue_position": queue_position(world, paths, &issue.key)?,
+    "queue_position": queue_position(world, &issue.key),
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
@@ -204,24 +204,11 @@ fn issue_events(
   )
 }
 
-fn queue_position(world: &World, paths: &Paths, key: &str) -> Result<Option<u64>, String> {
-  let queue = status_epics::queue(world, paths)?;
-  Ok(
-    queue
-      .get("repositories")
-      .and_then(Value::as_array)
-      .into_iter()
-      .flatten()
-      .flat_map(|repo| {
-        repo
-          .get("items")
-          .and_then(Value::as_array)
-          .into_iter()
-          .flatten()
-      })
-      .find(|item| item.get("key").and_then(Value::as_str) == Some(key))
-      .and_then(|item| item.get("position").and_then(Value::as_u64)),
-  )
+fn queue_position(world: &World, key: &str) -> Option<u64> {
+  crate::queue::queues(world)
+    .values()
+    .find_map(|entries| entries.iter().position(|entry| entry.key == key))
+    .and_then(|index| u64::try_from(index.saturating_add(1)).ok())
 }
 
 fn field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {

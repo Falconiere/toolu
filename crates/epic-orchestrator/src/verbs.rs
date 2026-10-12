@@ -1,4 +1,4 @@
-//! The `toolu epic` command tree. The merge queue stays on `planned` (#448).
+//! The `toolu epic` command tree.
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
@@ -8,14 +8,6 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::config::secrets;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::namespace::Planned;
-
-const LATER: Planned = Planned {
-  name: "epic",
-  about: "Drive an epic to merged PRs: the resident engine, merge queue and trackers",
-  verbs: &["queue"],
-  issues: &[448],
-};
 
 /// The phases a worker reports, in pipeline order.
 const PHASES: [&str; 12] = [
@@ -43,6 +35,7 @@ pub(crate) fn command() -> Command {
     .subcommand(serve_command())
     .subcommand(start_command())
     .subcommand(status_command())
+    .subcommand(queue_command())
     .subcommand(pause_command(
       "pause",
       "Pause effects for every epic, or one epic",
@@ -68,7 +61,6 @@ pub(crate) fn command() -> Command {
           Command::new("install").about("Write the systemd user unit without starting it"),
         ),
     )
-    .subcommand(Command::new("planned").about("Not ported yet (#448): show the planned verbs"))
     .subcommand(token_command())
     .subcommands(crate::verbs_actions::commands())
 }
@@ -81,6 +73,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("serve", args)) => crate::control::serve(args, &env, tick),
     Some(("start", args)) => crate::control::start(args, &env),
     Some(("status", args)) => crate::query::status(args, &env),
+    Some(("queue", args)) => crate::query::queue(args, &env),
     Some(("pause", args)) => crate::query::pause(args, &env, true),
     Some(("resume", args)) => crate::query::pause(args, &env, false),
     Some(("ack", args)) => crate::query::ack(ctx, args, &env),
@@ -92,10 +85,9 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
       crate::query::service(&env)
     }
     Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
-    Some((name, args)) => {
-      crate::verbs_actions::run(name, args, ctx, &env).unwrap_or_else(|| LATER.run(ctx))
-    }
-    None => LATER.run(ctx),
+    Some((name, args)) => crate::verbs_actions::run(name, args, ctx, &env)
+      .unwrap_or_else(|| failed("toolu epic", &format!("unknown verb {name}"))),
+    None => failed("toolu epic", "a verb is required"),
   }
 }
 
@@ -158,6 +150,16 @@ fn status_command() -> Command {
       Arg::new("epic")
         .value_name("EPIC")
         .help("Epic key, or a trailing issue number"),
+    )
+}
+
+fn queue_command() -> Command {
+  Command::new("queue")
+    .about("Print the merge queue of every repository, in merge order")
+    .arg(
+      Arg::new("epic")
+        .value_name("EPIC")
+        .help("Only this epic's entries"),
     )
 }
 

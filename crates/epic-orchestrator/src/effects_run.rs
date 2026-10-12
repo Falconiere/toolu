@@ -1,8 +1,9 @@
 //! The body of each engine effect, built on the state thread from what the
 //! effect needs and run by the executor: the checkpoint, the launch, the
-//! cleanup and the epic refresh and close in process, and the script seam
-//! (`TOOLU_EPIC_SCRIPTS`) for merge and its reconcile. Worker prompts are no
-//! effect: `attention_ops::send_prompt` sends them.
+//! cleanup, the epic refresh and close, and the merge-queue step and its
+//! reconcile in process; the script seam (`TOOLU_EPIC_SCRIPTS`), when set,
+//! still runs merge and reconcile. Worker prompts are no effect:
+//! `attention_ops::send_prompt` sends them.
 
 use std::path::PathBuf;
 
@@ -52,6 +53,9 @@ pub(crate) fn job(engine: &Engine, call: &Call) -> Job {
     Action::Refresh | Action::Close => Box::new(|| "failed: no such epic".to_owned()),
     // Worker prompts go through `attention_ops::send_prompt`, never a call.
     Action::Prompt => Box::new(|| "failed: a prompt is no effect".to_owned()),
+    Action::Merge | Action::Reconcile if engine.scripts.is_none() => {
+      crate::effects_queue::job(engine, &call.key, call.action)
+    }
     Action::Merge | Action::Reconcile => {
       let epic = issue.map(|issue| issue.epic.clone()).unwrap_or_default();
       let body = json!({"key": call.key, "action": call.action.name(), "epic": epic}).to_string();

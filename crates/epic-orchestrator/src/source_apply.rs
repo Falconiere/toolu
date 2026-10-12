@@ -58,12 +58,18 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
       .get("pane_id")
       .and_then(Value::as_str)
       .map(str::to_owned);
-    if pane.is_some()
-      && let Some(issue) = engine.world.issues.get_mut(key)
-    {
-      issue.pane = pane;
+    let working = row.get("agent_status").and_then(Value::as_str) == Some("working");
+    if let Some(issue) = engine.world.issues.get_mut(key) {
+      issue.queue.agent_working = working;
+      if pane.is_some() {
+        issue.pane = pane;
+      }
     }
     return;
+  }
+  // An agent herdr does not list cannot be working in the worktree.
+  if let Some(issue) = engine.world.issues.get_mut(key) {
+    issue.queue.agent_working = false;
   }
   if running {
     note_event(&mut engine.world, key, "gone");
@@ -115,6 +121,9 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
     return Ok(());
   };
   let status = field(line, "agent_status").unwrap_or("unknown");
+  if let Some(issue) = engine.world.issues.get_mut(&key) {
+    issue.queue.agent_working = status == "working";
+  }
   if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");
   }

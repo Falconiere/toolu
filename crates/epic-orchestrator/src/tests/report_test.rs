@@ -60,6 +60,7 @@ fn report_spool_order() {
 #[test]
 fn report_ready_merges() {
   let fix = crate::source_fix::fixture(true).expect("fixture");
+  crate::source_fix::in_repo(&fix).expect("repo");
   let mut engine = crate::server::Engine::open(fix.engine_paths, None, Fault::None).expect("open");
   let dir = engine.world.issues["a"].state_dir.clone();
   engine

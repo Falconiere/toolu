@@ -297,6 +297,7 @@ pub(crate) fn assess(gh: &Gh, pr: &Pr) -> Result<(Map<String, Value>, Facts), St
   );
   result.insert("url".to_owned(), json!(field("url")));
   result.insert("head".to_owned(), json!(field("headRefOid")));
+  result.insert("head_ref".to_owned(), json!(field("headRefName")));
   let armed = node
     .get("autoMergeRequest")
     .is_some_and(|auto| !auto.is_null());

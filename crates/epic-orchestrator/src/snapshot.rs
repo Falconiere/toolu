@@ -185,6 +185,7 @@ fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
     .and_then(Value::as_str)
     .map(str::to_owned);
   issue.tracker_seen = crate::merge_bridge::seen_from(record);
+  crate::queue_fields::read(issue, record);
   if let Some(tree) = record.get("worktree").and_then(Value::as_str) {
     issue.worktree = Some(tree.to_owned());
   }

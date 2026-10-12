@@ -23,8 +23,13 @@ pub(crate) fn commit_effect(world: &mut World, key: &str, outcome: &str) -> Vec<
     return defer(world, key, action);
   }
   // Any other launch or cleanup outcome, a panic's text included, is read
-  // as its outcome document.
+  // as its outcome document; so is the in-process merge-queue step's (a JSON
+  // object), whose unreadable output fails the step with the parse error.
   let plain = matches!(outcome, "applied" | "already");
+  if action == Some(Action::Merge) && outcome.trim_start().starts_with('{') {
+    return crate::commit_queue::commit(world, key, outcome)
+      .unwrap_or_else(|reason| fail_pending(world, key, "failed", &reason));
+  }
   match action {
     Some(Action::Launch) if !plain => commit_launch(world, key, outcome),
     Some(Action::Cleanup) if !plain => commit_cleanup(world, key, outcome),
@@ -172,7 +177,7 @@ fn pending_recovered(world: &World, key: &str) -> bool {
     .is_some_and(|pending| pending.recovered)
 }
 
-fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
+pub(crate) fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
   if let Some(issue) = world.issues.get_mut(key) {
     if let Some(pending) = issue.pending.as_mut() {
       pending.phase = 2;
@@ -186,6 +191,8 @@ fn applied(world: &mut World, key: &str, action: Option<Action>) -> Vec<Step> {
   }
   if action == Some(Action::Merge) {
     crate::watch::after_merge(world, key);
+    // The merged issue left its queue: the next head goes.
+    crate::logic::arm_ready(world);
   }
   vec![Step::Issue {
     key: key.to_owned(),
@@ -225,7 +232,10 @@ fn commit_reconcile(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
       clear_recovered(world, key);
       Vec::new()
     }
-    _ => fail_pending(world, key, "failed", "outcome unknown"),
+    other => {
+      let note = other.strip_prefix("failed: ").unwrap_or("outcome unknown");
+      fail_pending(world, key, "failed", note)
+    }
   }
 }
 

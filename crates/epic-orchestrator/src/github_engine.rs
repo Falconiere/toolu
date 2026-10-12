@@ -7,7 +7,7 @@ use toolu_engine::babysit::{BabysitTick, TickRequest};
 use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
 
-use crate::babysit::{self, Next};
+use crate::babysit;
 use crate::github_probe::{self, Change, Report};
 use crate::journal::Record;
 use crate::logic::push_attention;
@@ -130,7 +130,12 @@ fn note_report(
   });
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
-    note_babysit(world, key, checked.next);
+    crate::babysit_next::apply(world, key, checked.next);
+  }
+  if let Some(crate::watch::Kind::Pr { key: issue, .. }) =
+    world.watches.get(key).map(|w| w.kind.clone())
+  {
+    crate::logic::arm_merge(world, &issue);
   }
   retry_after.is_some()
 }
@@ -181,33 +186,6 @@ fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<Tick
   })
 }
 
-fn note_babysit(world: &mut World, watch_key: &str, next: Next) {
-  let Some(crate::watch::Kind::Pr { key, .. }) =
-    world.watches.get(watch_key).map(|watch| &watch.kind)
-  else {
-    return;
-  };
-  let key = key.clone();
-  match next {
-    Next::KeepGoing => {}
-    Next::MergeQueue => {
-      if let Some(issue) = world.issues.get_mut(&key)
-        && issue.phase != "ready"
-      {
-        "ready".clone_into(&mut issue.phase);
-        world.outbox.push_back(Step::Status { key: key.clone() });
-        journal(world, &key, "github-babysit-ready", "");
-      }
-    }
-    Next::Attention(note) => push_attention(world, "babysit", &key, &note),
-    Next::Prompt(text) => crate::babysit::prompt(world, &key, "babysit", text, Some("babysit")),
-    Next::Escalate { note, prompt: text } => {
-      push_attention(world, "babysit", &key, &note);
-      crate::babysit::prompt(world, &key, "babysit", text, None);
-    }
-  }
-}
-
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
   world.rest_points = world.rest_points.saturating_add(report.rest_points);
   if let Some(counters) = report.rate.as_ref() {
@@ -243,7 +221,7 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &
   journal(world, key, "github-error", &note.to_string());
 }
 
-fn note_change(world: &mut World, change: Change) {
+pub(crate) fn note_change(world: &mut World, change: Change) {
   match change {
     Change::PrChanged { key, head, base } => {
       if let Some(issue) = world.issues.get_mut(&key) {
@@ -270,6 +248,9 @@ fn note_change(world: &mut World, change: Change) {
     Change::BaseMoved { repo, branch } => {
       let note = format!("{repo}@{branch}");
       journal(world, &note, "github-base-moved", "");
+      if let Some(head) = crate::queue::head(world, &repo) {
+        crate::logic::arm_merge(world, &head);
+      }
     }
     Change::EpicChanged { key } => {
       journal(world, &key, "github-epic-changed", "");

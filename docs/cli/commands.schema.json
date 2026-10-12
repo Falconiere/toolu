@@ -435,6 +435,52 @@
         "generated_at": { "type": "string" }
       }
     },
+    "epicQueue": {
+      "description": "toolu epic queue --json: each repository's merge queue, in merge order.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "repositories"],
+      "properties": {
+        "schema": { "const": 1 },
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["repo", "items"],
+            "properties": {
+              "repo": { "type": "string" },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["position", "key", "epic", "pr", "unblocks", "queued_at", "head", "rebase_rounds"],
+                  "properties": {
+                    "position": { "type": "integer", "minimum": 1 },
+                    "key": { "type": "string" },
+                    "epic": { "type": "string" },
+                    "pr": { "type": "integer", "minimum": 0 },
+                    "unblocks": { "type": "integer", "minimum": 0 },
+                    "queued_at": { "type": ["string", "null"] },
+                    "head": { "type": "boolean" },
+                    "rebase_rounds": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": ["engine", "worker"],
+                      "properties": {
+                        "engine": { "type": "integer", "minimum": 0 },
+                        "worker": { "type": "integer", "minimum": 0 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "epicStatus": {
       "description": "toolu epic status --json.",
       "type": "object",

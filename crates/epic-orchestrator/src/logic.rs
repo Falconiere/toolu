@@ -25,6 +25,7 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   let issue = issue_mut(world, report);
   let adopted = adopt(issue);
   report.phase.clone_into(&mut issue.phase);
+  crate::queue_fields::note_phase(issue, &report.phase, now_ms);
   issue.note = bounded_note(&report.note);
   if let Some(pr) = report.pr {
     issue.pr = Some(pr);
@@ -47,7 +48,7 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
       &report.phase,
     )),
   ];
-  if adopted {
+  if adopted || changed {
     steps.push(Step::Issue {
       key: report.key.clone(),
     });
@@ -98,11 +99,19 @@ fn issue_mut<'a>(world: &'a mut World, report: &Report) -> &'a mut Issue {
     .or_insert_with(|| Issue::blank(&report.key, &report.epic, &report.state_dir, now))
 }
 
+/// Arm the merge-queue step for `key` when it heads its repository's queue.
 pub(crate) fn arm_merge(world: &mut World, key: &str) {
   let Some(issue) = world.issues.get(key) else {
     return;
   };
-  if issue.stage != "running" || issue.pending.is_some() || issue.deferred.is_some() {
+  // `is_head` implies these stages too; checked here so a merging, merged or
+  // closed issue can never be armed whatever the queue says.
+  let live = matches!(issue.stage.as_str(), "running" | "awaiting_merge");
+  if !live
+    || issue.pending.is_some()
+    || issue.deferred.is_some()
+    || !crate::queue::is_head(world, key)
+  {
     return;
   }
   let token = token(world);
@@ -137,6 +146,7 @@ pub(crate) fn next(world: &mut World) -> Option<Step> {
   if let Some(step) = world.outbox.pop_front() {
     return Some(step);
   }
+  crate::disarm::arm(world);
   if let Some(step) = pending_step(world) {
     return Some(step);
   }

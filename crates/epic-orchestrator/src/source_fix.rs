@@ -52,6 +52,15 @@ fn write_epic(epic: &std::path::Path) -> Result<(), String> {
   Ok(())
 }
 
+/// Name `o/r` as issue `a`'s repository, so its ready report joins the merge queue.
+pub(crate) fn in_repo(fix: &Fix) -> Result<(), String> {
+  std::fs::write(
+    fix.tmp.path().join("epic").join("graph.json"),
+    r#"{"epic":"one","issues":[{"key":"a","repo":"o/r","open_blockers":[]}]}"#,
+  )
+  .map_err(|err| err.to_string())
+}
+
 pub(crate) fn fixture(with_agent: bool) -> Result<Fix, String> {
   let tmp = tempfile::tempdir().map_err(|err| err.to_string())?;
   let epic = tmp.path().join("epic");

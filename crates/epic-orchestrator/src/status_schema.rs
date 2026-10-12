@@ -88,7 +88,7 @@ pub(crate) fn render() -> String {
       endpoint.path, endpoint.purpose, endpoint.fields
     );
   }
-  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\nThe dashboard at `/` uses these same-origin endpoints. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are ready worker issues from registered epic graphs.\n");
+  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\nThe dashboard at `/` uses these same-origin endpoints. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.\n");
   out
 }
 

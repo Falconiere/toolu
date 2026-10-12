@@ -17,10 +17,10 @@ fn every_action_verb_is_listed_and_others_fall_through() {
     ]
   );
   let matches = crate::verbs::command()
-    .try_get_matches_from(["epic", "planned"])
-    .expect("planned");
+    .try_get_matches_from(["epic", "queue"])
+    .expect("queue");
   let env = Env::from_pairs([("HOME", "/tmp")]);
-  assert!(run("planned", &matches, &Ctx::default(), &env).is_none());
+  assert!(run("queue", &matches, &Ctx::default(), &env).is_none());
 }
 
 #[test]

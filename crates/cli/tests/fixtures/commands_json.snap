@@ -2970,6 +2970,29 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
+          "about": "Print the merge queue of every repository, in merge order",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Only this epic's entries",
+              "multiple": false,
+              "name": "EPIC",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "queue",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "queue"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Pause effects for every epic, or one epic",
           "aliases": [],
           "args": [
@@ -3220,22 +3243,6 @@ source: crates/cli/tests/helpers/schema.rs
             "service"
           ],
           "placeholder": false
-        },
-        {
-          "about": "Not ported yet (#448): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "epic-orchestrator",
-          "path": [
-            "epic",
-            "planned"
-          ],
-          "placeholder": true
         },
         {
           "about": "Manage the status bearer token",
