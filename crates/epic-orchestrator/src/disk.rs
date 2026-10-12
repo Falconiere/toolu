@@ -142,6 +142,20 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
   write_value(path, &Value::Object(map))
 }
 
+/// Write `issue`'s engine fields and tracker sighting to its record, unless
+/// it has nothing to record yet.
+///
+/// # Errors
+/// The record cannot be read or written.
+pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(), String> {
+  if issue.stage.is_empty() && issue.hold.is_none() && !issue.coupling_released {
+    return Ok(());
+  }
+  let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
+  write_issue_fields(&path, issue)?;
+  write_tracker_seen(&path, issue.tracker_seen, now)
+}
+
 /// Record what the engine saw of a merged issue's tracker item: when it was
 /// first seen closed, and that its one `reopened` judgment was raised.
 ///

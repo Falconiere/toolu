@@ -40,8 +40,7 @@ pub(crate) fn reply_answer(
   } else if !crate::attention::has_live(&engine.world, key) {
     Some(format!("no open attention for {key}"))
   } else {
-    engine
-      .send_prompt(key, text)
+    send_prompt(engine, key, text)
       .err()
       .map(|err| format!("worker prompt not delivered: {err}"))
   };
@@ -53,6 +52,32 @@ pub(crate) fn reply_answer(
   engine.flush()?;
   let _sent = reply.send(result_value(Ok(())));
   Ok(false)
+}
+
+/// Send `text` to `key`'s worker through herdr, or the `prompt` script,
+/// which reads `{"key","text"}`.
+///
+/// # Errors
+/// herdr fails, or the script fails or is deferred.
+pub(crate) fn send_prompt(engine: &Engine, key: &str, text: &str) -> Result<(), String> {
+  if engine.scripts.is_none() && crate::source::prompt_enabled() {
+    let target = engine
+      .world
+      .issues
+      .get(key)
+      .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
+    return crate::source::prompt(&engine.paths, &engine.env, &target, text);
+  }
+  let body = json!({"key": key, "text": text}).to_string();
+  let outcome = crate::effects::invoke(
+    engine.scripts.as_deref(),
+    crate::model::Action::Prompt,
+    &body,
+  );
+  match outcome.as_str() {
+    outcome @ ("failed" | "deferred") => Err(format!("prompt {outcome}")),
+    _ => Ok(()),
+  }
 }
 
 #[cfg(test)]

@@ -306,3 +306,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/github_engine_babysit_test.rs"]
 mod babysit_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_epic_test.rs"]
+mod epic_tests;

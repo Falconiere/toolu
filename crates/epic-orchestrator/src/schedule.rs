@@ -220,3 +220,7 @@ pub(crate) fn herdr_ok(session: Option<&str>) -> bool {
 #[cfg(test)]
 #[path = "tests/schedule_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/schedule_gone_test.rs"]
+mod gone_tests;

@@ -7,14 +7,14 @@ use std::time::SystemTime;
 use serde_json::json;
 
 use crate::commit::commit_effect;
-use crate::disk::{write_issue_fields, write_status, write_value};
+use crate::disk::{write_status, write_value};
 use crate::executor::{Call, Executor, Submitted};
 use crate::journal::{self, Record};
 use crate::logic::{apply_report, arm_ready, commit_journal, next};
 use crate::model::{Action, Report, Step, World};
 use crate::paths::Paths;
 use crate::schedule::{herdr_ok, note_herdr, on_tick, set_pause};
-use crate::snapshot::{issue_path, load, status_path};
+use crate::snapshot::{load, status_path};
 use crate::watch;
 use toolu_engine::babysit::BabysitTick;
 use toolu_github::Client;
@@ -246,7 +246,8 @@ impl Engine {
         text,
         fallback,
       } => {
-        if let (Err(err), Some(kind)) = (self.send_prompt(&key, &text), fallback) {
+        let sent = crate::attention_ops::send_prompt(self, &key, &text);
+        if let (Err(err), Some(kind)) = (sent, fallback) {
           let note = format!("worker prompt not delivered: {err}");
           crate::logic::push_attention(&mut self.world, &kind, &key, &note);
         }
@@ -273,28 +274,6 @@ impl Engine {
       }
     }
     Ok(Applied::Continue)
-  }
-
-  /// Send `text` to `key`'s worker through herdr, or the `prompt` script,
-  /// which reads `{"key","text"}`.
-  ///
-  /// # Errors
-  /// herdr fails, or the script fails or is deferred.
-  pub(crate) fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
-    if self.scripts.is_none() && crate::source::prompt_enabled() {
-      let target = self
-        .world
-        .issues
-        .get(key)
-        .map_or_else(|| key.to_owned(), |issue| issue.agent.clone());
-      let env = toolu_runtime::env::Env::process();
-      return crate::source::prompt(&self.paths, &env, &target, text);
-    }
-    let body = json!({"key": key, "text": text}).to_string();
-    match crate::effects::invoke(self.scripts.as_deref(), Action::Prompt, &body).as_str() {
-      outcome @ ("failed" | "deferred") => Err(format!("prompt {outcome}")),
-      _ => Ok(()),
-    }
   }
 
   fn apply_call(&mut self, call: Call) -> Result<Applied, String> {
@@ -370,15 +349,11 @@ impl Engine {
   }
 
   fn write_issue(&self, key: &str) -> Result<(), String> {
-    let Some(issue) = self.world.issues.get(key) else {
-      return Ok(());
-    };
-    if issue.stage.is_empty() && issue.hold.is_none() && !issue.coupling_released {
-      return Ok(());
-    }
-    let path = issue_path(&issue.state_dir, key);
-    write_issue_fields(&path, issue)?;
-    crate::disk::write_tracker_seen(&path, issue.tracker_seen, self.now)
+    self
+      .world
+      .issues
+      .get(key)
+      .map_or(Ok(()), |issue| crate::disk::write_issue(issue, self.now))
   }
 }
 
