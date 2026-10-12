@@ -189,19 +189,10 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
 #[test]
 fn an_uninstalled_plugin_stays_silent() {
   let sb = sandbox(false).unwrap();
-  assert!(
-    session_start(&sb, "register", &[])
-      .unwrap()
-      .status
-      .success()
-  );
-  let output = write(
-    &sb,
-    "src/lib.rs",
-    concat!("#[", "allow(x)]\nfn a() {}\n"),
-    &[],
-  )
-  .unwrap();
+  let registered = session_start(&sb, "register", &[]).unwrap();
+  assert!(registered.status.success(), "{registered:?}");
+  let bad = concat!("#[", "allow(x)]\nfn a() {}\n");
+  let output = write(&sb, "src/lib.rs", bad, &[]).unwrap();
   assert!(output.status.success(), "{output:?}");
   assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
 }
@@ -209,12 +200,8 @@ fn an_uninstalled_plugin_stays_silent() {
 #[test]
 fn non_rust_edits_spawn_no_tool() {
   let sb = sandbox(true).unwrap();
-  assert!(
-    session_start(&sb, "register", &[])
-      .unwrap()
-      .status
-      .success()
-  );
+  let registered = session_start(&sb, "register", &[]).unwrap();
+  assert!(registered.status.success(), "{registered:?}");
   let stubs = sb.home.join("stubs");
   fs::create_dir_all(&stubs).unwrap();
   let log = sb.home.join("spawned.log");
