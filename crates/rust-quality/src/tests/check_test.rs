@@ -169,3 +169,33 @@ fn it_fails_closed_without_ast_grep_or_a_repository() {
   let empty = check(&env, Host::Claude, dir.path(), &["missing/".to_owned()]).unwrap();
   assert_eq!(empty, Report::default(), "a path with no files is clean");
 }
+
+#[test]
+fn only_files_under_the_paths_that_still_exist_are_checked() {
+  let (dir, env) = repo(&[
+    ("crates/demo/src/kept.rs", "//! Kept.\n".to_owned()),
+    ("crates/demo/src/gone.rs", over_limit()),
+    ("tools/outside.rs", over_limit()),
+    (".claude/toolu.config.json", CAPPED.to_owned()),
+  ]);
+  let git = |args: &[&str]| {
+    let status = Command::new("git")
+      .args(["-c", "user.name=t", "-c", "user.email=t@t", "-C"])
+      .arg(dir.path())
+      .args(args)
+      .status()
+      .unwrap();
+    assert!(status.success(), "git {args:?}");
+  };
+  git(&["add", "-A"]);
+  git(&["commit", "-q", "-m", "init"]);
+  std::fs::remove_file(dir.path().join("crates/demo/src/gone.rs")).unwrap();
+  let report = check(&env, Host::Claude, dir.path(), &["crates".to_owned()]).unwrap();
+  assert_eq!(
+    report,
+    Report {
+      files: 1,
+      findings: Vec::new()
+    }
+  );
+}

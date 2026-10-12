@@ -239,7 +239,11 @@ fn rs_file<'a>(
 
 fn check_files(paths: &[String], top: &Path, ctx: &RuleContext<'_>) -> Report {
   let limits = limits(ctx);
-  let loaded: Vec<Loaded> = paths.iter().map(|path| load(path, top)).collect();
+  let loaded: Vec<Loaded> = paths
+    .iter()
+    .filter(|path| top.join(path).exists())
+    .map(|path| load(path, top))
+    .collect();
   let mut error_jobs = Vec::new();
   let mut mock_jobs = Vec::new();
   for (at, one) in loaded.iter().enumerate() {

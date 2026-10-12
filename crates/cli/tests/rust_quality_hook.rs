@@ -142,8 +142,13 @@ fn listing(dir: &Path) -> Res<Vec<String>> {
 fn registry_check(sb: &Sandbox) -> Res<Value> {
   let doctor = run(sb, &["--json", "doctor"], &[], "")?;
   let document: Value = serde_json::from_slice(&doctor.stdout)?;
-  let checks = document["checks"].as_array().ok_or("no checks")?;
-  let registry = checks.iter().find(|check| check["id"] == "registry");
+  let checks = document
+    .get("checks")
+    .and_then(Value::as_array)
+    .ok_or("no checks")?;
+  let registry = checks
+    .iter()
+    .find(|check| check.get("id").and_then(Value::as_str) == Some("registry"));
   Ok(registry.ok_or("no registry check")?.clone())
 }
 
@@ -278,9 +283,10 @@ fn check_toolu_warns_on_codex_without_the_core() {
 #[test]
 fn check_runs_the_blocking_rules_over_a_repository() {
   let sb = sandbox(true).unwrap();
-  let over: String = (0..320)
+  let over = (0..320)
     .map(|at| format!("const A{at}: u32 = {at};\n"))
-    .collect();
+    .collect::<Vec<_>>()
+    .concat();
   fs::create_dir_all(sb.project.join("crates/demo/src")).unwrap();
   fs::write(sb.project.join("crates/demo/src/over.rs"), &over).unwrap();
   let fits = run(&sb, &["rust-quality", "check", "crates"], &[], "").unwrap();
