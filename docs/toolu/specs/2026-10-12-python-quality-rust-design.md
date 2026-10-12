@@ -62,7 +62,7 @@ python-quality's Python checks run as a Bun bundle (`plugins/python-quality/hook
 - **AC-8:** `cargo xtask gate` passes with no exemption.
 - **AC-9:** On OpenCode, a selected python-quality registered by the built `toolu` makes the adapter's post-tool dispatch report a violation and a gate entry for a violating `.py` write, and nothing for an unselected plugin; the bootstrap verifies the `native-registry` record.
 - **AC-10:** With python-quality's manifest registered in a real config dir, `toolu doctor --json` reports no `registry` finding for it.
-- **AC-11:** `toolu python-quality hook check-toolu` on Codex with python-quality installed and `toolu@toolu` missing from `codex plugin list --json` prints the core-missing `systemMessage` and exits 0; with the core installed, or on Claude Code, it prints nothing.
+- **AC-11:** `toolu python-quality hook check-toolu` on Codex with python-quality installed and `toolu@toolu` missing from `codex plugin list --json` prints the core-missing `additionalContext` notice (`WARN: this plugin requires the toolu core. …`) and exits 0; with the core installed, or on Claude Code, it prints nothing.
 
 ## Acceptance evidence
 
