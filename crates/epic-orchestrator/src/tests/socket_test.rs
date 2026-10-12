@@ -41,6 +41,7 @@ fn serve_until_stopped(paths: Paths, protocol: u64) {
       ServeOptions {
         http: None,
         tick: &(),
+        attention: crate::notify::AttentionOptions::default(),
       },
     )
   });
@@ -50,6 +51,15 @@ fn serve_until_stopped(paths: Paths, protocol: u64) {
 fn stop(paths: &Paths, protocol: u64) {
   let stopped = exchange_retry(paths, protocol, &json!({"op": "stop"})).expect("stop");
   assert_eq!(stopped["ok"], true);
+}
+
+fn settle(done: impl Fn() -> bool) {
+  for _ in 0..500 {
+    if done() {
+      return;
+    }
+    thread::sleep(Duration::from_millis(20));
+  }
 }
 
 fn phase_count(paths: &Paths) -> usize {
@@ -89,14 +99,10 @@ fn protocol_replace() {
   let second = paths.clone();
   let newer = thread::spawn(move || serve_until_stopped(second, 2));
   let status = epic.join("status").join("a.json");
-  for _ in 0..50 {
-    if status.is_file() {
-      break;
-    }
-    thread::sleep(Duration::from_millis(20));
-  }
+  settle(|| status.is_file() && !spool.is_file() && phase_count(&paths) > 0);
   let text = std::fs::read_to_string(&status).expect("status");
   assert!(text.contains("\"phase\":\"running\""), "{text}");
+  assert!(!spool.is_file(), "spooled t9.json left behind");
   assert_eq!(phase_count(&paths), 1);
   stop(&paths, 2);
   newer.join().expect("new engine");
@@ -114,6 +120,7 @@ fn spool_survives() {
       ServeOptions {
         http: None,
         tick: &(),
+        attention: crate::notify::AttentionOptions::default(),
       },
     );
     return;
@@ -165,23 +172,12 @@ fn assert_restart(paths: &Paths, epic: &std::path::Path) {
   let background = paths.clone();
   let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
   let status = epic.join("status").join("a.json");
-  for _ in 0..50 {
-    if status.is_file() {
-      break;
-    }
-    thread::sleep(Duration::from_millis(20));
-  }
+  let spool = paths.spool().join("t8.json");
+  settle(|| status.is_file() && !spool.is_file() && phase_count(paths) > 0);
   let text = std::fs::read_to_string(&status).expect("applied");
   assert!(text.contains("\"phase\":\"blocked\""), "{text}");
-  assert_eq!(phase_count(paths), 1);
-  let spool = paths.spool().join("t8.json");
-  for _ in 0..50 {
-    if !spool.is_file() {
-      break;
-    }
-    thread::sleep(Duration::from_millis(20));
-  }
   assert!(!spool.is_file(), "spooled t8.json left behind");
+  assert_eq!(phase_count(paths), 1);
   stop(paths, PROTOCOL);
   handle.join().expect("restart");
 }
@@ -200,7 +196,9 @@ fn a_panic_in_the_state_loop_sets_the_accept_stop_flag() {
 #[test]
 fn poisoned_snapshot_publish_returns_error() {
   let root = tempfile::tempdir().expect("root");
-  let engine = super::open_engine(Paths::at(root.path()), None, Fault::None).expect("engine");
+  let quiet = crate::notify::AttentionOptions::default();
+  let engine =
+    super::open_engine(Paths::at(root.path()), None, Fault::None, quiet).expect("engine");
   let shared = Mutex::new(World::new(0));
   let _poisoned = std::panic::catch_unwind(|| {
     let _guard = shared.lock().expect("shared lock");
@@ -214,7 +212,7 @@ fn poisoned_snapshot_publish_returns_error() {
 }
 
 fn wait_socket(paths: &Paths, log: &std::path::Path) -> std::os::unix::net::UnixStream {
-  for _ in 0..100 {
+  for _ in 0..500 {
     if let Ok(stream) = std::os::unix::net::UnixStream::connect(paths.socket()) {
       return stream;
     }

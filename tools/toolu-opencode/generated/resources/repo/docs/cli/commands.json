@@ -2990,7 +2990,7 @@
           "placeholder": false
         },
         {
-          "about": "Clear a stall attention item",
+          "about": "Acknowledge an issue's attention items, or a keyless one by kind",
           "aliases": [],
           "args": [
             {
@@ -3013,7 +3013,7 @@
           "placeholder": false
         },
         {
-          "about": "Record an answer on the journal for one issue",
+          "about": "Send an answer to an issue's worker and mark its attention answered",
           "aliases": [],
           "args": [
             {
@@ -3030,7 +3030,19 @@
             }
           ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Who answered; defaults to the --host name, else user",
+              "hidden": false,
+              "long": "by",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            }
+          ],
           "hidden": false,
           "longAbout": null,
           "name": "answer",

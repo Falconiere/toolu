@@ -26,6 +26,10 @@ pub struct EpicSettings {
   pub http_port: u16,
   /// Whether outgoing attention notifications are enabled.
   pub attention_enabled: bool,
+  /// Whether attention items show a herdr notification.
+  pub attention_herdr: bool,
+  /// Minutes an open attention item waits before its first reminder.
+  pub remind_after_minutes: u64,
   /// Read-only peer engines.
   pub peers: Vec<Peer>,
 }
@@ -120,13 +124,35 @@ fn parse_bind(http: Option<&Map<String, Value>>) -> Result<String, EpicError> {
     .ok_or_else(|| bad("epic.http.bind", "expected a nonempty string"))
 }
 
-fn parse_attention(attention: Option<&Map<String, Value>>) -> Result<bool, EpicError> {
-  let Some(value) = attention.and_then(|attention| attention.get("enabled")) else {
-    return Ok(false);
+fn attention_flag(
+  attention: Option<&Map<String, Value>>,
+  key: &str,
+  default: bool,
+) -> Result<bool, EpicError> {
+  let Some(value) = attention.and_then(|attention| attention.get(key)) else {
+    return Ok(default);
   };
   value
     .as_bool()
-    .ok_or_else(|| bad("epic.attention.enabled", "expected a boolean"))
+    .ok_or_else(|| bad(format!("epic.attention.{key}"), "expected a boolean"))
+}
+
+/// One week, the longest first-reminder delay.
+const MAX_REMIND_MINUTES: u64 = 7 * 24 * 60;
+
+fn parse_remind(attention: Option<&Map<String, Value>>) -> Result<u64, EpicError> {
+  let Some(value) = attention.and_then(|attention| attention.get("remind_after_minutes")) else {
+    return Ok(30);
+  };
+  value
+    .as_u64()
+    .filter(|minutes| (1..=MAX_REMIND_MINUTES).contains(minutes))
+    .ok_or_else(|| {
+      bad(
+        "epic.attention.remind_after_minutes",
+        "expected an integer from 1 to 10080",
+      )
+    })
 }
 
 fn peer_url(value: &Value, path: &str) -> Result<String, EpicError> {
@@ -194,6 +220,8 @@ pub fn parse(config: &LoadedConfig) -> Result<EpicSettings, EpicError> {
       http_bind: "127.0.0.1".to_owned(),
       http_port: 7717,
       attention_enabled: false,
+      attention_herdr: true,
+      remind_after_minutes: 30,
       peers: Vec::new(),
     });
   };
@@ -206,7 +234,9 @@ pub fn parse(config: &LoadedConfig) -> Result<EpicSettings, EpicError> {
   Ok(EpicSettings {
     http_bind: parse_bind(http)?,
     http_port: parse_port(http)?,
-    attention_enabled: parse_attention(attention)?,
+    attention_enabled: attention_flag(attention, "enabled", false)?,
+    attention_herdr: attention_flag(attention, "herdr", true)?,
+    remind_after_minutes: parse_remind(attention)?,
     peers: parse_peers(epic)?,
   })
 }

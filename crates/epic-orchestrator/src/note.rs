@@ -28,6 +28,29 @@ pub(crate) fn bounded_note(note: &str) -> String {
   flat.chars().take(NOTE_CAP).collect()
 }
 
+/// Screen lines a blocked agent shows.
+const SCREEN_LINES: usize = 10;
+
+/// The last [`SCREEN_LINES`] non-empty lines of `tail`, newline-separated and
+/// capped at [`NOTE_CAP`] from the end. A recognized token prefix makes the
+/// whole text `[redacted]`.
+pub(crate) fn screen_lines(tail: &str) -> String {
+  let mut lines: Vec<&str> = tail
+    .lines()
+    .map(str::trim_end)
+    .filter(|line| !line.trim().is_empty())
+    .rev()
+    .take(SCREEN_LINES)
+    .collect();
+  lines.reverse();
+  let text = lines.join("\n");
+  if PREFIXES.iter().any(|prefix| text.contains(prefix)) {
+    return "[redacted]".to_owned();
+  }
+  let skip = text.chars().count().saturating_sub(NOTE_CAP);
+  text.chars().skip(skip).collect()
+}
+
 #[cfg(test)]
 #[path = "tests/note_test.rs"]
 mod tests;

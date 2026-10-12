@@ -28,6 +28,8 @@ pub(crate) enum Step {
     text: String,
     fallback: Option<String>,
   },
+  /// Announce the attention item `token` to the notifier.
+  Notify { token: String, reminder: bool },
 }
 
 /// An effect the scripts or a later issue perform.
@@ -61,7 +63,29 @@ impl Action {
   }
 }
 
-/// A judgment `wait` may return.
+/// Where a live attention item stands with its human.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Ack {
+  /// Nobody has answered or acknowledged it.
+  Open,
+  /// `toolu epic ack` saw it; reminders stop.
+  Acknowledged,
+  /// `toolu epic answer` reached the worker.
+  Answered,
+}
+
+impl Ack {
+  /// Document and journal name.
+  pub(crate) fn name(self) -> &'static str {
+    match self {
+      Self::Open => "open",
+      Self::Acknowledged => "acknowledged",
+      Self::Answered => "answered",
+    }
+  }
+}
+
+/// A judgment `wait` may return. It stays queued until a report closes it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Attention {
   /// Local sequence.
@@ -76,6 +100,18 @@ pub(crate) struct Attention {
   pub note: String,
   /// Already given to a waiter.
   pub delivered: bool,
+  /// Stable item token, `a<raised_ms>-<seq>`.
+  pub token: String,
+  /// When it was raised, milliseconds.
+  pub raised_ms: u64,
+  /// Open, acknowledged or answered.
+  pub state: Ack,
+  /// When it was last announced, milliseconds.
+  pub announced_ms: u64,
+  /// Reminders sent so far.
+  pub reminders: u32,
+  /// Redacted screen lines of a blocked agent, for `wait` only.
+  pub pending: Option<String>,
 }
 
 /// An action waiting to be journaled or run.
@@ -176,6 +212,8 @@ pub(crate) struct World {
   pub graphql_points: u64,
   /// Judgment queue.
   pub attention: Vec<Attention>,
+  /// First reminder delay for an open attention item.
+  pub remind_ms: u64,
   /// Local counter for tokens and attention.
   pub seq: u64,
   /// Pause every epic.
@@ -227,6 +265,8 @@ pub(crate) struct Report {
 
 const STALL_MS: u64 = 45 * 60 * 1000;
 const BABYSIT_STALL_MS: u64 = 120 * 60 * 1000;
+/// Default first reminder delay, `epic.attention.remind_after_minutes`.
+pub(crate) const REMIND_MS: u64 = 30 * 60 * 1000;
 /// Checkpoint period. Tests and the watcher read this.
 pub(crate) const CHECKPOINT_MS: u64 = 15 * 60 * 1000;
 
@@ -244,6 +284,7 @@ impl World {
       rest_points: 0,
       graphql_points: 0,
       attention: Vec::new(),
+      remind_ms: REMIND_MS,
       seq: 0,
       paused_all: false,
       draining: false,

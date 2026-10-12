@@ -10,6 +10,7 @@ pub(crate) fn observe(world: &mut World, record: &Record) {
   if record.kind == "judgment" && record.name == "dependency-cycle" {
     world.cycle = Cycle::Sent;
   }
+  crate::attention::observe(world, record);
   let Some(action) = action_of(&record.name) else {
     return;
   };

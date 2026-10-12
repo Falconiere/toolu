@@ -14,4 +14,16 @@ fn argv_names_every_control_verb() {
   assert!(joined[3].contains("worktree create --cwd /work --branch feat --base main"));
   assert!(joined[3].contains("--workspace w1"));
   assert!(joined[4].ends_with("worktree remove --workspace w1 --force"));
+  assert_eq!(
+    calls[5].argv(&env)[3..],
+    [
+      "notification",
+      "show",
+      "toolu epic: a needs-human",
+      "--body",
+      "which one?",
+      "--sound",
+      "request"
+    ]
+  );
 }

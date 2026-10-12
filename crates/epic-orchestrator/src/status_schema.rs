@@ -61,8 +61,8 @@ const ENDPOINTS: &[Endpoint] = &[
   },
   Endpoint {
     path: "/api/v1/attention",
-    fields: "items (kind, key, epic, note, seq, age_ms)",
-    purpose: "Open attention",
+    fields: "items (kind, key, epic, note, seq, state, age_ms)",
+    purpose: "Live attention",
   },
   Endpoint {
     path: "/api/v1/events",

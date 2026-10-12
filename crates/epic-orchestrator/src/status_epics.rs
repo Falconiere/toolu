@@ -56,7 +56,7 @@ fn summary(world: &World, key: &str) -> Value {
   let attention = world
     .attention
     .iter()
-    .filter(|item| item.epic == key && !item.delivered)
+    .filter(|item| item.epic == key)
     .count();
   json!({
     "key": key,

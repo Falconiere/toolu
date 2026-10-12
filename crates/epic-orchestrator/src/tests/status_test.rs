@@ -1,6 +1,6 @@
 use super::document;
 use crate::logic::ensure_issue;
-use crate::model::{Attention, World};
+use crate::model::World;
 use crate::watch::{Kind, Watch};
 use toolu_github::RateLimit;
 
@@ -25,10 +25,9 @@ fn one_epic_keeps_its_issues_and_open_attention() {
     issue.stage = "running".to_owned();
   }
   ensure_issue(&mut world, "b", "falconiere-toolu-402", "/other");
-  world.attention.push(item("a", "one", false));
-  world
-    .attention
-    .push(item("b", "falconiere-toolu-402", true));
+  let _a = crate::attention::raise(&mut world, "stall", "a", "n");
+  let _b = crate::attention::raise(&mut world, "stall", "b", "n");
+  world.attention[1].delivered = true;
   let doc = document(&world, true, Some("one"));
   assert_eq!(doc["engine"], "running");
   assert_eq!(doc["paused"], true);
@@ -75,13 +74,20 @@ fn status_shows_separate_github_budgets_and_pr_deadlines() {
   assert_eq!(doc["issues"][0]["github"]["nextCheckAt"], 360_000);
 }
 
-fn item(key: &str, epic: &str, delivered: bool) -> Attention {
-  Attention {
-    seq: 1,
-    kind: "stall".to_owned(),
-    key: key.to_owned(),
-    epic: epic.to_owned(),
-    note: "n".to_owned(),
-    delivered,
-  }
+#[test]
+fn every_live_item_is_listed_with_state_and_age_and_wait_adds_pending() {
+  let mut world = World::new(1_000);
+  let token = crate::attention::raise(&mut world, "blocked", "a", "blocked");
+  crate::attention::set_pending(&mut world, &token, "Allow? (y/n)".to_owned());
+  world.now_ms = 4_000;
+  let waited = super::wait_body(&mut world, 0);
+  assert_eq!(waited["kind"], "blocked");
+  assert_eq!(waited["state"], "open");
+  assert_eq!(waited["age_ms"], 3_000);
+  assert_eq!(waited["pending"], "Allow? (y/n)");
+  assert_eq!(super::wait_body(&mut world, 0)["state"], "waiting");
+  let doc = document(&world, true, None);
+  assert_eq!(doc["attention"][0]["key"], "a");
+  assert_eq!(doc["attention"][0]["age_ms"], 3_000);
+  assert!(!doc.to_string().contains("Allow?"));
 }

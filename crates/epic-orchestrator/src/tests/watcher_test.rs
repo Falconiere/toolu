@@ -80,6 +80,7 @@ fn assert_busy(root: &std::path::Path) {
       ServeOptions {
         http: None,
         tick: &(),
+        attention: crate::notify::AttentionOptions::default(),
       },
     )
   });
@@ -99,6 +100,7 @@ fn assert_busy(root: &std::path::Path) {
     ServeOptions {
       http: None,
       tick: &(),
+      attention: crate::notify::AttentionOptions::default(),
     },
   )
   .expect_err("second");

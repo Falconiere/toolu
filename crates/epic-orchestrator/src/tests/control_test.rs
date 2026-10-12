@@ -4,7 +4,10 @@ use clap::{Arg, Command};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
 
-use super::{engine, ensure, epic_key, fault_of, http_config, register, registry_nonempty, start};
+use super::{
+  attention_options, engine, ensure, epic_key, fault_of, http_config, register, registry_nonempty,
+  start,
+};
 use crate::disk::read_value;
 use crate::paths::Paths;
 use crate::server::Fault;
@@ -181,4 +184,31 @@ fn env_at(tmp: &Path) -> Env {
   let root = tmp.join("resources");
   std::fs::create_dir_all(&root).expect("root");
   Env::from_pairs([("TOOLU_RESOURCE_HOME", root.display().to_string())])
+}
+
+#[test]
+fn attention_options_follow_the_epic_attention_settings() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let config = tmp.path().join("config");
+  let env = |config: &Path| {
+    Env::from_pairs([
+      ("HOME", tmp.path().display().to_string()),
+      ("TOOLU_CONFIG_DIR", config.display().to_string()),
+    ])
+  };
+  let quiet = attention_options(&env(&config), None).expect("defaults");
+  assert_eq!(quiet.remind_ms, 30 * 60_000);
+  assert!(quiet.notify.is_none());
+  std::fs::create_dir_all(&config).expect("config dir");
+  let body = r#"{"version":1,"epic":{"attention":{"enabled":true,"remind_after_minutes":5}}}"#;
+  std::fs::write(config.join("toolu.config.json"), body).expect("config");
+  let http = crate::http::Config {
+    addr: "0.0.0.0:7800".parse().expect("addr"),
+    secrets: toolu_runtime::config::secrets::Secrets::none(),
+  };
+  let options = attention_options(&env(&config), Some(&http)).expect("configured");
+  assert_eq!(options.remind_ms, 5 * 60_000);
+  let notify = options.notify.expect("notifier");
+  assert_eq!((notify.post, notify.herdr), (true, false));
+  assert_eq!(notify.dashboard.as_deref(), Some("http://127.0.0.1:7800/"));
 }

@@ -9,6 +9,7 @@ use toolu_state::time::iso_seconds;
 
 use crate::disk::{read_value, write_value};
 use crate::model::World;
+use crate::note::screen_lines;
 use crate::paths::Paths;
 use crate::schedule::note_event;
 use crate::server::Engine;
@@ -70,7 +71,7 @@ pub(crate) fn on_status(
     return Ok(());
   }
   if status == "blocked" {
-    mark_blocked(engine, key);
+    mark_blocked(engine, key, tail);
   } else if let Some(issue) = engine.world.issues.get_mut(key) {
     issue.blocked = false;
   }
@@ -102,7 +103,8 @@ fn parked(engine: &Engine, key: &str) -> bool {
     .is_some_and(|issue| matches!(issue.phase.as_str(), "ready" | "needs-human"))
 }
 
-fn mark_blocked(engine: &mut Engine, key: &str) {
+/// Raise `blocked` once per blocked spell, keeping the screen tail for `wait`.
+fn mark_blocked(engine: &mut Engine, key: &str, tail: &str) {
   let already = engine
     .world
     .issues
@@ -114,7 +116,8 @@ fn mark_blocked(engine: &mut Engine, key: &str) {
   if let Some(issue) = engine.world.issues.get_mut(key) {
     issue.blocked = true;
   }
-  note_event(&mut engine.world, key, "blocked");
+  let token = crate::attention::reraise(&mut engine.world, "blocked", key, "blocked");
+  crate::attention::set_pending(&mut engine.world, &token, screen_lines(tail));
 }
 
 fn rate_limited(note: &str) -> bool {

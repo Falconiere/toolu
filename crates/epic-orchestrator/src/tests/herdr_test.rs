@@ -59,7 +59,7 @@ fn herdr_control() {
   let methods = tmp.path().join("methods.log");
   let listener = UnixListener::bind(&sock).expect("bind");
   let record = methods.clone();
-  let peer = thread::spawn(move || answer(&listener, 22, 5, &record));
+  let peer = thread::spawn(move || answer(&listener, 22, 6, &record));
   let env = herdr_env(&sock, &bin, None);
   let mut client = Client::new();
   for call in calls() {
@@ -73,13 +73,14 @@ fn herdr_control() {
     "agent.read",
     "worktree.create",
     "worktree.remove",
+    "notification.show",
   ] {
     assert!(seen.contains(method), "{seen}");
   }
   assert_eq!(std::fs::read_to_string(&log).unwrap_or_default(), "");
 }
 
-fn calls() -> [Call; 5] {
+fn calls() -> [Call; 6] {
   crate::herdr_argv::sample_calls()
 }
 

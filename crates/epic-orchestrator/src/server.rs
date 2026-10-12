@@ -63,6 +63,8 @@ pub(crate) struct Engine {
   pub resubscribe: bool,
   /// Shared GitHub client, created only when a watch first becomes due.
   pub(crate) github: Option<Client>,
+  /// The attention notifier thread, when notifications are on.
+  pub(crate) notifier: Option<crate::notify::Notifier>,
 }
 
 impl Engine {
@@ -83,6 +85,7 @@ impl Engine {
       now,
       resubscribe: false,
       github: None,
+      notifier: None,
     })
   }
 
@@ -227,6 +230,10 @@ impl Engine {
         }
         Ok(Applied::Continue)
       }
+      Step::Notify { token, reminder } => {
+        crate::notify::announce(self, &token, reminder);
+        Ok(Applied::Continue)
+      }
     }
   }
 
@@ -251,7 +258,7 @@ impl Engine {
   ///
   /// # Errors
   /// herdr fails, or the script fails or is deferred.
-  fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
+  pub(crate) fn send_prompt(&self, key: &str, text: &str) -> Result<(), String> {
     if self.scripts.is_none() && crate::source::prompt_enabled() {
       let target = self
         .world

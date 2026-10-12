@@ -13,6 +13,14 @@ use crate::client::exchange_retry;
 use crate::server::Fault;
 use crate::socket::{ServeOptions, serve_with_http as serve};
 
+fn quiet() -> ServeOptions<'static> {
+  ServeOptions {
+    http: None,
+    tick: &(),
+    attention: crate::notify::AttentionOptions::default(),
+  }
+}
+
 #[test]
 fn report_spool_order() {
   let tmp = tempfile::tempdir().expect("temp");
@@ -22,18 +30,7 @@ fn report_spool_order() {
   assert_eq!(send_phase(&env, "brainstorm", &path).exit, Exit::Success);
   assert_eq!(send_phase(&env, "spec", &path).exit, Exit::Success);
   let background = paths.clone();
-  let handle = thread::spawn(move || {
-    serve(
-      background,
-      None,
-      Fault::None,
-      PROTOCOL,
-      ServeOptions {
-        http: None,
-        tick: &(),
-      },
-    )
-  });
+  let handle = thread::spawn(move || serve(background, None, Fault::None, PROTOCOL, quiet()));
   wait_live(&paths);
   let rows = wait_phases(&paths);
   let phases: Vec<_> = rows

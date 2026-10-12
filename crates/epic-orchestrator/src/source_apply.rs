@@ -114,7 +114,7 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
     return Ok(());
   };
   let status = field(line, "agent_status").unwrap_or("unknown");
-  if status == "working" || scan_done(engine, &key, status) {
+  if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");
   }
   on_status(engine, &key, status, &read_tail(engine, env, &key))

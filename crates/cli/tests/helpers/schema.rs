@@ -87,6 +87,21 @@ fn every_other_json_document_validates_against_its_definition() {
 }
 
 #[test]
+fn a_wait_judgment_validates_and_an_unknown_state_does_not() {
+  let mut judgment = json!({"kind": "blocked", "key": "a", "epic": "one", "note": "blocked",
+    "seq": 1, "state": "open", "age_ms": 0, "pending": "Proceed? (y/n)"});
+  assert_eq!(
+    violations(&judgment, Some("epicJudgment")).unwrap(),
+    Vec::<String>::new()
+  );
+  judgment["state"] = json!("closed");
+  assert_ne!(
+    violations(&judgment, Some("epicJudgment")).unwrap(),
+    Vec::<String>::new()
+  );
+}
+
+#[test]
 fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {

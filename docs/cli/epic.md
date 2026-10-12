@@ -21,8 +21,8 @@ Commands:
   status   Print the engine, issues and attention
   pause    Pause effects for every epic, or one epic
   resume   Resume effects for every epic, or one epic
-  ack      Clear a stall attention item
-  answer   Record an answer on the journal for one issue
+  ack      Acknowledge an issue's attention items, or a keyless one by kind
+  answer   Send an answer to an issue's worker and mark its attention answered
   wait     Wait for a judgment, or return when the limit passes
   report   Record a worker phase
   job      Run a command under the worktree's resource lease
@@ -150,7 +150,7 @@ Options:
 ## `toolu epic ack`
 
 ```text
-Clear a stall attention item
+Acknowledge an issue's attention items, or a keyless one by kind
 
 Usage: toolu epic ack [OPTIONS] <KEY>
 
@@ -168,7 +168,7 @@ Options:
 ## `toolu epic answer`
 
 ```text
-Record an answer on the journal for one issue
+Send an answer to an issue's worker and mark its attention answered
 
 Usage: toolu epic answer [OPTIONS] <KEY> <TEXT>
 
@@ -177,6 +177,7 @@ Arguments:
   <TEXT>  The answer
 
 Options:
+      --by <NAME>         Who answered; defaults to the --host name, else user
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]

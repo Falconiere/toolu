@@ -31,6 +31,15 @@ impl Call {
       ]),
       Self::Create { .. } => create_argv(&mut argv, self),
       Self::Remove { .. } => remove_argv(&mut argv, self),
+      Self::Notify { title, body } => argv.extend([
+        "notification".into(),
+        "show".into(),
+        title.clone(),
+        "--body".into(),
+        body.clone(),
+        "--sound".into(),
+        "request".into(),
+      ]),
     }
     argv
   }
@@ -122,8 +131,8 @@ fn push_flag(argv: &mut Vec<String>, flag: &str, value: Option<&str>) {
   }
 }
 
-/// The five control calls the socket and CLI tests share.
-pub(crate) fn sample_calls() -> [Call; 5] {
+/// The six control calls the socket and CLI tests share.
+pub(crate) fn sample_calls() -> [Call; 6] {
   [
     Call::Start {
       name: "a".into(),
@@ -148,6 +157,10 @@ pub(crate) fn sample_calls() -> [Call; 5] {
     Call::Remove {
       workspace_id: "w1".into(),
       force: true,
+    },
+    Call::Notify {
+      title: "toolu epic: a needs-human".into(),
+      body: "which one?".into(),
     },
   ]
 }

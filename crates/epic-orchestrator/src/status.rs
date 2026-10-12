@@ -2,8 +2,8 @@
 
 use serde_json::{Value, json};
 
+use crate::attention;
 use crate::model::{Attention, Issue, World};
-use crate::schedule::take_judgment;
 
 /// One status document. `epic` keeps issues for that epic key when set.
 pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Value {
@@ -33,13 +33,12 @@ pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Valu
       "stage": issue.stage,
       "github": pr_times(world, issue),
     })).collect::<Vec<_>>(),
-    "attention": world.attention.iter().filter(|item| !item.delivered).map(|item| json!({
-      "kind": item.kind,
-      "key": item.key,
-      "epic": item.epic,
-      "note": item.note,
-      "seq": item.seq,
-    })).collect::<Vec<_>>(),
+    "attention": world
+      .attention
+      .iter()
+      .filter(|item| wanted_epic(epic, &item.epic))
+      .map(|item| attention::document(item, world.now_ms))
+      .collect::<Vec<_>>(),
   })
 }
 
@@ -55,9 +54,13 @@ fn pr_times(world: &World, issue: &Issue) -> Value {
 }
 
 fn wanted(epic: Option<&str>, issue: &Issue) -> bool {
+  wanted_epic(epic, &issue.epic)
+}
+
+fn wanted_epic(epic: Option<&str>, key: &str) -> bool {
   match epic {
     None => true,
-    Some(epic) => issue.epic == epic || issue.epic.ends_with(&format!("-{epic}")),
+    Some(epic) => key == epic || key.ends_with(&format!("-{epic}")),
   }
 }
 
@@ -74,20 +77,19 @@ fn epic_keys(issues: &[&Issue]) -> Vec<Value> {
 
 /// `wait` when a judgment is already queued, otherwise the timeout body.
 pub(crate) fn wait_body(world: &mut World, max_seconds: u64) -> Value {
-  match take_judgment(world) {
-    Some(item) => attention_value(&item),
+  match attention::take(world) {
+    Some(item) => judgment(&item, world.now_ms),
     None => waiting(max_seconds),
   }
 }
 
-fn attention_value(item: &Attention) -> Value {
-  json!({
-    "kind": item.kind,
-    "key": item.key,
-    "epic": item.epic,
-    "note": item.note,
-    "seq": item.seq,
-  })
+/// The `wait` document: the public fields, plus a blocked agent's screen text.
+fn judgment(item: &Attention, now_ms: u64) -> Value {
+  let mut value = attention::document(item, now_ms);
+  if let (Some(pending), Some(map)) = (&item.pending, value.as_object_mut()) {
+    let _previous = map.insert("pending".to_owned(), json!(pending));
+  }
+  value
 }
 
 fn waiting(_max_seconds: u64) -> Value {

@@ -295,6 +295,7 @@ fn live_fixture(
           secrets: Secrets::none(),
         }),
         tick: &(),
+        attention: crate::notify::AttentionOptions::default(),
       },
     )
   });

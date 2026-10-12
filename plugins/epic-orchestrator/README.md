@@ -103,14 +103,30 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `start <state-dir>` | Register that epic directory and ensure the engine. |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
-| `ack <key>` | Clear a stall attention item. |
-| `answer <key> <text>` | Record an answer on the journal. |
-| `wait [--max-seconds N]` | Block until a judgment, or print `{"state":"waiting"}`. |
+| `ack <key>` | Acknowledge the key's attention items (a keyless one by kind) and stop their reminders. |
+| `answer <key> <text> [--by NAME]` | Send the text to the worker's prompt, then mark its items answered. Fails when no item is live or the prompt is not delivered. |
+| `wait [--max-seconds N]` | Block until a judgment, or print `{"state":"waiting"}`. A `blocked` judgment carries the agent's screen as `pending`. |
 | `report <phase> --status-file <file> [--pr N] [--note TEXT]` | Update one issue. Ensures the engine when the registry is non-empty. |
 | `job <argv...>` | Run a command under the worktree's resource lease. The engine stays stopped. |
 | `service install` | Write the user unit. It does not start systemd. |
 | `token new` | Rotate the status bearer token in secrets.json. |
 | `planned` | Lists `graph`, `route`, `launch`, `finish`, `close`, `release`, `jira`, `probe`, `gate`, and `queue` (#435, #448). |
+
+### Attention
+
+Judgment events (`needs-human`, `failed`, `blocked`, `stall`, `babysit`, …)
+become attention items. Each item is `open`, `acknowledged` or `answered`, and
+the key's next worker report closes it. A returning stall or a new blocked spell
+reopens a seen item. `toolu epic status`, `/api/v1/attention`
+and the dashboard list every live item with its state and age. Items survive a
+restart through the journal.
+
+A new item shows a herdr notification (`epic.attention.herdr`, default on) and,
+when `epic.attention.enabled` is true and `secrets.json` has a `notify_url`,
+POSTs a JSON body with `text` to that URL: up to five attempts, retrying
+timeouts, 429 and 5xx. An open item is announced again after
+`epic.attention.remind_after_minutes` (default 30), then hourly. Every delivery
+is journaled as `notify`, `notify-failed` or `notify-dropped`.
 
 ### Fixed GitHub checks
 

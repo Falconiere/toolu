@@ -37,7 +37,10 @@ pub(crate) fn command() -> Command {
       "resume",
       "Resume effects for every epic, or one epic",
     ))
-    .subcommand(key_command("ack", "Clear a stall attention item"))
+    .subcommand(key_command(
+      "ack",
+      "Acknowledge an issue's attention items, or a keyless one by kind",
+    ))
     .subcommand(answer_command())
     .subcommand(wait_command())
     .subcommand(report_command())
@@ -67,8 +70,8 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("status", args)) => crate::query::status(args, &env),
     Some(("pause", args)) => crate::query::pause(args, &env, true),
     Some(("resume", args)) => crate::query::pause(args, &env, false),
-    Some(("ack", args)) => crate::query::ack(args, &env),
-    Some(("answer", args)) => crate::query::answer(args, &env),
+    Some(("ack", args)) => crate::query::ack(ctx, args, &env),
+    Some(("answer", args)) => crate::query::answer(ctx, args, &env),
     Some(("wait", args)) => crate::query::wait(ctx, args, &env),
     Some(("report", args)) => crate::query::report(args, &env),
     Some(("job", args)) => crate::query::job(args),
@@ -149,7 +152,7 @@ fn key_command(name: &'static str, about: &'static str) -> Command {
 
 fn answer_command() -> Command {
   Command::new("answer")
-    .about("Record an answer on the journal for one issue")
+    .about("Send an answer to an issue's worker and mark its attention answered")
     .arg(
       Arg::new("key")
         .value_name("KEY")
@@ -161,6 +164,12 @@ fn answer_command() -> Command {
         .value_name("TEXT")
         .required(true)
         .help("The answer"),
+    )
+    .arg(
+      Arg::new("by")
+        .long("by")
+        .value_name("NAME")
+        .help("Who answered; defaults to the --host name, else user"),
     )
 }
 

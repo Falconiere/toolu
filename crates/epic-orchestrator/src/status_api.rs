@@ -42,11 +42,7 @@ pub(crate) fn document(
   for issue in world.issues.values() {
     *counts.entry(issue.stage.clone()).or_default() += 1;
   }
-  let attention_count = world
-    .attention
-    .iter()
-    .filter(|item| !item.delivered)
-    .count();
+  let attention_count = world.attention.len();
   let resources = Snapshot::open(paths, world.now_ms)?;
   if let Some(map) = overview.as_object_mut() {
     map.insert("schema".to_owned(), json!(1));
@@ -132,17 +128,13 @@ fn attention(world: &World) -> Value {
   let items: Vec<Value> = world
     .attention
     .iter()
-    .filter(|item| !item.delivered)
     .map(|item| {
-      let phase_at = world.issues.get(&item.key).map(|issue| issue.phase_at_ms);
-      json!({
-        "kind": item.kind,
-        "key": item.key,
-        "epic": item.epic,
-        "note": item.note.chars().take(160).collect::<String>(),
-        "seq": item.seq,
-        "age_ms": phase_at.map(|at| world.now_ms.saturating_sub(at)),
-      })
+      let mut value = crate::attention::document(item, world.now_ms);
+      if let Some(map) = value.as_object_mut() {
+        let note: String = item.note.chars().take(160).collect();
+        map.insert("note".to_owned(), json!(note));
+      }
+      value
     })
     .collect();
   json!({"schema": 1, "items": items})
