@@ -108,6 +108,7 @@ test("without a native binary the launcher falls back to Bun for session context
     stdin: '{"source":"resume"}',
   });
   expect(res).toMatchObject({ exitCode: 0 });
+  expect(res.stderr).toContain("native toolu not found, running the Bun bundle");
   const out = OutputSchema.parse(JSON.parse(res.stdout));
   expect(out.systemMessage).toBe(`Session resumed\n${RUNTIME}`);
   expect(out.hookSpecificOutput.additionalContext).toContain("Session Protocol — project");
@@ -132,7 +133,7 @@ test("without Bun the session still starts with an advisory", async () => {
   const res = await run(["sh", "-c", COMMAND], { cwd: sb.project, env, stdin: "{}" });
   expect(res.exitCode).toBe(0);
   const message = (JSON.parse(res.stdout) as { systemMessage: string }).systemMessage;
-  expect(message).toContain("toolu is not installed");
+  expect(message).toContain("no usable native toolu");
   expect(message).toContain("brew install falconiere/tap/toolu");
 });
 

@@ -100,10 +100,7 @@ test("an edited or removed commandWindows fails", () => {
 
   const removed = copyOfRepo();
   edit(removed, BUN_PLUGIN, (text) =>
-    text.replace(
-      `,\n            "commandWindows": ${JSON.stringify(bunStart.commandWindows)}`,
-      "",
-    ),
+    text.replace(`,\n            "commandWindows": ${JSON.stringify(bunStart.commandWindows)}`, ""),
   );
   expect(checkHooksJson(removed).map((p) => p.problem)).toEqual([
     "commandWindows differs from the generated launcher",
@@ -146,7 +143,10 @@ test("a hand-written toolu hook command without the generated launcher fails", (
   const root = copyOfRepo();
   edit(root, TOOLU, (text) =>
     text
-      .replace(JSON.stringify(NATIVE_SESSION_HOOK.command), JSON.stringify("toolu hook session-start"))
+      .replace(
+        JSON.stringify(NATIVE_SESSION_HOOK.command),
+        JSON.stringify("toolu hook session-start"),
+      )
       .replace(
         `,\n            "commandWindows": ${JSON.stringify(NATIVE_SESSION_HOOK.commandWindows)}`,
         "",
@@ -245,7 +245,7 @@ test("a generated native entry passes beside Bun entries and a hand edit fails",
   expect(NATIVE_COMMAND).toContain("--hook-protocol");
   expect(NATIVE_COMMAND).toContain("hooks/dist/session-start.js");
   expect(NATIVE_SESSION_HOOK.command).toBe(NATIVE_COMMAND);
-  expect(NATIVE_SESSION_HOOK.commandWindows).toContain("toolu is not installed");
+  expect(NATIVE_SESSION_HOOK.commandWindows).toContain("no usable native toolu");
   const root = copyOfRepo();
   switchSessionStart(root);
   expect(checkHooksJson(root)).toEqual([]);

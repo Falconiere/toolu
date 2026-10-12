@@ -94,7 +94,7 @@ for (const [entry, command, input] of [
       });
       expect(result.status).toBe(2);
       expect(result.stdout).toBe("");
-      expect(result.stderr).toContain("blocked: toolu plugin: toolu is not installed");
+      expect(result.stderr).toContain("blocked: toolu plugin: no usable native toolu");
     });
   });
 }

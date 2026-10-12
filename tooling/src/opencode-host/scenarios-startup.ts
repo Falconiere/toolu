@@ -246,7 +246,7 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
     s.env.TOOLU_BIN = s.outside("missing-toolu");
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
     const context = messagesText(s, "system");
-    const installNotice = "toolu plugin: toolu is not installed";
+    const installNotice = "toolu plugin: no usable native toolu";
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
@@ -287,7 +287,7 @@ async function nativeStatuslineMissingBinary(ctx: EntryContext): Promise<EntryRe
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      installNotice: context.includes("statusline plugin: toolu is not installed"),
+      installNotice: context.includes("statusline plugin: no usable native toolu"),
       installer: context.includes("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
       helperAbsent: !existsSync(helper),
     };

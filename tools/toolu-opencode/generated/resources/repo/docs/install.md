@@ -93,7 +93,7 @@ A candidate counts only if `toolu --hook-protocol` prints an integer. The npm wr
 |---|---|---|
 | Binary found | runs `toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>`; exit 0 and 2 pass through, and any other status (abort, SIGSEGV, SIGKILL, OOM) becomes exit 2 with `blocked: <plugin> plugin: toolu ended with status <n>, so the action is blocked.` | `exec`s the binary |
 | No binary, Bun and the plugin's `hooks/dist/<name>.js` present (transition, #425) | runs the Bun bundle, with one stderr line: `<plugin> plugin: native toolu not found, running the Bun bundle for this transition release - see #425. …` | same |
-| No binary and no fallback, or a bad `TOOLU_BIN` | exit 2, stderr `blocked: <plugin> plugin: toolu is not installed - checked TOOLU_BIN, … Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash, or: brew install falconiere/tap/toolu. …` | exit 0, the same text as one `{"systemMessage": …}` |
+| No binary and no fallback, or a bad `TOOLU_BIN` | exit 2, stderr `blocked: <plugin> plugin: no usable native toolu - checked TOOLU_BIN, … Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash, or: brew install falconiere/tap/toolu. …` | exit 0, the same text as one `{"systemMessage": …}` |
 
 The fallback is skipped when `TOOLU_BIN` is set, and #440 removes it. The command string carries no version, so it stays the same across releases and Codex does not ask for hook trust again. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` keeps the Bun chain and prints the install hint, because Windows has no binary yet.
 

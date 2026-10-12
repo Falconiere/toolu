@@ -90,7 +90,7 @@ fn another_plugin_runs_its_own_namespace_and_bundle() {
   let command = generated("jev", "SessionStart", "session-start").command;
   assert!(command.contains("\"$t\" jev hook session-start --event SessionStart"));
   assert!(command.contains("${CLAUDE_PLUGIN_ROOT}/hooks/dist/session-start.js"));
-  assert!(command.contains("'{\"systemMessage\":\"jev plugin: toolu is not installed"));
+  assert!(command.contains("'{\"systemMessage\":\"jev plugin: no usable native toolu"));
 }
 
 #[test]

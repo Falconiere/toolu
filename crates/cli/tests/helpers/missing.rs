@@ -20,7 +20,7 @@ fn pre_tool_use_blocks_naming_both_install_commands() {
   assert!(
     run
       .stderr
-      .starts_with("blocked: toolu plugin: toolu is not installed")
+      .starts_with("blocked: toolu plugin: no usable native toolu")
   );
   assert!(run.stderr.contains(INSTALLER) && run.stderr.contains(BREW));
 }
@@ -34,7 +34,7 @@ fn session_start_prints_one_schema_valid_system_message() {
   assert_eq!(run.code, 0, "{run:?}");
   assert_eq!(run.stderr, "");
   let message = system_message(&run).unwrap();
-  assert!(message.starts_with("toolu plugin: toolu is not installed"));
+  assert!(message.starts_with("toolu plugin: no usable native toolu"));
   assert!(message.contains(INSTALLER) && message.contains(BREW));
   let payload: Value = serde_json::from_str(&run.stdout).unwrap();
   assert_eq!(schema_errors(&payload).unwrap(), Vec::<String>::new());

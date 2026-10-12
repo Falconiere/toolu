@@ -56,7 +56,7 @@ test.concurrent("the launcher advises and exits 0 when both runtimes are missing
     });
     expect(result.status).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
-      systemMessage: expect.stringContaining("toolu plugin: toolu is not installed"),
+      systemMessage: expect.stringContaining("toolu plugin: no usable native toolu"),
     });
   });
 });

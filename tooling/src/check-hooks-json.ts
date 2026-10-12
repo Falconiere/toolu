@@ -52,7 +52,10 @@ const NATIVE_EXAMPLES = {
       event: "PreToolUse",
       entry: "pre-tools",
       command: readFileSync(
-        join(import.meta.dir, "../../crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt"),
+        join(
+          import.meta.dir,
+          "../../crates/core/protocol/src/tests/fixtures/launcher-pre-tool-use.txt",
+        ),
         "utf8",
       ),
     },
@@ -61,7 +64,10 @@ const NATIVE_EXAMPLES = {
       event: "SessionStart",
       entry: "session-start",
       command: readFileSync(
-        join(import.meta.dir, "../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt"),
+        join(
+          import.meta.dir,
+          "../../crates/core/protocol/src/tests/fixtures/launcher-session-start.txt",
+        ),
         "utf8",
       ),
     },
@@ -103,8 +109,8 @@ function expectedNativeCommand(plugin: string, event: string, entry: string): st
     return undefined;
   const examples = plugin === "toolu" ? NATIVE_EXAMPLES.toolu : NATIVE_EXAMPLES.leaf;
   const example = isEnforcingEvent(event) ? examples.enforcing : examples.context;
-  const source = `${example.plugin === "toolu" ? "" : `${example.plugin} `}hook ${example.entry} --event ${example.event}`;
-  const target = `${plugin === "toolu" ? "" : `${plugin} `}hook ${entry} --event ${event}`;
+  const source = `${example.plugin === "toolu" ? "" : `${example.plugin} `}hook ${example.entry} --event ${example.event} --plugin-root "\${CLAUDE_PLUGIN_ROOT}"`;
+  const target = `${plugin === "toolu" ? "" : `${plugin} `}hook ${entry} --event ${event} --plugin-root "\${CLAUDE_PLUGIN_ROOT}"`;
   return example.command
     .replace(source, target)
     .replaceAll(`hooks/dist/${example.entry}.js`, `hooks/dist/${entry}.js`)
@@ -113,7 +119,7 @@ function expectedNativeCommand(plugin: string, event: string, entry: string): st
 
 /** The context golden carries the #412 install text used by both POSIX and Windows. */
 function nativeMissingMessage(plugin: string): string {
-  const message = /"systemMessage":"(toolu plugin: [^"]+ is not installed[^"]*)"/u.exec(
+  const message = /"systemMessage":"(toolu plugin: no usable native toolu[^"]*)"/u.exec(
     NATIVE_EXAMPLES.toolu.context.command,
   )?.[1];
   if (message === undefined) throw new Error("native SessionStart golden has no install message");

@@ -73,6 +73,6 @@ test("without Bun the prompt still goes through with an advisory", async () => {
   );
   expect(res.exitCode).toBe(0);
   const message = (JSON.parse(res.stdout) as { systemMessage: string }).systemMessage;
-  expect(message).toContain("toolu is not installed");
+  expect(message).toContain("no usable native toolu");
   expect(message).toContain("brew install falconiere/tap/toolu");
 });

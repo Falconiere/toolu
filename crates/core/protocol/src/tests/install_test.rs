@@ -6,10 +6,11 @@ const UNSAFE: &[char] = &['(', ')', '&', '<', '>', '^', '%', '"', '\'', '\\'];
 #[test]
 fn the_missing_message_names_the_plugin_and_both_install_commands() {
   let message = missing_message("jev");
-  assert!(message.starts_with("jev plugin: toolu is not installed - checked TOOLU_BIN"));
+  assert!(message.starts_with("jev plugin: no usable native toolu - checked TOOLU_BIN"));
   assert!(message.contains(INSTALLER));
   assert!(message.contains(BREW_INSTALL));
   assert!(message.contains("~/.local/bin and PATH"));
+  assert!(message.contains("If TOOLU_BIN is set, it must point to a native toolu"));
 }
 
 #[test]

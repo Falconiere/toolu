@@ -110,5 +110,5 @@ fn forced_bun_without_a_bundle_does_not_run_the_installed_native_hook() {
     )
     .unwrap();
   assert_eq!(run.code, 2, "{run:?}");
-  assert!(run.stderr.contains("toolu is not installed"));
+  assert!(run.stderr.contains("no usable native toolu"));
 }
