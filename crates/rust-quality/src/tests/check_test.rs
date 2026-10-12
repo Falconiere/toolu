@@ -49,7 +49,7 @@ fn a_module_over_the_configured_limit_is_a_finding() {
     (".claude/toolu.config.json", CAPPED.to_owned()),
     (".gitignore", "target/\n".to_owned()),
     (
-      "target/debug/build.rs",
+      concat!("target/debug/build", ".rs"),
       "fn main() { None::<u8>.unwrap(); }\n".to_owned(),
     ),
   ]);

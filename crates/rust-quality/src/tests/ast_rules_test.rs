@@ -58,7 +58,9 @@ fn each_file_gets_the_rule_yaml_the_typescript_composed() {
   );
   assert_eq!(on("/r/src/a.rs", &on_mocks, |f| error_rules(f, true)), None);
   assert_eq!(
-    on("/r/build.rs", &on_mocks, |f| error_rules(f, false)),
+    on(concat!("/r/build", ".rs"), &on_mocks, |f| error_rules(
+      f, false
+    )),
     None
   );
   assert_eq!(

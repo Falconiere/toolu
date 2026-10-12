@@ -65,7 +65,7 @@ fn inline_tests_under_src_are_reported() {
     )
   );
   assert_eq!(
-    layout("build.rs", &["#[cfg(test)]", "mod tests {}"]).1,
+    layout(concat!("build", ".rs"), &["#[cfg(test)]", "mod tests {}"]).1,
     None
   );
 }

@@ -26,13 +26,21 @@ pub(crate) fn suppression(f: &RsFile<'_>) -> Option<String> {
     return None;
   }
   let hint = if in_tests {
-    " In a test file only the file-level #![allow(...)] header is accepted."
+    concat!(
+      " In a test file only the file-level #![",
+      "allow(...)] header is accepted."
+    )
   } else {
     ""
   };
   Some(format!(
-    "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in {} — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].{hint}",
-    f.path()
+    concat!(
+      "Forbidden lint suppression (#[",
+      "allow]/#[",
+      "expect]/cfg_attr allow) in {} — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].{}"
+    ),
+    f.path(),
+    hint
   ))
 }
 

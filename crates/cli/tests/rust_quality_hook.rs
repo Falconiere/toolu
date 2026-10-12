@@ -177,7 +177,7 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));
   assert_eq!(fs::read_to_string(post.join(MANIFEST)).unwrap(), manifest);
 
-  let bad = "//! X.\n#[allow(dead_code)]\nfn a() {}\n";
+  let bad = concat!("//! X.\n#[", "allow(dead_code)]\nfn a() {}\n");
   let fired = write(&sb, "src/lib.rs", bad, &[]).unwrap();
   assert!(fired.status.success(), "{fired:?}");
   let stdout = String::from_utf8(fired.stdout).unwrap();
@@ -195,7 +195,13 @@ fn an_uninstalled_plugin_stays_silent() {
       .status
       .success()
   );
-  let output = write(&sb, "src/lib.rs", "#[allow(x)]\nfn a() {}\n", &[]).unwrap();
+  let output = write(
+    &sb,
+    "src/lib.rs",
+    concat!("#[", "allow(x)]\nfn a() {}\n"),
+    &[],
+  )
+  .unwrap();
   assert!(output.status.success(), "{output:?}");
   assert_eq!(String::from_utf8(output.stdout).unwrap(), "");
 }

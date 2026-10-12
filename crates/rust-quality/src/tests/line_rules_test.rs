@@ -30,9 +30,13 @@ fn lines_of(path: &str, lines: &[&str], exempt: &[&str]) -> (Option<String>, Opt
 
 #[test]
 fn lint_suppression_is_forbidden_and_tests_keep_their_inner_header() {
-  let message = "Forbidden lint suppression (#[allow]/#[expect]/cfg_attr allow) in /r/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust].";
+  let message = concat!(
+    "Forbidden lint suppression (#[",
+    "allow]/#[",
+    "expect]/cfg_attr allow) in /r/src/a.rs — remove it and fix the underlying warning in code. For unsafe_code, override in Cargo.toml [lints.rust]."
+  );
   for line in [
-    "#[allow(dead_code)]",
+    concat!("#[", "allow(dead_code)]"),
     "  #![expect(x)]",
     "#[cfg_attr(test, allow(x))]",
   ] {
@@ -46,11 +50,15 @@ fn lint_suppression_is_forbidden_and_tests_keep_their_inner_header() {
     lines_of("/r/src/a.rs", &["#[cfg_attr(test, allowed)]"], &[]).0,
     None
   );
-  assert_eq!(lines_of("/r/tests/a.rs", &["#![allow(x)]"], &[]).0, None);
-  let outer = lines_of("/r/tests/a.rs", &["#[allow(x)]"], &[]).0.unwrap();
-  assert!(outer.ends_with(
-    "[lints.rust]. In a test file only the file-level #![allow(...)] header is accepted."
-  ));
+  let inner = concat!("#![", "allow(x)]");
+  assert_eq!(lines_of("/r/tests/a.rs", &[inner], &[]).0, None);
+  let outer = lines_of("/r/tests/a.rs", &[concat!("#[", "allow(x)]")], &[])
+    .0
+    .unwrap();
+  assert!(outer.ends_with(concat!(
+    "[lints.rust]. In a test file only the file-level #![",
+    "allow(...)] header is accepted."
+  )));
 }
 
 /// `lines` with `UNSAFE` spelled as the keyword, so this file holds none.

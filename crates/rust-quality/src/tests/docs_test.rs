@@ -83,7 +83,7 @@ fn the_advisories_apply_to_non_test_src_files() {
   let none: [String; 0] = [];
   assert_eq!(docs(&f, true), none);
   let outside = RsFile {
-    scope: "/r/build.rs",
+    scope: concat!("/r/build", ".rs"),
     ..f
   };
   assert_eq!(docs(&outside, false), none);

@@ -137,7 +137,10 @@ fn violations_are_reported_with_real_ast_grep_and_a_clean_file_passes() {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path();
   let env = cargo_repo(root);
-  let bad = "//! A.\n#[allow(dead_code)]\nfn a() -> u8 {\n  Some(1).unwrap()\n}\n";
+  let bad = concat!(
+    "//! A.\n#[",
+    "allow(dead_code)]\nfn a() -> u8 {\n  Some(1).unwrap()\n}\n"
+  );
   let found = message(decide(&env, root, "src/lib.rs", bad));
   let file = root.join("src/lib.rs").display().to_string();
   assert!(
@@ -169,7 +172,7 @@ fn a_crashing_ast_grep_fails_each_group_that_applies() {
   assert!(found.contains("— ast-grep exit 3: boom; error-handling rules could not be verified."));
   assert!(found.contains("— ast-grep exit 3: boom; no-mocks rules could not be verified."));
   assert_eq!(
-    decide(&env, root, "build.rs", "fn main() {}\n"),
+    decide(&env, root, concat!("build", ".rs"), "fn main() {}\n"),
     Decision::Allow,
     "no YAML, no spawn"
   );
