@@ -304,3 +304,15 @@ fn a_lock_that_cannot_be_taken_fails_the_snapshot_instead_of_reading_busy() {
   assert_eq!(shot.skipped.as_deref(), Some("checkpoint lock failed"));
   assert!(shot.failed());
 }
+
+#[test]
+fn a_checkpoint_directory_that_cannot_be_made_fails_with_its_own_reason() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let (main, wt) = setup(tmp.path());
+  std::fs::write(wt.join("a.txt"), "dirty\n").expect("dirty");
+  // A file where the checkpoint tree's `toolu` directory would go.
+  std::fs::write(main.join(".git").join("toolu"), "in the way\n").expect("blocker");
+  let shot = snapshot(&path(&wt), "k-1", None);
+  assert_eq!(shot.skipped.as_deref(), Some("checkpoint directory failed"));
+  assert!(shot.failed());
+}

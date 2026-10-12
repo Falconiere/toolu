@@ -90,7 +90,7 @@ pub(crate) fn snapshot(worktree: &str, key: &str, trace: Option<&Path>) -> Snaps
     return base.skip("no git directory");
   };
   if std::fs::create_dir_all(&storage.path).is_err() {
-    return base.skip("git failed");
+    return base.skip("checkpoint directory failed");
   }
   let mut lock_path = storage.path.clone().into_os_string();
   lock_path.push(".lock");
