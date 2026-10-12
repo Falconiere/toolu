@@ -22,7 +22,7 @@ use toolu_state::detect::tools::tool_available;
 
 use crate::advisories::{docs, duplication, unhandled_await};
 use crate::ast_rules::{error_handling, inline_rules, mock_doubles};
-use crate::file::{Limits, Place, TsFile, has_extension, split_lines};
+use crate::file::{Limits, Place, TsFile, has_extension};
 use crate::layout_rules::{parent_import, test_placement};
 use crate::line_rules::{
   catch_toast, component_file_name, confirm_alert, console_log, factories, manual_type_guard,
@@ -154,13 +154,7 @@ impl QualityRule for TsQuality {
         };
       }
     };
-    let f = TsFile {
-      file,
-      lines: split_lines(&text),
-      at: Place::of(ctx),
-      limits: limits(ctx),
-      pm,
-    };
+    let f = TsFile::new(file, &text, Place::of(ctx), limits(ctx), pm);
     let errors = errors(&f, scan);
     let duplicated = if errors.is_empty() {
       duplication(&f)

@@ -6,7 +6,8 @@
 use std::path::Path;
 
 use crate::file::{
-  Pattern, TsFile, count_matches, has_extension, head, is_test_path, numbered, with_excerpt, without_comment_lines,
+  Pattern, TsFile, count_matches, has_extension, head, is_test_path, numbered, with_excerpt,
+  without_comment_lines,
 };
 
 static AS_PATTERN: Pattern = Pattern::new(
@@ -63,9 +64,8 @@ pub(crate) fn factories(f: &TsFile<'_>) -> Option<String> {
 fn project_uses_zod(root: &Path) -> bool {
   let manifest = root.join("package.json");
   std::fs::metadata(&manifest).is_ok_and(|meta| meta.is_file())
-    && std::fs::read(&manifest).is_ok_and(|bytes| {
-      String::from_utf8_lossy(&bytes).contains("\"zod\"")
-    })
+    && std::fs::read(&manifest)
+      .is_ok_and(|bytes| String::from_utf8_lossy(&bytes).contains("\"zod\""))
 }
 
 static TYPE_GUARD: Pattern = Pattern::new(r"function is[A-Z].*\): .* is [A-Z]");
@@ -81,8 +81,9 @@ pub(crate) fn manual_type_guard(f: &TsFile<'_>) -> Option<String> {
   ))
 }
 
-static GRAB_BAG: Pattern =
-  Pattern::new(r"^(parts|components|helpers|items|sections|elements)$|-(parts|sections|items|elements)$");
+static GRAB_BAG: Pattern = Pattern::new(
+  r"^(parts|components|helpers|items|sections|elements)$|-(parts|sections|items|elements)$",
+);
 
 /// 55-naming: a `.tsx` named after a grab-bag, not its exported component.
 pub(crate) fn component_file_name(f: &TsFile<'_>) -> Option<String> {
@@ -171,8 +172,7 @@ pub(crate) fn raw_radix_import(f: &TsFile<'_>) -> Option<String> {
   ))
 }
 
-static PROPS: Pattern =
-  Pattern::new(r"\((props|[a-z]+Props):[[:space:]]+[A-Z][a-zA-Z]+Props\)");
+static PROPS: Pattern = Pattern::new(r"\((props|[a-z]+Props):[[:space:]]+[A-Z][a-zA-Z]+Props\)");
 
 /// 74-react-props.
 pub(crate) fn mutable_props(f: &TsFile<'_>) -> Option<String> {

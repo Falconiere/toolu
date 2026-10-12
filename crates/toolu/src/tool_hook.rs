@@ -81,7 +81,7 @@ pub fn tool_hook(
 }
 
 /// Run only `spec`'s registry modules, for a host or dispatcher that runs the
-/// core gates itself: ast-grep's on OpenCode, ts-quality's from its bridge module.
+/// core gates itself: ast-grep's on `OpenCode`, ts-quality's from its bridge module.
 /// A path that dispatcher split out of a patch, exported as `TOOLU_EDIT_*`, is
 /// walked as that path.
 pub fn plugin_tool_hook(

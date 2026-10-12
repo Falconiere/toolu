@@ -73,13 +73,18 @@ impl QualityRule for Inline {
     "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: x\nrule:\n  pattern: 'throw \"$S\"'"
       .to_owned()
   }
-  fn check(&self, _file: &EditedFile, _ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings {
+  fn check(
+    &self,
+    _file: &EditedFile,
+    _ctx: &RuleContext<'_>,
+    scan: &AstGrepScan,
+  ) -> QualityFindings {
     let errors = match scan {
       AstGrepScan::Ok { hits, .. } => hits
         .iter()
         .map(|hit| format!("{} {}", hit.rule_id, hit.excerpt))
         .collect(),
-      other => vec![format!("{other:?}")],
+      other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => vec![format!("{other:?}")],
     };
     QualityFindings {
       errors,

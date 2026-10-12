@@ -70,8 +70,7 @@ static METHOD_HEAD: Pattern = Pattern::new(
 static KEYWORD_HEAD: Pattern = Pattern::new(
   r"^[[:space:]]*(if|for|while|switch|catch|return|do|else|function|await|with|yield|throw|new|typeof|delete|void|in|of|case)[^A-Za-z0-9_$]",
 );
-static METHOD_BODY: Pattern =
-  Pattern::new(r"\)([[:space:]]*:[^={]*)?[[:space:]]*\{[[:space:]]*$");
+static METHOD_BODY: Pattern = Pattern::new(r"\)([[:space:]]*:[^={]*)?[[:space:]]*\{[[:space:]]*$");
 static ENDS_STATEMENT: Pattern = Pattern::new(r";[[:space:]]*$");
 
 fn starts_function(line: &str) -> bool {

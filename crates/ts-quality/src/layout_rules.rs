@@ -129,7 +129,10 @@ pub(crate) fn test_placement(f: &TsFile<'_>) -> Vec<String> {
   if !is_test_path(path) || path.contains("/e2e/") {
     return Vec::new();
   }
-  let Some(cut) = path.rfind("__tests__/").filter(|_| path.contains("/__tests__/")) else {
+  let Some(cut) = path
+    .rfind("__tests__/")
+    .filter(|_| path.contains("/__tests__/"))
+  else {
     return vec![format!(
       "Test file outside __tests__/: {path} — move to sibling __tests__/ directory"
     )];

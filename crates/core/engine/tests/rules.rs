@@ -20,9 +20,11 @@ use counting::{Counting, payload};
 use hook::Hook;
 use toolu_engine::Phase;
 use toolu_engine::trace::{Skip, StepStatus};
+use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
+use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::registry::RegistryEvent;
-use toolu_runtime::registry::rule::Rule;
+use toolu_runtime::registry::rule::{Rule, RuleContext};
 
 /// A hook whose `bash` and `bun` log each spawn to the returned file, then run the real ones.
 fn sentinels() -> sandbox::Res<(Hook, std::path::PathBuf)> {
@@ -278,4 +280,43 @@ fn a_usable_manifest_shadows_whatever_the_tool() {
     ]
   );
   assert_eq!(write.calls(), (0, 0));
+}
+
+/// A rule that could not write its state, as the quality rules report it.
+struct Warns;
+
+impl Rule for Warns {
+  fn spec(&self) -> &'static str {
+    "w@t"
+  }
+  fn name(&self) -> &'static str {
+    "warns"
+  }
+  fn event(&self) -> RegistryEvent {
+    RegistryEvent::ToolPost
+  }
+  fn run(&self, _event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> Decision {
+    Decision::Allow
+  }
+  fn run_warning(
+    &self,
+    _event: &NormalizedEvent,
+    _ctx: &RuleContext<'_>,
+    warnings: &mut Vec<String>,
+  ) -> Decision {
+    warnings.push("w: state not written".to_owned());
+    Decision::Allow
+  }
+}
+
+#[test]
+fn a_rules_warnings_reach_the_hooks_stderr() {
+  let hook = Hook::new(Host::Claude).unwrap();
+  modules::manifest(&hook, Phase::Post, "w@t", "warns", "*").unwrap();
+  let edit = payload("Edit", r#"{"file_path":"/p/a.ts"}"#);
+  let out = hook.run(Phase::Post, &edit, &[], &[&Warns]).result;
+  assert_eq!(
+    (out.stdout.as_str(), out.stderr.as_str()),
+    ("", "w: state not written\n")
+  );
 }

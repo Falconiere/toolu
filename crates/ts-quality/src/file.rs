@@ -29,10 +29,7 @@ impl Pattern {
   }
 
   fn regex(&self) -> Option<&Regex> {
-    self
-      .cell
-      .get_or_init(|| compile(self.source))
-      .as_ref()
+    self.cell.get_or_init(|| compile(self.source)).as_ref()
   }
 
   /// Whether `text` matches.
@@ -73,6 +70,18 @@ pub(crate) struct Limits {
   pub(crate) no_mocks: bool,
 }
 
+impl Default for Limits {
+  /// The limits of a project with no `lang.ts` settings and no linter limit.
+  fn default() -> Limits {
+    Limits {
+      file_lines: 300,
+      file_source: ThresholdSource::Default,
+      fn_lines: 50,
+      no_mocks: true,
+    }
+  }
+}
+
 /// Where the hook runs.
 #[derive(Clone, Copy)]
 pub(crate) struct Place<'a> {
@@ -109,7 +118,24 @@ pub(crate) struct TsFile<'a> {
   pub(crate) pm: NodePackageManager,
 }
 
-impl TsFile<'_> {
+impl<'a> TsFile<'a> {
+  /// `file`, whose contents are `text`, checked at `at`.
+  pub(crate) fn new(
+    file: &'a EditedFile,
+    text: &str,
+    at: Place<'a>,
+    limits: Limits,
+    pm: NodePackageManager,
+  ) -> TsFile<'a> {
+    TsFile {
+      file,
+      lines: split_lines(text),
+      at,
+      limits,
+      pm,
+    }
+  }
+
   /// The edited path, as the hook named it.
   pub(crate) fn path(&self) -> &str {
     &self.file.path

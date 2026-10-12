@@ -133,4 +133,11 @@ fn a_rule_can_decline_an_event_before_it_runs() {
   };
   assert!(TypeScriptOnly.applies(&edit("/p/a.ts"), &ctx));
   assert!(!TypeScriptOnly.applies(&edit("/p/a.py"), &ctx));
+  let mut warnings = Vec::new();
+  let decision = TypeScriptOnly.run_warning(&edit("/p/a.ts"), &ctx, &mut warnings);
+  assert_eq!(
+    (decision, warnings.len()),
+    (Decision::Allow, 0),
+    "run, with no warnings"
+  );
 }

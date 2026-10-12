@@ -80,7 +80,8 @@ fn the_lib_dir_comes_from_the_plugin_root() {
       .collect::<Vec<_>>(),
     [
       ("ast-grep@toolu", "search-nudge"),
-      ("ast-grep@toolu", "byte-savings")
+      ("ast-grep@toolu", "byte-savings"),
+      ("ts-quality@toolu", "ts-quality")
     ]
   );
 }

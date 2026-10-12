@@ -106,8 +106,7 @@ fn prune(dir: &Path, keep: &Path) -> Result<bool, String> {
     let stale = if is_residue(&name) {
       old_enough(&path)
     } else {
-      has_extension(&name, &["js", "sh"])
-        && fs::metadata(&path).is_ok_and(|meta| meta.is_file())
+      has_extension(&name, &["js", "sh"]) && fs::metadata(&path).is_ok_and(|meta| meta.is_file())
     };
     if stale {
       fs::remove_file(&path).map_err(|error| format!("{}: {error}", path.display()))?;

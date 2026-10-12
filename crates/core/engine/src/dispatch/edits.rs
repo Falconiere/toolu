@@ -63,7 +63,10 @@ fn caller_split(session: &Session<'_>) -> Option<EditFields> {
   Some(EditFields {
     operation,
     from: env.get("TOOLU_EDIT_FROM").unwrap_or_default().to_owned(),
-    moved_to: env.get("TOOLU_EDIT_MOVED_TO").unwrap_or_default().to_owned(),
+    moved_to: env
+      .get("TOOLU_EDIT_MOVED_TO")
+      .unwrap_or_default()
+      .to_owned(),
   })
 }
 
