@@ -36,7 +36,7 @@ fn write_epic(epic: &std::path::Path) -> Result<(), String> {
   std::fs::create_dir_all(epic.join("status")).map_err(|err| err.to_string())?;
   std::fs::write(
     epic.join("graph.json"),
-    r#"{"epic":"one","issues":[{"key":"a","repo":"o/r","open_blockers":[]}]}"#,
+    r#"{"epic":"one","issues":[{"key":"a","open_blockers":[]}]}"#,
   )
   .map_err(|err| err.to_string())?;
   std::fs::write(
@@ -50,6 +50,15 @@ fn write_epic(epic: &std::path::Path) -> Result<(), String> {
   )
   .map_err(|err| err.to_string())?;
   Ok(())
+}
+
+/// Name `o/r` as issue `a`'s repository, so its ready report joins the merge queue.
+pub(crate) fn in_repo(fix: &Fix) -> Result<(), String> {
+  std::fs::write(
+    fix.tmp.path().join("epic").join("graph.json"),
+    r#"{"epic":"one","issues":[{"key":"a","repo":"o/r","open_blockers":[]}]}"#,
+  )
+  .map_err(|err| err.to_string())
 }
 
 pub(crate) fn fixture(with_agent: bool) -> Result<Fix, String> {

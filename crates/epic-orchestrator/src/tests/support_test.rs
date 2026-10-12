@@ -184,6 +184,10 @@ pub(crate) fn origin_with_clone(
 /// Issue `a` of the source fixture reports `ready` with PR 412, then the
 /// engine runs what that armed.
 pub(crate) fn report_ready(engine: &mut crate::server::Engine) {
+  // The source fixture's graph names no repository; the merge queue needs one.
+  if let Some(issue) = engine.world.issues.get_mut("a") {
+    "o/r".clone_into(&mut issue.repo);
+  }
   let ready = crate::model::Report {
     key: "a".into(),
     epic: "one".into(),
