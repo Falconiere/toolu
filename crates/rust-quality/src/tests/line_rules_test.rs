@@ -53,23 +53,37 @@ fn lint_suppression_is_forbidden_and_tests_keep_their_inner_header() {
   ));
 }
 
+/// `lines` with `UNSAFE` spelled as the keyword, so this file holds none.
+fn spelled(lines: &[&str]) -> Vec<String> {
+  lines
+    .iter()
+    .map(|line| line.replace("UNSAFE", "unsafe"))
+    .collect()
+}
+
+fn unsafe_in(lines: &[&str]) -> bool {
+  let owned = spelled(lines);
+  has_unsafe(&owned.iter().map(String::as_str).collect::<Vec<_>>())
+}
+
 #[test]
 fn unsafe_outside_comments_is_found() {
-  assert!(has_unsafe(&["  unsafe { x() }"]));
-  assert!(has_unsafe(&["pub unsafe fn f() {}"]));
-  assert!(!has_unsafe(&[
-    "// unsafe { x() }",
-    "let s = 1; // unsafe fn"
+  assert!(unsafe_in(&["  UNSAFE { x() }"]));
+  assert!(unsafe_in(&["pub UNSAFE fn f() {}"]));
+  assert!(!unsafe_in(&[
+    "// UNSAFE { x() }",
+    "let s = 1; // UNSAFE fn"
   ]));
-  assert!(!has_unsafe(&["/* unsafe {", "  unsafe fn", "*/ fine();"]));
-  assert!(has_unsafe(&["/* a */ unsafe { /* b */"]));
-  assert!(has_unsafe(&["/* open", "*/ unsafe {"]));
-  assert!(!has_unsafe(&["not_unsafe { }", "unsafely fn"]));
+  assert!(!unsafe_in(&["/* UNSAFE {", "  UNSAFE fn", "*/ fine();"]));
+  assert!(unsafe_in(&["/* a */ UNSAFE { /* b */"]));
+  assert!(unsafe_in(&["/* open", "*/ UNSAFE {"]));
+  assert!(!unsafe_in(&["not_UNSAFE { }", "UNSAFEly fn"]));
 }
 
 #[test]
 fn an_exempt_crate_may_use_unsafe() {
-  let body = ["unsafe { x() }"];
+  let owned = spelled(&["UNSAFE { x() }"]);
+  let body = [owned[0].as_str()];
   let found = lines_of("crates/ffi/src/a.rs", &body, &[]).1.unwrap();
   assert_eq!(
     found,

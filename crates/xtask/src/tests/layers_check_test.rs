@@ -56,6 +56,7 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
       "crates/pr-babysit (toolu-pr-babysit) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/toolu (toolu-hub) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/ast-grep (toolu-ast-grep) depends on serde_json: only toolu-http may link a `json` crate",
+      "crates/rust-quality (toolu-rust-quality) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/ts-quality (toolu-ts-quality) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/toolu-review (toolu-review) depends on serde_json: only toolu-http may link a `json` crate",
       "crates/statusline (toolu-statusline) depends on serde_json: only toolu-http may link a `json` crate",

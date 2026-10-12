@@ -40,8 +40,8 @@ pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
 const ABOUT: &str = "Rust quality rules that run after each edit";
 
 const GUIDE: &str = "rust-quality's rules run after every edit of a .rs file in a Cargo project \
-   with cargo on PATH. Violations (oversized files, functions and impl blocks, inline \
-   #[cfg(test)], misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, \
+   with cargo on PATH. Violations (oversized files, functions and impl blocks, inline test \
+   modules, misplaced tests, lint suppression, unsafe code, unwrap/expect/panic in src, \
    mocks) fail the file's quality-gate entry until it is fixed; missing or verbose docs are \
    advisories.\n\nLimits come from lang.rust in toolu.config.json (maxFileLines, maxFnLines, \
    maxImplLines, noMocks); crates allowed to use unsafe are listed in \

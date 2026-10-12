@@ -186,7 +186,7 @@ jobs:
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1,cargo-nextest@0.9.146
 
-      # jscpd (a devDependency) and the rust-quality step run on Bun.
+      # jscpd (a devDependency) and the gate's Bun steps need Bun.
       - name: Install bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -195,7 +195,7 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      # The rust-quality step runs the plugin's ast-grep rules and fails closed without it.
+      # The rust-quality step's `toolu rust-quality check` fails closed without ast-grep.
       - name: Install ast-grep
         run: npm install -g @ast-grep/cli
 

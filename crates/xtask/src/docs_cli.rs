@@ -61,7 +61,7 @@ fn expected(options: &Options) -> Result<BTreeMap<String, String>, String> {
 }
 
 /// Build `toolu-cli` in `root` and return the `toolu` executable cargo reports.
-fn build(root: &Path) -> Result<PathBuf, String> {
+pub(crate) fn build(root: &Path) -> Result<PathBuf, String> {
   let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
   let built = Command::new(cargo)
     .args(["build", "--locked", "--quiet", "-p", "toolu-cli"])

@@ -120,7 +120,7 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     "docs-cli" => docs_cli::check(options),
     "cli-compat" => cli_compat::run(options),
     "jscpd" => jscpd(root),
-    "rust-quality" => rust_quality(root),
+    "rust-quality" => rust_quality(options),
     "tests" => tests(root),
     "coverage" => coverage_step(options),
     "docs" => docs(root),
@@ -213,14 +213,30 @@ fn jscpd(root: &Path) -> Result<Verdict, String> {
     .map_err(|err| format!("{err} — jscpd is missing: run `bun install` (it is a devDependency)"))
 }
 
-fn rust_quality(root: &Path) -> Result<Verdict, String> {
-  status(
-    root,
-    "bun".as_ref(),
-    &["tooling/src/check-rust-quality.ts"],
-    &[],
-  )
-  .map_err(|err| format!("{err} — the rust-quality step needs Bun 1.4"))
+/// `toolu rust-quality check crates` at this repository's limits: `.claude` is
+/// both config layers and the shipped exemption list is the settings.
+fn rust_quality(options: &Options) -> Result<Verdict, String> {
+  let root = &options.root;
+  let bin = match &options.bin {
+    Some(bin) => bin.clone(),
+    None => docs_cli::build(root)?,
+  };
+  let claude = root.join(".claude").display().to_string();
+  let settings = root.join("plugins/toolu/settings").display().to_string();
+  let args = [
+    "--host",
+    "claude",
+    "--config-dir",
+    &claude,
+    "rust-quality",
+    "check",
+    "crates",
+  ];
+  let env = [
+    ("TOOLU_USER_CONFIG_DIR", claude.as_str()),
+    ("TOOLU_SETTINGS_DIR", settings.as_str()),
+  ];
+  status(root, bin.as_os_str(), &args, &env)
 }
 
 fn tests(root: &Path) -> Result<Verdict, String> {
