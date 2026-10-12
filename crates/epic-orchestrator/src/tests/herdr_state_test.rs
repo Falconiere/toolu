@@ -66,10 +66,12 @@ pub(crate) fn spawn(cwd: &Path, script: &str) -> Child {
     .expect("spawn")
 }
 
+/// Kill `child`'s process group and reap it. `killpg` itself: procps-ng's
+/// `kill -KILL -<pgid>` can exit 0 on Linux without signalling the group,
+/// which left `wait` blocked on the agent's `sleep`.
 pub(crate) fn stop(child: &mut Child) {
-  let _killed = Command::new("kill")
-    .args(["-KILL", &format!("-{}", child.id())])
-    .status();
+  use toolu_runtime::process::group::{Signal, signal};
+  let _killed = signal(child.id(), Signal::SIGKILL);
   let _reaped = child.wait();
 }
 

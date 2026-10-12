@@ -61,8 +61,11 @@ fn an_error_body_that_echoes_a_secret_is_redacted() {
     .expect("route");
   let http =
     Http::with_client(http_client(&fixture), FAST, "Linear").redacting("sentinel-linear-key-123");
+  // A body, as every tracker POST has: the fixture's TLS reply to a body-less
+  // POST can arrive as an EOF on Linux before the status is read.
+  let query = serde_json::json!({"query": "{ viewer { id } }"});
   let err = http
-    .json(Method::Post, &fixture.url("/api"), None, true)
+    .json(Method::Post, &fixture.url("/api"), Some(&query), true)
     .expect_err("401");
   assert!(!err.contains("sentinel-linear-key-123"), "{err}");
   assert!(err.contains("[redacted]"), "{err}");

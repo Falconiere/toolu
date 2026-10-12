@@ -22,9 +22,8 @@ fn spawn(cwd: &Path, script: &str) -> Child {
 }
 
 fn kill_group(child: &mut Child) {
-  let _status = Command::new("kill")
-    .args(["-KILL", &format!("-{}", child.id())])
-    .status();
+  use toolu_runtime::process::group::{Signal, signal};
+  let _killed = signal(child.id(), Signal::SIGKILL);
   let _reaped = child.wait();
 }
 
