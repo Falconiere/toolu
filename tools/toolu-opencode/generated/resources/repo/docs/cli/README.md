@@ -22,7 +22,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
 | [`serve`](serve.md) | `plugins/toolu` | planned | Serve the OpenCode shim over standard I/O |
-| [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | planned | TypeScript quality rules that run after each edit |
+| [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | planned | Python quality rules that run after each edit |
 | [`rust-quality`](rust-quality.md) | `plugins/rust-quality` | planned | Rust quality rules that run after each edit |
 | [`ast-grep`](ast-grep.md) | `plugins/ast-grep` | available | Structural code search and rewrite with ast-grep |

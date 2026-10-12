@@ -274,17 +274,17 @@ flowchart TD
     end
     subgraph plugins["domain plugins"]
         RQ["rust-quality<br/>register.js"]
-        TQ["ts-quality<br/>register.js"]
+        TQ["ts-quality<br/>toolu ts-quality"]
         AG["ast-grep<br/>register.js"]
     end
     RQ -- "one bundled ESM module, run in process" --> R[("registry<br/>host config dir/toolu/")]
-    TQ -- "one bundled ESM module, run in process" --> R
+    TQ -- "a manifest for its compiled-in rule" --> R
     AG -- "bundled ESM modules, run in process" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `python-quality` and `rust-quality` register bundled ESM modules (`<plugin-spec>__<name>.js`) that the core imports in-process, and `ts-quality` and `ast-grep` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -304,7 +304,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality checks, one bundled registry module
-    ├── ts-quality/             # TypeScript PostToolUse quality checks, one bundled registry module
+    ├── ts-quality/             # TypeScript PostToolUse quality checks, a native rule manifest
     ├── python-quality/         # Python PostToolUse quality checks, one bundled registry module
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── brainstorm/             # brainstorm skill + design question bank

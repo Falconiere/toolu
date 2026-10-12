@@ -107,7 +107,7 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev"
       | "review" | "ast-grep" | "statusline" | "babysit" | "epic" => continue,
-      "brainstorm" | "delivery-flow" => (vec!["--json", name.as_str()], "guide"),
+      "brainstorm" | "delivery-flow" | "ts-quality" => (vec!["--json", name.as_str()], "guide"),
       _ => (vec!["--json", name.as_str(), "planned"], "planned"),
     };
     let output = toolu(&args).unwrap();

@@ -9,33 +9,27 @@ Owner: `plugins/ts-quality`.
 ## `toolu ts-quality`
 
 ```text
-TypeScript quality rules that run after each edit
+ts-quality has no verbs: its rules run after every edit of a .ts or .tsx file in a TypeScript project with a package manager. Violations (type assertions, console.log, suppression comments, oversized files and functions, swallowed errors, mocks in tests and more) fail the file's quality-gate entry until it is fixed; duplication, JSDoc and unhandled-await findings are advisories.
 
-Usage: toolu ts-quality [OPTIONS] <COMMAND>
+Limits come from lang.ts in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.
 
-Commands:
-  planned  Not ported yet (#426): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+Usage: toolu ts-quality [OPTIONS]
 
 Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
+      --json
+          Print exactly one JSON document on stdout
 
-## `toolu ts-quality planned`
+  -q, --quiet
+          Drop the diagnostics of a successful run
 
-```text
-Not ported yet (#426): show the planned verbs
+      --host <HOST>
+          The host to act for, instead of the detected one
 
-Usage: toolu ts-quality planned [OPTIONS]
+          [possible values: claude, codex, opencode, cursor, hermes]
 
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```

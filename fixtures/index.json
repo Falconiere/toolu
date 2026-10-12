@@ -620,7 +620,7 @@
     {
       "id": "quality-ts",
       "fixture": "fixtures/quality/ts.json",
-      "source": "plugins/ts-quality/hooks/src/__tests__/cases.ts",
+      "source": "tools/toolu-conformance/src/ts-quality/cases.ts",
       "names": [
         "gating: outside a TS project",
         "gating: TS project with no lock file",

@@ -101,7 +101,7 @@ toolu's PostToolUse entry for edit, shell and search tools runs the Bun bundle `
   - push-waiver detects pushes through the same layer (#283 item 8).
   
   Historical Bash versions are available at tag `v7.2.0` for parity checks.
-- **Registry.** `post-tools.d` runs after the built-ins. ts-quality (#265), python-quality (#266) and rust-quality (#267) run there in process.
+- **Registry.** `post-tools.d` runs after the built-ins. python-quality (#266) and rust-quality (#267) run there in process; ts-quality runs through its bridge module (#426).
 - **Parity.**
   - `plugins/toolu/hooks/src/__tests__/post-tools-283.test.ts` and the colocated native tests exercise the PostToolUse corpus on Claude Code and Codex. Historical Bash behavior remains available from tag `v7.2.0`; each language-quality plugin retains its captured golden suite (see below).
   - `post-tools-283.test.ts` pins the named #283 fixtures: there the bundle is right and bash is recorded as the known-wrong baseline.
@@ -119,23 +119,13 @@ A language-quality plugin is one `tool/post` module that checks the edited file 
 - `fileQuality(event, ctx, spec)`: clears the entry of a removed file; skips a missing file, a file the module does not own (`spec.matches`) and, when asked, a file in a git linked worktree; then runs `spec.check` and settles the gate. Errors are recorded under the file's path with `spec.source` and `spec.reason`, and reported as `QUALITY VIOLATION — fix before proceeding:`. A clean file clears its entry and reports only the advisories.
 - `astGrepScan(file, rules, ctx)`: one `ast-grep scan --inline-rules … --json` for every structural rule. A non-zero exit, stderr, or output that is not the JSON array is a failure with its stage, never "no hits".
 
-ts-quality is the first such module: `plugins/ts-quality/hooks/src/post-tool-use.ts`, with one file of rules per family under `hooks/src/rules/`, in the order of the bash fragments they replace. Project checks come first, as in bash: a tracked `tsconfig*.json`, a lock file, and that package manager on `PATH`.
+ts-quality was the first such module (#265) and is the first native one (#426): the `toolu-ts-quality` crate (`crates/ts-quality`), one Rust file per rule family in the order of the TypeScript module it replaces. Project checks come first: a tracked `tsconfig*.json`, a lock file, and that package manager on `PATH`. Its structural rules are inline YAML (`QualityRule::ast_rules_inline`), joined with any other rule's directories into the event's one ast-grep scan; `git grep` and jscpd run through `toolu_runtime::process` with a 10 s deadline. Its SessionStart register writes `ts-quality@toolu__ts-quality.json` and, while toolu's own hooks are Bun bundles (#425), a bridge `ts-quality@toolu__ts-quality.sh` that runs `toolu ts-quality hook post-tools` for TypeScript edits. That path runs only ts-quality's modules, walks the path the calling dispatcher split out of a patch (`TOOLU_EDIT_*`), and resolves relative paths against the payload's `cwd`.
 
-**Parity.** `hooks/src/__tests__/fixtures/golden.json` holds 120 captures, taken from the bash module at `a8b0c9c9`: every fixture of the ten concern bats suites, plus threshold sources (a `toolu.config.json` override, `max-lines` in `.eslintrc.json` and `.oxlintrc.json`, an unparsed eslint config, biome), Codex patches, deletes and moves, linked worktrees, jscpd and ast-grep failure stages. `golden-capture.ts` rebuilds that module from git objects, so the capture still runs now that the bash files are gone. `golden.test.ts` replays each case through the same post-tools bundle with the TypeScript module registered, and requires the same stdout, stderr, exit code and gate and telemetry files. Three things differ, and each has a test:
+**Parity.** `fixtures/quality/ts-golden.json` holds 120 captures, taken from the bash module at `a8b0c9c9`: every fixture of the ten concern bats suites, plus threshold sources (a `toolu.config.json` override, `max-lines` in `.eslintrc.json` and `.oxlintrc.json`, an unparsed eslint config, biome), Codex patches, deletes and moves, linked worktrees, jscpd and ast-grep failure stages. `tools/toolu-conformance/src/ts-quality/golden-capture.ts` rebuilds that module from git objects, so the capture still runs now that the bash files are gone. `golden.test.ts` there registers ts-quality with the built `toolu` and replays each case through both post-tools hooks, the native `toolu hook post-tools` and the Bun bundle through the bridge, and requires the same stdout, stderr, exit code and gate and telemetry files. Three things differ from bash, and each has a test:
 
-- With no `jq` on `PATH`, bash exited silently. The TypeScript module needs neither `jq` nor `TOOLU_LIB_DIR`, and checks the file (`DEV-1`).
-- Bash listed no-mocks hits in ast-grep's output order, which varied from run to run. The module lists the first five in source order (`mock-order.test.ts`).
-- If a regular file cannot be read, the module records a quality violation instead of treating the file as empty and clearing its gate entry (`read-failure.test.ts`).
-
-**Latency.** `bun run tooling/src/benchmarks/ts-quality-latency.ts [--runs N] [--assert]` times the post-tools bundle running the bash module (from `a8b0c9c9`) against the same bundle running the TypeScript module. It uses two identical sandboxes and alternates the runs. On an Apple M2 Max with Bun 1.4.2 (7 runs, load average 5 to 9), the TypeScript module was 144 to 230 ms faster on every fixture:
-
-| Fixture | bash module p50 | TS module p50 |
-|---|---|---|
-| three violations in fragment order | 350.8 ms | 144.5 ms |
-| empty catch block (ast-grep) | 374.8 ms | 144.4 ms |
-| `vi.mock` in a test file | 381.3 ms | 158.7 ms |
-| long class method | 358.7 ms | 153.9 ms |
-| clean file | 291.2 ms | 147.7 ms |
+- With no `jq` on `PATH`, bash exited silently. The rule needs neither `jq` nor `TOOLU_LIB_DIR`, and checks the file (`DEV-1`).
+- Bash listed no-mocks hits in ast-grep's output order, which varied from run to run. The rule lists the first five in source order (`mock-order.test.ts`).
+- If a regular file cannot be read, the rule records a quality violation instead of treating the file as empty and clearing its gate entry (`read-failure.test.ts`).
 
 python-quality (#266) is the second: `plugins/python-quality/hooks/src/post-tool-use.ts`, with its rules under `hooks/src/rules/` in the order of the bash fragments: file size, test layout, suppression, function size, no-mocks, then the docstring advisory. Project checks come first, as in bash: a top-level `pyproject.toml`, `setup.py`, `setup.cfg` or `requirements.txt`, and `python3` on `PATH`. Unlike ts-quality, it checks files in linked worktrees, because the bash module did.
 

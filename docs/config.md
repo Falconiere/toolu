@@ -357,7 +357,7 @@ advisory wording. Resolver: `qualityThreshold` in `packages/toolu-core/src/confi
 
 `lang.ts.noMocks` / `lang.rust.noMocks` / `lang.python.noMocks` (default `true`
 — blocking) control the mechanical no-mock-test concerns:
-`ts-quality/hooks/src/rules/ast-rules.ts`
+`crates/ts-quality/src/ast_rules.rs`
 (TS/TSX test files — `jest.mock`/`vi.mock`/`jest.fn`/`vi.fn`/`sinon.*` calls and
 `ts-mockito` imports), `rust-quality/hooks/src/rules/ast-rules.ts` (`src/`
 mock *definitions* — `#[automock]`, `#[cfg_attr(..., automock)]`, `mock! {...}`

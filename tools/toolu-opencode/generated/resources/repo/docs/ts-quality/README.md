@@ -2,7 +2,7 @@
 
 **Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
 
-TypeScript `PostToolUse` quality checks registered into the toolu hook engine. Every TypeScript file the agent edits is checked on the spot.
+TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every TypeScript file the agent edits is checked on the spot.
 
 ## Install
 
@@ -14,9 +14,9 @@ TypeScript `PostToolUse` quality checks registered into the toolu hook engine. E
 
 ### Post-Edit Quality Checks
 
-Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks run as one bundled TypeScript module (`hooks/dist/post-tool-use.js`, built from `hooks/src/post-tool-use.ts` and `hooks/src/rules/`). The `SessionStart` register hook publishes it into toolu's registry, and the core dispatcher imports it in process while this plugin is enabled. Bun 1.4.x must be resolvable through `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun` ([docs/runtime.md](../runtime.md)).
+Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` register hook publishes the rule's manifest (`ts-quality@toolu__ts-quality.json`) into toolu's registry, and the core dispatcher runs the rule while this plugin is installed. Until toolu's own hooks are native (#425), the register hook also writes `ts-quality@toolu__ts-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
 
-On OpenCode, enable `ts-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.ts` and `.tsx` writes, edits and patches run the selected module when the project has a tracked `tsconfig*.json` and an available lock-file package manager. An installed `ast-grep` checks `.tsx` with its TSX parser. Violations appear after the edit and block later commit and push attempts; a linked worktree is skipped by the existing rule. See [OpenCode TypeScript post-edit quality](../opencode.md#typescript-post-edit-quality) and run `bun run smoke:opencode-ts-quality` in a toolu checkout for pinned-host proof.
+On OpenCode, enable `ts-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.ts` and `.tsx` writes, edits and patches run the rule when the project has a tracked `tsconfig*.json` and an available lock-file package manager. An installed `ast-grep` checks `.tsx` with its TSX parser. Violations appear after the edit and block later commit and push attempts; a linked worktree is skipped by the existing rule. See [OpenCode TypeScript post-edit quality](../opencode.md#typescript-post-edit-quality) and run `bun run smoke:opencode-ts-quality` in a toolu checkout for pinned-host proof.
 
 ## Checks Enforced
 
