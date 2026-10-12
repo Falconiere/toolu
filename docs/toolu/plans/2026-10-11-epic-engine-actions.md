@@ -341,7 +341,7 @@ docs, and the full gate.
   {
     "id": "engine-effects",
     "title": "Engine executor and effect thread: parked queue, pause/drain/stop, replace wait, closed channel, socket loop split",
-    "check": "test \"$(cargo test -p toolu-epic-orchestrator --lib effect_thread::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 6 && cargo test -p toolu-epic-orchestrator --lib effect_thread::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib executor::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 4 && cargo test -p toolu-epic-orchestrator --lib executor::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib control::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 13 && cargo test -p toolu-epic-orchestrator --lib control::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib client::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 3 && cargo test -p toolu-epic-orchestrator --lib client::tests:: && cargo xtask guardrails",
+    "check": "test \"$(cargo test -p toolu-epic-orchestrator --lib effect_thread::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 6 && cargo test -p toolu-epic-orchestrator --lib effect_thread::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib executor::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 4 && cargo test -p toolu-epic-orchestrator --lib executor::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib control:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 13 && cargo test -p toolu-epic-orchestrator --lib control:: && test \"$(cargo test -p toolu-epic-orchestrator --lib client::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 3 && cargo test -p toolu-epic-orchestrator --lib client::tests:: && cargo xtask guardrails",
     "ac_refs": [
       "AC-25",
       "AC-32",
@@ -376,7 +376,7 @@ docs, and the full gate.
   {
     "id": "engine-refill",
     "title": "Engine per-epic state, refill and batches, coupling holds and release, stage sets, relaunch counter, launch-wait streaks, budget floors and cooldown env",
-    "check": "test \"$(cargo test -p toolu-epic-orchestrator --lib refill::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 10 && cargo test -p toolu-epic-orchestrator --lib refill::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib holds::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 6 && cargo test -p toolu-epic-orchestrator --lib holds::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib epics::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 3 && cargo test -p toolu-epic-orchestrator --lib epics::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib limit::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 5 && cargo test -p toolu-epic-orchestrator --lib limit::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib schedule::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 11 && cargo test -p toolu-epic-orchestrator --lib schedule::tests:: && cargo xtask guardrails",
+    "check": "test \"$(cargo test -p toolu-epic-orchestrator --lib refill::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 10 && cargo test -p toolu-epic-orchestrator --lib refill::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib holds::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 6 && cargo test -p toolu-epic-orchestrator --lib holds::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib epics::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 3 && cargo test -p toolu-epic-orchestrator --lib epics::tests:: && test \"$(cargo test -p toolu-epic-orchestrator --lib limit:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 5 && cargo test -p toolu-epic-orchestrator --lib limit:: && test \"$(cargo test -p toolu-epic-orchestrator --lib schedule:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 11 && cargo test -p toolu-epic-orchestrator --lib schedule:: && cargo xtask guardrails",
     "ac_refs": [
       "AC-16",
       "AC-17",
@@ -776,3 +776,9 @@ cached, and its result is recorded in the PR.
   `toolu_runtime::startup::native_toolu_hook_output` replaces this branch's
   `native_advice_output`; its attention prompts and notifications keep their
   synchronous path beside the effect thread.
+- `rebase` (checks): the merge put this branch's `control`, `limit` and
+  `schedule` tests beside #513's in second wired modules
+  (`control::replace_tests`, `limit::reroute_tests`, `schedule::gone_tests`),
+  so `engine-effects` and `engine-refill` count `control::`, `limit::` and
+  `schedule::` instead of `…::tests::`. #512 made pr-babysit's hooks native,
+  so the xtask Bun-launcher test reads rust-quality's `register` entry.
