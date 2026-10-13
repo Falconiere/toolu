@@ -95,7 +95,7 @@ catalog.
 **Wrapper.** `tools/toolu-cli/src/cli.ts` becomes a dependency-free Node script
 built to `npm/dist/cli.js`; `npm/package.json` declares
 `"bin": {"toolu-plugins": "dist/cli.js"}` and no `toolu`. It resolves the
-native binary in the launcher's order (`TOOLU_BIN`; `/opt/homebrew/bin/toolu`,
+native binary in the launcher's order (a non-empty `TOOLU_BIN` alone; else `/opt/homebrew/bin/toolu`,
 `/usr/local/bin/toolu`, `/home/linuxbrew/.linuxbrew/bin/toolu`,
 `$HOME/.local/bin/toolu`; then each `toolu` on `PATH`). It skips a candidate
 that is not an executable regular file, whose real path is the wrapper's own
@@ -103,8 +103,9 @@ or inside an `@toolu/plugins` package, or whose `--hook-protocol` (20 s) does
 not print an integer. A native binary that answers but whose
 `toolu plugins install --help` fails predates this namespace: the wrapper exits
 69 naming its path and the upgrade commands. Then it runs
-`toolu plugins --catalog <assets/marketplace.json> <argv…>` with inherited
-stdio and exits with its status. `--version` prints the wrapper's version.
+`toolu plugins <argv…>` with `--catalog <assets/marketplace.json>` after the
+verb, inherited stdio and forwarded SIGINT/SIGTERM/SIGHUP, and exits with its
+status (128 plus the signal's number when a signal ends it). `--version` prints the wrapper's version.
 Missing binary: exit 69 and the #457 commands. The rest of
 `tools/toolu-cli/src` is deleted, with the `@clack/prompts`, `jsonc-parser`,
 `zod` and `@toolu/opencode` dependencies.

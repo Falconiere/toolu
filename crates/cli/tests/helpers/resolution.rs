@@ -5,7 +5,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use crate::sandbox::{
-  REDUCED_PATH, Res, STARTUP, Sandbox, TOOLU, copy_executable, on_path, script, spawn,
+  FIXED_DIRS, REDUCED_PATH, Res, STARTUP, Sandbox, TOOLU, copy_executable, on_path, script, spawn,
   system_message,
 };
 
@@ -90,14 +90,29 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
     node_dir.display()
   );
   let mut probe = Command::new(wrapper_dir.join("toolu"));
-  probe.arg("--hook-protocol").env("PATH", &path);
+  // Only PATH: no HOME, so no `~/.local/bin`, and no inherited TOOLU_BIN.
+  probe.arg("--hook-protocol").env_clear().env("PATH", &path);
   probe.stdout(Stdio::piped()).stderr(Stdio::piped());
   let probe = spawn(&mut probe).unwrap().wait_with_output().unwrap();
   // The wrapper never answers the native probe: it is not the native CLI, and
-  // it skips itself when it looks for one (#438).
+  // it skips itself when it looks for one (#438). With no native binary in a
+  // fixed directory either, it names the install commands and exits 69.
   let said = String::from_utf8_lossy(&probe.stderr);
-  assert!(said.starts_with("toolu-plugins: "), "{said}");
-  assert_ne!(probe.status.code(), Some(0));
+  assert_ne!(probe.status.code(), Some(0), "{said}");
+  let fixed = FIXED_DIRS
+    .iter()
+    .any(|dir| Path::new(dir).join("toolu").exists());
+  if !fixed {
+    assert_eq!(probe.status.code(), Some(69), "{said}");
+    assert!(
+      said.starts_with("toolu-plugins: the native toolu binary was not found"),
+      "{said}"
+    );
+    assert!(
+      said.contains("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
+      "{said}"
+    );
+  }
   assert_eq!(probe.stdout, b"");
   let run = sandbox
     .launch("SessionStart", "session-start", STARTUP, &[("PATH", &path)])

@@ -29,15 +29,16 @@ npx @toolu/plugins install
 
 `@toolu/plugins` is a thin Node wrapper. It finds the native `toolu` and runs
 `toolu plugins <args>`, passing the plugin catalog it ships
-(`assets/marketplace.json`) with `--catalog`. It looks for `toolu` in the places
-the plugins' hook launcher does, in the same order: `TOOLU_BIN`, then
-`/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
-`~/.local/bin`, then every `toolu` on `PATH`. Unlike the launcher, it keeps
-looking past a `TOOLU_BIN` that does not qualify.
+(`assets/marketplace.json`) with `--catalog`. It looks for `toolu` the way the plugins'
+hook launcher does. A non-empty `TOOLU_BIN` is the only candidate. Otherwise it
+tries `/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
+`~/.local/bin`, then every `toolu` on `PATH`, in that order.
 A candidate counts only if it is not the wrapper itself, `toolu --hook-protocol`
 prints an integer, and `toolu plugins install --help` succeeds. With no such
 binary the wrapper exits `69` and names the install commands. It never
-downloads a binary. `npx @toolu/plugins --version` prints the wrapper's own
+downloads a binary. It exits with the native run's status, forwards Ctrl-C,
+`SIGTERM` and `SIGHUP` to it, and exits 128 plus the signal's number when a
+signal ends it. `npx @toolu/plugins --version` prints the wrapper's own
 version.
 
 npx fetches the newest release, so no `@latest` tag is needed. The one

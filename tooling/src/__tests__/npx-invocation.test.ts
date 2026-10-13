@@ -146,6 +146,7 @@ test.concurrent("the packed wrapper runs the native toolu plugins through npx, v
   // The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb.
   const noun = await npx(sb.project, "plugins", "install");
   expect(noun.exitCode).toBe(64);
+  expect(noun.output).toContain("unrecognized subcommand 'plugins'");
 }, 300_000);
 
 test.concurrent("documented npx invocations use the bare @toolu/plugins name", async () => {

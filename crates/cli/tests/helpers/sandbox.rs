@@ -26,7 +26,7 @@ pub(crate) const REDUCED_PATH: &str = "/usr/bin:/bin";
 pub(crate) const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 
 /// The fixed install directories the launcher searches before `PATH`.
-const FIXED_DIRS: &[&str] = &[
+pub(crate) const FIXED_DIRS: &[&str] = &[
   "/opt/homebrew/bin",
   "/usr/local/bin",
   "/home/linuxbrew/.linuxbrew/bin",

@@ -7,5 +7,10 @@
   "type": "module",
   "scripts": {
     "build": "mkdir -p npm/assets npm/dist && cp ../../.claude-plugin/marketplace.json npm/assets/marketplace.json && bun build src/cli.ts --target=node --outfile=npm/dist/cli.js && chmod 755 npm/dist/cli.js"
+  },
+  "devDependencies": {
+    "@toolu/conformance": "workspace:*",
+    "@toolu/opencode": "workspace:*",
+    "zod": "4.1.5"
   }
 }

@@ -1,26 +1,29 @@
 import { spawnSync } from "node:child_process";
 import { accessSync, constants, realpathSync, statSync } from "node:fs";
-import { delimiter, dirname, join, resolve, sep } from "node:path";
+import { basename, delimiter, dirname, join, resolve, sep } from "node:path";
+
+/** The install directories the plugins' hook launcher searches (`crates/core/protocol/src/launcher.rs`). */
+export const FIXED_DIRS: readonly string[] = [
+  "/opt/homebrew/bin",
+  "/usr/local/bin",
+  "/home/linuxbrew/.linuxbrew/bin",
+];
+
+/** How long one probe of a candidate may take. */
+const PROBE_TIMEOUT_MS = 20_000;
 
 /**
- * Where the native `toolu` may live, in the order the plugins' generated hook
- * launcher searches (`crates/core/protocol/src/launcher.rs`): `TOOLU_BIN`, the
- * fixed install directories, then every `toolu` on `PATH`.
+ * Where the native `toolu` may live, the way the hook launcher searches: a non-empty
+ * `TOOLU_BIN` alone, else the install directories, `~/.local/bin`, then every
+ * `toolu` on `PATH`.
  */
-export function candidates(env: NodeJS.ProcessEnv): string[] {
-  const home = env.HOME ?? "";
-  const fixed = [
-    "/opt/homebrew/bin/toolu",
-    "/usr/local/bin/toolu",
-    "/home/linuxbrew/.linuxbrew/bin/toolu",
-    ...(home === "" ? [] : [join(home, ".local/bin/toolu")]),
-  ];
-  const onPath = (env.PATH ?? "")
-    .split(delimiter)
-    .filter((dir) => dir !== "")
-    .map((dir) => join(dir, "toolu"));
+export function candidates(env: NodeJS.ProcessEnv, fixed: readonly string[] = FIXED_DIRS): string[] {
   const bin = env.TOOLU_BIN ?? "";
-  return [...(bin === "" ? [] : [bin]), ...fixed, ...onPath];
+  if (bin !== "") return [bin];
+  const home = env.HOME ?? "";
+  const dirs = [...fixed, ...(home === "" ? [] : [join(home, ".local/bin")])];
+  const onPath = (env.PATH ?? "").split(delimiter).filter((dir) => dir !== "");
+  return [...dirs, ...onPath].map((dir) => join(dir, "toolu"));
 }
 
 function real(path: string): string | undefined {
@@ -41,18 +44,28 @@ function executableFile(path: string): boolean {
   }
 }
 
-/** The wrapper itself, a copy inside its own package, or a file that is no program. */
-function isWrapper(path: string, self: string): boolean {
-  const packageRoot = dirname(dirname(self));
+/**
+ * The wrapper itself, or a copy inside its own package: the bundle sits in
+ * `<package>/dist/` (published) or `<workspace>/src/` (a checkout), and a
+ * global install lives under `node_modules/@toolu/plugins/`.
+ */
+export function isWrapper(path: string, self: string): boolean {
+  const here = dirname(self);
+  const inPackage = basename(here) === "dist" || basename(here) === "src";
   return (
     path === self ||
-    path.startsWith(`${packageRoot}${sep}`) ||
+    (inPackage && path.startsWith(`${dirname(here)}${sep}`)) ||
     path.includes(`${sep}node_modules${sep}@toolu${sep}plugins${sep}`)
   );
 }
 
 function answers(path: string, args: readonly string[], env: NodeJS.ProcessEnv): string | undefined {
-  const result = spawnSync(path, [...args], { encoding: "utf8", env, timeout: 20_000, stdio: ["ignore", "pipe", "ignore"] });
+  const result = spawnSync(path, [...args], {
+    encoding: "utf8",
+    env,
+    timeout: PROBE_TIMEOUT_MS,
+    stdio: ["ignore", "pipe", "ignore"],
+  });
   return result.status === 0 ? result.stdout : undefined;
 }
 
@@ -64,14 +77,22 @@ export type Native =
 
 /**
  * The native binary: the first candidate that is an executable file, is not
- * this wrapper, prints an integer for `--hook-protocol` and has `plugins install`.
+ * this wrapper, prints an integer for `--hook-protocol` and has `plugins
+ * install`. Each real path is probed once.
  */
-export function findNative(env: NodeJS.ProcessEnv, self: string): Native {
-  const searched = candidates(env);
+export function findNative(
+  env: NodeJS.ProcessEnv,
+  self: string,
+  fixed: readonly string[] = FIXED_DIRS,
+): Native {
+  const searched = candidates(env, fixed);
+  const tried = new Set<string>();
   let old: string | undefined;
   for (const candidate of searched) {
     const path = real(candidate);
-    if (path === undefined || isWrapper(path, self) || !executableFile(path)) continue;
+    if (path === undefined || tried.has(path)) continue;
+    tried.add(path);
+    if (isWrapper(path, self) || !executableFile(path)) continue;
     const protocol = answers(path, ["--hook-protocol"], env);
     if (protocol === undefined || !/^\d+\s*$/.test(protocol)) continue;
     if (answers(path, ["plugins", "install", "--help"], env) === undefined) {
@@ -86,7 +107,21 @@ export function findNative(env: NodeJS.ProcessEnv, self: string): Native {
 /** The catalog shipped beside the bundle, or the repository's when run from source. */
 export function catalogPath(self: string): string {
   const here = dirname(self);
-  return here.endsWith(`${sep}src`)
+  return basename(here) === "src"
     ? resolve(here, "../../../.claude-plugin/marketplace.json")
     : resolve(here, "../assets/marketplace.json");
+}
+
+/** The verbs that take `--catalog`. */
+const VERBS = new Set(["install", "list", "remove", "update"]);
+
+/**
+ * The words after `toolu`: `plugins`, then the user's, with `--catalog <catalog>`
+ * after the first known verb unless the user gave their own `--catalog`.
+ */
+export function nativeWords(argv: readonly string[], catalog: string | undefined): string[] {
+  const own = argv.some((word) => word === "--catalog" || word.startsWith("--catalog="));
+  const at = argv.findIndex((word) => VERBS.has(word));
+  if (catalog === undefined || own || at < 0) return ["plugins", ...argv];
+  return ["plugins", ...argv.slice(0, at + 1), "--catalog", catalog, ...argv.slice(at + 1)];
 }

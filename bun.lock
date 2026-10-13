@@ -38,6 +38,11 @@
     "tools/toolu-cli": {
       "name": "toolu-cli",
       "version": "7.11.0",
+      "devDependencies": {
+        "@toolu/conformance": "workspace:*",
+        "@toolu/opencode": "workspace:*",
+        "zod": "4.1.5",
+      },
     },
     "tools/toolu-conformance": {
       "name": "@toolu/conformance",
@@ -54,7 +59,7 @@
       "name": "@toolu/opencode",
       "version": "7.11.0",
       "dependencies": {
-        "@toolu/core": "^7.9.0",
+        "@toolu/core": "^7.11.0",
         "gray-matter": "4.0.3",
         "zod": "4.1.5",
       },

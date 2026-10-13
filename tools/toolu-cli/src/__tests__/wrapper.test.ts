@@ -5,11 +5,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
+import { FIXED_DIRS } from "../resolve";
 
 const WRAPPER = resolve(import.meta.dir, "../cli.ts");
 const NPM = resolve(import.meta.dir, "../../npm/package.json");
@@ -49,26 +50,28 @@ describe("the published manifest", () => {
   });
 });
 
-describe("resolving the native binary", () => {
-  test("a toolu on PATH that is the wrapper itself is never run; the install commands are named", () => {
+/** A native binary in a fixed install directory would be found before the sandbox's PATH. */
+const fixedNative = FIXED_DIRS.some((dir) => existsSync(join(dir, "toolu")));
+
+describe("running the native binary", () => {
+  test.skipIf(fixedNative)("a toolu on PATH that is the wrapper itself is never run; the install commands are named", () => {
     using sb = sandbox();
     symlinkSync(WRAPPER, join(sb.bin, "toolu"));
     const run = wrapper(["install", "--dry-run", "--host", "claude"], { PATH: `${sb.bin}:/usr/bin:/bin`, HOME: sb.root }, sb.root);
     expect(run.code).toBe(69);
+    expect(run.stderr).toContain("the native toolu binary was not found (looked at ");
+    expect(run.stderr).toContain(`, ${join(sb.bin, "toolu")}, `);
     expect(run.stderr).toContain("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash");
     expect(run.stderr).toContain("brew install falconiere/tap/toolu");
-    expect(run.stderr).toContain(join(sb.bin, "toolu"));
   });
 
-  test("a script that is not the native CLI is skipped, and one without plugins is too old", () => {
+  test("a native binary without plugins is too old to run", () => {
     using sb = sandbox();
-    script(join(sb.bin, "toolu"), 'echo "toolu: unknown flag: $1" >&2; exit 2');
-    const legacy = wrapper(["list"], { PATH: `${sb.bin}:/usr/bin:/bin`, HOME: sb.root }, sb.root);
-    expect(legacy.code).toBe(69);
-    script(join(sb.bin, "toolu"), '[ "$1" = "--hook-protocol" ] && { echo 2; exit 0; }; exit 64');
-    const old = wrapper(["list"], { PATH: `${sb.bin}:/usr/bin:/bin`, HOME: sb.root }, sb.root);
-    expect(old.code).toBe(69);
-    expect(old.stderr).toContain("predates this package");
+    const old = join(sb.bin, "old");
+    script(old, '[ "$1" = "--hook-protocol" ] && { echo 2; exit 0; }; exit 64');
+    const run = wrapper(["list"], { PATH: "/usr/bin:/bin", HOME: sb.root, TOOLU_BIN: old }, sb.root);
+    expect(run.code).toBe(69);
+    expect(run.stderr).toContain(`${old} has no \`toolu plugins\`; it predates this package`);
   });
 
   test("with the native binary it runs toolu plugins from this repository and from an empty directory", () => {
@@ -82,18 +85,28 @@ describe("resolving the native binary", () => {
     }
     const usage = wrapper(["skills"], env, sb.root);
     expect(usage.code).toBe(64);
+    expect(usage.stderr).toContain("skills");
   });
 
-  test("the native exit status and a killing signal pass through", () => {
+  test("the words, the exit status and a killing signal pass through", () => {
     using sb = sandbox();
     const native = join(sb.bin, "native");
+    const log = join(sb.root, "argv.log");
     script(
       native,
-      'case "$1" in --hook-protocol) echo 2 ;; plugins) [ "$3" = --help ] && exit 0; kill -TERM $$ ;; esac',
+      `case "$1" in --hook-protocol) echo 2; exit 0 ;; esac
+[ "$3" = --help ] && exit 0
+echo "$*" >> ${log}
+case "$*" in *" list "*) kill -TERM $$ ;; esac
+exit 3`,
     );
     const env = { PATH: "/usr/bin:/bin", HOME: sb.root, TOOLU_BIN: native };
-    const killed = wrapper(["list"], env, sb.root);
-    expect(killed.signal).toBe("SIGTERM");
+    const status = wrapper(["install", "jev"], env, sb.root);
+    expect(status.code).toBe(3);
+    const catalog = resolve(REPO_ROOT, ".claude-plugin/marketplace.json");
+    expect(readFileSync(log, "utf8")).toBe(`plugins install --catalog ${catalog} jev\n`);
+    const killed = wrapper(["--host", "codex", "list"], env, sb.root);
+    expect(killed.code).toBe(143);
   });
 
   test("--version answers without a native binary", () => {

@@ -10,8 +10,7 @@ Claude Code and Codex are driven through their own plugin CLIs. OpenCode has no
 plugin CLI for this, so `toolu plugins` edits its documented config files
 instead ([OpenCode](#opencode)). The code is `crates/plugins` (`toolu-plugins`).
 
-Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`
-(untracked; `docs/toolu/` is gitignored).
+Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
 ## Install
 
@@ -30,13 +29,16 @@ npx @toolu/plugins install
 
 `@toolu/plugins` is a thin Node wrapper. It finds the native `toolu` and runs
 `toolu plugins <args>`, passing the plugin catalog it ships
-(`assets/marketplace.json`) with `--catalog`. It looks for `toolu` the way the
-plugins' hook launcher does: `TOOLU_BIN` first, then `/opt/homebrew/bin`,
-`/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`, `~/.local/bin`, then `PATH`.
+(`assets/marketplace.json`) with `--catalog`. It looks for `toolu` the way the plugins'
+hook launcher does. A non-empty `TOOLU_BIN` is the only candidate. Otherwise it
+tries `/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
+`~/.local/bin`, then every `toolu` on `PATH`, in that order.
 A candidate counts only if it is not the wrapper itself, `toolu --hook-protocol`
 prints an integer, and `toolu plugins install --help` succeeds. With no such
 binary the wrapper exits `69` and names the install commands. It never
-downloads a binary. `npx @toolu/plugins --version` prints the wrapper's own
+downloads a binary. It exits with the native run's status, forwards Ctrl-C,
+`SIGTERM` and `SIGHUP` to it, and exits 128 plus the signal's number when a
+signal ends it. `npx @toolu/plugins --version` prints the wrapper's own
 version.
 
 npx fetches the newest release, so no `@latest` tag is needed. The one
@@ -157,9 +159,10 @@ failure is recorded and the remaining plugins are still attempted. Either way th
 exit code is `1` and every failure is named.
 
 **Host ambiguity is never resolved silently.** With more than one wired host on
-`PATH` and no `--host`, a terminal prompts. `install` asks which hosts, and when
-no plugin names were given it also asks which plugins, every catalog entry
-selected by default. It then runs once per chosen host with a sectioned report.
+`PATH` and no `--host`, a terminal prompts. `install` asks which hosts and then
+runs once per chosen host with a sectioned report. Separately, an `install` on a
+terminal with no plugin names and no `--config` asks which plugins, every
+catalog entry selected by default, whatever the host.
 `list`, `remove`, and `update` ask for one host. The prompts are numbered lines
 on the terminal (`/dev/tty`): Enter takes the default, `1 3` or `1,3` picks,
 and `q` cancels. Without a terminal, or with `--no-input` or `--json`, the run

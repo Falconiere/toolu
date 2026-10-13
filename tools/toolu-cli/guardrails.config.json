@@ -3,49 +3,26 @@
   "version": 2,
   "srcRoot": "src",
   "src": {
-    "topLevel": [
-      "__tests__"
-    ],
+    "topLevel": ["__tests__"],
     "nested": {},
     "requireReadme": []
   },
   "fileSize": {
     "max": 300,
-    "skipExtensions": [
-      ".ts"
-    ]
+    "skipExtensions": [".ts"]
   },
   "functionSize": {
     "max": 60
   },
   "testDir": "__tests__",
   "testGlob": "*.test.ts",
-  "barrelNames": [
-    "index.ts",
-    "index.tsx"
-  ],
+  "barrelNames": ["index.ts", "index.tsx"],
   "barrelExempt": [],
-  "bannedDeps": [
-    "axios",
-    "yup",
-    "joi",
-    "valibot",
-    "superstruct",
-    "ajv"
-  ],
+  "bannedDeps": ["axios", "yup", "joi", "valibot", "superstruct", "ajv"],
   "requiredFiles": [],
   "secrets": {
-    "neverTracked": [
-      ".env",
-      ".env.local"
-    ]
+    "neverTracked": [".env", ".env.local"]
   },
   "shadowConfigs": [],
-  "ownedByLinter": [
-    "folder-tree",
-    "colocated-tests",
-    "no-barrels",
-    "filename-case",
-    "patterns"
-  ]
+  "ownedByLinter": ["folder-tree", "colocated-tests", "no-barrels", "filename-case", "patterns"]
 }

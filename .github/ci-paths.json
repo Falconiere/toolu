@@ -34,6 +34,7 @@
       "fixtures/**",
       "tooling/conventions/guardrails/rust/**",
       "plugins/rust-quality/**",
+      "tools/toolu-cli/**",
       "plugins/*/hooks/hooks.json",
       "plugins/*/.claude-plugin/plugin.json",
       "plugins/*/.codex-plugin/plugin.json",
