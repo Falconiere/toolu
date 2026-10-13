@@ -168,11 +168,11 @@ async function migrationRefusals(ctx: EntryContext): Promise<EntryResult> {
     },
     {
       name: "bothScopes",
-      exit: 2,
+      exit: 64,
       run: await refused(
         ctx,
         { global: true, projectEntry: true, selection: ["toolu"] },
-        { exit: 2, message: "--scope" },
+        { exit: 64, message: "--scope" },
       ),
     },
   ];
@@ -194,7 +194,7 @@ export const MIGRATION_REFUSAL_SCENARIOS: EntryScenario[] = [
   {
     id: "docs.migration-refusals",
     claim:
-      "docs/opencode-migration.md's migrate block stops with every user file unchanged when update fails (exit 1 with no entry, exit 2 with the package in both scopes); the documented no-entry steps then let it finish, and its rollback removes toolu's entry and restores the seeded files",
+      "docs/opencode-migration.md's migrate block stops with every user file unchanged when update fails (exit 1 with no entry, exit 64 with the package in both scopes); the documented no-entry steps then let it finish, and its rollback removes toolu's entry and restores the seeded files",
     run: migrationRefusals,
   },
 ];

@@ -21,7 +21,7 @@ After the rollback block, every seeded file must match its original byte for byt
 `docs.migration-refusals` runs the migrate block where `update` must fail:
 
 - a clone-only setup with no entry, which must exit `1`;
-- a package configured in both scopes, which must exit `2`.
+- a package configured in both scopes, which must exit `64`.
 
 In both cases the block must stop with every user file unchanged. For the clone-only setup, the check then runs the documented [no-entry step](#no-entry) and the migrate block again.
 
@@ -55,7 +55,7 @@ In both cases the block must stop with every user file unchanged. For the clone-
 
 1. Install the pinned host. Both packages declare an `opencode` command (`npm view @opencode/cli@2.0.12 bin`, `npm view opencode-ai@1.18.34 bin`), and a global npm install fails with `EEXIST` rather than replace another package's command unless you pass `--force`. Run `npm uninstall -g @opencode/cli` first, then `npm install -g opencode-ai@1.18.34`. Afterwards, `opencode --version` must print `1.18.34`.
 2. Run the block from each project where you used toolu. The global config is backed up and migrated on the first run. Later runs keep that first backup and only back up and clean the project.
-3. If the package is configured in both your global and project config, add `--scope user` or `--scope project` to `update`. Without it, the CLI exits `2` and writes nothing.
+3. If the package is configured in both your global and project config, add `--scope user` or `--scope project` to `update`. Without it, the CLI exits `64` and writes nothing.
 
 ## Migrate
 
@@ -86,7 +86,7 @@ npx @toolu/plugins list --host opencode
   - `node_modules`, toolu's data root and gate state are left out.
 - **`update`.** It rewrites every `@toolu/opencode` entry, the V2 one included, to this release, and leaves your selection alone. When it fails, the block stops before changing anything else:
   - **Exit `1`, not configured:** only the clone shim loaded toolu, so there is no entry to update. Add one with the [no-entry step](#no-entry) below, then run the block again.
-  - **Exit `2`:** the package is configured in both your global and project config. Add `--scope user` or `--scope project` to the `update` line.
+  - **Exit `64`:** the package is configured in both your global and project config. Add `--scope user` or `--scope project` to the `update` line.
 - **`list`** shows the entry OpenCode will load and the enabled plugins.
 - **Restart OpenCode.** The host log (`opencode --print-logs`) shows one `toolu: ready (…)` line, and the [quick start](opencode.md#quick-start) check refuses the scratch `.env.toolu-check` write.
 
