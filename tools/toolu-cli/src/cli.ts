@@ -38,7 +38,7 @@ function version(self: string): string {
  * by a signal exits 128 plus the signal's number, as a shell reports it.
  */
 function runNative(path: string, words: readonly string[]): void {
-  const child = spawn(path, [...words], { stdio: "inherit" });
+  const child = spawn(path, [...words], { stdio: "inherit", windowsHide: true });
   const forward = (signal: NodeJS.Signals) => () => child.kill(signal);
   for (const signal of FORWARDED) process.on(signal, forward(signal));
   child.on("error", (error) => {

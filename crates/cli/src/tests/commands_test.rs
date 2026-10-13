@@ -19,6 +19,17 @@ fn the_listing_has_one_line_per_visible_command() {
       .iter()
       .any(|line| line.starts_with("toolu serve planned "))
   );
+  // A ported namespace lists its real verbs, not the placeholder (#438).
+  assert!(
+    lines
+      .iter()
+      .any(|line| line.starts_with("toolu plugins install "))
+  );
+  assert!(
+    !lines
+      .iter()
+      .any(|line| line.starts_with("toolu plugins planned"))
+  );
   assert!(lines.iter().any(|line| line.starts_with("toolu hook ")));
   assert!(!lines.iter().any(|line| line.starts_with("toolu jev hook")));
   // The about column lines up: it starts at the same byte on every line.

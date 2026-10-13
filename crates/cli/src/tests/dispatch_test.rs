@@ -108,6 +108,20 @@ fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
     let outcome = dispatched(line);
     assert_eq!(document(&outcome)["namespace"], "serve", "{line}");
   }
+  // A ported verb (#438) takes them on either side too: here its catalog is
+  // unreadable, so it stops before any host runs and reports one error document.
+  for line in [
+    "--json plugins list --catalog /no/such/catalog.json",
+    "plugins list --catalog /no/such/catalog.json --json",
+  ] {
+    let outcome = dispatched(line);
+    assert_eq!(outcome.exit, Exit::Failure, "{line}");
+    let message = document(&outcome)["error"]["message"].clone();
+    assert_eq!(
+      message, "toolu: cannot read marketplace manifest: /no/such/catalog.json",
+      "{line}"
+    );
+  }
 }
 
 #[test]
@@ -144,7 +158,7 @@ fn an_unknown_host_is_a_usage_error() {
 
 #[test]
 fn the_global_flags_become_the_verb_context() {
-  let argv = "toolu --host codex --config-dir /tmp/cfg -q serve planned --json";
+  let argv = "toolu --host codex --config-dir /tmp/cfg -q plugins install --json";
   let matches = tree::command()
     .try_get_matches_from(argv.split(' '))
     .unwrap();
