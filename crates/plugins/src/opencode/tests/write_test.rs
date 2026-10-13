@@ -1,6 +1,10 @@
 use std::os::unix::fs::PermissionsExt as _;
 
-use super::write_atomic;
+use super::stage;
+
+fn write_atomic(path: &std::path::Path, text: &str) -> std::io::Result<()> {
+  stage(path, text)?.commit()
+}
 use crate::support::Sandbox;
 
 #[test]

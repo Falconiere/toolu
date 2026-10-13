@@ -98,12 +98,6 @@ impl Staged {
   }
 }
 
-/// Writes `text` to `path` atomically.
-#[cfg(test)]
-pub(crate) fn write_atomic(path: &Path, text: &str) -> std::io::Result<()> {
-  stage(path, text)?.commit()
-}
-
 #[cfg(test)]
 #[path = "tests/write_test.rs"]
 mod tests;

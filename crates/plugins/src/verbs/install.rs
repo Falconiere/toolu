@@ -34,6 +34,19 @@ fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<
   }
 }
 
+/// Adds the toolu marketplace. A failure is not fatal (it may be there
+/// already), but a plugin that then fails to install says so: the note.
+fn add_marketplace(driver: &Driver) -> String {
+  let ran = driver.run(&driver.adapter.add_marketplace());
+  if ran.ok() {
+    return String::new();
+  }
+  format!(
+    "; marketplace add failed: {}",
+    first_line(&ran.stderr, "no output")
+  )
+}
+
 /// Installs `requested` (all when empty) with their dependencies.
 pub(crate) fn run(
   driver: &Driver,
@@ -44,22 +57,11 @@ pub(crate) fn run(
 ) -> Res<Vec<Step>> {
   let order = install_order(catalog, requested)?;
   let adapter = driver.adapter;
-  // A failed marketplace add is not fatal (it may be there already), but a
-  // plugin that then fails to install says so.
-  let added = if dry_run {
-    None
+  let add_note = if dry_run {
+    String::new()
   } else {
-    Some(driver.run(&adapter.add_marketplace()))
+    add_marketplace(driver)
   };
-  let add_note = added
-    .filter(|ran| !ran.ok())
-    .map(|ran| {
-      format!(
-        "; marketplace add failed: {}",
-        first_line(&ran.stderr, "no output")
-      )
-    })
-    .unwrap_or_default();
   let installed = driver.versions(&adapter.list_installed());
   let offered = driver.versions(&adapter.list_available());
   let dependents = dependents_of(catalog, CORE);
