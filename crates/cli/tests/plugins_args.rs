@@ -44,16 +44,19 @@ impl Sb {
 
   fn run(&self, args: &[&str]) -> Res<Output> {
     let path = format!("{}:/usr/bin:/bin", self.root().join("bin").display());
-    Ok(
-      Command::new(TOOLU)
-        .args(args)
-        .current_dir(self.root())
-        .env_clear()
-        .env("PATH", path)
-        .env("HOME", self.root())
-        .stdin(Stdio::null())
-        .output()?,
-    )
+    let mut command = Command::new(TOOLU);
+    command
+      .args(args)
+      .current_dir(self.root())
+      .env_clear()
+      .env("PATH", path)
+      .env("HOME", self.root())
+      .stdin(Stdio::null());
+    // Coverage runs keep their profile path, so no `.profraw` lands in the cwd.
+    if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
+      command.env("LLVM_PROFILE_FILE", profile);
+    }
+    Ok(command.output()?)
   }
 }
 

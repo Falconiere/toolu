@@ -127,14 +127,19 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
 
 /// `toolu --json plugins …` in a fresh `HOME` with no host CLI on `PATH`.
 fn plugins_json(home: &std::path::Path, args: &[&str]) -> Res<Value> {
-  let output = assert_cmd::Command::new(crate::cli::TOOLU)
+  let mut command = assert_cmd::Command::new(crate::cli::TOOLU);
+  command
     .args(["--json", "plugins"])
     .args(args)
     .current_dir(home)
     .env_clear()
     .env("HOME", home)
-    .env("PATH", "/usr/bin:/bin")
-    .output()?;
+    .env("PATH", "/usr/bin:/bin");
+  // Coverage runs keep their profile path, so no `.profraw` lands in the cwd.
+  if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
+    command.env("LLVM_PROFILE_FILE", profile);
+  }
+  let output = command.output()?;
   one_document(&output)
 }
 
