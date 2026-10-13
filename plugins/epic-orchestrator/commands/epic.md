@@ -1,26 +1,25 @@
 # Epic orchestrator
 
-Resolve the plugin root, then read and execute the skill:
+`$ARGUMENTS` is a subcommand below, or an epic reference (GitHub, Jira, or
+Linear) with the skill's flags (`--dry-run`, `--max N`, `--hosts
+claude:2,codex:2`, `--repo owner/name`, `--tracker`, `--safe`, `--no-jev`).
 
-```bash
-ROOT="${CLAUDE_PLUGIN_ROOT}"
-ROOT="${ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT}}}"
-```
+An epic reference runs the `epic-orchestrator` skill: load it (on Claude Code
+`ROOT="${CLAUDE_PLUGIN_ROOT:-${PLUGIN_ROOT:-${TOOLU_PLUGIN_ROOT}}}"`, then
+`$ROOT/skills/epic-orchestrator/SKILL.md`), read it completely and execute it.
 
-Read `$ROOT/skills/epic-orchestrator/SKILL.md` completely and execute it. Pass
-`$ARGUMENTS` as the epic reference (GitHub, Jira, or Linear) plus flags
-(`--dry-run`, `--max N`, `--hosts claude:2,codex:2`, `--repo owner/name`,
-`--tracker`, `--safe`, `--no-jev`, `status`, `stop`).
+Each subcommand is one CLI command; print its output and stop. `<epic-key>`
+is the basename of the epic's state directory (for example
+`falconiere-toolu-402`); `<state_dir>` is the directory itself.
 
-The skill passes `--safe` and `--no-jev` to `toolu epic start <state_dir>`,
-which records them in `<state_dir>/launch.json` for the engine's launches,
-and `--no-jev` also to `toolu epic route` before the start. `--kind`,
-`--model` and `--effort` go to a manual `toolu epic launch`.
-
-For `status`, use `toolu --json epic status` and show its versioned engine
-overview; `toolu --json epic status <key>` selects one epic or worker. The
-read-only dashboard is at `http://127.0.0.1:7717/` while the engine runs.
+| Subcommand | Runs |
+|---|---|
+| `start <state_dir>` | `toolu epic start <state_dir>` (add `--safe`, `--no-jev` when passed), then the skill's wait loop |
+| `status [<epic-key>]` | `toolu epic status <epic-key>` (all epics without a key), plus the dashboard `http://127.0.0.1:7717/`; consumes no judgment |
+| `pause [<epic-key>]` | `toolu epic pause <epic-key>`: no launch, rebase or merge until resumed |
+| `resume [<epic-key>]` | `toolu epic resume <epic-key>` |
+| `stop <epic-key>` | `toolu epic pause <epic-key>`, then end the wait loop; workers finish their step and go idle |
+| `serve` | `toolu epic serve`: a foreground engine with its dashboard, when none runs |
 
 Every action is a `toolu epic` verb (see `docs/cli/epic.md`). Trust its
-output — do not re-fetch with ad-hoc `gh` what the graph, gate, or engine
-already reported.
+output; do not re-fetch with `gh` what the engine already reported.

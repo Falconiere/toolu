@@ -185,7 +185,7 @@ test("real epic skill description keeps its embedded issue number", () => {
   );
   const description = parseFrontmatter(source).frontmatter.description;
   expect(description).toContain("work epic #248");
-  expect(description).toContain("Not for a single standalone issue or PR.");
+  expect(description).toContain("Not for a single issue.");
 });
 
 test("plain YAML descriptions keep a hash after a literal backslash and quote", () => {

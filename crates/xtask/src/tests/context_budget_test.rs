@@ -138,3 +138,37 @@ fn doc_names_match_the_session_hook() {
   expected.sort_unstable();
   assert_eq!(rendered, expected);
 }
+
+#[test]
+fn the_real_epic_orchestrator_description_fits_80_words_with_its_triggers() {
+  let lines = check(&repo(), Mode::Skills);
+  let mine: Vec<_> = lines
+    .iter()
+    .filter(|line| line.text.starts_with("epic-orchestrator"))
+    .collect();
+  assert!(
+    mine.iter().any(|line| line.text.contains("(<= 80)")),
+    "{lines:?}"
+  );
+  assert!(mine.iter().all(|line| !line.red), "{mine:?}");
+}
+
+#[test]
+fn an_epic_description_without_its_trigger_phrase_is_red() {
+  let dir = tempfile::tempdir().unwrap();
+  write(
+    dir.path(),
+    "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
+    "---\nname: epic-orchestrator\ndescription: Drive an epic. \"where is the epic at\"\n---\n",
+  );
+  let lines = check(dir.path(), Mode::Skills);
+  let missing = lines
+    .iter()
+    .find(|line| line.text.starts_with("epic-orchestrator") && line.red)
+    .unwrap();
+  assert!(
+    missing.text.contains("dry-run the epic"),
+    "{}",
+    missing.text
+  );
+}

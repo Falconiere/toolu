@@ -15,13 +15,18 @@ use epic::{Home, Res, err};
 use epic_doc::doc;
 use epic_graph::write_graph;
 
-/// The orchestrator's skill and command, as the plugin ships them.
+/// The orchestrator's skill, its references and command, as the plugin ships them.
 fn surfaces() -> Res<Vec<(String, String)>> {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/epic-orchestrator");
-  ["skills/epic-orchestrator/SKILL.md", "commands/epic.md"]
-    .iter()
-    .map(|rel| Ok(((*rel).to_owned(), std::fs::read_to_string(root.join(rel))?)))
-    .collect()
+  [
+    "skills/epic-orchestrator/SKILL.md",
+    "skills/epic-orchestrator/references/recovery.md",
+    "skills/epic-orchestrator/references/worker-brief.md",
+    "commands/epic.md",
+  ]
+  .iter()
+  .map(|rel| Ok(((*rel).to_owned(), std::fs::read_to_string(root.join(rel))?)))
+  .collect()
 }
 
 /// The verbs `toolu epic --help` lists.
@@ -71,11 +76,11 @@ fn the_skill_and_command_run_toolu_epic_verbs_only() {
 fn the_preflight_checks_the_native_binary() {
   let skill = &surfaces().unwrap()[0].1;
   let preflight = skill
-    .split("## Preflight")
+    .split("## 1. Preflight")
     .nth(1)
     .and_then(|rest| rest.split("\n## ").next())
     .unwrap();
-  assert!(preflight.contains("`toolu --version`"), "{preflight}");
+  assert!(preflight.contains("Run `toolu doctor`"), "{preflight}");
   assert!(!preflight.contains("bun"), "{preflight}");
 }
 
@@ -118,6 +123,12 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
       "{kind}"
     );
     assert!(text.contains("toolu epic job -- "), "{kind}");
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+      flat.contains("`report babysit --pr <number>` instead and stop"),
+      "{kind}"
+    );
+    assert!(!flat.contains("`report ready"), "{kind}");
   }
   let jira = brief(&home, "claude", Some("jira")).unwrap();
   assert!(jira.contains("`toolu epic jira issue get Falconiere/comemory#255`"));

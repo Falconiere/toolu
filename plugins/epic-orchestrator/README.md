@@ -68,9 +68,11 @@ Wire OpenCode to the generated surface under
 plugin's `shell.env` sets while the plugin is enabled, points at its
 references.
 
-On every host the orchestrator waits in the foreground with
-`toolu epic wait --max-seconds 480` and runs it again until no issue is
-active; the engine does the polling.
+The orchestrator waits for judgments with `toolu epic wait`: on Claude Code
+as a background Bash call (45-minute default limit) that wakes it with a
+judgment or `waiting`, then starts again; on Codex and OpenCode as a
+foreground loop of `toolu epic wait --max-seconds 480`, since one tool call
+there cannot block for hours. The engine does the polling.
 
 OpenCode workers need `opencode --version` 1.x on `PATH`; launch refuses
 anything else before creating a worktree. Each worker is an
@@ -86,9 +88,12 @@ plugin; an uncommitted project selection does not reach worktrees.
 
 ## What it provides
 
-- **Skill `epic-orchestrator` and command `epic`** — orchestrate an epic (or
-  `status` / `stop`). Workers run the toolu delivery chain then babysit; the
-  orchestrator merges and advances the graph.
+- **Skill `epic-orchestrator` and command `epic`** — preview and start an
+  epic, then answer the engine's judgments; the command also wraps `start`,
+  `status`, `pause`, `resume`, `stop` and `serve`. Workers run the toolu
+  delivery chain through their PR, report `babysit` and go idle; the engine
+  checks each PR every 3 minutes, prompts a worker only when something needs
+  fixing, merges, and advances the graph.
 - **The `toolu epic` namespace** — the resident engine and every action
   (graph, route, launch, gate, finish, close, release, Jira read, evidence
   probe) as native verbs; see [docs/cli/epic.md](../../docs/cli/epic.md). The
@@ -184,8 +189,9 @@ Each PR check probes pull request state, head checks and status, comments and
 reviews with conditional REST requests. An unchanged `304` costs no REST
 primary point. The engine also calls the full `BabysitTick` for every watched
 babysit PR; its GraphQL cost is separate from REST cost in the journal and in
-`toolu epic status`. The production tick remains pending in #433, so its
-current `NotPorted` result raises attention instead of claiming clearance.
+`toolu epic status`. The production tick is pr-babysit's (#433): a green tick
+moves the issue to `ready` and queues its merge, a finding prompts the worker
+with the tick result, and a failed tick raises a `babysit` attention item.
 
 `Retry-After` pauses GitHub checks, launches and merges for the requested
 duration, then the fixed clock resumes. A low primary remaining budget pauses

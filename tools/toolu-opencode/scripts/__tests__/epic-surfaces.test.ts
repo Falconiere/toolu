@@ -81,15 +81,20 @@ test("every skill the orchestrator names resolves, and it runs toolu epic verbs 
   }
 });
 
-test("the orchestrator waits for judgments in the foreground", () => {
-  const skill = read(`${EPIC}/SKILL.md`);
+test("the orchestrator waits for judgments in a bounded foreground loop", () => {
+  const skill = read(`${EPIC}/SKILL.md`).replaceAll(/\s+/g, " ");
   expect(skill).toContain(
-    "toolu --json epic wait --max-seconds 480    # Bash tool with a 600000 ms timeout",
+    "- **OpenCode:** one tool call cannot block for hours, so loop: run `toolu --json epic wait --max-seconds 480` in the foreground, handle what it returns, and run it again while any issue is active.",
   );
-  expect(skill.replaceAll(/\s+/g, " ")).toContain(
-    "run it again in the same turn, and keep that loop going while any issue is active.",
-  );
+  expect(skill).not.toContain("Claude Code:**");
+  expect(skill).not.toContain("background");
   expectHostValidSkill(EPIC);
+});
+
+test("the OpenCode worker stops after reporting babysit", () => {
+  const brief = read(`${EPIC}/references/worker-brief.md`).replaceAll(/\s+/g, " ");
+  expect(brief).toContain("`report babysit --pr <number>` instead and stop; stay idle.");
+  expect(brief).not.toContain("`report ready");
 });
 
 const SKILL = "skills/epic-orchestrator/SKILL.md";
