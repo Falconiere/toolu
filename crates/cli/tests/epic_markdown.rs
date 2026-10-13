@@ -123,6 +123,12 @@ fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
       "{kind}"
     );
     assert!(text.contains("toolu epic job -- "), "{kind}");
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+      flat.contains("`report babysit --pr <number>` instead and stop"),
+      "{kind}"
+    );
+    assert!(!flat.contains("`report ready"), "{kind}");
   }
   let jira = brief(&home, "claude", Some("jira")).unwrap();
   assert!(jira.contains("`toolu epic jira issue get Falconiere/comemory#255`"));

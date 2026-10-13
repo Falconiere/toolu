@@ -4,7 +4,7 @@ use regex::Regex;
 
 use super::{BriefHost, BriefPaths, prompt_text, render_brief};
 use crate::graph::Graph;
-use crate::hosts::HostKind;
+use crate::hosts::{HostKind, skill_ref};
 use crate::support::graph_248;
 
 fn paths() -> BriefPaths {
@@ -114,4 +114,24 @@ fn a_safe_worker_s_brief_says_its_approval_prompts_are_on() {
   let unattended = brief(&graph, "Falconiere/comemory#255", HostKind::Codex);
   assert!(unattended.contains("You run without approval prompts"));
   assert!(unattended.contains("Nobody answers questions in this pane."));
+}
+
+#[test]
+fn the_worker_stops_after_reporting_babysit_and_waits_for_the_engine() {
+  let graph = graph_248();
+  for kind in crate::hosts::HOST_KINDS {
+    let text = brief(&graph, "Falconiere/comemory#255", kind)
+      .split_whitespace()
+      .collect::<Vec<_>>()
+      .join(" ");
+    let babysit = skill_ref(kind, "pr-babysit", "babysit").expect("babysit");
+    assert!(
+      text.contains("run `report babysit --pr <number>` instead and stop"),
+      "{kind:?}"
+    );
+    assert!(text.contains(&format!("Do not start {babysit}, a cron or a polling loop")));
+    assert!(text.contains("`pr-babysit: <repo>#<n> needs you (...)`"));
+    assert!(text.contains("the engine marks the issue `ready`"));
+    assert!(!text.contains("`report ready") && !text.contains("on a cron."), "{kind:?}");
+  }
 }

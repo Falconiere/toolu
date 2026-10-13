@@ -57,6 +57,12 @@ const SKILLS: &[Skill] = &[
     phrases: &["review before push"],
   },
   Skill {
+    name: "epic-orchestrator",
+    path: "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
+    budget: 80,
+    phrases: &["epic", "dry-run the epic", "where is the epic at"],
+  },
+  Skill {
     name: "ast-grep",
     path: "plugins/ast-grep/skills/ast-grep/SKILL.md",
     budget: 40,
