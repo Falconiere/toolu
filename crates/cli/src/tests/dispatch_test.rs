@@ -97,16 +97,16 @@ fn the_hook_protocol_flag_works_beside_other_flags() {
 
 #[test]
 fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
-  let text = dispatched("plugins planned");
+  let text = dispatched("serve planned");
   assert!(
     text
       .stdout
       .unwrap()
-      .starts_with("toolu plugins is not ported yet")
+      .starts_with("toolu serve is not ported yet")
   );
-  for line in ["--json plugins planned", "plugins planned --json"] {
+  for line in ["--json serve planned", "serve planned --json"] {
     let outcome = dispatched(line);
-    assert_eq!(document(&outcome)["namespace"], "plugins", "{line}");
+    assert_eq!(document(&outcome)["namespace"], "serve", "{line}");
   }
 }
 
@@ -144,7 +144,7 @@ fn an_unknown_host_is_a_usage_error() {
 
 #[test]
 fn the_global_flags_become_the_verb_context() {
-  let argv = "toolu --host codex --config-dir /tmp/cfg -q plugins planned --json";
+  let argv = "toolu --host codex --config-dir /tmp/cfg -q serve planned --json";
   let matches = tree::command()
     .try_get_matches_from(argv.split(' '))
     .unwrap();

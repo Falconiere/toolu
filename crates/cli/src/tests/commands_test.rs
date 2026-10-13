@@ -17,7 +17,7 @@ fn the_listing_has_one_line_per_visible_command() {
   assert!(
     lines
       .iter()
-      .any(|line| line.starts_with("toolu plugins planned "))
+      .any(|line| line.starts_with("toolu serve planned "))
   );
   assert!(lines.iter().any(|line| line.starts_with("toolu hook ")));
   assert!(!lines.iter().any(|line| line.starts_with("toolu jev hook")));

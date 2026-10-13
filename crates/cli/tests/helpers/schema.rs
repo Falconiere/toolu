@@ -165,7 +165,8 @@ fn the_plugins_json_documents_validate() {
     violations(&remove, Some("pluginsHost")).unwrap(),
     Vec::<String>::new()
   );
-  assert_eq!(remove["steps"][0]["removed"], true);
+  // Nothing is configured, so nothing is removed.
+  assert_eq!(remove["steps"][0]["removed"], false);
   assert_ne!(
     violations(&json!([{ "name": "x" }]), Some("pluginsList")).unwrap(),
     Vec::<String>::new()
