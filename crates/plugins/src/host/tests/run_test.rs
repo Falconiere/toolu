@@ -12,8 +12,12 @@ fn a_command_reports_its_status_and_streams() {
     (ran.code, ran.stdout.as_str(), ran.stderr.as_str(), ran.ok()),
     (3, "out\n", "err\n", false)
   );
-  let fine = run(&names(&["talk"]), &sb.env(), Duration::from_secs(10));
-  assert!(!fine.ok());
+  sb.stub("fine", "echo listed");
+  let fine = run(&names(&["fine"]), &sb.env(), Duration::from_secs(10));
+  assert_eq!(
+    (fine.code, fine.stdout.as_str(), fine.ok()),
+    (0, "listed\n", true)
+  );
 }
 
 #[test]

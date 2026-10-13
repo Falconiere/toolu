@@ -1,5 +1,5 @@
 //! What a verb prints: the TypeScript installer's reports byte for byte
-//! (`tools/toolu-cli` `src/ui/report.ts`), and their `--json` documents.
+//! (the former TypeScript installer's `src/ui/report.ts`), and their `--json` documents.
 
 use serde_json::{Map, Value, json};
 
@@ -39,12 +39,17 @@ fn install_one(target: Target, steps: &[Step], dry_run: bool) -> String {
   if target == Target::Opencode {
     return planned(steps);
   }
-  let commands = steps
+  commands(steps)
+}
+
+/// A host-CLI dry run: the commands, in order, that would run.
+pub(crate) fn commands(steps: &[Step]) -> String {
+  let lines = steps
     .iter()
     .map(|step| format!("  {}\n", step.argv.join(" ")))
     .collect::<Vec<_>>()
     .concat();
-  format!("Planned commands (nothing was run):\n{commands}")
+  format!("Planned commands (nothing was run):\n{lines}")
 }
 
 /// The install report, with a section per host when there are several.
@@ -123,7 +128,7 @@ pub(crate) fn step_json(step: &Step, removal: bool) -> Value {
   let mut doc = Map::new();
   doc.insert("name".to_owned(), json!(step.name));
   if removal {
-    doc.insert("removed".to_owned(), json!(step.status != Status::Failed));
+    doc.insert("removed".to_owned(), json!(step.status == Status::Removed));
   } else {
     doc.insert("outcome".to_owned(), json!(step.status.name()));
   }

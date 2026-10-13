@@ -156,3 +156,26 @@ fn a_missing_host_fails_the_core_and_an_unknown_name_runs_nothing() {
   assert!(unknown.is_err_and(|fail| fail.message.starts_with("unknown plugin: not-a-plugin")));
   assert_eq!(sb.log("claude"), Vec::<String>::new());
 }
+
+#[test]
+fn a_failed_marketplace_add_is_named_on_the_plugin_that_then_fails() {
+  let sb = Sandbox::new();
+  sb.host(
+    "claude",
+    "[]",
+    "\"plugin marketplace add Falconiere/toolu\"|\"plugin install jev@toolu\"",
+  );
+  let Ok(steps) = run(
+    &driver(&sb, Adapter::Claude),
+    &catalog(),
+    &names(&["jev"]),
+    None,
+    false,
+  ) else {
+    panic!("the install failed outright");
+  };
+  assert_eq!(
+    steps[0].detail,
+    "boom: plugin install jev@toolu; marketplace add failed: boom: plugin marketplace add Falconiere/toolu"
+  );
+}

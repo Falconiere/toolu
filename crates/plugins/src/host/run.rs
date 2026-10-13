@@ -17,7 +17,8 @@ const MAX_OUTPUT: usize = 16 * 1_048_576;
 /// What a host command left.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Ran {
-  /// Its exit status; 127 when it could not start, as a shell reports it.
+  /// Its exit status: 127 when it could not start, as a shell reports it, and
+  /// 124 when it outlived its deadline, as `timeout(1)` reports it.
   pub(crate) code: i32,
   /// Its stdout.
   pub(crate) stdout: String,
@@ -39,11 +40,18 @@ pub(crate) fn run(argv: &[String], env: &Env, timeout: Duration) -> Ran {
   spec.timeout = timeout;
   spec.wait = Wait::Streams;
   spec.max_output_bytes = MAX_OUTPUT;
-  let guard = GroupGuard::install().ok();
-  let mut arm = |pid: u32| {
-    if let Some(guard) = &guard {
-      guard.arm(pid);
+  let guard = match GroupGuard::install() {
+    Ok(guard) => guard,
+    Err(err) => {
+      return Ran {
+        code: 127,
+        stdout: String::new(),
+        stderr: format!("cannot guard the host command against Ctrl-C: {err}"),
+      };
     }
+  };
+  let mut arm = |pid: u32| {
+    guard.arm(pid);
     Ok(())
   };
   match run_with(&spec, &mut arm) {

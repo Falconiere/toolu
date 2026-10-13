@@ -1,5 +1,5 @@
 //! `install` on `OpenCode`: ensure the package entry where the host loads it,
-//! then the requested selection (`tools/toolu-cli` `src/opencode/install.ts`).
+//! then the requested selection (the former TypeScript installer's `src/opencode/install.ts`).
 
 use std::path::Path;
 
@@ -236,6 +236,24 @@ fn plugin_step(
   }
 }
 
+/// The names of `want` that `base` (closed over dependencies) lacks, and
+/// `base` with them appended.
+fn grow(catalog: &Catalog, base: Vec<String>, want: &[String]) -> (Vec<String>, Vec<String>) {
+  let have = closure(catalog, &base);
+  let added: Vec<String> = want
+    .iter()
+    .filter(|name| !have.contains(name))
+    .cloned()
+    .collect();
+  let mut next = base;
+  for name in &added {
+    if !next.contains(name) {
+      next.push(name.clone());
+    }
+  }
+  (added, next)
+}
+
 /// The selection changes of an install.
 fn selection_plan(
   state: &State,
@@ -257,18 +275,7 @@ fn selection_plan(
     None if installed_before => all.clone(),
     None => Vec::new(),
   };
-  let have = closure(catalog, &base);
-  let added: Vec<String> = want
-    .iter()
-    .filter(|name| !have.contains(name))
-    .cloned()
-    .collect();
-  let mut next = base;
-  for name in &added {
-    if !next.contains(name) {
-      next.push(name.clone());
-    }
-  }
+  let (added, next) = grow(catalog, base, &want);
   let no_files =
     state.selection(Scope::Global).is_none() && state.selection(Scope::Project).is_none();
   let path = state.paths.selection(scope);

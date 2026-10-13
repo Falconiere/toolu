@@ -65,6 +65,8 @@ Test files reach a bundle only through `entry-command`: `bundle-references.test.
 
 `fixtures/rust-ported.json` lists the ported entries, `{ "entries": ["<plugin>/<entry>", ...] }`, and a port adds its entry there. `bun run test:rust-conformance` reads it: an empty list is a no-op, otherwise it runs `cargo build --release --locked --bin toolu` (`CARGO` overrides the cargo executable), then `test:unit`, `test:conformance`, and `test:statusline-native` with `TOOLU_IMPL=rust:<entries>`. CI runs it in the `rust-conformance` job, which installs the Rust toolchain only when the list is not empty.
 
+The `tools/toolu-cli` suite runs the OpenCode verbs of `toolu plugins` and the npm wrapper against `target/debug/toolu` (`requiredBuiltTooluBinary`), and fails without it, so `test:unit` needs `cargo build -p toolu-cli --bin toolu` first.
+
 The statusline native suite runs the 31 render, 15 setup and five startup records through real repositories and settings files. `bun run test:statusline-native` uses `target/debug/toolu` for a direct run, so build that binary first with `cargo build -p toolu-cli --bin toolu`. The rust-conformance command uses the release binary it just built.
 
 A port also has a resource budget ([#410](https://github.com/Falconiere/toolu/issues/410), [resource-budgets.md](resource-budgets.md)). `bun run bench:hooks --assert` measures every entry in `fixtures/rust-ported.json` as Rust and fails when one is over its p50 budget in `benchmarks/hook-budgets.json`. It also fails when a ported entry has no budget, so a port adds its budget there too. The `hook-bench` CI job runs it on Linux; macOS only reports.

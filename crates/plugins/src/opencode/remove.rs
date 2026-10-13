@@ -1,6 +1,6 @@
 //! `remove` on `OpenCode`: `remove toolu` drops the package entry; other names
 //! leave the selection, unless an enabled plugin still needs them
-//! (`tools/toolu-cli` `src/opencode/remove.ts`).
+//! (the former TypeScript installer's `src/opencode/remove.ts`).
 
 use crate::catalog::Catalog;
 use crate::catalog::order::install_order;
@@ -8,7 +8,7 @@ use crate::fail::{Fail, Res};
 use crate::opencode::entries::{PACKAGE, plugin_len, toolu_entries};
 use crate::opencode::jsonc::{ConfigFile, remove_key};
 use crate::opencode::paths::Scope;
-use crate::opencode::selection::{closure, dependents_blocking, selection_text};
+use crate::opencode::selection::{Needs, closure, selection_text};
 use crate::opencode::splice;
 use crate::opencode::state::{Plan, State, Write};
 use crate::step::{Status, Step};
@@ -134,7 +134,7 @@ fn remove_package(state: &State, names: &[String], scope: Option<Scope>) -> Res<
 }
 
 /// Names that can go: enabled, and not needed by an enabled plugin that stays.
-fn removable(catalog: &Catalog, enabled: &[String], names: &[String]) -> Vec<String> {
+fn removable(needs: &Needs, enabled: &[String], names: &[String]) -> Vec<String> {
   let mut removing: Vec<String> = names
     .iter()
     .filter(|name| enabled.contains(name))
@@ -143,7 +143,7 @@ fn removable(catalog: &Catalog, enabled: &[String], names: &[String]) -> Vec<Str
   loop {
     let kept: Vec<String> = removing
       .iter()
-      .filter(|name| dependents_blocking(catalog, enabled, &removing, name).is_empty())
+      .filter(|name| needs.blocking(&removing, name).is_empty())
       .cloned()
       .collect();
     if kept.len() == removing.len() {
@@ -155,7 +155,7 @@ fn removable(catalog: &Catalog, enabled: &[String], names: &[String]) -> Vec<Str
 
 /// What a leaf removal decided, to report each name.
 struct Leaves<'a> {
-  catalog: &'a Catalog,
+  needs: &'a Needs,
   enabled: &'a [String],
   removing: &'a [String],
   path: String,
@@ -173,7 +173,7 @@ impl Leaves<'_> {
       return done(name, format!("disabled in {path}{overridden}"))
         .planned(format!("disable {name} in {path}"));
     }
-    let blockers = dependents_blocking(self.catalog, self.enabled, self.removing, name);
+    let blockers = self.needs.blocking(self.removing, name);
     let detail = format!("required by {}; remove them too", blockers.join(", "));
     Step::new(name, Status::Failed, detail, Vec::new())
   }
@@ -202,9 +202,10 @@ fn remove_leaves(
     .governing_selection(target)
     .map_or_else(|| catalog.names(), <[String]>::to_vec);
   let enabled = closure(catalog, &base);
-  let removing = removable(catalog, &enabled, names);
+  let needs = Needs::of(catalog, &enabled);
+  let removing = removable(&needs, &enabled, names);
   let leaves = Leaves {
-    catalog,
+    needs: &needs,
     enabled: &enabled,
     removing: &removing,
     path: state.paths.selection(target).display().to_string(),

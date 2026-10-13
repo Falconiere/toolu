@@ -216,7 +216,7 @@ export const CLI_SCENARIOS: EntryScenario[] = [
   {
     id: "cli.install",
     claim:
-      "`toolu install --host opencode` in a clean profile loads every plugin, enforces a gate, and a rerun changes nothing",
+      "`toolu plugins install --host opencode` (through the npm wrapper) in a clean profile loads every plugin, enforces a gate, and a rerun changes nothing",
     run: cliInstall,
   },
   {

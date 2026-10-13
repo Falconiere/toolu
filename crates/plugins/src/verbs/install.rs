@@ -44,9 +44,22 @@ pub(crate) fn run(
 ) -> Res<Vec<Step>> {
   let order = install_order(catalog, requested)?;
   let adapter = driver.adapter;
-  if !dry_run {
-    let _added = driver.run(&adapter.add_marketplace());
-  }
+  // A failed marketplace add is not fatal (it may be there already), but a
+  // plugin that then fails to install says so.
+  let added = if dry_run {
+    None
+  } else {
+    Some(driver.run(&adapter.add_marketplace()))
+  };
+  let add_note = added
+    .filter(|ran| !ran.ok())
+    .map(|ran| {
+      format!(
+        "; marketplace add failed: {}",
+        first_line(&ran.stderr, "no output")
+      )
+    })
+    .unwrap_or_default();
   let installed = driver.versions(&adapter.list_installed());
   let offered = driver.versions(&adapter.list_available());
   let dependents = dependents_of(catalog, CORE);
@@ -76,7 +89,7 @@ pub(crate) fn run(
       steps.push(Step::new(name, Status::Installed, "installed", argv));
     } else {
       core_failed |= name == CORE;
-      let detail = first_line(&ran.stderr, "install failed");
+      let detail = format!("{}{add_note}", first_line(&ran.stderr, "install failed"));
       steps.push(Step::new(name, Status::Failed, detail, argv));
     }
   }

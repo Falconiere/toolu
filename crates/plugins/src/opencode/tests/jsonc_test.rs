@@ -89,6 +89,12 @@ fn absent_malformed_and_non_object_files() {
   );
   let single = sb.write("single.json", "{ 'plugin': [] }");
   assert!(read_config_file(&single).is_err());
+  let empty = sb.write("empty.json", " \n");
+  assert!(read_config_file(&empty).is_err_and(|fail| {
+    fail
+      .message
+      .ends_with("empty.json is empty; nothing was written")
+  }));
   let dir = sb.path("home");
   assert!(read_config_file(&dir).is_err_and(|fail| fail.message.starts_with("cannot read ")));
   let commented = sb.write("ok.jsonc", "// c\n{ \"plugin\": [\"a\",], }\n");

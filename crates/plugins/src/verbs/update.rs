@@ -1,6 +1,7 @@
 //! `update` on Claude Code and Codex: only what differs from the offered version.
 
 use crate::fail::{Fail, Res};
+use crate::host::run::first_line;
 use crate::step::{Status, Step};
 use crate::verbs::{Driver, find};
 
@@ -36,8 +37,14 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<S
       if dry_run {
         return Step::new(name, Status::Skipped, "dry run", argv);
       }
-      if !driver.run(&argv).ok() {
-        return Step::new(name, Status::Failed, "update failed", argv);
+      let ran = driver.run(&argv);
+      if !ran.ok() {
+        return Step::new(
+          name,
+          Status::Failed,
+          first_line(&ran.stderr, "update failed"),
+          argv,
+        );
       }
       let detail = want.map_or_else(|| "updated".to_owned(), |want| format!("updated to {want}"));
       Step::new(name, Status::Updated, detail, argv)

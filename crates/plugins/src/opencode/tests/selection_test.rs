@@ -1,6 +1,5 @@
 use super::{
-  closure, dependents_blocking, effective_enabled, read_selection_file, selection_text,
-  skills_disabled,
+  Needs, closure, effective_enabled, read_selection_file, selection_text, skills_disabled,
 };
 use crate::support::{Sandbox, catalog, names};
 
@@ -119,16 +118,11 @@ fn dependents_block_a_removal_unless_they_are_removed_too() {
   let catalog = catalog();
   let enabled = effective_enabled(&catalog, Some(&names(&["delivery-flow"])), &[]);
   assert_eq!(
-    dependents_blocking(&catalog, &enabled, &names(&["pr-babysit"]), "pr-babysit"),
+    Needs::of(&catalog, &enabled).blocking(&names(&["pr-babysit"]), "pr-babysit"),
     ["delivery-flow"]
   );
   assert_eq!(
-    dependents_blocking(
-      &catalog,
-      &enabled,
-      &names(&["pr-babysit", "delivery-flow"]),
-      "pr-babysit"
-    ),
+    Needs::of(&catalog, &enabled).blocking(&names(&["pr-babysit", "delivery-flow"]), "pr-babysit"),
     Vec::<String>::new()
   );
 }

@@ -1,5 +1,5 @@
 //! `install --config <path>`: replay a `.toolu/plugins.json` selection with the
-//! rules of the TypeScript reader (`tools/toolu-cli` `src/config/read.ts`): an
+//! rules of the TypeScript reader (the former TypeScript installer's `src/config/read.ts`): an
 //! unknown format version or a file from a newer major is refused, not guessed at.
 
 use std::path::Path;

@@ -2,6 +2,8 @@
 
 Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code, Codex and OpenCode.
 
+These need the native `toolu` binary (below); without it the wrapper exits `69`.
+
 ```bash
 npx @toolu/plugins install              # every catalog plugin, core first
 npx @toolu/plugins install rust-quality # one plugin and its dependency

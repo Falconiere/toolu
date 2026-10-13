@@ -1,7 +1,7 @@
 use toolu_protocol::exit::Exit;
 
 use super::{dependents_of, install_order};
-use crate::catalog::{Catalog, load, parse};
+use crate::catalog::{Catalog, Entry, load, parse};
 
 fn real() -> Catalog {
   match load(None) {
@@ -98,28 +98,45 @@ fn an_unknown_name_is_a_usage_error_naming_the_list_command() {
   }
 }
 
+fn entry(name: &str, dependencies: &[&str]) -> Entry {
+  Entry {
+    name: name.to_owned(),
+    description: None,
+    dependencies: dependencies.iter().map(|name| (*name).to_owned()).collect(),
+  }
+}
+
 #[test]
-fn a_dependency_cycle_is_a_usage_error() {
+fn a_dependency_cycle_is_a_usage_error_at_load_and_in_the_walk() {
   let text = r#"{"name":"t","plugins":[
     {"name":"a","dependencies":[{"name":"b"}]},
-    {"name":"b","dependencies":[{"name":"a"}]},
-    {"name":"c","dependencies":[{"name":"outside"}]}]}"#;
-  let catalog = match parse(text, "cycle.json") {
-    Ok(catalog) => catalog,
-    Err(fail) => panic!("{}", fail.message),
+    {"name":"b","dependencies":[{"name":"a"}]}]}"#;
+  let Err(loaded) = parse(text, "cycle.json") else {
+    panic!("a cyclic catalog loaded");
   };
-  let Err(fail) = install_order(&catalog, &["a".to_owned()]) else {
-    panic!("a cycle was ordered");
-  };
-  assert_eq!(fail.exit, Exit::Usage);
+  assert_eq!(loaded.exit, Exit::Usage);
   assert!(
-    fail
+    loaded
       .message
       .starts_with("circular plugin dependency involving"),
     "{}",
-    fail.message
+    loaded.message
   );
-  // A dependency outside the catalog is skipped, as the TypeScript walk did.
+  let cyclic = Catalog {
+    plugins: vec![entry("a", &["b"]), entry("b", &["a"])],
+  };
+  let Err(walked) = install_order(&cyclic, &["a".to_owned()]) else {
+    panic!("a cycle was ordered");
+  };
+  assert_eq!(walked.exit, Exit::Usage);
+}
+
+#[test]
+fn a_dependency_outside_the_catalog_is_skipped() {
+  let text = r#"{"name":"t","plugins":[{"name":"c","dependencies":[{"name":"outside"}]}]}"#;
+  let Ok(catalog) = parse(text, "outside.json") else {
+    panic!("the catalog did not load");
+  };
   assert_eq!(
     install_order(&catalog, &["c".to_owned()]),
     Ok(vec!["c".to_owned()])

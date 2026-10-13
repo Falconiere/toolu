@@ -57,7 +57,8 @@ pub(crate) fn target_spec(env: &Env, version: &str) -> Res<String> {
   }
 }
 
-/// The file's `plugin` array, `None` when the key is absent.
+/// The file's `plugin` array, `None` when the key is absent; a `plugin` that
+/// is not an array is an error naming the file.
 pub(crate) fn plugin_array(file: &ConfigFile) -> Res<Option<&Vec<Value>>> {
   match file.data.as_ref().and_then(|data| data.get("plugin")) {
     None => Ok(None),
@@ -74,7 +75,8 @@ pub(crate) fn plugin_len(file: &ConfigFile) -> Res<Option<usize>> {
   Ok(plugin_array(file)?.map(Vec::len))
 }
 
-/// Every element of the file's array that names a spec, in order.
+/// The file's array, one slot per element in order: the entry of an element
+/// that names a spec, `None` for any other element.
 fn elements(file: &ConfigFile) -> Res<Vec<Option<PluginEntry>>> {
   let items = plugin_array(file)?.map(Vec::as_slice).unwrap_or_default();
   Ok(

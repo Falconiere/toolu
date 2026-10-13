@@ -1,5 +1,5 @@
 //! The two edits that keep a user's comments on their own entries, ported byte
-//! for byte from `tools/toolu-cli` `src/opencode/jsonc.ts` (`appendJsonc`,
+//! for byte from the former TypeScript installer's `src/opencode/jsonc.ts` (`appendJsonc`,
 //! `removeJsonc`): an element on its own line is added or removed with its
 //! line. A comment is one token, so a comma or line break inside one never
 //! counts. Anything else falls back to the CST edits in `jsonc`.

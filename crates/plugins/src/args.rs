@@ -1,6 +1,6 @@
 //! The clap tree of `toolu plugins` and the request a command line parses into.
-//! The verbs and flags are the TypeScript installer's (`tools/toolu-cli`
-//! `src/cli.ts`); `--host` and `--json` are the binary's global flags.
+//! The verbs and flags are those of the former TypeScript installer, which
+//! #438 replaced; `--host` and `--json` are the binary's global flags.
 
 use std::path::PathBuf;
 

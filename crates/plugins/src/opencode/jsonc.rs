@@ -50,7 +50,10 @@ pub(crate) fn parse_config(path: &Path, text: &str) -> Res<Map<String, Value>> {
   })?;
   match parsed.value.map(Value::from) {
     Some(Value::Object(map)) => Ok(map),
-    _other => Err(Fail::failed(format!(
+    None => Err(Fail::failed(format!(
+      "{label} is empty; nothing was written"
+    ))),
+    Some(_other) => Err(Fail::failed(format!(
       "{label} must hold a JSON object; nothing was written"
     ))),
   }

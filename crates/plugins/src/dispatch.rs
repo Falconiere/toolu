@@ -1,5 +1,5 @@
 //! Routes a request to its verb on each chosen host and turns the steps into a
-//! report (`tools/toolu-cli` `src/plugins/dispatch.ts`).
+//! report (the former TypeScript installer's `src/plugins/dispatch.ts`).
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -10,6 +10,7 @@ use toolu_runtime::env::Env;
 
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
+use crate::catalog::order::install_order;
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::{Mode, Target, check_scope, resolve, target_of};
@@ -58,6 +59,16 @@ fn driver(target: Target, cx: &Context<'_>) -> Option<Driver> {
     env: cx.env.clone(),
     timeout: cx.timeout,
   })
+}
+
+/// A dry run's report: the planned config changes on `OpenCode`, the planned
+/// commands on a host CLI; `None` when the run was real.
+fn dry_text(target: Target, dry_run: bool, steps: &[Step]) -> Option<String> {
+  match (dry_run, target) {
+    (false, _) => None,
+    (true, Target::Opencode) => Some(report::planned(steps)),
+    (true, Target::Claude | Target::Codex) => Some(report::commands(steps)),
+  }
 }
 
 fn failed(steps: &[Step]) -> bool {
@@ -181,16 +192,14 @@ fn remove(
   }
   let target = one_host(request, wanted, cx)?;
   let steps = match driver(target, cx) {
-    Some(driver) => verbs::remove::run(&driver, &request.names, request.dry_run),
+    Some(driver) => {
+      install_order(catalog, &request.names)?;
+      verbs::remove::run(&driver, &request.names, request.dry_run)
+    }
     None => opencode::remove(request, catalog, cx)?,
   };
-  let opencode_dry = target == Target::Opencode && request.dry_run;
   Ok(Report {
-    text: if opencode_dry {
-      report::planned(&steps)
-    } else {
-      report::remove(&steps)
-    },
+    text: dry_text(target, request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
     json: report::host_json(target, &steps, true),
     failed: failed(&steps),
   })
@@ -222,16 +231,14 @@ fn update(
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
   let steps = match driver(target, cx) {
-    Some(driver) => verbs::update::run(&driver, &request.names, request.dry_run)?,
+    Some(driver) => {
+      install_order(catalog, &request.names)?;
+      verbs::update::run(&driver, &request.names, request.dry_run)?
+    }
     None => opencode::update(request, catalog, cx)?,
   };
-  let opencode_dry = target == Target::Opencode && request.dry_run;
   Ok(Report {
-    text: if opencode_dry {
-      report::planned(&steps)
-    } else {
-      report::update(&steps)
-    },
+    text: dry_text(target, request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
     json: report::host_json(target, &steps, false),
     failed: failed(&steps),
   })

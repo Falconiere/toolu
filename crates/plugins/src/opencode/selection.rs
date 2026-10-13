@@ -110,6 +110,8 @@ pub(crate) fn closure(catalog: &Catalog, names: &[String]) -> Vec<String> {
   if seeds.is_empty() {
     return Vec::new();
   }
+  // `catalog::parse` refused cycles and the seeds are catalog names, so this
+  // walk cannot fail.
   install_order(catalog, &seeds).unwrap_or_default()
 }
 
@@ -127,23 +129,30 @@ pub(crate) fn effective_enabled(
   closure(catalog, &kept)
 }
 
-/// Enabled plugins outside `removing` that need `name`, directly or not.
-pub(crate) fn dependents_blocking(
-  catalog: &Catalog,
-  enabled: &[String],
-  removing: &[String],
-  name: &str,
-) -> Vec<String> {
-  enabled
-    .iter()
-    .filter(|other| *other != name && !removing.contains(other))
-    .filter(|other| {
-      closure(catalog, std::slice::from_ref(other))
+/// What each enabled plugin needs (its closure), computed once per run.
+pub(crate) struct Needs(Vec<(String, Vec<String>)>);
+
+impl Needs {
+  /// The closure of every plugin in `enabled`.
+  pub(crate) fn of(catalog: &Catalog, enabled: &[String]) -> Needs {
+    Needs(
+      enabled
         .iter()
-        .any(|needed| needed == name)
-    })
-    .cloned()
-    .collect()
+        .map(|name| (name.clone(), closure(catalog, std::slice::from_ref(name))))
+        .collect(),
+    )
+  }
+
+  /// Enabled plugins outside `removing` that need `name`, directly or not.
+  pub(crate) fn blocking(&self, removing: &[String], name: &str) -> Vec<String> {
+    self
+      .0
+      .iter()
+      .filter(|(other, _)| other != name && !removing.contains(other))
+      .filter(|(_, needed)| needed.iter().any(|needed| needed == name))
+      .map(|(other, _)| other.clone())
+      .collect()
+  }
 }
 
 #[cfg(test)]

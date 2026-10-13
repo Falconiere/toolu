@@ -1,5 +1,5 @@
 //! `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
-//! from the Node CLI `tools/toolu-cli` that npm publishes as `@toolu/plugins`.
+//! from the former Node CLI that npm published as `@toolu/plugins`.
 //! Claude Code and Codex are driven through their own plugin CLIs; `OpenCode`,
 //! which has none, through its config files. The npm package is now a wrapper
 //! that runs these verbs. This crate never touches the standard streams: a verb

@@ -136,6 +136,15 @@ impl State {
     Ok(scopes)
   }
 
+  /// Whether `path` is one of the `OpenCode` config files (not a selection).
+  pub(crate) fn is_config(&self, path: &Path) -> bool {
+    self
+      .global
+      .iter()
+      .chain(&self.project)
+      .any(|file| file.path == path)
+  }
+
   /// The text `path` held when the state was read (`None` inside: absent), or
   /// `None` for a path the state never read.
   pub(crate) fn original(&self, path: &Path) -> Option<&Option<String>> {

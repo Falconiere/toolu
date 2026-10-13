@@ -69,3 +69,51 @@ fn a_file_changed_since_the_read_stops_every_write() {
   let failed = apply(&state, unwritable, false).map_err(|fail| fail.message);
   assert!(failed.is_err_and(|message| message.starts_with("cannot write ")));
 }
+
+#[test]
+fn one_changed_file_stops_the_writes_of_the_others() {
+  let sb = Sandbox::new();
+  let project = sb.git_project("project");
+  sb.write(&global("opencode.json"), "{ \"plugin\": [] }\n");
+  sb.write(
+    &global("toolu/plugins.json"),
+    "{\n  \"version\": 1,\n  \"enabled\": []\n}\n",
+  );
+  let state = load(&project, &sb.env()).expect("state");
+  sb.write(
+    &global("toolu/plugins.json"),
+    "{\n  \"version\": 1,\n  \"enabled\": [\"jev\"]\n}\n",
+  );
+  let both = Plan {
+    steps: Vec::new(),
+    writes: vec![
+      Write {
+        path: sb.path(&global("opencode.json")),
+        text: "{ \"plugin\": [\"x\"] }\n".to_owned(),
+      },
+      Write {
+        path: sb.path(&global("toolu/plugins.json")),
+        text: "{}".to_owned(),
+      },
+    ],
+  };
+  assert!(
+    apply(&state, both, false).is_err_and(|fail| fail.message.contains("changed while toolu ran"))
+  );
+  assert_eq!(sb.read(&global("opencode.json")), "{ \"plugin\": [] }\n");
+}
+
+#[test]
+fn a_config_edit_must_stay_jsonc_and_change_something() {
+  let sb = Sandbox::new();
+  let project = sb.git_project("project");
+  sb.write(&global("opencode.json"), "{ \"plugin\": [] }\n");
+  let state = load(&project, &sb.env()).expect("state");
+  let same = plan(&sb, "{ \"plugin\": [] }\n");
+  assert!(apply(&state, same, false).is_err_and(|fail| fail.message.contains("changed nothing")));
+  let broken = plan(&sb, "{ \"plugin\": [");
+  assert!(
+    apply(&state, broken, false).is_err_and(|fail| fail.message.contains("is not valid JSONC"))
+  );
+  assert_eq!(sb.read(&global("opencode.json")), "{ \"plugin\": [] }\n");
+}

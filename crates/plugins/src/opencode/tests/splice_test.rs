@@ -1,4 +1,4 @@
-//! The JSONC fixtures of `tools/toolu-cli/src/opencode/__tests__/config.test.ts`,
+//! The JSONC fixtures of the former TypeScript installer's `config.test.ts`,
 //! byte for byte.
 
 use super::{append, remove};

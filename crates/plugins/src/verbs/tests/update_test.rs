@@ -38,7 +38,11 @@ fn only_plugins_behind_the_offer_are_updated_in_the_hosts_order() {
     [
       ("jev", Status::Updated, "updated to 7.11.0"),
       ("toolu", Status::Current, "current at 7.11.0"),
-      ("ast-grep", Status::Failed, "update failed"),
+      (
+        "ast-grep",
+        Status::Failed,
+        "boom: plugin update ast-grep@toolu"
+      ),
     ]
   );
 }

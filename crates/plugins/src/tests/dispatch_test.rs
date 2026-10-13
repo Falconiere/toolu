@@ -209,3 +209,48 @@ fn an_unsupported_host_is_a_usage_error() {
     go(&sb, &request(Verb::List, &[]), Some(Host::Cursor), None).map_err(|fail| fail.exit);
   assert_eq!(cursor, Err(Exit::Usage));
 }
+
+#[test]
+fn host_cli_remove_and_update_check_names_and_dry_runs_list_the_commands() {
+  let sb = Sandbox::new();
+  sb.host("claude", "[]", "never");
+  let mut unknown = request(Verb::Remove, &["nope"]);
+  unknown.yes = true;
+  let refused = go(&sb, &unknown, Some(Host::Claude), None).map_err(|fail| fail.exit);
+  assert_eq!(refused, Err(Exit::Usage));
+  let update = go(
+    &sb,
+    &request(Verb::Update, &["nope"]),
+    Some(Host::Claude),
+    None,
+  )
+  .map_err(|fail| fail.exit);
+  assert_eq!(update, Err(Exit::Usage));
+  assert_eq!(sb.log("claude"), Vec::<String>::new());
+  let mut dry = request(Verb::Remove, &["jev"]);
+  dry.yes = true;
+  dry.dry_run = true;
+  let Ok(report) = go(&sb, &dry, Some(Host::Claude), None) else {
+    panic!("the dry run failed");
+  };
+  assert_eq!(
+    report.text,
+    "Planned commands (nothing was run):\n  claude plugin uninstall jev@toolu\n"
+  );
+  assert_eq!(report.json["steps"][0]["removed"], json!(false));
+  let mut dry_update = request(Verb::Update, &["jev"]);
+  dry_update.dry_run = true;
+  let Ok(updated) = go(&sb, &dry_update, Some(Host::Claude), None) else {
+    panic!("the dry update failed");
+  };
+  assert_eq!(
+    updated.text,
+    "Planned commands (nothing was run):\n  claude plugin update jev@toolu\n"
+  );
+  assert!(
+    !sb
+      .log("claude")
+      .iter()
+      .any(|line| line.contains("uninstall") || line.contains("update"))
+  );
+}

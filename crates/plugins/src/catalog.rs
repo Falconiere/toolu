@@ -89,7 +89,10 @@ pub(crate) fn parse(text: &str, source: &str) -> Res<Catalog> {
       entry(plugin).map_err(|detail| malformed(&format!("plugins[{index}]: {detail}")))
     })
     .collect::<Result<Vec<_>, _>>()?;
-  Ok(Catalog { plugins })
+  let catalog = Catalog { plugins };
+  // A dependency cycle is refused here, so no later walk meets one.
+  order::install_order(&catalog, &[])?;
+  Ok(catalog)
 }
 
 fn entry(plugin: &Value) -> Result<Entry, String> {

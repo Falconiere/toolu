@@ -1,12 +1,13 @@
 //! `OpenCode`, which has no plugin commands on the supported host: the verbs
-//! edit its documented config files instead (`tools/toolu-cli` `src/opencode`).
+//! edit its documented config files instead (the former TypeScript installer's `src/opencode`).
 //! One npm package, `@toolu/opencode`, carries every plugin; the verbs manage
 //! its entry in a `plugin` array and the `toolu/plugins.json` selection.
 
 use crate::args::{self, Request};
 use crate::catalog::Catalog;
 use crate::dispatch::Context;
-use crate::fail::{Fail, Res};
+use crate::fail::Res;
+use crate::host::{Target, check_scope};
 use crate::report::Row;
 use crate::step::Step;
 
@@ -38,16 +39,15 @@ mod write;
 use entries::target_spec;
 use paths::Scope;
 
-/// `--scope user` is `OpenCode`'s global config, `project` the worktree root.
+/// `--scope user` is `OpenCode`'s global config, `project` the worktree root;
+/// `local` is refused by the same check every host's scope goes through.
 fn scope_of(scope: Option<args::Scope>) -> Res<Option<Scope>> {
-  match scope {
-    None => Ok(None),
-    Some(args::Scope::User) => Ok(Some(Scope::Global)),
-    Some(args::Scope::Project) => Ok(Some(Scope::Project)),
-    Some(args::Scope::Local) => Err(Fail::usage(
-      "--scope local is Claude Code only; OpenCode has user and project",
-    )),
-  }
+  check_scope(scope, Target::Opencode)?;
+  Ok(match scope {
+    Some(args::Scope::User) => Some(Scope::Global),
+    Some(args::Scope::Project) => Some(Scope::Project),
+    Some(args::Scope::Local) | None => None,
+  })
 }
 
 /// `install` on `OpenCode`.

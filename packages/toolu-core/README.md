@@ -9,6 +9,8 @@ npx @toolu/plugins install                  # Claude Code, Codex
 npx @toolu/plugins install --host opencode  # OpenCode
 ```
 
+Both run `toolu plugins` on the native `toolu` binary ([install](https://github.com/Falconiere/toolu/blob/main/docs/install.md)).
+
 ## Runtime
 
 **Bun only.** Sources ship unbuilt as TypeScript because every consumer is a Bun host that reads `.ts` directly.
