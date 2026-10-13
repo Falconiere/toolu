@@ -143,7 +143,15 @@ test("a selected plugin whose startup fails refuses every tool with its plugin a
   const { root } = await project();
   const catalog = await mkdtemp(join(tmpBase, "toolu-oc-hooks-catalog-"));
   await cp(join(REPO_ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-  await rm(join(catalog, "plugins/python-quality/hooks/dist/post-tool-use.js"));
+  // A register command typed by hand instead of generated: the bootstrap refuses to run it.
+  const hooksFile = join(catalog, "plugins/python-quality/hooks/hooks.json");
+  const generated = await readFile(hooksFile, "utf8");
+  const handWritten = generated.replace(
+    /"command": "t=;[^\n]*?python-quality hook register[^\n]*?",\n/u,
+    '"command": "toolu python-quality hook register",\n',
+  );
+  expect(handWritten).not.toBe(generated);
+  await writeFile(hooksFile, handWritten);
   await writeFile(
     join(root, ".opencode/toolu/plugins.json"),
     JSON.stringify({ version: 1, enabled: ["toolu", "python-quality"] }),
@@ -151,8 +159,9 @@ test("a selected plugin whose startup fails refuses every tool with its plugin a
   const logged: Logged[] = [];
   const hooks = await createTooluHooks(binding(root, logged, { repoRootOption: catalog }));
   const reason = await refusal(hooks, "bash", { command: "touch never.txt" });
-  expect(reason).toStartWith("toolu: not ready: bootstrap: python-quality/register: ");
-  expect(reason).toContain("python-quality@toolu__python-quality.js: bundle unreadable");
+  expect(reason).toStartWith(
+    'toolu: not ready: bootstrap: python-quality: unsupported SessionStart command "toolu python-quality hook register"; ',
+  );
   expect(logged).toEqual([
     { level: "error", message: `${reason}; every tool call is denied` },
     { level: "error", message: "toolu: status" },

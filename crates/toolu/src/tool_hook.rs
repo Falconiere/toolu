@@ -30,6 +30,7 @@ pub use toolu_engine::Phase;
 pub const QUALITY_PLUGINS: &[QualityPlugin] = &[
   toolu_ts_quality::QUALITY_PLUGIN,
   toolu_rust_quality::QUALITY_PLUGIN,
+  toolu_python_quality::QUALITY_PLUGIN,
 ];
 
 /// The compiled-in rules a manifest may enable.
@@ -38,6 +39,7 @@ pub const RULES: &[&dyn Rule] = &[
   toolu_ast_grep::BYTE_SAVINGS,
   toolu_ts_quality::TS_QUALITY,
   toolu_rust_quality::RUST_QUALITY,
+  toolu_python_quality::PYTHON_QUALITY,
 ];
 
 /// The payload `crates/cli` read, as the stream the hook main reads it from.

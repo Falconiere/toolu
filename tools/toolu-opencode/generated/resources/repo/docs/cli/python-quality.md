@@ -9,33 +9,27 @@ Owner: `plugins/python-quality`.
 ## `toolu python-quality`
 
 ```text
-Python quality rules that run after each edit
+python-quality has no verbs: its rules run after every edit of a .py file in a Python project (pyproject.toml, setup.py, setup.cfg or requirements.txt) with python3 on PATH. Violations (oversized files and functions, misplaced or misnamed tests, bare except, blanket # noqa or # type: ignore, mocks in tests) fail the file's quality-gate entry until it is fixed; a public def or class without a docstring is an advisory.
 
-Usage: toolu python-quality [OPTIONS] <COMMAND>
+Limits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.
 
-Commands:
-  planned  Not ported yet (#427): show the planned verbs
-  help     Print this message or the help of the given subcommand(s)
+Usage: toolu python-quality [OPTIONS]
 
 Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
-```
+      --json
+          Print exactly one JSON document on stdout
 
-## `toolu python-quality planned`
+  -q, --quiet
+          Drop the diagnostics of a successful run
 
-```text
-Not ported yet (#427): show the planned verbs
+      --host <HOST>
+          The host to act for, instead of the detected one
 
-Usage: toolu python-quality planned [OPTIONS]
+          [possible values: claude, codex, opencode, cursor, hermes]
 
-Options:
-      --json              Print exactly one JSON document on stdout
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --config-dir <DIR>
+          Read the toolu config from DIR instead of the host's default
+
+  -h, --help
+          Print help (see a summary with '-h')
 ```

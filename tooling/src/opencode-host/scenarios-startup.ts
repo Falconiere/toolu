@@ -80,7 +80,7 @@ export function modules(s: ProbeSession): string[] {
 export const MODULES = [
   "pre-tools.d/ast-grep@toolu__search-nudge.json",
   "post-tools.d/ast-grep@toolu__byte-savings.json",
-  "post-tools.d/python-quality@toolu__python-quality.js",
+  "post-tools.d/python-quality@toolu__python-quality.json",
   "post-tools.d/rust-quality@toolu__rust-quality.json",
   "post-tools.d/ts-quality@toolu__ts-quality.json",
 ];
@@ -88,6 +88,7 @@ export const MODULES = [
 /** Every registry file on disk: the modules plus the quality plugins' unreported bridges for Bun dispatch. */
 export const REGISTRY_FILES = [
   ...MODULES,
+  "post-tools.d/python-quality@toolu__python-quality.sh",
   "post-tools.d/rust-quality@toolu__rust-quality.sh",
   "post-tools.d/ts-quality@toolu__ts-quality.sh",
 ];
@@ -121,17 +122,40 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
   return { pass, observed };
 }
 
+/** A register command typed by hand instead of generated: the bootstrap refuses to run it. */
+const HAND_WRITTEN = "toolu python-quality hook register";
+
+/** Replace the first SessionStart command of the `hooks.json` at `path` with {@link HAND_WRITTEN}. */
+function handWrittenRegister(path: string): void {
+  const HooksFile = z.looseObject({
+    hooks: z.looseObject({
+      SessionStart: z.array(
+        z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+      ),
+    }),
+  });
+  const file = HooksFile.parse(JSON.parse(readFileSync(path, "utf8")));
+  const first = file.hooks.SessionStart[0]?.hooks[0];
+  if (first === undefined) throw new Error(`${path}: no SessionStart command`);
+  first.command = HAND_WRITTEN;
+  writeFileSync(path, JSON.stringify(file));
+}
+
 async function startupFailure(ctx: EntryContext): Promise<EntryResult> {
   const catalog = mkdtempSync(join(tmpdir(), "toolu-startup-catalog-"));
   try {
     cpSync(join(ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-    rmSync(join(catalog, "plugins/python-quality/hooks/dist/post-tool-use.js"));
+    handWrittenRegister(join(catalog, "plugins/python-quality/hooks/hooks.json"));
     using s = shimmedSession(ctx, ["toolu", "python-quality"], TOUCH_SCRIPT, catalog);
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:entry.touch"]);
     const bash = toolStates(hostRun).find((state) => state.tool === "bash");
     const observed = {
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: python-quality/register: "),
+      // The log quotes the message, so the command's own quotes are escaped there.
+      notReady: diagnostics(
+        hostRun.stderr,
+        "toolu: not ready: bootstrap: python-quality: unsupported SessionStart command ",
+      ),
       bashDenied: bash?.status === "error" && (bash.error ?? "").startsWith("toolu: not ready"),
       fileAbsent: !s.exists("denied.txt"),
     };

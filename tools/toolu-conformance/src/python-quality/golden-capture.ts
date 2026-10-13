@@ -2,10 +2,10 @@
  * One-time capture of the bash python-quality module (#266): `git archive` the
  * plugin's hooks at `--base` (default c50c6bd9, the last commit with bash),
  * register that module in each case's sandbox and record every step through
- * the post-tools bundle into `fixtures/golden.json`. Reading git objects keeps
+ * the post-tools bundle into `fixtures/quality/python-golden.json`. Reading git objects keeps
  * it reproducible after the bash files are deleted.
  *
- * Usage: bun run plugins/python-quality/hooks/src/__tests__/golden-capture.ts [--base <sha>]
+ * Usage: bun run tools/toolu-conformance/src/python-quality/golden-capture.ts [--base <sha>]
  */
 import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -39,13 +39,13 @@ function git(args: string[]): string {
   return res.stdout.trim();
 }
 
-const USAGE =
-  "Usage: bun run plugins/python-quality/hooks/src/__tests__/golden-capture.ts [--base <sha>]\n";
 const at = process.argv.indexOf("--base");
 const baseArg = at === -1 ? BASH_BASE : process.argv[at + 1];
 if (baseArg === undefined || baseArg.trim() === "") {
   process.stderr.write("--base requires a non-empty commit\n");
-  process.stderr.write(USAGE);
+  process.stderr.write(
+    "Usage: bun run tools/toolu-conformance/src/python-quality/golden-capture.ts [--base <sha>]\n",
+  );
   process.exit(2);
 }
 const base = git(["rev-parse", `${baseArg}^{commit}`]);
@@ -55,7 +55,7 @@ try {
   const jobs = PY_CASES.flatMap((c) =>
     (c.hosts ?? ["claude"]).map((host) => async (): Promise<[string, StepResult[]]> => [
       caseKey(c, host),
-      await runCase(c, host, { kind: "bash", register }),
+      await runCase(c, host, { kind: "bash", register }, "bun"),
     ]),
   );
   const cases = Object.fromEntries(await inBatches(jobs, BATCH));

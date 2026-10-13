@@ -15,7 +15,6 @@
         "plugins/*/skills/**/*.ts"
       ],
       "ignore": [
-        "plugins/python-quality/hooks/src/rules/py-file.ts",
         "plugins/toolu/hooks/src/lifecycle/bash-compat.ts",
         "plugins/toolu/hooks/src/lifecycle/dependency-warning.ts",
         "plugins/toolu/hooks/src/lifecycle/prompt-hints.ts",
@@ -25,7 +24,6 @@
     },
     "tooling": {
       "entry": [
-        "src/benchmarks/python-quality-latency.ts",
         "src/codex-smoke.ts",
         "src/opencode-host/mcp-server.ts",
         "src/opencode-tool-capture.ts",

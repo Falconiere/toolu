@@ -11,7 +11,7 @@ use std::time::{Duration, SystemTime};
 
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
-use toolu_runtime::atomic::write_atomic;
+use toolu_runtime::atomic::replace_atomic;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
@@ -55,8 +55,10 @@ fn has_extension(name: &str, extensions: &[&str]) -> bool {
     .is_some_and(|extension| extensions.contains(&extension))
 }
 
+/// A temp file a killed writer left: the Bun register's `<module>.tmp.<pid>`,
+/// or [`replace_atomic`]'s `<module>.<pid>.<nanoseconds>.tmp`.
 fn is_residue(name: &str) -> bool {
-  name.contains(".js.tmp.") || name.contains(".sh.tmp.")
+  name.contains(".js.tmp.") || name.contains(".sh.tmp.") || has_extension(name, &["tmp"])
 }
 
 fn old_enough(path: &Path) -> bool {
@@ -74,11 +76,7 @@ fn write_if_changed(target: &Path, body: &str) -> Result<(), String> {
   if fs::read(target).is_ok_and(|existing| existing == body.as_bytes()) {
     return Ok(());
   }
-  if write_atomic(target, body) {
-    Ok(())
-  } else {
-    Err(format!("{}: cannot write", target.display()))
-  }
+  replace_atomic(target, body).map_err(|error| format!("{}: {error}", target.display()))
 }
 
 impl QualityPlugin {

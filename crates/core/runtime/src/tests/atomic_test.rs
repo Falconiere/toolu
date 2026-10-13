@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use super::write_atomic;
+use super::{replace_atomic, write_atomic};
 
 fn entries(dir: &Path) -> Vec<String> {
   let mut names: Vec<String> = std::fs::read_dir(dir)
@@ -53,4 +53,22 @@ fn a_failed_write_reports_false_and_leaves_no_temp_file() {
   std::fs::write(target_dir.join("state.json/inside"), "x").unwrap();
   assert!(!write_atomic(&target_dir.join("state.json"), "x"));
   assert_eq!(entries(&target_dir), ["state.json"]);
+}
+
+#[test]
+fn replace_atomic_names_the_failing_step() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::write(dir.path().join("blocker"), "a file").unwrap();
+  let error = replace_atomic(&dir.path().join("blocker/state.json"), "x").unwrap_err();
+  assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+  std::fs::create_dir(dir.path().join("state.json")).unwrap();
+  std::fs::write(dir.path().join("state.json/inside"), "x").unwrap();
+  let error = replace_atomic(&dir.path().join("state.json"), "x").unwrap_err();
+  assert_eq!(error.kind(), std::io::ErrorKind::IsADirectory);
+  assert_eq!(entries(dir.path()), ["blocker", "state.json"]);
+  replace_atomic(&dir.path().join("fresh.json"), "{}").unwrap();
+  assert_eq!(
+    std::fs::read_to_string(dir.path().join("fresh.json")).unwrap(),
+    "{}"
+  );
 }

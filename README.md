@@ -284,7 +284,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `python-quality` registers a bundled ESM module (`<plugin-spec>__<name>.js`) that the core imports in-process, and `ts-quality`, `rust-quality` and `ast-grep` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -305,7 +305,7 @@ At `SessionStart`, `python-quality` registers a bundled ESM module (`<plugin-spe
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality checks, a native rule manifest
     ├── ts-quality/             # TypeScript PostToolUse quality checks, a native rule manifest
-    ├── python-quality/         # Python PostToolUse quality checks, one bundled registry module
+    ├── python-quality/         # Python PostToolUse quality checks, a native rule manifest
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references

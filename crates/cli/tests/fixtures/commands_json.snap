@@ -540,22 +540,6 @@ source: crates/cli/tests/helpers/schema.rs
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#427): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "python-quality",
-          "path": [
-            "python-quality",
-            "planned"
-          ],
-          "placeholder": true
-        },
-        {
           "about": "Run a hook entry; hooks.json calls it (internal)",
           "aliases": [],
           "args": [
@@ -604,7 +588,7 @@ source: crates/cli/tests/helpers/schema.rs
       ],
       "flags": [],
       "hidden": false,
-      "longAbout": null,
+      "longAbout": "python-quality has no verbs: its rules run after every edit of a .py file in a Python project (pyproject.toml, setup.py, setup.cfg or requirements.txt) with python3 on PATH. Violations (oversized files and functions, misplaced or misnamed tests, bare except, blanket # noqa or # type: ignore, mocks in tests) fail the file's quality-gate entry until it is fixed; a public def or class without a docstring is an advisory.\n\nLimits come from lang.python in toolu.config.json (maxFileLines, maxFnLines, noMocks). Run toolu doctor to see whether the rule is registered and compiled in.",
       "name": "python-quality",
       "owner": "python-quality",
       "path": [
