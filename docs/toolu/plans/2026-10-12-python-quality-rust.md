@@ -57,11 +57,11 @@ shared `QualityPlugin` (ts-quality green) → python rule crate → hub/CLI wiri
   },
   {
     "id": "plugin-cleanup",
-    "title": "Native hooks.json, delete hooks/src and hooks/dist, move engine quality_bridge test and OpenCode startupFailure to rust-quality's bundle, update OpenCode tests, host-paths, bench fixture, knip/oxlint/package references, delete python-quality-latency bench",
-    "check": "cargo xtask gate --only hooks --only dist && cargo test -p toolu-engine --test quality_bridge && bun test --timeout 120000 tools/toolu-opencode tooling/src/__tests__ tooling/src/benchmarks tools/toolu-conformance && bun run test:conformance",
+    "title": "Native hooks.json, delete hooks/src and hooks/dist, delete the engine quality_bridge test, make the OpenCode startup failure a hand-written register command, update OpenCode tests, host-paths, bench fixture, knip/oxlint/package references, delete python-quality-latency bench",
+    "check": "cargo xtask gate --only hooks --only dist && cargo test -p toolu-engine --test dispatch_fixture && bun test --timeout 120000 tools/toolu-opencode tooling/src/__tests__ tooling/src/benchmarks tools/toolu-conformance && bun run test:conformance",
     "ac_refs": ["AC-1", "AC-2", "AC-6", "AC-9"],
     "depends_on": ["golden-replay"],
-    "paths": ["plugins/python-quality/", "crates/core/engine/tests/quality_bridge.rs", "tools/toolu-conformance/src/", "tools/toolu-opencode/", "tooling/src/", "benchmarks/", "knip.json", "plugins/.oxlintrc.json", "package.json", "fixtures/gates/"],
+    "paths": ["plugins/python-quality/", "crates/core/engine/tests/", "packages/toolu-core/src/dispatch/__tests__/", "tools/toolu-conformance/src/", "tools/toolu-opencode/", "tooling/src/", "benchmarks/", "knip.json", "plugins/.oxlintrc.json", "package.json", "fixtures/gates/"],
     "input": "OpenCode adapter with a real registry dir and the built toolu; rust-quality's committed bundle for the engine bridge test",
     "model": "inherit"
   },
@@ -100,7 +100,7 @@ shared `QualityPlugin` (ts-quality green) → python rule crate → hub/CLI wiri
 ## Critical files
 
 - Create: `crates/core/engine/src/quality/plugin.rs` and `tests/plugin_test.rs`; `crates/python-quality/src/{file.rs,size_rules.rs,layout_rules.rs,suppression.rs,no_mocks.rs,docs.rs,rule.rs}` and `src/tests/*_test.rs`; `crates/cli/tests/python_quality_hook.rs`; `tools/toolu-conformance/src/python-quality/` (moved harness and tests).
-- Modify: `crates/core/engine/{Cargo.toml,src/quality.rs}`, `crates/ts-quality/{Cargo.toml,src/lib.rs}` (delete `register.rs`, `hooks.rs` and their tests, moved into the engine), `crates/python-quality/{Cargo.toml,src/lib.rs}`, `crates/toolu/src/{tool_hook.rs,lib.rs}`, `crates/toolu/Cargo.toml`, `crates/cli/src/hook/plugins.rs`, `plugins/python-quality/{hooks/hooks.json,README.md}`, `crates/core/engine/tests/quality_bridge.rs`, `tools/toolu-conformance/src/harness/pretool.ts`, OpenCode tests, `tooling/src/opencode-host/scenarios-startup.ts`, `tooling/src/__tests__/host-paths.test.ts`, docs listed in the spec.
+- Modify: `crates/core/engine/{Cargo.toml,src/quality.rs}`, `crates/ts-quality/{Cargo.toml,src/lib.rs}` (delete `register.rs`, `hooks.rs` and their tests, moved into the engine), `crates/python-quality/{Cargo.toml,src/lib.rs}`, `crates/toolu/src/{tool_hook.rs,lib.rs}`, `crates/toolu/Cargo.toml`, `crates/cli/src/hook/plugins.rs`, `plugins/python-quality/{hooks/hooks.json,README.md}`, `crates/core/engine/tests/quality_bridge.rs` and `packages/toolu-core/src/dispatch/__tests__/dispatch-cli.ts` (deleted), `tools/toolu-conformance/src/harness/pretool.ts`, OpenCode tests, `tooling/src/opencode-host/scenarios-startup.ts`, `tooling/src/__tests__/host-paths.test.ts`, docs listed in the spec.
 - Delete: `plugins/python-quality/hooks/src/`, `plugins/python-quality/hooks/dist/`, `tooling/src/benchmarks/python-quality-latency.ts`.
 
 ## Verification

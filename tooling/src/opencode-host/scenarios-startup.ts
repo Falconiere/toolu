@@ -122,17 +122,39 @@ async function fullStartup(ctx: EntryContext): Promise<EntryResult> {
   return { pass, observed };
 }
 
+/** A register command typed by hand instead of generated: the bootstrap refuses to run it. */
+const HAND_WRITTEN = "toolu python-quality hook register";
+
+/** Replace the first SessionStart command of the `hooks.json` at `path` with {@link HAND_WRITTEN}. */
+function handWrittenRegister(path: string): void {
+  const HooksFile = z.looseObject({
+    hooks: z.looseObject({
+      SessionStart: z.array(
+        z.looseObject({ hooks: z.array(z.looseObject({ command: z.string() })) }),
+      ),
+    }),
+  });
+  const file = HooksFile.parse(JSON.parse(readFileSync(path, "utf8")));
+  const first = file.hooks.SessionStart[0]?.hooks[0];
+  if (first === undefined) throw new Error(`${path}: no SessionStart command`);
+  first.command = HAND_WRITTEN;
+  writeFileSync(path, JSON.stringify(file));
+}
+
 async function startupFailure(ctx: EntryContext): Promise<EntryResult> {
   const catalog = mkdtempSync(join(tmpdir(), "toolu-startup-catalog-"));
   try {
     cpSync(join(ROOT, "plugins"), join(catalog, "plugins"), { recursive: true });
-    rmSync(join(catalog, "plugins/rust-quality/hooks/dist/post-tool-use.js"));
-    using s = shimmedSession(ctx, ["toolu", "rust-quality"], TOUCH_SCRIPT, catalog);
+    handWrittenRegister(join(catalog, "plugins/python-quality/hooks/hooks.json"));
+    using s = shimmedSession(ctx, ["toolu", "python-quality"], TOUCH_SCRIPT, catalog);
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:entry.touch"]);
     const bash = toolStates(hostRun).find((state) => state.tool === "bash");
     const observed = {
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      notReady: diagnostics(hostRun.stderr, "toolu: not ready: bootstrap: rust-quality/register: "),
+      notReady: diagnostics(
+        hostRun.stderr,
+        `toolu: not ready: bootstrap: python-quality: unsupported SessionStart command ${JSON.stringify(HAND_WRITTEN)}`,
+      ),
       bashDenied: bash?.status === "error" && (bash.error ?? "").startsWith("toolu: not ready"),
       fileAbsent: !s.exists("denied.txt"),
     };

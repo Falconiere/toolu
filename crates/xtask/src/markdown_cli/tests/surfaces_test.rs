@@ -15,6 +15,12 @@ fn tree() -> Value {
 /// The real tree with `namespace`'s placeholder verb turned into a real `run`.
 fn ported(namespace: &str) -> Value {
   let mut tree = tree();
+  port(&mut tree, namespace);
+  tree
+}
+
+/// Turn `namespace`'s placeholder verb in `tree` into a real `run`.
+fn port(tree: &mut Value, namespace: &str) {
   let commands = tree["commands"].as_array_mut().unwrap();
   let command = commands
     .iter_mut()
@@ -25,7 +31,6 @@ fn ported(namespace: &str) -> Value {
     verb["placeholder"] = Value::Bool(false);
     verb["name"] = Value::from("run");
   }
-  tree
 }
 
 #[test]
@@ -121,8 +126,13 @@ fn a_reference_fails_only_once_its_namespace_is_ported() {
 
 #[test]
 fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
-  assert_eq!(problem(&tree(), "check-rust", "rust-quality"), None);
-  assert!(problem(&ported("rust-quality"), "check-rust", "rust-quality").is_some());
+  // toolu still owns placeholder namespaces (`debug`, `serve`), so its unmapped stems stand.
+  assert_eq!(problem(&tree(), "anything", "toolu"), None);
+  let mut all = tree();
+  for namespace in ["debug", "serve"] {
+    port(&mut all, namespace);
+  }
+  assert!(problem(&all, "anything", "toolu").is_some());
   // epic-orchestrator's namespace is ported, so its old scripts are removed.
   assert!(problem(&tree(), "launch-issue", "epic-orchestrator").is_some());
   // brainstorm owns a namespace with no placeholder verb: already ported.
