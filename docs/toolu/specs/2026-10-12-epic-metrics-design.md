@@ -93,7 +93,7 @@ All code lives in `crates/epic-orchestrator`, except a usage probe in
   The HTTP route parses `epic` and `since` from the query and caches the
   document per query for 60 s, at most 16 entries (the oldest is evicted). `toolu epic summary` renders the document
   beside the baseline (embedded with
-  `include_str!("../../../benchmarks/epic-baseline.json")`), the budget table
+  `include_str!("../../../../benchmarks/epic-baseline.json")` from `src/metrics/`), the budget table
   and token rows. `close::summary_table` appends the same Markdown, without
   token rows, to the epic's closing comment. `toolu epic baseline` derives
   `benchmarks/epic-baseline.json`.
