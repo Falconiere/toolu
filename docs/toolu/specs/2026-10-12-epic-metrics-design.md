@@ -121,7 +121,7 @@ GET /api/v1/metrics[?epic=<id>&since=<date>]
 
 `<date>` is `YYYY-MM-DD` (UTC midnight) or an ISO-8601 UTC timestamp.
 
-Metrics document, schema 1 (`docs/epic-orchestrator/metrics.schema.json`,
+Metrics document, schema 1 (`$defs/epicMetrics` of `crates/cli/src/commands.schema.json` (`toolu commands --schema`),
 `additionalProperties: false`). `Pct` is
 `{"count": n, "p50": ms|null, "p90": ms|null, "max": ms|null}`.
 
@@ -311,7 +311,7 @@ path.
 
 - **AC-1:** Given the recorded `~/.claude/epics`, `toolu epic baseline --state ~/.claude/epics --until 2026-10-05T01:30:00Z --outlier falconiere-toolu-orm-145` prints JSON identical to the committed `benchmarks/epic-baseline.json`, whose `main` has 83 merged issues, 542.2 agent-hours, lead p50 219.9 min, 119 rebase rounds and 11 relaunched issues.
 - **AC-2:** Given the committed fixture state directory `fixtures/epic/baseline/`, `toolu epic baseline` returns the hand-computed counts, percentiles, shares and outlier split; a malformed issue file fails with exit 1 naming it.
-- **AC-3:** Given the committed fixture journal `fixtures/epic/metrics/journal/`, in which every issue has its `cleanup-done` so no value depends on the clock, `toolu --json epic metrics` validates against `docs/epic-orchestrator/metrics.schema.json` and equals `fixtures/epic/metrics/expected.json` (all fields but `generated_at`); `--epic` and `--since` narrow it to their own hand-computed expectations; the text form shows lead time, phase shares and rebase rounds beside the baseline.
+- **AC-3:** Given the committed fixture journal `fixtures/epic/metrics/journal/`, in which every issue has its `cleanup-done` so no value depends on the clock, `toolu --json epic metrics` validates against `$defs/epicMetrics` of `crates/cli/src/commands.schema.json` (`toolu commands --schema`) and equals `fixtures/epic/metrics/expected.json` (all fields but `generated_at`); `--epic` and `--since` narrow it to their own hand-computed expectations; the text form shows lead time, phase shares and rebase rounds beside the baseline.
 - **AC-4:** Given the same fixture journal under a running engine, `GET /api/v1/metrics` returns the CLI's document (all fields but `generated_at`); `?since=bad` returns 400.
 - **AC-5:** Given the scripted epic (scenario rig: launch, ready, a PR waiting through keep-going checks, an engine rebase, one conflict hand-off, merges, close, and a real blocking `wait`), the metrics of its journal mark `judgment-free-wakeups`, `prompts-while-waiting`, `rebase-without-conflict`, `verdict-reaction`, `check-gap` and `ready-to-merged` as `pass`.
 - **AC-6:** Given planted journals, each count budget fails: a `babysit` prompt after only keep-going checks (`prompts-while-waiting`), a `rebase` prompt with no hand-off (`rebase-without-conflict`), a `timeout` wait reply (`judgment-free-wakeups`), a `merge-intent` after a second check with no other merge between (`verdict-reaction`), a check whose `nextAt` is 360 s out (`check-gap`); and given a watch, the next scheduled slot after a fresh, unchanged, failed or errored check is exactly 180 000 ms after the previous slot.
@@ -341,7 +341,7 @@ path.
   `/api/v1/metrics` row.
 - `docs/epic-orchestrator/README.md`: "Metrics and budgets" (commands,
   definitions, budgets, the baseline and how to re-derive it).
-- `docs/epic-orchestrator/metrics.schema.json`: new.
+- `$defs/epicMetrics` of `crates/cli/src/commands.schema.json` (`toolu commands --schema`): new.
 - `docs/cli/`: regenerated for `metrics`, `summary`, `baseline`.
 - `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`: the closing
   step names `toolu epic summary`.

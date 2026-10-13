@@ -1,0 +1,160 @@
+{
+  "main": {
+    "agent_hours": 542.2,
+    "epics": 14,
+    "lead_time_ms": {
+      "count": 83,
+      "max": 215914000,
+      "p50": 13195000,
+      "p90": 55490600
+    },
+    "merged_issues": 83,
+    "phases": {
+      "babysit": {
+        "ms": 446112000,
+        "share": 0.2294
+      },
+      "brainstorm": {
+        "ms": 20249000,
+        "share": 0.0104
+      },
+      "execution": {
+        "ms": 751613000,
+        "share": 0.3866
+      },
+      "failed": {
+        "ms": 1158000,
+        "share": 0.0005
+      },
+      "needs-human": {
+        "ms": 313724000,
+        "share": 0.1613
+      },
+      "plan": {
+        "ms": 4606000,
+        "share": 0.0023
+      },
+      "plan-review": {
+        "ms": 15809000,
+        "share": 0.0081
+      },
+      "pr-open": {
+        "ms": 38733000,
+        "share": 0.0199
+      },
+      "ready": {
+        "ms": 217799000,
+        "share": 0.112
+      },
+      "rebasing": {
+        "ms": 70618000,
+        "share": 0.0363
+      },
+      "spec": {
+        "ms": 25948000,
+        "share": 0.0133
+      },
+      "spec-review": {
+        "ms": 37649000,
+        "share": 0.0193
+      }
+    },
+    "ready_to_cleanup_ms": {
+      "count": 75,
+      "max": 69921000,
+      "p50": 90000,
+      "p90": 5231600
+    },
+    "rebase_rounds": 119,
+    "relaunched_issues": 11
+  },
+  "outliers": {
+    "falconiere-toolu-orm-145": {
+      "agent_hours": 407.6,
+      "epics": 1,
+      "lead_time_ms": {
+        "count": 15,
+        "max": 168223000,
+        "p50": 115401000,
+        "p90": 162730400
+      },
+      "merged_issues": 15,
+      "phases": {
+        "babysit": {
+          "ms": 161910000,
+          "share": 0.1104
+        },
+        "execution": {
+          "ms": 107209000,
+          "share": 0.0731
+        },
+        "failed": {
+          "ms": 122000,
+          "share": 0.0
+        },
+        "needs-human": {
+          "ms": 220000,
+          "share": 0.0001
+        },
+        "plan": {
+          "ms": 902000,
+          "share": 0.0006
+        },
+        "plan-review": {
+          "ms": 1017000,
+          "share": 0.0006
+        },
+        "pr-open": {
+          "ms": 1337000,
+          "share": 0.0009
+        },
+        "ready": {
+          "ms": 1182888000,
+          "share": 0.8069
+        },
+        "rebasing": {
+          "ms": 7045000,
+          "share": 0.0048
+        },
+        "spec": {
+          "ms": 2329000,
+          "share": 0.0015
+        },
+        "spec-review": {
+          "ms": 878000,
+          "share": 0.0005
+        }
+      },
+      "ready_to_cleanup_ms": {
+        "count": 11,
+        "max": 162886000,
+        "p50": 120981000,
+        "p90": 157672000
+      },
+      "rebase_rounds": 7,
+      "relaunched_issues": 2
+    }
+  },
+  "reported": {
+    "date": "2026-10-04",
+    "first_ready_to_cleanup_min": {
+      "p50": 1,
+      "p90": 69
+    },
+    "lead_time_min": {
+      "p50": 219,
+      "p90": 912
+    },
+    "note": "hand-computed for #451 and the engine brainstorm; method not recorded",
+    "supervisor_rss_mb_per_epic": 31
+  },
+  "schema": 1,
+  "source": {
+    "merged": 98,
+    "outliers": [
+      "falconiere-toolu-orm-145"
+    ],
+    "records": 115,
+    "until": "2026-10-05T01:30:00Z"
+  }
+}

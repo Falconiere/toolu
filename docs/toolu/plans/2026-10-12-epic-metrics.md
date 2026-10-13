@@ -65,7 +65,8 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/tests/journal_test.rs",
       "crates/epic-orchestrator/src/metrics.rs",
       "crates/epic-orchestrator/src/metrics",
-      "crates/epic-orchestrator/src/lib.rs"
+      "crates/epic-orchestrator/src/lib.rs",
+      "crates/epic-orchestrator/src/tests/metrics_test.rs"
     ],
     "input": "percentiles of [1,2,3,4] and of one value; journal files for two days with a partial last line streamed from a since-day; records keyed by issue, by watch key and unkeyed, scoped to one epic",
     "model": "inherit"
@@ -82,7 +83,8 @@ summary (with the closing comment) → docs → full gate.
     ],
     "paths": [
       "crates/epic-orchestrator/src/metrics",
-      "crates/epic-orchestrator/src/metrics.rs"
+      "crates/epic-orchestrator/src/metrics.rs",
+      "crates/epic-orchestrator/src/tests/metrics_test.rs"
     ],
     "input": "planted journals: an issue launched, ready, engine rebase (rebased), waiting, merged with an empty merge-done note, cleanup-done; a second with a handoff and a queue-left; a third still open with a fixed now_ms; a cleanup-done with a failure note",
     "model": "inherit"
@@ -100,7 +102,8 @@ summary (with the closing comment) → docs → full gate.
     ],
     "paths": [
       "crates/epic-orchestrator/src/metrics",
-      "crates/epic-orchestrator/src/metrics.rs"
+      "crates/epic-orchestrator/src/metrics.rs",
+      "crates/epic-orchestrator/src/tests/metrics_test.rs"
     ],
     "input": "planted records per definition, including a held babysit prompt licensed earlier, a launch-wait pair (reason then count), a judgment re-journaled with one token, job attempts refused then admitted, two engine lifetimes; regression plants: babysit prompt after keep-going only, rebase prompt without handoff, timeout wait-reply, late merge-intent with no other repo merge, nextAt 360 s out; an empty journal (every budget unmeasured)",
     "model": "inherit"
@@ -108,7 +111,7 @@ summary (with the closing comment) → docs → full gate.
   {
     "id": "S5",
     "title": "toolu epic baseline over TypeScript state directories, its fixture test, the committed benchmarks/epic-baseline.json and a test that pins its content; verb wiring extracted out of verbs.rs (296 code lines)",
-    "check": "cargo test -p toolu-epic-orchestrator -- metrics::baseline verbs_metrics && cargo test -p toolu-cli --test epic_baseline",
+    "check": "cargo test -p toolu-epic-orchestrator -- metrics::baseline verbs_metrics && cargo test -p toolu-cli --test epic_metrics baseline",
     "ac_refs": [
       "AC-1",
       "AC-2"
@@ -121,11 +124,13 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/verbs_metrics.rs",
       "crates/epic-orchestrator/src/verbs.rs",
       "crates/epic-orchestrator/src/tests",
-      "crates/cli/tests/epic_baseline.rs",
+      "crates/cli/tests/epic_metrics.rs",
       "fixtures/epic/baseline",
       "benchmarks/epic-baseline.json",
       "crates/epic-orchestrator/src/lib.rs",
-      "crates/epic-orchestrator/src/verbs_metrics"
+      "crates/epic-orchestrator/src/verbs_metrics",
+      "crates/cli/src/commands.schema.json",
+      "crates/epic-orchestrator/src/metrics.rs"
     ],
     "input": "fixtures/epic/baseline: two epics, five issues (one outlier epic, one unmerged, one relaunched, one without a status file) with hand-computed expectations; a malformed issue file; then the real ~/.claude/epics with --until 2026-10-05T01:30:00Z --outlier falconiere-toolu-orm-145 diffed against the committed file; a test reading the committed benchmarks/epic-baseline.json asserts schema 1, 83 merged issues, 542.2 agent-hours, 119 rebase rounds, 11 relaunched and the reported section",
     "model": "inherit"
@@ -171,10 +176,11 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/verbs_metrics.rs",
       "crates/epic-orchestrator/src/metrics",
       "crates/cli/tests/epic_metrics.rs",
-      "docs/epic-orchestrator/metrics.schema.json",
+      "crates/cli/src/commands.schema.json",
       "fixtures/epic/metrics",
       "crates/epic-orchestrator/src/lib.rs",
-      "benchmarks/epic-baseline.json"
+      "benchmarks/epic-baseline.json",
+      "crates/epic-orchestrator/src/metrics.rs"
     ],
     "input": "fixtures/epic/metrics/journal (two epics, every issue closed) with expected.json and per --epic / --since expectations; an empty resource root; a bad --since; the text form reads the baseline embedded by include_str!(\"../../../../benchmarks/epic-baseline.json\") from src/metrics/text.rs",
     "model": "inherit"
@@ -360,3 +366,24 @@ summary (with the closing comment) → docs → full gate.
   xtask gate` is the final word (S13).
 - Documentation synchronized in S12 and checked by `docs-cli`,
   `check-markdown-cli` and the contract snapshot.
+
+## Deviations
+
+- S2–S5 and S7 landed together: workspace lints deny dead code, so the fold
+  compiles only once a verb uses it. Each step's check still runs on its own.
+- The metrics and baseline schemas are `$defs/epicMetrics`,
+  `$defs/epicPercentiles`, `$defs/epicBaseline` and `$defs/epicBaselineGroup`
+  in `crates/cli/src/commands.schema.json` (served by `toolu commands
+  --schema`), following `epicQueue` and `epicStatus`, instead of a separate
+  `docs/epic-orchestrator/metrics.schema.json`. The baseline CLI test lives in
+  `crates/cli/tests/epic_metrics.rs` beside the metrics test.
+- `relaunches` counts successful `launch-done` records (empty note) beyond the
+  first, not `launch-intent` records: a launch that waited for capacity
+  journals a second intent without being a relaunch.
+- `prompts.decided_checks` (checks that carried a babysit `next`) gates the
+  `prompts-while-waiting` budget, so a journal from before this change reports
+  it `unmeasured` instead of failing it.
+- A bad `--since` exits with `Exit::Usage` (64, sysexits `EX_USAGE`), the
+  repository's usage code, not 2.
+- Phase shares keep four decimals by truncation.
+

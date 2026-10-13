@@ -1,0 +1,164 @@
+{
+  "engine": {
+    "cpu_ms": 900,
+    "lifetimes": 1,
+    "max_rss_bytes": 6000000
+  },
+  "epic": null,
+  "github": {
+    "check_gap_ms": {
+      "count": 1,
+      "max": 180000,
+      "p50": 180000,
+      "p90": 180000
+    },
+    "checks": 2,
+    "errors": 0,
+    "graphql_points": 2,
+    "late_reactions": 0,
+    "next_gap_ms": {
+      "count": 2,
+      "max": 180000,
+      "p50": 180000,
+      "p90": 180000
+    },
+    "not_modified_share": 0.75,
+    "reaction_ms": {
+      "count": 1,
+      "max": 1000,
+      "p50": 1000,
+      "p90": 1000
+    },
+    "rest_fresh": 1,
+    "rest_not_modified": 3,
+    "rest_points": 1
+  },
+  "issues": 3,
+  "jobs": {
+    "attempts": 2,
+    "pressure_holds": 1,
+    "wait_ms": {
+      "count": 1,
+      "max": 120000,
+      "p50": 120000,
+      "p90": 120000
+    },
+    "waits": 1
+  },
+  "judgments": {
+    "needs-human": {
+      "closed": 1,
+      "raised": 1,
+      "wait_ms": {
+        "count": 1,
+        "max": 120000,
+        "p50": 120000,
+        "p90": 120000
+      }
+    }
+  },
+  "launches": {
+    "cooldowns": 1,
+    "host_switches": 1,
+    "relaunches": 1,
+    "waits": 1
+  },
+  "lead_time_ms": {
+    "count": 3,
+    "max": 2520000,
+    "p50": 780000,
+    "p90": 2172000
+  },
+  "phases": {
+    "babysit": {
+      "ms": 240000,
+      "share": 0.0634
+    },
+    "execution": {
+      "ms": 2640000,
+      "share": 0.6984
+    },
+    "ready": {
+      "ms": 603000,
+      "share": 0.1595
+    },
+    "rebasing": {
+      "ms": 297000,
+      "share": 0.0785
+    }
+  },
+  "prompts": {
+    "by_reason": {
+      "answer": 1,
+      "rebase": 1
+    },
+    "decided_checks": 2,
+    "rebase_without_conflict": 0,
+    "while_waiting": 0
+  },
+  "ready_to_merged_ms": {
+    "ci": {
+      "count": 3,
+      "max": 355000,
+      "p50": 0,
+      "p90": 284000
+    },
+    "clean_excluding_ci": {
+      "count": 2,
+      "max": 7000,
+      "p50": 4500,
+      "p90": 6500
+    },
+    "merge": {
+      "count": 3,
+      "max": 2000,
+      "p50": 1000,
+      "p90": 1800
+    },
+    "queue": {
+      "count": 3,
+      "max": 4000,
+      "p50": 1000,
+      "p90": 3400
+    },
+    "rebase": {
+      "count": 3,
+      "max": 4000,
+      "p50": 0,
+      "p90": 3200
+    },
+    "rework": {
+      "count": 3,
+      "max": 297000,
+      "p50": 0,
+      "p90": 237600
+    },
+    "total": {
+      "count": 3,
+      "max": 362000,
+      "p50": 302000,
+      "p90": 350000
+    }
+  },
+  "rebase_rounds": {
+    "engine": 1,
+    "issues": {
+      "a": {
+        "engine": 1,
+        "worker": 0
+      },
+      "b": {
+        "engine": 0,
+        "worker": 1
+      }
+    },
+    "worker": 1
+  },
+  "records": 52,
+  "schema": 1,
+  "since": null,
+  "wakeups": {
+    "judgment_free": 1,
+    "total": 2
+  }
+}

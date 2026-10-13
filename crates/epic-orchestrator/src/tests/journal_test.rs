@@ -81,3 +81,35 @@ fn status_journal_sequence_survives_a_day_without_events() {
   .expect("later record");
   assert_eq!(later.seq, first.seq + 1);
 }
+
+#[test]
+fn each_streams_days_from_a_given_day_in_date_order_without_partial_lines() {
+  let dir = tempfile::tempdir().unwrap();
+  let journal = dir.path().join("journal");
+  fs::create_dir_all(&journal).unwrap();
+  let line = |seq: u64, name: &str| {
+    format!("{{\"seq\":{seq},\"at\":\"x\",\"kind\":\"action\",\"name\":\"{name}\"}}\n")
+  };
+  fs::write(journal.join("2026-10-01.jsonl"), line(1, "old")).unwrap();
+  fs::write(
+    journal.join("2026-10-03.jsonl"),
+    format!("{}{{\"seq\":4", line(3, "late")),
+  )
+  .unwrap();
+  fs::write(journal.join("2026-10-02.jsonl"), line(2, "kept")).unwrap();
+  fs::write(journal.join("notes.txt"), "ignored").unwrap();
+  let mut names = Vec::new();
+  super::each(&journal, "2026-10-02", |row| {
+    names.push(row.name);
+    Ok(())
+  })
+  .unwrap();
+  assert_eq!(names, ["kept", "late"]);
+  let mut none = 0;
+  super::each(&dir.path().join("absent"), "", |_row| {
+    none += 1;
+    Ok(())
+  })
+  .unwrap();
+  assert_eq!(none, 0);
+}
