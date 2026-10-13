@@ -17,8 +17,9 @@ pub struct Usage {
 /// The calling process's usage.
 ///
 /// # Errors
-/// `getrusage` fails, or reports a negative time or size (never a valid
-/// measurement, so it is not turned into a 0 that would read as one).
+/// `getrusage` fails, or reports a negative time or size, or a size too
+/// large for bytes. None is ever a valid measurement, so none is turned
+/// into a 0 that would read as one.
 pub fn self_usage() -> Result<Usage, String> {
   let usage = getrusage(UsageWho::RUSAGE_SELF).map_err(|err| format!("getrusage: {err}"))?;
   let cpu = usage
@@ -35,11 +36,12 @@ pub fn self_usage() -> Result<Usage, String> {
 fn to_bytes(max_rss: i64) -> Result<u64, String> {
   let value =
     u64::try_from(max_rss).map_err(|_err| format!("getrusage: negative max RSS {max_rss}"))?;
-  Ok(if cfg!(target_os = "macos") {
-    value
-  } else {
-    value.saturating_mul(1024)
-  })
+  if cfg!(target_os = "macos") {
+    return Ok(value);
+  }
+  value
+    .checked_mul(1024)
+    .ok_or_else(|| format!("getrusage: max RSS overflow {value} KiB"))
 }
 
 #[cfg(test)]

@@ -34,3 +34,18 @@ fn rss_units_are_bytes_on_every_platform() {
     Err("getrusage: negative max RSS -1".to_owned())
   );
 }
+
+#[test]
+fn a_max_rss_too_large_for_bytes_is_an_error_not_a_cap() {
+  if cfg!(target_os = "macos") {
+    assert_eq!(
+      super::to_bytes(i64::MAX),
+      Ok(u64::try_from(i64::MAX).unwrap())
+    );
+  } else {
+    assert_eq!(
+      super::to_bytes(i64::MAX),
+      Err("getrusage: max RSS overflow 9223372036854775807 KiB".to_owned())
+    );
+  }
+}
