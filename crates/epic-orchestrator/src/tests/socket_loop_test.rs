@@ -1,8 +1,8 @@
 use std::sync::mpsc;
 use std::sync::{Condvar, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use super::{Msg, publish};
+use super::{Msg, Waiter, on_timeout, publish};
 use crate::effect_thread::EffectThread;
 use crate::executor::{Call, Executor};
 use crate::model::{Action, World};
@@ -43,4 +43,24 @@ fn an_effect_outcome_reaches_the_loop_as_a_message() {
     }) => assert_eq!((done, outcome.as_str()), (call, "applied")),
     _ => panic!("no effect message"),
   }
+}
+
+#[test]
+fn a_wait_reply_the_journal_cannot_record_still_replies_and_continues() {
+  let root = tempfile::tempdir().expect("root");
+  let mut engine = Engine::open(Paths::at(root.path()), None, Fault::None).expect("engine");
+  // A file where the journal directory would go, so every append fails.
+  std::fs::write(Paths::at(root.path()).journal_dir(), "not a directory").expect("block");
+  let (reply, rx) = mpsc::channel();
+  let mut waiters = vec![Waiter {
+    deadline: Instant::now(),
+    reply,
+  }];
+  let mut next_tick = Instant::now() + Duration::from_secs(30);
+  assert_eq!(
+    on_timeout(&mut engine, &mut waiters, &mut next_tick, &()),
+    Ok(())
+  );
+  assert_eq!(rx.recv().expect("reply")["state"], "waiting");
+  assert!(waiters.is_empty());
 }

@@ -73,7 +73,10 @@ pub(crate) fn state_loop(
         if engine.effect_done(&call, &outcome)? == Stop::Fault {
           return Err("fault".to_owned());
         }
-        satisfy(engine, &mut waiters)?;
+        // Best effort: the replies were already sent, so a wait-reply the
+        // journal cannot record must not stop the engine (as in
+        // `notify::record`).
+        let _replies = satisfy(engine, &mut waiters);
       }
       Ok(Msg::Herdr(fact)) => {
         engine.refresh_clock();
@@ -109,13 +112,15 @@ fn on_timeout(
   babysit: &dyn BabysitTick,
 ) -> Result<(), String> {
   engine.refresh_clock();
-  expire(engine, waiters)?;
+  // Best effort, as above: expired waiters were already replied.
+  let _expired = expire(engine, waiters);
   if Instant::now() >= *next_tick {
     tick(engine, next_tick, babysit)?;
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
     let _tick = engine.tick(babysit)?;
   }
-  satisfy(engine, waiters)
+  let _replies = satisfy(engine, waiters);
+  Ok(())
 }
 
 fn tick(
