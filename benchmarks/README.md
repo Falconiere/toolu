@@ -15,6 +15,11 @@ fabricated counterfactual.
   against `hook-budgets.json` (#410). Fixed payloads live in `cases/hooks/`, the
   Bun baselines and the Rust prototype measurement in `results/`. Budgets and
   method: [`docs/resource-budgets.md`](../docs/resource-budgets.md).
+- **Epic baseline (committed, derived):** `epic-baseline.json` holds the
+  TypeScript watcher's epic figures (lead time, phase shares, rebase rounds,
+  relaunches), derived from recorded state directories by `toolu epic
+  baseline`; `toolu epic metrics` and `toolu epic summary` print them beside a
+  run's measures. Method: [`docs/epic-orchestrator/README.md`](../docs/epic-orchestrator/README.md#metrics-and-budgets).
 - **Live (manual, non-CI):** `whole-session`. Real API / `claude -p` runs; token
   counts come from real `message.usage`. Results are run by hand and committed
   with provenance (model, commit, n_runs, variance).
@@ -26,6 +31,7 @@ benchmarks/                       data only
   cases/<mechanism>/              per-mechanism inputs (queries.tsv, tasks/, hooks/payloads.json)
   hook-budgets.json               p50 RSS/CPU budget per ported hook entry
   startup-budgets.json            the `toolu --version` wall budget (`cargo xtask check-startup`)
+  epic-baseline.json              the TypeScript-era epic baseline (`toolu epic baseline`)
   fixtures/                       stable test corpus + a real transcript set
   results/                        committed result JSON + methodology (results/README.md)
 tooling/src/benchmarks/           the harness, TypeScript on Bun

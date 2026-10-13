@@ -128,8 +128,10 @@ or a settled cause closes an item; ack the rest once handled.
 
 ## 5. Done
 
-The engine closes the epic (a Linear project stays open: tell the user).
-Report PRs merged, admin merges, hosts and models, and what needed a human.
+The engine closes the epic: it posts the sub-issue → merged PR table and the
+run's metrics beside the TypeScript baseline (a Linear project stays open:
+tell the user). Report PRs merged, admin merges, hosts and models, what needed
+a human, and `toolu epic summary <epic>` (measures, budgets, token use).
 
 ## Status and stop
 

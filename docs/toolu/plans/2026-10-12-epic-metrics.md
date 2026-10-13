@@ -313,7 +313,10 @@ summary (with the closing comment) → docs → full gate.
       "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
       "benchmarks/README.md",
       "AGENTS.md",
-      "crates/cli/tests"
+      "crates/cli/tests",
+      "crates/cli/tests/fixtures/commands_json.snap",
+      "crates/cli/src/commands.schema.json",
+      "docs/epic-status-api.md"
     ],
     "input": "the built toolu binary's --help for epic metrics, summary and baseline",
     "model": "inherit"

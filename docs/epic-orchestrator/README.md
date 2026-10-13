@@ -54,6 +54,9 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `release` | Release a coupling hold so the issue launches next                                           |
 | `report`  | Worker phase reporter                                                                        |
 | `wait`    | The orchestrator's next judgment from the resident engine                                    |
+| `metrics` | Epic runs measured from the engine journal, beside the TypeScript baseline                   |
+| `summary` | One epic's report: measures, budgets and token use per worker                                |
+| `baseline`| Derive the TypeScript-era baseline from recorded epic state directories                      |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
@@ -70,3 +73,40 @@ contract and token rules are in [`docs/epic-status-api.md`](../epic-status-api.m
 the next start applies in order. Stall deadlines belong to each issue: 45
 minutes, or 120 minutes while the phase is babysit. The 30-second tick is for
 checkpoints, not for herdr.
+
+## Metrics and budgets
+
+`toolu epic metrics` (narrowed with `--epic` and `--since`) folds the engine journal
+into lead time, phase shares, first `ready` to merged (split into queue, rebase,
+CI, merge and rework), rebase rounds by engine or worker, worker prompts by
+reason, judgments and their waits, orchestrator wake-ups, GitHub requests
+(the share answered `304`, points, the interval each check scheduled next),
+job admission waits and pressure holds, relaunches, host switches, cooldowns,
+and the engine's peak memory and CPU time. The text form sets each measure
+beside the TypeScript baseline; `--json` prints the document, which
+`/api/v1/metrics` also serves (`$defs/epicMetrics` in `toolu commands
+--schema`). A measure with no records is `null`; nothing is estimated.
+
+| Budget | Limit | Held by |
+|---|---|---|
+| `judgment-free-wakeups` | 0 `wait` replies without a judgment | scripted epic in CI |
+| `prompts-while-waiting` | 0 worker prompts without a babysit finding | scripted epic in CI |
+| `rebase-without-conflict` | 0 `REBASE` prompts without a conflict hand-off | scripted epic in CI |
+| `verdict-reaction` | 0 green verdicts that waited for another check | scripted epic in CI |
+| `check-gap` | each check schedules the next at most 180 s out | scripted epic in CI; it catches a changed interval or a backoff, not an observed delay |
+| `ready-to-merged` | p90 at most 240 s from first `ready` to merged, CI excluded, issues without rework | scripted epic in CI |
+| `idle-engine` | 10 MB resident, no timer under 30 s | `crates/epic-orchestrator/tests/idle_budget.rs` on Linux |
+
+Real runs report the same table: `toolu epic summary <epic>` prints it with the
+measures beside the baseline and token use per worker (Claude Code
+transcripts and Codex rollouts; OpenCode and Cursor rows say `unavailable`).
+The engine appends the same section, without token rows, to the epic's
+closing comment.
+
+The baseline is `benchmarks/epic-baseline.json`, derived from the TypeScript
+watcher's state directories as of 2026-10-04:
+
+```sh
+toolu epic baseline --state ~/.claude/epics --until 2026-10-05T01:30:00Z --outlier falconiere-toolu-orm-145
+```
+
