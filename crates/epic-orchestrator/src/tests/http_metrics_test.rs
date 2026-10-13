@@ -1,7 +1,7 @@
 use std::io::{Read as _, Write as _};
 use std::net::{SocketAddr, TcpStream};
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::SystemTime;
 
@@ -80,9 +80,7 @@ fn the_endpoint_serves_the_cli_document_and_rejects_a_bad_query() {
   let (bad, body) = get(running.addr, "/api/v1/metrics?since=bad");
   assert_eq!(bad, "HTTP/1.1 400 Bad Request");
   assert_eq!(body["error"], "bad_query");
-  stop.store(true, Ordering::Relaxed);
-  let _wake = TcpStream::connect(running.addr);
-  running.thread.join().unwrap();
+  running.stop(&stop).unwrap();
 }
 
 #[test]

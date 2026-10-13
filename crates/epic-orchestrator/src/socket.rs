@@ -1,6 +1,5 @@
 //! The resident control socket: one accept thread, one state thread, a 30s tick.
 
-use std::net::TcpStream;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,6 +18,7 @@ use crate::client::{read_json, write_json};
 use crate::dispatch::ingest;
 use crate::effect_thread::EffectThread;
 use crate::executor::Executor;
+use crate::herdr_interrupt::Interrupt;
 use crate::http::{self, Config as HttpConfig};
 use crate::lock::Held;
 use crate::model::World;
@@ -72,16 +72,17 @@ pub(crate) fn serve_with_http(
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
   let wake = Arc::new(AtomicBool::new(false));
+  let interrupt = Arc::new(Interrupt::default());
   let http = start_http(options.http, &engine, &shared, &changed, &stop)?;
   if let (Some(notifier), Some(running)) = (engine.notifier.as_mut(), http.as_ref()) {
     notifier.set_dashboard(running.addr);
   }
-  let herdr = socket_herdr::spawn(
-    tx.clone(),
-    Arc::clone(&shared),
-    Arc::clone(&stop),
-    Arc::clone(&wake),
-  );
+  let signals = socket_herdr::Signals {
+    stop: Arc::clone(&stop),
+    wake: Arc::clone(&wake),
+    interrupt: Arc::clone(&interrupt),
+  };
+  let herdr = socket_herdr::spawn(tx.clone(), Arc::clone(&shared), signals);
   let flag = Arc::clone(&stop);
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
@@ -94,6 +95,7 @@ pub(crate) fn serve_with_http(
         shared: &shared,
         changed: &changed,
         resub: &wake,
+        interrupt: &interrupt,
         babysit: options.tick,
       },
     )
@@ -103,7 +105,7 @@ pub(crate) fn serve_with_http(
     herdr,
     http,
   };
-  join_threads(&socket, &stop, &changed, threads);
+  join_threads(&socket, &stop, &changed, threads, &interrupt);
   stopped(&mut engine, result)
 }
 
@@ -114,9 +116,16 @@ fn stopped(engine: &mut Engine, result: Result<(), String>) -> Result<(), String
   crate::engine_usage::sample(engine, "stop")
 }
 
-fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, threads: Threads) {
+fn join_threads(
+  socket: &std::path::Path,
+  stop: &AtomicBool,
+  changed: &Condvar,
+  threads: Threads,
+  interrupt: &Interrupt,
+) {
   stop.store(true, Ordering::Relaxed);
   changed.notify_all();
+  interrupt.trigger();
   let _wake = UnixStream::connect(socket);
   if let Err(err) = threads.accept.join() {
     let _panic = err;
@@ -127,8 +136,7 @@ fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, 
     let _panic = err;
   }
   if let Some(http) = threads.http {
-    let _wake_http = TcpStream::connect(http.addr);
-    let _http = http.thread.join();
+    let _http = http.stop(stop);
   }
 }
 

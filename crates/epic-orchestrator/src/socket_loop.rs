@@ -43,6 +43,8 @@ pub(crate) struct StateContext<'a> {
   pub(crate) shared: &'a Mutex<World>,
   pub(crate) changed: &'a Condvar,
   pub(crate) resub: &'a AtomicBool,
+  /// Ends the herdr thread's blocking read so it resubscribes at once.
+  pub(crate) interrupt: &'a crate::herdr_interrupt::Interrupt,
   pub(crate) babysit: &'a dyn BabysitTick,
 }
 
@@ -79,6 +81,7 @@ pub(crate) fn state_loop(
         if engine.resubscribe {
           engine.resubscribe = false;
           context.resub.store(true, Ordering::Relaxed);
+          context.interrupt.trigger();
         }
       }
       Err(RecvTimeoutError::Timeout) => {

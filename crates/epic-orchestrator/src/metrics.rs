@@ -68,3 +68,7 @@ pub(crate) fn human(ms: u64) -> String {
 #[cfg(test)]
 #[path = "tests/metrics_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/metrics_scenario_test.rs"]
+mod scenario_tests;

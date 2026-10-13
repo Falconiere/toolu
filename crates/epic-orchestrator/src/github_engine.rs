@@ -310,3 +310,7 @@ mod babysit_tests;
 #[cfg(test)]
 #[path = "tests/github_engine_epic_test.rs"]
 mod epic_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_metrics_test.rs"]
+mod metrics_tests;

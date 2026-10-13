@@ -214,7 +214,7 @@ summary (with the closing comment) → docs → full gate.
   {
     "id": "S9",
     "title": "Idle timers: blocking HTTP accept, herdr Interrupt with 30 s idle and pause, and the Linux idle budget test",
-    "check": "cargo test -p toolu-epic-orchestrator -- http socket socket_herdr source socket_deadline && cargo test -p toolu-epic-orchestrator --release --test idle_budget",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- http socket socket_herdr source socket_deadline herdr_interrupt && cargo test -p toolu-epic-orchestrator --test idle_budget --test status_budget",
     "ac_refs": [
       "AC-7"
     ],
@@ -226,7 +226,12 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/socket_loop.rs",
       "crates/epic-orchestrator/src/tests",
       "crates/epic-orchestrator/tests/idle_budget.rs",
-      "crates/epic-orchestrator/src/lib.rs"
+      "crates/epic-orchestrator/src/lib.rs",
+      "crates/epic-orchestrator/src/herdr_interrupt.rs",
+      "crates/epic-orchestrator/src/tests/herdr_interrupt_test.rs",
+      "crates/epic-orchestrator/tests/common/release.rs",
+      "crates/epic-orchestrator/tests/status_budget.rs",
+      "crates/epic-orchestrator/src/http_metrics.rs"
     ],
     "input": "a real engine serving HTTP that stops within 1 s; a herdr fixture subscription stopped and resubscribed mid-read; an idle release engine with no herdr socket (Linux: VmHWM and per-task switches over 35 s; macOS: the test file is cfg-gated and the unit tests pin the constants)",
     "model": "inherit",
@@ -236,8 +241,8 @@ summary (with the closing comment) → docs → full gate.
   },
   {
     "id": "S10",
-    "title": "Scripted-epic budgets: the scenario rig run with a waiting PR, engine rebase, conflict hand-off, merges, close and a real wait; plus the 180 s slot test; github_engine's fixture test module and its FullTick/rest_routes/graphql_body widen to pub(crate), and the metrics scenario has its own multi-issue engine helper",
-    "check": "cargo test -p toolu-epic-orchestrator -- metrics_scenario watch",
+    "title": "Scripted-epic budgets: the GitHub half (keep-going checks then green, as a sibling test module of the fixture) and the queue half (engine rebases, a conflict hand-off, merges, a real wait), each with a planted regression; plus the 180 s slot test",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- metrics::scenario_tests github_engine::metrics_tests watch::tests",
     "ac_refs": [
       "AC-5",
       "AC-6"
@@ -252,7 +257,11 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/metrics",
       "crates/epic-orchestrator/src/lib.rs",
       "crates/epic-orchestrator/src/tests/github_engine_fixture_test.rs",
-      "crates/epic-orchestrator/src/github_engine.rs"
+      "crates/epic-orchestrator/src/github_engine.rs",
+      "crates/epic-orchestrator/src/tests/github_engine_metrics_test.rs",
+      "crates/epic-orchestrator/src/tests/metrics_scenario_test.rs",
+      "crates/epic-orchestrator/src/tests/watch_test.rs",
+      "crates/epic-orchestrator/src/metrics.rs"
     ],
     "input": "checks driven through the HTTPS GitHub fixture and FullTick as in src/tests/github_engine_fixture_test.rs (engine, rest_routes, graphql_body): a PR waiting through keep-going checks then green (github-babysit-ready, merge-intent in the same tick); the queue rig's journal from three PRs (one rebased by the engine, one handed off on a conflict); a blocking wait answered by epic-complete; Watch slots after fresh, 304, failed and errored checks",
     "model": "inherit"
@@ -393,3 +402,16 @@ summary (with the closing comment) → docs → full gate.
   journal (as the existing `spool` record is), not through the outbox: the
   reply is already sent, and a flush in the middle of a dispatch could apply
   unrelated queued steps.
+- S9: the HTTP listener stops through `Running::stop` (raise the flag, one
+  wake connection, join), used by `join_threads` and the HTTP tests. The
+  Linux budget tests share `tests/common/release.rs` (the release binary
+  build). Measured on Linux (aarch64 container, release): an idle engine made
+  2 voluntary context switches in 35 s with `VmHWM` 6 569 984 bytes; the
+  status budget stayed at p90 0.18 ms and 7 808 KiB.
+- S10: the GitHub half lives in `github_engine`'s own test module beside the
+  HTTPS fixture, so the fixture keeps its `pub(super)` visibility; nothing in
+  `github_engine.rs` widens.
+- S9 red evidence: the same `tests/idle_budget.rs` against a release binary
+  built from `main` (9d593b01) in the same container failed with 1 442
+  voluntary switches in 35 s (`VmHWM` 6 430 720 bytes).
+

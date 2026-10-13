@@ -33,6 +33,15 @@ pub(crate) struct Running {
   pub thread: JoinHandle<()>,
 }
 
+impl Running {
+  /// Raise `stop`, wake the blocking `accept` with one connection, and join.
+  pub(crate) fn stop(self, stop: &AtomicBool) -> std::thread::Result<()> {
+    stop.store(true, Ordering::Relaxed);
+    let _wake = TcpStream::connect(self.addr);
+    self.thread.join()
+  }
+}
+
 struct Context {
   paths: Paths,
   world: Arc<Mutex<World>>,
@@ -63,9 +72,6 @@ pub(crate) fn start(
     return Err("non-loopback HTTP bind requires TOOLU_EPIC_TOKEN or a status token".to_owned());
   }
   let listener = TcpListener::bind(config.addr).map_err(|err| format!("HTTP bind: {err}"))?;
-  listener
-    .set_nonblocking(true)
-    .map_err(|err| format!("HTTP nonblocking: {err}"))?;
   let addr = listener
     .local_addr()
     .map_err(|err| format!("HTTP address: {err}"))?;
@@ -89,6 +95,8 @@ pub(crate) fn start(
 fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
   while !context.stop.load(Ordering::Relaxed) {
     match listener.accept() {
+      // `join_threads` connects once to end a blocking accept on stop.
+      Ok(_) if context.stop.load(Ordering::Relaxed) => break,
       Ok((mut stream, _)) => {
         if stream.set_nodelay(true).is_err() {
           continue;
@@ -105,9 +113,7 @@ fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
           context.connections.fetch_sub(1, Ordering::AcqRel);
         });
       }
-      Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-        thread::sleep(Duration::from_millis(20));
-      }
+      Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
       Err(_err) => break,
     }
   }

@@ -1,6 +1,6 @@
 use std::io::{BufRead as _, BufReader, Read as _, Write as _};
 use std::net::{SocketAddr, TcpStream};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
 use std::time::{Duration, Instant, UNIX_EPOCH};
@@ -80,8 +80,7 @@ fn http_auth_requires_a_bearer_token_on_public_bind() {
   for response in [missing, invalid, valid] {
     assert!(!response.contains("PRIVATE-STATUS-CANARY"));
   }
-  stop.store(true, Ordering::Relaxed);
-  running.thread.join().expect("listener thread");
+  running.stop(&stop).expect("listener thread");
 }
 
 #[test]
@@ -133,8 +132,7 @@ fn http_boundary_checks_requests_and_poisoned_world() {
   assert!(stream_head.ends_with("\r\n\r\n"));
   assert!(!allowed.contains("Access-Control-Allow-Origin"));
   assert_poisoned_world(world, running.addr);
-  stop.store(true, Ordering::Relaxed);
-  running.thread.join().expect("listener thread");
+  running.stop(&stop).expect("listener thread");
 }
 
 fn assert_poisoned_world(world: Arc<Mutex<World>>, addr: SocketAddr) {
@@ -188,8 +186,7 @@ fn stream_replay_crosses_journal_days_and_honors_last_event_id() {
   let (ids, seen_private) = event_ids(reader);
   assert_eq!(ids, [2, 3]);
   assert!(!seen_private);
-  stop.store(true, Ordering::Relaxed);
-  running.thread.join().expect("listener thread");
+  running.stop(&stop).expect("listener thread");
 }
 
 fn seed_journal(paths: &Paths) {

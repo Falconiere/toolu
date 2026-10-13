@@ -54,6 +54,7 @@ mod herdr_calls;
 #[cfg(test)]
 #[path = "tests/herdr_fixture_test.rs"]
 mod herdr_fixture;
+mod herdr_interrupt;
 #[cfg(test)]
 #[path = "tests/herdr_state_test.rs"]
 mod herdr_state;
