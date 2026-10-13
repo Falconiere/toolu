@@ -30,9 +30,9 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   {
     "id": "S1",
     "title": "Rewrite SKILL.md for the engine (<150 lines) and extend epic_markdown contracts: references in surfaces, line limit, no gate/launch/finish/merge in the skill, judgment table complete, preflight via toolu doctor",
-    "check": "cargo test -p toolu-cli --test epic_markdown",
+    "check": "cargo test -p toolu-cli --test epic_markdown --test epic_skill",
     "ac_refs": ["AC-1", "AC-2", "AC-4"],
-    "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "crates/cli/tests/epic_markdown.rs", "crates/cli/tests/helpers/**"],
+    "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/**", "plugins/epic-orchestrator/commands/epic.md", "crates/cli/tests/epic_markdown.rs", "crates/cli/tests/epic_skill.rs", "crates/cli/tests/helpers/**"],
     "input": "the shipped SKILL.md and the real toolu binary's epic --help",
     "model": "inherit"
   },
@@ -49,10 +49,10 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   {
     "id": "S3",
     "title": "Rewrite references/recovery.md around status, journal and doctor; commands/epic.md subcommands start/status/pause/resume/stop/serve",
-    "check": "cargo test -p toolu-cli --test epic_markdown && cargo xtask check-markdown-cli",
+    "check": "cargo test -p toolu-cli --test epic_markdown --test epic_skill && cargo xtask check-markdown-cli",
     "ac_refs": ["AC-2", "AC-7", "AC-8"],
     "depends_on": ["S1"],
-    "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/references/recovery.md", "plugins/epic-orchestrator/commands/epic.md", "crates/cli/tests/epic_markdown.rs", "docs/cli/commands.json", "tooling/conventions/markdown-cli.json", "tooling/conventions/markdown-cli/**"],
+    "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/references/recovery.md", "plugins/epic-orchestrator/commands/epic.md", "crates/cli/tests/epic_markdown.rs", "crates/cli/tests/epic_skill.rs", "docs/cli/commands.json", "tooling/conventions/markdown-cli.json", "tooling/conventions/markdown-cli/**"],
     "input": "the shipped recovery.md and epic.md",
     "model": "inherit"
   },
@@ -127,6 +127,13 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   }
 ]
 ```
+
+## Deviations
+
+- S1 and S3 also run the new `crates/cli/tests/epic_skill.rs` (the skill,
+  command and recovery shape tests); `epic_markdown.rs` keeps the verb and
+  rendered-brief tests. S1's paths widen to the whole skill directory and the
+  command file, which `epic_markdown` reads.
 
 ## Critical files
 
