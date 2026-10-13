@@ -88,7 +88,11 @@ pub(crate) enum Mode {
 }
 
 fn joined(targets: &[Target]) -> String {
-  targets.iter().map(|target| target.name()).collect::<Vec<_>>().join(", ")
+  targets
+    .iter()
+    .map(|target| target.name())
+    .collect::<Vec<_>>()
+    .join(", ")
 }
 
 fn ambiguous(found: &[Target]) -> Fail {
@@ -127,7 +131,10 @@ pub(crate) fn resolve(
         Mode::Many => ask.many("Which hosts should receive the plugins?", &labels)?,
         Mode::One => vec![ask.one("Which host?", &labels)?],
       };
-      let picked: Vec<Target> = chosen.into_iter().filter_map(|at| found.get(at).copied()).collect();
+      let picked: Vec<Target> = chosen
+        .into_iter()
+        .filter_map(|at| found.get(at).copied())
+        .collect();
       if picked.is_empty() {
         return Err(ambiguous(&found));
       }

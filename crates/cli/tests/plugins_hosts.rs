@@ -18,7 +18,9 @@ struct Sb {
 
 impl Sb {
   fn new() -> Res<Sb> {
-    let dir = tempfile::Builder::new().prefix("toolu-plugins-cli-").tempdir()?;
+    let dir = tempfile::Builder::new()
+      .prefix("toolu-plugins-cli-")
+      .tempdir()?;
     std::fs::create_dir_all(dir.path().join("bin"))?;
     std::fs::create_dir_all(dir.path().join("home"))?;
     Ok(Sb { dir })
@@ -69,36 +71,86 @@ fn text(bytes: &[u8]) -> String {
 #[test]
 fn a_core_failure_skips_its_dependents_and_jev_still_installs() {
   let sb = Sb::new().unwrap();
-  sb.host("claude", "[]", "\"plugin install toolu@toolu\"").unwrap();
-  let out = sb.run(&sb.root(), &["plugins", "install", "toolu", "ts-quality", "jev", "--host", "claude"]).unwrap();
+  sb.host("claude", "[]", "\"plugin install toolu@toolu\"")
+    .unwrap();
+  let out = sb
+    .run(
+      &sb.root(),
+      &[
+        "plugins",
+        "install",
+        "toolu",
+        "ts-quality",
+        "jev",
+        "--host",
+        "claude",
+      ],
+    )
+    .unwrap();
   assert_eq!(out.status.code(), Some(1), "{}", text(&out.stderr));
   assert_eq!(
     text(&out.stdout),
     "  x toolu            boom: plugin install toolu@toolu\n  - ts-quality       skipped: toolu failed\n  + jev              installed\n"
   );
   let log = sb.log("claude");
-  assert!(log.contains(&"plugin install jev@toolu".to_owned()), "{log:?}");
-  assert!(!log.iter().any(|line| line.contains("ts-quality")), "{log:?}");
+  assert!(
+    log.contains(&"plugin install jev@toolu".to_owned()),
+    "{log:?}"
+  );
+  assert!(
+    !log.iter().any(|line| line.contains("ts-quality")),
+    "{log:?}"
+  );
 }
 
 #[test]
 fn json_is_one_document_on_success_and_on_failure() {
   let sb = Sb::new().unwrap();
-  sb.host("claude", "[]", "\"plugin install toolu@toolu\"").unwrap();
-  let failed = sb.run(&sb.root(), &["plugins", "install", "toolu", "--host", "claude", "--json"]).unwrap();
+  sb.host("claude", "[]", "\"plugin install toolu@toolu\"")
+    .unwrap();
+  let failed = sb
+    .run(
+      &sb.root(),
+      &["plugins", "install", "toolu", "--host", "claude", "--json"],
+    )
+    .unwrap();
   assert_eq!(failed.status.code(), Some(1));
   let doc: Value = serde_json::from_slice(&failed.stdout).unwrap();
   assert_eq!(doc["hosts"][0]["steps"][0]["outcome"], "failed");
   assert_eq!(doc["hosts"][0]["host"], "claude");
-  let listed = sb.run(&sb.root(), &["--json", "plugins", "list", "--host", "claude"]).unwrap();
+  let listed = sb
+    .run(
+      &sb.root(),
+      &["--json", "plugins", "list", "--host", "claude"],
+    )
+    .unwrap();
   assert_eq!(listed.status.code(), Some(0));
   let rows: Value = serde_json::from_slice(&listed.stdout).unwrap();
-  assert!(rows.as_array().is_some_and(|rows| rows.iter().all(|row| row["installed"] == false)));
+  assert!(
+    rows
+      .as_array()
+      .is_some_and(|rows| rows.iter().all(|row| row["installed"] == false))
+  );
   sb.host("codex", r#"{"installed":[]}"#, "never").unwrap();
-  let removed = sb.run(&sb.root(), &["plugins", "remove", "jev", "--yes", "--host", "codex", "--json"]).unwrap();
+  let removed = sb
+    .run(
+      &sb.root(),
+      &[
+        "plugins", "remove", "jev", "--yes", "--host", "codex", "--json",
+      ],
+    )
+    .unwrap();
   let doc: Value = serde_json::from_slice(&removed.stdout).unwrap();
-  assert_eq!((doc["host"].clone(), doc["steps"][0]["removed"].clone()), (Value::from("codex"), Value::Bool(true)));
-  let update = sb.run(&sb.root(), &["plugins", "update", "--host", "codex", "--json"]).unwrap();
+  assert_eq!(
+    (doc["host"].clone(), doc["steps"][0]["removed"].clone()),
+    (Value::from("codex"), Value::Bool(true))
+  );
+  let update = sb
+    .run(
+      &sb.root(),
+      &["plugins", "update", "--host", "codex", "--json"],
+    )
+    .unwrap();
   assert_eq!(update.status.code(), Some(1));
   let doc: Value = serde_json::from_slice(&update.stdout).unwrap();
   assert_eq!(doc["error"]["name"], "failure", "{doc}");
@@ -109,13 +161,33 @@ fn a_dry_run_works_with_no_host_cli_from_any_directory() {
   let sb = Sb::new().unwrap();
   let empty = sb.root().join("empty");
   std::fs::create_dir_all(&empty).unwrap();
-  let out = sb.run(&empty, &["plugins", "install", "--dry-run", "--host", "claude", "rust-quality"]).unwrap();
+  let out = sb
+    .run(
+      &empty,
+      &[
+        "plugins",
+        "install",
+        "--dry-run",
+        "--host",
+        "claude",
+        "rust-quality",
+      ],
+    )
+    .unwrap();
   assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
   assert_eq!(
     text(&out.stdout),
     "Planned commands (nothing was run):\n  claude plugin install toolu@toolu\n  claude plugin install rust-quality@toolu\n"
   );
   let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-  let inside = sb.run(&repo, &["plugins", "install", "--dry-run", "--host", "codex", "jev"]).unwrap();
-  assert_eq!(text(&inside.stdout), "Planned commands (nothing was run):\n  codex plugin add jev@toolu\n");
+  let inside = sb
+    .run(
+      &repo,
+      &["plugins", "install", "--dry-run", "--host", "codex", "jev"],
+    )
+    .unwrap();
+  assert_eq!(
+    text(&inside.stdout),
+    "Planned commands (nothing was run):\n  codex plugin add jev@toolu\n"
+  );
 }

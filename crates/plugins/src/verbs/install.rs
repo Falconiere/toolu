@@ -25,7 +25,12 @@ fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<
       ),
       argv,
     ),
-    _same => Step::new(name, Status::Already, format!("already installed at {}", have.version), argv),
+    _same => Step::new(
+      name,
+      Status::Already,
+      format!("already installed at {}", have.version),
+      argv,
+    ),
   }
 }
 
@@ -50,7 +55,12 @@ pub(crate) fn run(
   for name in &order {
     let argv = adapter.install(name, scope);
     if core_failed && dependents.contains(name) {
-      steps.push(Step::new(name, Status::Skipped, format!("skipped: {CORE} failed"), argv));
+      steps.push(Step::new(
+        name,
+        Status::Skipped,
+        format!("skipped: {CORE} failed"),
+        argv,
+      ));
       continue;
     }
     if let Some(have) = find(&installed, name) {

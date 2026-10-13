@@ -9,7 +9,10 @@ use crate::verbs::Driver;
 pub(crate) fn run(driver: &Driver, catalog: &Catalog) -> Res<Vec<Row>> {
   let ran = driver.run(&driver.adapter.list_installed());
   let present = if ran.ok() {
-    driver.adapter.parse_list(&ran.stdout).map_err(Fail::failed)?
+    driver
+      .adapter
+      .parse_list(&ran.stdout)
+      .map_err(Fail::failed)?
   } else {
     Vec::new()
   };

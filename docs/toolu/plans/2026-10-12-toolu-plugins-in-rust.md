@@ -181,7 +181,7 @@ Markdown and notices → docs and generated reference → full gate.
   {
     "id": "S7",
     "title": "Agent-facing text names toolu plugins: session notices (TS and Rust, golden), uninstall hint (TS and Rust), plugin skills",
-    "check": "cargo build -p toolu-cli && cargo xtask docs-cli && cargo test -p toolu-hub -p toolu-runtime && bun test --timeout 60000 plugins/toolu/hooks/src/__tests__/lifecycle-golden.test.ts packages/toolu-core/src/host && bun run build:plugins --check && cargo xtask check-markdown-cli && ! git grep -n 'npx @toolu/[p]lugins' -- 'plugins/*/skills' 'plugins/*/commands' 'plugins/*/agents' 'plugins/*/hooks/src' crates/toolu crates/core crates/cli/src packages/toolu-core/src fixtures",
+    "check": "cargo build -p toolu-cli && cargo xtask docs-cli && cargo test -p toolu-hub -p toolu-runtime && bun test --timeout 60000 plugins/toolu/hooks/src/__tests__/lifecycle-golden.test.ts packages/toolu-core/src/host tools/toolu-opencode/scripts/__tests__/epic-surfaces.test.ts && bun run build:plugins --check && cargo xtask check-markdown-cli && ! git grep -n 'npx @toolu/[p]lugins' -- plugins ':!plugins/*/README.md' crates/toolu crates/core crates/cli/src packages/toolu-core/src fixtures",
     "ac_refs": [
       "AC-8"
     ],
@@ -196,7 +196,8 @@ Markdown and notices → docs and generated reference → full gate.
       "fixtures/gates/lifecycle-golden.json",
       "docs/cli/commands.json",
       "docs/cli",
-      "crates/plugins/src"
+      "crates/plugins/src",
+      "tools/toolu-opencode/scripts"
     ],
     "input": "the codex delivery-flow install notice; the opencode uninstall command; the epic-orchestrator skill's install line",
     "model": "inherit"
@@ -234,7 +235,13 @@ Markdown and notices → docs and generated reference → full gate.
       "tools/toolu-cli/npm/README.md",
       "plugins/brainstorm/README.md",
       "plugins/delivery-flow/README.md",
-      "plugins/epic-orchestrator/README.md"
+      "plugins/epic-orchestrator/README.md",
+      "crates/cli/src/commands.schema.json",
+      "crates/cli/tests/contract.rs",
+      "crates/cli/tests/helpers",
+      "docs/markdown-cli.md",
+      "tooling/src/__tests__/install-prompts.test.ts",
+      ".github/ci-paths.json"
     ],
     "input": "the built binary's --help and commands --json; the README and docs/plugins/index.md install fences",
     "model": "inherit"

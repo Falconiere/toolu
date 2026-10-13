@@ -3,8 +3,8 @@
 //! verb's stdout stays its report. The logic runs over any `BufRead` and
 //! `Write`, which is how it is tested.
 
-use std::fs::{File, OpenOptions};
 use std::fmt::Write as _;
+use std::fs::{File, OpenOptions};
 use std::io::{BufRead, BufReader, IsTerminal as _, Write};
 
 use crate::fail::{Fail, Res};
@@ -36,7 +36,10 @@ impl<R: BufRead, W: Write> Prompter<R, W> {
   fn show(&mut self, message: &str, options: &[Choice], hint: &str) -> Res<()> {
     let mut text = format!("{message}\n");
     for (index, (label, about)) in options.iter().enumerate() {
-      let about = about.as_deref().map(|about| format!(" - {about}")).unwrap_or_default();
+      let about = about
+        .as_deref()
+        .map(|about| format!(" - {about}"))
+        .unwrap_or_default();
       let _written = writeln!(text, "  {}) {label}{about}", index + 1);
     }
     text.push_str(hint);
@@ -81,7 +84,11 @@ fn picks(answer: &str, count: usize) -> Option<Vec<usize>> {
 
 impl<R: BufRead, W: Write> Ask for Prompter<R, W> {
   fn many(&mut self, message: &str, options: &[Choice]) -> Res<Vec<usize>> {
-    self.show(message, options, "Numbers to choose (Enter: all, q: cancel): ")?;
+    self.show(
+      message,
+      options,
+      "Numbers to choose (Enter: all, q: cancel): ",
+    )?;
     loop {
       let answer = self.answer()?;
       if answer.is_empty() {
@@ -90,7 +97,10 @@ impl<R: BufRead, W: Write> Ask for Prompter<R, W> {
       if let Some(chosen) = picks(&answer, options.len()) {
         return Ok(chosen);
       }
-      self.say(&format!("Answer with numbers from 1 to {}: ", options.len()))?;
+      self.say(&format!(
+        "Answer with numbers from 1 to {}: ",
+        options.len()
+      ))?;
     }
   }
 
@@ -104,7 +114,10 @@ impl<R: BufRead, W: Write> Ask for Prompter<R, W> {
       if let Some([index]) = picks(&answer, options.len()).as_deref() {
         return Ok(*index);
       }
-      self.say(&format!("Answer with one number from 1 to {}: ", options.len()))?;
+      self.say(&format!(
+        "Answer with one number from 1 to {}: ",
+        options.len()
+      ))?;
     }
   }
 }
@@ -115,7 +128,11 @@ pub(crate) fn terminal(allowed: bool) -> Option<Prompter<BufReader<File>, File>>
   if !allowed || !std::io::stdin().is_terminal() {
     return None;
   }
-  let tty = OpenOptions::new().read(true).write(true).open("/dev/tty").ok()?;
+  let tty = OpenOptions::new()
+    .read(true)
+    .write(true)
+    .open("/dev/tty")
+    .ok()?;
   let input = tty.try_clone().ok()?;
   Some(Prompter::new(BufReader::new(input), tty))
 }

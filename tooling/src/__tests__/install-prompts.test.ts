@@ -40,7 +40,7 @@ test.concurrent("install-everything fences match in the README and the plugin in
 // The fences used to enumerate every plugin as `<name>@toolu`, core first, and
 // this test compared that list against the catalog. The CLI now derives both the
 // set and the order from .claude-plugin/marketplace.json itself -- covered by
-// tools/toolu-cli/src/catalog/__tests__/order.test.ts -- so the README must NOT
+// crates/plugins/src/catalog/tests/order_test.rs -- so the README must NOT
 // hand-enumerate them: a second copy of the catalog is exactly the drift the
 // version column already taught us about.
 test.concurrent("install-everything fences drive the CLI instead of enumerating plugins", () => {

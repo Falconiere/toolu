@@ -82,8 +82,9 @@ toolu plugins install
 The installer verifies the release's minisign signature and the archive's
 checksum before it writes anything. Upgrade, uninstall, a pinned version,
 rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
-Until `toolu plugins` lands (#438), install the plugins with
-`npx @toolu/plugins install`, as below.
+`npx @toolu/plugins install`, as below, does the same: the npm package is a
+wrapper that runs `toolu plugins` on the installed binary
+([docs/cli/installer.md](docs/cli/installer.md)).
 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.

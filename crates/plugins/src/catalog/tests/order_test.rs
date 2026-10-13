@@ -39,7 +39,13 @@ fn the_declared_dependents_really_depend_on_toolu() {
 fn delivery_flow_and_epic_orchestrator_close_their_dependencies() {
   assert_eq!(
     order(&["delivery-flow"]),
-    ["toolu", "toolu-review", "pr-babysit", "brainstorm", "delivery-flow"]
+    [
+      "toolu",
+      "toolu-review",
+      "pr-babysit",
+      "brainstorm",
+      "delivery-flow"
+    ]
   );
   assert_eq!(
     order(&["epic-orchestrator"]),
@@ -61,7 +67,10 @@ fn a_full_install_orders_every_dependent_after_toolu() {
   assert_eq!(all.len(), catalog.plugins.len());
   let core = all.iter().position(|name| name == "toolu");
   for dependent in dependents_of(&catalog, "toolu") {
-    assert!(all.iter().position(|name| *name == dependent) > core, "{dependent}");
+    assert!(
+      all.iter().position(|name| *name == dependent) > core,
+      "{dependent}"
+    );
   }
 }
 
@@ -69,7 +78,10 @@ fn a_full_install_orders_every_dependent_after_toolu() {
 fn a_dependent_pulls_its_dependency_first_and_repeats_appear_once() {
   assert_eq!(order(&["rust-quality"]), ["toolu", "rust-quality"]);
   assert_eq!(order(&["brainstorm"]), ["brainstorm"]);
-  assert_eq!(order(&["toolu", "rust-quality", "toolu"]), ["toolu", "rust-quality"]);
+  assert_eq!(
+    order(&["toolu", "rust-quality", "toolu"]),
+    ["toolu", "rust-quality"]
+  );
 }
 
 #[test]
@@ -100,7 +112,16 @@ fn a_dependency_cycle_is_a_usage_error() {
     panic!("a cycle was ordered");
   };
   assert_eq!(fail.exit, Exit::Usage);
-  assert!(fail.message.starts_with("circular plugin dependency involving"), "{}", fail.message);
+  assert!(
+    fail
+      .message
+      .starts_with("circular plugin dependency involving"),
+    "{}",
+    fail.message
+  );
   // A dependency outside the catalog is skipped, as the TypeScript walk did.
-  assert_eq!(install_order(&catalog, &["c".to_owned()]), Ok(vec!["c".to_owned()]));
+  assert_eq!(
+    install_order(&catalog, &["c".to_owned()]),
+    Ok(vec!["c".to_owned()])
+  );
 }

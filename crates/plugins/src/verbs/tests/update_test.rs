@@ -7,7 +7,11 @@ use crate::support::{Sandbox, names};
 use crate::verbs::Driver;
 
 fn driver(sb: &Sandbox) -> Driver {
-  Driver { adapter: Adapter::Claude, env: sb.env(), timeout: Duration::from_secs(10) }
+  Driver {
+    adapter: Adapter::Claude,
+    env: sb.env(),
+    timeout: Duration::from_secs(10),
+  }
 }
 
 #[test]
@@ -18,12 +22,17 @@ fn only_plugins_behind_the_offer_are_updated_in_the_hosts_order() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.10.0"},{"id":"toolu@toolu","version":"7.11.0"},{"id":"ast-grep@toolu","version":"1"}]"#,
   );
-  sb.write("claude-available.json", r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.11.0"}]"#);
+  sb.write(
+    "claude-available.json",
+    r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.11.0"}]"#,
+  );
   let Ok(steps) = run(&driver(&sb), &[], false) else {
     panic!("update failed outright");
   };
-  let seen: Vec<(&str, Status, &str)> =
-    steps.iter().map(|step| (step.name.as_str(), step.status, step.detail.as_str())).collect();
+  let seen: Vec<(&str, Status, &str)> = steps
+    .iter()
+    .map(|step| (step.name.as_str(), step.status, step.detail.as_str()))
+    .collect();
   assert_eq!(
     seen,
     [
@@ -41,7 +50,10 @@ fn a_named_plugin_the_host_does_not_report_is_still_attempted() {
   let Ok(steps) = run(&driver(&sb), &names(&["jev"]), false) else {
     panic!("update failed outright");
   };
-  assert_eq!((steps[0].status, steps[0].detail.as_str()), (Status::Updated, "updated"));
+  assert_eq!(
+    (steps[0].status, steps[0].detail.as_str()),
+    (Status::Updated, "updated")
+  );
   let Ok(dry) = run(&driver(&sb), &names(&["jev"]), true) else {
     panic!("the dry run failed");
   };
@@ -55,5 +67,8 @@ fn nothing_requested_and_nothing_installed_says_so() {
   let Err(fail) = run(&driver(&sb), &[], false) else {
     panic!("an empty update reported success");
   };
-  assert_eq!(fail.message, "claude reported no installed plugins, so there is nothing to update");
+  assert_eq!(
+    fail.message,
+    "claude reported no installed plugins, so there is nothing to update"
+  );
 }

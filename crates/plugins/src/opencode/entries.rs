@@ -25,7 +25,11 @@ pub(crate) struct PluginEntry {
 
 /// The npm package of a spec; URLs and paths come back whole and never match.
 pub(crate) fn package_name(spec: &str) -> &str {
-  let from = if spec.starts_with('@') { spec.find('/').unwrap_or(0) } else { 0 };
+  let from = if spec.starts_with('@') {
+    spec.find('/').unwrap_or(0)
+  } else {
+    0
+  };
   let skip = from.max(1);
   match spec.get(skip..).and_then(|rest| rest.find('@')) {
     Some(at) => spec.get(..skip + at).unwrap_or(spec),
@@ -36,7 +40,10 @@ pub(crate) fn package_name(spec: &str) -> &str {
 /// The version part of a spec, `latest` when unpinned.
 pub(crate) fn version_of(spec: &str) -> &str {
   let name = package_name(spec);
-  spec.get(name.len() + 1..).filter(|_| spec.len() > name.len()).unwrap_or("latest")
+  spec
+    .get(name.len() + 1..)
+    .filter(|_| spec.len() > name.len())
+    .unwrap_or("latest")
 }
 
 /// The spec install writes: `TOOLU_OPENCODE_PACKAGE`, else the package at `version`.
@@ -75,7 +82,12 @@ fn elements(file: &ConfigFile) -> Res<Vec<Option<PluginEntry>>> {
       .iter()
       .enumerate()
       .map(|(index, item)| {
-        let tuple_spec = || item.as_array().and_then(|tuple| tuple.first()).and_then(Value::as_str);
+        let tuple_spec = || {
+          item
+            .as_array()
+            .and_then(|tuple| tuple.first())
+            .and_then(Value::as_str)
+        };
         let (spec, tuple) = match (item.as_str(), tuple_spec()) {
           (Some(spec), _) => (spec, false),
           (None, Some(spec)) => (spec, true),
@@ -98,7 +110,13 @@ fn is_toolu(entry: &PluginEntry) -> bool {
 
 /// The toolu entries of one file.
 pub(crate) fn toolu_entries(file: &ConfigFile) -> Res<Vec<PluginEntry>> {
-  Ok(elements(file)?.into_iter().flatten().filter(is_toolu).collect())
+  Ok(
+    elements(file)?
+      .into_iter()
+      .flatten()
+      .filter(is_toolu)
+      .collect(),
+  )
 }
 
 /// The highest-priority global file defining `plugin` (files in ascending priority).
@@ -114,7 +132,10 @@ pub(crate) fn governing_global(global: &[ConfigFile]) -> Res<Option<&ConfigFile>
 /// The toolu entry `OpenCode` loads: the governing global array, then each
 /// project file in load order; an empty array resets the list, and the last
 /// entry for the package wins.
-pub(crate) fn effective_entry(global: &[ConfigFile], project: &[ConfigFile]) -> Res<Option<PluginEntry>> {
+pub(crate) fn effective_entry(
+  global: &[ConfigFile],
+  project: &[ConfigFile],
+) -> Res<Option<PluginEntry>> {
   let mut merged = match governing_global(global)? {
     Some(file) => elements(file)?,
     None => Vec::new(),

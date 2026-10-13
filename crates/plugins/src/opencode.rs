@@ -51,14 +51,23 @@ fn scope_of(scope: Option<args::Scope>) -> Res<Option<Scope>> {
 }
 
 /// `install` on `OpenCode`.
-pub(crate) fn install(request: &Request, names: &[String], catalog: &Catalog, cx: &Context<'_>) -> Res<Vec<Step>> {
+pub(crate) fn install(
+  request: &Request,
+  names: &[String],
+  catalog: &Catalog,
+  cx: &Context<'_>,
+) -> Res<Vec<Step>> {
   let state = state::load(&cx.cwd, &cx.env)?;
   let wanted = install::Install {
     names,
     scope: scope_of(request.scope)?,
     target: target_spec(&cx.env, cx.version)?,
   };
-  apply::apply(&state, install::plan(&state, catalog, &wanted)?, request.dry_run)
+  apply::apply(
+    &state,
+    install::plan(&state, catalog, &wanted)?,
+    request.dry_run,
+  )
 }
 
 /// `list` on `OpenCode`: the header line and the rows.
@@ -77,7 +86,13 @@ pub(crate) fn remove(request: &Request, catalog: &Catalog, cx: &Context<'_>) -> 
 pub(crate) fn update(request: &Request, catalog: &Catalog, cx: &Context<'_>) -> Res<Vec<Step>> {
   let state = state::load(&cx.cwd, &cx.env)?;
   let target = target_spec(&cx.env, cx.version)?;
-  let plan = update::plan(&state, catalog, &request.names, scope_of(request.scope)?, &target)?;
+  let plan = update::plan(
+    &state,
+    catalog,
+    &request.names,
+    scope_of(request.scope)?,
+    &target,
+  )?;
   apply::apply(&state, plan, request.dry_run)
 }
 

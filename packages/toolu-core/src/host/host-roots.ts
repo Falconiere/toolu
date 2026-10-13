@@ -163,14 +163,14 @@ export function pluginInstallCommand(spec: string, options: HostOptions = {}): s
   return INSTALL[resolveHost(options).host]?.(spec) ?? null;
 }
 
-// Claude Code and Codex: the argv `toolu remove` runs (tools/toolu-cli/src/host).
-// OpenCode has no plugin command; the toolu CLI edits its selection instead.
+// Claude Code and Codex: the argv `toolu plugins remove` runs (crates/plugins/src/host).
+// OpenCode has no plugin command; `toolu plugins` edits its selection instead.
 const UNINSTALL: Readonly<Record<HostName, ((name: string) => string) | null>> = {
   claude: (name) => `claude plugin uninstall ${name}@toolu`,
   codex: (name) => `codex plugin remove ${name}@toolu`,
   cursor: null,
   hermes: null,
-  opencode: (name) => `npx @toolu/plugins remove ${name} --host opencode --yes`,
+  opencode: (name) => `toolu plugins remove ${name} --host opencode --yes`,
 };
 
 /** Exact command that uninstalls toolu plugin `name` on this host, or `null` where none exists. */

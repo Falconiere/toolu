@@ -66,7 +66,12 @@ pub(crate) fn dependents_of(catalog: &Catalog, name: &str) -> Vec<String> {
   catalog
     .plugins
     .iter()
-    .filter(|entry| entry.dependencies.iter().any(|dependency| dependency == name))
+    .filter(|entry| {
+      entry
+        .dependencies
+        .iter()
+        .any(|dependency| dependency == name)
+    })
     .map(|entry| entry.name.clone())
     .collect()
 }

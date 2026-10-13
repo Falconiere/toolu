@@ -32,7 +32,11 @@ pub(crate) const MARKETPLACE: &str = "toolu";
 pub(crate) const SOURCE: &str = "Falconiere/toolu";
 
 fn words(head: &[&str], tail: &[String]) -> Vec<String> {
-  head.iter().map(|word| (*word).to_owned()).chain(tail.iter().cloned()).collect()
+  head
+    .iter()
+    .map(|word| (*word).to_owned())
+    .chain(tail.iter().cloned())
+    .collect()
 }
 
 impl Adapter {
@@ -68,7 +72,10 @@ impl Adapter {
       Adapter::Claude => "uninstall",
       Adapter::Codex => "remove",
     };
-    words(&[self.bin(), "plugin", verb], &[format!("{name}@{MARKETPLACE}")])
+    words(
+      &[self.bin(), "plugin", verb],
+      &[format!("{name}@{MARKETPLACE}")],
+    )
   }
 
   /// Updates `name`: Codex re-adds it.
@@ -77,7 +84,10 @@ impl Adapter {
       Adapter::Claude => "update",
       Adapter::Codex => "add",
     };
-    words(&[self.bin(), "plugin", verb], &[format!("{name}@{MARKETPLACE}")])
+    words(
+      &[self.bin(), "plugin", verb],
+      &[format!("{name}@{MARKETPLACE}")],
+    )
   }
 
   /// Lists what is installed.
@@ -87,7 +97,10 @@ impl Adapter {
 
   /// Lists what the marketplaces offer.
   pub(crate) fn list_available(self) -> Vec<String> {
-    words(&[self.bin(), "plugin", "list", "--available", "--json"], &[])
+    words(
+      &[self.bin(), "plugin", "list", "--available", "--json"],
+      &[],
+    )
   }
 
   /// Normalizes a `plugin list --json` payload; the wrong shape is an error,

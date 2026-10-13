@@ -41,13 +41,22 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let mut terminal = prompt::terminal(!request.no_input && !ctx.json);
   let cwd = match std::env::current_dir() {
     Ok(cwd) => cwd,
-    Err(err) => return outcome(Err(Fail::failed(format!("cannot read the working directory: {err}"))), ctx),
+    Err(err) => {
+      return outcome(
+        Err(Fail::failed(format!(
+          "cannot read the working directory: {err}"
+        ))),
+        ctx,
+      );
+    }
   };
   let mut cx = Context {
     env: Env::process(),
     cwd,
     host: ctx.host,
-    ask: terminal.as_mut().map(|prompter| prompter as &mut dyn prompt::Ask),
+    ask: terminal
+      .as_mut()
+      .map(|prompter| prompter as &mut dyn prompt::Ask),
     timeout: host::run::HOST_TIMEOUT,
     version: env!("CARGO_PKG_VERSION"),
   };
@@ -62,10 +71,22 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
 fn outcome(report: Result<Report, Fail>, ctx: &Ctx) -> Outcome {
   match report {
     Ok(report) => {
-      let text = report.text.strip_suffix('\n').unwrap_or(&report.text).to_owned();
-      let stdout = if ctx.json { Some(report.json.to_string()) } else { Some(text).filter(|text| !text.is_empty()) };
+      let text = report
+        .text
+        .strip_suffix('\n')
+        .unwrap_or(&report.text)
+        .to_owned();
+      let stdout = if ctx.json {
+        Some(report.json.to_string())
+      } else {
+        Some(text).filter(|text| !text.is_empty())
+      };
       Outcome {
-        exit: if report.failed { Exit::Failure } else { Exit::Success },
+        exit: if report.failed {
+          Exit::Failure
+        } else {
+          Exit::Success
+        },
         stdout,
         stderr: None,
       }

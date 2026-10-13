@@ -37,7 +37,11 @@ pub(crate) struct Catalog {
 impl Catalog {
   /// The plugin names, in manifest order.
   pub(crate) fn names(&self) -> Vec<String> {
-    self.plugins.iter().map(|entry| entry.name.clone()).collect()
+    self
+      .plugins
+      .iter()
+      .map(|entry| entry.name.clone())
+      .collect()
   }
 
   /// The plugin called `name`.
@@ -81,7 +85,9 @@ pub(crate) fn parse(text: &str, source: &str) -> Res<Catalog> {
   let plugins = plugins
     .iter()
     .enumerate()
-    .map(|(index, plugin)| entry(plugin).map_err(|detail| malformed(&format!("plugins[{index}]: {detail}"))))
+    .map(|(index, plugin)| {
+      entry(plugin).map_err(|detail| malformed(&format!("plugins[{index}]: {detail}")))
+    })
     .collect::<Result<Vec<_>, _>>()?;
   Ok(Catalog { plugins })
 }

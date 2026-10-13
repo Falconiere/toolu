@@ -14,7 +14,12 @@ pub(crate) fn plan(state: &State, catalog: &Catalog) -> Res<(String, Vec<Row>)> 
     let rows = catalog
       .names()
       .into_iter()
-      .map(|name| Row { name, installed: false, version: None, enabled: false })
+      .map(|name| Row {
+        name,
+        installed: false,
+        version: None,
+        enabled: false,
+      })
       .collect();
     return Ok((format!("{PACKAGE}: not configured\n"), rows));
   };
@@ -36,7 +41,10 @@ pub(crate) fn plan(state: &State, catalog: &Catalog) -> Res<(String, Vec<Row>)> 
       version: Some(version.clone()),
     })
     .collect();
-  let header = format!("{PACKAGE}: {} in {}; selection: {selection}\n", entry.spec, entry.file);
+  let header = format!(
+    "{PACKAGE}: {} in {}; selection: {selection}\n",
+    entry.spec, entry.file
+  );
   Ok((header, rows))
 }
 

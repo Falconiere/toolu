@@ -17,7 +17,12 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Vec<Step>
       if ran.ok() {
         Step::new(name, Status::Removed, "removed", argv)
       } else {
-        Step::new(name, Status::Failed, first_line(&ran.stderr, "remove failed"), argv)
+        Step::new(
+          name,
+          Status::Failed,
+          first_line(&ran.stderr, "remove failed"),
+          argv,
+        )
       }
     })
     .collect()

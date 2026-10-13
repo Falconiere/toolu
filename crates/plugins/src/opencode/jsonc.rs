@@ -67,7 +67,12 @@ pub(crate) fn read_config_file(path: &Path) -> Res<ConfigFile> {
         data: None,
       });
     }
-    Err(err) => return Err(Fail::failed(format!("cannot read {}: {err}", path.display()))),
+    Err(err) => {
+      return Err(Fail::failed(format!(
+        "cannot read {}: {err}",
+        path.display()
+      )));
+    }
   };
   let data = parse_config(path, &text)?;
   Ok(ConfigFile {
@@ -122,7 +127,9 @@ pub(crate) fn append_element(text: &str, key: &str, spec: &str) -> String {
 /// Removes element `index` of the root's `key` array.
 pub(crate) fn remove_element(text: &str, key: &str, index: usize) -> String {
   edit(text, |root| {
-    let array = root.object_value().and_then(|object| object.array_value(key));
+    let array = root
+      .object_value()
+      .and_then(|object| object.array_value(key));
     if let Some(element) = array.and_then(|array| array.elements().into_iter().nth(index)) {
       element.remove();
     }
@@ -143,11 +150,16 @@ pub(crate) fn replace_spec(text: &str, index: usize, tuple: bool, spec: &str) ->
     .and_then(|prop| prop.value.as_array());
   let element = array.and_then(|array| array.elements.get(index));
   let target = if tuple {
-    element.and_then(|value| value.as_array()).and_then(|tuple| tuple.elements.first())
+    element
+      .and_then(|value| value.as_array())
+      .and_then(|tuple| tuple.elements.first())
   } else {
     element
   };
-  let Some(range) = target.and_then(|value| value.as_string_lit()).map(|lit| lit.range) else {
+  let Some(range) = target
+    .and_then(|value| value.as_string_lit())
+    .map(|lit| lit.range)
+  else {
     return text.to_owned();
   };
   let quoted = serde_json::to_string(spec).unwrap_or_default();

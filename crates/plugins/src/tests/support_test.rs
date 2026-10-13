@@ -20,7 +20,10 @@ pub(crate) struct Sandbox {
 impl Sandbox {
   /// A fresh sandbox.
   pub(crate) fn new() -> Sandbox {
-    let dir = tempfile::Builder::new().prefix("toolu-plugins-").tempdir().expect("tempdir");
+    let dir = tempfile::Builder::new()
+      .prefix("toolu-plugins-")
+      .tempdir()
+      .expect("tempdir");
     std::fs::create_dir_all(dir.path().join("bin")).expect("bin");
     std::fs::create_dir_all(dir.path().join("home")).expect("home");
     Sandbox { dir }
@@ -93,7 +96,10 @@ impl Sandbox {
     Env::from_pairs([
       ("PATH", format!("{}:/usr/bin:/bin", bin.display())),
       ("HOME", self.path("home").display().to_string()),
-      ("XDG_CONFIG_HOME", self.path("home/.config").display().to_string()),
+      (
+        "XDG_CONFIG_HOME",
+        self.path("home/.config").display().to_string(),
+      ),
     ])
   }
 
@@ -102,7 +108,8 @@ impl Sandbox {
     let dir = self.path(rel);
     if !dir.join(".git").exists() {
       std::fs::create_dir_all(&dir).expect("project");
-      let init = toolu_runtime::process::Spec::new(["git", "init", "-q", &dir.display().to_string()]);
+      let init =
+        toolu_runtime::process::Spec::new(["git", "init", "-q", &dir.display().to_string()]);
       let ran = toolu_runtime::process::run(&init).expect("git init");
       assert_eq!(ran.exit_code, 0, "git init: {}", ran.stderr);
     }
@@ -141,7 +148,12 @@ pub(crate) fn selection(enabled: &[&str]) -> String {
 /// The enabled list of a selection file's text.
 pub(crate) fn enabled_of(text: &str) -> Vec<String> {
   let value: serde_json::Value = serde_json::from_str(text).expect("selection");
-  value["enabled"].as_array().expect("enabled").iter().filter_map(|v| v.as_str().map(str::to_owned)).collect()
+  value["enabled"]
+    .as_array()
+    .expect("enabled")
+    .iter()
+    .filter_map(|v| v.as_str().map(str::to_owned))
+    .collect()
 }
 
 /// The `plugin` array of a config file's text.
@@ -223,6 +235,10 @@ impl Ask for Answer {
   }
 
   fn one(&mut self, _message: &str, _options: &[Choice]) -> Res<usize> {
-    self.0.first().copied().ok_or_else(|| Fail::failed("cancelled"))
+    self
+      .0
+      .first()
+      .copied()
+      .ok_or_else(|| Fail::failed("cancelled"))
   }
 }

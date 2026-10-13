@@ -89,7 +89,7 @@ describe("resolving the native binary", () => {
     const native = join(sb.bin, "native");
     script(
       native,
-      'case "$1" in --hook-protocol) echo 2 ;; plugins) [ "$2" = install ] && exit 0; kill -TERM $$ ;; esac',
+      'case "$1" in --hook-protocol) echo 2 ;; plugins) [ "$3" = --help ] && exit 0; kill -TERM $$ ;; esac',
     );
     const env = { PATH: "/usr/bin:/bin", HOME: sb.root, TOOLU_BIN: native };
     const killed = wrapper(["list"], env, sb.root);

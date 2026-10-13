@@ -3999,20 +3999,281 @@ source: crates/cli/tests/helpers/schema.rs
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#438): show the planned verbs",
+          "about": "Install plugins, dependencies first (no names: all)",
           "aliases": [],
-          "args": [],
+          "args": [
+            {
+              "help": "Plugins to install; none means all (a terminal picks)",
+              "multiple": true,
+              "name": "NAME",
+              "required": false
+            }
+          ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read the plugin catalog from PATH instead of the one built in",
+              "hidden": false,
+              "long": "catalog",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "hidden": false,
+              "long": "scope",
+              "possibleValues": [
+                "user",
+                "project",
+                "local"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "SCOPE"
+            },
+            {
+              "global": false,
+              "help": "Print the host commands or config changes without applying them",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Never prompt; fail naming what is missing",
+              "hidden": false,
+              "long": "no-input",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Replay a .toolu/plugins.json selection",
+              "hidden": false,
+              "long": "config",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "Confirm a destructive operation",
+              "hidden": false,
+              "long": "yes",
+              "possibleValues": [],
+              "required": false,
+              "short": "y",
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "install",
           "owner": "toolu-cli",
           "path": [
             "plugins",
-            "planned"
+            "install"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "Show the catalog and what the host has installed",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read the plugin catalog from PATH instead of the one built in",
+              "hidden": false,
+              "long": "catalog",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "list",
+          "owner": "toolu-cli",
+          "path": [
+            "plugins",
+            "list"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Uninstall plugins (requires --yes)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Plugins to remove",
+              "multiple": true,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read the plugin catalog from PATH instead of the one built in",
+              "hidden": false,
+              "long": "catalog",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "hidden": false,
+              "long": "scope",
+              "possibleValues": [
+                "user",
+                "project",
+                "local"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "SCOPE"
+            },
+            {
+              "global": false,
+              "help": "Print the host commands or config changes without applying them",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Never prompt; fail naming what is missing",
+              "hidden": false,
+              "long": "no-input",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Confirm a destructive operation",
+              "hidden": false,
+              "long": "yes",
+              "possibleValues": [],
+              "required": false,
+              "short": "y",
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "remove",
+          "owner": "toolu-cli",
+          "path": [
+            "plugins",
+            "remove"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Update plugins to the marketplace version",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Plugins to update; none means every installed one",
+              "multiple": true,
+              "name": "NAME",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read the plugin catalog from PATH instead of the one built in",
+              "hidden": false,
+              "long": "catalog",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "hidden": false,
+              "long": "scope",
+              "possibleValues": [
+                "user",
+                "project",
+                "local"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "SCOPE"
+            },
+            {
+              "global": false,
+              "help": "Print the host commands or config changes without applying them",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Never prompt; fail naming what is missing",
+              "hidden": false,
+              "long": "no-input",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "update",
+          "owner": "toolu-cli",
+          "path": [
+            "plugins",
+            "update"
+          ],
+          "placeholder": false
         }
       ],
       "flags": [],

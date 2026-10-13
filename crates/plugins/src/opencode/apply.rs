@@ -13,7 +13,10 @@ fn current(path: &Path) -> Res<Option<String>> {
   match std::fs::read_to_string(path) {
     Ok(text) => Ok(Some(text)),
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(None),
-    Err(err) => Err(Fail::failed(format!("cannot read {}: {err}", path.display()))),
+    Err(err) => Err(Fail::failed(format!(
+      "cannot read {}: {err}",
+      path.display()
+    ))),
   }
 }
 

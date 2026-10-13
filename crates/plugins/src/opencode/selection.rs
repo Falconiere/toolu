@@ -28,10 +28,16 @@ pub(crate) fn read_selection_file(path: &Path) -> Res<SelectionFile> {
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(SelectionFile::default()),
     Err(err) => return Err(Fail::failed(format!("cannot read {label}: {err}"))),
   };
-  let invalid = |detail: String| Fail::failed(format!("invalid {label}: {detail}; nothing was written"));
+  let invalid =
+    |detail: String| Fail::failed(format!("invalid {label}: {detail}; nothing was written"));
   let value: Value = serde_json::from_str(&text).map_err(|err| invalid(err.to_string()))?;
-  let object = value.as_object().ok_or_else(|| invalid("expected an object".to_owned()))?;
-  if let Some(key) = object.keys().find(|key| *key != "version" && *key != "enabled") {
+  let object = value
+    .as_object()
+    .ok_or_else(|| invalid("expected an object".to_owned()))?;
+  if let Some(key) = object
+    .keys()
+    .find(|key| *key != "version" && *key != "enabled")
+  {
     return Err(invalid(format!("unrecognized key \"{key}\"")));
   }
   if object.get("version").and_then(Value::as_u64) != Some(1) {
@@ -42,7 +48,12 @@ pub(crate) fn read_selection_file(path: &Path) -> Res<SelectionFile> {
     .and_then(Value::as_array)
     .ok_or_else(|| invalid("\"enabled\" must be an array".to_owned()))?
     .iter()
-    .map(|item| item.as_str().filter(|name| !name.is_empty()).map(str::to_owned))
+    .map(|item| {
+      item
+        .as_str()
+        .filter(|name| !name.is_empty())
+        .map(str::to_owned)
+    })
     .collect::<Option<Vec<_>>>()
     .ok_or_else(|| invalid("\"enabled\" must hold non-empty strings".to_owned()))?;
   Ok(SelectionFile {
@@ -58,7 +69,11 @@ pub(crate) fn selection_text(enabled: &[String]) -> String {
     .iter()
     .map(|name| format!("    {}", serde_json::to_string(name).unwrap_or_default()))
     .collect();
-  let list = if names.is_empty() { "[]".to_owned() } else { format!("[\n{}\n  ]", names.join(",\n")) };
+  let list = if names.is_empty() {
+    "[]".to_owned()
+  } else {
+    format!("[\n{}\n  ]", names.join(",\n"))
+  };
   format!("{{\n  \"version\": 1,\n  \"enabled\": {list}\n}}\n")
 }
 
@@ -87,7 +102,11 @@ pub(crate) fn skills_disabled(path: &Path) -> Vec<String> {
 /// `names` plus every catalog plugin they need, in install order; names outside
 /// the catalog are dropped.
 pub(crate) fn closure(catalog: &Catalog, names: &[String]) -> Vec<String> {
-  let seeds: Vec<String> = names.iter().filter(|name| catalog.entry(name).is_some()).cloned().collect();
+  let seeds: Vec<String> = names
+    .iter()
+    .filter(|name| catalog.entry(name).is_some())
+    .cloned()
+    .collect();
   if seeds.is_empty() {
     return Vec::new();
   }
@@ -95,9 +114,16 @@ pub(crate) fn closure(catalog: &Catalog, names: &[String]) -> Vec<String> {
 }
 
 /// What the adapter enables: listed catalog names not disabled by skills, closed.
-pub(crate) fn effective_enabled(catalog: &Catalog, listed: Option<&[String]>, disabled: &[String]) -> Vec<String> {
+pub(crate) fn effective_enabled(
+  catalog: &Catalog,
+  listed: Option<&[String]>,
+  disabled: &[String],
+) -> Vec<String> {
   let names = listed.map_or_else(|| catalog.names(), <[String]>::to_vec);
-  let kept: Vec<String> = names.into_iter().filter(|name| !disabled.contains(name)).collect();
+  let kept: Vec<String> = names
+    .into_iter()
+    .filter(|name| !disabled.contains(name))
+    .collect();
   closure(catalog, &kept)
 }
 
@@ -111,7 +137,11 @@ pub(crate) fn dependents_blocking(
   enabled
     .iter()
     .filter(|other| *other != name && !removing.contains(other))
-    .filter(|other| closure(catalog, std::slice::from_ref(other)).iter().any(|needed| needed == name))
+    .filter(|other| {
+      closure(catalog, std::slice::from_ref(other))
+        .iter()
+        .any(|needed| needed == name)
+    })
     .cloned()
     .collect()
 }

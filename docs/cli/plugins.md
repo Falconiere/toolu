@@ -14,7 +14,10 @@ Install, list, remove and update toolu plugins on every host
 Usage: toolu plugins [OPTIONS] <COMMAND>
 
 Commands:
-  planned  Not ported yet (#438): show the planned verbs
+  install  Install plugins, dependencies first (no names: all)
+  list     Show the catalog and what the host has installed
+  remove   Uninstall plugins (requires --yes)
+  update   Update plugins to the marketplace version
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -24,20 +27,90 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Until #438 ports it, install plugins with `npx @toolu/plugins install`; its guide is docs/cli/installer.md.
+Claude Code and Codex are driven through their own plugin CLIs. OpenCode is managed through its config files: install adds @toolu/opencode to opencode.json and enables plugins in a toolu/plugins.json selection (global, or the project's .opencode/toolu/plugins.json); remove toolu drops the package, remove <name> disables one plugin. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
 ```
 
-## `toolu plugins planned`
+## `toolu plugins install`
 
 ```text
-Not ported yet (#438): show the planned verbs
+Install plugins, dependencies first (no names: all)
 
-Usage: toolu plugins planned [OPTIONS]
+Usage: toolu plugins install [OPTIONS] [NAME]...
+
+Arguments:
+  [NAME]...  Plugins to install; none means all (a terminal picks)
 
 Options:
+      --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
+      --dry-run           Print the host commands or config changes without applying them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --no-input          Never prompt; fail naming what is missing
+      --config <PATH>     Replay a .toolu/plugins.json selection
+  -y, --yes               Confirm a destructive operation
+  -h, --help              Print help
+```
+
+## `toolu plugins list`
+
+```text
+Show the catalog and what the host has installed
+
+Usage: toolu plugins list [OPTIONS]
+
+Options:
+      --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu plugins remove`
+
+```text
+Uninstall plugins (requires --yes)
+
+Usage: toolu plugins remove [OPTIONS] <NAME>...
+
+Arguments:
+  <NAME>...  Plugins to remove
+
+Options:
+      --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
+      --dry-run           Print the host commands or config changes without applying them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --no-input          Never prompt; fail naming what is missing
+  -y, --yes               Confirm a destructive operation
+  -h, --help              Print help
+```
+
+## `toolu plugins update`
+
+```text
+Update plugins to the marketplace version
+
+Usage: toolu plugins update [OPTIONS] [NAME]...
+
+Arguments:
+  [NAME]...  Plugins to update; none means every installed one
+
+Options:
+      --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
+      --dry-run           Print the host commands or config changes without applying them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --no-input          Never prompt; fail naming what is missing
   -h, --help              Print help
 ```

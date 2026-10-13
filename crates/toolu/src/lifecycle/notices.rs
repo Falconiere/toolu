@@ -13,7 +13,7 @@ const DELIVERY_PREFIX: &str = "WARN: toolu workflow skills moved to delivery-flo
 const CLAUDE_INSTALL: &str =
   "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
 
-const CODEX_INSTALL: &str = "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.";
+const CODEX_INSTALL: &str = "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.";
 
 const OPENCODE_INSTALL: &str = "Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \"delivery-flow-delivery-flow\" })`.";
 

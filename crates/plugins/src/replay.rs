@@ -37,14 +37,17 @@ pub(crate) fn read(path: &Path, version: &str) -> Res<Selection> {
   let value: Value = serde_json::from_str(&text)
     .map_err(|err| Fail::usage(format!("{label} is not valid JSON: {err}")))?;
   let Some(declared) = value.get("version").and_then(Value::as_f64) else {
-    return Err(Fail::usage(format!("{label} has no numeric \"version\" field")));
+    return Err(Fail::usage(format!(
+      "{label} has no numeric \"version\" field"
+    )));
   };
   if value.get("version").and_then(Value::as_u64) != Some(VERSION) {
     return Err(Fail::usage(format!(
       "{label} declares version {declared}; this CLI understands version {VERSION}"
     )));
   }
-  let selection = parse(&value).map_err(|detail| Fail::usage(format!("{label} is malformed: {detail}")))?;
+  let selection =
+    parse(&value).map_err(|detail| Fail::usage(format!("{label} is malformed: {detail}")))?;
   if let Some(written) = value.get("generatorVersion").and_then(Value::as_str)
     && major(written) > major(version)
   {
@@ -67,7 +70,11 @@ fn parse(value: &Value) -> Result<Selection, String> {
       "claude" => Target::Claude,
       "codex" => Target::Codex,
       "opencode" => Target::Opencode,
-      _other => return Err(format!("\"host\" must be claude, codex or opencode, got {name}")),
+      _other => {
+        return Err(format!(
+          "\"host\" must be claude, codex or opencode, got {name}"
+        ));
+      }
     }),
     Some(_other) => return Err("\"host\" must be a string".to_owned()),
   };

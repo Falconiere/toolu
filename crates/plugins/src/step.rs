@@ -65,7 +65,12 @@ pub(crate) struct Step {
 
 impl Step {
   /// A step with no planned file change.
-  pub(crate) fn new(name: &str, status: Status, detail: impl Into<String>, argv: Vec<String>) -> Step {
+  pub(crate) fn new(
+    name: &str,
+    status: Status,
+    detail: impl Into<String>,
+    argv: Vec<String>,
+  ) -> Step {
     Step {
       name: name.to_owned(),
       status,

@@ -15,6 +15,9 @@ const INSTALL = `Install it, then run this again:
   brew install falconiere/tap/toolu
 See https://github.com/Falconiere/toolu/blob/main/docs/install.md`;
 
+/** The verbs that take `--catalog`, which the wrapper passes its shipped catalog to. */
+const VERBS = new Set(["install", "list", "remove", "update"]);
+
 /** sysexits EX_UNAVAILABLE, the CLI contract's code for a missing dependency. */
 const UNAVAILABLE = 69;
 
@@ -46,7 +49,11 @@ function main(argv: readonly string[]): number {
     return UNAVAILABLE;
   }
   const catalog = catalogPath(self);
-  const words = argv.length > 0 && existsSync(catalog) ? ["plugins", "--catalog", catalog, ...argv] : ["plugins", ...argv];
+  const [verb, ...rest] = argv;
+  const words =
+    verb !== undefined && VERBS.has(verb) && existsSync(catalog)
+      ? ["plugins", verb, "--catalog", catalog, ...rest]
+      : ["plugins", ...argv];
   const result = spawnSync(native.path, words, { stdio: "inherit" });
   if (result.signal !== null) {
     process.kill(process.pid, result.signal);

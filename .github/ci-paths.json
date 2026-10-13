@@ -12,6 +12,8 @@
       "fixtures/**",
       "docs/opencode.md",
       "docs/opencode-migration.md",
+      "crates/plugins/**",
+      "tools/toolu-cli/**",
       "package.json",
       "bun.lock"
     ],
@@ -49,6 +51,7 @@
       "benchmarks/cases/hooks/**",
       "benchmarks/hook-budgets.json",
       "tools/toolu-conformance/**",
+      "tools/toolu-cli/**",
       "plugins/**",
       "packages/**",
       "Cargo.toml",

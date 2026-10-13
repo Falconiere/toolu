@@ -41,6 +41,8 @@ fn plugin_crates() -> Res<BTreeSet<String>> {
     crates.remove(name.ok_or("layers.json lacks a role")?);
   }
   crates.remove("http-test-support");
+  // The installer (#438): `crates/cli` owns `toolu plugins`; no plugin is named for it.
+  crates.remove("plugins");
   Ok(crates)
 }
 

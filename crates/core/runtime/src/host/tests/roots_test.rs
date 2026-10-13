@@ -70,7 +70,7 @@ fn uninstall_commands_exist_where_a_host_can_remove_a_plugin() {
     (Host::Codex, Some("codex plugin remove jev@toolu")),
     (
       Host::Opencode,
-      Some("npx @toolu/plugins remove jev --host opencode --yes"),
+      Some("toolu plugins remove jev --host opencode --yes"),
     ),
     (Host::Cursor, None),
     (Host::Hermes, None),

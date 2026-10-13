@@ -24,7 +24,10 @@ fn line(mark: char, name: &str, detail: &str) -> String {
 }
 
 fn marked(steps: &[Step]) -> String {
-  steps.iter().map(|step| line(step.status.mark(), &step.name, &step.detail)).collect()
+  steps
+    .iter()
+    .map(|step| line(step.status.mark(), &step.name, &step.detail))
+    .collect()
 }
 
 /// One host's install report: outcomes, or on a dry run the planned commands
@@ -36,7 +39,11 @@ fn install_one(target: Target, steps: &[Step], dry_run: bool) -> String {
   if target == Target::Opencode {
     return planned(steps);
   }
-  let commands = steps.iter().map(|step| format!("  {}\n", step.argv.join(" "))).collect::<Vec<_>>().concat();
+  let commands = steps
+    .iter()
+    .map(|step| format!("  {}\n", step.argv.join(" ")))
+    .collect::<Vec<_>>()
+    .concat();
   format!("Planned commands (nothing was run):\n{commands}")
 }
 
@@ -47,7 +54,13 @@ pub(crate) fn install(sections: &[(Target, Vec<Step>)], dry_run: bool) -> String
   }
   sections
     .iter()
-    .map(|(target, steps)| format!("{}:\n{}", target.name(), install_one(*target, steps, dry_run)))
+    .map(|(target, steps)| {
+      format!(
+        "{}:\n{}",
+        target.name(),
+        install_one(*target, steps, dry_run)
+      )
+    })
     .collect::<Vec<_>>()
     .join("\n")
 }
@@ -71,7 +84,13 @@ pub(crate) fn list(rows: &[Row]) -> String {
 pub(crate) fn remove(steps: &[Step]) -> String {
   steps
     .iter()
-    .map(|step| line(if step.failed() { 'x' } else { '-' }, &step.name, &step.detail))
+    .map(|step| {
+      line(
+        if step.failed() { 'x' } else { '-' },
+        &step.name,
+        &step.detail,
+      )
+    })
     .collect()
 }
 
@@ -86,7 +105,11 @@ pub(crate) fn planned(steps: &[Step]) -> String {
     .iter()
     .filter_map(|step| step.plan.as_ref().map(|plan| format!("  {plan}\n")))
     .collect();
-  let body = if changes.is_empty() { "  (no changes)\n".to_owned() } else { changes };
+  let body = if changes.is_empty() {
+    "  (no changes)\n".to_owned()
+  } else {
+    changes
+  };
   let refused: String = steps
     .iter()
     .filter(|step| step.failed())

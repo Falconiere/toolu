@@ -65,7 +65,12 @@ fn failed(steps: &[Step]) -> bool {
 }
 
 /// The hosts for `request`, with `--scope` checked against each.
-fn hosts(request: &Request, wanted: Option<Target>, mode: Mode, cx: &mut Context<'_>) -> Res<Vec<Target>> {
+fn hosts(
+  request: &Request,
+  wanted: Option<Target>,
+  mode: Mode,
+  cx: &mut Context<'_>,
+) -> Res<Vec<Target>> {
   if let Some(target) = wanted {
     check_scope(request.scope, target)?;
   }
@@ -79,7 +84,10 @@ fn hosts(request: &Request, wanted: Option<Target>, mode: Mode, cx: &mut Context
 
 fn one_host(request: &Request, wanted: Option<Target>, cx: &mut Context<'_>) -> Res<Target> {
   let targets = hosts(request, wanted, Mode::One, cx)?;
-  targets.first().copied().ok_or_else(|| Fail::usage("no host selected"))
+  targets
+    .first()
+    .copied()
+    .ok_or_else(|| Fail::usage("no host selected"))
 }
 
 /// Runs `request` against `catalog`.
@@ -111,7 +119,12 @@ fn pick(catalog: &Catalog, ask: &mut (dyn Ask + '_)) -> Res<Vec<String>> {
     .map(|entry| (entry.name.clone(), entry.description.clone()))
     .collect();
   let chosen = ask.many("Which plugins should be installed?", &options)?;
-  Ok(chosen.into_iter().filter_map(|at| options.get(at).map(|(name, _)| name.clone())).collect())
+  Ok(
+    chosen
+      .into_iter()
+      .filter_map(|at| options.get(at).map(|(name, _)| name.clone()))
+      .collect(),
+  )
 }
 
 fn install(
@@ -140,7 +153,10 @@ fn install(
     };
     sections.push((target, steps));
   }
-  let all: Vec<Step> = sections.iter().flat_map(|(_, steps)| steps.clone()).collect();
+  let all: Vec<Step> = sections
+    .iter()
+    .flat_map(|(_, steps)| steps.clone())
+    .collect();
   Ok(Report {
     text: report::install(&sections, request.dry_run),
     json: report::install_json(&sections, request.dry_run),
@@ -148,7 +164,12 @@ fn install(
   })
 }
 
-fn remove(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut Context<'_>) -> Res<Report> {
+fn remove(
+  request: &Request,
+  catalog: &Catalog,
+  wanted: Option<Target>,
+  cx: &mut Context<'_>,
+) -> Res<Report> {
   if let Some(target) = wanted {
     check_scope(request.scope, target)?;
   }
@@ -165,13 +186,22 @@ fn remove(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut
   };
   let opencode_dry = target == Target::Opencode && request.dry_run;
   Ok(Report {
-    text: if opencode_dry { report::planned(&steps) } else { report::remove(&steps) },
+    text: if opencode_dry {
+      report::planned(&steps)
+    } else {
+      report::remove(&steps)
+    },
     json: report::host_json(target, &steps, true),
     failed: failed(&steps),
   })
 }
 
-fn list(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut Context<'_>) -> Res<Report> {
+fn list(
+  request: &Request,
+  catalog: &Catalog,
+  wanted: Option<Target>,
+  cx: &mut Context<'_>,
+) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
   let (header, rows) = match driver(target, cx) {
     Some(driver) => (String::new(), verbs::list::run(&driver, catalog)?),
@@ -184,7 +214,12 @@ fn list(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut C
   })
 }
 
-fn update(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut Context<'_>) -> Res<Report> {
+fn update(
+  request: &Request,
+  catalog: &Catalog,
+  wanted: Option<Target>,
+  cx: &mut Context<'_>,
+) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
   let steps = match driver(target, cx) {
     Some(driver) => verbs::update::run(&driver, &request.names, request.dry_run)?,
@@ -192,7 +227,11 @@ fn update(request: &Request, catalog: &Catalog, wanted: Option<Target>, cx: &mut
   };
   let opencode_dry = target == Target::Opencode && request.dry_run;
   Ok(Report {
-    text: if opencode_dry { report::planned(&steps) } else { report::update(&steps) },
+    text: if opencode_dry {
+      report::planned(&steps)
+    } else {
+      report::update(&steps)
+    },
     json: report::host_json(target, &steps, false),
     failed: failed(&steps),
   })

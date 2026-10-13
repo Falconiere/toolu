@@ -18,7 +18,10 @@ fn append_after_a_trailing_comma_and_comment_keeps_every_other_byte() {
   let added = append(COMMENTED, "plugin", "@toolu/opencode@1.0.0");
   assert_eq!(
     added,
-    COMMENTED.replace("// unrelated\n", "// unrelated\n    \"@toolu/opencode@1.0.0\",\n")
+    COMMENTED.replace(
+      "// unrelated\n",
+      "// unrelated\n    \"@toolu/opencode@1.0.0\",\n"
+    )
   );
   assert_eq!(remove(&added, "plugin", 1), COMMENTED);
 }
@@ -27,16 +30,28 @@ fn append_after_a_trailing_comma_and_comment_keeps_every_other_byte() {
 fn append_without_a_trailing_comma_puts_the_comma_before_the_comment() {
   let strict = "{\n  \"plugin\": [\n    \"a\" // first\n  ]\n}\n";
   let appended = append(strict, "plugin", "@toolu/opencode@1.0.0");
-  assert_eq!(appended, "{\n  \"plugin\": [\n    \"a\", // first\n    \"@toolu/opencode@1.0.0\"\n  ]\n}\n");
-  assert_eq!(remove(&appended, "plugin", 1), "{\n  \"plugin\": [\n    \"a\" // first\n  ]\n}\n");
+  assert_eq!(
+    appended,
+    "{\n  \"plugin\": [\n    \"a\", // first\n    \"@toolu/opencode@1.0.0\"\n  ]\n}\n"
+  );
+  assert_eq!(
+    remove(&appended, "plugin", 1),
+    "{\n  \"plugin\": [\n    \"a\" // first\n  ]\n}\n"
+  );
 }
 
 #[test]
 fn line_breaks_inside_a_block_comment_are_not_line_ends() {
   let pinned = "{\n  \"plugin\": [\n    \"other\",\n    \"@toolu/opencode@1.0.0\" /* pinned for\n       the team */\n  ]\n}\n";
-  assert_eq!(remove(pinned, "plugin", 1), "{\n  \"plugin\": [\n    \"other\"\n  ]\n}\n");
+  assert_eq!(
+    remove(pinned, "plugin", 1),
+    "{\n  \"plugin\": [\n    \"other\"\n  ]\n}\n"
+  );
   let closing = "{\n  \"plugin\": [\n    \"a\" /* spans\n  */]\n}\n";
-  assert_eq!(append(closing, "plugin", "b"), "{\n  \"plugin\": [\n    \"a\", /* spans\n  */\n    \"b\"]\n}\n");
+  assert_eq!(
+    append(closing, "plugin", "b"),
+    "{\n  \"plugin\": [\n    \"a\", /* spans\n  */\n    \"b\"]\n}\n"
+  );
 }
 
 #[test]
@@ -50,7 +65,10 @@ fn inline_arrays_and_crlf_files_use_the_fallbacks_and_keep_their_line_ends() {
   assert_eq!(parsed["plugin"], serde_json::json!(["b"]));
   let crlf = "{\r\n  \"plugin\": [\r\n    \"a\"\r\n  ]\r\n}\r\n";
   let added = append(crlf, "plugin", "b");
-  assert_eq!(added, "{\r\n  \"plugin\": [\r\n    \"a\",\r\n    \"b\"\r\n  ]\r\n}\r\n");
+  assert_eq!(
+    added,
+    "{\r\n  \"plugin\": [\r\n    \"a\",\r\n    \"b\"\r\n  ]\r\n}\r\n"
+  );
   assert_eq!(remove(&added, "plugin", 1), crlf);
   let empty = append("{\n  \"plugin\": []\n}\n", "plugin", "b");
   assert!(empty.contains("\"b\""), "{empty}");
@@ -62,6 +80,12 @@ fn inline_arrays_and_crlf_files_use_the_fallbacks_and_keep_their_line_ends() {
 #[test]
 fn removing_the_middle_element_keeps_its_neighbours() {
   let three = "{\n  \"plugin\": [\n    \"a\",\n    \"b\", // mine\n    \"c\"\n  ]\n}\n";
-  assert_eq!(remove(three, "plugin", 1), "{\n  \"plugin\": [\n    \"a\",\n    \"c\"\n  ]\n}\n");
-  assert_eq!(remove(three, "plugin", 2), "{\n  \"plugin\": [\n    \"a\",\n    \"b\" // mine\n  ]\n}\n");
+  assert_eq!(
+    remove(three, "plugin", 1),
+    "{\n  \"plugin\": [\n    \"a\",\n    \"c\"\n  ]\n}\n"
+  );
+  assert_eq!(
+    remove(three, "plugin", 2),
+    "{\n  \"plugin\": [\n    \"a\",\n    \"b\" // mine\n  ]\n}\n"
+  );
 }

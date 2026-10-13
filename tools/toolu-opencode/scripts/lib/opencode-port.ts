@@ -309,7 +309,7 @@ with this explanation and writes nothing. Do not edit Codex profiles from here.`
   ],
   [`${EPIC}/SKILL.md`]: [
     [
-      "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,\n  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as\n  herdr agents and need those plugins installed in every host in `--hosts`\n  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).",
+      "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,\n  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as\n  herdr agents and need those plugins installed in every host in `--hosts`\n  (`toolu plugins install delivery-flow --host codex`, and so on).",
       `- These load through the \`skill\` tool: ${skill("delivery-flow-delivery-flow")},\n  ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT}. Workers run as\n  herdr agents and need those plugins installed and enabled in every host in \`--hosts\`.`,
     ],
   ],

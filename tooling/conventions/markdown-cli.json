@@ -25,21 +25,5 @@
     "tar",
     "touch"
   ],
-  "allow": [
-    {
-      "file": "AGENTS.md",
-      "subject": "toolu install",
-      "reason": "The Node installer's bin (tools/toolu-cli, npm @toolu/plugins) is also named toolu; toolu plugins replaces it in #438."
-    },
-    {
-      "file": "docs/cli/installer.md",
-      "subject": "toolu install",
-      "reason": "The Node installer guide: a global npm install gives its own toolu bin this verb, until toolu plugins (#438)."
-    },
-    {
-      "file": "docs/cli/installer.md",
-      "subject": "toolu plugins install",
-      "reason": "The grammar of the retired @toolu/cli package, named to explain why it is gone."
-    }
-  ]
+  "allow": []
 }

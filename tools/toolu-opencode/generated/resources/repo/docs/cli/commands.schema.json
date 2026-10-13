@@ -590,6 +590,57 @@
       "additionalProperties": false,
       "required": ["state"],
       "properties": { "state": { "const": "waiting" } }
+    },
+    "pluginsStep": {
+      "description": "One plugin's step in a toolu plugins report. A removal has removed instead of outcome; plan is the config change a file-editing host (OpenCode) makes.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "detail", "argv"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "outcome": {
+          "enum": ["installed", "already", "skew", "failed", "skipped", "updated", "current", "removed"]
+        },
+        "removed": { "type": "boolean" },
+        "detail": { "type": "string" },
+        "argv": { "type": "array", "items": { "type": "string" } },
+        "plan": { "type": "string" }
+      }
+    },
+    "pluginsHost": {
+      "description": "toolu plugins remove|update --json: one host's steps.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["host", "steps"],
+      "properties": {
+        "host": { "enum": ["claude", "codex", "opencode"] },
+        "steps": { "type": "array", "items": { "$ref": "#/$defs/pluginsStep" } }
+      }
+    },
+    "pluginsInstall": {
+      "description": "toolu plugins install --json: the steps of every chosen host.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dryRun", "hosts"],
+      "properties": {
+        "dryRun": { "type": "boolean" },
+        "hosts": { "type": "array", "items": { "$ref": "#/$defs/pluginsHost" } }
+      }
+    },
+    "pluginsList": {
+      "description": "toolu plugins list --json: every catalog plugin with the host's state; version only when known.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "installed", "enabled"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "installed": { "type": "boolean" },
+          "version": { "type": "string" },
+          "enabled": { "type": "boolean" }
+        }
+      }
     }
   }
 }

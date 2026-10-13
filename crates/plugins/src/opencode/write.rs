@@ -26,7 +26,10 @@ pub(crate) fn write_atomic(path: &Path, text: &str) -> std::io::Result<()> {
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => None,
     Err(err) => return Err(err),
   };
-  let name = target.file_name().map(|name| name.to_string_lossy().into_owned()).unwrap_or_default();
+  let name = target
+    .file_name()
+    .map(|name| name.to_string_lossy().into_owned())
+    .unwrap_or_default();
   let temp = dir.join(format!(".{name}.{}.tmp", std::process::id()));
   let written = (|| {
     let mut options = OpenOptions::new();

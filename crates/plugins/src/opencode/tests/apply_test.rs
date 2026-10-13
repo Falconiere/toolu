@@ -5,8 +5,16 @@ use crate::support::{Sandbox, global};
 
 fn plan(sb: &Sandbox, text: &str) -> Plan {
   Plan {
-    steps: vec![Step::new("@toolu/opencode", Status::Installed, "added", Vec::new())],
-    writes: vec![Write { path: sb.path(&global("opencode.json")), text: text.to_owned() }],
+    steps: vec![Step::new(
+      "@toolu/opencode",
+      Status::Installed,
+      "added",
+      Vec::new(),
+    )],
+    writes: vec![Write {
+      path: sb.path(&global("opencode.json")),
+      text: text.to_owned(),
+    }],
   }
 }
 
@@ -28,20 +36,35 @@ fn a_file_changed_since_the_read_stops_every_write() {
   let project = sb.git_project("project");
   sb.write(&global("opencode.json"), "{ \"plugin\": [] }\n");
   let state = load(&project, &sb.env()).expect("state");
-  sb.write(&global("opencode.json"), "{ \"share\": \"edited meanwhile\" }\n");
+  sb.write(
+    &global("opencode.json"),
+    "{ \"share\": \"edited meanwhile\" }\n",
+  );
   let Err(fail) = apply(&state, plan(&sb, "{ \"plugin\": [\"x\"] }\n"), false) else {
     panic!("a concurrent edit was overwritten");
   };
   assert_eq!(fail.exit.code(), 1);
-  assert!(fail.message.ends_with("changed while toolu ran; nothing was written"), "{}", fail.message);
-  assert_eq!(sb.read(&global("opencode.json")), "{ \"share\": \"edited meanwhile\" }\n");
+  assert!(
+    fail
+      .message
+      .ends_with("changed while toolu ran; nothing was written"),
+    "{}",
+    fail.message
+  );
+  assert_eq!(
+    sb.read(&global("opencode.json")),
+    "{ \"share\": \"edited meanwhile\" }\n"
+  );
   let blocked = Sandbox::new();
   let project = blocked.git_project("project");
   let state = load(&project, &blocked.env()).expect("state");
   blocked.write("not-a-dir", "a file where a directory goes");
   let unwritable = Plan {
     steps: Vec::new(),
-    writes: vec![Write { path: blocked.path("not-a-dir/opencode.json"), text: "{}".to_owned() }],
+    writes: vec![Write {
+      path: blocked.path("not-a-dir/opencode.json"),
+      text: "{}".to_owned(),
+    }],
   };
   let failed = apply(&state, unwritable, false).map_err(|fail| fail.message);
   assert!(failed.is_err_and(|message| message.starts_with("cannot write ")));

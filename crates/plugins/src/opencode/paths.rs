@@ -68,7 +68,9 @@ fn host_config_dir(env: &Env, cwd: &Path) -> PathBuf {
 fn selection_root(env: &Env, cwd: &Path) -> PathBuf {
   let config_dir = env.get("TOOLU_CONFIG_DIR");
   let inherited = config_dir.is_some() && config_dir == env.get("TOOLU_OPENCODE_DATA_ROOT");
-  let chosen = config_dir.filter(|_| !inherited).or_else(|| env.get("TOOLU_OPENCODE_HOME"));
+  let chosen = config_dir
+    .filter(|_| !inherited)
+    .or_else(|| env.get("TOOLU_OPENCODE_HOME"));
   chosen.map_or_else(|| host_config_dir(env, cwd), |dir| absolute(cwd, dir))
 }
 

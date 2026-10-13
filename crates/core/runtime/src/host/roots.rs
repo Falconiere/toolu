@@ -205,9 +205,7 @@ impl Roots {
     Ok(match self.host {
       Host::Claude => Some(format!("claude plugin uninstall {name}@toolu")),
       Host::Codex => Some(format!("codex plugin remove {name}@toolu")),
-      Host::Opencode => Some(format!(
-        "npx @toolu/plugins remove {name} --host opencode --yes"
-      )),
+      Host::Opencode => Some(format!("toolu plugins remove {name} --host opencode --yes")),
       Host::Cursor | Host::Hermes => None,
     })
   }

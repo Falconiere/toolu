@@ -13,7 +13,10 @@ pub(crate) fn parse(stdout: &str) -> Result<Vec<Installed>, String> {
 }
 
 fn entry(item: &Value) -> Result<Installed, String> {
-  let id = item.get("id").and_then(Value::as_str).ok_or("a plugin has no string \"id\"")?;
+  let id = item
+    .get("id")
+    .and_then(Value::as_str)
+    .ok_or("a plugin has no string \"id\"")?;
   let version = item
     .get("version")
     .and_then(Value::as_str)

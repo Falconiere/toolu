@@ -40,16 +40,26 @@ fn many_takes_numbers_by_space_or_comma_and_re_asks_on_a_bad_answer() {
   assert_eq!(ask_many("3,1,3\n").0, Ok(vec![2, 0]));
   let (chosen, shown) = ask_many("2,x\n9\n2\n");
   assert_eq!(chosen, Ok(vec![1]));
-  assert_eq!(shown.matches("Answer with numbers from 1 to 3: ").count(), 2);
+  assert_eq!(
+    shown.matches("Answer with numbers from 1 to 3: ").count(),
+    2
+  );
 }
 
 #[test]
 fn q_or_end_of_input_cancels() {
   for input in ["q\n", "", "9\n"] {
     let (chosen, _) = ask_many(input);
-    assert_eq!(chosen.map_err(|fail| fail.message), Err("cancelled".to_owned()), "{input:?}");
+    assert_eq!(
+      chosen.map_err(|fail| fail.message),
+      Err("cancelled".to_owned()),
+      "{input:?}"
+    );
   }
-  assert_eq!(ask_one("q\n").map_err(|fail| fail.message), Err("cancelled".to_owned()));
+  assert_eq!(
+    ask_one("q\n").map_err(|fail| fail.message),
+    Err("cancelled".to_owned())
+  );
 }
 
 #[test]

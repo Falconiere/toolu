@@ -87,17 +87,12 @@ pub(crate) fn command() -> Command {
     .after_help(AFTER)
     .subcommand_required(true)
     .arg_required_else_help(true)
-    .arg(
-      Arg::new("catalog")
-        .long("catalog")
-        .value_name("PATH")
-        .global(true)
-        .value_parser(value_parser!(PathBuf))
-        .help("Read the plugin catalog from PATH instead of the one built in"),
-    )
     .subcommand(
       changes(Command::new("install").about("Install plugins, dependencies first (no names: all)"))
-        .arg(names(false, "Plugins to install; none means all (a terminal picks)"))
+        .arg(names(
+          false,
+          "Plugins to install; none means all (a terminal picks)",
+        ))
         .arg(
           Arg::new("config")
             .long("config")
@@ -108,21 +103,36 @@ pub(crate) fn command() -> Command {
         )
         .arg(yes()),
     )
-    .subcommand(Command::new("list").about("Show the catalog and what the host has installed"))
+    .subcommand(
+      Command::new("list")
+        .about("Show the catalog and what the host has installed")
+        .arg(catalog()),
+    )
     .subcommand(
       changes(Command::new("remove").about("Uninstall plugins (requires --yes)"))
         .arg(names(true, "Plugins to remove"))
         .arg(yes()),
     )
     .subcommand(
-      changes(Command::new("update").about("Update plugins to the marketplace version"))
-        .arg(names(false, "Plugins to update; none means every installed one")),
+      changes(Command::new("update").about("Update plugins to the marketplace version")).arg(
+        names(false, "Plugins to update; none means every installed one"),
+      ),
     )
 }
 
-/// `--scope`, `--dry-run` and `--no-input`, which every changing verb takes.
+/// `--catalog`, which every verb takes; the npm wrapper passes its own copy.
+fn catalog() -> Arg {
+  Arg::new("catalog")
+    .long("catalog")
+    .value_name("PATH")
+    .value_parser(value_parser!(PathBuf))
+    .help("Read the plugin catalog from PATH instead of the one built in")
+}
+
+/// `--scope`, `--dry-run`, `--no-input` and `--catalog`, which every changing verb takes.
 fn changes(verb: Command) -> Command {
   verb
+    .arg(catalog())
     .arg(
       Arg::new("scope")
         .long("scope")
@@ -130,8 +140,14 @@ fn changes(verb: Command) -> Command {
         .value_parser(["user", "project", "local"])
         .help("user, project or local (Claude Code); user or project (OpenCode)"),
     )
-    .arg(flag("dry-run", "Print the host commands or config changes without applying them"))
-    .arg(flag("no-input", "Never prompt; fail naming what is missing"))
+    .arg(flag(
+      "dry-run",
+      "Print the host commands or config changes without applying them",
+    ))
+    .arg(flag(
+      "no-input",
+      "Never prompt; fail naming what is missing",
+    ))
 }
 
 fn names(required: bool, help: &'static str) -> Arg {
@@ -163,7 +179,14 @@ pub(crate) fn request(matches: &ArgMatches) -> Option<Request> {
     "update" => Verb::Update,
     _other => return None,
   };
-  let has = |id: &str| sub.try_get_one::<bool>(id).ok().flatten().copied().unwrap_or(false);
+  let has = |id: &str| {
+    sub
+      .try_get_one::<bool>(id)
+      .ok()
+      .flatten()
+      .copied()
+      .unwrap_or(false)
+  };
   let text = |id: &str| sub.try_get_one::<String>(id).ok().flatten().cloned();
   let path = |id: &str| sub.try_get_one::<PathBuf>(id).ok().flatten().cloned();
   let names = sub

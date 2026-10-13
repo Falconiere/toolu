@@ -11,7 +11,10 @@ fn the_installed_array_is_read_and_enabled_defaults_to_true() {
   };
   assert_eq!(list.len(), 2);
   assert_eq!((list[0].name.as_str(), list[0].enabled), ("jev", true));
-  assert_eq!((list[1].version.as_str(), list[1].enabled), ("7.10.0", false));
+  assert_eq!(
+    (list[1].version.as_str(), list[1].enabled),
+    ("7.10.0", false)
+  );
 }
 
 #[test]

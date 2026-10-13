@@ -6,16 +6,18 @@ use super::{Request, Scope, Verb, command, request};
 
 fn parse(words: &[&str]) -> Result<Request, ErrorKind> {
   let argv = std::iter::once("plugins").chain(words.iter().copied());
-  let matches = command().try_get_matches_from(argv).map_err(|err| err.kind())?;
+  let matches = command()
+    .try_get_matches_from(argv)
+    .map_err(|err| err.kind())?;
   request(&matches).ok_or(ErrorKind::InvalidSubcommand)
 }
 
 #[test]
 fn reads_a_full_install_invocation() {
   let words = [
+    "install",
     "--catalog",
     "/tmp/m.json",
-    "install",
     "rust-quality",
     "ts-quality",
     "--scope",
@@ -40,29 +42,53 @@ fn reads_a_full_install_invocation() {
 }
 
 #[test]
-fn every_verb_parses_and_the_catalog_flag_goes_anywhere() {
+fn every_verb_parses_and_takes_the_catalog_flag() {
   let list = parse(&["list", "--catalog", "c.json"]);
-  assert_eq!(list.as_ref().map(|r| (r.verb, r.catalog.clone())), Ok((Verb::List, Some("c.json".into()))));
+  assert_eq!(
+    list.as_ref().map(|r| (r.verb, r.catalog.clone())),
+    Ok((Verb::List, Some("c.json".into())))
+  );
   let update = parse(&["update"]);
-  assert_eq!(update.as_ref().map(|r| (r.verb, r.names.len())), Ok((Verb::Update, 0)));
+  assert_eq!(
+    update.as_ref().map(|r| (r.verb, r.names.len())),
+    Ok((Verb::Update, 0))
+  );
   let remove = parse(&["remove", "jev", "--yes", "--scope", "user"]);
   assert_eq!(
     remove.map(|r| (r.verb, r.names, r.yes, r.scope.map(Scope::name))),
     Ok((Verb::Remove, vec!["jev".to_owned()], true, Some("user")))
   );
   let config = parse(&["install", "--config", ".toolu/plugins.json"]);
-  assert_eq!(config.map(|r| r.config), Ok(Some(PathBuf::from(".toolu/plugins.json"))));
+  assert_eq!(
+    config.map(|r| r.config),
+    Ok(Some(PathBuf::from(".toolu/plugins.json")))
+  );
 }
 
 #[test]
 fn malformed_command_lines_are_clap_usage_errors() {
   assert_eq!(parse(&["skills"]), Err(ErrorKind::InvalidSubcommand));
   assert_eq!(parse(&["remove"]), Err(ErrorKind::MissingRequiredArgument));
-  assert_eq!(parse(&["install", "--scope", "global"]), Err(ErrorKind::InvalidValue));
-  assert_eq!(parse(&["install", "--host-x"]), Err(ErrorKind::UnknownArgument));
-  assert_eq!(parse(&["install", "jev", "--config", "p.json"]), Err(ErrorKind::ArgumentConflict));
-  assert_eq!(parse(&["list", "--config", "p.json"]), Err(ErrorKind::UnknownArgument));
-  assert_eq!(parse(&["list", "--dry-run"]), Err(ErrorKind::UnknownArgument));
+  assert_eq!(
+    parse(&["install", "--scope", "global"]),
+    Err(ErrorKind::InvalidValue)
+  );
+  assert_eq!(
+    parse(&["install", "--host-x"]),
+    Err(ErrorKind::UnknownArgument)
+  );
+  assert_eq!(
+    parse(&["install", "jev", "--config", "p.json"]),
+    Err(ErrorKind::ArgumentConflict)
+  );
+  assert_eq!(
+    parse(&["list", "--config", "p.json"]),
+    Err(ErrorKind::UnknownArgument)
+  );
+  assert_eq!(
+    parse(&["list", "--dry-run"]),
+    Err(ErrorKind::UnknownArgument)
+  );
   assert_eq!(parse(&["update", "--yes"]), Err(ErrorKind::UnknownArgument));
 }
 

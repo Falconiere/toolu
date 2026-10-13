@@ -28,7 +28,9 @@ pub(crate) struct Install<'a> {
 }
 
 fn nth(files: &[ConfigFile], index: usize) -> Res<&ConfigFile> {
-  files.get(index).ok_or_else(|| Fail::failed(format!("missing config candidate {index}")))
+  files
+    .get(index)
+    .ok_or_else(|| Fail::failed(format!("missing config candidate {index}")))
 }
 
 /// The file a new entry goes to, so the host loads it rather than shadowing it.
@@ -49,7 +51,11 @@ fn entry_file(state: &State, scope: Scope) -> Res<&ConfigFile> {
     }
   }
   let jsonc = nth(files, 1)?;
-  if jsonc.text.is_none() { nth(files, 0) } else { Ok(jsonc) }
+  if jsonc.text.is_none() {
+    nth(files, 0)
+  } else {
+    Ok(jsonc)
+  }
 }
 
 fn with_entry(file: &ConfigFile, spec: &str) -> Res<String> {
@@ -65,7 +71,12 @@ fn with_entry(file: &ConfigFile, spec: &str) -> Res<String> {
 fn present_step(entry: &PluginEntry, target: &str) -> Step {
   let place = format!("{} in {}", entry.spec, entry.file);
   if entry.spec == target {
-    return Step::new(PACKAGE, Status::Already, format!("already configured: {place}"), Vec::new());
+    return Step::new(
+      PACKAGE,
+      Status::Already,
+      format!("already configured: {place}"),
+      Vec::new(),
+    );
   }
   Step::new(
     PACKAGE,
@@ -108,7 +119,11 @@ fn shadow_note(state: &State) -> Res<String> {
 /// A note when the entry fills a project `plugin: []`, which then stops
 /// resetting the earlier layers.
 fn lift_note(state: &State, file: &ConfigFile) -> Res<String> {
-  let Some(at) = state.project.iter().position(|candidate| candidate.path == file.path) else {
+  let Some(at) = state
+    .project
+    .iter()
+    .position(|candidate| candidate.path == file.path)
+  else {
     return Ok(String::new());
   };
   if plugin_len(file)? != Some(0) {
@@ -167,14 +182,28 @@ fn package_step(state: &State, request: &Install<'_>) -> Res<(Step, Option<Write
   };
   let note = shadow_note(&after(state, &write)?)?;
   let shown = file.path.display();
-  let status = if note.is_empty() { Status::Installed } else { Status::Skew };
-  let detail = format!("added {} to {shown}{note}{}", request.target, lift_note(state, file)?);
+  let status = if note.is_empty() {
+    Status::Installed
+  } else {
+    Status::Skew
+  };
+  let detail = format!(
+    "added {} to {shown}{note}{}",
+    request.target,
+    lift_note(state, file)?
+  );
   let step = Step::new(PACKAGE, status, detail, Vec::new())
     .planned(format!("add {} to {shown}", request.target));
   Ok((step, Some(write)))
 }
 
-fn plugin_step(name: &str, added: bool, path: Option<&Path>, state: &State, overridden: &str) -> Step {
+fn plugin_step(
+  name: &str,
+  added: bool,
+  path: Option<&Path>,
+  state: &State,
+  overridden: &str,
+) -> Step {
   let skill_off = if state.disabled.iter().any(|off| off == name) {
     format!(
       " (skills.{name} is false in {}, so it stays off)",
@@ -185,37 +214,63 @@ fn plugin_step(name: &str, added: bool, path: Option<&Path>, state: &State, over
   };
   let off = format!("{skill_off}{overridden}");
   match (added, path) {
-    (false, _any) => Step::new(name, Status::Already, format!("already enabled{off}"), Vec::new()),
+    (false, _any) => Step::new(
+      name,
+      Status::Already,
+      format!("already enabled{off}"),
+      Vec::new(),
+    ),
     (true, None) => Step::new(
       name,
       Status::Installed,
       format!("enabled (no selection file, so every plugin is on){off}"),
       Vec::new(),
     ),
-    (true, Some(path)) => Step::new(name, Status::Installed, format!("enabled in {}{off}", path.display()), Vec::new())
-      .planned(format!("enable {name} in {}", path.display())),
+    (true, Some(path)) => Step::new(
+      name,
+      Status::Installed,
+      format!("enabled in {}{off}", path.display()),
+      Vec::new(),
+    )
+    .planned(format!("enable {name} in {}", path.display())),
   }
 }
 
 /// The selection changes of an install.
-fn selection_plan(state: &State, catalog: &Catalog, request: &Install<'_>, installed_before: bool) -> Res<Plan> {
-  let scope = request.scope.unwrap_or_else(|| state.default_selection_scope());
+fn selection_plan(
+  state: &State,
+  catalog: &Catalog,
+  request: &Install<'_>,
+  installed_before: bool,
+) -> Res<Plan> {
+  let scope = request
+    .scope
+    .unwrap_or_else(|| state.default_selection_scope());
   let all = catalog.names();
-  let want = if request.names.is_empty() { all.clone() } else { install_order(catalog, request.names)? };
+  let want = if request.names.is_empty() {
+    all.clone()
+  } else {
+    install_order(catalog, request.names)?
+  };
   let base: Vec<String> = match state.governing_selection(scope) {
     Some(listed) => listed.to_vec(),
     None if installed_before => all.clone(),
     None => Vec::new(),
   };
   let have = closure(catalog, &base);
-  let added: Vec<String> = want.iter().filter(|name| !have.contains(name)).cloned().collect();
+  let added: Vec<String> = want
+    .iter()
+    .filter(|name| !have.contains(name))
+    .cloned()
+    .collect();
   let mut next = base;
   for name in &added {
     if !next.contains(name) {
       next.push(name.clone());
     }
   }
-  let no_files = state.selection(Scope::Global).is_none() && state.selection(Scope::Project).is_none();
+  let no_files =
+    state.selection(Scope::Global).is_none() && state.selection(Scope::Project).is_none();
   let path = state.paths.selection(scope);
   let skip = added.is_empty() || (no_files && all.iter().all(|name| next.contains(name)));
   let writes = if skip {

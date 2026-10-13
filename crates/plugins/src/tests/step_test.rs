@@ -14,8 +14,12 @@ fn only_a_failed_step_fails_and_a_skew_does_not() {
   ];
   for (status, name, mark) in statuses {
     let step = Step::new("p", status, "d", Vec::new());
-    assert_eq!((status.name(), status.mark(), step.failed()), (name, mark, status == Status::Failed));
+    assert_eq!(
+      (status.name(), status.mark(), step.failed()),
+      (name, mark, status == Status::Failed)
+    );
   }
-  let planned = Step::new("jev", Status::Installed, "enabled", Vec::new()).planned("enable jev in /s");
+  let planned =
+    Step::new("jev", Status::Installed, "enabled", Vec::new()).planned("enable jev in /s");
   assert_eq!(planned.plan.as_deref(), Some("enable jev in /s"));
 }

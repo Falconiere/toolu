@@ -4,10 +4,10 @@
 //! line. A comment is one token, so a comma or line break inside one never
 //! counts. Anything else falls back to the CST edits in `jsonc`.
 
-use jsonc_parser::{Scanner, ScannerOptions};
-use jsonc_parser::tokens::Token;
 use jsonc_parser::common::Ranged as _;
+use jsonc_parser::tokens::Token;
 use jsonc_parser::{CollectOptions, parse_to_ast};
+use jsonc_parser::{Scanner, ScannerOptions};
 
 use crate::opencode::jsonc::{append_element, remove_element, strict};
 
@@ -43,7 +43,9 @@ fn line_start(text: &str, offset: usize) -> usize {
 
 /// Whether only whitespace precedes `offset` on its line.
 fn own_line(text: &str, offset: usize) -> bool {
-  part(text, line_start(text, offset), offset).trim().is_empty()
+  part(text, line_start(text, offset), offset)
+    .trim()
+    .is_empty()
 }
 
 /// The first comma and every line break of `text[from, to)` outside comments.
@@ -67,7 +69,11 @@ fn gap(text: &str, from: usize, to: usize) -> Gap {
       comma = Some(from + span.0);
     }
   }
-  let outside = |at: usize| !comments.iter().any(|(start, end)| *start <= at && at < *end);
+  let outside = |at: usize| {
+    !comments
+      .iter()
+      .any(|(start, end)| *start <= at && at < *end)
+  };
   let breaks = slice
     .match_indices('\n')
     .map(|(at, _)| at)
@@ -103,7 +109,11 @@ pub(crate) fn append(text: &str, key: &str, spec: &str) -> String {
   let trailing = after.comma.is_some();
   let indent = part(text, line_start(text, last_start), last_start);
   let quoted = serde_json::to_string(spec).unwrap_or_default();
-  let entry = format!("{}{indent}{quoted}{}", eol(text), if trailing { "," } else { "" });
+  let entry = format!(
+    "{}{indent}{quoted}{}",
+    eol(text),
+    if trailing { "," } else { "" }
+  );
   let head = if trailing {
     part(text, 0, at).to_owned()
   } else {
@@ -127,19 +137,32 @@ pub(crate) fn remove(text: &str, key: &str, index: usize) -> String {
   let next = array.elements.get(index + 1);
   let limit = next.map_or(array.close, |(next_start, _)| *next_start);
   let comma = gap(text, end, limit).comma;
-  let line_end = gap(text, comma.unwrap_or(end), limit).breaks.first().copied();
+  let line_end = gap(text, comma.unwrap_or(end), limit)
+    .breaks
+    .first()
+    .copied();
   if line_end.is_none() && next.is_some() {
     return remove_element(text, key, index);
   }
   let resume = line_end.map_or(limit, |(_, after)| after);
-  let body = format!("{}{}", part(text, 0, line_start(text, start)), part(text, resume, text.len()));
+  let body = format!(
+    "{}{}",
+    part(text, 0, line_start(text, start)),
+    part(text, resume, text.len())
+  );
   // The new last element must not keep a comma the removed one followed.
-  let previous = index.checked_sub(1).and_then(|before| array.elements.get(before));
+  let previous = index
+    .checked_sub(1)
+    .and_then(|before| array.elements.get(before));
   let Some(&(_, previous_end)) = previous.filter(|_| comma.is_none() && next.is_none()) else {
     return body;
   };
   match gap(text, previous_end, start).comma {
-    Some(before) => format!("{}{}", part(&body, 0, before), part(&body, before + 1, body.len())),
+    Some(before) => format!(
+      "{}{}",
+      part(&body, 0, before),
+      part(&body, before + 1, body.len())
+    ),
     None => body,
   }
 }

@@ -25,14 +25,47 @@ fn a_report_prints_text_or_one_json_document_and_failures_exit_1() {
   use crate::dispatch::Report;
   use crate::fail::Fail;
 
-  let report = Report { text: "  + jev              installed\n".to_owned(), json: json!({"ok": 1}), failed: false };
+  let report = Report {
+    text: "  + jev              installed\n".to_owned(),
+    json: json!({"ok": 1}),
+    failed: false,
+  };
   let text = outcome(Ok(report.clone()), &Ctx::default());
-  assert_eq!((text.exit, text.stdout.as_deref()), (Exit::Success, Some("  + jev              installed")));
-  let empty = outcome(Ok(Report { text: String::new(), ..report.clone() }), &Ctx::default());
+  assert_eq!(
+    (text.exit, text.stdout.as_deref()),
+    (Exit::Success, Some("  + jev              installed"))
+  );
+  let empty = outcome(
+    Ok(Report {
+      text: String::new(),
+      ..report.clone()
+    }),
+    &Ctx::default(),
+  );
   assert_eq!(empty.stdout, None);
-  let json = outcome(Ok(Report { failed: true, ..report }), &Ctx { json: true, ..Ctx::default() });
-  assert_eq!((json.exit, json.stdout.as_deref()), (Exit::Failure, Some("{\"ok\":1}")));
-  let usage = outcome(Err(Fail::usage("several hosts found (claude, codex). Choose one with --host.")), &Ctx::default());
+  let json = outcome(
+    Ok(Report {
+      failed: true,
+      ..report
+    }),
+    &Ctx {
+      json: true,
+      ..Ctx::default()
+    },
+  );
+  assert_eq!(
+    (json.exit, json.stdout.as_deref()),
+    (Exit::Failure, Some("{\"ok\":1}"))
+  );
+  let usage = outcome(
+    Err(Fail::usage(
+      "several hosts found (claude, codex). Choose one with --host.",
+    )),
+    &Ctx::default(),
+  );
   assert_eq!(usage.exit.code(), 64);
-  assert_eq!(usage.stderr.as_deref(), Some("toolu: several hosts found (claude, codex). Choose one with --host."));
+  assert_eq!(
+    usage.stderr.as_deref(),
+    Some("toolu: several hosts found (claude, codex). Choose one with --host.")
+  );
 }

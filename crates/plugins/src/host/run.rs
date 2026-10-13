@@ -67,9 +67,10 @@ pub(crate) fn run(argv: &[String], env: &Env, timeout: Duration) -> Ran {
 
 fn describe(err: &RunError) -> String {
   match err {
-    RunError::Spawn(text) | RunError::Wait(text) | RunError::Stdin(text) | RunError::Callback(text) => {
-      text.clone()
-    }
+    RunError::Spawn(text)
+    | RunError::Wait(text)
+    | RunError::Stdin(text)
+    | RunError::Callback(text) => text.clone(),
     RunError::EmptyArgv => "no command to run".to_owned(),
     RunError::ZeroTimeout | RunError::TimeoutTooLong => "unusable deadline".to_owned(),
   }

@@ -97,7 +97,7 @@ const DEPENDENCIES = [
   "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,",
   "  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as",
   "  herdr agents and need those plugins installed in every host in `--hosts`",
-  "  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).",
+  "  (`toolu plugins install delivery-flow --host codex`, and so on).",
 ].join("\n");
 const ANCHOR = DEPENDENCIES.split("\n")[0] ?? "";
 

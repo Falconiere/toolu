@@ -51,7 +51,12 @@ pub(crate) struct State {
 pub(crate) fn load(cwd: &Path, env: &Env) -> Res<State> {
   let root = project_root_of(cwd, env);
   let paths = paths(&root, env, cwd);
-  let read = |files: &[PathBuf]| files.iter().map(|path| read_config_file(path)).collect::<Res<Vec<_>>>();
+  let read = |files: &[PathBuf]| {
+    files
+      .iter()
+      .map(|path| read_config_file(path))
+      .collect::<Res<Vec<_>>>()
+  };
   Ok(State {
     global: read(&paths.global_files)?,
     project: read(&paths.project_files)?,
@@ -83,14 +88,20 @@ impl State {
   /// The selection an edit without `--scope` lands in: the project's when it
   /// exists, since that is the one `@toolu/opencode` reads there.
   pub(crate) fn default_selection_scope(&self) -> Scope {
-    if self.selection(Scope::Project).is_some() { Scope::Project } else { Scope::Global }
+    if self.selection(Scope::Project).is_some() {
+      Scope::Project
+    } else {
+      Scope::Global
+    }
   }
 
   /// The selection governing `scope`: a project falls back to the global one.
   pub(crate) fn governing_selection(&self, scope: Scope) -> Option<&[String]> {
     match scope {
       Scope::Global => self.selection(Scope::Global),
-      Scope::Project => self.selection(Scope::Project).or_else(|| self.selection(Scope::Global)),
+      Scope::Project => self
+        .selection(Scope::Project)
+        .or_else(|| self.selection(Scope::Global)),
     }
   }
 
