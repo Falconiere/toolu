@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import { launcherHook } from "@toolu/core/launcher";
 import { z } from "zod";
 import { matcherCovers, pluginHookEntries, pluginStartupEntries } from "../entrypoint.ts";
-import { PLUGINS_ROOT, copiedPlugin, fixturePlugin, tempRoot } from "./fixtures.ts";
+import { PLUGINS_ROOT, fixturePlugin, tempRoot } from "./fixtures.ts";
 
 const NATIVE_SESSION_START = readFileSync(
   resolve(
@@ -114,11 +114,11 @@ test.concurrent("a native command rejects an invalid extracted bundle name", () 
 
 test.concurrent("a deleted declared bundle fails the plan before anything runs", () => {
   using root = tempRoot("toolu-entries-missing-");
-  const plugin = copiedPlugin(root.path, "rust-quality");
-  rmSync(join(plugin.pluginDir, "hooks", "dist", "check-toolu.js"));
+  const plugin = fixturePlugin(root.path, "x", { entries: { boot: "process.exit(0);\n" } });
+  rmSync(join(plugin.pluginDir, "hooks", "dist", "boot.js"));
   expect(pluginStartupEntries(plugin.pluginDir)).toEqual({
     ok: false,
-    reason: "check-toolu: missing startup bundle",
+    reason: "boot: missing startup bundle",
   });
 });
 

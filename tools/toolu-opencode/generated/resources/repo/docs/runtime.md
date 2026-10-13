@@ -68,7 +68,7 @@ A TypeScript hook ships as a committed single-file ESM bundle. It is never insta
 
 A legacy skill CLI that starts with `#!/usr/bin/env bun` builds to an executable `hooks/dist/<entry>.js`, and the drift check fails if a committed one loses its exec bit. The native toolu-review writer is `toolu review write-state`; SessionStart keeps its former stable helper as a shell shim until #440.
 
-**Startup hooks.** toolu-review's SessionStart entries use the native launcher. The Codex dependency checks of pr-babysit and rust-quality still use bundles on `@toolu/core/startup` (#269); epic-orchestrator's three SessionStart entries are native (`toolu epic-orchestrator hook …`, #435). A publisher never replaces a regular file at its stable path, only a symlink. A legacy published Bun CLI still needs `bun` on the agent command shell's `PATH`; the toolu-review shim does not.
+**Startup hooks.** toolu-review's SessionStart entries use the native launcher. The Codex dependency checks of pr-babysit and the three quality plugins are native (`toolu <plugin> hook check-toolu`, #433, #426–#428); epic-orchestrator's three SessionStart entries are native (`toolu epic-orchestrator hook …`, #435). A publisher never replaces a regular file at its stable path, only a symlink. A legacy published Bun CLI still needs `bun` on the agent command shell's `PATH`; the toolu-review shim does not.
 
 ## Managed epic workloads
 
