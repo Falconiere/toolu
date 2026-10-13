@@ -69,7 +69,7 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   {
     "id": "S5",
     "title": "OpenCode port of the wait paragraph, regenerate the generated tree, update epic-surfaces.test.ts",
-    "check": "bun run check:opencode-surface && bun test tools/toolu-opencode/scripts/__tests__/epic-surfaces.test.ts",
+    "check": "bun run check:opencode-surface && bun test --timeout 60000 tools/toolu-opencode/scripts/__tests__/ tools/toolu-opencode/src/plugin/__tests__/epic-workflows.test.ts",
     "ac_refs": ["AC-6"],
     "depends_on": ["S1", "S2", "S3"],
     "paths": ["plugins/epic-orchestrator/**", "tools/toolu-opencode/scripts/**", "tools/toolu-opencode/generated/**", "plugins/*/skills/**", "plugins/*/commands/**", "plugins/*/agents/**", "plugins/*/.claude-plugin/plugin.json"],
@@ -138,6 +138,12 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   skill's own name is `verify-epic-watcher` and its command is
   `toolu --json epic wait`. It now bans the watcher script
   (`epic-watch.ts`, `scripts/`) instead.
+- The pre-push review found 9 issues (state_dir from `graph --json`, the
+  Claude wait's 45-minute `waiting`, what `status <key>` and the launch record
+  hold, `merge refused` and `epic close uncertain`, the unsent `FIX:` message,
+  a stale README passage, a vacuous test assertion); all fixed. Two Bun suites
+  pin skill text (`generate-surface.test.ts`, `epic-workflows.test.ts`), so S5
+  now runs the whole `scripts/__tests__` directory and `epic-workflows.test.ts`.
 
 ## Critical files
 
