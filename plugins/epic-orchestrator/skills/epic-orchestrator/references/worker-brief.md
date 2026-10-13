@@ -112,8 +112,8 @@ the branch recoverable:
   conflicts so both sides' intent survives (read the other change, don't just
   pick yours); re-run the gate and affected tests; `git push --force-with-lease`;
   `report babysit --pr <n>`; stop.
-- **`FIX: <reason>`** — a manual merge gate saw failing checks or unresolved
-  threads. Fix and push, `report babysit --pr <n>`, stop.
+- **Any other direction** from the orchestrator — follow it within this
+  brief's limits, push, `report babysit --pr <n>` once a PR exists, and stop.
 - **`STATUS?`** — reply in one line: phase, PR, what you are doing, blocker if
   any. Then stay idle.
 

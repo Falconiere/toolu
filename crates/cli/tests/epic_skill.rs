@@ -67,9 +67,9 @@ fn the_skill_checks_previews_then_starts() {
   assert!(plan.contains("--dry-run\n```") && plan.contains("A dry run stops here"));
   let run = section(&text, "3. Run").unwrap();
   let order = [
-    "toolu epic graph <epic> --max 3 --save",
-    "toolu epic route --graph <state_dir>/graph.json",
-    "toolu epic start <state_dir>",
+    "toolu --json epic graph <epic> --max 3 --save | jq -r .state_dir",
+    "toolu epic route --graph \"$STATE_DIR/graph.json\"",
+    "toolu epic start \"$STATE_DIR\"",
   ];
   let found: Vec<usize> = order.iter().map(|cmd| run.find(cmd).unwrap()).collect();
   assert!(found.windows(2).all(|pair| pair[0] < pair[1]), "{run}");
@@ -81,7 +81,7 @@ fn the_skill_waits_in_the_background_on_claude_and_in_bounded_loops_elsewhere() 
   let wait = section(&text, "4. Wait for judgments").unwrap();
   let claude = wait.split("- **Codex and OpenCode:**").next().unwrap();
   assert!(claude.contains("`toolu --json epic wait`") && claude.contains("run_in_background"));
-  assert!(claude.contains("end your turn"));
+  assert!(claude.contains("end your turn") && claude.contains("`waiting` after 45 minutes"));
   let others = wait.split("- **Codex and OpenCode:**").nth(1).unwrap();
   assert!(others.contains("`toolu --json epic wait --max-seconds 480`"));
   assert!(others.contains("run it again while any issue is active"));
@@ -122,7 +122,7 @@ fn status_reads_without_waiting_and_stop_pauses() {
   let text = skill().unwrap();
   let status = section(&text, "Status and stop").unwrap();
   assert!(status.contains("`toolu epic status <epic-key>`"));
-  assert!(status.contains("http://127.0.0.1:7717/") || text.contains("http://127.0.0.1:7717/"));
+  assert!(status.contains("`http://127.0.0.1:7717/`"));
   assert!(status.contains("never `toolu epic wait`"));
   assert!(status.contains("`toolu epic pause <epic-key>`"));
 }

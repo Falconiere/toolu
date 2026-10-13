@@ -1,10 +1,13 @@
 # Recovery playbook
 
 Start every repair from what the engine recorded, not from ad-hoc `gh` calls:
-`toolu epic status <key>` (one worker: stage, phase, PR, agent state, pending
-action, attention), the journal (`/api/v1/events` on the dashboard,
-`http://127.0.0.1:7717/`, every action with its intent and outcome), and
-`toolu doctor` (binary, config, plugins and tools). Then fix the cause and let
+`toolu epic status <key>` (one worker: stage, phase, host, model, effort, PR,
+last gate verdict, queue position, launches, phase history and recent events;
+`toolu epic status` alone lists the open attention items), the journal
+(`/api/v1/events` on the dashboard, `http://127.0.0.1:7717/`, every action with
+its intent and outcome), and `toolu doctor` (binary, config, plugins and
+tools). The launch record `<state_dir>/issues/<key>.json` holds the agent's
+attempt, pane and session. Then fix the cause and let
 the engine retry, or run the one repair below. A timeout during an agent start
 or prompt is uncertain: it is never retried as a fresh session.
 
@@ -45,7 +48,8 @@ or prompt is uncertain: it is never retried as a fresh session.
 
 `failed` with an `uncertain launch` note, a `reopened` issue, or a worker that
 must move host. Inspect `attempt_id`, `pane_id`, `session_id`, `prompt_state`
-and `lifecycle_error` in `toolu epic status <key>` first, then:
+and `lifecycle_error` in the launch record `<state_dir>/issues/<key>.json`
+first, then:
 
 ```bash
 toolu epic launch --graph <state_dir>/graph.json --issue <ref> --reprompt   # a verified session: prompt it again
@@ -62,6 +66,13 @@ exits right after start): check `codex debug models`, `cursor-agent
 - **`failed`, note `merge uncertain`:** never resend a merge. Check the PR;
   merged or not, `toolu epic ack <key>` and let the engine's next PR check
   settle it.
+- **`failed`, note `merge refused`:** GitHub refused the pinned merge (often a
+  push after the gate, or protection), and the engine holds the issue without
+  resending. Fix the cause or ask the user, merge with the gate below once it
+  says `merge`, then `toolu epic ack <key>`; the PR check sees the merge.
+- **`failed` on the epic key, note `epic close uncertain`:** the epic may be
+  closed already. Check it in the tracker and never close it twice; then
+  `toolu epic ack <epic-key>`.
 - **`merge-ready`** (a deferring merge script, a test seam), or a repair by
   hand: run the gate below, the one the engine runs.
 - **`cleanup-incomplete`:** the teardown kept the workspace because a job was

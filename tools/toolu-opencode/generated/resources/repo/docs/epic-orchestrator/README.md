@@ -36,7 +36,7 @@ toolu epic serve
 # Disable HTTP while keeping the control socket
 toolu epic engine --no-http
 # Register an epic and start the engine; wait for its next judgment
-# (Claude Code: one background call without a limit; Codex and OpenCode: a loop)
+# (Claude Code: a background call, 45-minute default limit; Codex and OpenCode: a loop)
 toolu epic start <state_dir>
 toolu --json epic wait --max-seconds 480
 ```

@@ -65,7 +65,7 @@ test.concurrent("selecting epic-orchestrator alone registers it and the delivery
 });
 
 test.concurrent("the skill runs toolu epic verbs, and its root reaches the references only when enabled", async () => {
-  expect(SKILL).toContain("toolu epic start <state_dir>");
+  expect(SKILL).toContain('toolu epic start "$STATE_DIR"');
   expect(SKILL).not.toContain("$S/");
   using sb = createSandbox({ git: true });
   epicProject(sb, ["epic-orchestrator"]);

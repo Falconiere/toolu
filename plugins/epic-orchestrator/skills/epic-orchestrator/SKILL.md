@@ -81,36 +81,36 @@ issues with their blockers, each issue's host, model and effort. Then:
 ## 3. Run
 
 ```bash
-toolu epic graph <epic> --max 3 --save
-toolu epic route --graph <state_dir>/graph.json --hosts claude:2,codex:1
-toolu epic start <state_dir>    # add --safe and --no-jev when the user passed them
+STATE_DIR=$(toolu --json epic graph <epic> --max 3 --save | jq -r .state_dir)
+toolu epic route --graph "$STATE_DIR/graph.json" --hosts claude:2,codex:1
+toolu epic start "$STATE_DIR"    # add --safe and --no-jev when the user passed them
 ```
 
-The graph prints `state_dir`; its basename is the `<epic-key>`. `start`
-registers the epic, records `--safe` and `--no-jev` (a start without them turns
-them off) and starts the engine. Tell the user which workers run where
-(`toolu epic status <epic-key>`; each has a herdr workspace named after its
-key) and the dashboard, `http://127.0.0.1:7717/`. Resume: the same commands.
+The basename of `$STATE_DIR` is the `<epic-key>`. `start` registers the
+epic, keeps `--safe` and `--no-jev` until a start without them, and starts the
+engine. Tell the user the dashboard, `http://127.0.0.1:7717/`, and which
+workers run where (`toolu epic status <epic-key>`; each has a herdr workspace
+named after its key). Resume: the same commands.
 
 ## 4. Wait for judgments
 
 - **Claude Code:** run `toolu --json epic wait` as a background Bash call
-  (`run_in_background: true`) and end your turn. Its completion wakes you;
-  handle the judgment, then start the next background wait. Keep exactly one
-  wait running; if the user speaks meanwhile, answer and keep it.
+  (`run_in_background: true`) and end your turn. Its completion (a judgment,
+  or `waiting` after 45 minutes) wakes you: handle it, then start the next one
+  while any issue is active. Keep exactly one; answer the user meanwhile.
 - **Codex and OpenCode:** one tool call cannot block for hours, so loop:
   run `toolu --json epic wait --max-seconds 480` in the foreground, handle what
   it returns, and run it again while any issue is active.
 
 It returns one judgment (`kind`, `key`, `note`, `pending` for `blocked`) or
-`{"state": "waiting"}` at the limit; a `waiting` at once means no engine runs
-(`toolu epic status`, then `toolu epic start <state_dir>`). A worker report
+`{"state": "waiting"}` at the limit; only a `waiting` at once means no engine
+runs (`toolu epic status`, then `toolu epic start "$STATE_DIR"`). A worker report
 or a settled cause closes an item; ack the rest once handled.
 
 | kind | action |
 |---|---|
 | `needs-human` | If the issue, epic or code answers the `note`, `toolu epic answer <key> "<answer>"`; else ask the user and relay it the same way. |
-| `failed` | Read the note (`herdr agent read <key> --lines 80` if unclear). `toolu epic answer <key> "<new direction>"`, or escalate. `uncertain launch` and `merge uncertain` notes: follow `references/recovery.md`. |
+| `failed` | Read the note (`herdr agent read <key> --lines 80` if unclear). `toolu epic answer <key> "<new direction>"`, or escalate. Notes `uncertain launch`, `merge uncertain`, `merge refused` and, on the epic key, `epic close uncertain`: follow `references/recovery.md`. |
 | `blocked` | Read `pending`. Inside the boundary: approve with `herdr agent send-keys`; else ask the user. Then `toolu epic ack <key>`. |
 | `stall` | The engine sent `STATUS?`. Read the reply, then `toolu epic answer <key> "<nudge>"` or `toolu epic ack <key>` to wait one more stall length. |
 | `babysit` | The PR check needs the worker or a human (the note says why). `toolu epic answer <key> "<direction>"` or escalate, then `toolu epic ack <key>`. |
@@ -134,7 +134,7 @@ Report PRs merged, admin merges, hosts and models, and what needed a human.
 ## Status and stop
 
 - **Status** ("where is the epic at"): print `toolu epic status <epic-key>`,
-  `toolu epic queue <epic-key>` and the dashboard URL; never `toolu epic wait`.
+  `toolu epic queue <epic-key>` and `http://127.0.0.1:7717/`; never `toolu epic wait`.
 - **Stop:** `toolu epic pause <epic-key>` stops launches, rebases and merges at
   once; workers finish their step and go idle. Then stop waiting.
   `toolu epic resume <epic-key>` continues. Tear an issue down only when the
