@@ -84,3 +84,26 @@ fn a_refused_job_journals_its_wait_reason() {
     [("job", "i-7", "true"), ("job-wait", "i-7", "capacity")]
   );
 }
+
+#[test]
+fn a_refusal_the_journal_cannot_record_is_named_in_the_failure() {
+  use toolu_engine::resources::binding::ResourceBinding;
+  let tmp = tempfile::tempdir().expect("temp");
+  let binding = ResourceBinding {
+    root: tmp.path().to_path_buf(),
+    key: "i-9".to_owned(),
+    state_dir: "state".to_owned(),
+    worktree: tmp.path().to_path_buf(),
+  };
+  assert_eq!(
+    super::failure(&binding, "spawn failed"),
+    "toolu epic job: spawn failed"
+  );
+  std::fs::write(Paths::at(tmp.path()).journal_dir(), "not a directory").expect("block");
+  let message = super::failure(&binding, "job capacity exhausted (1 of 1)");
+  assert!(
+    message
+      .starts_with("toolu epic job: job capacity exhausted (1 of 1); job-wait not journaled: "),
+    "{message}"
+  );
+}

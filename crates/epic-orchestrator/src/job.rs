@@ -43,18 +43,26 @@ pub(crate) fn run_job(argv: &[String], cwd: &Path) -> Outcome {
         format!("toolu epic job: command exited {}", output.exit_code),
       )
     }
-    Err(err) => {
-      if err.starts_with("job capacity exhausted") || err.starts_with("resource hold:") {
-        let _marked = waiting_jobs::mark(&binding, SystemTime::now());
-        let reason = if err.starts_with("resource hold:") {
-          "pressure"
-        } else {
-          "capacity"
-        };
-        let _journaled = refused(&binding, reason);
-      }
-      Outcome::failed(Exit::Failure, format!("toolu epic job: {err}"))
-    }
+    Err(err) => Outcome::failed(Exit::Failure, failure(&binding, &err)),
+  }
+}
+
+/// The message of a job that did not run. A refusal (`capacity` or
+/// `pressure`) is marked waiting and journaled as `job-wait`; a journal
+/// failure is named in the message rather than dropped (#451).
+fn failure(binding: &toolu_engine::resources::binding::ResourceBinding, err: &str) -> String {
+  let message = format!("toolu epic job: {err}");
+  let reason = if err.starts_with("resource hold:") {
+    "pressure"
+  } else if err.starts_with("job capacity exhausted") {
+    "capacity"
+  } else {
+    return message;
+  };
+  let _marked = waiting_jobs::mark(binding, SystemTime::now());
+  match refused(binding, reason) {
+    Ok(()) => message,
+    Err(journal) => format!("{message}; job-wait not journaled: {journal}"),
   }
 }
 
