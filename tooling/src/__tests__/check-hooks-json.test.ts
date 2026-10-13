@@ -1,6 +1,6 @@
 import { afterAll, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { launcherHook } from "@toolu/core/launcher";
@@ -52,6 +52,33 @@ const bunStart = launcherHook({
   entry: "register",
 });
 
+/**
+ * Every committed entry is native, so Bun-launcher tests plant ts-quality's
+ * generated Bun entry over its native register hook in the temp copy, with
+ * the committed bundle the Bun check requires. The replacement is textual,
+ * keeping the committed formatting (and its ignored `timeout`) so the edits
+ * below still apply.
+ */
+function plantBunLauncher(root: string): void {
+  const file = join(root, BUN_PLUGIN);
+  const text = readFileSync(file, "utf8");
+  const hook = (
+    JSON.parse(text) as {
+      hooks: { SessionStart: Array<{ hooks: Array<{ command?: string; commandWindows?: string }> }> };
+    }
+  ).hooks.SessionStart[0]?.hooks[0];
+  if (hook?.command === undefined || hook.commandWindows === undefined)
+    throw new Error("ts-quality has no native register hook to plant over");
+  const planted = text
+    .replace(JSON.stringify(hook.command), JSON.stringify(bunStart.command))
+    .replace(JSON.stringify(hook.commandWindows), JSON.stringify(bunStart.commandWindows));
+  if (planted === text) throw new Error("ts-quality register hook is not a native launcher");
+  writeFileSync(file, planted);
+  const dist = join(root, "plugins/ts-quality/hooks/dist");
+  mkdirSync(dist, { recursive: true });
+  writeFileSync(join(dist, "register.js"), "// planted test bundle\n");
+}
+
 function cli(...args: string[]) {
   return spawnSync(process.execPath, [CLI, ...args], { encoding: "utf8" });
 }
@@ -68,6 +95,7 @@ test("an unchanged copy passes", () => {
 
 test("a hand-edited launcher command fails and names the expected string", () => {
   const root = copyOfRepo();
+  plantBunLauncher(root);
   edit(root, BUN_PLUGIN, (text) =>
     text.replace(
       JSON.stringify(bunStart.command),
@@ -88,6 +116,7 @@ test("a hand-edited launcher command fails and names the expected string", () =>
 
 test("an edited or removed commandWindows fails", () => {
   const edited = copyOfRepo();
+  plantBunLauncher(edited);
   edit(edited, BUN_PLUGIN, (text) =>
     text.replace(
       JSON.stringify(bunStart.commandWindows),
@@ -99,6 +128,7 @@ test("an edited or removed commandWindows fails", () => {
   ]);
 
   const removed = copyOfRepo();
+  plantBunLauncher(removed);
   edit(removed, BUN_PLUGIN, (text) =>
     text.replace(`,\n            "commandWindows": ${JSON.stringify(bunStart.commandWindows)}`, ""),
   );
@@ -109,6 +139,7 @@ test("an edited or removed commandWindows fails", () => {
 
 test("a launcher hook whose bundle is not committed fails", () => {
   const root = copyOfRepo();
+  plantBunLauncher(root);
   rmSync(join(root, "plugins/ts-quality/hooks/dist/register.js"));
   expect(checkHooksJson(root).map((p) => p.problem)).toEqual([
     "bundle plugins/ts-quality/hooks/dist/register.js is not committed",
@@ -130,6 +161,7 @@ test("commandWindows on a legacy script command fails", () => {
 
 test("a hand-written bun command fails even though it names a real bundle", () => {
   const root = copyOfRepo();
+  plantBunLauncher(root);
   const bare = 'bun \\"${CLAUDE_PLUGIN_ROOT}/hooks/dist/register.js\\"';
   edit(root, BUN_PLUGIN, (text) =>
     text.replace(JSON.stringify(bunStart.command).slice(1, -1), bare),
@@ -157,6 +189,7 @@ test("a hand-written toolu hook command without the generated launcher fails", (
 
 test("an invalid entry name and malformed JSON are reported", () => {
   const badEntry = copyOfRepo();
+  plantBunLauncher(badEntry);
   edit(badEntry, BUN_PLUGIN, (text) =>
     text.replaceAll("hooks/dist/register.js", "hooks/dist/Register.js"),
   );
@@ -294,6 +327,7 @@ test("a native command with its protocol marker kept but its shell body edited f
 
 test("a native entry does not stop the Bun launcher check", () => {
   const root = copyOfRepo();
+  plantBunLauncher(root);
   expect(NATIVE_PRE_HOOK.command).toBe(NATIVE_PRE_TOOL);
   expect(checkHooksJson(root)).toEqual([]);
   edit(root, BUN_PLUGIN, (text) =>
