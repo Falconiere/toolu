@@ -48,7 +48,10 @@ npx passes `install` straight to it. A global install
 (`npm install -g @toolu/plugins`) gives you `toolu-plugins install`.
 
 The command used to be called `toolu`, the same name as the native binary, so a
-global npm install could shadow the binary in an agent command shell. If you
+global npm install could shadow the binary in an agent command shell. A script
+that ran the old global command's verbs (`install`, `list`, `remove`, `update`)
+must now run them as `toolu plugins <verb>` on the native binary, or as
+`toolu-plugins <verb>` from the npm package. If you
 installed an earlier release globally, run `npm uninstall -g @toolu/plugins`,
 then install it again. A leftover `toolu` from that package fails the native
 `--hook-protocol` check, so SessionStart, `toolu doctor` and the wrapper all

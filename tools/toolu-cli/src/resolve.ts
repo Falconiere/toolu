@@ -95,7 +95,9 @@ export function findNative(
     if (isWrapper(path, self) || !executableFile(path)) continue;
     const protocol = answers(path, ["--hook-protocol"], env);
     if (protocol === undefined || !/^\d+\s*$/.test(protocol)) continue;
-    if (answers(path, ["plugins", "install", "--help"], env) === undefined) {
+    // clap's help always has a usage line; an empty or foreign answer is no `plugins install`.
+    const help = answers(path, ["plugins", "install", "--help"], env);
+    if (help === undefined || !help.includes("Usage: toolu plugins install")) {
       old ??= path;
       continue;
     }

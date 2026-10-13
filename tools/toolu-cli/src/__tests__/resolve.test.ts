@@ -63,6 +63,9 @@ describe("findNative", () => {
     mkdirSync(oldDir);
     script(join(oldDir, "toolu"), '[ "$1" = "--hook-protocol" ] && { echo 2; exit 0; }; exit 64');
     expect(findNative({ PATH: oldDir }, WRAPPER, [])).toEqual({ kind: "old", path: join(oldDir, "toolu") });
+    // Exit 0 with no usage text is not `plugins install` either.
+    script(join(oldDir, "toolu"), '[ "$1" = "--hook-protocol" ] && echo 2; exit 0');
+    expect(findNative({ PATH: oldDir }, WRAPPER, [])).toEqual({ kind: "old", path: join(oldDir, "toolu") });
     symlinkSync(requiredBuiltTooluBinary(), join(sb.bin, "toolu"));
     const found = findNative({ PATH: `${oldDir}:${sb.bin}` }, WRAPPER, []);
     expect(found).toEqual({ kind: "found", path: realpathSync(requiredBuiltTooluBinary()) });
@@ -71,7 +74,10 @@ describe("findNative", () => {
   test("each real path is probed once, however many names lead to it", () => {
     using sb = sandbox();
     const log = join(sb.root, "probes.log");
-    const native = script(join(sb.root, "native"), `echo "$*" >> ${log}\n[ "$1" = "--hook-protocol" ] && echo 2; exit 0`);
+    const native = script(
+      join(sb.root, "native"),
+      `echo "$*" >> ${log}\n[ "$1" = "--hook-protocol" ] && echo 2\n[ "$1" = plugins ] && echo "Usage: toolu plugins install"\nexit 0`,
+    );
     const other = join(sb.root, "other");
     mkdirSync(other);
     symlinkSync(native, join(sb.bin, "toolu"));

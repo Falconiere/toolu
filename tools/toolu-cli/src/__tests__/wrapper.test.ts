@@ -91,7 +91,7 @@ describe("running the native binary", () => {
     script(
       native,
       `case "$1" in --hook-protocol) echo 2; exit 0 ;; esac
-[ "$3" = --help ] && exit 0
+[ "$3" = --help ] && { echo "Usage: toolu plugins install"; exit 0; }
 echo "$*" >> ${log}
 case "$*" in *" list "*) kill -TERM $$ ;; esac
 exit 3`,
