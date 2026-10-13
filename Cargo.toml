@@ -30,6 +30,7 @@ members = [
   "crates/statusline",
   "crates/pr-babysit",
   "crates/epic-orchestrator",
+  "crates/plugins",
 ]
 
 # The lockstep version: release-please bumps it with package.json and every plugin.json.
@@ -46,6 +47,9 @@ assert_cmd = "2"
 # The `toolu` command tree (#442): the builder API only, without derive's
 # proc-macro dependencies or colour's anstream stack.
 clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }
+# Format-preserving edits of OpenCode's JSONC config files in `toolu plugins` (#438):
+# dprint's parser, scanner and CST.
+jsonc-parser = { version = "0.34", default-features = false, features = ["cst", "serde_json"] }
 # The `toolu commands --json` snapshot and its schema validation (#442).
 insta = { version = "1", default-features = false }
 # The schema tests use 0.33 because 0.58 pulls getrandom 0.3 alongside ring's

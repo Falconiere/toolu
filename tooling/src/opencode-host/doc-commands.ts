@@ -4,7 +4,8 @@
  * the live `docs.*` scenarios run it word for word in an isolated profile.
  *
  * Only two commands are redirected, through PATH shims: `npx @toolu/plugins`
- * runs the checkout's CLI bundle (the release under test is not on npm yet) and
+ * runs the checkout's wrapper bundle, which runs the built native `toolu
+ * plugins` (the release under test is not on npm yet), and
  * `opencode` runs the pinned binary. `npx` with any other package fails, so a
  * doc can never reach an unpinned network package unnoticed. Everything else
  * is the reader's own shell.
@@ -12,7 +13,7 @@
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { delimiter, join } from "node:path";
 import { run, type RunResult } from "@toolu/conformance/harness/spawn";
-import { cliBundle } from "./scenarios-cli.ts";
+import { cliBundle, nativeEnv } from "./scenarios-cli.ts";
 import { ROOT, npmSpec, type EntryContext } from "./scenarios-entry.ts";
 import { ContractError } from "./schema.ts";
 import type { ProbeSession } from "./session.ts";
@@ -111,7 +112,7 @@ export async function runDocBlock(
   return runScript(script, {
     cwd: s.sb.project,
     shims,
-    env: { ...s.env, TOOLU_OPENCODE_PACKAGE: npmSpec(ctx.tarball) },
+    env: { ...s.env, ...nativeEnv(), TOOLU_OPENCODE_PACKAGE: npmSpec(ctx.tarball) },
   });
 }
 

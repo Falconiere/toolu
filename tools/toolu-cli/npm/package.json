@@ -1,7 +1,7 @@
 {
   "name": "@toolu/plugins",
   "version": "7.11.0",
-  "description": "Install toolu plugins into Claude Code, Codex and OpenCode: npx @toolu/plugins install",
+  "description": "Install toolu plugins into Claude Code, Codex and OpenCode: npx @toolu/plugins install (runs the native toolu plugins)",
   "keywords": [
     "claude-code",
     "codex",
@@ -21,7 +21,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "toolu": "dist/cli.js"
+    "toolu-plugins": "dist/cli.js"
   },
   "engines": {
     "node": ">=20.12"

@@ -99,7 +99,7 @@ native binary in the launcher's order (`TOOLU_BIN`; `/opt/homebrew/bin/toolu`,
 `/usr/local/bin/toolu`, `/home/linuxbrew/.linuxbrew/bin/toolu`,
 `$HOME/.local/bin/toolu`; then each `toolu` on `PATH`). It skips a candidate
 that is not an executable regular file, whose real path is the wrapper's own
-or inside an `@toolu/plugins` package, or whose `--hook-protocol` (5 s) does
+or inside an `@toolu/plugins` package, or whose `--hook-protocol` (20 s) does
 not print an integer. A native binary that answers but whose
 `toolu plugins install --help` fails predates this namespace: the wrapper exits
 69 naming its path and the upgrade commands. Then it runs
@@ -242,7 +242,7 @@ TS `JSON.stringify` did.
 | AC-5 | isolated HOME/XDG profiles and git projects; the fixture spawns `requiredBuiltTooluBinary()` (`@toolu/conformance/harness/entry-command`) with `plugins` instead of `src/cli.ts` | the TS assertions; only `EXIT.usage` (2) and `EXIT.missingInput` (3) become 64 and the `toolu: ` prefix stays | malformed JSONC, both scopes, symlink, mode 600 | `bun test tools/toolu-cli` |
 | AC-6 | pinned `opencode-ai` and a packed `@toolu/opencode` | scenarios pass | commented global `opencode.jsonc` | `bun run smoke:opencode-entry cli.install cli.lifecycle` |
 | AC-7 | the npm folder, a temp `PATH`, `TOOLU_BIN` set to the built binary; `--dry-run --host claude` needs no `claude` on `PATH` (a failed `plugin list` reads as nothing installed) | exit 69 / success | wrapper on `PATH` as `toolu`; a native binary without `plugins install` | `bun test tools/toolu-cli/src/__tests__/wrapper.test.ts tooling/src/__tests__/npx-invocation.test.ts`; `cargo xtask gate --only pack` |
-| AC-8 | `plugins/toolu/**`, `crates/toolu/src/lifecycle/notices.rs`, `crates/core/runtime/src/host/roots.rs` | no `npx @toolu/plugins` | the wrapper's own README and `docs/cli/installer.md` keep it, correctly | `! git grep -n 'npx @toolu/plugins' -- plugins/toolu crates/toolu crates/core`; `cargo xtask check-markdown-cli` |
+| AC-8 | `plugins/toolu/**`, `crates/toolu/src/lifecycle/notices.rs`, `crates/core/runtime/src/host/roots.rs` | no `npx @toolu/plugins` | the wrapper's own README and `docs/cli/installer.md` keep it, correctly | `! git grep -n 'npx @toolu/[p]lugins' -- plugins/toolu crates/toolu crates/core`; `cargo xtask check-markdown-cli` |
 | AC-9 | each verb with `--json`; a `claude` stub that fails `toolu@toolu` | parses as one document, exit 1 on the failing run | failure keeps one document | `cargo test -p toolu-cli --test plugins_args` |
 | AC-10 | the workspace | green | coverage floor | `cargo xtask gate` |
 | AC-11 | answers `""`, `"1 3"`, `"1,3"`, `"9"`, `"x"`, `"q"`, EOF | selections, re-ask, cancel | out of range, EOF | `cargo test -p toolu-plugins prompt`; `cargo test -p toolu-cli --test plugins_args` (no pty case: `script` differs between macOS and Linux, and the `/dev/tty` open is a few lines of glue) |

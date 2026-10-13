@@ -1,8 +1,9 @@
 /**
  * Live CLI management scenarios (#360) on the pinned host.
  *
- * The built `toolu` bundle runs under Node against an isolated profile and
- * edits OpenCode's documented config files; the host then reports what it
+ * The built npm wrapper runs under Node against an isolated profile and runs
+ * the built native `toolu plugins` (#438, through `TOOLU_BIN`), which edits
+ * OpenCode's documented config files; the host then reports what it
  * merged (`debug config`), discovered (`debug skill`) and enforced (a scripted
  * session writing a protected `.env`). The package spec points at the packed
  * tarball through `TOOLU_OPENCODE_PACKAGE`.
@@ -10,6 +11,7 @@
 import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { run } from "@toolu/conformance/harness/spawn";
 import { z } from "zod";
 import { catalogIds, host, named, skills } from "./install-host.ts";
@@ -57,7 +59,12 @@ export function cliBundle(ctx: EntryContext): Promise<string> {
   return built;
 }
 
-/** `node dist/cli.js <args> --host opencode` in the project, installing `spec`. */
+/** The environment the wrapper finds the built native binary in. */
+export function nativeEnv(): Record<string, string> {
+  return { TOOLU_BIN: requiredBuiltTooluBinary() };
+}
+
+/** `node dist/cli.js <args> --host opencode` (the wrapper, so `toolu plugins`) in the project, installing `spec`. */
 async function toolu(
   ctx: EntryContext,
   s: ProbeSession,
@@ -68,7 +75,7 @@ async function toolu(
   if (node === null) throw new ContractError("node is not on PATH; the CLI bundle targets Node");
   const res = await run([node, await cliBundle(ctx), ...args, "--host", "opencode"], {
     cwd: s.sb.project,
-    env: { ...s.env, TOOLU_OPENCODE_PACKAGE: spec },
+    env: { ...s.env, ...nativeEnv(), TOOLU_OPENCODE_PACKAGE: spec },
     stdin: "",
     timeoutMs: CLI_TIMEOUT_MS,
   });

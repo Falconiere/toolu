@@ -93,8 +93,11 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
   probe.arg("--hook-protocol").env("PATH", &path);
   probe.stdout(Stdio::piped()).stderr(Stdio::piped());
   let probe = spawn(&mut probe).unwrap().wait_with_output().unwrap();
+  // The wrapper never answers the native probe: it is not the native CLI, and
+  // it skips itself when it looks for one (#438).
   let said = String::from_utf8_lossy(&probe.stderr);
-  assert_eq!(said.trim(), "toolu: unknown flag: --hook-protocol");
+  assert!(said.starts_with("toolu-plugins: "), "{said}");
+  assert_ne!(probe.status.code(), Some(0));
   assert_eq!(probe.stdout, b"");
   let run = sandbox
     .launch("SessionStart", "session-start", STARTUP, &[("PATH", &path)])
@@ -107,7 +110,8 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
   );
 }
 
-/// Build the real npm wrapper (`@toolu/plugins`' `toolu` bin) from its source.
+/// Build the real npm wrapper (`@toolu/plugins`' `toolu-plugins` bin) from its
+/// source, as a user's `toolu` symlink to it would run.
 fn build_wrapper(out: &Path) -> Res<()> {
   let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
   let built = out.with_extension("js");
