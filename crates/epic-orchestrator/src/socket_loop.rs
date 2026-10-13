@@ -80,6 +80,8 @@ pub(crate) fn state_loop(
         source::apply(engine, &Env::process(), fact)?;
         if engine.resubscribe {
           engine.resubscribe = false;
+          // Publish first: the herdr thread copies the world it resubscribes with.
+          publish(context.shared, context.changed, engine)?;
           context.resub.store(true, Ordering::Relaxed);
           context.interrupt.trigger();
         }

@@ -43,14 +43,14 @@ pub(crate) fn spawn(
 /// Every wait ends early on a trigger, so no short timer runs while idle.
 fn run(tx: &Sender<Msg>, shared: &Arc<Mutex<World>>, env: &Env, signals: &Signals) {
   while !signals.stop.load(Ordering::Relaxed) {
+    // Clear earlier requests before copying the world: a resubscribe that
+    // lands after the copy stays pending and ends this session at once.
+    signals.interrupt.reset();
+    signals.wake.store(false, Ordering::Relaxed);
     let world = match shared.lock() {
       Ok(world) => world.clone(),
       Err(_err) => break,
     };
-    signals.interrupt.reset();
-    // This session subscribes with the current world, so an older request
-    // to resubscribe is already served.
-    signals.wake.store(false, Ordering::Relaxed);
     let pace = Pace {
       idle: Some(IDLE),
       return_on_idle: false,
