@@ -116,7 +116,7 @@ fn a_stop_ends_a_live_read_at_once_and_a_resubscribe_reconnects_once() {
   let signals = signals(false);
   let (tx, _rx) = mpsc::channel();
   let shared = Arc::new(Mutex::new(World::new(0)));
-  let env = fix.env.clone();
+  let env = fix.env;
   let running = signals.clone();
   let thread = std::thread::spawn(move || super::run(&tx, &shared, &env, &running));
   assert!(until(Duration::from_secs(2), || subscriptions(&log) == 1));
