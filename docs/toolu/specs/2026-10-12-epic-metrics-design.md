@@ -1,6 +1,8 @@
 # Epic metrics, baseline and efficiency budgets — Design
 
-**Date:** 2026-10-12   **Status:** Approved (revision 5; spec review rounds 1–4 by an independent reviewer, final finding resolved in Open Question 3)   **Author:** Claude (epic worker, #451)   **Topic:** Measure epic runs from the engine journal, against a derived TypeScript baseline, under CI budgets
+**Date:** 2026-10-12   **Status:** Approved   **Author:** Claude (epic worker, #451)   **Topic:** Measure epic runs from the engine journal, against a derived TypeScript baseline, under CI budgets
+
+Spec review: rounds 1–4 by an independent reviewer; the final finding was resolved in Open Question 3 (revision 5).
 
 Brainstorm: `docs/toolu/brainstorms/2026-10-12-epic-metrics.md`.
 

@@ -1,6 +1,8 @@
 # Epic metrics, baseline and efficiency budgets — Plan
 
-**Date:** 2026-10-12   **Status:** Approved (revision 3; plan review rounds 1–2 by an independent reviewer, the final S10 finding resolved by widening the fixture module in S10's paths)   **Spec:** docs/toolu/specs/2026-10-12-epic-metrics-design.md   **Topic:** Journal-derived epic metrics, the derived TypeScript baseline, and CI budgets (#451)
+**Date:** 2026-10-12   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-12-epic-metrics-design.md   **Topic:** Journal-derived epic metrics, the derived TypeScript baseline, and CI budgets (#451)
+
+Plan review: rounds 1–2 by an independent reviewer; the final S10 finding was resolved by widening the fixture module in S10's paths (revision 3).
 
 ## Evidence and approach
 
