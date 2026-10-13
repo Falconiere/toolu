@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{decimal, pct, share};
+use super::{decimal, pct, share, total};
 
 #[test]
 fn percentiles_interpolate_between_ranks_and_round_down() {
@@ -29,4 +29,11 @@ fn shares_keep_four_decimals_and_a_zero_total_is_null() {
   assert_eq!(share(5, 5), json!(1.0));
   assert_eq!(share(1, 0), json!(null));
   assert_eq!(decimal(5422, 10), json!(542.2));
+}
+
+#[test]
+fn totals_saturate_instead_of_overflowing() {
+  assert_eq!(total(&[1, 2, 3]), 6);
+  assert_eq!(total(&[u64::MAX, 5]), u64::MAX);
+  assert_eq!(total(&[]), 0);
 }

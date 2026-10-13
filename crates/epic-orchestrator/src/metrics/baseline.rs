@@ -9,7 +9,7 @@ use std::path::{Path, PathBuf};
 use serde_json::{Map, Value, json};
 use toolu_state::time::{epoch_millis, parse_iso};
 
-use crate::metrics::stats::{decimal, pct, share};
+use crate::metrics::stats::{self, decimal, pct, share};
 
 /// What `toolu epic baseline` was asked for.
 #[derive(Debug, Clone)]
@@ -146,8 +146,8 @@ fn history(status: &Value, finished: u64, path: &Path, group: &mut Group) -> Res
 }
 
 fn summary(group: &Group) -> Value {
-  let total: u64 = group.lead.iter().sum();
-  let phase_total: u64 = group.phases.values().sum();
+  let total = stats::total(&group.lead);
+  let phase_total = stats::total(group.phases.values());
   let phases: Map<String, Value> = group
     .phases
     .iter()

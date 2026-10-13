@@ -14,7 +14,7 @@ use crate::metrics::counts::Counts;
 use crate::metrics::github::GitHub;
 use crate::metrics::ready::Ready;
 use crate::metrics::scope::Scope;
-use crate::metrics::stats::{pct, share};
+use crate::metrics::stats::{self, pct, share};
 use crate::metrics::timeline::Timeline;
 
 #[derive(Default)]
@@ -68,7 +68,7 @@ fn push(fold: &mut Fold, scope: &Scope, query: &Query, record: &Record) {
 fn finish(fold: Fold, query: &Query) -> Value {
   let times = fold.timeline.finish(query.now_ms);
   let split = fold.ready.finish_all();
-  let total: u64 = times.phases.values().sum();
+  let total = stats::total(times.phases.values());
   let phases: Map<String, Value> = times
     .phases
     .iter()

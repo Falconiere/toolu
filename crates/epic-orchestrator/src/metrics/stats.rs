@@ -32,6 +32,13 @@ pub(crate) fn pct(values: &[u64]) -> Value {
   })
 }
 
+/// The sum of `values`, saturating instead of overflowing.
+pub(crate) fn total<'a>(values: impl IntoIterator<Item = &'a u64>) -> u64 {
+  values
+    .into_iter()
+    .fold(0, |sum, value| sum.saturating_add(*value))
+}
+
 /// `part / total` with four decimals, or `null` when `total` is 0.
 pub(crate) fn share(part: u64, total: u64) -> Value {
   if total == 0 {

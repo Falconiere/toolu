@@ -116,7 +116,7 @@ fn claude(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Valu
     last
       .values()
       .map(|usage| usage.get(field).and_then(Value::as_u64).unwrap_or(0))
-      .sum()
+      .fold(0, u64::saturating_add)
   };
   let tokens: serde_json::Map<String, Value> = CLAUDE_FIELDS
     .iter()
