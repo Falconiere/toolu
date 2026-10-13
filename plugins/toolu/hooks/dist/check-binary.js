@@ -177,7 +177,7 @@ var INSTALL_PATHS = [
   "/usr/local/bin/toolu",
   "/home/linuxbrew/.linuxbrew/bin/toolu"
 ];
-var PROBE_TIMEOUT_MS = 1000;
+var PROBE_TIMEOUT_MS = 1e4;
 function shellQuote(path) {
   return `'${path.replaceAll("'", "'\\''")}'`;
 }
@@ -234,7 +234,7 @@ function noticeName(sessionId) {
   }
   return hash.toString(16).padStart(16, "0");
 }
-function firstNotice(sessionId, env) {
+function firstScan(sessionId, env) {
   if (sessionId === undefined || sessionId === "")
     return true;
   const dir = join2(configRoot({ env }), "toolu", "native-notices");
@@ -251,12 +251,14 @@ function firstNotice(sessionId, env) {
 }
 function nativeTooluAdvice(options = {}) {
   const env = options.env ?? process.env;
+  if (!firstScan(options.sessionId, env))
+    return;
   const shell = shellToolu(env);
   if (shell !== undefined && native(shell, env))
     return;
   const known = knownToolu(env);
   const line = known === undefined ? `toolu: native binary not found in the agent command shell. Install it with: ${INSTALLER} or ${HOMEBREW}. Restart the session.` : `toolu: native binary for this session: ${shellQuote(known)}. Use that absolute path for toolu commands.`;
-  return firstNotice(options.sessionId, env) ? line : undefined;
+  return line;
 }
 function idFromInput(input, env) {
   try {

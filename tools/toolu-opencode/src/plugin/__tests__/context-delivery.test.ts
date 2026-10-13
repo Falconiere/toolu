@@ -93,7 +93,7 @@ function requireHook<T>(hook: T | undefined, name: string): T {
   return hook;
 }
 
-test("startup lines are appended once and the runtime notice stays on the log", async () => {
+test("native startup lines are appended once and the runtime notice reaches system and log", async () => {
   const root = await project();
   const logged: Logged[] = [];
   const hooks = await createTooluHooks(binding(root, logged));
@@ -106,7 +106,7 @@ test("startup lines are appended once and the runtime notice stays on the log", 
   expect(second.system[0]).toBe("keep-me");
   expect(first.system.filter((line) => line.includes("Session Protocol"))).toHaveLength(1);
   expect(second.system.some((line) => line.includes("Session Protocol"))).toBe(true);
-  expect(first.system.some((line) => line.includes("Toolu is on!"))).toBe(false);
+  expect(first.system.some((line) => line.includes("Toolu is on!"))).toBe(true);
   expect(
     logged.some((line) => line.level === "info" && line.message.includes("Toolu is on!")),
   ).toBe(true);

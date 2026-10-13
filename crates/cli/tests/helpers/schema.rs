@@ -105,8 +105,8 @@ fn a_wait_judgment_validates_and_an_unknown_state_does_not() {
 fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
-      "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev"
-      | "review" | "ast-grep" | "statusline" | "babysit" | "epic" | "plugins" => continue,
+      "hook" | "commands" | "doctor" | "ledger" | "debug" | "config" | "status" | "setup"
+      | "jev" | "review" | "ast-grep" | "statusline" | "babysit" | "epic" | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }

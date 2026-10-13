@@ -42,9 +42,9 @@ test.concurrent("CI workflow no longer runs the TypeScript gate", () => {
   expect(workflow).toContain("cargo xtask ci-aggregate tests.yml");
 });
 
-test.concurrent("root scripts keep the product suites and drop the TypeScript gate", () => {
+test.concurrent("root test alias runs the product suites and drops the TypeScript gate", () => {
   const scripts = rootPackage.scripts;
-  expect(scripts["test"]).toBeUndefined();
+  expect(scripts["test"]).toBe("bun run test:unit && bun run test:conformance");
   expect(scripts["test:ts"]).toBeUndefined();
   expect(scripts["test:unit"]).toBeTruthy();
   expect(scripts["test:conformance"]).toBeTruthy();

@@ -1,5 +1,14 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { cpSync, existsSync, mkdtempSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -44,7 +53,7 @@ function sandbox(): { home: string; config: string; bin: string; env: Record<str
 
 function stage(source: string, dir: string): string {
   const path = join(dir, "toolu");
-  cpSync(source, path);
+  symlinkSync(source, path);
   return path;
 }
 
@@ -71,7 +80,7 @@ test("native toolu first on the non-login shell PATH is silent and executable", 
   const run = spawnSync("/bin/sh", ["-c", "toolu --version"], { env: box.env });
   expect(run.status).toBe(0);
   expect(run.stdout.toString()).toStartWith("toolu ");
-});
+}, 20_000);
 
 test("~/.local/bin outside PATH is named once and the absolute path runs", () => {
   const box = sandbox();
@@ -86,6 +95,24 @@ test("~/.local/bin outside PATH is named once and the absolute path runs", () =>
   const run = spawnSync("/bin/sh", ["-c", `${quoted} --version`], { env: box.env });
   expect(run.status).toBe(0);
   expect(run.stdout.toString()).toStartWith("toolu ");
+}, 20_000);
+
+test("repeated SessionStart skips the native probe for the same session", () => {
+  const box = sandbox();
+  const probeFile = join(box.config, "probe-count");
+  const shellToolu = join(box.bin, "toolu");
+  writeFileSync(shellToolu, '#!/bin/sh\nprintf x >> "$TOOLU_TEST_PROBE_FILE"\n');
+  chmodSync(shellToolu, 0o755);
+  const env = {
+    ...box.env,
+    PATH: `${box.bin}:/usr/bin:/bin`,
+    TOOLU_BIN: binary,
+    TOOLU_TEST_PROBE_FILE: probeFile,
+  };
+  expect(nativeTooluAdvice({ env, sessionId: "one-scan" })).toContain(binary);
+  expect(readFileSync(probeFile, "utf8")).toBe("x");
+  expect(nativeTooluAdvice({ env, sessionId: "one-scan" })).toBeUndefined();
+  expect(readFileSync(probeFile, "utf8")).toBe("x");
 });
 
 test("no native binary emits one advisory with both install commands", () => {
@@ -109,7 +136,7 @@ test("two real plugin SessionStart bundles share one Codex notice", () => {
     "brew install falconiere/tap/toolu",
   );
   expect(second).toBe("");
-});
+}, 20_000);
 
 test("OpenCode bootstrap identity deduplicates plugin entries without stdin session_id", () => {
   const box = sandbox();
@@ -117,7 +144,7 @@ test("OpenCode bootstrap identity deduplicates plugin entries without stdin sess
   const input = { hook_event_name: "SessionStart", source: "startup" };
   expect(hook("jev", env, input)).toContain("additionalContext");
   expect(hook("pr-babysit", env, input)).toBe("");
-});
+}, 20_000);
 
 test("the real npm wrapper first on PATH is rejected in favor of a native absolute path", () => {
   const box = sandbox();
@@ -134,4 +161,4 @@ test("the real npm wrapper first on PATH is rejected in favor of a native absolu
   const shell = spawnSync("/bin/sh", ["-c", "command -v toolu"], { env: box.env });
   expect(shell.stdout.toString().trim()).toBe(join(box.bin, "toolu"));
   expect(dirname(path)).toBe(local);
-});
+}, 20_000);

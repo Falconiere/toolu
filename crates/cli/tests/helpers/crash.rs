@@ -1,5 +1,5 @@
 //! A binary that passes the signature check and then dies by a signal still
-//! blocks an enforcing event (AC-8).
+//! blocks an enforcing event (AC-8), without inferring the cause from status.
 
 use crate::sandbox::{Res, Run, STARTUP, Sandbox, script};
 
@@ -21,12 +21,54 @@ fn last_line(run: &Run) -> &str {
 fn an_abort_blocks_with_its_status() {
   let run = dies_by("ABRT", "PreToolUse").unwrap();
   assert_eq!(run.code, 2, "{run:?}");
-  assert!(last_line(&run).starts_with("blocked: toolu plugin: toolu ended with status 134"));
+  assert_eq!(
+    last_line(&run),
+    "blocked: toolu plugin: toolu ended with status 134, so the action is blocked. See docs/install.md."
+  );
 }
 
 #[test]
 fn a_segfault_blocks_with_its_status() {
   let run = dies_by("SEGV", "PermissionRequest").unwrap();
   assert_eq!(run.code, 2, "{run:?}");
-  assert!(last_line(&run).starts_with("blocked: toolu plugin: toolu ended with status 139"));
+  assert_eq!(
+    last_line(&run),
+    "blocked: toolu plugin: toolu ended with status 139, so the action is blocked. See docs/install.md."
+  );
+}
+
+#[test]
+fn a_noncontract_exit_blocks_with_its_status() {
+  let sandbox = Sandbox::new().unwrap();
+  script(
+    &sandbox.local_bin(),
+    "#!/bin/sh\nif [ \"$1\" = --hook-protocol ]; then echo 1; exit 0; fi\nexit 101\n",
+  )
+  .unwrap();
+  let run = sandbox
+    .launch("PreToolUse", "pre-tools", STARTUP, &[])
+    .unwrap();
+  assert_eq!(run.code, 2, "{run:?}");
+  assert_eq!(
+    last_line(&run),
+    "blocked: toolu plugin: toolu ended with status 101, so the action is blocked. See docs/install.md."
+  );
+}
+
+#[test]
+fn a_regular_exit_in_the_signal_shaped_range_reports_only_its_status() {
+  let sandbox = Sandbox::new().unwrap();
+  script(
+    &sandbox.local_bin(),
+    "#!/bin/sh\nif [ \"$1\" = --hook-protocol ]; then echo 1; exit 0; fi\nexit 130\n",
+  )
+  .unwrap();
+  let run = sandbox
+    .launch("PreToolUse", "pre-tools", STARTUP, &[])
+    .unwrap();
+  assert_eq!(run.code, 2, "{run:?}");
+  assert_eq!(
+    last_line(&run),
+    "blocked: toolu plugin: toolu ended with status 130, so the action is blocked. See docs/install.md."
+  );
 }

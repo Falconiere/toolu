@@ -36,6 +36,10 @@ const HooksFile = z.looseObject({
 
 const LAUNCHED_BUNDLE = /"\$\{CLAUDE_PLUGIN_ROOT\}\/hooks\/dist\/([a-z0-9-]+)\.js"/u;
 const NATIVE_TEMPLATE = readFileSync(join(import.meta.dir, "native-launcher.txt"), "utf8");
+const NATIVE_LEAF_TEMPLATE = readFileSync(
+  join(import.meta.dir, "native-launcher-leaf.txt"),
+  "utf8",
+);
 const NATIVE_NAME = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 
 /** Only the #412 generated command is executable; its target fields may vary. */
@@ -43,13 +47,15 @@ function nativeEntry(command: string, plugin: string, event: HookEventName): str
   const bundle = LAUNCHED_BUNDLE.exec(command)?.[1];
   if (bundle === undefined || !NATIVE_NAME.test(plugin) || !NATIVE_NAME.test(bundle))
     return undefined;
-  const prefix = plugin === "toolu" ? "" : `${plugin} `;
-  const expected = NATIVE_TEMPLATE.replace(
-    "hook session-start --event SessionStart",
-    `${prefix}hook ${bundle} --event ${event}`,
+  const source = plugin === "toolu" ? "hook session-start" : "statusline hook session-start";
+  const target = plugin === "toolu" ? `hook ${bundle}` : `${plugin} hook ${bundle}`;
+  const template = plugin === "toolu" ? NATIVE_TEMPLATE : NATIVE_LEAF_TEMPLATE;
+  const expected = template.replace(
+    `${source} --event SessionStart`,
+    `${target} --event ${event}`,
   )
     .replaceAll("hooks/dist/session-start.js", `hooks/dist/${bundle}.js`)
-    .replaceAll("toolu plugin:", `${plugin} plugin:`);
+    .replaceAll(`${plugin === "toolu" ? "toolu" : "statusline"} plugin:`, `${plugin} plugin:`);
   return command === expected ? bundle : undefined;
 }
 

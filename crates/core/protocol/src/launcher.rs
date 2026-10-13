@@ -88,9 +88,8 @@ fn command(target: &Target<'_>) -> String {
     (
       format!(
         "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; \
-         printf '%s\\n' \"blocked: {} plugin: toolu ended with status $s, so the action is \
-         blocked. See docs/install.md.\" >&2; exit 2; fi",
-        target.plugin
+         {}; exit 2; fi",
+        abnormal_status(target.plugin)
       ),
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
@@ -100,8 +99,33 @@ fn command(target: &Target<'_>) -> String {
       format!("printf '%s\\n' '{{\"systemMessage\":\"{missing}\"}}'; exit 0"),
     )
   };
+  let (lookup, fallback_guard) = native_lookup(target, &found);
   [
     "t=".to_owned(),
+    lookup,
+    format!(
+      "if {fallback_guard}; then b=; for c in \"$TOOLU_BUN\" \
+       \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && \
+       [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ] && \
+       [ -f {bundle} ]; then {}; exec \"$b\" {bundle}; fi; fi",
+      fallback_notice(target)
+    ),
+    absent,
+  ]
+  .join("; ")
+}
+
+/// Report only the observed shell status; it cannot identify a signal reliably.
+fn abnormal_status(plugin: &str) -> String {
+  format!(
+    "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
+     blocked. See docs/install.md.\" >&2"
+  )
+}
+
+/// Find a native binary unless toolu's transition rollback selects Bun.
+fn native_lookup(target: &Target<'_>, found: &str) -> (String, &'static str) {
+  let lookup = [
     format!(
       "if [ -n \"$TOOLU_BIN\" ]; then set -- \"$TOOLU_BIN\"; else set -- {INSTALL_DIRS} \
        \"$(command -v toolu 2>/dev/null)\"; fi"
@@ -111,17 +135,30 @@ fn command(target: &Target<'_>) -> String {
        case $(\"$c\" {MARKER} 2>/dev/null </dev/null) in ''|*[!0-9]*) ;; *) t=$c; break;; \
        esac; fi; done"
     ),
-    found,
-    format!(
-      "if [ -z \"$TOOLU_BIN\" ]; then b=; for c in \"$TOOLU_BUN\" \
-       \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && \
-       [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ] && \
-       [ -f {bundle} ]; then printf '%s\\n' '{}' >&2; exec \"$b\" {bundle}; fi; fi",
-      fallback_advisory(target.plugin)
-    ),
-    absent,
+    found.to_owned(),
   ]
-  .join("; ")
+  .join("; ");
+  if target.plugin == "toolu" {
+    (
+      format!("if [ \"$TOOLU_RUNTIME\" != bun ]; then {lookup}; fi"),
+      "[ \"$TOOLU_RUNTIME\" = bun ] || [ -z \"$TOOLU_BIN\" ]",
+    )
+  } else {
+    (lookup, "[ -z \"$TOOLU_BIN\" ]")
+  }
+}
+
+fn fallback_notice(target: &Target<'_>) -> String {
+  let missing = format!("printf '%s\\n' '{}' >&2", fallback_advisory(target.plugin));
+  if target.plugin == "toolu" {
+    format!(
+      "if [ \"$TOOLU_RUNTIME\" = bun ]; then printf '%s\\n' \
+       'toolu plugin: TOOLU_RUNTIME=bun selected the transition Bun bundle.' >&2; \
+       else {missing}; fi"
+    )
+  } else {
+    missing
+  }
 }
 
 fn command_windows(target: &Target<'_>) -> String {

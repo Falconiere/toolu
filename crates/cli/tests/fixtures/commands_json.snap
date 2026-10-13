@@ -244,25 +244,121 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
-      "about": "Debugging helpers: I/O capture, logs, stacks and failing tests",
+      "about": "Count or summarize logs, stacks and failing tests",
       "aliases": [],
       "args": [],
       "commands": [
         {
-          "about": "Not ported yet (#425): show the planned verbs",
+          "about": "Count input bytes and lines",
           "aliases": [],
           "args": [],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read a file instead of standard input",
+              "hidden": false,
+              "long": "file",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
           "hidden": false,
           "longAbout": null,
-          "name": "planned",
+          "name": "io",
           "owner": "toolu",
           "path": [
             "debug",
-            "planned"
+            "io"
           ],
-          "placeholder": true
+          "placeholder": false
+        },
+        {
+          "about": "Summarize error lines and a log tail",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read a file instead of standard input",
+              "hidden": false,
+              "long": "file",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "log",
+          "owner": "toolu",
+          "path": [
+            "debug",
+            "log"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Show app frames and collapse runtime frames",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read a file instead of standard input",
+              "hidden": false,
+              "long": "file",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "stack",
+          "owner": "toolu",
+          "path": [
+            "debug",
+            "stack"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Summarize failed tests, errors and locations",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read a file instead of standard input",
+              "hidden": false,
+              "long": "file",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "testfail",
+          "owner": "toolu",
+          "path": [
+            "debug",
+            "testfail"
+          ],
+          "placeholder": false
         }
       ],
       "flags": [],

@@ -221,7 +221,7 @@ async function nativeContext(ctx: EntryContext): Promise<EntryResult> {
     const executable = join(catalog, "native-toolu");
     writeFileSync(
       executable,
-      '#!/bin/sh\nif [ "$1" = "--hook-protocol" ]; then printf "1\\n"; exit 0; fi\nif [ "$1" = "hook" ] && [ "$2" = "session-start" ]; then printf \'%s\\n\' \'{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"native launcher context reached OpenCode"}}\'; exit 0; fi\nexit 3\n',
+      '#!/bin/sh\nif [ "$1" = "--hook-protocol" ]; then printf "1\\n"; exit 0; fi\nif [ "$1" = "hook" ] && [ "$2" = "session-start" ]; then printf \'%s\\n\' \'{"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":"native launcher context reached OpenCode"}}\'; exit 0; fi\nif [ "$1" = "hook" ]; then exit 0; fi\nexit 3\n',
     );
     chmodSync(executable, 0o755);
     using s = shimmedSession(ctx, ["toolu"], ALLOWED_SCRIPT, catalog);
@@ -246,7 +246,7 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
     s.env.TOOLU_BIN = s.outside("missing-toolu");
     const hostRun = await runHost(ctx.bin, s, ["--print-logs", "PROBE:startup.touch"]);
     const context = messagesText(s, "system");
-    const installNotice = "toolu plugin: toolu is not installed";
+    const installNotice = "toolu plugin: no usable native toolu";
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
@@ -264,7 +264,8 @@ async function nativeMissingBinary(ctx: EntryContext): Promise<EntryResult> {
         observed.homebrew &&
         observed.restart &&
         observed.modelCopies === 1 &&
-        observed.hostLogCopies === 1,
+        // The core plugin now invokes multiple native hooks in this session.
+        observed.hostLogCopies === 3,
       observed,
     };
   });
@@ -286,7 +287,7 @@ async function nativeStatuslineMissingBinary(ctx: EntryContext): Promise<EntryRe
     const observed = {
       hostExit: hostRun.exitCode,
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
-      installNotice: context.includes("statusline plugin: toolu is not installed"),
+      installNotice: context.includes("statusline plugin: no usable native toolu"),
       installer: context.includes("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
       helperAbsent: !existsSync(helper),
     };

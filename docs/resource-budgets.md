@@ -6,7 +6,10 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 
 | Budget | Number | Measured from | How it is measured | Owner |
 |---|---|---|---|---|
-| `toolu hook pre-tools` | ≤ 6 MiB max RSS, ≤ 5 ms CPU (p50) | prototype: 3.6 MiB, 2.5 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
+| `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms | `bun run bench:hooks --assert`, per hook spawn | #425 |
+| `toolu hook check-binary` | ≤ 7 MiB max RSS, ≤ 3 ms CPU (p50) | Linux CI: 4.4 MiB, 2.0 ms | as above | #425 |
+| `toolu hook mcp-tools` | ≤ 7 MiB max RSS, ≤ 2 ms CPU (p50) | Linux CI: 4.4 MiB, 1.3 ms | as above | #425 |
+| `toolu hook pre-tools` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 6.1 MiB, 1.7 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
 | `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `bun run bench:hooks`, release `toolu`, `sh` launcher included | #424 |
 | `toolu hook session-start` | ≤ 8 MiB max RSS, ≤ 43 ms CPU (p50) | native: 4.8 MiB, 33.8 ms | as above | #424 |
@@ -24,7 +27,7 @@ The status-server check is `cargo test -p toolu-epic-orchestrator --test status_
 
 ## Where the numbers come from
 
-The hook rows come from `benchmarks/results/hook-prototype-2026-10-05.json`. The prototype was a single `toolu` binary with the planned shape:
+The original pre/post hook rows come from `benchmarks/results/hook-prototype-2026-10-05.json`. The prototype was a single `toolu` binary with the planned shape:
 
 - a clap tree for every namespace;
 - ureq and rustls linked;
@@ -34,6 +37,10 @@ The hook rows come from `benchmarks/results/hook-prototype-2026-10-05.json`. The
 - a `toolu hook` fast path.
 
 It was built out of tree, because Rust outside a workspace member fails `cargo xtask check-reach`. The result file records its exact shape and dependency versions.
+
+The three hook budgets introduced with #425 use the measured Linux CI run in `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json`, with RSS at p50 × 1.5 and CPU at p50 × 1.25, each rounded up. Existing budgets are unchanged.
+
+Pre-tools was recalibrated from `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-13.json` after the merged binary outgrew the prototype (6.1 MiB p50 against a 6 MiB budget): RSS is the rule applied to the new run — min(epic start 8 MiB, p50 × 1.5 rounded up) — and CPU keeps the epic 5 ms.
 
 Rule:
 
@@ -54,7 +61,7 @@ A budget changes only together with a new measurement committed under `benchmark
 `bun run bench:hooks` (`tooling/src/benchmarks/hook-resources.ts`) does the following:
 
 1. Discovers every entry that `plugins/*/hooks/hooks.json` launches.
-2. Runs each one with its fixed payload from `benchmarks/cases/hooks/payloads.json`. The sandbox is a git project with toolu and the four registry plugins installed, and their `register` hooks run once. That is the fixed registry fixture.
+2. Runs each one with its fixed payload from `benchmarks/cases/hooks/payloads.json`. The sandbox is a git project with toolu and the four registry plugins installed, and their `register` hooks run once. For the asserted `toolu/post-tools` core budget only, a second real git sandbox has toolu alone installed: the budget excludes other plugins' external quality linters and their temporary Bun bridge. The unasserted report still measures the full registry fixture.
 3. Spawns each entry `--warmup` times (default 2), then `--runs` times (default 10), one at a time.
 4. Reports p50 and p90 of max RSS, CPU (user + sys, children included) and wall per entry.
 

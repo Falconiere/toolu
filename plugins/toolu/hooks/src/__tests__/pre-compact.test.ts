@@ -6,10 +6,10 @@
 import { expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { launcherHook } from "@toolu/core/launcher";
 import { entryArgv } from "@toolu/conformance/harness/entry-command";
 import { createSandbox } from "@toolu/conformance/harness/sandbox";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
+import { hookCommand } from "@toolu/conformance/harness/startup";
 import { PLUGIN } from "./lifecycle-cases.ts";
 
 function preCompactArgv(): string[] {
@@ -30,6 +30,11 @@ function env(home: string, extra: EnvPatch = {}): EnvPatch {
   };
 }
 
+const NATIVE_HOOK = {
+  type: "command",
+  command: hookCommand(PLUGIN, "PreCompact", "pre-compact"),
+};
+
 test("hooks.json runs the launcher on auto compaction", async () => {
   const hooks: unknown = await Bun.file(join(PLUGIN, "hooks", "hooks.json")).json();
   expect(hooks).toMatchObject({
@@ -37,7 +42,7 @@ test("hooks.json runs the launcher on auto compaction", async () => {
       PreCompact: [
         {
           matcher: "auto",
-          hooks: [launcherHook({ plugin: "toolu", event: "PreCompact", entry: "pre-compact" })],
+          hooks: [NATIVE_HOOK],
         },
       ],
     },

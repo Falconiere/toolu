@@ -112,12 +112,12 @@ fn bun_running_a_script_is_a_reference_unless_a_path_pattern_caught_it() {
 }
 
 #[test]
-fn a_reference_fails_only_once_its_namespace_is_ported() {
+fn a_reference_fails_once_its_namespace_is_ported() {
   let real = tree();
-  assert_eq!(problem(&real, "debug-report", "toolu"), None);
-  let message = problem(&ported("debug"), "debug-report", "toolu").unwrap();
+  let message = problem(&real, "debug-report", "toolu").unwrap();
   assert!(message.contains("`toolu debug` is ported"), "{message}");
-  assert_eq!(problem(&ported("epic"), "debug-report", "toolu"), None);
+  let epic = problem(&real, "launch-issue", "epic-orchestrator").unwrap();
+  assert!(epic.contains("`toolu epic` is ported"), "{epic}");
   let babysit = problem(&real, "babysit-tick", "pr-babysit").unwrap();
   assert!(babysit.contains("`toolu babysit` is ported"), "{babysit}");
   let ledger = problem(&real, "plan-ledger", "delivery-flow").unwrap();
@@ -126,7 +126,7 @@ fn a_reference_fails_only_once_its_namespace_is_ported() {
 
 #[test]
 fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
-  // toolu still owns placeholder namespaces (`debug`, `serve`), so its unmapped stems stand.
+  // toolu still owns a placeholder namespace (`serve`), so its unmapped stems stand.
   assert_eq!(problem(&tree(), "anything", "toolu"), None);
   let mut all = tree();
   for namespace in ["debug", "serve"] {

@@ -17,10 +17,10 @@ pub const BREW_UPGRADE: &str = "brew upgrade toolu";
 /// What a plugin hook says when no native `toolu` was found.
 pub fn missing_message(plugin: &str) -> String {
   format!(
-    "{plugin} plugin: toolu is not installed - checked TOOLU_BIN, /opt/homebrew/bin, \
-     /usr/local/bin, /home/linuxbrew/.linuxbrew/bin, ~/.local/bin and PATH, and a TOOLU_BIN \
-     that is not a native toolu is never replaced. Install it with: {INSTALLER}, or: \
-     {BREW_INSTALL}. Then restart the session. See docs/install.md."
+    "{plugin} plugin: no usable native toolu - checked TOOLU_BIN, /opt/homebrew/bin, \
+     /usr/local/bin, /home/linuxbrew/.linuxbrew/bin, ~/.local/bin and PATH. If TOOLU_BIN is set, \
+     it must point to a native toolu and is never replaced. Install toolu with: {INSTALLER}, \
+     or: {BREW_INSTALL}. Then restart the session. See docs/install.md."
   )
 }
 

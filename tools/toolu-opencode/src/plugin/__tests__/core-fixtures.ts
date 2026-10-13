@@ -33,14 +33,13 @@ export function writeStateCommand(findings: number): string {
     .trim();
 }
 
-/** The generated debug skill's pipe from `bun test` into its test-failure collector. */
+/** Run a real failing Bun test through the collector named by the generated skill. */
 export function debugTestfailCommand(): string {
-  const hit =
-    /`(bun test 2>&1 \| bun "\$TOOLU_PLUGIN_ROOT_TOOLU\/scripts\/debug-testfail\.ts")`/.exec(
-      generatedSkill("toolu-debug"),
-    );
-  if (hit?.[1] === undefined) throw new Error("no bun test pipe in toolu-debug");
-  return hit[1];
+  const skill = generatedSkill("toolu-debug");
+  if (!skill.includes("`toolu debug testfail`")) {
+    throw new Error("no native test-failure collector in toolu-debug");
+  }
+  return "bun test 2>&1 | toolu debug testfail";
 }
 
 /**

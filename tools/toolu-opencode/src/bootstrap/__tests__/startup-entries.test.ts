@@ -228,6 +228,7 @@ test.concurrent("prompt and compaction entries come from the real launchers", ()
       {
         name: "user-prompt-submit",
         bundle: join(toolu, "hooks", "dist", "user-prompt-submit.js"),
+         command: expect.stringContaining("--hook-protocol"),
       },
     ],
   });

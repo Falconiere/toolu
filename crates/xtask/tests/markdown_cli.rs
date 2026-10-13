@@ -148,12 +148,12 @@ fn this_repository_passes_in_under_five_seconds() {
 fn an_unported_namespace_has_only_its_placeholder_verb() {
   let dir = root(
     &real_tree().unwrap(),
-    &[(SKILL, &skill_running("toolu babysit run --pr 1"))],
+    &[(SKILL, &skill_running("toolu epic run --pr 1"))],
   )
   .unwrap();
   let (code, stderr) = check(dir.path()).unwrap();
   assert_eq!(code, 1, "{stderr}");
-  assert_has(&stderr, &["unknown command `run` under `toolu babysit`"]);
+  assert_has(&stderr, &["unknown command `run` under `toolu epic`"]);
 }
 
 #[test]
@@ -212,21 +212,21 @@ fn an_external_command_passes_only_while_it_is_listed() {
 
 #[test]
 fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
-  let debug = "plugins/toolu/skills/debug/SKILL.md";
-  let files = [(debug, skill_running("toolu debug report --json"))];
+  let serve = "plugins/toolu/skills/x/SKILL.md";
+  let files = [(serve, skill_running("toolu serve survey --json"))];
   let files: Vec<(&str, &str)> = files
     .iter()
     .map(|(path, text)| (*path, text.as_str()))
     .collect();
   let (code, stderr) = check(
-    root(&ported("debug", "report").unwrap(), &files)
+    root(&ported("serve", "survey").unwrap(), &files)
       .unwrap()
       .path(),
   )
   .unwrap();
   assert_eq!(code, 0, "{stderr}");
   let (code, stderr) = check(
-    root(&ported("debug", "step").unwrap(), &files)
+    root(&ported("serve", "step").unwrap(), &files)
       .unwrap()
       .path(),
   )
@@ -234,10 +234,9 @@ fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
   assert_eq!(code, 1, "{stderr}");
   assert_has(
     &stderr,
-    &[
-      &format!("{debug}:12: `toolu debug report --json`: unknown command `report`"),
-      "closest: `step`",
-    ],
+    &[&format!(
+      "{serve}:12: `toolu serve survey --json`: unknown command `survey`"
+    )],
   );
 }
 

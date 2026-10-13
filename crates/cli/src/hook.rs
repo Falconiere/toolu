@@ -23,6 +23,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
+use toolu_runtime::startup::native_toolu_advice;
 
 use crate::fast::HookRequest;
 use crate::{Context, VERSION};
@@ -124,6 +125,9 @@ fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
     return None;
   }
   let name = call.request.name.as_str();
+  if name == "check-binary" {
+    return Some(check_binary(call));
+  }
   if !matches!(name, "session-start" | "user-prompt-submit" | "pre-compact") {
     return None;
   }
@@ -136,6 +140,23 @@ fn toolu_hook(call: &HookCall<'_>) -> Option<Outcome> {
     "user-prompt-submit" => run_prompt(call, &cwd),
     _ => run_compact(call, &cwd),
   })
+}
+
+/// The former second `SessionStart` entry, now using the shared native notice.
+fn check_binary(call: &HookCall<'_>) -> Outcome {
+  let session_id = (call.stdin)()
+    .ok()
+    .and_then(|payload| serde_json::from_str::<serde_json::Value>(&payload).ok())
+    .and_then(|payload| payload.get("session_id")?.as_str().map(str::to_owned));
+  let session_id = session_id
+    .as_deref()
+    .filter(|id| !id.is_empty())
+    .or_else(|| call.env.get("TOOLU_SESSION_ID"));
+  Outcome {
+    exit: Exit::Success,
+    stdout: native_toolu_advice(call.env, session_id).map(|line| system_message(&line)),
+    stderr: None,
+  }
 }
 
 /// An unreadable working directory: the hook does not run, so it cannot guess

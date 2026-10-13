@@ -112,7 +112,9 @@ async function debugSummary(sb: Sandbox, repoRootOption: string): Promise<string
   let stdout = "";
   await withHooks({ ...binding(sb, [], ""), repoRootOption }, async (hooks) => {
     sb.write("math.test.ts", FAILING_TEST);
-    const res = await inShell(sb, debugTestfailCommand(), await bashEnv(hooks, sb));
+    const env = await bashEnv(hooks, sb);
+    env.PATH = `${NATIVE_BIN}:${env.PATH ?? ""}`;
+    const res = await inShell(sb, debugTestfailCommand(), env);
     expect(res).toMatchObject({ exitCode: 0, stderr: "" });
     stdout = res.stdout;
   });

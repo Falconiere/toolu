@@ -16,15 +16,20 @@ const FILES = {
 };
 
 /** Create the bench sandbox; the caller disposes of it. */
-export async function benchSandbox(): Promise<Sandbox> {
+export async function benchSandbox(registryPlugins = true): Promise<Sandbox> {
   const sb = createSandbox({ git: true, files: FILES });
   try {
     // No detached gc/maintenance writing into `.git` while hooks are measured.
     sb.git("config", "maintenance.auto", "false");
     sb.git("config", "gc.auto", "0");
-    installPlugins(sb, "toolu@toolu", ...REGISTRY_PLUGINS.map((plugin) => `${plugin}@toolu`));
+    installPlugins(
+      sb,
+      "toolu@toolu",
+      ...(registryPlugins ? REGISTRY_PLUGINS.map((plugin) => `${plugin}@toolu`) : []),
+    );
     // One after another: register hooks write the same registry directory.
-    await inSequence(REGISTRY_PLUGINS, (plugin) => registerPlugin(sb, "claude", plugin));
+    if (registryPlugins)
+      await inSequence(REGISTRY_PLUGINS, (plugin) => registerPlugin(sb, "claude", plugin));
     return sb;
   } catch (error) {
     sb[Symbol.dispose]();

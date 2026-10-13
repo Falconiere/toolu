@@ -1,12 +1,12 @@
 /**
- * The hook budgets follow from the committed prototype measurement by the rule
- * in docs/resource-budgets.md (#410 AC-7), and the doc states the same numbers.
+ * The hook budgets follow from committed measurements by the rule in
+ * docs/resource-budgets.md (#410 AC-7), and the doc states the same numbers.
  */
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { Budgets, loadJson } from "../lib/hook-data.ts";
+import { Budgets, HookResult, loadJson } from "../lib/hook-data.ts";
 import { MIB } from "../lib/hook-report.ts";
 
 const ROOT = resolve(import.meta.dir, "../../../..");
@@ -26,9 +26,8 @@ const Prototype = z.looseObject({
   }),
 });
 
-/** The epic's starting budgets, which the prototype measurement refines. */
+/** The epic's starting budgets still refined by the prototype measurement. */
 const START: Record<string, { maxRssMiB: number; cpuMs: number }> = {
-  "toolu/pre-tools": { maxRssMiB: 8, cpuMs: 5 },
   "toolu/post-tools": { maxRssMiB: 10, cpuMs: 10 },
 };
 
@@ -40,6 +39,27 @@ function rule(start: number, measured: number, tighten: boolean): number {
 
 const proto = loadJson(join(ROOT, "benchmarks/results/hook-prototype-2026-10-05.json"), Prototype);
 const budgets = loadJson(join(ROOT, "benchmarks/hook-budgets.json"), Budgets);
+const native = loadJson(
+  join(ROOT, "benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json"),
+  HookResult,
+);
+const recalibrated = loadJson(
+  join(ROOT, "benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-13.json"),
+  HookResult,
+);
+
+test("newly ported hook budgets follow the measured Linux CI run", () => {
+  expect(native.provenance).toMatchObject({ platform: "linux", runner: "github-actions" });
+  for (const id of ["toolu/agent-tier", "toolu/check-binary", "toolu/mcp-tools"]) {
+    const measured = native.entries.find((entry) => entry.entry === id);
+    expect(measured, id).toBeDefined();
+    if (measured === undefined) continue;
+    expect(budgets.entries[id], id).toEqual({
+      maxRssMiB: Math.ceil((measured.maxRssBytes.p50 / MIB) * 1.5),
+      cpuMs: Math.ceil((measured.cpuUs.p50 / 1000) * 1.25),
+    });
+  }
+});
 
 test("every prototype hook budget is the rule applied to the prototype's p50", () => {
   for (const id of Object.keys(START)) expect(budgets.entries[id], id).toBeDefined();
@@ -52,6 +72,18 @@ test("every prototype hook budget is the rule applied to the prototype's p50", (
       cpuMs: rule(start.cpuMs, measured.cpuUs.p50 / 1000, false),
     });
   }
+});
+
+test("the recalibrated pre-tools budget is the rule applied to the merged-tree run", () => {
+  expect(recalibrated.provenance).toMatchObject({ platform: "linux", runner: "github-actions" });
+  const measured = recalibrated.entries.find((entry) => entry.entry === "toolu/pre-tools");
+  expect(measured, "toolu/pre-tools").toBeDefined();
+  if (measured === undefined) return;
+  // The epic's starting budgets for pre-tools; the merged binary outgrew the prototype.
+  expect(budgets.entries["toolu/pre-tools"], "toolu/pre-tools").toEqual({
+    maxRssMiB: rule(8, measured.maxRssBytes.p50 / MIB, true),
+    cpuMs: rule(5, measured.cpuUs.p50 / 1000, false),
+  });
 });
 
 test("the fast path is what the budgets were measured with, and it is cheaper", () => {

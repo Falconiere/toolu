@@ -1,22 +1,17 @@
-use std::path::PathBuf;
-
 use serde_json::Value;
 
 use super::launch;
 
-fn repo() -> PathBuf {
-  PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
+/// The `@toolu/core/launcher` pair for toolu's old Bun entry: no committed
+/// entry uses the Bun launcher anymore, so the golden pins the contract.
+const GOLDEN: &str = include_str!("fixtures/bun-session-start.json");
 
 #[test]
-fn a_session_start_command_matches_the_committed_entry() {
-  let path = repo().join("plugins/toolu/hooks/hooks.json");
-  let text = std::fs::read_to_string(&path).unwrap();
-  let json: Value = serde_json::from_str(&text).unwrap();
-  let hook = &json["hooks"]["SessionStart"][0]["hooks"][0];
+fn a_session_start_command_matches_the_bun_launcher_golden() {
+  let golden: Value = serde_json::from_str(GOLDEN).unwrap();
   let built = launch("toolu", "SessionStart", "session-start").unwrap();
-  assert_eq!(built.command, hook["command"].as_str().unwrap());
-  assert_eq!(built.windows, hook["commandWindows"].as_str().unwrap());
+  assert_eq!(built.command, golden["command"].as_str().unwrap());
+  assert_eq!(built.windows, golden["commandWindows"].as_str().unwrap());
 }
 
 #[test]

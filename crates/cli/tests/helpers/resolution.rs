@@ -25,7 +25,12 @@ fn a_non_executable_toolu_bin_fails_closed_even_with_a_valid_install() {
   assert!(
     run
       .stderr
-      .starts_with("blocked: toolu plugin: toolu is not installed")
+      .starts_with("blocked: toolu plugin: no usable native toolu")
+  );
+  assert!(
+    run
+      .stderr
+      .contains("If TOOLU_BIN is set, it must point to a native toolu")
   );
   let context = sandbox
     .launch("SessionStart", "session-start", STARTUP, &extra)
@@ -34,7 +39,12 @@ fn a_non_executable_toolu_bin_fails_closed_even_with_a_valid_install() {
   assert!(
     system_message(&context)
       .unwrap()
-      .starts_with("toolu plugin: toolu is not installed")
+      .starts_with("toolu plugin: no usable native toolu")
+  );
+  assert!(
+    system_message(&context)
+      .unwrap()
+      .contains("If TOOLU_BIN is set, it must point to a native toolu")
   );
 }
 
