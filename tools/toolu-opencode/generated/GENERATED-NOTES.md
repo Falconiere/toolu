@@ -46,4 +46,4 @@ The OpenCode adapter's `shell.env` hook gives every bash call these variables (s
 
 ## Literal `.claude` references (not rewritten)
 
-- `~/.claude/epics/<owner>-<repo>-<n>/`, Codex: `$CODEX_HOME/toolu/epics/…`,
+- (none in scanned bodies)

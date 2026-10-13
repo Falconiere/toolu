@@ -312,6 +312,10 @@ with this explanation and writes nothing. Do not edit Codex profiles from here.`
       "- Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,\n  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as\n  herdr agents and need those plugins installed in every host in `--hosts`\n  (`toolu plugins install delivery-flow --host codex`, and so on).",
       `- These load through the \`skill\` tool: ${skill("delivery-flow-delivery-flow")},\n  ${skill("brainstorm-brainstorm")}, ${REVIEW} and ${BABYSIT}. Workers run as\n  herdr agents and need those plugins installed and enabled in every host in \`--hosts\`.`,
     ],
+    [
+      "- **Claude Code:** run `toolu --json epic wait` as a background Bash call\n  (`run_in_background: true`) and end your turn. Its completion wakes you;\n  handle the judgment, then start the next background wait. Keep exactly one\n  wait running; if the user speaks meanwhile, answer and keep it.\n- **Codex and OpenCode:** one tool call cannot block for hours, so loop:\n  run",
+      "- **OpenCode:** one tool call cannot block for hours, so loop:\n  run",
+    ],
   ],
   [`${EPIC}/references/worker-brief.md`]: [
     [

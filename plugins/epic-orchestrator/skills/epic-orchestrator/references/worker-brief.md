@@ -70,9 +70,9 @@ Report each phase as you enter it — the orchestrator's only view of progress.
    summary and verification evidence. Verify its number and head/base branches;
    `report pr-open --pr <number>`.
 4. **Babysit.** When the skill reaches its {{BABYSIT}} handoff, run
-   `report babysit --pr <number>` instead and stop: end your turn and stay
-   idle. Do not start {{BABYSIT}}, a cron or a polling loop. The engine checks
-   your PR every 3 minutes and prompts you only when something needs you.
+   `report babysit --pr <number>` instead and stop; stay idle. Do not start
+   {{BABYSIT}}, a cron or a polling loop. The engine checks your PR every 3
+   minutes and prompts you only when something needs you.
 5. **When prompted.** A tick result starts with
    `pr-babysit: <repo>#<n> needs you (...)` and lists the items. Act on them
    with the `toolu babysit` commands it names (reply, resolve, record; the
