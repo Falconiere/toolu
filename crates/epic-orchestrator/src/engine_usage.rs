@@ -16,7 +16,7 @@ const SAMPLE_MS: u64 = 15 * 60 * 1000;
 /// # Errors
 /// `getrusage` or the journal fails.
 pub(crate) fn sample(engine: &mut Engine, event: &str) -> Result<(), String> {
-  let usage = self_usage()?;
+  let usage = self_usage().map_err(|err| format!("engine-usage: {err}"))?;
   let note = json!({"event": event, "max_rss_bytes": usage.max_rss_bytes, "cpu_ms": usage.cpu_ms});
   let record = Record::new("action", "engine-usage", "", "", &note.to_string());
   journal::append(

@@ -105,7 +105,7 @@ fn issue(
   };
   group.epics.insert(name.to_owned());
   group.lead.push(finished.saturating_sub(launched));
-  if record.get("launches").and_then(Value::as_u64).unwrap_or(1) > 1 {
+  if record.get("launches").and_then(Value::as_u64).unwrap_or(0) > 1 {
     group.relaunched = group.relaunched.saturating_add(1);
   }
   let status = epic
