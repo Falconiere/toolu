@@ -27,6 +27,8 @@ The rule runs inside the core toolu dispatcher only while this plugin is install
 
 ## OpenCode
 
+OpenCode support is withdrawn. The notes below are not a supported install path.
+
 Add `ts-quality` to the project selection and restart OpenCode:
 
 ```json

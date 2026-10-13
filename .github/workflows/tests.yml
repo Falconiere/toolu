@@ -31,7 +31,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     outputs:
-      opencode: ${{ steps.groups.outputs.opencode }}
       docs: ${{ steps.groups.outputs.docs }}
       rust: ${{ steps.groups.outputs.rust }}
       ports: ${{ steps.groups.outputs.ports }}
@@ -51,76 +50,6 @@ jobs:
       - name: Classify the changed paths
         id: groups
         run: cargo xtask ci-changes
-
-  # Real OpenCode acceptance (#362): the pinned opencode-ai host runs every
-  # catalog plugin's checks in isolated profiles against a scripted loopback
-  # model, on both declared platforms. A missing host, tool or Chromium fails
-  # the run; nothing is skipped. The report is uploaded even on failure.
-  opencode:
-    name: opencode (${{ matrix.os }})
-    needs: changes
-    if: needs.changes.outputs.opencode == 'true'
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      - name: Install jq
-        if: runner.os == 'Linux'
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-
-      # ast-grep backs the ast-grep plugin's checks.
-      - name: Install acceptance tools
-        run: |
-          set -euo pipefail
-          npm install -g @ast-grep/cli
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Install the pinned toolchain
-        run: rustup toolchain install
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Build toolu
-        run: cargo build -p toolu-cli
-
-      # The pinned CLI and the host's package caches; the run still checks the
-      # cached binary's version against tools/toolu-opencode/contract/pin.json.
-      - name: Cache the pinned OpenCode host
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/toolu/opencode-host
-          key: opencode-host-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tools/toolu-opencode/contract/pin.json') }}
-
-      - name: OpenCode acceptance
-        run: |
-          set -euo pipefail
-          export PATH="$PWD/target/debug:$PATH"
-          bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"
-
-      - name: Upload the acceptance report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: opencode-acceptance-${{ matrix.os }}
-          path: ${{ runner.temp }}/opencode-acceptance.json
-          if-no-files-found: warn
 
   # The documentation checks a docs-only change needs, without the whole gate.
   docs:
@@ -476,7 +405,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   gate:
     name: gate
-    needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -499,7 +428,7 @@ jobs:
   # `gate` until the repository setting is migrated to the new check name.
   typescript:
     name: typescript
-    needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

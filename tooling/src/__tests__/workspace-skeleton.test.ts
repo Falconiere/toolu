@@ -58,7 +58,7 @@ test.concurrent("root scripts keep the product suites and drop the TypeScript ga
 test.concurrent("CI runs the Rust gate without retired shell jobs", () => {
   const workflow = readText(".github/workflows/tests.yml");
   const needs =
-    "needs: [changes, opencode, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]";
+    "needs: [changes, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]";
   expect(workflow).toContain(`  gate:\n    name: gate\n    ${needs}`);
   expect(workflow).toContain(`  typescript:\n    name: typescript\n    ${needs}`);
   expect(workflow).not.toMatch(/^  shellcheck:/m);
@@ -95,13 +95,15 @@ test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate 
   const agents = readText("AGENTS.md");
   for (const row of [
     /^\| `changes` \| — \| `cargo xtask ci-changes`/m,
-    /^\| `opencode \(ubuntu-latest\)`, `opencode \(macos-latest\)` \| `opencode` \|/m,
+    /^\| `rust`, `rust-macos` \| `rust` \|/m,
+    /^\| `hook-bench \(ubuntu-latest\)`, `hook-bench \(macos-latest\)` \| `ports` \|/m,
     /^\| `docs` \| `docs` \| `cargo xtask gate --only context-budget/m,
     /^\| `review` \| `changed` \|/m,
     /^\| `gate`, `typescript` \| aggregate, `if: always\(\)` \|/m,
   ]) {
     expect(agents).toMatch(row);
   }
+  expect(agents).not.toMatch(/^\| `opencode \(ubuntu-latest\)`/m);
   expect(agents).toContain("`.github/ci-paths.json`");
   expect(agents).toContain("No workflow-level path filter");
 });

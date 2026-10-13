@@ -1,8 +1,10 @@
 # Migrating from the V2-targeted OpenCode adapter
 
+OpenCode support is withdrawn. This guide is not a supported upgrade path.
+
 Up to 7.7.2, `@toolu/opencode` targeted OpenCode V2: `@opencode/cli@2.0.12` with `@opencode/plugin@2.0.12`, through `Plugin.define` and `permission.evaluate`. From 7.8.0 ([#366](https://github.com/Falconiere/toolu/issues/366)) the package implements the plugin API documented at <https://opencode.ai/docs/plugins/>, and it loads only on `opencode-ai@1.18.34` ([host contract](opencode-host-contract.md)). This guide moves an existing V2 setup onto that line and back. New installs follow [docs/opencode.md](opencode.md).
 
-CI checks this guide. The `docs.migration` acceptance check seeds a profile with V2-era state and runs the [migrate](#migrate) and [roll back](#roll-back) blocks below word for word against the pinned host. The seeded state is:
+CI does not run this guide. The `docs.migration` check, when someone runs `bun run test:opencode` locally, seeds a profile with V2-era state and runs the [migrate](#migrate) and [roll back](#roll-back) blocks below word for word against the pinned host. The seeded state is:
 
 - a commented global `opencode.jsonc` with an unpinned `@toolu/opencode` entry and another plugin;
 - the clone shim;

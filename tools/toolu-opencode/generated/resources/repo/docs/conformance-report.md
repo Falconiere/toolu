@@ -1,7 +1,7 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)\
-**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap), plus required OpenCode acceptance on the real host
+**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap). OpenCode acceptance is not run in CI.
 **Runners:**
 - `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
 - `bun run test:opencode` → `tooling/src/opencode-acceptance.ts`
@@ -18,8 +18,8 @@
 
 | OS | Status |
 |----|--------|
-| macOS | Supported. OpenCode acceptance runs in CI on `macos-latest` (darwin-arm64) |
-| Linux | Supported. OpenCode acceptance runs in CI on `ubuntu-latest` (linux-x64) |
+| macOS | The plugin runs in CI on `macos-14` (`rust-macos`) and `macos-latest` (`hook-bench`). OpenCode acceptance does not. |
+| Linux | The plugin runs in CI on `ubuntu-latest`. OpenCode acceptance does not. |
 | Windows | **N/A**: not probed for this port |
 
 ## Fixture suites
@@ -35,9 +35,9 @@ No suite can skip: a suite that cannot run fails the matrix.
 
 OpenCode is not a conformance suite. The old `opencode --version` probe and the handwritten `permission.evaluate` event were removed in [#362](https://github.com/Falconiere/toolu/issues/362). The real host replaces them, below.
 
-## OpenCode acceptance (required)
+## OpenCode acceptance (not in CI)
 
-`bun run test:opencode` runs the pinned `opencode-ai` binary in isolated profiles (temporary `HOME`, `XDG_*` and git project) against a scripted loopback model. CI runs it on Linux and macOS (`opencode (ubuntu-latest)` and `opencode (macos-latest)`). The required `typescript` status fails unless both acceptance runs and the `bun run test` job pass.
+OpenCode support is withdrawn. `bun run test:opencode` still runs the pinned `opencode-ai` binary in isolated profiles (temporary `HOME`, `XDG_*` and git project) against a scripted loopback model when someone starts it locally. CI does not run it, and the required `typescript` status does not depend on it.
 
 **What it runs.**
 

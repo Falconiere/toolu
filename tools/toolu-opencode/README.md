@@ -1,5 +1,7 @@
 # @toolu/opencode
 
+OpenCode support is withdrawn. This package remains in the repo and is not a supported install.
+
 The [toolu](https://github.com/Falconiere/toolu) adapter for [OpenCode](https://opencode.ai). It runs toolu's TypeScript dispatcher in `tool.execute.before` and `tool.execute.after`, so an edit that violates a gate is denied before bytes change.
 
 The adapter uses the documented plugin API (`opencode-ai@1.18.34`, `@opencode-ai/plugin@1.18.34`) pinned in [docs/opencode-host-contract.md](https://github.com/Falconiere/toolu/blob/main/docs/opencode-host-contract.md). [#336](https://github.com/Falconiere/toolu/issues/336) established the native plugin entrypoint.

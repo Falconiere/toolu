@@ -26,7 +26,7 @@ need `TYPESAFE_API_KEY` in the environment executing Jev. Hook and command
 environments can differ; an absent hook key requires checking the command
 environment without printing the value before declaring Jev unavailable.
 
-OpenCode: add `jev` to `.opencode/toolu/plugins.json` (see [docs/opencode.md](../../docs/opencode.md)).
+OpenCode support is withdrawn. The old install was: add `jev` to `.opencode/toolu/plugins.json` (see [docs/opencode.md](../../docs/opencode.md)).
 
 - The wrapper is published at `$TOOLU_CONFIG_DIR/jev/jev.sh`, the project's data root that `shell.env` gives every bash call.
 - The skill is listed as `jev-jev`.

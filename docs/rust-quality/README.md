@@ -18,7 +18,7 @@ Every Rust file the agent edits is checked on the spot, contributing to toolu's 
 
 `toolu rust-quality check [<path>...]` runs the same rules over the git-listed `.rs` files under each path (the whole repository by default) and exits 1 with one line per finding, or prints them as JSON under `--json`. This repository's gate runs `toolu rust-quality check crates` at its own limits.
 
-On OpenCode, enable `rust-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.rs` writes, edits and patches run the rule when the git toplevel has `Cargo.toml` and `cargo` is on `PATH`; `cargo` itself is never run. An installed `ast-grep` runs the error-handling and no-mocks scans with its Rust parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Rust post-edit quality](../opencode.md#rust-post-edit-quality) and run `bun run smoke:opencode-rust-quality` in a toolu checkout for pinned-host proof.
+OpenCode support is withdrawn. On OpenCode, enable `rust-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.rs` writes, edits and patches run the rule when the git toplevel has `Cargo.toml` and `cargo` is on `PATH`; `cargo` itself is never run. An installed `ast-grep` runs the error-handling and no-mocks scans with its Rust parser. Violations appear after the edit and block later commit and push attempts; linked worktrees are checked against their own gate file, as on other hosts. See [OpenCode Rust post-edit quality](../opencode.md#rust-post-edit-quality) and run `bun run smoke:opencode-rust-quality` in a toolu checkout for pinned-host proof.
 
 ## Checks Enforced
 

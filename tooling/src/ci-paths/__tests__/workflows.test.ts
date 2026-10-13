@@ -90,7 +90,6 @@ test.concurrent("both required aggregates and Rust OS checks retain their status
   const tests = workflow("tests.yml");
   const needed = [
     "changes",
-    "opencode",
     "docs",
     "rust",
     "rust-musl",

@@ -23,6 +23,8 @@ codex plugin add pr-babysit@toolu
 
 ## OpenCode
 
+OpenCode support is withdrawn. The notes below are not a supported install path.
+
 OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
 
 - **Controller.** OpenCode has no cron, goal or background command, so the invoking turn is the controller: it runs `toolu babysit tick`, then `toolu babysit wait` (at most 55 s) again and again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. The native `toolu` binary loads no project `.env`, so one never reaches `gh`.

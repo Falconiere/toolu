@@ -99,7 +99,6 @@ function checkCiAggregates(tests: ObjectMap, errors: string[]): void {
     const deps = array(job.needs).map(string).toSorted();
     const expected = [
       "changes",
-      "opencode",
       "docs",
       "rust",
       "rust-musl",

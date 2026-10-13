@@ -1,7 +1,7 @@
 # statusline
 
 Native project status through `toolu statusline`. Claude Code can show a persistent
-one-line bar; Codex and OpenCode use their status skills to run `toolu status`.
+one-line bar; Codex uses its status skill to run `toolu status`. OpenCode support is withdrawn.
 
 ```text
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [JEV:READY]
@@ -47,6 +47,8 @@ stays through #440; `toolu statusline refresh` republishes it and applies the
 same migration when needed.
 
 ## Codex and OpenCode
+
+OpenCode support is withdrawn. Codex still uses this skill.
 
 In Codex, run `$statusline:status`; it calls `toolu --host codex status`. In
 OpenCode, use the `statusline-status` skill; it calls `toolu --host opencode status`.

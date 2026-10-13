@@ -4,8 +4,8 @@ import { join } from "node:path";
 import { z } from "zod";
 import { ROOT } from "../../opencode-host/scenarios-entry.ts";
 
-// The real CI workflow (#362 AC-7): acceptance runs on both declared platforms, can never be
-// narrowed or soft-failed, and the required `typescript` status fails unless it passed.
+// OpenCode acceptance is not a Tests job. The required `typescript` status still
+// aggregates every remaining gated job.
 
 const Step = z.looseObject({
   name: z.string().optional(),
@@ -39,37 +39,9 @@ function job(id: string): z.infer<typeof Job> {
 
 const runs = (id: string): string[] => job(id).steps.flatMap((step) => step.run ?? []);
 
-const GROUP_OF: Record<string, string> = { opencode: "opencode" };
-
-test.concurrent("the acceptance job runs the full command on Linux and macOS", () => {
-  const opencode = job("opencode");
-  expect(opencode.strategy?.matrix.os?.toSorted()).toEqual(["macos-latest", "ubuntu-latest"]);
-  const commands = runs("opencode").filter((run) => run.includes("test:opencode"));
-  expect(commands).toEqual([
-    [
-      "set -euo pipefail",
-      'export PATH="$PWD/target/debug:$PATH"',
-      'bun run test:opencode --report "$RUNNER_TEMP/opencode-acceptance.json"',
-    ].join("\n") + "\n",
-  ]);
-  expect(commands.join("\n")).not.toContain("--only");
-});
-
-// #458: the acceptance job skips only through its path group; no step soft-fails.
-test.concurrent("no acceptance step may soft-fail or be skipped except by its path group", () => {
-  for (const [id, group] of Object.entries(GROUP_OF)) {
-    expect(job(id)["continue-on-error"]).toBeUndefined();
-    expect(job(id).steps.filter((step) => step["continue-on-error"] !== undefined)).toEqual([]);
-    expect(job(id).if).toBe(`needs.changes.outputs.${group} == 'true'`);
-    expect(job(id).needs).toBe("changes");
-  }
-  const acceptance = job("opencode").steps.find((step) => step.run?.includes("test:opencode"));
-  expect(acceptance?.if).toBeUndefined();
-});
-
-test.concurrent("the acceptance job installs ast-grep beyond runner-provided tools", () => {
-  const installs = runs("opencode").join("\n");
-  expect(installs).toContain("@ast-grep/cli");
+test.concurrent("Tests does not run OpenCode acceptance", () => {
+  expect(workflow.jobs.opencode).toBeUndefined();
+  expect(JSON.stringify(workflow)).not.toContain("test:opencode");
 });
 
 test.concurrent("the required typescript status needs every gated job, always runs and judges their results", () => {
@@ -80,7 +52,6 @@ test.concurrent("the required typescript status needs every gated job, always ru
     "docs",
     "fuzz",
     "hook-bench",
-    "opencode",
     "rust",
     "rust-conformance",
     "rust-musl",

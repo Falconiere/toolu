@@ -10,22 +10,20 @@ fn repo() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
-fn outputs(docs: bool, opencode: bool) -> Value {
+fn outputs(docs: bool, rust: bool) -> Value {
   json!({
-    "opencode": if opencode { "true" } else { "false" },
     "docs": if docs { "true" } else { "false" },
-    "rust": "false",
+    "rust": if rust { "true" } else { "false" },
     "ports": "false",
     "changed": "true"
   })
 }
 
-fn suite(changes_outputs: &Value, opencode: &str, docs: &str) -> String {
+fn suite(changes_outputs: &Value, rust: &str, docs: &str) -> String {
   json!({
     "changes": { "result": "success", "outputs": changes_outputs },
-    "opencode": { "result": opencode },
     "docs": { "result": docs },
-    "rust": { "result": "skipped" },
+    "rust": { "result": rust },
     "rust-musl": { "result": "skipped" },
     "fuzz": { "result": "skipped" },
     "rust-conformance": { "result": "skipped" },
@@ -64,11 +62,11 @@ fn a_failed_changes_job_exits_1() {
 
 #[test]
 fn a_job_skipped_while_its_group_is_on_fails() {
-  let raw = suite(&outputs(false, true), "skipped", "skipped");
+  let raw = suite(&outputs(true, false), "skipped", "skipped");
   let report = evaluate(&repo(), "tests.yml", Some(&raw)).unwrap();
   assert_eq!(
     report.lines,
-    vec!["opencode (opencode on): skipped, but its group is on".to_owned()]
+    vec!["docs (docs on): skipped, but its group is on".to_owned()]
   );
 }
 
