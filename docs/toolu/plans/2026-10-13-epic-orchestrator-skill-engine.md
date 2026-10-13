@@ -79,7 +79,7 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   {
     "id": "S6",
     "title": "Evals for work/dry-run/where/parallel/stop; verify-epic-watcher runs engine commands incl. toolu epic wait",
-    "check": "jq -e '[.evals[].name] | length == 5' plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json && grep -q 'toolu epic wait' .toolu/skills/verify-epic-watcher/SKILL.md && ! grep -Eq 'epic-watch|\\.ts\\b' .toolu/skills/verify-epic-watcher/SKILL.md",
+    "check": "jq -e '[.evals[].name] | length == 5' plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json && grep -q 'toolu --json epic wait' .toolu/skills/verify-epic-watcher/SKILL.md && ! grep -Eq 'epic-watch\\.ts|scripts/' .toolu/skills/verify-epic-watcher/SKILL.md",
     "ac_refs": ["AC-9", "AC-10"],
     "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json", ".toolu/skills/verify-epic-watcher/SKILL.md"],
     "input": "the shipped evals.json and project skill",
@@ -134,6 +134,10 @@ skill → READMEs → live wait evidence per host → eval runs → full gate.
   command and recovery shape tests); `epic_markdown.rs` keeps the verb and
   rendered-brief tests. S1's paths widen to the whole skill directory and the
   command file, which `epic_markdown` reads.
+- S6's check looked for `toolu epic wait` and banned `epic-watch`, but the
+  skill's own name is `verify-epic-watcher` and its command is
+  `toolu --json epic wait`. It now bans the watcher script
+  (`epic-watch.ts`, `scripts/`) instead.
 
 ## Critical files
 

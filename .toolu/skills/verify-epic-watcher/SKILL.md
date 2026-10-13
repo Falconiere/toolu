@@ -46,7 +46,15 @@ replaced it in #434 and #435.)
 9. The SessionStart `engine-ensure` hook (`toolu epic-orchestrator hook
    engine-ensure`) starts the engine in process when an epic is registered and
    stays silent otherwise; a malformed `registry.json` is one `systemMessage`.
-10. Save machine-readable measurements under `docs/toolu/evidence/` and state
+10. Judgment wait: with no engine, `toolu --json epic wait --max-seconds 0`
+    prints `{"state":"waiting"}` at once. With the engine running, start
+    `toolu --json epic wait` (a background Bash call on Claude Code; a loop of
+    `--max-seconds <n>` elsewhere), then raise a judgment with `toolu epic
+    report needs-human --status-file <epic dir>/status/<key>.json --note <text>`.
+    The wait must return that item (`kind`, `key`, `note`); `toolu epic ack
+    <key>` clears it before the next probe. Run an engine for this with
+    `toolu epic engine --no-http` so it never takes the real dashboard port.
+11. Save machine-readable measurements under `docs/toolu/evidence/` and state
     which acceptance criteria and host lifecycle cases remain outside the probe.
 
 ## Pitfalls
