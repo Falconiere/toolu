@@ -1,6 +1,6 @@
 # Epic metrics, baseline and efficiency budgets — Plan
 
-**Date:** 2026-10-12   **Status:** Draft (revision 2)   **Spec:** docs/toolu/specs/2026-10-12-epic-metrics-design.md   **Topic:** Journal-derived epic metrics, the derived TypeScript baseline, and CI budgets (#451)
+**Date:** 2026-10-12   **Status:** Approved (revision 3; plan review rounds 1–2 by an independent reviewer, the final S10 finding resolved by widening the fixture module in S10's paths)   **Spec:** docs/toolu/specs/2026-10-12-epic-metrics-design.md   **Topic:** Journal-derived epic metrics, the derived TypeScript baseline, and CI budgets (#451)
 
 ## Evidence and approach
 
@@ -225,7 +225,7 @@ summary (with the closing comment) → docs → full gate.
   },
   {
     "id": "S10",
-    "title": "Scripted-epic budgets: the scenario rig run with a waiting PR, engine rebase, conflict hand-off, merges, close and a real wait; plus the 180 s slot test",
+    "title": "Scripted-epic budgets: the scenario rig run with a waiting PR, engine rebase, conflict hand-off, merges, close and a real wait; plus the 180 s slot test; github_engine's fixture test module and its FullTick/rest_routes/graphql_body widen to pub(crate), and the metrics scenario has its own multi-issue engine helper",
     "check": "cargo test -p toolu-epic-orchestrator -- metrics_scenario watch",
     "ac_refs": [
       "AC-5",
@@ -240,7 +240,8 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/watch.rs",
       "crates/epic-orchestrator/src/metrics",
       "crates/epic-orchestrator/src/lib.rs",
-      "crates/epic-orchestrator/src/tests/github_engine_fixture_test.rs"
+      "crates/epic-orchestrator/src/tests/github_engine_fixture_test.rs",
+      "crates/epic-orchestrator/src/github_engine.rs"
     ],
     "input": "checks driven through the HTTPS GitHub fixture and FullTick as in src/tests/github_engine_fixture_test.rs (engine, rest_routes, graphql_body): a PR waiting through keep-going checks then green (github-babysit-ready, merge-intent in the same tick); the queue rig's journal from three PRs (one rebased by the engine, one handed off on a conflict); a blocking wait answered by epic-complete; Watch slots after fresh, 304, failed and errored checks",
     "model": "inherit"
