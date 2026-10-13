@@ -25,7 +25,7 @@ test("the core post-tools budget fixture excludes other plugins' registry module
   using core = await benchSandbox(false);
   using integrated = await benchSandbox();
   const registryModule = (root: Sandbox): string =>
-    join(root.configDir("claude", "user"), "toolu/post-tools.d/ts-quality@toolu__ts-quality.js");
+    join(root.configDir("claude", "user"), "toolu/post-tools.d/ts-quality@toolu__ts-quality.sh");
   const installRecord = join(core.configDir("claude", "user"), "plugins/installed_plugins.json");
   const installed = z
     .object({ plugins: z.record(z.string(), z.unknown()) })

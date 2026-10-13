@@ -65,11 +65,11 @@ fn records(text: &str) -> Vec<&str> {
   if text.is_empty() {
     return Vec::new();
   }
-  let mut lines: Vec<&str> = text.split('\n').collect();
-  if text.ends_with('\n') {
-    lines.pop();
-  }
-  lines
+  text
+    .strip_suffix('\n')
+    .unwrap_or(text)
+    .split('\n')
+    .collect()
 }
 
 fn io(bytes: &[u8], json: bool) -> String {

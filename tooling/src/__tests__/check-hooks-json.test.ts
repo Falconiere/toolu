@@ -62,13 +62,18 @@ const bunStart = launcherHook({
 function plantBunLauncher(root: string): void {
   const file = join(root, BUN_PLUGIN);
   const text = readFileSync(file, "utf8");
-  const hook = (
-    JSON.parse(text) as {
-      hooks: { SessionStart: Array<{ hooks: Array<{ command?: string; commandWindows?: string }> }> };
-    }
-  ).hooks.SessionStart[0]?.hooks[0];
-  if (hook?.command === undefined || hook.commandWindows === undefined)
-    throw new Error("ts-quality has no native register hook to plant over");
+  const hook = z
+    .looseObject({
+      hooks: z.looseObject({
+        SessionStart: z.array(
+          z.looseObject({
+            hooks: z.array(z.looseObject({ command: z.string(), commandWindows: z.string() })),
+          }),
+        ),
+      }),
+    })
+    .parse(JSON.parse(text)).hooks.SessionStart[0]?.hooks[0];
+  if (hook === undefined) throw new Error("ts-quality has no native register hook to plant over");
   const planted = text
     .replace(JSON.stringify(hook.command), JSON.stringify(bunStart.command))
     .replace(JSON.stringify(hook.commandWindows), JSON.stringify(bunStart.commandWindows));
