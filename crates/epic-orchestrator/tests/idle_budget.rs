@@ -89,6 +89,17 @@ fn field_value(status: &str, field: &str) -> io::Result<u64> {
     .and_then(|value| contextual(value.parse::<u64>(), "parse status field"))
 }
 
+fn assert_budget(switches: u64, resident: u64) {
+  assert!(
+    switches <= MAX_SWITCHES,
+    "{switches} switches: a timer under 30 s runs"
+  );
+  assert!(
+    resident <= MAX_RESIDENT_BYTES,
+    "VmHWM {resident} bytes exceeds 10 MB"
+  );
+}
+
 #[test]
 fn an_idle_engine_stays_small_and_wakes_only_on_slow_timers() -> io::Result<()> {
   let idle = start()?;
@@ -103,13 +114,6 @@ fn an_idle_engine_stays_small_and_wakes_only_on_slow_timers() -> io::Result<()> 
   )?;
   let resident = field_value(&status, "VmHWM:")?.saturating_mul(1024);
   println!("idle budget: {switches} voluntary switches in 35 s; VmHWM={resident} bytes");
-  assert!(
-    switches <= MAX_SWITCHES,
-    "{switches} switches: a timer under 30 s runs"
-  );
-  assert!(
-    resident <= MAX_RESIDENT_BYTES,
-    "VmHWM {resident} bytes exceeds 10 MB"
-  );
+  assert_budget(switches, resident);
   Ok(())
 }
