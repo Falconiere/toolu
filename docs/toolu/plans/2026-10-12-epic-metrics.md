@@ -138,7 +138,7 @@ summary (with the closing comment) → docs → full gate.
   {
     "id": "S6",
     "title": "Journal additions in new modules (engine_usage.rs, wait_journal.rs): wait-reply, github-check issue/nextAt/next with stamp to the epic, job-wait, engine-usage; server.rs, dispatch.rs and github_engine.rs stay under 300 code lines",
-    "check": "cargo test -p toolu-epic-orchestrator -- dispatch github_engine job server socket_loop",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- dispatch github_engine job server socket wait_journal engine_usage",
     "ac_refs": [
       "AC-8"
     ],
@@ -156,7 +156,10 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/tests",
       "crates/epic-orchestrator/src/lib.rs",
       "crates/epic-orchestrator/src/engine_usage.rs",
-      "crates/epic-orchestrator/src/wait_journal.rs"
+      "crates/epic-orchestrator/src/wait_journal.rs",
+      "crates/epic-orchestrator/src/babysit.rs",
+      "crates/epic-orchestrator/src/watch.rs",
+      "crates/epic-orchestrator/src/model.rs"
     ],
     "input": "a real engine with a waiter that times out and one answered by a raised judgment; a PR watch checked against the HTTPS GitHub fixture (keep-going and merge-queue); toolu epic job refused by a full job capacity in a temp resource root; engine start, a tick 15 minutes later and a clean stop",
     "model": "inherit"
@@ -386,4 +389,7 @@ summary (with the closing comment) → docs → full gate.
 - A bad `--since` exits with `Exit::Usage` (64, sysexits `EX_USAGE`), the
   repository's usage code, not 2.
 - Phase shares keep four decimals by truncation.
-
+- `wait-reply`, `job-wait` and `engine-usage` are appended straight to the
+  journal (as the existing `spool` record is), not through the outbox: the
+  reply is already sent, and a flush in the middle of a dispatch could apply
+  unrelated queued steps.

@@ -28,6 +28,19 @@ pub enum Next {
   },
 }
 
+impl Next {
+  /// The decision's journal name (`next` of a `github-check` note).
+  pub(crate) fn name(&self) -> &'static str {
+    match self {
+      Self::KeepGoing => "keep-going",
+      Self::MergeQueue => "merge-queue",
+      Self::Attention(_) => "attention",
+      Self::Prompt(_) => "prompt",
+      Self::Escalate { .. } => "escalate",
+    }
+  }
+}
+
 /// A babysit decision with the GraphQL usage supplied by the tick.
 pub(crate) struct Checked {
   /// The state-machine input.

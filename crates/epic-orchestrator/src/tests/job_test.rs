@@ -42,3 +42,45 @@ fn epic_job() {
   );
   assert!(!paths.lock().exists());
 }
+
+#[test]
+fn a_refused_job_journals_its_wait_reason() {
+  use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease};
+  let tmp = tempfile::tempdir().expect("temp");
+  let work = tmp.path().join("work");
+  std::fs::create_dir_all(&work).expect("work");
+  let init = Command::new("git")
+    .args(["init", "-q"])
+    .current_dir(&work)
+    .status();
+  assert!(init.expect("git init").success());
+  let root = tmp.path().join("resources");
+  std::fs::create_dir_all(&root).expect("root");
+  bind_worktree(&root, &work, "i-7", &work.display().to_string()).expect("bind");
+  let occupied = LeaseRequest {
+    kind: LeaseKind::Job,
+    key: "occupied".to_owned(),
+    state_dir: "other".to_owned(),
+    host: None,
+    host_cap: None,
+    epic_cap: None,
+    worktree: None,
+  };
+  acquire_lease(&root, &occupied, std::time::SystemTime::now()).expect("lease");
+  let refused = run_job(&["true".to_owned()], &work);
+  assert_eq!(refused.exit, Exit::Failure, "{refused:?}");
+  let rows = journal::tail(
+    &Paths::at(&root).journal_dir(),
+    std::time::SystemTime::now(),
+  )
+  .expect("journal");
+  let admission: Vec<(&str, &str, &str)> = rows
+    .iter()
+    .filter(|row| row.kind == "admission")
+    .map(|row| (row.name.as_str(), row.key.as_str(), row.note.as_str()))
+    .collect();
+  assert_eq!(
+    admission,
+    [("job", "i-7", "true"), ("job-wait", "i-7", "capacity")]
+  );
+}

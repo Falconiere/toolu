@@ -52,10 +52,9 @@ All code lives in `crates/epic-orchestrator`, except a usage probe in
   1. `action`/`wait-reply` when a blocking `toolu epic wait`
      (`max_seconds` > 0) returns: note `judgment:<kind>` (key = the item's
      issue or epic key) or `timeout` (empty key). A `max_seconds` = 0 poll is
-     not a wake-up and is not journaled. Written through the engine outbox
-     after the reply is sent, and flushed in the same state-loop iteration
-     (the reply paths `reply_wait`, `satisfy` and `expire` flush); a journal
-     failure never withholds the reply.
+     not a wake-up and is not journaled. Appended straight to the journal
+     after the reply is sent (as the `spool` record is), so a journal failure
+     never withholds the reply and no queued step runs mid-dispatch.
   2. `github-check` and `github-error` notes gain `"issue"` (the issue key of
      a `Pr` watch, else absent) and `"nextAt"` (the watch's next scheduled
      slot after this attempt, Unix ms); `github-check` also gains `"next"`

@@ -104,7 +104,14 @@ pub(crate) fn serve_with_http(
     http,
   };
   join_threads(&socket, &stop, &changed, threads);
-  result
+  stopped(&mut engine, result)
+}
+
+/// A clean stop journals the engine's last resource sample.
+fn stopped(engine: &mut Engine, result: Result<(), String>) -> Result<(), String> {
+  result?;
+  engine.refresh_clock();
+  crate::engine_usage::sample(engine, "stop")
 }
 
 fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, threads: Threads) {
@@ -144,6 +151,7 @@ fn open_engine(
   if engine.pump()? == Stop::Fault {
     return Err("fault".to_owned());
   }
+  crate::engine_usage::sample(&mut engine, "start")?;
   Ok(engine)
 }
 

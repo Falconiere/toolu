@@ -174,3 +174,30 @@ fn a_registered_pr_fixture_emits_the_six_rest_inputs_and_one_graphql_tick() {
   assert_eq!(requests.len(), 7);
   assert_eq!(requests[6].path, "/graphql");
 }
+
+#[test]
+fn a_check_journals_its_issue_epic_next_slot_and_babysit_decision() {
+  for (green, next) in [(false, "keep-going"), (true, "merge-queue")] {
+    let fixture = Fixture::start().expect("fixture");
+    rest_routes(&fixture);
+    fixture
+      .route("/graphql", Reply::new(200, graphql_body(green)))
+      .expect("GraphQL route");
+    let (_temp, mut engine, tick) = engine(&fixture);
+    engine.github_tick(&tick);
+    engine.flush().expect("flush");
+    let rows = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("journal");
+    let check = rows
+      .iter()
+      .find(|row| row.name == "github-check")
+      .expect("github-check");
+    assert_eq!(check.key, "pr:o/r#1");
+    assert_eq!(check.epic, "epic");
+    let note: serde_json::Value = serde_json::from_str(&check.note).expect("note");
+    assert_eq!(note["issue"], "one");
+    assert_eq!(note["next"], next);
+    assert_eq!(note["nextAt"], crate::watch::CHECK_MS);
+    let ready = rows.iter().any(|row| row.name == "github-babysit-ready");
+    assert_eq!(ready, green);
+  }
+}

@@ -46,6 +46,12 @@ pub(crate) fn run_job(argv: &[String], cwd: &Path) -> Outcome {
     Err(err) => {
       if err.starts_with("job capacity exhausted") || err.starts_with("resource hold:") {
         let _marked = waiting_jobs::mark(&binding, SystemTime::now());
+        let reason = if err.starts_with("resource hold:") {
+          "pressure"
+        } else {
+          "capacity"
+        };
+        let _journaled = refused(&binding, reason);
       }
       Outcome::failed(Exit::Failure, format!("toolu epic job: {err}"))
     }
@@ -65,6 +71,22 @@ fn admit(
     SystemTime::now(),
   )?;
   Ok(())
+}
+
+/// Journal a refused attempt (`job-wait`), `capacity` or `pressure` (#451).
+fn refused(
+  binding: &toolu_engine::resources::binding::ResourceBinding,
+  reason: &str,
+) -> Result<(), String> {
+  let paths = Paths::at(&binding.root);
+  let record = Record::new("admission", "job-wait", &binding.key, "", reason);
+  journal::append(
+    &paths.journal_dir(),
+    &paths.journal_lock(),
+    &record,
+    SystemTime::now(),
+  )
+  .map(|_| ())
 }
 
 #[cfg(test)]

@@ -71,7 +71,7 @@ pub(crate) fn state_loop(
         if engine.effect_done(&call, &outcome)? == Stop::Fault {
           return Err("fault".to_owned());
         }
-        satisfy(engine, &mut waiters);
+        satisfy(engine, &mut waiters)?;
       }
       Ok(Msg::Herdr(fact)) => {
         engine.refresh_clock();
@@ -103,15 +103,14 @@ fn on_timeout(
   next_tick: &mut Instant,
   babysit: &dyn BabysitTick,
 ) -> Result<(), String> {
-  expire(engine, waiters);
+  expire(engine, waiters)?;
   if Instant::now() >= *next_tick {
     tick(engine, next_tick, babysit)?;
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
     engine.refresh_clock();
     let _tick = engine.tick(babysit)?;
   }
-  satisfy(engine, waiters);
-  Ok(())
+  satisfy(engine, waiters)
 }
 
 fn tick(

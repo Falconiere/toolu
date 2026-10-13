@@ -2,7 +2,7 @@
 
 use std::time::Duration;
 
-use serde_json::json;
+use serde_json::{Value, json};
 use toolu_engine::babysit::{BabysitTick, TickRequest};
 use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
@@ -128,6 +128,10 @@ fn note_report(
     "graphqlResetAt": world.graphql_reset_at,
     "graphqlRetryAfter": retry_after.map(|wait| wait.as_secs()),
   });
+  let mut note = with_watch(world, key, note);
+  if let (Some(map), Some(checked)) = (note.as_object_mut(), checked.as_ref()) {
+    map.insert("next".to_owned(), json!(checked.next.name()));
+  }
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
     crate::babysit_next::apply(world, key, checked.next);
@@ -218,6 +222,7 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &
     "restFresh": report.fresh, "restNotModified": report.not_modified,
     "restPoints": report.rest_points,
   });
+  let note = with_watch(world, key, note);
   journal(world, key, "github-error", &note.to_string());
 }
 
@@ -257,6 +262,20 @@ pub(crate) fn note_change(world: &mut World, change: Change) {
       crate::refresh::arm(world, &key);
     }
   }
+}
+
+/// `note` with the watch's issue (a pull request watch) and its next slot.
+fn with_watch(world: &World, key: &str, mut note: Value) -> Value {
+  let Some(watch) = world.watches.get(key) else {
+    return note;
+  };
+  if let Some(map) = note.as_object_mut() {
+    if let crate::watch::Kind::Pr { key: issue, .. } = &watch.kind {
+      map.insert("issue".to_owned(), json!(issue));
+    }
+    map.insert("nextAt".to_owned(), json!(watch.next_at_ms));
+  }
+  note
 }
 
 fn cause_name(cause: Cause) -> &'static str {
