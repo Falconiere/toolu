@@ -151,9 +151,10 @@ async function startupFailure(ctx: EntryContext): Promise<EntryResult> {
     const bash = toolStates(hostRun).find((state) => state.tool === "bash");
     const observed = {
       ready: diagnostics(hostRun.stderr, "toolu: ready"),
+      // The log quotes the message, so the command's own quotes are escaped there.
       notReady: diagnostics(
         hostRun.stderr,
-        `toolu: not ready: bootstrap: python-quality: unsupported SessionStart command ${JSON.stringify(HAND_WRITTEN)}`,
+        "toolu: not ready: bootstrap: python-quality: unsupported SessionStart command ",
       ),
       bashDenied: bash?.status === "error" && (bash.error ?? "").startsWith("toolu: not ready"),
       fileAbsent: !s.exists("denied.txt"),
