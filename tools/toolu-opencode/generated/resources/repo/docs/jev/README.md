@@ -26,7 +26,7 @@ need Bun 1.4.x (resolved from `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun`) and
 `TYPESAFE_API_KEY` in the environment executing Jev. Hooks can receive a different
 environment from agent commands.
 
-OpenCode: add `jev` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)).
+OpenCode support is withdrawn. The old install was: add `jev` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)).
 
 - The wrapper lives at `$TOOLU_CONFIG_DIR/jev/jev.sh`, the per-project data root exported to every bash call.
 - The skill is `jev-jev`.

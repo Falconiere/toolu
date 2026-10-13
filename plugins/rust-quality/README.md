@@ -27,6 +27,8 @@ The rule runs in the core toolu dispatcher only while this plugin is installed â
 
 ## OpenCode
 
+OpenCode support is withdrawn. The notes below are not a supported install path.
+
 Add `rust-quality` to the project selection and restart OpenCode:
 
 ```json

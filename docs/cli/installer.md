@@ -6,9 +6,10 @@ package that runs it. The generated reference of every verb and flag is
 [plugins.md](plugins.md). The [README](../../README.md#install) install snippets
 use these commands.
 
-Claude Code and Codex are driven through their own plugin CLIs. OpenCode has no
-plugin CLI for this, so `toolu plugins` edits its documented config files
-instead ([OpenCode](#opencode)). The code is `crates/plugins` (`toolu-plugins`).
+Claude Code and Codex are the supported hosts, driven through their own plugin
+CLIs. OpenCode support is withdrawn. The [OpenCode](#opencode) section records
+how `toolu plugins` used to edit that host's config. The code is `crates/plugins`
+(`toolu-plugins`).
 
 Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
@@ -185,7 +186,10 @@ native report prints once, when the run ends.
 
 ## OpenCode
 
-The supported host (`opencode-ai@1.18.34`, see the
+OpenCode support is withdrawn. This section is the last record of the config
+edits, not an install guide.
+
+The former host (`opencode-ai@1.18.34`, see the
 [host contract](../opencode-host-contract.md)) has no `plugin add`, `list`,
 `update` or `remove` command. The CLI therefore edits the config files OpenCode
 documents and never runs the host. One npm package, `@toolu/opencode`, carries

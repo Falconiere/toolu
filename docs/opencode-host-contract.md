@@ -1,7 +1,9 @@
 # OpenCode host contract
 
+OpenCode support is withdrawn. This page is the last probed contract, not a promise that CI runs the host.
+
 **Issue:** [#335](https://github.com/Falconiere/toolu/issues/335) (OP-01, epic [#334](https://github.com/Falconiere/toolu/issues/334))
-**Status:** Documented contract pinned and probed on a real host.
+**Status:** Documented contract pinned and probed on a real host. Not a supported install.
 
 The shipped entry (`tools/toolu-opencode/src/plugin/toolu.ts`) follows this contract since OP-02 ([#336](https://github.com/Falconiere/toolu/issues/336)). It is a default `PluginModule` whose `server` returns `tool.execute.before` and `tool.execute.after`. Every setup failure becomes a hook that refuses all tool calls, never an init throw. `bun run smoke:opencode-entry` proves the npm, local-shim and config routes on the pinned host. The work packages in the [capability matrix](#capability-matrix) own the remaining axes.
 

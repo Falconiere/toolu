@@ -168,4 +168,4 @@ toolu ast-grep savings ~/.claude/toolu/byte-savings/<session>.jsonl
 
 The wrapper prefers `sg`, falls back to `ast-grep`, and does nothing when neither is installed. Verbs: `search`, `files`, `scan`, `debug`, `savings`.
 
-On OpenCode ([#347](https://github.com/Falconiere/toolu/issues/347)) the nudge arrives with the tool result, because the host has no pre-tool advisory channel. The ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Each `ast-grep` run's result ends with the session's report; other hosts stay silent. Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand. See [`docs/opencode.md`](../opencode.md#ast-grep).
+OpenCode support is withdrawn. On OpenCode ([#347](https://github.com/Falconiere/toolu/issues/347)) the nudge arrives with the tool result, because the host has no pre-tool advisory channel. The ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Each `ast-grep` run's result ends with the session's report; other hosts stay silent. Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand. See [`docs/opencode.md`](../opencode.md#ast-grep).

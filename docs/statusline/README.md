@@ -1,8 +1,8 @@
 # statusline
 
 The statusline plugin uses the native `toolu` binary. Claude Code can display a
-persistent one-line bar. Codex and OpenCode offer status skills that run the
-native `toolu status` command for their host.
+persistent one-line bar. Codex offers a status skill that runs the
+native `toolu status` command. OpenCode support is withdrawn.
 
 ## Install and set up Claude Code
 
@@ -57,6 +57,8 @@ A still older `~/.claude/toolu/statusline.sh` setting is treated as custom;
 run `/statusline:setup --force` to replace it.
 
 ## Codex and OpenCode
+
+OpenCode support is withdrawn. Codex still uses this skill.
 
 Run `$statusline:status` in Codex or `statusline-status` in OpenCode. They run
 `toolu --host codex status` and `toolu --host opencode status`, respectively.

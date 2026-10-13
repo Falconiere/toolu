@@ -83,7 +83,6 @@
       "aggregate": "gate",
       "required": ["typescript"],
       "jobs": {
-        "opencode": "opencode",
         "docs": "docs",
         "rust": "rust",
         "rust-musl": "rust",

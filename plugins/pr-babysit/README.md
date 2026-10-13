@@ -3,8 +3,8 @@
 Babysit a PR for the current branch until every review thread, the review-bot
 verdict, and CI are clear. `toolu babysit wait` checks the PR every 180 s
 without a model turn and returns only when there is work: Claude runs it as a
-background command, Codex inside an explicit durable goal, OpenCode in the
-invoking turn. Fixes run as Claude Code, Codex or Cursor Agent
+background command, and Codex runs it inside an explicit durable goal. OpenCode
+support is withdrawn. Fixes run as Claude Code, Codex or Cursor Agent
 sessions in a herdr worktree, or as `opencode run` fixers, each at the model
 and effort Jev picks for its complexity.
 
@@ -26,6 +26,8 @@ and the host CLIs you list (`claude`, `codex`, `cursor-agent`); without herdr,
 fixes run in-session as before. OpenCode fixers need only the `opencode` CLI. Jev
 routing needs `TYPESAFE_API_KEY`; without it a task/severity
 heuristic picks the tier.
+
+OpenCode support is withdrawn. The notes below are not a supported install path.
 
 OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../../docs/opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
 

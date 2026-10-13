@@ -1,7 +1,6 @@
 # OpenCode install
 
-**Supported host:** `opencode-ai@1.18.34` with `@opencode-ai/plugin@1.18.34`. That is the plugin API documented at <https://opencode.ai/docs/plugins/>, pinned and probed in the [host contract](opencode-host-contract.md). Runs on macOS and Linux; Windows is **N/A**.
-**Evidence:** the required OpenCode acceptance (`bun run test:opencode`) runs on Linux and macOS in CI and checks every support claim on this page. The [quick start](#quick-start) and the [update and removal steps](#update-roll-back-and-remove) run there exactly as written, and [Plugin support](#plugin-support) lists the checks each plugin must pass.
+OpenCode support is withdrawn. toolu is supported on Claude Code and Codex. The plugin still runs on macOS in CI (`rust-macos` and `hook-bench`); those jobs are not an OpenCode acceptance run. Nothing below is a supported install path. It is the last record of the `opencode-ai@1.18.34` adapter, kept so the host-contract checks still have a page to compare.
 
 toolu ships to OpenCode as one npm package, `@toolu/opencode`, which carries all 12 plugins. OpenCode has no `plugin add`, `list`, `update` or `remove` command of its own. The `toolu` CLI therefore adds the package to OpenCode's documented `plugin` config and writes which plugins are enabled ([docs/cli/installer.md § OpenCode](cli/installer.md#opencode)). It keeps your comments and other entries.
 
@@ -51,7 +50,7 @@ rm -f .env.toolu-check
 
 ## Plugin support
 
-Each plugin's status comes from the [capability matrix](opencode-host-contract.md#capability-matrix). Its CI checks are the actual-host acceptance checks dedicated to it: `bun run test:opencode` fails unless every one of them passes on Linux and macOS. The limitations below are host-specific: each one names what OpenCode lacks and the alternative toolu uses. `bun run check:opencode-docs` regenerates this section from the matrix and the acceptance registry, and fails when it drifts.
+Each plugin's status comes from the [capability matrix](opencode-host-contract.md#capability-matrix). OpenCode acceptance is not a CI job. The limitations below are host-specific: each one names what OpenCode lacks and the alternative toolu uses. `bun run check:opencode-docs` regenerates this section from the matrix and the acceptance registry, and fails when it drifts.
 
 <!-- opencode-support:start -->
 | Plugin | Status on OpenCode | Dedicated CI checks |

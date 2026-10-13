@@ -32,7 +32,7 @@ toolu core (hook dispatcher + registry)
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands. `delivery-flow` installs its declared dependencies through Claude Code or the toolu CLI; native Codex plugin installs require adding those dependencies explicitly.
 
-Hook entries and registry contributions are bundled TypeScript running on Bun. OpenCode runs the same native core in process, before and after its tool calls; each plugin's OpenCode status is in [docs/opencode.md § Plugin support](../opencode.md#plugin-support).
+Hook entries and registry contributions are bundled TypeScript running on Bun. OpenCode support is withdrawn. The plugin still runs on macOS in CI.
 
 ## Shared Configuration
 
@@ -88,24 +88,6 @@ npx @toolu/plugins install --host codex
 
 After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
-
-#### OpenCode
-
-OpenCode has no marketplace — paste this prompt so the agent installs the npm adapter with the `toolu` CLI, which edits OpenCode's own config files ([docs/cli/installer.md](../cli/installer.md#opencode)). It enables every plugin unless you name some.
-
-<!-- install-everything:opencode -->
-```text
-Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
-
-1. If `toolu --version` fails, install the native binary first: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash (or brew install falconiere/tap/toolu). npx @toolu/plugins runs it and exits 69 without it.
-   Then run: npx @toolu/plugins install --host opencode
-   It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project, or when this project already has one).
-2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
-3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.
-
-Do not install comemory via toolu. Upgrading from the V2-targeted adapter (toolu 7.7.2 or earlier)? Follow docs/opencode-migration.md instead. Working on toolu itself? Use the git-clone contributor path in docs/opencode.md. Full detail, including the per-plugin support table: docs/opencode.md
-```
-<!-- /install-everything:opencode -->
 
 Codex support covers CLI, IDE extension, and ChatGPT desktop Codex on macOS
 and Linux. Codex cloud and Windows are limitations for this release. Review

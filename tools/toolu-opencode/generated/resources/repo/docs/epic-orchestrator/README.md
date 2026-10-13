@@ -1,7 +1,7 @@
 # epic-orchestrator — Epic Orchestrator
 
 Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr
-worktrees, parallel workers on Claude Code, Codex, Cursor Agent, or OpenCode
+worktrees, parallel workers on Claude Code, Codex, or Cursor Agent
 (delivery-flow from brainstorm through PR and babysit) routed by Jev
 complexity, a merge gate with GitHub auto-merge, rate-limit and progress
 guardrails, and cleanup. See the plugin README for trackers, hosts, and
@@ -19,7 +19,7 @@ npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, `herdr`
 (orchestrator session must run inside a herdr pane with `HERDR_ENV=1`).
-OpenCode workers also need `opencode` 1.x on `PATH`; see the OpenCode section
+OpenCode support is withdrawn. The old workers also needed `opencode` 1.x on `PATH`; see the OpenCode section
 of the plugin README.
 
 ## Usage

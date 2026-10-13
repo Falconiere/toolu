@@ -16,7 +16,7 @@ The skill remains usable without toolu. Install the native `toolu` binary for th
 
 - **`ast-grep` skill** — an always-active protocol that mandates ast-grep (tree-sitter AST patterns) over Grep/sed for any find-or-rewrite-by-code-shape task, falling back to Grep only for exact literals.
 - **`search-nudge` (`PreToolUse`)** — nudges a structural Grep pattern on code files, and `grep`/`rg` run in Bash to search files, toward the proper structural tool.
-- **`byte-savings` (`PostToolUse`)** + `toolu ast-grep savings <ledger.jsonl>` — records the bytes each Read, Grep, Glob and ast-grep call returns, and sums a session's ledger. On OpenCode, an ast-grep result also carries the session's report ([`docs/opencode.md`](../../docs/opencode.md#ast-grep)).
+- **`byte-savings` (`PostToolUse`)** + `toolu ast-grep savings <ledger.jsonl>` — records the bytes each Read, Grep, Glob and ast-grep call returns, and sums a session's ledger. OpenCode support is withdrawn. On OpenCode, an ast-grep result also carries the session's report ([`docs/opencode.md`](../../docs/opencode.md#ast-grep)).
 - **`toolu ast-grep search|files|scan|debug`** — wraps the external binary with `--color never` and infers `--lang` from the first file argument.
 
 ## The ast-grep binary

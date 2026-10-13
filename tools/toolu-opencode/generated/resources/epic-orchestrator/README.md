@@ -5,8 +5,8 @@ dependency graph, launches herdr worktrees with workers (delivery-flow from
 brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
-Works on **Claude Code**, **Codex**, **Cursor Agent**, and **OpenCode**, both
-as the orchestrator and as workers. One run can mix hosts
+Works on **Claude Code**, **Codex**, and **Cursor Agent**, both
+as the orchestrator and as workers. OpenCode support is withdrawn. One run can mix hosts
 (`--hosts claude:2,codex:2`): Jev scores each issue's complexity and a routing
 table picks the model and effort per host.
 
@@ -46,6 +46,8 @@ the Claude-shaped plugin tree). Then invoke the `epic-orchestrator` skill or
 the `/epic-orchestrator:epic` command.
 
 ### OpenCode
+
+OpenCode support is withdrawn. The notes below are not a supported install path.
 
 ```bash
 npx @toolu/plugins install epic-orchestrator --host opencode
