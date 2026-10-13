@@ -4,8 +4,6 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } f
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
-import { claudeAdapter } from "../../tools/toolu-cli/src/host/claude.ts";
-import { codexAdapter } from "../../tools/toolu-cli/src/host/codex.ts";
 import { stagePlugins } from "../../tools/toolu-opencode/scripts/bundle-plugins.ts";
 import { selectPluginsByEnabledNames } from "../../tools/toolu-opencode/src/select/resolve.ts";
 import { bootstrapRuntime } from "../../tools/toolu-opencode/src/bootstrap/runtime.ts";
@@ -13,6 +11,24 @@ import { createPermissionEvaluateHandler } from "../../tools/toolu-opencode/src/
 import type { PermissionEvaluationEvent } from "../../tools/toolu-opencode/src/adapter/permission-map.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
+/** `claude plugin list --json`: `[{ id: "<name>@<marketplace>", installPath }]`. */
+const ClaudeList = z.array(z.looseObject({ id: z.string(), installPath: z.string().optional() }));
+/** `codex plugin list --json`: `{ installed: [{ name, source: { path } }] }`. */
+const CodexList = z.looseObject({
+  installed: z.array(
+    z.looseObject({ name: z.string(), source: z.looseObject({ path: z.string().optional() }).optional() }),
+  ),
+});
+
+/** Where the host installed plugin `name`, read from its `plugin list --json`. */
+function installPath(host: "claude" | "codex", listed: string, name: string): string | undefined {
+  const raw: unknown = JSON.parse(listed);
+  if (host === "claude") {
+    return ClaudeList.parse(raw).find((entry) => entry.id.split("@")[0] === name)?.installPath;
+  }
+  return CodexList.parse(raw).installed.find((entry) => entry.name === name)?.source?.path;
+}
+
 const HookOutput = z.object({
   hookSpecificOutput: z.object({ permissionDecision: z.string() }).optional(),
 });
@@ -85,11 +101,8 @@ function smokeCommandHost(
     env,
   );
   const listed = run([bin, "plugin", "list", "--json"], project, env);
-  const installed = (host === "claude" ? claudeAdapter : codexAdapter)
-    .parseList(listed)
-    .find((entry) => entry.name === "toolu");
-  if (!installed?.path) throw new Error(`${host}: toolu install path missing from plugin list`);
-  const pluginRoot = installed.path;
+  const pluginRoot = installPath(host, listed, "toolu");
+  if (pluginRoot === undefined) throw new Error(`${host}: toolu install path missing from plugin list`);
   const file = join(project, ".env");
   const payload = JSON.stringify({
     tool_name: "Edit",

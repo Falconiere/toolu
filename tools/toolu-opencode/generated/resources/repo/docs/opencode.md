@@ -14,6 +14,7 @@ If you installed the V2-targeted adapter (toolu 7.7.2 or earlier on `opencode` 2
 | OpenCode CLI | `opencode-ai@1.18.34` ([host contract](opencode-host-contract.md)); `opencode --version` prints `1.18.34`      |
 | Plugin SDK   | `@opencode-ai/plugin@1.18.34`. The host provisions it into each config directory; toolu imports its types only |
 | Bun          | `1.4.x` (workspace `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`); see the [runtime contract](runtime.md)          |
+| toolu        | The native binary ([install](install.md)); `npx @toolu/plugins` runs `toolu plugins` and exits 69 without it   |
 | Node.js      | For `npx @toolu/plugins`                                                                                        |
 | git          | Project and gate context                                                                                       |
 | Platform     | macOS and Linux; Windows **N/A**                                                                               |

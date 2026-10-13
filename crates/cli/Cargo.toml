@@ -20,6 +20,7 @@ toolu-engine = { path = "../core/engine" }
 toolu-epic-orchestrator = { path = "../epic-orchestrator" }
 toolu-hub = { path = "../toolu" }
 toolu-jev = { path = "../jev" }
+toolu-plugins = { path = "../plugins" }
 toolu-pr-babysit = { path = "../pr-babysit" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-review = { path = "../toolu-review" }

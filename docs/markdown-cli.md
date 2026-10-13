@@ -36,7 +36,7 @@ In a plugin's Markdown, a path to a Bun bundle (`hooks/dist/<stem>.js`), a TypeS
 {
   "external": ["gh", "git"],
   "allow": [
-    { "file": "AGENTS.md", "subject": "toolu install", "reason": "The Node installer's bin, until #438." }
+    { "file": "docs/example.md", "subject": "toolu frobnicate", "reason": "A deliberately wrong command, shown to explain an error." }
   ]
 }
 ```

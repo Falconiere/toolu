@@ -82,8 +82,9 @@ toolu plugins install
 The installer verifies the release's minisign signature and the archive's
 checksum before it writes anything. Upgrade, uninstall, a pinned version,
 rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
-Until `toolu plugins` lands (#438), install the plugins with
-`npx @toolu/plugins install`, as below.
+`npx @toolu/plugins install`, as below, does the same: the npm package is a
+wrapper that runs `toolu plugins` on the installed binary
+([docs/cli/installer.md](docs/cli/installer.md)).
 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
@@ -114,11 +115,12 @@ rollback and removal. Coming from the V2-targeted adapter (7.7.2 or earlier)?
 See the [migration guide](docs/opencode-migration.md). Claude Code and Codex
 marketplace installs below are unchanged.
 
-### The `toolu` CLI
+### The plugin installer
 
-Installation goes through a published CLI that drives each host's own plugin CLI
-in catalog dependency order. OpenCode has no plugin management commands, so
-there the CLI edits its documented config files instead:
+`toolu plugins` installs the plugins: it drives each host's own plugin CLI in
+catalog dependency order. OpenCode has no plugin management commands, so there
+it edits its documented config files instead. `npx @toolu/plugins` runs the same
+verbs through the installed `toolu`:
 
 ```bash
 npx @toolu/plugins install              # everything, core first
@@ -148,6 +150,9 @@ OpenCode has no marketplace; it installs the npm adapter instead.
 # installed from it; skip if you do not want the pre-simplify pass.
 claude plugin marketplace add anthropics/claude-plugins-official
 
+# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 # Already-installed plugins are reported and left alone.
 npx @toolu/plugins install
@@ -158,6 +163,9 @@ npx @toolu/plugins install
 
 <!-- install-everything:codex -->
 ```bash
+# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 npx @toolu/plugins install --host codex
 ```
@@ -173,7 +181,8 @@ OpenCode has no marketplace — paste this prompt so the agent installs the npm 
 ```text
 Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
 
-1. Run: npx @toolu/plugins install --host opencode
+1. If `toolu --version` fails, install the native binary first: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash (or brew install falconiere/tap/toolu). npx @toolu/plugins runs it and exits 69 without it.
+   Then run: npx @toolu/plugins install --host opencode
    It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project, or when this project already has one).
 2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
 3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.

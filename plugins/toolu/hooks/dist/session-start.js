@@ -5050,7 +5050,7 @@ function gatePresetNotice(configRoot, config) {
 var NEUTRAL_INSTALL = "Install the `delivery-flow` plugin, then load its `delivery-flow` skill.";
 var DELIVERY_FLOW_INSTALL = {
   claude: "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.",
-  codex: "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
+  codex: "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
   opencode: 'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.',
   cursor: NEUTRAL_INSTALL,
   hermes: NEUTRAL_INSTALL

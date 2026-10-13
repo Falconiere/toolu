@@ -97,7 +97,7 @@ Stop and report the first check that fails:
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
   `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as
   herdr agents and need those plugins installed in every host in `--hosts`
-  (`npx @toolu/plugins install delivery-flow --host codex`, and so on).
+  (`toolu plugins install delivery-flow --host codex`, and so on).
   An OpenCode worker uses its worktree's selection: a committed
   `.opencode/toolu/plugins.json`, else the global one, else every installed
   plugin. An uncommitted project selection does not reach worktrees.

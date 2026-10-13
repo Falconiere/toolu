@@ -46,7 +46,7 @@ const DELIVERY_FLOW_INSTALL: Record<HostName, string> = {
   claude:
     "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.",
   codex:
-    "Install with `npx @toolu/plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
+    "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
   opencode:
     'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.',
   cursor: NEUTRAL_INSTALL,

@@ -106,7 +106,7 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "config" | "status" | "setup" | "jev"
-      | "review" | "ast-grep" | "statusline" | "babysit" | "epic" => continue,
+      | "review" | "ast-grep" | "statusline" | "babysit" | "epic" | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }
@@ -123,4 +123,57 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
     );
     assert_eq!(document["namespace"], name.as_str());
   }
+}
+
+/// `toolu --json plugins …` in a fresh `HOME` with no host CLI on `PATH`.
+fn plugins_json(home: &std::path::Path, args: &[&str]) -> Res<Value> {
+  let mut command = assert_cmd::Command::new(crate::cli::TOOLU);
+  command
+    .args(["--json", "plugins"])
+    .args(args)
+    .current_dir(home)
+    .env_clear()
+    .env("HOME", home)
+    .env("PATH", "/usr/bin:/bin");
+  // Coverage runs keep their profile path, so no `.profraw` lands in the cwd.
+  if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
+    command.env("LLVM_PROFILE_FILE", profile);
+  }
+  let output = command.output()?;
+  one_document(&output)
+}
+
+#[test]
+fn the_plugins_json_documents_validate() {
+  let home = tempfile::tempdir().unwrap();
+  let install = plugins_json(
+    home.path(),
+    &["install", "--dry-run", "--host", "claude", "jev"],
+  )
+  .unwrap();
+  assert_eq!(
+    violations(&install, Some("pluginsInstall")).unwrap(),
+    Vec::<String>::new()
+  );
+  assert_eq!(install["hosts"][0]["steps"][0]["outcome"], "skipped");
+  let list = plugins_json(home.path(), &["list", "--host", "opencode"]).unwrap();
+  assert_eq!(
+    violations(&list, Some("pluginsList")).unwrap(),
+    Vec::<String>::new()
+  );
+  let remove = plugins_json(
+    home.path(),
+    &["remove", "jev", "--yes", "--host", "opencode"],
+  )
+  .unwrap();
+  assert_eq!(
+    violations(&remove, Some("pluginsHost")).unwrap(),
+    Vec::<String>::new()
+  );
+  // Nothing is configured, so nothing is removed.
+  assert_eq!(remove["steps"][0]["removed"], false);
+  assert_ne!(
+    violations(&json!([{ "name": "x" }]), Some("pluginsList")).unwrap(),
+    Vec::<String>::new()
+  );
 }

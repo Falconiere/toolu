@@ -4,7 +4,6 @@
 
 use clap::{ArgMatches, Command};
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::namespace::Planned;
 
 use crate::{commands, fast, links};
 
@@ -51,25 +50,6 @@ const fn verb(
     command,
     action: Action::Verb(run),
   }
-}
-
-/// `toolu plugins`: the installer, still the npm package `@toolu/plugins` until #438.
-const PLUGINS: Planned = Planned {
-  name: "plugins",
-  about: "Install, list, remove and update toolu plugins on every host",
-  verbs: &["install", "list", "remove", "update"],
-  issues: &[438],
-};
-
-fn plugins_command() -> Command {
-  PLUGINS.command().after_help(
-    "Until #438 ports it, install plugins with `npx @toolu/plugins install`; \
-     its guide is docs/cli/installer.md.",
-  )
-}
-
-fn plugins_run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
-  PLUGINS.run(ctx)
 }
 
 /// The top-level commands, in `toolu --help` order.
@@ -189,7 +169,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     command: commands::command,
     action: Action::Commands,
   },
-  verb("plugins", BUILTIN, plugins_command, plugins_run),
+  verb(
+    "plugins",
+    BUILTIN,
+    toolu_plugins::command,
+    toolu_plugins::run,
+  ),
 ];
 
 /// The namespace whose command is `name`.

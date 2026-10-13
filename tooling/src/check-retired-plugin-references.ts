@@ -63,7 +63,7 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
     ) {
       continue;
     }
-    if (term === "context7" && path === "tools/toolu-cli/src/catalog/__tests__/order.test.ts") {
+    if (term === "context7" && path === "crates/plugins/src/catalog/tests/order_test.rs") {
       continue; // required unknown-plugin regression test
     }
     if (

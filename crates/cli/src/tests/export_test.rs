@@ -71,9 +71,14 @@ fn namespaces_carry_owner_aliases_placeholders_and_hidden_hooks() {
   assert_eq!(epic["path"], serde_json::json!(["epic"]));
   let queue = command(&doc, &["epic", "queue"]);
   assert_eq!(queue["path"], serde_json::json!(["epic", "queue"]));
-  let planned = command(&doc, &["plugins", "planned"]);
+  let planned = command(&doc, &["serve", "planned"]);
   assert_eq!(planned["placeholder"], true);
-  assert_eq!(planned["path"], serde_json::json!(["plugins", "planned"]));
+  assert_eq!(planned["path"], serde_json::json!(["serve", "planned"]));
+  // A ported namespace (#438) exports real verbs and no placeholder.
+  let install = command(&doc, &["plugins", "install"]);
+  assert_eq!(install["placeholder"], false);
+  assert_eq!(install["path"], serde_json::json!(["plugins", "install"]));
+  assert_eq!(install["owner"], "toolu-cli");
   let hook = command(&doc, &["epic", "hook"]);
   assert_eq!(hook["hidden"], true);
   assert_eq!(hook["owner"], "epic-orchestrator");

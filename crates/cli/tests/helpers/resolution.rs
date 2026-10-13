@@ -90,11 +90,29 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
     node_dir.display()
   );
   let mut probe = Command::new(wrapper_dir.join("toolu"));
-  probe.arg("--hook-protocol").env("PATH", &path);
+  // TOOLU_BIN names the wrapper itself, so it is the only candidate: no fixed
+  // directory, `~/.local/bin` or PATH entry can decide the case.
+  let wrapper = wrapper_dir.join("toolu");
+  probe
+    .arg("--hook-protocol")
+    .env_clear()
+    .env("PATH", &path)
+    .env("TOOLU_BIN", &wrapper);
   probe.stdout(Stdio::piped()).stderr(Stdio::piped());
   let probe = spawn(&mut probe).unwrap().wait_with_output().unwrap();
+  // The wrapper never answers the native probe: it is not the native CLI, and
+  // it skips itself when it looks for one (#438): it names the install
+  // commands and exits 69.
   let said = String::from_utf8_lossy(&probe.stderr);
-  assert_eq!(said.trim(), "toolu: unknown flag: --hook-protocol");
+  assert_eq!(probe.status.code(), Some(69), "{said}");
+  assert!(
+    said.starts_with("toolu-plugins: the native toolu binary was not found"),
+    "{said}"
+  );
+  assert!(
+    said.contains("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
+    "{said}"
+  );
   assert_eq!(probe.stdout, b"");
   let run = sandbox
     .launch("SessionStart", "session-start", STARTUP, &[("PATH", &path)])
@@ -107,7 +125,8 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
   );
 }
 
-/// Build the real npm wrapper (`@toolu/plugins`' `toolu` bin) from its source.
+/// Build the real npm wrapper (`@toolu/plugins`' `toolu-plugins` bin) from its
+/// source, as a user's `toolu` symlink to it would run.
 fn build_wrapper(out: &Path) -> Res<()> {
   let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
   let built = out.with_extension("js");

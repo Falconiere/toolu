@@ -26,7 +26,7 @@ Your own definitions win:
 npx @toolu/plugins install --host opencode
 ```
 
-The [`@toolu/plugins`](https://www.npmjs.com/package/@toolu/plugins) CLI adds this package to the `plugin` array of OpenCode's global config (`--scope project` for the project's), keeping your comments and other entries. Name plugins (`install ts-quality --host opencode`) to write a selection instead of enabling everything. You can also write the selection yourself, in your project:
+It needs the native `toolu` binary ([install](https://github.com/Falconiere/toolu/blob/main/docs/install.md)): the [`@toolu/plugins`](https://www.npmjs.com/package/@toolu/plugins) wrapper runs its `toolu plugins`, which adds this package to the `plugin` array of OpenCode's global config (`--scope project` for the project's), keeping your comments and other entries. Name plugins (`install ts-quality --host opencode`) to write a selection instead of enabling everything. You can also write the selection yourself, in your project:
 
 ```jsonc
 // .opencode/toolu/plugins.json

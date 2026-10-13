@@ -16,6 +16,7 @@ import { existsSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { run, type EnvPatch } from "@toolu/conformance/harness/spawn";
 import { createSandbox, type Sandbox } from "@toolu/conformance/harness/sandbox";
+import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
 import { z } from "zod";
 
 // Physical path: Arborist reports a workspace twice when the project path and
@@ -23,7 +24,8 @@ import { z } from "zod";
 const ROOT = realpathSync(resolve(import.meta.dir, "../../.."));
 const PUBLISH_DIR = join(ROOT, "tools/toolu-cli/npm");
 const SLOW_MS = 240_000;
-const HELP_FIRST_LINE = "npx @toolu/plugins <command> [options]";
+/** The first line of `toolu plugins --help`, which the wrapper runs. */
+const HELP_FIRST_LINE = "Install, list, remove and update toolu plugins on every host";
 
 /** Tracked markdown only: gitignored scratch specs are not published docs. CHANGELOG.md is release-please history and stays untouched. */
 async function trackedMarkdown(): Promise<string[]> {
@@ -107,47 +109,44 @@ test.concurrent("npm sees no local package named @toolu/plugins, so npx goes to 
   expect(published.output).toBe("[]");
 }, 300_000);
 
-test.concurrent("the packed tarball runs through npx with the verb first", async () => {
+test.concurrent("the packed wrapper runs the native toolu plugins through npx, verb first", async () => {
   using sb = createSandbox();
-  // Isolated cache, and no update notice mixed into the captured output.
+  // Isolated cache, and no update notice mixed into the captured output. The
+  // wrapper finds the built binary through TOOLU_BIN, the way the launcher would.
   const env: EnvPatch = {
     npm_config_cache: sb.path("npm-cache"),
     npm_config_update_notifier: "false",
     npm_config_store_dir: undefined,
+    TOOLU_BIN: requiredBuiltTooluBinary(),
   };
   const spec = await packTarball(sb, env);
   const { version } = PackageJson.parse(
     JSON.parse(readFileSync(join(PUBLISH_DIR, "package.json"), "utf8")),
   );
-  const npx = async (...args: string[]): Promise<{ exitCode: number; output: string }> => {
-    const res = await run(["npx", "--yes", spec, ...args], {
-      cwd: sb.project,
-      env,
-      timeoutMs: SLOW_MS,
-    });
+  const npx = async (cwd: string, ...args: string[]): Promise<{ exitCode: number; output: string }> => {
+    const res = await run(["npx", "--yes", spec, ...args], { cwd, env, timeoutMs: SLOW_MS });
     return { exitCode: res.exitCode, output: (res.stdout + res.stderr).replace(/\n+$/, "") };
   };
 
-  const versionRun = await npx("--version");
+  const versionRun = await npx(sb.project, "--version");
   expect(versionRun.exitCode).toBe(0);
   expect(versionRun.output).toBe(version);
 
-  const help = await npx("--help");
+  const help = await npx(sb.project, "--help");
   expect(help.exitCode).toBe(0);
   expect(help.output.split("\n")[0]).toBe(HELP_FIRST_LINE);
 
-  // No command at all prints the same help, but like a usage error.
-  const bare = await npx();
-  expect(bare.exitCode).toBe(2);
-  expect(bare.output.split("\n")[0]).toBe(HELP_FIRST_LINE);
+  // From an empty directory and from inside this repository alike.
+  for (const cwd of [sb.project, ROOT]) {
+    const dry = await npx(cwd, "install", "--dry-run", "--host", "claude", "jev");
+    expect(dry.exitCode).toBe(0);
+    expect(dry.output).toBe("Planned commands (nothing was run):\n  claude plugin install jev@toolu");
+  }
 
-  // The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb,
-  // and the error says what to type instead.
-  const noun = await npx("plugins", "install");
-  expect(noun.exitCode).toBe(2);
-  expect(noun.output).toBe(
-    "toolu: unknown command: plugins. The package name already says plugins: run `npx @toolu/plugins install`",
-  );
+  // The noun grammar of the old @toolu/cli is gone: `plugins` is not a verb.
+  const noun = await npx(sb.project, "plugins", "install");
+  expect(noun.exitCode).toBe(64);
+  expect(noun.output).toContain("unrecognized subcommand 'plugins'");
 }, 300_000);
 
 test.concurrent("documented npx invocations use the bare @toolu/plugins name", async () => {

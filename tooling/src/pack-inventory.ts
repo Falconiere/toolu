@@ -2,8 +2,9 @@
  * Asserts each published tarball's file list, as `npm pack` (the tool
  * `npm publish` uses, prepack included) reports it.
  *
- * `@toolu/plugins`, the `toolu` CLI, ships a Node bundle and its bundled
- * marketplace manifest and nothing else — above all not the bash plugins/ tree,
+ * `@toolu/plugins`, the `toolu-plugins` wrapper that runs the native
+ * `toolu plugins`, ships a Node bundle and its bundled marketplace manifest and
+ * nothing else — above all not the bash plugins/ tree,
  * which Claude Code and Codex users never read from npm. It packs from
  * tools/toolu-cli/npm, not the workspace, so no local package shares its name.
  *

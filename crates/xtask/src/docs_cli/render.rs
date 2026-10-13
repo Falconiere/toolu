@@ -23,8 +23,8 @@ beneath it, and the gate's `docs-cli` step fails when these files are stale.
 (`toolu.commands/v1`) that tools such as the Markdown drift gate (#444) read.
 - [`commands.schema.json`](commands.schema.json) is `toolu commands --schema`, the JSON Schema of \
 that tree and of every other `--json` document.
-- [`installer.md`](installer.md) documents the Node installer, `npx @toolu/plugins`, until \
-`toolu plugins` (#438) replaces it.
+- [`installer.md`](installer.md) is the guide to `toolu plugins`, the plugin installer, and to \
+`npx @toolu/plugins`, the npm wrapper that runs it.
 
 Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly one JSON \
 document. The exit codes are in the `toolu --help` output below. Within a major version every \

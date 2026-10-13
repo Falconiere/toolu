@@ -66,6 +66,9 @@ are in the root [README](../../README.md#install-everything).
 # installed from it; skip if you do not want the pre-simplify pass.
 claude plugin marketplace add anthropics/claude-plugins-official
 
+# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 # Already-installed plugins are reported and left alone.
 npx @toolu/plugins install
@@ -76,6 +79,9 @@ npx @toolu/plugins install
 
 <!-- install-everything:codex -->
 ```bash
+# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 npx @toolu/plugins install --host codex
 ```
@@ -91,7 +97,8 @@ OpenCode has no marketplace — paste this prompt so the agent installs the npm 
 ```text
 Install toolu for OpenCode (npm adapter; no marketplace, no clone). Skip steps already done.
 
-1. Run: npx @toolu/plugins install --host opencode
+1. If `toolu --version` fails, install the native binary first: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash (or brew install falconiere/tap/toolu). npx @toolu/plugins runs it and exits 69 without it.
+   Then run: npx @toolu/plugins install --host opencode
    It adds @toolu/opencode to the global OpenCode config (~/.config/opencode) once and enables every plugin. Add --scope project to write this project's opencode.json instead. To enable only some plugins, name them (npx @toolu/plugins install toolu ts-quality --host opencode); their dependencies are added and the choice lands in toolu/plugins.json beside that config (.opencode/toolu/plugins.json for --scope project, or when this project already has one).
 2. Optional: .opencode/toolu.config.json for gate modes (same schema as other hosts), e.g. { "version": 1, "gates": { "protectedFiles": { "mode": "block" } } }
 3. Restart OpenCode. Smoke-check: attempt a protected .env edit with protectedFiles mode block and confirm it is denied before bytes change.

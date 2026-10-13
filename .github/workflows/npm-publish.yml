@@ -11,13 +11,14 @@ name: npm publish
 # which is exactly how the 6.7.0 release published nothing.
 #
 # Three packages publish, in dependency order: @toolu/core, then
-# @toolu/opencode which depends on it, then @toolu/plugins, the `toolu` CLI.
+# @toolu/opencode which depends on it, then @toolu/plugins, the `toolu-plugins`
+# wrapper that runs the native `toolu plugins`.
 # @toolu/conformance stays private — it is an internal test harness.
 #
 # @toolu/plugins publishes from tools/toolu-cli/npm, not from its private dev
 # workspace. npx checks the local project tree before the registry, so a
-# workspace under the published name made `npx @toolu/cli` fail with
-# "toolu: command not found" from every toolu checkout.
+# workspace under the published name made `npx @toolu/cli` (the old name) fail
+# with "toolu: command not found" from every toolu checkout.
 #
 # @toolu/opencode carries the plugins/ catalog (manifests, committed bundles and
 # their runtime data), staged by its prepack, so the `plugin` config entry

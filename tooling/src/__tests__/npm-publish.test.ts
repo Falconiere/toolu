@@ -198,12 +198,14 @@ test.concurrent("the published tarball carries the bundle and the manifest and n
 // `toml` (E403 at publish time, after a 404 had suggested it was free). The
 // similarity filter applies to unscoped names only, so the CLI is scoped. It
 // declares exactly one bin: npx runs the only bin, which is what makes
-// `npx @toolu/plugins install` hand `install` to the CLI.
-test.concurrent("the CLI publishes under @toolu/plugins with toolu the only command", () => {
+// `npx @toolu/plugins install` hand `install` to the wrapper. The bin is
+// `toolu-plugins`, never `toolu`, so a global install cannot shadow the native
+// binary (#438).
+test.concurrent("the wrapper publishes under @toolu/plugins with toolu-plugins the only command", () => {
   const cli = readPackage("tools/toolu-cli/npm");
   expect(cli.name).toBe("@toolu/plugins");
-  expect(Object.keys(cli.bin ?? {})).toEqual(["toolu"]);
-  expect(cli.bin?.["toolu"]).toBe("dist/cli.js");
+  expect(Object.keys(cli.bin ?? {})).toEqual(["toolu-plugins"]);
+  expect(cli.bin?.["toolu-plugins"]).toBe("dist/cli.js");
 });
 
 test.concurrent("every published package carries a README and a LICENSE", () => {

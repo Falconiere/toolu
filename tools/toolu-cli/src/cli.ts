@@ -1,111 +1,77 @@
 #!/usr/bin/env node
-import { constants } from "node:fs";
-import { access, readFile } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+/**
+ * `npx @toolu/plugins …`: runs `toolu plugins …` on the separately installed
+ * native binary (#438). The package's command is `toolu-plugins`, so it never
+ * shadows that binary on `PATH`, and it never takes itself for it.
+ */
+import { spawn } from "node:child_process";
+import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { constants } from "node:os";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parseArgs } from "./args/parse";
-import { manifestCandidates } from "./catalog/manifest";
-import { CliError, EXIT, type ExitCode } from "./exit";
-import { dispatchPlugins } from "./plugins/dispatch";
+import { catalogPath, findNative, nativeWords } from "./resolve";
 
-const HELP = `npx @toolu/plugins <command> [options]
+const INSTALL = `Install it, then run this again:
+  curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+  brew install falconiere/tap/toolu
+See https://github.com/Falconiere/toolu/blob/main/docs/install.md`;
 
-Install toolu plugins into Claude Code, Codex and OpenCode.
+/** sysexits EX_UNAVAILABLE, the CLI contract's code for a missing dependency. */
+const UNAVAILABLE = 69;
 
-Commands:
-  install [name...]   Install plugins, core first (no names = all)
-  list                Show catalog and installation state
-  remove <name...>    Uninstall plugins
-  update [name...]    Update plugins to the marketplace version
+/** The signals the wrapper hands on, so the native run never outlives it. */
+const FORWARDED: readonly NodeJS.Signals[] = ["SIGINT", "SIGTERM", "SIGHUP"];
 
-For example: npx @toolu/plugins install
-
-OpenCode is managed through its config files: install adds @toolu/opencode to
-opencode.json and enables plugins in a toolu/plugins.json selection (global, or
-the project's .opencode/toolu/plugins.json); remove toolu drops the package,
-remove <name> disables one plugin.
-
-Options:
-  --host <id>       claude | codex | opencode (detected when omitted)
-  --scope <scope>   user | project | local (Claude Code); user | project (OpenCode)
-  --config <path>   Replay a .toolu/plugins.json selection
-  --yes, -y         Confirm destructive or command-declaring operations
-  --dry-run         Print the host commands or config changes without applying them
-  --no-input        Never prompt; fail listing what is missing
-  --json            Machine-readable output where supported
-  -h, --help        Show help
-  -v, --version     Show the version
-`;
-
-async function packageVersion(): Promise<string> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  for (const candidate of ["../package.json", "../../package.json"]) {
-    try {
-      const raw: unknown = JSON.parse(await readFile(resolve(here, candidate), "utf8"));
-      if (typeof raw === "object" && raw !== null && "version" in raw) {
-        const { version } = raw as { version: unknown };
-        if (typeof version === "string") return version;
-      }
-    } catch {
-      continue;
-    }
+/** The wrapper's version: `package.json` beside `dist/` (published) or `src/` (a checkout). */
+function version(self: string): string {
+  const path = resolve(self, "../../package.json");
+  if (!existsSync(path)) return "unknown";
+  const parsed: unknown = JSON.parse(readFileSync(path, "utf8"));
+  if (typeof parsed === "object" && parsed !== null && "version" in parsed && typeof parsed.version === "string") {
+    return parsed.version;
   }
-  throw new Error("package version is missing");
+  return "unknown";
 }
 
-/** The CLI prompts only on a real terminal, and never when --no-input is passed. */
-function isInteractive(noInput: boolean): boolean {
-  return !noInput && process.stdin.isTTY === true && process.stdout.isTTY === true;
+/**
+ * Runs the native binary with `words` and exits with its status; a run killed
+ * by a signal exits 128 plus the signal's number, as a shell reports it.
+ */
+function runNative(path: string, words: readonly string[]): void {
+  const child = spawn(path, [...words], { stdio: "inherit", windowsHide: true });
+  const forward = (signal: NodeJS.Signals) => () => child.kill(signal);
+  for (const signal of FORWARDED) process.on(signal, forward(signal));
+  child.on("error", (error) => {
+    process.stderr.write(`toolu-plugins: cannot run ${path}: ${error.message}\n`);
+    process.exitCode = UNAVAILABLE;
+  });
+  child.on("exit", (code, signal) => {
+    process.exitCode = signal === null ? (code ?? 1) : 128 + (constants.signals[signal] ?? 0);
+  });
 }
 
-/** Locates the marketplace manifest for this bundle or source run. */
-async function manifestPath(): Promise<string> {
-  const here = dirname(fileURLToPath(import.meta.url));
-  for (const candidate of manifestCandidates(here)) {
-    if (await readable(candidate)) return candidate;
+function main(argv: readonly string[]): void {
+  const self = realpathSync(fileURLToPath(import.meta.url));
+  if (argv.length === 1 && (argv[0] === "--version" || argv[0] === "-v")) {
+    process.stdout.write(`${version(self)}\n`);
+    return;
   }
-  throw new Error("marketplace manifest not found beside the CLI or in the repository");
-}
-
-async function readable(path: string): Promise<boolean> {
-  try {
-    await access(path, constants.R_OK);
-    return true;
-  } catch {
-    return false;
+  const native = findNative(process.env, self);
+  if (native.kind === "missing") {
+    const looked = native.searched.join(", ") || "nothing";
+    process.stderr.write(`toolu-plugins: the native toolu binary was not found (looked at ${looked}).\n${INSTALL}\n`);
+    process.exitCode = UNAVAILABLE;
+    return;
   }
-}
-
-export async function main(argv: readonly string[] = process.argv.slice(2)): Promise<ExitCode> {
-  try {
-    const args = parseArgs(argv);
-    if (args.version) {
-      process.stdout.write(`${await packageVersion()}\n`);
-      return EXIT.ok;
-    }
-    if (args.help || args.verb === undefined) {
-      process.stdout.write(HELP);
-      return args.help ? EXIT.ok : EXIT.usage;
-    }
-    return await dispatchPlugins(
-      { ...args, verb: args.verb },
-      {
-        manifestPath: await manifestPath(),
-        version: await packageVersion(),
-        cwd: process.cwd(),
-        interactive: isInteractive(args.noInput),
-        terminal: process.stdout.isTTY === true && process.env.TERM !== "dumb",
-        write: (text: string) => process.stdout.write(text),
-      },
+  if (native.kind === "old") {
+    process.stderr.write(
+      `toolu-plugins: ${native.path} has no \`toolu plugins\`; it predates this package. Upgrade it:\n  brew upgrade toolu\n  curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash\n`,
     );
-  } catch (error) {
-    if (error instanceof CliError) {
-      process.stderr.write(`toolu: ${error.message}\n`);
-      return error.code;
-    }
-    process.stderr.write(`toolu: ${error instanceof Error ? error.message : String(error)}\n`);
-    return EXIT.failed;
+    process.exitCode = UNAVAILABLE;
+    return;
   }
+  const catalog = catalogPath(self);
+  runNative(native.path, nativeWords(argv, existsSync(catalog) ? catalog : undefined));
 }
 
-if (import.meta.main === true) process.exitCode = await main();
+main(process.argv.slice(2));
