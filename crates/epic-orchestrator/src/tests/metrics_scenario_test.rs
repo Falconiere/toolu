@@ -40,20 +40,7 @@ fn status(engine: &Engine, id: &str) -> String {
 
 /// Three PRs merge in order; B and C are rebased by the engine.
 fn clean_queue() -> QueueRig {
-  let mut rig = QueueRig::new(&[2, 3, 4]);
-  for number in [2, 3, 4] {
-    rig.work(
-      number,
-      &format!("f{number}.txt"),
-      &format!("child {number}\n"),
-    );
-  }
-  rig.serve(2, Checks::Green, false);
-  rig.land(2);
-  for number in [3, 4] {
-    rig.serve(number, Checks::Green, false);
-  }
-  rig.ready(&[2, 3, 4]);
+  let (mut rig, _, _) = QueueRig::three_ready();
   rig.serve(3, Checks::Running, false);
   rig.checked(3);
   rig.serve(3, Checks::Green, true);

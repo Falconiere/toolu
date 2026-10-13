@@ -41,6 +41,27 @@ impl QueueRig {
     rig
   }
 
+  /// A, B and C (children 2, 3, 4) ready together with green checks; GitHub
+  /// merges A at the engine's call. Returns B's and C's heads before.
+  pub(crate) fn three_ready() -> (Self, String, String) {
+    let mut rig = Self::new(&[2, 3, 4]);
+    for number in [2, 3, 4] {
+      rig.work(
+        number,
+        &format!("f{number}.txt"),
+        &format!("child {number}\n"),
+      );
+    }
+    rig.serve(2, Checks::Green, false);
+    rig.land(2);
+    for number in [3, 4] {
+      rig.serve(number, Checks::Green, false);
+    }
+    let (b_before, c_before) = (rig.head(3), rig.head(4));
+    rig.ready(&[2, 3, 4]);
+    (rig, b_before, c_before)
+  }
+
   /// Child `number`'s issue record.
   pub(crate) fn record(&self, number: u64) -> Value {
     self.scenario.record(number)
