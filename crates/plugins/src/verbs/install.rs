@@ -35,14 +35,14 @@ fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<
 }
 
 /// Adds the toolu marketplace. A failure is not fatal (it may be there
-/// already), but a plugin that then fails to install says so: the note.
+/// already), so it only becomes a hint on a plugin that then fails to install.
 fn add_marketplace(driver: &Driver) -> String {
   let ran = driver.run(&driver.adapter.add_marketplace());
   if ran.ok() {
     return String::new();
   }
   format!(
-    "; marketplace add failed: {}",
+    "; the marketplace add also failed: {}",
     first_line(&ran.stderr, "no output")
   )
 }

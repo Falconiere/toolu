@@ -136,3 +136,16 @@ fn both_scopes_need_a_scope_and_nothing_configured_removes_nothing() {
   opencode(&sb, Verb::Remove, &["toolu"], Some(Scope::Project), false).expect("project");
   assert!(!sb.read(&local("opencode.json")).contains("plugin"));
 }
+
+#[test]
+fn a_name_with_nothing_to_remove_is_not_reported_as_removed() {
+  let sb = Sandbox::new();
+  let nothing = opencode(&sb, Verb::Remove, &["toolu", "jev"], None, false).expect("remove");
+  assert!(
+    nothing.json["steps"]
+      .as_array()
+      .is_some_and(|steps| steps.len() == 2 && steps.iter().all(|step| step["removed"] == false)),
+    "{}",
+    nothing.json
+  );
+}

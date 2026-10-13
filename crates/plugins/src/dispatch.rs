@@ -18,7 +18,7 @@ use crate::opencode;
 use crate::prompt::{Ask, Choice};
 use crate::replay;
 use crate::report;
-use crate::step::Step;
+use crate::step::{Status, Step};
 use crate::verbs::{self, Driver};
 
 /// What a run works with besides its request.
@@ -61,14 +61,36 @@ fn driver(target: Target, cx: &Context<'_>) -> Option<Driver> {
   })
 }
 
-/// A dry run's report: the planned config changes on `OpenCode`, the planned
-/// commands on a host CLI; `None` when the run was real.
+/// A dry run's report: the planned config changes on `OpenCode`, on a host CLI
+/// the commands a real run would run (not those of a plugin already current);
+/// `None` when the run was real.
 fn dry_text(target: Target, dry_run: bool, steps: &[Step]) -> Option<String> {
   match (dry_run, target) {
     (false, _) => None,
     (true, Target::Opencode) => Some(report::planned(steps)),
-    (true, Target::Claude | Target::Codex) => Some(report::commands(steps)),
+    (true, Target::Claude | Target::Codex) => {
+      let would_run: Vec<Step> = steps
+        .iter()
+        .filter(|step| step.status == Status::Skipped)
+        .cloned()
+        .collect();
+      Some(report::commands(&would_run))
+    }
   }
+}
+
+/// The steps `--json` reports for a removal: a dry run removed nothing.
+fn as_reported(steps: &[Step], dry_run: bool) -> Vec<Step> {
+  steps
+    .iter()
+    .map(|step| match (dry_run, step.status) {
+      (true, Status::Removed) => Step {
+        status: Status::Skipped,
+        ..step.clone()
+      },
+      _other => step.clone(),
+    })
+    .collect()
 }
 
 fn failed(steps: &[Step]) -> bool {
@@ -200,7 +222,7 @@ fn remove(
   };
   Ok(Report {
     text: dry_text(target, request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
-    json: report::host_json(target, &steps, true),
+    json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
     failed: failed(&steps),
   })
 }

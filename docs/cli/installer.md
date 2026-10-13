@@ -168,8 +168,9 @@ on the terminal (`/dev/tty`): Enter takes the default, `1 3` or `1,3` picks,
 and `q` cancels. Without a terminal, or with `--no-input` or `--json`, the run
 exits `64` and names the candidates rather than guessing.
 
-**Dry runs run nothing.** `--dry-run` prints the commands for `install`,
-`remove` and `update` alike. The TypeScript installer ignored the flag on
+**Dry runs run nothing.** `--dry-run` prints the commands a real run would
+run, for `install`, `remove` and `update` alike (an `update` leaves out plugins
+already at the offered version). The TypeScript installer ignored the flag on
 `remove` and `update` for Claude Code and Codex.
 
 **Each host command has 600 seconds.** A command that runs longer is a failed

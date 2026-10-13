@@ -48,3 +48,36 @@ fn a_rewrite_keeps_permissions_and_a_new_file_gets_its_directories() {
   let blocked = sb.write("file", "");
   assert!(write_atomic(&blocked.join("child.json"), "x").is_err());
 }
+
+#[test]
+fn a_discarded_or_failed_stage_leaves_no_temporary_file() {
+  let sb = Sandbox::new();
+  let staged = stage(&sb.path("cfg/a.json"), "x").expect("stage");
+  staged.discard();
+  assert!(!sb.path("cfg/a.json").exists());
+  std::fs::create_dir_all(sb.path("cfg/dir/inner")).expect("dir");
+  let onto_dir = stage(&sb.path("cfg/dir"), "x").expect("stage");
+  assert!(onto_dir.commit().is_err());
+  let temps: Vec<_> = std::fs::read_dir(sb.path("cfg"))
+    .expect("cfg")
+    .flatten()
+    .filter(|entry| entry.file_name().to_string_lossy().ends_with(".tmp"))
+    .collect();
+  assert_eq!(temps.len(), 0);
+}
+
+#[test]
+fn a_symlink_planted_at_a_temporary_name_is_never_followed() {
+  let sb = Sandbox::new();
+  let victim = sb.write("victim.txt", "keep");
+  let dir = sb.path("cfg");
+  std::fs::create_dir_all(&dir).expect("cfg");
+  let next = super::NEXT.load(std::sync::atomic::Ordering::Relaxed);
+  for unique in next..next + 8 {
+    let name = format!(".a.json.{}.{unique}.tmp", std::process::id());
+    std::os::unix::fs::symlink(&victim, dir.join(name)).expect("plant");
+  }
+  write_atomic(&dir.join("a.json"), "new").expect("write");
+  assert_eq!(sb.read("victim.txt"), "keep");
+  assert_eq!(sb.read("cfg/a.json"), "new");
+}

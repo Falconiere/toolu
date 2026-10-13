@@ -68,8 +68,11 @@ pub(crate) fn apply(state: &State, plan: Plan, dry_run: bool) -> Res<Vec<Step>> 
     }
   }
   let mut written: Vec<String> = Vec::new();
-  for (file, write) in staged.into_iter().zip(&plan.writes) {
+  let mut files = staged.into_iter().zip(&plan.writes);
+  while let Some((file, write)) = files.next() {
     if let Err(err) = file.commit() {
+      // The files not renamed yet are removed, never left behind.
+      files.for_each(|(rest, _)| rest.discard());
       let done = if written.is_empty() {
         "nothing".to_owned()
       } else {

@@ -5,12 +5,11 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
-import { FIXED_DIRS } from "../resolve";
 
 const WRAPPER = resolve(import.meta.dir, "../cli.ts");
 const NPM = resolve(import.meta.dir, "../../npm/package.json");
@@ -50,19 +49,16 @@ describe("the published manifest", () => {
   });
 });
 
-/** A native binary in a fixed install directory would be found before the sandbox's PATH. */
-const fixedNative = FIXED_DIRS.some((dir) => existsSync(join(dir, "toolu")));
-
 describe("running the native binary", () => {
-  test.skipIf(fixedNative)("a toolu on PATH that is the wrapper itself is never run; the install commands are named", () => {
+  test("a TOOLU_BIN that is the wrapper itself is never run; the install commands are named", () => {
     using sb = sandbox();
     symlinkSync(WRAPPER, join(sb.bin, "toolu"));
-    const run = wrapper(["install", "--dry-run", "--host", "claude"], { PATH: `${sb.bin}:/usr/bin:/bin`, HOME: sb.root }, sb.root);
+    const env = { PATH: "/usr/bin:/bin", HOME: sb.root, TOOLU_BIN: join(sb.bin, "toolu") };
+    const run = wrapper(["install", "--dry-run", "--host", "claude"], env, sb.root);
     expect(run.code).toBe(69);
-    expect(run.stderr).toContain("the native toolu binary was not found (looked at ");
-    expect(run.stderr).toContain(`, ${join(sb.bin, "toolu")}, `);
-    expect(run.stderr).toContain("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash");
-    expect(run.stderr).toContain("brew install falconiere/tap/toolu");
+    expect(run.stderr).toBe(
+      `toolu-plugins: the native toolu binary was not found (looked at ${join(sb.bin, "toolu")}).\nInstall it, then run this again:\n  curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash\n  brew install falconiere/tap/toolu\nSee https://github.com/Falconiere/toolu/blob/main/docs/install.md\n`,
+    );
   });
 
   test("a native binary without plugins is too old to run", () => {

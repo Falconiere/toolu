@@ -4,7 +4,7 @@
  * own installs never decide a case.
  */
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { requiredBuiltTooluBinary } from "@toolu/conformance/harness/entry-command";
@@ -66,6 +66,19 @@ describe("findNative", () => {
     symlinkSync(requiredBuiltTooluBinary(), join(sb.bin, "toolu"));
     const found = findNative({ PATH: `${oldDir}:${sb.bin}` }, WRAPPER, []);
     expect(found).toEqual({ kind: "found", path: realpathSync(requiredBuiltTooluBinary()) });
+  });
+
+  test("each real path is probed once, however many names lead to it", () => {
+    using sb = sandbox();
+    const log = join(sb.root, "probes.log");
+    const native = script(join(sb.root, "native"), `echo "$*" >> ${log}\n[ "$1" = "--hook-protocol" ] && echo 2; exit 0`);
+    const other = join(sb.root, "other");
+    mkdirSync(other);
+    symlinkSync(native, join(sb.bin, "toolu"));
+    symlinkSync(native, join(other, "toolu"));
+    const found = findNative({ PATH: `${sb.bin}:${other}` }, WRAPPER, []);
+    expect(found).toEqual({ kind: "found", path: native });
+    expect(readFileSync(log, "utf8")).toBe("--hook-protocol\nplugins install --help\n");
   });
 
   test("a bad TOOLU_BIN is not passed over for a good binary elsewhere", () => {

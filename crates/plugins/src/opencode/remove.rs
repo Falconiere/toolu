@@ -18,6 +18,11 @@ fn done(name: &str, detail: impl Into<String>) -> Step {
   Step::new(name, Status::Removed, detail, Vec::new())
 }
 
+/// A name with nothing to remove: not a failure, and not a removal.
+fn noop(name: &str, detail: impl Into<String>) -> Step {
+  Step::new(name, Status::Skipped, detail, Vec::new())
+}
+
 /// The scopes a package-level verb acts on; ambiguity is a usage error, not a guess.
 pub(crate) fn package_scopes(state: &State, scope: Option<Scope>) -> Res<Vec<Scope>> {
   if let Some(scope) = scope {
@@ -84,6 +89,23 @@ fn resurfaced(state: &State, file: &ConfigFile) -> Res<String> {
   Ok(String::new())
 }
 
+/// `remove toolu` with no package entry: every name is a no-op.
+fn not_configured(names: &[String]) -> Plan {
+  let nothing = format!("{PACKAGE} is not configured; nothing to remove");
+  let rest = names
+    .iter()
+    .map(String::as_str)
+    .filter(|name| *name != CORE);
+  let steps = std::iter::once(CORE)
+    .chain(rest)
+    .map(|name| noop(name, nothing.clone()))
+    .collect();
+  Plan {
+    steps,
+    writes: Vec::new(),
+  }
+}
+
 fn remove_package(state: &State, names: &[String], scope: Option<Scope>) -> Res<Plan> {
   let files = files_with_entries(state, &package_scopes(state, scope)?)?;
   let others = names
@@ -91,15 +113,7 @@ fn remove_package(state: &State, names: &[String], scope: Option<Scope>) -> Res<
     .filter(|name| *name != CORE)
     .map(|name| done(name, format!("removed with {PACKAGE}")));
   if files.is_empty() {
-    let mut steps = vec![done(
-      CORE,
-      format!("{PACKAGE} is not configured; nothing to remove"),
-    )];
-    steps.extend(others);
-    return Ok(Plan {
-      steps,
-      writes: Vec::new(),
-    });
+    return Ok(not_configured(names));
   }
   let kept = [Scope::Project, Scope::Global]
     .into_iter()
@@ -167,7 +181,7 @@ impl Leaves<'_> {
   fn step(&self, name: &str) -> Step {
     let (path, overridden) = (&self.path, &self.overridden);
     if !self.enabled.iter().any(|enabled| enabled == name) {
-      return done(name, format!("not enabled; nothing to change{overridden}"));
+      return noop(name, format!("not enabled; nothing to change{overridden}"));
     }
     if self.removing.iter().any(|removing| removing == name) {
       return done(name, format!("disabled in {path}{overridden}"))
@@ -187,7 +201,7 @@ fn remove_leaves(
 ) -> Res<Plan> {
   if state.installed_scopes()?.is_empty() {
     let steps = names.iter().map(|name| {
-      done(
+      noop(
         name,
         format!("{PACKAGE} is not configured; nothing to remove"),
       )

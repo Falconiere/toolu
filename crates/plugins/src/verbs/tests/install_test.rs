@@ -176,6 +176,6 @@ fn a_failed_marketplace_add_is_named_on_the_plugin_that_then_fails() {
   };
   assert_eq!(
     steps[0].detail,
-    "boom: plugin install jev@toolu; marketplace add failed: boom: plugin marketplace add Falconiere/toolu"
+    "boom: plugin install jev@toolu; the marketplace add also failed: boom: plugin marketplace add Falconiere/toolu"
   );
 }

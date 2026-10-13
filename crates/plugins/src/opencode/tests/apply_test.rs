@@ -117,3 +117,46 @@ fn a_config_edit_must_stay_jsonc_and_change_something() {
   );
   assert_eq!(sb.read(&global("opencode.json")), "{ \"plugin\": [] }\n");
 }
+
+#[test]
+fn a_rename_that_fails_names_what_was_written_and_leaves_no_temporary_file() {
+  let sb = Sandbox::new();
+  let project = sb.git_project("project");
+  let state = load(&project, &sb.env()).expect("state");
+  std::fs::create_dir_all(sb.path("out/busy/inner")).expect("busy");
+  let plan = Plan {
+    steps: Vec::new(),
+    writes: vec![
+      Write {
+        path: sb.path("out/first.json"),
+        text: "{}".to_owned(),
+      },
+      Write {
+        path: sb.path("out/busy"),
+        text: "{}".to_owned(),
+      },
+      Write {
+        path: sb.path("out/third.json"),
+        text: "{}".to_owned(),
+      },
+    ],
+  };
+  let Err(fail) = apply(&state, plan, false) else {
+    panic!("a rename onto a directory succeeded");
+  };
+  let first = sb.path("out/first.json").display().to_string();
+  assert!(
+    fail
+      .message
+      .ends_with(&format!("; already written: {first}")),
+    "{}",
+    fail.message
+  );
+  assert!(!sb.path("out/third.json").exists());
+  let temps = std::fs::read_dir(sb.path("out"))
+    .expect("out")
+    .flatten()
+    .filter(|entry| entry.file_name().to_string_lossy().ends_with(".tmp"))
+    .count();
+  assert_eq!(temps, 0);
+}

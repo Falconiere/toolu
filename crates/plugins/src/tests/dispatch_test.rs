@@ -254,3 +254,55 @@ fn host_cli_remove_and_update_check_names_and_dry_runs_list_the_commands() {
       .any(|line| line.contains("uninstall") || line.contains("update"))
   );
 }
+
+#[test]
+fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
+  let sb = Sandbox::new();
+  sb.host("claude", "[]", "never");
+  sb.write(
+    "claude-installed.json",
+    r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.10.0"}]"#,
+  );
+  sb.write(
+    "claude-available.json",
+    r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.11.0"}]"#,
+  );
+  let mut dry = request(Verb::Update, &[]);
+  dry.dry_run = true;
+  let Ok(report) = go(&sb, &dry, Some(Host::Claude), None) else {
+    panic!("the dry update failed");
+  };
+  assert_eq!(
+    report.text,
+    "Planned commands (nothing was run):\n  claude plugin update toolu@toolu\n"
+  );
+  sb.write(
+    &crate::support::global("opencode.json"),
+    &format!("{{ \"plugin\": [\"{}\"] }}\n", crate::support::TARGET),
+  );
+  let mut remove = request(Verb::Remove, &["toolu", "jev"]);
+  remove.yes = true;
+  remove.dry_run = true;
+  let Ok(planned) = go_in(&sb, &remove, Some(Host::Opencode)) else {
+    panic!("the dry removal failed");
+  };
+  assert!(
+    planned.json["steps"]
+      .as_array()
+      .is_some_and(|steps| steps.iter().all(|step| step["removed"] == json!(false))),
+    "{}",
+    planned.json
+  );
+}
+
+fn go_in(sb: &Sandbox, request: &Request, host: Option<Host>) -> Result<Report, Fail> {
+  let mut cx = Context {
+    env: sb.env(),
+    cwd: sb.git_project("project"),
+    host,
+    ask: None,
+    timeout: Duration::from_secs(10),
+    version: "7.11.0",
+  };
+  dispatch(request, &catalog(), &mut cx)
+}
