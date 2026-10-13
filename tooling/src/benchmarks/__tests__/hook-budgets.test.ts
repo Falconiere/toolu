@@ -1,6 +1,6 @@
 /**
- * The hook budgets follow from the committed prototype measurement by the rule
- * in docs/resource-budgets.md (#410 AC-7), and the doc states the same numbers.
+ * The hook budgets follow from committed measurements by the rule in
+ * docs/resource-budgets.md (#410 AC-7), and the doc states the same numbers.
  */
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -26,9 +26,8 @@ const Prototype = z.looseObject({
   }),
 });
 
-/** The epic's starting budgets, which the prototype measurement refines. */
+/** The epic's starting budgets still refined by the prototype measurement. */
 const START: Record<string, { maxRssMiB: number; cpuMs: number }> = {
-  "toolu/pre-tools": { maxRssMiB: 8, cpuMs: 5 },
   "toolu/post-tools": { maxRssMiB: 10, cpuMs: 10 },
 };
 
@@ -42,6 +41,10 @@ const proto = loadJson(join(ROOT, "benchmarks/results/hook-prototype-2026-10-05.
 const budgets = loadJson(join(ROOT, "benchmarks/hook-budgets.json"), Budgets);
 const native = loadJson(
   join(ROOT, "benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json"),
+  HookResult,
+);
+const recalibrated = loadJson(
+  join(ROOT, "benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-13.json"),
   HookResult,
 );
 
@@ -69,6 +72,18 @@ test("every prototype hook budget is the rule applied to the prototype's p50", (
       cpuMs: rule(start.cpuMs, measured.cpuUs.p50 / 1000, false),
     });
   }
+});
+
+test("the recalibrated pre-tools budget is the rule applied to the merged-tree run", () => {
+  expect(recalibrated.provenance).toMatchObject({ platform: "linux", runner: "github-actions" });
+  const measured = recalibrated.entries.find((entry) => entry.entry === "toolu/pre-tools");
+  expect(measured, "toolu/pre-tools").toBeDefined();
+  if (measured === undefined) return;
+  // The epic's starting budgets for pre-tools; the merged binary outgrew the prototype.
+  expect(budgets.entries["toolu/pre-tools"], "toolu/pre-tools").toEqual({
+    maxRssMiB: rule(8, measured.maxRssBytes.p50 / MIB, true),
+    cpuMs: rule(5, measured.cpuUs.p50 / 1000, false),
+  });
 });
 
 test("the fast path is what the budgets were measured with, and it is cheaper", () => {

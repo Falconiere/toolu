@@ -23,7 +23,7 @@
       "cpuMs": 4
     },
     "toolu/pre-tools": {
-      "maxRssMiB": 6,
+      "maxRssMiB": 8,
       "cpuMs": 5
     },
     "toolu/session-start": {

@@ -212,20 +212,21 @@ fn an_external_command_passes_only_while_it_is_listed() {
 
 #[test]
 fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
-  let files = [(SKILL, skill_running("toolu epic survey --json"))];
+  let serve = "plugins/toolu/skills/x/SKILL.md";
+  let files = [(serve, skill_running("toolu serve survey --json"))];
   let files: Vec<(&str, &str)> = files
     .iter()
     .map(|(path, text)| (*path, text.as_str()))
     .collect();
   let (code, stderr) = check(
-    root(&ported("epic", "survey").unwrap(), &files)
+    root(&ported("serve", "survey").unwrap(), &files)
       .unwrap()
       .path(),
   )
   .unwrap();
   assert_eq!(code, 0, "{stderr}");
   let (code, stderr) = check(
-    root(&ported("epic", "step").unwrap(), &files)
+    root(&ported("serve", "step").unwrap(), &files)
       .unwrap()
       .path(),
   )
@@ -234,7 +235,7 @@ fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
   assert_has(
     &stderr,
     &[&format!(
-      "{SKILL}:12: `toolu epic survey --json`: unknown command `survey`"
+      "{serve}:12: `toolu serve survey --json`: unknown command `survey`"
     )],
   );
 }

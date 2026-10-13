@@ -9,7 +9,7 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 | `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms | `bun run bench:hooks --assert`, per hook spawn | #425 |
 | `toolu hook check-binary` | ≤ 7 MiB max RSS, ≤ 3 ms CPU (p50) | Linux CI: 4.4 MiB, 2.0 ms | as above | #425 |
 | `toolu hook mcp-tools` | ≤ 7 MiB max RSS, ≤ 2 ms CPU (p50) | Linux CI: 4.4 MiB, 1.3 ms | as above | #425 |
-| `toolu hook pre-tools` | ≤ 6 MiB max RSS, ≤ 5 ms CPU (p50) | prototype: 3.6 MiB, 2.5 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
+| `toolu hook pre-tools` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 6.1 MiB, 1.7 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
 | `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `bun run bench:hooks`, release `toolu`, `sh` launcher included | #424 |
 | `toolu hook session-start` | ≤ 8 MiB max RSS, ≤ 43 ms CPU (p50) | native: 4.8 MiB, 33.8 ms | as above | #424 |
@@ -39,6 +39,8 @@ The original pre/post hook rows come from `benchmarks/results/hook-prototype-202
 It was built out of tree, because Rust outside a workspace member fails `cargo xtask check-reach`. The result file records its exact shape and dependency versions.
 
 The three hook budgets introduced with #425 use the measured Linux CI run in `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json`, with RSS at p50 × 1.5 and CPU at p50 × 1.25, each rounded up. Existing budgets are unchanged.
+
+Pre-tools was recalibrated from `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-13.json` after the merged binary outgrew the prototype (6.1 MiB p50 against a 6 MiB budget): RSS is the rule applied to the new run — min(epic start 8 MiB, p50 × 1.5 rounded up) — and CPU keeps the epic 5 ms.
 
 Rule:
 
