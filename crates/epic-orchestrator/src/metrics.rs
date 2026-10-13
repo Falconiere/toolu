@@ -7,6 +7,8 @@
 //! - `budgets`: the budget table;
 //! - `baseline`: the TypeScript-era figures (`toolu epic baseline`);
 //! - `text`: the human table beside the committed baseline;
+//! - `summary`, `tokens`: the end-of-epic report (`toolu epic summary`, the
+//!   closing comment) and token use per worker;
 //! - `stats`, `scope`, `timeline`, `ready`, `counts`, `github`: the fold.
 
 pub(crate) mod baseline;
@@ -17,8 +19,10 @@ mod github;
 mod ready;
 mod scope;
 mod stats;
+pub(crate) mod summary;
 mod text;
 mod timeline;
+mod tokens;
 
 use std::time::Duration;
 
@@ -26,6 +30,7 @@ use toolu_state::time::{epoch_millis, parse_iso};
 
 pub(crate) use budgets::rows as budget_rows;
 pub(crate) use document::document;
+pub(crate) use summary::closing;
 pub(crate) use text::render;
 
 /// What a metrics document covers and when it is computed.

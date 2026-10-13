@@ -5,6 +5,126 @@
   "description": "The root validates `toolu commands --json` (toolu.commands/v1). $defs holds every other document a toolu command prints under --json.",
   "$ref": "#/$defs/commands",
   "$defs": {
+    "epicSummary": {
+      "description": "toolu epic summary --json: one epic's run beside the TypeScript baseline, the budget table, and token use per worker read from host session records (#451).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "epic",
+        "rows",
+        "budgets",
+        "tokens"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "epic": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "measure",
+              "epic",
+              "baseline"
+            ],
+            "properties": {
+              "measure": {
+                "type": "string"
+              },
+              "epic": {
+                "type": "string"
+              },
+              "baseline": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "budgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "budget",
+              "value",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "budget": {
+                "type": "string"
+              },
+              "value": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "unmeasured"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "host"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "tokens": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "status": {
+                "const": "unavailable"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
     "epicMetrics": {
       "description": "toolu epic metrics --json and GET /api/v1/metrics: epic runs measured from the engine journal (#451). Durations are milliseconds.",
       "type": "object",

@@ -10,8 +10,8 @@ use crate::graph::Graph;
 use crate::tracker::Tracker;
 
 /// The summary posted on the epic: one row per sub-issue with its merged PRs,
-/// admin merges noted.
-pub(crate) fn summary_table(graph: &Graph) -> String {
+/// admin merges noted, then the run's `metrics` section when the engine ran it.
+pub(crate) fn summary_table(graph: &Graph, metrics: Option<&str>) -> String {
   let state = Path::new(&graph.state_dir);
   let mut lines = vec![
     "Epic complete.".to_owned(),
@@ -44,6 +44,9 @@ pub(crate) fn summary_table(graph: &Graph) -> String {
       issue.title.replace('|', "\\|")
     ));
   }
+  if let Some(metrics) = metrics {
+    lines.extend([String::new(), metrics.trim_end().to_owned()]);
+  }
   lines.join("\n")
 }
 
@@ -71,9 +74,13 @@ pub(crate) fn require_complete(graph: &Graph) -> Result<(), String> {
 ///
 /// # Errors
 /// The epic is incomplete, or the tracker fails.
-pub(crate) fn close_epic(graph: &Graph, tracker: &dyn Tracker) -> Result<Value, String> {
+pub(crate) fn close_epic(
+  graph: &Graph,
+  tracker: &dyn Tracker,
+  metrics: Option<&str>,
+) -> Result<Value, String> {
   require_complete(graph)?;
-  let result = tracker.close_epic(&summary_table(graph))?;
+  let result = tracker.close_epic(&summary_table(graph, metrics))?;
   Ok(json!({"epic": graph.epic.reference, "tracker": tracker.kind().name(), "result": result}))
 }
 

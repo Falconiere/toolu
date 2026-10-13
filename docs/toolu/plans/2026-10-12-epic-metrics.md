@@ -269,7 +269,7 @@ summary (with the closing comment) → docs → full gate.
   {
     "id": "S11",
     "title": "Token rows (Claude Code with subagents, Codex; OpenCode and Cursor unavailable), toolu epic summary, and the summary in the closing comment",
-    "check": "cargo test -p toolu-epic-orchestrator -- metrics::tokens metrics::summary close::tests epic_close verbs_actions::settle verbs_metrics",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- metrics::tokens metrics::summary close::tests verbs_metrics settle && cargo test -p toolu-cli --test epic_metrics summary",
     "ac_refs": [
       "AC-9"
     ],
@@ -285,7 +285,12 @@ summary (with the closing comment) → docs → full gate.
       "crates/epic-orchestrator/src/lib.rs",
       "crates/epic-orchestrator/src/verbs_actions/settle.rs",
       "crates/epic-orchestrator/src/verbs_actions/tests/settle_test.rs",
-      "crates/epic-orchestrator/src/epic_close.rs"
+      "crates/epic-orchestrator/src/epic_close.rs",
+      "crates/epic-orchestrator/src/effects_epic.rs",
+      "crates/epic-orchestrator/src/tests/close_test.rs",
+      "crates/epic-orchestrator/src/metrics.rs",
+      "crates/cli/tests/epic_metrics.rs",
+      "crates/cli/src/commands.schema.json"
     ],
     "input": "fixtures/epic/tokens: a Claude transcript with a streamed duplicate message id and a subagent file, a Codex rollout with two token_count events; issue records for claude, codex (relaunched), opencode and cursor; a graph whose epic closes",
     "model": "inherit"
@@ -414,4 +419,8 @@ summary (with the closing comment) → docs → full gate.
 - S9 red evidence: the same `tests/idle_budget.rs` against a release binary
   built from `main` (9d593b01) in the same container failed with 1 442
   voluntary switches in 35 s (`VmHWM` 6 430 720 bytes).
+- S11: `toolu epic summary --json` validates against a new
+  `$defs/epicSummary`. The closing comment's metrics section appears only
+  when the epic is registered with the engine and its journal holds a launch,
+  so an epic the TypeScript watcher ran closes as before.
 

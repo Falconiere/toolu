@@ -1,6 +1,7 @@
 //! The measuring verbs of `toolu epic` (#451): `metrics` reads the journal,
+//! `summary` reports one epic beside the baseline with token use, and
 //! `baseline` derives the TypeScript-era figures from recorded state
-//! directories. Neither needs a running engine.
+//! directories. None needs a running engine.
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -17,13 +18,14 @@ use crate::verbs::{failed, json_out, text};
 
 /// The verbs, for the `toolu epic` tree.
 pub(crate) fn commands() -> Vec<Command> {
-  vec![metrics_command(), baseline_command()]
+  vec![metrics_command(), summary_command(), baseline_command()]
 }
 
 /// Run `name` when it is one of these verbs.
 pub(crate) fn run(name: &str, matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Option<Outcome> {
   Some(match name {
     "metrics" => metrics_verb(matches, ctx, env),
+    "summary" => summary_verb(matches, ctx, env),
     "baseline" => baseline_verb(matches),
     _ => return None,
   })
@@ -43,6 +45,17 @@ fn metrics_command() -> Command {
         .long("since")
         .value_name("DATE")
         .help("Only records from this date (YYYY-MM-DD) or ISO-8601 UTC time on"),
+    )
+}
+
+fn summary_command() -> Command {
+  Command::new("summary")
+    .about("Report one epic's run beside the baseline, with budgets and token use")
+    .arg(
+      Arg::new("epic")
+        .value_name("EPIC")
+        .required(true)
+        .help("The epic key"),
     )
 }
 
@@ -90,6 +103,16 @@ fn metrics_verb(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
     return json_out(&doc);
   }
   Outcome::data(metrics::render(&doc, &metrics::budget_rows(&doc)))
+}
+
+fn summary_verb(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
+  let epic = text(matches, "epic").unwrap_or("");
+  let now = epoch_millis(SystemTime::now());
+  match metrics::summary::report(&Paths::from_env(env), epic, now, Some(env)) {
+    Ok(report) if ctx.json => json_out(&report),
+    Ok(report) => Outcome::data(metrics::summary::markdown(&report)),
+    Err(err) => failed("toolu epic summary", &err),
+  }
 }
 
 fn baseline_verb(matches: &ArgMatches) -> Outcome {

@@ -13,6 +13,7 @@ use crate::socket_loop::Msg;
 use crate::source::{self, Pace};
 
 /// What ends a subscription read or the pause between sessions.
+#[derive(Debug, Clone, Default)]
 pub(crate) struct Signals {
   /// The engine is stopping.
   pub stop: Arc<AtomicBool>,

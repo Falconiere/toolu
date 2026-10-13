@@ -187,3 +187,22 @@ fn baseline_of_the_fixture_state_matches_and_a_malformed_file_fails() {
   assert_eq!(failed.status.code(), Some(1));
   assert!(String::from_utf8_lossy(&failed.stderr).contains("x.json"));
 }
+
+#[test]
+fn summary_reports_an_epic_from_the_journal_and_refuses_an_unknown_one() {
+  let root = journal_root().unwrap();
+  let doc = document(&run(root.path(), &["--json", "epic", "summary", "e1"]).unwrap()).unwrap();
+  assert_eq!(
+    violations(&doc, "epicSummary").unwrap(),
+    Vec::<String>::new()
+  );
+  assert_eq!(
+    doc["rows"][0],
+    json!({"measure": "Merged issues", "epic": "2", "baseline": "83"})
+  );
+  let text = run(root.path(), &["epic", "summary", "e1"]).unwrap();
+  assert!(String::from_utf8_lossy(&text.stdout).starts_with("## Epic metrics"));
+  let unknown = run(root.path(), &["epic", "summary", "nope"]).unwrap();
+  assert_eq!(unknown.status.code(), Some(1));
+  assert!(String::from_utf8_lossy(&unknown.stderr).contains("unknown epic nope"));
+}
