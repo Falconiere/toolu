@@ -1,6 +1,6 @@
 # Orchestrator skill, worker brief and commands for the engine (#452) — Design
 
-**Date:** 2026-10-13   **Status:** Draft   **Author:** epic worker (Claude Code)   **Topic:** the epic-orchestrator Markdown for the resident engine
+**Date:** 2026-10-13   **Status:** Approved   **Author:** epic worker (Claude Code)   **Topic:** the epic-orchestrator Markdown for the resident engine
 
 ## Problem
 
@@ -82,8 +82,8 @@ No CLI or file-format change. Markdown contracts:
 - SKILL.md body (after the front matter) is at most 149 lines.
 - SKILL.md names only these `toolu epic` verbs: `graph`, `route`, `start`,
   `wait`, `status`, `queue`, `answer`, `ack`, `release`, `pause`, `resume`,
-  `close` (manual close stays in recovery only if it does not fit), and
-  `toolu doctor`. It names no `toolu epic gate`, `launch`, `finish` or
+  and `toolu doctor`. The engine closes the epic; a manual
+  `toolu epic close` lives in `references/recovery.md`. It names no `toolu epic gate`, `launch`, `finish` or
   `gh pr merge`.
 - The judgment table lists the attention kinds the engine raises:
   `needs-human`, `failed`, `blocked`, `stall`, `babysit`, `coupling-hold`,
@@ -91,8 +91,9 @@ No CLI or file-format change. Markdown contracts:
   `refresh-failed`, `herdr-error`, `dependency-cycle`, `epic-complete`,
   `merge-ready` (test seam), each with one command.
 - Context budget row: `epic-orchestrator`, `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`,
-  a word ceiling on the description with trigger phrases `epic`,
-  `dry-run the epic`, `where is the epic at`.
+  a ceiling of 80 description words with the trigger phrases `epic`,
+  `dry-run the epic` and `where is the epic at` (today's description is
+  about 150 words).
 
 ## Failure modes and edge cases
 
@@ -137,15 +138,20 @@ No CLI or file-format change. Markdown contracts:
 - **AC-6:** The OpenCode generated skill, references and command carry no
   Claude-only step (`run_in_background`, "end your turn") and describe the
   bounded loop; generation and its drift check pass.
-- **AC-7:** `commands/epic.md` maps `start`, `status`, `pause`, `resume`,
-  `stop` and `serve` each to its CLI command.
-- **AC-8:** `references/recovery.md` routes every failure through
-  `toolu epic status`, the journal or `toolu doctor` first.
-- **AC-9:** `.toolu/skills/verify-epic-watcher` runs engine commands and names
-  no watcher script.
-- **AC-10:** The five evals exist with assertions, and the read-only ones
-  ("dry-run the epic", "where is the epic at", "which issues can run in
-  parallel") and "stop" (against an isolated engine) pass when run.
+- **AC-7:** Given `/epic start|status|pause|resume|stop|serve`, the shipped
+  command file gives each one CLI command (`stop` = `toolu epic pause
+  <epic-key>`), and an epic reference runs the skill.
+- **AC-8:** Given a failure in `references/recovery.md`, its first step is
+  `toolu epic status <key>`, the journal (`/api/v1/events`) or
+  `toolu doctor`, and every command in it is a real `toolu` command.
+- **AC-9:** Given `.toolu/skills/verify-epic-watcher`, its procedure runs only
+  `toolu epic` and `herdr` commands (including `toolu epic wait`) and names no
+  watcher script (`epic-watch`, `.ts`).
+- **AC-10:** Given the five eval prompts, each run by a fresh subagent that
+  reads the shipped SKILL.md, the read-only ones ("dry-run the epic" on #402,
+  "which issues can run in parallel" on #402, "where is the epic at") and
+  "stop" (with `TOOLU_RESOURCE_HOME` pointing at an isolated engine, the real
+  one's pause state unchanged) meet their assertions.
 
 ## Acceptance evidence
 
@@ -155,11 +161,11 @@ No CLI or file-format change. Markdown contracts:
 | AC-2 | plugin Markdown | no drift | `cargo xtask check-markdown-cli`; `epic_markdown` verb test (now over references) |
 | AC-3 | `fixtures` graph via the real binary | brief per host × tracker | `cargo test -p toolu-cli --test epic_markdown`; `cargo test -p toolu-epic-orchestrator brief` |
 | AC-4 | shipped SKILL.md | banned verbs absent, table complete | `epic_markdown` tests |
-| AC-5 | isolated `TOOLU_RESOURCE_HOME`, real engine, a `needs-human` report | wait returns that item | this session's background Bash; `codex exec` and `opencode run` sessions; record in `docs/toolu/evidence/2026-10-13-epic-wait-hosts.md` |
+| AC-5 | isolated `TOOLU_RESOURCE_HOME`, real engine, a `needs-human` report sent after the waiter's 3rd return | wait returns that item; earlier iterations return `waiting` | this session's background Bash; a `codex exec` and an `opencode run` session (the installed CLIs; versions recorded) running a short `--max-seconds` loop; record in `docs/toolu/evidence/2026-10-13-epic-wait-hosts.md` |
 | AC-6 | generated tree | banned tokens absent | `bun run generate:opencode-surface`, `bun run check:opencode-surface`, `bun test tools/toolu-opencode/scripts/__tests__/epic-surfaces.test.ts` |
 | AC-7 | `commands/epic.md` | six subcommands | `epic_markdown` test |
 | AC-8, AC-9 | the files | commands present, no script | `epic_markdown` (recovery), review; `cargo xtask check-markdown-cli` does not read `.toolu/`, so review |
-| AC-10 | Epic #402 and #203 (read-only), isolated engine for stop | assertions hold | eval runs recorded in the evidence file |
+| AC-10 | Epic #402 (read-only GitHub), isolated engine for status and stop | each assertion met; no write outside the isolated root | one subagent per eval with the prompt verbatim; transcript excerpts and grades in the evidence file; `toolu epic status` of the real engine before and after |
 
 ## Documentation impact
 
@@ -175,3 +181,14 @@ babysit, the command's subcommands) and `docs/epic-orchestrator/README.md`
    Non-blocking for this PR; the PR says it was not run and why.
 2. **The "work epic #N" eval** launches agents; it runs with Open Question 1.
    Non-blocking.
+
+## Spec review (round 1)
+
+- Interfaces: 🟡 should-fix: `close` listed conditionally. Fixed: the engine closes; manual close only in recovery.
+- Interfaces: 🟡 should-fix: the budget row had no number. Fixed: 80 description words.
+- Acceptance criteria: 🟡 should-fix: AC-7–AC-10 read as activities (Jev noul 0.23 on observability). Fixed: each is given/then on a real input.
+- Acceptance evidence: 🟡 should-fix: eval runs had no method. Fixed: one subagent per eval, isolated engine for stop, real engine checked before and after.
+- Acceptance evidence: 🟡 should-fix: the installed OpenCode is 2.0.21, not the 1.x the plugin targets; the wait loop is plain bash, so the version is recorded rather than pinned.
+- Open Questions: both owned and non-blocking (Jev coverage score 2.24, mode 3 at 0.56).
+
+**Status:** Approved
