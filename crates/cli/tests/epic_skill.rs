@@ -59,7 +59,10 @@ fn the_skill_checks_previews_then_starts() {
   let preflight = section(&text, "1. Preflight").unwrap();
   assert!(preflight.contains("`toolu doctor`"), "{preflight}");
   let plan = section(&text, "2. Plan").unwrap();
-  assert!(plan.contains("epic graph <epic> --max 3 --dry-run"), "{plan}");
+  assert!(
+    plan.contains("epic graph <epic> --max 3 --dry-run"),
+    "{plan}"
+  );
   assert!(plan.contains("toolu epic route --graph /tmp/epic-graph.json"));
   assert!(plan.contains("--dry-run\n```") && plan.contains("A dry run stops here"));
   let run = section(&text, "3. Run").unwrap();

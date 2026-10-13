@@ -24,9 +24,9 @@ fn surfaces() -> Res<Vec<(String, String)>> {
     "skills/epic-orchestrator/references/worker-brief.md",
     "commands/epic.md",
   ]
-    .iter()
-    .map(|rel| Ok(((*rel).to_owned(), std::fs::read_to_string(root.join(rel))?)))
-    .collect()
+  .iter()
+  .map(|rel| Ok(((*rel).to_owned(), std::fs::read_to_string(root.join(rel))?)))
+  .collect()
 }
 
 /// The verbs `toolu epic --help` lists.

@@ -166,5 +166,9 @@ fn an_epic_description_without_its_trigger_phrase_is_red() {
     .iter()
     .find(|line| line.text.starts_with("epic-orchestrator") && line.red)
     .unwrap();
-  assert!(missing.text.contains("dry-run the epic"), "{}", missing.text);
+  assert!(
+    missing.text.contains("dry-run the epic"),
+    "{}",
+    missing.text
+  );
 }

@@ -132,6 +132,9 @@ fn the_worker_stops_after_reporting_babysit_and_waits_for_the_engine() {
     assert!(text.contains(&format!("Do not start {babysit}, a cron or a polling loop")));
     assert!(text.contains("`pr-babysit: <repo>#<n> needs you (...)`"));
     assert!(text.contains("the engine marks the issue `ready`"));
-    assert!(!text.contains("`report ready") && !text.contains("on a cron."), "{kind:?}");
+    assert!(
+      !text.contains("`report ready") && !text.contains("on a cron."),
+      "{kind:?}"
+    );
   }
 }
