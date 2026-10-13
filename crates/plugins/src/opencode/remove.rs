@@ -153,6 +153,32 @@ fn removable(catalog: &Catalog, enabled: &[String], names: &[String]) -> Vec<Str
   }
 }
 
+/// What a leaf removal decided, to report each name.
+struct Leaves<'a> {
+  catalog: &'a Catalog,
+  enabled: &'a [String],
+  removing: &'a [String],
+  path: String,
+  overridden: String,
+}
+
+impl Leaves<'_> {
+  /// The step of `name`: absent, disabled, or refused while another needs it.
+  fn step(&self, name: &str) -> Step {
+    let (path, overridden) = (&self.path, &self.overridden);
+    if !self.enabled.iter().any(|enabled| enabled == name) {
+      return done(name, format!("not enabled; nothing to change{overridden}"));
+    }
+    if self.removing.iter().any(|removing| removing == name) {
+      return done(name, format!("disabled in {path}{overridden}"))
+        .planned(format!("disable {name} in {path}"));
+    }
+    let blockers = dependents_blocking(self.catalog, self.enabled, self.removing, name);
+    let detail = format!("required by {}; remove them too", blockers.join(", "));
+    Step::new(name, Status::Failed, detail, Vec::new())
+  }
+}
+
 fn remove_leaves(
   state: &State,
   catalog: &Catalog,
@@ -177,27 +203,14 @@ fn remove_leaves(
     .map_or_else(|| catalog.names(), <[String]>::to_vec);
   let enabled = closure(catalog, &base);
   let removing = removable(catalog, &enabled, names);
-  let path = state.paths.selection(target).display().to_string();
-  let overridden = state.overridden_note(target);
-  let steps = names
-    .iter()
-    .map(|name| {
-      if !enabled.contains(name) {
-        return done(name, format!("not enabled; nothing to change{overridden}"));
-      }
-      if removing.contains(name) {
-        return done(name, format!("disabled in {path}{overridden}"))
-          .planned(format!("disable {name} in {path}"));
-      }
-      let blockers = dependents_blocking(catalog, &enabled, &removing, name).join(", ");
-      Step::new(
-        name,
-        Status::Failed,
-        format!("required by {blockers}; remove them too"),
-        Vec::new(),
-      )
-    })
-    .collect();
+  let leaves = Leaves {
+    catalog,
+    enabled: &enabled,
+    removing: &removing,
+    path: state.paths.selection(target).display().to_string(),
+    overridden: state.overridden_note(target),
+  };
+  let steps = names.iter().map(|name| leaves.step(name)).collect();
   let next: Vec<String> = base
     .into_iter()
     .filter(|name| !removing.contains(name))
