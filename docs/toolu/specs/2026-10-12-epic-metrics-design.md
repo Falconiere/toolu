@@ -1,6 +1,6 @@
 # Epic metrics, baseline and efficiency budgets — Design
 
-**Date:** 2026-10-12   **Status:** Draft (revision 4)   **Author:** Claude (epic worker, #451)   **Topic:** Measure epic runs from the engine journal, against a derived TypeScript baseline, under CI budgets
+**Date:** 2026-10-12   **Status:** Approved (revision 5; spec review rounds 1–4 by an independent reviewer, final finding resolved in Open Question 3)   **Author:** Claude (epic worker, #451)   **Topic:** Measure epic runs from the engine journal, against a derived TypeScript baseline, under CI budgets
 
 Brainstorm: `docs/toolu/brainstorms/2026-10-12-epic-metrics.md`.
 
@@ -313,7 +313,7 @@ path.
 - **AC-4:** Given the same fixture journal under a running engine, `GET /api/v1/metrics` returns the CLI's document (all fields but `generated_at`); `?since=bad` returns 400.
 - **AC-5:** Given the scripted epic (scenario rig: launch, ready, a PR waiting through keep-going checks, an engine rebase, one conflict hand-off, merges, close, and a real blocking `wait`), the metrics of its journal mark `judgment-free-wakeups`, `prompts-while-waiting`, `rebase-without-conflict`, `verdict-reaction`, `check-gap` and `ready-to-merged` as `pass`.
 - **AC-6:** Given planted journals, each count budget fails: a `babysit` prompt after only keep-going checks (`prompts-while-waiting`), a `rebase` prompt with no hand-off (`rebase-without-conflict`), a `timeout` wait reply (`judgment-free-wakeups`), a `merge-intent` after a second check with no other merge between (`verdict-reaction`), a check whose `nextAt` is 360 s out (`check-gap`); and given a watch, the next scheduled slot after a fresh, unchanged, failed or errored check is exactly 180 000 ms after the previous slot.
-- **AC-7:** On Linux, a release `toolu epic serve --http` with no epic, after 2 s of warm-up, keeps `VmHWM` ≤ 10 000 000 bytes (the issue's 10 MB; the measured idle figure is recorded in Open Questions 3) and makes at most 40 voluntary context switches in total, summed over `/proc/<pid>/task/*/status`, in a 35 s window, with the herdr thread running and no herdr socket. Each idle source (the 30 s tick with its journal and watch I/O, the herdr 30 s pause and its outage message) fits at most twice in the window; a sub-second timer (the 20 ms accept poll gives about 1 750, a 1 s timer about 35 per thread) fails it. Unit tests pin the idle constants: the herdr idle read and pause are 30 s, and `wake_after` on an idle world waits for the tick.
+- **AC-7:** On Linux, a release `toolu epic serve --http` with no epic, after 2 s of warm-up, keeps `VmHWM` ≤ 10 000 000 bytes (the issue's 10 MB; the measured idle figure is recorded in Open Questions 3) and makes at most 20 voluntary context switches in total, summed over `/proc/<pid>/task/*/status`, in a 35 s window, with the herdr thread running and no herdr socket. Each idle source (the 30 s tick with its journal and watch I/O, the herdr 30 s pause and its outage message) fits at most twice in the window; so the idle total is about 4 wake-ups plus their I/O waits, while the 20 ms accept poll gives about 1 750 and a single 1 s timer (today's herdr `pause`) about 35, both failing it. The limit was not measured on Linux before the change; the CI test's first run records the figure in the PR, and a limit change needs that evidence. Unit tests pin the idle constants: the herdr idle read and pause are 30 s, and `wake_after` on an idle world waits for the tick.
 - **AC-8:** Given a real blocking `wait` that times out and one that returns a judgment, a babysit check, a refused `toolu epic job`, and an engine start, tick and stop, the journal holds `wait-reply` (`timeout`, `judgment:<kind>`), a `github-check` with `issue` and `next` and the issue's epic, `job-wait` (`capacity`), and `engine-usage` `start`/`stop` with `max_rss_bytes` > 0.
 - **AC-9:** Given fixture Claude Code (with a subagent file) and Codex transcripts, `toolu epic summary <epic>` prints lead time, phase shares, rebase rounds, ready-to-merged and relaunches beside the baseline, the budget table, summed token rows, `unavailable` rows for OpenCode and Cursor, and `complete: false` for a relaunched issue; the epic's closing comment carries the summary without token rows.
 - **AC-10:** `cargo xtask check-markdown-cli`, the `docs-cli` drift check, `cli-compat` and the full `cargo xtask gate` pass with the new verbs documented.
@@ -328,7 +328,7 @@ path.
 | AC-4 | same journal under `serve_with_http` | same document; 400 | bad query | `cargo test -p toolu-epic-orchestrator status_api` |
 | AC-5 | scenario rig journal | five budgets `pass` | conflict hand-off present | `cargo test -p toolu-epic-orchestrator metrics_scenario` |
 | AC-6 | planted records; `Watch` | named budget `fail`; slot + 180 000 | errors, 304s, late wake | `cargo test -p toolu-epic-orchestrator budgets` and `watch` |
-| AC-7 | release binary | ≤ 10 MB, ≤ 40 switches in 35 s | herdr socket absent | `cargo test -p toolu-epic-orchestrator --release --test idle_budget` (Linux `rust` CI job) |
+| AC-7 | release binary | ≤ 10 MB, ≤ 20 switches in 35 s | herdr socket absent | `cargo test -p toolu-epic-orchestrator --release --test idle_budget` (Linux `rust` CI job) |
 | AC-8 | real engine paths | the records | timeout and judgment | `cargo test -p toolu-epic-orchestrator` (dispatch, github_engine, job, server tests) |
 | AC-9 | transcript fixtures | token sums; `unavailable` | relaunched issue | `cargo test -p toolu-epic-orchestrator metrics::` and `close` |
 | AC-10 | the branch | green | — | `cargo xtask gate` |
@@ -361,3 +361,7 @@ path.
    context switches in a 5 s sample, from the 20 ms accept poll and the 1 s
    herdr pause. The 10 MB budget therefore holds with margin; the Linux CI
    test confirms `VmHWM` on its runner, and only the timers need the fix.
+   The Linux switch figure is not measured yet: the first CI run of
+   `tests/idle_budget.rs` prints the measured `VmHWM` and switch total, which
+   go into the PR body, and changing the 20-switch or 10 MB limit later needs
+   that evidence. Owner: this PR; non-blocking for planning.
