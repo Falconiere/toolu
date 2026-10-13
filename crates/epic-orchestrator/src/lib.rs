@@ -62,6 +62,7 @@ pub mod hook;
 mod hosts;
 mod http;
 mod http_access;
+mod http_metrics;
 mod http_request;
 mod http_response;
 mod http_stream;

@@ -44,6 +44,7 @@ struct Context {
   connections: AtomicUsize,
   streams: AtomicUsize,
   overview: OverviewCache,
+  metrics: crate::http_metrics::MetricsCache,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -79,6 +80,7 @@ pub(crate) fn start(
     connections: AtomicUsize::new(0),
     streams: AtomicUsize::new(0),
     overview: OverviewCache::new(),
+    metrics: crate::http_metrics::MetricsCache::new(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running { addr, thread })
@@ -225,6 +227,11 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   }
   if path == "/api/v1/events" {
     return events_page(context, query, request);
+  }
+  if path == "/api/v1/metrics" {
+    return context
+      .metrics
+      .response(&context.paths, query, &context.secrets);
   }
   let world = match context.world.lock() {
     Ok(world) => world.clone(),

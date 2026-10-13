@@ -191,7 +191,7 @@ summary (with the closing comment) → docs → full gate.
   {
     "id": "S8",
     "title": "GET /api/v1/metrics in a new http_metrics.rs (query parsing, 60 s 16-entry cache) routed from http.rs, and the generated API reference row",
-    "check": "cargo test -p toolu-epic-orchestrator -- status_api status_schema http_metrics http::tests",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- status_api status_schema http_metrics http::tests",
     "ac_refs": [
       "AC-4"
     ],
