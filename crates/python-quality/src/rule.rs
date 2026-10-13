@@ -77,7 +77,10 @@ fn findings(file: &EditedFile, text: &str, ctx: &RuleContext<'_>) -> QualityFind
   let f = PyFile::new(file, text, limits(ctx));
   QualityFindings {
     errors: errors(&f, ctx),
-    advisories: vec![docs(&f)],
+    advisories: Some(docs(&f))
+      .filter(|text| !text.is_empty())
+      .into_iter()
+      .collect(),
   }
 }
 

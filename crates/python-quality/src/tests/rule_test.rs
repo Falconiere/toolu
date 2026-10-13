@@ -144,7 +144,9 @@ fn every_lang_python_key_sets_its_limit() {
   )
   .unwrap();
   std::fs::write(root.join("a.py"), "a = 1\n").unwrap();
-  let set = checked(root, &env, "a.py").3;
+  let (_, errors, advisories, set) = checked(root, &env, "a.py");
+  // A clean file with no public def or class gets no advisory, not an empty one.
+  assert_eq!((errors.len(), advisories.len()), (0, 0));
   assert_eq!(
     set,
     Limits {
