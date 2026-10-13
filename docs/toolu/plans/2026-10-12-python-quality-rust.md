@@ -58,7 +58,7 @@ shared `QualityPlugin` (ts-quality green) → python rule crate → hub/CLI wiri
   {
     "id": "plugin-cleanup",
     "title": "Native hooks.json, delete hooks/src and hooks/dist, delete the engine quality_bridge test, make the OpenCode startup failure a hand-written register command, update OpenCode tests, host-paths, bench fixture, knip/oxlint/package references, delete python-quality-latency bench",
-    "check": "cargo xtask gate --only hooks --only dist && cargo test -p toolu-engine --test dispatch_fixture && bun test --timeout 120000 tools/toolu-opencode tooling/src/__tests__ tooling/src/benchmarks tools/toolu-conformance && bun run test:conformance",
+    "check": "cargo xtask gate --only hooks --only dist && cargo test -p toolu-engine --test dispatch_fixture && bun test --timeout 120000 tools/toolu-opencode tooling/src tools/toolu-conformance && bun run test:conformance",
     "ac_refs": ["AC-1", "AC-2", "AC-6", "AC-9"],
     "depends_on": ["golden-replay"],
     "paths": ["plugins/python-quality/", "crates/core/engine/tests/", "packages/toolu-core/src/dispatch/__tests__/", "tools/toolu-conformance/src/", "tools/toolu-opencode/", "tooling/src/", "benchmarks/", "knip.json", "plugins/.oxlintrc.json", "package.json", "fixtures/gates/"],
