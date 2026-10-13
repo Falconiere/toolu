@@ -112,7 +112,7 @@ test.concurrent("npm sees no local package named @toolu/plugins, so npx goes to 
 test.concurrent("the packed wrapper runs the native toolu plugins through npx, verb first", async () => {
   using sb = createSandbox();
   // Isolated cache, and no update notice mixed into the captured output. The
-  // wrapper finds the built binary through TOOLU_BIN, as the launcher would.
+  // wrapper finds the built binary through TOOLU_BIN, the way the launcher would.
   const env: EnvPatch = {
     npm_config_cache: sb.path("npm-cache"),
     npm_config_update_notifier: "false",
