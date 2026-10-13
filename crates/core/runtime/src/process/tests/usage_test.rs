@@ -23,13 +23,14 @@ fn peak_resident_memory_grows_with_touched_pages_and_cpu_never_goes_back() {
 
 #[test]
 fn rss_units_are_bytes_on_every_platform() {
+  let expected = if cfg!(target_os = "macos") {
+    10
+  } else {
+    10 * 1024
+  };
+  assert_eq!(super::to_bytes(10), Ok(expected));
   assert_eq!(
-    super::to_bytes(10),
-    if cfg!(target_os = "macos") {
-      10
-    } else {
-      10 * 1024
-    }
+    super::to_bytes(-1),
+    Err("getrusage: negative max RSS -1".to_owned())
   );
-  assert_eq!(super::to_bytes(-1), 0);
 }
