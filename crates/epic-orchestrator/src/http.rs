@@ -95,7 +95,7 @@ pub(crate) fn start(
 fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
   while !context.stop.load(Ordering::Relaxed) {
     match listener.accept() {
-      // `join_threads` connects once to end a blocking accept on stop.
+      // `Running::stop` connects once to end a blocking accept on stop.
       Ok(_) if context.stop.load(Ordering::Relaxed) => break,
       Ok((mut stream, _)) => {
         if stream.set_nodelay(true).is_err() {

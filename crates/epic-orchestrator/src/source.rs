@@ -43,8 +43,12 @@ where
   if world.herdr_failures > 0 && world.now_ms < world.herdr_retry_at_ms {
     return Ok(());
   }
+  // With an interrupt, the caller reconnects with a fresh world; an
+  // in-session retry would reuse stale filters and be shut down at once.
   match connect(env, world, pace, &mut on)? {
-    Stop::Retry if !stopped(pace) => connect(env, world, pace, &mut on).map(|_| ()),
+    Stop::Retry if !stopped(pace) && pace.interrupt.is_none() => {
+      connect(env, world, pace, &mut on).map(|_| ())
+    }
     Stop::Retry | Stop::Idle | Stop::Done => Ok(()),
   }
 }

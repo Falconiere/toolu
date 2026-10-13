@@ -106,11 +106,11 @@ fn on_timeout(
   next_tick: &mut Instant,
   babysit: &dyn BabysitTick,
 ) -> Result<(), String> {
+  engine.refresh_clock();
   expire(engine, waiters)?;
   if Instant::now() >= *next_tick {
     tick(engine, next_tick, babysit)?;
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
-    engine.refresh_clock();
     let _tick = engine.tick(babysit)?;
   }
   satisfy(engine, waiters)

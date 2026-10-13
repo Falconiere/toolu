@@ -48,6 +48,9 @@ fn run(tx: &Sender<Msg>, shared: &Arc<Mutex<World>>, env: &Env, signals: &Signal
       Err(_err) => break,
     };
     signals.interrupt.reset();
+    // This session subscribes with the current world, so an older request
+    // to resubscribe is already served.
+    signals.wake.store(false, Ordering::Relaxed);
     let pace = Pace {
       idle: Some(IDLE),
       return_on_idle: false,
