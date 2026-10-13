@@ -4,13 +4,13 @@
 
 use std::path::Path;
 
-/// A fallible helper result.
-type Res<T> = Result<T, Box<dyn std::error::Error>>;
+/// A fallible helper result; the error says what was missing.
+type Res<T> = Result<T, String>;
 
 /// One shipped epic-orchestrator file.
 fn shipped(rel: &str) -> Res<String> {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/epic-orchestrator");
-  Ok(std::fs::read_to_string(root.join(rel))?)
+  std::fs::read_to_string(root.join(rel)).map_err(|err| format!("{rel}: {err}"))
 }
 
 fn skill() -> Res<String> {
@@ -19,7 +19,10 @@ fn skill() -> Res<String> {
 
 /// The skill after its front matter.
 fn body(text: &str) -> Res<&str> {
-  Ok(text.splitn(3, "---\n").nth(2).ok_or("no front matter")?)
+  text
+    .splitn(3, "---\n")
+    .nth(2)
+    .ok_or_else(|| "no front matter".to_owned())
 }
 
 /// The text of the `## <title>` section, up to the next `## `.
