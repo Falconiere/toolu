@@ -34,7 +34,7 @@ pub(crate) fn command() -> Command {
     .subcommand(engine_command())
     .subcommand(serve_command())
     .subcommand(start_command())
-    .subcommand(status_command())
+    .subcommand(crate::query::status_command())
     .subcommand(queue_command())
     .subcommand(pause_command(
       "pause",
@@ -142,16 +142,6 @@ fn start_command() -> Command {
         .long("no-jev")
         .action(ArgAction::SetTrue)
         .help("Route and check coupling by heuristics only, until a start without it"),
-    )
-}
-
-fn status_command() -> Command {
-  Command::new("status")
-    .about("Print the engine, issues and attention")
-    .arg(
-      Arg::new("epic")
-        .value_name("EPIC")
-        .help("Epic key, or a trailing issue number"),
     )
 }
 

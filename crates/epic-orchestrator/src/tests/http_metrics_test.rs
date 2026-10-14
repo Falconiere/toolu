@@ -51,6 +51,7 @@ fn the_endpoint_serves_the_cli_document_and_rejects_a_bad_query() {
   let config = Config {
     addr: "127.0.0.1:0".parse().unwrap(),
     secrets: Secrets::none(),
+    peers: Vec::new(),
   };
   let running = start(
     config,

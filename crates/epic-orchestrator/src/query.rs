@@ -3,7 +3,7 @@
 use std::path::Path;
 use std::time::SystemTime;
 
-use clap::ArgMatches;
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
 use toolu_runtime::atomic::write_atomic;
@@ -23,8 +23,29 @@ use crate::paths::Paths;
 use crate::status::document;
 use crate::verbs::{failed, json_out, text};
 
+/// `toolu epic status [EPIC | --fleet]`.
+pub(crate) fn status_command() -> Command {
+  Command::new("status")
+    .about("Print the engine, issues and attention")
+    .arg(
+      Arg::new("epic")
+        .value_name("EPIC")
+        .help("Epic key, or a trailing issue number"),
+    )
+    .arg(
+      Arg::new("fleet")
+        .long("fleet")
+        .action(ArgAction::SetTrue)
+        .conflicts_with("epic")
+        .help("Print this machine and every configured peer engine"),
+    )
+}
+
 /// Read one status document through the engine or report that its key is unknown.
 pub(crate) fn status(matches: &ArgMatches, env: &Env) -> Outcome {
+  if matches.get_flag("fleet") {
+    return crate::fleet_cli::run(env);
+  }
   if let Err(err) = ensure(env) {
     return failed("toolu epic status", &err);
   }

@@ -93,7 +93,11 @@ fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, St
     ),
   };
   let secrets = secrets::load(&roots).map_err(|err| err.to_string())?;
-  Ok(Some(HttpConfig { addr, secrets }))
+  Ok(Some(HttpConfig {
+    addr,
+    secrets,
+    peers: settings.peers,
+  }))
 }
 
 /// Reminder delay and notifier settings from `epic.attention`.

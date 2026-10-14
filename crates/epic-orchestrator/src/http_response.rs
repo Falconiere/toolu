@@ -90,6 +90,21 @@ impl Response {
   }
 }
 
+/// A JSON document as `200`, `None` as `404` and a read failure as `500`.
+pub(crate) fn json_response(document: Result<Option<serde_json::Value>, String>) -> Response {
+  match document {
+    Ok(Some(value)) => Response {
+      status: 200,
+      content_type: "application/json; charset=utf-8",
+      body: value.to_string().into_bytes(),
+      head: false,
+      close: false,
+    },
+    Ok(None) => Response::error(404, "not_found"),
+    Err(_err) => Response::error(500, "status_unavailable"),
+  }
+}
+
 /// Send headers and the optional body.
 ///
 /// # Errors
@@ -140,6 +155,7 @@ fn reason(status: u16) -> &'static str {
     405 => "Method Not Allowed",
     413 => "Content Too Large",
     429 => "Too Many Requests",
+    502 => "Bad Gateway",
     503 => "Service Unavailable",
     _ => "Internal Server Error",
   }
