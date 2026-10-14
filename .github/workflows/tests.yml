@@ -309,7 +309,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build the measurer and the hooks
-        run: cargo build --release --locked -p xtask --bin toolu
+        run: cargo build --release --locked -p xtask -p toolu-cli
 
       - name: bench-hooks
         env:

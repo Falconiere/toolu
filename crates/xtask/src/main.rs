@@ -3,6 +3,11 @@
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
 mod bench;
+mod bench_hooks;
+mod bench_hooks_entries;
+mod bench_hooks_measure;
+mod bench_hooks_report;
+mod bench_hooks_sandbox;
 mod bench_result;
 mod check_hooks;
 mod check_workflows;
@@ -99,6 +104,7 @@ const TASKS: &[(&str, Task)] = &[
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
   ("bench", bench::run),
+  ("bench-hooks", bench_hooks::run),
   ("pack", pack::run),
 ];
 
@@ -109,7 +115,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, pack";
+  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, bench-hooks, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
