@@ -50,7 +50,8 @@ pub(crate) fn create(
     &path.join("package.json"),
     "{\"name\":\"native-host-smoke\",\"private\":true}\n",
   )?;
-  write(&path.join("bun.lock"), "")?;
+  // npm, not Bun: ts-quality runs only when the project's package manager is on PATH.
+  write(&path.join("package-lock.json"), "{}\n")?;
   write(&host_dir.join("toolu.config.json"), &format!("{LIMITS}\n"))?;
   git(&path, env, &["init", "-q", "-b", "main"])?;
   for (key, value) in [

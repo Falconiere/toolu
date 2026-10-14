@@ -1,0 +1,458 @@
+{
+  "entries": [
+    {
+      "cpuUs": {
+        "p50": 3432,
+        "p90": 3527
+      },
+      "entry": "ast-grep/register",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2719744,
+        "p90": 2719744
+      },
+      "wallUs": {
+        "p50": 6963,
+        "p90": 7243
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 6789,
+        "p90": 7482
+      },
+      "entry": "epic-orchestrator/check-binary",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3063808,
+        "p90": 3096576
+      },
+      "wallUs": {
+        "p50": 35969,
+        "p90": 37483
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3480,
+        "p90": 3530
+      },
+      "entry": "epic-orchestrator/check-deps",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2605056,
+        "p90": 2621440
+      },
+      "wallUs": {
+        "p50": 7247,
+        "p90": 7361
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3466,
+        "p90": 3694
+      },
+      "entry": "epic-orchestrator/engine-ensure",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2719744,
+        "p90": 2719744
+      },
+      "wallUs": {
+        "p50": 7226,
+        "p90": 7567
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 6775,
+        "p90": 6850
+      },
+      "entry": "jev/check-binary",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3080192,
+        "p90": 3112960
+      },
+      "wallUs": {
+        "p50": 36972,
+        "p90": 37605
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3411,
+        "p90": 3557
+      },
+      "entry": "jev/session-start",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2850816,
+        "p90": 2867200
+      },
+      "wallUs": {
+        "p50": 7086,
+        "p90": 7310
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3613,
+        "p90": 3698
+      },
+      "entry": "jev/user-prompt-submit",
+      "event": "UserPromptSubmit",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3997696,
+        "p90": 3997696
+      },
+      "wallUs": {
+        "p50": 7328,
+        "p90": 7537
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 6766,
+        "p90": 6888
+      },
+      "entry": "pr-babysit/check-binary",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3080192,
+        "p90": 3080192
+      },
+      "wallUs": {
+        "p50": 37458,
+        "p90": 37801
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3370,
+        "p90": 3571
+      },
+      "entry": "pr-babysit/check-toolu",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2621440,
+        "p90": 2637824
+      },
+      "wallUs": {
+        "p50": 7089,
+        "p90": 7300
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3423,
+        "p90": 3518
+      },
+      "entry": "python-quality/check-toolu",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2621440,
+        "p90": 2637824
+      },
+      "wallUs": {
+        "p50": 7122,
+        "p90": 7278
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3502,
+        "p90": 3554
+      },
+      "entry": "python-quality/register",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2785280,
+        "p90": 2801664
+      },
+      "wallUs": {
+        "p50": 7124,
+        "p90": 7204
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3417,
+        "p90": 3532
+      },
+      "entry": "rust-quality/check-toolu",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2621440,
+        "p90": 2637824
+      },
+      "wallUs": {
+        "p50": 7093,
+        "p90": 7274
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3616,
+        "p90": 3845
+      },
+      "entry": "rust-quality/register",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2785280,
+        "p90": 2801664
+      },
+      "wallUs": {
+        "p50": 7280,
+        "p90": 7751
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3432,
+        "p90": 3551
+      },
+      "entry": "statusline/session-start",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2637824,
+        "p90": 2654208
+      },
+      "wallUs": {
+        "p50": 7115,
+        "p90": 7296
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 7385,
+        "p90": 8862
+      },
+      "entry": "toolu-review/check-binary",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3063808,
+        "p90": 3096576
+      },
+      "wallUs": {
+        "p50": 37970,
+        "p90": 38725
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3523,
+        "p90": 4132
+      },
+      "entry": "toolu-review/session-start",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2588672,
+        "p90": 2605056
+      },
+      "wallUs": {
+        "p50": 7162,
+        "p90": 8120
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 11686,
+        "p90": 11920
+      },
+      "entry": "toolu/agent-tier",
+      "event": "PreToolUse",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3784704,
+        "p90": 3784704
+      },
+      "wallUs": {
+        "p50": 23660,
+        "p90": 24034
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 6681,
+        "p90": 7519
+      },
+      "entry": "toolu/check-binary",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3080192,
+        "p90": 3112960
+      },
+      "wallUs": {
+        "p50": 37378,
+        "p90": 37578
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 5600,
+        "p90": 5686
+      },
+      "entry": "toolu/mcp-tools",
+      "event": "PreToolUse",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3112960,
+        "p90": 3129344
+      },
+      "wallUs": {
+        "p50": 7482,
+        "p90": 7736
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3390,
+        "p90": 3477
+      },
+      "entry": "toolu/post-tools",
+      "event": "PostToolUse",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 3358720,
+        "p90": 3375104
+      },
+      "wallUs": {
+        "p50": 6939,
+        "p90": 7103
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3727,
+        "p90": 4061
+      },
+      "entry": "toolu/pre-compact",
+      "event": "PreCompact",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2686976,
+        "p90": 2703360
+      },
+      "wallUs": {
+        "p50": 7405,
+        "p90": 7983
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 5929,
+        "p90": 6069
+      },
+      "entry": "toolu/pre-tools",
+      "event": "PreToolUse",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 4227072,
+        "p90": 4259840
+      },
+      "wallUs": {
+        "p50": 7902,
+        "p90": 8273
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 39078,
+        "p90": 40317
+      },
+      "entry": "toolu/session-start",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 4718592,
+        "p90": 4734976
+      },
+      "wallUs": {
+        "p50": 108063,
+        "p90": 110326
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 9385,
+        "p90": 9750
+      },
+      "entry": "toolu/user-prompt-submit",
+      "event": "UserPromptSubmit",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 4194304,
+        "p90": 4194304
+      },
+      "wallUs": {
+        "p50": 22734,
+        "p90": 23029
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3285,
+        "p90": 3426
+      },
+      "entry": "ts-quality/check-toolu",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2621440,
+        "p90": 2637824
+      },
+      "wallUs": {
+        "p50": 6709,
+        "p90": 6968
+      }
+    },
+    {
+      "cpuUs": {
+        "p50": 3409,
+        "p90": 3511
+      },
+      "entry": "ts-quality/register",
+      "event": "SessionStart",
+      "implementation": "rust",
+      "maxRssBytes": {
+        "p50": 2768896,
+        "p90": 2785280
+      },
+      "wallUs": {
+        "p50": 6880,
+        "p90": 7023
+      }
+    }
+  ],
+  "provenance": {
+    "arch": "arm64",
+    "commit": "26c34bc247f4fa56d2f8eabec8bf0dd44cc84a94",
+    "date": "2026-10-14",
+    "elapsedMs": 7783,
+    "platform": "darwin",
+    "runner": "local",
+    "runs": 10,
+    "toolu": "toolu 7.11.0",
+    "warmup": 2
+  },
+  "schema": "toolu.hook-resources/v1"
+}
