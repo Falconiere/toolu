@@ -116,8 +116,8 @@ fleet core (fetch, classify, project) → listener route, round cache and refres
   },
   {
     "id": "S5",
-    "title": "dashboard.rs: machine switcher, fleet summary, sequential peer panel fetches through the proxy, 5 s polling, state banners. Test dashboard::tests::fleet_dashboard (tests/dashboard_test.rs). Evidence script docs/toolu/evidence/epic-fleet-dashboard.ts: free ports, trap kills both engines on every exit, fails clearly without Chrome, saves epic-fleet-dashboard.html; force-added",
-    "check": "cargo test -p toolu-epic-orchestrator --lib -- dashboard::tests::fleet_dashboard && cargo build -p toolu-cli && bun docs/toolu/evidence/epic-fleet-dashboard.ts",
+    "title": "dashboard.rs: machine switcher, fleet summary, sequential peer panel fetches through the proxy, 5 s polling, state banners. Test dashboard::tests::fleet_dashboard (tests/dashboard_test.rs). Evidence script docs/toolu/evidence/epic-fleet-dashboard.js: free ports, trap kills both engines on every exit, fails clearly without Chrome, saves epic-fleet-dashboard.html; force-added",
+    "check": "cargo test -p toolu-epic-orchestrator --lib -- dashboard::tests::fleet_dashboard && cargo build -p toolu-cli && bun docs/toolu/evidence/epic-fleet-dashboard.js",
     "ac_refs": [
       "AC-8"
     ],
@@ -128,7 +128,7 @@ fleet core (fetch, classify, project) → listener route, round cache and refres
     "paths": [
       "crates/epic-orchestrator/src",
       "crates/cli/src",
-      "docs/toolu/evidence/epic-fleet-dashboard.ts"
+      "docs/toolu/evidence/epic-fleet-dashboard.js"
     ],
     "input": "GET / from a live listener (element ids, fleet endpoints, no external URL); two real target/debug/toolu epic serve processes plus a closed-port peer and a wrong-token peer rendered by headless Chrome: A shows local, server, Unreachable \u00b7 never seen, Unauthorized: token rejected and the fleet summary; B hides the switcher",
     "model": "inherit"
@@ -194,7 +194,7 @@ fleet core (fetch, classify, project) → listener route, round cache and refres
 
 ## Critical files
 
-- Create: `crates/epic-orchestrator/src/fleet.rs`, `src/http_fleet.rs`, `src/fleet_cli.rs`, `src/tests/{fleet,http_fleet,http_fleet_proxy,fleet_cli}_test.rs`, `src/tests/dashboard_test.rs`, the test-only `src/tests/{peer_fixture,fleet_rig}_test.rs`, and `docs/toolu/evidence/epic-fleet-dashboard.ts` (force-added).
+- Create: `crates/epic-orchestrator/src/fleet.rs`, `src/http_fleet.rs`, `src/fleet_cli.rs`, `src/tests/{fleet,http_fleet,http_fleet_proxy,fleet_cli}_test.rs`, `src/tests/dashboard_test.rs`, the test-only `src/tests/{peer_fixture,fleet_rig}_test.rs`, and `docs/toolu/evidence/epic-fleet-dashboard.js` (force-added).
 - Modify: `crates/epic-orchestrator/src/{lib,http,http_response,control,socket,query,verbs,dashboard,status_schema}.rs`, the tests constructing `http::Config` (`http_test.rs`, `http_access_test.rs`, `http_metrics_test.rs`, `control_test.rs`, `attention_ops_test.rs`).
 - Docs: `AGENTS.md`, `docs/epic-status-api.md`, `docs/config.md`, `docs/cli/**`, `plugins/epic-orchestrator/{README.md,commands/epic.md,skills/epic-orchestrator/SKILL.md}`, the `commands --json` snapshot in `crates/cli/tests`.
 
@@ -202,7 +202,7 @@ fleet core (fetch, classify, project) → listener route, round cache and refres
 
 End to end: two real in-process engines on loopback serve a fleet document listing both machines and their in-flight issues (AC-1); a blackholed peer and a wrong token each resolve within 3 s while local routes answer in under 500 ms (AC-2); old-schema, non-JSON and 404 peers are `version-mismatch` (AC-3); canary peer tokens never appear in any body, CLI output or resource-root file while peers observe them (AC-4); last-seen, the refresher's first round and round coalescing (AC-5); the proxy and its limit (AC-6); `--fleet` (AC-7); headless Chrome rendering of the real page against two `toolu epic serve` processes, a manual macOS run recorded in the PR (AC-8); hostile peer data (AC-10). Each step's check runs through the managed job wrapper (`job.ts -- <command>`). Delivery then runs `plan-ledger run <plan> --verify`, `toolu-review:review`, `verdict status`, a scoped commit and push of `feat/453-fleet-view-one-status-page`, the PR (`Closes Falconiere/toolu#453`, `Part of Falconiere/toolu#402`) and `pr-babysit:babysit`.
 
-The scoped commit force-adds the gitignored `docs/toolu/` files: the brainstorm, spec, this plan, `docs/toolu/evidence/epic-fleet-dashboard.ts` and `epic-fleet-dashboard.html`. The AC-8 Chrome run is recorded in the PR body; S5's check re-runs it on the verifying machine, which needs Chrome.
+The scoped commit force-adds the gitignored `docs/toolu/` files: the brainstorm, spec, this plan, `docs/toolu/evidence/epic-fleet-dashboard.js` and `epic-fleet-dashboard.html`. The AC-8 Chrome run is recorded in the PR body; S5's check re-runs it on the verifying machine, which needs Chrome.
 
 ## Review
 
@@ -214,4 +214,5 @@ Plan review (2026-10-13): two blockers (missing `http::Config` literals in `http
 - S5: `chrome --dump-dom` either never settled (`--virtual-time-budget` waits on the open event stream) or dumped before the page's fetches ran. The script now drives Chrome through the DevTools protocol with `docs/toolu/evidence/epic-fleet-dashboard-dom.ts` (Bun): it waits 3 s, optionally clicks a machine tab, and prints the rendered `.shell` without script text, so the checks cannot match the page source. It also checks the `server` peer view (title and board through the proxy) and the `vault` banner with panels hidden.
 - Local review (toolu-review:review) findings applied: the fleet route clones the world and releases its lock before building the local overview; the dashboard stops fleet polling when the engine has no peers (peers are fixed at startup), discards a superseded refresh (generation counter), skips a poll while a peer refresh runs, clears the error banner on a non-`ok` peer, and shows fleet fetch errors. New tests: `http_fleet::tests::fleet_refresher_keeps_last_seen_between_rounds` (`Refresher::spawn` now takes its period) and `fleet_cli::tests::fleet_cli_reads_the_running_engine`. An automated DOM test was judged out of scope (no DOM dependency in the repo); the Chrome evidence script covers the page.
 - `skills/epic-orchestrator/SKILL.md` keeps its 150-line cap: the `--fleet` note is folded into the existing Status line.
-- The evidence script is TypeScript (`bun docs/toolu/evidence/epic-fleet-dashboard.ts`), one file with the DevTools driver folded in: the gate's `final-removal` step forbids tracked shell files.
+- The evidence script is plain JavaScript (`bun docs/toolu/evidence/epic-fleet-dashboard.js`), one file with the DevTools driver folded in: the gate's `final-removal` step forbids tracked shell files.
+- The evidence script is `.js`, not `.ts`: CI's gate-reach check (`tooling/src/check-gate-reach.ts`, run by `test:unit`) requires every tracked TypeScript file to be reached by typecheck, oxlint, jscpd and knip, and a one-off evidence script under `docs/toolu/` belongs to none of those trees.

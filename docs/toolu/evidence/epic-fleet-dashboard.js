@@ -1,11 +1,12 @@
-// AC-8 evidence for #453: render the shipped dashboard in headless Chrome
+// AC-8 evidence for #453 (plain JavaScript: the gate's reach check governs
+// every tracked TypeScript file, and this one-off check is no product code): render the shipped dashboard in headless Chrome
 // against real `toolu epic serve` engines and check the fleet view.
 //
 // Engine B binds 0.0.0.0 with a status token. Engine A lists B twice (right
 // and wrong token) and a closed port; engine C has no peers. Chrome is driven
 // through the DevTools protocol, so the checks read the rendered `.shell`
 // (no script text). Saves A's rendered shell beside this file.
-// Manual check: `bun docs/toolu/evidence/epic-fleet-dashboard.ts`; needs
+// Manual check: `bun docs/toolu/evidence/epic-fleet-dashboard.js`; needs
 // Chrome (set CHROME) and target/debug/toolu (`cargo build -p toolu-cli`).
 import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
@@ -21,9 +22,9 @@ for (const [path, hint] of [[toolu, "run cargo build -p toolu-cli"], [chrome, "s
   }
 }
 const work = mkdtempSync("/tmp/fleet.");
-const children: { kill: () => void; exited: Promise<number> }[] = [];
+const children = [];
 
-function freePort(): Promise<number> {
+function freePort() {
   return new Promise((resolve, reject) => {
     const server = createServer();
     server.once("error", reject);
@@ -35,7 +36,7 @@ function freePort(): Promise<number> {
   });
 }
 
-function envOf(dir: string, extra: Record<string, string> = {}): Record<string, string> {
+function envOf(dir, extra = {}) {
   return {
     PATH: process.env.PATH ?? "/usr/bin:/bin",
     HOME: join(dir, "home"),
@@ -46,7 +47,7 @@ function envOf(dir: string, extra: Record<string, string> = {}): Record<string, 
 }
 
 /** A registered epic whose graph holds one issue. */
-function seed(dir: string, epic: string, issue: string): void {
+function seed(dir, epic, issue) {
   for (const sub of ["home", "res", "cfg", join(epic, "status")]) mkdirSync(join(dir, sub), { recursive: true });
   writeFileSync(join(dir, "res/registry.json"), JSON.stringify({ epics: [{ key: epic, state_dir: join(dir, epic) }] }));
   const graph = { issues: [{ key: issue, title: "Fleet evidence", wave: 1, open_blockers: [] }] };
@@ -54,7 +55,7 @@ function seed(dir: string, epic: string, issue: string): void {
 }
 
 /** Start `toolu epic serve` and wait for its HTTP listener. */
-async function engine(dir: string, bind: string, extra: Record<string, string> = {}): Promise<void> {
+async function engine(dir, bind, extra = {}) {
   const child = Bun.spawn([toolu, "epic", "serve", "--http", bind], {
     env: envOf(dir, extra), stdout: "ignore", stderr: "ignore",
   });
@@ -72,7 +73,7 @@ async function engine(dir: string, bind: string, extra: Record<string, string> =
 }
 
 /** Record execution so the issue runs. */
-async function report(dir: string, epic: string, issue: string): Promise<void> {
+async function report(dir, epic, issue) {
   const status = join(dir, epic, "status", `${issue}.json`);
   const child = Bun.spawn([toolu, "epic", "report", "--status-file", status, "execution", "--note", "evidence"], {
     env: envOf(dir), stdout: "ignore", stderr: "inherit",
@@ -81,13 +82,13 @@ async function report(dir: string, epic: string, issue: string): Promise<void> {
 }
 
 /** The rendered page shell after 3 s, after clicking machine tab `tab` when given. */
-async function render(port: number, tab?: string): Promise<string> {
+async function render(port, tab) {
   const profile = mkdtempSync(join(work, "chrome-"));
   const debug = await freePort();
   const browser = Bun.spawn([chrome, "--headless=new", "--disable-gpu", "--no-first-run",
     `--user-data-dir=${profile}`, `--remote-debugging-port=${debug}`, "about:blank"], { stdout: "ignore", stderr: "ignore" });
   try {
-    let target: { webSocketDebuggerUrl: string } | undefined;
+    let target;
     for (let attempt = 0; attempt < 100 && !target; attempt += 1) {
       try {
         const reply = await fetch(`http://127.0.0.1:${debug}/json/new?http://127.0.0.1:${port}/`, { method: "PUT" });
@@ -104,7 +105,7 @@ async function render(port: number, tab?: string): Promise<string> {
       socket.onerror = () => reject(new Error("DevTools socket failed"));
     });
     let next = 0;
-    const evaluate = (expression: string) => new Promise<string>((resolve) => {
+    const evaluate = (expression) => new Promise((resolve) => {
       next += 1;
       const id = next;
       socket.addEventListener("message", (event) => {
@@ -127,7 +128,7 @@ async function render(port: number, tab?: string): Promise<string> {
 }
 
 let failed = 0;
-function check(text: string, needle: string, label: string): void {
+function check(text, needle, label) {
   if (text.includes(needle)) {
     console.log(`ok: ${label}`);
   } else {
