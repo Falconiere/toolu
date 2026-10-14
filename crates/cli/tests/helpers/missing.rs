@@ -1,4 +1,4 @@
-//! No `toolu` and no Bun: enforcing events block, context events advise (AC-3).
+//! No `toolu`: enforcing events block, context events advise (AC-3).
 
 use serde_json::Value;
 

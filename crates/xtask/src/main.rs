@@ -4,7 +4,6 @@
 
 mod bench;
 mod bench_result;
-mod bun_launcher;
 mod check_hooks;
 mod check_workflows;
 mod ci_aggregate;

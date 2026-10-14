@@ -45,7 +45,7 @@ The approach follows the approved spec. Edits run inline in the main thread: the
     "ac_refs": ["AC-2"],
     "paths": ["crates/core/protocol/src", "crates/xtask/src", "crates/cli/tests/launcher.rs", "crates/cli/tests/helpers", "tooling/fixtures/native-launcher", "plugins/*/hooks/hooks.json"],
     "input": "Real plugins/*/hooks/hooks.json; launcher golden text fixtures; a temp PATH holding a real bun and no toolu",
-    "check": "cargo test -p toolu-protocol launcher && cargo test -p toolu-cli --test launcher missing_binary_blocks_even_with_bun && cargo test -p xtask hooks && cargo run -q -p xtask -- check-hooks && ! git grep -n -i -E 'TOOLU_RUNTIME|hooks/dist|bun' -- 'plugins/*/hooks/hooks.json' && cargo test -p toolu-cli --test launcher && cargo build -q --bin toolu && cargo run -q -p xtask -- launcher-e2e --bin target/debug/toolu",
+    "check": "cargo test -p toolu-protocol launcher && cargo test -p toolu-cli --test launcher missing_binary_blocks_even_with_bun && cargo test -p xtask hooks && cargo run -q -p xtask -- check-hooks && ! git grep -n -i -E 'TOOLU_RUNTIME|hooks/dist|bun' -- 'plugins/*/hooks/hooks.json' && cargo test -p toolu-cli --test launcher",
     "model": "inherit"
   },
   {
@@ -160,6 +160,10 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   }
 ]
 ```
+
+## Deviations
+
+- launcher: `cargo xtask launcher-e2e` requires the binary inside a fixed install directory, such as `/usr/local/bin`, which is root-owned on this machine. It is dropped from the local check and stays covered by the `rust` and `rust-macos` CI jobs, which install there with `sudo`.
 
 ## Critical files
 

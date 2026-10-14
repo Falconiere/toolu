@@ -22,6 +22,16 @@ pub(crate) fn commands_of(entry: &Value) -> Vec<String> {
     .unwrap_or_default()
 }
 
+/// A hand-written `toolu hook` that is not the generated native command.
+pub(crate) fn is_native_like(command: &str) -> bool {
+  [
+    r"\btoolu(?:\s+[a-z0-9-]+)?\s+hook\s+[a-z0-9-]+",
+    r"\bhook\s+[a-z0-9-]+\s+--event\s+[A-Z][A-Za-z]+",
+  ]
+  .iter()
+  .any(|pattern| Regex::new(pattern).is_ok_and(|expr| expr.is_match(command)))
+}
+
 pub(crate) fn normalize_command(command: &str) -> String {
   if let Some(bundle) = bundle_path(command) {
     return bundle;

@@ -1,4 +1,4 @@
-use super::{BREW_INSTALL, INSTALLER, fallback_advisory, missing_message};
+use super::{BREW_INSTALL, INSTALLER, missing_message};
 
 /// Characters a cmd `echo`, sh single quotes or a JSON string would reinterpret.
 const UNSAFE: &[char] = &['(', ')', '&', '<', '>', '^', '%', '"', '\'', '\\'];
@@ -14,16 +14,8 @@ fn the_missing_message_names_the_plugin_and_both_install_commands() {
 }
 
 #[test]
-fn the_fallback_advisory_names_the_transition_and_both_install_commands() {
-  let message = fallback_advisory("toolu");
-  assert!(message.starts_with("toolu plugin: native toolu not found, running the Bun bundle"));
-  assert!(message.contains("#425"));
-  assert!(message.contains(INSTALLER) && message.contains(BREW_INSTALL));
-}
-
-#[test]
 fn messages_are_one_cmd_safe_line_whose_only_pipe_is_the_installer() {
-  for message in [missing_message("toolu"), fallback_advisory("toolu")] {
+  for message in [missing_message("toolu"), missing_message("jev")] {
     assert!(!message.contains('\n'), "{message}");
     assert!(!message.contains(UNSAFE), "{message}");
     assert!(!message.contains(" hook "), "{message}");

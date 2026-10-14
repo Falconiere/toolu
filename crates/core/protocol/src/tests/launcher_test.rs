@@ -2,16 +2,12 @@ use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_name};
 
 const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
 const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
-const SESSION_HOOK: &str =
-  include_str!("../../../../../tooling/fixtures/native-launcher/session-start.json");
-const PRE_HOOK: &str =
-  include_str!("../../../../../tooling/fixtures/native-launcher/pre-tool-use.json");
+const SESSION_HOOK: &str = include_str!("fixtures/native-launcher/session-start.json");
+const PRE_HOOK: &str = include_str!("fixtures/native-launcher/pre-tool-use.json");
 const STATUSLINE_SESSION_HOOK: &str =
-  include_str!("../../../../../tooling/fixtures/native-launcher/statusline-session-start.json");
-const PROMPT_HOOK: &str =
-  include_str!("../../../../../tooling/fixtures/native-launcher/user-prompt-submit.json");
-const COMPACT_HOOK: &str =
-  include_str!("../../../../../tooling/fixtures/native-launcher/pre-compact.json");
+  include_str!("fixtures/native-launcher/statusline-session-start.json");
+const PROMPT_HOOK: &str = include_str!("fixtures/native-launcher/user-prompt-submit.json");
+const COMPACT_HOOK: &str = include_str!("fixtures/native-launcher/pre-compact.json");
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {
     plugin,
@@ -35,7 +31,7 @@ fn enforcing_and_context_commands_match_the_committed_goldens() {
 }
 
 #[test]
-fn typescript_checker_fixtures_match_the_rust_generator() {
+fn launcher_fixtures_match_the_generator() {
   for (plugin, event, name, fixture) in [
     ("toolu", "SessionStart", "session-start", SESSION_HOOK),
     ("toolu", "PreToolUse", "pre-tools", PRE_HOOK),
@@ -82,11 +78,26 @@ fn a_context_entry_execs_and_ends_with_a_system_message() {
 }
 
 #[test]
-fn another_plugin_runs_its_own_namespace_and_bundle() {
+fn another_plugin_runs_its_own_namespace() {
   let command = generated("jev", "SessionStart", "session-start").command;
   assert!(command.contains("\"$t\" jev hook session-start --event SessionStart"));
-  assert!(command.contains("${CLAUDE_PLUGIN_ROOT}/hooks/dist/session-start.js"));
   assert!(command.contains("'{\"systemMessage\":\"jev plugin: no usable native toolu"));
+}
+
+#[test]
+fn no_generated_string_names_bun_or_a_bundle() {
+  for (plugin, event, name) in [
+    ("toolu", "PreToolUse", "pre-tools"),
+    ("toolu", "SessionStart", "session-start"),
+    ("jev", "UserPromptSubmit", "user-prompt-submit"),
+  ] {
+    let hook = generated(plugin, event, name);
+    for text in [&hook.command, &hook.command_windows] {
+      for word in ["bun", "BUN", "TOOLU_RUNTIME", "hooks/dist", ".js"] {
+        assert!(!text.contains(word), "{plugin} {event}: {word} in {text}");
+      }
+    }
+  }
 }
 
 #[test]
@@ -113,15 +124,15 @@ fn the_command_carries_no_version_and_names_every_install_directory_in_order() {
 }
 
 #[test]
-fn windows_keeps_the_bun_chain_and_escapes_the_installer_pipe() {
+fn windows_reports_the_missing_binary_and_escapes_the_installer_pipe() {
   let windows = generated("toolu", "PreToolUse", "pre-tools").command_windows;
-  assert!(windows.starts_with("if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" "));
-  assert!(windows.contains("\"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools.js\""));
+  assert!(windows.starts_with("(1>&2 echo blocked: toolu plugin: no usable native toolu"));
   assert!(windows.contains("install ^| bash"));
   assert_eq!(windows.matches('|').count(), 1, "{windows}");
-  assert!(windows.ends_with("See docs/install.md.& exit /b 2))"));
+  assert!(windows.ends_with("See docs/install.md.& exit /b 2)"));
   let context = generated("toolu", "SessionStart", "session-start").command_windows;
-  assert!(context.ends_with("See docs/install.md.\"}))"));
+  assert!(context.starts_with("echo {\"systemMessage\":\"toolu plugin: no usable native toolu"));
+  assert!(context.ends_with("See docs/install.md.\"}"));
 }
 
 #[test]

@@ -15,9 +15,8 @@ fn a_non_executable_toolu_bin_fails_closed_even_with_a_valid_install() {
   sandbox.install().unwrap();
   let file = sandbox.home.join("toolu-copy");
   std::fs::write(&file, "not a program").unwrap();
-  let bun = on_path("bun").unwrap().to_string_lossy().into_owned();
   let bin = file.to_string_lossy().into_owned();
-  let extra = [("TOOLU_BIN", bin.as_str()), ("TOOLU_BUN", bun.as_str())];
+  let extra = [("TOOLU_BIN", bin.as_str())];
   let run = sandbox
     .launch("PreToolUse", "session-start", STARTUP, &extra)
     .unwrap();

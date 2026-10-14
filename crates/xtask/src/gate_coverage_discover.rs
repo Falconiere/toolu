@@ -4,10 +4,9 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use crate::bun_launcher::is_native_like;
 use crate::gate_coverage::Row;
 use crate::gate_coverage_names::{
-  commands_of, dir_names, make_id, native_names, normalize_command,
+  commands_of, dir_names, is_native_like, make_id, native_names, normalize_command,
 };
 
 const PRE_PARENT: &str =
