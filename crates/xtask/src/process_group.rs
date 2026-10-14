@@ -73,6 +73,15 @@ pub(crate) fn kill(leader: u32) -> Result<(), String> {
   }
 }
 
+/// Kill what is left of `leader`'s group after the leader exited on its own and was
+/// reaped: background children that would hold its pipes or skew later samples. A
+/// group id cannot be reused while any member exists, and those stragglers are its
+/// members; with none left the call finds no group (`ESRCH`), unless a new process took
+/// the leader's pid and made itself a group leader in that instant.
+pub(crate) fn kill_stragglers(leader: u32) -> Result<(), String> {
+  kill(leader)
+}
+
 /// Wait for `child`, calling `tick` before every look and once after it exits. `Some`
 /// is its status; past `timeout` its whole group is killed and reaped, and the result
 /// is `None`. `child` must lead its group (`CommandExt::process_group(0)`).

@@ -15,7 +15,7 @@ use std::time::Duration;
 use serde_json::Value;
 
 use crate::bench_hooks_report::Sample;
-use crate::process_group::{spawn_retrying, wait};
+use crate::process_group::{kill_stragglers, spawn_retrying, wait};
 
 /// A measurer that runs longer than this is killed with its whole process group.
 pub(crate) const SPAWN_DEADLINE: Duration = Duration::from_secs(60);
@@ -87,7 +87,8 @@ fn start(
 }
 
 /// Wait for the measurer within the deadline; past it, `wait` kills its whole group
-/// before reaping the leader, so no group id outlives the child it names.
+/// before reaping the leader. After a normal exit a hook's background children are
+/// killed too, so none runs on into the next sample.
 fn finish(
   (mut child, writer): (Child, JoinHandle<()>),
   spawn: &Spawn<'_>,
@@ -95,6 +96,9 @@ fn finish(
 ) -> Result<Option<ExitStatus>, String> {
   let waited =
     wait(&mut child, spawn.deadline, &mut || {}).map_err(|err| format!("{label}: {err}"));
+  if matches!(waited, Ok(Some(_))) {
+    kill_stragglers(child.id()).map_err(|err| format!("{label}: {err}"))?;
+  }
   // A writer still blocked now is held by a hook's background child that kept the pipe
   // open; it ends with that child, and waiting for it would defeat the deadline.
   if writer.is_finished() {

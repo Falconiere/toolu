@@ -2,7 +2,7 @@ use std::os::unix::process::CommandExt as _;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use super::{kill, retry_busy, spawn_retrying, wait};
+use super::{kill, kill_stragglers, retry_busy, spawn_retrying, wait};
 
 fn leader(script: &str) -> Child {
   Command::new("/bin/sh")
@@ -108,4 +108,34 @@ fn spawn_retrying_starts_a_program_and_reports_a_missing_one() {
     spawn_retrying(&mut missing).unwrap_err().kind(),
     std::io::ErrorKind::NotFound
   );
+}
+
+/// Whether `pid` is gone within two seconds (init reaps a killed orphan shortly after).
+fn gone(pid: i32) -> bool {
+  let until = Instant::now() + Duration::from_secs(2);
+  while Instant::now() < until {
+    if nix::sys::signal::kill(nix::unistd::Pid::from_raw(pid), None).is_err() {
+      return true;
+    }
+    std::thread::sleep(Duration::from_millis(20));
+  }
+  false
+}
+
+#[test]
+fn stragglers_of_a_leader_that_exited_are_killed() {
+  let dir = tempfile::tempdir().unwrap();
+  let pid_file = dir.path().join("pid");
+  let mut child = leader(&format!("sleep 30 & echo $! > '{}'", pid_file.display()));
+  let status = wait(&mut child, Duration::from_secs(5), &mut || {}).unwrap();
+  assert!(status.unwrap().success());
+  let pid: i32 = std::fs::read_to_string(&pid_file)
+    .unwrap()
+    .trim()
+    .parse()
+    .unwrap();
+  assert!(!gone(pid), "the straggler should still run before the kill");
+  kill_stragglers(child.id()).unwrap();
+  assert!(gone(pid), "straggler {pid} survived");
+  kill_stragglers(child.id()).unwrap();
 }
