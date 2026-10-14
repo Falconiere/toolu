@@ -9,6 +9,9 @@ mod bench_hooks_measure;
 mod bench_hooks_report;
 mod bench_hooks_sandbox;
 mod bench_result;
+mod bench_statusline;
+mod bench_statusline_repo;
+mod bench_statusline_report;
 mod check_hooks;
 mod check_workflows;
 mod ci_aggregate;
@@ -35,6 +38,15 @@ mod guardrails;
 mod homebrew_formula;
 mod hooks_entries;
 mod hooks_manifests;
+mod host_smoke;
+mod host_smoke_checks;
+mod host_smoke_claude;
+mod host_smoke_codex;
+mod host_smoke_env;
+mod host_smoke_exec;
+mod host_smoke_project;
+mod host_smoke_prompts;
+mod host_smoke_steps;
 mod launcher_e2e;
 mod layers;
 mod layers_check;
@@ -105,6 +117,8 @@ const TASKS: &[(&str, Task)] = &[
   ("packaging", packaging::run),
   ("bench", bench::run),
   ("bench-hooks", bench_hooks::run),
+  ("bench-statusline", bench_statusline::run),
+  ("host-smoke", host_smoke::run),
   ("pack", pack::run),
 ];
 
@@ -115,7 +129,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, bench-hooks, pack";
+  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

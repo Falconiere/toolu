@@ -6,7 +6,7 @@
       "aliases": [],
       "args": [
         {
-          "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+          "help": "The hook entry, as its plugin's hooks.json names it",
           "multiple": false,
           "name": "NAME",
           "required": true
@@ -543,7 +543,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -605,7 +605,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -690,7 +690,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -891,7 +891,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -953,7 +953,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1015,7 +1015,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1162,7 +1162,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1529,7 +1529,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1631,7 +1631,7 @@
           "placeholder": false
         },
         {
-          "about": "Refresh the compatibility shim and old settings",
+          "about": "Migrate old settings and retire the old statusline path",
           "aliases": [],
           "args": [],
           "commands": [],
@@ -1674,7 +1674,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -2777,7 +2777,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -4099,7 +4099,7 @@
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true

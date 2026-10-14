@@ -9,7 +9,7 @@ source: crates/cli/tests/helpers/schema.rs
       "aliases": [],
       "args": [
         {
-          "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+          "help": "The hook entry, as its plugin's hooks.json names it",
           "multiple": false,
           "name": "NAME",
           "required": true
@@ -546,7 +546,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -608,7 +608,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -693,7 +693,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -894,7 +894,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -956,7 +956,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1018,7 +1018,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1165,7 +1165,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1532,7 +1532,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -1677,7 +1677,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -2780,7 +2780,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true
@@ -4102,7 +4102,7 @@ source: crates/cli/tests/helpers/schema.rs
           "aliases": [],
           "args": [
             {
-              "help": "The hook entry, as in the plugin's hooks/dist/<NAME>.js",
+              "help": "The hook entry, as its plugin's hooks.json names it",
               "multiple": false,
               "name": "NAME",
               "required": true

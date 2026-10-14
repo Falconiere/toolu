@@ -86,7 +86,7 @@ pub(crate) fn command() -> Command {
         .value_name("NAME")
         .required(true)
         .value_parser(hook_name)
-        .help("The hook entry, as in the plugin's hooks/dist/<NAME>.js"),
+        .help("The hook entry, as its plugin's hooks.json names it"),
     )
     .arg(
       Arg::new("event")
