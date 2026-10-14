@@ -215,18 +215,7 @@ fn doctor_rejects_the_real_npm_wrapper_first_on_path() {
   std::fs::create_dir(&home).unwrap();
   let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
   let wrapper = temp.path().join("toolu");
-  let built = Command::new("bun")
-    .args([
-      "build",
-      "tools/toolu-cli/src/cli.ts",
-      "--target=node",
-      "--outfile",
-    ])
-    .arg(&wrapper)
-    .current_dir(repo)
-    .output()
-    .unwrap();
-  assert_eq!(built.status.code(), Some(0), "{built:?}");
+  std::fs::copy(repo.join("tools/toolu-cli/npm/cli.js"), &wrapper).unwrap();
   let mut mode = std::fs::metadata(&wrapper).unwrap().permissions();
   mode.set_mode(0o755);
   std::fs::set_permissions(&wrapper, mode).unwrap();

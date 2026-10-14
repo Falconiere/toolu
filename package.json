@@ -43,8 +43,7 @@
   "workspaces": [
     "tooling",
     "packages/toolu-core",
-    "tools/toolu-conformance",
-    "tools/toolu-cli"
+    "tools/toolu-conformance"
   ],
   "engines": {
     "bun": ">=1.4.0 <1.5.0"
