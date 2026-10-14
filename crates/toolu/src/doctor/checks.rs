@@ -1,12 +1,9 @@
 //! One doctor check and the report folded from the list.
 
 use std::path::Path;
-use std::time::Duration;
 
 use serde_json::{Value, json};
-use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::process::{Spec, run};
 
 /// How serious a check's result is. Warn does not change the process exit.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -104,40 +101,6 @@ pub(super) fn document(checks: &[Check]) -> Value {
     "ok": !checks.iter().any(|check| check.status == Status::Fail),
     "checks": checks.iter().map(Check::json).collect::<Vec<_>>(),
   })
-}
-
-const BUN_HINT: &str = "install Bun 1.4.x";
-const BUN_TIMEOUT: Duration = Duration::from_secs(1);
-
-/// `bun --version` from `TOOLU_BUN`, else `PATH`. Missing or too slow warns.
-pub(super) fn runtime(env: &Env) -> Check {
-  let program = env.get("TOOLU_BUN").unwrap_or("bun");
-  let mut spec = Spec::new([program, "--version"]);
-  spec.timeout = BUN_TIMEOUT;
-  spec.env = Some(env.clone());
-  spec.max_output_bytes = 256;
-  let version = run(&spec)
-    .ok()
-    .filter(|output| output.exit_code == 0 && !output.timed_out && !output.truncated);
-  match version {
-    Some(output) => {
-      let version = output.stdout.lines().next().unwrap_or("").trim();
-      Check::new(
-        "runtime",
-        Status::Ok,
-        format!("bun {version}"),
-        None,
-        json!({ "version": version }),
-      )
-    }
-    None => Check::new(
-      "runtime",
-      Status::Warn,
-      "Bun is missing",
-      Some(BUN_HINT.to_owned()),
-      json!({}),
-    ),
-  }
 }
 
 /// Host, config root and project root. A detection warning warns.

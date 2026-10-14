@@ -1,5 +1,5 @@
-//! The `UserPromptSubmit` hook (port of `plugins/jev/hooks/src/user-prompt-submit.ts`): repeat
-//! the Jev mandate on a substantive prompt. No network call.
+//! The `UserPromptSubmit` hook: repeat the Jev mandate on a substantive prompt. No
+//! network call.
 
 use std::path::Path;
 use std::sync::LazyLock;
@@ -7,12 +7,9 @@ use std::sync::LazyLock;
 use regex::Regex;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
 
-use crate::session::{
-  context_outcome, credential_notice, executable, invocation, payload, silent, skill_reference,
-};
+use crate::session::{context_outcome, credential_notice, payload, silent, skill_reference};
 
 static TRIVIAL: LazyLock<Option<Regex>> = LazyLock::new(|| {
   Regex::new(
@@ -35,15 +32,10 @@ fn prompt_of(stdin: Option<&str>) -> Option<String> {
   }
 }
 
-/// The reminder for a substantive prompt, or nothing for a confirmation, an unreadable
-/// payload, or a wrapper that is missing or not executable.
+/// The reminder for a substantive prompt, or nothing for a confirmation or an
+/// unreadable payload.
 pub fn user_prompt_submit(env: &Env, plugin_root: &Path, stdin: Option<&str>) -> Outcome {
   if prompt_of(stdin).is_none_or(|prompt| trivial(&prompt)) {
-    return silent();
-  }
-  let roots = Roots::new(env.clone(), None);
-  let wrapper = roots.config_root().join("jev/jev.sh");
-  if !executable(&wrapper) {
     return silent();
   }
   context_outcome(
@@ -51,8 +43,8 @@ pub fn user_prompt_submit(env: &Env, plugin_root: &Path, stdin: Option<&str>) ->
     &format!(
       concat!(
         "{}Jev is mandatory for this task when it contains semantic decisions. After initial ",
-        "exploration, identify useful judgments over supplied evidence; you MUST call {} before ",
-        "the decision it informs. The command is toolu jev and does not load a project .env ",
+        "exploration, identify useful judgments over supplied evidence; you MUST call toolu jev ",
+        "before the decision it informs. The command does not load a project .env ",
         "file. Reassess after new evidence, failed hypotheses, or changed requirements. Batch ",
         "independent questions in one ask call. Reuse unchanged evidence and questions rather ",
         "than repeating calls. If a task has no semantic decision, say so in one sentence rather ",
@@ -60,7 +52,6 @@ pub fn user_prompt_submit(env: &Env, plugin_root: &Path, stdin: Option<&str>) ->
         "limitation and use an evidence fallback; Jev never replaces tests or authorization."
       ),
       credential_notice(env),
-      invocation(&wrapper),
       skill_reference(plugin_root),
     ),
   )

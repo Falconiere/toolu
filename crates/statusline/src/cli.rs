@@ -22,7 +22,9 @@ pub(crate) fn command() -> Command {
             .help("Replace an existing custom statusLine after backing it up"),
         ),
     )
-    .subcommand(Command::new("refresh").about("Refresh the compatibility shim and old settings"))
+    .subcommand(
+      Command::new("refresh").about("Migrate old settings and retire the old statusline path"),
+    )
     .subcommand(
       Command::new("refresh-cache")
         .about("Refresh cached Git counts for a statusline worktree (internal)")
