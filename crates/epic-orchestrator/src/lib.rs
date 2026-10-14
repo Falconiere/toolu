@@ -37,6 +37,11 @@ mod finish;
 #[cfg(test)]
 #[path = "tests/finish_rig_test.rs"]
 mod finish_rig;
+mod fleet;
+mod fleet_cli;
+#[cfg(test)]
+#[path = "tests/fleet_rig_test.rs"]
+mod fleet_rig;
 mod gate;
 #[cfg(test)]
 #[path = "tests/gate_rig_test.rs"]
@@ -63,6 +68,7 @@ pub mod hook;
 mod hosts;
 mod http;
 mod http_access;
+mod http_fleet;
 mod http_metrics;
 mod http_request;
 mod http_response;
@@ -87,6 +93,9 @@ mod note;
 mod notify;
 mod notify_notice;
 mod paths;
+#[cfg(test)]
+#[path = "tests/peer_fixture_test.rs"]
+mod peer_fixture;
 mod probe_evidence;
 mod query;
 mod queue;

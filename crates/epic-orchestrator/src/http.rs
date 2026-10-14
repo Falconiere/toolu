@@ -7,12 +7,14 @@ use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
+use toolu_runtime::config::epic::Peer;
 use toolu_runtime::config::secrets::Secrets;
 
 use crate::dashboard::HTML;
 use crate::http_access::{authorized, host_allowed};
+use crate::http_fleet::{FleetCache, REFRESH_EVERY, Refresher};
 use crate::http_request::{ReadError, Request, read_request};
-use crate::http_response::{OverviewCache, Response, send, stream_headers};
+use crate::http_response::{OverviewCache, Response, json_response, send, stream_headers};
 use crate::http_stream;
 use crate::model::World;
 use crate::paths::Paths;
@@ -21,16 +23,18 @@ use crate::status_api;
 const CONNECTIONS: usize = 64;
 const STREAMS: usize = 8;
 
-/// Bound address and private status credentials.
+/// Bound address, private status credentials and read-only peers.
 pub(crate) struct Config {
   pub addr: SocketAddr,
   pub secrets: Secrets,
+  pub peers: Vec<Peer>,
 }
 
 /// A listener thread and its bound address.
 pub(crate) struct Running {
   pub addr: SocketAddr,
   pub thread: JoinHandle<()>,
+  refresher: Refresher,
 }
 
 impl Running {
@@ -38,6 +42,7 @@ impl Running {
   pub(crate) fn stop(self, stop: &AtomicBool) -> std::thread::Result<()> {
     stop.store(true, Ordering::Relaxed);
     let _wake = TcpStream::connect(self.addr);
+    self.refresher.stop()?;
     self.thread.join()
   }
 }
@@ -54,6 +59,7 @@ struct Context {
   streams: AtomicUsize,
   overview: OverviewCache,
   metrics: crate::http_metrics::MetricsCache,
+  fleet: Arc<FleetCache>,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -75,6 +81,8 @@ pub(crate) fn start(
   let addr = listener
     .local_addr()
     .map_err(|err| format!("HTTP address: {err}"))?;
+  let fleet = Arc::new(FleetCache::new(&config.peers, &config.secrets));
+  let refresher = Refresher::spawn(&fleet, &stop, REFRESH_EVERY);
   let context = Arc::new(Context {
     paths,
     world,
@@ -87,9 +95,14 @@ pub(crate) fn start(
     streams: AtomicUsize::new(0),
     overview: OverviewCache::new(),
     metrics: crate::http_metrics::MetricsCache::new(),
+    fleet,
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
-  Ok(Running { addr, thread })
+  Ok(Running {
+    addr,
+    thread,
+    refresher,
+  })
 }
 
 fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
@@ -239,6 +252,16 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       .metrics
       .response(&context.paths, query, &context.secrets);
   }
+  let fleet = &context.fleet;
+  if let Some(response) = crate::http_fleet::response(
+    fleet,
+    &context.world,
+    &context.paths,
+    &context.secrets,
+    path,
+  ) {
+    return response;
+  }
   let world = match context.world.lock() {
     Ok(world) => world.clone(),
     Err(_err) => return Response::error(500, "status_unavailable"),
@@ -266,20 +289,6 @@ fn events_page(context: &Context, query: &str, request: &Request) -> Response {
     )
     .map(Some),
   )
-}
-
-fn json_response(document: Result<Option<serde_json::Value>, String>) -> Response {
-  match document {
-    Ok(Some(value)) => Response {
-      status: 200,
-      content_type: "application/json; charset=utf-8",
-      body: value.to_string().into_bytes(),
-      head: false,
-      close: false,
-    },
-    Ok(None) => Response::error(404, "not_found"),
-    Err(_err) => Response::error(500, "status_unavailable"),
-  }
 }
 
 fn serve_events(stream: &mut TcpStream, context: &Context, request: &Request, query: &str) -> bool {

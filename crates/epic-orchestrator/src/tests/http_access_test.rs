@@ -22,6 +22,7 @@ fn http_boundary_refuses_public_bind_without_a_token() {
     Config {
       addr: "0.0.0.0:0".parse().expect("address"),
       secrets: Secrets::none(),
+      peers: Vec::new(),
     },
     Paths::at(temp.path()),
     Arc::new(Mutex::new(World::new(0))),

@@ -2997,7 +2997,19 @@ source: crates/cli/tests/helpers/schema.rs
             }
           ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Print this machine and every configured peer engine",
+              "hidden": false,
+              "long": "fleet",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
           "hidden": false,
           "longAbout": null,
           "name": "status",

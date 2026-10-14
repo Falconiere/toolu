@@ -73,7 +73,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
   "epic":       { "http": { "bind": "127.0.0.1", "port": 7717 },
                   "attention": { "enabled": false, "herdr": true,
                                  "remind_after_minutes": 30 },
-                  "peers": [{ "name": "server", "url": "https://server.example:7717" }] }
+                  "peers": [{ "name": "server", "url": "http://192.168.1.20:7717" }] }
 }
 ```
 
@@ -125,7 +125,9 @@ peers. `http.bind` is a nonempty string, `http.port` is an integer from 1 to
 `attention.remind_after_minutes` (first reminder of an open attention item,
 later ones hourly) is an integer from 1 to 10080 with default 30, and each peer
 has a unique nonempty `name` and an HTTP(S) origin `url`. A peer URL may include a port but no user
-info, path beyond `/`, query or fragment. Unknown safe keys under `epic` are
+info, path beyond `/`, query or fragment. A peer engine accepts only a `Host` equal to its bound
+address, so the URL names the peer's bound IP and port (or a TLS proxy that forwards that `Host`);
+see [Fleet over a private network](epic-status-api.md#fleet-over-a-private-network). Unknown safe keys under `epic` are
 ignored so older binaries can read newer settings. A key named like a token,
 secret, password or notification URL is rejected by the Rust reader. The
 TypeScript hook loader accepts and ignores the whole `epic` section during the

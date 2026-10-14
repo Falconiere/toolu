@@ -70,6 +70,16 @@ const ENDPOINTS: &[Endpoint] = &[
     purpose: "Epic run metrics",
   },
   Endpoint {
+    path: "/api/v1/fleet",
+    fields: "summary (machines, reachable, hosts, in_flight, attention_count), machines (name, local, state, reason, age_ms, last_seen, engine, paused, journal_seq, epics, in_flight, hosts, counts, attention_count)",
+    purpose: "This machine and every peer",
+  },
+  Endpoint {
+    path: "/api/v1/fleet/peers/{name}/{route}",
+    fields: "the peer's document for route overview, epics, epics/{id}, issues/{key}, agents, hosts, machine, jobs, queue or attention",
+    purpose: "One peer's document, read through this server",
+  },
+  Endpoint {
     path: "/api/v1/events",
     fields: "events, oldest_seq, next_seq",
     purpose: "Journal replay",
@@ -93,7 +103,19 @@ pub(crate) fn render() -> String {
       endpoint.path, endpoint.purpose, endpoint.fields
     );
   }
-  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\nThe dashboard at `/` uses these same-origin endpoints. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.\n");
+  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Fleet over a private network
+
+An engine can show other machines' engines beside its own. List each peer under `epic.peers` in `toolu.config.json` with a `name` and a `url`, and put its bearer token in `peer_tokens` of `toolu/secrets.json` (mode 0600) or in `TOOLU_EPIC_PEER_TOKENS`, a JSON object of peer name to token. A token never goes on the command line. The engine reads its peers at startup; `toolu epic status --fleet` reads them on every run.
+
+A peer accepts only a `Host` equal to its bound address, so the URL names the peer's bound IP and port, for example `http://192.168.1.20:7717` for an engine started with `--http 0.0.0.0:7717` or `epic.http.bind` `0.0.0.0`. A DNS name, or a URL without the port, gets `403` (state `unauthorized`, reason `host`). With TLS in front of a peer, the proxy must forward to the engine with `Host` set to the engine's address: nginx's `proxy_pass` does this by default, and Caddy needs `header_up Host {upstream_hostport}`.
+
+A token sent to an `http://` peer crosses the network in clear text. Use plain HTTP only on a private network. A status server must not be exposed to the public internet without its token and TLS in front of it.
+
+`/api/v1/fleet` lists this machine first (`name` `local`, `local: true`), then each peer in config order. Peers are fetched in parallel with a 2 s deadline, at most once a second for requests and every 30 s in the background while peers are configured. A peer's `state` is `ok`, `unreachable` (no reply, timeout, redirect, a body over 1 MiB or a server error), `unauthorized` (`reason` `token` for `401`, `host` for the engine's `403 foreign_host`, otherwise `null`) or `version-mismatch` (a status API other than schema 1). `last_seen` is the peer's last `ok` reply since this engine started, and `age_ms` its age; only `ok` machines carry data and count in `summary`. In-flight issues are those whose stage is `running` or `awaiting_merge`. Peer fields are allow-listed, strings are cut to 160 characters, and every configured secret is redacted. Peer requests are read-only `GET`s; a peer is never asked to act.
+
+`/api/v1/fleet/peers/{name}/{route}` returns a peer's own document, redacted, so the browser needs only this server's address. `{name}` is percent-decoded and matches a configured peer exactly; `{id}` and `{key}` match `[A-Za-z0-9._-]{1,128}`. An unknown peer or route is `404`; a failing peer is `502` (`peer_unreachable`, `peer_unauthorized`, `peer_version_mismatch`), and more than eight proxied calls at once get `503 proxy_limit`.
+
+The dashboard at `/` uses these same-origin endpoints. With peers configured it shows a fleet summary and a machine switcher; a peer's panels are read through the proxy every 5 s. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.\n");
   out
 }
 

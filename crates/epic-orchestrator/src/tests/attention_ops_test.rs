@@ -187,7 +187,11 @@ fn live(root: &Path, fixture: &Fixture) -> Live {
       notify: Some(notify),
       ..AttentionOptions::default()
     };
-    let http = Some(crate::http::Config { addr, secrets });
+    let http = Some(crate::http::Config {
+      addr,
+      secrets,
+      peers: Vec::new(),
+    });
     let options = ServeOptions {
       http,
       tick: &(),
