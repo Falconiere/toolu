@@ -32,7 +32,7 @@ fn the_full_fixture_registers_the_four_registry_plugins_and_is_removed_on_drop()
   );
   let env = sandbox.env(&repo.join("plugins/toolu"));
   let get = |key: &str| env.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
-  assert_eq!(get("TOOLU_BIN"), Some(bin.as_os_str().to_owned()));
+  assert_eq!(get("TOOLU_BIN"), None);
   assert_eq!(
     get("CLAUDE_PROJECT_DIR"),
     Some(project.as_os_str().to_owned())
@@ -40,7 +40,7 @@ fn the_full_fixture_registers_the_four_registry_plugins_and_is_removed_on_drop()
   let toolu_keys = env
     .iter()
     .filter(|(k, _)| k.to_string_lossy().starts_with("TOOLU_"));
-  assert_eq!(toolu_keys.count(), 1);
+  assert_eq!(toolu_keys.count(), 0);
   assert!(env.iter().all(|(k, _)| !selects_repository(k)));
   assert!(sandbox.scratch().join("project").is_dir() && sandbox.scratch().join("home").is_dir());
   drop(sandbox);

@@ -158,7 +158,8 @@ impl Sandbox {
   }
 
   /// The hook environment: this process's minus host-session keys, then the
-  /// sandbox home, Claude's roots for `plugin_root`, and the native binary.
+  /// sandbox home and Claude's roots for `plugin_root`. The hook is spawned by path,
+  /// so `TOOLU_BIN` stays unset, as it was when the budgets were measured.
   pub(crate) fn env(&self, plugin_root: &Path) -> Vec<(OsString, OsString)> {
     let mut env = inherited(&["PLUGIN_ROOT"]);
     let text = |key: &str, path: &Path| (OsString::from(key), path.as_os_str().to_owned());
@@ -167,7 +168,6 @@ impl Sandbox {
       text("CLAUDE_PLUGIN_ROOT", plugin_root),
       text("CLAUDE_PROJECT_DIR", &self.project),
       text("CLAUDE_CONFIG_DIR", &self.home.join(".claude")),
-      text("TOOLU_BIN", &self.bin),
     ]);
     env
   }

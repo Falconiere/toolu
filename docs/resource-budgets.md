@@ -54,7 +54,7 @@ A budget changes only together with a new measurement committed under `benchmark
 ## Requirements the budgets rest on
 
 - **`toolu hook` takes a fast path.** `toolu hook <name>`, `toolu <plugin> hook <name>` and `toolu --hook-protocol` are recognised before the clap command tree is built (`crates/cli/src/fast.rs`). Building the tree first cost the prototype's pre-tools 0.9 ms CPU and 0.4 MiB at p50 (3.4 ms against 2.5 ms), a fifth of its CPU budget. Owned by #442 and #418.
-- **Hooks are measured the way hosts pay for them.** Each spawn runs the entry's real `hooks.json` launcher under `/bin/sh -c`, with `TOOLU_BIN` naming the release binary.
+- **Hooks are measured in the shape their budgets were set in.** Each spawn runs `/bin/sh -c 'exec "$0" "$@"' toolu [<plugin>] hook <name> --event <Event> --plugin-root <dir>` with the release binary: the `sh` a host starts, then the hook. The launcher's binary resolution, whose `--hook-protocol` probe adds about 1–2 ms CPU on the Linux runner, is left out. Measuring the full launcher needs re-measured budgets, which change only in a PR of their own.
 
 ## How hooks are measured
 

@@ -20,6 +20,37 @@ pub(crate) struct HookEntry {
   pub(crate) command: String,
 }
 
+impl HookEntry {
+  /// The spawn that is measured: `bin [<plugin>] hook <name> --event <event>
+  /// --plugin-root <root>` under `/bin/sh -c 'exec "$0" "$@"'`, the shape the budgets of
+  /// `benchmarks/hook-budgets.json` were measured in. The launcher's own resolution
+  /// (its `--hook-protocol` probe) is left out until the budgets are measured with it.
+  pub(crate) fn argv(&self, bin: &Path) -> Vec<String> {
+    let (plugin, name) = self
+      .id
+      .split_once('/')
+      .unwrap_or(("toolu", self.id.as_str()));
+    let mut argv = vec![
+      "/bin/sh".to_owned(),
+      "-c".to_owned(),
+      "exec \"$0\" \"$@\"".to_owned(),
+      bin.display().to_string(),
+    ];
+    if plugin != "toolu" {
+      argv.push(plugin.to_owned());
+    }
+    argv.extend([
+      "hook".to_owned(),
+      name.to_owned(),
+      "--event".to_owned(),
+      self.event.clone(),
+      "--plugin-root".to_owned(),
+      self.root.display().to_string(),
+    ]);
+    argv
+  }
+}
+
 /// Every entry under `<root>/plugins`.
 pub(crate) fn discover(root: &Path) -> Result<Vec<HookEntry>, String> {
   let plugins = root.join("plugins");

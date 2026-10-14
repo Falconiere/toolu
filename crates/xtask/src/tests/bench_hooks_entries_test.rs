@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
 
-use super::{discover, select};
+use super::{HookEntry, discover, select};
 
 fn repo() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -53,4 +53,31 @@ fn a_non_native_hook_is_an_error() {
     err.ends_with("a PreToolUse hook is not the native launcher"),
     "{err}"
   );
+}
+
+#[test]
+fn the_measured_spawn_execs_the_hook_directly() {
+  let entry = |id: &str| HookEntry {
+    id: id.to_owned(),
+    event: "PreToolUse".to_owned(),
+    root: std::path::PathBuf::from("/p/plugins/x"),
+    command: String::new(),
+  };
+  let bin = std::path::Path::new("/bin/toolu");
+  let tail = ["--event", "PreToolUse", "--plugin-root", "/p/plugins/x"];
+  let head = ["/bin/sh", "-c", "exec \"$0\" \"$@\"", "/bin/toolu"];
+  let core: Vec<&str> = head
+    .iter()
+    .chain(&["hook", "pre-tools"])
+    .chain(&tail)
+    .copied()
+    .collect();
+  assert_eq!(entry("toolu/pre-tools").argv(bin), core);
+  let leaf: Vec<&str> = head
+    .iter()
+    .chain(&["jev", "hook", "session-start"])
+    .chain(&tail)
+    .copied()
+    .collect();
+  assert_eq!(entry("jev/session-start").argv(bin), leaf);
 }

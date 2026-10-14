@@ -117,7 +117,7 @@ fn measure_all(
     };
     let stdin = payload_stdin(payloads.get(&entry.id), &sandbox.project)?;
     let spawn = Spawn {
-      argv: vec!["/bin/sh".to_owned(), "-c".to_owned(), entry.command.clone()],
+      argv: entry.argv(bench.bin),
       cwd: &sandbox.project,
       env: sandbox.env(&entry.root),
       stdin,
