@@ -134,10 +134,7 @@ Report PRs merged, admin merges, hosts and models, what needed a human, and `too
 ## Status and stop
 
 - **Status** ("where is the epic at"): print `toolu epic status <epic-key>`,
-  `toolu epic queue <epic-key>` and `http://127.0.0.1:7717/`; never `toolu epic wait`.
-  For epics on several machines, `toolu epic status --fleet` lists every peer
-  engine in `epic.peers` with its state (`ok`, `unreachable`, `unauthorized`,
-  `version-mismatch`).
+  `toolu epic queue <epic-key>` and `http://127.0.0.1:7717/` (peer engines: `toolu epic status --fleet`); never `toolu epic wait`.
 - **Stop:** `toolu epic pause <epic-key>` stops launches, rebases and merges at
   once; workers finish their step and go idle. Then stop waiting.
   `toolu epic resume <epic-key>` continues. Tear an issue down only when the

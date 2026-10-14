@@ -1,6 +1,7 @@
 //! Read-only peer engine fetches and the fleet document that `/api/v1/fleet`
-//! and `toolu epic status --fleet` share. Peer data is allow-listed field by
-//! field and redacted with the local secrets; a peer is never asked to act.
+//! and `toolu epic status --fleet` share. The fleet document allow-lists peer
+//! data field by field; every peer document is redacted with the local
+//! secrets. A peer is never asked to act.
 
 use std::collections::BTreeMap;
 use std::thread;

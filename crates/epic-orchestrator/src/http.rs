@@ -12,7 +12,7 @@ use toolu_runtime::config::secrets::Secrets;
 
 use crate::dashboard::HTML;
 use crate::http_access::{authorized, host_allowed};
-use crate::http_fleet::{FleetCache, Refresher};
+use crate::http_fleet::{FleetCache, REFRESH_EVERY, Refresher};
 use crate::http_request::{ReadError, Request, read_request};
 use crate::http_response::{OverviewCache, Response, json_response, send, stream_headers};
 use crate::http_stream;
@@ -82,7 +82,7 @@ pub(crate) fn start(
     .local_addr()
     .map_err(|err| format!("HTTP address: {err}"))?;
   let fleet = Arc::new(FleetCache::new(&config.peers, &config.secrets));
-  let refresher = Refresher::spawn(&fleet, &stop);
+  let refresher = Refresher::spawn(&fleet, &stop, REFRESH_EVERY);
   let context = Arc::new(Context {
     paths,
     world,

@@ -114,3 +114,29 @@ fn fleet_token_canary_cli() {
   )));
   assert!(refused.seen().to_ascii_lowercase().contains("-b"));
 }
+
+#[test]
+fn fleet_cli_reads_the_running_engine() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let root = temp.path().join("a");
+  let a = Engine::start(
+    &root,
+    "repo-402",
+    "repo-449",
+    config(free_port(), Vec::new(), Secrets::none()),
+  );
+  let outcome = fleet(&home(&root, &json!({}), ""));
+  assert_eq!(outcome.exit, Exit::Success, "{:?}", outcome.stderr);
+  let doc: Value = serde_json::from_str(&outcome.stdout.expect("stdout")).expect("json");
+  let local = &doc["machines"][0];
+  assert_eq!(local["engine"], "running");
+  assert_eq!(local["in_flight"][0]["key"], "repo-449");
+  assert_eq!(local["epics"][0]["key"], "repo-402");
+  assert!(
+    local["hosts"]
+      .as_array()
+      .is_some_and(|hosts| !hosts.is_empty())
+  );
+  assert_eq!(doc["summary"]["machines"], 1);
+  a.stop();
+}

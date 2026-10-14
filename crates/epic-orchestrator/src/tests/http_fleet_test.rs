@@ -1,10 +1,13 @@
 use std::net::SocketAddr;
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 use toolu_runtime::config::secrets::Secrets;
 
+use super::{FleetCache, Refresher};
 use crate::fleet_rig::{
   Engine, config, files_text, free_port, get, get_json, listener, machine, secrets_of,
 };
@@ -227,4 +230,29 @@ fn fleet_round_coalesces() {
     );
     running.stop(&stop).expect("listener thread");
   }
+}
+
+#[test]
+fn fleet_refresher_keeps_last_seen_between_rounds() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let b = Engine::start(
+    &temp.path().join("b"),
+    "repo-500",
+    "repo-501",
+    config(free_port(), Vec::new(), Secrets::none()),
+  );
+  let fleet = Arc::new(FleetCache::new(&[b.peer("server")], &Secrets::none()));
+  let stop = Arc::new(AtomicBool::new(false));
+  let refresher = Refresher::spawn(&fleet, &stop, Duration::from_millis(300));
+  thread::sleep(Duration::from_millis(150));
+  let first = fleet.refresh(Duration::MAX).expect("first round");
+  assert_eq!(first[0].state, crate::fleet::PeerState::Ok);
+  let seen = first[0].last_seen_ms;
+  b.stop();
+  thread::sleep(Duration::from_millis(700));
+  let later = fleet.refresh(Duration::MAX).expect("later round");
+  assert_eq!(later[0].state, crate::fleet::PeerState::Unreachable);
+  assert_eq!(later[0].last_seen_ms, seen);
+  stop.store(true, Ordering::Relaxed);
+  refresher.stop().expect("refresher thread");
 }

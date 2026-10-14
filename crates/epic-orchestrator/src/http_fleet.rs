@@ -20,9 +20,8 @@ use crate::status_api;
 
 /// How old a shared round may be for a `/api/v1/fleet` request.
 const REQUEST_AGE: Duration = Duration::from_secs(1);
-/// The refresher's period, and the round age it accepts.
-const REFRESH_EVERY: Duration = Duration::from_secs(30);
-const REFRESH_AGE: Duration = Duration::from_secs(25);
+/// The refresher's period; it accepts a round up to 5/6 of it old.
+pub(crate) const REFRESH_EVERY: Duration = Duration::from_secs(30);
 /// Proxied peer calls in flight at once.
 const PROXIES: usize = 8;
 /// Detail routes a peer's documents are proxied for.
@@ -91,16 +90,18 @@ impl FleetCache {
 pub(crate) struct Refresher(Option<JoinHandle<()>>);
 
 impl Refresher {
-  /// Start the first round now; `stop` and [`Refresher::stop`] end the loop.
-  pub(crate) fn spawn(fleet: &Arc<FleetCache>, stop: &Arc<AtomicBool>) -> Self {
+  /// Start the first round now, then one every `period`; `stop` and
+  /// [`Refresher::stop`] end the loop.
+  pub(crate) fn spawn(fleet: &Arc<FleetCache>, stop: &Arc<AtomicBool>, period: Duration) -> Self {
     if fleet.targets.is_empty() {
       return Self(None);
     }
     let fleet = Arc::clone(fleet);
     let stop = Arc::clone(stop);
     Self(Some(thread::spawn(move || {
-      while !stop.load(Ordering::Relaxed) && fleet.refresh(REFRESH_AGE).is_ok() {
-        thread::park_timeout(REFRESH_EVERY);
+      let max_age = period.mul_f64(5.0 / 6.0);
+      while !stop.load(Ordering::Relaxed) && fleet.refresh(max_age).is_ok() {
+        thread::park_timeout(period);
       }
     })))
   }
@@ -142,11 +143,11 @@ fn document(
   paths: &Paths,
   secrets: &Secrets,
 ) -> Response {
-  let local = match world.lock() {
-    Ok(world) => status_api::document(&world, paths, None, secrets),
+  let snapshot = match world.lock() {
+    Ok(world) => world.clone(),
     Err(_err) => return Response::error(500, "status_unavailable"),
   };
-  let Ok(local) = local else {
+  let Ok(local) = status_api::document(&snapshot, paths, None, secrets) else {
     return Response::error(500, "status_unavailable");
   };
   let Ok(peers) = fleet.refresh(REQUEST_AGE) else {
