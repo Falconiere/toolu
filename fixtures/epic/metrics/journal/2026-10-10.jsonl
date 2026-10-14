@@ -1,0 +1,52 @@
+{"seq":1,"at":"2026-10-10T00:00:00.000Z","kind":"action","name":"engine-usage","epic":"","key":"","token":"","note":"{\"event\":\"start\",\"max_rss_bytes\":5000000,\"cpu_ms\":10}"}
+{"seq":2,"at":"2026-10-10T00:00:00.000Z","kind":"action","name":"launch-intent","epic":"e1","key":"a","token":"","note":""}
+{"seq":3,"at":"2026-10-10T00:00:10.000Z","kind":"action","name":"launch-done","epic":"e1","key":"a","token":"","note":""}
+{"seq":4,"at":"2026-10-10T00:01:00.000Z","kind":"transition","name":"phase","epic":"e1","key":"a","token":"","note":"execution"}
+{"seq":5,"at":"2026-10-10T00:20:00.000Z","kind":"action","name":"wait-reply","epic":"","key":"","token":"","note":"timeout"}
+{"seq":6,"at":"2026-10-10T00:30:00.000Z","kind":"transition","name":"phase","epic":"e1","key":"a","token":"","note":"babysit"}
+{"seq":7,"at":"2026-10-10T00:31:00.000Z","kind":"transition","name":"github-check","epic":"e1","key":"pr:o/r#1","token":"","note":"{\"issue\":\"a\",\"cause\":\"scheduled\",\"restFresh\":0,\"restNotModified\":2,\"restPoints\":0,\"graphqlPoints\":1,\"nextAt\":1791592440000,\"next\":\"keep-going\"}"}
+{"seq":8,"at":"2026-10-10T00:34:00.000Z","kind":"transition","name":"github-check","epic":"e1","key":"pr:o/r#1","token":"","note":"{\"issue\":\"a\",\"cause\":\"scheduled\",\"restFresh\":1,\"restNotModified\":1,\"restPoints\":1,\"graphqlPoints\":1,\"nextAt\":1791592620000,\"next\":\"merge-queue\"}"}
+{"seq":9,"at":"2026-10-10T00:34:00.000Z","kind":"transition","name":"github-babysit-ready","epic":"e1","key":"a","token":"","note":""}
+{"seq":10,"at":"2026-10-10T00:34:01.000Z","kind":"action","name":"merge-intent","epic":"e1","key":"a","token":"","note":""}
+{"seq":11,"at":"2026-10-10T00:34:05.000Z","kind":"action","name":"merge-done","epic":"e1","key":"a","token":"","note":"rebased"}
+{"seq":12,"at":"2026-10-10T00:34:05.000Z","kind":"action","name":"rebase","epic":"e1","key":"a","token":"","note":"{\"by\":\"engine\",\"head\":\"abc\",\"round\":1}"}
+{"seq":13,"at":"2026-10-10T00:40:00.000Z","kind":"action","name":"merge-intent","epic":"e1","key":"a","token":"","note":""}
+{"seq":14,"at":"2026-10-10T00:40:02.000Z","kind":"action","name":"merge-done","epic":"e1","key":"a","token":"","note":""}
+{"seq":15,"at":"2026-10-10T00:41:00.000Z","kind":"action","name":"cleanup-intent","epic":"e1","key":"a","token":"","note":""}
+{"seq":16,"at":"2026-10-10T00:42:00.000Z","kind":"action","name":"cleanup-done","epic":"e1","key":"a","token":"","note":""}
+{"seq":17,"at":"2026-10-10T00:43:00.000Z","kind":"action","name":"launch-intent","epic":"e1","key":"b","token":"","note":""}
+{"seq":18,"at":"2026-10-10T00:43:10.000Z","kind":"action","name":"launch-done","epic":"e1","key":"b","token":"","note":""}
+{"seq":19,"at":"2026-10-10T00:44:00.000Z","kind":"transition","name":"phase","epic":"e1","key":"b","token":"","note":"execution"}
+{"seq":20,"at":"2026-10-10T00:45:00.000Z","kind":"judgment","name":"needs-human","epic":"e1","key":"b","token":"t1","note":"which schema?"}
+{"seq":21,"at":"2026-10-10T00:45:00.000Z","kind":"action","name":"wait-reply","epic":"e1","key":"b","token":"","note":"judgment:needs-human"}
+{"seq":22,"at":"2026-10-10T00:46:00.000Z","kind":"admission","name":"job","epic":"","key":"b","token":"","note":"cargo test"}
+{"seq":23,"at":"2026-10-10T00:46:00.000Z","kind":"admission","name":"job-wait","epic":"","key":"b","token":"","note":"pressure"}
+{"seq":24,"at":"2026-10-10T00:47:00.000Z","kind":"judgment","name":"closed","epic":"e1","key":"b","token":"t1","note":"kind=needs-human waited_ms=120000 by=answer"}
+{"seq":25,"at":"2026-10-10T00:47:00.000Z","kind":"prompt","name":"answer","epic":"e1","key":"b","token":"","note":"use v1"}
+{"seq":26,"at":"2026-10-10T00:48:00.000Z","kind":"admission","name":"job","epic":"","key":"b","token":"","note":"cargo test"}
+{"seq":27,"at":"2026-10-10T00:50:00.000Z","kind":"transition","name":"phase","epic":"e1","key":"b","token":"","note":"ready"}
+{"seq":28,"at":"2026-10-10T00:50:01.000Z","kind":"action","name":"merge-intent","epic":"e1","key":"b","token":"","note":""}
+{"seq":29,"at":"2026-10-10T00:50:03.000Z","kind":"action","name":"merge-done","epic":"e1","key":"b","token":"","note":"handoff: conflict in lib.rs"}
+{"seq":30,"at":"2026-10-10T00:50:03.000Z","kind":"action","name":"rebase","epic":"e1","key":"b","token":"","note":"{\"by\":\"worker\",\"round\":1}"}
+{"seq":31,"at":"2026-10-10T00:50:03.000Z","kind":"transition","name":"queue-left","epic":"e1","key":"b","token":"","note":"rebasing: conflict in lib.rs"}
+{"seq":32,"at":"2026-10-10T00:50:04.000Z","kind":"prompt","name":"rebase","epic":"e1","key":"b","token":"","note":"REBASE"}
+{"seq":33,"at":"2026-10-10T00:55:00.000Z","kind":"transition","name":"phase","epic":"e1","key":"b","token":"","note":"ready"}
+{"seq":34,"at":"2026-10-10T00:55:01.000Z","kind":"action","name":"merge-intent","epic":"e1","key":"b","token":"","note":""}
+{"seq":35,"at":"2026-10-10T00:55:02.000Z","kind":"action","name":"merge-done","epic":"e1","key":"b","token":"","note":""}
+{"seq":36,"at":"2026-10-10T00:56:00.000Z","kind":"action","name":"cleanup-done","epic":"e1","key":"b","token":"","note":""}
+{"seq":37,"at":"2026-10-10T01:00:00.000Z","kind":"action","name":"launch-intent","epic":"e2","key":"c","token":"","note":""}
+{"seq":38,"at":"2026-10-10T01:00:05.000Z","kind":"action","name":"launch-wait","epic":"e2","key":"c","token":"","note":"no host capacity"}
+{"seq":39,"at":"2026-10-10T01:00:05.000Z","kind":"action","name":"launch-done","epic":"e2","key":"c","token":"","note":"wait"}
+{"seq":40,"at":"2026-10-10T01:00:30.000Z","kind":"action","name":"launch-wait","epic":"e2","key":"c","token":"","note":"1"}
+{"seq":41,"at":"2026-10-10T01:00:30.000Z","kind":"action","name":"launch-intent","epic":"e2","key":"c","token":"","note":""}
+{"seq":42,"at":"2026-10-10T01:00:40.000Z","kind":"action","name":"launch-done","epic":"e2","key":"c","token":"","note":""}
+{"seq":43,"at":"2026-10-10T01:01:00.000Z","kind":"transition","name":"phase","epic":"e2","key":"c","token":"","note":"execution"}
+{"seq":44,"at":"2026-10-10T01:05:00.000Z","kind":"action","name":"host-limited","epic":"e2","key":"c","token":"","note":"claude"}
+{"seq":45,"at":"2026-10-10T01:05:00.000Z","kind":"action","name":"reroute","epic":"e2","key":"c","token":"","note":"claude -> codex"}
+{"seq":46,"at":"2026-10-10T01:05:30.000Z","kind":"action","name":"launch-done","epic":"e2","key":"c","token":"","note":""}
+{"seq":47,"at":"2026-10-10T01:06:00.000Z","kind":"transition","name":"phase","epic":"e2","key":"c","token":"","note":"execution"}
+{"seq":48,"at":"2026-10-10T01:10:00.000Z","kind":"transition","name":"phase","epic":"e2","key":"c","token":"","note":"ready"}
+{"seq":49,"at":"2026-10-10T01:10:01.000Z","kind":"action","name":"merge-intent","epic":"e2","key":"c","token":"","note":""}
+{"seq":50,"at":"2026-10-10T01:10:02.000Z","kind":"action","name":"merge-done","epic":"e2","key":"c","token":"","note":""}
+{"seq":51,"at":"2026-10-10T01:11:00.000Z","kind":"action","name":"cleanup-done","epic":"e2","key":"c","token":"","note":""}
+{"seq":52,"at":"2026-10-10T01:12:00.000Z","kind":"action","name":"engine-usage","epic":"","key":"","token":"","note":"{\"event\":\"stop\",\"max_rss_bytes\":6000000,\"cpu_ms\":900}"}

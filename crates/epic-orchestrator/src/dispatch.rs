@@ -59,7 +59,7 @@ fn operate(
     "ack" => crate::attention_ops::reply_ack(engine, request, &reply),
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),
-    "wait" => Ok(reply_wait(engine, request, reply, waiters)),
+    "wait" => reply_wait(engine, request, reply, waiters),
     "answer" => crate::attention_ops::reply_answer(engine, request, &reply),
     "release" => crate::dispatch_ops::reply_release(engine, request, &reply),
     _ => {
@@ -132,7 +132,7 @@ fn reply_report(
   }
   engine.report(&report_from(request))?;
   remember_spool(engine, request)?;
-  satisfy(engine, waiters);
+  satisfy(engine, waiters)?;
   let _sent = reply.send(json!({"ok": true}));
   pump_after(engine)
 }
@@ -146,15 +146,18 @@ fn reply_wait(
   request: &Value,
   reply: Sender<Value>,
   waiters: &mut Vec<Waiter>,
-) -> bool {
+) -> Result<bool, String> {
   let max_seconds = request
     .get("max_seconds")
     .and_then(Value::as_u64)
     .unwrap_or(0);
   if let Some(body) = ready_wait(&mut engine.world, max_seconds) {
-    let _sent = reply.send(body);
+    let _sent = reply.send(body.clone());
     drop(reply);
-    return false;
+    if max_seconds > 0 {
+      crate::wait_journal::replied(engine, &body)?;
+    }
+    return Ok(false);
   }
   let now = Instant::now();
   waiters.push(Waiter {
@@ -163,7 +166,7 @@ fn reply_wait(
       .unwrap_or(now),
     reply,
   });
-  false
+  Ok(false)
 }
 
 fn ready_wait(world: &mut crate::model::World, max_seconds: u64) -> Option<Value> {
@@ -210,32 +213,45 @@ fn report_from(request: &Value) -> Report {
   }
 }
 
-/// Reply to waiters whose judgment has become available.
-pub(crate) fn satisfy(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
+/// Reply to waiters whose judgment has become available, journaling each
+/// reply as a wake-up.
+///
+/// # Errors
+/// The journal cannot be written; the reply was already sent.
+pub(crate) fn satisfy(engine: &mut Engine, waiters: &mut Vec<Waiter>) -> Result<(), String> {
   if waiters.is_empty() {
-    return;
+    return Ok(());
   }
   let body = wait_body(&mut engine.world, 1);
   if body.get("kind").is_some() {
     let reply = waiters.remove(0).reply;
-    let _sent = reply.send(body);
-    return;
+    let _sent = reply.send(body.clone());
+    return crate::wait_journal::replied(engine, &body);
   }
   let now = Instant::now();
   let mut staying = Vec::new();
+  let mut timed_out = Vec::new();
   for waiter in waiters.drain(..) {
     if waiter.deadline <= now {
-      let _sent = waiter.reply.send(json!({"state": "waiting"}));
+      let body = json!({"state": "waiting"});
+      let _sent = waiter.reply.send(body.clone());
+      timed_out.push(body);
     } else {
       staying.push(waiter);
     }
   }
   *waiters = staying;
+  timed_out
+    .iter()
+    .try_for_each(|body| crate::wait_journal::replied(engine, body))
 }
 
 /// Reply to waiters whose deadlines have passed.
-pub(crate) fn expire(engine: &mut Engine, waiters: &mut Vec<Waiter>) {
-  satisfy(engine, waiters);
+///
+/// # Errors
+/// As [`satisfy`].
+pub(crate) fn expire(engine: &mut Engine, waiters: &mut Vec<Waiter>) -> Result<(), String> {
+  satisfy(engine, waiters)
 }
 
 fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {

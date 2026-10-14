@@ -26,3 +26,12 @@ fn github_retry_after_hold_does_not_spin_the_socket() {
   world.now_ms = 61_000;
   assert!(github_ready(&world));
 }
+
+#[test]
+fn an_idle_world_sleeps_until_the_thirty_second_tick() {
+  assert_eq!(crate::TICK, Duration::from_secs(30));
+  let world = World::new(1_000);
+  let wake = wake_after(&world, &[], Instant::now() + crate::TICK);
+  assert!(wake > Duration::from_secs(29), "{wake:?}");
+  assert!(wake <= crate::TICK, "{wake:?}");
+}

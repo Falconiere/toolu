@@ -32,7 +32,7 @@ fn the_summary_lists_every_sub_issue_with_its_merged_pr_and_admin_merges() {
     json!({"last_gate": {"admin_used": true}}).to_string(),
   )
   .expect("record");
-  let text = summary_table(&graph);
+  let text = summary_table(&graph, None);
   let lines: Vec<&str> = text.lines().collect();
   assert_eq!(
     lines[..4],
@@ -76,7 +76,8 @@ fn a_complete_epic_is_summarized_and_closed_in_github() {
   }
   let tracker =
     GitHubTracker::with("Falconiere/comemory#248", gh(&fixture), CLOSE_POLLS).expect("tracker");
-  let result = close_epic(&graph, &tracker).expect("closed");
+  let metrics = "## Epic metrics\n\n| Measure | This epic | TypeScript baseline |\n";
+  let result = close_epic(&graph, &tracker, Some(metrics)).expect("closed");
   assert_eq!(
     result,
     json!({"epic": "Falconiere/comemory#248", "tracker": "github", "result": "closed"})
@@ -87,6 +88,11 @@ fn a_complete_epic_is_summarized_and_closed_in_github() {
     comment["body"]
       .as_str()
       .is_some_and(|body| body.starts_with("Epic complete."))
+  );
+  let body = comment["body"].as_str().unwrap_or("");
+  assert!(
+    body.ends_with("\n\n## Epic metrics\n\n| Measure | This epic | TypeScript baseline |"),
+    "{body}"
   );
   let closed: Value = serde_json::from_slice(&requests[1].body).expect("close");
   assert_eq!(
@@ -101,6 +107,6 @@ fn closing_an_incomplete_epic_makes_no_request() {
   let fixture = Fixture::start().expect("fixture");
   let tracker =
     GitHubTracker::with("Falconiere/comemory#248", gh(&fixture), CLOSE_POLLS).expect("tracker");
-  assert!(close_epic(&graph(tmp.path()), &tracker).is_err());
+  assert!(close_epic(&graph(tmp.path()), &tracker, None).is_err());
   assert_eq!(fixture.requests().expect("requests").len(), 0);
 }

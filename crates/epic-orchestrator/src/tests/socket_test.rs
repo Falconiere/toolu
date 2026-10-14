@@ -82,6 +82,36 @@ fn wait_limit() {
 }
 
 #[test]
+fn a_served_engine_journals_its_usage_and_a_timed_out_wait() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let background = paths.clone();
+  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let body =
+    exchange_retry(&paths, PROTOCOL, &json!({"op": "wait", "max_seconds": 1})).expect("wait");
+  assert_eq!(body, json!({"state": "waiting"}));
+  stop(&paths, PROTOCOL);
+  handle.join().expect("joined");
+  let rows = journal::tail(&paths.journal_dir(), std::time::SystemTime::now()).expect("journal");
+  let usage: Vec<String> = rows
+    .iter()
+    .filter(|row| row.name == "engine-usage")
+    .map(|row| {
+      let note: Value = serde_json::from_str(&row.note).expect("note");
+      assert!(note["max_rss_bytes"].as_u64().expect("rss") > 0);
+      note["event"].as_str().expect("event").to_owned()
+    })
+    .collect();
+  assert_eq!(usage, ["start", "stop"]);
+  assert!(
+    rows
+      .iter()
+      .any(|row| row.name == "wait-reply" && row.note == "timeout"),
+    "{rows:?}"
+  );
+}
+
+#[test]
 fn protocol_replace() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = epic_dir(tmp.path());

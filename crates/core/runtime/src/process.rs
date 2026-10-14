@@ -6,13 +6,15 @@
 //! - `file`: a command whose stdout and stderr share one file (the plan
 //!   ledger's unmanaged check);
 //! - `guard`: a detached group that dies with its runner on SIGINT, SIGTERM or
-//!   SIGHUP.
+//!   SIGHUP;
+//! - `usage`: this process's own peak memory and CPU time.
 
 pub mod commands;
 mod drain;
 pub mod file;
 pub mod group;
 pub mod guard;
+pub mod usage;
 
 use std::io::{ErrorKind, Write as _};
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};

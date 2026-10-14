@@ -22,6 +22,8 @@ pub(crate) struct Pace {
   pub stop: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
   /// When set, a quiet read reconnects after `pane.created`.
   pub resubscribe: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+  /// When set, the live stream is shared so a stop or resubscribe ends a read.
+  pub interrupt: Option<std::sync::Arc<crate::herdr_interrupt::Interrupt>>,
 }
 
 enum Stop {
@@ -41,9 +43,13 @@ where
   if world.herdr_failures > 0 && world.now_ms < world.herdr_retry_at_ms {
     return Ok(());
   }
+  // With an interrupt, the caller reconnects with a fresh world; an
+  // in-session retry would reuse stale filters and be shut down at once.
   match connect(env, world, pace, &mut on)? {
-    Stop::Retry => connect(env, world, pace, &mut on).map(|_| ()),
-    Stop::Idle | Stop::Done => Ok(()),
+    Stop::Retry if !stopped(pace) && pace.interrupt.is_none() => {
+      connect(env, world, pace, &mut on).map(|_| ())
+    }
+    Stop::Retry | Stop::Idle | Stop::Done => Ok(()),
   }
 }
 
@@ -81,7 +87,19 @@ where
   {
     return Ok(Stop::Retry);
   }
-  read_events(&mut stream, pace, on)
+  let Some(interrupt) = &pace.interrupt else {
+    return read_events(&mut stream, pace, on);
+  };
+  interrupt.publish(&stream);
+  // A stop that landed before the stream was shared would otherwise wait for
+  // a whole idle read.
+  let ended = if stopped(pace) {
+    Ok(Stop::Done)
+  } else {
+    read_events(&mut stream, pace, on)
+  };
+  interrupt.clear();
+  ended
 }
 
 fn read_events<F>(stream: &mut UnixStream, pace: &Pace, on: &mut F) -> Result<Stop, String>

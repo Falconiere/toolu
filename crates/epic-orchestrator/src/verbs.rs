@@ -63,6 +63,7 @@ pub(crate) fn command() -> Command {
     )
     .subcommand(token_command())
     .subcommands(crate::verbs_actions::commands())
+    .subcommands(crate::verbs_metrics::commands())
 }
 
 /// Dispatch one epic subcommand.
@@ -86,6 +87,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     }
     Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
     Some((name, args)) => crate::verbs_actions::run(name, args, ctx, &env)
+      .or_else(|| crate::verbs_metrics::run(name, args, ctx, &env))
       .unwrap_or_else(|| failed("toolu epic", &format!("unknown verb {name}"))),
     None => failed("toolu epic", "a verb is required"),
   }

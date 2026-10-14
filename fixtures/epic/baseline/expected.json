@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "source": {"until": "2026-10-02T00:00:00Z", "outliers": ["out"], "records": 4, "merged": 3},
+  "main": {
+    "epics": 1,
+    "merged_issues": 2,
+    "agent_hours": 4.0,
+    "lead_time_ms": {"count": 2, "p50": 7200000, "p90": 10080000, "max": 10800000},
+    "ready_to_cleanup_ms": {"count": 1, "p50": 1200000, "p90": 1200000, "max": 1200000},
+    "phases": {
+      "execution": {"ms": 2400000, "share": 0.6666},
+      "ready": {"ms": 900000, "share": 0.25},
+      "rebasing": {"ms": 300000, "share": 0.0833}
+    },
+    "rebase_rounds": 1,
+    "relaunched_issues": 1
+  },
+  "outliers": {
+    "out": {
+      "epics": 1,
+      "merged_issues": 1,
+      "agent_hours": 10.0,
+      "lead_time_ms": {"count": 1, "p50": 36000000, "p90": 36000000, "max": 36000000},
+      "ready_to_cleanup_ms": {"count": 1, "p50": 36000000, "p90": 36000000, "max": 36000000},
+      "phases": {"ready": {"ms": 36000000, "share": 1.0}},
+      "rebase_rounds": 0,
+      "relaunched_issues": 0
+    }
+  },
+  "reported": {
+    "date": "2026-10-04",
+    "lead_time_min": {"p50": 219, "p90": 912},
+    "first_ready_to_cleanup_min": {"p50": 1, "p90": 69},
+    "supervisor_rss_mb_per_epic": 31,
+    "note": "hand-computed for #451 and the engine brainstorm; method not recorded"
+  }
+}

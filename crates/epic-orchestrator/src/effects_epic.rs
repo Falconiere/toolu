@@ -89,7 +89,9 @@ fn close(input: &EpicJob) -> Result<Value, String> {
   let kind = detect_tracker(&graph.epic.reference, graph.tracker.as_deref(), &input.env)?;
   let repo = graph.default_repo.clone().unwrap_or_default();
   let tracker = (input.reach.tracker)(kind, &graph.epic.reference, &repo, &input.env)?;
-  let result = close_epic(&graph, tracker.as_ref())?;
+  let now = toolu_state::time::epoch_millis(std::time::SystemTime::now());
+  let metrics = crate::metrics::closing(&input.paths, &input.state_dir, now);
+  let result = close_epic(&graph, tracker.as_ref(), metrics.as_deref())?;
   Ok(json!({"outcome": "applied", "result": result}))
 }
 

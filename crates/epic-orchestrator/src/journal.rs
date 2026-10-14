@@ -247,6 +247,42 @@ pub(crate) fn page(
   ))
 }
 
+/// Hand every retained record from files dated `from_day` (`YYYY-MM-DD`) or
+/// later to `each`, file by file in date order, so a reader never holds the
+/// whole journal.
+///
+/// # Errors
+/// The directory or a file cannot be read, or `each` fails.
+pub(crate) fn each<F>(dir: &Path, from_day: &str, mut each: F) -> Result<(), String>
+where
+  F: FnMut(Record) -> Result<(), String>,
+{
+  let entries = match std::fs::read_dir(dir) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(()),
+    Err(err) => return Err(err.to_string()),
+  };
+  let mut days = Vec::new();
+  for entry in entries {
+    let path = entry.map_err(|err| err.to_string())?.path();
+    let Some(name) = file_name(&path) else {
+      continue;
+    };
+    if let Some(stem) = name.strip_suffix(".jsonl")
+      && stem >= from_day
+    {
+      days.push(path);
+    }
+  }
+  days.sort();
+  for path in days {
+    for row in read_file(&path)? {
+      each(row)?;
+    }
+  }
+  Ok(())
+}
+
 /// The path of a journal file, exposed for tests that plant a partial line.
 pub(crate) fn file_for(dir: &Path, now: SystemTime) -> PathBuf {
   dir.join(format!("{}.jsonl", day(now)))

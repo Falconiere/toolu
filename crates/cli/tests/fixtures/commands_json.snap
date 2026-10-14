@@ -4006,6 +4006,118 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
+          "about": "Measure epic runs from the engine journal, beside the TypeScript baseline",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Only this epic's records",
+              "hidden": false,
+              "long": "epic",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ID"
+            },
+            {
+              "global": false,
+              "help": "Only records from this date (YYYY-MM-DD) or ISO-8601 UTC time on",
+              "hidden": false,
+              "long": "since",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DATE"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "metrics",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "metrics"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Report one epic's run beside the baseline, with budgets and token use",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The epic key",
+              "multiple": false,
+              "name": "EPIC",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "summary",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "summary"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Derive the TypeScript-era baseline from recorded epic state directories",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The state root with one directory per epic",
+              "hidden": false,
+              "long": "state",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            },
+            {
+              "global": false,
+              "help": "Count issues launched and merged by this ISO-8601 UTC time",
+              "hidden": false,
+              "long": "until",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "TIME"
+            },
+            {
+              "global": false,
+              "help": "An epic reported apart from the totals; repeatable",
+              "hidden": false,
+              "long": "outlier",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EPIC"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "baseline",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "baseline"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Run a hook entry; hooks.json calls it (internal)",
           "aliases": [],
           "args": [

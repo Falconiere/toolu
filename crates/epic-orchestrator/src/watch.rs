@@ -124,6 +124,14 @@ impl Watch {
   }
 }
 
+/// The issue a pull request watch belongs to, by watch key.
+pub(crate) fn issue_of<'a>(world: &'a World, watch_key: &str) -> Option<&'a str> {
+  match &world.watches.get(watch_key)?.kind {
+    Kind::Pr { key, .. } => Some(key),
+    Kind::Base { .. } | Kind::Epic { .. } | Kind::Blocker { .. } => None,
+  }
+}
+
 /// Consume all due inputs while keeping their fixed deadlines anchored.
 pub(crate) fn take_due(world: &mut World) -> Vec<(String, Cause)> {
   let mut due = Vec::new();
