@@ -30,6 +30,20 @@ fn fleet_proxy_documents() {
   b.stop();
 }
 
+/// What a peer had seen once the refresher's first round reached it. That round fetches
+/// every peer's overview on its own thread; a slow runner would see it arrive mid-test.
+fn after_first_round(seen: impl Fn() -> String) -> String {
+  for _ in 0..500 {
+    if seen().contains("GET /api/v1/overview ") {
+      break;
+    }
+    thread::sleep(Duration::from_millis(20));
+  }
+  let heads = seen();
+  assert!(heads.contains("GET /api/v1/overview "), "{heads}");
+  heads
+}
+
 #[test]
 fn fleet_proxy_rejects_paths() {
   let temp = tempfile::tempdir().expect("temp root");
@@ -47,7 +61,7 @@ fn fleet_proxy_rejects_paths() {
     get_json(a.addr, &format!("/api/v1/fleet/peers/any/issues/{long}"))["ok"],
     true
   );
-  let before = any.seen();
+  let before = after_first_round(|| any.seen());
   for path in [
     "/api/v1/fleet/peers/nobody/overview".to_owned(),
     "/api/v1/fleet/peers/any/metrics".to_owned(),
