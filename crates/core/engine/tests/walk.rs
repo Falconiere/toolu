@@ -46,7 +46,7 @@ fn ask(reason: &str) -> String {
 }
 
 #[test]
-fn registry_warnings_come_before_registry_exit_lines_as_in_typescript() {
+fn registry_warnings_come_before_registry_exit_lines_and_js_is_silent() {
   let hook = Hook::new(Host::Claude).unwrap();
   let pre = Phase::Pre;
   hook.sh(pre, "a@t__first.sh", "exit 1").unwrap();
@@ -58,7 +58,6 @@ fn registry_warnings_come_before_registry_exit_lines_as_in_typescript() {
     dispatched.result.stderr,
     "toolu-dispatch: module native exited 1; output skipped\n\
      toolu-registry: registry module noname.sh lacks <plugin-spec>__<name> namespace; skipped\n\
-     toolu-registry: module b@t__boom.js failed: boom; output skipped\n\
      toolu-dispatch: module a@t__first.sh exited 1; output skipped\n"
   );
   assert_eq!(dispatched.result.exit_code, 0);
@@ -97,10 +96,16 @@ fn a_built_in_deny_wins_before_a_registry_ask_runs() {
 }
 
 #[test]
-fn a_js_module_shadows_its_specs_sh_and_selection_gates_specs() {
+fn a_js_module_no_longer_shadows_its_specs_sh_and_selection_gates_specs() {
   let mut hook = Hook::new(Host::Claude).unwrap();
   let pre = Phase::Pre;
-  hook.sh(pre, "x@t__old.sh", "exit 2").unwrap();
+  hook
+    .sh(
+      pre,
+      "x@t__old.sh",
+      r#"printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"old sh"}}'"#,
+    )
+    .unwrap();
   modules::js(
     &hook,
     pre,
@@ -119,14 +124,17 @@ fn a_js_module_shadows_its_specs_sh_and_selection_gates_specs() {
   modules::manifest(&hook, pre, "z@t", "w", "Write").unwrap();
   modules::install(&hook, &["x@t", "y@t"]).unwrap();
   let dispatched = hook.run(pre, BASH, &[], &[]);
-  let both = expect::merged("PreToolUse", Some("fresh js"), Some("other spec"));
+  let both = expect::merged("PreToolUse", Some("old sh"), Some("other spec"));
   assert_eq!(dispatched.result.stdout, both);
-  let old = dispatched
-    .trace
-    .iter()
-    .find(|step| step.module == "x@t__old.sh")
-    .unwrap();
-  assert_eq!(old.status, StepStatus::Skipped(Skip::Shadowed));
+  let status = |module: &str| {
+    let step = dispatched.trace.iter().find(|step| step.module == module);
+    step.map(|step| step.status.clone())
+  };
+  assert_eq!(status("x@t__old.sh"), Some(StepStatus::Exited(0)));
+  assert_eq!(
+    status("x@t__new.js"),
+    Some(StepStatus::Skipped(Skip::Unsupported))
+  );
   hook.selected = Some(BTreeSet::from(["y@t".to_owned()]));
   let dispatched = hook.run(pre, BASH, &[], &[]);
   let selected = expect::merged("PreToolUse", None, Some("other spec"));

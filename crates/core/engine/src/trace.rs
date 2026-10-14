@@ -21,7 +21,7 @@ pub enum StepKind {
   Rule,
   /// A `.sh` module.
   Executable,
-  /// A `.js` module, run through the Bun bridge.
+  /// A `.js` module, which toolu no longer runs (#440).
   Esm,
 }
 
@@ -47,6 +47,6 @@ pub enum Skip {
   Shadowed,
   /// Its manifest's matcher, or its rule's `applies`, does not fit the event.
   NotMatching,
-  /// It is a `.js` module and Bun could not be found or started.
-  NoBun,
+  /// It is a `.js` module: toolu runs only manifests and executables (#440).
+  Unsupported,
 }

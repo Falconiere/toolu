@@ -24,7 +24,10 @@ fn bait(sandbox: &Sandbox) -> Res<(PathBuf, Vec<(String, String)>)> {
   }
   let env = vec![
     ("TOOLU_BUN".to_owned(), bun.to_string_lossy().into_owned()),
-    ("PATH".to_owned(), format!("{}:{REDUCED_PATH}", bin.display())),
+    (
+      "PATH".to_owned(),
+      format!("{}:{REDUCED_PATH}", bin.display()),
+    ),
   ];
   Ok((marker, env))
 }

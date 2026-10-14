@@ -3,7 +3,6 @@
 //! `TOOLU_CONFIG_DIR`; after it, also `PROJECT_ROOT` (the cwd's git toplevel,
 //! else the cwd) and `<PROJECT_ROOT>/node_modules/.bin` first on `PATH`.
 
-use std::cell::RefCell;
 use std::path::{Path, PathBuf};
 
 use toolu_protocol::host::Host;
@@ -14,7 +13,6 @@ use toolu_runtime::host::detect::detect;
 use toolu_runtime::host::roots::Roots;
 
 use super::{DispatchOptions, Phase};
-use crate::registry::bridge::bun::BunState;
 
 /// One hook call's fixed context.
 pub(crate) struct Session<'a> {
@@ -27,8 +25,6 @@ pub(crate) struct Session<'a> {
   pub(crate) config_root: PathBuf,
   pub(crate) project_root: PathBuf,
   pub(crate) options: &'a DispatchOptions<'a>,
-  /// Whether Bun was found, and whether this call already reported its absence.
-  pub(crate) bun: RefCell<BunState>,
 }
 
 /// A session, or the warnings of a hook its config switched off.
@@ -84,7 +80,6 @@ impl<'a> Session<'a> {
       config_root,
       project_root,
       options,
-      bun: RefCell::new(BunState::default()),
     };
     Opened::Ready(session, warnings)
   }

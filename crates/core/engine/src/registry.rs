@@ -3,7 +3,6 @@
 //! them, regular files or symlinks to them only, and a module name without the
 //! `<spec>__` namespace rejected rather than run.
 
-pub(crate) mod bridge;
 mod executable;
 pub mod gate;
 mod manifests;
@@ -12,7 +11,7 @@ pub mod prune;
 
 use std::path::{Path, PathBuf};
 
-use toolu_runtime::registry::{ModuleKind, NameParse, parse_name};
+use toolu_runtime::registry::{ModuleKind, NameParse, RegistryEvent, parse_name};
 
 /// One module file of an event directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -36,6 +35,35 @@ pub struct Listing {
   pub entries: Vec<Entry>,
   /// Module files lacking the `<spec>__<name>` namespace, never run.
   pub rejected: Vec<String>,
+}
+
+/// The `.js` modules under `<config_root>/toolu/{pre,post}-tools.d`, as
+/// `<dir>/<file>`, in byte order per directory. toolu no longer runs them (#440).
+pub fn esm_modules(config_root: &Path) -> Vec<String> {
+  [RegistryEvent::ToolPre, RegistryEvent::ToolPost]
+    .iter()
+    .flat_map(|event| {
+      let dir = event.dir_name();
+      list_dir(&config_root.join("toolu").join(dir))
+        .entries
+        .into_iter()
+        .filter(|entry| entry.kind == ModuleKind::Esm)
+        .map(move |entry| format!("{dir}/{}", entry.file))
+    })
+    .collect()
+}
+
+/// The advisory line for one `.js` module named by [`esm_modules`].
+pub fn esm_advisory(module: &str) -> String {
+  let stem = module
+    .rsplit('/')
+    .next()
+    .and_then(|file| file.strip_suffix(".js"))
+    .unwrap_or(module);
+  format!(
+    "toolu-registry: {module} is a JavaScript module, which toolu no longer runs; publish it \
+     as an executable {stem}.sh (docs/registry.md#executable-modules)"
+  )
 }
 
 /// Every `.js`, `.sh` and `.json` module file in `dir`, in byte order; an

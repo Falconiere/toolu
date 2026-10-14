@@ -24,15 +24,13 @@ use toolu_protocol::host::Host;
 use toolu_runtime::registry::RegistryEvent;
 use toolu_runtime::registry::rule::Rule;
 
-/// A hook whose `bash` and `bun` log each spawn to the returned file, then run the real ones.
+/// A hook whose `bash` logs each spawn to the returned file, then runs the real one.
 fn sentinels() -> sandbox::Res<(Hook, std::path::PathBuf)> {
   let mut hook = Hook::new(Host::Claude)?;
   let log = hook.sb.path("spawned");
-  for name in ["bash", "bun"] {
-    let real = bins::which(name)?;
-    let body = format!("echo {name} >> {}\nexec {real} \"$@\"", log.display());
-    bins::script(&hook.sb.path(&format!("bin/{name}")), &body)?;
-  }
+  let real = bins::which("bash")?;
+  let body = format!("echo bash >> {}\nexec {real} \"$@\"", log.display());
+  bins::script(&hook.sb.path("bin/bash"), &body)?;
   let path = std::env::var("PATH").map_err(|err| err.to_string())?;
   hook
     .extra
@@ -81,8 +79,8 @@ fn a_read_with_no_fitting_manifest_runs_no_rule_and_spawns_nothing() {
   hook.run(Phase::Pre, &read, &[], &[&r, &s]);
   let spawned = std::fs::read_to_string(&log).unwrap();
   assert_eq!(
-    spawned, "bash\nbun\n",
-    "control: the sentinels see a .sh and a .js module run"
+    spawned, "bash\n",
+    "control: the sentinel sees the .sh run, and the .js never runs"
   );
 }
 
