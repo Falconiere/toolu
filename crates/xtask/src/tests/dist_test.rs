@@ -1,9 +1,8 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::{build_one, checksums, drift, drift_with};
+use super::checksums;
 use crate::Verdict;
-use crate::ci_yaml::bun_binary;
 use crate::homebrew_formula::digest;
 use crate::options::Options;
 
@@ -15,58 +14,14 @@ fn options(root: PathBuf, files: &[&str]) -> Options {
   }
 }
 
-fn write_source(root: &Path) {
-  let src = root.join("plugins/demo/hooks/src/pre-tools.ts");
-  std::fs::create_dir_all(src.parent().unwrap()).unwrap();
-  std::fs::write(&src, "console.log(\"one\");\n").unwrap();
-}
-
 #[test]
-fn a_matching_bundle_passes() {
+fn check_is_no_longer_a_mode() {
   let root = tempfile::tempdir().unwrap();
-  write_source(root.path());
-  let outfile = root.path().join("plugins/demo/hooks/dist/pre-tools.js");
-  std::fs::create_dir_all(outfile.parent().unwrap()).unwrap();
-  build_one(
-    &bun_binary().unwrap(),
-    root.path(),
-    "plugins/demo/hooks/src/pre-tools.ts",
-    &outfile,
-  )
-  .unwrap();
-  assert_eq!(drift(root.path()).unwrap(), Vec::<String>::new());
-  assert_eq!(
-    super::run(&options(root.path().to_path_buf(), &["check"])).unwrap(),
-    Verdict::Clean
-  );
-}
-
-#[test]
-fn a_stale_bundle_names_the_path() {
-  let root = tempfile::tempdir().unwrap();
-  write_source(root.path());
-  let outfile = root.path().join("plugins/demo/hooks/dist/pre-tools.js");
-  std::fs::create_dir_all(outfile.parent().unwrap()).unwrap();
-  std::fs::write(&outfile, "stale\n").unwrap();
-  let problems = drift(root.path()).unwrap();
+  let err = super::run(&options(root.path().to_path_buf(), &["check"])).unwrap_err();
   assert!(
-    problems
-      .iter()
-      .any(|line| line.contains("plugins/demo/hooks/dist/pre-tools.js")),
-    "{problems:?}"
+    err.contains("usage: cargo xtask dist checksums <dir>"),
+    "{err}"
   );
-  assert_eq!(
-    super::run(&options(root.path().to_path_buf(), &["check"])).unwrap(),
-    Verdict::Findings
-  );
-}
-
-#[test]
-fn a_missing_bun_is_an_error() {
-  let root = tempfile::tempdir().unwrap();
-  write_source(root.path());
-  let err = drift_with(root.path(), Path::new("/no/such/bun")).unwrap_err();
-  assert!(err.contains("bun is not installed"), "{err}");
 }
 
 fn gzip(dir: &Path, name: &str) {

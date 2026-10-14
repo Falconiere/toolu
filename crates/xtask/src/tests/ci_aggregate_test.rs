@@ -26,7 +26,6 @@ fn suite(changes_outputs: &Value, rust: &str, docs: &str) -> String {
     "rust": { "result": rust },
     "rust-musl": { "result": "skipped" },
     "fuzz": { "result": "skipped" },
-    "rust-conformance": { "result": "skipped" },
     "hook-bench": { "result": "skipped" }
   })
   .to_string()

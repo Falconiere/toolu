@@ -4,50 +4,50 @@
 **Final removal:** [#279](https://github.com/Falconiere/toolu/issues/279) (epic [#247](https://github.com/Falconiere/toolu/issues/247))
 **Inventory:** `fixtures/gate-coverage/inventory.json`
 
-**Check:** `bun run tooling/src/gate-coverage-inventory.ts check`
+**Check:** `cargo xtask gate-coverage`
 
-Every live hook and built-in gate in this inventory is `port-native`. The host mechanism records whether its entry uses a Bun bundle or the generated native launcher. The final-removal check also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457) and the one-line native shims `plugins/jev/scripts/jev.sh` and `plugins/toolu-review/scripts/write-state.sh` (#440).
+Every live hook and built-in gate in this inventory is `port-native` and runs on the generated native launcher (#440 removed the Bun bundles). A `hooks.json` row is named after the hook it runs (`hook <name>`); a built-in gate's source is its module under `crates/core/engine/src/gates/`. The final-removal check (`cargo xtask final-removal`) also rejects tracked shell and Bats files, except the root curl installer `install.sh` (#457).
 
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
-| `ast-grep:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #429/done | native | no | — |
-| `epic-orchestrator:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
-| `epic-orchestrator:hooks.json:SessionStart:check-deps.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
-| `epic-orchestrator:hooks.json:SessionStart:engine-ensure.js:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
-| `jev:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #443/done | native | no | — |
-| `jev:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | native | no | — |
-| `jev:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | native | no | — |
-| `pr-babysit:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #443/done | native | no | — |
-| `pr-babysit:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #433/done | native | no | — |
-| `python-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
-| `python-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
-| `rust-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
-| `rust-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
-| `statusline:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | port-native | required | #431/done | native | no | — |
-| `toolu-review:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | native | no | — |
-| `toolu-review:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | native | no | — |
-| `toolu:builtin-module:PostToolUse:gate-status` | `packages/toolu-core/src/gates/gate-status.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
-| `toolu:builtin-module:PostToolUse:push-waiver` | `packages/toolu-core/src/gates/push-waiver.ts` | toolu | PostToolUse | port-native | required | #259/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:bash-commands` | `packages/toolu-core/src/gates/bash-commands.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:code-edit-rules` | `packages/toolu-core/src/gates/code-edit-rules.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:commit-gate` | `packages/toolu-core/src/gates/commit-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:docs-sync` | `packages/toolu-core/src/gates/docs-sync.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:mcp-blocker` | `packages/toolu-core/src/gates/mcp-blocker.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:plan-ledger` | `packages/toolu-core/src/gates/plan-ledger.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:protected-files` | `packages/toolu-core/src/gates/protected-files.ts` | toolu | PreToolUse | port-native | required | #419/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:push-review` | `packages/toolu-core/src/gates/push-review.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:builtin-module:PreToolUse:quality-gate` | `packages/toolu-core/src/gates/quality-gate.ts` | toolu | PreToolUse | port-native | required | #261/done | bun-bundle | no | — |
-| `toolu:entrypoint:PreToolUse:agent-tier` | `plugins/toolu/hooks/src/agent-tier.ts` | toolu | PreToolUse | port-native | required | #262/done | bun-bundle | no | — |
-| `toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | native | no | — |
-| `toolu:hooks.json:PreCompact:pre-compact.js:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | native | no | — |
-| `toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
-| `toolu:hooks.json:PreToolUse:mcp-tools.js:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #260/done | native | no | — |
-| `toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |
-| `toolu:hooks.json:SessionStart:check-binary.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | native | no | — |
-| `toolu:hooks.json:SessionStart:session-start.js:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | native | no | — |
-| `toolu:hooks.json:UserPromptSubmit:user-prompt-submit.js` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | native | no | — |
-| `ts-quality:hooks.json:SessionStart:check-toolu.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
-| `ts-quality:hooks.json:SessionStart:register.js:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
+| `ast-grep:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #429/done | native | no | — |
+| `epic-orchestrator:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
+| `epic-orchestrator:hooks.json:SessionStart:hook_check-deps:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
+| `epic-orchestrator:hooks.json:SessionStart:hook_engine-ensure:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
+| `jev:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #443/done | native | no | — |
+| `jev:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | native | no | — |
+| `jev:hooks.json:UserPromptSubmit:hook_user-prompt-submit` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | native | no | — |
+| `pr-babysit:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #443/done | native | no | — |
+| `pr-babysit:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/pr-babysit/hooks/hooks.json` | pr-babysit | SessionStart | port-native | required | #433/done | native | no | — |
+| `python-quality:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
+| `python-quality:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/python-quality/hooks/hooks.json` | python-quality | SessionStart | port-native | required | #427/done | native | no | — |
+| `rust-quality:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
+| `rust-quality:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/rust-quality/hooks/hooks.json` | rust-quality | SessionStart | port-native | required | #428/done | native | no | — |
+| `statusline:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/statusline/hooks/hooks.json` | statusline | SessionStart | port-native | required | #431/done | native | no | — |
+| `toolu-review:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #443/done | native | no | — |
+| `toolu-review:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/toolu-review/hooks/hooks.json` | toolu-review | SessionStart | port-native | required | #269/done | native | no | — |
+| `toolu:builtin-module:PostToolUse:gate-status` | `crates/core/engine/src/gates/gate_status.rs` | toolu | PostToolUse | port-native | required | #259/done | native | no | — |
+| `toolu:builtin-module:PostToolUse:push-waiver` | `crates/core/engine/src/gates/push_waiver.rs` | toolu | PostToolUse | port-native | required | #259/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:bash-commands` | `crates/core/engine/src/gates/bash_commands.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:code-edit-rules` | `crates/core/engine/src/gates/code_edit_rules.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:commit-gate` | `crates/core/engine/src/gates/commit_gate.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:docs-sync` | `crates/core/engine/src/gates/docs_sync.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:mcp-blocker` | `crates/core/engine/src/gates/mcp_blocker.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:plan-ledger` | `crates/core/engine/src/gates/plan_ledger.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:protected-files` | `crates/core/engine/src/gates/protected_files.rs` | toolu | PreToolUse | port-native | required | #419/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:push-review` | `crates/core/engine/src/gates/push_review.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:builtin-module:PreToolUse:quality-gate` | `crates/core/engine/src/gates/quality_gate.rs` | toolu | PreToolUse | port-native | required | #261/done | native | no | — |
+| `toolu:entrypoint:PreToolUse:agent-tier` | `crates/toolu/src/agent_tier.rs` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:hooks.json:PostToolUse:hook_post-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PostToolUse | port-native | required | #279/done | native | no | — |
+| `toolu:hooks.json:PreCompact:hook_pre-compact:auto` | `plugins/toolu/hooks/hooks.json` | toolu | PreCompact | port-native | required | #263/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:hook_agent-tier:spawn_agent|Agent|Task` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #262/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:hook_mcp-tools:mcp__` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #260/done | native | no | — |
+| `toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh` | `plugins/toolu/hooks/hooks.json` | toolu | PreToolUse | port-native | required | #258/done | native | no | — |
+| `toolu:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #443/done | native | no | — |
+| `toolu:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/toolu/hooks/hooks.json` | toolu | SessionStart | port-native | required | #263/done | native | no | — |
+| `toolu:hooks.json:UserPromptSubmit:hook_user-prompt-submit` | `plugins/toolu/hooks/hooks.json` | toolu | UserPromptSubmit | port-native | required | #263/done | native | no | — |
+| `ts-quality:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
+| `ts-quality:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/ts-quality/hooks/hooks.json` | ts-quality | SessionStart | port-native | required | #426/done | native | no | — |
 
 ## Notes
 

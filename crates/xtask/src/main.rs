@@ -41,16 +41,18 @@ mod options;
 mod output;
 mod pack;
 mod pack_npm;
-mod package_workspace;
 mod packaging;
 mod packaging_assets;
 mod packaging_catalog;
-mod portable_core;
 mod print_hook;
 mod reach;
 mod source;
 mod startup;
 mod unused_pub;
+mod workflow_ci;
+mod workflow_install;
+mod workflow_release;
+mod workflow_yaml;
 mod workspace;
 
 use std::process::ExitCode;
@@ -93,8 +95,6 @@ const TASKS: &[(&str, Task)] = &[
   ("check-ci-paths", ci_check::run),
   ("ci-aggregate", ci_aggregate::run),
   ("dist", dist::run),
-  ("check-portable-core", portable_core::run),
-  ("check-workspace", package_workspace::run),
   ("final-removal", final_removal::run),
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
@@ -109,8 +109,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
-  final-removal, gate-coverage, packaging, bench, pack";
+  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

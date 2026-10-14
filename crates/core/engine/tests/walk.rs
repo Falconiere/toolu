@@ -106,14 +106,7 @@ fn a_js_module_no_longer_shadows_its_specs_sh_and_selection_gates_specs() {
       r#"printf '%s\n' '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"old sh"}}'"#,
     )
     .unwrap();
-  modules::js(
-    &hook,
-    pre,
-    "x@t",
-    "new",
-    r#"return { kind: "advisory", message: "fresh js" };"#,
-  )
-  .unwrap();
+  modules::js(&hook, pre, "x@t", "new", "return {};").unwrap();
   hook
     .sh(
       pre,

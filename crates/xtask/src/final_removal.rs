@@ -1,23 +1,29 @@
-//! `cargo xtask final-removal`: the Bun-only cutover still holds.
+//! `cargo xtask final-removal`: the TypeScript and Bun removal holds (#440).
+//! No TypeScript source but benchmark fixtures, no Bun lockfile, bundle or
+//! source tree, no shell but the installer, no `bun` in a hook or a workflow,
+//! no JavaScript workspace, and a coverage inventory that is native throughout.
 
 use std::path::Path;
 use std::process::Command;
 
 use regex::Regex;
 use serde::Deserialize;
-use serde_json::Value;
 
 use crate::options::Options;
 use crate::{Verdict, output};
 
-const SHELL_KEEP: [&str; 4] = [
-  "install.sh",
-  "plugins/jev/scripts/jev.sh",
-  "plugins/statusline/scripts/statusline.sh",
-  "plugins/toolu-review/scripts/write-state.sh",
+/// The one shell file that stays: the curl installer.
+const SHELL_KEEP: &str = "install.sh";
+
+/// Where TypeScript may remain: input files of the deterministic benchmark.
+const TS_KEEP: &str = "benchmarks/fixtures/";
+
+/// Trees the removal deleted.
+const GONE: [&str; 3] = [
+  "packages",
+  "tools/toolu-conformance",
+  "tooling/testdata/bats",
 ];
-const HOSTS: [&str; 2] = ["bun-bundle", "native"];
-const SHELL_SCRIPTS: [&str; 3] = ["lint:shell", "test:shell", "test:shell:serial"];
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,14 +35,13 @@ struct Row {
   bash_required: bool,
 }
 
-/// Judge tracked shell, the workflow, and the native coverage inventory.
+/// Judge the tree, the hooks, the workflows and the native coverage inventory.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let found = problems(&options.root)?;
   if found.is_empty() {
     let rows = load_rows(&options.root)?;
-    let kept = SHELL_KEEP.join(", ");
     output::say(&format!(
-      "final-removal: ok ({} native rows, shell kept: {kept})",
+      "final-removal: ok ({} native rows, shell kept: {SHELL_KEEP})",
       rows.len()
     ));
     return Ok(Verdict::Clean);
@@ -48,57 +53,129 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
 }
 
 pub(crate) fn problems(root: &Path) -> Result<Vec<String>, String> {
-  let mut found = Vec::new();
-  for file in tracked_shell(root)? {
-    found.push(format!("tracked shell file: {file}"));
+  let mut found = tracked_problems(&tracked(root)?);
+  for dir in GONE {
+    if root.join(dir).exists() {
+      found.push(format!("{dir} remains"));
+    }
   }
   if root.join(".shellcheckrc").exists() {
     found.push(".shellcheckrc remains".to_owned());
   }
-  if root.join("tooling/testdata/bats").exists() {
-    found.push("tooling/testdata/bats remains".to_owned());
-  }
-  found.extend(script_problems(root)?);
+  found.extend(plugin_problems(root)?);
+  found.extend(package_problems(root)?);
   found.extend(workflow_problems(root)?);
   found.extend(inventory_problems(root)?);
   Ok(found)
 }
 
-fn script_problems(root: &Path) -> Result<Vec<String>, String> {
-  let text = read(root, "package.json")?;
-  let doc: Value = serde_json::from_str(&text).map_err(|err| format!("package.json: {err}"))?;
-  let scripts = doc
-    .get("scripts")
-    .and_then(Value::as_object)
-    .ok_or_else(|| "package.json: scripts".to_owned())?;
+/// TypeScript, Bun lockfiles and shell among the tracked files.
+pub(crate) fn tracked_problems(files: &[String]) -> Vec<String> {
   let mut found = Vec::new();
-  for name in SHELL_SCRIPTS {
-    if scripts.contains_key(name) {
-      found.push(format!("shell-only package script remains: {name}"));
+  for file in files {
+    let name = file.rsplit('/').next().unwrap_or(file);
+    let ext = Path::new(name).extension().and_then(|ext| ext.to_str());
+    let script = matches!(ext, Some("ts" | "tsx" | "mts" | "cts"));
+    if script && !file.starts_with(TS_KEEP) {
+      found.push(format!("tracked TypeScript file: {file}"));
+    }
+    if matches!(name, "bun.lock" | "bun.lockb" | "bunfig.toml") {
+      found.push(format!("tracked Bun file: {file}"));
+    }
+    if matches!(ext, Some("sh" | "bash" | "bats")) && file != SHELL_KEEP {
+      found.push(format!("tracked shell file: {file}"));
+    }
+  }
+  found
+}
+
+/// Bundles, hook sources, and `bun` in a plugin's `hooks.json`.
+fn plugin_problems(root: &Path) -> Result<Vec<String>, String> {
+  let bun = word_bun()?;
+  let mut found = Vec::new();
+  let Ok(plugins) = std::fs::read_dir(root.join("plugins")) else {
+    return Ok(found);
+  };
+  for plugin in plugins.flatten() {
+    let name = plugin.file_name().to_string_lossy().into_owned();
+    for tree in ["hooks/dist", "hooks/src"] {
+      if plugin.path().join(tree).exists() {
+        found.push(format!("plugins/{name}/{tree} remains"));
+      }
+    }
+    let hooks = plugin.path().join("hooks/hooks.json");
+    let text = std::fs::read_to_string(&hooks).unwrap_or_default();
+    if bun.is_match(&text) || text.contains("TOOLU_RUNTIME") || text.contains("hooks/dist") {
+      found.push(format!("plugins/{name}/hooks/hooks.json still names Bun"));
     }
   }
   Ok(found)
 }
 
+/// The root `package.json` is the release anchor and jscpd's manifest, not a workspace.
+fn package_problems(root: &Path) -> Result<Vec<String>, String> {
+  let text = read(root, "package.json")?;
+  let doc: serde_json::Value =
+    serde_json::from_str(&text).map_err(|err| format!("package.json: {err}"))?;
+  Ok(if doc.get("workspaces").is_some() {
+    vec!["package.json still declares workspaces".to_owned()]
+  } else {
+    Vec::new()
+  })
+}
+
+/// No workflow installs or runs Bun; the retired jobs stay gone, `typescript` stays.
 fn workflow_problems(root: &Path) -> Result<Vec<String>, String> {
-  let workflow = read(root, ".github/workflows/tests.yml")?;
+  let bun = word_bun()?;
   let mut found = Vec::new();
-  for job in ["shellcheck", "bats"] {
-    let pattern = format!(r"(?m)^  {job}:");
-    if Regex::new(&pattern)
-      .map_err(|err| format!("workflow pattern: {err}"))?
-      .is_match(&workflow)
-    {
+  if let Ok(entries) = std::fs::read_dir(root.join(".github/workflows")) {
+    for entry in entries.flatten() {
+      let name = entry.file_name().to_string_lossy().into_owned();
+      let text = std::fs::read_to_string(entry.path()).unwrap_or_default();
+      if bun.is_match(&text) || text.contains("setup-bun") {
+        found.push(format!("workflow {name} still uses Bun"));
+      }
+    }
+  }
+  let tests = read(root, ".github/workflows/tests.yml")?;
+  for job in ["shellcheck", "bats", "rust-conformance"] {
+    if job_pattern(job)?.is_match(&tests) {
       found.push(format!("retired CI job remains: {job}"));
     }
   }
-  if !Regex::new(r"(?m)^  typescript:")
-    .map_err(|err| format!("workflow pattern: {err}"))?
-    .is_match(&workflow)
-  {
+  if !job_pattern("typescript")?.is_match(&tests) {
     found.push("replacement typescript CI job missing".to_owned());
   }
   Ok(found)
+}
+
+fn job_pattern(job: &str) -> Result<Regex, String> {
+  Regex::new(&format!(r"(?m)^  {job}:")).map_err(|err| format!("workflow pattern: {err}"))
+}
+
+/// `bun` as a word, lower case, as a command names it.
+fn word_bun() -> Result<Regex, String> {
+  Regex::new(r"\bbun\b").map_err(|err| format!("bun pattern: {err}"))
+}
+
+/// Every file `git ls-files` lists under `root`.
+fn tracked(root: &Path) -> Result<Vec<String>, String> {
+  let output = Command::new("git")
+    .args(["ls-files", "-z"])
+    .current_dir(root)
+    .output()
+    .map_err(|err| format!("git ls-files failed: {err}"))?;
+  if !output.status.success() {
+    let detail = String::from_utf8_lossy(&output.stderr);
+    return Err(format!("git ls-files failed: {}", detail.trim()));
+  }
+  Ok(
+    String::from_utf8_lossy(&output.stdout)
+      .split('\0')
+      .filter(|file| !file.is_empty())
+      .map(str::to_owned)
+      .collect(),
+  )
 }
 
 fn inventory_problems(root: &Path) -> Result<Vec<String>, String> {
@@ -123,7 +200,7 @@ fn row_problems(row: &Row) -> Vec<String> {
   if row.bash_required {
     found.push(format!("{}: bashRequired=true", row.id));
   }
-  if !HOSTS.contains(&row.host_mechanism.as_str()) {
+  if row.host_mechanism != "native" {
     found.push(format!("{}: hostMechanism {}", row.id, row.host_mechanism));
   }
   if row.implementation_status != "done" {
@@ -168,8 +245,8 @@ fn matrix_line(line: &str, expr: &Regex) -> Vec<String> {
   if class != "port-native" {
     found.push(format!("matrix row is not native: {line}"));
   }
-  if !HOSTS.contains(&host) {
-    found.push(format!("matrix row is not Bun or native: {line}"));
+  if host != "native" {
+    found.push(format!("matrix row is not native: {line}"));
   }
   if bash != "no" {
     found.push(format!("matrix row requires Bash: {line}"));
@@ -180,26 +257,6 @@ fn matrix_line(line: &str, expr: &Regex) -> Vec<String> {
 fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
   let text = read(root, "fixtures/gate-coverage/inventory.json")?;
   serde_json::from_str(&text).map_err(|err| format!("coverage inventory: {err}"))
-}
-
-fn tracked_shell(root: &Path) -> Result<Vec<String>, String> {
-  let output = Command::new("git")
-    .args(["ls-files", "-z", "*.sh", "*.bash", "*.bats"])
-    .current_dir(root)
-    .output()
-    .map_err(|err| format!("git ls-files failed: {err}"))?;
-  if !output.status.success() {
-    let detail = String::from_utf8_lossy(&output.stderr);
-    return Err(format!("git ls-files failed: {}", detail.trim()));
-  }
-  let text = String::from_utf8_lossy(&output.stdout);
-  Ok(
-    text
-      .split('\0')
-      .filter(|file| !file.is_empty() && !SHELL_KEEP.contains(file))
-      .map(str::to_owned)
-      .collect(),
-  )
 }
 
 fn read(root: &Path, rel: &str) -> Result<String, String> {

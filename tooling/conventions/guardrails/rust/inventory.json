@@ -129,20 +129,8 @@
     {
       "kind": "xtask-task",
       "id": "dist",
-      "pass": "crates/xtask/src/tests/dist_test.rs::a_matching_bundle_passes",
-      "fail": "crates/xtask/src/tests/dist_test.rs::a_stale_bundle_names_the_path"
-    },
-    {
-      "kind": "xtask-task",
-      "id": "check-portable-core",
-      "pass": "crates/xtask/src/tests/portable_core_test.rs::the_committed_doc_passes",
-      "fail": "crates/xtask/src/tests/portable_core_test.rs::a_missing_heading_is_a_finding"
-    },
-    {
-      "kind": "xtask-task",
-      "id": "check-workspace",
-      "pass": "crates/xtask/src/tests/package_workspace_test.rs::this_checkout_passes",
-      "fail": "crates/xtask/src/tests/package_workspace_test.rs::a_missing_package_is_a_finding"
+      "pass": "crates/xtask/src/tests/dist_test.rs::four_archives_write_sums_homebrew_can_read",
+      "fail": "crates/xtask/src/tests/dist_test.rs::a_missing_archive_names_each_gap_and_writes_nothing"
     },
     {
       "kind": "xtask-task",

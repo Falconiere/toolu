@@ -1,6 +1,9 @@
 {
   "groups": {
-    "docs": ["docs/**", "**/*.md"],
+    "docs": [
+      "docs/**",
+      "**/*.md"
+    ],
     "rust": [
       "Cargo.toml",
       "Cargo.lock",
@@ -23,21 +26,13 @@
       "plugins/*/.codex-plugin/plugin.json",
       "docs/cli/**",
       "benchmarks/startup-budgets.json",
-      "packages/toolu-core/src/state/**",
-      "packages/toolu-core/src/detect/**"
+      "package-lock.json"
     ],
     "ports": [
       "fixtures/**",
-      "tooling/src/rust-conformance.ts",
-      "tooling/src/benchmarks/hook-resources.ts",
-      "tooling/src/benchmarks/lib/hook-*.ts",
-      "tooling/src/benchmarks/__tests__/hook-resources*.ts",
       "benchmarks/cases/hooks/**",
       "benchmarks/hook-budgets.json",
-      "tools/toolu-conformance/**",
-      "tools/toolu-cli/**",
       "plugins/**",
-      "packages/**",
       "Cargo.toml",
       "Cargo.lock",
       "rust-toolchain.toml",
@@ -45,7 +40,10 @@
       "vendor/**"
     ]
   },
-  "runEverything": [".github/**", "bun.lock"],
+  "runEverything": [
+    ".github/**",
+    "package-lock.json"
+  ],
   "releaseOnly": {
     "paths": [
       "CHANGELOG.md",
@@ -53,31 +51,38 @@
       "Cargo.toml",
       "Cargo.lock",
       "package.json",
-      "packages/*/package.json",
-      "tools/*/package.json",
+      "package-lock.json",
       "tools/*/npm/package.json",
       "plugins/*/.claude-plugin/plugin.json",
       "plugins/*/.codex-plugin/plugin.json"
     ],
-    "versionKeys": ["version", ".", "@toolu/core"]
+    "versionKeys": [
+      "version",
+      "."
+    ]
   },
   "workflows": {
     "tests.yml": {
       "aggregate": "gate",
-      "required": ["typescript"],
+      "required": [
+        "typescript"
+      ],
       "jobs": {
         "docs": "docs",
         "rust": "rust",
         "rust-musl": "rust",
         "fuzz": "rust",
-        "rust-conformance": "ports",
         "hook-bench": "ports"
       }
     },
     "toolu-review.yml": {
       "aggregate": null,
-      "required": ["review"],
-      "jobs": { "review": "changed" }
+      "required": [
+        "review"
+      ],
+      "jobs": {
+        "review": "changed"
+      }
     }
   }
 }

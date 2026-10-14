@@ -5,15 +5,16 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::gate_coverage::Row;
-use crate::gate_coverage_names::{
-  commands_of, dir_names, is_native_like, make_id, native_names, normalize_command,
-};
+use crate::gate_coverage_names::{builtin_gates, commands_of, dir_names, hook_module, make_id};
 
 const PRE_PARENT: &str =
-  "toolu:hooks.json:PreToolUse:pre-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep";
+  "toolu:hooks.json:PreToolUse:hook_pre-tools:apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep";
 const POST_PARENT: &str =
-  "toolu:hooks.json:PostToolUse:post-tools.js:apply_patch|Edit|Write|MultiEdit|Bash|Sh";
-const AGENT_PARENT: &str = "toolu:hooks.json:PreToolUse:agent-tier.js:spawn_agent|Agent|Task";
+  "toolu:hooks.json:PostToolUse:hook_post-tools:apply_patch|Edit|Write|MultiEdit|Bash|Sh";
+const AGENT_PARENT: &str = "toolu:hooks.json:PreToolUse:hook_agent-tier:spawn_agent|Agent|Task";
+
+/// The native entry point that decides an agent's model tier.
+const AGENT_TIER: &str = "crates/toolu/src/agent_tier.rs";
 
 pub(crate) fn discover(root: &Path) -> Result<Vec<Row>, String> {
   let mut out = Vec::new();
@@ -78,15 +79,9 @@ fn add_entry(
 ) -> Result<(), String> {
   let matcher = entry.get("matcher").and_then(Value::as_str).unwrap_or("");
   for command in commands_of(entry) {
-    let native = command.contains("--hook-protocol");
-    if !native && is_native_like(&command) {
-      return Err(format!(
-        "{}: native launcher is missing --hook-protocol",
-        site.rel
-      ));
-    }
-    let command_or_module = normalize_command(&command);
-    let host = if native { "native" } else { "bun-bundle" };
+    let Some(command_or_module) = hook_module(&command) else {
+      return Err(format!("{}: a hook is not the native launcher", site.rel));
+    };
     push(
       out,
       seen,
@@ -97,7 +92,6 @@ fn add_entry(
         command: &command_or_module,
         matcher,
         source: site.rel,
-        host,
         parent: None,
       }),
     );
@@ -110,30 +104,22 @@ fn discover_builtins(
   out: &mut Vec<Row>,
   seen: &mut Vec<String>,
 ) -> Result<(), String> {
-  for name in native_names(root)? {
-    let rel = format!("packages/toolu-core/src/gates/{name}.ts");
-    if !root.join(&rel).is_file() {
-      return Err(format!("native built-in module {name} has no {rel}"));
+  for (table, event, parent) in [
+    ("PRE_TOOL", "PreToolUse", PRE_PARENT),
+    ("POST_TOOL", "PostToolUse", POST_PARENT),
+  ] {
+    for (name, source) in builtin_gates(root, table)? {
+      if !root.join(&source).is_file() {
+        return Err(format!("native built-in module {name} has no {source}"));
+      }
+      push(
+        out,
+        seen,
+        made(&builtin(&name, event, &source, Some(parent))),
+      );
     }
-    push(
-      out,
-      seen,
-      made(&builtin(&name, "PreToolUse", &rel, Some(PRE_PARENT))),
-    );
   }
-  for name in ["gate-status", "push-waiver"] {
-    let rel = format!("packages/toolu-core/src/gates/{name}.ts");
-    if !root.join(&rel).is_file() {
-      return Err(format!("native built-in module {name} has no {rel}"));
-    }
-    push(
-      out,
-      seen,
-      made(&builtin(name, "PostToolUse", &rel, Some(POST_PARENT))),
-    );
-  }
-  let agent = "plugins/toolu/hooks/src/agent-tier.ts";
-  if root.join(agent).is_file() {
+  if root.join(AGENT_TIER).is_file() {
     push(
       out,
       seen,
@@ -143,8 +129,7 @@ fn discover_builtins(
         event: "PreToolUse",
         command: "agent-tier",
         matcher: "",
-        source: agent,
-        host: "bun-bundle",
+        source: AGENT_TIER,
         parent: Some(AGENT_PARENT),
       }),
     );
@@ -159,7 +144,6 @@ struct Made<'a> {
   command: &'a str,
   matcher: &'a str,
   source: &'a str,
-  host: &'a str,
   parent: Option<&'a str>,
 }
 
@@ -176,7 +160,6 @@ fn builtin<'a>(
     command: name,
     matcher: "",
     source,
-    host: "bun-bundle",
     parent,
   }
 }
@@ -190,7 +173,7 @@ fn made(row: &Made<'_>) -> Row {
     event: row.event.to_owned(),
     matcher: row.matcher.to_owned(),
     command_or_module: row.command.to_owned(),
-    host_mechanism: row.host.to_owned(),
+    host_mechanism: "native".to_owned(),
     parent_id: row.parent.map(str::to_owned),
     semantics: String::new(),
     classification: String::new(),

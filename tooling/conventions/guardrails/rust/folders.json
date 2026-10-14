@@ -8,9 +8,6 @@
     ".gitattributes",
     ".github",
     ".gitignore",
-    ".jscpd.json",
-    ".oxfmtrc.json",
-    ".oxlintrc.json",
     ".release-please-manifest.json",
     ".toolu",
     "AGENTS.md",
@@ -21,16 +18,14 @@
     "LICENSE",
     "README.md",
     "benchmarks",
-    "bun.lock",
     "clippy.toml",
     "crates",
     "deny.toml",
     "docs",
     "fixtures",
-    "guardrails.workspace.json",
     "install.sh",
-    "knip.json",
     "lefthook.yml",
+    "package-lock.json",
     "package.json",
     "packages",
     "plugins",
@@ -39,8 +34,6 @@
     "rustfmt.toml",
     "tooling",
     "tools",
-    "tsconfig.base.json",
-    "tsconfig.json",
     "vendor"
   ],
   "crates": [
@@ -62,5 +55,14 @@
     "plugins",
     "http-test-support"
   ],
-  "core": ["protocol", "runtime", "shell", "http", "state", "engine", "github", "jev"]
+  "core": [
+    "protocol",
+    "runtime",
+    "shell",
+    "http",
+    "state",
+    "engine",
+    "github",
+    "jev"
+  ]
 }

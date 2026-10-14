@@ -20,6 +20,16 @@ fn register(env: &Env, host: Host) -> toolu_runtime::cli::Outcome {
 const MANIFEST: &str = "toolu/post-tools.d/ts-quality@toolu__ts-quality.json";
 const BRIDGE: &str = "toolu/post-tools.d/ts-quality@toolu__ts-quality.sh";
 
+/// The sorted file names in `dir`.
+fn listing(dir: &Path) -> Vec<String> {
+  let mut names: Vec<String> = std::fs::read_dir(dir)
+    .unwrap()
+    .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
+    .collect();
+  names.sort();
+  names
+}
+
 fn config(dir: &Path) -> Env {
   Env::from_pairs([("TOOLU_CONFIG_DIR", dir.display().to_string())])
 }
@@ -57,13 +67,8 @@ fn register_removes_its_old_bridge_silently_and_keeps_other_specs() {
   std::fs::write(post.join("python-quality@toolu__python-quality.sh"), "kept").unwrap();
   let outcome = register(&env, Host::Claude);
   assert_eq!((outcome.exit, outcome.stdout), (Exit::Success, None));
-  let mut left: Vec<String> = std::fs::read_dir(&post)
-    .unwrap()
-    .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-    .collect();
-  left.sort();
   assert_eq!(
-    left,
+    listing(&post),
     [
       "python-quality@toolu__python-quality.sh",
       "ts-quality@toolu__ts-quality.json",
@@ -166,13 +171,8 @@ fn register_removes_only_aged_temp_residue_of_this_plugin() {
   std::fs::write(post.join("ts-quality@toolu__ts-quality.json.43.1.tmp"), "").unwrap();
   let outcome = register(&config(dir.path()), Host::Claude);
   assert_eq!((outcome.exit, outcome.stdout), (Exit::Success, None));
-  let mut left: Vec<String> = std::fs::read_dir(&post)
-    .unwrap()
-    .map(|entry| entry.unwrap().file_name().to_string_lossy().into_owned())
-    .collect();
-  left.sort();
   assert_eq!(
-    left,
+    listing(&post),
     [
       "rust-quality@toolu__rust-quality.js.42.1700000000.tmp",
       "ts-quality@toolu__ts-quality.json",

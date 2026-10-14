@@ -2,50 +2,9 @@
   "name": "toolu-workspace",
   "private": true,
   "version": "7.11.0",
-  "description": "Engineering discipline for coding agents.",
-  "type": "module",
+  "description": "Engineering discipline for coding agents. The version anchor for release-please; jscpd is the gate's one npm tool.",
   "license": "MIT",
-  "keywords": [
-    "claude-code",
-    "skills",
-    "hooks",
-    "quality-gate"
-  ],
-  "scripts": {
-    "build:plugins": "bun run tooling/src/build-plugins.ts",
-    "bench:hooks": "bun run tooling/src/benchmarks/hook-resources.ts",
-    "bench:final-hooks": "bun run tooling/src/benchmarks/final-hook-latency.ts && bun run tooling/src/benchmarks/post-tools-latency.ts",
-    "bench:final-hooks:linux": "bun run tooling/src/benchmarks/linux-container.ts",
-    "smoke:clean-install": "bun run tooling/src/clean-install-smoke.ts",
-    "test:portable-core": "bun run tooling/src/check-portable-core-doc.ts && bun test --timeout 60000 tooling/src/__tests__/check-portable-core-doc.test.ts",
-    "check:http-musl": "bun run tooling/src/check-http-musl.ts",
-    "check:markdown-cli": "cargo xtask check-markdown-cli",
-    "test:conformance": "bun run tools/toolu-conformance/src/cli/run.ts",
-    "test:rust-conformance": "bun run tooling/src/rust-conformance.ts",
-    "test:statusline-native": "bun test --timeout 60000 tools/toolu-conformance/src/harness/__tests__/statusline-*.native.test.ts",
-    "test": "bun run test:unit && bun run test:conformance",
-    "test:unit": "bun test --timeout 60000 --max-concurrency=4 --path-ignore-patterns=**/*.native.test.ts tooling/src packages tools plugins"
-  },
-  "dependencies": {
-    "zod": "4.1.5",
-    "@toolu/core": "workspace:*",
-    "@toolu/conformance": "workspace:*"
-  },
   "devDependencies": {
-    "@types/bun": "1.4.2",
-    "jscpd": "4.0.5",
-    "knip": "5.63.1",
-    "oxfmt": "^0.70.0",
-    "oxlint": "1.77.0",
-    "oxlint-tsgolint": "^7.0.2002",
-    "typescript": "5.9.3"
-  },
-  "workspaces": [
-    "tooling",
-    "packages/toolu-core",
-    "tools/toolu-conformance"
-  ],
-  "engines": {
-    "bun": ">=1.4.0 <1.5.0"
+    "jscpd": "4.0.5"
   }
 }

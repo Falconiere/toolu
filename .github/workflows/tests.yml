@@ -24,7 +24,7 @@ permissions:
 jobs:
   # Classifies the event's diff into the path groups of .github/ci-paths.json and
   # outputs one boolean per group. pull_request: base...head; push: before..after;
-  # workflow_dispatch, an unmatched path, .github/**, bun.lock, an empty diff or
+  # workflow_dispatch, an unmatched path, .github/**, package-lock.json, an empty diff or
   # a diff error: every group on. A release-please version bump: every group off.
   changes:
     name: changes
@@ -68,16 +68,10 @@ jobs:
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      # ci-paths parses workflow YAML through Bun.
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
       - name: Documentation checks
         run: |
           set -euo pipefail
-          cargo xtask gate --only context-budget --only portable-core --only ci-paths
+          cargo xtask gate --only context-budget --only ci-paths
           cargo xtask check-markdown-cli
 
   # The Rust workspace gate (#407): format, clippy with warnings denied, build,
@@ -115,14 +109,9 @@ jobs:
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1,cargo-nextest@0.9.146
 
-      # jscpd (a devDependency) and the gate's Bun steps need Bun.
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
+      # jscpd, the gate's duplication check, is the one npm devDependency.
       - name: Install dependencies
-        run: bun install --frozen-lockfile
+        run: npm ci --ignore-scripts
 
       # The rust-quality step's `toolu rust-quality check` fails closed without ast-grep.
       - name: Install ast-grep
@@ -184,7 +173,7 @@ jobs:
 
       - name: statusline render budget
         if: runner.os == 'Linux'
-        run: bun tooling/src/benchmarks/statusline.ts --assert
+        run: cargo xtask bench-statusline --assert --bin target/release/toolu
 
   # Static Linux builds (#411) from the first Rust PR, not first at release
   # time: a release build per musl target, and the binary must be static.
@@ -294,55 +283,11 @@ jobs:
           name: fuzz-artifacts
           path: crates/core/shell/fuzz/artifacts
 
-  # The Rust conformance leg (#409): the black-box suites against the Rust
-  # binary for each hook entry in fixtures/rust-ported.json, the one list that
-  # grows with every port. An empty list is a no-op, so no toolchain is set up.
-  rust-conformance:
-    name: rust-conformance
-    needs: changes
-    if: needs.changes.outputs.ports == 'true'
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
-      - name: Count the ported entries
-        id: ports
-        run: echo "count=$(jq '.entries | length' fixtures/rust-ported.json)" >> "$GITHUB_OUTPUT"
-
-      - name: Install test tools
-        if: steps.ports.outputs.count != '0'
-        run: |
-          set -euo pipefail
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-          npm install -g @openai/codex @ast-grep/cli
-
-      - name: Install the pinned toolchain
-        if: steps.ports.outputs.count != '0'
-        run: rustup toolchain install
-
-      - name: Cache cargo
-        if: steps.ports.outputs.count != '0'
-        uses: Swatinem/rust-cache@v2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Rust conformance
-        run: bun run test:rust-conformance
-
   # Hook resource benchmark (#410): every hook entry's max RSS, CPU (children
-  # included) and wall per spawn, measured by `cargo xtask measure`. Linux
-  # asserts the entries in fixtures/rust-ported.json against
-  # benchmarks/hook-budgets.json; macOS reports only. Each leg uploads its
-  # `toolu.hook-resources/v1` result, the source of the committed baselines.
+  # included) and wall per spawn, measured by `cargo xtask bench-hooks` (#440).
+  # Linux asserts the entries of benchmarks/hook-budgets.json; macOS reports
+  # only. Each leg uploads its `toolu.hook-resources/v1` result, the source of
+  # the committed baselines.
   hook-bench:
     name: hook-bench (${{ matrix.os }})
     needs: changes
@@ -357,39 +302,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: "1.4.2"
-
       - name: Install the pinned toolchain
         run: rustup toolchain install
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+      - name: Build the measurer and the hooks
+        run: cargo build --release --locked -p xtask --bin toolu
 
-      - name: Build the measurer and any ported entries
-        run: |
-          set -euo pipefail
-          cargo build --release --locked -p xtask
-          if [ "$(jq '.entries | length' fixtures/rust-ported.json)" != "0" ]; then
-            cargo build --release --locked --bin toolu
-          fi
-
-      - name: Bench end-to-end tests
-        run: bun test --timeout 180000 tooling/src/benchmarks/__tests__/hook-resources.native.test.ts
-
-      - name: bench:hooks
+      - name: bench-hooks
         env:
           RESULT: ${{ runner.temp }}/hook-resources.json
         run: |
           set -euo pipefail
           assert=
           if [ "$RUNNER_OS" = "Linux" ]; then assert=--assert; fi
-          bun run bench:hooks --out "$RESULT" $assert | tee -a "$GITHUB_STEP_SUMMARY"
+          cargo xtask bench-hooks --bin target/release/toolu --out "$RESULT" $assert | tee -a "$GITHUB_STEP_SUMMARY"
 
       - name: Upload the result
         if: always()
@@ -405,7 +334,7 @@ jobs:
   # was on; it passes when each job succeeded or was skipped with its group off.
   gate:
     name: gate
-    needs: [changes, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -428,7 +357,7 @@ jobs:
   # `gate` until the repository setting is migrated to the new check name.
   typescript:
     name: typescript
-    needs: [changes, docs, rust, rust-musl, fuzz, rust-conformance, hook-bench]
+    needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     timeout-minutes: 10

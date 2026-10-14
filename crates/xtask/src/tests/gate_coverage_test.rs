@@ -11,7 +11,7 @@ fn row(id: &str) -> Row {
     event: "SessionStart".to_owned(),
     matcher: String::new(),
     command_or_module: "hooks/dist/demo.js".to_owned(),
-    host_mechanism: "bun-bundle".to_owned(),
+    host_mechanism: "native".to_owned(),
     parent_id: None,
     semantics: String::new(),
     classification: "port-native".to_owned(),
