@@ -31,6 +31,18 @@ fn wrapper() -> PathBuf {
   repo().join("tools/toolu-cli/npm/cli.js")
 }
 
+/// The catalog the wrapper passes from this checkout: the copy `npm pack`'s
+/// `prepack` leaves in `assets/`, else the repository's.
+fn catalog() -> PathBuf {
+  let shipped = repo().join("tools/toolu-cli/npm/assets/marketplace.json");
+  let path = if shipped.is_file() {
+    shipped
+  } else {
+    repo().join(".claude-plugin/marketplace.json")
+  };
+  std::fs::canonicalize(&path).unwrap_or(path)
+}
+
 /// The first `node` on this process's `PATH`; these tests need it.
 fn node() -> Res<PathBuf> {
   let path = std::env::var_os("PATH").unwrap_or_default();
@@ -184,7 +196,7 @@ fn the_words_the_catalog_the_status_and_a_killing_signal_pass_through() {
   );
   let killed = run(&wrapper(), &["--host", "codex", "list"], &env, &root).unwrap();
   assert_eq!(killed.code, Some(143), "{killed:?}");
-  let catalog = std::fs::canonicalize(repo().join(".claude-plugin/marketplace.json")).unwrap();
+  let catalog = catalog();
   let catalog = catalog.display();
   assert_eq!(
     std::fs::read_to_string(&log).unwrap(),
@@ -233,7 +245,7 @@ fn path_order_skips_legacy_scripts_and_probes_each_real_path_once() {
   )
   .unwrap();
   assert_eq!(ran.code, Some(0), "{ran:?}");
-  let catalog = std::fs::canonicalize(repo().join(".claude-plugin/marketplace.json")).unwrap();
+  let catalog = catalog();
   assert_eq!(
     std::fs::read_to_string(&log).unwrap(),
     format!(
