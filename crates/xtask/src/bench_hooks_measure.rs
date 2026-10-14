@@ -7,7 +7,7 @@ use std::ffi::OsString;
 use std::fs::File;
 use std::io::Write as _;
 use std::os::unix::process::CommandExt as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
 use std::thread::JoinHandle;
 use std::time::Duration;
@@ -16,6 +16,55 @@ use serde_json::Value;
 
 use crate::bench_hooks_report::Sample;
 use crate::process_group::{kill_stragglers, spawn_retrying, wait};
+
+/// The variable naming the measurer to use instead of a release `xtask`.
+pub(crate) const MEASURER_VAR: &str = "XTASK_MEASURER";
+
+/// The `xtask` that measures: `chosen` (the [`MEASURER_VAR`] value) when given, this
+/// executable when it is a release build, else the release `xtask` built beside it.
+/// On Linux a spawner's own resident memory is folded into its child's reading, so a
+/// debug measurer (what `cargo xtask` runs) lifts every hook to its own ~6 MiB.
+pub(crate) fn measurer(root: &Path, chosen: Option<OsString>) -> Result<PathBuf, String> {
+  if let Some(path) = chosen {
+    let path = PathBuf::from(path);
+    return if path.is_file() {
+      Ok(path)
+    } else {
+      Err(format!("{MEASURER_VAR}: no measurer at {}", path.display()))
+    };
+  }
+  let exe = std::env::current_exe().map_err(|err| format!("measurer: {err}"))?;
+  if !cfg!(debug_assertions) {
+    return Ok(exe);
+  }
+  let (Some(target), Some(name)) = (exe.parent().and_then(Path::parent), exe.file_name()) else {
+    return Err(format!(
+      "measurer: {} is not in a target directory",
+      exe.display()
+    ));
+  };
+  let cargo = std::env::var_os("CARGO").unwrap_or_else(|| "cargo".into());
+  let status = Command::new(cargo)
+    .args([
+      "build",
+      "--quiet",
+      "--locked",
+      "--release",
+      "-p",
+      "xtask",
+      "--target-dir",
+    ])
+    .arg(target)
+    .current_dir(root)
+    .status()
+    .map_err(|err| format!("measurer: cannot run cargo: {err}"))?;
+  if !status.success() {
+    return Err(format!(
+      "measurer: cargo build --release -p xtask exited {status}"
+    ));
+  }
+  Ok(target.join("release").join(name))
+}
 
 /// A measurer that runs longer than this is killed with its whole process group.
 pub(crate) const SPAWN_DEADLINE: Duration = Duration::from_secs(60);

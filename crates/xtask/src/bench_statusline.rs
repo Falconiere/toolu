@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::bench_hooks_measure::{SPAWN_DEADLINE, Spawn, samples};
+use crate::bench_hooks_measure::{MEASURER_VAR, SPAWN_DEADLINE, Spawn, measurer, samples};
 use crate::bench_hooks_report::{Sample, percentile};
 use crate::bench_statusline_repo::{Fixture, payload};
 use crate::bench_statusline_report::{Measured, WARMUP, cpu_model, document, violations};
@@ -26,7 +26,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let fixture_json = options.root.join("fixtures/statusline/performance.json");
   let fixture_json = std::fs::read_to_string(&fixture_json)
     .map_err(|err| format!("bench-statusline: {}: {err}", fixture_json.display()))?;
-  let exe = std::env::current_exe().map_err(|err| format!("bench-statusline: {err}"))?;
+  let exe = measurer(&options.root, std::env::var_os(MEASURER_VAR))
+    .map_err(|err| format!("bench-statusline: {err}"))?;
   let fixture = Fixture::new()?;
   let stdin = payload(&fixture_json, &fixture.worktree)?;
   let measured = measure(&exe, &bin, &fixture, &stdin, runs)?;

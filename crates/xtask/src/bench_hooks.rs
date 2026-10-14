@@ -12,7 +12,7 @@ use std::time::Instant;
 use serde_json::{Map, Value, json};
 
 use crate::bench_hooks_entries::{HookEntry, discover, select};
-use crate::bench_hooks_measure::{SPAWN_DEADLINE, Spawn, samples};
+use crate::bench_hooks_measure::{MEASURER_VAR, SPAWN_DEADLINE, Spawn, measurer, samples};
 use crate::bench_hooks_report::{Row, stale_budgets, summarize, table, violations};
 use crate::bench_hooks_sandbox::Sandbox;
 use crate::options::Options;
@@ -35,7 +35,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let discovered = discover(root)?;
   let known: Vec<String> = discovered.iter().map(|entry| entry.id.clone()).collect();
   let entries = select(discovered, &payloads, &options.only)?;
-  let measurer = std::env::current_exe().map_err(|err| format!("bench-hooks: {err}"))?;
+  let measurer =
+    measurer(root, std::env::var_os(MEASURER_VAR)).map_err(|err| format!("bench-hooks: {err}"))?;
   let started = Instant::now();
   let rows = measure_all(
     &Bench {

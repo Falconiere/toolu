@@ -67,7 +67,7 @@ A budget changes only together with a new measurement committed under `benchmark
 
 `--assert` fails, naming the entry, the metric, the measured value and the budget, when an entry of `benchmarks/hook-budgets.json` exceeds its p50 budget, or when the measured phase takes over 60 s. An entry without a budget is measured and reported, not gated. The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
 
-Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`. That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
+Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`, run by a release `xtask`: a debug `cargo xtask` builds `xtask --release` into its own target directory first, and `XTASK_MEASURER` names another measurer (the bench's own tests use the test build). That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
 
 On Linux, `exec` folds the spawner's RSS high-water mark into the child's, so no measurement reads below the measurer's own RSS. The bench reports that floor (`/usr/bin/true` measured the same way): about 3 MiB on the CI runner, 1.3 MiB on macOS. A reading above it is exact. A reading at it means "at most the floor". The same is why every sample gets its own measurer: `ru_maxrss` of `RUSAGE_CHILDREN` is a high-water mark over every child a process has reaped.
 

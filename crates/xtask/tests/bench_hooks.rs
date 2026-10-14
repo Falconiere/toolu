@@ -66,6 +66,8 @@ fn bench(root: &Path, extra: &[&str]) -> Res<Output> {
   let out = root.join("result.json");
   Ok(
     Command::new(env!("CARGO_BIN_EXE_xtask"))
+      // The test binary measures itself, so no release `xtask` is built.
+      .env("XTASK_MEASURER", env!("CARGO_BIN_EXE_xtask"))
       .args(["bench-hooks", "--root"])
       .arg(root)
       .arg("--bin")

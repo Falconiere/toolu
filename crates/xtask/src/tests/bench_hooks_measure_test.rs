@@ -4,7 +4,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
-use super::{SPAWN_DEADLINE, Spawn, once, sample_of, samples};
+use super::{MEASURER_VAR, SPAWN_DEADLINE, Spawn, once, sample_of, samples};
 use crate::bench_hooks_report::Sample;
 
 #[test]
@@ -162,4 +162,20 @@ fn the_stderr_file_is_removed_with_the_report() {
   let measurer = measurer(dir.path(), "echo oops >&2\nexit 1");
   once(&measurer, &spawn(dir.path(), SPAWN_DEADLINE), "entry", 3).unwrap_err();
   assert!(!dir.path().join("measure-3.err").exists());
+}
+
+#[test]
+fn a_chosen_measurer_is_used_as_given_and_must_exist() {
+  let dir = tempfile::tempdir().unwrap();
+  let chosen = dir.path().join("xtask");
+  std::fs::write(&chosen, "").unwrap();
+  assert_eq!(
+    super::measurer(dir.path(), Some(chosen.clone().into_os_string())).unwrap(),
+    chosen
+  );
+  let missing = dir.path().join("none");
+  assert_eq!(
+    super::measurer(dir.path(), Some(missing.clone().into_os_string())).unwrap_err(),
+    format!("{MEASURER_VAR}: no measurer at {}", missing.display())
+  );
 }
