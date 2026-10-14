@@ -128,12 +128,6 @@
     },
     {
       "kind": "xtask-task",
-      "id": "dist",
-      "pass": "crates/xtask/src/tests/dist_test.rs::four_archives_write_sums_homebrew_can_read",
-      "fail": "crates/xtask/src/tests/dist_test.rs::a_missing_archive_names_each_gap_and_writes_nothing"
-    },
-    {
-      "kind": "xtask-task",
       "id": "final-removal",
       "pass": "crates/xtask/src/tests/final_removal_test.rs::this_repository_passes",
       "fail": "crates/xtask/src/tests/final_removal_test.rs::a_shellcheckrc_is_a_finding"

@@ -18,6 +18,25 @@ pub(crate) struct Sandbox {
   pub(crate) home: PathBuf,
   /// The Codex home, `<home>/.codex`.
   pub(crate) codex_home: PathBuf,
+  /// The steps' `PATH`: the user's Bun toolchain, then this process's `PATH`.
+  pub(crate) path_var: String,
+}
+
+/// The fixtures were captured in Bun projects on a machine with Bun, and toolu
+/// no longer brings Bun (#440): `bun` only needs to exist (ts-quality checks the
+/// project's package manager is installed), and `bunx` runs the project's own
+/// binaries, as it would there.
+fn user_toolchain(root: &Path) -> Res<String> {
+  use std::os::unix::fs::PermissionsExt as _;
+  let bin = root.join("user-bin");
+  std::fs::create_dir_all(&bin)?;
+  for (name, body) in [("bun", "exit 0"), ("bunx", "exec npx --no-install \"$@\"")] {
+    let file = bin.join(name);
+    std::fs::write(&file, format!("#!/bin/sh\n{body}\n"))?;
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755))?;
+  }
+  let path = std::env::var("PATH").unwrap_or_default();
+  Ok(format!("{}:{path}", bin.display()))
 }
 
 /// `rel` under `base`; a path that leaves `base` is an error.
@@ -69,12 +88,14 @@ impl Sandbox {
     std::fs::write(project.join(".gitkeep"), "")?;
     git(&project, &["add", "-A"])?;
     git(&project, &["commit", "-q", "-m", "harness: initial commit"])?;
+    let path_var = user_toolchain(&root)?;
     Ok(Self {
       _dir: dir,
       root,
       project,
       home,
       codex_home,
+      path_var,
     })
   }
 

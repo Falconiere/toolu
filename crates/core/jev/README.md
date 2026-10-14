@@ -15,7 +15,7 @@ depends on `toolu-runtime` and `toolu-http` only. The package is not
   default. A negative or non-numeric value, or one over `u32::MAX` seconds
   (where a deadline would overflow the clock), also gives 60. `0`
   makes every attempt time out without connecting. An empty value counts as
-  unset (the `Env` rule), whereas TypeScript reads it as 0.
+  unset (the `Env` rule), whereas the removed TypeScript client read it as 0.
 
 ## Requests
 
@@ -23,7 +23,7 @@ depends on `toolu-runtime` and `toolu-http` only. The package is not
 `https://api.typesafe.ai/v1/systemone` without following redirects.
 
 The state and questions are `toolu_runtime::json::ordered::Ordered`, so the body
-is the `JSON.stringify` text `jev.ts` sends: keys in order, and a repeated key
+is the `JSON.stringify` text the removed `jev.ts` sent: keys in order, and a repeated key
 in its first place with its last value.
 
 - **Building questions:**
@@ -36,10 +36,10 @@ in its first place with its last value.
   it as given. Structured instructions, structured criteria and unknown fields
   pass through.
 - **State:** `State::text` sends a string. `State::structured` reads file or
-  stdin text as `jev.ts` does: it removes trailing line feeds, keeps a JSON
+  stdin text as `jev.ts` did: it removes trailing line feeds, keeps a JSON
   object or array, and sends any other text as a string.
 
-One difference from TypeScript: a choice option whose key looks like an integer
+One difference from the removed TypeScript client: a choice option whose key looks like an integer
 (`"1"`) keeps its place, where JavaScript would move it first.
 
 ## Retries
@@ -60,7 +60,7 @@ A call makes up to three attempts.
 
 ## Replies
 
-The reply is checked the way the TypeScript client checked it, and anything else is
+The reply is checked the way the removed TypeScript client checked it, and anything else is
 `Error::InvalidResponse`:
 
 - a non-empty model;
@@ -78,6 +78,6 @@ the CLI prints unchanged.
 ## Tests
 
 `tests/cases.rs` and `tests/retries.rs` replay the request and response cases
-that do not concern argv. They
+of the removed TypeScript suite that do not concern argv. They
 run against `toolu-http-test-support`'s real TLS origin and CONNECT proxy, with
 a 10 ms pause unit.

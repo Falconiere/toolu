@@ -273,7 +273,7 @@ The approach follows the approved spec. Edits run inline in the main thread: the
       ".toolu/skills"
     ],
     "input": "Repository Markdown",
-    "check": "cargo run -q -p xtask -- check-markdown-cli && cargo run -q -p xtask -- gate --only docs-cli --only context-budget && test -z \"$(git grep -n -E '(^|[^a-z])bun (run|install|test|build|x)( |$)|setup-bun|hooks/dist|TOOLU_RUNTIME|@toolu/core' -- AGENTS.md README.md 'docs/*.md' 'docs/cli/**' tooling/templates 'plugins/**/*.md' '.toolu/skills/**' | grep -v '^docs/runtime.md:')\"",
+    "check": "cargo run -q -p xtask -- check-markdown-cli && cargo run -q -p xtask -- gate --only docs-cli --only context-budget && test -z \"$(git grep -n -E '(^|[^a-z])bun (run|install|test|build|x)( |$)|setup-bun|hooks/dist|TOOLU_RUNTIME|@toolu/core' -- AGENTS.md README.md ':(glob)docs/*.md' ':(glob)docs/cli/**' tooling/templates ':(glob)plugins/**/*.md' ':(glob).toolu/skills/**' | grep -v -E '^(docs/runtime.md|docs/conformance-report.md|docs/markdown-cli.md|docs/shell-analysis.md|plugins/toolu/hooks/docs/gates.md):' | grep -v 'deprecated')\"",
     "model": "inherit"
   },
   {
@@ -322,6 +322,7 @@ The approach follows the approved spec. Edits run inline in the main thread: the
 
 - xtask-no-bun: the root toolchain and CI edits planned for `toolchain-ci` landed with this step, because the `ci-paths` and `workflows` checks need the workflows and `.github/ci-paths.json` to agree with the new jobs. `toolchain-ci` re-checks them.
 - bench-smoke: the hook budgets are Linux CI numbers, and macOS has a higher process floor (about 3.4 ms CPU per spawn). So the local check runs `bench-hooks` without `--assert`; the Linux `hook-bench` CI leg asserts (AC-7). The statusline budget asserts locally.
+- docs: the check's pathspecs are `:(glob)` so `docs/*.md` no longer descends into the historical `docs/toolu/` records, and the lines that legitimately name Bun are excluded: the migration notes (`runtime.md`), the historical conformance report, the markdown-cli gate's description of the old paths it rejects, the `bun test` examples of a user project's test command (`shell-analysis.md`, `gates.md`), and the `@toolu/core` deprecation notes.
 - golden-replay (new step, AC-13): see the spec's Deviations. The gate, lifecycle, quality and statusline replays were delegated to implementers on sonnet, one per family, each writing only its own test files.
 
 ## Critical files

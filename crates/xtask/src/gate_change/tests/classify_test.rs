@@ -123,3 +123,28 @@ fn coverage_floors_may_only_rise_and_start_at_the_default() {
     Some("coverage floor of toolu-shell added at 86, below the default 90")
   );
 }
+
+#[test]
+fn an_inventory_row_may_go_with_its_task_but_not_while_the_task_lives() {
+  let path = format!("{DATA}/inventory.json");
+  let row = |id: &str, pass: &str| {
+    format!(r#"{{"kind":"xtask-task","id":"{id}","pass":"a.rs::{pass}","fail":"a.rs::f"}}"#)
+  };
+  let doc = |rows: &[String]| format!(r#"{{"entries":[{}]}}"#, rows.join(","));
+  let gone = row("no-such-task", "p");
+  let live = row("guardrails", "p");
+  let before = doc(&[gone.clone(), live.clone()]);
+  assert_eq!(gate(&path, Some(&before), Some(&doc(&[live]))), None);
+  let dropped_live = gate(
+    &path,
+    Some(&before),
+    Some(&doc(std::slice::from_ref(&gone))),
+  );
+  assert!(dropped_live.unwrap().contains("changed an existing entry"));
+  let changed = gate(
+    &path,
+    Some(&before),
+    Some(&doc(&[gone, row("guardrails", "q")])),
+  );
+  assert!(changed.unwrap().contains("changed an existing entry"));
+}

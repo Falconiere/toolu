@@ -44,6 +44,7 @@ pub(crate) fn hook_env(
   let toolu_plugin = plugin_root("toolu").display().to_string();
   let mut env = parent_env();
   env.insert("HOME".to_owned(), sb.home.display().to_string());
+  env.insert("PATH".to_owned(), sb.path_var.clone());
   match host {
     Host::Claude => {
       env.insert(
@@ -241,8 +242,7 @@ fn apply_setup(sb: &Sandbox, host: Host, actions: &[Action]) -> Res<()> {
 fn path_without(sb: &Sandbox, without: &[String]) -> Res<String> {
   let bin = sb.root.join(format!("path-without-{}", without.join("-")));
   std::fs::create_dir_all(&bin)?;
-  let path = std::env::var_os("PATH").unwrap_or_default();
-  for dir in std::env::split_paths(&path).filter(|dir| !dir.as_os_str().is_empty()) {
+  for dir in std::env::split_paths(&sb.path_var).filter(|dir| !dir.as_os_str().is_empty()) {
     let entries = match std::fs::read_dir(&dir) {
       Ok(entries) => entries,
       Err(err) if skippable(&err) => continue,
@@ -272,8 +272,7 @@ fn stub_ast_grep(sb: &Sandbox, body: &str) -> Res<String> {
   let bin = sb.root.join("stub-bin");
   std::fs::create_dir_all(&bin)?;
   proc::write_script(&bin.join("ast-grep"), &format!("#!/bin/sh\n{body}\n"))?;
-  let path = std::env::var("PATH").unwrap_or_default();
-  Ok(format!("{}:{path}", bin.display()))
+  Ok(format!("{}:{}", bin.display(), sb.path_var))
 }
 
 /// The environment the case's variant adds to each step.

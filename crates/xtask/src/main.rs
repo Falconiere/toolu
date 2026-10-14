@@ -26,7 +26,6 @@ mod command_tree;
 mod context_budget;
 mod coverage;
 mod data;
-mod dist;
 mod docs_cli;
 mod final_removal;
 mod gate;
@@ -111,7 +110,6 @@ const TASKS: &[(&str, Task)] = &[
   ("ci-changes", ci_changes::run),
   ("check-ci-paths", ci_check::run),
   ("ci-aggregate", ci_aggregate::run),
-  ("dist", dist::run),
   ("final-removal", final_removal::run),
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
@@ -129,7 +127,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
+  check-ci-paths, ci-aggregate, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {
