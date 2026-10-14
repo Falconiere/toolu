@@ -1,5 +1,5 @@
-//! The parent side of `interleave.rs`: a sandbox per race, writer processes of
-//! both implementations, a reader polling the file meanwhile, and the checks.
+//! The parent side of `interleave.rs`: a sandbox per race, writer processes, a
+//! reader polling the file meanwhile, and the checks.
 
 use std::fs::File;
 use std::path::{Path, PathBuf};
@@ -44,39 +44,24 @@ impl Race {
       .envs(self.sb.env().vars())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
-    command.spawn().map_err(|err| {
-      format!(
-        "cannot start writer {}: {err} (bun is required)",
-        writer.id()
-      )
-    })
+    command
+      .spawn()
+      .map_err(|err| format!("cannot start writer {}: {err}", writer.id()))
   }
 
   /// Runs `writers` at once while a reader polls; checks every outcome.
   pub(crate) fn run(&self, writers: &[Writer], case: &Ordered) -> Res<()> {
     let (count, mode) = (number(case, "iterations")?, text(case, "mode")?);
     let mut fleet = Fleet(Vec::new());
-    let ordered = writers
-      .iter()
-      .filter(|writer| !writer.is_typescript())
-      .chain(writers.iter().filter(|writer| writer.is_typescript()));
-    let mut started_typescript = false;
-    for writer in ordered {
-      if writer.is_typescript() && !started_typescript {
-        self.wait_rust_ready(&mut fleet)?;
-        started_typescript = true;
-      }
+    for writer in writers {
       fleet.0.push((writer, self.spawn(writer, count, &mode)?));
     }
     let (reads, bad) = self.watch(&mut fleet)?;
     if reads <= number(case, "minReads")? || !bad.is_empty() {
       return Err(format!("{reads} reads, bad: {bad:?}"));
     }
-    // With TypeScript writers in the race, every Rust writer must have kept
-    // writing until the last of them exited: that is the interleaving.
-    let overlap = writers.iter().any(Writer::is_typescript);
     for (writer, child) in &mut fleet.0 {
-      check_writer(writer, &finished(child)?, overlap)?;
+      check_writer(writer, &finished(child)?, false)?;
     }
     let kept = numbers(field(case, "keptIndices")?);
     let expected: Vec<String> = writers
@@ -90,38 +75,8 @@ impl Race {
     self.check_final(expected)
   }
 
-  /// Each Rust writer has reached its cycle before the short TypeScript writers start.
-  fn wait_rust_ready(&self, fleet: &mut Fleet<'_>) -> Res<()> {
-    let deadline = Instant::now() + Duration::from_secs(20);
-    for (writer, child) in &mut fleet.0 {
-      self.wait_writer_ready(writer, child, deadline)?;
-    }
-    Ok(())
-  }
-
-  fn wait_writer_ready(&self, writer: &Writer, child: &mut Child, deadline: Instant) -> Res<()> {
-    let ready = PathBuf::from(format!(
-      "{}.stop.ready-{}",
-      self.gate.display(),
-      writer.id()
-    ));
-    while !ready.exists() {
-      if child.try_wait().map_err(|err| err.to_string())?.is_some() {
-        return Err(format!(
-          "writer {} exited before the mixed race",
-          writer.id()
-        ));
-      }
-      if Instant::now() >= deadline {
-        return Err(format!("writer {} never became ready", writer.id()));
-      }
-      std::thread::sleep(Duration::from_millis(1));
-    }
-    std::fs::remove_file(ready).map_err(|err| err.to_string())
-  }
-
-  /// Polls the file until every child exits; tells the Rust writers to stop
-  /// cycling once every TypeScript writer is done. Reads made, and reads failed.
+  /// Polls the file until every child exits; tells the writers not to cycle.
+  /// Reads made, and reads failed.
   fn watch(&self, fleet: &mut Fleet<'_>) -> Res<(usize, Vec<String>)> {
     let stop = PathBuf::from(format!("{}.stop", self.gate.display()));
     let (mut reads, mut bad) = (0, Vec::new());
@@ -132,13 +87,11 @@ impl Race {
         GateRead::Unrecognized { reason, .. } => bad.push(format!("unrecognized: {reason}")),
       }
       reads += 1;
-      let (mut running, mut typescript) = (false, false);
-      for (writer, child) in &mut fleet.0 {
-        let live = child.try_wait().map_err(|err| err.to_string())?.is_none();
-        running |= live;
-        typescript |= live && writer.is_typescript();
+      let mut running = false;
+      for (_, child) in &mut fleet.0 {
+        running |= child.try_wait().map_err(|err| err.to_string())?.is_none();
       }
-      if !typescript && !stop.exists() {
+      if !stop.exists() {
         std::fs::write(&stop, "").map_err(|err| err.to_string())?;
       }
       if !running {
@@ -149,7 +102,7 @@ impl Race {
     }
   }
 
-  /// Tells Rust writers not to cycle: no TypeScript writer runs beside them.
+  /// Tells the writers not to cycle.
   fn stop_cycling(&self) -> Res<()> {
     std::fs::write(format!("{}.stop", self.gate.display()), "").map_err(|err| err.to_string())
   }

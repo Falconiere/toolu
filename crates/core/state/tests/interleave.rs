@@ -1,7 +1,7 @@
-//! TypeScript and Rust writers on one gate file (AC-1, AC-2, and the
-//! `concurrency` cases of `fixtures/state/cases.json`). This test binary has
-//! no libtest harness: run plainly it is the parent; `interleave writer …`
-//! is one Rust writer process (TypeScript's `gate-writer.ts`, in Rust), and
+//! Concurrent writers on one gate file (AC-1, AC-2, and the `concurrency`
+//! cases of `fixtures/state/cases.json`). This test binary has no libtest
+//! harness: run plainly it is the parent; `interleave writer …` is one writer
+//! process, and
 //! `interleave hold <gate>` takes the lock and holds it for a minute, to be killed.
 //! Readers poll the file throughout; it must parse under the strict schema
 //! after every write, keep every slot, and leave no temp file or lock.
@@ -156,7 +156,6 @@ fn hold(args: &[String]) -> Res<()> {
 
 fn parent() -> Res<()> {
   fixture_cases()?;
-  mixed_race()?;
   crashed_holders()?;
   std::io::stdout()
     .write_all(b"interleave: ok\n")
@@ -178,30 +177,9 @@ fn fixture_cases() -> Res<()> {
   Ok(())
 }
 
-/// AC-1: eight TypeScript and eight Rust writers on one file.
-fn mixed_race() -> Res<()> {
-  let case = cases_of("state/cases.json", "concurrency")?
-    .into_iter()
-    .find(|case| text(case, "scenario").as_deref() == Ok("race"))
-    .ok_or("no race case")?;
-  let race = Race::new("feat/race")?;
-  let all: Vec<Writer> = (0..16)
-    .map(|id| {
-      if id < 8 {
-        Writer::typescript(&id.to_string())
-      } else {
-        Writer::rust(&id.to_string())
-      }
-    })
-    .collect();
-  race.run(&all, &case)
-}
-
-/// AC-2: a lock left by a killed holder of one implementation is broken at
-/// once by a writer of the other.
+/// AC-2: a lock left by a killed holder is broken at once by the next writer.
 fn crashed_holders() -> Res<()> {
   let race = Race::new("feat/crash")?;
-  race.crash_then(&Writer::rust_holder(), &Writer::typescript("ts-after-rust"))?;
-  race.crash_then(&Writer::typescript_holder(), &Writer::rust("rust-after-ts"))?;
-  race.has_slots(&["/w/ts-after-rust/1", "/w/rust-after-ts/1"])
+  race.crash_then(&Writer::rust_holder(), &Writer::rust("after-crash"))?;
+  race.has_slots(&["/w/after-crash/1"])
 }

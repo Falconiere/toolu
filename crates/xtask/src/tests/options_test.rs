@@ -69,14 +69,43 @@ fn measure_takes_out_and_every_word_after_the_separator() {
 }
 
 #[test]
-fn other_tasks_refuse_measure_options() {
-  for args in [&["--out", "r.json"][..], &["--", "true"][..]] {
+fn other_tasks_refuse_measure_bench_and_smoke_options() {
+  for (args, task, err) in [
+    (
+      &["--out", "r.json"][..],
+      "guardrails",
+      "only measure and the benches take --out",
+    ),
+    (
+      &["--", "true"][..],
+      "bench-hooks",
+      "only measure takes a command after --",
+    ),
+    (
+      &["--assert"][..],
+      "gate",
+      "only the benches take --assert and --runs",
+    ),
+    (
+      &["--runs", "3"][..],
+      "measure",
+      "only the benches take --assert and --runs",
+    ),
+    (
+      &["--host", "claude"][..],
+      "bench-hooks",
+      "only host-smoke takes --host",
+    ),
+  ] {
     let options = Options::parse(&words(args)).unwrap();
-    assert_eq!(
-      options.for_task("guardrails").unwrap_err(),
-      "only measure takes --out and a command after --"
-    );
+    assert_eq!(options.for_task(task).unwrap_err(), err, "{args:?}");
   }
+  let bench = Options::parse(&words(&["--assert", "--runs", "3", "--out", "r.json"])).unwrap();
+  assert!(bench.assert);
+  assert!(bench.for_task("bench-hooks").is_ok());
+  let smoke = Options::parse(&words(&["--host", "codex"])).unwrap();
+  assert_eq!(smoke.host.as_deref(), Some("codex"));
+  assert!(smoke.for_task("host-smoke").is_ok());
 }
 
 #[test]

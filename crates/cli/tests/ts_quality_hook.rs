@@ -24,7 +24,8 @@ const CLEAR: &[&str] = &[
   "TOOLU_STARTUP_REPORT",
 ];
 const TOOLS: &[&str] = &[
-  "ast-grep", "sg", "npx", "bunx", "bun", "node", "tsc", "biome", "eslint", "oxlint", "jscpd",
+  "ast-grep", "sg", "npm", "npx", "bunx", "bun", "node", "tsc", "biome", "eslint", "oxlint",
+  "jscpd",
 ];
 
 /// A home holding a git project with a TypeScript config, ts-quality installed or not.
@@ -66,7 +67,7 @@ fn sandbox(installed: bool) -> Res<Sandbox> {
   )?;
   fs::write(project.join("tsconfig.json"), "{}\n")?;
   fs::write(project.join("package.json"), "{\"name\":\"x\"}\n")?;
-  fs::write(project.join("bun.lock"), "")?;
+  fs::write(project.join("package-lock.json"), "{}\n")?;
   git(&project, &["init", "-q"])?;
   git(&project, &["add", "."])?;
   git(&project, &["commit", "-q", "-m", "ts project"])?;
@@ -171,8 +172,8 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   )
   .unwrap();
   assert!(fired.status.success(), "{fired:?}");
-  let stdout = String::from_utf8(fired.stdout).unwrap();
-  assert!(stdout.contains("Forbidden console.log"), "{stdout}");
+  let stdout = String::from_utf8(fired.stdout.clone()).unwrap();
+  assert!(stdout.contains("Forbidden console.log"), "{fired:?}");
 
   let doctor = toolu(
     &sb,

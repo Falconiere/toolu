@@ -4,8 +4,7 @@ use super::summarize;
 
 #[test]
 fn captured_bun_and_cargo_failures_name_tests() {
-  let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/toolu/scripts/__tests__/fixtures/debug");
+  let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/debug");
   for (file, name) in [
     ("bun-testfail.txt", "add sums"),
     ("cargo-testfail.txt", "tests::adds"),

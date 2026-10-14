@@ -1,12 +1,10 @@
-//! Detection against real repositories, real `PATH` directories and TypeScript (AC-12):
-//! the 35 layouts of `detect-project.test.ts` built in git repositories, the cases of
-//! `detect-tools.test.ts`, and the line counters on every tracked source of this
-//! repository against `detect-lines.ts` (one `bun` process).
+//! Detection against real repositories and real `PATH` directories (AC-12): the 35
+//! layouts of the former `detect-project.test.ts` built in git repositories, and the
+//! cases of `detect-tools.test.ts`. The line counters' parity run against
+//! `detect-lines.ts` was retired with the TypeScript tree (#440); their unit tests stay.
 
 #[path = "helpers/layouts.rs"]
 mod layouts;
-#[path = "helpers/parity.rs"]
-mod parity;
 #[path = "helpers/scratch.rs"]
 mod scratch;
 
@@ -251,78 +249,4 @@ fn the_probe_cache_is_keyed_by_path_so_a_new_path_re_probes() {
   assert!(detect_ast_grep(&with));
   assert!(!detect_ast_grep(&without));
   assert!(!tool_available("sg", &scratch.env_with("")));
-}
-
-/// One file of more than 1 MiB made of tracked TypeScript sources.
-fn big_file(dir: &Path, sources: &[PathBuf]) -> Res<PathBuf> {
-  let mut body = Vec::new();
-  for file in sources
-    .iter()
-    .filter(|file| file.extension().is_some_and(|ext| ext == "ts"))
-  {
-    body.extend(std::fs::read(file).map_err(|err| format!("{}: {err}", file.display()))?);
-    if body.len() > 3 << 20 {
-      break;
-    }
-  }
-  let path = dir.join("big.ts");
-  write(&path, &body)?;
-  (body.len() > 1 << 20)
-    .then_some(path)
-    .ok_or_else(|| "too few TypeScript sources".to_owned())
-}
-
-/// What the parity run saw.
-struct Report {
-  /// Tracked sources of the repository.
-  sources: usize,
-  /// Files with at least one code line.
-  counted: usize,
-  /// Files whose counts differ between TypeScript and Rust.
-  differ: Vec<String>,
-}
-
-/// Count every tracked source, a 3 MiB file, a missing path and a directory in both languages.
-fn parity_report() -> Res<Report> {
-  let scratch = Scratch::new()?;
-  let mut files = parity::tracked_sources()?;
-  let sources = files.len();
-  files.push(big_file(&scratch.root, &files)?);
-  files.extend([scratch.root.join("missing.ts"), scratch.root.clone()]);
-  let typescript = parity::typescript_counts(&files, &scratch.root)?;
-  let rust = parity::rust_counts(&files);
-  if typescript.len() != files.len() {
-    return Err(format!(
-      "bun counted {} of {} files",
-      typescript.len(),
-      files.len()
-    ));
-  }
-  let differ = (files.iter().zip(&typescript).zip(&rust))
-    .filter(|((_, ts), rs)| ts != rs)
-    .map(|((file, ts), rs)| format!("{}: typescript {ts:?}, rust {rs:?}", file.display()))
-    .collect();
-  let counted = rust
-    .iter()
-    .filter(|counts| counts.0.is_some_and(|code| code > 0))
-    .count();
-  Ok(Report {
-    sources,
-    counted,
-    differ,
-  })
-}
-
-#[test]
-fn line_counts_match_typescript_on_every_tracked_source() {
-  let report = parity_report().unwrap();
-  assert!(report.sources > 500, "{} tracked sources", report.sources);
-  assert!(report.counted > 500, "{} files with code", report.counted);
-  let differ = &report.differ;
-  assert!(
-    differ.is_empty(),
-    "{} files differ:\n{}",
-    differ.len(),
-    differ.join("\n")
-  );
 }

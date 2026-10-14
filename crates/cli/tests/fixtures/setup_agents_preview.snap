@@ -1,0 +1,45 @@
+---
+source: crates/cli/tests/setup_agents_golden.rs
+expression: text
+---
+$ toolu setup agents preview
+exit 0
+--- stdout
+TARGET ROOT/.codex/agents
+PLAN quick-task install
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+--- stderr
+
+$ toolu setup agents install
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task install
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+INSTALLED 5 UPDATED 0 UNCHANGED 0
+Restart Codex to reload custom agent profiles.
+--- stderr
+
+$ toolu setup agents install --now
+exit 2
+--- stdout
+--- stderr
+Usage: toolu setup agents preview | install [--force] | remove --yes [--force]
+
+$ toolu setup agents deploy
+exit 2
+--- stdout
+--- stderr
+Usage: toolu setup agents preview | install [--force] | remove --yes [--force]
+
+$ toolu setup agents preview
+exit 1
+--- stdout
+--- stderr
+toolu setup: CODEX_HOME and HOME are both unset

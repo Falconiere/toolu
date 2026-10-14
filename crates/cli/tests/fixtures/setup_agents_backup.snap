@@ -1,0 +1,54 @@
+---
+source: crates/cli/tests/setup_agents_golden.rs
+expression: text
+---
+$ toolu setup agents remove --yes --force
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task conflict
+PLAN deep-explore absent
+PLAN research-agent absent
+PLAN implementer absent
+PLAN architect absent
+REMOVED 1 ABSENT 4
+BACKUP ROOT/codex/agents/.toolu-backups/20260813T190300Z
+Restart Codex to reload custom agent profiles.
+--- stderr
+
+$ toolu setup agents install
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task install
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+INSTALLED 5 UPDATED 0 UNCHANGED 0
+Restart Codex to reload custom agent profiles.
+--- stderr
+
+$ toolu setup agents remove --yes
+exit 1
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task remove
+PLAN deep-explore remove
+PLAN research-agent remove
+PLAN implementer remove
+PLAN architect remove
+--- stderr
+toolu setup: invalid backup timestamp: ../x
+
+$ toolu setup agents install
+exit 1
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task update
+PLAN deep-explore unchanged
+PLAN research-agent unchanged
+PLAN implementer unchanged
+PLAN architect unchanged
+--- stderr
+toolu setup: backup already exists: ROOT/codex/agents/.toolu-backups/20260813T190400Z/quick-task.toml
