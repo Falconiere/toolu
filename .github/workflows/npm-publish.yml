@@ -82,6 +82,10 @@ jobs:
           set -euo pipefail
           tag="$TAG"
           for dir in tools/toolu-cli/npm; do
+            if [ ! -f "$dir/package.json" ]; then
+              echo "$dir/package.json not found at $tag" >&2
+              exit 1
+            fi
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
               continue

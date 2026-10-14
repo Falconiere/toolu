@@ -173,7 +173,17 @@ jobs:
 
       - name: statusline render budget
         if: runner.os == 'Linux'
-        run: cargo xtask bench-statusline --assert --bin target/release/toolu
+        run: >-
+          cargo xtask bench-statusline --assert --bin target/release/toolu
+          --out "${{ runner.temp }}/statusline-bench.json"
+
+      - name: Upload the statusline result
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: statusline-bench
+          path: ${{ runner.temp }}/statusline-bench.json
+          if-no-files-found: warn
 
   # Static Linux builds (#411) from the first Rust PR, not first at release
   # time: a release build per musl target, and the binary must be static.

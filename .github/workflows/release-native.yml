@@ -73,7 +73,14 @@ jobs:
           set -euo pipefail
           version=${TAG#v}
           for package in @toolu/plugins; do
-            test "$(npm view "$package@$version" version)" = "$version"
+            published=$(npm view "$package@$version" version) || {
+              echo "npm view $package@$version failed; aborting the native release" >&2
+              exit 1
+            }
+            if [ "$published" != "$version" ]; then
+              echo "$package@$version is not published (npm reports '$published'); aborting the native release" >&2
+              exit 1
+            fi
           done
       - name: Gate released source
         run: cargo xtask gate

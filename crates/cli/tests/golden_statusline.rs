@@ -96,19 +96,19 @@ fn adapted_cases_are_startup_cases_of_the_file() -> TestResult<()> {
 #[test]
 fn render_cases_replay() {
   let done = replay("render", golden_statusline_render::replay_case);
-  assert_eq!(done.unwrap_or_else(|error| panic!("{error}")), 31);
+  assert_eq!(done.expect("render replay"), 31);
 }
 
 #[test]
 fn setup_cases_replay() {
   let done = replay("setup", golden_statusline_setup_legacy::replay_case);
-  assert_eq!(done.unwrap_or_else(|error| panic!("{error}")), 15);
+  assert_eq!(done.expect("setup replay"), 15);
 }
 
 #[test]
 fn startup_cases_replay_with_the_old_path_retired() {
   let done = replay("startup", golden_statusline_startup::replay_case);
-  assert_eq!(done.unwrap_or_else(|error| panic!("{error}")), 5);
+  assert_eq!(done.expect("startup replay"), 5);
 }
 
 #[test]
