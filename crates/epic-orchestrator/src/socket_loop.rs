@@ -43,6 +43,8 @@ pub(crate) struct StateContext<'a> {
   pub(crate) shared: &'a Mutex<World>,
   pub(crate) changed: &'a Condvar,
   pub(crate) resub: &'a AtomicBool,
+  /// Ends the herdr thread's blocking read so it resubscribes at once.
+  pub(crate) interrupt: &'a crate::herdr_interrupt::Interrupt,
   pub(crate) babysit: &'a dyn BabysitTick,
 }
 
@@ -71,14 +73,20 @@ pub(crate) fn state_loop(
         if engine.effect_done(&call, &outcome)? == Stop::Fault {
           return Err("fault".to_owned());
         }
-        satisfy(engine, &mut waiters);
+        // Best effort: the replies were already sent, so a wait-reply the
+        // journal cannot record must not stop the engine (as in
+        // `notify::record`).
+        let _replies = satisfy(engine, &mut waiters);
       }
       Ok(Msg::Herdr(fact)) => {
         engine.refresh_clock();
         source::apply(engine, &Env::process(), fact)?;
         if engine.resubscribe {
           engine.resubscribe = false;
+          // Publish first: the herdr thread copies the world it resubscribes with.
+          publish(context.shared, context.changed, engine)?;
           context.resub.store(true, Ordering::Relaxed);
+          context.interrupt.trigger();
         }
       }
       Err(RecvTimeoutError::Timeout) => {
@@ -103,14 +111,15 @@ fn on_timeout(
   next_tick: &mut Instant,
   babysit: &dyn BabysitTick,
 ) -> Result<(), String> {
-  expire(engine, waiters);
+  engine.refresh_clock();
+  // Best effort, as above: expired waiters were already replied.
+  let _expired = expire(engine, waiters);
   if Instant::now() >= *next_tick {
     tick(engine, next_tick, babysit)?;
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
-    engine.refresh_clock();
     let _tick = engine.tick(babysit)?;
   }
-  satisfy(engine, waiters);
+  let _replies = satisfy(engine, waiters);
   Ok(())
 }
 

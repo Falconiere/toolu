@@ -37,6 +37,7 @@ fn pace() -> Pace {
     return_on_idle: true,
     stop: None,
     resubscribe: None,
+    interrupt: None,
   }
 }
 

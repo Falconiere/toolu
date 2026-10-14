@@ -5,6 +5,667 @@
   "description": "The root validates `toolu commands --json` (toolu.commands/v1). $defs holds every other document a toolu command prints under --json.",
   "$ref": "#/$defs/commands",
   "$defs": {
+    "epicSummary": {
+      "description": "toolu epic summary --json: one epic's run beside the TypeScript baseline, the budget table, and token use per worker read from host session records (#451).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "epic",
+        "rows",
+        "budgets",
+        "tokens"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "epic": {
+          "type": "string"
+        },
+        "rows": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "measure",
+              "epic",
+              "baseline"
+            ],
+            "properties": {
+              "measure": {
+                "type": "string"
+              },
+              "epic": {
+                "type": "string"
+              },
+              "baseline": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "budgets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "budget",
+              "value",
+              "status",
+              "reason"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "budget": {
+                "type": "string"
+              },
+              "value": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0
+              },
+              "status": {
+                "enum": [
+                  "pass",
+                  "fail",
+                  "unmeasured"
+                ]
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "tokens": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "key",
+              "host"
+            ],
+            "properties": {
+              "key": {
+                "type": "string"
+              },
+              "host": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "tokens": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              },
+              "status": {
+                "const": "unavailable"
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      }
+    },
+    "epicMetrics": {
+      "description": "toolu epic metrics --json and GET /api/v1/metrics: epic runs measured from the engine journal (#451). Durations are milliseconds.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "epic",
+        "since",
+        "generated_at",
+        "records",
+        "issues",
+        "lead_time_ms",
+        "phases",
+        "ready_to_merged_ms",
+        "rebase_rounds",
+        "prompts",
+        "judgments",
+        "wakeups",
+        "github",
+        "jobs",
+        "launches",
+        "engine"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "epic": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "since": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "generated_at": {
+          "type": "string"
+        },
+        "records": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lead_time_ms": {
+          "$ref": "#/$defs/epicPercentiles"
+        },
+        "phases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ms",
+              "share"
+            ],
+            "properties": {
+              "ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "share": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "ready_to_merged_ms": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total",
+            "queue",
+            "rebase",
+            "ci",
+            "merge",
+            "rework",
+            "clean_excluding_ci"
+          ],
+          "properties": {
+            "total": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "queue": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "rebase": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "ci": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "merge": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "rework": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "clean_excluding_ci": {
+              "$ref": "#/$defs/epicPercentiles"
+            }
+          }
+        },
+        "rebase_rounds": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "engine",
+            "worker",
+            "issues"
+          ],
+          "properties": {
+            "engine": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "worker": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "issues": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "engine",
+                  "worker"
+                ],
+                "properties": {
+                  "engine": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "worker": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          }
+        },
+        "prompts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "by_reason",
+            "decided_checks",
+            "while_waiting",
+            "rebase_without_conflict"
+          ],
+          "properties": {
+            "by_reason": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "decided_checks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "while_waiting": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rebase_without_conflict": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "judgments": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "raised",
+              "closed",
+              "wait_ms"
+            ],
+            "properties": {
+              "raised": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "closed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "wait_ms": {
+                "$ref": "#/$defs/epicPercentiles"
+              }
+            }
+          }
+        },
+        "wakeups": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "total",
+            "judgment_free"
+          ],
+          "properties": {
+            "total": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "judgment_free": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "github": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "checks",
+            "errors",
+            "rest_fresh",
+            "rest_not_modified",
+            "not_modified_share",
+            "rest_points",
+            "graphql_points",
+            "next_gap_ms",
+            "check_gap_ms",
+            "reaction_ms",
+            "late_reactions"
+          ],
+          "properties": {
+            "checks": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "errors": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rest_fresh": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "rest_not_modified": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "not_modified_share": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "rest_points": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "graphql_points": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "next_gap_ms": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "check_gap_ms": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "reaction_ms": {
+              "$ref": "#/$defs/epicPercentiles"
+            },
+            "late_reactions": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "jobs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attempts",
+            "waits",
+            "pressure_holds",
+            "wait_ms"
+          ],
+          "properties": {
+            "attempts": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "waits": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "pressure_holds": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "wait_ms": {
+              "$ref": "#/$defs/epicPercentiles"
+            }
+          }
+        },
+        "launches": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "relaunches",
+            "host_switches",
+            "cooldowns",
+            "waits"
+          ],
+          "properties": {
+            "relaunches": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "host_switches": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cooldowns": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "waits": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "engine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "lifetimes",
+            "max_rss_bytes",
+            "cpu_ms"
+          ],
+          "properties": {
+            "lifetimes": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "max_rss_bytes": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "cpu_ms": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "epicPercentiles": {
+      "description": "Linear-interpolated percentiles of millisecond durations, rounded down; null without values.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "p50",
+        "p90",
+        "max"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "p50": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "p90": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "max": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "epicBaseline": {
+      "description": "toolu epic baseline: the TypeScript-era figures derived from recorded epic state directories (benchmarks/epic-baseline.json).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "source",
+        "main",
+        "outliers",
+        "reported"
+      ],
+      "properties": {
+        "schema": {
+          "const": 1
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "until",
+            "outliers",
+            "records",
+            "merged"
+          ],
+          "properties": {
+            "until": {
+              "type": "string"
+            },
+            "outliers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "records": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "merged": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "main": {
+          "$ref": "#/$defs/epicBaselineGroup"
+        },
+        "outliers": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/epicBaselineGroup"
+          }
+        },
+        "reported": {
+          "type": "object"
+        }
+      }
+    },
+    "epicBaselineGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "epics",
+        "merged_issues",
+        "agent_hours",
+        "lead_time_ms",
+        "ready_to_cleanup_ms",
+        "phases",
+        "rebase_rounds",
+        "relaunched_issues"
+      ],
+      "properties": {
+        "epics": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "merged_issues": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "agent_hours": {
+          "type": "number",
+          "minimum": 0
+        },
+        "lead_time_ms": {
+          "$ref": "#/$defs/epicPercentiles"
+        },
+        "ready_to_cleanup_ms": {
+          "$ref": "#/$defs/epicPercentiles"
+        },
+        "phases": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ms",
+              "share"
+            ],
+            "properties": {
+              "ms": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "share": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          }
+        },
+        "rebase_rounds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "relaunched_issues": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
     "commands": {
       "description": "toolu commands --json: the full command tree.",
       "type": "object",

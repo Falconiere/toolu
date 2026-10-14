@@ -29,6 +29,7 @@ mod effects_epic;
 mod effects_launch;
 mod effects_queue;
 mod effects_run;
+mod engine_usage;
 mod epic_close;
 mod epics;
 mod executor;
@@ -53,6 +54,7 @@ mod herdr_calls;
 #[cfg(test)]
 #[path = "tests/herdr_fixture_test.rs"]
 mod herdr_fixture;
+mod herdr_interrupt;
 #[cfg(test)]
 #[path = "tests/herdr_state_test.rs"]
 mod herdr_state;
@@ -61,6 +63,7 @@ pub mod hook;
 mod hosts;
 mod http;
 mod http_access;
+mod http_metrics;
 mod http_request;
 mod http_response;
 mod http_stream;
@@ -78,6 +81,7 @@ mod limit;
 mod lock;
 mod logic;
 mod merge_bridge;
+mod metrics;
 mod model;
 mod note;
 mod notify;
@@ -139,6 +143,8 @@ mod support;
 mod tracker;
 mod verbs;
 mod verbs_actions;
+mod verbs_metrics;
+mod wait_journal;
 mod waiting_jobs;
 mod watch;
 mod workload;

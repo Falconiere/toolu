@@ -61,8 +61,11 @@ pub(super) fn close(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
   if let Err(err) = require_complete(&graph) {
     return failure("toolu epic close", &err);
   }
+  let now = toolu_state::time::epoch_millis(std::time::SystemTime::now());
+  let paths = crate::paths::Paths::from_env(env);
+  let metrics = crate::metrics::closing(&paths, Path::new(&graph.state_dir), now);
   if matches.get_flag("dry-run") {
-    let summary = summary_table(&graph);
+    let summary = summary_table(&graph, metrics.as_deref());
     return if ctx.json {
       document(&json!({"epic": graph.epic.reference, "summary": summary}))
     } else {
@@ -75,7 +78,7 @@ pub(super) fn close(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
   };
   let repo = graph.default_repo.clone().unwrap_or_default();
   match make_tracker(kind, &graph.epic.reference, &repo, env)
-    .and_then(|tracker| close_epic(&graph, tracker.as_ref()))
+    .and_then(|tracker| close_epic(&graph, tracker.as_ref(), metrics.as_deref()))
   {
     Ok(result) => document(&result),
     Err(err) => failure("toolu epic close", &err),

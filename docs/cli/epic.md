@@ -15,30 +15,33 @@ Drive an epic to merged PRs: the resident engine, merge queue and trackers
 Usage: toolu epic [OPTIONS] <COMMAND>
 
 Commands:
-  engine   Run the resident engine in the foreground
-  serve    Run the resident engine with its HTTP status listener
-  start    Register an epic state directory and start the engine
-  status   Print the engine, issues and attention
-  queue    Print the merge queue of every repository, in merge order
-  pause    Pause effects for every epic, or one epic
-  resume   Resume effects for every epic, or one epic
-  ack      Acknowledge an issue's attention items, or a keyless one by kind
-  answer   Send an answer to an issue's worker and mark its attention answered
-  wait     Wait for a judgment, or return when the limit passes
-  report   Record a worker phase
-  job      Run a command under the worktree's resource lease
-  service  Install the user service unit
-  token    Manage the status bearer token
-  graph    Build an epic's dependency graph and the next launch batch
-  route    Route sub-issues to worker hosts, models and efforts
-  launch   Launch or resume one sub-issue in its herdr worktree
-  finish   Tear down one sub-issue after its PR merged
-  close    Close a completed epic in its tracker with the merged-PR summary
-  release  Release a coupling hold so the issue launches next
-  gate     Verify a sub-issue PR against the merge policy and optionally merge it
-  jira     Read the epic's Jira issues
-  probe    Validate the committed host-lifecycle evidence
-  help     Print this message or the help of the given subcommand(s)
+  engine    Run the resident engine in the foreground
+  serve     Run the resident engine with its HTTP status listener
+  start     Register an epic state directory and start the engine
+  status    Print the engine, issues and attention
+  queue     Print the merge queue of every repository, in merge order
+  pause     Pause effects for every epic, or one epic
+  resume    Resume effects for every epic, or one epic
+  ack       Acknowledge an issue's attention items, or a keyless one by kind
+  answer    Send an answer to an issue's worker and mark its attention answered
+  wait      Wait for a judgment, or return when the limit passes
+  report    Record a worker phase
+  job       Run a command under the worktree's resource lease
+  service   Install the user service unit
+  token     Manage the status bearer token
+  graph     Build an epic's dependency graph and the next launch batch
+  route     Route sub-issues to worker hosts, models and efforts
+  launch    Launch or resume one sub-issue in its herdr worktree
+  finish    Tear down one sub-issue after its PR merged
+  close     Close a completed epic in its tracker with the merged-PR summary
+  release   Release a coupling hold so the issue launches next
+  gate      Verify a sub-issue PR against the merge policy and optionally merge it
+  jira      Read the epic's Jira issues
+  probe     Validate the committed host-lifecycle evidence
+  metrics   Measure epic runs from the engine journal, beside the TypeScript baseline
+  summary   Report one epic's run beside the baseline, with budgets and token use
+  baseline  Derive the TypeScript-era baseline from recorded epic state directories
+  help      Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -560,6 +563,59 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic metrics`
+
+```text
+Measure epic runs from the engine journal, beside the TypeScript baseline
+
+Usage: toolu epic metrics [OPTIONS]
+
+Options:
+      --epic <ID>         Only this epic's records
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --since <DATE>      Only records from this date (YYYY-MM-DD) or ISO-8601 UTC time on
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic summary`
+
+```text
+Report one epic's run beside the baseline, with budgets and token use
+
+Usage: toolu epic summary [OPTIONS] <EPIC>
+
+Arguments:
+  <EPIC>  The epic key
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic baseline`
+
+```text
+Derive the TypeScript-era baseline from recorded epic state directories
+
+Usage: toolu epic baseline [OPTIONS] --state <DIR> --until <TIME>
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --state <DIR>       The state root with one directory per epic
+  -q, --quiet             Drop the diagnostics of a successful run
+      --until <TIME>      Count issues launched and merged by this ISO-8601 UTC time
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --outlier <EPIC>    An epic reported apart from the totals; repeatable
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

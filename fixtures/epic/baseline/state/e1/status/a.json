@@ -1,0 +1,7 @@
+{"phase": "babysit", "history": [
+  {"phase": "execution", "at": "2026-10-01T00:00:00Z", "note": null},
+  {"phase": "ready", "at": "2026-10-01T00:40:00Z", "note": null},
+  {"phase": "rebasing", "at": "2026-10-01T00:45:00Z", "note": null},
+  {"phase": "ready", "at": "2026-10-01T00:50:00Z", "note": null},
+  {"phase": "babysit", "at": "2026-10-01T02:00:00Z", "note": "after cleanup, ignored"}
+]}

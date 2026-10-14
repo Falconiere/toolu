@@ -1,6 +1,5 @@
 //! The resident control socket: one accept thread, one state thread, a 30s tick.
 
-use std::net::TcpStream;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::{UnixListener, UnixStream};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -68,24 +67,20 @@ pub(crate) fn serve_with_http(
   let (tx, rx) = mpsc::channel();
   let mut engine = open_engine(paths, scripts, fault, options.attention, &tx)?;
   let listener = bind(&engine.paths)?;
-  let stop = Arc::new(AtomicBool::new(false));
+  let signals = socket_herdr::Signals::default();
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
-  let wake = Arc::new(AtomicBool::new(false));
-  let http = start_http(options.http, &engine, &shared, &changed, &stop)?;
+  let http = start_http(options.http, &engine, &shared, &changed, &signals.stop)?;
   if let (Some(notifier), Some(running)) = (engine.notifier.as_mut(), http.as_ref()) {
     notifier.set_dashboard(running.addr);
   }
-  let herdr = socket_herdr::spawn(
-    tx.clone(),
-    Arc::clone(&shared),
-    Arc::clone(&stop),
-    Arc::clone(&wake),
-  );
-  let flag = Arc::clone(&stop);
+  let herdr = socket_herdr::spawn(tx.clone(), Arc::clone(&shared), signals.clone());
+  let flag = Arc::clone(&signals.stop);
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
-    let _stop_accept = StopAccept { stop: &stop };
+    let _stop_accept = StopAccept {
+      stop: &signals.stop,
+    };
     state_loop(
       &mut engine,
       &rx,
@@ -93,7 +88,8 @@ pub(crate) fn serve_with_http(
         protocol,
         shared: &shared,
         changed: &changed,
-        resub: &wake,
+        resub: &signals.wake,
+        interrupt: &signals.interrupt,
         babysit: options.tick,
       },
     )
@@ -103,13 +99,27 @@ pub(crate) fn serve_with_http(
     herdr,
     http,
   };
-  join_threads(&socket, &stop, &changed, threads);
-  result
+  join_threads(&socket, &signals, &changed, threads);
+  stopped(&mut engine, result)
 }
 
-fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, threads: Threads) {
+/// A clean stop journals the engine's last resource sample.
+fn stopped(engine: &mut Engine, result: Result<(), String>) -> Result<(), String> {
+  result?;
+  engine.refresh_clock();
+  crate::engine_usage::sample(engine, "stop")
+}
+
+fn join_threads(
+  socket: &std::path::Path,
+  signals: &socket_herdr::Signals,
+  changed: &Condvar,
+  threads: Threads,
+) {
+  let stop = &signals.stop;
   stop.store(true, Ordering::Relaxed);
   changed.notify_all();
+  signals.interrupt.trigger();
   let _wake = UnixStream::connect(socket);
   if let Err(err) = threads.accept.join() {
     let _panic = err;
@@ -120,8 +130,7 @@ fn join_threads(socket: &std::path::Path, stop: &AtomicBool, changed: &Condvar, 
     let _panic = err;
   }
   if let Some(http) = threads.http {
-    let _wake_http = TcpStream::connect(http.addr);
-    let _http = http.thread.join();
+    let _http = http.stop(stop);
   }
 }
 
@@ -144,6 +153,7 @@ fn open_engine(
   if engine.pump()? == Stop::Fault {
     return Err("fault".to_owned());
   }
+  crate::engine_usage::sample(&mut engine, "start")?;
   Ok(engine)
 }
 

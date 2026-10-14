@@ -1,4 +1,4 @@
-use super::{Cause, Kind, Watch};
+use super::{CHECK_MS, Cause, Kind, Watch};
 use serde_json::json;
 
 use crate::disk::write_value;
@@ -177,4 +177,28 @@ fn github_ready_base_watch_survives_restart_from_cached_pr_identity() {
       .watches
       .contains_key("base:Falconiere/toolu@main")
   );
+}
+
+#[test]
+fn every_scheduled_check_moves_the_next_slot_exactly_one_interval_on() {
+  let kind = Kind::Pr {
+    key: "one".into(),
+    repo: "o/r".into(),
+    number: 1,
+  };
+  let mut watch = Watch::new(kind, 0);
+  assert_eq!(watch.take_due(0), Some(Cause::Immediate));
+  let mut slot = watch.next_at_ms;
+  assert_eq!(slot, CHECK_MS);
+  // On time, a little late, and after a fresh, unchanged or failed answer
+  // alike: the schedule never stretches.
+  for jitter in [0, 7, 1_500, 0, 179_999] {
+    let previous = slot;
+    assert_eq!(watch.take_due(slot + jitter), Some(Cause::Scheduled));
+    slot = watch.next_at_ms;
+    assert_eq!(slot - previous, CHECK_MS, "jitter {jitter}");
+  }
+  watch.request_immediate();
+  assert_eq!(watch.take_due(slot - 1), Some(Cause::Immediate));
+  assert_eq!(watch.next_at_ms, slot, "an extra check keeps the slot");
 }

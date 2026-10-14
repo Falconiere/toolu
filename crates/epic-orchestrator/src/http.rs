@@ -33,6 +33,15 @@ pub(crate) struct Running {
   pub thread: JoinHandle<()>,
 }
 
+impl Running {
+  /// Raise `stop`, wake the blocking `accept` with one connection, and join.
+  pub(crate) fn stop(self, stop: &AtomicBool) -> std::thread::Result<()> {
+    stop.store(true, Ordering::Relaxed);
+    let _wake = TcpStream::connect(self.addr);
+    self.thread.join()
+  }
+}
+
 struct Context {
   paths: Paths,
   world: Arc<Mutex<World>>,
@@ -44,6 +53,7 @@ struct Context {
   connections: AtomicUsize,
   streams: AtomicUsize,
   overview: OverviewCache,
+  metrics: crate::http_metrics::MetricsCache,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -62,9 +72,6 @@ pub(crate) fn start(
     return Err("non-loopback HTTP bind requires TOOLU_EPIC_TOKEN or a status token".to_owned());
   }
   let listener = TcpListener::bind(config.addr).map_err(|err| format!("HTTP bind: {err}"))?;
-  listener
-    .set_nonblocking(true)
-    .map_err(|err| format!("HTTP nonblocking: {err}"))?;
   let addr = listener
     .local_addr()
     .map_err(|err| format!("HTTP address: {err}"))?;
@@ -79,6 +86,7 @@ pub(crate) fn start(
     connections: AtomicUsize::new(0),
     streams: AtomicUsize::new(0),
     overview: OverviewCache::new(),
+    metrics: crate::http_metrics::MetricsCache::new(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running { addr, thread })
@@ -87,6 +95,8 @@ pub(crate) fn start(
 fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
   while !context.stop.load(Ordering::Relaxed) {
     match listener.accept() {
+      // `Running::stop` connects once to end a blocking accept on stop.
+      Ok(_) if context.stop.load(Ordering::Relaxed) => break,
       Ok((mut stream, _)) => {
         if stream.set_nodelay(true).is_err() {
           continue;
@@ -103,9 +113,7 @@ fn accept_loop(listener: &TcpListener, context: &Arc<Context>) {
           context.connections.fetch_sub(1, Ordering::AcqRel);
         });
       }
-      Err(err) if err.kind() == std::io::ErrorKind::WouldBlock => {
-        thread::sleep(Duration::from_millis(20));
-      }
+      Err(err) if err.kind() == std::io::ErrorKind::Interrupted => {}
       Err(_err) => break,
     }
   }
@@ -225,6 +233,11 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   }
   if path == "/api/v1/events" {
     return events_page(context, query, request);
+  }
+  if path == "/api/v1/metrics" {
+    return context
+      .metrics
+      .response(&context.paths, query, &context.secrets);
   }
   let world = match context.world.lock() {
     Ok(world) => world.clone(),

@@ -19,9 +19,12 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/api/v1/jobs` | Expensive jobs | running, waiting |
 | `/api/v1/queue` | Ready work by repository | repositories (repo, items) |
 | `/api/v1/attention` | Live attention | items (kind, key, epic, note, seq, state, age_ms) |
+| `/api/v1/metrics` | Epic run metrics | epic, since, generated_at, records, issues, lead_time_ms, phases, ready_to_merged_ms, rebase_rounds, prompts, judgments, wakeups, github, jobs, launches, engine |
 | `/api/v1/events` | Journal replay | events, oldest_seq, next_seq |
 | `/api/v1/events/stream` | Live journal feed | SSE id, event, data |
 
 `/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.
+
+`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.
 
 The dashboard at `/` uses these same-origin endpoints. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.

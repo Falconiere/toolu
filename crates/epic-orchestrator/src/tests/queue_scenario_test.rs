@@ -16,22 +16,7 @@ fn engine_rebases(rig: &QueueRig) -> Vec<(String, String)> {
 
 /// A, B and C ready together; GitHub merges A at the engine's call.
 fn three_ready() -> (QueueRig, String, String) {
-  let mut rig = QueueRig::new(&[2, 3, 4]);
-  for number in [2, 3, 4] {
-    rig.work(
-      number,
-      &format!("f{number}.txt"),
-      &format!("child {number}\n"),
-    );
-  }
-  rig.serve(2, Checks::Green, false);
-  rig.land(2);
-  for number in [3, 4] {
-    rig.serve(number, Checks::Green, false);
-  }
-  let (b_before, c_before) = (rig.head(3), rig.head(4));
-  rig.ready(&[2, 3, 4]);
-  (rig, b_before, c_before)
+  QueueRig::three_ready()
 }
 
 fn merged(rig: &QueueRig, number: u64) -> bool {

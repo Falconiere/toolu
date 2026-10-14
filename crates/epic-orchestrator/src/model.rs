@@ -288,6 +288,8 @@ pub(crate) struct World {
   pub checkpointed: BTreeSet<String>,
   /// Steps produced by ticks and events.
   pub outbox: VecDeque<Step>,
+  /// When the engine last journaled its resource use (Unix ms).
+  pub usage_at_ms: u64,
 }
 
 /// A worker report.
@@ -348,6 +350,7 @@ impl World {
       cycle: Cycle::Clear,
       checkpointed: BTreeSet::new(),
       outbox: VecDeque::new(),
+      usage_at_ms: now_ms,
     }
   }
 }

@@ -129,13 +129,20 @@ fn wait_replies_expires_or_returns_a_judgment() {
   assert!(rx.try_recv().is_err());
   assert_eq!(waiters.len(), 1);
   waiters[0].deadline = Instant::now();
-  expire(&mut engine, &mut waiters);
+  expire(&mut engine, &mut waiters).unwrap();
   assert_eq!(rx.recv().expect("expired")["state"], "waiting");
-  satisfy(&mut engine, &mut waiters);
+  satisfy(&mut engine, &mut waiters).unwrap();
   crate::schedule::note_event(&mut engine.world, "a", "blocked");
   let (stop, value) = round(&mut engine, &json!({"op": "wait", "max_seconds": 30}));
   assert!(!stop);
   assert_eq!(value["kind"], "blocked");
+  let rows = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("journal");
+  let replies: Vec<&str> = rows
+    .iter()
+    .filter(|row| row.name == "wait-reply")
+    .map(|row| row.note.as_str())
+    .collect();
+  assert_eq!(replies, ["timeout", "judgment:blocked"]);
 }
 
 #[test]
@@ -155,7 +162,7 @@ fn a_later_waiter_can_expire_before_an_earlier_one() {
     );
   }
   waiters[1].deadline = Instant::now();
-  expire(&mut engine, &mut waiters);
+  expire(&mut engine, &mut waiters).unwrap();
   assert!(early_rx.try_recv().is_err());
   assert_eq!(late_rx.recv().expect("late")["state"], "waiting");
   assert_eq!(waiters.len(), 1);
@@ -176,7 +183,7 @@ fn a_huge_wait_does_not_panic() {
   );
   assert_eq!(waiters.len(), 1);
   assert!(waiters[0].deadline <= Instant::now());
-  expire(&mut engine, &mut waiters);
+  expire(&mut engine, &mut waiters).unwrap();
   assert_eq!(rx.recv().expect("capped")["state"], "waiting");
 }
 

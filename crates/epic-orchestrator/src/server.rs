@@ -200,6 +200,7 @@ impl Engine {
     on_tick(&mut self.world);
     self.github_tick(babysit);
     journal::retain(&self.paths.journal_dir(), 90, self.now)?;
+    crate::engine_usage::on_tick(self)?;
     self.persist_watch()?;
     if !crate::source::prompt_enabled() {
       self.probe_herdr()?;
@@ -364,9 +365,10 @@ fn recovered(world: &World, key: &str) -> bool {
 
 fn stamp(world: &World, mut record: Record) -> Record {
   if record.epic.is_empty() {
+    let issue = crate::watch::issue_of(world, &record.key).unwrap_or(&record.key);
     record.epic = world
       .issues
-      .get(&record.key)
+      .get(issue)
       .map(|issue| issue.epic.clone())
       .or_else(|| {
         world
