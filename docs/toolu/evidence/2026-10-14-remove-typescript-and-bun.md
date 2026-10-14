@@ -4,7 +4,7 @@
 
 ## Live host smoke (AC-9)
 
-Command: `cargo xtask host-smoke --bin target/debug/toolu --host both`. Every child PATH had each directory holding `bun` removed and `TOOLU_BUN` unset. Real Claude Code (haiku) and Codex sessions each ran a protected `.env` write (denied, file unchanged), an allowed `pwd` control, a TypeScript edit over the 3-line limit (quality gate file recorded failing), `git commit` (denied by the quality gate, HEAD unchanged), and `git push origin HEAD:refs/heads/feat/smoke` from a feature branch (denied by push review, the bare remote has no `feat/smoke`).
+Command: `cargo xtask host-smoke --bin target/debug/toolu --host both`. Every child PATH had each directory holding `bun` or `bunx` replaced by a private shim directory linking every other executable of it (so `git`, `node`, `npm` and the host CLIs stay), and `TOOLU_BUN` unset. Rerun after the review fixes: the `.env` check requires the protected-files reason `Blocked by gates.protectedFiles.mode='block'`, and the control requires the echoed marker `toolu-smoke-cwd:<project>`. Real Claude Code (haiku) and Codex sessions each ran a protected `.env` write (denied, file unchanged), an allowed `pwd` control, a TypeScript edit over the 3-line limit (quality gate file recorded failing), `git commit` (denied by the quality gate, HEAD unchanged), and `git push origin HEAD:refs/heads/feat/smoke` from a feature branch (denied by push review, the bare remote has no `feat/smoke`).
 
 First run: 4 findings. The smoke project shipped `bun.lock`, so ts-quality, which runs only when the project's package manager is on PATH, stayed silent with Bun hidden. The project now uses `package-lock.json`. Second run:
 
