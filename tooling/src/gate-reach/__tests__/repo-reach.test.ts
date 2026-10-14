@@ -9,7 +9,7 @@ import { REACH_CONFIG } from "../reach-run.ts";
 import { JscpdSchema, ReachConfigSchema, readJson } from "../reach-schema.ts";
 import { BIN_PATH, ROOT } from "./reach-fixture.ts";
 
-const NEWLY_GATED = ["plugins/", "tools/toolu-cli/src/", "tools/toolu-opencode/scripts/"];
+const NEWLY_GATED = ["plugins/", "tools/toolu-cli/src/"];
 
 const DUPLICATED = [
   "export function summarize(values: readonly number[]): string {",
@@ -46,7 +46,7 @@ test("no allowance lets a non-test file of a newly gated tree out of a gate", ()
   // The epic scripts (#435), pr-babysit's TypeScript (#512), the ts-quality (#426), rust-quality (#428) and
   // python-quality (#427) hooks and the TypeScript installer (#438) left these trees; the floor only proves
   // the scan still finds them.
-  expect(gated.length).toBeGreaterThan(40);
+  expect(gated.length).toBeGreaterThan(20);
   const allowedOut = gated.flatMap((file) =>
     config.allowances
       .filter(({ glob }) => matches(glob, file))

@@ -1,5 +1,4 @@
 use serde_json::json;
-use toolu_runtime::env::Env;
 
 use super::*;
 use crate::fixture;
@@ -16,14 +15,14 @@ fn group(seq: &Value, host: &str) -> Value {
   json!({"seq": seq, "tier": "standard", "host": host, "model": "gpt-6-sol", "effort": "medium", "items": [first_id()]})
 }
 
-fn refused(plan: &Value, env: &Env) -> (String, String) {
+fn refused(plan: &Value) -> (String, String) {
   let state = json!({"version": 2, "repo": "Falconiere/toolu", "number": 165, "slot": "falconiere-toolu-165"});
-  let failure = validate(plan, &items(), &state, env).unwrap_err();
+  let failure = validate(plan, &items(), &state).unwrap_err();
   (failure.code.to_owned(), failure.message)
 }
 
 fn message(plan: &Value) -> String {
-  refused(plan, &Env::from_pairs([("PATH", "/usr/bin:/bin")])).1
+  refused(plan).1
 }
 
 #[test]
@@ -31,15 +30,7 @@ fn a_well_formed_plan_passes() {
   let plan =
     json!({"dispatch": "herdr", "groups": [group(&json!(1), "codex"), group(&json!(2), "claude")]});
   let state = json!({"slot": "falconiere-toolu-165"});
-  assert!(
-    validate(
-      &plan,
-      &items(),
-      &state,
-      &Env::from_pairs([("PATH", "/usr/bin")])
-    )
-    .is_ok()
-  );
+  assert!(validate(&plan, &items(), &state).is_ok());
 }
 
 #[test]
@@ -80,31 +71,17 @@ fn malformed_plan_groups_are_refused_with_the_typescript_messages() {
 }
 
 #[test]
-fn hosts_routing_and_opencode_config_are_checked_before_any_worktree() {
-  let env = Env::from_pairs([("PATH", "/usr/bin")]);
-  let (code, text) = refused(
-    &json!({"dispatch": "herdr", "groups": [group(&json!(1), "vim")]}),
-    &env,
-  );
+fn hosts_and_routing_are_checked_before_any_worktree() {
+  let (code, text) = refused(&json!({"dispatch": "herdr", "groups": [group(&json!(1), "vim")]}));
   assert_eq!(code, "config_invalid");
   assert_eq!(
     text,
-    "plan group 1 names host 'vim'; use claude, codex, cursor or opencode"
+    "plan group 1 names host 'vim'; use one of claude, codex, cursor"
   );
   let mut unsafe_model = group(&json!(1), "codex");
   unsafe_model["model"] = json!("gpt; rm -rf /");
-  let (code, _) = refused(
-    &json!({"dispatch": "herdr", "groups": [unsafe_model]}),
-    &env,
-  );
+  let (code, _) = refused(&json!({"dispatch": "herdr", "groups": [unsafe_model]}));
   assert_eq!(code, "config_invalid");
-  let bad = env.with("OPENCODE_CONFIG_CONTENT", "[1]");
-  let (code, text) = refused(
-    &json!({"dispatch": "herdr", "groups": [group(&json!(1), "opencode")]}),
-    &bad,
-  );
-  assert_eq!(code, "config_invalid");
-  assert!(text.contains("OPENCODE_CONFIG_CONTENT"), "{text}");
 }
 
 #[test]
@@ -131,14 +108,13 @@ fn read_object_refuses_a_missing_or_non_object_file() {
 
 #[test]
 fn a_bad_round_or_an_injection_flagged_item_is_refused() {
-  let env = Env::from_pairs([("PATH", "/usr/bin")]);
   let plan = json!({"dispatch": "herdr", "groups": [group(&json!(1), "codex")]});
   let mut zero = items();
   zero["round"] = json!(0);
-  let failure = validate(&plan, &zero, &json!({}), &env).unwrap_err();
+  let failure = validate(&plan, &zero, &json!({})).unwrap_err();
   assert_eq!(failure.message, "round must be a positive integer");
   let flagged = json!({"actions": {"flagged": {first_id(): {"at": "2026-10-03T12:00:00Z"}}}});
-  let failure = validate(&plan, &items(), &flagged, &env).unwrap_err();
+  let failure = validate(&plan, &items(), &flagged).unwrap_err();
   assert_eq!(
     failure.message,
     "the plan includes an injection-flagged thread"

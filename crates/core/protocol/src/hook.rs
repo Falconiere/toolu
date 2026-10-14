@@ -7,7 +7,7 @@
 //! - **post** (`tool/post`, `session/unload`): `<line>` on stderr, exit 2, as
 //!   `plugins/toolu/hooks/src/pre-tools/hook-main.ts` does for `PostToolUse`;
 //! - **context** (`session/start`, `prompt`, `pre_compact`): `{"systemMessage":"<line>"}`
-//!   on stdout (a continue callback for `OpenCode`), exit 0.
+//!   on stdout, exit 0.
 //!
 //! Host detection lives in `toolu-runtime`, so the caller passes the host in.
 
@@ -18,7 +18,7 @@ use std::process::ExitCode;
 use serde_json::Value;
 
 use crate::decision::Decision;
-use crate::encode::{Callback, CallbackAction, Encoded, encode};
+use crate::encode::{Encoded, encode};
 use crate::event::HostEvent;
 use crate::exit::Exit;
 use crate::host::Host;
@@ -164,10 +164,7 @@ where
     }),
     Reply::Decision(decision) => {
       let encoded = encode(host, event, &decision).map_err(|err| format!("hook failed: {err}"))?;
-      let stdout = match encoded {
-        Encoded::Command(stdout) => stdout,
-        Encoded::Callback(callback) => format!("{}\n", callback.json()),
-      };
+      let Encoded::Command(stdout) = encoded;
       Ok(Output {
         stdout,
         stderr: String::new(),
@@ -197,17 +194,6 @@ fn failure(event: HostEvent, host: Host, tail: &str) -> Output {
   let (stdout, stderr, exit) = match class(event) {
     Class::Enforcing => (String::new(), format!("blocked: {line}\n"), Exit::Blocked),
     Class::Post => (String::new(), format!("{line}\n"), Exit::Blocked),
-    Class::Context if host == Host::Opencode => {
-      let callback = Callback {
-        action: CallbackAction::Continue,
-        message: Some(line),
-      };
-      (
-        format!("{}\n", callback.json()),
-        String::new(),
-        Exit::Success,
-      )
-    }
     Class::Context => (
       format!("{{\"systemMessage\":{}}}\n", Value::from(line)),
       String::new(),

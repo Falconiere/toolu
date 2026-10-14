@@ -52,4 +52,4 @@ Every live hook and built-in gate in this inventory is `port-native`. The host m
 ## Notes
 
 - Native built-in gate rows point to their TypeScript source and the dispatcher hook that invokes them.
-- OpenCode supports the host events documented in [conformance-report.md](conformance-report.md); this inventory records the implementation of each listed hook rather than claiming every host exposes every event.
+- This inventory records the implementation of each listed hook rather than claiming every host exposes every event.

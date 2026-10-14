@@ -1,16 +1,12 @@
 /**
  * Verifies docs/portable-core.md against the #205 contract checklist: required
- * headings, the documented OpenCode pins and contract link (#335), citations,
- * the four classification tokens in the Policy split section (and no invalid
- * `maybe-later`), and no citation of the superseded V2 plugin docs.
- * `PORTABLE_CORE_DOC` points it at another copy.
+ * headings, citations, and the four classification tokens in the Policy split
+ * section (and no invalid `maybe-later`). `PORTABLE_CORE_DOC` points it at
+ * another copy.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { envOr } from "./env.ts";
-import { V2_DOCS } from "./opencode-host/contract-check.ts";
-import { contractPaths } from "./opencode-host/results.ts";
-import { ContractError, PinSchema, readJson } from "./opencode-host/schema.ts";
 
 const ROOT = resolve(import.meta.dir, "../..");
 const FIXTURE = resolve(ROOT, "fixtures/portable-core/protected-files-pre.json");
@@ -21,16 +17,12 @@ const HEADINGS = [
   "## Zod boundary rules",
   "## Decision contract",
   "## Event vocabulary",
-  "## OpenCode dispatch contract",
   "## Policy split",
   "## Protected-files gate trace",
-  "## OpenCode interception",
-  "### Capability-results",
   "## Release blockers",
 ];
 
 const CITATIONS: ReadonlyArray<readonly [string, string]> = [
-  ["opencode-host-contract.md", "missing host contract link"],
   ["dispatchPreTool", "missing native dispatch contract"],
   ["gates/protected-files.ts", "missing protected-files gate citation"],
   ["gate-mode.sh", "missing gate-mode.sh citation"],
@@ -62,15 +54,7 @@ function check(docPath: string): void {
   for (const heading of HEADINGS) {
     if (!doc.includes(heading)) throw new DocError(`missing heading: ${heading}`);
   }
-  const pin = readJson(contractPaths().pin, PinSchema);
-  const pins: ReadonlyArray<readonly [string, string]> = [
-    [
-      `${pin.cli.package}@${pin.cli.version}`,
-      `missing CLI pin ${pin.cli.package}@${pin.cli.version}`,
-    ],
-    [`${pin.sdk.package}@${pin.sdk.version}`, "missing SDK pin"],
-  ];
-  for (const [needle, message] of [...pins, ...CITATIONS]) {
+  for (const [needle, message] of CITATIONS) {
     if (!doc.includes(needle)) throw new DocError(message);
   }
   const policy = policySection(doc);
@@ -85,7 +69,6 @@ function check(docPath: string): void {
   ) {
     throw new DocError("invalid classification token maybe-later");
   }
-  if (doc.includes(V2_DOCS)) throw new DocError(`cites the V2 contract (${V2_DOCS})`);
 }
 
 function main(): number {
@@ -93,7 +76,7 @@ function main(): number {
   try {
     check(docPath);
   } catch (err: unknown) {
-    if (!(err instanceof DocError || err instanceof ContractError)) throw err;
+    if (!(err instanceof DocError)) throw err;
     console.error(`check-portable-core-doc: ${err.message}`);
     return 1;
   }

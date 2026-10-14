@@ -67,36 +67,6 @@ fn hermes_uses_snake_case_and_has_no_compaction_or_permission_event() {
 }
 
 #[test]
-fn opencode_uses_dotted_plugin_hook_names() {
-  assert_eq!(
-    native_event(Host::Opencode, ToolPre),
-    Some("tool.execute.before")
-  );
-  assert_eq!(
-    native_event(Host::Opencode, ShellPre),
-    Some("tool.execute.before")
-  );
-  assert_eq!(
-    native_event(Host::Opencode, ToolPost),
-    Some("tool.execute.after")
-  );
-  assert_eq!(native_event(Host::Opencode, PermissionEvaluate), None);
-  assert_eq!(
-    native_event(Host::Opencode, SessionStart),
-    Some("session.created")
-  );
-  assert_eq!(
-    native_event(Host::Opencode, SessionUnload),
-    Some("session.deleted")
-  );
-  assert_eq!(native_event(Host::Opencode, Prompt), Some("chat.message"));
-  assert_eq!(
-    native_event(Host::Opencode, PreCompact),
-    Some("experimental.session.compacting")
-  );
-}
-
-#[test]
 fn every_mapped_row_round_trips_to_an_event_with_the_same_native_name() {
   for host in Host::ALL {
     for event in HostEvent::ALL {
@@ -114,10 +84,6 @@ fn a_shared_native_name_reverses_to_the_first_row() {
   assert_eq!(canonical_event(Host::Claude, "PreToolUse"), Some(ToolPre));
   assert_eq!(
     canonical_event(Host::Hermes, "pre_tool_call"),
-    Some(ToolPre)
-  );
-  assert_eq!(
-    canonical_event(Host::Opencode, "tool.execute.before"),
     Some(ToolPre)
   );
 }
@@ -156,11 +122,10 @@ fn pascal_case_names_belong_to_both_claude_and_codex() {
 }
 
 #[test]
-fn cursor_hermes_and_opencode_names_belong_to_one_host() {
+fn cursor_and_hermes_names_belong_to_one_host() {
   assert_eq!(hosts_for_native("beforeShellExecution"), [Host::Cursor]);
   assert_eq!(hosts_for_native("afterFileEdit"), [Host::Cursor]);
   assert_eq!(hosts_for_native("pre_tool_call"), [Host::Hermes]);
-  assert_eq!(hosts_for_native("tool.execute.before"), [Host::Opencode]);
 }
 
 #[test]

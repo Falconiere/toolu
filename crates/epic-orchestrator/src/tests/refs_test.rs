@@ -126,13 +126,6 @@ fn epics_home_follows_the_host_override_and_epic_state_home() {
     PathBuf::from("/c/toolu/epics")
   );
   assert_eq!(
-    epics_home(&env(&[
-      ("TOOLU_HOST_OVERRIDE", "opencode"),
-      ("TOOLU_OPENCODE_HOME", "/o")
-    ])),
-    PathBuf::from("/o/toolu/epics")
-  );
-  assert_eq!(
     epics_home(&env(&[("TOOLU_HOST_OVERRIDE", "claude")])),
     PathBuf::from("/home/u/.claude/epics")
   );
@@ -143,9 +136,5 @@ fn epics_home_follows_the_host_override_and_epic_state_home() {
   assert_eq!(
     epics_home(&env(&[("CODEX_HOME", "/c"), ("CLAUDE_CONFIG_DIR", "/cl")])),
     PathBuf::from("/home/u/.claude/epics")
-  );
-  assert_eq!(
-    epics_home(&env(&[("OPENCODE_HOME", "/oc")])),
-    PathBuf::from("/oc/toolu/epics")
   );
 }

@@ -37,15 +37,6 @@ describe("nativeEventName", () => {
     expect(nativeEventName("hermes", "pre_compact")).toBeNull();
     expect(nativeEventName("hermes", "permission/evaluate")).toBeNull();
   });
-
-  test("OpenCode uses dotted plugin hook names", () => {
-    expect(nativeEventName("opencode", "tool/pre")).toBe("tool.execute.before");
-    expect(nativeEventName("opencode", "permission/evaluate")).toBeNull();
-    expect(nativeEventName("opencode", "session/start")).toBe("session.created");
-    expect(nativeEventName("opencode", "session/unload")).toBe("session.deleted");
-    expect(nativeEventName("opencode", "prompt")).toBe("chat.message");
-    expect(nativeEventName("opencode", "pre_compact")).toBe("experimental.session.compacting");
-  });
 });
 
 describe("canonicalEvent", () => {
@@ -85,11 +76,10 @@ describe("hostsForNativeEvent", () => {
     expect(hostsForNativeEvent("PreToolUse")).toEqual(["claude", "codex"]);
   });
 
-  test("Cursor, Hermes and OpenCode names belong to one host", () => {
+  test("Cursor and Hermes names belong to one host", () => {
     expect(hostsForNativeEvent("beforeShellExecution")).toEqual(["cursor"]);
     expect(hostsForNativeEvent("afterFileEdit")).toEqual(["cursor"]);
     expect(hostsForNativeEvent("pre_tool_call")).toEqual(["hermes"]);
-    expect(hostsForNativeEvent("tool.execute.before")).toEqual(["opencode"]);
   });
 
   test("an unknown name belongs to no host", () => {

@@ -4,9 +4,7 @@ Host- and tracker-specific placeholders (written here without braces so they
 survive):
 - DELIVERY, BABYSIT, DEBUG: the host's skill invocation, e.g. for delivery-flow
   `/delivery-flow:delivery-flow` (Claude Code), `$delivery-flow:delivery-flow`
-  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent),
-  `skill({ name: "delivery-flow-delivery-flow" })` (OpenCode, the generated
-  skill name the hosts module lists).
+  (Codex), "the `delivery-flow:delivery-flow` skill" (Cursor Agent).
 - ISSUE_READ: how to read the issue: `gh issue view URL --comments` (GitHub),
   `toolu epic jira issue get KEY` (Jira), the issue URL (Linear).
 - CLOSES: the PR body's closing line: `Closes OWNER/REPO#N` (GitHub),

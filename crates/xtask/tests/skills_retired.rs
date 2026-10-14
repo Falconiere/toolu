@@ -82,7 +82,7 @@ fn skills_retired_allows_a_longer_bun_script() {
   std::fs::create_dir_all(skill.parent().unwrap()).unwrap();
   std::fs::write(
     &skill,
-    "Run `bun run smoke:opencode-permissions` and `bun run test:unit`.\n",
+    "Run `bun run smoke:host-permissions` and `bun run test:unit`.\n",
   )
   .unwrap();
   assert_eq!(retired_hits(root).unwrap(), Vec::<String>::new());

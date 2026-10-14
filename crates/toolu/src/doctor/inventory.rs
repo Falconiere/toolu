@@ -15,12 +15,11 @@ use super::checks::{Check, Status};
 /// How long `codex plugin list --json` may run. Only a Codex host starts it.
 const CODEX_LIST_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// One installed toolu plugin. `OpenCode` rows are names only.
+/// One installed toolu plugin.
 pub(super) struct Plugin {
   pub(super) name: String,
   pub(super) version: Option<String>,
   pub(super) root: Option<PathBuf>,
-  pub(super) names_only: bool,
 }
 
 /// Plugins the host could list, plus a warning when the inventory is incomplete.
@@ -52,7 +51,6 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
   match roots.host() {
     Host::Claude => claude(roots, cwd),
     Host::Codex => codex(roots),
-    Host::Opencode => opencode(roots),
     Host::Cursor | Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
 }
@@ -84,9 +82,6 @@ pub(super) fn plugins_check(inventory: &Inventory) -> Check {
 }
 
 fn plugin_json(plugin: &Plugin) -> Value {
-  if plugin.names_only {
-    return json!({ "name": plugin.name });
-  }
   let mut map = Map::new();
   map.insert("name".to_owned(), json!(plugin.name));
   if let Some(version) = &plugin.version {
@@ -104,7 +99,6 @@ fn plugin_at(name: &str, root: PathBuf) -> Plugin {
     name: name.to_owned(),
     version,
     root: Some(root),
-    names_only: false,
   }
 }
 
@@ -248,42 +242,6 @@ fn flag_on(entry: &Map<String, Value>, key: &str) -> bool {
   entry
     .get(key)
     .is_none_or(|value| value == &Value::Bool(true))
-}
-
-fn opencode(roots: &Roots) -> Inventory {
-  let path = roots
-    .config_root()
-    .join("toolu")
-    .join("opencode-status.json");
-  let Ok(text) = std::fs::read_to_string(path) else {
-    return Inventory::warn("plugin inventory is unavailable");
-  };
-  let Ok(value) = serde_json::from_str::<Value>(&text) else {
-    return Inventory::warn("plugin inventory is unavailable");
-  };
-  let Some(plugins) = value.get("plugins").and_then(Value::as_array) else {
-    return Inventory::warn("plugin inventory is unavailable");
-  };
-  let mut found = Vec::new();
-  for plugin in plugins {
-    let Some(name) = plugin
-      .get("name")
-      .and_then(Value::as_str)
-      .filter(|name| !name.is_empty())
-    else {
-      return Inventory::warn("plugin inventory is unavailable");
-    };
-    found.push(Plugin {
-      name: name.to_owned(),
-      version: None,
-      root: None,
-      names_only: true,
-    });
-  }
-  Inventory {
-    plugins: found,
-    warning: None,
-  }
 }
 
 #[cfg(test)]

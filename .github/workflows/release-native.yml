@@ -75,7 +75,7 @@ jobs:
         run: |
           set -euo pipefail
           version=${TAG#v}
-          for package in @toolu/core @toolu/opencode @toolu/plugins; do
+          for package in @toolu/core @toolu/plugins; do
             test "$(npm view "$package@$version" version)" = "$version"
           done
       - name: Gate released source

@@ -1,6 +1,6 @@
 ---
 name: verify-dual-host-plugins
-description: Verify toolu plugin packaging and startup on Codex, Claude Code, and OpenCode when supported. Use when adding or reviewing host plugins.
+description: Verify toolu plugin packaging and startup on Codex and Claude Code. Use when adding or reviewing host plugins.
 metadata:
   toolu:
     origin: agent
@@ -9,7 +9,7 @@ metadata:
 ## When to Use
 
 Use when adding or reviewing a toolu plugin that must install and deliver working
-startup behavior in Codex and Claude Code, and in OpenCode when supported.
+startup behavior in Codex and Claude Code.
 
 ## Procedure
 
@@ -31,21 +31,13 @@ startup behavior in Codex and Claude Code, and in OpenCode when supported.
    paths and startup context with and without credentials.
 5. Run `cargo xtask gate`, including the deterministic `bench` step, and the
    colocated-test check from `.github/workflows/tests.yml`. Inspect every result.
-6. When a plugin's Bun registry bundle becomes a native manifest, check the
-   OpenCode startup report and readiness verifier, deselection cleanup, hook
-   inventory, packed catalog, and pinned-host scenarios. Replay the focused
-   actual-host cases before the full acceptance run. A repeated SessionStart
-   must preserve byte-identical manifest files and their timestamps.
-7. When native SessionStart publishes a helper in OpenCode, keep its source
-   inside the selected plugin and stage that file in the `@toolu/opencode`
-   tarball. Require it in the pack inventory, then run focused pinned-host
-   enabled, missing-binary, and clean-install scenarios before full acceptance.
-8. For native hook acceptance, run `bun tooling/src/native-toolu-host-smoke.ts`
+6. When a plugin's Bun registry bundle becomes a native manifest, check
+   deselection cleanup, hook inventory and the packed catalog. A repeated
+   SessionStart must preserve byte-identical manifest files and their timestamps.
+7. For native hook acceptance, run `bun tooling/src/native-toolu-host-smoke.ts`
    on macOS with the checkout binary. It installs temporary host profiles and
    checks a denied protected-file write, a post-edit quality failure, a denied
    commit, and an allowed shell command in actual Claude Code and Codex sessions.
-   For OpenCode acceptance, point `TOOLU_BIN` at that binary and put its directory
-   first on `PATH`: scripted agent commands can call `toolu` by name.
 
 ## Pitfalls
 
@@ -76,10 +68,6 @@ startup behavior in Codex and Claude Code, and in OpenCode when supported.
 - A native registry manifest has a `.json` name and no source bundle to compare.
   Startup readiness must validate its exact contents and location; deleting the
   old `.js` bundle requires updating live package and worktree assertions too.
-- OpenCode rejects a published helper whose source is generated under the data
-  root instead of the selected plugin. A direct CLI refresh may generate a local
-  source when it has no plugin root; an installed SessionStart must publish the
-  plugin-owned file that the tarball carries.
 - Keep host overrides scoped to the operation being verified. A Codex override
   inherited by the full suite redirects Claude fixtures away from their temporary
   configuration directories. Unset it in the test subprocess when running a

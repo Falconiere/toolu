@@ -71,8 +71,7 @@ fn cooldowns_expire() {
   let cooldowns = json!({
     "codex": {"until": "2026-09-26T13:00:00Z"},
     "claude": {"until": "2026-09-26T11:00:00Z"},
-    "cursor": {"until": now + 1},
-    "opencode": {"until": true}
+    "cursor": {"until": now + 1}
   });
   assert_eq!(
     cooling_hosts(&cooldowns, now),

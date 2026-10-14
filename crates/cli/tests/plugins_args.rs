@@ -67,17 +67,6 @@ fn stderr(out: &Output) -> String {
 #[test]
 fn scopes_are_checked_per_host() {
   let sb = Sb::new().unwrap();
-  let local = sb
-    .run(&[
-      "plugins", "install", "--scope", "local", "--host", "opencode",
-    ])
-    .unwrap();
-  assert_eq!(local.status.code(), Some(64));
-  assert!(
-    stderr(&local).contains("--scope local is Claude Code only"),
-    "{}",
-    stderr(&local)
-  );
   let codex = sb
     .run(&["plugins", "install", "--scope", "user", "--host", "codex"])
     .unwrap();
@@ -198,7 +187,7 @@ fn unsupported_hosts_and_unconfirmed_removals_are_usage_errors() {
   );
   let none = sb.run(&["plugins", "list"]).unwrap();
   assert_eq!(none.status.code(), Some(64));
-  assert!(stderr(&none).contains("no host found on PATH (probed claude, codex, opencode)"));
+  assert!(stderr(&none).contains("no host found on PATH (probed claude, codex)"));
 }
 
 #[test]

@@ -31,7 +31,6 @@ fn go(
 ) -> Result<Report, Fail> {
   let mut cx = Context {
     env: sb.env(),
-    cwd: sb.root(),
     host,
     ask,
     timeout: Duration::from_secs(10),
@@ -276,33 +275,17 @@ fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
     report.text,
     "Planned commands (nothing was run):\n  claude plugin update toolu@toolu\n"
   );
-  sb.write(
-    &crate::support::global("opencode.json"),
-    &format!("{{ \"plugin\": [\"{}\"] }}\n", crate::support::TARGET),
-  );
-  let mut remove = request(Verb::Remove, &["toolu", "jev"]);
+  let mut remove = request(Verb::Remove, &["jev"]);
   remove.yes = true;
   remove.dry_run = true;
-  let Ok(planned) = go_in(&sb, &remove, Some(Host::Opencode)) else {
+  let Ok(planned) = go(&sb, &remove, Some(Host::Claude), None) else {
     panic!("the dry removal failed");
   };
   assert!(
-    planned.json["steps"]
-      .as_array()
-      .is_some_and(|steps| steps.iter().all(|step| step["removed"] == json!(false))),
+    planned.json["steps"].as_array().is_some_and(
+      |steps| !steps.is_empty() && steps.iter().all(|step| step["removed"] == json!(false))
+    ),
     "{}",
     planned.json
   );
-}
-
-fn go_in(sb: &Sandbox, request: &Request, host: Option<Host>) -> Result<Report, Fail> {
-  let mut cx = Context {
-    env: sb.env(),
-    cwd: sb.git_project("project"),
-    host,
-    ask: None,
-    timeout: Duration::from_secs(10),
-    version: "7.11.0",
-  };
-  dispatch(request, &catalog(), &mut cx)
 }

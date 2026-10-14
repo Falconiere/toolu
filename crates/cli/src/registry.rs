@@ -97,12 +97,6 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_hub::status::run,
   ),
   verb(
-    "serve",
-    toolu_hub::PLUGIN,
-    toolu_hub::serve::command,
-    toolu_hub::serve::run,
-  ),
-  verb(
     "ts-quality",
     toolu_hub::ts_quality::PLUGIN,
     toolu_hub::ts_quality::command,

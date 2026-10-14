@@ -7,10 +7,9 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
-use regex::{Regex, RegexBuilder};
+use regex::RegexBuilder;
 use serde_json::Value;
 use toolu_runtime::env::Env;
-use toolu_runtime::process::{Spec, run};
 
 use super::digest::md5_hex;
 use super::failure::Failure;
@@ -20,16 +19,11 @@ const MAX_FILES: usize = 256;
 const MAX_BYTES: usize = 65_536;
 const MAX_RECORDS: usize = 32;
 
-fn valid_id(kind: HostKind, value: &str) -> bool {
-  let pattern = match kind {
-    HostKind::Opencode => Regex::new(r"^ses_[A-Za-z0-9]+$"),
-    HostKind::Claude | HostKind::Codex | HostKind::Cursor => RegexBuilder::new(
-      r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
-    )
+fn valid_id(value: &str) -> bool {
+  RegexBuilder::new(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     .case_insensitive(true)
-    .build(),
-  };
-  pattern.is_ok_and(|re| re.is_match(value))
+    .build()
+    .is_ok_and(|re| re.is_match(value))
 }
 
 fn vanished(err: &std::io::Error) -> bool {
@@ -87,10 +81,7 @@ fn cursor(worktree: &str, since: f64, env: &Env) -> Result<Option<String>, Strin
     return Ok(None);
   }
   let mut found = BTreeSet::new();
-  for chat in chats
-    .into_iter()
-    .filter(|chat| valid_id(HostKind::Cursor, chat))
-  {
+  for chat in chats.into_iter().filter(|chat| valid_id(chat)) {
     let Some(text) = head(&root.join(&chat).join("meta.json"))? else {
       continue;
     };
@@ -103,26 +94,6 @@ fn cursor(worktree: &str, since: f64, env: &Env) -> Result<Option<String>, Strin
     }
   }
   Ok(one(found))
-}
-
-fn opencode(worktree: &str, since: f64, env: &Env) -> Option<String> {
-  let mut spec = Spec::new(["opencode", "session", "list", "--format", "json"]);
-  spec.cwd = Some(PathBuf::from(worktree));
-  spec.env = Some(env.clone());
-  spec.timeout = Duration::from_secs(10);
-  let out = run(&spec)
-    .ok()
-    .filter(|out| out.exit_code == 0 && !out.timed_out && !out.truncated)?;
-  let entries: Vec<Value> = serde_json::from_str(&out.stdout).ok()?;
-  let found = entries
-    .iter()
-    .filter(|entry| entry.get("directory").and_then(Value::as_str) == Some(worktree))
-    .filter(|entry| epoch_ms(entry.get("created")).is_some_and(|created| created >= since))
-    .filter_map(|entry| entry.get("id").and_then(Value::as_str))
-    .filter(|id| valid_id(HostKind::Opencode, id))
-    .map(str::to_owned)
-    .collect();
-  one(found)
 }
 
 /// Every `*.jsonl` under `root`, or `None` past [`MAX_FILES`].
@@ -164,10 +135,10 @@ fn session_of(kind: HostKind, entry: &Value, worktree: &str) -> Option<String> {
       (payload.get("cwd"), payload.get("id"))
     }
     HostKind::Claude => (entry.get("cwd"), entry.get("sessionId")),
-    HostKind::Codex | HostKind::Cursor | HostKind::Opencode => return None,
+    HostKind::Codex | HostKind::Cursor => return None,
   };
   let id = id?.as_str()?;
-  (cwd?.as_str()? == worktree && valid_id(kind, id)).then(|| id.to_owned())
+  (cwd?.as_str()? == worktree && valid_id(id)).then(|| id.to_owned())
 }
 
 fn transcripts(
@@ -236,7 +207,6 @@ pub(crate) fn capture_session(
     + f64::from(u32::try_from(since & 0xffff_ffff).unwrap_or(0));
   match kind {
     HostKind::Cursor => cursor(worktree, since_f, env),
-    HostKind::Opencode => Ok(opencode(worktree, since_f, env)),
     HostKind::Claude | HostKind::Codex => transcripts(kind, worktree, since, env),
   }
 }

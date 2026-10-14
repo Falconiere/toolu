@@ -69,6 +69,6 @@
     ]
   },
   "overrides": [
-    {"files":["toolu/skills/setup/scripts/setup.ts"],"rules":{"max-lines-per-function":"off","no-console":"off","no-unused-vars":"off","typescript/prefer-nullish-coalescing":"off"}}
+    {"files":["toolu/skills/setup/scripts/setup.ts"],"rules":{"no-console":"off","no-unused-vars":"off","typescript/prefer-nullish-coalescing":"off"}}
   ]
 }

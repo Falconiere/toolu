@@ -91,12 +91,6 @@ the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
 **Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH` for every host. Resolution order, missing-runtime behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
 
-### OpenCode
-
-OpenCode support is withdrawn. Install toolu on Claude Code or Codex. The
-plugin still runs on macOS in CI (`rust-macos` and `hook-bench`). The old
-install record is [docs/opencode.md](docs/opencode.md).
-
 ### The plugin installer
 
 `toolu plugins` installs the plugins: it drives each host's own plugin CLI in

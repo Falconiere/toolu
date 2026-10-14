@@ -7,7 +7,6 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use toolu_protocol::exit::Exit;
-use toolu_protocol::host::Host;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
@@ -72,13 +71,9 @@ pub(crate) fn invocation(wrapper: &Path) -> String {
   }
 }
 
-/// Where the agent finds the CLI syntax: the native skill on `OpenCode`, else the plugin's file.
-pub(crate) fn skill_reference(host: Host, plugin_root: &Path) -> String {
-  if host == Host::Opencode {
-    "skill({ name: \"jev-jev\" })".to_owned()
-  } else {
-    format!("{}/skills/jev/SKILL.md", plugin_root.display())
-  }
+/// Where the agent finds the CLI syntax: the plugin's skill file.
+pub(crate) fn skill_reference(plugin_root: &Path) -> String {
+  format!("{}/skills/jev/SKILL.md", plugin_root.display())
 }
 
 /// Hooks and agent commands can receive different environments. Never expose the key.
@@ -107,20 +102,11 @@ fn mandate(roots: &Roots, plugin_root: &Path, wrapper: &Path) -> String {
     ),
     credential_notice(roots.env()),
     invocation(wrapper),
-    skill_reference(roots.host(), plugin_root),
+    skill_reference(plugin_root),
   )
 }
 
-/// `source` of the payload names the trigger; only `compact` on `OpenCode` stays quiet.
-fn compacting(stdin: Option<&str>) -> bool {
-  let input = payload(stdin);
-  matches!(
-    input.as_ref().and_then(|input| input.get("source")),
-    Some(Ordered::String(source)) if source == "compact"
-  )
-}
-
-fn outcome_of(published: &Published, quiet: bool, roots: &Roots, plugin_root: &Path) -> Outcome {
+fn outcome_of(published: &Published, roots: &Roots, plugin_root: &Path) -> Outcome {
   if let Some(warning) = &published.warning {
     return Outcome {
       exit: Exit::Success,
@@ -137,21 +123,16 @@ fn outcome_of(published: &Published, quiet: bool, roots: &Roots, plugin_root: &P
       stdout: None,
       stderr: Some(format!("jev: cannot publish {}", path.display())),
     },
-    HelperStatus::Published | HelperStatus::KeptUserFile if !quiet => {
+    HelperStatus::Published | HelperStatus::KeptUserFile => {
       context_outcome("SessionStart", &mandate(roots, plugin_root, path))
     }
-    HelperStatus::Published
-    | HelperStatus::KeptUserFile
-    | HelperStatus::Unwritable
-    | HelperStatus::SourceMissing => silent(),
+    HelperStatus::Unwritable | HelperStatus::SourceMissing => silent(),
   }
 }
 
-/// Publish the shim and state the mandate. `stdin` is the hook payload text, `None` when it
-/// could not be read; it is a normal start unless it names `source` `compact` on `OpenCode`.
-pub fn session_start(env: &Env, plugin_root: &Path, stdin: Option<&str>) -> Outcome {
+/// Publish the shim and state the mandate.
+pub fn session_start(env: &Env, plugin_root: &Path) -> Outcome {
   let roots = Roots::new(env.clone(), None);
-  let quiet = roots.host() == Host::Opencode && compacting(stdin);
   let source = plugin_root.join("scripts/jev.sh");
   let published = publish(&PublishOptions {
     plugin: "jev",
@@ -161,7 +142,7 @@ pub fn session_start(env: &Env, plugin_root: &Path, stdin: Option<&str>) -> Outc
     what: "wrapper",
     roots: &roots,
   });
-  let mut outcome = outcome_of(&published, quiet, &roots, plugin_root);
+  let mut outcome = outcome_of(&published, &roots, plugin_root);
   if let Some(error) = published.report_error {
     outcome.exit = Exit::Failure;
     outcome.stderr = Some(error);

@@ -45,7 +45,7 @@ await runRegisterHook("ts-quality@toolu", [
 
 `registerModules` copies each bundle to its target through `<target>.tmp.<pid>` and `rename`, and only when the bytes differ. It then removes every other `<spec>__*.js` and `<spec>__*.sh` in both directories: a plugin's pre-port `.sh` disappears the first time its TypeScript version registers. It also removes `<spec>__*.{js,sh}.tmp.*` residue older than a minute. Other plugins' entries are never touched. A missing bundle keeps the existing registry copy (stale enforcement beats none). The hook drains stdin, prints nothing on stdout, reports each failure on one stderr line and exits 0.
 
-When `TOOLU_STARTUP_REPORT` names a file, the hook also appends one JSON record per declared module. The record carries `spec`, `name`, `event`, `source`, `target` and `status` (`written`, `unchanged` or `failed`, with `error`). It appends one `error` record for any other failure. `publishWrapper` does the same for each helper. Only the OpenCode bootstrap sets the variable ([#342](https://github.com/Falconiere/toolu/issues/342)): its readiness counts only what this run reported and verified on disk. A record that cannot be written makes the entry exit 1. With the variable unset, as on Claude Code and Codex, nothing is written.
+When `TOOLU_STARTUP_REPORT` names a file, the hook also appends one JSON record per declared module. The record carries `spec`, `name`, `event`, `source`, `target` and `status` (`written`, `unchanged` or `failed`, with `error`). It appends one `error` record for any other failure. `publishWrapper` does the same for each helper. A self-hosting bootstrap can set the variable ([#342](https://github.com/Falconiere/toolu/issues/342)) to count only what a run reported and verified on disk. A record that cannot be written makes the entry exit 1. With the variable unset, as on Claude Code and Codex, nothing is written.
 
 On Codex, `pruneInactiveModules` removes modules of plugins that the ready plugin snapshot lists as absent. It never removes a symlink, and a missing or stale snapshot prunes nothing. The core SessionStart hook runs it once per session; dispatch-time gating also skips an absent plugin's modules.
 
@@ -55,7 +55,7 @@ On Codex, `pruneInactiveModules` removes modules of plugins that the ready plugi
 
 | Situation | Outcome |
 |---|---|
-| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | `skipped: inactive`. An unreadable record fails open, and Cursor, Hermes and OpenCode count as installed |
+| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | `skipped: inactive`. An unreadable record fails open, and Cursor and Hermes count as installed |
 | `.js` module | imported (fresh when its bytes change), checked against its file name, `run`, decision validated: `decision` |
 | Import error, throw, rejection, contract mismatch, non-decision | `error`, plus `toolu-registry: module <file> failed: …; output skipped` on stderr; the walk continues |
 | `deny` on a pre-tool event, `post_block` on a post-tool event | recorded, then the walk stops |
@@ -188,6 +188,6 @@ A bundled module costs about what the bash module it replaces cost. Most of it i
 The ast-grep plugin's native SessionStart hook publishes two manifests. `crates/ast-grep` supplies both compiled rules to the `toolu` hook engine:
 
 - **search-nudge** (`tool/pre`) advises on structural Grep patterns and Bash or Shell file searches. It uses `toolu-shell` to distinguish a file search from a grep filtering a pipe, and honors `skills.ast-grep: false`.
-- **byte-savings** (`tool/post`) appends `{"kind","returned","full"}` records to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob, and ast-grep commands. An OpenCode ast-grep result also receives the session report; other hosts stay silent. `toolu ast-grep savings <ledger.jsonl>` prints the report on demand.
+- **byte-savings** (`tool/post`) appends `{"kind","returned","full"}` records to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob, and ast-grep commands. Hosts stay silent about it. `toolu ast-grep savings <ledger.jsonl>` prints the report on demand.
 
-The compiled rules run only when their manifests exist and the plugin is selected. OpenCode's current in-process adapter invokes the same native rules for its before and after events, then delivers advice in the model-visible tool result. `fixtures/ast-grep/{nudge,savings,golden}.json`, native hook integration tests, and OpenCode acceptance cover the behavior. `bun run bench:hooks` measures the native hook entries; resource budgets are documented in [`docs/resource-budgets.md`](resource-budgets.md).
+The compiled rules run only when their manifests exist and the plugin is selected. `fixtures/ast-grep/{nudge,savings,golden}.json` and the native hook integration tests cover the behavior. `bun run bench:hooks` measures the native hook entries; resource budgets are documented in [`docs/resource-budgets.md`](resource-budgets.md).

@@ -7,7 +7,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::host::snapshot::Installed;
 
-/// `detect_plugin_installed`. Cursor, `OpenCode` and Hermes use Claude's record.
+/// `detect_plugin_installed`. Cursor and Hermes use Claude's record.
 pub(crate) fn presence(spec: &str, env: &Env, host: Host) -> Installed {
   let mapped = if host == Host::Codex {
     Host::Codex

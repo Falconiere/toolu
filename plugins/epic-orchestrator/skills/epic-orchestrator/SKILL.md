@@ -1,6 +1,6 @@
 ---
 name: epic-orchestrator
-description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, Cursor Agent, or OpenCode) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
+description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, or Cursor Agent) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
 ---
 
 # Epic orchestrator
@@ -21,7 +21,7 @@ write product code. Keep your context small: a run lasts hours.
 `repo:owner/name` label or a `Repo: owner/name` line, else `--repo`.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2`
-(hosts `claude`, `codex`, `cursor`, `opencode`); `--safe` keeps each host's
+(hosts `claude`, `codex`, `cursor`); `--safe` keeps each host's
 approval prompts on; `--no-jev` routes by heuristics; `--dry-run` plans and
 launches nothing ("show me the plan", "what can run in parallel" and "don't
 launch yet" mean `--dry-run`). Subcommands: `status`, `stop`.
@@ -54,10 +54,10 @@ first of these that fails:
   `herdr status` answers.
 - `gh auth status` succeeds, and `gh api rate_limit` shows core above 1000.
 - Each host in `--hosts` is on `PATH` and logged in (`claude`, `codex`,
-  `cursor-agent`, `opencode`; OpenCode must be 1.x).
+  `cursor-agent`).
 - The tracker variables above are exported (a Jira or Linear epic).
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
-  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies (or the OpenCode-generated equivalents). Workers run as
+  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Workers run as
   herdr agents and need those plugins installed in every host in `--hosts`
   (`toolu plugins install delivery-flow --host codex`, and so on).
 
@@ -98,7 +98,7 @@ named after its key). Resume: the same commands.
   (`run_in_background: true`) and end your turn. Its completion (a judgment,
   or `waiting` after 45 minutes) wakes you: handle it, then start the next one
   while any issue is active. Keep exactly one; answer the user meanwhile.
-- **Codex and OpenCode:** one tool call cannot block for hours, so loop:
+- **Codex:** one tool call cannot block for hours, so loop:
   run `toolu --json epic wait --max-seconds 480` in the foreground, handle what
   it returns, and run it again while any issue is active.
 

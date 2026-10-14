@@ -155,7 +155,7 @@ fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   let text = stdin.as_deref();
   let outcome = match request.name.as_str() {
     "session-start" => match plugin_root(request) {
-      Some(root) => toolu_jev::session_start(&env, root, text),
+      Some(root) => toolu_jev::session_start(&env, root),
       None => quiet(),
     },
     "user-prompt-submit" => match plugin_root(request) {

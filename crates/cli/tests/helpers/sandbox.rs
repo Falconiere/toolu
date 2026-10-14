@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::RwLock;
 
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::launcher::{DEFAULT_TIMEOUT, Target, hook};
 
 /// A fallible helper result.
@@ -102,7 +103,7 @@ impl Sandbox {
       home,
       root,
     };
-    sandbox.manifest(VERSION, "1")?;
+    sandbox.manifest(VERSION, &HOOK_PROTOCOL.to_string())?;
     Ok(sandbox)
   }
 

@@ -62,9 +62,7 @@ export function docParts(input: DocInput): string[] {
   if (input.event === "compact") parts.push(renderDoc(join(docs, "post-compaction.md"), []));
   if (eventTitle(input.event) !== "") parts.push(render("session-start.md"));
   if (enabled(input.config, "models", "enabled")) {
-    parts.push(
-      render(input.host === "opencode" ? "model-routing-opencode.md" : "model-routing.md"),
-    );
+    parts.push(render("model-routing.md"));
   }
   if (input.verbose) {
     if (facts.ts) parts.push(render("session-start-ts.md"));

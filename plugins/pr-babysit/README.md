@@ -3,10 +3,9 @@
 Babysit a PR for the current branch until every review thread, the review-bot
 verdict, and CI are clear. `toolu babysit wait` checks the PR every 180 s
 without a model turn and returns only when there is work: Claude runs it as a
-background command, and Codex runs it inside an explicit durable goal. OpenCode
-support is withdrawn. Fixes run as Claude Code, Codex or Cursor Agent
-sessions in a herdr worktree, or as `opencode run` fixers, each at the model
-and effort Jev picks for its complexity.
+background command, and Codex runs it inside an explicit durable goal. Fixes
+run as Claude Code, Codex or Cursor Agent sessions in a herdr worktree, each
+at the model and effort Jev picks for its complexity.
 
 ## Install
 
@@ -23,17 +22,8 @@ codex plugin add pr-babysit@toolu
 
 Requires the `toolu` plugin. Multi-host fixes need [herdr](https://herdr.dev)
 and the host CLIs you list (`claude`, `codex`, `cursor-agent`); without herdr,
-fixes run in-session as before. OpenCode fixers need only the `opencode` CLI. Jev
-routing needs `TYPESAFE_API_KEY`; without it a task/severity
-heuristic picks the tier.
-
-OpenCode support is withdrawn. The notes below are not a supported install path.
-
-OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../../docs/opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
-
-- **Controller.** OpenCode has no goal, so the invoking turn is the controller: it runs `toolu babysit wait` (at most 55 s per call) again and again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. `toolu` reads no project `.env`, so a stray `GH_TOKEN` there never reaches GitHub.
-- **Fixers.** `--host opencode` routing reads `prBabysit` from your OpenCode config (`routing.opencode` rows are `provider/model` plus an OpenCode `--variant`; with none, your default model). An OpenCode fixer is a detached `opencode run` as the `pr-babysit-fixer` agent in a native worktree beside the state file: it may edit, test and commit. Its agent denies `task` and the plain `git push` and `gh` forms on top of your own permission rules, and whatever form a command takes it has no GitHub token or `gh` login and git may use only local (`file`) remotes, so https and ssh pushes are refused. herdr is needed only for Claude Code, Codex or Cursor fixers. Inline fixes go to `task` with `toolu-quick-task`, `toolu-implementer` or `toolu-architect`.
-- **Cancel.** `stop` ends a running fixer's whole process group, removes the clean worktrees and marks the state `cancelled`; the state file stays as the record.
+fixes run in-session as before. Jev routing needs `TYPESAFE_API_KEY`; without
+it a task/severity heuristic picks the tier.
 
 ## Authorization and delivery handoff
 

@@ -9,13 +9,11 @@ use serde_json::{Value, json};
 use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command, screen, stop_agent, try_herdr};
 use super::launch::Launch;
-use super::outcome::{fixer_outcome, host_errors, log_tail};
-use super::procs::{group_alive, stop_group};
+use super::outcome::fixer_outcome;
 use crate::error::{Failure, Result};
 
 /// The wait when the caller names none.
 pub(crate) const DEFAULT_TIMEOUT: u64 = 480;
-const SECOND: Duration = Duration::from_secs(1);
 
 fn text<'v>(value: &'v Value, key: &str) -> &'v str {
   value.get(key).and_then(Value::as_str).unwrap_or_default()
@@ -37,26 +35,6 @@ fn one_line(text: &str, limit: usize) -> String {
 impl Dispatcher<'_> {
   fn outcome(&self, group: &Value) -> (&'static str, String) {
     let report = Path::new(text(group, "report"));
-    if text(group, "host") == "opencode" {
-      let tail = log_tail(Path::new(text(group, "log")), 40);
-      let outcome = fixer_outcome(report, &host_errors(&tail));
-      let trimmed = tail.trim_end();
-      let last: String = trimmed
-        .chars()
-        .skip(trimmed.chars().count().saturating_sub(600))
-        .collect();
-      let last = if last.is_empty() {
-        "(none)".to_owned()
-      } else {
-        last
-      };
-      let error = if outcome == "no_report" {
-        format!("the fixer exited without a report; last output: {last}")
-      } else {
-        String::new()
-      };
-      return (outcome, error);
-    }
     let agent = text(group, "agent");
     let read = screen(self.env, agent);
     let shown = if read.status == 0 {
@@ -96,23 +74,10 @@ impl Dispatcher<'_> {
   }
 
   /// Ends a group's fixer before it is launched again or cleaned up.
-  ///
-  /// # Errors
-  /// `process_error` when the `OpenCode` fixer's processes cannot be listed.
-  pub(super) fn stop_fixer(&self, group: &Value) -> Result<bool> {
-    if text(group, "host") == "opencode" {
-      let pid = group
-        .get("pid")
-        .and_then(Value::as_u64)
-        .and_then(|pid| u32::try_from(pid).ok());
-      return pid.map_or(Ok(true), |pid| stop_group(pid, text(group, "pidStart")));
+  pub(super) fn stop_fixer(&self, group: &Value) {
+    if let Some(agent) = group.get("agent").and_then(Value::as_str) {
+      stop_agent(self.env, agent);
     }
-    Ok(
-      group
-        .get("agent")
-        .and_then(Value::as_str)
-        .is_none_or(|agent| stop_agent(self.env, agent)),
-    )
   }
 
   fn unblock(&mut self) -> Result<()> {
@@ -142,7 +107,7 @@ impl Dispatcher<'_> {
   }
 
   fn relaunch(&mut self, seq: u64, group: &Value) -> Result<()> {
-    self.stop_fixer(group)?;
+    self.stop_fixer(group);
     let items_file = self
       .fixer_field("itemsFile")
       .and_then(Value::as_str)
@@ -164,22 +129,6 @@ impl Dispatcher<'_> {
 }
 
 impl Dispatcher<'_> {
-  /// Whether the `OpenCode` group's process group exited before `deadline`.
-  fn exited(group: &Value, deadline: Instant) -> Result<bool> {
-    let pid = group
-      .get("pid")
-      .and_then(Value::as_u64)
-      .and_then(|pid| u32::try_from(pid).ok());
-    let pid = pid.unwrap_or_default();
-    while group_alive(pid, text(group, "pidStart"))? {
-      if Instant::now() >= deadline {
-        return Ok(false);
-      }
-      std::thread::sleep(SECOND);
-    }
-    Ok(true)
-  }
-
   /// The herdr agent's status after `herdr agent wait`; `None` on its timeout.
   fn waited(&self, agent: &str, remaining: u64) -> Result<Option<String>> {
     let millis = (remaining * 1000).to_string();
@@ -223,20 +172,14 @@ impl Dispatcher<'_> {
       return Ok(true);
     }
     *fresh = false;
-    if text(&group, "host") == "opencode" {
-      if !Self::exited(&group, deadline)? {
-        return Ok(false);
-      }
-    } else {
-      let Some(status) = self.waited(text(&group, "agent"), remaining)? else {
-        return Ok(false);
-      };
-      if status == "blocked" {
-        let blocked = json!({"status": "blocked", "reason": "agent_blocked"});
-        self.patch_fixer(&blocked)?;
-        self.patch_group(seq, &blocked)?;
-        return Ok(false);
-      }
+    let Some(status) = self.waited(text(&group, "agent"), remaining)? else {
+      return Ok(false);
+    };
+    if status == "blocked" {
+      let blocked = json!({"status": "blocked", "reason": "agent_blocked"});
+      self.patch_fixer(&blocked)?;
+      self.patch_group(seq, &blocked)?;
+      return Ok(false);
     }
     self.settle_group(seq)?;
     self.next(seq, count)

@@ -25,8 +25,6 @@
     "tooling": {
       "entry": [
         "src/codex-smoke.ts",
-        "src/opencode-host/mcp-server.ts",
-        "src/opencode-tool-capture.ts",
         "src/probe-ask.ts",
         "src/pr-babysit-herdr-smoke.ts",
         "src/validate-plugin-packaging.ts",
@@ -48,27 +46,6 @@
       ],
       "project": [
         "src/**/*.ts"
-      ]
-    },
-    "tools/toolu-opencode": {
-      "entry": [
-        "src/**/*.ts!",
-        "src/**/__tests__/**",
-        "contract/**/*.ts",
-        "scripts/*.ts",
-        "scripts/**/__tests__/**"
-      ],
-      "project": [
-        "src/**/*.ts",
-        "contract/**/*.ts",
-        "scripts/**/*.ts"
-      ],
-      "ignore": [
-        "scripts/lib/emit.ts",
-        "scripts/lib/frontmatter.ts",
-        "scripts/lib/opencode-port.ts",
-        "scripts/lib/rewrite.ts",
-        "scripts/lib/scan-surface.ts"
       ]
     },
     "tools/toolu-conformance": {

@@ -37,7 +37,7 @@ impl Snapshot {
 
   /// Per-host caps, running counts and cooldowns.
   pub(crate) fn hosts(&self) -> Value {
-    let items: Vec<Value> = ["claude", "codex", "cursor", "opencode"]
+    let items: Vec<Value> = ["claude", "codex", "cursor"]
       .iter()
       .map(|host| self.host(host))
       .collect();

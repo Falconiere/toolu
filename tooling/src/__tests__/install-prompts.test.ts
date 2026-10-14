@@ -58,14 +58,6 @@ test.concurrent("the codex fence targets codex and the claude fence does not", (
   expect(extractRegion(README, "claude")).not.toContain("--host");
 });
 
-test.concurrent("the README and plugin index withdraw OpenCode instead of offering an install prompt", () => {
-  for (const text of [README, PLUGIN_INDEX]) {
-    expect(text).toContain("OpenCode support is withdrawn");
-    expect(text).not.toContain("<!-- install-everything:opencode -->");
-    expect(text).not.toContain("npx @toolu/plugins install --host opencode");
-  }
-});
-
 // The README used to carry a per-plugin version column that release-please never
 // updated, so it silently went stale at every release. The column is gone; this
 // keeps a hardcoded repository version from creeping back into the file.

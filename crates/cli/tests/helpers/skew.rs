@@ -2,7 +2,14 @@
 
 use std::path::Path;
 
+use toolu_protocol::HOOK_PROTOCOL;
+
 use crate::sandbox::{Res, STARTUP, Sandbox, TOOLU, VERSION, copy_executable, system_message};
+
+/// The hook protocol of this binary, as a manifest value.
+fn current() -> String {
+  HOOK_PROTOCOL.to_string()
+}
 
 /// `VERSION` with its major moved by `major`, or else its minor by `minor`.
 fn shifted(major: u64, minor: i64) -> Res<String> {
@@ -48,7 +55,7 @@ fn an_older_binary_advises_the_installer_and_still_enforces() {
   let sandbox = Sandbox::new().unwrap();
   sandbox.install().unwrap();
   let plugin = shifted(0, 1).unwrap();
-  sandbox.manifest(&plugin, "1").unwrap();
+  sandbox.manifest(&plugin, &current()).unwrap();
   assert_eq!(
     first_line(&start(&sandbox).unwrap()),
     format!(
@@ -69,7 +76,9 @@ fn a_binary_in_a_cellar_advises_brew_upgrade() {
   std::fs::create_dir_all(&cellar).unwrap();
   copy_executable(Path::new(TOOLU), &cellar.join("toolu")).unwrap();
   std::os::unix::fs::symlink(cellar.join("toolu"), sandbox.local_bin()).unwrap();
-  sandbox.manifest(&shifted(0, 1).unwrap(), "1").unwrap();
+  sandbox
+    .manifest(&shifted(0, 1).unwrap(), &current())
+    .unwrap();
   let message = start(&sandbox).unwrap();
   assert!(
     first_line(&message).ends_with("upgrade it: brew upgrade toolu"),
@@ -82,7 +91,9 @@ fn a_binary_in_a_cellar_advises_brew_upgrade() {
 fn a_newer_binary_advises_a_plugin_update() {
   let sandbox = Sandbox::new().unwrap();
   sandbox.install().unwrap();
-  sandbox.manifest(&shifted(0, -1).unwrap(), "1").unwrap();
+  sandbox
+    .manifest(&shifted(0, -1).unwrap(), &current())
+    .unwrap();
   let message = start(&sandbox).unwrap();
   assert!(message.contains(&format!("toolu {VERSION} is newer than the toolu plugin")));
   assert!(message.contains("update the plugins from your host's marketplace"));
@@ -92,7 +103,9 @@ fn a_newer_binary_advises_a_plugin_update() {
 fn a_major_skew_with_the_same_protocol_only_advises() {
   let sandbox = Sandbox::new().unwrap();
   sandbox.install().unwrap();
-  sandbox.manifest(&shifted(1, 0).unwrap(), "1").unwrap();
+  sandbox
+    .manifest(&shifted(1, 0).unwrap(), &current())
+    .unwrap();
   assert!(
     start(&sandbox)
       .unwrap()
@@ -108,19 +121,20 @@ fn a_major_skew_with_the_same_protocol_only_advises() {
 fn a_higher_plugin_protocol_blocks_with_the_upgrade_command() {
   let sandbox = Sandbox::new().unwrap();
   sandbox.install().unwrap();
-  sandbox.manifest(VERSION, "2").unwrap();
+  let newer = HOOK_PROTOCOL + 1;
+  sandbox.manifest(VERSION, &newer.to_string()).unwrap();
   let pre = sandbox
     .launch("PreToolUse", "session-start", STARTUP, &[])
     .unwrap();
   assert_eq!(pre.code, 2, "{pre:?}");
-  assert!(
-    pre
-      .stderr
-      .starts_with("blocked: toolu plugin: hook protocol 2 needs a newer toolu")
-  );
+  assert!(pre.stderr.starts_with(&format!(
+    "blocked: toolu plugin: hook protocol {newer} needs a newer toolu"
+  )));
   assert!(pre.stderr.contains("upgrade it: curl -fsSL"));
   let message = start(&sandbox).unwrap();
-  assert!(message.starts_with("toolu plugin: hook protocol 2 needs a newer toolu"));
+  assert!(message.starts_with(&format!(
+    "toolu plugin: hook protocol {newer} needs a newer toolu"
+  )));
   assert!(!message.contains("toolu runtime"));
 }
 

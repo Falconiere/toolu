@@ -90,7 +90,7 @@ fn plan(max_seconds: u64) -> Plan<'static> {
 
 #[test]
 fn a_pending_pr_waits_exactly_the_per_host_default() {
-  for (host, seconds, checks) in [("claude", 1800, 11), ("codex", 55, 1), ("opencode", 55, 1)] {
+  for (host, seconds, checks) in [("claude", 1800, 11), ("codex", 55, 1)] {
     let dir = TempDir::new().unwrap();
     let fixture = Fixture::start().unwrap();
     pending(&fixture);

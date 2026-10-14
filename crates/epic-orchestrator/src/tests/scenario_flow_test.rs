@@ -140,37 +140,6 @@ fn scenario_jira_launches_only_the_unblocked_child() {
 }
 
 #[test]
-fn scenario_opencode_failure_and_disappearance_reach_the_orchestrator() {
-  let scenario = Scenario::new(&[(2, &[])], 1);
-  scenario.pool(&["opencode"]);
-  let mut engine = scenario.engine();
-  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
-  assert_eq!(
-    scenario.record(2)["kind"],
-    "opencode",
-    "{:?}",
-    engine.world.attention
-  );
-  scenario.report_note(&mut engine, 2, "failed", "tests fail on main");
-  let failed = &engine.world.attention[0];
-  assert_eq!(
-    (failed.kind.as_str(), failed.note.as_str()),
-    ("failed", "tests fail on main")
-  );
-  scenario.lose_agent(2);
-  crate::schedule::note_event(&mut engine.world, &key(2), "gone");
-  assert_eq!(engine.pump().expect("pump"), Stop::Idle);
-  assert_eq!(engine.world.issues[&key(2)].launches, 1);
-  assert_eq!(
-    stage(&engine, &key(2)),
-    "running",
-    "{:?}",
-    engine.world.attention
-  );
-  assert_eq!(scenario.record(2)["kind"], "opencode");
-}
-
-#[test]
 fn scenario_a_safe_epic_launches_its_workers_with_approval_prompts_on() {
   for safe in [true, false] {
     let scenario = Scenario::new(&[(2, &[])], 1);

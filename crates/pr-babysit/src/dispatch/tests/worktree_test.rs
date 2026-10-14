@@ -4,16 +4,17 @@ use crate::dispatch::sandbox::{Sandbox, git, sandbox};
 const SLOT_BRANCH: &str = "pr-babysit/falconiere-toolu-165";
 
 fn native(sb: &Sandbox) -> Result<Value> {
-  Dispatcher::new(&sb.options(false))?.worktree(&sb.root, "feat/fix", false)
+  sb.herdr(r#"{"result":{}}"#, "true");
+  Dispatcher::new(&sb.options(false))?.worktree(&sb.root, "feat/fix")
 }
 
 #[test]
-fn a_native_worktree_is_created_then_fast_forwarded_on_reuse() {
+fn a_herdr_worktree_is_created_then_fast_forwarded_on_reuse() {
   let sb = sandbox();
   let created = native(&sb).unwrap();
   let path = created["path"].as_str().unwrap().to_owned();
   assert_eq!(created["branch"], SLOT_BRANCH);
-  assert_eq!(created["workspaceId"], Value::Null);
+  assert_eq!(created["workspaceId"], "w1");
   assert_eq!(sb.state()["herdrWorktree"], created);
   std::fs::write(sb.repo.join("more.ts"), "export {};\n").unwrap();
   git(&sb.env, &sb.repo, &["add", "more.ts"]);
@@ -36,8 +37,8 @@ fn a_native_worktree_is_created_then_fast_forwarded_on_reuse() {
 fn a_rewritten_pr_branch_or_a_dirty_worktree_refuses_reuse() {
   let sb = sandbox();
   let path = native(&sb).unwrap()["path"].as_str().unwrap().to_owned();
-  std::fs::create_dir(Path::new(&path).join(".opencode")).unwrap();
-  std::fs::write(Path::new(&path).join(".opencode/package.json"), "{}").unwrap();
+  std::fs::create_dir(Path::new(&path).join(".cursor")).unwrap();
+  std::fs::write(Path::new(&path).join(".cursor/package.json"), "{}").unwrap();
   std::fs::write(Path::new(&path).join("extra.ts"), "export {};\n").unwrap();
   let dirty = native(&sb).unwrap_err();
   assert_eq!(dirty.code, "worktree_dirty");

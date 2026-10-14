@@ -1,6 +1,6 @@
 /**
  * Startup report channel (#342). A host that runs SessionStart entries itself,
- * like the OpenCode bootstrap, cannot tell a registry write that failed (exit
+ * such as a bootstrap script, cannot tell a registry write that failed (exit
  * 0, one stderr line) or a helper whose source is missing (silent) from a
  * success. When `TOOLU_STARTUP_REPORT` names a file, the startup helpers append
  * one JSON line per contribution there; unset, as on Claude Code and Codex,

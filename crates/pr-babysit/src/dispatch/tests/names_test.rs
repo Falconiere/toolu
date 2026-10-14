@@ -2,7 +2,7 @@ use std::path::Path;
 
 use toolu_runtime::process::{Spec, run};
 
-use super::{agent_name, cksum, gh_config, group_file, native_worktree, shell_quote};
+use super::{agent_name, cksum, group_file, shell_quote};
 
 fn posix_cksum(text: &str) -> u32 {
   let mut spec = Spec::new(["cksum"]);
@@ -41,14 +41,6 @@ fn group_files_sit_beside_the_state() {
   assert_eq!(
     report,
     Path::new("/t/owner's run/falconiere-toolu-165.fixer-r1g2.report.json")
-  );
-  assert_eq!(
-    gh_config(state),
-    Path::new("/t/owner's run/falconiere-toolu-165.fixer-gh")
-  );
-  assert_eq!(
-    native_worktree(state),
-    Path::new("/t/owner's run/falconiere-toolu-165.worktree")
   );
   assert_eq!(shell_quote("owner's run"), "'owner'\\''s run'");
 }

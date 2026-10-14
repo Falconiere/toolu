@@ -11,13 +11,11 @@ use super::admission::{Owner, Reserve, launch_reservation, persist_attempt};
 use super::agent::{AgentPlan, AgentStart, Resolved, ensure_agent};
 use super::checkout::prepare_checkout;
 use super::failure::Failure;
-use super::opencode::exclude_for_worker;
 use super::record::{Record, text};
 use super::session::capture_session;
 use super::worktree::{Place, Worktree, ensure_worktree};
 use super::{Ctx, LaunchOpts};
 use crate::graph::{Graph, GraphIssue};
-use crate::hosts::HostKind;
 
 /// The attempt's inputs and what it has done so far.
 pub(super) struct Attempt<'g> {
@@ -151,11 +149,6 @@ impl<'g> Attempt<'g> {
       dry,
     };
     let wt = ensure_worktree(&mut ctx.herdr, &place, self.issue, &mut self.log)?;
-    if self.host.kind == HostKind::Opencode {
-      self
-        .log
-        .push(exclude_for_worker(Path::new(&checkout), dry, ctx.env)?);
-    }
     if let Some(owner) = &self.owner {
       for (key, value) in [
         ("workspace_id", &wt.workspace_id),

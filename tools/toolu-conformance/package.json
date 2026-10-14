@@ -28,7 +28,6 @@
     "start": "bun run src/cli/run.ts"
   },
   "dependencies": {
-    "@toolu/core": "workspace:*",
-    "@toolu/opencode": "workspace:*"
+    "@toolu/core": "workspace:*"
   }
 }

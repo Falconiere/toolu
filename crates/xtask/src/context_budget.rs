@@ -17,7 +17,6 @@ const FOLDED: &[&str] = &["", ">", ">-", "|", "|-"];
 const DOC_BUDGETS: &[(&str, u32)] = &[
   ("session-start", 110),
   ("model-routing", 90),
-  ("model-routing-opencode", 90),
   ("post-compaction", 28),
   ("session-start-ts", 30),
   ("session-start-rust", 36),

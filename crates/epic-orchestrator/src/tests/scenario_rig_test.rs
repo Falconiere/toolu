@@ -62,7 +62,7 @@ impl Scenario {
     scenario
   }
 
-  /// The checkout, herdr, the merge script and `opencode`; no tracker routes.
+  /// The checkout, herdr, the merge script; no tracker routes.
   pub(crate) fn base(children: &[(u64, &[u64])]) -> Self {
     let tmp = tempfile::tempdir().expect("temp");
     let herdr = HerdrFixture::start();
@@ -106,7 +106,6 @@ impl Scenario {
     };
     scenario.checkout();
     scenario.merge_script();
-    scenario.opencode();
     scenario
   }
 
@@ -128,15 +127,6 @@ impl Scenario {
       &self.scripts.join("reconcile"),
       "cat >/dev/null\necho '{\"state\":\"merged\"}'",
     );
-  }
-
-  /// A 1.x `opencode` that lists one session for the worktree it runs in.
-  fn opencode(&self) {
-    let body = r#"case "$1" in
-  --version) echo 1.4.0 ;;
-  session) printf '[{"id":"ses_0123456789abcdef","directory":"%s","created":%s}]' "$PWD" "$(($(date +%s) * 1000 + 999))" ;;
-esac"#;
-    executable(&self.tmp.path().join("bin/opencode"), body);
   }
 }
 

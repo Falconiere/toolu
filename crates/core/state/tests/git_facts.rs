@@ -286,7 +286,7 @@ fn every_layout_matches_git_and_needs_no_process() {
 fn the_project_root_spawns_nothing_on_any_host() {
   let s = Scratch::new().unwrap();
   let cases = worktree_layouts(&s).unwrap();
-  for host in [Host::Codex, Host::Opencode, Host::Claude] {
+  for host in [Host::Codex, Host::Cursor, Host::Claude] {
     let roots = Roots::new(without_git(), Some(host));
     for (label, cwd, _) in &cases {
       let expected = gits(&s, cwd).unwrap().toplevel;

@@ -20,10 +20,9 @@ function isDir(rel: string): boolean {
 
 const rootPackage = RootPackage.parse(JSON.parse(readText("package.json")));
 
-test.concurrent("workspaces list core, opencode, conformance, and cli packages", () => {
+test.concurrent("workspaces list core, conformance, and cli packages", () => {
   const packages = [
     "packages/toolu-core",
-    "tools/toolu-opencode",
     "tools/toolu-conformance",
     "tools/toolu-cli",
   ];
@@ -49,7 +48,6 @@ test.concurrent("root test alias runs the product suites and drops the TypeScrip
   expect(scripts["test:unit"]).toBeTruthy();
   expect(scripts["test:conformance"]).toBeTruthy();
   expect(scripts["test:rust-conformance"]).toBeTruthy();
-  expect(scripts["test:opencode"]).toBeTruthy();
   expect(scripts["lint:shell"]).toBeUndefined();
   expect(scripts["test:shell"]).toBeUndefined();
   expect(scripts["test:shell:serial"]).toBeUndefined();
@@ -103,7 +101,6 @@ test.concurrent("AGENTS.md maps each CI job to its path group and the aggregate 
   ]) {
     expect(agents).toMatch(row);
   }
-  expect(agents).not.toMatch(/^\| `opencode \(ubuntu-latest\)`/m);
   expect(agents).toContain("`.github/ci-paths.json`");
   expect(agents).toContain("No workflow-level path filter");
 });

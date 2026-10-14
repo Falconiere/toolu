@@ -82,25 +82,6 @@ async function preflight(host: string, planStatus: string, specStatus: string) {
   });
 }
 
-const OPENCODE_REMEDY = 'load skill({ name: "delivery-flow-delivery-flow" })';
-
-test.concurrent("preflight on OpenCode names the generated delivery-flow skill", async () => {
-  const plan = await preflight("opencode", "Draft", "Approved");
-  expect(plan.exitCode).toBe(1);
-  expect(plan.stderr).toBe(
-    `preflight: plan not approved (Status: Draft) — ${OPENCODE_REMEDY} (plan review phase)\n`,
-  );
-  const spec = await preflight("opencode", "Approved", "Draft");
-  expect(spec.exitCode).toBe(1);
-  expect(spec.stderr).toBe(
-    `preflight: spec spec.md not approved (Status: Draft) — ${OPENCODE_REMEDY} (spec review phase)\n`,
-  );
-  expect(await preflight("opencode", "Approved", "Approved")).toMatchObject({
-    exitCode: 0,
-    stderr: "",
-  });
-});
-
 test.concurrent.each(["claude", "codex"])(
   "preflight on %s keeps its slash command",
   async (host) => {

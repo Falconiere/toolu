@@ -1,4 +1,4 @@
-//! Native post-tool byte accounting and the `OpenCode` session report.
+//! Native post-tool byte accounting.
 
 use std::fs::{self, OpenOptions};
 use std::io::Write;
@@ -6,14 +6,11 @@ use std::path::{Path, PathBuf};
 
 use serde_json::Value;
 use toolu_protocol::decision::Decision;
-use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
-use toolu_protocol::text::Text;
 use toolu_runtime::registry::RegistryEvent;
 use toolu_runtime::registry::rule::{Rule, RuleContext};
 
 use crate::launched::{program_at, program_indexes};
-use crate::report::{parse, read_ledger, render};
 
 fn jq_or<'a>(value: Option<&'a Value>, fallback: &'a Value) -> &'a Value {
   match value {
@@ -158,19 +155,6 @@ fn append(path: &Path, kind: &str, returned: usize, full: u64) -> bool {
   file.write_all(&line).is_ok()
 }
 
-fn session_report(path: &Path) -> String {
-  match read_ledger(path) {
-    Ok(text) => match parse(&text) {
-      Ok(records) => render(&records),
-      Err(line) => format!(
-        "report unavailable: {}:{line}: invalid ledger line",
-        path.display()
-      ),
-    },
-    Err(error) => format!("report unavailable: {error}"),
-  }
-}
-
 /// The compiled post-tool rule.
 struct ByteSavings;
 
@@ -216,14 +200,9 @@ impl Rule for ByteSavings {
       0
     };
     let path = ledger_path(ctx);
-    if !append(&path, kind, returned, full) || ctx.host != Host::Opencode || kind != "ast-grep" {
-      return Decision::Allow;
-    }
-    Text::new(format!(
-      "ast-grep byte savings this session:\n{}",
-      session_report(&path)
-    ))
-    .map_or(Decision::Allow, |message| Decision::Advisory { message })
+    // Best effort: a ledger that cannot be written never blocks the tool.
+    append(&path, kind, returned, full);
+    Decision::Allow
   }
 }
 

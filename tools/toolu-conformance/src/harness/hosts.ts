@@ -9,9 +9,7 @@
  * permission events with `{permission, user_message, agent_message}` and blocks
  * on an invalid response; `beforeSubmitPrompt` answers `{continue}` and other
  * events `{additional_context}`. Hermes shell hooks block with
- * `{action|decision: "block"}` and inject `{context}`. OpenCode runs in process
- * and continues or throws from its tool callback. The old mutable permission
- * event remains only as compatibility coverage.
+ * `{action|decision: "block"}` and inject `{context}`.
  */
 import { z } from "zod";
 import type { RunResult } from "./spawn.ts";
@@ -69,15 +67,6 @@ export const HermesOutputSchema = z.looseObject({
   message: z.string().optional(),
   reason: z.string().optional(),
   context: z.string().optional(),
-});
-export const OpencodeEffectSchema = z.looseObject({
-  effect: z.enum(["allow", "deny", "ask"]),
-  message: z.string().optional(),
-});
-export const OpencodeCallbackSchema = z.strictObject({
-  kind: z.literal("callback"),
-  action: z.enum(["continue", "throw"]),
-  message: z.string().optional(),
 });
 
 type HookOutput = z.infer<typeof ClaudeOutputSchema>;
@@ -177,20 +166,6 @@ export function readHostOutcome(host: CommandHost, event: string, result: RunRes
   const schema = host === "codex" ? CodexOutputSchema : ClaudeOutputSchema;
   const out = validate(host, schema, parseJson(host, result.stdout), result.stdout);
   return hookOutcome(host, event, out);
-}
-
-/** Normalise an OpenCode permission event after the in-process hook evaluated it. */
-export function readOpencodeOutcome(event: { effect: unknown; message?: unknown }): Outcome {
-  const out = validate("opencode", OpencodeEffectSchema, event, JSON.stringify(event));
-  return withText({ effect: out.effect }, "reason", out.message);
-}
-
-/** Normalise the callback action; continuation alone does not deliver context. */
-export function readOpencodeCallbackOutcome(callback: unknown): Outcome {
-  const out = validate("opencode", OpencodeCallbackSchema, callback, JSON.stringify(callback));
-  return out.action === "throw"
-    ? withText({ effect: "deny" }, "reason", out.message)
-    : { effect: "allow" };
 }
 
 /** Normalise a Hermes shell hook's result: exit 2 or `block` denies, `context` is advice. */

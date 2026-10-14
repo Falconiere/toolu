@@ -106,7 +106,7 @@ fn closed_blockers(issue: &GraphIssue) -> String {
 /// The brief of `issue` for a worker on `host`.
 ///
 /// # Errors
-/// The host has no invocation for a skill the brief names.
+/// The brief template comment pattern fails to compile.
 pub(crate) fn render_brief(
   graph: &Graph,
   issue: &GraphIssue,
@@ -126,10 +126,10 @@ pub(crate) fn render_brief(
     ("HOST", kind.name().to_owned()),
     (
       "DELIVERY",
-      skill_ref(kind, "delivery-flow", "delivery-flow")?,
+      skill_ref(kind, "delivery-flow", "delivery-flow"),
     ),
-    ("BABYSIT", skill_ref(kind, "pr-babysit", "babysit")?),
-    ("DEBUG", skill_ref(kind, "toolu", "debug")?),
+    ("BABYSIT", skill_ref(kind, "pr-babysit", "babysit")),
+    ("DEBUG", skill_ref(kind, "toolu", "debug")),
     ("EPIC_REF", graph.epic.reference.clone()),
     ("EPIC_URL", graph.epic.url.clone()),
     ("EPIC_TITLE", graph.epic.title.clone()),

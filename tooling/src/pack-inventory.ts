@@ -7,34 +7,11 @@
  * nothing else — above all not the bash plugins/ tree,
  * which Claude Code and Codex users never read from npm. It packs from
  * tools/toolu-cli/npm, not the workspace, so no local package shares its name.
- *
- * `@toolu/opencode` stages manifests, settings and committed hook bundles, but
- * never the repository's bash source tree or its tests. It packs from a temp
- * copy (`stageOpencode`), and its closure gate (`pack-closure.ts`) requires
- * every helper, link, import and export target it reaches to ship with it.
- * Files reached only through code or a shell variable such as `$ROOT` stay
- * listed in `required`.
  */
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
-import { z } from "zod";
-import { committedBundles } from "./build-plugins.ts";
-import { packedFiles, stageOpencode } from "./npm-pack.ts";
-import { closureProblems } from "./pack-closure.ts";
-
-const ROOT = resolve(import.meta.dir, "../..");
+import { packedFiles } from "./npm-pack.ts";
 
 /** A plugin's TypeScript hook sources: they ship built into hooks/dist, never in source form. */
 export const HOOK_SOURCES = /(^|\/)hooks\/src\//;
-/** Tests and their fixtures import the private harness, so no installed copy can run them. */
-export const TEST_FILES = /(^|\/)(__tests__|fixtures)\//;
-/** The stable-path native shims stay until #440. Every other shell file stays out. */
-export const JEV_SHIM = "plugins/jev/scripts/jev.sh";
-const STATUSLINE_SHIM = "plugins/statusline/scripts/statusline.sh";
-const REVIEW_SHIM = "plugins/toolu-review/scripts/write-state.sh";
-const SHELL_FILES =
-  /^(?!(?:plugins\/jev\/scripts\/jev\.sh|plugins\/statusline\/scripts\/statusline\.sh|plugins\/toolu-review\/scripts\/write-state\.sh)$).*\.(?:sh|bash|bats)$/;
 
 export interface Expectation {
   readonly dir: string;
@@ -45,8 +22,8 @@ export interface Expectation {
   readonly exact: boolean;
 }
 
-/** Every published tarball's expected file list, given the repository at `root`. */
-export function expectations(root: string): readonly Expectation[] {
+/** Every published tarball's expected file list. */
+export function expectations(): readonly Expectation[] {
   return [
     {
       dir: "tools/toolu-cli/npm",
@@ -67,29 +44,6 @@ export function expectations(root: string): readonly Expectation[] {
         "src/dispatch/dispatch.ts",
       ],
       forbidden: ["plugins/", "dist/", "node_modules/", ".env"],
-      exact: false,
-    },
-    {
-      dir: "tools/toolu-opencode",
-      name: "@toolu/opencode",
-      required: [
-        "package.json",
-        "README.md",
-        "LICENSE",
-        "src/plugin/toolu.ts",
-        "src/bootstrap/native-launcher.txt",
-        "plugins/toolu/hooks/hooks.json",
-        "plugins/rust-quality/.claude-plugin/plugin.json",
-        "plugins/toolu/settings/protected-files.txt",
-        "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md",
-        "plugins/pr-babysit/skills/babysit/references/fixer-brief.md",
-        JEV_SHIM,
-        STATUSLINE_SHIM,
-        REVIEW_SHIM,
-        ...committedBundles(root),
-      ],
-      forbidden: ["node_modules/", ".env"],
-      forbiddenPatterns: [HOOK_SOURCES, TEST_FILES, SHELL_FILES],
       exact: false,
     },
   ];
@@ -123,42 +77,9 @@ export function checkOne(expectation: Expectation, files: readonly string[]): re
   return [...new Set(problems)];
 }
 
-const CoreManifest = z.looseObject({ exports: z.record(z.string(), z.unknown()) });
-
-/** Inventory and closure problems of `@toolu/opencode`, packed from a temp copy through its own prepack. */
-function opencodeProblems(expectation: Expectation): string[] {
-  const work = mkdtempSync(join(tmpdir(), "pack-inventory-opencode-"));
-  try {
-    const stage = stageOpencode(work, ROOT);
-    const files = packedFiles(stage);
-    const core = CoreManifest.parse(
-      JSON.parse(readFileSync(join(ROOT, "packages/toolu-core/package.json"), "utf8")),
-    );
-    process.stdout.write(`pack-inventory: ${expectation.name} — ${files.length} files\n`);
-    return [
-      ...checkOne(
-        expectation,
-        files.map((file) => file.path),
-      ),
-      ...closureProblems({
-        packageDir: stage,
-        files,
-        sourcePlugins: join(ROOT, "plugins"),
-        coreExports: Object.keys(core.exports),
-      }),
-    ];
-  } finally {
-    rmSync(work, { recursive: true, force: true });
-  }
-}
-
 function run(): number {
   const problems: string[] = [];
-  for (const expectation of expectations(ROOT)) {
-    if (expectation.name === "@toolu/opencode") {
-      problems.push(...opencodeProblems(expectation));
-      continue;
-    }
+  for (const expectation of expectations()) {
     const files = packedFiles(expectation.dir).map((file) => file.path);
     problems.push(...checkOne(expectation, files));
     process.stdout.write(`pack-inventory: ${expectation.name} — ${files.length} files\n`);

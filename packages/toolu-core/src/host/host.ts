@@ -2,7 +2,7 @@
  * `@toolu/core/host` (#252): the one place that knows which host spawned a hook,
  * where that host keeps its roots, what it calls each event, and what output it
  * accepts. TypeScript port of `plugins/toolu/hooks/lib/host.sh`, extended from
- * Claude and Codex to Cursor, OpenCode and Hermes.
+ * Claude and Codex to Cursor and Hermes.
  *
  * Every function that reads the environment takes it explicitly (default
  * `process.env`); an empty variable counts as unset, like bash `${VAR:-}`. The

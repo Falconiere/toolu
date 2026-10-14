@@ -34,7 +34,6 @@ fn wait_defaults_follow_the_host() {
   assert_eq!(wait_default(Some(Host::Claude)), 2700);
   assert_eq!(wait_default(Some(Host::Codex)), 480);
   assert_eq!(wait_default(Some(Host::Cursor)), 480);
-  assert_eq!(wait_default(Some(Host::Opencode)), 480);
   assert_eq!(wait_default(Some(Host::Hermes)), 480);
 }
 

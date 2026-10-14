@@ -1,8 +1,8 @@
 /**
  * Canonical ↔ native hook event names (#252). The canonical slugs are the
  * `@toolu/core/events` vocabulary; each host names them its own way: Claude and
- * Codex PascalCase, Cursor camelCase, Hermes snake_case, OpenCode dotted plugin
- * hooks. `null` marks an event the host does not have.
+ * Codex PascalCase, Cursor camelCase, Hermes snake_case. `null` marks an event
+ * the host does not have.
  *
  * `HOST_EVENTS` is the subset of `BridgeEvent` toolu registers hooks for.
  * `session/resume` and `session/clear` arrive as the host's session-start event
@@ -60,16 +60,6 @@ const TABLES: Readonly<Record<HostName, EventTable>> = {
     "tool/pre": "pre_tool_call",
     "shell/pre": "pre_tool_call",
     "tool/post": "post_tool_call",
-  },
-  opencode: {
-    "session/start": "session.created",
-    "session/unload": "session.deleted",
-    prompt: "chat.message",
-    pre_compact: "experimental.session.compacting",
-    "permission/evaluate": null,
-    "tool/pre": "tool.execute.before",
-    "shell/pre": "tool.execute.before",
-    "tool/post": "tool.execute.after",
   },
 };
 

@@ -58,8 +58,8 @@ toolu epic launch --graph <state_dir>/graph.json --issue <ref> --force      # a 
 ```
 
 Never delete a lease to make capacity look free. A wrong model name (the agent
-exits right after start): check `codex debug models`, `cursor-agent
---list-models` or `opencode models`, fix `routing.json`, then `--replace`.
+exits right after start): check `codex debug models` or `cursor-agent
+--list-models`, fix `routing.json`, then `--replace`.
 
 ## Merge and teardown
 

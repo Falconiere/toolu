@@ -3,36 +3,6 @@ use serde_json::json;
 use crate::dispatch::dispatcher::Dispatcher;
 use crate::dispatch::sandbox::{FIX, Sandbox, git, sandbox};
 
-/// A herdr stand-in: `worktree create` adds a git worktree, `agent prompt`
-/// does the fixer's work and reports `done`, `agent start` answers `start`.
-fn herdr(sb: &Sandbox, start: &str) {
-  let worktree = sb.dir.path().join("herdr-wt").display().to_string();
-  let script = format!(
-    r#"#!/bin/sh
-case "$1 $2" in
-"worktree create")
-  git -C "$4" worktree add --quiet -b "$6" '{worktree}' "$8" >/dev/null 2>&1
-  echo '{{"result":{{"worktree":{{"path":"{worktree}"}},"workspace":{{"workspace_id":"w1"}},"root_pane":{{"pane_id":"p1"}}}}}}';;
-"worktree remove") git -C '{root}' worktree remove --force '{worktree}' && echo '{{"result":{{}}}}';;
-"agent start") echo '{start}';;
-"agent prompt")
-  brief=${{4#You are a pr-babysit fixer. Read }}
-  brief=${{brief% and follow it exactly.}}
-  cd '{worktree}' && {FIX}
-  printf '{{"version":1,"status":"done","note":"fixed","at":"x"}}' > "${{brief%.md}}.report.json"
-  echo '{{"result":{{}}}}';;
-"agent wait") echo '{{"result":{{"agent":{{"agent_status":"idle"}}}}}}';;
-"agent read") echo 'Fixed sum.ts';;
-"agent list") echo '{{"result":{{"agents":[]}}}}';;
-*) echo '{{"result":{{}}}}';;
-esac
-"#,
-    root = sb.root,
-  );
-  sb.bin("herdr", &script);
-  sb.bin("claude", "#!/bin/sh\n");
-}
-
 fn start(sb: &Sandbox) -> serde_json::Value {
   let (plan, items) = sb.plan("claude", Some("opus"));
   Dispatcher::new(&sb.options(false))
@@ -44,7 +14,7 @@ fn start(sb: &Sandbox) -> serde_json::Value {
 #[test]
 fn a_herdr_fixer_round_runs_from_start_through_wait_to_cleanup() {
   let sb = sandbox();
-  herdr(&sb, r#"{"result":{"agent":{"name":"pb"}}}"#);
+  sb.herdr(r#"{"result":{"agent":{"name":"pb"}}}"#, FIX);
   let started = start(&sb);
   assert_eq!(started["status"], "running");
   let worktree = sb.dir.path().join("herdr-wt");
@@ -78,9 +48,9 @@ fn a_herdr_fixer_round_runs_from_start_through_wait_to_cleanup() {
 #[test]
 fn an_agent_that_never_gets_ready_fails_the_group_with_herdr_s_reason() {
   let sb = sandbox();
-  herdr(
-    &sb,
+  sb.herdr(
     r#"{"error":{"code":"agent_not_ready","message":"pb did not get ready"}}"#,
+    FIX,
   );
   let failed = start(&sb);
   assert_eq!(failed["reason"], "agent_start_failed");
@@ -93,7 +63,7 @@ fn an_agent_that_never_gets_ready_fails_the_group_with_herdr_s_reason() {
 #[test]
 fn a_host_cli_missing_from_path_fails_the_group_before_herdr_starts_it() {
   let sb = sandbox();
-  herdr(&sb, r#"{"result":{}}"#);
+  sb.herdr(r#"{"result":{}}"#, FIX);
   std::fs::remove_file(sb.dir.path().join("bin/claude")).unwrap();
   let failed = start(&sb);
   assert_eq!(failed["groups"][0]["error"], "claude is not on PATH");

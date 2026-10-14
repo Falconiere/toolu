@@ -18,7 +18,6 @@ mod deliver;
 mod digest;
 mod failure;
 pub(crate) mod lifecycle;
-mod opencode;
 pub(crate) mod record;
 mod session;
 mod worktree;
@@ -215,10 +214,6 @@ fn launch(
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
-  // Before any clone, GitHub, herdr or state write.
-  if host.kind == crate::hosts::HostKind::Opencode {
-    opencode::check_opencode(host.model.as_deref(), opts.dry_run, ctx.env)?;
-  }
   require_recoverable_stage(&record, opts)?;
   let previous = record::text(&record, "kind").map(str::to_owned);
   if previous

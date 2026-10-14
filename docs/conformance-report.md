@@ -1,25 +1,22 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)  
-**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap). OpenCode acceptance is not run in CI.
+**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap).
 **Runners:**
 - `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
-- `bun run test:opencode` → `tooling/src/opencode-acceptance.ts`
 
 ## Pins
 
 | Component | Pin |
 |-----------|-----|
 | Bun | `1.4.x` (workspace engines `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
-| OpenCode CLI | `opencode-ai@1.18.34` (`tools/toolu-opencode/contract/pin.json`; see [opencode-host-contract.md](opencode-host-contract.md)) |
-| Plugin SDK | `@opencode-ai/plugin@1.18.34`, which the host provisions at its own version |
 
 ## Platforms
 
 | OS | Status |
 |----|--------|
-| macOS | The plugin runs in CI on `macos-14` (`rust-macos`) and `macos-latest` (`hook-bench`). OpenCode acceptance does not. |
-| Linux | The plugin runs in CI on `ubuntu-latest`. OpenCode acceptance does not. |
+| macOS | The plugin runs in CI on `macos-14` (`rust-macos`) and `macos-latest` (`hook-bench`). |
+| Linux | The plugin runs in CI on `ubuntu-latest`. |
 | Windows | **N/A**: not probed for this port |
 
 ## Fixture suites
@@ -29,76 +26,11 @@ No suite can skip: a suite that cannot run fails the matrix.
 | Suite | What it proves |
 |-------|----------------|
 | `protected-files` | The native PreToolUse bundle blocks a `.env` edit (`deny` or `ask`); **file bytes are unchanged on `deny`** |
-| `bootstrap-readiness` | A Bun registration bundle that exits 0 without registry artifacts is `NotReady` |
-| `surface-drift` | `bun run check:opencode-surface` is clean |
 | `spaces-cwd` | A project path with spaces still blocks a protected edit |
-
-OpenCode is not a conformance suite. The old `opencode --version` probe and the handwritten `permission.evaluate` event were removed in [#362](https://github.com/Falconiere/toolu/issues/362). The real host replaces them, below.
-
-## OpenCode acceptance (not in CI)
-
-OpenCode support is withdrawn. `bun run test:opencode` still runs the pinned `opencode-ai` binary in isolated profiles (temporary `HOME`, `XDG_*` and git project) against a scripted loopback model when someone starts it locally. CI does not run it, and the required `typescript` status does not depend on it.
-
-**What it runs.**
-
-- The 29 host contract probes, compared with `contract/probe-results.json`.
-- The generated surface and the names the host discovers.
-- Every `smoke:opencode-*` scenario.
-- The documentation's executable blocks, run word for word: `docs.quickstart` (the [quick start](opencode.md#quick-start), then update and removal) `docs.migration` (the [migration guide](opencode-migration.md), seeded with V2-era state, then its rollback) and `docs.migration-refusals` (its block stopping cleanly when `update` fails).
-- The five `*.live.test.ts` files, through a JUnit report, so a skipped host test fails.
-- Three concurrent runs over two projects.
-- A startup and per-tool budget.
-
-Every one of the 12 catalog plugins must have a passing dedicated actual-host check. [docs/opencode.md § Plugin support](opencode.md#plugin-support) lists those checks per plugin; `bun run check:opencode-docs` regenerates that list from this registry and fails on drift.
-
-**Preflight.** A missing host, `git`, `npm`, `tar`, or `ast-grep` fails the run before any session, and names what is missing. Nothing is reported as skipped.
-
-**Regression controls.** Each run stages copies of `@toolu/opencode`. A control is detected only when its check passes against the unbroken copy and then fails once one edit breaks it. A stage that fails on its own, or an edit that no longer applies, counts as a missed control:
-
-| Control | Regression | Check that must fail |
-|---|---|---|
-| `control.v2-entry` | The entry is the V2 `Plugin.define` / `permission.hook("evaluate")` shape | `entry.local-shim` |
-| `control.invalid-skill-name` | A generated skill id has a double hyphen | `surface.discovered-names` |
-| `control.missing-context` | `experimental.chat.system.transform` is not wired | `live.context-delivery` |
-| `control.missing-post-tool` | `tool.execute.after` is not wired | `posttool.edit` |
-
-**Evidence.** The report keeps three categories apart:
-
-- **Execution.** `actual-host` means the pinned binary ran; `in-process` means the hooks were called directly.
-- **Model.** Always `scripted-loopback`: a fixture that only scripts replies.
-- **Service.**
-  - `none`.
-  - `fixture`: a loopback HTTP(S) server or bare git remote stands in for Jev or GitHub.
-  - `live`: real external services are reported under `external` and never decide acceptance. api.typesafe.ai is called only when `TYPESAFE_API_KEY` is set and is otherwise `not-configured`.
-
-The run removes service credentials (`TYPESAFE_API_KEY` and `JIRA_*`) from its own environment, so no fixture check can reach a live service.
-
-**Budgets.** The same six-call session runs twice with no plugin (a no-op local plugin) and twice with toolu selecting every plugin. The startup overhead (spawn to first model request) and the median per-tool overhead are toolu's fastest run minus the reference's fastest. They must stay within `contract/acceptance-budgets.json`. On darwin-arm64, two runs measured +444 and +539 ms startup and +45 and +35 ms per tool call. The ceilings leave a wide margin for shared CI runners.
-
-**Report.** The JSON report holds:
-
-- the CLI version, the provisioned SDK version, the platform, Bun and every tool version;
-- each check with its plugins, evidence, duration and observations;
-- the controls, the budget and the coverage.
-
-The CI jobs upload it as `opencode-acceptance-<os>`, and the Markdown summary goes to the job summary.
-
-```bash
-bun run test:opencode                              # complete run; exits 0 only on acceptance
-bun run test:opencode --only entry.npm-root pretool.mcp control.missing-post-tool   # local narrowing, never acceptance
-```
-
-For #276, the old fixture matrix passed with a temporary `@opencode/cli@2.0.12` binary on a PATH containing only Bun and git. That V2 lane no longer exists.
 
 ## Isolation
 
 Conformance fixtures use `TMPDIR` (recommended: `/Volumes/Projects/.tmp` locally) and bootstrap paths set `TOOLU_CONFIG_DIR` / isolated `HOME` so Claude/Codex host settings are not mutated.
-
-## Final Bun-only clean-install smoke (#279)
-
-**Historical V2 record.** This smoke predates the documented-line adapter. Its OpenCode lane installs the V2 host `@opencode/cli@2.0.12` and drives the retained `permission.evaluate`-shaped export directly, so it is not evidence for current OpenCode support; [OpenCode acceptance](#opencode-acceptance-required) is. See [what is not retained](opencode-migration.md#what-is-not-retained).
-
-On 2026-10-01, `bun run tooling/src/clean-install-smoke.ts` passed with temporary `HOME`, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, `TOOLU_CONFIG_DIR`, `XDG_CONFIG_HOME`, and `OPENCODE_CONFIG_DIR`. No command in this smoke targeted the user's real host configuration. Claude Code and Codex each installed `toolu` from the checkout's local marketplace into their temporary config root; the installed bundle denied an edit of a temporary project's `.env` and left its bytes unchanged. OpenCode v2.0.12 installed a staged local Git package into its temporary config, then the staged package bootstrapped its native adapter and denied the same protected edit. The OpenCode permission call exercised the adapter directly after CLI installation; it did not launch an interactive OpenCode session.
 
 ## Final v7.2.0 Bash comparison (#279)
 

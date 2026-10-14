@@ -125,7 +125,21 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   }
 }
 
-/// `toolu --json plugins …` in a fresh `HOME` with no host CLI on `PATH`.
+/// A `claude` that lists no plugin and accepts every other command, in `<home>/bin`.
+fn stub_claude(home: &std::path::Path) -> Res<()> {
+  use std::os::unix::fs::PermissionsExt as _;
+  let bin = home.join("bin");
+  std::fs::create_dir_all(&bin)?;
+  let path = bin.join("claude");
+  std::fs::write(
+    &path,
+    "#!/bin/sh\ncase \"$*\" in\n*--json) echo '[]' ;;\nesac\nexit 0\n",
+  )?;
+  std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755))?;
+  Ok(())
+}
+
+/// `toolu --json plugins …` in a fresh `HOME` with only the stub `claude` on `PATH`.
 fn plugins_json(home: &std::path::Path, args: &[&str]) -> Res<Value> {
   let mut command = assert_cmd::Command::new(crate::cli::TOOLU);
   command
@@ -134,7 +148,10 @@ fn plugins_json(home: &std::path::Path, args: &[&str]) -> Res<Value> {
     .current_dir(home)
     .env_clear()
     .env("HOME", home)
-    .env("PATH", "/usr/bin:/bin");
+    .env(
+      "PATH",
+      format!("{}:/usr/bin:/bin", home.join("bin").display()),
+    );
   // Coverage runs keep their profile path, so no `.profraw` lands in the cwd.
   if let Ok(profile) = std::env::var("LLVM_PROFILE_FILE") {
     command.env("LLVM_PROFILE_FILE", profile);
@@ -146,6 +163,7 @@ fn plugins_json(home: &std::path::Path, args: &[&str]) -> Res<Value> {
 #[test]
 fn the_plugins_json_documents_validate() {
   let home = tempfile::tempdir().unwrap();
+  stub_claude(home.path()).unwrap();
   let install = plugins_json(
     home.path(),
     &["install", "--dry-run", "--host", "claude", "jev"],
@@ -156,22 +174,18 @@ fn the_plugins_json_documents_validate() {
     Vec::<String>::new()
   );
   assert_eq!(install["hosts"][0]["steps"][0]["outcome"], "skipped");
-  let list = plugins_json(home.path(), &["list", "--host", "opencode"]).unwrap();
+  let list = plugins_json(home.path(), &["list", "--host", "claude"]).unwrap();
   assert_eq!(
     violations(&list, Some("pluginsList")).unwrap(),
     Vec::<String>::new()
   );
-  let remove = plugins_json(
-    home.path(),
-    &["remove", "jev", "--yes", "--host", "opencode"],
-  )
-  .unwrap();
+  let remove = plugins_json(home.path(), &["remove", "jev", "--yes", "--host", "claude"]).unwrap();
   assert_eq!(
     violations(&remove, Some("pluginsHost")).unwrap(),
     Vec::<String>::new()
   );
-  // Nothing is configured, so nothing is removed.
-  assert_eq!(remove["steps"][0]["removed"], false);
+  // The stub host accepts the removal.
+  assert_eq!(remove["steps"][0]["removed"], true);
   assert_ne!(
     violations(&json!([{ "name": "x" }]), Some("pluginsList")).unwrap(),
     Vec::<String>::new()

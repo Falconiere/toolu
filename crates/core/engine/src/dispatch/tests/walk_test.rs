@@ -17,7 +17,7 @@ fn codex_gets_codex_output_and_every_other_host_claudes() {
     "{claude}"
   );
   assert!(!claude.ends_with('\n'));
-  for host in [Host::Cursor, Host::Hermes, Host::Opencode] {
+  for host in [Host::Cursor, Host::Hermes] {
     assert_eq!(encoded(host, HostEvent::ToolPre, &ask), claude, "{host:?}");
   }
   let codex = encoded(Host::Codex, HostEvent::ToolPre, &ask);

@@ -12,9 +12,7 @@ import type { HostName } from "./host-name.ts";
 
 export type GateClass = "guardrail" | "judgement";
 
-export type EncodedOutput =
-  | { kind: "command"; stdout: string; stderr: string; exitCode: 0 }
-  | { kind: "callback"; action: "continue" | "throw"; message?: string };
+export type EncodedOutput = { kind: "command"; stdout: string; stderr: string; exitCode: 0 };
 
 /** A decision after normalisation: no runtime failures, and only what the event can carry. */
 type Normalized = Exclude<Decision, { kind: "runtime_failure" }>;
@@ -42,7 +40,6 @@ const ASK_EVENTS: Readonly<Record<HostName, ReadonlySet<HostEvent>>> = {
   // Cursor accepts but does not enforce ask on preToolUse.
   cursor: new Set(["shell/pre"]),
   hermes: new Set(),
-  opencode: new Set(),
 };
 
 /** Can `host` put an `ask` for `event` in front of a human? Default event: PreToolUse. */
@@ -162,17 +159,6 @@ function hermesOutput(event: HostEvent, decision: Normalized): string {
   return "";
 }
 
-/** OpenCode's before hook can continue or throw; neither grants native permission. */
-function opencodeCallback(decision: Normalized): EncodedOutput {
-  if (decision.kind === "deny" || decision.kind === "ask") {
-    return { kind: "callback", action: "throw", message: decision.reason };
-  }
-  if (decision.kind === "advisory" || decision.kind === "post_block") {
-    return { kind: "callback", action: "continue", message: text(decision) };
-  }
-  return { kind: "callback", action: "continue" };
-}
-
 /** Encode `decision` for `event` in `host`'s native hook output. */
 export function encodeDecision(
   host: HostName,
@@ -184,9 +170,6 @@ export function encodeDecision(
     throw new Error(`${host} has no native event for ${event}`);
   }
   const normalized = normalize(host, event, decision);
-  if (host === "opencode") {
-    return opencodeCallback(normalized);
-  }
   const stdout =
     host === "cursor"
       ? cursorOutput(event, normalized)

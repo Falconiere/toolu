@@ -14,7 +14,7 @@ const SHIM: &str = "#!/bin/sh\nexec toolu jev \"$@\"\n";
 const EVENT: &str = "SessionStart";
 
 fn start(env: &Env, plugin: &Path) -> toolu_runtime::cli::Outcome {
-  session_start(env, plugin, Some("{}"))
+  session_start(env, plugin)
 }
 
 fn user_file(path: &Path, body: &str, mode: u32) {
@@ -67,7 +67,7 @@ fn toolu_config_dir_takes_precedence_over_the_codex_root() {
 fn without_the_hook_key_the_command_environment_is_checked_first() {
   let sb = Sandbox::new();
   let env = Env::from_pairs([("HOME", sb.home.to_str().unwrap())]);
-  let context = context_of(&session_start(&env, &sb.plugin, Some("{}")), EVENT);
+  let context = context_of(&session_start(&env, &sb.plugin), EVENT);
   assert!(context.starts_with("The Jev hook did not receive TYPESAFE_API_KEY."));
   assert!(context.contains(
     "check whether TYPESAFE_API_KEY is set in the command environment without printing its value"
@@ -279,29 +279,6 @@ fn a_config_dir_that_refuses_the_link_reports_once_and_emits_no_context() {
       root.join("jev/jev.sh").display()
     ))
   );
-}
-
-#[test]
-fn unreadable_or_non_object_stdin_is_a_normal_start_on_opencode_too() {
-  let sb = Sandbox::new();
-  let expected = mandate("toolu jev", &skill_file(&sb.plugin));
-  for stdin in [
-    None,
-    Some(""),
-    Some("bad json"),
-    Some("[]"),
-    Some("null"),
-    Some("42"),
-  ] {
-    let outcome = session_start(&sb.env("claude"), &sb.plugin, stdin);
-    assert_eq!(context_of(&outcome, EVENT), expected);
-  }
-  let open = sb.env("opencode");
-  let skill = "skill({ name: \"jev-jev\" })";
-  for stdin in [None, Some("bad json"), Some("[1]")] {
-    let outcome = session_start(&open, &sb.plugin, stdin);
-    assert_eq!(context_of(&outcome, EVENT), mandate("toolu jev", skill));
-  }
 }
 
 #[test]

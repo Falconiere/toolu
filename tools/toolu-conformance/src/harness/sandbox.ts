@@ -9,7 +9,7 @@ import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSy
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
-export type HostName = "claude" | "codex" | "cursor" | "opencode";
+export type HostName = "claude" | "codex" | "cursor";
 export type ConfigScope = "project" | "user";
 
 export type SandboxOptions = {
@@ -39,7 +39,6 @@ const PROJECT_CONFIG_DIR: Record<HostName, string> = {
   claude: ".claude",
   codex: ".codex",
   cursor: ".cursor",
-  opencode: ".opencode",
 };
 
 /** Resolve `rel` under `base`, refusing anything that escapes it. */
@@ -88,7 +87,6 @@ const USER_CONFIG_DIR: Record<HostName, (roots: Roots) => string> = {
   claude: (roots) => join(roots.home, ".claude"),
   codex: (roots) => roots.codexHome,
   cursor: (roots) => join(roots.home, ".cursor"),
-  opencode: (roots) => join(roots.home, ".config", "opencode"),
 };
 
 function configDirFor(roots: Roots, host: HostName, scope: ConfigScope): string {

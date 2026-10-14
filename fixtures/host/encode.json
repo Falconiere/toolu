@@ -2268,704 +2268,6 @@
       }
     },
     {
-      "name": "opencode session/start: allow",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: ask",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: deny",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: advisory",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: post_block",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: runtime_failure",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode session/start: ask from a judgement gate",
-      "host": "opencode",
-      "event": "session/start",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: allow",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: ask",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: deny",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: advisory",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: post_block",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: runtime_failure",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode session/unload: ask from a judgement gate",
-      "host": "opencode",
-      "event": "session/unload",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: allow",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: ask",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: deny",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: advisory",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: post_block",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: runtime_failure",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode prompt: ask from a judgement gate",
-      "host": "opencode",
-      "event": "prompt",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: allow",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: ask",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: deny",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: advisory",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: post_block",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: runtime_failure",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode pre_compact: ask from a judgement gate",
-      "host": "opencode",
-      "event": "pre_compact",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode permission/evaluate: no native event",
-      "host": "opencode",
-      "event": "permission/evaluate",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "error": "opencode has no native event for permission/evaluate"
-      }
-    },
-    {
-      "name": "opencode tool/pre: allow",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: ask",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: deny",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: advisory",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: post_block",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: runtime_failure",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode tool/pre: ask from a judgement gate",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: allow",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: ask",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: deny",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: advisory",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: post_block",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: runtime_failure",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode shell/pre: ask from a judgement gate",
-      "host": "opencode",
-      "event": "shell/pre",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: allow",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "allow"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: ask",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: deny",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "deny",
-        "reason": "protected file"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"protected file\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: advisory",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "advisory",
-        "message": "run the tests"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"run the tests\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: post_block",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "post_block",
-        "reason": "lint failed"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"lint failed\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: runtime_failure",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "runtime_failure",
-        "reason": "gate crashed",
-        "code": "nonzero"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"gate crashed\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: ask from a guardrail gate",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "guardrail",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
-      "name": "opencode tool/post: ask from a judgement gate",
-      "host": "opencode",
-      "event": "tool/post",
-      "decision": {
-        "kind": "ask",
-        "reason": "confirm .env write"
-      },
-      "gateClass": "judgement",
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"confirm .env write\"}"
-      }
-    },
-    {
       "name": "hermes session/start: allow",
       "host": "hermes",
       "event": "session/start",
@@ -3583,10 +2885,10 @@
       "event": "tool/pre",
       "decision": {
         "kind": "deny",
-        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}\n"
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}}\n"
       }
     },
     {
@@ -3595,10 +2897,10 @@
       "event": "tool/post",
       "decision": {
         "kind": "advisory",
-        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}\n"
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PostToolUse\",\"additionalContext\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}}\n"
       }
     },
     {
@@ -3607,10 +2909,10 @@
       "event": "permission/evaluate",
       "decision": {
         "kind": "deny",
-        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}}}\n"
+        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PermissionRequest\",\"decision\":{\"behavior\":\"deny\",\"message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}}}\n"
       }
     },
     {
@@ -3619,10 +2921,10 @@
       "event": "shell/pre",
       "decision": {
         "kind": "ask",
-        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"permission\":\"ask\",\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\",\"agent_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
+        "stdout": "{\"permission\":\"ask\",\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\",\"agent_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}\n"
       }
     },
     {
@@ -3631,10 +2933,10 @@
       "event": "prompt",
       "decision": {
         "kind": "deny",
-        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"continue\":false,\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
+        "stdout": "{\"continue\":false,\"user_message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}\n"
       }
     },
     {
@@ -3643,22 +2945,10 @@
       "event": "prompt",
       "decision": {
         "kind": "advisory",
-        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
+        "message": "quote \" backslash \\ newline \n tab \t control \u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>"
       },
       "expect": {
-        "stdout": "{\"context\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}\n"
-      }
-    },
-    {
-      "name": "opencode tool/pre: deny escapes JSON text",
-      "host": "opencode",
-      "event": "tool/pre",
-      "decision": {
-        "kind": "deny",
-        "reason": "quote \" backslash \\ newline \n tab \t control \u0001 del  é 😀   </script>"
-      },
-      "expect": {
-        "callback": "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del  é 😀   </script>\"}"
+        "stdout": "{\"context\":\"quote \\\" backslash \\\\ newline \\n tab \\t control \\u0001 del \u007f \u00e9 \ud83d\ude00 \u2028 </script>\"}\n"
       }
     }
   ]

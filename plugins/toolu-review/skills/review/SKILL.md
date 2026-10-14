@@ -62,16 +62,15 @@ the pre-fix tree, so committing staleifies it and the push denies.
    the writer and the gate alike.
 
    The native `toolu` binary detects the host. If the command shell has no host
-   markers, set `TOOLU_HOST_OVERRIDE=codex`, `claude` or `opencode` on this
+   markers, set `TOOLU_HOST_OVERRIDE=codex` or `claude` on this
    command. SessionStart keeps the former stable helper as a compatibility shim
    until #440; new calls use `toolu review write-state`.
 
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate
    caps at 5 rounds on an unchanged diff), and writes
-   the active host's `<repo root>/.claude/tmp/push-review/`,
-   `<repo root>/.codex/tmp/push-review/` or
-   `<repo root>/.opencode/tmp/push-review/` path atomically as
+   the active host's `<repo root>/.claude/tmp/push-review/` or
+   `<repo root>/.codex/tmp/push-review/` path atomically as
    schema `version: 2`, including `reviewed_files` — auto-computed from
    `git diff --name-only <base>...HEAD` (sorted, unique); pass
    `--reviewed-files a.ts,b.rs` only if the review genuinely covered a

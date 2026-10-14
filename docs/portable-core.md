@@ -3,33 +3,24 @@
 **Issue:** [#205](https://github.com/Falconiere/toolu/issues/205) (epic [#203](https://github.com/Falconiere/toolu/issues/203))  
 **Status:** `@toolu/core` provides Zod contracts, native gates and dispatchers. Fixture-suite conformance evidence lives in `@toolu/conformance`; see [`conformance-report.md`](conformance-report.md).
 
-OpenCode support is withdrawn. The OpenCode target recorded here is the documented plugin API. [`opencode-host-contract.md`](opencode-host-contract.md) pins it and records a live probe of every claim ([#335](https://github.com/Falconiere/toolu/issues/335), epic [#334](https://github.com/Falconiere/toolu/issues/334)).
-
-`@toolu/opencode` implements that contract ([#336](https://github.com/Falconiere/toolu/issues/336)). Its root export is a default `PluginModule` whose `server` runs preflight, plugin selection and bootstrap, then returns `tool.execute.before` and `tool.execute.after`. The before hook runs the nine native gates and selected registry modules through `dispatchPreTool`, routes MCP calls through the standalone `mcpHook`, and adds `agentTierHook` to task calls. The after hook dispatches completed results through native post gates and selected registry modules, then appends post diagnostics and matching pre-tool advice to the original result. The plugin never throws from init, because the host would then run tools unguarded. Instead, a setup failure returns a hook that refuses every tool call and logs `toolu: not ready: <reason>` to the host log.
-
 ## Pins
 
 | Component | Pin | Discovery |
 |-----------|-----|-----------|
-| OpenCode CLI | `opencode-ai@1.18.34` | npm `opencode-ai`. `bun run probe:opencode-host` installs it into a version-keyed cache; `TOOLU_OPENCODE_HOST_BIN` must report the same version |
-| Plugin SDK | `@opencode-ai/plugin@1.18.34` | npm. The host provisions the SDK at its own version; `@toolu/opencode` pins it as a devDependency |
 | Bun | `1.4.2` (workspace requires 1.4.x) | `bun --version` |
-| Docs baseline | Plugin function returning `Hooks` | https://opencode.ai/docs/plugins/ |
-| Contract | Pins, loader behavior, host surface, probes, 12-plugin matrix | [`opencode-host-contract.md`](opencode-host-contract.md), checked by `bun run check:opencode-host` |
 
-Runtime contract: [`runtime.md`](runtime.md). OpenCode requires Bun 1.4.x and git; bash and jq are not prerequisites. Windows is out of scope until probed.
+Runtime contract: [`runtime.md`](runtime.md). Bash and jq are not prerequisites. Windows is out of scope until probed.
 
 ## Package boundaries
 
 | Path | Owns | Must not own |
 |------|------|--------------|
-| `packages/toolu-core/` | Zod schemas, normalization, decisions, policy and dispatch | Host SDKs (`@opencode-ai/plugin`, `@opencode-ai/sdk`, `@opencode/plugin`), generated skills |
-| `tools/toolu-opencode/` | OpenCode `setup`, hooks, generators, host config | Duplicated Zod contracts |
+| `packages/toolu-core/` | Zod schemas, normalization, decisions, policy and dispatch | Host SDKs, generated skills |
 | Conformance CLI (`tools/toolu-conformance/`) | Second real consumer of core exports | Host SDK |
 
-Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Bun 1.4.x is the documented prerequisite for every host, including Claude Code and Codex (epic [#247](https://github.com/Falconiere/toolu/issues/247) retires the #203 no-Bun constraint); see [`runtime.md`](runtime.md). OpenCode preflight requires git and Bun. Its package contains manifests, settings and committed bundles; selected plugins without a native registration bundle remain NotReady.
+Root: one `bun.lock`, Bun-only scripts/tests, frozen installs. Unified release `vX.Y.Z` across root, packages, and every `plugin.json`. Bun 1.4.x is the documented prerequisite for every host, including Claude Code and Codex (epic [#247](https://github.com/Falconiere/toolu/issues/247) retires the #203 no-Bun constraint); see [`runtime.md`](runtime.md).
 
-TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Bun workspaces (`packages/toolu-core`, `tools/toolu-opencode`, `tools/toolu-conformance`) and the mandatory CI `typescript` job land in [#208](https://github.com/Falconiere/toolu/issues/208): `bun run test:ts` must pass before runtime implementation merges. Missing Bun/lockfile/tooling fails closed (no successful skip).
+TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, jscpd, Zod-only validators) is adopted in [#213](https://github.com/Falconiere/toolu/issues/213) — see [`docs/conventions-adoption.md`](conventions-adoption.md). Bun workspaces (`packages/toolu-core`, `tools/toolu-conformance`) and the mandatory CI `typescript` job land in [#208](https://github.com/Falconiere/toolu/issues/208): `bun run test:ts` must pass before runtime implementation merges. Missing Bun/lockfile/tooling fails closed (no successful skip).
 
 ### Core export map
 
@@ -47,36 +38,8 @@ TS quality foundation (oxlint/oxfmt, strict `tsc`, structural guardrails, knip, 
 | `./registry` | Cross-plugin hook modules as bundled ESM (`<config>/toolu/<dir>.d/<spec>__<name>.js`): `RegistryModule` contract, `runRegistry` (byte-order walk, installed-plugin gating, optional host-selected spec filter, per-module error isolation, stop after deny/block), `registerModules`/`runRegisterHook` (atomic sync, same-prefix prune) and `pruneInactiveModules` (Codex snapshot); parity with `registry.sh`, `dispatch.sh` and the plugins' `register.sh` ([#257](https://github.com/Falconiere/toolu/issues/257), [docs/registry.md](registry.md)) |
 | `./ledger` | The delivery-flow plan ledger, the push verdict and push-review waivers. For v1 files they retain parity with the historical Bash implementation. `ledgerMain`/`ledgerRun`/`ledgerStatus`/`ledgerPreflight` (bundled CLI `plugins/toolu/hooks/dist/plan-ledger.js`; each step check runs in its own process group under a native `PLAN_LEDGER_STEP_TIMEOUT`), `parseSteps`/`docField`/`parseAcs`/`checkAcRefs`, `verdictMain`/`verdictReport` (bundled CLI `plugins/toolu/hooks/dist/verdict.js`; quality, plan, review v2, docs), and `pushWaiverPend`/`pushWaiverPromote`/`pushWaiverMatches` ([#256](https://github.com/Falconiere/toolu/issues/256)). Skills run the Rust port, `toolu ledger` ([#421](https://github.com/Falconiere/toolu/issues/421)); the bundled CLIs stay as its reference behind the `TOOLU_IMPL` seam |
 | `./startup` | What the leaf plugins' SessionStart hooks share: `publishWrapper` (symlink a plugin file at `<config root>/<dir>/<name>`, never over a user's file), `bunOnPath`/`bunAdvisory`, `sessionContext` (bounded to `MAX_CONTEXT_CHARS`) and `renderHookOutput`, and the Codex dependency check `codexMissingPlugins`/`codexDependencyNotice` with host-native install commands. Ported from `session-start.sh`, `check-toolu.sh` and `check-deps.sh` ([#269](https://github.com/Falconiere/toolu/issues/269)) |
-| `./dispatch` | PreToolUse and PostToolUse dispatchers: `dispatchPreTool` and `dispatchPostTool` walk native built-in modules then `pre-tools.d`/`post-tools.d` with `dispatch.sh` semantics. The OpenCode package contains only `.js` registry modules ([#258](https://github.com/Falconiere/toolu/issues/258), [#259](https://github.com/Falconiere/toolu/issues/259), [docs/registry.md](registry.md#pretooluse-dispatch)) |
+| `./dispatch` | PreToolUse and PostToolUse dispatchers: `dispatchPreTool` and `dispatchPostTool` walk native built-in modules then `pre-tools.d`/`post-tools.d` with `dispatch.sh` semantics. (#258](https://github.com/Falconiere/toolu/issues/258), [#259](https://github.com/Falconiere/toolu/issues/259), [docs/registry.md](registry.md#pretooluse-dispatch)) |
 | `./gates` | Built-in gates as native `ToolModule`s: `gateStatusModule` and `pushWaiverModule` (PostToolUse), plus `qualityCommands` over a parsed command and `toolExitStatus`/`toolInterrupted`/`toolCommand`, which read a payload as the bash modules' jq did ([#259](https://github.com/Falconiere/toolu/issues/259)) |
-
-### OpenCode export map ([#211](https://github.com/Falconiere/toolu/issues/211))
-
-| Export | Responsibility |
-|--------|----------------|
-| `@toolu/opencode/host` | `detectHost`; the global config root (`TOOLU_CONFIG_DIR`, `TOOLU_OPENCODE_HOME`, `$XDG_CONFIG_HOME/opencode`) and per-project data roots (`.opencode/toolu/state/`, or keyed under an override) |
-| `@toolu/opencode/inventory` | Installed/enabled/absent/unknown. Selection comes from `.opencode/toolu/plugins.json`, else the global selection `<global config root>/toolu/plugins.json`, else every installed plugin. An invalid explicit file is an error, and `toolu.config` skills can turn a plugin off ([#345](https://github.com/Falconiere/toolu/issues/345)) |
-| `@toolu/opencode/select` | Enabled set + manifest dependency closure |
-| `@toolu/opencode/bootstrap` | `bootstrapRuntime` → Ready \| NotReady with registry/session artifacts |
-| `@toolu/opencode/preflight` | git/bun/opencode probe; missing git or Bun fails closed |
-| `@toolu/opencode/lifecycle` | Event → supported \| deferred \| unsupported (evaluate wired in #204; other events may stay deferred) |
-| `@toolu/opencode` (`./plugin`) | Default `PluginModule` `{ id: "toolu", server }` ([#336](https://github.com/Falconiere/toolu/issues/336)). `server` binds `directory`, `worktree` and `client`, then runs preflight, selection, the surface plan and bootstrap. It returns `tool.execute.before`, `tool.execute.after`, `shell.env`, a `config` hook that adds the selected plugins' generated skills, agents and commands ([#345](https://github.com/Falconiere/toolu/issues/345)), and `dispose`. A failed setup returns a deny-all before hook. One instance per directory enforces; a duplicate load (npm spec plus local shim) returns no hooks. `toolu: ready` / `not ready` / `duplicate load skipped` go to the host log |
-| `@toolu/opencode/adapter/tool-before` | `mapToolCall` maps `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and configured MCP ids onto the core request ([#337](https://github.com/Falconiere/toolu/issues/337)); other tools pass through. `createToolBeforeHandler` throws on deny, runtime failure or a residual ask; allow and advisory return normally, preserving native permission checks. `createDenyAllToolBefore` |
-| `@toolu/opencode/adapter/tool-advice` | Per-instance pending advice keyed by session and call ID; `tool.execute.after` appends it only to the matching successful tool result, with bounded storage and expiry |
-| `@toolu/opencode/adapter/tool-post` | Per-call completion guard and `dispatchPostTool` bridge for confirmed shell outcomes and completed edits; appends post diagnostics without claiming rollback |
-| `@toolu/opencode/adapter/evaluate` | `createGateDecider`: nine native gates plus selected registry specs through in-process `dispatchPreTool`; MCP through `mcpHook`; task through dispatch plus `agentTierHook`, with deny/runtime failure ahead of ask and advisory. It also exports the retained V2-era `permission.evaluate`-shaped `createPermissionEvaluateHandler`, which only the historical clean-install smoke drives; no supported host calls it ([migration guide](opencode-migration.md#what-is-not-retained)) |
-| `@toolu/opencode/adapter/permission-map` | Retained V2-era `permission.evaluate`-shaped mapping for that smoke only, not an install route; never weakens an existing `deny` or `ask` effect |
-
-### OpenCode surface generator ([#206](https://github.com/Falconiere/toolu/issues/206))
-
-| Artifact | Role |
-|----------|------|
-| `tools/toolu-opencode/scripts/generate-surface.ts` | Deterministic skills/agents/commands mirror under `tools/toolu-opencode/generated/` |
-| `docs/portable-frontmatter.md` | Frontmatter preserve/map/reject table |
-| `bun run generate:opencode-surface` | Regenerate committed tree |
-| `bun run check:opencode-surface` | Fail if sources drift without regen |
-
-Phase 1 enables the `toolu` plugin only (override with `--enabled`); `${CLAUDE_PLUGIN_ROOT}` becomes the owning plugin's `${TOOLU_PLUGIN_ROOT_<PLUGIN>}` in bodies.
 
 ## Zod boundary rules
 
@@ -97,23 +60,19 @@ Derive types with `z.infer`. No `any`, unchecked casts, or non-null escapes to b
 | `allow` | proceed | silent success |
 | `ask` | host prompt where supported; otherwise class fallback | `permissionDecision: "ask"` where supported (`packages/toolu-core/src/config/gate-mode.ts`) |
 | `deny` | hard block | `permissionDecision: "deny"` |
-| `advisory` | context only | Host-specific context; OpenCode appends advice to the matching tool result |
+| `advisory` | context only | Host-specific context |
 | `post_block` | post-tool feedback | PostToolUse `decision: "block"` (`packages/toolu-core/src/dispatch/dispatch.ts`) |
 | `runtime_failure` | fail closed | malformed output or dispatcher error |
 
-**Ask degradation** (`@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex and OpenCode cannot open a native prompt for a toolu gate. Judgement gates use `ask→advise`; security guardrails use `ask→block` (`packages/toolu-core/src/config/gate-mode.ts`, `plugins/toolu/hooks/docs/gates.md`). OpenCode's own `opencode.json` permission asks still prompt through the host; the plugin's declared `permission.ask` hook is never invoked (probe `permission.ask-hook`). Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without a plugin prompt use the same class rules, and `encodeDecision` turns any residual `ask` on a pre-action event into a deny.
+**Ask degradation** (`@toolu/core/host` `supportsAsk` / `degradeAsk`): Codex cannot open a native prompt for a toolu gate. Judgement gates use `ask→advise`; security guardrails use `ask→block` (`packages/toolu-core/src/config/gate-mode.ts`, `plugins/toolu/hooks/docs/gates.md`). Cursor enforces `ask` only on `beforeShellExecution`; Hermes shell hooks cannot prompt. Hosts without a plugin prompt use the same class rules, and `encodeDecision` turns any residual `ask` on a pre-action event into a deny.
 
-**Host layer** (`@toolu/core/host`): detection order is `TOOLU_HOST_OVERRIDE`, the in-process OpenCode flag, a stdin `hook_event_name` only one host uses, Cursor's `CURSOR_VERSION` / `CURSOR_PROJECT_DIR`, Codex's `PLUGIN_ROOT`, then Claude. Cursor and Hermes are detected and encoded only; no Cursor manifest or Hermes shim ships yet.
+**Host layer** (`@toolu/core/host`): detection order is `TOOLU_HOST_OVERRIDE`, a stdin `hook_event_name` only one host uses, Cursor's `CURSOR_VERSION` / `CURSOR_PROJECT_DIR`, Codex's `PLUGIN_ROOT`, then Claude. Cursor and Hermes are detected and encoded only; no Cursor manifest or Hermes shim ships yet.
 
 **Precedence:** deny beats ask beats advisory merge; multi-file patches hold ask while walking and emit the first deny immediately (`@toolu/core/dispatch`).
 
 ## Event vocabulary
 
 Normalized: `session/{start,resume,clear,unload}`, `prompt`, `pre_compact`/`compaction`, `permission/evaluate`, `tool/{pre,post}`, `shell/pre`, with `sessionId`, `toolCallId`, `cwd`, `projectRoot`, `worktree`, multi-file edit records, cancellation, state scope.
-
-## OpenCode dispatch contract
-
-Under the documented contract the pre-tool source is `tool.execute.before` (`input.tool`, `input.sessionID`, `input.callID`, `output.args`). A deny is a thrown error, which stops the call before any side effect. The adapter copies `sessionID` and `callID` into the core request and maps `bash`, `read`, `grep`, `glob`, `edit`, `write`, `apply_patch`, `task`, and MCP ids `sanitize(server)_<tool>` (servers from `opencode.json`) onto the core tool names. A `bash` `workdir` becomes that call's `cwd`; otherwise the cwd is the plugin directory. `dispatchPreTool` runs the native core gates followed by `pre-tools.d` modules belonging to the selected OpenCode plugin specs; a stale disabled file is never imported. MCP calls use the standalone `mcpHook` and no ordinary registry walk. Task calls also run `agentTierHook` over their preserved `model` and `reasoning_effort` fields, recording one delegation and blocking a model mismatch in `agentTier: block` mode; an absent model inherits the plan tier. `TOOLU_CONFIG_DIR` points to the OpenCode data root, where selected Bun registration bundles publish registry modules. Deny or runtime failure wins over ask and advisory; residual ask also throws. An allow returns without changing the host's `deny` or `ask` decision. Before-hook advice is held per instance by session and call ID. For a completed call, `tool.execute.after` runs native post gates and selected `post-tools.d` modules once, then appends their diagnostics and matching advice to the original result. Missing gated fields, malformed output or failed bootstrap denies. A startup bundle exit 0 does not prove registry readiness; the bootstrap verifies tangible artifacts.
 
 ## Policy split (shared with #209)
 
@@ -135,35 +94,17 @@ Exhaustive per-source rows: [docs/gate-coverage-matrix.md](gate-coverage-matrix.
 1. Host carries an edit (or Bash write) to a protected path.
 2. Normalize via edit records (`packages/toolu-core/src/state/edit-records.ts`).
 3. The native protected-files gate (`packages/toolu-core/src/gates/protected-files.ts`, #260; it replaced `protected-files.sh`) + `gateMode(config, "protectedFiles")`, the port of `toolu_gate_mode` in `gate-mode.sh`.
-4. Mode `block` → decision `deny`. The OpenCode adapter **must** throw from `tool.execute.before` **before** the write. A throw blocks `write`, `edit` and multi-file `apply_patch` with no bytes changed (probes `deny.write`, `deny.edit`, `deny.apply-patch`). Prompt text alone is not enforcement.
+4. Mode `block` → decision `deny`. The host's PreToolUse hook **must** deny **before** the write, so no bytes change. Prompt text alone is not enforcement.
 5. Post-tool cannot un-write a completed edit.
-
-## OpenCode interception (capability table)
-
-Pinned-host probes establish each hook's interception and callback behavior; [`opencode-host-contract.md`](opencode-host-contract.md#probe-results) has the full results. The post-dispatch behavior is covered by adapter tests, and `bun run smoke:opencode-posttool` is its live integration scenario. `bun run smoke:opencode-ast-grep` covers ast-grep's search-nudge and byte-savings modules on the same path.
-
-| Mechanism | Hard-block? | Role for toolu |
-|-----------|-------------|----------------|
-| `tool.execute.before` (throw) | **Yes** — no side effect, the reason reaches the model | Primary deny path for bash, edit, write, `apply_patch`, grep, MCP (`<server>_<tool>`) and `task`/child-session tools |
-| `opencode.json` `permission` rules | **Yes** (the user's rules) | Authoritative user choice. `deny` removes the tool and a plugin cannot override it. `tool.execute.before` runs before the native prompt |
-| `permission.ask` | Declared, never invoked | Not usable; gate `ask` degrades by class rules while native `opencode.json` asks remain active |
-| `tool.execute.after` | No (post) | Completed results run gate-status, push-waiver and selected post modules; diagnostics and matching pre-tool advice are appended to the original result. No callback for a thrown tool error |
-| `chat.message`, `experimental.chat.system.transform`, `experimental.session.compacting` | No | Context only (prompt, session, compaction); never enforcement |
-
-### Capability-results
-
-The pinned results, the probe harness and the 12-plugin capability matrix live in [`opencode-host-contract.md`](opencode-host-contract.md). `bun run probe:opencode-host` refreshes the live evidence (`tools/toolu-opencode/contract/probe-results.json`). `bun run check:opencode-host` (part of `bun run test`) keeps that evidence, the matrix, the catalog manifests, the pinned SDK declarations and the contract doc in agreement.
 
 ## Release blockers (parity)
 
-1. Any required enforcement capability that the pinned host cannot support. It fails `check:opencode-host` unless it is flagged `releaseBlocker` or has an alternative backed by supported probes.
-2. Treating `chat.message`, `experimental.*` context hooks or prompt rewriting as a substitute for a `tool.execute.before` deny.
-3. A plugin init that can throw. The loader is fail-open: it logs `failed to load plugin` and runs tools unguarded (probe `load.init-throw`).
-4. Advertising OpenCode enforcement when bootstrap or the pin check fails.
+1. Any required enforcement capability that a supported host cannot provide.
+2. Treating prompt context or prompt rewriting as a substitute for a PreToolUse deny.
+3. A hook that can crash open: an internal error on an enforcing event must block, never run the tool unguarded.
 
 ## Related docs
 
 - Runtime gate modes: [plugins/toolu/hooks/docs/gates.md](../plugins/toolu/hooks/docs/gates.md)
 - Config schema: [docs/config.md](config.md)
-- OpenCode host contract: [opencode-host-contract.md](opencode-host-contract.md) ([#335](https://github.com/Falconiere/toolu/issues/335))
 - Tracking: [#205](https://github.com/Falconiere/toolu/issues/205) / epic [#203](https://github.com/Falconiere/toolu/issues/203)

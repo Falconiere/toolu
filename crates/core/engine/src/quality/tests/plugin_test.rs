@@ -89,16 +89,14 @@ fn register_reports_its_manifest_and_survives_a_bad_root() {
   let report = dir.path().join("report.jsonl");
   std::fs::write(&report, "").unwrap();
   let env = config(dir.path()).with("TOOLU_STARTUP_REPORT", &report.display().to_string());
-  assert_eq!(register(&env, Host::Opencode).exit, Exit::Success);
+  assert_eq!(register(&env, Host::Cursor).exit, Exit::Success);
   let text = std::fs::read_to_string(&report).unwrap();
   let record: serde_json::Value = serde_json::from_str(text.trim()).unwrap();
   assert_eq!(record["kind"], "native-registry");
   let target = dir.path().join(MANIFEST).display().to_string();
   assert_eq!(record["target"], target);
   let missing = config(dir.path()).with("TOOLU_STARTUP_REPORT", "/nonexistent/report");
-  let unreported = register(&missing, Host::Opencode)
-    .stdout
-    .unwrap_or_default();
+  let unreported = register(&missing, Host::Cursor).stdout.unwrap_or_default();
   assert!(
     unreported.contains("cannot write startup report /nonexistent/report"),
     "{unreported}"

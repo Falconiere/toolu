@@ -2,7 +2,7 @@
 
 The tick helper is the deterministic half of babysitting. It is the
 `toolu babysit` namespace of the native `toolu` binary and runs the same way on
-Claude Code, Codex and OpenCode — only `--state-file` differs by host. Read this
+Claude Code and Codex — only `--state-file` differs by host. Read this
 file instead of the sources: every field the agent may act on is listed here.
 Fields not listed are not part of the contract.
 
@@ -20,7 +20,7 @@ Fields not listed are not part of the contract.
 | `toolu babysit stop` | `dispatch-fix cleanup`, then `record status --status cancelled`. |
 | `toolu babysit parse-verdict` | Parse the CI review-bot comment from stdin. |
 | `toolu babysit route-fix` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. |
-| `toolu babysit dispatch-fix` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents (herdr panes, or `opencode run` processes). |
+| `toolu babysit dispatch-fix` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents in herdr panes. |
 | `toolu babysit fixer-report` | Run by a fixer agent, never by the controller: writes its done/failed report. |
 
 Exit codes, for every command: `0` result · `64` usage · `69`
@@ -49,8 +49,7 @@ toolu babysit wait --repo <owner/repo> --pr <n> --state-file <path>
 ```
 
 - `--state-file` — the host's slot path, verbatim: `/tmp/pr-babysit-<slot>.json`
-  (Claude), `<repo>/.codex/tmp/pr-babysit/<slot>.json` (Codex) or
-  `<repo>/.opencode/tmp/pr-babysit/<slot>.json` (OpenCode). Created on the
+  (Claude) or `<repo>/.codex/tmp/pr-babysit/<slot>.json` (Codex). Created on the
   first tick, resumed after.
 - `--snapshot-out` — full snapshot (default `<state-file minus .json>.snapshot.json`).
   The result is always written beside it, to `<stem>.result.json`.
@@ -63,7 +62,7 @@ toolu babysit wait --repo <owner/repo> --pr <n> --state-file <path>
 - `--page-size` — GraphQL/REST page size (default 100). Exists so pagination is
   testable on small real PRs.
 - `--max-seconds` — the longest `wait` runs: 1800 on Claude (a background Bash
-  call), 55 on Codex, OpenCode and any other host.
+  call) and 55 on Codex and any other host.
 
 `wait` checks whenever the slot's `schedule.nextCheckAt` is due and sleeps
 until the next slot otherwise. It prints the tick result as soon as one has
@@ -162,8 +161,8 @@ through the result, and writes it only through `toolu babysit record`, `reply`,
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
-| `fixer` | Written by `toolu babysit dispatch-fix`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head, pid?, pidStart?, log?}]}`, or `null`; `pid`, `pidStart` and `log` are an OpenCode group's process. `toolu babysit record round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
-| `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's fixer worktree, or `null`. `workspaceId` and `paneId` are `null` for a native worktree (an all-OpenCode plan). |
+| `fixer` | Written by `toolu babysit dispatch-fix`: `{round, status (running·done·failed·blocked), reason, startedAt, finishedAt, current, unattended, context, itemsFile, items[], groups[{seq, tier, host, model, effort, items[], agent, status (pending·launching·running·done·failed·blocked), reason, error?, brief, report, startedAt, finishedAt, head}]}`, or `null`. `toolu babysit record round` clears a done or failed record; a running or blocked one has a live agent and is kept. |
+| `herdrWorktree` | `{path, workspaceId, paneId, branch: "pr-babysit/<slot>", prBranch, repoRoot, base}` of the slot's fixer worktree, or `null`. |
 | `hostCooldowns` | `{<host>: {until, reason: "host_limited"}}` — a host that hit a provider usage limit is skipped by `toolu babysit route-fix` for 60 min. |
 
 ## Write side
@@ -198,7 +197,7 @@ toolu babysit stop --state-file <path>
 ## Fixer dispatch
 
 ```
-toolu babysit route-fix --items <file> --host claude|codex|opencode [--state-file <path>] [--raise <itemId>]... [--no-jev]
+toolu babysit route-fix --items <file> --host claude|codex|cursor [--state-file <path>] [--raise <itemId>]... [--no-jev]
                         [--jev-answers-in <file>] [--now <iso8601>]
 toolu babysit dispatch-fix start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
 toolu babysit dispatch-fix wait    --state-file <p> [--timeout-seconds N]
@@ -215,18 +214,15 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
   `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·
   implementation · architecture · architecture`). A host is dropped when cooling
-  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`, `opencode`) is not on `PATH`;
+  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`) is not on `PATH`;
   no host left → `dispatch: inline` with a `note`. `dispatch: herdr` means fixer agents through
-  `toolu babysit dispatch-fix`, whatever their transport. With `--host opencode` the config is
-  `$TOOLU_USER_CONFIG_DIR/toolu.config.json` plus `.opencode/toolu.config.json`. Jev runs in
+  `toolu babysit dispatch-fix`. Jev runs in
   process with `TYPESAFE_API_KEY` and never loads a project `.env` file; `prBabysit.jev: false`
   turns it off like `--no-jev`. `--jev-answers-in` replays a captured Jev answer map
   (tests, debugging — the workflow never passes it) and wins over both.
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
   `round` that is not a positive integer, and a `--base` or `--branch` starting with `-`), each group's host and model/effort (`config_invalid`), an
-  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`) when a group
-  needs a pane: an all-`opencode` plan does not, and gets a native `git worktree` at
-  `<state>.worktree` instead. It fetches
+  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`). It fetches
   `origin/<base>` (the brief's changed-file rule diffs against it) and the PR branch; a failed git
   step is `git_error`.
 - **Wait** waits at most `--timeout-seconds` (default 480) for the running group. A group moves
@@ -239,9 +235,7 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
 - **Dispatch status** (`start` / `wait` stdout): `{version:1, status: running|done|failed|blocked|none,
   reason: null|no_report|reported_failed|host_limited|agent_blocked|agent_start_failed|worktree_lost, group,
   worktree, branch, commits[], groups[{seq, tier, host, model, effort, agent, status, reason, error?}]}`
-  — `error` carries herdr's message when a group failed to start (for OpenCode, the log path
-  that receives the start error), and an OpenCode fixer's last output when it exited without a
-  report.
+  — `error` carries herdr's message when a group failed to start.
   `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`
   prints `{dryRun:true, commands:[[argv…]…], brief}` and writes nothing.
 - **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
@@ -252,23 +246,6 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
 
   These are the unattended flags; `prBabysit.unattended: false` selects safe mode. Codex also
   gets `--no-daemon` first in both modes.
-- **OpenCode fixers** never use herdr: `opencode run --format json --dir <worktree> --agent
-  pr-babysit-fixer [--auto] [--model <provider/model>] [--variant <effort>] <prompt>`, detached in
-  its own process group, stdin closed, output to `<state>.fixer-r<round>g<seq>.log`. The agent is
-  added to the caller's `OPENCODE_CONFIG_CONTENT` (which must be a JSON object, else
-  `config_invalid`) with `task`, `gh` and `git push` (also `git -C <dir> push`) denied; OpenCode
-  layers it over the user's own rules. The fixer's env has no `GH_TOKEN`/`GITHUB_TOKEN` (or the
-  enterprise ones), `GH_CONFIG_DIR=<state>.fixer-gh` (never created, so no `gh` login),
-  `GIT_TERMINAL_PROMPT=0` and `GIT_ALLOW_PROTOCOL=file`: git refuses every https, ssh (scp-style
-  aliases included) and git:// remote, for push and fetch alike, while a test's local bare remote
-  still works. So no command form can write to GitHub. `OPENCODE_CONFIG_CONTENT` is checked before
-  any side effect. The group records `pid`, `pidStart` (the leader's `ps -o
-  lstart=`) and `log`; a pid whose start time differs is a reused pid and is never signalled.
-  `wait` polls the group once a second; `cleanup` and a relaunch send TERM, then KILL after 10 s,
-  to the whole group and every descendant (OpenCode runs each bash call in a group of its own).
-  It never reaches `blocked`; a missing `opencode` is `agent_start_failed`. `host_limited` is read
-  only from the host's own errors in the log (`error` events and non-INFO stderr), never from tool
-  output or model text.
 - **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).
@@ -276,11 +253,10 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
   the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
   blocked screen fails the group with `agent_start_failed` and is never answered.
-- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or `.opencode/` (a
+- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/` or `.cursor/` (a
   fixer's own SessionStart hooks write `.claude/settings.local.json` and `.claude/tmp/`) do not make
   the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
-- **Cleanup** exits a live fixer (`fixer_running` when an OpenCode group outlives KILL; the worktree
-  is kept) and clears the `fixer` record, then removes the worktree (`--force`,
+- **Cleanup** exits a live fixer and clears the `fixer` record, then removes the worktree (`--force`,
   discarding only those session artifacts) when it has no other changes (`worktree_dirty`
   otherwise, the worktree stays recorded), prunes git's worktree metadata, deletes
   `pr-babysit/<slot>` only when `origin/<pr-branch>` contains it, and removes this slot's

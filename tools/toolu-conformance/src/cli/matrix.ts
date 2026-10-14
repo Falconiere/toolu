@@ -1,13 +1,9 @@
-import { runBootstrapReadinessSuite } from "./suites/bootstrap-readiness.ts";
 import { runProtectedFilesSuite } from "./suites/protected-files.ts";
 import { runSpacesCwdSuite } from "./suites/spaces-cwd.ts";
-import { runSurfaceDriftSuite } from "./suites/surface-drift.ts";
 import type { ConformanceResult, SuiteDefinition, SuiteOutcome, SuiteResult } from "./types.ts";
 
 export const CONFORMANCE_SUITES: SuiteDefinition[] = [
   { id: "protected-files", run: runProtectedFilesSuite },
-  { id: "bootstrap-readiness", run: runBootstrapReadinessSuite },
-  { id: "surface-drift", run: runSurfaceDriftSuite },
   { id: "spaces-cwd", run: runSpacesCwdSuite },
 ];
 

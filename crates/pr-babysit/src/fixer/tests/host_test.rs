@@ -4,11 +4,11 @@ use super::{Fixer, safe};
 use crate::fixture;
 
 #[test]
-fn fixer_argv_matches_the_recorded_host_contract_for_32_combinations() {
+fn fixer_argv_matches_the_recorded_host_contract_for_24_combinations() {
   let golden = fixture::json("hosts/fixer-hosts.json");
   let name = golden["name"].as_str().unwrap();
   let cases = golden["argv"].as_array().unwrap();
-  assert_eq!(cases.len(), 32);
+  assert_eq!(cases.len(), 24);
   for case in cases {
     let host = Fixer::parse(case["host"].as_str().unwrap()).unwrap();
     let args = host

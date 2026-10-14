@@ -73,7 +73,6 @@ fn supports_ask_answers_the_pre_tool_use_question() {
   assert!(!supports_ask(Host::Codex, ToolPre));
   assert!(!supports_ask(Host::Cursor, ToolPre));
   assert!(!supports_ask(Host::Hermes, ToolPre));
-  assert!(!supports_ask(Host::Opencode, ToolPre));
 }
 
 #[test]
@@ -81,7 +80,6 @@ fn cursor_asks_only_before_shell_execution_and_permission_requests_defer() {
   assert!(supports_ask(Host::Cursor, ShellPre));
   assert!(supports_ask(Host::Codex, PermissionEvaluate));
   assert!(!supports_ask(Host::Claude, Prompt));
-  assert!(!supports_ask(Host::Opencode, ToolPost));
 }
 
 #[test]
@@ -93,10 +91,6 @@ fn a_guardrail_ask_becomes_a_deny_where_the_host_cannot_prompt() {
     degrade_ask(Host::Codex, ToolPre, ask(), GateClass::Guardrail),
     deny
   );
-  assert_eq!(
-    degrade_ask(Host::Opencode, ToolPre, ask(), GateClass::Guardrail),
-    deny
-  );
 }
 
 #[test]
@@ -106,10 +100,6 @@ fn a_judgement_ask_becomes_advice_where_the_host_cannot_prompt() {
   };
   assert_eq!(
     degrade_ask(Host::Hermes, ShellPre, ask(), GateClass::Judgement),
-    advice
-  );
-  assert_eq!(
-    degrade_ask(Host::Opencode, ToolPre, ask(), GateClass::Judgement),
     advice
   );
 }
@@ -252,10 +242,7 @@ fn ask_never_reaches_a_host_or_event_that_cannot_prompt() {
         continue;
       }
       for decision in &decisions {
-        let out = match encode(host, event, decision).unwrap() {
-          Encoded::Command(out) => out,
-          Encoded::Callback(callback) => callback.json(),
-        };
+        let Encoded::Command(out) = encode(host, event, decision).unwrap();
         assert!(!out.contains("\"ask\""), "{host:?} {event:?} {out}");
       }
     }
@@ -277,7 +264,6 @@ fn an_event_the_host_does_not_have_is_a_wiring_error() {
     "cursor has no native event for permission/evaluate"
   );
   assert!(encode(Host::Hermes, PreCompact, &allow()).is_err());
-  assert!(encode(Host::Opencode, PermissionEvaluate, &deny()).is_err());
 }
 
 #[test]

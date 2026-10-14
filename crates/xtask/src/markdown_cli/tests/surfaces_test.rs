@@ -126,25 +126,27 @@ fn a_reference_fails_once_its_namespace_is_ported() {
 
 #[test]
 fn unmapped_stems_fall_back_to_the_plugins_own_namespaces() {
-  // toolu still owns a placeholder namespace (`serve`), so its unmapped stems stand.
-  assert_eq!(problem(&tree(), "anything", "toolu"), None);
-  let mut all = tree();
-  for namespace in ["debug", "serve"] {
-    port(&mut all, namespace);
-  }
-  assert!(problem(&all, "anything", "toolu").is_some());
+  // every namespace toolu owns is ported, so its unmapped stems are removed surfaces.
+  assert!(problem(&tree(), "anything", "toolu").is_some());
   // epic-orchestrator's namespace is ported, so its old scripts are removed.
   assert!(problem(&tree(), "launch-issue", "epic-orchestrator").is_some());
   // brainstorm owns a namespace with no placeholder verb: already ported.
   assert!(problem(&tree(), "anything", "brainstorm").is_some());
   // a plugin owning several namespaces needs all of them ported.
-  assert_eq!(problem(&ported("ledger"), "anything", "toolu"), None);
+  let mut partial = tree();
+  let commands = partial["commands"].as_array_mut().unwrap();
+  let owned = commands
+    .iter_mut()
+    .find(|command| command["name"] == "debug");
+  owned.unwrap()["commands"]
+    .as_array_mut()
+    .unwrap()
+    .push(serde_json::json!({"name": "planned", "placeholder": true, "commands": []}));
+  assert_eq!(problem(&partial, "anything", "toolu"), None);
   // stems match exactly unless the entry is a `-` prefix.
   assert!(problem(&ported("statusline"), "status", "toolu").is_some());
-  assert_eq!(
-    problem(&ported("statusline"), "status-board", "toolu"),
-    None
-  );
+  let board = problem(&tree(), "status-board", "toolu").unwrap();
+  assert!(!board.contains("`toolu statusline`"), "{board}");
   assert!(problem(&ported("babysit"), "babysit-route-fix", "toolu").is_some());
   // an unknown plugin owns nothing.
   assert_eq!(problem(&tree(), "anything", "nope"), None);

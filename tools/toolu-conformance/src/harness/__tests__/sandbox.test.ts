@@ -77,10 +77,6 @@ test.concurrent("writeConfig lands in each host's project and user config roots"
     [sb.writeConfig("claude", "user", { version: 1 }), join(sb.home, ".claude/toolu.config.json")],
     [sb.writeConfig("codex", "user", { version: 1 }), join(sb.codexHome, "toolu.config.json")],
     [sb.writeConfig("cursor", "user", { version: 1 }), join(sb.home, ".cursor/toolu.config.json")],
-    [
-      sb.writeConfig("opencode", "user", { version: 1 }),
-      join(sb.home, ".config/opencode/toolu.config.json"),
-    ],
   ];
   for (const [written, expected] of cases) {
     expect(written).toBe(expected);

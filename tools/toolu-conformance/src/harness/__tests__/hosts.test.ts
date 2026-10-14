@@ -5,8 +5,6 @@ import {
   HostOutputError,
   readHermesOutcome,
   readHostOutcome,
-  readOpencodeCallbackOutcome,
-  readOpencodeOutcome,
 } from "../hosts.ts";
 import { run, type RunResult } from "../spawn.ts";
 
@@ -114,28 +112,6 @@ test.concurrent("cursor: permission objects map to effects and empty stdout is r
   expect(() => readHostOutcome("cursor", "preToolUse", result('{"permission":"maybe"}'))).toThrow(
     HostOutputError,
   );
-});
-
-test.concurrent("opencode: the before callback continues or throws without granting permission", () => {
-  expect(readOpencodeCallbackOutcome({ kind: "callback", action: "throw", message: "m" })).toEqual({
-    effect: "deny",
-    reason: "m",
-  });
-  expect(
-    readOpencodeCallbackOutcome({ kind: "callback", action: "continue", message: "advice" }),
-  ).toEqual({ effect: "allow" });
-  expect(() => readOpencodeCallbackOutcome({ kind: "callback", action: "allow" })).toThrow(
-    HostOutputError,
-  );
-});
-
-test.concurrent("opencode: the retained mutable permission effect maps to an outcome", () => {
-  expect(readOpencodeOutcome({ effect: "ask", message: "m" })).toEqual({
-    effect: "ask",
-    reason: "m",
-  });
-  expect(readOpencodeOutcome({ effect: "allow" })).toEqual({ effect: "allow" });
-  expect(() => readOpencodeOutcome({ effect: "maybe" })).toThrow(HostOutputError);
 });
 
 test.concurrent("claude and codex: PermissionRequest decision.behavior deny is a deny", () => {

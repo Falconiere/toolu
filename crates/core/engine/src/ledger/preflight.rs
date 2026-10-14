@@ -36,10 +36,9 @@ fn heal_ledger_for(opts: &LedgerOptions) -> String {
     .unwrap_or_default()
 }
 
-/// Where a refused preflight sends the agent: `OpenCode` loads the generated skill by its id.
+/// Where a refused preflight sends the agent.
 fn review_remedy(host: Host, phase: &str) -> String {
   let action = match host {
-    Host::Opencode => "load skill({ name: \"delivery-flow-delivery-flow\" })",
     Host::Claude | Host::Codex => "run /delivery-flow:delivery-flow",
     Host::Cursor | Host::Hermes => "load the delivery-flow skill",
   };

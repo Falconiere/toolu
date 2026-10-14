@@ -284,7 +284,7 @@ pub(crate) fn epic_for(paths: &Paths, state_dir: &str) -> String {
 /// Return the host's default judgment wait in seconds.
 pub(crate) fn wait_default(host: Option<Host>) -> u64 {
   match host {
-    Some(Host::Codex | Host::Opencode | Host::Cursor | Host::Hermes) => 480,
+    Some(Host::Codex | Host::Cursor | Host::Hermes) => 480,
     _ => 2700,
   }
 }

@@ -1,4 +1,5 @@
 use serde_json::Value;
+use toolu_protocol::HOOK_PROTOCOL;
 
 use super::{SCHEMA_ID, tree};
 use crate::tree as full;
@@ -31,7 +32,7 @@ fn longs(node: &Value) -> Vec<&str> {
 fn the_document_names_its_schema_and_carries_no_version() {
   let doc = exported();
   assert_eq!(doc["schema"], SCHEMA_ID);
-  assert_eq!(doc["hookProtocol"], 1);
+  assert_eq!(doc["hookProtocol"], HOOK_PROTOCOL);
   assert!(doc.get("version").is_none());
   assert_eq!(doc["exitCodes"].as_array().unwrap().len(), 6);
   assert_eq!(doc["exitCodes"][3]["code"], 64);
@@ -55,7 +56,7 @@ fn root_flags_are_the_globals_version_and_the_hidden_probe() {
   assert_eq!(host["valueName"], "HOST");
   assert_eq!(
     host["possibleValues"],
-    serde_json::json!(["claude", "codex", "opencode", "cursor", "hermes"])
+    serde_json::json!(["claude", "codex", "cursor", "hermes"])
   );
   assert_eq!(doc["flags"][1]["short"], "q");
   assert_eq!(doc["flags"][4]["hidden"], true);
@@ -71,9 +72,6 @@ fn namespaces_carry_owner_aliases_placeholders_and_hidden_hooks() {
   assert_eq!(epic["path"], serde_json::json!(["epic"]));
   let queue = command(&doc, &["epic", "queue"]);
   assert_eq!(queue["path"], serde_json::json!(["epic", "queue"]));
-  let planned = command(&doc, &["serve", "planned"]);
-  assert_eq!(planned["placeholder"], true);
-  assert_eq!(planned["path"], serde_json::json!(["serve", "planned"]));
   // A ported namespace (#438) exports real verbs and no placeholder.
   let install = command(&doc, &["plugins", "install"]);
   assert_eq!(install["placeholder"], false);

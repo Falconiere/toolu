@@ -1,4 +1,4 @@
-//! The four fixer hosts, their CLIs, default model routing per tier, and the
+//! The three fixer hosts, their CLIs, default model routing per tier, and the
 //! approval, name, model and effort flags a fixer pane is launched with —
 //! the same contract the epic orchestrator launches workers with.
 
@@ -19,8 +19,6 @@ pub(crate) enum Fixer {
   Codex,
   /// Cursor's agent CLI.
   Cursor,
-  /// `opencode`.
-  Opencode,
 }
 
 /// A tier's model and effort; either may be left to the host.
@@ -48,7 +46,7 @@ pub(crate) fn safe(text: &str) -> bool {
 
 impl Fixer {
   /// Every fixer host.
-  pub(crate) const ALL: [Fixer; 4] = [Fixer::Claude, Fixer::Codex, Fixer::Cursor, Fixer::Opencode];
+  pub(crate) const ALL: [Fixer; 3] = [Fixer::Claude, Fixer::Codex, Fixer::Cursor];
 
   /// The host `name` names, accepting `claude-code` and `cursor-agent`.
   pub(crate) fn parse(name: &str) -> Result<Fixer> {
@@ -56,11 +54,10 @@ impl Fixer {
       "claude" | "claude-code" => Ok(Fixer::Claude),
       "codex" => Ok(Fixer::Codex),
       "cursor" | "cursor-agent" => Ok(Fixer::Cursor),
-      "opencode" => Ok(Fixer::Opencode),
       _ => Err(
         Failure::new(
           "config_invalid",
-          format!("unknown host '{name}'; use one of claude, codex, cursor, opencode"),
+          format!("unknown host '{name}'; use one of claude, codex, cursor"),
         )
         .with("host", name),
       ),
@@ -73,7 +70,6 @@ impl Fixer {
       Fixer::Claude => "claude",
       Fixer::Codex => "codex",
       Fixer::Cursor => "cursor",
-      Fixer::Opencode => "opencode",
     }
   }
 
@@ -81,12 +77,11 @@ impl Fixer {
   pub(crate) fn cli(self) -> &'static str {
     match self {
       Fixer::Cursor => "cursor-agent",
-      Fixer::Claude | Fixer::Codex | Fixer::Opencode => self.name(),
+      Fixer::Claude | Fixer::Codex => self.name(),
     }
   }
 
-  /// The default model and effort per tier, trivial to critical; `opencode`
-  /// runs the user's own default model.
+  /// The default model and effort per tier, trivial to critical.
   pub(crate) fn defaults(self) -> Vec<Choice> {
     match self {
       Fixer::Claude => vec![
@@ -108,7 +103,6 @@ impl Fixer {
       .iter()
       .map(|model| Choice::of(model, None))
       .collect(),
-      Fixer::Opencode => vec![Choice::default(); 4],
     }
   }
 
@@ -117,7 +111,6 @@ impl Fixer {
       (Fixer::Claude, true) => &["--dangerously-skip-permissions"],
       (Fixer::Codex, true) => &["--dangerously-bypass-approvals-and-sandbox"],
       (Fixer::Cursor, true) => &["--yolo", "--trust", "--approve-mcps"],
-      (Fixer::Opencode, true) => &["--auto"],
       (Fixer::Claude, false) => &["--permission-mode", "auto"],
       (Fixer::Codex, false) => &[
         "--ask-for-approval",
@@ -126,7 +119,6 @@ impl Fixer {
         "workspace-write",
       ],
       (Fixer::Cursor, false) => &["--trust"],
-      (Fixer::Opencode, false) => &[],
     }
   }
 
@@ -135,7 +127,6 @@ impl Fixer {
       Fixer::Claude => vec!["--effort".into(), effort.into()],
       Fixer::Codex => vec!["-c".into(), format!("model_reasoning_effort={effort}")],
       Fixer::Cursor => Vec::new(),
-      Fixer::Opencode => vec!["--variant".into(), effort.into()],
     }
   }
 

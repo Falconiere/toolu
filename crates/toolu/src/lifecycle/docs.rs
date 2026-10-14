@@ -65,7 +65,7 @@ pub(crate) fn doc_parts(input: &DocInput<'_>) -> Vec<String> {
     parts.push(render_doc(&input.docs.join("session-start.md"), &pairs));
   }
   if enabled(input.config, "models", "enabled") {
-    parts.push(render_doc(&input.docs.join(model_doc(input.host)), &pairs));
+    parts.push(render_doc(&input.docs.join("model-routing.md"), &pairs));
   }
   if input.verbose {
     append_verbose(&mut parts, input, &pairs);
@@ -122,14 +122,6 @@ fn token_pairs(tokens: &[(String, String)]) -> Vec<(&str, &str)> {
     .iter()
     .map(|(key, value)| (key.as_str(), value.as_str()))
     .collect()
-}
-
-fn model_doc(host: Host) -> &'static str {
-  if host == Host::Opencode {
-    "model-routing-opencode.md"
-  } else {
-    "model-routing.md"
-  }
 }
 
 fn append_verbose(parts: &mut Vec<String>, input: &DocInput<'_>, pairs: &[(&str, &str)]) {

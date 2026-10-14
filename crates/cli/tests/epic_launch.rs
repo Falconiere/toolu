@@ -42,13 +42,12 @@ fn a_dry_run_prints_the_commands_and_the_brief_and_writes_nothing() {
 fn every_host_dry_runs_its_agent_args_prompt_and_exclude() {
   let home = Home::new().unwrap();
   let graph = write_graph(&home, |_| {}).unwrap();
-  for (kind, model, first) in [
-    ("claude", None, "--dangerously-skip-permissions"),
-    ("codex", None, "--no-daemon"),
-    ("cursor", None, "--yolo"),
-    ("opencode", Some("p/m"), "--auto"),
+  for (kind, first) in [
+    ("claude", "--dangerously-skip-permissions"),
+    ("codex", "--no-daemon"),
+    ("cursor", "--yolo"),
   ] {
-    let mut args = vec![
+    let args = vec![
       "--json",
       "epic",
       "launch",
@@ -60,9 +59,6 @@ fn every_host_dry_runs_its_agent_args_prompt_and_exclude() {
       "--kind",
       kind,
     ];
-    if let Some(model) = model {
-      args.extend(["--model", model]);
-    }
     let result = doc(&home.run(&args).unwrap()).unwrap();
     assert_eq!(result["agent_args"][0], first, "{kind}");
     assert_eq!(result["resume"], false);
@@ -71,10 +67,7 @@ fn every_host_dry_runs_its_agent_args_prompt_and_exclude() {
         .as_str()
         .is_some_and(|prompt| prompt.starts_with("You are an epic worker."))
     );
-    assert_eq!(
-      result["exclude"].as_array().map(Vec::len),
-      Some(if kind == "opencode" { 3 } else { 0 })
-    );
+    assert!(result.get("exclude").is_none(), "{kind}");
   }
 }
 

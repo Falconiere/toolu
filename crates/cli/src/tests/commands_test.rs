@@ -14,11 +14,6 @@ fn ran(flags: &[&str], ctx: &Ctx) -> String {
 fn the_listing_has_one_line_per_visible_command() {
   let listing = ran(&[], &Ctx::default());
   let lines: Vec<&str> = listing.lines().collect();
-  assert!(
-    lines
-      .iter()
-      .any(|line| line.starts_with("toolu serve planned "))
-  );
   // A ported namespace lists its real verbs, not the placeholder (#438).
   assert!(
     lines

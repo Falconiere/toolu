@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use toolu_protocol::HOOK_PROTOCOL;
+
 use super::{Manifest, read};
 
 fn plugin(claude: Option<&str>, codex: Option<&str>) -> tempfile::TempDir {
@@ -17,7 +19,7 @@ fn plugin(claude: Option<&str>, codex: Option<&str>) -> tempfile::TempDir {
 fn the_real_toolu_manifest_reads() {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../../plugins/toolu");
   let manifest = read(&root).unwrap();
-  assert_eq!(manifest.hook_protocol, 1);
+  assert_eq!(manifest.hook_protocol, HOOK_PROTOCOL);
   assert_eq!(manifest.version, env!("CARGO_PKG_VERSION"));
 }
 

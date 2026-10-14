@@ -1,4 +1,3 @@
-use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
@@ -6,7 +5,7 @@ use serde_json::json;
 use toolu_runtime::env::Env;
 
 use super::{await_session, capture_session, require_captured_session};
-use crate::hosts::HostKind::{Claude, Codex, Cursor, Opencode};
+use crate::hosts::HostKind::{Claude, Codex, Cursor};
 use crate::launch::digest::md5_hex;
 
 const FIRST: &str = "0199a272-0b4e-7cc3-8c4f-071c81275655";
@@ -152,7 +151,7 @@ fn codex_metadata_attests_one_session_and_never_guesses() {
 }
 
 #[test]
-fn claude_transcripts_and_opencode_sessions_name_the_worktree() {
+fn claude_transcripts_name_the_worktree() {
   let tmp = tempfile::tempdir().expect("temp");
   let (since, wt) = (since(), tmp.path().join("project").display().to_string());
   let claude = tmp.path().join("claude");
@@ -176,25 +175,17 @@ fn claude_transcripts_and_opencode_sessions_name_the_worktree() {
     capture_session(Claude, &wt, since + 3_600_000, &env),
     Ok(None)
   );
-  let bin = tmp.path().join("bin");
-  std::fs::create_dir_all(&bin).expect("bin");
-  std::fs::create_dir_all(&wt).expect("worktree");
-  let list = json!([{"id": "ses_abc", "directory": wt, "created": since + 5}, {"id": "ses_old", "directory": wt, "created": since - 5}]);
-  let script = bin.join("opencode");
-  std::fs::write(&script, format!("#!/bin/sh\necho '{list}'\n")).expect("script");
-  std::fs::set_permissions(&script, std::fs::Permissions::from_mode(0o755)).expect("chmod");
-  let path = env
-    .clone()
-    .with("PATH", &format!("{}:/usr/bin:/bin", bin.display()));
-  assert_eq!(
-    capture_session(Opencode, &wt, since, &path),
-    Ok(Some("ses_abc".to_owned()))
-  );
-  let none =
-    await_session(Opencode, &wt, since, &env, Duration::from_millis(10)).expect_err("none");
+  let none = await_session(
+    Claude,
+    &wt,
+    since + 3_600_000,
+    &env,
+    Duration::from_millis(10),
+  )
+  .expect_err("none");
   assert_eq!(
     none.message,
-    "cannot attest opencode session identity; inspect the owned pane before retry"
+    "cannot attest claude session identity; inspect the owned pane before retry"
   );
 }
 

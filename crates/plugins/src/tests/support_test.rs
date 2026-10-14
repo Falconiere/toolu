@@ -3,7 +3,7 @@
 //! inject the failures and listings a real host cannot be made to produce.
 
 use std::os::unix::fs::PermissionsExt as _;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use tempfile::TempDir;
 use toolu_runtime::env::Env;
@@ -47,11 +47,6 @@ impl Sandbox {
     }
     std::fs::write(&path, text).expect("write");
     path
-  }
-
-  /// Reads `root/rel`.
-  pub(crate) fn read(&self, rel: &str) -> String {
-    std::fs::read_to_string(self.path(rel)).expect("read")
   }
 
   /// An executable `bin/<name>` running `body` under `/bin/sh`. It is written
@@ -102,19 +97,6 @@ impl Sandbox {
       ),
     ])
   }
-
-  /// A git repository at `root/rel` (created once), returned.
-  pub(crate) fn git_project(&self, rel: &str) -> PathBuf {
-    let dir = self.path(rel);
-    if !dir.join(".git").exists() {
-      std::fs::create_dir_all(&dir).expect("project");
-      let init =
-        toolu_runtime::process::Spec::new(["git", "init", "-q", &dir.display().to_string()]);
-      let ran = toolu_runtime::process::run(&init).expect("git init");
-      assert_eq!(ran.exit_code, 0, "git init: {}", ran.stderr);
-    }
-    dir
-  }
 }
 
 /// The catalog this binary was built with.
@@ -125,104 +107,6 @@ pub(crate) fn catalog() -> Catalog {
 /// `names` as owned strings.
 pub(crate) fn names(names: &[&str]) -> Vec<String> {
   names.iter().map(|name| (*name).to_owned()).collect()
-}
-
-/// The spec `OpenCode` installs in these tests.
-pub(crate) const TARGET: &str = "@toolu/opencode@7.11.0";
-
-/// `home/.config/opencode/<rel>`.
-pub(crate) fn global(rel: &str) -> String {
-  format!("home/.config/opencode/{rel}")
-}
-
-/// `project/<rel>`.
-pub(crate) fn local(rel: &str) -> String {
-  format!("project/{rel}")
-}
-
-/// A selection file's text.
-pub(crate) fn selection(enabled: &[&str]) -> String {
-  crate::opencode::selection::selection_text(&names(enabled))
-}
-
-/// The enabled list of a selection file's text.
-pub(crate) fn enabled_of(text: &str) -> Vec<String> {
-  let value: serde_json::Value = serde_json::from_str(text).expect("selection");
-  value["enabled"]
-    .as_array()
-    .expect("enabled")
-    .iter()
-    .filter_map(|v| v.as_str().map(str::to_owned))
-    .collect()
-}
-
-/// The `plugin` array of a config file's text.
-pub(crate) fn plugins_of(text: &str) -> serde_json::Value {
-  let map = crate::opencode::jsonc::parse_config(Path::new("t"), text).expect("config");
-  map.get("plugin").cloned().unwrap_or_default()
-}
-
-/// A confirmed, non-interactive request.
-pub(crate) fn request(
-  verb: crate::args::Verb,
-  plugins: &[&str],
-  scope: Option<crate::args::Scope>,
-  dry_run: bool,
-) -> crate::args::Request {
-  crate::args::Request {
-    verb,
-    names: names(plugins),
-    scope,
-    config: None,
-    yes: true,
-    dry_run,
-    no_input: true,
-    catalog: None,
-  }
-}
-
-/// `toolu plugins <verb> <plugins> --host opencode` in the sandbox's git
-/// project; `remove` is confirmed.
-pub(crate) fn opencode(
-  sb: &Sandbox,
-  verb: crate::args::Verb,
-  plugins: &[&str],
-  scope: Option<crate::args::Scope>,
-  dry_run: bool,
-) -> Result<crate::dispatch::Report, crate::fail::Fail> {
-  opencode_with(sb, &sb.env(), &request(verb, plugins, scope, dry_run))
-}
-
-/// `request` on `OpenCode` with an explicit environment.
-pub(crate) fn opencode_with(
-  sb: &Sandbox,
-  env: &Env,
-  request: &crate::args::Request,
-) -> Result<crate::dispatch::Report, crate::fail::Fail> {
-  let mut cx = crate::dispatch::Context {
-    env: env.clone(),
-    cwd: sb.git_project("project"),
-    host: Some(toolu_protocol::host::Host::Opencode),
-    ask: None,
-    timeout: std::time::Duration::from_secs(10),
-    version: "7.11.0",
-  };
-  crate::dispatch::dispatch(request, &catalog(), &mut cx)
-}
-
-/// The names `list --json` reports enabled, sorted.
-pub(crate) fn enabled_names(sb: &Sandbox) -> Vec<String> {
-  let report = opencode(sb, crate::args::Verb::List, &[], None, false).expect("list");
-  let mut enabled: Vec<String> = report
-    .json
-    .as_array()
-    .expect("rows")
-    .iter()
-    .filter(|row| row["enabled"] == serde_json::json!(true))
-    .filter_map(|row| row["name"].as_str().map(str::to_owned))
-    .collect();
-  enabled.sort();
-  enabled
 }
 
 /// Answers every prompt with fixed indices, as a person at the terminal would;

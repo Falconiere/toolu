@@ -1,6 +1,6 @@
 //! Each host's names for the host events (`packages/toolu-core/src/host/host-events.ts`):
-//! Claude Code and Codex use `PascalCase`, Cursor `camelCase`, Hermes `snake_case` and
-//! `OpenCode` dotted plugin hooks. `None` marks an event the host does not have.
+//! Claude Code and Codex use `PascalCase`, Cursor `camelCase` and Hermes `snake_case`.
+//! `None` marks an event the host does not have.
 
 use crate::event::HostEvent;
 use crate::host::Host;
@@ -19,7 +19,6 @@ pub fn native_event(host: Host, event: HostEvent) -> Option<&'static str> {
     Host::Claude | Host::Codex => Some(pascal(event)),
     Host::Cursor => cursor(event),
     Host::Hermes => hermes(event),
-    Host::Opencode => opencode(event),
   }
 }
 
@@ -34,7 +33,7 @@ pub fn canonical_event(host: Host, native: &str) -> Option<HostEvent> {
       .into_iter()
       .find(|(alias, _)| *alias == native)
       .map(|(_, event)| event),
-    Host::Claude | Host::Codex | Host::Hermes | Host::Opencode => None,
+    Host::Claude | Host::Codex | Host::Hermes => None,
   })
 }
 
@@ -79,18 +78,6 @@ fn hermes(event: HostEvent) -> Option<&'static str> {
     HostEvent::PreCompact | HostEvent::PermissionEvaluate => None,
     HostEvent::ToolPre | HostEvent::ShellPre => Some("pre_tool_call"),
     HostEvent::ToolPost => Some("post_tool_call"),
-  }
-}
-
-fn opencode(event: HostEvent) -> Option<&'static str> {
-  match event {
-    HostEvent::SessionStart => Some("session.created"),
-    HostEvent::SessionUnload => Some("session.deleted"),
-    HostEvent::Prompt => Some("chat.message"),
-    HostEvent::PreCompact => Some("experimental.session.compacting"),
-    HostEvent::PermissionEvaluate => None,
-    HostEvent::ToolPre | HostEvent::ShellPre => Some("tool.execute.before"),
-    HostEvent::ToolPost => Some("tool.execute.after"),
   }
 }
 

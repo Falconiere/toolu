@@ -22,7 +22,7 @@ pub(crate) enum Verb {
 /// `--scope`: where a host installs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Scope {
-  /// Claude Code's user scope; `OpenCode`'s global config.
+  /// Claude Code's user scope.
   User,
   /// The project.
   Project,
@@ -74,10 +74,7 @@ pub(crate) struct Request {
 const ABOUT: &str = "Install, list, remove and update toolu plugins on every host";
 
 const AFTER: &str = "Claude Code and Codex are driven through their own plugin CLIs. \
-  OpenCode is managed through its config files: install adds @toolu/opencode to opencode.json \
-  and enables plugins in a toolu/plugins.json selection (global, or the project's \
-  .opencode/toolu/plugins.json); remove toolu drops the package, remove <name> disables one \
-  plugin. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; \
+  The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; \
   its guide is docs/cli/installer.md.";
 
 /// The `toolu plugins` namespace.
@@ -138,11 +135,11 @@ fn changes(verb: Command) -> Command {
         .long("scope")
         .value_name("SCOPE")
         .value_parser(["user", "project", "local"])
-        .help("user, project or local (Claude Code); user or project (OpenCode)"),
+        .help("user, project or local (Claude Code only)"),
     )
     .arg(flag(
       "dry-run",
-      "Print the host commands or config changes without applying them",
+      "Print the host commands without running them",
     ))
     .arg(flag(
       "no-input",

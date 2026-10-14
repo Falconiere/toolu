@@ -32,8 +32,6 @@ const JIRA_INTEGRATION = new Set([
   "plugins/toolu/hooks/src/__tests__/session-start-cases.ts",
   "plugins/toolu/hooks/src/__tests__/user-prompt-submit-cases.ts",
   "plugins/toolu/settings/README.md",
-  "tooling/src/opencode-acceptance/__tests__/run.test.ts",
-  "tooling/src/opencode-acceptance/run.ts",
   "tooling/src/pack-inventory.ts",
 ]);
 
@@ -68,11 +66,9 @@ for (const term of ["exa-search", "context7", "agent-browser", "jira"]) {
     }
     if (
       term === "jira" &&
-      (JIRA_INTEGRATION.has(path) ||
-        path.startsWith("crates/epic-orchestrator/") ||
-        path.startsWith("tools/toolu-opencode/generated/"))
+      (JIRA_INTEGRATION.has(path) || path.startsWith("crates/epic-orchestrator/"))
     ) {
-      continue; // built-in tracker, its crate's verb and drift-checked generated copies
+      continue; // built-in tracker, and its crate's verb
     }
     unexpected.push(`${path}: ${term}`);
   }

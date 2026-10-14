@@ -29,7 +29,7 @@ function childEnv(env) {
 }
 var HOST_NAMES;
 var init_host_name = __esm(() => {
-  HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
+  HOST_NAMES = ["claude", "codex", "cursor", "hermes"];
 });
 
 // packages/toolu-core/src/host/host-events.ts
@@ -88,16 +88,6 @@ var init_host_events = __esm(() => {
       "tool/pre": "pre_tool_call",
       "shell/pre": "pre_tool_call",
       "tool/post": "post_tool_call"
-    },
-    opencode: {
-      "session/start": "session.created",
-      "session/unload": "session.deleted",
-      prompt: "chat.message",
-      pre_compact: "experimental.session.compacting",
-      "permission/evaluate": null,
-      "tool/pre": "tool.execute.before",
-      "shell/pre": "tool.execute.before",
-      "tool/post": "tool.execute.after"
     }
   };
   ALIASES = {
@@ -192,24 +182,12 @@ function hermesOutput(event, decision) {
   }
   return "";
 }
-function opencodeCallback(decision) {
-  if (decision.kind === "deny" || decision.kind === "ask") {
-    return { kind: "callback", action: "throw", message: decision.reason };
-  }
-  if (decision.kind === "advisory" || decision.kind === "post_block") {
-    return { kind: "callback", action: "continue", message: text(decision) };
-  }
-  return { kind: "callback", action: "continue" };
-}
 function encodeDecision(host, event, decision) {
   const native = nativeEventName(host, event);
   if (native === null) {
     throw new Error(`${host} has no native event for ${event}`);
   }
   const normalized = normalize(host, event, decision);
-  if (host === "opencode") {
-    return opencodeCallback(normalized);
-  }
   const stdout = host === "cursor" ? cursorOutput(event, normalized) : host === "hermes" ? hermesOutput(event, normalized) : hookOutput(native, event, normalized);
   return { kind: "command", stdout, stderr: "", exitCode: 0 };
 }
@@ -234,8 +212,7 @@ var init_host_encode = __esm(() => {
     claude: new Set(["tool/pre", "shell/pre", "permission/evaluate"]),
     codex: new Set(["permission/evaluate"]),
     cursor: new Set(["shell/pre"]),
-    hermes: new Set,
-    opencode: new Set
+    hermes: new Set
   };
 });
 
@@ -252,9 +229,6 @@ function detectHost(options = {}) {
       return override;
     }
     (options.warn ?? stderrLine)(`toolu-host: invalid TOOLU_HOST_OVERRIDE '${override}' (using environment detection)`);
-  }
-  if (options.inProcess === "opencode") {
-    return "opencode";
   }
   const owners = options.hookEventName ? hostsForNativeEvent(options.hookEventName) : [];
   const [owner] = owners;
@@ -326,8 +300,7 @@ var init_host_roots = __esm(() => {
     claude: (env) => envValue(env, "CLAUDE_CONFIG_DIR") ?? join(home(env), ".claude"),
     codex: (env) => envValue(env, "CODEX_HOME") ?? join(home(env), ".codex"),
     cursor: (env) => join(home(env), ".cursor"),
-    hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes"),
-    opencode: (env) => envValue(env, "TOOLU_OPENCODE_HOME") ?? join(envValue(env, "XDG_CONFIG_HOME") ?? join(home(env), ".config"), "opencode")
+    hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes")
   };
   PROJECT_DIR_VAR = {
     claude: "CLAUDE_PROJECT_DIR",
@@ -335,8 +308,7 @@ var init_host_roots = __esm(() => {
   };
   PLUGIN_ROOT_VAR = {
     codex: "PLUGIN_ROOT",
-    cursor: "CURSOR_PLUGIN_ROOT",
-    opencode: "TOOLU_PLUGIN_ROOT"
+    cursor: "CURSOR_PLUGIN_ROOT"
   };
 });
 

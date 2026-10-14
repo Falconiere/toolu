@@ -9,17 +9,15 @@ use crate::ci_yaml::bun_binary;
 use crate::options::Options;
 use crate::{Verdict, output};
 
-const PACKAGES: [&str; 5] = [
+const PACKAGES: [&str; 4] = [
   "packages/toolu-core",
-  "tools/toolu-opencode",
   "tools/toolu-conformance",
   "tools/toolu-cli",
   "tooling",
 ];
 
-const WORKSPACES: [&str; 4] = [
+const WORKSPACES: [&str; 3] = [
   "packages/toolu-core",
-  "tools/toolu-opencode",
   "tools/toolu-conformance",
   "tools/toolu-cli",
 ];
@@ -29,10 +27,6 @@ const { parseDecision } = await import("@toolu/core/decision");
 if (parseDecision({ kind: "allow" }).kind !== "allow") throw new Error("decision");
 const { detectHost } = await import("@toolu/core/host");
 if (detectHost({ env: { PLUGIN_ROOT: "/p" } }) !== "codex") throw new Error("host");
-const { classifyStub } = await import("@toolu/opencode/plugin-stub");
-if (classifyStub("shell-out") !== "shell-out") throw new Error("classify");
-const plugin = (await import("@toolu/opencode")).default;
-if (plugin.id !== "toolu") throw new Error("default entry");
 const { runProtectedFilesConformance } = await import("@toolu/conformance/run-stub");
 const conformance = await runProtectedFilesConformance();
 if (!conformance.pass) throw new Error(conformance.message ?? "conformance");
@@ -137,7 +131,7 @@ fn read_json(root: &Path, rel: &str) -> Result<Value, String> {
 
 fn smoke_message(stderr: &[u8]) -> String {
   let text = String::from_utf8_lossy(stderr);
-  for token in ["decision", "host", "classify", "default entry"] {
+  for token in ["decision", "host"] {
     if text.contains(token) {
       return token.to_owned();
     }

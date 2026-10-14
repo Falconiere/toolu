@@ -150,7 +150,7 @@ Every live hook and built-in gate in this inventory is \`port-native\`. The host
   const body =
     header +
     lines.join("\n") +
-    "\n\n## Notes\n\n- Native built-in gate rows point to their TypeScript source and the dispatcher hook that invokes them.\n- OpenCode supports the host events documented in [conformance-report.md](conformance-report.md); this inventory records the implementation of each listed hook rather than claiming every host exposes every event.\n";
+    "\n\n## Notes\n\n- Native built-in gate rows point to their TypeScript source and the dispatcher hook that invokes them.\n- This inventory records the implementation of each listed hook rather than claiming every host exposes every event.\n";
   writeFileSync(MATRIX, body);
   process.stdout.write(`gate-coverage-inventory: wrote ${rel(MATRIX)} (${rows.length} rows)\n`);
 }

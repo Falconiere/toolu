@@ -10,7 +10,7 @@ import { z } from "zod";
 const ROOT = resolve(import.meta.dir, "../../..");
 const WF = readFileSync(join(ROOT, ".github/workflows/npm-publish.yml"), "utf8");
 const RELEASE_PLEASE = readFileSync(join(ROOT, ".github/workflows/release-please.yml"), "utf8");
-const PUBLISHED = ["packages/toolu-core", "tools/toolu-opencode", "tools/toolu-cli/npm"];
+const PUBLISHED = ["packages/toolu-core", "tools/toolu-cli/npm"];
 const TOKEN_LINE = "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}";
 
 const PackageJson = z.looseObject({
@@ -48,7 +48,6 @@ test.concurrent("release-please bumps the CLI package alongside every other pack
   expect(paths).toContain("tools/toolu-cli/package.json");
   expect(paths).toContain("tools/toolu-cli/npm/package.json");
   expect(paths).toContain("packages/toolu-core/package.json");
-  expect(paths).toContain("tools/toolu-opencode/package.json");
 });
 
 test.concurrent("the CLI version matches every other workspace package", () => {
@@ -57,7 +56,6 @@ test.concurrent("the CLI version matches every other workspace package", () => {
     "tools/toolu-cli",
     "tools/toolu-cli/npm",
     "packages/toolu-core",
-    "tools/toolu-opencode",
     "tools/toolu-conformance",
   ];
   for (const dir of dirs) {
@@ -109,7 +107,7 @@ test.concurrent("the publish workflow refuses a tag that disagrees with any pack
   expect(WF).toContain("does not match $dir version");
 });
 
-test.concurrent("the three published packages are publishable and conformance stays private", () => {
+test.concurrent("the published packages are publishable and conformance stays private", () => {
   for (const dir of PUBLISHED) {
     const pkg = readPackage(dir);
     expect({ dir, private: pkg.private ?? null }).toEqual({ dir, private: null });
@@ -129,52 +127,14 @@ test.concurrent("the three published packages are publishable and conformance st
   expect(cli.name).not.toBe("@toolu/plugins");
 });
 
-// @toolu/opencode depends on @toolu/core. The dependency is a caret range, not
-// the workspace: protocol (npm would ship that verbatim and Bun's installer
-// would reject it -- #287), so core must reach the registry first.
-test.concurrent("the workflow publishes in dependency order, core before opencode", () => {
-  expect(WF).toContain("packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm");
-});
-
-// release-please's json updater replaces only the semver inside the value, so
-// the caret survives and the floor tracks every release (#361). A floor below
-// the release let an install resolve a core without the adapter's exports.
-test.concurrent("@toolu/opencode declares @toolu/core with a caret on its own release, never workspace:*", () => {
-  const pkg = readPackage("tools/toolu-opencode");
-  expect(pkg.dependencies?.["@toolu/core"]).toBe(`^${pkg.version ?? ""}`);
-  const raw = readFileSync(join(ROOT, "tools/toolu-opencode/package.json"), "utf8");
-  expect(raw).not.toContain("workspace:");
-});
-
-test.concurrent("release-please raises the @toolu/core floor with every release", () => {
-  const config = ReleasePleaseConfig.parse(
-    JSON.parse(readFileSync(join(ROOT, "release-please-config.json"), "utf8")),
-  );
-  const entries = config.packages["."]["extra-files"].filter(
-    (file) => file.path === "tools/toolu-opencode/package.json",
-  );
-  expect(entries.map((entry) => entry.jsonpath)).toEqual([
-    "$.version",
-    "$.dependencies['@toolu/core']",
-  ]);
-});
-
-test.concurrent("@toolu/opencode ships a resolvable default entry", () => {
-  const pkg = readPackage("tools/toolu-opencode");
-  expect(pkg.main).toBe("./src/plugin/toolu.ts");
-  expect(pkg.exports?.["."]).toBe("./src/plugin/toolu.ts");
-  expect(existsSync(join(ROOT, "tools/toolu-opencode/src/plugin/toolu.ts"))).toBe(true);
-});
-
 test.concurrent("a package already on the registry is skipped so a re-run resumes", () => {
   expect(WF).toContain("is already published");
   expect(WF).toContain("skipping");
 });
 
-// @toolu/opencode declares a concrete @toolu/core version. Publishing it after
-// core failed would put a package on the registry whose dependency is absent.
-test.concurrent("a failed publish aborts instead of continuing to dependent packages", () => {
-  expect(WF).toContain("stopping before its dependents");
+// A failed publish must not be followed by the next package in the same run.
+test.concurrent("a failed publish aborts instead of continuing to the next package", () => {
+  expect(WF).toContain("failed; stopping");
   // No accumulate-and-continue: the old loop set a status flag and carried on.
   expect(WF).not.toContain("status=1");
 });
@@ -237,7 +197,7 @@ test.concurrent("the workflow waits until every published package resolves befor
   expect(publishLine).toBeGreaterThanOrEqual(0);
   expect(waitLine).toBeGreaterThan(publishLine);
   // Each package gets its full propagation window. In the 7.7.0 release,
-  // core took almost eight minutes and a shared deadline gave opencode only
+  // core took almost eight minutes and a shared deadline gave the next package only
   // thirty seconds before falsely failing the deployment.
   const waitLines = lines.slice(waitLine);
   const packageLoop = waitLines.findIndex((line) => line.trim().startsWith("for dir in "));
@@ -246,7 +206,7 @@ test.concurrent("the workflow waits until every published package resolves befor
   expect(deadline).toBeGreaterThan(packageLoop);
   expect(deadline).toBeLessThan(poll);
   expect(waitLines[deadline]).toBe("            deadline=$(( $(date +%s) + 8 * 60 ))");
-  // Three eight-minute waits plus setup and publishing must fit in the job.
+  // Two eight-minute waits plus setup and publishing must fit in the job.
   expect(WF).toContain("timeout-minutes: 30");
   // setup-node's .npmrc reads NODE_AUTH_TOKEN on every npm call, so the wait
   // step needs the token too, not only the publish step.
@@ -265,43 +225,23 @@ function tagCheckScript(tag: string): string {
   return body.join("\n").replace("${{ inputs.tag }}", tag);
 }
 
-/**
- * The three published manifests and release-please-config.json copied into a
- * temp tree, `edit` applied to opencode's. `synced: false` drops the core-floor
- * extra-file, like a tag cut before #361.
- */
-function manifestTree(edit: (pkg: Record<string, unknown>) => void, synced = true): string {
-  const dir = mkdtempSync(join(tmpdir(), "npm-publish-tag-"));
-  const config = readFileSync(join(ROOT, "release-please-config.json"), "utf8");
-  const floorEntry = /\s*\{[^{}]*"\$\.dependencies\['@toolu\/core'\]"[^{}]*\},/;
-  writeFileSync(
-    join(dir, "release-please-config.json"),
-    synced ? config : config.replace(floorEntry, ""),
-  );
-  for (const rel of PUBLISHED) {
-    const pkg = z
-      .record(z.string(), z.unknown())
-      .parse(JSON.parse(readFileSync(join(ROOT, rel, "package.json"), "utf8")));
-    if (rel === "tools/toolu-opencode") edit(pkg);
-    mkdirSync(join(dir, rel), { recursive: true });
-    writeFileSync(join(dir, rel, "package.json"), JSON.stringify(pkg));
-  }
-  return dir;
-}
-
-function staleFloor(pkg: Record<string, unknown>): void {
-  pkg["dependencies"] = {
-    ...z.record(z.string(), z.string()).parse(pkg["dependencies"]),
-    "@toolu/core": "^7.4.0",
-  };
-}
-
-test.concurrent("the tag check passes for this release and refuses a stale @toolu/core floor", async () => {
+test.concurrent("the tag check passes for this release and refuses a stale package version", async () => {
   const tag = `v${readPackage(".").version ?? ""}`;
-  const good = manifestTree(() => undefined);
-  const stale = manifestTree(staleFloor);
-  const older = manifestTree(staleFloor, false);
+  const good = mkdtempSync(join(tmpdir(), "npm-publish-tag-"));
+  const stale = mkdtempSync(join(tmpdir(), "npm-publish-tag-"));
   try {
+    for (const [dir, version] of [
+      [good, readPackage(".").version ?? ""],
+      [stale, "0.0.1"],
+    ] as const) {
+      for (const rel of PUBLISHED) {
+        const pkg = z
+          .record(z.string(), z.unknown())
+          .parse(JSON.parse(readFileSync(join(ROOT, rel, "package.json"), "utf8")));
+        mkdirSync(join(dir, rel), { recursive: true });
+        writeFileSync(join(dir, rel, "package.json"), JSON.stringify({ ...pkg, version }));
+      }
+    }
     const ok = await run(["bash", "-c", tagCheckScript(tag)], { cwd: good });
     expect({ exitCode: ok.exitCode, stdout: ok.stdout }).toEqual({
       exitCode: 0,
@@ -310,18 +250,9 @@ test.concurrent("the tag check passes for this release and refuses a stale @tool
     const refused = await run(["bash", "-c", tagCheckScript(tag)], { cwd: stale });
     expect({ exitCode: refused.exitCode, stderr: refused.stderr }).toEqual({
       exitCode: 1,
-      stderr: `tag ${tag} does not match the @toolu/opencode @toolu/core floor ^7.4.0\n`,
+      stderr: `tag ${tag} does not match packages/toolu-core version 0.0.1\n`,
     });
-    // A tag from before the floor was synced has no such config entry and stays retryable.
-    const retried = await run(["bash", "-c", tagCheckScript(tag)], { cwd: older });
-    expect({ exitCode: retried.exitCode, stdout: retried.stdout }).toEqual({
-      exitCode: 0,
-      stdout: `publishing ${tag}\n`,
-    });
-    expect(readFileSync(join(older, "release-please-config.json"), "utf8")).not.toContain(
-      "@toolu/core']",
-    );
   } finally {
-    for (const dir of [good, stale, older]) rmSync(dir, { recursive: true, force: true });
+    for (const dir of [good, stale]) rmSync(dir, { recursive: true, force: true });
   }
 });

@@ -4,7 +4,7 @@ The core toolu plugin launches its hooks through the installed native `toolu` bi
 
 > **Core plugin.** Install the `toolu` binary once with the get.toolu.sh installer or Homebrew before enabling the toolu plugin. Its eight hook entries use native launchers. A temporary Bun bundle fallback remains for one transition release, and `TOOLU_RUNTIME=bun` selects that rollback path. See [install.md](install.md) for targets, version skew and resolution.
 
-> **Migration status.** Leaf plugins still using TypeScript hooks or `.js` registry modules need Bun. Their own launchers continue to use the Bun path described below. OpenCode continues to enforce its adapter's TypeScript gates until #437.
+> **Migration status.** Leaf plugins still using TypeScript hooks or `.js` registry modules need Bun. Their own launchers continue to use the Bun path described below.
 
 ## Bun prerequisite for remaining TypeScript hooks
 
@@ -98,7 +98,7 @@ There is no `node` fallback. Measured warm hook startup on macOS: bash plus jq 6
 ## Decision record
 
 - **Historical decision (#247):** run plugins, hooks, gates, scripts and tests on TypeScript under Bun while retiring bash and bats. Epic #402 supersedes this for ported hooks, starting with toolu's native entries in #425.
-- **Why:** every host except OpenCode spawns command hooks in any language, and OpenCode loads TypeScript in-process, so TypeScript on Bun is the one language every host can run. The measurements show parity, not a speed-up: Bun (5.2 ms) is within 1.1 ms of bash plus jq (6.3 ms), so the rewrite does not slow hooks. The reason to migrate is one language across all hosts, not speed.
+- **Why:** every host spawns command hooks in any language, so TypeScript on Bun is one language every host can run. The measurements show parity, not a speed-up: Bun (5.2 ms) is within 1.1 ms of bash plus jq (6.3 ms), so the rewrite does not slow hooks. The reason to migrate is one language across all hosts, not speed.
 - **Evidence:** the latency measurements above (macOS, recorded in [epic #247](https://github.com/Falconiere/toolu/issues/247)) support only that Bun does not regress hook startup and that node is 8x slower than Bun; they do not by themselves justify the rewrite.
 - **Current consequence:** Bun 1.4.x remains necessary for unported leaf hooks, registry modules and the temporary rollback path. The core toolu hooks default to the native binary.
 - **Supersedes:** the #203 non-goal of keeping Claude Code and Codex free of a mandatory Bun dependency.

@@ -2,6 +2,7 @@ use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
@@ -38,7 +39,7 @@ fn shim(dir: &Path, version: &str) {
   .unwrap();
   fs::write(
     dir.join(".claude-plugin/plugin.json"),
-    format!(r#"{{"name":"jev","version":"{version}","hookProtocol":1}}"#),
+    format!(r#"{{"name":"jev","version":"{version}","hookProtocol":{HOOK_PROTOCOL}}}"#),
   )
   .unwrap();
 }

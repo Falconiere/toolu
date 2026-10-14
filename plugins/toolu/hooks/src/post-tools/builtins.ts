@@ -1,7 +1,7 @@
 /**
  * The toolu plugin's built-in PostToolUse modules (#259), in the byte order
  * `post-tools/mod.sh` globs `modules/*.sh`. Both are native ports; the bash
- * scripts stay as the parity baseline until the OpenCode bridge drops them.
+ * scripts stay as the parity baseline.
  */
 import type { ToolModule } from "@toolu/core/dispatch";
 import { gateStatusModule, pushWaiverModule } from "@toolu/core/gates";

@@ -23,7 +23,6 @@ import { envOr } from "./env.ts";
 
 const WORKSPACE_PACKAGES = [
   "packages/toolu-core/package.json",
-  "tools/toolu-opencode/package.json",
   "tools/toolu-conformance/package.json",
 ];
 

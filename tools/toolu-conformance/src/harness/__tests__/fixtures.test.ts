@@ -9,7 +9,6 @@ import {
   postToolFixture,
   promptFixture,
   sessionFixture,
-  toOpencodePermission,
   toStdin,
   writeFixture,
 } from "../fixtures.ts";
@@ -140,22 +139,4 @@ test.concurrent("cursor stdin uses its native shell, MCP and preToolUse events",
     tool_name: "Edit",
   });
   expect(() => toStdin("cursor", sessionFixture("startup"), ctx)).toThrow(HostOutputError);
-});
-
-test.concurrent("opencode permission events cover edit, write and bash only", () => {
-  expect(toOpencodePermission(editFixture("/p/a.ts", "a", "b"))).toEqual({
-    sessionID: "harness-session",
-    action: "edit",
-    resources: ["/p/a.ts"],
-    metadata: { file_path: "/p/a.ts" },
-    effect: "allow",
-  });
-  expect(toOpencodePermission(bashFixture("ls"), "s2")).toMatchObject({
-    sessionID: "s2",
-    action: "bash",
-    resources: ["ls"],
-    metadata: { command: "ls" },
-  });
-  expect(toOpencodePermission(writeFixture("/p/b.ts", "x")).action).toBe("write");
-  expect(() => toOpencodePermission(mcpFixture("github", "get_me", {}))).toThrow(HostOutputError);
 });

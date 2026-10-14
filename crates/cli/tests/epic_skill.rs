@@ -82,10 +82,10 @@ fn the_skill_checks_previews_then_starts() {
 fn the_skill_waits_in_the_background_on_claude_and_in_bounded_loops_elsewhere() {
   let text = skill().unwrap();
   let wait = section(&text, "4. Wait for judgments").unwrap();
-  let claude = wait.split("- **Codex and OpenCode:**").next().unwrap();
+  let claude = wait.split("- **Codex:**").next().unwrap();
   assert!(claude.contains("`toolu --json epic wait`") && claude.contains("run_in_background"));
   assert!(claude.contains("end your turn") && claude.contains("`waiting` after 45 minutes"));
-  let others = wait.split("- **Codex and OpenCode:**").nth(1).unwrap();
+  let others = wait.split("- **Codex:**").nth(1).unwrap();
   assert!(others.contains("`toolu --json epic wait --max-seconds 480`"));
   assert!(others.contains("run it again while any issue is active"));
 }

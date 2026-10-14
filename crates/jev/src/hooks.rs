@@ -149,7 +149,7 @@ fn failed_output() -> Output {
   }
 }
 
-/// The skill line every non-`OpenCode` host gets for `plugin`.
+/// The skill line every host gets for `plugin`.
 pub(crate) fn skill_file(plugin: &Path) -> String {
   format!("{}/skills/jev/SKILL.md", plugin.display())
 }

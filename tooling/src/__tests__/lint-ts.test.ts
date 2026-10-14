@@ -26,13 +26,12 @@ test.concurrent("lint-ts fails, naming the directory, when a config has no lint 
   expect(res.stderr).toContain(`lint:ts: no lint target under ${sb.path("plugins/stray")}`);
 });
 
-test.concurrent("lint-ts skips node_modules and the OpenCode plugin mirror, and passes clean sources", async () => {
+test.concurrent("lint-ts skips node_modules and passes clean sources", async () => {
   using sb = createSandbox({
     files: {
       "packages/a/.oxlintrc.json": "{}\n",
       "packages/a/src/a.ts": "export const a = 1;\n",
       "packages/a/node_modules/dep/.oxlintrc.json": "{}\n",
-      "tools/toolu-opencode/plugins/x/.oxlintrc.json": "{}\n",
     },
   });
   const res = await run([process.execPath, SCRIPT], {

@@ -216,13 +216,6 @@ pub(crate) fn epics_home(env: &Env) -> PathBuf {
     let root = codex.map_or_else(|| env.home().join(".codex"), PathBuf::from);
     return root.join("toolu").join("epics");
   }
-  let opencode = env
-    .get("TOOLU_OPENCODE_HOME")
-    .or_else(|| env.get("OPENCODE_HOME"));
-  if host == "opencode" || (unset && opencode.is_some()) {
-    let root = opencode.map_or_else(|| env.home().join(".opencode"), PathBuf::from);
-    return root.join("toolu").join("epics");
-  }
   env.home().join(".claude").join("epics")
 }
 

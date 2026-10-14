@@ -75,7 +75,7 @@ impl Dispatcher<'_> {
       start.items.display()
     );
     let items = read_object(start.items, "plan_invalid", items_message)?;
-    validate(&plan, &items, &self.state, self.env)?;
+    validate(&plan, &items, &self.state)?;
     self.refuse_active()?;
     Ok((plan, items))
   }
@@ -160,10 +160,7 @@ impl Dispatcher<'_> {
       .and_then(Value::as_array)
       .cloned()
       .unwrap_or_default();
-    let needs_pane = groups
-      .iter()
-      .any(|group| text(group, "host") != Some("opencode"));
-    if needs_pane && !self.dry && !reachable(self.env) {
+    if !self.dry && !reachable(self.env) {
       let message = "herdr is not reachable (not installed, or its server is not running); \
                      run this round inline";
       return Err(Failure::new("herdr_unavailable", message));
@@ -175,7 +172,7 @@ impl Dispatcher<'_> {
       "git_error",
       format!("git fetch origin {base} failed in {root}"),
     )?;
-    let worktree = self.worktree(root, start.branch, needs_pane)?;
+    let worktree = self.worktree(root, start.branch)?;
     let round = crate::json::round(&items).unwrap_or(1);
     let context = self.context(start, &worktree, round, groups.len());
     let items_file = self.copy_items(start)?;

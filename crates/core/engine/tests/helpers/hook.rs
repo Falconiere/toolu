@@ -63,7 +63,7 @@ impl Hook {
   pub(crate) fn config_root(&self) -> PathBuf {
     match self.host {
       Host::Codex => self.sb.path("codex"),
-      Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => self.sb.path("home/.claude"),
+      Host::Claude | Host::Cursor | Host::Hermes => self.sb.path("home/.claude"),
     }
   }
 
@@ -93,7 +93,7 @@ impl Hook {
       Host::Codex => env
         .with("PLUGIN_ROOT", &self.sb.text("plugin"))
         .with("CODEX_HOME", &self.sb.text("codex")),
-      Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => {
+      Host::Claude | Host::Cursor | Host::Hermes => {
         env.with("CLAUDE_PROJECT_DIR", &self.sb.text("project"))
       }
     };

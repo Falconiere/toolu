@@ -4,7 +4,7 @@ Every toolu gate answers one question and then has to decide how forcefully to
 say no. The question is the gate's own business; the answer's **delivery** is a
 mode you configure.
 
-Portable Bun/TS + OpenCode contracts (pins, decision union, bash bridge):
+Portable Bun/TS contracts (pins, decision union, bash bridge):
 [`docs/portable-core.md`](../../../../docs/portable-core.md).
 
 ## Modes

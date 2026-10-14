@@ -101,7 +101,7 @@ export type PublishedCliSpec = {
   /** Running the published path with `args` (and `env`) exits `exitCode` and prints `output`. */
   probe: { args: string[]; env?: EnvPatch; exitCode: number; output: string };
   /** The exact `systemMessage` a deprecated plugin prints on each host (#403); absent: silent. */
-  notice?: Record<StartupHost | "opencode", string>;
+  notice?: Record<StartupHost, string>;
 };
 
 /** The hook's exact stdout on `host`: the notice object, or nothing. */
@@ -206,38 +206,6 @@ async function failsSoftWithoutSource(spec: PublishedCliSpec): Promise<void> {
   expect(existsSync(join(startupRoot("claude", sb), spec.dir))).toBe(false);
 }
 
-const NoticeOutput = z.strictObject({
-  hookSpecificOutput: z
-    .strictObject({ hookEventName: z.literal("SessionStart"), additionalContext: z.string() })
-    .optional(),
-  systemMessage: z.string().optional(),
-});
-
-/**
- * On OpenCode the notice rides beside any startup context at a start, and is
- * left out at a compaction, which OpenCode runs SessionStart again for (#403).
- */
-async function opencodeNotice(spec: PublishedCliSpec, notice: string): Promise<void> {
-  using sb = createSandbox();
-  const env = {
-    HOME: sb.home,
-    CLAUDE_PLUGIN_ROOT: spec.pluginRoot,
-    TOOLU_BUN: process.execPath,
-    TOOLU_HOST_OVERRIDE: "opencode",
-    TOOLU_CONFIG_DIR: join(sb.project, ".opencode/toolu/state"),
-  };
-  // In order, as OpenCode runs them: both publish the same helper path.
-  const start = await runStartupHook(spec.pluginRoot, "session-start", sb, env, "startup");
-  expect(start).toMatchObject({ exitCode: 0, stderr: "" });
-  const started = NoticeOutput.parse(JSON.parse(start.stdout));
-  expect(started.systemMessage).toBe(notice);
-  expect(started.hookSpecificOutput?.additionalContext ?? "").not.toContain("deprecated");
-  const compact = await runStartupHook(spec.pluginRoot, "session-start", sb, env, "compact");
-  expect(compact).toMatchObject({ exitCode: 0, stderr: "" });
-  const compacted = compact.stdout === "" ? {} : NoticeOutput.parse(JSON.parse(compact.stdout));
-  expect(compacted.systemMessage).toBeUndefined();
-}
-
 /** Register the shared published-CLI SessionStart cases for one plugin. */
 export function publishedCliSuite(spec: PublishedCliSpec): void {
   const name = `${spec.plugin} session-start`;
@@ -254,9 +222,4 @@ export function publishedCliSuite(spec: PublishedCliSpec): void {
   const quiet = spec.notice === undefined ? "silent" : "only the notice";
   test.concurrent(`${name}: missing CLI bundle -> ${quiet}, nothing published`, () =>
     failsSoftWithoutSource(spec));
-  const notice = spec.notice?.opencode;
-  if (notice !== undefined) {
-    test.concurrent(`${name}: OpenCode notice once at start, none at compaction`, () =>
-      opencodeNotice(spec, notice));
-  }
 }

@@ -1,6 +1,6 @@
 /** Host names and the environment shape every `@toolu/core/host` function reads (#252). */
 
-export const HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"] as const;
+export const HOST_NAMES = ["claude", "codex", "cursor", "hermes"] as const;
 
 export type HostName = (typeof HOST_NAMES)[number];
 

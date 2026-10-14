@@ -32,7 +32,7 @@ const SIGNAL_EXIT_BASE = 128;
 const SIGKILL = 9;
 
 /** Host-session variables that must never leak from the developer's own agent into a spawn. */
-const HOST_ENV_PREFIXES = ["CLAUDE_", "CODEX_", "TOOLU_", "OPENCODE_", "CURSOR_"];
+const HOST_ENV_PREFIXES = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"];
 const HOST_ENV_KEYS = new Set(["PLUGIN_ROOT"]);
 
 function isHostKey(key: string): boolean {
@@ -166,7 +166,6 @@ const HOST_ENV: Record<HostName, (sandbox: Sandbox, pluginRoot: string) => Recor
     }),
     codex: (sandbox, pluginRoot) => ({ PLUGIN_ROOT: pluginRoot, CODEX_HOME: sandbox.codexHome }),
     cursor: (sandbox) => ({ CURSOR_PROJECT_DIR: sandbox.project }),
-    opencode: () => ({ TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" }),
   };
 
 /** The environment a host puts on a hook process, rooted in the sandbox. */

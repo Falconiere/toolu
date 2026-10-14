@@ -20,7 +20,6 @@ mod cursor;
 mod hermes;
 mod hook;
 mod object;
-mod opencode;
 
 use object::Object;
 
@@ -29,26 +28,6 @@ use object::Object;
 pub enum Encoded {
   /// A command hook's exact stdout (exit 0, no stderr); `""` is silent success.
   Command(String),
-  /// An in-process `OpenCode` callback.
-  Callback(Callback),
-}
-
-/// An `OpenCode` before or after hook: continue, or throw to refuse the call.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Callback {
-  /// Continue or throw.
-  pub action: CallbackAction,
-  /// The refusal, or the advice appended to the result.
-  pub message: Option<String>,
-}
-
-/// What an `OpenCode` hook does with the call.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum CallbackAction {
-  /// Let the call run.
-  Continue,
-  /// Refuse it.
-  Throw,
 }
 
 /// A decision for an event the host does not have: a wiring error.
@@ -78,7 +57,7 @@ pub fn supports_ask(host: Host, event: HostEvent) -> bool {
     Host::Codex => event == HostEvent::PermissionEvaluate,
     // Cursor accepts but does not enforce ask on preToolUse.
     Host::Cursor => event == HostEvent::ShellPre,
-    Host::Hermes | Host::Opencode => false,
+    Host::Hermes => false,
   }
 }
 
@@ -107,7 +86,6 @@ pub fn encode(host: Host, event: HostEvent, decision: &Decision) -> Result<Encod
     Host::Claude | Host::Codex => Encoded::Command(hook::output(native, event, normal)),
     Host::Cursor => Encoded::Command(cursor::output(event, normal)),
     Host::Hermes => Encoded::Command(hermes::output(event, normal)),
-    Host::Opencode => Encoded::Callback(opencode::callback(normal)),
   })
 }
 

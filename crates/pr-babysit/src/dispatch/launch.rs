@@ -1,5 +1,4 @@
-//! A fixer group's launch: its brief, then a herdr agent in the slot pane or a
-//! detached `opencode run` in the slot worktree.
+//! A fixer group's launch: its brief, then a herdr agent in the slot pane.
 
 use std::path::Path;
 use std::time::Duration;
@@ -9,10 +8,8 @@ use serde_json::{Value, json};
 use super::brief::{Reports, render};
 use super::dispatcher::{Dispatcher, now};
 use super::herdr::{accept_claude_trust, argv, stop_agent, try_herdr};
-use super::names::{agent_name, gh_config, group_file, shell_quote};
-use super::opencode::{self, Run};
+use super::names::{agent_name, group_file, shell_quote};
 use super::plan::read_object;
-use super::procs::stop_group;
 use crate::error::Result;
 use crate::fixer::host::Fixer;
 use crate::route::on_path;
@@ -103,26 +100,14 @@ impl Dispatcher<'_> {
       "You are a pr-babysit fixer. Read {} and follow it exactly.",
       brief.display()
     );
-    if host == Fixer::Opencode {
-      let worktree = Path::new(text(launch.context, "worktree").unwrap_or_default());
-      let run = Run {
-        model,
-        effort,
-        unattended: launch.unattended,
-        worktree,
-        prompt: &message,
-      };
-      self.launch_opencode(seq, round, &run)?;
-    } else {
-      let started = Agent {
-        host,
-        name: &agent,
-        pane: launch.pane,
-        args: &args,
-        message: &message,
-      };
-      self.launch_agent(seq, &started)?;
-    }
+    let started = Agent {
+      host,
+      name: &agent,
+      pane: launch.pane,
+      args: &args,
+      message: &message,
+    };
+    self.launch_agent(seq, &started)?;
     Ok(rendered)
   }
 
@@ -142,28 +127,6 @@ impl Dispatcher<'_> {
     let patch = json!({"agent": agent, "brief": brief.display().to_string(), "report": report.display().to_string(),
       "status": "launching", "reason": null, "startedAt": now()});
     self.patch_group(seq, &patch)
-  }
-
-  fn launch_opencode(&mut self, seq: u64, round: u64, run: &Run<'_>) -> Result<()> {
-    let mut recorded = vec!["opencode".to_owned()];
-    recorded.extend(opencode::args(run)?);
-    self.record(&recorded);
-    if self.dry {
-      return Ok(());
-    }
-    let log = group_file(self.file, round, seq, ".log");
-    let _absent = std::fs::remove_file(&log);
-    match opencode::spawn(run, &log, self.env, &gh_config(self.file)) {
-      Err(error) => self.settle(seq, "agent_start_failed", "", &error),
-      Ok((pid, start)) => {
-        let patch = json!({"status": "running", "pid": pid, "pidStart": start, "log": log.display().to_string()});
-        let recorded = self.patch_group(seq, &patch);
-        if recorded.is_err() {
-          let _stopped = stop_group(pid, &start);
-        }
-        recorded
-      }
-    }
   }
 
   fn launch_agent(&mut self, seq: u64, agent: &Agent<'_>) -> Result<()> {

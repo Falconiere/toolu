@@ -4,7 +4,7 @@ use crate::dispatch::sandbox::{Sandbox, sandbox};
 fn with_round(sb: &Sandbox) {
   let mut state = sb.state();
   let group = |seq: u64, host: &str| json!({"seq": seq, "tier": "standard", "host": host, "model": null, "effort": null, "items": ["ci:test"], "status": "running", "reason": null});
-  state["fixer"] = json!({"round": 1, "status": "running", "reason": null, "current": 1, "groups": [group(1, "opencode"), group(2, "codex")]});
+  state["fixer"] = json!({"round": 1, "status": "running", "reason": null, "current": 1, "groups": [group(1, "claude"), group(2, "codex")]});
   std::fs::write(&sb.state, state.to_string()).unwrap();
 }
 
@@ -50,7 +50,7 @@ fn a_provider_limit_fails_the_round_and_cools_its_host_for_an_hour() {
     state["fixer"]["groups"][0]["error"],
     "429 Too Many Requests"
   );
-  let cooldown = &state["hostCooldowns"]["opencode"];
+  let cooldown = &state["hostCooldowns"]["claude"];
   assert_eq!(cooldown["reason"], "host_limited");
   let until = toolu_state::time::parse_iso(cooldown["until"].as_str().unwrap()).unwrap();
   let left = until.duration_since(SystemTime::now()).unwrap().as_secs();

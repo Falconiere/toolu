@@ -37,19 +37,9 @@ pub(crate) fn agent_name(slot: &str, round: u64, seq: u64) -> String {
   )
 }
 
-/// `<state stem>.fixer-r<round>g<seq><suffix>`: `.md`, `.report.json` or `.log`.
+/// `<state stem>.fixer-r<round>g<seq><suffix>`: `.md` or `.report.json`.
 pub(crate) fn group_file(state: &Path, round: u64, seq: u64, suffix: &str) -> PathBuf {
   sibling(state, &format!(".fixer-r{round}g{seq}{suffix}"))
-}
-
-/// An `OpenCode` fixer's `GH_CONFIG_DIR`: never created, so `gh` has no login.
-pub(crate) fn gh_config(state: &Path) -> PathBuf {
-  sibling(state, ".fixer-gh")
-}
-
-/// The native worktree used when no group needs a herdr pane.
-pub(crate) fn native_worktree(state: &Path) -> PathBuf {
-  sibling(state, ".worktree")
 }
 
 /// `text` in single quotes for a POSIX shell.

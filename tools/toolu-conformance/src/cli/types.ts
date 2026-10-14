@@ -1,7 +1,6 @@
 /**
  * Per-suite outcome for the conformance matrix (#212). There is no skip: a
- * suite that cannot run fails (#362). Live OpenCode acceptance is
- * `bun run test:opencode`, not a conformance suite.
+ * suite that cannot run fails (#362).
  */
 export type SuiteOutcome = { status: "pass" } | { status: "fail"; message: string };
 

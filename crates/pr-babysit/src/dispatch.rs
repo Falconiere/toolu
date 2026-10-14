@@ -1,6 +1,5 @@
 //! `dispatch-fix start|wait|cleanup`: run a route plan's groups one after
-//! another, each a fixer agent in a herdr pane or a detached `OpenCode` process
-//! in the slot's own worktree, and settle each from its report.
+//! another, each a fixer agent in a herdr pane, and settle each from its report.
 
 use serde_json::Value;
 
@@ -12,10 +11,8 @@ pub(crate) mod dispatcher;
 pub(crate) mod herdr;
 pub(crate) mod launch;
 pub(crate) mod names;
-pub(crate) mod opencode;
 pub(crate) mod outcome;
 pub(crate) mod plan;
-pub(crate) mod procs;
 #[cfg(test)]
 #[path = "tests/sandbox_test.rs"]
 mod sandbox;

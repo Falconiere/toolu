@@ -3,8 +3,6 @@ use toolu_runtime::process::{Spec, run};
 
 use super::*;
 use crate::dispatch::dispatcher::Options;
-use crate::dispatch::names::{agent_name, native_worktree};
-use crate::dispatch::sandbox::{git, sandbox};
 use crate::fixture;
 
 const MINIMAL: &str =
@@ -139,99 +137,4 @@ fn the_brief_report_commands_survive_an_apostrophe_in_the_state_path() {
       ]
     );
   }
-}
-
-#[test]
-fn a_dry_run_of_an_all_opencode_plan_uses_a_native_worktree_and_no_herdr() {
-  let sb = sandbox();
-  let before = std::fs::read_to_string(&sb.state).unwrap();
-  let (plan, items) = sb.plan("opencode", Some("probe/m"));
-  let result = Dispatcher::new(&sb.options(true))
-    .unwrap()
-    .start(&sb.start(&plan, &items))
-    .unwrap();
-  let commands: Vec<Vec<String>> = serde_json::from_value(result["commands"].clone()).unwrap();
-  assert!(commands.iter().all(|command| command[0] != "herdr"));
-  let worktree = native_worktree(&sb.state).display().to_string();
-  let add = commands
-    .iter()
-    .find(|command| command.contains(&"add".to_owned()))
-    .unwrap();
-  let expected = [
-    "git",
-    "-C",
-    &sb.root,
-    "worktree",
-    "add",
-    "--quiet",
-    "-b",
-    "pr-babysit/falconiere-toolu-165",
-    &worktree,
-    "origin/feat/fix",
-  ];
-  assert_eq!(add, &expected);
-  let last = commands.last().unwrap();
-  assert_eq!(
-    last[..8],
-    [
-      "opencode",
-      "run",
-      "--format",
-      "json",
-      "--dir",
-      &worktree,
-      "--agent",
-      "pr-babysit-fixer"
-    ]
-  );
-  assert_eq!(std::fs::read_to_string(&sb.state).unwrap(), before);
-}
-
-#[test]
-fn a_bad_opencode_config_is_refused_before_any_worktree_or_fixer_record() {
-  let sb = sandbox();
-  let before = std::fs::read_to_string(&sb.state).unwrap();
-  let (plan, items) = sb.plan("opencode", Some("probe/m"));
-  let env = sb.env.clone().with("OPENCODE_CONFIG_CONTENT", "[1]");
-  let options = Options {
-    env: &env,
-    ..sb.options(false)
-  };
-  let failure = Dispatcher::new(&options)
-    .unwrap()
-    .start(&sb.start(&plan, &items))
-    .unwrap_err();
-  assert_eq!(failure.code, "config_invalid");
-  assert!(!native_worktree(&sb.state).exists());
-  assert_eq!(std::fs::read_to_string(&sb.state).unwrap(), before);
-}
-
-#[test]
-fn a_fixer_that_cannot_start_settles_agent_start_failed_on_a_ready_worktree() {
-  let sb = sandbox();
-  let ledger = sb.state()["actions"].clone();
-  let (plan, items) = sb.plan("opencode", Some("probe/m"));
-  let started = Dispatcher::new(&sb.options(false))
-    .unwrap()
-    .start(&sb.start(&plan, &items))
-    .unwrap();
-  let worktree = native_worktree(&sb.state).display().to_string();
-  let group = json!({"seq": 1, "tier": "trivial", "host": "opencode", "model": "probe/m", "effort": null,
-    "agent": agent_name("falconiere-toolu-165", 1, 1), "status": "failed", "reason": "agent_start_failed", "error": "opencode is not on PATH"});
-  assert_eq!(started["status"], "failed");
-  assert_eq!(started["reason"], "agent_start_failed");
-  assert_eq!(started["worktree"], worktree.as_str());
-  assert_eq!(started["branch"], "pr-babysit/falconiere-toolu-165");
-  assert_eq!(started["commits"], json!([]));
-  assert_eq!(started["groups"][0], group);
-  let head = git(&sb.env, Path::new(&worktree), &["rev-parse", "HEAD"]);
-  assert_eq!(
-    head,
-    git(&sb.env, &sb.repo, &["rev-parse", "origin/feat/fix"])
-  );
-  let state = sb.state();
-  assert_eq!(state["actions"], ledger);
-  assert_eq!(state["herdrWorktree"]["path"], worktree.as_str());
-  assert_eq!(state["herdrWorktree"]["workspaceId"], Value::Null);
-  assert_eq!(state["herdrWorktree"]["paneId"], Value::Null);
 }

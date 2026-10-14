@@ -17,7 +17,6 @@ import {
 import {
   readHermesOutcome,
   readHostOutcome,
-  readOpencodeCallbackOutcome,
   type Outcome,
 } from "../hosts.ts";
 import { run } from "../spawn.ts";
@@ -26,13 +25,9 @@ const HOOK = `
 import { encodeDecision } from "@toolu/core/host";
 const [host, event, decision] = JSON.parse(process.argv[1]);
 const out = encodeDecision(host, event, decision);
-if (out.kind === "callback") {
-  process.stdout.write(JSON.stringify(out));
-} else {
-  process.stdout.write(out.stdout);
-  process.stderr.write(out.stderr);
-  process.exitCode = out.exitCode;
-}
+process.stdout.write(out.stdout);
+process.stderr.write(out.stderr);
+process.exitCode = out.exitCode;
 `;
 
 const DECISIONS = {
@@ -49,11 +44,6 @@ async function outcome(host: HostName, event: HostEvent, decision: Decision): Pr
     cwd: import.meta.dir,
   });
   const native = nativeEventName(host, event) ?? "";
-  if (host === "opencode") {
-    expect(res.exitCode).toBe(0);
-    const callback: unknown = JSON.parse(res.stdout);
-    return readOpencodeCallbackOutcome(callback);
-  }
   return host === "hermes" ? readHermesOutcome(res) : readHostOutcome(host, native, res);
 }
 
@@ -114,9 +104,9 @@ describe("host-specific effects", () => {
   });
 
   test.concurrent("a prompt deny blocks on every host that can block prompts", async () => {
-    const hosts = ["claude", "codex", "cursor", "opencode"] as const;
+    const hosts = ["claude", "codex", "cursor"] as const;
     const effects = await Promise.all(hosts.map((host) => outcome(host, "prompt", DECISIONS.deny)));
-    expect(effects.map((o) => o.effect)).toEqual(["deny", "deny", "deny", "deny"]);
+    expect(effects.map((o) => o.effect)).toEqual(["deny", "deny", "deny"]);
     expect(await outcome("hermes", "prompt", DECISIONS.deny)).toEqual({
       effect: "allow",
       context: "protected",

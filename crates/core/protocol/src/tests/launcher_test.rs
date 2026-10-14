@@ -12,9 +12,6 @@ const PROMPT_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/user-prompt-submit.json");
 const COMPACT_HOOK: &str =
   include_str!("../../../../../tooling/fixtures/native-launcher/pre-compact.json");
-const OPENCODE_LAUNCHER: &str =
-  include_str!("../../../../../tools/toolu-opencode/src/bootstrap/native-launcher.txt");
-
 fn target<'a>(plugin: &'a str, event: &'a str, name: &'a str) -> Target<'a> {
   Target {
     plugin,
@@ -35,7 +32,6 @@ fn enforcing_and_context_commands_match_the_committed_goldens() {
   );
   let generated_session = generated("toolu", "SessionStart", "session-start").command;
   assert_eq!(generated_session, SESSION_START);
-  assert_eq!(generated_session, OPENCODE_LAUNCHER);
 }
 
 #[test]

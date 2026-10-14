@@ -24,8 +24,6 @@ pub mod ledger;
 pub mod lifecycle;
 /// The standalone MCP blocker hook.
 pub mod mcp_hook;
-/// `toolu serve`.
-pub mod serve;
 /// `toolu setup`.
 pub mod setup;
 /// `toolu status`.

@@ -43,8 +43,8 @@ function claudePresence(spec: string, env: HostEnv): PluginPresence {
 
 /**
  * Whether plugin `spec` (`name@marketplace`) is installed. Claude reads
- * `installed_plugins.json`, Codex its SessionStart snapshot. Cursor, Hermes
- * and OpenCode keep no install record toolu can read, so they are `unknown`.
+ * `installed_plugins.json`, Codex its SessionStart snapshot. Cursor and Hermes
+ * keep no install record toolu can read, so they are `unknown`.
  */
 export function pluginPresence(spec: string, options: HostOptions = {}): PluginPresence {
   if (spec === "") return "absent";

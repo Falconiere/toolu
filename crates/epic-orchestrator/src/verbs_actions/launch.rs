@@ -26,7 +26,7 @@ pub(super) fn launch_command() -> Command {
     .arg(option(
       "kind",
       "HOST",
-      "The host: claude, codex, cursor or opencode; default the route's",
+      "The host: claude, codex or cursor; default the route's",
     ))
     .arg(option("model", "MODEL", "The model; default the route's"))
     .arg(option(

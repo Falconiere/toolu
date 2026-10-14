@@ -76,7 +76,7 @@ impl State {
     Ok(json!({"agent": {"name": name}}))
   }
 
-  /// A prompt or keys; `/exit`, and `ctrl+c` for `OpenCode`, end the agent.
+  /// A prompt or keys; `/exit` ends the agent.
   pub(crate) fn input(&mut self, method: &str, params: &Value) -> Result<Value, Scripted> {
     let name = text(params, "target");
     let words: Vec<String> = if method == "agent.prompt" {
@@ -103,9 +103,7 @@ impl State {
       .get_mut(index)
       .ok_or_else(|| error("agent_not_found", &name))?;
     agent.prompts.extend(words.iter().cloned());
-    let exits = words
-      .iter()
-      .any(|word| word == "/exit" || (word == "ctrl+c" && agent.kind == "opencode"));
+    let exits = words.iter().any(|word| word == "/exit");
     if exits {
       stop(&mut agent.process);
       self.agents.remove(index);

@@ -28,7 +28,7 @@ pub(crate) fn encoded(host: Host, event: HostEvent, decision: &Decision) -> Stri
   };
   match encode(target, event, decision) {
     Ok(Encoded::Command(stdout)) => substituted(&stdout).to_owned(),
-    Ok(Encoded::Callback(_)) | Err(_) => String::new(),
+    Err(_) => String::new(),
   }
 }
 

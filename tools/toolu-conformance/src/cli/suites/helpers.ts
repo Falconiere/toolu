@@ -10,10 +10,6 @@ export function tmpBase(): string {
   return process.env.TMPDIR ?? "/tmp";
 }
 
-export function isolatedHome(prefix: string): string {
-  return mkdtempSync(join(tmpBase(), prefix));
-}
-
 export function bridgeEnvClaude(root: string): Record<string, string> {
   return {
     TOOLU_SETTINGS_DIR: join(root, "plugins/toolu/settings"),
