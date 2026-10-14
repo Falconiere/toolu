@@ -7,9 +7,9 @@ pub(crate) const DENY: &str = "Use the shell tool exactly once to run printf cha
 /// The refspec the push-review check pushes; the bare remote must never gain it.
 pub(crate) const PUSH_REF: &str = "refs/heads/feat/smoke";
 
-/// Claude Code's allowed control.
+/// Claude Code's allowed control: it prints the project's nonce through a relative path.
 pub(crate) const CLAUDE_ALLOWED: &str =
-  "Use Bash once to run echo \"toolu-smoke-cwd:$PWD\", then stop.";
+  "Use Bash once to run exactly `cat .toolu-smoke-nonce`, then stop.";
 /// Claude Code's quality-failing edit.
 pub(crate) const CLAUDE_EDIT: &str = "Use Read on sample.ts, then Edit to replace its one line with eight nonblank export const statements. The configured file limit is three code lines. Stop after the edit; do not fix it.";
 /// Claude Code's gated commit, which stages `sample.ts` itself.
@@ -19,7 +19,7 @@ pub(crate) const CLAUDE_PUSH: &str = "Use Bash once to run git push origin HEAD:
 
 /// Codex's allowed control.
 pub(crate) const CODEX_ALLOWED: &str =
-  "Use the shell tool once to run echo \"toolu-smoke-cwd:$PWD\", then stop.";
+  "Use the shell tool once to run exactly `cat .toolu-smoke-nonce`, then stop.";
 /// Codex's quality-failing edit.
 pub(crate) const CODEX_EDIT: &str = "Use the apply_patch tool to replace the one line in sample.ts with eight nonblank export const statements. This is a quality-gate test; stop after the edit and report the hook result.";
 /// Codex's gated commit, after the harness staged `sample.ts`.

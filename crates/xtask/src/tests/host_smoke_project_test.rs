@@ -1,7 +1,7 @@
 use std::ffi::OsString;
 use std::path::Path;
 
-use super::{create, create_push, git, head, remote_has};
+use super::{NONCE_FILE, create, create_push, git, head, nonce, remote_has};
 use crate::host_smoke_env::ChildEnv;
 
 fn env(base: &Path) -> ChildEnv {
@@ -68,4 +68,24 @@ fn git_reports_a_failing_command() {
   let root = tempfile::tempdir().unwrap();
   let env = env(root.path());
   assert!(git(root.path(), &env, &["rev-parse", "HEAD"]).is_err());
+}
+
+#[test]
+fn each_project_holds_its_own_committed_nonce() {
+  let root = tempfile::tempdir().unwrap();
+  let env = env(root.path());
+  let first = create(root.path(), "first", "claude", &env).unwrap();
+  let second = create(root.path(), "second", "claude", &env).unwrap();
+  let (one, two) = (nonce(&first).unwrap(), nonce(&second).unwrap());
+  assert!(one.len() >= 20 && one.chars().all(|c| c.is_ascii_hexdigit() || c == '-'));
+  assert_ne!(one, two);
+  let file = std::fs::read_to_string(first.join(NONCE_FILE)).unwrap();
+  assert_eq!(file, format!("{one}\n"));
+  assert_eq!(git(&first, &env, &["status", "--porcelain"]).unwrap(), "");
+}
+
+#[test]
+fn a_project_without_a_nonce_file_is_an_error() {
+  let root = tempfile::tempdir().unwrap();
+  assert!(nonce(root.path()).unwrap_err().contains("cannot read"));
 }

@@ -4,16 +4,18 @@
 //! light hook from inheriting a heavy one's reading.
 
 use std::ffi::OsString;
+use std::fs::File;
 use std::io::Write as _;
 use std::os::unix::process::CommandExt as _;
 use std::path::Path;
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
+use std::thread::JoinHandle;
 use std::time::Duration;
 
 use serde_json::Value;
 
 use crate::bench_hooks_report::Sample;
-use crate::process_group::{collect, drain, kill, wait};
+use crate::process_group::{spawn_retrying, wait};
 
 /// A measurer that runs longer than this is killed with its whole process group.
 pub(crate) const SPAWN_DEADLINE: Duration = Duration::from_secs(60);
@@ -47,9 +49,26 @@ pub(crate) fn samples(
   Ok(kept)
 }
 
-/// Start the measurer as the leader of its own process group.
-fn start(measurer: &Path, spawn: &Spawn<'_>, out: &Path, label: &str) -> Result<Child, String> {
-  let mut child = Command::new(measurer)
+/// Write `payload` to the measurer's stdin on a thread, so a measurer that never reads
+/// cannot stall the deadline; the pipe closing when it dies ends the write.
+fn feed(mut stdin: ChildStdin, payload: Vec<u8>) -> JoinHandle<()> {
+  std::thread::spawn(move || {
+    // A hook that fails closed may exit before it reads.
+    let _ignored = stdin.write_all(&payload);
+  })
+}
+
+/// Start the measurer as the leader of its own process group, its stderr in `err`.
+/// A file, not a pipe, so a hook's background child cannot hold the harness waiting.
+fn start(
+  measurer: &Path,
+  spawn: &Spawn<'_>,
+  (out, err): (&Path, &Path),
+  label: &str,
+) -> Result<(Child, JoinHandle<()>), String> {
+  let stderr = File::create(err).map_err(|why| format!("{label}: {}: {why}", err.display()))?;
+  let mut command = Command::new(measurer);
+  command
     .args(["measure", "--out"])
     .arg(out)
     .arg("--")
@@ -60,39 +79,41 @@ fn start(measurer: &Path, spawn: &Spawn<'_>, out: &Path, label: &str) -> Result<
     .process_group(0)
     .stdin(Stdio::piped())
     .stdout(Stdio::null())
-    .stderr(Stdio::piped())
-    .spawn()
-    .map_err(|err| format!("{label}: cannot start the measurer: {err}"))?;
-  if let Some(mut stdin) = child.stdin.take() {
-    // A hook that fails closed may exit before it reads.
-    let _ignored = stdin.write_all(spawn.stdin.as_bytes());
-  }
-  Ok(child)
+    .stderr(Stdio::from(stderr));
+  let mut child = spawn_retrying(&mut command)
+    .map_err(|why| format!("{label}: cannot start the measurer: {why}"))?;
+  let stdin = child.stdin.take().ok_or("no stdin pipe")?;
+  Ok((child, feed(stdin, spawn.stdin.clone().into_bytes())))
 }
 
-/// Wait for the measurer within the deadline, then kill what is left of its group
-/// (a hook's background child could hold the stderr pipe).
+/// Wait for the measurer within the deadline; past it, `wait` kills its whole group
+/// before reaping the leader, so no group id outlives the child it names.
 fn finish(
-  child: &mut Child,
+  (mut child, writer): (Child, JoinHandle<()>),
   spawn: &Spawn<'_>,
   label: &str,
-) -> Result<(Option<ExitStatus>, String), String> {
-  let stderr = child.stderr.take().ok_or("no stderr pipe")?;
-  let reader = drain(stderr);
-  let waited = wait(child, spawn.deadline, &mut || {}).map_err(|err| format!("{label}: {err}"));
-  let killed = kill(child.id());
-  let stderr = collect(reader)?;
-  let status = waited?;
-  killed?;
-  Ok((status, stderr))
+) -> Result<Option<ExitStatus>, String> {
+  let waited =
+    wait(&mut child, spawn.deadline, &mut || {}).map_err(|err| format!("{label}: {err}"));
+  // A writer still blocked now is held by a hook's background child that kept the pipe
+  // open; it ends with that child, and waiting for it would defeat the deadline.
+  if writer.is_finished() {
+    writer
+      .join()
+      .map_err(|_panic| format!("{label}: the stdin writer panicked"))?;
+  }
+  waited
 }
 
 fn once(measurer: &Path, spawn: &Spawn<'_>, label: &str, round: usize) -> Result<Sample, String> {
   let out = spawn.report_dir.join(format!("measure-{round}.json"));
-  let mut child = start(measurer, spawn, &out, label)?;
-  let (status, stderr) = finish(&mut child, spawn, label)?;
+  let err = out.with_extension("err");
+  let started = start(measurer, spawn, (&out, &err), label)?;
+  let status = finish(started, spawn, label)?;
   let text = std::fs::read_to_string(&out);
-  let _gone = std::fs::remove_file(&out);
+  let stderr =
+    std::fs::read_to_string(&err).unwrap_or_else(|why| format!("(stderr unreadable: {why})"));
+  let _gone = (std::fs::remove_file(&out), std::fs::remove_file(&err));
   let Some(status) = status else {
     return Err(format!(
       "{label}: the measurer ran past {} s and was killed: {}",

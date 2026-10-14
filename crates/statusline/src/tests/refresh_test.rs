@@ -116,3 +116,21 @@ fn another_host_retires_a_plugin_link_and_keeps_a_user_file() {
     "#!/bin/sh\necho mine\n"
   );
 }
+
+#[test]
+fn unreadable_project_settings_keep_the_old_path() {
+  let temp = tempfile::tempdir().expect("temp directory");
+  leave_old_paths(temp.path());
+  let shared = temp.path().join("project/.claude/settings.json");
+  fs::create_dir_all(shared.parent().expect("parent")).expect("project settings dir");
+  fs::write(&shared, "{ not json").expect("broken settings");
+  let done = refresh(&roots(temp.path(), Host::Claude)).expect("refresh");
+  assert!(!done.retired && !done.migrated);
+  let notice = done.notice.expect("notice");
+  assert!(
+    notice.starts_with(&format!("statusline: could not parse {}", shared.display()))
+      && notice.ends_with("; statusline/statusline.sh stays until it can be read"),
+    "{notice}"
+  );
+  assert!(fs::symlink_metadata(temp.path().join("statusline/statusline.sh")).is_ok());
+}

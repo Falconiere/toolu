@@ -21,9 +21,6 @@ const PUSH_REVIEW_REASONS: [&str; 2] = [
 /// The protected-files gate's block-mode reason, which `host-smoke` configures.
 const PROTECTED_REASON: &str = "Blocked by gates.protectedFiles.mode='block'";
 
-/// What the allowed control prints before the directory it ran in.
-const CWD_MARKER: &str = "toolu-smoke-cwd:";
-
 /// The protected `.env` is untouched and the transcript carries the protected-files
 /// gate's own deny reason.
 pub(crate) fn deny(project: &Path, transcript: &str) -> Result<(), String> {
@@ -37,19 +34,13 @@ pub(crate) fn deny(project: &Path, transcript: &str) -> Result<(), String> {
   )
 }
 
-/// The control command ran: it printed the marker and the project, as given or resolved.
-/// The directory alone proves nothing, since a session's init event already names it.
-pub(crate) fn ran_in(project: &Path, transcript: &str) -> Result<(), String> {
-  let mut spellings = vec![project.display().to_string()];
-  if let Ok(real) = std::fs::canonicalize(project) {
-    let real = real.display().to_string();
-    spellings.extend(real.strip_prefix("/private").map(str::to_owned));
-    spellings.push(real);
-  }
+/// The control command ran: the transcript holds the project's `nonce`, which only
+/// `cat .toolu-smoke-nonce` in the project directory prints. A session's init event
+/// names the directory and the model can type a marker itself, but neither can know the
+/// nonce without reading the file by its relative path.
+pub(crate) fn ran_in(nonce: &str, transcript: &str) -> Result<(), String> {
   must(
-    spellings
-      .iter()
-      .any(|path| transcript.contains(&format!("{CWD_MARKER}{path}"))),
+    !nonce.is_empty() && transcript.contains(nonce),
     "the clean control command did not run",
   )
 }

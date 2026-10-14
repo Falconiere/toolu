@@ -7,7 +7,7 @@ use std::process::{Command, Stdio};
 use std::time::Duration;
 
 use crate::host_smoke_env::ChildEnv;
-use crate::process_group::{collect, drain, kill, wait};
+use crate::process_group::{collect, drain, kill, spawn_retrying, wait};
 
 /// Each live session gets this long before it is killed.
 pub(crate) const TIMEOUT: Duration = Duration::from_secs(180);
@@ -41,13 +41,17 @@ pub(crate) fn exec(
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
   env.apply(&mut command);
-  let mut child = command
-    .spawn()
-    .map_err(|err| format!("cannot run {program}: {err}"))?;
+  let mut child =
+    spawn_retrying(&mut command).map_err(|err| format!("cannot run {program}: {err}"))?;
   let out = child.stdout.take().ok_or("no stdout pipe")?;
   let err = child.stderr.take().ok_or("no stderr pipe")?;
   let (out, err) = (drain(out), drain(err));
   let waited = wait(&mut child, timeout, tick).map_err(|why| format!("{program} {why}"));
+  // The leader is reaped by now. This is safe enough: a process group id cannot be reused
+  // while any member exists, and the members this kills are the stragglers holding the
+  // pipes. With none left the call is a no-op (`ESRCH`), unless a new process took the
+  // leader's pid and made itself a group leader inside that window. A timeout was killed
+  // and reaped by `wait` itself.
   let killed = kill(child.id());
   let output = format!("{}{}", collect(out)?, collect(err)?);
   let Some(status) = waited? else {

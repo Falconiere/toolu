@@ -1,7 +1,7 @@
 //! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|both]`: a live macOS
 //! smoke of the native toolu hooks in real Claude Code and Codex sessions, with no
 //! `bun` on the children's `PATH`. Per host it checks that a protected `.env` write
-//! is denied, an allowed `echo` of its working directory runs, a post-edit quality
+//! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality
 //! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
 //! push review.
 //!

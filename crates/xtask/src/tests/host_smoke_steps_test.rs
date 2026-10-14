@@ -59,7 +59,7 @@ fn deny_and_allowed_judge_the_transcript_and_keep_it_in_the_evidence() {
   let project = create(root.path(), "p", "claude", &env).unwrap();
   let script = host(
     root.path(),
-    "case $1 in deny) echo \"Blocked by gates.protectedFiles.mode='block'\";; *) echo \"toolu-smoke-cwd:$2\";; esac",
+    "case $1 in deny) echo \"Blocked by gates.protectedFiles.mode='block'\";; *) cat \"$2/.toolu-smoke-nonce\";; esac",
     false,
   );
   deny(&script, &run, &project).unwrap();
@@ -69,6 +69,11 @@ fn deny_and_allowed_judge_the_transcript_and_keep_it_in_the_evidence() {
   assert_eq!(
     deny(&silent, &run, &project).unwrap_err(),
     "no live deny evidence"
+  );
+  let typed = host(root.path(), "echo \"toolu-smoke-cwd:$2\"", false);
+  assert_eq!(
+    allowed(&typed, &run, &project).unwrap_err(),
+    "the clean control command did not run"
   );
   let init_only = host(root.path(), "echo \"cwd $2\"", false);
   assert_eq!(

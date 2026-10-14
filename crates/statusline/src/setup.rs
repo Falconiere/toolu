@@ -220,12 +220,25 @@ fn settings_files(roots: &Roots) -> Vec<PathBuf> {
   files
 }
 
-/// The first settings file whose statusLine command still names the old stable path.
-pub(crate) fn names_old_path(roots: &Roots) -> Option<PathBuf> {
-  settings_files(roots).into_iter().find(|path| {
-    load(path)
-      .is_ok_and(|(map, _)| current_command(&map).is_some_and(|command| command.contains(MARKER)))
-  })
+/// Why the old stable path must stay: the first settings file whose statusLine
+/// command still names it, or that cannot be read and so might.
+pub(crate) fn names_old_path(roots: &Roots) -> Option<String> {
+  settings_files(roots)
+    .into_iter()
+    .find_map(|path| match load(&path) {
+      Ok((map, _)) => current_command(&map)
+        .is_some_and(|command| command.contains(MARKER))
+        .then(|| {
+          format!(
+            "statusline: {} still runs statusline/statusline.sh, which toolu no longer \
+             publishes; set its statusLine command to toolu statusline render",
+            path.display()
+          )
+        }),
+      Err(error) => Some(format!(
+        "statusline: {error}; statusline/statusline.sh stays until it can be read"
+      )),
+    })
 }
 
 /// CLI formatting: one JSON document or one newline-terminated STATUS line.

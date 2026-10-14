@@ -1,8 +1,8 @@
 //! A child run as the leader of its own process group, so a deadline or an exit takes
 //! every descendant with it and none keeps a captured pipe open.
 
-use std::io::Read;
-use std::process::{Child, ExitStatus};
+use std::io::{self, Read};
+use std::process::{Child, Command, ExitStatus};
 use std::thread::{JoinHandle, sleep, spawn};
 use std::time::{Duration, Instant};
 
@@ -12,6 +12,33 @@ use nix::unistd::Pid;
 
 /// The wait between two looks at a running child.
 const POLL: Duration = Duration::from_millis(20);
+
+/// Spawns tried again when the executable is still open for writing.
+const BUSY_RETRIES: usize = 20;
+/// The wait between two such spawns.
+const BUSY_WAIT: Duration = Duration::from_millis(25);
+
+/// Run `attempt` again while it fails with `ETXTBSY`: on Linux a freshly written
+/// executable cannot be executed while a concurrent `fork` still holds its write
+/// descriptor, which clears within milliseconds. The first other result, or the
+/// last `ETXTBSY` once the retries are spent, is returned.
+pub(crate) fn retry_busy<T>(mut attempt: impl FnMut() -> io::Result<T>) -> io::Result<T> {
+  let mut retries = 0;
+  loop {
+    match attempt() {
+      Err(err) if err.raw_os_error() == Some(Errno::ETXTBSY as i32) && retries < BUSY_RETRIES => {
+        retries += 1;
+        sleep(BUSY_WAIT);
+      }
+      other => return other,
+    }
+  }
+}
+
+/// `command.spawn()`, tried again while the program is busy (see [`retry_busy`]).
+pub(crate) fn spawn_retrying(command: &mut Command) -> io::Result<Child> {
+  retry_busy(|| command.spawn())
+}
 
 /// Read `stream` to its end on a thread, so a full pipe never stalls the child.
 pub(crate) fn drain<R: Read + Send + 'static>(mut stream: R) -> JoinHandle<String> {

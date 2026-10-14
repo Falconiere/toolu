@@ -114,3 +114,52 @@ fn a_failing_measurer_reports_its_exit_and_stderr() {
   let err = once(&measurer, &spawn(dir.path(), SPAWN_DEADLINE), "entry", 0).unwrap_err();
   assert_eq!(err, "entry: measurer exited Some(4): cannot measure");
 }
+
+#[test]
+fn a_measurer_that_never_reads_a_large_payload_still_meets_the_deadline() {
+  let dir = tempfile::tempdir().unwrap();
+  let measurer = measurer(dir.path(), "sleep 30");
+  let big = Spawn {
+    stdin: "x".repeat(2 << 20),
+    ..spawn(dir.path(), Duration::from_secs(1))
+  };
+  let started = Instant::now();
+  let err = once(&measurer, &big, "entry", 0).unwrap_err();
+  assert!(
+    err.starts_with("entry: the measurer ran past 1 s and was killed"),
+    "{err}"
+  );
+  assert!(started.elapsed() < Duration::from_secs(10), "{err}");
+}
+
+#[test]
+fn a_large_payload_is_delivered_to_a_measurer_that_reads_it() {
+  let dir = tempfile::tempdir().unwrap();
+  let body = r#"n=$(wc -c)
+printf '{"exitCode":0,"wallUs":1,"userUs":1,"sysUs":1,"maxRssBytes":%s}' "$n" > "$3""#;
+  let measurer = measurer(dir.path(), body);
+  let big = Spawn {
+    stdin: "x".repeat(1 << 20),
+    ..spawn(dir.path(), SPAWN_DEADLINE)
+  };
+  let sample = once(&measurer, &big, "entry", 0).unwrap();
+  assert_eq!(sample.max_rss_bytes, 1 << 20);
+}
+
+#[test]
+fn a_background_child_holding_stderr_does_not_keep_the_harness_waiting() {
+  let dir = tempfile::tempdir().unwrap();
+  let measurer = measurer(dir.path(), "echo gone >&2\nsleep 4 &\nexit 4");
+  let started = Instant::now();
+  let err = once(&measurer, &spawn(dir.path(), SPAWN_DEADLINE), "entry", 0).unwrap_err();
+  assert_eq!(err, "entry: measurer exited Some(4): gone");
+  assert!(started.elapsed() < Duration::from_secs(3), "{err}");
+}
+
+#[test]
+fn the_stderr_file_is_removed_with_the_report() {
+  let dir = tempfile::tempdir().unwrap();
+  let measurer = measurer(dir.path(), "echo oops >&2\nexit 1");
+  once(&measurer, &spawn(dir.path(), SPAWN_DEADLINE), "entry", 3).unwrap_err();
+  assert!(!dir.path().join("measure-3.err").exists());
+}

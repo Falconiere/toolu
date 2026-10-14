@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::host_smoke_checks as checks;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run as run_child;
-use crate::host_smoke_project::{PushProject, git, head, remote_has};
+use crate::host_smoke_project::{PushProject, git, head, nonce, remote_has};
 use crate::host_smoke_prompts::{DENY, PUSH_REF};
 
 /// Where a host's transcripts go and how its children are started.
@@ -68,7 +68,7 @@ pub(crate) fn deny(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result
   checks::deny(project, &session(driver, run, project, &step)?)
 }
 
-/// The clean control command runs.
+/// The clean control command runs: it prints the project's nonce.
 pub(crate) fn allowed(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
   let prompt = driver.prompts().allowed;
   let step = Step {
@@ -76,7 +76,8 @@ pub(crate) fn allowed(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Res
     tools: "Bash",
     prompt,
   };
-  checks::ran_in(project, &session(driver, run, project, &step)?)
+  let expected = nonce(project)?;
+  checks::ran_in(&expected, &session(driver, run, project, &step)?)
 }
 
 /// The edit leaves a failing quality state.

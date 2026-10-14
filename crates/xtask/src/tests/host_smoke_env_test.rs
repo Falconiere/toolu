@@ -38,31 +38,48 @@ fn a_directory_with_bun_is_replaced_by_links_to_its_other_tools() {
   script(&inert, "bun", 0o644);
   let filtered = path_without_bun(&join(&[&plain, &brew, &inert]), &shims).unwrap();
   let kept: Vec<_> = std::env::split_paths(&filtered).collect();
-  assert_eq!(kept, vec![plain, shims.clone(), inert]);
-  assert_eq!(names(&shims), ["git", "node"]);
-  let linked = std::fs::read_link(shims.join("git")).unwrap();
+  let shim = shims.join("0");
+  assert_eq!(kept, vec![plain, shim.clone(), inert]);
+  assert_eq!(names(&shim), ["git", "node"]);
+  let linked = std::fs::read_link(shim.join("git")).unwrap();
   assert_eq!(linked, brew.join("git"));
   assert!(find_tool("git", &filtered).is_some() && find_tool("bun", &filtered).is_none());
 }
 
 #[test]
-fn several_directories_with_bun_share_one_shim_directory_in_path_order() {
+fn non_adjacent_directories_with_bun_keep_their_slots_and_their_own_tools() {
   let dir = tempfile::tempdir().unwrap();
-  let (first, second) = (dir.path().join("first"), dir.path().join("second"));
-  let shims = dir.path().join("shims");
-  for (bin, tools) in [(&first, ["bun", "git"]), (&second, ["bunx", "git"])] {
-    for tool in tools {
-      script(bin, tool, 0o755);
-    }
-  }
-  script(&second, "npm", 0o755);
-  let filtered = path_without_bun(&join(&[&first, &second]), &shims).unwrap();
-  assert_eq!(std::env::split_paths(&filtered).count(), 1);
-  assert_eq!(names(&shims), ["git", "npm"]);
-  assert_eq!(
-    std::fs::read_link(shims.join("git")).unwrap(),
-    first.join("git")
+  let (first, plain, last) = (
+    dir.path().join("first"),
+    dir.path().join("plain"),
+    dir.path().join("last"),
   );
+  let shims = dir.path().join("shims");
+  for tool in ["bun", "git", "only-first"] {
+    script(&first, tool, 0o755);
+  }
+  for tool in ["git", "rg"] {
+    script(&plain, tool, 0o755);
+  }
+  for tool in ["bunx", "git", "only-last"] {
+    script(&last, tool, 0o755);
+  }
+  let filtered = path_without_bun(&join(&[&first, &plain, &last]), &shims).unwrap();
+  let kept: Vec<_> = std::env::split_paths(&filtered).collect();
+  assert_eq!(kept, vec![shims.join("0"), plain.clone(), shims.join("1")]);
+  assert_eq!(names(&shims.join("0")), ["git", "only-first"]);
+  assert_eq!(names(&shims.join("1")), ["git", "only-last"]);
+  assert_eq!(
+    find_tool("git", &filtered).unwrap(),
+    shims.join("0").join("git")
+  );
+  assert_eq!(
+    std::fs::read_link(shims.join("1").join("git")).unwrap(),
+    last.join("git")
+  );
+  let plain_path = join(&[&plain, &shims.join("1")]);
+  assert_eq!(find_tool("git", &plain_path).unwrap(), plain.join("git"));
+  assert!(find_tool("bun", &filtered).is_none() && find_tool("bunx", &filtered).is_none());
 }
 
 #[test]
@@ -151,7 +168,7 @@ fn apply_sets_the_native_binary_and_drops_the_bun_and_git_selection_overrides() 
     value("CODEX_HOME"),
     Some(Some(Path::new("/x/home").as_os_str()))
   );
-  let expected = join(&[&shims, &plain]);
+  let expected = join(&[&shims.join("0"), &plain]);
   assert_eq!(value("PATH"), Some(Some(expected.as_os_str())));
 }
 

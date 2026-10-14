@@ -60,15 +60,7 @@ fn refresh(roots: &Roots) -> Result<Refreshed, String> {
   } else {
     retire_paths(roots)?
   };
-  let notice = migrated.map(|line| line.message).or_else(|| {
-    still_named.map(|path| {
-      format!(
-        "statusline: {} still runs statusline/statusline.sh, which toolu no longer \
-         publishes; set its statusLine command to toolu statusline render",
-        path.display()
-      )
-    })
-  });
+  let notice = migrated.map(|line| line.message).or(still_named);
   Ok(Refreshed {
     retired,
     migrated: did_migrate,

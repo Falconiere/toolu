@@ -1,6 +1,7 @@
 //! The temporary git projects `host-smoke` drives a live session in.
 
 use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run;
@@ -9,6 +10,9 @@ use crate::host_smoke_exec::run;
 const LIMITS: &str = r#"{"gates":{"protectedFiles":{"mode":"block"},"commitGate":{"mode":"block"},"qualityGate":{"mode":"block"},"pushReview":{"mode":"block"}},"lang":{"ts":{"maxFileLines":3}}}"#;
 /// The branch the push-review project is on, ahead of `main`.
 const PUSH_BRANCH: &str = "feat/push-smoke";
+
+/// The file in a project that holds its nonce, read by the allowed control command.
+pub(crate) const NONCE_FILE: &str = ".toolu-smoke-nonce";
 
 /// A project whose `origin` is a local bare repository.
 pub(crate) struct PushProject {
@@ -32,6 +36,26 @@ fn write(path: &Path, text: &str) -> Result<(), String> {
   std::fs::write(path, text).map_err(|err| format!("cannot write {}: {err}", path.display()))
 }
 
+/// A value no prompt or earlier output contains: the hex of the clock's nanoseconds
+/// xor this process's id, then the id and the nanoseconds again, so it is long and
+/// differs between projects and runs.
+fn fresh_nonce() -> Result<String, String> {
+  let nanos = SystemTime::now()
+    .duration_since(UNIX_EPOCH)
+    .map_err(|err| format!("the clock is before the epoch: {err}"))?
+    .as_nanos();
+  let pid = u128::from(std::process::id());
+  Ok(format!("{:x}-{pid:x}-{nanos:x}", nanos ^ pid))
+}
+
+/// The nonce `create` wrote in `project`.
+pub(crate) fn nonce(project: &Path) -> Result<String, String> {
+  let file = project.join(NONCE_FILE);
+  let text = std::fs::read_to_string(&file)
+    .map_err(|err| format!("cannot read {}: {err}", file.display()))?;
+  Ok(text.trim().to_owned())
+}
+
 /// A committed project called `name` for `host` (`claude` or `codex`).
 pub(crate) fn create(
   root: &Path,
@@ -45,6 +69,7 @@ pub(crate) fn create(
     .map_err(|err| format!("cannot create {}: {err}", host_dir.display()))?;
   write(&path.join(".env"), "KEEP=1\n")?;
   write(&path.join("sample.ts"), "export const n = 1;\n")?;
+  write(&path.join(NONCE_FILE), &format!("{}\n", fresh_nonce()?))?;
   write(&path.join("tsconfig.json"), "{}\n")?;
   write(
     &path.join("package.json"),

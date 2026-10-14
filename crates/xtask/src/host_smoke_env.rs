@@ -30,47 +30,49 @@ fn holds_bun(dir: &Path) -> bool {
   BUN.iter().any(|name| is_executable(&dir.join(name)))
 }
 
-/// Link every executable of `dirs`, the first directory winning a name, except `bun`
-/// and `bunx`, into the new directory `shims`.
-fn shim_dir(dirs: &[PathBuf], shims: &Path) -> Result<(), String> {
+/// Link every executable of `dir` except `bun` and `bunx` into the new directory `shim`.
+fn shim_dir(dir: &Path, shim: &Path) -> Result<(), String> {
   std::fs::DirBuilder::new()
     .mode(0o700)
-    .create(shims)
-    .map_err(|err| format!("cannot create {}: {err}", shims.display()))?;
-  for dir in dirs {
-    let listing =
-      std::fs::read_dir(dir).map_err(|err| format!("cannot list {}: {err}", dir.display()))?;
-    for entry in listing {
-      let entry = entry.map_err(|err| format!("cannot list {}: {err}", dir.display()))?;
-      let name = entry.file_name();
-      let hidden = BUN.iter().any(|bun| name == OsStr::new(bun));
-      let link = shims.join(&name);
-      if hidden || !is_executable(&entry.path()) || link.symlink_metadata().is_ok() {
-        continue;
-      }
-      symlink(entry.path(), &link)
-        .map_err(|err| format!("cannot link {}: {err}", link.display()))?;
+    .create(shim)
+    .map_err(|err| format!("cannot create {}: {err}", shim.display()))?;
+  let listing =
+    std::fs::read_dir(dir).map_err(|err| format!("cannot list {}: {err}", dir.display()))?;
+  for entry in listing {
+    let entry = entry.map_err(|err| format!("cannot list {}: {err}", dir.display()))?;
+    let name = entry.file_name();
+    let hidden = BUN.iter().any(|bun| name == OsStr::new(bun));
+    if hidden || !is_executable(&entry.path()) {
+      continue;
     }
+    let link = shim.join(&name);
+    symlink(entry.path(), &link).map_err(|err| format!("cannot link {}: {err}", link.display()))?;
   }
   Ok(())
 }
 
-/// `path` with each directory that holds an executable `bun` or `bunx` replaced, at
-/// the place of the first, by one directory `shims` of links to the other tools in
-/// them. `shims` must not exist yet; it is created only when such a directory does.
+/// `path` with each directory that holds an executable `bun` or `bunx` replaced, in its
+/// own slot, by a directory of links to the other tools in it: `shims/0`, `shims/1`, in
+/// `PATH` order. One directory each keeps the order of every tool across the slots.
+/// `shims` must not exist yet; it is created only when such a directory does.
 pub(crate) fn path_without_bun(path: &OsStr, shims: &Path) -> Result<OsString, String> {
-  let dirs: Vec<PathBuf> = std::env::split_paths(path).collect();
-  let with_bun: Vec<PathBuf> = dirs.iter().filter(|dir| holds_bun(dir)).cloned().collect();
   let mut kept = Vec::new();
-  for dir in &dirs {
-    if !holds_bun(dir) {
-      kept.push(dir.clone());
-    } else if !kept.iter().any(|known| known == shims) {
-      kept.push(shims.to_path_buf());
+  let mut made = 0_usize;
+  for dir in std::env::split_paths(path) {
+    if !holds_bun(&dir) {
+      kept.push(dir);
+      continue;
     }
-  }
-  if !with_bun.is_empty() {
-    shim_dir(&with_bun, shims)?;
+    if made == 0 {
+      std::fs::DirBuilder::new()
+        .mode(0o700)
+        .create(shims)
+        .map_err(|err| format!("cannot create {}: {err}", shims.display()))?;
+    }
+    let shim = shims.join(made.to_string());
+    shim_dir(&dir, &shim)?;
+    kept.push(shim);
+    made += 1;
   }
   std::env::join_paths(kept).map_err(|err| format!("cannot rebuild PATH: {err}"))
 }

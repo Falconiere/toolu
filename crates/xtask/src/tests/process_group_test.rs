@@ -2,7 +2,7 @@ use std::os::unix::process::CommandExt as _;
 use std::process::{Child, Command, Stdio};
 use std::time::{Duration, Instant};
 
-use super::{kill, wait};
+use super::{kill, retry_busy, spawn_retrying, wait};
 
 fn leader(script: &str) -> Child {
   Command::new("/bin/sh")
@@ -58,4 +58,54 @@ fn a_reader_that_panicked_is_an_error() {
   let handle = std::thread::spawn(|| -> String { std::panic::resume_unwind(Box::new("boom")) });
   let err = super::collect(handle).unwrap_err();
   assert_eq!(err, "an output reader panicked: boom");
+}
+
+fn busy() -> std::io::Error {
+  std::io::Error::from_raw_os_error(nix::errno::Errno::ETXTBSY as i32)
+}
+
+#[test]
+fn a_busy_executable_is_tried_again_until_it_starts() {
+  let mut calls = 0;
+  let result = retry_busy(|| {
+    calls += 1;
+    if calls < 3 { Err(busy()) } else { Ok(calls) }
+  });
+  assert_eq!(result.unwrap(), 3);
+}
+
+#[test]
+fn another_error_is_returned_at_once() {
+  let mut calls = 0;
+  let result: std::io::Result<()> = retry_busy(|| {
+    calls += 1;
+    Err(std::io::Error::from_raw_os_error(
+      nix::errno::Errno::ENOENT as i32,
+    ))
+  });
+  assert_eq!(calls, 1);
+  assert_eq!(result.unwrap_err().kind(), std::io::ErrorKind::NotFound);
+}
+
+#[test]
+fn a_program_that_stays_busy_fails_after_the_retries() {
+  let mut calls = 0;
+  let result: std::io::Result<()> = retry_busy(|| {
+    calls += 1;
+    Err(busy())
+  });
+  assert_eq!(calls, 21);
+  assert_eq!(result.unwrap_err().raw_os_error(), busy().raw_os_error());
+}
+
+#[test]
+fn spawn_retrying_starts_a_program_and_reports_a_missing_one() {
+  let mut ok = Command::new("/bin/sh");
+  ok.args(["-c", "exit 0"]);
+  assert!(spawn_retrying(&mut ok).unwrap().wait().unwrap().success());
+  let mut missing = Command::new("/no/such/program");
+  assert_eq!(
+    spawn_retrying(&mut missing).unwrap_err().kind(),
+    std::io::ErrorKind::NotFound
+  );
 }

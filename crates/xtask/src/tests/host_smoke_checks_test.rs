@@ -1,4 +1,5 @@
-use super::{CWD_MARKER, commit_denied, deny, must, push_blocked, quality, quality_state, ran_in};
+use super::{commit_denied, deny, must, push_blocked, quality, quality_state, ran_in};
+use crate::host_smoke_project::NONCE_FILE;
 use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CODEX_ALLOWED};
 
 const FAILING: &str =
@@ -52,36 +53,32 @@ fn deny_without_an_env_file_is_an_error() {
 }
 
 #[test]
-fn ran_in_needs_the_marker_before_the_given_or_resolved_path() {
-  let dir = tempfile::tempdir().unwrap();
-  let given = dir.path().display().to_string();
-  let printed = format!("{{\"output\":\"{CWD_MARKER}{given}\\n\"}}");
-  assert!(ran_in(dir.path(), &printed).is_ok());
-  let real = std::fs::canonicalize(dir.path())
-    .unwrap()
-    .display()
-    .to_string();
-  assert!(ran_in(dir.path(), &format!("{CWD_MARKER}{real}")).is_ok());
-  assert!(ran_in(dir.path(), &format!("{CWD_MARKER}/somewhere/else")).is_err());
-}
-
-#[test]
-fn the_working_directory_alone_is_not_evidence_the_control_ran() {
-  let dir = tempfile::tempdir().unwrap();
-  let init = format!(
-    "{{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"{}\"}}",
-    dir.path().display()
-  );
+fn ran_in_needs_the_nonce_in_the_transcript() {
+  let printed = "{\"output\":\"1f2e3d-9a-77\\n\"}";
+  assert!(ran_in("1f2e3d-9a-77", printed).is_ok());
   assert_eq!(
-    ran_in(dir.path(), &init).unwrap_err(),
+    ran_in("1f2e3d-9a-78", printed).unwrap_err(),
     "the clean control command did not run"
   );
+  assert!(ran_in("", printed).is_err());
 }
 
 #[test]
-fn both_allowed_prompts_print_the_marker_with_the_shell_working_directory() {
+fn the_working_directory_or_a_typed_marker_is_not_evidence_the_control_ran() {
+  let init = "{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"/tmp/p\"}";
+  assert_eq!(
+    ran_in("abc-12-34", init).unwrap_err(),
+    "the clean control command did not run"
+  );
+  let typed = "{\"output\":\"toolu-smoke-cwd:/tmp/p\\n\"}";
+  assert!(ran_in("abc-12-34", typed).is_err());
+}
+
+#[test]
+fn both_allowed_prompts_cat_the_nonce_by_its_relative_path() {
   for prompt in [CLAUDE_ALLOWED, CODEX_ALLOWED] {
-    assert!(prompt.contains(&format!("{CWD_MARKER}$PWD")), "{prompt}");
+    assert!(prompt.contains(&format!("`cat {NONCE_FILE}`")), "{prompt}");
+    assert!(!prompt.contains("echo"), "{prompt}");
   }
 }
 
