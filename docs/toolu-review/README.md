@@ -35,7 +35,7 @@ Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk a
 | 3 | **Performance** | Hot paths (per-render/per-hook work), needless subprocess spawns |
 | 4 | **Test coverage** | Every new code path must have a colocated real-data test — missing tests are findings |
 | 5 | **Doc/comment accuracy** | Comments must match behavior — no stale paths, no "one-time" on code that runs every invocation |
-| 6 | **Tight test assertions** | Assert full identity, not loose suffixes (`*/toolu/pre-tools.d/rule.sh`, not `*/rule.sh`) |
+| 6 | **Tight test assertions** | Assert full identity, not loose suffixes (`*/toolu/pre-tools.d/rule.json`, not `*/rule.json`) |
 | 7 | **In-session migration WARNs** | Breaking changes (moved paths, removed symlinks) must surface actionable hints, not silent failures |
 | 8 | **Convention adherence** | Diff must follow the repo's own convention files the CI action gathers from the base ref (`AGENTS.md`, `CLAUDE.md`, etc.) |
 
