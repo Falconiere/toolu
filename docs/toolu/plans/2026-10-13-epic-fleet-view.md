@@ -128,7 +128,8 @@ fleet core (fetch, classify, project) → listener route, round cache and refres
     "paths": [
       "crates/epic-orchestrator/src",
       "crates/cli/src",
-      "docs/toolu/evidence/epic-fleet-dashboard.sh"
+      "docs/toolu/evidence/epic-fleet-dashboard.sh",
+      "docs/toolu/evidence/epic-fleet-dashboard-dom.ts"
     ],
     "input": "GET / from a live listener (element ids, fleet endpoints, no external URL); two real target/debug/toolu epic serve processes plus a closed-port peer and a wrong-token peer rendered by headless Chrome: A shows local, server, Unreachable \u00b7 never seen, Unauthorized: token rejected and the fleet summary; B hides the switcher",
     "model": "inherit"
@@ -207,3 +208,8 @@ The scoped commit force-adds the gitignored `docs/toolu/` files: the brainstorm,
 ## Review
 
 Plan review (2026-10-13): two blockers (missing `http::Config` literals in `http_access_test.rs`/`http_metrics_test.rs`; a `git diff` check that fails on its own regeneration) and should-fixes (pinned test names, AC-4 split per step, dashboard test module, docs phrase assertions, guardrail checks per step, evidence script robustness, force-added files). All applied above.
+
+## Deviations
+
+- S1–S4: the production modules were drafted before their tests. Red evidence comes from a mutation run: with `fleet::document`'s redaction removed, `fleet_summary_sums_ok_machines` and `fleet_token_canary_fleet` fail (the canary appears in the fleet body); restoring it turns them green.
+- S5: `chrome --dump-dom` either never settled (`--virtual-time-budget` waits on the open event stream) or dumped before the page's fetches ran. The script now drives Chrome through the DevTools protocol with `docs/toolu/evidence/epic-fleet-dashboard-dom.ts` (Bun): it waits 3 s, optionally clicks a machine tab, and prints the rendered `.shell` without script text, so the checks cannot match the page source. It also checks the `server` peer view (title and board through the proxy) and the `vault` banner with panels hidden.
