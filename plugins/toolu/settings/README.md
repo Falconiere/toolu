@@ -24,7 +24,7 @@ jq -s '.[0] * .[1]' ~/.claude/settings.json plugins/toolu/settings/permissions.f
 
 The settings.json deny matcher is substring-based and unreliable for argv
 shapes like `node -e`, `git push --force`, or `git push origin main`. The
-`bash-commands` PreToolUse gate (`@toolu/core/gates`) performs argv-aware
+`bash-commands` PreToolUse gate (`toolu_engine::gates`) performs argv-aware
 enforcement using `bash-denylist.txt`. Both layers must be installed for
 the security model to hold:
 
@@ -43,13 +43,13 @@ when you run them.
 
 | File                          | Consumer                                          | Purpose                                                            |
 |-------------------------------|---------------------------------------------------|--------------------------------------------------------------------|
-| `bash-allowlist.txt`          | `bash-commands` gate (`@toolu/core/gates`)        | Explicit overrides on top of the denylist (deny + allow → allowed). |
-| `bash-denylist.txt`           | `bash-commands` gate (`@toolu/core/gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
-| `code-edit-rules.json`        | `code-edit-rules` gate (`@toolu/core/gates`)      | Pattern rules for Write/Edit gating on source files.               |
-| `commit-prefixes.txt`         | `commit-gate` gate (`@toolu/core/gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
-| `mcp-blocklist.txt`           | `mcp-blocker` gate (`@toolu/core/gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
+| `bash-allowlist.txt`          | `bash-commands` gate (`toolu_engine::gates`)        | Explicit overrides on top of the denylist (deny + allow → allowed). |
+| `bash-denylist.txt`           | `bash-commands` gate (`toolu_engine::gates`)        | Tokens the bash guard rejects via argv-aware parsing.              |
+| `code-edit-rules.json`        | `code-edit-rules` gate (`toolu_engine::gates`)      | Pattern rules for Write/Edit gating on source files.               |
+| `commit-prefixes.txt`         | `commit-gate` gate (`toolu_engine::gates`)          | Allowed Conventional Commits prefixes for `git commit` messages.   |
+| `mcp-blocklist.txt`           | `mcp-blocker` gate (`toolu_engine::gates`)          | MCP server prefixes blocked unconditionally (plain text).          |
 | `toolu.config.example.json` | (reference — copy to `~/.claude/toolu.config.json`) | Example runtime opt-out config (skills/hooks/mcp). See `docs/config.md`. |
-| `protected-files.txt`         | `protected-files` gate (`@toolu/core/gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
+| `protected-files.txt`         | `protected-files` gate (`toolu_engine::gates`)      | Paths the edit guard refuses to modify (lockfiles, secrets, etc.). |
 | `rust-unsafe-exemptions.txt`  | `crates/rust-quality/src/rule.rs`                 | Files/paths exempt from the `unsafe` Rust check.                   |
 
 Each plain-text file is one entry per line, `#` for comments. JSON files
@@ -114,12 +114,13 @@ the rust-quality / ts-quality / python-quality hooks write. Install it and wire 
 
 ```json
 { "statusLine": { "type": "command",
-                  "command": "~/.claude/statusline/statusline.sh" } }
+                  "command": "toolu statusline render" } }
 ```
 
-Toolu no longer ships or symlinks the statusline; on upgrade it sweeps the
-old `~/.claude/toolu/statusline.sh` symlink it used to own. If you previously
-wired that path, re-point it to `~/.claude/statusline/statusline.sh`.
+Toolu no longer ships or symlinks a statusline script. On upgrade, the
+statusline plugin's SessionStart removes the `~/.claude/statusline/statusline.sh`
+link older versions published (a file of your own stays) and rewrites a
+`settings.json` `statusLine` that ran it to `toolu statusline render`.
 
 ## Runtime config
 

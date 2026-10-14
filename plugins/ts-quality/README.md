@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its manifest into toolu's registry, plus a small `.sh` bridge that lets the Bun post-tools dispatcher run the same rule until #425. It also removes the Bun module of earlier releases:
+Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases:
 
 - File / function line limits (config-driven).
 - No `../` relative imports — use the `@/` alias (only enforced when the project defines a `@/*` path alias in its tsconfig).

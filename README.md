@@ -8,7 +8,7 @@ AI writes code fast — then skips the parts that keep a codebase alive: oversiz
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
-[![Tests](https://img.shields.io/badge/tests-Bun%20suite-brightgreen)](#testing)
+[![Tests](https://img.shields.io/badge/tests-Rust%20suite-brightgreen)](#testing)
 [![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
@@ -89,7 +89,7 @@ wrapper that runs `toolu plugins` on the installed binary
 toolu has first-class packages for Claude Code and Codex. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH` for every host. Resolution order, missing-runtime behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
+**Prerequisite:** the native `toolu` binary. Every hook, skill command and agent command runs it; Bun is not used or needed on any host. Resolution order, missing-binary behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
 
 ### The plugin installer
 
@@ -225,7 +225,7 @@ To think a change through without starting delivery, invoke `/brainstorm:brainst
 
 Spec and plan reviews must approve before the next phase. The execution phase verifies ledger steps, real-data tests, documentation, local review, and the green verdict. A rejection or failed check stops the flow at that phase; resume there and refresh stale evidence. Missing GitHub auth, a non-default branch, a dependency, or a gate is reported as a specific delivery blocker.
 
-The workflow skills and `ast-grep` run on Bun hook bundles. The standalone `deep-research` skill uses the active host's native web tools for cited reports under `docs/research/`.
+The workflow skills and `ast-grep` run native `toolu` commands. The standalone `deep-research` skill uses the active host's native web tools for cited reports under `docs/research/`.
 
 ## Architecture
 
@@ -239,11 +239,11 @@ flowchart TD
     subgraph plugins["domain plugins"]
         RQ["rust-quality<br/>toolu rust-quality"]
         TQ["ts-quality<br/>toolu ts-quality"]
-        AG["ast-grep<br/>register.js"]
+        AG["ast-grep<br/>toolu ast-grep"]
     end
     RQ -- "a manifest for its compiled-in rule" --> R[("registry<br/>host config dir/toolu/")]
     TQ -- "a manifest for its compiled-in rule" --> R
-    AG -- "bundled ESM modules, run in process" --> R
+    AG -- "a manifest for each compiled-in rule" --> R
     R --> D
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
@@ -263,9 +263,9 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     │   ├── skills/             # core orchestration, debug, research, and command skills
     │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
     │   ├── commands/           # commit, review-and-commit
-    │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart bundles
+    │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart hook entries
     │   └── settings/           # reusable settings fragments
-    ├── ast-grep/               # ast-grep skill + nudge and byte-savings registry modules (Bun)
+    ├── ast-grep/               # ast-grep skill + nudge and byte-savings rules, native manifests
     ├── jev/                    # jev skill + TypeSafe System One REST wrapper
     ├── rust-quality/           # Rust PostToolUse quality checks, a native rule manifest
     ├── ts-quality/             # TypeScript PostToolUse quality checks, a native rule manifest
@@ -299,12 +299,12 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by Bun tests and conformance suites, all run in CI on every push. Install smoke tests use temporary host configuration roots:
+The hook engine and language gates are covered by Rust tests that spawn the real `toolu` binary, all run in CI on every push. Install smoke tests use temporary host configuration roots:
 
 ```sh
-cargo xtask gate          # the quality gate
-bun run test:unit         # focused Bun tests
-bun run test:conformance  # host and gate conformance
+cargo xtask gate                    # the quality gate
+cargo test --workspace             # every Rust test
+cargo xtask host-smoke --host both  # macOS live check of both hosts
 ```
 
 ## Contributing
@@ -312,7 +312,7 @@ bun run test:conformance  # host and gate conformance
 PRs and issues welcome.
 
 1. Pick the right home — skill vs. agent vs. command vs. hook — and use the existing siblings as templates.
-2. Add Bun tests (`*.test.ts`, colocated in a `__tests__/`) for hook logic.
+2. Add Rust tests (`tests/<module>_test.rs` beside the module, or a crate's `tests/`) for hook logic.
 3. Verify in a real session before committing.
 4. Use a [Conventional Commits](https://www.conventionalcommits.org/) subject (`feat(skills): add foo`).
 
@@ -322,7 +322,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the Bun packages, `Cargo.toml` / `Cargo.lock`, and every Claude and Codex plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run in the same workflow; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the npm wrapper package, `Cargo.toml` / `Cargo.lock`, and every Claude and Codex plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run in the same workflow; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
 
 ## References
 

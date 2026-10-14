@@ -46,12 +46,13 @@ the key.
 
 ## Existing settings
 
-The native SessionStart hook publishes a compatibility symlink at
-`<config root>/statusline/statusline.sh`. It migrates the older path or its
-simple shell form in Claude's `statusLine` to `toolu statusline render`, saves a
-backup, and shows one notice. Later starts are silent. A user-owned regular
-file at the compatibility path is left alone. Run `toolu statusline refresh`
-to republish the path and apply a pending migration outside SessionStart.
+The native SessionStart hook no longer publishes
+`<config root>/statusline/statusline.sh`. It rewrites a Claude `statusLine` that
+ran that path, or its simple shell form, to `toolu statusline render`, saves a
+backup, and shows one notice. When it cannot rewrite the setting, it says so and
+leaves the path alone. Once nothing names the old path, it removes toolu's link
+there; a user-owned regular file is kept. Later starts are silent. Run
+`toolu statusline refresh` to apply a pending migration outside SessionStart.
 
 A still older `~/.claude/toolu/statusline.sh` setting is treated as custom;
 run `/statusline:setup --force` to replace it.
@@ -65,7 +66,7 @@ waiver facts. It has no Claude model, context, or account fields.
 ## Verification
 
 The native crate and CLI tests use real repositories, settings files, linked
-worktrees, and hook processes. `bun run test:statusline-native` replays the 31
-render, 15 setup, and five SessionStart cases in
-`fixtures/statusline/cases.json` against the binary. The render budget is
-measured with `bun tooling/src/benchmarks/statusline.ts --assert`.
+worktrees, and hook processes. `crates/cli/tests/golden_statusline.rs` replays
+the render, setup and SessionStart cases in `fixtures/statusline/cases.json`
+against the binary. The render budget is measured with
+`cargo xtask bench-statusline --assert`.

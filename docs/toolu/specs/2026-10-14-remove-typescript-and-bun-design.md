@@ -118,6 +118,7 @@ The decisive trade-off is deleting the live TypeScript oracle. The shared JSON g
 - **AC-10:** `cargo xtask check-markdown-cli` and `cargo xtask gate --only docs-cli` pass. `git grep -n -E '\bbun (run|install|test|build|x)\b|setup-bun|hooks/dist|TOOLU_RUNTIME|@toolu/core' -- AGENTS.md README.md 'docs/*.md' 'docs/cli/**' tooling/templates 'plugins/**/*.md' '.toolu/skills/**'` prints only lines in the `docs/runtime.md` migration note, which names `TOOLU_RUNTIME=bun` and `@toolu/core` as removed.
 - **AC-11:** No `.github/workflows/*.yml` uses `oven-sh/setup-bun` or runs `bun`. `cargo xtask gate --only ci-paths --only workflows` passes on the new workflows, and fails on a fixture workflow that violates one ported rule, for example a missing `if` on a gated job.
 
+- **AC-13:** Every shared golden that only the TypeScript harness replayed is replayed by a Rust test against the built `toolu`. That covers `gates/pre-tool-modules-{a,b,c}-golden.json` with their corpus rows, `gates/lifecycle-golden.json`, `quality/{ts,python,rust}-golden.json` and `statusline/cases.json`. Each test asserts its case count and names a mismatching case. A case it does not replay is listed with a reason. `toolu setup agents` keeps its former `setup.ts` parity as recorded transcripts.
 - **AC-12:** With a `PATH` that holds no `bun` and no `~/.bun`, running every `SessionStart` and `UserPromptSubmit` hook entry of every plugin through the built binary in a temp config dir prints no text that contains `bun` (case-insensitive) on stdout or stderr. With the same `PATH`, `toolu doctor --json` reports no Bun check.
 
 ## Acceptance evidence
@@ -137,6 +138,8 @@ The decisive trade-off is deleting the live TypeScript oracle. The shared JSON g
 | AC-11 | `.github/workflows/*.yml`; fixture workflows in `check_workflows_test.rs` | Pass; violation reported | One rule broken per fixture | `cargo test -p xtask check_workflows ci_yaml`; `cargo xtask gate --only ci-paths --only workflows` |
 | AC-12 | Every plugin's `hooks.json` SessionStart/UserPromptSubmit entry, temp config dir | No Bun mention | `PATH` without Bun, `TOOLU_BUN` unset | `cargo test -p toolu-cli --test no_bun_advice` (spawns the generated launcher commands with `TOOLU_BIN`); `toolu doctor --json` in the same test |
 
+| AC-13 | The committed goldens and the built binary | Every case replayed or listed with a reason | A corrupted golden value fails with the case name (checked by hand while porting) | `cargo test -p toolu-cli --test golden_gates --test golden_lifecycle --test golden_quality --test golden_statusline --test setup_agents_golden` |
+
 ## Documentation impact
 
 - **Rewritten:** `docs/runtime.md`.
@@ -150,6 +153,13 @@ The decisive trade-off is deleting the live TypeScript oracle. The shared JSON g
 
 1. **Merge after a #425 release.** Owner: epic orchestrator or maintainer. Non-blocking for implementation. The PR states it.
 2. **`npm deprecate @toolu/core`.** Owner: maintainer. It needs registry credentials the worker does not have. Non-blocking, and listed in the PR as a post-merge step.
+
+## Deviations (execution)
+
+- **Golden replays (AC-13).** Execution found about 600 golden cases (gates A/B/C, lifecycle, quality, statusline) whose only replayer was the TypeScript harness, through the `TOOLU_IMPL` seam. The Architecture's claim that every golden already had a Rust replayer was wrong for them. Jev chose to port them rather than drop the coverage (0.94). They are now Rust tests in `crates/cli/tests/golden_*.rs`. The statusline `jev`, `report` and `report-error` kinds (24 cases) describe the TypeScript plugin's text report and `jev.sh` probe, which #431 replaced by design, so they are counted, explained and not replayed.
+- **`.sh`-free stable paths.** `toolu statusline refresh --json` reports `retired` instead of `published`.
+- **YAML crate.** `serde_yaml_ng` failed `cargo deny` (unmaintained `unsafe-libyaml`) and `yaml-rust2` pulls the Zlib `foldhash`; `serde-saphyr` (deserialize only) passes. `rustls` moved to 0.23.46 for RUSTSEC-2026-0346, which fails `cargo deny` on main as well.
+- **Interleave.** The state race of 8 TypeScript and 8 Rust writers lost its TypeScript half. A 16-writer Rust race tripped the 5 s lock timeout under load, and the fixture race already covers Rust writers, so it was dropped.
 
 ## Spec review (2026-10-14)
 

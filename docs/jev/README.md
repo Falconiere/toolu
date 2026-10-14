@@ -2,7 +2,7 @@
 
 **Type:** Knowledge | **Standalone** (no plugin dependencies)
 
-Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus a Bun CLI.
+Ask TypeSafe's Jev model a **typed** question about some state and get an answer code can branch on — a probability, a chosen option, or a score on your own levels — through a skill plus the native `toolu jev` CLI.
 
 ## Install
 
@@ -22,15 +22,15 @@ codex plugin add jev@toolu
 
 Restart the host after installation. In Codex, review and trust the installed
 hook through `/hooks`; installation alone does not trust hooks. Both hosts
-need Bun 1.4.x (resolved from `TOOLU_BUN`, `PATH`, or `~/.bun/bin/bun`) and
-`TYPESAFE_API_KEY` in the environment executing Jev. Hooks can receive a different
-environment from agent commands.
+need the native [`toolu` binary](../install.md) and `TYPESAFE_API_KEY` in the
+environment executing Jev. Hooks can receive a different environment from agent
+commands.
 
-- The wrapper lives at `$TOOLU_CONFIG_DIR/jev/jev.sh`, the per-project data root exported to every bash call.
+- The command is `toolu jev`. No wrapper script is published; SessionStart removes the `<config-dir>/jev/jev.sh` link an older version left and keeps a file of your own.
 - The skill is `jev-jev`.
-- The hooks' command adds Bun's `--no-env-file`, and the adapter runs every hook with it, so a project `.env` never supplies or reveals the key.
+- `toolu jev` never loads a project `.env`, so a `.env` never supplies or reveals the key.
 
-Set `TYPESAFE_API_KEY` in the environment for the wrapper to authenticate
+Set `TYPESAFE_API_KEY` in the environment for `toolu jev` to authenticate
 (keys: `https://console.typesafe.ai/settings/keys`). It is never read from a
 `.env` file. `JEV_TIMEOUT` overrides the 60-second timeout per attempt.
 
@@ -57,21 +57,19 @@ next actions, including no-match and uncertain outcomes.
 
 The SessionStart hook injects the full rule on startup, resume, clear, and
 compaction. The UserPromptSubmit hook restates a short form on every prompt so
-the rule survives long sessions. Neither calls the API. Both provide a command
-using the Bun executable already running the hook, so Bun need not be on `PATH`.
-If a hook lacks the key, its notice requires checking the command environment
+the rule survives long sessions. Neither calls the API. Both name `toolu jev` as
+the command to run. If a hook lacks the key, its notice requires checking the command environment
 without printing the key before reporting unavailability.
 Enforcement is through workflow instructions; it does not block edits or commits.
 See the [workflow guidance](../../plugins/toolu/workflows/semantic-judgments.md).
 
-### `jev.sh` Wrapper
+### `toolu jev`
 
-`POST https://api.typesafe.ai/v1/systemone` through a self-contained Bun bundle. The
-SessionStart hook republishes it at `<config-dir>/jev/jev.sh` every session, so
-the agent's shell can reach it without plugin lifecycle variables.
+`POST https://api.typesafe.ai/v1/systemone` from the native binary, so the agent's
+shell reaches it without plugin lifecycle variables.
 
 ```text
-jev.sh <command> [options]
+toolu jev <command> [options]
 
 Commands:
   noul   <instructions>    Yes/no judgment -> probability of yes
@@ -111,13 +109,14 @@ search (rank + existence), debugging (hypotheses + new evidence), planning
 | Context | 64k tokens per request; 32k for `state` plus the longest question. Slice large files first. |
 | Output | Default prints `.answers` compactly. `--raw` adds `model` and token `usage`. Missing or invalid typed answers fail explicitly, including with `--raw`. |
 | Errors | Up to three attempts for timeouts, connection failures, and HTTP `408`, `429`, and any `5xx` — the SDK's default retry set — with 1s then 2s backoff. `Retry-After` (seconds) or `retry-after-ms` up to 60s is honored; longer waits surface the error. `401`/`422` and other 4xx are not retried. |
-| Exit codes | `1` usage/config error or invalid response, `22` HTTP error with the API's body on stderr, `28` timeout. |
+| Exit codes | `1` failure (an HTTP error prints the API's body on stderr), `64` usage, `75` timeout. |
 | Confidence | For `choice`/`score`, `confidence` describes how concentrated the distribution is — not whether the answer is right. Tune thresholds against your own data. |
 
 ## Tests
 
 ```bash
-bun test plugins/jev   # loopback HTTPS; no paid API calls
+cargo test -p toolu-jev    # loopback HTTPS; no paid API calls
+cargo test -p toolu-cli --test jev_cli
 ```
 
 Live docs: `https://docs.typesafe.ai/llms.txt` (append `.md` to any page path).

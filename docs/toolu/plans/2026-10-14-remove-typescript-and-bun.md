@@ -42,8 +42,17 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "launcher",
     "title": "Launcher without Bun: native lookup or fail closed; commandWindows reports the missing binary; regenerate every hooks.json; xtask check-hooks accepts native entries only",
-    "ac_refs": ["AC-2"],
-    "paths": ["crates/core/protocol/src", "crates/xtask/src", "crates/cli/tests/launcher.rs", "crates/cli/tests/helpers", "tooling/fixtures/native-launcher", "plugins/*/hooks/hooks.json"],
+    "ac_refs": [
+      "AC-2"
+    ],
+    "paths": [
+      "crates/core/protocol/src",
+      "crates/xtask/src",
+      "crates/cli/tests/launcher.rs",
+      "crates/cli/tests/helpers",
+      "tooling/fixtures/native-launcher",
+      "plugins/*/hooks/hooks.json"
+    ],
     "input": "Real plugins/*/hooks/hooks.json; launcher golden text fixtures; a temp PATH holding a real bun and no toolu",
     "check": "cargo test -p toolu-protocol launcher && cargo test -p toolu-cli --test launcher missing_binary_blocks_even_with_bun && cargo test -p xtask hooks && cargo run -q -p xtask -- check-hooks && ! git grep -n -i -E 'TOOLU_RUNTIME|hooks/dist|bun' -- 'plugins/*/hooks/hooks.json' && cargo test -p toolu-cli --test launcher",
     "model": "inherit"
@@ -51,9 +60,19 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "registry",
     "title": "Registry: delete the Bun bridge; .js entries skipped as unsupported and no longer shadow .sh; SessionStart advisory per .js module",
-    "ac_refs": ["AC-3"],
-    "depends_on": ["launcher"],
-    "paths": ["crates/core/engine/src/registry", "crates/core/engine/src/trace.rs", "crates/core/engine/tests", "crates/toolu/src/lifecycle", "crates/cli/tests/registry_js.rs"],
+    "ac_refs": [
+      "AC-3"
+    ],
+    "depends_on": [
+      "launcher"
+    ],
+    "paths": [
+      "crates/core/engine/src/registry",
+      "crates/core/engine/src/trace.rs",
+      "crates/core/engine/tests",
+      "crates/toolu/src/lifecycle",
+      "crates/cli/tests/registry_js.rs"
+    ],
     "input": "Temp config dir with x@t__deny.js, x@t__ok.sh and an installed-plugins file; a bun shim on PATH that writes a marker",
     "check": "cargo test -p toolu-engine && cargo test -p toolu-hub && cargo test -p toolu-cli --test registry_js",
     "model": "inherit"
@@ -61,9 +80,21 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "quality-register",
     "title": "Quality plugins register only the manifest and prune their old .sh bridge",
-    "ac_refs": ["AC-5"],
-    "depends_on": ["registry"],
-    "paths": ["crates/core/engine/src/quality", "crates/ts-quality", "crates/python-quality", "crates/rust-quality", "crates/cli/tests/ts_quality_hook.rs", "crates/cli/tests/python_quality_hook.rs", "crates/cli/tests/rust_quality_hook.rs"],
+    "ac_refs": [
+      "AC-5"
+    ],
+    "depends_on": [
+      "registry"
+    ],
+    "paths": [
+      "crates/core/engine/src/quality",
+      "crates/ts-quality",
+      "crates/python-quality",
+      "crates/rust-quality",
+      "crates/cli/tests/ts_quality_hook.rs",
+      "crates/cli/tests/python_quality_hook.rs",
+      "crates/cli/tests/rust_quality_hook.rs"
+    ],
     "input": "Temp config dir holding the exact old bridge text and an unrelated spec's .sh",
     "check": "cargo test -p toolu-engine quality && cargo test -p toolu-ts-quality -p toolu-python-quality -p toolu-rust-quality && cargo test -p toolu-cli --test ts_quality_hook --test python_quality_hook --test rust_quality_hook",
     "model": "inherit"
@@ -71,9 +102,24 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "shims",
     "title": "Stop publishing jev.sh, statusline.sh, write-state.sh; remove toolu-owned symlinks, keep user files; jev context names toolu jev; doctor drops the Bun check; no hook output mentions Bun",
-    "ac_refs": ["AC-4", "AC-12"],
-    "depends_on": ["quality-register"],
-    "paths": ["crates/jev", "crates/statusline", "crates/toolu-review", "crates/toolu/src", "crates/core/runtime/src/startup", "crates/cli/tests", "plugins/jev", "plugins/statusline", "plugins/toolu-review"],
+    "ac_refs": [
+      "AC-4",
+      "AC-12"
+    ],
+    "depends_on": [
+      "quality-register"
+    ],
+    "paths": [
+      "crates/jev",
+      "crates/statusline",
+      "crates/toolu-review",
+      "crates/toolu/src",
+      "crates/core/runtime/src/startup",
+      "crates/cli/tests",
+      "plugins/jev",
+      "plugins/statusline",
+      "plugins/toolu-review"
+    ],
     "input": "Temp config dir with symlinks published by the previous code path, a regular user file, and a foreign symlink; PATH without bun",
     "check": "cargo test -p toolu-jev -p toolu-statusline -p toolu-review -p toolu-hub && cargo test -p toolu-cli --test no_bun_advice --test doctor",
     "model": "inherit"
@@ -81,9 +127,18 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "npm-wrapper",
     "title": "npm wrapper as committed dependency-free tools/toolu-cli/npm/cli.js with Rust integration tests; pack checks only @toolu/plugins",
-    "ac_refs": ["AC-8"],
-    "depends_on": ["shims"],
-    "paths": ["tools/toolu-cli", "crates/cli/tests/npm_wrapper.rs", "crates/xtask/src/pack.rs", "crates/xtask/src/packaging_assets.rs"],
+    "ac_refs": [
+      "AC-8"
+    ],
+    "depends_on": [
+      "shims"
+    ],
+    "paths": [
+      "tools/toolu-cli",
+      "crates/cli/tests/npm_wrapper.rs",
+      "crates/xtask/src/pack.rs",
+      "crates/xtask/src/packaging_assets.rs"
+    ],
     "input": "The built toolu binary; temp HOME/PATH layouts; npm pack --dry-run of tools/toolu-cli/npm",
     "check": "cargo test -p toolu-cli --test npm_wrapper && cargo test -p xtask pack && cargo run -q -p xtask -- gate --only pack",
     "model": "inherit"
@@ -91,9 +146,23 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "xtask-no-bun",
     "title": "xtask without Bun: Rust YAML in ci_yaml, check_workflows ported from TypeScript, dist check / workspace / portable-core steps and bench live/container removed, final-removal rewritten, gate-coverage native-only",
-    "ac_refs": ["AC-1", "AC-11"],
-    "depends_on": ["npm-wrapper"],
-    "paths": ["crates/xtask", "Cargo.toml", "Cargo.lock", "deny.toml", "fixtures/gate-coverage", "docs/gate-coverage-matrix.md", "tooling/conventions/guardrails/rust/inventory.json", ".github"],
+    "ac_refs": [
+      "AC-1",
+      "AC-11"
+    ],
+    "depends_on": [
+      "npm-wrapper"
+    ],
+    "paths": [
+      "crates/xtask",
+      "Cargo.toml",
+      "Cargo.lock",
+      "deny.toml",
+      "fixtures/gate-coverage",
+      "docs/gate-coverage-matrix.md",
+      "tooling/conventions/guardrails/rust/inventory.json",
+      ".github"
+    ],
     "input": "Real .github/workflows/*.yml; temp roots with one violation each (a .ts file, bun.lock, hooks/dist, a .sh, a gated job without if)",
     "check": "cargo test -p xtask && cargo test -p xtask final_removal && cargo test -p xtask check_workflows && cargo run -q -p xtask -- gate --only workflows --only ci-paths --only gate-coverage",
     "model": "inherit"
@@ -101,29 +170,86 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "bench-smoke",
     "title": "New xtask tasks bench-hooks, bench-statusline and host-smoke ported from the TypeScript tools",
-    "ac_refs": ["AC-7", "AC-9"],
-    "depends_on": ["xtask-no-bun"],
-    "paths": ["crates/xtask", "benchmarks", "tooling/conventions/guardrails/rust/inventory.json"],
+    "ac_refs": [
+      "AC-7",
+      "AC-9"
+    ],
+    "depends_on": [
+      "xtask-no-bun"
+    ],
+    "paths": [
+      "crates/xtask",
+      "benchmarks",
+      "plugins/*/hooks/hooks.json",
+      "tooling/conventions/guardrails/rust/inventory.json"
+    ],
     "input": "benchmarks/cases/hooks/payloads.json and every hooks.json entry; a temp budgets copy lowered below the measurement",
-    "check": "cargo test -p xtask bench && cargo test -p xtask bench_hooks_lowered_budget_fails && cargo build --release --locked --bin toolu && cargo run -q -p xtask -- bench-hooks --assert --bin target/release/toolu --out /tmp/toolu-440-bench.json",
+    "check": "cargo test -p xtask bench && cargo test -p xtask bench_hooks_lowered_budget_fails && cargo test -p xtask host_smoke && cargo build --release --locked -p xtask -p toolu-cli && ./target/release/xtask bench-hooks --bin target/release/toolu --out /tmp/toolu-440-bench.json && ./target/release/xtask bench-statusline --bin target/release/toolu --assert",
     "model": "inherit"
   },
   {
     "id": "delete-ts",
     "title": "Delete packages/, tools/toolu-conformance, plugins hooks src/dist, TS tests and scripts, tooling TypeScript, fixtures/rust-ported.json; port delivery-flow contract tests to xtask; drop the live-TypeScript halves of Rust parity tests; drop deleted paths from .github/ci-paths.json so ci-paths stays green",
-    "ac_refs": ["AC-1", "AC-6"],
-    "depends_on": ["bench-smoke"],
-    "paths": ["packages", "tools", "plugins", "tooling", "fixtures", "crates", "benchmarks", ".github/ci-paths.json"],
+    "ac_refs": [
+      "AC-1",
+      "AC-6"
+    ],
+    "depends_on": [
+      "bench-smoke"
+    ],
+    "paths": [
+      "packages",
+      "tools",
+      "plugins",
+      "tooling",
+      "fixtures",
+      "crates",
+      "benchmarks",
+      ".github/ci-paths.json"
+    ],
     "input": "The repository tree; PATH filtered of every bun directory",
     "check": "test -z \"$(git ls-files '*.ts' '*.tsx' '*.mts' '*.cts' | grep -v '^benchmarks/fixtures/')\" && env PATH=\"$(printf %s \"$PATH\" | tr ':' '\\n' | grep -v -i bun | paste -sd: -)\" cargo test --workspace --locked && cargo run -q -p xtask -- gate --only ci-paths",
     "model": "inherit"
   },
   {
+    "id": "golden-replay",
+    "title": "Rust replays of the goldens the TypeScript harness owned: gates A/B/C with corpus rows, lifecycle, quality ts/python/rust, statusline; setup agents transcripts; delivery-flow Markdown contract",
+    "ac_refs": [
+      "AC-13",
+      "AC-6"
+    ],
+    "depends_on": [
+      "delete-ts"
+    ],
+    "paths": [
+      "crates/cli/tests",
+      "crates/xtask/tests/skills_contract.rs",
+      "fixtures",
+      "plugins"
+    ],
+    "input": "The committed goldens in fixtures/ and the built toolu",
+    "check": "cargo test -p toolu-cli --test golden_gates --test golden_lifecycle --test golden_quality --test golden_statusline --test setup_agents_golden && cargo test -p xtask --test skills_contract",
+    "model": "inherit"
+  },
+  {
     "id": "toolchain-ci",
     "title": "Minimal root package.json with package-lock.json (jscpd), bun.lock and TS configs deleted; release-please-config, npm-publish, release-native, tests.yml, toolu-review.yml and ci-paths.json without Bun",
-    "ac_refs": ["AC-8", "AC-11", "AC-1"],
-    "depends_on": ["delete-ts"],
-    "paths": ["package.json", "package-lock.json", "release-please-config.json", ".github", "crates/xtask", "lefthook.yml"],
+    "ac_refs": [
+      "AC-8",
+      "AC-11",
+      "AC-1"
+    ],
+    "depends_on": [
+      "golden-replay"
+    ],
+    "paths": [
+      "package.json",
+      "package-lock.json",
+      "release-please-config.json",
+      ".github",
+      "crates/xtask",
+      "lefthook.yml"
+    ],
     "input": "Real workflows and release config",
     "check": "! git grep -n -E 'setup-bun|(^|[^a-z])bun (run|install|test|x)( |$)|toolu-core|toolu-conformance' -- .github release-please-config.json package.json lefthook.yml && npm ci --ignore-scripts && cargo run -q -p xtask -- gate --only workflows --only ci-paths --only final-removal --only jscpd --only pack",
     "model": "inherit"
@@ -131,9 +257,21 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "docs",
     "title": "Docs: runtime.md rewritten; AGENTS.md, testing.md, registry.md, resource-budgets.md, install.md, plugin README template, plugin READMEs, benchmarks READMEs, verify-dual-host-plugins skill; docs/cli regenerated; portable-core.md deleted",
-    "ac_refs": ["AC-10"],
-    "depends_on": ["toolchain-ci"],
-    "paths": ["AGENTS.md", "README.md", "docs", "tooling/templates", "plugins", "benchmarks", ".toolu/skills"],
+    "ac_refs": [
+      "AC-10"
+    ],
+    "depends_on": [
+      "toolchain-ci"
+    ],
+    "paths": [
+      "AGENTS.md",
+      "README.md",
+      "docs",
+      "tooling/templates",
+      "plugins",
+      "benchmarks",
+      ".toolu/skills"
+    ],
     "input": "Repository Markdown",
     "check": "cargo run -q -p xtask -- check-markdown-cli && cargo run -q -p xtask -- gate --only docs-cli --only context-budget && test -z \"$(git grep -n -E '(^|[^a-z])bun (run|install|test|build|x)( |$)|setup-bun|hooks/dist|TOOLU_RUNTIME|@toolu/core' -- AGENTS.md README.md 'docs/*.md' 'docs/cli/**' tooling/templates 'plugins/**/*.md' '.toolu/skills/**' | grep -v '^docs/runtime.md:')\"",
     "model": "inherit"
@@ -141,9 +279,17 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "evidence",
     "title": "Commit the native hook-bench result next to the Bun baselines; run the live host smoke without Bun and record the evidence",
-    "ac_refs": ["AC-7", "AC-9"],
-    "depends_on": ["docs"],
-    "paths": ["benchmarks/results", "docs/toolu/evidence/2026-10-14-remove-typescript-and-bun.md"],
+    "ac_refs": [
+      "AC-7",
+      "AC-9"
+    ],
+    "depends_on": [
+      "docs"
+    ],
+    "paths": [
+      "benchmarks/results",
+      "docs/toolu/evidence/2026-10-14-remove-typescript-and-bun.md"
+    ],
     "input": "Real Claude Code and Codex sessions on temp git projects; the release binary",
     "check": "ls benchmarks/results/hook-resources-rust-darwin-arm64-2026-10-1*.json && grep -q 'host-smoke: ok' docs/toolu/evidence/2026-10-14-remove-typescript-and-bun.md",
     "model": "inherit"
@@ -151,9 +297,18 @@ The approach follows the approved spec. Edits run inline in the main thread: the
   {
     "id": "gate",
     "title": "Full cargo xtask gate on a PATH without Bun",
-    "ac_refs": ["AC-6", "AC-1", "AC-10", "AC-11"],
-    "depends_on": ["evidence"],
-    "paths": ["."],
+    "ac_refs": [
+      "AC-6",
+      "AC-1",
+      "AC-10",
+      "AC-11"
+    ],
+    "depends_on": [
+      "evidence"
+    ],
+    "paths": [
+      "."
+    ],
     "input": "The whole repository; PATH filtered of every bun directory",
     "check": "env PATH=\"$(printf %s \"$PATH\" | tr ':' '\\n' | grep -v -i bun | paste -sd: -)\" cargo xtask gate --base origin/main --title 'feat!: remove the TypeScript implementation and the Bun prerequisite (#440)'",
     "model": "inherit"
@@ -164,6 +319,10 @@ The approach follows the approved spec. Edits run inline in the main thread: the
 ## Deviations
 
 - launcher: `cargo xtask launcher-e2e` requires the binary inside a fixed install directory, such as `/usr/local/bin`, which is root-owned on this machine. It is dropped from the local check and stays covered by the `rust` and `rust-macos` CI jobs, which install there with `sudo`.
+
+- xtask-no-bun: the root toolchain and CI edits planned for `toolchain-ci` landed with this step, because the `ci-paths` and `workflows` checks need the workflows and `.github/ci-paths.json` to agree with the new jobs. `toolchain-ci` re-checks them.
+- bench-smoke: the hook budgets are Linux CI numbers, and macOS has a higher process floor (about 3.4 ms CPU per spawn). So the local check runs `bench-hooks` without `--assert`; the Linux `hook-bench` CI leg asserts (AC-7). The statusline budget asserts locally.
+- golden-replay (new step, AC-13): see the spec's Deviations. The gate, lifecycle, quality and statusline replays were delegated to implementers on sonnet, one per family, each writing only its own test files.
 
 ## Critical files
 

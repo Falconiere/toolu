@@ -22,7 +22,7 @@ startup behavior in Codex and Claude Code.
    Distinguish installing a skill from injecting mandatory session instructions.
    For every changed hook event, validate successful stdout or silent success
    against each host's event-specific output schema; valid JSON is not sufficient.
-3. Run the plugin's colocated tests. For REST wrappers, exercise real curl against
+3. Run the plugin crate's Rust tests (`cargo test -p <crate>`). For REST wrappers, exercise real curl against
    a private loopback HTTPS fixture; check request JSON, retries, output
    validation, and error propagation.
 4. Install from the checkout with both actual plugin CLIs in temporary,
@@ -31,13 +31,13 @@ startup behavior in Codex and Claude Code.
    paths and startup context with and without credentials.
 5. Run `cargo xtask gate`, including the deterministic `bench` step, and the
    colocated-test check from `.github/workflows/tests.yml`. Inspect every result.
-6. When a plugin's Bun registry bundle becomes a native manifest, check
+6. When a plugin registers a native manifest, check
    deselection cleanup, hook inventory and the packed catalog. A repeated
    SessionStart must preserve byte-identical manifest files and their timestamps.
-7. For native hook acceptance, run `bun tooling/src/native-toolu-host-smoke.ts`
-   on macOS with the checkout binary. It installs temporary host profiles and
-   checks a denied protected-file write, a post-edit quality failure, a denied
-   commit, and an allowed shell command in actual Claude Code and Codex sessions.
+7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|both`
+   on macOS with the checkout binary. It hides Bun, installs temporary host profiles and
+   checks a denied `.env` write, a post-edit quality failure, a denied
+   commit, and a denied push in actual Claude Code and Codex sessions.
 
 ## Pitfalls
 
@@ -56,13 +56,11 @@ startup behavior in Codex and Claude Code.
   unavailable credentials explicitly; do not read keys from `.env`.
 - Hook and command environments can differ. Check credentials by presence in the
   command environment before reporting them missing, and never print their value.
-  Exercise published Bun commands with an empty `PATH`: a launcher can resolve
-  Bun through `TOOLU_BUN` or `~/.bun/bin/bun` even when an env shebang cannot.
-- A published `#!/usr/bin/env bun` CLI can auto-load a project's `.env` even
-  when its startup hook used `--no-env-file`. For credentialed helpers that must
-  use only exported keys, use `#!/usr/bin/env -S bun --no-env-file` and test the
-  published symlink from a project with a `.env`-only sentinel key. Require no
-  request and no key in model-visible output.
+  Exercise hook commands with an empty `PATH`: the launcher resolves `toolu`
+  through `TOOLU_BIN` and the install directories even when `PATH` lacks it.
+- A credentialed helper must use only exported keys. `toolu jev` never loads a
+  project `.env`; test such a command from a project with a `.env`-only sentinel
+  key. Require no request and no key in model-visible output.
 - Packaging and Codex smoke assertions contain explicit plugin/skill/hook counts.
   Update relevant counts together when adding a plugin.
 - A native registry manifest has a `.json` name and no source bundle to compare.

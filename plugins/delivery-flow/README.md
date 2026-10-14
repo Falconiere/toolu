@@ -4,7 +4,7 @@ One delivery skill for Claude Code and Codex. It runs brainstorm, spec, spec rev
 
 ## Install
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+**Prerequisite:** the native [`toolu` binary](../../docs/install.md). Bun is not used or needed. See [docs/runtime.md](../../docs/runtime.md).
 
 Install `delivery-flow@toolu` from the toolu marketplace. Claude Code installs its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies automatically. For Codex, use `npx @toolu/plugins install delivery-flow --host codex` to install the dependency set, or add those four plugins explicitly with `codex plugin add`. Invoke `/delivery-flow:delivery-flow` in Claude Code or `$delivery-flow:delivery-flow` in Codex. Invocation authorizes commit, push, PR creation, and babysit after all checks pass.
 

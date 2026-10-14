@@ -20,8 +20,8 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 2. **Security** — input validation, injection, secrets, unsafe file/symlink ops.
 3. **Performance** — hot paths (e.g. per-render/per-hook work), needless spawns.
 4. **Test coverage for every NEW behavior** — a new code path without a colocated
-   real-data test is a finding. Use a Bun test for TypeScript behavior; retain
-   Bats coverage for legacy scripts until #279 removes them.
+   real-data test is a finding. Use the project's own test runner; in toolu
+   itself that is a Rust test beside the module (`tests/<module>_test.rs`).
 5. **Doc/comment accuracy** — comments must match behavior; e.g. no "one-time" on
    a block that runs every invocation; no stale paths after a move.
 6. **Tight test assertions** — assert the full path and command identity, not a
@@ -63,8 +63,8 @@ the pre-fix tree, so committing staleifies it and the push denies.
 
    The native `toolu` binary detects the host. If the command shell has no host
    markers, set `TOOLU_HOST_OVERRIDE=codex` or `claude` on this
-   command. SessionStart keeps the former stable helper as a compatibility shim
-   until #440; new calls use `toolu review write-state`.
+   command. SessionStart no longer publishes the former stable helper; always run
+   `toolu review write-state`.
 
    It computes the gate's exact `diff_sha`/`base`/`slug`, sets `review_round`
    (1 for a new `diff_sha`, +1 only when rewriting at the same one — the gate

@@ -1,6 +1,6 @@
 # Native release runbook
 
-`release-please.yml` owns version bumps and tags. Its Release PR updates the root package, Bun packages, Cargo workspace and lockfile, and every plugin manifest. Merging it creates a draft GitHub Release and the tag in one run. `npm-publish.yml` waits for the packages to resolve, then `release-native.yml` builds from that tag. The release is never public before native finalization.
+`release-please.yml` owns version bumps and tags. Its Release PR updates the root package, the npm wrapper package, Cargo workspace and lockfile, and every plugin manifest. Merging it creates a draft GitHub Release and the tag in one run. `npm-publish.yml` waits for the packages to resolve, then `release-native.yml` builds from that tag. The release is never public before native finalization.
 
 ## Native assets
 

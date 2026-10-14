@@ -1,6 +1,6 @@
 # Installing toolu
 
-`toolu` is the single native binary that the Rust rebuild ([epic #402](https://github.com/Falconiere/toolu/issues/402)) puts behind every plugin. The user installs it once. Plugins carry no binary and download nothing: their hooks and Markdown call the installed `toolu`. Decision record: [#411](https://github.com/Falconiere/toolu/issues/411). The Bun runtime stays the contract until the last TypeScript hook is gone (see [runtime.md](runtime.md)).
+`toolu` is the single native binary that the Rust rebuild ([epic #402](https://github.com/Falconiere/toolu/issues/402)) puts behind every plugin. The user installs it once. Plugins carry no binary and download nothing: their hooks and Markdown call the installed `toolu`. Decision record: [#411](https://github.com/Falconiere/toolu/issues/411). No other runtime is needed: Bun stopped being a prerequisite on Claude Code and Codex in #440 (see [runtime.md](runtime.md)).
 
 ```bash
 curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
@@ -56,10 +56,10 @@ The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh
 | Location | Homebrew's prefix, or `/usr/local/bin` (or `--install-dir`) for the installer. The hook launcher also looks in `~/.local/bin` (#412). |
 | Missing binary | Enforcing hooks fail closed and name both install commands. Context hooks print one `systemMessage`. |
 | macOS | curl and brew do not set quarantine. Finalize runs `codesign --verify` on darwin binaries (ad-hoc signature after strip). Notarization is deferred. |
-| Rollback | `install.sh --version <tag>` (#457) and pinning the plugin version in each host. The transition fallback to Bun bundles is in #425. |
+| Rollback | `install.sh --version <tag>` (#457) and pinning the plugin version in each host. |
 | Upgrade | `brew upgrade toolu`, or re-run the installer. No self-update command in this version. |
 | Removal | `brew uninstall toolu`, or `install.sh --uninstall`. `toolu doctor` names the right command for how the binary was installed. |
-| Bun | Stops being a prerequisite on Claude Code and Codex when the last TypeScript hook is gone (#440). |
+| Bun | Not used or needed on Claude Code and Codex since #440. |
 
 ## Version skew
 
@@ -92,12 +92,11 @@ A candidate counts only if `toolu --hook-protocol` prints an integer. The npm wr
 | Situation | Enforcing event (`PreToolUse`, `PermissionRequest`) | Context event |
 |---|---|---|
 | Binary found | runs `toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>`; exit 0 and 2 pass through, and any other status (abort, SIGSEGV, SIGKILL, OOM) becomes exit 2 with `blocked: <plugin> plugin: toolu ended with status <n>, so the action is blocked.` | `exec`s the binary |
-| No binary, Bun and the plugin's `hooks/dist/<name>.js` present (transition, #425) | runs the Bun bundle, with one stderr line: `<plugin> plugin: native toolu not found, running the Bun bundle for this transition release - see #425. …` | same |
-| No binary and no fallback, or a bad `TOOLU_BIN` | exit 2, stderr `blocked: <plugin> plugin: no usable native toolu - checked TOOLU_BIN, … Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash, or: brew install falconiere/tap/toolu. …` | exit 0, the same text as one `{"systemMessage": …}` |
+| No binary, or a bad `TOOLU_BIN` | exit 2, stderr `blocked: <plugin> plugin: no usable native toolu - checked TOOLU_BIN, … Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash, or: brew install falconiere/tap/toolu. …` | exit 0, the same text as one `{"systemMessage": …}` |
 
-The fallback is skipped when `TOOLU_BIN` is set, and #440 removes it. The command string carries no version, so it stays the same across releases and Codex does not ask for hook trust again. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` keeps the Bun chain and prints the install hint, because Windows has no binary yet.
+There is no fallback: #440 removed the Bun bundles the transition release (#425) ran without a binary. The command string carries no version, so it stays the same across releases and Codex does not ask for hook trust again. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` reports the missing binary the same way, because Windows has no binary yet.
 
-On session start and resume, toolu's native `session-start` hook prints `Toolu is on!` and then `toolu runtime: native <version> at <path>`. All eight entries in `plugins/toolu/hooks/hooks.json` use the generated native launcher. `TOOLU_RUNTIME=bun` selects the retained Bun bundles as a rollback for this transition release; the native path is the default.
+On session start and resume, toolu's native `session-start` hook prints `Toolu is on!` and then `toolu runtime: native <version> at <path>`. Every entry of every plugin's `hooks.json` uses the generated native launcher.
 
 **Verifying.** `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in one of the fixed directories, under `PATH=/usr/bin:/bin`. CI runs it at Homebrew's bin and at `/usr/local/bin` on Linux and macOS. The launcher tests (`cargo test -p toolu-cli --test launcher`, and `launcher-e2e`'s own tests) fail on purpose when a real `toolu` sits in `/opt/homebrew/bin`, `/usr/local/bin` or `/home/linuxbrew/.linuxbrew/bin`, because that binary would win. On such a machine, move it aside or run the tests in a container.
 

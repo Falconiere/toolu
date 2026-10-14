@@ -14,7 +14,7 @@ Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registr
 
 ### Post-Edit Quality Checks
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into the native [`toolu` binary](../install.md) (#428). The `SessionStart` register hook publishes the rule's manifest (`rust-quality@toolu__rust-quality.json`) into toolu's registry, and the rule runs only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.** Until toolu's own hooks are native (#425), the register hook also writes `rust-quality@toolu__rust-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice.
+Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into the native [`toolu` binary](../install.md) (#428). The `SessionStart` register hook publishes the rule's manifest (`rust-quality@toolu__rust-quality.json`) into toolu's registry, and the rule runs only while this plugin is installed — **uninstall it and the Rust rules vanish, fail-closed.** The register hook registers only that `.json` manifest. It removes the `.js` module and `.sh` bridge of earlier releases once, with a notice.
 
 `toolu rust-quality check [<path>...]` runs the same rules over the git-listed `.rs` files under each path (the whole repository by default) and exits 1 with one line per finding, or prints them as JSON under `--json`. This repository's gate runs `toolu rust-quality check crates` at its own limits.
 
