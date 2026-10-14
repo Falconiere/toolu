@@ -23,11 +23,11 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Claude Code and Codex are driven through their own plugin CLIs. OpenCode is managed through its config files: install adds @toolu/opencode to opencode.json and enables plugins in a toolu/plugins.json selection (global, or the project's .opencode/toolu/plugins.json); remove toolu drops the package, remove <name> disables one plugin. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
+Claude Code and Codex are driven through their own plugin CLIs. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
 ```
 
 ## `toolu plugins install`
@@ -44,9 +44,9 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
-      --dry-run           Print the host commands or config changes without applying them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
+      --dry-run           Print the host commands without running them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
       --config <PATH>     Replay a .toolu/plugins.json selection
@@ -65,7 +65,7 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -84,9 +84,9 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
-      --dry-run           Print the host commands or config changes without applying them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
+      --dry-run           Print the host commands without running them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
   -y, --yes               Confirm a destructive operation
@@ -107,9 +107,9 @@ Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --scope <SCOPE>     user, project or local (Claude Code); user or project (OpenCode) [possible values: user, project, local]
-      --dry-run           Print the host commands or config changes without applying them
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --scope <SCOPE>     user, project or local (Claude Code only) [possible values: user, project, local]
+      --dry-run           Print the host commands without running them
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
   -h, --help              Print help

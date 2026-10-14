@@ -1,6 +1,5 @@
 //! The slot's fixer worktree on `pr-babysit/<slot>`: reused and fast-forwarded,
-//! created by herdr with a pane when a group needs one, or a native git
-//! worktree beside the state when every group is an `OpenCode` fixer.
+//! created by herdr with a pane.
 
 use std::path::Path;
 use std::time::Duration;
@@ -9,11 +8,10 @@ use serde_json::{Value, json};
 
 use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command, herdr, try_herdr};
-use super::names::native_worktree;
 use crate::error::{Failure, Result};
 use crate::pattern::{is, pattern};
 
-pattern!(SESSION_FILES, r"^\?\? \.(claude|codex|cursor|opencode)/");
+pattern!(SESSION_FILES, r"^\?\? \.(claude|codex|cursor)/");
 
 /// The worktree's uncommitted changes, host session files left out.
 pub(super) fn dirt(dispatcher: &Dispatcher<'_>, path: &str) -> Vec<String> {
@@ -180,22 +178,6 @@ impl Dispatcher<'_> {
     )
   }
 
-  fn add_native(&mut self, root: &str, branch: &str, base: &str) -> Result<(String, Pane)> {
-    let path = native_worktree(self.file).display().to_string();
-    let add = argv(&[
-      "git", "-C", root, "worktree", "add", "--quiet", "-b", branch, &path, base,
-    ]);
-    let message = format!("git worktree add {path} failed (does the path already exist?)");
-    self.git(&add, "git_error", message)?;
-    Ok((
-      path,
-      Pane {
-        workspace: Value::Null,
-        pane: Value::Null,
-      },
-    ))
-  }
-
   fn create_herdr(&mut self, root: &str, branch: &str, base: &str) -> Result<(String, Pane)> {
     let label = self.label();
     let create = argv(&[
@@ -238,13 +220,7 @@ impl Dispatcher<'_> {
     Ok((path.to_owned(), pane))
   }
 
-  fn create(
-    &mut self,
-    root: &str,
-    pr: &str,
-    branch: &str,
-    needs_pane: bool,
-  ) -> Result<(String, Pane)> {
+  fn create(&mut self, root: &str, pr: &str, branch: &str) -> Result<(String, Pane)> {
     let fetch = argv(&["git", "-C", root, "fetch", "--quiet", "origin", pr]);
     self.git(
       &fetch,
@@ -258,16 +234,11 @@ impl Dispatcher<'_> {
       format!("git -C {root} worktree prune failed"),
     )?;
     self.drop_branch(root, branch, pr)?;
-    let base = format!("origin/{pr}");
-    if needs_pane {
-      self.create_herdr(root, branch, &base)
-    } else {
-      self.add_native(root, branch, &base)
-    }
+    self.create_herdr(root, branch, &format!("origin/{pr}"))
   }
 
   /// The slot worktree for PR branch `pr` in `root`, recorded in the state.
-  pub(super) fn worktree(&mut self, root: &str, pr: &str, needs_pane: bool) -> Result<Value> {
+  pub(super) fn worktree(&mut self, root: &str, pr: &str) -> Result<Value> {
     let branch = format!(
       "pr-babysit/{}",
       self
@@ -290,13 +261,13 @@ impl Dispatcher<'_> {
           workspace: id(&recorded, "/workspaceId"),
           pane: id(&recorded, "/paneId"),
         };
-        if needs_pane && !self.dry && !self.pane_listed(&pane.workspace, &pane.pane) {
+        if !self.dry && !self.pane_listed(&pane.workspace, &pane.pane) {
           let label = self.label();
           pane = self.open_pane(root, &path, &label)?;
         }
         (path, pane)
       }
-      None => self.create(root, pr, &branch, needs_pane)?,
+      None => self.create(root, pr, &branch)?,
     };
     let worktree = json!({
       "path": path, "workspaceId": pane.workspace, "paneId": pane.pane, "branch": branch,

@@ -57,7 +57,7 @@ const WarningSchema = z.strictObject({
 });
 const OptionsSchema = z.strictObject({
   env: z.record(z.string(), z.string()).optional(),
-  host: z.enum(["claude", "codex", "cursor", "hermes", "opencode"]).optional(),
+  host: z.enum(["claude", "codex", "cursor", "hermes"]).optional(),
   cwd: z.string().optional(),
   root: z.string().optional(),
 });

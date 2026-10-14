@@ -1,5 +1,5 @@
 //! The startup report (`report.ts`). A host that runs `SessionStart` entries
-//! itself, like the `OpenCode` bootstrap, cannot tell a failed registry write or
+//! itself, like an external bootstrap, cannot tell a failed registry write or
 //! a helper with a missing source from a success. When `TOOLU_STARTUP_REPORT`
 //! names a file, each contribution appends one JSON line there; unset, nothing
 //! is written.

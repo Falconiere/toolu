@@ -106,32 +106,6 @@ fn cursor_and_an_unreadable_record_warn() {
 }
 
 #[test]
-fn opencode_lists_names_only() {
-  let home = tempfile::tempdir().unwrap();
-  let path = home
-    .path()
-    .join(".config/opencode/toolu/opencode-status.json");
-  std::fs::create_dir_all(path.parent().unwrap()).unwrap();
-  std::fs::write(
-    &path,
-    r#"{"plugins":[{"name":"toolu"},{"name":"pr-babysit"}]}"#,
-  )
-  .unwrap();
-  let roots = Roots::new(
-    Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
-    Some(Host::Opencode),
-  );
-  let check = plugins_check(&collect(&roots, home.path()));
-  assert_eq!(check.status, Status::Ok);
-  assert_eq!(
-    check.details["plugins"][0],
-    serde_json::json!({"name": "toolu"})
-  );
-  assert!(check.details["plugins"][0].get("version").is_none());
-  assert!(check.details["plugins"][0].get("root").is_none());
-}
-
-#[test]
 fn codex_parse_keeps_enabled_toolu_plugins() {
   let root = PathBuf::from("/plugins/toolu");
   let list = parse_codex(&format!(

@@ -15,8 +15,6 @@ const CLAUDE_INSTALL: &str =
 
 const CODEX_INSTALL: &str = "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.";
 
-const OPENCODE_INSTALL: &str = "Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \"delivery-flow-delivery-flow\" })`.";
-
 const NEUTRAL_INSTALL: &str =
   "Install the `delivery-flow` plugin, then load its `delivery-flow` skill.";
 
@@ -48,7 +46,6 @@ fn delivery_install(host: Host) -> &'static str {
   match host {
     Host::Claude => CLAUDE_INSTALL,
     Host::Codex => CODEX_INSTALL,
-    Host::Opencode => OPENCODE_INSTALL,
     Host::Cursor | Host::Hermes => NEUTRAL_INSTALL,
   }
 }

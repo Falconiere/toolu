@@ -32,7 +32,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -49,7 +49,7 @@ Options:
       --repo <VALUE>          The repository, owner/repo
       --pr <VALUE>            The pull request number
   -q, --quiet                 Drop the diagnostics of a successful run
-      --host <HOST>           The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>           The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --page-size <VALUE>     Items per GitHub page [default: 100]
       --config-dir <DIR>      Read the toolu config from DIR instead of the host's default
       --timeout <VALUE>       Seconds each GitHub call may take
@@ -72,7 +72,7 @@ Options:
       --repo <VALUE>         The repository, owner/repo
       --pr <VALUE>           The pull request number
   -q, --quiet                Drop the diagnostics of a successful run
-      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --page-size <VALUE>    Items per GitHub page [default: 100]
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
       --timeout <VALUE>      Seconds each GitHub call may take
@@ -93,7 +93,7 @@ Options:
       --repo <VALUE>       The repository, owner/repo
       --pr <VALUE>         The pull request number
   -q, --quiet              Drop the diagnostics of a successful run
-      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --page-size <VALUE>  Items per GitHub page [default: 100]
       --config-dir <DIR>   Read the toolu config from DIR instead of the host's default
       --timeout <VALUE>    Seconds each GitHub call may take
@@ -113,7 +113,7 @@ Options:
       --snapshot <VALUE>       The snapshot file
   -q, --quiet                  Drop the diagnostics of a successful run
       --state <VALUE>          The previous state file
-      --host <HOST>            The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>            The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --now <VALUE>            The check's time, YYYY-MM-DDTHH:MM:SSZ
       --config-dir <DIR>       Read the toolu config from DIR instead of the host's default
       --state-out <VALUE>      Write the new state here
@@ -133,7 +133,7 @@ Usage: toolu babysit parse-verdict [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -154,7 +154,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -171,7 +171,7 @@ Options:
       --state-file <VALUE>  The slot's state file
   -q, --quiet               Drop the diagnostics of a successful run
       --thread <VALUE>      The thread's GraphQL id
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
 ```
@@ -189,7 +189,7 @@ Options:
       --had-rejection <VALUE>  Whether a finding was rejected [possible values: true, false]
   -q, --quiet                  Drop the diagnostics of a successful run
       --fix-pushed             The round pushed a fix
-      --host <HOST>            The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>            The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>       Read the toolu config from DIR instead of the host's default
   -h, --help                   Print help
 ```
@@ -206,7 +206,7 @@ Options:
       --state-file <VALUE>  The slot's state file
   -q, --quiet               Drop the diagnostics of a successful run
       --status <VALUE>      The terminal status [possible values: complete, escalated, cancelled]
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
 ```
@@ -223,7 +223,7 @@ Options:
       --state-file <VALUE>    The slot's state file
       --kind <VALUE>          What the reply answers [possible values: thread, conversation, review]
   -q, --quiet                 Drop the diagnostics of a successful run
-      --host <HOST>           The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>           The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --thread <VALUE>        The thread's GraphQL id (thread)
       --config-dir <DIR>      Read the toolu config from DIR instead of the host's default
       --root-comment <VALUE>  The thread's first comment id (thread)
@@ -247,7 +247,7 @@ Options:
       --state-file <VALUE>  The slot's state file
   -q, --quiet               Drop the diagnostics of a successful run
       --thread <VALUE>      The thread's GraphQL id
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --timeout <VALUE>     Seconds each GitHub call may take
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
@@ -265,7 +265,7 @@ Options:
       --json                    Print exactly one JSON document on stdout
   -q, --quiet                   Drop the diagnostics of a successful run
       --state-file <VALUE>      The slot's state file, for host cooldowns
-      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --raise <VALUE>           Raise this item one tier
       --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
       --no-jev                  Use the heuristic tiers only
@@ -290,7 +290,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -307,7 +307,7 @@ Options:
       --state-file <VALUE>  The slot's state file
       --plan <VALUE>        The route plan
   -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --items <VALUE>       The items file
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
       --repo-root <VALUE>   The repository the PR branch lives in
@@ -329,7 +329,7 @@ Options:
       --state-file <VALUE>       The slot's state file
   -q, --quiet                    Drop the diagnostics of a successful run
       --timeout-seconds <VALUE>  The longest the wait runs; 480 by default
-      --host <HOST>              The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>              The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>         Read the toolu config from DIR instead of the host's default
   -h, --help                     Print help
 ```
@@ -346,7 +346,7 @@ Options:
       --state-file <VALUE>  The slot's state file
       --dry-run             Print the commands; run and write nothing
   -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
 ```
@@ -366,7 +366,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --note <VALUE>      A one-line summary or the reason
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -382,7 +382,7 @@ Options:
       --json                Print exactly one JSON document on stdout
       --state-file <VALUE>  The slot's state file
   -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, opencode, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
 ```

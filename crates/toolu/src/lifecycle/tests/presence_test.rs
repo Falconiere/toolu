@@ -24,7 +24,7 @@ fn non_codex_hosts_read_claudes_install_record() {
     presence("ast-grep@toolu", &env, Host::Hermes),
     Installed::Absent
   );
-  assert!(!plugin_active("ast-grep@toolu", &env, Host::Opencode));
+  assert!(!plugin_active("ast-grep@toolu", &env, Host::Cursor));
   std::fs::write(
     plugins.join("installed_plugins.json"),
     r#"{"plugins":{"ast-grep@toolu":{}}}"#,

@@ -26,14 +26,12 @@ describe("supportsAsk", () => {
     expect(supportsAsk("codex")).toBe(false);
     expect(supportsAsk("cursor")).toBe(false);
     expect(supportsAsk("hermes")).toBe(false);
-    expect(supportsAsk("opencode")).toBe(false);
   });
 
   test("Cursor asks only before shell execution; permission requests defer to the host prompt", () => {
     expect(supportsAsk("cursor", "shell/pre")).toBe(true);
     expect(supportsAsk("codex", "permission/evaluate")).toBe(true);
     expect(supportsAsk("claude", "prompt")).toBe(false);
-    expect(supportsAsk("opencode", "tool/post")).toBe(false);
   });
 });
 
@@ -43,18 +41,10 @@ describe("degradeAsk", () => {
       kind: "deny",
       reason: "confirm .env write",
     });
-    expect(degradeAsk("opencode", "tool/pre", ASK, "guardrail")).toEqual({
-      kind: "deny",
-      reason: "confirm .env write",
-    });
   });
 
   test("a judgement gate's ask becomes advice where the host cannot prompt", () => {
     expect(degradeAsk("hermes", "shell/pre", ASK, "judgement")).toEqual({
-      kind: "advisory",
-      message: "confirm .env write",
-    });
-    expect(degradeAsk("opencode", "tool/pre", ASK, "judgement")).toEqual({
       kind: "advisory",
       message: "confirm .env write",
     });
@@ -215,33 +205,6 @@ describe("Hermes encoding", () => {
   });
 });
 
-describe("OpenCode encoding", () => {
-  test("pre-tool decisions are callback continuation or refusal, never a permission grant", () => {
-    expect(encodeDecision("opencode", "tool/pre", ASK)).toEqual({
-      kind: "callback",
-      action: "throw",
-      message: "confirm .env write",
-    });
-    expect(encodeDecision("opencode", "tool/post", POST_BLOCK)).toEqual({
-      kind: "callback",
-      action: "continue",
-      message: "lint failed",
-    });
-    expect(encodeDecision("opencode", "tool/pre", ALLOW)).toEqual({
-      kind: "callback",
-      action: "continue",
-    });
-    expect(encodeDecision("opencode", "tool/pre", DENY)).toEqual({
-      kind: "callback",
-      action: "throw",
-      message: "protected file",
-    });
-    expect(() => encodeDecision("opencode", "permission/evaluate", DENY)).toThrow(
-      "opencode has no native event for permission/evaluate",
-    );
-  });
-});
-
 describe("fail-closed invariants", () => {
   test("a runtime failure encodes exactly as a deny on pre-action and permission events", () => {
     const deny: Decision = { kind: "deny", reason: "gate crashed" };
@@ -264,11 +227,6 @@ describe("fail-closed invariants", () => {
     });
     expect(stdout("hermes", "tool/pre", FAILURE)).toEqual({
       action: "block",
-      message: "gate crashed",
-    });
-    expect(encodeDecision("opencode", "tool/pre", FAILURE)).toEqual({
-      kind: "callback",
-      action: "throw",
       message: "gate crashed",
     });
   });

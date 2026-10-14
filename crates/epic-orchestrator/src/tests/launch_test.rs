@@ -40,7 +40,6 @@ fn a_dry_run_prints_the_herdr_sequence_and_writes_nothing() {
   assert!(
     text.contains("# brief -> ") && text.contains("# Epic worker brief — Falconiere/comemory#255")
   );
-  assert_eq!(result["exclude"], json!([]));
   assert_eq!(result["resume"], json!(false));
   assert_eq!(snapshot_tree(rig.tmp.path()), before);
   assert_eq!(rig.herdr.calls(), Vec::new());
@@ -103,51 +102,20 @@ fn safe_keeps_approval_prompts_on() {
 }
 
 #[test]
-fn an_opencode_worker_gets_provider_model_the_exclude_and_its_skill_ids() {
+fn opencode_is_not_a_worker_host() {
   let rig = Rig::new();
-  let result = dry(&rig, "Falconiere/comemory#255", |flags| {
-    flags.kind = Some("opencode".into());
-    flags.model = Some("probe/scripted".into());
-  })
-  .expect("dry");
-  let commands: Vec<&str> = result["commands"]
-    .as_array()
-    .expect("commands")
-    .iter()
-    .filter_map(Value::as_str)
-    .collect();
-  let at = |prefix: &str| {
-    commands
-      .iter()
-      .position(|line| line.starts_with(prefix))
-      .expect(prefix)
-  };
-  assert!(
-    at("herdr worktree create")
-      < at("# opencode: exclude /.opencode/toolu/state/ /.opencode/tmp/ in ")
-  );
-  assert!(at("# opencode: exclude") < at("herdr agent start"));
-  assert_eq!(
-    commands[at("herdr agent start")],
-    "herdr agent start comemory-255 --kind opencode --pane '<root-pane>' --timeout 90000 -- --auto --model probe/scripted"
-  );
-  assert!(
-    result["brief"]
-      .as_str()
-      .unwrap_or("")
-      .contains("`skill({ name: \"delivery-flow-delivery-flow\" })`")
-  );
-  assert_eq!(result["exclude"].as_array().map(Vec::len), Some(3));
-  assert!(!rig.state().join("issues").exists());
   let refused = dry(&rig, "Falconiere/comemory#255", |flags| {
     flags.kind = Some("opencode".into());
-    flags.model = Some("sonnet".into());
   })
-  .expect_err("model");
-  assert_eq!(
-    refused.message,
-    "OpenCode model must be provider/model, got sonnet"
+  .expect_err("host");
+  assert!(
+    refused
+      .message
+      .contains("unknown host opencode; use one of claude, codex, cursor"),
+    "{}",
+    refused.message
   );
+  assert!(!rig.state().join("issues").exists());
 }
 
 #[test]

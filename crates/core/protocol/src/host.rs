@@ -7,8 +7,6 @@ pub enum Host {
   Claude,
   /// Codex.
   Codex,
-  /// `OpenCode`.
-  Opencode,
   /// Cursor.
   Cursor,
   /// Hermes.
@@ -17,20 +15,13 @@ pub enum Host {
 
 impl Host {
   /// Every host, in `--host` order.
-  pub const ALL: [Host; 5] = [
-    Host::Claude,
-    Host::Codex,
-    Host::Opencode,
-    Host::Cursor,
-    Host::Hermes,
-  ];
+  pub const ALL: [Host; 4] = [Host::Claude, Host::Codex, Host::Cursor, Host::Hermes];
 
   /// The `--host` value.
   pub fn name(self) -> &'static str {
     match self {
       Host::Claude => "claude",
       Host::Codex => "codex",
-      Host::Opencode => "opencode",
       Host::Cursor => "cursor",
       Host::Hermes => "hermes",
     }

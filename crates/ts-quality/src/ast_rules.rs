@@ -3,21 +3,14 @@
 //! skipped; a broken scan is itself a violation.
 
 use toolu_engine::quality::{AstGrepHit, AstGrepScan, ScanFailure, ScanStage};
-use toolu_protocol::host::Host;
 
 use crate::ast_yaml::{ERROR_RULES, MOCK_RULES};
 use crate::file::{Pattern, TsFile, is_test_path};
 
 /// The rules for the event's scan. ast-grep picks rules by file language, so
-/// `OpenCode` adds the `tsx` copies its `.tsx` files were always checked with;
-/// elsewhere a `.tsx` file matches no rule, as before.
-pub(crate) fn inline_rules(host: Host) -> String {
-  let ts = format!("{ERROR_RULES}\n---\n{MOCK_RULES}");
-  if host != Host::Opencode {
-    return ts;
-  }
-  let tsx = ts.replace("language: ts\n", "language: tsx\n");
-  format!("{ts}\n---\n{tsx}")
+/// a `.tsx` file matches no rule.
+pub(crate) fn inline_rules() -> String {
+  format!("{ERROR_RULES}\n---\n{MOCK_RULES}")
 }
 
 const MOCK_IDS: [&str; 5] = ["jest-mock", "vi-mock", "jest-fn", "vi-fn", "sinon-method"];

@@ -3,6 +3,7 @@ use std::path::Path;
 use super::super::checks::Status;
 use super::super::inventory::collect;
 use super::check;
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
@@ -36,28 +37,15 @@ fn install(home: &Path, version: &str, protocol: u32) -> Roots {
 }
 
 #[test]
-fn opencode_skew_is_not_applicable() {
-  let home = tempfile::tempdir().unwrap();
-  let roots = Roots::new(
-    Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
-    Some(Host::Opencode),
-  );
-  let inventory = collect(&roots, home.path());
-  let check = check(&roots, &inventory);
-  assert_eq!(check.status, Status::Ok);
-  assert_eq!(check.summary, "not applicable");
-}
-
-#[test]
 fn a_different_version_warns_and_a_different_protocol_fails() {
   let home = tempfile::tempdir().unwrap();
-  let roots = install(home.path(), "0.0.1", 1);
-  let warned = check(&roots, &collect(&roots, home.path()));
+  let roots = install(home.path(), "0.0.1", HOOK_PROTOCOL);
+  let warned = check(&collect(&roots, home.path()));
   assert_eq!(warned.status, Status::Warn, "{}", warned.summary);
   assert!(warned.summary.contains("0.0.1"), "{}", warned.summary);
 
   let roots = install(home.path(), "7.11.0", 99);
-  let failed = check(&roots, &collect(&roots, home.path()));
+  let failed = check(&collect(&roots, home.path()));
   assert_eq!(failed.status, Status::Fail, "{}", failed.summary);
   assert!(
     failed.summary.contains("hook protocol 99"),
@@ -79,7 +67,7 @@ fn no_plugins_make_skew_ok() {
     ]),
     Some(Host::Claude),
   );
-  let check = check(&roots, &collect(&roots, home.path()));
+  let check = check(&collect(&roots, home.path()));
   assert_eq!(check.status, Status::Ok);
   assert_eq!(check.summary, "no plugins to compare");
 }

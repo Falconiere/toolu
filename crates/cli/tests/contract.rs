@@ -58,7 +58,6 @@ fn every_namespace_answers_help_on_stdout() {
       "doctor",
       "config",
       "status",
-      "serve",
       "ts-quality",
       "python-quality",
       "rust-quality",
@@ -199,7 +198,7 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   assert!(
     stderr(&bogus)
       .unwrap()
-      .contains("[possible values: claude, codex, opencode, cursor, hermes]")
+      .contains("[possible values: claude, codex, cursor, hermes]")
   );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));

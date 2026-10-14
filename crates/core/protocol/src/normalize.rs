@@ -1,7 +1,6 @@
 //! Map a host [`Payload`] to its [`NormalizedEvent`]: `toolEvent` in
 //! `packages/toolu-core/src/dispatch/dispatch-context.ts`, extended to the
 //! session events with the `source` chain of `plugins/toolu/hooks/src/session-start.ts`.
-//! `OpenCode` payloads need the `OpenCode` tool-name map (#462) and map to nothing yet.
 
 use serde_json::{Map, Value};
 
@@ -34,13 +33,12 @@ struct View<'a> {
 }
 
 impl Payload {
-  /// The normalized form of this payload for `event`, or `None` for `OpenCode`.
+  /// The normalized form of this payload for `event`.
   pub fn normalize(&self, event: HostEvent, roots: &Roots) -> Option<NormalizedEvent> {
     let view = match self {
       Payload::Claude(payload) | Payload::Codex(payload) => hook_view(payload),
       Payload::Cursor(payload) => cursor_view(payload),
       Payload::Hermes(payload) => hermes_view(payload),
-      Payload::Opencode(_) => return None,
     };
     view.event(event, roots)
   }

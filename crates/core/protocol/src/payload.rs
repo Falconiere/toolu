@@ -12,12 +12,10 @@ use crate::host::Host;
 mod cursor;
 mod hermes;
 mod hook;
-mod opencode;
 
 pub use cursor::CursorPayload;
 pub use hermes::HermesPayload;
 pub use hook::HookPayload;
-pub use opencode::{OpencodeInput, OpencodePayload};
 
 /// A string field read leniently: a JSON string reads as itself, and any other
 /// value reads as absent, as TypeScript's `typeof value === "string"` reads do.
@@ -59,8 +57,6 @@ pub enum Payload {
   Cursor(CursorPayload),
   /// Hermes.
   Hermes(HermesPayload),
-  /// `OpenCode`, as the SDK's `(input, output)` pair.
-  Opencode(OpencodePayload),
 }
 
 /// Parse `text` as `host`'s payload.
@@ -74,7 +70,6 @@ pub fn parse(host: Host, text: &str) -> Result<Payload, serde_json::Error> {
     Host::Codex => Payload::Codex(serde_json::from_str(text)?),
     Host::Cursor => Payload::Cursor(serde_json::from_str(text)?),
     Host::Hermes => Payload::Hermes(serde_json::from_str(text)?),
-    Host::Opencode => Payload::Opencode(serde_json::from_str(text)?),
   })
 }
 

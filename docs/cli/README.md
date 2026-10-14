@@ -21,7 +21,6 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
-| [`serve`](serve.md) | `plugins/toolu` | planned | Serve the OpenCode shim over standard I/O |
 | [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | available | Python quality rules that run after each edit |
 | [`rust-quality`](rust-quality.md) | `plugins/rust-quality` | available | Rust quality rules that run after each edit |
@@ -55,7 +54,6 @@ Commands:
   doctor          Report binary, config, plugin and tool health
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
-  serve           Serve the OpenCode shim over standard I/O
   ts-quality      TypeScript quality rules that run after each edit
   python-quality  Python quality rules that run after each edit
   rust-quality    Rust quality rules that run after each edit
@@ -81,7 +79,7 @@ Options:
       --host <HOST>
           The host to act for, instead of the detected one
 
-          [possible values: claude, codex, opencode, cursor, hermes]
+          [possible values: claude, codex, cursor, hermes]
 
       --config-dir <DIR>
           Read the toolu config from DIR instead of the host's default

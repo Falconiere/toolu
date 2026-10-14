@@ -35,9 +35,6 @@ const NATIVE_CONFIG_ROOT: Readonly<Record<HostName, (env: HostEnv) => string>> =
   codex: (env) => envValue(env, "CODEX_HOME") ?? join(home(env), ".codex"),
   cursor: (env) => join(home(env), ".cursor"),
   hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes"),
-  opencode: (env) =>
-    envValue(env, "TOOLU_OPENCODE_HOME") ??
-    join(envValue(env, "XDG_CONFIG_HOME") ?? join(home(env), ".config"), "opencode"),
 };
 
 /** Host-native writable config/data root; `TOOLU_CONFIG_DIR` wins everywhere. */
@@ -76,7 +73,7 @@ export function projectRoot(options: ProjectOptions = {}): string | undefined {
   );
 }
 
-/** `.claude`, `.codex`, `.cursor`, `.hermes` or `.opencode`, unless overridden. */
+/** `.claude`, `.codex`, `.cursor`, or `.hermes`, unless overridden. */
 export function projectDirname(options: HostOptions = {}): string {
   const { env, host } = resolveHost(options);
   return envValue(env, "TOOLU_PROJECT_CONFIG_DIRNAME") ?? `.${host}`;
@@ -108,7 +105,6 @@ export function projectStateDir(name: string, options: StateOptions = {}): strin
 const PLUGIN_ROOT_VAR: Readonly<Partial<Record<HostName, string>>> = {
   codex: "PLUGIN_ROOT",
   cursor: "CURSOR_PLUGIN_ROOT",
-  opencode: "TOOLU_PLUGIN_ROOT",
 };
 
 /** The host's own plugin root variable, then `CLAUDE_PLUGIN_ROOT`. */
@@ -139,8 +135,6 @@ const INVOCATION: Readonly<Record<HostName, (namespace: string, name: string) =>
   codex: (namespace, name) => `$${namespace}:${name}`,
   cursor: (namespace, name) => `/${namespace}:${name}`,
   hermes: (namespace, name) => `/${namespace}:${name}`,
-  // Generated OpenCode commands are named `<namespace>--<name>`.
-  opencode: (namespace, name) => `/${namespace}--${name}`,
 };
 
 /** How a user invokes skill/command `name` of plugin `namespace` on this host. */
@@ -154,7 +148,6 @@ const INSTALL: Readonly<Record<HostName, ((spec: string) => string) | null>> = {
   codex: (spec) => `codex plugin add ${spec}`,
   cursor: null,
   hermes: null,
-  opencode: null,
 };
 
 /** Exact host-native install command for `spec`, or `null` where none exists yet. */
@@ -164,13 +157,11 @@ export function pluginInstallCommand(spec: string, options: HostOptions = {}): s
 }
 
 // Claude Code and Codex: the argv `toolu plugins remove` runs (crates/plugins/src/host).
-// OpenCode has no plugin command; `toolu plugins` edits its selection instead.
 const UNINSTALL: Readonly<Record<HostName, ((name: string) => string) | null>> = {
   claude: (name) => `claude plugin uninstall ${name}@toolu`,
   codex: (name) => `codex plugin remove ${name}@toolu`,
   cursor: null,
   hermes: null,
-  opencode: (name) => `toolu plugins remove ${name} --host opencode --yes`,
 };
 
 /** Exact command that uninstalls toolu plugin `name` on this host, or `null` where none exists. */

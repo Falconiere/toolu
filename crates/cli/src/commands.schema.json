@@ -1253,7 +1253,7 @@
       "properties": { "state": { "const": "waiting" } }
     },
     "pluginsStep": {
-      "description": "One plugin's step in a toolu plugins report. A removal has removed instead of outcome; plan is the config change a file-editing host (OpenCode) makes.",
+      "description": "One plugin's step in a toolu plugins report. A removal has removed instead of outcome.",
       "type": "object",
       "additionalProperties": false,
       "required": ["name", "detail", "argv"],
@@ -1264,8 +1264,7 @@
         },
         "removed": { "type": "boolean" },
         "detail": { "type": "string" },
-        "argv": { "type": "array", "items": { "type": "string" } },
-        "plan": { "type": "string" }
+        "argv": { "type": "array", "items": { "type": "string" } }
       }
     },
     "pluginsHost": {
@@ -1274,7 +1273,7 @@
       "additionalProperties": false,
       "required": ["host", "steps"],
       "properties": {
-        "host": { "enum": ["claude", "codex", "opencode"] },
+        "host": { "enum": ["claude", "codex"] },
         "steps": { "type": "array", "items": { "$ref": "#/$defs/pluginsStep" } }
       }
     },

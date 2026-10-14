@@ -138,14 +138,6 @@ test("two real plugin SessionStart bundles share one Codex notice", () => {
   expect(second).toBe("");
 }, 20_000);
 
-test("OpenCode bootstrap identity deduplicates plugin entries without stdin session_id", () => {
-  const box = sandbox();
-  const env = { ...box.env, TOOLU_HOST_OVERRIDE: "opencode", TOOLU_SESSION_ID: "open-code-run" };
-  const input = { hook_event_name: "SessionStart", source: "startup" };
-  expect(hook("jev", env, input)).toContain("additionalContext");
-  expect(hook("pr-babysit", env, input)).toBe("");
-}, 20_000);
-
 test("the real npm wrapper first on PATH is rejected in favor of a native absolute path", () => {
   const box = sandbox();
   stage(wrapper, box.bin);

@@ -3,7 +3,6 @@
   "exclude": [
     "**/fixtures/**",
     "**/hooks/dist/**",
-    "tools/toolu-opencode/generated/**",
     "crates/**"
   ],
   "allowances": [

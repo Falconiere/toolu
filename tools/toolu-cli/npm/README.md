@@ -1,6 +1,6 @@
 # @toolu/plugins
 
-Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code, Codex and OpenCode.
+Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code and Codex.
 
 These need the native `toolu` binary (below); without it the wrapper exits `69`.
 
@@ -41,21 +41,15 @@ order comes from the catalog's dependency edges, so `rust-quality` pulls in
 depend on it are skipped. Any other failure is reported, and the rest still
 install.
 
-OpenCode has no plugin management commands, so `--host opencode` edits its
-documented config instead. It adds `@toolu/opencode` to the `plugin` array of
-the global config (or the project's, with `--scope project`), and it records
-named plugins in a `toolu/plugins.json` selection. Comments, other keys and
-other plugins in those files are kept.
-
 ## Options
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex`, or `opencode`. Detected when omitted. |
-| `--scope <scope>` | Claude Code: `user`, `project`, `local`. OpenCode: `user` (default) or `project`. Not for Codex. |
+| `--host <id>` | `claude` or `codex`. Detected when omitted. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only; not for Codex). |
 | `--config <path>` | `install` only: replay a `.toolu/plugins.json` selection. |
 | `--yes`, `-y` | Confirm a removal. |
-| `--dry-run` | Print the host commands (OpenCode: the planned config edits); change nothing. |
+| `--dry-run` | Print the host commands; change nothing. |
 | `--no-input` | Never prompt; fail naming what is missing. For CI. |
 | `--json` | One JSON document on stdout. |
 

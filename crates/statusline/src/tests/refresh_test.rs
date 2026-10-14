@@ -36,7 +36,7 @@ fn installed_hook_publishes_a_plugin_owned_shim() {
   let plugin_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/statusline");
   let roots = Roots::new(
     Env::from_pairs([("TOOLU_CONFIG_DIR", temp.path().to_string_lossy())]),
-    Some(Host::Opencode),
+    Some(Host::Cursor),
   );
   let done = refresh(&roots, Some(&plugin_root)).expect("installed refresh");
   assert!(done.published);

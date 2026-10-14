@@ -1,8 +1,7 @@
 //! `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
 //! from the former Node CLI that npm published as `@toolu/plugins`.
-//! Claude Code and Codex are driven through their own plugin CLIs; `OpenCode`,
-//! which has none, through its config files. The npm package is now a wrapper
-//! that runs these verbs. This crate never touches the standard streams: a verb
+//! Claude Code and Codex are driven through their own plugin CLIs. The npm
+//! package is now a wrapper that runs these verbs. This crate never touches the standard streams: a verb
 //! returns one `Outcome`, and prompts use the terminal (`/dev/tty`).
 
 use clap::{ArgMatches, Command};
@@ -15,7 +14,6 @@ mod catalog;
 mod dispatch;
 mod fail;
 mod host;
-mod opencode;
 mod prompt;
 mod replay;
 mod report;
@@ -33,26 +31,14 @@ pub fn command() -> Command {
   args::command()
 }
 
-/// Run a `toolu plugins` verb in the process's environment and directory.
+/// Run a `toolu plugins` verb in the process's environment.
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let Some(request) = args::request(matches) else {
     return Outcome::failed(Exit::Usage, "toolu: a plugins verb is required".to_owned());
   };
   let mut terminal = prompt::terminal(!request.no_input && !ctx.json);
-  let cwd = match std::env::current_dir() {
-    Ok(cwd) => cwd,
-    Err(err) => {
-      return outcome(
-        Err(Fail::failed(format!(
-          "cannot read the working directory: {err}"
-        ))),
-        ctx,
-      );
-    }
-  };
   let mut cx = Context {
     env: Env::process(),
-    cwd,
     host: ctx.host,
     ask: terminal
       .as_mut()

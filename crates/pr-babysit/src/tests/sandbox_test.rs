@@ -1,5 +1,5 @@
 //! Test worlds for the dispatcher: a repository with a bare origin holding
-//! `main` and the PR branch `feat/fix`, the captured slot state, an `OpenCode`
+//! `main` and the PR branch `feat/fix`, the captured slot state, a
 //! plan, and a `bin` directory first on `PATH` for host CLIs.
 
 use std::os::unix::fs::PermissionsExt;
@@ -94,7 +94,7 @@ fn repository(env: &Env, root: &Path, repo: &Path, origin: &Path) {
   }
 }
 
-/// A sandbox with the repository and the slot state at `.opencode/tmp/pr-babysit`.
+/// A sandbox with the repository and the slot state at `.toolu/tmp/pr-babysit`.
 pub(crate) fn sandbox() -> Sandbox {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path().to_path_buf();
@@ -104,7 +104,7 @@ pub(crate) fn sandbox() -> Sandbox {
   let mut state = fixture::json("states/toolu-165-initial.json");
   state["actions"]["replied"] =
     json!({"2300000001": {"at": "2026-10-03T12:00:00Z", "replyId": 7234}});
-  let path = repo.join(".opencode/tmp/pr-babysit/falconiere-toolu-165.json");
+  let path = repo.join(".toolu/tmp/pr-babysit/falconiere-toolu-165.json");
   std::fs::create_dir_all(path.parent().unwrap()).unwrap();
   std::fs::write(&path, state.to_string()).unwrap();
   let root_text = repo.display().to_string();
@@ -127,22 +127,36 @@ impl Sandbox {
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o755)).unwrap();
   }
 
-  /// An `OpenCode` stand-in: finds the brief in its prompt, runs `body`, and
-  /// reports `status` beside the brief unless `status` is empty.
-  pub(crate) fn opencode(&self, body: &str, status: &str) {
-    let report = if status.is_empty() {
-      String::new()
-    } else {
-      format!(
-        "printf '{{\"version\":1,\"status\":\"{status}\",\"note\":\"fixed\",\"at\":\"2026-10-11T00:00:00Z\"}}' > \"${{brief%.md}}.report.json\"\n"
-      )
-    };
-    let prompt =
-      "brief=${last#You are a pr-babysit fixer. Read }\nbrief=${brief% and follow it exactly.}";
-    self.bin(
-      "opencode",
-      &format!("#!/bin/sh\nfor last; do :; done\n{prompt}\n{body}\n{report}"),
+  /// A herdr stand-in and a `claude` CLI: `worktree create` adds a git
+  /// worktree, `agent prompt` runs `work` in it and reports `done`, and
+  /// `agent start` answers `start`.
+  pub(crate) fn herdr(&self, start: &str, work: &str) {
+    let worktree = self.dir.path().join("herdr-wt").display().to_string();
+    let script = format!(
+      r#"#!/bin/sh
+case "$1 $2" in
+"worktree create")
+  git -C "$4" worktree add --quiet -b "$6" '{worktree}' "$8" >/dev/null 2>&1
+  echo '{{"result":{{"worktree":{{"path":"{worktree}"}},"workspace":{{"workspace_id":"w1"}},"root_pane":{{"pane_id":"p1"}}}}}}';;
+"worktree remove") git -C '{root}' worktree remove --force '{worktree}' && echo '{{"result":{{}}}}';;
+"pane list") echo '{{"result":{{"panes":[{{"pane_id":"p1"}}]}}}}';;
+"agent start") echo '{start}';;
+"agent prompt")
+  brief=${{4#You are a pr-babysit fixer. Read }}
+  brief=${{brief% and follow it exactly.}}
+  cd '{worktree}' && {work}
+  printf '{{"version":1,"status":"done","note":"fixed","at":"x"}}' > "${{brief%.md}}.report.json"
+  echo '{{"result":{{}}}}';;
+"agent wait") echo '{{"result":{{"agent":{{"agent_status":"idle"}}}}}}';;
+"agent read") echo 'Fixed sum.ts';;
+"agent list") echo '{{"result":{{"agents":[]}}}}';;
+*) echo '{{"result":{{}}}}';;
+esac
+"#,
+      root = self.root,
     );
+    self.bin("herdr", &script);
+    self.bin("claude", "#!/bin/sh\n");
   }
 
   /// Writes `plan.json` and `items.json`: one item routed to `host`.
@@ -195,18 +209,10 @@ fn the_sandbox_holds_a_pushed_pr_branch_and_the_captured_slot_state() {
     sb.state()["actions"]["replied"]["2300000001"]["replyId"],
     7234
   );
-  let (plan, items) = sb.plan("opencode", None);
+  let (plan, items) = sb.plan("codex", None);
   assert!(plan.exists() && items.exists());
   assert_eq!(sb.options(true).state_file, sb.state);
   let start = sb.start(&plan, &items);
   assert_eq!((start.branch, start.base), ("feat/fix", "main"));
   assert_eq!(start.repo_root, sb.repo.display().to_string());
-}
-
-#[test]
-fn a_stand_in_opencode_is_an_executable_on_the_sandbox_path() {
-  let sb = sandbox();
-  sb.opencode(FIX, "done");
-  assert!(crate::route::on_path(&sb.env, "opencode"));
-  assert!(!crate::route::on_path(&sb.env, "herdr"));
 }

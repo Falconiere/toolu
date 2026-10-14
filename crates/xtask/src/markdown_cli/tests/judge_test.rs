@@ -126,7 +126,6 @@ fn todays_documented_hook_forms_pass() {
     "toolu commands --json",
     "toolu epic queue",
     "toolu plugins install --dry-run --host claude",
-    "toolu serve planned",
     "toolu hook …",
   ] {
     passes(command, Origin::Fenced);

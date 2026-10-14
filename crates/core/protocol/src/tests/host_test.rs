@@ -3,7 +3,7 @@ use super::Host;
 #[test]
 fn every_host_name_parses_back_to_its_host() {
   let names: Vec<&str> = Host::ALL.iter().map(|host| host.name()).collect();
-  assert_eq!(names, ["claude", "codex", "opencode", "cursor", "hermes"]);
+  assert_eq!(names, ["claude", "codex", "cursor", "hermes"]);
   for host in Host::ALL {
     assert_eq!(Host::parse(host.name()), Some(host));
   }

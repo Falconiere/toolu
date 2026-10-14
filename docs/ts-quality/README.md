@@ -16,8 +16,6 @@ TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a r
 
 Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` register hook publishes the rule's manifest (`ts-quality@toolu__ts-quality.json`) into toolu's registry, and the core dispatcher runs the rule while this plugin is installed. Until toolu's own hooks are native (#425), the register hook also writes `ts-quality@toolu__ts-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
 
-OpenCode support is withdrawn. On OpenCode, enable `ts-quality` in `.opencode/toolu/plugins.json` alongside `toolu`. Completed `.ts` and `.tsx` writes, edits and patches run the rule when the project has a tracked `tsconfig*.json` and an available lock-file package manager. An installed `ast-grep` checks `.tsx` with its TSX parser. Violations appear after the edit and block later commit and push attempts; a linked worktree is skipped by the existing rule. See [OpenCode TypeScript post-edit quality](../opencode.md#typescript-post-edit-quality) and run `bun run smoke:opencode-ts-quality` in a toolu checkout for pinned-host proof.
-
 ## Checks Enforced
 
 ### 1. Size Discipline

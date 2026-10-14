@@ -304,89 +304,6 @@
         "--model",
         "gpt-5.6-sol-high"
       ]
-    },
-    {
-      "host": "opencode",
-      "unattended": true,
-      "model": null,
-      "effort": null,
-      "argv": [
-        "--auto"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": true,
-      "model": null,
-      "effort": "high",
-      "argv": [
-        "--auto",
-        "--variant",
-        "high"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": true,
-      "model": "anthropic/claude-sonnet",
-      "effort": null,
-      "argv": [
-        "--auto",
-        "--model",
-        "anthropic/claude-sonnet"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": true,
-      "model": "anthropic/claude-sonnet",
-      "effort": "high",
-      "argv": [
-        "--auto",
-        "--model",
-        "anthropic/claude-sonnet",
-        "--variant",
-        "high"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": false,
-      "model": null,
-      "effort": null,
-      "argv": []
-    },
-    {
-      "host": "opencode",
-      "unattended": false,
-      "model": null,
-      "effort": "high",
-      "argv": [
-        "--variant",
-        "high"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": false,
-      "model": "anthropic/claude-sonnet",
-      "effort": null,
-      "argv": [
-        "--model",
-        "anthropic/claude-sonnet"
-      ]
-    },
-    {
-      "host": "opencode",
-      "unattended": false,
-      "model": "anthropic/claude-sonnet",
-      "effort": "high",
-      "argv": [
-        "--model",
-        "anthropic/claude-sonnet",
-        "--variant",
-        "high"
-      ]
     }
   ],
   "aliases": {
@@ -394,7 +311,6 @@
     "Claude-Code": "claude",
     " Cursor-Agent ": "cursor",
     "codex": "codex",
-    "OpenCode": "opencode",
     "claude": "claude"
   },
   "routing": {
@@ -447,12 +363,6 @@
       {
         "model": "gpt-5.6-sol-xhigh"
       }
-    ],
-    "opencode": [
-      {},
-      {},
-      {},
-      {}
     ]
   },
   "hostLimit": "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) ",

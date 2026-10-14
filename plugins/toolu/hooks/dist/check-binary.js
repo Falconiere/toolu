@@ -29,7 +29,7 @@ function renderHookOutput(value, pretty) {
 `;
 }
 // packages/toolu-core/src/host/host-name.ts
-var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
+var HOST_NAMES = ["claude", "codex", "cursor", "hermes"];
 function envValue(env, key) {
   const value = env[key];
   return value === undefined || value === "" ? undefined : value;
@@ -89,16 +89,6 @@ var TABLES = {
     "tool/pre": "pre_tool_call",
     "shell/pre": "pre_tool_call",
     "tool/post": "post_tool_call"
-  },
-  opencode: {
-    "session/start": "session.created",
-    "session/unload": "session.deleted",
-    prompt: "chat.message",
-    pre_compact: "experimental.session.compacting",
-    "permission/evaluate": null,
-    "tool/pre": "tool.execute.before",
-    "shell/pre": "tool.execute.before",
-    "tool/post": "tool.execute.after"
   }
 };
 var ALIASES = {
@@ -131,9 +121,6 @@ function detectHost(options = {}) {
     }
     (options.warn ?? stderrLine)(`toolu-host: invalid TOOLU_HOST_OVERRIDE '${override}' (using environment detection)`);
   }
-  if (options.inProcess === "opencode") {
-    return "opencode";
-  }
   const owners = options.hookEventName ? hostsForNativeEvent(options.hookEventName) : [];
   const [owner] = owners;
   if (owners.length === 1 && owner !== undefined) {
@@ -159,8 +146,7 @@ var NATIVE_CONFIG_ROOT = {
   claude: (env) => envValue(env, "CLAUDE_CONFIG_DIR") ?? join(home(env), ".claude"),
   codex: (env) => envValue(env, "CODEX_HOME") ?? join(home(env), ".codex"),
   cursor: (env) => join(home(env), ".cursor"),
-  hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes"),
-  opencode: (env) => envValue(env, "TOOLU_OPENCODE_HOME") ?? join(envValue(env, "XDG_CONFIG_HOME") ?? join(home(env), ".config"), "opencode")
+  hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes")
 };
 function configRoot(options = {}) {
   const { env, host } = resolveHost(options);

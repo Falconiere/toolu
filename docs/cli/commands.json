@@ -534,38 +534,6 @@
       "placeholder": false
     },
     {
-      "about": "Serve the OpenCode shim over standard I/O",
-      "aliases": [],
-      "args": [],
-      "commands": [
-        {
-          "about": "Not ported yet (#437): show the planned verbs",
-          "aliases": [],
-          "args": [],
-          "commands": [],
-          "flags": [],
-          "hidden": false,
-          "longAbout": null,
-          "name": "planned",
-          "owner": "toolu",
-          "path": [
-            "serve",
-            "planned"
-          ],
-          "placeholder": true
-        }
-      ],
-      "flags": [],
-      "hidden": false,
-      "longAbout": null,
-      "name": "serve",
-      "owner": "toolu",
-      "path": [
-        "serve"
-      ],
-      "placeholder": false
-    },
-    {
       "about": "TypeScript quality rules that run after each edit",
       "aliases": [],
       "args": [],
@@ -3553,7 +3521,7 @@
             },
             {
               "global": false,
-              "help": "The host: claude, codex, cursor or opencode; default the route's",
+              "help": "The host: claude, codex or cursor; default the route's",
               "hidden": false,
               "long": "kind",
               "possibleValues": [],
@@ -4229,7 +4197,7 @@
             },
             {
               "global": false,
-              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "help": "user, project or local (Claude Code only)",
               "hidden": false,
               "long": "scope",
               "possibleValues": [
@@ -4244,7 +4212,7 @@
             },
             {
               "global": false,
-              "help": "Print the host commands or config changes without applying them",
+              "help": "Print the host commands without running them",
               "hidden": false,
               "long": "dry-run",
               "possibleValues": [],
@@ -4351,7 +4319,7 @@
             },
             {
               "global": false,
-              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "help": "user, project or local (Claude Code only)",
               "hidden": false,
               "long": "scope",
               "possibleValues": [
@@ -4366,7 +4334,7 @@
             },
             {
               "global": false,
-              "help": "Print the host commands or config changes without applying them",
+              "help": "Print the host commands without running them",
               "hidden": false,
               "long": "dry-run",
               "possibleValues": [],
@@ -4434,7 +4402,7 @@
             },
             {
               "global": false,
-              "help": "user, project or local (Claude Code); user or project (OpenCode)",
+              "help": "user, project or local (Claude Code only)",
               "hidden": false,
               "long": "scope",
               "possibleValues": [
@@ -4449,7 +4417,7 @@
             },
             {
               "global": false,
-              "help": "Print the host commands or config changes without applying them",
+              "help": "Print the host commands without running them",
               "hidden": false,
               "long": "dry-run",
               "possibleValues": [],
@@ -4555,7 +4523,6 @@
       "possibleValues": [
         "claude",
         "codex",
-        "opencode",
         "cursor",
         "hermes"
       ],
@@ -4598,7 +4565,7 @@
       "valueName": null
     }
   ],
-  "hookProtocol": 1,
+  "hookProtocol": 2,
   "name": "toolu",
   "schema": "toolu.commands/v1"
 }

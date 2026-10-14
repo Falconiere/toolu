@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { detectHost } from "../host-detect.ts";
 import type { HostEnv } from "../host-name.ts";
 
-function detect(env: HostEnv, extra: { hookEventName?: string; inProcess?: "opencode" } = {}) {
+function detect(env: HostEnv, extra: { hookEventName?: string } = {}) {
   const warnings: string[] = [];
   const host = detectHost({ env, ...extra, warn: (line) => warnings.push(line) });
   return { host, warnings };
@@ -44,12 +44,8 @@ describe("detectHost", () => {
     expect(detect({}, { hookEventName: "made_up_event" }).host).toBe("claude");
   });
 
-  test("the in-process OpenCode flag selects OpenCode over environment signals", () => {
-    expect(detect({ PLUGIN_ROOT: "/p" }, { inProcess: "opencode" }).host).toBe("opencode");
-  });
-
   test("TOOLU_HOST_OVERRIDE accepts every host and wins over all signals", () => {
-    for (const host of ["claude", "codex", "cursor", "opencode", "hermes"] as const) {
+    for (const host of ["claude", "codex", "cursor", "hermes"] as const) {
       const env = { TOOLU_HOST_OVERRIDE: host, PLUGIN_ROOT: "/p", CURSOR_VERSION: "1" };
       expect(detect(env, { hookEventName: "pre_tool_call" })).toEqual({ host, warnings: [] });
     }

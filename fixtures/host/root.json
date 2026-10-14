@@ -54,18 +54,6 @@
             }
           ],
           "expected": "/home/u/.hermes"
-        },
-        {
-          "fn": "configRoot",
-          "args": [
-            {
-              "env": {
-                "HOME": "/home/u"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/home/u/.config/opencode"
         }
       ]
     },
@@ -134,43 +122,10 @@
                 "HERMES_HOME": "/hh",
                 "XDG_CONFIG_HOME": "/xdg"
               },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/xdg/opencode"
-        },
-        {
-          "fn": "configRoot",
-          "args": [
-            {
-              "env": {
-                "HOME": "/home/u",
-                "CLAUDE_CONFIG_DIR": "/cc",
-                "CODEX_HOME": "/cx",
-                "HERMES_HOME": "/hh",
-                "XDG_CONFIG_HOME": "/xdg"
-              },
               "host": "cursor"
             }
           ],
           "expected": "/home/u/.cursor"
-        },
-        {
-          "fn": "configRoot",
-          "args": [
-            {
-              "env": {
-                "HOME": "/home/u",
-                "CLAUDE_CONFIG_DIR": "/cc",
-                "CODEX_HOME": "/cx",
-                "HERMES_HOME": "/hh",
-                "XDG_CONFIG_HOME": "/xdg",
-                "TOOLU_OPENCODE_HOME": "/oc"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/oc"
         }
       ]
     },
@@ -232,20 +187,6 @@
                 "CODEX_HOME": "/wrong"
               },
               "host": "hermes"
-            }
-          ],
-          "expected": "/explicit"
-        },
-        {
-          "fn": "configRoot",
-          "args": [
-            {
-              "env": {
-                "HOME": "/home/u",
-                "TOOLU_CONFIG_DIR": "/explicit",
-                "CODEX_HOME": "/wrong"
-              },
-              "host": "opencode"
             }
           ],
           "expected": "/explicit"
@@ -645,43 +586,6 @@
             }
           ],
           "expected": "/repo/.hermes/tmp/telemetry"
-        },
-        {
-          "fn": "projectDirname",
-          "args": [
-            {
-              "env": {
-                "TOOLU_PROJECT_DIR": "/repo"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": ".opencode"
-        },
-        {
-          "fn": "projectConfigPath",
-          "args": [
-            {
-              "env": {
-                "TOOLU_PROJECT_DIR": "/repo"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/repo/.opencode/toolu.config.json"
-        },
-        {
-          "fn": "projectStateDir",
-          "args": [
-            "telemetry",
-            {
-              "env": {
-                "TOOLU_PROJECT_DIR": "/repo"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/repo/.opencode/tmp/telemetry"
         }
       ]
     },
@@ -780,23 +684,6 @@
             }
           ],
           "expected": "/cursor-root"
-        },
-        {
-          "fn": "pluginRoot",
-          "args": [
-            {
-              "env": {
-                "PLUGIN_ROOT": "/codex-root",
-                "PLUGIN_DATA": "/codex-data",
-                "CURSOR_PLUGIN_ROOT": "/cursor-root",
-                "TOOLU_PLUGIN_ROOT": "/oc-root",
-                "CLAUDE_PLUGIN_ROOT": "/claude-root",
-                "CLAUDE_PLUGIN_DATA": "/claude-data"
-              },
-              "host": "opencode"
-            }
-          ],
-          "expected": "/oc-root"
         },
         {
           "fn": "pluginRoot",
@@ -961,18 +848,6 @@
             }
           ],
           "expected": "/toolu:setup"
-        },
-        {
-          "fn": "invocation",
-          "args": [
-            "toolu",
-            "commit",
-            {
-              "env": {},
-              "host": "opencode"
-            }
-          ],
-          "expected": "/toolu--commit"
         }
       ]
     },
@@ -1052,17 +927,6 @@
             {
               "env": {},
               "host": "hermes"
-            }
-          ],
-          "expected": null
-        },
-        {
-          "fn": "pluginInstallCommand",
-          "args": [
-            "toolu@toolu",
-            {
-              "env": {},
-              "host": "opencode"
             }
           ],
           "expected": null

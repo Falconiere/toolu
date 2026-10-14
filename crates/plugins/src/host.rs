@@ -25,12 +25,10 @@ pub(crate) enum Target {
   Claude,
   /// Codex, through `codex plugin`.
   Codex,
-  /// `OpenCode`, through its config files.
-  Opencode,
 }
 
 /// The probe order.
-const PROBED: [Target; 3] = [Target::Claude, Target::Codex, Target::Opencode];
+const PROBED: [Target; 2] = [Target::Claude, Target::Codex];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.
@@ -38,7 +36,6 @@ impl Target {
     match self {
       Target::Claude => "claude",
       Target::Codex => "codex",
-      Target::Opencode => "opencode",
     }
   }
 }
@@ -48,9 +45,8 @@ pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
     Host::Codex => Ok(Target::Codex),
-    Host::Opencode => Ok(Target::Opencode),
     Host::Cursor | Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex or opencode",
+      "--host {} is not an installer target; toolu plugins installs into claude or codex",
       host.name()
     ))),
   }
@@ -143,16 +139,13 @@ pub(crate) fn resolve(
   }
 }
 
-/// Claude Code takes every scope, `OpenCode` `user` or `project`, Codex none.
+/// Claude Code takes every scope, Codex none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(Scope::Local), Target::Opencode) => Err(Fail::usage(
-      "--scope local is Claude Code only; OpenCode takes user or project",
-    )),
     (Some(_), Target::Codex) => Err(Fail::usage(
-      "--scope is for Claude Code and OpenCode; codex has no scope concept",
+      "--scope is for Claude Code; codex has no scope concept",
     )),
-    (None, _) | (Some(_), Target::Claude | Target::Opencode) => Ok(()),
+    (None, _) | (Some(_), Target::Claude) => Ok(()),
   }
 }
 

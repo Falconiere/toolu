@@ -252,16 +252,6 @@ fn hermes_reads_only_its_top_level_envelope() {
 }
 
 #[test]
-fn opencode_payloads_do_not_normalize_until_the_tool_map_is_ported() {
-  let payload = parse(
-    Host::Opencode,
-    r#"{"input":{"tool":"bash","sessionID":"s","callID":"c"},"output":{"args":{}}}"#,
-  )
-  .unwrap();
-  assert_eq!(payload.normalize(HostEvent::ToolPre, &roots()), None);
-}
-
-#[test]
 fn text_or_takes_a_non_empty_string_and_otherwise_its_fallback() {
   let fallback = Text::new("unknown").unwrap();
   assert_eq!(text_or(Some("s1"), &fallback).as_str(), "s1");

@@ -66,7 +66,7 @@ fn native_writer_uses_each_hosts_project_state_directory() {
   let tmp = tempfile::tempdir().unwrap();
   let dir = tmp.path().join("project");
   repo(&dir).unwrap();
-  for host in ["claude", "codex", "opencode"] {
+  for host in ["claude", "codex", "cursor"] {
     let output = writer_host(&dir, host, &["--findings-count", "0"]).unwrap();
     assert_eq!(
       output.status.code(),
@@ -262,7 +262,7 @@ fn native_writer_keys_a_detached_worktree_to_the_requested_branch() {
 fn native_session_start_publishes_the_compatibility_shim_on_each_host() {
   let tmp = tempfile::tempdir().unwrap();
   let plugin = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/toolu-review");
-  for host in ["claude", "codex", "opencode"] {
+  for host in ["claude", "codex", "cursor"] {
     let config = tmp.path().join(host);
     let output = assert_cmd::Command::new(TOOLU)
       .args([

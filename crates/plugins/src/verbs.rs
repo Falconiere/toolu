@@ -1,5 +1,5 @@
 //! The four verbs on a host driven through its own plugin CLI (Claude Code,
-//! Codex). `OpenCode`'s live in `opencode`.
+//! Codex).
 
 use std::time::Duration;
 

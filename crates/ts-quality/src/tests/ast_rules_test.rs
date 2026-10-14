@@ -1,7 +1,6 @@
 use std::path::Path;
 
 use toolu_engine::quality::{AstGrepHit, AstGrepScan, EditedFile, ScanFailure, ScanStage};
-use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_state::detect::project::NodePackageManager;
 
@@ -56,11 +55,17 @@ fn structural(path: &str, text: &str, no_mocks: bool, scan: &AstGrepScan) -> Vec
 }
 
 #[test]
-fn opencode_also_scans_tsx_files() {
-  let claude = inline_rules(Host::Claude);
-  assert!(claude.contains("language: ts\n") && !claude.contains("language: tsx\n"));
-  let opencode = inline_rules(Host::Opencode);
-  assert!(opencode.starts_with(&claude) && opencode.contains("language: tsx\n"));
+fn the_rules_cover_ts_files_only() {
+  let rules = inline_rules();
+  assert!(
+    rules.contains(
+      "language: ts
+"
+    ) && !rules.contains(
+      "language: tsx
+"
+    )
+  );
 }
 
 #[test]

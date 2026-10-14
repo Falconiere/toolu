@@ -72,7 +72,7 @@
     {
       "name": "statusline",
       "source": "./plugins/statusline",
-      "description": "Native Claude Code statusline and Codex/OpenCode status skills for repository and gate status. Standalone, no dependencies.",
+      "description": "Native Claude Code statusline and Codex status skills for repository and gate status. Standalone, no dependencies.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["statusline", "quality-gate", "hooks"],
@@ -126,7 +126,7 @@
     {
       "name": "epic-orchestrator",
       "source": "./plugins/epic-orchestrator",
-      "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent / OpenCode workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
+      "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["epic", "github", "herdr", "orchestration"],

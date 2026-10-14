@@ -37,11 +37,11 @@ fn shared_capacity_refuses_before_external_work() {
 #[test]
 fn a_dry_resume_prompts_with_the_captured_session() {
   let rig = Rig::new();
-  rig.write_record("comemory-255", &serde_json::json!({"stage": "running", "kind": "opencode", "launches": 1, "session_id": "ses_abc"}));
+  rig.write_record("comemory-255", &serde_json::json!({"stage": "running", "kind": "claude", "launches": 1, "session_id": "0f8fad5b-d9cb-469f-a165-70867728950e"}));
   let mut flags = opts();
   flags.dry_run = true;
-  flags.kind = Some("opencode".into());
-  flags.model = Some("p/m".into());
+  flags.kind = Some("claude".into());
+  flags.model = Some("opus".into());
   let issue = find_issue(&rig.graph, "comemory-255")
     .expect("issue")
     .clone();
@@ -49,7 +49,15 @@ fn a_dry_resume_prompts_with_the_captured_session() {
   assert_eq!(result["resume"], true);
   assert_eq!(
     result["agent_args"],
-    serde_json::json!(["--session", "ses_abc", "--auto", "--model", "p/m"])
+    serde_json::json!([
+      "--resume",
+      "0f8fad5b-d9cb-469f-a165-70867728950e",
+      "--dangerously-skip-permissions",
+      "-n",
+      "comemory-255",
+      "--model",
+      "opus"
+    ])
   );
   assert!(result["prompt"].as_str().is_some_and(|prompt| {
     prompt.contains("resuming interrupted work") && prompt.ends_with("loaded above.")

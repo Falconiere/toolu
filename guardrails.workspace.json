@@ -4,7 +4,6 @@
   "packages": [
     "tooling",
     "packages/toolu-core",
-    "tools/toolu-opencode",
     "tools/toolu-conformance",
     "tools/toolu-cli"
   ],

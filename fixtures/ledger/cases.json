@@ -640,23 +640,6 @@
           }
         },
         {
-          "op": "run",
-          "cli": "plan-ledger",
-          "argv": [
-            "preflight",
-            "p.md"
-          ],
-          "expect": {
-            "exitCode": 1,
-            "stdout": "",
-            "stderr": "preflight: spec spec.md not approved (Status: Draft) — load skill({ name: \"delivery-flow-delivery-flow\" }) (spec review phase)\n",
-            "ledger": null
-          },
-          "env": {
-            "TOOLU_HOST_OVERRIDE": "opencode"
-          }
-        },
-        {
           "op": "write",
           "path": "p.md",
           "body": "# P\n\n**Status:** Draft   **Spec:** spec.md\n"

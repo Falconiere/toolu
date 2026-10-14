@@ -25,8 +25,8 @@ fn real_tree() -> Result<Value> {
   serde_json::from_str(&real(TREE)?).map_err(text)
 }
 
-/// The real tree with `namespace`'s placeholder verb renamed to `verb`.
-fn ported(namespace: &str, verb: &str) -> Result<Value> {
+/// The real tree with `namespace`'s verb `from` renamed to `to`.
+fn renamed(namespace: &str, from: &str, to: &str) -> Result<Value> {
   let mut tree = real_tree()?;
   let command = tree
     .get_mut("commands")
@@ -42,9 +42,8 @@ fn ported(namespace: &str, verb: &str) -> Result<Value> {
     .and_then(Value::as_array_mut)
     .ok_or("no verbs")?;
   for child in verbs.iter_mut().filter_map(Value::as_object_mut) {
-    if child.get("placeholder") == Some(&Value::Bool(true)) {
-      child.insert("placeholder".to_owned(), Value::Bool(false));
-      child.insert("name".to_owned(), Value::from(verb));
+    if child.get("name") == Some(&Value::from(from)) {
+      child.insert("name".to_owned(), Value::from(to));
     }
   }
   Ok(tree)
@@ -212,21 +211,21 @@ fn an_external_command_passes_only_while_it_is_listed() {
 
 #[test]
 fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
-  let serve = "plugins/toolu/skills/x/SKILL.md";
-  let files = [(serve, skill_running("toolu serve survey --json"))];
+  let debug = "plugins/toolu/skills/x/SKILL.md";
+  let files = [(debug, skill_running("toolu debug io --json"))];
   let files: Vec<(&str, &str)> = files
     .iter()
     .map(|(path, text)| (*path, text.as_str()))
     .collect();
   let (code, stderr) = check(
-    root(&ported("serve", "survey").unwrap(), &files)
+    root(&renamed("debug", "io", "io").unwrap(), &files)
       .unwrap()
       .path(),
   )
   .unwrap();
   assert_eq!(code, 0, "{stderr}");
   let (code, stderr) = check(
-    root(&ported("serve", "step").unwrap(), &files)
+    root(&renamed("debug", "io", "step").unwrap(), &files)
       .unwrap()
       .path(),
   )
@@ -235,7 +234,7 @@ fn renaming_a_verb_without_the_skill_fails_on_the_skill_line() {
   assert_has(
     &stderr,
     &[&format!(
-      "{serve}:12: `toolu serve survey --json`: unknown command `survey`"
+      "{debug}:12: `toolu debug io --json`: unknown command `io`"
     )],
   );
 }

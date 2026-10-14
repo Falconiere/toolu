@@ -1,8 +1,7 @@
 use serde_json::Value;
 
 use super::{
-  AgentOpts, HOST_KINDS, HostKind, agent_args, host_kind, host_limited, opencode_model_args,
-  opencode_version_problem, parse_host_kind, skill_ref,
+  AgentOpts, HOST_KINDS, HostKind, agent_args, host_kind, host_limited, parse_host_kind, skill_ref,
 };
 
 const FIXTURE: &str = include_str!("../../../../fixtures/epic/hosts.json");
@@ -29,7 +28,7 @@ fn kind_of(case: &Value) -> HostKind {
 #[test]
 fn agent_args_match_every_captured_combination() {
   let args = cases("args");
-  assert!(args.len() >= 24 + 12);
+  assert!(args.len() >= 24 + 9);
   for case in args {
     let opts = &case["opts"];
     let options = AgentOpts {
@@ -59,12 +58,8 @@ fn skill_syntax_matches_every_host() {
       case["plugin"].as_str().expect("plugin"),
       case["skill"].as_str().expect("skill"),
     );
-    assert_eq!(got.ok(), text(&case["text"]), "{}", case["name"]);
+    assert_eq!(Some(got), text(&case["text"]), "{}", case["name"]);
   }
-  assert_eq!(
-    skill_ref(HostKind::Opencode, "nope", "x"),
-    Err("no OpenCode skill id for nope:x".to_owned())
-  );
 }
 
 #[test]
@@ -80,11 +75,12 @@ fn aliases_resolve_as_captured() {
   }
   assert_eq!(
     host_kind("gemini").err().as_deref(),
-    Some("unknown host gemini; use one of claude, codex, cursor, opencode")
+    Some("unknown host gemini; use one of claude, codex, cursor")
   );
+  assert_eq!(parse_host_kind("opencode"), None);
   assert_eq!(
     HOST_KINDS.map(HostKind::name),
-    ["claude", "codex", "cursor", "opencode"]
+    ["claude", "codex", "cursor"]
   );
 }
 
@@ -101,19 +97,7 @@ fn the_limit_pattern_matches_throttle_messages_not_ordinary_output() {
 }
 
 #[test]
-fn opencode_versions_and_models_are_checked() {
-  for case in cases("opencode-version") {
-    let output = case["output"].as_str().expect("output");
-    assert_eq!(
-      opencode_version_problem(output),
-      text(&case["problem"]),
-      "{output}"
-    );
-  }
-  assert_eq!(
-    opencode_model_args("sonnet"),
-    Err("OpenCode model must be provider/model, got sonnet".to_owned())
-  );
+fn unsafe_arguments_are_refused() {
   let opts = AgentOpts {
     key: "k".into(),
     model: Some("bad model".into()),

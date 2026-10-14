@@ -79,7 +79,7 @@ fn malformed_and_missing_files_are_usage_errors() {
     (r#"{"version":1,"enabled":[""]}"#, "non-empty strings"),
     (
       r#"{"version":1,"host":"cursor","enabled":[]}"#,
-      "\"host\" must be claude, codex or opencode",
+      "\"host\" must be claude or codex",
     ),
     (
       r#"{"version":1,"host":3,"enabled":[]}"#,

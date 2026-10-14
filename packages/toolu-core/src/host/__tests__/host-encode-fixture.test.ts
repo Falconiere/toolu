@@ -14,7 +14,6 @@ import { HOST_NAMES } from "../host-name.ts";
 
 const ExpectSchema = z.union([
   z.strictObject({ stdout: z.string() }),
-  z.strictObject({ callback: z.string() }),
   z.strictObject({ error: z.string() }),
 ]);
 const CaseSchema = z.strictObject({
@@ -36,7 +35,6 @@ function encoded(c: Case): z.infer<typeof ExpectSchema> {
     c.gateClass === undefined ? c.decision : degradeAsk(c.host, c.event, c.decision, c.gateClass);
   try {
     const out = encodeDecision(c.host, c.event, decision);
-    if (out.kind === "callback") return { callback: JSON.stringify(out) };
     expect(out.stderr).toBe("");
     expect(out.exitCode).toBe(0);
     return { stdout: out.stdout };
@@ -47,10 +45,9 @@ function encoded(c: Case): z.infer<typeof ExpectSchema> {
 
 test("the fixture covers every host, event and decision", () => {
   const kinds = cases.map((c) => Object.keys(c.expect)[0]);
-  expect(cases.length).toBe(299);
+  expect(cases.length).toBe(241);
   expect(kinds.filter((kind) => kind === "stdout").length).toBe(238);
-  expect(kinds.filter((kind) => kind === "callback").length).toBe(57);
-  expect(kinds.filter((kind) => kind === "error").length).toBe(4);
+  expect(kinds.filter((kind) => kind === "error").length).toBe(3);
 });
 
 for (const c of cases) {

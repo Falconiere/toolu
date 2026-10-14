@@ -1,14 +1,4 @@
-use super::{kind, returned_bytes, session_id, session_report};
-
-#[test]
-fn session_report_reports_oversized_ledger() {
-  let file = tempfile::NamedTempFile::new().expect("temporary ledger");
-  file
-    .as_file()
-    .set_len(crate::report::MAX_LEDGER_BYTES + 1)
-    .expect("extend ledger");
-  assert!(session_report(file.path()).contains("ledger exceeds 16777216 bytes"));
-}
+use super::{kind, returned_bytes, session_id};
 
 #[test]
 fn savings_response_projection_matches_every_recorded_fixture_case() {
@@ -66,8 +56,8 @@ fn savings_identifies_actual_ast_grep_command_and_response() {
 #[test]
 fn savings_sanitizes_session_and_ignores_empty_result() {
   assert_eq!(
-    session_id(Some(&serde_json::json!("ses_opencode-1"))),
-    "sesopencode-1"
+    session_id(Some(&serde_json::json!("ses_real-1"))),
+    "sesreal-1"
   );
   assert_eq!(returned_bytes(Some(&serde_json::json!(""))), None);
 }

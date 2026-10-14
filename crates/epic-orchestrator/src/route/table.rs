@@ -42,7 +42,7 @@ fn choice(model: Option<&str>, effort: Option<&str>) -> ModelChoice {
 }
 
 /// Effort rises with the tier and the model steps up where a host has a
-/// stronger one. `OpenCode` keeps its configured model.
+/// stronger one.
 pub(crate) fn default_table() -> RoutingTable {
   let hosts = [
     (
@@ -70,7 +70,6 @@ pub(crate) fn default_table() -> RoutingTable {
         choice(Some("gpt-5.6-sol-xhigh"), None),
       ],
     ),
-    (HostKind::Opencode, vec![ModelChoice::default(); 4]),
   ];
   RoutingTable {
     hosts: hosts.into_iter().collect(),

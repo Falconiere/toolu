@@ -1,7 +1,6 @@
 //! Routes a request to its verb on each chosen host and turns the steps into a
 //! report (the former TypeScript installer's `src/plugins/dispatch.ts`).
 
-use std::path::PathBuf;
 use std::time::Duration;
 
 use serde_json::Value;
@@ -14,7 +13,6 @@ use crate::catalog::order::install_order;
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::{Mode, Target, check_scope, resolve, target_of};
-use crate::opencode;
 use crate::prompt::{Ask, Choice};
 use crate::replay;
 use crate::report;
@@ -23,17 +21,15 @@ use crate::verbs::{self, Driver};
 
 /// What a run works with besides its request.
 pub(crate) struct Context<'a> {
-  /// The environment: `PATH` for host detection, roots for `OpenCode`.
+  /// The environment: `PATH` for host detection.
   pub(crate) env: Env,
-  /// The directory the run started in.
-  pub(crate) cwd: PathBuf,
   /// `--host`.
   pub(crate) host: Option<Host>,
   /// Prompts, when the run may ask.
   pub(crate) ask: Option<&'a mut dyn Ask>,
   /// The deadline of each host command.
   pub(crate) timeout: Duration,
-  /// This binary's version: what `OpenCode` installs and `--config` is checked against.
+  /// This binary's version: what `--config` is checked against.
   pub(crate) version: &'static str,
 }
 
@@ -48,35 +44,30 @@ pub(crate) struct Report {
   pub(crate) failed: bool,
 }
 
-fn driver(target: Target, cx: &Context<'_>) -> Option<Driver> {
+fn driver(target: Target, cx: &Context<'_>) -> Driver {
   let adapter = match target {
     Target::Claude => Adapter::Claude,
     Target::Codex => Adapter::Codex,
-    Target::Opencode => return None,
   };
-  Some(Driver {
+  Driver {
     adapter,
     env: cx.env.clone(),
     timeout: cx.timeout,
-  })
+  }
 }
 
-/// A dry run's report: the planned config changes on `OpenCode`, on a host CLI
-/// the commands a real run would run (not those of a plugin already current);
-/// `None` when the run was real.
-fn dry_text(target: Target, dry_run: bool, steps: &[Step]) -> Option<String> {
-  match (dry_run, target) {
-    (false, _) => None,
-    (true, Target::Opencode) => Some(report::planned(steps)),
-    (true, Target::Claude | Target::Codex) => {
-      let would_run: Vec<Step> = steps
-        .iter()
-        .filter(|step| step.status == Status::Skipped)
-        .cloned()
-        .collect();
-      Some(report::commands(&would_run))
-    }
+/// A dry run's report: the commands a real run would run (not those of a plugin
+/// already current); `None` when the run was real.
+fn dry_text(dry_run: bool, steps: &[Step]) -> Option<String> {
+  if !dry_run {
+    return None;
   }
+  let would_run: Vec<Step> = steps
+    .iter()
+    .filter(|step| step.status == Status::Skipped)
+    .cloned()
+    .collect();
+  Some(report::commands(&would_run))
 }
 
 /// The steps `--json` reports for a removal: a dry run removed nothing.
@@ -177,12 +168,11 @@ fn install(
   let nothing = request.config.is_some() && names.is_empty();
   let mut sections = Vec::new();
   for target in targets {
-    let steps = match (nothing, driver(target, cx)) {
-      (true, _any) => Vec::new(),
-      (false, Some(driver)) => {
-        verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
-      }
-      (false, None) => opencode::install(request, &names, catalog, cx)?,
+    let steps = if nothing {
+      Vec::new()
+    } else {
+      let driver = driver(target, cx);
+      verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
     };
     sections.push((target, steps));
   }
@@ -213,15 +203,10 @@ fn remove(
     return Err(Fail::usage("remove requires --yes to confirm"));
   }
   let target = one_host(request, wanted, cx)?;
-  let steps = match driver(target, cx) {
-    Some(driver) => {
-      install_order(catalog, &request.names)?;
-      verbs::remove::run(&driver, &request.names, request.dry_run)
-    }
-    None => opencode::remove(request, catalog, cx)?,
-  };
+  install_order(catalog, &request.names)?;
+  let steps = verbs::remove::run(&driver(target, cx), &request.names, request.dry_run);
   Ok(Report {
-    text: dry_text(target, request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
+    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
     json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
     failed: failed(&steps),
   })
@@ -234,12 +219,9 @@ fn list(
   cx: &mut Context<'_>,
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
-  let (header, rows) = match driver(target, cx) {
-    Some(driver) => (String::new(), verbs::list::run(&driver, catalog)?),
-    None => opencode::list(catalog, cx)?,
-  };
+  let rows = verbs::list::run(&driver(target, cx), catalog)?;
   Ok(Report {
-    text: format!("{header}{}", report::list(&rows)),
+    text: report::list(&rows),
     json: report::rows_json(&rows),
     failed: false,
   })
@@ -252,15 +234,10 @@ fn update(
   cx: &mut Context<'_>,
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
-  let steps = match driver(target, cx) {
-    Some(driver) => {
-      install_order(catalog, &request.names)?;
-      verbs::update::run(&driver, &request.names, request.dry_run)?
-    }
-    None => opencode::update(request, catalog, cx)?,
-  };
+  install_order(catalog, &request.names)?;
+  let steps = verbs::update::run(&driver(target, cx), &request.names, request.dry_run)?;
   Ok(Report {
-    text: dry_text(target, request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
+    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
     json: report::host_json(target, &steps, false),
     failed: failed(&steps),
   })

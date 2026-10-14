@@ -10,8 +10,6 @@ test("runConformanceMatrix passes every fixture suite; none skips (#362)", async
   const { pass, results } = await runConformanceMatrix();
   expect(results.map((r) => [r.id, r.outcome.status])).toEqual([
     ["protected-files", "pass"],
-    ["bootstrap-readiness", "pass"],
-    ["surface-drift", "pass"],
     ["spaces-cwd", "pass"],
   ]);
   expect(pass).toBe(true);

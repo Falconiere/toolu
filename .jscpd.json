@@ -2,9 +2,6 @@
   "path": [
     "tooling/src",
     "packages/toolu-core/src",
-    "tools/toolu-opencode/src",
-    "tools/toolu-opencode/scripts",
-    "tools/toolu-opencode/contract",
     "tools/toolu-conformance/src",
     "tools/toolu-cli/src",
     "plugins"

@@ -25,8 +25,6 @@ test("the CLI matrix sends protected dispatch through a selected Rust executable
   expect(result.exitCode).toBe(0);
   expect(result.stdout).toContain("protected-files pass");
   expect(result.stdout).toContain("spaces-cwd pass");
-  expect(result.stdout).toContain("bootstrap-readiness pass");
-  expect(result.stdout).toContain("surface-drift pass");
   expect(readFileSync(calls, "utf8")).toBe("hook pre-tools\nhook pre-tools\n");
 });
 

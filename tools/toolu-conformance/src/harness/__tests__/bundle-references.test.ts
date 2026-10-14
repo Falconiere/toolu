@@ -18,8 +18,6 @@ const COMMENT = /^\s*(\/\/|\/?\*)/;
 /** Path prefix → why the bundle path is the subject rather than a command to run. */
 const ALLOWED: Record<string, string> = {
   "tooling/src/__tests__/build-plugins.test.ts": "builds bundles and checks their drift",
-  "tooling/src/__tests__/bundle-plugins.test.ts": "checks the bundle file layout",
-  "tooling/src/__tests__/pack-closure.test.ts": "checks published tarball contents",
   "tooling/src/__tests__/pack-inventory.test.ts": "checks published tarball file lists",
   "tooling/src/__tests__/check-hooks-json.test.ts": "checks hooks.json launcher text",
   "tooling/src/__tests__/gate-coverage-inventory.test.ts":
@@ -28,8 +26,6 @@ const ALLOWED: Record<string, string> = {
     "checks the generated launcher text and its fail-closed behavior",
   "packages/toolu-core/src/startup/__tests__/publish.test.ts":
     "builds a fake plugin layout to test stable-path publishing",
-  "tools/toolu-opencode/":
-    "the OpenCode bootstrap itself spawns bundles; its Rust shim is a later epic issue",
   "plugins/delivery-flow/skills/__tests__/delivery-flow-contract.test.ts":
     "skill text that must no longer name the ledger and verdict bundles (#421)",
   "tooling/src/__tests__/workspace-skeleton.test.ts": "asserts release-only paths exclude bundles",

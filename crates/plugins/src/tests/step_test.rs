@@ -19,7 +19,4 @@ fn only_a_failed_step_fails_and_a_skew_does_not() {
       (name, mark, status == Status::Failed)
     );
   }
-  let planned =
-    Step::new("jev", Status::Installed, "enabled", Vec::new()).planned("enable jev in /s");
-  assert_eq!(planned.plan.as_deref(), Some("enable jev in /s"));
 }

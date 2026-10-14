@@ -36,10 +36,6 @@ fn preflight(opts: &LedgerOptions, plan: Option<&str>) -> (u8, String) {
 fn each_host_names_its_delivery_flow_remedy() {
   let repo = Repo::new().unwrap();
   for (host, action) in [
-    (
-      Host::Opencode,
-      "load skill({ name: \"delivery-flow-delivery-flow\" })",
-    ),
     (Host::Claude, "run /delivery-flow:delivery-flow"),
     (Host::Codex, "run /delivery-flow:delivery-flow"),
     (Host::Cursor, "load the delivery-flow skill"),

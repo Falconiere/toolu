@@ -229,10 +229,6 @@ fn settle(herdr: &mut Herdr<'_>, name: &str) -> Result<(), Failure> {
 
 /// Ask agent `name` on host `kind` to stop its turn and exit.
 fn request_exit(herdr: &mut Herdr<'_>, name: &str, kind: HostKind) -> Result<(), Failure> {
-  if kind == HostKind::Opencode {
-    // The 1.x TUI runs its server in-process; ctrl+c closes it and its jobs.
-    return send(herdr, name, &["ctrl+c"]);
-  }
   send(herdr, name, &["esc"])?;
   // Codex's turn cancellation leaves tool jobs alive; /stop is separate.
   if kind == HostKind::Codex {

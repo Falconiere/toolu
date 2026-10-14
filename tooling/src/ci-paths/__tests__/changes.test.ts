@@ -24,7 +24,6 @@ const SEEDED = [
   ".github/workflows/tests.yml",
   "docs/statusline/README.md",
   "README.md",
-  "tools/toolu-opencode/src/plugin/hooks.ts",
   "crates/core/runtime/src/lib.rs",
   "bun.lock",
   ...RELEASE_ONLY,
@@ -77,14 +76,12 @@ async function prOutputs(edits: Record<string, string>): Promise<Outputs> {
 }
 
 const ALL_ON = {
-  opencode: "true",
   docs: "true",
   rust: "true",
   ports: "true",
   changed: "true",
 };
 const ALL_OFF = {
-  opencode: "false",
   docs: "false",
   rust: "false",
   ports: "false",
@@ -108,7 +105,6 @@ function bump(path: string): string {
 test.concurrent("a docs-only PR turns on docs and changed only (AC-1)", async () => {
   const outputs = await prOutputs({ "docs/statusline/README.md": "# statusline\n\nEdited.\n" });
   expect(outputs).toEqual({
-    opencode: "false",
     docs: "true",
     rust: "false",
     ports: "false",
@@ -119,7 +115,6 @@ test.concurrent("a docs-only PR turns on docs and changed only (AC-1)", async ()
 test.concurrent("a root Markdown edit is docs-only too (AC-1)", async () => {
   const outputs = await prOutputs({ "README.md": "# toolu\n" });
   expect(outputs).toEqual({
-    opencode: "false",
     docs: "true",
     rust: "false",
     ports: "false",
@@ -132,7 +127,7 @@ test.concurrent("a CLI verb rename turns on docs, which runs the Markdown drift 
     "crates/core/runtime/src/lib.rs": "//! renamed\n",
     "docs/cli/commands.json": "{}\n",
   };
-  expect(await prOutputs(rename)).toEqual({ ...ALL_ON, opencode: "false" });
+  expect(await prOutputs(rename)).toEqual(ALL_ON);
 });
 
 test.concurrent("a release-please version bump turns every output off (AC-2)", async () => {
@@ -146,21 +141,14 @@ test.concurrent("a release-please version bump turns every output off (AC-2)", a
   expect(await prOutputs(edits)).toEqual(ALL_OFF);
 });
 
-test.concurrent("a scripts edit in root package.json is not release-only (AC-2)", async () => {
+test.concurrent("a scripts edit in root package.json is not release-only and runs every group (AC-2, AC-4)", async () => {
   const text = readFileSync(join(ROOT, "package.json"), "utf8");
   const edited = text.replace(
     '"test:unit": "bun test --timeout 60000',
     '"test:unit": "bun test --timeout 1',
   );
   expect(edited).not.toBe(text);
-  const outputs = await prOutputs({ "package.json": edited });
-  expect(outputs).toEqual({
-    opencode: "true",
-    docs: "false",
-    rust: "false",
-    ports: "false",
-    changed: "true",
-  });
+  expect(await prOutputs({ "package.json": edited })).toEqual(ALL_ON);
 });
 
 test.concurrent("a Rust-only PR turns on rust and changed only (#407 AC-5)", async () => {
@@ -168,7 +156,6 @@ test.concurrent("a Rust-only PR turns on rust and changed only (#407 AC-5)", asy
   const text = readFileSync(join(ROOT, path), "utf8");
   const outputs = await prOutputs({ [path]: `${text}\n// edited\n` });
   expect(outputs).toEqual({
-    opencode: "false",
     docs: "false",
     rust: "true",
     ports: "true",
@@ -183,7 +170,6 @@ test.concurrent("a Cargo.toml edit beyond the version is not release-only (#407 
   );
   expect(edited).not.toBe(bump("Cargo.toml"));
   expect(await prOutputs({ "Cargo.toml": edited })).toEqual({
-    opencode: "false",
     docs: "false",
     rust: "true",
     ports: "true",
@@ -195,23 +181,9 @@ test.concurrent("a hooks.json edit turns on rust for cargo xtask check-hooks (#4
   const path = "plugins/toolu/hooks/hooks.json";
   const text = readFileSync(join(ROOT, path), "utf8");
   expect(await prOutputs({ [path]: `${text}\n` })).toEqual({
-    opencode: "true",
     docs: "false",
     rust: "true",
     ports: "true",
-    changed: "true",
-  });
-});
-
-test.concurrent("an OpenCode adapter edit turns on opencode (AC-3)", async () => {
-  const path = "tools/toolu-opencode/src/plugin/hooks.ts";
-  const text = readFileSync(join(ROOT, path), "utf8");
-  const outputs = await prOutputs({ [path]: `${text}\n// edited\n` });
-  expect(outputs).toEqual({
-    opencode: "true",
-    docs: "false",
-    rust: "false",
-    ports: "false",
     changed: "true",
   });
 });
@@ -229,7 +201,6 @@ test.concurrent("a push compares before..after with the same groups (AC-6)", asy
   const after = commit(sb, { "docs/statusline/README.md": "# pushed\n" });
   const outputs = await changes(sb, "push", { before, after });
   expect(outputs).toEqual({
-    opencode: "false",
     docs: "true",
     rust: "false",
     ports: "false",
@@ -287,7 +258,6 @@ test.concurrent("a version bump plus a docs edit runs docs only (AC-1, AC-2)", a
   const edits = Object.fromEntries(RELEASE_ONLY.map((path) => [path, bump(path)]));
   edits["docs/statusline/README.md"] = "# statusline\n\nEdited.\n";
   expect(await prOutputs(edits)).toEqual({
-    opencode: "false",
     docs: "true",
     rust: "false",
     ports: "false",
@@ -300,7 +270,6 @@ test.concurrent("a plugin manifest with a version and another change is not rele
   const edited = bump(path).replace(/"description": "/, '"description": "Edited. ');
   expect(edited).not.toBe(bump(path));
   expect(await prOutputs({ [path]: edited })).toEqual({
-    opencode: "true",
     docs: "false",
     // check-hooks gates every manifest's hookProtocol (#412).
     rust: "true",
@@ -317,7 +286,6 @@ test.concurrent("deleting a release-only file is not release-only", async () => 
   const head = sb.git("rev-parse", "HEAD").trim();
   const event = { pull_request: { base: { sha: base }, head: { sha: head } } };
   expect(await changes(sb, "pull_request", event)).toEqual({
-    opencode: "true",
     docs: "false",
     rust: "true",
     ports: "true",

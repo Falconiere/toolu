@@ -12,14 +12,12 @@ import { envOr } from "./env.ts";
 
 const PACKAGES = [
   "packages/toolu-core",
-  "tools/toolu-opencode",
   "tools/toolu-conformance",
   "tools/toolu-cli",
   "tooling",
 ];
 const WORKSPACES = [
   "packages/toolu-core",
-  "tools/toolu-opencode",
   "tools/toolu-conformance",
   "tools/toolu-cli",
 ];
@@ -49,10 +47,6 @@ async function exportSmokes(): Promise<void> {
   if (parseDecision({ kind: "allow" }).kind !== "allow") throw new WorkspaceError("decision");
   const { detectHost } = await import("@toolu/core/host");
   if (detectHost({ env: { PLUGIN_ROOT: "/p" } }) !== "codex") throw new WorkspaceError("host");
-  const { classifyStub } = await import("@toolu/opencode/plugin-stub");
-  if (classifyStub("shell-out") !== "shell-out") throw new WorkspaceError("classify");
-  const plugin = (await import("@toolu/opencode")).default;
-  if (plugin.id !== "toolu") throw new WorkspaceError("default entry");
   const { runProtectedFilesConformance } = await import("@toolu/conformance/run-stub");
   const conformance = await runProtectedFilesConformance();
   if (!conformance.pass) throw new WorkspaceError(conformance.message);

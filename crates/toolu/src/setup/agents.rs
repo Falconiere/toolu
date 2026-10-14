@@ -6,7 +6,7 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 
-use super::{env_of, opencode};
+use super::env_of;
 
 mod apply;
 mod classify;
@@ -14,11 +14,6 @@ mod classify;
 const MARKER: &str = "# Managed by toolu. Install and update with $toolu:setup.";
 const USAGE: &str =
   "Usage: toolu setup agents preview | install [--force] | remove --yes [--force]";
-const OPENCODE: &str = "\
-toolu setup agents: OpenCode registers toolu's agents itself (toolu-quick-task, \
-toolu-deep-explore, toolu-research-agent, toolu-implementer, toolu-architect); there are no \
-Codex profiles to install. Set agent.<id>.model in opencode.json to pin a model, or disable: \
-true to drop one.";
 const REFUSE_REMOVE: &str = "REFUSED removal requires --yes after explicit user confirmation";
 const REFUSE_CONFLICT: &str =
   "REFUSED unmanaged profile conflict; preview it and confirm install/remove --force";
@@ -90,12 +85,9 @@ pub(super) fn usage() -> Outcome {
   Outcome::failed(Exit::Blocked, USAGE.to_owned())
 }
 
-/// Preview, install or remove. `OpenCode` refuses before any other parse.
+/// Preview, install or remove.
 pub(super) fn run(ctx: &Ctx, args: &[String]) -> Outcome {
   let env = env_of(ctx);
-  if opencode(ctx, &env) {
-    return Outcome::failed(Exit::Blocked, OPENCODE.to_owned());
-  }
   let Some(plan) = parse(args) else {
     return usage();
   };

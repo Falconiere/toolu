@@ -22,17 +22,6 @@ fn a_given_host_is_kept_and_detection_warns_once() {
 }
 
 #[test]
-fn opencode_reads_its_own_home_then_xdg() {
-  let own = roots(
-    Host::Opencode,
-    &[("TOOLU_OPENCODE_HOME", "/oc"), ("XDG_CONFIG_HOME", "/x")],
-  );
-  assert_eq!(own.config_root(), PathBuf::from("/oc"));
-  let xdg = roots(Host::Opencode, &[("XDG_CONFIG_HOME", "/x"), ("HOME", "/h")]);
-  assert_eq!(xdg.config_root(), PathBuf::from("/x/opencode"));
-}
-
-#[test]
 fn cursor_reads_its_project_and_plugin_variables() {
   let cursor = roots(
     Host::Cursor,
@@ -43,11 +32,6 @@ fn cursor_reads_its_project_and_plugin_variables() {
   );
   assert_eq!(cursor.project_root(None), Some(PathBuf::from("/repo")));
   assert_eq!(cursor.plugin_root(), Some(PathBuf::from("/cp")));
-  let opencode = roots(
-    Host::Opencode,
-    &[("TOOLU_PLUGIN_ROOT", "/op"), ("CLAUDE_PLUGIN_ROOT", "/c")],
-  );
-  assert_eq!(opencode.plugin_root(), Some(PathBuf::from("/op")));
   let hermes = roots(Host::Hermes, &[("PLUGIN_ROOT", "/p")]);
   assert_eq!(hermes.plugin_root(), None);
 }
@@ -68,10 +52,6 @@ fn uninstall_commands_exist_where_a_host_can_remove_a_plugin() {
   let expect = [
     (Host::Claude, Some("claude plugin uninstall jev@toolu")),
     (Host::Codex, Some("codex plugin remove jev@toolu")),
-    (
-      Host::Opencode,
-      Some("toolu plugins remove jev --host opencode --yes"),
-    ),
     (Host::Cursor, None),
     (Host::Hermes, None),
   ];

@@ -12,13 +12,11 @@ use super::brief::{BriefHost, BriefPaths, prompt_text, render_brief};
 use super::checkout::shell_join;
 use super::failure::Failure;
 use super::lifecycle::{Expected, Outcome, acknowledged_outcome};
-use super::opencode::{EXCLUDE_MARKER, OPENCODE_EXCLUDE};
 use super::record::Record;
 use super::session::await_session;
 use super::worktree::Worktree;
 use super::{Ctx, live_result};
 use crate::herdr::Call;
-use crate::hosts::HostKind;
 
 impl Attempt<'_> {
   fn dry_document(
@@ -28,13 +26,6 @@ impl Attempt<'_> {
     prompt: &str,
     brief: &str,
   ) -> Value {
-    let exclude: Vec<&str> = if self.host.kind == HostKind::Opencode {
-      std::iter::once(EXCLUDE_MARKER)
-        .chain(OPENCODE_EXCLUDE)
-        .collect()
-    } else {
-      Vec::new()
-    };
     json!({
       "dry_run": true,
       "issue": self.issue.reference,
@@ -45,7 +36,6 @@ impl Attempt<'_> {
       "prompt": prompt,
       "brief_path": paths.brief,
       "brief": brief,
-      "exclude": exclude,
     })
   }
 

@@ -32,7 +32,7 @@ toolu core (hook dispatcher + registry)
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands. `delivery-flow` installs its declared dependencies through Claude Code or the toolu CLI; native Codex plugin installs require adding those dependencies explicitly.
 
-Hook entries and registry contributions are bundled TypeScript running on Bun. OpenCode support is withdrawn. The plugin still runs on macOS in CI.
+Hook entries and registry contributions are bundled TypeScript running on Bun.
 
 ## Shared Configuration
 

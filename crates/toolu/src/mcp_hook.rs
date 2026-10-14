@@ -76,7 +76,7 @@ fn encoded(host: Host, decision: &Decision) -> Outcome {
       stdout: (!text.is_empty()).then(|| text.trim_end_matches('\n').to_owned()),
       stderr: None,
     },
-    Ok(Encoded::Callback(_)) | Err(_) => silent(),
+    Err(_) => silent(),
   }
 }
 

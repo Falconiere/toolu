@@ -10,7 +10,7 @@
     "platform": "Darwin",
     "arch": "arm64",
     "herdrVersion": "0.9.3",
-    "topology": "Dedicated named Herdr session; one temporary Git project; per-host panes and temporary profiles; OpenCode used a fully isolated HOME/XDG profile with --standalone."
+    "topology": "Dedicated named Herdr session; one temporary Git project; per-host panes and temporary profiles."
   },
   "hosts": {
     "claude": {
@@ -271,99 +271,6 @@
             "message": "Cursor could not start",
             "exitCode": 1
           }
-        }
-      }
-    },
-    "opencode": {
-      "binary": "opencode",
-      "version": "2.0.21",
-      "versionCommand": ["opencode", "--version"],
-      "profileIsolation": "Temporary HOME and XDG data/config/cache/state roots with --standalone; no user session database or service was reused.",
-      "capabilities": {
-        "start": {
-          "outcome": "verified",
-          "summary": "OpenCode started against a fully isolated standalone profile and Herdr reported it idle in the owned pane.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": [
-            "opencode",
-            "--standalone",
-            "--session",
-            "ses_efd1133cdffeZJJ1RF9ec5eTJF",
-            "--auto"
-          ],
-          "evidence": [
-            "agent_started returned the exact standalone argv, pane, cwd, and interactive_ready=true."
-          ],
-          "nativeError": null
-        },
-        "tool_task": {
-          "outcome": "verified",
-          "summary": "OpenCode used an explicit available model to create and read-verify a real artifact in the isolated profile.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": [
-            "opencode",
-            "run",
-            "--standalone",
-            "--model",
-            "openai/gpt-5.6-luna",
-            "--auto",
-            "--format",
-            "json"
-          ],
-          "evidence": [
-            "JSON events carried one sessionID and completed patch/read tool states; opencode-strict-artifact.txt contained OPENCODE_STRICT_376."
-          ],
-          "nativeError": null
-        },
-        "resume": {
-          "outcome": "verified",
-          "summary": "The exact session ID restored prior context and completed a second verified artifact.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": [
-            "opencode",
-            "--standalone",
-            "--session",
-            "ses_efd1133cdffeZJJ1RF9ec5eTJF",
-            "--auto"
-          ],
-          "evidence": [
-            "Isolated session list returned only the captured ID; the resumed UI recalled OPENCODE_STRICT_376 and verified opencode-strict-resumed.txt."
-          ],
-          "nativeError": null
-        },
-        "background_work": {
-          "outcome": "verified",
-          "summary": "A real sh and sleep child ran beneath the standalone OpenCode session and remained observable while the agent was working.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": ["sh", "-c", "sleep 120; touch opencode-standalone-cancelled.txt"],
-          "evidence": ["The owned sh and sleep PIDs were observed before cancellation."],
-          "nativeError": null
-        },
-        "cancel_replace": {
-          "outcome": "verified",
-          "summary": "Esc did not cancel; Ctrl-C terminated the standalone TUI and its sh/sleep descendants, and exact-ID restart completed new work.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": [
-            "opencode",
-            "Ctrl-C",
-            "--standalone",
-            "--session",
-            "ses_efd1133cdffeZJJ1RF9ec5eTJF"
-          ],
-          "evidence": [
-            "No sh, sleep, or delayed artifact survived Ctrl-C; the restarted exact session created opencode-after-cancel.txt."
-          ],
-          "nativeError": null
-        },
-        "teardown": {
-          "outcome": "verified",
-          "summary": "Native /exit after recovery returned to fish with no matching standalone session or child process.",
-          "observedAt": "2026-10-03T17:56:00Z",
-          "command": ["opencode", "/exit"],
-          "evidence": [
-            "Herdr process-info showed only fish and process inspection found no session or sleep survivor."
-          ],
-          "nativeError": null
         }
       }
     }

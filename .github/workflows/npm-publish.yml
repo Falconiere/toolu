@@ -10,8 +10,7 @@ name: npm publish
 # event created by that token -- a `release:` trigger here is silently ignored,
 # which is exactly how the 6.7.0 release published nothing.
 #
-# Three packages publish, in dependency order: @toolu/core, then
-# @toolu/opencode which depends on it, then @toolu/plugins, the `toolu-plugins`
+# Two packages publish: @toolu/core, then @toolu/plugins, the `toolu-plugins`
 # wrapper that runs the native `toolu plugins`.
 # @toolu/conformance stays private — it is an internal test harness.
 #
@@ -19,11 +18,6 @@ name: npm publish
 # workspace. npx checks the local project tree before the registry, so a
 # workspace under the published name made `npx @toolu/cli` (the old name) fail
 # with "toolu: command not found" from every toolu checkout.
-#
-# @toolu/opencode carries the plugins/ catalog (manifests, committed bundles and
-# their runtime data), staged by its prepack, so the `plugin` config entry
-# `npx @toolu/plugins install --host opencode` writes needs no clone and no
-# TOOLU_REPO_ROOT.
 #
 # npm acknowledges a publish minutes before the package is fetchable. The first
 # ever CLI package, @toolu/cli 6.8.1, answered 404 for about six minutes after
@@ -93,7 +87,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="${{ inputs.tag }}"
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
+          for dir in packages/toolu-core tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
               continue
@@ -104,32 +98,17 @@ jobs:
               exit 1
             fi
           done
-          # release-please raises @toolu/opencode's @toolu/core floor with every
-          # release. A stale floor would let an install resolve an older core that
-          # lacks the exports the adapter imports. Tags cut before the floor was
-          # synced do not carry that config entry and stay retryable.
-          if grep -qF "\$.dependencies['@toolu/core']" release-please-config.json; then
-            floor=$(node -p "require('./tools/toolu-opencode/package.json').dependencies['@toolu/core']")
-            if [ "$floor" != "^${tag#v}" ]; then
-              echo "tag $tag does not match the @toolu/opencode @toolu/core floor $floor" >&2
-              exit 1
-            fi
-          fi
           echo "publishing $tag"
 
-      # Dependency order: @toolu/opencode depends on @toolu/core via a caret range
-      # (never the workspace: protocol — npm would ship that verbatim and Bun's
-      # installer would reject it, #287), so core must land first.
-      # A failure therefore ABORTS rather than continuing: publishing opencode after
-      # core failed would ship a package whose declared @toolu/core version is not on
-      # the registry. Packages already published are skipped, so a re-run resumes
-      # from the one that failed.
+      # A failure ABORTS rather than continuing, so one run never publishes a
+      # partial set past a failure. Packages already published are skipped, so a
+      # re-run resumes from the one that failed.
       - name: Publish
         run: |
           set -uo pipefail
           npm_tag=latest
           if [[ "$TAG" == *-* ]]; then npm_tag=next; fi
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
+          for dir in packages/toolu-core tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $TAG; skipping"
               continue
@@ -146,7 +125,7 @@ jobs:
             fi
             echo "publishing $name@$pkg"
             if ! ( cd "$dir" && npm publish --provenance --access public --tag "$npm_tag" ); then
-              echo "publishing $name@$pkg failed; stopping before its dependents" >&2
+              echo "publishing $name@$pkg failed; stopping" >&2
               exit 1
             fi
           done
@@ -158,7 +137,7 @@ jobs:
       - name: Wait until every package resolves on the registry
         run: |
           set -euo pipefail
-          for dir in packages/toolu-core tools/toolu-opencode tools/toolu-cli/npm; do
+          for dir in packages/toolu-core tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
               continue

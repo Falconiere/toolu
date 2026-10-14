@@ -40,7 +40,7 @@ fn a_record_without_a_host_is_rejected() {
     .unwrap();
   assert_eq!(output.status.code(), Some(1));
   assert_eq!(out(&output), "");
-  assert!(err(&output).contains("evidence.hosts: expected keys claude, codex, cursor, opencode"));
+  assert!(err(&output).contains("evidence.hosts: expected keys claude, codex, cursor"));
 }
 
 #[test]

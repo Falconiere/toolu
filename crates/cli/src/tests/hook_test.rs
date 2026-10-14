@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 
@@ -85,7 +86,7 @@ fn message(stdout: Option<String>) -> String {
 
 #[test]
 fn the_same_version_prints_the_startup_line() {
-  let dir = plugin(VERSION, "1");
+  let dir = plugin(VERSION, &HOOK_PROTOCOL.to_string());
   let root = dir.path().to_str().unwrap();
   let outcome = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   assert_eq!(outcome.exit.code(), 0);
@@ -97,7 +98,7 @@ fn the_same_version_prints_the_startup_line() {
 
 #[test]
 fn semver_skew_advises_at_session_start_only() {
-  let dir = plugin("999.0.0", "1");
+  let dir = plugin("999.0.0", &HOOK_PROTOCOL.to_string());
   let root = dir.path().to_str().unwrap();
   let start = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   let text = message(start.stdout);
@@ -115,20 +116,21 @@ fn semver_skew_advises_at_session_start_only() {
 
 #[test]
 fn a_protocol_mismatch_blocks_enforcing_and_reports_context_events() {
-  let dir = plugin(VERSION, "2");
+  let dir = plugin(VERSION, &(HOOK_PROTOCOL + 1).to_string());
   let root = dir.path().to_str().unwrap();
   let pre = run_hook(&request("session-start", Some("PreToolUse"), Some(root)));
   assert_eq!(pre.exit.code(), 2);
   assert_eq!(pre.stdout, None);
-  assert!(
-    pre
-      .stderr
-      .unwrap()
-      .starts_with("blocked: toolu plugin: hook protocol 2 needs a newer")
-  );
+  assert!(pre.stderr.unwrap().starts_with(&format!(
+    "blocked: toolu plugin: hook protocol {} needs a newer",
+    HOOK_PROTOCOL + 1
+  )));
   let start = run_hook(&request("session-start", Some("SessionStart"), Some(root)));
   assert_eq!(start.exit.code(), 0);
-  assert!(message(start.stdout).starts_with("toolu plugin: hook protocol 2 needs a newer"));
+  assert!(message(start.stdout).starts_with(&format!(
+    "toolu plugin: hook protocol {} needs a newer",
+    HOOK_PROTOCOL + 1
+  )));
 }
 
 #[test]

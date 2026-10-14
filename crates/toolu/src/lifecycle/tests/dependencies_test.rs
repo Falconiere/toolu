@@ -49,7 +49,7 @@ fn specs_follow_jq_and_an_unknown_record_silences_the_warning() {
     ("HOME", dir.path().to_str().unwrap()),
     ("TOOLU_CONFIG_DIR", cfg.to_str().unwrap()),
   ]);
-  let warning = dependency_warning(&env, Host::Opencode, root, "").unwrap();
+  let warning = dependency_warning(&env, Host::Cursor, root, "").unwrap();
   assert!(warning.contains("/plugin install alpha@toolu"));
   std::fs::write(
     plugins.join("installed_plugins.json"),

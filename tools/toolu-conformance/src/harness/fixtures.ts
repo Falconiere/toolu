@@ -4,8 +4,7 @@
  * A fixture says what the agent did — edit a file, run a command, call an MCP
  * tool, start a session. `toStdin` renders it the way a given host delivers it:
  * Claude Code's envelope, Codex's (edits arrive as `apply_patch`), or Cursor's
- * native permission events. OpenCode runs in process, so `toOpencodePermission`
- * builds its permission-evaluation event instead.
+ * native permission events.
  */
 import { isAbsolute, relative } from "node:path";
 import { HostOutputError, type CommandHost } from "./hosts.ts";
@@ -26,13 +25,6 @@ export type Fixture =
 
 export type PatchFile = { op: "add" | "update" | "delete"; path: string; lines?: string[] };
 export type StdinContext = { cwd: string; sessionId?: string };
-export type OpencodePermissionEvent = {
-  sessionID: string;
-  action: string;
-  resources: string[];
-  metadata: Record<string, unknown>;
-  effect: "allow";
-};
 
 const DEFAULT_SESSION = "harness-session";
 
@@ -208,33 +200,3 @@ export function toStdin(
   return host === "cursor" ? cursorStdin(fx, ctx) : hookStdin(host, fx, ctx);
 }
 
-/** The OpenCode permission.evaluate event for an edit, write or bash fixture. */
-export function toOpencodePermission(
-  fx: Fixture,
-  sessionId = DEFAULT_SESSION,
-): OpencodePermissionEvent {
-  if (fx.kind === "tool" && (fx.toolName === "Edit" || fx.toolName === "Write")) {
-    const filePath = text(fx.toolInput, "file_path");
-    const action = fx.toolName === "Edit" ? "edit" : "write";
-    return {
-      sessionID: sessionId,
-      action,
-      resources: [filePath],
-      metadata: { file_path: filePath },
-      effect: "allow",
-    };
-  }
-  if (fx.kind === "tool" && fx.toolName === "Bash") {
-    const command = text(fx.toolInput, "command");
-    return {
-      sessionID: sessionId,
-      action: "bash",
-      resources: [command],
-      metadata: { command },
-      effect: "allow",
-    };
-  }
-  throw new HostOutputError(
-    `opencode: no permission action for ${fx.kind === "tool" ? fx.toolName : fx.event}`,
-  );
-}

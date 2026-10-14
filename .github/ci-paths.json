@@ -1,22 +1,5 @@
 {
   "groups": {
-    "opencode": [
-      "tools/toolu-opencode/**",
-      "tools/toolu-conformance/**",
-      "plugins/**",
-      "packages/toolu-core/**",
-      "tooling/src/opencode-*/**",
-      "tooling/src/opencode-*.ts",
-      "tooling/src/env.ts",
-      "tooling/src/npm-pack.ts",
-      "fixtures/**",
-      "docs/opencode.md",
-      "docs/opencode-migration.md",
-      "crates/plugins/**",
-      "tools/toolu-cli/**",
-      "package.json",
-      "bun.lock"
-    ],
     "docs": ["docs/**", "**/*.md"],
     "rust": [
       "Cargo.toml",

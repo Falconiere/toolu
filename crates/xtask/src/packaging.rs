@@ -9,9 +9,8 @@ use crate::packaging_assets::{self, PLUGINS, dirs, read_json};
 use crate::packaging_catalog;
 use crate::{Verdict, output};
 
-const WORKSPACE_PACKAGES: [&str; 3] = [
+const WORKSPACE_PACKAGES: [&str; 2] = [
   "packages/toolu-core/package.json",
-  "tools/toolu-opencode/package.json",
   "tools/toolu-conformance/package.json",
 ];
 

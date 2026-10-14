@@ -54,7 +54,7 @@ pub(crate) fn install(hook: &Hook, specs: &[&str]) -> Res<()> {
         list.join(",")
       ),
     ),
-    Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => {
+    Host::Claude | Host::Cursor | Host::Hermes => {
       let plugins: Vec<String> = list
         .iter()
         .map(|spec| format!("{spec}:[{{\"scope\":\"user\"}}]"))

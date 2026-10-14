@@ -1,12 +1,11 @@
 import { afterEach, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import { packedFiles } from "../npm-pack.ts";
-import { checkOne, expectations, HOOK_SOURCES, TEST_FILES } from "../pack-inventory.ts";
+import { checkOne, expectations, HOOK_SOURCES } from "../pack-inventory.ts";
 import type { Expectation } from "../pack-inventory.ts";
 
-const ROOT = resolve(import.meta.dir, "../../..");
 const temps: string[] = [];
 
 /** A real package on disk that publishes its plugins/ tree. */
@@ -59,28 +58,8 @@ test("a tarball carrying only built bundles passes", () => {
   expect(checkOne(expectation(dir, required), paths(dir))).toEqual([]);
 });
 
-test("the opencode tarball must carry every committed bundle and no hook source", () => {
-  const opencode = expectations(ROOT).find((candidate) => candidate.name === "@toolu/opencode");
-  expect(opencode?.required).toContain("plugins/toolu/hooks/dist/sample.js");
-  expect(opencode?.forbiddenPatterns).toContain(HOOK_SOURCES);
-  expect(opencode?.forbiddenPatterns).toContain(TEST_FILES);
-});
-
-test("a tarball carrying tests or fixtures is rejected", () => {
-  const dir = fixturePackage([
-    "plugins/x/hooks/dist/a.js",
-    "plugins/x/scripts/__tests__/a.test.ts",
-    "plugins/x/scripts/fixtures/repo/x.ts",
-  ]);
-  const check = { ...expectation(dir, ["package.json"]), forbiddenPatterns: [TEST_FILES] };
-  expect(checkOne(check, paths(dir))).toEqual([
-    "pack-fixture tarball must not contain plugins/x/scripts/__tests__/a.test.ts",
-    "pack-fixture tarball must not contain plugins/x/scripts/fixtures/repo/x.ts",
-  ]);
-});
-
 test("the CLI tarball stays exact and also forbids hook sources", () => {
-  const cli = expectations(ROOT).find((candidate) => candidate.name === "@toolu/plugins");
+  const cli = expectations().find((candidate) => candidate.name === "@toolu/plugins");
   expect(cli?.exact).toBe(true);
   expect(cli?.forbidden).toContain("plugins/");
   expect(cli?.forbiddenPatterns).toContain(HOOK_SOURCES);

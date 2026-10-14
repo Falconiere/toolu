@@ -22,9 +22,10 @@ fn each_verb_runs_against_the_slot_state() {
   let sb = sandbox();
   let none = dispatch_fix(&Verb::Wait(Some("1")), &sb.options(false)).unwrap();
   assert_eq!(none, json!({"version": 1, "status": "none"}));
-  let (plan, items) = sb.plan("opencode", None);
+  sb.herdr(r#"{"result":{"agent":{"name":"pb"}}}"#, "true");
+  let (plan, items) = sb.plan("claude", Some("opus"));
   let started = dispatch_fix(&Verb::Start(sb.start(&plan, &items)), &sb.options(false)).unwrap();
-  assert_eq!(started["reason"], "agent_start_failed");
+  assert_eq!(started["status"], "running");
   let cleaned = dispatch_fix(&Verb::Cleanup, &sb.options(false)).unwrap();
   assert_eq!(cleaned["status"], "cleaned");
   let missing = sb.dir.path().join("missing.json");

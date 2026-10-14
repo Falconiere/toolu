@@ -3635,7 +3635,7 @@ import { statSync } from "fs";
 import { join as join2 } from "path";
 
 // packages/toolu-core/src/host/host-name.ts
-var HOST_NAMES = ["claude", "codex", "cursor", "opencode", "hermes"];
+var HOST_NAMES = ["claude", "codex", "cursor", "hermes"];
 function envValue(env, key) {
   const value = env[key];
   return value === undefined || value === "" ? undefined : value;
@@ -3695,16 +3695,6 @@ var TABLES = {
     "tool/pre": "pre_tool_call",
     "shell/pre": "pre_tool_call",
     "tool/post": "post_tool_call"
-  },
-  opencode: {
-    "session/start": "session.created",
-    "session/unload": "session.deleted",
-    prompt: "chat.message",
-    pre_compact: "experimental.session.compacting",
-    "permission/evaluate": null,
-    "tool/pre": "tool.execute.before",
-    "shell/pre": "tool.execute.before",
-    "tool/post": "tool.execute.after"
   }
 };
 var ALIASES = {
@@ -3737,9 +3727,6 @@ function detectHost(options = {}) {
     }
     (options.warn ?? stderrLine)(`toolu-host: invalid TOOLU_HOST_OVERRIDE '${override}' (using environment detection)`);
   }
-  if (options.inProcess === "opencode") {
-    return "opencode";
-  }
   const owners = options.hookEventName ? hostsForNativeEvent(options.hookEventName) : [];
   const [owner] = owners;
   if (owners.length === 1 && owner !== undefined) {
@@ -3766,8 +3753,7 @@ var NATIVE_CONFIG_ROOT = {
   claude: (env) => envValue(env, "CLAUDE_CONFIG_DIR") ?? join(home(env), ".claude"),
   codex: (env) => envValue(env, "CODEX_HOME") ?? join(home(env), ".codex"),
   cursor: (env) => join(home(env), ".cursor"),
-  hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes"),
-  opencode: (env) => envValue(env, "TOOLU_OPENCODE_HOME") ?? join(envValue(env, "XDG_CONFIG_HOME") ?? join(home(env), ".config"), "opencode")
+  hermes: (env) => envValue(env, "HERMES_HOME") ?? join(home(env), ".hermes")
 };
 function configRoot(options = {}) {
   const { env, host } = resolveHost(options);
@@ -4015,8 +4001,7 @@ var ASK_EVENTS = {
   claude: new Set(["tool/pre", "shell/pre", "permission/evaluate"]),
   codex: new Set(["permission/evaluate"]),
   cursor: new Set(["shell/pre"]),
-  hermes: new Set,
-  opencode: new Set
+  hermes: new Set
 };
 // packages/toolu-core/src/config/permissions.ts
 import { spawnSync as spawnSync2 } from "child_process";
@@ -4985,7 +4970,7 @@ function docParts(input) {
   if (eventTitle(input.event) !== "")
     parts.push(render("session-start.md"));
   if (enabled(input.config, "models", "enabled")) {
-    parts.push(render(input.host === "opencode" ? "model-routing-opencode.md" : "model-routing.md"));
+    parts.push(render("model-routing.md"));
   }
   if (input.verbose) {
     if (facts.ts)
@@ -5051,7 +5036,6 @@ var NEUTRAL_INSTALL = "Install the `delivery-flow` plugin, then load its `delive
 var DELIVERY_FLOW_INSTALL = {
   claude: "Install with `/plugin install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.",
   codex: "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.",
-  opencode: 'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: "delivery-flow-delivery-flow" })`.',
   cursor: NEUTRAL_INSTALL,
   hermes: NEUTRAL_INSTALL
 };

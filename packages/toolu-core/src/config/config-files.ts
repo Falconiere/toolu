@@ -26,8 +26,7 @@ export function isFile(path: string): boolean {
 
 /**
  * `<user config dir>/toolu.config.json` and `<project>/<dirname>/toolu.config.json`.
- * The user config dir is `TOOLU_USER_CONFIG_DIR` (set by the OpenCode adapter,
- * whose config root is a per-project data root), else the config root (#343).
+ * The user config dir is `TOOLU_USER_CONFIG_DIR`, else the config root (#343).
  */
 export function configFiles(options: ConfigFileOptions): ConfigFiles {
   const env = options.env ?? process.env;

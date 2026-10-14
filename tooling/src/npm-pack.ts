@@ -2,22 +2,13 @@
  * Packs a package the way `npm publish` does (#361): `npm pack` runs the
  * package's own `prepack` and applies its `files` field, and `--json` reports
  * each file's mode.
- *
- * `stageOpencode` copies `@toolu/opencode` into a temp repository layout, with
- * `plugins/` linked to the checkout's catalog. Its real prepack then stages
- * the catalog inside the copy, so packing never rewrites the working tree and
- * concurrent packs never share a staging directory.
  */
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { z } from "zod";
 
 const ROOT = resolve(import.meta.dir, "../..");
-const OPENCODE = "tools/toolu-opencode";
 const PACK_TIMEOUT_MS = 180_000;
-/** What `npm pack` produces from the package itself, never copied into a stage. */
-const NOT_STAGED = new Set(["plugins", "node_modules"]);
 
 export type PackedFile = { readonly path: string; readonly mode: number };
 
@@ -64,17 +55,4 @@ export function packedFiles(directory: string): readonly PackedFile[] {
 export function packInto(directory: string, destination: string): string {
   const { filename } = parsePackReport(npmPack(directory, ["--pack-destination", destination]));
   return join(destination, filename);
-}
-
-/** A publishable copy of `@toolu/opencode` under `workDir`; returns the package directory. */
-export function stageOpencode(workDir: string, root: string = ROOT): string {
-  const source = join(root, OPENCODE);
-  const stage = join(workDir, "repo", OPENCODE);
-  mkdirSync(stage, { recursive: true });
-  for (const entry of readdirSync(source)) {
-    if (!NOT_STAGED.has(entry))
-      cpSync(join(source, entry), join(stage, entry), { recursive: true });
-  }
-  symlinkSync(join(root, "plugins"), join(workDir, "repo", "plugins"));
-  return stage;
 }

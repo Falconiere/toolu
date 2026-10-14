@@ -228,9 +228,9 @@ fn codex_and_toolu_user_config_dir_choose_their_files() {
     .clone()
     .with("TOOLU_USER_CONFIG_DIR", &global.display().to_string())
     .with("TOOLU_CONFIG_DIR", "/data");
-  let opencode = Roots::new(env, Some(Host::Opencode));
+  let hermes = Roots::new(env, Some(Host::Hermes));
   assert_eq!(
-    super::config_files(&opencode, None).user,
+    super::config_files(&hermes, None).user,
     global.join("toolu.config.json")
   );
 }

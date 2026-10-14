@@ -153,7 +153,7 @@ ast-grep scan          # run all configured rules
 | Hook | Event | Purpose |
 |------|-------|--------|
 | `search-nudge` | PreToolUse | Steers a structural Grep pattern, and `grep`/`rg` run in Bash to search files, toward ast-grep |
-| `byte-savings` | PostToolUse | Records the bytes Read, Grep, Glob and ast-grep return into context; on OpenCode, an ast-grep result also carries the session's report |
+| `byte-savings` | PostToolUse | Records the bytes Read, Grep, Glob and ast-grep return into context |
 
 Both are compiled Rust rules. SessionStart publishes manifests into the toolu registry, and they run in process only while this plugin is installed and toolu is available. search-nudge reads a Bash command through toolu's shell parser, so a grep that filters a pipe, words in a commit message, or a `for … in` loop is not taken for a file search.
 
@@ -168,4 +168,4 @@ toolu ast-grep savings ~/.claude/toolu/byte-savings/<session>.jsonl
 
 The wrapper prefers `sg`, falls back to `ast-grep`, and does nothing when neither is installed. Verbs: `search`, `files`, `scan`, `debug`, `savings`.
 
-OpenCode support is withdrawn. On OpenCode ([#347](https://github.com/Falconiere/toolu/issues/347)) the nudge arrives with the tool result, because the host has no pre-tool advisory channel. The ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Each `ast-grep` run's result ends with the session's report; other hosts stay silent. Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand. See [`docs/opencode.md`](../opencode.md#ast-grep).
+The byte-savings ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand.

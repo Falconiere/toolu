@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{Row, host_json, install, install_json, list, planned, remove, rows_json, update};
+use super::{Row, host_json, install, install_json, list, remove, rows_json, update};
 use crate::host::Target;
 use crate::step::{Status, Step};
 use crate::support::names;
@@ -55,30 +55,6 @@ fn several_hosts_get_a_labelled_section_each() {
   );
   assert!(both.starts_with("claude:\nPlanned commands"), "{both}");
   assert!(both.contains("\n\ncodex:\nPlanned commands"), "{both}");
-}
-
-#[test]
-fn opencode_dry_runs_print_planned_changes_and_refusals() {
-  let steps = vec![
-    step("@toolu/opencode", Status::Installed, "added", &[])
-      .planned("add @toolu/opencode@1 to /g/opencode.json"),
-    step(
-      "jev",
-      Status::Failed,
-      "required by pr-babysit; remove them too",
-      &[],
-    ),
-  ];
-  let text = install(&[(Target::Opencode, steps.clone())], true);
-  assert_eq!(
-    text,
-    "Planned changes (nothing was written):\n  add @toolu/opencode@1 to /g/opencode.json\n  x jev              required by pr-babysit; remove them too\n"
-  );
-  assert_eq!(
-    planned(&[]),
-    "Planned changes (nothing was written):\n  (no changes)\n"
-  );
-  assert_eq!(planned(&steps), text);
 }
 
 #[test]
@@ -142,10 +118,15 @@ fn json_documents_keep_the_typescript_shapes() {
       {"name": "jev", "installed": false, "enabled": false}
     ])
   );
-  let removed = vec![step("jev", Status::Removed, "disabled", &[]).planned("disable jev in /s")];
+  let removed = vec![step(
+    "jev",
+    Status::Removed,
+    "uninstalled",
+    &["claude", "plugin"],
+  )];
   assert_eq!(
-    host_json(Target::Opencode, &removed, true),
-    json!({"host": "opencode", "steps": [{"name": "jev", "removed": true, "detail": "disabled", "argv": [], "plan": "disable jev in /s"}]})
+    host_json(Target::Claude, &removed, true),
+    json!({"host": "claude", "steps": [{"name": "jev", "removed": true, "detail": "uninstalled", "argv": ["claude", "plugin"]}]})
   );
   let installed = vec![step("toolu", Status::Failed, "boom", &["claude", "plugin"])];
   assert_eq!(

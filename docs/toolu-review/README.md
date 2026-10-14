@@ -57,7 +57,7 @@ toolu review write-state --findings-count 0 \
   --reviewers '["toolu-review:review"]'
 
 # In a shell without host markers, set the host explicitly.
-TOOLU_HOST_OVERRIDE=opencode toolu review write-state --findings-count 0
+TOOLU_HOST_OVERRIDE=claude toolu review write-state --findings-count 0
 ```
 
 When reviewing a worktree from a session rooted elsewhere, append
@@ -68,7 +68,7 @@ state file under the pushed repository's own root.
 stable helper as a compatibility shim until #440. The native writer computes
 the gate's exact `diff_sha`/`base`/`slug`, sets
 `review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`,
-`<repo root>/.codex/tmp/push-review/` or `<repo root>/.opencode/tmp/push-review/`
+or `<repo root>/.codex/tmp/push-review/`
 state atomically as schema version 2.
 `--repo` defaults to the cwd's repo root; `$STATE_DIR` overrides the directory
 for tests and explicit integrations.

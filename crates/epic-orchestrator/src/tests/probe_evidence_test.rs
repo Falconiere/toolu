@@ -8,7 +8,7 @@ fn the_committed_evidence_keeps_every_capability_gap() {
   let hosts = validate(&value).expect("valid");
   assert_eq!(
     hosts.keys().map(String::as_str).collect::<Vec<_>>(),
-    ["claude", "codex", "cursor", "opencode"]
+    ["claude", "codex", "cursor"]
   );
   assert!(hosts.values().all(|caps| caps.len() == 6));
   let summary = summarize(&hosts);
@@ -30,7 +30,7 @@ fn a_record_without_a_host_is_rejected_with_the_expected_keys() {
   let err = check_evidence(Some(&value.to_string())).expect_err("missing host");
   assert_eq!(
     err,
-    "probe-evidence: invalid: evidence.hosts: expected keys claude, codex, cursor, opencode; got claude, codex, opencode"
+    "probe-evidence: invalid: evidence.hosts: expected keys claude, codex, cursor; got claude, codex"
   );
 }
 

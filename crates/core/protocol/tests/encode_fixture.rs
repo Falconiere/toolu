@@ -57,7 +57,6 @@ fn every_case() -> Res<Vec<Case>> {
 fn encoded(case: &Case) -> Value {
   match encode(case.host, case.event, &case.decision) {
     Ok(Encoded::Command(stdout)) => json!({ "stdout": stdout }),
-    Ok(Encoded::Callback(callback)) => json!({ "callback": callback.json() }),
     Err(err) => json!({ "error": err.to_string() }),
   }
 }
@@ -71,10 +70,9 @@ fn the_fixture_covers_every_host_event_and_decision() {
       .filter(|case| case.expect.get(kind).is_some())
       .count()
   };
-  assert_eq!(cases.len(), 299);
+  assert_eq!(cases.len(), 241);
   assert_eq!(count("stdout"), 238);
-  assert_eq!(count("callback"), 57);
-  assert_eq!(count("error"), 4);
+  assert_eq!(count("error"), 3);
 }
 
 #[test]

@@ -67,18 +67,6 @@ fn the_hook_gets_the_payload_and_its_decision_is_encoded_for_the_host() {
 }
 
 #[test]
-fn an_opencode_decision_is_one_callback_line() {
-  let got = run(HostEvent::ToolPre, Host::Opencode, b"{}", |_| {
-    Ok(deny("no"))
-  });
-  assert_eq!(
-    got.stdout,
-    "{\"kind\":\"callback\",\"action\":\"throw\",\"message\":\"no\"}\n"
-  );
-  assert_eq!(got.exit, ExitCode::from(0));
-}
-
-#[test]
 fn a_raw_reply_is_written_as_given_and_only_success_exits_0() {
   let raw = |exit| {
     Ok(Reply::Raw(Raw {
@@ -179,17 +167,6 @@ fn an_event_the_host_lacks_is_an_internal_error_named_by_its_slug() {
      permission/evaluate\n"
   );
   assert_eq!(got.exit, ExitCode::from(2));
-}
-
-#[test]
-fn an_opencode_context_failure_is_a_continue_callback() {
-  let got = run(HostEvent::SessionStart, Host::Opencode, b"{}", fails);
-  assert_eq!(
-    got.stdout,
-    "{\"kind\":\"callback\",\"action\":\"continue\",\"message\":\"toolu session.created hook \
-     failed: boom\"}\n"
-  );
-  assert_eq!(got.exit, ExitCode::from(0));
 }
 
 #[test]

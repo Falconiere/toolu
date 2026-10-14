@@ -30,7 +30,6 @@ codex plugin add toolu@toolu
 - **Model routing** — Claude keeps its Haiku/Sonnet/Opus aliases. Codex defaults to Luna/medium, Terra/medium or high, and Sol/high by work class. Both are configurable under `models`.
 - **Commands** — `/toolu:doctor` runs `toolu doctor` and presents the report. `/toolu:status` runs `toolu status` and presents the repository, gate and push-review state.
 - **Tier-pinned agents** — Claude reads bundled definitions. The setup skill runs `toolu setup agents` to preview, install, update or remove the five Codex profiles, then `toolu doctor` and `toolu config validate`.
-- **OpenCode** — support is withdrawn. The old adapter `@toolu/opencode` registers the same skills, commands and five agents as `toolu-*`. Delegation routes by `task` `subagent_type`, and each agent's model comes from `agent.<id>.model` in `opencode.json`. Setup has nothing to install there. See [docs/opencode.md § Core workflows](../../docs/opencode.md#core-workflows).
 
 ## Configuration
 

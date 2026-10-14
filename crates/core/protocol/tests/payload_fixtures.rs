@@ -13,7 +13,7 @@ use toolu_protocol::event::{EventKind, HostEvent};
 use toolu_protocol::host::Host;
 use toolu_protocol::normalize::Roots;
 use toolu_protocol::normalized::NormalizedEvent;
-use toolu_protocol::payload::{Payload, parse};
+use toolu_protocol::payload::parse;
 use toolu_protocol::text::Text;
 
 const GATES: [&str; 5] = [
@@ -253,24 +253,6 @@ fn every_quality_step_renders_as_a_post_tool_payload() {
 }
 
 #[test]
-fn the_permission_evaluate_requests_are_claude_payloads() {
-  let doc = repo::json("fixtures/opencode/permission-evaluate.json").unwrap();
-  let mut requests = Vec::new();
-  for case in doc["cases"].as_array().unwrap() {
-    if let Some(request) = case.pointer("/expected/request") {
-      requests.push(normalized(Host::Claude, HostEvent::ToolPre, request).unwrap());
-    }
-  }
-  let names: Vec<&str> = requests
-    .iter()
-    .map(|event| event.tool().unwrap().name.as_str())
-    .collect();
-  assert_eq!(names, ["Edit", "Bash"]);
-  assert_eq!(requests[1].kind(), EventKind::ShellPre);
-  assert_eq!(requests[0].session().session_id.as_str(), "sess_1");
-}
-
-#[test]
 fn the_protected_files_fixture_renders_as_its_conformance_suite_does() {
   let fixture = repo::json("fixtures/portable-core/protected-files-pre.json").unwrap();
   let payload = json!({ "tool_name": fixture["toolName"],
@@ -284,27 +266,4 @@ fn the_protected_files_fixture_renders_as_its_conformance_suite_does() {
   assert_eq!(tool.name.as_str(), "Edit");
   assert_eq!(tool.call_id.as_str(), "call_fixture_1");
   assert_eq!(session.session_id.as_str(), "sess_fixture_1");
-}
-
-#[test]
-fn the_pinned_host_opencode_captures_parse_as_input_and_output() {
-  let text = repo::text("tools/toolu-opencode/contract/captures/tool-calls.jsonl").unwrap();
-  let mut tools = Vec::new();
-  for line in text.lines() {
-    let capture: Value = serde_json::from_str(line).unwrap();
-    let payload = json!({
-      "input": { "tool": capture["tool"], "sessionID": capture["sessionID"], "callID": capture["callID"] },
-      "output": { "args": capture["args"] },
-    });
-    let Payload::Opencode(parsed) = parse(Host::Opencode, &payload.to_string()).unwrap() else {
-      panic!("not an OpenCode payload");
-    };
-    assert_eq!(parsed.input.call_id.as_str(), capture["callID"].as_str());
-    assert_eq!(parsed.output, Some(json!({ "args": capture["args"] })));
-    let event = Payload::Opencode(parsed.clone()).normalize(HostEvent::ToolPre, &roots().unwrap());
-    assert_eq!(event, None);
-    tools.push(parsed.input.tool.as_str().unwrap().to_owned());
-  }
-  assert_eq!(tools.len(), 10);
-  assert!(tools.contains(&"bash".to_owned()) && tools.contains(&"apply_patch".to_owned()));
 }

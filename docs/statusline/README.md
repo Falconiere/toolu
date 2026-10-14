@@ -2,7 +2,7 @@
 
 The statusline plugin uses the native `toolu` binary. Claude Code can display a
 persistent one-line bar. Codex offers a status skill that runs the
-native `toolu status` command. OpenCode support is withdrawn.
+native `toolu status` command.
 
 ## Install and set up Claude Code
 
@@ -56,15 +56,11 @@ to republish the path and apply a pending migration outside SessionStart.
 A still older `~/.claude/toolu/statusline.sh` setting is treated as custom;
 run `/statusline:setup --force` to replace it.
 
-## Codex and OpenCode
+## Codex
 
-OpenCode support is withdrawn. Codex still uses this skill.
-
-Run `$statusline:status` in Codex or `statusline-status` in OpenCode. They run
-`toolu --host codex status` and `toolu --host opencode status`, respectively.
+Run `$statusline:status` in Codex. It runs `toolu --host codex status`.
 The JSON document includes repository, working-tree, gate, push-review, and
-waiver facts. It has no Claude model, context, or account fields. OpenCode's
-plugin readiness remains in its separate startup record and host log.
+waiver facts. It has no Claude model, context, or account fields.
 
 ## Verification
 

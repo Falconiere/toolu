@@ -4,9 +4,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use serde_json::Value;
-use toolu_runtime::env::Env;
 
-use super::opencode::config_content;
 use crate::error::{Failure, Result};
 use crate::fixer::host::Fixer;
 
@@ -57,7 +55,7 @@ fn hosts(groups: &[Value]) -> Result<()> {
       });
       return Err(Failure::new(
         "config_invalid",
-        format!("plan group {seq} names host '{named}'; use claude, codex, cursor or opencode"),
+        format!("plan group {seq} names host '{named}'; use one of claude, codex, cursor"),
       ));
     };
     let text = |key: &str| group.get(key).and_then(Value::as_str);
@@ -131,15 +129,10 @@ fn known_items(groups: &[Value], items: &Value, state: &Value) -> Result<()> {
 ///
 /// # Errors
 /// `plan_invalid` or `config_invalid` naming the first rule broken.
-pub(crate) fn validate(plan: &Value, items: &Value, state: &Value, env: &Env) -> Result<()> {
+pub(crate) fn validate(plan: &Value, items: &Value, state: &Value) -> Result<()> {
   let groups = shaped(plan)?;
   known_items(groups, items, state)?;
-  hosts(groups)?;
-  let host = |group: &Value| group.get("host").and_then(Value::as_str) == Some("opencode");
-  if groups.iter().any(host) {
-    config_content(env.get("OPENCODE_CONFIG_CONTENT"))?;
-  }
-  Ok(())
+  hosts(groups)
 }
 
 #[cfg(test)]

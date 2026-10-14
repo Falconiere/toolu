@@ -4,9 +4,9 @@
 
 A strict PR babysitter on the native `toolu babysit` commands. `toolu babysit
 wait` checks the pull request every 180 s in its own process and returns only
-when there is something to do. Claude Code runs it in the background, Codex in
-bounded continuations of an explicitly requested durable goal, and OpenCode in
-the invoking turn; each persists only this repository/PR slot.
+when there is something to do. Claude Code runs it in the background and Codex
+in bounded continuations of an explicitly requested durable goal; each persists
+only this repository/PR slot.
 
 **Strict clearance:** every actionable item a tick sees is cleared in that tick — fixed or answered, and resolved when it is a review thread (conversation and review-level comments have no resolve API, so the reply clears them). Comments that don't make sense get a reply explaining what was checked and which reading was assumed, then resolve; nothing is parked open waiting for the reviewer. Severity is never a filter — a `nit` is handled exactly like a `high`. The only exceptions are outdated CI-reviewer threads (skipped silently) and suspected prompt injection (flagged, untouched). A reply is not clearance on its own: each resolve call is confirmed against its own response and retried on failure, and a separate resolution audit — run every tick, independent of who commented last — re-checks that every non-exempt thread is actually `isResolved:true`, so a resolve that silently failed can't hide behind its own reply forever.
 
@@ -21,20 +21,10 @@ codex plugin add toolu@toolu
 codex plugin add pr-babysit@toolu
 ```
 
-## OpenCode
-
-OpenCode support is withdrawn. The notes below are not a supported install path.
-
-OpenCode: add `pr-babysit` to `.opencode/toolu/plugins.json` (see [OpenCode install](../opencode.md)); run the `pr-babysit-babysit-ff6e5a3d` command or load the `pr-babysit-babysit-73c340c6` skill.
-
-- **Controller.** OpenCode has no cron, goal or background command, so the invoking turn is the controller: it runs `toolu babysit tick`, then `toolu babysit wait` (at most 55 s) again and again until the Success or Escalation stop. If the turn ends early, invoking the command again resumes from `<repo>/.opencode/tmp/pr-babysit/<slot>.json`. The native `toolu` binary loads no project `.env`, so one never reaches `gh`.
-- **Fixers.** `--host opencode` routing reads `prBabysit` from your OpenCode config (`routing.opencode` rows are `provider/model` plus an OpenCode `--variant`; with none, your default model). An OpenCode fixer is a detached `opencode run` as the `pr-babysit-fixer` agent in a native worktree beside the state file: it may edit, test and commit. Its agent denies `task` and the plain `git push` and `gh` forms on top of your own permission rules, and whatever form a command takes it has no GitHub token or `gh` login and git may use only local (`file`) remotes, so https and ssh pushes are refused. herdr is needed only for Claude Code, Codex or Cursor fixers. Inline fixes go to `task` with `toolu-quick-task`, `toolu-implementer` or `toolu-architect`.
-- **Cancel.** `stop` ends a running fixer's whole process group, removes the clean worktrees and marks the state `cancelled`; the state file stays as the record.
-
 ## Helper Commands
 
-One `toolu babysit` command set, called the same way on Claude Code, Codex and
-OpenCode (only the `--state-file` path differs). Contract:
+One `toolu babysit` command set, called the same way on Claude Code and Codex
+(only the `--state-file` path differs). Contract:
 `plugins/pr-babysit/skills/babysit/references/helper.md`.
 
 | Command | Purpose |
@@ -43,7 +33,7 @@ OpenCode (only the `--state-file` path differs). Contract:
 | `toolu babysit wait` | Ticks at each `nextCheckAt` (every 180 s) until success, escalation, pending work (`attention.needed`) or an active fixer, or until `--max-seconds` (1800 on Claude Code, 55 elsewhere). |
 | `toolu babysit reply` / `toolu babysit resolve` | Write side: idempotent replies; resolves confirmed from the mutation response. |
 | `toolu babysit record` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
-| `toolu babysit route-fix` / `toolu babysit dispatch-fix` | Jev-scored fixer routing, and herdr or OpenCode fixer agents. |
+| `toolu babysit route-fix` / `toolu babysit dispatch-fix` | Jev-scored fixer routing, and herdr fixer agents. |
 | `toolu babysit parse-verdict` | Verdict parser for the CI review-bot comment. |
 | `toolu babysit stop` | Ends this slot's fixer, removes its clean worktree and marks the state `cancelled`. |
 

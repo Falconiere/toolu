@@ -11,7 +11,6 @@ const SCRIPT = join(ROOT, "tooling/src/ci-aggregate.ts");
 type Job = { result: string; outputs?: Record<string, string> };
 
 function changes(on: {
-  opencode: boolean;
   docs: boolean;
   rust?: boolean;
   ports?: boolean;
@@ -45,8 +44,8 @@ async function aggregate(needs: Record<string, Job>, workflow = "tests.yml") {
   return { exitCode: res.exitCode, out: res.stdout + res.stderr };
 }
 
-const DOCS_ONLY = changes({ opencode: false, docs: true });
-const EVERYTHING = changes({ opencode: true, docs: true });
+const DOCS_ONLY = changes({ docs: true });
+const EVERYTHING = changes({ docs: true });
 
 test.concurrent("a docs-only run passes (AC-1)", async () => {
   const res = await aggregate({
@@ -61,7 +60,6 @@ test.concurrent("a release-only run passes with every gated job skipped (AC-2)",
   const off = {
     result: "success",
     outputs: {
-      opencode: "false",
       docs: "false",
       rust: "false",
       ports: "false",
@@ -127,7 +125,7 @@ test.concurrent("missing or malformed NEEDS never passes", async () => {
 test.concurrent("a changes job that succeeded without group outputs never passes (AC-5)", async () => {
   const skipped = { result: "skipped", outputs: {} };
   const res = await aggregate({
-    changes: { result: "success", outputs: { opencode: "false" } },
+    changes: { result: "success", outputs: {} },
     docs: skipped,
   });
   expect(res).toEqual({
@@ -136,7 +134,7 @@ test.concurrent("a changes job that succeeded without group outputs never passes
   });
 });
 
-const RUST_ONLY = changes({ opencode: false, docs: false, rust: true });
+const RUST_ONLY = changes({ docs: false, rust: true });
 
 test.concurrent("a Rust-only run passes with the TypeScript jobs skipped (#407 AC-5)", async () => {
   const res = await aggregate({
@@ -174,7 +172,7 @@ test.concurrent("a musl job skipped while rust is on fails the aggregate (#407 A
 });
 
 test.concurrent("the Rust conformance leg skipped while ports is on fails the aggregate (#409 AC-5)", async () => {
-  const ports = changes({ opencode: true, docs: false, ports: true });
+  const ports = changes({ docs: false, ports: true });
   const passed = await aggregate({
     changes: ports,
     docs: SKIPPED,

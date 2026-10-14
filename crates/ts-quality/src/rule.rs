@@ -136,8 +136,8 @@ impl QualityRule for TsQuality {
     Vec::new()
   }
 
-  fn ast_rules_inline(&self, ctx: &RuleContext<'_>) -> String {
-    inline_rules(ctx.host)
+  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
+    inline_rules()
   }
 
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings {

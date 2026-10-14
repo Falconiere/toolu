@@ -10,7 +10,7 @@
   "toolInput": {
     "file_path": "/repo/.env"
   },
-  "host": "opencode",
+  "host": "claude",
   "deadlineMs": 15000,
   "maxStdoutBytes": 1048576
 }

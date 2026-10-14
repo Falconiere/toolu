@@ -35,9 +35,9 @@ fn an_under_budget_doc_passes() {
     "one two\n",
   );
   let lines = check(dir.path(), Mode::Docs);
-  assert_eq!(lines.len(), 7);
+  assert_eq!(lines.len(), 6);
   assert_eq!(
-    render(&lines[3]).as_str(),
+    render(&lines[2]).as_str(),
     "ok   post-compaction 2w (<= 28)"
   );
 }

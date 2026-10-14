@@ -54,7 +54,7 @@ fn register_reports_native_manifests_to_startup_verifier() {
     ("TOOLU_CONFIG_DIR", dir.path().display().to_string()),
     ("TOOLU_STARTUP_REPORT", report.display().to_string()),
   ]);
-  assert_eq!(register(&env, Host::Opencode).exit.code(), 0);
+  assert_eq!(register(&env, Host::Cursor).exit.code(), 0);
   let lines = std::fs::read_to_string(&report).expect("report lines");
   let records: Vec<serde_json::Value> = lines
     .lines()

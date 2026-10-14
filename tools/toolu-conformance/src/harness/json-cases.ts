@@ -15,7 +15,7 @@ import { z } from "zod";
 import type { ToolFixture } from "./fixtures.ts";
 import type { HostName, Sandbox } from "./sandbox.ts";
 
-const HostSchema = z.enum(["claude", "codex", "cursor", "opencode"]);
+const HostSchema = z.enum(["claude", "codex", "cursor"]);
 const ScopeSchema = z.enum(["project", "user"]);
 const REPO_ROOT = resolve(import.meta.dir, "../../../..");
 const TaggedPathSchema = z.strictObject({ $path: z.string() });

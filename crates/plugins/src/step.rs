@@ -51,20 +51,18 @@ impl Status {
 /// One plugin's step.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Step {
-  /// The plugin (or, on `OpenCode`, the package) it is about.
+  /// The plugin it is about.
   pub(crate) name: String,
   /// How it ended.
   pub(crate) status: Status,
   /// What happened, for a human.
   pub(crate) detail: String,
-  /// The host command, empty on a host managed by editing files.
+  /// The host command.
   pub(crate) argv: Vec<String>,
-  /// The config change a dry run prints, on a file-editing host.
-  pub(crate) plan: Option<String>,
 }
 
 impl Step {
-  /// A step with no planned file change.
+  /// A step.
   pub(crate) fn new(
     name: &str,
     status: Status,
@@ -76,14 +74,7 @@ impl Step {
       status,
       detail: detail.into(),
       argv,
-      plan: None,
     }
-  }
-
-  /// The same step with the change a dry run prints.
-  pub(crate) fn planned(mut self, plan: impl Into<String>) -> Step {
-    self.plan = Some(plan.into());
-    self
   }
 
   /// Whether it failed, which makes the run exit 1.

@@ -12,8 +12,8 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::host::snapshot::{Installed, codex_plugin_installed};
 
 /// Whether plugin `spec` (`name@marketplace`) is installed. Claude reads
-/// `installed_plugins.json`, Codex its `SessionStart` snapshot; Cursor, Hermes and
-/// `OpenCode` keep no record toolu can read, so they are `Unknown`.
+/// `installed_plugins.json`, Codex its `SessionStart` snapshot; Cursor and Hermes
+/// keep no record toolu can read, so they are `Unknown`.
 pub fn plugin_presence(spec: &str, roots: &Roots) -> Installed {
   if spec.is_empty() {
     return Installed::Absent;
@@ -21,7 +21,7 @@ pub fn plugin_presence(spec: &str, roots: &Roots) -> Installed {
   match roots.host() {
     Host::Codex => codex_plugin_installed(spec, roots),
     Host::Claude => claude_presence(spec, roots.env()),
-    Host::Opencode | Host::Cursor | Host::Hermes => Installed::Unknown,
+    Host::Cursor | Host::Hermes => Installed::Unknown,
   }
 }
 

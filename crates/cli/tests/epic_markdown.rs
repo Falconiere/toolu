@@ -115,7 +115,7 @@ fn brief(home: &Home, kind: &str, tracker: Option<&str>) -> Res<String> {
 #[test]
 fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
   let home = Home::new().unwrap();
-  for kind in ["claude", "codex", "cursor", "opencode"] {
+  for kind in ["claude", "codex", "cursor"] {
     let text = brief(&home, kind, None).unwrap();
     assert!(!text.contains("{{"), "{kind}: {text}");
     assert!(

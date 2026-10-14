@@ -32,7 +32,7 @@ function packagingFixture(): Sandbox {
     for (const dir of ["plugins", ".claude-plugin", ".agents"]) {
       cpSync(join(ROOT, dir), join(repo, dir), { recursive: true, verbatimSymlinks: true });
     }
-    for (const pkg of ["packages/toolu-core", "tools/toolu-opencode", "tools/toolu-conformance"]) {
+    for (const pkg of ["packages/toolu-core", "tools/toolu-conformance"]) {
       mkdirSync(join(repo, pkg), { recursive: true });
       cpSync(join(ROOT, pkg, "package.json"), join(repo, pkg, "package.json"));
     }

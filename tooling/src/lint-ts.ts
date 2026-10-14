@@ -18,13 +18,13 @@ const COLLECTION_TARGETS = ["hooks/src", "scripts", "skills"];
 /** One lint run: the directory holding the config, and its targets relative to it. */
 export type LintDir = { readonly dir: string; readonly targets: readonly string[] };
 
-/** Every .oxlintrc.json below `dir`, skipping node_modules and the OpenCode plugin mirror. */
-function configs(root: string, dir: string): string[] {
-  if (!existsSync(dir) || dir === join(root, "tools/toolu-opencode/plugins")) return [];
+/** Every .oxlintrc.json below `dir`, skipping node_modules. */
+function configs(dir: string): string[] {
+  if (!existsSync(dir)) return [];
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name);
-    if (entry.isDirectory() && entry.name !== "node_modules") out.push(...configs(root, path));
+    if (entry.isDirectory() && entry.name !== "node_modules") out.push(...configs(path));
     else if (entry.isFile() && entry.name === ".oxlintrc.json") out.push(path);
   }
   return out;
@@ -44,7 +44,7 @@ function targetsOf(dir: string): string[] {
 
 /** Every config directory under `root` with its lint targets; what `lint:ts` runs, in order. */
 export function lintDirs(root: string): LintDir[] {
-  return SEARCH_ROOTS.flatMap((top) => configs(root, join(root, top)))
+  return SEARCH_ROOTS.flatMap((top) => configs(join(root, top)))
     .toSorted()
     .map((config) => config.slice(0, -"/.oxlintrc.json".length))
     .map((dir) => ({ dir, targets: targetsOf(dir) }));

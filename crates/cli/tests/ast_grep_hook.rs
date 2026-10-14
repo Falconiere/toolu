@@ -224,27 +224,21 @@ fn post_output(
 }
 
 #[test]
-fn post_manifest_records_real_result_and_reports_only_on_opencode() {
+fn post_manifest_records_real_result_and_reports_nothing() {
   let dir = tempfile::tempdir().expect("sandbox");
   let project = project(dir.path()).expect("project");
   let config = dir.path().join("config");
   register(&config, &project).expect("registration");
-  let payload = json!({"session_id":"ses_opencode-1", "tool_name":"Bash",
+  let payload = json!({"session_id":"ses_real-1", "tool_name":"Bash",
     "tool_input":{"command":"ast-grep run -p 'console.log($A)' -l typescript src"},
     "tool_response":{"output":"match line\n"}});
   let path = std::env::var("PATH").expect("PATH");
-  let claude = post_output(&project, &config, "claude", &payload, &path).expect("Claude post hook");
-  assert!(claude.status.success(), "{claude:?}");
-  assert_eq!(message(&claude).expect("Claude output"), None);
-  let open =
-    post_output(&project, &config, "opencode", &payload, &path).expect("OpenCode post hook");
-  assert!(open.status.success(), "{open:?}");
-  assert!(
-    message(&open)
-      .expect("OpenCode output")
-      .is_some_and(|text| text.contains("ast-grep: returned=20 (n=2)"))
-  );
-  let ledger = config.join("toolu/byte-savings/sesopencode-1.jsonl");
+  for host in ["claude", "cursor"] {
+    let done = post_output(&project, &config, host, &payload, &path).expect("post hook");
+    assert!(done.status.success(), "{host}: {done:?}");
+    assert_eq!(message(&done).expect("output"), None, "{host}");
+  }
+  let ledger = config.join("toolu/byte-savings/sesreal-1.jsonl");
   assert_eq!(
     fs::read_to_string(ledger).expect("ledger"),
     "{\"kind\":\"ast-grep\",\"returned\":10,\"full\":0}\n".repeat(2)

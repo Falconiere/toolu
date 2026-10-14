@@ -1,7 +1,7 @@
 # statusline
 
 Native project status through `toolu statusline`. Claude Code can show a persistent
-one-line bar; Codex uses its status skill to run `toolu status`. OpenCode support is withdrawn.
+one-line bar; Codex uses its status skill to run `toolu status`.
 
 ```text
 model | effort:high | ctx:45k/200k (22%) | example.com | ✗ gate:failing | my-folder | main ↑2↓1 [+2 ~1 ?3] | [COMEMORY:42] | [JEV:READY]
@@ -46,15 +46,12 @@ regular file at the compatibility path is left alone. The compatibility path
 stays through #440; `toolu statusline refresh` republishes it and applies the
 same migration when needed.
 
-## Codex and OpenCode
+## Codex
 
-OpenCode support is withdrawn. Codex still uses this skill.
-
-In Codex, run `$statusline:status`; it calls `toolu --host codex status`. In
-OpenCode, use the `statusline-status` skill; it calls `toolu --host opencode status`.
-These hosts provide the repository, working-tree, gate, push-review
+In Codex, run `$statusline:status`; it calls `toolu --host codex status`.
+It provides the repository, working-tree, gate, push-review
 and waiver document. Claude's account, model, effort and context fields are
-not present in their skill shell.
+not present in its skill shell.
 
 The plugin's SessionStart hook and commands use the installed native `toolu`
 binary. Follow [installation instructions](../../docs/install.md) if it is not

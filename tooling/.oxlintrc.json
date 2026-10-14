@@ -28,10 +28,6 @@
           {
             "group": ["yup", "yup/*", "joi", "joi/*", "valibot", "valibot/*", "superstruct", "superstruct/*", "ajv", "ajv/*"],
             "message": "One validator: use zod"
-          },
-          {
-            "group": ["@opencode/plugin", "@opencode/plugin/*", "@opencode-ai/plugin", "@opencode-ai/plugin/*", "@opencode-ai/sdk", "@opencode-ai/sdk/*"],
-            "message": "Host SDK must not enter shared tooling/core"
           }
         ]
       }

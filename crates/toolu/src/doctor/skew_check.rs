@@ -4,8 +4,6 @@ use std::path::PathBuf;
 
 use serde_json::json;
 use toolu_protocol::HOOK_PROTOCOL;
-use toolu_protocol::host::Host;
-use toolu_runtime::host::roots::Roots;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{self, Skew};
@@ -13,11 +11,8 @@ use toolu_runtime::skew::{self, Skew};
 use super::checks::{Check, Status};
 use super::inventory::Inventory;
 
-/// `OpenCode` has no native skew. Elsewhere, mismatch fails and advice warns.
-pub(super) fn check(roots: &Roots, inventory: &Inventory) -> Check {
-  if roots.host() == Host::Opencode {
-    return Check::new("skew", Status::Ok, "not applicable", None, json!({}));
-  }
+/// Mismatch fails and advice warns.
+pub(super) fn check(inventory: &Inventory) -> Check {
   let upgrade =
     upgrade_command(&std::env::current_exe().unwrap_or_else(|_| PathBuf::from("toolu")));
   let binary = skew::Binary {

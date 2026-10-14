@@ -61,7 +61,7 @@ pub fn user_prompt_submit(env: &Env, plugin_root: &Path, stdin: Option<&str>) ->
       ),
       credential_notice(env),
       invocation(&wrapper),
-      skill_reference(roots.host(), plugin_root),
+      skill_reference(plugin_root),
     ),
   )
 }

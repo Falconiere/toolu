@@ -157,7 +157,7 @@ test.concurrent("an explicit selected-spec set leaves stale disabled modules ine
     ["b@t__disabled.js", "deny"],
   ]);
   const event = hookEvent(sb, "tool/pre");
-  const ctx = { ...context(sb), host: "opencode" as const };
+  const ctx = { ...context(sb), host: "hermes" as const };
   const selected = await runRegistry(event, ctx, { selectedSpecs: new Set(["a@t"]) });
   expect(summary(selected)).toEqual(["a@t__selected.js:advisory", "b@t__disabled.js:inactive"]);
   expect(ran(sb)).toEqual(["selected"]);

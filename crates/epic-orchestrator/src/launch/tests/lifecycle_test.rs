@@ -144,7 +144,7 @@ fn shutdown_exits_the_agent_and_codex_also_stops_its_jobs() {
 #[test]
 fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   let rig = Rig::new();
-  let (worktree, pane) = started(&rig, "opencode");
+  let (worktree, pane) = started(&rig, "claude");
   // Its own group, as a worker's job has: in the test runner's group, any
   // exiting process of a parallel test would make ownership unknowable.
   let mut leftover = std::os::unix::process::CommandExt::process_group(
@@ -159,7 +159,7 @@ fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   let outcome = shutdown_agent(
     &mut ctx.herdr,
     "k-1",
-    &expected(HostKind::Opencode, &pane, &worktree),
+    &expected(HostKind::Claude, &pane, &worktree),
   );
   let _killed = leftover.kill();
   let _reaped = leftover.wait();
@@ -171,7 +171,7 @@ fn workload_left_in_the_worktree_is_cleanup_incomplete() {
     .filter(|(method, _)| method == "agent.send_keys")
     .map(|(_, params)| params["keys"].clone())
     .collect::<Vec<_>>();
-  assert_eq!(keys, [serde_json::json!(["ctrl+c"])]);
+  assert_eq!(keys, [serde_json::json!(["esc"])]);
   rig.herdr.script(
     "pane.process_info",
     Scripted::Raw(r#"{"result":{"process_info":{}}}"#.into()),
@@ -179,7 +179,7 @@ fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   let blind = shutdown_agent(
     &mut ctx.herdr,
     "k-1",
-    &expected(HostKind::Opencode, &pane, &worktree),
+    &expected(HostKind::Claude, &pane, &worktree),
   )
   .expect_err("blind");
   assert_eq!(blind.message, "pane shell ownership unavailable");

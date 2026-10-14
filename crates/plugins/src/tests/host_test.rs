@@ -6,20 +6,15 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_are_claude_codex_and_opencode() {
+fn installer_targets_are_claude_and_codex() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
-  assert_eq!(target_of(Host::Opencode), Ok(Target::Opencode));
   for host in [Host::Cursor, Host::Hermes] {
     let Err(fail) = target_of(host) else {
       panic!("{} was accepted", host.name());
     };
     assert_eq!(fail.exit, Exit::Usage);
-    assert!(
-      fail.message.contains("claude, codex or opencode"),
-      "{}",
-      fail.message
-    );
+    assert!(fail.message.contains("claude or codex"), "{}", fail.message);
   }
 }
 
@@ -27,12 +22,13 @@ fn installer_targets_are_claude_codex_and_opencode() {
 fn detection_reads_executable_files_on_path_in_probe_order() {
   let sb = Sandbox::new();
   assert_eq!(available(&sb.env()), Vec::<Target>::new());
-  sb.stub("opencode", "exit 0");
   sb.stub("claude", "exit 0");
   sb.write("bin/codex", "not executable");
   assert!(on_path("claude", &sb.env()));
   assert!(!on_path("codex", &sb.env()));
-  assert_eq!(available(&sb.env()), [Target::Claude, Target::Opencode]);
+  assert_eq!(available(&sb.env()), [Target::Claude]);
+  sb.stub("codex", "exit 0");
+  assert_eq!(available(&sb.env()), [Target::Claude, Target::Codex]);
 }
 
 #[test]
@@ -48,7 +44,7 @@ fn an_explicit_host_wins_and_one_found_host_is_used() {
   assert_eq!(none.exit, Exit::Usage);
   assert_eq!(
     none.message,
-    "no host found on PATH (probed claude, codex, opencode). Choose one with --host."
+    "no host found on PATH (probed claude, codex). Choose one with --host."
   );
   sb.stub("codex", "exit 0");
   assert_eq!(
@@ -96,20 +92,14 @@ fn scopes_follow_each_host() {
   for scope in [Scope::User, Scope::Project, Scope::Local] {
     assert_eq!(check_scope(Some(scope), Target::Claude), Ok(()));
   }
-  assert_eq!(check_scope(Some(Scope::User), Target::Opencode), Ok(()));
   assert_eq!(check_scope(None, Target::Codex), Ok(()));
-  let local = check_scope(Some(Scope::Local), Target::Opencode).map_err(|fail| fail.message);
-  assert_eq!(
-    local,
-    Err("--scope local is Claude Code only; OpenCode takes user or project".to_owned())
-  );
   let codex =
     check_scope(Some(Scope::User), Target::Codex).map_err(|fail| (fail.exit, fail.message));
   assert_eq!(
     codex,
     Err((
       Exit::Usage,
-      "--scope is for Claude Code and OpenCode; codex has no scope concept".to_owned()
+      "--scope is for Claude Code; codex has no scope concept".to_owned()
     ))
   );
 }

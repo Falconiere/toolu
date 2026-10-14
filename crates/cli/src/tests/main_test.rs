@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use serde_json::Value;
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
@@ -85,7 +86,7 @@ fn the_fast_path_never_builds_the_tree() {
     assert_eq!(calls, 0, "{line}");
   }
   let (outcome, _) = counted("--hook-protocol");
-  assert_eq!(outcome, Outcome::data("1".to_owned()));
+  assert_eq!(outcome, Outcome::data(HOOK_PROTOCOL.to_string()));
 }
 
 #[test]
@@ -121,7 +122,7 @@ fn json_version_is_one_document_with_the_hook_protocol() {
   let (outcome, _) = counted("--json --version");
   let doc: Value = serde_json::from_str(&outcome.stdout.unwrap()).unwrap();
   assert_eq!(doc["version"], VERSION);
-  assert_eq!(doc["hookProtocol"], 1);
+  assert_eq!(doc["hookProtocol"], HOOK_PROTOCOL);
 }
 
 #[test]

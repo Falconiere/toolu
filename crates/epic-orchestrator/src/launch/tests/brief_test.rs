@@ -1,7 +1,5 @@
 use std::path::Path;
 
-use regex::Regex;
-
 use super::{BriefHost, BriefPaths, prompt_text, render_brief};
 use crate::graph::Graph;
 use crate::hosts::{HostKind, skill_ref};
@@ -71,21 +69,6 @@ fn jira_and_linear_items_read_through_their_own_lines_on_every_host() {
 }
 
 #[test]
-fn opencode_names_its_generated_skills_only() {
-  let graph = graph_248();
-  let text = brief(&graph, "Falconiere/comemory#255", HostKind::Opencode);
-  assert!(text.contains("`skill({ name: \"delivery-flow-delivery-flow\" })`"));
-  assert!(text.contains("`skill({ name: \"pr-babysit-babysit-73c340c6\" })`"));
-  assert!(text.contains("`skill({ name: \"toolu-debug\" })`"));
-  assert!(
-    !Regex::new(r"[/$](delivery-flow|pr-babysit|toolu):")
-      .expect("re")
-      .is_match(&text)
-  );
-  assert!(text.contains("| Closed blockers | Falconiere/comemory#"));
-}
-
-#[test]
 fn prompts_point_at_the_brief_and_resume_from_the_status() {
   let paths = paths();
   let start = prompt_text(&paths, "main", false, false);
@@ -124,7 +107,7 @@ fn the_worker_stops_after_reporting_babysit_and_waits_for_the_engine() {
       .split_whitespace()
       .collect::<Vec<_>>()
       .join(" ");
-    let babysit = skill_ref(kind, "pr-babysit", "babysit").expect("babysit");
+    let babysit = skill_ref(kind, "pr-babysit", "babysit");
     assert!(
       text.contains("run `report babysit --pr <number>` instead and stop"),
       "{kind:?}"

@@ -6,7 +6,7 @@ brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
 Works on **Claude Code**, **Codex**, and **Cursor Agent**, both
-as the orchestrator and as workers. OpenCode support is withdrawn. One run can mix hosts
+as the orchestrator and as workers. One run can mix hosts
 (`--hosts claude:2,codex:2`): Jev scores each issue's complexity and a routing
 table picks the model and effort per host.
 
@@ -45,46 +45,11 @@ Install the toolu marketplace plugin the same way as Claude Code (Cursor loads
 the Claude-shaped plugin tree). Then invoke the `epic-orchestrator` skill or
 the `/epic-orchestrator:epic` command.
 
-### OpenCode
-
-OpenCode support is withdrawn. The notes below are not a supported install path.
-
-```bash
-npx @toolu/plugins install epic-orchestrator --host opencode
-```
-
-That adds `@toolu/opencode` to OpenCode's config and enables
-`epic-orchestrator` with its dependencies in the `toolu/plugins.json`
-selection, for example:
-
-```json
-{ "version": 1, "enabled": ["toolu", "toolu-review", "pr-babysit", "brainstorm", "delivery-flow", "epic-orchestrator"] }
-```
-
-Wire OpenCode to the generated surface under
-`tools/toolu-opencode/generated/` (shipped in `@toolu/opencode`); see
-[docs/opencode.md](../../docs/opencode.md). The generated skill runs the same
-`toolu epic` verbs; `$TOOLU_PLUGIN_ROOT_EPIC_ORCHESTRATOR`, which the OpenCode
-plugin's `shell.env` sets while the plugin is enabled, points at its
-references.
-
 The orchestrator waits for judgments with `toolu epic wait`: on Claude Code
 as a background Bash call (45-minute default limit) that wakes it with a
-judgment or `waiting`, then starts again; on Codex and OpenCode as a
+judgment or `waiting`, then starts again; on Codex as a
 foreground loop of `toolu epic wait --max-seconds 480`, since one tool call
 there cannot block for hours. The engine does the polling.
-
-OpenCode workers need `opencode --version` 1.x on `PATH`; launch refuses
-anything else before creating a worktree. Each worker is an
-`opencode --auto --model provider/model` session (without `--auto` under
-`--safe`) in its own herdr worktree.
-Its `task` calls reach agent-tier like any OpenCode session. Before the agent
-starts, launch adds `/.opencode/toolu/state/` and `/.opencode/tmp/` to the
-repository's shared `info/exclude`, so worker state never shows as a change,
-is never captured by a `refs/epic-wip/*` snapshot, and never blocks worktree
-removal. A worktree uses the plugin selection committed in its checkout
-(`.opencode/toolu/plugins.json`), else your global one, else every installed
-plugin; an uncommitted project selection does not reach worktrees.
 
 ## What it provides
 
@@ -208,7 +173,6 @@ Override with `EPIC_STATE_HOME`. Otherwise:
 | -------------------------- | -------------------------------------------------------------- |
 | Claude Code / Cursor Agent | `~/.claude/epics/<owner>-<repo>-<n>/`                          |
 | Codex                      | `$CODEX_HOME/toolu/epics/…` (default `~/.codex/toolu/epics/…`) |
-| OpenCode                   | `$TOOLU_OPENCODE_HOME/toolu/epics/…` (or `$OPENCODE_HOME/…`)   |
 
 ## Trackers
 
@@ -228,7 +192,6 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 | Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--resume <captured-id>` |
 | Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
 | Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--resume <captured-id>` |
-| OpenCode | `--auto` | `--model provider/model` (no effort flag) | `--session <captured-id>` |
 
 `--safe` keeps approval prompts on (Claude runs in its `auto` permission
 mode); pass it as `toolu epic start <state-dir> --safe`, which the engine and
@@ -240,8 +203,7 @@ routing keeps its own `prBabysit.jev` setting): pass it to
 and coupling check heuristic. `--kind`, `--model` and `--effort` override the route for
 one manual `toolu epic launch`. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
-`gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`, and
-OpenCode's configured model. Override per host and tier in `routing.json`
+`gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`. Override per host and tier in `routing.json`
 under the state root, or point `EPIC_ROUTING_FILE` at one.
 
 Routes are preferences, not reservations. Cached routes count against each batch
@@ -294,8 +256,7 @@ never more than total memory. Non-Linux sampling uses load/memory
 without claiming to measure steal. Hypervisor starvation is distinct from guest work.
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
-cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`; OpenCode
-uses the 1.x TUI, which runs its server in-process; ctrl+c exits it. Worktree
+cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`. Worktree
 process inventories and process birth identities guard final cleanup. Missing shutdown/workspace evidence produces
 `cleanup-incomplete`, preserves the lease and allows a later retry. Both merged
 and abandoned work require a successful final snapshot before removal.
@@ -308,7 +269,7 @@ success record is written can be reconciled against Git and workload ownership.
 Installed-host evidence is in `docs/toolu/evidence/epic-hosts*`; `toolu epic
 probe --check-evidence` validates its recorded contract, not live provider
 availability.
-The October 3 probe verified Codex and OpenCode tool/session lifecycles. Claude's
+The October 3 probe verified Codex tool/session lifecycles. Claude's
 expired login and Cursor's locked keychain leave their tool/cancel coverage
 explicitly unverified.
 

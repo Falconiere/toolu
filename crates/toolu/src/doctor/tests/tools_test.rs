@@ -15,7 +15,6 @@ fn named(names: &[&str]) -> Inventory {
         name: (*name).to_owned(),
         version: None,
         root: None,
-        names_only: false,
       })
       .collect(),
     warning: None,

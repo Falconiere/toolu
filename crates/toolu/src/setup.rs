@@ -1,7 +1,6 @@
 //! `toolu setup agents`: Codex profiles, the same plan as `setup.ts` (#445).
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 
@@ -45,11 +44,6 @@ pub(super) fn env_of(ctx: &Ctx) -> Env {
     env = env.with("TOOLU_HOST_OVERRIDE", host.name());
   }
   env
-}
-
-/// Whether this run is `OpenCode`.
-pub(super) fn opencode(ctx: &Ctx, env: &Env) -> bool {
-  ctx.host == Some(Host::Opencode) || env.get("TOOLU_HOST_OVERRIDE") == Some("opencode")
 }
 
 #[cfg(test)]

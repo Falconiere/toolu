@@ -178,12 +178,6 @@ fn preview_install_and_refusal_match_the_script() {
   once(Home::Codex, &[], &["install", "--now"]).unwrap();
   once(Home::Codex, &[], &["deploy"]).unwrap();
   once(Home::Unset, &[], &["preview"]).unwrap();
-  once(
-    Home::Codex,
-    &[("TOOLU_HOST_OVERRIDE", "opencode")],
-    &["install"],
-  )
-  .unwrap();
 }
 
 #[test]

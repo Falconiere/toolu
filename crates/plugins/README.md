@@ -6,10 +6,6 @@ wrapper (`toolu-plugins`) that finds the native `toolu` and runs these verbs.
 
 - Claude Code and Codex are driven through `claude plugin …` and
   `codex plugin …` (`src/host/`); `plugin list --json` is normalized there.
-- OpenCode has no plugin commands, so `src/opencode/` edits its config files:
-  the `@toolu/opencode` entry of a `plugin` array (format-preserving JSONC
-  edits with `jsonc-parser`'s CST, and `splice.rs` for line-keeping appends and
-  removals) and the `toolu/plugins.json` selection.
 - The catalog is `.claude-plugin/marketplace.json`, embedded with
   `include_str!` from the repository layout at build time; `--catalog <path>`
   reads another (the npm wrapper passes its bundled copy).

@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -91,23 +92,12 @@ fn flags_without_a_command_are_a_usage_error() {
 fn the_hook_protocol_flag_works_beside_other_flags() {
   assert_eq!(
     dispatched("--hook-protocol --quiet"),
-    Outcome::data("1".to_owned())
+    Outcome::data(HOOK_PROTOCOL.to_string())
   );
 }
 
 #[test]
 fn a_namespace_verb_runs_with_global_flags_before_or_after_it() {
-  let text = dispatched("serve planned");
-  assert!(
-    text
-      .stdout
-      .unwrap()
-      .starts_with("toolu serve is not ported yet")
-  );
-  for line in ["--json serve planned", "serve planned --json"] {
-    let outcome = dispatched(line);
-    assert_eq!(document(&outcome)["namespace"], "serve", "{line}");
-  }
   // A ported verb (#438) takes them on either side too: here its catalog is
   // unreadable, so it stops before any host runs and reports one error document.
   for line in [

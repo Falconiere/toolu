@@ -88,8 +88,7 @@ fn herdr_plans_skip_cooling_hosts_and_hosts_off_path() {
   let herdr = settings(&block);
   let state = world.dir.path().join("state.json");
   let cooldowns = json!({"hostCooldowns": {
-    "claude": {"until": "2026-09-28T13:00:00Z"},
-    "opencode": {"until": "2026-09-28T11:00:00Z"}
+    "claude": {"until": "2026-09-28T13:00:00Z"}
   }});
   std::fs::write(&state, cooldowns.to_string()).unwrap();
   assert_eq!(

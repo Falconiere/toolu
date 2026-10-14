@@ -10,7 +10,7 @@ const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 
 const CLEAR: &str = "TOOLU_CONFIG_DIR TOOLU_USER_CONFIG_DIR CLAUDE_CONFIG_DIR CLAUDE_PROJECT_DIR \
 CLAUDE_PLUGINS_REGISTRY CODEX_HOME CURSOR_PROJECT_DIR HERMES_HOME XDG_CONFIG_HOME \
-TOOLU_OPENCODE_HOME TOOLU_CODEX_PLUGIN_SNAPSHOT TOOLU_BUN TOOLU_EPIC_TOKEN \
+TOOLU_CODEX_PLUGIN_SNAPSHOT TOOLU_BUN TOOLU_EPIC_TOKEN \
 TOOLU_EPIC_STATUS_TOKEN TOOLU_EPIC_PEER_TOKENS TOOLU_EPIC_NOTIFY_URL";
 
 const CHECKS: &str = "binary,reachability,runtime,host,config,plugins,skew,registry,tools";
@@ -126,7 +126,7 @@ fn claude_lists_copied_plugins_in_check_order() {
 }
 
 #[test]
-fn codex_lists_the_stub_and_opencode_is_names_only() {
+fn codex_lists_the_stub() {
   let home = tempfile::tempdir().unwrap();
   let toolu = copy_plugin("toolu", home.path()).unwrap();
   let bin = home.path().join("bin");
@@ -148,23 +148,6 @@ fn codex_lists_the_stub_and_opencode_is_names_only() {
   let listed = &check(&codex, "plugins").unwrap()["details"]["plugins"][0];
   assert_eq!(listed["version"], "7.11.0");
   assert_eq!(listed["root"], toolu.display().to_string());
-
-  let status = home
-    .path()
-    .join(".config/opencode/toolu/opencode-status.json");
-  std::fs::create_dir_all(status.parent().unwrap()).unwrap();
-  std::fs::write(&status, r#"{"plugins":[{"name":"toolu"}]}"#).unwrap();
-  let opencode = parsed(&doctor(home.path(), "opencode", &shell_path(None)).unwrap()).unwrap();
-  assert_order(&opencode);
-  assert_eq!(
-    check(&opencode, "plugins").unwrap()["details"]["plugins"][0],
-    json!({"name": "toolu"})
-  );
-  assert_eq!(check(&opencode, "skew").unwrap()["status"], "ok");
-  assert_eq!(
-    check(&opencode, "skew").unwrap()["summary"],
-    "not applicable"
-  );
 }
 
 #[test]

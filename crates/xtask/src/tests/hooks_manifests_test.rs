@@ -1,13 +1,19 @@
 use std::path::Path;
 
+use toolu_protocol::HOOK_PROTOCOL;
+
 use super::{check, problem};
 
 #[test]
 fn the_binary_protocol_passes_and_anything_else_is_named() {
-  assert_eq!(problem(r#"{"hookProtocol":1}"#), None);
   assert_eq!(
-    problem(r#"{"hookProtocol":2}"#).as_deref(),
-    Some("hookProtocol is 2, but toolu speaks 1")
+    problem(&format!(r#"{{"hookProtocol":{HOOK_PROTOCOL}}}"#)),
+    None
+  );
+  let other = HOOK_PROTOCOL + 1;
+  assert_eq!(
+    problem(&format!(r#"{{"hookProtocol":{other}}}"#)).as_deref(),
+    Some(format!("hookProtocol is {other}, but toolu speaks {HOOK_PROTOCOL}").as_str())
   );
   for text in [
     r#"{"version":"1.0.0"}"#,

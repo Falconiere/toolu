@@ -4,7 +4,7 @@
 **Provenance / update procedure:** [`tooling/conventions/PROVENANCE.md`](../tooling/conventions/PROVENANCE.md)  
 **Epic:** [#203](https://github.com/Falconiere/toolu/issues/203) · **Issue:** [#213](https://github.com/Falconiere/toolu/issues/213)
 
-This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream application scaffolds (Hono, Cloudflare, Vitest, UI/database trees, deploy hooks) are out of scope. Package dirs `packages/toolu-core/` and `tools/toolu-opencode/` join the workspace in [#208](https://github.com/Falconiere/toolu/issues/208) / [#210](https://github.com/Falconiere/toolu/issues/210); this issue gates the existing `tooling/` TypeScript surface.
+This repo is a **library/plugin Bun workspace**, not a Workers/web app. Upstream application scaffolds (Hono, Cloudflare, Vitest, UI/database trees, deploy hooks) are out of scope. Package dir `packages/toolu-core/` joins the workspace in [#208](https://github.com/Falconiere/toolu/issues/208); this issue gates the existing `tooling/` TypeScript surface.
 
 ## Adoption table
 
@@ -91,7 +91,7 @@ bun install --frozen-lockfile
 bun run test
 ```
 
-CI job `bun run test` (`gate`) in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. The required `typescript` status passes only when that job and the OpenCode acceptance jobs pass. The retired `shellcheck` and `bats (plugins)` jobs no longer report, so branch protection must require `typescript` in their place. The repo-admin branch-protection setting is tracked separately from this change.
+CI job `bun run test` (`gate`) in `.github/workflows/tests.yml` runs the same gate on every non-release-only PR/push. The required `typescript` status passes only when that job passes. The retired `shellcheck` and `bats (plugins)` jobs no longer report, so branch protection must require `typescript` in their place. The repo-admin branch-protection setting is tracked separately from this change.
 
 ## Related contracts
 

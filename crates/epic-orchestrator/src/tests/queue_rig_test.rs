@@ -31,7 +31,8 @@ impl QueueRig {
   pub(crate) fn new(numbers: &[u64]) -> Self {
     let children: Vec<(u64, &[u64])> = numbers.iter().map(|number| (*number, &[][..])).collect();
     let scenario = Scenario::new(&children, u64::try_from(numbers.len()).unwrap_or(3));
-    scenario.pool(&["claude", "codex", "opencode"]);
+    let pool = serde_json::json!([{"kind": "claude", "cap": 2}, {"kind": "codex", "cap": 1}]);
+    std::fs::write(scenario.state.join("pool.json"), pool.to_string()).expect("pool");
     let mut engine = scenario.engine_with(None);
     assert_eq!(engine.pump().expect("launch"), Stop::Idle);
     let rig = Self { scenario, engine };

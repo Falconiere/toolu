@@ -153,28 +153,10 @@ test("disabled context reports the runtime on startup only and writes no readine
   expect(compact).toMatchObject({ exitCode: 0, stdout: "" });
 });
 
-test("OpenCode routes delegation by subagent_type, not a model argument", async () => {
-  const opencode: LifecycleCase = {
-    ...START,
-    env: { TOOLU_HOST_OVERRIDE: "opencode", TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
-  };
-  const { outputs, prepared } = await runTimes(opencode, 1);
-  using _sb = prepared.sb;
-  const out = outputs[0] ?? "";
-  expect(out).toContain("Route every `task` call by `subagent_type`");
-  expect(out).toContain("`agent.<id>.model`");
-  expect(out).not.toContain("Pass `model:`");
-});
-
 /** The host's config roots, empty (read as unset) so a runner's own `XDG_CONFIG_HOME` cannot hold the notice sentinels. */
-const NO_CONFIG_ROOTS = { XDG_CONFIG_HOME: "", TOOLU_CONFIG_DIR: "", TOOLU_OPENCODE_HOME: "" };
+const NO_CONFIG_ROOTS = { XDG_CONFIG_HOME: "", TOOLU_CONFIG_DIR: "" };
 
 test.each([
-  [
-    "opencode",
-    { TOOLU_PROJECT_CONFIG_DIRNAME: ".opencode" },
-    'Add `delivery-flow` to `enabled` in `.opencode/toolu/plugins.json`, then load `skill({ name: \\"delivery-flow-delivery-flow\\" })`.',
-  ],
   ["cursor", {}, "Install the `delivery-flow` plugin, then load its `delivery-flow` skill."],
 ])("%s's first start points at delivery-flow in its own terms", async (host, extra, install) => {
   const first: LifecycleCase = {

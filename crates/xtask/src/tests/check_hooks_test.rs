@@ -4,6 +4,7 @@ use serde_json::Value;
 
 use super::{Finding, check};
 use crate::print_hook::entry_json;
+use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::launcher::{Target, hook};
 
 const WIRING: &[&str] = &[
@@ -161,7 +162,7 @@ fn a_missing_timeout_and_a_manifest_problem_are_both_found() {
   });
   let manifest = dir.path().join("plugins/jev/.claude-plugin/plugin.json");
   let mut json: Value = serde_json::from_str(&std::fs::read_to_string(&manifest).unwrap()).unwrap();
-  json["hookProtocol"] = Value::from(2);
+  json["hookProtocol"] = Value::from(HOOK_PROTOCOL + 1);
   std::fs::write(&manifest, json.to_string()).unwrap();
   let shown: Vec<String> = check(dir.path())
     .unwrap()
@@ -170,7 +171,10 @@ fn a_missing_timeout_and_a_manifest_problem_are_both_found() {
     .collect();
   assert_eq!(shown.len(), 2, "{shown:?}");
   assert!(
-    shown[0].ends_with("hookProtocol is 2, but toolu speaks 1"),
+    shown[0].ends_with(&format!(
+      "hookProtocol is {}, but toolu speaks {HOOK_PROTOCOL}",
+      HOOK_PROTOCOL + 1
+    )),
     "{shown:?}"
   );
   assert!(shown[0].starts_with("check-hooks: plugins/jev/.claude-plugin/plugin.json: "));
