@@ -21,7 +21,8 @@ pub use rule::PYTHON_QUALITY;
 /// The plugin this crate belongs to: `plugins/python-quality`.
 pub const PLUGIN: &str = "python-quality";
 
-/// Its `SessionStart` registration and the bridge for `.py` edits.
+/// Its `SessionStart` registration for `.py` edits: the manifest, and the prune of the old
+/// `.js` module and `.sh` bridge.
 pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: rule::SPEC,

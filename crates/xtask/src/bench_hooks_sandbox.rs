@@ -3,16 +3,16 @@
 //! fixture, the four registry plugins) marked installed in a private home, and
 //! their `register` hooks run once, so every run loads the same registry.
 
+use std::ffi::OsString;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::sync::atomic::{AtomicU64, Ordering};
+
+use crate::env_scrub::{inherited, scrub};
+use crate::scratch;
 
 /// The plugins whose `SessionStart` register hook writes the registry.
 const REGISTRY_PLUGINS: [&str; 4] = ["ast-grep", "ts-quality", "python-quality", "rust-quality"];
-
-/// Environment keys a host session sets, never inherited by a measured hook.
-const HOST_PREFIXES: [&str; 4] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"];
 
 /// A temporary `project` and `home`, removed on drop.
 pub(crate) struct Sandbox {
@@ -40,18 +40,21 @@ fn run(command: &mut Command, what: &str) -> Result<(), String> {
 }
 
 fn git(project: &Path, args: &[&str]) -> Result<(), String> {
-  run(
-    Command::new("git").arg("-C").arg(project).args(args),
-    &format!("git {}", args.join(" ")),
-  )
+  let mut command = Command::new("git");
+  command.arg("-C").arg(project).args(args);
+  scrub(&mut command);
+  run(&mut command, &format!("git {}", args.join(" ")))
 }
 
 impl Sandbox {
+  /// The private directory that holds the project, the home and the measure reports.
+  pub(crate) fn scratch(&self) -> &Path {
+    &self.root
+  }
+
   /// The sandbox for `repo`'s plugins, run with the native `bin`.
   pub(crate) fn new(repo: &Path, bin: &Path, registry_plugins: bool) -> Result<Sandbox, String> {
-    static TICK: AtomicU64 = AtomicU64::new(0);
-    let tick = TICK.fetch_add(1, Ordering::Relaxed);
-    let root = std::env::temp_dir().join(format!("toolu-hook-bench-{}-{tick}", std::process::id()));
+    let root = scratch::create("toolu-hook-bench")?;
     let sandbox = Sandbox {
       project: root.join("project"),
       home: root.join("home"),
@@ -146,28 +149,25 @@ impl Sandbox {
     if output.status.success() {
       return Ok(());
     }
+    let stderr = String::from_utf8_lossy(&output.stderr);
     Err(format!(
-      "bench sandbox: register {plugin} exited {:?}",
-      output.status.code()
+      "bench sandbox: register {plugin} exited {:?}: {}",
+      output.status.code(),
+      stderr.trim()
     ))
   }
 
   /// The hook environment: this process's minus host-session keys, then the
   /// sandbox home, Claude's roots for `plugin_root`, and the native binary.
-  pub(crate) fn env(&self, plugin_root: &Path) -> Vec<(String, String)> {
-    let mut env: Vec<(String, String)> = std::env::vars()
-      .filter(|(key, _)| key != "PLUGIN_ROOT" && !HOST_PREFIXES.iter().any(|p| key.starts_with(p)))
-      .collect();
-    let text = |path: &Path| path.display().to_string();
+  pub(crate) fn env(&self, plugin_root: &Path) -> Vec<(OsString, OsString)> {
+    let mut env = inherited(&["PLUGIN_ROOT"]);
+    let text = |key: &str, path: &Path| (OsString::from(key), path.as_os_str().to_owned());
     env.extend([
-      ("HOME".to_owned(), text(&self.home)),
-      ("CLAUDE_PLUGIN_ROOT".to_owned(), text(plugin_root)),
-      ("CLAUDE_PROJECT_DIR".to_owned(), text(&self.project)),
-      (
-        "CLAUDE_CONFIG_DIR".to_owned(),
-        text(&self.home.join(".claude")),
-      ),
-      ("TOOLU_BIN".to_owned(), text(&self.bin)),
+      text("HOME", &self.home),
+      text("CLAUDE_PLUGIN_ROOT", plugin_root),
+      text("CLAUDE_PROJECT_DIR", &self.project),
+      text("CLAUDE_CONFIG_DIR", &self.home.join(".claude")),
+      text("TOOLU_BIN", &self.bin),
     ]);
     env
   }

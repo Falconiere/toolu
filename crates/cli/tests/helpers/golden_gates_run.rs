@@ -4,14 +4,18 @@
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
-use std::io::{ErrorKind, Write};
+use std::io::{ErrorKind, Read, Write};
 use std::os::unix::process::ExitStatusExt;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, ExitStatus, Stdio};
 use std::thread;
+use std::time::{Duration, Instant};
 
 use crate::golden_gates_model::{Capture, Host, REPO, Res};
 use crate::golden_gates_sandbox::Sandbox;
+
+/// How long a hook may run before the case fails.
+const DEADLINE: Duration = Duration::from_secs(30);
 
 /// The binary under test.
 pub(crate) const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
@@ -112,19 +116,52 @@ pub(crate) fn spawn(args: &[&str], call: &Call<'_>) -> Res<Capture> {
     Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(error),
     _ => Ok(()),
   });
-  let output = child.wait_with_output()?;
+  let (stdout, stderr) = (drain(child.stdout.take()), drain(child.stderr.take()));
+  let status = wait(&mut child, args)?;
   writer.join().map_err(|_panic| "stdin writer panicked")??;
-  let code = output
-    .status
+  let code = status
     .code()
-    .or_else(|| output.status.signal().map(|signal| 128 + signal))
+    .or_else(|| status.signal().map(|signal| 128 + signal))
     .ok_or("no exit status")?;
   Ok(Capture {
-    stdout: String::from_utf8_lossy(&output.stdout).into_owned(),
-    stderr: String::from_utf8_lossy(&output.stderr).into_owned(),
+    stdout: join_text(stdout)?,
+    stderr: join_text(stderr)?,
     exit_code: i64::from(code),
     files: None,
   })
+}
+
+type Reader = thread::JoinHandle<std::io::Result<Vec<u8>>>;
+
+fn drain<R: Read + Send + 'static>(stream: Option<R>) -> Reader {
+  thread::spawn(move || {
+    let mut bytes = Vec::new();
+    if let Some(mut stream) = stream {
+      stream.read_to_end(&mut bytes)?;
+    }
+    Ok(bytes)
+  })
+}
+
+fn join_text(handle: Reader) -> Res<String> {
+  let bytes = handle.join().map_err(|_panic| "reader thread panicked")??;
+  Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// Wait for `child`, killing it once it has run past `DEADLINE`.
+fn wait(child: &mut Child, args: &[&str]) -> Res<ExitStatus> {
+  let started = Instant::now();
+  loop {
+    if let Some(status) = child.try_wait()? {
+      return Ok(status);
+    }
+    if started.elapsed() > DEADLINE {
+      child.kill()?;
+      child.wait()?;
+      return Err(format!("toolu {args:?} ran over {DEADLINE:?} and was killed").into());
+    }
+    thread::sleep(Duration::from_millis(5));
+  }
 }
 
 /// Run the native hook `entry` the way `hooks.json` runs it for `PreToolUse`.

@@ -6,8 +6,9 @@ use super::{Codex, argv, observe, private_home};
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_steps::{Driver, Run, Step};
 
-fn env() -> ChildEnv {
-  ChildEnv::new(Path::new("/x/toolu"), &OsString::from("/usr/bin:/bin")).unwrap()
+fn env(base: &Path) -> ChildEnv {
+  let path = OsString::from("/usr/bin:/bin");
+  ChildEnv::new(Path::new("/x/toolu"), &path, &base.join("shims")).unwrap()
 }
 
 fn script(dir: &Path, name: &str, body: &str) -> PathBuf {
@@ -75,7 +76,7 @@ fn prepare_adds_the_marketplace_and_both_plugins() {
   };
   let run = Run {
     root: dir.path(),
-    env: &env(),
+    env: &env(dir.path()),
   };
   codex.prepare(&run, dir.path()).unwrap();
   let calls = std::fs::read_to_string(log).unwrap();
@@ -103,7 +104,7 @@ fn an_edit_repaired_in_the_same_turn_keeps_its_observed_failure() {
   };
   let run = Run {
     root: dir.path(),
-    env: &env(),
+    env: &env(dir.path()),
   };
   codex.edit(&run, &project).unwrap();
   assert_eq!(
@@ -125,7 +126,7 @@ fn an_edit_that_never_fails_the_gate_is_an_error() {
   };
   let run = Run {
     root: dir.path(),
-    env: &env(),
+    env: &env(dir.path()),
   };
   let err = codex.edit(&run, dir.path()).unwrap_err();
   assert!(err.contains("did not record a live failing edit") && err.contains("nothing happened"));

@@ -144,7 +144,15 @@ fn an_inventory_row_may_go_with_its_task_but_not_while_the_task_lives() {
   let changed = gate(
     &path,
     Some(&before),
-    Some(&doc(&[gone, row("guardrails", "q")])),
+    Some(&doc(&[gone.clone(), row("guardrails", "q")])),
   );
   assert!(changed.unwrap().contains("changed an existing entry"));
+  let unknown = r#"{"kind":"no-such-kind","id":"x","pass":"a.rs::p","fail":"a.rs::f"}"#.to_owned();
+  let with_unknown = doc(&[unknown, gone.clone()]);
+  let dropped_unknown = gate(&path, Some(&with_unknown), Some(&doc(&[gone])));
+  assert!(
+    dropped_unknown
+      .unwrap()
+      .contains("changed an existing entry")
+  );
 }

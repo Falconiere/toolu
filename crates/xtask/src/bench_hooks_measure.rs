@@ -3,20 +3,31 @@
 //! over every child a process reaped, so one measurer per sample keeps a
 //! light hook from inheriting a heavy one's reading.
 
+use std::ffi::OsString;
 use std::io::Write as _;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::os::unix::process::CommandExt as _;
+use std::path::Path;
+use std::process::{Child, Command, ExitStatus, Stdio};
+use std::time::Duration;
 
 use serde_json::Value;
 
 use crate::bench_hooks_report::Sample;
+use crate::process_group::{collect, drain, kill, wait};
+
+/// A measurer that runs longer than this is killed with its whole process group.
+pub(crate) const SPAWN_DEADLINE: Duration = Duration::from_secs(60);
 
 /// What to spawn and how.
 pub(crate) struct Spawn<'s> {
   pub(crate) argv: Vec<String>,
   pub(crate) cwd: &'s Path,
-  pub(crate) env: Vec<(String, String)>,
+  pub(crate) env: Vec<(OsString, OsString)>,
   pub(crate) stdin: String,
+  /// A private directory the measurer writes its report in.
+  pub(crate) report_dir: &'s Path,
+  /// How long one spawn may take.
+  pub(crate) deadline: Duration,
 }
 
 /// `warmup + runs` measured spawns one after another; the last `runs` are kept.
@@ -36,16 +47,17 @@ pub(crate) fn samples(
   Ok(kept)
 }
 
-fn once(measurer: &Path, spawn: &Spawn<'_>, label: &str, round: usize) -> Result<Sample, String> {
-  let out = report_path(round);
+/// Start the measurer as the leader of its own process group.
+fn start(measurer: &Path, spawn: &Spawn<'_>, out: &Path, label: &str) -> Result<Child, String> {
   let mut child = Command::new(measurer)
     .args(["measure", "--out"])
-    .arg(&out)
+    .arg(out)
     .arg("--")
     .args(&spawn.argv)
     .current_dir(spawn.cwd)
     .env_clear()
     .envs(spawn.env.iter().map(|(key, value)| (key, value)))
+    .process_group(0)
     .stdin(Stdio::piped())
     .stdout(Stdio::null())
     .stderr(Stdio::piped())
@@ -55,29 +67,49 @@ fn once(measurer: &Path, spawn: &Spawn<'_>, label: &str, round: usize) -> Result
     // A hook that fails closed may exit before it reads.
     let _ignored = stdin.write_all(spawn.stdin.as_bytes());
   }
-  let output = child
-    .wait_with_output()
-    .map_err(|err| format!("{label}: {err}"))?;
+  Ok(child)
+}
+
+/// Wait for the measurer within the deadline, then kill what is left of its group
+/// (a hook's background child could hold the stderr pipe).
+fn finish(
+  child: &mut Child,
+  spawn: &Spawn<'_>,
+  label: &str,
+) -> Result<(Option<ExitStatus>, String), String> {
+  let stderr = child.stderr.take().ok_or("no stderr pipe")?;
+  let reader = drain(stderr);
+  let waited = wait(child, spawn.deadline, &mut || {}).map_err(|err| format!("{label}: {err}"));
+  let killed = kill(child.id());
+  let stderr = collect(reader)?;
+  let status = waited?;
+  killed?;
+  Ok((status, stderr))
+}
+
+fn once(measurer: &Path, spawn: &Spawn<'_>, label: &str, round: usize) -> Result<Sample, String> {
+  let out = spawn.report_dir.join(format!("measure-{round}.json"));
+  let mut child = start(measurer, spawn, &out, label)?;
+  let (status, stderr) = finish(&mut child, spawn, label)?;
   let text = std::fs::read_to_string(&out);
   let _gone = std::fs::remove_file(&out);
-  if !output.status.success() {
-    let stderr = String::from_utf8_lossy(&output.stderr);
+  let Some(status) = status else {
+    return Err(format!(
+      "{label}: the measurer ran past {} s and was killed: {}",
+      spawn.deadline.as_secs_f64(),
+      stderr.trim()
+    ));
+  };
+  if !status.success() {
     return Err(format!(
       "{label}: measurer exited {:?}: {}",
-      output.status.code(),
+      status.code(),
       stderr.trim()
     ));
   }
   let report: Value = serde_json::from_str(&text.map_err(|err| format!("{label}: {err}"))?)
     .map_err(|err| format!("{label}: report: {err}"))?;
   sample_of(&report).map_err(|err| format!("{label}: {err}"))
-}
-
-fn report_path(round: usize) -> PathBuf {
-  std::env::temp_dir().join(format!(
-    "toolu-hook-bench-{}-{round}.json",
-    std::process::id()
-  ))
 }
 
 /// A report whose hook exited 0, reduced to a sample; a broken hook must not look cheap.

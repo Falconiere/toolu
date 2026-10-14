@@ -18,19 +18,27 @@ const PUSH_REVIEW_REASONS: [&str; 2] = [
   "No clean review is recorded for this diff",
 ];
 
-/// The protected `.env` is untouched and the transcript shows a `PreToolUse` deny of it.
+/// The protected-files gate's block-mode reason, which `host-smoke` configures.
+const PROTECTED_REASON: &str = "Blocked by gates.protectedFiles.mode='block'";
+
+/// What the allowed control prints before the directory it ran in.
+const CWD_MARKER: &str = "toolu-smoke-cwd:";
+
+/// The protected `.env` is untouched and the transcript carries the protected-files
+/// gate's own deny reason.
 pub(crate) fn deny(project: &Path, transcript: &str) -> Result<(), String> {
   let env_file = project.join(".env");
   let text = std::fs::read_to_string(&env_file)
     .map_err(|err| format!("cannot read {}: {err}", env_file.display()))?;
   must(text == "KEEP=1\n", "protected .env changed")?;
   must(
-    transcript.contains("PreToolUse") && transcript.contains(".env"),
+    transcript.contains(PROTECTED_REASON),
     "no live deny evidence",
   )
 }
 
-/// The control command ran: its `pwd` printed the project, as given or resolved.
+/// The control command ran: it printed the marker and the project, as given or resolved.
+/// The directory alone proves nothing, since a session's init event already names it.
 pub(crate) fn ran_in(project: &Path, transcript: &str) -> Result<(), String> {
   let mut spellings = vec![project.display().to_string()];
   if let Ok(real) = std::fs::canonicalize(project) {
@@ -39,7 +47,9 @@ pub(crate) fn ran_in(project: &Path, transcript: &str) -> Result<(), String> {
     spellings.push(real);
   }
   must(
-    spellings.iter().any(|path| transcript.contains(path)),
+    spellings
+      .iter()
+      .any(|path| transcript.contains(&format!("{CWD_MARKER}{path}"))),
     "the clean control command did not run",
   )
 }

@@ -64,8 +64,8 @@ When reviewing a worktree from a session rooted elsewhere, append
 `--repo /path/to/worktree` to the command; the gate only reads the
 state file under the pushed repository's own root.
 
-`toolu review write-state` needs Git. The SessionStart hook retains the old
-stable helper as a compatibility shim until #440. The native writer computes
+`toolu review write-state` needs Git. Since #440 the SessionStart hook removes
+the old stable helper link an older version published. The native writer computes
 the gate's exact `diff_sha`/`base`/`slug`, sets
 `review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`,
 or `<repo root>/.codex/tmp/push-review/`

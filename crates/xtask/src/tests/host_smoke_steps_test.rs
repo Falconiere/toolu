@@ -36,9 +36,9 @@ impl Driver for Script {
   }
 }
 
-fn env() -> ChildEnv {
+fn env(base: &Path) -> ChildEnv {
   let path = std::env::var_os("PATH").unwrap_or_else(|| OsString::from("/usr/bin:/bin"));
-  ChildEnv::new(Path::new("/x/toolu"), &path).unwrap()
+  ChildEnv::new(Path::new("/x/toolu"), &path, &base.join("shims")).unwrap()
 }
 
 fn host(dir: &Path, body: &str, stages: bool) -> Script {
@@ -51,7 +51,7 @@ fn host(dir: &Path, body: &str, stages: bool) -> Script {
 #[test]
 fn deny_and_allowed_judge_the_transcript_and_keep_it_in_the_evidence() {
   let root = tempfile::tempdir().unwrap();
-  let env = env();
+  let env = env(root.path());
   let run = Run {
     root: root.path(),
     env: &env,
@@ -59,7 +59,7 @@ fn deny_and_allowed_judge_the_transcript_and_keep_it_in_the_evidence() {
   let project = create(root.path(), "p", "claude", &env).unwrap();
   let script = host(
     root.path(),
-    "case $1 in deny) echo 'PreToolUse denied .env';; *) echo \"ran in $2\";; esac",
+    "case $1 in deny) echo \"Blocked by gates.protectedFiles.mode='block'\";; *) echo \"toolu-smoke-cwd:$2\";; esac",
     false,
   );
   deny(&script, &run, &project).unwrap();
@@ -70,12 +70,17 @@ fn deny_and_allowed_judge_the_transcript_and_keep_it_in_the_evidence() {
     deny(&silent, &run, &project).unwrap_err(),
     "no live deny evidence"
   );
+  let init_only = host(root.path(), "echo \"cwd $2\"", false);
+  assert_eq!(
+    allowed(&init_only, &run, &project).unwrap_err(),
+    "the clean control command did not run"
+  );
 }
 
 #[test]
 fn commit_needs_the_quality_denial_and_an_unmoved_head() {
   let root = tempfile::tempdir().unwrap();
-  let env = env();
+  let env = env(root.path());
   let run = Run {
     root: root.path(),
     env: &env,
@@ -99,7 +104,7 @@ fn commit_needs_the_quality_denial_and_an_unmoved_head() {
 #[test]
 fn push_needs_the_review_denial_and_an_untouched_remote() {
   let root = tempfile::tempdir().unwrap();
-  let env = env();
+  let env = env(root.path());
   let run = Run {
     root: root.path(),
     env: &env,

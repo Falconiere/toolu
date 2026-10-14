@@ -69,5 +69,5 @@ host verification limits and recovery.
 ## Decision record
 
 - **Decision (epic #402):** every plugin is a Rust crate behind one `toolu` binary plus Markdown; hooks run the binary through the generated launcher. #425 switched the core plugin and kept a Bun fallback for one release; #440 removed the fallback, the bundles and the TypeScript tree.
-- **Why:** hook memory and CPU. Every tool call spawns the pre- and post-tool hooks. Bun alone costs 13 MB RSS, and the Bun dispatchers cost 38–46 MB and 45–150 ms CPU per call; the native hooks stay within the budgets of [resource-budgets.md](resource-budgets.md), measured by `cargo xtask bench-hooks`.
+- **Why:** hook memory and CPU. Every tool call spawns the pre- and post-tool hooks. Bun alone costs 13 MB RSS, and the Bun dispatchers cost 37–56 MiB and 57–166 ms CPU per call at p50 on the CI runners ([Bun baseline](resource-budgets.md#bun-baseline)); the native hooks stay within the budgets of [resource-budgets.md](resource-budgets.md), measured by `cargo xtask bench-hooks`.
 - **Superseded:** the TypeScript-on-Bun decision of epic #247.

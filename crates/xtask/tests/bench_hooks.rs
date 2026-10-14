@@ -113,3 +113,30 @@ fn an_entry_over_its_budget_fails_and_names_it() {
   let only = bench(&root, &["--only", "demo/session-start", "--assert"]).unwrap();
   assert_eq!(only.status.code(), Some(0), "{only:?}");
 }
+
+#[test]
+fn a_budget_for_an_entry_no_hook_registers_fails_even_when_only_filters_it_out() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(dir.path()).unwrap();
+  tree(&root, 1000).unwrap();
+  let budgets = json!({"version": 1, "percentile": 50, "entries": {
+    "demo/pre-tools": {"maxRssMiB": 64, "cpuMs": 1000},
+    "demo/renamed-hook": {"maxRssMiB": 64, "cpuMs": 1000}}});
+  write(
+    &root.join("benchmarks/hook-budgets.json"),
+    &budgets.to_string(),
+  )
+  .unwrap();
+  for extra in [
+    vec!["--assert"],
+    vec!["--only", "demo/session-start", "--assert"],
+  ] {
+    let run = bench(&root, &extra).unwrap();
+    let stderr = String::from_utf8_lossy(&run.stderr);
+    assert_eq!(run.status.code(), Some(1), "{run:?}");
+    assert!(
+      stderr.contains("demo/renamed-hook: a budget for an entry no hooks.json registers"),
+      "{stderr}"
+    );
+  }
+}

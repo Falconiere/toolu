@@ -84,9 +84,8 @@ pub(crate) fn finished(child: &mut Child) -> Res<Output> {
   })
 }
 
-/// A writer exited 0 with nothing on stderr; a Rust writer never stalled and,
-/// when `overlap` is required, cycled at least once.
-pub(crate) fn check_writer(writer: &Writer, out: &Output, overlap: bool) -> Res<()> {
+/// A writer exited 0 with nothing on stderr, and a Rust writer never stalled.
+pub(crate) fn check_writer(writer: &Writer, out: &Output) -> Res<()> {
   let stderr = String::from_utf8_lossy(&out.stderr);
   if !out.status.success() || !stderr.is_empty() {
     return Err(format!(
@@ -105,16 +104,11 @@ pub(crate) fn check_writer(writer: &Writer, out: &Output, overlap: bool) -> Res<
       .find_map(|pair| pair.strip_prefix(key));
     found.and_then(|value| value.parse::<u64>().ok())
   };
-  let (Some(ms), Some(cycles)) = (field("slowest_ms="), field("cycles=")) else {
+  let (Some(ms), Some(_)) = (field("slowest_ms="), field("cycles=")) else {
     return Err(format!("writer {id} printed {stdout:?}"));
   };
   if Duration::from_millis(ms) >= STALL {
     return Err(format!("writer {id} stalled {ms} ms"));
-  }
-  if overlap && cycles == 0 {
-    return Err(format!(
-      "writer {id} stopped before the TypeScript writers ran"
-    ));
   }
   Ok(())
 }

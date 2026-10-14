@@ -110,8 +110,8 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
   Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
 }
 
-/// A quality plugin's two `SessionStart` entries (the hub's `QUALITY_PLUGINS`) and the
-/// post-tools run of its bridge module.
+/// A quality plugin's two `SessionStart` entries (the hub's `QUALITY_PLUGINS`) and
+/// `post-tools`, which runs only that plugin's rules.
 pub(super) fn quality_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   let plugin = QUALITY_PLUGINS
     .iter()

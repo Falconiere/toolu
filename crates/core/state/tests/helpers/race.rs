@@ -61,7 +61,7 @@ impl Race {
       return Err(format!("{reads} reads, bad: {bad:?}"));
     }
     for (writer, child) in &mut fleet.0 {
-      check_writer(writer, &finished(child)?, false)?;
+      check_writer(writer, &finished(child)?)?;
     }
     let kept = numbers(field(case, "keptIndices")?);
     let expected: Vec<String> = writers
@@ -192,7 +192,6 @@ impl Race {
     check_writer(
       &writer,
       &child.wait_with_output().map_err(|err| err.to_string())?,
-      false,
     )?;
     let max = u64::try_from(number(case, "maxMs")?).map_err(|err| err.to_string())?;
     if started.elapsed() >= Duration::from_millis(max) || lock.exists() {
@@ -239,7 +238,6 @@ impl Race {
     check_writer(
       after,
       &child.wait_with_output().map_err(|err| err.to_string())?,
-      false,
     )?;
     if started.elapsed() >= STALL || lock.exists() {
       return Err(format!(

@@ -1,4 +1,5 @@
-//! `cargo xtask bench`: the deterministic retrieval tier, plus live and container.
+//! `cargo xtask bench`: the deterministic retrieval tier, the only tier (#440 retired the
+//! TypeScript `live` and `container` tiers).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;

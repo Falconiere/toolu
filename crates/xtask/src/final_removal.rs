@@ -104,7 +104,7 @@ fn plugin_problems(root: &Path) -> Result<Vec<String>, String> {
       }
     }
     let hooks = plugin.path().join("hooks/hooks.json");
-    let text = std::fs::read_to_string(&hooks).unwrap_or_default();
+    let text = read_or_empty(&hooks)?;
     if bun.is_match(&text) || text.contains("TOOLU_RUNTIME") || text.contains("hooks/dist") {
       found.push(format!("plugins/{name}/hooks/hooks.json still names Bun"));
     }
@@ -128,13 +128,15 @@ fn package_problems(root: &Path) -> Result<Vec<String>, String> {
 fn workflow_problems(root: &Path) -> Result<Vec<String>, String> {
   let bun = word_bun()?;
   let mut found = Vec::new();
-  if let Ok(entries) = std::fs::read_dir(root.join(".github/workflows")) {
-    for entry in entries.flatten() {
-      let name = entry.file_name().to_string_lossy().into_owned();
-      let text = std::fs::read_to_string(entry.path()).unwrap_or_default();
-      if bun.is_match(&text) || text.contains("setup-bun") {
-        found.push(format!("workflow {name} still uses Bun"));
-      }
+  let dir = root.join(".github/workflows");
+  let entries =
+    std::fs::read_dir(&dir).map_err(|err| format!("cannot read {}: {err}", dir.display()))?;
+  for entry in entries {
+    let entry = entry.map_err(|err| format!("cannot read {}: {err}", dir.display()))?;
+    let name = entry.file_name().to_string_lossy().into_owned();
+    let text = read_or_empty(&entry.path())?;
+    if bun.is_match(&text) || text.contains("setup-bun") {
+      found.push(format!("workflow {name} still uses Bun"));
     }
   }
   let tests = read(root, ".github/workflows/tests.yml")?;
@@ -257,6 +259,15 @@ fn matrix_line(line: &str, expr: &Regex) -> Vec<String> {
 fn load_rows(root: &Path) -> Result<Vec<Row>, String> {
   let text = read(root, "fixtures/gate-coverage/inventory.json")?;
   serde_json::from_str(&text).map_err(|err| format!("coverage inventory: {err}"))
+}
+
+/// A file's text, or empty when it does not exist; any other error is reported.
+fn read_or_empty(path: &Path) -> Result<String, String> {
+  match std::fs::read_to_string(path) {
+    Ok(text) => Ok(text),
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+    Err(err) => Err(format!("cannot read {}: {err}", path.display())),
+  }
 }
 
 fn read(root: &Path, rel: &str) -> Result<String, String> {

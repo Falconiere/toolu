@@ -28,6 +28,8 @@ enum Home {
 }
 
 struct Side {
+  /// Keeps the directory alive until the scenario ends, then removes it.
+  _dir: tempfile::TempDir,
   root: PathBuf,
 }
 
@@ -38,10 +40,9 @@ struct Out {
 }
 
 fn sandbox() -> Result<Side, String> {
-  let root = tempfile::tempdir()
-    .map_err(|_err| "temp".to_owned())?
-    .into_path();
-  Ok(Side { root })
+  let dir = tempfile::tempdir().map_err(|err| format!("temp: {err}"))?;
+  let root = dir.path().to_path_buf();
+  Ok(Side { _dir: dir, root })
 }
 
 fn capture(output: Output) -> Result<Out, String> {
@@ -52,14 +53,19 @@ fn capture(output: Output) -> Result<Out, String> {
   })
 }
 
+/// Host-session variables that must never leak from the developer's own agent.
+fn is_host_key(key: &str) -> bool {
+  key == "PLUGIN_ROOT"
+    || ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"]
+      .iter()
+      .any(|prefix| key.starts_with(prefix))
+}
+
 fn clear(command: &mut Command) {
-  for key in [
-    "TOOLU_HOST_OVERRIDE",
-    "TOOLU_AGENT_TEMPLATE_DIR",
-    "TOOLU_TIMESTAMP",
-    "TOOLU_PROJECT_DIR",
-  ] {
-    command.env_remove(key);
+  for (key, _) in std::env::vars_os() {
+    if is_host_key(&key.to_string_lossy()) {
+      command.env_remove(key);
+    }
   }
 }
 

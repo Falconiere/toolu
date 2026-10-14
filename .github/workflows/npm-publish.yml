@@ -76,9 +76,11 @@ jobs:
         run: npm install --global npm@11.5.1
 
       - name: Check the tag matches every package version
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          tag="${{ inputs.tag }}"
+          tag="$TAG"
           for dir in tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"

@@ -89,3 +89,14 @@ fn a_plain_string_array_is_a_table_too() {
   let other = tree(&[(MAIN, "//! t\nconst TASKS: u8 = 1;\n")]);
   assert_eq!(check(&context(&other.workspace)).unwrap(), Vec::new());
 }
+
+#[test]
+fn table_items_reads_only_the_named_const() {
+  let text = "const OTHER: &[&str] = &[\"gate\"];\nconst TASKS: &[(&str, u8)] = &[(\"one\", 1)];\n";
+  assert_eq!(
+    super::table_items(text, "TASKS").unwrap(),
+    Some(vec!["one".to_owned()])
+  );
+  assert_eq!(super::table_items(text, "MISSING").unwrap(), None);
+  assert!(super::table_items("fn (", "TASKS").is_err());
+}

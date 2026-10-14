@@ -15,7 +15,9 @@ fn roots(config: &Path) -> Roots {
 #[test]
 fn a_link_into_a_plugin_scripts_dir_is_removed() {
   let dir = tempfile::tempdir().unwrap();
-  let plugin = dir.path().join("cache/jev/7.11.0/scripts/jev.sh");
+  let plugin = dir
+    .path()
+    .join("plugins/cache/toolu/jev/7.11.0/scripts/jev.sh");
   std::fs::create_dir_all(plugin.parent().unwrap()).unwrap();
   std::fs::write(&plugin, "#!/bin/sh\n").unwrap();
   let config = dir.path().join("config");
@@ -38,7 +40,11 @@ fn a_dangling_link_from_a_removed_plugin_version_is_removed() {
   let dir = tempfile::tempdir().unwrap();
   let config = dir.path().join("config");
   std::fs::create_dir_all(config.join("jev")).unwrap();
-  symlink("/gone/jev/6.0.0/scripts/jev.sh", config.join("jev/jev.sh")).unwrap();
+  symlink(
+    "/gone/plugins/cache/toolu/jev/6.0.0/scripts/jev.sh",
+    config.join("jev/jev.sh"),
+  )
+  .unwrap();
   assert_eq!(
     retire(&roots(&config), "jev", "jev", "jev.sh", None),
     Retired::Removed
@@ -60,6 +66,10 @@ fn user_files_and_foreign_links_are_kept() {
   );
   std::fs::remove_file(&file).unwrap();
   symlink("/home/me/bin/my-jev", &file).unwrap();
+  assert_eq!(retire(&roots, "jev", "jev", "jev.sh", None), Retired::Kept);
+  assert!(std::fs::symlink_metadata(&file).is_ok());
+  std::fs::remove_file(&file).unwrap();
+  symlink("/home/me/proj/scripts/jev.sh", &file).unwrap();
   assert_eq!(retire(&roots, "jev", "jev", "jev.sh", None), Retired::Kept);
   assert!(std::fs::symlink_metadata(&file).is_ok());
 }
@@ -90,7 +100,7 @@ fn a_link_that_cannot_be_removed_is_a_warning() {
   let config = dir.path().join("config");
   let jev = config.join("jev");
   std::fs::create_dir_all(&jev).unwrap();
-  symlink("/x/scripts/jev.sh", jev.join("jev.sh")).unwrap();
+  symlink("/x/plugins/jev/scripts/jev.sh", jev.join("jev.sh")).unwrap();
   std::fs::set_permissions(&jev, std::fs::Permissions::from_mode(0o500)).unwrap();
   let retired = retire(&roots(&config), "jev", "jev", "jev.sh", None);
   std::fs::set_permissions(&jev, std::fs::Permissions::from_mode(0o700)).unwrap();

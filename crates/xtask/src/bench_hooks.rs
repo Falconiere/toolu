@@ -12,8 +12,8 @@ use std::time::Instant;
 use serde_json::{Map, Value, json};
 
 use crate::bench_hooks_entries::{HookEntry, discover, select};
-use crate::bench_hooks_measure::{Spawn, samples};
-use crate::bench_hooks_report::{Row, summarize, table, violations};
+use crate::bench_hooks_measure::{SPAWN_DEADLINE, Spawn, samples};
+use crate::bench_hooks_report::{Row, stale_budgets, summarize, table, violations};
 use crate::bench_hooks_sandbox::Sandbox;
 use crate::options::Options;
 use crate::{Verdict, output};
@@ -32,7 +32,9 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let payloads = entries_of(&read_json(
     &root.join("benchmarks/cases/hooks/payloads.json"),
   )?)?;
-  let entries = select(discover(root)?, &payloads, &options.only)?;
+  let discovered = discover(root)?;
+  let known: Vec<String> = discovered.iter().map(|entry| entry.id.clone()).collect();
+  let entries = select(discovered, &payloads, &options.only)?;
   let measurer = std::env::current_exe().map_err(|err| format!("bench-hooks: {err}"))?;
   let started = Instant::now();
   let rows = measure_all(
@@ -54,7 +56,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     return Ok(Verdict::Clean);
   }
   let budgets = entries_of(&read_json(&root.join("benchmarks/hook-budgets.json"))?)?;
-  let mut found = violations(&rows, &budgets);
+  let mut found = stale_budgets(&known, &budgets);
+  found.extend(violations(&rows, &budgets));
   if elapsed > MAX_ELAPSED_MS {
     found.push(format!(
       "the measured phase took {elapsed} ms > {MAX_ELAPSED_MS} ms"
@@ -117,6 +120,8 @@ fn measure_all(
       cwd: &sandbox.project,
       env: sandbox.env(&entry.root),
       stdin,
+      report_dir: sandbox.scratch(),
+      deadline: SPAWN_DEADLINE,
     };
     let measured = samples(bench.measurer, &spawn, &entry.id, (WARMUP, bench.runs))?;
     rows.push(summarize(&entry.id, &entry.event, &measured));

@@ -14,7 +14,7 @@ fn session_start_retires_the_old_link_but_preserves_a_user_file() {
     ("TOOLU_HOST_OVERRIDE", "codex".to_owned()),
     ("TOOLU_CONFIG_DIR", config.display().to_string()),
   ]);
-  let plugin = dir.path().join("cache/toolu-review/7.11.0");
+  let plugin = dir.path().join("plugins/cache/toolu/toolu-review/7.11.0");
   let shim = config.join("toolu-review/write-state.sh");
   fs::create_dir_all(shim.parent().unwrap()).unwrap();
   symlink(plugin.join("scripts/write-state.sh"), &shim).unwrap();

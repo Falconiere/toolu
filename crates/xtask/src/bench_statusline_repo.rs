@@ -2,12 +2,12 @@
 //! worktree holding an untracked file, a primed config directory and a cold one, in
 //! a private home, all removed on drop.
 
+use std::ffi::{OsStr, OsString};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::sync::atomic::{AtomicU64, Ordering};
 
-/// Environment keys a host session sets, never inherited by a measured render.
-const HOST_PREFIXES: [&str; 4] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"];
+use crate::env_scrub::{inherited, scrub};
+use crate::scratch;
 
 /// The sandbox directories.
 pub(crate) struct Fixture {
@@ -24,10 +24,10 @@ impl Drop for Fixture {
 }
 
 fn git(dir: &Path, args: &[&str]) -> Result<(), String> {
-  let output = Command::new("git")
-    .arg("-C")
-    .arg(dir)
-    .args(args)
+  let mut command = Command::new("git");
+  command.arg("-C").arg(dir).args(args);
+  scrub(&mut command);
+  let output = command
     .output()
     .map_err(|err| format!("bench-statusline: cannot run git: {err}"))?;
   if output.status.success() {
@@ -42,14 +42,14 @@ fn git(dir: &Path, args: &[&str]) -> Result<(), String> {
 }
 
 impl Fixture {
+  /// The private directory that holds the repository, the config directories and the reports.
+  pub(crate) fn scratch(&self) -> &Path {
+    &self.root
+  }
+
   /// Build the repository, its linked worktree and the two config directories.
   pub(crate) fn new() -> Result<Fixture, String> {
-    static TICK: AtomicU64 = AtomicU64::new(0);
-    let tick = TICK.fetch_add(1, Ordering::Relaxed);
-    let root = std::env::temp_dir().join(format!(
-      "toolu-statusline-bench-{}-{tick}",
-      std::process::id()
-    ));
+    let root = scratch::create("toolu-statusline-bench")?;
     let fixture = Fixture {
       worktree: root.join("linked"),
       cfg: root.join("cfg"),
@@ -89,23 +89,17 @@ impl Fixture {
 
   /// The environment of a render: this process's minus host-session keys, the
   /// private home, `cfg` as the config directory, and `bin`'s directory on `PATH`.
-  pub(crate) fn env(&self, bin: &Path, cfg: &Path) -> Vec<(String, String)> {
-    let managed = ["HOME", "PATH", "TYPESAFE_API_KEY"];
-    let mut env: Vec<(String, String)> = std::env::vars()
-      .filter(|(key, _)| {
-        !managed.contains(&key.as_str()) && !HOST_PREFIXES.iter().any(|p| key.starts_with(p))
-      })
-      .collect();
-    let inherited = std::env::var("PATH").unwrap_or_default();
-    let dir = bin.parent().unwrap_or(Path::new("")).display();
+  pub(crate) fn env(&self, bin: &Path, cfg: &Path) -> Vec<(OsString, OsString)> {
+    let mut env = inherited(&["HOME", "PATH", "TYPESAFE_API_KEY"]);
+    let mut path = OsString::from(bin.parent().unwrap_or(Path::new("")));
+    path.push(":");
+    path.push(std::env::var_os("PATH").unwrap_or_default());
+    let text = |key: &str, value: &OsStr| (OsString::from(key), value.to_owned());
     env.extend([
-      ("HOME".to_owned(), self.root.display().to_string()),
-      ("CLAUDE_CONFIG_DIR".to_owned(), cfg.display().to_string()),
-      (
-        "TYPESAFE_API_KEY".to_owned(),
-        "statusline-benchmark-key".to_owned(),
-      ),
-      ("PATH".to_owned(), format!("{dir}:{inherited}")),
+      text("HOME", self.root.as_os_str()),
+      text("CLAUDE_CONFIG_DIR", cfg.as_os_str()),
+      text("TYPESAFE_API_KEY", OsStr::new("statusline-benchmark-key")),
+      text("PATH", &path),
     ]);
     env
   }

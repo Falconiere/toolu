@@ -51,5 +51,5 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 
 ## Notes
 
-- Native built-in gate rows point to their TypeScript source and the dispatcher hook that invokes them.
+- Native built-in gate rows point to their Rust source and the dispatcher hook that invokes them.
 - This inventory records the implementation of each listed hook rather than claiming every host exposes every event.

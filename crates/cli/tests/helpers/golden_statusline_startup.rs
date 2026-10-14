@@ -107,15 +107,8 @@ fn verify(effect: Effect, ran: &Ran, old: &Old, first: bool) -> TestResult<()> {
   let (link, shim) = present(old);
   let text = &ran.stdout;
   let (said, keeps) = match effect {
-    Effect::Migrated => (
-      if first {
-        text.contains("migrated")
-      } else {
-        text.is_empty()
-      },
-      false,
-    ),
-    Effect::Retired => (text.is_empty(), false),
+    Effect::Migrated if first => (text.contains("migrated"), true),
+    Effect::Migrated | Effect::Retired => (text.is_empty(), false),
     Effect::Kept => (text.contains(RENDER), true),
   };
   if said && link == keeps && shim == keeps {

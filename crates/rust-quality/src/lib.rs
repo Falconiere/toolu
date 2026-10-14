@@ -27,7 +27,8 @@ pub const PLUGIN: &str = "rust-quality";
 /// The registry spec of the rule.
 pub const SPEC: &str = rule::SPEC;
 
-/// Its `SessionStart` registration and the bridge for `.rs` edits.
+/// Its `SessionStart` registration for `.rs` edits: the manifest, and the prune of the old
+/// `.js` module and `.sh` bridge.
 pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: SPEC,

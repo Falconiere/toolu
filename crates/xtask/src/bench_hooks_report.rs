@@ -95,6 +95,21 @@ pub(crate) fn table(rows: &[Row]) -> String {
   lines.join("\n") + "\n"
 }
 
+/// One line per key of `budgets` that no discovered hook entry (`known`, before any
+/// `--only` filter) has: a renamed or removed hook must not leave a budget gating nothing.
+pub(crate) fn stale_budgets(
+  known: &[String],
+  budgets: &serde_json::Map<String, Value>,
+) -> Vec<String> {
+  let mut stale: Vec<String> = budgets
+    .keys()
+    .filter(|key| !known.contains(key))
+    .map(|key| format!("{key}: a budget for an entry no hooks.json registers"))
+    .collect();
+  stale.sort();
+  stale
+}
+
 /// One line per budget a measured entry exceeds. `budgets` is the `entries`
 /// object of `benchmarks/hook-budgets.json` (whole MiB and ms); an entry without
 /// a budget is not gated.

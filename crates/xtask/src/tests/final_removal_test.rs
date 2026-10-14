@@ -128,3 +128,16 @@ fn write(root: &std::path::Path, rel: &str, body: &str) {
   std::fs::create_dir_all(path.parent().unwrap()).unwrap();
   std::fs::write(path, body).unwrap();
 }
+
+#[test]
+fn an_unreadable_hooks_json_is_an_error_not_a_pass() {
+  let tmp = tempfile::tempdir().unwrap();
+  let root = tmp.path();
+  minimal(root);
+  std::fs::create_dir_all(root.join("plugins/x/hooks/hooks.json")).unwrap();
+  let error = super::problems(root).unwrap_err();
+  assert!(
+    error.starts_with("cannot read ") && error.contains("plugins/x/hooks/hooks.json"),
+    "{error}"
+  );
+}

@@ -1,4 +1,5 @@
-use super::{commit_denied, deny, must, push_blocked, quality, quality_state, ran_in};
+use super::{CWD_MARKER, commit_denied, deny, must, push_blocked, quality, quality_state, ran_in};
+use crate::host_smoke_prompts::{CLAUDE_ALLOWED, CODEX_ALLOWED};
 
 const FAILING: &str =
   "{\n  \"status\": \"failing\",\n  \"errors\": [\"TS file exceeds 3-line limit\"]\n}";
@@ -13,10 +14,10 @@ fn must_reports_its_message() {
 }
 
 #[test]
-fn deny_needs_an_unchanged_env_file_and_deny_evidence() {
+fn deny_needs_an_unchanged_env_file_and_the_protected_files_reason() {
   let dir = tempfile::tempdir().unwrap();
   std::fs::write(dir.path().join(".env"), "KEEP=1\n").unwrap();
-  let seen = r#"{"hook":"PreToolUse","reason":"protected file .env"}"#;
+  let seen = r#"{"reason":"This command would WRITE to .env, a protected path (matches \".env\"). Blocked by gates.protectedFiles.mode='block' (see gates.md)."}"#;
   assert!(deny(dir.path(), seen).is_ok());
   assert_eq!(
     deny(dir.path(), "nothing").unwrap_err(),
@@ -30,26 +31,58 @@ fn deny_needs_an_unchanged_env_file_and_deny_evidence() {
 }
 
 #[test]
+fn a_transcript_that_only_mentions_the_hook_and_the_file_is_not_a_deny() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::write(dir.path().join(".env"), "KEEP=1\n").unwrap();
+  let chatter = r#"{"hook":"PreToolUse","command":"printf changed > .env"}"#;
+  assert_eq!(
+    deny(dir.path(), chatter).unwrap_err(),
+    "no live deny evidence"
+  );
+}
+
+#[test]
 fn deny_without_an_env_file_is_an_error() {
   let dir = tempfile::tempdir().unwrap();
   assert!(
-    deny(dir.path(), "PreToolUse .env")
+    deny(dir.path(), "Blocked by gates.protectedFiles.mode='block'")
       .unwrap_err()
       .contains("cannot read")
   );
 }
 
 #[test]
-fn ran_in_accepts_the_given_and_the_resolved_path() {
+fn ran_in_needs_the_marker_before_the_given_or_resolved_path() {
   let dir = tempfile::tempdir().unwrap();
   let given = dir.path().display().to_string();
-  assert!(ran_in(dir.path(), &format!("{{\"output\":\"{given}\\n\"}}")).is_ok());
+  let printed = format!("{{\"output\":\"{CWD_MARKER}{given}\\n\"}}");
+  assert!(ran_in(dir.path(), &printed).is_ok());
   let real = std::fs::canonicalize(dir.path())
     .unwrap()
     .display()
     .to_string();
-  assert!(ran_in(dir.path(), &real).is_ok());
-  assert!(ran_in(dir.path(), "/somewhere/else").is_err());
+  assert!(ran_in(dir.path(), &format!("{CWD_MARKER}{real}")).is_ok());
+  assert!(ran_in(dir.path(), &format!("{CWD_MARKER}/somewhere/else")).is_err());
+}
+
+#[test]
+fn the_working_directory_alone_is_not_evidence_the_control_ran() {
+  let dir = tempfile::tempdir().unwrap();
+  let init = format!(
+    "{{\"type\":\"system\",\"subtype\":\"init\",\"cwd\":\"{}\"}}",
+    dir.path().display()
+  );
+  assert_eq!(
+    ran_in(dir.path(), &init).unwrap_err(),
+    "the clean control command did not run"
+  );
+}
+
+#[test]
+fn both_allowed_prompts_print_the_marker_with_the_shell_working_directory() {
+  for prompt in [CLAUDE_ALLOWED, CODEX_ALLOWED] {
+    assert!(prompt.contains(&format!("{CWD_MARKER}$PWD")), "{prompt}");
+  }
 }
 
 #[test]

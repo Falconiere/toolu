@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{MIB, Sample, percentile, summarize, table, violations};
+use super::{MIB, Sample, percentile, stale_budgets, summarize, table, violations};
 
 fn row(cpu_us: u64, rss: u64) -> super::Row {
   let sample = Sample {
@@ -53,6 +53,23 @@ fn bench_hooks_lowered_budget_fails() {
   let ungated = json!({});
   assert_eq!(
     violations(&[row(9_999_999, 99 * MIB)], ungated.as_object().unwrap()),
+    Vec::<String>::new()
+  );
+}
+
+#[test]
+fn a_budget_for_an_entry_no_hook_registers_is_a_violation() {
+  let known = ["toolu/pre-tools".to_owned(), "toolu/post-tools".to_owned()];
+  let budgets = json!({"toolu/pre-tools": {}, "toolu/post-tool": {}, "gone/session-start": {}});
+  assert_eq!(
+    stale_budgets(&known, budgets.as_object().unwrap()),
+    [
+      "gone/session-start: a budget for an entry no hooks.json registers",
+      "toolu/post-tool: a budget for an entry no hooks.json registers",
+    ]
+  );
+  assert_eq!(
+    stale_budgets(&known, json!({}).as_object().unwrap()),
     Vec::<String>::new()
   );
 }

@@ -28,7 +28,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | State | `state/cases.json` | 77 | `crates/core/state/tests/{state_cases,diff_cases,io_cases,gate_cases,interleave}.rs` |
 | State gate-file bytes | `state/gate-bytes.json` | 16 | `crates/core/state/tests/gate_bytes.rs` |
 | State edit records | `state/edit-records.json` | 42 | `crates/core/state/tests/edit_records.rs` |
-| Dispatch walk | `dispatch/cases.json` | 52 | `crates/core/engine/tests/dispatch_fixture.rs` |
+| Dispatch walk | `dispatch/cases.json` | 50 | `crates/core/engine/tests/dispatch_fixture.rs` |
 | Plan ledger and verdict | `ledger/cases.json` | 27 | `crates/cli/tests/ledger_cases.rs` |
 | Statusline states | `statusline/cases.json` | 75 | `crates/cli/tests/golden_statusline.rs` |
 | Epic hosts | `epic/hosts.json` | 61 | `crates/epic-orchestrator/src/tests/hosts_test.rs` |

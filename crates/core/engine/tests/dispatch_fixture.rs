@@ -251,7 +251,7 @@ fn the_engine_reproduces_every_dispatch_case() {
     .filter_map(|case| case.get("stdin").cloned())
     .collect();
   assert_eq!(cases.len(), stdins.len());
-  assert!(cases.len() >= 50, "{} cases", cases.len());
+  assert_eq!(cases.len(), 50, "fixtures/dispatch/cases.json case count");
   let failures: Vec<String> = cases
     .iter()
     .zip(&stdins)

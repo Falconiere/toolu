@@ -178,7 +178,7 @@ fn settings_preserve_other_keys_and_upgrade_known_legacy_paths() -> TestResult<(
 }
 
 #[test]
-fn session_start_migrates_once_and_retires_the_old_path() -> TestResult<()> {
+fn session_start_migrates_once_and_retires_the_old_path_next_session() -> TestResult<()> {
   let temp = tempfile::tempdir()?;
   let cfg = temp.path().join("cfg");
   fs::create_dir_all(&cfg)?;
@@ -190,7 +190,7 @@ fn session_start_migrates_once_and_retires_the_old_path() -> TestResult<()> {
   fs::create_dir_all(cfg.join("statusline"))?;
   let old = temp
     .path()
-    .join("cache/statusline/7.11.0/scripts/statusline.sh");
+    .join("plugins/cache/toolu/statusline/7.11.0/scripts/statusline.sh");
   std::os::unix::fs::symlink(old, cfg.join("statusline/statusline.sh"))?;
   let args = [
     "statusline",
@@ -206,6 +206,7 @@ fn session_start_migrates_once_and_retires_the_old_path() -> TestResult<()> {
     String::from_utf8_lossy(&first.stderr)
   );
   ensure!(text(&first).contains("migrated"));
+  ensure!(fs::symlink_metadata(cfg.join("statusline/statusline.sh")).is_ok());
   let second = cmd(temp.path(), &cfg, temp.path(), &args, Some("{}"))?;
   ensure!(second.status.success());
   ensure_eq!(text(&second), "");

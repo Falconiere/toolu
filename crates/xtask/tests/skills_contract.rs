@@ -146,7 +146,7 @@ fn invocation_authorizes_checked_delivery_and_prerequisite_failures_block_it() -
   has("SKILL", list)?;
   let list = "toolu-review:review|toolu ledger verdict status|overall: ready";
   has("SKILL", list)?;
-  has("SKILL", "PR|pr-babysit:babysit")
+  has("SKILL", "PR creation|pr-babysit:babysit|with no arguments")
 }
 
 // ---- execution-contract ----

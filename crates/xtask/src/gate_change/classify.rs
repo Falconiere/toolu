@@ -6,6 +6,7 @@ use serde_json::Value;
 
 use super::additive::additive;
 use crate::data::{self, Rules};
+use crate::guardrails::inventory::table_items;
 
 /// The classification of one path.
 #[derive(Debug, Default, PartialEq)]
@@ -116,9 +117,9 @@ fn data_file(
 }
 
 /// Drop from `before` each inventory row that `after` no longer has and whose
-/// item is gone from its discovery file: registration shrinks with the code it
-/// registered. A changed row, or a removed row of an item that still exists,
-/// stays a gate change.
+/// item is gone from its discovery table: registration shrinks with the code it
+/// registered. A changed row, a removed row of an item that still exists, and a
+/// row of an unknown kind or an unreadable table stay a gate change.
 fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), String> {
   let kinds = data::rules(root)?.inventory.kinds;
   let kept = |row: &Value| {
@@ -129,13 +130,13 @@ fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), St
   };
   let exists = |row: &Value| {
     let field = |key: &str| row.get(key).and_then(Value::as_str).unwrap_or_default();
-    kinds
-      .iter()
-      .filter(|kind| kind.kind == field("kind"))
-      .any(|kind| {
-        std::fs::read_to_string(root.join(&kind.file))
-          .is_ok_and(|text| text.contains(&format!("\"{}\"", field("id"))))
-      })
+    let Some(kind) = kinds.iter().find(|kind| kind.kind == field("kind")) else {
+      return true;
+    };
+    std::fs::read_to_string(root.join(&kind.file))
+      .ok()
+      .and_then(|text| table_items(&text, &kind.constant).ok().flatten())
+      .is_none_or(|items| items.iter().any(|item| item == field("id")))
   };
   if let Some(rows) = before.get_mut("entries").and_then(Value::as_array_mut) {
     rows.retain(|row| kept(row) || exists(row));

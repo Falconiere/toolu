@@ -1,6 +1,8 @@
+use std::ffi::OsString;
 use std::path::Path;
 
 use super::{Fixture, payload};
+use crate::env_scrub::selects_repository;
 
 #[test]
 fn the_fixture_is_a_linked_worktree_with_an_untracked_file_and_is_removed_on_drop() {
@@ -30,13 +32,16 @@ fn the_env_drops_host_keys_and_points_home_config_and_path_at_the_sandbox() {
   };
   assert_eq!(
     get("CLAUDE_CONFIG_DIR"),
-    Some(fixture.cold_cfg.display().to_string())
+    Some(fixture.cold_cfg.as_os_str().to_owned())
   );
   assert_eq!(
-    get("TYPESAFE_API_KEY").as_deref(),
-    Some("statusline-benchmark-key")
+    get("TYPESAFE_API_KEY"),
+    Some(OsString::from("statusline-benchmark-key"))
   );
-  assert!(get("PATH").unwrap().starts_with("/opt/toolu/bin:"));
+  let path = get("PATH").unwrap();
+  assert!(path.to_string_lossy().starts_with("/opt/toolu/bin:"));
+  assert!(env.iter().all(|(k, _)| !selects_repository(k)));
+  assert_eq!(fixture.scratch(), fixture.cfg.parent().unwrap());
   assert_eq!(env.iter().filter(|(k, _)| k == "HOME").count(), 1);
   assert_ne!(get("HOME").unwrap(), "");
 }

@@ -209,10 +209,23 @@ pub(crate) fn migrate(roots: &Roots) -> Result<Option<ResultLine>, String> {
   )))
 }
 
-/// Whether the settings' statusLine command still names the old stable path.
-pub(crate) fn names_old_path(roots: &Roots) -> bool {
-  load(&settings_path(roots))
-    .is_ok_and(|(map, _)| current_command(&map).is_some_and(|command| command.contains(MARKER)))
+/// The user's settings, then the project's shared and local settings.
+fn settings_files(roots: &Roots) -> Vec<PathBuf> {
+  let mut files = vec![settings_path(roots)];
+  if let Some(project) = roots.project_root(None) {
+    let dir = project.join(roots.project_dirname());
+    files.push(dir.join("settings.json"));
+    files.push(dir.join("settings.local.json"));
+  }
+  files
+}
+
+/// The first settings file whose statusLine command still names the old stable path.
+pub(crate) fn names_old_path(roots: &Roots) -> Option<PathBuf> {
+  settings_files(roots).into_iter().find(|path| {
+    load(path)
+      .is_ok_and(|(map, _)| current_command(&map).is_some_and(|command| command.contains(MARKER)))
+  })
 }
 
 /// CLI formatting: one JSON document or one newline-terminated STATUS line.

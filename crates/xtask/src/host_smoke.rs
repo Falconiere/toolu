@@ -1,17 +1,17 @@
 //! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|both]`: a live macOS
 //! smoke of the native toolu hooks in real Claude Code and Codex sessions, with no
 //! `bun` on the children's `PATH`. Per host it checks that a protected `.env` write
-//! is denied, an allowed `pwd` runs, a post-edit quality failure is recorded, a
-//! `git commit` is denied by the quality gate and a `git push` by push review.
+//! is denied, an allowed `echo` of its working directory runs, a post-edit quality
+//! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
+//! push review.
 //!
 //! The sessions spend model credits, so this is never a gate step. The evidence
 //! directory is kept (and printed) on failure; on success it is deleted unless
 //! `TOOLU_HOST_SMOKE_KEEP=1`.
 
 use std::ffi::OsString;
-use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::host_smoke_claude::Claude;
 use crate::host_smoke_codex::{Codex, private_home};
@@ -19,9 +19,8 @@ use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_project::{create, create_push};
 use crate::host_smoke_steps::{self as steps, Driver, Run};
 use crate::options::Options;
+use crate::scratch;
 use crate::{Verdict, output};
-
-static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
 
 /// A host the smoke can drive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,7 +77,7 @@ struct Plan {
   codex: Option<(PathBuf, PathBuf)>,
 }
 
-fn plan(options: &Options) -> Result<Plan, String> {
+fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
   let hosts = hosts(options.host.as_deref())?;
   if !cfg!(target_os = "macos") {
     return Err("live host smoke requires macOS".to_owned());
@@ -86,7 +85,7 @@ fn plan(options: &Options) -> Result<Plan, String> {
   let default = options.root.join("target/debug/toolu");
   let bin = require_bin(options.bin.as_deref().unwrap_or(&default))?;
   let path = std::env::var_os("PATH").ok_or("PATH is not set")?;
-  let env = ChildEnv::new(&bin, &path)?;
+  let env = ChildEnv::new(&bin, &path, &root.join("shims"))?;
   let home = std::env::var_os("HOME")
     .map(PathBuf::from)
     .ok_or("HOME is not set")?;
@@ -206,13 +205,7 @@ fn drive(plan: &Plan, root: &Path) -> Vec<String> {
 }
 
 fn evidence_dir() -> Result<PathBuf, String> {
-  let tick = NEXT_ROOT.fetch_add(1, Ordering::Relaxed);
-  let root = std::env::temp_dir().join(format!("toolu-native-host-{}-{tick}", std::process::id()));
-  std::fs::DirBuilder::new()
-    .mode(0o700)
-    .create(&root)
-    .map_err(|err| format!("cannot create {}: {err}", root.display()))?;
-  Ok(root)
+  scratch::create("toolu-native-host")
 }
 
 /// Drop the Codex auth link, then the evidence unless something failed or `keep`.
@@ -234,8 +227,17 @@ pub(crate) fn settle(root: &Path, found: &[String], keep: bool) -> Result<Verdic
 
 /// Run the live smoke for `--host` with `--bin`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
-  let plan = plan(options)?;
   let root = evidence_dir()?;
+  let plan = match plan(options, &root) {
+    Ok(plan) => plan,
+    Err(why) => {
+      let cleanup = std::fs::remove_dir_all(&root);
+      return Err(match cleanup {
+        Ok(()) => why,
+        Err(err) => format!("{why}; cannot remove {}: {err}", root.display()),
+      });
+    }
+  };
   let found = drive(&plan, &root);
   let keep = std::env::var_os("TOOLU_HOST_SMOKE_KEEP") == Some(OsString::from("1"));
   settle(&root, &found, keep)

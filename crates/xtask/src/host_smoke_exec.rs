@@ -1,17 +1,16 @@
 //! Run one child process of `host-smoke` with a deadline, its output captured, and an
 //! optional callback that fires every 20 ms while it runs (the Codex edit poller).
 
-use std::io::Read;
+use std::os::unix::process::CommandExt as _;
 use std::path::Path;
-use std::process::{Command, ExitStatus, Stdio};
-use std::thread::{JoinHandle, sleep, spawn};
-use std::time::{Duration, Instant};
+use std::process::{Command, Stdio};
+use std::time::Duration;
 
 use crate::host_smoke_env::ChildEnv;
+use crate::process_group::{collect, drain, kill, wait};
 
 /// Each live session gets this long before it is killed.
 pub(crate) const TIMEOUT: Duration = Duration::from_secs(180);
-const POLL: Duration = Duration::from_millis(20);
 const TAIL: usize = 800;
 
 /// A child that ran to the end.
@@ -22,48 +21,9 @@ pub(crate) struct Finished {
   pub(crate) output: String,
 }
 
-fn drain<R: Read + Send + 'static>(mut stream: R) -> JoinHandle<String> {
-  spawn(move || {
-    let mut bytes = Vec::new();
-    // A read that fails mid-stream keeps what arrived: the transcript is evidence.
-    stream.read_to_end(&mut bytes).ok();
-    String::from_utf8_lossy(&bytes).into_owned()
-  })
-}
-
-fn wait(
-  child: &mut std::process::Child,
-  timeout: Duration,
-  tick: &mut dyn FnMut(),
-) -> Result<ExitStatus, String> {
-  let deadline = Instant::now() + timeout;
-  loop {
-    tick();
-    if let Some(status) = child.try_wait().map_err(|err| err.to_string())? {
-      tick();
-      return Ok(status);
-    }
-    if Instant::now() >= deadline {
-      child.kill().map_err(|err| err.to_string())?;
-      child.wait().map_err(|err| err.to_string())?;
-      return Err(format!("timed out after {} s", timeout.as_secs()));
-    }
-    sleep(POLL);
-  }
-}
-
-fn collect(handle: JoinHandle<String>) -> Result<String, String> {
-  handle.join().map_err(|payload| {
-    let why = payload
-      .downcast_ref::<&str>()
-      .copied()
-      .or_else(|| payload.downcast_ref::<String>().map(String::as_str))
-      .unwrap_or("unknown cause");
-    format!("an output reader panicked: {why}")
-  })
-}
-
-/// Run `argv` in `cwd` with `env` and no stdin; `tick` runs while it does.
+/// Run `argv` in `cwd` with `env` and no stdin; `tick` runs while it does. The child
+/// leads its own process group, killed when it times out and again after it exits, so a
+/// grandchild never holds the output pipes open. A timeout keeps what was printed.
 pub(crate) fn exec(
   argv: &[String],
   cwd: &Path,
@@ -76,6 +36,7 @@ pub(crate) fn exec(
   command
     .args(rest)
     .current_dir(cwd)
+    .process_group(0)
     .stdin(Stdio::null())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
@@ -86,8 +47,17 @@ pub(crate) fn exec(
   let out = child.stdout.take().ok_or("no stdout pipe")?;
   let err = child.stderr.take().ok_or("no stderr pipe")?;
   let (out, err) = (drain(out), drain(err));
-  let status = wait(&mut child, timeout, tick).map_err(|why| format!("{program} {why}"))?;
+  let waited = wait(&mut child, timeout, tick).map_err(|why| format!("{program} {why}"));
+  let killed = kill(child.id());
   let output = format!("{}{}", collect(out)?, collect(err)?);
+  let Some(status) = waited? else {
+    return Err(format!(
+      "{program} timed out after {} s; output so far: {}",
+      timeout.as_secs(),
+      tail(&output)
+    ));
+  };
+  killed?;
   Ok(Finished {
     success: status.success(),
     code: status.code(),

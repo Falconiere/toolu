@@ -18,7 +18,8 @@ pub(crate) struct Sandbox {
   pub(crate) home: PathBuf,
   /// The Codex home, `<home>/.codex`.
   pub(crate) codex_home: PathBuf,
-  /// The steps' `PATH`: the user's Bun toolchain, then this process's `PATH`.
+  /// The steps' `PATH`: a stub `bun` and a `bunx` shim (`npx --no-install`), then this
+  /// process's `PATH`.
   pub(crate) path_var: String,
 }
 

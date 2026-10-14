@@ -8,9 +8,16 @@ use toolu_runtime::host::roots::Roots;
 
 use super::refresh;
 
+/// Config root `dir`, project `dir/project`, so no test reads the process directory's settings.
 fn roots(dir: &Path, host: Host) -> Roots {
   Roots::new(
-    Env::from_pairs([("TOOLU_CONFIG_DIR", dir.to_string_lossy())]),
+    Env::from_pairs([
+      ("TOOLU_CONFIG_DIR", dir.to_string_lossy().into_owned()),
+      (
+        "TOOLU_PROJECT_DIR",
+        dir.join("project").to_string_lossy().into_owned(),
+      ),
+    ]),
     Some(host),
   )
 }
@@ -29,7 +36,7 @@ fn leave_old_paths(dir: &Path) {
 }
 
 #[test]
-fn migrates_legacy_settings_once_then_retires_the_old_path() {
+fn migrates_legacy_settings_then_retires_the_old_path_at_the_next_refresh() {
   let temp = tempfile::tempdir().expect("temp directory");
   leave_old_paths(temp.path());
   let settings = temp.path().join("settings.json");
@@ -37,18 +44,44 @@ fn migrates_legacy_settings_once_then_retires_the_old_path() {
   fs::write(&settings, original).expect("settings");
   let roots = roots(temp.path(), Host::Claude);
   let first = refresh(&roots).expect("first refresh");
-  assert!(first.retired);
-  assert!(first.migrated);
+  assert!(first.migrated && !first.retired);
   assert!(first.notice.is_some());
   assert_eq!(
     fs::read_to_string(temp.path().join("settings.json.bak")).expect("backup"),
     original
   );
+  assert!(fs::symlink_metadata(temp.path().join("statusline/statusline.sh")).is_ok());
+  let second = refresh(&roots).expect("second refresh");
+  assert!(second.retired && !second.migrated);
+  assert!(second.notice.is_none());
   assert!(fs::symlink_metadata(temp.path().join("statusline/statusline.sh")).is_err());
   assert!(!temp.path().join("toolu/statusline-render.sh").exists());
-  let second = refresh(&roots).expect("second refresh");
-  assert!(!second.migrated && !second.retired);
-  assert!(second.notice.is_none());
+  let third = refresh(&roots).expect("third refresh");
+  assert!(!third.migrated && !third.retired && third.notice.is_none());
+}
+
+#[test]
+fn project_settings_naming_the_old_path_keep_it_and_name_the_file() {
+  let temp = tempfile::tempdir().expect("temp directory");
+  leave_old_paths(temp.path());
+  let local = temp.path().join("project/.claude/settings.local.json");
+  fs::create_dir_all(local.parent().expect("parent")).expect("project settings dir");
+  fs::write(
+    &local,
+    r#"{"statusLine":{"type":"command","command":"bash ~/.claude/statusline/statusline.sh"}}"#,
+  )
+  .expect("local settings");
+  let done = refresh(&roots(temp.path(), Host::Claude)).expect("refresh");
+  assert!(!done.retired && !done.migrated);
+  assert_eq!(
+    done.notice.expect("notice"),
+    format!(
+      "statusline: {} still runs statusline/statusline.sh, which toolu no longer publishes; \
+       set its statusLine command to toolu statusline render",
+      local.display()
+    )
+  );
+  assert!(fs::symlink_metadata(temp.path().join("statusline/statusline.sh")).is_ok());
 }
 
 #[test]

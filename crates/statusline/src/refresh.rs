@@ -1,6 +1,7 @@
 //! `SessionStart` and `toolu statusline refresh`: migrate a settings command that
 //! still runs the old stable path to `toolu statusline render`, then retire that
-//! path (#440) once nothing names it.
+//! path (#440) on a later refresh, once no user or project settings name it. The
+//! session that migrates keeps the link, since it may still run the old command.
 
 use std::path::Path;
 
@@ -54,16 +55,18 @@ fn refresh(roots: &Roots) -> Result<Refreshed, String> {
   };
   let did_migrate = migrated.is_some();
   let still_named = setup::names_old_path(roots);
-  let retired = if still_named {
+  let retired = if did_migrate || still_named.is_some() {
     false
   } else {
     retire_paths(roots)?
   };
   let notice = migrated.map(|line| line.message).or_else(|| {
-    still_named.then(|| {
-      "statusline: settings.json still runs statusline/statusline.sh, which toolu no longer \
-       publishes; set its statusLine command to toolu statusline render"
-        .to_owned()
+    still_named.map(|path| {
+      format!(
+        "statusline: {} still runs statusline/statusline.sh, which toolu no longer \
+         publishes; set its statusLine command to toolu statusline render",
+        path.display()
+      )
     })
   });
   Ok(Refreshed {

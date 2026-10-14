@@ -1,12 +1,17 @@
 //! Real subprocesses with an explicit environment, and the real git repositories the cases need.
 
-use std::io::{ErrorKind, Write as _};
+use std::io::{ErrorKind, Read, Write as _};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use crate::golden_statusline_sandbox::Sandbox;
 use crate::golden_statusline_value::TestResult;
 use crate::golden_statusline_value::bad;
+
+/// How long a process may run before the case fails.
+const DEADLINE: Duration = Duration::from_secs(60);
 
 /// Environment overrides in order; `None` unsets the key in the child.
 pub(crate) type EnvPatch = Vec<(String, Option<String>)>;
@@ -46,7 +51,7 @@ pub(crate) fn set(env: &mut EnvPatch, key: &str, value: Option<String>) {
   env.push((key.to_owned(), value));
 }
 
-/// Run the process, feed it `stdin`, and capture its streams.
+/// Run the process, feed it `stdin`, and capture its streams; a hung process is killed.
 pub(crate) fn exec(spec: &Spec<'_>) -> TestResult<Ran> {
   let mut command = Command::new(spec.program);
   command.args(&spec.args).current_dir(spec.cwd).env_clear();
@@ -68,17 +73,60 @@ pub(crate) fn exec(spec: &Spec<'_>) -> TestResult<Ran> {
     .stdin
     .take()
     .ok_or_else(|| bad("child has no stdin"))?;
-  match stdin.write_all(spec.stdin.as_bytes()) {
-    Err(error) if error.kind() != ErrorKind::BrokenPipe => return Err(error.into()),
-    Ok(()) | Err(_) => {}
-  }
-  drop(stdin);
-  let out = child.wait_with_output()?;
+  let body = spec.stdin.as_bytes().to_vec();
+  // A child that exits without reading closes the pipe; its exit status tells the story.
+  let writer = thread::spawn(move || match stdin.write_all(&body) {
+    Err(error) if error.kind() != ErrorKind::BrokenPipe => Err(error),
+    Ok(()) | Err(_) => Ok(()),
+  });
+  let (stdout, stderr) = (drain(child.stdout.take()), drain(child.stderr.take()));
+  let code = wait(&mut child, spec)?;
+  writer
+    .join()
+    .map_err(|_panic| bad("stdin writer panicked"))??;
   Ok(Ran {
-    code: out.status.code(),
-    stdout: String::from_utf8_lossy(&out.stdout).into_owned(),
-    stderr: String::from_utf8_lossy(&out.stderr).into_owned(),
+    code,
+    stdout: join_text(stdout)?,
+    stderr: join_text(stderr)?,
   })
+}
+
+type Reader = thread::JoinHandle<std::io::Result<Vec<u8>>>;
+
+fn drain<R: Read + Send + 'static>(stream: Option<R>) -> Reader {
+  thread::spawn(move || {
+    let mut bytes = Vec::new();
+    if let Some(mut stream) = stream {
+      stream.read_to_end(&mut bytes)?;
+    }
+    Ok(bytes)
+  })
+}
+
+fn join_text(handle: Reader) -> TestResult<String> {
+  let bytes = handle
+    .join()
+    .map_err(|_panic| bad("output reader panicked"))??;
+  Ok(String::from_utf8_lossy(&bytes).into_owned())
+}
+
+/// Wait for the child, killing it once it has run past `DEADLINE`.
+fn wait(child: &mut Child, spec: &Spec<'_>) -> TestResult<Option<i32>> {
+  let started = Instant::now();
+  loop {
+    if let Some(status) = child.try_wait()? {
+      return Ok(status.code());
+    }
+    if started.elapsed() > DEADLINE {
+      child.kill()?;
+      child.wait()?;
+      return Err(bad(format!(
+        "{} {:?} ran over {DEADLINE:?} and was killed",
+        spec.program, spec.args
+      )));
+    }
+    thread::sleep(Duration::from_millis(5));
+  }
 }
 
 /// `git -C cwd <args>` with a throwaway identity and the sandbox HOME; a failure is an error.

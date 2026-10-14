@@ -2,6 +2,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::PathBuf;
 
 use super::Sandbox;
+use crate::env_scrub::selects_repository;
 
 /// A `toolu` that records each register call and succeeds.
 fn fake_toolu(dir: &std::path::Path) -> PathBuf {
@@ -31,15 +32,17 @@ fn the_full_fixture_registers_the_four_registry_plugins_and_is_removed_on_drop()
   );
   let env = sandbox.env(&repo.join("plugins/toolu"));
   let get = |key: &str| env.iter().find(|(k, _)| k == key).map(|(_, v)| v.clone());
-  assert_eq!(get("TOOLU_BIN"), Some(bin.display().to_string()));
+  assert_eq!(get("TOOLU_BIN"), Some(bin.as_os_str().to_owned()));
   assert_eq!(
     get("CLAUDE_PROJECT_DIR"),
-    Some(project.display().to_string())
+    Some(project.as_os_str().to_owned())
   );
-  assert_eq!(
-    env.iter().filter(|(k, _)| k.starts_with("TOOLU_")).count(),
-    1
-  );
+  let toolu_keys = env
+    .iter()
+    .filter(|(k, _)| k.to_string_lossy().starts_with("TOOLU_"));
+  assert_eq!(toolu_keys.count(), 1);
+  assert!(env.iter().all(|(k, _)| !selects_repository(k)));
+  assert!(sandbox.scratch().join("project").is_dir() && sandbox.scratch().join("home").is_dir());
   drop(sandbox);
   assert!(!project.exists());
 }
@@ -51,7 +54,10 @@ fn the_core_fixture_registers_nothing_and_a_failed_register_is_an_error() {
   let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
   drop(Sandbox::new(&repo, &bin, false).unwrap());
   assert!(!dir.path().join("calls.log").exists());
-  std::fs::write(&bin, "#!/bin/sh\nexit 3\n").unwrap();
+  std::fs::write(&bin, "#!/bin/sh\necho 'no registry here' >&2\nexit 3\n").unwrap();
   let err = Sandbox::new(&repo, &bin, true).err().unwrap();
-  assert_eq!(err, "bench sandbox: register ast-grep exited Some(3)");
+  assert_eq!(
+    err,
+    "bench sandbox: register ast-grep exited Some(3): no registry here"
+  );
 }

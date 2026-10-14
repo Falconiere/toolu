@@ -12,7 +12,7 @@
 //!   plugin settings files;
 //! - `git`: the repository holding a directory, read from `.git` without spawning git (#415);
 //! - `process`: bounded subprocesses in their own process group (only this module spawns);
-//! - `startup`: stable-path publishing, bounded context output, Codex dependency
+//! - `startup`: retiring the stable paths of before #440, bounded context output, Codex dependency
 //!   warnings and `TOOLU_STARTUP_REPORT` records;
 //! - `registry`: registry events, file names, the module manifest and the `Rule` trait;
 //! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments.

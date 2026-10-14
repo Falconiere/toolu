@@ -9,7 +9,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use crate::bench_hooks_measure::{Spawn, samples};
+use crate::bench_hooks_measure::{SPAWN_DEADLINE, Spawn, samples};
 use crate::bench_hooks_report::{Sample, percentile};
 use crate::bench_statusline_repo::{Fixture, payload};
 use crate::bench_statusline_report::{Measured, WARMUP, cpu_model, document, violations};
@@ -85,6 +85,8 @@ pub(crate) fn measure(
     cwd: &fixture.worktree,
     env: fixture.env(bin, &fixture.cfg),
     stdin: stdin.to_owned(),
+    report_dir: fixture.scratch(),
+    deadline: SPAWN_DEADLINE,
   };
   let mut warm = Vec::new();
   for round in 0..WARMUP + runs {

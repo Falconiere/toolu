@@ -22,10 +22,19 @@ pub enum Retired {
   Failed(String),
 }
 
-/// Whether `target` is what toolu linked: `<plugin root>/scripts/<name>`, or `also`.
+/// Whether `target` is what toolu linked, or `also`: `<plugin root>/scripts/<name>`,
+/// where a plugin root lies under a `plugins` directory (the hosts' `plugins/cache/…`,
+/// or a checkout's `plugins/<plugin>`).
 fn ours(target: &Path, name: &str, also: Option<&Path>) -> bool {
+  let scripts = target
+    .parent()
+    .filter(|dir| dir.file_name() == Some(OsStr::new("scripts")));
   let script = target.file_name() == Some(OsStr::new(name))
-    && target.parent().and_then(Path::file_name) == Some(OsStr::new("scripts"));
+    && scripts.is_some_and(|dir| {
+      dir
+        .ancestors()
+        .any(|up| up.file_name() == Some(OsStr::new("plugins")))
+    });
   script || also.is_some_and(|other| other == target)
 }
 

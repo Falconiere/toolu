@@ -12,7 +12,7 @@ const EVENT: &str = "SessionStart";
 
 /// A link an older version published, into a plugin version's `scripts/`.
 fn old_link(link: &Path, dir: &Path) {
-  let script = dir.join("jev/7.11.0/scripts/jev.sh");
+  let script = dir.join("plugins/cache/toolu/jev/7.11.0/scripts/jev.sh");
   fs::create_dir_all(script.parent().unwrap()).unwrap();
   fs::write(&script, "#!/bin/sh\nexec toolu jev \"$@\"\n").unwrap();
   fs::create_dir_all(link.parent().unwrap()).unwrap();
