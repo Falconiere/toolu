@@ -68,16 +68,21 @@ struct Run {
   stderr: String,
 }
 
-/// `node <cli> args` with exactly `env` (plus `TERM`), in `cwd`.
+/// `node <cli> args` with exactly `env` (plus `TERM`, and under coverage the profile
+/// path, so the instrumented `toolu` never writes a profile into `cwd`), in `cwd`.
 fn run(cli: &Path, args: &[&str], env: &[(&str, &str)], cwd: &Path) -> Res<Run> {
-  let output = Command::new(node()?)
+  let mut command = Command::new(node()?);
+  command
     .arg(cli)
     .args(args)
     .env_clear()
     .env("TERM", "dumb")
     .envs(env.iter().copied())
-    .current_dir(cwd)
-    .output()?;
+    .current_dir(cwd);
+  if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
+    command.env("LLVM_PROFILE_FILE", profile);
+  }
+  let output = command.output()?;
   Ok(Run {
     code: output.status.code(),
     stdout: String::from_utf8(output.stdout)?,
