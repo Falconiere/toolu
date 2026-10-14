@@ -1,4 +1,0 @@
-pre-commit:
-  commands:
-    fmt:
-      run: true

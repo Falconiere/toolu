@@ -1,3 +1,0 @@
-# domains/ping
-
-Ping capability.

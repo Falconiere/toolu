@@ -1,1 +1,0 @@
-{ "name": "conventions-violating-fixture", "private": true, "type": "module", "dependencies": { "valibot": "1.0.0" } }
