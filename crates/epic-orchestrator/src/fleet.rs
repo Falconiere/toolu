@@ -161,6 +161,8 @@ pub(crate) fn fetch_all(client: &Client, targets: &[Target]) -> Vec<Fetched> {
     handles
       .into_iter()
       .map(|handle| {
+        // A panicked peer thread is a peer that gave no usable answer.
+        // `Result::unwrap_or` never panics: `Err` yields the default.
         handle
           .join()
           .unwrap_or(Fetched::Failed(PeerState::Unreachable))
@@ -266,7 +268,9 @@ fn summary(machines: &[Value]) -> Value {
   let sum = |field: &str| -> u64 {
     ok.iter()
       .map(|machine| match machine.get(field) {
-        Some(Value::Array(items)) => u64::try_from(items.len()).unwrap_or(u64::MAX),
+        Some(Value::Array(items)) => items
+          .iter()
+          .fold(0, |count: u64, _| count.saturating_add(1)),
         other => number(other),
       })
       .fold(0, u64::saturating_add)
