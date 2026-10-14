@@ -16,6 +16,7 @@ is the basename of the epic's state directory (for example
 |---|---|
 | `start <state_dir>` | `toolu epic start <state_dir>` (add `--safe`, `--no-jev` when passed), then the skill's wait loop |
 | `status [<epic-key>]` | `toolu epic status <epic-key>` (all epics without a key), plus the dashboard `http://127.0.0.1:7717/`; consumes no judgment |
+| `fleet` | `toolu epic status --fleet`: this machine and every peer engine in `epic.peers`, with each peer's state; consumes no judgment |
 | `pause [<epic-key>]` | `toolu epic pause <epic-key>`: no launch, rebase or merge until resumed |
 | `resume [<epic-key>]` | `toolu epic resume <epic-key>` |
 | `stop <epic-key>` | `toolu epic pause <epic-key>`, then end the wait loop; workers finish their step and go idle |

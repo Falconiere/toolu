@@ -78,6 +78,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
 | `start <state-dir> [--safe] [--no-jev]` | Register that epic directory, record the two flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic. |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
+| `status --fleet` | This machine and every peer engine in `epic.peers` as the `/api/v1/fleet` document: per-machine state (`ok`, `unreachable`, `unauthorized`, `version-mismatch`), last seen, in-flight issues and hosts, and a summary. Peers are fetched by this command, never by the engine. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
 | `ack <key>` | Acknowledge the key's attention items (a keyless one by kind) and stop their reminders. |
 | `answer <key> <text> [--by NAME]` | Send the text to the worker's prompt, then mark its items answered. Fails when no item is live or the prompt is not delivered. |

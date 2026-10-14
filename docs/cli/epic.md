@@ -118,6 +118,7 @@ Arguments:
   [EPIC]  Epic key, or a trailing issue number
 
 Options:
+      --fleet             Print this machine and every configured peer engine
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
