@@ -259,11 +259,14 @@ fn native_writer_keys_a_detached_worktree_to_the_requested_branch() {
 }
 
 #[test]
-fn native_session_start_publishes_the_compatibility_shim_on_each_host() {
+fn native_session_start_retires_the_old_shim_on_each_host() {
   let tmp = tempfile::tempdir().unwrap();
   let plugin = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/toolu-review");
   for host in ["claude", "codex", "cursor"] {
     let config = tmp.path().join(host);
+    let shim = config.join("toolu-review/write-state.sh");
+    fs::create_dir_all(shim.parent().unwrap()).unwrap();
+    std::os::unix::fs::symlink(plugin.join("scripts/write-state.sh"), &shim).unwrap();
     let output = assert_cmd::Command::new(TOOLU)
       .args([
         "toolu-review",
@@ -285,17 +288,6 @@ fn native_session_start_publishes_the_compatibility_shim_on_each_host() {
       "{host}: {}",
       String::from_utf8_lossy(&output.stderr)
     );
-    let shim = config.join("toolu-review/write-state.sh");
-    assert!(
-      fs::symlink_metadata(&shim)
-        .unwrap()
-        .file_type()
-        .is_symlink(),
-      "{host}"
-    );
-    assert_eq!(
-      fs::read_to_string(&shim).unwrap(),
-      "#!/bin/sh\nexec toolu review write-state \"$@\"\n"
-    );
+    assert!(fs::symlink_metadata(&shim).is_err(), "{host}");
   }
 }

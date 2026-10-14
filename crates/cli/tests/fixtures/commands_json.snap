@@ -1634,7 +1634,7 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
-          "about": "Refresh the compatibility shim and old settings",
+          "about": "Migrate old settings and retire the old statusline path",
           "aliases": [],
           "args": [],
           "commands": [],

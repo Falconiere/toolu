@@ -7,12 +7,10 @@ mod ensure;
 mod statusline;
 
 use std::fs;
-use std::io::Write as _;
-use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 use serde_json::Value;
-use statusline::{TOOLU, TestResult, cmd, isolated_env, text};
+use statusline::{TOOLU, TestResult, cmd, text};
 
 #[test]
 fn setup_targets_claude_even_with_another_host_selected() -> TestResult<()> {
@@ -179,31 +177,8 @@ fn settings_preserve_other_keys_and_upgrade_known_legacy_paths() -> TestResult<(
   Ok(())
 }
 
-fn shim_line(cfg: &Path, cwd: &Path) -> TestResult<String> {
-  let linked = cfg.join("statusline/statusline.sh");
-  let bin_dir = Path::new(TOOLU)
-    .parent()
-    .ok_or_else(|| std::io::Error::other("binary parent"))?;
-  let mut shim = Command::new(linked);
-  isolated_env(&mut shim, cwd, cfg);
-  let mut shim = shim
-    .current_dir(cwd)
-    .env("PATH", format!("{}:/usr/bin:/bin", bin_dir.display()))
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .spawn()?;
-  shim
-    .stdin
-    .take()
-    .ok_or_else(|| std::io::Error::other("shim stdin"))?
-    .write_all(b"{}")?;
-  let output = shim.wait_with_output()?;
-  ensure!(output.status.success());
-  Ok(text(&output))
-}
-
 #[test]
-fn session_start_migrates_once_and_the_published_shim_runs_the_renderer() -> TestResult<()> {
+fn session_start_migrates_once_and_retires_the_old_path() -> TestResult<()> {
   let temp = tempfile::tempdir()?;
   let cfg = temp.path().join("cfg");
   fs::create_dir_all(&cfg)?;
@@ -212,6 +187,11 @@ fn session_start_migrates_once_and_the_published_shim_runs_the_renderer() -> Tes
     &settings,
     r#"{"statusLine":{"type":"command","command":"bash ~/.claude/statusline/statusline.sh"}}"#,
   )?;
+  fs::create_dir_all(cfg.join("statusline"))?;
+  let old = temp
+    .path()
+    .join("cache/statusline/7.11.0/scripts/statusline.sh");
+  std::os::unix::fs::symlink(old, cfg.join("statusline/statusline.sh"))?;
   let args = [
     "statusline",
     "hook",
@@ -229,18 +209,10 @@ fn session_start_migrates_once_and_the_published_shim_runs_the_renderer() -> Tes
   let second = cmd(temp.path(), &cfg, temp.path(), &args, Some("{}"))?;
   ensure!(second.status.success());
   ensure_eq!(text(&second), "");
-  ensure!(cfg.join("statusline/statusline.sh").is_symlink());
+  ensure!(fs::symlink_metadata(cfg.join("statusline/statusline.sh")).is_err());
   let migrated: Value = serde_json::from_slice(&fs::read(&settings)?)?;
   ensure_eq!(migrated["statusLine"]["command"], "toolu statusline render");
   ensure!(cfg.join("settings.json.bak").exists());
-  let line = cmd(
-    temp.path(),
-    &cfg,
-    temp.path(),
-    &["statusline", "render"],
-    Some("{}"),
-  )?;
-  ensure_eq!(shim_line(&cfg, temp.path())?, text(&line));
   Ok(())
 }
 
@@ -290,7 +262,7 @@ fn refresh_reports_json_and_is_idempotent() -> TestResult<()> {
   ensure!(first.status.success());
   let value: Value = serde_json::from_slice(&first.stdout)?;
   ensure_eq!(value["status"], "WIRED");
-  ensure_eq!(value["published"], true);
+  ensure_eq!(value["retired"], false);
   ensure_eq!(value["migrated"], true);
   let second = cmd(temp.path(), &cfg, temp.path(), &args, None)?;
   let value: Value = serde_json::from_slice(&second.stdout)?;
