@@ -212,8 +212,7 @@ pub(crate) fn migrate(roots: &Roots) -> Result<Option<ResultLine>, String> {
 /// Whether the settings' statusLine command still names the old stable path.
 pub(crate) fn names_old_path(roots: &Roots) -> bool {
   load(&settings_path(roots))
-    .ok()
-    .is_some_and(|(map, _)| current_command(&map).is_some_and(|command| command.contains(MARKER)))
+    .is_ok_and(|(map, _)| current_command(&map).is_some_and(|command| command.contains(MARKER)))
 }
 
 /// CLI formatting: one JSON document or one newline-terminated STATUS line.

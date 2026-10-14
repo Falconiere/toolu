@@ -26,7 +26,7 @@ struct Refreshed {
 /// Remove the old link and the generated shim it pointed at, unless the settings still name them.
 fn retire_paths(roots: &Roots) -> Result<bool, String> {
   let generated = roots.config_root().join("toolu/statusline-render.sh");
-  let link = retire(
+  let retired = retire(
     roots,
     "statusline",
     "statusline",
@@ -39,8 +39,8 @@ fn retire_paths(roots: &Roots) -> Result<bool, String> {
     std::fs::remove_file(&generated)
       .map_err(|error| format!("cannot remove {}: {error}", generated.display()))?;
   }
-  match link {
-    Retired::Failed(line) => Err(line),
+  match retired {
+    Retired::Failed(warning) => Err(warning),
     Retired::Removed => Ok(true),
     Retired::Absent | Retired::Kept => Ok(shim),
   }

@@ -36,12 +36,19 @@ fn entries(events: &[&str]) -> Res<Vec<(String, String, String)>> {
       .to_owned();
     let doc: Value = serde_json::from_str(&text)?;
     for event in events {
-      let groups = doc["hooks"][*event].as_array().cloned().unwrap_or_default();
-      for hook in groups
-        .iter()
-        .flat_map(|group| group["hooks"].as_array().cloned().unwrap_or_default())
-      {
-        let command = hook["command"].as_str().ok_or("command")?.to_owned();
+      let groups = doc
+        .get("hooks")
+        .and_then(|hooks| hooks.get(*event))
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+      let hooks = groups.iter().flat_map(|group| {
+        let list = group.get("hooks").and_then(Value::as_array);
+        list.cloned().unwrap_or_default()
+      });
+      for hook in hooks {
+        let command = hook.get("command").and_then(Value::as_str);
+        let command = command.ok_or("command")?.to_owned();
         found.push((plugin.clone(), (*event).to_owned(), command));
       }
     }
@@ -107,8 +114,14 @@ fn no_session_or_prompt_hook_mentions_bun() {
     );
     all.push_str(&said);
   }
-  assert!(all.contains("you MUST call toolu jev"), "the hooks ran: {all}");
-  assert!(all.contains("toolu runtime: native"), "the hooks ran: {all}");
+  assert!(
+    all.contains("you MUST call toolu jev"),
+    "the hooks ran: {all}"
+  );
+  assert!(
+    all.contains("toolu runtime: native"),
+    "the hooks ran: {all}"
+  );
 }
 
 #[test]
@@ -124,7 +137,7 @@ fn doctor_has_no_bun_check() {
     .unwrap();
   let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
   let checks = doc["checks"].as_array().unwrap();
-  assert!(!checks.is_empty());
+  assert_ne!(checks.len(), 0);
   assert!(checks.iter().all(|check| check["id"] != "runtime"), "{doc}");
   assert!(!doc.to_string().to_lowercase().contains("bun"), "{doc}");
 }
