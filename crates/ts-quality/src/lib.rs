@@ -31,9 +31,6 @@ pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: SPEC,
   name: rule::NAME,
-  path_glob: "*.ts*",
-  guard: "TOOLU_TS_QUALITY_NATIVE",
-  language: "TypeScript",
 };
 
 const GUIDE: Guide = Guide {

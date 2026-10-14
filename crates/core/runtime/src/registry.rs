@@ -48,7 +48,7 @@ impl RegistryEvent {
 /// What a registry file is, by its extension.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModuleKind {
-  /// `.js`: a bundled ESM module, run through the Bun bridge until #440.
+  /// `.js`: a bundled ESM module. Listed so it can be named, never run (#440).
   Esm,
   /// `.sh`: an executable module.
   Bash,

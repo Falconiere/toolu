@@ -15,7 +15,6 @@ type Res<T> = Result<T, Box<dyn Error>>;
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 const POST: &str = ".claude/toolu/post-tools.d";
 const MANIFEST: &str = "rust-quality@toolu__rust-quality.json";
-const BRIDGE: &str = "rust-quality@toolu__rust-quality.sh";
 const CLEAR: &[&str] = &[
   "TOOLU_CONFIG_DIR",
   "TOOLU_USER_CONFIG_DIR",
@@ -163,15 +162,18 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   )
   .unwrap();
   let before = registry_check(&sb).unwrap();
-  assert!(before.to_string().contains("Bun bridge"), "{before}");
+  assert!(
+    before.to_string().contains("is a JavaScript module"),
+    "{before}"
+  );
   let first = session_start(&sb, "register", &[]).unwrap();
   assert!(first.status.success(), "{first:?}");
   let notice: Value = serde_json::from_slice(&first.stdout).unwrap();
   assert_eq!(
     notice["systemMessage"],
-    "rust-quality's Bun module was replaced by its native rule in toolu."
+    "rust-quality's JavaScript module was replaced by its native rule in toolu."
   );
-  assert_eq!(listing(&post).unwrap(), [MANIFEST, BRIDGE]);
+  assert_eq!(listing(&post).unwrap(), [MANIFEST]);
   let manifest = fs::read_to_string(post.join(MANIFEST)).unwrap();
   let again = session_start(&sb, "register", &[]).unwrap();
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));

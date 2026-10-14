@@ -276,7 +276,7 @@ fn registry_warns_on_javascript_and_orphans_and_fails_a_bad_manifest() {
   let summary = registry["summary"].as_str().unwrap();
   assert_eq!(registry["status"], "fail");
   assert!(
-    summary.contains("runs through the Bun bridge until #440"),
+    summary.contains("is a JavaScript module, which toolu no longer runs"),
     "{summary}"
   );
   assert!(

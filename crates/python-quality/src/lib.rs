@@ -26,9 +26,6 @@ pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: rule::SPEC,
   name: rule::NAME,
-  path_glob: "*.py*",
-  guard: "TOOLU_PYTHON_QUALITY_NATIVE",
-  language: "Python",
 };
 
 const GUIDE: Guide = Guide {

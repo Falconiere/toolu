@@ -18,11 +18,3 @@ fn the_python_quality_crate_is_its_plugin_and_prints_its_guide() {
     guide.ends_with("Run toolu doctor to see whether the rule is registered and compiled in.")
   );
 }
-
-#[test]
-fn the_bridge_runs_only_for_python_paths() {
-  let script = QUALITY_PLUGIN.bridge_script(Path::new("/opt/toolu"));
-  assert!(script.contains("in *.py*) ;;"), "{script}");
-  assert!(script.contains("TOOLU_PYTHON_QUALITY_NATIVE=1 exec \"$bin\" python-quality hook"));
-  assert!(script.contains("python-quality: toolu not found; Python checks skipped"));
-}

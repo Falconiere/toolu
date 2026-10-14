@@ -46,7 +46,7 @@ fn javascript_and_orphans_warn_a_bad_version_fails_and_shell_is_silent() {
   assert!(
     check
       .summary
-      .contains("x@vendor__mod.js runs through the Bun bridge until #440"),
+      .contains("x@vendor__mod.js is a JavaScript module, which toolu no longer runs (docs/registry.md#executable-modules)"),
     "{}",
     check.summary
   );
