@@ -1349,7 +1349,7 @@ checksum = "7d56353a2a665ad0f41a421187180aab746c8c325620617ad883a99a1cbe66d2"
 
 [[package]]
 name = "toolu-ast-grep"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1364,7 +1364,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-brainstorm"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "toolu-runtime",
@@ -1372,7 +1372,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-cli"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "assert_cmd",
  "clap",
@@ -1399,7 +1399,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-delivery-flow"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "toolu-runtime",
@@ -1407,7 +1407,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-engine"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "serde_json",
  "tempfile",
@@ -1419,7 +1419,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-epic-orchestrator"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1439,7 +1439,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-github"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "serde",
  "serde_json",
@@ -1451,7 +1451,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-http"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "base64 0.23.1",
  "rustls",
@@ -1464,7 +1464,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-http-test-support"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "rcgen",
  "serde_json",
@@ -1474,7 +1474,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-hub"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1492,7 +1492,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-jev"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1506,7 +1506,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-jev-client"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "base64 0.23.1",
  "serde_json",
@@ -1517,7 +1517,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-plugins"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "serde_json",
@@ -1528,7 +1528,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-pr-babysit"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1545,7 +1545,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-protocol"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "jsonschema",
  "serde",
@@ -1554,7 +1554,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-python-quality"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1568,7 +1568,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-review"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "serde_json",
@@ -1580,7 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-runtime"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "nix",
@@ -1593,7 +1593,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-rust-quality"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1607,7 +1607,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-shell"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "serde_json",
  "tempfile",
@@ -1617,7 +1617,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-state"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "nix",
  "serde_json",
@@ -1628,7 +1628,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-statusline"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "serde_json",
@@ -1641,7 +1641,7 @@ dependencies = [
 
 [[package]]
 name = "toolu-ts-quality"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "clap",
  "regex",
@@ -1962,7 +1962,7 @@ dependencies = [
 
 [[package]]
 name = "xtask"
-version = "8.0.2"
+version = "8.0.3"
 dependencies = [
  "nix",
  "proc-macro2",
