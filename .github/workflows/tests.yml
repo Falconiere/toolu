@@ -114,8 +114,10 @@ jobs:
         run: npm ci --ignore-scripts
 
       # The rust-quality step's `toolu rust-quality check` fails closed without ast-grep.
+      # Pinned: @ast-grep/cli publishes before its platform packages, and an
+      # unpinned install in that window fails its postinstall.
       - name: Install ast-grep
-        run: npm install -g @ast-grep/cli
+        run: npm install -g @ast-grep/cli@0.50.0
 
       - name: Test native release helper
         if: matrix.os == 'ubuntu-latest'
