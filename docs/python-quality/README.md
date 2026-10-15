@@ -1,6 +1,6 @@
 # python-quality — Python Quality Gate
 
-**Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
+**Type:** Quality Gate | **Depends on:** `toolu`
 
 Python `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Python file the agent edits is checked on the spot. Static-only — the gate never invokes `ruff`, `pylint`, `mypy`, or any other linter/type-checker.
 
@@ -80,7 +80,7 @@ A file is "test-bearing" if it defines a top-level `def test_...`/`async def tes
 ### 4. No Mocks (test files only)
 
 ```python
-# ❌ BANNED — in test_*.py / *_test.py / conftest.py
+# ❌ BANNED — in test_*.py / *_test.py
 from unittest.mock import MagicMock, patch
 
 def test_process(mocker):

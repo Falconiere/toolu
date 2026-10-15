@@ -15,12 +15,12 @@ disable what you do not want.
 - `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
   is not the config root.
 
-Both are optional. When both exist they are deep-merged via `jq '. * .'`;
-project values win on conflict. Missing keys default to **enabled**.
+Both are optional. When both exist they are deep-merged in the binary,
+like `jq '$u * $p`; project values win on conflict. Missing keys default
+to **enabled**. No `jq` is needed: the merge is native code.
 
-Requires `jq` (already a hard dependency of every toolu hook). With `jq`
-absent or the JSON malformed, the loader warns once on stderr and falls
-back to "all enabled".
+A file whose JSON is malformed is ignored with one stderr warning, as in
+bash — a half-typed file does not lock you out.
 
 ## CLI
 
@@ -37,6 +37,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
 {
   "version": 1,
   "skills":  { "<name>": true | false },
+  "agents":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
   "mcp":     { "<server>": true | false },
   "models":  { "enabled": true | false,
@@ -245,9 +246,9 @@ Two consequences worth stating plainly:
 
 - **`gates.bashCommands: "off"` is a security decision, not a convenience
   one.** It disables the whole `settings/bash-denylist.txt` check, including
-  the `node -e` / `bun -e` arbitrary-code-execution rules. `advise` (the
-  default) tells the agent the rule fired; `off` removes it; `ask` is opt-in
-  if you want a prompt.
+  the `node -e` / `bun -e` arbitrary-code-execution rules. `ask` (the
+  default) prompts you; `advise` only tells the agent the rule fired;
+  `off` removes it.
 - **`permissions.deny` in Claude Code settings overrides a hook's `ask`.** A
   command denied there is denied outright and toolu never gets to prompt.
   `permissions.allow` does *not* have that power — an allowlisted command still
@@ -506,6 +507,7 @@ the babysit slot state) and is skipped while cooling.
 | Category | Names                                                                              |
 |----------|------------------------------------------------------------------------------------|
 | `skills` | `ast-grep` (the only skill key any hook reads)                                     |
+| `agents` | `research-agent` (the only agents key any hook reads)                             |
 | `hooks`  | `session-start`, `user-prompt-submit`, `pre-tools`, `post-tools`, `pre-compact` |
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
 | `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
@@ -518,6 +520,10 @@ Unknown names are silently ignored (forward compatible).
 - `skills.ast-grep = false`
   - Suppresses ast-grep STOP/install advisories in its registry module. The
     generic `grep/rg → Grep tool` advisory still fires.
+
+- `agents.research-agent = false`
+  - Suppresses the user-prompt-submit hint that delegates external
+    research to the research-agent subagent.
 
 - `hooks.<name> = false`
   - The named hook exits early and emits nothing. Its stdin is drained first so
@@ -638,4 +644,4 @@ concurrent reader sees either the old file or the new one, never a partial one.
 Forces the non-interactive path regardless of whether a terminal is attached.
 Without it the CLI prompts only when stdin *and* stdout are both TTYs. Use it in
 CI so a job on an allocated TTY fails fast, listing what is missing, instead of
-blocking on a prompt nobody can answer. Missing input in that state exits `3`.
+blocking on a prompt nobody can answer. Missing input in that state exits `64`.

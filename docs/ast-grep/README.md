@@ -1,6 +1,6 @@
 # ast-grep — Structural Code Search & Rewrite
 
-**Type:** Code Intel | **Version:** 7.11.0 | **Standalone skill**
+**Type:** Code Intel | **Standalone skill**
 
 Structural code search and rewrite powered by **tree-sitter AST patterns** — a skill, a wrapper, and a `PreToolUse` `Grep → ast-grep` nudge registered into the toolu hook engine.
 

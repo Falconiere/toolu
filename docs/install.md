@@ -40,7 +40,7 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | TOOLU_REPO=example/toolu bas
 
 Exit codes: 0 installed, checked or removed; 1 a network, signature, checksum, archive or permission failure; 2 a usage error, a bad tag or `TOOLU_REPO`, or an unsupported platform (only Darwin and Linux, on arm64 or amd64).
 
-The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh` at a pinned commit of this repository, never at `main` ([CodaSignal/toolu.sh#79](https://github.com/CodaSignal/toolu.sh/pull/79); the URL returns 404 until that change is deployed). The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
+The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh` at a pinned commit of this repository, never at `main` ([CodaSignal/toolu.sh#79](https://github.com/CodaSignal/toolu.sh/pull/79)). The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
 
 ## Why this way
 
@@ -57,8 +57,8 @@ The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh
 | Missing binary | Enforcing hooks fail closed and name both install commands. Context hooks print one `systemMessage`. |
 | macOS | curl and brew do not set quarantine. Finalize runs `codesign --verify` on darwin binaries (ad-hoc signature after strip). Notarization is deferred. |
 | Rollback | `install.sh --version <tag>` (#457) and pinning the plugin version in each host. |
-| Upgrade | `brew upgrade toolu`, or re-run the installer. No self-update command in this version. |
-| Removal | `brew uninstall toolu`, or `install.sh --uninstall`. `toolu doctor` names the right command for how the binary was installed. |
+| Upgrade | `brew upgrade toolu`, or re-run the installer. `toolu doctor` names the right command for how the binary was installed. No self-update command in this version. |
+| Removal | `brew uninstall toolu`, or `install.sh --uninstall`. |
 | Bun | Not used or needed on Claude Code and Codex since #440. |
 
 ## Version skew
@@ -73,7 +73,7 @@ The binary and the plugins are upgraded separately (`brew upgrade`, the installe
 
 `toolu doctor` warns on skew and fails only on a `hookProtocol` mismatch.
 
-**Compatibility.** While `hookProtocol` is unchanged, `toolu hook <event>` and every documented verb keep working, so a newer binary serves older plugins (#442).
+**Compatibility.** While `hookProtocol` is unchanged, `toolu hook <name>` and every documented verb keep working, so a newer binary serves older plugins (#442).
 
 **Config compatibility.** An older binary accepts and ignores unknown keys inside namespaced sections (for example `epic`, #463). Unknown top-level keys are still rejected.
 

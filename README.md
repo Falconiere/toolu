@@ -183,7 +183,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Sixteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Twelve plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -274,7 +274,8 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
-    └── toolu-review/            # toolu-review:review skill + push-review state writer
+    ├── toolu-review/            # toolu-review:review skill + push-review state writer
+    └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
 ```
 
 </details>

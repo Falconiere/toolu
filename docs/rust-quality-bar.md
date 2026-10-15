@@ -33,8 +33,10 @@ reasons.
 5. **A rule that cannot fail is not a rule.** Every rule has a clean and a
    violating fixture under `fixtures/guardrails/rust/`, run against this
    repository's real gate data by `cargo test -p xtask`.
-6. **Same gate everywhere.** `cargo xtask gate` is the `rust` CI job on Linux
-   and macOS, the `lefthook.yml` pre-push hook, and what an agent runs locally.
+6. **Same gate everywhere.** `cargo xtask gate` is the `rust` CI job on
+   Linux, the `lefthook.yml` pre-push hook, and what an agent runs locally.
+   macOS runs the clippy and tests steps plus the shell-latency and
+   launcher checks (`rust-macos`), not the full gate.
 
 ## Why these limits
 
