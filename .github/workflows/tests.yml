@@ -28,7 +28,7 @@ jobs:
   # a diff error: every group on. A release-please version bump: every group off.
   changes:
     name: changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
       docs: ${{ steps.groups.outputs.docs }}
@@ -37,7 +37,7 @@ jobs:
       changed: ${{ steps.groups.outputs.changed }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -56,11 +56,11 @@ jobs:
     name: docs
     needs: changes
     if: needs.changes.outputs.docs == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the pinned toolchain
         run: rustup toolchain install
@@ -85,7 +85,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             check: rust
           - os: macos-14
             check: rust-macos
@@ -93,7 +93,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           # check-gate-change diffs against the merge base.
           fetch-depth: 0
@@ -120,21 +120,21 @@ jobs:
         run: npm install -g @ast-grep/cli@0.50.0
 
       - name: Test native release helper
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
 
       - name: Reject Rust suppressions and structural violations
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: cargo xtask gate --only guardrails
 
       - name: Check Rust crate layers
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         run: cargo xtask gate --only layers
 
       # The quality bar: every cargo xtask gate step, including check-gate-change
       # against the PR base (or the pushed range).
       - name: cargo xtask gate
-        if: matrix.os == 'ubuntu-latest'
+        if: matrix.os == 'ubuntu-24.04'
         env:
           GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           PR_TITLE: ${{ github.event.pull_request.title }}
@@ -181,7 +181,7 @@ jobs:
 
       - name: Upload the statusline result
         if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: statusline-bench
           path: ${{ runner.temp }}/statusline-bench.json
@@ -198,14 +198,14 @@ jobs:
       matrix:
         include:
           - target: x86_64-unknown-linux-musl
-            os: ubuntu-latest
+            os: ubuntu-24.04
           - target: aarch64-unknown-linux-musl
             os: ubuntu-24.04-arm
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the pinned toolchain and the musl target
         run: |
@@ -246,7 +246,7 @@ jobs:
     name: fuzz
     needs: changes
     if: needs.changes.outputs.rust == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     defaults:
       run:
@@ -256,7 +256,7 @@ jobs:
       CFLAGS: -fsanitize=fuzzer-no-link,address
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install nightly
         run: rustup toolchain install nightly --profile minimal
@@ -290,7 +290,7 @@ jobs:
 
       - name: Upload the failing inputs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-artifacts
           path: crates/core/shell/fuzz/artifacts
@@ -307,12 +307,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
+        os: [ubuntu-24.04, macos-latest]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the pinned toolchain
         run: rustup toolchain install
@@ -334,7 +334,7 @@ jobs:
 
       - name: Upload the result
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hook-resources-${{ matrix.os }}
           path: ${{ runner.temp }}/hook-resources.json
@@ -348,11 +348,11 @@ jobs:
     name: gate
     needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the pinned toolchain
         run: rustup toolchain install
@@ -371,11 +371,11 @@ jobs:
     name: typescript
     needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
     if: ${{ always() }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install the pinned toolchain
         run: rustup toolchain install

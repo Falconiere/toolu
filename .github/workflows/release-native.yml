@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
           fetch-depth: 0
@@ -112,7 +112,7 @@ jobs:
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
       - name: Install target toolchain
@@ -148,7 +148,7 @@ jobs:
         run: |
           codesign --force --sign - "target/${{ matrix.target }}/release/toolu"
           codesign --verify --verbose=2 "target/${{ matrix.target }}/release/toolu"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: binary-${{ matrix.os }}-${{ matrix.arch }}
           path: target/${{ matrix.target }}/release/toolu
@@ -159,10 +159,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: binary-*
           path: binaries
@@ -209,7 +209,7 @@ jobs:
           upload-release-assets: false
       - name: Require SBOM
         run: test -s dist/toolu.spdx.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: native-release
           path: dist/
@@ -225,7 +225,7 @@ jobs:
       attestations: write
       actions: read
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: native-release
           path: dist
@@ -237,7 +237,7 @@ jobs:
         run: |
           test "$(gh release view "$TAG" --json isDraft --jq .isDraft)" = true
       - name: Attest native archives
-        uses: actions/attest-build-provenance@v2
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/toolu-*.tar.gz
       - name: Upload assets to the draft

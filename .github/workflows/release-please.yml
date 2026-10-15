@@ -23,7 +23,7 @@ jobs:
   release-please:
     name: Release PR / draft
     if: vars.TOOLU_RELEASE_DISABLED != 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: write
@@ -33,11 +33,11 @@ jobs:
       # but checkout is the standard release-please-action pattern and a cheap
       # safety net on the release critical path — keep it.
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Run release-please
         id: release
-        uses: googleapis/release-please-action@v4
+        uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json

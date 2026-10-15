@@ -8,7 +8,7 @@
 | OS | Status |
 |----|--------|
 | macOS | The plugin runs in CI on `macos-14` (`rust-macos`) and `macos-latest` (`hook-bench`). |
-| Linux | The plugin runs in CI on `ubuntu-latest`. |
+| Linux | The plugin runs in CI on `ubuntu-24.04`. |
 | Windows | **N/A**: not probed for this port |
 
 ## Fixture suites

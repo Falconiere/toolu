@@ -42,7 +42,7 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag }}
       - name: Install the pinned toolchain
@@ -73,14 +73,14 @@ jobs:
         run: cargo xtask homebrew-formula "$TAG" dist/SHA256SUMS > dist/toolu.rb
       - name: Mint a homebrew-tap token
         id: tap-token
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           app-id: ${{ secrets.HOMEBREW_APP_ID }}
           private-key: ${{ secrets.HOMEBREW_APP_PRIVATE_KEY }}
           owner: Falconiere
           repositories: homebrew-tap
       - name: Checkout homebrew-tap
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Falconiere/homebrew-tap
           path: tap
