@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.0.2](https://github.com/Falconiere/toolu/compare/v8.0.1...v8.0.2) (2026-10-15)
+
+
+### Bug Fixes
+
+* **ci:** pin @ast-grep/cli so a mid-publish release cannot fail the gate ([#529](https://github.com/Falconiere/toolu/issues/529)) ([674807f](https://github.com/Falconiere/toolu/commit/674807fb38c8975377110f45e2d0554fed4bf316))
+
 ## [8.0.1](https://github.com/Falconiere/toolu/compare/v8.0.0...v8.0.1) (2026-10-15)
 
 
