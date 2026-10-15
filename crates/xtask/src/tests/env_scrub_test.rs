@@ -50,3 +50,23 @@ fn the_inherited_environment_keeps_the_path_and_drops_host_git_and_managed_keys(
   let without = inherited(&["PATH"]);
   assert!(without.iter().all(|(key, _)| key != "PATH"));
 }
+
+#[test]
+fn the_inherited_environment_drops_what_cargo_adds() {
+  assert!(
+    std::env::var_os("CARGO_MANIFEST_DIR").is_some(),
+    "cargo test runs with its own environment"
+  );
+  let keys: Vec<String> = inherited(&[])
+    .iter()
+    .map(|(key, _)| key.to_string_lossy().into_owned())
+    .collect();
+  assert!(
+    keys.iter().all(|key| !key.starts_with("CARGO")
+      && !key.starts_with("RUSTUP_")
+      && !key.starts_with("RUSTC")
+      && key != "LD_LIBRARY_PATH"
+      && key != "DYLD_FALLBACK_LIBRARY_PATH"),
+    "{keys:?}"
+  );
+}
