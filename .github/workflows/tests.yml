@@ -364,26 +364,3 @@ jobs:
         env:
           NEEDS: ${{ toJSON(needs) }}
         run: cargo xtask ci-aggregate tests.yml
-
-  # Branch protection currently requires `typescript`. Keep it equivalent to
-  # `gate` until the repository setting is migrated to the new check name.
-  typescript:
-    name: typescript
-    needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
-    if: ${{ always() }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Install the pinned toolchain
-        run: rustup toolchain install
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Require every needed job
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-        run: cargo xtask ci-aggregate tests.yml
