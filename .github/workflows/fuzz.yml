@@ -18,7 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         target: [analyze, nested]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     defaults:
       run:
@@ -28,7 +28,7 @@ jobs:
       CFLAGS: -fsanitize=fuzzer-no-link,address
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install nightly
         run: rustup toolchain install nightly --profile minimal
@@ -54,7 +54,7 @@ jobs:
 
       - name: Upload the failing inputs
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: fuzz-artifacts-${{ matrix.target }}
           path: crates/core/shell/fuzz/artifacts
