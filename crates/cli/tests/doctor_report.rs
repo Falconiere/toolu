@@ -7,6 +7,7 @@ use std::process::{Command, Output};
 use serde_json::{Value, json};
 
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 const CLEAR: &str = "TOOLU_CONFIG_DIR TOOLU_USER_CONFIG_DIR CLAUDE_CONFIG_DIR CLAUDE_PROJECT_DIR \
 CLAUDE_PLUGINS_REGISTRY CODEX_HOME CURSOR_PROJECT_DIR HERMES_HOME XDG_CONFIG_HOME \
@@ -120,7 +121,7 @@ fn claude_lists_copied_plugins_in_check_order() {
       .iter()
       .find(|plugin| plugin["name"] == name)
       .unwrap();
-    assert_eq!(plugin["version"], "7.11.0");
+    assert_eq!(plugin["version"], VERSION);
     assert_eq!(plugin["root"], root.display().to_string());
   }
 }
@@ -146,7 +147,7 @@ fn codex_lists_the_stub() {
   let codex = parsed(&doctor(home.path(), "codex", &shell_path(Some(&bin))).unwrap()).unwrap();
   assert_order(&codex);
   let listed = &check(&codex, "plugins").unwrap()["details"]["plugins"][0];
-  assert_eq!(listed["version"], "7.11.0");
+  assert_eq!(listed["version"], VERSION);
   assert_eq!(listed["root"], toolu.display().to_string());
 }
 
@@ -200,7 +201,7 @@ fn version_skew_warns_and_protocol_skew_fails() {
       .contains("0.0.1")
   );
 
-  plugin["version"] = json!("7.11.0");
+  plugin["version"] = json!(VERSION);
   plugin["hookProtocol"] = json!(99);
   std::fs::write(&manifest, plugin.to_string()).unwrap();
   let failed = doctor(home.path(), "claude", &shell_path(None)).unwrap();
