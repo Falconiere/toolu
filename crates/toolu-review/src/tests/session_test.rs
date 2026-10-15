@@ -1,11 +1,12 @@
 use std::fs;
+use std::os::unix::fs::symlink;
 
 use toolu_runtime::env::Env;
 
 use super::session_start;
 
 #[test]
-fn session_start_publishes_shim_but_preserves_a_user_file() {
+fn session_start_retires_the_old_link_but_preserves_a_user_file() {
   let dir = tempfile::tempdir().unwrap();
   let config = dir.path().join("config");
   let env = Env::from_pairs([
@@ -13,17 +14,16 @@ fn session_start_publishes_shim_but_preserves_a_user_file() {
     ("TOOLU_HOST_OVERRIDE", "codex".to_owned()),
     ("TOOLU_CONFIG_DIR", config.display().to_string()),
   ]);
-  let plugin = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/toolu-review");
-  let result = session_start(&env, &plugin);
-  assert!(result.stderr.is_none(), "{result:?}");
+  let plugin = dir.path().join("plugins/cache/toolu/toolu-review/7.11.0");
   let shim = config.join("toolu-review/write-state.sh");
-  assert!(
-    fs::symlink_metadata(&shim)
-      .unwrap()
-      .file_type()
-      .is_symlink()
+  fs::create_dir_all(shim.parent().unwrap()).unwrap();
+  symlink(plugin.join("scripts/write-state.sh"), &shim).unwrap();
+  let result = session_start(&env, &plugin);
+  assert_eq!(
+    (result.stdout.as_deref(), result.stderr.as_deref()),
+    (None, None)
   );
-  fs::remove_file(&shim).unwrap();
+  assert!(fs::symlink_metadata(&shim).is_err(), "the old link is gone");
   fs::write(&shim, "user override\n").unwrap();
   let result = session_start(&env, &plugin);
   assert!(result.stderr.is_none(), "{result:?}");

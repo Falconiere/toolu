@@ -41,9 +41,12 @@ fn session_start(
 }
 
 #[test]
-fn statusline_session_start_publishes_compat_path_without_blocking() {
+fn statusline_session_start_retires_the_compat_path_without_blocking() {
   let dir = tempfile::tempdir().expect("statusline root");
   let root = dir.path().display().to_string();
+  std::fs::create_dir_all(dir.path().join("statusline")).expect("statusline dir");
+  let old = format!("{}/scripts/statusline.sh", plugin_root("statusline"));
+  std::os::unix::fs::symlink(old, dir.path().join("statusline/statusline.sh")).expect("old link");
   let env = Env::default()
     .with("HOME", &root)
     .with("CLAUDE_CONFIG_DIR", &root)
@@ -58,7 +61,7 @@ fn statusline_session_start_publishes_compat_path_without_blocking() {
   assert_eq!(outcome.exit.code(), 0);
   assert_eq!(outcome.stderr, None);
   assert_eq!(outcome.stdout, None);
-  assert!(dir.path().join("statusline/statusline.sh").is_symlink());
+  assert!(std::fs::symlink_metadata(dir.path().join("statusline/statusline.sh")).is_err());
 }
 
 fn hook(plugin: &str, name: &str, event: &str, env: &Env) -> toolu_runtime::cli::Outcome {

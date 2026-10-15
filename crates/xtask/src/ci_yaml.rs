@@ -1,8 +1,6 @@
-//! Workflow YAML, parsed through Bun so the gate adds no YAML crate.
+//! Workflow YAML, parsed in process with `serde-saphyr` into JSON values.
 
-use std::io::Write;
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::path::Path;
 
 use serde_json::Value;
 
@@ -126,53 +124,15 @@ fn path_filters(on: Option<&Value>) -> Vec<String> {
     .collect()
 }
 
-fn yaml_to_json(text: &str) -> Result<Value, String> {
-  let mut child = Command::new(bun_binary()?)
-    .args(["-e", "const fs=require('fs'); const text=fs.readFileSync(0,'utf8'); process.stdout.write(JSON.stringify(Bun.YAML.parse(text)))"])
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()
-    .map_err(|err| format!("cannot run bun: {err}"))?;
-  {
-    let mut stdin = child.stdin.take().ok_or("bun stdin is closed")?;
-    stdin
-      .write_all(text.as_bytes())
-      .map_err(|err| format!("cannot write workflow to bun: {err}"))?;
-  }
-  let output = child
-    .wait_with_output()
-    .map_err(|err| format!("bun failed: {err}"))?;
-  if !output.status.success() {
-    return Err(String::from_utf8_lossy(&output.stderr).trim().to_owned());
-  }
-  serde_json::from_slice(&output.stdout).map_err(|err| format!("bun did not print JSON: {err}"))
+/// The YAML document `text` as a JSON value; YAML 1.2, so `on:` stays a string key.
+pub(crate) fn yaml_to_json(text: &str) -> Result<Value, String> {
+  serde_saphyr::from_str::<Value>(text).map_err(|err| err.to_string())
 }
 
 fn yaml_file(name: &str) -> bool {
   Path::new(name)
     .extension()
     .is_some_and(|ext| ext.eq_ignore_ascii_case("yml") || ext.eq_ignore_ascii_case("yaml"))
-}
-
-pub(crate) fn bun_binary() -> Result<PathBuf, String> {
-  if let Some(path) = std::env::var_os("TOOLU_BUN") {
-    return Ok(PathBuf::from(path));
-  }
-  if Command::new("bun")
-    .arg("--version")
-    .output()
-    .is_ok_and(|output| output.status.success())
-  {
-    return Ok(PathBuf::from("bun"));
-  }
-  if let Some(home) = std::env::var_os("HOME") {
-    let candidate = PathBuf::from(home).join(".bun/bin/bun");
-    if candidate.is_file() {
-      return Ok(candidate);
-    }
-  }
-  Err("bun is not installed".to_owned())
 }
 
 #[cfg(test)]

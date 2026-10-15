@@ -7,7 +7,7 @@ fn a_checkout_without_builtins_is_an_error() {
   let err = super::discover(&dir).expect_err("missing builtins");
   let _ = fs::remove_dir_all(&dir);
   assert!(
-    err.contains("cannot read plugins/toolu/hooks/src/pre-tools/builtins.ts"),
+    err.contains("cannot read crates/core/engine/src/builtins.rs"),
     "{err}"
   );
 }

@@ -14,7 +14,7 @@ Python `PostToolUse` quality checks compiled into `toolu` and enabled by a regis
 
 ### Post-Edit Quality Checks
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into the native [`toolu` binary](../install.md) (#427), and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.** The `SessionStart` register hook publishes the rule's manifest (`python-quality@toolu__python-quality.json`) into toolu's registry. Until toolu's own hooks are native (#425), it also writes `python-quality@toolu__python-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice. The `toolu python-quality` namespace has no verbs; its help lists the checks, and `toolu doctor` reports whether the rule is registered.
+Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into the native [`toolu` binary](../install.md) (#427), and run only while this plugin is installed — **uninstall it and the Python rules vanish, fail-closed.** The `SessionStart` register hook publishes the rule's manifest (`python-quality@toolu__python-quality.json`) into toolu's registry. It registers only that `.json` manifest, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice. The `toolu python-quality` namespace has no verbs; its help lists the checks, and `toolu doctor` reports whether the rule is registered.
 
 ## Checks Enforced
 

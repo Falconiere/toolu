@@ -51,13 +51,10 @@ jobs:
       - uses: taiki-e/install-action@v2
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1,cargo-nextest@0.9.146
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: '1.4.2'
       - name: Install gate dependencies
         run: |
           npm install -g @ast-grep/cli
-          bun install --frozen-lockfile
+          npm ci --ignore-scripts
       - name: Verify tag and versions
         env:
           TAG: ${{ inputs.tag }}
@@ -75,8 +72,15 @@ jobs:
         run: |
           set -euo pipefail
           version=${TAG#v}
-          for package in @toolu/core @toolu/plugins; do
-            test "$(npm view "$package@$version" version)" = "$version"
+          for package in @toolu/plugins; do
+            published=$(npm view "$package@$version" version) || {
+              echo "npm view $package@$version failed; aborting the native release" >&2
+              exit 1
+            }
+            if [ "$published" != "$version" ]; then
+              echo "$package@$version is not published (npm reports '$published'); aborting the native release" >&2
+              exit 1
+            fi
           done
       - name: Gate released source
         run: cargo xtask gate

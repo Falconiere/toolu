@@ -74,7 +74,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx, status: &dyn StatusSnapshot) -> Outc
   }
 }
 
-/// The native `SessionStart` hook; it refreshes the shim and migrates old settings.
+/// The native `SessionStart` hook; it migrates old settings and retires the old path.
 pub fn session_start(env: &Env, plugin_root: Option<&Path>) -> Outcome {
   refresh::session_start(&Roots::new(env.clone(), None), plugin_root)
 }

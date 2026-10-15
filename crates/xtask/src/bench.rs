@@ -1,4 +1,5 @@
-//! `cargo xtask bench`: the deterministic retrieval tier, plus live and container.
+//! `cargo xtask bench`: the deterministic retrieval tier, the only tier (#440 retired the
+//! TypeScript `live` and `container` tiers).
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -6,7 +7,6 @@ use std::process::Command;
 use serde_json::{Map, Value};
 
 use crate::bench_result::write_result;
-use crate::ci_yaml::bun_binary;
 use crate::options::Options;
 use crate::{Verdict, output};
 
@@ -36,17 +36,11 @@ struct Measured {
   note: String,
 }
 
-/// `bench deterministic`, `bench live`, or `bench container`.
+/// `bench deterministic` (#440 retired the TypeScript `live` and `container` tiers).
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   match options.files.as_slice() {
     [mode] if mode == Path::new("deterministic") => deterministic_cli(options),
-    [mode] if mode == Path::new("live") => {
-      spawn_script(options, "tooling/src/benchmarks/cases/whole-session.ts")
-    }
-    [mode] if mode == Path::new("container") => {
-      spawn_script(options, "tooling/src/benchmarks/linux-container.ts")
-    }
-    _ => Err("usage: cargo xtask bench <deterministic|live|container>".to_owned()),
+    _ => Err("usage: cargo xtask bench deterministic".to_owned()),
   }
 }
 
@@ -246,21 +240,6 @@ fn head_commit(root: &Path) -> String {
       String::from_utf8_lossy(&output.stdout).trim().to_owned()
     }
     _ => "unknown".to_owned(),
-  }
-}
-
-fn spawn_script(options: &Options, rel: &str) -> Result<Verdict, String> {
-  let bun = bun_binary()?;
-  let status = Command::new(bun)
-    .arg(options.root.join(rel))
-    .current_dir(&options.root)
-    .status()
-    .map_err(|err| format!("bench: cannot run {rel}: {err}"))?;
-  match status.code() {
-    Some(0) => Ok(Verdict::Clean),
-    Some(1) => Ok(Verdict::Findings),
-    Some(code) => Err(format!("bench: {rel} exited {code}")),
-    None => Err(format!("bench: {rel} was terminated")),
   }
 }
 

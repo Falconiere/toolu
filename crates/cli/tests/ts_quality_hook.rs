@@ -14,7 +14,6 @@ type Res<T> = Result<T, Box<dyn Error>>;
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 const POST: &str = ".claude/toolu/post-tools.d";
 const MANIFEST: &str = "ts-quality@toolu__ts-quality.json";
-const BRIDGE: &str = "ts-quality@toolu__ts-quality.sh";
 const CLEAR: &[&str] = &[
   "TOOLU_CONFIG_DIR",
   "CLAUDE_CONFIG_DIR",
@@ -25,7 +24,8 @@ const CLEAR: &[&str] = &[
   "TOOLU_STARTUP_REPORT",
 ];
 const TOOLS: &[&str] = &[
-  "ast-grep", "sg", "npx", "bunx", "bun", "node", "tsc", "biome", "eslint", "oxlint", "jscpd",
+  "ast-grep", "sg", "npm", "npx", "bunx", "bun", "node", "tsc", "biome", "eslint", "oxlint",
+  "jscpd",
 ];
 
 /// A home holding a git project with a TypeScript config, ts-quality installed or not.
@@ -67,7 +67,7 @@ fn sandbox(installed: bool) -> Res<Sandbox> {
   )?;
   fs::write(project.join("tsconfig.json"), "{}\n")?;
   fs::write(project.join("package.json"), "{\"name\":\"x\"}\n")?;
-  fs::write(project.join("bun.lock"), "")?;
+  fs::write(project.join("package-lock.json"), "{}\n")?;
   git(&project, &["init", "-q"])?;
   git(&project, &["add", "."])?;
   git(&project, &["commit", "-q", "-m", "ts project"])?;
@@ -135,7 +135,7 @@ fn listing(dir: &Path) -> Res<Vec<String>> {
 }
 
 fn snapshot(dir: &Path) -> Res<Vec<(String, std::time::SystemTime)>> {
-  [MANIFEST, BRIDGE]
+  [MANIFEST]
     .iter()
     .map(|name| {
       let path = dir.join(name);
@@ -156,9 +156,9 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   let notice: Value = serde_json::from_slice(&first.stdout).unwrap();
   assert_eq!(
     notice["systemMessage"],
-    "ts-quality's Bun module was replaced by its native rule in toolu."
+    "ts-quality's JavaScript module was replaced by its native rule in toolu."
   );
-  assert_eq!(listing(&post).unwrap(), [MANIFEST, BRIDGE]);
+  assert_eq!(listing(&post).unwrap(), [MANIFEST]);
   let before = snapshot(&post).unwrap();
   let again = register(&sb).unwrap();
   assert_eq!((again.status.code(), again.stdout.len()), (Some(0), 0));
@@ -172,8 +172,8 @@ fn register_migrates_then_the_native_hook_reports_and_doctor_is_clean() {
   )
   .unwrap();
   assert!(fired.status.success(), "{fired:?}");
-  let stdout = String::from_utf8(fired.stdout).unwrap();
-  assert!(stdout.contains("Forbidden console.log"), "{stdout}");
+  let stdout = String::from_utf8(fired.stdout.clone()).unwrap();
+  assert!(stdout.contains("Forbidden console.log"), "{fired:?}");
 
   let doctor = toolu(
     &sb,

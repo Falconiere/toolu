@@ -20,7 +20,7 @@
   "license": "MIT",
   "type": "module",
   "bin": {
-    "toolu-plugins": "dist/cli.js"
+    "toolu-plugins": "cli.js"
   },
   "engines": {
     "node": ">=20.12"
@@ -30,10 +30,10 @@
     "provenance": true
   },
   "files": [
-    "dist/cli.js",
+    "cli.js",
     "assets"
   ],
   "scripts": {
-    "prepack": "bun run --cwd .. build"
+    "prepack": "mkdir -p assets && cp ../../../.claude-plugin/marketplace.json assets/marketplace.json"
   }
 }

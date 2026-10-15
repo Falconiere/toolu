@@ -28,7 +28,6 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let report = [
     binary::binary(&probed),
     binary::reachability(&probed),
-    checks::runtime(roots.env()),
     checks::host(&roots, &cwd),
     config_check::check(&roots, &cwd, &secrets),
     inventory::plugins_check(&found),

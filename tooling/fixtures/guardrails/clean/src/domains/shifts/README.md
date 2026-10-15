@@ -1,3 +1,0 @@
-# shifts
-
-The shifts domain.

@@ -128,24 +128,6 @@
     },
     {
       "kind": "xtask-task",
-      "id": "dist",
-      "pass": "crates/xtask/src/tests/dist_test.rs::a_matching_bundle_passes",
-      "fail": "crates/xtask/src/tests/dist_test.rs::a_stale_bundle_names_the_path"
-    },
-    {
-      "kind": "xtask-task",
-      "id": "check-portable-core",
-      "pass": "crates/xtask/src/tests/portable_core_test.rs::the_committed_doc_passes",
-      "fail": "crates/xtask/src/tests/portable_core_test.rs::a_missing_heading_is_a_finding"
-    },
-    {
-      "kind": "xtask-task",
-      "id": "check-workspace",
-      "pass": "crates/xtask/src/tests/package_workspace_test.rs::this_checkout_passes",
-      "fail": "crates/xtask/src/tests/package_workspace_test.rs::a_missing_package_is_a_finding"
-    },
-    {
-      "kind": "xtask-task",
       "id": "final-removal",
       "pass": "crates/xtask/src/tests/final_removal_test.rs::this_repository_passes",
       "fail": "crates/xtask/src/tests/final_removal_test.rs::a_shellcheckrc_is_a_finding"
@@ -173,6 +155,24 @@
       "id": "pack",
       "pass": "crates/xtask/src/tests/pack_test.rs::this_repository_packs",
       "fail": "crates/xtask/src/tests/pack_test.rs::a_hook_source_is_a_finding"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "bench-hooks",
+      "pass": "crates/xtask/src/tests/bench_hooks_entries_test.rs::every_repository_entry_has_exactly_one_payload",
+      "fail": "crates/xtask/src/tests/bench_hooks_report_test.rs::bench_hooks_lowered_budget_fails"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "bench-statusline",
+      "pass": "crates/xtask/src/tests/bench_statusline_test.rs::warm_renders_are_primed_each_and_the_cold_one_uses_the_cold_config",
+      "fail": "crates/xtask/src/tests/bench_statusline_report_test.rs::bench_statusline_over_budget_fails"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "host-smoke",
+      "pass": "crates/xtask/src/tests/host_smoke_steps_test.rs::push_needs_the_review_denial_and_an_untouched_remote",
+      "fail": "crates/xtask/src/tests/host_smoke_test.rs::an_unknown_host_is_an_error"
     }
   ]
 }

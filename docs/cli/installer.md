@@ -64,13 +64,12 @@ similar to the existing package `toml`. It replaces `@toolu/cli`, which used a
 tree before the registry. If the repository root or a declared workspace carried
 the name `@toolu/plugins`, npx would treat it as installed inside any toolu
 checkout and fail with `sh: toolu: command not found`, which is what the old
-`@toolu/cli` did. So the dev workspace at `tools/toolu-cli` is private and named
-`toolu-cli`, and the published manifest lives in its `npm/` folder, which no
-workspace declares. `tooling/src/__tests__/npx-invocation.test.ts` runs npm's own
-lookup to prove no local package matches, and fails if a documented command
-adds a tag, a version, or the old name. The one folder where npx still fails is
-`tools/toolu-cli/npm` itself. npm treats a folder with its own `package.json` as
-the project, and that manifest is the published package.
+`@toolu/cli` did. So the root package is the private `toolu-workspace`, and the
+published manifest lives in `tools/toolu-cli/npm`, which no workspace declares.
+The wrapper is one committed file, `cli.js`, with no build step.
+`crates/cli/tests/npm_wrapper.rs` runs it with Node. The one folder where npx
+still fails is `tools/toolu-cli/npm` itself. npm treats a folder with its own
+`package.json` as the project, and that manifest is the published package.
 
 To run unreleased code from a checkout, build the binary and call it:
 
@@ -79,15 +78,13 @@ cargo build -p toolu-cli
 ./target/debug/toolu plugins install --dry-run
 ```
 
-[`@toolu/core`](https://www.npmjs.com/package/@toolu/core) publishes from the
-same release. `@toolu/conformance` stays private, because it is an internal
-harness.
+`@toolu/core`, the old TypeScript library, is deprecated and no longer published.
 
 The `@toolu/plugins` tarball is five files: `package.json`, `README.md`,
-`LICENSE`, `dist/cli.js`, and `assets/marketplace.json`. The `plugins/` tree is
+`LICENSE`, `cli.js`, and `assets/marketplace.json`. The `plugins/` tree is
 deliberately excluded, because Claude Code and Codex fetch plugin content
 through their own host CLIs. The gate's `pack` step fails if anything else
-appears in either package.
+appears in it.
 
 ## Grammar
 

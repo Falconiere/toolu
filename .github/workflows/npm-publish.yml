@@ -10,9 +10,9 @@ name: npm publish
 # event created by that token -- a `release:` trigger here is silently ignored,
 # which is exactly how the 6.7.0 release published nothing.
 #
-# Two packages publish: @toolu/core, then @toolu/plugins, the `toolu-plugins`
-# wrapper that runs the native `toolu plugins`.
-# @toolu/conformance stays private — it is an internal test harness.
+# One package publishes: @toolu/plugins, the `toolu-plugins` wrapper that runs
+# the native `toolu plugins`. @toolu/core is no longer published (#440); its last
+# version stays on the registry, deprecated.
 #
 # @toolu/plugins publishes from tools/toolu-cli/npm, not from its private dev
 # workspace. npx checks the local project tree before the registry, so a
@@ -75,19 +75,17 @@ jobs:
       - name: Set up an npm new enough to attest provenance
         run: npm install --global npm@11.5.1
 
-      - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.4.2
-
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
       - name: Check the tag matches every package version
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          tag="${{ inputs.tag }}"
-          for dir in packages/toolu-core tools/toolu-cli/npm; do
+          tag="$TAG"
+          for dir in tools/toolu-cli/npm; do
+            if [ ! -f "$dir/package.json" ]; then
+              echo "$dir/package.json not found at $tag" >&2
+              exit 1
+            fi
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $tag; skipping"
               continue
@@ -108,7 +106,7 @@ jobs:
           set -uo pipefail
           npm_tag=latest
           if [[ "$TAG" == *-* ]]; then npm_tag=next; fi
-          for dir in packages/toolu-core tools/toolu-cli/npm; do
+          for dir in tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $TAG; skipping"
               continue
@@ -137,7 +135,7 @@ jobs:
       - name: Wait until every package resolves on the registry
         run: |
           set -euo pipefail
-          for dir in packages/toolu-core tools/toolu-cli/npm; do
+          for dir in tools/toolu-cli/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
               continue

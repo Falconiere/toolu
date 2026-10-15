@@ -35,7 +35,7 @@ Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk a
 | 3 | **Performance** | Hot paths (per-render/per-hook work), needless subprocess spawns |
 | 4 | **Test coverage** | Every new code path must have a colocated real-data test — missing tests are findings |
 | 5 | **Doc/comment accuracy** | Comments must match behavior — no stale paths, no "one-time" on code that runs every invocation |
-| 6 | **Tight test assertions** | Assert full identity, not loose suffixes (`*/statusline/statusline.sh`, not `*/statusline.sh`) |
+| 6 | **Tight test assertions** | Assert full identity, not loose suffixes (`*/toolu/pre-tools.d/rule.json`, not `*/rule.json`) |
 | 7 | **In-session migration WARNs** | Breaking changes (moved paths, removed symlinks) must surface actionable hints, not silent failures |
 | 8 | **Convention adherence** | Diff must follow the repo's own convention files the CI action gathers from the base ref (`AGENTS.md`, `CLAUDE.md`, etc.) |
 
@@ -64,8 +64,8 @@ When reviewing a worktree from a session rooted elsewhere, append
 `--repo /path/to/worktree` to the command; the gate only reads the
 state file under the pushed repository's own root.
 
-`toolu review write-state` needs Git. The SessionStart hook retains the old
-stable helper as a compatibility shim until #440. The native writer computes
+`toolu review write-state` needs Git. Since #440 the SessionStart hook removes
+the old stable helper link an older version published. The native writer computes
 the gate's exact `diff_sha`/`base`/`slug`, sets
 `review_round`, and writes the host-native `<repo root>/.claude/tmp/push-review/`,
 or `<repo root>/.codex/tmp/push-review/`

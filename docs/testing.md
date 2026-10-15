@@ -1,93 +1,48 @@
-# Testing with bun test
+# Testing
 
-toolu uses `bun test` for its hook, tooling, and conformance suites ([epic #247](https://github.com/Falconiere/toolu/issues/247)). The quality gate is `cargo xtask gate`. `bun run test:unit`, `bun run test:conformance`, and `bun run test:rust-conformance` stay product suites.
+Every test is a Rust test, run by `cargo test --workspace` (and by the gate's `tests` and `coverage` steps). There is no TypeScript or Bun test suite since #440. The quality gate is `cargo xtask gate`; the rules a test must follow are in [AGENTS.md](../AGENTS.md#rust-conventions) and [rust-quality-bar.md](rust-quality-bar.md).
 
-CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate --only context-budget --only portable-core --only ci-paths` and `cargo xtask check-markdown-cli`. See the CI section of AGENTS.md. The shell-analysis cold-start budget is hard on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`, and report-only on Linux. See [conformance-report.md](conformance-report.md) for measurements against the `v7.2.0` Bash baseline.
+CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. The plugin also runs on macOS: `rust-macos` runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
 
-The plugin also runs on macOS: `rust-macos` runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
+## Real, not mocked
 
-A test spawns the real thing: a hook bundle, `git`, `npm`, or a host CLI. It runs against real temp repositories and config roots. There are no mocks (AGENTS.md).
+A test spawns the real thing: the built `toolu` (`env!("CARGO_BIN_EXE_toolu")` in `crates/cli/tests`), `git`, `npm`, `node`, `ast-grep` or a host CLI. It runs against real temporary repositories, homes and config roots. There are no mocking crates (cargo-deny bans them) and no `#[ignore]` (the guardrails reject it). A tool a test needs is installed in CI; a test that cannot find it fails rather than skips.
 
-Shared helpers live in `@toolu/conformance/harness/*` (`tools/toolu-conformance/src/harness/`):
+## Where tests live
 
-| Module | What it gives you |
+- **Unit tests** sit beside their module in `src/<dir>/tests/<module>_test.rs`, wired by `#[cfg(test)] #[path = "tests/<module>_test.rs"] mod tests;`. They keep private access, and every module with a function has one.
+- **Black-box tests** sit in each crate's root `tests/`. `crates/cli/tests` drives the built binary through its real CLI and hook entries; shared helpers are under `tests/helpers/` and are included with `#[path = "helpers/<file>.rs"] mod <name>;`. A helper returns `Result` and never unwraps; only a `#[test]` function may unwrap.
+- **Fixtures** for a crate's own tests sit in `tests/fixtures/`; the language-neutral contracts several crates share sit in the repository's `fixtures/` ([fixtures/README.md](../fixtures/README.md)).
+
+## Shared goldens
+
+The JSON goldens in `fixtures/` were captured from the bash and TypeScript implementations the Rust crates replaced. Each is replayed against the native code, so the captured behaviour stays the contract:
+
+| Golden | Replayed by |
 |---|---|
-| `sandbox` | `using sb = createSandbox({ git: true })`: a temp `project` (optionally a git repo with one commit), `home`, and `codexHome`. Helpers are `path`/`write`/`read`/`git`, plus `writeConfig(host, "project" \| "user", config)` for `toolu.config.json`. The tree is removed when the scope ends, even if the test throws. |
-| `spawn` | `run(argv, { cwd, env, stdin, timeoutMs })` captures stdout, stderr, exit code, `durationMs` and `timedOut`. A timeout kills the whole process group. A missing binary resolves with exit 127. Host-session variables (`CLAUDE_*`, `CODEX_*`, `TOOLU_*`, `PLUGIN_ROOT`, …) never leak in, and an `env` value of `undefined` unsets a key. `runHook({ host, sandbox, pluginRoot, bundle \| argv, stdin })` spawns the real bundle as the host would. It sets `CLAUDE_PLUGIN_ROOT` / `PLUGIN_ROOT` / `CODEX_HOME` / `TOOLU_HOST_OVERRIDE` and runs with cwd at the project. |
-| `hosts` | `readHostOutcome(host, event, result)` validates a hook's output against that host's contract and returns `{ effect: allow \| deny \| ask, reason?, context? }`. Claude and Codex use `hookSpecificOutput`, and Codex has no `ask`. Cursor answers with `permission` and an empty reply is invalid. A violation throws `HostOutputError`. |
-| `fixtures` | Builders: `editFixture`, `writeFixture`, `patchFixture` (multi-file `apply_patch`), `bashFixture`, `mcpFixture`, `sessionFixture`, `promptFixture`, `postToolFixture`. `toStdin(host, fixture, { cwd })` renders the host's stdin: Codex receives edits as `apply_patch`, and Cursor gets `beforeShellExecution` / `beforeMCPExecution` / `preToolUse`. |
-| `timing` | `measureLatency(once, { runs, warmup })` samples sequentially and reports p50/p95. `assertLatencyBudget(candidate, baseline, 5)` checks the cold-start delta measured in the same run when enforcement is enabled. |
-| `entry-command` | The one place a test names a committed hook entry. `bundlePath(root, entry)` is `hooks/dist/<entry>.js` under `root`; `entryArgv(plugin, entry)` runs it with Bun; `publishedArgv(plugin, entry)` runs a skill CLI bundle by path through its shebang, as its published symlink does; `launchedArgv({ plugin, event, entry })` runs it through its `hooks.json` launcher under `sh -c`; `resolveEntryCommand` is the resolver behind them. Each returns the selected Rust command instead under `TOOLU_IMPL` (below). `implementationTag(plugin, entry)` is a test-name suffix that names the Rust run. |
-| `startup` | SessionStart startup hooks run the way a host runs them: `runStartupHook(pluginRoot, entry, sb, env)` executes the plugin's real `hooks.json` launcher under `sh -c`; `startupEnv(host, sb, pluginRoot)` / `startupRoot` give the Claude or Codex environment and config root. `publishedCliSuite(spec)` registers the shared cases for a plugin that publishes a Bun CLI at a stable config-root path (both hosts with and without credentials, stale link, user file, Bun off `PATH`, no Bun, missing bundle). |
+| `dispatch/cases.json` | `crates/core/engine/tests/dispatch_fixture.rs` |
+| `gates/pre-tool-modules-{a,b,c}-golden.json` and their corpus rows | `crates/cli/tests/golden_gates.rs` |
+| `gates/lifecycle-golden.json` | `crates/cli/tests/golden_lifecycle.rs` |
+| `quality/{ts,python,rust}-golden.json` | `crates/cli/tests/golden_quality.rs` |
+| `statusline/cases.json` (render, setup, startup) | `crates/cli/tests/golden_statusline.rs` |
+| `ledger/cases.json` | `crates/cli/tests/ledger_cases.rs` |
+| `shell/analysis.json` | `crates/core/shell/tests/analysis_fixture.rs` |
+| `host/encode.json`, `host/root.json`, `config/expected.json` | `crates/core/protocol/tests/encode_fixture.rs`, `crates/core/runtime/tests/{host_roots,config}_fixture.rs` |
+| `state/{cases,gate-bytes,edit-records}.json` | `crates/core/state/tests/` |
 
-The parity case records and golden captures live in `fixtures/`; `fixtures/README.md` documents their shapes. The TypeScript suites load these committed JSON files at runtime; Rust ports read the same records. `index.json` records the original case names and `bun run tooling/src/check-fixture-inventory.ts` rejects missing, extra or renamed cases. The shared `json-cases` harness validates case envelopes, expands explicitly tagged sandbox paths, and runs a bounded set of real setup actions. Add a case to its JSON file, record its name in `index.json`, and the corresponding suite discovers it without changing a TypeScript case table. The three tooling-only overlay trees remain under `tooling/fixtures/` until #439.
+Each replay asserts the number of cases it ran, names a mismatching case with a diff, and lists any case it deliberately does not replay in a constant with a one-line reason (for example the statusline `jev` and `report` kinds, which describe the retired TypeScript report). A deviation from a capture is named and asserted, never silent.
 
-A port test reads like this:
+## Concurrency
 
-```ts
-import { expect, test } from "bun:test";
-import { resolve } from "node:path";
-import { editFixture, toStdin } from "@toolu/conformance/harness/fixtures";
-import { readHostOutcome } from "@toolu/conformance/harness/hosts";
-import { bundlePath } from "@toolu/conformance/harness/entry-command";
-import { createSandbox } from "@toolu/conformance/harness/sandbox";
-import { runHook } from "@toolu/conformance/harness/spawn";
+Tests run in parallel. Each test owns its temporary directories (`tempfile`), never changes the process's working directory or environment, and passes `cwd` and `env` to the processes it spawns, clearing host-session variables (`CLAUDE_*`, `CODEX_*`, `TOOLU_*`, `CURSOR_*`, `PLUGIN_ROOT`) so a developer's session never leaks in. A test that writes an executable and spawns it holds the lock the launcher helpers use, so `exec` never meets `ETXTBSY` on Linux.
 
-const pluginRoot = resolve(import.meta.dir, "../../.."); // plugins/<name>
-const bundle = bundlePath(pluginRoot, "<entry>");
+## Benchmarks and live checks
 
-test.concurrent("protected files deny an .env edit on codex", async () => {
-  using sb = createSandbox({ git: true });
-  sb.writeConfig("codex", "project", { version: 1, gates: { protectedFiles: { mode: "block" } } });
-  const stdin = toStdin("codex", editFixture(sb.path(".env"), "a", "b"), { cwd: sb.project });
-  const res = await runHook({ host: "codex", sandbox: sb, pluginRoot, bundle, stdin });
-  expect(readHostOutcome("codex", "PreToolUse", res).effect).toBe("deny");
-});
-```
-
-## Running the suites against a Rust port
-
-The Rust rebuild ([epic #402](https://github.com/Falconiere/toolu/issues/402)) reuses these black-box tests unchanged ([#409](https://github.com/Falconiere/toolu/issues/409)). `TOOLU_IMPL` selects which hook entries run as the Rust binary:
-
-| `TOOLU_IMPL` | Runs |
-|---|---|
-| unset or empty | every entry as its committed Bun bundle, exactly as before |
-| `rust` | every entry as the Rust binary |
-| `rust:<plugin>/<entry>,...` | only the listed entries as the Rust binary, e.g. `rust:toolu/pre-tools` |
-
-Any other value, an empty item, a duplicate or a path separator inside a name is an error, never a silent fallback to Bun. The binary is `toolu` in `TOOLU_RUST_BIN_DIR`, or `target/release/toolu` at the repository root when that is unset. A selected entry runs `toolu hook <entry>` for the core `toolu` plugin and `toolu <plugin> hook <entry>` for the others, with the same stdin, cwd and environment the bundle gets. The two skill CLIs the binary serves as namespace verbs are the exception ([#421](https://github.com/Falconiere/toolu/issues/421)): `toolu/plan-ledger` runs `toolu ledger` and `toolu/verdict` runs `toolu ledger verdict`, each followed by the CLI's own arguments. A test that runs Markdown commands puts `installTooluShim(dir)` first on its `PATH`: that `toolu` sends `toolu ledger …` through the same seam, and fails with 127 on any other command. A selected binary that is missing, not a file or not executable fails the test at setup and names the selector and the expected path. The pre-tools case suites put `implementationTag` in their test names, so `TOOLU_IMPL=rust:toolu/pre-tools bun test plugins/toolu/hooks/src/__tests__/pre-tool-modules-a-golden.test.ts` reports a failing case as `… [rust:toolu/pre-tools]`.
-
-Test files reach a bundle only through `entry-command`: `bundle-references.test.ts` fails on a test that spells the `hooks/dist` path (or `../dist/` from `hooks/src`) or calls `launcherCommand` itself, except for the listed files whose subject is the bundle or launcher text (packaging, drift, and the launcher).
-
-`test:conformance` runs two suites, `protected-files` and `spaces-cwd`. Both dispatch `toolu/pre-tools` and take the Rust route when it is selected.
-
-`fixtures/ledger/cases.json` is the ledger's shared golden: `ledger-cases.test.ts` replays it through the seam, and `crates/cli/tests/ledger_cases.rs` replays it against the binary.
-
-`fixtures/rust-ported.json` lists the ported entries, `{ "entries": ["<plugin>/<entry>", ...] }`, and a port adds its entry there. `bun run test:rust-conformance` reads it: an empty list is a no-op, otherwise it runs `cargo build --release --locked --bin toolu` (`CARGO` overrides the cargo executable), then `test:unit`, `test:conformance`, and `test:statusline-native` with `TOOLU_IMPL=rust:<entries>`. CI runs it in the `rust-conformance` job, which installs the Rust toolchain only when the list is not empty.
-
-The `tools/toolu-cli` suite runs `toolu plugins` and the npm wrapper against `target/debug/toolu` (`requiredBuiltTooluBinary`), and fails without it, so `test:unit` needs `cargo build -p toolu-cli --bin toolu` first.
-
-The statusline native suite runs the 31 render, 15 setup and five startup records through real repositories and settings files. `bun run test:statusline-native` uses `target/debug/toolu` for a direct run, so build that binary first with `cargo build -p toolu-cli --bin toolu`. The rust-conformance command uses the release binary it just built.
-
-A port also has a resource budget ([#410](https://github.com/Falconiere/toolu/issues/410), [resource-budgets.md](resource-budgets.md)). `bun run bench:hooks --assert` measures every entry in `fixtures/rust-ported.json` as Rust and fails when one is over its p50 budget in `benchmarks/hook-budgets.json`. It also fails when a ported entry has no budget, so a port adds its budget there too. The `hook-bench` CI job runs it on Linux; macOS only reports.
-
-The bench and its end-to-end tests need the native measurer (`cargo xtask measure`), so they need the Rust toolchain. Test files named `*.native.test.ts` hold such tests: `test:unit` ignores them (`--path-ignore-patterns`), and the `hook-bench` job runs `tooling/src/benchmarks/__tests__/hook-resources.native.test.ts` before the bench.
-
-Epic-orchestrator's TypeScript scripts and their tests are gone: #434 (the resident engine) and #435 (worker reports and actions) replaced them with Rust tests (`crates/epic-orchestrator`, `crates/cli/tests/epic_*.rs`). The conformance seam's Rust-only entries `epic-orchestrator/launch` and `epic-orchestrator/report` resolve to the built `toolu` whatever `TOOLU_IMPL` says.
-
-## Concurrency rule
-
-bats ran files in parallel and tests within a file serially, because suites shared per-file state. `bun test` suites follow a stronger rule: **files in parallel, tests concurrent.**
-
-- Write every test as a top-level `test.concurrent(...)`. Where a required tool may be absent, use `test.concurrent.skipIf(NO_TOOL)(...)`. CI installs every such tool.
-- Each test owns its temp directories through `createSandbox`. Nothing is shared at module scope.
-- Never call `process.chdir` and never write `process.env`. Pass `cwd` and `env` to `run` instead.
-- Latency measurements are the exception: they time one process at a time, so a timing test stays a plain `test`.
-
-The suites pass under `bun test --parallel --concurrent --timeout 60000`. Every `bun test` in the package scripts passes `--timeout 60000`, because real subprocesses under concurrency outrun bun's 5 s default on a loaded CI runner. Pass it too when you run several suite files by hand.
-
-On macOS, put Homebrew OpenSSL 3 before `/usr/bin` on `PATH` when running the HTTPS fixture: `PATH=/opt/homebrew/bin:$PATH`. Apple's `/usr/bin/openssl` is LibreSSL and its generated EC key fails to load in Bun 1.4.2.
+- `cargo xtask bench-hooks [--assert]` measures every hook entry ([resource-budgets.md](resource-budgets.md)); the `hook-bench` CI job asserts on Linux.
+- `cargo xtask bench-statusline --assert` is the statusline render budget, run by the Linux `rust` leg.
+- `cargo xtask host-smoke --host claude|codex|both` is the live macOS check of the native hooks in real Claude Code and Codex sessions, with Bun hidden from every child `PATH`: a denied `.env` write, a recorded quality failure, a denied commit and a denied push. It spends model credits, so it runs by hand, never in CI; see the `verify-dual-host-plugins` project skill.
+- `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in a fixed install directory; CI runs it with `sudo install`.
 
 ## Adding coverage
 
-Put a hook test beside its source in `hooks/src/__tests__/<name>.test.ts`, spawn the committed bundle, and assert its host output and state. Use `createSandbox` for every test. For a new hook surface, add cases to the conformance harness and update the [coverage inventory](gate-coverage-matrix.md).
+Add a unit test beside the module you change and a black-box test in the crate's `tests/` for a new hook surface, CLI verb or engine transition. A new `cargo xtask` task also names a passing and a failing test in `tooling/conventions/guardrails/rust/inventory.json`. For a new hook or gate, update the [coverage inventory](gate-coverage-matrix.md).

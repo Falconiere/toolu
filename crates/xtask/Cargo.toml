@@ -13,6 +13,7 @@ proc-macro2.workspace = true
 regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde-saphyr.workspace = true
 syn.workspace = true
 toml.workspace = true
 toolu-protocol = { path = "../core/protocol" }

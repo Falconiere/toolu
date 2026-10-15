@@ -4,8 +4,8 @@ use super::summarize;
 
 #[test]
 fn captured_rust_panic_keeps_app_frames_and_collapses_runtime() {
-  let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/toolu/scripts/__tests__/fixtures/debug/rust-panic.txt");
+  let path =
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/debug/rust-panic.txt");
   let contents = std::fs::read_to_string(path).unwrap();
   let lines: Vec<&str> = contents.lines().collect();
   let doc: serde_json::Value =

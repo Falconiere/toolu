@@ -124,9 +124,7 @@ fn folded_descriptions_unicode_spaces_and_missing_phrases() {
 
 #[test]
 fn doc_names_match_the_session_hook() {
-  let source =
-    std::fs::read_to_string(repo().join("plugins/toolu/hooks/src/lifecycle/session-docs.ts"))
-      .unwrap();
+  let source = std::fs::read_to_string(repo().join("crates/toolu/src/lifecycle/docs.rs")).unwrap();
   let pattern = regex::Regex::new(r#""([a-z-]+)\.md""#).unwrap();
   let mut rendered: Vec<&str> = pattern
     .captures_iter(&source)

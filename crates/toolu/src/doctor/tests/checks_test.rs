@@ -1,6 +1,4 @@
-use std::time::Duration;
-
-use super::{BUN_TIMEOUT, Check, Status, document, failure_line, host, runtime, text};
+use super::{Check, Status, document, failure_line, host, text};
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
@@ -46,22 +44,13 @@ fn document_is_not_ok_when_a_check_fails() {
 #[test]
 fn a_warn_does_not_clear_ok() {
   let checks = [Check::new(
-    "runtime",
+    "tools",
     Status::Warn,
-    "Bun is missing",
+    "ast-grep is missing",
     None,
     serde_json::json!({}),
   )];
   assert_eq!(document(&checks)["ok"], true);
-}
-
-#[test]
-fn runtime_warns_when_bun_is_not_on_path() {
-  let env = Env::from_pairs([("PATH", "/nonexistent")]);
-  let check = runtime(&env);
-  assert_eq!(check.status, Status::Warn);
-  assert_eq!(check.hint.as_deref(), Some("install Bun 1.4.x"));
-  assert_eq!(BUN_TIMEOUT, Duration::from_secs(1));
 }
 
 #[test]

@@ -513,7 +513,7 @@
       }
     },
     {
-      "name": "pre: a .js module shadows its spec's .sh",
+      "name": "pre: a .js module never runs and no longer shadows its spec's .sh",
       "phase": "pre",
       "host": "claude",
       "stdin": {
@@ -539,7 +539,7 @@
         }
       ],
       "expect": {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"fresh js\\n\\nother spec\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"stale sh\\n\\nother spec\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0
       }
@@ -601,7 +601,7 @@
       }
     },
     {
-      "name": "pre: an ESM deny wins over a built-in ask",
+      "name": "pre: an ESM deny never runs, so a built-in ask stands",
       "phase": "pre",
       "host": "claude",
       "stdin": {
@@ -628,13 +628,13 @@
         }
       ],
       "expect": {
-        "stdout": "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"esm denies\"}}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"permissionDecision\": \"ask\",\n    \"permissionDecisionReason\": \"maybe\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0
       }
     },
     {
-      "name": "pre: ESM failures are reported and skipped",
+      "name": "pre: ESM modules are skipped without running",
       "phase": "pre",
       "host": "claude",
       "stdin": {
@@ -672,31 +672,7 @@
         }
       ],
       "expect": {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"survivor\"\n  }\n}\n",
-        "stderr": "toolu-registry: module a@t__throws.js failed: boom; output skipped\ntoolu-registry: module b@t__mismatch.js failed: contract mismatch: exports {\"spec\":\"b@t\",\"name\":\"other\",\"event\":\"tool/pre\"}, file and directory want {\"spec\":\"b@t\",\"name\":\"mismatch\",\"event\":\"tool/pre\"}; output skipped\ntoolu-registry: module c@t__invalid.js failed: invalid decision: { kind: 'advisory', message: '' }; output skipped\ntoolu-registry: module d@t__number.js failed: default export is not a registry module; output skipped\ntoolu-registry: module e@t__wrongdir.js failed: contract mismatch: exports {\"spec\":\"e@t\",\"name\":\"wrongdir\",\"event\":\"tool/post\"}, file and directory want {\"spec\":\"e@t\",\"name\":\"wrongdir\",\"event\":\"tool/pre\"}; output skipped\n",
-        "exitCode": 0
-      }
-    },
-    {
-      "name": "pre: an ESM module sees the shell event and its context",
-      "phase": "pre",
-      "host": "claude",
-      "stdin": {
-        "tool_name": "Bash",
-        "tool_input": {
-          "command": "git status"
-        },
-        "session_id": "s1",
-        "cwd": "$PROJECT"
-      },
-      "registry": [
-        {
-          "file": "x@t__probe.js",
-          "js": "export default { spec: \"x@t\", name: \"probe\", event: \"tool/pre\", async run(event, ctx) { return { kind: \"advisory\", message: [event.type, event.command, event.toolName, event.sessionId, event.toolCallId, ctx.raw.tool_name, ctx.host, ctx.projectRoot === ctx.cwd, typeof ctx.env.PATH, ctx.edit === undefined].join(\"|\") }; } };"
-        }
-      ],
-      "expect": {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"shell/pre|git status|Bash|s1|unknown|Bash|claude|true|string|true\"\n  }\n}\n",
+        "stdout": "",
         "stderr": "",
         "exitCode": 0
       }
@@ -1297,7 +1273,7 @@
       }
     },
     {
-      "name": "post: an ESM post_block ends the walk",
+      "name": "post: an ESM post_block never runs, so the walk continues",
       "phase": "post",
       "host": "claude",
       "stdin": {
@@ -1326,38 +1302,7 @@
         }
       ],
       "expect": {
-        "stdout": "{\"decision\":\"block\",\"reason\":\"esm blocks\"}\n",
-        "stderr": "",
-        "exitCode": 0
-      }
-    },
-    {
-      "name": "post: an ESM module sees the tool output",
-      "phase": "post",
-      "host": "claude",
-      "stdin": {
-        "hook_event_name": "PostToolUse",
-        "tool_name": "Edit",
-        "tool_input": {
-          "file_path": "$PROJECT/README.md",
-          "old_string": "a",
-          "new_string": "b"
-        },
-        "tool_response": {
-          "success": true,
-          "filePath": "$PROJECT/README.md"
-        },
-        "session_id": "s1",
-        "cwd": "$PROJECT"
-      },
-      "registry": [
-        {
-          "file": "x@t__probe.js",
-          "js": "export default { spec: \"x@t\", name: \"probe\", event: \"tool/post\", async run(event, ctx) { return { kind: \"advisory\", message: [event.type, JSON.stringify(event.toolOutput), event.toolInput.file_path === ctx.raw.tool_input.file_path].join(\"|\") }; } };"
-        }
-      ],
-      "expect": {
-        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"tool/post|{\\\"success\\\":true,\\\"filePath\\\":\\\"$PROJECT/README.md\\\"}|true\"\n  }\n}\n",
+        "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PostToolUse\",\n    \"additionalContext\": \"never\"\n  }\n}\n",
         "stderr": "",
         "exitCode": 0
       }
@@ -1433,7 +1378,7 @@
       ],
       "expect": {
         "stdout": "",
-        "stderr": "toolu-dispatch: module native exited 1; output skipped\ntoolu-registry: registry module noname.sh lacks <plugin-spec>__<name> namespace; skipped\ntoolu-registry: module b@t__boom.js failed: boom; output skipped\ntoolu-dispatch: module a@t__first.sh exited 1; output skipped\n",
+        "stderr": "toolu-dispatch: module native exited 1; output skipped\ntoolu-registry: registry module noname.sh lacks <plugin-spec>__<name> namespace; skipped\ntoolu-dispatch: module a@t__first.sh exited 1; output skipped\n",
         "exitCode": 0
       }
     },

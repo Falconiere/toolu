@@ -16,7 +16,7 @@ Usage: toolu statusline [OPTIONS] <COMMAND>
 Commands:
   render         Render one Claude status-line JSON payload from stdin
   setup          Wire Claude settings.json to the native renderer
-  refresh        Refresh the compatibility shim and old settings
+  refresh        Migrate old settings and retire the old statusline path
   refresh-cache  Refresh cached Git counts for a statusline worktree (internal)
   help           Print this message or the help of the given subcommand(s)
 
@@ -62,7 +62,7 @@ Options:
 ## `toolu statusline refresh`
 
 ```text
-Refresh the compatibility shim and old settings
+Migrate old settings and retire the old statusline path
 
 Usage: toolu statusline refresh [OPTIONS]
 

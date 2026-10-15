@@ -26,14 +26,12 @@ pub const PLUGIN: &str = "ts-quality";
 /// The registry spec of the rule.
 pub const SPEC: &str = rule::SPEC;
 
-/// Its `SessionStart` registration and the bridge for `.ts`/`.tsx` edits.
+/// Its `SessionStart` registration for `.ts`/`.tsx` edits: the manifest, and the prune of the old
+/// `.js` module and `.sh` bridge.
 pub const QUALITY_PLUGIN: QualityPlugin = QualityPlugin {
   plugin: PLUGIN,
   spec: SPEC,
   name: rule::NAME,
-  path_glob: "*.ts*",
-  guard: "TOOLU_TS_QUALITY_NATIVE",
-  language: "TypeScript",
 };
 
 const GUIDE: Guide = Guide {

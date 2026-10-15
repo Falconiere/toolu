@@ -82,8 +82,9 @@ Gate data sets the bar: `[workspace.lints]`, `clippy.toml`, `rustfmt.toml`,
 code exists: `layers.json`, `folders.json`, `inventory.json` and
 `coverage-floor.json`. `cargo xtask check-gate-change` compares the working
 tree with the merge base: registration data may only grow (append, add a key,
-add a floor row at or above the default) and may ship with product code; any
-other change to it, and any change to gate data, must ship alone in a PR
+add a floor row at or above the default) and may ship with product code. An
+`inventory.json` row may also be removed once its task no longer exists, so a
+diff that deletes a task drops its row with it. Any other change to it, and any change to gate data, must ship alone in a PR
 titled `chore(gates): …`, with the reason in its body.
 
 ## Fuzzing

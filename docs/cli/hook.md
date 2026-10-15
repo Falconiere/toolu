@@ -14,7 +14,7 @@ Run a hook entry; hooks.json calls it (internal)
 Usage: toolu hook [OPTIONS] <NAME>
 
 Arguments:
-  <NAME>  The hook entry, as in the plugin's hooks/dist/<NAME>.js
+  <NAME>  The hook entry, as its plugin's hooks.json names it
 
 Options:
       --event <EVENT>      The host event it is registered under; absent counts as enforcing

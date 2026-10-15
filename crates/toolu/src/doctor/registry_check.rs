@@ -1,4 +1,5 @@
-//! Registry directories: bash modules are fine, the Bun bridge warns, a bad manifest fails.
+//! Registry directories: bash modules are fine, a `.js` module (never run since #440) warns,
+//! a bad manifest fails.
 
 use toolu_engine::registry::gate::plugin_presence;
 use toolu_engine::registry::{Entry, list_dir};
@@ -47,7 +48,10 @@ fn entry_findings(roots: &Roots, event: RegistryEvent, entry: &Entry) -> Vec<(bo
     ModuleKind::Bash => Vec::new(),
     ModuleKind::Esm => vec![(
       false,
-      format!("{} runs through the Bun bridge until #440", entry.file),
+      format!(
+        "{} is a JavaScript module, which toolu no longer runs (docs/registry.md#executable-modules)",
+        entry.file
+      ),
     )],
     ModuleKind::Manifest => manifest_findings(roots, event, entry),
   }

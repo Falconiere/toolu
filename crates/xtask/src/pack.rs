@@ -48,7 +48,7 @@ fn report(problems: &[String]) -> Verdict {
 }
 
 fn expectations() -> Vec<Expectation> {
-  vec![plugins_package(), core_package()]
+  vec![plugins_package()]
 }
 
 fn plugins_package() -> Expectation {
@@ -60,28 +60,11 @@ fn plugins_package() -> Expectation {
       "README.md",
       "LICENSE",
       "assets/marketplace.json",
-      "dist/cli.js",
+      "cli.js",
     ]),
     forbidden: &["plugins/", "src/", "node_modules/", ".env"],
     patterns: PLUGINS_PATTERNS,
     exact: true,
-  }
-}
-
-fn core_package() -> Expectation {
-  Expectation {
-    name: "@toolu/core",
-    dir: "packages/toolu-core",
-    required: owned(&[
-      "package.json",
-      "README.md",
-      "LICENSE",
-      "src/decision/decision.ts",
-      "src/dispatch/dispatch.ts",
-    ]),
-    forbidden: &["plugins/", "dist/", "node_modules/", ".env"],
-    patterns: &[],
-    exact: false,
   }
 }
 

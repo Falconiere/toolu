@@ -26,22 +26,6 @@ pub enum RegistryStatus {
   Failed,
 }
 
-/// How a stable-path publish ended.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "kebab-case")]
-pub enum HelperStatus {
-  /// The link points at the source.
-  Published,
-  /// A user's file or directory holds the path and was left alone.
-  KeptUserFile,
-  /// The link could not be made.
-  LinkFailed,
-  /// The directory could not be created.
-  Unwritable,
-  /// There was nothing to publish.
-  SourceMissing,
-}
-
 /// One line of the report, in TypeScript's key order.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
@@ -63,18 +47,6 @@ pub enum StartupRecord {
     /// Why it failed.
     #[serde(skip_serializing_if = "Option::is_none")]
     error: Option<String>,
-  },
-  /// One stable-path helper.
-  Helper {
-    /// The plugin.
-    plugin: String,
-    /// The file published.
-    source: String,
-    /// Where; absent only when there was no source.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    path: Option<String>,
-    /// How it ended.
-    status: HelperStatus,
   },
   /// A failure outside any one contribution.
   Error {

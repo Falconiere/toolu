@@ -17,6 +17,8 @@ use toolu_runtime::startup::context::render_hook_output;
 use toolu_state::ctx::StateCtx;
 use toolu_state::sweeper::sweep_state;
 
+use toolu_engine::registry::{esm_advisory, esm_modules};
+
 use crate::lifecycle::dependencies::dependency_warning;
 use crate::lifecycle::diagnostics::diagnostics;
 use crate::lifecycle::docs::{DocInput, doc_parts, event_title};
@@ -62,6 +64,15 @@ pub fn session_start(input: &SessionInput<'_>) -> Outcome {
   housekeeping(&roots);
   let event = session_event(input.payload);
   let config = load(&roots, Some(input.cwd));
+  let registry: Vec<String> = esm_modules(&config_root)
+    .iter()
+    .map(|module| esm_advisory(module))
+    .collect();
+  let advisory = advisory_lines(input.advisory, &registry);
+  let input = &SessionInput {
+    advisory: advisory.as_deref(),
+    ..*input
+  };
   let (stdout, swept) = render(input, &event, detected.host, &config_root, &config);
   Outcome {
     exit: Exit::Success,
@@ -133,6 +144,16 @@ fn runtime_line(version: &str, exe: Option<&Path>) -> String {
     |path| path.display().to_string(),
   );
   format!("toolu runtime: native {version} at {at}")
+}
+
+/// The skew advisory, then one line per `.js` registry module toolu no longer runs.
+fn advisory_lines(skew: Option<&str>, registry: &[String]) -> Option<String> {
+  let lines: Vec<&str> = skew
+    .filter(|line| !line.is_empty())
+    .into_iter()
+    .chain(registry.iter().map(String::as_str))
+    .collect();
+  (!lines.is_empty()).then(|| lines.join("\n"))
 }
 
 fn with_advisory(advisory: Option<&str>, body: String) -> String {

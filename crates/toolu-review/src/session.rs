@@ -1,4 +1,5 @@
-//! Native `SessionStart`: retain the old stable path as a one-line shell shim.
+//! Native `SessionStart`: retire the `write-state.sh` stable path older
+//! versions published (#440); `toolu review write-state` replaces it.
 
 use std::path::Path;
 
@@ -6,32 +7,21 @@ use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::startup::publish::{PublishOptions, publish};
-use toolu_runtime::startup::report::HelperStatus;
+use toolu_runtime::startup::retire::{Retired, retire};
 
-/// Link the compatibility shim into the active host's config root.
-pub fn session_start(env: &Env, plugin_root: &Path) -> Outcome {
+/// Remove toolu's old `<config root>/toolu-review/write-state.sh` link, if any.
+pub fn session_start(env: &Env, _plugin_root: &Path) -> Outcome {
   let roots = Roots::new(env.clone(), None);
-  let source = plugin_root.join("scripts/write-state.sh");
-  let published = publish(&PublishOptions {
-    plugin: "toolu-review",
-    source: &source,
-    dir: "toolu-review",
-    name: "write-state.sh",
-    what: "helper",
-    roots: &roots,
-  });
-  if let Some(error) = published.report_error {
-    return Outcome::failed(Exit::Failure, error);
-  }
-  let warning = published.warning.or_else(|| match published.result.status {
-    HelperStatus::LinkFailed => published
-      .result
-      .path
-      .map(|path| format!("toolu-review: cannot publish {}", path.display())),
-    HelperStatus::SourceMissing => Some("toolu-review: compatibility helper missing".to_owned()),
-    HelperStatus::Published | HelperStatus::KeptUserFile | HelperStatus::Unwritable => None,
-  });
+  let warning = match retire(
+    &roots,
+    "toolu-review",
+    "toolu-review",
+    "write-state.sh",
+    None,
+  ) {
+    Retired::Failed(line) => Some(line),
+    Retired::Absent | Retired::Removed | Retired::Kept => None,
+  };
   Outcome {
     exit: Exit::Success,
     stdout: None,

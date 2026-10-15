@@ -6,8 +6,9 @@
 //!   ask over advisory before a tool, block over advisory after it, and one walk
 //!   per path of a multi-file patch;
 //! - `registry`: the `<config>/toolu/{pre,post}-tools.d` listing, installed-plugin
-//!   gating and the Codex prune; manifests enable compiled-in rules, `.sh` modules
-//!   run as executables and `.js` modules through a temporary Bun bridge;
+//!   gating and the Codex prune; manifests enable compiled-in rules and `.sh`
+//!   modules run as executables. `.js` modules no longer run (#440):
+//!   [`registry::esm_modules`] names them for the session-start advisory;
 //! - `gates`: private implementations of the post-tool `gate_status` and
 //!   `push_waiver` built-ins, exposed through `builtins::POST_TOOL`;
 //! - `trace`: what a dispatch did with each module;

@@ -1,6 +1,6 @@
-# Build output, written into the publish folder.
-npm/dist/
+# Copied into the publish folder by `prepack`.
 npm/assets/
-# Left behind by builds from before the CLI published from npm/.
+# Left behind by builds from before #440, when the CLI was bundled into npm/dist.
+npm/dist/
 /dist/
 /assets/

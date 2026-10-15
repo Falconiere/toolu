@@ -8,15 +8,14 @@
 /plugin install <NAME>@toolu
 ```
 
-**Prerequisite:** [Bun](https://bun.sh) 1.4.x on `PATH`. See [docs/runtime.md](../../docs/runtime.md).
+**Prerequisite:** the native [`toolu` binary](../../docs/install.md). Bun is not used or needed. See [docs/runtime.md](../../docs/runtime.md).
 
-Hooks and registry contributions run as bundled TypeScript on Bun. Document the executable bundle and its host wiring when this plugin has a hook.
+Hooks and registry contributions run as `toolu <namespace> hook …` entries from the generated launcher. Document the hook entries and their host wiring when this plugin has a hook.
 
 In skills, commands and agents, write plain `toolu <namespace> <verb>` for a
 ported CLI verb. SessionStart supplies the native binary's absolute path for
 that session when the agent command shell cannot resolve plain `toolu`; never
-put a fixed binary path in static Markdown. Keep the current Bun invocation
-until the namespace's port supplies that verb. See [docs/install.md](../../docs/install.md#agent-command-shell).
+put a fixed binary path in static Markdown. See [docs/install.md](../../docs/install.md#agent-command-shell).
 
 <DEPENDENCY-NOTE — if the Claude plugin.json lists a dependency, e.g. "Requires the `toolu` plugin." Otherwise: "Standalone, no dependencies.">
 

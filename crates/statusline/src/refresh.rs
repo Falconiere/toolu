@@ -1,133 +1,95 @@
-//! `SessionStart`: keep the old statusline path alive and migrate it once to the native command.
+//! `SessionStart` and `toolu statusline refresh`: migrate a settings command that
+//! still runs the old stable path to `toolu statusline render`, then retire that
+//! path (#440) on a later refresh, once no user or project settings name it. The
+//! session that migrates keeps the link, since it may still run the old command.
 
-use std::fs::OpenOptions;
-use std::io::{ErrorKind, Write as _};
-use std::os::unix::fs::{OpenOptionsExt as _, PermissionsExt as _};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::host::roots::Roots;
-use toolu_runtime::startup::publish::{PublishOptions, publish};
-use toolu_runtime::startup::report::HelperStatus;
+use toolu_runtime::startup::retire::{Retired, retire};
 
 use crate::setup;
 
+/// What the generated fallback shim held, before #440.
 const SHIM: &str = "#!/bin/sh\nexec toolu statusline render \"$@\"\n";
 
 #[derive(Debug)]
 struct Refreshed {
-  published: bool,
+  retired: bool,
   migrated: bool,
   notice: Option<String>,
 }
 
-fn generated_source(roots: &Roots) -> Result<PathBuf, String> {
-  let dir = roots.config_root().join("toolu");
-  std::fs::create_dir_all(&dir)
-    .map_err(|error| format!("cannot create {}: {error}", dir.display()))?;
-  let path = dir.join("statusline-render.sh");
-  let opened = OpenOptions::new()
-    .write(true)
-    .create_new(true)
-    .mode(0o755)
-    .open(&path);
-  match opened {
-    Ok(mut file) => {
-      if let Err(error) = file.write_all(SHIM.as_bytes()) {
-        let _removed = std::fs::remove_file(&path);
-        return Err(format!("cannot write {}: {error}", path.display()));
-      }
-      Ok(path)
-    }
-    Err(error) if error.kind() == ErrorKind::AlreadyExists => {
-      let text = std::fs::read_to_string(&path)
-        .map_err(|error| format!("cannot read {}: {error}", path.display()))?;
-      let executable = std::fs::metadata(&path)
-        .is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0);
-      if text == SHIM && executable {
-        Ok(path)
-      } else {
-        Err(format!(
-          "{} is not the toolu statusline shim",
-          path.display()
-        ))
-      }
-    }
-    Err(error) => Err(format!("cannot create {}: {error}", path.display())),
-  }
-}
-
-fn source(roots: &Roots, plugin_root: Option<&Path>) -> Result<PathBuf, String> {
-  if let Some(root) = plugin_root {
-    return Ok(root.join("scripts/statusline.sh"));
-  }
-  generated_source(roots)
-}
-
-fn published(roots: &Roots, source: &Path) -> Result<bool, String> {
-  let done = publish(&PublishOptions {
-    plugin: "statusline",
-    source,
-    dir: "statusline",
-    name: "statusline.sh",
-    what: "renderer",
+/// Remove the old link and the generated shim it pointed at, unless the settings still name them.
+fn retire_paths(roots: &Roots) -> Result<bool, String> {
+  let generated = roots.config_root().join("toolu/statusline-render.sh");
+  let retired = retire(
     roots,
-  });
-  if let Some(error) = done.report_error {
-    return Err(error);
+    "statusline",
+    "statusline",
+    "statusline.sh",
+    Some(&generated),
+  );
+  let shim = std::fs::symlink_metadata(&generated).is_ok_and(|meta| meta.is_file())
+    && std::fs::read_to_string(&generated).is_ok_and(|text| text == SHIM);
+  if shim {
+    std::fs::remove_file(&generated)
+      .map_err(|error| format!("cannot remove {}: {error}", generated.display()))?;
   }
-  if let Some(warning) = done.warning {
-    return Err(warning);
-  }
-  match done.result.status {
-    HelperStatus::Published => Ok(true),
-    HelperStatus::KeptUserFile => Ok(false),
-    HelperStatus::LinkFailed | HelperStatus::Unwritable | HelperStatus::SourceMissing => {
-      Err("statusline compatibility shim could not be published".to_owned())
-    }
+  match retired {
+    Retired::Failed(warning) => Err(warning),
+    Retired::Removed => Ok(true),
+    Retired::Absent | Retired::Kept => Ok(shim),
   }
 }
 
-fn refresh(roots: &Roots, plugin_root: Option<&Path>) -> Result<Refreshed, String> {
-  let shim = source(roots, plugin_root)?;
-  let published = published(roots, &shim)?;
+fn refresh(roots: &Roots) -> Result<Refreshed, String> {
   let migrated = if roots.host() == Host::Claude {
     setup::migrate(roots)?
   } else {
     None
   };
+  let did_migrate = migrated.is_some();
+  let still_named = setup::names_old_path(roots);
+  let retired = if did_migrate || still_named.is_some() {
+    false
+  } else {
+    retire_paths(roots)?
+  };
+  let notice = migrated.map(|line| line.message).or(still_named);
   Ok(Refreshed {
-    published,
-    migrated: migrated.is_some(),
-    notice: migrated.map(|line| line.message),
+    retired,
+    migrated: did_migrate,
+    notice,
   })
 }
 
 /// Run `toolu statusline refresh` from a CLI shell.
 pub(crate) fn run(roots: &Roots, json_out: bool) -> Outcome {
-  match refresh(roots, None) {
+  match refresh(roots) {
     Ok(done) => {
       let status = if done.migrated { "WIRED" } else { "REFRESHED" };
       let text = if json_out {
         json!({
           "status": status,
-          "published": done.published,
+          "retired": done.retired,
           "migrated": done.migrated
         })
         .to_string()
       } else if done.migrated {
-        "WIRED statusline settings migrated; compatibility path refreshed".to_owned()
+        "WIRED statusline settings migrated to toolu statusline render".to_owned()
       } else {
-        format!("{status} statusline compatibility path refreshed")
+        format!("{status} statusline settings checked")
       };
       Outcome::data(text)
     }
     Err(error) => {
       let text = if json_out {
-        json!({"status":"ERROR", "published":false, "migrated":false, "message":error}).to_string()
+        json!({"status":"ERROR", "retired":false, "migrated":false, "message":error}).to_string()
       } else {
         format!("ERROR {error}")
       };
@@ -140,9 +102,9 @@ pub(crate) fn run(roots: &Roots, json_out: bool) -> Outcome {
   }
 }
 
-/// The host hook is silent after migration and reports any failure as context.
-pub(crate) fn session_start(roots: &Roots, plugin_root: Option<&Path>) -> Outcome {
-  match refresh(roots, plugin_root) {
+/// The host hook says only what changed or still needs the user, and reports any failure.
+pub(crate) fn session_start(roots: &Roots, _plugin_root: Option<&Path>) -> Outcome {
+  match refresh(roots) {
     Ok(done) => Outcome {
       exit: Exit::Success,
       stdout: done

@@ -24,14 +24,6 @@ pub fn missing_message(plugin: &str) -> String {
   )
 }
 
-/// What a plugin hook says on stderr when it falls back to its Bun bundle (#425).
-pub fn fallback_advisory(plugin: &str) -> String {
-  format!(
-    "{plugin} plugin: native toolu not found, running the Bun bundle for this transition \
-     release - see #425. Install toolu with: {INSTALLER} or: {BREW_INSTALL}."
-  )
-}
-
 #[cfg(test)]
 #[path = "tests/install_test.rs"]
 mod tests;

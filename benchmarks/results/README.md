@@ -11,7 +11,9 @@ result cannot be flattered.
   tool output. No model, no network.
 - **Live** (`whole-session`): run by hand against the real API / `claude -p`,
   then committed. Non-deterministic — reported as mean±stddev over `n_runs ≥ 5`,
-  never a single cherry-picked run.
+  never a single cherry-picked run. The runner was part of the TypeScript
+  harness and was retired with it (#440); this section is the contract for any
+  future live result.
 
 ## Fair baseline
 
@@ -23,7 +25,7 @@ baseline.
 
 The deterministic tier counts static text either **exactly** (Anthropic
 `count_tokens`, when a key is present) or by a **heuristic** (`bytes/4`, offline).
-A single delta must use one mode for both sides — the result writer (`tooling/src/benchmarks/lib/result.ts`) refuses to
+A single delta must use one mode for both sides — the result writer (`crates/xtask/src/bench_result.rs`) refuses to
 write a result whose two sides were counted differently. If a key is set but the
 API errors, the runner aborts rather than silently downgrading to the heuristic.
 
@@ -64,8 +66,9 @@ the contract.
 ## Hook resource results
 
 `hook-resources-<impl>-<platform>-<arch>-<ci|local>-<date>.json` files come from
-`bun run bench:hooks --out` (#410). The committed `bun` baselines are the
-`hook-bench` CI job's artifacts from `ubuntu-latest` and `macos-latest`. Schema
+`cargo xtask bench-hooks --out` (#410). The committed `bun` baselines are the
+`hook-bench` CI job's artifacts from `ubuntu-latest` and `macos-latest`, taken
+before the Bun bundles were removed (#440). Schema
 `toolu.hook-resources/v1`:
 
 Each committed file records the hooks present on its measurement date. The

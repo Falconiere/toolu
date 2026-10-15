@@ -6,17 +6,17 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 
 | Budget | Number | Measured from | How it is measured | Owner |
 |---|---|---|---|---|
-| `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms | `bun run bench:hooks --assert`, per hook spawn | #425 |
+| `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms | `cargo xtask bench-hooks --assert`, per hook spawn | #425 |
 | `toolu hook check-binary` | ≤ 7 MiB max RSS, ≤ 3 ms CPU (p50) | Linux CI: 4.4 MiB, 2.0 ms | as above | #425 |
 | `toolu hook mcp-tools` | ≤ 7 MiB max RSS, ≤ 2 ms CPU (p50) | Linux CI: 4.4 MiB, 1.3 ms | as above | #425 |
-| `toolu hook pre-tools` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 6.1 MiB, 1.7 ms | `bun run bench:hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
+| `toolu hook pre-tools` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 6.1 MiB, 1.7 ms | `cargo xtask bench-hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
-| `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `bun run bench:hooks`, release `toolu`, `sh` launcher included | #424 |
+| `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `cargo xtask bench-hooks`, release `toolu`, `sh` launcher included | #424 |
 | `toolu hook session-start` | ≤ 8 MiB max RSS, ≤ 43 ms CPU (p50) | native: 4.8 MiB, 33.8 ms | as above | #424 |
 | `toolu hook user-prompt-submit` | ≤ 9 MiB max RSS, ≤ 16 ms CPU (p50) | native: 5.5 MiB, 12.6 ms | as above | #424 |
 | Binary size | ≤ 4 MiB | prototype: 2.75 MiB | size of the stripped release `toolu` (fat LTO, one codegen unit), Linux x86_64 | #417 |
 | `toolu --version` startup | ≤ 4 ms wall (p50) | prototype: 2.3 ms | `cargo xtask check-startup --bin <toolu>`: wall time from spawn to reap of one `toolu --version`, 30 runs after 3 warm-up, nearest-rank p50; the Linux `rust` CI job gates the release binary | #442 |
-| One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | `bun tooling/src/benchmarks/statusline.ts --assert`: 30 warm-cache release-binary renders after 3 warm-ups through `cargo xtask measure`; render reads cached Git counts; Linux `rust` CI gates it | #431 |
+| One statusline render | ≤ 4 ms wall, ≤ 5 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB | `cargo xtask bench-statusline --assert`: 30 warm-cache release-binary renders after 3 warm-ups through `cargo xtask measure`; render reads cached Git counts; Linux `rust` CI gates it | #431 |
 | Idle engine RSS | ≤ 5 MiB | prototype: 3.9 MiB | resident set (`VmRSS`) of the idle resident engine 2 s after start | #434 |
 | Status server under 50 clients | ≤ 7 ms latency (p90), ≤ 13 MiB max RSS | prototype: 4.4 ms, 9.7 MiB | 50 concurrent keep-alive clients × 40 loopback requests; client-side latency, server `VmHWM` | #449 |
 | Gate duration | ≤ 60 s | 40 s (slowest of three CI runs) | the `cargo xtask gate` step of the `rust (ubuntu-latest)` job, warm cache | #455 |
@@ -54,28 +54,28 @@ A budget changes only together with a new measurement committed under `benchmark
 ## Requirements the budgets rest on
 
 - **`toolu hook` takes a fast path.** `toolu hook <name>`, `toolu <plugin> hook <name>` and `toolu --hook-protocol` are recognised before the clap command tree is built (`crates/cli/src/fast.rs`). Building the tree first cost the prototype's pre-tools 0.9 ms CPU and 0.4 MiB at p50 (3.4 ms against 2.5 ms), a fifth of its CPU budget. Owned by #442 and #418.
-- **Hooks are measured the way hosts pay for them.** Each spawn includes the `sh` launcher. Until the native launcher (#412) exists, the bench runs a ported entry as `/bin/sh -c 'exec "$0" "$@"' toolu hook <entry>`, the same shape as the Bun launcher.
+- **Hooks are measured in the shape their budgets were set in.** Each spawn runs `/bin/sh -c 'exec "$0" "$@"' toolu [<plugin>] hook <name> --event <Event> --plugin-root <dir>` with the release binary: the `sh` a host starts, then the hook. The launcher's binary resolution, whose `--hook-protocol` probe adds about 1–2 ms CPU on the Linux runner, is left out. Measuring the full launcher needs re-measured budgets, which change only in a PR of their own.
 
 ## How hooks are measured
 
-`bun run bench:hooks` (`tooling/src/benchmarks/hook-resources.ts`) does the following:
+`cargo xtask bench-hooks [--bin <toolu>] [--runs N] [--only <plugin/hook>]... [--out FILE] [--assert]` (`crates/xtask/src/bench_hooks*.rs`, #440) does the following:
 
-1. Discovers every entry that `plugins/*/hooks/hooks.json` launches.
-2. Runs each one with its fixed payload from `benchmarks/cases/hooks/payloads.json`. The sandbox is a git project with toolu and the four registry plugins installed, and their `register` hooks run once. For the asserted `toolu/post-tools` core budget only, a second real git sandbox has toolu alone installed: the budget excludes other plugins' external quality linters and their temporary Bun bridge. The unasserted report still measures the full registry fixture.
-3. Spawns each entry `--warmup` times (default 2), then `--runs` times (default 10), one at a time.
-4. Reports p50 and p90 of max RSS, CPU (user + sys, children included) and wall per entry.
+1. Discovers every entry that `plugins/*/hooks/hooks.json` launches, one per `<plugin>/<hook name>`, and requires `benchmarks/cases/hooks/payloads.json` to cover exactly those.
+2. Runs each one with its fixed payload. The sandbox is a git project with toolu and the four registry plugins installed, and their `register` hooks run once. For `toolu/post-tools` only, a second git sandbox has toolu alone installed: its budget excludes other plugins' external quality linters.
+3. Spawns each entry twice unmeasured, then `--runs` times (default 10), one at a time, each in a fresh `xtask measure` process.
+4. Prints p50 and p90 of max RSS, CPU (user + sys, children included) and wall per entry, and writes the `toolu.hook-resources/v1` document to `--out`.
 
-`--assert` measures the entries listed in `fixtures/rust-ported.json` as Rust and fails, naming the entry, the metric, the measured value and the budget, when one exceeds its p50 budget. It also fails when a ported entry has no budget, or when the measured phase takes over 60 s. The ported skill CLIs `toolu/plan-ledger` and `toolu/verdict` have no `hooks.json` launcher, so the bench neither measures nor budgets them ([#421](https://github.com/Falconiere/toolu/issues/421)). The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
+`--assert` fails, naming the entry, the metric, the measured value and the budget, when an entry of `benchmarks/hook-budgets.json` exceeds its p50 budget, or when the measured phase takes over 60 s. An entry without a budget is measured and reported, not gated. The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
 
-Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`. That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
+Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`, run by a release `xtask`: a debug `cargo xtask` builds `xtask --release` into its own target directory first, and `XTASK_MEASURER` names another measurer (the bench's own tests use the test build). That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
 
-On Linux, `exec` folds the spawner's RSS high-water mark into the child's, so no measurement reads below the measurer's own RSS. The bench reports that floor (`/usr/bin/true` measured the same way): about 3 MiB on the CI runner, 1.3 MiB on macOS. A reading above it is exact. A reading at it means "at most the floor". This is also why Bun cannot measure hooks itself: its children inherit its own 14–22 MB.
+On Linux, `exec` folds the spawner's RSS high-water mark into the child's, so no measurement reads below the measurer's own RSS. The bench reports that floor (`/usr/bin/true` measured the same way): about 3 MiB on the CI runner, 1.3 MiB on macOS. A reading above it is exact. A reading at it means "at most the floor". The same is why every sample gets its own measurer: `ru_maxrss` of `RUSAGE_CHILDREN` is a high-water mark over every child a process has reaped.
 
 RSS is in MiB (1024² bytes).
 
 ## Bun baseline
 
-The committed baselines show what the Bun bundles cost on the CI runners. They are the source files for this table:
+The committed baselines show what the retired Bun bundles cost on the CI runners, next to the native results under `benchmarks/results/hook-resources-rust-*.json`. They are the source files for this table:
 
 - `benchmarks/results/hook-resources-bun-linux-x64-ci-2026-10-05.json`
 - `benchmarks/results/hook-resources-bun-darwin-arm64-ci-2026-10-05.json`

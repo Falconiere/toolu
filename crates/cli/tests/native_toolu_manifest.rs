@@ -43,18 +43,17 @@ fn expected() -> [(&'static str, Entries); 5] {
 }
 
 #[test]
-fn every_shipped_toolu_hook_is_native_and_keeps_its_transition_bundle() {
+fn every_shipped_toolu_hook_is_native_and_ships_no_bundle() {
   let plugin = root().join("plugins/toolu");
   let text = std::fs::read_to_string(plugin.join("hooks/hooks.json")).unwrap();
   let document: serde_json::Value = serde_json::from_str(&text).unwrap();
   let hooks = document["hooks"].as_object().unwrap();
   let expected = expected();
   assert_eq!(hooks.len(), expected.len());
-  let ported: serde_json::Value = serde_json::from_str(
-    &std::fs::read_to_string(root().join("fixtures/rust-ported.json")).unwrap(),
-  )
-  .unwrap();
-  let entries = ported["entries"].as_array().unwrap();
+  assert!(
+    !plugin.join("hooks/dist").exists(),
+    "#440 removed the Bun bundles"
+  );
   for (event, names) in expected {
     let rows = hooks[event].as_array().unwrap();
     assert_eq!(rows.len(), names.len(), "{event}");
@@ -78,12 +77,6 @@ fn every_shipped_toolu_hook_is_native_and_keeps_its_transition_bundle() {
       assert_eq!(shipped["timeout"], native.timeout);
       assert_eq!(shipped["command"], native.command);
       assert_eq!(shipped["commandWindows"], native.command_windows);
-      assert!(plugin.join(format!("hooks/dist/{name}.js")).exists());
-      assert!(
-        entries
-          .iter()
-          .any(|entry| entry == &format!("toolu/{name}"))
-      );
     }
   }
 }

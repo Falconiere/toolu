@@ -38,13 +38,12 @@ other settings, saves `settings.json.bak` before changing an existing file, and
 refuses to replace a custom status line unless you explicitly pass `--force`.
 It prints `CREATED`, `WIRED`, `ALREADY`, `REFUSED` or `ERROR` as its first word.
 
-The native SessionStart hook publishes a compatibility command at
-`<config root>/statusline/statusline.sh` for settings written by older versions.
-When it sees that path in Claude's `statusLine`, it saves a backup, rewrites the
-setting to `toolu statusline render`, and shows a one-time notice. A user-owned
-regular file at the compatibility path is left alone. The compatibility path
-stays through #440; `toolu statusline refresh` republishes it and applies the
-same migration when needed.
+The native SessionStart hook no longer publishes
+`<config root>/statusline/statusline.sh`. When it sees that path in Claude's
+`statusLine`, it saves a backup, rewrites the setting to
+`toolu statusline render`, and shows a one-time notice. Once nothing names the
+old path it removes toolu's link there; a user-owned regular file is left alone.
+`toolu statusline refresh` applies the same migration outside SessionStart.
 
 ## Codex
 

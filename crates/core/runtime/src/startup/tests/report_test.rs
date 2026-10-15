@@ -1,4 +1,4 @@
-use super::{HelperStatus, RegistryStatus, STARTUP_REPORT_ENV, StartupRecord, report};
+use super::{RegistryStatus, STARTUP_REPORT_ENV, StartupRecord, report};
 use crate::env::Env;
 use crate::registry::RegistryEvent;
 
@@ -26,12 +26,6 @@ fn every_record_is_one_json_line_in_typescript_key_order() {
       status: RegistryStatus::Unchanged,
       error: None,
     },
-    StartupRecord::Helper {
-      plugin: "jev".to_owned(),
-      source: "/p/jev.sh".to_owned(),
-      path: None,
-      status: HelperStatus::SourceMissing,
-    },
     StartupRecord::Error {
       origin: "prune".to_owned(),
       message: "stale".to_owned(),
@@ -43,7 +37,6 @@ fn every_record_is_one_json_line_in_typescript_key_order() {
   let expected = [
     r#"{"kind":"registry","spec":"ts-quality@toolu","name":"max-lines","event":"tool/post","source":"/p/a.js","target":"/c/post-tools.d/a.js","status":"failed","error":"EACCES"}"#,
     r#"{"kind":"registry","spec":"s","name":"n","event":"tool/pre","source":"a","target":"b","status":"unchanged"}"#,
-    r#"{"kind":"helper","plugin":"jev","source":"/p/jev.sh","status":"source-missing"}"#,
     r#"{"kind":"error","origin":"prune","message":"stale"}"#,
   ];
   assert_eq!(

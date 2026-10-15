@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its manifest into toolu's registry, plus a small `.sh` bridge that lets toolu's current post-tools dispatcher run the same rule until #425, and removes the module of earlier releases. The checks are static-only — the gate never invokes `ruff`, `pylint`, or any other linter:
+Every Python file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-python-quality` crate (`crates/python-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases. The checks are static-only — the gate never invokes `ruff`, `pylint`, or any other linter:
 
 - File / function line limits (config-driven).
 - No suppression: bare `except:`, one-line `except ...: pass`, blanket `# noqa`, bare `# type: ignore`.

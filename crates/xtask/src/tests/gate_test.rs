@@ -36,13 +36,10 @@ fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
       "coverage",
       "docs",
       "context-budget",
-      "portable-core",
-      "workspace",
       "final-removal",
       "gate-coverage",
       "packaging",
       "ci-paths",
-      "dist",
       "bench",
       "pack",
     ]
@@ -66,10 +63,14 @@ fn context_budget_step_uses_the_task() {
 }
 
 #[test]
-fn dist_step_checks_an_empty_tree_without_a_mode_word() {
-  let dir = tempfile::tempdir().unwrap();
-  let verdict = run(&options(dir.path().to_path_buf(), &["dist"])).unwrap();
-  assert_eq!(verdict, Verdict::Clean);
+fn the_retired_typescript_steps_are_unknown() {
+  for step in ["dist", "workspace", "portable-core"] {
+    let err = run(&options(PathBuf::from("."), &[step])).unwrap_err();
+    assert!(
+      err.starts_with(&format!("unknown gate step {step}")),
+      "{err}"
+    );
+  }
 }
 
 #[test]

@@ -14,7 +14,7 @@ Requires the `toolu` plugin.
 
 ## What it provides
 
-Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its manifest into toolu's registry, plus a small `.sh` bridge that lets the Bun post-tools dispatcher run the same rule until #425. It also removes the Bun module of earlier releases once, with a notice:
+Every Rust file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-rust-quality` crate (`crates/rust-quality`), compiled into `toolu`. The `SessionStart` register hook publishes its `.json` manifest into toolu's registry, and removes the `.js` module and `.sh` bridge of earlier releases once, with a notice:
 
 - File / function / `impl` line limits (config-driven).
 - No `.unwrap()` / `.expect()` — use `?` or `match`.

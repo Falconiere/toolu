@@ -168,13 +168,12 @@ fn a_read_with_nothing_that_fits_prints_nothing_and_spawns_nothing() {
   let out = sb
     .hook("pre-tools", READ, Some(&sb.root.join("bin")))
     .unwrap();
-  let failed = "toolu-registry: module z@t__probe.js failed: bridge exited 1; output skipped\n\
-                toolu-dispatch: module y@t__probe.sh exited 1; output skipped\n";
+  let failed = "toolu-dispatch: module y@t__probe.sh exited 1; output skipped\n";
   assert_eq!(streams(&out), (String::new(), failed.to_owned(), Some(0)));
   let spawned = std::fs::read_to_string(&log).unwrap();
   assert_eq!(
-    spawned, "bash\nbun\n",
-    "control: the sentinels see a .sh and a .js module run"
+    spawned, "bash\n",
+    "control: the sentinel sees the .sh run, and the .js never runs"
   );
 }
 

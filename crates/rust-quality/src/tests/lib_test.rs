@@ -10,10 +10,7 @@ fn the_rust_quality_crate_is_its_plugin_and_prints_its_guide() {
   let dir = Path::new(env!("CARGO_MANIFEST_DIR")).file_name();
   assert_eq!(dir.and_then(|name| name.to_str()), Some(PLUGIN));
   assert_eq!(SPEC, "rust-quality@toolu");
-  assert_eq!(
-    (QUALITY_PLUGIN.path_glob, QUALITY_PLUGIN.guard),
-    ("*.rs*", "TOOLU_RUST_QUALITY_NATIVE")
-  );
+  assert_eq!(QUALITY_PLUGIN.spec, SPEC);
   let bare = command().try_get_matches_from(["rust-quality"]).unwrap();
   let guide = run(&bare, &Ctx::default()).stdout.unwrap_or_default();
   assert!(

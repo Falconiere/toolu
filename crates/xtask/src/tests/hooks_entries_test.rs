@@ -1,9 +1,6 @@
-use std::path::Path;
-
 use serde_json::{Map, Value, json};
 
 use super::judge;
-use crate::bun_launcher;
 use crate::print_hook::entry_json;
 use toolu_protocol::launcher::{Target, hook};
 
@@ -12,7 +9,7 @@ fn judge_here(
   event: &str,
   entry: &Map<String, Value>,
 ) -> Vec<(String, Option<String>)> {
-  judge(Path::new("."), plugin, event, entry)
+  judge(plugin, event, entry)
 }
 
 fn native(event: &str, name: &str) -> Map<String, Value> {
@@ -26,25 +23,19 @@ fn native(event: &str, name: &str) -> Map<String, Value> {
 }
 
 #[test]
-fn a_generated_entry_and_a_bun_entry_pass() {
+fn a_generated_entry_passes_and_a_bun_entry_is_refused() {
   assert_eq!(
     judge_here("toolu", "PreToolUse", &native("PreToolUse", "pre-tools")),
     Vec::new()
   );
-  let dir = tempfile::tempdir().unwrap();
-  let bundle = dir.path().join("plugins/toolu/hooks/dist/pre-tools.js");
-  std::fs::create_dir_all(bundle.parent().unwrap()).unwrap();
-  std::fs::write(&bundle, "bundle").unwrap();
-  let generated = bun_launcher::launch("toolu", "PreToolUse", "pre-tools").unwrap();
   let bun = json!({
     "type": "command",
-    "command": generated.command,
-    "commandWindows": generated.windows,
+    "command": "bun \"${CLAUDE_PLUGIN_ROOT}/hooks/dist/pre-tools.js\"",
+    "commandWindows": "bun \"%PLUGIN_ROOT%\\hooks\\dist\\pre-tools.js\"",
   });
-  assert_eq!(
-    judge(dir.path(), "toolu", "PreToolUse", bun.as_object().unwrap()),
-    Vec::new()
-  );
+  let problems = judge_here("toolu", "PreToolUse", bun.as_object().unwrap());
+  assert_eq!(problems.len(), 1, "{problems:?}");
+  assert!(problems[0].0.starts_with("not the native launcher"));
 }
 
 #[test]
@@ -96,25 +87,21 @@ fn timeout_type_and_name_problems_are_named() {
 }
 
 #[test]
-fn a_short_bun_command_names_the_expected_launcher() {
+fn a_hand_written_toolu_command_is_refused() {
   let dir = tempfile::tempdir().unwrap();
   let hooks = dir.path().join("plugins/toolu/hooks");
   std::fs::create_dir_all(&hooks).unwrap();
   std::fs::write(
     hooks.join("hooks.json"),
-    r#"{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"bun hooks/dist/pre-tools.js"}]}]}}"#,
+    r#"{"hooks":{"PreToolUse":[{"hooks":[{"type":"command","command":"toolu hook pre-tools"}]}]}}"#,
   )
   .unwrap();
   let found = super::check(dir.path(), "toolu");
-  let command = found
-    .iter()
-    .find(|item| item.problem == "command differs from the generated launcher");
-  let Some(command) = command else {
-    panic!("missing command finding: {found:?}");
-  };
-  let expected = command.expected.as_deref().unwrap_or("");
-  assert!(expected.contains("hooks/dist/pre-tools.js"), "{expected}");
-  assert!(expected.contains("blocked:"), "{expected}");
+  assert_eq!(found.len(), 1, "{found:?}");
+  assert!(
+    found[0].problem.starts_with("not the native launcher"),
+    "{found:?}"
+  );
 }
 
 #[test]

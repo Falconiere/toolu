@@ -1,7 +1,6 @@
 //! The event and context one walk hands its modules (`toolEvent` and
 //! `toolContext` in `dispatch-context.ts`): a `NormalizedEvent` and
-//! `RuleContext` for gates and rules, and the same in TypeScript key order for
-//! the Bun bridge.
+//! `RuleContext` for gates and rules.
 
 use serde_json::{Map, Value, json};
 use toolu_protocol::event::HostEvent;
@@ -50,8 +49,6 @@ pub(crate) struct Payload {
 pub(crate) struct View {
   pub(crate) event: NormalizedEvent,
   pub(crate) raw: Map<String, Value>,
-  /// The event's fields in `toolEvent`'s key order, for the Bun bridge.
-  fields: Vec<(String, Value)>,
 }
 
 /// A non-empty string field, else `fallback`.
@@ -90,35 +87,9 @@ impl View {
       Some(_) | None => Map::new(),
     };
     let fields = fields(payload, session, &raw);
-    let wire = Value::Object(fields.iter().cloned().collect());
+    let wire = Value::Object(fields.into_iter().collect());
     let event: NormalizedEvent = serde_json::from_value(wire).map_err(|err| err.to_string())?;
-    Ok(View { event, raw, fields })
-  }
-
-  /// The event as the Bun bridge sends it: `toolEvent`'s key order, with
-  /// `toolInput` and `toolOutput` in the payload's own key order.
-  pub(crate) fn ordered_event(&self, payload: &Payload) -> Ordered {
-    let mut event = Ordered::Object(
-      self
-        .fields
-        .iter()
-        .map(|(key, value)| (key.clone(), Ordered::from(value)))
-        .collect(),
-    );
-    let doc = payload.doc.as_ref();
-    let field = |key: &str| doc.and_then(|doc| doc.get(key));
-    let input = field("tool_input").filter(|input| matches!(input, Ordered::Object(_)));
-    event.set(
-      "toolInput",
-      input.cloned().unwrap_or(Ordered::Object(Vec::new())),
-    );
-    if self.fields.iter().any(|(key, _)| key == "toolOutput") {
-      let output = field("tool_response")
-        .filter(|response| **response != Ordered::Null)
-        .or_else(|| field("tool_output"));
-      event.set("toolOutput", output.cloned().unwrap_or(Ordered::Null));
-    }
-    event
+    Ok(View { event, raw })
   }
 
   /// The context a gate or rule sees for this view.
@@ -220,37 +191,6 @@ fn typed(
     ],
     (Phase::Pre, None) => vec![field("type", "tool/pre".into())],
   }
-}
-
-/// `toolContext` for the bridge, without `env`, which the runner takes from its process.
-pub(crate) fn ordered_ctx(payload: &Payload, session: &Session<'_>) -> Ordered {
-  let raw = match &payload.doc {
-    Some(doc @ Ordered::Object(_)) => doc.clone(),
-    Some(_) | None => Ordered::Object(Vec::new()),
-  };
-  let path = |path: &std::path::Path| Ordered::String(path.to_string_lossy().into_owned());
-  let mut ctx = vec![
-    (
-      "host".to_owned(),
-      Ordered::String(session.host.name().to_owned()),
-    ),
-    ("configRoot".to_owned(), path(&session.config_root)),
-    ("projectRoot".to_owned(), path(&session.project_root)),
-    ("cwd".to_owned(), path(session.cwd())),
-    ("raw".to_owned(), raw),
-  ];
-  if let Some(edit) = &payload.edit {
-    let fields = vec![
-      (
-        "operation".to_owned(),
-        Ordered::String(edit.operation.name().to_owned()),
-      ),
-      ("from".to_owned(), Ordered::String(edit.from.clone())),
-      ("movedTo".to_owned(), Ordered::String(edit.moved_to.clone())),
-    ];
-    ctx.push(("edit".to_owned(), Ordered::Object(fields)));
-  }
-  Ordered::Object(ctx)
 }
 
 #[cfg(test)]

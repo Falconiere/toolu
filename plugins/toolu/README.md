@@ -6,7 +6,7 @@ domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
 ## Install
 
-**Prerequisite:** install the native [`toolu` binary](../../docs/install.md) before enabling the plugin. Bun is needed only while a legacy registry module or the transition fallback runs; see [docs/runtime.md](../../docs/runtime.md).
+**Prerequisite:** install the native [`toolu` binary](../../docs/install.md) before enabling the plugin. Every hook and command runs it; Bun is not used or needed on Claude Code or Codex. See [docs/runtime.md](../../docs/runtime.md).
 
 ```text
 /plugin install toolu@toolu
@@ -24,7 +24,7 @@ codex plugin add toolu@toolu
 - **Supporting skills** — `orchestrator`, `debug`, and `deep-research`. The end-to-end workflow lives in the separate `delivery-flow` plugin, which depends on `toolu`, `toolu-review`, and `pr-babysit`.
 - **Quality gate engine** — the `PreToolUse` / `PostToolUse` / `SessionStart` hook dispatcher and runtime **registry** that domain plugins contribute checks to (fail-closed; a module runs only while its owning plugin is installed).
 - **\`push-review\` gate** — gates \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review\` skill or \`toolu-review:review\`), with a round cap that escalates instead of looping (5 rewrites against an unchanged diff; a changed diff restarts the count). Gated per target repo — `git -C <worktree> push` is judged on the worktree's own branch, diff, and state file. **Delivery is configurable** (`gates.pushReview.mode`): the shipped default advises rather than blocking; `ask` is opt-in and a yes is remembered for that diff. See [hooks/docs/gates.md](hooks/docs/gates.md).
-- **Runtime diagnostic** — on session start and resume, a one-line message names the native binary and version. If it is missing, the launcher advises about the temporary Bun fallback and how to install the binary; see [docs/runtime.md](../../docs/runtime.md#native-launcher).
+- **Runtime diagnostic** — on session start and resume, a one-line message names the native binary and version. If it is missing, enforcing hooks fail closed and the launcher says how to install the binary; see [docs/runtime.md](../../docs/runtime.md#hook-launcher).
 - **docs-sync backstop** — an advisory (never a block) on push when code changes but no docs surface does.
 - **Commit workflows** — Claude `/commit` and `/review-and-commit`, with Codex equivalents `$toolu:commit` and `$toolu:review-and-commit`, all reading shared workflow bodies.
 - **Model routing** — Claude keeps its Haiku/Sonnet/Opus aliases. Codex defaults to Luna/medium, Terra/medium or high, and Sol/high by work class. Both are configurable under `models`.

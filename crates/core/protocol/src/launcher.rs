@@ -2,11 +2,12 @@
 //! `cargo xtask check-hooks`. `command` resolves `TOOLU_BIN`, else the install
 //! directories, then `PATH`, keeping the first candidate whose `--hook-protocol`
 //! prints an integer; enforcing events map any status but 0 or 2 to 2. Without a
-//! binary it runs the Bun bundle (#425) or fails closed. `commandWindows` keeps
-//! the Bun chain (#411: no Windows binary yet).
+//! binary an enforcing event fails closed and a context event prints the install
+//! `systemMessage`. There is no Windows binary yet (#411), so `commandWindows`
+//! reports the missing binary the same way.
 
 use crate::event::is_enforcing;
-use crate::install::{fallback_advisory, missing_message};
+use crate::install::missing_message;
 
 /// The marker that makes a `hooks.json` command a native launcher entry.
 pub const MARKER: &str = "--hook-protocol";
@@ -28,7 +29,7 @@ pub struct Target<'a> {
   pub plugin: &'a str,
   /// Host event the hook is registered under.
   pub event: &'a str,
-  /// Hook name: `toolu [<plugin>] hook <name>`, and `hooks/dist/<name>.js`.
+  /// Hook name: `toolu [<plugin>] hook <name>`.
   pub name: &'a str,
 }
 
@@ -82,7 +83,6 @@ fn command(target: &Target<'_>) -> String {
     argv(target),
     target.event
   );
-  let bundle = format!("\"${{CLAUDE_PLUGIN_ROOT}}/hooks/dist/{}.js\"", target.name);
   let missing = missing_message(target.plugin);
   let (found, absent) = if is_enforcing(target.event) {
     (
@@ -99,17 +99,18 @@ fn command(target: &Target<'_>) -> String {
       format!("printf '%s\\n' '{{\"systemMessage\":\"{missing}\"}}'; exit 0"),
     )
   };
-  let (lookup, fallback_guard) = native_lookup(target, &found);
   [
     "t=".to_owned(),
-    lookup,
     format!(
-      "if {fallback_guard}; then b=; for c in \"$TOOLU_BUN\" \
-       \"$(command -v bun 2>/dev/null)\" \"$HOME/.bun/bin/bun\"; do if [ -n \"$c\" ] && \
-       [ -f \"$c\" ] && [ -x \"$c\" ]; then b=$c; break; fi; done; if [ -n \"$b\" ] && \
-       [ -f {bundle} ]; then {}; exec \"$b\" {bundle}; fi; fi",
-      fallback_notice(target)
+      "if [ -n \"$TOOLU_BIN\" ]; then set -- \"$TOOLU_BIN\"; else set -- {INSTALL_DIRS} \
+       \"$(command -v toolu 2>/dev/null)\"; fi"
     ),
+    format!(
+      "for c in \"$@\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then \
+       case $(\"$c\" {MARKER} 2>/dev/null </dev/null) in ''|*[!0-9]*) ;; *) t=$c; break;; \
+       esac; fi; done"
+    ),
+    found,
     absent,
   ]
   .join("; ")
@@ -123,58 +124,14 @@ fn abnormal_status(plugin: &str) -> String {
   )
 }
 
-/// Find a native binary unless toolu's transition rollback selects Bun.
-fn native_lookup(target: &Target<'_>, found: &str) -> (String, &'static str) {
-  let lookup = [
-    format!(
-      "if [ -n \"$TOOLU_BIN\" ]; then set -- \"$TOOLU_BIN\"; else set -- {INSTALL_DIRS} \
-       \"$(command -v toolu 2>/dev/null)\"; fi"
-    ),
-    format!(
-      "for c in \"$@\"; do if [ -n \"$c\" ] && [ -f \"$c\" ] && [ -x \"$c\" ]; then \
-       case $(\"$c\" {MARKER} 2>/dev/null </dev/null) in ''|*[!0-9]*) ;; *) t=$c; break;; \
-       esac; fi; done"
-    ),
-    found.to_owned(),
-  ]
-  .join("; ");
-  if target.plugin == "toolu" {
-    (
-      format!("if [ \"$TOOLU_RUNTIME\" != bun ]; then {lookup}; fi"),
-      "[ \"$TOOLU_RUNTIME\" = bun ] || [ -z \"$TOOLU_BIN\" ]",
-    )
-  } else {
-    (lookup, "[ -z \"$TOOLU_BIN\" ]")
-  }
-}
-
-fn fallback_notice(target: &Target<'_>) -> String {
-  let missing = format!("printf '%s\\n' '{}' >&2", fallback_advisory(target.plugin));
-  if target.plugin == "toolu" {
-    format!(
-      "if [ \"$TOOLU_RUNTIME\" = bun ]; then printf '%s\\n' \
-       'toolu plugin: TOOLU_RUNTIME=bun selected the transition Bun bundle.' >&2; \
-       else {missing}; fi"
-    )
-  } else {
-    missing
-  }
-}
-
+/// cmd.exe has no native `toolu` to run: report it as the POSIX command does without one.
 fn command_windows(target: &Target<'_>) -> String {
-  let bundle = format!("\"%PLUGIN_ROOT%\\hooks\\dist\\{}.js\"", target.name);
-  let home = "\"%USERPROFILE%\\.bun\\bin\\bun.exe\"";
   let missing = missing_message(target.plugin).replace('|', "^|");
-  let absent = if is_enforcing(target.event) {
+  if is_enforcing(target.event) {
     format!("(1>&2 echo blocked: {missing}& exit /b 2)")
   } else {
-    format!("(echo {{\"systemMessage\":\"{missing}\"}})")
-  };
-  format!(
-    "if exist \"%TOOLU_BUN%\" (\"%TOOLU_BUN%\" {bundle}) else \
-     (where /q bun& if not errorlevel 1 (bun {bundle}) else \
-     if exist {home} ({home} {bundle}) else {absent})"
-  )
+    format!("echo {{\"systemMessage\":\"{missing}\"}}")
+  }
 }
 
 fn validate(target: &Target<'_>) -> Result<(), String> {

@@ -21,7 +21,7 @@ use toolu_runtime::registry::rule::Rule;
 use crate::gate::Gate;
 use crate::trace::Step;
 
-/// How long one `.sh` module, or one `.js` module of a Bun batch, may run.
+/// How long one `.sh` module may run.
 pub const DEFAULT_MODULE_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// The bytes of stdout and stderr together kept from one module process.

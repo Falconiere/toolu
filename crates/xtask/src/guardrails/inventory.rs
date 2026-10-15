@@ -89,6 +89,17 @@ fn discover(
   Ok(Some((line(table.ident.span()), names(&table.expr))))
 }
 
+/// The items of `constant` in the Rust source `text`, or `None` when it has no such const.
+pub(crate) fn table_items(text: &str, constant: &str) -> Result<Option<Vec<String>>, String> {
+  let ast = syn::parse_file(text).map_err(|err| err.to_string())?;
+  Ok(ast.items.iter().find_map(|item| {
+    let syn::Item::Const(table) = item else {
+      return None;
+    };
+    (table.ident == constant).then(|| names(&table.expr))
+  }))
+}
+
 /// String literals that are array elements, or the first field of a tuple element.
 fn names(expr: &syn::Expr) -> Vec<String> {
   if let syn::Expr::Reference(reference) = expr {

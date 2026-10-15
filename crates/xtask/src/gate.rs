@@ -7,9 +7,8 @@ use std::time::Instant;
 
 use crate::options::Options;
 use crate::{
-  Verdict, bench, check_hooks, check_workflows, ci_check, context_budget, coverage, data, dist,
-  docs_cli, final_removal, gate_change, gate_coverage, guardrails, layers_check, output, pack,
-  package_workspace, packaging, portable_core,
+  Verdict, bench, check_hooks, check_workflows, ci_check, context_budget, coverage, data, docs_cli,
+  final_removal, gate_change, gate_coverage, guardrails, layers_check, output, pack, packaging,
 };
 use crate::{cli_compat, reach, unused_pub};
 
@@ -45,13 +44,10 @@ pub(crate) const STEPS: &[&str] = &[
   "coverage",
   "docs",
   "context-budget",
-  "portable-core",
-  "workspace",
   "final-removal",
   "gate-coverage",
   "packaging",
   "ci-paths",
-  "dist",
   "bench",
   "pack",
 ];
@@ -128,24 +124,21 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
   }
 }
 
-/// The checks ported from the TypeScript gate. `dist` and `bench` run one mode.
+/// The checks ported from the TypeScript gate. `bench` runs one mode.
 fn ported(step: &str, options: &Options) -> Result<Verdict, String> {
   match step {
     "context-budget" => context_budget::run(options),
-    "portable-core" => portable_core::run(options),
-    "workspace" => package_workspace::run(options),
     "final-removal" => final_removal::run(options),
     "gate-coverage" => gate_coverage::run(options),
     "packaging" => packaging::run(options),
     "ci-paths" => ci_check::run(options),
-    "dist" => dist::run(&positional(options, "check")),
     "bench" => bench::run(&positional(options, "deterministic")),
     "pack" => pack::run(options),
     _ => Err(format!("unknown gate step {step}")),
   }
 }
 
-/// `options` with one positional, which is how `dist check` and `bench deterministic` are selected.
+/// `options` with one positional, which is how `bench deterministic` is selected.
 fn positional(options: &Options, word: &str) -> Options {
   Options {
     root: options.root.clone(),
@@ -210,7 +203,7 @@ fn jscpd(root: &Path) -> Result<Verdict, String> {
   };
   let config = format!("{}/jscpd.json", data::DATA_DIR);
   status(root, &program, &["--config", &config, "crates"], &[])
-    .map_err(|err| format!("{err} — jscpd is missing: run `bun install` (it is a devDependency)"))
+    .map_err(|err| format!("{err} — jscpd is missing: run `npm ci` (it is the one devDependency)"))
 }
 
 /// `toolu rust-quality check crates` at this repository's limits: `.claude` is

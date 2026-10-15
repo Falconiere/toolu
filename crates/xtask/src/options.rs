@@ -31,6 +31,12 @@ pub(crate) struct Options {
   pub(crate) command: Vec<String>,
   /// Compare instead of writing (`--check`, `docs-cli`).
   pub(crate) check: bool,
+  /// Fail on a budget the measurement exceeds (`--assert`, the benches).
+  pub(crate) assert: bool,
+  /// Measured runs per entry (`--runs`, the benches).
+  pub(crate) runs: Option<String>,
+  /// Which hosts `host-smoke` drives (`--host claude|codex|both`).
+  pub(crate) host: Option<String>,
 }
 
 impl Options {
@@ -48,8 +54,9 @@ impl Options {
         options.files.push(PathBuf::from(word));
         continue;
       }
-      if word == "--check" {
-        options.check = true;
+      if word == "--check" || word == "--assert" {
+        options.check |= word == "--check";
+        options.assert |= word == "--assert";
         continue;
       }
       let value = rest
@@ -67,6 +74,8 @@ impl Options {
         "--timeout" => options.timeout = Some(value),
         "--bin" => options.bin = Some(PathBuf::from(value)),
         "--home" => options.home = Some(PathBuf::from(value)),
+        "--runs" => options.runs = Some(value),
+        "--host" => options.host = Some(value),
         _ => return Err(format!("unknown option {word}")),
       }
     }
@@ -76,10 +85,21 @@ impl Options {
     Ok(options)
   }
 
-  /// Refuse `measure`'s options on any other task.
+  /// Refuse `measure`'s and the benches' options on any other task.
   pub(crate) fn for_task(self, task: &str) -> Result<Self, String> {
-    if task != "measure" && (self.out.is_some() || !self.command.is_empty()) {
-      return Err("only measure takes --out and a command after --".to_owned());
+    if task != "measure" && !self.command.is_empty() {
+      return Err("only measure takes a command after --".to_owned());
+    }
+    let writes = ["measure", "bench-hooks", "bench-statusline"];
+    if !writes.contains(&task) && self.out.is_some() {
+      return Err("only measure and the benches take --out".to_owned());
+    }
+    let benches = ["bench-hooks", "bench-statusline"];
+    if !benches.contains(&task) && (self.assert || self.runs.is_some()) {
+      return Err("only the benches take --assert and --runs".to_owned());
+    }
+    if task != "host-smoke" && self.host.is_some() {
+      return Err("only host-smoke takes --host".to_owned());
     }
     Ok(self)
   }

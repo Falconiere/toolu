@@ -14,7 +14,7 @@ TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a r
 
 ### Post-Edit Quality Checks
 
-Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` register hook publishes the rule's manifest (`ts-quality@toolu__ts-quality.json`) into toolu's registry, and the core dispatcher runs the rule while this plugin is installed. Until toolu's own hooks are native (#425), the register hook also writes `ts-quality@toolu__ts-quality.sh`, a bridge through which the Bun post-tools dispatcher runs the same rule; it removes the Bun module of earlier releases once, with a notice. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
+Every TypeScript file the agent edits is checked on the spot, contributing to toolu's quality gate. The checks are the `toolu-ts-quality` crate (`crates/ts-quality`), compiled into the native [`toolu` binary](../install.md) (#426). The `SessionStart` register hook publishes the rule's manifest (`ts-quality@toolu__ts-quality.json`) into toolu's registry, and the core dispatcher runs the rule while this plugin is installed. The register hook registers only that `.json` manifest. It removes the `.js` module and `.sh` bridge of earlier releases once, with a notice. The `toolu ts-quality` namespace has no verbs; its help lists the checks.
 
 ## Checks Enforced
 

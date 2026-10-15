@@ -3,8 +3,15 @@
 //! Exit codes: 0 clean, 1 findings, 2 usage, setup or missing-tool error.
 
 mod bench;
+mod bench_hooks;
+mod bench_hooks_entries;
+mod bench_hooks_measure;
+mod bench_hooks_report;
+mod bench_hooks_sandbox;
 mod bench_result;
-mod bun_launcher;
+mod bench_statusline;
+mod bench_statusline_repo;
+mod bench_statusline_report;
 mod check_hooks;
 mod check_workflows;
 mod ci_aggregate;
@@ -19,8 +26,8 @@ mod command_tree;
 mod context_budget;
 mod coverage;
 mod data;
-mod dist;
 mod docs_cli;
+mod env_scrub;
 mod final_removal;
 mod gate;
 mod gate_change;
@@ -31,6 +38,15 @@ mod guardrails;
 mod homebrew_formula;
 mod hooks_entries;
 mod hooks_manifests;
+mod host_smoke;
+mod host_smoke_checks;
+mod host_smoke_claude;
+mod host_smoke_codex;
+mod host_smoke_env;
+mod host_smoke_exec;
+mod host_smoke_project;
+mod host_smoke_prompts;
+mod host_smoke_steps;
 mod launcher_e2e;
 mod layers;
 mod layers_check;
@@ -42,16 +58,20 @@ mod options;
 mod output;
 mod pack;
 mod pack_npm;
-mod package_workspace;
 mod packaging;
 mod packaging_assets;
 mod packaging_catalog;
-mod portable_core;
 mod print_hook;
+mod process_group;
 mod reach;
+mod scratch;
 mod source;
 mod startup;
 mod unused_pub;
+mod workflow_ci;
+mod workflow_install;
+mod workflow_release;
+mod workflow_yaml;
 mod workspace;
 
 use std::process::ExitCode;
@@ -93,13 +113,13 @@ const TASKS: &[(&str, Task)] = &[
   ("ci-changes", ci_changes::run),
   ("check-ci-paths", ci_check::run),
   ("ci-aggregate", ci_aggregate::run),
-  ("dist", dist::run),
-  ("check-portable-core", portable_core::run),
-  ("check-workspace", package_workspace::run),
   ("final-removal", final_removal::run),
   ("gate-coverage", gate_coverage::run),
   ("packaging", packaging::run),
   ("bench", bench::run),
+  ("bench-hooks", bench_hooks::run),
+  ("bench-statusline", bench_statusline::run),
+  ("host-smoke", host_smoke::run),
   ("pack", pack::run),
 ];
 
@@ -110,8 +130,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
-  check-ci-paths, ci-aggregate, dist, check-portable-core, check-workspace, \
-  final-removal, gate-coverage, packaging, bench, pack";
+  check-ci-paths, ci-aggregate, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.
 fn run(args: &[String]) -> ExitCode {

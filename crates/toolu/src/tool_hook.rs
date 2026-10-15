@@ -26,7 +26,7 @@ use toolu_runtime::registry::rule::Rule;
 /// Which tool hook runs.
 pub use toolu_engine::Phase;
 
-/// The quality plugins whose `SessionStart` hooks publish a manifest and its bridge.
+/// The quality plugins whose `SessionStart` hooks publish a manifest.
 pub const QUALITY_PLUGINS: &[QualityPlugin] = &[
   toolu_ts_quality::QUALITY_PLUGIN,
   toolu_rust_quality::QUALITY_PLUGIN,
@@ -90,8 +90,8 @@ pub fn tool_hook(
   run(phase, payload, plugin_root, None)
 }
 
-/// Run only `spec`'s registry modules, for a host or dispatcher that runs the
-/// core gates itself: ts-quality's from its bridge module.
+/// Run only `spec`'s registry modules, for a dispatcher that runs the core gates
+/// itself (`toolu <plugin> hook post-tools`, which the retired `.sh` bridges called).
 /// A path that dispatcher split out of a patch, exported as `TOOLU_EDIT_*`, is
 /// walked as that path, and the payload's `cwd` is the dispatcher's, not this
 /// process's.

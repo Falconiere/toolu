@@ -15,9 +15,8 @@ fn a_non_executable_toolu_bin_fails_closed_even_with_a_valid_install() {
   sandbox.install().unwrap();
   let file = sandbox.home.join("toolu-copy");
   std::fs::write(&file, "not a program").unwrap();
-  let bun = on_path("bun").unwrap().to_string_lossy().into_owned();
   let bin = file.to_string_lossy().into_owned();
-  let extra = [("TOOLU_BIN", bin.as_str()), ("TOOLU_BUN", bun.as_str())];
+  let extra = [("TOOLU_BIN", bin.as_str())];
   let run = sandbox
     .launch("PreToolUse", "session-start", STARTUP, &extra)
     .unwrap();
@@ -135,26 +134,12 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
   );
 }
 
-/// Build the real npm wrapper (`@toolu/plugins`' `toolu-plugins` bin) from its
-/// source, as a user's `toolu` symlink to it would run.
+/// Copy the real npm wrapper (`@toolu/plugins`' `toolu-plugins` bin) to `out`,
+/// as a user's leftover `toolu` copy of it would run.
 fn build_wrapper(out: &Path) -> Res<()> {
   let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-  let built = out.with_extension("js");
-  let mut bundler = Command::new(on_path("bun")?);
-  bundler
-    .args([
-      "build",
-      "tools/toolu-cli/src/cli.ts",
-      "--target=node",
-      "--outfile",
-    ])
-    .arg(&built)
-    .current_dir(&repo)
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped());
-  let output = spawn(&mut bundler)?.wait_with_output()?;
-  if !output.status.success() {
-    return Err(String::from_utf8_lossy(&output.stderr).into_owned().into());
-  }
-  script(out, &std::fs::read_to_string(&built)?)
+  script(
+    out,
+    &std::fs::read_to_string(repo.join("tools/toolu-cli/npm/cli.js"))?,
+  )
 }

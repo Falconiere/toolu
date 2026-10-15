@@ -80,18 +80,17 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
 `version` is reserved for future schema bumps; v1 is the current value.
 See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated example.
 
-### TypeScript loader (`@toolu/core/config`)
+### Loader (`toolu_runtime::config`)
 
-`packages/toolu-core/src/config/` ports the bash config libs to TypeScript
-([#253](https://github.com/Falconiere/toolu/issues/253)). It reads the same two
-files, merges them the same way, and resolves every threshold, gate mode, model
-tier, docs-sync list and flag to the value bash resolves
-(`config-parity.test.ts` runs both over `fixtures/config/`). The
-PreToolUse dispatcher ([#258](https://github.com/Falconiere/toolu/issues/258))
-reads `hooks.pre-tools` through this loader; its modules and the other hooks
-still run the bash libs until they are ported.
+The loader (`toolu_runtime::config::load`,
+[#414](https://github.com/Falconiere/toolu/issues/414)) ports the bash config
+libs. It reads the same two files, merges them the same way, and resolves every
+threshold, gate mode, model tier, docs-sync list and flag to the value bash
+resolved. `fixtures/config/expected.json` holds those results, and
+`crates/core/runtime/tests/config_fixture.rs` replays them. The PreToolUse
+dispatcher reads `hooks.pre-tools` through this loader.
 
-The TypeScript loader validates each file's envelope, and bash never did:
+The loader validates each file's envelope, and bash never did:
 
 - `version` may be omitted. A missing `version` is read as `1`.
 - A top-level key outside the schema above (for example a typo like `gate`), a
@@ -110,11 +109,6 @@ The TypeScript loader validates each file's envelope, and bash never did:
   non-numeric threshold) still warns, where bash warns, and falls back for that
   key only.
 
-The Rust loader (`toolu_runtime::config::load`,
-[#414](https://github.com/Falconiere/toolu/issues/414)) applies the same
-envelope with the same messages; `fixtures/config/expected.json` holds the
-results both loaders must reproduce.
-
 ## Epic engine settings and secrets
 
 Put only non-secret engine settings under `epic` in `toolu.config.json`. The
@@ -129,9 +123,9 @@ info, path beyond `/`, query or fragment. A peer engine accepts only a `Host` eq
 address, so the URL names the peer's bound IP and port (or a TLS proxy that forwards that `Host`);
 see [Fleet over a private network](epic-status-api.md#fleet-over-a-private-network). Unknown safe keys under `epic` are
 ignored so older binaries can read newer settings. A key named like a token,
-secret, password or notification URL is rejected by the Rust reader. The
-TypeScript hook loader accepts and ignores the whole `epic` section during the
-transition, while it still rejects unknown top-level keys.
+secret, password or notification URL is rejected by the Rust reader. The hook
+loader accepts and ignores the whole `epic` section, while it still rejects
+unknown top-level keys.
 
 Credentials live in `<config>/toolu/secrets.json`, where `<config>` is the
 host config root (`TOOLU_CONFIG_DIR` overrides it). This file is never a
@@ -187,8 +181,7 @@ overrides.
 ### Gate modes (`gates`)
 
 How firmly a gate says no is configuration, not a constant. Full reference:
-`plugins/toolu/hooks/docs/gates.md`. Shared-core contracts:
-[`docs/portable-core.md`](portable-core.md).
+`plugins/toolu/hooks/docs/gates.md`.
 
 | Mode | Effect |
 |------|--------|
@@ -333,9 +326,9 @@ threshold resolves with this precedence (first hit wins, always a positive integ
    `maxFileLines` 400 / `maxFnLines` 50 (no native-linter layer — ruff is
    detected presence-only for advisory wording, never parsed or invoked).
 
-The file-size limit counts real code only: `countCodeLines`
-(`packages/toolu-core/src/detect/detect-lines.ts`) excludes blank lines and `//` + `/* */`
-comments; Python uses `countPythonCodeLines` (same file), which excludes
+The file-size limit counts real code only: `count_code_lines`
+(`crates/core/state/src/detect/lines.rs`) excludes blank lines and `//` + `/* */`
+comments; Python uses `count_python_code_lines` (same file), which excludes
 blank lines and full-line `#` comments — trailing comments and docstrings count
 as code, deliberately failing toward flagging. It is a lexical heuristic, not a parser — a `//` inside a string literal
 (e.g. a `"https://…"` URL) is treated as a line-ending comment, so a file dense in
@@ -349,7 +342,7 @@ through to the next layer — it does not mean a limit of zero. A stringified
 positive integer (`"maxFileLines": "120"`) is accepted and coerced to a number,
 so configs copy-pasted from sources that quote numbers still work. The gate never
 invokes biome/oxc/eslint/prettier/clippy/rustfmt; detecting them only tunes
-advisory wording. Resolver: `qualityThreshold` in `packages/toolu-core/src/config/quality-config.ts`.
+advisory wording. Resolver: `quality_threshold` in `crates/core/runtime/src/config/quality.rs`.
 
 ### No-mock test gate (`lang.<ts|rust|python>.noMocks`)
 
@@ -365,8 +358,8 @@ and `crates/python-quality/src/no_mocks.rs` (Python test files —
 `mocker`/`monkeypatch` fixture parameters).
 All three run one `ast-grep scan --inline-rules`; a real ast-grep failure
 (non-zero exit or unparseable JSON) is reported as a gate error, never a
-silent pass. Set to `false` to opt out — read via `qualityFlag` in
-`@toolu/core/config`.
+silent pass. Set to `false` to opt out — read via `quality_flag` in
+`toolu_runtime::config::quality`.
 
 ### Model routing (`models`)
 
@@ -397,7 +390,7 @@ invalid effort warns and falls back to the class default.
 
 `models.enabled = false` suppresses the SessionStart injection; the tiers still
 resolve for anything that reads them (`model` in
-`packages/toolu-core/src/config/config-read.ts`).
+`crates/core/runtime/src/config/read.rs`).
 
 Config remaps the **rubric** and the tiers passed on delegated work. It does not
 rewrite installed agent definitions. Claude reads the plugin's agent
@@ -411,7 +404,7 @@ block may carry `"model": "<alias>"`, validated at parse time and surfaced by
 
 ### Docs-sync surfaces (`docsSync`)
 
-The docs-sync backstop (`packages/toolu-core/src/gates/docs-sync.ts`)
+The docs-sync backstop (`crates/core/engine/src/gates/docs_sync.rs`)
 fires on `git push` when the branch diff changes code but no documentation
 surface — a nudge to keep user-facing docs in sync with behavior. It is
 silenced by a diff-`sha`-keyed attestation the agent writes to the host-native
@@ -432,8 +425,8 @@ telemetry), `docsSync.mode=off` is fully silent — the advisory nudge is this
 module's only artifact, so turning it off turns off everything.
 
 Three glob sets tune the code/doc classification; each resolves *project/user
-override → built-in default* (native resolver
-`packages/toolu-core/src/config/docs-sync-config.ts`):
+override → built-in default* (resolver
+`crates/core/runtime/src/config/docs_sync.rs`):
 
 | Key | Default | Meaning |
 |-----|---------|---------|
@@ -449,7 +442,7 @@ Setting any key replaces (does not merge with) that list's default.
 
 ### Workflow telemetry (`telemetry`)
 
-`telemetry.enabled` (default `true`) gates `telemetryAppend` in `packages/toolu-core/src/state/telemetry.ts`,
+`telemetry.enabled` (default `true`) gates `telemetry_append` in `crates/core/state/src/telemetry.rs`,
 the one append path every gate/lib event funnels through. When enabled it writes
 one JSONL line per event to the host-native
 `.claude/tmp/telemetry/<branch_slug>.jsonl` or
@@ -464,7 +457,7 @@ caller's real work), it just writes nothing.
 
 ### Agent-tier advisory (`agentTier`)
 
-`agentTier.mode` (default `advise`) controls `hooks/dist/agent-tier.js`,
+`agentTier.mode` (default `advise`) controls the native `toolu hook agent-tier`,
 a standalone `PreToolUse` hook on Claude `Agent`/`Task` and Codex `spawn_agent`
 calls. It always records a
 `delegation` telemetry event (model, subagent_type, and — when a plan ledger
@@ -482,7 +475,7 @@ feature produces (model-routing analytics), not a side effect of the nudge.
 ### AC-coverage promotion (`planLedger`)
 
 `planLedger.blockOnUncoveredAcs` (default `false`) promotes spec AC coverage
-from advisory to blocking in `packages/toolu-core/src/gates/plan-ledger.ts`.
+from advisory to blocking in `crates/core/engine/src/gates/plan_ledger.rs`.
 Either way, every push check appends an `ac_coverage` telemetry event with
 `covered`/`uncovered` counts (reusing `pl_ac_coverage_lines`). With the default
 `false`, an uncovered AC only shows up in that count and in `toolu ledger status`'s AC-coverage report. With `true`, `git push` is denied naming the
@@ -544,8 +537,8 @@ Unknown names are silently ignored (forward compatible).
     `version` other than 1) makes every gate block, and its `mcp.<name>: false`
     keys still block: they are read from the file directly.
   - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
-    the `mcp__` prefix through the Bun launcher to `hooks/dist/mcp-tools.js`,
-    the native mcp-blocker from `@toolu/core/gates`.
+    the `mcp__` prefix through the native launcher to `toolu hook mcp-tools`,
+    the mcp-blocker gate.
 
 Skills, hooks, Claude agents, and Claude commands are loaded from plugin
 manifests at session start, so config does not remove those files from host
@@ -604,7 +597,7 @@ usable context window. To reclaim it:
   block a noisy one entirely.
 
 The harness caps its *own* injected footprint with
-`plugins/toolu/scripts/context-budget.ts` (`bun run test:context-budget`, run in CI): word ceilings on the
+`cargo xtask gate --only context-budget` (run in CI): word ceilings on the
 Session Protocol + per-language docs and on every skill `description`, so the
 baseline cannot silently regrow.
 

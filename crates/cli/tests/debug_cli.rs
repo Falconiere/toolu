@@ -12,7 +12,7 @@ type Res<T> = Result<T, Box<dyn std::error::Error>>;
 
 fn fixture(name: &str) -> PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/toolu/scripts/__tests__/fixtures/debug")
+    .join("../../fixtures/debug")
     .join(name)
 }
 

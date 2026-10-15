@@ -5,7 +5,7 @@ mod attributes;
 mod capabilities;
 mod colocated;
 mod hygiene;
-mod inventory;
+pub(crate) mod inventory;
 mod leftovers;
 mod public_api;
 mod secrets;

@@ -123,3 +123,54 @@ fn coverage_floors_may_only_rise_and_start_at_the_default() {
     Some("coverage floor of toolu-shell added at 86, below the default 90")
   );
 }
+
+#[test]
+fn an_inventory_row_may_go_with_its_task_but_not_while_the_task_lives() {
+  let path = format!("{DATA}/inventory.json");
+  let row = |id: &str, pass: &str| {
+    format!(r#"{{"kind":"xtask-task","id":"{id}","pass":"a.rs::{pass}","fail":"a.rs::f"}}"#)
+  };
+  let doc = |rows: &[String]| format!(r#"{{"entries":[{}]}}"#, rows.join(","));
+  let gone = row("no-such-task", "p");
+  let live = row("guardrails", "p");
+  let before = doc(&[gone.clone(), live.clone()]);
+  assert_eq!(gate(&path, Some(&before), Some(&doc(&[live]))), None);
+  let dropped_live = gate(
+    &path,
+    Some(&before),
+    Some(&doc(std::slice::from_ref(&gone))),
+  );
+  assert!(dropped_live.unwrap().contains("changed an existing entry"));
+  let changed = gate(
+    &path,
+    Some(&before),
+    Some(&doc(&[gone.clone(), row("guardrails", "q")])),
+  );
+  assert!(changed.unwrap().contains("changed an existing entry"));
+  let unknown = r#"{"kind":"no-such-kind","id":"x","pass":"a.rs::p","fail":"a.rs::f"}"#.to_owned();
+  let with_unknown = doc(&[unknown, gone.clone()]);
+  let dropped_unknown = gate(&path, Some(&with_unknown), Some(&doc(&[gone])));
+  assert!(
+    dropped_unknown
+      .unwrap()
+      .contains("changed an existing entry")
+  );
+}
+
+#[test]
+fn an_unreadable_discovery_table_is_an_error() {
+  let tmp = tempfile::tempdir().unwrap();
+  let rules = format!("{DATA}/rules.json");
+  std::fs::create_dir_all(tmp.path().join(DATA)).unwrap();
+  std::fs::copy(Path::new(REPO).join(&rules), tmp.path().join(&rules)).unwrap();
+  let row = r#"{"kind":"xtask-task","id":"gone","pass":"a.rs::p","fail":"a.rs::f"}"#;
+  let before = format!(r#"{{"entries":[{row}]}}"#);
+  let error = classify(
+    Path::new(&format!("{DATA}/inventory.json")),
+    Some(&before),
+    Some(r#"{"entries":[]}"#),
+    tmp.path(),
+  )
+  .unwrap_err();
+  assert!(error.starts_with("crates/xtask/src/main.rs: "), "{error}");
+}

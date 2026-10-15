@@ -3,8 +3,6 @@
 //! and run, until one stops the walk. Warnings go to stderr as they happen; the
 //! results are returned for the walk to fold afterwards, as TypeScript does.
 
-mod batching;
-
 use std::collections::{BTreeMap, BTreeSet};
 
 use toolu_protocol::decision::Decision;
@@ -23,7 +21,6 @@ use crate::dispatch::session::Session;
 use crate::dispatch::walk::encoded;
 use crate::dispatch::{ModuleResult, Phase};
 use crate::trace::{Skip, Step, StepKind, StepStatus};
-use batching::flush;
 
 /// One walk, as the registry phase needs it.
 pub(crate) struct RegistryWalk<'w> {
@@ -107,28 +104,21 @@ pub(crate) fn run_registry(
     ));
   }
   let manifests = Manifests::read(&listing.entries, event, session.options.rules);
-  let mut admit = Admission::new(session, &listing.entries, &manifests);
-  let mut batch: Vec<&Entry> = Vec::new();
+  let mut admit = Admission::new(session, &manifests);
   for entry in &listing.entries {
     if let Some(skip) = admit.skip(entry) {
       run.step(entry, step_kind(entry.kind), StepStatus::Skipped(skip));
       continue;
     }
     match entry.kind {
-      ModuleKind::Esm => batch.push(entry),
-      ModuleKind::Bash => {
-        flush(&mut run, &mut batch);
-        if !run.stopped {
-          executable(&mut run, entry);
-        }
-      }
-      ModuleKind::Manifest => manifest(&mut run, &mut batch, &manifests, entry),
+      ModuleKind::Esm => run.step(entry, StepKind::Esm, StepStatus::Skipped(Skip::Unsupported)),
+      ModuleKind::Bash => executable(&mut run, entry),
+      ModuleKind::Manifest => manifest(&mut run, &manifests, entry),
     }
     if run.stopped {
       return run.out;
     }
   }
-  flush(&mut run, &mut batch);
   run.out
 }
 
@@ -137,23 +127,15 @@ struct Admission<'a> {
   session: &'a Session<'a>,
   /// Specs with a usable manifest: their `.js` and `.sh` modules are shadowed.
   usable: BTreeSet<String>,
-  /// Specs with a `.js` module: their `.sh` modules are shadowed.
-  esm: BTreeSet<String>,
   /// Whether each spec's plugin is active, asked once per walk.
   active: BTreeMap<String, bool>,
 }
 
 impl<'a> Admission<'a> {
-  fn new(session: &'a Session<'a>, entries: &[Entry], manifests: &Manifests<'_>) -> Admission<'a> {
-    let esm = entries
-      .iter()
-      .filter(|entry| entry.kind == ModuleKind::Esm)
-      .map(|entry| entry.spec.clone())
-      .collect();
+  fn new(session: &'a Session<'a>, manifests: &Manifests<'_>) -> Admission<'a> {
     Admission {
       session,
       usable: manifests.usable_specs(),
-      esm,
       active: BTreeMap::new(),
     }
   }
@@ -166,8 +148,7 @@ impl<'a> Admission<'a> {
     });
     let shadowed = match entry.kind {
       ModuleKind::Manifest => false,
-      ModuleKind::Esm => self.usable.contains(&entry.spec),
-      ModuleKind::Bash => self.usable.contains(&entry.spec) || self.esm.contains(&entry.spec),
+      ModuleKind::Esm | ModuleKind::Bash => self.usable.contains(&entry.spec),
     };
     if !active {
       Some(Skip::Inactive)
@@ -207,10 +188,10 @@ fn executable(run: &mut Run<'_>, entry: &Entry) {
 }
 
 /// One manifest: read, matcher, rule, `applies`, then the rule's decision.
-fn manifest(run: &mut Run<'_>, batch: &mut Vec<&Entry>, manifests: &Manifests<'_>, entry: &Entry) {
+fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   let (manifest, rule) = match manifests.get(&entry.file) {
     Some(Read::Valid(manifest, rule)) => (manifest, rule),
-    Some(Read::Problem(reason)) => return problem(run, batch, entry, reason.clone()),
+    Some(Read::Problem(reason)) => return problem(run, entry, reason.clone()),
     None => return,
   };
   let not_matching = StepStatus::Skipped(Skip::NotMatching);
@@ -223,12 +204,11 @@ fn manifest(run: &mut Run<'_>, batch: &mut Vec<&Entry>, manifests: &Manifests<'_
       "no rule {}__{} in toolu {version}",
       manifest.spec, manifest.name
     );
-    return problem(run, batch, entry, reason);
+    return problem(run, entry, reason);
   };
   if !rule.applies(&run.walk.view.event, run.walk.ctx) {
     return run.step(entry, StepKind::Rule, not_matching);
   }
-  flush(run, batch);
   if !run.stopped {
     let mut warnings = Vec::new();
     let decision = rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings);
@@ -240,11 +220,7 @@ fn manifest(run: &mut Run<'_>, batch: &mut Vec<&Entry>, manifests: &Manifests<'_
 }
 
 /// A manifest that cannot enable its rule: one stderr line, never an error.
-fn problem(run: &mut Run<'_>, batch: &mut Vec<&Entry>, entry: &Entry, reason: String) {
-  flush(run, batch);
-  if run.stopped {
-    return;
-  }
+fn problem(run: &mut Run<'_>, entry: &Entry, reason: String) {
   run.warn(&format!(
     "toolu-registry: manifest {} skipped: {reason}",
     entry.file

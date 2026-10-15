@@ -4,9 +4,6 @@ Every toolu gate answers one question and then has to decide how forcefully to
 say no. The question is the gate's own business; the answer's **delivery** is a
 mode you configure.
 
-Portable Bun/TS contracts (pins, decision union, bash bridge):
-[`docs/portable-core.md`](../../../../docs/portable-core.md).
-
 ## Modes
 
 | Mode | What the user sees | What happens |
@@ -94,11 +91,11 @@ Or `{"gates": {"preset": "strict"}}`, which blocks everything.
 write targets, and command substitutions inside unquoted heredocs — so a
 protected path cannot be written through Bash to dodge the prompt
 (github.com/Falconiere/toolu/issues/176). The command is parsed once by
-`@toolu/core/shell`, so a redirect without a space or on any descriptor
+`toolu_shell::analyze`, so a redirect without a space or on any descriptor
 (`>.env`, `2>.env`), `cp -t DIR`, and writes inside `bash -c` or `eval` are
 seen too (#283). A pathname pattern (`> .en[v]`) is checked as every existing
 file it matches, and a target built from a variable (`> $HOME/.env`) by its
-text. See `writeTargets` in `docs/shell-analysis.md`.
+text. See `writes` in `docs/shell-analysis.md`.
 
 ## Per-gate overrides
 
@@ -122,8 +119,8 @@ typo mis-delivers nothing.
 
 1. The gate asks, and records a **pending** waiver naming the diff SHA it asked
    about (`.claude/tmp/push-review/<branch>.pending-waiver.json`).
-2. The PostToolUse push-waiver module (`@toolu/core/gates`, the port of
-   `post-tools/modules/push-waiver.sh`) sees the push actually ran **and
+2. The PostToolUse push-waiver gate (`crates/core/engine/src/gates/push_waiver.rs`,
+   the port of `post-tools/modules/push-waiver.sh`) sees the push actually ran **and
    succeeded** (the whole command line's reported exit status, so
    `git push || true` counts as success, as it did in bash), and promotes the
    pending marker to
@@ -188,7 +185,6 @@ outrank them.
 ## Tests
 
 ```bash
-bun test packages/toolu-core/src/gates
-bun test plugins/toolu/hooks/src/__tests__/post-tools-283.test.ts
-bun run test:final-removal
+cargo test -p toolu-engine gates
+cargo test -p toolu-cli --test pre_tool_gates --test post_tool_gates --test golden_gates
 ```

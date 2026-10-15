@@ -209,6 +209,38 @@ pub(crate) fn migrate(roots: &Roots) -> Result<Option<ResultLine>, String> {
   )))
 }
 
+/// The user's settings, then the project's shared and local settings.
+fn settings_files(roots: &Roots) -> Vec<PathBuf> {
+  let mut files = vec![settings_path(roots)];
+  if let Some(project) = roots.project_root(None) {
+    let dir = project.join(roots.project_dirname());
+    files.push(dir.join("settings.json"));
+    files.push(dir.join("settings.local.json"));
+  }
+  files
+}
+
+/// Why the old stable path must stay: the first settings file whose statusLine
+/// command still names it, or that cannot be read and so might.
+pub(crate) fn names_old_path(roots: &Roots) -> Option<String> {
+  settings_files(roots)
+    .into_iter()
+    .find_map(|path| match load(&path) {
+      Ok((map, _)) => current_command(&map)
+        .is_some_and(|command| command.contains(MARKER))
+        .then(|| {
+          format!(
+            "statusline: {} still runs statusline/statusline.sh, which toolu no longer \
+             publishes; set its statusLine command to toolu statusline render",
+            path.display()
+          )
+        }),
+      Err(error) => Some(format!(
+        "statusline: {error}; statusline/statusline.sh stays until it can be read"
+      )),
+    })
+}
+
 /// CLI formatting: one JSON document or one newline-terminated STATUS line.
 pub(crate) fn outcome(line: ResultLine, json_out: bool) -> Outcome {
   let text = if json_out {

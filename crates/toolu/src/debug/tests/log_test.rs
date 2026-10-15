@@ -18,8 +18,7 @@ fn repeated_timestamped_errors_collapse_and_tail_stays() {
 
 #[test]
 fn real_big_log_is_bounded() {
-  let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/toolu/scripts/__tests__/fixtures/debug/big.log");
+  let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/debug/big.log");
   let contents = std::fs::read_to_string(path).unwrap();
   let lines: Vec<&str> = contents.lines().collect();
   let env = Env::process().with("DEBUG_MAX_LINES", "10");

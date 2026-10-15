@@ -9,10 +9,8 @@ use crate::packaging_assets::{self, PLUGINS, dirs, read_json};
 use crate::packaging_catalog;
 use crate::{Verdict, output};
 
-const WORKSPACE_PACKAGES: [&str; 2] = [
-  "packages/toolu-core/package.json",
-  "tools/toolu-conformance/package.json",
-];
+/// The published npm manifests that move in lockstep with the workspace.
+const WORKSPACE_PACKAGES: [&str; 1] = ["tools/toolu-cli/npm/package.json"];
 
 /// Validate plugin packaging under `--root`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {

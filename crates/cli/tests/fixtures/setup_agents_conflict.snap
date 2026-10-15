@@ -1,0 +1,73 @@
+---
+source: crates/cli/tests/setup_agents_golden.rs
+expression: text
+---
+$ toolu setup agents preview
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task conflict
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+NOTICE use install --force only after confirming each conflict
+--- stderr
+
+$ toolu setup agents install
+exit 2
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task conflict
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+--- stderr
+REFUSED unmanaged profile conflict; preview it and confirm install/remove --force
+
+$ toolu setup agents install --force
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task conflict
+PLAN deep-explore install
+PLAN research-agent install
+PLAN implementer install
+PLAN architect install
+INSTALLED 4 UPDATED 1 UNCHANGED 0
+BACKUP ROOT/codex/agents/.toolu-backups/20260813T190100Z
+Restart Codex to reload custom agent profiles.
+--- stderr
+
+$ toolu setup agents remove
+exit 2
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task remove
+PLAN deep-explore remove
+PLAN research-agent remove
+PLAN implementer remove
+PLAN architect remove
+--- stderr
+REFUSED removal requires --yes after explicit user confirmation
+
+$ toolu setup agents remove --yes
+exit 0
+--- stdout
+TARGET ROOT/codex/agents
+PLAN quick-task remove
+PLAN deep-explore remove
+PLAN research-agent remove
+PLAN implementer remove
+PLAN architect remove
+REMOVED 5 ABSENT 0
+BACKUP ROOT/codex/agents/.toolu-backups/20260813T190200Z
+Restart Codex to reload custom agent profiles.
+--- stderr
+
+$ toolu setup agents install
+exit 1
+--- stdout
+--- stderr
+toolu setup: invalid agent template: ROOT/templates/architect.toml

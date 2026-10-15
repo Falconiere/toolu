@@ -1,15 +1,7 @@
 # Cross-host conformance report
 
 **Issue:** [#212](https://github.com/Falconiere/toolu/issues/212)  
-**Depth:** fixture suites (hermetic temp projects, native dispatcher, Bun bootstrap).
-**Runners:**
-- `bun run test:conformance` → `tools/toolu-conformance/src/cli/run.ts`
-
-## Pins
-
-| Component | Pin |
-|-----------|-----|
-| Bun | `1.4.x` (workspace engines `>=1.4.0 <1.5.0`; CI/docs baseline `1.4.2`) |
+**Status:** historical for the TypeScript harness. The Bun conformance runner (`bun run test:conformance`, `tools/toolu-conformance`) was removed in #440. Every test is a Rust test now: see [testing.md](testing.md). The live check of both hosts is `cargo xtask host-smoke --host claude|codex|both`.
 
 ## Platforms
 
@@ -21,18 +13,20 @@
 
 ## Fixture suites
 
-No suite can skip: a suite that cannot run fails the matrix.
+The suites below were the harness's matrix. Their Rust replays are `crates/cli/tests/pre_tool_gates.rs` and `golden_gates.rs`; a suite that cannot run fails.
 
 | Suite | What it proves |
 |-------|----------------|
-| `protected-files` | The native PreToolUse bundle blocks a `.env` edit (`deny` or `ask`); **file bytes are unchanged on `deny`** |
+| `protected-files` | The native PreToolUse hook blocks a `.env` edit (`deny` or `ask`); **file bytes are unchanged on `deny`** |
 | `spaces-cwd` | A project path with spaces still blocks a protected edit |
 
 ## Isolation
 
-Conformance fixtures use `TMPDIR` (recommended: `/Volumes/Projects/.tmp` locally) and bootstrap paths set `TOOLU_CONFIG_DIR` / isolated `HOME` so Claude/Codex host settings are not mutated.
+Test sandboxes use `TMPDIR` (recommended: `/Volumes/Projects/.tmp` locally) and set `TOOLU_CONFIG_DIR` / an isolated `HOME` so Claude/Codex host settings are not mutated.
 
 ## Final v7.2.0 Bash comparison (#279)
+
+This is a record of the v7.2.0 measurement. The Bun side was the committed hook bundles, which #440 removed; the native hooks are measured by `cargo xtask bench-hooks` against the budgets in [resource-budgets.md](resource-budgets.md).
 
 Each row below is the p50 of 15 sequential Bash/Bun pairs after two warm-up pairs, in milliseconds. The Bash side was extracted from tag `v7.2.0` with `git archive`; the Bun side used the committed hook bundles. macOS ran natively on an Apple M2 Max with Bun 1.4.2. Linux ran inside a Debian arm64 Colima container on the same host with Bun 1.4.2, Git and jq; both sides of each Linux pair ran in that same container. A negative delta means Bun was faster. The end-to-end rows include command launch, parsing, gate work, and fixture I/O; they are diagnostic comparisons.
 
@@ -53,4 +47,4 @@ Each row below is the p50 of 15 sequential Bash/Bun pairs after two warm-up pair
 | Post: push waiver promotion | 172.1 | 123.5 | -48.6 | 38.3 | 28.5 | -9.9 |
 | Post: multi-path registry patch | 362.3 | 83.8 | -278.5 | 115.9 | 33.1 | -82.9 |
 
-The owner's 5 ms **incremental cold-start** budget applies to the readable unminified shell-analysis bundle probe (`bun run bench:shell --assert`), not to these full hook rows. It is a hard assertion on macOS arm64 or with `TOOLU_LATENCY_ENFORCE=1`; Linux reports the measured delta without failing that budget. On this macOS run, the 40-pair probe measured empty bundle p50 **28.92 ms**, combined shell-analysis bundle p50 **32.71 ms**, delta **+3.78 ms** and passed. The owner-provided Linux CI measurements were **+5.26 ms on AMD** and **+6.84 ms on Intel**; both exceed 5 ms and remain report-only. These Linux CI numbers are from the owner's earlier runner evidence, not from the Linux arm64 container above. The full hook table preserves the macOS MCP fast-path overages; no claim that every end-to-end row is within 5 ms is made.
+The owner's 5 ms **incremental cold-start** budget applied to the readable unminified shell-analysis bundle probe (`bun run bench:shell --assert`, removed in #440), not to these full hook rows. On the macOS run, the 40-pair probe measured empty bundle p50 **28.92 ms**, combined shell-analysis bundle p50 **32.71 ms**, delta **+3.78 ms** and passed. The owner-provided Linux CI measurements were **+5.26 ms on AMD** and **+6.84 ms on Intel**; both exceeded 5 ms and stayed report-only. These Linux CI numbers are from the owner's earlier runner evidence, not from the Linux arm64 container above. The full hook table preserves the macOS MCP fast-path overages; no claim that every end-to-end row is within 5 ms is made.

@@ -22,31 +22,9 @@ pub(crate) fn commands_of(entry: &Value) -> Vec<String> {
     .unwrap_or_default()
 }
 
-pub(crate) fn normalize_command(command: &str) -> String {
-  if let Some(bundle) = bundle_path(command) {
-    return bundle;
-  }
-  let trimmed = command.trim();
-  let unquoted = unquote(trimmed);
-  unquoted
-    .replace("${CLAUDE_PLUGIN_ROOT}/", "")
-    .replace("${PLUGIN_ROOT}/", "")
-}
-
-fn bundle_path(command: &str) -> Option<String> {
-  let expr = Regex::new(r"hooks/dist/[a-z0-9-]+\.js").ok()?;
-  expr.find(command).map(|found| found.as_str().to_owned())
-}
-
-fn unquote(text: &str) -> &str {
-  let bytes = text.as_bytes();
-  let (Some(&first), Some(&last)) = (bytes.first(), bytes.last()) else {
-    return text;
-  };
-  if bytes.len() >= 2 && ((first == b'"' && last == b'"') || (first == b'\'' && last == b'\'')) {
-    return text.get(1..text.len() - 1).unwrap_or(text);
-  }
-  text
+/// What a native `hooks.json` command runs: `hook <name>`.
+pub(crate) fn hook_module(command: &str) -> Option<String> {
+  toolu_protocol::launcher::hook_name(command).map(|name| format!("hook {name}"))
 }
 
 pub(crate) fn make_id(
@@ -88,29 +66,47 @@ fn base_name(path: &str) -> &str {
   path.rsplit(['/', '\\']).next().unwrap_or(path)
 }
 
-pub(crate) fn native_names(root: &Path) -> Result<Vec<String>, String> {
-  let rel = "plugins/toolu/hooks/src/pre-tools/builtins.ts";
-  let text =
-    std::fs::read_to_string(root.join(rel)).map_err(|err| format!("cannot read {rel}: {err}"))?;
+/// The engine's built-in gate table.
+const BUILTINS: &str = "crates/core/engine/src/builtins.rs";
+
+/// The gate modules of `table` (`PRE_TOOL` or `POST_TOOL`) in `builtins.rs`, in
+/// table order, as `(name, source)`: `bash-commands`, `crates/core/engine/src/gates/bash_commands.rs`.
+pub(crate) fn builtin_gates(root: &Path, table: &str) -> Result<Vec<(String, String)>, String> {
+  let text = std::fs::read_to_string(root.join(BUILTINS))
+    .map_err(|err| format!("cannot read {BUILTINS}: {err}"))?;
+  let uses = Regex::new(r"use crate::gates::([a-z_]+)::([A-Z_]+);")
+    .map_err(|err| format!("{BUILTINS}: {err}"))?;
+  let modules: Vec<(String, String)> = uses
+    .captures_iter(&text)
+    .filter_map(|caps| {
+      Some((
+        caps.get(2)?.as_str().to_owned(),
+        caps.get(1)?.as_str().to_owned(),
+      ))
+    })
+    .collect();
   let start = text
-    .find("export const NATIVE_MODULES")
-    .ok_or_else(|| format!("{rel}: NATIVE_MODULES missing"))?;
-  let rest = text
+    .find(&format!("pub const {table}"))
+    .ok_or_else(|| format!("{BUILTINS}: {table} missing"))?;
+  let body = text
     .get(start..)
-    .ok_or_else(|| format!("{rel}: NATIVE_MODULES missing"))?;
-  let end = rest
-    .find("} as const")
-    .ok_or_else(|| format!("{rel}: NATIVE_MODULES missing"))?;
-  let body = rest
-    .get(..end)
-    .ok_or_else(|| format!("{rel}: NATIVE_MODULES missing"))?;
-  let expr = Regex::new(r#""([a-z0-9-]+)":"#).map_err(|err| format!("{rel}: {err}"))?;
-  let mut names = expr
+    .and_then(|rest| rest.split_once("];"))
+    .map(|(body, _)| body)
+    .ok_or_else(|| format!("{BUILTINS}: {table} missing"))?;
+  let consts = Regex::new(r"&([A-Z_]+)\b").map_err(|err| format!("{BUILTINS}: {err}"))?;
+  consts
     .captures_iter(body)
-    .filter_map(|caps| caps.get(1).map(|item| item.as_str().to_owned()))
-    .collect::<Vec<_>>();
-  names.sort();
-  Ok(names)
+    .filter_map(|caps| caps.get(1))
+    .map(|name| {
+      let module = modules
+        .iter()
+        .find(|(constant, _)| constant == name.as_str())
+        .map(|(_, module)| module.clone())
+        .ok_or_else(|| format!("{BUILTINS}: no gate module for {}", name.as_str()))?;
+      let source = format!("crates/core/engine/src/gates/{module}.rs");
+      Ok((module.replace('_', "-"), source))
+    })
+    .collect()
 }
 
 pub(crate) fn dir_names(dir: &Path) -> Result<Vec<String>, String> {

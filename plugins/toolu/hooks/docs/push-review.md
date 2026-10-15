@@ -14,8 +14,8 @@ the host cannot prompt, `ask` degrades to `advise`.
 
 1. In `ask` mode the gate writes `<branch-slug>.pending-waiver.json` naming the
    diff SHA it asked about.
-2. The PostToolUse push-waiver module (`@toolu/core/gates`, ported from
-   `post-tools/modules/push-waiver.sh`) promotes that marker to
+2. The PostToolUse push-waiver gate (`crates/core/engine/src/gates/push_waiver.rs`,
+   ported from `post-tools/modules/push-waiver.sh`) promotes that marker to
    `<branch-slug>.waiver.json` once the push has actually run **and succeeded**
    — PostToolUse fires when a tool ran, not when it worked, and a rejected
    non-fast-forward push has been reviewed by nobody.
@@ -27,7 +27,7 @@ the host cannot prompt, `ask` degrades to `advise`.
 A refused prompt leaves the pending marker orphaned; the SessionStart state
 sweeper reclaims it.
 
-Detection lives in `lib/detect.sh:is_git_push`, which is **structural, not textual**: the command is split into statements (honouring shell quoting), each statement is tokenized, and git's real subcommand is resolved after consuming git's global options. So `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, and `git --git-dir=<path> push` are all gated, while `git commit -m "push"` is a commit.
+Detection lives in `toolu_engine::detect::is_git_push`, which is **structural, not textual**: the command is split into statements (honouring shell quoting), each statement is tokenized, and git's real subcommand is resolved after consuming git's global options. So `git -C <path> push`, `git -c k=v push`, `git --no-pager push`, and `git --git-dir=<path> push` are all gated, while `git commit -m "push"` is a commit.
 
 Prose is not a command. `echo "no git push rules remain"`, a grep pattern like `grep -qE "^git push" file`, or a commit message that explains the gate are all arguments, not invocations, and do not fire it — the earlier regex over the raw string did fire on every one of them. Heredoc bodies are stripped first, and `$(...)` / backtick bodies are scanned as commands in their own right, so `out=$(git push)` is still a push.
 
@@ -86,9 +86,8 @@ for backward compatibility and denies with an escalation message once the round
 exceeds 5 (`MAX_ROUNDS`), so a fix→re-review loop on an unchanged diff cannot
 run unbounded.
 
-The canonical writer, toolu-review's `write-state.sh` (the Bun CLI
-`plugins/toolu-review/hooks/src/write-state.ts`, published at
-`<config root>/toolu-review/write-state.sh`), emits this v2 schema and auto-computes `reviewed_files` from `git diff
+The canonical writer, `toolu review write-state` (the `toolu-review` crate; it
+replaced the `write-state.sh` stable path), emits this v2 schema and auto-computes `reviewed_files` from `git diff
 --name-only` (override with `--reviewed-files <comma-list>` for a partial or
 adjusted review scope).
 
@@ -115,11 +114,13 @@ or nothing — is the mode's business, not this list's.
 
 ## Tests
 
-`hooks/src/__tests__/pre-tool-modules-c.test.ts` covers the gate;
-`packages/toolu-core/src/detect/__tests__/detect-git.test.ts` covers push detection and destination resolution.
+`crates/core/engine/src/gates/tests/push_review_test.rs` and
+`crates/core/engine/src/gates/tests/push_target_test.rs` cover the gate, push
+detection and destination resolution; `crates/cli/tests/golden_gates.rs` replays
+the captured gate goldens through the built binary.
 Run from the repo root with:
 
 ```bash
-bun test plugins/toolu/hooks/src/__tests__/pre-tool-modules-c.test.ts
-bun test packages/toolu-core/src/detect/__tests__/detect-git.test.ts
+cargo test -p toolu-engine push_
+cargo test -p toolu-cli --test golden_gates
 ```

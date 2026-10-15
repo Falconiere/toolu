@@ -10,19 +10,21 @@ fabricated counterfactual.
 - **Deterministic (CI, hermetic):** `retrieval`. No model in the loop — compares
   full-file read bytes vs ast-grep targeted-match bytes, as tokens. Runs in CI
   with no API key; its result is committed under `results/`.
-- **Hook resources (CI, `hook-bench` job):** `bun run bench:hooks` measures max
-  RSS, CPU and wall per spawn of every hook entry and gates ported Rust entries
-  against `hook-budgets.json` (#410). Fixed payloads live in `cases/hooks/`, the
-  Bun baselines and the Rust prototype measurement in `results/`. Budgets and
+- **Hook resources (CI, `hook-bench` job):** `cargo xtask bench-hooks` measures max
+  RSS, CPU and wall per spawn of every hook entry and, with `--assert`, gates
+  them against `hook-budgets.json` (#410). Fixed payloads live in `cases/hooks/`,
+  the former Bun baselines and the Rust prototype measurement in `results/`. Budgets and
   method: [`docs/resource-budgets.md`](../docs/resource-budgets.md).
 - **Epic baseline (committed, derived):** `epic-baseline.json` holds the
   TypeScript watcher's epic figures (lead time, phase shares, rebase rounds,
   relaunches), derived from recorded state directories by `toolu epic
   baseline`; `toolu epic metrics` and `toolu epic summary` print them beside a
   run's measures. Method: [`docs/epic-orchestrator/README.md`](../docs/epic-orchestrator/README.md#metrics-and-budgets).
-- **Live (manual, non-CI):** `whole-session`. Real API / `claude -p` runs; token
-  counts come from real `message.usage`. Results are run by hand and committed
-  with provenance (model, commit, n_runs, variance).
+- **Statusline render (CI):** `cargo xtask bench-statusline --assert` times
+  `toolu statusline render` against the payload in
+  `fixtures/statusline/performance.json` and gates the warm p50 wall and max RSS.
+- **Retired:** the `live` (`whole-session`) and `container` tiers went with the
+  TypeScript harness (#440). `cases/whole-session/` keeps the task inputs.
 
 ## Layout
 
@@ -34,37 +36,26 @@ benchmarks/                       data only
   epic-baseline.json              the TypeScript-era epic baseline (`toolu epic baseline`)
   fixtures/                       stable test corpus + a real transcript set
   results/                        committed result JSON + methodology (results/README.md)
-tooling/src/benchmarks/           the harness, TypeScript on Bun
-  run.ts                          entry point (`bun run benchmarks`)
-  hook-resources.ts               `bun run bench:hooks`; helpers in lib/hook-*.ts
-  lib/                            root, tokens, result, pricing, usage
-  cases/                          retrieval.ts, whole-session.ts (each also runnable directly)
-  __tests__/                      bun tests
 ```
+
+The harness is `cargo xtask`: `crates/xtask/src/bench*.rs`.
 
 ## Usage
 
 ```sh
-bun run benchmarks --tier deterministic            # hermetic; writes results/retrieval-*.json
-bun run benchmarks --tier live --mechanism whole-session  # manual; needs the claude CLI
-bun run benchmarks --validate <result.json>        # schema check
-bun run bench:hooks [--runs N] [--warmup N] [--only <plugin/entry>] [--out FILE] [--assert]
-bun run tooling/src/benchmarks/cases/whole-session.ts --n 3 --model <id>  # case flags go to the case itself
-bun run tooling/src/benchmarks/cases/retrieval.ts --queries <tsv> --corpus <dir>
+cargo xtask bench deterministic    # hermetic; writes results/retrieval-*.json
+cargo xtask bench-hooks [--runs N] [--only <plugin/hook>] [--out FILE] [--assert]
+cargo xtask bench-statusline [--runs N] [--out FILE] [--assert]
 ```
 
 ## Reuse, not reinvention
 
-Token math is benchmarks' own, imported not reimplemented per-case:
-`usageRollup` and the pricing in `tooling/src/benchmarks/lib/` (`usage.ts` +
-`pricing.ts`; originally written for the now-removed `stats` plugin's report,
-kept here as benchmarks' single source of truth for token/cost accounting). The
-deterministic tier reuses the byte-savings comparison shape from
-`plugins/ast-grep`.
+The deterministic tier reuses the byte-savings comparison shape from
+`plugins/ast-grep`. Token and cost accounting use the pricing id stamped on each
+result (`pricing_id`).
 
 ## Conventions
 
-TypeScript on Bun; one responsibility per file; bun tests colocated in
-`tooling/src/benchmarks/__tests__/` against real data (no mocks; the paid `claude`
-CLI is the only substituted boundary, in the live-tier contract test). Design lives in the (gitignored) spec
-and plan under `docs/toolu/`. Methodology contract: [`results/README.md`](results/README.md).
+Rust, in `crates/xtask`, with unit tests beside each module against real data (no
+mocks). Design lives in the (gitignored) spec and plan under `docs/toolu/`.
+Methodology contract: [`results/README.md`](results/README.md).

@@ -34,8 +34,8 @@ Standalone, no plugin dependencies.
 
 - **`jev` skill** — mandatory when semantic decisions exist: gather evidence, call before the decision it informs, and reassess after new evidence, failed hypotheses, or changed requirements. Batch independent questions and reuse unchanged results.
 - **Jev CLI** — `toolu jev` provides `noul` (probability of yes), `choice` (pick one, with the full distribution), `score` (rate on your own ordered levels), and `ask` (many questions in one call).
-- **SessionStart hook** — publishes `<config-dir>/jev/jev.sh` and injects the mandate to run `toolu jev` on startup, resume, clear, and compaction. It makes no API call.
-- **UserPromptSubmit hook** — restates that mandate on substantive prompts so it survives long sessions; silent for trivial confirmations and unpublished wrappers. An absent hook key prompts command-environment verification. No API call.
+- **SessionStart hook** — removes the `<config-dir>/jev/jev.sh` link older versions published (a file of your own stays) and injects the mandate to run `toolu jev` on startup, resume, clear, and compaction. It makes no API call.
+- **UserPromptSubmit hook** — restates that mandate on substantive prompts so it survives long sessions; silent for trivial confirmations. An absent hook key prompts command-environment verification. No API call.
 
 ## Wiring
 
@@ -50,13 +50,7 @@ Full CLI reference and usage guidance: [`skills/jev/SKILL.md`](skills/jev/SKILL.
 Executable [problem-solving examples](skills/jev/references/problem-solving.md) cover search, debugging, planning, and review with uncertainty and no-match handling.
 Plugin page: [`docs/jev/README.md`](../../docs/jev/README.md).
 
-A regular file already at `jev.sh` is a user-provided executable override. It is
-preserved and invoked directly using its own shebang/interpreter; this supports
-both shell scripts and JavaScript executables. Raw JavaScript without an
-executable shebang is not an executable override. The published link means
-`toolu jev`.
-
-## Wrapper reference
+## CLI reference
 
 Text input only; preprocess other formats. Context: 64k tokens/request, 32k for
 state + longest question. Slice large inputs. English is the primary training language.

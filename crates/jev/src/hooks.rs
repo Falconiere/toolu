@@ -1,35 +1,28 @@
-//! Test support for the hook modules: a temp home, a temp plugin root whose shim is the one
-//! `plugins/jev/scripts/jev.sh` will be, and the checks every hook test makes of an `Outcome`.
+//! Test support for the hook modules: a temp home, a temp plugin root with the skill file,
+//! and the checks every hook test makes of an `Outcome`.
 
 use std::fs;
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
 
 use tempfile::TempDir;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 use toolu_runtime::json::ordered::Ordered;
-use toolu_runtime::process::{Output, Spec, run};
 
 /// The key a hook may or may not receive.
 pub(crate) const KEY: &str = "local-test-key";
 
-/// A temp tree: `home`, and `plugin` with the shim and the skill.
+/// A temp tree: `home`, and `plugin` with the skill.
 pub(crate) struct Sandbox {
   pub(crate) dir: TempDir,
   pub(crate) home: PathBuf,
   pub(crate) plugin: PathBuf,
 }
 
-/// A plugin root at `dir` with the shim (mode 0755) and the skill file.
+/// A plugin root at `dir` with the skill file.
 pub(crate) fn install(dir: &Path) -> PathBuf {
-  assert!(fs::create_dir_all(dir.join("scripts")).is_ok());
   assert!(fs::create_dir_all(dir.join("skills/jev")).is_ok());
-  let shim = dir.join("scripts/jev.sh");
-  assert!(fs::write(&shim, "#!/bin/sh\nexec toolu jev \"$@\"\n").is_ok());
-  assert!(fs::set_permissions(&shim, fs::Permissions::from_mode(0o755)).is_ok());
   assert!(fs::write(dir.join("skills/jev/SKILL.md"), "# jev\n").is_ok());
   dir.to_path_buf()
 }
@@ -58,7 +51,7 @@ impl Sandbox {
     ])
   }
 
-  /// `<home>/.claude/jev`, where Claude's shim lands.
+  /// `<home>/.claude/jev`, where older versions published Claude's shim.
   pub(crate) fn claude_dir(&self) -> PathBuf {
     self.home.join(".claude/jev")
   }
@@ -124,42 +117,17 @@ pub(crate) fn called(context: &str) -> &str {
   command
 }
 
-/// `/bin/sh -c command` with exactly `env` and its output.
-pub(crate) fn sh(command: &str, env: &Env) -> Output {
-  let mut spec = Spec::new(["/bin/sh", "-c", command]);
-  spec.env = Some(env.clone());
-  let output = run(&spec);
-  assert!(output.is_ok());
-  match output {
-    Ok(output) => output,
-    Err(_) => failed_output(),
-  }
-}
-
-fn failed_output() -> Output {
-  Output {
-    pid: 0,
-    stdout: String::new(),
-    stdout_bytes: Vec::new(),
-    stderr: String::new(),
-    exit_code: 1,
-    duration: Duration::ZERO,
-    timed_out: false,
-    truncated: false,
-  }
-}
-
 /// The skill line every host gets for `plugin`.
 pub(crate) fn skill_file(plugin: &Path) -> String {
   format!("{}/skills/jev/SKILL.md", plugin.display())
 }
 
-/// The expected mandate for `command` and `skill`.
-pub(crate) fn mandate(command: &str, skill: &str) -> String {
+/// The expected mandate for `skill`.
+pub(crate) fn mandate(skill: &str) -> String {
   format!(
     "Jev is mandatory on every task containing semantic decisions. After initial exploration, \
-identify useful judgments over supplied evidence; you MUST call {command} before the decision it \
-informs. The command is toolu jev and does not load a project .env file. Reassess after new \
+identify useful judgments over supplied evidence; you MUST call toolu jev before the decision it \
+informs. The command does not load a project .env file. Reassess after new \
 evidence, failed hypotheses, or changed requirements. Batch independent questions in one ask \
 call. Reuse unchanged evidence and questions rather than repeating calls. If a task has no \
 semantic decision, say so in one sentence rather than skipping silently. Syntax and linked \
@@ -167,16 +135,6 @@ examples: {skill}. Keep exact rules, tests, and code verification deterministic.
 failure, state the limitation and use an explicit evidence fallback. Jev never replaces tests or \
 authorization."
   )
-}
-
-/// The first `node` on this process's `PATH`, if any.
-pub(crate) fn node() -> Option<PathBuf> {
-  let env = Env::process();
-  env
-    .get("PATH")?
-    .split(':')
-    .map(|dir| Path::new(dir).join("node"))
-    .find(|path| path.is_file())
 }
 
 #[cfg(test)]
