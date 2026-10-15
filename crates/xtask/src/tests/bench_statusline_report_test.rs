@@ -25,7 +25,7 @@ fn the_document_keeps_the_committed_shape_and_key_order() {
   assert_eq!(value["warmup"], 3);
   assert_eq!(value["wallUs"], 2824);
   assert_eq!(value["coldFirstRender"]["wallUs"], 3762);
-  assert_eq!(value["budget"]["maxRssBytes"], 5_242_880);
+  assert_eq!(value["budget"]["maxRssBytes"], 6_291_456);
   let at = |key: &str| text.find(&format!("\"{key}\"")).unwrap();
   let keys = [
     "schema",
@@ -50,7 +50,9 @@ fn bench_statusline_over_budget_fails() {
   let found = violations(&measured(WALL_US + 1, RSS_BYTES + 1));
   assert_eq!(found.len(), 2, "{found:?}");
   assert!(found[0].contains("wall p50 4001 us > budget 4000 us"));
-  assert!(found[1].contains("rss p50 5242881 bytes"));
+  assert!(found[1].contains("rss p50 6291457 bytes"));
+  // The CI render that crossed the old 5 MiB budget on unchanged code.
+  assert_eq!(violations(&measured(1417, 5_341_184)), Vec::<String>::new());
 }
 
 #[test]

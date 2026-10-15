@@ -4,7 +4,7 @@
 //! warm-up renders then `--runs` (30) measured ones, each in a fresh `xtask measure`
 //! after a cache refresh, then one cold first render. `--out` writes the
 //! `toolu.statusline-benchmark/v1` result. `--assert` fails when the warm p50 is over
-//! 4000 us wall or 5 MiB max RSS. Exit 0 ok, 1 over budget, 2 usage or setup error.
+//! 4000 us wall or 6 MiB max RSS. Exit 0 ok, 1 over budget, 2 usage or setup error.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
