@@ -1,6 +1,6 @@
 {
   "name": "delivery-flow",
-  "version": "8.0.1",
+  "version": "8.0.2",
   "hookProtocol": 2,
   "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
   "author": {
