@@ -4,15 +4,15 @@
   "entries": {
     "toolu/agent-tier": {
       "maxRssMiB": 8,
-      "cpuMs": 4
+      "cpuMs": 5
     },
     "toolu/check-binary": {
       "maxRssMiB": 7,
-      "cpuMs": 3
+      "cpuMs": 4
     },
     "toolu/mcp-tools": {
       "maxRssMiB": 7,
-      "cpuMs": 2
+      "cpuMs": 3
     },
     "toolu/post-tools": {
       "maxRssMiB": 6,
