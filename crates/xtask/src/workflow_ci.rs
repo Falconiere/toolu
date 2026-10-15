@@ -150,7 +150,7 @@ pub(crate) fn rust_legs(tests: &Value, found: &mut Findings) {
     "tests.yml:rust must report each OS check name",
   );
   let legs = items(at(rust, &["strategy", "matrix", "include"]));
-  for (os, check) in [("ubuntu-latest", "rust"), ("macos-14", "rust-macos")] {
+  for (os, check) in [("ubuntu-24.04", "rust"), ("macos-14", "rust-macos")] {
     found.need(
       legs
         .iter()
@@ -190,7 +190,7 @@ fn leg_steps(rust: &Value, found: &mut Findings) {
   found.need(
     linux
       .iter()
-      .all(|name| !named(name, "matrix.os == 'ubuntu-latest'").is_null()),
+      .all(|name| !named(name, "matrix.os == 'ubuntu-24.04'").is_null()),
     "tests.yml:rust Linux leg must own the full quality gate",
   );
   let mac = named("macOS clippy and Rust tests", "matrix.os == 'macos-14'");

@@ -19,7 +19,7 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 | One statusline render | ≤ 4 ms wall, ≤ 6 MiB max RSS (p50) | prototype: 2.6 ms, 3.9 MiB; Linux CI 2026-10-15: 1.4 ms, 4.7-5.1 MiB (raised from 5 MiB: the unchanged render crossed it on CI hosts) | `cargo xtask bench-statusline --assert`: 30 warm-cache release-binary renders after 3 warm-ups through `cargo xtask measure`; render reads cached Git counts; Linux `rust` CI gates it | #431 |
 | Idle engine | ≤ 10 MB high-water RSS (`VmHWM`), ≤ 20 voluntary context switches in a 35 s idle window (no timer under 30 s) | the #451 budget, enforced by the test | `cargo test -p toolu-epic-orchestrator --test idle_budget` on a release binary (Linux) | #451 |
 | Status server under 50 clients | ≤ 7 ms latency (p90), ≤ 13 MiB max RSS | prototype: 4.4 ms, 9.7 MiB | 50 concurrent keep-alive clients × 40 loopback requests; client-side latency, server `VmHWM` | #449 |
-| Gate duration | ≤ 60 s | 40 s (slowest of three CI runs) | the `cargo xtask gate` step of the `rust (ubuntu-latest)` job, warm cache | #455 |
+| Gate duration | ≤ 60 s | 40 s (slowest of three CI runs) | the `cargo xtask gate` step of the Linux `rust` job (`ubuntu-24.04`), warm cache | #455 |
 
 Linux CI is the gating platform. macOS is never gated: the hook bench measures and reports there, and the startup check runs on Linux only.
 
@@ -65,7 +65,7 @@ A budget changes only together with a new measurement committed under `benchmark
 3. Spawns each entry twice unmeasured, then `--runs` times (default 10), one at a time, each in a fresh `xtask measure` process.
 4. Prints p50 and p90 of max RSS, CPU (user + sys, children included) and wall per entry, and writes the `toolu.hook-resources/v1` document to `--out`.
 
-`--assert` fails, naming the entry, the metric, the measured value and the budget, when an entry of `benchmarks/hook-budgets.json` exceeds its p50 budget, or when the measured phase takes over 60 s. An entry without a budget is measured and reported, not gated. The `hook-bench` CI job runs it on `ubuntu-latest` with `--assert` and on `macos-latest` without, and uploads the JSON result.
+`--assert` fails, naming the entry, the metric, the measured value and the budget, when an entry of `benchmarks/hook-budgets.json` exceeds its p50 budget, or when the measured phase takes over 60 s. An entry without a budget is measured and reported, not gated. The `hook-bench` CI job runs it on `ubuntu-24.04` with `--assert` and on `macos-latest` without, and uploads the JSON result.
 
 Each spawn goes through `cargo xtask measure --out FILE -- COMMAND…`, run by a release `xtask`: a debug `cargo xtask` builds `xtask --release` into its own target directory first, and `XTASK_MEASURER` names another measurer (the bench's own tests use the test build). That task spawns the command once with inherited stdio, waits, and reads `getrusage(RUSAGE_CHILDREN)`. With one child, that is the child's whole process tree. `ru_maxrss` is KiB on Linux and bytes on macOS, and the task reports bytes.
 
