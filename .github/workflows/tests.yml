@@ -340,35 +340,12 @@ jobs:
           path: ${{ runner.temp }}/hook-resources.json
           if-no-files-found: warn
 
-  # The new aggregate status. `if: always()` keeps it from being skipped (a skipped
-  # required check would count as passing). It fails when `changes` failed, a
+  # The required aggregate status. `if: always()` keeps it from being skipped (a
+  # skipped required check would count as passing). It fails when `changes` failed, a
   # needed job failed or was cancelled, or a job was skipped although its group
   # was on; it passes when each job succeeded or was skipped with its group off.
   gate:
     name: gate
-    needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install the pinned toolchain
-        run: rustup toolchain install
-
-      - name: Cache cargo
-        uses: Swatinem/rust-cache@v2
-
-      - name: Require every needed job
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-        run: cargo xtask ci-aggregate tests.yml
-
-  # Branch protection currently requires `typescript`. Keep it equivalent to
-  # `gate` until the repository setting is migrated to the new check name.
-  typescript:
-    name: typescript
     needs: [changes, docs, rust, rust-musl, fuzz, hook-bench]
     if: ${{ always() }}
     runs-on: ubuntu-latest
