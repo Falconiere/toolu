@@ -156,3 +156,21 @@ fn an_inventory_row_may_go_with_its_task_but_not_while_the_task_lives() {
       .contains("changed an existing entry")
   );
 }
+
+#[test]
+fn an_unreadable_discovery_table_is_an_error() {
+  let tmp = tempfile::tempdir().unwrap();
+  let rules = format!("{DATA}/rules.json");
+  std::fs::create_dir_all(tmp.path().join(DATA)).unwrap();
+  std::fs::copy(Path::new(REPO).join(&rules), tmp.path().join(&rules)).unwrap();
+  let row = r#"{"kind":"xtask-task","id":"gone","pass":"a.rs::p","fail":"a.rs::f"}"#;
+  let before = format!(r#"{{"entries":[{row}]}}"#);
+  let error = classify(
+    Path::new(&format!("{DATA}/inventory.json")),
+    Some(&before),
+    Some(r#"{"entries":[]}"#),
+    tmp.path(),
+  )
+  .unwrap_err();
+  assert!(error.starts_with("crates/xtask/src/main.rs: "), "{error}");
+}
