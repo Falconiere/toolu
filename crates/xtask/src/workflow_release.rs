@@ -189,6 +189,27 @@ fn finalize(finalize: &Value, audit: &Value, found: &mut Findings) {
   );
 }
 
+/// A draft is visible only to a write token, so the smoke test runs the run's
+/// artifact with no token, and the upload job proves the draft holds those bytes.
+fn draft_access(native: &Value, finalize: &Value, found: &mut Findings) {
+  let smoke = at(finalize, &["jobs", "smoke-test"]);
+  let artifact = step_where(smoke, |step| {
+    includes(at(step, &["uses"]), "download-artifact@")
+      && text(at(step, &["with", "name"])) == "native-release"
+  });
+  found.need(
+    !artifact.is_null()
+      && !runs(smoke).contains("gh release download")
+      && at(smoke, &["env", "GH_TOKEN"]).is_null(),
+    "release-finalize.yml must smoke-test the run's native-release artifact without a token",
+  );
+  let upload = runs(at(native, &["jobs", "upload"]));
+  found.need(
+    upload.contains("gh release download") && upload.contains("cmp "),
+    "release-native.yml upload must verify the draft holds the packaged bytes",
+  );
+}
+
 /// npm publishing never cancels and leaves `latest` alone for a prerelease.
 fn npm(npm: &Value, found: &mut Findings) {
   found.need(
@@ -214,6 +235,7 @@ pub(crate) fn release(root: &Path, docs: &Docs<'_>, found: &mut Findings) -> Res
     docs.get("advisory-audit.yml"),
     found,
   );
+  draft_access(native, docs.get("release-finalize.yml"), found);
   npm(docs.get("npm-publish.yml"), found);
   Ok(())
 }

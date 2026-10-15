@@ -246,6 +246,19 @@ jobs:
           GH_REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
         run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/SHA256SUMS.minisig dist/toolu.spdx.json --clobber
+      # finalize smoke-tests the artifact, not the draft, which its read-only
+      # token cannot see; this proves the draft holds exactly those bytes.
+      - name: Verify the draft holds the packaged bytes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" -D roundtrip
+          for file in dist/*; do
+            cmp "$file" "roundtrip/${file#dist/}"
+          done
 
   finalize:
     needs: [package, upload]

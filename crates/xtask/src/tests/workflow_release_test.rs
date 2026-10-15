@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::release;
+use super::{draft_access, release};
 use crate::workflow_ci::Docs;
 use crate::workflow_yaml::Findings;
 
@@ -12,6 +12,35 @@ fn an_unreadable_release_config_is_an_error() {
   assert!(
     err.starts_with("release-please-config.json: cannot read or parse"),
     "{err}"
+  );
+}
+
+#[test]
+fn the_smoke_test_never_reads_the_draft_and_the_upload_verifies_it() {
+  let artifact =
+    json!({"uses": "actions/download-artifact@v4", "with": {"name": "native-release"}});
+  let finalize = json!({"jobs": {"smoke-test": {"steps": [artifact]}}});
+  let native = json!({"jobs": {"upload": {"steps": [
+    {"run": "gh release upload \"$TAG\" dist/x --clobber"},
+    {"run": "gh release download \"$TAG\" -D roundtrip\ncmp \"$file\" \"roundtrip/x\""}
+  ]}}});
+  let mut found = Findings::default();
+  draft_access(&native, &finalize, &mut found);
+  assert_eq!(found.0, Vec::<String>::new());
+
+  let finalize = json!({"jobs": {"smoke-test": {
+    "env": {"GH_TOKEN": "${{ github.token }}"},
+    "steps": [{"run": "gh release download \"$TAG\" -p \"$TARBALL\" -D dist"}]}}});
+  let native =
+    json!({"jobs": {"upload": {"steps": [{"run": "gh release upload \"$TAG\" dist/x"}]}}});
+  let mut found = Findings::default();
+  draft_access(&native, &finalize, &mut found);
+  assert_eq!(
+    found.0,
+    [
+      "release-finalize.yml must smoke-test the run's native-release artifact without a token",
+      "release-native.yml upload must verify the draft holds the packaged bytes",
+    ]
   );
 }
 

@@ -1,7 +1,9 @@
 name: Finalize native release
 
-# Smoke-test each actual target archive. Published runs download the draft
-# release assets; manual dry runs use the assembled artifact from this run.
+# Smoke-test each actual target archive: the assembled artifact of this run.
+# A draft release is invisible to this read-only token, so a published run
+# relies on the upload job, which byte-compares the draft's assets with the
+# same artifact. No token reaches the jobs that run the built binary.
 on:
   workflow_call:
     inputs:
@@ -41,17 +43,12 @@ jobs:
       TAG: ${{ inputs.tag }}
       TARBALL: toolu-${{ matrix.os }}-${{ matrix.arch }}.tar.gz
       PUBLISHED: ${{ inputs.published }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ inputs.tag }}
-      - name: Download uploaded release assets
-        if: inputs.published == true
-        run: gh release download "$TAG" -p "$TARBALL" -p SHA256SUMS -p toolu.spdx.json -D dist
-      - name: Download dry-run build assets
-        if: inputs.published != true
+          persist-credentials: false
+      - name: Download the assembled release assets
         uses: actions/download-artifact@v4
         with:
           name: native-release
