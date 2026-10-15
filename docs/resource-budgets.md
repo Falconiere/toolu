@@ -6,9 +6,9 @@ The Rust rebuild (epic #402) exists to cut what every hook spawn costs. This pag
 
 | Budget | Number | Measured from | How it is measured | Owner |
 |---|---|---|---|---|
-| `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms | `cargo xtask bench-hooks --assert`, per hook spawn | #425 |
-| `toolu hook check-binary` | ≤ 7 MiB max RSS, ≤ 3 ms CPU (p50) | Linux CI: 4.4 MiB, 2.0 ms | as above | #425 |
-| `toolu hook mcp-tools` | ≤ 7 MiB max RSS, ≤ 2 ms CPU (p50) | Linux CI: 4.4 MiB, 1.3 ms | as above | #425 |
+| `toolu hook agent-tier` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 4.7 MiB, 2.7 ms; Linux CI 2026-10-15: 5.0 MiB, 4.0 ms (raised from 4 ms: unchanged code reached it on CI hosts) | `cargo xtask bench-hooks --assert`, per hook spawn | #425 |
+| `toolu hook check-binary` | ≤ 7 MiB max RSS, ≤ 4 ms CPU (p50) | Linux CI: 4.4 MiB, 2.0 ms; Linux CI 2026-10-15: 4.4 MiB, 3.1 ms (raised from 3 ms: unchanged code crossed it on CI hosts) | as above | #425 |
+| `toolu hook mcp-tools` | ≤ 7 MiB max RSS, ≤ 3 ms CPU (p50) | Linux CI: 4.4 MiB, 1.3 ms; Linux CI 2026-10-15: 4.5 MiB, 1.9 ms (raised from 2 ms with the two above) | as above | #425 |
 | `toolu hook pre-tools` | ≤ 8 MiB max RSS, ≤ 5 ms CPU (p50) | Linux CI: 6.1 MiB, 1.7 ms | `cargo xtask bench-hooks --assert`, per hook spawn, `sh` launcher included | #418–#422 |
 | `toolu hook post-tools` | ≤ 6 MiB max RSS, ≤ 10 ms CPU (p50), excluding external linters it runs on purpose | prototype: 3.6 MiB, 2.6 ms | as above | #423 |
 | `toolu hook pre-compact` | ≤ 6 MiB max RSS, ≤ 4 ms CPU (p50) | native: 3.8 MiB, 3.0 ms | `cargo xtask bench-hooks`, release `toolu`, `sh` launcher included | #424 |
@@ -41,6 +41,8 @@ It was built out of tree, because Rust outside a workspace member fails `cargo x
 The three hook budgets introduced with #425 use the measured Linux CI run in `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-12.json`, with RSS at p50 × 1.5 and CPU at p50 × 1.25, each rounded up. Existing budgets are unchanged.
 
 Pre-tools was recalibrated from `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-13.json` after the merged binary outgrew the prototype (6.1 MiB p50 against a 6 MiB budget): RSS is the rule applied to the new run — min(epic start 8 MiB, p50 × 1.5 rounded up) — and CPU keeps the epic 5 ms.
+
+The CPU budgets of agent-tier, check-binary and mcp-tools were recalibrated from `benchmarks/results/hook-resources-rust-linux-x64-ci-2026-10-15.json`, the `main` run (`3c02bf04`) that failed check-binary at 3.1 ms against 3 ms: CPU is p50 × 1.25, rounded up. No hook code changed. On one runner image that day, check-binary measured 2.7–3.1 ms across four runs, and every gated entry except post-tools measured about 45–55% above the 2026-10-12 run. Only these three measured over 90% of their CPU budget. The other CPU budgets keep at least twice the measured time, and RSS budgets are unchanged.
 
 Rule:
 
