@@ -1,6 +1,6 @@
 # ts-quality — TypeScript Quality Gate
 
-**Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
+**Type:** Quality Gate | **Depends on:** `toolu`
 
 TypeScript `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every TypeScript file the agent edits is checked on the spot.
 
@@ -96,17 +96,19 @@ Tests must live in a sibling `__tests__/` directory, kept flat (only `fixtures/`
 // ✅ CORRECT — fix the actual problem
 ```
 
-### 6. No Console Statements
+### 6. No `console.log`
 
 ```typescript
 // ❌ BANNED in production code
 console.log('debug info');
-console.error('something broke');
 
-// ✅ CORRECT — use a proper logger
-logger.info('debug info');
-logger.error('something broke');
+// ✅ CORRECT — log at a level
+console.info('debug info');
+console.error('something broke');
 ```
+
+Only `console.log` is flagged; `console.error`, `console.warn` and
+`console.info` stay legal.
 
 ### 7. No Thrown Literals
 
@@ -174,13 +176,13 @@ Agent: *writes the middleware*
 > ❌ Gate: FAILING
 >   - src/middleware/auth.ts:1: '../../lib/jwt' — use @/lib/jwt instead of ../
 >   - src/middleware/auth.ts:28: as User — use a type guard or Zod schema
->   - src/middleware/auth.ts:55: console.log — use a logger
+>   - src/middleware/auth.ts:55: console.log — use console.error/warn/info
 >   - src/middleware/auth.ts: file exceeds 300-line limit (342 lines)
 
 # Commit and push are blocked until these are fixed:
 #   - Change relative import to @/lib/jwt
 #   - Replace as User with a Zod schema or type guard
-#   - Replace console.log with logger.info
+#   - Replace console.log with console.error/warn/info
 #   - Split the middleware into helper functions or a separate file
 
 > PostToolUse: Checking src/middleware/auth.ts...

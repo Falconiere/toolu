@@ -1,6 +1,6 @@
 # pr-babysit — PR Babysitter
 
-**Type:** Workflow | **Version:** 6.5.0 | **Depends on:** `toolu`
+**Type:** Workflow | **Depends on:** `toolu`
 
 A strict PR babysitter on the native `toolu babysit` commands. `toolu babysit
 wait` checks the pull request every 180 s in its own process and returns only

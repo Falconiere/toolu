@@ -1,6 +1,6 @@
 # rust-quality — Rust Quality Gate
 
-**Type:** Quality Gate | **Version:** 6.5.0 | **Depends on:** `toolu`
+**Type:** Quality Gate | **Depends on:** `toolu`
 
 Rust `PostToolUse` quality checks compiled into `toolu` and enabled by a registry manifest. Every Rust file the agent edits is checked on the spot.
 
@@ -98,7 +98,7 @@ use my_crate::auth;
 
 Tests must live in a sibling `tests/` directory, kept flat (only `fixtures/`, `helpers/`, `common/` subdirectories).
 
-### 6. Doc Comments on Public Items
+### 6. Doc Comments on Public Items (advisory, non-blocking)
 
 ```rust
 // ✅ CORRECT — public item has a doc comment
@@ -108,13 +108,15 @@ pub async fn validate_token(token: &str) -> Result<Claims, AuthError> {
     // ...
 }
 
-// ❌ BANNED — public function with no doc comment
+// ⚠️ ADVISORY — public function with no doc comment
 pub fn validate_token(token: &str) -> Result<Claims, AuthError> {
     // ...
 }
 ```
 
-Every public item must carry a concise doc line.
+Every public item should carry a concise doc line. This check is
+**advisory only** — it surfaces as guidance, never fails the gate, and is
+shown only when nothing blocks.
 
 ## How the Gate Works
 

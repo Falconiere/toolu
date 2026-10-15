@@ -30,7 +30,7 @@ The JSON goldens in `fixtures/` were captured from the bash and TypeScript imple
 | `host/encode.json`, `host/root.json`, `config/expected.json` | `crates/core/protocol/tests/encode_fixture.rs`, `crates/core/runtime/tests/{host_roots,config}_fixture.rs` |
 | `state/{cases,gate-bytes,edit-records}.json` | `crates/core/state/tests/` |
 
-Each replay asserts the number of cases it ran, names a mismatching case with a diff, and lists any case it deliberately does not replay in a constant with a one-line reason (for example the statusline `jev` and `report` kinds, which describe the retired TypeScript report). A deviation from a capture is named and asserted, never silent.
+Each replay asserts the number of cases it ran, names a mismatching case with a diff, and lists any case it deliberately does not replay in a constant with a one-line reason (for example the statusline `jev`, `report` and `report-error` kinds, which describe the retired TypeScript report). A deviation from a capture is named and asserted, never silent.
 
 ## Concurrency
 

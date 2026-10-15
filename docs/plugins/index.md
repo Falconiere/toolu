@@ -11,7 +11,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring CI `code-review@v8` (Jev-enabled) |
 | 4 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
 | 5 | [**pr-babysit**](../pr-babysit/README.md) | Workflow | `toolu` | Claude cron / durable Codex PR babysitter that chases findings to zero |
-| 6 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `delivery-flow` | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host and a merge gate |
+| 6 | [**epic-orchestrator**](../epic-orchestrator/README.md) | Workflow | `toolu`, `delivery-flow`, `pr-babysit` | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host and a merge gate |
 | 7 | [**python-quality**](../python-quality/README.md) | Quality Gate | `toolu` | Python post-edit quality checks (size, suppression, test layout, no-mocks) |
 | 8 | [**rust-quality**](../rust-quality/README.md) | Quality Gate | `toolu` | Rust post-edit quality checks (size, unsafe, unwrap bans) |
 | 9 | [**statusline**](../statusline/README.md) | Status | — | Persistent Claude statusline plus explicit Codex repository/gate status |
