@@ -119,9 +119,21 @@ fn data_file(
 /// Drop from `before` each inventory row that `after` no longer has and whose
 /// item is gone from its discovery table: registration shrinks with the code it
 /// registered. A changed row, a removed row of an item that still exists, and a
-/// row of an unknown kind stay a gate change; a table that cannot be read or has
-/// no such const is an error.
+/// row of an unknown kind stay a gate change. When a row is removed, a table that
+/// cannot be read or has no such const is an error.
 fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), String> {
+  let kept = |row: &Value| {
+    after
+      .get("entries")
+      .and_then(Value::as_array)
+      .is_some_and(|rows| rows.contains(row))
+  };
+  let Some(rows) = before.get_mut("entries").and_then(Value::as_array_mut) else {
+    return Ok(());
+  };
+  if rows.iter().all(kept) {
+    return Ok(());
+  }
   let mut tables = Vec::new();
   for kind in data::rules(root)?.inventory.kinds {
     let text = std::fs::read_to_string(root.join(&kind.file))
@@ -131,12 +143,6 @@ fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), St
       .ok_or_else(|| format!("{}: no const {}", kind.file, kind.constant))?;
     tables.push((kind.kind, items));
   }
-  let kept = |row: &Value| {
-    after
-      .get("entries")
-      .and_then(Value::as_array)
-      .is_some_and(|rows| rows.contains(row))
-  };
   let exists = |row: &Value| {
     let field = |key: &str| row.get(key).and_then(Value::as_str).unwrap_or_default();
     tables
@@ -144,9 +150,7 @@ fn drop_retired(before: &mut Value, after: &Value, root: &Path) -> Result<(), St
       .find(|(kind, _)| kind == field("kind"))
       .is_none_or(|(_, items)| items.iter().any(|item| item == field("id")))
   };
-  if let Some(rows) = before.get_mut("entries").and_then(Value::as_array_mut) {
-    rows.retain(|row| kept(row) || exists(row));
-  }
+  rows.retain(|row| kept(row) || exists(row));
   Ok(())
 }
 
