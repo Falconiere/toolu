@@ -12,19 +12,27 @@ fn current() -> String {
 }
 
 /// `VERSION` with its major moved by `major`, or else its minor by `minor`.
-fn shifted(major: u64, minor: i64) -> Res<String> {
+fn shifted(major: i64, minor: i64) -> Res<String> {
   let mut parts = VERSION.split('.').map(str::parse::<u64>);
   let (current_major, current_minor) = (
     parts.next().ok_or("no major")??,
     parts.next().ok_or("no minor")??,
   );
-  if major > 0 {
-    return Ok(format!("{}.0.0", current_major + major));
+  if major != 0 {
+    let moved = current_major
+      .checked_add_signed(major)
+      .ok_or("major out of range")?;
+    return Ok(format!("{moved}.0.0"));
   }
   let moved = current_minor
     .checked_add_signed(minor)
     .ok_or("minor out of range")?;
   Ok(format!("{current_major}.{moved}.0"))
+}
+
+/// A version below `VERSION`: its minor down one, or its major when the minor is 0.
+fn older() -> Res<String> {
+  shifted(0, -1).or_else(|_| shifted(-1, 0))
 }
 
 fn start(sandbox: &Sandbox) -> Res<String> {
@@ -91,9 +99,7 @@ fn a_binary_in_a_cellar_advises_brew_upgrade() {
 fn a_newer_binary_advises_a_plugin_update() {
   let sandbox = Sandbox::new().unwrap();
   sandbox.install().unwrap();
-  sandbox
-    .manifest(&shifted(0, -1).unwrap(), &current())
-    .unwrap();
+  sandbox.manifest(&older().unwrap(), &current()).unwrap();
   let message = start(&sandbox).unwrap();
   assert!(message.contains(&format!("toolu {VERSION} is newer than the toolu plugin")));
   assert!(message.contains("update the plugins from your host's marketplace"));
