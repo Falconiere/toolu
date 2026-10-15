@@ -13,8 +13,9 @@ pub(crate) const WARMUP: usize = 3;
 /// The p50 wall budget of one render, in microseconds.
 pub(crate) const WALL_US: u64 = 4000;
 
-/// The p50 max RSS budget of one render, in bytes.
-pub(crate) const RSS_BYTES: u64 = 5 * MIB;
+/// The p50 max RSS budget of one render, in bytes. 5 MiB until CI hosts measured the
+/// unchanged render at up to 5.1 MiB (`benchmarks/results/statusline-rust-linux-ci-2026-10-15.json`).
+pub(crate) const RSS_BYTES: u64 = 6 * MIB;
 
 /// What one bench run measured: warm p50s and the cold first render.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

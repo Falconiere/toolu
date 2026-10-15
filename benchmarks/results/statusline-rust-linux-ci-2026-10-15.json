@@ -1,0 +1,17 @@
+{
+  "schema": "toolu.statusline-benchmark/v1",
+  "platform": "linux",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "runs": 30,
+  "warmup": 3,
+  "wallUs": 1417,
+  "maxRssBytes": 5267456,
+  "coldFirstRender": {
+    "wallUs": 1747,
+    "maxRssBytes": 5341184
+  },
+  "budget": {
+    "wallUs": 4000,
+    "maxRssBytes": 5242880
+  }
+}
