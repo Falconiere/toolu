@@ -47,7 +47,7 @@ Any Conventional Commit on `main` counts, any path. `feat` / `fix` / `feat!` bum
 
 | Workflow | When | What |
 |----------|------|------|
-| `tests.yml` | push/PR to `main`, or a manual run. No workflow-level path filter | Jobs run by path group (below); `gate` and compatibility `typescript` aggregate them |
+| `tests.yml` | push/PR to `main`, or a manual run. No workflow-level path filter | Jobs run by path group (below); `gate` aggregates them |
 | `release-please.yml` | push to `main` | Release PR; on merge, draft Release and tag, npm publish and native build/finalize |
 | `release-native.yml` / `release-finalize.yml` | called by release-please or native dry-run dispatch | Four native archives, minisign-signed checksums, SPDX SBOM, provenance, OS smoke checks, then publish the draft |
 | `release-homebrew.yml` | called by release-please after the native release | `cargo xtask homebrew-formula` from the release `SHA256SUMS`, pushed to `Falconiere/homebrew-tap` with a tap-scoped App token; skipped for a tag containing `-` |
@@ -72,7 +72,7 @@ Each gated job carries a job-level `if`, and a job skipped that way reports Succ
 | `fuzz` | `rust` | Both `toolu-shell` fuzz targets (`crates/core/shell/fuzz`) for 60 seconds each on nightly with cargo-fuzz, clang instrumenting tree-sitter's C sources, the corpus seeded from `fixtures/shell` (#416) |
 | `hook-bench (ubuntu-24.04)`, `hook-bench (macos-latest)` | `ports` | `cargo xtask bench-hooks`, the max RSS, CPU and wall of every hook entry per spawn (#410). Linux adds `--assert`, which gates the entries of `benchmarks/hook-budgets.json`; macOS only reports. Each leg uploads its JSON result. See `docs/resource-budgets.md` |
 | `review` | `changed` | The code review. Runs for any change outside release-only files, docs included, and for forks even with a release-only diff; a generated same-repo Release PR is exempt |
-| `gate`, `typescript` | aggregate, `if: always()` | `cargo xtask ci-aggregate tests.yml`. Both evaluate all gated jobs identically. `typescript` remains for existing branch protection while `gate` is added |
+| `gate` | aggregate, `if: always()` | `cargo xtask ci-aggregate tests.yml` over all gated jobs. Branch protection requires it and `review` |
 
 These paths turn every group on:
 

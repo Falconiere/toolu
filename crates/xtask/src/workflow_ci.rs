@@ -8,7 +8,7 @@ use serde_json::Value;
 
 use crate::workflow_yaml::{Findings, at, includes, items, lists, runs, step_where, steps, text};
 
-/// The jobs `gate` and `typescript` aggregate.
+/// The jobs `gate` aggregates.
 const GATED: [&str; 6] = ["changes", "docs", "fuzz", "hook-bench", "rust", "rust-musl"];
 
 /// The jobs allowed `contents: write`, as `<file>:<job>`.
@@ -113,25 +113,23 @@ pub(crate) fn actions_and_permissions(name: &str, doc: &Value, found: &mut Findi
   }
 }
 
-/// `gate` and `typescript` aggregate every gated job with `always()`.
+/// `gate` aggregates every gated job with `always()`.
 pub(crate) fn aggregates(tests: &Value, found: &mut Findings) {
-  for id in ["gate", "typescript"] {
-    let job = at(tests, &["jobs", id]);
-    let mut needs: Vec<&str> = items(at(job, &["needs"])).iter().map(text).collect();
-    needs.sort_unstable();
-    found.need(
-      needs == GATED && includes(at(job, &["if"]), "always()"),
-      &format!("tests.yml:{id} must aggregate every gated job with always()"),
-    );
-    found.need(
-      text(at(job, &["name"])) == id,
-      &format!("tests.yml:{id} must report the {id} check"),
-    );
-    found.need(
-      runs(job).contains("cargo xtask ci-aggregate tests.yml"),
-      &format!("tests.yml:{id} must run cargo xtask ci-aggregate"),
-    );
-  }
+  let job = at(tests, &["jobs", "gate"]);
+  let mut needs: Vec<&str> = items(at(job, &["needs"])).iter().map(text).collect();
+  needs.sort_unstable();
+  found.need(
+    needs == GATED && includes(at(job, &["if"]), "always()"),
+    "tests.yml:gate must aggregate every gated job with always()",
+  );
+  found.need(
+    text(at(job, &["name"])) == "gate",
+    "tests.yml:gate must report the gate check",
+  );
+  found.need(
+    runs(job).contains("cargo xtask ci-aggregate tests.yml"),
+    "tests.yml:gate must run cargo xtask ci-aggregate",
+  );
   found.need(
     at(tests, &["jobs", "ts"]).is_null(),
     "tests.yml must not keep the ts job",

@@ -64,9 +64,7 @@
   "workflows": {
     "tests.yml": {
       "aggregate": "gate",
-      "required": [
-        "typescript"
-      ],
+      "required": [],
       "jobs": {
         "docs": "docs",
         "rust": "rust",

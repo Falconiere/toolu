@@ -124,7 +124,7 @@ fn package_problems(root: &Path) -> Result<Vec<String>, String> {
   })
 }
 
-/// No workflow installs or runs Bun; the retired jobs stay gone, `typescript` stays.
+/// No workflow installs or runs Bun, and the retired jobs stay gone.
 fn workflow_problems(root: &Path) -> Result<Vec<String>, String> {
   let bun = word_bun()?;
   let mut found = Vec::new();
@@ -140,13 +140,10 @@ fn workflow_problems(root: &Path) -> Result<Vec<String>, String> {
     }
   }
   let tests = read(root, ".github/workflows/tests.yml")?;
-  for job in ["shellcheck", "bats", "rust-conformance"] {
+  for job in ["shellcheck", "bats", "rust-conformance", "typescript"] {
     if job_pattern(job)?.is_match(&tests) {
       found.push(format!("retired CI job remains: {job}"));
     }
-  }
-  if !job_pattern("typescript")?.is_match(&tests) {
-    found.push("replacement typescript CI job missing".to_owned());
   }
   Ok(found)
 }

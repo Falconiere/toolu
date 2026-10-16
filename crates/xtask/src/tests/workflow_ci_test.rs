@@ -46,9 +46,8 @@ fn an_aggregate_missing_a_gated_job_is_named() {
     "steps": [{"run": "cargo xtask ci-aggregate tests.yml"}]})
   };
   let all = json!(["changes", "docs", "fuzz", "hook-bench", "rust", "rust-musl"]);
-  let mut tests = json!({"jobs": {"gate": job(all.clone()),
-    "typescript": job(all), "changes": {"steps": [{"run": "cargo xtask ci-changes"}]}}});
-  tests["jobs"]["typescript"]["name"] = json!("typescript");
+  let mut tests = json!({"jobs": {"gate": job(all),
+    "changes": {"steps": [{"run": "cargo xtask ci-changes"}]}}});
   assert_eq!(found(|f| aggregates(&tests, f)), Vec::<String>::new());
   tests["jobs"]["gate"]["needs"] = json!(["changes"]);
   assert_eq!(

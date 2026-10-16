@@ -94,7 +94,21 @@ fn a_bun_bundle_inventory_row_is_a_finding() {
   );
 }
 
-/// A git repository that passes: a package manifest, the `typescript` job and one native row.
+#[test]
+fn a_typescript_job_is_a_retired_job() {
+  let tmp = tempfile::tempdir().unwrap();
+  let root = tmp.path();
+  minimal(root);
+  write(
+    root,
+    ".github/workflows/tests.yml",
+    "jobs:\n  gate:\n  typescript:\n",
+  );
+  let found = super::problems(root).unwrap();
+  assert_eq!(found, ["retired CI job remains: typescript"]);
+}
+
+/// A git repository that passes: a package manifest, the `gate` job and one native row.
 fn minimal(root: &std::path::Path) {
   assert!(
     Command::new("git")
@@ -106,11 +120,7 @@ fn minimal(root: &std::path::Path) {
       .success()
   );
   write(root, "package.json", "{\"private\":true}\n");
-  write(
-    root,
-    ".github/workflows/tests.yml",
-    "jobs:\n  typescript:\n",
-  );
+  write(root, ".github/workflows/tests.yml", "jobs:\n  gate:\n");
   write(
     root,
     "fixtures/gate-coverage/inventory.json",
