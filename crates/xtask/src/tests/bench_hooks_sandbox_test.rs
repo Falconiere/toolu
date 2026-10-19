@@ -10,7 +10,10 @@ fn fake_toolu(dir: &std::path::Path) -> PathBuf {
   let log = dir.join("calls.log");
   std::fs::write(
     &bin,
-    format!("#!/bin/sh\ncat >/dev/null\necho \"$1 $2 $3\" >> '{}'\n", log.display()),
+    format!(
+      "#!/bin/sh\ncat >/dev/null\necho \"$1 $2 $3\" >> '{}'\n",
+      log.display()
+    ),
   )
   .unwrap();
   std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
@@ -54,7 +57,11 @@ fn the_core_fixture_registers_nothing_and_a_failed_register_is_an_error() {
   let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
   drop(Sandbox::new(&repo, &bin, false).unwrap());
   assert!(!dir.path().join("calls.log").exists());
-  std::fs::write(&bin, "#!/bin/sh\ncat >/dev/null\necho 'no registry here' >&2\nexit 3\n").unwrap();
+  std::fs::write(
+    &bin,
+    "#!/bin/sh\ncat >/dev/null\necho 'no registry here' >&2\nexit 3\n",
+  )
+  .unwrap();
   let err = Sandbox::new(&repo, &bin, true).err().unwrap();
   assert_eq!(
     err,
