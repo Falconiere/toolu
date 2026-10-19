@@ -69,7 +69,7 @@ normalized into the native shape, so `snapshot.json` under
 | Observation | Consequence |
 |---|---|
 | A directory with `.muse-plugin`, `.claude-plugin` and `.codex-plugin` manifests selects `.muse-plugin`, with only a `multiple-manifests` warning | #547 adds one manifest; the catalog and the other manifests stay |
-| toolu's plugins today: 11 of 12 skipped through `.claude-plugin` (`commandWindows` in `hooks.json`, `dependencies` entries) | Nothing installs usefully before #547 |
+| toolu's plugins today: 11 of 12 skipped through `.claude-plugin` (`commandWindows` in `hooks.json`, `dependencies` entries); only `brainstorm` (skills, no hooks) imports as `claude-compatible` | No hook-carrying plugin installs before #547 |
 | Git sources accepted: `file://…`, `https://github.com/Falconiere/toolu.git`, `Falconiere/toolu`, and `<url>#<tag>`, which checks out the tag; `marketplace update` stays on that tag. `@ref`, `/tree/<ref>` and `github:` fail | A Git marketplace would be possible |
 | A Git marketplace's `marketplace update` writes `generations/<n>/source`, but the installed plugin keeps its old path. `muse plugins update` stays on the old version, and a second `install <name>@<mp>` is refused ("already installed from a different source") | With a Git marketplace, every update would be remove + install |
 | A local-directory marketplace records the live path. After the directory changes, `marketplace update` offers the new version and `muse plugins update` installs it in place. Repeating an install from the same source exits 0 | In-place update works |
@@ -100,7 +100,8 @@ DIR="${XDG_DATA_HOME:-$HOME/.local/share}/toolu/muse-marketplace"
 TAG=v8.0.4
 NAME=statusline
 
-# install (and install --config replay; every step is idempotent)
+# install (and install --config replay). Clone only when $DIR is absent;
+# otherwise move the existing checkout with the update fetch below.
 git clone --depth 1 --branch "$TAG" https://github.com/Falconiere/toolu.git "$DIR"
 muse plugins marketplace list --json   # skip the add when "toolu" is already at $DIR
 muse plugins marketplace add toolu "$DIR" --json
@@ -142,8 +143,9 @@ toolu plugins remove --host muse <name>... --yes
   skills and commands are active. On Claude Code and Codex, which have no
   approval step, the flag does nothing.
 - **`install --config` replay.** This is the install sequence for the file's
-  `enabled` names. A marketplace already registered at `$DIR` is skipped, and a
-  repeated install from the same source exits 0 unchanged. The selection format
+  `enabled` names. An existing `$DIR` is moved with the update fetch instead of
+  cloned, a marketplace already registered at `$DIR` is skipped, and a repeated
+  install from the same source exits 0 unchanged. The selection format
   stays at version 1; #549 adds `"muse"` to its accepted `host` values.
 - **`update` for installed plugins.** Move the checkout, refresh the snapshot,
   then `muse plugins update` each installed toolu plugin. A plugin whose
