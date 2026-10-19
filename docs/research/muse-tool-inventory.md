@@ -627,9 +627,9 @@ Under `untrusted`, `ran` for the `hookSpecificOutput` shape means the request we
 
 | Hook output | `hook test` | Live hook status | Ran | Tool result |
 |-------------|-------------|------------------|-----|-------------|
-| `{"updatedInput":{"command":"echo rewritten-540-r1"}}` | status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output | completed | original-540 | command `echo original-540-r1`, output `original-540-r1` |
+| `{"updatedInput":{"command":"echo rewritten-540-r1"}}` | status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output | failed | original-540 | command `echo original-540-r1`, output `original-540-r1` |
 | `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"command":"echo rewritten-540-r2"}}}` | status=completed; parsed={"updated_input": {"command": "echo rewritten-540"}} | completed | rewritten-540 | command `echo rewritten-540-r2`, output `rewritten-540-r2` |
-| `{"decision":"approve","updatedInput":{"command":"echo rewritten-540-r3"}}` | status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output | completed | original-540 | command `echo original-540-r3`, output `original-540-r3` |
+| `{"decision":"approve","updatedInput":{"command":"echo rewritten-540-r3"}}` | status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output | failed | original-540 | command `echo original-540-r3`, output `original-540-r3` |
 | `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"command":"echo rewritten-540-r4"}}}` | status=completed; parsed={"updated_input": {"command": "echo rewritten-540"}} | completed | rewritten-540 | command `echo rewritten-540-r4`, output `rewritten-540-r4` |
 
 ## PostToolUse-block verdict

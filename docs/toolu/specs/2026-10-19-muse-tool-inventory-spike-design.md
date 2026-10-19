@@ -77,10 +77,11 @@ The session log lives under `<scratch>/xdg-data/muse/sessions/…/session.jsonl`
 | I7 | same as I1 | `image_generation` of a tiny image |
 | I8 | same as I1 | MCP `probe_echo` (the model-visible name is read from `active_tools`) |
 | I9 | same as I1 | delegation: `workflow` running one child agent, plus any delegation tool the trusted toolset adds |
+| I9b, I10, I11 | same as I1 | added during execution: a `workflow` whose `host.agent` passes `agentType`, `model` and `effort` (I9b); `work_status`/`work_stop` on a real background job plus `subagent_spawn` with every optional parameter, `subagent_status`, `subagent_send_message` and `subagent_cancel` (I10); failing `read_file` and `bash` calls for `PostToolUseFailure` (I11) |
 | P1 | `--preset native-basic --approval-mode never --trust-workspace` | `shell`, `subagent_spawn` + `subagent_wait` + `subagent_read_result`, `list_peer_sessions`, `send_session_message` to its own session |
 | S1 | `--enable-shell-tool --approval-mode never --trust-workspace` | `shell` naming on the default surface |
 | A0 | `--approval-mode untrusted --trust-workspace`, no hook rule | `bash` `touch ask-baseline.txt`; this calibrates Muse's own approval record (see V-ask) |
-| A1–A9 | `--approval-mode untrusted --trust-workspace` | the I1–I9 prompts again; a tool is `fired` when a `PermissionRequest` hook line with its `tool_name` appears |
+| A1–A11 | `--approval-mode untrusted --trust-workspace` | the I1–I11 prompts again; a tool is `fired` when a `PermissionRequest` hook line with its `tool_name` appears |
 | AP1, AS1 | the P1 and S1 flags with `--approval-mode untrusted` in place of `never` | the P1 and S1 prompts again (`shell`, `subagent_*`, `list_peer_sessions`, `send_session_message`) |
 
 **V-ask** (target `bash` `touch ask-540.txt`, a write that the untrusted mode gates):
@@ -104,6 +105,7 @@ The session log lives under `<scratch>/xdg-data/muse/sessions/…/session.jsonl`
   - `ran`: the hook output was ignored.
   - `failed`: Muse recorded the hook as failed and the tool ran.
   - `not-invoked`: the hook event never fired for this call. For example, `PermissionRequest` does not fire when the mode needs no approval.
+- Added during execution, after the hook test showed which values parse: PreToolUse `hookSpecificOutput.permissionDecision: "deny"`, and PermissionRequest `hookSpecificOutput.decision.behavior` `"deny"` and `"allow"`, each run live under `untrusted` only. They are recorded in `verdicts.ask.extra_candidates`.
 - If headless exec cannot surface any prompt even for A0, the verdict says so. It then falls back to the `hook test` classification: a candidate classified as an ask counts as an ask surface, and one classified as `failed` or an unsupported field does not.
 
 **V-rewrite** (target `bash` `echo original-540`, under `--approval-mode never --trust-workspace`). The `PreToolUse` candidates:
@@ -111,6 +113,7 @@ The session log lives under `<scratch>/xdg-data/muse/sessions/…/session.jsonl`
 - `{"updatedInput":{"command":"echo rewritten-540"}}`
 - `{"hookSpecificOutput":{"hookEventName":"PreToolUse","updatedInput":{"command":"echo rewritten-540"}}}`
 - `{"decision":"approve","updatedInput":{"command":"echo rewritten-540"}}`
+- added during execution, after the hook test pointed to it: `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{…}}}`
 
 Each gets the hook-test classification and the live `tool_result_batch_committed` text.
 
@@ -204,13 +207,13 @@ The research doc's sections, whose headings the plan checks:
 
 ## Acceptance criteria
 
-- **AC-1:** Given the probe on Muse 1.4.10, the research doc and evidence list every tool name that is in any recorded main-agent `active_tools` or in any `PreToolUse` hook line of runs I0–I9, P1 and S1. Each entry carries:
+- **AC-1:** Given the probe on Muse 1.4.10, the research doc and evidence list every tool name that is in any recorded main-agent `active_tools` or in any `PreToolUse` hook line of runs I0–I11, I9b, P1 and S1. Each entry carries:
   - its families and configurations;
   - for an exercised tool, its `tool_input` keys, its post event with the `tool_response` shape, and a redacted `pre_example`;
   - for a listed tool that was not exercised, `exercised: false` and the reason.
 
   Every family in {shell, file-read, file-write, file-edit, search, web, skill, memory, cron, delegation, mcp} has at least one exercised tool with an example.
-- **AC-2:** Given runs A1–A9, AP1 and AS1 under `--approval-mode untrusted`, every exercised non-internal tool has `permission_request` ∈ {fired, not fired, not exercised}, decided by the presence of a `PermissionRequest` hook line with that `tool_name`. The `PermissionRequest` payload keys are listed, or the list is empty because no tool fired.
+- **AC-2:** Given runs A1–A11, AP1 and AS1 under `--approval-mode untrusted`, every exercised non-internal tool has `permission_request` ∈ {fired, not fired, not exercised}, decided by the presence of a `PermissionRequest` hook line with that `tool_name`. The `PermissionRequest` payload keys are listed, or the list is empty because no tool fired.
 - **AC-3:** The ignore list names every host-internal tool observed, at least `submit_reminder_decision`. Each entry is absent from every main-agent `active_tools`, and its `origin` cites the reminder or child agent and toolset (`mode: named, source: runtime`) that carries it.
 - **AC-4:** The ask verdict records the A0 calibration records, and for each candidate × {PreToolUse, PermissionRequest} the hook-test classification and the live outcome under on-request, untrusted and never. Its conclusion is either a supported ask shape or "no ask surface".
 - **AC-5:** The input-rewrite verdict quotes the live tool-result text for `bash` `echo original-540` under each candidate, and concludes whether `rewritten-540` ever ran.
@@ -238,8 +241,8 @@ The extractor (`extract.py`, scratchpad) turns the live logs into the evidence J
 
 | AC | Real input | Expected observable result | Boundary / failure case | Runnable check |
 |----|-----------|---------------------------|-------------------------|----------------|
-| AC-1 | hook log and session logs of I0–I9, P1, S1 | every `active_tools` ∪ hook-log name is an evidence key; each exercised tool has keys, a post event and an example; every required family is exercised | listed but unexercised → `exercised: false` with reason; a required family missing fails | `jq -e` over the evidence (the plan's S1 expression); the cross-check output is pasted in the doc's Method section |
-| AC-2 | hook log of A1–A9, AP1, AS1 | `permission_request` set for every exercised tool; payload keys non-empty whenever a tool fired | a tool not run under untrusted → `not exercised`; no tool fired → empty key list allowed | `jq -e` (plan S3) |
+| AC-1 | hook log and session logs of I0–I11, I9b, P1, S1 | every `active_tools` ∪ hook-log name is an evidence key; each exercised tool has keys, a post event and an example; every required family is exercised | listed but unexercised → `exercised: false` with reason; a required family missing fails | `jq -e` over the evidence (the plan's S1 expression); the cross-check output is pasted in the doc's Method section |
+| AC-2 | hook log of A1–A11, AP1, AS1 | `permission_request` set for every exercised tool; payload keys non-empty whenever a tool fired | a tool not run under untrusted → `not exercised`; no tool fired → empty key list allowed | `jq -e` (plan S3) |
 | AC-3 | reminder-agent session logs | `internal` tools have an `origin` and appear in no `toolsets` list | an internal tool listed in a main toolset fails | `jq -e` (plan S2) |
 | AC-4 | A0 records, hook-test JSON, live V-ask sessions | calibration non-empty; every candidate has a hook test and three live outcomes; conclusion set | headless exec shows no prompt even for A0 → stated, with the hook-test fallback | `jq -e` (plan S4) |
 | AC-5 | live V-rewrite sessions | `ran` ∈ {original-540, rewritten-540, none} per candidate, plus the quoted result | an empty or failed result is recorded verbatim (`none`) | `jq -e` (plan S4) |

@@ -2526,7 +2526,7 @@
         {
           "output": "{\"updatedInput\": {\"command\": \"echo rewritten-540-r1\"}}",
           "hook_test": "status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output",
-          "live_hook_status": "completed",
+          "live_hook_status": "failed",
           "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo original-540-r1\",\n  \"description\": \"Run original echo command\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"original-540-r1\\n\",\n  \"original_output_bytes\": 16,\n  \"original_output_tokens\": 4,\n  \"truncated\": false\n}",
           "ran": "original-540"
         },
@@ -2540,7 +2540,7 @@
         {
           "output": "{\"decision\": \"approve\", \"updatedInput\": {\"command\": \"echo rewritten-540-r3\"}}",
           "hook_test": "status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output",
-          "live_hook_status": "completed",
+          "live_hook_status": "failed",
           "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo original-540-r3\",\n  \"description\": \"Run echo verification command\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"original-540-r3\\n\",\n  \"original_output_bytes\": 16,\n  \"original_output_tokens\": 4,\n  \"truncated\": false\n}",
           "ran": "original-540"
         },
