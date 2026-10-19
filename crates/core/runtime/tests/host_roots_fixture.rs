@@ -1,8 +1,7 @@
 //! The shared host-roots fixture (AC-2): `Roots` reproduces every case of
-//! `fixtures/host/root.json`, as `host-roots.ts` does
-//! (`packages/toolu-core/src/host/__tests__/host-roots.test.ts`), in the same
-//! kind of sandbox: a temp root holding `project` (a real git repository when
-//! the case asks for one) and `home`.
+//! `fixtures/host/root.json`, including the original `host-roots.ts` cases
+//! and Muse cases, in a temp root holding `project` (a real git repository
+//! when the case asks for one) and `home`.
 
 #[path = "helpers/repo.rs"]
 mod repo;
@@ -131,7 +130,7 @@ fn shown(path: Option<PathBuf>) -> Value {
 fn call(function: &str, args: &[Value]) -> Res<Result<Value, ()>> {
   let options_at = |index: usize| options(args.get(index).unwrap_or(&Value::Null));
   let (roots, cwd, root) = options_at(match function {
-    "projectStateDir" | "pluginInstallCommand" => 1,
+    "projectStateDir" | "pluginInstallCommand" | "pluginUninstallCommand" => 1,
     "invocation" => 2,
     _ => 0,
   })?;
@@ -153,6 +152,10 @@ fn call(function: &str, args: &[Value]) -> Res<Result<Value, ()>> {
       Err(_) => return Ok(Err(())),
     },
     "pluginInstallCommand" => match roots.plugin_install_command(text(args.first())?) {
+      Ok(command) => command.map_or(Value::Null, Value::from),
+      Err(_) => return Ok(Err(())),
+    },
+    "pluginUninstallCommand" => match roots.plugin_uninstall_command(text(args.first())?) {
       Ok(command) => command.map_or(Value::Null, Value::from),
       Err(_) => return Ok(Err(())),
     },
@@ -228,9 +231,9 @@ fn run_warning(case: &Value) -> Res<usize> {
 }
 
 #[test]
-fn every_host_root_case_resolves_as_typescript_does() {
+fn every_host_root_case_resolves_as_declared() {
   let cases = repo::cases(FIXTURE).unwrap();
-  assert_eq!(cases.len(), 18);
+  assert_eq!(cases.len(), 20);
   let mut failures = Vec::new();
   let mut checks = 0;
   for case in &cases {

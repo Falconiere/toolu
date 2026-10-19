@@ -238,7 +238,7 @@ fn ask_never_reaches_a_host_or_event_that_cannot_prompt() {
   let decisions = [allow(), ask(), deny(), advise(), post_block(), failure()];
   for host in Host::ALL {
     for event in HostEvent::ALL {
-      if native_event(host, event).is_none() || supports_ask(host, event) {
+      if host == Host::Muse || native_event(host, event).is_none() || supports_ask(host, event) {
         continue;
       }
       for decision in &decisions {
@@ -247,6 +247,13 @@ fn ask_never_reaches_a_host_or_event_that_cannot_prompt() {
       }
     }
   }
+}
+
+#[test]
+fn muse_encoder_is_explicitly_unavailable_until_its_host_port() {
+  assert!(!supports_ask(Host::Muse, ToolPre));
+  let err = encode(Host::Muse, ToolPre, &deny()).unwrap_err();
+  assert_eq!(err.to_string(), "muse has no output encoder for tool/pre");
 }
 
 #[test]

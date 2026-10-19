@@ -23,11 +23,11 @@ paths → generated CLI documentation and full gate.
 [
   {
     "id": "S1",
-    "title": "Add Host::Muse and shared PascalCase native events, leaving Muse-only events unmapped",
+    "title": "Add Host::Muse and PascalCase events, leaving extra events unmapped and staged payload/encoder routes fail-closed",
     "check": "cargo test -p toolu-protocol --lib",
     "ac_refs": ["AC-1", "AC-4"],
-    "paths": ["crates/core/protocol/src/host.rs", "crates/core/protocol/src/native.rs", "crates/core/protocol/src/tests/host_test.rs", "crates/core/protocol/src/tests/native_test.rs"],
-    "input": "Host::parse muse and mus; PreToolUse, Stop, Notification, SubagentStop and PostToolUseFailure native names",
+    "paths": ["crates/core/protocol/src/host.rs", "crates/core/protocol/src/native.rs", "crates/core/protocol/src/payload.rs", "crates/core/protocol/src/encode.rs", "crates/core/protocol/src/tests/host_test.rs", "crates/core/protocol/src/tests/native_test.rs", "crates/core/protocol/src/tests/encode_test.rs", "crates/core/protocol/src/tests/hook_test.rs"],
+    "input": "Host::parse muse and mus; PreToolUse, Stop, Notification, SubagentStop and PostToolUseFailure native names; a real run_hook_io Muse decision with nonempty stderr on enforcing failure",
     "model": "inherit"
   },
   {
@@ -53,17 +53,17 @@ paths → generated CLI documentation and full gate.
   {
     "id": "S4",
     "title": "Document the additive --host muse interface in generated CLI reference and accept commands JSON snapshot",
-    "check": "cargo test -p toolu-cli --test contract && cargo xtask gate --only docs-cli --only cli-compat && cargo xtask check-markdown-cli",
+    "check": "TOOLU_RESOURCE_HOME=\"$TMPDIR/isolated-resources\" cargo test -p toolu-cli --test contract && cargo xtask gate --only docs-cli --only cli-compat && cargo xtask check-markdown-cli",
     "ac_refs": ["AC-1", "AC-5"],
     "depends_on": ["S3"],
-    "paths": ["crates/cli/tests/contract.rs", "crates/cli/tests/fixtures/commands_json.snap", "docs/cli", "crates/core/protocol/src/host.rs"],
+    "paths": ["crates/cli/tests/contract.rs", "crates/cli/tests/fixtures/commands_json.snap", "docs/cli", "crates/core/protocol/src/host.rs", "crates/plugins/src/host.rs", "crates/core/engine/src/registry/gate.rs", "crates/core/engine/src/ledger/preflight.rs", "crates/core/engine/tests/helpers", "crates/toolu/src/doctor/inventory.rs", "crates/toolu/src/lifecycle/notices.rs"],
     "input": "Built CLI --host muse commands --json and invalid --host mus, then generated --help and commands snapshot",
     "model": "inherit"
   },
   {
     "id": "S5",
     "title": "Run the full Rust quality gate and CLI compatibility contract",
-    "check": "cargo xtask gate",
+    "check": "capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c 'TOOLU_RESOURCE_HOME=\"$TMPDIR/isolated-resources\" cargo xtask gate'",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
     "depends_on": ["S4"],
     "paths": ["crates", "fixtures/host", "docs/cli"],
@@ -101,3 +101,24 @@ missing/empty variables. Check the actual binary's accepted/rejected host
 Plan review (2026-10-19): fixed the fixture runner path, declared its case
 count and uninstall dispatch, and recorded delivery preflight. All ACs have a
 dependent check and representative boundary input. Status: Approved.
+
+## Deviations
+
+- S1: `Host::Muse` made the existing exhaustive payload and encoder matches
+  fail to compile. #543/#544 own the full ports, so S1 includes the smallest
+  compile-safe interim arms. The payload reads Claude-shaped JSON (as the
+  epic probe observed), while decision encoding explicitly errors. A real
+  `run_hook_io` test proves enforcing events exit 2 with blocked stderr and
+  context events return `systemMessage` until #544 lands.
+- S4: the CLI contract build exposed other exhaustive host matches. Muse stays
+  an unsupported installer target and an unknown installed-plugin inventory
+  until #549/#550; the registry keeps unknown presence, and the ledger and
+  lifecycle use neutral instructions. The dispatch test harness uses Muse's
+  native config root. This resolves the compiler boundary without claiming
+  later epic integration is complete.
+- S4 verification uses a task-owned `TOOLU_RESOURCE_HOME` for the contract
+  test. Without it, the test connects to this machine's resident epic engine,
+  whose newer status fields are outside this checkout's schema. The isolated
+  run passed all 20 tests against this checkout's own status document.
+- S5 keeps that isolation for the full gate and drops root capabilities as
+  required by the repository's root-host gate procedure.

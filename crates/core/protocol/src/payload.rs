@@ -66,7 +66,8 @@ pub enum Payload {
 /// or holds a lone-surrogate escape.
 pub fn parse(host: Host, text: &str) -> Result<Payload, serde_json::Error> {
   Ok(match host {
-    Host::Claude => Payload::Claude(serde_json::from_str(text)?),
+    // #543 adds a distinct Muse payload once its tool names are normalized.
+    Host::Claude | Host::Muse => Payload::Claude(serde_json::from_str(text)?),
     Host::Codex => Payload::Codex(serde_json::from_str(text)?),
     Host::Cursor => Payload::Cursor(serde_json::from_str(text)?),
     Host::Hermes => Payload::Hermes(serde_json::from_str(text)?),

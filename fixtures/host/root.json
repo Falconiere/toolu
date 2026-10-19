@@ -944,6 +944,87 @@
       ]
     },
     {
+      "name": "Muse config and plugin paths prefer native variables with XDG and Claude fallbacks",
+      "kind": "calls",
+      "git": false,
+      "dirs": [],
+      "checks": [
+        {
+          "fn": "configRoot",
+          "args": [{"env": {"HOME": "/home/u"}, "host": "muse"}],
+          "expected": "/home/u/.config/muse"
+        },
+        {
+          "fn": "configRoot",
+          "args": [{"env": {"HOME": "/home/u", "XDG_CONFIG_HOME": "/xdg"}, "host": "muse"}],
+          "expected": "/xdg/muse"
+        },
+        {
+          "fn": "configRoot",
+          "args": [{"env": {"MUSE_CONFIG_DIR": "/muse", "XDG_CONFIG_HOME": "/xdg"}, "host": "muse"}],
+          "expected": "/muse"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [{"env": {"MUSE_PLUGIN_ROOT": "/muse/root", "PLUGIN_ROOT": "/codex/root", "CLAUDE_PLUGIN_ROOT": "/claude/root"}, "host": "muse"}],
+          "expected": "/muse/root"
+        },
+        {
+          "fn": "pluginData",
+          "args": [{"env": {"MUSE_PLUGIN_DATA_DIR": "/muse/data", "PLUGIN_DATA": "/codex/data", "CLAUDE_PLUGIN_DATA": "/claude/data"}, "host": "muse"}],
+          "expected": "/muse/data"
+        },
+        {
+          "fn": "pluginRoot",
+          "args": [{"env": {"CLAUDE_PLUGIN_ROOT": "/claude/root"}, "host": "muse"}],
+          "expected": "/claude/root"
+        },
+        {
+          "fn": "pluginData",
+          "args": [{"env": {"CLAUDE_PLUGIN_DATA": "/claude/data"}, "host": "muse"}],
+          "expected": "/claude/data"
+        }
+      ]
+    },
+    {
+      "name": "Muse project paths and commands use a real git root and native syntax",
+      "kind": "calls",
+      "git": true,
+      "dirs": ["src"],
+      "checks": [
+        {
+          "fn": "projectRoot",
+          "args": [{"env": {}, "host": "muse", "cwd": {"$path": "$PROJECT/src"}}],
+          "expected": {"$path": "$PROJECT"}
+        },
+        {
+          "fn": "projectDirname",
+          "args": [{"env": {}, "host": "muse"}],
+          "expected": ".agents"
+        },
+        {
+          "fn": "projectConfigPath",
+          "args": [{"env": {}, "host": "muse", "cwd": {"$path": "$PROJECT/src"}}],
+          "expected": {"$path": "$PROJECT/.agents/toolu.config.json"}
+        },
+        {
+          "fn": "invocation",
+          "args": ["toolu", "setup", {"env": {}, "host": "muse"}],
+          "expected": "/toolu:setup"
+        },
+        {
+          "fn": "pluginInstallCommand",
+          "args": ["/plugins/jev", {"env": {}, "host": "muse"}],
+          "expected": "muse plugins install /plugins/jev"
+        },
+        {
+          "fn": "pluginUninstallCommand",
+          "args": ["jev", {"env": {}, "host": "muse"}],
+          "expected": "muse plugins remove jev"
+        }
+      ]
+    },
+    {
       "name": "an invalid override warns once from composite path functions",
       "kind": "warning",
       "override": "bogus",

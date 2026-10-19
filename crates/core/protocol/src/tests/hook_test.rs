@@ -170,6 +170,34 @@ fn an_event_the_host_lacks_is_an_internal_error_named_by_its_slug() {
 }
 
 #[test]
+fn muse_without_its_encoder_fails_closed_on_enforcing_events() {
+  for (event, native) in [
+    (HostEvent::ToolPre, "PreToolUse"),
+    (HostEvent::PermissionEvaluate, "PermissionRequest"),
+  ] {
+    let got = run(event, Host::Muse, b"{}", |_| Ok(deny("protected file")));
+    assert_eq!(got.exit, ExitCode::from(2));
+    assert_eq!(got.stdout, "");
+    assert_eq!(
+      got.stderr,
+      format!(
+        "blocked: toolu {native} hook failed: muse has no output encoder for {}\n",
+        event.slug()
+      )
+    );
+  }
+  let start = run(HostEvent::SessionStart, Host::Muse, b"{}", |_| {
+    Ok(Reply::from(Decision::Allow))
+  });
+  assert_eq!(start.exit, ExitCode::from(0));
+  assert_eq!(start.stderr, "");
+  assert_eq!(
+    start.stdout,
+    "{\"systemMessage\":\"toolu SessionStart hook failed: muse has no output encoder for session/start\"}\n"
+  );
+}
+
+#[test]
 fn a_panic_is_caught_and_ends_by_the_event_class() {
   let got = run(HostEvent::ToolPre, Host::Claude, b"{}", |_| panic!("boom"));
   assert_eq!(

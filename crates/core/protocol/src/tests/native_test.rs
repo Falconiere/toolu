@@ -117,8 +117,11 @@ fn names_from_another_host_or_unknown_names_are_none() {
 }
 
 #[test]
-fn pascal_case_names_belong_to_both_claude_and_codex() {
-  assert_eq!(hosts_for_native("PreToolUse"), [Host::Claude, Host::Codex]);
+fn pascal_case_names_belong_to_claude_codex_and_muse() {
+  assert_eq!(
+    hosts_for_native("PreToolUse"),
+    [Host::Claude, Host::Codex, Host::parse("muse").unwrap()]
+  );
 }
 
 #[test]
@@ -132,4 +135,15 @@ fn cursor_and_hermes_names_belong_to_one_host() {
 fn an_unknown_name_belongs_to_no_host() {
   assert_eq!(hosts_for_native("pre_compact"), []);
   assert_eq!(hosts_for_native(""), []);
+}
+
+#[test]
+fn muse_shares_pascal_events_but_not_its_extra_events() {
+  let muse = Host::parse("muse").expect("Muse host");
+  for event in HostEvent::ALL {
+    assert_eq!(native_event(muse, event), native_event(Host::Claude, event));
+  }
+  for name in ["Stop", "Notification", "SubagentStop", "PostToolUseFailure"] {
+    assert_eq!(canonical_event(muse, name), None, "{name}");
+  }
 }

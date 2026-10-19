@@ -36,6 +36,7 @@ impl Inventory {
     }
   }
 
+  /// The installed plugin names paired with their readable roots.
   pub(super) fn roots(&self) -> impl Iterator<Item = (&str, &Path)> {
     self.plugins.iter().filter_map(|plugin| {
       plugin
@@ -51,7 +52,9 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
   match roots.host() {
     Host::Claude => claude(roots, cwd),
     Host::Codex => codex(roots),
-    Host::Cursor | Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
+    Host::Cursor | Host::Hermes | Host::Muse => {
+      Inventory::warn("plugin inventory is unknown for this host")
+    }
   }
 }
 

@@ -27,6 +27,12 @@ host-unique event, Cursor variables, `MUSE_PLUGIN_ID` or `MUSE_SESSION_ID`,
 `PLUGIN_ROOT`, then Claude. An invalid override preserves its warning and
 falls through. This makes shared event names ambiguous-safe.
 
+Until #543/#544 supply the distinct Muse payload and output encoder, parsing
+uses the shared Claude-shaped hook payload and Muse decision encoding returns
+an explicit error. `run_hook` converts that error to stderr plus exit 2 on
+enforcing events, preserving the epic's fail-closed rule during staged delivery.
+It never emits Claude's incompatible decision JSON for Muse.
+
 Extend `Roots` matches rather than branching callers. Keep `TOOLU_CONFIG_DIR`
 and `TOOLU_PROJECT_DIR` as highest-priority generic overrides. Muse project
 dirname is `.agents`, except when `TOOLU_PROJECT_CONFIG_DIRNAME` overrides it.
@@ -50,7 +56,8 @@ spelling.
   remain fallback values.
 - `Roots::invocation("toolu", "setup")` returns `/toolu:setup`.
 - `plugin_install_command(spec)` returns `muse plugins install <spec>`;
-  `plugin_uninstall_command(name)` returns `muse plugins remove <name>@toolu`.
+  `plugin_uninstall_command(name)` returns `muse plugins remove <name>` because
+  Muse removes by its native plugin ID, as its CLI and installed-plugin list show.
 
 ## Failure modes and edge cases
 
@@ -61,6 +68,9 @@ Without `TOOLU_PROJECT_DIR` or a git toplevel, project paths remain `None`.
 Empty command names preserve the existing `CallerError`. `--host mus` remains
 an unknown-host usage error. No `HOOK_PROTOCOL` bump is needed for an additive
 host and event mapping.
+Before #544 lands, a Muse decision fails with a named encoder error: enforcing
+events exit 2 with a nonempty blocked stderr; context events report a
+`systemMessage` with exit 0.
 
 ## Acceptance criteria
 

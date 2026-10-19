@@ -192,18 +192,22 @@ fn a_successful_verb_leaves_stderr_empty() {
 
 #[test]
 fn host_must_be_a_known_host_and_config_dir_is_accepted() {
-  let bogus = toolu(&["--host", "bogus", "commands"]).unwrap();
+  let bogus = toolu(&["--host", "mus", "commands"]).unwrap();
   assert_eq!(bogus.status.code(), Some(64));
   assert_eq!(stdout(&bogus).unwrap(), "");
   assert!(
     stderr(&bogus)
       .unwrap()
-      .contains("[possible values: claude, codex, cursor, hermes]")
+      .contains("[possible values: claude, codex, cursor, hermes, muse]")
   );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));
   assert!(stdout(&known).unwrap().starts_with("toolu hook "));
   assert_eq!(stderr(&known).unwrap(), "");
+  let muse = toolu(&["--host", "muse", "commands", "--json"]).unwrap();
+  assert_eq!(muse.status.code(), Some(0));
+  assert!(one_document(&muse).is_ok());
+  assert_eq!(stderr(&muse).unwrap(), "");
 }
 
 #[test]

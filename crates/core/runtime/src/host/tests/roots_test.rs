@@ -54,6 +54,7 @@ fn uninstall_commands_exist_where_a_host_can_remove_a_plugin() {
     (Host::Codex, Some("codex plugin remove jev@toolu")),
     (Host::Cursor, None),
     (Host::Hermes, None),
+    (Host::Muse, Some("muse plugins remove jev")),
   ];
   for (host, command) in expect {
     let command = command.map(str::to_owned);
@@ -67,4 +68,77 @@ fn uninstall_commands_exist_where_a_host_can_remove_a_plugin() {
     roots(Host::Claude, &[]).plugin_uninstall_command(""),
     Err(error)
   );
+}
+
+#[test]
+fn muse_config_root_uses_its_dir_then_xdg_then_home() {
+  let custom = roots(Host::Muse, &[("MUSE_CONFIG_DIR", "/muse")]);
+  assert_eq!(custom.config_root(), PathBuf::from("/muse"));
+  let xdg = roots(
+    Host::Muse,
+    &[("HOME", "/home/u"), ("XDG_CONFIG_HOME", "/xdg")],
+  );
+  assert_eq!(xdg.config_root(), PathBuf::from("/xdg/muse"));
+  let home = roots(Host::Muse, &[("HOME", "/home/u")]);
+  assert_eq!(home.config_root(), PathBuf::from("/home/u/.config/muse"));
+  let toolu = roots(
+    Host::Muse,
+    &[("MUSE_CONFIG_DIR", "/muse"), ("TOOLU_CONFIG_DIR", "/toolu")],
+  );
+  assert_eq!(toolu.config_root(), PathBuf::from("/toolu"));
+}
+
+#[test]
+fn muse_project_uses_agents_dir_and_git_toplevel() {
+  let muse = roots(Host::Muse, &[]);
+  assert_eq!(muse.project_dirname(), ".agents");
+  let repo = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..");
+  let repo = std::fs::canonicalize(repo).unwrap();
+  assert_eq!(
+    muse.project_root(Some(&repo.join("crates/core/runtime"))),
+    Some(repo.clone())
+  );
+  assert_eq!(
+    muse.project_config_path(Some(&repo.join("crates/core/runtime"))),
+    Some(repo.join(".agents/toolu.config.json"))
+  );
+  let override_root = roots(Host::Muse, &[("TOOLU_PROJECT_DIR", "/other")]);
+  assert_eq!(
+    override_root.project_root(None),
+    Some(PathBuf::from("/other"))
+  );
+}
+
+#[test]
+fn muse_plugin_paths_and_commands_prefer_its_native_variables() {
+  let muse = roots(
+    Host::Muse,
+    &[
+      ("MUSE_PLUGIN_ROOT", "/muse/root"),
+      ("MUSE_PLUGIN_DATA_DIR", "/muse/data"),
+      ("CLAUDE_PLUGIN_ROOT", "/claude/root"),
+      ("CLAUDE_PLUGIN_DATA", "/claude/data"),
+      ("PLUGIN_ROOT", "/codex/root"),
+      ("PLUGIN_DATA", "/codex/data"),
+    ],
+  );
+  assert_eq!(muse.plugin_root(), Some(PathBuf::from("/muse/root")));
+  assert_eq!(muse.plugin_data(), Some(PathBuf::from("/muse/data")));
+  assert_eq!(
+    muse.invocation("toolu", "setup"),
+    Ok("/toolu:setup".to_owned())
+  );
+  assert_eq!(
+    muse.plugin_install_command("/plugins/toolu"),
+    Ok(Some("muse plugins install /plugins/toolu".to_owned()))
+  );
+  let fallback = roots(
+    Host::Muse,
+    &[
+      ("CLAUDE_PLUGIN_ROOT", "/claude/root"),
+      ("CLAUDE_PLUGIN_DATA", "/claude/data"),
+    ],
+  );
+  assert_eq!(fallback.plugin_root(), Some(PathBuf::from("/claude/root")));
+  assert_eq!(fallback.plugin_data(), Some(PathBuf::from("/claude/data")));
 }

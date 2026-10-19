@@ -4539,7 +4539,8 @@ source: crates/cli/tests/helpers/schema.rs
         "claude",
         "codex",
         "cursor",
-        "hermes"
+        "hermes",
+        "muse"
       ],
       "required": false,
       "short": null,
