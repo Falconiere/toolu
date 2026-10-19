@@ -193,6 +193,18 @@
     ]
   },
   "event_payload_keys": {
+    "Notification": [
+      "cwd",
+      "hook_event_name",
+      "message",
+      "model",
+      "notification_type",
+      "permission_mode",
+      "session_id",
+      "title",
+      "transcript_path",
+      "turn_id"
+    ],
     "PermissionRequest": [
       "cwd",
       "hook_event_name",
@@ -1252,7 +1264,7 @@
     "search": {
       "family": "search",
       "internal": false,
-      "canonical": "Grep, or Glob when mode is files/glob",
+      "canonical": "Grep (glob is a file-filter array; output_mode takes Grep values)",
       "configs": [
         "default-untrusted",
         "default-trusted",
@@ -2332,5 +2344,279 @@
     "tool_name",
     "transcript_path",
     "turn_id"
-  ]
+  ],
+  "verdicts": {
+    "ask": {
+      "calibration": {
+        "approval_records": [
+          "A0 (untrusted, no hook rule, bash touch): runtime.session `requested` {presentation_phase: automated_reviewing, available_choices: [allow_once, allow_local_prefix, abort], approval_subject.kind: shell_command}",
+          "approval_wait.effect.started",
+          "automated_review_started / automated_review_completed {outcome: approve, model: muse-spark-1.3-contributor, reasoning_effort: low}",
+          "decision_applied {decision: approved, decision_source.kind: llm_judge}",
+          "PermissionRequest hook_run_started / hook_run_terminal, after decision_applied",
+          "approval_wait.effect.terminal {outcome: approved}"
+        ],
+        "hook_forced_prompt_records": [
+          "V-ask-c-o (on-request, PreToolUse hookSpecificOutput.permissionDecision ask): `requested` {presentation_phase: human_pending, available_choices: [allow_once, abort], approval_subject.stages: []}",
+          "approval_wait.effect.started with no automated_review record",
+          "PermissionRequest hook ran (its output failed), then Notification hook {notification_type: permission_prompt, title: 'Muse Code needs approval', message: 'ws — waiting for approval'}",
+          "no further record: headless exec has no responder; run.py killed the session after 900 s; ask540-c-o.txt never created"
+        ],
+        "notification": "Notification fired only for the hook-forced human prompt (notification_type permission_prompt), never for LLM-judged approvals"
+      },
+      "candidates": [
+        {
+          "event": "PreToolUse",
+          "output": "{\"decision\": \"ask\", \"reason\": \"probe-540 ask\"}",
+          "hook_test": "status=failed; error=unsupported legacy PreToolUse output; use `hookSpecificOutput.permissionDecision`",
+          "live": {
+            "on-request": "failed",
+            "untrusted": "failed",
+            "never": "failed"
+          },
+          "evidence": [
+            "V-ask-a-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-o.t']",
+            "V-ask-a-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-u.t']",
+            "V-ask-a-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-n.t']"
+          ]
+        },
+        {
+          "event": "PermissionRequest",
+          "output": "{\"decision\": \"ask\", \"reason\": \"probe-540 ask\"}",
+          "hook_test": "status=failed; error=unsupported `decision.behavior` value in PermissionRequest output",
+          "live": {
+            "on-request": "not-invoked",
+            "untrusted": "failed",
+            "never": "not-invoked"
+          },
+          "evidence": [
+            "V-ask-a-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-o.t']",
+            "V-ask-a-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-u.t']",
+            "V-ask-a-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-a-n.t']"
+          ]
+        },
+        {
+          "event": "PreToolUse",
+          "output": "{\"permissionDecision\": \"ask\", \"permissionDecisionReason\": \"probe-540 ask\"}",
+          "hook_test": "status=failed; error=unsupported `permissionDecision` in output of PreToolUse hook output",
+          "live": {
+            "on-request": "failed",
+            "untrusted": "failed",
+            "never": "failed"
+          },
+          "evidence": [
+            "V-ask-b-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-o.t']",
+            "V-ask-b-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-u.t']",
+            "V-ask-b-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-n.t']"
+          ]
+        },
+        {
+          "event": "PermissionRequest",
+          "output": "{\"permissionDecision\": \"ask\", \"permissionDecisionReason\": \"probe-540 ask\"}",
+          "hook_test": "status=failed; error=unsupported `permissionDecision` in output of PermissionRequest hook output",
+          "live": {
+            "on-request": "not-invoked",
+            "untrusted": "failed",
+            "never": "not-invoked"
+          },
+          "evidence": [
+            "V-ask-b-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-o.t']",
+            "V-ask-b-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-u.t']",
+            "V-ask-b-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-b-n.t']"
+          ]
+        },
+        {
+          "event": "PreToolUse",
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"ask\", \"permissionDecisionReason\": \"probe-540 ask\"}}",
+          "hook_test": "status=completed",
+          "live": {
+            "on-request": "prompted",
+            "untrusted": "ran",
+            "never": "ran"
+          },
+          "evidence": [
+            "V-ask-c-o: approvals=['human_pending'] results=['none (session waited until killed)']",
+            "V-ask-c-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-c-u.t']",
+            "V-ask-c-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-c-n.t']"
+          ]
+        },
+        {
+          "event": "PermissionRequest",
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"permissionDecision\": \"ask\", \"permissionDecisionReason\": \"probe-540 ask\"}}",
+          "hook_test": "status=failed; error=unsupported `permissionDecision` in hookSpecificOutput of PermissionRequest hook output",
+          "live": {
+            "on-request": "failed",
+            "untrusted": "failed",
+            "never": "not-invoked"
+          },
+          "evidence": [
+            "V-ask-c-o: approvals=['human_pending'] results=['none (session waited until killed)']",
+            "V-ask-c-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-c-u.t']",
+            "V-ask-c-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-c-n.t']"
+          ]
+        },
+        {
+          "event": "PreToolUse",
+          "output": "{\"decision\": \"approve\"}",
+          "hook_test": "status=failed; error=unsupported legacy PreToolUse output; use `hookSpecificOutput.permissionDecision`",
+          "live": {
+            "on-request": "failed",
+            "untrusted": "failed",
+            "never": "failed"
+          },
+          "evidence": [
+            "V-ask-d-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-o.t']",
+            "V-ask-d-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-u.t']",
+            "V-ask-d-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-n.t']"
+          ]
+        },
+        {
+          "event": "PermissionRequest",
+          "output": "{\"decision\": \"approve\"}",
+          "hook_test": "status=failed; error=unsupported `decision.behavior` value in PermissionRequest output",
+          "live": {
+            "on-request": "not-invoked",
+            "untrusted": "failed",
+            "never": "not-invoked"
+          },
+          "evidence": [
+            "V-ask-d-o: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-o.t']",
+            "V-ask-d-u: approvals=['automated_reviewing', 'approved'] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-u.t']",
+            "V-ask-d-n: approvals=[] results=['{\\n  \"chunk_id\": \"exec-1-1\",\\n  \"command\": \"touch ask540-d-n.t']"
+          ]
+        }
+      ],
+      "extra_candidates": [
+        {
+          "event": "PreToolUse",
+          "decision": "deny",
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": \"probe-540 deny\"}}",
+          "mode": "untrusted",
+          "hook_test": "status=blocked; parsed={\"permission_decision\": \"deny\", \"should_block\": true}",
+          "live": "blocked",
+          "tool_result": "tool blocked by hook: probe-540 deny",
+          "approvals": []
+        },
+        {
+          "event": "PermissionRequest",
+          "decision": "deny",
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"decision\": {\"behavior\": \"deny\", \"message\": \"probe-540 deny\"}}}",
+          "mode": "untrusted",
+          "hook_test": "status=blocked; parsed={\"permission_decision\": \"deny\", \"should_block\": true}",
+          "live": "blocked",
+          "tool_result": "tool denied by hook: probe-540 deny",
+          "approvals": []
+        },
+        {
+          "event": "PermissionRequest",
+          "decision": "allow",
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PermissionRequest\", \"decision\": {\"behavior\": \"allow\"}}}",
+          "mode": "untrusted",
+          "hook_test": "status=completed; parsed={\"permission_decision\": \"allow\"}",
+          "live": "ran",
+          "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"touch ask540-g-u.txt\",\n  \"description\": \"Create empty marker file\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"\",\n  \"original_output_byt",
+          "approvals": []
+        }
+      ],
+      "hook_test_note": "muse plugins hook test reports hookSpecificOutput.permissionDecision ask as status=completed with permission_decision null; only the live runtime shows the human prompt",
+      "conclusion": "Ask surface exists: PreToolUse {\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"ask\",\"permissionDecisionReason\":…}} (exit 0) forces a human approval prompt (presentation_phase human_pending, choices allow once / abort, Notification permission_prompt) that bypasses the LLM approval judge under --approval-mode on-request (the default); a headless muse exec has no responder and waits until killed. Under untrusted it folds into the mode's own approval, which the LLM judge decided (approved, the same records as the no-hook baseline); under never it is ignored and the tool runs. PermissionRequest has no ask: hookSpecificOutput.decision.behavior accepts only allow and deny. Every other ask shape (legacy {decision}, top-level permissionDecision, decision approve) is a failed hook and the tool runs (fail-open). Deny works on both events: PreToolUse permissionDecision deny → 'tool blocked by hook: <reason>'; PermissionRequest decision.behavior deny → 'tool denied by hook: <reason>'. A bare PreToolUse permissionDecision allow is rejected ('requires updatedInput')."
+    },
+    "updated_input": {
+      "candidates": [
+        {
+          "output": "{\"updatedInput\": {\"command\": \"echo rewritten-540-r1\"}}",
+          "hook_test": "status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output",
+          "live_hook_status": "completed",
+          "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo original-540-r1\",\n  \"description\": \"Run original echo command\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"original-540-r1\\n\",\n  \"original_output_bytes\": 16,\n  \"original_output_tokens\": 4,\n  \"truncated\": false\n}",
+          "ran": "original-540"
+        },
+        {
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"updatedInput\": {\"command\": \"echo rewritten-540-r2\"}}}",
+          "hook_test": "status=completed; parsed={\"updated_input\": {\"command\": \"echo rewritten-540\"}}",
+          "live_hook_status": "completed",
+          "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo rewritten-540-r2\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"rewritten-540-r2\\n\",\n  \"original_output_bytes\": 17,\n  \"original_output_tokens\": 5,\n  \"truncated\": false\n}",
+          "ran": "rewritten-540"
+        },
+        {
+          "output": "{\"decision\": \"approve\", \"updatedInput\": {\"command\": \"echo rewritten-540-r3\"}}",
+          "hook_test": "status=failed; error=unsupported `updatedInput` in output of PreToolUse hook output",
+          "live_hook_status": "completed",
+          "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo original-540-r3\",\n  \"description\": \"Run echo verification command\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"original-540-r3\\n\",\n  \"original_output_bytes\": 16,\n  \"original_output_tokens\": 4,\n  \"truncated\": false\n}",
+          "ran": "original-540"
+        },
+        {
+          "output": "{\"hookSpecificOutput\": {\"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"allow\", \"updatedInput\": {\"command\": \"echo rewritten-540-r4\"}}}",
+          "hook_test": "status=completed; parsed={\"updated_input\": {\"command\": \"echo rewritten-540\"}}",
+          "live_hook_status": "completed",
+          "tool_result": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo rewritten-540-r4\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"rewritten-540-r4\\n\",\n  \"original_output_bytes\": 17,\n  \"original_output_tokens\": 5,\n  \"truncated\": false\n}",
+          "ran": "rewritten-540"
+        }
+      ],
+      "conclusion": "Input rewrite is supported on PreToolUse through hookSpecificOutput.updatedInput, alone or with permissionDecision allow (exit 0). It replaces the whole tool_input: keys the hook omits are dropped (the model's description vanished from the bash result), and the tool runs the rewritten input (echo rewritten-540-r2 / -r4 ran, not the model's echo original-540-*). Top-level updatedInput, with or without decision approve, is a failed hook and the original input runs."
+    },
+    "post_tool_use_block": {
+      "candidates": [
+        {
+          "output": "{\"decision\": \"block\", \"reason\": \"probe-540 post block\"}",
+          "stderr": "",
+          "exit": 0,
+          "hook_test": "status=blocked; parsed={\"should_block\": true}",
+          "tool_result": "probe-540 post block",
+          "follow_up_records": [
+            "memory_reminder_child_session_linked",
+            "model_input_trace_recorded",
+            "model_response_created",
+            "provider_request_options_configured",
+            "reasoning_committed",
+            "reminder_proposal",
+            "reminder_reconciler_outcome",
+            "skill_reminder_decision",
+            "task_stream_linked"
+          ],
+          "model_quote": "The `edit_file` result was:\n\n```\nprobe-540 post block\n```\n",
+          "persisted": true
+        },
+        {
+          "output": "",
+          "stderr": "probe-540 post block",
+          "exit": 2,
+          "hook_test": "status=blocked; parsed={\"should_block\": true}",
+          "tool_result": "probe-540 post block",
+          "follow_up_records": [
+            "memory_reminder_child_session_linked",
+            "model_input_trace_recorded",
+            "model_response_created",
+            "provider_request_options_configured",
+            "reasoning_committed",
+            "reminder_proposal",
+            "reminder_reconciler_outcome",
+            "skill_reminder_decision",
+            "task_stream_linked"
+          ],
+          "model_quote": "probe-540 post block",
+          "persisted": true
+        }
+      ],
+      "follow_up_note": "records between the tool result and the next assistant message are reminder-agent plumbing (skill_reminder_decision, reminder_proposal …) and model-request bookkeeping; no developer or system message carries the block reason",
+      "conclusion": "A PostToolUse block replaces the tool result the model receives with the block reason: for edit_file the model got exactly 'probe-540 post block' instead of the {filePath, structuredPatch} result, and quoted it as the tool output. Both {\"decision\":\"block\",\"reason\":…} with exit 0 and stderr text with exit 2 do this. Nothing else is injected, and the edit stays on disk (the hook runs after the tool)."
+    }
+  },
+  "side_effects": [
+    {
+      "path": "~/.config/muse/settings.json",
+      "cause": "muse plugins approve toolu-probe-540 wrote 8 runtime_capabilities trust keys (plugin:toolu-probe-540:*); approval trust is global even with XDG_DATA_HOME set",
+      "removed": false,
+      "reason": "the file is the user's Muse settings and stays; muse plugins remove deleted the probe's 8 keys, the file is back to its 82-byte pre-probe content, and S6 checks that no plugin:toolu-probe-540 key remains"
+    },
+    {
+      "path": "~/.local/share/muse/session-name-authority/session-names.db",
+      "cause": "every muse exec session claims an automatic session name in this machine-wide registry, which XDG_DATA_HOME does not relocate; 53 of its 69 claims belong to probe sessions",
+      "removed": false,
+      "reason": "shared SQLite registry that every Muse session on the machine writes, the parallel #541 worker's included; deleting rows from another program's live database risks corrupting it, and the claims only reserve names of sessions that exist solely in the probe's sandbox data home"
+    }
+  ],
+  "cleanup": {
+    "sandbox_list": "no plugins",
+    "global_list": "brainstorm\t8.0.3\tenabled=true active=true trust=user-local provenance=marketplace-user-added valid=true diagnostics=7"
+  }
 }
