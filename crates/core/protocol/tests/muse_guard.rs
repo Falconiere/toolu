@@ -196,16 +196,28 @@ fn every_muse_path_on_a_context_event_exits_0() {
 
 #[test]
 fn a_failure_on_an_enforcing_event_blocks_with_a_stderr_line() {
-  for event in [HostEvent::ToolPre, HostEvent::PermissionEvaluate] {
+  for (event, native) in [
+    (HostEvent::ToolPre, "PreToolUse"),
+    (HostEvent::PermissionEvaluate, "PermissionRequest"),
+  ] {
     let paths = every_path(event, Box::new(|| panic!("boom"))).unwrap();
-    for label in ["panic", "error", "unreadable stdin", "lost stdout"] {
+    for (label, tail) in [
+      ("panic", "hook panicked: boom"),
+      ("error", "hook failed: boom"),
+      (
+        "unreadable stdin",
+        "hook failed: the hook payload could not be read: closed",
+      ),
+      ("lost stdout", "hook could not write its output: closed"),
+    ] {
       let path = paths.iter().find(|p| p.label == label).unwrap();
       let (code, stdout, stderr) = run(event, path);
       assert_eq!(code, ExitCode::from(2), "{event:?} {label}");
       assert_eq!(stdout, "", "{event:?} {label}");
-      assert!(
-        stderr.starts_with("blocked: toolu "),
-        "{event:?} {label}: {stderr}"
+      assert_eq!(
+        stderr,
+        format!("blocked: toolu {native} {tail}\n"),
+        "{label}"
       );
     }
   }
