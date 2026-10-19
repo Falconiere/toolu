@@ -26,6 +26,7 @@ Use when running toolu's required Rust gates as root on a shared Linux host, esp
 - Do not delete another worker's or unproven-owned `/tmp` data. Redirect this worker's temporary files to a separate filesystem.
 - A test helper may clear the environment before starting a child process. Forward only the needed `TMPDIR` in that helper; do not weaken a gate or suppress a lint to work around host pressure.
 - Preserve the shared lease and root capability drops on retries. A failed environmental run remains failed until the complete final-tree gate passes.
+- If a real parser budget test passes alone but times out amid parallel coverage tests on a loaded host, set `RUST_TEST_THREADS=1` for the local full gate. This runs every test without changing the repository's budget or assertion.
 - Run coverage tests through `cargo llvm-cov` or point `LLVM_PROFILE_FILE` outside the repository. Executing its instrumented test binary directly without that variable leaves `default_*.profraw` files at the root, which correctly fail the folder guardrail.
 
 ## Verification

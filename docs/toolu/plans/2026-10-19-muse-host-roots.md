@@ -63,7 +63,7 @@ paths → generated CLI documentation and full gate.
   {
     "id": "S5",
     "title": "Run the full Rust quality gate and CLI compatibility contract",
-    "check": "mkdir -p \"$TMPDIR/empty-local-bin\" && env -u HERDR_SOCKET_PATH -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_BIN_PATH -u HERDR_CONFIG_PATH unshare -m -- sh -c 'mount --make-rprivate / && mount --bind \"$TMPDIR/empty-local-bin\" /usr/local/bin && capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c \"TOOLU_RESOURCE_HOME=$TMPDIR/isolated-resources cargo xtask gate\"'",
+    "check": "mkdir -p \"$TMPDIR/empty-local-bin\" && env -u HERDR_SOCKET_PATH -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_BIN_PATH -u HERDR_CONFIG_PATH unshare -m -- sh -c 'mount --make-rprivate / && mount --bind \"$TMPDIR/empty-local-bin\" /usr/local/bin && capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c \"RUST_TEST_THREADS=1 TOOLU_RESOURCE_HOME=$TMPDIR/isolated-resources cargo xtask gate\"'",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
     "depends_on": ["S4"],
     "paths": ["crates", "fixtures/host", "docs/cli", ".toolu/skills/verify-root-host-gates/SKILL.md"],
@@ -148,3 +148,8 @@ dependent check and representative boundary input. Status: Approved.
 - The proven mount, Herdr and coverage-profile precautions are recorded in
   the existing `verify-root-host-gates` project skill for future root-host
   checks.
+- After rebasing onto #540's documentation-only merge, the parallel gate's
+  100,000-term shell limit test hit its wall-clock parse budget under shared
+  host load. The named test passed alone in 0.42 seconds, and shell code did
+  not change. S5 sets `RUST_TEST_THREADS=1` to run every local gate test with
+  bounded contention, without changing any parser budget or test assertion.
