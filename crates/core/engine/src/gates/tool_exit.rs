@@ -100,16 +100,21 @@ pub(crate) fn tool_exit_status(payload: &Map<String, Value>) -> String {
     return status;
   }
   let output = read(doc, &[&["tool_output"]], "");
-  if let Ok(inner) = serde_json::from_str::<Value>(&output) {
-    let found = read(Doc::Parsed(&inner), &[&["exitCode"], &["exit_code"]], "");
-    if !found.is_empty() {
-      return found;
-    }
+  let legacy_status = if output.is_empty() {
+    status
+  } else {
+    serde_json::from_str::<Value>(&output).map_or_else(
+      |_| String::new(),
+      |inner| read(Doc::Parsed(&inner), &[&["exitCode"], &["exit_code"]], ""),
+    )
+  };
+  if !legacy_status.is_empty() && legacy_status != "null" {
+    return legacy_status;
   }
   let response = payload.get("tool_response").and_then(Value::as_str);
   response
     .and_then(|text| serde_json::from_str::<Value>(text).ok())
-    .map_or(status, |inner| {
+    .map_or(legacy_status, |inner| {
       read(
         Doc::Parsed(&inner),
         &[&["metadata", "exit_code"], &["exit_code"], &["exitCode"]],

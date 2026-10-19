@@ -113,6 +113,12 @@ fn cursor_output_strings_and_jq_errors_read_as_typescript_reads_them() {
       "false",
     ),
     (
+      "legacy output without exit code overrides null status",
+      json!({"tool_response": {"exit_code": "null"}, "tool_output": "{\"output\":\"done\"}"}),
+      "",
+      "false",
+    ),
+    (
       "a tool_output number raises",
       json!({"tool_output": "5"}),
       "",
