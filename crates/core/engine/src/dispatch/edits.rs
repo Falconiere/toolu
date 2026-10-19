@@ -4,7 +4,11 @@
 //! on any path wins for the whole patch.
 
 use serde_json::Value;
+use toolu_protocol::event::HostEvent;
 use toolu_protocol::host::Host;
+use toolu_protocol::normalize::Roots as ProtocolRoots;
+use toolu_protocol::payload::{Payload as HostPayload, parse};
+use toolu_protocol::text::Text;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::edit_records::{EditOperation, EditRecord, EditRecords, normalize_edit_records};
@@ -63,6 +67,31 @@ fn malformed_edit(phase: Phase, host: Host) -> ModuleResult {
   }
 }
 
+/// Canonicalize Muse's raw tool name through the host protocol before edit splitting.
+fn tool_name(text: &str, doc: Option<&Ordered>, session: &Session<'_>) -> Result<String, String> {
+  if session.host != Host::Muse {
+    return Ok(read_field(doc, &["tool_name"]));
+  }
+  let root = Text::new(session.project_root.to_string_lossy().into_owned())
+    .map_err(|err| err.to_string())?;
+  let roots = ProtocolRoots {
+    project_root: root.clone(),
+    worktree: root,
+  };
+  let payload: HostPayload = parse(Host::Muse, text).map_err(|err| err.to_string())?;
+  let event = match session.phase {
+    Phase::Pre => HostEvent::ToolPre,
+    Phase::Post => HostEvent::ToolPost,
+  };
+  let normalized = payload
+    .normalize(event, &roots)
+    .ok_or_else(|| "Muse tool event could not be normalized".to_owned())?;
+  normalized
+    .tool()
+    .map(|tool| tool.name.as_str().to_owned())
+    .ok_or_else(|| "Muse tool event has no tool".to_owned())
+}
+
 /// The path a calling dispatcher already split out, from the `TOOLU_EDIT_*` it
 /// exported, when [`DispatchOptions::split_by_caller`](super::DispatchOptions) is set.
 fn caller_split(session: &Session<'_>) -> Option<EditFields> {
@@ -108,7 +137,10 @@ pub(crate) fn dispatch_input(
     }
     Err(Unreadable::NotJson) => None,
   };
-  let tool_name = read_field(doc.as_ref(), &["tool_name"]);
+  let tool_name = match tool_name(text, doc.as_ref(), session) {
+    Ok(name) => name,
+    Err(reason) => return refusal(session.phase, session.host, &reason),
+  };
   if let Some(edit) = caller_split(session) {
     let payload = Payload {
       text: text.to_owned(),

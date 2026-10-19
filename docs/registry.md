@@ -51,18 +51,20 @@ The built-ins run first, in table order, and each is folded as it decides. The p
 
 | Situation | Outcome |
 |---|---|
-| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | skipped, inactive. An unreadable record fails open, and Cursor and Hermes count as installed |
+| Plugin definitively not installed (Claude `installed_plugins.json`, Codex snapshot) | skipped, inactive. An unreadable record fails open, and Cursor, Hermes and Muse count as installed |
 | Manifest whose matcher or `applies` does not fit | skipped, not matching |
 | `.js` module | skipped, unsupported |
 | `deny` before a tool, `{"decision":"block"}` after it | recorded, then the walk stops |
 
-**Before a tool.** The first deny is emitted exactly as its module wrote it. A module exit of 2 blocks with that module's stderr. The first ask is held and receives every advisory. Advisories are deduped and merged into one `additionalContext` and one `systemMessage`. On Codex an `ask` degrades to a deny where the host cannot ask.
+**Before a tool.** The first deny is emitted exactly as its module wrote it. A module exit of 2 blocks with that module's stderr. The first ask is held and receives every advisory. Advisories are deduped and merged into one `additionalContext` and one `systemMessage`. On Codex and Muse, an `ask` degrades according to the gate mode policy because those hosts' supported hook path cannot reliably pause for approval. Muse pre-tool denials use its native `{"decision":"block","reason":"…"}` output, which ends the walk.
 
 **After a tool.** The first block is emitted as written and stops the walk. `permissionDecision` means nothing after the tool ran: no ask is held and no deny stops the walk. The merged object names `hookEventName: "PostToolUse"`.
 
 **Edits.** Edit, Write, MultiEdit and `apply_patch` are walked once per affected path as a synthetic `Edit`. A deny, a block or an exit 2 on any path wins for the whole patch. Unparseable `apply_patch` headers are denied before the tool and blocked after it.
 
-**Payload.** The payload is parsed as `JSON.parse` would read it. Lone surrogate escapes read as U+FFFD, so gates still see the tool, while modules get the raw text. A payload that is not UTF-8, or is nested past 128 levels, fails closed.
+**Muse tool calls.** The engine parses the raw Muse payload through `toolu-protocol` before it chooses edit splitting or gate and manifest matching. `bash` and `shell` become `Bash`; `edit_file` becomes `Edit`; `write_file` becomes `Write`. Gates read Muse's `tool_input.path` for edits and writes, while executable modules still receive the original payload. `edit_file {path, find, replace}` and `write_file {path, content}` each name one path, so each runs one synthetic `Edit` walk; the observed Muse 1.4.10 toolset has no multi-path edit, delete or move tool. The existing `apply_patch` splitter still walks every path of a patch. Internal tool names pass through and match no built-in gate. Muse MCP names have the form `mcp__plugin_<plugin>_<server>__<tool>`; the dispatch mcp-blocker can match the full `plugin_<plugin>_<server>` prefix in `mcp-blocklist.txt`. Failed Muse calls fire `PostToolUseFailure` rather than `PostToolUse`, so the two post-tool gates see only the latter event.
+
+**Payload.** The payload is parsed as `JSON.parse` would read it. Lone surrogate escapes read as U+FFFD for Claude-shaped legacy dispatch, while modules get the raw text. Muse's protocol parser rejects a lone surrogate and the engine blocks that malformed payload. A payload that is not UTF-8, or is nested past 128 levels, fails closed.
 
 **Failure.** An unexpected engine error exits 2: before a tool it blocks the action, and after it the model sees that the post-tool checks did not run.
 

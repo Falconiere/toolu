@@ -19,8 +19,7 @@ use crate::registry::phase::{RegistryWalk, run_registry};
 use crate::trace::{Step, StepKind, StepStatus};
 
 /// A decision as the hook JSON a bash module would have printed: Codex output
-/// for Codex, Claude output for Claude-shaped hosts. Muse never reaches it
-/// until #545 ports the walk.
+/// for Codex, Claude output for Claude-shaped hosts, and native Muse output.
 pub(crate) fn encoded(host: Host, event: HostEvent, decision: &Decision) -> String {
   let target = match host {
     Host::Codex | Host::Muse => host,
@@ -94,10 +93,6 @@ pub(crate) fn walk(
   session: &Session<'_>,
   trace: &mut Vec<Step>,
 ) -> ModuleResult {
-  // The fold reads Claude-shaped module output; #545 ports the walk to Muse.
-  if session.host == Host::Muse {
-    return failed(session.phase, "Muse tool calls are not gated yet (#545)");
-  }
   let view = match View::of(payload, session) {
     Ok(view) => view,
     Err(message) => return failed(session.phase, &message),
