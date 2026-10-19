@@ -9,6 +9,9 @@
 //! - **context** (`session/start`, `prompt`, `pre_compact`): `{"systemMessage":"<line>"}`
 //!   on stdout, exit 0.
 //!
+//! On Muse, a dispatcher's failed raw output is rewritten to one of these shapes,
+//! because Muse ignores an exit 2 with JSON on stdout or a blank stderr.
+//!
 //! Host detection lives in `toolu-runtime`, so the caller passes the host in.
 
 use std::fmt;
@@ -157,11 +160,18 @@ where
   let payload = read_all(stdin)
     .map_err(|err| format!("hook failed: the hook payload could not be read: {err}"))?;
   match hook(&payload).map_err(|err| err.to_string())? {
-    Reply::Raw(raw) => Ok(Output {
-      stdout: raw.stdout,
-      stderr: raw.stderr,
-      exit: raw.exit,
-    }),
+    Reply::Raw(raw) => {
+      let output = Output {
+        stdout: raw.stdout,
+        stderr: raw.stderr,
+        exit: raw.exit,
+      };
+      Ok(if host == Host::Muse {
+        muse_safe(event, output)
+      } else {
+        output
+      })
+    }
     Reply::Decision(decision) => {
       let encoded = encode(host, event, &decision).map_err(|err| format!("hook failed: {err}"))?;
       let Encoded::Command(stdout) = encoded;
@@ -204,6 +214,25 @@ fn failure(event: HostEvent, host: Host, tail: &str) -> Output {
     stdout,
     stderr,
     exit,
+  }
+}
+
+/// A failed Muse `Raw` reply in a shape Muse acts on. Muse ignores an exit 2
+/// with JSON on stdout or a blank stderr, and reads context only at exit 0.
+fn muse_safe(event: HostEvent, output: Output) -> Output {
+  if output.exit == Exit::Success {
+    return output;
+  }
+  let reason = output.stderr.trim();
+  if reason.is_empty() {
+    return failure(event, Host::Muse, "hook failed: exited without a reason");
+  }
+  match class(event) {
+    Class::Context => failure(event, Host::Muse, reason),
+    Class::Enforcing | Class::Post => Output {
+      stdout: String::new(),
+      ..output
+    },
   }
 }
 

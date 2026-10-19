@@ -170,31 +170,83 @@ fn an_event_the_host_lacks_is_an_internal_error_named_by_its_slug() {
 }
 
 #[test]
-fn muse_without_its_encoder_fails_closed_on_enforcing_events() {
+fn muse_failures_block_with_stderr_or_land_as_a_system_message() {
   for (event, native) in [
     (HostEvent::ToolPre, "PreToolUse"),
     (HostEvent::PermissionEvaluate, "PermissionRequest"),
   ] {
-    let got = run(event, Host::Muse, b"{}", |_| Ok(deny("protected file")));
-    assert_eq!(got.exit, ExitCode::from(2));
-    assert_eq!(got.stdout, "");
-    assert_eq!(
-      got.stderr,
-      format!(
-        "blocked: toolu {native} hook failed: muse has no output encoder for {}\n",
-        event.slug()
-      )
-    );
+    let got = run(event, Host::Muse, b"{}", |_| panic!("boom"));
+    let stderr = format!("blocked: toolu {native} hook panicked: boom\n");
+    let want = Run {
+      exit: ExitCode::from(2),
+      stdout: String::new(),
+      stderr,
+    };
+    assert_eq!(got, want);
   }
-  let start = run(HostEvent::SessionStart, Host::Muse, b"{}", |_| {
-    Ok(Reply::from(Decision::Allow))
+  let start = run(HostEvent::Prompt, Host::Muse, b"{}", |_| {
+    Err(HookError::new("boom"))
   });
   assert_eq!(start.exit, ExitCode::from(0));
   assert_eq!(start.stderr, "");
   assert_eq!(
     start.stdout,
-    "{\"systemMessage\":\"toolu SessionStart hook failed: muse has no output encoder for session/start\"}\n"
+    "{\"systemMessage\":\"toolu UserPromptSubmit hook failed: boom\"}\n"
   );
+}
+
+/// A `Raw` reply with `stdout`, `stderr` and `exit`.
+fn raw(stdout: &str, stderr: &str, exit: Exit) -> Reply {
+  Reply::Raw(Raw {
+    stdout: stdout.to_owned(),
+    stderr: stderr.to_owned(),
+    exit,
+  })
+}
+
+#[test]
+fn a_muse_raw_failure_drops_stdout_and_never_leaves_stderr_blank() {
+  let json = "{\"decision\":\"block\",\"reason\":\"x\"}\n";
+  let got = run(HostEvent::ToolPre, Host::Muse, b"", |_| {
+    Ok(raw(json, "blocked: lint\n", Exit::Blocked))
+  });
+  assert_eq!(
+    (got.stdout.as_str(), got.stderr.as_str()),
+    ("", "blocked: lint\n")
+  );
+  let got = run(HostEvent::ToolPre, Host::Muse, b"", |_| {
+    Ok(raw(json, " \n", Exit::Blocked))
+  });
+  assert_eq!(
+    (got.exit, got.stdout.as_str(), got.stderr.as_str()),
+    (
+      ExitCode::from(2),
+      "",
+      "blocked: toolu PreToolUse hook failed: exited without a reason\n"
+    )
+  );
+  let got = run(HostEvent::ToolPost, Host::Muse, b"", |_| {
+    Ok(raw("", "", Exit::Blocked))
+  });
+  assert_eq!(
+    got.stderr,
+    "toolu PostToolUse hook failed: exited without a reason\n"
+  );
+  let got = run(HostEvent::SessionStart, Host::Muse, b"", |_| {
+    Ok(raw("", "gate crashed\n", Exit::Blocked))
+  });
+  assert_eq!(
+    (got.exit, got.stdout.as_str(), got.stderr.as_str()),
+    (
+      ExitCode::from(0),
+      "{\"systemMessage\":\"toolu SessionStart gate crashed\"}\n",
+      ""
+    )
+  );
+  let ok = run(HostEvent::ToolPre, Host::Muse, b"", |_| {
+    Ok(raw(json, "", Exit::Success))
+  });
+  assert_eq!((ok.exit, ok.stdout.as_str()), (ExitCode::from(0), json));
 }
 
 #[test]

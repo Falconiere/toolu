@@ -64,7 +64,8 @@ fn refuse(native: &str, event: HostEvent, normal: Normal<'_>, reason: &str) -> S
   Object::new().object("hookSpecificOutput", specific).line()
 }
 
-fn block(reason: &str) -> String {
+/// The `decision: "block"` line Claude, Codex and Muse share.
+pub(super) fn block(reason: &str) -> String {
   Object::new()
     .text("decision", "block")
     .text("reason", reason)

@@ -238,7 +238,7 @@ fn ask_never_reaches_a_host_or_event_that_cannot_prompt() {
   let decisions = [allow(), ask(), deny(), advise(), post_block(), failure()];
   for host in Host::ALL {
     for event in HostEvent::ALL {
-      if host == Host::Muse || native_event(host, event).is_none() || supports_ask(host, event) {
+      if native_event(host, event).is_none() || supports_ask(host, event) {
         continue;
       }
       for decision in &decisions {
@@ -250,10 +250,44 @@ fn ask_never_reaches_a_host_or_event_that_cannot_prompt() {
 }
 
 #[test]
-fn muse_encoder_is_explicitly_unavailable_until_its_host_port() {
-  assert!(!supports_ask(Host::Muse, ToolPre));
-  let err = encode(Host::Muse, ToolPre, &deny()).unwrap_err();
-  assert_eq!(err.to_string(), "muse has no output encoder for tool/pre");
+fn muse_never_asks_and_never_writes_claude_shapes() {
+  let decisions = [allow(), ask(), deny(), advise(), post_block(), failure()];
+  for event in HostEvent::ALL {
+    assert!(!supports_ask(Host::Muse, event), "{event:?}");
+    for decision in &decisions {
+      let Ok(Encoded::Command(out)) = encode(Host::Muse, event, decision) else {
+        panic!("no Muse output for {event:?} {decision:?}");
+      };
+      for shape in [
+        "hookSpecificOutput",
+        "additionalContext",
+        "permissionDecision",
+      ] {
+        assert!(!out.contains(shape), "{event:?} {decision:?} {out}");
+      }
+    }
+  }
+}
+
+#[test]
+fn muse_blocks_with_exit_0_json_and_advises_with_a_system_message() {
+  let block = json!({ "decision": "block", "reason": "protected file" });
+  for event in [ToolPre, ShellPre, PermissionEvaluate, Prompt] {
+    assert_eq!(stdout(Host::Muse, event, &deny()), block, "{event:?}");
+  }
+  assert_eq!(
+    stdout(Host::Muse, ToolPost, &post_block()),
+    json!({ "decision": "block", "reason": "lint failed" })
+  );
+  for event in [SessionStart, SessionUnload, PreCompact] {
+    let advice = json!({ "systemMessage": "protected file" });
+    assert_eq!(stdout(Host::Muse, event, &deny()), advice, "{event:?}");
+  }
+  let guarded = degrade_ask(Host::Muse, ToolPre, ask(), GateClass::Guardrail);
+  assert_eq!(
+    stdout(Host::Muse, ToolPre, &guarded),
+    json!({ "decision": "block", "reason": "confirm .env write" })
+  );
 }
 
 #[test]

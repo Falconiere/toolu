@@ -1,5 +1,5 @@
 //! The crate links from outside and Muse dispatch remains fail closed until
-//! its output encoder is available.
+//! #545 ports the walk to Muse tool calls.
 
 use std::time::Duration;
 
@@ -12,7 +12,7 @@ fn the_crate_links_and_names_its_layer() {
 }
 
 #[test]
-fn muse_dispatch_fails_closed_until_its_encoder_is_available() {
+fn muse_dispatch_fails_closed_until_its_walk_is_ported() {
   let dir = tempfile::tempdir().unwrap();
   let home = dir.path().to_str().unwrap();
   let env = Env::from_pairs([
@@ -37,7 +37,7 @@ fn muse_dispatch_fails_closed_until_its_encoder_is_available() {
   assert_eq!(pre.result.exit_code, 2);
   assert_eq!(
     pre.result.stderr,
-    "blocked: toolu PreToolUse dispatcher failed: Muse output encoder is not available (#544)\n"
+    "blocked: toolu PreToolUse dispatcher failed: Muse tool calls are not gated yet (#545)\n"
   );
   assert_eq!(pre.trace, Vec::new());
   let post = dispatch_post_tool(body, &options);
@@ -45,7 +45,7 @@ fn muse_dispatch_fails_closed_until_its_encoder_is_available() {
   assert_eq!(post.result.exit_code, 2);
   assert_eq!(
     post.result.stderr,
-    "toolu PostToolUse dispatcher failed: Muse output encoder is not available (#544)\n"
+    "toolu PostToolUse dispatcher failed: Muse tool calls are not gated yet (#545)\n"
   );
   assert_eq!(post.trace, Vec::new());
 }

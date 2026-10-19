@@ -19,6 +19,7 @@ use crate::text::Text;
 mod cursor;
 mod hermes;
 mod hook;
+mod muse;
 mod object;
 
 use object::Object;
@@ -86,8 +87,7 @@ pub fn encode(host: Host, event: HostEvent, decision: &Decision) -> Result<Encod
     Host::Claude | Host::Codex => Encoded::Command(hook::output(native, event, normal)),
     Host::Cursor => Encoded::Command(cursor::output(event, normal)),
     Host::Hermes => Encoded::Command(hermes::output(event, normal)),
-    // #544 supplies the Muse encoder. Until then, run_hook fails closed.
-    Host::Muse => return Err(EncodeError { host, event }),
+    Host::Muse => Encoded::Command(muse::output(normal)),
   })
 }
 
@@ -150,16 +150,12 @@ impl<'a> Normal<'a> {
 
 impl fmt::Display for EncodeError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    if self.host == Host::Muse {
-      write!(f, "muse has no output encoder for {}", self.event.slug())
-    } else {
-      write!(
-        f,
-        "{} has no native event for {}",
-        self.host.name(),
-        self.event.slug()
-      )
-    }
+    write!(
+      f,
+      "{} has no native event for {}",
+      self.host.name(),
+      self.event.slug()
+    )
   }
 }
 
