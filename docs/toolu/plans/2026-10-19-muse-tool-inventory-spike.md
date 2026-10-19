@@ -164,7 +164,7 @@ inventory runs (evidence JSON) → PermissionRequest runs → verdict experiment
   {
     "id": "S8",
     "title": "Scope and gates on the final tree: the four files are tracked (git add -f under the ignored docs/toolu) and are the whole diff against origin/main; docs CI checks; full cargo xtask gate",
-    "check": "git ls-files --error-unmatch docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md >/dev/null && [ \"$(git diff --name-only origin/main...HEAD | sort | tr '\\n' ' ')\" = \"$(printf '%s\\n' docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md | sort | tr '\\n' ' ')\" ] || { echo 'diff scope differs from the four planned files'; git diff --name-only origin/main...HEAD; exit 1; }; export PATH=\"$HOME/.cargo/bin:$PATH\"; mkdir -p \"$HOME/.cache/toolu-540-tmp\" && chmod 700 \"$HOME/.cache/toolu-540-tmp\" && export TMPDIR=\"$HOME/.cache/toolu-540-tmp\"; cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate",
+    "check": "git ls-files --error-unmatch docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md >/dev/null && [ \"$(git diff --name-only origin/main...HEAD | sort | tr '\\n' ' ')\" = \"$(printf '%s\\n' docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md | sort | tr '\\n' ' ')\" ] || { echo 'diff scope differs from the four planned files'; git diff --name-only origin/main...HEAD; exit 1; }; export PATH=\"$HOME/.cargo/bin:$PATH\"; mkdir -p \"$HOME/.cache/toolu-540-tmp\" && chmod 700 \"$HOME/.cache/toolu-540-tmp\" && export TMPDIR=\"$HOME/.cache/toolu-540-tmp\"; capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c 'cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate'",
     "ac_refs": [
       "AC-9"
     ],
@@ -182,6 +182,7 @@ inventory runs (evidence JSON) → PermissionRequest runs → verdict experiment
 ## Deviations
 
 - S1: the check required a non-empty `tool_input_keys` for every exercised tool. Muse sends `tool_input: {}` for parameterless tools (`cron_list`, `get_goal`, `work_list`, observed in I5, I6 and I10), so the check now requires the recorded input to be an object and the key list to be an array (it may be empty).
+- S8: the full gate runs under `capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace`, as the `verify-root-host-gates` project skill requires on this root host. Gates that test file permissions are otherwise defeated by root's capabilities.
 
 ## Critical files
 
