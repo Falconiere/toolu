@@ -17,6 +17,7 @@
     "jq",
     "mkdir",
     "mktemp",
+    "muse",
     "mv",
     "npm",
     "npx",
