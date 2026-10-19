@@ -90,7 +90,9 @@ const EXIT_PATHS: [&[&str]; 3] = [
 /// The reported exit status: `tool_response.metadata.exit_code`, then
 /// `tool_response.exit_code`, then `tool_output.exit_code`, and when that is
 /// empty or the text `null`, `exitCode`/`exit_code` inside `tool_output` (a
-/// JSON string or object). "" when the host reported none.
+/// JSON string or object). Muse's `tool_response` is a JSON string with an
+/// `exit_code`; read it after the existing object and `tool_output` paths.
+/// "" when the host reported none.
 pub(crate) fn tool_exit_status(payload: &Map<String, Value>) -> String {
   let doc = Doc::Payload(payload);
   let status = read(doc, &EXIT_PATHS, "");
@@ -98,13 +100,22 @@ pub(crate) fn tool_exit_status(payload: &Map<String, Value>) -> String {
     return status;
   }
   let output = read(doc, &[&["tool_output"]], "");
-  if output.is_empty() {
-    return status;
+  if let Ok(inner) = serde_json::from_str::<Value>(&output) {
+    let found = read(Doc::Parsed(&inner), &[&["exitCode"], &["exit_code"]], "");
+    if !found.is_empty() {
+      return found;
+    }
   }
-  match serde_json::from_str::<Value>(&output) {
-    Ok(inner) => read(Doc::Parsed(&inner), &[&["exitCode"], &["exit_code"]], ""),
-    Err(_) => String::new(),
-  }
+  let response = payload.get("tool_response").and_then(Value::as_str);
+  response
+    .and_then(|text| serde_json::from_str::<Value>(text).ok())
+    .map_or(status, |inner| {
+      read(
+        Doc::Parsed(&inner),
+        &[&["metadata", "exit_code"], &["exit_code"], &["exitCode"]],
+        "",
+      )
+    })
 }
 
 /// `.tool_response.interrupted // false` printed as `true`.

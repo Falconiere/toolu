@@ -77,3 +77,31 @@ fn malformed_and_partial_json_follow_lenient_field_semantics() {
     }
   );
 }
+
+#[test]
+fn muse_edit_path_receives_the_same_source_rules() {
+  let dir = tempfile::tempdir().expect("tempdir");
+  fs::write(
+    dir.path().join("code-edit-rules.json"),
+    r#"{"rules":[{"match":"*.py","docs":["Python guide"]}]}"#,
+  )
+  .expect("rules");
+  let home = dir.path().to_string_lossy().into_owned();
+  let env = Env::from_pairs([
+    ("TOOLU_SETTINGS_DIR", home.as_str()),
+    ("HOME", home.as_str()),
+  ]);
+  let raw = Map::new();
+  let mut ctx = context(dir.path(), &env, &raw);
+  ctx.host = Host::Muse;
+  let event: NormalizedEvent = serde_json::from_value(json!({
+    "type":"tool/pre", "sessionId":"s", "cwd":home, "projectRoot":home,
+    "worktree":home, "toolCallId":"c", "toolName":"Edit",
+    "toolInput":{"path":"src/main.py","find":"old","replace":"new"}
+  }))
+  .expect("muse edit");
+  let decision = CodeEditRules.run(&event, &ctx).expect("decision");
+  assert!(
+    matches!(decision, Decision::Advisory { message } if message.as_str() == "File: src/main.py\nApply these rules: Python guide")
+  );
+}

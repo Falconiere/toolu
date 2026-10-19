@@ -104,12 +104,18 @@ pub(crate) fn gate_config(ctx: &RuleContext<'_>) -> LoadedConfig {
   load(&roots, ctx.cwd)
 }
 
-/// An edit tool's string-valued `file_path`, or empty for any other shape.
+/// An edit tool's string-valued `file_path` or Muse `path`.
 pub(crate) fn file_path(event: &NormalizedEvent) -> &str {
   event
     .tool()
-    .and_then(|tool| tool.input.get("file_path"))
-    .and_then(serde_json::Value::as_str)
+    .and_then(|tool| {
+      tool
+        .input
+        .get("file_path")
+        .and_then(serde_json::Value::as_str)
+        .filter(|path| !path.is_empty())
+        .or_else(|| tool.input.get("path").and_then(serde_json::Value::as_str))
+    })
     .unwrap_or("")
 }
 

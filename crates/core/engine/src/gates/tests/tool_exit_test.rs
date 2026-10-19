@@ -128,6 +128,24 @@ fn cursor_output_strings_and_jq_errors_read_as_typescript_reads_them() {
 }
 
 #[test]
+fn muse_json_string_response_reports_its_exit_code() {
+  check(&[
+    (
+      "Muse successful bash response",
+      json!({"tool_response": "{\"chunk_id\":\"exec-1\",\"exit_code\":0,\"output\":\"ok\"}"}),
+      "0",
+      "false",
+    ),
+    (
+      "Muse malformed bash response",
+      json!({"tool_response": "{invalid"}),
+      "",
+      "false",
+    ),
+  ]);
+}
+
+#[test]
 fn odd_statuses_print_as_jq_prints_them() {
   check(&[
     (
