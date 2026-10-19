@@ -56,7 +56,7 @@ paths → generated CLI documentation and full gate.
     "check": "TOOLU_RESOURCE_HOME=\"$TMPDIR/isolated-resources\" cargo test -p toolu-cli --test contract && cargo xtask gate --only docs-cli --only cli-compat && cargo xtask check-markdown-cli",
     "ac_refs": ["AC-1", "AC-5"],
     "depends_on": ["S3"],
-    "paths": ["crates/cli/tests/contract.rs", "crates/cli/tests/fixtures/commands_json.snap", "docs/cli", "crates/core/protocol/src/host.rs", "crates/plugins/src/host.rs", "crates/core/engine/src/registry/gate.rs", "crates/core/engine/src/ledger/preflight.rs", "crates/core/engine/tests/helpers", "crates/toolu/src/doctor/inventory.rs", "crates/toolu/src/lifecycle/notices.rs"],
+    "paths": ["crates/cli/tests/contract.rs", "crates/cli/tests/fixtures/commands_json.snap", "crates/cli/src/tests/clap_error_test.rs", "crates/cli/src/tests/export_test.rs", "docs/cli", "crates/core/protocol/src/host.rs", "crates/plugins/src/host.rs", "crates/core/engine/src/registry/gate.rs", "crates/core/engine/src/ledger/preflight.rs", "crates/core/engine/tests/helpers", "crates/toolu/src/doctor/inventory.rs", "crates/toolu/src/lifecycle/notices.rs"],
     "input": "Built CLI --host muse commands --json and invalid --host mus, then generated --help and commands snapshot",
     "model": "inherit"
   },
