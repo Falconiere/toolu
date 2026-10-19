@@ -27,7 +27,7 @@ The probe, the run logs and the extractor (`extract.py`) stay in the scratchpad.
 
 ## Workstream summary
 
-inventory runs → PermissionRequest runs → verdict experiments → evidence JSON → research doc → cleanup → issue comment → full gate.
+inventory runs (evidence JSON) → PermissionRequest runs → verdict experiments → cleanup and side-effect audit → research doc → issue comment → full gate.
 
 ## Steps (machine-readable)
 
@@ -36,7 +36,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S1",
     "title": "Build, validate (muse plugins validate, zero diagnostics), install and approve the toolu-probe-540 probe in the sandbox data home; take the before snapshot of global Muse state (snap.py take); run I0-I9, P1, S1 (spec run matrix); cross-check model calls against hook lines; write evidence muse/toolsets/tools (families, configs, exercised, tool_input_keys, post_event, tool_response_shape, redacted pre/post examples); git add -f the evidence",
-    "check": "jq -e '(.muse.version | startswith(\"1.4.10\")) and ((.toolsets | keys) - [\"default-untrusted\", \"default-trusted\", \"native-basic\", \"enable-shell-tool\"] | length == 0) and ([.toolsets[] | length > 0] | all) and ([.toolsets[][]] - (.tools | keys) | length == 0) and ([.tools[] | select(.internal == false) | if .exercised then (.tool_input_keys | length > 0) and (.post_event | IN(\"PostToolUse\", \"PostToolUseFailure\")) and (.pre_example | type == \"object\" and length > 0) and (.tool_response_shape | type == \"string\" and length > 0) else (.not_exercised_reason | type == \"string\" and length > 0) end] | all) and ([\"shell\", \"file-read\", \"file-write\", \"file-edit\", \"search\", \"web\", \"skill\", \"memory\", \"cron\", \"delegation\", \"mcp\"] - [.tools[] | select(.exercised == true) | .family] | length == 0)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '(.muse.version | startswith(\"1.4.10\")) and ((.toolsets | keys) - [\"default-untrusted\", \"default-trusted\", \"native-basic\", \"enable-shell-tool\"] | length == 0) and ([.toolsets[] | length > 0] | all) and ([.toolsets[][]] - (.tools | keys) | length == 0) and ([.tools[] | select(.internal == false) | if .exercised then (.tool_input_keys | length > 0) and (.post_event | IN(\"PostToolUse\", \"PostToolUseFailure\")) and (.pre_example | type == \"object\" and length > 0) and (.tool_response_shape | type == \"string\" and length > 0) else (.not_exercised_reason | type == \"string\" and length > 0) end] | all) and ([\"shell\", \"file-read\", \"file-write\", \"file-edit\", \"search\", \"web\", \"skill\", \"memory\", \"cron\", \"delegation\", \"mcp\"] - [.tools[] | select(.exercised == true) | .family] | length == 0)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-1",
       "AC-7"
@@ -50,7 +50,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S2",
     "title": "Internal-tool ignore list in evidence: each internal tool absent from the main toolsets with its reminder/child-agent origin cited",
-    "check": "jq -e '. as $r | [.tools | to_entries[] | select(.value.internal == true)] as $int | ($int | length > 0) and ([$int[] | (.value.origin | type == \"string\" and length > 0) and (.key as $k | [$r.toolsets[][]] | index($k) | not)] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '. as $r | [.tools | to_entries[] | select(.value.internal == true)] as $int | ($int | length > 0) and ([$int[] | (.value.origin | type == \"string\" and length > 0) and (.key as $k | [$r.toolsets[][]] | index($k) | not)] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-3"
     ],
@@ -66,7 +66,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S3",
     "title": "PermissionRequest runs A1-A9, AP1 and AS1 under --approval-mode untrusted --trust-workspace; record permission_request per tool and the PermissionRequest payload keys",
-    "check": "jq -e '([.tools[] | select(.internal == false and .exercised == true) | .permission_request | IN(\"fired\", \"not fired\", \"not exercised\")] | all) and (if ([.tools[] | select(.permission_request == \"fired\")] | length > 0) then (.permission_request_payload_keys | length > 0) else (.permission_request_payload_keys | type == \"array\") end)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '([.tools[] | select(.internal == false and .exercised == true) | .permission_request | IN(\"fired\", \"not fired\", \"not exercised\")] | all) and (if ([.tools[] | select(.permission_request == \"fired\")] | length > 0) then (.permission_request_payload_keys | length > 0) else (.permission_request_payload_keys | type == \"array\") end)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-2"
     ],
@@ -82,7 +82,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S4",
     "title": "Verdict experiments per spec: A0 calibration, ask candidates on PreToolUse and PermissionRequest (hook test + live on-request/untrusted/never), input-rewrite candidates on bash echo original-540, PostToolUse block candidates on edit_file with follow-up records, model quote and git diff",
-    "check": "jq -e '(.verdicts.ask.calibration.approval_records | type == \"array\") and (.verdicts.ask.conclusion | type == \"string\" and length > 0) and ([.verdicts.ask.candidates[] | (.event | IN(\"PreToolUse\", \"PermissionRequest\")) and (.hook_test | type == \"string\" and length > 0) and ([.live[\"on-request\", \"untrusted\", \"never\"] | IN(\"prompted\", \"blocked\", \"ran\", \"failed\", \"not-invoked\")] | all)] | all) and (.verdicts.ask.candidates | length >= 8) and (.verdicts.updated_input.conclusion | type == \"string\" and length > 0) and (.verdicts.updated_input.candidates | length >= 3) and ([.verdicts.updated_input.candidates[] | (.hook_test | type == \"string\") and (.tool_result | type == \"string\") and (.ran | IN(\"original-540\", \"rewritten-540\", \"none\"))] | all) and (.verdicts.post_tool_use_block.conclusion | type == \"string\" and length > 0) and (.verdicts.post_tool_use_block.candidates | length >= 2) and ([.verdicts.post_tool_use_block.candidates[] | (.tool_result | type == \"string\") and (.follow_up_records | type == \"array\") and (.model_quote | type == \"string\") and (.persisted | type == \"boolean\")] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '(.verdicts.ask.calibration.approval_records | type == \"array\") and (.verdicts.ask.conclusion | type == \"string\" and length > 0) and ([.verdicts.ask.candidates[] | (.event | IN(\"PreToolUse\", \"PermissionRequest\")) and (.hook_test | type == \"string\" and length > 0) and ([.live[\"on-request\", \"untrusted\", \"never\"] | IN(\"prompted\", \"blocked\", \"ran\", \"failed\", \"not-invoked\")] | all)] | all) and (.verdicts.ask.candidates | length >= 8) and (.verdicts.updated_input.conclusion | type == \"string\" and length > 0) and (.verdicts.updated_input.candidates | length >= 3) and ([.verdicts.updated_input.candidates[] | (.hook_test | type == \"string\") and (.tool_result | type == \"string\") and (.ran | IN(\"original-540\", \"rewritten-540\", \"none\"))] | all) and (.verdicts.post_tool_use_block.conclusion | type == \"string\" and length > 0) and (.verdicts.post_tool_use_block.candidates | length >= 2) and ([.verdicts.post_tool_use_block.candidates[] | (.tool_result | type == \"string\") and (.follow_up_records | type == \"array\") and (.model_quote | type == \"string\") and (.persisted | type == \"boolean\")] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-4",
       "AC-5",
@@ -129,7 +129,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   },
   {
     "id": "S6",
-    "title": "Cleanup (runs even when an earlier step is red): XDG_DATA_HOME=<scratch>/xdg-data muse plugins remove toolu-probe-540 --delete-data; record the sandbox and global muse plugins list output in evidence.cleanup; take the after snapshot and diff it (snap.py diff); remove each probe-caused path (cron_delete/edit_memory where the tool can, else delete) and record evidence.side_effects; reject + remove again if trust keys survive",
+    "title": "Cleanup, after S4's live runs (and by hand whenever an earlier step is red): XDG_DATA_HOME=<scratch>/xdg-data muse plugins remove toolu-probe-540 --delete-data; record the sandbox and global muse plugins list output in evidence.cleanup; take the after snapshot and diff it (snap.py diff); remove each probe-caused path (cron_delete/edit_memory where the tool can, else delete) and record evidence.side_effects; reject + remove again if trust keys survive",
     "check": "export MUSE_UPDATE_INTERVAL_SECONDS=99999999; out=$(muse plugins list) || exit 1; [ -n \"$out\" ] || exit 1; case \"$out\" in *toolu-probe-540*) echo 'probe still listed'; exit 1;; esac; mk=$(muse plugins marketplace list) || exit 1; case \"$mk\" in *toolu-probe-540*) echo 'probe marketplace listed'; exit 1;; esac; jq -e '(.runtime_capabilities // {}) | keys | map(select(startswith(\"plugin:toolu-probe-540\"))) | length == 0' \"$HOME/.config/muse/settings.json\" && jq -e '(.cleanup.sandbox_list == \"no plugins\") and (.cleanup.global_list | type == \"string\" and (contains(\"toolu-probe-540\") | not)) and (.side_effects | type == \"array\") and ([.side_effects[] | (.removed == true) or (.reason | type == \"string\" and length > 0)] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && for p in $(jq -r '.side_effects[] | select(.removed == true) | .path' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json); do q=$(printf '%s' \"$p\" | sed \"s|^~|$HOME|\"); [ ! -e \"$q\" ] || { echo \"still present: $p\"; exit 1; }; done",
     "ac_refs": [
       "AC-8",
