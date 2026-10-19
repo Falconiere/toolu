@@ -8,6 +8,21 @@ fn each_host_parses_into_its_own_payload_type() {
   assert!(matches!(parse(Host::Codex, doc), Ok(Payload::Codex(_))));
   assert!(matches!(parse(Host::Cursor, doc), Ok(Payload::Cursor(_))));
   assert!(matches!(parse(Host::Hermes, doc), Ok(Payload::Hermes(_))));
+  assert!(matches!(parse(Host::Muse, doc), Ok(Payload::Muse(_))));
+}
+
+#[test]
+fn a_muse_payload_keeps_its_unknown_keys_and_reads_a_null_transcript_as_absent() {
+  let doc = r#"{"hook_event_name":"PostToolUseFailure","transcript_path":null,
+    "model":"m","turn_id":"t","error":"exit 3","duration_ms":497,"is_interrupt":false}"#;
+  let Ok(Payload::Muse(payload)) = parse(Host::Muse, doc) else {
+    panic!("not a Muse payload");
+  };
+  assert_eq!(payload.transcript_path.as_str(), None);
+  assert_eq!(payload.turn_id.as_str(), Some("t"));
+  let mut rest: Vec<&str> = payload.rest.keys().map(String::as_str).collect();
+  rest.sort_unstable();
+  assert_eq!(rest, ["duration_ms", "error", "is_interrupt"]);
 }
 
 #[test]

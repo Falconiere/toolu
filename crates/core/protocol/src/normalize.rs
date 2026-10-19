@@ -9,6 +9,8 @@ use crate::normalized::{NormalizedEvent, Session, Tool};
 use crate::payload::{CursorPayload, HermesPayload, HookPayload, Payload};
 use crate::text::Text;
 
+mod muse;
+
 /// The roots the caller resolved (`toolu-runtime`): every event carries them.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Roots {
@@ -39,6 +41,7 @@ impl Payload {
       Payload::Claude(payload) | Payload::Codex(payload) => hook_view(payload),
       Payload::Cursor(payload) => cursor_view(payload),
       Payload::Hermes(payload) => hermes_view(payload),
+      Payload::Muse(payload) => muse::view(payload),
     };
     view.event(event, roots)
   }
