@@ -3,12 +3,14 @@
 //! The prelude owns the advisory and mismatch output. A mismatch never reaches
 //! the hook: enforcing events exit 2 with `blocked:` on stderr, context events
 //! print it as a `systemMessage`. A semver advisory is printed at `SessionStart`
-//! only, on the line before the hook's own message: skew changes only on an
+//! only, ahead of the hook's own message in its one JSON object: skew changes only on an
 //! upgrade, so one line per session is the design (#411, the #412 scenario), and
 //! repeating it on every prompt or tool call would be noise. Enforcement is the
 //! same either way.
 
 use std::path::{Path, PathBuf};
+
+use serde_json::Value;
 
 use toolu_hub::lifecycle::pre_compact::{PreCompactInput, pre_compact};
 use toolu_hub::lifecycle::prompt_submit::{PromptInput, prompt_submit};
@@ -84,19 +86,37 @@ pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   compose(advisory, result)
 }
 
-/// A `SessionStart` skew advisory is its own `systemMessage` line, before the hook JSON.
+/// A `SessionStart` skew advisory joins the hook's own JSON: the host parses stdout
+/// as one object, so a second object on another line is rejected as invalid JSON.
 fn prefix(advisory: Option<String>, outcome: Outcome) -> Outcome {
   let Some(text) = advisory else {
     return outcome;
   };
-  let line = system_message(&text);
   Outcome {
     stdout: Some(match outcome.stdout {
-      Some(body) => format!("{line}\n{body}"),
-      None => line,
+      Some(body) => merged(&text, &body),
+      None => system_message(&text),
     }),
     ..outcome
   }
+}
+
+/// `body` with `advisory` ahead of its `systemMessage`. A body that is not a JSON
+/// object is plain-text context, so it moves into `additionalContext`.
+fn merged(advisory: &str, body: &str) -> String {
+  let Ok(Value::Object(mut object)) = serde_json::from_str::<Value>(body) else {
+    return serde_json::json!({
+      "systemMessage": advisory,
+      "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": body},
+    })
+    .to_string();
+  };
+  let message = match object.get("systemMessage").and_then(Value::as_str) {
+    Some(own) if !own.is_empty() => format!("{advisory}\n{own}"),
+    _ => advisory.to_owned(),
+  };
+  object.insert("systemMessage".to_owned(), Value::String(message));
+  Value::Object(object).to_string()
 }
 
 /// The tool hook `request` names: toolu's `pre-tools` or `post-tools` (#418),
