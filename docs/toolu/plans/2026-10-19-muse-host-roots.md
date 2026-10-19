@@ -66,7 +66,7 @@ paths → generated CLI documentation and full gate.
     "check": "mkdir -p \"$TMPDIR/empty-local-bin\" && env -u HERDR_SOCKET_PATH -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_BIN_PATH -u HERDR_CONFIG_PATH unshare -m -- sh -c 'mount --make-rprivate / && mount --bind \"$TMPDIR/empty-local-bin\" /usr/local/bin && capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c \"TOOLU_RESOURCE_HOME=$TMPDIR/isolated-resources cargo xtask gate\"'",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
     "depends_on": ["S4"],
-    "paths": ["crates", "fixtures/host", "docs/cli"],
+    "paths": ["crates", "fixtures/host", "docs/cli", ".toolu/skills/verify-root-host-gates/SKILL.md"],
     "input": "The complete branch diff and the real Rust workspace gate",
     "model": "inherit"
   }
@@ -141,3 +141,10 @@ dependent check and representative boundary input. Status: Approved.
   fixture uses its own socket. The suite then exposed a CLI compatibility test
   that removed the last `--host` value by position; adding Muse changed that
   value. It now removes `hermes` by identity and keeps the exact assertion.
+- The parallel xtask suite exposed a race in the hook bench's fake executable:
+  it could exit before the sandbox wrote its piped event, yielding a broken
+  pipe. Both fake success and failure scripts now consume the event before
+  exiting. All 403 xtask tests passed together after that fixture correction.
+- The proven mount, Herdr and coverage-profile precautions are recorded in
+  the existing `verify-root-host-gates` project skill for future root-host
+  checks.
