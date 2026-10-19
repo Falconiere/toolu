@@ -145,7 +145,7 @@ fn fold_records(
   trace: &mut Vec<Step>,
 ) -> ModuleResult {
   let collect_blocks = session.phase == Phase::Post && session.options.continue_post_blocks;
-  let mut outer = WalkState::new(session.phase);
+  let mut outer = WalkState::new(session.phase, session.host);
   let mut blocks: Vec<String> = Vec::new();
   for record in records {
     let result = walk_path(doc, record, session, trace);

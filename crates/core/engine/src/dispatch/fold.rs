@@ -6,11 +6,13 @@
 
 use super::output::{Advisories, final_advisory, final_ask, parse_document, printed, read_field};
 use super::{ModuleResult, Phase};
+use toolu_protocol::host::Host;
 
 /// What one walk has gathered so far.
 #[derive(Debug, Clone)]
 pub(crate) struct WalkState {
   pub(crate) phase: Phase,
+  pub(crate) host: Host,
   pub(crate) advisories: Advisories,
   pub(crate) ask: Option<String>,
   pub(crate) stderr: String,
@@ -37,9 +39,10 @@ pub(crate) fn event_name(phase: Phase) -> &'static str {
 
 impl WalkState {
   /// An empty walk.
-  pub(crate) fn new(phase: Phase) -> WalkState {
+  pub(crate) fn new(phase: Phase, host: Host) -> WalkState {
     WalkState {
       phase,
+      host,
       advisories: Advisories::default(),
       ask: None,
       stderr: String::new(),
@@ -79,7 +82,7 @@ impl WalkState {
       return None;
     }
     let doc = parse_document(&result.stdout).ok();
-    if stops_walk(self.phase, doc.as_ref()) {
+    if stops_walk(self.phase, self.host, doc.as_ref()) {
       return Some(ModuleResult {
         stdout: printed(&result.stdout),
         stderr: self.stderr.clone(),
@@ -116,10 +119,14 @@ fn permission_of(doc: Option<&toolu_runtime::json::ordered::Ordered>) -> String 
 /// Whether a result ends the walk: a deny before the tool, a block after it.
 pub(crate) fn stops_walk(
   phase: Phase,
+  host: Host,
   doc: Option<&toolu_runtime::json::ordered::Ordered>,
 ) -> bool {
   match phase {
-    Phase::Pre => permission_of(doc) == "deny",
+    Phase::Pre => {
+      permission_of(doc) == "deny"
+        || host == Host::Muse && read_field(doc, &["decision"]) == "block"
+    }
     Phase::Post => read_field(doc, &["decision"]) == "block",
   }
 }

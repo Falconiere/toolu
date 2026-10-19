@@ -104,7 +104,7 @@ pub(crate) fn walk(
   };
   let ctx = view.rule_context(payload, session);
   let event = host_event(&view.event);
-  let mut state = WalkState::new(session.phase);
+  let mut state = WalkState::new(session.phase, session.host);
   for gate in session.options.builtins {
     let folded = run_gate(
       *gate,
