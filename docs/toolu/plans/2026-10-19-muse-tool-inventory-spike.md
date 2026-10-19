@@ -117,7 +117,9 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
     ],
     "paths": [
       "docs/research/muse-tool-inventory.md",
-      "docs/toolu/evidence/2026-10-19-muse-tool-inventory.json"
+      "docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+      "docs/cli/commands.json",
+      "tooling/conventions/markdown-cli.json"
     ],
     "input": "the committed evidence JSON",
     "model": "inherit"
@@ -161,20 +163,16 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S8",
     "title": "Docs CI checks and the full gate on the final tree",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate",
+    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; mkdir -p \"$HOME/.cache/toolu-540-tmp\" && chmod 700 \"$HOME/.cache/toolu-540-tmp\" && export TMPDIR=\"$HOME/.cache/toolu-540-tmp\"; cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate",
     "ac_refs": [
       "AC-9"
     ],
     "depends_on": [
-      "S5"
+      "S5",
+      "S6",
+      "S7"
     ],
-    "paths": [
-      "docs/research/muse-tool-inventory.md",
-      "docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
-      "docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md",
-      "docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md"
-    ],
-    "input": "the branch tree",
+    "input": "the whole branch tree (no paths: freshness follows the full diff)",
     "model": "inherit"
   }
 ]
@@ -199,3 +197,20 @@ The boundary cases:
 - a verdict candidate that Muse classifies `failed` is recorded verbatim.
 
 S6 runs even if an earlier step fails. No user-facing documentation changes: Muse is not a shipped host until #542 onward, and #551 owns those docs.
+
+**Delivery.** Each step's output is committed as soon as its check is green, with a `docs(research):` subject, and pushed to `feat/540-spike-muse-tool-inventory-ask`. The commit scope is only:
+
+- the research doc;
+- the evidence JSON;
+- this plan and its spec.
+
+`git diff --stat origin/main` must name nothing else. Then:
+
+1. `toolu ledger run docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md --verify` re-runs every step against the final committed tree.
+2. `toolu-review:review` records version 2 review state.
+3. `toolu ledger verdict status` must report `overall: ready`.
+4. Push.
+5. The PR targets `main`, with a `docs(research):` conventional title. Its body opens with `Closes Falconiere/toolu#540` and `Part of Falconiere/toolu#539`, then gives the summary and the verification evidence.
+6. `toolu epic report pr-open --pr <n>`, then `toolu epic report babysit --pr <n>`, and the worker goes idle. The engine babysits.
+
+Delivery needs an authenticated `gh api user` and a non-default branch.
