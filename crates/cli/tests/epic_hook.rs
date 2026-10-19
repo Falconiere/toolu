@@ -83,11 +83,16 @@ impl Root {
       command.env("LLVM_PROFILE_FILE", profile);
     }
     let mut child = command.spawn()?;
-    child
+    let written = child
       .stdin
       .take()
       .ok_or("no stdin")?
-      .write_all(stdin.as_bytes())?;
+      .write_all(stdin.as_bytes());
+    // A hook that never reads stdin may exit and close the pipe before the write.
+    match written {
+      Err(err) if err.kind() != std::io::ErrorKind::BrokenPipe => return Err(err.into()),
+      Ok(()) | Err(_) => {}
+    }
     Ok(child.wait_with_output()?)
   }
 }

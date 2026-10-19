@@ -57,6 +57,8 @@ pub enum Payload {
   Cursor(CursorPayload),
   /// Hermes.
   Hermes(HermesPayload),
+  /// Muse Code: Claude's shape with Muse's own tool names.
+  Muse(HookPayload),
 }
 
 /// Parse `text` as `host`'s payload.
@@ -66,11 +68,11 @@ pub enum Payload {
 /// or holds a lone-surrogate escape.
 pub fn parse(host: Host, text: &str) -> Result<Payload, serde_json::Error> {
   Ok(match host {
-    // #543 adds a distinct Muse payload once its tool names are normalized.
-    Host::Claude | Host::Muse => Payload::Claude(serde_json::from_str(text)?),
+    Host::Claude => Payload::Claude(serde_json::from_str(text)?),
     Host::Codex => Payload::Codex(serde_json::from_str(text)?),
     Host::Cursor => Payload::Cursor(serde_json::from_str(text)?),
     Host::Hermes => Payload::Hermes(serde_json::from_str(text)?),
+    Host::Muse => Payload::Muse(serde_json::from_str(text)?),
   })
 }
 

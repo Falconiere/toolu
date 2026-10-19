@@ -1,12 +1,12 @@
-//! The Claude Code and Codex hook payload: one shape, where Codex adds `turn_id`
-//! and `model`.
+//! The Claude Code, Codex and Muse hook payload: one shape, where Codex and
+//! Muse add `turn_id` and `model`.
 
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
 use super::LenientString;
 
-/// What Claude Code or Codex writes on a command hook's stdin.
+/// What Claude Code, Codex or Muse writes on a command hook's stdin.
 #[derive(Debug, Clone, Default, PartialEq, Deserialize)]
 #[serde(default)]
 pub struct HookPayload {
@@ -20,9 +20,9 @@ pub struct HookPayload {
   pub hook_event_name: LenientString,
   /// Claude Code's permission mode.
   pub permission_mode: LenientString,
-  /// Codex's model.
+  /// Codex's or Muse's model.
   pub model: LenientString,
-  /// Codex's turn.
+  /// Codex's or Muse's turn.
   pub turn_id: LenientString,
   /// The tool of a tool event.
   pub tool_name: LenientString,
