@@ -39,7 +39,7 @@ fn muse_dispatch_fails_closed_until_its_encoder_is_available() {
     pre.result.stderr,
     "blocked: toolu PreToolUse dispatcher failed: Muse output encoder is not available (#544)\n"
   );
-  assert!(pre.trace.is_empty());
+  assert_eq!(pre.trace, Vec::new());
   let post = dispatch_post_tool(body, &options);
   assert_eq!(post.result.stdout, "");
   assert_eq!(post.result.exit_code, 2);
@@ -47,5 +47,5 @@ fn muse_dispatch_fails_closed_until_its_encoder_is_available() {
     post.result.stderr,
     "toolu PostToolUse dispatcher failed: Muse output encoder is not available (#544)\n"
   );
-  assert!(post.trace.is_empty());
+  assert_eq!(post.trace, Vec::new());
 }
