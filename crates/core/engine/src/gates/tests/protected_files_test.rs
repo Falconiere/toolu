@@ -40,6 +40,24 @@ fn event(
   (serde_json::from_value(wire).expect("normalized event"), raw)
 }
 
+fn context<'a>(
+  host: Host,
+  env: &'a Env,
+  raw: &'a Map<String, Value>,
+  root: &'a Path,
+) -> RuleContext<'a> {
+  RuleContext {
+    host,
+    env,
+    config_root: root,
+    project_root: root,
+    cwd: Some(root),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
+
 #[test]
 fn env_edit_asks_on_claude_and_denies_on_codex() {
   let dir = tempfile::tempdir().expect("tempdir");
@@ -51,16 +69,7 @@ fn env_edit_asks_on_claude_and_denies_on_codex() {
   ]);
   let (event, raw) = event("Edit", None, Some(".env"));
   for (host, ask) in [(Host::Claude, true), (Host::Codex, false)] {
-    let ctx = RuleContext {
-      host,
-      env: &env,
-      config_root: dir.path(),
-      project_root: dir.path(),
-      cwd: Some(dir.path()),
-      plugin_root: None,
-      raw: &raw,
-      edit: None,
-    };
+    let ctx = context(host, &env, &raw, dir.path());
     let decision = ProtectedFiles.run(&event, &ctx).expect("decision");
     match (decision, ask) {
       (Decision::Ask { reason }, true) => assert!(reason.as_str().contains("SECURITY GUARDRAIL")),
@@ -125,16 +134,7 @@ fn muse_edit_path_is_protected_in_block_mode() {
     .as_object()
     .cloned()
     .expect("payload");
-  let ctx = RuleContext {
-    host: Host::Muse,
-    env: &env,
-    config_root: dir.path(),
-    project_root: dir.path(),
-    cwd: Some(dir.path()),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = context(Host::Muse, &env, &raw, dir.path());
   let decision = ProtectedFiles.run(&event, &ctx).expect("decision");
   assert!(matches!(decision, Decision::Deny { reason } if reason.as_str().contains(".env")));
 }

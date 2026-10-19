@@ -81,6 +81,38 @@ fn the_analysis_is_of_the_reported_command() {
   );
 }
 
+fn muse_shell(command: &str, home: &str) -> (NormalizedEvent, Map<String, serde_json::Value>) {
+  let input = json!({"command":command});
+  let event = serde_json::from_value(json!({
+    "type":"shell/pre", "sessionId":"s", "cwd":home, "projectRoot":home,
+    "worktree":home, "toolCallId":"c", "toolName":"Bash",
+    "toolInput":input, "command":command
+  }))
+  .expect("canonical Muse shell");
+  let raw = json!({"tool_input":input})
+    .as_object()
+    .cloned()
+    .expect("payload");
+  (event, raw)
+}
+
+fn muse_context<'a>(
+  env: &'a Env,
+  raw: &'a Map<String, serde_json::Value>,
+  root: &'a Path,
+) -> RuleContext<'a> {
+  RuleContext {
+    host: Host::Muse,
+    env,
+    config_root: root,
+    project_root: root,
+    cwd: Some(root),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
+
 #[test]
 fn muse_shell_commands_keep_commit_and_denylist_enforcement() {
   let dir = tempfile::tempdir().expect("tempdir");
@@ -102,27 +134,8 @@ fn muse_shell_commands_keep_commit_and_denylist_enforcement() {
     ("git commit -m 'wibble: x'", false, true),
     ("echo ready", false, false),
   ] {
-    let input = json!({"command":command});
-    let event: NormalizedEvent = serde_json::from_value(json!({
-      "type":"shell/pre", "sessionId":"s", "cwd":home, "projectRoot":home,
-      "worktree":home, "toolCallId":"c", "toolName":"Bash",
-      "toolInput":input, "command":command
-    }))
-    .expect("canonical Muse shell");
-    let raw = json!({"tool_input":input})
-      .as_object()
-      .cloned()
-      .expect("payload");
-    let ctx = RuleContext {
-      host: Host::Muse,
-      env: &env,
-      config_root: dir.path(),
-      project_root: dir.path(),
-      cwd: Some(dir.path()),
-      plugin_root: None,
-      raw: &raw,
-      edit: None,
-    };
+    let (event, raw) = muse_shell(command, &home);
+    let ctx = muse_context(&env, &raw, dir.path());
     let bash = BASH_COMMANDS.run(&event, &ctx).expect("bash decision");
     let commit = COMMIT_GATE.run(&event, &ctx).expect("commit decision");
     assert_eq!(
