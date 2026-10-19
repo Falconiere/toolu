@@ -9,17 +9,7 @@ use crate::{Verdict, output};
 
 /// Print the entry for the plugin, event and hook name in `options.files`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
-  let words: Vec<String> = options
-    .files
-    .iter()
-    .map(|word| word.to_string_lossy().into_owned())
-    .collect();
-  let [plugin, event, name] = words.as_slice() else {
-    return Err("print-hook needs <plugin> <Event> <name>".to_owned());
-  };
-  if !options.root.join("plugins").join(plugin).is_dir() {
-    return Err(format!("no plugins/{plugin} directory"));
-  }
+  let [plugin, event, name] = target_words(options, "print-hook")?;
   let timeout = match &options.timeout {
     Some(text) => text
       .parse()
@@ -28,14 +18,31 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   };
   let generated = hook(
     &Target {
-      plugin,
-      event,
-      name,
+      plugin: &plugin,
+      event: &event,
+      name: &name,
     },
     timeout,
   )?;
   output::say(&entry_json(&generated));
   Ok(Verdict::Clean)
+}
+
+/// The plugin, event and hook name in `options.files`, for `task`'s messages;
+/// the plugin must have a `plugins/<plugin>` directory.
+pub(crate) fn target_words(options: &Options, task: &str) -> Result<[String; 3], String> {
+  let words: Vec<String> = options
+    .files
+    .iter()
+    .map(|word| word.to_string_lossy().into_owned())
+    .collect();
+  let Ok([plugin, event, name]) = <[String; 3]>::try_from(words) else {
+    return Err(format!("{task} needs <plugin> <Event> <name>"));
+  };
+  if !options.root.join("plugins").join(&plugin).is_dir() {
+    return Err(format!("no plugins/{plugin} directory"));
+  }
+  Ok([plugin, event, name])
 }
 
 /// The `hooks.json` hook object, pretty-printed.

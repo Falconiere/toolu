@@ -62,6 +62,7 @@ mod packaging;
 mod packaging_assets;
 mod packaging_catalog;
 mod print_hook;
+mod print_muse_hook;
 mod process_group;
 mod reach;
 mod scratch;
@@ -101,6 +102,7 @@ const TASKS: &[(&str, Task)] = &[
   ("check-coverage", coverage::run),
   ("measure", measure::run),
   ("print-hook", print_hook::run),
+  ("print-muse-hook", print_muse_hook::run),
   ("check-hooks", check_hooks::run),
   ("check-workflows", check_workflows::run),
   ("launcher-e2e", launcher_e2e::run),
@@ -125,10 +127,11 @@ const TASKS: &[(&str, Task)] = &[
 
 // `\x20` keeps the second line's indent: a `\` continuation strips leading spaces.
 const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--title TEXT] \
-  [--only STEP]... [--timeout N] [--bin PATH] [--home DIR] [--check] [ARG]...\n\
+  [--only STEP]... [--timeout N] [--timeout-ms N] [--resolver] [--bin PATH] [--home DIR] \
+  [--check] [ARG]...\n\
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
-  check-coverage, measure, print-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
+  check-coverage, measure, print-hook, print-muse-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
   check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
   check-ci-paths, ci-aggregate, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
 
