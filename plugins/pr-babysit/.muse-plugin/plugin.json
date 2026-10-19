@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "name": "pr-babysit",
+  "displayName": "pr-babysit",
+  "version": "8.0.4",
+  "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal; fixes run on Jev-routed Claude Code, Codex or Cursor Agent sessions in a herdr worktree.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "babysit",
+        "path": "skills/babysit/SKILL.md"
+      }
+    ],
+    "commands": [
+      {
+        "id": "babysit-command",
+        "path": "commands/babysit.md"
+      }
+    ],
+    "hooks": [
+      {
+        "id": "check-toolu",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-toolu"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-binary",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-binary"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

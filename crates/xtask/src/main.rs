@@ -63,6 +63,7 @@ mod packaging;
 mod packaging_assets;
 mod packaging_catalog;
 mod packaging_muse;
+mod packaging_muse_identity;
 mod print_hook;
 mod print_muse_hook;
 mod process_group;

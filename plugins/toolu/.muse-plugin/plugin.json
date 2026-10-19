@@ -37,6 +37,22 @@
     ],
     "commands": [
       {
+        "id": "commit-command",
+        "path": "commands/commit.md"
+      },
+      {
+        "id": "doctor",
+        "path": "commands/doctor.md"
+      },
+      {
+        "id": "review-and-commit-command",
+        "path": "commands/review-and-commit.md"
+      },
+      {
+        "id": "status",
+        "path": "commands/status.md"
+      },
+      {
         "id": "architect",
         "path": "agents/architect.md"
       },
@@ -57,7 +73,80 @@
         "path": "agents/research-agent.md"
       }
     ],
-    "hooks": [],
+    "hooks": [
+      {
+        "id": "session-start",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/session-start"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-binary",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-binary"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "pre-compact",
+        "event": "PreCompact",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/pre-compact"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "user-prompt-submit",
+        "event": "UserPromptSubmit",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/user-prompt-submit"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "pre-tools",
+        "event": "PreToolUse",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/pre-tools"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "mcp-tools",
+        "event": "PreToolUse",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/mcp-tools"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "agent-tier",
+        "event": "PreToolUse",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/agent-tier"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "post-tools",
+        "event": "PostToolUse",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/post-tools"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
     "mcpServers": [],
     "reminders": []
   }

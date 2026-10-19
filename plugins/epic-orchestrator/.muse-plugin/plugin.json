@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "name": "epic-orchestrator",
+  "displayName": "epic-orchestrator",
+  "version": "8.0.4",
+  "description": "Drive a GitHub, Jira, or Linear epic to merged PRs: dependency graph, herdr worktrees, parallel Claude Code / Codex / Cursor Agent workers routed by Jev complexity, merge gate, rate-limit and progress guardrails.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "epic-orchestrator",
+        "path": "skills/epic-orchestrator/SKILL.md"
+      }
+    ],
+    "commands": [
+      {
+        "id": "epic",
+        "path": "commands/epic.md"
+      }
+    ],
+    "hooks": [
+      {
+        "id": "check-deps",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-deps"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-binary",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-binary"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "engine-ensure",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/engine-ensure"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

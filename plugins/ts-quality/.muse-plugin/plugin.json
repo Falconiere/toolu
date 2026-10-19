@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "name": "ts-quality",
+  "displayName": "ts-quality",
+  "version": "8.0.4",
+  "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "register",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/register"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-toolu",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-toolu"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

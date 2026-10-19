@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "name": "toolu-review",
+  "displayName": "toolu-review",
+  "version": "8.0.4",
+  "description": "Project-tuned pre-push code review mirroring CI falconiere/toolu-ghactions/code-review@v8 (Jev-enabled), writing the toolu push-review state so the gate passes. Standalone.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "review",
+        "path": "skills/review/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "session-start",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/session-start"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-binary",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-binary"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

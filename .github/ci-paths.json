@@ -22,6 +22,7 @@
       "plugins/rust-quality/**",
       "tools/toolu-cli/**",
       "plugins/*/hooks/hooks.json",
+      "plugins/*/hooks/muse/*",
       "plugins/*/.claude-plugin/plugin.json",
       "plugins/*/.codex-plugin/plugin.json",
       "plugins/*/.muse-plugin/plugin.json",

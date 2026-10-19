@@ -24,6 +24,8 @@ The plugin directory is self-contained under `plugins/<name>/`. No symlinks out.
 ```
 plugins/<name>/
   .claude-plugin/plugin.json   # name, version, description, dependencies
+  .muse-plugin/plugin.json     # Muse bundle: skills, commands, generated hooks (#547)
+  hooks/muse/<name>            # generated Muse hook resolvers
   README.md                    # tooling/templates/plugin-README.md
   hooks/hooks.json             # event routing: generated native launchers only
   .muse-plugin/plugin.json     # Muse manifest (#547): skills, commands, hooks as argv
@@ -35,7 +37,7 @@ plugins/<name>/
   settings/                    # core only
 ```
 
-Root `package.json` (the release-please version anchor, and jscpd's manifest with `package-lock.json`), the npm wrapper's `tools/toolu-cli/npm/package.json`, the Cargo workspace (`[workspace.package] version`), and every `plugin.json` share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
+Root `package.json` (the release-please version anchor, and jscpd's manifest with `package-lock.json`), the npm wrapper's `tools/toolu-cli/npm/package.json`, the Cargo workspace (`[workspace.package] version`), and every `plugin.json` (Claude, Codex and Muse) share one `vX.Y.Z`, matching the git tag. A plugin is re-extracted only when its `plugin.json` version changes, so a release re-extracts all of them.
 
 ## Releases
 
