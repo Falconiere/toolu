@@ -1,6 +1,6 @@
 # Muse agent commands — Design
 
-**Date:** 2026-10-19  **Status:** Draft  **Author:** Claude  **Topic:** Falconiere/toolu#548
+**Date:** 2026-10-19  **Status:** Approved  **Author:** Claude  **Topic:** Falconiere/toolu#548
 
 ## Problem
 
@@ -13,9 +13,11 @@ must notice when the Muse view drifts from it.
 
 ## Non-Goals
 
-1. The other toolu skills, the existing commands (`commit`, `doctor`,
-   `review-and-commit`, `status`) and the generated hooks in the toolu Muse
-   manifest belong to #547, as do the manifests of the other 11 plugins.
+1. The existing commands (`commit`, `doctor`, `review-and-commit`, `status`)
+   and the generated hooks in the toolu Muse manifest belong to #547, as do the
+   manifests of the other 11 plugins. The six toolu skills are included here
+   only so a skill that references an agent can be shown resolving on Muse.
+   The gate does not judge skill entries.
 2. The Codex agent profiles (`plugins/toolu/assets/agents/*.toml`) do not
    change.
 3. No tier pin on Muse. Muse has no custom agent definitions, and the
@@ -41,6 +43,14 @@ Decisive evidence, from a scratch bundle on Muse Code 1.4.11 in an isolated
   `description`, including the folded `>-` one.
 - Submitting `/quick-task list files` sent the agent body (frontmatter
   stripped) followed by `list files`. The prompt is the agent text.
+- The qualified `/toolu:quick-task find X` resolves the same way. Muse also
+  qualifies names on a collision: the toolu skill `deep-research` is listed as
+  `/toolu:deep-research` beside the built-in `/deep-research`. **The Muse
+  invocation the docs give is therefore `/toolu:<agent>`.** It always resolves,
+  and a bare `/<agent>` works while no other command takes the name.
+- All six `plugins/toolu/skills/*` pass `muse skills validate` with no
+  diagnostics. A bundle that holds them beside the five agent commands
+  validates clean, and they appear as `/orchestrator`, `/debug` and so on.
 
 Rejected alternatives:
 
@@ -52,10 +62,12 @@ Rejected alternatives:
   `submit_reminder_decision`, behind a decision envelope. The agents are
   delegated task roles, not standing policies.
 
-Jev compared the three mappings (`commands` 1.0), the manifest scope
-(agents-only 0.99) and the gate placement (new packaging module 0.47, ahead of
+Jev compared the three mappings (`commands` 1.0) and the gate placement (new packaging module 0.47, ahead of
 `packaging_assets.rs` at 0.37). The module is new because `packaging_assets.rs`
-is already at 307 lines against the 300-line file limit.
+is already at 307 lines against the 300-line file limit. Jev first picked an
+agents-only manifest (0.99). Spec review then found that no skill could show an
+agent reference resolving on Muse, and the re-asked choice moved to agents plus
+skills (0.97).
 
 On Muse a command applies the role in the current thread. It does not spawn a
 tier-pinned subagent. The skills that list the agents say this next to each
@@ -80,7 +92,14 @@ Reuse:
   "description": "<the .claude-plugin description>",
   "compat": { "source": "native", "manifestDir": ".muse-plugin" },
   "capabilities": {
-    "skills": [],
+    "skills": [
+      { "id": "commit", "path": "skills/commit/SKILL.md" },
+      { "id": "debug", "path": "skills/debug/SKILL.md" },
+      { "id": "deep-research", "path": "skills/deep-research/SKILL.md" },
+      { "id": "orchestrator", "path": "skills/orchestrator/SKILL.md" },
+      { "id": "review-and-commit", "path": "skills/review-and-commit/SKILL.md" },
+      { "id": "setup", "path": "skills/setup/SKILL.md" }
+    ],
     "commands": [
       { "id": "architect", "path": "agents/architect.md" },
       { "id": "deep-explore", "path": "agents/deep-explore.md" },
@@ -110,6 +129,9 @@ For each `plugins/<p>` it checks:
 - the agents: the sorted stems of `agents/*.md`;
 - the manifest, `plugins/<p>/.muse-plugin/plugin.json`, when present: its
   `version` equals `package.json`, release-please tracks it at `$.version`,
+  its top-level keys are within `schemaVersion`, `name`, `displayName`,
+  `version`, `description`, `compat` and `capabilities` (Muse warns
+  `unsupported-field` on any other key, which breaks the zero-diagnostics bar),
   `capabilities` has no `agents` key, and `capabilities.commands`, when
   present, is an array;
 - every agent `a`: there is a command entry with `id == a` and
@@ -138,6 +160,8 @@ Every message names the manifest path:
   `<manifest>: command <id> points at agents/x.md, which is not an agent source`.
 - **Id differs from the stem:**
   `<manifest>: command <id> must be named <stem> after agents/<stem>.md`.
+- **An unknown top-level key** (`agents`, `hookProtocol`, `author`, …):
+  `<manifest>: top-level <key> is not a Muse manifest field; Muse warns unsupported-field`.
 - **An `agents` key under `capabilities`:**
   `<manifest>: Muse rejects the agents capability; map each agent to a command`.
 - **A plugin with agents and no Muse manifest:**
@@ -156,17 +180,19 @@ These cases pass:
 ## Acceptance criteria
 
 - **AC-1:** Given the committed `plugins/toolu`, `muse plugins validate plugins/toolu --json`
-  reports `valid: true`, empty `diagnostics`, and five commands whose paths are
-  the five `agents/*.md` files.
+  reports `valid: true`, empty `diagnostics`, the six skills, and five commands
+  whose paths are the five `agents/*.md` files. `muse skills validate` passes
+  for each of the six skill directories.
 - **AC-2:** With `plugins/toolu` installed in an isolated Muse store, the TUI
-  slash menu offers all five commands. Invoking `/architect <task>` and
-  `/quick-task <task>` submits the body of `agents/architect.md` or
+  slash menu offers all five commands. Invoking `/toolu:architect <task>` and
+  `/toolu:quick-task <task>` submits the body of `agents/architect.md` or
   `agents/quick-task.md`, frontmatter stripped, followed by the task.
 - **AC-3:** Given a copy of the real `plugins/toolu` in a temp root,
   `packaging_muse::check_muse` returns `Ok(5)`. Renaming
   `agents/implementer.md`, deleting its command entry, adding a stale
   `agents/` entry, renaming an entry's id, adding `capabilities.agents`,
-  deleting the manifest, changing its version, or dropping its release-please
+  adding a top-level `agents` or `author`, deleting the manifest, changing its version, or
+  dropping its release-please
   extra-file each returns the matching `Err` from Failure modes.
 - **AC-4:** Editing the text of `agents/implementer.md` without touching the
   manifest still passes `check_muse`, because the Muse view is the source.
@@ -175,16 +201,23 @@ These cases pass:
 - **AC-6:** The toolu README states the mapping rule and the Muse invocation.
   The orchestrator skill and both `model-routing.md` copies give each agent's
   Claude, Codex and Muse syntax. `cargo xtask check-markdown-cli` passes.
+- **AC-7:** In the same isolated Muse session, `/orchestrator` submits the
+  committed `skills/orchestrator/SKILL.md` body, which names Muse
+  `/toolu:quick-task`. That command then resolves as in AC-2, so a skill's
+  agent reference resolves on Muse. On Claude the same line names the
+  `toolu:quick-task` agent that the Claude plugin ships.
 
 ## Acceptance evidence
 
 - **AC-1:** Run `muse plugins validate plugins/toolu --json | jq '{valid,diagnostics,commands:[.capabilities.commands[].path]}'`
-  on the real bundle. Record the output in the PR body.
-- **AC-2:** Run `muse plugins install plugins/toolu` with a scratch
-  `XDG_DATA_HOME`, then `muse --provider echo --trust-workspace` in tmux.
-  Capture the pane for the `/arch`, `/quick` filters and both invocations, then
-  remove the plugin from the scratch store. Record it in the PR body. A
-  shadowed name would show up here as a missing menu row.
+  on the real bundle, and `muse skills validate` on each skill directory.
+  Record the output in the PR body.
+- **AC-2, AC-7:** Run `muse plugins install plugins/toolu` with a scratch
+  `XDG_DATA_HOME`, then `muse --provider echo --trust-workspace` in tmux. The
+  echo provider returns the submitted prompt, so the pane shows the expansion.
+  Capture the pane for the `/toolu:` filter, both agent invocations and
+  `/orchestrator`, then remove the plugin from the scratch store. Record it in
+  the PR body. A shadowed name would show up here as a missing menu row.
 - **AC-3, AC-4:** Unit tests in `crates/xtask/src/tests/packaging_muse_test.rs`
   copy the real repository files (`plugins/toolu/agents/*.md`, the manifest,
   `package.json`, `release-please-config.json`) into a tempdir, then apply each
@@ -198,20 +231,22 @@ These cases pass:
 ## Documentation impact
 
 - `plugins/toolu/README.md`: a Muse section with the mapping rule, the
-  `/<agent>` invocation, a note that it runs in the current thread, and the
+  `/toolu:<agent>` invocation, a note that it runs in the current thread, and the
   validate command.
 - `plugins/toolu/skills/orchestrator/SKILL.md` and both identical
   `model-routing.md` copies (`plugins/toolu/skills/orchestrator/references/`,
   `plugins/delivery-flow/skills/delivery-flow/references/`): the Muse syntax for
   each agent.
-- `AGENTS.md`: the `packaging` description in Key files or Rust conventions
-  names the Muse agent-command check. The CI section's `rust` group gets the
-  two new globs.
+- `AGENTS.md`: the CI section's sentence that lists the `rust` group gets the
+  two new globs, and the release-only sentence names the Muse manifest. The
+  `packaging` gate step keeps its name.
 
 ## Open Questions
 
 - #547's scenario expects the toolu manifest to list "4 commands". Under this
   mapping it lists 9 (the 4 existing commands plus 5 agent commands). Owner:
   #547. Not blocking. The PR body notes it.
-- Muse's built-in `/doctor` skill shadows a plugin command named `doctor`.
-  Owner: #547, when it adds the existing commands. Not blocking.
+- Muse has a built-in `/doctor` skill. Muse qualified the clashing
+  `deep-research` as `/toolu:deep-research`, so a plugin `doctor` command is
+  likely reached as `/toolu:doctor`. Owner: #547, when it adds the existing
+  commands. Not blocking.
