@@ -1,0 +1,2336 @@
+{
+  "muse": {
+    "version": "1.4.10-R6427.1",
+    "captured": "2026-10-19",
+    "model": "muse-spark-1.3-contributor (meta)"
+  },
+  "redaction": "session/turn/tool-use/subagent/goal/work ids → <id>; probe workspace → <ws>; scratchpad → <scratch>; $HOME → ~; strings over 200 characters truncated with …",
+  "toolsets": {
+    "default-untrusted": [
+      "workflow",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "work_stop",
+      "work_list",
+      "web_fetch",
+      "web_search",
+      "bash",
+      "bash_input",
+      "monitor",
+      "cron_create",
+      "cron_delete",
+      "cron_list",
+      "get_goal",
+      "create_goal",
+      "update_goal",
+      "report_progress",
+      "image_generation",
+      "read_skill",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "snooze_reminder",
+      "write_todos"
+    ],
+    "default-trusted": [
+      "workflow",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "work_stop",
+      "work_list",
+      "web_fetch",
+      "web_search",
+      "bash",
+      "bash_input",
+      "monitor",
+      "cron_create",
+      "cron_delete",
+      "cron_list",
+      "get_goal",
+      "create_goal",
+      "update_goal",
+      "report_progress",
+      "image_generation",
+      "subagent_spawn",
+      "subagent_status",
+      "subagent_send_message",
+      "subagent_wait",
+      "subagent_read_result",
+      "subagent_cancel",
+      "read_skill",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "snooze_reminder",
+      "write_todos"
+    ],
+    "native-basic": [
+      "workflow",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "work_stop",
+      "work_list",
+      "web_fetch",
+      "web_search",
+      "bash",
+      "bash_input",
+      "monitor",
+      "cron_create",
+      "cron_delete",
+      "cron_list",
+      "get_goal",
+      "create_goal",
+      "update_goal",
+      "report_progress",
+      "image_generation",
+      "subagent_spawn",
+      "subagent_status",
+      "subagent_send_message",
+      "subagent_wait",
+      "subagent_read_result",
+      "subagent_cancel",
+      "read_skill",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "snooze_reminder",
+      "write_todos"
+    ],
+    "enable-shell-tool": [
+      "workflow",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "work_stop",
+      "work_list",
+      "web_fetch",
+      "web_search",
+      "shell",
+      "monitor",
+      "cron_create",
+      "cron_delete",
+      "cron_list",
+      "get_goal",
+      "create_goal",
+      "update_goal",
+      "report_progress",
+      "image_generation",
+      "subagent_spawn",
+      "subagent_status",
+      "subagent_send_message",
+      "subagent_wait",
+      "subagent_read_result",
+      "subagent_cancel",
+      "read_skill",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "snooze_reminder",
+      "write_todos"
+    ]
+  },
+  "child_toolsets": {
+    "reminder-agent": [
+      "submit_reminder_decision"
+    ],
+    "subagent": [
+      "read_skill",
+      "web_search",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "web_fetch",
+      "bash",
+      "bash_input",
+      "monitor",
+      "subagent_spawn",
+      "subagent_status",
+      "subagent_send_message",
+      "subagent_wait",
+      "subagent_read_result",
+      "subagent_cancel",
+      "image_generation",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo"
+    ],
+    "workflow-child": [
+      "read_skill",
+      "web_search",
+      "read_file",
+      "search",
+      "write_file",
+      "edit_file",
+      "read_memory",
+      "add_memory",
+      "edit_memory",
+      "web_fetch",
+      "bash",
+      "bash_input",
+      "monitor",
+      "image_generation",
+      "work_status",
+      "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "submit_result"
+    ]
+  },
+  "event_payload_keys": {
+    "PermissionRequest": [
+      "cwd",
+      "hook_event_name",
+      "model",
+      "permission_mode",
+      "session_id",
+      "tool_input",
+      "tool_name",
+      "transcript_path",
+      "turn_id"
+    ],
+    "PostToolUse": [
+      "cwd",
+      "hook_event_name",
+      "model",
+      "permission_mode",
+      "session_id",
+      "tool_input",
+      "tool_name",
+      "tool_response",
+      "tool_use_id",
+      "transcript_path",
+      "turn_id"
+    ],
+    "PostToolUseFailure": [
+      "cwd",
+      "duration_ms",
+      "error",
+      "hook_event_name",
+      "is_interrupt",
+      "model",
+      "permission_mode",
+      "session_id",
+      "tool_input",
+      "tool_name",
+      "tool_use_id",
+      "transcript_path",
+      "turn_id"
+    ],
+    "PreToolUse": [
+      "cwd",
+      "hook_event_name",
+      "model",
+      "permission_mode",
+      "session_id",
+      "tool_input",
+      "tool_name",
+      "tool_use_id",
+      "transcript_path",
+      "turn_id"
+    ],
+    "SessionStart": [
+      "cwd",
+      "hook_event_name",
+      "model",
+      "permission_mode",
+      "session_id",
+      "source",
+      "transcript_path"
+    ],
+    "SubagentStop": [
+      "child_session_id",
+      "cwd",
+      "hook_event_name",
+      "last_assistant_message",
+      "model",
+      "permission_mode",
+      "session_id",
+      "stop_hook_active",
+      "subagent_id",
+      "transcript_path",
+      "turn_id"
+    ]
+  },
+  "tools": {
+    "add_memory": {
+      "family": "memory",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I4"
+      ],
+      "tool_input_keys": [
+        "content",
+        "path"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys message, operation, path, scope, success)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "content": "probe-540 memory note",
+          "path": "probe-540.md"
+        },
+        "tool_name": "add_memory",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "content": "probe-540 memory note",
+          "path": "probe-540.md"
+        },
+        "tool_name": "add_memory",
+        "tool_response": "{\"success\":true,\"scope\":\"personal_project\",\"path\":\"probe-540.md\",\"operation\":\"add\",\"message\":\"memory note written\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "bash": {
+      "family": "shell",
+      "internal": false,
+      "canonical": "Bash",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10",
+        "I11",
+        "I5",
+        "P1"
+      ],
+      "tool_input_keys": [
+        "command",
+        "description",
+        "tty",
+        "workdir",
+        "yield_time_ms"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": true,
+      "tool_response_shape": "string (JSON text, object with keys chunk_id, command, description, exit_code, original_output_bytes, original_output_tokens, output, terminal_status, truncated)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "read line; echo got:$line",
+          "description": "Wait for probe input",
+          "workdir": "<ws>"
+        },
+        "tool_name": "bash",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "read line; echo got:$line",
+          "description": "Wait for probe input",
+          "workdir": "<ws>"
+        },
+        "tool_name": "bash",
+        "tool_response": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"read line; echo got:$line\",\n  \"description\": \"Wait for probe input\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"got:\\n\",\n  \"original_out…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "failure_example": {
+        "cwd": "<ws>",
+        "duration_ms": 497,
+        "error": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"exit_code\": 3,\n  \"terminal_status\": \"failed\",\n  \"terminal_reason\": \"process exited with status 3\",\n  \"output\": \"fail-540\\n\",\n  \"original_output_bytes\": 9,\n  \"original_ou…",
+        "hook_event_name": "PostToolUseFailure",
+        "is_interrupt": false,
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "echo fail-540; exit 3",
+          "description": "Run echo fail command",
+          "workdir": "<ws>"
+        },
+        "tool_name": "bash",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "bash_input": {
+      "family": "shell",
+      "internal": false,
+      "canonical": "none: stdin to a running bash job",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I5"
+      ],
+      "tool_input_keys": [
+        "chars",
+        "session_id",
+        "yield_time_ms"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys chunk_id, command, description, exit_code, original_output_bytes, original_output_tokens, output, terminal_status, truncated)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "chars": "probe-540\n",
+          "session_id": 2,
+          "yield_time_ms": 5000
+        },
+        "tool_name": "bash_input",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "chars": "probe-540\n",
+          "session_id": 2,
+          "yield_time_ms": 5000
+        },
+        "tool_name": "bash_input",
+        "tool_response": "{\n  \"chunk_id\": \"exec-2-2\",\n  \"command\": \"read line; echo got:$line\",\n  \"description\": \"Wait for probe input\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"probe-540\\r\\ngot:probe-5…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "create_goal": {
+      "family": "goal",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I6"
+      ],
+      "tool_input_keys": [
+        "objective"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys goal)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "objective": "probe-540 goal: write the word done"
+        },
+        "tool_name": "create_goal",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "objective": "probe-540 goal: write the word done"
+        },
+        "tool_name": "create_goal",
+        "tool_response": "{\"goal\":{\"created_at_ms\":1792423478096,\"current_work\":null,\"goal_id\":\"goal-<id>\",\"last_progress_at_ms\":null,\"next_work\":null,\"objective\":\"probe-540 goal: write the word done\",\"percent_complete\":0,\"ses…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "cron_create": {
+      "family": "cron",
+      "internal": false,
+      "canonical": "CronCreate",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I5"
+      ],
+      "tool_input_keys": [
+        "cron",
+        "prompt"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "cron": "0 0 1 1 *",
+          "prompt": "say probe-540"
+        },
+        "tool_name": "cron_create",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "cron": "0 0 1 1 *",
+          "prompt": "say probe-540"
+        },
+        "tool_name": "cron_create",
+        "tool_response": "Scheduled f1198916 (0 0 1 1 *)",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "cron_delete": {
+      "family": "cron",
+      "internal": false,
+      "canonical": "CronDelete",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I5"
+      ],
+      "tool_input_keys": [
+        "id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "id": "<id>"
+        },
+        "tool_name": "cron_delete",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "id": "<id>"
+        },
+        "tool_name": "cron_delete",
+        "tool_response": "Removed scheduled job f1198916.",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "cron_list": {
+      "family": "cron",
+      "internal": false,
+      "canonical": "CronList",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I5"
+      ],
+      "tool_input_keys": [],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys jobs)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "cron_list",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "cron_list",
+        "tool_response": "{\"jobs\":[{\"cron\":\"0 0 1 1 *\",\"fire_count\":0,\"fire_when_active_run\":true,\"id\":\"f1198916\",\"last_fired_at_ms\":null,\"next_fire_at_ms\":1798763400000,\"permanent\":false,\"prompt\":\"say probe-540\",\"recurring\":t…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "edit_file": {
+      "family": "file-edit",
+      "internal": false,
+      "canonical": "Edit",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I1"
+      ],
+      "tool_input_keys": [
+        "find",
+        "path",
+        "replace"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "object with keys filePath, structuredPatch",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "find": "two",
+          "path": "probe-new.txt",
+          "replace": "three"
+        },
+        "tool_name": "edit_file",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "find": "two",
+          "path": "probe-new.txt",
+          "replace": "three"
+        },
+        "tool_name": "edit_file",
+        "tool_response": {
+          "filePath": "<ws>/probe-new.txt",
+          "structuredPatch": [
+            {
+              "lines": [
+                "-two",
+                "+three"
+              ],
+              "newLines": 1,
+              "newStart": 1,
+              "oldLines": 1,
+              "oldStart": 1
+            }
+          ]
+        },
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "edit_memory": {
+      "family": "memory",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I4"
+      ],
+      "tool_input_keys": [
+        "new_str",
+        "old_str",
+        "path"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys message, operation, path, scope, success)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "new_str": "",
+          "old_str": "probe-540 memory note",
+          "path": "probe-540.md"
+        },
+        "tool_name": "edit_memory",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "new_str": "",
+          "old_str": "probe-540 memory note",
+          "path": "probe-540.md"
+        },
+        "tool_name": "edit_memory",
+        "tool_response": "{\"success\":true,\"scope\":\"personal_project\",\"path\":\"probe-540.md\",\"operation\":\"edit\",\"message\":\"memory note edited\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "get_goal": {
+      "family": "goal",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I6"
+      ],
+      "tool_input_keys": [],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys goal)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "get_goal",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "get_goal",
+        "tool_response": "{\"goal\":{\"created_at_ms\":1792423478096,\"current_work\":null,\"goal_id\":\"goal-<id>\",\"last_progress_at_ms\":null,\"next_work\":null,\"objective\":\"probe-540 goal: write the word done\",\"percent_complete\":0,\"ses…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "image_generation": {
+      "family": "image",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I7"
+      ],
+      "tool_input_keys": [
+        "prompt"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "prompt": "tiny 64x64 image of a plain red square, solid red fill, no border, no background, no other elements"
+        },
+        "tool_name": "image_generation",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "prompt": "tiny 64x64 image of a plain red square, solid red fill, no border, no background, no other elements"
+        },
+        "tool_name": "image_generation",
+        "tool_response": "Saved generated image to generated_images/call_<id>.png",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "list_peer_sessions": {
+      "family": "peer-message",
+      "internal": false,
+      "canonical": "none",
+      "configs": [],
+      "exercised": false,
+      "not_exercised_reason": "never offered to a muse exec session: absent from the default, trusted, native-basic, enable-shell-tool and echo toolsets even with gates.local_session_messaging=true; the binary lists it only in the native-basic profile table",
+      "runs": [],
+      "tool_input_keys": [],
+      "post_event": null,
+      "failure_event_observed": false,
+      "tool_response_shape": null,
+      "pre_example": null,
+      "post_example": null,
+      "permission_request": "not exercised"
+    },
+    "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo": {
+      "family": "mcp",
+      "internal": false,
+      "canonical": "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I8"
+      ],
+      "tool_input_keys": [
+        "text"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "text": "hello-540"
+        },
+        "tool_name": "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "text": "hello-540"
+        },
+        "tool_name": "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo",
+        "tool_response": "probe-echo: hello-540",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "monitor": {
+      "family": "monitor",
+      "internal": false,
+      "canonical": "Monitor",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I5"
+      ],
+      "tool_input_keys": [
+        "command",
+        "description"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys message, persistent, timeout_ms, work_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "sleep 2; echo monitor-540",
+          "description": "Monitor probe command"
+        },
+        "tool_name": "monitor",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "sleep 2; echo monitor-540",
+          "description": "Monitor probe command"
+        },
+        "tool_name": "monitor",
+        "tool_response": "{\"work_id\":\"work.v2.monitor.sha256.<hash>\",\"timeout_ms\":300000,\"persistent\":false,\"message\":\"Monitor started (work work.v2.monitor.sha256.<hash>, timeout 5m). Events will be delivered automatically. K…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "read_file": {
+      "family": "file-read",
+      "internal": false,
+      "canonical": "Read",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I1",
+        "I11"
+      ],
+      "tool_input_keys": [
+        "path"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": true,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "path": "probe-new.txt"
+        },
+        "tool_name": "read_file",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "path": "probe-new.txt"
+        },
+        "tool_name": "read_file",
+        "tool_response": "Read text file `probe-new.txt`.\n1|three",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "failure_example": {
+        "cwd": "<ws>",
+        "duration_ms": 41,
+        "error": "tool failed: No such file or directory (os error 2); requested relative path \"does-not-exist-540.txt\"; resolved candidate \"<ws>/does-not-exist-540.txt\"; Active Workspace Root \"<ws>\". Relative paths re…",
+        "hook_event_name": "PostToolUseFailure",
+        "is_interrupt": false,
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "path": "does-not-exist-540.txt"
+        },
+        "tool_name": "read_file",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "read_memory": {
+      "family": "memory",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I4"
+      ],
+      "tool_input_keys": [
+        "path"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys content, path, scope, start_line_number, success, truncated)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "path": "probe-540.md"
+        },
+        "tool_name": "read_memory",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "path": "probe-540.md"
+        },
+        "tool_name": "read_memory",
+        "tool_response": "{\"success\":true,\"scope\":\"personal_project\",\"path\":\"probe-540.md\",\"start_line_number\":1,\"content\":\"probe-540 memory note\",\"truncated\":false}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "read_skill": {
+      "family": "skill",
+      "internal": false,
+      "canonical": "Skill",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I2"
+      ],
+      "tool_input_keys": [
+        "name"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "name": "bundled:blender"
+        },
+        "tool_name": "read_skill",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "name": "bundled:blender"
+        },
+        "tool_name": "read_skill",
+        "tool_response": "<read-skill-result name=\"bundled:blender\" status=\"ok\">\n<metadata>\npath: <scratch>/xdg-data/muse/skills/bundled/muse-core/skills/blender/SKILL.md\nlocator: file://<scratch>/xdg-data/muse/skills/bundled/…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "report_progress": {
+      "family": "goal",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I6"
+      ],
+      "tool_input_keys": [
+        "current_work",
+        "next_work",
+        "percent_complete"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys goal)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "current_work": "probe-540 progress",
+          "next_work": "complete goal",
+          "percent_complete": 50
+        },
+        "tool_name": "report_progress",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "current_work": "probe-540 progress",
+          "next_work": "complete goal",
+          "percent_complete": 50
+        },
+        "tool_name": "report_progress",
+        "tool_response": "{\"goal\":{\"created_at_ms\":1792423478096,\"current_work\":\"probe-540 progress\",\"goal_id\":\"goal-<id>\",\"last_progress_at_ms\":1792423481587,\"next_work\":\"complete goal\",\"objective\":\"probe-540 goal: write the …",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "search": {
+      "family": "search",
+      "internal": false,
+      "canonical": "Grep, or Glob when mode is files/glob",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I2"
+      ],
+      "tool_input_keys": [
+        "glob",
+        "mode",
+        "output_mode",
+        "pattern"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "pattern": "alpha"
+        },
+        "tool_name": "search",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "pattern": "alpha"
+        },
+        "tool_name": "search",
+        "tool_response": "notes.txt:1:alpha",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "send_session_message": {
+      "family": "peer-message",
+      "internal": false,
+      "canonical": "SendMessage",
+      "configs": [],
+      "exercised": false,
+      "not_exercised_reason": "never offered to a muse exec session (same toolsets as list_peer_sessions)",
+      "runs": [],
+      "tool_input_keys": [],
+      "post_event": null,
+      "failure_event_observed": false,
+      "tool_response_shape": null,
+      "pre_example": null,
+      "post_example": null,
+      "permission_request": "not exercised"
+    },
+    "shell": {
+      "family": "shell",
+      "internal": false,
+      "canonical": "Bash",
+      "configs": [
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "S1"
+      ],
+      "tool_input_keys": [
+        "command"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "echo legacy-540"
+        },
+        "tool_name": "shell",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command": "echo legacy-540"
+        },
+        "tool_name": "shell",
+        "tool_response": "legacy-540\n",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "snooze_reminder": {
+      "family": "reminder",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": false,
+      "not_exercised_reason": "listed in every default toolset, but no snoozable reminder existed in any run (I6 prompt skipped it)",
+      "runs": [],
+      "tool_input_keys": [],
+      "post_event": null,
+      "failure_event_observed": false,
+      "tool_response_shape": null,
+      "pre_example": null,
+      "post_example": null,
+      "permission_request": "not exercised"
+    },
+    "subagent_cancel": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "TaskStop",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10"
+      ],
+      "tool_input_keys": [
+        "command_id",
+        "subagent_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys status, subagent_id, task_ref)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "cancel-540-1",
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_cancel",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "cancel-540-1",
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_cancel",
+        "tool_response": "{\"status\":\"already_terminal\",\"subagent_id\":\"<id>\",\"task_ref\":\"task/<id>#5\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "subagent_read_result": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "P1"
+      ],
+      "tool_input_keys": [
+        "subagent_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys evidence_refs, status, subagent_id, summary, task_ref, workspace)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_read_result",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_read_result",
+        "tool_response": "{\"status\":\"ready\",\"subagent_id\":\"<id>\",\"task_ref\":\"task/<id>#5\",\"summary\":\"sub-540\",\"workspace\":{\"placement\":\"shared\",\"setup\":\"active\",\"parent_changes\":\"not_recorded\"},\"evidence_refs\":[\"<scratch>/xdg-…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "subagent_send_message": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "SendMessage",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10"
+      ],
+      "tool_input_keys": [
+        "command_id",
+        "message",
+        "subagent_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys reason, status, subagent_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "send-540-1",
+          "message": "ping-540",
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_send_message",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "send-540-1",
+          "message": "ping-540",
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_send_message",
+        "tool_response": "{\"status\":\"rejected\",\"reason\":\"terminal\",\"subagent_id\":\"<id>\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "subagent_spawn": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "Agent",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10",
+        "I9",
+        "P1"
+      ],
+      "tool_input_keys": [
+        "command_id",
+        "context_policy_ref",
+        "objective",
+        "output_schema",
+        "role",
+        "subagent_type",
+        "task_name",
+        "worktree_isolation"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys agent_path, status, subagent_id, task_ref, work_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "spawn-540-1",
+          "objective": "Reply with the text sub-540",
+          "role": "responder"
+        },
+        "tool_name": "subagent_spawn",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "spawn-540-1",
+          "objective": "Reply with the text sub-540",
+          "role": "responder"
+        },
+        "tool_name": "subagent_spawn",
+        "tool_response": "{\"status\":\"accepted\",\"subagent_id\":\"<id>\",\"work_id\":\"work.v2.native_subagent.sha256.<hash>\",\"agent_path\":\"main/responder/1\",\"task_ref\":\"task/<id>#0\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "subagent_status": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10"
+      ],
+      "tool_input_keys": [
+        "subagent_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys roster, status, subagent_id, task_ref, workspace)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_status",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "subagent_id": "<id>"
+        },
+        "tool_name": "subagent_status",
+        "tool_response": "{\"status\":\"found\",\"subagent_id\":\"<id>\",\"task_ref\":\"task/<id>#0\",\"workspace\":{\"placement\":\"shared\",\"setup\":\"active\",\"parent_changes\":\"not_recorded\"},\"roster\":[{\"agent_path\":\"main/sub2-540-task/1\",\"stat…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "subagent_wait": {
+      "family": "delegation",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10",
+        "I9",
+        "P1"
+      ],
+      "tool_input_keys": [
+        "command_id",
+        "subagent_id",
+        "timeout_ms",
+        "wait_for"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys evidence_refs, status, subagent_id, summary, task_ref, workspace)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "wait-540-1",
+          "subagent_id": "<id>",
+          "wait_for": "result_ready"
+        },
+        "tool_name": "subagent_wait",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "command_id": "wait-540-1",
+          "subagent_id": "<id>",
+          "wait_for": "result_ready"
+        },
+        "tool_name": "subagent_wait",
+        "tool_response": "{\"status\":\"ready\",\"subagent_id\":\"<id>\",\"task_ref\":\"task/<id>#5\",\"summary\":\"sub-540\",\"workspace\":{\"placement\":\"shared\",\"setup\":\"active\",\"parent_changes\":\"not_recorded\"},\"evidence_refs\":[\"<scratch>/xdg-…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "fired"
+    },
+    "submit_reminder_decision": {
+      "family": "internal",
+      "internal": true,
+      "canonical": "ignore",
+      "configs": [],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I0",
+        "I1",
+        "I10",
+        "I11",
+        "I2",
+        "I3",
+        "I4",
+        "I5",
+        "I6",
+        "I7",
+        "I8",
+        "I9",
+        "I9b",
+        "P1",
+        "S1"
+      ],
+      "tool_input_keys": [
+        "additionalProperties",
+        "advisory_text",
+        "confidence",
+        "decision",
+        "next_step",
+        "priority",
+        "reason",
+        "skill_id",
+        "visible_for_steps"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": true,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "decision": "none",
+          "next_step": null,
+          "reason": "User asked for single word 'ready' and agent delivered it; all explicit deliverables present."
+        },
+        "tool_name": "submit_reminder_decision",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "decision": "none",
+          "next_step": null,
+          "reason": "User asked for single word 'ready' and agent delivered it; all explicit deliverables present."
+        },
+        "tool_name": "submit_reminder_decision",
+        "tool_response": "reminder decision recorded",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "failure_example": {
+        "cwd": "<ws>",
+        "duration_ms": 4,
+        "error": "tool failed: reminder decision payload missing required field `decision`",
+        "hook_event_name": "PostToolUseFailure",
+        "is_interrupt": false,
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "default",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "submit_reminder_decision",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "origin": "reminder agents (skill-reminder, goal-reminder, verify-reminder) that Muse starts on every run; each runs with toolset {mode: named, source: runtime, active_tools: [submit_reminder_decision]} and ends with SubagentStop",
+      "permission_request": "not fired"
+    },
+    "submit_result": {
+      "family": "internal",
+      "internal": true,
+      "canonical": "ignore",
+      "configs": [],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I9",
+        "I9b"
+      ],
+      "tool_input_keys": [
+        "notes",
+        "reply",
+        "text"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "notes": "",
+          "text": "child-540"
+        },
+        "tool_name": "submit_result",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "notes": "",
+          "text": "child-540"
+        },
+        "tool_name": "submit_result",
+        "tool_response": "workflow child result recorded",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "origin": "workflow child agents started by host.agent(...) inside the workflow tool; their toolset {mode: all, source: default} of 17 tools ends with submit_result, which returns the child's answer to the workflow",
+      "permission_request": "fired"
+    },
+    "update_goal": {
+      "family": "goal",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I6"
+      ],
+      "tool_input_keys": [
+        "status"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys goal)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "status": "complete"
+        },
+        "tool_name": "update_goal",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "status": "complete"
+        },
+        "tool_name": "update_goal",
+        "tool_response": "{\"goal\":{\"created_at_ms\":1792423478096,\"current_work\":\"probe-540 progress\",\"goal_id\":\"goal-<id>\",\"last_progress_at_ms\":1792423481587,\"next_work\":\"complete goal\",\"objective\":\"probe-540 goal: write the …",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "web_fetch": {
+      "family": "web",
+      "internal": false,
+      "canonical": "WebFetch",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I3"
+      ],
+      "tool_input_keys": [
+        "url"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (plain text)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "url": "https://example.com"
+        },
+        "tool_name": "web_fetch",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "url": "https://example.com"
+        },
+        "tool_name": "web_fetch",
+        "tool_response": "Example Domain\n\nThis domain is for use in documentation examples without needing permission. This is not a service; avoid relying on it for testing and monitoring purposes.\n\nSource: https://example.co…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "web_search": {
+      "family": "web",
+      "internal": false,
+      "canonical": "WebSearch",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I3"
+      ],
+      "tool_input_keys": [
+        "query"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys query, results)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "query": "Muse Code CLI by Meta"
+        },
+        "tool_name": "web_search",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "query": "Muse Code CLI by Meta"
+        },
+        "tool_name": "web_search",
+        "tool_response": "{\"query\":\"Muse Code CLI by Meta\",\"results\":[{\"url\":\"https://9to5mac.com/2026/08/05/meta-launches-muse-code-ai-coding-agent-for-macos-and-linux/\",\"title\":\"Meta launches Muse Code AI coding agent for ma…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "work_list": {
+      "family": "work",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10",
+        "I6"
+      ],
+      "tool_input_keys": [],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys items, next_after_work_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "work_list",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {},
+        "tool_name": "work_list",
+        "tool_response": "{\"items\":[],\"next_after_work_id\":null}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "work_status": {
+      "family": "work",
+      "internal": false,
+      "canonical": "none",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10"
+      ],
+      "tool_input_keys": [
+        "work_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys artifacts, controls, detail, family, inspection_hint, lifecycle, status, terminal, work_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "work_id": "<id>"
+        },
+        "tool_name": "work_status",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "work_id": "<id>"
+        },
+        "tool_name": "work_status",
+        "tool_response": "{\"status\":\"found\",\"work_id\":\"work.v2.managed_bash.sha256.<hash>\",\"family\":\"managed_bash\",\"lifecycle\":\"running\",\"terminal\":null,\"controls\":{\"work_stop\":\"available\"},\"inspection_hint\":\"Use this summary …",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "work_stop": {
+      "family": "work",
+      "internal": false,
+      "canonical": "TaskStop",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I10"
+      ],
+      "tool_input_keys": [
+        "work_id"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys request_id, status, work_id)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "work_id": "<id>"
+        },
+        "tool_name": "work_stop",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "work_id": "<id>"
+        },
+        "tool_name": "work_stop",
+        "tool_response": "{\"request_id\":\"call_<id>\",\"status\":\"accepted\",\"work_id\":\"work.v2.managed_bash.sha256.<hash>\"}",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "workflow": {
+      "family": "workflow",
+      "internal": false,
+      "canonical": "Workflow",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I9",
+        "I9b"
+      ],
+      "tool_input_keys": [
+        "name",
+        "script"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "string (JSON text, object with keys args, entryId, hostApiVersion, maxParallelAgents, message, policy, scriptBytes, scriptHash, scriptPath, status, taskId, tokenBudget, workId, workflowRunId, workflowRunIdDescription)",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "name": "child-540 echo",
+          "script": "export default async function workflow(host) { const result = await host.agent({ input: \"Reply with the text child-540\" }); return { status: \"ok\", ref: result.ref, text: result.text }; }"
+        },
+        "tool_name": "workflow",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "name": "child-540 echo",
+          "script": "export default async function workflow(host) { const result = await host.agent({ input: \"Reply with the text child-540\" }); return { status: \"ok\", ref: result.ref, text: result.text }; }"
+        },
+        "tool_name": "workflow",
+        "tool_response": "{\"args\":{},\"entryId\":\"child-540 echo\",\"hostApiVersion\":\"v1\",\"maxParallelAgents\":6,\"message\":\"Workflow launched: the workflow runs in the background and its completion is delivered to this conversation…",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "write_file": {
+      "family": "file-write",
+      "internal": false,
+      "canonical": "Write",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": true,
+      "not_exercised_reason": null,
+      "runs": [
+        "I1"
+      ],
+      "tool_input_keys": [
+        "content",
+        "path"
+      ],
+      "post_event": "PostToolUse",
+      "failure_event_observed": false,
+      "tool_response_shape": "object with keys filePath, structuredPatch",
+      "pre_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PreToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "content": "one",
+          "path": "probe-new.txt"
+        },
+        "tool_name": "write_file",
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "post_example": {
+        "cwd": "<ws>",
+        "hook_event_name": "PostToolUse",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "session_id": "<id>",
+        "tool_input": {
+          "content": "one",
+          "path": "probe-new.txt"
+        },
+        "tool_name": "write_file",
+        "tool_response": {
+          "filePath": "<ws>/probe-new.txt",
+          "structuredPatch": [
+            {
+              "lines": [
+                "+one"
+              ],
+              "newLines": 1,
+              "newStart": 1,
+              "oldLines": 0,
+              "oldStart": 1
+            }
+          ]
+        },
+        "tool_use_id": "<id>",
+        "transcript_path": null,
+        "turn_id": "<id>"
+      },
+      "permission_request": "not fired"
+    },
+    "write_todos": {
+      "family": "todo",
+      "internal": false,
+      "canonical": "TodoWrite",
+      "configs": [
+        "default-untrusted",
+        "default-trusted",
+        "native-basic",
+        "enable-shell-tool"
+      ],
+      "exercised": false,
+      "not_exercised_reason": "the model called it (run I2; result {\"items\":2,\"ok\":true,\"revision\":1}) but Muse fired no PreToolUse, PostToolUse or PostToolUseFailure hook for it: hook coverage gap",
+      "runs": [],
+      "tool_input_keys": [],
+      "post_event": null,
+      "failure_event_observed": false,
+      "tool_response_shape": null,
+      "pre_example": null,
+      "post_example": null,
+      "permission_request": "not exercised"
+    }
+  },
+  "permission_request_payload_keys": [
+    "cwd",
+    "hook_event_name",
+    "model",
+    "permission_mode",
+    "session_id",
+    "tool_input",
+    "tool_name",
+    "transcript_path",
+    "turn_id"
+  ]
+}

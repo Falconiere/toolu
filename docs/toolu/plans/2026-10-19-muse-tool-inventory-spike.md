@@ -36,7 +36,7 @@ inventory runs (evidence JSON) → PermissionRequest runs → verdict experiment
   {
     "id": "S1",
     "title": "Build, validate (muse plugins validate, zero diagnostics), install and approve the toolu-probe-540 probe in the sandbox data home; take the before snapshot of global Muse state (snap.py take); run I0-I9, P1, S1 (spec run matrix); cross-check model calls against hook lines; write evidence muse/toolsets/tools (families, configs, exercised, tool_input_keys, post_event, tool_response_shape, redacted pre/post examples); git add -f the evidence",
-    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '(.muse.version | startswith(\"1.4.10\")) and ((.toolsets | keys) - [\"default-untrusted\", \"default-trusted\", \"native-basic\", \"enable-shell-tool\"] | length == 0) and ([.toolsets[] | length > 0] | all) and ([.toolsets[][]] - (.tools | keys) | length == 0) and ([.tools[] | select(.internal == false) | if .exercised then (.tool_input_keys | length > 0) and (.post_event | IN(\"PostToolUse\", \"PostToolUseFailure\")) and (.pre_example | type == \"object\" and length > 0) and (.tool_response_shape | type == \"string\" and length > 0) else (.not_exercised_reason | type == \"string\" and length > 0) end] | all) and ([\"shell\", \"file-read\", \"file-write\", \"file-edit\", \"search\", \"web\", \"skill\", \"memory\", \"cron\", \"delegation\", \"mcp\"] - [.tools[] | select(.exercised == true) | .family] | length == 0)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+    "check": "! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && jq -e '(.muse.version | startswith(\"1.4.10\")) and ((.toolsets | keys) - [\"default-untrusted\", \"default-trusted\", \"native-basic\", \"enable-shell-tool\"] | length == 0) and ([.toolsets[] | length > 0] | all) and ([.toolsets[][]] - (.tools | keys) | length == 0) and ([.tools[] | select(.internal == false) | if .exercised then (.tool_input_keys | type == \"array\") and (.pre_example.tool_input | type == \"object\") and (.post_event | IN(\"PostToolUse\", \"PostToolUseFailure\")) and (.pre_example | type == \"object\" and length > 0) and (.tool_response_shape | type == \"string\" and length > 0) else (.not_exercised_reason | type == \"string\" and length > 0) end] | all) and ([\"shell\", \"file-read\", \"file-write\", \"file-edit\", \"search\", \"web\", \"skill\", \"memory\", \"cron\", \"delegation\", \"mcp\"] - [.tools[] | select(.exercised == true) | .family] | length == 0)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-1",
       "AC-7"
@@ -178,6 +178,10 @@ inventory runs (evidence JSON) → PermissionRequest runs → verdict experiment
   }
 ]
 ```
+
+## Deviations
+
+- S1: the check required a non-empty `tool_input_keys` for every exercised tool. Muse sends `tool_input: {}` for parameterless tools (`cron_list`, `get_goal`, `work_list`, observed in I5, I6 and I10), so the check now requires the recorded input to be an object and the key list to be an array (it may be empty).
 
 ## Critical files
 
