@@ -1,6 +1,6 @@
 # Muse tool inventory and hook-verdict spike — Plan
 
-**Date:** 2026-10-19   **Status:** Draft   **Spec:** docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md   **Topic:** Issue #540, observed Muse tool inventory and the ask, input-rewrite and PostToolUse-block verdicts
+**Date:** 2026-10-19   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md   **Topic:** Issue #540, observed Muse tool inventory and the ask, input-rewrite and PostToolUse-block verdicts
 
 ## Evidence and approach
 
