@@ -283,3 +283,15 @@ fn an_orphan_resolver_fails_with_or_without_a_manifest() {
   std::fs::remove_file(dir.path().join(MANIFEST)).unwrap();
   assert_eq!(check(dir.path(), "toolu").len(), 3);
 }
+
+#[test]
+fn an_unlistable_resolver_directory_is_a_finding() {
+  let dir = tempfile::tempdir().unwrap();
+  write(
+    &dir.path().join("plugins/toolu/hooks/muse"),
+    "not a directory\n",
+  );
+  let finding = only(&check(dir.path(), "toolu")).clone();
+  assert_eq!(finding.file, "plugins/toolu/hooks/muse");
+  assert!(finding.problem.starts_with("cannot list: "), "{finding}");
+}

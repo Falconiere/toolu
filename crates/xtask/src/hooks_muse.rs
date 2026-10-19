@@ -188,22 +188,31 @@ fn resolver(root: &Path, plugin: &str, expected: &MuseHook) -> Option<Finding> {
 /// A finding for every file in `hooks/muse/` that no entry id names.
 fn orphans(root: &Path, plugin: &str, ids: &BTreeSet<String>) -> Vec<Finding> {
   let dir = format!("plugins/{plugin}/{RESOLVER_DIR}");
-  let Ok(listing) = std::fs::read_dir(root.join(&dir)) else {
-    return Vec::new();
+  let finding = |file: String, problem: String| Finding {
+    file,
+    at: String::new(),
+    problem,
+    expected: None,
   };
-  let mut names: Vec<String> = listing
-    .filter_map(Result::ok)
-    .map(|entry| entry.file_name().to_string_lossy().into_owned())
-    .filter(|name| !ids.contains(name))
-    .collect();
+  let listing = match std::fs::read_dir(root.join(&dir)) {
+    Ok(listing) => listing,
+    Err(err) if err.kind() == ErrorKind::NotFound => return Vec::new(),
+    Err(err) => return vec![finding(dir, format!("cannot list: {err}"))],
+  };
+  let mut names = Vec::new();
+  for entry in listing {
+    match entry {
+      Ok(entry) => names.push(entry.file_name().to_string_lossy().into_owned()),
+      Err(err) => return vec![finding(dir, format!("cannot list: {err}"))],
+    }
+  }
+  names.retain(|name| !ids.contains(name));
   names.sort();
   names
     .into_iter()
-    .map(|name| Finding {
-      file: format!("{dir}/{name}"),
-      at: String::new(),
-      problem: "not referenced by .muse-plugin/plugin.json; remove it or add its entry".to_owned(),
-      expected: None,
+    .map(|name| {
+      let problem = "not referenced by .muse-plugin/plugin.json; remove it or add its entry";
+      finding(format!("{dir}/{name}"), problem.to_owned())
     })
     .collect()
 }
