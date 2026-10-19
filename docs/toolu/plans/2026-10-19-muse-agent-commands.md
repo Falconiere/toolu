@@ -1,6 +1,6 @@
 # Muse agent commands — Plan
 
-**Date:** 2026-10-19   **Status:** Draft   **Spec:** docs/toolu/specs/2026-10-19-muse-agent-commands-design.md   **Topic:** Falconiere/toolu#548
+**Date:** 2026-10-19   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-19-muse-agent-commands-design.md   **Topic:** Falconiere/toolu#548
 
 ## Evidence and approach
 
@@ -36,7 +36,7 @@ validation → docs → CI path groups → live TUI evidence → full gate.
   {
     "id": "S1",
     "title": "Add crates/xtask/src/packaging_muse.rs (check_muse: lockstep version, release-please tracking, top-level key allow-list, no capabilities.agents, one command {id,path=agents/<id>.md} per agent, no stale agents/ entry, agents require a manifest) with tests/packaging_muse_test.rs over copies of the real plugins/toolu files (red first), wire it into packaging::package and its report line, add plugins/toolu/.muse-plugin/plugin.json (6 skills, 5 agent commands) and its release-please extra-file",
-    "check": "cargo test -p xtask packaging",
+    "check": "cargo test -p xtask packaging && cargo xtask packaging | grep -q ' 5 Muse agent commands'",
     "ac_refs": ["AC-3", "AC-4", "AC-5"],
     "paths": [
       "crates/xtask/src/packaging_muse.rs",
@@ -54,7 +54,7 @@ validation → docs → CI path groups → live TUI evidence → full gate.
       "Cargo.toml",
       "Cargo.lock"
     ],
-    "input": "the real plugins/toolu/agents/*.md, plugins/toolu/.muse-plugin/plugin.json, package.json and release-please-config.json copied into a tempdir and mutated (renamed agent, removed entry, stale entry, wrong id, capabilities.agents, top-level agents/author, missing manifest, wrong version, untracked release, .gitkeep-only agents)",
+    "input": "the real plugins/toolu/agents/*.md, plugins/toolu/.muse-plugin/plugin.json, package.json and release-please-config.json copied into a tempdir and mutated: failing cases are a renamed agent, a removed entry, a stale agents/ entry, a wrong id, capabilities.agents, top-level agents and author, a missing manifest, a wrong version, an untracked release, invalid JSON and a non-array commands; passing cases are the unmutated copy (Ok(5)), an edited agent body with the manifest untouched, a .gitkeep-only agents/, a plugin with neither agents nor manifest, and a command entry outside agents/",
     "model": "inherit"
   },
   {
@@ -149,3 +149,18 @@ plugin without agents or a manifest.
 **Docs.** The README, the orchestrator skill, both identical `model-routing.md`
 copies and AGENTS.md change together (S3). `check-markdown-cli` and
 `context-budget` judge them. The full `cargo xtask gate` closes the plan (S6).
+
+**Delivery.**
+
+1. Commit scoped `feat(toolu): …` changes.
+2. Run `toolu ledger run docs/toolu/plans/2026-10-19-muse-agent-commands.md --verify`
+   over the whole branch diff.
+3. Run `toolu-review:review` to write version-2 push-review state with zero
+   findings.
+4. `toolu ledger verdict status` must report `overall: ready`.
+5. Rebase on `origin/main` if it moved, then push
+   `feat/548-remap-the-5-toolu-agents`.
+6. Open the PR against `main`. Its body starts with `Closes Falconiere/toolu#548`
+   and `Part of Falconiere/toolu#539`, and carries the S2/S5 evidence.
+7. `report pr-open --pr <n>`, then `report babysit --pr <n>` in place of
+   starting babysit, as the epic brief requires.
