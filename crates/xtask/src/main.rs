@@ -38,6 +38,7 @@ mod guardrails;
 mod homebrew_formula;
 mod hooks_entries;
 mod hooks_manifests;
+mod hooks_muse;
 mod host_smoke;
 mod host_smoke_checks;
 mod host_smoke_claude;
