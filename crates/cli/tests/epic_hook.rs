@@ -167,7 +167,7 @@ fn check_binary_advises_once_per_session_id() {
   let context = doc["hookSpecificOutput"]["additionalContext"]
     .as_str()
     .expect("context");
-  assert!(context.starts_with("toolu: native binary not found in the agent command shell."));
+  assert!(context.starts_with("toolu: native binary "), "{context}");
   assert_eq!(out(&root.hook("check-binary", payload, false).unwrap()), "");
   assert_ne!(
     out(

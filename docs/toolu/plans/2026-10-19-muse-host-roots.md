@@ -125,3 +125,8 @@ dependent check and representative boundary input. Status: Approved.
   run passed all 20 tests against this checkout's own status document.
 - S5 keeps that isolation for the full gate and drops root capabilities as
   required by the repository's root-host gate procedure.
+- S5's full suite found an existing host-dependent `epic_hook` assertion:
+  fixed system install paths can supply a native `toolu` outside the test's
+  cleared `PATH`, so either valid advisory is possible. The integration test
+  now checks the shared advisory prefix and once-per-session behavior; runtime
+  unit tests retain exact text checks for both advice variants.
