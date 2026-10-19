@@ -4,6 +4,7 @@ use std::path::Path;
 
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
+use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
 
@@ -68,24 +69,48 @@ fn run_jev(env: &Env, name: &str, event: &str, root: &Path, stdin: &'static str)
 }
 
 #[test]
-fn jev_session_start_prints_context_and_a_skew_line_before_it() {
+fn jev_session_start_joins_the_skew_advisory_to_its_context_in_one_json_object() {
   let (dir, env) = jev_home();
   shim(dir.path(), "999.0.0");
   let outcome = run_jev(&env, "session-start", "SessionStart", dir.path(), "{}");
-  let stdout = outcome.stdout.unwrap();
-  let mut lines = stdout.lines();
-  let advisory: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
-  let body: serde_json::Value = serde_json::from_str(lines.next().unwrap()).unwrap();
-  assert!(
-    advisory["systemMessage"]
-      .as_str()
-      .unwrap()
-      .contains("999.0.0")
+  let body: serde_json::Value = serde_json::from_str(&outcome.stdout.unwrap()).unwrap();
+  assert_eq!(
+    body["systemMessage"],
+    format!("toolu {VERSION} is older than the jev plugin 999.0.0; upgrade it: {INSTALLER}")
   );
   let context = body["hookSpecificOutput"]["additionalContext"]
     .as_str()
     .unwrap();
-  assert!(context.contains("toolu jev") && lines.next().is_none());
+  assert!(context.contains("toolu jev"));
+}
+
+fn prefixed(stdout: &str) -> serde_json::Value {
+  let outcome = Outcome {
+    exit: Exit::Success,
+    stdout: Some(stdout.to_owned()),
+    stderr: None,
+  };
+  let joined = super::prefix(Some("skew".to_owned()), outcome);
+  serde_json::from_str(&joined.stdout.unwrap()).unwrap()
+}
+
+#[test]
+fn the_advisory_goes_ahead_of_a_hooks_own_system_message() {
+  assert_eq!(
+    prefixed(r#"{"systemMessage":"own","continue":true}"#),
+    serde_json::json!({"systemMessage": "skew\nown", "continue": true})
+  );
+}
+
+#[test]
+fn a_plain_text_body_becomes_context_beside_the_advisory() {
+  assert_eq!(
+    prefixed("plain context"),
+    serde_json::json!({
+      "systemMessage": "skew",
+      "hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": "plain context"},
+    })
+  );
 }
 
 #[test]
