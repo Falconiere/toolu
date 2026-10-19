@@ -173,6 +173,12 @@
       "id": "host-smoke",
       "pass": "crates/xtask/src/tests/host_smoke_steps_test.rs::push_needs_the_review_denial_and_an_untouched_remote",
       "fail": "crates/xtask/src/tests/host_smoke_test.rs::an_unknown_host_is_an_error"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "print-muse-hook",
+      "pass": "crates/xtask/src/tests/print_muse_hook_test.rs::a_known_plugin_entry_prints",
+      "fail": "crates/xtask/src/tests/print_muse_hook_test.rs::bad_timeouts_events_names_plugins_and_arity_are_errors"
     }
   ]
 }

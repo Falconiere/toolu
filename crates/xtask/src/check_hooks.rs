@@ -1,12 +1,13 @@
 //! `cargo xtask check-hooks`: every native `hooks.json` entry equals the launcher
 //! generator's output and declares a `timeout`, no entry is anything else, and
-//! every `plugin.json` declares the binary's `hookProtocol` (#412).
+//! every `plugin.json` declares the binary's `hookProtocol` (#412). Muse hook
+//! entries and their resolver files equal the Muse generator's output (#546).
 
 use std::fmt;
 use std::path::Path;
 
 use crate::options::Options;
-use crate::{Verdict, hooks_entries, hooks_manifests, output};
+use crate::{Verdict, hooks_entries, hooks_manifests, hooks_muse, output};
 
 /// One problem in a plugin's hook wiring.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -54,6 +55,7 @@ pub(crate) fn check(root: &Path) -> Result<Vec<Finding>, String> {
   for plugin in &plugins {
     found.extend(hooks_entries::check(root, plugin));
     found.extend(hooks_manifests::check(root, plugin));
+    found.extend(hooks_muse::check(root, plugin));
   }
   Ok(found)
 }

@@ -4,10 +4,13 @@
 //! prints an integer; enforcing events map any status but 0 or 2 to 2. Without a
 //! binary an enforcing event fails closed and a context event prints the install
 //! `systemMessage`. There is no Windows binary yet (#411), so `commandWindows`
-//! reports the missing binary the same way.
+//! reports the missing binary the same way. [`muse`] writes the same launcher
+//! to a per-hook resolver file, since Muse hooks are argv, not shell strings.
 
 use crate::event::is_enforcing;
 use crate::install::missing_message;
+
+pub mod muse;
 
 /// The marker that makes a `hooks.json` command a native launcher entry.
 pub const MARKER: &str = "--hook-protocol";
@@ -17,6 +20,9 @@ pub const DEFAULT_TIMEOUT: u32 = 60;
 
 /// The largest `timeout` (seconds) a native entry may declare.
 pub const MAX_TIMEOUT: u32 = 600;
+
+/// The `--plugin-root` value of a `hooks.json` launcher.
+const CLAUDE_ROOT: &str = "\"${CLAUDE_PLUGIN_ROOT}\"";
 
 /// The installed `toolu` candidates, in order, before `PATH`.
 const INSTALL_DIRS: &str = "/opt/homebrew/bin/toolu /usr/local/bin/toolu \
@@ -56,7 +62,7 @@ pub fn hook(target: &Target<'_>, timeout: u32) -> Result<LauncherHook, String> {
     ));
   }
   Ok(LauncherHook {
-    command: command(target),
+    command: command(target, CLAUDE_ROOT),
     command_windows: command_windows(target),
     timeout,
   })
@@ -77,9 +83,10 @@ fn argv(target: &Target<'_>) -> String {
   }
 }
 
-fn command(target: &Target<'_>) -> String {
+/// The launcher for `target`, passing `root` (shell text) as `--plugin-root`.
+fn command(target: &Target<'_>, root: &str) -> String {
   let run = format!(
-    "{} --event {} --plugin-root \"${{CLAUDE_PLUGIN_ROOT}}\"",
+    "{} --event {} --plugin-root {root}",
     argv(target),
     target.event
   );

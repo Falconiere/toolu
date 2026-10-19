@@ -100,6 +100,20 @@ On session start and resume, toolu's native `session-start` hook prints `Toolu i
 
 **Verifying.** `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in one of the fixed directories, under `PATH=/usr/bin:/bin`. CI runs it at Homebrew's bin and at `/usr/local/bin` on Linux and macOS. The launcher tests (`cargo test -p toolu-cli --test launcher`, and `launcher-e2e`'s own tests) fail on purpose when a real `toolu` sits in `/opt/homebrew/bin`, `/usr/local/bin` or `/home/linuxbrew/.linuxbrew/bin`, because that binary would win. On such a machine, move it aside or run the tests in a container.
 
+### On Muse
+
+Muse Code runs a hook as an argv from `.muse-plugin/plugin.json`, with no shell string and no matcher, and a hook whose program is missing does not block the tool. So toolu never puts bare `toolu` in a Muse entry. Each entry runs its own resolver file, which holds the launcher above, with `--plugin-root "${MUSE_PLUGIN_ROOT}"`:
+
+```json
+{ "id": "pre-tools", "event": "PreToolUse", "command": ["/bin/sh", "hooks/muse/pre-tools"], "timeoutMs": 60000 }
+```
+
+- `cargo xtask print-muse-hook <plugin> <Event> <name> [--timeout-ms N]` prints the entry, and `--resolver` prints the file for `plugins/<plugin>/hooks/muse/<name>`. `cargo xtask check-hooks` fails on an entry or a resolver that differs from these, a missing or out-of-range `timeoutMs` (default 60000, at most 600000), an event toolu does not handle on Muse, a duplicate id, a `hookProtocol` field, and a `hooks/muse/` file no entry runs.
+- There is one resolver per hook, because Muse reads any relative argv word containing `/` as a package file and refuses two hooks sharing one. The files have no extension and start with a "generated" comment.
+- Resolution is the same as above, except that Muse passes hooks only `HOME`, `PATH`, its own variables and a few basics. `TOOLU_BIN` never arrives, so on Muse the install directories come first, then `PATH`.
+- The fail-closed table above holds unchanged. With no binary, `PreToolUse` and `PermissionRequest` exit 2 with `blocked: …` on stderr, which Muse blocks. Context events print the install `systemMessage` with exit 0.
+- Muse installs the whole plugin directory, so the skew check reads the packaged `.claude-plugin/plugin.json`. A different `hookProtocol` blocks or advises exactly as on Claude Code. Muse manifests carry no `hookProtocol`: Muse warns on unknown top-level fields and rejects unknown hook-entry fields.
+
 ## Agent command shell
 
 Skills, commands and agents write plain `toolu …`, without a fixed binary path. A SessionStart check uses `sh -c 'command -v toolu'` with the agent command shell's `PATH` and accepts the result only when `--hook-protocol` identifies the native binary. If that command resolves the native binary, the check is silent. If the binary is only at `TOOLU_BIN`, Homebrew's bin, `/usr/local/bin`, or `~/.local/bin`, SessionStart gives its absolute path to use for that session. If none is present, it gives one advisory with both install commands above. Independent plugin hooks share a session marker, so the advice appears once even when several plugins start.

@@ -18,6 +18,10 @@ pub(crate) struct Options {
   pub(crate) only: Vec<String>,
   /// The entry `timeout` for `print-hook` (`--timeout`, seconds).
   pub(crate) timeout: Option<String>,
+  /// The entry `timeoutMs` for `print-muse-hook` (`--timeout-ms`).
+  pub(crate) timeout_ms: Option<String>,
+  /// Print the resolver file instead of the entry (`--resolver`, `print-muse-hook`).
+  pub(crate) resolver: bool,
   /// The `toolu` binary `launcher-e2e`, `docs-cli` and `check-startup` run (`--bin`).
   pub(crate) bin: Option<PathBuf>,
   /// The home `launcher-e2e` gives the launcher (`--home`, default `$HOME`).
@@ -54,9 +58,10 @@ impl Options {
         options.files.push(PathBuf::from(word));
         continue;
       }
-      if word == "--check" || word == "--assert" {
+      if matches!(word.as_str(), "--check" | "--assert" | "--resolver") {
         options.check |= word == "--check";
         options.assert |= word == "--assert";
+        options.resolver |= word == "--resolver";
         continue;
       }
       let value = rest
@@ -72,6 +77,7 @@ impl Options {
         "--only" => options.only.push(value),
         "--out" => options.out = Some(PathBuf::from(value)),
         "--timeout" => options.timeout = Some(value),
+        "--timeout-ms" => options.timeout_ms = Some(value),
         "--bin" => options.bin = Some(PathBuf::from(value)),
         "--home" => options.home = Some(PathBuf::from(value)),
         "--runs" => options.runs = Some(value),
@@ -100,6 +106,9 @@ impl Options {
     }
     if task != "host-smoke" && self.host.is_some() {
       return Err("only host-smoke takes --host".to_owned());
+    }
+    if task != "print-muse-hook" && (self.resolver || self.timeout_ms.is_some()) {
+      return Err("only print-muse-hook takes --timeout-ms and --resolver".to_owned());
     }
     Ok(self)
   }

@@ -123,3 +123,19 @@ fn check_is_a_flag_without_a_value() {
   assert_eq!(options.bin, Some(PathBuf::from("/t/toolu")));
   assert!(!Options::parse(&words(&[])).unwrap().check);
 }
+
+#[test]
+fn muse_hook_options_belong_to_print_muse_hook() {
+  let options = Options::parse(&words(&["--timeout-ms", "30000", "--resolver", "toolu"])).unwrap();
+  assert_eq!(options.timeout_ms.as_deref(), Some("30000"));
+  assert!(options.resolver);
+  assert!(options.for_task("print-muse-hook").is_ok());
+  for args in [&["--timeout-ms", "1"][..], &["--resolver"][..]] {
+    let options = Options::parse(&words(args)).unwrap();
+    assert_eq!(
+      options.for_task("print-hook").unwrap_err(),
+      "only print-muse-hook takes --timeout-ms and --resolver",
+      "{args:?}"
+    );
+  }
+}
