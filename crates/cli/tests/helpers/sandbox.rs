@@ -165,7 +165,8 @@ impl Sandbox {
     let resolver = self.root.join(&generated.resolver_path);
     std::fs::create_dir_all(resolver.parent().ok_or("no resolver directory")?)?;
     std::fs::write(&resolver, &generated.resolver)?;
-    let mut sh = Command::new(&generated.entry.command[0]);
+    let shell = generated.entry.command.first().ok_or("no command")?;
+    let mut sh = Command::new(shell);
     sh.arg(&resolver)
       .env_clear()
       .env("MUSE_PLUGIN_ROOT", &self.root)
