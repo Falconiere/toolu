@@ -24,9 +24,9 @@ paths → generated CLI documentation and full gate.
   {
     "id": "S1",
     "title": "Add Host::Muse and PascalCase events, leaving extra events unmapped and staged payload/encoder routes fail-closed",
-    "check": "cargo test -p toolu-protocol --lib",
+    "check": "cargo test -p toolu-protocol --lib && cargo test -p toolu-engine --test smoke muse_dispatch_fails_closed_until_its_encoder_is_available",
     "ac_refs": ["AC-1", "AC-4"],
-    "paths": ["crates/core/protocol/src/host.rs", "crates/core/protocol/src/native.rs", "crates/core/protocol/src/payload.rs", "crates/core/protocol/src/encode.rs", "crates/core/protocol/src/tests/host_test.rs", "crates/core/protocol/src/tests/native_test.rs", "crates/core/protocol/src/tests/encode_test.rs", "crates/core/protocol/src/tests/hook_test.rs"],
+    "paths": ["crates/core/protocol/src/host.rs", "crates/core/protocol/src/native.rs", "crates/core/protocol/src/payload.rs", "crates/core/protocol/src/encode.rs", "crates/core/protocol/src/tests/host_test.rs", "crates/core/protocol/src/tests/native_test.rs", "crates/core/protocol/src/tests/encode_test.rs", "crates/core/protocol/src/tests/hook_test.rs", "crates/core/engine/src/dispatch/walk.rs", "crates/core/engine/tests/smoke.rs"],
     "input": "Host::parse muse and mus; PreToolUse, Stop, Notification, SubagentStop and PostToolUseFailure native names; a real run_hook_io Muse decision with nonempty stderr on enforcing failure",
     "model": "inherit"
   },
@@ -109,7 +109,10 @@ dependent check and representative boundary input. Status: Approved.
   compile-safe interim arms. The payload reads Claude-shaped JSON (as the
   epic probe observed), while decision encoding explicitly errors. A real
   `run_hook_io` test proves enforcing events exit 2 with blocked stderr and
-  context events return `systemMessage` until #544 lands.
+  context events return `systemMessage` until #544 lands. Review found the
+  engine's legacy non-Codex-to-Claude output mapping; a red integration test
+  returned exit 0, then a Muse-only walk guard made pre/post dispatch exit 2
+  with no stdout. #544 removes the guard when its encoder is ready.
 - S4: the CLI contract build exposed other exhaustive host matches. Muse stays
   an unsupported installer target and an unknown installed-plugin inventory
   until #549/#550; the registry keeps unknown presence, and the ledger and

@@ -32,6 +32,10 @@ uses the shared Claude-shaped hook payload and Muse decision encoding returns
 an explicit error. `run_hook` converts that error to stderr plus exit 2 on
 enforcing events, preserving the epic's fail-closed rule during staged delivery.
 It never emits Claude's incompatible decision JSON for Muse.
+The engine's legacy dispatcher otherwise routes every non-Codex host through
+Claude output. Its Muse walk therefore exits 2 before gates or registry modules
+run until #544 supplies a Muse encoder; explicit Muse dispatch cannot emit
+Claude decision JSON during the staged rollout.
 
 Extend `Roots` matches rather than branching callers. Keep `TOOLU_CONFIG_DIR`
 and `TOOLU_PROJECT_DIR` as highest-priority generic overrides. Muse project
@@ -70,7 +74,8 @@ an unknown-host usage error. No `HOOK_PROTOCOL` bump is needed for an additive
 host and event mapping.
 Before #544 lands, a Muse decision fails with a named encoder error: enforcing
 events exit 2 with a nonempty blocked stderr; context events report a
-`systemMessage` with exit 0.
+`systemMessage` with exit 0. The legacy pre/post dispatcher also exits 2 with
+no stdout for Muse.
 
 ## Acceptance criteria
 

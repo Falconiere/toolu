@@ -40,6 +40,7 @@ fn each_host_names_its_delivery_flow_remedy() {
     (Host::Codex, "run /delivery-flow:delivery-flow"),
     (Host::Cursor, "load the delivery-flow skill"),
     (Host::Hermes, "load the delivery-flow skill"),
+    (Host::Muse, "load the delivery-flow skill"),
   ] {
     let opts = on(&repo, host);
     docs(&repo, "Draft", "Approved");

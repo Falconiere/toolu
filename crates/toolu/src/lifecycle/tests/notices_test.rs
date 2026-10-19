@@ -21,4 +21,6 @@ fn notices_show_once_and_a_pinned_preset_skips_the_gate_text() {
   let delivery = delivery_flow_notice(root, Host::Claude).unwrap();
   assert!(delivery.contains("/plugin install delivery-flow@toolu"));
   assert_eq!(delivery_flow_notice(root, Host::Claude), None);
+  let muse = delivery_flow_notice(&dir.path().join("muse"), Host::Muse).unwrap();
+  assert!(muse.contains("Install the `delivery-flow` plugin"));
 }
