@@ -6,6 +6,27 @@ use std::time::Duration;
 use toolu_engine::{DispatchOptions, dispatch_post_tool, dispatch_pre_tool};
 use toolu_runtime::env::Env;
 
+fn assert_muse_refusal(
+  body: &str,
+  options: &DispatchOptions<'_>,
+  pre_reason: &str,
+  post_reason: &str,
+) {
+  for (result, reason) in [
+    (dispatch_pre_tool(body, options), pre_reason),
+    (dispatch_post_tool(body, options), post_reason),
+  ] {
+    let expected = format!(
+      "{}\n",
+      serde_json::json!({"decision":"block","reason":reason})
+    );
+    assert_eq!(result.result.stdout, expected);
+    assert_eq!(result.result.stderr, "");
+    assert_eq!(result.result.exit_code, 0);
+    assert_eq!(result.trace, Vec::new());
+  }
+}
+
 #[test]
 fn the_crate_links_and_names_its_layer() {
   assert_eq!(toolu_engine::LAYER, "engine");
@@ -48,4 +69,17 @@ fn muse_dispatch_fails_closed_until_its_walk_is_ported() {
     "toolu PostToolUse dispatcher failed: Muse tool calls are not gated yet (#545)\n"
   );
   assert_eq!(post.trace, Vec::new());
+
+  assert_muse_refusal(
+    "{invalid",
+    &options,
+    "toolu: hook payload is not JSON",
+    "toolu: hook payload is not JSON",
+  );
+  assert_muse_refusal(
+    r#"{"tool_name":"Write","tool_input":{"path":""}}"#,
+    &options,
+    "Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed.",
+    "Unable to parse apply_patch file headers; per-file post-edit quality checks could not run.",
+  );
 }

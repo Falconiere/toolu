@@ -4,6 +4,7 @@
 //! on any path wins for the whole patch.
 
 use serde_json::Value;
+use toolu_protocol::host::Host;
 use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::edit_records::{EditOperation, EditRecord, EditRecords, normalize_edit_records};
@@ -33,14 +34,33 @@ fn reply(stdout: String) -> ModuleResult {
 }
 
 /// A fixed deny before the tool, or block after it, for `reason`.
-fn refusal(phase: Phase, reason: &str) -> ModuleResult {
+fn refusal(phase: Phase, host: Host, reason: &str) -> ModuleResult {
   let reason = Value::from(reason).to_string();
-  reply(match phase {
-    Phase::Pre => format!(
+  reply(match (host, phase) {
+    (Host::Muse, _) | (_, Phase::Post) => {
+      format!("{{\"decision\":\"block\",\"reason\":{reason}}}\n")
+    }
+    (_, Phase::Pre) => format!(
       "{{\"hookSpecificOutput\":{{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":{reason}}}}}\n"
     ),
-    Phase::Post => format!("{{\"decision\":\"block\",\"reason\":{reason}}}\n"),
   })
+}
+
+fn malformed_edit(phase: Phase, host: Host) -> ModuleResult {
+  match (host, phase) {
+    (Host::Muse, Phase::Pre) => refusal(
+      phase,
+      host,
+      "Unable to parse apply_patch file headers; patch blocked so protected-file and quality gates cannot be bypassed.",
+    ),
+    (Host::Muse, Phase::Post) => refusal(
+      phase,
+      host,
+      "Unable to parse apply_patch file headers; per-file post-edit quality checks could not run.",
+    ),
+    (_, Phase::Pre) => reply(MALFORMED_PATCH_DENY.to_owned()),
+    (_, Phase::Post) => reply(MALFORMED_PATCH_BLOCK.to_owned()),
+  }
 }
 
 /// The path a calling dispatcher already split out, from the `TOOLU_EDIT_*` it
@@ -78,7 +98,14 @@ pub(crate) fn dispatch_input(
 ) -> ModuleResult {
   let doc = match parse_document(text) {
     Ok(doc) => Some(doc),
-    Err(Unreadable::TooDeep) => return refusal(session.phase, TOO_DEEP),
+    Err(Unreadable::TooDeep) => return refusal(session.phase, session.host, TOO_DEEP),
+    Err(Unreadable::NotJson) if session.host == Host::Muse => {
+      return refusal(
+        session.phase,
+        session.host,
+        "toolu: hook payload is not JSON",
+      );
+    }
     Err(Unreadable::NotJson) => None,
   };
   let tool_name = read_field(doc.as_ref(), &["tool_name"]);
@@ -92,10 +119,7 @@ pub(crate) fn dispatch_input(
     return walk(&payload, session, trace);
   }
   let value = doc.as_ref().map_or(Value::Null, plain);
-  let malformed = || match session.phase {
-    Phase::Pre => reply(MALFORMED_PATCH_DENY.to_owned()),
-    Phase::Post => reply(MALFORMED_PATCH_BLOCK.to_owned()),
-  };
+  let malformed = || malformed_edit(session.phase, session.host);
   match (normalize_edit_records(&value, &tool_name), doc) {
     (EditRecords::NotEdit, doc) => {
       let payload = Payload {

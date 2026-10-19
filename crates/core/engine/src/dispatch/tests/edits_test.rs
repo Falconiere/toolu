@@ -4,6 +4,7 @@ use toolu_state::edit_records::{EditOperation, EditRecord};
 use super::{MALFORMED_PATCH_BLOCK, MALFORMED_PATCH_DENY, refusal, synthetic_edit};
 use crate::dispatch::Phase;
 use crate::dispatch::output::parse_document;
+use toolu_protocol::host::Host;
 
 #[test]
 fn a_split_path_is_an_edit_payload_in_javascript_key_order() {
@@ -37,13 +38,17 @@ fn a_split_path_is_an_edit_payload_in_javascript_key_order() {
 #[test]
 fn refusals_are_fixed_compact_lines() {
   assert_eq!(
-    refusal(Phase::Post, "a \"quoted\" reason").stdout,
+    refusal(Phase::Post, Host::Claude, "a \"quoted\" reason").stdout,
     "{\"decision\":\"block\",\"reason\":\"a \\\"quoted\\\" reason\"}\n"
   );
   assert!(
-    refusal(Phase::Pre, "r")
+    refusal(Phase::Pre, Host::Claude, "r")
       .stdout
       .ends_with("\"permissionDecisionReason\":\"r\"}}\n")
   );
   assert!(MALFORMED_PATCH_DENY.ends_with("}}\n") && MALFORMED_PATCH_BLOCK.ends_with("}\n"));
+  assert_eq!(
+    refusal(Phase::Pre, Host::Muse, "r").stdout,
+    "{\"decision\":\"block\",\"reason\":\"r\"}\n"
+  );
 }
