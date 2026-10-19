@@ -9,8 +9,7 @@
 //! - **context** (`session/start`, `prompt`, `pre_compact`): `{"systemMessage":"<line>"}`
 //!   on stdout, exit 0.
 //!
-//! On Muse, a dispatcher's failed raw output is rewritten to one of these shapes,
-//! because Muse ignores an exit 2 with JSON on stdout or a blank stderr.
+//! On Muse, a failed raw reply never exits 2 with stdout or a blank stderr (ignored).
 //!
 //! Host detection lives in `toolu-runtime`, so the caller passes the host in.
 

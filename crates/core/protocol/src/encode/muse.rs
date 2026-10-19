@@ -1,9 +1,9 @@
 //! Muse output: the exit-0 `{"decision":"block"}` line refuses a tool call, a
 //! permission or a prompt and replaces a tool's result, and `systemMessage`
-//! carries advice on every event. Muse fails, and so fails open on, a
-//! `decision` on context events, an exit 2 with JSON on stdout and Claude's
-//! `additionalContext`, and its only ask hangs a headless session, so this
-//! writes neither `hookSpecificOutput` nor an ask.
+//! carries advice on every event. Muse rejects a `decision` on `SessionStart`
+//! and `PreCompact`, which `normalize` already turns into advice there. This
+//! writes no `hookSpecificOutput`: its only ask hangs a headless session, and
+//! its `additionalContext` was never proven in a live run.
 
 use super::hook::block;
 use super::{Normal, Object};
