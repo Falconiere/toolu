@@ -9,6 +9,7 @@ use std::process::{Child, Command, Stdio};
 use std::sync::RwLock;
 
 use toolu_protocol::HOOK_PROTOCOL;
+use toolu_protocol::launcher::muse::{self, DEFAULT_TIMEOUT_MS};
 use toolu_protocol::launcher::{DEFAULT_TIMEOUT, Target, hook};
 
 /// A fallible helper result.
@@ -146,9 +147,39 @@ impl Sandbox {
     sh.arg("-c")
       .arg(hook(&target, DEFAULT_TIMEOUT)?.command)
       .env_clear()
-      .env("HOME", &self.home)
-      .env("PATH", REDUCED_PATH)
+      .env("CLAUDE_PLUGIN_ROOT", &self.root);
+    self.run(sh, extra, payload)
+  }
+
+  /// Write the generated Muse resolver for `event` and `name` under the plugin
+  /// root and run it as Muse does: `/bin/sh <root>/hooks/muse/<name>`, with the
+  /// variables Muse gives a hook (`MUSE_PLUGIN_ROOT`, `MUSE_PLUGIN_ID`, and the
+  /// Claude and Codex aliases) and no `TOOLU_BIN`, which Muse never passes.
+  pub(crate) fn launch_muse(&self, event: &str, name: &str, payload: &str) -> Res<Run> {
+    let target = Target {
+      plugin: "toolu",
+      event,
+      name,
+    };
+    let generated = muse::hook(&target, DEFAULT_TIMEOUT_MS)?;
+    let resolver = self.root.join(&generated.resolver_path);
+    std::fs::create_dir_all(resolver.parent().ok_or("no resolver directory")?)?;
+    std::fs::write(&resolver, &generated.resolver)?;
+    let mut sh = Command::new(&generated.entry.command[0]);
+    sh.arg(&resolver)
+      .env_clear()
+      .env("MUSE_PLUGIN_ROOT", &self.root)
+      .env("MUSE_PLUGIN_ID", "toolu")
       .env("CLAUDE_PLUGIN_ROOT", &self.root)
+      .env("PLUGIN_ROOT", &self.root);
+    self.run(sh, &[], payload)
+  }
+
+  /// Run `sh` from the home with `HOME`, the reduced `PATH`, `extra`, the
+  /// coverage profile variable and `payload` on stdin.
+  fn run(&self, mut sh: Command, extra: &[(&str, &str)], payload: &str) -> Res<Run> {
+    sh.env("HOME", &self.home)
+      .env("PATH", REDUCED_PATH)
       .envs(extra.iter().copied())
       .current_dir(&self.home)
       .stdin(Stdio::piped())
