@@ -1,6 +1,6 @@
 {
   "name": "jev",
-  "version": "8.0.3",
+  "version": "8.0.4",
   "hookProtocol": 2,
   "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
   "author": {
