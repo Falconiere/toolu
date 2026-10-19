@@ -35,7 +35,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
 [
   {
     "id": "S1",
-    "title": "Inventory runs I0-I9, P1, S1 with the probe (spec run matrix); cross-check model calls against hook lines; write evidence muse/toolsets/tools (families, configs, exercised, tool_input_keys, post_event, tool_response_shape, redacted pre/post examples)",
+    "title": "Build, validate (muse plugins validate, zero diagnostics), install and approve the toolu-probe-540 probe in the sandbox data home; take the before snapshot of global Muse state (snap.py take); run I0-I9, P1, S1 (spec run matrix); cross-check model calls against hook lines; write evidence muse/toolsets/tools (families, configs, exercised, tool_input_keys, post_event, tool_response_shape, redacted pre/post examples); git add -f the evidence",
     "check": "jq -e '(.muse.version | startswith(\"1.4.10\")) and ((.toolsets | keys) - [\"default-untrusted\", \"default-trusted\", \"native-basic\", \"enable-shell-tool\"] | length == 0) and ([.toolsets[] | length > 0] | all) and ([.toolsets[][]] - (.tools | keys) | length == 0) and ([.tools[] | select(.internal == false) | if .exercised then (.tool_input_keys | length > 0) and (.post_event | IN(\"PostToolUse\", \"PostToolUseFailure\")) and (.pre_example | type == \"object\" and length > 0) and (.tool_response_shape | type == \"string\" and length > 0) else (.not_exercised_reason | type == \"string\" and length > 0) end] | all) and ([\"shell\", \"file-read\", \"file-write\", \"file-edit\", \"search\", \"web\", \"skill\", \"memory\", \"cron\", \"delegation\", \"mcp\"] - [.tools[] | select(.exercised == true) | .family] | length == 0)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
     "ac_refs": [
       "AC-1",
@@ -100,7 +100,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S5",
     "title": "Research doc docs/research/muse-tool-inventory.md: method, toolsets, tool table, examples per family, ignore list, three verdicts, notes for #543/#544/#554; no secrets in doc or evidence",
-    "check": "f=docs/research/muse-tool-inventory.md; e=docs/toolu/evidence/2026-10-19-muse-tool-inventory.json; for h in '## Method' '## Toolsets' '## Tool inventory' '## Examples' '## Internal tools' '## Ask verdict' '## Input-rewrite verdict' '## PostToolUse-block verdict' '## Side effects and cleanup' '## Notes for #543, #544 and #554'; do grep -qxF \"$h\" $f || { echo \"missing $h\"; exit 1; }; done; for t in $(jq -r '.tools | keys[]' $e); do grep -qF \"\\`$t\\`\" $f || { echo \"tool $t not in doc\"; exit 1; }; done; notes=$(awk '/^## Notes for #543, #544 and #554$/{p=1;next} /^## /{p=0} p' $f); for t in $(jq -r '.tools | to_entries[] | select(.value.family | IN(\"delegation\", \"workflow\", \"mcp\")) | .key' $e); do printf '%s' \"$notes\" | grep -qF \"$t\" || { echo \"notes lack $t\"; exit 1; }; done; ! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' $f $e && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli",
+    "check": "f=docs/research/muse-tool-inventory.md; e=docs/toolu/evidence/2026-10-19-muse-tool-inventory.json; for h in '## Method' '## Toolsets' '## Tool inventory' '## Examples' '## Internal tools' '## Ask verdict' '## Input-rewrite verdict' '## PostToolUse-block verdict' '## Side effects and cleanup' '## Notes for #543, #544 and #554'; do grep -qxF \"$h\" $f || { echo \"missing $h\"; exit 1; }; done; jq -r '.tools | to_entries[] | .key as $t | ($t, (.value.tool_input_keys // [])[] | tostring)' $e | sort -u | while IFS= read -r w; do grep -qF -- \"$w\" $f || { echo \"doc lacks $w\"; exit 1; }; done || exit 1; for t in $(jq -r '.tools | keys[]' $e); do grep -qF \"\\`$t\\`\" $f || { echo \"tool $t not in doc\"; exit 1; }; done; for fam in $(jq -r '[.tools[] | select(.exercised == true and .internal == false) | .family] | unique[]' $e); do grep -qF \"Example \u2014 $fam\" $f || { echo \"doc lacks example for $fam\"; exit 1; }; done; notes=$(awk '/^## Notes for #543, #544 and #554$/{p=1;next} /^## /{p=0} p' $f); for t in $(jq -r '.tools | to_entries[] | select(.value.family | IN(\"delegation\", \"workflow\", \"mcp\")) | .key' $e); do printf '%s' \"$notes\" | grep -qF \"$t\" || { echo \"notes lack $t\"; exit 1; }; done; side=$(awk '/^## Side effects and cleanup$/{p=1;next} /^## /{p=0} p' $f); first=$(jq -r '.cleanup.global_list | split(\"\\n\")[0]' $e); [ -n \"$first\" ] && printf '%s' \"$side\" | grep -qF -- \"$first\" || { echo \"side-effects section lacks the recorded global list\"; exit 1; }; ! grep -nE 'Bearer [A-Za-z0-9]|sk-[A-Za-z0-9]{16}|access_token|refresh_token|\"token\"|/root/' $f $e && PATH=\"$HOME/.cargo/bin:$PATH\" cargo xtask check-markdown-cli",
     "ac_refs": [
       "AC-1",
       "AC-2",
@@ -108,12 +108,15 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
       "AC-4",
       "AC-5",
       "AC-6",
-      "AC-7"
+      "AC-7",
+      "AC-8",
+      "AC-10"
     ],
     "depends_on": [
       "S2",
       "S3",
-      "S4"
+      "S4",
+      "S6"
     ],
     "paths": [
       "docs/research/muse-tool-inventory.md",
@@ -126,16 +129,14 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   },
   {
     "id": "S6",
-    "title": "Cleanup: remove toolu-probe-540 from the sandbox store, remove the probe's side effects found by the before/after snapshots; no probe in either plugin list or marketplace list, no plugin:toolu-probe-540 trust key, every side effect removed or explained",
-    "check": "export MUSE_UPDATE_INTERVAL_SECONDS=99999999; ! muse plugins list | grep -q toolu-probe-540 && ! muse plugins marketplace list | grep -q toolu-probe-540 && jq -e '(.runtime_capabilities // {}) | keys | map(select(startswith(\"plugin:toolu-probe-540\"))) | length == 0' \"$HOME/.config/muse/settings.json\" && jq -e '(.cleanup.sandbox_list == \"no plugins\") and (.cleanup.global_list | type == \"string\" and (contains(\"toolu-probe-540\") | not)) and (.side_effects | type == \"array\") and ([.side_effects[] | (.removed == true) or (.reason | type == \"string\" and length > 0)] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && for p in $(jq -r '.side_effects[] | select(.removed == true) | .path' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json); do q=$(printf '%s' \"$p\" | sed \"s|^~|$HOME|\"); [ ! -e \"$q\" ] || { echo \"still present: $p\"; exit 1; }; done",
+    "title": "Cleanup (runs even when an earlier step is red): XDG_DATA_HOME=<scratch>/xdg-data muse plugins remove toolu-probe-540 --delete-data; record the sandbox and global muse plugins list output in evidence.cleanup; take the after snapshot and diff it (snap.py diff); remove each probe-caused path (cron_delete/edit_memory where the tool can, else delete) and record evidence.side_effects; reject + remove again if trust keys survive",
+    "check": "export MUSE_UPDATE_INTERVAL_SECONDS=99999999; out=$(muse plugins list) || exit 1; [ -n \"$out\" ] || exit 1; case \"$out\" in *toolu-probe-540*) echo 'probe still listed'; exit 1;; esac; mk=$(muse plugins marketplace list) || exit 1; case \"$mk\" in *toolu-probe-540*) echo 'probe marketplace listed'; exit 1;; esac; jq -e '(.runtime_capabilities // {}) | keys | map(select(startswith(\"plugin:toolu-probe-540\"))) | length == 0' \"$HOME/.config/muse/settings.json\" && jq -e '(.cleanup.sandbox_list == \"no plugins\") and (.cleanup.global_list | type == \"string\" and (contains(\"toolu-probe-540\") | not)) and (.side_effects | type == \"array\") and ([.side_effects[] | (.removed == true) or (.reason | type == \"string\" and length > 0)] | all)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json && for p in $(jq -r '.side_effects[] | select(.removed == true) | .path' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json); do q=$(printf '%s' \"$p\" | sed \"s|^~|$HOME|\"); [ ! -e \"$q\" ] || { echo \"still present: $p\"; exit 1; }; done",
     "ac_refs": [
       "AC-8",
       "AC-10"
     ],
     "depends_on": [
-      "S2",
-      "S3",
-      "S4"
+      "S1"
     ],
     "input": "live muse state after muse plugins remove toolu-probe-540 --delete-data",
     "model": "inherit",
@@ -146,7 +147,7 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   {
     "id": "S7",
     "title": "Post the findings on #540: one comment (or numbered parts '(n/m)' when over 60,000 characters) with every evidence tool and its tool_input keys, one redacted example per exercised family, the ignore list, the three verdicts and notes for #554, linking the research doc",
-    "check": "body=$(gh api repos/Falconiere/toolu/issues/540/comments --paginate --jq '.[].body | select(contains(\"Muse tool inventory\"))') && [ -n \"$body\" ] && for h in 'Internal tools' 'Ask verdict' 'Input-rewrite verdict' 'PostToolUse-block verdict' 'Notes for #543, #544 and #554'; do printf '%s' \"$body\" | grep -qF \"$h\" || { echo \"comment lacks $h\"; exit 1; }; done && jq -r '.tools | to_entries[] | .key as $t | ($t, (.value.tool_input_keys // [])[] | tostring)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json | sort -u | while IFS= read -r w; do printf '%s' \"$body\" | grep -qF -- \"$w\" || { echo \"comment lacks $w\"; exit 1; }; done && for f in $(jq -r '[.tools[] | select(.exercised == true) | .family] | unique[]' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json); do printf '%s' \"$body\" | grep -qF \"Example \u2014 $f\" || { echo \"comment lacks example for $f\"; exit 1; }; done",
+    "check": "body=$(gh api repos/Falconiere/toolu/issues/540/comments --paginate --jq '.[].body | select(contains(\"Muse tool inventory\"))') && [ -n \"$body\" ] && for h in 'Internal tools' 'Ask verdict' 'Input-rewrite verdict' 'PostToolUse-block verdict' 'Notes for #543, #544 and #554'; do printf '%s' \"$body\" | grep -qF \"$h\" || { echo \"comment lacks $h\"; exit 1; }; done && jq -r '.tools | to_entries[] | .key as $t | ($t, (.value.tool_input_keys // [])[] | tostring)' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json | sort -u | while IFS= read -r w; do printf '%s' \"$body\" | grep -qF -- \"$w\" || { echo \"comment lacks $w\"; exit 1; }; done && for f in $(jq -r '[.tools[] | select(.exercised == true and .internal == false) | .family] | unique[]' docs/toolu/evidence/2026-10-19-muse-tool-inventory.json); do printf '%s' \"$body\" | grep -qF \"Example \u2014 $f\" || { echo \"comment lacks example for $f\"; exit 1; }; done",
     "ac_refs": [
       "AC-9"
     ],
@@ -162,8 +163,8 @@ inventory runs → PermissionRequest runs → verdict experiments → evidence J
   },
   {
     "id": "S8",
-    "title": "Docs CI checks and the full gate on the final tree",
-    "check": "export PATH=\"$HOME/.cargo/bin:$PATH\"; mkdir -p \"$HOME/.cache/toolu-540-tmp\" && chmod 700 \"$HOME/.cache/toolu-540-tmp\" && export TMPDIR=\"$HOME/.cache/toolu-540-tmp\"; cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate",
+    "title": "Scope and gates on the final tree: the four files are tracked (git add -f under the ignored docs/toolu) and are the whole diff against origin/main; docs CI checks; full cargo xtask gate",
+    "check": "git ls-files --error-unmatch docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md >/dev/null && [ \"$(git diff --name-only origin/main...HEAD | sort | tr '\\n' ' ')\" = \"$(printf '%s\\n' docs/research/muse-tool-inventory.md docs/toolu/evidence/2026-10-19-muse-tool-inventory.json docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md docs/toolu/specs/2026-10-19-muse-tool-inventory-spike-design.md | sort | tr '\\n' ' ')\" ] || { echo 'diff scope differs from the four planned files'; git diff --name-only origin/main...HEAD; exit 1; }; export PATH=\"$HOME/.cargo/bin:$PATH\"; mkdir -p \"$HOME/.cache/toolu-540-tmp\" && chmod 700 \"$HOME/.cache/toolu-540-tmp\" && export TMPDIR=\"$HOME/.cache/toolu-540-tmp\"; cargo xtask gate --only context-budget --only ci-paths && cargo xtask check-markdown-cli && cargo xtask gate",
     "ac_refs": [
       "AC-9"
     ],
@@ -198,19 +199,21 @@ The boundary cases:
 
 S6 runs even if an earlier step fails. No user-facing documentation changes: Muse is not a shipped host until #542 onward, and #551 owns those docs.
 
-**Delivery.** Each step's output is committed as soon as its check is green, with a `docs(research):` subject, and pushed to `feat/540-spike-muse-tool-inventory-ask`. The commit scope is only:
+**Delivery.** Each step's output is committed as soon as its check is green, with a `docs(research):` subject. Files under the ignored `docs/toolu/` need `git add -f`. Per the worker brief, every such commit is pushed to `feat/540-spike-muse-tool-inventory-ask` so a session loss loses nothing. The push-review gate is advisory in this repository (no `gates.pushReview` mode is configured). The commit scope is only:
 
 - the research doc;
 - the evidence JSON;
 - this plan and its spec.
 
-`git diff --stat origin/main` must name nothing else. Then:
+S8 enforces that scope with `git diff --name-only origin/main...HEAD`. Then:
 
 1. `toolu ledger run docs/toolu/plans/2026-10-19-muse-tool-inventory-spike.md --verify` re-runs every step against the final committed tree.
 2. `toolu-review:review` records version 2 review state.
 3. `toolu ledger verdict status` must report `overall: ready`.
-4. Push.
+4. The final push.
 5. The PR targets `main`, with a `docs(research):` conventional title. Its body opens with `Closes Falconiere/toolu#540` and `Part of Falconiere/toolu#539`, then gives the summary and the verification evidence.
-6. `toolu epic report pr-open --pr <n>`, then `toolu epic report babysit --pr <n>`, and the worker goes idle. The engine babysits.
+6. `toolu epic report pr-open --pr <n> --status-file /root/.claude/epics/falconiere-toolu-539/status/falconiere-toolu-540.json`, then `toolu epic report babysit --pr <n> --status-file …` (same file), and the worker goes idle. The engine babysits.
 
 Delivery needs an authenticated `gh api user` and a non-default branch.
+
+**Failure runbook.** When any of S1–S5 goes red, or a run hangs, the S6 cleanup runs by hand before anything else. This clears the probe and its trust keys from the shared Muse state that the #541 worker also uses. Then the failing step is repaired and re-run with the probe re-installed.
