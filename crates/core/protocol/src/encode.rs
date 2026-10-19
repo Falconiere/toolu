@@ -30,7 +30,7 @@ pub enum Encoded {
   Command(String),
 }
 
-/// A decision for an event the host does not have: a wiring error.
+/// A decision for an unavailable host event or encoder: a wiring error.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EncodeError {
   /// The host.
@@ -57,7 +57,7 @@ pub fn supports_ask(host: Host, event: HostEvent) -> bool {
     Host::Codex => event == HostEvent::PermissionEvaluate,
     // Cursor accepts but does not enforce ask on preToolUse.
     Host::Cursor => event == HostEvent::ShellPre,
-    Host::Hermes => false,
+    Host::Hermes | Host::Muse => false,
   }
 }
 
@@ -86,6 +86,8 @@ pub fn encode(host: Host, event: HostEvent, decision: &Decision) -> Result<Encod
     Host::Claude | Host::Codex => Encoded::Command(hook::output(native, event, normal)),
     Host::Cursor => Encoded::Command(cursor::output(event, normal)),
     Host::Hermes => Encoded::Command(hermes::output(event, normal)),
+    // #544 supplies the Muse encoder. Until then, run_hook fails closed.
+    Host::Muse => return Err(EncodeError { host, event }),
   })
 }
 
@@ -148,12 +150,16 @@ impl<'a> Normal<'a> {
 
 impl fmt::Display for EncodeError {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(
-      f,
-      "{} has no native event for {}",
-      self.host.name(),
-      self.event.slug()
-    )
+    if self.host == Host::Muse {
+      write!(f, "muse has no output encoder for {}", self.event.slug())
+    } else {
+      write!(
+        f,
+        "{} has no native event for {}",
+        self.host.name(),
+        self.event.slug()
+      )
+    }
   }
 }
 

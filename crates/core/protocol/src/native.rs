@@ -1,6 +1,8 @@
 //! Each host's names for the host events (`packages/toolu-core/src/host/host-events.ts`):
-//! Claude Code and Codex use `PascalCase`, Cursor `camelCase` and Hermes `snake_case`.
+//! Claude Code, Codex and Muse use `PascalCase`, Cursor `camelCase` and Hermes `snake_case`.
 //! `None` marks an event the host does not have.
+//! Muse's `Notification`, `Stop`, `SubagentStop` and `PostToolUseFailure` have
+//! no corresponding [`HostEvent`] and do not reverse-map.
 
 use crate::event::HostEvent;
 use crate::host::Host;
@@ -16,7 +18,7 @@ const CURSOR_ALIASES: [(&str, HostEvent); 4] = [
 /// `host`'s name for `event`, or `None` when the host has no such event.
 pub fn native_event(host: Host, event: HostEvent) -> Option<&'static str> {
   match host {
-    Host::Claude | Host::Codex => Some(pascal(event)),
+    Host::Claude | Host::Codex | Host::Muse => Some(pascal(event)),
     Host::Cursor => cursor(event),
     Host::Hermes => hermes(event),
   }
@@ -33,7 +35,7 @@ pub fn canonical_event(host: Host, native: &str) -> Option<HostEvent> {
       .into_iter()
       .find(|(alias, _)| *alias == native)
       .map(|(_, event)| event),
-    Host::Claude | Host::Codex | Host::Hermes => None,
+    Host::Claude | Host::Codex | Host::Hermes | Host::Muse => None,
   })
 }
 

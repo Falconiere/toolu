@@ -56,7 +56,7 @@ fn root_flags_are_the_globals_version_and_the_hidden_probe() {
   assert_eq!(host["valueName"], "HOST");
   assert_eq!(
     host["possibleValues"],
-    serde_json::json!(["claude", "codex", "cursor", "hermes"])
+    serde_json::json!(["claude", "codex", "cursor", "hermes", "muse"])
   );
   assert_eq!(doc["flags"][1]["short"], "q");
   assert_eq!(doc["flags"][4]["hidden"], true);

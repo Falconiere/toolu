@@ -46,7 +46,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -63,7 +63,7 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --replace           Ask a running engine to drain, then take its place
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --http <ADDR>       Bind status HTTP to this IP address and port
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-http           Disable the status listener
@@ -82,7 +82,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --no-http           Disable the status listener
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -102,7 +102,7 @@ Options:
       --safe              Keep approval prompts on in this epic's workers, until a start without it
       --no-jev            Route and check coupling by heuristics only, until a start without it
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -121,7 +121,7 @@ Options:
       --fleet             Print this machine and every configured peer engine
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -139,7 +139,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -157,7 +157,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -175,7 +175,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -193,7 +193,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -213,7 +213,7 @@ Options:
       --by <NAME>         Who answered; defaults to the --host name, else user
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -229,7 +229,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --max-seconds <N>   Stop after this many seconds; 0 returns immediately
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -249,7 +249,7 @@ Options:
       --status-file <FILE>  The issue status snapshot
       --pr <N>              Pull request number
   -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --note <TEXT>         Note stored with the phase
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
   -h, --help                Print help
@@ -268,7 +268,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -287,7 +287,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -302,7 +302,7 @@ Usage: toolu epic service install [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -321,7 +321,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -336,7 +336,7 @@ Usage: toolu epic token new [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -356,7 +356,7 @@ Options:
       --max <N>            Live issue agents at once [default: 3]
   -q, --quiet              Drop the diagnostics of a successful run
       --tracker <TRACKER>  The epic's tracker [possible values: github, jira, linear]
-      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --repo <O/R>         The code repository of Jira and Linear children
       --config-dir <DIR>   Read the toolu config from DIR instead of the host's default
       --out <FILE>         Also write graph.json to FILE
@@ -377,7 +377,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --hosts <SPEC>      The host pool, e.g. claude:2,codex:1 [default: claude]
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --issue <REF>       Route this issue (repeatable); default the launch batch
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-jev            Use the heuristic tiers only
@@ -398,7 +398,7 @@ Options:
       --json                    Print exactly one JSON document on stdout
       --issue <REF>             The sub-issue: reference, key or URL
   -q, --quiet                   Drop the diagnostics of a successful run
-      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --kind <HOST>             The host: claude, codex or cursor; default the route's
       --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
       --model <MODEL>           The model; default the route's
@@ -428,7 +428,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --dry-run           Validate and print the planned teardown
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -445,7 +445,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --dry-run           Print the summary and close nothing
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -464,7 +464,7 @@ Options:
       --dry-run           Find the hold and change nothing
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -482,7 +482,7 @@ Options:
       --issue <REF>       The sub-issue to close and tick once merged
   -q, --quiet             Drop the diagnostics of a successful run
       --epic <REF>        The epic to tick
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --merge             Merge on a merge verdict, pinned to the verified head
       --auto              Arm auto-merge on a wait verdict
@@ -507,7 +507,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -526,7 +526,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -544,7 +544,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -563,7 +563,7 @@ Options:
       --check-evidence    Validate the evidence and print every gap
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -580,7 +580,7 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --since <DATE>      Only records from this date (YYYY-MM-DD) or ISO-8601 UTC time on
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -598,7 +598,7 @@ Arguments:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -615,7 +615,7 @@ Options:
       --state <DIR>       The state root with one directory per epic
   -q, --quiet             Drop the diagnostics of a successful run
       --until <TIME>      Count issues launched and merged by this ISO-8601 UTC time
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --outlier <EPIC>    An epic reported apart from the totals; repeatable
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help

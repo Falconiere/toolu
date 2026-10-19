@@ -40,12 +40,12 @@ impl Target {
   }
 }
 
-/// The installer target `--host` names; Cursor and Hermes are not targets.
+/// The installer target `--host` names; other hosts are not targets yet.
 pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
     Host::Codex => Ok(Target::Codex),
-    Host::Cursor | Host::Hermes => Err(Fail::usage(format!(
+    Host::Cursor | Host::Hermes | Host::Muse => Err(Fail::usage(format!(
       "--host {} is not an installer target; toolu plugins installs into claude or codex",
       host.name()
     ))),

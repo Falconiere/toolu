@@ -31,6 +31,18 @@ fn codex_plugin_root_wins_over_the_claude_compatibility_variables() {
 }
 
 #[test]
+fn muse_identity_wins_over_codex_and_claude_compatibility_variables() {
+  let aliases = [("PLUGIN_ROOT", "/codex"), ("CLAUDE_PLUGIN_ROOT", "/claude")];
+  for signal in ["MUSE_PLUGIN_ID", "MUSE_SESSION_ID"] {
+    let mut pairs = aliases.to_vec();
+    pairs.push((signal, "muse-session"));
+    assert_eq!(host(&pairs, Some("PreToolUse")), Host::Muse, "{signal}");
+  }
+  assert_eq!(host(&aliases, Some("PreToolUse")), Host::Codex);
+  assert_eq!(host(&[], Some("PreToolUse")), Host::Claude);
+}
+
+#[test]
 fn cursor_variables_win_over_plugin_root() {
   assert_eq!(
     host(&[("CURSOR_VERSION", "1.7.0"), ("PLUGIN_ROOT", "/p")], None),
@@ -99,6 +111,20 @@ fn an_invalid_override_warns_and_falls_back_to_detection() {
     warning: Some(warning.to_owned()),
   };
   assert_eq!(detect(&env, None), expected);
+  let muse = Env::from_pairs([
+    ("TOOLU_HOST_OVERRIDE", "bogus"),
+    ("MUSE_SESSION_ID", "s1"),
+    ("PLUGIN_ROOT", "/p"),
+  ]);
+  assert_eq!(
+    detect(&muse, None),
+    Detected {
+      host: Host::Muse,
+      warning: Some(
+        "toolu-host: invalid TOOLU_HOST_OVERRIDE 'bogus' (using environment detection)".to_owned()
+      )
+    }
+  );
 }
 
 #[test]

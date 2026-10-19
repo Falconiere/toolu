@@ -15,9 +15,9 @@ pub struct Detected {
 }
 
 /// Resolves the host, first hit wins: `TOOLU_HOST_OVERRIDE`, a hook event name
-/// only one host uses, Cursor's per-hook variables, Codex's `PLUGIN_ROOT`, then
-/// Claude. Hermes documents no hook environment, so only its event names (or
-/// the override) select it.
+/// only one host uses, Cursor's per-hook variables, Muse's identity variables,
+/// Codex's `PLUGIN_ROOT`, then Claude. Hermes documents no hook environment,
+/// so only its event names (or the override) select it.
 pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
   let mut warning = None;
   if let Some(name) = env.get("TOOLU_HOST_OVERRIDE") {
@@ -40,6 +40,13 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
       .is_some() =>
     {
       Host::Cursor
+    }
+    _ if env
+      .get("MUSE_PLUGIN_ID")
+      .or(env.get("MUSE_SESSION_ID"))
+      .is_some() =>
+    {
+      Host::Muse
     }
     _ if env.get("PLUGIN_ROOT").is_some() => Host::Codex,
     _ => Host::Claude,

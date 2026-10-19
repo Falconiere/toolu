@@ -93,7 +93,7 @@ fn shrinking_a_flag_breaks_callers() {
       tree["flags"][2]["possibleValues"]
         .as_array_mut()
         .unwrap()
-        .pop();
+        .retain(|value| value != "hermes");
     }),
     ["value \"hermes\" of `--host` on `toolu` removed"]
   );

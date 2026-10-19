@@ -46,7 +46,7 @@ fn delivery_install(host: Host) -> &'static str {
   match host {
     Host::Claude => CLAUDE_INSTALL,
     Host::Codex => CODEX_INSTALL,
-    Host::Cursor | Host::Hermes => NEUTRAL_INSTALL,
+    Host::Cursor | Host::Hermes | Host::Muse => NEUTRAL_INSTALL,
   }
 }
 

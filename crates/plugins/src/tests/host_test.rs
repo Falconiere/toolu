@@ -9,7 +9,7 @@ use crate::support::{Answer, Sandbox};
 fn installer_targets_are_claude_and_codex() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
-  for host in [Host::Cursor, Host::Hermes] {
+  for host in [Host::Cursor, Host::Hermes, Host::Muse] {
     let Err(fail) = target_of(host) else {
       panic!("{} was accepted", host.name());
     };

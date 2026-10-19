@@ -85,15 +85,17 @@ fn a_claude_entry_without_install_path_warns_and_is_omitted() {
 }
 
 #[test]
-fn cursor_and_an_unreadable_record_warn() {
+fn unsupported_hosts_and_an_unreadable_record_warn() {
   let home = tempfile::tempdir().unwrap();
-  let cursor = Roots::new(
-    Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
-    Some(Host::Cursor),
-  );
-  let check = plugins_check(&collect(&cursor, home.path()));
-  assert_eq!(check.status, Status::Warn);
-  assert!(check.summary.contains("unknown"), "{}", check.summary);
+  for host in [Host::Cursor, Host::Hermes, Host::Muse] {
+    let roots = Roots::new(
+      Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
+      Some(host),
+    );
+    let check = plugins_check(&collect(&roots, home.path()));
+    assert_eq!(check.status, Status::Warn);
+    assert!(check.summary.contains("unknown"), "{}", check.summary);
+  }
 
   let claude = claude(home.path(), home.path());
   let missing = plugins_check(&collect(&claude, home.path()));

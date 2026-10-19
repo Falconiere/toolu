@@ -95,7 +95,7 @@ fn codex_reads_its_snapshot_and_other_hosts_are_unknown() {
   let roots = Roots::new(Env::from_pairs([("CODEX_HOME", c)]), Some(Host::Codex));
   assert_eq!(plugin_presence("x@t", &roots), Installed::Installed);
   assert_eq!(plugin_presence("y@t", &roots), Installed::Absent);
-  for host in [Host::Cursor, Host::Hermes] {
+  for host in [Host::Cursor, Host::Hermes, Host::Muse] {
     let roots = Roots::new(Env::from_pairs([("HOME", c)]), Some(host));
     assert_eq!(
       plugin_presence("y@t", &roots),

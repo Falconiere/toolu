@@ -77,6 +77,15 @@ impl Roots {
       Host::Codex => own("CODEX_HOME", ".codex"),
       Host::Cursor => env.home().join(".cursor"),
       Host::Hermes => own("HERMES_HOME", ".hermes"),
+      Host::Muse => env.get("MUSE_CONFIG_DIR").map_or_else(
+        || {
+          env
+            .get("XDG_CONFIG_HOME")
+            .map_or_else(|| env.home().join(".config"), PathBuf::from)
+            .join("muse")
+        },
+        PathBuf::from,
+      ),
     }
   }
 
@@ -86,7 +95,7 @@ impl Roots {
     let own = match self.host {
       Host::Claude => self.env.get("CLAUDE_PROJECT_DIR"),
       Host::Cursor => self.env.get("CURSOR_PROJECT_DIR"),
-      Host::Codex | Host::Hermes => None,
+      Host::Codex | Host::Hermes | Host::Muse => None,
     };
     if let Some(dir) = self.env.get("TOOLU_PROJECT_DIR").or(own) {
       return Some(PathBuf::from(dir));
@@ -98,11 +107,12 @@ impl Roots {
     git::toplevel(&self.env, &cwd)
   }
 
-  /// `.claude`, `.codex`, `.cursor` or `.hermes`, unless
+  /// `.claude`, `.codex`, `.cursor`, `.hermes` or Muse's `.agents`, unless
   /// `TOOLU_PROJECT_CONFIG_DIRNAME` names another.
   pub fn project_dirname(&self) -> String {
     match self.env.get("TOOLU_PROJECT_CONFIG_DIRNAME") {
       Some(name) => name.to_owned(),
+      None if self.host == Host::Muse => ".agents".to_owned(),
       None => format!(".{}", self.host.name()),
     }
   }
@@ -145,6 +155,7 @@ impl Roots {
     let own = match self.host {
       Host::Codex => self.env.get("PLUGIN_ROOT"),
       Host::Cursor => self.env.get("CURSOR_PLUGIN_ROOT"),
+      Host::Muse => self.env.get("MUSE_PLUGIN_ROOT"),
       Host::Claude | Host::Hermes => None,
     };
     own
@@ -152,10 +163,11 @@ impl Roots {
       .map(PathBuf::from)
   }
 
-  /// `PLUGIN_DATA` on Codex, then `CLAUDE_PLUGIN_DATA`.
+  /// The host's own data variable, then `CLAUDE_PLUGIN_DATA`.
   pub fn plugin_data(&self) -> Option<PathBuf> {
     let own = match self.host {
       Host::Codex => self.env.get("PLUGIN_DATA"),
+      Host::Muse => self.env.get("MUSE_PLUGIN_DATA_DIR"),
       Host::Claude | Host::Cursor | Host::Hermes => None,
     };
     own
@@ -172,7 +184,9 @@ impl Roots {
     require("invocation", "name", name)?;
     Ok(match self.host {
       Host::Codex => format!("${namespace}:{name}"),
-      Host::Claude | Host::Cursor | Host::Hermes => format!("/{namespace}:{name}"),
+      Host::Claude | Host::Cursor | Host::Hermes | Host::Muse => {
+        format!("/{namespace}:{name}")
+      }
     })
   }
 
@@ -185,6 +199,7 @@ impl Roots {
     Ok(match self.host {
       Host::Claude => Some(format!("/plugin install {spec}")),
       Host::Codex => Some(format!("codex plugin add {spec}")),
+      Host::Muse => Some(format!("muse plugins install {spec}")),
       Host::Cursor | Host::Hermes => None,
     })
   }
@@ -198,6 +213,7 @@ impl Roots {
     Ok(match self.host {
       Host::Claude => Some(format!("claude plugin uninstall {name}@toolu")),
       Host::Codex => Some(format!("codex plugin remove {name}@toolu")),
+      Host::Muse => Some(format!("muse plugins remove {name}")),
       Host::Cursor | Host::Hermes => None,
     })
   }

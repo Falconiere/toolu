@@ -11,11 +11,19 @@ pub enum Host {
   Cursor,
   /// Hermes.
   Hermes,
+  /// Muse Code.
+  Muse,
 }
 
 impl Host {
   /// Every host, in `--host` order.
-  pub const ALL: [Host; 4] = [Host::Claude, Host::Codex, Host::Cursor, Host::Hermes];
+  pub const ALL: [Host; 5] = [
+    Host::Claude,
+    Host::Codex,
+    Host::Cursor,
+    Host::Hermes,
+    Host::Muse,
+  ];
 
   /// The `--host` value.
   pub fn name(self) -> &'static str {
@@ -24,6 +32,7 @@ impl Host {
       Host::Codex => "codex",
       Host::Cursor => "cursor",
       Host::Hermes => "hermes",
+      Host::Muse => "muse",
     }
   }
 
