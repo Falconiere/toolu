@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.0.4](https://github.com/Falconiere/toolu/compare/v8.0.3...v8.0.4) (2026-10-19)
+
+
+### Bug Fixes
+
+* **cli:** join the SessionStart skew advisory to the hook's own JSON ([#538](https://github.com/Falconiere/toolu/issues/538)) ([af8a5ba](https://github.com/Falconiere/toolu/commit/af8a5babfb62502a35284f3574309df59ac09fd8))
+
 ## [8.0.3](https://github.com/Falconiere/toolu/compare/v8.0.2...v8.0.3) (2026-10-15)
 
 
