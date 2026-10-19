@@ -1,0 +1,1882 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "name": "session/start: allow",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "session/start: ask",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/start: deny",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "no .env writes"
+      }
+    },
+    {
+      "name": "session/start: advisory",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "session/start: post_block",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "lint failed"
+      }
+    },
+    {
+      "name": "session/start: runtime_failure",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "gate crashed"
+      }
+    },
+    {
+      "name": "session/start: ask from a guardrail gate",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/start: ask from a judgement gate",
+      "event": "session/start",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/unload: allow",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "session/unload: ask",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/unload: deny",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "no .env writes"
+      }
+    },
+    {
+      "name": "session/unload: advisory",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "session/unload: post_block",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "lint failed"
+      }
+    },
+    {
+      "name": "session/unload: runtime_failure",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "gate crashed"
+      }
+    },
+    {
+      "name": "session/unload: ask from a guardrail gate",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/unload: ask from a judgement gate",
+      "event": "session/unload",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "prompt: allow",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "prompt: ask",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "prompt: deny",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "prompt: advisory",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "prompt: post_block",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "prompt: runtime_failure",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "gate crashed"
+      }
+    },
+    {
+      "name": "prompt: ask from a guardrail gate",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "prompt: ask from a judgement gate",
+      "event": "prompt",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "pre_compact: allow",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "pre_compact: ask",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "pre_compact: deny",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "no .env writes"
+      }
+    },
+    {
+      "name": "pre_compact: advisory",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "pre_compact: post_block",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "lint failed"
+      }
+    },
+    {
+      "name": "pre_compact: runtime_failure",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "gate crashed"
+      }
+    },
+    {
+      "name": "pre_compact: ask from a guardrail gate",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "pre_compact: ask from a judgement gate",
+      "event": "pre_compact",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "permission/evaluate: allow",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "permission/evaluate: ask",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "permission/evaluate: deny",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "permission/evaluate: advisory",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "permission/evaluate: post_block",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "permission/evaluate: runtime_failure",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "gate crashed"
+      }
+    },
+    {
+      "name": "permission/evaluate: ask from a guardrail gate",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "permission/evaluate: ask from a judgement gate",
+      "event": "permission/evaluate",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/pre: allow",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "tool/pre: ask",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/pre: deny",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "tool/pre: advisory",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "tool/pre: post_block",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "tool/pre: runtime_failure",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "gate crashed"
+      }
+    },
+    {
+      "name": "tool/pre: ask from a guardrail gate",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/pre: ask from a judgement gate",
+      "event": "tool/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "shell/pre: allow",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "shell/pre: ask",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "shell/pre: deny",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "shell/pre: advisory",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "shell/pre: post_block",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "shell/pre: runtime_failure",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "gate crashed"
+      }
+    },
+    {
+      "name": "shell/pre: ask from a guardrail gate",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "shell/pre: ask from a judgement gate",
+      "event": "shell/pre",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/post: allow",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "allow"
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed"
+      }
+    },
+    {
+      "name": "tool/post: ask",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/post: deny",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "deny",
+          "reason": "no .env writes"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"no .env writes\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "no .env writes"
+      }
+    },
+    {
+      "name": "tool/post: advisory",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "advisory",
+          "message": "prefer rg"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"prefer rg\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "prefer rg"
+      }
+    },
+    {
+      "name": "tool/post: post_block",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "post_block",
+          "reason": "lint failed"
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"lint failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "lint failed"
+      }
+    },
+    {
+      "name": "tool/post: runtime_failure",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "runtime_failure",
+          "reason": "gate crashed",
+          "code": "nonzero"
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"gate crashed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "gate crashed"
+      }
+    },
+    {
+      "name": "tool/post: ask from a guardrail gate",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "guardrail",
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "confirm .env write"
+      }
+    },
+    {
+      "name": "tool/post: ask from a judgement gate",
+      "event": "tool/post",
+      "reply": {
+        "decision": {
+          "kind": "ask",
+          "reason": "confirm .env write"
+        }
+      },
+      "gateClass": "judgement",
+      "expect": {
+        "stdout": "{\"systemMessage\":\"confirm .env write\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "confirm .env write"
+      }
+    },
+    {
+      "name": "session/start: hook panic",
+      "event": "session/start",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu SessionStart hook panicked: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu SessionStart hook panicked: boom"
+      }
+    },
+    {
+      "name": "session/start: hook error",
+      "event": "session/start",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu SessionStart hook failed: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu SessionStart hook failed: boom"
+      }
+    },
+    {
+      "name": "session/start: raw exit 2 with blank streams",
+      "event": "session/start",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu SessionStart hook failed: exited without a reason\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu SessionStart hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "session/unload: hook panic",
+      "event": "session/unload",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu SessionEnd hook panicked: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "failed"
+      }
+    },
+    {
+      "name": "session/unload: hook error",
+      "event": "session/unload",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu SessionEnd hook failed: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "failed"
+      }
+    },
+    {
+      "name": "session/unload: raw exit 2 with blank streams",
+      "event": "session/unload",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu SessionEnd hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "failed"
+      }
+    },
+    {
+      "name": "prompt: hook panic",
+      "event": "prompt",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu UserPromptSubmit hook panicked: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu UserPromptSubmit hook panicked: boom"
+      }
+    },
+    {
+      "name": "prompt: hook error",
+      "event": "prompt",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu UserPromptSubmit hook failed: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu UserPromptSubmit hook failed: boom"
+      }
+    },
+    {
+      "name": "prompt: raw exit 2 with blank streams",
+      "event": "prompt",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu UserPromptSubmit hook failed: exited without a reason\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu UserPromptSubmit hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "pre_compact: hook panic",
+      "event": "pre_compact",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu PreCompact hook panicked: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu PreCompact hook panicked: boom"
+      }
+    },
+    {
+      "name": "pre_compact: hook error",
+      "event": "pre_compact",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu PreCompact hook failed: boom\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu PreCompact hook failed: boom"
+      }
+    },
+    {
+      "name": "pre_compact: raw exit 2 with blank streams",
+      "event": "pre_compact",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu PreCompact hook failed: exited without a reason\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu PreCompact hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "permission/evaluate: hook panic",
+      "event": "permission/evaluate",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PermissionRequest hook panicked: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PermissionRequest hook panicked: boom"
+      }
+    },
+    {
+      "name": "permission/evaluate: hook error",
+      "event": "permission/evaluate",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PermissionRequest hook failed: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PermissionRequest hook failed: boom"
+      }
+    },
+    {
+      "name": "permission/evaluate: raw exit 2 with blank streams",
+      "event": "permission/evaluate",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PermissionRequest hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PermissionRequest hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "tool/pre: hook panic",
+      "event": "tool/pre",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook panicked: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook panicked: boom"
+      }
+    },
+    {
+      "name": "tool/pre: hook error",
+      "event": "tool/pre",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook failed: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook failed: boom"
+      }
+    },
+    {
+      "name": "tool/pre: raw exit 2 with blank streams",
+      "event": "tool/pre",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "shell/pre: hook panic",
+      "event": "shell/pre",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook panicked: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook panicked: boom"
+      }
+    },
+    {
+      "name": "shell/pre: hook error",
+      "event": "shell/pre",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook failed: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook failed: boom"
+      }
+    },
+    {
+      "name": "shell/pre: raw exit 2 with blank streams",
+      "event": "shell/pre",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "tool/post: hook panic",
+      "event": "tool/post",
+      "reply": {
+        "panic": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu PostToolUse hook panicked: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "toolu PostToolUse hook panicked: boom"
+      }
+    },
+    {
+      "name": "tool/post: hook error",
+      "event": "tool/post",
+      "reply": {
+        "error": "boom"
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu PostToolUse hook failed: boom\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "toolu PostToolUse hook failed: boom"
+      }
+    },
+    {
+      "name": "tool/post: raw exit 2 with blank streams",
+      "event": "tool/post",
+      "reply": {
+        "raw": {
+          "stdout": "",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu PostToolUse hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "toolu PostToolUse hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "permission/evaluate: raw exit 2 with JSON stdout",
+      "event": "permission/evaluate",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PermissionRequest hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PermissionRequest hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "permission/evaluate: raw exit 2 with JSON stdout and a stderr reason",
+      "event": "permission/evaluate",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "blocked: dispatcher failed\n",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: dispatcher failed\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: dispatcher failed"
+      }
+    },
+    {
+      "name": "tool/pre: raw exit 2 with JSON stdout",
+      "event": "tool/pre",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: toolu PreToolUse hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: toolu PreToolUse hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "tool/pre: raw exit 2 with JSON stdout and a stderr reason",
+      "event": "tool/pre",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "blocked: dispatcher failed\n",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: dispatcher failed\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: dispatcher failed"
+      }
+    },
+    {
+      "name": "tool/post: raw exit 2 with JSON stdout",
+      "event": "tool/post",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "toolu PostToolUse hook failed: exited without a reason\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "toolu PostToolUse hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "tool/post: raw exit 2 with JSON stdout and a stderr reason",
+      "event": "tool/post",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "blocked: dispatcher failed\n",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "",
+        "stderr": "blocked: dispatcher failed\n",
+        "exit": 2
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "blocked: dispatcher failed"
+      }
+    },
+    {
+      "name": "session/start: raw exit 2 with JSON stdout",
+      "event": "session/start",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu SessionStart hook failed: exited without a reason\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu SessionStart hook failed: exited without a reason"
+      }
+    },
+    {
+      "name": "session/start: raw exit 2 with JSON stdout and a stderr reason",
+      "event": "session/start",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "blocked: dispatcher failed\n",
+          "exit": 2
+        }
+      },
+      "expect": {
+        "stdout": "{\"systemMessage\":\"toolu SessionStart blocked: dispatcher failed\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "completed",
+        "system_message": "toolu SessionStart blocked: dispatcher failed"
+      }
+    },
+    {
+      "name": "tool/pre: raw exit 0 is written as given",
+      "event": "tool/pre",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 0
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "x"
+      }
+    },
+    {
+      "name": "tool/post: raw exit 0 is written as given",
+      "event": "tool/post",
+      "reply": {
+        "raw": {
+          "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+          "stderr": "",
+          "exit": 0
+        }
+      },
+      "expect": {
+        "stdout": "{\"decision\":\"block\",\"reason\":\"x\"}\n",
+        "stderr": "",
+        "exit": 0
+      },
+      "muse": {
+        "status": "blocked",
+        "should_block": true,
+        "block_reason": "x"
+      }
+    }
+  ]
+}
