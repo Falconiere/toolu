@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "name": "toolu",
+  "displayName": "toolu",
+  "version": "8.0.4",
+  "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "commit",
+        "path": "skills/commit/SKILL.md"
+      },
+      {
+        "id": "debug",
+        "path": "skills/debug/SKILL.md"
+      },
+      {
+        "id": "deep-research",
+        "path": "skills/deep-research/SKILL.md"
+      },
+      {
+        "id": "orchestrator",
+        "path": "skills/orchestrator/SKILL.md"
+      },
+      {
+        "id": "review-and-commit",
+        "path": "skills/review-and-commit/SKILL.md"
+      },
+      {
+        "id": "setup",
+        "path": "skills/setup/SKILL.md"
+      }
+    ],
+    "commands": [
+      {
+        "id": "architect",
+        "path": "agents/architect.md"
+      },
+      {
+        "id": "deep-explore",
+        "path": "agents/deep-explore.md"
+      },
+      {
+        "id": "implementer",
+        "path": "agents/implementer.md"
+      },
+      {
+        "id": "quick-task",
+        "path": "agents/quick-task.md"
+      },
+      {
+        "id": "research-agent",
+        "path": "agents/research-agent.md"
+      }
+    ],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

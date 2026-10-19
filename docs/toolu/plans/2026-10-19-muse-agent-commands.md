@@ -59,8 +59,8 @@ validation → docs → CI path groups → live TUI evidence → full gate.
   },
   {
     "id": "S2",
-    "title": "Validate the committed toolu Muse bundle with the real muse CLI: valid, zero diagnostics, the 5 agent commands pointing at agents/*.md, the 6 skills, and every skill directory clean under muse skills validate",
-    "check": "muse plugins validate plugins/toolu --json | jq -e '.valid == true and (.diagnostics | length == 0) and ([.capabilities.commands[] | .id + \"=\" + .path] | sort == [\"architect=agents/architect.md\", \"deep-explore=agents/deep-explore.md\", \"implementer=agents/implementer.md\", \"quick-task=agents/quick-task.md\", \"research-agent=agents/research-agent.md\"]) and (.capabilities.skills | length == 6)' && for d in plugins/toolu/skills/*/; do muse skills validate \"$d\" --json | jq -e '.valid == true and (.diagnostics | length == 0)' || exit 1; done",
+    "title": "Validate the committed toolu Muse bundle with the real muse CLI: valid, no diagnostic but the epic-accepted multiple-manifests layout warning (spec Deviations), the 5 agent commands pointing at agents/*.md, the 6 skills, and every skill directory clean under muse skills validate",
+    "check": "muse plugins validate plugins/toolu --json | jq -e '.valid == true and ([.diagnostics[] | select(.code != \"multiple-manifests\" or .severity != \"warning\")] | length == 0) and ([.capabilities.commands[] | .id + \"=\" + .path] | sort == [\"architect=agents/architect.md\", \"deep-explore=agents/deep-explore.md\", \"implementer=agents/implementer.md\", \"quick-task=agents/quick-task.md\", \"research-agent=agents/research-agent.md\"]) and (.capabilities.skills | length == 6)' && for d in plugins/toolu/skills/*/; do muse skills validate \"$d\" --json | jq -e '.valid == true and (.diagnostics | length == 0)' || exit 1; done",
     "ac_refs": ["AC-1"],
     "depends_on": ["S1"],
     "paths": ["plugins/toolu"],
@@ -116,6 +116,15 @@ validation → docs → CI path groups → live TUI evidence → full gate.
   }
 ]
 ```
+
+## Deviations
+
+- S2 allows the one `multiple-manifests` layout warning. Muse emits it for every
+  plugin directory that also holds `.claude-plugin` and `.codex-plugin`. #541
+  accepted the warning, and the spec's Deviations section records it.
+- The folder guardrail needs `.muse-plugin` in `rules.json`. That is gate data,
+  and it ships separately in #563 (`chore(gates):`). This branch rebases on
+  `main` after #563 merges, before the S6 gate and the push.
 
 ## Critical files
 

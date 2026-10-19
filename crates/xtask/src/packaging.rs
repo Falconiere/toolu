@@ -7,6 +7,7 @@ use serde_json::Value;
 use crate::options::Options;
 use crate::packaging_assets::{self, PLUGINS, dirs, read_json};
 use crate::packaging_catalog;
+use crate::packaging_muse;
 use crate::{Verdict, output};
 
 /// The published npm manifests that move in lockstep with the workspace.
@@ -18,9 +19,15 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     return Err(format!("missing root {}", options.root.display()));
   }
   match package(&options.root) {
-    Ok((plugins, skills, agents, hooks)) => {
+    Ok(Counts {
+      plugins,
+      skills,
+      agents,
+      muse,
+      hooks,
+    }) => {
       output::say(&format!(
-        "validate-plugin-packaging: validated {plugins} plugins, {skills} skills, {agents} agents, and {hooks} hook manifests"
+        "validate-plugin-packaging: validated {plugins} plugins, {skills} skills, {agents} agents, {muse} Muse agent commands, and {hooks} hook manifests"
       ));
       Ok(Verdict::Clean)
     }
@@ -33,17 +40,31 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   }
 }
 
-fn package(root: &Path) -> Result<(usize, usize, usize, usize), String> {
+/// What one packaging run validated.
+#[derive(Debug)]
+struct Counts {
+  plugins: usize,
+  skills: usize,
+  agents: usize,
+  muse: usize,
+  hooks: usize,
+}
+
+fn package(root: &Path) -> Result<Counts, String> {
   let version = read_json(root, "package.json")?
     .get("version")
     .and_then(Value::as_str)
     .ok_or_else(|| "package.json must contain a version".to_owned())?
     .to_owned();
   let plugins = check_plugins(root, &version)?;
-  let skills = packaging_assets::check_skills(root)?;
-  let agents = packaging_assets::check_agents(root)?;
-  let hooks = packaging_assets::check_hooks(root)?;
-  Ok((plugins, skills, agents, hooks))
+  let release = read_json(root, "release-please-config.json")?;
+  Ok(Counts {
+    plugins,
+    skills: packaging_assets::check_skills(root)?,
+    agents: packaging_assets::check_agents(root)?,
+    muse: packaging_muse::check_muse(root, &version, &release)?,
+    hooks: packaging_assets::check_hooks(root)?,
+  })
 }
 
 fn check_plugins(root: &Path, version: &str) -> Result<usize, String> {

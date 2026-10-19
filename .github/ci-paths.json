@@ -24,6 +24,8 @@
       "plugins/*/hooks/hooks.json",
       "plugins/*/.claude-plugin/plugin.json",
       "plugins/*/.codex-plugin/plugin.json",
+      "plugins/*/.muse-plugin/plugin.json",
+      "plugins/*/agents/*.md",
       "docs/cli/**",
       "benchmarks/startup-budgets.json",
       "package-lock.json"
@@ -54,7 +56,8 @@
       "package-lock.json",
       "tools/*/npm/package.json",
       "plugins/*/.claude-plugin/plugin.json",
-      "plugins/*/.codex-plugin/plugin.json"
+      "plugins/*/.codex-plugin/plugin.json",
+      "plugins/*/.muse-plugin/plugin.json"
     ],
     "versionKeys": [
       "version",

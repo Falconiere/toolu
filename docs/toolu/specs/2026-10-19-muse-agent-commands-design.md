@@ -180,7 +180,8 @@ These cases pass:
 ## Acceptance criteria
 
 - **AC-1:** Given the committed `plugins/toolu`, `muse plugins validate plugins/toolu --json`
-  reports `valid: true`, empty `diagnostics`, the six skills, and five commands
+  reports `valid: true`, no diagnostic other than the one `multiple-manifests`
+  layout warning (see Deviations), the six skills, and five commands
   whose paths are the five `agents/*.md` files. `muse skills validate` passes
   for each of the six skill directories.
 - **AC-2:** With `plugins/toolu` installed in an isolated Muse store, the TUI
@@ -250,3 +251,20 @@ These cases pass:
   `deep-research` as `/toolu:deep-research`, so a plugin `doctor` command is
   likely reached as `/toolu:doctor`. Owner: #547, when it adds the existing
   commands. Not blocking.
+
+## Deviations
+
+- **The `multiple-manifests` warning.** It was found during execution, and
+  this is how the spec reads "zero diagnostics" because of it. Running
+  `muse plugins validate plugins/toolu` on the real directory returns `valid:
+  true` with one warning: `multiple-manifests` ("selected
+  `.muse-plugin/plugin.json`; ignoring `.claude-plugin/plugin.json`,
+  `.codex-plugin/plugin.json`"). The isolated scratch bundle never showed it
+  because it held no foreign manifests. Any plugin directory that also ships
+  the Claude and Codex manifests gets this warning. The epic's distribution
+  spike (#541, `docs/research/muse-plugin-distribution.md`) chose that
+  colocated layout and accepted the warning. It assigns re-probing to #553 in
+  case the warning becomes an error. This PR therefore holds AC-1 to `valid:
+  true` and no diagnostic except that single layout warning. Any other
+  diagnostic, including `unsupported-field`, still fails S2.
+
