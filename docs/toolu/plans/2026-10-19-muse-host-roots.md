@@ -63,7 +63,7 @@ paths → generated CLI documentation and full gate.
   {
     "id": "S5",
     "title": "Run the full Rust quality gate and CLI compatibility contract",
-    "check": "capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c 'TOOLU_RESOURCE_HOME=\"$TMPDIR/isolated-resources\" cargo xtask gate'",
+    "check": "mkdir -p \"$TMPDIR/empty-local-bin\" && env -u HERDR_SOCKET_PATH -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_BIN_PATH -u HERDR_CONFIG_PATH unshare -m -- sh -c 'mount --make-rprivate / && mount --bind \"$TMPDIR/empty-local-bin\" /usr/local/bin && capsh --drop=cap_dac_override,cap_dac_read_search,cap_sys_ptrace -- -c \"TOOLU_RESOURCE_HOME=$TMPDIR/isolated-resources cargo xtask gate\"'",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5"],
     "depends_on": ["S4"],
     "paths": ["crates", "fixtures/host", "docs/cli"],
@@ -130,3 +130,14 @@ dependent check and representative boundary input. Status: Approved.
   cleared `PATH`, so either valid advisory is possible. The integration test
   now checks the shared advisory prefix and once-per-session behavior; runtime
   unit tests retain exact text checks for both advice variants.
+- S5's launcher suite intentionally refuses a real binary in fixed install
+  directories. This shared host has `/usr/local/bin/toolu`; a private mount
+  namespace binds an empty task-owned directory over `/usr/local/bin` during
+  the gate. All 22 launcher tests passed in that view. Mount propagation is
+  made private before binding, and the shared binary is not moved.
+- S5's full suite also inherits this pane's live Herdr variables. With them,
+  the merge-queue scenario failed after all three merge calls; without them,
+  it passed in the full parallel suite. The gate unsets those variables so the
+  fixture uses its own socket. The suite then exposed a CLI compatibility test
+  that removed the last `--host` value by position; adding Muse changed that
+  value. It now removes `hermes` by identity and keeps the exact assertion.
