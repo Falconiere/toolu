@@ -24,7 +24,7 @@ fn roots() -> Res<Roots> {
 }
 
 /// `stdin` read as a Muse payload, and its sorted `rest` keys.
-fn rest(stdin: &Value) -> Res<(Payload, Value)> {
+fn read(stdin: &Value) -> Res<(Payload, Value)> {
   let payload = parse(Host::Muse, &stdin.to_string()).map_err(|err| err.to_string())?;
   let Payload::Muse(hook) = &payload else {
     return Err(format!("not a Muse payload: {payload:?}"));
@@ -39,7 +39,7 @@ fn rest(stdin: &Value) -> Res<(Payload, Value)> {
 fn check(case: &Value) -> Res<Value> {
   let name = case.get("name").and_then(Value::as_str).ok_or("no name")?;
   let stdin = case.get("stdin").ok_or("no stdin")?;
-  let (payload, keys) = rest(stdin)?;
+  let (payload, keys) = read(stdin)?;
   if Some(&keys) != case.get("rest") {
     return Err(format!("{name}: rest {keys}"));
   }
