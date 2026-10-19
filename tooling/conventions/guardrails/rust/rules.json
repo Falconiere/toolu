@@ -30,6 +30,7 @@
     "plugin": [
       ".claude-plugin",
       ".codex-plugin",
+      ".muse-plugin",
       "README.md",
       "agents",
       "assets",
