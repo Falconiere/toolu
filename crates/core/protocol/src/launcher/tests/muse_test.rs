@@ -1,4 +1,4 @@
-use super::{DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, RESOLVER_DIR, hook, is_event};
+use super::{DEFAULT_TIMEOUT_MS, MAX_TIMEOUT_MS, MuseEntry, RESOLVER_DIR, hook, is_event};
 use crate::launcher::Target;
 
 const PRE_TOOL_USE: &str = include_str!("../../tests/fixtures/launcher-pre-tool-use.txt");
@@ -24,6 +24,15 @@ fn the_entry_runs_the_per_hook_resolver_with_bin_sh() {
     entry,
     "{\n  \"id\": \"pre-tools\",\n  \"event\": \"PreToolUse\",\n  \"command\": [\n    \
      \"/bin/sh\",\n    \"hooks/muse/pre-tools\"\n  ],\n  \"timeoutMs\": 60000\n}"
+  );
+  assert_eq!(
+    generated.entry,
+    MuseEntry {
+      id: "pre-tools".to_owned(),
+      event: "PreToolUse".to_owned(),
+      command: vec!["/bin/sh".to_owned(), "hooks/muse/pre-tools".to_owned()],
+      timeout_ms: 60_000,
+    }
   );
   assert_eq!(generated.resolver_path, "hooks/muse/pre-tools");
   assert!(generated.resolver_path.starts_with(RESOLVER_DIR));
