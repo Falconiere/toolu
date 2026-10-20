@@ -86,9 +86,9 @@ rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
 wrapper that runs `toolu plugins` on the installed binary
 ([docs/cli/installer.md](docs/cli/installer.md)).
 
-toolu has first-class packages for Claude Code and Codex. Codex support covers
+toolu supports Claude Code, Codex and Muse Code. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux. Muse Code
-is supported through `toolu plugins install --host muse`; see
+is installed through `toolu plugins install --host muse`; see
 [docs/install.md](docs/install.md#on-muse) for the install, approve and verify steps.
 
 **Prerequisite:** the native `toolu` binary. Every hook, skill command and agent command runs it; Bun is not used or needed on any host. Resolution order, missing-binary behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
