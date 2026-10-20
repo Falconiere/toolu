@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use super::run;
+use crate::args::Approval;
 use crate::host::adapter::Adapter;
 use crate::step::Status;
 use crate::support::{Sandbox, names};
@@ -11,6 +12,8 @@ fn driver(sb: &Sandbox) -> Driver {
     adapter: Adapter::Claude,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   }
 }
 
@@ -75,4 +78,51 @@ fn nothing_requested_and_nothing_installed_says_so() {
     fail.message,
     "claude reported no installed plugins, so there is nothing to update"
   );
+}
+
+#[test]
+fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
+  let sb = Sandbox::new();
+  sb.muse("never");
+  let origin = sb.origin(&["v8.0.4"]);
+  sb.capture("list", "muse-installed.json");
+  let listing =
+    std::fs::read_to_string(sb.path("muse-installed.json")).expect("a file the test wrote");
+  sb.write(
+    "muse-installed.json",
+    &listing
+      .replace("hooky", "brainstorm")
+      .replace("8.0.4", "8.0.3"),
+  );
+  sb.capture("available", "muse-available.json");
+  sb.capture("inspect-modified", "muse-inspect-toolu.json");
+  let driver = sb.muse_driver("8.0.4", &origin, Approval::Report);
+  let Ok(steps) = run(&driver, &[], false) else {
+    panic!("the Muse update failed outright");
+  };
+  let seen: Vec<(&str, Status, &str)> = steps
+    .iter()
+    .map(|step| (step.name.as_str(), step.status, step.detail.as_str()))
+    .collect();
+  assert_eq!(
+    seen,
+    [(
+      "toolu",
+      Status::Updated,
+      "updated to 8.0.4; awaiting approval: muse plugins approve toolu"
+    )]
+  );
+  let log = sb.log("muse");
+  assert!(
+    log.contains(&"plugins update toolu --json".to_owned()),
+    "{log:?}"
+  );
+  assert!(
+    !log.iter().any(|line| line.contains("update brainstorm")),
+    "{log:?}"
+  );
+  let Ok(named) = run(&driver, &names(&["brainstorm"]), false) else {
+    panic!("the named Muse update failed outright");
+  };
+  assert_eq!(named[0].status, Status::Skew);
 }

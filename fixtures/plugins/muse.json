@@ -1,0 +1,915 @@
+{
+  "version": 1,
+  "muse": "Muse Code 1.4.11 (1.4.11-R6667.1)",
+  "captured": "2026-10-20",
+  "note": "Real `muse` output from an isolated XDG home; only the scratch directory prefix is rewritten to /home/user.",
+  "cases": [
+    {
+      "name": "list",
+      "description": "toolu installed from the toolu marketplace; hooky installed from another marketplace and disabled",
+      "argv": [
+        "plugins",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "plugins": [
+          {
+            "active": false,
+            "active_scope": "installed-plugin",
+            "diagnostics": [],
+            "plugin": {
+              "capabilities": {
+                "commands": [],
+                "hooks": [
+                  {
+                    "async": false,
+                    "command": [
+                      "/bin/sh",
+                      "hooks/pre"
+                    ],
+                    "compatibility_name": null,
+                    "event": "PreToolUse",
+                    "id": "pre",
+                    "matcher": null,
+                    "shell_command": null,
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626/package/hooks/pre",
+                    "source_relative_path": "hooks/pre",
+                    "timeout_ms": 9000
+                  }
+                ],
+                "mcp_servers": [],
+                "reminders": [],
+                "skills": []
+              },
+              "description": "probe",
+              "display_name": null,
+              "id": "hooky",
+              "manifest_family": "native",
+              "version": "1.0.1"
+            },
+            "record": {
+              "cache_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626/package",
+              "description": "probe",
+              "display_name": null,
+              "enabled": false,
+              "id": "hooky",
+              "installed_at": "2026-10-20T02:05:12.336937032Z",
+              "manifest_family": "native",
+              "manifest_sha256": "sha256:ca9e56a1dc4c54a275919b5f4c018e3683348360eaa01a972d740c6db770e6e8",
+              "package_sha256": "sha256:7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626",
+              "source": {
+                "path": "/home/user/src/hooky-marketplace/plugins/hooky",
+                "provenance": "marketplace-user-added"
+              },
+              "trust": "user-local",
+              "updated_at": "2026-10-20T02:05:12.679700544Z",
+              "version": "1.0.1"
+            },
+            "valid": true,
+            "warning": "third-party plugin: hooks require review before activation"
+          },
+          {
+            "active": true,
+            "active_scope": "installed-plugin",
+            "diagnostics": [
+              {
+                "code": "multiple-manifests",
+                "message": "selected `.muse-plugin/plugin.json`; ignoring `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`",
+                "path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package",
+                "severity": "warning"
+              }
+            ],
+            "plugin": {
+              "capabilities": {
+                "commands": [
+                  {
+                    "enabled_default": true,
+                    "id": "architect",
+                    "path": "agents/architect.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/architect.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "deep-explore",
+                    "path": "agents/deep-explore.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/deep-explore.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "implementer",
+                    "path": "agents/implementer.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/implementer.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "quick-task",
+                    "path": "agents/quick-task.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/quick-task.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "research-agent",
+                    "path": "agents/research-agent.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/research-agent.md"
+                  }
+                ],
+                "hooks": [],
+                "mcp_servers": [],
+                "reminders": [],
+                "skills": [
+                  {
+                    "enabled_default": true,
+                    "id": "commit",
+                    "path": "skills/commit/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/commit/SKILL.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "debug",
+                    "path": "skills/debug/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/debug/SKILL.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "deep-research",
+                    "path": "skills/deep-research/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/deep-research/SKILL.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "orchestrator",
+                    "path": "skills/orchestrator/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/orchestrator/SKILL.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "review-and-commit",
+                    "path": "skills/review-and-commit/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/review-and-commit/SKILL.md"
+                  },
+                  {
+                    "enabled_default": true,
+                    "id": "setup",
+                    "path": "skills/setup/SKILL.md",
+                    "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/setup/SKILL.md"
+                  }
+                ]
+              },
+              "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
+              "display_name": "toolu",
+              "id": "toolu",
+              "manifest_family": "native",
+              "version": "8.0.4"
+            },
+            "record": {
+              "cache_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package",
+              "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
+              "display_name": "toolu",
+              "enabled": true,
+              "id": "toolu",
+              "installed_at": "2026-10-20T02:02:36.522265642Z",
+              "manifest_family": "native",
+              "manifest_sha256": "sha256:00eb2856418ae0f2a30994b0d66b093f24b5b3fdfe0ab634bac93587e552089f",
+              "package_sha256": "sha256:08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b",
+              "source": {
+                "path": "/home/user/.local/share/toolu/muse-marketplace/plugins/toolu",
+                "provenance": "marketplace-user-added"
+              },
+              "trust": "user-local",
+              "updated_at": "2026-10-20T02:02:49.480827845Z",
+              "version": "8.0.4"
+            },
+            "valid": true,
+            "warning": "third-party plugin: Agent Definitions require review before activation; skills and commands are active without review while the plugin is enabled"
+          }
+        ]
+      },
+      "stderr": ""
+    },
+    {
+      "name": "available",
+      "description": "the toolu marketplace offers brainstorm and toolu; another marketplace offers hooky; ten toolu plugins skipped for their .claude-plugin manifests",
+      "argv": [
+        "plugins",
+        "list",
+        "--available",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "available": [
+          {
+            "digest": "sha256:7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626",
+            "install": {
+              "source": "/home/user/src/hooky-marketplace/plugins/hooky",
+              "transport": "local-path"
+            },
+            "marketplace": "hmp",
+            "name": "hooky",
+            "status": "available",
+            "version": "1.0.1"
+          },
+          {
+            "digest": "sha256:c70eb9fe0d89dc931bf3a1d79d6032e207a0f13a5f6ef55797f2e4718bd21b22",
+            "install": {
+              "source": "/home/user/.local/share/toolu/muse-marketplace/plugins/brainstorm",
+              "transport": "local-path"
+            },
+            "marketplace": "toolu",
+            "name": "brainstorm",
+            "status": "available",
+            "version": "8.0.4"
+          },
+          {
+            "digest": "sha256:08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b",
+            "install": {
+              "source": "/home/user/.local/share/toolu/muse-marketplace/plugins/toolu",
+              "transport": "local-path"
+            },
+            "marketplace": "toolu",
+            "name": "toolu",
+            "status": "available",
+            "version": "8.0.4"
+          }
+        ],
+        "skipped": [
+          {
+            "marketplace": "toolu",
+            "name": "ast-grep",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "jev",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "pr-babysit",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "delivery-flow",
+            "reason": "invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 1; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 2; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 3"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "epic-orchestrator",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 1; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 2"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "python-quality",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "rust-quality",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "statusline",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "toolu-review",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+          },
+          {
+            "marketplace": "toolu",
+            "name": "ts-quality",
+            "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+          }
+        ],
+        "warnings": []
+      },
+      "stderr": ""
+    },
+    {
+      "name": "marketplace-list",
+      "description": "toolu and hooky marketplaces registered from local directories",
+      "argv": [
+        "plugins",
+        "marketplace",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "marketplaces": [
+          {
+            "fetched": true,
+            "last_updated_at": "2026-10-20T02:05:12.62339779Z",
+            "name": "hmp",
+            "plugin_count": 1,
+            "skipped": [],
+            "snapshot_path": "/home/user/.local/share/muse/plugins/marketplaces/hmp/generations/1792461912622768617/snapshot.json",
+            "source": {
+              "kind": "local-dir",
+              "path": "/home/user/src/hooky-marketplace"
+            }
+          },
+          {
+            "fetched": true,
+            "last_updated_at": "2026-10-20T02:02:31.431058522Z",
+            "name": "toolu",
+            "plugin_count": 2,
+            "skipped": [
+              {
+                "name": "ast-grep",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+              },
+              {
+                "name": "jev",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+              },
+              {
+                "name": "pr-babysit",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+              },
+              {
+                "name": "delivery-flow",
+                "reason": "invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 1; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 2; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 3"
+              },
+              {
+                "name": "epic-orchestrator",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 1; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 2"
+              },
+              {
+                "name": "python-quality",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+              },
+              {
+                "name": "rust-quality",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+              },
+              {
+                "name": "statusline",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+              },
+              {
+                "name": "toolu-review",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported"
+              },
+              {
+                "name": "ts-quality",
+                "reason": "unsupported-field: foreign hook handler field `commandWindows` is unsupported; unsupported-field: foreign hook handler field `commandWindows` is unsupported; invalid-manifest-schema: Claude manifest field `dependencies` contains an unclassifiable entry at index 0"
+              }
+            ],
+            "snapshot_path": "/home/user/.local/share/muse/plugins/marketplaces/toolu/snapshot.json",
+            "source": {
+              "kind": "local-dir",
+              "path": "/home/user/.local/share/toolu/muse-marketplace"
+            }
+          }
+        ],
+        "warnings": []
+      },
+      "stderr": ""
+    },
+    {
+      "name": "inspect-review-needed",
+      "description": "a freshly installed plugin's hook awaits review",
+      "argv": [
+        "plugins",
+        "inspect",
+        "hooky",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "active": true,
+        "active_scope": "installed-plugin",
+        "capability_diagnostics": [],
+        "diagnostics": [],
+        "effective_capabilities": [],
+        "effective_capabilities_scope": "plugin-capability-snapshot",
+        "plugin": {
+          "capabilities": {
+            "commands": [],
+            "hooks": [
+              {
+                "async": false,
+                "command": [
+                  "/bin/sh",
+                  "hooks/pre"
+                ],
+                "compatibility_name": null,
+                "event": "PreToolUse",
+                "id": "pre",
+                "matcher": null,
+                "shell_command": null,
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930/package/hooks/pre",
+                "source_relative_path": "hooks/pre",
+                "timeout_ms": 5000
+              }
+            ],
+            "mcp_servers": [],
+            "reminders": [],
+            "skills": []
+          },
+          "description": "probe",
+          "display_name": null,
+          "id": "hooky",
+          "manifest_family": "native",
+          "version": "1.0.0"
+        },
+        "record": {
+          "cache_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930/package",
+          "description": "probe",
+          "display_name": null,
+          "enabled": true,
+          "id": "hooky",
+          "installed_at": "2026-10-20T02:05:12.336937032Z",
+          "manifest_family": "native",
+          "manifest_sha256": "sha256:bb7eb00a9118c8c9b7eae7ece65039b5628c225e6f7a9ec6dd5518f352873636",
+          "package_sha256": "sha256:2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930",
+          "source": {
+            "path": "/home/user/src/hooky-marketplace/plugins/hooky",
+            "provenance": "marketplace-user-added"
+          },
+          "trust": "user-local",
+          "updated_at": null,
+          "version": "1.0.0"
+        },
+        "runtime_capabilities": [
+          {
+            "candidate": {
+              "capability_id": "pre",
+              "definition_hash": "sha256:54d390da2a44bb13cd790f06df46ed18010b8a2437184f18eecc98a2598071db",
+              "display_path": "plugin://hooky/hook/pre",
+              "kind": "hook",
+              "plugin_id": "hooky",
+              "source_digest": "sha256:2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930",
+              "stable_id": "plugin:hooky:hook:pre"
+            },
+            "diagnostic": null,
+            "status": "review_needed"
+          }
+        ],
+        "valid": true,
+        "warning": "third-party plugin: hooks require review before activation"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "inspect-trusted",
+      "description": "after approve the hook is trusted and enabled",
+      "argv": [
+        "plugins",
+        "inspect",
+        "hooky",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "active": true,
+        "active_scope": "installed-plugin",
+        "capability_diagnostics": [],
+        "diagnostics": [],
+        "effective_capabilities": [],
+        "effective_capabilities_scope": "plugin-capability-snapshot",
+        "plugin": {
+          "capabilities": {
+            "commands": [],
+            "hooks": [
+              {
+                "async": false,
+                "command": [
+                  "/bin/sh",
+                  "hooks/pre"
+                ],
+                "compatibility_name": null,
+                "event": "PreToolUse",
+                "id": "pre",
+                "matcher": null,
+                "shell_command": null,
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930/package/hooks/pre",
+                "source_relative_path": "hooks/pre",
+                "timeout_ms": 5000
+              }
+            ],
+            "mcp_servers": [],
+            "reminders": [],
+            "skills": []
+          },
+          "description": "probe",
+          "display_name": null,
+          "id": "hooky",
+          "manifest_family": "native",
+          "version": "1.0.0"
+        },
+        "record": {
+          "cache_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930/package",
+          "description": "probe",
+          "display_name": null,
+          "enabled": true,
+          "id": "hooky",
+          "installed_at": "2026-10-20T02:05:12.336937032Z",
+          "manifest_family": "native",
+          "manifest_sha256": "sha256:bb7eb00a9118c8c9b7eae7ece65039b5628c225e6f7a9ec6dd5518f352873636",
+          "package_sha256": "sha256:2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930",
+          "source": {
+            "path": "/home/user/src/hooky-marketplace/plugins/hooky",
+            "provenance": "marketplace-user-added"
+          },
+          "trust": "user-local",
+          "updated_at": null,
+          "version": "1.0.0"
+        },
+        "runtime_capabilities": [
+          {
+            "candidate": {
+              "capability_id": "pre",
+              "definition_hash": "sha256:54d390da2a44bb13cd790f06df46ed18010b8a2437184f18eecc98a2598071db",
+              "display_path": "plugin://hooky/hook/pre",
+              "kind": "hook",
+              "plugin_id": "hooky",
+              "source_digest": "sha256:2cc4346d72a7a1abf9d12d8fe15a1ebdf9379f033c529b9215d845f5d01f9930",
+              "stable_id": "plugin:hooky:hook:pre"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          }
+        ],
+        "valid": true,
+        "warning": "third-party plugin: hooks require review before activation"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "inspect-modified",
+      "description": "after an update that changed the hook definition",
+      "argv": [
+        "plugins",
+        "inspect",
+        "hooky",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "active": true,
+        "active_scope": "installed-plugin",
+        "capability_diagnostics": [],
+        "diagnostics": [],
+        "effective_capabilities": [],
+        "effective_capabilities_scope": "plugin-capability-snapshot",
+        "plugin": {
+          "capabilities": {
+            "commands": [],
+            "hooks": [
+              {
+                "async": false,
+                "command": [
+                  "/bin/sh",
+                  "hooks/pre"
+                ],
+                "compatibility_name": null,
+                "event": "PreToolUse",
+                "id": "pre",
+                "matcher": null,
+                "shell_command": null,
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626/package/hooks/pre",
+                "source_relative_path": "hooks/pre",
+                "timeout_ms": 9000
+              }
+            ],
+            "mcp_servers": [],
+            "reminders": [],
+            "skills": []
+          },
+          "description": "probe",
+          "display_name": null,
+          "id": "hooky",
+          "manifest_family": "native",
+          "version": "1.0.1"
+        },
+        "record": {
+          "cache_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626/package",
+          "description": "probe",
+          "display_name": null,
+          "enabled": true,
+          "id": "hooky",
+          "installed_at": "2026-10-20T02:05:12.336937032Z",
+          "manifest_family": "native",
+          "manifest_sha256": "sha256:ca9e56a1dc4c54a275919b5f4c018e3683348360eaa01a972d740c6db770e6e8",
+          "package_sha256": "sha256:7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626",
+          "source": {
+            "path": "/home/user/src/hooky-marketplace/plugins/hooky",
+            "provenance": "marketplace-user-added"
+          },
+          "trust": "user-local",
+          "updated_at": "2026-10-20T02:05:12.679700544Z",
+          "version": "1.0.1"
+        },
+        "runtime_capabilities": [
+          {
+            "candidate": {
+              "capability_id": "pre",
+              "definition_hash": "sha256:f879b2085a327c63a1abad732b7aa7d19d7b6597e388271c5eebd8a922663839",
+              "display_path": "plugin://hooky/hook/pre",
+              "kind": "hook",
+              "plugin_id": "hooky",
+              "source_digest": "sha256:7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626",
+              "stable_id": "plugin:hooky:hook:pre"
+            },
+            "diagnostic": {
+              "code": "modified_definition_hash",
+              "message": "runtime capability `plugin:hooky:hook:pre` is inactive: definition hash changed and needs review",
+              "stable_id": "plugin:hooky:hook:pre"
+            },
+            "status": "modified"
+          }
+        ],
+        "valid": true,
+        "warning": "third-party plugin: hooks require review before activation"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "inspect-toolu-trusted",
+      "description": "toolu's five agent definitions after approve",
+      "argv": [
+        "plugins",
+        "inspect",
+        "toolu",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "active": true,
+        "active_scope": "installed-plugin",
+        "capability_diagnostics": [],
+        "diagnostics": [
+          {
+            "code": "multiple-manifests",
+            "message": "selected `.muse-plugin/plugin.json`; ignoring `.claude-plugin/plugin.json`, `.codex-plugin/plugin.json`",
+            "path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package",
+            "severity": "warning"
+          }
+        ],
+        "effective_capabilities": [
+          {
+            "kind": "command",
+            "stable_id": "plugin:toolu:architect"
+          },
+          {
+            "kind": "command",
+            "stable_id": "plugin:toolu:deep-explore"
+          },
+          {
+            "kind": "command",
+            "stable_id": "plugin:toolu:implementer"
+          },
+          {
+            "kind": "command",
+            "stable_id": "plugin:toolu:quick-task"
+          },
+          {
+            "kind": "command",
+            "stable_id": "plugin:toolu:research-agent"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:commit"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:debug"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:deep-research"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:orchestrator"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:review-and-commit"
+          },
+          {
+            "kind": "skill",
+            "stable_id": "plugin:toolu:setup"
+          }
+        ],
+        "effective_capabilities_scope": "plugin-capability-snapshot",
+        "plugin": {
+          "capabilities": {
+            "commands": [
+              {
+                "enabled_default": true,
+                "id": "architect",
+                "path": "agents/architect.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/architect.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "deep-explore",
+                "path": "agents/deep-explore.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/deep-explore.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "implementer",
+                "path": "agents/implementer.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/implementer.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "quick-task",
+                "path": "agents/quick-task.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/quick-task.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "research-agent",
+                "path": "agents/research-agent.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/agents/research-agent.md"
+              }
+            ],
+            "hooks": [],
+            "mcp_servers": [],
+            "reminders": [],
+            "skills": [
+              {
+                "enabled_default": true,
+                "id": "commit",
+                "path": "skills/commit/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/commit/SKILL.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "debug",
+                "path": "skills/debug/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/debug/SKILL.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "deep-research",
+                "path": "skills/deep-research/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/deep-research/SKILL.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "orchestrator",
+                "path": "skills/orchestrator/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/orchestrator/SKILL.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "review-and-commit",
+                "path": "skills/review-and-commit/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/review-and-commit/SKILL.md"
+              },
+              {
+                "enabled_default": true,
+                "id": "setup",
+                "path": "skills/setup/SKILL.md",
+                "source_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package/skills/setup/SKILL.md"
+              }
+            ]
+          },
+          "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
+          "display_name": "toolu",
+          "id": "toolu",
+          "manifest_family": "native",
+          "version": "8.0.4"
+        },
+        "record": {
+          "cache_path": "/home/user/.local/share/muse/plugins/cache/local/toolu/08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b/package",
+          "description": "Dual-host engineering discipline for Claude Code and Codex: workflow skills, agents, commands, and registry-driven quality hooks.",
+          "display_name": "toolu",
+          "enabled": true,
+          "id": "toolu",
+          "installed_at": "2026-10-20T02:02:36.522265642Z",
+          "manifest_family": "native",
+          "manifest_sha256": "sha256:00eb2856418ae0f2a30994b0d66b093f24b5b3fdfe0ab634bac93587e552089f",
+          "package_sha256": "sha256:08419cdce99f15c630dd8edcd598f0912cca8982bd24b78f8a5c4398f80d701b",
+          "source": {
+            "path": "/home/user/.local/share/toolu/muse-marketplace/plugins/toolu",
+            "provenance": "marketplace-user-added"
+          },
+          "trust": "user-local",
+          "updated_at": "2026-10-20T02:02:49.480827845Z",
+          "version": "8.0.4"
+        },
+        "runtime_capabilities": [
+          {
+            "candidate": {
+              "original_ordinal": 2,
+              "plugin_id": "toolu",
+              "scoped_definition_id": "toolu/implementer"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          },
+          {
+            "candidate": {
+              "original_ordinal": 0,
+              "plugin_id": "toolu",
+              "scoped_definition_id": "toolu/architect"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          },
+          {
+            "candidate": {
+              "original_ordinal": 4,
+              "plugin_id": "toolu",
+              "scoped_definition_id": "toolu/research-agent"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          },
+          {
+            "candidate": {
+              "original_ordinal": 3,
+              "plugin_id": "toolu",
+              "scoped_definition_id": "toolu/quick-task"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          },
+          {
+            "candidate": {
+              "original_ordinal": 1,
+              "plugin_id": "toolu",
+              "scoped_definition_id": "toolu/deep-explore"
+            },
+            "diagnostic": null,
+            "status": "trusted_enabled"
+          }
+        ],
+        "valid": true,
+        "warning": "third-party plugin: Agent Definitions require review before activation; skills and commands are active without review while the plugin is enabled"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "approve",
+      "description": "approve trusts the plugin's current definitions",
+      "argv": [
+        "plugins",
+        "approve",
+        "hooky",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "decision": "approve",
+        "runtime_capabilities": [
+          {
+            "enabled": true,
+            "stable_id": "plugin:hooky:hook:pre",
+            "trusted_definition_hash": "sha256:54d390da2a44bb13cd790f06df46ed18010b8a2437184f18eecc98a2598071db"
+          }
+        ]
+      },
+      "stderr": ""
+    },
+    {
+      "name": "remove",
+      "description": "remove of an installed plugin",
+      "argv": [
+        "plugins",
+        "remove",
+        "hooky",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "cache_path": "/home/user/.local/share/muse/plugins/cache/local/hooky/7052b652c6e55ea64fe6ac4c57d9ea72fbb20a16fd066134b82e63ba0ef9e626/package",
+        "data_path": null,
+        "lockfile_path": "/home/user/.local/share/muse/plugins/installed.json",
+        "removed": "hooky",
+        "warning": null
+      },
+      "stderr": ""
+    },
+    {
+      "name": "remove-missing",
+      "description": "remove of a plugin that is not installed",
+      "argv": [
+        "plugins",
+        "remove",
+        "hooky",
+        "--json"
+      ],
+      "exit": 1,
+      "stdout": {
+        "error": {
+          "code": "unknown-plugin",
+          "message": "plugin `hooky` is not installed"
+        }
+      },
+      "stderr": "plugin `hooky` is not installed\n"
+    }
+  ]
+}

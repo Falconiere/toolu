@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::error::ErrorKind;
 
-use super::{Request, Scope, Verb, command, request};
+use super::{Approval, Request, Scope, Verb, command, request};
 
 fn parse(words: &[&str]) -> Result<Request, ErrorKind> {
   let argv = std::iter::once("plugins").chain(words.iter().copied());
@@ -37,8 +37,26 @@ fn reads_a_full_install_invocation() {
       dry_run: true,
       no_input: true,
       catalog: Some(PathBuf::from("/tmp/m.json")),
+      approval: Approval::Report,
     })
   );
+}
+
+#[test]
+fn approve_is_taken_by_install_and_update_only() {
+  for verb in ["install", "update"] {
+    assert_eq!(
+      parse(&[verb, "--approve"]).map(|request| request.approval),
+      Ok(Approval::Approve),
+      "{verb}"
+    );
+    assert_eq!(
+      parse(&[verb]).map(|request| request.approval),
+      Ok(Approval::Report)
+    );
+  }
+  assert!(parse(&["list", "--approve"]).is_err());
+  assert!(parse(&["remove", "toolu", "--approve"]).is_err());
 }
 
 #[test]

@@ -65,7 +65,8 @@ fn listings_normalize_and_the_wrong_shape_is_an_error_naming_the_command() {
     Ok(vec![Installed {
       name: "jev".to_owned(),
       version: "7.11.0".to_owned(),
-      enabled: false
+      enabled: false,
+      source: None
     }])
   );
   let Err(wrong) = Adapter::Claude.parse_list(r#"{"installed":[]}"#) else {
@@ -76,4 +77,34 @@ fn listings_normalize_and_the_wrong_shape_is_an_error_naming_the_command() {
     panic!("an array parsed as a codex listing");
   };
   assert!(wrong.starts_with("codex plugin list --json: "), "{wrong}");
+}
+
+#[test]
+fn muse_builds_its_plugins_argv_with_json_and_no_scope() {
+  let muse = Adapter::Muse;
+  assert_eq!(
+    words(&muse.install("toolu", Some(Scope::User))),
+    "muse plugins install toolu@toolu --json"
+  );
+  assert_eq!(words(&muse.remove("jev")), "muse plugins remove jev --json");
+  assert_eq!(words(&muse.update("jev")), "muse plugins update jev --json");
+  assert_eq!(words(&muse.list_installed()), "muse plugins list --json");
+  assert_eq!(
+    words(&muse.list_available()),
+    "muse plugins list --available --json"
+  );
+  assert_eq!(
+    muse.inspect("jev").map(|argv| words(&argv)).as_deref(),
+    Some("muse plugins inspect jev --json")
+  );
+  assert_eq!(
+    muse.approve("jev").map(|argv| words(&argv)).as_deref(),
+    Some("muse plugins approve jev --json")
+  );
+  assert_eq!(Adapter::Claude.inspect("jev"), None);
+  assert_eq!(Adapter::Codex.approve("jev"), None);
+  let Err(wrong) = muse.parse_list("[]") else {
+    panic!("an array parsed as a muse listing");
+  };
+  assert!(wrong.starts_with("muse plugins list --json: "), "{wrong}");
 }

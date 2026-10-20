@@ -11,10 +11,14 @@ use crate::args::Scope;
 use crate::fail::{Fail, Res};
 use crate::prompt::Ask;
 
-/// The plugin commands of Claude Code and Codex, normalized.
+/// The plugin commands of Claude Code, Codex and Muse, normalized.
 pub(crate) mod adapter;
+/// The toolu checkout Muse installs from.
+pub(crate) mod checkout;
 mod claude;
 mod codex;
+/// Muse's plugin documents and marketplace commands.
+pub(crate) mod muse;
 /// Host commands with a deadline.
 pub(crate) mod run;
 
@@ -25,10 +29,13 @@ pub(crate) enum Target {
   Claude,
   /// Codex, through `codex plugin`.
   Codex,
+  /// Muse, through `muse plugins` (#549).
+  Muse,
 }
 
-/// The probe order.
-const PROBED: [Target; 2] = [Target::Claude, Target::Codex];
+/// The probe order: Muse comes last, so the order Claude Code and Codex users
+/// are offered stays as it was.
+const PROBED: [Target; 3] = [Target::Claude, Target::Codex, Target::Muse];
 
 impl Target {
   /// The `--host` value, which is also the binary probed on `PATH`.
@@ -36,6 +43,7 @@ impl Target {
     match self {
       Target::Claude => "claude",
       Target::Codex => "codex",
+      Target::Muse => "muse",
     }
   }
 }
@@ -45,8 +53,9 @@ pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
     Host::Codex => Ok(Target::Codex),
-    Host::Cursor | Host::Hermes | Host::Muse => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude or codex",
+    Host::Muse => Ok(Target::Muse),
+    Host::Cursor | Host::Hermes => Err(Fail::usage(format!(
+      "--host {} is not an installer target; toolu plugins installs into claude, codex or muse",
       host.name()
     ))),
   }
@@ -139,12 +148,13 @@ pub(crate) fn resolve(
   }
 }
 
-/// Claude Code takes every scope, Codex none.
+/// Claude Code takes every scope, Codex and Muse none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex) => Err(Fail::usage(
-      "--scope is for Claude Code; codex has no scope concept",
-    )),
+    (Some(_), Target::Codex | Target::Muse) => Err(Fail::usage(format!(
+      "--scope is for Claude Code; {} has no scope concept",
+      target.name()
+    ))),
     (None, _) | (Some(_), Target::Claude) => Ok(()),
   }
 }

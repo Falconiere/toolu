@@ -69,8 +69,11 @@ fn parse(value: &Value) -> Result<Selection, String> {
     Some(Value::String(name)) => Some(match name.as_str() {
       "claude" => Target::Claude,
       "codex" => Target::Codex,
+      "muse" => Target::Muse,
       _other => {
-        return Err(format!("\"host\" must be claude or codex, got {name}"));
+        return Err(format!(
+          "\"host\" must be claude, codex or muse, got {name}"
+        ));
       }
     }),
     Some(_other) => return Err("\"host\" must be a string".to_owned()),

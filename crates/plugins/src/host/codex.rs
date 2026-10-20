@@ -26,6 +26,7 @@ fn entry(item: &Value) -> Result<Installed, String> {
     name: text("name")?,
     version: text("version")?,
     enabled: item.get("enabled").and_then(Value::as_bool).unwrap_or(true),
+    source: None,
   })
 }
 

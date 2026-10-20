@@ -1,4 +1,4 @@
-//! `remove` on Claude Code and Codex: each name uninstalled independently.
+//! `remove`: each name uninstalled independently, on any host.
 
 use crate::host::run::first_line;
 use crate::step::{Status, Step};

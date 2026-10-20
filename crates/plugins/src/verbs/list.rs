@@ -1,4 +1,4 @@
-//! `list` on Claude Code and Codex: the catalog joined with `plugin list --json`.
+//! `list`: the catalog joined with the host's listing of installed plugins.
 
 use crate::catalog::Catalog;
 use crate::fail::{Fail, Res};

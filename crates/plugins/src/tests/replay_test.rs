@@ -32,6 +32,16 @@ fn a_valid_selection_replays_its_names_and_host() {
       enabled: Vec::new()
     })
   );
+  assert_eq!(
+    replay(
+      r#"{"version":1,"host":"muse","enabled":["toolu"]}"#,
+      "7.11.0"
+    ),
+    Ok(Selection {
+      host: Some(Target::Muse),
+      enabled: names(&["toolu"])
+    })
+  );
   assert!(
     replay(
       r#"{"version":1,"generatorVersion":"7.0.0","enabled":[]}"#,
@@ -79,7 +89,7 @@ fn malformed_and_missing_files_are_usage_errors() {
     (r#"{"version":1,"enabled":[""]}"#, "non-empty strings"),
     (
       r#"{"version":1,"host":"cursor","enabled":[]}"#,
-      "\"host\" must be claude or codex",
+      "\"host\" must be claude, codex or muse",
     ),
     (
       r#"{"version":1,"host":3,"enabled":[]}"#,

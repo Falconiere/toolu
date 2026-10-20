@@ -1,15 +1,16 @@
-//! `install` on Claude Code and Codex: add the marketplace, then each plugin in
-//! dependency order. A failure of the core plugin skips its dependents, which
-//! cannot work without it; any other failure is recorded and the rest continue.
+//! `install`: make the marketplace ready, then each plugin in dependency order,
+//! then settle hook approval (Muse). A failure of the core plugin skips its
+//! dependents, which cannot work without it; any other failure is recorded and
+//! the rest continue.
 
-use crate::args::Scope;
+use crate::args::{Scope, Verb};
 use crate::catalog::Catalog;
 use crate::catalog::order::{dependents_of, install_order};
 use crate::fail::Res;
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
-use crate::verbs::{Driver, find};
+use crate::verbs::{Driver, find, foreign_step, prepare, trust};
 
 /// The plugin every other one builds on.
 pub(crate) const CORE: &str = "toolu";
@@ -34,17 +35,14 @@ fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<
   }
 }
 
-/// Adds the toolu marketplace. A failure is not fatal (it may be there
-/// already), so it only becomes a hint on a plugin that then fails to install.
-fn add_marketplace(driver: &Driver) -> String {
-  let ran = driver.run(&driver.adapter.add_marketplace());
+/// Runs the install of `name`; a failure names the marketplace hint too.
+fn attempt(driver: &Driver, name: &str, argv: Vec<String>, add_note: &str) -> Step {
+  let ran = driver.run(&argv);
   if ran.ok() {
-    return String::new();
+    return Step::new(name, Status::Installed, "installed", argv);
   }
-  format!(
-    "; the marketplace add also failed: {}",
-    first_line(&ran.stderr, "no output")
-  )
+  let detail = format!("{}{add_note}", first_line(&ran.stderr, "install failed"));
+  Step::new(name, Status::Failed, detail, argv)
 }
 
 /// Installs `requested` (all when empty) with their dependencies.
@@ -60,7 +58,7 @@ pub(crate) fn run(
   let add_note = if dry_run {
     String::new()
   } else {
-    add_marketplace(driver)
+    prepare::run(driver, Verb::Install)?
   };
   let installed = driver.versions(&adapter.list_installed());
   let offered = driver.versions(&adapter.list_available());
@@ -79,23 +77,25 @@ pub(crate) fn run(
       continue;
     }
     if let Some(have) = find(&installed, name) {
-      steps.push(present(name, have, find(&offered, name), argv));
+      steps.push(if driver.foreign(have) {
+        foreign_step(name, have, argv)
+      } else {
+        present(name, have, find(&offered, name), argv)
+      });
       continue;
     }
     if dry_run {
       steps.push(Step::new(name, Status::Skipped, "dry run", argv));
       continue;
     }
-    let ran = driver.run(&argv);
-    if ran.ok() {
-      steps.push(Step::new(name, Status::Installed, "installed", argv));
-    } else {
-      core_failed |= name == CORE;
-      let detail = format!("{}{add_note}", first_line(&ran.stderr, "install failed"));
-      steps.push(Step::new(name, Status::Failed, detail, argv));
-    }
+    let step = attempt(driver, name, argv, &add_note);
+    core_failed |= name == CORE && step.failed();
+    steps.push(step);
   }
-  Ok(steps)
+  if dry_run {
+    return Ok(steps);
+  }
+  Ok(trust::settle(driver, steps))
 }
 
 #[cfg(test)]

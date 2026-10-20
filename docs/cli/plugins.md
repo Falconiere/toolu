@@ -27,7 +27,7 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Claude Code and Codex are driven through their own plugin CLIs. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
+Claude Code, Codex and Muse are driven through their own plugin CLIs. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
 ```
 
 ## `toolu plugins install`
@@ -51,6 +51,7 @@ Options:
       --no-input          Never prompt; fail naming what is missing
       --config <PATH>     Replay a .toolu/plugins.json selection
   -y, --yes               Confirm a destructive operation
+      --approve           Approve each plugin's hooks after installing or updating it (Muse only)
   -h, --help              Print help
 ```
 
@@ -112,5 +113,6 @@ Options:
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
+      --approve           Approve each plugin's hooks after installing or updating it (Muse only)
   -h, --help              Print help
 ```
