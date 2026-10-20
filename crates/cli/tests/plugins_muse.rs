@@ -84,9 +84,14 @@ impl Sb {
     Ok(text)
   }
 
-  fn log(&self, name: &str) -> Vec<String> {
-    let text = std::fs::read_to_string(self.root().join(format!("{name}.log"))).unwrap_or_default();
-    text.lines().map(str::to_owned).collect()
+  /// The argv lines a stub logged; none when it never ran. Any other read
+  /// error fails the test rather than reading as an empty log.
+  fn log(&self, name: &str) -> Res<Vec<String>> {
+    match std::fs::read_to_string(self.root().join(format!("{name}.log"))) {
+      Ok(text) => Ok(text.lines().map(str::to_owned).collect()),
+      Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(Vec::new()),
+      Err(err) => Err(err.into()),
+    }
   }
 
   fn git(&self, args: &[&str]) -> Res<()> {
@@ -191,7 +196,7 @@ fn muse_alone_on_path_lists_the_captured_plugins_without_asking() {
     )
   );
   assert_eq!(
-    sb.log("muse"),
+    sb.log("muse").unwrap(),
     ["plugins list --json", "plugins list --json"]
   );
 }
@@ -216,9 +221,9 @@ fn with_three_hosts_muse_is_chosen_by_flag_and_never_guessed() {
     .run(&["--json", "plugins", "list", "--host", "muse"])
     .unwrap();
   assert_eq!(chosen.status.code(), Some(0), "{}", text(&chosen.stderr));
-  assert_eq!(sb.log("muse"), ["plugins list --json"]);
-  assert_eq!(sb.log("claude"), Vec::<String>::new());
-  assert_eq!(sb.log("codex"), Vec::<String>::new());
+  assert_eq!(sb.log("muse").unwrap(), ["plugins list --json"]);
+  assert_eq!(sb.log("claude").unwrap(), Vec::<String>::new());
+  assert_eq!(sb.log("codex").unwrap(), Vec::<String>::new());
 }
 
 #[test]
@@ -251,7 +256,7 @@ fn a_scope_with_muse_is_a_usage_error_naming_it() {
     "{}",
     text(&out.stderr)
   );
-  assert_eq!(sb.log("muse"), Vec::<String>::new());
+  assert_eq!(sb.log("muse").unwrap(), Vec::<String>::new());
 }
 
 #[test]
@@ -283,7 +288,7 @@ fn install_registers_the_checkout_and_approves_only_under_the_flag() {
     text(&approved.stdout),
     "  + toolu            installed; approved\n"
   );
-  let log = sb.log("muse");
+  let log = sb.log("muse").unwrap();
   assert_eq!(
     log.get(..6),
     Some(

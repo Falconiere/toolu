@@ -10,7 +10,8 @@ fn checkout_dir(sb: &Sandbox) -> String {
 
 fn head_tag(sb: &Sandbox) -> String {
   let dir = sb.path("home/.local/share/toolu/muse-marketplace");
-  std::fs::read_to_string(dir.join(".agents/plugins/marketplace.json")).unwrap_or_default()
+  std::fs::read_to_string(dir.join(".agents/plugins/marketplace.json"))
+    .expect("a file the test wrote")
 }
 
 #[test]
@@ -70,7 +71,8 @@ fn a_foreign_toolu_marketplace_stops_before_any_install() {
   sb.muse("never");
   let origin = sb.origin(&["v9.9.8"]);
   sb.capture("marketplace-list", "muse-marketplaces.json");
-  let listing = std::fs::read_to_string(sb.path("muse-marketplaces.json")).unwrap_or_default();
+  let listing =
+    std::fs::read_to_string(sb.path("muse-marketplaces.json")).expect("a file the test wrote");
   sb.write(
     "muse-marketplaces.json",
     &listing.replace(&checkout_dir(&sb), "/srv/elsewhere"),

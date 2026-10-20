@@ -189,7 +189,8 @@ fn muse_installed(sb: &Sandbox) -> Driver {
   sb.muse("never");
   let origin = sb.origin(&["v8.0.4"]);
   sb.capture("list", "muse-installed.json");
-  let listing = std::fs::read_to_string(sb.path("muse-installed.json")).unwrap_or_default();
+  let listing =
+    std::fs::read_to_string(sb.path("muse-installed.json")).expect("a file the test wrote");
   sb.write(
     "muse-installed.json",
     &listing.replace("hooky", "brainstorm"),
