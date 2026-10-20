@@ -54,12 +54,14 @@ impl Fixture {
   }
 
   fn hook(&self, name: &str, payload: &Value) -> io::Result<Output> {
+    let path = std::env::var_os("PATH")
+      .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "PATH is not set"))?;
     let mut cmd = Command::new(TOOLU);
     cmd
       .args(["hook", name, "--event", "PreToolUse"])
       .current_dir(&self.project)
       .env_clear()
-      .env("PATH", std::env::var("PATH").unwrap_or_default())
+      .env("PATH", path)
       .env(
         "HOME",
         self
