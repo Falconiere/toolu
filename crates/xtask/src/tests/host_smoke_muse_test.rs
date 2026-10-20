@@ -25,10 +25,11 @@ fn the_command_line_is_a_never_asking_headless_exec() {
 
 #[test]
 fn auth_follows_the_launchers_lookup_order() {
-  let dir = tempfile::tempdir().unwrap();
-  let explicit = dir.path().join("explicit.json");
-  let xdg = dir.path().join("xdg");
-  let home = dir.path().join("home");
+  let tmp = tempfile::tempdir().unwrap();
+  let dir = std::fs::canonicalize(tmp.path()).unwrap();
+  let explicit = dir.join("explicit.json");
+  let xdg = dir.join("xdg");
+  let home = dir.join("home");
   let vars = |pairs: Vec<(&'static str, PathBuf)>| {
     move |key: &str| {
       pairs

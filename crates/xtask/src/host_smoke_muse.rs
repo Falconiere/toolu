@@ -44,7 +44,8 @@ pub(crate) fn argv(exe: &Path, prompt: &str) -> Vec<String> {
 
 /// The user's Muse credential, where the `muse` launcher reads it:
 /// `MUSE_AUTH_PATH`, else `$XDG_CONFIG_HOME/muse/auth.json`, else
-/// `$HOME/.config/muse/auth.json`. `var` reads the environment.
+/// `$HOME/.config/muse/auth.json`, made absolute so its link resolves from the
+/// private home. `var` reads the environment.
 pub(crate) fn require_auth(var: &dyn Fn(&str) -> Option<OsString>) -> Result<PathBuf, String> {
   let auth = if let Some(path) = var("MUSE_AUTH_PATH") {
     PathBuf::from(path)
@@ -55,7 +56,7 @@ pub(crate) fn require_auth(var: &dyn Fn(&str) -> Option<OsString>) -> Result<Pat
     PathBuf::from(home).join(".config/muse/auth.json")
   };
   if auth.is_file() {
-    Ok(auth)
+    std::fs::canonicalize(&auth).map_err(|err| format!("{}: {err}", auth.display()))
   } else {
     Err(format!(
       "no Muse auth at {}; run `muse login`",
