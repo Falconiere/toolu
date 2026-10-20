@@ -1,5 +1,6 @@
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
+use std::time::Duration;
 
 use serde_json::json;
 use toolu_protocol::host::Host;
@@ -8,7 +9,7 @@ use toolu_runtime::host::roots::Roots;
 
 use super::super::checks::Status;
 use super::super::inventory::plugins_check;
-use super::{collect, parse_inspect, parse_listing};
+use super::{collect, collect_with_budget, parse_inspect, parse_listing};
 
 fn toolu_root() -> String {
   Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -62,6 +63,9 @@ fn collect_reads_installed_capabilities_through_the_muse_command() {
   let (_temp, roots, listing, inspection) = command_fixture();
   write_list(&listing, true, true);
   write_inspect(&inspection, "review_needed");
+  let incomplete = plugins_check(&collect_with_budget(&roots, Duration::ZERO));
+  assert_eq!(incomplete.status, Status::Warn);
+  assert!(incomplete.summary.contains("inventory is incomplete"));
   let pending = plugins_check(&collect(&roots));
   assert_eq!(pending.status, Status::Warn);
   assert!(pending.summary.contains("muse plugins approve toolu"));

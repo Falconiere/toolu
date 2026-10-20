@@ -2,7 +2,7 @@
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 use toolu_runtime::host::roots::Roots;
@@ -11,6 +11,7 @@ use toolu_runtime::process::{Spec, run};
 use super::inventory::{Inventory, MuseHealth, Plugin};
 
 const TIMEOUT: Duration = Duration::from_secs(10);
+const INVENTORY_BUDGET: Duration = Duration::from_secs(30);
 const REPOSITORY: &str = "https://github.com/falconiere/toolu";
 
 /// One toolu plugin selected from Muse's installed listing.
@@ -33,7 +34,13 @@ pub(super) struct MuseApproval {
 
 /// Read the installed toolu plugins and inspect their runtime capabilities.
 pub(super) fn collect(roots: &Roots) -> Inventory {
-  let listing = invoke(roots, &["plugins", "list", "--json"]).and_then(|text| parse_listing(&text));
+  collect_with_budget(roots, INVENTORY_BUDGET)
+}
+
+fn collect_with_budget(roots: &Roots, budget: Duration) -> Inventory {
+  let started = Instant::now();
+  let listing =
+    invoke(roots, &["plugins", "list", "--json"], TIMEOUT).and_then(|text| parse_listing(&text));
   let Ok(entries) = listing else {
     return Inventory {
       plugins: Vec::new(),
@@ -43,8 +50,17 @@ pub(super) fn collect(roots: &Roots) -> Inventory {
   let mut plugins = Vec::new();
   let mut warnings = Vec::new();
   for entry in entries {
-    let approval = invoke(roots, &["plugins", "inspect", &entry.id, "--json"])
-      .and_then(|text| parse_inspect(&text));
+    let remaining = budget.saturating_sub(started.elapsed());
+    if remaining.is_zero() {
+      warnings.push("Muse plugin inspection timed out; inventory is incomplete".to_owned());
+      break;
+    }
+    let approval = invoke(
+      roots,
+      &["plugins", "inspect", &entry.id, "--json"],
+      remaining.min(TIMEOUT),
+    )
+    .and_then(|text| parse_inspect(&text));
     let (approval, pending_hooks) = if let Ok(result) = approval {
       (result.approval, result.pending_hooks)
     } else {
@@ -69,12 +85,12 @@ pub(super) fn collect(roots: &Roots) -> Inventory {
   }
 }
 
-fn invoke(roots: &Roots, args: &[&str]) -> Result<String, String> {
+fn invoke(roots: &Roots, args: &[&str], timeout: Duration) -> Result<String, String> {
   let mut command = vec!["muse".to_owned()];
   command.extend(args.iter().map(|part| (*part).to_owned()));
   let mut spec = Spec::new(command);
   spec.env = Some(roots.env().clone());
-  spec.timeout = TIMEOUT;
+  spec.timeout = timeout;
   spec.max_output_bytes = 1_048_576;
   let output = run(&spec).map_err(|error| format!("Muse CLI unavailable: {error:?}"))?;
   if output.exit_code != 0 || output.timed_out || output.truncated {

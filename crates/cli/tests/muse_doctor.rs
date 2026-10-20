@@ -14,6 +14,7 @@ fn muse_doctor_reports_roots_and_unavailable_binary_and_inventory() {
   let output = Command::new(TOOLU)
     .args(["--host", "muse", "--json", "doctor"])
     .env("HOME", home.path())
+    .env("XDG_CONFIG_HOME", home.path().join(".config"))
     .env("PATH", &empty_bin)
     .env("TOOLU_PROJECT_DIR", home.path())
     .env_remove("TOOLU_CONFIG_DIR")
@@ -25,11 +26,10 @@ fn muse_doctor_reports_roots_and_unavailable_binary_and_inventory() {
   let checks = document["checks"].as_array().unwrap();
   let check = |id: &str| checks.iter().find(|item| item["id"] == id).unwrap();
   assert_eq!(check("host")["details"]["host"], "muse");
-  assert!(
-    check("host")["details"]["configRoot"]
-      .as_str()
-      .unwrap()
-      .ends_with("/.config/muse")
+  let expected_config = home.path().join(".config/muse");
+  assert_eq!(
+    check("host")["details"]["configRoot"].as_str(),
+    expected_config.to_str()
   );
   assert_eq!(check("reachability")["status"], "fail");
   assert_eq!(check("plugins")["status"], "warn");
