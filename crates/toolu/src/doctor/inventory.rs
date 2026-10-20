@@ -20,6 +20,15 @@ pub(super) struct Plugin {
   pub(super) name: String,
   pub(super) version: Option<String>,
   pub(super) root: Option<PathBuf>,
+  pub(super) muse: Option<MuseHealth>,
+}
+
+/// Muse activation and approval state, separate from installation.
+pub(super) struct MuseHealth {
+  pub(super) active: bool,
+  pub(super) enabled: bool,
+  pub(super) approval: &'static str,
+  pub(super) pending_hooks: Vec<String>,
 }
 
 /// Plugins the host could list, plus a warning when the inventory is incomplete.
@@ -52,9 +61,8 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
   match roots.host() {
     Host::Claude => claude(roots, cwd),
     Host::Codex => codex(roots),
-    Host::Cursor | Host::Hermes | Host::Muse => {
-      Inventory::warn("plugin inventory is unknown for this host")
-    }
+    Host::Muse => super::muse::collect(roots),
+    Host::Cursor | Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
 }
 
@@ -62,8 +70,10 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
 pub(super) fn plugins_check(inventory: &Inventory) -> Check {
   let plugins: Vec<Value> = inventory.plugins.iter().map(plugin_json).collect();
   let details = json!({ "plugins": plugins });
-  if let Some(warning) = &inventory.warning {
-    return Check::new("plugins", Status::Warn, warning.clone(), None, details);
+  let mut notices = inventory.warning.iter().cloned().collect::<Vec<_>>();
+  notices.extend(inventory.plugins.iter().filter_map(muse_notice));
+  if !notices.is_empty() {
+    return Check::new("plugins", Status::Warn, notices.join("; "), None, details);
   }
   if inventory.plugins.is_empty() {
     return Check::new(
@@ -84,6 +94,36 @@ pub(super) fn plugins_check(inventory: &Inventory) -> Check {
   )
 }
 
+fn muse_notice(plugin: &Plugin) -> Option<String> {
+  let state = plugin.muse.as_ref()?;
+  if !state.enabled {
+    return Some(format!(
+      "{} is disabled; muse plugins enable {}",
+      plugin.name, plugin.name
+    ));
+  }
+  if !state.active {
+    return Some(format!(
+      "{} is inactive; muse plugins inspect {}",
+      plugin.name, plugin.name
+    ));
+  }
+  if !state.pending_hooks.is_empty() {
+    return Some(format!(
+      "{} hooks are installed but inert; muse plugins approve {}",
+      plugin.name, plugin.name
+    ));
+  }
+  match state.approval {
+    "needs-approval" => Some(format!(
+      "{} capabilities need approval; muse plugins approve {}",
+      plugin.name, plugin.name
+    )),
+    "unknown" => Some(format!("{} approval status is unavailable", plugin.name)),
+    _ => None,
+  }
+}
+
 fn plugin_json(plugin: &Plugin) -> Value {
   let mut map = Map::new();
   map.insert("name".to_owned(), json!(plugin.name));
@@ -92,6 +132,12 @@ fn plugin_json(plugin: &Plugin) -> Value {
   }
   if let Some(root) = &plugin.root {
     map.insert("root".to_owned(), json!(root.display().to_string()));
+  }
+  if let Some(muse) = &plugin.muse {
+    map.insert("active".to_owned(), json!(muse.active));
+    map.insert("enabled".to_owned(), json!(muse.enabled));
+    map.insert("approval".to_owned(), json!(muse.approval));
+    map.insert("pendingHooks".to_owned(), json!(muse.pending_hooks));
   }
   Value::Object(map)
 }
@@ -102,6 +148,7 @@ fn plugin_at(name: &str, root: PathBuf) -> Plugin {
     name: name.to_owned(),
     version,
     root: Some(root),
+    muse: None,
   }
 }
 

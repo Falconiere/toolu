@@ -2,7 +2,9 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use super::super::checks::Status;
-use super::{CODEX_LIST_TIMEOUT, collect, parse_codex, plugins_check};
+use super::{
+  CODEX_LIST_TIMEOUT, Inventory, MuseHealth, Plugin, collect, parse_codex, plugins_check,
+};
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
@@ -85,9 +87,9 @@ fn a_claude_entry_without_install_path_warns_and_is_omitted() {
 }
 
 #[test]
-fn unsupported_hosts_and_an_unreadable_record_warn() {
+fn unsupported_hosts_and_unavailable_inventories_warn() {
   let home = tempfile::tempdir().unwrap();
-  for host in [Host::Cursor, Host::Hermes, Host::Muse] {
+  for host in [Host::Cursor, Host::Hermes] {
     let roots = Roots::new(
       Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
       Some(host),
@@ -96,6 +98,17 @@ fn unsupported_hosts_and_an_unreadable_record_warn() {
     assert_eq!(check.status, Status::Warn);
     assert!(check.summary.contains("unknown"), "{}", check.summary);
   }
+
+  let muse = Roots::new(
+    Env::from_pairs([
+      ("HOME", home.path().to_str().unwrap()),
+      ("PATH", home.path().to_str().unwrap()),
+    ]),
+    Some(Host::Muse),
+  );
+  let unavailable = plugins_check(&collect(&muse, home.path()));
+  assert_eq!(unavailable.status, Status::Warn);
+  assert!(unavailable.summary.contains("unavailable"));
 
   let claude = claude(home.path(), home.path());
   let missing = plugins_check(&collect(&claude, home.path()));
@@ -144,4 +157,45 @@ fn codex_without_a_cli_warns_without_waiting() {
   );
   assert_eq!(check.status, Status::Warn);
   assert!(check.summary.contains("unavailable"), "{}", check.summary);
+}
+
+#[test]
+fn muse_unapproved_hooks_and_disabled_plugins_are_actionable() {
+  let plugin = |name: &str, active, enabled, approval, hooks: Vec<String>| Plugin {
+    name: name.to_owned(),
+    version: Some("8.0.4".to_owned()),
+    root: None,
+    muse: Some(MuseHealth {
+      active,
+      enabled,
+      approval,
+      pending_hooks: hooks,
+    }),
+  };
+  let inventory = Inventory {
+    plugins: vec![
+      plugin(
+        "toolu",
+        true,
+        true,
+        "needs-approval",
+        vec!["pre-tools".to_owned()],
+      ),
+      plugin("rust-quality", false, false, "approved", Vec::new()),
+      plugin("ts-quality", false, true, "unknown", Vec::new()),
+    ],
+    warning: None,
+  };
+  let check = plugins_check(&inventory);
+  assert_eq!(check.status, Status::Warn);
+  assert!(
+    check
+      .summary
+      .contains("toolu hooks are installed but inert")
+  );
+  assert!(check.summary.contains("muse plugins approve toolu"));
+  assert!(check.summary.contains("muse plugins enable rust-quality"));
+  assert!(check.summary.contains("muse plugins inspect ts-quality"));
+  assert_eq!(check.details["plugins"][0]["approval"], "needs-approval");
+  assert_eq!(check.details["plugins"][1]["enabled"], false);
 }

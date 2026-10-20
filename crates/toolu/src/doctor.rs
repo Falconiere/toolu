@@ -9,6 +9,7 @@ mod binary;
 mod checks;
 mod config_check;
 mod inventory;
+mod muse;
 mod registry_check;
 mod skew_check;
 mod tools;

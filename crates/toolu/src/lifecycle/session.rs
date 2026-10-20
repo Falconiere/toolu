@@ -89,7 +89,7 @@ fn render(
   config: &LoadedConfig,
 ) -> (Option<String>, Vec<String>) {
   if !enabled(config, "hooks", "session-start") {
-    return (disabled_stdout(event, input), Vec::new());
+    return (disabled_stdout(event, input, host), Vec::new());
   }
   let built = ContextIn {
     event,
@@ -103,19 +103,19 @@ fn render(
   let (parts, warnings) = context_parts(&built);
   let message = full_message(event, input);
   (
-    Some(hook_json(Some(&parts.join("\n\n")), &message)),
+    Some(hook_json(host, Some(&parts.join("\n\n")), &message)),
     warnings,
   )
 }
 
-fn disabled_stdout(event: &str, input: &SessionInput<'_>) -> Option<String> {
+fn disabled_stdout(event: &str, input: &SessionInput<'_>, host: Host) -> Option<String> {
   if event == "startup" || event == "resume" {
-    return Some(hook_json(None, &full_message(event, input)));
+    return Some(hook_json(host, None, &full_message(event, input)));
   }
   input
     .advisory
     .filter(|line| !line.is_empty())
-    .map(|line| hook_json(None, line))
+    .map(|line| hook_json(host, None, line))
 }
 
 fn full_message(event: &str, input: &SessionInput<'_>) -> String {
@@ -249,16 +249,9 @@ fn docs_dir(env: &Env, host: Host, plugin_root: Option<&Path>) -> PathBuf {
 }
 
 fn plugin_root_of(env: &Env, host: Host) -> String {
-  let codex = if host == Host::Codex {
-    env.get("PLUGIN_ROOT").unwrap_or("")
-  } else {
-    ""
-  };
-  if codex.is_empty() {
-    env.get("CLAUDE_PLUGIN_ROOT").unwrap_or("").to_owned()
-  } else {
-    codex.to_owned()
-  }
+  Roots::new(env.clone(), Some(host))
+    .plugin_root()
+    .map_or_else(String::new, |root| root.display().to_string())
 }
 
 fn verbose(env: &Env) -> bool {
@@ -275,7 +268,18 @@ fn push_present(parts: &mut Vec<String>, part: Option<String>) {
   }
 }
 
-fn hook_json(context: Option<&str>, message: &str) -> String {
+fn hook_json(host: Host, context: Option<&str>, message: &str) -> String {
+  if host == Host::Muse {
+    let combined = context.filter(|context| !context.is_empty()).map_or_else(
+      || message.to_owned(),
+      |context| format!("{message}\n\n{context}"),
+    );
+    let value = Ordered::Object(vec![(
+      "systemMessage".to_owned(),
+      Ordered::String(combined),
+    )]);
+    return strip_trailing_newlines(&render_hook_output(&value, true)).to_owned();
+  }
   let mut fields = Vec::new();
   if let Some(context) = context {
     fields.push((

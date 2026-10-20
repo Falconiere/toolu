@@ -15,6 +15,8 @@ const CLAUDE_INSTALL: &str =
 
 const CODEX_INSTALL: &str = "Install with `toolu plugins install delivery-flow --host codex`, then invoke `$delivery-flow:delivery-flow`.";
 
+const MUSE_INSTALL: &str = "Install with `muse plugins install delivery-flow@toolu`, then invoke `/delivery-flow:delivery-flow`.";
+
 const NEUTRAL_INSTALL: &str =
   "Install the `delivery-flow` plugin, then load its `delivery-flow` skill.";
 
@@ -46,7 +48,8 @@ fn delivery_install(host: Host) -> &'static str {
   match host {
     Host::Claude => CLAUDE_INSTALL,
     Host::Codex => CODEX_INSTALL,
-    Host::Cursor | Host::Hermes | Host::Muse => NEUTRAL_INSTALL,
+    Host::Muse => MUSE_INSTALL,
+    Host::Cursor | Host::Hermes => NEUTRAL_INSTALL,
   }
 }
 

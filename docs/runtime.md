@@ -33,6 +33,8 @@ A `TOOLU_BIN` that does not name a native `toolu` is never replaced by another c
 
 **Diagnostic.** On session start and resume, toolu's hook prints `Toolu is on!\ntoolu runtime: native <version> at <path>`. With `hooks.session-start` set to `false`, startup and resume print that title and runtime line and nothing else; clear and compact print nothing.
 
+On Muse, startup and resume put that title, runtime line and any session guidance in one `systemMessage`. Prompt hints use the same field. The native binary check shares a once-per-session marker across plugin hooks and gives a Muse install command or an absolute native path when plain `toolu` is unavailable to agent commands.
+
 Agent command tools use a non-login shell. Their plain `toolu` reachability and the SessionStart absolute-path advice are checked separately; see [Agent command shell](install.md#agent-command-shell).
 
 ## Migrating from the Bun runtime
