@@ -142,9 +142,9 @@ impl Fixture {
   }
 
   fn assert_rust_edit_blocks_commit(&self) -> io::Result<()> {
-    let bad = "//! demo\n#[allow(dead_code)]\nfn bad() {}\n";
+    let bad = ["//! demo\n#[", "allow(dead_code)]\nfn bad() {}\n"].concat();
     let file = self.project.join("src/lib.rs");
-    fs::write(&file, bad)?;
+    fs::write(&file, &bad)?;
     let payload = json!({"session_id":"s","cwd":self.project,"tool_name":"write_file",
       "tool_input":{"file_path":file,"content":bad},"tool_response":{}});
     let edited = self.run(
