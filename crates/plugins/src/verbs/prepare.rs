@@ -5,6 +5,9 @@
 //! `toolu`; anything wrong there stops the run before any plugin command, so a
 //! failed fetch leaves Muse untouched.
 
+use std::io::ErrorKind;
+use std::path::Path;
+
 use crate::args::Verb;
 use crate::fail::{Fail, Res};
 use crate::host::adapter::{Adapter, MARKETPLACE};
@@ -56,17 +59,30 @@ fn must(driver: &Driver, argv: &[String]) -> Res<String> {
   )))
 }
 
+/// Whether `path` is a regular file (`Some(false)` for anything else there),
+/// or `None` when nothing is; an unreadable path is an error, never "absent".
+fn kind(path: &Path) -> Res<Option<bool>> {
+  match std::fs::metadata(path) {
+    Ok(meta) => Ok(Some(meta.is_file())),
+    Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+    Err(err) => Err(Fail::failed(format!(
+      "cannot read {}: {err}",
+      path.display()
+    ))),
+  }
+}
+
 /// Clones the tag, or moves an existing toolu checkout to it.
 fn sync(driver: &Driver, checkout: &Checkout) -> Res<()> {
   let dir = checkout.dir_text();
-  if !checkout.dir.exists() {
+  if kind(&checkout.dir)?.is_none() {
     if let Some(parent) = checkout.dir.parent() {
       std::fs::create_dir_all(parent)
         .map_err(|err| Fail::failed(format!("cannot create {}: {err}", parent.display())))?;
     }
     return must(driver, &checkout.clone_argv()).map(drop);
   }
-  if !checkout.dir.join(CATALOG).is_file() {
+  if kind(&checkout.dir.join(CATALOG))? != Some(true) {
     return Err(Fail::failed(format!(
       "{dir} is not a toolu checkout (it has no {CATALOG}); move it aside and run again"
     )));

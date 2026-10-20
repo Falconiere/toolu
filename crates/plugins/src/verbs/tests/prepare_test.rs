@@ -182,3 +182,38 @@ fn a_failing_marketplace_command_stops_the_run() {
     fail.message
   );
 }
+
+#[test]
+fn an_unreadable_checkout_path_is_an_error_not_a_missing_checkout() {
+  let sb = Sandbox::new();
+  sb.muse("never");
+  let origin = sb.origin(&["v9.9.8"]);
+  sb.write("data", "a regular file where the data directory should be");
+  let mut driver = sb.muse_driver("9.9.8", &origin, Approval::Report);
+  if let Some(checkout) = driver.checkout.as_mut() {
+    checkout.dir = sb.path("data/toolu/muse-marketplace");
+  }
+  let Err(fail) = run(&driver, Verb::Install) else {
+    panic!("an unreadable checkout path passed");
+  };
+  assert!(
+    fail.message.starts_with(&format!(
+      "cannot read {}: ",
+      sb.path("data/toolu/muse-marketplace").display()
+    )),
+    "{}",
+    fail.message
+  );
+  assert_eq!(sb.log("muse"), Vec::<String>::new());
+  sb.write(
+    "home/.local/share/toolu/muse-marketplace/.agents",
+    "a file, not a directory",
+  );
+  let Err(fail) = run(
+    &sb.muse_driver("9.9.8", &origin, Approval::Report),
+    Verb::Install,
+  ) else {
+    panic!("an unreadable catalog path passed");
+  };
+  assert!(fail.message.starts_with("cannot read "), "{}", fail.message);
+}
