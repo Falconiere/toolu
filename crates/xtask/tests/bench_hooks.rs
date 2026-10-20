@@ -67,6 +67,11 @@ fn tree(root: &Path, budget_cpu_ms: u64) -> Res<()> {
     &root.join("benchmarks/hook-budgets.json"),
     &budgets.to_string(),
   )?;
+  stand_in(root)
+}
+
+/// A `toolu` that answers the launcher's probe, logs each Muse hook call and exits 0.
+fn stand_in(root: &Path) -> Res<()> {
   let toolu = root.join("bin/toolu");
   write(
     &toolu,
@@ -122,17 +127,27 @@ fn every_entry_is_measured_written_and_judged() {
   assert_eq!(entries.len(), 4);
   assert_eq!(entries[2]["entry"], "muse:demo/pre-tools");
   assert!(entries[2]["maxRssBytes"]["p50"].as_u64().unwrap() > 0);
-  assert!(entries[2]["cpuUs"]["p90"].as_u64().is_some(), "{}", entries[2]);
+  assert!(
+    entries[2]["cpuUs"]["p90"].as_u64().is_some(),
+    "{}",
+    entries[2]
+  );
   // The resolver found the stand-in through TOOLU_BIN and ran the hook with
   // Muse's plugin root, once per warm-up and measured run of each Muse entry.
   let calls = std::fs::read_to_string(root.join("bin/toolu.muse.log")).unwrap();
   let root_text = root.join("plugins/demo").display().to_string();
   let pre = format!("demo hook pre-tools --event PreToolUse --plugin-root {root_text}");
-  assert_eq!(calls.lines().filter(|line| *line == pre).count(), 4, "{calls}");
+  assert_eq!(
+    calls.lines().filter(|line| *line == pre).count(),
+    4,
+    "{calls}"
+  );
   let demo = calls.lines().filter(|line| line.starts_with("demo hook "));
   assert_eq!(demo.count(), 8, "{calls}");
   // The sandbox also registered the four registry plugins under Muse's environment.
-  let registered = calls.lines().filter(|line| line.contains(" hook register "));
+  let registered = calls
+    .lines()
+    .filter(|line| line.contains(" hook register "));
   assert_eq!(registered.count(), 4, "{calls}");
 }
 
@@ -173,9 +188,14 @@ fn a_budget_for_an_entry_no_hook_registers_fails_even_when_only_filters_it_out()
     let stderr = String::from_utf8_lossy(&run.stderr);
     assert_eq!(run.status.code(), Some(1), "{run:?}");
     assert!(
-      stderr.contains("demo/renamed-hook: a budget for an entry no hooks.json or Muse manifest registers"),
+      stderr.contains(
+        "demo/renamed-hook: a budget for an entry no hooks.json or Muse manifest registers"
+      ),
       "{stderr}"
     );
-    assert!(stderr.contains("muse:demo/renamed-hook: a budget"), "{stderr}");
+    assert!(
+      stderr.contains("muse:demo/renamed-hook: a budget"),
+      "{stderr}"
+    );
   }
 }

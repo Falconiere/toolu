@@ -91,10 +91,24 @@ fn a_muse_entry_gets_only_what_muse_forwards_plus_the_measured_binary() {
   assert_eq!(get("TOOLU_BIN"), Some(bin.as_os_str().to_owned()));
   assert_eq!(get("PWD"), Some(sandbox.project.as_os_str().to_owned()));
   let allowed = [
-    "HOME", "LANG", "LOGNAME", "PATH", "PWD", "SHELL", "TERM", "USER",
-    "MUSE_PLUGIN_ID", "MUSE_PLUGIN_ROOT", "MUSE_PLUGIN_DATA_DIR", "MUSE_SESSION_ID",
-    "MUSE_THREAD_ID", "CLAUDE_PLUGIN_ROOT", "CLAUDE_PLUGIN_DATA", "PLUGIN_ROOT",
-    "PLUGIN_DATA", "TOOLU_BIN",
+    "HOME",
+    "LANG",
+    "LOGNAME",
+    "PATH",
+    "PWD",
+    "SHELL",
+    "TERM",
+    "USER",
+    "MUSE_PLUGIN_ID",
+    "MUSE_PLUGIN_ROOT",
+    "MUSE_PLUGIN_DATA_DIR",
+    "MUSE_SESSION_ID",
+    "MUSE_THREAD_ID",
+    "CLAUDE_PLUGIN_ROOT",
+    "CLAUDE_PLUGIN_DATA",
+    "PLUGIN_ROOT",
+    "PLUGIN_DATA",
+    "TOOLU_BIN",
   ];
   let extra: Vec<_> = env
     .iter()

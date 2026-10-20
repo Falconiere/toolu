@@ -56,7 +56,16 @@ pub(crate) fn nonce(project: &Path) -> Result<String, String> {
   Ok(text.trim().to_owned())
 }
 
-/// A committed project called `name` for `host` (`claude` or `codex`).
+/// The project config directory of `host`: `.claude`, `.codex`, or Muse's `.agents`.
+pub(crate) fn config_dir(host: &str) -> String {
+  if host == "muse" {
+    ".agents".to_owned()
+  } else {
+    format!(".{host}")
+  }
+}
+
+/// A committed project called `name` for `host` (`claude`, `codex` or `muse`).
 pub(crate) fn create(
   root: &Path,
   name: &str,
@@ -64,7 +73,7 @@ pub(crate) fn create(
   env: &ChildEnv,
 ) -> Result<PathBuf, String> {
   let path = root.join(name);
-  let host_dir = path.join(format!(".{host}"));
+  let host_dir = path.join(config_dir(host));
   std::fs::create_dir_all(&host_dir)
     .map_err(|err| format!("cannot create {}: {err}", host_dir.display()))?;
   write(&path.join(".env"), "KEEP=1\n")?;

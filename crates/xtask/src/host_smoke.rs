@@ -1,6 +1,8 @@
-//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|both]`: a live macOS
-//! smoke of the native toolu hooks in real Claude Code and Codex sessions, with no
-//! `bun` on the children's `PATH`. Per host it checks that a protected `.env` write
+//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|both]`: a live
+//! smoke of the native toolu hooks in real Claude Code, Codex and Muse sessions
+//! (`both`, the default, means all three), with no `bun` on the children's `PATH`.
+//! Claude Code and Codex run on macOS only; Muse on any Unix (#552). Per host it
+//! checks that a protected `.env` write
 //! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality
 //! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
 //! push review.
@@ -16,8 +18,10 @@ use std::path::{Path, PathBuf};
 use crate::host_smoke_claude::Claude;
 use crate::host_smoke_codex::{Codex, private_home};
 use crate::host_smoke_env::ChildEnv;
+use crate::host_smoke_muse::{self as muse, Muse};
 use crate::host_smoke_project::{create, create_push};
 use crate::host_smoke_steps::{self as steps, Driver, Run};
+use crate::launcher_e2e::SYSTEM_DIRS;
 use crate::options::Options;
 use crate::scratch;
 use crate::{Verdict, output};
@@ -27,16 +31,39 @@ use crate::{Verdict, output};
 pub(crate) enum Host {
   Claude,
   Codex,
+  Muse,
 }
 
-/// The hosts `--host` names; both when it is absent.
+impl Host {
+  fn name(self) -> &'static str {
+    match self {
+      Host::Claude => "claude",
+      Host::Codex => "codex",
+      Host::Muse => "muse",
+    }
+  }
+}
+
+/// The hosts `--host` names; all three for `both` or when it is absent.
 pub(crate) fn hosts(arg: Option<&str>) -> Result<Vec<Host>, String> {
   match arg {
-    None | Some("both") => Ok(vec![Host::Claude, Host::Codex]),
+    None | Some("both") => Ok(vec![Host::Claude, Host::Codex, Host::Muse]),
     Some("claude") => Ok(vec![Host::Claude]),
     Some("codex") => Ok(vec![Host::Codex]),
-    Some(other) => Err(format!("--host must be claude, codex or both, not {other}")),
+    Some("muse") => Ok(vec![Host::Muse]),
+    Some(other) => Err(format!(
+      "--host must be claude, codex, muse or both, not {other}"
+    )),
   }
+}
+
+/// `Ok` when every host in `hosts` runs on `os`: Claude Code and Codex need macOS.
+pub(crate) fn require_platform(hosts: &[Host], os: &str) -> Result<(), String> {
+  let needs_macos = hosts.iter().any(|host| *host != Host::Muse);
+  if needs_macos && os != "macos" {
+    return Err("live Claude Code and Codex smoke requires macOS".to_owned());
+  }
+  Ok(())
 }
 
 /// `bin` as an absolute path, if it is an executable file.
@@ -72,16 +99,27 @@ pub(crate) fn require_auth(home: &Path) -> Result<PathBuf, String> {
 struct Plan {
   hosts: Vec<Host>,
   repo: PathBuf,
+  bin: PathBuf,
   env: ChildEnv,
   claude: Option<PathBuf>,
   codex: Option<(PathBuf, PathBuf)>,
+  muse: Option<(PathBuf, PathBuf)>,
+}
+
+/// The Muse CLI and credential, when Muse is planned and no fixed-directory
+/// `toolu` would answer its hooks instead of `bin`.
+fn muse_plan(env: &ChildEnv, bin: &Path) -> Result<(PathBuf, PathBuf), String> {
+  let dirs: Vec<PathBuf> = SYSTEM_DIRS.iter().map(PathBuf::from).collect();
+  muse::require_unshadowed(&dirs, bin)?;
+  Ok((
+    env.tool("muse")?,
+    muse::require_auth(&|key| std::env::var_os(key))?,
+  ))
 }
 
 fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
   let hosts = hosts(options.host.as_deref())?;
-  if !cfg!(target_os = "macos") {
-    return Err("live host smoke requires macOS".to_owned());
-  }
+  require_platform(&hosts, std::env::consts::OS)?;
   let default = options.root.join("target/debug/toolu");
   let bin = require_bin(options.bin.as_deref().unwrap_or(&default))?;
   let path = std::env::var_os("PATH").ok_or("PATH is not set")?;
@@ -98,12 +136,18 @@ fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
   } else {
     None
   };
+  let muse = hosts
+    .contains(&Host::Muse)
+    .then(|| muse_plan(&env, &bin))
+    .transpose()?;
   Ok(Plan {
     hosts,
     repo: options.root.clone(),
+    bin,
     env,
     claude,
     codex,
+    muse,
   })
 }
 
@@ -159,44 +203,50 @@ fn sweep(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
   found
 }
 
+/// One host's sweep with its own CLI and profile.
+fn drive_host(plan: &Plan, host: Host, root: &Path) -> Vec<String> {
+  let run = |driver: &dyn Driver, env: &ChildEnv| sweep(driver, &Run { root, env });
+  let repo = plan.repo.clone();
+  match (host, &plan.claude, &plan.codex, &plan.muse) {
+    (Host::Claude, Some(exe), _, _) => run(
+      &Claude {
+        exe: exe.clone(),
+        repo,
+      },
+      &plan.env,
+    ),
+    (Host::Codex, _, Some((exe, auth)), _) => match private_home(root, auth) {
+      Ok(home) => run(
+        &Codex {
+          exe: exe.clone(),
+          repo,
+        },
+        &plan.env.with_codex_home(&home),
+      ),
+      Err(why) => vec![format!("codex: {why}")],
+    },
+    (Host::Muse, _, _, Some((exe, auth))) => match muse::private_home(root, auth, &plan.bin) {
+      Ok(home) => run(
+        &Muse {
+          exe: exe.clone(),
+          repo,
+        },
+        &plan.env.with_muse_home(&home),
+      ),
+      Err(why) => vec![format!("muse: {why}")],
+    },
+    _ => vec!["host-smoke: host not planned".to_owned()],
+  }
+}
+
 fn drive(plan: &Plan, root: &Path) -> Vec<String> {
   let mut found = Vec::new();
   for host in &plan.hosts {
-    let host_found = match (host, &plan.claude, &plan.codex) {
-      (Host::Claude, Some(exe), _) => {
-        let claude = Claude {
-          exe: exe.clone(),
-          repo: plan.repo.clone(),
-        };
-        sweep(
-          &claude,
-          &Run {
-            root,
-            env: &plan.env,
-          },
-        )
-      }
-      (Host::Codex, _, Some((exe, auth))) => match private_home(root, auth) {
-        Ok(home) => {
-          let env = plan.env.with_codex_home(&home);
-          let codex = Codex {
-            exe: exe.clone(),
-            repo: plan.repo.clone(),
-          };
-          sweep(&codex, &Run { root, env: &env })
-        }
-        Err(why) => vec![format!("codex: {why}")],
-      },
-      _ => vec!["host-smoke: host not planned".to_owned()],
-    };
+    let host_found = drive_host(plan, *host, root);
     if host_found.is_empty() {
-      let name = if *host == Host::Claude {
-        "claude"
-      } else {
-        "codex"
-      };
       output::say(&format!(
-        "{name}: native deny, post-edit quality state, commit gate and push review passed"
+        "{}: native deny, post-edit quality state, commit gate and push review passed",
+        host.name()
       ));
     }
     found.extend(host_found);
@@ -208,13 +258,18 @@ fn evidence_dir() -> Result<PathBuf, String> {
   scratch::create("toolu-native-host")
 }
 
-/// Drop the Codex auth link, then the evidence unless something failed or `keep`.
+/// The credential links a private profile holds, relative to the evidence directory.
+const AUTH_LINKS: [&str; 2] = ["codex-home/auth.json", "muse-home/.config/muse/auth.json"];
+
+/// Drop the Codex and Muse auth links, then the evidence unless something failed or `keep`.
 pub(crate) fn settle(root: &Path, found: &[String], keep: bool) -> Result<Verdict, String> {
-  let auth = root.join("codex-home/auth.json");
-  match std::fs::remove_file(&auth) {
-    Ok(()) => {}
-    Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
-    Err(err) => return Err(format!("cannot remove {}: {err}", auth.display())),
+  for link in AUTH_LINKS {
+    let auth = root.join(link);
+    match std::fs::remove_file(&auth) {
+      Ok(()) => {}
+      Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+      Err(err) => return Err(format!("cannot remove {}: {err}", auth.display())),
+    }
   }
   if found.is_empty() && !keep {
     std::fs::remove_dir_all(root)

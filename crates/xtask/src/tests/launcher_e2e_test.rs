@@ -59,7 +59,9 @@ fn the_muse_resolver_runs_both_events_with_muses_plugin_root() {
     .collect();
   assert_eq!(events, ["SessionStart", "PreToolUse"], "{calls}");
   assert!(
-    calls.lines().all(|line| line.contains("toolu-launcher-e2e-")),
+    calls
+      .lines()
+      .all(|line| line.contains("toolu-launcher-e2e-")),
     "the plugin root is the e2e root: {calls}"
   );
 }

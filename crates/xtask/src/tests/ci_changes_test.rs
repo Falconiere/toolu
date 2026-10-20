@@ -112,9 +112,8 @@ fn muse_manifest_push(edit: fn(&str) -> String) -> (tempfile::TempDir, serde_jso
 
 #[test]
 fn a_muse_manifest_only_edit_turns_rust_and_ports_on() {
-  let (dir, event) = muse_manifest_push(|text| {
-    text.replacen("\"timeoutMs\": 60000", "\"timeoutMs\": 30000", 1)
-  });
+  let (dir, event) =
+    muse_manifest_push(|text| text.replacen("\"timeoutMs\": 60000", "\"timeoutMs\": 30000", 1));
   let class = decide(dir.path(), "push", Some(&event)).unwrap();
   assert_eq!(flag(&class, "rust"), Some(true), "{:?}", class.reasons);
   assert_eq!(flag(&class, "ports"), Some(true), "{:?}", class.reasons);
@@ -123,9 +122,8 @@ fn a_muse_manifest_only_edit_turns_rust_and_ports_on() {
 
 #[test]
 fn a_muse_manifest_version_bump_is_release_only() {
-  let (dir, event) = muse_manifest_push(|text| {
-    text.replacen("\"version\": \"8.0.4\"", "\"version\": \"8.1.0\"", 1)
-  });
+  let (dir, event) =
+    muse_manifest_push(|text| text.replacen("\"version\": \"8.0.4\"", "\"version\": \"8.1.0\"", 1));
   let class = decide(dir.path(), "push", Some(&event)).unwrap();
   assert_eq!(flag(&class, "rust"), Some(false), "{:?}", class.reasons);
   assert_eq!(flag(&class, "ports"), Some(false), "{:?}", class.reasons);

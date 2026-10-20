@@ -17,7 +17,7 @@ use crate::options::Options;
 use crate::{Verdict, output};
 
 /// The directories the launcher searches before `PATH`, `~/.local/bin` last.
-const SYSTEM_DIRS: &[&str] = &[
+pub(crate) const SYSTEM_DIRS: &[&str] = &[
   "/opt/homebrew/bin",
   "/usr/local/bin",
   "/home/linuxbrew/.linuxbrew/bin",

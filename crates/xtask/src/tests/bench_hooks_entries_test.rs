@@ -94,7 +94,11 @@ fn every_muse_manifest_hook_is_an_entry_after_the_hooks_json_ones() {
     .iter()
     .position(|entry| entry.id.starts_with("muse:"))
     .unwrap();
-  assert!(entries[first_muse..].iter().all(|entry| entry.id.starts_with("muse:")));
+  assert!(
+    entries[first_muse..]
+      .iter()
+      .all(|entry| entry.id.starts_with("muse:"))
+  );
   let pre = muse
     .iter()
     .find(|entry| entry.id == "muse:toolu/pre-tools")

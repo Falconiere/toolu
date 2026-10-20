@@ -2,7 +2,7 @@ use std::ffi::OsString;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
-use super::{Codex, argv, observe, private_home};
+use super::{Codex, argv, private_home};
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_steps::{Driver, Run, Step};
 
@@ -44,21 +44,6 @@ fn the_private_home_links_the_users_auth() {
   assert_eq!(std::fs::read_link(home.join("auth.json")).unwrap(), auth);
   let mode = std::fs::metadata(&home).unwrap().permissions().mode();
   assert_eq!(mode & 0o777, 0o700);
-}
-
-#[test]
-fn observe_waits_for_a_failing_gate_file() {
-  let dir = tempfile::tempdir().unwrap();
-  let (gate, source) = (dir.path().join("gate.json"), dir.path().join("sample.ts"));
-  std::fs::write(&source, "edited\n").unwrap();
-  assert!(observe(&gate, &source).is_none());
-  std::fs::write(&gate, "{\"status\": \"passing\"}").unwrap();
-  assert!(observe(&gate, &source).is_none());
-  std::fs::write(&gate, FAILING).unwrap();
-  assert_eq!(
-    observe(&gate, &source),
-    Some((FAILING.to_owned(), "edited\n".to_owned()))
-  );
 }
 
 #[test]

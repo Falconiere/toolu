@@ -195,7 +195,10 @@ impl Sandbox {
       .iter()
       .filter_map(|key| std::env::var_os(key).map(|value| (OsString::from(key), value)))
       .collect();
-    let data = self.home.join(".local/share/muse/plugins/data").join(plugin);
+    let data = self
+      .home
+      .join(".local/share/muse/plugins/data")
+      .join(plugin);
     let path = |key: &str, path: &Path| (OsString::from(key), path.as_os_str().to_owned());
     let word = |key: &str, value: &str| (OsString::from(key), OsString::from(value));
     env.extend([

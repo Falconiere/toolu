@@ -4,7 +4,8 @@
 use std::os::unix::fs::{DirBuilderExt as _, symlink};
 use std::path::{Path, PathBuf};
 
-use crate::host_smoke_exec::{TIMEOUT, exec, run as run_child, tail};
+use crate::host_smoke_exec::run as run_child;
+use crate::host_smoke_observe::observed_edit;
 use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_EDIT, CODEX_PUSH};
 use crate::host_smoke_steps::{Driver, Prompts, Run, Step};
 
@@ -56,46 +57,6 @@ fn command(codex: &Codex, words: &[&str]) -> Vec<String> {
   argv
 }
 
-/// The gate file and source as they are now, when the gate file records a failure.
-fn observe(gate: &Path, source: &Path) -> Option<(String, String)> {
-  let state = std::fs::read_to_string(gate).ok()?;
-  if !state.contains("\"status\": \"failing\"") {
-    return None;
-  }
-  Some((state, std::fs::read_to_string(source).ok()?))
-}
-
-/// The edit session. The model may repair its edit in the same turn, so the first
-/// failing gate file and source seen while it ran are written back afterwards.
-fn observed_edit(codex: &Codex, run: &Run<'_>, project: &Path) -> Result<(), String> {
-  let gate = project.join(".codex/tmp/quality-gate-status.json");
-  let source = project.join("sample.ts");
-  let mut seen: Option<(String, String)> = None;
-  let mut tick = || {
-    if seen.is_none() {
-      seen = observe(&gate, &source);
-    }
-  };
-  let done = exec(
-    &argv(&codex.exe, project, CODEX_EDIT),
-    project,
-    run.env,
-    TIMEOUT,
-    &mut tick,
-  )?;
-  std::fs::write(run.root.join("codex-edit.jsonl"), &done.output)
-    .map_err(|err| format!("cannot write the edit transcript: {err}"))?;
-  let Some((state, text)) = seen.filter(|_| done.success) else {
-    return Err(format!(
-      "Codex did not record a live failing edit (exit {:?}): {}",
-      done.code,
-      tail(&done.output)
-    ));
-  };
-  std::fs::write(&source, text).map_err(|err| format!("cannot restore sample.ts: {err}"))?;
-  std::fs::write(&gate, state).map_err(|err| format!("cannot restore the gate file: {err}"))
-}
-
 impl Driver for Codex {
   fn name(&self) -> &'static str {
     "codex"
@@ -135,7 +96,7 @@ impl Driver for Codex {
   }
 
   fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    observed_edit(self, run, project)
+    observed_edit(run, project, &argv(&self.exe, project, CODEX_EDIT), "codex")
   }
 }
 
