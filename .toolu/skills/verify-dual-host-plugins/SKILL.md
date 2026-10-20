@@ -1,6 +1,6 @@
 ---
 name: verify-dual-host-plugins
-description: Verify toolu plugin packaging and startup on Codex and Claude Code. Use when adding or reviewing host plugins.
+description: Verify toolu plugin packaging and startup on Codex, Claude Code, and Muse. Use when adding or reviewing host plugins.
 metadata:
   toolu:
     origin: agent
@@ -9,7 +9,7 @@ metadata:
 ## When to Use
 
 Use when adding or reviewing a toolu plugin that must install and deliver working
-startup behavior in Codex and Claude Code.
+startup behavior in Codex, Claude Code, or Muse.
 
 ## Procedure
 
@@ -38,6 +38,13 @@ startup behavior in Codex and Claude Code.
    on macOS with the checkout binary. It hides Bun, installs temporary host profiles and
    checks a denied `.env` write, a post-edit quality failure, a denied
    commit, and a denied push in actual Claude Code and Codex sessions.
+8. For Muse, use a fresh temporary profile with isolated `HOME`, `XDG_CONFIG_HOME`,
+   and `XDG_DATA_HOME`. Install a scratch copy of the plugin, inspect its runtime
+   capabilities, and approve the scratch hook. Muse's hook-test fixture wraps
+   the payload as `{"event":"SessionStart","stdin":{...}}`; a raw payload is
+   rejected before the hook runs. Check the test's terminal status, exit code,
+   stdout and parsed `system_message`: startup context and the native runtime
+   line belong in `systemMessage`.
 
 ## Pitfalls
 
@@ -50,6 +57,9 @@ startup behavior in Codex and Claude Code.
   does not wait for more input. Stage a fixture outside Codex's workspace-write
   sandbox before testing a `git commit` hook, since that sandbox blocks writes
   to `.git/index.lock`.
+- Muse's plugin list can report an active installation while a hook is still
+  `review_needed` or `trusted_disabled` in plugin inspection. Treat those hooks
+  as inert, and keep trust changes inside the temporary profile.
 - Claude-compatible `hookSpecificOutput` is not valid for every Codex event.
   Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report
