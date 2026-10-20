@@ -1,188 +1,203 @@
-//! A real Muse edit through the installed Python quality hook and CLI.
+//! Muse quality registration and post-edit enforcement through the real CLI.
 
 use std::fs;
-use std::io::Write as _;
+use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
 use serde_json::{Value, json};
-use toolu_protocol::host::Host;
-use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
-use toolu_runtime::registry::{RegistryEvent, event_dir};
 
-fn run(
-  args: &[&str],
-  cwd: &Path,
-  env: &[(String, String)],
-  input: &str,
-) -> std::io::Result<Output> {
-  let mut child = Command::new(env!("CARGO_BIN_EXE_toolu"))
-    .args(args)
-    .current_dir(cwd)
-    .env_clear()
-    .envs(env.iter().map(|(key, value)| (key, value)))
-    .stdin(Stdio::piped())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or_else(|| std::io::Error::other("toolu stdin unavailable"))?
-    .write_all(input.as_bytes())?;
-  child.wait_with_output()
+const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
+
+struct Fixture {
+  _temp: tempfile::TempDir,
+  project: PathBuf,
+  config: PathBuf,
+  report: PathBuf,
 }
 
-fn register_python(
-  project: &Path,
-  env: &[(String, String)],
-) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync + 'static>> {
-  let plugin = Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("../../plugins/python-quality")
-    .canonicalize()?;
-  let plugin = plugin.to_str().ok_or("plugin path is not UTF-8")?;
-  let registered = run(
-    &[
-      "python-quality",
+impl Fixture {
+  fn new() -> io::Result<Self> {
+    let temp = tempfile::tempdir()?;
+    let project = temp.path().join("project");
+    let config = temp.path().join("muse-config");
+    let report = temp.path().join("startup.jsonl");
+    fs::create_dir_all(project.join("src"))?;
+    fs::create_dir_all(config.join("toolu/post-tools.d"))?;
+    fs::create_dir_all(config.join("toolu/pre-tools.d"))?;
+    fs::write(&report, "")?;
+    fs::write(
+      project.join("Cargo.toml"),
+      "[package]\nname=\"demo\"\nversion=\"0.1.0\"\n",
+    )?;
+    let status = Command::new("git")
+      .args(["init", "-q"])
+      .current_dir(&project)
+      .status()?;
+    if !status.success() {
+      return Err(io::Error::other("git init failed"));
+    }
+    fs::write(
+      config.join("toolu/post-tools.d/rust-quality@toolu__rust-quality.js"),
+      "old",
+    )?;
+    fs::write(
+      config.join("toolu/pre-tools.d/rust-quality@toolu__old.sh"),
+      "old",
+    )?;
+    Ok(Self {
+      _temp: temp,
+      project,
+      config,
+      report,
+    })
+  }
+
+  fn run(&self, args: &[&str], payload: &str) -> io::Result<Output> {
+    let mut child = Command::new(TOOLU)
+      .args(args)
+      .current_dir(&self.project)
+      .env("HOME", &self.project)
+      .env("TOOLU_HOST_OVERRIDE", "muse")
+      .env("MUSE_CONFIG_DIR", &self.config)
+      .env("TOOLU_PROJECT_DIR", &self.project)
+      .env("TOOLU_STARTUP_REPORT", &self.report)
+      .stdin(Stdio::piped())
+      .stdout(Stdio::piped())
+      .stderr(Stdio::piped())
+      .spawn()?;
+    let mut input = child
+      .stdin
+      .take()
+      .ok_or_else(|| io::Error::other("piped stdin missing"))?;
+    input.write_all(payload.as_bytes())?;
+    drop(input);
+    child.wait_with_output()
+  }
+
+  fn register_rule(&self, plugin: &str) -> io::Result<()> {
+    let root = plugin_root(plugin).display().to_string();
+    let args = [
+      plugin,
       "hook",
       "register",
       "--event",
       "SessionStart",
       "--plugin-root",
-      plugin,
-    ],
-    project,
-    env,
-    "{}",
-  )?;
-  if !registered.status.success() || !registered.stdout.is_empty() {
-    return Err(format!("registration failed: {registered:?}").into());
-  }
-  let roots = Roots::new(Env::from_pairs(env.to_vec()), Some(Host::Muse));
-  Ok(event_dir(&roots, RegistryEvent::ToolPost).join("python-quality@toolu__python-quality.json"))
-}
-
-struct MusePythonSite {
-  _dir: tempfile::TempDir,
-  project: PathBuf,
-  source: PathBuf,
-  manifest: PathBuf,
-  env: Vec<(String, String)>,
-}
-
-impl MusePythonSite {
-  fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let dir = tempfile::tempdir()?;
-    let project = dir.path().join("project");
-    let config = dir.path().join("config");
-    fs::create_dir_all(&project)?;
-    fs::create_dir_all(&config)?;
-    fs::write(
-      project.join("pyproject.toml"),
-      "[project]\nname = \"muse-case\"\nversion = \"0.1.0\"\n",
-    )?;
-    let source = project.join("sample.py");
-    fs::write(&source, "try:\n    pass\nexcept:\n    pass\n")?;
-    let git = Command::new("git")
-      .arg("init")
-      .arg("-b")
-      .arg("main")
-      .arg(&project)
-      .output()?;
-    if !git.status.success() {
-      return Err(format!("git init failed: {git:?}").into());
-    }
-    let mut env = vec![
-      ("HOME".to_owned(), dir.path().display().to_string()),
-      ("PATH".to_owned(), std::env::var("PATH")?),
-      ("MUSE_PLUGIN_ID".to_owned(), "toolu".to_owned()),
-      ("TOOLU_CONFIG_DIR".to_owned(), config.display().to_string()),
+      &root,
     ];
-    if let Ok(tmp) = std::env::var("TMPDIR") {
-      env.push(("TMPDIR".to_owned(), tmp));
-    }
-    let manifest = register_python(&project, &env)?;
-    Ok(Self {
-      _dir: dir,
-      project,
-      source,
-      manifest,
-      env,
-    })
-  }
-
-  fn set_matcher(
-    &self,
-    name: &str,
-  ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
-    let mut rule: Value = serde_json::from_slice(&fs::read(&self.manifest)?)?;
-    let fields = rule.as_object_mut().ok_or("manifest is not an object")?;
-    fields.insert("matcher".to_owned(), name.into());
-    fs::write(&self.manifest, rule.to_string())?;
+    let registered = self.run(&args, "{}")?;
+    ensure(
+      registered.status.code() == Some(0),
+      format!("{plugin}: {registered:?}"),
+    )?;
+    let manifest = self
+      .config
+      .join(format!("toolu/post-tools.d/{plugin}@toolu__{plugin}.json"));
+    ensure(manifest.is_file(), format!("missing manifest for {plugin}"))?;
+    let bytes = fs::read(&manifest)?;
+    let modified = fs::metadata(&manifest)?.modified()?;
+    let again = self.run(&args, "{}")?;
+    ensure(again.status.code() == Some(0), format!("{again:?}"))?;
+    ensure(fs::read(&manifest)? == bytes, "manifest bytes changed")?;
+    ensure(
+      fs::metadata(&manifest)?.modified()? == modified,
+      "manifest timestamp changed",
+    )?;
+    let check = [
+      plugin,
+      "hook",
+      "check-toolu",
+      "--event",
+      "SessionStart",
+      "--plugin-root",
+      &root,
+    ];
+    let checked = self.run(&check, "{}")?;
+    ensure(
+      (checked.status.code(), checked.stdout.len()) == (Some(0), 0),
+      format!("check-toolu was not silent: {checked:?}"),
+    )?;
     Ok(())
   }
 
-  fn post(&self, name: &str, path: &Path) -> std::io::Result<Output> {
-    let input = if name == "write_file" {
-      json!({"path":path,"content":fs::read_to_string(path)?})
-    } else {
-      json!({"path":path,"find":"old","replace":"new"})
-    };
-    let payload = json!({
-      "hook_event_name":"PostToolUse","session_id":"s1","cwd":self.project,
-      "tool_name":name,"tool_input":input,
-      "tool_response":{"success":true}
-    });
-    run(
-      &["hook", "post-tools", "--event", "PostToolUse"],
-      &self.project,
-      &self.env,
-      &payload.to_string(),
-    )
+  fn assert_cleanup_and_report(&self) -> io::Result<()> {
+    let post = self.config.join("toolu/post-tools.d");
+    let pre = self.config.join("toolu/pre-tools.d");
+    ensure(
+      !post.join("rust-quality@toolu__rust-quality.js").exists(),
+      "old JavaScript module remains",
+    )?;
+    ensure(
+      !pre.join("rust-quality@toolu__old.sh").exists(),
+      "old shell bridge remains",
+    )?;
+    let lines = fs::read_to_string(&self.report)?;
+    ensure(lines.lines().count() == 6, "startup report count differs")?;
+    ensure(
+      lines.contains(&post.display().to_string()),
+      "startup report has no Muse manifest path",
+    )?;
+    Ok(())
   }
 
-  fn gate_file(&self) -> Option<PathBuf> {
-    Roots::new(Env::from_pairs(self.env.clone()), Some(Host::Muse))
-      .project_state_root(None, Some(&self.project))
-      .map(|root| root.join("quality-gate-status.json"))
+  fn assert_rust_edit_blocks_commit(&self) -> io::Result<()> {
+    let bad = ["//! demo\n#[", "allow(dead_code)]\nfn bad() {}\n"].concat();
+    let file = self.project.join("src/lib.rs");
+    fs::write(&file, &bad)?;
+    let payload = json!({"session_id":"s","cwd":self.project,"tool_name":"write_file",
+      "tool_input":{"file_path":file,"content":bad},"tool_response":{}});
+    let edited = self.run(
+      &["hook", "post-tools", "--event", "PostToolUse"],
+      &payload.to_string(),
+    )?;
+    ensure(edited.status.code() == Some(0), format!("{edited:?}"))?;
+    let output: Value = serde_json::from_slice(&edited.stdout).map_err(io::Error::other)?;
+    ensure(
+      output
+        .get("systemMessage")
+        .and_then(Value::as_str)
+        .is_some_and(|message| message.contains("Forbidden lint suppression")),
+      format!("missing quality notice: {output}"),
+    )?;
+    let gate = fs::read_to_string(self.project.join(".agents/tmp/quality-gate-status.json"))?;
+    ensure(gate.contains("\"status\": \"failing\""), gate)?;
+    let commit = json!({"session_id":"s","cwd":self.project,"tool_name":"bash",
+      "tool_input":{"command":"git commit -m test"}});
+    let before = self.run(
+      &["hook", "pre-tools", "--event", "PreToolUse"],
+      &commit.to_string(),
+    )?;
+    ensure(before.status.code() == Some(0), format!("{before:?}"))?;
+    let decision: Value = serde_json::from_slice(&before.stdout).map_err(io::Error::other)?;
+    ensure(
+      decision.get("decision").and_then(Value::as_str) == Some("block"),
+      format!("commit was not blocked: {decision}"),
+    )?;
+    Ok(())
+  }
+}
+
+fn plugin_root(name: &str) -> PathBuf {
+  Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join("../../plugins")
+    .join(name)
+}
+
+fn ensure(condition: bool, detail: impl Into<String>) -> io::Result<()> {
+  if condition {
+    Ok(())
+  } else {
+    Err(io::Error::other(detail.into()))
   }
 }
 
 #[test]
-fn muse_edit_file_records_a_real_python_quality_violation() {
-  let site = MusePythonSite::new().expect("real Python site");
-  site.set_matcher("Write").expect("nonmatching rule");
-  let skipped = site
-    .post("edit_file", &site.source)
-    .expect("nonmatching hook");
-  assert!(skipped.status.success(), "{skipped:?}");
-  assert!(skipped.stdout.is_empty(), "{skipped:?}");
-  site.set_matcher("Edit").expect("matching rule");
-  let post = site.post("edit_file", &site.source).expect("matching hook");
-  assert!(post.status.success(), "{post:?}");
-  let decision: Value = serde_json::from_slice(&post.stdout).expect("Muse post decision");
-  assert!(
-    decision["systemMessage"]
-      .as_str()
-      .is_some_and(|message| message.contains("Forbidden suppression")),
-    "{post:?}"
-  );
-  let fresh = site.project.join("fresh.py");
-  fs::write(&fresh, "try:\n    pass\nexcept:\n    pass\n").expect("new Python file");
-  for path in [&fresh, &site.source] {
-    let wrote = site.post("write_file", path).expect("Muse write hook");
-    assert!(wrote.status.success(), "{wrote:?}");
-    let result: Value = serde_json::from_slice(&wrote.stdout).expect("quality advice");
-    assert!(
-      result["systemMessage"]
-        .as_str()
-        .is_some_and(|message| message.contains("Forbidden suppression")),
-      "{wrote:?}"
-    );
+fn muse_registers_three_rules_and_enforces_a_rust_edit() {
+  let fixture = Fixture::new().unwrap();
+  for plugin in ["ts-quality", "python-quality", "rust-quality"] {
+    fixture.register_rule(plugin).unwrap();
   }
-  let state =
-    fs::read_to_string(site.gate_file().expect("project state")).expect("quality gate state");
-  assert!(state.contains("\"status\": \"failing\""), "{state}");
-  assert!(state.contains("fresh.py"), "{state}");
+  fixture.assert_cleanup_and_report().unwrap();
+  fixture.assert_rust_edit_blocks_commit().unwrap();
 }

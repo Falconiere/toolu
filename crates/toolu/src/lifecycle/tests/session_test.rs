@@ -50,6 +50,28 @@ fn startup_prints_the_protocol_and_the_native_runtime_line() {
 }
 
 #[test]
+fn muse_startup_keeps_context_in_system_message() {
+  let (_dir, repo, env) = repo_env();
+  let env = env
+    .with("TOOLU_HOST_OVERRIDE", "muse")
+    .with("MUSE_PLUGIN_ROOT", plugin_root().to_str().unwrap());
+  let value = document(&run(&env, &repo, r#"{"source":"startup"}"#, None));
+  assert!(value.get("hookSpecificOutput").is_none(), "{value}");
+  let message = value["systemMessage"].as_str().unwrap();
+  assert!(message.starts_with(&format!(
+    "Toolu is on!\ntoolu runtime: native {VERSION} at {EXE}"
+  )));
+  assert!(message.contains("Session Protocol — repo"), "{message}");
+  let resume = document(&run(&env, &repo, r#"{"source":"resume"}"#, None));
+  assert!(
+    resume["systemMessage"]
+      .as_str()
+      .unwrap()
+      .starts_with("Session resumed\ntoolu runtime: native")
+  );
+}
+
+#[test]
 fn a_disabled_hook_keeps_startup_and_resume_and_is_silent_otherwise() {
   let (dir, repo, env) = repo_env();
   let config = dir.path().join("cfg");

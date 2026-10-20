@@ -126,3 +126,15 @@ fn the_hook_output_is_one_session_start_context_document_per_session() {
   assert!(first.contains("toolu: native binary not found"), "{first}");
   assert_eq!(native_toolu_hook_output(&env, payload), None);
 }
+
+#[test]
+fn muse_missing_binary_is_one_system_message() {
+  let (_dir, env) = sandbox();
+  let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
+  let payload = Some(r#"{"session_id":"muse-hook"}"#);
+  let output = native_toolu_hook_output(&env, payload).unwrap();
+  let value: serde_json::Value = serde_json::from_str(&output).unwrap();
+  assert!(value.get("hookSpecificOutput").is_none());
+  assert!(value["systemMessage"].as_str().unwrap().contains("Muse"));
+  assert_eq!(native_toolu_hook_output(&env, payload), None);
+}

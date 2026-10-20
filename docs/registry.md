@@ -12,6 +12,8 @@ Domain plugins add rules to toolu's `PreToolUse` and `PostToolUse` hooks through
 
 `<config root>` is `TOOLU_CONFIG_DIR`, else the host's own root (`CLAUDE_CONFIG_DIR` or `~/.claude`, `CODEX_HOME` or `~/.codex`, …). `<spec>` is the owning plugin's `name@marketplace`. It may contain `.` but never `__`, `/` or whitespace. A file without the `<spec>__<name>` namespace is never run and gets one stderr warning per walk.
 
+On Muse, the config root is `TOOLU_CONFIG_DIR`, then `MUSE_CONFIG_DIR`, then `XDG_CONFIG_HOME/muse`, then `~/.config/muse`. Each quality plugin's SessionStart hook writes its manifest there, removes its own older `.js` and `.sh` bridges, and leaves an unchanged manifest byte-identical. Muse post-edit quality failures write a failing gate record; the next commit or push is blocked by the quality gate.
+
 ## Manifests
 
 `<spec>__<name>.json` enables the rule of that spec and name compiled into the binary: `{"version":1,"spec","name","event","matcher"}` (`toolu_runtime::registry::manifest`). The matcher is tested against the walk's tool name, which is `Edit` for every path of a split edit, and the rule then runs only if its `applies` holds. Nothing else costs anything: a `Read` with no fitting manifest calls no rule code and spawns no process. A manifest that cannot be read, has an unknown field or another `version`, or (when its matcher fits the tool) names a rule the binary lacks prints one `toolu-registry: manifest <file> skipped: <reason>` line and is never an error. A usable manifest shadows its spec's `.sh` modules.

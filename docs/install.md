@@ -127,7 +127,10 @@ muse plugins inspect toolu                    # trust state: approved, not "awai
 - Without `--approve`, `install` and `update` end with `awaiting approval: muse plugins approve <name>`; run that command, or re-run with `--approve`. Muse asks again when a hook definition changes.
 - `toolu plugins install` shallow-clones the tag matching the binary and registers it as the Muse marketplace `toolu` ([installer guide](cli/installer.md#muse)). `get.toolu.sh` and Homebrew install only the binary and are unaffected.
 - Today only the `toolu` plugin carries a `.muse-plugin/plugin.json`, and its `hooks` list is still empty; the other plugins and the hooks follow in #547. Until then a release without a plugin's manifest gives that plugin a failed step (`not available in marketplace`).
-- `toolu doctor` and the session-start report do not cover Muse yet (#550); verify with `muse plugins inspect`.
+
+After installing a toolu plugin, run `toolu --host muse doctor`. The doctor reads Muse's installed-plugin list and inspects each toolu plugin's runtime capabilities. An installed plugin can be active in the list while its hooks still need approval; the doctor warns and gives the corresponding `muse plugins approve` command. It also warns when a plugin is disabled and gives `muse plugins enable`, or when Muse's plugin inventory cannot be read. Run doctor again after approval to verify that the hooks are effective.
+
+Muse user settings live under `TOOLU_USER_CONFIG_DIR` when set; otherwise the config root is `TOOLU_CONFIG_DIR`, `MUSE_CONFIG_DIR`, `XDG_CONFIG_HOME/muse`, or `~/.config/muse`, in that order. Project settings live at `<project>/.agents/toolu.config.json`. `toolu --host muse config set <key> <value>` writes the user file, and `--project` writes the project file. `toolu --host muse setup agents preview` still targets `CODEX_HOME/agents`.
 
 ## Agent command shell
 

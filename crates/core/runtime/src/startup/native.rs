@@ -12,6 +12,7 @@ use crate::env::Env;
 use crate::host::roots::Roots;
 use crate::json::ordered::Ordered;
 use crate::process::commands::{ShellToolu, known_native_toolu, shell_toolu};
+use toolu_protocol::host::Host;
 
 const INSTALLER: &str = "curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash";
 const HOMEBREW: &str = "brew install falconiere/tap/toolu";
@@ -30,9 +31,13 @@ pub fn native_toolu_advice(env: &Env, session_id: Option<&str>) -> Option<String
 /// else `TOOLU_SESSION_ID`.
 pub fn native_toolu_hook_output(env: &Env, payload: Option<&str>) -> Option<String> {
   let id = payload_session_id(env, payload);
-  native_toolu_advice(env, id.as_deref())
-    .and_then(|line| session_context("SessionStart", &line))
-    .map(|context| render_hook_output(&context, false).trim_end().to_owned())
+  let line = native_toolu_advice(env, id.as_deref())?;
+  let context = if Roots::new(env.clone(), None).host() == Host::Muse {
+    Ordered::Object(vec![("systemMessage".to_owned(), Ordered::String(line))])
+  } else {
+    session_context("SessionStart", &line)?
+  };
+  Some(render_hook_output(&context, false).trim_end().to_owned())
 }
 
 fn payload_session_id(env: &Env, payload: Option<&str>) -> Option<String> {
@@ -48,10 +53,19 @@ fn shell_is_native(env: &Env) -> bool {
 }
 
 fn advice_line(env: &Env) -> String {
+  let muse = Roots::new(env.clone(), None).host() == Host::Muse;
   match known_native_toolu(env) {
+    Some(path) if muse => format!(
+      "toolu: native binary for this Muse session: {}. Use that absolute path for toolu commands.",
+      shell_quote(&path)
+    ),
     Some(path) => format!(
       "toolu: native binary for this session: {}. Use that absolute path for toolu commands.",
       shell_quote(&path)
+    ),
+    None if muse => format!(
+      "toolu: native binary not found in the Muse command shell. \
+Install it with: {INSTALLER} or {HOMEBREW}. Restart the Muse session."
     ),
     None => format!(
       "toolu: native binary not found in the agent command shell. \

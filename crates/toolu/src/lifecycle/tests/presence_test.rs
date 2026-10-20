@@ -5,7 +5,7 @@ use toolu_runtime::host::snapshot::Installed;
 use super::{install_command, plugin_active, presence};
 
 #[test]
-fn non_codex_hosts_read_claudes_install_record() {
+fn cursor_and_hermes_use_claudes_record_but_muse_does_not() {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path().join("cfg");
   let plugins = root.join("plugins");
@@ -25,6 +25,11 @@ fn non_codex_hosts_read_claudes_install_record() {
     Installed::Absent
   );
   assert!(!plugin_active("ast-grep@toolu", &env, Host::Cursor));
+  assert_eq!(
+    presence("ast-grep@toolu", &env, Host::Muse),
+    Installed::Unknown
+  );
+  assert!(plugin_active("ast-grep@toolu", &env, Host::Muse));
   std::fs::write(
     plugins.join("installed_plugins.json"),
     r#"{"plugins":{"ast-grep@toolu":{}}}"#,
@@ -35,11 +40,20 @@ fn non_codex_hosts_read_claudes_install_record() {
     Installed::Installed
   );
   assert_eq!(
+    presence("ast-grep@toolu", &env, Host::Muse),
+    Installed::Unknown
+  );
+  assert_eq!(presence("", &env, Host::Muse), Installed::Absent);
+  assert_eq!(
     install_command("ast-grep@toolu", Host::Claude),
     "/plugin install ast-grep@toolu"
   );
   assert_eq!(
     install_command("ast-grep@toolu", Host::Codex),
     "codex plugin add ast-grep@toolu"
+  );
+  assert_eq!(
+    install_command("ast-grep@toolu", Host::Muse),
+    "muse plugins install ast-grep@toolu"
   );
 }

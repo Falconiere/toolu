@@ -60,9 +60,10 @@ fn reply(input: &PromptInput<'_>, host: Host, config: &LoadedConfig) -> Option<S
   match prompt_gate(&lower) {
     PromptGate::Skip => None,
     PromptGate::Block => Some(block_json()),
-    PromptGate::Hint => Some(hint_json(&additional_context(
-      input, host, config, &prompt, &lower,
-    ))),
+    PromptGate::Hint => Some(hint_json(
+      host,
+      &additional_context(input, host, config, &prompt, &lower),
+    )),
   }
 }
 
@@ -149,7 +150,13 @@ fn block_json() -> String {
   ])
 }
 
-fn hint_json(context: &str) -> String {
+fn hint_json(host: Host, context: &str) -> String {
+  if host == Host::Muse {
+    return hook_json(vec![(
+      "systemMessage".to_owned(),
+      Ordered::String(context.to_owned()),
+    )]);
+  }
   let specific = Ordered::Object(vec![
     (
       "hookEventName".to_owned(),

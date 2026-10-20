@@ -31,6 +31,22 @@ fn structural_prompts_follow_whether_ast_grep_is_on_path() {
 }
 
 #[test]
+fn muse_prompt_hints_use_system_message() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = bin_with(dir.path(), true);
+  let env = env(dir.path(), &path).with("TOOLU_HOST_OVERRIDE", "muse");
+  let hint = document(
+    &env,
+    dir.path(),
+    r#"{"prompt":"list all methods on the trait"}"#,
+  );
+  assert_eq!(hint["systemMessage"], STRUCTURAL);
+  assert!(hint.get("hookSpecificOutput").is_none());
+  let blocked = document(&env, dir.path(), r#"{"prompt":"fix"}"#);
+  assert_eq!(blocked["decision"], "block");
+}
+
+#[test]
 fn a_one_word_verb_blocks_and_trivial_or_empty_prompts_are_silent() {
   let dir = tempfile::tempdir().unwrap();
   let path = bin_with(dir.path(), false);
