@@ -1,5 +1,6 @@
 //! Muse config roots and Codex agent setup through the real CLI.
 
+use std::io;
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -7,7 +8,7 @@ use serde_json::Value;
 
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 
-fn run(home: &Path, project: &Path, codex: &Path, args: &[&str]) -> Output {
+fn run(home: &Path, project: &Path, codex: &Path, args: &[&str]) -> io::Result<Output> {
   Command::new(TOOLU)
     .args(["--host", "muse"])
     .args(args)
@@ -21,7 +22,6 @@ fn run(home: &Path, project: &Path, codex: &Path, args: &[&str]) -> Output {
     .env_remove("TOOLU_AGENT_TEMPLATE_DIR")
     .env_remove("MUSE_CONFIG_DIR")
     .output()
-    .unwrap()
 }
 
 #[test]
@@ -38,7 +38,8 @@ fn muse_config_uses_xdg_and_project_agents_roots() {
     &project,
     &codex,
     &["config", "set", "gates.pushReview", "\"off\""],
-  );
+  )
+  .unwrap();
   assert_eq!(user.status.code(), Some(0), "{user:?}");
   let user_path = home.join("xdg/muse/toolu.config.json");
   let user_data: Value = serde_json::from_slice(&std::fs::read(user_path).unwrap()).unwrap();
@@ -49,7 +50,8 @@ fn muse_config_uses_xdg_and_project_agents_roots() {
     &project,
     &codex,
     &["config", "set", "gates.pushReview", "\"warn\"", "--project"],
-  );
+  )
+  .unwrap();
   assert_eq!(project_set.status.code(), Some(0), "{project_set:?}");
   let project_path = project.join(".agents/toolu.config.json");
   let project_data: Value = serde_json::from_slice(&std::fs::read(project_path).unwrap()).unwrap();
@@ -60,7 +62,8 @@ fn muse_config_uses_xdg_and_project_agents_roots() {
     &project,
     &codex,
     &["config", "get", "gates.pushReview"],
-  );
+  )
+  .unwrap();
   assert_eq!(get.status.code(), Some(0), "{get:?}");
   assert_eq!(String::from_utf8_lossy(&get.stdout).trim(), "warn");
 }
@@ -73,7 +76,7 @@ fn muse_setup_agents_preview_keeps_codex_home() {
   let codex = root.path().join("codex");
   std::fs::create_dir_all(&home).unwrap();
   std::fs::create_dir_all(&project).unwrap();
-  let output = run(&home, &project, &codex, &["setup", "agents", "preview"]);
+  let output = run(&home, &project, &codex, &["setup", "agents", "preview"]).unwrap();
   assert_eq!(output.status.code(), Some(0), "{output:?}");
   assert!(
     String::from_utf8_lossy(&output.stdout).contains(&format!("TARGET {}/agents", codex.display()))

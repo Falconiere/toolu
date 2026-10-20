@@ -1,13 +1,13 @@
 //! Muse lifecycle output through the real `toolu` binary.
 
-use std::io::Write as _;
+use std::io::{self, Write as _};
 use std::process::{Command, Output, Stdio};
 
 use serde_json::Value;
 
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 
-fn hook(root: &std::path::Path, name: &str, path: &str, payload: &str) -> Output {
+fn hook(root: &std::path::Path, name: &str, path: &str, payload: &str) -> io::Result<Output> {
   let mut child = Command::new(TOOLU)
     .args(["hook", name, "--event", "SessionStart"])
     .current_dir(root)
@@ -19,15 +19,13 @@ fn hook(root: &std::path::Path, name: &str, path: &str, payload: &str) -> Output
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
-    .spawn()
-    .unwrap();
+    .spawn()?;
   child
     .stdin
     .take()
-    .unwrap()
-    .write_all(payload.as_bytes())
-    .unwrap();
-  child.wait_with_output().unwrap()
+    .ok_or_else(|| io::Error::other("missing hook stdin"))?
+    .write_all(payload.as_bytes())?;
+  child.wait_with_output()
 }
 
 #[test]
@@ -44,7 +42,8 @@ fn muse_startup_and_resume_use_system_message_with_runtime_line() {
       "session-start",
       &path,
       &format!(r#"{{"source":"{source}"}}"#),
-    );
+    )
+    .unwrap();
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let value: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert!(value.get("hookSpecificOutput").is_none(), "{value}");
@@ -60,12 +59,12 @@ fn muse_startup_and_resume_use_system_message_with_runtime_line() {
 fn muse_check_binary_reports_missing_native_once_per_session() {
   let root = tempfile::tempdir().unwrap();
   let payload = r#"{"session_id":"muse-missing"}"#;
-  let first = hook(root.path(), "check-binary", "/nonexistent", payload);
+  let first = hook(root.path(), "check-binary", "/nonexistent", payload).unwrap();
   assert_eq!(first.status.code(), Some(0), "{first:?}");
   let value: Value = serde_json::from_slice(&first.stdout).unwrap();
   assert!(value.get("hookSpecificOutput").is_none());
   assert!(value["systemMessage"].as_str().unwrap().contains("Muse"));
-  let second = hook(root.path(), "check-binary", "/nonexistent", payload);
+  let second = hook(root.path(), "check-binary", "/nonexistent", payload).unwrap();
   assert_eq!(second.status.code(), Some(0), "{second:?}");
   assert!(second.stdout.is_empty(), "{second:?}");
 }
@@ -86,7 +85,8 @@ fn muse_check_binary_advises_install_when_a_shim_shadows_it() {
     "check-binary",
     &shadow.display().to_string(),
     r#"{"session_id":"muse-shadow"}"#,
-  );
+  )
+  .unwrap();
   assert_eq!(output.status.code(), Some(0), "{output:?}");
   let value: Value = serde_json::from_slice(&output.stdout).unwrap();
   assert!(
