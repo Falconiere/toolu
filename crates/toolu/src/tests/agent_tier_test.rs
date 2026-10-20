@@ -79,3 +79,73 @@ fn explicit_block_mode_denies_but_matching_model_is_silent() {
   let allowed = evaluate(matching, env, dir.path());
   assert_eq!(allowed.stdout, None);
 }
+
+fn observed_muse_payload(tool: &str) -> serde_json::Value {
+  let path = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/toolu/evidence/2026-10-19-muse-tool-inventory.json"
+  );
+  let inventory: serde_json::Value =
+    serde_json::from_str(&std::fs::read_to_string(path).expect("inventory")).expect("JSON");
+  inventory["tools"][tool]["pre_example"].clone()
+}
+
+#[test]
+fn observed_muse_spawn_records_role_without_inventing_child_model() {
+  let (dir, env) = fixture();
+  let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
+  let payload = observed_muse_payload("subagent_spawn").to_string();
+  assert_eq!(evaluate(&payload, env, dir.path()), silent());
+  let telemetry = dir.path().join(".agents/tmp/telemetry/feat_x.jsonl");
+  let line = std::fs::read_to_string(telemetry).expect("delegation telemetry");
+  let event: serde_json::Value = serde_json::from_str(line.trim()).expect("event JSON");
+  assert_eq!(event["event"], "delegation");
+  assert_eq!(event["subagent_type"], "responder");
+  assert!(event["model"].is_null());
+  assert!(event["reasoning_effort"].is_null());
+}
+
+#[test]
+fn muse_spawn_with_structured_model_and_effort_emits_muse_advice() {
+  let (dir, env) = fixture();
+  let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
+  let ledger = dir.path().join(".agents/tmp/plan-ledger/feat_x.json");
+  std::fs::create_dir_all(ledger.parent().expect("parent")).expect("ledger dir");
+  std::fs::write(
+    &ledger,
+    r#"{"steps":[{"id":"s1","status":"running","model":"opus"}],"next":"s1"}"#,
+  )
+  .expect("ledger");
+  let mut payload = observed_muse_payload("subagent_spawn");
+  payload["tool_input"]["model"] = serde_json::json!("sonnet");
+  payload["tool_input"]["effort"] = serde_json::json!("high");
+  let out = evaluate(&payload.to_string(), env.clone(), dir.path());
+  assert_eq!(out.exit, Exit::Success);
+  let advice: serde_json::Value =
+    serde_json::from_str(&out.stdout.expect("advice")).expect("Muse JSON");
+  assert!(
+    advice["systemMessage"]
+      .as_str()
+      .expect("message")
+      .contains("opus")
+  );
+  assert!(advice.get("hookSpecificOutput").is_none());
+  let telemetry = dir.path().join(".agents/tmp/telemetry/feat_x.jsonl");
+  let line = std::fs::read_to_string(telemetry).expect("delegation telemetry");
+  let event: serde_json::Value = serde_json::from_str(line.trim()).expect("event JSON");
+  assert_eq!(event["model"], "sonnet");
+  assert_eq!(event["subagent_type"], "responder");
+  assert_eq!(event["reasoning_effort"], "high");
+  payload["tool_input"]["model"] = serde_json::json!("opus");
+  let matching = evaluate(&payload.to_string(), env, dir.path());
+  assert_eq!(matching.stdout, None);
+}
+
+#[test]
+fn muse_internal_tool_does_not_write_delegation_telemetry() {
+  let (dir, env) = fixture();
+  let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
+  let payload = observed_muse_payload("submit_reminder_decision").to_string();
+  assert_eq!(evaluate(&payload, env, dir.path()), silent());
+  assert!(!dir.path().join(".agents/tmp/telemetry").exists());
+}
