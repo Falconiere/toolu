@@ -32,7 +32,7 @@ AC-10).
   {
     "id": "S1",
     "title": "Clean-machine setup; install toolu without --approve and show a .env write proceeds, approve and show it blocked (check 8); .env write blocked under block config and default preset (check 1)",
-    "check": "grep -Eq '^\\| 8 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 8' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -Eq '^\\| 1 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 1' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"8\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && jq -e '.checks[\"1\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "check": "grep -q '^## Check 8 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"8\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"8\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 8 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 1 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"1\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"1\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 1 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-8",
       "AC-1"
@@ -47,7 +47,7 @@ AC-10).
   {
     "id": "S2",
     "title": "Install every plugin --approve; session edit breaks maxFileLines, gate file failing and toolu status shows it (check 2); commit blocked with HEAD unchanged, then fixed and committed (check 3)",
-    "check": "grep -Eq '^\\| 2 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 2' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -Eq '^\\| 3 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 3' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"2\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && jq -e '.checks[\"3\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "check": "grep -q '^## Check 2 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"2\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"2\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 2 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 3 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"3\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"3\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 3 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-2",
       "AC-3"
@@ -65,7 +65,7 @@ AC-10).
   {
     "id": "S3",
     "title": "Push to a bare origin blocked by push review with no remote ref, ask mode also blocks, then toolu review write-state --findings-count 0 and the push lands (check 4)",
-    "check": "grep -Eq '^\\| 4 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 4' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"4\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "check": "grep -q '^## Check 4 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"4\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"4\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 4 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-4"
     ],
@@ -82,7 +82,7 @@ AC-10).
   {
     "id": "S4",
     "title": "No-tool prompt and routine read/edit/bash session with internal tools: no failed hook events (check 5); binary renamed mid-run blocks bash with the install advisory, restore re-gates (check 6)",
-    "check": "grep -Eq '^\\| 5 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 5' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -Eq '^\\| 6 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 6' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"5\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && jq -e '.checks[\"6\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "check": "grep -q '^## Check 5 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"5\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"5\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 5 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 6 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"6\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"6\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 6 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-5",
       "AC-6"
@@ -100,7 +100,7 @@ AC-10).
   {
     "id": "S5",
     "title": "toolu doctor in the project: no failing line, Muse roots, every plugin approved (check 7)",
-    "check": "grep -Eq '^\\| 7 \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && grep -q '^## Check 7' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"7\"] | (.facts | length > 0 and all(.[]; . == true)) and (.sessions | length > 0) and all(.sessions[]; .hook_failures == 0)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "check": "grep -q '^## Check 7 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"7\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"7\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 7 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-7"
     ],
@@ -116,8 +116,8 @@ AC-10).
   },
   {
     "id": "S6",
-    "title": "Evidence file complete and redacted: eight PASS rows (or a linked issue per FAIL), contract-verified statement, no scratch path, session id or credential",
-    "check": "test \"$(grep -cE '^\\| [1-8] \\|.*\\| PASS \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md)\" = 8 && grep -q 'enforcement contract' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && ! grep -Eq '/tmp/claude-0|\\.cache/toolu-553|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|sk-[A-Za-z0-9]|api[_-]?key' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && ! grep -Eq '/tmp/claude-0|\\.cache/toolu-553|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}' docs/toolu/evidence/2026-10-20-muse-live-e2e.json && jq -e '.checks|keys == [\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null",
+    "title": "Evidence file complete and redacted: eight verdict rows, each PASS or FAIL with its issue link, FAIL issues equal to the filed deviations, contract statement, no scratch path, id or credential",
+    "check": "test \"$(grep -cE '^\\| [1-8] \\|.*\\| (PASS|FAIL #[0-9]+) \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md)\" = 8 && test \"$(grep -cE '^\\| [1-8] \\|.*\\| FAIL \\|' docs/toolu/evidence/2026-10-20-muse-live-e2e.md)\" = 0 && grep -q 'enforcement contract' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks|keys == [\"1\",\"2\",\"3\",\"4\",\"5\",\"6\",\"7\",\"8\"]' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && jq -e '[.checks[] | select(.verdict == \"FAIL\") | .issue] == [.deviations[].issue]' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && ! grep -Eq '/tmp/claude-0|\\.cache/toolu-553|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|call_[0-9a-f]{20}|auth\\.json\"' docs/toolu/evidence/2026-10-20-muse-live-e2e.md docs/toolu/evidence/2026-10-20-muse-live-e2e.json",
     "ac_refs": [
       "AC-9",
       "AC-10"
@@ -215,3 +215,22 @@ Round 1 (Jev: alignment `noul` 0.51; most material gap "the checks verify only a
 - S6: 🔵 consider: the redaction check now covers the JSON file too.
 
 Round 2: every AC (1–10) maps to a step, checks are runnable, paths cover what each check reads, the order is linear, and delivery runs `toolu ledger run --verify`, the review and the verdict before the push. **Status:** Approved.
+
+## Deviations
+
+Execution, 2026-10-20 (the live run).
+- **Two FAIL verdicts, filed fix-forward.**
+  - Check 4: #571, owner #542. Muse's sandbox makes `.agents/` read-only, so in-session `toolu review write-state` and `toolu ledger run` cannot write state.
+  - Check 7: #572, owner #550. In-session `toolu doctor` reports trusted hooks as inert and a false secrets failure.
+
+  Jev assigned the owners (0.76 and 0.87) and scored check 7 FAIL (0.98). Check 4 was a coin-flip (fail 0.55), so it is scored FAIL and the rerun covers it. Under spec AC-10, the PR says `Part of Falconiere/toolu#553` and #553 stays open until the rerun is green.
+- **Checks S1–S6 are re-expressed for that outcome.** A step proves the evidence is mechanically consistent:
+  - a PASS row needs every computed fact true;
+  - a FAIL row needs at least one false fact and a linked issue;
+  - the Markdown verdict matches the JSON verdict;
+  - every session has zero failed hook runs;
+  - the FAIL issues equal the filed deviations.
+
+  A hand-typed PASS still cannot pass.
+- **The spec's "ask mode also blocks" (check 4 boundary) was wrong.** `pushReview` is a judgement gate, so its `ask` degrades to `advise` on Muse (`gate_mode.rs`), as on Codex. The run recorded it as `ask_mode_advises_on_muse`, and the evidence explains it.
+- **The run added `herdr` and `ast-grep` to the clean machine's `PATH`.** Doctor's `tools` check requires them; that is setup, not a toolu defect.

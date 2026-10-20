@@ -1,0 +1,994 @@
+{
+  "issue": 553,
+  "epic": 539,
+  "run": {
+    "date": "2026-10-20",
+    "muse": "Muse Code 1.4.11 (1.4.11-R6667.1)",
+    "toolu": "8.0.4 built from origin/main 04f29e95",
+    "plugins": 12,
+    "clean_machine": "env -i, HOME/XDG_* under $SCRATCH, /usr/local/bin masked by unshare -m, toolu at $HOME/.local/bin/toolu"
+  },
+  "checks": {
+    "1": {
+      "sessions": [
+        {
+          "name": "c1-block",
+          "prompt": "Use the edit or write file tool (not bash) to change the file .env so that it contains the two lines KEEP=1 and ADDED=1. Report the tool result verbatim.",
+          "tools": [
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: Claude is trying to edit .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+            },
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: Claude is trying to edit .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+            }
+          ],
+          "tool_names_seen": [
+            "edit_file",
+            "submit_reminder_decision",
+            "write_file"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 5,
+            "PreToolUse plugin:toolu:agent-tier completed": 7,
+            "PreToolUse plugin:toolu:mcp-tools completed": 7,
+            "PreToolUse plugin:toolu:pre-tools blocked": 2,
+            "PreToolUse plugin:toolu:pre-tools completed": 5,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "1` + `ADDED=1`\n\nResult:\n> tool blocked by hook: Claude is trying to edit .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\n\nBlocker: `gates.protectedFiles.mode='block'` blocks agent edits to `.env`.\n\nTo proceed:\n- Edit `.env` yourself to contain those two lines, or\n- Allow this path / approve the edit in the gate config, then ask me to retry with the file tools."
+        },
+        {
+          "name": "c8-approved",
+          "prompt": "Run exactly this one shell command with the bash tool and nothing else: printf 'ADDED=1\\n' >> .env . Then reply with the tool output.",
+          "tools": [
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools blocked": 1,
+            "PreToolUse plugin:toolu:pre-tools completed": 2,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "tool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\n"
+        }
+      ],
+      "facts": {
+        "block_config_edit_blocked": true,
+        "reason_names_protected_files_rule": true,
+        "default_preset_write_blocked": true,
+        "env_unchanged": true
+      },
+      "verdict": "PASS"
+    },
+    "2": {
+      "sessions": [
+        {
+          "name": "c2-edit",
+          "prompt": "Use the write_file or edit_file tool (not bash) to make sample.ts contain exactly these six lines: export const a = 1; export const b = 2; export const c = 3; export const d = 4; export const e = 5; export const f = 6; (one statement per line). Do not run any other command. Report each tool result verbatim.",
+          "tools": [
+            {
+              "tool_name": "write_file",
+              "outcome": "success",
+              "text": "wrote 120 bytes to $SCRATCH/run/home/proj/sample.ts"
+            }
+          ],
+          "tool_names_seen": [
+            "submit_reminder_decision",
+            "write_file"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:pre-tools: File: sample.ts\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions",
+            "plugin:toolu:post-tools: QUALITY VIOLATION — fix before proceeding:\nTS file exceeds 3-line limit: sample.ts (6 code lines, blanks/comments excluded) — split into smaller modules"
+          ],
+          "answer": "wrote 120 bytes to $SCRATCH/run/home/proj/sample.ts"
+        }
+      ],
+      "facts": {
+        "edit_ran": true,
+        "post_tools_reported_violation": true,
+        "gate_failing_for_sample_ts": true,
+        "status_host_muse": true
+      },
+      "verdict": "PASS"
+    },
+    "3": {
+      "sessions": [
+        {
+          "name": "c3-commit-red",
+          "prompt": "Run these with the bash tool, one call each, and report each result verbatim: (1) toolu status  (2) git add sample.ts && git commit -m 'feat: six constants'  . Do not edit any file and do not retry.",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"toolu status\",\n  \"description\": \"Check toolu status\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"{\\n  \\\"ahead\\\": 0,\\n  \\\"behind\\\": 0,\\n  \\\"branch\\\": \\\"main\\\",\\n  \\\"cwd\\\": \\\"$SCRATCH/run/home/proj\\\",\\n  \\\"gate\\\": {\\n    \\\"entries\\\": [\\n      {\\n        \\\"file\\\": \\\"sample.ts\\\",\\n        \\\"reason\\\": \\\"Post-edit quality violation(s) detec"
+            },
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: BLOCKED: quality gate failing — fix the violations before committing or pushing.\nPost-edit quality violation(s) detected\nTS file exceeds 3-line limit: sample.ts (6 code lines, blanks/comments excluded) — split into smaller modules"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 4,
+            "PreToolUse plugin:toolu:mcp-tools completed": 4,
+            "PreToolUse plugin:toolu:pre-tools blocked": 1,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:user-prompt-submit: Quality gate failing: Post-edit quality violation(s) detected. Prefer fixing before unrelated work."
+          ],
+          "answer": "proj/.agents/tmp/push-review/main.json\",\n    \"reason\": null,\n    \"state\": \"missing\"\n  },\n  \"repo_root\": \"$SCRATCH/run/home/proj\",\n  \"waivers\": {\n    \"pending\": null,\n    \"waiver\": null\n  },\n  \"working_tree\": {\n    \"staged\": 0,\n    \"unstaged\": 1,\n    \"untracked\": 1\n  }\n}\n```\n\n(2) `git add sample.ts && git commit -m 'feat: six constants'`:\n```\ntool blocked by hook: BLOCKED: quality gate failing — fix the violations before committing or pushing.\nPost-edit quality violation(s) detected\nTS file exceeds 3-line limit: sample.ts (6 code lines, blanks/comments excluded) — split into smaller modules\n```"
+        },
+        {
+          "name": "c3-commit-green",
+          "prompt": "The quality gate failed because sample.ts exceeds a 3-line limit. Use the write_file tool (not bash) to make sample.ts contain exactly two lines: export const a = 1; and export const b = 2; . Then, with the bash tool, run: git add sample.ts && git commit -m 'feat: two constants' . Report each tool result verbatim. Do not run anything else.",
+          "tools": [
+            {
+              "tool_name": "write_file",
+              "outcome": "success",
+              "text": "wrote 40 bytes to $SCRATCH/run/home/proj/sample.ts"
+            },
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"git add sample.ts && git commit -m 'feat: two constants'\",\n  \"description\": \"Commit sample constants file\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"[main 2f5b69b] feat: two constants\\n 1 file changed, 2 insertions(+), 1 deletion(-)\\n\",\n  \"original_output_bytes\": 83,\n  \"original_output_tokens\": 21,\n  \"truncated\": false\n}"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision",
+            "write_file"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 4,
+            "PreToolUse plugin:toolu:agent-tier completed": 4,
+            "PreToolUse plugin:toolu:mcp-tools completed": 4,
+            "PreToolUse plugin:toolu:pre-tools completed": 4,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:user-prompt-submit: Quality gate failing: Post-edit quality violation(s) detected. Prefer fixing before unrelated work.",
+            "plugin:toolu:pre-tools: File: sample.ts\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions",
+            "plugin:toolu:pre-tools: BEFORE COMMITTING:\n1. Verify diff covers only expected scope (git diff --stat against main)\n2. Save memory of significant decisions before committing.\nSkip only if already done this task."
+          ],
+          "answer": "Done: sample.ts updated and committed.\n\nwrite_file result:\n```\nwrote 40 bytes to $SCRATCH/run/home/proj/sample.ts\n```\n\nbash result:\n```\n{\n  \"chunk_id\": \"exec-1-1\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"[main 2f5b69b] feat: two constants\\n 1 file changed, 2 insertions(+), 1 deletion(-)\\n\",\n  \"original_output_bytes\": 83,\n  \"original_output_tokens\": 21,\n  \"truncated\": false\n}\n```\n"
+        }
+      ],
+      "facts": {
+        "in_session_status_host_muse_gate_failing": true,
+        "commit_blocked_by_quality_gate": true,
+        "head_unchanged_after_block": true,
+        "commit_after_fix_ran": true,
+        "head_moved_after_fix": true
+      },
+      "verdict": "PASS"
+    },
+    "4": {
+      "sessions": [
+        {
+          "name": "c4-push-blocked",
+          "prompt": "Run exactly this with the bash tool and report the result verbatim, without retrying or running anything else: git push -u origin feat/push-smoke",
+          "tools": [
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: Code review required before push (diff SHA 0b17edb9ecf389e73ef179ab3b6362ac12fba89c, base main).\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \"code-review\" (or the `toolu-review:review` skill). Then atomically write $SCRATCH/run/home/push-proj/.agents/tmp/push-review/feat_push-smoke.json "
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools blocked": 1,
+            "PreToolUse plugin:toolu:pre-tools completed": 2,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "p/push-review/feat_push-smoke.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push."
+        },
+        {
+          "name": "c4-push-ask",
+          "prompt": "Run exactly this with the bash tool and report the result verbatim, without retrying or running anything else: git push -u origin feat/push-smoke",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"git push -u origin feat/push-smoke\",\n  \"description\": \"Push branch to origin\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"To $SCRATCH/run/home/remote.git\\n * [new branch]      feat/push-smoke -> feat/push-smoke\\nbranch 'feat/push-smoke' set up to track 'origin/feat/push-smoke'.\\n\",\n  \"original_output_bytes\": 275,\n  \"original_output_to"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:pre-tools: Code review required before push (diff SHA 0b17edb9ecf389e73ef179ab3b6362ac12fba89c, base main).\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \"code-review\" (or the `toolu-review:review` s"
+          ],
+          "answer": "To $SCRATCH/run/home/remote.git\n * [new branch]      feat/push-smoke -> feat/push-smoke\nbranch 'feat/push-smoke' set up to track 'origin/feat/push-smoke'.\n"
+        },
+        {
+          "name": "c4-push-reviewed",
+          "prompt": "Run these with the bash tool, one call each, in order, and report each result verbatim: (1) git push origin feat/push-smoke  (2) toolu review write-state --findings-count 0  (3) git push origin feat/push-smoke . Do not run anything else and do not retry.",
+          "tools": [
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: Code review required before push (diff SHA d62aef8f363d73b522a1ecde66420918a1e508fc, base main).\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \"code-review\" (or the `toolu-review:review` skill). Then atomically write $SCRATCH/run/home/push-proj/.agents/tmp/push-review/feat_push-smoke.json "
+            },
+            {
+              "tool_name": "bash",
+              "outcome": "failure",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"toolu review write-state --findings-count 0\",\n  \"description\": \"Write review state file\",\n  \"exit_code\": 1,\n  \"terminal_status\": \"failed\",\n  \"terminal_reason\": \"process exited with status 1\",\n  \"output\": \"review: cannot atomically write $SCRATCH/run/home/push-proj/.agents/tmp/push-review/feat_push-smoke.json\\n\",\n  \"original_output_bytes\": 225,\n  \"original_"
+            },
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: Code review required before push (diff SHA d62aef8f363d73b522a1ecde66420918a1e508fc, base main).\nRun a code reviewer on `git diff main...HEAD` and apply its findings — use the built-in `/code-review xhigh --fix` skill, recorded as \"code-review\" (or the `toolu-review:review` skill). Then atomically write $SCRATCH/run/home/push-proj/.agents/tmp/push-review/feat_push-smoke.json "
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 5,
+            "PreToolUse plugin:toolu:mcp-tools completed": 5,
+            "PreToolUse plugin:toolu:pre-tools blocked": 2,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:user-prompt-submit: Review: forbidden syntax, quality gates, test coverage."
+          ],
+          "answer": "h-review/feat_push-smoke.json (tmp+mv) with schema { version: 2, branch, diff_sha, base_branch, reviewed_at, reviewers, findings_count, findings, review_round, reviewed_files }. `reviewers` must include at least one accepted reviewer (code-review, toolu-review:review, code-review:xhigh, review, or security-review), `findings_count` must be 0, `review_round` starts at 1 for a new `diff_sha` and bumps by 1 only when rewriting at the same `diff_sha`. `reviewed_files` must list every path from `git diff main...HEAD --name-only` (sorted, unique) — the actual reviewer file coverage. Retry push.\n```\n"
+        },
+        {
+          "name": "c4-sandbox-probe",
+          "prompt": "Run these with the bash tool, one call each, and report each result verbatim: (1) mkdir -p .agents/tmp/probe && echo ok-agents  (2) mkdir -p probe-dir && echo ok-root . Do not run anything else.",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "failure",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"mkdir -p .agents/tmp/probe && echo ok-agents\",\n  \"description\": \"Create agents probe directory\",\n  \"exit_code\": 1,\n  \"terminal_status\": \"failed\",\n  \"terminal_reason\": \"process exited with status 1\",\n  \"output\": \"mkdir: Read-only file system\\n\",\n  \"original_output_bytes\": 29,\n  \"original_output_tokens\": 8,\n  \"truncated\": false\n}"
+            },
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-2-1\",\n  \"command\": \"mkdir -p probe-dir && echo ok-root\",\n  \"description\": \"Create root probe directory\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"ok-root\\n\",\n  \"original_output_bytes\": 8,\n  \"original_output_tokens\": 2,\n  \"truncated\": false\n}"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 4,
+            "PreToolUse plugin:toolu:mcp-tools completed": 4,
+            "PreToolUse plugin:toolu:pre-tools completed": 4,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "(1) `mkdir: Read-only file system`\nexit_code: 1\n\n(2) `ok-root`\nexit_code: 0"
+        },
+        {
+          "name": "c4-sandbox-dirs",
+          "prompt": "Run exactly this single command with the bash tool and report its output verbatim: for d in .agents/x .muse/x .git/x .toolu/x .claude/x .codex/x plain/x; do mkdir -p $d 2>/dev/null && echo \"$d writable\" || echo \"$d read-only\"; done",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"for d in .agents/x .muse/x .git/x .toolu/x .claude/x .codex/x plain/x; do mkdir -p $d 2>/dev/null && echo \\\"$d writable\\\" || echo \\\"$d read-only\\\"; done\",\n  \"description\": \"Check directory write permissions\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \".agents/x read-only\\n.muse/x writable\\n.git/x writable\\n.toolu/x writable\\n.claude/x"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": ".agents/x read-only\n.muse/x writable\n.git/x writable\n.toolu/x writable\n.claude/x writable\n.codex/x writable\nplain/x writable"
+        },
+        {
+          "name": "c4-push-allowed",
+          "prompt": "Run exactly this with the bash tool and report the result verbatim, without retrying or running anything else: git push origin feat/push-smoke",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"git push origin feat/push-smoke\",\n  \"description\": \"Push branch to origin\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"To $SCRATCH/run/home/remote.git\\n   8298d72..e07cd6c  feat/push-smoke -> feat/push-smoke\\n\",\n  \"original_output_bytes\": 208,\n  \"original_output_tokens\": 52,\n  \"truncated\": false\n}"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "To $SCRATCH/run/home/remote.git\n   8298d72..e07cd6c  feat/push-smoke -> feat/push-smoke"
+        }
+      ],
+      "facts": {
+        "push_blocked_without_review": true,
+        "remote_unchanged_after_block": true,
+        "ask_mode_advises_on_muse": true,
+        "in_session_write_state_succeeds": false,
+        "agents_dir_writable_in_sandbox": false,
+        "push_allowed_after_recorded_review": true
+      },
+      "verdict": "FAIL",
+      "issue": 571
+    },
+    "5": {
+      "sessions": [
+        {
+          "name": "c5-no-tools",
+          "prompt": "Without using any workspace tool (no file reads, edits or shell), answer in one sentence: what is 17 times 3?",
+          "tools": [],
+          "tool_names_seen": [
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 2,
+            "PreToolUse plugin:toolu:mcp-tools completed": 2,
+            "PreToolUse plugin:toolu:pre-tools completed": 2,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "17 times 3 is 51."
+        },
+        {
+          "name": "c5-routine",
+          "prompt": "Do this routine work: read sample.ts with the read_file tool; use the edit_file tool to append the line '// two constants' to sample.ts; then with the bash tool run 'git status --short' and 'ls'. Report briefly.",
+          "tools": [
+            {
+              "tool_name": "read_file",
+              "outcome": "success",
+              "text": "Read text file `sample.ts`.\n1|export const a = 1;\n2|export const b = 2;"
+            },
+            {
+              "tool_name": "edit_file",
+              "outcome": "success",
+              "text": "edited\nchanged lines: line 2\n--- original\n+++ updated\n@@\n-export const b = 2;\n+export const b = 2;\n+// two constants\n"
+            },
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"git status --short\",\n  \"description\": \"Check git working tree status\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \" M sample.ts\\n?? .agents/tmp/\\n\",\n  \"original_output_bytes\": 29,\n  \"original_output_tokens\": 8,\n  \"truncated\": false\n}"
+            },
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-2-1\",\n  \"command\": \"ls\",\n  \"description\": \"List workspace files\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"package-lock.json\\npackage.json\\nsample.ts\\ntsconfig.json\\n\",\n  \"original_output_bytes\": 55,\n  \"original_output_tokens\": 14,\n  \"truncated\": false\n}"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "edit_file",
+            "read_file",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 6,
+            "PreToolUse plugin:toolu:agent-tier completed": 6,
+            "PreToolUse plugin:toolu:mcp-tools completed": 6,
+            "PreToolUse plugin:toolu:pre-tools completed": 6,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:pre-tools: File: sample.ts\nApply these rules: TS: zero typecheck/lint errors and warnings + no `any`, @ts-ignore, or non-null assertions + keep it simple — no speculative abstractions"
+          ],
+          "answer": "Done: appended `// two constants` to [sample.ts]($SCRATCH/run/home/proj/sample.ts:3).\n\n`git status --short` shows `M sample.ts`; `ls` shows `package.json`, `package-lock.json`, `sample.ts`, `tsconfig.json`. No semantic decision was needed, so Jev did not apply."
+        }
+      ],
+      "facts": {
+        "no_tool_session_answered": true,
+        "no_tool_session_only_internal_tools": true,
+        "routine_session_tools_ran": true,
+        "routine_session_saw_internal_tools": true,
+        "no_block_in_either": true
+      },
+      "verdict": "PASS"
+    },
+    "6": {
+      "sessions": [
+        {
+          "name": "c6-renamed",
+          "prompt": "Run these with the bash tool, one call each, in order, and report each result verbatim: (1) touch started && sleep 40  (2) echo after-rename . Do not retry and do not run anything else.",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"touch started && sleep 40\",\n  \"description\": \"Touch marker and wait\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"\",\n  \"original_output_bytes\": 0,\n  \"original_output_tokens\": 0,\n  \"truncated\": false\n}"
+            },
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: blocked: toolu plugin: no usable native toolu - checked TOOLU_BIN, /opt/homebrew/bin, /usr/local/bin, /home/linuxbrew/.linuxbrew/bin, ~/.local/bin and PATH. If TOOLU_BIN is set, it must point to a native toolu and is never replaced. Install toolu with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash, or: brew install falconiere/tap/toolu. Then restart the session. Se"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 1,
+            "PreToolUse plugin:toolu:agent-tier blocked": 24,
+            "PreToolUse plugin:toolu:agent-tier completed": 1,
+            "PreToolUse plugin:toolu:mcp-tools blocked": 24,
+            "PreToolUse plugin:toolu:mcp-tools completed": 1,
+            "PreToolUse plugin:toolu:pre-tools blocked": 24,
+            "PreToolUse plugin:toolu:pre-tools completed": 1,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [
+            "plugin:toolu:user-prompt-submit: Rename: find all refs (ast-grep + Grep on configs) before rewriting.",
+            "plugin:toolu:post-tools: toolu plugin: no usable native toolu - checked TOOLU_BIN, /opt/homebrew/bin, /usr/local/bin, /home/linuxbrew/.linuxbrew/bin, ~/.local/bin and PATH. If TOOLU_BIN is set, it must point to a native toolu and is never replaced. Install toolu with: curl -fsSL https://get.toolu.sh"
+          ],
+          "answer": "inal_status\": \"completed\",\n  \"output\": \"\",\n  \"original_output_bytes\": 0,\n  \"original_output_tokens\": 0,\n  \"truncated\": false\n}\n```\n\n(2) `echo after-rename` result verbatim:\n```\ntool blocked by hook: blocked: toolu plugin: no usable native toolu - checked TOOLU_BIN, /opt/homebrew/bin, /usr/local/bin, /home/linuxbrew/.linuxbrew/bin, ~/.local/bin and PATH. If TOOLU_BIN is set, it must point to a native toolu and is never replaced. Install toolu with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash, or: brew install falconiere/tap/toolu. Then restart the session. See docs/install.md.\n```\n"
+        },
+        {
+          "name": "c6-restored",
+          "prompt": "Run these with the bash tool, one call each, in order, and report each result verbatim: (1) echo restored  (2) printf 'ADDED=1\\n' >> .env . Do not retry and do not run anything else.",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"echo restored\",\n  \"description\": \"Echo restored marker\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"restored\\n\",\n  \"original_output_bytes\": 9,\n  \"original_output_tokens\": 3,\n  \"truncated\": false\n}"
+            },
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 4,
+            "PreToolUse plugin:toolu:mcp-tools completed": 4,
+            "PreToolUse plugin:toolu:pre-tools blocked": 1,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "batim:\n```\n{\n  \"chunk_id\": \"exec-1-1\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"restored\\n\",\n  \"original_output_bytes\": 9,\n  \"original_output_tokens\": 3,\n  \"truncated\": false\n}\n```\n\n(2) `printf 'ADDED=1\\n' >> .env` result verbatim:\n```\ntool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\n```\n"
+        }
+      ],
+      "facts": {
+        "call_after_rename_blocked_with_install_advisory": true,
+        "post_tool_advisory_after_rename": true,
+        "restored_call_ran": true,
+        "restored_env_write_blocked": true
+      },
+      "verdict": "PASS"
+    },
+    "7": {
+      "sessions": [
+        {
+          "name": "c7-doctor-session",
+          "prompt": "Run exactly this with the bash tool and report its output verbatim: toolu doctor",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "failure",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"toolu doctor\",\n  \"description\": \"Run toolu doctor check\",\n  \"exit_code\": 1,\n  \"terminal_status\": \"failed\",\n  \"terminal_reason\": \"process exited with status 1\",\n  \"output\": \"ok binary: toolu 8.0.4 protocol 2 at $SCRATCH/run/home/.local/bin/toolu; upgrade with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash\\nok reachability: native toolu at $SCRATC"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "ins approve pr-babysit; python-quality hooks are installed but inert; muse plugins approve python-quality; rust-quality hooks are installed but inert; muse plugins approve rust-quality; statusline hooks are installed but inert; muse plugins approve statusline; toolu hooks are installed but inert; muse plugins approve toolu; toolu-review hooks are installed but inert; muse plugins approve toolu-review; ts-quality hooks are installed but inert; muse plugins approve ts-quality\nok skew: plugin versions match\nok registry: no findings\nok tools: required tools are present\ntoolu doctor: 1 check failed"
+        },
+        {
+          "name": "c7-sandbox-probe",
+          "prompt": "Run exactly this single command with the bash tool and report its output verbatim: for f in \"$HOME/.config/muse/trust.json\" \"$HOME/.config/muse/settings.json\" \"$HOME/.config/toolu\" \"$HOME/.config/toolu/secrets.json\"; do if [ -e \"$f\" ]; then if [ -r \"$f\" ] && cat \"$f\" >/dev/null 2>&1 || [ -d \"$f\" ]; then echo \"$f readable\"; else echo \"$f unreadable\"; fi; else echo \"$f absent-or-hidden\"; fi; done; muse plugins inspect toolu --json | head -c 0; echo inspect-exit=$?; muse plugins inspect toolu --json 2>&1 | grep -o \"\\\"status\\\": *\\\"[a-z_]*\\\"\" | sort | uniq -c",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"for f in \\\"$HOME/.config/muse/trust.json\\\" \\\"$HOME/.config/muse/settings.json\\\" \\\"$HOME/.config/toolu\\\" \\\"$HOME/.config/toolu/secrets.json\\\"; do if [ -e \\\"$f\\\" ]; then if [ -r \\\"$f\\\" ] && cat \\\"$f\\\" >/dev/null 2>&1 || [ -d \\\"$f\\\" ]; then echo \\\"$f readable\\\"; else echo \\\"$f unreadable\\\"; fi; else echo \\\"$f absent-or-hidden\\\"; fi; done; muse plugins inspect"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 3,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools completed": 3,
+            "SessionStart plugin:ast-grep:register completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-binary completed": 1,
+            "SessionStart plugin:epic-orchestrator:check-deps completed": 1,
+            "SessionStart plugin:epic-orchestrator:engine-ensure completed": 1,
+            "SessionStart plugin:jev:check-binary completed": 1,
+            "SessionStart plugin:jev:session-start completed": 1,
+            "SessionStart plugin:pr-babysit:check-binary completed": 1,
+            "SessionStart plugin:pr-babysit:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:check-toolu completed": 1,
+            "SessionStart plugin:python-quality:register completed": 1,
+            "SessionStart plugin:rust-quality:check-toolu completed": 1,
+            "SessionStart plugin:rust-quality:register completed": 1,
+            "SessionStart plugin:statusline:session-start completed": 1,
+            "SessionStart plugin:toolu-review:check-binary completed": 1,
+            "SessionStart plugin:toolu-review:session-start completed": 1,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "SessionStart plugin:ts-quality:check-toolu completed": 1,
+            "SessionStart plugin:ts-quality:register completed": 1,
+            "UserPromptSubmit plugin:jev:user-prompt-submit completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "```\n$SCRATCH/run/home/.config/muse/trust.json absent-or-hidden\n$SCRATCH/run/home/.config/muse/settings.json absent-or-hidden\n$SCRATCH/run/home/.config/toolu absent-or-hidden\n$SCRATCH/run/home/.config/toolu/secrets.json absent-or-hidden\ntbh: cannot read $SCRATCH/run/home/.config/muse/settings.json: Permission denied (os error 13); continuing with optional network features disabled; settings changes will not be saved\ninspect-exit=0\n     13 \"status\": \"review_needed\"\n```"
+        }
+      ],
+      "facts": {
+        "terminal_doctor_exit_0": true,
+        "terminal_doctor_all_ok": true,
+        "terminal_doctor_muse_roots": true,
+        "in_session_doctor_no_failure": false,
+        "in_session_doctor_no_false_inert_warning": false
+      },
+      "verdict": "FAIL",
+      "issue": 572
+    },
+    "8": {
+      "sessions": [
+        {
+          "name": "c8-unapproved",
+          "prompt": "Run exactly this one shell command with the bash tool and nothing else: printf 'ADDED=1\\n' >> .env . Then reply with the tool output.",
+          "tools": [
+            {
+              "tool_name": "bash",
+              "outcome": "success",
+              "text": "{\n  \"chunk_id\": \"exec-1-1\",\n  \"command\": \"printf 'ADDED=1\\\\n' >> .env\",\n  \"description\": \"Append marker to env file\",\n  \"exit_code\": 0,\n  \"terminal_status\": \"completed\",\n  \"output\": \"\",\n  \"original_output_bytes\": 0,\n  \"original_output_tokens\": 0,\n  \"truncated\": false\n}"
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {},
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "{\"exit_code\":0,\"output\":\"\",\"terminal_status\":\"completed\"}"
+        },
+        {
+          "name": "c8-approved",
+          "prompt": "Run exactly this one shell command with the bash tool and nothing else: printf 'ADDED=1\\n' >> .env . Then reply with the tool output.",
+          "tools": [
+            {
+              "tool_name": null,
+              "outcome": "blocked",
+              "text": "tool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md)."
+            }
+          ],
+          "tool_names_seen": [
+            "bash",
+            "submit_reminder_decision"
+          ],
+          "hook_runs": {
+            "PostToolUse plugin:toolu:post-tools completed": 2,
+            "PreToolUse plugin:toolu:agent-tier completed": 3,
+            "PreToolUse plugin:toolu:mcp-tools completed": 3,
+            "PreToolUse plugin:toolu:pre-tools blocked": 1,
+            "PreToolUse plugin:toolu:pre-tools completed": 2,
+            "SessionStart plugin:toolu:check-binary completed": 1,
+            "SessionStart plugin:toolu:session-start completed": 1,
+            "UserPromptSubmit plugin:toolu:user-prompt-submit completed": 1
+          },
+          "hook_failures": 0,
+          "hook_system_messages": [],
+          "answer": "tool blocked by hook: This command would WRITE to .env, a protected path (matches \".env\"). This is a secrets file. Approving lets an agent read or rewrite live credentials, and anything it writes here can leak into logs, commits, or a diff you push. Blocked by gates.protectedFiles.mode='block' (see plugins/toolu/hooks/docs/gates.md).\n"
+        }
+      ],
+      "facts": {
+        "unapproved_caps_review_needed": true,
+        "unapproved_session_ran_no_hook": true,
+        "unapproved_env_write_ran": true,
+        "approved_caps_trusted_enabled": true,
+        "approved_env_write_blocked": true
+      },
+      "verdict": "PASS"
+    }
+  },
+  "deviations": [
+    {
+      "issue": 571,
+      "owner": 542,
+      "summary": "Muse's sandbox mounts .agents read-only, so agent-run toolu commands that write project state (review write-state, ledger run) fail in-session"
+    },
+    {
+      "issue": 572,
+      "owner": 550,
+      "summary": "In-session toolu doctor on Muse reports trusted hooks as inert and a false secrets failure because the sandbox hides ~/.config/muse"
+    }
+  ]
+}
