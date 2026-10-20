@@ -138,6 +138,8 @@ fn real_cargo_failure_blocks_muse_commit_until_a_passing_run() {
     fs::read_to_string(site.gate_file().expect("state root")).expect("cleared quality failure");
   assert!(!gate.contains("\"status\": \"failing\""), "{gate}");
   let unblocked = dispatch_pre_tool(&commit, &site.options(false));
-  let decision: Value = serde_json::from_str(&unblocked.result.stdout).unwrap_or(Value::Null);
-  assert_ne!(decision["decision"], "block", "{unblocked:?}");
+  let decision: Value =
+    serde_json::from_str(&unblocked.result.stdout).expect("valid Muse advisory");
+  assert_eq!(unblocked.result.exit_code, 0, "{unblocked:?}");
+  assert!(decision["systemMessage"].is_string(), "{unblocked:?}");
 }

@@ -197,8 +197,9 @@ fn muse_push_review_blocks_then_real_push_promotes_a_waiver() {
   assert_eq!(post.result.exit_code, 0, "{post:?}");
   assert!(site.state.join("feature.waiver.json").is_file());
   let after = dispatch_pre_tool(&site.payload(command, None), &site.options(false));
-  let output: Value = serde_json::from_str(&after.result.stdout).unwrap_or(Value::Null);
-  assert_ne!(output["decision"], "block", "{after:?}");
+  let output: Value = serde_json::from_str(&after.result.stdout).expect("valid Muse advisory");
+  assert_eq!(after.result.exit_code, 0, "{after:?}");
+  assert!(output["systemMessage"].is_string(), "{after:?}");
 }
 
 #[test]
