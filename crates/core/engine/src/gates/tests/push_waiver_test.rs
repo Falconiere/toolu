@@ -22,11 +22,19 @@ fn event(tool: &str) -> NormalizedEvent {
 #[test]
 fn only_an_empty_null_or_zero_status_counts_as_landed() {
   for status in ["", "null", "0"] {
-    assert!(!push_failed(status), "{status}");
+    assert!(!push_failed(status, Host::Claude), "{status}");
   }
   for status in ["1", "128", "00", "x"] {
-    assert!(push_failed(status), "{status}");
+    assert!(push_failed(status, Host::Claude), "{status}");
   }
+}
+
+#[test]
+fn muse_push_requires_a_proven_zero_exit() {
+  for status in ["", "null", "1", "128", "00", "x"] {
+    assert!(push_failed(status, Host::Muse), "{status}");
+  }
+  assert!(!push_failed("0", Host::Muse));
 }
 
 #[test]

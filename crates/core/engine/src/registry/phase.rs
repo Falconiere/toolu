@@ -182,8 +182,10 @@ fn executable(run: &mut Run<'_>, entry: &Entry) {
   let code = folded.result.exit_code;
   run.step(entry, StepKind::Executable, StepStatus::Exited(code));
   let doc = parse_document(&folded.result.stdout).ok();
-  run.stopped =
-    code == 2 || code == 0 && !folded.truncated && stops_walk(run.walk.session.phase, doc.as_ref());
+  run.stopped = code == 2
+    || code == 0
+      && !folded.truncated
+      && stops_walk(run.walk.session.phase, run.walk.session.host, doc.as_ref());
   run.out.push(folded);
 }
 

@@ -98,3 +98,36 @@ fn invalid_config_still_blocks_an_explicit_false_server() {
     .expect("decision");
   assert!(matches!(decision, Decision::Deny { .. }));
 }
+
+#[test]
+fn muse_plugin_server_name_is_checked_as_a_full_mcp_prefix() {
+  let dir = tempfile::tempdir().expect("tempdir");
+  fs::write(
+    dir.path().join("mcp-blocklist.txt"),
+    "plugin_toolu_probe_540_probe_mcp\n",
+  )
+  .expect("blocklist");
+  fs::write(
+    dir.path().join("toolu.config.json"),
+    r#"{"version":1,"gates":{"mcpBlocker":{"mode":"block"}}}"#,
+  )
+  .expect("config");
+  let home = dir.path().to_string_lossy().into_owned();
+  let env = Env::from_pairs([
+    ("TOOLU_SETTINGS_DIR", home.as_str()),
+    ("TOOLU_USER_CONFIG_DIR", home.as_str()),
+    ("HOME", home.as_str()),
+  ]);
+  let raw = Map::new();
+  let mut ctx = context(dir.path(), &env, &raw);
+  ctx.host = Host::Muse;
+  let observed = "mcp__plugin_toolu_probe_540_probe_mcp__probe_echo";
+  assert!(matches!(
+    McpBlocker.run(&tool(observed), &ctx),
+    Ok(Decision::Deny { .. })
+  ));
+  assert_eq!(
+    McpBlocker.run(&tool("mcp__plugin_other_server__probe_echo"), &ctx),
+    Ok(Decision::Allow)
+  );
+}

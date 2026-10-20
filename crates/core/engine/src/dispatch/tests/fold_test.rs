@@ -1,6 +1,11 @@
 use super::{Folded, WalkState, event_name, stops_walk};
 use crate::dispatch::output::parse_document;
 use crate::dispatch::{ModuleResult, Phase};
+use toolu_protocol::decision::Decision;
+use toolu_protocol::encode::{Encoded, encode};
+use toolu_protocol::event::HostEvent;
+use toolu_protocol::host::Host;
+use toolu_protocol::text::Text;
 
 fn module(stdout: &str, stderr: &str, exit_code: i32) -> Folded {
   Folded {
@@ -21,7 +26,7 @@ const DENY: &str =
 
 #[test]
 fn exit_2_ends_the_walk_with_every_stderr_so_far() {
-  let mut state = WalkState::new(Phase::Pre);
+  let mut state = WalkState::new(Phase::Pre, Host::Claude);
   assert_eq!(state.consume(&module("", "lost\n", 3)), None);
   let done = state.consume(&module("", "kept\n", 2)).unwrap();
   assert_eq!(
@@ -33,13 +38,13 @@ fn exit_2_ends_the_walk_with_every_stderr_so_far() {
 
 #[test]
 fn before_a_tool_the_first_ask_is_held_and_a_deny_ends_the_walk() {
-  let mut state = WalkState::new(Phase::Pre);
+  let mut state = WalkState::new(Phase::Pre, Host::Claude);
   assert_eq!(state.consume(&module(ASK, "", 0)), None);
   assert_eq!(
     state.consume(&module(DENY, "", 0)).unwrap().stdout,
     format!("{DENY}\n")
   );
-  let mut held = WalkState::new(Phase::Pre);
+  let mut held = WalkState::new(Phase::Pre, Host::Claude);
   held.consume(&module(ASK, "", 0));
   held.consume(&module(
     r#"{"hookSpecificOutput":{"permissionDecision":"ask","permissionDecisionReason":"second"}}"#,
@@ -51,7 +56,7 @@ fn before_a_tool_the_first_ask_is_held_and_a_deny_ends_the_walk() {
 
 #[test]
 fn after_a_tool_only_a_block_ends_the_walk() {
-  let mut state = WalkState::new(Phase::Post);
+  let mut state = WalkState::new(Phase::Post, Host::Claude);
   assert_eq!(state.consume(&module(DENY, "", 0)), None);
   assert_eq!(state.consume(&module(ASK, "", 0)), None);
   let block = r#"{"decision":"block","reason":"bad"}"#;
@@ -59,13 +64,40 @@ fn after_a_tool_only_a_block_ends_the_walk() {
     state.consume(&module(block, "", 0)).unwrap().stdout,
     format!("{block}\n")
   );
-  assert!(stops_walk(Phase::Post, parse_document(block).ok().as_ref()));
-  assert!(!stops_walk(Phase::Pre, parse_document(block).ok().as_ref()));
+  assert!(stops_walk(
+    Phase::Post,
+    Host::Claude,
+    parse_document(block).ok().as_ref()
+  ));
+  assert!(!stops_walk(
+    Phase::Pre,
+    Host::Claude,
+    parse_document(block).ok().as_ref()
+  ));
+  assert!(stops_walk(
+    Phase::Pre,
+    Host::Muse,
+    parse_document(block).ok().as_ref()
+  ));
+}
+
+#[test]
+fn muse_pre_block_from_the_real_encoder_stops_the_walk() {
+  let decision = Decision::Deny {
+    reason: Text::new("protected file").expect("reason"),
+  };
+  let Encoded::Command(output) = encode(Host::Muse, HostEvent::ToolPre, &decision).expect("Muse");
+  let line = output.trim_end_matches('\n');
+  let mut state = WalkState::new(Phase::Pre, Host::Muse);
+  let done = state
+    .consume(&module(line, "", 0))
+    .expect("Muse deny must stop");
+  assert_eq!(done.stdout, output);
 }
 
 #[test]
 fn truncated_output_is_reported_and_settle_merges_advice() {
-  let mut state = WalkState::new(Phase::Post);
+  let mut state = WalkState::new(Phase::Post, Host::Claude);
   let mut cut = module(r#"{"systemMessage":"lost"}"#, "", 0);
   cut.truncated = true;
   assert_eq!(state.consume(&cut), None);

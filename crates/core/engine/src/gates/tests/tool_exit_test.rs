@@ -113,6 +113,12 @@ fn cursor_output_strings_and_jq_errors_read_as_typescript_reads_them() {
       "false",
     ),
     (
+      "legacy output without exit code overrides null status",
+      json!({"tool_response": {"exit_code": "null"}, "tool_output": "{\"output\":\"done\"}"}),
+      "",
+      "false",
+    ),
+    (
       "a tool_output number raises",
       json!({"tool_output": "5"}),
       "",
@@ -121,6 +127,24 @@ fn cursor_output_strings_and_jq_errors_read_as_typescript_reads_them() {
     (
       "a tool_output null",
       json!({"tool_output": "null"}),
+      "",
+      "false",
+    ),
+  ]);
+}
+
+#[test]
+fn muse_json_string_response_reports_its_exit_code() {
+  check(&[
+    (
+      "Muse successful bash response",
+      json!({"tool_response": "{\"chunk_id\":\"exec-1\",\"exit_code\":0,\"output\":\"ok\"}"}),
+      "0",
+      "false",
+    ),
+    (
+      "Muse malformed bash response",
+      json!({"tool_response": "{invalid"}),
       "",
       "false",
     ),

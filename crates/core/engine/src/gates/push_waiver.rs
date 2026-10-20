@@ -8,6 +8,7 @@
 //! repository is `crate::detect::push_target_root`. It never writes stdout.
 
 use toolu_protocol::decision::Decision;
+use toolu_protocol::host::Host;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::RuleContext;
@@ -29,7 +30,10 @@ pub(crate) struct PushWaiver;
 pub(crate) static PUSH_WAIVER: PushWaiver = PushWaiver;
 
 /// A reported exit status other than 0 means the push did not land.
-fn push_failed(status: &str) -> bool {
+fn push_failed(status: &str, host: Host) -> bool {
+  if host == Host::Muse {
+    return status != "0";
+  }
   !matches!(status, "" | "null" | "0")
 }
 
@@ -44,7 +48,7 @@ impl Gate for PushWaiver {
     }
     let analysis = command_analysis(ctx);
     if !is_git_push(&analysis)
-      || push_failed(&tool_exit_status(ctx.raw))
+      || push_failed(&tool_exit_status(ctx.raw), ctx.host)
       || tool_interrupted(ctx.raw)
     {
       return Ok(Decision::Allow);

@@ -40,6 +40,24 @@ fn event(
   (serde_json::from_value(wire).expect("normalized event"), raw)
 }
 
+fn context<'a>(
+  host: Host,
+  env: &'a Env,
+  raw: &'a Map<String, Value>,
+  root: &'a Path,
+) -> RuleContext<'a> {
+  RuleContext {
+    host,
+    env,
+    config_root: root,
+    project_root: root,
+    cwd: Some(root),
+    plugin_root: None,
+    raw,
+    edit: None,
+  }
+}
+
 #[test]
 fn env_edit_asks_on_claude_and_denies_on_codex() {
   let dir = tempfile::tempdir().expect("tempdir");
@@ -51,16 +69,7 @@ fn env_edit_asks_on_claude_and_denies_on_codex() {
   ]);
   let (event, raw) = event("Edit", None, Some(".env"));
   for (host, ask) in [(Host::Claude, true), (Host::Codex, false)] {
-    let ctx = RuleContext {
-      host,
-      env: &env,
-      config_root: dir.path(),
-      project_root: dir.path(),
-      cwd: Some(dir.path()),
-      plugin_root: None,
-      raw: &raw,
-      edit: None,
-    };
+    let ctx = context(host, &env, &raw, dir.path());
     let decision = ProtectedFiles.run(&event, &ctx).expect("decision");
     match (decision, ask) {
       (Decision::Ask { reason }, true) => assert!(reason.as_str().contains("SECURITY GUARDRAIL")),
@@ -98,4 +107,34 @@ fn real_shell_redirect_to_env_is_guarded_but_read_is_allowed() {
       "{command}"
     );
   }
+}
+
+#[test]
+fn muse_edit_path_is_protected_in_block_mode() {
+  let dir = tempfile::tempdir().expect("tempdir");
+  fs::write(dir.path().join("protected-files.txt"), ".env\n").expect("settings");
+  fs::write(
+    dir.path().join("toolu.config.json"),
+    r#"{"version":1,"gates":{"protectedFiles":{"mode":"block"}}}"#,
+  )
+  .expect("config");
+  let home = dir.path().to_string_lossy().into_owned();
+  let env = Env::from_pairs([
+    ("TOOLU_SETTINGS_DIR", home.as_str()),
+    ("TOOLU_USER_CONFIG_DIR", home.as_str()),
+    ("HOME", home.as_str()),
+  ]);
+  let input = json!({"path":".env","find":"old","replace":"new"});
+  let event: NormalizedEvent = serde_json::from_value(json!({
+    "type":"tool/pre", "sessionId":"s", "cwd":home, "projectRoot":home,
+    "worktree":home, "toolCallId":"c", "toolName":"Edit", "toolInput":input
+  }))
+  .expect("muse edit");
+  let raw = json!({"tool_input":input})
+    .as_object()
+    .cloned()
+    .expect("payload");
+  let ctx = context(Host::Muse, &env, &raw, dir.path());
+  let decision = ProtectedFiles.run(&event, &ctx).expect("decision");
+  assert!(matches!(decision, Decision::Deny { reason } if reason.as_str().contains(".env")));
 }
