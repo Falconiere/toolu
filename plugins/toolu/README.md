@@ -1,6 +1,6 @@
 # toolu
 
-Dual-host engineering discipline for Claude Code and Codex: workflow skills,
+Engineering discipline for Claude Code and Codex (Muse in progress): workflow skills,
 agents, commands, and registry-driven quality hooks. This is the core plugin;
 domain plugins (`rust-quality`, `ts-quality`, …) register into it.
 
@@ -40,6 +40,8 @@ Invoke an agent on Muse as `/toolu:<name> <task>`, for example `/toolu:architect
 ```bash
 muse plugins validate plugins/toolu --json
 ```
+
+`toolu setup agents` installs the Codex profiles only. On Muse the five agents are the commands above, so there is nothing to install and `setup agents` does not apply.
 
 ## Configuration
 

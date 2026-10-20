@@ -59,7 +59,7 @@ The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh
 | Rollback | `install.sh --version <tag>` (#457) and pinning the plugin version in each host. |
 | Upgrade | `brew upgrade toolu`, or re-run the installer. `toolu doctor` names the right command for how the binary was installed. No self-update command in this version. |
 | Removal | `brew uninstall toolu`, or `install.sh --uninstall`. |
-| Bun | Not used or needed on Claude Code and Codex since #440. |
+| Bun | Not used or needed on Claude Code, Codex or Muse since #440. |
 
 ## Version skew
 
@@ -113,6 +113,21 @@ Muse Code runs a hook as an argv from `.muse-plugin/plugin.json`, with no shell 
 - Resolution is the same as above, except that Muse passes hooks only `HOME`, `PATH`, its own variables and a few basics. `TOOLU_BIN` never arrives, so on Muse the install directories come first, then `PATH`.
 - The fail-closed table above holds unchanged. With no binary, `PreToolUse` and `PermissionRequest` exit 2 with `blocked: …` on stderr, which Muse blocks. Context events print the install `systemMessage` with exit 0.
 - Muse installs the whole plugin directory, so the skew check reads the packaged `.claude-plugin/plugin.json`. A different `hookProtocol` blocks or advises exactly as on Claude Code. Muse manifests carry no `hookProtocol`: Muse warns on unknown top-level fields and rejects unknown hook-entry fields.
+
+### Install, approve and verify on Muse
+
+Muse keeps a plugin's hooks and agent definitions inert until they are approved. With the `toolu` binary installed and `muse` on `PATH`:
+
+```bash
+toolu plugins install --host muse --approve   # register the release checkout, install, approve
+muse plugins list                             # each plugin installed from the `toolu` marketplace
+muse plugins inspect toolu                    # trust state: approved, not "awaiting approval"
+```
+
+- Without `--approve`, `install` and `update` end with `awaiting approval: muse plugins approve <name>`; run that command, or re-run with `--approve`. Muse asks again when a hook definition changes.
+- `toolu plugins install` shallow-clones the tag matching the binary and registers it as the Muse marketplace `toolu` ([installer guide](cli/installer.md#muse)). `get.toolu.sh` and Homebrew install only the binary and are unaffected.
+- Today only the `toolu` plugin carries a `.muse-plugin/plugin.json`, and its `hooks` list is still empty; the other plugins and the hooks follow in #547. Until then a release without a plugin's manifest gives that plugin a failed step (`not available in marketplace`).
+- `toolu doctor` and the session-start report do not cover Muse yet (#550); verify with `muse plugins inspect`.
 
 ## Agent command shell
 

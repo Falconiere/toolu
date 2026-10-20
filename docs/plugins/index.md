@@ -6,7 +6,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 
 | # | Plugin | Type | Depends On | Quick Summary |
 |:--:|--------|------|:----------:|---------------|
-| 1 | [**toolu**](../toolu/README.md) | Core | — | Dual-host hook engine, push-review gate, and agent routing |
+| 1 | [**toolu**](../toolu/README.md) | Core | — | Hook engine for Claude Code and Codex (Muse in progress), push-review gate, and agent routing |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
 | 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring CI `code-review@v8` (Jev-enabled) |
 | 4 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
