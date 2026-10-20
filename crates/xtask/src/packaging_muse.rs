@@ -1,7 +1,7 @@
 //! Muse bundles for `cargo xtask packaging` (#548). Muse rejects the `agents`
 //! capability, so each `plugins/<name>/agents/<agent>.md` ships as the Muse
 //! command `{"id":"<agent>","path":"agents/<agent>.md"}`: the entry names the
-//! Claude/Codex source itself, and no second copy exists to drift. A plugin's
+//! Claude agent file itself, and no second copy exists to drift. A plugin's
 //! `.muse-plugin/plugin.json` also moves in lockstep with the workspace version
 //! and carries only the fields Muse validates without a warning.
 

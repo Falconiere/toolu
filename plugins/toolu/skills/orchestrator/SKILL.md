@@ -106,7 +106,7 @@ Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model
 - **`Plan`** — design an implementation strategy for a non-trivial change.
 - **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
 
-Muse has no custom agents. There, each agent is a command that applies its role to the current thread (`/toolu:architect <task>`). It does not spawn a tier-pinned subagent.
+Muse plugins cannot ship agents. There, each agent is a command that applies its role to the current thread (`/toolu:architect <task>`). It does not spawn a tier-pinned subagent.
 
 Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
 

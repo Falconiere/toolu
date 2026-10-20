@@ -20,7 +20,7 @@ must notice when the Muse view drifts from it.
    The gate does not judge skill entries.
 2. The Codex agent profiles (`plugins/toolu/assets/agents/*.toml`) do not
    change.
-3. No tier pin on Muse. Muse has no custom agent definitions, and the
+3. No tier pin on Muse. A Muse plugin cannot ship agent definitions, and the
    frontmatter `model` stays a Claude alias.
 4. Running `muse` in CI. Live validation is evidence recorded in this PR, and
    #552 owns Muse CI registration.

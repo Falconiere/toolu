@@ -72,7 +72,7 @@ pass `model:`, so prefer these when one fits:
 | `toolu:architect` | `opus` | Design, trade-offs, synthesis (read-only) |
 
 Codex has the same five names as custom agents once `$toolu:setup` installs
-them. Muse has no custom agents:
+them. Muse plugins cannot ship agents:
 each one is the command `/toolu:<agent>` (for example `/toolu:architect`), which
 applies the role to the current thread with no tier pin.
 
