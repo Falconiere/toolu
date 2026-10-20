@@ -35,6 +35,16 @@ fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<
   }
 }
 
+/// Runs the install of `name`; a failure names the marketplace hint too.
+fn attempt(driver: &Driver, name: &str, argv: Vec<String>, add_note: &str) -> Step {
+  let ran = driver.run(&argv);
+  if ran.ok() {
+    return Step::new(name, Status::Installed, "installed", argv);
+  }
+  let detail = format!("{}{add_note}", first_line(&ran.stderr, "install failed"));
+  Step::new(name, Status::Failed, detail, argv)
+}
+
 /// Installs `requested` (all when empty) with their dependencies.
 pub(crate) fn run(
   driver: &Driver,
@@ -78,14 +88,9 @@ pub(crate) fn run(
       steps.push(Step::new(name, Status::Skipped, "dry run", argv));
       continue;
     }
-    let ran = driver.run(&argv);
-    if ran.ok() {
-      steps.push(Step::new(name, Status::Installed, "installed", argv));
-    } else {
-      core_failed |= name == CORE;
-      let detail = format!("{}{add_note}", first_line(&ran.stderr, "install failed"));
-      steps.push(Step::new(name, Status::Failed, detail, argv));
-    }
+    let step = attempt(driver, name, argv, &add_note);
+    core_failed |= name == CORE && step.failed();
+    steps.push(step);
   }
   if dry_run {
     return Ok(steps);
