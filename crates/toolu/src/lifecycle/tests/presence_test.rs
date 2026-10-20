@@ -40,6 +40,11 @@ fn cursor_and_hermes_use_claudes_record_but_muse_does_not() {
     Installed::Installed
   );
   assert_eq!(
+    presence("ast-grep@toolu", &env, Host::Muse),
+    Installed::Unknown
+  );
+  assert_eq!(presence("", &env, Host::Muse), Installed::Absent);
+  assert_eq!(
     install_command("ast-grep@toolu", Host::Claude),
     "/plugin install ast-grep@toolu"
   );
