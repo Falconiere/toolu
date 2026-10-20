@@ -1,0 +1,59 @@
+{
+  "muse_version": "1.4.11-R6667.1",
+  "input_source": "docs/toolu/evidence/2026-10-19-muse-tool-inventory.json",
+  "method": "Installed plugins/toolu scratch copy in isolated HOME/XDG profile; approved hooks; event-wrapped captured PreToolUse fixtures; private mount namespace selected checkout target/debug/toolu because Muse hook test does not pass TOOLU_BIN through",
+  "mcp_block": {
+    "should_block": true,
+    "exit_code": 0,
+    "status": "blocked",
+    "stdout": {
+      "decision": "block",
+      "reason": "MCP server \"plugin_toolu_probe_540_probe_mcp\" is blocked (listed in settings/mcp-blocklist.txt). Blocked MCP servers are ones this project has decided not to reach through an MCP bridge — usually because a CLI path exists that is auditable and scoped, where the MCP tool is neither. Use instead: use CLI"
+    },
+    "stderr": ""
+  },
+  "mcp_allow": {
+    "should_block": false,
+    "exit_code": 0,
+    "stdout": ""
+  },
+  "mcp_internal": {
+    "should_block": false,
+    "stdout": ""
+  },
+  "agent_allow": {
+    "should_block": false,
+    "exit_code": 0,
+    "stdout": ""
+  },
+  "agent_advice": {
+    "should_block": false,
+    "exit_code": 0,
+    "stdout": {
+      "systemMessage": "plan step \"s1\" expects model tier \"opus\" but this delegation used \"sonnet\""
+    },
+    "system_message": "plan step \"s1\" expects model tier \"opus\" but this delegation used \"sonnet\""
+  },
+  "agent_internal": {
+    "should_block": false,
+    "stdout": ""
+  },
+  "delegation_telemetry": [
+    {
+      "model": null,
+      "subagent_type": "responder",
+      "reasoning_effort": null,
+      "step_id": "s1",
+      "step_model": "opus",
+      "event": "delegation"
+    },
+    {
+      "model": "sonnet",
+      "subagent_type": "responder",
+      "reasoning_effort": "high",
+      "step_id": "s1",
+      "step_model": "opus",
+      "event": "delegation"
+    }
+  ]
+}

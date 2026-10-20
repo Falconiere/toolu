@@ -65,10 +65,9 @@ fn normalized(doc: &Map<String, Value>, tool: String, root: &Path) -> Option<Nor
 }
 
 fn encoded(host: Host, decision: &Decision) -> Outcome {
-  let target = if host == Host::Codex {
-    Host::Codex
-  } else {
-    Host::Claude
+  let target = match host {
+    Host::Codex | Host::Muse => host,
+    Host::Claude | Host::Cursor | Host::Hermes => Host::Claude,
   };
   match encode(target, HostEvent::ToolPre, decision) {
     Ok(Encoded::Command(text)) => Outcome {

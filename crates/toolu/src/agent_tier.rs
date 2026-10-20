@@ -92,10 +92,9 @@ fn advice(
     .ok()
     .and_then(|reason| gate_decision(mode, reason))
     .and_then(|decision: Decision| {
-      let host = if roots.host() == Host::Codex {
-        Host::Codex
-      } else {
-        Host::Claude
+      let host = match roots.host() {
+        Host::Codex | Host::Muse => roots.host(),
+        Host::Claude | Host::Cursor | Host::Hermes => Host::Claude,
       };
       encode(host, HostEvent::ToolPre, &decision).ok()
     });
@@ -113,16 +112,18 @@ fn evaluate(payload: &str, env: Env, cwd: &Path) -> Outcome {
     return silent();
   };
   let tool = get(&doc, "tool_name").map(value_text).unwrap_or_default();
-  if !matches!(tool.as_str(), "Agent" | "Task" | "spawn_agent") || !has_git(&env) {
+  let host = detect(&env, None).host;
+  let delegation = matches!(tool.as_str(), "Agent" | "Task" | "spawn_agent")
+    || (host == Host::Muse && tool == "subagent_spawn");
+  if !delegation || !has_git(&env) {
     return silent();
   }
   let Some(root) = toolu_runtime::git::toplevel(&env, cwd) else {
     return silent();
   };
   let model = input_field(&doc, &["model"]);
-  let subagent = input_field(&doc, &["subagent_type", "task_name", "agent_type"]);
-  let effort = input_field(&doc, &["reasoning_effort", "reasoningEffort"]);
-  let host = detect(&env, None).host;
+  let subagent = input_field(&doc, &["subagent_type", "task_name", "agent_type", "role"]);
+  let effort = input_field(&doc, &["reasoning_effort", "reasoningEffort", "effort"]);
   let roots = Roots::new(env, Some(host));
   let (step, tier) = join(&root, &roots);
   let mut state = StateCtx::new(roots.clone());

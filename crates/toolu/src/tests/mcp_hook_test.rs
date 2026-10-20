@@ -65,3 +65,45 @@ fn malformed_project_config_warns_and_keeps_blocklist_decision() {
       .starts_with("toolu-config: malformed JSON in ")
   );
 }
+
+fn observed_muse_payload(tool: &str) -> String {
+  let path = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../docs/toolu/evidence/2026-10-19-muse-tool-inventory.json"
+  );
+  let inventory: Value =
+    serde_json::from_str(&std::fs::read_to_string(path).expect("inventory")).expect("JSON");
+  inventory["tools"][tool]["pre_example"].to_string()
+}
+
+#[test]
+fn observed_muse_mcp_name_blocks_with_muse_json() {
+  let (dir, env) = fixture("muse");
+  std::fs::write(
+    dir.path().join("settings/mcp-blocklist.txt"),
+    "plugin_toolu_probe_540_probe_mcp -> use CLI\n",
+  )
+  .expect("blocklist");
+  let payload = observed_muse_payload("mcp__plugin_toolu_probe_540_probe_mcp__probe_echo");
+  let out = evaluate(&payload, None, env, &dir.path().join("project"));
+  assert_eq!(out.exit, Exit::Success);
+  assert_eq!(out.stderr, None);
+  let stdout = out.stdout.expect("Muse block");
+  let json: Value = serde_json::from_str(&stdout).expect("block JSON");
+  assert_eq!(json["decision"], "block");
+  assert!(json["reason"].as_str().expect("reason").contains("use CLI"));
+  assert!(json.get("hookSpecificOutput").is_none());
+}
+
+#[test]
+fn unmatched_muse_mcp_and_internal_tool_are_silent() {
+  let (dir, env) = fixture("muse");
+  let mcp = observed_muse_payload("mcp__plugin_toolu_probe_540_probe_mcp__probe_echo");
+  let internal = observed_muse_payload("submit_reminder_decision");
+  for payload in [mcp, internal] {
+    assert_eq!(
+      evaluate(&payload, None, env.clone(), &dir.path().join("project")),
+      silent()
+    );
+  }
+}

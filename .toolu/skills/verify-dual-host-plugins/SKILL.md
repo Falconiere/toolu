@@ -60,6 +60,14 @@ startup behavior in Codex, Claude Code, or Muse.
 - Muse's plugin list can report an active installation while a hook is still
   `review_needed` or `trusted_disabled` in plugin inspection. Treat those hooks
   as inert, and keep trust changes inside the temporary profile.
+- Muse Code 1.4.11 `muse plugins hook test` did not forward caller-set
+  `TOOLU_BIN` or `TOOLU_SETTINGS_DIR` to the hook child. Confirm the generated
+  resolver directly with `TOOLU_BIN`, then exercise Muse's verdict with the
+  blocklist in the isolated installed plugin's `settings/`. To make Muse use a
+  checkout binary without changing a global install, bind that binary over the
+  fixed install path Muse's launcher finds inside a private `unshare -m` mount
+  namespace. On the measured Linux host that path was `/usr/local/bin/toolu`.
+  Remove the scratch plugin after the test.
 - Claude-compatible `hookSpecificOutput` is not valid for every Codex event.
   Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report

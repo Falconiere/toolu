@@ -10,6 +10,8 @@ disable what you do not want.
   `<repo>/.claude/toolu.config.json` (`CLAUDE_CONFIG_DIR` remains supported).
 - Codex: `${CODEX_HOME:-~/.codex}/toolu.config.json` and
   `<repo>/.codex/toolu.config.json`.
+- Muse: `${XDG_CONFIG_HOME:-~/.config}/muse/toolu.config.json` and
+  `<repo>/.agents/toolu.config.json` (`MUSE_CONFIG_DIR` overrides the user root).
 - `TOOLU_CONFIG_DIR`, `TOOLU_PROJECT_DIR`, and
   `TOOLU_PROJECT_CONFIG_DIRNAME` are explicit cross-host overrides.
 - `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
@@ -460,13 +462,21 @@ caller's real work), it just writes nothing.
 
 `agentTier.mode` (default `advise`) controls the native `toolu hook agent-tier`,
 a standalone `PreToolUse` hook on Claude `Agent`/`Task` and Codex `spawn_agent`
-calls. It always records a
+calls, and on Muse `subagent_spawn`. It always records a
 `delegation` telemetry event (model, subagent_type, and — when a plan ledger
 exists for the branch — the running/next step's id and declared `model`). When
 a delegation's `model` differs from that step's declared (non-null) `model`, it
-nudges: `advise` emits `additionalContext`, `block` denies the call,
-`off` records telemetry only. A delegation with no `model` param (tier-inherit)
-is always legitimate and never nudged.
+nudges: `advise` emits host-appropriate context (`additionalContext` on
+Claude/Codex, `systemMessage` on Muse), `block` denies the call, and `off`
+records telemetry only. A delegation with no `model` param (tier-inherit) is
+always legitimate and never nudged.
+
+Muse's observed `subagent_spawn` payload has `role` but no child `model` or
+effort. The hook records `role` as the subagent type and leaves model and effort
+null; it does not mistake the payload's top-level model for the child's model.
+If structured spawn input supplies `model` and `effort`, those values are
+recorded and a mismatched tier emits Muse `systemMessage` advice. Other Muse
+subagent tools, such as wait and status, do not create a delegation event.
 
 `agentTier.mode=off` is a deliberate, narrower "off" than `docsSync.mode=off`
 below: it silences only the advisory — the `delegation` telemetry event still
@@ -545,6 +555,15 @@ Unknown names are silently ignored (forward compatible).
   - Matcher wiring lives in `plugins/toolu/hooks/hooks.json`, which routes
     the `mcp__` prefix through the native launcher to `toolu hook mcp-tools`,
     the mcp-blocker gate.
+
+  On Muse, the same standalone hook filters tool names inside the binary
+  because Muse has no hook matchers. Muse MCP names include the plugin and
+  server in one token: `mcp__plugin_<plugin>_<server>__<tool>`. Use that full
+  token before the final `__` as the blocklist prefix or `mcp` config key.
+  For example, `mcp__plugin_toolu_probe_540_probe_mcp__probe_echo` matches
+  `plugin_toolu_probe_540_probe_mcp`; `probe_mcp` alone does not identify it.
+  A blocked Muse call emits `{"decision":"block",…}` with exit 0; an
+  unmatched or non-MCP call stays silent.
 
 Skills, hooks, Claude agents, and Claude commands are loaded from plugin
 manifests at session start, so config does not remove those files from host
