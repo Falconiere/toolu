@@ -187,7 +187,7 @@ fn unsupported_hosts_and_unconfirmed_removals_are_usage_errors() {
   );
   let none = sb.run(&["plugins", "list"]).unwrap();
   assert_eq!(none.status.code(), Some(64));
-  assert!(stderr(&none).contains("no host found on PATH (probed claude, codex)"));
+  assert!(stderr(&none).contains("no host found on PATH (probed claude, codex, muse)"));
 }
 
 #[test]
