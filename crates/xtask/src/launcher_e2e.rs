@@ -1,20 +1,23 @@
 //! `cargo xtask launcher-e2e --bin <dir>/toolu [--home DIR]`: the real generated
 //! launcher finds a `toolu` installed in a fixed directory under a `PATH` that
 //! lacks it, reports it at `SessionStart`, and fails closed on a protocol mismatch
-//! (#412). CI runs it at the Homebrew directory and `/usr/local/bin`.
+//! (#412). The generated Muse resolver, run as Muse runs it (`/bin/sh
+//! hooks/muse/<name>` with `MUSE_PLUGIN_ROOT`, #552), must do the same. CI runs it
+//! at the Homebrew directory and `/usr/local/bin`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use toolu_protocol::launcher::muse::{DEFAULT_TIMEOUT_MS, hook as muse_hook};
 use toolu_protocol::launcher::{DEFAULT_TIMEOUT, Target, hook};
 
 use crate::options::Options;
 use crate::{Verdict, output};
 
 /// The directories the launcher searches before `PATH`, `~/.local/bin` last.
-const SYSTEM_DIRS: &[&str] = &[
+pub(crate) const SYSTEM_DIRS: &[&str] = &[
   "/opt/homebrew/bin",
   "/usr/local/bin",
   "/home/linuxbrew/.linuxbrew/bin",
@@ -22,6 +25,15 @@ const SYSTEM_DIRS: &[&str] = &[
 
 const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 static NEXT_ROOT: AtomicU64 = AtomicU64::new(0);
+
+/// Which generated launcher runs the hook.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Form {
+  /// The `hooks.json` command under `/bin/sh -c`.
+  Claude,
+  /// The Muse resolver file under `/bin/sh`.
+  Muse,
+}
 
 /// Run the end-to-end check for `--bin`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
@@ -53,7 +65,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   Ok(output::findings("launcher-e2e", &found?))
 }
 
-/// The `SessionStart` and protocol-mismatch findings for an installed `bin`.
+/// The `SessionStart` and protocol-mismatch findings for an installed `bin`, for
+/// the Claude launcher, then the Muse resolver (prefixed `Muse resolver: `).
 fn check(
   bin: &Path,
   home: &Path,
@@ -63,13 +76,42 @@ fn check(
 ) -> Result<Vec<String>, String> {
   let canonical = std::fs::canonicalize(bin).map_err(|err| err.to_string())?;
   let mut found = Vec::new();
+  for form in [Form::Claude, Form::Muse] {
+    let run = Run {
+      home,
+      root,
+      version,
+      protocol,
+      form,
+    };
+    let form_found = check_form(&run, &canonical)?;
+    found.extend(form_found.into_iter().map(|finding| match form {
+      Form::Claude => finding,
+      Form::Muse => format!("Muse resolver: {finding}"),
+    }));
+  }
+  Ok(found)
+}
+
+/// One launcher form's run.
+struct Run<'r> {
+  home: &'r Path,
+  root: &'r Path,
+  version: &'r str,
+  protocol: u32,
+  form: Form,
+}
+
+fn check_form(run: &Run<'_>, canonical: &Path) -> Result<Vec<String>, String> {
+  let (home, root, version, protocol) = (run.home, run.root, run.version, run.protocol);
+  let mut found = Vec::new();
   manifest(root, version, protocol)?;
-  let start = launch(home, root, "SessionStart")?;
-  if let Some(finding) = session_finding(&start, version, &canonical) {
+  let start = launch(home, root, "SessionStart", run.form)?;
+  if let Some(finding) = session_finding(&start, version, canonical) {
     found.push(finding);
   }
   manifest(root, version, protocol + 1)?;
-  let pre = launch(home, root, "PreToolUse")?;
+  let pre = launch(home, root, "PreToolUse", run.form)?;
   let refusal = format!(
     "hook protocol {} needs a newer toolu - toolu {version} speaks protocol {protocol}",
     protocol + 1
@@ -136,9 +178,10 @@ fn manifest(root: &Path, version: &str, protocol: u32) -> Result<(), String> {
 
 /// The generated toolu launcher for `event`, run as a host would. `HOME` stays
 /// the install home so `~/.local/bin` resolution works. The working directory,
-/// `CLAUDE_PROJECT_DIR` and `TOOLU_CONFIG_DIR` stay on `root`, so session-start
-/// cannot write the caller's project or config.
-fn launch(home: &Path, root: &Path, event: &str) -> Result<Output, String> {
+/// the project variable and `TOOLU_CONFIG_DIR` stay on `root`, so session-start
+/// cannot write the caller's project or config. Muse forwards no `TOOLU_CONFIG_DIR`;
+/// the harness sets it for the same reason.
+fn launch(home: &Path, root: &Path, event: &str, form: Form) -> Result<Output, String> {
   let config = root.join("config");
   std::fs::create_dir_all(&config).map_err(|err| err.to_string())?;
   let target = Target {
@@ -146,15 +189,33 @@ fn launch(home: &Path, root: &Path, event: &str) -> Result<Output, String> {
     event,
     name: "session-start",
   };
-  let command = hook(&target, DEFAULT_TIMEOUT)?.command;
-  let mut child = Command::new("/bin/sh")
-    .arg("-c")
-    .arg(command)
-    .env_clear()
+  let mut command = Command::new("/bin/sh");
+  command.env_clear();
+  match form {
+    Form::Claude => {
+      command
+        .arg("-c")
+        .arg(hook(&target, DEFAULT_TIMEOUT)?.command)
+        .env("CLAUDE_PLUGIN_ROOT", root)
+        .env("CLAUDE_PROJECT_DIR", root);
+    }
+    Form::Muse => {
+      let generated = muse_hook(&target, DEFAULT_TIMEOUT_MS)?;
+      let resolver = root.join(&generated.resolver_path);
+      let dir = resolver.parent().ok_or("the resolver has no directory")?;
+      std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
+      std::fs::write(&resolver, generated.resolver).map_err(|err| err.to_string())?;
+      command
+        .arg(&resolver)
+        .env("MUSE_PLUGIN_ID", "toolu")
+        .env("MUSE_PLUGIN_ROOT", root)
+        .env("CLAUDE_PLUGIN_ROOT", root)
+        .env("PLUGIN_ROOT", root);
+    }
+  }
+  let mut child = command
     .env("HOME", home)
     .env("PATH", "/usr/bin:/bin")
-    .env("CLAUDE_PLUGIN_ROOT", root)
-    .env("CLAUDE_PROJECT_DIR", root)
     .env("TOOLU_CONFIG_DIR", &config)
     .current_dir(root)
     .stdin(Stdio::piped())

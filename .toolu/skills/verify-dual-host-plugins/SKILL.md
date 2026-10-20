@@ -34,10 +34,11 @@ startup behavior in Codex, Claude Code, or Muse.
 6. When a plugin registers a native manifest, check
    deselection cleanup, hook inventory and the packed catalog. A repeated
    SessionStart must preserve byte-identical manifest files and their timestamps.
-7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|both`
-   on macOS with the checkout binary. It hides Bun, installs temporary host profiles and
+7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|muse|both`
+   with the checkout binary (`both` is all three; Claude Code and Codex need macOS, Muse
+   runs on Linux too). It hides Bun, installs temporary host profiles and
    checks a denied `.env` write, a post-edit quality failure, a denied
-   commit, and a denied push in actual Claude Code and Codex sessions.
+   commit, and a denied push in actual Claude Code, Codex and Muse sessions.
 8. For Muse, use a fresh temporary profile with isolated `HOME`, `XDG_CONFIG_HOME`,
    and `XDG_DATA_HOME`. Install a scratch copy of the plugin, inspect its runtime
    capabilities, and approve the scratch hook. Muse's hook-test fixture wraps
@@ -57,6 +58,12 @@ startup behavior in Codex, Claude Code, or Muse.
   does not wait for more input. Stage a fixture outside Codex's workspace-write
   sandbox before testing a `git commit` hook, since that sandbox blocks writes
   to `.git/index.lock`.
+- Muse forwards a hook only `HOME LANG LOGNAME PATH PWD SHELL TERM USER` and its
+  plugin variables, never `TOOLU_BIN` or `XDG_*`. Its resolver therefore takes a
+  `toolu` from `/opt/homebrew/bin`, `/usr/local/bin` or linuxbrew before the
+  private home's `~/.local/bin`, and `host-smoke --host muse` refuses to run then.
+  On a shared root host, mask it in a private mount namespace
+  (`unshare -m`, bind a copy of `/usr/local/bin` without `toolu`).
 - Muse's plugin list can report an active installation while a hook is still
   `review_needed` or `trusted_disabled` in plugin inspection. Treat those hooks
   as inert, and keep trust changes inside the temporary profile.

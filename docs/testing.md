@@ -39,10 +39,10 @@ Tests run in parallel. Each test owns its temporary directories (`tempfile`), ne
 
 ## Benchmarks and live checks
 
-- `cargo xtask bench-hooks [--assert]` measures every hook entry ([resource-budgets.md](resource-budgets.md)); the `hook-bench` CI job asserts on Linux.
+- `cargo xtask bench-hooks [--assert]` measures every hook entry, the Muse manifest entries included ([resource-budgets.md](resource-budgets.md)); the `hook-bench` CI job asserts on Linux.
 - `cargo xtask bench-statusline --assert` is the statusline render budget, run by the Linux `rust` leg.
-- `cargo xtask host-smoke --host claude|codex|both` is the live macOS check of the native hooks in real Claude Code and Codex sessions, with Bun hidden from every child `PATH`: a denied `.env` write, a recorded quality failure, a denied commit and a denied push. It spends model credits, so it runs by hand, never in CI; see the `verify-dual-host-plugins` project skill.
-- `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in a fixed install directory; CI runs it with `sudo install`.
+- `cargo xtask host-smoke --host claude|codex|muse|both` is the live check of the native hooks in real Claude Code, Codex and Muse sessions, with Bun hidden from every child `PATH`. `both` (the default) is all three hosts. Claude Code and Codex need macOS; Muse runs on any Unix. It checks a denied `.env` write, a recorded quality failure, a denied commit and a denied push. It spends model credits, so it runs by hand, never in CI; see the `verify-dual-host-plugins` project skill.
+- `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher, and the generated Muse resolver, against a binary installed in a fixed install directory; CI runs it with `sudo install`.
 
 ## Adding coverage
 

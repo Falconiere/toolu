@@ -16,7 +16,7 @@ const SELECTION: [&str; 6] = [
 ];
 
 /// Environment key prefixes a host session sets.
-const HOST_PREFIXES: [&str; 4] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"];
+const HOST_PREFIXES: [&str; 5] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "MUSE_"];
 
 /// What `cargo xtask` (cargo run, rustup) adds to the environment. A host never
 /// passes it to a hook, and a larger environment raises a hook's measured RSS.
@@ -28,6 +28,14 @@ const TOOLCHAIN_KEYS: [&str; 2] = ["LD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PAT
 /// Whether `key` names a repository-selecting variable.
 pub(crate) fn selects_repository(key: &OsStr) -> bool {
   SELECTION.iter().any(|name| key == OsStr::new(name))
+}
+
+/// Whether `key` is one a host session sets about itself.
+pub(crate) fn is_host_session(key: &OsStr) -> bool {
+  let bytes = key.as_encoded_bytes();
+  HOST_PREFIXES
+    .iter()
+    .any(|prefix| bytes.starts_with(prefix.as_bytes()))
 }
 
 /// Remove every repository-selecting variable from `command`'s environment.
@@ -45,11 +53,11 @@ pub(crate) fn inherited(managed: &[&str]) -> Vec<(OsString, OsString)> {
     .filter(|(key, _)| {
       let bytes = key.as_encoded_bytes();
       !selects_repository(key)
+        && !is_host_session(key)
         && !managed.iter().any(|name| key == OsStr::new(name))
         && !TOOLCHAIN_KEYS.iter().any(|name| key == OsStr::new(name))
-        && !HOST_PREFIXES
+        && !TOOLCHAIN_PREFIXES
           .iter()
-          .chain(&TOOLCHAIN_PREFIXES)
           .any(|prefix| bytes.starts_with(prefix.as_bytes()))
     })
     .collect()

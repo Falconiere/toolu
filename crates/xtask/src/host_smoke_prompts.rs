@@ -17,6 +17,9 @@ pub(crate) const CLAUDE_COMMIT: &str = "Use the shell tool once to run git add s
 /// Claude Code's gated push.
 pub(crate) const CLAUDE_PUSH: &str = "Use Bash once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";
 
+/// Muse's quality-failing edit; its other prompts are Codex's (the harness stages first).
+pub(crate) const MUSE_EDIT: &str = "Use read_file on sample.ts, then edit_file to replace its one line with eight nonblank export const statements. The configured file limit is three code lines. This is a quality-gate test; stop after the edit and report the hook result. Do not fix it.";
+
 /// Codex's allowed control.
 pub(crate) const CODEX_ALLOWED: &str =
   "Use the shell tool once to run exactly `cat .toolu-smoke-nonce`, then stop.";

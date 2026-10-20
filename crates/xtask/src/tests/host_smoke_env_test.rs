@@ -181,3 +181,34 @@ fn a_plain_environment_has_no_codex_home() {
   env.apply(&mut command);
   assert!(command.get_envs().all(|(name, _)| name != "CODEX_HOME"));
 }
+
+#[test]
+fn a_muse_child_gets_the_private_home_and_no_xdg_roots_or_muse_keys() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = OsString::from("/usr/bin:/bin");
+  let env = ChildEnv::new(Path::new("/x/toolu"), &path, &dir.path().join("shims")).unwrap();
+  let home = dir.path().join("muse-home");
+  let mut command = Command::new("/bin/sh");
+  command
+    .args([
+      "-c",
+      "echo \"$HOME|${XDG_CONFIG_HOME-none}|${XDG_DATA_HOME-none}|${MUSE_AUTH_PATH-none}|${MUSE_SESSION_ID-none}\"",
+    ])
+    .env("XDG_CONFIG_HOME", "/user/config")
+    .env("XDG_DATA_HOME", "/user/data")
+    .env("MUSE_AUTH_PATH", "/user/auth.json")
+    .env("MUSE_SESSION_ID", "outer-session");
+  env.with_muse_home(&home).apply(&mut command);
+  let out = command.output().unwrap();
+  assert_eq!(
+    String::from_utf8_lossy(&out.stdout).trim(),
+    format!("{}|none|none|none|none", home.display())
+  );
+  let mut claude = Command::new("/bin/sh");
+  claude
+    .args(["-c", "echo \"${MUSE_PLUGIN_ROOT-none}|$TOOLU_BIN\""])
+    .env("MUSE_PLUGIN_ROOT", "/outer/plugin");
+  env.apply(&mut claude);
+  let out = claude.output().unwrap();
+  assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "none|/x/toolu");
+}

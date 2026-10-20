@@ -1,24 +1,42 @@
 use std::os::unix::fs::PermissionsExt as _;
 
-use super::{Host, hosts, require_auth, require_bin, run, settle};
+use super::{Host, hosts, require_auth, require_bin, require_platform, run, settle};
 use crate::Verdict;
 use crate::options::Options;
 
 #[test]
-fn host_defaults_to_both_and_names_one() {
-  assert_eq!(hosts(None).unwrap(), vec![Host::Claude, Host::Codex]);
-  assert_eq!(
-    hosts(Some("both")).unwrap(),
-    vec![Host::Claude, Host::Codex]
-  );
+fn host_defaults_to_all_three_and_names_one() {
+  let all = vec![Host::Claude, Host::Codex, Host::Muse];
+  assert_eq!(hosts(None).unwrap(), all);
+  assert_eq!(hosts(Some("both")).unwrap(), all);
   assert_eq!(hosts(Some("claude")).unwrap(), vec![Host::Claude]);
   assert_eq!(hosts(Some("codex")).unwrap(), vec![Host::Codex]);
+  assert_eq!(hosts(Some("muse")).unwrap(), vec![Host::Muse]);
 }
 
 #[test]
 fn an_unknown_host_is_an_error() {
   let err = hosts(Some("cursor")).unwrap_err();
-  assert_eq!(err, "--host must be claude, codex or both, not cursor");
+  assert_eq!(
+    err,
+    "--host must be claude, codex, muse or both, not cursor"
+  );
+}
+
+#[test]
+fn muse_runs_anywhere_and_claude_and_codex_need_macos() {
+  assert_eq!(require_platform(&[Host::Muse], "linux"), Ok(()));
+  assert_eq!(require_platform(&[Host::Muse], "macos"), Ok(()));
+  assert_eq!(
+    require_platform(&[Host::Claude, Host::Codex], "macos"),
+    Ok(())
+  );
+  for planned in [vec![Host::Claude], vec![Host::Codex], hosts(None).unwrap()] {
+    assert_eq!(
+      require_platform(&planned, "linux").unwrap_err(),
+      "live Claude Code and Codex smoke requires macOS"
+    );
+  }
 }
 
 #[test]
@@ -68,6 +86,7 @@ fn codex_auth_is_the_users_auth_json() {
 fn evidence() -> tempfile::TempDir {
   let dir = tempfile::tempdir().unwrap();
   std::fs::create_dir_all(dir.path().join("evidence/codex-home")).unwrap();
+  std::fs::create_dir_all(dir.path().join("evidence/muse-home/.config/muse")).unwrap();
   dir
 }
 
@@ -80,6 +99,22 @@ fn a_clean_run_deletes_the_evidence_but_never_the_users_auth() {
   std::os::unix::fs::symlink(&auth, root.join("codex-home/auth.json")).unwrap();
   assert_eq!(settle(&root, &[], false).unwrap(), Verdict::Clean);
   assert!(!root.exists() && auth.is_file());
+}
+
+#[test]
+fn kept_evidence_holds_no_auth_link() {
+  let dir = evidence();
+  let root = dir.path().join("evidence");
+  let auth = dir.path().join("auth.json");
+  std::fs::write(&auth, "{}").unwrap();
+  let muse = root.join("muse-home/.config/muse/auth.json");
+  std::os::unix::fs::symlink(&auth, &muse).unwrap();
+  std::os::unix::fs::symlink(&auth, root.join("codex-home/auth.json")).unwrap();
+  let found = vec!["muse: deny: no live deny evidence".to_owned()];
+  assert_eq!(settle(&root, &found, false).unwrap(), Verdict::Findings);
+  assert!(root.is_dir() && auth.is_file());
+  assert!(std::fs::symlink_metadata(&muse).is_err());
+  assert!(std::fs::symlink_metadata(root.join("codex-home/auth.json")).is_err());
 }
 
 #[test]

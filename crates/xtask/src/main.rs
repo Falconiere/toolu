@@ -45,6 +45,8 @@ mod host_smoke_claude;
 mod host_smoke_codex;
 mod host_smoke_env;
 mod host_smoke_exec;
+mod host_smoke_muse;
+mod host_smoke_observe;
 mod host_smoke_project;
 mod host_smoke_prompts;
 mod host_smoke_steps;

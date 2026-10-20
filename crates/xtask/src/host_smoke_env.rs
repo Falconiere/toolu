@@ -1,7 +1,8 @@
 //! The environment every `host-smoke` child runs in: a `PATH` where `bun` and `bunx`
 //! are gone but every other tool of the same directories stays, no `TOOLU_BUN`, no
-//! inherited repository selection from `GIT_*`, and `TOOLU_BIN` set to the native
-//! binary, so only native hooks can answer.
+//! inherited repository selection from `GIT_*`, no Muse session or credential
+//! variable (`MUSE_*`), and `TOOLU_BIN` set to the native binary, so only native
+//! hooks can answer.
 
 use std::ffi::{OsStr, OsString};
 use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _, symlink};
@@ -20,7 +21,16 @@ pub(crate) struct ChildEnv {
   path: OsString,
   bin: PathBuf,
   codex_home: Option<PathBuf>,
+  muse_home: Option<PathBuf>,
 }
+
+/// What would point Muse at the user's own config and data instead of the private home.
+const MUSE_XDG: [&str; 2] = ["XDG_CONFIG_HOME", "XDG_DATA_HOME"];
+
+/// The prefix of every Muse session and credential variable (`MUSE_AUTH_PATH`,
+/// `MUSE_PLUGIN_ROOT`, `MUSE_SESSION_ID`, …), which a smoke run started from inside
+/// a Muse session would otherwise pass to every child.
+const MUSE_PREFIX: &str = "MUSE_";
 
 fn is_executable(path: &Path) -> bool {
   std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
@@ -93,6 +103,7 @@ impl ChildEnv {
       path: path_without_bun(path, shims)?,
       bin: bin.to_path_buf(),
       codex_home: None,
+      muse_home: None,
     })
   }
 
@@ -100,6 +111,14 @@ impl ChildEnv {
   pub(crate) fn with_codex_home(&self, home: &Path) -> ChildEnv {
     ChildEnv {
       codex_home: Some(home.to_path_buf()),
+      ..self.clone()
+    }
+  }
+
+  /// The same environment with a private `HOME` for Muse, and no XDG roots.
+  pub(crate) fn with_muse_home(&self, home: &Path) -> ChildEnv {
+    ChildEnv {
+      muse_home: Some(home.to_path_buf()),
       ..self.clone()
     }
   }
@@ -117,8 +136,21 @@ impl ChildEnv {
       .env("GIT_CONFIG_NOSYSTEM", "1")
       .env_remove("TOOLU_BUN");
     scrub(command);
+    let inherited = std::env::vars_os().map(|(key, _)| key);
+    let set: Vec<OsString> = command.get_envs().map(|(key, _)| key.to_owned()).collect();
+    for key in inherited.chain(set) {
+      if key.as_encoded_bytes().starts_with(MUSE_PREFIX.as_bytes()) {
+        command.env_remove(key);
+      }
+    }
     if let Some(home) = &self.codex_home {
       command.env("CODEX_HOME", home);
+    }
+    if let Some(home) = &self.muse_home {
+      command.env("HOME", home);
+      for key in MUSE_XDG {
+        command.env_remove(key);
+      }
     }
   }
 }
