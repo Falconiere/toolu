@@ -102,7 +102,7 @@ $ submit: /orchestrator should I delegate a rename  (echo provider returns the s
   Muse Code loaded the full instructions for an explicitly invoked skill. Apply these instructions only to the current user turn.
   <skill-body id="plugin:toolu:orchestrator" scope="plugin" path="plugin://toolu/skills/orchestrator/SKILL.md"
   skill-dir="<scratch>
-  0ea0e9f3d7820aa32/package/skills/orchestrator" sha256="sha256:1a5a1cbfe30c973c2d77f615d5e2b316eb611c3b1b6c7e01a10d64827298c9df" byte-count="9286">
+  f8a5c4398f80d701b/package/skills/orchestrator" sha256="sha256:c54ac3bda720091ab97d8160c2a378b44e6cb8809f7d7fe1c731699f92b3e7de" byte-count="9292">
   ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
   name: orchestrator
   description: "Use when deciding HOW to run a large task: whether to delegate it at all, and if so how to split it. Teaches the MAIN thread that inline is the default and a subagent must earn its round trip — plus which
@@ -196,7 +196,7 @@ $ submit: /orchestrator should I delegate a rename  (echo provider returns the s
   • Explore — broad read-only fan-out search when you need the conclusion, not file dumps.
   • Plan — design an implementation strategy for a non-trivial change.
   • general-purpose — multi-step research/execution that doesn't fit a specific agent; set model: yourself.
-  Muse has no custom agents. There, each agent is a command that applies its role to the current thread (/toolu:architect &lt;task&gt;). It does not spawn a tier-pinned subagent.
+  Muse plugins cannot ship agents. There, each agent is a command that applies its role to the current thread (/toolu:architect &lt;task&gt;). It does not spawn a tier-pinned subagent.
   Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
   Parallelize independent work
   Launch independent subagents in one message with multiple tool calls so they run concurrently — not one-at-a-time. Dependent steps wait; independent steps don't. A four-way independent search done serially wastes
