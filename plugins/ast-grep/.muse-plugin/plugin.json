@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "name": "ast-grep",
+  "displayName": "ast-grep",
+  "version": "8.0.4",
+  "description": "Structural code search and rewrite: skill, native toolu ast-grep commands, and compiled search and byte-savings rules.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "ast-grep",
+        "path": "skills/ast-grep/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "register",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/register"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

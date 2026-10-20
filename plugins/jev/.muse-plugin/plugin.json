@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "name": "jev",
+  "displayName": "jev",
+  "version": "8.0.4",
+  "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "jev",
+        "path": "skills/jev/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "session-start",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/session-start"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-binary",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-binary"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "user-prompt-submit",
+        "event": "UserPromptSubmit",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/user-prompt-submit"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

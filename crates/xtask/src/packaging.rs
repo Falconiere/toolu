@@ -8,6 +8,7 @@ use crate::options::Options;
 use crate::packaging_assets::{self, PLUGINS, dirs, read_json};
 use crate::packaging_catalog;
 use crate::packaging_muse;
+use crate::packaging_muse_identity;
 use crate::{Verdict, output};
 
 /// The published npm manifests that move in lockstep with the workspace.
@@ -146,7 +147,8 @@ fn check_manifests(
     }
   }
   skills_decl(root, plugin_root, name, &codex)?;
-  hooks_decl(root, plugin_root, name, &codex)
+  hooks_decl(root, plugin_root, name, &codex)?;
+  packaging_muse_identity::check(root, plugin_root, name, &claude)
 }
 
 fn skills_decl(root: &Path, plugin_root: &str, name: &str, codex: &Value) -> Result<(), String> {

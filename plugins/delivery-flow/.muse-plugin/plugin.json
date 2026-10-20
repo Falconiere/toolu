@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "delivery-flow",
+  "displayName": "delivery-flow",
+  "version": "8.0.4",
+  "description": "One dual-host delivery skill for brainstorm, approved spec and plan, real-data execution, PR creation, and pr-babysit handoff.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "delivery-flow",
+        "path": "skills/delivery-flow/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

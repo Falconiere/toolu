@@ -35,12 +35,22 @@
         },
         {
           "type": "json",
+          "path": "plugins/ast-grep/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/toolu-review/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/toolu-review/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/toolu-review/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
@@ -55,12 +65,22 @@
         },
         {
           "type": "json",
+          "path": "plugins/jev/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/pr-babysit/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/pr-babysit/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/pr-babysit/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
@@ -75,12 +95,22 @@
         },
         {
           "type": "json",
+          "path": "plugins/brainstorm/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/delivery-flow/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/delivery-flow/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/delivery-flow/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
@@ -95,12 +125,22 @@
         },
         {
           "type": "json",
+          "path": "plugins/epic-orchestrator/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/python-quality/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/python-quality/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/python-quality/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
@@ -115,6 +155,11 @@
         },
         {
           "type": "json",
+          "path": "plugins/rust-quality/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/statusline/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
@@ -125,12 +170,22 @@
         },
         {
           "type": "json",
+          "path": "plugins/statusline/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/ts-quality/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
           "type": "json",
           "path": "plugins/ts-quality/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/ts-quality/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
         },
         {
