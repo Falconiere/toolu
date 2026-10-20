@@ -31,6 +31,16 @@ codex plugin add toolu@toolu
 - **Commands** — `/toolu:doctor` runs `toolu doctor` and presents the report. `/toolu:status` runs `toolu status` and presents the repository, gate and push-review state.
 - **Tier-pinned agents** — Claude reads bundled definitions. The setup skill runs `toolu setup agents` to preview, install, update or remove the five Codex profiles, then `toolu doctor` and `toolu config validate`.
 
+## Muse
+
+Muse rejects the `agents` capability. The Muse bundle, `.muse-plugin/plugin.json`, uses one rule for all five agents: each `agents/<name>.md` is the Muse command `<name>`, and its `path` is that same file. No copy of the agent text exists, so editing an agent changes Claude and Muse together. The Codex profiles in `assets/agents/` are written separately. `cargo xtask packaging` fails when an agent has no matching command or a command points at a missing agent.
+
+Invoke an agent on Muse as `/toolu:<name> <task>`, for example `/toolu:architect pick a queue`. A bare `/<name>` also works while no other command takes the name. A Muse plugin cannot ship agents, so the command applies the role to the current thread rather than spawning a tier-pinned subagent. The bundle also carries the six skills. The existing commands and the hooks are not in it yet (#547).
+
+```bash
+muse plugins validate plugins/toolu --json
+```
+
 ## Configuration
 
 Toggle individual skills, hooks, or MCP servers via the host-native config:

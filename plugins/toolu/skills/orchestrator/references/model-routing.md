@@ -71,6 +71,11 @@ pass `model:`, so prefer these when one fits:
 | `toolu:implementer` | `sonnet` | One bounded plan step + its tests |
 | `toolu:architect` | `opus` | Design, trade-offs, synthesis (read-only) |
 
+Codex has the same five names as custom agents once `$toolu:setup` installs
+them. Muse plugins cannot ship agents:
+each one is the command `/toolu:<agent>` (for example `/toolu:architect`), which
+applies the role to the current thread with no tier pin.
+
 For anything else, route explicitly with the active host's delegation interface.
 Leaving routing unset inherits host defaults.
 

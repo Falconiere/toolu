@@ -97,14 +97,16 @@ work inline, but do not re-spawn the same prompt hoping for a better roll.
 
 Prefer a **tier-pinned** agent when one fits — its frontmatter fixes the model, so routing can't be forgotten:
 
-- **`toolu:quick-task` / Codex `quick-task`** — mechanical lookups and listings.
-- **`toolu:deep-explore` / Codex `deep-explore`** — structural exploration.
-- **`toolu:research-agent` / Codex `research-agent`** — external research.
-- **`toolu:implementer` / Codex `implementer`** — one bounded plan step and tests.
-- **`toolu:architect` / Codex `architect`** — design and synthesis, read-only.
+- **`toolu:quick-task` / Codex `quick-task` / Muse `/toolu:quick-task`** — mechanical lookups and listings.
+- **`toolu:deep-explore` / Codex `deep-explore` / Muse `/toolu:deep-explore`** — structural exploration.
+- **`toolu:research-agent` / Codex `research-agent` / Muse `/toolu:research-agent`** — external research.
+- **`toolu:implementer` / Codex `implementer` / Muse `/toolu:implementer`** — one bounded plan step and tests.
+- **`toolu:architect` / Codex `architect` / Muse `/toolu:architect`** — design and synthesis, read-only.
 - **`Explore`** — broad read-only fan-out search when you need the conclusion, not file dumps.
 - **`Plan`** — design an implementation strategy for a non-trivial change.
 - **`general-purpose`** — multi-step research/execution that doesn't fit a specific agent; set `model:` yourself.
+
+Muse plugins cannot ship agents. There, each agent is a command that applies its role to the current thread (`/toolu:architect <task>`). It does not spawn a tier-pinned subagent.
 
 Carry the session mandates into every subagent prompt (comemory recall/save, ast-grep first). Delegation never exempts the work.
 

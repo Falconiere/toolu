@@ -20,6 +20,11 @@
         },
         {
           "type": "json",
+          "path": "plugins/toolu/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/ast-grep/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },
