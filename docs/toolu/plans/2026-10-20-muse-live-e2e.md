@@ -64,7 +64,7 @@ AC-10).
   },
   {
     "id": "S3",
-    "title": "Push to a bare origin blocked by push review with no remote ref, ask mode also blocks, then toolu review write-state --findings-count 0 and the push lands (check 4)",
+    "title": "Push to a bare origin blocked by push review with no remote ref, ask mode advises (judgement-gate degrade on Muse), then toolu review write-state --findings-count 0 and the push lands (check 4)",
     "check": "grep -q '^## Check 4 ' docs/toolu/evidence/2026-10-20-muse-live-e2e.md && jq -e '.checks[\"4\"] as $c | ($c.sessions | length > 0) and all($c.sessions[]; .hook_failures == 0) and (if $c.verdict == \"PASS\" then ($c.facts | all(.[]; . == true)) else ($c.verdict == \"FAIL\" and ($c.issue | type == \"number\") and ($c.facts | any(.[]; . == false))) end)' docs/toolu/evidence/2026-10-20-muse-live-e2e.json >/dev/null && v=$(jq -r '.checks[\"4\"] | if .verdict == \"PASS\" then \"PASS\" else \"FAIL #\\(.issue)\" end' docs/toolu/evidence/2026-10-20-muse-live-e2e.json) && grep -Eq \"^\\| 4 \\|.*\\| $v \\|\" docs/toolu/evidence/2026-10-20-muse-live-e2e.md",
     "ac_refs": [
       "AC-4"
@@ -199,7 +199,7 @@ binary, and each verdict is backed by on-disk state:
 Each check also covers its boundary:
 - an unapproved plugin (inert);
 - the default preset (ask → block);
-- ask-mode push (block, no waiver on Muse);
+- ask-mode push (advise on Muse: no waiver can be granted);
 - a renamed binary, then restored.
 
 Delivery runs `toolu ledger run <plan> --verify`, `toolu-review:review` and

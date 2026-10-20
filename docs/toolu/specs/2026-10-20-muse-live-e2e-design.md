@@ -30,7 +30,9 @@ command captured:
 
 - **Binary.** `cargo build -p toolu-cli` at `origin/main` (04f29e95, version
   8.0.4, all merged Muse work) is the release candidate. It is installed as
-  `$HOME/.local/bin/toolu`, the install directory `install.sh` uses.
+  `$HOME/.local/bin/toolu`, one of the launcher's install directories (where
+  `install.sh --install-dir` puts it for a user without root; its default,
+  `/usr/local/bin`, is masked below).
 - **Isolation.** Every command runs under `env -i` with `HOME`,
   `XDG_CONFIG_HOME` and `XDG_DATA_HOME` inside the scratch directory. `PATH` is
   `$HOME/.local/bin:<private muse/node/git bin>:/usr/bin:/bin`. The run sits
@@ -45,16 +47,17 @@ command captured:
   --host muse` runs: first `toolu` alone without `--approve` (check 8), then
   every plugin with `--approve`.
 - **Sessions.** `muse exec --json` in a git project. Each check has its own
-  prompt and transcript. A hook's verdict is read from the JSONL tool events:
-  `tool blocked by hook: …` or an executed result. On-disk effects are checked
+  prompt and transcript. A hook's verdict is read from the JSONL tool events
+  (`tool blocked by hook: …` or an executed result) and from Muse's session log,
+  which records every hook run (`hook_run_terminal`). On-disk effects are checked
   independently: file bytes, `HEAD`, refs in the bare remote, the gate file,
   `toolu status`.
 - **Project config.** `.agents/toolu.config.json` (Muse's project directory,
   the host-smoke `LIMITS` shape) sets `protectedFiles`, `commitGate`,
   `qualityGate` and `pushReview` to `block`, plus a 3-line TypeScript
   `maxFileLines`, so each probe is deterministic. Check 1 runs once more under
-  the default preset to show the shipped default also blocks on Muse: its
-  `ask` encodes as a block there.
+  the default preset to show the shipped default also blocks on Muse: a
+  guardrail's `ask` degrades to `block` on a host that cannot prompt.
 - **Decided readings.** Jev was asked about the two ambiguous checks.
   - Check 3 ("commit with approval"): the commit is blocked while the quality
     gate is red, and the same commit is allowed once the agent fixes the
@@ -63,9 +66,11 @@ command captured:
     `toolu review write-state --findings-count 0` records a clean review of
     the exact diff, and the push is then allowed (Jev `state` 0.54 against
     `none` 0.45). The ask-mode waiver of `docs/config.md` cannot be granted on
-    Muse by design: the Muse encoder turns `ask` into a block (#544), so no
-    approved push ever promotes a pending waiver. The evidence states this, and
-    shows ask mode blocking.
+    Muse, because Muse cannot prompt. *Corrected during execution:* the spec
+    first said ask mode blocks there. In fact `pushReview` is a judgement
+    gate, so its `ask` degrades to `advise` (`gate_mode.rs`, as on Codex), and
+    the run recorded the push going through with the advice. See the plan's
+    Deviations.
 - **Evidence.** `docs/toolu/evidence/2026-10-20-muse-live-e2e.md` holds the
   setup, a verdict table, and one redacted transcript excerpt per check, in
   `text` fences. Redaction replaces the scratch path with `$SCRATCH` and drops
@@ -74,7 +79,7 @@ command captured:
 ## Interfaces / Schema
 
 - Evidence file: `docs/toolu/evidence/2026-10-20-muse-live-e2e.md`. It has a
-  `## Verdicts` table with one row per check, `| <n> | <check> | PASS\|FAIL |
+  `## Verdicts` table with one row per check, `| <n> | <check> | PASS\|FAIL #<issue> |
   <observed> |`, then `## Check <n>` sections with the commands, exit codes
   and the tool events quoted.
 - Project config written for the run (`.agents/toolu.config.json`):
@@ -159,7 +164,7 @@ command captured:
 | AC-1 | Muse 1.4.11 session, project `.env` = `KEEP=1` | `tool blocked by hook` + protected reason; `.env` unchanged | default preset (`ask` → block on Muse) | evidence `## Check 1` + verdict row PASS |
 | AC-2 | `sample.ts` grown past 3 lines by the session | gate file `failing`, `toolu status` names it | — | evidence `## Check 2` |
 | AC-3 | staged `sample.ts`, red gate | commit blocked, `HEAD` same; after fix `HEAD` moves | blocked commit must not move `HEAD` | evidence `## Check 3` (`git rev-parse` before/after) |
-| AC-4 | `feat/push-smoke` + bare `origin` | push blocked, no remote ref; then pushed | ask mode also blocks (no waiver on Muse) | evidence `## Check 4` (`git for-each-ref` on the remote) |
+| AC-4 | `feat/push-smoke` + bare `origin` | push blocked, no remote ref; then pushed | ask mode on Muse: no waiver can be granted (corrected: it advises, see Deviations) | evidence `## Check 4` (`git for-each-ref` on the remote) |
 | AC-5 | routine read/edit/bash prompt | no `failed` hook event | internal tools present in JSONL | evidence `## Check 5` (event counts) |
 | AC-6 | `$HOME/.local/bin/toolu` renamed, `/usr/local/bin` masked | block with install advisory | restore → gated again | evidence `## Check 6` |
 | AC-7 | `toolu doctor` in project | no failing line, Muse roots | — | evidence `## Check 7` |
