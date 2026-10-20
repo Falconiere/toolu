@@ -4268,6 +4268,17 @@ source: crates/cli/tests/helpers/schema.rs
               "short": "y",
               "takesValue": false,
               "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Approve each plugin's hooks after installing or updating it (Muse only)",
+              "hidden": false,
+              "long": "approve",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
             }
           ],
           "hidden": false,
@@ -4446,6 +4457,17 @@ source: crates/cli/tests/helpers/schema.rs
               "help": "Never prompt; fail naming what is missing",
               "hidden": false,
               "long": "no-input",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Approve each plugin's hooks after installing or updating it (Muse only)",
+              "hidden": false,
+              "long": "approve",
               "possibleValues": [],
               "required": false,
               "short": null,

@@ -69,7 +69,7 @@ Muse run → full gate.
   {
     "id": "S5",
     "title": "Document Muse in docs/cli/installer.md, crates/plugins/README.md, AGENTS.md and fixtures/README.md; regenerate docs/cli and accept the commands snapshot",
-    "check": "cargo xtask gate --only docs-cli --only cli-compat && cargo test -p toolu-cli --test contract && cargo xtask check-markdown-cli",
+    "check": "cargo xtask gate --only docs-cli --only cli-compat && env -u HERDR_SOCKET_PATH -u HERDR_ENV -u HERDR_PANE_ID -u HERDR_TAB_ID -u HERDR_WORKSPACE_ID -u HERDR_BIN_PATH -u HERDR_CONFIG_PATH TOOLU_RESOURCE_HOME=\"$TMPDIR/isolated-resources\" cargo test -p toolu-cli --test contract && cargo xtask check-markdown-cli",
     "ac_refs": ["AC-10"],
     "depends_on": ["S4"],
     "paths": ["docs/cli", "crates/plugins/README.md", "AGENTS.md", "fixtures/README.md", "crates/cli/tests/contract.rs", "crates/cli/tests/fixtures", "crates/plugins/src/args.rs"],
@@ -122,6 +122,10 @@ Delivery: scoped `feat(plugins):` commit, `toolu ledger run <plan> --verify` wit
 `TMPDIR` on a durable filesystem (`verify-root-host-gates`), `toolu-review:review`,
 `toolu ledger verdict status` ready, push, PR with `Closes Falconiere/toolu#549`
 and `Part of Falconiere/toolu#539`, then `report babysit` (the epic engine babysits).
+
+## Deviations
+
+- S5: the contract test's `epic status --json` read this host's live epic engine through the inherited `HERDR_*` variables; the check now runs it with them unset and a private `TOOLU_RESOURCE_HOME`, as `verify-root-host-gates` prescribes.
 
 ## Plan review (2026-10-20)
 

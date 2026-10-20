@@ -4,8 +4,15 @@
 from the Node CLI that npm publishes as `@toolu/plugins`. That package is now a
 wrapper (`toolu-plugins`) that finds the native `toolu` and runs these verbs.
 
-- Claude Code and Codex are driven through `claude plugin …` and
-  `codex plugin …` (`src/host/`); `plugin list --json` is normalized there.
+- Claude Code, Codex and Muse are driven through `claude plugin …`,
+  `codex plugin …` and `muse plugins …` (`src/host/`); each listing is
+  normalized there.
+- Muse (#549) installs from a toolu checkout of the tag `v<binary version>`
+  (`src/host/checkout.rs`), registered as the marketplace `toolu` before
+  install and update (`src/verbs/prepare.rs`). `src/verbs/trust.rs` approves
+  pending hooks under `--approve` and otherwise names `muse plugins approve`.
+  `src/host/muse.rs` reads the outputs captured in
+  `fixtures/plugins/muse.json`.
 - The catalog is `.claude-plugin/marketplace.json`, embedded with
   `include_str!` from the repository layout at build time; `--catalog <path>`
   reads another (the npm wrapper passes its bundled copy).

@@ -6,8 +6,9 @@ package that runs it. The generated reference of every verb and flag is
 [plugins.md](plugins.md). The [README](../../README.md#install) install snippets
 use these commands.
 
-Claude Code and Codex are the supported hosts, driven through their own plugin
-CLIs. The code is `crates/plugins` (`toolu-plugins`).
+Claude Code, Codex and Muse are the supported hosts, driven through their own
+plugin CLIs. The code is `crates/plugins` (`toolu-plugins`); Muse is
+[below](#muse).
 
 Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
@@ -103,8 +104,9 @@ toolu plugins update [name...]    Update only what is behind the marketplace
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude` or `codex`. Detected when omitted. `cursor` and `hermes` are not installer targets and exit `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex exits `64`. |
+| `--host <id>` | `claude`, `codex` or `muse`. Detected when omitted (probed in that order). `cursor` and `hermes` are not installer targets and exit `64`. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex or Muse exits `64`. |
+| `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. The npm wrapper passes its own. |
 | `--yes`, `-y` | Confirm a removal. |
@@ -195,7 +197,49 @@ The run installs `enabled` with its dependencies, as if the names had been
 given, and an empty list installs nothing. `version` is the file format: an
 unknown or missing value exits `64` rather than being guessed at.
 `generatorVersion` records the CLI that wrote the file, and a file from a newer
-major exits `64` with both versions named. `host` is used when `--host` is
-absent; `--host` wins. A file that is missing, is not JSON or is malformed also
+major exits `64` with both versions named. `host` (`claude`, `codex` or `muse`)
+is used when `--host` is absent; `--host` wins. A file that is missing, is not JSON or is malformed also
 exits `64`. Nothing writes this file. The TypeScript installer parsed
 `--config` but never read it.
+
+## Muse
+
+`toolu plugins … --host muse` drives `muse plugins …` (#549). Muse has no
+GitHub marketplace source that updates in place, so toolu keeps its own
+checkout of the release that matches the binary and registers it with Muse
+as the marketplace `toolu` (the #541 decision,
+[muse-plugin-distribution.md](../research/muse-plugin-distribution.md)):
+
+- **The checkout** is `$XDG_DATA_HOME/toolu/muse-marketplace` (a relative
+  `XDG_DATA_HOME` is ignored), else `~/.local/share/toolu/muse-marketplace`: a
+  shallow clone of the tag `v<toolu version>` from
+  `https://github.com/Falconiere/toolu.git`. `install` and `update` clone it
+  when it is absent, or fetch the tag and check it out when it is there, then
+  add it as the marketplace `toolu` or refresh that marketplace's snapshot.
+  Plugins install as `muse plugins install <name>@toolu`; `update` runs
+  `muse plugins update <name>`, and `remove` runs `muse plugins remove <name>`.
+  Upgrading the binary and running `toolu plugins update --host muse` moves
+  every installed toolu plugin to the new release.
+- **Approval.** Muse keeps a plugin's hooks and agent definitions inert until
+  `muse plugins approve <name>` trusts them, and asks again when a definition
+  changes. After `install` and `update`, toolu reads `muse plugins inspect
+  <name>`. With `--approve` it approves any plugin whose capabilities are
+  `review_needed` or `modified`, and the step says `approved`. Without it the
+  run still exits `0` and the step ends with `awaiting approval: muse plugins
+  approve <name>`. A plugin that is already trusted is left alone, so running
+  `install --approve` again over an approved plugin asks for nothing.
+- **Plugins from elsewhere.** A toolu plugin Muse installed from another source
+  is reported as `skew` and left untouched, with the `muse plugins remove`
+  and `toolu plugins install` commands that hand it to toolu; `update` without
+  names skips it.
+- **Failures before any plugin command** exit `1` and leave Muse unchanged:
+  neither `XDG_DATA_HOME` nor `HOME` set; a clone or fetch that fails (offline,
+  or a development build whose tag does not exist); a checkout directory that
+  is not a toolu checkout or was cloned from another origin (toolu never
+  deletes it, move it aside); and a `toolu` marketplace Muse already has from
+  another source (remove it with `muse plugins marketplace remove toolu`).
+- **Releases before Muse manifests.** Muse installs only plugins whose
+  directory carries `.muse-plugin/plugin.json`. A release without them gives a
+  failed step per plugin with Muse's `not available in marketplace` line.
+- `--dry-run` runs no `git` and changes no marketplace; it prints the plugin
+  commands, as for the other hosts.
