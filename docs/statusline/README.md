@@ -63,6 +63,10 @@ Run `$statusline:status` in Codex. It runs `toolu --host codex status`.
 The JSON document includes repository, working-tree, gate, push-review, and
 waiver facts. It has no Claude model, context, or account fields.
 
+## Muse
+
+The statusline plugin is not supported on Muse: it ships no `.muse-plugin/plugin.json` yet (#547), so there is no Muse statusline or setup. `toolu status --host muse` still prints the repository, gate and push-review document.
+
 ## Verification
 
 The native crate and CLI tests use real repositories, settings files, linked

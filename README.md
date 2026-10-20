@@ -87,7 +87,9 @@ wrapper that runs `toolu plugins` on the installed binary
 ([docs/cli/installer.md](docs/cli/installer.md)).
 
 toolu has first-class packages for Claude Code and Codex. Codex support covers
-the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux.
+the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux. Muse Code
+is supported through `toolu plugins install --host muse`; see
+[docs/install.md](docs/install.md#on-muse) for the install, approve and verify steps.
 
 **Prerequisite:** the native `toolu` binary. Every hook, skill command and agent command runs it; Bun is not used or needed on any host. Resolution order, missing-binary behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
 
@@ -105,7 +107,7 @@ npx @toolu/plugins remove jev --yes
 npx @toolu/plugins update
 ```
 
-Claude Code and Codex are the supported hosts. Full grammar, exit codes, and
+Claude Code, Codex and Muse are the supported hosts. Full grammar, exit codes, and
 the `.toolu/plugins.json` selection file:
 **[docs/cli/installer.md](docs/cli/installer.md)**.
 
@@ -323,7 +325,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the npm wrapper package, `Cargo.toml` / `Cargo.lock`, and every Claude and Codex plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run in the same workflow; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the npm wrapper package, `Cargo.toml` / `Cargo.lock`, and every Claude, Codex and Muse plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run in the same workflow; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
 
 ## References
 

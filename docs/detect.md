@@ -12,6 +12,19 @@ Issue: [#254](https://github.com/Falconiere/toolu/issues/254). Epic: [#247](http
 
 The layer shells out to `git` only, and for most questions not even that (see **Git facts without git**). It never runs `wc`, `grep`, `awk` or `jq`.
 
+## Host detection
+
+`toolu_runtime::host::detect` picks the host that spawned a hook; the first hit wins:
+
+1. `TOOLU_HOST_OVERRIDE` (an invalid value warns and falls through);
+2. a hook event name only one host uses;
+3. Cursor's `CURSOR_VERSION` or `CURSOR_PROJECT_DIR`;
+4. Muse's `MUSE_PLUGIN_ID` or `MUSE_SESSION_ID`;
+5. Codex's `PLUGIN_ROOT`;
+6. otherwise Claude Code.
+
+On Muse the config root is `MUSE_CONFIG_DIR`, else `$XDG_CONFIG_HOME/muse`, else `~/.config/muse`; `TOOLU_CONFIG_DIR` wins on every host. The plugin root and data directory are `MUSE_PLUGIN_ROOT` and `MUSE_PLUGIN_DATA_DIR`. Muse has no project-directory variable, so the project root is the git toplevel.
+
 ## API
 
 | Function | bash | Answers |

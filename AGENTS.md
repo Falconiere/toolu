@@ -2,7 +2,7 @@
 
 ## Overview
 
-**toolu** — plugin marketplace that enforces code-quality rules through hooks, skills, and a runtime registry. Runs on Claude Code and Codex; the plugin also runs on macOS in CI (`rust-macos`, `hook-bench`).
+**toolu** — plugin marketplace that enforces code-quality rules through hooks, skills, and a runtime registry. Runs on Claude Code, Codex and Muse Code (Muse support is in progress, #539); the plugin also runs on macOS in CI (`rust-macos`, `hook-bench`).
 
 ## Agent instructions
 
@@ -10,7 +10,7 @@ This file is the source of truth. Codex, Cursor, and Claude Code read it directl
 
 ## Tech stack
 
-- **Native only** (#440) — every hook, skill command and agent command runs the installed `toolu` binary; there is no TypeScript and no Bun on Claude Code or Codex (`docs/runtime.md`). Tests are Rust tests that spawn the real binary, `git` and host CLIs; the shared JSON goldens in `fixtures/` are replayed against the native code (`docs/testing.md`). The gate is `cargo xtask gate`.
+- **Native only** (#440) — every hook, skill command and agent command runs the installed `toolu` binary; there is no TypeScript and no Bun on Claude Code, Codex or Muse (`docs/runtime.md`). Tests are Rust tests that spawn the real binary, `git` and host CLIs; the shared JSON goldens in `fixtures/` are replayed against the native code (`docs/testing.md`). The gate is `cargo xtask gate`.
 - **`toolu` binary** (#442) — `crates/cli`, the one Rust binary: a clap tree with a namespace per plugin crate, global `--json`/`--quiet`/`--host`/`--config-dir`, the exit codes of `toolu_protocol::exit`, and a `toolu hook` fast path that never builds the tree. `docs/cli/` is its generated reference (`cargo xtask docs-cli`), and `toolu commands --json` exports the tree.
 - **Plugin installer** (#438) — `toolu plugins` (`crates/plugins`, package `toolu-plugins`) installs plugins across hosts by shelling out to each host's own plugin CLI. `tools/toolu-cli` is the npm wrapper `@toolu/plugins` (bin `toolu-plugins`, never `toolu`): one committed, dependency-free JavaScript file (`npm/cli.js`, no build step), published from its `npm/` folder, that finds the native binary and runs `toolu plugins …`; `crates/cli/tests/npm_wrapper.rs` runs it with `node`. npx resolves a package by name, and no local package carries `@toolu/plugins` (there is no npm workspace), so npx in a checkout still fetches the published package. See `docs/cli/installer.md`.
 - **Rust workspace** (epic #402) — root `Cargo.toml`, toolchain pinned in `rust-toolchain.toml` (1.99.0 with rustfmt and clippy). Core crates live in `crates/core/<layer>` (package `toolu-<layer>`), tooling in `crates/xtask`. Every crate passes the quality bar of #455 (see **Rust conventions** below); the gate is `cargo xtask gate`.
@@ -26,6 +26,8 @@ plugins/<name>/
   .claude-plugin/plugin.json   # name, version, description, dependencies
   README.md                    # tooling/templates/plugin-README.md
   hooks/hooks.json             # event routing: generated native launchers only
+  .muse-plugin/plugin.json     # Muse manifest (#547): skills, commands, hooks as argv
+  hooks/muse/<name>            # one generated launcher per Muse hook (#546)
   hooks/docs/                  # Markdown a hook renders (core only)
   skills/<skill>/SKILL.md
   commands/<name>.md

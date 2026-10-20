@@ -83,7 +83,7 @@ cargo build -p toolu-cli
 
 The `@toolu/plugins` tarball is five files: `package.json`, `README.md`,
 `LICENSE`, `cli.js`, and `assets/marketplace.json`. The `plugins/` tree is
-deliberately excluded, because Claude Code and Codex fetch plugin content
+deliberately excluded, because Claude Code, Codex and Muse fetch plugin content
 through their own host CLIs. The gate's `pack` step fails if anything else
 appears in it.
 
@@ -170,7 +170,7 @@ exits `64` and names the candidates rather than guessing.
 **Dry runs run nothing.** `--dry-run` prints the commands a real run would
 run, for `install`, `remove` and `update` alike (an `update` leaves out plugins
 already at the offered version). The TypeScript installer ignored the flag on
-`remove` and `update` for Claude Code and Codex.
+`remove` and `update` for Claude Code and Codex. Muse had no TypeScript installer.
 
 **Each host command has 600 seconds.** A command that runs longer is a failed
 step whose detail says `timed out after 600 s`. Ctrl-C stops the running host
