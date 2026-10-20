@@ -33,6 +33,10 @@ fn inspect_distinguishes_unapproved_approved_and_unknown_hooks() {
   let pending = parse_inspect(&unapproved.to_string()).unwrap();
   assert_eq!(pending.pending_hooks, vec!["probe"]);
   assert_eq!(pending.approval, "needs-approval");
+  let rejected = json!({"runtime_capabilities":[{"candidate":{"kind":"hook","capability_id":"probe"},"status":"trusted_disabled"}]});
+  let disabled = parse_inspect(&rejected.to_string()).unwrap();
+  assert_eq!(disabled.pending_hooks, vec!["probe"]);
+  assert_eq!(disabled.approval, "needs-approval");
   let approved = json!({"runtime_capabilities":[{"candidate":{"kind":"hook","capability_id":"probe"},"status":"trusted_enabled"}]});
   assert_eq!(
     parse_inspect(&approved.to_string()).unwrap().approval,

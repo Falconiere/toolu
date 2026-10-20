@@ -176,15 +176,15 @@ pub(super) fn parse_inspect(body: &str) -> Result<MuseApproval, String> {
       .and_then(Value::as_str)
       .ok_or("Muse capability has no status")?;
     match status {
-      "review_needed" if kind == "hook" => pending_hooks.push(
+      "review_needed" | "trusted_disabled" if kind == "hook" => pending_hooks.push(
         candidate
           .get("capability_id")
           .and_then(Value::as_str)
           .ok_or("Muse hook has no id")?
           .to_owned(),
       ),
-      "review_needed" => pending_other = true,
-      "trusted_enabled" | "trusted_disabled" => {}
+      "review_needed" | "trusted_disabled" => pending_other = true,
+      "trusted_enabled" => {}
       _ => return Err(format!("Muse capability has unknown status {status}")),
     }
   }
