@@ -45,12 +45,11 @@ pub(super) fn collect(roots: &Roots) -> Inventory {
   for entry in entries {
     let approval = invoke(roots, &["plugins", "inspect", &entry.id, "--json"])
       .and_then(|text| parse_inspect(&text));
-    let (approval, pending_hooks) = match approval {
-      Ok(result) => (result.approval, result.pending_hooks),
-      Err(_) => {
-        warnings.push(format!("cannot inspect Muse plugin {}", entry.id));
-        ("unknown", Vec::new())
-      }
+    let (approval, pending_hooks) = if let Ok(result) = approval {
+      (result.approval, result.pending_hooks)
+    } else {
+      warnings.push(format!("cannot inspect Muse plugin {}", entry.id));
+      ("unknown", Vec::new())
     };
     plugins.push(Plugin {
       name: entry.id,
@@ -71,13 +70,13 @@ pub(super) fn collect(roots: &Roots) -> Inventory {
 }
 
 fn invoke(roots: &Roots, args: &[&str]) -> Result<String, String> {
-  let mut argv = vec!["muse".to_owned()];
-  argv.extend(args.iter().map(|part| (*part).to_owned()));
-  let mut spec = Spec::new(argv);
+  let mut command = vec!["muse".to_owned()];
+  command.extend(args.iter().map(|part| (*part).to_owned()));
+  let mut spec = Spec::new(command);
   spec.env = Some(roots.env().clone());
   spec.timeout = TIMEOUT;
   spec.max_output_bytes = 1_048_576;
-  let output = run(&spec).map_err(|_| "Muse CLI unavailable".to_owned())?;
+  let output = run(&spec).map_err(|error| format!("Muse CLI unavailable: {error:?}"))?;
   if output.exit_code != 0 || output.timed_out || output.truncated {
     return Err("Muse CLI listing failed".to_owned());
   }

@@ -51,7 +51,7 @@ fn inspect_distinguishes_unapproved_approved_and_unknown_hooks() {
   let agent = json!({"runtime_capabilities":[{"candidate":{"scoped_definition_id":"toolu/implementer"},"status":"review_needed"}]});
   let pending_agent = parse_inspect(&agent.to_string()).unwrap();
   assert_eq!(pending_agent.approval, "needs-approval");
-  assert!(pending_agent.pending_hooks.is_empty());
+  assert_eq!(pending_agent.pending_hooks, Vec::<String>::new());
   let unknown = json!({"runtime_capabilities":[{"candidate":{"kind":"hook","capability_id":"probe"},"status":"future_status"}]});
   assert!(parse_inspect(&unknown.to_string()).is_err());
   assert!(parse_inspect("{}").is_err());
