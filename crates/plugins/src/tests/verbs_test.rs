@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use super::{Driver, find};
+use crate::args::Approval;
 use crate::host::adapter::Adapter;
 use crate::support::Sandbox;
 
@@ -17,6 +18,8 @@ fn a_listing_that_fails_or_is_malformed_reads_as_empty() {
     adapter: Adapter::Claude,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   };
   let installed = driver.versions(&driver.adapter.list_installed());
   assert_eq!(

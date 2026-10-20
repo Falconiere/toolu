@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use super::run;
-use crate::args::Scope;
+use crate::args::{Approval, Scope};
 use crate::catalog::order::dependents_of;
 use crate::host::adapter::Adapter;
 use crate::step::Status;
@@ -13,6 +13,8 @@ fn driver(sb: &Sandbox, adapter: Adapter) -> Driver {
     adapter,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   }
 }
 
@@ -178,4 +180,97 @@ fn a_failed_marketplace_add_is_named_on_the_plugin_that_then_fails() {
     steps[0].detail,
     "boom: plugin install jev@toolu; the marketplace add also failed: boom: plugin marketplace add Falconiere/toolu"
   );
+}
+
+/// The captured `muse plugins list --json`, with the plugin installed from
+/// another marketplace renamed to the catalog's `brainstorm`; toolu trusted
+/// and ast-grep awaiting review once installed. Returns an approving driver.
+fn muse_installed(sb: &Sandbox) -> Driver {
+  sb.muse("never");
+  let origin = sb.origin(&["v8.0.4"]);
+  sb.capture("list", "muse-installed.json");
+  let listing = std::fs::read_to_string(sb.path("muse-installed.json")).unwrap_or_default();
+  sb.write(
+    "muse-installed.json",
+    &listing.replace("hooky", "brainstorm"),
+  );
+  sb.capture("available", "muse-available.json");
+  sb.capture("inspect-toolu-trusted", "muse-inspect-toolu.json");
+  sb.capture("inspect-review-needed", "muse-inspect-ast-grep.json");
+  sb.muse_driver("8.0.4", &origin, Approval::Approve)
+}
+
+/// The commands the `muse` stub ran that change or read trust.
+fn muse_writes(sb: &Sandbox) -> Vec<String> {
+  sb.log("muse")
+    .into_iter()
+    .filter(|line| {
+      ["install ", "inspect", "approve", "add"]
+        .iter()
+        .any(|word| line.contains(word))
+    })
+    .collect()
+}
+
+#[test]
+fn muse_installs_from_the_checkout_approves_what_is_pending_and_leaves_foreign_plugins() {
+  let sb = Sandbox::new();
+  let driver = muse_installed(&sb);
+  let Ok(steps) = run(
+    &driver,
+    &catalog(),
+    &names(&["toolu", "brainstorm", "ast-grep"]),
+    None,
+    false,
+  ) else {
+    panic!("the Muse install failed outright");
+  };
+  let seen = |name: &str| {
+    steps
+      .iter()
+      .find(|step| step.name == name)
+      .map(|step| (step.status, step.detail.clone()))
+  };
+  assert_eq!(
+    seen("toolu"),
+    Some((Status::Already, "already installed at 8.0.4".to_owned()))
+  );
+  assert_eq!(
+    seen("ast-grep"),
+    Some((Status::Installed, "installed; approved".to_owned()))
+  );
+  let Some((status, detail)) = seen("brainstorm") else {
+    panic!("brainstorm was not reported");
+  };
+  assert_eq!(status, Status::Skew);
+  assert!(
+    detail.contains("outside the toolu marketplace")
+      && detail.contains("muse plugins remove brainstorm"),
+    "{detail}"
+  );
+  let dir = sb
+    .path("home/.local/share/toolu/muse-marketplace")
+    .display()
+    .to_string();
+  assert_eq!(
+    muse_writes(&sb),
+    [
+      format!("plugins marketplace add toolu {dir} --json"),
+      "plugins install ast-grep@toolu --json".to_owned(),
+      "plugins inspect toolu --json".to_owned(),
+      "plugins inspect ast-grep --json".to_owned(),
+      "plugins approve ast-grep --json".to_owned(),
+    ]
+  );
+}
+
+#[test]
+fn a_muse_checkout_that_cannot_be_made_installs_nothing() {
+  let sb = Sandbox::new();
+  sb.muse("never");
+  let origin = sb.origin(&["v8.0.4"]);
+  let driver = sb.muse_driver("0.0.0-dev", &origin, Approval::Approve);
+  let failed = run(&driver, &catalog(), &names(&["toolu"]), None, false);
+  assert!(failed.is_err_and(|fail| fail.message.contains("v0.0.0-dev")));
+  assert_eq!(sb.log("muse"), Vec::<String>::new());
 }

@@ -1,17 +1,28 @@
-//! `update` on Claude Code and Codex: only what differs from the offered version.
+//! `update`: only what differs from the offered version, then hook approval
+//! (Muse). On Muse the checkout moves to this binary's tag first, and a plugin
+//! installed from elsewhere is left alone.
 
+use crate::args::Verb;
 use crate::fail::{Fail, Res};
+use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
-use crate::verbs::{Driver, find};
+use crate::verbs::{Driver, find, foreign_step, prepare, trust};
 
 /// Updates `names`, or every installed plugin when empty; a dry run runs no update.
 pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
+  if !dry_run {
+    prepare::run(driver, Verb::Update)?;
+  }
   let installed = driver.versions(&adapter.list_installed());
   let offered = driver.versions(&adapter.list_available());
   let targets: Vec<String> = if names.is_empty() {
-    installed.iter().map(|entry| entry.name.clone()).collect()
+    installed
+      .iter()
+      .filter(|entry| !driver.foreign(entry))
+      .map(|entry| entry.name.clone())
+      .collect()
   } else {
     names.to_vec()
   };
@@ -25,32 +36,50 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<S
   }
   let steps = targets
     .iter()
-    .map(|name| {
-      let argv = adapter.update(name);
-      let have = find(&installed, name).map(|entry| entry.version.as_str());
-      let want = find(&offered, name).map(|entry| entry.version.as_str());
-      if let (Some(have), Some(want)) = (have, want)
-        && have == want
-      {
-        return Step::new(name, Status::Current, format!("current at {have}"), argv);
-      }
-      if dry_run {
-        return Step::new(name, Status::Skipped, "dry run", argv);
-      }
-      let ran = driver.run(&argv);
-      if !ran.ok() {
-        return Step::new(
-          name,
-          Status::Failed,
-          first_line(&ran.stderr, "update failed"),
-          argv,
-        );
-      }
-      let detail = want.map_or_else(|| "updated".to_owned(), |want| format!("updated to {want}"));
-      Step::new(name, Status::Updated, detail, argv)
-    })
+    .map(|name| one(driver, name, &installed, &offered, dry_run))
     .collect();
-  Ok(steps)
+  if dry_run {
+    return Ok(steps);
+  }
+  Ok(trust::settle(driver, steps))
+}
+
+/// Updates `name` unless it is current or installed from elsewhere.
+fn one(
+  driver: &Driver,
+  name: &str,
+  installed: &[Installed],
+  offered: &[Installed],
+  dry_run: bool,
+) -> Step {
+  let argv = driver.adapter.update(name);
+  let entry = find(installed, name);
+  if let Some(entry) = entry
+    && driver.foreign(entry)
+  {
+    return foreign_step(name, entry, argv);
+  }
+  let have = entry.map(|entry| entry.version.as_str());
+  let want = find(offered, name).map(|entry| entry.version.as_str());
+  if let (Some(have), Some(want)) = (have, want)
+    && have == want
+  {
+    return Step::new(name, Status::Current, format!("current at {have}"), argv);
+  }
+  if dry_run {
+    return Step::new(name, Status::Skipped, "dry run", argv);
+  }
+  let ran = driver.run(&argv);
+  if !ran.ok() {
+    return Step::new(
+      name,
+      Status::Failed,
+      first_line(&ran.stderr, "update failed"),
+      argv,
+    );
+  }
+  let detail = want.map_or_else(|| "updated".to_owned(), |want| format!("updated to {want}"));
+  Step::new(name, Status::Updated, detail, argv)
 }
 
 #[cfg(test)]

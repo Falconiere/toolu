@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use super::run;
+use crate::args::Approval;
 use crate::host::adapter::Adapter;
 use crate::support::{Sandbox, catalog};
 use crate::verbs::Driver;
@@ -17,6 +18,8 @@ fn the_catalog_is_joined_with_the_hosts_listing() {
     adapter: Adapter::Claude,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   };
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
@@ -43,6 +46,8 @@ fn a_malformed_listing_fails_and_a_failing_host_lists_nothing_installed() {
     adapter: Adapter::Claude,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   };
   assert!(
     run(&driver, &catalog())

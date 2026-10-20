@@ -6,15 +6,20 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_are_claude_and_codex() {
+fn installer_targets_are_claude_codex_and_muse() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
-  for host in [Host::Cursor, Host::Hermes, Host::Muse] {
+  assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
+  for host in [Host::Cursor, Host::Hermes] {
     let Err(fail) = target_of(host) else {
       panic!("{} was accepted", host.name());
     };
     assert_eq!(fail.exit, Exit::Usage);
-    assert!(fail.message.contains("claude or codex"), "{}", fail.message);
+    assert!(
+      fail.message.contains("claude, codex or muse"),
+      "{}",
+      fail.message
+    );
   }
 }
 
@@ -29,6 +34,52 @@ fn detection_reads_executable_files_on_path_in_probe_order() {
   assert_eq!(available(&sb.env()), [Target::Claude]);
   sb.stub("codex", "exit 0");
   assert_eq!(available(&sb.env()), [Target::Claude, Target::Codex]);
+  sb.stub("muse", "exit 0");
+  assert_eq!(
+    available(&sb.env()),
+    [Target::Claude, Target::Codex, Target::Muse]
+  );
+}
+
+#[test]
+fn muse_alone_on_path_is_used_without_asking() {
+  let sb = Sandbox::new();
+  sb.stub("muse", "exit 0");
+  assert_eq!(
+    resolve(None, Mode::Many, &sb.env(), None),
+    Ok(vec![Target::Muse])
+  );
+  assert_eq!(
+    resolve(None, Mode::One, &sb.env(), None),
+    Ok(vec![Target::Muse])
+  );
+}
+
+#[test]
+fn three_hosts_refuse_without_a_terminal_and_offer_muse_last() {
+  let sb = Sandbox::new();
+  for bin in ["claude", "codex", "muse"] {
+    sb.stub(bin, "exit 0");
+  }
+  let Err(refused) = resolve(None, Mode::One, &sb.env(), None) else {
+    panic!("ambiguity resolved silently");
+  };
+  assert_eq!(
+    (refused.exit, refused.message.as_str()),
+    (
+      Exit::Usage,
+      "several hosts found (claude, codex, muse). Choose one with --host."
+    )
+  );
+  let mut third = Answer(vec![2]);
+  assert_eq!(
+    resolve(None, Mode::One, &sb.env(), Some(&mut third)),
+    Ok(vec![Target::Muse])
+  );
+  assert_eq!(
+    resolve(Some(Target::Muse), Mode::One, &sb.env(), None),
+    Ok(vec![Target::Muse])
+  );
 }
 
 #[test]
@@ -44,7 +95,7 @@ fn an_explicit_host_wins_and_one_found_host_is_used() {
   assert_eq!(none.exit, Exit::Usage);
   assert_eq!(
     none.message,
-    "no host found on PATH (probed claude, codex). Choose one with --host."
+    "no host found on PATH (probed claude, codex, muse). Choose one with --host."
   );
   sb.stub("codex", "exit 0");
   assert_eq!(
@@ -100,6 +151,15 @@ fn scopes_follow_each_host() {
     Err((
       Exit::Usage,
       "--scope is for Claude Code; codex has no scope concept".to_owned()
+    ))
+  );
+  assert_eq!(check_scope(None, Target::Muse), Ok(()));
+  let muse = check_scope(Some(Scope::User), Target::Muse).map_err(|fail| (fail.exit, fail.message));
+  assert_eq!(
+    muse,
+    Err((
+      Exit::Usage,
+      "--scope is for Claude Code; muse has no scope concept".to_owned()
     ))
   );
 }

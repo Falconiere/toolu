@@ -1,19 +1,26 @@
 //! The four verbs on a host driven through its own plugin CLI (Claude Code,
-//! Codex).
+//! Codex, Muse).
 
 use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
+use crate::args::Approval;
 use crate::host::adapter::{Adapter, Installed};
+use crate::host::checkout::Checkout;
 use crate::host::run::{Ran, run};
+use crate::step::{Status, Step};
 
 /// Dependency-ordered install.
 pub(crate) mod install;
 /// The catalog joined with the host's state.
 pub(crate) mod list;
+/// The marketplace a host installs from, made ready before install and update.
+pub(crate) mod prepare;
 /// Uninstall.
 pub(crate) mod remove;
+/// Approval of installed hooks, on a host that asks for it.
+pub(crate) mod trust;
 /// Update what is behind.
 pub(crate) mod update;
 
@@ -26,6 +33,10 @@ pub(crate) struct Driver {
   pub(crate) env: Env,
   /// The deadline of each command.
   pub(crate) timeout: Duration,
+  /// Muse's toolu checkout; `None` on the other hosts.
+  pub(crate) checkout: Option<Checkout>,
+  /// What to do with hooks awaiting approval after an install or update.
+  pub(crate) approval: Approval,
 }
 
 impl Driver {
@@ -43,6 +54,28 @@ impl Driver {
     }
     self.adapter.parse_list(&ran.stdout).unwrap_or_default()
   }
+
+  /// Whether the host installed `entry` from outside toolu's marketplace, which
+  /// leaves it for the user to change (only Muse reports a source).
+  pub(crate) fn foreign(&self, entry: &Installed) -> bool {
+    match (&self.checkout, &entry.source) {
+      (Some(checkout), Some(path)) => !checkout.owns(path),
+      _unknown => false,
+    }
+  }
+}
+
+/// The step for a plugin the host installed from outside toolu's marketplace.
+pub(crate) fn foreign_step(name: &str, have: &Installed, argv: Vec<String>) -> Step {
+  let source = have.source.as_deref().unwrap_or("elsewhere");
+  Step::new(
+    name,
+    Status::Skew,
+    format!(
+      "installed from {source}, outside the toolu marketplace; left untouched. Run `muse plugins remove {name}`, then `toolu plugins install {name} --host muse`."
+    ),
+    argv,
+  )
 }
 
 /// The entry for `name` in a listing.

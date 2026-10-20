@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use super::run;
+use crate::args::Approval;
 use crate::host::adapter::Adapter;
 use crate::step::Status;
 use crate::support::{Sandbox, names};
@@ -14,6 +15,8 @@ fn each_name_is_removed_independently_and_a_dry_run_runs_nothing() {
     adapter: Adapter::Claude,
     env: sb.env(),
     timeout: Duration::from_secs(10),
+    checkout: None,
+    approval: Approval::Report,
   };
   let steps = run(&driver, &names(&["ast-grep", "jev"]), false);
   let seen: Vec<(Status, &str)> = steps

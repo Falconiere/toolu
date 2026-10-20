@@ -1,6 +1,6 @@
 //! `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
 //! from the former Node CLI that npm published as `@toolu/plugins`.
-//! Claude Code and Codex are driven through their own plugin CLIs. The npm
+//! Claude Code, Codex and Muse are driven through their own plugin CLIs. The npm
 //! package is now a wrapper that runs these verbs. This crate never touches the standard streams: a verb
 //! returns one `Outcome`, and prompts use the terminal (`/dev/tty`).
 
@@ -45,6 +45,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       .map(|prompter| prompter as &mut dyn prompt::Ask),
     timeout: host::run::HOST_TIMEOUT,
     version: env!("CARGO_PKG_VERSION"),
+    origin: host::checkout::ORIGIN.to_owned(),
   };
   let report = catalog::load(request.catalog.as_deref())
     .and_then(|catalog| dispatch::dispatch(&request, &catalog, &mut cx));

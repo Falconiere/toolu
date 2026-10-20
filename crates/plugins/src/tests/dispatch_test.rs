@@ -5,7 +5,7 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 
 use super::{Context, Report, dispatch};
-use crate::args::{Request, Scope, Verb};
+use crate::args::{Approval, Request, Scope, Verb};
 use crate::fail::Fail;
 use crate::prompt::Ask;
 use crate::support::{Answer, Sandbox, catalog, names};
@@ -20,6 +20,7 @@ fn request(verb: Verb, plugins: &[&str]) -> Request {
     dry_run: false,
     no_input: false,
     catalog: None,
+    approval: Approval::Report,
   }
 }
 
@@ -35,6 +36,7 @@ fn go(
     ask,
     timeout: Duration::from_secs(10),
     version: "7.11.0",
+    origin: String::new(),
   };
   dispatch(request, &catalog(), &mut cx)
 }

@@ -69,11 +69,23 @@ pub(crate) struct Request {
   pub(crate) no_input: bool,
   /// `--catalog`.
   pub(crate) catalog: Option<PathBuf>,
+  /// `--approve` (install and update).
+  pub(crate) approval: Approval,
+}
+
+/// What `install` and `update` do with a plugin whose hooks await approval,
+/// on a host that asks for it (Muse).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Approval {
+  /// Leave them inert and name the approve command.
+  Report,
+  /// `--approve`: approve them.
+  Approve,
 }
 
 const ABOUT: &str = "Install, list, remove and update toolu plugins on every host";
 
-const AFTER: &str = "Claude Code and Codex are driven through their own plugin CLIs. \
+const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs. \
   The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; \
   its guide is docs/cli/installer.md.";
 
@@ -98,7 +110,8 @@ pub(crate) fn command() -> Command {
             .conflicts_with("names")
             .help("Replay a .toolu/plugins.json selection"),
         )
-        .arg(yes()),
+        .arg(yes())
+        .arg(approve()),
     )
     .subcommand(
       Command::new("list")
@@ -111,9 +124,12 @@ pub(crate) fn command() -> Command {
         .arg(yes()),
     )
     .subcommand(
-      changes(Command::new("update").about("Update plugins to the marketplace version")).arg(
-        names(false, "Plugins to update; none means every installed one"),
-      ),
+      changes(Command::new("update").about("Update plugins to the marketplace version"))
+        .arg(names(
+          false,
+          "Plugins to update; none means every installed one",
+        ))
+        .arg(approve()),
     )
 }
 
@@ -153,6 +169,13 @@ fn names(required: bool, help: &'static str) -> Arg {
     .num_args(1..)
     .required(required)
     .help(help)
+}
+
+fn approve() -> Arg {
+  flag(
+    "approve",
+    "Approve each plugin's hooks after installing or updating it (Muse only)",
+  )
 }
 
 fn yes() -> Arg {
@@ -201,6 +224,11 @@ pub(crate) fn request(matches: &ArgMatches) -> Option<Request> {
     dry_run: has("dry-run"),
     no_input: has("no-input"),
     catalog: path("catalog"),
+    approval: if has("approve") {
+      Approval::Approve
+    } else {
+      Approval::Report
+    },
   })
 }
 
