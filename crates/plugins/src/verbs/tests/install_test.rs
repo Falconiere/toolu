@@ -274,3 +274,24 @@ fn a_muse_checkout_that_cannot_be_made_installs_nothing() {
   assert!(failed.is_err_and(|fail| fail.message.contains("v0.0.0-dev")));
   assert_eq!(sb.log("muse"), Vec::<String>::new());
 }
+
+#[test]
+fn a_muse_dry_run_clones_nothing_and_changes_no_marketplace() {
+  let sb = Sandbox::new();
+  let driver = muse_installed(&sb);
+  let Ok(steps) = run(&driver, &catalog(), &names(&["ast-grep"]), None, true) else {
+    panic!("the Muse dry run failed");
+  };
+  assert_eq!(
+    (steps[0].status, steps[0].argv.join(" ")),
+    (
+      Status::Skipped,
+      "muse plugins install ast-grep@toolu --json".to_owned()
+    )
+  );
+  assert!(!sb.path("home/.local/share/toolu/muse-marketplace").exists());
+  assert_eq!(
+    sb.log("muse"),
+    ["plugins list --json", "plugins list --available --json"]
+  );
+}
