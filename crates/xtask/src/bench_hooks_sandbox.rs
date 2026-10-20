@@ -1,7 +1,8 @@
 //! The fixed sandbox every hook entry runs in for `cargo xtask bench-hooks`: a
 //! git project with a README and a TypeScript file, toolu (and, for the full
 //! fixture, the four registry plugins) marked installed in a private home, and
-//! their `register` hooks run once, so every run loads the same registry.
+//! their `register` hooks run once per host (Claude Code, then Muse), so every
+//! run loads the same registry.
 
 use std::ffi::OsString;
 use std::io::Write as _;
@@ -13,6 +14,13 @@ use crate::scratch;
 
 /// The plugins whose `SessionStart` register hook writes the registry.
 const REGISTRY_PLUGINS: [&str; 4] = ["ast-grep", "ts-quality", "python-quality", "rust-quality"];
+
+/// What Muse passes a hook from its own environment (probed on Muse 1.4.11);
+/// `HOME` and `PWD` are the sandbox's own.
+const MUSE_FORWARDED: [&str; 6] = ["LANG", "LOGNAME", "PATH", "SHELL", "TERM", "USER"];
+
+/// The session id a Muse hook sees.
+const MUSE_SESSION: &str = "hook-bench";
 
 /// A temporary `project` and `home`, removed on drop.
 pub(crate) struct Sandbox {
@@ -77,7 +85,9 @@ impl Sandbox {
     };
     sandbox.install(plugins)?;
     for plugin in plugins {
-      sandbox.register(repo, plugin)?;
+      let root = repo.join("plugins").join(plugin);
+      sandbox.register(plugin, sandbox.env(&root), &root)?;
+      sandbox.register(plugin, sandbox.muse_env(&root, plugin), &root)?;
     }
     Ok(sandbox)
   }
@@ -116,8 +126,12 @@ impl Sandbox {
     std::fs::write(&file, format!("{doc}\n")).map_err(|err| format!("bench sandbox: {err}"))
   }
 
-  fn register(&self, repo: &Path, plugin: &str) -> Result<(), String> {
-    let root = repo.join("plugins").join(plugin);
+  fn register(
+    &self,
+    plugin: &str,
+    env: Vec<(OsString, OsString)>,
+    root: &Path,
+  ) -> Result<(), String> {
     let mut command = Command::new(&self.bin);
     command
       .args([
@@ -128,10 +142,10 @@ impl Sandbox {
         "SessionStart",
         "--plugin-root",
       ])
-      .arg(&root)
+      .arg(root)
       .current_dir(&self.project)
       .env_clear()
-      .envs(self.env(&root))
+      .envs(env)
       .stdin(Stdio::piped())
       .stdout(Stdio::piped())
       .stderr(Stdio::piped());
@@ -168,6 +182,35 @@ impl Sandbox {
       text("CLAUDE_PLUGIN_ROOT", plugin_root),
       text("CLAUDE_PROJECT_DIR", &self.project),
       text("CLAUDE_CONFIG_DIR", &self.home.join(".claude")),
+    ]);
+    env
+  }
+
+  /// A Muse hook's environment: only the keys Muse forwards, its plugin and
+  /// session variables with their Claude Code and Codex aliases, and `TOOLU_BIN`.
+  /// Muse never forwards `TOOLU_BIN`; the bench sets it so the resolver measures
+  /// `--bin`, not a `toolu` installed on the machine.
+  pub(crate) fn muse_env(&self, plugin_root: &Path, plugin: &str) -> Vec<(OsString, OsString)> {
+    let mut env: Vec<(OsString, OsString)> = MUSE_FORWARDED
+      .iter()
+      .filter_map(|key| std::env::var_os(key).map(|value| (OsString::from(key), value)))
+      .collect();
+    let data = self.home.join(".local/share/muse/plugins/data").join(plugin);
+    let path = |key: &str, path: &Path| (OsString::from(key), path.as_os_str().to_owned());
+    let word = |key: &str, value: &str| (OsString::from(key), OsString::from(value));
+    env.extend([
+      path("HOME", &self.home),
+      path("PWD", &self.project),
+      word("MUSE_PLUGIN_ID", plugin),
+      path("MUSE_PLUGIN_ROOT", plugin_root),
+      path("MUSE_PLUGIN_DATA_DIR", &data),
+      word("MUSE_SESSION_ID", MUSE_SESSION),
+      word("MUSE_THREAD_ID", MUSE_SESSION),
+      path("CLAUDE_PLUGIN_ROOT", plugin_root),
+      path("CLAUDE_PLUGIN_DATA", &data),
+      path("PLUGIN_ROOT", plugin_root),
+      path("PLUGIN_DATA", &data),
+      path("TOOLU_BIN", &self.bin),
     ]);
     env
   }

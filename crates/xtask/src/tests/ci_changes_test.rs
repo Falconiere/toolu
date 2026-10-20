@@ -86,3 +86,47 @@ fn a_missing_data_file_is_an_error() {
   let err = decide(empty.path(), "push", None).unwrap_err();
   assert!(err.contains("not readable JSON"), "{err}");
 }
+
+/// `fixture()` plus `plugins/toolu/.muse-plugin/plugin.json` at version 8.0.4,
+/// and the push event of one more commit that rewrites it as `edit` returns.
+fn muse_manifest_push(edit: fn(&str) -> String) -> (tempfile::TempDir, serde_json::Value) {
+  let dir = fixture();
+  let manifest = dir.path().join("plugins/toolu/.muse-plugin/plugin.json");
+  std::fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+  let base = std::fs::read_to_string(repo().join("plugins/toolu/.muse-plugin/plugin.json"))
+    .unwrap()
+    .replacen(
+      &format!("\"version\": \"{}\"", env!("CARGO_PKG_VERSION")),
+      "\"version\": \"8.0.4\"",
+      1,
+    );
+  std::fs::write(&manifest, &base).unwrap();
+  git(dir.path(), &["add", "-A"]);
+  git(dir.path(), &["commit", "-m", "muse manifest"]);
+  let before = rev(dir.path());
+  std::fs::write(&manifest, edit(&base)).unwrap();
+  git(dir.path(), &["commit", "-am", "edit muse manifest"]);
+  let event = json!({"before": before, "after": rev(dir.path())});
+  (dir, event)
+}
+
+#[test]
+fn a_muse_manifest_only_edit_turns_rust_and_ports_on() {
+  let (dir, event) = muse_manifest_push(|text| {
+    text.replacen("\"timeoutMs\": 60000", "\"timeoutMs\": 30000", 1)
+  });
+  let class = decide(dir.path(), "push", Some(&event)).unwrap();
+  assert_eq!(flag(&class, "rust"), Some(true), "{:?}", class.reasons);
+  assert_eq!(flag(&class, "ports"), Some(true), "{:?}", class.reasons);
+  assert_eq!(flag(&class, "changed"), Some(true), "{:?}", class.reasons);
+}
+
+#[test]
+fn a_muse_manifest_version_bump_is_release_only() {
+  let (dir, event) = muse_manifest_push(|text| {
+    text.replacen("\"version\": \"8.0.4\"", "\"version\": \"8.1.0\"", 1)
+  });
+  let class = decide(dir.path(), "push", Some(&event)).unwrap();
+  assert_eq!(flag(&class, "rust"), Some(false), "{:?}", class.reasons);
+  assert_eq!(flag(&class, "ports"), Some(false), "{:?}", class.reasons);
+}

@@ -33,6 +33,110 @@
     "toolu/user-prompt-submit": {
       "maxRssMiB": 9,
       "cpuMs": 16
+    },
+    "muse:ast-grep/register": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:epic-orchestrator/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 13
+    },
+    "muse:epic-orchestrator/check-deps": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:epic-orchestrator/engine-ensure": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:jev/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 12
+    },
+    "muse:jev/session-start": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:jev/user-prompt-submit": {
+      "maxRssMiB": 9,
+      "cpuMs": 8
+    },
+    "muse:pr-babysit/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 12
+    },
+    "muse:pr-babysit/check-toolu": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:python-quality/check-toolu": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:python-quality/register": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:rust-quality/check-toolu": {
+      "maxRssMiB": 7,
+      "cpuMs": 6
+    },
+    "muse:rust-quality/register": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:statusline/session-start": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:toolu-review/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 13
+    },
+    "muse:toolu-review/session-start": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:toolu/agent-tier": {
+      "maxRssMiB": 7,
+      "cpuMs": 8
+    },
+    "muse:toolu/check-binary": {
+      "maxRssMiB": 7,
+      "cpuMs": 12
+    },
+    "muse:toolu/mcp-tools": {
+      "maxRssMiB": 8,
+      "cpuMs": 8
+    },
+    "muse:toolu/post-tools": {
+      "maxRssMiB": 8,
+      "cpuMs": 7
+    },
+    "muse:toolu/pre-compact": {
+      "maxRssMiB": 7,
+      "cpuMs": 6
+    },
+    "muse:toolu/pre-tools": {
+      "maxRssMiB": 10,
+      "cpuMs": 8
+    },
+    "muse:toolu/session-start": {
+      "maxRssMiB": 9,
+      "cpuMs": 20
+    },
+    "muse:toolu/user-prompt-submit": {
+      "maxRssMiB": 8,
+      "cpuMs": 11
+    },
+    "muse:ts-quality/check-toolu": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
+    },
+    "muse:ts-quality/register": {
+      "maxRssMiB": 7,
+      "cpuMs": 7
     }
   }
 }

@@ -64,8 +64,8 @@ fn a_budget_for_an_entry_no_hook_registers_is_a_violation() {
   assert_eq!(
     stale_budgets(&known, budgets.as_object().unwrap()),
     [
-      "gone/session-start: a budget for an entry no hooks.json registers",
-      "toolu/post-tool: a budget for an entry no hooks.json registers",
+      "gone/session-start: a budget for an entry no hooks.json or Muse manifest registers",
+      "toolu/post-tool: a budget for an entry no hooks.json or Muse manifest registers",
     ]
   );
   assert_eq!(

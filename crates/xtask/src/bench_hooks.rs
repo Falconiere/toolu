@@ -1,6 +1,8 @@
 //! `cargo xtask bench-hooks [--bin <toolu>] [--runs N] [--only <plugin/hook>]...
 //! [--out FILE] [--assert]` (#410, ported from `hook-resources.ts` by #440): every
-//! `hooks.json` entry spawned through its real launcher with the fixed payload of
+//! `hooks.json` entry spawned through its real launcher, and every Muse entry
+//! (`muse:<plugin>/<hook>`, #552) through its generated resolver with Muse's
+//! environment, with the fixed payload of
 //! `benchmarks/cases/hooks/payloads.json`, two warm-up runs then `--runs`
 //! measured ones, each in a fresh `xtask measure`; p50/p90 of max RSS, CPU and
 //! wall. `--assert` fails when an entry of `benchmarks/hook-budgets.json` is over
@@ -11,7 +13,7 @@ use std::time::Instant;
 
 use serde_json::{Map, Value, json};
 
-use crate::bench_hooks_entries::{HookEntry, discover, select};
+use crate::bench_hooks_entries::{HookEntry, Launch, discover, select};
 use crate::bench_hooks_measure::{MEASURER_VAR, SPAWN_DEADLINE, Spawn, measurer, samples};
 use crate::bench_hooks_report::{Row, stale_budgets, summarize, table, violations};
 use crate::bench_hooks_sandbox::Sandbox;
@@ -99,8 +101,10 @@ fn runs(options: &Options) -> Result<usize, String> {
   }
 }
 
-/// Every entry in the full sandbox, except `toolu/post-tools`, whose budget
-/// excludes the quality linters other plugins register, in a core-only one.
+/// The entries whose budget excludes the quality linters other plugins register.
+const CORE_ONLY: [&str; 2] = ["toolu/post-tools", "muse:toolu/post-tools"];
+
+/// Every entry in the full sandbox, except [`CORE_ONLY`], in a core-only one.
 fn measure_all(
   bench: &Bench<'_>,
   entries: &[HookEntry],
@@ -110,16 +114,20 @@ fn measure_all(
   let core = Sandbox::new(bench.root, bench.bin, false)?;
   let mut rows = Vec::new();
   for entry in entries {
-    let sandbox = if entry.id == "toolu/post-tools" {
+    let sandbox = if CORE_ONLY.contains(&entry.id.as_str()) {
       &core
     } else {
       &full
     };
     let stdin = payload_stdin(payloads.get(&entry.id), &sandbox.project)?;
+    let env = match entry.launch {
+      Launch::Resolver(_) => sandbox.muse_env(&entry.root, entry.plugin()),
+      Launch::Command(_) => sandbox.env(&entry.root),
+    };
     let spawn = Spawn {
       argv: entry.argv(bench.bin),
       cwd: &sandbox.project,
-      env: sandbox.env(&entry.root),
+      env,
       stdin,
       report_dir: sandbox.scratch(),
       deadline: SPAWN_DEADLINE,

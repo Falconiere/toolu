@@ -104,7 +104,7 @@ pub(crate) fn stale_budgets(
   let mut stale: Vec<String> = budgets
     .keys()
     .filter(|key| !known.contains(key))
-    .map(|key| format!("{key}: a budget for an entry no hooks.json registers"))
+    .map(|key| format!("{key}: a budget for an entry no hooks.json or Muse manifest registers"))
     .collect();
   stale.sort();
   stale
