@@ -18,7 +18,7 @@ struct MuseSite {
 }
 
 impl MuseSite {
-  fn new() -> Result<Self, Box<dyn std::error::Error>> {
+  fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let dir = tempfile::tempdir()?;
     let home = dir.path().join("home");
     let project = dir.path().join("project");
@@ -79,7 +79,9 @@ impl MuseSite {
   }
 }
 
-fn block_reason(got: &Dispatched) -> Result<String, Box<dyn std::error::Error>> {
+fn block_reason(
+  got: &Dispatched,
+) -> Result<String, Box<dyn std::error::Error + Send + Sync + 'static>> {
   if got.result.exit_code != 0 || !got.result.stderr.is_empty() {
     return Err(format!("unexpected Muse result: {got:?}").into());
   }

@@ -44,7 +44,10 @@ fn commit(repo: &Path, message: &str) -> std::io::Result<Output> {
   )
 }
 
-fn prepare_repository(repo: &Path, remote: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn prepare_repository(
+  repo: &Path,
+  remote: &Path,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
   git(repo, &["init", "-b", "main"])?;
   git(remote, &["init", "--bare"])?;
   fs::write(repo.join("main.rs"), "fn main() {}\n")?;
@@ -71,7 +74,7 @@ struct GitSite {
 }
 
 impl GitSite {
-  fn new() -> Result<Self, Box<dyn std::error::Error>> {
+  fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let dir = tempfile::tempdir()?;
     let repo = dir.path().join("repo");
     let remote = dir.path().join("remote.git");

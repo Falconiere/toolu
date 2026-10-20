@@ -20,7 +20,7 @@ struct CargoSite {
 }
 
 impl CargoSite {
-  fn new() -> Result<Self, Box<dyn std::error::Error>> {
+  fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let dir = tempfile::tempdir()?;
     let project = dir.path().join("project");
     let config = dir.path().join("config");

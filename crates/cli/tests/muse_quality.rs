@@ -37,7 +37,7 @@ fn run(
 fn register_python(
   project: &Path,
   env: &[(String, String)],
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
+) -> Result<PathBuf, Box<dyn std::error::Error + Send + Sync + 'static>> {
   let plugin = Path::new(env!("CARGO_MANIFEST_DIR"))
     .join("../../plugins/python-quality")
     .canonicalize()?;
@@ -72,7 +72,7 @@ struct MusePythonSite {
 }
 
 impl MusePythonSite {
-  fn new() -> Result<Self, Box<dyn std::error::Error>> {
+  fn new() -> Result<Self, Box<dyn std::error::Error + Send + Sync + 'static>> {
     let dir = tempfile::tempdir()?;
     let project = dir.path().join("project");
     let config = dir.path().join("config");
@@ -112,7 +112,10 @@ impl MusePythonSite {
     })
   }
 
-  fn set_matcher(&self, name: &str) -> Result<(), Box<dyn std::error::Error>> {
+  fn set_matcher(
+    &self,
+    name: &str,
+  ) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
     let mut rule: Value = serde_json::from_slice(&fs::read(&self.manifest)?)?;
     let fields = rule.as_object_mut().ok_or("manifest is not an object")?;
     fields.insert("matcher".to_owned(), name.into());
