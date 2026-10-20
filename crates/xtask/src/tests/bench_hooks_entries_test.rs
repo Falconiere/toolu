@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use serde_json::{Map, Value, json};
 
-use super::{HookEntry, discover, select};
+use super::{HookEntry, Launch, discover, select};
 
 fn repo() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
@@ -61,7 +61,7 @@ fn the_measured_spawn_execs_the_hook_directly() {
     id: id.to_owned(),
     event: "PreToolUse".to_owned(),
     root: std::path::PathBuf::from("/p/plugins/x"),
-    command: String::new(),
+    launch: Launch::Command(String::new()),
   };
   let bin = std::path::Path::new("/bin/toolu");
   let tail = ["--event", "PreToolUse", "--plugin-root", "/p/plugins/x"];
@@ -80,4 +80,75 @@ fn the_measured_spawn_execs_the_hook_directly() {
     .copied()
     .collect();
   assert_eq!(entry("jev/session-start").argv(bin), leaf);
+}
+
+#[test]
+fn every_muse_manifest_hook_is_an_entry_after_the_hooks_json_ones() {
+  let entries = discover(&repo()).unwrap();
+  let muse: Vec<&HookEntry> = entries
+    .iter()
+    .filter(|entry| entry.id.starts_with("muse:"))
+    .collect();
+  assert_eq!(muse.len(), 26, "{muse:?}");
+  let first_muse = entries
+    .iter()
+    .position(|entry| entry.id.starts_with("muse:"))
+    .unwrap();
+  assert!(entries[first_muse..].iter().all(|entry| entry.id.starts_with("muse:")));
+  let pre = muse
+    .iter()
+    .find(|entry| entry.id == "muse:toolu/pre-tools")
+    .unwrap();
+  assert_eq!(pre.event, "PreToolUse");
+  assert_eq!(
+    pre.launch,
+    Launch::Resolver(repo().join("plugins/toolu/hooks/muse/pre-tools"))
+  );
+  assert_eq!(pre.plugin(), "toolu");
+}
+
+#[test]
+fn a_muse_entry_spawns_its_resolver_with_the_shell_muse_names() {
+  let entry = HookEntry {
+    id: "muse:jev/session-start".to_owned(),
+    event: "SessionStart".to_owned(),
+    root: std::path::PathBuf::from("/p/plugins/jev"),
+    launch: Launch::Resolver(std::path::PathBuf::from(
+      "/p/plugins/jev/hooks/muse/session-start",
+    )),
+  };
+  assert_eq!(
+    entry.argv(std::path::Path::new("/bin/toolu")),
+    ["/bin/sh", "/p/plugins/jev/hooks/muse/session-start"]
+  );
+  assert_eq!(entry.plugin(), "jev");
+}
+
+fn muse_manifest(text: &str) -> tempfile::TempDir {
+  let dir = tempfile::tempdir().unwrap();
+  let manifest = dir.path().join("plugins/x/.muse-plugin");
+  std::fs::create_dir_all(&manifest).unwrap();
+  std::fs::write(manifest.join("plugin.json"), text).unwrap();
+  dir
+}
+
+#[test]
+fn a_muse_hook_that_is_not_the_generated_resolver_is_an_error() {
+  let dir = muse_manifest(
+    r#"{"capabilities":{"hooks":[{"id":"pre-tools","event":"PreToolUse","command":["toolu","hook","pre-tools"]}]}}"#,
+  );
+  let err = discover(dir.path()).unwrap_err();
+  assert!(
+    err.ends_with("Muse hook pre-tools is not /bin/sh hooks/muse/pre-tools"),
+    "{err}"
+  );
+}
+
+#[test]
+fn an_unreadable_muse_manifest_names_the_file() {
+  let dir = muse_manifest("{not json");
+  let err = discover(dir.path()).unwrap_err();
+  assert!(err.contains("plugins/x/.muse-plugin/plugin.json"), "{err}");
+  let none = muse_manifest(r#"{"capabilities":{"skills":[]}}"#);
+  assert_eq!(discover(none.path()).unwrap(), []);
 }

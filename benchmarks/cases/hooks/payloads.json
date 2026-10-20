@@ -229,6 +229,326 @@
         "hook_event_name": "SessionStart",
         "source": "startup"
       }
+    },
+    "muse:ast-grep/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:epic-orchestrator/check-deps": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:epic-orchestrator/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:epic-orchestrator/engine-ensure": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:jev/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:jev/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:jev/user-prompt-submit": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "UserPromptSubmit",
+        "turn_id": "hook-bench-turn",
+        "prompt": "Summarise README.md in one sentence."
+      }
+    },
+    "muse:pr-babysit/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:pr-babysit/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:python-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:python-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:rust-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:rust-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:statusline/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:toolu-review/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:toolu-review/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:toolu/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:toolu/check-binary": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:toolu/pre-compact": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "PreCompact",
+        "turn_id": "hook-bench-turn",
+        "trigger": "auto",
+        "custom_instructions": ""
+      }
+    },
+    "muse:toolu/user-prompt-submit": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "UserPromptSubmit",
+        "turn_id": "hook-bench-turn",
+        "prompt": "Summarise README.md in one sentence."
+      }
+    },
+    "muse:toolu/pre-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "PreToolUse",
+        "turn_id": "hook-bench-turn",
+        "tool_use_id": "hook-bench-call",
+        "tool_name": "bash",
+        "tool_input": {
+          "command": "git status",
+          "description": "Show the working tree status"
+        }
+      }
+    },
+    "muse:toolu/mcp-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "PreToolUse",
+        "turn_id": "hook-bench-turn",
+        "tool_use_id": "hook-bench-call",
+        "tool_name": "mcp__plugin_example_search__search",
+        "tool_input": {
+          "query": "hook budgets"
+        }
+      }
+    },
+    "muse:toolu/agent-tier": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "PreToolUse",
+        "turn_id": "hook-bench-turn",
+        "tool_use_id": "hook-bench-call",
+        "tool_name": "subagent_spawn",
+        "tool_input": {
+          "objective": "Find the callers of answer in src/app.ts.",
+          "role": "explorer",
+          "subagent_type": "Explore",
+          "task_name": "find-callers"
+        }
+      }
+    },
+    "muse:toolu/post-tools": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "PostToolUse",
+        "turn_id": "hook-bench-turn",
+        "tool_use_id": "hook-bench-call",
+        "tool_name": "edit_file",
+        "tool_input": {
+          "path": "${PROJECT}/README.md",
+          "find": "hello",
+          "replace": "hello, bench"
+        },
+        "tool_response": {
+          "filePath": "${PROJECT}/README.md",
+          "structuredPatch": []
+        }
+      }
+    },
+    "muse:ts-quality/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:ts-quality/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
     }
   }
 }

@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 use std::process::Command;
 
-use super::{inherited, scrub, selects_repository};
+use super::{inherited, is_host_session, scrub, selects_repository};
 
 #[test]
 fn only_the_repository_selecting_variables_are_named() {
@@ -69,4 +69,21 @@ fn the_inherited_environment_drops_what_cargo_adds() {
       && key != "DYLD_FALLBACK_LIBRARY_PATH"),
     "{keys:?}"
   );
+}
+
+#[test]
+fn every_host_session_prefix_is_dropped_and_other_keys_are_kept() {
+  for key in [
+    "CLAUDE_PLUGIN_ROOT",
+    "CODEX_HOME",
+    "TOOLU_BIN",
+    "CURSOR_VERSION",
+    "MUSE_PLUGIN_ID",
+    "MUSE_SESSION_ID",
+  ] {
+    assert!(is_host_session(OsStr::new(key)), "{key}");
+  }
+  for key in ["PATH", "HOME", "PLUGIN_ROOT", "MUSED"] {
+    assert!(!is_host_session(OsStr::new(key)), "{key}");
+  }
 }
