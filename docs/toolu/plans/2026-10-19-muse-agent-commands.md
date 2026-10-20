@@ -109,7 +109,7 @@ validation → docs → CI path groups → live TUI evidence → full gate.
   {
     "id": "S6",
     "title": "Full quality gate",
-    "check": "cargo xtask gate",
+    "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo xtask gate",
     "ac_refs": ["AC-5"],
     "depends_on": ["S1", "S2", "S3", "S4", "S5"],
     "model": "inherit"
@@ -125,6 +125,13 @@ validation → docs → CI path groups → live TUI evidence → full gate.
 - The folder guardrail needs `.muse-plugin` in `rules.json`. That is gate data,
   and it ships separately in #563 (`chore(gates):`). This branch rebases on
   `main` after #563 merges, before the S6 gate and the push.
+
+- S6 runs the gate with `TOOLU_RESOURCE_HOME` pointing at a fresh empty
+  directory. The ledger takes the shared job lease before it runs the check, so
+  the lease is unchanged. Inside the gate, the `toolu-cli` contract test runs
+  `toolu epic status --json`. Without the variable that test reaches this
+  host's resident epic engine, whose newer status fields fail the checkout's
+  schema. CI has no resident engine. The #542 worker used the same isolation.
 
 ## Critical files
 
