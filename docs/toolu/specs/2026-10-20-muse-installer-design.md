@@ -1,6 +1,6 @@
 # toolu plugins targets Muse (#549) — Design
 
-**Date:** 2026-10-20   **Status:** Draft   **Author:** Claude (epic worker)   **Topic:** `toolu plugins --host muse`: a Muse adapter with a local-dir marketplace and opt-in approval
+**Date:** 2026-10-20   **Status:** Approved   **Author:** Claude (epic worker)   **Topic:** `toolu plugins --host muse`: a Muse adapter with a local-dir marketplace and opt-in approval
 
 ## Problem
 
@@ -19,8 +19,9 @@ this issue implements it.
    `update` already read for every host); `toolu plugins list` reports
    name/version/enabled from `muse plugins list --json`. (Jev `available` → internal, 0.74.)
 2. No change to Claude Code or Codex behaviour, argv, or reports.
-3. No live-Muse test in CI: Muse is not on CI runners. The live run is recorded
-   as evidence here; #552 (host-smoke) and #553 (live end-to-end) own the
+3. No live-Muse test in CI: Muse is not on CI runners. The issue's "verified
+   against the real `muse` CLI in tests" is met by stub `muse` executables that
+   replay outputs captured from Muse 1.4.11 plus a recorded live run (AC-9); #552 (host-smoke) and #553 (live end-to-end) own the
    standing live checks.
 4. No npm wrapper change (`tools/toolu-cli`): it forwards argv unchanged.
 5. No `.muse-plugin` manifests (#547) or Muse docs sweep (#551) beyond the
@@ -65,8 +66,12 @@ other flag is unchanged; `--host muse` now resolves; `--scope … --host muse`
 exits 64 with `--scope is for Claude Code; muse has no scope concept`.
 `.toolu/plugins.json` accepts `"host": "muse"` (format version stays 1).
 
-**Checkout.** `DIR = $XDG_DATA_HOME/toolu/muse-marketplace`, else
-`$HOME/.local/share/toolu/muse-marketplace`; `TAG = v<binary version>`.
+**Checkout.** `DIR = $XDG_DATA_HOME/toolu/muse-marketplace` when
+`XDG_DATA_HOME` is an absolute path (a relative one is ignored, per the XDG
+spec), else `$HOME/.local/share/toolu/muse-marketplace`; `TAG = v<binary
+version>`. Missing parent directories are created before the clone. A plugin is
+*foreign* when its install record's `source.path` starts with neither `DIR` nor
+`DIR`'s canonical path.
 
 **Muse argv** (all with `--json`):
 
@@ -123,6 +128,8 @@ plugins install NAME --host muse\`.`
 | Plugin installed from another source | non-failing skew with remove + reinstall commands; no trust pass; skipped by a default `update` |
 | `inspect` fails or is malformed after a good install | the step becomes `failed` ("installed, but …"), exit 1 — trust state unknown is not success |
 | `approve` fails | the step becomes `failed` with Muse's line, exit 1 |
+| Two runs at once on one `DIR` | git's lock refuses the second; exit 1 with git's line |
+| Tag without Muse manifests (v8.0.4 and earlier) | Muse skips those plugins, so `install NAME@toolu` fails per plugin with Muse's `not available in marketplace` line; exit 1. Fixed by the first release carrying #547 |
 | `--dry-run` | no git, no marketplace change, no trust pass; plugin argv only, as for other hosts |
 | `--approve` on Claude/Codex | accepted, does nothing |
 | `remove` of an absent plugin | Muse exits 1 (`plugin \`x\` is not installed`); a failed step, exit 1, as on Claude |
@@ -168,3 +175,13 @@ plugins install NAME --host muse\`.`
 None blocking. Recorded decisions: probe order last; no `list --available` flag;
 flag name `--approve`; foreign sources are skew; `record` (not `plugin`) is the
 installed identity.
+
+## Spec review (2026-10-20)
+
+Jev: coverage 0.63 → "every issue item covered or explicitly deviated"; live-test deviation justified 0.93.
+
+- Non-Goals: 🟡 should-fix: the issue's "verified against the real muse CLI in tests" was not tied to the deviation. Fixed: Non-Goal 3 names it.
+- Interfaces: 🟡 should-fix: "foreign" and a relative `XDG_DATA_HOME` were undefined. Fixed in **Checkout**.
+- Failure modes: 🟡 should-fix: concurrent runs and released tags without Muse manifests were missing. Fixed: two rows added.
+
+**Status:** Approved
