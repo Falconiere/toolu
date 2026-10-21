@@ -6,6 +6,23 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.1.0](https://github.com/Falconiere/toolu/compare/v8.0.4...v8.1.0) (2026-10-20)
+
+
+### Features
+
+* **engine:** gate canonicalized Muse tool calls ([#564](https://github.com/Falconiere/toolu/issues/564)) ([2d7a1eb](https://github.com/Falconiere/toolu/commit/2d7a1eb78a907a782b9bd8b6d4c00650e13aa53c))
+* **host:** detect Muse and resolve native roots ([#558](https://github.com/Falconiere/toolu/issues/558)) ([dd72cd6](https://github.com/Falconiere/toolu/commit/dd72cd629fc83c47844b31af25a82e1ccc67f643))
+* **muse:** complete doctor and startup integration ([#569](https://github.com/Falconiere/toolu/issues/569)) ([e8ac359](https://github.com/Falconiere/toolu/commit/e8ac359f40696402362aa55e2c86184f299679ca))
+* **muse:** ship .muse-plugin/plugin.json for all 12 plugins ([#565](https://github.com/Falconiere/toolu/issues/565)) ([04f29e9](https://github.com/Falconiere/toolu/commit/04f29e955c115718dc67da725d0c4034a7e16d2d))
+* **plugins:** toolu plugins targets Muse (--host muse) ([#567](https://github.com/Falconiere/toolu/issues/567)) ([5cf20ed](https://github.com/Falconiere/toolu/commit/5cf20edb34116d2d0db4911621db3b034fbe9a8f))
+* **protocol:** Muse hook-output encoder and fail-closed mapping ([#561](https://github.com/Falconiere/toolu/issues/561)) ([bf886b4](https://github.com/Falconiere/toolu/commit/bf886b4976fcef5c471ea4287c78bde48f86098b))
+* **protocol:** parse Muse payloads and canonicalize Muse tool names ([#560](https://github.com/Falconiere/toolu/issues/560)) ([33e0808](https://github.com/Falconiere/toolu/commit/33e080869d32ec6ce27d6051daec2b0ed9bafa44))
+* **toolu:** enforce standalone hooks on Muse ([#570](https://github.com/Falconiere/toolu/issues/570)) ([bad79d8](https://github.com/Falconiere/toolu/commit/bad79d8a20db2e95f023003b707de2847f0c6ef5))
+* **toolu:** ship the five agents to Muse as commands naming their source ([#566](https://github.com/Falconiere/toolu/issues/566)) ([3772425](https://github.com/Falconiere/toolu/commit/3772425cc1e4c0ceedab659c539209c7feaae3ed))
+* **xtask:** bench, host-smoke and launcher e2e cover Muse ([#552](https://github.com/Falconiere/toolu/issues/552)) ([#574](https://github.com/Falconiere/toolu/issues/574)) ([d3767bc](https://github.com/Falconiere/toolu/commit/d3767bc9781da572e0406e0a9e433843d4251a3a))
+* **xtask:** generate and gate Muse hook-manifest entries ([#562](https://github.com/Falconiere/toolu/issues/562)) ([57ef7f2](https://github.com/Falconiere/toolu/commit/57ef7f21cf8e0d0ff66c06f416704a963e0b2427))
+
 ## [8.0.4](https://github.com/Falconiere/toolu/compare/v8.0.3...v8.0.4) (2026-10-19)
 
 
