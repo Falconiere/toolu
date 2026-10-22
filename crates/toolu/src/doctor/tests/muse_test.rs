@@ -59,6 +59,31 @@ fn inspect_distinguishes_unapproved_approved_and_unknown_hooks() {
 }
 
 #[test]
+fn sandboxed_trust_is_unknown_not_inert() {
+  let (_temp, roots, listing, inspection) = command_fixture();
+  let muse_dir = roots.env().home().join(".config").join("muse");
+  std::fs::create_dir_all(&muse_dir).unwrap();
+  std::fs::set_permissions(&muse_dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+  write_list(&listing, true, true);
+  write_inspect(&inspection, "review_needed");
+  let check = plugins_check(&collect(&roots));
+  std::fs::set_permissions(&muse_dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+  assert_eq!(check.status, Status::Warn);
+  assert!(!check.summary.contains("inert"), "{}", check.summary);
+  assert!(
+    check.summary.contains("unknown inside the sandbox"),
+    "{}",
+    check.summary
+  );
+  assert!(
+    check.summary.contains("muse plugins inspect"),
+    "{}",
+    check.summary
+  );
+  assert_eq!(check.details["plugins"][0]["approval"], "sandboxed");
+}
+
+#[test]
 fn collect_reads_installed_capabilities_through_the_muse_command() {
   let (_temp, roots, listing, inspection) = command_fixture();
   write_list(&listing, true, true);

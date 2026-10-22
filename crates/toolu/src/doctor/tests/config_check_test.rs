@@ -1,3 +1,4 @@
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use super::super::checks::Status;
@@ -51,6 +52,33 @@ fn malformed_json_warns_and_is_not_a_failure() {
     "{}",
     check.summary
   );
+}
+
+#[test]
+fn sandbox_denied_secrets_are_unknown_not_a_failure() {
+  let home = tempfile::tempdir().unwrap();
+  let muse_dir = home.path().join(".config/muse");
+  std::fs::create_dir_all(&muse_dir).unwrap();
+  std::fs::write(muse_dir.join("toolu"), "not a dir").unwrap();
+  std::fs::set_permissions(&muse_dir, std::fs::Permissions::from_mode(0o000)).unwrap();
+  let bound = Roots::new(
+    Env::from_pairs([
+      ("HOME", home.path().to_str().unwrap()),
+      ("TOOLU_PROJECT_DIR", home.path().to_str().unwrap()),
+    ]),
+    Some(Host::Muse),
+  );
+  let loaded = secrets::load(&bound);
+  assert!(loaded.is_err(), "expected unreadable secrets");
+  let check = check(&bound, home.path(), &loaded);
+  std::fs::set_permissions(&muse_dir, std::fs::Permissions::from_mode(0o755)).unwrap();
+  assert_eq!(check.status, Status::Warn);
+  assert!(
+    check.summary.contains("unknown inside"),
+    "{}",
+    check.summary
+  );
+  assert!(check.summary.contains("toolu doctor"), "{}", check.summary);
 }
 
 #[test]

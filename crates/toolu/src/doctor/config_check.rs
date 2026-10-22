@@ -17,7 +17,7 @@ pub(super) fn check(
   secrets: &Result<Secrets, secrets::SecretError>,
 ) -> Check {
   let loaded = load::load(roots, Some(cwd));
-  let warnings = loaded.take_warnings();
+  let mut warnings = loaded.take_warnings();
   let mut failures = Vec::new();
   if let Some(invalid) = &loaded.invalid {
     failures.push(invalid.clone());
@@ -25,7 +25,16 @@ pub(super) fn check(
     failures.push(error.to_string());
   }
   if let Err(error) = secrets {
-    failures.push(error.to_string());
+    // The sandbox hides the file, so its read fails before any environment
+    // check; any error here is the hidden file, not a misconfiguration.
+    if super::muse::sandboxed(roots) && super::muse::secrets_under_muse(roots) {
+      warnings.push(
+        "epic secrets: unknown inside the Muse sandbox; run toolu doctor from a terminal"
+          .to_owned(),
+      );
+    } else {
+      failures.push(error.to_string());
+    }
   }
   let mut details = serde_json::Map::new();
   details.insert("files".to_owned(), existing_files(&loaded.files));
