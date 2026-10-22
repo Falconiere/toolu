@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "ast-grep",
   "displayName": "ast-grep",
-  "version": "8.1.0",
+  "version": "8.1.1",
   "description": "Structural code search and rewrite: skill, native toolu ast-grep commands, and compiled search and byte-savings rules.",
   "compat": {
     "source": "native",

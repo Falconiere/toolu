@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.1.1](https://github.com/Falconiere/toolu/compare/v8.1.0...v8.1.1) (2026-10-22)
+
+
+### Bug Fixes
+
+* **toolu:** report unknown trust and secrets inside Muse sandbox ([#575](https://github.com/Falconiere/toolu/issues/575)) ([5e6d913](https://github.com/Falconiere/toolu/commit/5e6d913ab7902376febf53572b59a3ddab89488e))
+
 ## [8.1.0](https://github.com/Falconiere/toolu/compare/v8.0.4...v8.1.0) (2026-10-20)
 
 
