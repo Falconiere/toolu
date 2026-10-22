@@ -97,6 +97,41 @@ fn a_copy_passes_and_each_mutation_names_its_break() {
   );
 }
 
+/// The 8.1.1 shape: the native release waiting for npm, npm's verify job
+/// gating native, and the registry wait back inside the publish job.
+#[test]
+fn the_native_release_never_waits_for_npm() {
+  let dir = copy();
+  mutate(
+    dir.path(),
+    "release-please.yml",
+    "    needs: release-please\n    if: needs.release-please.outputs.releases_created == 'true'\n    permissions:\n      contents: write",
+    "    needs: [release-please, publish]\n    if: needs.release-please.outputs.releases_created == 'true' && needs.publish.result == 'success'\n    permissions:\n      contents: write",
+  );
+  mutate(
+    dir.path(),
+    "release-native.yml",
+    "      - name: Gate released source",
+    "      - run: npm view \"@toolu/plugins@${TAG#v}\" version\n      - name: Gate released source",
+  );
+  mutate(
+    dir.path(),
+    "npm-publish.yml",
+    "            echo \"publishing $name@$pkg\"\n",
+    "            until npm view \"$name@$pkg\" version; do sleep 15; done\n            echo \"publishing $name@$pkg\"\n",
+  );
+  mutate(dir.path(), "npm-publish.yml", "    needs: publish\n", "");
+  assert_eq!(
+    check(dir.path()).unwrap(),
+    [
+      "release-please.yml native release must not wait for npm",
+      "release-native.yml verify must not block on npm",
+      "npm-publish.yml publish must end when npm accepts the upload",
+      "npm-publish.yml must verify the registry's per-version document in its own job",
+    ]
+  );
+}
+
 #[test]
 fn invalid_yaml_is_a_finding_not_a_pass() {
   let dir = copy();

@@ -67,23 +67,9 @@ jobs:
           else
             python3 .github/scripts/release_native.py verify-tag "$TAG" --test-tag
           fi
-      - name: Require published npm packages before native publication
-        if: inputs.publish == true
-        env:
-          TAG: ${{ inputs.tag }}
-        run: |
-          set -euo pipefail
-          version=${TAG#v}
-          for package in @toolu/plugins; do
-            published=$(npm view "$package@$version" version) || {
-              echo "npm view $package@$version failed; aborting the native release" >&2
-              exit 1
-            }
-            if [ "$published" != "$version" ]; then
-              echo "$package@$version is not published (npm reports '$published'); aborting the native release" >&2
-              exit 1
-            fi
-          done
+      # No npm check here: the npm wrapper locates an installed native binary,
+      # never the reverse, and npm makes a version visible on its own schedule.
+      # npm-publish.yml verifies the registry in its own job.
       - name: Gate released source
         run: cargo xtask gate
 

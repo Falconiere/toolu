@@ -57,10 +57,12 @@ fn empty_release_workflows_name_every_broken_link() {
   release(root.path(), &Docs(&[]), &mut found).unwrap();
   for line in [
     "release-please.yml must chain native release",
+    "release-please.yml native release must not wait for npm",
     "release-native.yml lacks x86_64-apple-darwin on macos-15-intel",
     "release-native.yml dry run must skip release writes",
     "release-finalize.yml must check four archives",
     "npm-publish.yml prereleases must leave the latest dist-tag untouched",
+    "npm-publish.yml must verify the registry's per-version document in its own job",
   ] {
     assert!(found.0.contains(&line.to_owned()), "{line}: {:?}", found.0);
   }

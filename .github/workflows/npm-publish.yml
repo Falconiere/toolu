@@ -19,14 +19,18 @@ name: npm publish
 # workspace under the published name made `npx @toolu/cli` (the old name) fail
 # with "toolu: command not found" from every toolu checkout.
 #
-# npm acknowledges a publish minutes before the package is fetchable. The first
-# ever CLI package, @toolu/cli 6.8.1, answered 404 for about six minutes after
-# "+ @toolu/cli@6.8.1", so npx failed right after the release went green, and
-# @toolu/plugins 8.1.1 took 8 minutes 11 seconds after npm reported it "being
-# processed", one second past the old 8-minute window. The
-# last step polls until every package resolves, so green means installable and
-# a re-run after green skips instead of publishing twice. A prerelease uses the
-# npm `next` dist-tag so it does not move stable `latest`.
+# npm processes a publish asynchronously: `npm publish` returns "Your package is
+# being processed and may take a few minutes to become available" and the
+# version appears later, with no published upper bound. @toolu/cli 6.8.1 took
+# about six minutes; @toolu/plugins 8.1.1 took 8 minutes 11 seconds and failed
+# the 8-minute wait this workflow used to run inside its publish job, which
+# left the native release and the Homebrew tap unbuilt although npm had
+# shipped. So the publish job ends when npm accepts the upload, and the
+# `verify` job below polls the registry on its own: nothing waits for it. The
+# wrapper only locates an installed native binary, so the native release never
+# depends on this package. A red `verify` means a manual dispatch of this
+# workflow with the same tag, which skips what is already on the registry. A
+# prerelease uses the npm `next` dist-tag so it does not move stable `latest`.
 
 on:
   workflow_call:
@@ -134,31 +138,50 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ inputs.tag }}
 
+  # Nothing needs this job: release-please.yml runs the native release beside
+  # `publish`, not after it. It only turns the run red when npm has not made
+  # the version visible within its window.
+  verify:
+    name: verify npm packages resolve
+    needs: publish
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout the released tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      # The per-version document, registry.npmjs.org/<name>/<version>, is served
+      # uncached (`cf-cache-status: DYNAMIC`), while the packument `npm view`
+      # reads sits behind Cloudflare for up to five minutes (`max-age=300`,
+      # revalidation answered from the edge). So this asks the registry itself.
       - name: Wait until every package resolves on the registry
         run: |
           set -euo pipefail
           for dir in tools/toolu-cli/npm; do
-            if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
+            if [ "$(jq -r '.private == true' "$dir/package.json")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
               continue
             fi
-            name=$(node -p "require('./$dir/package.json').name")
-            pkg=$(node -p "require('./$dir/package.json').version")
+            name=$(jq -r .name "$dir/package.json")
+            pkg=$(jq -r .version "$dir/package.json")
+            url="https://registry.npmjs.org/${name/\//%2F}/$pkg"
             # Each package gets a full window, even when earlier packages
-            # take most of theirs to propagate. 20 minutes is more than twice
-            # the slowest propagation seen and still ends inside the job's
-            # 30-minute timeout, so a stuck publish fails with the message below.
-            deadline=$(( $(date +%s) + 20 * 60 ))
-            until npm view "$name@$pkg" version >/dev/null 2>&1; do
+            # take most of theirs to propagate. The window ends inside this
+            # job's timeout, so a stuck publish fails with the message below.
+            deadline=$(( $(date +%s) + 30 * 60 ))
+            until [ "$(curl -fs "$url" | jq -r .version 2>/dev/null || true)" = "$pkg" ]; do
               if [ "$(date +%s)" -ge "$deadline" ]; then
-                echo "$name@$pkg is still not fetchable from the registry: the publish was accepted but has not propagated" >&2
+                echo "$name@$pkg is still not on the registry: the publish was accepted but has not propagated; dispatch this workflow again with tag $TAG once it has" >&2
                 exit 1
               fi
-              echo "$name@$pkg is not fetchable yet; retrying in 15s"
+              echo "$name@$pkg is not on the registry yet; retrying in 15s"
               sleep 15
             done
             echo "$name@$pkg resolves on the registry"
           done
         env:
-          # Same .npmrc as the publish step: it reads NODE_AUTH_TOKEN on every npm call.
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ inputs.tag }}
