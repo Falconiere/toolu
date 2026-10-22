@@ -1,6 +1,9 @@
-//! The release half of the workflow contract: release-please chains npm and
+//! The release half of the workflow contract: release-please runs npm beside
 //! the native release, which builds four targets, packages checksums and an
-//! SBOM, attests, uploads, finalizes and only then publishes.
+//! SBOM, attests, uploads, finalizes and only then publishes. The native
+//! release never waits for npm: the npm package is a wrapper that locates an
+//! installed binary, and npm makes a version visible on its own schedule, so
+//! npm-publish.yml verifies the registry in a job nothing else needs.
 
 use std::path::Path;
 
@@ -35,9 +38,12 @@ fn caller(root: &Path, please: &Value, found: &mut Findings) -> Result<(), Strin
     text(job("native", "uses")) == "./.github/workflows/release-native.yml",
     "release-please.yml must chain native release",
   );
+  let native_needs = job("native", "needs");
   found.need(
-    lists(job("native", "needs"), "publish"),
-    "release-please.yml native release must wait for npm availability",
+    (text(native_needs) == "release-please" || lists(native_needs, "release-please"))
+      && !lists(native_needs, "publish")
+      && !includes(job("native", "if"), "needs.publish"),
+    "release-please.yml native release must not wait for npm",
   );
   found.need(
     text(job("publish", "uses")) == "./.github/workflows/npm-publish.yml"
@@ -82,12 +88,15 @@ fn build(native: &Value, found: &mut Findings) {
     [
       "release_native.py verify-tag",
       "cargo xtask gate",
-      "npm view",
       "python3 -B -m unittest discover -s .github/scripts",
     ]
     .iter()
     .all(|part| verify.contains(part)),
-    "release-native.yml verify must test the helper, gate the tag, and require npm packages",
+    "release-native.yml verify must test the helper and gate the tag",
+  );
+  found.need(
+    !verify.contains("npm view"),
+    "release-native.yml verify must not block on npm",
   );
   package(at(jobs, &["package"]), found);
 }
@@ -210,7 +219,9 @@ fn draft_access(native: &Value, finalize: &Value, found: &mut Findings) {
   );
 }
 
-/// npm publishing never cancels and leaves `latest` alone for a prerelease.
+/// npm publishing never cancels, leaves `latest` alone for a prerelease, and
+/// ends when npm accepts the upload; the registry wait is its own job, asking
+/// the uncached per-version document.
 fn npm(npm: &Value, found: &mut Findings) {
   found.need(
     at(npm, &["concurrency", "cancel-in-progress"]) == &Value::Bool(false),
@@ -221,6 +232,16 @@ fn npm(npm: &Value, found: &mut Findings) {
     script.contains("npm_tag=next")
       && script.contains("npm publish --provenance --access public --tag \"$npm_tag\""),
     "npm-publish.yml prereleases must leave the latest dist-tag untouched",
+  );
+  found.need(
+    !script.contains("sleep "),
+    "npm-publish.yml publish must end when npm accepts the upload",
+  );
+  let verify = at(npm, &["jobs", "verify"]);
+  found.need(
+    text(at(verify, &["needs"])) == "publish"
+      && runs(verify).contains("https://registry.npmjs.org/${name/\\//%2F}/$pkg"),
+    "npm-publish.yml must verify the registry's per-version document in its own job",
   );
 }
 
