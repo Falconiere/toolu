@@ -6,6 +6,14 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.1.2](https://github.com/Falconiere/toolu/compare/v8.1.1...v8.1.2) (2026-10-22)
+
+
+### Bug Fixes
+
+* **muse:** keep project state outside protected config directories ([#577](https://github.com/Falconiere/toolu/issues/577)) ([bf86f6b](https://github.com/Falconiere/toolu/commit/bf86f6bbfa80e0630c8b86b325bcec9e22f735a5)), closes [#571](https://github.com/Falconiere/toolu/issues/571)
+* **release:** run the native release beside npm, never after it ([#578](https://github.com/Falconiere/toolu/issues/578)) ([a1ca452](https://github.com/Falconiere/toolu/commit/a1ca452bb9cf57ad6d3888f3c51c9eb228fb12ba))
+
 ## [8.1.1](https://github.com/Falconiere/toolu/compare/v8.1.0...v8.1.1) (2026-10-22)
 
 
