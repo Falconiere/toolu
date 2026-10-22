@@ -21,7 +21,9 @@ name: npm publish
 #
 # npm acknowledges a publish minutes before the package is fetchable. The first
 # ever CLI package, @toolu/cli 6.8.1, answered 404 for about six minutes after
-# "+ @toolu/cli@6.8.1", so npx failed right after the release went green. The
+# "+ @toolu/cli@6.8.1", so npx failed right after the release went green, and
+# @toolu/plugins 8.1.1 took 8 minutes 11 seconds after npm reported it "being
+# processed", one second past the old 8-minute window. The
 # last step polls until every package resolves, so green means installable and
 # a re-run after green skips instead of publishing twice. A prerelease uses the
 # npm `next` dist-tag so it does not move stable `latest`.
@@ -143,8 +145,10 @@ jobs:
             name=$(node -p "require('./$dir/package.json').name")
             pkg=$(node -p "require('./$dir/package.json').version")
             # Each package gets a full window, even when earlier packages
-            # take most of theirs to propagate.
-            deadline=$(( $(date +%s) + 8 * 60 ))
+            # take most of theirs to propagate. 20 minutes is more than twice
+            # the slowest propagation seen and still ends inside the job's
+            # 30-minute timeout, so a stuck publish fails with the message below.
+            deadline=$(( $(date +%s) + 20 * 60 ))
             until npm view "$name@$pkg" version >/dev/null 2>&1; do
               if [ "$(date +%s)" -ge "$deadline" ]; then
                 echo "$name@$pkg is still not fetchable from the registry: the publish was accepted but has not propagated" >&2
