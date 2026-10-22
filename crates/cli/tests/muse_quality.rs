@@ -160,7 +160,11 @@ impl Fixture {
         .is_some_and(|message| message.contains("Forbidden lint suppression")),
       format!("missing quality notice: {output}"),
     )?;
-    let gate = fs::read_to_string(self.project.join(".agents/tmp/quality-gate-status.json"))?;
+    let gate = fs::read_to_string(
+      self
+        .project
+        .join(".toolu/tmp/muse/quality-gate-status.json"),
+    )?;
     ensure(gate.contains("\"status\": \"failing\""), gate)?;
     let commit = json!({"session_id":"s","cwd":self.project,"tool_name":"bash",
       "tool_input":{"command":"git commit -m test"}});

@@ -124,12 +124,18 @@ impl Roots {
   }
 
   /// `<root>/<dirname>/tmp`, with `root` defaulting to the project root.
+  /// Muse uses `.toolu/tmp/muse`: its sandbox makes `.agents` and `.muse` read-only.
+  /// `TOOLU_PROJECT_CONFIG_DIRNAME` still overrides both config and state.
   pub fn project_state_root(&self, cwd: Option<&Path>, root: Option<&Path>) -> Option<PathBuf> {
     let root = match root {
       Some(root) => root.to_path_buf(),
       None => self.project_root(cwd)?,
     };
-    Some(root.join(self.project_dirname()).join("tmp"))
+    let state = match self.env.get("TOOLU_PROJECT_CONFIG_DIRNAME") {
+      None if self.host == Host::Muse => root.join(".toolu/tmp/muse"),
+      _ => root.join(self.project_dirname()).join("tmp"),
+    };
+    Some(state)
   }
 
   /// `<state root>/<name>`.

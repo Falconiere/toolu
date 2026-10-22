@@ -80,7 +80,7 @@ fn additional_context(
   } else {
     PathBuf::from(top)
   };
-  let dirname = Roots::new(input.env.clone(), Some(host)).project_dirname();
+  let roots = Roots::new(input.env.clone(), Some(host));
   let mut parts = prompt_hints(
     lower,
     &HintOptions {
@@ -89,7 +89,7 @@ fn additional_context(
     },
   );
   let project = project_context(
-    &root.join(&dirname).join("context.sh"),
+    &root.join(roots.project_dirname()).join("context.sh"),
     prompt,
     input.cwd,
     input.env,
@@ -98,7 +98,8 @@ fn additional_context(
     parts.push(project);
   }
   if !mentions_gate_topic(lower)
-    && let Some(hint) = failing_gate_hint(&root.join(&dirname).join("tmp"))
+    && let Some(state) = roots.project_state_root(None, Some(&root))
+    && let Some(hint) = failing_gate_hint(&state)
   {
     parts.push(hint);
   }

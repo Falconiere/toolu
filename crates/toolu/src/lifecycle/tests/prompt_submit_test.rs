@@ -47,6 +47,31 @@ fn muse_prompt_hints_use_system_message() {
 }
 
 #[test]
+fn muse_prompt_reads_context_from_agents_and_gate_from_writable_state() {
+  let dir = tempfile::tempdir().unwrap();
+  let agents = dir.path().join(".agents");
+  let state = dir.path().join(".toolu/tmp/muse");
+  std::fs::create_dir_all(&agents).unwrap();
+  std::fs::create_dir_all(&state).unwrap();
+  std::fs::write(agents.join("context.sh"), "printf 'project context'").unwrap();
+  std::fs::write(
+    state.join("quality-gate-status.json"),
+    r#"{"status":"failing","reason":"Muse lint failure"}"#,
+  )
+  .unwrap();
+  let bin = bin_with(dir.path(), false);
+  std::os::unix::fs::symlink("/bin/bash", bin.join("bash")).unwrap();
+  let env = env(dir.path(), &bin).with("TOOLU_HOST_OVERRIDE", "muse");
+  let value = document(&env, dir.path(), r#"{"prompt":"rename the helper"}"#);
+  let message = value["systemMessage"].as_str().unwrap();
+  assert!(message.contains("project context"), "{message}");
+  assert!(
+    message.contains("Quality gate failing: Muse lint failure"),
+    "{message}"
+  );
+}
+
+#[test]
 fn a_one_word_verb_blocks_and_trivial_or_empty_prompts_are_silent() {
   let dir = tempfile::tempdir().unwrap();
   let path = bin_with(dir.path(), false);

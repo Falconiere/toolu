@@ -102,7 +102,7 @@ impl Fixture {
   }
 
   fn telemetry(&self) -> PathBuf {
-    self.project.join(".agents/tmp/telemetry/feat_x.jsonl")
+    self.project.join(".toolu/tmp/muse/telemetry/feat_x.jsonl")
   }
 }
 
@@ -165,7 +165,9 @@ fn muse_spawn_records_observed_role_and_structured_child_fields() {
   assert_eq!(first["subagent_type"], "responder");
   assert!(first["model"].is_null());
   assert!(first["reasoning_effort"].is_null());
-  let ledger = fixture.project.join(".agents/tmp/plan-ledger/feat_x.json");
+  let ledger = fixture
+    .project
+    .join(".toolu/tmp/muse/plan-ledger/feat_x.json");
   fs::create_dir_all(ledger.parent().expect("parent")).expect("ledger dir");
   fs::write(
     ledger,

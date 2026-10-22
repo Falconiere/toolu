@@ -17,7 +17,16 @@ disable what you do not want.
 - `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
   is not the config root.
 
-Both are optional. When both exist they are deep-merged in the binary,
+Muse's writable project state (reviews, plan ledgers, quality gates and telemetry)
+defaults to `<repo>/.toolu/tmp/muse`. Configuration and `context.sh` stay in `.agents`.
+Muse's sandbox makes `.agents` read-only, and Muse 1.4.12 also mounts `.muse`
+read-only. Hooks and agent-run commands use the same writable
+state directory. `TOOLU_PROJECT_CONFIG_DIRNAME` overrides both directories; choose
+a writable location when setting it on Muse. Existing `.agents/tmp` state is not
+loaded from the old path: rerun reviews and ledger checks after upgrading, and
+add `.toolu/tmp/` to the project's `.gitignore`.
+
+User and project config files are optional. When both exist they are deep-merged in the binary,
 like `jq '$u * $p`; project values win on conflict. Missing keys default
 to **enabled**. No `jq` is needed: the merge is native code.
 

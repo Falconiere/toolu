@@ -96,7 +96,7 @@ fn observed_muse_spawn_records_role_without_inventing_child_model() {
   let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
   let payload = observed_muse_payload("subagent_spawn").to_string();
   assert_eq!(evaluate(&payload, env, dir.path()), silent());
-  let telemetry = dir.path().join(".agents/tmp/telemetry/feat_x.jsonl");
+  let telemetry = dir.path().join(".toolu/tmp/muse/telemetry/feat_x.jsonl");
   let line = std::fs::read_to_string(telemetry).expect("delegation telemetry");
   let event: serde_json::Value = serde_json::from_str(line.trim()).expect("event JSON");
   assert_eq!(event["event"], "delegation");
@@ -109,7 +109,7 @@ fn observed_muse_spawn_records_role_without_inventing_child_model() {
 fn muse_spawn_with_structured_model_and_effort_emits_muse_advice() {
   let (dir, env) = fixture();
   let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
-  let ledger = dir.path().join(".agents/tmp/plan-ledger/feat_x.json");
+  let ledger = dir.path().join(".toolu/tmp/muse/plan-ledger/feat_x.json");
   std::fs::create_dir_all(ledger.parent().expect("parent")).expect("ledger dir");
   std::fs::write(
     &ledger,
@@ -130,7 +130,7 @@ fn muse_spawn_with_structured_model_and_effort_emits_muse_advice() {
       .contains("opus")
   );
   assert!(advice.get("hookSpecificOutput").is_none());
-  let telemetry = dir.path().join(".agents/tmp/telemetry/feat_x.jsonl");
+  let telemetry = dir.path().join(".toolu/tmp/muse/telemetry/feat_x.jsonl");
   let line = std::fs::read_to_string(telemetry).expect("delegation telemetry");
   let event: serde_json::Value = serde_json::from_str(line.trim()).expect("event JSON");
   assert_eq!(event["model"], "sonnet");
@@ -147,5 +147,5 @@ fn muse_internal_tool_does_not_write_delegation_telemetry() {
   let env = env.with("TOOLU_HOST_OVERRIDE", "muse");
   let payload = observed_muse_payload("submit_reminder_decision").to_string();
   assert_eq!(evaluate(&payload, env, dir.path()), silent());
-  assert!(!dir.path().join(".agents/tmp/telemetry").exists());
+  assert!(!dir.path().join(".toolu/tmp/muse/telemetry").exists());
 }
