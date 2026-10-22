@@ -1,10 +1,13 @@
 //! Muse's installed-plugin and capability listing.
 
 use std::io::ErrorKind;
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
+use toolu_protocol::host::Host;
+use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::process::{Spec, run};
 
@@ -47,6 +50,9 @@ fn collect_with_budget(roots: &Roots, budget: Duration) -> Inventory {
       warning: Some("Muse plugin inventory is unavailable".to_owned()),
     };
   };
+  if sandboxed(roots) {
+    return sandboxed_inventory(entries);
+  }
   let mut plugins = Vec::new();
   let mut warnings = Vec::new();
   for entry in entries {
@@ -82,6 +88,79 @@ fn collect_with_budget(roots: &Roots, budget: Duration) -> Inventory {
   Inventory {
     plugins,
     warning: (!warnings.is_empty()).then(|| warnings.join("; ")),
+  }
+}
+
+/// Muse's own config dir, ignoring `TOOLU_CONFIG_DIR`, which only relocates toolu's files.
+fn muse_config_dir(env: &Env) -> PathBuf {
+  if let Some(dir) = env.get("MUSE_CONFIG_DIR") {
+    return PathBuf::from(dir);
+  }
+  env.get("XDG_CONFIG_HOME").map_or_else(
+    || env.home().join(".config").join("muse"),
+    |base| PathBuf::from(base).join("muse"),
+  )
+}
+
+/// Whether doctor runs inside Muse's sandbox, where `~/.config/muse` is hidden
+/// and `muse plugins inspect` reports every capability `review_needed` (#572).
+pub(super) fn sandboxed(roots: &Roots) -> bool {
+  if roots.host() != Host::Muse {
+    return false;
+  }
+  let dir = muse_config_dir(roots.env());
+  unreadable_dir(&dir) || unreadable_file(&dir.join("settings.json"))
+}
+
+/// Whether `secrets.json` lives under Muse's own config dir (no `TOOLU_CONFIG_DIR`
+/// override), so a sandbox-denied read is expected rather than a misconfiguration.
+pub(super) fn secrets_under_muse(roots: &Roots) -> bool {
+  toolu_runtime::config::secrets::path(roots).starts_with(muse_config_dir(roots.env()))
+}
+
+fn unreadable_dir(dir: &Path) -> bool {
+  match std::fs::read_dir(dir) {
+    Ok(_) => mode_denied(dir, 0o500),
+    Err(error) if error.kind() == ErrorKind::PermissionDenied => true,
+    Err(_) => false,
+  }
+}
+
+fn unreadable_file(path: &Path) -> bool {
+  match std::fs::File::open(path) {
+    Ok(_) => mode_denied(path, 0o400),
+    Err(error) if error.kind() == ErrorKind::PermissionDenied => true,
+    Err(_) => false,
+  }
+}
+
+fn mode_denied(path: &Path, need: u32) -> bool {
+  std::fs::metadata(path).is_ok_and(|meta| meta.permissions().mode() & need == 0)
+}
+
+/// Listing without trust: the sandbox hides approval, so every plugin is
+/// `sandboxed` (unknown) with one terminal command to check it.
+fn sandboxed_inventory(entries: Vec<MuseEntry>) -> Inventory {
+  let plugins = entries
+    .into_iter()
+    .map(|entry| Plugin {
+      name: entry.id,
+      version: entry.version,
+      root: Some(entry.root),
+      muse: Some(MuseHealth {
+        active: entry.active,
+        enabled: entry.enabled,
+        approval: "sandboxed",
+        pending_hooks: Vec::new(),
+      }),
+    })
+    .collect();
+  Inventory {
+    plugins,
+    warning: Some(
+      "Muse plugin trust is unknown inside the sandbox; run muse plugins inspect <plugin> from a terminal"
+        .to_owned(),
+    ),
   }
 }
 
