@@ -83,6 +83,12 @@ startup behavior in Codex, Claude Code, or Muse.
   command environment before reporting them missing, and never print their value.
   Exercise hook commands with an empty `PATH`: the launcher resolves `toolu`
   through `TOOLU_BIN` and the install directories even when `PATH` lacks it.
+- Verify project state writes inside the host's actual shell sandbox, as well as
+  through hooks. Probe the candidate directory and inspect its mount when a write
+  fails: Muse 1.4.12 mounts both `.agents` and `.muse` read-only, while `.toolu`
+  is writable. A directory writable in an earlier Muse version is not sufficient
+  evidence. Run review recording and ledger checks in-session, then verify that
+  the push hook reads the same state; keep sandboxing enabled for this check.
 - A credentialed helper must use only exported keys. `toolu jev` never loads a
   project `.env`; test such a command from a project with a `.env`-only sentinel
   key. Require no request and no key in model-visible output.

@@ -46,8 +46,8 @@ pub(crate) fn ran_in(nonce: &str, transcript: &str) -> Result<(), String> {
 }
 
 /// The gate file records the failing edit, and `sample.ts` holds it.
-pub(crate) fn quality(project: &Path, host_dir: &str) -> Result<(), String> {
-  let gate = project.join(host_dir).join("tmp/quality-gate-status.json");
+pub(crate) fn quality(project: &Path, state_dir: &str) -> Result<(), String> {
+  let gate = project.join(state_dir).join("quality-gate-status.json");
   let state = std::fs::read_to_string(&gate)
     .map_err(|err| format!("quality gate file missing: {}: {err}", gate.display()))?;
   let source = std::fs::read_to_string(project.join("sample.ts"))

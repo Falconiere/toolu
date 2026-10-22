@@ -100,7 +100,7 @@ fn quality_state_needs_the_failure_and_the_edit() {
 fn quality_reads_the_host_directory() {
   let dir = tempfile::tempdir().unwrap();
   assert!(
-    quality(dir.path(), ".codex")
+    quality(dir.path(), ".codex/tmp")
       .unwrap_err()
       .contains("quality gate file missing")
   );
@@ -111,7 +111,7 @@ fn quality_reads_the_host_directory() {
   )
   .unwrap();
   std::fs::write(dir.path().join("sample.ts"), eight()).unwrap();
-  assert!(quality(dir.path(), ".codex").is_ok());
+  assert!(quality(dir.path(), ".codex/tmp").is_ok());
 }
 
 #[test]

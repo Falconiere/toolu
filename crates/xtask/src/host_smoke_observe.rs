@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use crate::host_smoke_exec::{TIMEOUT, exec, tail};
-use crate::host_smoke_project::config_dir;
+use crate::host_smoke_project::state_dir;
 use crate::host_smoke_steps::Run;
 
 /// The gate file and source as they are now, when the gate file records a failure.
@@ -26,8 +26,8 @@ pub(crate) fn observed_edit(
   host: &str,
 ) -> Result<(), String> {
   let gate = project
-    .join(config_dir(host))
-    .join("tmp/quality-gate-status.json");
+    .join(state_dir(host))
+    .join("quality-gate-status.json");
   let source = project.join("sample.ts");
   let mut seen: Option<(String, String)> = None;
   let mut tick = || {

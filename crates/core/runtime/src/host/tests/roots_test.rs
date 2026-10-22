@@ -110,6 +110,46 @@ fn muse_project_uses_agents_dir_and_git_toplevel() {
 }
 
 #[test]
+fn muse_state_is_separate_from_read_only_project_config() {
+  let muse = roots(Host::Muse, &[("TOOLU_PROJECT_DIR", "/repo")]);
+  assert_eq!(
+    muse.project_config_path(None),
+    Some(PathBuf::from("/repo/.agents/toolu.config.json"))
+  );
+  assert_eq!(
+    muse.project_state_root(None, None),
+    Some(PathBuf::from("/repo/.toolu/tmp/muse"))
+  );
+  assert_eq!(
+    muse.project_state_dir("push-review", None, Some(Path::new("/worktree"))),
+    Ok(Some(PathBuf::from("/worktree/.toolu/tmp/muse/push-review")))
+  );
+  assert_eq!(
+    roots(Host::Muse, &[]).project_state_root(Some(Path::new("/nonexistent")), None),
+    None
+  );
+}
+
+#[test]
+fn explicit_project_dirname_still_overrides_muse_config_and_state() {
+  let muse = roots(
+    Host::Muse,
+    &[
+      ("TOOLU_PROJECT_DIR", "/repo"),
+      ("TOOLU_PROJECT_CONFIG_DIRNAME", ".custom"),
+    ],
+  );
+  assert_eq!(
+    muse.project_config_path(None),
+    Some(PathBuf::from("/repo/.custom/toolu.config.json"))
+  );
+  assert_eq!(
+    muse.project_state_root(None, Some(Path::new("/worktree"))),
+    Some(PathBuf::from("/worktree/.custom/tmp"))
+  );
+}
+
+#[test]
 fn muse_plugin_paths_and_commands_prefer_its_native_variables() {
   let muse = roots(
     Host::Muse,

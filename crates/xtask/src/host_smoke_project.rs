@@ -57,11 +57,20 @@ pub(crate) fn nonce(project: &Path) -> Result<String, String> {
 }
 
 /// The project config directory of `host`: `.claude`, `.codex`, or Muse's `.agents`.
-pub(crate) fn config_dir(host: &str) -> String {
+fn config_dir(host: &str) -> String {
   if host == "muse" {
     ".agents".to_owned()
   } else {
     format!(".{host}")
+  }
+}
+
+/// Writable project state, separate from Muse's sandbox-protected configuration.
+pub(crate) fn state_dir(host: &str) -> String {
+  if host == "muse" {
+    ".toolu/tmp/muse".to_owned()
+  } else {
+    format!(".{host}/tmp")
   }
 }
 

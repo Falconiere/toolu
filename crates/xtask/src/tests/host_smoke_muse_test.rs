@@ -180,14 +180,14 @@ fn a_failed_install_stops_prepare() {
 }
 
 #[test]
-fn the_muse_edit_keeps_the_failure_it_recorded_under_agents() {
+fn the_muse_edit_keeps_the_failure_it_recorded_under_toolu() {
   let dir = tempfile::tempdir().unwrap();
   let project = dir.path().join("project");
-  std::fs::create_dir_all(project.join(".agents/tmp")).unwrap();
+  std::fs::create_dir_all(project.join(".toolu/tmp/muse")).unwrap();
   let failing = "{\"status\": \"failing\"}";
   let body = format!(
-    "cd '{p}'\nprintf 'a\\nb\\n' > sample.ts\nprintf '%s' '{failing}' > .agents/tmp/quality-gate-status.json\n\
-     sleep 0.3\nprintf 'fixed\\n' > sample.ts\nprintf '{{}}' > .agents/tmp/quality-gate-status.json",
+    "cd '{p}'\nprintf 'a\\nb\\n' > sample.ts\nprintf '%s' '{failing}' > .toolu/tmp/muse/quality-gate-status.json\n\
+     sleep 0.3\nprintf 'fixed\\n' > sample.ts\nprintf '{{}}' > .toolu/tmp/muse/quality-gate-status.json",
     p = project.display()
   );
   let muse = Muse {

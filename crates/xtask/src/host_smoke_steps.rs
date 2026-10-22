@@ -6,7 +6,7 @@ use std::path::Path;
 use crate::host_smoke_checks as checks;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run as run_child;
-use crate::host_smoke_project::{PushProject, config_dir, git, head, nonce, remote_has};
+use crate::host_smoke_project::{PushProject, git, head, nonce, remote_has, state_dir};
 use crate::host_smoke_prompts::{DENY, PUSH_REF};
 
 /// Where a host's transcripts go and how its children are started.
@@ -83,7 +83,7 @@ pub(crate) fn allowed(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Res
 /// The edit leaves a failing quality state.
 pub(crate) fn edit(driver: &dyn Driver, run: &Run<'_>, project: &Path) -> Result<(), String> {
   driver.edit(run, project)?;
-  checks::quality(project, &config_dir(driver.name()))
+  checks::quality(project, &state_dir(driver.name()))
 }
 
 /// The commit is denied by the quality gate and `HEAD` stays.
