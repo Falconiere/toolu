@@ -12,17 +12,20 @@ use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::env::Env;
 
 use crate::TICK;
-use crate::dispatch::{dispatch, expire, satisfy};
+use crate::dispatch::dispatch;
 use crate::executor::Call;
 use crate::model::World;
 use crate::server::{Engine, Stop};
 use crate::socket_deadline::{github_ready, stall_ready, wake_after};
 use crate::source::{self, Fact};
+use crate::wait_ops::{expire, satisfy};
 
 /// A pending `toolu epic wait` reply.
 pub(crate) struct Waiter {
   pub(crate) deadline: Instant,
   pub(crate) reply: Sender<Value>,
+  /// The registered epic it waits for; `None` waits for every epic.
+  pub(crate) epic: Option<String>,
 }
 
 /// Request or host event delivered to the state loop.

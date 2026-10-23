@@ -96,8 +96,11 @@ fn reminder_fires_at_the_delay_then_hourly_and_never_when_acknowledged() {
   assert_eq!(world.attention.len(), 2);
   assert_eq!(world.attention[0].reminders, 2);
   assert_eq!(next_reminder_ms(&world), Some(150 * MINUTE));
-  assert_eq!(take(&mut world).map(|item| item.key), Some("a".to_owned()));
-  assert!(take(&mut world).is_none());
+  assert_eq!(
+    take(&mut world, None).map(|item| item.key),
+    Some("a".to_owned())
+  );
+  assert!(take(&mut world, None).is_none());
 }
 
 #[test]

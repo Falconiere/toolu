@@ -53,6 +53,7 @@ fn a_wait_reply_the_journal_cannot_record_still_replies_and_continues() {
   std::fs::write(Paths::at(root.path()).journal_dir(), "not a directory").expect("block");
   let (reply, rx) = mpsc::channel();
   let mut waiters = vec![Waiter {
+    epic: None,
     deadline: Instant::now(),
     reply,
   }];

@@ -207,9 +207,12 @@ pub(crate) fn next_reminder_ms(world: &World) -> Option<u64> {
     .min()
 }
 
-/// The oldest item no waiter has seen, now marked seen.
-pub(crate) fn take(world: &mut World) -> Option<Attention> {
-  let item = world.attention.iter_mut().find(|item| !item.delivered)?;
+/// The oldest item no waiter has seen, now marked seen. A `scope` takes only
+/// that epic's items and the engine-wide ones (no epic).
+pub(crate) fn take(world: &mut World, scope: Option<&str>) -> Option<Attention> {
+  let item = world.attention.iter_mut().find(|item| {
+    !item.delivered && scope.is_none_or(|epic| item.epic.is_empty() || item.epic == epic)
+  })?;
   item.delivered = true;
   Some(item.clone())
 }
@@ -235,9 +238,23 @@ pub(crate) fn document(item: &Attention, now_ms: u64) -> Value {
 }
 
 /// Replay one journal record into the queue while rebuilding. Records
-/// without an item token predate the queue and are ignored.
+/// without an item token predate the queue and are ignored; a `wait-reply`
+/// with one marks that item delivered.
 pub(crate) fn observe(world: &mut World, record: &Record) {
-  if record.kind != "judgment" || !record.token.starts_with('a') {
+  if !record.token.starts_with('a') {
+    return;
+  }
+  if record.kind == "action" && record.name == "wait-reply" {
+    if let Some(item) = world
+      .attention
+      .iter_mut()
+      .find(|item| item.token == record.token)
+    {
+      item.delivered = true;
+    }
+    return;
+  }
+  if record.kind != "judgment" {
     return;
   }
   if record.name == "closed" {

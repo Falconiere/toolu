@@ -156,6 +156,7 @@ mod verbs;
 mod verbs_actions;
 mod verbs_metrics;
 mod wait_journal;
+mod wait_ops;
 mod waiting_jobs;
 mod watch;
 mod workload;

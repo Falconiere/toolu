@@ -3,10 +3,11 @@ use std::time::Instant;
 
 use serde_json::{Value, json};
 
-use super::{dispatch, expire, ingest, report_from, satisfy};
+use super::{dispatch, ingest, report_from};
 use crate::PROTOCOL;
 use crate::paths::Paths;
 use crate::server::{Engine, Fault};
+use crate::wait_ops::{expire, satisfy};
 
 #[test]
 fn a_report_request_copies_its_phase() {

@@ -68,14 +68,14 @@ fn blocked_pending_reaches_wait_only_and_raises_once_per_spell() {
       .to_string();
     assert!(!body.contains("rm -rf build"), "{path}: {body}");
   }
-  let wait = crate::status::wait_body(&mut engine.world, 0);
+  let wait = crate::status::wait_body(&mut engine.world, None).0;
   assert_eq!(wait["kind"], "blocked");
   assert_eq!(
     wait["pending"],
     "cargo build\n   Compiling a\nDo you want to run rm -rf build? (y/n)"
   );
   assert_eq!(
-    crate::status::wait_body(&mut engine.world, 0)["state"],
+    crate::status::wait_body(&mut engine.world, None).0["state"],
     "waiting"
   );
 }
@@ -85,12 +85,12 @@ fn blocked_pending_of_a_new_spell_reopens_the_seen_item() {
   let tmp = tempfile::tempdir().expect("temp");
   let (mut engine, _paths) = running_issue(tmp.path());
   on_status(&mut engine, "a", "blocked", "Run tests? (y/n)").expect("blocked");
-  let first = crate::status::wait_body(&mut engine.world, 0);
+  let first = crate::status::wait_body(&mut engine.world, None).0;
   crate::attention::ack(&mut engine.world, "a", "user");
   on_status(&mut engine, "a", "working", "").expect("working");
   on_status(&mut engine, "a", "blocked", "Overwrite config? (y/n)").expect("blocked again");
   assert_eq!(engine.world.attention.len(), 1);
-  let second = crate::status::wait_body(&mut engine.world, 0);
+  let second = crate::status::wait_body(&mut engine.world, None).0;
   assert_eq!(
     (&second["state"], &second["seq"]),
     (&json!("open"), &first["seq"])
