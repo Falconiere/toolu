@@ -2,6 +2,8 @@
 
 use std::io::{Read, Write};
 use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
@@ -99,63 +101,73 @@ pub(crate) fn fixture(with_agent: bool) -> Result<Fix, String> {
 
 pub(crate) fn serve_peer(listener: UnixListener, script: Script) -> thread::JoinHandle<()> {
   thread::spawn(move || {
-    let seen = std::sync::atomic::AtomicUsize::new(0);
-    for _ in 0..4 {
+    let snapshots = Arc::new(AtomicUsize::new(0));
+    for _ in 0..16 {
       let Ok((stream, _)) = listener.accept() else {
         break;
       };
-      let n = seen.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-      let mut script = script.clone();
-      if script.empty_after_first && n > 0 {
-        script.agents = json!([]);
-      }
-      thread::spawn(move || handle(stream, &script));
+      let script = script.clone();
+      let snapshots = Arc::clone(&snapshots);
+      thread::spawn(move || handle(stream, &script, &snapshots));
     }
   })
 }
 
-fn handle(mut stream: UnixStream, script: &Script) {
+/// Answer one request, as herdr 0.9.3 does. Only a subscription stays open.
+fn handle(mut stream: UnixStream, script: &Script, snapshots: &AtomicUsize) {
   let _ = stream.set_read_timeout(Some(Duration::from_secs(2)));
-  while let Ok(line) = read_line(&mut stream) {
-    let Ok(req) = serde_json::from_str::<Value>(&line) else {
-      break;
-    };
-    let method = req.get("method").and_then(Value::as_str).unwrap_or("");
-    if let Some(log) = &script.log {
-      let _saved = std::fs::OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(log)
-        .and_then(|mut file| writeln!(file, "{method}"));
-    }
-    let id = req.get("id").cloned().unwrap_or(Value::Null);
-    if method == "events.subscribe" {
-      let _ = write_line(
-        &mut stream,
-        &json!({"id": id, "result": {"type": "subscription_started"}}),
-      );
-      if let Some(event) = &script.event {
-        let _ = stream.write_all(event.as_bytes());
-        let _ = stream.write_all(b"\n");
-      }
-      if script.drop_after_subscribe {
-        break;
-      }
-      continue;
-    }
-    let result = if method == "ping" {
-      json!({"type": "pong", "protocol": 22})
-    } else if method == "session.snapshot" {
-      json!({"type": "session_snapshot", "snapshot": {"agents": script.agents}})
-    } else if method == "agent.read" {
-      json!({"read": {"text": script.read.clone().unwrap_or_default()}})
-    } else {
-      json!({})
-    };
-    if write_line(&mut stream, &json!({"id": id, "result": result})).is_err() {
-      break;
-    }
+  let Ok(line) = read_line(&mut stream) else {
+    return;
+  };
+  let Ok(req) = serde_json::from_str::<Value>(&line) else {
+    return;
+  };
+  let method = req.get("method").and_then(Value::as_str).unwrap_or("");
+  if let Some(log) = &script.log {
+    let _saved = std::fs::OpenOptions::new()
+      .create(true)
+      .append(true)
+      .open(log)
+      .and_then(|mut file| writeln!(file, "{method}"));
   }
+  let id = req.get("id").cloned().unwrap_or(Value::Null);
+  if method == "events.subscribe" {
+    stream_events(stream, script, &id);
+    return;
+  }
+  let result = if method == "ping" {
+    json!({"type": "pong", "protocol": 22})
+  } else if method == "session.snapshot" {
+    let served = snapshots.fetch_add(1, Ordering::Relaxed);
+    let agents = if script.empty_after_first && served > 0 {
+      json!([])
+    } else {
+      script.agents.clone()
+    };
+    json!({"type": "session_snapshot", "snapshot": {"agents": agents}})
+  } else if method == "agent.read" {
+    json!({"read": {"text": script.read.clone().unwrap_or_default()}})
+  } else {
+    json!({})
+  };
+  let _ = write_line(&mut stream, &json!({"id": id, "result": result}));
+}
+
+/// Acknowledge the subscription, push the scripted event, then hold the
+/// connection open until the client goes quiet, unless the script drops it.
+fn stream_events(mut stream: UnixStream, script: &Script, id: &Value) {
+  let _ = write_line(
+    &mut stream,
+    &json!({"id": id, "result": {"type": "subscription_started"}}),
+  );
+  if let Some(event) = &script.event {
+    let _ = stream.write_all(event.as_bytes());
+    let _ = stream.write_all(b"\n");
+  }
+  if script.drop_after_subscribe {
+    return;
+  }
+  while read_line(&mut stream).is_ok_and(|line| !line.is_empty()) {}
 }
 
 fn read_line(stream: &mut UnixStream) -> Result<String, ()> {

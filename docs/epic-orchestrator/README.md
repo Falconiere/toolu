@@ -61,6 +61,9 @@ Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 ## Engine events
 
 The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
+herdr answers one request per socket connection, so each herdr call, the
+session's ping and snapshot included, opens its own connection; only the
+subscription stays open.
 The engine starts its read-only dashboard at `http://127.0.0.1:7717/` by default.
 It shows registered epics,
 workers, hosts, jobs, machine capacity, queue and attention, and follows the

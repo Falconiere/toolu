@@ -59,7 +59,8 @@ fn herdr_control() {
   let methods = tmp.path().join("methods.log");
   let listener = UnixListener::bind(&sock).expect("bind");
   let record = methods.clone();
-  let peer = thread::spawn(move || answer(&listener, 22, 6, &record));
+  // Each call pings on its own connection, then sends the call on another.
+  let peer = thread::spawn(move || answer(&listener, 22, 12, &record));
   let env = herdr_env(&sock, &bin, None);
   let mut client = Client::new();
   for call in calls() {
@@ -120,30 +121,28 @@ fn script_dir(root: &Path, log: &Path) -> PathBuf {
   bin
 }
 
+/// Answer one request per connection, as herdr 0.9.3 does.
 fn answer(listener: &UnixListener, protocol: u64, accepts: usize, methods: &Path) {
   for _ in 0..accepts {
     let Ok((mut stream, _)) = listener.accept() else {
       break;
     };
-    while let Ok(req) = read_json(&mut stream) {
-      let method = req.get("method").and_then(Value::as_str).unwrap_or("");
-      let id = req.get("id").cloned().unwrap_or(Value::Null);
-      let result = if method == "ping" {
-        json!({"type": "pong", "protocol": protocol})
-      } else {
-        json!({})
-      };
-      if write_json(&mut stream, &json!({"id": id, "result": result})).is_err() {
-        break;
-      }
-      if method != "ping" {
-        let _saved = std::fs::OpenOptions::new()
-          .create(true)
-          .append(true)
-          .open(methods)
-          .and_then(|mut file| writeln!(file, "{method}"));
-        break;
-      }
+    let Ok(req) = read_json(&mut stream) else {
+      continue;
+    };
+    let method = req.get("method").and_then(Value::as_str).unwrap_or("");
+    let id = req.get("id").cloned().unwrap_or(Value::Null);
+    let result = if method == "ping" {
+      json!({"type": "pong", "protocol": protocol})
+    } else {
+      json!({})
+    };
+    if write_json(&mut stream, &json!({"id": id, "result": result})).is_ok() && method != "ping" {
+      let _saved = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(methods)
+        .and_then(|mut file| writeln!(file, "{method}"));
     }
   }
 }
