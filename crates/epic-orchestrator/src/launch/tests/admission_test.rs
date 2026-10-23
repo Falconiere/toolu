@@ -196,3 +196,35 @@ fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
   .expect("the leftover lease is reclaimed");
   assert_eq!(rig.leases(), 1);
 }
+
+#[test]
+fn a_same_host_replacement_at_the_agent_cap_keeps_its_own_slot() {
+  let rig = Rig::new();
+  let state = rig.state();
+  let resources = rig.tmp.path().join("resources");
+  std::fs::create_dir_all(&resources).expect("resources");
+  std::fs::write(resources.join("policy.json"), r#"{"maxAgents":1}"#).expect("policy");
+  let worktree = rig.tmp.path().join("wt");
+  std::fs::create_dir_all(&worktree).expect("worktree");
+  let workspace = rig.herdr.add_repo(&worktree);
+  let mut ctx = rig.ctx();
+  let mut record = Record::new();
+  let owner = launch_reservation(
+    &reserve(&rig, &state, HostKind::Claude, false),
+    &mut record,
+    &mut ctx.herdr,
+  )
+  .expect("lease");
+  record.insert("pane_id".into(), json!(format!("{workspace}:p1")));
+  let real = std::fs::canonicalize(&worktree).expect("real");
+  record.insert("worktree".into(), json!(real.display().to_string()));
+  persist_attempt(&state, "issue-1", &owner, &mut record, "running").expect("persist");
+  let moved = launch_reservation(
+    &reserve(&rig, &state, HostKind::Claude, true),
+    &mut record,
+    &mut ctx.herdr,
+  )
+  .map_err(|err| err.message);
+  assert_eq!(moved, Ok(owner));
+  assert_eq!(rig.leases(), 1);
+}
