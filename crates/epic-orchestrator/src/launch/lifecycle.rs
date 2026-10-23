@@ -161,6 +161,12 @@ pub(crate) fn acknowledged_status(status: &str, tail: &str, fallback: Outcome) -
   }
 }
 
+/// The agent is listed but herdr has not populated its identity yet: still
+/// starting, not a failure.
+fn identity_pending(name: &str, err: &Failure) -> bool {
+  err.message == format!("cannot verify live identity of {name}")
+}
+
 /// Poll until herdr lists `name` with the recorded identity, up to `wait`: a
 /// started agent can precede herdr naming it, and a prompt sent before then
 /// fails with `agent_not_ready` while the agent idles with an empty prompt.
@@ -175,9 +181,14 @@ pub(crate) fn await_named_agent(
 ) -> Result<(), Failure> {
   let deadline = Instant::now() + wait;
   loop {
-    if let Some(live) = inspect_agent(herdr, name)? {
-      require_identity(name, &live, expected)?;
-      return Ok(());
+    match inspect_agent(herdr, name) {
+      Ok(Some(live)) => {
+        require_identity(name, &live, expected)?;
+        return Ok(());
+      }
+      Ok(None) => {}
+      Err(err) if identity_pending(name, &err) => {}
+      Err(err) => return Err(err),
     }
     if Instant::now() >= deadline {
       return Err(Failure::unknown(format!(

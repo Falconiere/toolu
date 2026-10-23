@@ -119,6 +119,14 @@ fn a_started_agent_is_addressable_before_its_first_prompt() {
     absent.message,
     "agent nobody is not addressable after start; inspect the owned pane before retry"
   );
+  rig.herdr.script(
+    "agent.list",
+    Scripted::Raw(r#"{"result":{"agents":[{"name":"nobody"}]}}"#.into()),
+  );
+  let pending =
+    await_named_agent(&mut ctx.herdr, "nobody", &right, Duration::ZERO).expect_err("pending");
+  assert!(pending.uncertain);
+  assert_eq!(pending.message, absent.message);
 }
 
 #[test]
