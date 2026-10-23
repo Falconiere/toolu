@@ -3169,6 +3169,17 @@ source: crates/cli/tests/helpers/schema.rs
               "short": null,
               "takesValue": true,
               "valueName": "N"
+            },
+            {
+              "global": false,
+              "help": "Only this epic's items and engine-wide ones; key or trailing issue number",
+              "hidden": false,
+              "long": "epic",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EPIC"
             }
           ],
           "hidden": false,

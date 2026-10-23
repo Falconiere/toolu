@@ -224,6 +224,10 @@ fn assert_wait_ack_and_answer(env: &Env) {
     env,
   );
   assert_eq!(waiting.exit, Exit::Success, "{waiting:?}");
+  let line = ["epic", "wait", "--epic", "nope", "--max-seconds", "0"];
+  let unknown = wait(&Ctx::default(), &parse(&line), env);
+  assert_eq!(unknown.exit, Exit::Failure, "{unknown:?}");
+  assert!(unknown.stderr.expect("err").contains("unknown epic: nope"));
   let ctx = Ctx::default();
   assert_eq!(
     ack(&ctx, &parse(&["epic", "ack", "a"]), env).exit,

@@ -75,11 +75,12 @@ fn epic_keys(issues: &[&Issue]) -> Vec<Value> {
   keys
 }
 
-/// `wait` when a judgment is already queued, otherwise the timeout body.
-pub(crate) fn wait_body(world: &mut World, max_seconds: u64) -> Value {
-  match attention::take(world) {
-    Some(item) => judgment(&item, world.now_ms),
-    None => waiting(max_seconds),
+/// The `wait` reply for `scope` and the token of the item it hands out: the
+/// oldest judgment the scope may take, else the timeout body and no token.
+pub(crate) fn wait_body(world: &mut World, scope: Option<&str>) -> (Value, String) {
+  match attention::take(world, scope) {
+    Some(item) => (judgment(&item, world.now_ms), item.token),
+    None => (json!({"state": "waiting"}), String::new()),
   }
 }
 
@@ -90,10 +91,6 @@ fn judgment(item: &Attention, now_ms: u64) -> Value {
     let _previous = map.insert("pending".to_owned(), json!(pending));
   }
   value
-}
-
-fn waiting(_max_seconds: u64) -> Value {
-  json!({"state": "waiting"})
 }
 
 #[cfg(test)]

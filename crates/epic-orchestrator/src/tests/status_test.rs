@@ -80,12 +80,12 @@ fn every_live_item_is_listed_with_state_and_age_and_wait_adds_pending() {
   let token = crate::attention::raise(&mut world, "blocked", "a", "blocked");
   crate::attention::set_pending(&mut world, &token, "Allow? (y/n)".to_owned());
   world.now_ms = 4_000;
-  let waited = super::wait_body(&mut world, 0);
+  let waited = super::wait_body(&mut world, None).0;
   assert_eq!(waited["kind"], "blocked");
   assert_eq!(waited["state"], "open");
   assert_eq!(waited["age_ms"], 3_000);
   assert_eq!(waited["pending"], "Allow? (y/n)");
-  assert_eq!(super::wait_body(&mut world, 0)["state"], "waiting");
+  assert_eq!(super::wait_body(&mut world, None).0["state"], "waiting");
   let doc = document(&world, true, None);
   assert_eq!(doc["attention"][0]["key"], "a");
   assert_eq!(doc["attention"][0]["age_ms"], 3_000);

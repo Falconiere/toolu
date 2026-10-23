@@ -45,11 +45,14 @@ Install the toolu marketplace plugin the same way as Claude Code (Cursor loads
 the Claude-shaped plugin tree). Then invoke the `epic-orchestrator` skill or
 the `/epic-orchestrator:epic` command.
 
-The orchestrator waits for judgments with `toolu epic wait`: on Claude Code
-as a background Bash call (45-minute default limit) that wakes it with a
-judgment or `waiting`, then starts again; on Codex as a
-foreground loop of `toolu epic wait --max-seconds 480`, since one tool call
-there cannot block for hours. The engine does the polling.
+The orchestrator waits for judgments with `toolu epic wait --epic <epic-key>`:
+on Claude Code as a background Bash call (45-minute default limit) that wakes
+it with a judgment or `waiting`, then starts again; on Codex as a foreground
+loop of `toolu epic wait --epic <epic-key> --max-seconds 480`, since one tool
+call there cannot block for hours. The engine does the polling. `--epic`
+returns only that epic's items and engine-wide ones, so several orchestrators
+can share one engine; an item handed out once is not handed out again after
+an engine restart.
 
 ## What it provides
 

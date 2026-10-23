@@ -185,7 +185,7 @@ fn assert_no_wait(sandbox: &Sandbox) {
 fn assert_wait(engine: &mut Engine, epic: &Path) {
   note_event(&mut engine.world, "a", "host-limited");
   engine.flush().expect("flush");
-  assert_eq!(wait_body(&mut engine.world, 0)["state"], "waiting");
+  assert_eq!(wait_body(&mut engine.world, None).0["state"], "waiting");
   engine
     .report(&Report {
       key: "c".to_owned(),
@@ -196,7 +196,7 @@ fn assert_wait(engine: &mut Engine, epic: &Path) {
       note: "look".to_owned(),
     })
     .expect("needs-human");
-  assert_eq!(wait_body(&mut engine.world, 0)["kind"], "needs-human");
+  assert_eq!(wait_body(&mut engine.world, None).0["kind"], "needs-human");
 }
 
 #[test]

@@ -5,13 +5,13 @@
       "id": 0,
       "name": "work-epic",
       "prompt": "work epic #402",
-      "expected_output": "Preflight (toolu doctor, herdr, gh, hosts), the plan tables from graph --dry-run and route --dry-run, then graph --save, route and toolu epic start <state_dir>, then one background `toolu --json epic wait` and the turn ends. No gate, merge, launch or finish command.",
+      "expected_output": "Preflight (toolu doctor, herdr, gh, hosts), the plan tables from graph --dry-run and route --dry-run, then graph --save, route and toolu epic start <state_dir>, then one background `toolu --json epic wait --epic <epic-key>` and the turn ends. No gate, merge, launch or finish command.",
       "files": [],
       "assertions": [
         "Runs `toolu doctor` before any other toolu command",
         "Shows the plan from `toolu epic graph ... --dry-run` and `toolu epic route ... --dry-run` before starting",
         "Starts with `toolu epic graph <epic> ... --save`, then `toolu epic route --graph <state_dir>/graph.json ...`, then `toolu epic start <state_dir>`, in that order",
-        "On Claude Code runs `toolu --json epic wait` as a background Bash call and ends its turn; on Codex runs `toolu --json epic wait --max-seconds 480` in the foreground",
+        "On Claude Code runs `toolu --json epic wait --epic <epic-key>` as a background Bash call and ends its turn; on Codex runs `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the foreground",
         "Runs no `toolu epic gate`, `toolu epic launch`, `toolu epic finish`, `toolu epic close` or `gh pr merge`",
         "Tells the user the dashboard URL http://127.0.0.1:7717/ and which workers run on which host"
       ]

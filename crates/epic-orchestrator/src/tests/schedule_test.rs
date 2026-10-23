@@ -127,10 +127,13 @@ fn pause_applies_to_every_epic_or_one() {
   assert!(!world.paused.contains("one"));
   set_pause(&mut world, None, false);
   assert!(!world.paused_all);
-  assert!(take_judgment(&mut world).is_none());
+  assert!(take_judgment(&mut world, None).is_none());
   note_event(&mut world, "a", "blocked");
-  assert_eq!(take_judgment(&mut world).expect("item").kind, "blocked");
-  assert!(take_judgment(&mut world).is_none());
+  assert_eq!(
+    take_judgment(&mut world, None).expect("item").kind,
+    "blocked"
+  );
+  assert!(take_judgment(&mut world, None).is_none());
 }
 
 #[test]
@@ -257,7 +260,7 @@ fn ack_silences_a_stall_until_its_full_length_passes_again() {
     .collect();
   assert_eq!(reopened, ["reopened", "notify"]);
   assert_eq!(
-    take_judgment(&mut world).map(|item| item.kind),
+    take_judgment(&mut world, None).map(|item| item.kind),
     Some("stall".to_owned())
   );
 }

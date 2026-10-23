@@ -228,6 +228,7 @@ Usage: toolu epic wait [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
       --max-seconds <N>   Stop after this many seconds; 0 returns immediately
+      --epic <EPIC>       Only this epic's items and engine-wide ones; key or trailing issue number
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
