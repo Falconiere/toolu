@@ -168,3 +168,31 @@ fn one_launch_at_a_time_per_issue() {
     Ok(2)
   );
 }
+
+#[test]
+fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
+  let rig = Rig::new();
+  let state = rig.state();
+  let resources = rig.tmp.path().join("resources");
+  let mut child = std::process::Command::new("true").spawn().expect("spawn");
+  let dead = child.id();
+  child.wait().expect("wait");
+  std::fs::create_dir_all(&resources).expect("resources");
+  std::fs::write(resources.join("policy.json"), r#"{"maxAgents":1}"#).expect("policy");
+  let leftover = format!(
+    r#"{{"token":"old","type":"agent","key":"issue-0","stateDir":"s","host":"claude","ownerPid":{dead},"stage":"running","createdAt":"c","heartbeatAt":"h"}}"#
+  );
+  std::fs::write(
+    resources.join("state.json"),
+    format!(r#"{{"version":1,"leases":[{leftover}],"cooldowns":{{}}}}"#),
+  )
+  .expect("state");
+  let mut ctx = rig.ctx();
+  launch_reservation(
+    &reserve(&rig, &state, HostKind::Claude, false),
+    &mut Record::new(),
+    &mut ctx.herdr,
+  )
+  .expect("the leftover lease is reclaimed");
+  assert_eq!(rig.leases(), 1);
+}

@@ -5,6 +5,7 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
+use toolu_engine::resources::agents::reconcile_agent_leases;
 use toolu_engine::resources::leases::{
   LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease, reconcile_resource_jobs,
 };
@@ -20,6 +21,7 @@ use toolu_runtime::json::ordered::Ordered;
 use super::failure::Failure;
 use super::lifecycle::{Expected, Herdr, Outcome, shutdown_agent};
 use super::record::{Record, text, write_record};
+use crate::herdr::Call;
 use crate::hosts::{HostKind, host_kind};
 use crate::route::load_host_pool;
 
@@ -153,6 +155,7 @@ pub(crate) fn launch_reservation(
 ) -> Result<Owner, Failure> {
   let root = text(record, "resource_root").map_or_else(|| resource_home(input.env), PathBuf::from);
   let selected = selected_cap(input)?;
+  reclaim_dead_agents(&root, herdr);
   let Some((token, saved_host)) = saved_lease(&root, input)? else {
     return acquire(root, input, selected);
   };
@@ -182,6 +185,27 @@ pub(crate) fn launch_reservation(
       Err(err)
     }
   }
+}
+
+/// Free the agent leases whose owner exited and whose agent herdr no longer
+/// lists (#583). herdr is asked only for such a lease, and only once; without
+/// its answer nothing is proven gone, so nothing is freed.
+fn reclaim_dead_agents(root: &Path, herdr: &mut Herdr<'_>) {
+  let mut listing: Option<Option<Vec<serde_json::Value>>> = None;
+  let listed = |name: &str, pane: Option<&str>| {
+    let agents = listing.get_or_insert_with(|| {
+      let reply = herdr.call(&Call::AgentList).ok()?;
+      reply.get("agents")?.as_array().cloned()
+    });
+    agents.as_ref().is_none_or(|agents| {
+      agents.iter().any(|agent| {
+        let text = |key: &str| agent.get(key).and_then(serde_json::Value::as_str);
+        text("name") == Some(name) || pane.is_some_and(|p| text("pane_id") == Some(p))
+      })
+    })
+  };
+  // A failed reclaim leaves the leases, as before; admission reports capacity.
+  let _freed = reconcile_agent_leases(root, listed);
 }
 
 /// The live agent a replacement moves away from.

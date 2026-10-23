@@ -3,6 +3,8 @@
 //! pressure holds, leases, worktree bindings and the managed job a ledger
 //! check runs under; agent migration and worktree fences for the epic engine (#435).
 
+/// Reclaiming agent leases whose owner and agent are gone.
+pub mod agents;
 /// A worktree's resource binding.
 pub mod binding;
 /// A command under a job lease.
