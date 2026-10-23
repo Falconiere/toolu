@@ -372,7 +372,7 @@ instruction a fixer follows) and `quote` holding the reviewer's text verbatim
   "path": "src/x.sh", "line": 12, "severity": "medium", "task": "<your instruction>", "quote": "<reviewer text>"}]}
 ```
 
-Route it (`--host` is this controller: `claude`, `codex` or `cursor`):
+Route it (`--host` is this controller: `claude`, `codex`, `cursor` or `muse`):
 
 ```bash
 toolu babysit route-fix --items "$PB_TMP/items.json" --host claude \

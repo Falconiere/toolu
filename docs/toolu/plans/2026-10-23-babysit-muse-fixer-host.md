@@ -80,7 +80,7 @@ session files → teardown → limit lines → docs → live round → gate.
     "id": "s7",
     "title": "Docs: helper.md, babysit workflow, README name muse and .toolu/tmp/",
     "check": "cargo xtask check-markdown-cli && grep -q 'cursor-agent`, `muse`' plugins/pr-babysit/skills/babysit/references/helper.md && grep -q '.toolu/tmp/' plugins/pr-babysit/skills/babysit/references/helper.md && grep -q 'cursor` or `muse`' plugins/pr-babysit/workflows/babysit.md && grep -q '`cursor-agent`, `muse`' plugins/pr-babysit/README.md && ! grep -q 'claude|codex|cursor ' plugins/pr-babysit/skills/babysit/references/helper.md",
-    "paths": ["plugins/pr-babysit/skills/babysit/references/helper.md", "plugins/pr-babysit/workflows/babysit.md", "plugins/pr-babysit/README.md"],
+    "paths": ["plugins/pr-babysit/skills/babysit/references/helper.md", "plugins/pr-babysit/workflows/babysit.md", "plugins/pr-babysit/README.md", "docs/config.md"],
     "input": "the three agent-facing Markdown files; boundary: no host list still stops at cursor, and every toolu command in them parses against the real CLI tree"
   },
   {
@@ -117,6 +117,10 @@ round (s8) runs the debug binary against real herdr 0.9.5 and Muse Code 1.4.12
 and records the commands, outputs and the empty agent/worktree/branch listings.
 `cargo xtask gate` before push; the Homebrew-toolu launcher-test deviation known
 from #607 is recorded if it recurs. Docs are synchronized in s7.
+
+## Deviations
+
+- s7 also updates `docs/config.md`: its `prBabysit` table lists the fixer hosts and their routing defaults, which the spec's documentation impact missed.
 
 ## Plan review
 

@@ -77,7 +77,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
                      "archiveAfterDays": 90,
                      "indexCap": 20 },
   "prBabysit":  { "dispatch": "herdr|inline",
-                  "hosts": ["claude", "codex", "cursor"],
+                  "hosts": ["claude", "codex", "cursor", "muse"],
                   "prefer": { "<tier>": ["<host>"] },
                   "routing": { "<host>": [{ "model": "<id>", "effort": "<level>" }, "…4 tiers"] },
                   "unattended": true,
@@ -511,10 +511,10 @@ fixer agent in the slot's worktree. Every key is optional:
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `dispatch` | `"herdr"` | `herdr` runs fixers as agents through `toolu babysit dispatch-fix` (herdr panes); `inline` keeps fixes in the controller session. Without a reachable herdr, a round with a Claude Code, Codex or Cursor group runs inline anyway. |
-| `hosts` | `[<controller host>]` | The fixer pool, in preference order: `claude` (`claude-code`), `codex`, `cursor` (`cursor-agent`). A host whose CLI is not on `PATH` is skipped. An unknown name is an error. |
+| `dispatch` | `"herdr"` | `herdr` runs fixers as agents through `toolu babysit dispatch-fix` (herdr panes); `inline` keeps fixes in the controller session. Without a reachable herdr, a round with a Claude Code, Codex, Cursor or Muse group runs inline anyway. |
+| `hosts` | `[<controller host>]` | The fixer pool, in preference order: `claude` (`claude-code`), `codex`, `cursor` (`cursor-agent`), `muse`. A host whose CLI is not on `PATH` is skipped. An unknown name is an error. |
 | `prefer` | `{}` | Per-tier host order, e.g. `{"critical": ["claude"]}`. Only hosts also in `hosts` count. |
-| `routing` | epic-orchestrator's table | Per host, four `{model, effort}` entries (trivial → critical) replacing that host's row. Defaults: claude `sonnet/low`, `sonnet/medium`, `opus/high`, `opus/xhigh`; codex `gpt-6-sol` low → xhigh; cursor `composer-2.5`, `gpt-5.6-sol-high`, `claude-opus-5-thinking-high`, `gpt-5.6-sol-xhigh` (effort lives in the model id). Values must be shell-safe. |
+| `routing` | epic-orchestrator's table | Per host, four `{model, effort}` entries (trivial → critical) replacing that host's row. Defaults: claude `sonnet/low`, `sonnet/medium`, `opus/high`, `opus/xhigh`; codex `gpt-6-sol` low → xhigh; cursor `composer-2.5`, `gpt-5.6-sol-high`, `claude-opus-5-thinking-high`, `gpt-5.6-sol-xhigh` (effort lives in the model id); muse `muse-spark-1.3/low`, `muse-wonder-1.0/medium`, `muse-wonder-1.0/high`, `muse-wonder-full-1.0/xhigh`. Values must be shell-safe. |
 | `unattended` | `true` | `true` starts fixers with the host's approval bypass (the epic-orchestrator default); `false` uses safe mode, and a fixer waiting at a prompt is reported, never answered. |
 | `jev` | `true` | `false` skips Jev and uses the task/severity heuristic. |
 

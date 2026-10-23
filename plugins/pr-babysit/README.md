@@ -21,7 +21,7 @@ codex plugin add pr-babysit@toolu
 ```
 
 Requires the `toolu` plugin. Multi-host fixes need [herdr](https://herdr.dev)
-and the host CLIs you list (`claude`, `codex`, `cursor-agent`); without herdr,
+and the host CLIs you list (`claude`, `codex`, `cursor-agent`, `muse`); without herdr,
 fixes run in-session as before. Jev routing needs `TYPESAFE_API_KEY`; without
 it a task/severity heuristic picks the tier.
 
