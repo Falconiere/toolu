@@ -70,5 +70,5 @@ impl Cursor {
 }
 
 #[cfg(test)]
-#[path = "cursor/tests/cursor_test.rs"]
+#[path = "tests/cursor_test.rs"]
 mod tests;

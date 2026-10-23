@@ -51,10 +51,6 @@ impl Driver for Cursor {
     }
   }
 
-  fn prepare(&self, _run: &Run<'_>, _project: &Path) -> Result<(), String> {
-    Ok(())
-  }
-
   fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
     let step = Step {
       name: "edit",
