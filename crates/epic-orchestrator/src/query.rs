@@ -6,10 +6,9 @@ use std::time::SystemTime;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
-use toolu_runtime::atomic::write_atomic;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
-use toolu_runtime::invocation::{current_dir, current_exe};
+use toolu_runtime::invocation::current_dir;
 use toolu_state::time::epoch_millis;
 
 use crate::PROTOCOL;
@@ -236,35 +235,6 @@ pub(crate) fn job(matches: &ArgMatches) -> Outcome {
     return failed("toolu epic job", "a command is required");
   }
   run_job(&argv, &cwd)
-}
-
-/// Install the engine's user service unit.
-pub(crate) fn service(env: &Env) -> Outcome {
-  let paths = Paths::from_env(env);
-  let Some(exe) = current_exe() else {
-    return failed("toolu epic service", "cannot find the current executable");
-  };
-  match install_unit(&paths, &env.home(), &exe) {
-    Ok(()) => Outcome::data(format!("toolu epic: unit {}", paths.service().display())),
-    Err(err) => failed("toolu epic service", &err),
-  }
-}
-
-/// Write the service unit to the resource and user configuration roots.
-pub(crate) fn install_unit(paths: &Paths, home: &Path, exe: &Path) -> Result<(), String> {
-  let body = format!(
-    "[Unit]\nDescription=toolu epic engine\n\n[Service]\nExecStart={} epic engine\nEnvironment=TOOLU_RESOURCE_HOME={}\n\n[Install]\nWantedBy=default.target\n",
-    exe.display(),
-    paths.root.display()
-  );
-  let user = home.join(".config/systemd/user/toolu-epic.service");
-  if !write_atomic(&paths.service(), &body) {
-    return Err(format!("could not write {}", paths.service().display()));
-  }
-  if !write_atomic(&user, &body) {
-    return Err(format!("could not write {}", user.display()));
-  }
-  Ok(())
 }
 
 /// Resolve a status file to its issue key and state directory.
