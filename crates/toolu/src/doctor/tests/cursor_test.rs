@@ -86,19 +86,3 @@ fn an_incomplete_cache_and_an_unmarked_local_directory_do_not_count() {
   copy(&repo_plugin("toolu"), &cursor.join("local/toolu"));
   assert!(collect(&roots(home.path())).plugins.is_empty());
 }
-
-#[test]
-fn a_plugin_without_hooks_json_warns() {
-  let home = tempfile::tempdir().unwrap();
-  let local = home.path().join(".cursor/plugins/local/toolu");
-  copy(&repo_plugin("toolu"), &local);
-  std::fs::write(local.join(".toolu-install.json"), "{}").unwrap();
-  std::fs::remove_file(local.join("hooks/hooks.json")).unwrap();
-  let inventory = collect(&roots(home.path()));
-  assert_eq!(inventory.plugins.len(), 1);
-  let warning = inventory.warning.unwrap();
-  assert!(
-    warning.contains("toolu has no hooks/hooks.json"),
-    "{warning}"
-  );
-}

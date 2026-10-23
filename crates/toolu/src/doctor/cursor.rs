@@ -25,24 +25,9 @@ pub(super) fn collect(roots: &Roots) -> Inventory {
       });
     }
   }
-  let silent: Vec<String> = plugins
-    .iter()
-    .filter(|plugin| {
-      plugin
-        .root
-        .as_deref()
-        .is_some_and(|root| !hooks_present(root))
-    })
-    .map(|plugin| {
-      format!(
-        "{} has no hooks/hooks.json, so Cursor runs none of its hooks",
-        plugin.name
-      )
-    })
-    .collect();
   Inventory {
     plugins,
-    warning: (!silent.is_empty()).then(|| silent.join("; ")),
+    warning: None,
   }
 }
 
@@ -91,10 +76,6 @@ fn version_of(root: &Path) -> Option<String> {
   let text = std::fs::read_to_string(root.join(".claude-plugin/plugin.json")).ok()?;
   let json: Value = serde_json::from_str(&text).ok()?;
   json.get("version")?.as_str().map(str::to_owned)
-}
-
-fn hooks_present(root: &Path) -> bool {
-  root.join("hooks/hooks.json").is_file()
 }
 
 #[cfg(test)]
