@@ -6,9 +6,9 @@ brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
 Works on **Claude Code**, **Codex**, and **Cursor Agent**, both
-as the orchestrator and as workers. One run can mix hosts
-(`--hosts claude:2,codex:2`): Jev scores each issue's complexity and a routing
-table picks the model and effort per host.
+as the orchestrator and as workers, and runs workers on **Muse Code**. One run
+can mix hosts (`--hosts claude:2,codex:2,muse:1`): Jev scores each issue's
+complexity and a routing table picks the model and effort per host.
 
 ## Install
 
@@ -196,9 +196,10 @@ a `Repo: owner/name` description line, or `--repo` (default: current repo).
 | Claude Code | `--dangerously-skip-permissions` | `--model` / `--effort` | `--resume <captured-id>` |
 | Codex | `--no-daemon --dangerously-bypass-approvals-and-sandbox` | `--model` / `-c model_reasoning_effort=` | `resume <captured-id>` |
 | Cursor Agent | `--yolo --trust --approve-mcps` | model id carries effort | `--resume <captured-id>` |
+| Muse Code | `--yolo` | `--model` / `--reasoning-effort` | `resume <captured-id>` |
 
 `--safe` keeps approval prompts on (Claude runs in its `auto` permission
-mode); pass it as `toolu epic start <state-dir> --safe`, which the engine and
+mode, Muse in `--approval-mode on-request --trust-workspace`); pass it as `toolu epic start <state-dir> --safe`, which the engine and
 a manual `toolu epic launch` read from `<state-dir>/launch.json` until a start
 without it. With `--no-jev` the engine sends Jev nothing (workers' babysit
 routing keeps its own `prBabysit.jev` setting): pass it to
@@ -207,7 +208,8 @@ routing keeps its own `prBabysit.jev` setting): pass it to
 and coupling check heuristic. `--kind`, `--model` and `--effort` override the route for
 one manual `toolu epic launch`. Default tiers (`trivial`, `standard`,
 `complex`, `critical`) map to Claude `sonnet` low → `opus` xhigh, Codex
-`gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`. Override per host and tier in `routing.json`
+`gpt-6-sol` low → xhigh, Cursor `composer-2.5` → `gpt-5.6-sol-xhigh`, Muse `muse-spark-1.3` low →
+`muse-wonder-1.0` medium and high → `muse-wonder-full-1.0` xhigh. Override per host and tier in `routing.json`
 under the state root, or point `EPIC_ROUTING_FILE` at one.
 
 Routes are preferences, not reservations. Cached routes count against each batch
@@ -275,7 +277,12 @@ probe --check-evidence` validates its recorded contract, not live provider
 availability.
 The October 3 probe verified Codex tool/session lifecycles. Claude's
 expired login and Cursor's locked keychain leave their tool/cancel coverage
-explicitly unverified.
+explicitly unverified. The October 23 Muse probe (herdr 0.9.5, Muse Code 1.4.12)
+verified all six capabilities. Muse writes its session at start under
+`$XDG_DATA_HOME/muse/sessions/<yyyy>/<mm>/<dd>/<uuid>/` (default
+`~/.local/share/muse`), where launch captures it. Teardown follows `/exit` with
+`enter`, which confirms Muse's "Exit anyway" prompt when background work is
+still running.
 
 ## Merging
 
