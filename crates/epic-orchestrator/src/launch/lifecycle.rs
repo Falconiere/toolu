@@ -161,6 +161,62 @@ pub(crate) fn acknowledged_status(status: &str, tail: &str, fallback: Outcome) -
   }
 }
 
+/// The agent is listed but herdr has not populated its identity yet: still
+/// starting, not a failure.
+fn identity_pending(name: &str, err: &Failure) -> bool {
+  err.message == format!("cannot verify live identity of {name}")
+}
+
+/// Whether herdr no longer lists `name`. A dying agent's entry degrades
+/// before its name disappears: still present, not a failure.
+fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
+  match inspect_agent(herdr, name) {
+    Ok(agent) => Ok(agent.is_none()),
+    Err(err) if identity_pending(name, &err) => Ok(false),
+    Err(err) => Err(err),
+  }
+}
+
+/// A status that accepts a prompt.
+fn promptable(status: &str) -> bool {
+  status == "idle" || status == "done"
+}
+
+/// Poll until herdr lists `name` with the recorded identity and a promptable
+/// status, up to `wait`: a started agent precedes herdr naming it, and naming
+/// precedes it accepting input. A prompt sent before then fails with
+/// `agent_not_ready` while the agent idles with an empty prompt.
+///
+/// # Errors
+/// The agent never appears promptable with its identity, or herdr fails.
+pub(crate) fn await_named_agent(
+  herdr: &mut Herdr<'_>,
+  name: &str,
+  expected: &Expected<'_>,
+  wait: Duration,
+) -> Result<(), Failure> {
+  let deadline = Instant::now() + wait;
+  loop {
+    match inspect_agent(herdr, name) {
+      Ok(Some(live)) => {
+        require_identity(name, &live, expected)?;
+        if promptable(&live.status) {
+          return Ok(());
+        }
+      }
+      Ok(None) => {}
+      Err(err) if identity_pending(name, &err) => {}
+      Err(err) => return Err(err),
+    }
+    if Instant::now() >= deadline {
+      return Err(Failure::unknown(format!(
+        "agent {name} is not addressable after start; inspect the owned pane before retry"
+      )));
+    }
+    std::thread::sleep(Duration::from_millis(500));
+  }
+}
+
 /// Whether a prompt is running work or stopped at a blocked UI.
 ///
 /// # Errors
@@ -271,7 +327,10 @@ pub(crate) fn shutdown_agent(
   }
   request_exit(herdr, name, expected.kind)?;
   let deadline = Instant::now() + Duration::from_secs(30);
-  while inspect_agent(herdr, name)?.is_some() {
+  loop {
+    if listing_gone(herdr, name)? {
+      break;
+    }
     if Instant::now() >= deadline {
       return Ok(Outcome::CleanupIncomplete);
     }

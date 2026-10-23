@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use super::{
-  Expected, Outcome, acknowledged_outcome, acknowledged_status, inspect_agent, shutdown_agent,
+  Expected, Outcome, acknowledged_outcome, acknowledged_status, await_named_agent, inspect_agent,
+  shutdown_agent,
 };
 use crate::herdr::Call;
 use crate::herdr_state::Scripted;
@@ -96,6 +98,47 @@ fn a_live_agent_is_verified_by_host_pane_and_worktree() {
 }
 
 #[test]
+fn a_started_agent_is_addressable_before_its_first_prompt() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "claude");
+  let mut ctx = rig.ctx();
+  let right = expected(HostKind::Claude, &pane, &worktree);
+  // A working agent is listed, but not promptable yet.
+  rig.herdr.state().agents[0].status = "working".into();
+  let busy = await_named_agent(&mut ctx.herdr, "k-1", &right, Duration::ZERO).expect_err("busy");
+  assert!(busy.uncertain);
+  assert_eq!(
+    busy.message,
+    "agent k-1 is not addressable after start; inspect the owned pane before retry"
+  );
+  rig.herdr.state().agents[0].status = "idle".into();
+  await_named_agent(&mut ctx.herdr, "k-1", &right, Duration::from_secs(5)).expect("named");
+  let wrong = expected(HostKind::Codex, &pane, &worktree);
+  let mismatch =
+    await_named_agent(&mut ctx.herdr, "k-1", &wrong, Duration::ZERO).expect_err("identity");
+  assert!(!mismatch.uncertain);
+  assert_eq!(
+    mismatch.message,
+    "live agent k-1 identity does not match recorded host/pane/worktree"
+  );
+  let absent =
+    await_named_agent(&mut ctx.herdr, "nobody", &right, Duration::ZERO).expect_err("absent");
+  assert!(absent.uncertain);
+  assert_eq!(
+    absent.message,
+    "agent nobody is not addressable after start; inspect the owned pane before retry"
+  );
+  rig.herdr.script(
+    "agent.list",
+    Scripted::Raw(r#"{"result":{"agents":[{"name":"nobody"}]}}"#.into()),
+  );
+  let pending =
+    await_named_agent(&mut ctx.herdr, "nobody", &right, Duration::ZERO).expect_err("pending");
+  assert!(pending.uncertain);
+  assert_eq!(pending.message, absent.message);
+}
+
+#[test]
 fn shutdown_exits_the_agent_and_codex_also_stops_its_jobs() {
   let rig = Rig::new();
   let (worktree, pane) = started(&rig, "codex");
@@ -136,6 +179,30 @@ fn shutdown_exits_the_agent_and_codex_also_stops_its_jobs() {
       &mut ctx.herdr,
       "k-1",
       &expected(HostKind::Codex, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+}
+
+#[test]
+fn shutdown_tolerates_a_degrading_entry_while_the_agent_exits() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "claude");
+  let full = format!(
+    "{{\"result\":{{\"agents\":[{{\"name\":\"k-1\",\"agent\":\"claude\",\"pane_id\":\"{pane}\",\"cwd\":\"{}\",\"agent_status\":\"idle\"}}]}}}}",
+    worktree.display()
+  );
+  rig.herdr.script("agent.list", Scripted::Raw(full));
+  rig.herdr.script(
+    "agent.list",
+    Scripted::Raw(r#"{"result":{"agents":[{"name":"k-1"}]}}"#.into()),
+  );
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Claude, &pane, &worktree)
     ),
     Ok(Outcome::Exited)
   );

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::{AgentPlan, Resolved, ensure_agent};
 use crate::herdr::Call;
 use crate::hosts::HostKind;
@@ -33,7 +35,7 @@ fn a_dry_start_prints_the_argv_and_a_resume_needs_its_session() {
     dry: true,
     ..plan("<root-pane>", "/wt")
   };
-  let start = ensure_agent(&mut ctx.herdr, &dry, &mut log).expect("dry");
+  let start = ensure_agent(&mut ctx.herdr, &dry, &mut log, Duration::from_secs(5)).expect("dry");
   assert_eq!(
     log,
     [
@@ -46,13 +48,15 @@ fn a_dry_start_prints_the_argv_and_a_resume_needs_its_session() {
     previous_kind: Some("claude".into()),
     ..dry.clone()
   };
-  let missing = ensure_agent(&mut ctx.herdr, &resume, &mut log).expect_err("session");
+  let missing =
+    ensure_agent(&mut ctx.herdr, &resume, &mut log, Duration::from_secs(5)).expect_err("session");
   assert!(missing.message.starts_with("captured session ID missing"));
   let resumed = AgentPlan {
     session_id: Some("0199a272-0b4e-7cc3-8c4f-071c81275655".into()),
     ..resume
   };
-  let start = ensure_agent(&mut ctx.herdr, &resumed, &mut log).expect("resume");
+  let start =
+    ensure_agent(&mut ctx.herdr, &resumed, &mut log, Duration::from_secs(5)).expect("resume");
   assert!(start.resumed && start.args.starts_with(&["--resume".to_owned()]));
 }
 
@@ -76,7 +80,8 @@ fn a_live_agent_is_kept_only_with_its_recorded_session_and_host() {
   };
   ctx.herdr.call(&start).expect("start");
   let live = plan(&pane, &worktree);
-  let unrecorded = ensure_agent(&mut ctx.herdr, &live, &mut Vec::new()).expect_err("session");
+  let wait = Duration::from_secs(5);
+  let unrecorded = ensure_agent(&mut ctx.herdr, &live, &mut Vec::new(), wait).expect_err("session");
   assert_eq!(
     unrecorded.message,
     "live session identity is missing; inspect before explicit --replace"
@@ -90,14 +95,14 @@ fn a_live_agent_is_kept_only_with_its_recorded_session_and_host() {
     previous_kind: Some("claude".into()),
     ..live.clone()
   };
-  let refused = ensure_agent(&mut ctx.herdr, &moving, &mut Vec::new()).expect_err("move");
+  let refused = ensure_agent(&mut ctx.herdr, &moving, &mut Vec::new(), wait).expect_err("move");
   assert_eq!(refused.message, "host change requires explicit --replace");
   let replace = AgentPlan {
     replace: true,
     ..moving
   };
   let mut log = Vec::new();
-  let started = ensure_agent(&mut ctx.herdr, &replace, &mut log).expect("replaced");
+  let started = ensure_agent(&mut ctx.herdr, &replace, &mut log, wait).expect("replaced");
   assert!(started.started && log[0] == "herdr agent prompt k-1 /exit");
   assert!(log[1].starts_with("herdr agent start k-1 --kind codex"));
 }
