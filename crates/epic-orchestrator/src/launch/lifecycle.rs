@@ -167,12 +167,18 @@ fn identity_pending(name: &str, err: &Failure) -> bool {
   err.message == format!("cannot verify live identity of {name}")
 }
 
-/// Poll until herdr lists `name` with the recorded identity, up to `wait`: a
-/// started agent can precede herdr naming it, and a prompt sent before then
-/// fails with `agent_not_ready` while the agent idles with an empty prompt.
+/// A status that accepts a prompt.
+fn promptable(status: &str) -> bool {
+  status == "idle" || status == "done"
+}
+
+/// Poll until herdr lists `name` with the recorded identity and a promptable
+/// status, up to `wait`: a started agent precedes herdr naming it, and naming
+/// precedes it accepting input. A prompt sent before then fails with
+/// `agent_not_ready` while the agent idles with an empty prompt.
 ///
 /// # Errors
-/// The agent never appears with its identity, or herdr fails.
+/// The agent never appears promptable with its identity, or herdr fails.
 pub(crate) fn await_named_agent(
   herdr: &mut Herdr<'_>,
   name: &str,
@@ -184,7 +190,9 @@ pub(crate) fn await_named_agent(
     match inspect_agent(herdr, name) {
       Ok(Some(live)) => {
         require_identity(name, &live, expected)?;
-        return Ok(());
+        if promptable(&live.status) {
+          return Ok(());
+        }
       }
       Ok(None) => {}
       Err(err) if identity_pending(name, &err) => {}
