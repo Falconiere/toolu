@@ -2,9 +2,13 @@
 //! must be the recorded one, a resume must attach the recorded session, and a
 //! host change needs `--replace`.
 
+use std::time::Duration;
+
 use super::checkout::shell_join;
 use super::failure::Failure;
-use super::lifecycle::{Expected, Herdr, Outcome, inspect_agent, require_identity, shutdown_agent};
+use super::lifecycle::{
+  Expected, Herdr, Outcome, await_named_agent, inspect_agent, require_identity, shutdown_agent,
+};
 use super::session::require_captured_session;
 use crate::herdr::Call;
 use crate::hosts::{AgentOpts, HostKind, agent_args, host_kind};
@@ -127,6 +131,28 @@ fn keep_or_stop(
   Ok(None)
 }
 
+/// Wait for a fresh start to answer to its name before its first prompt.
+///
+/// # Errors
+/// The agent stays unaddressable, or herdr fails.
+fn await_start(
+  herdr: &mut Herdr<'_>,
+  plan: &AgentPlan,
+  kind: HostKind,
+  wait: Duration,
+) -> Result<(), Failure> {
+  await_named_agent(
+    herdr,
+    &plan.key,
+    &Expected {
+      kind,
+      pane: &plan.pane,
+      cwd: &plan.worktree,
+    },
+    wait,
+  )
+}
+
 /// The `agent start` call and its argv after `--`.
 fn start_call(plan: &AgentPlan, resume: bool) -> Result<(Call, Vec<String>), Failure> {
   let kind = plan.host.kind;
@@ -151,14 +177,18 @@ fn start_call(plan: &AgentPlan, resume: bool) -> Result<(Call, Vec<String>), Fai
 }
 
 /// Keep a verified live agent, stop it for `--replace`, then start or resume.
+/// A fresh start waits up to `wait` for herdr to name the agent, so the
+/// brief never sends to an agent that cannot receive it.
 ///
 /// # Errors
 /// A foreign live agent, a host change without replace, a missing session,
-/// an agent that will not exit, or herdr failing.
+/// an agent that will not exit, an agent that stays unaddressable, or herdr
+/// failing.
 pub(crate) fn ensure_agent(
   herdr: &mut Herdr<'_>,
   plan: &AgentPlan,
   log: &mut Vec<String>,
+  wait: Duration,
 ) -> Result<AgentStart, Failure> {
   let (key, kind) = (plan.key.as_str(), plan.host.kind);
   if !plan.dry
@@ -183,6 +213,9 @@ pub(crate) fn ensure_agent(
     });
   }
   herdr.call(&start)?;
+  if !resume {
+    await_start(herdr, plan, kind, wait)?;
+  }
   if resume {
     let live = inspect_agent(herdr, key)?
       .ok_or_else(|| Failure::refusal("resumed agent disappeared before identity verification"))?;

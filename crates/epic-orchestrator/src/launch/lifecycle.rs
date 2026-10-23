@@ -161,6 +161,33 @@ pub(crate) fn acknowledged_status(status: &str, tail: &str, fallback: Outcome) -
   }
 }
 
+/// Poll until herdr lists `name` with the recorded identity, up to `wait`: a
+/// started agent can precede herdr naming it, and a prompt sent before then
+/// fails with `agent_not_ready` while the agent idles with an empty prompt.
+///
+/// # Errors
+/// The agent never appears with its identity, or herdr fails.
+pub(crate) fn await_named_agent(
+  herdr: &mut Herdr<'_>,
+  name: &str,
+  expected: &Expected<'_>,
+  wait: Duration,
+) -> Result<(), Failure> {
+  let deadline = Instant::now() + wait;
+  loop {
+    if let Some(live) = inspect_agent(herdr, name)? {
+      require_identity(name, &live, expected)?;
+      return Ok(());
+    }
+    if Instant::now() >= deadline {
+      return Err(Failure::unknown(format!(
+        "agent {name} is not addressable after start; inspect the owned pane before retry"
+      )));
+    }
+    std::thread::sleep(Duration::from_millis(500));
+  }
+}
+
 /// Whether a prompt is running work or stopped at a blocked UI.
 ///
 /// # Errors

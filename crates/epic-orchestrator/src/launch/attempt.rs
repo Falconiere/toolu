@@ -193,7 +193,7 @@ impl<'g> Attempt<'g> {
       session_id: text(record, "session_id").map(str::to_owned),
       session_started_after: record.get("session_started_after").and_then(Value::as_u64),
     };
-    let start = ensure_agent(&mut ctx.herdr, &plan, &mut self.log)?;
+    let start = ensure_agent(&mut ctx.herdr, &plan, &mut self.log, ctx.session_wait)?;
     if !self.opts.dry_run && start.started && !start.resumed {
       record.insert("session_started_after".to_owned(), json!(self.started_at));
       let id = capture_session(self.host.kind, &wt.path, self.started_at, ctx.env)?;

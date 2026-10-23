@@ -1,7 +1,9 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use super::{
-  Expected, Outcome, acknowledged_outcome, acknowledged_status, inspect_agent, shutdown_agent,
+  Expected, Outcome, acknowledged_outcome, acknowledged_status, await_named_agent, inspect_agent,
+  shutdown_agent,
 };
 use crate::herdr::Call;
 use crate::herdr_state::Scripted;
@@ -92,6 +94,30 @@ fn a_live_agent_is_verified_by_host_pane_and_worktree() {
       .expect_err("omitted")
       .message,
     "herdr agent list omitted agents"
+  );
+}
+
+#[test]
+fn a_started_agent_is_addressable_before_its_first_prompt() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "claude");
+  let mut ctx = rig.ctx();
+  let right = expected(HostKind::Claude, &pane, &worktree);
+  await_named_agent(&mut ctx.herdr, "k-1", &right, Duration::from_secs(5)).expect("named");
+  let wrong = expected(HostKind::Codex, &pane, &worktree);
+  let mismatch =
+    await_named_agent(&mut ctx.herdr, "k-1", &wrong, Duration::ZERO).expect_err("identity");
+  assert!(!mismatch.uncertain);
+  assert_eq!(
+    mismatch.message,
+    "live agent k-1 identity does not match recorded host/pane/worktree"
+  );
+  let absent =
+    await_named_agent(&mut ctx.herdr, "nobody", &right, Duration::ZERO).expect_err("absent");
+  assert!(absent.uncertain);
+  assert_eq!(
+    absent.message,
+    "agent nobody is not addressable after start; inspect the owned pane before retry"
   );
 }
 
