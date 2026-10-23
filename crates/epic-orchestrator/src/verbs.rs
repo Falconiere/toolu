@@ -205,6 +205,12 @@ fn wait_command() -> Command {
         .value_parser(clap::value_parser!(u64))
         .help("Stop after this many seconds; 0 returns immediately"),
     )
+    .arg(
+      Arg::new("epic")
+        .long("epic")
+        .value_name("EPIC")
+        .help("Only this epic's items and engine-wide ones; key or trailing issue number"),
+    )
 }
 
 fn report_command() -> Command {

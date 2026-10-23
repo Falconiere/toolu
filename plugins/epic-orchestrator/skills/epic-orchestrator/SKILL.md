@@ -94,15 +94,15 @@ named after its key). Resume: the same commands.
 
 ## 4. Wait for judgments
 
-- **Claude Code:** run `toolu --json epic wait` as a background Bash call
+- **Claude Code:** run `toolu --json epic wait --epic <epic-key>` as a background Bash call
   (`run_in_background: true`) and end your turn. Its completion (a judgment,
   or `waiting` after 45 minutes) wakes you: handle it, then start the next one
   while any issue is active. Keep exactly one; answer the user meanwhile.
 - **Codex:** one tool call cannot block for hours, so loop:
-  run `toolu --json epic wait --max-seconds 480` in the foreground, handle what
-  it returns, and run it again while any issue is active.
+  run `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the
+  foreground, handle what it returns, and run it again while any issue is active.
 
-It returns one judgment (`kind`, `key`, `note`, `pending` for `blocked`) or
+It returns one judgment of this epic or an engine-wide one (`kind`, `key`, `note`, `pending` for `blocked`) or
 `{"state": "waiting"}` at the limit; only a `waiting` at once means no engine
 runs (`toolu epic status`, then `toolu epic start "$STATE_DIR"`). A worker report
 or a settled cause closes an item; ack the rest once handled.

@@ -108,16 +108,7 @@ pub(crate) fn answer(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   let body = text(matches, "text").unwrap_or("");
   let by = answerer(ctx, text(matches, "by"));
   let request = json!({"op": "answer", "key": key, "text": body, "by": by});
-  if let Err(err) = ensure(env) {
-    return failed("toolu epic answer", &err);
-  }
-  match exchange_retry(&Paths::from_env(env), PROTOCOL, &request) {
-    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
-      Some(err) => failed("toolu epic answer", err),
-      None => json_out(&doc),
-    },
-    Err(err) => failed("toolu epic answer", &err),
-  }
+  ask_checked(env, "answer", &request)
 }
 
 /// `--by`, else the `--host` name, else `user`.
@@ -141,8 +132,11 @@ pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
   if !live(&paths.lock()) {
     return json_out(&json!({"state": "waiting"}));
   }
-  let request = json!({"op": "wait", "max_seconds": max});
-  ask(env, "wait", &request)
+  let request = match text(matches, "epic") {
+    Some(epic) => json!({"op": "wait", "max_seconds": max, "epic": epic}),
+    None => json!({"op": "wait", "max_seconds": max}),
+  };
+  ask_checked(env, "wait", &request)
 }
 
 /// Persist and submit a worker phase report.
@@ -214,6 +208,20 @@ pub(crate) fn ask(env: &Env, verb: &str, request: &Value) -> Outcome {
   }
   match exchange_retry(&Paths::from_env(env), PROTOCOL, request) {
     Ok(doc) => json_out(&doc),
+    Err(err) => failed(&format!("toolu epic {verb}"), &err),
+  }
+}
+
+/// As [`ask`], but an `error` reply from the engine is a failure.
+pub(crate) fn ask_checked(env: &Env, verb: &str, request: &Value) -> Outcome {
+  if let Err(err) = ensure(env) {
+    return failed(&format!("toolu epic {verb}"), &err);
+  }
+  match exchange_retry(&Paths::from_env(env), PROTOCOL, request) {
+    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
+      Some(err) => failed(&format!("toolu epic {verb}"), err),
+      None => json_out(&doc),
+    },
     Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }
 }
