@@ -119,7 +119,7 @@ pub(crate) fn repo_roots(env: &Env) -> Vec<PathBuf> {
 /// # Errors
 /// Nothing known gives a directory other than `/`.
 pub(crate) fn resolve_clone_root(
-  epic_checkout: Option<String>,
+  epic_checkout: Option<&str>,
   repo_roots: &[PathBuf],
   herdr_roots: &[PathBuf],
   checkouts: &BTreeMap<String, Option<String>>,

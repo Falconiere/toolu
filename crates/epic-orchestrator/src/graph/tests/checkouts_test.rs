@@ -89,12 +89,7 @@ fn clone_root_comes_from_known_roots_and_never_from_slash() {
   let none = BTreeMap::new();
   let root = |checkout: Option<&str>, roots: &[&str], herdr: &[&str]| {
     let paths = |list: &[&str]| list.iter().map(PathBuf::from).collect::<Vec<_>>();
-    resolve_clone_root(
-      checkout.map(str::to_owned),
-      &paths(roots),
-      &paths(herdr),
-      &none,
-    )
+    resolve_clone_root(checkout, &paths(roots), &paths(herdr), &none)
   };
   assert_eq!(
     root(Some("/a/b/repo"), &["/x"], &[]),

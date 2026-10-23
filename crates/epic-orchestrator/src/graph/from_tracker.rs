@@ -62,7 +62,7 @@ pub(crate) fn build(input: &BuildInput<'_>) -> Result<Graph, String> {
   let checkouts = resolve_checkouts(&repos, &input.herdr_roots, &input.repo_roots);
   annotate(&mut issues, &launched, &checkouts);
   let clone_root = resolve_clone_root(
-    checkouts.get(&epic_repo).cloned().flatten(),
+    checkouts.get(&epic_repo).and_then(Option::as_deref),
     &input.repo_roots,
     &input.herdr_roots,
     &checkouts,
