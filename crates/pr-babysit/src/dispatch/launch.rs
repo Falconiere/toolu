@@ -152,7 +152,7 @@ impl Dispatcher<'_> {
     if error.is_empty() {
       return self.patch_group(seq, &json!({"status": "running"}));
     }
-    stop_agent(self.env, name);
+    stop_agent(self.env, name, Some(agent.host));
     self.settle(seq, "agent_start_failed", "", &error)
   }
 

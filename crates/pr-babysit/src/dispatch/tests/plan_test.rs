@@ -31,6 +31,12 @@ fn a_well_formed_plan_passes() {
     json!({"dispatch": "herdr", "groups": [group(&json!(1), "codex"), group(&json!(2), "claude")]});
   let state = json!({"slot": "falconiere-toolu-165"});
   assert!(validate(&plan, &items(), &state).is_ok());
+  let mut muse = group(&json!(1), "muse");
+  muse["model"] = json!("muse-wonder-1.0");
+  muse["effort"] = json!("high");
+  let plan = json!({"dispatch": "herdr", "groups": [muse]});
+  let state = json!({"slot": "falconiere-toolu-165"});
+  assert!(validate(&plan, &items(), &state).is_ok());
 }
 
 #[test]
@@ -76,7 +82,7 @@ fn hosts_and_routing_are_checked_before_any_worktree() {
   assert_eq!(code, "config_invalid");
   assert_eq!(
     text,
-    "plan group 1 names host 'vim'; use one of claude, codex, cursor"
+    "plan group 1 names host 'vim'; use one of claude, codex, cursor, muse"
   );
   let mut unsafe_model = group(&json!(1), "codex");
   unsafe_model["model"] = json!("gpt; rm -rf /");

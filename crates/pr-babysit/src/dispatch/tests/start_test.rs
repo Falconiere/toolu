@@ -9,9 +9,13 @@ const MINIMAL: &str =
   r#"{"version":2,"repo":"Falconiere/toolu","number":165,"slot":"falconiere-toolu-165"}"#;
 
 fn claude_plan(dir: &Path) -> std::path::PathBuf {
+  one_group_plan(dir, "claude", "opus", "xhigh")
+}
+
+fn one_group_plan(dir: &Path, host: &str, model: &str, effort: &str) -> std::path::PathBuf {
   let items = fixture::json("items/review-items.json");
   let id = items["items"][0]["id"].clone();
-  let group = json!({"seq": 1, "tier": "critical", "host": "claude", "model": "opus", "effort": "xhigh", "items": [id]});
+  let group = json!({"seq": 1, "tier": "critical", "host": host, "model": model, "effort": effort, "items": [id]});
   let plan = dir.join("plan.json");
   std::fs::write(
     &plan,
@@ -86,6 +90,43 @@ fn a_dry_run_records_the_herdr_commands_and_keeps_the_state_byte_identical() {
   );
   assert_eq!(std::fs::read_to_string(&state).unwrap(), MINIMAL);
   assert!(!dir.path().join("state.json.lock").exists());
+}
+
+#[test]
+fn a_muse_group_starts_a_muse_agent_with_its_approval_model_and_effort_flags() {
+  let dir = tempfile::tempdir().unwrap();
+  let state = dir.path().join("state.json");
+  std::fs::write(&state, MINIMAL).unwrap();
+  let repo = dir.path().join("repo").display().to_string();
+  let plan = one_group_plan(dir.path(), "muse", "muse-wonder-full-1.0", "xhigh");
+  let result = dry_start(&state, &plan, &repo);
+  let start: Vec<&str> = result["commands"]
+    .as_array()
+    .unwrap()
+    .iter()
+    .filter_map(Value::as_array)
+    .find(|command| command.get(2).and_then(Value::as_str) == Some("start"))
+    .unwrap()
+    .iter()
+    .filter_map(Value::as_str)
+    .collect();
+  let tail = start.iter().position(|arg| *arg == "--").unwrap();
+  assert_eq!(start[..3], ["herdr", "agent", "start"]);
+  assert!(
+    start[3].starts_with("pb-") && start[3].ends_with("-r1g1"),
+    "{start:?}"
+  );
+  assert_eq!(start[4..6], ["--kind", "muse"]);
+  assert_eq!(
+    start[tail + 1..],
+    [
+      "--yolo",
+      "--model",
+      "muse-wonder-full-1.0",
+      "--reasoning-effort",
+      "xhigh"
+    ]
+  );
 }
 
 #[test]

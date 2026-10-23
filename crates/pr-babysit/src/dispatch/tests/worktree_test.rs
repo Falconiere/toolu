@@ -84,3 +84,22 @@ fn a_local_slot_branch_with_unpushed_commits_is_never_dropped() {
   );
   assert_eq!(native(&sb).unwrap()["branch"], SLOT_BRANCH);
 }
+
+#[test]
+fn muse_hook_state_under_toolu_tmp_is_a_session_file_but_a_new_skill_is_work() {
+  let sb = sandbox();
+  let path = native(&sb).unwrap()["path"].as_str().unwrap().to_owned();
+  let telemetry = Path::new(&path).join(".toolu/tmp/muse/telemetry");
+  std::fs::create_dir_all(&telemetry).unwrap();
+  std::fs::write(telemetry.join("hook.json"), "{}").unwrap();
+  assert!(native(&sb).is_ok());
+  let skill = Path::new(&path).join(".toolu/skills/fix");
+  std::fs::create_dir_all(&skill).unwrap();
+  std::fs::write(skill.join("SKILL.md"), "# fix\n").unwrap();
+  let dirty = native(&sb).unwrap_err();
+  assert_eq!(dirty.code, "worktree_dirty");
+  assert_eq!(
+    dirty.extra["changes"],
+    serde_json::json!(["?? .toolu/skills/fix/SKILL.md"])
+  );
+}

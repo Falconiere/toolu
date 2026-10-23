@@ -1,4 +1,4 @@
-//! The three fixer hosts, their CLIs, default model routing per tier, and the
+//! The four fixer hosts, their CLIs, default model routing per tier, and the
 //! approval, name, model and effort flags a fixer pane is launched with —
 //! the same contract the epic orchestrator launches workers with.
 
@@ -6,6 +6,9 @@ use crate::error::{Failure, Result};
 use crate::pattern::{is, pattern};
 
 pattern!(SAFE, r"^[A-Za-z0-9_./:=,@%+#-]+$");
+
+/// The fixer host names, for messages that list them.
+pub(crate) const NAMES: &str = "claude, codex, cursor, muse";
 
 /// The word that opens a rejected argument's message.
 const UNSAFE: &str = "unsafe";
@@ -19,6 +22,8 @@ pub(crate) enum Fixer {
   Codex,
   /// Cursor's agent CLI.
   Cursor,
+  /// Muse Code.
+  Muse,
 }
 
 /// A tier's model and effort; either may be left to the host.
@@ -46,7 +51,7 @@ pub(crate) fn safe(text: &str) -> bool {
 
 impl Fixer {
   /// Every fixer host.
-  pub(crate) const ALL: [Fixer; 3] = [Fixer::Claude, Fixer::Codex, Fixer::Cursor];
+  pub(crate) const ALL: [Fixer; 4] = [Fixer::Claude, Fixer::Codex, Fixer::Cursor, Fixer::Muse];
 
   /// The host `name` names, accepting `claude-code` and `cursor-agent`.
   pub(crate) fn parse(name: &str) -> Result<Fixer> {
@@ -54,10 +59,11 @@ impl Fixer {
       "claude" | "claude-code" => Ok(Fixer::Claude),
       "codex" => Ok(Fixer::Codex),
       "cursor" | "cursor-agent" => Ok(Fixer::Cursor),
+      "muse" => Ok(Fixer::Muse),
       _ => Err(
         Failure::new(
           "config_invalid",
-          format!("unknown host '{name}'; use one of claude, codex, cursor"),
+          format!("unknown host '{name}'; use one of {NAMES}"),
         )
         .with("host", name),
       ),
@@ -70,6 +76,7 @@ impl Fixer {
       Fixer::Claude => "claude",
       Fixer::Codex => "codex",
       Fixer::Cursor => "cursor",
+      Fixer::Muse => "muse",
     }
   }
 
@@ -77,7 +84,7 @@ impl Fixer {
   pub(crate) fn cli(self) -> &'static str {
     match self {
       Fixer::Cursor => "cursor-agent",
-      Fixer::Claude | Fixer::Codex => self.name(),
+      Fixer::Claude | Fixer::Codex | Fixer::Muse => self.name(),
     }
   }
 
@@ -103,6 +110,12 @@ impl Fixer {
       .iter()
       .map(|model| Choice::of(model, None))
       .collect(),
+      Fixer::Muse => vec![
+        Choice::of("muse-spark-1.3", Some("low")),
+        Choice::of("muse-wonder-1.0", Some("medium")),
+        Choice::of("muse-wonder-1.0", Some("high")),
+        Choice::of("muse-wonder-full-1.0", Some("xhigh")),
+      ],
     }
   }
 
@@ -119,6 +132,8 @@ impl Fixer {
         "workspace-write",
       ],
       (Fixer::Cursor, false) => &["--trust"],
+      (Fixer::Muse, true) => &["--yolo"],
+      (Fixer::Muse, false) => &["--approval-mode", "on-request", "--trust-workspace"],
     }
   }
 
@@ -127,6 +142,7 @@ impl Fixer {
       Fixer::Claude => vec!["--effort".into(), effort.into()],
       Fixer::Codex => vec!["-c".into(), format!("model_reasoning_effort={effort}")],
       Fixer::Cursor => Vec::new(),
+      Fixer::Muse => vec!["--reasoning-effort".into(), effort.into()],
     }
   }
 

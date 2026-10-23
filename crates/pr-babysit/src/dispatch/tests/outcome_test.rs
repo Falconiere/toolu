@@ -1,9 +1,30 @@
 use serde_json::Value;
 
-use super::{fixer_outcome, is_claude_trust_prompt, report};
+use super::{HOST_LIMIT, fixer_outcome, is_claude_trust_prompt, report};
 use crate::fixture;
 
 const TRUSTED: &str = "/Users/falconiere/.herdr/worktrees/probe/pb-probe";
+
+#[test]
+fn muse_limit_lines_are_provider_limits_but_its_quota_warning_is_not() {
+  let dir = tempfile::tempdir().unwrap();
+  let file = dir.path().join("absent.report.json");
+  for line in [
+    "Error: model limit reached for muse-wonder-1.0",
+    "You've used your Pro quota for this period.",
+  ] {
+    assert_eq!(fixer_outcome(&file, line), "host_limited", "{line}");
+  }
+  let warning = "At this pace your Pro quota runs out in 2 hours.";
+  assert_eq!(fixer_outcome(&file, warning), "no_report");
+  let golden = fixture::json("hosts/fixer-hosts.json");
+  let source = HOST_LIMIT.as_ref().unwrap().as_str();
+  assert_eq!(
+    source.strip_prefix("(?i)"),
+    golden["hostLimit"].as_str(),
+    "the recorded hostLimit"
+  );
+}
 
 #[test]
 fn a_report_wins_over_the_screen_and_a_limit_wins_over_silence() {

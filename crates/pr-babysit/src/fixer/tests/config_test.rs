@@ -91,6 +91,28 @@ fn the_project_block_merges_over_the_user_block_field_by_field() {
 }
 
 #[test]
+fn muse_is_a_fixer_host_whose_routing_can_be_overridden() {
+  let world = world();
+  let routing = json!([{}, {}, {}, {"model": "muse-wonder-full-1.0", "effort": "high"}]);
+  write(
+    &world.project,
+    &json!({"prBabysit": {
+      "hosts": ["claude", "Muse"],
+      "prefer": {"critical": ["muse"]},
+      "routing": {"muse": routing}
+    }}),
+  );
+  let loaded = settings(&world).unwrap();
+  assert_eq!(loaded.hosts, [Fixer::Claude, Fixer::Muse]);
+  assert_eq!(loaded.prefer[&3], [Fixer::Muse]);
+  let critical = Choice {
+    model: Some("muse-wonder-full-1.0".into()),
+    effort: Some("high".into()),
+  };
+  assert_eq!(loaded.routing[&Fixer::Muse][3], critical);
+}
+
+#[test]
 fn malformed_files_and_files_without_the_block_are_ignored() {
   let world = world();
   std::fs::write(&world.user, "{not json").unwrap();
@@ -127,6 +149,10 @@ fn each_invalid_field_fails_with_its_own_message() {
     (
       json!({"routing": {"codex": [{}]}}),
       "prBabysit: routing.codex must list 4 tiers",
+    ),
+    (
+      json!({"routing": {"muse": [{}, {}]}}),
+      "prBabysit: routing.muse must list 4 tiers",
     ),
     (
       json!({"routing": {"claude": [{"model": "a b"}, {}, {}, {}]}}),

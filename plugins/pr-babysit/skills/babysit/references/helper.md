@@ -197,7 +197,7 @@ toolu babysit stop --state-file <path>
 ## Fixer dispatch
 
 ```
-toolu babysit route-fix --items <file> --host claude|codex|cursor [--state-file <path>] [--raise <itemId>]... [--no-jev]
+toolu babysit route-fix --items <file> --host claude|codex|cursor|muse [--state-file <path>] [--raise <itemId>]... [--no-jev]
                         [--jev-answers-in <file>] [--now <iso8601>]
 toolu babysit dispatch-fix start   --state-file <p> --plan <route.json> --items <items.json> --repo-root <dir> --branch <pr-branch> --base <base-branch> [--dry-run]
 toolu babysit dispatch-fix wait    --state-file <p> [--timeout-seconds N]
@@ -214,7 +214,7 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   tier, class, host, model, effort, items[]}]}`. Tier = `clamp(round(score + 0.15), 0, 3)` over
   `trivial · standard · complex · critical`; `class` maps to the inline rubric (`mechanical ·
   implementation · architecture · architecture`). A host is dropped when cooling
-  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`) is not on `PATH`;
+  (`hostCooldowns`) or when its CLI (`claude`, `codex`, `cursor-agent`, `muse`) is not on `PATH`;
   no host left → `dispatch: inline` with a `note`. `dispatch: herdr` means fixer agents through
   `toolu babysit dispatch-fix`. Jev runs in
   process with `TYPESAFE_API_KEY` and never loads a project `.env` file; `prBabysit.jev: false`
@@ -243,9 +243,11 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   - Claude: `--dangerously-skip-permissions -n <name> --model --effort`
   - Codex: `--dangerously-bypass-approvals-and-sandbox --model -c model_reasoning_effort=<e>`
   - Cursor: `--yolo --trust --approve-mcps --model`
+  - Muse: `--yolo --model --reasoning-effort`
 
   These are the unattended flags; `prBabysit.unattended: false` selects safe mode. Codex also
-  gets `--no-daemon` first in both modes.
+  gets `--no-daemon` first in both modes. Stopping a fixer sends `esc` and `/exit`; a Muse fixer
+  then gets `enter`, which confirms Muse's exit prompt while background work runs.
 - **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).
@@ -253,9 +255,10 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
   the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
   blocked screen fails the group with `agent_start_failed` and is never answered.
-- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/` or `.cursor/` (a
-  fixer's own SessionStart hooks write `.claude/settings.local.json` and `.claude/tmp/`) do not make
-  the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
+- **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or
+  `.toolu/tmp/` (a fixer's own SessionStart hooks write `.claude/settings.local.json` and
+  `.claude/tmp/`; toolu's hooks under Muse write `.toolu/tmp/muse/`) do not make the worktree
+  dirty; any other change does (`worktree_dirty`, with `changes[]`).
 - **Cleanup** exits a live fixer and clears the `fixer` record, then removes the worktree (`--force`,
   discarding only those session artifacts) when it has no other changes (`worktree_dirty`
   otherwise, the worktree stays recorded), prunes git's worktree metadata, deletes
