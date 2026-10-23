@@ -12,20 +12,22 @@ fn host_defaults_to_all_three_and_names_one() {
   assert_eq!(hosts(Some("claude")).unwrap(), vec![Host::Claude]);
   assert_eq!(hosts(Some("codex")).unwrap(), vec![Host::Codex]);
   assert_eq!(hosts(Some("muse")).unwrap(), vec![Host::Muse]);
+  assert_eq!(hosts(Some("cursor")).unwrap(), vec![Host::Cursor]);
 }
 
 #[test]
 fn an_unknown_host_is_an_error() {
-  let err = hosts(Some("cursor")).unwrap_err();
+  let err = hosts(Some("vim")).unwrap_err();
   assert_eq!(
     err,
-    "--host must be claude, codex, muse or both, not cursor"
+    "--host must be claude, codex, muse, cursor or both, not vim"
   );
 }
 
 #[test]
-fn muse_runs_anywhere_and_claude_and_codex_need_macos() {
+fn muse_and_cursor_run_anywhere_and_claude_and_codex_need_macos() {
   assert_eq!(require_platform(&[Host::Muse], "linux"), Ok(()));
+  assert_eq!(require_platform(&[Host::Cursor], "linux"), Ok(()));
   assert_eq!(require_platform(&[Host::Muse], "macos"), Ok(()));
   assert_eq!(
     require_platform(&[Host::Claude, Host::Codex], "macos"),

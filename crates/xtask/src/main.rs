@@ -44,6 +44,7 @@ mod host_smoke;
 mod host_smoke_checks;
 mod host_smoke_claude;
 mod host_smoke_codex;
+mod host_smoke_cursor;
 mod host_smoke_env;
 mod host_smoke_exec;
 mod host_smoke_muse;
