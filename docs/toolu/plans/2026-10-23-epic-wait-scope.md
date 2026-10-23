@@ -29,7 +29,7 @@ restart-safe delivery → scoped engine wait → CLI flag → docs and skill →
   {"id": "s3", "title": "toolu epic wait --epic forwards the selector", "check": "cargo test -p toolu-epic-orchestrator -- query", "ac_refs": ["AC-8"], "depends_on": ["s2"], "paths": ["crates/epic-orchestrator/src/query.rs", "crates/epic-orchestrator/src/verbs.rs", "crates/epic-orchestrator/src/tests/query_test.rs"], "input": "toolu epic wait --epic nope --max-seconds 0 parsed by the real clap command and sent to a live local engine: exit failure with unknown epic: nope; without --epic the same engine answers waiting", "model": "inherit"},
   {"id": "s4", "title": "Docs: generated CLI reference, commands snapshot, skill main loop and README pass --epic", "check": "cargo xtask docs-cli && TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test -p toolu-cli --test contract --test epic_skill && cargo xtask check-markdown-cli", "ac_refs": ["AC-7"], "depends_on": ["s3"], "paths": ["docs/cli", "crates/cli/tests/fixtures/commands_json.snap", "crates/cli/tests/epic_skill.rs", "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "plugins/epic-orchestrator/README.md", "plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json", "crates/epic-orchestrator/src/verbs.rs"], "input": "the built toolu binary: docs/cli/epic/wait page and commands_json.snap list --epic; SKILL.md main loop runs toolu --json epic wait --epic <epic-key>, asserted by epic_skill", "model": "inherit"},
   {"id": "s5", "title": "Quality gate: every step except tests and coverage", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo xtask gate --base origin/main --only gate-change --only fmt --only clippy --only guardrails --only layers --only reach --only deny --only machete --only unused-pub --only hooks --only workflows --only docs-cli --only cli-compat --only jscpd --only rust-quality --only docs --only context-budget --only final-removal --only gate-coverage --only packaging --only ci-paths --only bench --only pack", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s4"], "paths": ["crates", "docs", "plugins", "tooling"], "input": "the whole branch", "model": "inherit"},
-  {"id": "s6", "title": "Tests of every package this branch changes (toolu-epic-orchestrator, toolu-cli) except the launcher target", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test --locked -p toolu-epic-orchestrator && TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test -p toolu-cli --locked --lib --bins $(ls crates/cli/tests/*.rs | xargs -n1 basename | sed 's/[.]rs$//' | grep -vx launcher | sed 's/^/--test /')", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s5"], "paths": ["crates", "docs", "plugins", "tooling", "fixtures", "Cargo.toml", "Cargo.lock"], "input": "the whole branch", "model": "inherit"}
+  {"id": "s6", "title": "Tests of every package this branch changes (toolu-epic-orchestrator, toolu-cli) except the launcher target", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test --locked -p toolu-epic-orchestrator -p toolu-cli --lib --bins $(ls crates/cli/tests/*.rs | xargs -n1 basename | sed 's/[.]rs$//' | grep -vx launcher | sed 's/^/--test /') -- --skip a_toolu_inside_the_wrapper_package_or_a_global_install_is_the_wrapper --skip muse_check_binary_advises_install_when_a_shim_shadows_it --skip path_order_skips_legacy_scripts_and_probes_each_real_path_once", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s5"], "paths": ["crates", "docs", "plugins", "tooling", "fixtures", "Cargo.toml", "Cargo.lock"], "input": "the whole branch", "model": "inherit"}
 ]
 ```
 
@@ -81,7 +81,13 @@ with `Closes Falconiere/toolu#588` / `Part of Falconiere/toolu#591`.
   `without_toolu_one_install_line_is_printed_as_session_context_and_once_per_id`
   (fails identically on a clean `origin/main` checkout, verified 2026-10-23) and
   `toolu-runtime`'s `startup::native` cases. This branch changes no crate but
-  `toolu-epic-orchestrator` and `toolu-cli`'s tests.
+  `toolu-epic-orchestrator` and `toolu-cli`'s tests. Within those, three
+  `toolu-cli` cases find the same installed binary and are skipped by name
+  (`a_toolu_inside_the_wrapper_package_or_a_global_install_is_the_wrapper`,
+  `muse_check_binary_advises_install_when_a_shim_shadows_it`,
+  `path_order_skips_legacy_scripts_and_probes_each_real_path_once`): the same
+  command on a clean `origin/main` worktree fails exactly these three
+  (verified 2026-10-23).
 
 ## Plan review
 
