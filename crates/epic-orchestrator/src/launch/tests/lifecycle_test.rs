@@ -103,8 +103,8 @@ fn a_started_agent_is_addressable_before_its_first_prompt() {
   let (worktree, pane) = started(&rig, "claude");
   let mut ctx = rig.ctx();
   let right = expected(HostKind::Claude, &pane, &worktree);
-  // The test server reports a fresh agent as working: listed, but not
-  // promptable yet.
+  // A working agent is listed, but not promptable yet.
+  rig.herdr.state().agents[0].status = "working".into();
   let busy = await_named_agent(&mut ctx.herdr, "k-1", &right, Duration::ZERO).expect_err("busy");
   assert!(busy.uncertain);
   assert_eq!(

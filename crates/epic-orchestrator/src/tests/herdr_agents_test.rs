@@ -67,7 +67,7 @@ impl State {
     self.agents.push(Agent {
       process: spawn(&cwd, &self.agent_script),
       kind: text(params, "kind"),
-      status: "working".to_owned(),
+      status: "idle".to_owned(),
       prompts: Vec::new(),
       name: name.clone(),
       pane,
@@ -103,6 +103,9 @@ impl State {
       .get_mut(index)
       .ok_or_else(|| error("agent_not_found", &name))?;
     agent.prompts.extend(words.iter().cloned());
+    if method == "agent.prompt" {
+      agent.status = "working".to_owned();
+    }
     let exits = words.iter().any(|word| word == "/exit");
     if exits {
       stop(&mut agent.process);
