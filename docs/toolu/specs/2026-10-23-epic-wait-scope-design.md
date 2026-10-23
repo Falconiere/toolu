@@ -141,4 +141,4 @@ architecture 1).
 
 - Architecture: 🟡 should-fix: `dispatch.rs` near the 300-line limit. Fixed: `wait_ops.rs` (Architecture 3).
 - Acceptance criteria: 🟡 should-fix: nothing proved the CLI forwards `--epic` (Jev AC-coverage noul 0.48). Fixed: AC-8.
-- Interfaces: 🔵 consider: a trailing number matching several epics takes the first registered, as `status` does. Accepted.
+- Interfaces: 🔵 consider: a trailing number matching several epics takes the first in key order (`world.epics` is a `BTreeMap`). Accepted; an exact key avoids it.
