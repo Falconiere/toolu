@@ -29,7 +29,7 @@ restart-safe delivery → scoped engine wait → CLI flag → docs and skill →
   {"id": "s3", "title": "toolu epic wait --epic forwards the selector", "check": "cargo test -p toolu-epic-orchestrator -- query", "ac_refs": ["AC-8"], "depends_on": ["s2"], "paths": ["crates/epic-orchestrator/src/query.rs", "crates/epic-orchestrator/src/verbs.rs", "crates/epic-orchestrator/src/tests/query_test.rs"], "input": "toolu epic wait --epic nope --max-seconds 0 parsed by the real clap command and sent to a live local engine: exit failure with unknown epic: nope; without --epic the same engine answers waiting", "model": "inherit"},
   {"id": "s4", "title": "Docs: generated CLI reference, commands snapshot, skill main loop and README pass --epic", "check": "cargo xtask docs-cli && TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test -p toolu-cli --test contract --test epic_skill && cargo xtask check-markdown-cli", "ac_refs": ["AC-7"], "depends_on": ["s3"], "paths": ["docs/cli", "crates/cli/tests/fixtures/commands_json.snap", "crates/cli/tests/epic_skill.rs", "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "plugins/epic-orchestrator/README.md", "plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json", "crates/epic-orchestrator/src/verbs.rs"], "input": "the built toolu binary: docs/cli/epic/wait page and commands_json.snap list --epic; SKILL.md main loop runs toolu --json epic wait --epic <epic-key>, asserted by epic_skill", "model": "inherit"},
   {"id": "s5", "title": "Quality gate: every step except tests and coverage", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo xtask gate --base origin/main --only gate-change --only fmt --only clippy --only guardrails --only layers --only reach --only deny --only machete --only unused-pub --only hooks --only workflows --only docs-cli --only cli-compat --only jscpd --only rust-quality --only docs --only context-budget --only final-removal --only gate-coverage --only packaging --only ci-paths --only bench --only pack", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s4"], "paths": ["crates", "docs", "plugins", "tooling"], "input": "the whole branch", "model": "inherit"},
-  {"id": "s6", "title": "Workspace tests except the launcher target", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test --workspace --locked --exclude toolu-cli -- --skip check::tests::without_toolu_one_install_line_is_printed_as_session_context_and_once_per_id && TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test -p toolu-cli --locked --lib --bins $(ls crates/cli/tests/*.rs | xargs -n1 basename | sed 's/[.]rs$//' | grep -vx launcher | sed 's/^/--test /')", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s5"], "paths": ["crates", "docs", "plugins", "tooling", "fixtures", "Cargo.toml", "Cargo.lock"], "input": "the whole branch", "model": "inherit"}
+  {"id": "s6", "title": "Tests of every package this branch changes (toolu-epic-orchestrator, toolu-cli) except the launcher target", "check": "TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test --locked -p toolu-epic-orchestrator && TOOLU_RESOURCE_HOME=\"$(mktemp -d)\" cargo test -p toolu-cli --locked --lib --bins $(ls crates/cli/tests/*.rs | xargs -n1 basename | sed 's/[.]rs$//' | grep -vx launcher | sed 's/^/--test /')", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6", "AC-7", "AC-8"], "depends_on": ["s5"], "paths": ["crates", "docs", "plugins", "tooling", "fixtures", "Cargo.toml", "Cargo.lock"], "input": "the whole branch", "model": "inherit"}
 ]
 ```
 
@@ -75,10 +75,13 @@ with `Closes Falconiere/toolu#588` / `Part of Falconiere/toolu#591`.
   engine other sessions use. s5 runs every other gate step; s6 runs every
   workspace test except the `launcher` target, which this branch does not
   touch. CI runs the whole gate, coverage included.
-- s6: it also skips `toolu-jev`'s
-  `without_toolu_one_install_line_is_printed_as_session_context_and_once_per_id`,
-  which finds the same Homebrew `toolu` and fails the same way on a clean
-  `origin/main` checkout (verified 2026-10-23).
+- s6: runs the tests of the packages this branch changes. Other crates'
+  tests that look up `toolu` in fixed install directories fail on this
+  machine for the same Homebrew binary, independent of this branch: `toolu-jev`'s
+  `without_toolu_one_install_line_is_printed_as_session_context_and_once_per_id`
+  (fails identically on a clean `origin/main` checkout, verified 2026-10-23) and
+  `toolu-runtime`'s `startup::native` cases. This branch changes no crate but
+  `toolu-epic-orchestrator` and `toolu-cli`'s tests.
 
 ## Plan review
 
