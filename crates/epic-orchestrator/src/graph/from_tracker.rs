@@ -7,7 +7,7 @@ use serde_json::Value;
 
 use super::{
   Counts, Graph, GraphIssue, chain_lengths, classify, compute_levels, downstream_counts,
-  pick_batch, resolve_checkouts,
+  pick_batch, resolve_checkouts, resolve_clone_root,
 };
 use crate::refs::{branch_for, key_for};
 use crate::tracker::{Gh, PrNode, TrackedIssue, Tracker, TrackerKind};
@@ -28,8 +28,6 @@ pub(crate) struct BuildInput<'a> {
   pub herdr_roots: Vec<PathBuf>,
   /// `EPIC_REPO_ROOTS`.
   pub repo_roots: Vec<PathBuf>,
-  /// Where to clone when the epic's own repository has no checkout.
-  pub cwd: PathBuf,
 }
 
 /// The graph of the epic in `input`.
@@ -63,11 +61,12 @@ pub(crate) fn build(input: &BuildInput<'_>) -> Result<Graph, String> {
     .collect();
   let checkouts = resolve_checkouts(&repos, &input.herdr_roots, &input.repo_roots);
   annotate(&mut issues, &launched, &checkouts);
-  let clone_root = checkouts
-    .get(&epic_repo)
-    .cloned()
-    .flatten()
-    .map_or_else(|| input.cwd.clone(), PathBuf::from);
+  let clone_root = resolve_clone_root(
+    checkouts.get(&epic_repo).and_then(Option::as_deref),
+    &input.repo_roots,
+    &input.herdr_roots,
+    &checkouts,
+  )?;
   Ok(assemble(input, epic, issues, &checkouts, &clone_root))
 }
 
@@ -248,10 +247,7 @@ fn assemble(
     ready,
     cycle,
     missing_checkouts: missing(checkouts),
-    clone_root: clone_root.parent().map_or_else(
-      || clone_root.display().to_string(),
-      |parent| parent.display().to_string(),
-    ),
+    clone_root: clone_root.display().to_string(),
   }
 }
 

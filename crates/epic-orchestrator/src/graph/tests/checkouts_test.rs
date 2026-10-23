@@ -2,7 +2,9 @@ use std::path::PathBuf;
 
 use toolu_runtime::env::Env;
 
-use super::{herdr_roots, origin_of, repo_roots, resolve_checkouts};
+use std::collections::BTreeMap;
+
+use super::{herdr_roots, origin_of, repo_roots, resolve_checkouts, resolve_clone_root};
 use crate::paths::Paths;
 use crate::support::repo_with_origin;
 
@@ -80,4 +82,22 @@ fn repo_roots_split_on_colons_and_herdr_roots_tolerate_no_herdr() {
     herdr_roots(&Paths::at(tmp.path()), &absent),
     Vec::<PathBuf>::new()
   );
+}
+
+#[test]
+fn clone_root_comes_from_known_roots_and_never_from_slash() {
+  let none = BTreeMap::new();
+  let root = |checkout: Option<&str>, roots: &[&str], herdr: &[&str]| {
+    let paths = |list: &[&str]| list.iter().map(PathBuf::from).collect::<Vec<_>>();
+    resolve_clone_root(checkout, &paths(roots), &paths(herdr), &none)
+  };
+  assert_eq!(
+    root(Some("/a/b/repo"), &["/x"], &[]),
+    Ok(PathBuf::from("/a/b"))
+  );
+  assert_eq!(root(None, &["/x"], &["/h/repo"]), Ok(PathBuf::from("/x")));
+  assert_eq!(root(None, &[], &["/h/repo"]), Ok(PathBuf::from("/h")));
+  assert_eq!(root(Some("/repo"), &["/"], &["/repo"]).ok(), None);
+  let err = root(None, &[], &[]).expect_err("unresolved");
+  assert!(err.starts_with("cannot resolve clone_root"), "{err}");
 }

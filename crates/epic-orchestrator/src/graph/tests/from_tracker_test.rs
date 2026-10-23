@@ -86,7 +86,6 @@ fn build_github(fixture: &Fixture, tmp: &Path) -> (Graph, PathBuf) {
     gh: None,
     herdr_roots: vec![checkout.clone()],
     repo_roots: Vec::new(),
-    cwd: tmp.to_path_buf(),
   })
   .expect("graph");
   (graph, checkout)
@@ -163,14 +162,16 @@ fn a_jira_epic_finds_prs_by_branch_and_reports_missing_checkouts() {
     max_parallel: 3,
     gh: Some(&github),
     herdr_roots: Vec::new(),
-    repo_roots: Vec::new(),
-    cwd: tmp.path().join("here"),
+    repo_roots: vec![tmp.path().join("roots")],
   })
   .expect("graph");
   assert_eq!(graph.issues[0].prs[0].state, "MERGED");
   assert_eq!(graph.issues[0].key, "pay-12");
   assert_eq!(graph.missing_checkouts, ["acme/mono", "acme/refunds"]);
   assert_eq!(graph.default_repo.as_deref(), Some("acme/mono"));
-  assert_eq!(graph.clone_root, tmp.path().display().to_string());
+  assert_eq!(
+    graph.clone_root,
+    tmp.path().join("roots").display().to_string()
+  );
   assert_eq!(tracker.kind().name(), "jira");
 }

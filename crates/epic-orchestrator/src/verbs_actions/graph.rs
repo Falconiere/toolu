@@ -119,7 +119,6 @@ fn graph_with(matches: &ArgMatches, ctx: &Ctx, env: &Env, reach: &Reach) -> Outc
     gh: gh.as_ref(),
     herdr_roots: herdr_roots(&Paths::from_env(env), env),
     repo_roots: repo_roots(env),
-    cwd: toolu_runtime::invocation::current_dir().unwrap_or_else(|_| PathBuf::from(".")),
   };
   match build(&input).and_then(|built| save(matches, &built).map(|()| built)) {
     Ok(built) if ctx.json => document(&json!(built)),
