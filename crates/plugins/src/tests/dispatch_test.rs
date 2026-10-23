@@ -206,9 +206,9 @@ fn config_replays_the_selection_and_its_host() {
 #[test]
 fn an_unsupported_host_is_a_usage_error() {
   let sb = Sandbox::new();
-  let cursor =
-    go(&sb, &request(Verb::List, &[]), Some(Host::Cursor), None).map_err(|fail| fail.exit);
-  assert_eq!(cursor, Err(Exit::Usage));
+  let hermes =
+    go(&sb, &request(Verb::List, &[]), Some(Host::Hermes), None).map_err(|fail| fail.exit);
+  assert_eq!(hermes, Err(Exit::Usage));
 }
 
 #[test]

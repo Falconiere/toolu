@@ -31,6 +31,8 @@ pub(crate) enum Target {
   Codex,
   /// Muse, through `muse plugins` (#549).
   Muse,
+  /// Cursor, through its local plugins directory (#589).
+  Cursor,
 }
 
 /// The probe order: Muse comes last, so the order Claude Code and Codex users
@@ -44,18 +46,22 @@ impl Target {
       Target::Claude => "claude",
       Target::Codex => "codex",
       Target::Muse => "muse",
+      Target::Cursor => "cursor",
     }
   }
 }
 
-/// The installer target `--host` names; other hosts are not targets yet.
+/// The installer target `--host` names; Hermes is not a target yet. Cursor is
+/// never probed on `PATH` (a machine with `cursor-agent` and another host would
+/// stop resolving silently), so it is chosen with `--host cursor`.
 pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
     Host::Codex => Ok(Target::Codex),
     Host::Muse => Ok(Target::Muse),
-    Host::Cursor | Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex or muse",
+    Host::Cursor => Ok(Target::Cursor),
+    Host::Hermes => Err(Fail::usage(format!(
+      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse or cursor",
       host.name()
     ))),
   }
@@ -148,10 +154,10 @@ pub(crate) fn resolve(
   }
 }
 
-/// Claude Code takes every scope, Codex and Muse none.
+/// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse) => Err(Fail::usage(format!(
+    (Some(_), Target::Codex | Target::Muse | Target::Cursor) => Err(Fail::usage(format!(
       "--scope is for Claude Code; {} has no scope concept",
       target.name()
     ))),

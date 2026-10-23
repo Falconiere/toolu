@@ -73,7 +73,7 @@ fn kind(path: &Path) -> Res<Option<bool>> {
 }
 
 /// Clones the tag, or moves an existing toolu checkout to it.
-fn sync(driver: &Driver, checkout: &Checkout) -> Res<()> {
+pub(crate) fn sync(driver: &Driver, checkout: &Checkout) -> Res<()> {
   let dir = checkout.dir_text();
   if kind(&checkout.dir)?.is_none() {
     if let Some(parent) = checkout.dir.parent() {
