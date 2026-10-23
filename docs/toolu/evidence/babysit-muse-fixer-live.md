@@ -17,7 +17,7 @@ The same start with `--dry-run`, run against the same state, plan and items afte
 ["herdr","agent","start","pb-56afc5-r1g1","--kind","muse","--pane","<root pane>","--timeout","90000","--","--yolo","--model","muse-wonder-1.0","--reasoning-effort","medium"]
 ```
 
-The real start answered:
+The fixer ran as a herdr agent of kind muse (`--kind muse`). The real start answered:
 
 ```json
 {"branch":"pr-babysit/scratch-pb604-604","commits":[],"group":1,"groups":[{"agent":"pb-56afc5-r1g1","effort":"medium","host":"muse","model":"muse-wonder-1.0","reason":null,"seq":1,"status":"running","tier":"standard"}],"reason":null,"status":"running","version":1,"worktree":"/Volumes/Projects/.herdr/worktrees/repo/pr-babysit-scratch-pb604-604"}
