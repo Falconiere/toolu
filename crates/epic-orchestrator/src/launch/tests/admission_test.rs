@@ -179,12 +179,12 @@ fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
   child.wait().expect("wait");
   std::fs::create_dir_all(&resources).expect("resources");
   std::fs::write(resources.join("policy.json"), r#"{"maxAgents":1}"#).expect("policy");
-  let stale = format!(
+  let leftover = format!(
     r#"{{"token":"old","type":"agent","key":"issue-0","stateDir":"s","host":"claude","ownerPid":{dead},"stage":"running","createdAt":"c","heartbeatAt":"h"}}"#
   );
   std::fs::write(
     resources.join("state.json"),
-    format!(r#"{{"version":1,"leases":[{stale}],"cooldowns":{{}}}}"#),
+    format!(r#"{{"version":1,"leases":[{leftover}],"cooldowns":{{}}}}"#),
   )
   .expect("state");
   let mut ctx = rig.ctx();
@@ -193,6 +193,6 @@ fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
     &mut Record::new(),
     &mut ctx.herdr,
   )
-  .expect("the stale lease is reclaimed");
+  .expect("the leftover lease is reclaimed");
   assert_eq!(rig.leases(), 1);
 }
