@@ -10,8 +10,7 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 
 use super::{
-  ack, answer, answerer, ask, epic_for, install_unit, job, located, pause, report, service, status,
-  wait, wait_default,
+  ack, answer, answerer, ask, epic_for, job, located, pause, report, status, wait, wait_default,
 };
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
@@ -63,7 +62,7 @@ fn epic_for_reads_the_registry_row() {
 }
 
 #[test]
-fn report_job_and_install_fail_closed() {
+fn report_and_job_fail_closed() {
   let tmp = tempfile::tempdir().expect("temp");
   let (_paths, env) = root(tmp.path());
   let missing = report(
@@ -101,25 +100,6 @@ fn report_job_and_install_fail_closed() {
       .expect("err")
       .contains("a command is required")
   );
-  let home = tmp.path().join("home-file");
-  std::fs::write(&home, "x").expect("home");
-  let err = install_unit(&Paths::at(tmp.path()), &home, Path::new("/bin/toolu")).expect_err("home");
-  assert!(err.contains("could not write"));
-  let file = tmp.path().join("not-a-dir");
-  std::fs::write(&file, "x").expect("file");
-  let err = install_unit(&Paths::at(&file), tmp.path(), Path::new("/bin/toolu")).expect_err("root");
-  assert!(err.contains("could not write"));
-}
-
-#[test]
-fn service_writes_the_unit_for_its_home() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let (paths, env) = root(tmp.path());
-  let outcome = service(&env);
-  assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
-  let body = std::fs::read_to_string(paths.service()).expect("unit");
-  assert!(body.contains("WantedBy=default.target"));
-  assert!(body.contains(&paths.root.display().to_string()));
 }
 
 #[test]

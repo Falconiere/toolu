@@ -64,6 +64,7 @@ mod herdr_interrupt;
 #[path = "tests/herdr_state_test.rs"]
 mod herdr_state;
 mod holds;
+/// Native hook commands for the epic plugin.
 pub mod hook;
 mod hosts;
 mod http;
@@ -130,6 +131,7 @@ mod scenario_rig;
 mod schedule;
 mod server;
 mod server_snapshot;
+mod service;
 mod snapshot;
 mod socket;
 mod socket_deadline;

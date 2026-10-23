@@ -83,7 +83,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("report", args)) => crate::query::report(args, &env),
     Some(("job", args)) => crate::query::job(args),
     Some(("service", args)) if args.subcommand_name() == Some("install") => {
-      crate::query::service(&env)
+      crate::service::service(&env)
     }
     Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
     Some((name, args)) => crate::verbs_actions::run(name, args, ctx, &env)
