@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// `npx @toolu/plugins …`: runs `toolu plugins …` on the separately installed
-// native binary (#438). The package's command is `toolu-plugins`, so it never
-// shadows that binary on `PATH`, and it never takes itself for it. Plain,
-// dependency-free JavaScript: there is no build step (#440).
+// `npx @toolu/plugins …`: runs `toolu plugins …`, preferring the native
+// binary the package ships (`bin/<os>-<arch>/toolu`) and falling back to a
+// separately installed one (#438, bundled binaries). The package's command is
+// `toolu-plugins`, so it never shadows that binary on `PATH`, and it never
+// takes itself for it. Plain, dependency-free JavaScript: there is no build
+// step (#440).
 import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants, existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import { constants as os } from "node:os";
@@ -80,6 +82,48 @@ function answers(path, args, env) {
   return result.status === 0 ? result.stdout : undefined;
 }
 
+/** Whether `path` answers the native probes: `found`, `old`, or no answer. */
+function probeCandidate(path, env) {
+  const protocol = answers(path, ["--hook-protocol"], env);
+  if (protocol === undefined || !/^\d+\s*$/.test(protocol)) return undefined;
+  // clap's help always has a usage line; an empty or foreign answer is no `plugins install`.
+  const help = answers(path, ["plugins", "install", "--help"], env);
+  if (help === undefined || !help.includes("Usage: toolu plugins install")) return "old";
+  return "found";
+}
+
+/** The bundled binary's directory for this platform, or undefined elsewhere. */
+function platformArch() {
+  const platform = process.platform;
+  if (platform !== "darwin" && platform !== "linux") return undefined;
+  const arch = process.arch;
+  if (arch !== "arm64" && arch !== "x64") return undefined;
+  return `${platform}-${arch === "arm64" ? "arm64" : "amd64"}`;
+}
+
+/** The binary shipped beside this file for this platform, or undefined. */
+function bundledPath(self) {
+  const dir = platformArch();
+  return dir === undefined ? undefined : join(dirname(self), "bin", dir, "toolu");
+}
+
+/**
+ * The bundled binary, probed like any native binary except the
+ * inside-the-package exclusion, which would always reject it. Returns
+ * `{ kind: "found", path }`, `{ kind: "unusable", path }`, or undefined when
+ * this platform ships nothing or the file is absent. Callers fall through on
+ * anything but found, so a corrupt bundle never runs and never blocks the
+ * system search.
+ */
+function probeBundled(env, self) {
+  const candidate = bundledPath(self);
+  if (candidate === undefined) return undefined;
+  const path = real(candidate);
+  if (path === undefined || !executableFile(path)) return undefined;
+  const verdict = probeCandidate(path, env);
+  return verdict === "found" ? { kind: "found", path } : { kind: "unusable", path };
+}
+
 /**
  * The native binary: the first candidate that is an executable file, is not
  * this wrapper, prints an integer for `--hook-protocol` and has `plugins
@@ -95,15 +139,10 @@ function findNative(env, self) {
     if (path === undefined || tried.has(path)) continue;
     tried.add(path);
     if (isWrapper(path, self) || !executableFile(path)) continue;
-    const protocol = answers(path, ["--hook-protocol"], env);
-    if (protocol === undefined || !/^\d+\s*$/.test(protocol)) continue;
-    // clap's help always has a usage line; an empty or foreign answer is no `plugins install`.
-    const help = answers(path, ["plugins", "install", "--help"], env);
-    if (help === undefined || !help.includes("Usage: toolu plugins install")) {
-      old ??= path;
-      continue;
-    }
-    return { kind: "found", path };
+    const verdict = probeCandidate(path, env);
+    if (verdict === undefined) continue;
+    if (verdict === "found") return { kind: "found", path };
+    old ??= path;
   }
   return old === undefined ? { kind: "missing", searched } : { kind: "old", path: old };
 }
@@ -157,6 +196,16 @@ function main(argv) {
   if (argv.length === 1 && (argv[0] === "--version" || argv[0] === "-v")) {
     process.stdout.write(`${version(self)}\n`);
     return;
+  }
+  // An explicit TOOLU_BIN is the only candidate; otherwise the bundled
+  // binary wins over the system search, and anything but a working bundle
+  // falls through to it.
+  if ((process.env.TOOLU_BIN ?? "") === "") {
+    const bundled = probeBundled(process.env, self);
+    if (bundled !== undefined && bundled.kind === "found") {
+      runNative(bundled.path, nativeWords(argv, catalogPath(self)));
+      return;
+    }
   }
   const native = findNative(process.env, self);
   if (native.kind === "missing") {

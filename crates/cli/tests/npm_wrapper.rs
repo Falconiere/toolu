@@ -2,34 +2,23 @@
 //! with the real `node` against the built `toolu` and shell stand-ins: it runs
 //! the native binary's `toolu plugins`, never takes itself for that binary,
 //! and without one names the install commands instead of downloading anything.
+//! Bundled-binary cases live in `npm_wrapper_bundled.rs` on the shared
+//! `helpers/npm.rs` harness.
 
-use std::os::unix::fs::{PermissionsExt as _, symlink};
-use std::path::{Path, PathBuf};
-use std::process::Command;
+#[path = "helpers/npm.rs"]
+mod npm;
+
+use std::os::unix::fs::symlink;
+use std::path::PathBuf;
 
 use serde_json::Value;
 
-/// The `toolu` binary under test.
-const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
-
-/// A helper's result; the tests unwrap it.
-type Res<T> = Result<T, Box<dyn std::error::Error>>;
-
-/// A `PATH` with no `toolu` on it.
-const SYSTEM: &str = "/usr/bin:/bin";
+use npm::{SYSTEM, TOOLU, native_stub, repo, run, script, temp, wrapper};
 
 const INSTALL: &str = "Install it, then run this again:\n  curl -fsSL \
                        https://get.toolu.sh/pkg/toolu/install | bash\n  brew install \
                        falconiere/tap/toolu\nSee \
                        https://github.com/Falconiere/toolu/blob/main/docs/install.md\n";
-
-fn repo() -> PathBuf {
-  Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn wrapper() -> PathBuf {
-  repo().join("tools/toolu-cli/npm/cli.js")
-}
 
 /// The catalog the wrapper passes from this checkout: the copy `npm pack`'s
 /// `prepack` leaves in `assets/`, else the repository's.
@@ -43,72 +32,6 @@ fn catalog() -> PathBuf {
   std::fs::canonicalize(&path).unwrap_or(path)
 }
 
-/// The first `node` on this process's `PATH`; these tests need it.
-fn node() -> Res<PathBuf> {
-  let path = std::env::var_os("PATH").unwrap_or_default();
-  std::env::split_paths(&path)
-    .map(|dir| dir.join("node"))
-    .find(|candidate| candidate.is_file())
-    .ok_or_else(|| "node is not on PATH; the npm wrapper tests need it".into())
-}
-
-/// An executable `#!/bin/sh` script at `path`.
-fn script(path: &Path, body: &str) -> Res<PathBuf> {
-  std::fs::create_dir_all(path.parent().ok_or("no parent")?)?;
-  std::fs::write(path, format!("#!/bin/sh\n{body}\n"))?;
-  std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755))?;
-  Ok(path.to_path_buf())
-}
-
-/// What one wrapper run printed and how it ended.
-#[derive(Debug)]
-struct Run {
-  code: Option<i32>,
-  stdout: String,
-  stderr: String,
-}
-
-/// `node <cli> args` with exactly `env` (plus `TERM`, and under coverage the profile
-/// path, so the instrumented `toolu` never writes a profile into `cwd`), in `cwd`.
-fn run(cli: &Path, args: &[&str], env: &[(&str, &str)], cwd: &Path) -> Res<Run> {
-  let mut command = Command::new(node()?);
-  command
-    .arg(cli)
-    .args(args)
-    .env_clear()
-    .env("TERM", "dumb")
-    .envs(env.iter().copied())
-    .current_dir(cwd);
-  if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
-    command.env("LLVM_PROFILE_FILE", profile);
-  }
-  let output = command.output()?;
-  Ok(Run {
-    code: output.status.code(),
-    stdout: String::from_utf8(output.stdout)?,
-    stderr: String::from_utf8(output.stderr)?,
-  })
-}
-
-fn temp() -> Res<(tempfile::TempDir, PathBuf)> {
-  let dir = tempfile::tempdir()?;
-  let root = std::fs::canonicalize(dir.path())?;
-  Ok((dir, root))
-}
-
-/// A stand-in native binary that answers the probes and logs every other call.
-fn native_stub(path: &Path, log: &Path, tail: &str) -> Res<PathBuf> {
-  script(
-    path,
-    &format!(
-      "case \"$1\" in --hook-protocol) echo 2; exit 0 ;; esac\n\
-       [ \"$3\" = --help ] && {{ echo \"Usage: toolu plugins install\"; exit 0; }}\n\
-       echo \"$*\" >> '{}'\n{tail}",
-      log.display()
-    ),
-  )
-}
-
 #[test]
 fn the_manifest_declares_toolu_plugins_and_no_toolu_bin() {
   let text = std::fs::read_to_string(repo().join("tools/toolu-cli/npm/package.json")).unwrap();
@@ -117,7 +40,10 @@ fn the_manifest_declares_toolu_plugins_and_no_toolu_bin() {
     manifest["bin"],
     serde_json::json!({ "toolu-plugins": "cli.js" })
   );
-  assert_eq!(manifest["files"], serde_json::json!(["cli.js", "assets"]));
+  assert_eq!(
+    manifest["files"],
+    serde_json::json!(["cli.js", "assets", "bin"])
+  );
 }
 
 #[test]

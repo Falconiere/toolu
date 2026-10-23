@@ -10,6 +10,8 @@ struct Expectation {
   name: &'static str,
   dir: &'static str,
   required: Vec<String>,
+  /// Shipped files that may be absent (staged only at release time).
+  optional: Vec<String>,
   forbidden: &'static [&'static str],
   patterns: &'static [fn(&str) -> bool],
   exact: bool,
@@ -62,6 +64,12 @@ fn plugins_package() -> Expectation {
       "assets/marketplace.json",
       "cli.js",
     ]),
+    optional: owned(&[
+      "bin/darwin-arm64/toolu",
+      "bin/darwin-amd64/toolu",
+      "bin/linux-amd64/toolu",
+      "bin/linux-arm64/toolu",
+    ]),
     forbidden: &["plugins/", "src/", "node_modules/", ".env"],
     patterns: PLUGINS_PATTERNS,
     exact: true,
@@ -100,7 +108,9 @@ fn check_one(expectation: &Expectation, files: &[String]) -> Vec<String> {
   }
   if expectation.exact {
     for file in files {
-      if !expectation.required.iter().any(|required| required == file) {
+      let known = expectation.required.iter().any(|required| required == file)
+        || expectation.optional.iter().any(|allowed| allowed == file);
+      if !known {
         problems.push(format!(
           "{} tarball has an undeclared file: {file}",
           expectation.name

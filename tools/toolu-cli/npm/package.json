@@ -31,7 +31,8 @@
   },
   "files": [
     "cli.js",
-    "assets"
+    "assets",
+    "bin"
   ],
   "scripts": {
     "prepack": "mkdir -p assets && cp ../../../.claude-plugin/marketplace.json assets/marketplace.json"

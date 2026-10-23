@@ -82,8 +82,8 @@ toolu plugins install
 The installer verifies the release's minisign signature and the archive's
 checksum before it writes anything. Upgrade, uninstall, a pinned version,
 rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
-`npx @toolu/plugins install`, as below, does the same: the npm package is a
-wrapper that runs `toolu plugins` on the installed binary
+`npx @toolu/plugins install`, as below, does the same with no separate
+binary install: the npm package ships its own `toolu`
 ([docs/cli/installer.md](docs/cli/installer.md)).
 
 toolu supports Claude Code, Codex and Muse Code. Codex support covers
@@ -96,8 +96,8 @@ is installed through `toolu plugins install --host muse`; see
 ### The plugin installer
 
 `toolu plugins` installs the plugins: it drives each host's own plugin CLI in
-catalog dependency order. `npx @toolu/plugins` runs the same verbs through the
-installed `toolu`:
+catalog dependency order. `npx @toolu/plugins` runs the same verbs on its
+bundled `toolu`:
 
 ```bash
 npx @toolu/plugins install              # everything, core first
@@ -125,7 +125,7 @@ edges. Do not install comemory — it has moved to its own installer (below).
 # installed from it; skip if you do not want the pre-simplify pass.
 claude plugin marketplace add anthropics/claude-plugins-official
 
-# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# npx carries its own toolu binary; to use an installed one instead:
 # curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.
@@ -138,7 +138,7 @@ npx @toolu/plugins install
 
 <!-- install-everything:codex -->
 ```bash
-# Needs the native toolu binary (docs/install.md); without it npx exits 69:
+# npx carries its own toolu binary; to use an installed one instead:
 # curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.
@@ -325,7 +325,7 @@ Releases are automated with [release-please](https://github.com/googleapis/relea
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.
-- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the npm wrapper package, `Cargo.toml` / `Cargo.lock`, and every Claude, Codex and Muse plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. npm and four native builds run side by side in the same workflow, and the native builds never wait for npm; the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
+- Review the Release PR, then **merge it to cut the release** — the only manual step. It bumps root `package.json`, the npm wrapper package, `Cargo.toml` / `Cargo.lock`, and every Claude, Codex and Muse plugin manifest, updates `CHANGELOG.md`, and creates a draft release with a `vX.Y.Z` tag. Four native builds run first and the GitHub release becomes public only after the native archives, checksums, SBOM, and platform smoke tests pass; npm then publishes `@toolu/plugins` with those same binaries inside, and the native builds never wait for npm. The marketplace re-extracts a plugin when its manifest version changes. See [the native release runbook](docs/releases/native.md) for dry runs and recovery.
 
 ## References
 
