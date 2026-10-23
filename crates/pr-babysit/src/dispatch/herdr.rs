@@ -141,8 +141,9 @@ pub(crate) fn stop_agent(env: &Env, name: &str, host: Option<Fixer>) -> bool {
   }
   let _escaped = try_herdr(env, &argv(&["agent", "send-keys", name, "esc"]), TIMEOUT);
   let _exited = try_herdr(env, &argv(&["agent", "prompt", name, "/exit"]), TIMEOUT);
-  // With live background work Muse asks "Exit anyway?" and enter confirms it;
-  // an idle Muse has already left, so herdr answers agent_not_found.
+  // With live background work Muse asks "Exit anyway?" and enter confirms it.
+  // An idle Muse has already left: the key lands at the pane shell or herdr
+  // answers agent_not_found, and either way the liveness wait decides.
   if host == Some(Fixer::Muse) {
     let _confirmed = try_herdr(env, &argv(&["agent", "send-keys", name, "enter"]), TIMEOUT);
   }

@@ -257,7 +257,8 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   blocked screen fails the group with `agent_start_failed` and is never answered.
 - **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or
   `.toolu/tmp/` (a fixer's own SessionStart hooks write `.claude/settings.local.json` and
-  `.claude/tmp/`; toolu's hooks under Muse write `.toolu/tmp/muse/`) do not make the worktree dirty; any other change does (`worktree_dirty`, with `changes[]`).
+  `.claude/tmp/`; toolu's hooks under Muse write `.toolu/tmp/muse/`) do not make the worktree
+  dirty; any other change does (`worktree_dirty`, with `changes[]`).
 - **Cleanup** exits a live fixer and clears the `fixer` record, then removes the worktree (`--force`,
   discarding only those session artifacts) when it has no other changes (`worktree_dirty`
   otherwise, the worktree stays recorded), prunes git's worktree metadata, deletes
