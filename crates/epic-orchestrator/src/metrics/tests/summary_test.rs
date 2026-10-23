@@ -45,7 +45,7 @@ fn the_report_sets_the_epic_beside_the_baseline_with_budgets_and_tokens() {
     report["rows"][0],
     json!({"measure": "Merged issues", "epic": "1", "baseline": "83"})
   );
-  assert_eq!(report["tokens"].as_array().unwrap().len(), 4);
+  assert_eq!(report["tokens"].as_array().unwrap().len(), 5);
   assert_eq!(report["tokens"][0]["tokens"]["output_tokens"], 23);
   let text = markdown(&report);
   assert!(text.starts_with("## Epic metrics\n\n| Measure | This epic | TypeScript baseline |"));

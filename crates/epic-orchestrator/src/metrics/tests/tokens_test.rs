@@ -16,6 +16,7 @@ fn env() -> Env {
     ("HOME", "/nonexistent"),
     ("CLAUDE_CONFIG_DIR", claude.to_str().unwrap()),
     ("CODEX_HOME", codex.to_str().unwrap()),
+    ("XDG_DATA_HOME", fixtures().to_str().unwrap()),
   ])
 }
 
@@ -23,7 +24,7 @@ fn env() -> Env {
 fn each_host_row_sums_its_own_records_or_says_why_it_cannot() {
   let agents = agents(&fixtures().join("state")).unwrap();
   let keys: Vec<&str> = agents.iter().map(|agent| agent.key.as_str()).collect();
-  assert_eq!(keys, ["a", "b", "c", "d"]);
+  assert_eq!(keys, ["a", "b", "c", "d", "e"]);
   let rows: Vec<serde_json::Value> = agents.iter().map(|agent| row(agent, &env())).collect();
   assert_eq!(
     rows[0],
@@ -40,6 +41,12 @@ fn each_host_row_sums_its_own_records_or_says_why_it_cannot() {
   assert_eq!(rows[2]["status"], "unavailable");
   assert!(rows[2]["reason"].as_str().unwrap().contains("OpenCode"));
   assert_eq!(rows[3]["reason"], "no session id was captured at launch");
+  assert_eq!(
+    rows[4],
+    json!({"key": "e", "host": "muse", "source": "muse session log", "complete": true,
+      "tokens": {"input_tokens": 683_287, "output_tokens": 19_083, "cached_tokens": 558_797,
+        "reasoning_tokens": 14_805}})
+  );
 }
 
 #[test]

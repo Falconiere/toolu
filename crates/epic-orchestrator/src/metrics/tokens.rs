@@ -1,7 +1,8 @@
 //! Token use per worker, read from the host's own session records (#451):
-//! Claude Code transcripts (with their subagent transcripts) and Codex
-//! rollouts. `opencode` keeps usage in a database and `cursor` in no
-//! readable store, so their rows say `unavailable`; nothing is estimated.
+//! Claude Code transcripts (with their subagent transcripts), Codex rollouts
+//! and Muse session logs (`muse_tokens`). `opencode` keeps usage in a database
+//! and `cursor` in no readable store, so their rows say `unavailable`; nothing
+//! is estimated.
 
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
@@ -14,7 +15,7 @@ use toolu_runtime::env::Env;
 pub(crate) struct Agent {
   /// The issue key.
   pub key: String,
-  /// `claude`, `codex`, `opencode` or `cursor`.
+  /// `claude`, `codex`, `muse`, `opencode` or `cursor`.
   pub host: String,
   /// The host's session id, when the launch captured it.
   pub session: Option<String>,
@@ -67,6 +68,7 @@ pub(crate) fn row(agent: &Agent, env: &Env) -> Value {
     (_, None) => Err("no session id was captured at launch"),
     ("claude", Some(session)) => claude(agent, session, env),
     ("codex", Some(session)) => codex(session, env),
+    ("muse", Some(session)) => super::muse_tokens::muse(session, env),
     ("opencode", Some(_)) => Err("OpenCode keeps usage in its database, which toolu does not read"),
     (_, Some(_)) => Err("this host records no token use toolu can read"),
   };

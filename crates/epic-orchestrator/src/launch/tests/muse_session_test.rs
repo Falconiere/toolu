@@ -14,7 +14,10 @@ const WORKSPACE: &str = "/private/tmp/muse-probe-603";
 const OTHER: &str = "01a16abe-bf40-7a42-a923-df25d8809d3d";
 
 fn real_log() -> String {
-  let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/muse/session.jsonl");
+  let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join("../../fixtures/epic/tokens/muse/sessions/2026/10/23")
+    .join(ID)
+    .join("session.jsonl");
   std::fs::read_to_string(path).expect("fixture")
 }
 

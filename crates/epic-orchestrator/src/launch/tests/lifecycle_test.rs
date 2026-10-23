@@ -251,3 +251,33 @@ fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   .expect_err("blind");
   assert_eq!(blind.message, "pane shell ownership unavailable");
 }
+
+#[test]
+fn shutdown_confirms_muse_exit_even_when_it_already_left() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "muse");
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Muse, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+  let input: Vec<serde_json::Value> = rig
+    .herdr
+    .calls()
+    .into_iter()
+    .filter(|(method, _)| method == "agent.send_keys" || method == "agent.prompt")
+    .map(|(_, params)| params.get("keys").or(params.get("text")).cloned().unwrap_or_default())
+    .collect();
+  assert_eq!(
+    input,
+    [
+      serde_json::json!(["esc"]),
+      serde_json::json!("/exit"),
+      serde_json::json!(["enter"])
+    ]
+  );
+}
