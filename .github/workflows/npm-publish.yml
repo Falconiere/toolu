@@ -96,7 +96,7 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
-          gh release download "$TAG" --pattern 'toolu-*.tar.gz' --pattern SHA256SUMS -D native-release
+          gh release download "$TAG" --pattern 'toolu-*.tar.gz' --pattern SHA256SUMS -D native-release --clobber
           (cd native-release && sha256sum -c SHA256SUMS)
 
       - name: Stage the platform binaries in the npm package

@@ -125,7 +125,8 @@ edges. Do not install comemory — it has moved to its own installer (below).
 # installed from it; skip if you do not want the pre-simplify pass.
 claude plugin marketplace add anthropics/claude-plugins-official
 
-# npx carries its own toolu binary; to use an installed one instead:
+# npx runs the toolu binary it ships. To use an installed toolu instead,
+# install it, then set TOOLU_BIN to its path:
 # curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.
@@ -138,7 +139,8 @@ npx @toolu/plugins install
 
 <!-- install-everything:codex -->
 ```bash
-# npx carries its own toolu binary; to use an installed one instead:
+# npx runs the toolu binary it ships. To use an installed toolu instead,
+# install it, then set TOOLU_BIN to its path:
 # curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 
 # Adds the toolu marketplace and installs every catalog plugin, core first.

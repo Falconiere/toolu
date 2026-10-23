@@ -40,8 +40,10 @@ then `/opt/homebrew/bin`, `/usr/local/bin`,
 `PATH`, in that order.
 A candidate counts only if it is not the wrapper itself, `toolu --hook-protocol`
 prints an integer, and `toolu plugins install --help` succeeds. A bundled
-binary that fails those probes is skipped for the installed search. With no
-working binary anywhere the wrapper exits `69` and names the install commands.
+binary that fails those probes is skipped for the installed search. To run an
+installed `toolu` instead of a working bundled one, set `TOOLU_BIN` to its
+path. With no working binary anywhere the wrapper exits `69` and names the
+install commands.
 It never downloads a binary: everything it runs rides the tarball. It exits
 with the native run's status, forwards Ctrl-C, `SIGTERM` and `SIGHUP` to it,
 and exits 128 plus the signal's number when a signal ends it.
