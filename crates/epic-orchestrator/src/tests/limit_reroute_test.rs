@@ -89,7 +89,12 @@ fn a_limited_muse_worker_cools_muse() {
   .expect("cool");
   let state =
     toolu_engine::resources::store::read_resource_state(&engine.paths.root).expect("resources");
-  assert!(state.get("cooldowns").and_then(|cool| cool.get("muse")).is_some());
+  assert!(
+    state
+      .get("cooldowns")
+      .and_then(|cool| cool.get("muse"))
+      .is_some()
+  );
 }
 
 #[test]

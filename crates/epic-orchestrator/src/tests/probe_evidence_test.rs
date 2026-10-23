@@ -17,7 +17,10 @@ fn the_committed_evidence_keeps_every_capability_gap() {
     summary.contains("cursor.start=unverified") && summary.contains("claude.teardown=unverified")
   );
   assert!(!summary.contains("codex.cancel_replace=failed") && !summary.contains("gaps: none"));
-  assert!(!summary.contains("muse."), "every Muse capability was verified live: {summary}");
+  assert!(
+    !summary.contains("muse."),
+    "every Muse capability was verified live: {summary}"
+  );
   assert_eq!(check_evidence(None), Ok(summary));
 }
 

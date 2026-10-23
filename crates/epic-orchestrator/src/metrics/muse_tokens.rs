@@ -56,7 +56,10 @@ fn logs(session: &Path) -> Vec<PathBuf> {
 
 /// Every reported quantity in `text`, keyed by its `usage_id`.
 fn reported(text: &str, into: &mut BTreeMap<String, Value>) {
-  for entry in text.lines().filter_map(|line| serde_json::from_str::<Value>(line).ok()) {
+  for entry in text
+    .lines()
+    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
+  {
     if entry.pointer("/payload/event/kind").and_then(Value::as_str)
       != Some("goal_usage_attribution")
     {

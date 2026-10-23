@@ -37,10 +37,14 @@ fn metadata_session(entry: &Value, worktree: &str) -> Option<String> {
 /// The session directories of the days around `since` (the day folders may be
 /// local time); `None` past [`MAX_FILES`].
 fn session_dirs(root: &Path, since: u64) -> Result<Option<Vec<PathBuf>>, String> {
-  let days: BTreeSet<PathBuf> = [since.saturating_sub(DAY_MS), since, since.saturating_add(DAY_MS)]
-    .into_iter()
-    .map(|at| day_dir(root, at))
-    .collect();
+  let days: BTreeSet<PathBuf> = [
+    since.saturating_sub(DAY_MS),
+    since,
+    since.saturating_add(DAY_MS),
+  ]
+  .into_iter()
+  .map(|at| day_dir(root, at))
+  .collect();
   let mut dirs = Vec::new();
   for day in days {
     let entries = match std::fs::read_dir(&day) {

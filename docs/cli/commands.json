@@ -3544,7 +3544,7 @@
             },
             {
               "global": false,
-              "help": "The host: claude, codex or cursor; default the route's",
+              "help": "The host: claude, codex, cursor or muse; default the route's",
               "hidden": false,
               "long": "kind",
               "possibleValues": [],

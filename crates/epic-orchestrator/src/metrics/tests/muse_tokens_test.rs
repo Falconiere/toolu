@@ -41,7 +41,10 @@ fn a_missing_or_unreadable_log_is_unavailable_not_zero() {
   let tmp = tempfile::tempdir().expect("temp");
   let session = tmp.path().join("muse/sessions/2026/10/23").join(ID);
   std::fs::create_dir_all(session.join("subagent/child")).expect("dirs");
-  assert_eq!(muse(ID, &data(tmp.path())), Err("the session log cannot be read"));
+  assert_eq!(
+    muse(ID, &data(tmp.path())),
+    Err("the session log cannot be read")
+  );
   std::fs::write(session.join("session.jsonl"), "{}\nnot json\n").expect("log");
   assert_eq!(
     muse(ID, &data(tmp.path())),

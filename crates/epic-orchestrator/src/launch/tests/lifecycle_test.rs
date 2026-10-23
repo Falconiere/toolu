@@ -270,7 +270,13 @@ fn shutdown_confirms_muse_exit_even_when_it_already_left() {
     .calls()
     .into_iter()
     .filter(|(method, _)| method == "agent.send_keys" || method == "agent.prompt")
-    .map(|(_, params)| params.get("keys").or(params.get("text")).cloned().unwrap_or_default())
+    .map(|(_, params)| {
+      params
+        .get("keys")
+        .or(params.get("text"))
+        .cloned()
+        .unwrap_or_default()
+    })
     .collect();
   assert_eq!(
     input,
