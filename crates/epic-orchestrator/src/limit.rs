@@ -30,7 +30,14 @@ pub(crate) fn limit_line(tail: &str) -> Option<String> {
   Some(truncate(line))
 }
 
-const HOSTS: &[&str] = &["claude", "claude-code", "codex", "cursor", "cursor-agent"];
+const HOSTS: &[&str] = &[
+  "claude",
+  "claude-code",
+  "codex",
+  "cursor",
+  "cursor-agent",
+  "muse",
+];
 
 /// A failed report whose note starts with `rate-limited`.
 pub(crate) fn on_failed(

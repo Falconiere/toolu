@@ -77,6 +77,22 @@ fn a_cooldown_reaches_shared_state_for_the_configured_minutes() {
 }
 
 #[test]
+fn a_limited_muse_worker_cools_muse() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = limited_engine(tmp.path(), "muse");
+  super::on_failed(
+    &mut engine,
+    "failed",
+    "rate-limited: model limit reached, try again later",
+    "a",
+  )
+  .expect("cool");
+  let state =
+    toolu_engine::resources::store::read_resource_state(&engine.paths.root).expect("resources");
+  assert!(state.get("cooldowns").and_then(|cool| cool.get("muse")).is_some());
+}
+
+#[test]
 fn an_unknown_host_is_reported_without_a_cooldown() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut engine = limited_engine(tmp.path(), "gemini");

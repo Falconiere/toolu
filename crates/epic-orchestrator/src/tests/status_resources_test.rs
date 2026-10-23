@@ -13,7 +13,7 @@ fn status_api_resources_project_real_lease_and_cooldown() {
   write_value(
     &paths.root.join("policy.json"),
     &json!({
-      "maxAgents": 3, "maxJobs": 1, "hosts": {"codex": 2}
+      "maxAgents": 3, "maxJobs": 1, "hosts": {"codex": 2, "muse": 1}
     }),
   )
   .expect("policy");
@@ -48,6 +48,14 @@ fn status_api_resources_project_real_lease_and_cooldown() {
     .iter()
     .find(|host| host["host"] == "claude")
     .expect("claude");
+  let names: Vec<&str> = hosts["items"]
+    .as_array()
+    .expect("hosts")
+    .iter()
+    .filter_map(|host| host["host"].as_str())
+    .collect();
+  assert_eq!(names, ["claude", "codex", "cursor", "muse"]);
+  assert_eq!(hosts["items"][3]["cap"], 1);
   assert_eq!(codex["cap"], 2);
   assert_eq!(codex["running"], 1);
   assert_eq!(claude["reason"], "usage limit");

@@ -273,6 +273,142 @@
           }
         }
       }
+    },
+    "muse": {
+      "binary": "muse",
+      "version": "Muse Code 1.4.12 (1.4.12-R6909.1)",
+      "versionCommand": [
+        "muse",
+        "--version"
+      ],
+      "profileIsolation": "Owned herdr 0.9.5 workspace on a temporary Git project (/private/tmp/muse-probe-603); the user's own Muse profile and data root, as an epic worker uses them (2026-10-23, #603).",
+      "capabilities": {
+        "start": {
+          "outcome": "verified",
+          "summary": "herdr started Muse interactively in the owned pane, ready and idle in the project, and Muse wrote its session log at start.",
+          "observedAt": "2026-10-23T21:47:15Z",
+          "command": [
+            "herdr",
+            "agent",
+            "start",
+            "probemuse",
+            "--kind",
+            "muse",
+            "--pane",
+            "wEY:p1",
+            "--",
+            "--yolo",
+            "--model",
+            "muse-spark-1.3",
+            "--reasoning-effort",
+            "low"
+          ],
+          "evidence": [
+            "agent_started returned argv [muse --yolo --model muse-spark-1.3 --reasoning-effort low], agent=muse, agent_status=idle, interactive_ready=true.",
+            "~/.local/share/muse/sessions/2026/10/23/01a16abb-7eef-7340-8cf2-2e0378dcf66c/session.jsonl held runtime.session.metadata with stream.id 01a16abb-7eef-7340-8cf2-2e0378dcf66c and workspace_root /private/tmp/muse-probe-603 before the first prompt."
+          ],
+          "nativeError": null
+        },
+        "tool_task": {
+          "outcome": "verified",
+          "summary": "A prompted shell task ran and its artifact was verified on disk.",
+          "observedAt": "2026-10-23T21:47:33Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probemuse",
+            "Run the shell command: printf 'muse-ok' > muse-artifact.txt && cat muse-artifact.txt. Then stop.",
+            "--wait"
+          ],
+          "evidence": [
+            "agent_prompted ended agent_status=done; muse-artifact.txt contained muse-ok."
+          ],
+          "nativeError": null
+        },
+        "resume": {
+          "outcome": "verified",
+          "summary": "The exact captured session id restored the prior conversation in the same pane.",
+          "observedAt": "2026-10-23T21:50:48Z",
+          "command": [
+            "herdr",
+            "agent",
+            "start",
+            "probemuse",
+            "--kind",
+            "muse",
+            "--pane",
+            "wEY:p1",
+            "--",
+            "resume",
+            "01a16abb-7eef-7340-8cf2-2e0378dcf66c",
+            "--yolo",
+            "--model",
+            "muse-spark-1.3",
+            "--reasoning-effort",
+            "low"
+          ],
+          "evidence": [
+            "agent_started returned argv [muse resume 01a16abb-7eef-7340-8cf2-2e0378dcf66c --yolo ...] and no new session directory appeared.",
+            "Asked without tools what muse-artifact.txt contained, the resumed agent answered muse-ok.",
+            "Right after the resume Muse started its own turn and dropped a prompt typed meanwhile: 'message not sent — the runtime is busy with other work · draft restored'."
+          ],
+          "nativeError": null
+        },
+        "background_work": {
+          "outcome": "verified",
+          "summary": "A managed background bash session kept running after the turn ended; Muse refuses unmanaged & and nohup.",
+          "observedAt": "2026-10-23T21:49:00Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probemuse",
+            "Start 'sleep 901' in a managed bash session (the session_id polling mode), do not wait for it to finish, tell me the session id, and end your turn while it keeps running.",
+            "--wait"
+          ],
+          "evidence": [
+            "ps showed sleep 901 as a child of the muse-bin process after the turn ended; esc left it running.",
+            "nohup sleep 901 & was refused: 'unmanaged shell backgrounding is not allowed; use bash session_id polling instead'."
+          ],
+          "nativeError": null
+        },
+        "cancel_replace": {
+          "outcome": "verified",
+          "summary": "esc cancelled a running foreground tool; after exit a fresh agent replaced the old one in the same pane with a new session.",
+          "observedAt": "2026-10-23T21:51:05Z",
+          "command": [
+            "herdr",
+            "agent",
+            "send-keys",
+            "probemuse",
+            "esc"
+          ],
+          "evidence": [
+            "sleep 120 started by the prompted turn was gone after esc and the agent reached done; the background sleep 901 kept running.",
+            "herdr agent start probemuse2 --kind muse in the same pane started a new session 01a16abe-bf40-7a42-a923-df25d8809d3d."
+          ],
+          "nativeError": null
+        },
+        "teardown": {
+          "outcome": "verified",
+          "summary": "/exit with live background work asks 'Local work is still active … 1. Exit anyway / 2. Stay'; enter confirms and Muse and its background process exit. An idle Muse exits on /exit alone.",
+          "observedAt": "2026-10-23T21:50:00Z",
+          "command": [
+            "herdr",
+            "agent",
+            "prompt",
+            "probemuse",
+            "/exit"
+          ],
+          "evidence": [
+            "After /exit then enter, herdr agent get returned agent_not_found and ps showed neither muse-bin nor sleep 901.",
+            "Muse printed 'To continue this session, run muse resume 01a16abb-7eef-7340-8cf2-2e0378dcf66c'; the pane returned to fish.",
+            "/exit followed at once by enter on an idle Muse exited it and the enter reached the fish prompt harmlessly (second run, session 01a16ac2-2700-75d1-963b-39e9d296e105)."
+          ],
+          "nativeError": null
+        }
+      }
     }
   }
 }
