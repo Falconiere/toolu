@@ -6,6 +6,14 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.1.4](https://github.com/Falconiere/toolu/compare/v8.1.3...v8.1.4) (2026-10-23)
+
+
+### Bug Fixes
+
+* **epic:** wait for herdr to name a started agent before prompting ([#593](https://github.com/Falconiere/toolu/issues/593)) ([a427fa3](https://github.com/Falconiere/toolu/commit/a427fa3f8c9b565a76375b01eab63991499c10c5))
+* **resources:** reclaim agent leases whose owner and agent are gone ([#592](https://github.com/Falconiere/toolu/issues/592)) ([84b3603](https://github.com/Falconiere/toolu/commit/84b36034a640c8c1aca7000c2c17d49fbba5d283))
+
 ## [8.1.3](https://github.com/Falconiere/toolu/compare/v8.1.2...v8.1.3) (2026-10-23)
 
 

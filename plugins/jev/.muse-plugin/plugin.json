@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "jev",
   "displayName": "jev",
-  "version": "8.1.3",
+  "version": "8.1.4",
   "description": "Typed judgments from TypeSafe's Jev model at runtime (skill + REST wrapper) — yes/no probabilities, choices, and scores a script can branch on. Standalone, no dependencies.",
   "compat": {
     "source": "native",
