@@ -107,8 +107,25 @@ fn suffixed(path: &Path, suffix: &str) -> PathBuf {
   PathBuf::from(out)
 }
 
+/// A regular file at the lock path cannot contain `owner.json` and must be
+/// cleared explicitly so unknown contents are never discarded.
+fn lock_directory_exists(path: &Path) -> Result<bool, String> {
+  match std::fs::metadata(path) {
+    Ok(meta) if meta.is_dir() => Ok(true),
+    Ok(_) => Err(format!(
+      "{} is not a directory; confirm no resource update is using it, then remove the file",
+      path.display()
+    )),
+    Err(err) if err.kind() == ErrorKind::NotFound => Ok(false),
+    Err(err) => Err(format!("{}: {err}", path.display())),
+  }
+}
+
 /// Whether the lock's owner is provably dead; unknown or corrupt ownership is not.
 fn stale(path: &Path) -> Result<bool, String> {
+  if !lock_directory_exists(path)? {
+    return Ok(false);
+  }
   let owner = read_json_file(&path.join("owner.json"), Ordered::Null)?;
   match (owner.get("pid"), owner.get("token")) {
     (Some(Ordered::Number(pid)), Some(Ordered::String(_))) => {
@@ -179,13 +196,14 @@ pub fn acquire_lock(path: &Path, timeout: Duration) -> Result<Option<LockHandle>
   }
   let until = Instant::now() + timeout;
   loop {
+    let exists = lock_directory_exists(path)?;
     if suffixed(path, ".reap").exists() {
       return Ok(None);
     }
-    if path.exists() {
+    if exists {
       reclaim(path)?;
     }
-    if !path.exists()
+    if !lock_directory_exists(path)?
       && let Some(handle) = attempt(path)?
     {
       return Ok(Some(handle));

@@ -75,6 +75,11 @@ the next start applies in order. Stall deadlines belong to each issue: 45
 minutes, or 120 minutes while the phase is babysit. The 30-second tick is for
 checkpoints, not for herdr.
 
+Resource leases use a `state.lock` directory under the resource home. If an
+external command creates a regular file there, lease commands report its path
+and ask you to confirm no resource update is using it, then remove the file.
+Inspect the named file before removal; toolu leaves its contents untouched.
+
 ## Metrics and budgets
 
 `toolu epic metrics` (narrowed with `--epic` and `--since`) folds the engine journal

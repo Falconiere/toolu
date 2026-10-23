@@ -64,6 +64,29 @@ fn a_crashed_reclaimer_fails_closed_and_corrupt_ownership_is_kept() {
 }
 
 #[test]
+fn a_regular_lock_file_reports_recovery_without_changing_the_file() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("state.lock");
+  std::fs::write(&path, b"operator data").unwrap();
+
+  let error = acquire_lock(&path, Duration::ZERO).unwrap_err();
+  assert!(error.contains(&path.display().to_string()), "{error}");
+  assert!(error.contains("not a directory"), "{error}");
+  assert!(error.contains("remove the file"), "{error}");
+
+  let mut ran = false;
+  let update = with_resource_lock(dir.path(), || {
+    ran = true;
+    Ok(())
+  });
+  assert_eq!(update, Err(error.clone()));
+  assert!(!ran);
+  std::fs::create_dir(dir.path().join("state.lock.reap")).unwrap();
+  assert_eq!(acquire_lock(&path, Duration::ZERO).unwrap_err(), error);
+  assert_eq!(std::fs::read(&path).unwrap(), b"operator data");
+}
+
+#[test]
 fn an_update_waits_for_the_lock_then_reports_busy() {
   let dir = tempfile::tempdir().unwrap();
   let held = acquire_lock(&dir.path().join("state.lock"), Duration::ZERO)
