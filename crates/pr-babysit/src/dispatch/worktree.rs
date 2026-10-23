@@ -11,7 +11,9 @@ use super::herdr::{argv, command, herdr, try_herdr};
 use crate::error::{Failure, Result};
 use crate::pattern::{is, pattern};
 
-pattern!(SESSION_FILES, r"^\?\? \.(claude|codex|cursor)/");
+// Muse writes nothing into the worktree; toolu's hooks under Muse keep their
+// state in `.toolu/tmp/`.
+pattern!(SESSION_FILES, r"^\?\? \.(claude|codex|cursor|toolu/tmp)/");
 
 /// The worktree's uncommitted changes, host session files left out.
 pub(super) fn dirt(dispatcher: &Dispatcher<'_>, path: &str) -> Vec<String> {

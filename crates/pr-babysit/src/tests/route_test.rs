@@ -102,6 +102,75 @@ fn herdr_plans_skip_cooling_hosts_and_hosts_off_path() {
   );
 }
 
+fn hosts_of(routed: &Value) -> Vec<(String, Value, Value, Value)> {
+  let groups = routed["groups"].as_array().unwrap();
+  let field = |group: &Value, key: &str| group[key].clone();
+  groups
+    .iter()
+    .map(|group| {
+      let tier = group["tier"].as_str().unwrap().to_owned();
+      (
+        tier,
+        field(group, "host"),
+        field(group, "model"),
+        field(group, "effort"),
+      )
+    })
+    .collect()
+}
+
+#[test]
+fn muse_fixes_alone_or_takes_its_preferred_tier_in_a_mixed_pool() {
+  let world = world();
+  let muse = world.dir.path().join("bin/muse");
+  std::fs::write(&muse, "#!/bin/sh\n").unwrap();
+  std::fs::set_permissions(&muse, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let alone = plan(
+    &world,
+    &settings(&json!({"hosts": ["muse"]})),
+    &[],
+    None,
+    Scoring::Off,
+  );
+  assert_eq!(alone["dispatch"], "herdr");
+  let tiers = Fixer::Muse.defaults();
+  for (tier, host, model, effort) in hosts_of(&alone) {
+    let index = ["trivial", "standard", "complex", "critical"]
+      .iter()
+      .position(|name| *name == tier)
+      .unwrap();
+    assert_eq!(host, "muse", "{tier}");
+    assert_eq!(model, json!(tiers[index].model), "{tier}");
+    assert_eq!(effort, json!(tiers[index].effort), "{tier}");
+  }
+  let mixed = settings(&json!({"hosts": ["claude", "muse"], "prefer": {"critical": ["muse"]}}));
+  let routed = plan(&world, &mixed, &[], None, Scoring::Off);
+  let hosts: Vec<(String, Value)> = hosts_of(&routed)
+    .into_iter()
+    .map(|(tier, host, _, _)| (tier, host))
+    .collect();
+  assert_eq!(
+    hosts,
+    [
+      ("critical".to_owned(), json!("muse")),
+      ("complex".to_owned(), json!("claude")),
+      ("standard".to_owned(), json!("claude")),
+      ("trivial".to_owned(), json!("claude")),
+    ]
+  );
+  std::fs::remove_file(&muse).unwrap();
+  let missing = plan(
+    &world,
+    &settings(&json!({"hosts": ["muse"]})),
+    &[],
+    None,
+    Scoring::Off,
+  );
+  assert_eq!(missing["dispatch"], "inline");
+  let note = missing["note"].as_str().unwrap();
+  assert!(note.contains("(CLI not on PATH: muse)"), "{note}");
+}
+
 #[test]
 fn every_host_cooling_routes_inline_and_says_why() {
   let world = world();

@@ -6,7 +6,7 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::error::{Failure, Result};
-use crate::fixer::host::Fixer;
+use crate::fixer::host::{Fixer, NAMES};
 
 fn invalid(message: &str) -> Failure {
   Failure::new("plan_invalid", message)
@@ -55,7 +55,7 @@ fn hosts(groups: &[Value]) -> Result<()> {
       });
       return Err(Failure::new(
         "config_invalid",
-        format!("plan group {seq} names host '{named}'; use one of claude, codex, cursor"),
+        format!("plan group {seq} names host '{named}'; use one of {NAMES}"),
       ));
     };
     let text = |key: &str| group.get(key).and_then(Value::as_str);
