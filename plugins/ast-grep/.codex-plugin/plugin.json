@@ -1,6 +1,6 @@
 {
   "name": "ast-grep",
-  "version": "8.1.1",
+  "version": "8.1.2",
   "hookProtocol": 2,
   "description": "Structural code search and rewrite: skill, native toolu ast-grep commands, and compiled search and byte-savings rules.",
   "skills": "./skills/",
