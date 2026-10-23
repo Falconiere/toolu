@@ -176,6 +176,32 @@ fn start_call(plan: &AgentPlan, resume: bool) -> Result<(Call, Vec<String>), Fai
   Ok((start, args))
 }
 
+/// After `agent start`: a fresh agent must answer to its name, a resumed one
+/// must keep its recorded identity and session.
+fn verify_started(
+  herdr: &mut Herdr<'_>,
+  plan: &AgentPlan,
+  resume: bool,
+  wait: Duration,
+) -> Result<(), Failure> {
+  let (key, kind) = (plan.key.as_str(), plan.host.kind);
+  if !resume {
+    return await_start(herdr, plan, kind, wait);
+  }
+  let live = inspect_agent(herdr, key)?
+    .ok_or_else(|| Failure::refusal("resumed agent disappeared before identity verification"))?;
+  require_identity(
+    key,
+    &live,
+    &Expected {
+      kind,
+      pane: &plan.pane,
+      cwd: &plan.worktree,
+    },
+  )?;
+  require_recorded_session(herdr, kind, plan)
+}
+
 /// Keep a verified live agent, stop it for `--replace`, then start or resume.
 /// A fresh start waits up to `wait` for herdr to name the agent, so the
 /// brief never sends to an agent that cannot receive it.
@@ -190,7 +216,7 @@ pub(crate) fn ensure_agent(
   log: &mut Vec<String>,
   wait: Duration,
 ) -> Result<AgentStart, Failure> {
-  let (key, kind) = (plan.key.as_str(), plan.host.kind);
+  let kind = plan.host.kind;
   if !plan.dry
     && let Some(kept) = keep_or_stop(herdr, plan, log)?
   {
@@ -213,23 +239,7 @@ pub(crate) fn ensure_agent(
     });
   }
   herdr.call(&start)?;
-  if !resume {
-    await_start(herdr, plan, kind, wait)?;
-  }
-  if resume {
-    let live = inspect_agent(herdr, key)?
-      .ok_or_else(|| Failure::refusal("resumed agent disappeared before identity verification"))?;
-    require_identity(
-      key,
-      &live,
-      &Expected {
-        kind,
-        pane: &plan.pane,
-        cwd: &plan.worktree,
-      },
-    )?;
-    require_recorded_session(herdr, kind, plan)?;
-  }
+  verify_started(herdr, plan, resume, wait)?;
   Ok(AgentStart {
     started: true,
     resumed: resume,

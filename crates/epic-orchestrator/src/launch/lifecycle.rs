@@ -167,6 +167,16 @@ fn identity_pending(name: &str, err: &Failure) -> bool {
   err.message == format!("cannot verify live identity of {name}")
 }
 
+/// Whether herdr no longer lists `name`. A dying agent's entry degrades
+/// before its name disappears: still present, not a failure.
+fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
+  match inspect_agent(herdr, name) {
+    Ok(agent) => Ok(agent.is_none()),
+    Err(err) if identity_pending(name, &err) => Ok(false),
+    Err(err) => Err(err),
+  }
+}
+
 /// A status that accepts a prompt.
 fn promptable(status: &str) -> bool {
   status == "idle" || status == "done"
@@ -318,14 +328,7 @@ pub(crate) fn shutdown_agent(
   request_exit(herdr, name, expected.kind)?;
   let deadline = Instant::now() + Duration::from_secs(30);
   loop {
-    // A dying agent's entry degrades before its name disappears: still
-    // present, not a failure.
-    let gone = match inspect_agent(herdr, name) {
-      Ok(agent) => agent.is_none(),
-      Err(err) if identity_pending(name, &err) => false,
-      Err(err) => return Err(err),
-    };
-    if gone {
+    if listing_gone(herdr, name)? {
       break;
     }
     if Instant::now() >= deadline {
