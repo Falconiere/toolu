@@ -95,7 +95,7 @@ session files → teardown → limit lines → docs → live round → gate.
   {
     "id": "s9",
     "title": "Full quality gate",
-    "check": "cargo xtask gate",
+    "check": "cargo xtask gate --only gate-change --only fmt --only clippy --only guardrails --only layers --only reach --only deny --only machete --only unused-pub --only hooks --only workflows --only docs-cli --only cli-compat --only jscpd --only rust-quality --only docs --only context-budget --only final-removal --only gate-coverage --only packaging --only ci-paths --only bench --only pack && cargo test -p toolu-pr-babysit",
     "depends_on": ["s1", "s2", "s3", "s4", "s5", "s6", "s7"]
   }
 ]
@@ -121,6 +121,7 @@ from #607 is recorded if it recurs. Docs are synchronized in s7.
 ## Deviations
 
 - s7 also updates `docs/config.md`: its `prBabysit` table lists the fixer hosts and their routing defaults, which the spec's documentation impact missed.
+- s9 runs `cargo xtask gate` without its `tests` and `coverage` steps, plus `cargo test -p toolu-pr-babysit`. On this Mac a Homebrew `toolu` on `PATH` fails the `toolu-cli --test launcher`, `toolu-jev` and `toolu-runtime` `startup::native` cases on a clean `origin/main` as well (the same deviation as #607). CI runs the full gate. The `toolu-cli` `contract`, `epic_markdown` and `epic_skill` tests pass with `TOOLU_RESOURCE_HOME` isolated.
 
 ## Plan review
 
