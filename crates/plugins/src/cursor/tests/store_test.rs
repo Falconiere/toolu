@@ -39,7 +39,7 @@ fn a_directory_without_the_marker_is_foreign_and_never_listed_as_ours() {
   let store = store(home.path());
   std::fs::create_dir_all(store.path("mine")).unwrap();
   assert_eq!(store.state("mine"), State::Foreign);
-  assert!(store.ours().is_empty());
+  assert_eq!(store.ours(), Vec::<String>::new());
 }
 
 #[test]
