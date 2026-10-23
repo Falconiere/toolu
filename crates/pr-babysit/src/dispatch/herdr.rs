@@ -9,6 +9,7 @@ use toolu_runtime::process::{Spec, run};
 
 use super::outcome::is_claude_trust_prompt;
 use crate::error::{Failure, Result};
+use crate::fixer::host::Fixer;
 
 const TIMEOUT: Duration = Duration::from_secs(120);
 const SECOND: Duration = Duration::from_secs(1);
@@ -132,13 +133,19 @@ fn agent_live(env: &Env, name: &str) -> bool {
   })
 }
 
-/// Asks agent `name` to exit and waits up to 30 s; true when it is gone.
-pub(crate) fn stop_agent(env: &Env, name: &str) -> bool {
+/// Asks agent `name`, a `host` fixer, to exit and waits up to 30 s; true when
+/// it is gone.
+pub(crate) fn stop_agent(env: &Env, name: &str, host: Option<Fixer>) -> bool {
   if !agent_live(env, name) {
     return true;
   }
   let _escaped = try_herdr(env, &argv(&["agent", "send-keys", name, "esc"]), TIMEOUT);
   let _exited = try_herdr(env, &argv(&["agent", "prompt", name, "/exit"]), TIMEOUT);
+  // With live background work Muse asks "Exit anyway?" and enter confirms it;
+  // an idle Muse has already left, so herdr answers agent_not_found.
+  if host == Some(Fixer::Muse) {
+    let _confirmed = try_herdr(env, &argv(&["agent", "send-keys", name, "enter"]), TIMEOUT);
+  }
   for _ in 0..30 {
     if !agent_live(env, name) {
       return true;

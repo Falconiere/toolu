@@ -11,12 +11,18 @@ use super::herdr::{argv, command, screen, stop_agent, try_herdr};
 use super::launch::Launch;
 use super::outcome::fixer_outcome;
 use crate::error::{Failure, Result};
+use crate::fixer::host::Fixer;
 
 /// The wait when the caller names none.
 pub(crate) const DEFAULT_TIMEOUT: u64 = 480;
 
 fn text<'v>(value: &'v Value, key: &str) -> &'v str {
   value.get(key).and_then(Value::as_str).unwrap_or_default()
+}
+
+/// The fixer host a group names.
+fn host(group: &Value) -> Option<Fixer> {
+  Fixer::parse(text(group, "host")).ok()
 }
 
 fn agent_status(value: &Value) -> Option<&str> {
@@ -43,7 +49,7 @@ impl Dispatcher<'_> {
       ""
     };
     let outcome = fixer_outcome(report, shown);
-    stop_agent(self.env, agent);
+    stop_agent(self.env, agent, host(group));
     let error = if outcome == "no_report" && read.status != 0 {
       format!(
         "could not read the fixer's last screen: {}",
@@ -76,7 +82,7 @@ impl Dispatcher<'_> {
   /// Ends a group's fixer before it is launched again or cleaned up.
   pub(super) fn stop_fixer(&self, group: &Value) {
     if let Some(agent) = group.get("agent").and_then(Value::as_str) {
-      stop_agent(self.env, agent);
+      stop_agent(self.env, agent, host(group));
     }
   }
 

@@ -9,9 +9,10 @@ use crate::error::{Failure, Result};
 use crate::pattern::{is, pattern};
 use crate::state::write_json;
 
+// Muse says `model limit reached` and `You've used your <plan> quota`.
 pattern!(
   HOST_LIMIT,
-  r"(?i)usage limit|rate[- ]limit(ed)?\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\b429\b|limit will reset|try again (at|in) "
+  r"(?i)usage limit|rate[- ]limit(ed)?\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\b429\b|limit will reset|try again (at|in) |model limit reached|you've used your [a-z0-9 -]*quota"
 );
 pattern!(
   TRUST_EXTRAS,
