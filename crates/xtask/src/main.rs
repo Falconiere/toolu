@@ -36,6 +36,7 @@ mod gate_coverage_discover;
 mod gate_coverage_names;
 mod guardrails;
 mod homebrew_formula;
+mod hooks_cursor;
 mod hooks_entries;
 mod hooks_manifests;
 mod hooks_muse;
