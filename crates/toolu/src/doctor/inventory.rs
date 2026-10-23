@@ -62,7 +62,8 @@ pub(super) fn collect(roots: &Roots, cwd: &Path) -> Inventory {
     Host::Claude => claude(roots, cwd),
     Host::Codex => codex(roots),
     Host::Muse => super::muse::collect(roots),
-    Host::Cursor | Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
+    Host::Cursor => super::cursor::collect(roots),
+    Host::Hermes => Inventory::warn("plugin inventory is unknown for this host"),
   }
 }
 

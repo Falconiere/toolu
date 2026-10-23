@@ -89,7 +89,7 @@ fn a_claude_entry_without_install_path_warns_and_is_omitted() {
 #[test]
 fn unsupported_hosts_and_unavailable_inventories_warn() {
   let home = tempfile::tempdir().unwrap();
-  for host in [Host::Cursor, Host::Hermes] {
+  for host in [Host::Hermes] {
     let roots = Roots::new(
       Env::from_pairs([("HOME", home.path().to_str().unwrap())]),
       Some(host),
