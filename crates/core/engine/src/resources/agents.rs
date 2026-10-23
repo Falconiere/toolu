@@ -15,7 +15,7 @@ use super::store::{leases_mut, update_resources};
 /// and `is_live` does not know its agent.
 fn reclaimable(
   lease: &Ordered,
-  is_live: &impl Fn(&str, Option<&str>) -> bool,
+  is_live: &mut impl FnMut(&str, Option<&str>) -> bool,
 ) -> Result<bool, String> {
   if text(lease, "type") != Some("agent") || process_alive(pid(lease, "ownerPid").unwrap_or(0.0))? {
     return Ok(false);
@@ -35,7 +35,7 @@ fn reclaimable(
 /// A lock, state or process probe failure.
 pub fn reconcile_agent_leases(
   root: &Path,
-  is_live: impl Fn(&str, Option<&str>) -> bool,
+  mut is_live: impl FnMut(&str, Option<&str>) -> bool,
 ) -> Result<usize, String> {
   update_resources(root, |state| {
     let Some(items) = leases_mut(state) else {
@@ -44,7 +44,7 @@ pub fn reconcile_agent_leases(
     let before = items.len();
     let mut kept = Vec::with_capacity(before);
     for lease in items.drain(..) {
-      if !reclaimable(&lease, &is_live)? {
+      if !reclaimable(&lease, &mut is_live)? {
         kept.push(lease);
       }
     }
