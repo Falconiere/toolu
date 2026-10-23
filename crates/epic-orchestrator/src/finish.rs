@@ -3,7 +3,9 @@
 //! branch, mark the record merged and release its lease. `--abandon` skips
 //! the merge check, keeps the branch, and refuses dirty work it could not
 //! snapshot. A teardown step that fails leaves `cleanup-incomplete` and the
-//! lease; a missing or unmerged PR refuses before anything is written.
+//! lease; a missing or unmerged PR refuses before anything is written. An
+//! abandoned attempt that never made a worktree (#584) has nothing to tear
+//! down: it is marked abandoned and its lease released.
 
 use std::path::Path;
 use std::time::SystemTime;
@@ -16,7 +18,9 @@ mod record;
 mod remove;
 
 use ownership::{fence_cleanup_ownership, release_recorded_ownership};
-use record::{finished, read_issue_record, removal_intent, terminal_cleanup_complete};
+use record::{
+  finished, never_started, read_issue_record, removal_intent, terminal_cleanup_complete,
+};
 use remove::{Removal, Teardown, verify_prepared};
 
 use crate::launch::Ctx;
@@ -93,6 +97,14 @@ fn plan(state_dir: &Path, key: &str, abandon: bool, ctx: &Ctx<'_>) -> Result<Fin
   if !abandon {
     require_merged(state_dir, key, &word("repo"), ctx.gh.clone())?;
   }
+  if abandon && never_started(&record) {
+    let lease = text(&record, "lease_token").map(|token| format!("release lease {token}"));
+    let finished = json!({"dry_run": true, "key": key, "stage": word("stage"), "actions": lease.into_iter().collect::<Vec<_>>()});
+    return Ok(FinishReport {
+      finished,
+      warnings: Vec::new(),
+    });
+  }
   let mut actions = Vec::new();
   if !word("agent").is_empty() {
     actions.push(format!("herdr agent prompt {} /exit", word("agent")));
@@ -148,6 +160,9 @@ fn finish(
     (terminal, abandon),
     ctx.gh.clone(),
   )?;
+  if abandon && never_started(&record) {
+    return abandon_unstarted(&path, &dir, &mut record);
+  }
   let mut teardown = Teardown {
     path: &path,
     abandon,
@@ -167,6 +182,18 @@ fn finish(
     (&removal, abandon),
     teardown.warnings,
   )
+}
+
+/// Abandon an attempt that made nothing to remove: settle it and release its
+/// lease.
+fn abandon_unstarted(path: &Path, dir: &str, record: &mut Record) -> Result<FinishReport, String> {
+  let nothing = Removal {
+    removed: true,
+    branch_deleted: false,
+    wip_ref: None,
+    dirty: Vec::new(),
+  };
+  record_finish(path, dir, record, (&nothing, true), Vec::new())
 }
 
 /// Write the teardown's final stage and evidence, and release the lease

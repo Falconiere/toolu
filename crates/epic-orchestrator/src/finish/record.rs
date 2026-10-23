@@ -135,7 +135,13 @@ pub(crate) fn read_issue_record(path: &Path, key: &str) -> Result<Record, String
     ));
   };
   let invalid = |detail: &str| format!("invalid issue record {}: {detail}", path.display());
-  for field in ["key", "repo", "branch", "checkout", "worktree", "stage"] {
+  let started = !never_started(&record);
+  let required = if started {
+    &["key", "repo", "branch", "checkout", "worktree", "stage"][..]
+  } else {
+    &["key", "repo", "branch", "stage"][..]
+  };
+  for field in required {
     if text(&record, field).is_none_or(str::is_empty) {
       return Err(invalid(field));
     }
@@ -148,7 +154,8 @@ pub(crate) fn read_issue_record(path: &Path, key: &str) -> Result<Record, String
   }
   let absolute =
     |field: &str| text(&record, field).is_some_and(|path| Path::new(path).is_absolute());
-  if !absolute("checkout") || !absolute("worktree") {
+  let relative = |field: &str| record.contains_key(field) && !absolute(field);
+  if relative("checkout") || relative("worktree") {
     return Err(invalid("paths"));
   }
   let (root, token) = (record.get("resource_root"), record.get("lease_token"));
@@ -166,6 +173,22 @@ pub(crate) fn read_issue_record(path: &Path, key: &str) -> Result<Record, String
   }
   removal_intent(&record).map_err(|_err| invalid("removal intent"))?;
   Ok(record)
+}
+
+/// Whether the attempt died before it made anything a teardown must remove:
+/// no worktree, workspace, agent, pane, session or removal intent.
+pub(crate) fn never_started(record: &Record) -> bool {
+  let empty = |field: &str| record.get(field).is_none_or(|v| v.is_null() || v == "");
+  [
+    "worktree",
+    "workspace_id",
+    "agent",
+    "pane_id",
+    "session_id",
+    "removal_intent",
+  ]
+  .iter()
+  .all(|field| empty(field))
 }
 
 /// Whether a terminal record proves its cleanup finished.
