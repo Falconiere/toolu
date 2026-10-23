@@ -2,6 +2,7 @@
 //! (`admission.ts`): the agent lease, its replacement on another host, the
 //! per-issue launch lock, and each attempt's persisted stage.
 
+use std::cell::{OnceCell, RefCell};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -188,18 +189,21 @@ pub(crate) fn launch_reservation(
 }
 
 /// Free the agent leases whose owner exited and whose agent herdr no longer
-/// lists (#583). Without herdr's answer nothing is proven gone, so nothing is freed.
+/// lists (#583). herdr is asked only for such a lease, and only once; without
+/// its answer nothing is proven gone, so nothing is freed.
 fn reclaim_dead_agents(root: &Path, herdr: &mut Herdr<'_>) {
-  let Ok(reply) = herdr.call(&Call::AgentList) else {
-    return;
-  };
-  let Some(agents) = reply.get("agents").and_then(serde_json::Value::as_array) else {
-    return;
-  };
+  let herdr = RefCell::new(herdr);
+  let listing: OnceCell<Option<Vec<serde_json::Value>>> = OnceCell::new();
   let listed = |name: &str, pane: Option<&str>| {
-    agents.iter().any(|agent| {
-      let text = |key: &str| agent.get(key).and_then(serde_json::Value::as_str);
-      text("name") == Some(name) || pane.is_some_and(|p| text("pane_id") == Some(p))
+    let agents = listing.get_or_init(|| {
+      let reply = herdr.borrow_mut().call(&Call::AgentList).ok()?;
+      reply.get("agents")?.as_array().cloned()
+    });
+    agents.as_ref().is_none_or(|agents| {
+      agents.iter().any(|agent| {
+        let text = |key: &str| agent.get(key).and_then(serde_json::Value::as_str);
+        text("name") == Some(name) || pane.is_some_and(|p| text("pane_id") == Some(p))
+      })
     })
   };
   // A failed reclaim leaves the leases, as before; admission reports capacity.
