@@ -70,7 +70,11 @@ impl<'a> Session<'a> {
           options.env.clone().with("TOOLU_CONFIG_DIR", &config_dir),
         )
       }
-      Phase::Post => post_env(options.env, options.cwd, &config_dir),
+      Phase::Post => post_env(
+        options.env,
+        &post_cwd(host, &roots, options.cwd),
+        &config_dir,
+      ),
     };
     let session = Session {
       phase,
@@ -87,6 +91,18 @@ impl<'a> Session<'a> {
   /// The hook process's working directory.
   pub(crate) fn cwd(&self) -> &Path {
     self.options.cwd
+  }
+}
+
+/// The directory a post-tool run is rooted at: the hook process's own, except on
+/// Cursor, whose plugin hooks start elsewhere and name the project in
+/// `CURSOR_PROJECT_DIR` (#589).
+fn post_cwd(host: Host, roots: &Roots, cwd: &Path) -> PathBuf {
+  match host {
+    Host::Cursor => roots
+      .project_root(Some(cwd))
+      .unwrap_or_else(|| cwd.to_path_buf()),
+    Host::Claude | Host::Codex | Host::Hermes | Host::Muse => cwd.to_path_buf(),
   }
 }
 

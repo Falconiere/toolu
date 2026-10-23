@@ -1,8 +1,10 @@
 use std::path::Path;
 
+use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
+use toolu_runtime::host::roots::Roots;
 
-use super::{Opened, Session, post_env};
+use super::{Opened, Session, post_cwd, post_env};
 use crate::dispatch::{DEFAULT_MODULE_TIMEOUT, DispatchOptions, Phase};
 
 fn options<'a>(env: &'a Env, cwd: &'a Path) -> DispatchOptions<'a> {
@@ -64,4 +66,18 @@ fn a_hook_switched_off_keeps_its_warnings_and_opens_no_session() {
     }
     Opened::Disabled(_) => panic!("pre-tools is on"),
   }
+}
+
+#[test]
+fn cursor_roots_a_post_tool_run_at_its_project_not_the_hook_process_directory() {
+  let dir = tempfile::tempdir().unwrap();
+  let project = std::fs::canonicalize(dir.path()).unwrap();
+  let elsewhere = tempfile::tempdir().unwrap();
+  let env = Env::from_pairs([("CURSOR_PROJECT_DIR", project.to_str().unwrap())]);
+  let roots = Roots::new(env, Some(Host::Cursor));
+  assert_eq!(post_cwd(Host::Cursor, &roots, elsewhere.path()), project);
+  assert_eq!(
+    post_cwd(Host::Claude, &roots, elsewhere.path()),
+    elsewhere.path()
+  );
 }
