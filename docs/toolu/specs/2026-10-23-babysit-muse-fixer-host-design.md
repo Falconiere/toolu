@@ -117,6 +117,9 @@ four tiers; `prefer.<tier>` may name `muse`.
   clean; one with an untracked `.toolu/skills/x/SKILL.md` is `worktree_dirty`.
 - **AC-6:** `fixer_outcome` returns `host_limited` for Muse's `model limit reached`
   and `You've used your Pro quota` lines without a report.
+- **AC-8:** Stopping a live Muse fixer sends `esc`, `/exit` and then `enter`;
+  stopping a Claude, Codex or Cursor fixer sends no `enter`; an
+  `agent_not_found` answer to the `enter` still ends in a stopped agent.
 - **AC-7:** Live: on herdr 0.9.5 with Muse Code 1.4.12, a `dispatch-fix start` /
   `wait` / `cleanup` round with a single Muse group applies a fix (the fixer's
   new commit on the slot branch, which the controller then pushes to the PR
@@ -138,6 +141,9 @@ four tiers; `prefer.<tier>` may name `muse`.
   untracked layouts; `cargo test -p toolu-pr-babysit worktree`.
 - AC-6: `dispatch/tests/outcome_test.rs` with both Muse lines;
   `cargo test -p toolu-pr-babysit outcome`.
+- AC-8: `dispatch/tests/herdr_test.rs` with a herdr executable on a temporary
+  `PATH` that logs its argv and lists the agent until `/exit` (Muse: until
+  `enter`); `cargo test -p toolu-pr-babysit herdr`.
 - AC-7: manual live run recorded in the PR body and linked on #604: the round's
   JSON outputs, the fix commit on the scratch remote, and empty `herdr agent list`,
   `git worktree list` and `git branch --list 'pr-babysit/*'` afterwards.
@@ -159,6 +165,7 @@ if those change, both tables change together (owner #591).
 
 - Acceptance criteria: 🟡 should-fix (fixed): AC-4 only covered a Muse-only pool; the issue asks that route-fix can choose Muse within a pool. Added the mixed `["claude", "muse"]` pool with `prefer.critical`.
 - Acceptance criteria: 🟡 should-fix (fixed): AC-7 said the fix commit is pushed by the round; fixers never push (fixer brief), the controller does. Reworded, and made `wait` stopping the Muse agent observable.
+- Acceptance criteria: 🔵 consider (fixed): the Muse teardown had no AC; added AC-8 with a logging herdr executable.
 - Issue mapping: `Fixer::Muse` flags and defaults (AC-1, AC-2), worktree session files (AC-5), host messages (AC-3), plan group `muse` (AC-3), route-fix pool choice (AC-4), live herdr 0.9.5 round with cleanup and evidence on #604 (AC-7). Jev coverage judgment 0.71; manual mapping found no uncovered item.
 
 **Status:** Approved
