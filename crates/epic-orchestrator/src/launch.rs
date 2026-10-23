@@ -18,6 +18,7 @@ mod deliver;
 mod digest;
 mod failure;
 pub(crate) mod lifecycle;
+mod muse_session;
 pub(crate) mod record;
 mod session;
 mod worktree;

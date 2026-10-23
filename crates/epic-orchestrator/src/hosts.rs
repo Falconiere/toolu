@@ -6,7 +6,7 @@
 
 use regex::{Regex, RegexBuilder};
 
-/// The three worker hosts.
+/// The four worker hosts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum HostKind {
   /// Claude Code.
@@ -15,13 +15,21 @@ pub(crate) enum HostKind {
   Codex,
   /// Cursor Agent.
   Cursor,
+  /// Muse Code.
+  Muse,
 }
 
 /// Every host, in pool order.
-pub(crate) const HOST_KINDS: [HostKind; 3] = [HostKind::Claude, HostKind::Codex, HostKind::Cursor];
+pub(crate) const HOST_KINDS: [HostKind; 4] = [
+  HostKind::Claude,
+  HostKind::Codex,
+  HostKind::Cursor,
+  HostKind::Muse,
+];
 
 /// Usage-limit or rate-limit messages the agent CLIs print when throttled.
-pub(crate) const HOST_LIMIT: &str = "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) ";
+/// Muse also says `model limit reached` and `You've used your <plan> quota`.
+pub(crate) const HOST_LIMIT: &str = "usage limit|rate[- ]limit(ed)?\\b|hit your (usage )?limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit will reset|try again (at|in) |model limit reached|you've used your [a-z0-9 -]*quota";
 
 impl HostKind {
   /// The herdr `--kind` and record name.
@@ -30,6 +38,7 @@ impl HostKind {
       Self::Claude => "claude",
       Self::Codex => "codex",
       Self::Cursor => "cursor",
+      Self::Muse => "muse",
     }
   }
 }
@@ -40,6 +49,7 @@ pub(crate) fn parse_host_kind(name: &str) -> Option<HostKind> {
     "claude" | "claude-code" => Some(HostKind::Claude),
     "codex" => Some(HostKind::Codex),
     "cursor" | "cursor-agent" => Some(HostKind::Cursor),
+    "muse" => Some(HostKind::Muse),
     _ => None,
   }
 }
@@ -50,7 +60,7 @@ pub(crate) fn parse_host_kind(name: &str) -> Option<HostKind> {
 /// The name is no host.
 pub(crate) fn host_kind(name: &str) -> Result<HostKind, String> {
   parse_host_kind(name)
-    .ok_or_else(|| format!("unknown host {name}; use one of claude, codex, cursor"))
+    .ok_or_else(|| format!("unknown host {name}; use one of claude, codex, cursor, muse"))
 }
 
 /// Whether `text` holds a provider-limit message.
@@ -97,6 +107,8 @@ fn approvals(kind: HostKind, opts: &AgentOpts) -> Vec<String> {
     ]),
     (HostKind::Cursor, true) => words(&["--yolo", "--trust", "--approve-mcps"]),
     (HostKind::Cursor, false) => words(&["--trust"]),
+    (HostKind::Muse, true) => words(&["--yolo"]),
+    (HostKind::Muse, false) => words(&["--approval-mode", "on-request", "--trust-workspace"]),
   }
 }
 
@@ -111,13 +123,14 @@ fn effort_args(kind: HostKind, effort: &str) -> Vec<String> {
     HostKind::Codex => vec!["-c".to_owned(), format!("model_reasoning_effort={effort}")],
     // Cursor encodes effort in the model id.
     HostKind::Cursor => Vec::new(),
+    HostKind::Muse => vec!["--reasoning-effort".to_owned(), effort.to_owned()],
   }
 }
 
 fn resume_args(kind: HostKind, opts: &AgentOpts) -> (Vec<String>, Vec<String>) {
   if let (true, Some(id)) = (opts.resume, opts.session_id.as_deref()) {
     let lead = match kind {
-      HostKind::Codex => vec!["resume".to_owned(), id.to_owned()],
+      HostKind::Codex | HostKind::Muse => vec!["resume".to_owned(), id.to_owned()],
       HostKind::Claude | HostKind::Cursor => vec!["--resume".to_owned(), id.to_owned()],
     };
     return (lead, Vec::new());
@@ -126,7 +139,7 @@ fn resume_args(kind: HostKind, opts: &AgentOpts) -> (Vec<String>, Vec<String>) {
     return (Vec::new(), Vec::new());
   }
   match kind {
-    HostKind::Codex => (words(&["resume", "--last"]), Vec::new()),
+    HostKind::Codex | HostKind::Muse => (words(&["resume", "--last"]), Vec::new()),
     HostKind::Claude | HostKind::Cursor => (Vec::new(), words(&["--continue"])),
   }
 }
@@ -168,6 +181,8 @@ pub(crate) fn skill_ref(kind: HostKind, plugin: &str, skill: &str) -> String {
     HostKind::Claude => format!("`/{plugin}:{skill}`"),
     HostKind::Codex => format!("`${plugin}:{skill}`"),
     HostKind::Cursor => format!("the `{plugin}:{skill}` skill"),
+    // Muse names plugin skills `plugin:<plugin>:<skill>`.
+    HostKind::Muse => format!("the `plugin:{plugin}:{skill}` skill"),
   }
 }
 

@@ -70,6 +70,15 @@ pub(crate) fn default_table() -> RoutingTable {
         choice(Some("gpt-5.6-sol-xhigh"), None),
       ],
     ),
+    (
+      HostKind::Muse,
+      vec![
+        choice(Some("muse-spark-1.3"), Some("low")),
+        choice(Some("muse-wonder-1.0"), Some("medium")),
+        choice(Some("muse-wonder-1.0"), Some("high")),
+        choice(Some("muse-wonder-full-1.0"), Some("xhigh")),
+      ],
+    ),
   ];
   RoutingTable {
     hosts: hosts.into_iter().collect(),

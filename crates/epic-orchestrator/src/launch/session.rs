@@ -15,18 +15,18 @@ use super::digest::md5_hex;
 use super::failure::Failure;
 use crate::hosts::HostKind;
 
-const MAX_FILES: usize = 256;
+pub(super) const MAX_FILES: usize = 256;
 const MAX_BYTES: usize = 65_536;
 const MAX_RECORDS: usize = 32;
 
-fn valid_id(value: &str) -> bool {
+pub(super) fn valid_id(value: &str) -> bool {
   RegexBuilder::new(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
     .case_insensitive(true)
     .build()
     .is_ok_and(|re| re.is_match(value))
 }
 
-fn vanished(err: &std::io::Error) -> bool {
+pub(super) fn vanished(err: &std::io::Error) -> bool {
   err.kind() == std::io::ErrorKind::NotFound
 }
 
@@ -45,7 +45,7 @@ fn head(path: &Path) -> Result<Option<String>, String> {
   }
 }
 
-fn one(found: BTreeSet<String>) -> Option<String> {
+pub(super) fn one(found: BTreeSet<String>) -> Option<String> {
   (found.len() == 1)
     .then(|| found.into_iter().next())
     .flatten()
@@ -119,13 +119,33 @@ fn jsonl_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<bool, String> {
   Ok(true)
 }
 
-fn day_dir(base: &Path, epoch_ms: u64) -> PathBuf {
+pub(super) fn day_dir(base: &Path, epoch_ms: u64) -> PathBuf {
   let iso = toolu_state::time::iso_seconds(UNIX_EPOCH + Duration::from_millis(epoch_ms));
   iso
     .get(..10)
     .unwrap_or("")
     .split('-')
     .fold(base.join("sessions"), |dir, part| dir.join(part))
+}
+
+/// The head of `path` when it was written at or after `since` (epoch ms);
+/// `None` when older or gone.
+pub(super) fn fresh_head(path: &Path, since: u64) -> Result<Option<String>, String> {
+  let since_time = UNIX_EPOCH + Duration::from_millis(since);
+  let fresh = match std::fs::metadata(path).and_then(|meta| meta.modified()) {
+    Ok(modified) => modified >= since_time,
+    Err(err) if vanished(&err) => false,
+    Err(err) => return Err(format!("{}: {err}", path.display())),
+  };
+  Ok(fresh.then(|| head(path)).transpose()?.flatten())
+}
+
+/// The first [`MAX_RECORDS`] JSON lines of `text`.
+pub(super) fn records(text: &str) -> impl Iterator<Item = Value> + '_ {
+  text
+    .split('\n')
+    .take(MAX_RECORDS)
+    .filter_map(|line| serde_json::from_str::<Value>(line).ok())
 }
 
 fn session_of(kind: HostKind, entry: &Value, worktree: &str) -> Option<String> {
@@ -135,7 +155,7 @@ fn session_of(kind: HostKind, entry: &Value, worktree: &str) -> Option<String> {
       (payload.get("cwd"), payload.get("id"))
     }
     HostKind::Claude => (entry.get("cwd"), entry.get("sessionId")),
-    HostKind::Codex | HostKind::Cursor => return None,
+    HostKind::Codex | HostKind::Cursor | HostKind::Muse => return None,
   };
   let id = id?.as_str()?;
   (cwd?.as_str()? == worktree && valid_id(id)).then(|| id.to_owned())
@@ -172,22 +192,12 @@ fn transcripts(
       return Ok(None);
     }
   }
-  let since_time = UNIX_EPOCH + Duration::from_millis(since);
   let mut found = BTreeSet::new();
   for path in files {
-    let fresh = match std::fs::metadata(&path).and_then(|meta| meta.modified()) {
-      Ok(modified) => modified >= since_time,
-      Err(err) if vanished(&err) => false,
-      Err(err) => return Err(format!("{}: {err}", path.display())),
-    };
-    let Some(text) = fresh.then(|| head(&path)).transpose()?.flatten() else {
+    let Some(text) = fresh_head(&path, since)? else {
       continue;
     };
-    let entries = text
-      .split('\n')
-      .take(MAX_RECORDS)
-      .filter_map(|line| serde_json::from_str::<Value>(line).ok());
-    found.extend(entries.filter_map(|entry| session_of(kind, &entry, worktree)));
+    found.extend(records(&text).filter_map(|entry| session_of(kind, &entry, worktree)));
   }
   Ok(one(found))
 }
@@ -207,6 +217,7 @@ pub(crate) fn capture_session(
     + f64::from(u32::try_from(since & 0xffff_ffff).unwrap_or(0));
   match kind {
     HostKind::Cursor => cursor(worktree, since_f, env),
+    HostKind::Muse => super::muse_session::capture(worktree, since, env),
     HostKind::Claude | HostKind::Codex => transcripts(kind, worktree, since, env),
   }
 }

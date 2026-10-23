@@ -28,7 +28,7 @@ fn kind_of(case: &Value) -> HostKind {
 #[test]
 fn agent_args_match_every_captured_combination() {
   let args = cases("args");
-  assert!(args.len() >= 24 + 9);
+  assert!(args.len() >= 24 + 9 + 6);
   for case in args {
     let opts = &case["opts"];
     let options = AgentOpts {
@@ -75,12 +75,12 @@ fn aliases_resolve_as_captured() {
   }
   assert_eq!(
     host_kind("gemini").err().as_deref(),
-    Some("unknown host gemini; use one of claude, codex, cursor")
+    Some("unknown host gemini; use one of claude, codex, cursor, muse")
   );
   assert_eq!(parse_host_kind("opencode"), None);
   assert_eq!(
     HOST_KINDS.map(HostKind::name),
-    ["claude", "codex", "cursor"]
+    ["claude", "codex", "cursor", "muse"]
   );
 }
 
@@ -115,4 +115,14 @@ fn unsafe_arguments_are_refused() {
     ..AgentOpts::default()
   };
   assert!(agent_args(HostKind::Cursor, &cursor).is_err());
+  let muse = AgentOpts {
+    key: "k".into(),
+    model: Some("muse wonder".into()),
+    bypass: true,
+    ..AgentOpts::default()
+  };
+  assert_eq!(
+    agent_args(HostKind::Muse, &muse).err().as_deref(),
+    Some("muse arg the pane shell would mangle: muse wonder")
+  );
 }
