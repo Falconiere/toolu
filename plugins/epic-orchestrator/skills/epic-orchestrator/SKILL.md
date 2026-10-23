@@ -21,7 +21,7 @@ write product code. Keep your context small: a run lasts hours.
 `repo:owner/name` label or a `Repo: owner/name` line, else `--repo`.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2`
-(hosts `claude`, `codex`, `cursor`); `--safe` keeps each host's
+(hosts `claude`, `codex`, `cursor`, `muse`); `--safe` keeps each host's
 approval prompts on; `--no-jev` routes by heuristics; `--dry-run` plans and
 launches nothing ("show me the plan", "what can run in parallel" and "don't
 launch yet" mean `--dry-run`). Subcommands: `status`, `stop`.
@@ -54,7 +54,7 @@ first of these that fails:
   `herdr status` answers.
 - `gh auth status` succeeds, and `gh api rate_limit` shows core above 1000.
 - Each host in `--hosts` is on `PATH` and logged in (`claude`, `codex`,
-  `cursor-agent`).
+  `cursor-agent`, `muse`).
 - The tracker variables above are exported (a Jira or Linear epic).
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
   `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Workers run as

@@ -10,6 +10,7 @@ use toolu_engine::resources::store::{
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::time::{epoch_millis, iso_millis, parse_iso};
 
+use crate::hosts::HOST_KINDS;
 use crate::paths::Paths;
 use crate::waiting_jobs;
 
@@ -37,9 +38,9 @@ impl Snapshot {
 
   /// Per-host caps, running counts and cooldowns.
   pub(crate) fn hosts(&self) -> Value {
-    let items: Vec<Value> = ["claude", "codex", "cursor"]
+    let items: Vec<Value> = HOST_KINDS
       .iter()
-      .map(|host| self.host(host))
+      .map(|kind| self.host(kind.name()))
       .collect();
     json!({"schema": 1, "items": items})
   }

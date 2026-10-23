@@ -16,6 +16,7 @@ mod budgets;
 mod counts;
 mod document;
 mod github;
+mod muse_tokens;
 mod ready;
 mod scope;
 mod stats;

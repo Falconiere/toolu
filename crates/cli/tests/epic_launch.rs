@@ -46,6 +46,7 @@ fn every_host_dry_runs_its_agent_args_prompt_and_exclude() {
     ("claude", "--dangerously-skip-permissions"),
     ("codex", "--no-daemon"),
     ("cursor", "--yolo"),
+    ("muse", "--yolo"),
   ] {
     let args = vec![
       "--json",
@@ -101,6 +102,47 @@ fn a_resume_dry_runs_the_captured_session() {
     result["prompt"]
       .as_str()
       .is_some_and(|prompt| prompt.contains("resuming interrupted work"))
+  );
+}
+
+#[test]
+fn a_muse_resume_dry_runs_its_captured_session_and_skill_syntax() {
+  let home = Home::new().unwrap();
+  let graph = write_graph(&home, |_| {}).unwrap();
+  let record = home.path("state/issues/comemory-255.json");
+  std::fs::create_dir_all(record.parent().expect("parent")).expect("dir");
+  std::fs::write(&record, r#"{"stage":"running","kind":"muse","launches":1,"session_id":"01a16abb-7eef-7340-8cf2-2e0378dcf66c"}"#).expect("record");
+  let launch = |extra: &[&str]| {
+    let mut args = vec![
+      "--json",
+      "epic",
+      "launch",
+      "--graph",
+      &graph,
+      "--issue",
+      "comemory-255",
+      "--dry-run",
+      "--kind",
+      "muse",
+    ];
+    args.extend_from_slice(extra);
+    doc(&home.run(&args).unwrap()).unwrap()
+  };
+  let resumed = launch(&[]);
+  assert_eq!(resumed["resume"], true);
+  assert_eq!(
+    resumed["agent_args"].as_array().expect("args")[..3],
+    ["resume", "01a16abb-7eef-7340-8cf2-2e0378dcf66c", "--yolo"]
+  );
+  let safe = launch(&["--safe"]);
+  assert_eq!(
+    safe["agent_args"].as_array().expect("args")[2..5],
+    ["--approval-mode", "on-request", "--trust-workspace"]
+  );
+  assert!(
+    resumed["brief"]
+      .as_str()
+      .is_some_and(|brief| brief.contains("the `plugin:delivery-flow:delivery-flow` skill"))
   );
 }
 

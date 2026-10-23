@@ -32,7 +32,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Dispatch walk | `dispatch/cases.json` | 50 | `crates/core/engine/tests/dispatch_fixture.rs` |
 | Plan ledger and verdict | `ledger/cases.json` | 27 | `crates/cli/tests/ledger_cases.rs` |
 | Statusline states | `statusline/cases.json` | 75 | `crates/cli/tests/golden_statusline.rs` |
-| Epic hosts | `epic/hosts.json` | 61 | `crates/epic-orchestrator/src/tests/hosts_test.rs` |
+| Epic hosts | `epic/hosts.json` | 75 | `crates/epic-orchestrator/src/tests/hosts_test.rs` |
 | Muse plugin CLI output | `plugins/muse.json` | 10 | `crates/plugins/src/{host,verbs}/tests/`, `crates/cli/tests/plugins_muse.rs` |
 
 ## Case fields and setup
@@ -63,5 +63,5 @@ The case files accept ordered `setup` operations `write`, `remove`, `mkdir`, `sy
 - `portable-core/protected-files-pre.json` is a protocol v1 pre-tool event for the protected-file gate tests (`crates/cli/tests/pre_tool_gates.rs`).
 - `gate-coverage/inventory.json` is an array of hook registrations with source path, plugin, event, matcher and command/module identity, used by the gate's coverage steps.
 - `codex-hook-schemas/*.schema.json` are JSON Schemas for the five Codex hook command outputs, read by the launcher tests.
-- `epic/epic248-graph.json`, `epic/epic248-body.md`, `epic/epic203-body.md` and `epic/pr290-rollup.json` are tracker captures the `toolu epic` tests read (moved from the deleted epic scripts in #435). `epic/herdr-calls.json` records the herdr 0.9.3 (protocol 22) method names and param keys every `herdr::Call` must match.
+- `epic/epic248-graph.json`, `epic/epic248-body.md`, `epic/epic203-body.md` and `epic/pr290-rollup.json` are tracker captures the `toolu epic` tests read (moved from the deleted epic scripts in #435). `epic/herdr-calls.json` records the herdr 0.9.3 (protocol 22) method names and param keys every `herdr::Call` must match. `epic/tokens/muse/sessions/2026/10/23/<id>/session.jsonl` and its `subagent/<child>/session.jsonl` (#603), in Muse's own data-root layout, are trimmed from a real Muse Code 1.4.12 session started by `herdr agent start --kind muse` on 2026-10-23 (session `01a16abb-7eef-7340-8cf2-2e0378dcf66c`, workspace `/private/tmp/muse-probe-603`): the first three records, which hold the session metadata, then every `goal_usage_attribution` record, with one provider record repeated to prove deduplication; one subagent log keeps its first three records and its usage. Only the home prefix became `/home/user`. The token tests use `epic/tokens` as `XDG_DATA_HOME`; the session capture test copies the main log under a temporary one.
 - `debug/` holds the captured outputs `toolu debug` parses (see [debug/PROVENANCE.md](debug/PROVENANCE.md)).

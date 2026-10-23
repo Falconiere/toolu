@@ -235,30 +235,6 @@
       ]
     },
     {
-      "name": "skill claude delivery-flow:delivery-flow",
-      "kind": "skill",
-      "host": "claude",
-      "plugin": "delivery-flow",
-      "skill": "delivery-flow",
-      "text": "`/delivery-flow:delivery-flow`"
-    },
-    {
-      "name": "skill claude pr-babysit:babysit",
-      "kind": "skill",
-      "host": "claude",
-      "plugin": "pr-babysit",
-      "skill": "babysit",
-      "text": "`/pr-babysit:babysit`"
-    },
-    {
-      "name": "skill claude toolu:debug",
-      "kind": "skill",
-      "host": "claude",
-      "plugin": "toolu",
-      "skill": "debug",
-      "text": "`/toolu:debug`"
-    },
-    {
       "name": "args codex bypass=true model=null effort=null",
       "kind": "args",
       "host": "codex",
@@ -492,30 +468,6 @@
       ]
     },
     {
-      "name": "skill codex delivery-flow:delivery-flow",
-      "kind": "skill",
-      "host": "codex",
-      "plugin": "delivery-flow",
-      "skill": "delivery-flow",
-      "text": "`$delivery-flow:delivery-flow`"
-    },
-    {
-      "name": "skill codex pr-babysit:babysit",
-      "kind": "skill",
-      "host": "codex",
-      "plugin": "pr-babysit",
-      "skill": "babysit",
-      "text": "`$pr-babysit:babysit`"
-    },
-    {
-      "name": "skill codex toolu:debug",
-      "kind": "skill",
-      "host": "codex",
-      "plugin": "toolu",
-      "skill": "debug",
-      "text": "`$toolu:debug`"
-    },
-    {
       "name": "args cursor bypass=true model=null effort=null",
       "kind": "args",
       "host": "cursor",
@@ -726,6 +678,176 @@
       ]
     },
     {
+      "name": "args muse bypass=true model=null effort=null",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo"
+      ]
+    },
+    {
+      "name": "args muse bypass=true model=muse-spark-1.3 effort=low",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "muse-spark-1.3",
+        "effort": "low",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--yolo",
+        "--model",
+        "muse-spark-1.3",
+        "--reasoning-effort",
+        "low"
+      ]
+    },
+    {
+      "name": "args muse bypass=false model=muse-wonder-1.0 effort=medium",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "muse-wonder-1.0",
+        "effort": "medium",
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--approval-mode",
+        "on-request",
+        "--trust-workspace",
+        "--model",
+        "muse-wonder-1.0",
+        "--reasoning-effort",
+        "medium"
+      ]
+    },
+    {
+      "name": "args muse bypass=false model=null effort=null",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": false,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null
+      },
+      "argv": [
+        "--approval-mode",
+        "on-request",
+        "--trust-workspace"
+      ]
+    },
+    {
+      "name": "args muse resume session=01a16abb-7eef-7340-8cf2-2e0378dcf66c",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": "muse-spark-1.3",
+        "effort": "low",
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": true,
+        "sessionId": "01a16abb-7eef-7340-8cf2-2e0378dcf66c"
+      },
+      "argv": [
+        "resume",
+        "01a16abb-7eef-7340-8cf2-2e0378dcf66c",
+        "--yolo",
+        "--model",
+        "muse-spark-1.3",
+        "--reasoning-effort",
+        "low"
+      ]
+    },
+    {
+      "name": "args muse resume session=null",
+      "kind": "args",
+      "host": "muse",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": true,
+        "sessionId": null
+      },
+      "argv": [
+        "resume",
+        "--last",
+        "--yolo"
+      ]
+    },
+    {
+      "name": "skill claude delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`/delivery-flow:delivery-flow`"
+    },
+    {
+      "name": "skill claude pr-babysit:babysit",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`/pr-babysit:babysit`"
+    },
+    {
+      "name": "skill claude toolu:debug",
+      "kind": "skill",
+      "host": "claude",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`/toolu:debug`"
+    },
+    {
+      "name": "skill codex delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "`$delivery-flow:delivery-flow`"
+    },
+    {
+      "name": "skill codex pr-babysit:babysit",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "`$pr-babysit:babysit`"
+    },
+    {
+      "name": "skill codex toolu:debug",
+      "kind": "skill",
+      "host": "codex",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "`$toolu:debug`"
+    },
+    {
       "name": "skill cursor delivery-flow:delivery-flow",
       "kind": "skill",
       "host": "cursor",
@@ -748,6 +870,30 @@
       "plugin": "toolu",
       "skill": "debug",
       "text": "the `toolu:debug` skill"
+    },
+    {
+      "name": "skill muse delivery-flow:delivery-flow",
+      "kind": "skill",
+      "host": "muse",
+      "plugin": "delivery-flow",
+      "skill": "delivery-flow",
+      "text": "the `plugin:delivery-flow:delivery-flow` skill"
+    },
+    {
+      "name": "skill muse pr-babysit:babysit",
+      "kind": "skill",
+      "host": "muse",
+      "plugin": "pr-babysit",
+      "skill": "babysit",
+      "text": "the `plugin:pr-babysit:babysit` skill"
+    },
+    {
+      "name": "skill muse toolu:debug",
+      "kind": "skill",
+      "host": "muse",
+      "plugin": "toolu",
+      "skill": "debug",
+      "text": "the `plugin:toolu:debug` skill"
     },
     {
       "name": "alias \"claude\"",
@@ -804,6 +950,18 @@
       "host": null
     },
     {
+      "name": "alias \"muse\"",
+      "kind": "alias",
+      "alias": "muse",
+      "host": "muse"
+    },
+    {
+      "name": "alias \" Muse \"",
+      "kind": "alias",
+      "alias": " Muse ",
+      "host": "muse"
+    },
+    {
       "name": "limit \"You've hit your usage limit\"",
       "kind": "limit",
       "text": "You've hit your usage limit",
@@ -858,6 +1016,24 @@
       "matches": false
     },
     {
+      "name": "limit \"model limit reached, try again later\"",
+      "kind": "limit",
+      "text": "model limit reached, try again later",
+      "matches": true
+    },
+    {
+      "name": "limit \"You've used your weekly quota (resets at 5pm)\"",
+      "kind": "limit",
+      "text": "You've used your weekly quota (resets at 5pm)",
+      "matches": true
+    },
+    {
+      "name": "limit \"At this pace your weekly quota runs out in about 2 hours (resets at 5pm)\"",
+      "kind": "limit",
+      "text": "At this pace your weekly quota runs out in about 2 hours (resets at 5pm)",
+      "matches": false
+    },
+    {
       "name": "default routing table",
       "kind": "table",
       "hosts": {
@@ -909,6 +1085,24 @@
           },
           {
             "model": "gpt-5.6-sol-xhigh"
+          }
+        ],
+        "muse": [
+          {
+            "model": "muse-spark-1.3",
+            "effort": "low"
+          },
+          {
+            "model": "muse-wonder-1.0",
+            "effort": "medium"
+          },
+          {
+            "model": "muse-wonder-1.0",
+            "effort": "high"
+          },
+          {
+            "model": "muse-wonder-full-1.0",
+            "effort": "xhigh"
           }
         ]
       }

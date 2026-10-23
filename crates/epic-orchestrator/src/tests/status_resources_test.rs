@@ -58,3 +58,26 @@ fn status_api_resources_project_real_lease_and_cooldown() {
   assert!(!machine.to_string().contains("PRIVATE-LEASE-TOKEN"));
   assert_eq!(snapshot.jobs()["running"], json!([]));
 }
+
+#[test]
+fn every_worker_host_has_a_capacity_row_with_its_policy_cap() {
+  let temp = tempfile::tempdir().expect("resource root");
+  let paths = Paths::at(temp.path());
+  write_value(
+    &paths.root.join("policy.json"),
+    &json!({"maxAgents": 3, "hosts": {"muse": 1}}),
+  )
+  .expect("policy");
+  let now = epoch_millis(parse_iso("2026-10-23T12:00:00Z").expect("time"));
+  let hosts = Snapshot::open(&paths, now).expect("resources").hosts();
+  let rows: Vec<(&str, u64)> = hosts["items"]
+    .as_array()
+    .expect("hosts")
+    .iter()
+    .filter_map(|host| Some((host["host"].as_str()?, host["cap"].as_u64()?)))
+    .collect();
+  assert_eq!(
+    rows,
+    [("claude", 3), ("codex", 3), ("cursor", 3), ("muse", 1)]
+  );
+}

@@ -292,7 +292,17 @@ fn request_exit(herdr: &mut Herdr<'_>, name: &str, kind: HostKind) -> Result<(),
     prompt(herdr, name, "/stop")?;
     settle(herdr, name)?;
   }
-  prompt(herdr, name, "/exit")
+  prompt(herdr, name, "/exit")?;
+  if kind != HostKind::Muse {
+    return Ok(());
+  }
+  // Live background work makes Muse ask "Exit anyway?"; enter confirms it. An
+  // idle Muse has already left: the key lands at the pane shell, or herdr no
+  // longer knows the agent, and the exit wait decides.
+  match send(herdr, name, &["enter"]) {
+    Err(err) if err.code.as_deref() != Some("agent_not_found") => Err(err),
+    Ok(()) | Err(_) => Ok(()),
+  }
 }
 
 /// Ask the agent to exit and wait up to 30 s for it and its workload to go.
