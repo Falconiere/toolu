@@ -85,30 +85,30 @@ impl Drop for HerdrFixture {
   }
 }
 
+/// Answer one request, then close the connection, as herdr 0.9.3 does.
 fn serve(stream: UnixStream, state: &Mutex<State>) {
   let Ok(mut writer) = stream.try_clone() else {
     return;
   };
-  for line in BufReader::new(stream).lines().map_while(Result::ok) {
-    let request: Value = serde_json::from_str(&line).unwrap_or(Value::Null);
-    let id = request.get("id").cloned().unwrap_or(Value::Null);
-    let method = request.get("method").and_then(Value::as_str).unwrap_or("");
-    let params = request.get("params").cloned().unwrap_or_else(|| json!({}));
-    let reply = {
-      let mut state = state
-        .lock()
-        .unwrap_or_else(std::sync::PoisonError::into_inner);
-      state.reply(method, &params)
-    };
-    let text = match reply {
-      Ok(result) => json!({"id": id, "result": result}).to_string(),
-      Err(Scripted::Error { code, message }) => {
-        json!({"id": id, "error": {"code": code, "message": message}}).to_string()
-      }
-      Err(Scripted::Raw(text)) => text,
-    };
-    if writeln!(writer, "{text}").is_err() {
-      return;
+  let Some(Ok(line)) = BufReader::new(stream).lines().next() else {
+    return;
+  };
+  let request: Value = serde_json::from_str(&line).unwrap_or(Value::Null);
+  let id = request.get("id").cloned().unwrap_or(Value::Null);
+  let method = request.get("method").and_then(Value::as_str).unwrap_or("");
+  let params = request.get("params").cloned().unwrap_or_else(|| json!({}));
+  let reply = {
+    let mut state = state
+      .lock()
+      .unwrap_or_else(std::sync::PoisonError::into_inner);
+    state.reply(method, &params)
+  };
+  let text = match reply {
+    Ok(result) => json!({"id": id, "result": result}).to_string(),
+    Err(Scripted::Error { code, message }) => {
+      json!({"id": id, "error": {"code": code, "message": message}}).to_string()
     }
-  }
+    Err(Scripted::Raw(text)) => text,
+  };
+  let _sent = writeln!(writer, "{text}");
 }

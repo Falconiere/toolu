@@ -1,4 +1,5 @@
-//! One herdr connection: snapshot, subscribe, then pushed events.
+//! One herdr session: ping, snapshot and subscribe, each on its own
+//! connection, then the events pushed on the subscription.
 
 use std::io::Read;
 use std::os::unix::net::UnixStream;
@@ -57,36 +58,26 @@ fn connect<F>(env: &Env, world: &World, pace: &Pace, on: &mut F) -> Result<Stop,
 where
   F: FnMut(Fact) -> Result<(), String>,
 {
-  let Ok(mut stream) = UnixStream::connect(herdr::socket_path(env)) else {
+  // herdr answers one request per connection: the ping and the snapshot each
+  // get their own, and only the subscription stays open for events.
+  let Ok(mut probe) = open(env) else {
     on(Fact::Outage)?;
     return Ok(Stop::Done);
   };
-  let protocol = ping(&mut stream)?;
+  let protocol = ping(&mut probe)?;
   if protocol > HERDR_PROTOCOL {
     on(Fact::Event(
       json!({"event": "herdr_protocol", "protocol": protocol}),
     ))?;
     return Ok(Stop::Done);
   }
-  let snap = round(&mut stream, "2", "session.snapshot", &json!({}))?;
+  let snap = round(&mut open(env)?, "2", "session.snapshot", &json!({}))?;
   let body = source_apply::snapshot_body(&snap);
   on(Fact::Snapshot(body.clone()))?;
   let filters = source_apply::filters(world, &body);
-  let subscribed = round(
-    &mut stream,
-    "3",
-    "events.subscribe",
-    &json!({"subscriptions": filters}),
-  );
-  if subscribed
-    .as_ref()
-    .ok()
-    .and_then(|v| v.get("error"))
-    .is_some()
-    || subscribed.is_err()
-  {
+  let Some(mut stream) = subscribe(env, &filters) else {
     return Ok(Stop::Retry);
-  }
+  };
   let Some(interrupt) = &pace.interrupt else {
     return read_events(&mut stream, pace, on);
   };
@@ -213,6 +204,24 @@ pub(crate) fn prompt_enabled() -> bool {
     return env.get("TOOLU_EPIC_HERDR") == Some("1");
   }
   true
+}
+
+/// A new connection subscribed to `filters`, or `None` when herdr cannot be
+/// reached, drops the request or answers with an error.
+fn subscribe(env: &Env, filters: &[Value]) -> Option<UnixStream> {
+  let mut stream = open(env).ok()?;
+  let reply = round(
+    &mut stream,
+    "3",
+    "events.subscribe",
+    &json!({"subscriptions": filters}),
+  )
+  .ok()?;
+  reply.get("error").is_none().then_some(stream)
+}
+
+fn open(env: &Env) -> Result<UnixStream, String> {
+  UnixStream::connect(herdr::socket_path(env)).map_err(|err| err.to_string())
 }
 
 fn round(stream: &mut UnixStream, id: &str, method: &str, params: &Value) -> Result<Value, String> {

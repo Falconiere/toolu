@@ -120,16 +120,14 @@ impl Client {
   }
 
   fn on_socket(&mut self, paths: &Paths, env: &Env, call: &Call) -> Result<String, String> {
-    let mut stream = UnixStream::connect(socket_path(env)).map_err(|err| err.to_string())?;
-    stream
-      .set_read_timeout(Some(call.cli_timeout()))
-      .map_err(|err| err.to_string())?;
-    let protocol = ping(&mut stream, &self.next_id())?;
+    // herdr answers one request per connection, so the call gets its own.
+    let protocol = ping(&mut connect(env, call)?, &self.next_id())?;
     if protocol > HERDR_PROTOCOL {
       self.newer = true;
       warn_protocol(paths, protocol, &mut self.warned)?;
       return Err("newer protocol".to_owned());
     }
+    let mut stream = connect(env, call)?;
     let id = self.next_id();
     write_json(
       &mut stream,
@@ -168,6 +166,15 @@ impl Client {
     self.seq = self.seq.saturating_add(1);
     self.seq.to_string()
   }
+}
+
+/// A new connection to the herdr socket that waits up to `call`'s deadline.
+fn connect(env: &Env, call: &Call) -> Result<UnixStream, String> {
+  let stream = UnixStream::connect(socket_path(env)).map_err(|err| err.to_string())?;
+  stream
+    .set_read_timeout(Some(call.cli_timeout()))
+    .map_err(|err| err.to_string())?;
+  Ok(stream)
 }
 
 /// Where the herdr API socket lives for `env`.

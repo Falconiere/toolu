@@ -247,11 +247,16 @@ fn a_full_queue_drops_the_notice_and_journals_it_without_waiting() {
   announce(&mut engine, &token, false);
 }
 
+/// Answer one request per connection, as herdr 0.9.3 does, until a non-ping
+/// request arrives.
 fn herdr(listener: &UnixListener, seen: &Path) {
-  let Ok((mut stream, _)) = listener.accept() else {
-    return;
-  };
-  while let Ok(request) = read_json(&mut stream) {
+  for _ in 0..2 {
+    let Ok((mut stream, _)) = listener.accept() else {
+      return;
+    };
+    let Ok(request) = read_json(&mut stream) else {
+      continue;
+    };
     let method = request.get("method").and_then(Value::as_str).unwrap_or("");
     let id = request.get("id").cloned().unwrap_or(Value::Null);
     let result = if method == "ping" {
@@ -268,6 +273,6 @@ fn herdr(listener: &UnixListener, seen: &Path) {
       .open(seen)
       .expect("seen");
     writeln!(file, "{request}").expect("write");
-    break;
+    return;
   }
 }
