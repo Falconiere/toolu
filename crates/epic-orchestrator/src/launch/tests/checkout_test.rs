@@ -90,3 +90,39 @@ fn the_budget_guard_refuses_under_a_floor_and_passes_otherwise() {
   );
   assert_eq!(guard_budget(Err("offline".into()), &env), Ok(()));
 }
+
+#[cfg(unix)]
+#[test]
+fn concurrent_launches_of_one_missing_repo_clone_it_once() {
+  use std::os::unix::fs::PermissionsExt;
+  let tmp = tempfile::tempdir().expect("temp");
+  let bin = tmp.path().join("bin");
+  std::fs::create_dir_all(&bin).expect("bin");
+  let calls = tmp.path().join("calls.log");
+  let stub = bin.join("gh");
+  let script = format!(
+    "#!/bin/sh\necho \"$@\" >> {}\nsleep 1\nmkdir -p \"$4/.git\"\n",
+    calls.display()
+  );
+  std::fs::write(&stub, script).expect("stub");
+  std::fs::set_permissions(&stub, std::fs::Permissions::from_mode(0o755)).expect("mode");
+  let path = format!("{}:/usr/bin:/bin", bin.display());
+  let env = Env::from_pairs([("HOME", "/tmp"), ("PATH", path.as_str())]);
+  let mut graph = graph_248();
+  graph.clone_root = tmp.path().join("clones").display().to_string();
+  graph.state_dir = tmp.path().join("state").display().to_string();
+  let issue = graph.find("homebrew-tap-1").expect("issue").clone();
+  let place = || {
+    let mut log = Vec::new();
+    super::clone_checkout(&graph, &issue, false, &mut log, &env).map_err(|err| err.message)
+  };
+  let (first, second) = std::thread::scope(|scope| {
+    let a = scope.spawn(place);
+    let b = scope.spawn(place);
+    (a.join().expect("a"), b.join().expect("b"))
+  });
+  assert_eq!(first, second);
+  assert!(first.is_ok(), "{first:?}");
+  let logged = std::fs::read_to_string(&calls).expect("calls");
+  assert_eq!(logged.lines().count(), 1, "{logged}");
+}

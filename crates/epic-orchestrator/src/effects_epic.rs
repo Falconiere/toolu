@@ -78,7 +78,6 @@ fn refresh(input: &EpicJob) -> Result<Value, String> {
     gh: gh.as_ref(),
     herdr_roots: herdr_roots(&input.paths, &input.env),
     repo_roots: repo_roots(&input.env),
-    cwd: input.state_dir.clone(),
   })?;
   write_graph(&input.state_dir.join("graph.json"), &built)?;
   Ok(json!({"outcome": "applied", "complete": built.complete}))

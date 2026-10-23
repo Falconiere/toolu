@@ -112,6 +112,36 @@ pub(crate) fn repo_roots(env: &Env) -> Vec<PathBuf> {
     .unwrap_or_default()
 }
 
+/// Where missing repositories are cloned: the parent of the epic repository's
+/// checkout, else an `EPIC_REPO_ROOTS` entry, the parent of a herdr root, or
+/// the parent of any other checkout. Never the working directory.
+///
+/// # Errors
+/// Nothing known gives a directory other than `/`.
+pub(crate) fn resolve_clone_root(
+  epic_checkout: Option<String>,
+  repo_roots: &[PathBuf],
+  herdr_roots: &[PathBuf],
+  checkouts: &BTreeMap<String, Option<String>>,
+) -> Result<PathBuf, String> {
+  let parent = |path: &Path| path.parent().map(Path::to_path_buf);
+  let from_checkout = epic_checkout.iter().filter_map(|c| parent(Path::new(c)));
+  let from_roots = repo_roots.iter().cloned();
+  let from_herdr = herdr_roots.iter().filter_map(|root| parent(root));
+  let from_others = checkouts
+    .values()
+    .flatten()
+    .filter_map(|c| parent(Path::new(c)));
+  from_checkout
+    .chain(from_roots)
+    .chain(from_herdr)
+    .chain(from_others)
+    .find(|dir| dir.parent().is_some() && dir.is_absolute())
+    .ok_or_else(|| {
+      "cannot resolve clone_root: set EPIC_REPO_ROOTS or open the repository in herdr".to_owned()
+    })
+}
+
 fn unique(paths: Vec<PathBuf>) -> Vec<PathBuf> {
   let mut seen = BTreeSet::new();
   paths

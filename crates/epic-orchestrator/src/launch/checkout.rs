@@ -7,6 +7,7 @@ use std::time::{Duration, UNIX_EPOCH};
 use regex::Regex;
 use serde_json::Value;
 use toolu_runtime::env::Env;
+use toolu_state::lock::{LockOptions, with_lock};
 
 use super::failure::{Failure, argv, run_checked};
 use crate::graph::{Graph, GraphIssue};
@@ -84,9 +85,35 @@ fn clone_checkout(
   let clone = argv(&["gh", "repo", "clone", &issue.repo, &checkout]);
   log.push(shell_join(&clone));
   if !dry {
-    run_checked(&clone, None, env, COMMAND_TIMEOUT)?;
+    clone_once(graph, name, &checkout, &clone, env)?;
   }
   Ok(checkout)
+}
+
+/// Clone under a per-repository lock, and skip it when a concurrent launch
+/// already cloned: launches of one batch share a missing repository.
+fn clone_once(
+  graph: &Graph,
+  name: &str,
+  checkout: &str,
+  clone: &[String],
+  env: &Env,
+) -> Result<(), Failure> {
+  let options = LockOptions {
+    timeout: COMMAND_TIMEOUT + Duration::from_secs(10),
+    stale: COMMAND_TIMEOUT + Duration::from_secs(5),
+  };
+  let lock = Path::new(&graph.state_dir).join(format!("clone-{name}"));
+  if let Some(parent) = lock.parent() {
+    std::fs::create_dir_all(parent)
+      .map_err(|err| Failure::unknown(format!("cannot create {}: {err}", parent.display())))?;
+  }
+  with_lock(&lock, options, &mut Vec::new(), || {
+    if Path::new(checkout).join(".git").exists() {
+      return Ok(());
+    }
+    run_checked(clone, None, env, COMMAND_TIMEOUT).map(|_| ())
+  })
 }
 
 fn default_branch(gh: Result<&Gh, String>, repo: &str) -> Result<String, Failure> {
