@@ -81,3 +81,28 @@ fn cursor_roots_a_post_tool_run_at_its_project_not_the_hook_process_directory() 
     elsewhere.path()
   );
 }
+
+#[test]
+fn a_cursor_session_works_in_its_project_and_every_other_host_in_the_hook_directory() {
+  let project = tempfile::tempdir().unwrap();
+  let elsewhere = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(project.path()).unwrap();
+  let env = Env::from_pairs([
+    ("HOME", elsewhere.path().to_str().unwrap()),
+    ("CURSOR_PROJECT_DIR", root.to_str().unwrap()),
+    ("CURSOR_VERSION", "2026.10"),
+  ]);
+  let opts = options(&env, elsewhere.path());
+  for phase in [Phase::Pre, Phase::Post] {
+    match Session::open(phase, &opts) {
+      Opened::Ready(session, _) => assert_eq!(session.cwd(), root),
+      Opened::Disabled(_) => panic!("the hook is on"),
+    }
+  }
+  let claude = Env::from_pairs([("HOME", elsewhere.path().to_str().unwrap())]);
+  let opts = options(&claude, elsewhere.path());
+  match Session::open(Phase::Post, &opts) {
+    Opened::Ready(session, _) => assert_eq!(session.cwd(), elsewhere.path()),
+    Opened::Disabled(_) => panic!("the hook is on"),
+  }
+}

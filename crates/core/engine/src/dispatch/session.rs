@@ -88,9 +88,13 @@ impl<'a> Session<'a> {
     Opened::Ready(session, warnings)
   }
 
-  /// The hook process's working directory.
+  /// The hook process's working directory; on Cursor, whose plugin hooks start
+  /// outside the project, the project root (#589).
   pub(crate) fn cwd(&self) -> &Path {
-    self.options.cwd
+    match self.host {
+      Host::Cursor => &self.project_root,
+      Host::Claude | Host::Codex | Host::Hermes | Host::Muse => self.options.cwd,
+    }
   }
 }
 
