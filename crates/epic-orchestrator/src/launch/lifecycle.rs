@@ -317,7 +317,17 @@ pub(crate) fn shutdown_agent(
   }
   request_exit(herdr, name, expected.kind)?;
   let deadline = Instant::now() + Duration::from_secs(30);
-  while inspect_agent(herdr, name)?.is_some() {
+  loop {
+    // A dying agent's entry degrades before its name disappears: still
+    // present, not a failure.
+    let gone = match inspect_agent(herdr, name) {
+      Ok(agent) => agent.is_none(),
+      Err(err) if identity_pending(name, &err) => false,
+      Err(err) => return Err(err),
+    };
+    if gone {
+      break;
+    }
     if Instant::now() >= deadline {
       return Ok(Outcome::CleanupIncomplete);
     }

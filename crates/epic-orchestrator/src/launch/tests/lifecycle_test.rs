@@ -185,6 +185,30 @@ fn shutdown_exits_the_agent_and_codex_also_stops_its_jobs() {
 }
 
 #[test]
+fn shutdown_tolerates_a_degrading_entry_while_the_agent_exits() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "claude");
+  let full = format!(
+    "{{\"result\":{{\"agents\":[{{\"name\":\"k-1\",\"agent\":\"claude\",\"pane_id\":\"{pane}\",\"cwd\":\"{}\",\"agent_status\":\"idle\"}}]}}}}",
+    worktree.display()
+  );
+  rig.herdr.script("agent.list", Scripted::Raw(full));
+  rig.herdr.script(
+    "agent.list",
+    Scripted::Raw(r#"{"result":{"agents":[{"name":"k-1"}]}}"#.into()),
+  );
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Claude, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+}
+
+#[test]
 fn workload_left_in_the_worktree_is_cleanup_incomplete() {
   let rig = Rig::new();
   let (worktree, pane) = started(&rig, "claude");
