@@ -1,8 +1,12 @@
+use std::time::SystemTime;
+
 use serde_json::{Value, json};
 use toolu_engine::resources::binding::bind_worktree;
+use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease};
+use toolu_runtime::json::ordered::Ordered;
 
 use super::{FinishReport, finish_issue};
-use crate::finish_rig::{Layout, agent_lease, layout, leases, patch, read};
+use crate::finish_rig::{Layout, agent_lease, layout, leases, patch, read, write};
 use crate::launch_rig::Rig;
 use crate::support::git;
 
@@ -177,4 +181,89 @@ fn an_incomplete_terminal_record_retries_without_releasing() {
     (json!("cleanup-incomplete"), json!(false))
   );
   assert_eq!(leases(&l), [(token, "cleaning".to_owned())]);
+}
+
+/// An `uncertain` record that never made a worktree, owning a fresh lease
+/// without a worktree binding; the lease token.
+fn unstarted(l: &Layout, checkout: bool) -> String {
+  let request = LeaseRequest {
+    kind: LeaseKind::Agent,
+    key: "k-1".into(),
+    state_dir: l.state.display().to_string(),
+    host: Some("claude".into()),
+    host_cap: None,
+    epic_cap: None,
+    worktree: None,
+  };
+  let lease = acquire_lease(&l.resources, &request, SystemTime::now()).expect("lease");
+  let token = match lease.get("token") {
+    Some(Ordered::String(token)) => token.clone(),
+    _ => String::new(),
+  };
+  let mut body = json!({"key": "k-1", "repo": "o/r", "branch": "feat/1-x", "stage": "uncertain", "resource_root": l.resources, "lease_token": token});
+  if checkout {
+    body["checkout"] = json!(l.main);
+  }
+  write(&l.record, &body);
+  token
+}
+
+#[test]
+fn unstarted_abandon_releases_the_lease_and_marks_the_record_abandoned() {
+  for checkout in [false, true] {
+    let l = layout();
+    unstarted(&l, checkout);
+    let report = finish(&l, true).expect("abandon");
+    assert_eq!(report.finished["stage"], "abandoned");
+    assert_eq!(report.finished["worktree_removed"], true);
+    let record = read(&l.record);
+    assert_eq!(record["stage"], "abandoned");
+    assert_eq!(record["worktree_removed"], true);
+    assert!(record["finished_at"].is_string());
+    assert_eq!(leases(&l).len(), 0);
+  }
+}
+
+#[test]
+fn unstarted_abandon_twice_succeeds_both_times() {
+  let l = layout();
+  unstarted(&l, false);
+  finish(&l, true).expect("first");
+  let report = finish(&l, true).expect("second");
+  assert_eq!(report.finished["stage"], "abandoned");
+  assert_eq!(read(&l.record)["stage"], "abandoned");
+}
+
+#[test]
+fn unstarted_dry_run_plans_a_release_and_writes_nothing() {
+  let l = layout();
+  let token = unstarted(&l, false);
+  let before = std::fs::read_to_string(&l.record).expect("record");
+  let rig = Rig::new();
+  let report = finish_issue(&l.state, "k-1", (true, true), &mut rig.ctx()).expect("plan");
+  assert_eq!(
+    report.finished["actions"],
+    json!([format!("release lease {token}")])
+  );
+  assert_eq!(std::fs::read_to_string(&l.record).expect("record"), before);
+  assert_eq!(leases(&l).len(), 1);
+}
+
+#[test]
+fn unstarted_without_abandon_or_with_a_worktree_only_is_refused_unchanged() {
+  let l = layout();
+  unstarted(&l, false);
+  let before = std::fs::read_to_string(&l.record).expect("record");
+  let refused = finish(&l, false).expect_err("no PR");
+  assert_eq!(
+    refused,
+    "no PR recorded for k-1; use --abandon to tear down anyway"
+  );
+  assert_eq!(std::fs::read_to_string(&l.record).expect("record"), before);
+  write(
+    &l.record,
+    &json!({"key": "k-1", "repo": "o/r", "branch": "b", "worktree": l.wt, "stage": "uncertain"}),
+  );
+  let refused = finish(&l, true).expect_err("no checkout");
+  assert!(refused.ends_with(": checkout"), "{refused}");
 }
