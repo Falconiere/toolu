@@ -33,7 +33,7 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     checks::host(&roots, &cwd),
     config_check::check(&roots, &cwd, &secrets),
     inventory::plugins_check(&found),
-    skew_check::check(&found),
+    skew_check::check(&found, &roots),
     registry_check::check(&roots),
     tools::check(&found, roots.env()),
   ];

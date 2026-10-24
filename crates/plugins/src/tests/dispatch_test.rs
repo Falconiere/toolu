@@ -215,7 +215,8 @@ fn an_unsupported_host_is_a_usage_error() {
 fn host_cli_remove_and_update_check_names_and_dry_runs_list_the_commands() {
   let sb = Sandbox::new();
   sb.host("claude", "[]", "never");
-  let mut unknown = request(Verb::Remove, &["nope"]);
+  // A plugin-shaped name may be a retired plugin; this one cannot be.
+  let mut unknown = request(Verb::Remove, &["No_Such"]);
   unknown.yes = true;
   let refused = go(&sb, &unknown, Some(Host::Claude), None).map_err(|fail| fail.exit);
   assert_eq!(refused, Err(Exit::Usage));
