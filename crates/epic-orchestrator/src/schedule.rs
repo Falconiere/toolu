@@ -138,6 +138,10 @@ pub(crate) fn note_event(world: &mut World, key: &str, event: &str) {
 }
 
 fn gone(world: &mut World, key: &str) {
+  // A teardown in progress or a settled issue has no agent to relaunch (#619).
+  if !crate::attention::has_live_agent(world, key) {
+    return;
+  }
   let Some(issue) = world.issues.get(key) else {
     return;
   };

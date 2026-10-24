@@ -85,7 +85,12 @@ exits right after start): check `codex debug models` or `cursor-agent
   that stayed alive. Stop those first. Fix the cause, then
   `toolu epic finish <state_dir> <key>` and `toolu epic ack <key>`.
 - **Tear an issue down without a merge** (only when the user asks):
-  `toolu epic finish <state_dir> <key> --abandon` keeps the branch.
+  `toolu epic finish <state_dir> <key> --abandon` keeps the branch. It tells
+  a running engine before and after the teardown, so the engine never
+  relaunches the issue, and the abandoned issue frees its slot. If the engine
+  refuses, nothing is torn down: wait for a merge or cleanup in progress, or
+  replace an older engine with `toolu epic engine --replace`. An issue removed
+  from the epic's tracker leaves the engine at its next refresh.
 - **Close the epic by hand:** `toolu epic close --graph <state_dir>/graph.json`
   (`--dry-run` prints the summary only). Never close it twice.
 

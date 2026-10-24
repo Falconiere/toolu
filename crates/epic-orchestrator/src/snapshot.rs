@@ -265,8 +265,36 @@ pub(crate) fn reload_epic(world: &mut World, epic: &str) -> Result<(), String> {
   let mut stages = BTreeMap::new();
   load_epic(world, epic, &dir, &mut stages)?;
   overlay_stages(world, &stages);
+  drop_departed(world, epic, &read_value(&dir.join("graph.json"))?);
+  crate::dispatch_ops::heal_cleaning(world, epic);
   watch::sync(world);
   Ok(())
+}
+
+/// Drop each issue of `epic` that left its graph, so it frees its slot
+/// (#619). One with an action pending stays until a later refresh; a graph
+/// without an issue list drops nothing.
+fn drop_departed(world: &mut World, epic: &str, graph: &Value) {
+  let Some(items) = graph.get("issues").and_then(Value::as_array) else {
+    return;
+  };
+  let listed: Vec<&str> = items
+    .iter()
+    .filter_map(|item| item.get("key").and_then(Value::as_str))
+    .collect();
+  let departed: Vec<String> = world
+    .issues
+    .values()
+    .filter(|issue| issue.epic == epic && issue.pending.is_none())
+    .filter(|issue| !listed.contains(&issue.key.as_str()))
+    .map(|issue| issue.key.clone())
+    .collect();
+  for key in departed {
+    world.issues.remove(&key);
+    crate::attention::settle(world, &key, None, "drop");
+    let line = journal::Record::new("action", "drop", &key, "", "not in the graph");
+    world.outbox.push_back(crate::model::Step::Journal(line));
+  }
 }
 
 /// Issue snapshot path.

@@ -172,3 +172,50 @@ fn a_busy_pane_refusal_waits() {
     "herdr agent.start: timeout: agent did not become ready"
   ));
 }
+
+#[test]
+fn a_settled_record_is_never_relaunched_even_after_it_left_the_graph() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let issues = tmp.path().join("issues");
+  std::fs::create_dir_all(&issues).expect("issues");
+  std::fs::write(issues.join("gone-1.json"), r#"{"stage":"abandoned"}"#).expect("record");
+  let dropped = launch(tmp.path(), "gone-1", &[]);
+  assert_eq!(
+    dropped,
+    serde_json::json!({"outcome": "settled", "stage": "abandoned"})
+  );
+  let mut graph = crate::support::graph_248();
+  graph.state_dir = tmp.path().display().to_string();
+  crate::graph::write_graph(&tmp.path().join("graph.json"), &graph).expect("graph");
+  std::fs::write(issues.join("comemory-255.json"), r#"{"stage":"merged"}"#).expect("record");
+  let merged = launch(tmp.path(), "comemory-255", &[]);
+  assert_eq!(
+    merged,
+    serde_json::json!({"outcome": "settled", "stage": "merged"})
+  );
+  assert!(!tmp.path().join("worktrees").exists());
+  assert_eq!(std::fs::read_dir(&issues).expect("issues").count(), 2);
+}
+
+#[test]
+fn a_record_settled_after_the_first_check_is_refused_under_the_launch_lock() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut graph = crate::support::graph_248();
+  graph.state_dir = tmp.path().display().to_string();
+  let issues = tmp.path().join("issues");
+  std::fs::create_dir_all(&issues).expect("issues");
+  let record = issues.join("comemory-255.json");
+  std::fs::write(&record, r#"{"stage":"abandoned","launches":1}"#).expect("record");
+  let input = input(tmp.path(), "comemory-255", &[], crate::reach::Reach::live());
+  let issue = graph.find("comemory-255").expect("issue");
+  let outcome = super::launch_routed(&input, &graph, issue, None);
+  assert_eq!(
+    outcome,
+    serde_json::json!({"outcome": "settled", "stage": "abandoned"})
+  );
+  assert_eq!(
+    std::fs::read_to_string(&record).expect("record"),
+    r#"{"stage":"abandoned","launches":1}"#
+  );
+  assert!(!tmp.path().join("launch-locks/comemory-255").exists());
+}

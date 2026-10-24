@@ -60,6 +60,7 @@ fn operate(
     "wait" => crate::wait_ops::reply_wait(engine, request, reply, waiters),
     "answer" => crate::attention_ops::reply_answer(engine, request, &reply),
     "release" => crate::dispatch_ops::reply_release(engine, request, &reply),
+    "finish" => crate::dispatch_ops::reply_finish(engine, request, &reply),
     _ => {
       let _sent = reply.send(json!({"error": "unknown op"}));
       Ok(false)

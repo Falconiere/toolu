@@ -71,6 +71,7 @@ fn commit_launch(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
       crate::refill::mark_relaunch(world, key, reroute);
       world.outbox.drain(..).collect()
     }
+    "settled" => launch_settled(world, key, &text("stage")),
     _ => launch_failed(world, key, &doc),
   }
 }
@@ -87,6 +88,20 @@ fn close_launch(world: &mut World, key: &str, note: &str) -> Option<Pending> {
     note,
   )));
   Some(pending)
+}
+
+/// A finish already settled the issue: adopt its `merged` or `abandoned`
+/// stage and launch nothing, with no judgment and no record write (#619).
+fn launch_settled(world: &mut World, key: &str, stage: &str) -> Vec<Step> {
+  crate::refill::set_outcome(world, key, "skipped");
+  if let Some(issue) = world.issues.get_mut(key) {
+    if matches!(stage, "merged" | "abandoned") {
+      stage.clone_into(&mut issue.stage);
+    }
+    issue.relaunch = None;
+  }
+  let _closed = close_launch(world, key, "settled");
+  world.outbox.drain(..).collect()
 }
 
 /// A failed launch keeps the record's stage and is not tried again until
