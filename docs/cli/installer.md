@@ -180,6 +180,17 @@ on the terminal (`/dev/tty`): Enter takes the default, `1 3` or `1,3` picks,
 and `q` cancels. Without a terminal, or with `--no-input` or `--json`, the run
 exits `64` and names the candidates rather than guessing.
 
+**`remove` also takes a plugin the marketplace retired** (#615), such as a
+leftover 7.11.0 `context7` from before the Rust rewrite. On Claude Code, Codex
+and Cursor, a name outside the catalog that is shaped like a plugin name
+(lowercase letters and digits, single inner hyphens) goes to the host's own
+removal, which only reaches toolu's plugins: `claude plugin uninstall
+<name>@toolu`, `codex plugin remove <name>@toolu`, or a Cursor directory with
+toolu's install marker. A name the host does not have is a failed step with the
+host's message, exit `1`. Muse removes by bare name from any source, so there
+`remove` takes catalog names only, and `toolu doctor` names `muse plugins remove
+<name>` instead. Any other unknown name exits `64`.
+
 **Dry runs run nothing.** `--dry-run` prints the commands a real run would
 run, for `install`, `remove` and `update` alike (an `update` leaves out plugins
 already at the offered version). The TypeScript installer ignored the flag on
