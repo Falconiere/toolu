@@ -6,6 +6,18 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.4.0](https://github.com/Falconiere/toolu/compare/v8.3.0...v8.4.0) (2026-10-24)
+
+
+### Features
+
+* deprecate the @toolu/plugins npm installer ([#634](https://github.com/Falconiere/toolu/issues/634)) ([9fdb328](https://github.com/Falconiere/toolu/commit/9fdb32893301fc642319d15573d1c68f13496d6b))
+
+
+### Bug Fixes
+
+* **epic:** a worker the launch never confirmed gets a loadable record, a running lease, and its session ([#631](https://github.com/Falconiere/toolu/issues/631)) ([788e1e7](https://github.com/Falconiere/toolu/commit/788e1e70a0b46c32c1143a6b4b340207fb9ac73b))
+
 ## [8.3.0](https://github.com/Falconiere/toolu/compare/v8.2.0...v8.3.0) (2026-10-24)
 
 
