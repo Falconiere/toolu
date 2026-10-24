@@ -137,7 +137,7 @@ fn an_unpinned_toolu_marketplace_is_removed_and_added_again_pinned() {
 fn a_toolu_marketplace_from_elsewhere_is_left_alone_and_named() {
   let sb = Sandbox::new();
   codex(&sb, "local /src/toolu");
-  let Ok(Pin::Unpinned(hint)) = ensure(&driver(&sb), TAG) else {
+  let Ok(Pin::Foreign(hint)) = ensure(&driver(&sb), TAG) else {
     panic!("a local marketplace was pinned");
   };
   assert!(hint.contains("/src/toolu (local)"), "{hint}");

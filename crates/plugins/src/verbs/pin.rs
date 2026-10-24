@@ -16,6 +16,9 @@ use crate::verbs::Driver;
 /// registered one: the only add failure a remove can fix.
 const REFUSED: &str = "already added from a different source";
 
+/// What a Codex that cannot list its marketplaces is told.
+const NEEDS: &str = "toolu needs a Codex with `codex plugin marketplace list --json` (0.164.0 or later); update Codex";
+
 /// What pinning did.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Pin {
@@ -24,9 +27,11 @@ pub(crate) enum Pin {
   /// toolu's own marketplace followed another ref and now follows the tag;
   /// the installed plugins still hold the old content.
   Repinned,
-  /// Left as it was (a source other than toolu's, or none that could be
-  /// added); the text is the hint for a plugin that then fails.
-  Unpinned(String),
+  /// A `toolu` marketplace from another source, left as it was; the text is
+  /// the hint for a plugin that then fails.
+  Foreign(String),
+  /// No `toolu` marketplace, and the pinned add failed; the text is why.
+  Absent(String),
 }
 
 /// Pins the Codex marketplace `toolu` to `tag`. A `toolu` marketplace from
@@ -46,12 +51,12 @@ pub(crate) fn ensure(driver: &Driver, tag: &str) -> Res<Pin> {
   let listing = driver.run(&list);
   if !listing.ok() {
     let why = first_line(&listing.stderr, &format!("exited {}", listing.code));
-    return Err(cannot(tag, &format!("{}: {why}", list.join(" "))));
+    return Err(cannot(tag, &format!("{}: {why}; {NEEDS}", list.join(" "))));
   }
   let source = codex::marketplace_source(&listing.stdout, MARKETPLACE)
     .map_err(|detail| cannot(tag, &format!("{}: {detail}", list.join(" "))))?;
   if let Some(source) = source.as_ref().filter(|source| !ours(source)) {
-    return Ok(Pin::Unpinned(format!(
+    return Ok(Pin::Foreign(format!(
       "; the marketplace {MARKETPLACE} comes from {} ({}), so toolu left it unpinned",
       source.source, source.kind
     )));
@@ -63,15 +68,14 @@ pub(crate) fn ensure(driver: &Driver, tag: &str) -> Res<Pin> {
   }
   let why = first_line(&ran.stderr, "no output");
   match source {
-    None => Ok(Pin::Unpinned(format!(
-      "; the marketplace add also failed: {why}"
-    ))),
+    None => Ok(Pin::Absent(why)),
     Some(_ours) if ran.stderr.contains(REFUSED) => repin(driver, &pinned, tag),
     Some(_ours) => Err(cannot(tag, &why)),
   }
 }
 
-fn cannot(tag: &str, why: &str) -> Fail {
+/// The failure of pinning to `tag`, for `why`.
+pub(crate) fn cannot(tag: &str, why: &str) -> Fail {
   Fail::failed(format!(
     "cannot pin the Codex marketplace {MARKETPLACE} to {tag}: {why}"
   ))

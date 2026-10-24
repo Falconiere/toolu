@@ -188,3 +188,34 @@ fn an_unrecorded_pane_is_named_as_such() {
     "codex is waiting on its hook review in pane (unrecorded): \"18 hooks are new or changed.\"; review and trust the hooks there, then relaunch with --replace"
   );
 }
+
+#[test]
+fn a_dry_run_or_an_unreserved_attempt_never_reads_a_pane() {
+  let rig = Rig::new();
+  BROWSER.clone_into(&mut rig.herdr.state().tail);
+  let issue = find_issue(&rig.graph, "comemory-255")
+    .expect("issue")
+    .clone();
+  for dry_run in [true, false] {
+    let mut flags = opts();
+    flags.kind = Some("codex".into());
+    flags.dry_run = dry_run;
+    let host = crate::launch::resolve_host(&flags, None).expect("host");
+    let attempt = crate::launch::attempt::Attempt::new(&rig.graph, &issue, &flags, host, 0);
+    let mut ctx = rig.ctx();
+    let record = crate::launch::record::Record::new();
+    assert_eq!(
+      attempt.explain(lost(), &record, &mut ctx.herdr),
+      lost(),
+      "dry_run={dry_run}"
+    );
+  }
+  assert!(
+    !rig
+      .herdr
+      .state()
+      .calls
+      .iter()
+      .any(|(method, _params)| method == "agent.read")
+  );
+}
