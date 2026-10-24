@@ -53,16 +53,17 @@ jobs:
   # `release:` trigger never fires. Chaining keeps it in the same run that cut
   # the tag and needs no App token.
   #
-  # npm and the native release run side by side. The npm package is a wrapper
-  # that locates an installed native binary, so the binaries never depend on
-  # it, and npm makes a version visible minutes after accepting it with no
-  # published bound: 8.1.1 waited 8 minutes 11 seconds, outlived the npm job's
-  # wait, and the native release and Homebrew tap were skipped although npm
-  # had shipped. npm-publish.yml verifies the registry in its own job, which
-  # nothing here waits for.
+  # The npm package ships the native binaries, so the binaries come first:
+  # `publish` waits for `native`, which publishes the release, and embeds its
+  # archives. The native release never depends on npm. npm still makes a
+  # version visible minutes after accepting it with no published bound: 8.1.1
+  # waited 8 minutes 11 seconds, outlived the npm job's wait, and the native
+  # release and Homebrew tap were skipped although npm had shipped.
+  # npm-publish.yml verifies the registry in its own job, which nothing here
+  # waits for.
   publish:
     name: Publish to npm
-    needs: release-please
+    needs: [release-please, native]
     if: needs.release-please.outputs.releases_created == 'true'
     permissions:
       contents: read

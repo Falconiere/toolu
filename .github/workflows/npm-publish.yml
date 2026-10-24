@@ -11,7 +11,9 @@ name: npm publish
 # which is exactly how the 6.7.0 release published nothing.
 #
 # One package publishes: @toolu/plugins, the `toolu-plugins` wrapper that runs
-# the native `toolu plugins`. @toolu/core is no longer published (#440); its last
+# the native `toolu plugins`, preferring the platform binaries the tarball
+# ships (`tools/toolu-cli/npm/bin/<os>-<arch>/toolu`) over an installed `toolu`.
+# @toolu/core is no longer published (#440); its last
 # version stays on the registry, deprecated.
 #
 # @toolu/plugins publishes from tools/toolu-cli/npm, not from its private dev
@@ -27,7 +29,8 @@ name: npm publish
 # left the native release and the Homebrew tap unbuilt although npm had
 # shipped. So the publish job ends when npm accepts the upload, and the
 # `verify` job below polls the registry on its own: nothing waits for it. The
-# wrapper only locates an installed native binary, so the native release never
+# bundled binaries come from the published GitHub Release's own archives, so
+# this workflow runs after the native release and the native release never
 # depends on this package. A red `verify` means a manual dispatch of this
 # workflow with the same tag, which skips what is already on the registry. A
 # prerelease uses the npm `next` dist-tag so it does not move stable `latest`.
@@ -80,6 +83,38 @@ jobs:
 
       - name: Set up an npm new enough to attest provenance
         run: npm install --global npm@11.5.1
+
+      # The tarball ships the release's own binaries. This runs after the
+      # native release published them, so a chained run and a manual dispatch
+      # both take the public release's archives, checked against its
+      # SHA256SUMS. A draft is invisible to this token, so an unpublished
+      # native release fails here, before anything reaches npm.
+      - name: Download the native release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --pattern 'toolu-*.tar.gz' --pattern SHA256SUMS -D native-release --clobber
+          (cd native-release && sha256sum -c SHA256SUMS)
+
+      - name: Stage the platform binaries in the npm package
+        run: |
+          set -euo pipefail
+          for item in darwin-arm64 darwin-amd64 linux-amd64 linux-arm64; do
+            dir="tools/toolu-cli/npm/bin/$item"
+            mkdir -p "$dir"
+            tar -xzf "native-release/toolu-$item.tar.gz" -C "$dir" toolu
+            chmod +x "$dir/toolu"
+          done
+          test "$(find tools/toolu-cli/npm/bin -mindepth 2 -maxdepth 2 -name toolu | wc -l)" -eq 4
+
+      - name: Install the pinned toolchain
+        run: rustup toolchain install
+
+      - name: Verify the staged npm file list
+        run: cargo xtask gate --only pack
 
       - name: Check the tag matches every package version
         env:
@@ -138,8 +173,8 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ inputs.tag }}
 
-  # Nothing needs this job: release-please.yml runs the native release beside
-  # `publish`, not after it. It only turns the run red when npm has not made
+  # Nothing needs this job: release-please.yml runs `publish` after the native
+  # release. It only turns the run red when npm has not made
   # the version visible within its window.
   verify:
     name: verify npm packages resolve

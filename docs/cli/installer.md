@@ -21,25 +21,36 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 toolu plugins install
 ```
 
-The same verbs run through npm, which is handy where `npx` is the habit:
+The same verbs run through npm, which is handy where `npx` is the habit.
+No separate binary install is needed: the package ships a native `toolu` for
+each supported platform:
 
 ```bash
 npx @toolu/plugins install
 ```
 
-`@toolu/plugins` is a thin Node wrapper. It finds the native `toolu` and runs
-`toolu plugins <args>`, passing the plugin catalog it ships
-(`assets/marketplace.json`) with `--catalog`. It looks for `toolu` the way the plugins'
-hook launcher does. A non-empty `TOOLU_BIN` is the only candidate. Otherwise it
-tries `/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`,
-`~/.local/bin`, then every `toolu` on `PATH`, in that order.
+`@toolu/plugins` is a thin Node wrapper. It runs `toolu plugins <args>`,
+passing the plugin catalog it ships (`assets/marketplace.json`) with
+`--catalog`. It prefers the binary the package ships
+(`bin/<os>-<arch>/toolu`), then looks for an installed `toolu` the way the
+plugins' hook launcher does. A non-empty `TOOLU_BIN` is the only candidate and
+always wins. Otherwise the bundled binary runs when it answers the probes;
+then `/opt/homebrew/bin`, `/usr/local/bin`,
+`/home/linuxbrew/.linuxbrew/bin`, `~/.local/bin`, then every `toolu` on
+`PATH`, in that order.
 A candidate counts only if it is not the wrapper itself, `toolu --hook-protocol`
-prints an integer, and `toolu plugins install --help` succeeds. With no such
-binary the wrapper exits `69` and names the install commands. It never
-downloads a binary. It exits with the native run's status, forwards Ctrl-C,
-`SIGTERM` and `SIGHUP` to it, and exits 128 plus the signal's number when a
-signal ends it. `npx @toolu/plugins --version` prints the wrapper's own
-version.
+prints an integer, and `toolu plugins install --help` succeeds. A bundled
+binary that fails those probes is skipped for the installed search. To run an
+installed `toolu` instead of a working bundled one, set `TOOLU_BIN` to its
+path. With no working binary anywhere the wrapper exits `69` and names the
+install commands.
+It never downloads a binary: everything it runs rides the tarball. It exits
+with the native run's status, forwards Ctrl-C, `SIGTERM` and `SIGHUP` to it,
+and exits 128 plus the signal's number when a signal ends it.
+`npx @toolu/plugins --version` prints the wrapper's own version. A pinned copy
+(an older global install, or a project dependency) runs its pinned bundled
+binary rather than a newer installed one. There is no Windows binary, so on
+Windows the wrapper always exits `69`.
 
 npx fetches the newest release, so no `@latest` tag is needed. The one
 exception is a project that already depends on `@toolu/plugins`: there npx runs
@@ -81,8 +92,9 @@ cargo build -p toolu-cli
 
 `@toolu/core`, the old TypeScript library, is deprecated and no longer published.
 
-The `@toolu/plugins` tarball is five files: `package.json`, `README.md`,
-`LICENSE`, `cli.js`, and `assets/marketplace.json`. The `plugins/` tree is
+The `@toolu/plugins` tarball is nine files: `package.json`, `README.md`,
+`LICENSE`, `cli.js`, `assets/marketplace.json`, and the four
+`bin/<os>-<arch>/toolu` binaries. The `plugins/` tree is
 deliberately excluded, because Claude Code, Codex and Muse fetch plugin content
 through their own host CLIs. The gate's `pack` step fails if anything else
 appears in it.
