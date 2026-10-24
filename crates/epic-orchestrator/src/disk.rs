@@ -157,7 +157,9 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
 }
 
 /// Write `issue`'s engine fields and tracker sighting to its record, unless
-/// it has nothing to record yet.
+/// it has nothing to record yet. A `running` issue's agent lease follows
+/// when its launch never confirmed the prompt (#625), unless the engine's
+/// own launch of it is pending, which sets the stage when it commits.
 ///
 /// # Errors
 /// The record cannot be read or written.
@@ -171,6 +173,16 @@ pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(
   }
   let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
   write_issue_fields(&path, issue)?;
+  let launching = issue
+    .pending
+    .as_ref()
+    .is_some_and(|pending| pending.action == crate::model::Action::Launch);
+  if issue.stage == "running" && !launching {
+    // Best effort, like the dead-lease reclaim: a lease left as it was is
+    // mirrored again by the next write, and the record write stands.
+    let _mirrored =
+      crate::launch::adoption::mirror_running(Path::new(&issue.state_dir), &issue.key);
+  }
   write_tracker_seen(&path, issue.tracker_seen, now)
 }
 

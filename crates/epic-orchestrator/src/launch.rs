@@ -10,12 +10,13 @@ use serde_json::{Map, Value, json};
 use toolu_runtime::env::Env;
 
 pub(crate) mod admission;
+pub(crate) mod adoption;
 mod agent;
 mod attempt;
 mod brief;
 mod checkout;
 mod deliver;
-mod digest;
+pub(crate) mod digest;
 mod failure;
 pub(crate) mod lifecycle;
 pub(crate) mod muse_session;

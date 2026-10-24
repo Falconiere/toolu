@@ -43,18 +43,25 @@ fn ending(record: &Record) -> bool {
   )
 }
 
+/// A launch whose prompt was never confirmed may still lack its session: while
+/// it starts, and once the engine adopted the worker that reported before its
+/// launch confirmed the prompt (#625).
+fn awaiting_capture(record: &Record) -> bool {
+  let prompt = text(record, "prompt_state");
+  match text(record, "stage") {
+    Some("starting" | "uncertain" | "replacing") => prompt != Some("acknowledged"),
+    Some("running") => prompt.is_some_and(|state| state != "acknowledged"),
+    _ => false,
+  }
+}
+
 fn check_identity(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(), String> {
   for field in IDENTITY {
     let Some(value) = record.get(field) else {
       continue;
     };
     if field == "session_id" && value.is_null() {
-      let awaiting = text(record, "prompt_state") != Some("acknowledged")
-        && matches!(
-          text(record, "stage"),
-          Some("starting" | "uncertain" | "replacing")
-        );
-      if !ending(record) && !awaiting {
+      if !ending(record) && !awaiting_capture(record) {
         return Err(invalid(
           "session_id may be null only while awaiting capture",
         ));
@@ -67,6 +74,7 @@ fn check_identity(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(
   }
   let managed = text(record, "lease_token").is_some()
     && !ending(record)
+    && !awaiting_capture(record)
     && (text(record, "stage") == Some("running")
       || text(record, "prompt_state") == Some("acknowledged"));
   if managed && text(record, "session_id").is_none() {

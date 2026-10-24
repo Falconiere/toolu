@@ -186,3 +186,30 @@ fn a_pending_session_may_be_null_but_an_acknowledged_one_may_not() {
     assert_eq!(record["cleanup_error"], "owned workload remains");
   }
 }
+
+/// The record #625 left: the engine adopted a reporting worker as running
+/// before its launch confirmed the prompt or captured the session.
+#[test]
+fn an_adopted_running_record_may_lack_its_session_until_acknowledged() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let adopted = json!({
+    "stage": "running", "prompt_state": "submitting", "lifecycle_outcome": "uncertain",
+    "session_id": null, "lease_token": "lease-1", "resource_root": "/r", "pane_id": "p",
+    "worktree": "/w",
+  });
+  let record = load_launch_record(&put(tmp.path(), "a.json", &adopted.to_string()));
+  assert_eq!(record.map(Value::Object), Ok(adopted));
+  for body in [
+    json!({"stage": "running", "prompt_state": "acknowledged", "session_id": null}),
+    json!({"stage": "running", "session_id": null}),
+  ] {
+    let err = refused(tmp.path(), &body);
+    assert!(
+      err.ends_with("session_id may be null only while awaiting capture"),
+      "{body}: {err}"
+    );
+  }
+  let managed =
+    json!({"stage": "running", "prompt_state": "acknowledged", "lease_token": "lease-1"});
+  assert!(refused(tmp.path(), &managed).ends_with("a managed running launch requires session_id"));
+}

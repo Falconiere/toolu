@@ -89,18 +89,7 @@ fn busy() -> crate::herdr_state::Scripted {
 fn launch_live(rig: &Rig) -> Result<serde_json::Value, crate::launch::Failure> {
   let mut flags = opts();
   flags.force = true;
-  let issue = find_issue(&rig.graph, "comemory-255")?.clone();
-  let github = toolu_http_test_support::Fixture::start()
-    .map_err(|err| crate::launch::Failure::unknown(format!("GitHub fixture: {err:?}")))?;
-  crate::support::ok(
-    &github,
-    "/repos/Falconiere/comemory",
-    &json!({"default_branch": "main"}),
-  );
-  let client = crate::support::gh(&github);
-  let mut ctx = rig.ctx();
-  ctx.gh = Ok(&client);
-  launch_issue(&rig.graph, &issue, &flags, &mut ctx)
+  rig.launch(&flags)
 }
 
 fn starts(rig: &Rig) -> usize {

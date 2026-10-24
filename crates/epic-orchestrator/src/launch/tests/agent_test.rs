@@ -107,3 +107,81 @@ fn a_live_agent_is_kept_only_with_its_recorded_session_and_host() {
   assert!(started.started && log[0] == "herdr agent prompt k-1 /exit");
   assert!(log[1].starts_with("herdr agent start k-1 --kind codex"));
 }
+
+/// A live Cursor agent in a real worktree, and the plan of a launch that
+/// started it at `since` but never captured its chat (#625).
+fn live_cursor(rig: &Rig, since: u64) -> AgentPlan {
+  let worktree = rig.tmp.path().join("wt");
+  std::fs::create_dir_all(&worktree).expect("worktree");
+  let pane = format!("{}:p1", rig.herdr.add_repo(&worktree));
+  let worktree = std::fs::canonicalize(&worktree)
+    .expect("real")
+    .display()
+    .to_string();
+  let start = Call::Start {
+    name: "k-1".into(),
+    kind: "cursor".into(),
+    pane_id: pane.clone(),
+    args: Vec::new(),
+    timeout_ms: None,
+  };
+  rig.ctx().herdr.call(&start).expect("start");
+  AgentPlan {
+    host: Resolved {
+      kind: HostKind::Cursor,
+      model: None,
+      effort: None,
+    },
+    previous_kind: Some("cursor".into()),
+    session_started_after: Some(since),
+    ..plan(&pane, &worktree)
+  }
+}
+
+#[test]
+fn a_kept_agent_without_a_recorded_session_takes_the_one_its_host_wrote() {
+  let rig = Rig::new();
+  let since = 1_797_863_400_000;
+  let live = live_cursor(&rig, since);
+  let mut ctx = rig.ctx();
+  let wait = Duration::from_secs(5);
+  let missing = "live session identity is missing; inspect before explicit --replace";
+  let refused = |ctx: &mut crate::launch::Ctx<'_>, plan: &AgentPlan| {
+    ensure_agent(&mut ctx.herdr, plan, &mut Vec::new(), wait).map(|start| start.captured)
+  };
+  assert_eq!(
+    refused(&mut ctx, &live).map_err(|err| err.message),
+    Err(missing.into())
+  );
+  rig.cursor_chat(
+    &live.worktree,
+    "6f10bc76-793c-4c27-b5f2-f7c57f6e3fd0",
+    since - 1,
+  );
+  assert_eq!(
+    refused(&mut ctx, &live).map_err(|err| err.message),
+    Err(missing.into())
+  );
+  let chat = "1f21b969-a107-480c-989c-32f677f90a5f";
+  rig.cursor_chat(&live.worktree, chat, since + 5);
+  let unstarted = AgentPlan {
+    session_started_after: None,
+    ..live.clone()
+  };
+  assert_eq!(
+    refused(&mut ctx, &unstarted).map_err(|err| err.message),
+    Err(missing.into())
+  );
+  let kept = ensure_agent(&mut ctx.herdr, &live, &mut Vec::new(), wait).expect("kept");
+  assert_eq!(kept.captured.as_deref(), Some(chat));
+  assert!(!kept.started && !kept.resumed);
+  rig.cursor_chat(
+    &live.worktree,
+    "68e9f284-9d8b-4e3b-ac10-b64b2841c361",
+    since + 9,
+  );
+  assert_eq!(
+    refused(&mut ctx, &live).map_err(|err| err.message),
+    Err(missing.into())
+  );
+}

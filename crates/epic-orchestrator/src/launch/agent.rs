@@ -9,7 +9,7 @@ use super::failure::Failure;
 use super::lifecycle::{
   Expected, Herdr, Outcome, await_named_agent, inspect_agent, require_identity, shutdown_agent,
 };
-use super::session::require_captured_session;
+use super::session::{capture_session, require_captured_session};
 use crate::herdr::Call;
 use crate::hosts::{AgentOpts, HostKind, agent_args, host_kind};
 
@@ -67,23 +67,35 @@ pub(crate) struct AgentStart {
   pub resumed: bool,
   /// The argv after `--` in `agent start`.
   pub args: Vec<String>,
+  /// A session the record lacked, captured from the host's store for the
+  /// kept agent (#625).
+  pub captured: Option<String>,
 }
 
-fn require_recorded_session(
+/// The session a live agent runs: the recorded one, which the host's own
+/// records must still name (`None`), or, when the launch never captured it
+/// (#625), the one session the host wrote for the worktree since the attempt
+/// began (`Some`).
+fn recorded_session(
   herdr: &Herdr<'_>,
   kind: HostKind,
   plan: &AgentPlan,
-) -> Result<(), Failure> {
-  let (Some(id), Some(since)) = (plan.session_id.as_deref(), plan.session_started_after) else {
-    return Err(Failure::refusal(
-      "live session identity is missing; inspect before explicit --replace",
-    ));
+) -> Result<Option<String>, Failure> {
+  let missing =
+    || Failure::refusal("live session identity is missing; inspect before explicit --replace");
+  let Some(since) = plan.session_started_after else {
+    return Err(missing());
+  };
+  let Some(id) = plan.session_id.as_deref() else {
+    let captured = capture_session(kind, &plan.worktree, since, herdr.env)?;
+    return captured.map(Some).ok_or_else(missing);
   };
   require_captured_session(kind, &plan.worktree, since, id, herdr.env).map_err(|_err| {
     Failure::refusal(
       "live session identity is missing or changed; inspect before explicit --replace",
     )
-  })
+  })?;
+  Ok(None)
 }
 
 fn previous(plan: &AgentPlan) -> Result<HostKind, Failure> {
@@ -119,12 +131,13 @@ fn keep_or_stop(
     return Err(Failure::refusal("host change requires explicit --replace"));
   }
   if !plan.replace {
-    require_recorded_session(herdr, kind, plan)?;
+    let captured = recorded_session(herdr, kind, plan)?;
     log.push(format!("agent {key} already live"));
     return Ok(Some(AgentStart {
       started: false,
       resumed: false,
       args: Vec::new(),
+      captured,
     }));
   }
   log.push(format!("herdr agent prompt {key} /exit"));
@@ -240,7 +253,7 @@ fn verify_started(
       cwd: &plan.worktree,
     },
   )?;
-  require_recorded_session(herdr, kind, plan)
+  recorded_session(herdr, kind, plan).map(|_resumed| ())
 }
 
 /// Keep a verified live agent, stop it for `--replace`, then start or resume.
@@ -277,6 +290,7 @@ pub(crate) fn ensure_agent(
       started: true,
       resumed: resume,
       args,
+      captured: None,
     });
   }
   send_start(herdr, &start, plan, log)?;
@@ -285,6 +299,7 @@ pub(crate) fn ensure_agent(
     started: true,
     resumed: resume,
     args,
+    captured: None,
   })
 }
 
