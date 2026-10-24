@@ -77,8 +77,12 @@ pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf>;
   in the `since` folder, capture returns `None` (ambiguity is still refused).
 - **AC-4:** Muse capture keeps its existing behaviour: the existing `muse_session_test.rs`
   cases pass unchanged after the shared-helper refactor.
-- **AC-5:** On herdr 0.9.5, a Codex worker launched between 21:00 and midnight in UTC-3
-  records `running` with its session on the first attempt.
+- **AC-5:** Given the real Codex CLI run under a time zone whose date differs from UTC at
+  that moment (UTC-12 before 12:00 UTC, else UTC+14), its new rollout naming the run's cwd
+  appears under `sessions/<local date>/`, not the UTC one: the layout the AC-1/AC-2
+  fixtures reproduce.
+- **AC-6:** On herdr 0.9.5, a Codex worker launched between 21:00 and midnight in UTC-3
+  records `running` with its session on the first attempt (post-merge; see Open Questions).
 
 ## Acceptance evidence
 - **AC-1:** real files in a temp `CODEX_HOME`: a `session_meta` JSONL at
@@ -91,14 +95,16 @@ pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf>;
   worktree `cwd`. Expected `Ok(None)`. Same check.
 - **AC-4:** existing real-file Muse cases. Check:
   `cargo test -p toolu-epic-orchestrator launch::muse_session::tests`.
-- **AC-5:** two parts. (a) Pre-merge live layout probe with the real Codex CLI: run
-  `TZ=Pacific/Kiritimati codex exec … </dev/null` (UTC+14, so its local date is ahead of
-  UTC at the probe time) in a temp directory and confirm the new rollout lands in the
-  local-date folder, not the UTC one — the layout AC-1/AC-2 fixtures reproduce. Result
-  goes in the PR body. (b) Post-merge, the epic orchestrator's next late-day Codex launch
-  on herdr 0.9.5 (the issue's repro) records `running` with its session; owner: the epic
-  #591 run, recorded on the epic as evidence. The engine-level launch needs the resident
-  engine and herdr, which this worker does not drive.
+- **AC-5:** real codex-cli 0.164.0 `exec … </dev/null` in a temp directory under
+  `TZ=Etc/GMT+12` or `TZ=Pacific/Kiritimati`; expected a rollout with
+  `"cwd":"<temp dir>"` under `sessions/<local date>/` with the local date unequal to the
+  UTC date (probes 2026-10-24 ~11:40 UTC: Kiritimati `2026/10/25`, GMT+12 `2026/10/23`,
+  UTC `2026/10/24`). Check: `/tmp/probe620.sh` (fails when the dates match or no such
+  rollout exists). Result goes in the PR body.
+- **AC-6:** the epic orchestrator's next late-day Codex launch on herdr 0.9.5 on the merged
+  build (the issue's repro); expected `running` with a captured session, recorded on epic
+  #591. Not a ledger step: it needs the resident engine, herdr and the late-day clock, which
+  this worker does not drive.
 
 ## Documentation impact
 None — internal capture behaviour; no command, flag, config, or documented path changes.
@@ -106,12 +112,13 @@ The `session.rs` and `muse_session.rs` doc comments are updated to say the day f
 be local time.
 
 ## Open Questions
-None blocking. AC-5 is verified live after merge by the epic orchestrator (owner: epic
-#591 run), as the issue's own acceptance requires a real late-day launch.
+None blocking. AC-6 is verified live after merge by the epic orchestrator (owner: epic
+#591 run), as the issue's own acceptance requires a real late-day engine launch.
 
 ## Spec review
 
 **Status:** Approved
 
-- Acceptance evidence: 🔵 consider: AC-5(b) is post-merge and engine-driven; owned by the epic #591 run, as the issue's acceptance requires a real late-day launch. Pre-merge live layout probe AC-5(a) covers the cause. No change.
+- Acceptance evidence: 🔵 consider: AC-6 is post-merge and engine-driven; owned by the epic #591 run, as the issue's acceptance requires a real late-day launch. The pre-merge live layout probe (AC-5) covers the cause.
+- Re-review after plan review split the live check into AC-5 (pre-merge probe) and AC-6 (post-merge launch): still Approved.
 - No blockers: problem, non-goals, single approach, interfaces, failure modes, real-file evidence, and documentation impact are concrete.
