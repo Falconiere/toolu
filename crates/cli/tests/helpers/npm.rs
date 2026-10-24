@@ -1,18 +1,12 @@
-//! The shared harness for the npm wrapper (`toolu-plugins`) tests: the real
-//! `node`, the built `toolu`, shell stand-ins, and one wrapper run.
+//! The shared harness for the `@toolu/plugins` notice tests: the real `node`
+//! and one run of `cli.js`.
 
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-/// The `toolu` binary under test.
-pub(crate) const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
-
 /// A helper's result; the tests unwrap it.
 pub(crate) type Res<T> = Result<T, Box<dyn std::error::Error>>;
-
-/// A `PATH` with no `toolu` on it.
-pub(crate) const SYSTEM: &str = "/usr/bin:/bin";
 
 /// The workspace checkout.
 pub(crate) fn repo() -> PathBuf {

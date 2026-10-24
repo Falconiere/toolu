@@ -243,6 +243,12 @@ fn npm(npm: &Value, found: &mut Findings) {
       && runs(verify).contains("https://registry.npmjs.org/${name/\\//%2F}/$pkg"),
     "npm-publish.yml must verify the registry's per-version document in its own job",
   );
+  found.need(
+    script.contains("npm deprecate")
+      && !script.contains("gh release download")
+      && !script.contains("tools/toolu-cli/npm/bin/"),
+    "npm-publish.yml must publish a deprecation notice and no bundled binaries",
+  );
 }
 
 /// The whole release chain.

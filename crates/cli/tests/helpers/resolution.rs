@@ -109,15 +109,11 @@ fn the_npm_wrapper_first_on_path_is_skipped() {
     .env("TOOLU_BIN", &wrapper);
   probe.stdout(Stdio::piped()).stderr(Stdio::piped());
   let probe = spawn(&mut probe).unwrap().wait_with_output().unwrap();
-  // The wrapper never answers the native probe: it is not the native CLI, and
-  // it skips itself when it looks for one (#438): it names the install
-  // commands and exits 69.
+  // The notice is not a native toolu: `--hook-protocol` prints nothing,
+  // stdout stays empty, and it exits 69 after naming the native install.
   let said = String::from_utf8_lossy(&probe.stderr);
   assert_eq!(probe.status.code(), Some(69), "{said}");
-  assert!(
-    said.starts_with("toolu-plugins: the native toolu binary was not found"),
-    "{said}"
-  );
+  assert!(said.starts_with("@toolu/plugins is deprecated."), "{said}");
   assert!(
     said.contains("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"),
     "{said}"

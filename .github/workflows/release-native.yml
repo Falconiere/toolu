@@ -67,8 +67,7 @@ jobs:
           else
             python3 .github/scripts/release_native.py verify-tag "$TAG" --test-tag
           fi
-      # No npm check here: the npm wrapper locates an installed native binary,
-      # never the reverse, and npm makes a version visible on its own schedule.
+      # No npm check here: the native release never waits for npm.
       # npm-publish.yml verifies the registry in its own job.
       - name: Gate released source
         run: cargo xtask gate

@@ -1,8 +1,9 @@
 //! `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
 //! from the former Node CLI that npm published as `@toolu/plugins`.
 //! Claude Code, Codex and Muse are driven through their own plugin CLIs. The npm
-//! package is now a wrapper that runs these verbs. This crate never touches the standard streams: a verb
-//! returns one `Outcome`, and prompts use the terminal (`/dev/tty`).
+//! package `@toolu/plugins` is a deprecated notice and does not run these verbs.
+//! This crate never touches the standard streams: a verb returns one `Outcome`,
+//! and prompts use the terminal (`/dev/tty`).
 
 use clap::{ArgMatches, Command};
 use toolu_protocol::exit::Exit;

@@ -27,7 +27,7 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; its guide is docs/cli/installer.md.
+Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. Install the native binary, then run these verbs. The npm package @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.
 ```
 
 ## `toolu plugins install`

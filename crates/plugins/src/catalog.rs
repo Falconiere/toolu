@@ -1,8 +1,7 @@
 //! The plugin catalog: the marketplace manifest's plugins and their
 //! dependencies. The binary carries the repository's
 //! `.claude-plugin/marketplace.json` from its build, so `toolu plugins` works
-//! with no checkout beside it; `--catalog <path>` reads another, which is how the
-//! npm wrapper hands over the copy it ships.
+//! with no checkout beside it. `--catalog <path>` reads another file.
 
 use std::path::Path;
 

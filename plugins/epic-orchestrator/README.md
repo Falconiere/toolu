@@ -36,13 +36,13 @@ and `JIRA_API_TOKEN`. `JIRA_API_VERSION` accepts `2` or `3` and defaults to
 ### Codex
 
 ```bash
-npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
+toolu plugins install delivery-flow epic-orchestrator --host codex
 ```
 
 ### Cursor Agent
 
 ```bash
-npx @toolu/plugins install delivery-flow epic-orchestrator --host cursor
+toolu plugins install delivery-flow epic-orchestrator --host cursor
 ```
 
 Cursor has no plugin install command, so this copies the plugins into
@@ -53,7 +53,7 @@ skill or the `/epic-orchestrator:epic` command.
 ### Muse Code
 
 ```bash
-npx @toolu/plugins install delivery-flow epic-orchestrator --host muse --approve
+toolu plugins install delivery-flow epic-orchestrator --host muse --approve
 ```
 
 Muse keeps a plugin's hooks inert until `muse plugins approve <name>` trusts
