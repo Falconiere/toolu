@@ -20,6 +20,7 @@ fn surfaces() -> Res<Vec<(String, String)>> {
   let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/epic-orchestrator");
   [
     "skills/epic-orchestrator/SKILL.md",
+    "skills/epic-orchestrator/references/preflight.md",
     "skills/epic-orchestrator/references/recovery.md",
     "skills/epic-orchestrator/references/worker-brief.md",
     "commands/epic.md",
@@ -80,8 +81,28 @@ fn the_preflight_checks_the_native_binary() {
     .nth(1)
     .and_then(|rest| rest.split("\n## ").next())
     .unwrap();
-  assert!(preflight.contains("Run `toolu doctor`"), "{preflight}");
+  for check in [
+    "Run `toolu doctor` with `--host <host>`",
+    "`references/preflight.md`",
+    "`Operation not permitted`",
+    "`toolu plugins list --host <host>`",
+    "`toolu --host <host> doctor` prints no `fail` or `warn plugins` line",
+    "muse plugins approve toolu",
+  ] {
+    assert!(preflight.contains(check), "{check}: {preflight}");
+  }
   assert!(!preflight.contains("bun"), "{preflight}");
+  let detail = &surfaces().unwrap()[1].1;
+  for check in [
+    "`toolu doctor --host <host>`",
+    "`--disable-sandbox`",
+    "`security unlock-keychain`",
+    "`toolu plugins list --host <host>` succeeds",
+    "`toolu plugins install delivery-flow --host <host>`",
+    "`warn plugins: toolu capabilities need approval; muse plugins approve toolu`",
+  ] {
+    assert!(detail.contains(check), "{check}: {detail}");
+  }
 }
 
 /// The brief `toolu epic launch --dry-run` renders for `kind` on `tracker`.
@@ -115,7 +136,7 @@ fn brief(home: &Home, kind: &str, tracker: Option<&str>) -> Res<String> {
 #[test]
 fn the_brief_fills_every_placeholder_for_each_host_and_tracker() {
   let home = Home::new().unwrap();
-  for kind in ["claude", "codex", "cursor"] {
+  for kind in ["claude", "codex", "cursor", "muse"] {
     let text = brief(&home, kind, None).unwrap();
     assert!(!text.contains("{{"), "{kind}: {text}");
     assert!(

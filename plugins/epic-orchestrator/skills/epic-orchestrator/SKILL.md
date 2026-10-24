@@ -21,11 +21,10 @@ write product code. Keep your context small: a run lasts hours.
 `repo:owner/name` label or a `Repo: owner/name` line, else `--repo`.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2`
-(hosts `claude`, `codex`, `cursor`, `muse`; default `claude`); `--safe`
-keeps each host's approval prompts on; `--no-jev` routes by heuristics;
-`--dry-run` plans and launches nothing ("show me the plan", "what can run in
-parallel" and "don't launch yet" mean `--dry-run`). Subcommands: `status`,
-`stop`.
+(hosts `claude`, `codex`, `cursor`, `muse`); `--safe` keeps each host's
+approval prompts on; `--no-jev` routes by heuristics; `--dry-run` plans and
+launches nothing ("show me the plan", "what can run in parallel" and "don't
+launch yet" mean `--dry-run`). Subcommands: `status`, `stop`.
 
 ## Authorization boundary
 
@@ -49,52 +48,16 @@ the authorized list, ask the user before approving it.
 
 ## 1. Preflight
 
-**This session.** Run `toolu --host <host> doctor` for the host you run on
-(`claude`, `codex`, `cursor`, `muse`) and stop on its first failure. Name the
-host: toolu can't detect every host from its shell. Then stop and report the
-first of these that fails:
-- `HERDR_ENV` is `1` (herdr control works only from a herdr pane), and
-  `herdr status` answers.
-- `toolu epic status` answers (`"engine":"down"` is fine; `start` starts it).
-  `Operation not permitted` from it or from `herdr status` means your host's
-  sandbox blocks the engine and herdr sockets and the epic state directory,
-  so every step below would fail the same way. Run your commands outside the
-  sandbox. On Claude Code, disable the sandbox for those calls. Start Codex
-  with `--sandbox danger-full-access`, or approve its escalation. Start
-  Cursor Agent with `--sandbox disabled`. Start Muse Code with
-  `--disable-sandbox`, or approve its one-time unsandboxed run.
-- `gh auth status` succeeds, and `gh api rate_limit` shows core above 1000.
-- The tracker variables above are exported (a Jira or Linear epic).
+Run `toolu doctor` with `--host <host>` for the host you run on and stop on its first failure.
+Then stop and report the first of these that fails (`references/preflight.md` has each fix):
+- `HERDR_ENV` is `1`, and `herdr status` and `toolu epic status` answer.
+  `Operation not permitted` from either means your host's sandbox blocks the engine: run outside it.
+- `gh auth status` succeeds and `gh api rate_limit` shows core above 1000; a Jira or Linear epic has its tracker variables.
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
   `toolu-review`, `pr-babysit`, and `brainstorm` dependencies.
-
-**Each worker host in `--hosts`.** Run these checks in order. Stop at a
-host's first failure and print its fix:
-1. Its CLI is on `PATH`, and it is logged in:
-
-   | Host | CLI | Logged in when | Fix |
-   |---|---|---|---|
-   | `claude` | `claude` | `claude auth status` shows `"loggedIn": true` | `claude auth login` |
-   | `codex` | `codex` | `codex login status` prints `Logged in` | `codex login` |
-   | `cursor` | `cursor-agent` | `cursor-agent status` prints `Logged in` | `cursor-agent login`; for `Your macOS login keychain is locked`, `security unlock-keychain` |
-   | `muse` | `muse` | `META_API_KEY` is set, or its auth file exists: `MUSE_AUTH_PATH`, else `$XDG_CONFIG_HOME/muse/auth.json`, else `~/.config/muse/auth.json` | `muse login` |
-
-2. `toolu plugins list --host <host>` succeeds and shows `toolu`,
-   `toolu-review`, `pr-babysit`, `brainstorm` and `delivery-flow` installed:
-   none of them on a `not installed` row. Fix:
-   `toolu plugins install delivery-flow --host <host>`. If the command
-   itself fails, your `toolu` is too old for that host: check the `binary`
-   line of this session's doctor.
-3. `toolu --host <host> doctor` prints no `fail` line and no `warn plugins`
-   line. A `warn plugins` line means the plugins' hooks won't run, and it names
-   the fix. For example, an unapproved Muse plugin prints
-   `warn plugins: toolu capabilities need approval; muse plugins approve toolu`.
-   Doctor exits 0 on a warning, so read the lines, not the exit code. One
-   exception: a `fail skew` line that names only plugins outside those five
-   (retired ones such as `context7`) is a note, not a stop.
-
-Report one line per host, `ready` or `not ready: <fix>`. Launch nothing while
-a host in `--hosts` is not ready. Drop that host only if the user agrees.
+- Each host in `--hosts` is logged in, `toolu plugins list --host <host>` shows those five
+  plugins, and `toolu --host <host> doctor` prints no `fail` or `warn plugins` line (an
+  unapproved Muse plugin prints `muse plugins approve toolu`): `ready` or `not ready: <fix>`.
 
 ## 2. Plan
 
@@ -136,13 +99,8 @@ named after its key). Resume: the same commands.
 - **Codex:** one tool call cannot block for hours, so loop:
   run `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the
   foreground, handle what it returns, and run it again while any issue is active.
-- **Cursor Agent:** the same foreground loop:
-  `toolu --json epic wait --epic <epic-key> --max-seconds 480`, again while
-  any issue is active. Its shell runs a 480-second call to the end.
-- **Muse Code:** the same foreground loop:
-  `toolu --json epic wait --epic <epic-key> --max-seconds 480`, again while
-  any issue is active. If the call returns a session id before it ends, don't
-  poll that id: Muse delivers the result on its own and wakes you.
+- **Cursor Agent** and **Muse Code:** the same `--max-seconds 480` loop. On Muse, a call
+  that returns a session id delivers its result on its own and wakes you: don't poll it.
 
 It returns one judgment of this epic or an engine-wide one (`kind`, `key`, `note`, `pending` for `blocked`) or
 `{"state": "waiting"}` at the limit; only a `waiting` at once means no engine
