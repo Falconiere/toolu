@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "pr-babysit",
   "displayName": "pr-babysit",
-  "version": "8.1.4",
+  "version": "8.2.0",
   "description": "Babysit a PR until review threads, the review-bot verdict, and CI are clear, using Claude cron or a durable Codex goal; fixes run on Jev-routed Claude Code, Codex or Cursor Agent sessions in a herdr worktree.",
   "compat": {
     "source": "native",
