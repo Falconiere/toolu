@@ -40,7 +40,7 @@ READMEs → live four-host preflight evidence → full gate.
   {"id": "s2", "title": "SKILL.md: four-host description and options, per-host preflight with fixes and sandbox check, four-host wait", "check": "cargo xtask check-markdown-cli && grep -q '^description:.*Cursor Agent.*Muse Code' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF '(hosts `claude`, `codex`, `cursor`, `muse`' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF 'muse plugins approve' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF 'security unlock-keychain' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF 'toolu plugins install delivery-flow --host' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF 'Operation not permitted' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -qF -- '--disable-sandbox' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md && grep -A3 -F -e '- **Cursor Agent:**' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md | grep -qF -- '--max-seconds 480' && grep -A3 -F -e '- **Muse Code:**' plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md | grep -qF -- '--max-seconds 480'", "ac_refs": ["AC-2", "AC-4", "AC-6", "AC-7"], "depends_on": ["s1"], "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "tooling/conventions/markdown-cli.json", "docs/cli/commands.json"], "input": "the skill text, judged against docs/cli/commands.json by check-markdown-cli", "model": "inherit"},
   {"id": "s3", "title": "Plugin and docs READMEs: four hosts as orchestrator, Muse install, four-host waiting, real state-directory rule and sandbox note", "check": "cargo xtask check-markdown-cli && grep -qF '**Cursor Agent**, and **Muse Code**, both' plugins/epic-orchestrator/README.md && grep -qF '### Muse Code' plugins/epic-orchestrator/README.md && grep -qF 'on Codex, Cursor Agent and Muse Code' plugins/epic-orchestrator/README.md && grep -qF 'Claude Code, Cursor Agent, Muse Code' plugins/epic-orchestrator/README.md && grep -qF 'Operation not permitted' plugins/epic-orchestrator/README.md && grep -qF 'Codex, Cursor Agent and Muse Code: a loop' docs/epic-orchestrator/README.md", "ac_refs": ["AC-4", "AC-6", "AC-7"], "depends_on": ["s2"], "paths": ["plugins/epic-orchestrator/README.md", "docs/epic-orchestrator/README.md", "docs/cli/commands.json"], "input": "the README text", "model": "inherit"},
   {"id": "s4", "title": "Live preflight from inside each of the four hosts, the skill text driving a Muse agent, the sandboxed boundary; worker brief invocations unchanged", "check": "bash /tmp/w605-preflight/check-evidence.sh && cargo test -p toolu-epic-orchestrator skill_syntax_matches_every_host && cargo test -p toolu-epic-orchestrator brief", "ac_refs": ["AC-1", "AC-5", "AC-7"], "depends_on": ["s2"], "paths": ["plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md", "crates/epic-orchestrator/src/hosts.rs", "crates/epic-orchestrator/src/tests/hosts_test.rs", "crates/epic-orchestrator/src/launch/brief.rs"], "input": "/tmp/w605-preflight/preflight.sh (the skill's preflight commands verbatim) run in a Claude Code Bash call, codex exec --dangerously-bypass-approvals-and-sandbox, cursor-agent -p --force and muse exec --disable-sandbox; muse exec --disable-sandbox given only SKILL.md section 1; muse exec with its default sandbox as the boundary case; transcripts under /tmp/w605-preflight/evidence/", "model": "inherit"},
-  {"id": "s5", "title": "Full quality gate", "check": "toolu epic job -- cargo xtask gate", "ac_refs": ["AC-6"], "depends_on": ["s1", "s2", "s3", "s4"], "paths": ["crates/epic-orchestrator/src/refs.rs", "crates/epic-orchestrator/src/tests/refs_test.rs", "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "plugins/epic-orchestrator/README.md", "docs/epic-orchestrator/README.md"], "input": "the whole branch", "model": "inherit"}
+  {"id": "s5", "title": "Full quality gate", "check": "toolu epic job -- /tmp/w605-gate/gate.sh", "ac_refs": ["AC-6"], "depends_on": ["s1", "s2", "s3", "s4"], "paths": ["crates/epic-orchestrator/src/refs.rs", "crates/epic-orchestrator/src/tests/refs_test.rs", "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md", "plugins/epic-orchestrator/README.md", "docs/epic-orchestrator/README.md"], "input": "the whole branch", "model": "inherit"}
 ]
 ```
 
@@ -98,6 +98,18 @@ READMEs → live four-host preflight evidence → full gate.
 - s2, from self-review: the session check names the host
   (`toolu --host <host> doctor`), because toolu's detection can't identify a
   Cursor shell, which exports only `CURSOR_AGENT`.
+- s5: on this Mac, the full `cargo xtask gate` can't pass its `tests` and
+  `coverage` steps. `/opt/homebrew/bin/toolu` breaks the `launcher`, jev and
+  `startup::native` tests, and the live epic engine breaks the contract
+  schema test. Both reproduce on a clean `origin/main` (local-gate memory,
+  2026-10-23). The check is now `/tmp/w605-gate/gate.sh`:
+  - every other gate step, via `--only`;
+  - plus `cargo test -p toolu-epic-orchestrator`, the only Rust package
+    changed;
+  - with `TMPDIR=/private/tmp`, `npm_config_store_dir` unset, and a temporary
+    `TOOLU_RESOURCE_HOME`.
+
+  CI runs the full gate.
 
 ## Plan review (2026-10-23)
 

@@ -146,7 +146,10 @@ fn epics_home_follows_the_host_override_and_epic_state_home() {
 /// (probed 2026-10-23; only their presence matters). None exports
 /// `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or `TOOLU_HOST_OVERRIDE`.
 const SHELLS: [(&str, &[(&str, &str)]); 4] = [
-  ("claude", &[("CLAUDECODE", "1"), ("CLAUDE_CODE_SESSION_ID", "s")]),
+  (
+    "claude",
+    &[("CLAUDECODE", "1"), ("CLAUDE_CODE_SESSION_ID", "s")],
+  ),
   (
     "codex",
     &[
@@ -155,7 +158,10 @@ const SHELLS: [(&str, &[(&str, &str)]); 4] = [
       ("CODEX_SANDBOX", "seatbelt"),
     ],
   ),
-  ("cursor", &[("CURSOR_AGENT", "1"), ("CURSOR_CONVERSATION_ID", "c")]),
+  (
+    "cursor",
+    &[("CURSOR_AGENT", "1"), ("CURSOR_CONVERSATION_ID", "c")],
+  ),
   ("muse", &[("MUSE_SESSION_ID", "s"), ("MUSE_THREAD_ID", "t")]),
 ];
 
