@@ -205,10 +205,10 @@ pub(crate) fn branch_for(reference: &str, number: Option<u64>, title: &str) -> S
 }
 
 /// Where epic state lives: `EPIC_STATE_HOME`; else `$CODEX_HOME/toolu/epics`
-/// (default `~/.codex`) when `TOOLU_HOST_OVERRIDE=codex`, or when `CODEX_HOME`
-/// is set without `CLAUDE_CONFIG_DIR`; else `~/.claude/epics`. That last
-/// default is every orchestrator's, Codex's included: no host's shell tool
-/// exports `CODEX_HOME` or the override.
+/// (default `~/.codex`) when `TOOLU_HOST_OVERRIDE=codex`, or when no override
+/// is set and `CODEX_HOME` is set without `CLAUDE_CONFIG_DIR`; else
+/// `~/.claude/epics`. That last default is every orchestrator's, Codex's
+/// included: no host's shell tool sets `CODEX_HOME` or the override.
 pub(crate) fn epics_home(env: &Env) -> PathBuf {
   if let Some(home) = env.get("EPIC_STATE_HOME") {
     return PathBuf::from(home);

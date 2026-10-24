@@ -210,13 +210,13 @@ engine creates no webhook or GitHub listener.
 
 Override with `EPIC_STATE_HOME`. Otherwise:
 
-| Orchestrator environment                          | Default                                                        |
-| ------------------------------------------------- | -------------------------------------------------------------- |
-| Claude Code, Cursor Agent, Muse Code, and Codex   | `~/.claude/epics/<owner>-<repo>-<n>/`                          |
-| `CODEX_HOME` exported without `CLAUDE_CONFIG_DIR` | `$CODEX_HOME/toolu/epics/…`                                    |
-| `TOOLU_HOST_OVERRIDE=codex`                       | `$CODEX_HOME/toolu/epics/…` (default `~/.codex/toolu/epics/…`) |
+| Orchestrator environment                                         | Default                                                        |
+| ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| Claude Code, Cursor Agent, Muse Code, and Codex                  | `~/.claude/epics/<owner>-<repo>-<n>/`                          |
+| `CODEX_HOME` exported, no `CLAUDE_CONFIG_DIR` and no override    | `$CODEX_HOME/toolu/epics/…`                                    |
+| `TOOLU_HOST_OVERRIDE=codex`                                      | `$CODEX_HOME/toolu/epics/…` (default `~/.codex/toolu/epics/…`) |
 
-No host's shell tool exports `CODEX_HOME` or `TOOLU_HOST_OVERRIDE`, so every
+No host's shell tool sets `CODEX_HOME` or `TOOLU_HOST_OVERRIDE`, so every
 orchestrator shares `~/.claude/epics` unless you export one of them. An epic
 started under one of those variables resumes only with the same variable or
 `EPIC_STATE_HOME`. Workers write their status files there on every host. Like

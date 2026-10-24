@@ -142,22 +142,22 @@ fn epics_home_follows_the_host_override_and_epic_state_home() {
   );
 }
 
+/// What Codex's shell tool exported to a command it ran (probed 2026-10-23).
+const CODEX_SHELL: &[(&str, &str)] = &[
+  ("CODEX_SESSION_ID", "s"),
+  ("CODEX_THREAD_ID", "t"),
+  ("CODEX_SANDBOX", "seatbelt"),
+];
+
 /// The variables each host's shell tool exported to a command it ran
-/// (probed 2026-10-23; only their presence matters). None exports
+/// (probed 2026-10-23; only their presence matters). None sets
 /// `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or `TOOLU_HOST_OVERRIDE`.
 const SHELLS: [(&str, &[(&str, &str)]); 4] = [
   (
     "claude",
     &[("CLAUDECODE", "1"), ("CLAUDE_CODE_SESSION_ID", "s")],
   ),
-  (
-    "codex",
-    &[
-      ("CODEX_SESSION_ID", "s"),
-      ("CODEX_THREAD_ID", "t"),
-      ("CODEX_SANDBOX", "seatbelt"),
-    ],
-  ),
+  ("codex", CODEX_SHELL),
   (
     "cursor",
     &[("CURSOR_AGENT", "1"), ("CURSOR_CONVERSATION_ID", "c")],
@@ -174,8 +174,7 @@ fn epics_home_for_each_orchestrator_host() {
       "{host}"
     );
   }
-  let (_, codex) = SHELLS[1];
-  let with = |extra: (&str, &str)| home_env(&[codex, &[extra]].concat());
+  let with = |extra: (&str, &str)| home_env(&[CODEX_SHELL, &[extra]].concat());
   assert_eq!(
     epics_home(&with(("CODEX_HOME", "/c"))),
     PathBuf::from("/c/toolu/epics")
@@ -187,5 +186,12 @@ fn epics_home_for_each_orchestrator_host() {
   assert_eq!(
     epics_home(&with(("EPIC_STATE_HOME", "/srv/epics"))),
     PathBuf::from("/srv/epics")
+  );
+  assert_eq!(
+    epics_home(&home_env(&[
+      ("TOOLU_HOST_OVERRIDE", "claude"),
+      ("CODEX_HOME", "/c")
+    ])),
+    PathBuf::from("/home/u/.claude/epics")
   );
 }

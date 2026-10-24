@@ -38,7 +38,8 @@ toolu epic engine --no-http
 # Register an epic and start the engine; wait for its next judgment
 # (Claude Code: a background call, 45-minute default limit;
 # Codex, Cursor Agent and Muse Code: a loop). Run these outside the host's
-# sandbox: it blocks the engine socket with "Operation not permitted".
+# sandbox: Codex's and Muse's block the engine socket with
+# "Operation not permitted".
 toolu epic start <state_dir>
 toolu --json epic wait --epic <epic-key> --max-seconds 480
 ```
