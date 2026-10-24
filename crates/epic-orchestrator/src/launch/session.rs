@@ -18,6 +18,7 @@ use crate::hosts::HostKind;
 pub(super) const MAX_FILES: usize = 256;
 const MAX_BYTES: usize = 65_536;
 const MAX_RECORDS: usize = 32;
+const DAY_MS: u64 = 86_400_000;
 
 pub(super) fn valid_id(value: &str) -> bool {
   RegexBuilder::new(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")
@@ -119,7 +120,18 @@ fn jsonl_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<bool, String> {
   Ok(true)
 }
 
-pub(super) fn day_dir(base: &Path, epoch_ms: u64) -> PathBuf {
+/// The `sessions/<yyyy>/<mm>/<dd>` folders that can hold a session started at
+/// any of `instants` (epoch ms): hosts name the folder by their local date,
+/// which is always the UTC date one day either side or the same.
+pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf> {
+  instants
+    .iter()
+    .flat_map(|&at| [at.saturating_sub(DAY_MS), at, at.saturating_add(DAY_MS)])
+    .map(|at| day_dir(base, at))
+    .collect()
+}
+
+fn day_dir(base: &Path, epoch_ms: u64) -> PathBuf {
   let iso = toolu_state::time::iso_seconds(UNIX_EPOCH + Duration::from_millis(epoch_ms));
   iso
     .get(..10)
@@ -172,10 +184,7 @@ fn transcripts(
       .get("CODEX_HOME")
       .map_or_else(|| env.home().join(".codex"), PathBuf::from);
     let now = toolu_state::time::epoch_millis(SystemTime::now());
-    [since, now]
-      .into_iter()
-      .map(|at| day_dir(&home, at))
-      .collect()
+    day_dirs(&home, &[since, now])
   } else {
     let home = env
       .get("CLAUDE_CONFIG_DIR")

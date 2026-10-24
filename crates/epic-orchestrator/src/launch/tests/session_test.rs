@@ -150,6 +150,26 @@ fn codex_metadata_attests_one_session_and_never_guesses() {
   assert_eq!(capture_session(Codex, &wt, since, &env), Ok(None));
 }
 
+/// Codex files a session under its local date, which is the UTC date one day
+/// before (west of UTC late in the day) or after (far east) the launch.
+#[test]
+fn codex_capture_finds_a_session_filed_under_a_local_date() {
+  const DAY: u64 = 86_400_000;
+  for at in [since() - DAY, since() + DAY] {
+    let tmp = tempfile::tempdir().expect("temp");
+    let (since, wt) = (since(), tmp.path().join("project").display().to_string());
+    let root = tmp.path().join("codex");
+    let env = env(&[("CODEX_HOME", root.display().to_string())]);
+    codex_session(&root, &wt, at, FIRST);
+    assert_eq!(
+      capture_session(Codex, &wt, since, &env),
+      Ok(Some(FIRST.to_owned()))
+    );
+    codex_session(&root, &wt, since, SECOND);
+    assert_eq!(capture_session(Codex, &wt, since, &env), Ok(None));
+  }
+}
+
 #[test]
 fn claude_transcripts_name_the_worktree() {
   let tmp = tempfile::tempdir().expect("temp");
