@@ -16,7 +16,7 @@ fn an_applied_merge_moves_to_cleaning() {
 }
 
 #[test]
-fn an_applied_merge_requests_related_checks_without_moving_the_clock() {
+fn merged_pr_stage_applied_merge_requests_related_checks_without_moving_clock() {
   let mut world = World::new(0);
   let issue = ensure_issue(&mut world, "a", "one", "/tmp");
   issue.repo = "o/r".into();
@@ -59,7 +59,9 @@ fn an_applied_merge_requests_related_checks_without_moving_the_clock() {
     world.watches.insert(id.into(), watch);
   }
   let _steps = commit_effect(&mut world, "a", "applied");
-  for id in ["pr", "base", "epic"] {
+  assert!(!world.watches["pr"].immediate);
+  assert_eq!(world.watches["pr"].next_at_ms, 180_000);
+  for id in ["base", "epic"] {
     assert!(world.watches[id].immediate);
     assert_eq!(world.watches[id].next_at_ms, 180_000);
   }

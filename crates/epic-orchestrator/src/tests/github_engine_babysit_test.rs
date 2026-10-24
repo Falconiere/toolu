@@ -8,7 +8,7 @@ use toolu_runtime::env::Env;
 
 use super::fixture::{engine, pr_reply};
 use crate::journal::Record;
-use crate::model::Step;
+use crate::model::{Action, Step, fresh};
 use crate::server::Engine;
 
 const SLOT_MS: u64 = 180_000;
@@ -108,11 +108,102 @@ fn prompts(engine: &Engine) -> Vec<&Record> {
     .collect()
 }
 
+fn assert_no_babysit_work(engine: &mut Engine) {
+  assert!(
+    !engine
+      .world
+      .attention
+      .iter()
+      .any(|item| item.kind == "babysit")
+  );
+  assert!(
+    !engine
+      .world
+      .outbox
+      .iter()
+      .any(|step| matches!(step, Step::Prompt { .. }))
+  );
+  engine.flush().expect("flush journal");
+  let rows = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("journal");
+  assert!(
+    rows
+      .iter()
+      .all(|row| !(row.kind == "judgment" && row.name == "babysit"))
+  );
+  assert!(
+    rows
+      .iter()
+      .all(|row| !(row.kind == "prompt" && row.name == "babysit"))
+  );
+}
+
 fn run_slots(engine: &mut Engine, tick: &GitHubTick, slots: std::ops::Range<u64>) {
   for slot in slots {
     engine.world.now_ms = slot * SLOT_MS;
     engine.github_tick(tick);
   }
+}
+
+#[test]
+fn merged_pr_stage_skips_babysit_even_for_a_stale_immediate_watch() {
+  let fixture = Fixture::start().expect("fixture");
+  serve(&fixture, graphql("SUCCESS", &[]), &json!([]));
+  let (_temp, mut engine, _) = engine(&fixture);
+  let tick = babysit(&fixture);
+  engine.world.issues.get_mut("one").expect("issue").pending =
+    Some(fresh(Action::Merge, "merge-token".into()));
+  let _steps = crate::commit::applied(&mut engine.world, "one", Some(Action::Merge));
+  let _steps = crate::logic::finish_action(&mut engine.world, "one");
+  assert_eq!(engine.world.issues["one"].stage, "cleaning");
+  assert_eq!(
+    engine.world.issues["one"]
+      .pending
+      .as_ref()
+      .map(|p| p.action),
+    Some(Action::Cleanup)
+  );
+  engine
+    .world
+    .watches
+    .get_mut("pr:o/r#1")
+    .expect("stale watch")
+    .request_immediate();
+  engine.github_tick(&tick);
+  let requests = fixture.requests().expect("requests");
+  assert!(
+    requests
+      .iter()
+      .any(|request| request.path == "/repos/o/r/pulls/1")
+  );
+  assert!(requests.iter().all(|request| request.path != "/graphql"));
+  assert_no_babysit_work(&mut engine);
+}
+
+#[test]
+fn merged_pr_tick_enters_cleanup_without_babysit_attention_or_prompt() {
+  let fixture = Fixture::start().expect("fixture");
+  let mut merged: Value = serde_json::from_str(&graphql("SUCCESS", &[])).expect("GraphQL response");
+  merged["data"]["repository"]["pullRequest"]["state"] = json!("MERGED");
+  serve(&fixture, merged.to_string(), &json!([]));
+  let (_temp, mut engine, _) = engine(&fixture);
+  let tick = babysit(&fixture);
+  engine.github_tick(&tick);
+  let requests = fixture.requests().expect("requests");
+  assert!(requests.iter().any(|request| request.path == "/graphql"));
+  assert_eq!(engine.world.issues["one"].stage, "cleaning");
+  assert_eq!(
+    engine.world.issues["one"]
+      .pending
+      .as_ref()
+      .map(|p| p.action),
+    Some(Action::Cleanup)
+  );
+  assert!(
+    journal(&engine)
+      .iter()
+      .any(|row| row.name == "github-pr-merged")
+  );
+  assert_no_babysit_work(&mut engine);
 }
 
 #[test]
