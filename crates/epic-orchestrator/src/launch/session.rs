@@ -153,7 +153,11 @@ fn fresh(path: &Path, since: u64) -> Result<bool, String> {
 /// The head of `path` when it was written at or after `since` (epoch ms);
 /// `None` when older or gone.
 pub(super) fn fresh_head(path: &Path, since: u64) -> Result<Option<String>, String> {
-  Ok(fresh(path, since)?.then(|| head(path)).transpose()?.flatten())
+  if fresh(path, since)? {
+    head(path)
+  } else {
+    Ok(None)
+  }
 }
 
 /// The first [`MAX_RECORDS`] JSON lines of `text`.
