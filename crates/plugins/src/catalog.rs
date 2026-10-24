@@ -48,6 +48,20 @@ impl Catalog {
   pub(crate) fn entry(&self, name: &str) -> Option<&Entry> {
     self.plugins.iter().find(|entry| entry.name == name)
   }
+
+  /// Whether `name` can be a plugin the marketplace retired (#615): it is not
+  /// in this catalog and is shaped like a plugin name (lowercase letters and
+  /// digits, single inner hyphens), so it never names a path.
+  pub(crate) fn retired(&self, name: &str) -> bool {
+    let shaped = !name.is_empty()
+      && name.split('-').all(|part| {
+        !part.is_empty()
+          && part
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit())
+      });
+    shaped && self.entry(name).is_none()
+  }
 }
 
 /// The catalog at `path`, or the built-in one.

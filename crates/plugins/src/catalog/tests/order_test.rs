@@ -1,6 +1,6 @@
 use toolu_protocol::exit::Exit;
 
-use super::{dependents_of, install_order};
+use super::{dependents_of, install_order, removable};
 use crate::catalog::{Catalog, Entry, load, parse};
 
 fn real() -> Catalog {
@@ -141,4 +141,32 @@ fn a_dependency_outside_the_catalog_is_skipped() {
     install_order(&catalog, &["c".to_owned()]),
     Ok(vec!["c".to_owned()])
   );
+}
+
+#[test]
+fn a_retired_name_is_removable_only_where_the_host_scopes_removal_to_toolu() {
+  let names =
+    |list: &[&str]| -> Vec<String> { list.iter().map(|name| (*name).to_owned()).collect() };
+  assert_eq!(
+    removable(&real(), &names(&["jev", "context7"]), true),
+    Ok(())
+  );
+  assert_eq!(removable(&real(), &names(&["jev"]), false), Ok(()));
+  for (list, scoped) in [
+    (["context7"], false),
+    (["../x"], true),
+    (["Bad_Name"], true),
+  ] {
+    let Err(fail) = removable(&real(), &names(&list), scoped) else {
+      panic!("{list:?} was removable");
+    };
+    assert_eq!(fail.exit, Exit::Usage);
+    assert_eq!(
+      fail.message,
+      format!(
+        "unknown plugin: {}. Run `toolu plugins list` for the catalog.",
+        list[0]
+      )
+    );
+  }
 }

@@ -194,3 +194,70 @@ fn a_dry_run_works_with_no_host_cli_from_any_directory() {
     "Planned commands (nothing was run):\n  codex plugin add jev@toolu\n"
   );
 }
+
+#[test]
+fn a_retired_plugin_is_removed_where_removal_is_scoped_to_toolu() {
+  let sb = Sb::new().unwrap();
+  sb.host("claude", "[]", "\"plugin uninstall nope@toolu\"")
+    .unwrap();
+  sb.host("codex", r#"{"installed":[]}"#, "never").unwrap();
+  for (host, argv) in [
+    ("claude", "plugin uninstall context7@toolu"),
+    ("codex", "plugin remove context7@toolu"),
+  ] {
+    let out = sb
+      .run(
+        &sb.root(),
+        &["plugins", "remove", "context7", "--host", host, "--yes"],
+      )
+      .unwrap();
+    assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+    let stdout = text(&out.stdout);
+    assert!(
+      stdout.starts_with("  - context7") && stdout.ends_with("removed\n"),
+      "{stdout}"
+    );
+    assert_eq!(sb.log(host), [argv]);
+  }
+  let typo = sb
+    .run(
+      &sb.root(),
+      &["plugins", "remove", "nope", "--host", "claude", "--yes"],
+    )
+    .unwrap();
+  assert_eq!(typo.status.code(), Some(1));
+  assert!(
+    text(&typo.stdout).contains("boom: plugin uninstall nope@toolu"),
+    "{}",
+    text(&typo.stdout)
+  );
+}
+
+#[test]
+fn a_name_outside_the_catalog_is_refused_when_malformed_or_on_muse() {
+  let sb = Sb::new().unwrap();
+  sb.host("claude", "[]", "never").unwrap();
+  sb.host("codex", r#"{"installed":[]}"#, "never").unwrap();
+  for (name, host) in [
+    ("../x", "claude"),
+    ("Bad_Name", "codex"),
+    ("context7", "muse"),
+  ] {
+    let refused = sb
+      .run(
+        &sb.root(),
+        &["plugins", "remove", name, "--host", host, "--yes"],
+      )
+      .unwrap();
+    assert_eq!(refused.status.code(), Some(64), "{name} on {host}");
+    assert!(
+      text(&refused.stderr).contains(&format!(
+        "unknown plugin: {name}. Run `toolu plugins list` for the catalog."
+      )),
+      "{}",
+      text(&refused.stderr)
+    );
+  }
+  assert_eq!(sb.log("claude"), Vec::<String>::new());
+  assert_eq!(sb.log("codex"), Vec::<String>::new());
+}

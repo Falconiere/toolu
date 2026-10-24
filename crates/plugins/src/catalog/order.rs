@@ -24,9 +24,7 @@ impl Walk<'_> {
       )));
     }
     let Some(entry) = self.catalog.entry(name) else {
-      return Err(Fail::usage(format!(
-        "unknown plugin: {name}. Run `toolu plugins list` for the catalog."
-      )));
+      return Err(unknown(name));
     };
     self.active.insert(name.to_owned());
     for dependency in &entry.dependencies {
@@ -59,6 +57,26 @@ pub(crate) fn install_order(catalog: &Catalog, requested: &[String]) -> Res<Vec<
     walk.visit(name)?;
   }
   Ok(walk.ordered)
+}
+
+/// The usage error for a name the catalog does not have.
+fn unknown(name: &str) -> Fail {
+  Fail::usage(format!(
+    "unknown plugin: {name}. Run `toolu plugins list` for the catalog."
+  ))
+}
+
+/// Refuses a name `remove` may not hand to the host: one outside the catalog,
+/// unless it can be a retired plugin and the host's removal is `scoped` to
+/// toolu's marketplace or install marker, so it cannot remove another plugin.
+pub(crate) fn removable(catalog: &Catalog, names: &[String], scoped: bool) -> Res<()> {
+  match names
+    .iter()
+    .find(|name| catalog.entry(name).is_none() && !(scoped && catalog.retired(name)))
+  {
+    Some(name) => Err(unknown(name)),
+    None => Ok(()),
+  }
 }
 
 /// The plugins that declare `name` as a dependency, in manifest order.

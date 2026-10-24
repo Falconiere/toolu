@@ -9,7 +9,7 @@ use toolu_runtime::env::Env;
 
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
-use crate::catalog::order::install_order;
+use crate::catalog::order::{install_order, removable};
 use crate::cursor::{self, Cursor};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
@@ -221,7 +221,8 @@ fn remove(
     return Err(Fail::usage("remove requires --yes to confirm"));
   }
   let target = one_host(request, wanted, cx)?;
-  install_order(catalog, &request.names)?;
+  // Muse removes by bare name, from any source; the other hosts only toolu's.
+  removable(catalog, &request.names, target != Target::Muse)?;
   let steps = match target {
     Target::Cursor => cursor::remove(&Cursor::new(cx)?, &request.names, request.dry_run),
     Target::Claude | Target::Codex | Target::Muse => verbs::remove::run(

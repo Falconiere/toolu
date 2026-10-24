@@ -12,8 +12,8 @@ fn the_built_in_catalog_names_the_shipped_plugins_and_not_the_retired_ones() {
 
 #[test]
 fn text_that_is_not_a_manifest_names_no_plugin() {
-  assert!(plugin_names("{").is_empty());
-  assert!(plugin_names(r#"{"plugins":3}"#).is_empty());
+  assert_eq!(plugin_names("{"), Vec::<String>::new());
+  assert_eq!(plugin_names(r#"{"plugins":3}"#), Vec::<String>::new());
   assert_eq!(
     plugin_names(r#"{"plugins":[{"name":"a"},{"name":7},{}]}"#),
     ["a"]

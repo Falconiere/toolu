@@ -110,3 +110,18 @@ fn each_field_of_a_plugin_is_checked() {
     assert!(fail.message.contains("x.json"), "{}", fail.message);
   }
 }
+
+#[test]
+fn only_a_plugin_shaped_name_outside_the_catalog_can_be_retired() {
+  let Ok(catalog) = load(None) else {
+    panic!("the built-in catalog is invalid");
+  };
+  for name in ["context7", "exa-search", "agent-browser", "jira", "7up"] {
+    assert!(catalog.retired(name), "{name}");
+  }
+  for name in [
+    "jev", "toolu", "", "../x", "a/b", "Bad", "Bad_Name", "-x", "x-", "a--b", "a b",
+  ] {
+    assert!(!catalog.retired(name), "{name:?}");
+  }
+}
