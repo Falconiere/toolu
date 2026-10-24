@@ -14,7 +14,7 @@ use crate::coupling::check;
 use crate::executor::Job;
 use crate::graph::{Graph, GraphIssue, read_graph};
 use crate::hosts::HostKind;
-use crate::launch::{Ctx, LaunchOpts, Recovery, guard_budget, launch_issue};
+use crate::launch::{Ctx, LaunchOpts, PANE_BUSY, Recovery, guard_budget, launch_issue};
 use crate::paths::Paths;
 use crate::retry::{Policy, effect_scope};
 use crate::route::{RouteOptions, jev_from_env, load_host_pool, load_table, route_issues};
@@ -49,11 +49,13 @@ fn failed(note: &str, stage: Option<&str>) -> Value {
   json!({"outcome": "failed", "note": note, "stage": stage})
 }
 
-/// Whether a launch refusal only waits for capacity or for a resource hold to clear.
+/// Whether a launch refusal only waits for capacity, for a resource hold to
+/// clear, or for a new pane's shell that never became ready (nothing started).
 fn waits(message: &str) -> bool {
   message.contains("capacity exhausted")
     || message.contains("no host capacity")
     || message.contains("resource hold:")
+    || message.contains(PANE_BUSY)
 }
 
 /// Whether this launch may ask Jev: a key is set and the epic was not started

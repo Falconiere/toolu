@@ -23,6 +23,7 @@ fn plan(pane: &str, worktree: &str) -> AgentPlan {
     worktree: worktree.into(),
     session_id: None,
     session_started_after: None,
+    shell_wait: Duration::from_secs(2),
   }
 }
 

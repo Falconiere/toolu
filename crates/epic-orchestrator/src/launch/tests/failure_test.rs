@@ -25,6 +25,18 @@ fn details_name_the_outcome_and_the_native_error() {
   }
   .into();
   assert_eq!(herdr.details()["native_error"]["code"], "timeout");
+  assert!(!herdr.not_started());
+  let busy: Failure = CallError {
+    message:
+      "herdr agent.start: agent_pane_busy: agent target pane wE0:p1 is not an available shell"
+        .into(),
+    code: Some("agent_pane_busy".into()),
+    exit_code: None,
+    uncertain: false,
+  }
+  .into();
+  assert!(busy.not_started());
+  assert_eq!(busy.details()["lifecycle_outcome"], "not-started");
   assert_eq!(
     herdr.report("r#1"),
     json!({"issue": "r#1", "error": "herdr agent.prompt: timeout: x", "native_exit_code": null})

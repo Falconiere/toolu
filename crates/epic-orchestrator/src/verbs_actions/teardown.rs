@@ -68,6 +68,7 @@ pub(super) fn finish(matches: &ArgMatches, env: &Env) -> Outcome {
     },
     gh: gh.as_ref().map_err(Clone::clone),
     session_wait: Duration::from_secs(10),
+    shell_wait: crate::launch::SHELL_WAIT,
   };
   let flags = (matches.get_flag("abandon"), matches.get_flag("dry-run"));
   match finish_issue(&state, key, flags, &mut ctx) {

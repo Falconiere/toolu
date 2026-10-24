@@ -6,12 +6,13 @@ use std::path::Path;
 use std::time::{Duration, UNIX_EPOCH};
 
 use serde_json::{Value, json};
+use toolu_engine::resources::leases::release_lease;
 
 use super::admission::{Owner, Reserve, launch_reservation, persist_attempt};
 use super::agent::{AgentPlan, AgentStart, Resolved, ensure_agent};
 use super::checkout::prepare_checkout;
 use super::failure::Failure;
-use super::record::{Record, text};
+use super::record::{Record, text, write_record};
 use super::session::capture_session;
 use super::worktree::{Place, Worktree, ensure_worktree};
 use super::{Ctx, LaunchOpts};
@@ -93,6 +94,8 @@ impl<'g> Attempt<'g> {
   }
 
   /// Leave a failed reserved attempt `uncertain` with its failure details.
+  /// A refusal that proves no agent started instead returns the lease and
+  /// drops the stage, so a plain launch may run again.
   ///
   /// # Errors
   /// `outcome`'s failure, or the record cannot be written.
@@ -104,11 +107,37 @@ impl<'g> Attempt<'g> {
     let Err(err) = outcome else {
       return outcome;
     };
-    if self.owner.is_some() {
-      record.extend(err.details());
-      self.persist(record, "uncertain")?;
+    let Some(owner) = &self.owner else {
+      return Err(err);
+    };
+    record.extend(err.details());
+    if err.not_started() && self.release(owner, record)? {
+      return Err(err);
     }
+    self.persist(record, "uncertain")?;
     Err(err)
+  }
+
+  /// Return the lease of an attempt that started nothing and drop its stage,
+  /// leaving a record a plain launch may run again. `false` when the lease
+  /// cannot be released: the attempt stays for inspection, with the reason.
+  ///
+  /// # Errors
+  /// The record cannot be written.
+  fn release(&self, owner: &Owner, record: &mut Record) -> Result<bool, Failure> {
+    if let Err(release) = release_lease(&owner.root, &owner.token) {
+      record.insert("lease_release_error".to_owned(), json!(release));
+      return Ok(false);
+    }
+    for key in ["stage", "lease_token", "attempt_id"] {
+      record.remove(key);
+    }
+    let path = self
+      .state()
+      .join("issues")
+      .join(format!("{}.json", self.issue.key));
+    write_record(&path, record)?;
+    Ok(true)
   }
 
   pub(super) fn initialize(&self, record: &mut Record) -> Result<(), Failure> {
@@ -192,6 +221,7 @@ impl<'g> Attempt<'g> {
       worktree: wt.path.clone(),
       session_id: text(record, "session_id").map(str::to_owned),
       session_started_after: record.get("session_started_after").and_then(Value::as_u64),
+      shell_wait: ctx.shell_wait,
     };
     let start = ensure_agent(&mut ctx.herdr, &plan, &mut self.log, ctx.session_wait)?;
     if !self.opts.dry_run && start.started && !start.resumed {

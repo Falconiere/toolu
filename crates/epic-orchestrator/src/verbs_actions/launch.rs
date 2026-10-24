@@ -103,6 +103,7 @@ pub(super) fn launch(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
     },
     gh: gh.as_ref().map_err(Clone::clone),
     session_wait: Duration::from_secs(10),
+    shell_wait: crate::launch::SHELL_WAIT,
   };
   let result =
     find_issue(&graph, wanted).and_then(|issue| launch_issue(&graph, issue, &flags, &mut run));

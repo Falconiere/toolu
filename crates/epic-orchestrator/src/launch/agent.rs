@@ -2,7 +2,7 @@
 //! must be the recorded one, a resume must attach the recorded session, and a
 //! host change needs `--replace`.
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use super::checkout::shell_join;
 use super::failure::Failure;
@@ -51,7 +51,12 @@ pub(crate) struct AgentPlan {
   pub session_id: Option<String>,
   /// When the captured session's attempt began (epoch ms).
   pub session_started_after: Option<u64>,
+  /// How long `agent start` is retried while the pane's shell is not ready.
+  pub shell_wait: Duration,
 }
+
+/// The first and the longest pause between `agent start` retries.
+const BACKOFF: (Duration, Duration) = (Duration::from_millis(250), Duration::from_secs(2));
 
 /// How the agent step ended.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -176,6 +181,42 @@ fn start_call(plan: &AgentPlan, resume: bool) -> Result<(Call, Vec<String>), Fai
   Ok((start, args))
 }
 
+/// Send `agent start`, and send it again while herdr answers that the pane's
+/// shell is not at its prompt yet: herdr refused before starting anything, so
+/// a resend cannot start a second agent. Pauses double from 250 ms to 2 s and
+/// never run past `plan.shell_wait`; then the last refusal is returned.
+///
+/// # Errors
+/// herdr fails, or still finds the pane busy when the wait is spent.
+fn send_start(
+  herdr: &mut Herdr<'_>,
+  start: &Call,
+  plan: &AgentPlan,
+  log: &mut Vec<String>,
+) -> Result<(), Failure> {
+  let began = Instant::now();
+  let mut pause = BACKOFF.0;
+  loop {
+    let err = match herdr.call(start) {
+      Ok(_) => return Ok(()),
+      Err(err) if err.not_started() => err,
+      Err(err) => return Err(err),
+    };
+    let left = plan.shell_wait.saturating_sub(began.elapsed());
+    if left.is_zero() {
+      return Err(err);
+    }
+    let sleep = pause.min(left);
+    log.push(format!(
+      "herdr agent.start: pane {} busy; retry in {} ms",
+      plan.pane,
+      sleep.as_millis()
+    ));
+    std::thread::sleep(sleep);
+    pause = pause.saturating_mul(2).min(BACKOFF.1);
+  }
+}
+
 /// After `agent start`: a fresh agent must answer to its name, a resumed one
 /// must keep its recorded identity and session.
 fn verify_started(
@@ -238,7 +279,7 @@ pub(crate) fn ensure_agent(
       args,
     });
   }
-  herdr.call(&start)?;
+  send_start(herdr, &start, plan, log)?;
   verify_started(herdr, plan, resume, wait)?;
   Ok(AgentStart {
     started: true,

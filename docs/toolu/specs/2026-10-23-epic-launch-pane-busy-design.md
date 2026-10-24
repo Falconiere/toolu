@@ -46,7 +46,7 @@ exist.
 ## Interfaces / Schema
 
 - `Ctx { …, shell_wait: Duration }`; `Ctx::live` sets 30 s; the test rig sets 2 s.
-- `ensure_agent(herdr, plan, log, waits: Waits)` with `Waits { session: Duration, shell: Duration }`.
+- `AgentPlan { …, shell_wait: Duration }`, filled from `Ctx::shell_wait`; `ensure_agent`'s signature is unchanged.
 - `Failure::not_started(&self) -> bool`.
 - `Failure::details()` writes `lifecycle_outcome: "not-started"` when `not_started()`.
 - Record after an exhausted retry: no `stage`, `lease_token` or `attempt_id`;

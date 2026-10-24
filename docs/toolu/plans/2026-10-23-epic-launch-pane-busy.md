@@ -90,7 +90,7 @@ Failure classification → retry loop and `shell_wait` plumbing → not-started 
 
 ## Critical files
 
-- `crates/epic-orchestrator/src/launch/agent.rs` — retry loop; `ensure_agent` takes `Waits`.
+- `crates/epic-orchestrator/src/launch/agent.rs` — retry loop; `AgentPlan::shell_wait`.
 - `crates/epic-orchestrator/src/launch/failure.rs` — `not_started()`, `not-started` outcome in `details()`.
 - `crates/epic-orchestrator/src/launch/attempt.rs` — not-started settle.
 - `crates/epic-orchestrator/src/launch.rs`, `verbs_actions/launch.rs`, `verbs_actions/teardown.rs`, `tests/launch_rig_test.rs` — `Ctx::shell_wait`.
@@ -106,3 +106,9 @@ Red first: S1 and S2 tests fail on `main` (the busy reply settles `uncertain`). 
 
 - S5: 🟡 should-fix (fixed): the check wrapped the full gate in `toolu epic job` inside a ledger check, which already takes a job lease. S5 now runs the crate tests and clippy; the full gate runs through `toolu epic job` before delivery.
 - AC coverage: AC-1 → S1, AC-2 → S2, AC-3 → S3, AC-4 → S1; no dangling refs. Jev alignment 0.76.
+
+## Deviations
+
+- S1: the shell wait travels as `AgentPlan::shell_wait` instead of a `Waits` argument to `ensure_agent`, which keeps its signature and its six test call sites unchanged. The spec's Interfaces section was updated to match.
+- S1/S2: `launch::PANE_BUSY` names herdr's code once; `effects_launch::waits` matches it.
+- S2: when the lease cannot be released, the record also carries `lease_release_error` beside the `uncertain` fallback, so the reason is not lost.

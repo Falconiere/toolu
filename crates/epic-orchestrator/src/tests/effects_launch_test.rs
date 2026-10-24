@@ -162,3 +162,13 @@ fn a_resource_hold_refusal_waits() {
   assert!(waits("job capacity exhausted (1)"));
   assert!(!waits("boom"));
 }
+
+#[test]
+fn a_busy_pane_refusal_waits() {
+  assert!(waits(
+    "herdr agent.start: agent_pane_busy: agent target pane wE0:p1 is not an available shell"
+  ));
+  assert!(!waits(
+    "herdr agent.start: timeout: agent did not become ready"
+  ));
+}
