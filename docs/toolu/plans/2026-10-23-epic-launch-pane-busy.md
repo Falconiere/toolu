@@ -113,3 +113,4 @@ Red first: S1 and S2 tests fail on `main` (the busy reply settles `uncertain`). 
 - S1/S2: `launch::PANE_BUSY` names herdr's code once; `effects_launch::waits` matches it.
 - S2: when the lease cannot be released, the record also carries `lease_release_error` beside the `uncertain` fallback, so the reason is not lost.
 - S2: local review found the `lease_release_error` fallback untested; `a_busy_pane_whose_lease_cannot_be_released_stays_uncertain` holds a real job lease on the worktree, and S2's check now runs every `launch::attempt` test.
+- S5: jscpd found the two verbs' identical `Ctx` literals (grown by `shell_wait`) as a clone; both now call `Ctx::live`, which builds the same context.

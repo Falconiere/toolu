@@ -1,7 +1,6 @@
 //! `toolu epic launch`.
 
 use std::path::Path;
-use std::time::Duration;
 
 use clap::{ArgMatches, Command};
 use toolu_jev_client::Jev;
@@ -11,10 +10,7 @@ use toolu_runtime::env::Env;
 
 use super::{document, failure, flag, option, text};
 use crate::graph::read_graph;
-use crate::herdr::Client;
-use crate::launch::{
-  Ctx as LaunchCtx, Herdr, LaunchOpts, Recovery, find_issue, launch_issue, render_dry,
-};
+use crate::launch::{Ctx as LaunchCtx, LaunchOpts, Recovery, find_issue, launch_issue, render_dry};
 use crate::paths::Paths;
 use crate::tracker::Gh;
 
@@ -94,17 +90,7 @@ pub(super) fn launch(matches: &ArgMatches, ctx: &Ctx, env: &Env) -> Outcome {
   flags.safe |= crate::epics::launch_settings(Path::new(&graph.state_dir)).safe;
   let paths = Paths::from_env(env);
   let gh = Gh::new(env);
-  let mut run = LaunchCtx {
-    env,
-    herdr: Herdr {
-      client: Client::new(),
-      paths: &paths,
-      env,
-    },
-    gh: gh.as_ref().map_err(Clone::clone),
-    session_wait: Duration::from_secs(10),
-    shell_wait: crate::launch::SHELL_WAIT,
-  };
+  let mut run = LaunchCtx::live(env, &paths, gh.as_ref().map_err(Clone::clone));
   let result =
     find_issue(&graph, wanted).and_then(|issue| launch_issue(&graph, issue, &flags, &mut run));
   match result {

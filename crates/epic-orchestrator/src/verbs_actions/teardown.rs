@@ -1,7 +1,7 @@
 //! `toolu epic finish` and `toolu epic release`.
 
 use std::path::{Path, PathBuf};
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 use clap::{Arg, ArgMatches, Command};
 use serde_json::{Value, json};
@@ -11,10 +11,9 @@ use toolu_runtime::env::Env;
 
 use super::{document, failure, flag, text};
 use crate::finish::finish_issue;
-use crate::herdr::Client;
 use crate::journal::{self, Record};
+use crate::launch::Ctx as LaunchCtx;
 use crate::launch::record::write_record;
-use crate::launch::{Ctx as LaunchCtx, Herdr};
 use crate::paths::Paths;
 use crate::tracker::Gh;
 
@@ -59,17 +58,7 @@ pub(super) fn finish(matches: &ArgMatches, env: &Env) -> Outcome {
   let key = text(matches, "key").unwrap_or("");
   let paths = Paths::from_env(env);
   let gh = Gh::new(env);
-  let mut ctx = LaunchCtx {
-    env,
-    herdr: Herdr {
-      client: Client::new(),
-      paths: &paths,
-      env,
-    },
-    gh: gh.as_ref().map_err(Clone::clone),
-    session_wait: Duration::from_secs(10),
-    shell_wait: crate::launch::SHELL_WAIT,
-  };
+  let mut ctx = LaunchCtx::live(env, &paths, gh.as_ref().map_err(Clone::clone));
   let flags = (matches.get_flag("abandon"), matches.get_flag("dry-run"));
   match finish_issue(&state, key, flags, &mut ctx) {
     Ok(report) => {
