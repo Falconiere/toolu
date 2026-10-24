@@ -52,7 +52,7 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `route`   | Jev complexity tier, then host, model, and effort per issue                                  |
 | `launch`  | Clone/fetch, herdr worktree + routed host agent, worker brief                                |
 | `gate`    | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks  |
-| `finish`  | Snapshot, then tear down agent/worktree after merge                                          |
+| `finish`  | Snapshot, then tear down agent/worktree after merge; a live engine is told, never relaunches |
 | `close`   | Post the summary and close the epic in its tracker                                           |
 | `release` | Release a coupling hold so the issue launches next                                           |
 | `report`  | Worker phase reporter                                                                        |

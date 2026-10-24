@@ -131,7 +131,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `route --graph <file>` | Score and route issues to hosts, models and efforts; saves routes and `pool.json`. |
 | `launch --graph <file> --issue <ref>` | Launch or resume one issue in its herdr worktree (`--dry-run` plans only). |
 | `gate --pr <ref>` | Verify a PR against the merge policy; `--merge` merges pinned to the head, `--auto` arms auto-merge. |
-| `finish <state-dir> <key>` | Tear down an issue after its merge (`--abandon` keeps the branch). |
+| `finish <state-dir> <key>` | Tear down an issue after its merge (`--abandon` keeps the branch). A running engine is told, so it never relaunches the issue. |
 | `close --graph <file>` | Post the merged-PR summary and close a complete epic. |
 | `release <key>` | Release a coupling hold so the issue launches next. |
 | `jira issue get <key>` | Print one Jira issue as JSON. |
