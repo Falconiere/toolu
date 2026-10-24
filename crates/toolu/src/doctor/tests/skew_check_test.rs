@@ -4,7 +4,7 @@ use serde_json::json;
 
 use super::super::checks::Status;
 use super::super::inventory::collect;
-use super::{check, removal};
+use super::{check, removal, retired};
 use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
@@ -244,4 +244,16 @@ fn the_removal_command_is_the_inspected_hosts() {
   );
   assert_eq!(hint(Host::Hermes), None);
   assert_eq!(removal(&roots_for(home.path(), Host::Claude), &[]), None);
+}
+
+#[test]
+fn only_a_plugin_the_built_in_catalog_lacks_can_be_retired() {
+  let unreadable: Result<toolu_runtime::manifest::Manifest, String> =
+    Err("no hookProtocol".to_owned());
+  let shipped = ["toolu".to_owned()];
+  assert!(retired("context7", &unreadable, "8.2.0", &shipped));
+  // A catalog plugin with a bad manifest stays a mismatch, and an empty
+  // catalog retires nothing.
+  assert!(!retired("toolu", &unreadable, "8.2.0", &shipped));
+  assert!(!retired("context7", &unreadable, "8.2.0", &[]));
 }

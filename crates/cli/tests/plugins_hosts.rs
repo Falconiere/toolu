@@ -212,11 +212,7 @@ fn a_retired_plugin_is_removed_where_removal_is_scoped_to_toolu() {
       )
       .unwrap();
     assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
-    let stdout = text(&out.stdout);
-    assert!(
-      stdout.starts_with("  - context7") && stdout.ends_with("removed\n"),
-      "{stdout}"
-    );
+    assert_eq!(text(&out.stdout), "  - context7         removed\n");
     assert_eq!(sb.log(host), [argv]);
   }
   let typo = sb

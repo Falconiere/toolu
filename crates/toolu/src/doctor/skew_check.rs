@@ -90,7 +90,7 @@ fn retired(
   }
   match manifest {
     Ok(manifest) => compare(binary, &manifest.version) != Comparison::Older,
-    Err(_no_protocol) => true,
+    Err(_unreadable) => true,
   }
 }
 
