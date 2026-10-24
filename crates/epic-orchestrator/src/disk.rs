@@ -125,12 +125,18 @@ pub(crate) fn write_pretty<T: serde::Serialize>(path: &Path, value: &T) -> Resul
 
 /// Write the engine's fields of an issue record: its stage (when known),
 /// its coupling hold, whether a hold was released, and a waiting relaunch.
+/// A record a finish settled (`merged` or `abandoned`) keeps its stage
+/// (#619).
 ///
 /// # Errors
 /// The record cannot be read or written.
 pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), String> {
   let mut map = object(read_value(path)?);
-  if !issue.stage.is_empty() {
+  let settled = matches!(
+    map.get("stage").and_then(Value::as_str),
+    Some("merged" | "abandoned")
+  );
+  if !issue.stage.is_empty() && !settled {
     map.insert("stage".to_owned(), json!(issue.stage));
   }
   match &issue.hold {

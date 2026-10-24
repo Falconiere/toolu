@@ -82,3 +82,19 @@ fn a_loss_during_a_checkpoint_relaunches_after_it_and_a_merge_spends_nothing() {
   note_event(&mut world, "a", "gone");
   assert_eq!(world.issues["a"].launches, 1);
 }
+
+#[test]
+fn a_gone_issue_without_a_live_agent_arms_nothing() {
+  let mut world = World::new(0);
+  for (key, stage) in [("c", "cleaning"), ("x", "abandoned"), ("r", "running")] {
+    let mut issue = crate::model::Issue::blank(key, "one", "/s", 0);
+    issue.stage = stage.to_owned();
+    world.issues.insert(key.into(), issue);
+    note_event(&mut world, key, "gone");
+  }
+  let armed = |key: &str| (world.issues[key].pending.is_some(), world.issues[key].launches);
+  assert_eq!(
+    (armed("c"), armed("x"), armed("r")),
+    ((false, 0), (false, 0), (true, 1))
+  );
+}

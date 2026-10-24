@@ -1,6 +1,6 @@
 use serde_json::json;
 
-use super::{read_value, write_status, write_value};
+use super::{read_value, write_issue, write_status, write_value};
 
 #[test]
 fn a_status_rewrite_keeps_an_extra_key_and_appends_history() {
@@ -24,4 +24,23 @@ fn a_status_always_carries_pr_null_until_a_report_names_one() {
   write_status(&path, "pr-open", Some(7), "", std::time::UNIX_EPOCH).unwrap();
   write_status(&path, "babysit", None, "", std::time::UNIX_EPOCH).unwrap();
   assert_eq!(read_value(&path).unwrap()["pr"], 7);
+}
+
+#[test]
+fn an_engine_write_keeps_a_merged_or_abandoned_record_stage() {
+  let dir = tempfile::tempdir().unwrap();
+  let state = dir.path().display().to_string();
+  let mut issue = crate::model::Issue::blank("a", "one", &state, 0);
+  issue.stage = "running".to_owned();
+  let path = crate::snapshot::issue_path(&state, "a");
+  for (recorded, kept) in [
+    ("abandoned", "abandoned"),
+    ("merged", "merged"),
+    ("cleanup-incomplete", "running"),
+  ] {
+    write_value(&path, &json!({"stage": recorded, "worktree": "/w"})).unwrap();
+    write_issue(&issue, std::time::UNIX_EPOCH).unwrap();
+    let record = read_value(&path).unwrap();
+    assert_eq!((record["stage"].clone(), record["worktree"].clone()), (json!(kept), json!("/w")));
+  }
 }
