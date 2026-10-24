@@ -144,3 +144,69 @@ fn a_finish_step_is_refused_while_the_engine_merges_and_needs_begin_or_end() {
   );
   assert_eq!(unrecorded["stage"], "uncertain");
 }
+
+#[test]
+fn begin_drops_a_waiting_relaunch_and_a_checkpoint_s_launch_and_refuses_a_cleanup() {
+  let (_fix, mut engine) = finish_engine();
+  let issue = engine.world.issues.get_mut("a").expect("a");
+  issue.relaunch = Some("lost".to_owned());
+  let mut checkpoint = crate::model::fresh(crate::model::Action::Checkpoint, "c".to_owned());
+  checkpoint.follow = Some(crate::model::Action::Launch);
+  issue.pending = Some(checkpoint);
+  let begin = finish_step(
+    &mut engine,
+    &json!({"op": "finish", "key": "a", "step": "begin"}),
+  );
+  assert_eq!(begin["tracked"], true);
+  crate::schedule::note_event(&mut engine.world, "a", "gone");
+  let issue = &engine.world.issues["a"];
+  // The checkpoint may already have run; either way it no longer leads to a launch.
+  let follow = issue.pending.as_ref().and_then(|pending| pending.follow);
+  assert_eq!(
+    (issue.relaunch.as_deref(), follow, issue.launches),
+    (None, None, 0)
+  );
+  let rows = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("journal");
+  assert!(!rows.iter().any(|row| row.name == "launch-intent"));
+  engine.world.issues.get_mut("a").expect("a").pending = Some(crate::model::fresh(
+    crate::model::Action::Cleanup,
+    "t".to_owned(),
+  ));
+  let busy = finish_step(
+    &mut engine,
+    &json!({"op": "finish", "key": "a", "step": "begin"}),
+  );
+  assert_eq!(
+    busy,
+    json!({"error": "the engine is merging or cleaning up a; wait for it"})
+  );
+}
+
+#[test]
+fn a_cleaning_issue_whose_finish_died_gets_its_live_stage_back_once_no_finish_holds_it() {
+  let (_fix, mut engine) = finish_engine();
+  let _begin = finish_step(
+    &mut engine,
+    &json!({"op": "finish", "key": "a", "step": "begin"}),
+  );
+  engine.flush().expect("flush");
+  let state = engine.world.issues["a"].state_dir.clone();
+  let lock = std::path::Path::new(&state).join("launch-locks").join("a");
+  let held = toolu_engine::resources::lock::acquire_lock(&lock, std::time::Duration::ZERO)
+    .expect("lock")
+    .expect("free");
+  super::heal_cleaning(&mut engine.world, "one");
+  assert_eq!(engine.world.issues["a"].stage, "cleaning");
+  held.release();
+  super::heal_cleaning(&mut engine.world, "one");
+  assert_eq!(engine.world.issues["a"].stage, "running");
+  let healed = engine.world.outbox.iter().any(|step| {
+    matches!(step, crate::model::Step::Journal(row) if row.name == "finish" && row.note == "running")
+  });
+  assert!(healed);
+  let path = crate::snapshot::issue_path(&state, "a");
+  crate::disk::write_value(&path, &json!({"stage": "abandoned"})).expect("record");
+  engine.world.issues.get_mut("a").expect("a").stage = "cleaning".to_owned();
+  super::heal_cleaning(&mut engine.world, "one");
+  assert_eq!(engine.world.issues["a"].stage, "cleaning");
+}

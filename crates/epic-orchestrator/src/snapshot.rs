@@ -266,6 +266,7 @@ pub(crate) fn reload_epic(world: &mut World, epic: &str) -> Result<(), String> {
   load_epic(world, epic, &dir, &mut stages)?;
   overlay_stages(world, &stages);
   drop_departed(world, epic, &read_value(&dir.join("graph.json"))?);
+  crate::dispatch_ops::heal_cleaning(world, epic);
   watch::sync(world);
   Ok(())
 }

@@ -90,12 +90,14 @@ fn close_launch(world: &mut World, key: &str, note: &str) -> Option<Pending> {
   Some(pending)
 }
 
-/// A finish already settled the issue: adopt its stage and launch nothing,
-/// with no judgment and no record write (#619).
+/// A finish already settled the issue: adopt its `merged` or `abandoned`
+/// stage and launch nothing, with no judgment and no record write (#619).
 fn launch_settled(world: &mut World, key: &str, stage: &str) -> Vec<Step> {
   crate::refill::set_outcome(world, key, "skipped");
   if let Some(issue) = world.issues.get_mut(key) {
-    stage.clone_into(&mut issue.stage);
+    if matches!(stage, "merged" | "abandoned") {
+      stage.clone_into(&mut issue.stage);
+    }
     issue.relaunch = None;
   }
   let _closed = close_launch(world, key, "settled");

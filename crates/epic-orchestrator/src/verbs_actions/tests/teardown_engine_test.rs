@@ -170,3 +170,54 @@ fn an_engine_that_cannot_take_the_finish_leaves_the_record_untouched() {
   );
   assert_eq!(std::fs::read(&s.record).expect("bytes"), before);
 }
+
+/// An engine that answers one request with `reply`, then goes away.
+fn one_shot_engine(paths: &Paths, reply: &'static str) -> thread::JoinHandle<()> {
+  std::fs::write(paths.lock(), format!("{}\n", std::process::id())).expect("lock");
+  let listener = UnixListener::bind(paths.socket()).expect("bind");
+  let socket = paths.socket();
+  thread::spawn(move || {
+    let (mut stream, _) = listener.accept().expect("accept");
+    stream.write_all(b"{\"protocol\":2}\n").expect("hello");
+    let mut line = String::new();
+    BufReader::new(stream.try_clone().expect("clone"))
+      .read_line(&mut line)
+      .expect("request");
+    stream.write_all(reply.as_bytes()).expect("reply");
+    drop(listener);
+    std::fs::remove_file(socket).expect("unbind");
+  })
+}
+
+#[test]
+fn an_engine_that_goes_away_after_begin_is_named_in_a_warning_on_success_and_failure() {
+  const BEGUN: &str = "{\"ok\":true,\"key\":\"a\",\"tracked\":true,\"stage\":\"running\"}\n";
+  let s = setup();
+  let engine = one_shot_engine(&s.paths, BEGUN);
+  let done = finish_line(&s);
+  engine.join().expect("engine");
+  assert_eq!(done.exit, Exit::Success, "{:?}", done.stderr);
+  let warning = done.stderr.expect("warning");
+  assert!(
+    warning.starts_with("engine not told: connect: "),
+    "{warning}"
+  );
+  assert_eq!(
+    crate::disk::read_value(&s.record).expect("record")["stage"],
+    "abandoned"
+  );
+  let broken = json!({"key": "a", "stage": "running"});
+  crate::disk::write_value(&s.record, &broken).expect("record");
+  let engine = one_shot_engine(&s.paths, BEGUN);
+  let failed = finish_line(&s);
+  engine.join().expect("engine");
+  assert_eq!(failed.exit, Exit::Failure);
+  let text = failed.stderr.expect("stderr");
+  let (first, second) = text.split_once('\n').expect("two lines");
+  assert!(
+    first.starts_with("toolu epic finish: invalid issue record "),
+    "{text}"
+  );
+  assert!(second.starts_with("engine not told: connect: "), "{text}");
+  assert_eq!(crate::disk::read_value(&s.record).expect("record"), broken);
+}

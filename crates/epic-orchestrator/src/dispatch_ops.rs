@@ -108,6 +108,47 @@ fn end(world: &mut World, key: &str, previous: Option<&Value>) -> Result<Value, 
   Ok(json!({"ok": true, "key": key, "stage": stage}))
 }
 
+/// Give back the record's live stage to each issue of `epic` that a finish
+/// left `cleaning` with no action pending, once no finish holds its launch
+/// lock: the CLI died between `begin` and `end` after refusing before it
+/// wrote anything, so its agent still runs (#619).
+pub(crate) fn heal_cleaning(world: &mut World, epic: &str) {
+  let stale: Vec<(String, String)> = world
+    .issues
+    .values()
+    .filter(|issue| issue.epic == epic && issue.stage == "cleaning" && issue.pending.is_none())
+    .filter_map(|issue| {
+      let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
+      let record = crate::disk::read_value(&path).ok()?;
+      let stage = record.get("stage").and_then(Value::as_str)?;
+      let live = matches!(stage, "starting" | "uncertain" | "running");
+      (live && !finish_holds(&issue.state_dir, &issue.key))
+        .then(|| (issue.key.clone(), stage.to_owned()))
+    })
+    .collect();
+  for (key, stage) in stale {
+    if let Some(issue) = world.issues.get_mut(&key) {
+      stage.clone_into(&mut issue.stage);
+    }
+    journal(world, &key, &stage);
+  }
+}
+
+/// Whether a finish (or a launch) holds `key`'s launch lock; one that cannot
+/// be probed counts as held, so nothing is healed on a guess.
+fn finish_holds(state_dir: &str, key: &str) -> bool {
+  let path = std::path::Path::new(state_dir)
+    .join("launch-locks")
+    .join(key);
+  match toolu_engine::resources::lock::acquire_lock(&path, std::time::Duration::ZERO) {
+    Ok(Some(lock)) => {
+      lock.release();
+      false
+    }
+    Ok(None) | Err(_) => true,
+  }
+}
+
 #[cfg(test)]
 #[path = "tests/dispatch_ops_test.rs"]
 mod tests;

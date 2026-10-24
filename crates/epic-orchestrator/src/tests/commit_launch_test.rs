@@ -188,3 +188,16 @@ fn a_failed_relaunch_keeps_an_abandoned_record() {
     "abandoned"
   );
 }
+
+#[test]
+fn a_settled_launch_without_a_settled_stage_keeps_the_stage_it_had() {
+  let mut world = launching("running", false);
+  let _steps = commit_effect(&mut world, "b", r#"{"outcome":"settled","stage":null}"#);
+  assert_eq!(
+    (
+      world.issues["b"].stage.as_str(),
+      world.issues["b"].pending.is_none()
+    ),
+    ("running", true)
+  );
+}
