@@ -29,6 +29,15 @@ use crate::launch::admission::with_launch_ownership;
 use crate::launch::record::{Record, text, write_record};
 use crate::tracker::Gh;
 
+/// The prefix of a teardown failure a later attempt can clear on its own: the
+/// agent or its workload is still exiting.
+pub(crate) const STILL_EXITING: &str = "still exiting: ";
+
+/// Whether `reason` is a [`STILL_EXITING`] failure, which the engine retries.
+pub(crate) fn still_exiting(reason: &str) -> bool {
+  reason.starts_with(STILL_EXITING)
+}
+
 /// What a finish printed, and its warnings for stderr.
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct FinishReport {

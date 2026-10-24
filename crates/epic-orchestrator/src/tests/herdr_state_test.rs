@@ -50,6 +50,8 @@ pub(crate) struct State {
   pub agent_script: String,
   /// The text `agent.read` returns.
   pub tail: String,
+  /// `/exit` requests agents ignore before one ends them.
+  pub ignore_exits: u32,
   pub root: PathBuf,
   next: u64,
 }
@@ -117,6 +119,7 @@ impl State {
       scripted: BTreeMap::new(),
       agent_script: "exec sleep 600".to_owned(),
       tail: String::new(),
+      ignore_exits: 0,
       root: root.to_path_buf(),
       next: 0,
     }

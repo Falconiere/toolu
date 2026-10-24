@@ -3,18 +3,19 @@
 //! reports it closed. The outcome is one JSON document for `commit`.
 
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 use toolu_runtime::env::Env;
 
 use crate::executor::Job;
-use crate::finish::finish_issue;
+use crate::finish::{FinishReport, finish_issue, still_exiting};
 use crate::gate::{MakeTracker, Settle};
 use crate::graph::read_graph;
 use crate::launch::Ctx;
 use crate::paths::Paths;
 use crate::reach::{Reach, redact};
-use crate::retry::{Policy, effect_scope};
+use crate::retry::{Policy, effect_scope, number};
 use crate::tracker::{Gh, TrackerKind, detect_tracker};
 
 /// What one cleanup needs, moved onto the effect thread.
@@ -39,17 +40,71 @@ pub(crate) fn job(input: CleanupJob) -> Job {
   })
 }
 
+/// How often a teardown whose agent or workload is still exiting is tried.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct CleanupRetry {
+  /// Attempts, the first included.
+  pub attempts: u32,
+  /// The pause before the second attempt; it doubles after each one.
+  pub backoff: Duration,
+}
+
+impl CleanupRetry {
+  /// `EPIC_CLEANUP_ATTEMPTS` (3, at least 1), `EPIC_CLEANUP_BACKOFF_MS` (5000).
+  pub(crate) fn from_env(env: &Env) -> Self {
+    let attempts = u32::try_from(number(env, "EPIC_CLEANUP_ATTEMPTS", 3)).unwrap_or(3);
+    Self {
+      attempts: attempts.max(1),
+      backoff: Duration::from_millis(number(env, "EPIC_CLEANUP_BACKOFF_MS", 5000)),
+    }
+  }
+}
+
+/// Finish the merged issue, trying again with backoff while its agent or
+/// workload is still exiting; any other failure ends it at once.
+///
+/// # Errors
+/// The last attempt's reason (prefixed with the attempt count once
+/// retried), or a failure no retry can clear.
+pub(crate) fn finish_retrying(
+  state_dir: &Path,
+  key: &str,
+  ctx: &mut Ctx<'_>,
+  retry: CleanupRetry,
+) -> Result<FinishReport, String> {
+  let (mut attempt, mut pause) = (1, retry.backoff);
+  loop {
+    match finish_issue(state_dir, key, (false, false), ctx) {
+      Err(reason) if still_exiting(&reason) && attempt < retry.attempts => {
+        std::thread::sleep(pause);
+        pause = pause.saturating_mul(2);
+        attempt += 1;
+      }
+      Err(reason) if still_exiting(&reason) && attempt > 1 => {
+        return Err(format!("after {attempt} attempts: {reason}"));
+      }
+      other => return other,
+    }
+  }
+}
+
 /// Finish, then settle: `applied` (with `settle` or `settle_error`) or
 /// `cleanup-incomplete` with the reason.
 pub(crate) fn cleanup(input: &CleanupJob) -> Value {
   let gh = (input.reach.gh)(&input.env);
   let mut ctx = Ctx::live(&input.env, &input.paths, gh.as_ref().map_err(Clone::clone));
-  let finished = match finish_issue(&input.state_dir, &input.key, (false, false), &mut ctx) {
-    Ok(report) => report.finished,
+  let retry = CleanupRetry::from_env(&input.env);
+  let report = match finish_retrying(&input.state_dir, &input.key, &mut ctx, retry) {
+    Ok(report) => report,
     Err(err) => return incomplete(&input.env, &err),
   };
-  if finished.get("stage").and_then(Value::as_str) != Some("merged") {
-    return incomplete(&input.env, "cleanup incomplete; see the issue record");
+  if report.finished.get("stage").and_then(Value::as_str) != Some("merged") {
+    let note = if report.warnings.is_empty() {
+      "cleanup incomplete; see the issue record".to_owned()
+    } else {
+      format!("cleanup incomplete: {}", report.warnings.join("; "))
+    };
+    return incomplete(&input.env, &note);
   }
   match settle(input, gh.as_ref().map_err(Clone::clone)) {
     Ok(settled) => json!({"outcome": "applied", "settle": settled, "tracker_closed": true}),

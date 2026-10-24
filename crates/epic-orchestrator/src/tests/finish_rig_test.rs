@@ -8,9 +8,13 @@ use serde_json::{Value, json};
 use toolu_engine::resources::leases::{
   LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease,
 };
+use toolu_engine::resources::binding::bind_worktree;
+use toolu_http_test_support::Fixture;
 use toolu_runtime::json::ordered::Ordered;
 
-use crate::support::git;
+use crate::herdr::Call;
+use crate::launch_rig::Rig;
+use crate::support::{git, ok};
 
 /// The repositories and state of one finish test.
 pub(crate) struct Layout {
@@ -117,4 +121,37 @@ pub(crate) fn leases(layout: &Layout) -> Vec<(String, String)> {
     .iter()
     .map(|lease| (text(lease, "token"), text(lease, "stage")))
     .collect()
+}
+
+/// The layout's worktree open in herdr with a live Claude agent and a merged
+/// or open PR 7; the GitHub fixture.
+pub(crate) fn live(l: &Layout, rig: &Rig, merged: bool) -> Fixture {
+  let workspace = rig.herdr.state().open(&l.main, &l.wt, "k-1", true);
+  let pane = format!("{workspace}:p1");
+  let start = Call::Start {
+    name: "k-1".into(),
+    kind: "claude".into(),
+    pane_id: pane.clone(),
+    args: Vec::new(),
+    timeout_ms: None,
+  };
+  rig.ctx().herdr.call(&start).expect("agent");
+  let token = agent_lease(l, "running");
+  bind_worktree(&l.resources, &l.wt, "k-1", &l.state.display().to_string()).expect("bind");
+  patch(
+    l,
+    &json!({"workspace_id": workspace, "pane_id": pane, "agent": "k-1", "kind": "claude", "resource_root": l.resources, "lease_token": token}),
+  );
+  write(
+    &l.state.join("status").join("k-1.json"),
+    &json!({"phase": "ready", "pr": 7}),
+  );
+  let fixture = Fixture::start().expect("fixture");
+  let state = if merged { "closed" } else { "open" };
+  ok(
+    &fixture,
+    "/repos/o/r/pulls/7",
+    &json!({"merged": merged, "state": state}),
+  );
+  fixture
 }

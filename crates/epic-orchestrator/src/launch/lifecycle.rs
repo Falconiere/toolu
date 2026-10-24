@@ -170,7 +170,7 @@ fn identity_pending(name: &str, err: &Failure) -> bool {
 
 /// Whether herdr no longer lists `name`. A dying agent's entry degrades
 /// before its name disappears: still present, not a failure.
-fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
+pub(crate) fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
   match inspect_agent(herdr, name) {
     Ok(agent) => Ok(agent.is_none()),
     Err(err) if identity_pending(name, &err) => Ok(false),
