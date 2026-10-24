@@ -235,3 +235,26 @@ fn an_engine_launch_refuses_a_settled_record_and_a_human_launch_does_not() {
   }
   assert!(dry(&rig, "Falconiere/comemory#255", |_| {}).is_ok());
 }
+
+#[test]
+fn reprompt_and_replace_load_a_record_the_engine_adopted_before_its_session() {
+  let rig = Rig::new();
+  rig.write_record(
+    "comemory-255",
+    &json!({
+      "stage": "running", "kind": "cursor", "prompt_state": "submitting",
+      "lifecycle_outcome": "uncertain", "session_id": null, "lease_token": "lease-1",
+      "resource_root": "/r", "pane_id": "p", "worktree": "/w",
+    }),
+  );
+  for (kind, recovery) in [
+    ("cursor", Recovery::Reprompt),
+    ("claude", Recovery::Replace),
+  ] {
+    let planned = dry(&rig, "Falconiere/comemory#255", |flags| {
+      flags.kind = Some(kind.into());
+      flags.recovery = recovery;
+    });
+    assert!(planned.is_ok(), "{kind}: {:?}", planned.err());
+  }
+}

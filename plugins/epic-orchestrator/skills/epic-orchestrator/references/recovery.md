@@ -66,6 +66,17 @@ toolu epic launch --graph <state_dir>/graph.json --issue <ref> --replace    # sh
 toolu epic launch --graph <state_dir>/graph.json --issue <ref> --force      # a reopened issue the graph blocks
 ```
 
+Sometimes a prompt stalls before the host records its session, and the worker
+runs once someone submits the prompt in its pane. The record then shows
+`session_id: null` and a `prompt_state` other than `acknowledged`. When that
+worker reports, the engine records it as `running` and sets its agent lease from
+`uncertain` to `running`, so `toolu epic job` runs its gate. To repair the
+record, run `toolu epic launch --graph <state_dir>/graph.json --issue <ref>`
+with no recovery flag. It keeps the live worker and records the one session
+the host wrote for the worktree since the attempt began. It does not prompt the
+worker again, and it refuses if it finds no session or several. `--reprompt`
+repairs the record the same way but also sends the worker its prompt again.
+
 Never delete a lease to make capacity look free. A wrong model name (the agent
 exits right after start): check `codex debug models` or `cursor-agent
 --list-models`, fix `routing.json`, then `--replace`.

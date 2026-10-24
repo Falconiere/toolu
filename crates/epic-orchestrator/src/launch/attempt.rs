@@ -224,6 +224,9 @@ impl<'g> Attempt<'g> {
       shell_wait: ctx.shell_wait,
     };
     let start = ensure_agent(&mut ctx.herdr, &plan, &mut self.log, ctx.session_wait)?;
+    if let Some(id) = &start.captured {
+      record.insert("session_id".to_owned(), json!(id));
+    }
     if !self.opts.dry_run && start.started && !start.resumed {
       record.insert("session_started_after".to_owned(), json!(self.started_at));
       let id = capture_session(self.host.kind, &wt.path, self.started_at, ctx.env)?;

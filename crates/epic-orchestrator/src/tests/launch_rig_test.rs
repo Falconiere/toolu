@@ -83,6 +83,43 @@ impl Rig {
     self.herdr.state().agent_script = CLAUDE_AGENT.replace("{claude}", &claude);
   }
 
+  /// The chat Cursor Agent keeps for `worktree`, created at `created_at_ms`,
+  /// in its own layout: `<HOME>/.cursor/chats/<md5(cwd)>/<id>/meta.json`.
+  pub(crate) fn cursor_chat(&self, worktree: &str, id: &str, created_at_ms: u64) {
+    let chat = self
+      .tmp
+      .path()
+      .join("home/.cursor/chats")
+      .join(crate::launch::digest::md5_hex(worktree.as_bytes()))
+      .join(id);
+    std::fs::create_dir_all(&chat).expect("chat");
+    let meta = serde_json::json!({
+      "schemaVersion": 1, "createdAtMs": created_at_ms, "hasConversation": true,
+      "updatedAtMs": created_at_ms, "cwd": worktree,
+    });
+    std::fs::write(chat.join("meta.json"), meta.to_string()).expect("meta");
+  }
+
+  /// A live launch of comemory-255 with `flags`, GitHub answering its
+  /// default branch.
+  pub(crate) fn launch(
+    &self,
+    flags: &LaunchOpts,
+  ) -> Result<serde_json::Value, crate::launch::Failure> {
+    let issue = crate::launch::find_issue(&self.graph, "comemory-255")?.clone();
+    let github = toolu_http_test_support::Fixture::start()
+      .map_err(|err| crate::launch::Failure::unknown(format!("GitHub fixture: {err:?}")))?;
+    crate::support::ok(
+      &github,
+      "/repos/Falconiere/comemory",
+      &serde_json::json!({"default_branch": "main"}),
+    );
+    let client = crate::support::gh(&github);
+    let mut ctx = self.ctx();
+    ctx.gh = Ok(&client);
+    crate::launch::launch_issue(&self.graph, &issue, flags, &mut ctx)
+  }
+
   /// The state directory.
   pub(crate) fn state(&self) -> PathBuf {
     PathBuf::from(&self.graph.state_dir)
