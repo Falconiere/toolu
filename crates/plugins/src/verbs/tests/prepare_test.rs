@@ -1,4 +1,4 @@
-use super::run;
+use super::{Prepared, run};
 use crate::args::{Approval, Verb};
 use crate::support::Sandbox;
 
@@ -20,7 +20,7 @@ fn a_clean_home_clones_the_tag_and_registers_the_marketplace() {
   sb.muse("never");
   let origin = sb.origin(&["v9.9.8", "v9.9.9"]);
   let driver = sb.muse_driver("9.9.8", &origin, Approval::Report);
-  assert_eq!(run(&driver, Verb::Install), Ok(String::new()));
+  assert_eq!(run(&driver, Verb::Install), Ok(Prepared::default()));
   assert_eq!(head_tag(&sb), r#"{"tag":"v9.9.8"}"#);
   assert_eq!(
     sb.log("muse"),
@@ -41,7 +41,7 @@ fn an_existing_checkout_moves_to_the_new_tag_and_refreshes_the_snapshot() {
       &sb.muse_driver("9.9.8", &origin, Approval::Report),
       Verb::Install
     ),
-    Ok(String::new())
+    Ok(Prepared::default())
   );
   sb.write(
     "origin/.agents/plugins/marketplace.json",
@@ -56,7 +56,7 @@ fn an_existing_checkout_moves_to_the_new_tag_and_refreshes_the_snapshot() {
       &sb.muse_driver("9.9.9", &origin, Approval::Report),
       Verb::Update
     ),
-    Ok(String::new())
+    Ok(Prepared::default())
   );
   assert_eq!(head_tag(&sb), r#"{"tag":"v9.9.9"}"#);
   assert_eq!(

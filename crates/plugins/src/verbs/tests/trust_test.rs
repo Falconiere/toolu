@@ -24,6 +24,7 @@ fn muse(sb: &Sandbox, approval: Approval) -> Driver {
     env: sb.env(),
     timeout: Duration::from_secs(10),
     checkout: None,
+    pin: None,
     approval,
   }
 }

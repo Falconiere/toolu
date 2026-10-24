@@ -38,6 +38,7 @@ impl Cursor {
       env: cx.env.clone(),
       timeout: cx.timeout,
       checkout: Some(checkout.clone()),
+      pin: None,
       approval: Approval::Report,
     };
     Ok(Cursor {

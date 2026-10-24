@@ -1,7 +1,8 @@
 //! `install`: make the marketplace ready, then each plugin in dependency order,
 //! then settle hook approval (Muse). A failure of the core plugin skips its
 //! dependents, which cannot work without it; any other failure is recorded and
-//! the rest continue.
+//! the rest continue. After Codex's marketplace is re-pinned to the release
+//! tag, an installed plugin is added again to take the tag's content.
 
 use crate::args::{Scope, Verb};
 use crate::catalog::Catalog;
@@ -10,7 +11,7 @@ use crate::fail::Res;
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
-use crate::verbs::{Driver, find, foreign_step, prepare, trust};
+use crate::verbs::{Driver, find, foreign_step, pin, prepare, trust};
 
 /// The plugin every other one builds on.
 pub(crate) const CORE: &str = "toolu";
@@ -55,8 +56,8 @@ pub(crate) fn run(
 ) -> Res<Vec<Step>> {
   let order = install_order(catalog, requested)?;
   let adapter = driver.adapter;
-  let add_note = if dry_run {
-    String::new()
+  let prepared = if dry_run {
+    prepare::Prepared::default()
   } else {
     prepare::run(driver, Verb::Install)?
   };
@@ -79,6 +80,8 @@ pub(crate) fn run(
     if let Some(have) = find(&installed, name) {
       steps.push(if driver.foreign(have) {
         foreign_step(name, have, argv)
+      } else if prepared.repinned {
+        pin::refresh(driver, name)
       } else {
         present(name, have, find(&offered, name), argv)
       });
@@ -88,7 +91,7 @@ pub(crate) fn run(
       steps.push(Step::new(name, Status::Skipped, "dry run", argv));
       continue;
     }
-    let step = attempt(driver, name, argv, &add_note);
+    let step = attempt(driver, name, argv, &prepared.hint);
     core_failed |= name == CORE && step.failed();
     steps.push(step);
   }

@@ -54,9 +54,14 @@ impl Adapter {
   }
 
   /// Adds the toolu marketplace from GitHub (Claude Code and Codex; Muse adds
-  /// its checkout in `verbs::prepare`).
-  pub(crate) fn add_marketplace(self) -> Vec<String> {
-    words(&[self.bin(), "plugin", "marketplace", "add", SOURCE], &[])
+  /// its checkout in `verbs::prepare`). Codex takes `pin`, a release tag, so
+  /// its startup auto-upgrade never moves the plugins past it (#626).
+  pub(crate) fn add_marketplace(self, pin: Option<&str>) -> Vec<String> {
+    let tail = match (self, pin) {
+      (Adapter::Codex, Some(tag)) => vec!["--ref".to_owned(), tag.to_owned()],
+      _unpinned => Vec::new(),
+    };
+    words(&[self.bin(), "plugin", "marketplace", "add", SOURCE], &tail)
   }
 
   /// Installs `name`; only Claude Code takes a scope.

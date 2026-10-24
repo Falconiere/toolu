@@ -19,6 +19,7 @@ fn a_listing_that_fails_or_is_malformed_reads_as_empty() {
     env: sb.env(),
     timeout: Duration::from_secs(10),
     checkout: None,
+    pin: None,
     approval: Approval::Report,
   };
   let installed = driver.versions(&driver.adapter.list_installed());

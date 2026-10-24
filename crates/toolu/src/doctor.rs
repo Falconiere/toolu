@@ -7,6 +7,7 @@ use toolu_runtime::config::secrets::{self, Secrets};
 
 mod binary;
 mod checks;
+mod codex_pin;
 mod config_check;
 mod cursor;
 mod inventory;

@@ -15,6 +15,8 @@ use crate::step::{Status, Step};
 pub(crate) mod install;
 /// The catalog joined with the host's state.
 pub(crate) mod list;
+/// Codex's marketplace pinned to the release tag.
+pub(crate) mod pin;
 /// The marketplace a host installs from, made ready before install and update.
 pub(crate) mod prepare;
 /// Uninstall.
@@ -35,6 +37,9 @@ pub(crate) struct Driver {
   pub(crate) timeout: Duration,
   /// Muse's toolu checkout; `None` on the other hosts.
   pub(crate) checkout: Option<Checkout>,
+  /// The release tag Codex's marketplace is pinned to; `None` on the other
+  /// hosts.
+  pub(crate) pin: Option<String>,
   /// What to do with hooks awaiting approval after an install or update.
   pub(crate) approval: Approval,
 }

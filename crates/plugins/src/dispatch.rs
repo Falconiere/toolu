@@ -32,7 +32,7 @@ pub(crate) struct Context<'a> {
   /// The deadline of each host command.
   pub(crate) timeout: Duration,
   /// This binary's version: what `--config` is checked against, and the tag
-  /// Muse's checkout follows.
+  /// Muse's checkout follows and Codex's marketplace is pinned to.
   pub(crate) version: &'static str,
   /// The repository Muse's checkout is cloned from.
   pub(crate) origin: String,
@@ -60,11 +60,13 @@ fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
     // Cursor has no plugin CLI; every verb branches to `crate::cursor` before here.
     Target::Cursor => return Err(Fail::failed("cursor has no plugin command to drive")),
   };
+  let pin = (adapter == Adapter::Codex).then(|| format!("v{}", cx.version));
   Ok(Driver {
     adapter,
     env: cx.env.clone(),
     timeout: cx.timeout,
     checkout,
+    pin,
     approval: request.approval,
   })
 }
