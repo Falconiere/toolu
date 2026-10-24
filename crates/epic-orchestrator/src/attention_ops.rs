@@ -23,7 +23,8 @@ pub(crate) fn reply_ack(
 }
 
 /// Deliver an answer to a live worker for the `answer` op, then mark the key's
-/// attention answered, or record a direction when none is open. A refused or undelivered answer is the caller's error.
+/// attention answered, or record a direction when none is open. A refused or
+/// undelivered answer is the caller's error.
 ///
 /// # Errors
 /// The journal cannot be written after the worker received the answer.
