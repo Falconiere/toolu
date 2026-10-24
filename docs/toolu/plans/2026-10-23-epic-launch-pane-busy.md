@@ -38,7 +38,7 @@ Failure classification → retry loop and `shell_wait` plumbing → not-started 
   {
     "id": "S2",
     "title": "A not-started refusal past the budget releases the lease and drops the stage",
-    "check": "cargo test -p toolu-epic-orchestrator --lib launch::attempt::tests::a_pane_busy_past_the_budget_releases_the_launch",
+    "check": "cargo test -p toolu-epic-orchestrator --lib launch::attempt::tests::",
     "ac_refs": ["AC-2"],
     "depends_on": ["S1"],
     "paths": [
@@ -112,3 +112,4 @@ Red first: S1 and S2 tests fail on `main` (the busy reply settles `uncertain`). 
 - S1: the shell wait travels as `AgentPlan::shell_wait` instead of a `Waits` argument to `ensure_agent`, which keeps its signature and its six test call sites unchanged. The spec's Interfaces section was updated to match.
 - S1/S2: `launch::PANE_BUSY` names herdr's code once; `effects_launch::waits` matches it.
 - S2: when the lease cannot be released, the record also carries `lease_release_error` beside the `uncertain` fallback, so the reason is not lost.
+- S2: local review found the `lease_release_error` fallback untested; `a_busy_pane_whose_lease_cannot_be_released_stays_uncertain` holds a real job lease on the worktree, and S2's check now runs every `launch::attempt` test.

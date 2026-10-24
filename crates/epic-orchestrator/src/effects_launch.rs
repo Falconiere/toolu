@@ -1,8 +1,9 @@
 //! The engine's in-process launch effect: the coupling check against the
 //! batch members ahead, then routing (a valid saved route is kept), then the
 //! launch itself. The outcome is a JSON document: `applied`, `hold` (with
-//! the partner, score and source), `wait` (no host, shared capacity or the
-//! GitHub budget) or `failed` (with the record's stage after the attempt).
+//! the partner, score and source), `wait` (no host, shared capacity, a
+//! resource hold, the GitHub budget, or a pane whose shell never became
+//! ready) or `failed` (with the record's stage after the attempt).
 
 use std::path::PathBuf;
 use std::time::SystemTime;

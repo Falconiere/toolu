@@ -1,4 +1,7 @@
+use std::time::SystemTime;
+
 use serde_json::json;
+use toolu_engine::resources::leases::{LeaseKind, LeaseRequest, acquire_lease};
 
 use crate::launch::{find_issue, launch_issue};
 use crate::launch_rig::{Rig, opts};
@@ -115,11 +118,20 @@ fn a_busy_pane_is_retried_until_the_agent_starts() {
   rig.checkout("comemory-255");
   rig.claude_agents();
   rig.herdr.script("agent.start", busy());
-  let result = launch_live(&rig);
-  result.unwrap_or_else(|err| panic!("{}", err.message));
+  let result = launch_live(&rig).unwrap_or_else(|err| panic!("{}", err.message));
   let record = rig.record("comemory-255");
   assert_eq!(record["stage"], "running");
   assert_eq!(record["lifecycle_outcome"], "started");
+  let retry = format!(
+    "herdr agent.start: pane {} busy; retry in 250 ms",
+    record["pane_id"].as_str().expect("pane")
+  );
+  assert!(
+    result["commands"]
+      .as_array()
+      .is_some_and(|lines| lines.iter().any(|line| line == retry.as_str())),
+    "{result}"
+  );
   assert!(record.get("lifecycle_error").is_none(), "{record}");
   assert_eq!(starts(&rig), 2);
 }
@@ -152,4 +164,39 @@ fn a_pane_busy_past_the_budget_releases_the_launch() {
   let record = rig.record("comemory-255");
   assert_eq!(record["stage"], "running");
   assert_eq!(rig.leases(), 1);
+}
+
+#[test]
+fn a_busy_pane_whose_lease_cannot_be_released_stays_uncertain() {
+  let mut rig = Rig::new();
+  rig.checkout("comemory-255");
+  rig.claude_agents();
+  for _ in 0..40 {
+    rig.herdr.script("agent.start", busy());
+  }
+  launch_live(&rig).expect_err("busy past the budget");
+  let worktree = rig.record("comemory-255")["worktree"]
+    .as_str()
+    .expect("worktree")
+    .to_owned();
+  let job = LeaseRequest {
+    kind: LeaseKind::Job,
+    key: "comemory-255".into(),
+    state_dir: rig.graph.state_dir.clone(),
+    host: None,
+    host_cap: None,
+    epic_cap: None,
+    worktree: Some(worktree),
+  };
+  let resources = rig.tmp.path().join("resources");
+  acquire_lease(&resources, &job, SystemTime::now()).expect("job");
+  let refused = launch_live(&rig).expect_err("still busy");
+  assert!(refused.message.contains("agent_pane_busy"));
+  let record = rig.record("comemory-255");
+  assert_eq!(record["stage"], "uncertain");
+  assert_eq!(
+    record["lease_release_error"],
+    "active jobs prevent agent lease release"
+  );
+  assert_eq!(record["lifecycle_outcome"], "not-started");
 }

@@ -97,7 +97,8 @@ pub(crate) const SHELL_WAIT: Duration = Duration::from_secs(30);
 
 impl<'a> Ctx<'a> {
   /// The context of one engine effect or verb: live herdr through `paths`,
-  /// and ten seconds for the host to record its session.
+  /// ten seconds for the host to record its session, and [`SHELL_WAIT`] for
+  /// a new pane's shell.
   pub(crate) fn live(
     env: &'a Env,
     paths: &'a crate::paths::Paths,
@@ -188,7 +189,8 @@ fn epoch_ms(at: SystemTime) -> u64 {
 ///
 /// # Errors
 /// Any refusal or failure; a failure after reservation leaves the record
-/// `uncertain` with its lease.
+/// `uncertain` with its lease, except a refusal that proves no agent started,
+/// which returns the lease and drops the stage.
 pub(crate) fn launch_issue(
   graph: &Graph,
   issue: &GraphIssue,
