@@ -14,6 +14,9 @@ use crate::hosts::host_limited;
 /// herdr's code for an `agent start` on a pane whose shell is not ready.
 pub(crate) const PANE_BUSY: &str = "agent_pane_busy";
 
+/// The code of a launch whose agent waits on an approval screen (#626).
+pub(crate) const APPROVAL: &str = "approval_pending";
+
 /// Why a launch stopped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Failure {
@@ -52,12 +55,20 @@ impl Failure {
     self.code.as_deref() == Some(PANE_BUSY)
   }
 
+  /// The agent started and waits on an approval screen only a human can
+  /// pass (#626).
+  pub(crate) fn awaits_approval(&self) -> bool {
+    self.code.as_deref() == Some(APPROVAL)
+  }
+
   /// `lifecycle_error`, `lifecycle_outcome` and `native_error` for the record.
   pub(crate) fn details(&self) -> Map<String, Value> {
     let outcome = if host_limited(&self.message) {
       "provider-limited"
     } else if self.not_started() {
       "not-started"
+    } else if self.awaits_approval() {
+      "needs-human"
     } else {
       "uncertain"
     };

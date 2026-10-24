@@ -201,3 +201,26 @@ fn a_settled_launch_without_a_settled_stage_keeps_the_stage_it_had() {
     ("running", true)
   );
 }
+
+#[test]
+fn a_launch_waiting_on_an_approval_screen_raises_needs_human_not_failed() {
+  let mut world = launching("", false);
+  let note = "codex is waiting on its hook review in pane w1:p1: \"26 hooks need review before they can run.\"; review and trust the hooks there, then relaunch with --replace";
+  let doc = serde_json::json!({"outcome": "needs-human", "note": note, "stage": "uncertain"});
+  let steps = commit_effect(&mut world, "b", &doc.to_string());
+  assert_eq!(
+    done_line(&steps).map(|line| line.note),
+    Some("failed".into())
+  );
+  assert_eq!(world.issues["b"].stage, "uncertain");
+  assert_eq!(world.issues["b"].deferred.as_deref(), Some("launch"));
+  assert!(world.issues["b"].pending.is_none());
+  assert_eq!(world.attention.len(), 1);
+  assert_eq!(
+    (
+      world.attention[0].kind.as_str(),
+      world.attention[0].note.as_str()
+    ),
+    ("needs-human", note)
+  );
+}

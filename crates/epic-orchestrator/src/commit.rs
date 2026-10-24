@@ -72,7 +72,8 @@ fn commit_launch(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
       world.outbox.drain(..).collect()
     }
     "settled" => launch_settled(world, key, &text("stage")),
-    _ => launch_failed(world, key, &doc),
+    "needs-human" => launch_failed(world, key, &doc, "needs-human"),
+    _ => launch_failed(world, key, &doc, "failed"),
   }
 }
 
@@ -105,8 +106,9 @@ fn launch_settled(world: &mut World, key: &str, stage: &str) -> Vec<Step> {
 }
 
 /// A failed launch keeps the record's stage and is not tried again until
-/// the worker or a human moves the issue.
-fn launch_failed(world: &mut World, key: &str, doc: &Value) -> Vec<Step> {
+/// the worker or a human moves the issue. `kind` is the attention it raises:
+/// `needs-human` for an agent waiting on an approval screen (#626).
+fn launch_failed(world: &mut World, key: &str, doc: &Value, kind: &str) -> Vec<Step> {
   crate::refill::set_outcome(world, key, "failed");
   if let Some(issue) = world.issues.get_mut(key) {
     if let Some(stage) = doc.get("stage").and_then(Value::as_str) {
@@ -120,7 +122,7 @@ fn launch_failed(world: &mut World, key: &str, doc: &Value) -> Vec<Step> {
   });
   let _closed = close_launch(world, key, "failed");
   let note = doc.get("note").and_then(Value::as_str).unwrap_or("");
-  fail_pending(world, key, "failed", note)
+  fail_pending(world, key, kind, note)
 }
 
 /// The in-process cleanup's outcome document: a finished issue journals its
