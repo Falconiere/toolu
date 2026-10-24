@@ -158,6 +158,7 @@ pub(crate) fn after_merge(world: &mut World, issue_key: &str) {
   let epic = issue.epic.clone();
   for watch in world.watches.values_mut() {
     let related = match &watch.kind {
+      Kind::Pr { key, .. } if key == issue_key => false,
       Kind::Pr { repo: watched, .. } | Kind::Base { repo: watched, .. } => watched == &repo,
       Kind::Epic { key, .. } | Kind::Blocker { key, .. } => key == &epic,
     };
@@ -237,7 +238,8 @@ fn base_for<'a>(world: &'a World, issue: &'a Issue) -> Option<&'a str> {
 }
 
 fn waiting(phase: &str, stage: &str) -> bool {
-  matches!(phase, "pr-open" | "babysit" | "ready") && !matches!(stage, "merged" | "closed")
+  matches!(phase, "pr-open" | "babysit" | "ready")
+    && !matches!(stage, "cleaning" | "merged" | "closed")
 }
 
 fn reference_parts(reference: &str) -> Option<(&str, u64)> {

@@ -2,6 +2,7 @@
 //! `crates/cli` passes in (pr-babysit's), turned into what the engine does
 //! next. A tick that fails is an attention item, never a crash.
 
+use serde_json::Value;
 use toolu_engine::LinkError;
 use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickRequest};
 
@@ -13,6 +14,8 @@ use crate::model::{Step, World};
 pub enum Next {
   /// Check again at the next interval.
   KeepGoing,
+  /// The pull request merged; start its cleanup.
+  Merged,
   /// Everything is green: queue the pull request for merge.
   MergeQueue,
   /// Raise an attention item with this message.
@@ -33,6 +36,7 @@ impl Next {
   pub(crate) fn name(&self) -> &'static str {
     match self {
       Self::KeepGoing => "keep-going",
+      Self::Merged => "merged",
       Self::MergeQueue => "merge-queue",
       Self::Attention(_) => "attention",
       Self::Prompt(_) => "prompt",
@@ -71,20 +75,29 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
   let slot = format!("{}#{}", request.repo, request.number);
   match tick.tick(request) {
     Ok(report) => Checked {
-      next: match report.decision {
-        TickDecision::KeepGoing => Next::KeepGoing,
-        TickDecision::Success => Next::MergeQueue,
-        TickDecision::Escalate => match report.prompt {
-          Some(prompt) => Next::Escalate {
-            note: format!("babysit escalated {slot}"),
-            prompt,
+      next: if report
+        .result
+        .get("reasons")
+        .and_then(Value::as_array)
+        .is_some_and(|reasons| reasons.iter().any(|reason| reason["code"] == "pr_merged"))
+      {
+        Next::Merged
+      } else {
+        match report.decision {
+          TickDecision::KeepGoing => Next::KeepGoing,
+          TickDecision::Success => Next::MergeQueue,
+          TickDecision::Escalate => match report.prompt {
+            Some(prompt) => Next::Escalate {
+              note: format!("babysit escalated {slot}"),
+              prompt,
+            },
+            None => Next::Attention(format!("babysit escalated {slot}")),
           },
-          None => Next::Attention(format!("babysit escalated {slot}")),
-        },
-        TickDecision::Act => match report.prompt {
-          Some(text) => Next::Prompt(text),
-          None => Next::Attention(format!("babysit needs the worker on {slot}")),
-        },
+          TickDecision::Act => match report.prompt {
+            Some(text) => Next::Prompt(text),
+            None => Next::Attention(format!("babysit needs the worker on {slot}")),
+          },
+        }
       },
       graphql: report.graphql,
       throttle: None,

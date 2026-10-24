@@ -4,6 +4,7 @@
 //! a failed tick is an attention item that leaves the queue alone.
 
 use crate::babysit::Next;
+use crate::github_probe::Change;
 use crate::journal::Record;
 use crate::logic::push_attention;
 use crate::model::{Step, World};
@@ -18,6 +19,7 @@ pub(crate) fn apply(world: &mut World, watch_key: &str, next: Next) {
   let key = key.clone();
   match next {
     Next::KeepGoing => {}
+    Next::Merged => crate::github_engine::note_change(world, Change::PrMerged { key }),
     Next::MergeQueue => {
       if let Some(issue) = world.issues.get_mut(&key)
         && issue.phase != "ready"

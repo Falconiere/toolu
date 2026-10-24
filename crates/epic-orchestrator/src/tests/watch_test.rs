@@ -2,6 +2,7 @@ use super::{CHECK_MS, Cause, Kind, Watch};
 use serde_json::json;
 
 use crate::disk::write_value;
+use crate::model::{Action, Issue, World};
 use crate::paths::Paths;
 use crate::server::{Engine, Fault};
 
@@ -11,6 +12,29 @@ fn pr() -> Kind {
     repo: "Falconiere/toolu".to_owned(),
     number: 501,
   }
+}
+
+#[test]
+fn merged_pr_stage_rearms_sibling_pr_and_removes_merged_watch() {
+  let mut world = World::new(0);
+  for (key, pr) in [("one", 1), ("two", 2)] {
+    let mut issue = Issue::blank(key, "epic", "/state", 0);
+    issue.repo = "o/r".into();
+    issue.phase = "ready".into();
+    issue.stage = "running".into();
+    issue.pr = Some(pr);
+    world.issues.insert(key.into(), issue);
+  }
+  super::sync(&mut world);
+  for watch in world.watches.values_mut() {
+    let _due = watch.take_due(0);
+  }
+  let _steps = crate::commit::applied(&mut world, "one", Some(Action::Merge));
+  assert!(!world.watches["pr:o/r#1"].immediate);
+  assert!(world.watches["pr:o/r#2"].immediate);
+  super::sync(&mut world);
+  assert!(!world.watches.contains_key("pr:o/r#1"));
+  assert!(world.watches.contains_key("pr:o/r#2"));
 }
 
 #[test]

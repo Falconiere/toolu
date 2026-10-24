@@ -173,7 +173,7 @@ fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<Tick
   };
   let issue = world.issues.get(key)?;
   if !matches!(issue.phase.as_str(), "babysit" | "ready")
-    || matches!(issue.stage.as_str(), "closed" | "merged")
+    || matches!(issue.stage.as_str(), "cleaning" | "closed" | "merged")
   {
     return None;
   }
@@ -226,6 +226,7 @@ fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &
   journal(world, key, "github-error", &note.to_string());
 }
 
+/// Apply one observed GitHub change to the epic world.
 pub(crate) fn note_change(world: &mut World, change: Change) {
   match change {
     Change::PrChanged { key, head, base } => {
