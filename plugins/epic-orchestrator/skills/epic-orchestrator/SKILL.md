@@ -105,7 +105,7 @@ named after its key). Resume: the same commands.
 It returns one judgment of this epic or an engine-wide one (`kind`, `key`, `note`, `pending` for `blocked`) or
 `{"state": "waiting"}` at the limit; only a `waiting` at once means no engine
 runs (`toolu epic status`, then `toolu epic start "$STATE_DIR"`). A worker report
-or a settled cause closes an item; ack the rest once handled.
+or a settled cause closes an item; ack the rest once handled. To redirect a live worker with no item open, use `toolu epic answer <key> "<direction>"`; it is journaled and shown in `toolu epic status`.
 
 | kind | action |
 |---|---|

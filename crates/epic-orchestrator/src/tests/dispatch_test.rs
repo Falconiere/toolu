@@ -65,7 +65,7 @@ fn status_pause_ack_and_answer_reply() {
     &json!({"op": "answer", "key": "a", "text": "hi"}),
   );
   assert!(!stop);
-  assert_eq!(value["error"], "no open attention for a");
+  assert_eq!(value["error"], "no live agent for a");
   let (_, value) = round(&mut engine, &json!({"op": "answer", "key": "a"}));
   assert_eq!(value["error"], "answer needs a key and a text");
 }

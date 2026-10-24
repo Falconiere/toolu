@@ -1192,12 +1192,22 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["key", "epic", "phase", "stage", "github"],
+            "required": ["key", "epic", "phase", "stage", "github", "direction"],
             "properties": {
               "key": { "type": "string" },
               "epic": { "type": "string" },
               "phase": { "type": "string" },
               "stage": { "type": "string" },
+              "direction": {
+                "type": ["object", "null"],
+                "additionalProperties": false,
+                "required": ["text", "by", "atMs"],
+                "properties": {
+                  "text": { "type": "string" },
+                  "by": { "type": "string" },
+                  "atMs": { "type": "integer", "minimum": 0 }
+                }
+              },
               "github": {
                 "type": ["object", "null"],
                 "additionalProperties": false,

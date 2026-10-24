@@ -170,6 +170,31 @@ pub(crate) fn answered(world: &mut World, key: &str, by: &str, text: &str) {
   }
 }
 
+/// Journal a message the worker received while `key` had no live item, and
+/// remember it as the issue's last direction.
+pub(crate) fn directed(world: &mut World, key: &str, by: &str, text: &str) {
+  let record = Record::new("prompt", "answer", key, "", text);
+  world.outbox.push_back(Step::Journal(record));
+  let at_ms = world.now_ms;
+  if let Some(issue) = world.issues.get_mut(key) {
+    issue.direction = Some(crate::model::Direction {
+      text: text.to_owned(),
+      by: by.to_owned(),
+      at_ms,
+    });
+  }
+}
+
+/// Whether `key` names an issue whose worker is still running.
+pub(crate) fn has_live_agent(world: &World, key: &str) -> bool {
+  world.issues.get(key).is_some_and(|issue| {
+    !matches!(
+      issue.stage.as_str(),
+      "cleaning" | "cleanup-incomplete" | "merged" | "abandoned"
+    )
+  })
+}
+
 fn due_at(item: &Attention, first_ms: u64) -> Option<u64> {
   let wait = if item.reminders == 0 {
     first_ms

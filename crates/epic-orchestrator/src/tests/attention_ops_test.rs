@@ -36,12 +36,12 @@ fn prompt_scripts(root: &Path, outcome: &str) -> PathBuf {
   scripts
 }
 
-fn engine(root: &Path, outcome: &str) -> Engine {
+pub(crate) fn engine(root: &Path, outcome: &str) -> Engine {
   let scripts = prompt_scripts(root, outcome);
   Engine::open(Paths::at(root), Some(scripts), Fault::None).expect("open")
 }
 
-fn report(engine: &mut Engine, phase: &str) {
+pub(crate) fn report(engine: &mut Engine, phase: &str) {
   let state_dir = engine.paths.root.join("epic").display().to_string();
   engine
     .report(&Report {
@@ -55,17 +55,17 @@ fn report(engine: &mut Engine, phase: &str) {
     .expect("report");
 }
 
-fn answer(engine: &mut Engine, request: &Value) -> Value {
+pub(crate) fn answer(engine: &mut Engine, request: &Value) -> Value {
   let (tx, rx) = channel();
   assert_eq!(reply_answer(engine, request, &tx), Ok(false));
   rx.recv().expect("reply")
 }
 
-fn rows(engine: &Engine) -> Vec<Record> {
+pub(crate) fn rows(engine: &Engine) -> Vec<Record> {
   journal::tail(&engine.paths.journal_dir(), engine.now).expect("tail")
 }
 
-fn prompts(root: &Path) -> Vec<Value> {
+pub(crate) fn prompts(root: &Path) -> Vec<Value> {
   std::fs::read_to_string(root.join("prompts"))
     .unwrap_or_default()
     .lines()
@@ -105,18 +105,6 @@ fn answer_reaches_the_prompt_script_and_the_next_report_closes_it() {
   assert_eq!(closed.token, token);
   let note = closed.note.as_str();
   assert!(note.starts_with("kind=needs-human waited_ms="), "{note}");
-}
-
-#[test]
-fn answer_without_a_live_item_calls_no_prompt() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "sent");
-  let request = json!({"op": "answer", "key": "a", "text": "take B"});
-  assert_eq!(
-    answer(&mut engine, &request),
-    json!({"error": "no open attention for a"})
-  );
-  assert_eq!(prompts(tmp.path()), [] as [Value; 0]);
 }
 
 #[test]

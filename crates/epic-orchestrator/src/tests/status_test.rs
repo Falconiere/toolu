@@ -91,3 +91,16 @@ fn every_live_item_is_listed_with_state_and_age_and_wait_adds_pending() {
   assert_eq!(doc["attention"][0]["age_ms"], 3_000);
   assert!(!doc.to_string().contains("Allow?"));
 }
+
+#[test]
+fn an_issue_entry_shows_its_last_direction() {
+  let mut world = World::new(5);
+  ensure_issue(&mut world, "a", "one", "/epic");
+  assert!(document(&world, true, None)["issues"][0]["direction"].is_null());
+  crate::attention::directed(&mut world, "a", "user", "NEW DIRECTION");
+  let doc = document(&world, true, None);
+  assert_eq!(
+    doc["issues"][0]["direction"],
+    serde_json::json!({"text": "NEW DIRECTION", "by": "user", "atMs": 5})
+  );
+}

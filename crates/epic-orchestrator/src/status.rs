@@ -32,6 +32,11 @@ pub(crate) fn document(world: &World, running: bool, epic: Option<&str>) -> Valu
       "phase": issue.phase,
       "stage": issue.stage,
       "github": pr_times(world, issue),
+      "direction": issue.direction.as_ref().map(|direction| json!({
+        "text": direction.text,
+        "by": direction.by,
+        "atMs": direction.at_ms,
+      })),
     })).collect::<Vec<_>>(),
     "attention": world
       .attention
