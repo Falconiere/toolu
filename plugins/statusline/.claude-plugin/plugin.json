@@ -1,6 +1,6 @@
 {
   "name": "statusline",
-  "version": "8.2.0",
+  "version": "8.3.0",
   "hookProtocol": 2,
   "description": "Native Claude Code statusline and Codex status skills for repository and gate status. Standalone, no dependencies.",
   "author": {
