@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "python-quality",
   "displayName": "python-quality",
-  "version": "8.2.0",
+  "version": "8.3.0",
   "description": "Python PostToolUse quality checks registered into the toolu hook engine.",
   "compat": {
     "source": "native",

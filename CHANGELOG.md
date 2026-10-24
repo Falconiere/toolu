@@ -6,6 +6,26 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.3.0](https://github.com/Falconiere/toolu/compare/v8.2.0...v8.3.0) (2026-10-24)
+
+
+### Features
+
+* **epic:** answer redirects any live worker without an open attention item ([#624](https://github.com/Falconiere/toolu/issues/624)) ([85a896a](https://github.com/Falconiere/toolu/commit/85a896a11e0edebc025a921e3258b528b8225590))
+* **epic:** skill preflight and waiting cover all four hosts ([#621](https://github.com/Falconiere/toolu/issues/621)) ([62dfd02](https://github.com/Falconiere/toolu/commit/62dfd02cfe8858125a7717d465c49f6cb0f2ce71))
+
+
+### Bug Fixes
+
+* **doctor:** warn on retired marketplace plugins and let plugins remove uninstall them ([#627](https://github.com/Falconiere/toolu/issues/627)) ([53d24b8](https://github.com/Falconiere/toolu/commit/53d24b8048dba3c66e7a060b32fd7be36ef06705))
+* **epic:** find Codex sessions filed under the local date ([#629](https://github.com/Falconiere/toolu/issues/629)) ([daf1f55](https://github.com/Falconiere/toolu/commit/daf1f55ad0da57677acbbcb24ca3fcb0271e41a2))
+* **epic:** finish goes through the engine, which never relaunches an abandoned issue ([#628](https://github.com/Falconiere/toolu/issues/628)) ([0e09eeb](https://github.com/Falconiere/toolu/commit/0e09eeb75c25618d49af52f531a80c77bd0c7311))
+* **epic:** retry a busy pane on agent start instead of leaving the launch uncertain ([#622](https://github.com/Falconiere/toolu/issues/622)) ([136898b](https://github.com/Falconiere/toolu/commit/136898b97ce797a73be7a3b89d3a8262179345fc))
+* **epic:** retry a post-merge teardown while the agent is still exiting ([#623](https://github.com/Falconiere/toolu/issues/623)) ([9e264f4](https://github.com/Falconiere/toolu/commit/9e264f4626eb66a2d0b482e1e7263faf7eb773fb))
+* **epic:** stop babysitting merged pull requests ([#611](https://github.com/Falconiere/toolu/issues/611)) ([2b464d3](https://github.com/Falconiere/toolu/commit/2b464d367ddfcbd13d0f4bca61210692dadb9221))
+* **epic:** wait instead of failing a launch refused by a resource hold ([#617](https://github.com/Falconiere/toolu/issues/617)) ([0794c0d](https://github.com/Falconiere/toolu/commit/0794c0d894e3628e2e1345871a43299e6bc1c199))
+* **plugins:** pin Codex's toolu marketplace to the release tag; a launch over Codex's hook review is needs-human ([#630](https://github.com/Falconiere/toolu/issues/630)) ([40cca50](https://github.com/Falconiere/toolu/commit/40cca502074f765ed48b1c8a128287898e707264))
+
 ## [8.2.0](https://github.com/Falconiere/toolu/compare/v8.1.4...v8.2.0) (2026-10-24)
 
 
