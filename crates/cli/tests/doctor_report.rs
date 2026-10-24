@@ -152,12 +152,29 @@ fn codex_lists_the_stub() {
 }
 
 #[test]
-fn cursor_warns_that_plugin_inventory_is_unknown() {
+fn cursor_lists_the_plugins_toolu_installed_and_the_ones_its_cache_holds() {
+  let home = tempfile::tempdir().unwrap();
+  let local = copy_plugin("toolu", &home.path().join(".cursor/plugins/local")).unwrap();
+  std::fs::write(local.join(".toolu-install.json"), "{}").unwrap();
+  let cursor = parsed(&doctor(home.path(), "cursor", &shell_path(None)).unwrap()).unwrap();
+  let plugins = check(&cursor, "plugins").unwrap();
+  assert_eq!(plugins["status"], "ok");
+  assert_eq!(plugins["details"]["plugins"][0]["name"], "toolu");
+  assert_eq!(plugins["details"]["plugins"][0]["version"], VERSION);
+}
+
+#[test]
+fn cursor_without_plugins_says_none_are_installed_not_that_it_is_unknown() {
   let home = tempfile::tempdir().unwrap();
   let cursor = parsed(&doctor(home.path(), "cursor", &shell_path(None)).unwrap()).unwrap();
   let plugins = check(&cursor, "plugins").unwrap();
   assert_eq!(plugins["status"], "warn");
-  assert!(plugins["summary"].as_str().unwrap().contains("unknown"));
+  assert!(
+    plugins["summary"]
+      .as_str()
+      .unwrap()
+      .contains("no toolu plugin")
+  );
 }
 
 #[test]

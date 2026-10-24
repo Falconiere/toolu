@@ -1,7 +1,8 @@
-//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|both]`: a live
-//! smoke of the native toolu hooks in real Claude Code, Codex and Muse sessions
-//! (`both`, the default, means all three), with no `bun` on the children's `PATH`.
-//! Claude Code and Codex run on macOS only; Muse on any Unix (#552). Per host it
+//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|cursor|both]`: a live
+//! smoke of the native toolu hooks in real Claude Code, Codex, Muse and Cursor sessions
+//! (`both`, the default, means Claude Code, Codex and Muse; Cursor is asked for by
+//! name), with no `bun` on the children's `PATH`.
+//! Claude Code and Codex run on macOS only; Muse and Cursor on any Unix (#552, #589). Per host it
 //! checks that a protected `.env` write
 //! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality
 //! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
@@ -17,6 +18,7 @@ use std::path::{Path, PathBuf};
 
 use crate::host_smoke_claude::Claude;
 use crate::host_smoke_codex::{Codex, private_home};
+use crate::host_smoke_cursor::Cursor;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_muse::{self as muse, Muse};
 use crate::host_smoke_project::{create, create_push};
@@ -32,6 +34,7 @@ pub(crate) enum Host {
   Claude,
   Codex,
   Muse,
+  Cursor,
 }
 
 impl Host {
@@ -40,26 +43,30 @@ impl Host {
       Host::Claude => "claude",
       Host::Codex => "codex",
       Host::Muse => "muse",
+      Host::Cursor => "cursor",
     }
   }
 }
 
-/// The hosts `--host` names; all three for `both` or when it is absent.
+/// The hosts `--host` names; Claude Code, Codex and Muse for `both` or when it is absent.
 pub(crate) fn hosts(arg: Option<&str>) -> Result<Vec<Host>, String> {
   match arg {
     None | Some("both") => Ok(vec![Host::Claude, Host::Codex, Host::Muse]),
     Some("claude") => Ok(vec![Host::Claude]),
     Some("codex") => Ok(vec![Host::Codex]),
     Some("muse") => Ok(vec![Host::Muse]),
+    Some("cursor") => Ok(vec![Host::Cursor]),
     Some(other) => Err(format!(
-      "--host must be claude, codex, muse or both, not {other}"
+      "--host must be claude, codex, muse, cursor or both, not {other}"
     )),
   }
 }
 
 /// `Ok` when every host in `hosts` runs on `os`: Claude Code and Codex need macOS.
 pub(crate) fn require_platform(hosts: &[Host], os: &str) -> Result<(), String> {
-  let needs_macos = hosts.iter().any(|host| *host != Host::Muse);
+  let needs_macos = hosts
+    .iter()
+    .any(|host| !matches!(host, Host::Muse | Host::Cursor));
   if needs_macos && os != "macos" {
     return Err("live Claude Code and Codex smoke requires macOS".to_owned());
   }
@@ -104,6 +111,7 @@ struct Plan {
   claude: Option<PathBuf>,
   codex: Option<(PathBuf, PathBuf)>,
   muse: Option<(PathBuf, PathBuf)>,
+  cursor: Option<PathBuf>,
 }
 
 /// The Muse CLI and credential, when Muse is planned and no fixed-directory
@@ -140,6 +148,10 @@ fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
     .contains(&Host::Muse)
     .then(|| muse_plan(&env, &bin))
     .transpose()?;
+  let cursor = hosts
+    .contains(&Host::Cursor)
+    .then(|| env.tool("cursor-agent"))
+    .transpose()?;
   Ok(Plan {
     hosts,
     repo: options.root.clone(),
@@ -148,6 +160,7 @@ fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
     claude,
     codex,
     muse,
+    cursor,
   })
 }
 
@@ -208,6 +221,16 @@ fn drive_host(plan: &Plan, host: Host, root: &Path) -> Vec<String> {
   let run = |driver: &dyn Driver, env: &ChildEnv| sweep(driver, &Run { root, env });
   let repo = plan.repo.clone();
   match (host, &plan.claude, &plan.codex, &plan.muse) {
+    (Host::Cursor, ..) => match &plan.cursor {
+      Some(exe) => run(
+        &Cursor {
+          exe: exe.clone(),
+          repo,
+        },
+        &plan.env,
+      ),
+      None => vec!["cursor: cursor-agent not planned".to_owned()],
+    },
     (Host::Claude, Some(exe), _, _) => run(
       &Claude {
         exe: exe.clone(),

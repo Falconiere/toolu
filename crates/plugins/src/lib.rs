@@ -11,6 +11,7 @@ use toolu_runtime::env::Env;
 
 mod args;
 mod catalog;
+mod cursor;
 mod dispatch;
 mod fail;
 mod host;

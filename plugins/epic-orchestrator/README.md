@@ -41,9 +41,14 @@ npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
 
 ### Cursor Agent
 
-Install the toolu marketplace plugin the same way as Claude Code (Cursor loads
-the Claude-shaped plugin tree). Then invoke the `epic-orchestrator` skill or
-the `/epic-orchestrator:epic` command.
+```bash
+npx @toolu/plugins install delivery-flow epic-orchestrator --host cursor
+```
+
+Cursor has no plugin install command, so this copies the plugins into
+`~/.cursor/plugins/local` (see [the installer guide](../../docs/cli/installer.md#cursor));
+`toolu --host cursor doctor` checks them. Then invoke the `epic-orchestrator`
+skill or the `/epic-orchestrator:epic` command.
 
 The orchestrator waits for judgments with `toolu epic wait --epic <epic-key>`:
 on Claude Code as a background Bash call (45-minute default limit) that wakes

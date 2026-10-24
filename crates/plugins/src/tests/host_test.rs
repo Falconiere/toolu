@@ -6,21 +6,20 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_are_claude_codex_and_muse() {
+fn installer_targets_are_claude_codex_muse_and_cursor() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
   assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
-  for host in [Host::Cursor, Host::Hermes] {
-    let Err(fail) = target_of(host) else {
-      panic!("{} was accepted", host.name());
-    };
-    assert_eq!(fail.exit, Exit::Usage);
-    assert!(
-      fail.message.contains("claude, codex or muse"),
-      "{}",
-      fail.message
-    );
-  }
+  assert_eq!(target_of(Host::Cursor), Ok(Target::Cursor));
+  let Err(fail) = target_of(Host::Hermes) else {
+    panic!("hermes was accepted");
+  };
+  assert_eq!(fail.exit, Exit::Usage);
+  assert!(
+    fail.message.contains("claude, codex, muse or cursor"),
+    "{}",
+    fail.message
+  );
 }
 
 #[test]

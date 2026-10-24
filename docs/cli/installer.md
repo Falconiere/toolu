@@ -6,9 +6,10 @@ package that runs it. The generated reference of every verb and flag is
 [plugins.md](plugins.md). The [README](../../README.md#install) install snippets
 use these commands.
 
-Claude Code, Codex and Muse are the supported hosts, driven through their own
-plugin CLIs. The code is `crates/plugins` (`toolu-plugins`); Muse is
-[below](#muse).
+Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has
+none, so toolu copies plugins into its local plugins directory. The code is
+`crates/plugins` (`toolu-plugins`); Muse is [below](#muse) and Cursor
+[after it](#cursor).
 
 Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
@@ -116,8 +117,8 @@ toolu plugins update [name...]    Update only what is behind the marketplace
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex` or `muse`. Detected when omitted (probed in that order). `cursor` and `hermes` are not installer targets and exit `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex or Muse exits `64`. |
+| `--host <id>` | `claude`, `codex`, `muse` or `cursor`. Detected when omitted (probed in the order claude, codex, muse; Cursor is never probed, so name it with `--host cursor`). `hermes` is not an installer target and exits `64`. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. The npm wrapper passes its own. |
@@ -209,7 +210,7 @@ The run installs `enabled` with its dependencies, as if the names had been
 given, and an empty list installs nothing. `version` is the file format: an
 unknown or missing value exits `64` rather than being guessed at.
 `generatorVersion` records the CLI that wrote the file, and a file from a newer
-major exits `64` with both versions named. `host` (`claude`, `codex` or `muse`)
+major exits `64` with both versions named. `host` (`claude`, `codex`, `muse` or `cursor`)
 is used when `--host` is absent; `--host` wins. A file that is missing, is not JSON or is malformed also
 exits `64`. Nothing writes this file. The TypeScript installer parsed
 `--config` but never read it.
@@ -255,3 +256,30 @@ as the marketplace `toolu` (the #541 decision,
   failed step per plugin with Muse's `not available in marketplace` line.
 - `--dry-run` runs no `git` and changes no marketplace; it prints the plugin
   commands, as for the other hosts.
+
+## Cursor
+
+`toolu plugins … --host cursor` (#589). `cursor-agent plugin` manages only
+marketplaces, and `/plugin` records installs on the account, so there is no
+command to drive. Cursor does load any plugin directory under
+`~/.cursor/plugins/local`, and runs the Claude-format `hooks/hooks.json` inside
+it. So the verbs work on the filesystem, and need neither `cursor-agent` nor
+its keychain login:
+
+- **The checkout** is `$XDG_DATA_HOME/toolu/cursor-marketplace` (else
+  `~/.local/share/toolu/cursor-marketplace`): a shallow clone of the release tag
+  that matches the binary, as for Muse but in its own directory.
+- **`install`** copies `plugins/<name>/` from it into
+  `<cursor config>/plugins/local/<name>`, dependencies first, and writes
+  `.toolu-install.json` there (tag and version). `list` reads those markers,
+  `update` moves a plugin to the binary's tag, `remove --yes` deletes it.
+  The cursor config is `~/.cursor`, or `TOOLU_CONFIG_DIR` when set.
+- **Plugins that are not toolu's.** A directory without the marker is reported
+  as `skew` and never touched.
+- **Failures before any copy** (no `git`, a missing tag, a checkout from
+  another origin) exit `1` and leave Cursor unchanged. `--dry-run` clones and
+  copies nothing.
+- A plugin installed through Cursor's own marketplace is cached at
+  `~/.cursor/plugins/cache/toolu/<plugin>/<rev>`; `toolu doctor --host cursor`
+  lists both kinds, and Cursor also runs plugins installed for Claude Code under
+  `~/.claude`, so install in one place only.

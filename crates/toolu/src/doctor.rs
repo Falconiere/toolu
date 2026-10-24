@@ -8,6 +8,7 @@ use toolu_runtime::config::secrets::{self, Secrets};
 mod binary;
 mod checks;
 mod config_check;
+mod cursor;
 mod inventory;
 mod muse;
 mod registry_check;

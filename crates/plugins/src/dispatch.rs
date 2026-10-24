@@ -10,6 +10,7 @@ use toolu_runtime::env::Env;
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
 use crate::catalog::order::install_order;
+use crate::cursor::{self, Cursor};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::checkout::Checkout;
@@ -56,6 +57,8 @@ fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
       Adapter::Muse,
       Some(Checkout::locate(&cx.env, cx.version, &cx.origin)?),
     ),
+    // Cursor has no plugin CLI; every verb branches to `crate::cursor` before here.
+    Target::Cursor => return Err(Fail::failed("cursor has no plugin command to drive")),
   };
   Ok(Driver {
     adapter,
@@ -181,8 +184,13 @@ fn install(
     let steps = if nothing {
       Vec::new()
     } else {
-      let driver = driver(target, request, cx)?;
-      verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
+      match target {
+        Target::Cursor => cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)?,
+        Target::Claude | Target::Codex | Target::Muse => {
+          let driver = driver(target, request, cx)?;
+          verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
+        }
+      }
     };
     sections.push((target, steps));
   }
@@ -214,11 +222,14 @@ fn remove(
   }
   let target = one_host(request, wanted, cx)?;
   install_order(catalog, &request.names)?;
-  let steps = verbs::remove::run(
-    &driver(target, request, cx)?,
-    &request.names,
-    request.dry_run,
-  );
+  let steps = match target {
+    Target::Cursor => cursor::remove(&Cursor::new(cx)?, &request.names, request.dry_run),
+    Target::Claude | Target::Codex | Target::Muse => verbs::remove::run(
+      &driver(target, request, cx)?,
+      &request.names,
+      request.dry_run,
+    ),
+  };
   Ok(Report {
     text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
     json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
@@ -233,7 +244,12 @@ fn list(
   cx: &mut Context<'_>,
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
-  let rows = verbs::list::run(&driver(target, request, cx)?, catalog)?;
+  let rows = match target {
+    Target::Cursor => cursor::list(&Cursor::new(cx)?, catalog),
+    Target::Claude | Target::Codex | Target::Muse => {
+      verbs::list::run(&driver(target, request, cx)?, catalog)?
+    }
+  };
   Ok(Report {
     text: report::list(&rows),
     json: report::rows_json(&rows),
@@ -249,11 +265,14 @@ fn update(
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
   install_order(catalog, &request.names)?;
-  let steps = verbs::update::run(
-    &driver(target, request, cx)?,
-    &request.names,
-    request.dry_run,
-  )?;
+  let steps = match target {
+    Target::Cursor => cursor::update(&Cursor::new(cx)?, &request.names, request.dry_run)?,
+    Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
+      &driver(target, request, cx)?,
+      &request.names,
+      request.dry_run,
+    )?,
+  };
   Ok(Report {
     text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
     json: report::host_json(target, &steps, false),

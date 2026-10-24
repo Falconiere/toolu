@@ -137,6 +137,45 @@ impl Sandbox {
     format!("file://{dir}")
   }
 
+  /// A toolu origin repository whose `plugins/` holds real copies of the
+  /// `toolu` and `ast-grep` plugins (the cursor installer's source); commits and
+  /// tags `tag`, setting every plugin's version to `version` when given.
+  pub(crate) fn cursor_origin(&self, tag: &str, version: Option<&str>) -> String {
+    let dir = self.path("origin");
+    if !dir.join(".git").is_dir() {
+      self.git(&["init", "--quiet", &dir.display().to_string()]);
+      for name in ["toolu", "ast-grep"] {
+        let from = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+          .join("../../plugins")
+          .join(name);
+        copy_tree(&from, &dir.join("plugins").join(name));
+      }
+    }
+    if let Some(version) = version {
+      for name in ["toolu", "ast-grep"] {
+        let manifest = dir
+          .join("plugins")
+          .join(name)
+          .join(".claude-plugin/plugin.json");
+        let json: serde_json::Value =
+          serde_json::from_str(&std::fs::read_to_string(&manifest).expect("manifest"))
+            .expect("json");
+        let mut json = json;
+        json["version"] = serde_json::Value::String(version.to_owned());
+        std::fs::write(&manifest, json.to_string()).expect("write manifest");
+      }
+    }
+    self.write(
+      "origin/.agents/plugins/marketplace.json",
+      &format!("{{\"tag\":\"{tag}\"}}"),
+    );
+    let at = dir.display().to_string();
+    self.git(&["-C", &at, "add", "--all"]);
+    self.git(&["-C", &at, "commit", "--quiet", "-m", tag]);
+    self.git(&["-C", &at, "tag", tag]);
+    format!("file://{at}")
+  }
+
   /// A Muse driver whose checkout follows `version` from `origin`.
   pub(crate) fn muse_driver(&self, version: &str, origin: &str, approval: Approval) -> Driver {
     Driver {
@@ -213,4 +252,17 @@ pub(crate) fn muse_output(name: &str) -> String {
     .find(|case| case["name"] == name)
     .unwrap_or_else(|| panic!("no Muse case {name}"));
   case["stdout"].to_string()
+}
+
+fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
+  std::fs::create_dir_all(to).expect("dir");
+  for entry in std::fs::read_dir(from).expect("read") {
+    let entry = entry.expect("entry");
+    let target = to.join(entry.file_name());
+    if entry.path().is_dir() {
+      copy_tree(&entry.path(), &target);
+    } else {
+      std::fs::copy(entry.path(), target).expect("copy");
+    }
+  }
 }

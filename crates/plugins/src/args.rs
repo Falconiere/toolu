@@ -85,7 +85,8 @@ pub(crate) enum Approval {
 
 const ABOUT: &str = "Install, list, remove and update toolu plugins on every host";
 
-const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs. \
+const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs; \
+  Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. \
   The npm package @toolu/plugins (`npx @toolu/plugins install`) runs these verbs; \
   its guide is docs/cli/installer.md.";
 

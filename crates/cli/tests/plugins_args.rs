@@ -154,12 +154,12 @@ fn no_input_with_two_hosts_names_both_and_never_prompts() {
 #[test]
 fn unsupported_hosts_and_unconfirmed_removals_are_usage_errors() {
   let sb = Sb::new().unwrap();
-  let cursor = sb.run(&["--host", "cursor", "plugins", "list"]).unwrap();
-  assert_eq!(cursor.status.code(), Some(64));
+  let hermes = sb.run(&["--host", "hermes", "plugins", "list"]).unwrap();
+  assert_eq!(hermes.status.code(), Some(64));
   assert!(
-    stderr(&cursor).contains("not an installer target"),
+    stderr(&hermes).contains("not an installer target"),
     "{}",
-    stderr(&cursor)
+    stderr(&hermes)
   );
   let json = sb
     .run(&["--json", "--host", "hermes", "plugins", "list"])

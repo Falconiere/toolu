@@ -16,8 +16,11 @@ pub(crate) const ORIGIN: &str = "https://github.com/Falconiere/toolu.git";
 /// The catalog Muse reads from a toolu checkout; its presence marks one.
 pub(crate) const CATALOG: &str = ".agents/plugins/marketplace.json";
 
-/// The checkout directory under the data home.
+/// The checkout directory of Muse under the data home.
 const SUBDIR: &str = "toolu/muse-marketplace";
+
+/// The checkout directory of Cursor's installer under the data home (#589).
+pub(crate) const CURSOR_SUBDIR: &str = "toolu/cursor-marketplace";
 
 /// The checkout of one release.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,6 +38,11 @@ impl Checkout {
   /// `XDG_DATA_HOME` (a relative one is ignored, as the XDG spec says), else
   /// under `$HOME/.local/share`.
   pub(crate) fn locate(env: &Env, version: &str, origin: &str) -> Res<Checkout> {
+    Checkout::locate_in(env, version, origin, SUBDIR)
+  }
+
+  /// [`Checkout::locate`] for the data-home directory `subdir`.
+  pub(crate) fn locate_in(env: &Env, version: &str, origin: &str, subdir: &str) -> Res<Checkout> {
     let xdg = env
       .get("XDG_DATA_HOME")
       .map(PathBuf::from)
@@ -44,11 +52,11 @@ impl Checkout {
       .map(|home| Path::new(home).join(".local/share"));
     let Some(data) = xdg.or(home) else {
       return Err(Fail::failed(
-        "cannot place the Muse marketplace checkout: set XDG_DATA_HOME or HOME",
+        "cannot place the marketplace checkout: set XDG_DATA_HOME or HOME",
       ));
     };
     Ok(Checkout {
-      dir: data.join(SUBDIR),
+      dir: data.join(subdir),
       tag: format!("v{version}"),
       origin: origin.to_owned(),
     })

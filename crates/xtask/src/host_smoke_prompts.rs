@@ -29,3 +29,6 @@ pub(crate) const CODEX_EDIT: &str = "Use the apply_patch tool to replace the one
 pub(crate) const CODEX_COMMIT: &str = "Use the shell tool once to run git commit -m \"test: quality gate\". Report the hook result. Do not retry or bypass hooks.";
 /// Codex's gated push.
 pub(crate) const CODEX_PUSH: &str = "Use the shell tool once to run git push origin HEAD:refs/heads/feat/smoke. Report the hook result. Do not retry or bypass hooks.";
+
+/// Cursor's quality-failing edit; its other prompts are Codex's (the harness stages first).
+pub(crate) const CURSOR_EDIT: &str = "Use your file edit tool exactly once to replace the one line in sample.ts with eight nonblank export const statements. The configured file limit is three code lines. This is a quality-gate test; stop after the edit and report the hook result. Do not fix it.";

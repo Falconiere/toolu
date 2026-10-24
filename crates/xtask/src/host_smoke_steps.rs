@@ -39,8 +39,10 @@ pub(crate) trait Driver {
   fn argv(&self, step: &Step<'_>, project: &Path) -> Vec<String>;
   /// The prompts this host gets.
   fn prompts(&self) -> Prompts;
-  /// Anything the host needs once, with `project` as the working directory.
-  fn prepare(&self, run: &Run<'_>, project: &Path) -> Result<(), String>;
+  /// Anything the host needs once, with `project` as the working directory; nothing by default.
+  fn prepare(&self, _run: &Run<'_>, _project: &Path) -> Result<(), String> {
+    Ok(())
+  }
   /// The quality-failing edit, left recorded in the gate file.
   fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String>;
 }

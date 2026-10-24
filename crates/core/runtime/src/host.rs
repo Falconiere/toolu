@@ -3,6 +3,7 @@
 //! plugin roots, the host-native invocation and install commands, and the Codex
 //! plugin snapshot. Every function reads an explicit [`crate::env::Env`].
 
+pub mod cursor;
 pub mod detect;
 pub mod roots;
 pub mod snapshot;

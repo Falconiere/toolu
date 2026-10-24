@@ -50,11 +50,16 @@ pub(crate) fn cmd(
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
       .spawn()?;
-    child
+    let mut stdin = child
       .stdin
       .take()
-      .ok_or_else(|| std::io::Error::other("toolu has no stdin"))?
-      .write_all(text.as_bytes())?;
+      .ok_or_else(|| std::io::Error::other("toolu has no stdin"))?;
+    // A hook that never reads its payload may exit first; that is not a failure.
+    match stdin.write_all(text.as_bytes()) {
+      Err(err) if err.kind() != std::io::ErrorKind::BrokenPipe => return Err(err.into()),
+      Ok(()) | Err(_) => {}
+    }
+    drop(stdin);
     Ok(child.wait_with_output()?)
   } else {
     Ok(command.output()?)
