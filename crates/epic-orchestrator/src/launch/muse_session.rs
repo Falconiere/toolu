@@ -9,9 +9,7 @@ use std::path::{Path, PathBuf};
 use serde_json::Value;
 use toolu_runtime::env::Env;
 
-use super::session::{MAX_FILES, day_dir, fresh_head, one, records, valid_id, vanished};
-
-const DAY_MS: u64 = 86_400_000;
+use super::session::{MAX_FILES, day_dirs, fresh_head, one, records, valid_id, vanished};
 
 /// Muse's data root: `$XDG_DATA_HOME/muse`, else `~/.local/share/muse`.
 pub(crate) fn data_root(env: &Env) -> PathBuf {
@@ -37,16 +35,8 @@ fn metadata_session(entry: &Value, worktree: &str) -> Option<String> {
 /// The session directories of the days around `since` (the day folders may be
 /// local time); `None` past [`MAX_FILES`].
 fn session_dirs(root: &Path, since: u64) -> Result<Option<Vec<PathBuf>>, String> {
-  let days: BTreeSet<PathBuf> = [
-    since.saturating_sub(DAY_MS),
-    since,
-    since.saturating_add(DAY_MS),
-  ]
-  .into_iter()
-  .map(|at| day_dir(root, at))
-  .collect();
   let mut dirs = Vec::new();
-  for day in days {
+  for day in day_dirs(root, &[since]) {
     let entries = match std::fs::read_dir(&day) {
       Ok(entries) => entries,
       Err(err) if vanished(&err) => continue,

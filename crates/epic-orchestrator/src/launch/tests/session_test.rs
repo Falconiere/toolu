@@ -1,10 +1,10 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use serde_json::json;
 use toolu_runtime::env::Env;
 
-use super::{await_session, capture_session, require_captured_session};
+use super::{MAX_FILES, await_session, capture_session, require_captured_session};
 use crate::hosts::HostKind::{Claude, Codex, Cursor};
 use crate::launch::digest::md5_hex;
 
@@ -26,13 +26,18 @@ fn env(pairs: &[(&str, String)]) -> Env {
   env
 }
 
-fn codex_session(root: &Path, worktree: &str, at: u64, id: &str) {
+/// `<root>/sessions/<yyyy>/<mm>/<dd>` for the UTC date of `at` (epoch ms).
+fn codex_day(root: &Path, at: u64) -> PathBuf {
   let day = toolu_state::time::iso_seconds(SystemTime::UNIX_EPOCH + Duration::from_millis(at));
-  let dir = day
+  day
     .get(..10)
     .expect("date")
     .split('-')
-    .fold(root.join("sessions"), |dir, part| dir.join(part));
+    .fold(root.join("sessions"), |dir, part| dir.join(part))
+}
+
+fn codex_session(root: &Path, worktree: &str, at: u64, id: &str) {
+  let dir = codex_day(root, at);
   std::fs::create_dir_all(&dir).expect("dir");
   let line = json!({"type": "session_meta", "payload": {"id": id, "cwd": worktree}});
   std::fs::write(dir.join(format!("{id}.jsonl")), format!("{line}\n")).expect("session");
@@ -134,12 +139,7 @@ fn codex_metadata_attests_one_session_and_never_guesses() {
     capture_session(Codex, &wt, since, &env),
     Ok(Some(FIRST.to_owned()))
   );
-  let day = toolu_state::time::iso_seconds(SystemTime::UNIX_EPOCH + Duration::from_millis(since));
-  let dir = day
-    .get(..10)
-    .expect("date")
-    .split('-')
-    .fold(root.join("sessions"), |dir, part| dir.join(part));
+  let dir = codex_day(&root, since);
   std::os::unix::fs::symlink(root.join("rotated.jsonl"), dir.join("rotated.jsonl"))
     .expect("dangling");
   assert_eq!(
@@ -148,6 +148,51 @@ fn codex_metadata_attests_one_session_and_never_guesses() {
   );
   codex_session(&root, &wt, since, SECOND);
   assert_eq!(capture_session(Codex, &wt, since, &env), Ok(None));
+}
+
+/// Codex files a session under its local date, which is the UTC date one day
+/// before (west of UTC late in the day) or after (far east) the launch.
+#[test]
+fn codex_capture_finds_a_session_filed_under_a_local_date() {
+  const DAY: u64 = 86_400_000;
+  for at in [since() - DAY, since() + DAY] {
+    let tmp = tempfile::tempdir().expect("temp");
+    let (since, wt) = (since(), tmp.path().join("project").display().to_string());
+    let root = tmp.path().join("codex");
+    let env = env(&[("CODEX_HOME", root.display().to_string())]);
+    codex_session(&root, &wt, at, FIRST);
+    assert_eq!(
+      capture_session(Codex, &wt, since, &env),
+      Ok(Some(FIRST.to_owned()))
+    );
+    codex_session(&root, &wt, since, SECOND);
+    assert_eq!(capture_session(Codex, &wt, since, &env), Ok(None));
+  }
+}
+
+/// Older rollouts across the day window never count toward the file cap.
+#[test]
+fn codex_capture_ignores_older_rollouts_past_the_file_cap() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let (since, wt) = (since(), tmp.path().join("project").display().to_string());
+  let root = tmp.path().join("codex");
+  let env = env(&[("CODEX_HOME", root.display().to_string())]);
+  let old = SystemTime::UNIX_EPOCH + Duration::from_millis(since - 3_600_000);
+  for n in 0..=MAX_FILES {
+    let id = format!("0199a272-0b4e-7cc3-8c4f-{n:012}");
+    codex_session(&root, &wt, since, &id);
+    std::fs::File::options()
+      .write(true)
+      .open(codex_day(&root, since).join(format!("{id}.jsonl")))
+      .and_then(|file| file.set_modified(old))
+      .expect("age");
+  }
+  assert_eq!(capture_session(Codex, &wt, since, &env), Ok(None));
+  codex_session(&root, &wt, since, FIRST);
+  assert_eq!(
+    capture_session(Codex, &wt, since, &env),
+    Ok(Some(FIRST.to_owned()))
+  );
 }
 
 #[test]
