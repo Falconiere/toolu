@@ -1,6 +1,6 @@
 {
   "name": "ts-quality",
-  "version": "8.1.4",
+  "version": "8.2.0",
   "hookProtocol": 2,
   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
   "author": {

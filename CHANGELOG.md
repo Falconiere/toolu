@@ -6,6 +6,25 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.2.0](https://github.com/Falconiere/toolu/compare/v8.1.4...v8.2.0) (2026-10-24)
+
+
+### Features
+
+* **epic:** run workers on Muse Code ([#607](https://github.com/Falconiere/toolu/issues/607)) ([2d9e985](https://github.com/Falconiere/toolu/commit/2d9e985245a14061b1bc266f90bca4a77024f48e))
+* **plugins:** ship the native binaries inside @toolu/plugins ([#610](https://github.com/Falconiere/toolu/issues/610)) ([d7d8cf0](https://github.com/Falconiere/toolu/commit/d7d8cf0f4054a5f04eb5e909877eac06d2e7e832))
+* **plugins:** support Cursor as an epic worker host ([#600](https://github.com/Falconiere/toolu/issues/600)) ([bd91ef5](https://github.com/Falconiere/toolu/commit/bd91ef512155091102c19a307ce980670ce248dc))
+* **pr-babysit:** run fixers on Muse Code ([#609](https://github.com/Falconiere/toolu/issues/609)) ([acf3211](https://github.com/Falconiere/toolu/commit/acf321104f731ce3439f1287c015be0b27737367))
+
+
+### Bug Fixes
+
+* **epic:** abandon a launch that died before its worktree existed ([#596](https://github.com/Falconiere/toolu/issues/596)) ([43d1f08](https://github.com/Falconiere/toolu/commit/43d1f08ef84fde0e2343e38b96013bdfc0bd6078))
+* **epic:** install a runnable user service unit ([#598](https://github.com/Falconiere/toolu/issues/598)) ([6f9b914](https://github.com/Falconiere/toolu/commit/6f9b91452b1ba80f4b3dd900aa0d2a77616db949))
+* **epic:** resolve clone_root from known roots and clone a shared repo once ([#595](https://github.com/Falconiere/toolu/issues/595)) ([e5373f1](https://github.com/Falconiere/toolu/commit/e5373f1197403fed45575ff72a7448de9dcc0bf9))
+* **epic:** scope epic wait to one epic and keep delivered items across restarts ([#602](https://github.com/Falconiere/toolu/issues/602)) ([52d2812](https://github.com/Falconiere/toolu/commit/52d2812db57373bce13343973d99268cd72fb8d8))
+* **resources:** explain regular lock files ([#608](https://github.com/Falconiere/toolu/issues/608)) ([86a1fab](https://github.com/Falconiere/toolu/commit/86a1fabe01133391a3c00241c2efef1a2c112e2e))
+
 ## [8.1.4](https://github.com/Falconiere/toolu/compare/v8.1.3...v8.1.4) (2026-10-23)
 
 
