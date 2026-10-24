@@ -44,6 +44,12 @@ and waits for the engine to launch it again, with no `--replace`.
   workspace-trust prompt for this worktree; otherwise ask the user.
 - **`agent_prompt_stalled`:** this does not prove the prompt was lost. `herdr
   agent read` it before sending anything again.
+- **`needs-human`, note `codex is waiting on its hook review in pane <pane>`:**
+  the worker sits on Codex's hook review, which the launch read from its pane.
+  Review and trust the hooks in that pane (`t` trusts all), then
+  `toolu epic launch … --replace`. If every Codex launch stops there, run
+  `toolu plugins update --host codex`: a marketplace that follows `main` asks
+  for the review again after each merge.
 - **Name collision** (`<key>` is live in another pane): `herdr agent get
   <key>`. Reuse it only if host, pane, worktree and captured session match.
 

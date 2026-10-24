@@ -45,6 +45,10 @@ fix.
    - A `warn plugins` line means the plugins' hooks won't run, and the line
      names its fix. An unapproved Muse plugin, for example, prints
      `warn plugins: toolu capabilities need approval; muse plugins approve toolu`.
+     A Codex marketplace that follows `main` prints `warn plugins: the Codex
+     marketplace toolu follows its default branch, …; toolu plugins update
+     --host codex`: Codex would ask to review toolu's hooks again after every
+     merge, and a worker stops at that review.
    - Doctor exits 0 on a warning, so read the lines, not the exit code.
    - A `fail skew` line that names only plugins outside those five is a note,
      not a stop. Those are retired plugins, such as `context7`.

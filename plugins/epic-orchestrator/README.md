@@ -261,7 +261,9 @@ Routes are preferences, not reservations. Cached routes count against each batch
 and are revalidated against the current pool; `NONE` refuses launch, including
 `--force`. Launch reserves shared capacity before creating a workspace or
 starting an agent. Start/prompt uncertainty retains ownership and requires
-inspection before explicit `--reprompt` or `--replace`.
+inspection before explicit `--reprompt` or `--replace`. A failed launch whose
+agent sits on Codex's hook review is `needs-human`, naming the screen and pane
+(#626), not `failed`.
 Replacement reserves its destination before stopping the source; both host slots
 remain occupied until source shutdown is verified. Cleanup stages cannot be
 reopened by a launch retry. Malformed saved routes, pools and ownership records
