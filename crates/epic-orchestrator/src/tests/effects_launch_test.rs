@@ -1,6 +1,6 @@
 use serde_json::Value;
 
-use super::{LaunchJob, job};
+use super::{LaunchJob, job, waits};
 use crate::paths::Paths;
 
 fn launch(state: &std::path::Path, key: &str, ahead: &[&str]) -> Value {
@@ -152,4 +152,13 @@ fn a_no_jev_epic_never_asks_jev_even_with_a_key() {
   };
   crate::epics::write_launch_settings(tmp.path(), settings).expect("settings");
   assert!(!super::jev_allowed(&job_input));
+}
+
+#[test]
+fn a_resource_hold_refusal_waits() {
+  assert!(waits(
+    "resource hold: sustained CPU/load or memory pressure"
+  ));
+  assert!(waits("job capacity exhausted (1)"));
+  assert!(!waits("boom"));
 }

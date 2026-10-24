@@ -49,9 +49,11 @@ fn failed(note: &str, stage: Option<&str>) -> Value {
   json!({"outcome": "failed", "note": note, "stage": stage})
 }
 
-/// Whether a launch refusal only waits for capacity.
+/// Whether a launch refusal only waits for capacity or for a resource hold to clear.
 fn waits(message: &str) -> bool {
-  message.contains("capacity exhausted") || message.contains("no host capacity")
+  message.contains("capacity exhausted")
+    || message.contains("no host capacity")
+    || message.contains("resource hold:")
 }
 
 /// Whether this launch may ask Jev: a key is set and the epic was not started
