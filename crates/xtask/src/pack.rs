@@ -57,20 +57,16 @@ fn plugins_package() -> Expectation {
   Expectation {
     name: "@toolu/plugins",
     dir: "tools/toolu-cli/npm",
-    required: owned(&[
-      "package.json",
-      "README.md",
-      "LICENSE",
-      "assets/marketplace.json",
-      "cli.js",
-    ]),
-    optional: owned(&[
-      "bin/darwin-arm64/toolu",
-      "bin/darwin-amd64/toolu",
-      "bin/linux-amd64/toolu",
-      "bin/linux-arm64/toolu",
-    ]),
-    forbidden: &["plugins/", "src/", "node_modules/", ".env"],
+    required: owned(&["package.json", "README.md", "LICENSE", "cli.js"]),
+    optional: Vec::new(),
+    forbidden: &[
+      "plugins/",
+      "src/",
+      "node_modules/",
+      ".env",
+      "bin/",
+      "assets/",
+    ],
     patterns: PLUGINS_PATTERNS,
     exact: true,
   }

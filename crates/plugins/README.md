@@ -1,8 +1,8 @@
 # toolu-plugins
 
 `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
-from the Node CLI that npm publishes as `@toolu/plugins`. That package is now a
-wrapper (`toolu-plugins`) that finds the native `toolu` and runs these verbs.
+from the Node CLI that npm published as `@toolu/plugins`. That package is
+deprecated and does not run these verbs.
 
 - Claude Code, Codex and Muse are driven through `claude plugin …`,
   `codex plugin …` and `muse plugins …` (`src/host/`); each listing is
@@ -15,7 +15,7 @@ wrapper (`toolu-plugins`) that finds the native `toolu` and runs these verbs.
   `fixtures/plugins/muse.json`.
 - The catalog is `.claude-plugin/marketplace.json`, embedded with
   `include_str!` from the repository layout at build time; `--catalog <path>`
-  reads another (the npm wrapper passes its bundled copy).
+  reads another file.
 - Prompts are numbered lines on `/dev/tty` (`src/prompt.rs`); stdout stays the
   report. The crate never writes the standard streams (rule 14).
 

@@ -7,7 +7,7 @@ toolu is a Rust plugin marketplace for Claude Code, Codex, and Muse Code. Its ho
 ## Work in this repository
 
 1. Find the owning crate or plugin, then read its nearby tests, fixtures, and relevant documentation before editing. Match existing patterns. The Rust workspace is in `crates/`; plugin assets are in `plugins/<name>/`.
-2. Keep first-party hooks, skills, and agent commands native. Do not add TypeScript, Bun, JavaScript bundles, or handwritten shell wrappers. Generated Muse resolvers, the root `install.sh`, and the dependency-free npm wrapper at `tools/toolu-cli/npm/cli.js` are deliberate exceptions. See [runtime](docs/runtime.md) and [testing](docs/testing.md).
+2. Keep first-party hooks, skills, and agent commands native. Do not add TypeScript, Bun, JavaScript bundles, or handwritten shell wrappers. Generated Muse resolvers, the root `install.sh`, and the dependency-free deprecation notice at `tools/toolu-cli/npm/cli.js` are deliberate exceptions. The notice prints the native install commands and exits 69. See [runtime](docs/runtime.md) and [testing](docs/testing.md).
 3. Test behavior with the real binary, Git, and host CLIs. Use the shared JSON cases in `fixtures/` when changing captured behavior. Do not use mocking crates or ignored tests. Put Rust unit tests in a sibling `tests/<module>_test.rs`, wired from the module; put black-box tests in the crate's `tests/`.
 4. Run focused checks while editing and `cargo xtask gate` before pushing. Fix every gate failure; do not add suppressions or exemptions. See [Rust quality rules](docs/rust-quality-bar.md) and the root `Cargo.toml` lints. The gate requires cargo-deny, cargo-machete, cargo-llvm-cov, ast-grep, Node, and `npm ci` for jscpd.
 5. Use Conventional Commits. Release versions and tags come only from release-please; do not bump or tag them manually. See [releases](docs/releases/native.md).
@@ -17,7 +17,7 @@ toolu is a Rust plugin marketplace for Claude Code, Codex, and Muse Code. Its ho
 | Area | Owner | Start here |
 | --- | --- | --- |
 | CLI tree, hook fast path, generated command reference | `crates/cli` | `crates/cli/src/registry.rs`, `docs/cli/` |
-| Plugin installation and npm wrapper | `crates/plugins`, `tools/toolu-cli/npm` | [installer](docs/cli/installer.md) |
+| Plugin installation and the deprecated npm notice | `crates/plugins`, `tools/toolu-cli/npm` | [installer](docs/cli/installer.md) |
 | Host payloads, decisions, native launchers | `crates/core/protocol` | `crates/core/protocol/src/hook.rs`, `launcher.rs` |
 | Host environment, config, Git detection, processes | `crates/core/runtime` | `crates/core/runtime/src/lib.rs` |
 | Shell analysis, HTTP, persistent state | `crates/core/{shell,http,state}` | [shell analysis](docs/shell-analysis.md), [detection](docs/detect.md) |

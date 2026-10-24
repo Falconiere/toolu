@@ -14,9 +14,9 @@ guardrails.
 ```
 
 ```bash
-npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
-npx @toolu/plugins install delivery-flow epic-orchestrator --host cursor
-npx @toolu/plugins install delivery-flow epic-orchestrator --host muse --approve
+toolu plugins install delivery-flow epic-orchestrator --host codex
+toolu plugins install delivery-flow epic-orchestrator --host cursor
+toolu plugins install delivery-flow epic-orchestrator --host muse --approve
 ```
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, `herdr`

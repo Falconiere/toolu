@@ -1,10 +1,9 @@
-# The plugin installer (`toolu plugins`, `npx @toolu/plugins`)
+# The plugin installer (`toolu plugins`)
 
 This guide covers `toolu plugins`, the namespace of the native `toolu` binary
-that installs toolu's plugins on each host (#438), and `@toolu/plugins`, the npm
-package that runs it. The generated reference of every verb and flag is
-[plugins.md](plugins.md). The [README](../../README.md#install) install snippets
-use these commands.
+that installs toolu's plugins on each host (#438). The generated reference of
+every verb and flag is [plugins.md](plugins.md). The
+[README](../../README.md#install) install snippets use these commands.
 
 Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has
 none, so toolu copies plugins into its local plugins directory. The code is
@@ -19,70 +18,18 @@ Install the native binary once ([docs/install.md](../install.md)), then the plug
 
 ```bash
 curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
+brew install falconiere/tap/toolu
 toolu plugins install
 ```
 
-The same verbs run through npm, which is handy where `npx` is the habit.
-No separate binary install is needed: the package ships a native `toolu` for
-each supported platform:
+The npm package `@toolu/plugins` is deprecated. Its command prints those lines
+and exits `69`. It does not install plugins and it ships no binary. Remove a
+global install, including one from before #438 that put `toolu` on `PATH`,
+with `npm uninstall -g @toolu/plugins`. That leftover fails the native
+`--hook-protocol` check, so SessionStart and `toolu doctor` skip it
+([Installing toolu](../install.md#agent-command-shell)).
 
-```bash
-npx @toolu/plugins install
-```
-
-`@toolu/plugins` is a thin Node wrapper. It runs `toolu plugins <args>`,
-passing the plugin catalog it ships (`assets/marketplace.json`) with
-`--catalog`. It prefers the binary the package ships
-(`bin/<os>-<arch>/toolu`), then looks for an installed `toolu` the way the
-plugins' hook launcher does. A non-empty `TOOLU_BIN` is the only candidate and
-always wins. Otherwise the bundled binary runs when it answers the probes;
-then `/opt/homebrew/bin`, `/usr/local/bin`,
-`/home/linuxbrew/.linuxbrew/bin`, `~/.local/bin`, then every `toolu` on
-`PATH`, in that order.
-A candidate counts only if it is not the wrapper itself, `toolu --hook-protocol`
-prints an integer, and `toolu plugins install --help` succeeds. A bundled
-binary that fails those probes is skipped for the installed search. To run an
-installed `toolu` instead of a working bundled one, set `TOOLU_BIN` to its
-path. With no working binary anywhere the wrapper exits `69` and names the
-install commands.
-It never downloads a binary: everything it runs rides the tarball. It exits
-with the native run's status, forwards Ctrl-C, `SIGTERM` and `SIGHUP` to it,
-and exits 128 plus the signal's number when a signal ends it.
-`npx @toolu/plugins --version` prints the wrapper's own version. A pinned copy
-(an older global install, or a project dependency) runs its pinned bundled
-binary rather than a newer installed one. There is no Windows binary, so on
-Windows the wrapper always exits `69`.
-
-npx fetches the newest release, so no `@latest` tag is needed. The one
-exception is a project that already depends on `@toolu/plugins`: there npx runs
-that pinned copy. The package declares a single command, `toolu-plugins`, and
-npx passes `install` straight to it. A global install
-(`npm install -g @toolu/plugins`) gives you `toolu-plugins install`.
-
-The command used to be called `toolu`, the same name as the native binary, so a
-global npm install could shadow the binary in an agent command shell. A script
-that ran the old global command's verbs (`install`, `list`, `remove`, `update`)
-must now run them as `toolu plugins <verb>` on the native binary, or as
-`toolu-plugins <verb>` from the npm package. If you
-installed an earlier release globally, run `npm uninstall -g @toolu/plugins`,
-then install it again. A leftover `toolu` from that package fails the native
-`--hook-protocol` check, so SessionStart, `toolu doctor` and the wrapper all
-skip it ([Installing toolu](../install.md#agent-command-shell)).
-
-The package is scoped because npm rejects the unscoped name `toolu` as too
-similar to the existing package `toml`. It replaces `@toolu/cli`, which used a
-`plugins install` noun grammar and is no longer published.
-
-**Why it publishes from `tools/toolu-cli/npm`.** npx checks the local project
-tree before the registry. If the repository root or a declared workspace carried
-the name `@toolu/plugins`, npx would treat it as installed inside any toolu
-checkout and fail with `sh: toolu: command not found`, which is what the old
-`@toolu/cli` did. So the root package is the private `toolu-workspace`, and the
-published manifest lives in `tools/toolu-cli/npm`, which no workspace declares.
-The wrapper is one committed file, `cli.js`, with no build step.
-`crates/cli/tests/npm_wrapper.rs` runs it with Node. The one folder where npx
-still fails is `tools/toolu-cli/npm` itself. npm treats a folder with its own
-`package.json` as the project, and that manifest is the published package.
+`@toolu/core`, the old TypeScript library, is deprecated and no longer published.
 
 To run unreleased code from a checkout, build the binary and call it:
 
@@ -91,18 +38,9 @@ cargo build -p toolu-cli
 ./target/debug/toolu plugins install --dry-run
 ```
 
-`@toolu/core`, the old TypeScript library, is deprecated and no longer published.
-
-The `@toolu/plugins` tarball is nine files: `package.json`, `README.md`,
-`LICENSE`, `cli.js`, `assets/marketplace.json`, and the four
-`bin/<os>-<arch>/toolu` binaries. The `plugins/` tree is
-deliberately excluded, because Claude Code, Codex and Muse fetch plugin content
-through their own host CLIs. The gate's `pack` step fails if anything else
-appears in it.
-
 ## Grammar
 
-The verb comes first; with npx the package name already says what it acts on:
+The verb comes first:
 
 ```
 toolu plugins install [name...]   Install plugins, core first (terminal: pick; else all)
@@ -111,7 +49,7 @@ toolu plugins remove <name...>    Uninstall, requires --yes
 toolu plugins update [name...]    Update only what is behind the marketplace
 ```
 
-`npx @toolu/plugins install` is `toolu plugins install`, and so on for every verb.
+`toolu plugins install` is the install verb, and the same shape covers `list`, `remove`, and `update`.
 
 ## Options
 
@@ -121,7 +59,7 @@ toolu plugins update [name...]    Update only what is behind the marketplace
 | `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
-| `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. The npm wrapper passes its own. |
+| `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. |
 | `--yes`, `-y` | Confirm a removal. |
 | `--dry-run` | Print the host commands in order; change nothing. |
 | `--no-input` | Never prompt; fail naming what is missing. Use in CI. |
@@ -136,7 +74,7 @@ The exit codes are those of the `toolu` CLI contract ([README.md](README.md)):
 | `0` | Everything succeeded or was already satisfied |
 | `1` | Something failed (every failure is named), or a prompt was cancelled |
 | `64` | Usage error or missing input: unknown command, flag, host, or plugin, an ambiguous host with no terminal or with `--no-input`, a removal without `--yes`, a bad `--config` file |
-| `69` | The wrapper found no native `toolu` |
+| `69` | The deprecated `@toolu/plugins` command. It installs nothing. |
 
 The TypeScript installer used `2`, `3` and `130` for these. Scripts that test for
 those codes must test for `64` and `1`.

@@ -66,12 +66,9 @@ are in the root [README](../../README.md#install-everything).
 # installed from it; skip if you do not want the pre-simplify pass.
 claude plugin marketplace add anthropics/claude-plugins-official
 
-# Needs the native toolu binary (docs/install.md); without it npx exits 69:
-# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
-
 # Adds the toolu marketplace and installs every catalog plugin, core first.
 # Already-installed plugins are reported and left alone.
-npx @toolu/plugins install
+toolu plugins install
 ```
 <!-- /install-everything:claude -->
 
@@ -79,11 +76,8 @@ npx @toolu/plugins install
 
 <!-- install-everything:codex -->
 ```bash
-# Needs the native toolu binary (docs/install.md); without it npx exits 69:
-# curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
-
 # Adds the toolu marketplace and installs every catalog plugin, core first.
-npx @toolu/plugins install --host codex
+toolu plugins install --host codex
 ```
 
 After they are installed, review and trust the hooks in `/hooks` before they run.

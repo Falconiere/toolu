@@ -1,67 +1,17 @@
 # @toolu/plugins
 
-Install [toolu](https://github.com/Falconiere/toolu) plugins into Claude Code and Codex.
+This package is deprecated. It does not install toolu.
 
-These need the native `toolu` binary (below); without it the wrapper exits `69`.
-
-```bash
-npx @toolu/plugins install              # every catalog plugin, core first
-npx @toolu/plugins install rust-quality # one plugin and its dependency
-npx @toolu/plugins list                 # catalog joined with what is installed
-npx @toolu/plugins remove ast-grep --yes
-npx @toolu/plugins update
-```
-
-This package is a thin wrapper. It runs `toolu plugins …` on the native `toolu`
-binary, which you install once:
+Install the native binary, then install plugins with it:
 
 ```bash
 curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
-# or
 brew install falconiere/tap/toolu
+toolu plugins install
 ```
 
-Without it, the wrapper names those commands and exits `69`. It never downloads
-a binary. With `toolu` installed, `toolu plugins install` does the same as
-`npx @toolu/plugins install`. The wrapper passes along the plugin catalog it
-ships (`assets/marketplace.json`).
+Running this package prints those commands and exits `69`.
 
-The package's command is `toolu-plugins`, so a global install
-(`npm install -g @toolu/plugins`) never shadows the native `toolu` on your
-`PATH`. Earlier releases named it `toolu`. If you installed one of them
-globally, run `npm uninstall -g @toolu/plugins` and then install again. The
-wrapper skips any `toolu` that is itself, or that is not the native CLI.
-
-## What it does
-
-It drives each host's own plugin CLI (`claude plugin install`,
-`codex plugin add`) and never writes into their directories itself. Install
-order comes from the catalog's dependency edges, so `rust-quality` pulls in
-`toolu` first. When the core plugin `toolu` fails to install, the plugins that
-depend on it are skipped. Any other failure is reported, and the rest still
-install.
-
-## Options
-
-| Flag | Meaning |
-|------|---------|
-| `--host <id>` | `claude` or `codex`. Detected when omitted. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only; not for Codex). |
-| `--config <path>` | `install` only: replay a `.toolu/plugins.json` selection. |
-| `--yes`, `-y` | Confirm a removal. |
-| `--dry-run` | Print the host commands; change nothing. |
-| `--no-input` | Never prompt; fail naming what is missing. For CI. |
-| `--json` | One JSON document on stdout. |
-
-## Exit codes
-
-| Code | Meaning |
-|------|---------|
-| `0` | Succeeded, or already satisfied |
-| `1` | Something failed (every failure is named), or a prompt was cancelled |
-| `64` | Usage error or missing input: unknown command, flag, host or plugin, an ambiguous host with no terminal or with `--no-input`, a removal without `--yes` |
-| `69` | The native `toolu` binary is missing (wrapper only) |
-
-Full documentation: **[docs/cli/installer.md](https://github.com/Falconiere/toolu/blob/main/docs/cli/installer.md)**
+Full documentation: **[docs/install.md](https://github.com/Falconiere/toolu/blob/main/docs/install.md)**
 
 MIT © Falconiere Barbosa

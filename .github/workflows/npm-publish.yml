@@ -10,9 +10,11 @@ name: npm publish
 # event created by that token -- a `release:` trigger here is silently ignored,
 # which is exactly how the 6.7.0 release published nothing.
 #
-# One package publishes: @toolu/plugins, the `toolu-plugins` wrapper that runs
-# the native `toolu plugins`, preferring the platform binaries the tarball
-# ships (`tools/toolu-cli/npm/bin/<os>-<arch>/toolu`) over an installed `toolu`.
+# One package publishes: @toolu/plugins, a deprecation notice. Its tarball is
+# package.json, README.md, LICENSE, and cli.js. cli.js prints the native
+# install commands and exits 69. It ships no binary. After a stable publish
+# the job marks every version deprecated. A prerelease still uses the `next`
+# dist-tag and does not deprecate, so it cannot move stable `latest`.
 # @toolu/core is no longer published (#440); its last
 # version stays on the registry, deprecated.
 #
@@ -28,9 +30,8 @@ name: npm publish
 # the 8-minute wait this workflow used to run inside its publish job, which
 # left the native release and the Homebrew tap unbuilt although npm had
 # shipped. So the publish job ends when npm accepts the upload, and the
-# `verify` job below polls the registry on its own: nothing waits for it. The
-# bundled binaries come from the published GitHub Release's own archives, so
-# this workflow runs after the native release and the native release never
+# `verify` job below polls the registry on its own: nothing waits for it.
+# This workflow runs after the native release and the native release never
 # depends on this package. A red `verify` means a manual dispatch of this
 # workflow with the same tag, which skips what is already on the registry. A
 # prerelease uses the npm `next` dist-tag so it does not move stable `latest`.
@@ -84,36 +85,10 @@ jobs:
       - name: Set up an npm new enough to attest provenance
         run: npm install --global npm@11.5.1
 
-      # The tarball ships the release's own binaries. This runs after the
-      # native release published them, so a chained run and a manual dispatch
-      # both take the public release's archives, checked against its
-      # SHA256SUMS. A draft is invisible to this token, so an unpublished
-      # native release fails here, before anything reaches npm.
-      - name: Download the native release archives
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          TAG: ${{ inputs.tag }}
-        run: |
-          set -euo pipefail
-          gh release download "$TAG" --pattern 'toolu-*.tar.gz' --pattern SHA256SUMS -D native-release --clobber
-          (cd native-release && sha256sum -c SHA256SUMS)
-
-      - name: Stage the platform binaries in the npm package
-        run: |
-          set -euo pipefail
-          for item in darwin-arm64 darwin-amd64 linux-amd64 linux-arm64; do
-            dir="tools/toolu-cli/npm/bin/$item"
-            mkdir -p "$dir"
-            tar -xzf "native-release/toolu-$item.tar.gz" -C "$dir" toolu
-            chmod +x "$dir/toolu"
-          done
-          test "$(find tools/toolu-cli/npm/bin -mindepth 2 -maxdepth 2 -name toolu | wc -l)" -eq 4
-
       - name: Install the pinned toolchain
         run: rustup toolchain install
 
-      - name: Verify the staged npm file list
+      - name: Verify the npm file list
         run: cargo xtask gate --only pack
 
       - name: Check the tag matches every package version
@@ -170,6 +145,20 @@ jobs:
           done
         env:
           # setup-node's registry-url writes an .npmrc that reads NODE_AUTH_TOKEN.
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TAG: ${{ inputs.tag }}
+
+      # A re-run skips a version that is already on the registry, then deprecates
+      # again. A prerelease stays on `next` and leaves stable versions alone.
+      - name: Deprecate every published version
+        run: |
+          set -euo pipefail
+          if [[ "$TAG" == *-* ]]; then
+            echo "prerelease $TAG leaves existing deprecations unchanged"
+            exit 0
+          fi
+          npm deprecate @toolu/plugins@"*" "@toolu/plugins is deprecated. Install the native binary with the installer or Homebrew, then run toolu plugins install. https://github.com/Falconiere/toolu/blob/main/docs/install.md"
+        env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ inputs.tag }}
 

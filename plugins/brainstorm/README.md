@@ -10,7 +10,7 @@ Think a change through before building: evidence-backed triage, alternatives, tr
 /plugin install brainstorm@toolu
 ```
 
-Standalone, no dependencies. For Codex: `codex plugin add brainstorm@toolu`, or `npx @toolu/plugins install brainstorm --host codex`.
+Standalone, no dependencies. For Codex: `codex plugin add brainstorm@toolu`, or `toolu plugins install brainstorm --host codex`.
 
 ## What it provides
 
