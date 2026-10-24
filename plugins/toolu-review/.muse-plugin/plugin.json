@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "toolu-review",
   "displayName": "toolu-review",
-  "version": "8.2.0",
+  "version": "8.3.0",
   "description": "Project-tuned pre-push code review mirroring CI falconiere/toolu-ghactions/code-review@v8 (Jev-enabled), writing the toolu push-review state so the gate passes. Standalone.",
   "compat": {
     "source": "native",
