@@ -87,3 +87,42 @@ fn assert_keeps_agent(status: &std::path::Path) {
     (Some("ready"), Some("kept"))
   );
 }
+
+#[test]
+fn a_refresh_drops_an_issue_that_left_the_graph_and_frees_its_slot() {
+  let fix = crate::source_fix::fixture(true).expect("fixture");
+  let mut engine =
+    crate::server::Engine::open(fix.engine_paths.clone(), None, crate::server::Fault::None)
+      .expect("open");
+  let graph = fix.tmp.path().join("epic").join("graph.json");
+  let taken = |world: &crate::model::World| {
+    world
+      .issues
+      .values()
+      .filter(|issue| issue.epic == "one" && crate::refill::occupies(issue))
+      .count()
+  };
+  assert_eq!(taken(&engine.world), 1);
+  // A graph without an issue list drops nothing.
+  std::fs::write(&graph, r#"{"epic":"one"}"#).expect("graph");
+  super::reload_epic(&mut engine.world, "one").expect("reload");
+  assert!(engine.world.issues.contains_key("a"));
+  std::fs::write(&graph, r#"{"epic":"one","issues":[]}"#).expect("graph");
+  engine.world.issues.get_mut("a").expect("a").pending = Some(crate::model::fresh(
+    crate::model::Action::Checkpoint,
+    "t".to_owned(),
+  ));
+  super::reload_epic(&mut engine.world, "one").expect("reload");
+  assert!(
+    engine.world.issues.contains_key("a"),
+    "a pending action keeps it"
+  );
+  engine.world.issues.get_mut("a").expect("a").pending = None;
+  super::reload_epic(&mut engine.world, "one").expect("reload");
+  assert!(!engine.world.issues.contains_key("a"));
+  assert_eq!(taken(&engine.world), 0);
+  let dropped = engine.world.outbox.iter().any(|step| {
+    matches!(step, crate::model::Step::Journal(row) if row.name == "drop" && row.key == "a" && row.note == "not in the graph")
+  });
+  assert!(dropped);
+}
