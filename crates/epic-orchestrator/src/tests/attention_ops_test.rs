@@ -36,12 +36,12 @@ fn prompt_scripts(root: &Path, outcome: &str) -> PathBuf {
   scripts
 }
 
-fn engine(root: &Path, outcome: &str) -> Engine {
+pub(crate) fn engine(root: &Path, outcome: &str) -> Engine {
   let scripts = prompt_scripts(root, outcome);
   Engine::open(Paths::at(root), Some(scripts), Fault::None).expect("open")
 }
 
-fn report(engine: &mut Engine, phase: &str) {
+pub(crate) fn report(engine: &mut Engine, phase: &str) {
   let state_dir = engine.paths.root.join("epic").display().to_string();
   engine
     .report(&Report {
@@ -55,17 +55,17 @@ fn report(engine: &mut Engine, phase: &str) {
     .expect("report");
 }
 
-fn answer(engine: &mut Engine, request: &Value) -> Value {
+pub(crate) fn answer(engine: &mut Engine, request: &Value) -> Value {
   let (tx, rx) = channel();
   assert_eq!(reply_answer(engine, request, &tx), Ok(false));
   rx.recv().expect("reply")
 }
 
-fn rows(engine: &Engine) -> Vec<Record> {
+pub(crate) fn rows(engine: &Engine) -> Vec<Record> {
   journal::tail(&engine.paths.journal_dir(), engine.now).expect("tail")
 }
 
-fn prompts(root: &Path) -> Vec<Value> {
+pub(crate) fn prompts(root: &Path) -> Vec<Value> {
   std::fs::read_to_string(root.join("prompts"))
     .unwrap_or_default()
     .lines()
@@ -105,71 +105,6 @@ fn answer_reaches_the_prompt_script_and_the_next_report_closes_it() {
   assert_eq!(closed.token, token);
   let note = closed.note.as_str();
   assert!(note.starts_with("kind=needs-human waited_ms="), "{note}");
-}
-
-#[test]
-fn answer_for_an_unknown_issue_calls_no_prompt() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "sent");
-  let request = json!({"op": "answer", "key": "a", "text": "take B"});
-  assert_eq!(
-    answer(&mut engine, &request),
-    json!({"error": "no live agent for a"})
-  );
-  assert_eq!(prompts(tmp.path()), [] as [Value; 0]);
-  assert!(rows(&engine).iter().all(|row| row.name != "answer"));
-}
-
-#[test]
-fn answer_for_a_merged_issue_calls_no_prompt() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "sent");
-  report(&mut engine, "execution");
-  engine.world.issues.get_mut("a").expect("issue").stage = "merged".to_owned();
-  let request = json!({"op": "answer", "key": "a", "text": "take B"});
-  assert_eq!(
-    answer(&mut engine, &request),
-    json!({"error": "no live agent for a"})
-  );
-  assert_eq!(prompts(tmp.path()), [] as [Value; 0]);
-}
-
-#[test]
-fn answer_redirects_a_live_worker_with_no_open_item() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "sent");
-  report(&mut engine, "execution");
-  let request = json!({"op": "answer", "key": "a", "text": "NEW DIRECTION", "by": "user"});
-  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
-  assert_eq!(prompts(tmp.path()).len(), 1);
-  let sent: Vec<(String, String)> = rows(&engine)
-    .into_iter()
-    .filter(|row| row.name == "answer")
-    .map(|row| (row.key, row.note))
-    .collect();
-  assert_eq!(sent, [("a".to_owned(), "NEW DIRECTION".to_owned())]);
-  let direction = engine.world.issues["a"]
-    .direction
-    .clone()
-    .expect("direction");
-  assert_eq!(
-    (direction.text.as_str(), direction.by.as_str()),
-    ("NEW DIRECTION", "user")
-  );
-}
-
-#[test]
-fn a_redirect_not_delivered_records_nothing() {
-  let tmp = tempfile::tempdir().expect("temp");
-  let mut engine = engine(tmp.path(), "failed");
-  report(&mut engine, "execution");
-  let request = json!({"op": "answer", "key": "a", "text": "go"});
-  assert_eq!(
-    answer(&mut engine, &request),
-    json!({"error": "worker prompt not delivered: prompt failed"})
-  );
-  assert!(engine.world.issues["a"].direction.is_none());
-  assert!(rows(&engine).iter().all(|row| row.name != "answer"));
 }
 
 #[test]

@@ -87,3 +87,7 @@ pub(crate) fn send_prompt(engine: &Engine, key: &str, text: &str) -> Result<(), 
 #[cfg(test)]
 #[path = "tests/attention_ops_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/attention_redirect_test.rs"]
+mod redirect_tests;
