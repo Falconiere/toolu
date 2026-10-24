@@ -287,3 +287,31 @@ fn shutdown_confirms_muse_exit_even_when_it_already_left() {
     ]
   );
 }
+
+#[test]
+fn worktree_processes_that_exit_within_the_grace_complete_the_shutdown() {
+  let mut rig = Rig::new();
+  rig.env = rig.env.clone().with("EPIC_AGENT_EXIT_GRACE_S", "10");
+  let (worktree, pane) = started(&rig, "claude");
+  // Its own group, as a worker's job has; a thread reaps it, so it does not
+  // linger as a zombie the inventory still lists.
+  let mut late = std::os::unix::process::CommandExt::process_group(
+    std::process::Command::new("sleep")
+      .arg("3")
+      .current_dir(&worktree),
+    0,
+  )
+  .spawn()
+  .expect("late");
+  let reaper = std::thread::spawn(move || late.wait());
+  let begun = std::time::Instant::now();
+  let mut ctx = rig.ctx();
+  let outcome = shutdown_agent(
+    &mut ctx.herdr,
+    "k-1",
+    &expected(HostKind::Claude, &pane, &worktree),
+  );
+  let _reaped = reaper.join();
+  assert_eq!(outcome, Ok(Outcome::Exited));
+  assert!(begun.elapsed() >= Duration::from_secs(2), "{:?}", begun.elapsed());
+}

@@ -5,6 +5,7 @@
 
 use std::collections::BTreeSet;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 mod linux;
 mod mac;
@@ -155,6 +156,29 @@ pub(crate) fn verify_owned_exit(records: &[OwnedWorkload]) -> Result<bool, Strin
       }))
     }
     other => Err(format!("process inventory is unavailable on {other}")),
+  }
+}
+
+/// Poll up to `grace` until every recorded process is gone and the worktree
+/// owns no new one: a departing agent's children take a moment to exit.
+///
+/// # Errors
+/// The inventory fails, or ownership is uncertain.
+pub(crate) fn await_owned_exit(
+  worktree: &Path,
+  shell: Option<u32>,
+  owned: &[OwnedWorkload],
+  grace: Duration,
+) -> Result<bool, String> {
+  let deadline = Instant::now() + grace;
+  loop {
+    if verify_owned_exit(owned)? && owned_workload(worktree, shell)?.is_empty() {
+      return Ok(true);
+    }
+    if Instant::now() >= deadline {
+      return Ok(false);
+    }
+    std::thread::sleep(Duration::from_millis(500));
   }
 }
 
