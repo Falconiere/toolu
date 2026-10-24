@@ -5,10 +5,10 @@ dependency graph, launches herdr worktrees with workers (delivery-flow from
 brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
-Works on **Claude Code**, **Codex**, and **Cursor Agent**, both
-as the orchestrator and as workers, and runs workers on **Muse Code**. One run
-can mix hosts (`--hosts claude:2,codex:2,muse:1`): Jev scores each issue's
-complexity and a routing table picks the model and effort per host.
+Works on **Claude Code**, **Codex**, **Cursor Agent**, and **Muse Code**, both
+as the orchestrator and as workers. One run can mix hosts
+(`--hosts claude:2,codex:2,muse:1`): Jev scores each issue's complexity and a
+routing table picks the model and effort per host.
 
 ## Install
 
@@ -50,14 +50,46 @@ Cursor has no plugin install command, so this copies the plugins into
 `toolu --host cursor doctor` checks them. Then invoke the `epic-orchestrator`
 skill or the `/epic-orchestrator:epic` command.
 
-The orchestrator waits for judgments with `toolu epic wait --epic <epic-key>`:
-on Claude Code as a background Bash call (45-minute default limit) that wakes
-it with a judgment or `waiting`, then starts again; on Codex as a foreground
-loop of `toolu epic wait --epic <epic-key> --max-seconds 480`, since one tool
-call there cannot block for hours. The engine does the polling. `--epic`
-returns only that epic's items and engine-wide ones, so several orchestrators
-can share one engine; an item handed out once is not handed out again after
-an engine restart.
+### Muse Code
+
+```bash
+npx @toolu/plugins install delivery-flow epic-orchestrator --host muse --approve
+```
+
+Muse keeps a plugin's hooks inert until `muse plugins approve <name>` trusts
+them, and asks again whenever a hook definition changes, for example after a
+toolu upgrade. `--approve` approves them as part of the install. Without it,
+`toolu --host muse doctor` reports `warn plugins: <name> capabilities need
+approval; muse plugins approve <name>`, and the skill's preflight stops on
+that line.
+
+### Before a run
+
+The skill's preflight checks each host in `--hosts`: its CLI and login, the
+worker plugins (`toolu`, `toolu-review`, `pr-babysit`, `brainstorm`,
+`delivery-flow`), and `toolu --host <host> doctor`. It prints the fix for the
+first thing that fails.
+
+The orchestrator needs the engine's socket, herdr's socket and the epic state
+directory, so run it outside its host's sandbox. In the 2026-10-23 probe,
+Codex's `workspace-write` sandbox and Muse's default sandbox blocked the
+engine socket and every state path. Muse's also blocked herdr. Commands
+fail with `Operation not permitted`. Start Codex with
+`--sandbox danger-full-access` and Muse with `--disable-sandbox`, or approve
+each escalation. Cursor Agent's sandbox reached them in the same probe; if
+it doesn't, start it with `--sandbox disabled`. Claude Code runs commands
+unsandboxed unless you turned its sandbox on.
+
+The orchestrator waits for judgments with `toolu epic wait --epic <epic-key>`.
+On Claude Code it runs as a background Bash call (45-minute default limit)
+that wakes the session with a judgment or `waiting`, then starts again;
+on Codex, Cursor Agent and Muse Code it runs as a foreground loop of
+`toolu epic wait --epic <epic-key> --max-seconds 480`, since one tool call
+there cannot block for hours. On Muse, a call that outlives its shell's yield
+returns a session id, and its result arrives on its own. The engine does the
+polling. `--epic` returns only that epic's items and engine-wide ones, so
+several orchestrators can share one engine; an item handed out once is not
+handed out again after an engine restart.
 
 ## What it provides
 
@@ -178,10 +210,18 @@ engine creates no webhook or GitHub listener.
 
 Override with `EPIC_STATE_HOME`. Otherwise:
 
-| Host                       | Default                                                        |
-| -------------------------- | -------------------------------------------------------------- |
-| Claude Code / Cursor Agent | `~/.claude/epics/<owner>-<repo>-<n>/`                          |
-| Codex                      | `$CODEX_HOME/toolu/epics/…` (default `~/.codex/toolu/epics/…`) |
+| Orchestrator environment                                         | Default                                                        |
+| ---------------------------------------------------------------- | -------------------------------------------------------------- |
+| Claude Code, Cursor Agent, Muse Code, and Codex                  | `~/.claude/epics/<owner>-<repo>-<n>/`                          |
+| `CODEX_HOME` exported, no `CLAUDE_CONFIG_DIR` and no override    | `$CODEX_HOME/toolu/epics/…`                                    |
+| `TOOLU_HOST_OVERRIDE=codex`                                      | `$CODEX_HOME/toolu/epics/…` (default `~/.codex/toolu/epics/…`) |
+
+No host's shell tool sets `CODEX_HOME` or `TOOLU_HOST_OVERRIDE`, so every
+orchestrator shares `~/.claude/epics` unless you export one of them. An epic
+started under one of those variables resumes only with the same variable or
+`EPIC_STATE_HOME`. Workers write their status files there on every host. Like
+the engine socket, the directory must be writable from the orchestrator's
+shell, outside the host sandbox (see [Before a run](#before-a-run)).
 
 ## Trackers
 

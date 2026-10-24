@@ -1,6 +1,6 @@
 ---
 name: epic-orchestrator
-description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, or Cursor Agent) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
+description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, Cursor Agent, or Muse Code) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
 ---
 
 # Epic orchestrator
@@ -48,18 +48,16 @@ the authorized list, ask the user before approving it.
 
 ## 1. Preflight
 
-Run `toolu doctor` and stop on its first failure. Then stop and report the
-first of these that fails:
-- `HERDR_ENV` is `1` (herdr control works only from a herdr pane), and
-  `herdr status` answers.
-- `gh auth status` succeeds, and `gh api rate_limit` shows core above 1000.
-- Each host in `--hosts` is on `PATH` and logged in (`claude`, `codex`,
-  `cursor-agent`, `muse`).
-- The tracker variables above are exported (a Jira or Linear epic).
+Run `toolu doctor` with `--host <host>` for the host you run on and stop on its first failure.
+Then stop and report the first of these that fails (`references/preflight.md` has each fix):
+- `HERDR_ENV` is `1`, and `herdr status` and `toolu epic status` answer.
+  `Operation not permitted` from either means your host's sandbox blocks the engine: run outside it.
+- `gh auth status` succeeds and `gh api rate_limit` shows core above 1000; a Jira or Linear epic has its tracker variables.
 - Your skill list includes `delivery-flow:delivery-flow` and its `toolu`,
-  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Workers run as
-  herdr agents and need those plugins installed in every host in `--hosts`
-  (`toolu plugins install delivery-flow --host codex`, and so on).
+  `toolu-review`, `pr-babysit`, and `brainstorm` dependencies.
+- Each host in `--hosts` is logged in, `toolu plugins list --host <host>` shows those five
+  plugins, and `toolu --host <host> doctor` prints no `fail` or `warn plugins` line (an
+  unapproved Muse plugin prints `muse plugins approve toolu`): `ready` or `not ready: <fix>`.
 
 ## 2. Plan
 
@@ -101,6 +99,8 @@ named after its key). Resume: the same commands.
 - **Codex:** one tool call cannot block for hours, so loop:
   run `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the
   foreground, handle what it returns, and run it again while any issue is active.
+- **Cursor Agent** and **Muse Code:** the same `--max-seconds 480` loop. On Muse, a call
+  that returns a session id delivers its result on its own and wakes you: don't poll it.
 
 It returns one judgment of this epic or an engine-wide one (`kind`, `key`, `note`, `pending` for `blocked`) or
 `{"state": "waiting"}` at the limit; only a `waiting` at once means no engine

@@ -103,17 +103,20 @@ fn keys_and_branches_for_jira_and_linear_items_are_valid_herdr_names() {
   assert_eq!(branch_for("a/b#3", Some(3), "Fix it"), "feat/3-fix-it");
 }
 
+/// `pairs` plus `HOME=/home/u`.
+fn home_env(pairs: &[(&str, &str)]) -> Env {
+  Env::from_pairs(
+    pairs
+      .iter()
+      .copied()
+      .chain([("HOME", "/home/u")])
+      .map(|(key, value)| (key.to_owned(), value.to_owned())),
+  )
+}
+
 #[test]
 fn epics_home_follows_the_host_override_and_epic_state_home() {
-  let env = |pairs: &[(&str, &str)]| {
-    Env::from_pairs(
-      pairs
-        .iter()
-        .copied()
-        .chain([("HOME", "/home/u")])
-        .map(|(key, value)| (key.to_owned(), value.to_owned())),
-    )
-  };
+  let env = home_env;
   assert_eq!(
     epics_home(&env(&[("EPIC_STATE_HOME", "/tmp/epics")])),
     PathBuf::from("/tmp/epics")
@@ -135,6 +138,60 @@ fn epics_home_follows_the_host_override_and_epic_state_home() {
   );
   assert_eq!(
     epics_home(&env(&[("CODEX_HOME", "/c"), ("CLAUDE_CONFIG_DIR", "/cl")])),
+    PathBuf::from("/home/u/.claude/epics")
+  );
+}
+
+/// What Codex's shell tool exported to a command it ran (probed 2026-10-23).
+const CODEX_SHELL: &[(&str, &str)] = &[
+  ("CODEX_SESSION_ID", "s"),
+  ("CODEX_THREAD_ID", "t"),
+  ("CODEX_SANDBOX", "seatbelt"),
+];
+
+/// The variables each host's shell tool exported to a command it ran
+/// (probed 2026-10-23; only their presence matters). None sets
+/// `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or `TOOLU_HOST_OVERRIDE`.
+const SHELLS: [(&str, &[(&str, &str)]); 4] = [
+  (
+    "claude",
+    &[("CLAUDECODE", "1"), ("CLAUDE_CODE_SESSION_ID", "s")],
+  ),
+  ("codex", CODEX_SHELL),
+  (
+    "cursor",
+    &[("CURSOR_AGENT", "1"), ("CURSOR_CONVERSATION_ID", "c")],
+  ),
+  ("muse", &[("MUSE_SESSION_ID", "s"), ("MUSE_THREAD_ID", "t")]),
+];
+
+#[test]
+fn epics_home_for_each_orchestrator_host() {
+  for (host, vars) in SHELLS {
+    assert_eq!(
+      epics_home(&home_env(vars)),
+      PathBuf::from("/home/u/.claude/epics"),
+      "{host}"
+    );
+  }
+  let with = |extra: (&str, &str)| home_env(&[CODEX_SHELL, &[extra]].concat());
+  assert_eq!(
+    epics_home(&with(("CODEX_HOME", "/c"))),
+    PathBuf::from("/c/toolu/epics")
+  );
+  assert_eq!(
+    epics_home(&with(("TOOLU_HOST_OVERRIDE", "codex"))),
+    PathBuf::from("/home/u/.codex/toolu/epics")
+  );
+  assert_eq!(
+    epics_home(&with(("EPIC_STATE_HOME", "/srv/epics"))),
+    PathBuf::from("/srv/epics")
+  );
+  assert_eq!(
+    epics_home(&home_env(&[
+      ("TOOLU_HOST_OVERRIDE", "claude"),
+      ("CODEX_HOME", "/c")
+    ])),
     PathBuf::from("/home/u/.claude/epics")
   );
 }

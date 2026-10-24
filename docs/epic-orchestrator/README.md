@@ -15,6 +15,8 @@ guardrails.
 
 ```bash
 npx @toolu/plugins install delivery-flow epic-orchestrator --host codex
+npx @toolu/plugins install delivery-flow epic-orchestrator --host cursor
+npx @toolu/plugins install delivery-flow epic-orchestrator --host muse --approve
 ```
 
 Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, `herdr`
@@ -34,9 +36,12 @@ toolu epic serve
 # Disable HTTP while keeping the control socket
 toolu epic engine --no-http
 # Register an epic and start the engine; wait for its next judgment
-# (Claude Code: a background call, 45-minute default limit; Codex: a loop)
+# (Claude Code: a background call, 45-minute default limit;
+# Codex, Cursor Agent and Muse Code: a loop). Run these outside the host's
+# sandbox: Codex's and Muse's block the engine socket with
+# "Operation not permitted".
 toolu epic start <state_dir>
-toolu --json epic wait --max-seconds 480
+toolu --json epic wait --epic <epic-key> --max-seconds 480
 ```
 
 Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic.md)):
