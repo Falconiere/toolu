@@ -4,6 +4,7 @@
 //!
 //! What every binary needs to run on a host, without a shell parser or TLS (#414):
 //!
+//! - `catalog`: the marketplace manifest built into the binary and its plugin names;
 //! - `env`: the environment snapshot every resolver reads (only this crate reads `std::env`);
 //! - `host`: host detection, the config, project, state and plugin roots, and the
 //!   Codex plugin snapshot;
@@ -18,6 +19,7 @@
 //! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments.
 
 pub mod atomic;
+pub mod catalog;
 pub mod cli;
 pub mod cli_args;
 pub mod config;

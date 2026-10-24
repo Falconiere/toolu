@@ -14,7 +14,7 @@ use crate::fail::{Fail, Res};
 pub(crate) mod order;
 
 /// The manifest this binary was built with.
-const EMBEDDED: &str = include_str!("../../../.claude-plugin/marketplace.json");
+const EMBEDDED: &str = toolu_runtime::catalog::BUILT_IN;
 
 /// One catalog plugin.
 #[derive(Debug, Clone, PartialEq, Eq)]
