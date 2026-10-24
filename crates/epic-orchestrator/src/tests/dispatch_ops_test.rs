@@ -136,4 +136,11 @@ fn a_finish_step_is_refused_while_the_engine_merges_and_needs_begin_or_end() {
     &json!({"op": "finish", "key": "a", "step": "end", "stage": "running"}),
   );
   assert_eq!(fallback["stage"], "running");
+  let path = crate::snapshot::issue_path(&engine.world.issues["a"].state_dir, "a");
+  crate::disk::write_value(&path, &json!({"stage": null})).expect("record");
+  let unrecorded = finish_step(
+    &mut engine,
+    &json!({"op": "finish", "key": "a", "step": "end", "stage": "uncertain"}),
+  );
+  assert_eq!(unrecorded["stage"], "uncertain");
 }

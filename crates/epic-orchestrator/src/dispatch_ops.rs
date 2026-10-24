@@ -95,8 +95,9 @@ fn end(world: &mut World, key: &str, previous: Option<&Value>) -> Result<Value, 
   let recorded = crate::disk::read_value(&path)?;
   let stage = recorded
     .get("stage")
-    .or(previous)
     .and_then(Value::as_str)
+    .filter(|stage| !stage.is_empty())
+    .or_else(|| previous.and_then(Value::as_str))
     .unwrap_or("")
     .to_owned();
   stage.clone_into(&mut issue.stage);
