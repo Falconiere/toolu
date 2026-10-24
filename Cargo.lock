@@ -1480,6 +1480,7 @@ dependencies = [
  "regex",
  "serde_json",
  "tempfile",
+ "toml",
  "toolu-ast-grep",
  "toolu-engine",
  "toolu-protocol",

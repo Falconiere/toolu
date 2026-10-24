@@ -191,6 +191,31 @@ host's message, exit `1`. Muse removes by bare name from any source, so there
 `remove` takes catalog names only, and `toolu doctor` names `muse plugins remove
 <name>` instead. Any other unknown name exits `64`.
 
+**Codex follows a release tag, not `main`** (#626). `install` and `update`
+register Codex's marketplace as `codex plugin marketplace add Falconiere/toolu
+--ref v<version>`, the tag of the running `toolu`. At every session start Codex
+re-clones a git marketplace whose ref moved and reinstalls its plugins, and a
+reinstalled plugin's hooks need review again. A marketplace that followed
+`main` therefore asked for a review after every merge, which stopped Codex
+epic workers before their first turn. A tag moves only when you upgrade toolu,
+so one trust lasts until then.
+
+An existing `toolu` marketplace from `https://github.com/Falconiere/toolu.git`
+that follows another ref is removed and added again pinned. Codex keeps the
+installed plugins and their hook trust across that, and toolu then adds each
+installed toolu plugin again (`re-pinned to v<version>`) so its cache holds the
+tag's content. Only Codex's "already added from a different source" refusal
+leads to the remove; if Codex cannot list its marketplaces (this needs Codex
+0.164.0 or later), or the pinned add fails for another reason, the run fails
+naming the tag and changes nothing. With no `toolu` marketplace and a failed
+add, `install` still tries each plugin and names the add on a plugin that
+fails, while `update` fails. If
+the pinned add fails after the remove, the unpinned marketplace is added back
+and the run fails naming the tag. A `toolu`
+marketplace from any other source, such as a local checkout, is left as it is.
+`toolu --host codex doctor` warns `plugins` while the marketplace is not
+pinned to this binary's tag.
+
 **Dry runs run nothing.** `--dry-run` prints the commands a real run would
 run, for `install`, `remove` and `update` alike (an `update` leaves out plugins
 already at the offered version). The TypeScript installer ignored the flag on

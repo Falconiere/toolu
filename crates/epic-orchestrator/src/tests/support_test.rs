@@ -40,6 +40,20 @@ pub(crate) fn gh(fixture: &Fixture) -> crate::tracker::Gh {
   crate::tracker::Gh::with_client(github_client(fixture, "fixture-token"), FAST)
 }
 
+/// A started fixture whose repository `Falconiere/comemory` defaults to
+/// `main`, and the tracker client over it: what a live launch of issue
+/// `comemory-255` asks GitHub.
+pub(crate) fn comemory_github() -> (Fixture, crate::tracker::Gh) {
+  let github = Fixture::start().expect("fixture");
+  ok(
+    &github,
+    "/repos/Falconiere/comemory",
+    &serde_json::json!({"default_branch": "main"}),
+  );
+  let client = gh(&github);
+  (github, client)
+}
+
 /// Route `path` to a `200` with the JSON `body`.
 pub(crate) fn ok(fixture: &Fixture, path: &str, body: &serde_json::Value) {
   fixture

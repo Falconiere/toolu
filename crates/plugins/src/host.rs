@@ -16,7 +16,8 @@ pub(crate) mod adapter;
 /// The toolu checkout Muse installs from.
 pub(crate) mod checkout;
 mod claude;
-mod codex;
+/// Codex's plugin listing and marketplace commands.
+pub(crate) mod codex;
 /// Muse's plugin documents and marketplace commands.
 pub(crate) mod muse;
 /// Host commands with a deadline.

@@ -9,7 +9,7 @@ fn words(argv: &[String]) -> String {
 fn claude_builds_marketplace_install_with_scope_remove_and_update() {
   let claude = Adapter::Claude;
   assert_eq!(
-    words(&claude.add_marketplace()),
+    words(&claude.add_marketplace(Some("v8.2.0"))),
     "claude plugin marketplace add Falconiere/toolu"
   );
   assert_eq!(
@@ -51,7 +51,11 @@ fn codex_omits_scope_and_re_adds_to_update() {
     "codex plugin remove ast-grep@toolu"
   );
   assert_eq!(
-    words(&codex.add_marketplace()),
+    words(&codex.add_marketplace(Some("v8.2.0"))),
+    "codex plugin marketplace add Falconiere/toolu --ref v8.2.0"
+  );
+  assert_eq!(
+    words(&codex.add_marketplace(None)),
     "codex plugin marketplace add Falconiere/toolu"
   );
 }

@@ -1,9 +1,10 @@
 //! The marketplace a host installs from, made ready before `install` and
-//! `update` touch a plugin. Claude Code and Codex add the GitHub marketplace on
-//! install, and a failure there is only a hint (it may be there already). Muse
-//! needs toolu's checkout at this binary's tag, registered as the marketplace
-//! `toolu`; anything wrong there stops the run before any plugin command, so a
-//! failed fetch leaves Muse untouched.
+//! `update` touch a plugin. Claude Code adds the GitHub marketplace on install,
+//! and a failure there is only a hint (it may be there already). Codex's is
+//! pinned to this binary's tag on both verbs (#626). Muse needs toolu's
+//! checkout at this binary's tag, registered as the marketplace `toolu`;
+//! anything wrong there stops the run before any plugin command, so a failed
+//! fetch leaves Muse untouched.
 
 use std::io::ErrorKind;
 use std::path::Path;
@@ -15,28 +16,66 @@ use crate::host::checkout::{CATALOG, Checkout};
 use crate::host::muse;
 use crate::host::run::first_line;
 use crate::verbs::Driver;
+use crate::verbs::pin::{self, Pin};
 
-/// Makes the marketplace ready for `verb`; returns a hint for a plugin that
-/// then fails to install.
-pub(crate) fn run(driver: &Driver, verb: Verb) -> Res<String> {
-  match (driver.adapter, &driver.checkout) {
-    (Adapter::Muse, Some(checkout)) => {
+/// The marketplace made ready.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub(crate) struct Prepared {
+  /// The hint for a plugin that then fails to install.
+  pub(crate) hint: String,
+  /// Codex's marketplace moved to the tag now, so every installed plugin is
+  /// added again to take the tag's content.
+  pub(crate) repinned: bool,
+}
+
+/// Makes the marketplace ready for `verb`.
+///
+/// # Errors
+/// Muse's checkout or registration fails, or pinning Codex's marketplace
+/// fails after removing it.
+pub(crate) fn run(driver: &Driver, verb: Verb) -> Res<Prepared> {
+  match (driver.adapter, &driver.checkout, &driver.pin) {
+    (Adapter::Muse, Some(checkout), _pin) => {
       sync(driver, checkout)?;
       register(driver, checkout)?;
-      Ok(String::new())
+      Ok(Prepared::default())
     }
-    (Adapter::Muse, None) => Err(Fail::failed("muse needs a marketplace checkout")),
-    (Adapter::Claude | Adapter::Codex, _none) if verb == Verb::Install => {
-      Ok(add_marketplace(driver))
-    }
-    (Adapter::Claude | Adapter::Codex, _none) => Ok(String::new()),
+    (Adapter::Muse, None, _pin) => Err(Fail::failed("muse needs a marketplace checkout")),
+    (Adapter::Codex, _checkout, Some(tag)) => codex(driver, verb, tag),
+    (Adapter::Claude | Adapter::Codex, _checkout, _pin) if verb == Verb::Install => Ok(Prepared {
+      hint: add_marketplace(driver),
+      repinned: false,
+    }),
+    (Adapter::Claude | Adapter::Codex, _checkout, _pin) => Ok(Prepared::default()),
   }
+}
+
+/// Pins Codex's marketplace. With no marketplace and a failed add, `install`
+/// still tries its plugins and hints at the add on a failure, as it always
+/// did; `update` has nothing to pin its plugins to, so it fails.
+fn codex(driver: &Driver, verb: Verb, tag: &str) -> Res<Prepared> {
+  let hint = match pin::ensure(driver, tag)? {
+    Pin::Pinned => String::new(),
+    Pin::Repinned => {
+      return Ok(Prepared {
+        hint: String::new(),
+        repinned: true,
+      });
+    }
+    Pin::Foreign(hint) => hint,
+    Pin::Absent(why) if verb == Verb::Update => return Err(pin::cannot(tag, &why)),
+    Pin::Absent(why) => format!("; the marketplace add also failed: {why}"),
+  };
+  Ok(Prepared {
+    hint,
+    repinned: false,
+  })
 }
 
 /// Adds the toolu marketplace. A failure is not fatal (it may be there
 /// already), so it only becomes a hint on a plugin that then fails to install.
 fn add_marketplace(driver: &Driver) -> String {
-  let ran = driver.run(&driver.adapter.add_marketplace());
+  let ran = driver.run(&driver.adapter.add_marketplace(None));
   if ran.ok() {
     return String::new();
   }

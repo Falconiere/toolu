@@ -219,3 +219,24 @@ fn a_record_settled_after_the_first_check_is_refused_under_the_launch_lock() {
   );
   assert!(!tmp.path().join("launch-locks/comemory-255").exists());
 }
+
+#[test]
+fn a_launch_waiting_on_an_approval_screen_is_needs_human_with_its_stage() {
+  let note = "codex is waiting on its hook review in pane w1:p1: \"18 hooks are new or changed.\"; review and trust the hooks there, then relaunch with --replace";
+  let approval = crate::launch::Failure {
+    message: note.to_owned(),
+    exit_code: None,
+    code: Some("approval_pending".to_owned()),
+    uncertain: true,
+  };
+  let stage = |name: &str| (name == "stage").then(|| "uncertain".to_owned());
+  assert_eq!(
+    super::outcome_of(Err(approval), stage),
+    serde_json::json!({"outcome": "needs-human", "note": note, "stage": "uncertain"})
+  );
+  let lost = crate::launch::Failure::unknown("cannot attest codex session identity");
+  assert_eq!(
+    super::outcome_of(Err(lost), stage),
+    serde_json::json!({"outcome": "failed", "note": "cannot attest codex session identity", "stage": "uncertain"})
+  );
+}

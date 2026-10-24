@@ -247,10 +247,16 @@ fn codex(roots: &Roots) -> Inventory {
   let Some(list) = parse_codex(&output.stdout) else {
     return Inventory::warn("plugin inventory is unavailable");
   };
-  let warning = (list.missing_path > 0).then(|| "a toolu plugin has no source.path".to_owned());
+  let notices: Vec<String> = [
+    (list.missing_path > 0).then(|| "a toolu plugin has no source.path".to_owned()),
+    super::codex_pin::notice(roots.env(), env!("CARGO_PKG_VERSION")),
+  ]
+  .into_iter()
+  .flatten()
+  .collect();
   Inventory {
     plugins: list.plugins,
-    warning,
+    warning: (!notices.is_empty()).then(|| notices.join("; ")),
   }
 }
 

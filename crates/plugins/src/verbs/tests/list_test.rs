@@ -19,6 +19,7 @@ fn the_catalog_is_joined_with_the_hosts_listing() {
     env: sb.env(),
     timeout: Duration::from_secs(10),
     checkout: None,
+    pin: None,
     approval: Approval::Report,
   };
   let Ok(rows) = run(&driver, &catalog()) else {
@@ -47,6 +48,7 @@ fn a_malformed_listing_fails_and_a_failing_host_lists_nothing_installed() {
     env: sb.env(),
     timeout: Duration::from_secs(10),
     checkout: None,
+    pin: None,
     approval: Approval::Report,
   };
   assert!(

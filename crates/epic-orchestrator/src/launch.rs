@@ -20,6 +20,7 @@ mod failure;
 pub(crate) mod lifecycle;
 pub(crate) mod muse_session;
 pub(crate) mod record;
+pub(crate) mod screen;
 mod session;
 mod worktree;
 
@@ -268,7 +269,9 @@ fn launch(
   run.previous = previous;
   run.launches = launches;
   run.reserve(&mut record, ctx)?;
-  let outcome = run.go(&mut record, ctx);
+  let outcome = run
+    .go(&mut record, ctx)
+    .map_err(|err| run.explain(err, &record, &mut ctx.herdr));
   run.settle(&mut record, outcome)
 }
 

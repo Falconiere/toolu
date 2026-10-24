@@ -175,13 +175,7 @@ fn a_live_launch_reserves_starts_prompts_and_records_the_session() {
   let issue = find_issue(&rig.graph, "comemory-255")
     .expect("issue")
     .clone();
-  let github = toolu_http_test_support::Fixture::start().expect("fixture");
-  crate::support::ok(
-    &github,
-    "/repos/Falconiere/comemory",
-    &json!({"default_branch": "main"}),
-  );
-  let client = crate::support::gh(&github);
+  let (_github, client) = crate::support::comemory_github();
   let mut ctx = rig.ctx();
   ctx.gh = Ok(&client);
   let result = launch_issue(&rig.graph, &issue, &flags, &mut ctx);

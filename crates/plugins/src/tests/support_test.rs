@@ -183,6 +183,7 @@ impl Sandbox {
       env: self.env(),
       timeout: std::time::Duration::from_secs(60),
       checkout: Some(Checkout::locate(&self.env(), version, origin).expect("checkout")),
+      pin: None,
       approval,
     }
   }

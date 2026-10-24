@@ -95,6 +95,22 @@ pub(crate) fn pending(stdout: &str) -> Result<bool, String> {
 /// --json` payload; `None` when it is not registered.
 pub(crate) fn marketplace(stdout: &str, name: &str) -> Result<Option<Source>, String> {
   let value: Value = serde_json::from_str(stdout).map_err(|err| err.to_string())?;
+  let Some(source) = registered_source(&value, name, "source")? else {
+    return Ok(None);
+  };
+  Ok(Some(Source {
+    kind: text(source, "kind")?,
+    path: text(source, "path")?,
+  }))
+}
+
+/// The `key` object of the marketplace `name` in a `{"marketplaces": [...]}`
+/// listing, which Muse and Codex both print; `None` when it is not registered.
+pub(crate) fn registered_source<'v>(
+  value: &'v Value,
+  name: &str,
+  key: &str,
+) -> Result<Option<&'v Value>, String> {
   let registered = value
     .get("marketplaces")
     .and_then(Value::as_array)
@@ -105,13 +121,10 @@ pub(crate) fn marketplace(stdout: &str, name: &str) -> Result<Option<Source>, St
   else {
     return Ok(None);
   };
-  let source = entry
-    .get("source")
-    .ok_or(format!("marketplace {name} has no \"source\""))?;
-  Ok(Some(Source {
-    kind: text(source, "kind")?,
-    path: text(source, "path")?,
-  }))
+  entry
+    .get(key)
+    .map(Some)
+    .ok_or(format!("marketplace {name} has no \"{key}\""))
 }
 
 /// `muse plugins marketplace list --json`.

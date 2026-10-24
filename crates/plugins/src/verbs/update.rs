@@ -1,20 +1,19 @@
 //! `update`: only what differs from the offered version, then hook approval
 //! (Muse). On Muse the checkout moves to this binary's tag first, and a plugin
-//! installed from elsewhere is left alone.
+//! installed from elsewhere is left alone. On Codex the marketplace is pinned
+//! to the tag first; a re-pin adds every installed plugin again (#626).
 
 use crate::args::Verb;
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
-use crate::verbs::{Driver, find, foreign_step, prepare, trust};
+use crate::verbs::{Driver, find, foreign_step, pin, prepare, trust};
 
 /// Updates `names`, or every installed plugin when empty; a dry run runs no update.
 pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
-  if !dry_run {
-    prepare::run(driver, Verb::Update)?;
-  }
+  let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
   let installed = driver.versions(&adapter.list_installed());
   let offered = driver.versions(&adapter.list_available());
   let targets: Vec<String> = if names.is_empty() {
@@ -36,7 +35,13 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<S
   }
   let steps = targets
     .iter()
-    .map(|name| one(driver, name, &installed, &offered, dry_run))
+    .map(|name| {
+      if repinned && !find(&installed, name).is_some_and(|entry| driver.foreign(entry)) {
+        pin::refresh(driver, name)
+      } else {
+        one(driver, name, &installed, &offered, dry_run)
+      }
+    })
     .collect();
   if dry_run {
     return Ok(steps);

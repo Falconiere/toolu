@@ -4,8 +4,8 @@
 //! the partner, score and source), `wait` (no host, shared capacity, a
 //! resource hold, the GitHub budget, or a pane whose shell never became
 //! ready), `settled` (a finish already merged or abandoned the issue, so it
-//! is never relaunched, #619) or `failed` (with the record's stage after the
-//! attempt).
+//! is never relaunched, #619), `needs-human` (the agent waits on an approval
+//! screen, #626) or `failed` (both with the record's stage after the attempt).
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -18,7 +18,7 @@ use crate::executor::Job;
 use crate::graph::{Graph, GraphIssue, read_graph};
 use crate::hosts::HostKind;
 use crate::launch::{
-  Ctx, FINISHED, LaunchOpts, Launcher, PANE_BUSY, Recovery, finished_stage, guard_budget,
+  Ctx, FINISHED, Failure, LaunchOpts, Launcher, PANE_BUSY, Recovery, finished_stage, guard_budget,
   launch_issue,
 };
 use crate::paths::Paths;
@@ -164,13 +164,23 @@ fn launch_routed(
     by: Launcher::Engine,
   };
   let mut ctx = Ctx::live(&input.env, &input.paths, gh.as_ref().map_err(Clone::clone));
-  match launch_issue(graph, issue, &opts, &mut ctx) {
-    Ok(_) => json!({"outcome": "applied", "kind": record_field(input, "kind")}),
+  let result = launch_issue(graph, issue, &opts, &mut ctx).map(|_document| ());
+  outcome_of(result, |name| record_field(input, name))
+}
+
+/// The effect's outcome for a launch that `launched` or failed, reading the
+/// record's fields after the attempt through `field`.
+fn outcome_of(launched: Result<(), Failure>, field: impl Fn(&str) -> Option<String>) -> Value {
+  match launched {
+    Ok(()) => json!({"outcome": "applied", "kind": field("kind")}),
     Err(err) if waits(&err.message) => json!({"outcome": "wait", "note": err.message}),
-    Err(err) if err.message.starts_with(FINISHED) => {
-      settled(record_field(input, "stage").as_deref())
-    }
-    Err(err) => failed(&err.message, record_field(input, "stage").as_deref()),
+    Err(err) if err.message.starts_with(FINISHED) => settled(field("stage").as_deref()),
+    Err(err) if err.awaits_approval() => json!({
+      "outcome": "needs-human",
+      "note": err.message,
+      "stage": field("stage"),
+    }),
+    Err(err) => failed(&err.message, field("stage").as_deref()),
   }
 }
 
