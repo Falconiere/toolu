@@ -1,5 +1,6 @@
 //! The in-process cleanup effect: finish the merged issue (not `--abandon`),
-//! then settle its tracker item (close and tick) unless the tracker already
+//! retrying with backoff while its agent or workload is still exiting, then
+//! settle its tracker item (close and tick) unless the tracker already
 //! reports it closed. The outcome is one JSON document for `commit`.
 
 use std::path::{Path, PathBuf};
@@ -99,16 +100,21 @@ pub(crate) fn cleanup(input: &CleanupJob) -> Value {
     Err(err) => return incomplete(&input.env, &err),
   };
   if report.finished.get("stage").and_then(Value::as_str) != Some("merged") {
-    let note = if report.warnings.is_empty() {
-      "cleanup incomplete; see the issue record".to_owned()
-    } else {
-      format!("cleanup incomplete: {}", report.warnings.join("; "))
-    };
-    return incomplete(&input.env, &note);
+    return incomplete(&input.env, &unmerged_note(&report));
   }
   match settle(input, gh.as_ref().map_err(Clone::clone)) {
     Ok(settled) => json!({"outcome": "applied", "settle": settled, "tracker_closed": true}),
     Err(err) => json!({"outcome": "applied", "settle_error": redact(&input.env, &err)}),
+  }
+}
+
+/// Why a finish that returned stopped short of `merged`: its warnings (a
+/// failed workspace removal), or a pointer to the record.
+fn unmerged_note(report: &FinishReport) -> String {
+  if report.warnings.is_empty() {
+    "cleanup incomplete; see the issue record".to_owned()
+  } else {
+    format!("cleanup incomplete: {}", report.warnings.join("; "))
   }
 }
 

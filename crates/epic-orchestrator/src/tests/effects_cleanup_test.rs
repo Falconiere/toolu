@@ -3,8 +3,9 @@ use std::time::Duration;
 use serde_json::{Value, json};
 use toolu_runtime::env::Env;
 
-use super::{CleanupJob, CleanupRetry, cleanup, finish_retrying};
+use super::{CleanupJob, CleanupRetry, cleanup, finish_retrying, unmerged_note};
 use crate::finish_rig::{Layout, layout, live, read};
+use crate::herdr_state::error;
 use crate::launch_rig::Rig;
 use crate::paths::Paths;
 use crate::reach::Reach;
@@ -105,5 +106,28 @@ fn the_retry_policy_reads_its_environment() {
       attempts: 1,
       backoff: Duration::from_millis(250)
     }
+  );
+}
+
+#[test]
+fn a_failed_removal_names_herdr_s_error_in_the_note() {
+  let (l, rig) = (layout(), Rig::new());
+  let github = live(&l, &rig, true);
+  rig.herdr.script(
+    "worktree.remove",
+    error("workspace_busy", "workspace w-1 is busy"),
+  );
+  let client = gh(&github);
+  let mut ctx = rig.ctx();
+  ctx.gh = Ok(&client);
+  let retry = CleanupRetry {
+    attempts: 3,
+    backoff: Duration::ZERO,
+  };
+  let report = finish_retrying(&l.state, "k-1", &mut ctx, retry).expect("finish");
+  assert_eq!(report.finished["stage"], "cleanup-incomplete");
+  assert_eq!(
+    unmerged_note(&report),
+    "cleanup incomplete: herdr worktree.remove: workspace_busy: workspace w-1 is busy"
   );
 }
