@@ -8,6 +8,7 @@ use std::time::{Duration, SystemTime};
 use serde_json::{Value, json};
 use toolu_runtime::process::{Spec, run};
 
+use super::STILL_EXITING;
 use super::branch::delete_branch;
 use super::ownership::{Cleanup, verify_no_jobs};
 use super::record::{RemovalIntent, leftover_files};
@@ -15,9 +16,11 @@ use crate::checkpoint::snapshot;
 use crate::herdr::Call;
 use crate::hosts::host_kind;
 use crate::launch::Ctx;
-use crate::launch::lifecycle::{Expected, Outcome, inspect_agent, shutdown_agent};
+use crate::launch::lifecycle::{
+  Expected, Outcome, exit_grace, exit_wait, inspect_agent, listing_gone, shutdown_agent,
+};
 use crate::launch::record::{Record, text, write_record};
-use crate::workload::{owned_workload, verify_owned_exit};
+use crate::workload::{OwnedWorkload, await_owned_exit, owned_workload, verify_owned_exit};
 
 const LEFTOVER_LINES: usize = 20;
 
@@ -48,8 +51,16 @@ fn word(record: &Record, key: &str) -> String {
   text(record, key).unwrap_or("").to_owned()
 }
 
-/// Exit the agent; babysit's cron is session-scoped, so it ends too.
-fn exit_agent(ctx: &mut Ctx<'_>, record: &Record) -> Result<(), String> {
+/// The pids of `list`, comma-separated.
+fn pids(list: &[OwnedWorkload]) -> String {
+  let pids: Vec<String> = list.iter().map(|owned| owned.pid.to_string()).collect();
+  pids.join(", ")
+}
+
+/// Exit the agent; babysit's cron is session-scoped, so it ends too. A
+/// shutdown that did not finish says whether the agent or its workload is
+/// still exiting.
+fn exit_agent(ctx: &mut Ctx<'_>, record: &Record, shell: Option<u32>) -> Result<(), String> {
   let agent = word(record, "agent");
   if agent.is_empty() {
     return Ok(());
@@ -66,10 +77,24 @@ fn exit_agent(ctx: &mut Ctx<'_>, record: &Record) -> Result<(), String> {
   };
   let outcome = shutdown_agent(&mut ctx.herdr, &agent, &expected).map_err(|err| err.message)?;
   if outcome == Outcome::Exited {
-    Ok(())
-  } else {
-    Err(format!("agent {agent} shutdown incomplete"))
+    return Ok(());
   }
+  if !listing_gone(&mut ctx.herdr, &agent).map_err(|err| err.message)? {
+    let wait = exit_wait(ctx.env).as_secs();
+    return Err(format!(
+      "{STILL_EXITING}agent {agent} did not leave herdr within {wait} s"
+    ));
+  }
+  let left = owned_workload(Path::new(&worktree), shell)?;
+  // Nothing owned now; `Teardown::live` still awaits the set it recorded
+  // before the exit, so a process that moved out of the worktree is caught.
+  if left.is_empty() {
+    return Ok(());
+  }
+  Err(format!(
+    "{STILL_EXITING}worktree processes {} remain after agent {agent} left herdr",
+    pids(&left)
+  ))
 }
 
 /// The snapshot ref when one holds the worktree's work.
@@ -139,9 +164,14 @@ impl Teardown<'_> {
     let worktree = word(record, "worktree");
     let shell = shell_pid(ctx, record)?;
     let owned = owned_workload(Path::new(&worktree), shell)?;
-    exit_agent(ctx, record)?;
-    if !verify_owned_exit(&owned)? || !owned_workload(Path::new(&worktree), shell)?.is_empty() {
-      return Err("owned background workload remains alive".to_owned());
+    exit_agent(ctx, record, shell)?;
+    if !await_owned_exit(Path::new(&worktree), shell, &owned, exit_grace(ctx.env))? {
+      let now = owned_workload(Path::new(&worktree), shell)?;
+      let left = if now.is_empty() { &owned } else { &now };
+      return Err(format!(
+        "{STILL_EXITING}owned background workload remains alive: {}",
+        pids(left)
+      ));
     }
     verify_no_jobs(ownership, &worktree)?;
     let wip_ref = snapshot_ref(&worktree, &word(record, "key"))?;
@@ -153,7 +183,9 @@ impl Teardown<'_> {
       ));
     }
     if !owned_workload(Path::new(&worktree), shell)?.is_empty() {
-      return Err("new workload appeared before cleanup; retry after it exits".to_owned());
+      return Err(format!(
+        "{STILL_EXITING}new workload appeared before cleanup; retry after it exits"
+      ));
     }
     let intent = RemovalIntent {
       workspace_id: word(record, "workspace_id"),

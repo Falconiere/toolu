@@ -1,45 +1,9 @@
 use serde_json::json;
-use toolu_engine::resources::binding::bind_worktree;
-use toolu_http_test_support::Fixture;
 
 use crate::finish::finish_issue;
-use crate::finish_rig::{Layout, agent_lease, layout, leases, patch, read, write};
-use crate::herdr::Call;
+use crate::finish_rig::{agent_lease, layout, leases, live, patch, read};
 use crate::launch_rig::Rig;
-use crate::support::{gh, git, ok};
-
-/// The layout's worktree open in herdr with a live Claude agent and a merged
-/// or open PR 7; the GitHub fixture.
-fn live(l: &Layout, rig: &Rig, merged: bool) -> Fixture {
-  let workspace = rig.herdr.state().open(&l.main, &l.wt, "k-1", true);
-  let pane = format!("{workspace}:p1");
-  let start = Call::Start {
-    name: "k-1".into(),
-    kind: "claude".into(),
-    pane_id: pane.clone(),
-    args: Vec::new(),
-    timeout_ms: None,
-  };
-  rig.ctx().herdr.call(&start).expect("agent");
-  let token = agent_lease(l, "running");
-  bind_worktree(&l.resources, &l.wt, "k-1", &l.state.display().to_string()).expect("bind");
-  patch(
-    l,
-    &json!({"workspace_id": workspace, "pane_id": pane, "agent": "k-1", "kind": "claude", "resource_root": l.resources, "lease_token": token}),
-  );
-  write(
-    &l.state.join("status").join("k-1.json"),
-    &json!({"phase": "ready", "pr": 7}),
-  );
-  let fixture = Fixture::start().expect("fixture");
-  let state = if merged { "closed" } else { "open" };
-  ok(
-    &fixture,
-    "/repos/o/r/pulls/7",
-    &json!({"merged": merged, "state": state}),
-  );
-  fixture
-}
+use crate::support::{gh, git};
 
 #[test]
 fn a_merged_issue_is_torn_down_through_herdr_and_its_lease_released() {
@@ -92,14 +56,16 @@ fn an_open_pr_and_live_workload_refuse_and_keep_the_lease() {
   let busy = finish_issue(&l.state, "k-1", (true, false), &mut ctx);
   let _killed = sleeper.kill();
   let _reaped = sleeper.wait();
-  assert_eq!(busy, Err("agent k-1 shutdown incomplete".to_owned()));
+  let reason = format!(
+    "still exiting: worktree processes {} remain after agent k-1 left herdr",
+    sleeper.id()
+  );
+  assert_eq!(busy, Err(reason.clone()));
+  assert!(crate::finish::still_exiting(&reason));
   let record = read(&l.record);
   assert_eq!(
     (record["stage"].clone(), record["cleanup_error"].clone()),
-    (
-      json!("cleanup-incomplete"),
-      json!("agent k-1 shutdown incomplete")
-    )
+    (json!("cleanup-incomplete"), json!(reason))
   );
   assert_eq!(leases(&l).len(), 1);
 }

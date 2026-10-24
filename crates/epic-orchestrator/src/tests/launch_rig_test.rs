@@ -49,7 +49,9 @@ impl Rig {
       .with(
         "CODEX_HOME",
         &tmp.path().join("codex").display().to_string(),
-      );
+      )
+      // A leftover process is reported after 2 s, not the live 10 s.
+      .with("EPIC_AGENT_EXIT_GRACE_S", "2");
     let paths = Paths::at(tmp.path().join("engine"));
     Self {
       tmp,

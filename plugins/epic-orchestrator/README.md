@@ -308,7 +308,13 @@ without claiming to measure steal. Hypervisor starvation is distinct from guest 
 
 Lifecycle operations verify host, pane and worktree. Shutdown distinguishes turn
 cancellation from background jobs: Codex uses `--no-daemon` and `/stop` before `/exit`. Worktree
-process inventories and process birth identities guard final cleanup. Missing shutdown/workspace evidence produces
+process inventories and process birth identities guard final cleanup. Shutdown waits up to
+`EPIC_AGENT_EXIT_WAIT_S` (30) for herdr to stop listing the agent, then up to
+`EPIC_AGENT_EXIT_GRACE_S` (10) for its worktree processes to exit. A teardown
+whose agent or workload is still exiting (a `still exiting:` reason) is retried
+by the engine up to `EPIC_CLEANUP_ATTEMPTS` (3) times, pausing
+`EPIC_CLEANUP_BACKOFF_MS` (5000) and doubling. Any other failure is not retried.
+Missing shutdown/workspace evidence produces
 `cleanup-incomplete`, preserves the lease and allows a later retry. Both merged
 and abandoned work require a successful final snapshot before removal.
 Prompt acknowledgement records blocked and provider-limited outcomes separately

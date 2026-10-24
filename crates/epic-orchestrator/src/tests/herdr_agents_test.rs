@@ -76,7 +76,7 @@ impl State {
     Ok(json!({"agent": {"name": name}}))
   }
 
-  /// A prompt or keys; `/exit` ends the agent.
+  /// A prompt or keys; `/exit` ends the agent unless it ignores exits.
   pub(crate) fn input(&mut self, method: &str, params: &Value) -> Result<Value, Scripted> {
     let name = text(params, "target");
     let words: Vec<String> = if method == "agent.prompt" {
@@ -107,7 +107,9 @@ impl State {
       agent.status = "working".to_owned();
     }
     let exits = words.iter().any(|word| word == "/exit");
-    if exits {
+    if exits && self.ignore_exits > 0 {
+      self.ignore_exits -= 1;
+    } else if exits {
       stop(&mut agent.process);
       self.agents.remove(index);
     }

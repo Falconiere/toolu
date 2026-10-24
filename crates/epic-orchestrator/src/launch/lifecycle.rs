@@ -13,7 +13,8 @@ use crate::herdr::{Call, Client};
 use crate::herdr_calls::request;
 use crate::hosts::{HostKind, host_kind, host_limited};
 use crate::paths::Paths;
-use crate::workload::{owned_workload, verify_owned_exit};
+use crate::retry::number;
+use crate::workload::{await_owned_exit, owned_workload};
 
 /// herdr as the launch and finish verbs reach it.
 pub(crate) struct Herdr<'a> {
@@ -169,7 +170,7 @@ fn identity_pending(name: &str, err: &Failure) -> bool {
 
 /// Whether herdr no longer lists `name`. A dying agent's entry degrades
 /// before its name disappears: still present, not a failure.
-fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
+pub(crate) fn listing_gone(herdr: &mut Herdr<'_>, name: &str) -> Result<bool, Failure> {
   match inspect_agent(herdr, name) {
     Ok(agent) => Ok(agent.is_none()),
     Err(err) if identity_pending(name, &err) => Ok(false),
@@ -305,7 +306,20 @@ fn request_exit(herdr: &mut Herdr<'_>, name: &str, kind: HostKind) -> Result<(),
   }
 }
 
-/// Ask the agent to exit and wait up to 30 s for it and its workload to go.
+/// How long an agent may take to leave herdr's list after `/exit`
+/// (`EPIC_AGENT_EXIT_WAIT_S`, 30).
+pub(crate) fn exit_wait(env: &Env) -> Duration {
+  Duration::from_secs(number(env, "EPIC_AGENT_EXIT_WAIT_S", 30))
+}
+
+/// How long its worktree processes may take to follow it
+/// (`EPIC_AGENT_EXIT_GRACE_S`, 10).
+pub(crate) fn exit_grace(env: &Env) -> Duration {
+  Duration::from_secs(number(env, "EPIC_AGENT_EXIT_GRACE_S", 10))
+}
+
+/// Ask the agent to exit, wait for herdr to stop listing it
+/// ([`exit_wait`]), then for its workload to go ([`exit_grace`]).
 ///
 /// # Errors
 /// The identity differs, the pane's shell is unknown, or herdr fails.
@@ -328,28 +342,18 @@ pub(crate) fn shutdown_agent(
     .ok_or_else(|| Failure::refusal("pane shell ownership unavailable"))?;
   let cwd = Path::new(expected.cwd);
   let owned = owned_workload(cwd, Some(shell)).map_err(Failure::unknown)?;
-  if live.is_none() {
-    return Ok(if owned.is_empty() {
-      Outcome::Exited
-    } else {
-      Outcome::CleanupIncomplete
-    });
-  }
-  request_exit(herdr, name, expected.kind)?;
-  let deadline = Instant::now() + Duration::from_secs(30);
-  loop {
-    if listing_gone(herdr, name)? {
-      break;
+  if live.is_some() {
+    request_exit(herdr, name, expected.kind)?;
+    let deadline = Instant::now() + exit_wait(herdr.env);
+    while !listing_gone(herdr, name)? {
+      if Instant::now() >= deadline {
+        return Ok(Outcome::CleanupIncomplete);
+      }
+      std::thread::sleep(Duration::from_secs(1));
     }
-    if Instant::now() >= deadline {
-      return Ok(Outcome::CleanupIncomplete);
-    }
-    std::thread::sleep(Duration::from_secs(1));
   }
-  let gone = verify_owned_exit(&owned).map_err(Failure::unknown)?
-    && owned_workload(cwd, Some(shell))
-      .map_err(Failure::unknown)?
-      .is_empty();
+  let gone =
+    await_owned_exit(cwd, Some(shell), &owned, exit_grace(herdr.env)).map_err(Failure::unknown)?;
   Ok(if gone {
     Outcome::Exited
   } else {
@@ -360,3 +364,7 @@ pub(crate) fn shutdown_agent(
 #[cfg(test)]
 #[path = "tests/lifecycle_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/lifecycle_shutdown_test.rs"]
+mod shutdown_tests;
