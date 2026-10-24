@@ -1,7 +1,7 @@
 {
   "name": "toolu-workspace",
   "private": true,
-  "version": "8.3.0",
+  "version": "8.4.0",
   "description": "Engineering discipline for coding agents. The version anchor for release-please; jscpd is the gate's one npm tool.",
   "license": "MIT",
   "devDependencies": {
