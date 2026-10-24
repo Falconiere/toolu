@@ -263,8 +263,9 @@ and are revalidated against the current pool; `NONE` refuses launch, including
 starting an agent. Start/prompt uncertainty retains ownership and requires
 inspection before explicit `--reprompt` or `--replace`. A worker that reports
 after such a launch is running: the engine moves its agent lease to `running`,
-so its jobs run, and `--reprompt` records the one session its host wrote for
-the worktree since the attempt began (#625). A failed launch whose
+so its jobs run. Any later launch that keeps the live worker records the one
+session its host wrote for the worktree since the attempt began; a plain launch
+does so without prompting the worker again (#625). A failed launch whose
 agent sits on Codex's hook review is `needs-human`, naming the screen and pane
 (#626), not `failed`.
 Replacement reserves its destination before stopping the source; both host slots

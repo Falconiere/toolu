@@ -205,13 +205,46 @@ fn adopt(rig: &Rig) {
   crate::disk::write_issue(&adopted, SystemTime::now()).expect("engine write");
 }
 
+/// The chat Cursor kept once the stalled prompt was submitted.
+const CHAT: &str = "1f21b969-a107-480c-989c-32f677f90a5f";
+
+/// How many prompts herdr has served.
+fn prompts(rig: &Rig) -> usize {
+  let calls = rig.herdr.calls();
+  calls
+    .iter()
+    .filter(|(method, _)| method == "agent.prompt")
+    .count()
+}
+
+/// Write [`CHAT`] as Cursor does, launch `record`'s issue again with
+/// `recovery`, and check the record now names the chat, acknowledged.
+fn repair(rig: &Rig, mut flags: LaunchOpts, record: &Value, recovery: Recovery) {
+  let since = record["session_started_after"].as_u64().expect("since");
+  let worktree = record["worktree"].as_str().expect("worktree");
+  rig.cursor_chat(worktree, CHAT, since + 1);
+  flags.recovery = recovery;
+  let launched = rig.launch(&flags);
+  launched.unwrap_or_else(|err| panic!("{}", err.message));
+  let repaired = rig.record("comemory-255");
+  let fields =
+    ["stage", "prompt_state", "session_id", "lifecycle_outcome"].map(|key| &repaired[key]);
+  let expected = [
+    json!("running"),
+    json!("acknowledged"),
+    json!(CHAT),
+    json!("retained"),
+  ];
+  assert_eq!(fields, expected.each_ref());
+}
+
 /// #625 end to end: a Cursor prompt stalls before its chat exists, a human
 /// submits it, the worker reports, the engine adopts it, and `--reprompt`
-/// records the chat Cursor wrote.
+/// records the chat Cursor wrote and prompts the worker again.
 #[test]
 fn a_stalled_cursor_prompt_runs_jobs_once_adopted_and_reprompt_records_its_chat() {
   let mut rig = Rig::new();
-  let (mut flags, record) = stalled_cursor(&mut rig);
+  let (flags, record) = stalled_cursor(&mut rig);
   let unconfirmed = (
     &record["stage"],
     &record["prompt_state"],
@@ -233,25 +266,22 @@ fn a_stalled_cursor_prompt_runs_jobs_once_adopted_and_reprompt_records_its_chat(
   assert_eq!(rig.record("comemory-255")["stage"], "running");
   assert_eq!(lease_stage(&resources, &token).as_deref(), Some("running"));
   assert!(job().is_ok());
-  let since = record["session_started_after"].as_u64().expect("since");
-  let chat = "1f21b969-a107-480c-989c-32f677f90a5f";
-  rig.cursor_chat(&worktree, chat, since + 1);
-  flags.recovery = Recovery::Reprompt;
-  let launched = rig.launch(&flags);
-  launched.unwrap_or_else(|err| panic!("{}", err.message));
-  let repaired = rig.record("comemory-255");
-  let fields =
-    ["stage", "prompt_state", "session_id", "lifecycle_outcome"].map(|key| &repaired[key]);
-  assert_eq!(
-    fields,
-    [
-      &json!("running"),
-      &json!("acknowledged"),
-      &json!(chat),
-      &json!("retained")
-    ]
-  );
+  let before = prompts(&rig);
+  repair(&rig, flags, &record, Recovery::Reprompt);
+  assert_eq!(prompts(&rig), before + 1);
   assert_eq!(lease_stage(&resources, &token).as_deref(), Some("running"));
+}
+
+/// A plain launch repairs the same record and leaves the working worker
+/// unprompted.
+#[test]
+fn a_plain_launch_records_the_chat_without_prompting_the_worker_again() {
+  let mut rig = Rig::new();
+  let (flags, record) = stalled_cursor(&mut rig);
+  adopt(&rig);
+  let before = prompts(&rig);
+  repair(&rig, flags, &record, Recovery::Fresh);
+  assert_eq!(prompts(&rig), before);
 }
 
 #[test]
@@ -271,4 +301,21 @@ fn the_engine_write_mirrors_unless_its_own_launch_is_pending() {
     lease_stage(&owned.root, &owned.token).as_deref(),
     Some("running")
   );
+}
+
+/// A mirror that fails is best effort: the engine's record write still
+/// stands, through its tracker sighting.
+#[test]
+fn an_unreadable_resource_state_leaves_the_engine_write_standing() {
+  let owned = owned("uncertain");
+  std::fs::write(owned.root.join("state.json"), "{").expect("corrupt");
+  assert!(mirror_running(&owned.state, "k-1").is_err());
+  let state = owned.state.display().to_string();
+  let mut issue = crate::model::Issue::blank("k-1", "epic", &state, 0);
+  "running".clone_into(&mut issue.stage);
+  issue.tracker_seen = crate::model::Seen::Closed;
+  crate::disk::write_issue(&issue, SystemTime::now()).expect("the record write stands");
+  let record = crate::disk::read_value(&owned.state.join("issues/k-1.json")).expect("record");
+  assert_eq!(record["stage"], "running");
+  assert!(record.get("tracker_closed_at").is_some(), "{record}");
 }

@@ -45,12 +45,12 @@ fn ending(record: &Record) -> bool {
 
 /// A launch whose prompt was never confirmed may still lack its session: while
 /// it starts, and once the engine adopted the worker that reported before its
-/// launch confirmed the prompt (#625).
+/// launch confirmed the prompt (#625), through the gate parking it to merge.
 fn awaiting_capture(record: &Record) -> bool {
   let prompt = text(record, "prompt_state");
   match text(record, "stage") {
     Some("starting" | "uncertain" | "replacing") => prompt != Some("acknowledged"),
-    Some("running") => prompt.is_some_and(|state| state != "acknowledged"),
+    Some("running" | "awaiting_merge") => prompt.is_some_and(|state| state != "acknowledged"),
     _ => false,
   }
 }

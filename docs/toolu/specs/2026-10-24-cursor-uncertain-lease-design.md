@@ -50,9 +50,9 @@ three repairs, p=0.92.
 
 1. **Validation (`launch/record.rs`).** A new `awaiting_capture(record)` holds the "may
    still lack its session" rule. At `starting`/`uncertain`/`replacing` it is true when
-   `prompt_state` is not `acknowledged`, as today. At `running` it is true only when
-   `prompt_state` is **present** and not `acknowledged`, which is the shape adoption
-   leaves. The managed-running check skips records that are awaiting capture. Every record
+   `prompt_state` is not `acknowledged`, as today. At `running` (and `awaiting_merge`, where
+   the gate parks it) it is true only when `prompt_state` is **present** and not
+   `acknowledged`, which is the shape adoption leaves. The managed-running check skips records that are awaiting capture. Every record
    that was valid stays valid. An acknowledged `running` record without a session is still
    refused, with the same two messages.
 2. **Lease on adoption (`launch/adoption.rs`, new).** `mirror_running(state_dir, key)`
@@ -78,6 +78,9 @@ three repairs, p=0.92.
    fills. `Attempt::start` writes a captured id to `session_id`. Then the existing
    `deliver` path finishes the record as `running`, `prompt_state: acknowledged`,
    `lifecycle_outcome: retained`, and `persist_attempt` sets the lease to `running` too.
+   The keep path is shared, so any launch that keeps the live agent repairs the record: a
+   plain launch does so without prompting the worker again, and `--reprompt` also sends
+   the prompt again. Jev chose this over limiting capture to `--reprompt`, p=0.91.
 
 Decisive trade-off: the lease mirror lives in the engine's record write, not in job
 admission. This keeps `uncertain` meaningful (ownership unclear, so no jobs), and grants
@@ -163,6 +166,11 @@ pub(crate) struct AgentStart { pub started: bool, pub resumed: bool, pub args: V
   chat whose `createdAtMs` is before `session_started_after`, `ensure_agent` refuses with
   `live session identity is missing; inspect before explicit --replace` and captures
   nothing.
+- **AC-7:** Over the same adopted record and Cursor chat, a plain `launch_issue`
+  (no recovery flag) leaves the same repaired record and serves no `agent.prompt`, and
+  `--reprompt` serves exactly one. An `awaiting_merge` adopted record loads like a
+  `running` one. An unreadable resource state makes `mirror_running` fail, yet
+  `disk::write_issue` still writes the stage and the tracker sighting.
 - **AC-6:** A dry-run `--replace` and a dry-run `--reprompt` launch over the AC-1 record
   succeed, where before they failed with `invalid launch record …: session_id may be null
   only while awaiting capture`.
@@ -190,14 +198,19 @@ pub(crate) struct AgentStart { pub started: bool, pub resumed: bool, pub args: V
 - **AC-6:** The `Rig` state with the AC-1 record written, through the existing `dry()`
   helper with `Recovery::Replace` and `Recovery::Reprompt`. Check: `cargo test -p
   toolu-epic-orchestrator launch::tests::`.
+- **AC-7:** The AC-4 `Rig` flow with `Recovery::Fresh`, counting `agent.prompt` calls on the
+  herdr fixture; a record file at `awaiting_merge`; a corrupt `state.json` (`{`) under a
+  real resource root. Checks: `cargo test -p toolu-epic-orchestrator launch::adoption::tests`
+  and `launch::record::tests`.
 - The whole change: `cargo xtask gate` before push.
 
 ## Documentation impact
 `plugins/epic-orchestrator/README.md` (launch ownership paragraph) and
 `plugins/epic-orchestrator/skills/epic-orchestrator/references/recovery.md`, Relaunch
 section: a record whose launch never captured its session (`session_id: null`, the worker
-working) is repaired with `--reprompt`. That records the one session the host wrote for
-the worktree since the attempt began. The engine gives a reporting worker's lease
+working) is repaired by a plain `toolu epic launch`, which records the one session the
+host wrote for the worktree since the attempt began without prompting the worker again;
+`--reprompt` repairs it too and also sends the prompt again. The engine gives a reporting worker's lease
 `running`, so its gate runs. No CLI contract, flag or generated-docs change.
 
 ## Open Questions
