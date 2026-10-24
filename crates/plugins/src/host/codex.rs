@@ -5,6 +5,7 @@
 use serde_json::Value;
 
 use crate::host::adapter::{Installed, MARKETPLACE};
+use crate::host::muse::registered_source;
 
 /// The toolu plugins of a `codex plugin list --json` payload. Codex lists
 /// every marketplace's plugins; an entry naming another marketplace is not
@@ -56,19 +57,9 @@ pub(crate) struct Source {
 /// --json` payload, or `None` when Codex has no such marketplace.
 pub(crate) fn marketplace_source(stdout: &str, name: &str) -> Result<Option<Source>, String> {
   let value: Value = serde_json::from_str(stdout).map_err(|err| err.to_string())?;
-  let registered = value
-    .get("marketplaces")
-    .and_then(Value::as_array)
-    .ok_or("expected an object with a \"marketplaces\" array")?;
-  let Some(entry) = registered
-    .iter()
-    .find(|entry| entry.get("name").and_then(Value::as_str) == Some(name))
-  else {
+  let Some(source) = registered_source(&value, name, "marketplaceSource")? else {
     return Ok(None);
   };
-  let source = entry
-    .get("marketplaceSource")
-    .ok_or(format!("marketplace {name} has no \"marketplaceSource\""))?;
   let text = |key: &str| {
     source
       .get(key)

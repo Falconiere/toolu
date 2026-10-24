@@ -1,6 +1,5 @@
-use serde_json::json;
-
 use super::{Left, approval_screen, explain};
+use crate::herdr_state::Scripted;
 use crate::hosts::HostKind;
 use crate::launch::failure::{APPROVAL, Failure};
 use crate::launch::{find_issue, launch_issue};
@@ -116,13 +115,7 @@ fn a_codex_launch_stuck_on_its_hook_review_records_needs_human() {
   let issue = find_issue(&rig.graph, "comemory-255")
     .expect("issue")
     .clone();
-  let github = toolu_http_test_support::Fixture::start().expect("fixture");
-  crate::support::ok(
-    &github,
-    "/repos/Falconiere/comemory",
-    &json!({"default_branch": "main"}),
-  );
-  let client = crate::support::gh(&github);
+  let (_github, client) = crate::support::comemory_github();
   let mut ctx = rig.ctx();
   ctx.gh = Ok(&client);
   ctx.session_wait = std::time::Duration::from_millis(600);
@@ -139,4 +132,59 @@ fn a_codex_launch_stuck_on_its_hook_review_records_needs_human() {
   assert_eq!(record["lifecycle_outcome"], "needs-human");
   assert_eq!(record["stage"], "uncertain");
   assert_eq!(rig.leases(), 1);
+}
+
+#[test]
+fn a_refusal_or_limit_is_kept_unread_and_an_unreadable_pane_keeps_the_failure() {
+  let rig = Rig::new();
+  BROWSER.clone_into(&mut rig.herdr.state().tail);
+  let mut ctx = rig.ctx();
+  let busy = Failure {
+    code: Some(crate::launch::PANE_BUSY.to_owned()),
+    ..Failure::refusal("agent target pane w1:p1 is not an available shell")
+  };
+  assert_eq!(
+    explain(busy.clone(), &mut ctx.herdr, &left(HostKind::Codex)),
+    busy
+  );
+  let limited = Failure::unknown("You've hit your usage limit.");
+  assert_eq!(
+    explain(limited.clone(), &mut ctx.herdr, &left(HostKind::Codex)),
+    limited
+  );
+  assert!(
+    !rig
+      .herdr
+      .state()
+      .calls
+      .iter()
+      .any(|(method, _params)| method == "agent.read"),
+    "a refusal or limit read the pane"
+  );
+  rig.herdr.script(
+    "agent.read",
+    Scripted::Error {
+      code: "agent_not_found".into(),
+      message: "no agent k-1".into(),
+    },
+  );
+  assert_eq!(
+    explain(lost(), &mut ctx.herdr, &left(HostKind::Codex)),
+    lost()
+  );
+}
+
+#[test]
+fn an_unrecorded_pane_is_named_as_such() {
+  let rig = Rig::new();
+  MODAL.clone_into(&mut rig.herdr.state().tail);
+  let mut ctx = rig.ctx();
+  let unrecorded = Left {
+    pane: None,
+    ..left(HostKind::Codex)
+  };
+  assert_eq!(
+    explain(lost(), &mut ctx.herdr, &unrecorded).message,
+    "codex is waiting on its hook review in pane (unrecorded): \"18 hooks are new or changed.\"; review and trust the hooks there, then relaunch with --replace"
+  );
 }

@@ -77,8 +77,12 @@ pub(crate) fn explain(err: Failure, herdr: &mut Herdr<'_>, left: &Left<'_>) -> F
 }
 
 impl Attempt<'_> {
-  /// [`explain`] for this attempt's agent, in the pane its record names.
+  /// [`explain`] for this attempt's agent, in the pane its record names. A
+  /// dry run, or an attempt that reserved nothing, started no agent to read.
   pub(super) fn explain(&self, err: Failure, record: &Record, herdr: &mut Herdr<'_>) -> Failure {
+    if self.opts.dry_run || self.owner.is_none() {
+      return err;
+    }
     let left = Left {
       name: &self.issue.key,
       kind: self.host.kind,

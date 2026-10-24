@@ -156,8 +156,12 @@ failure.
   remove, no re-add.
 - **Foreign `toolu` marketplace** (a local path or a fork): left untouched; the
   hint names its source. Doctor stays silent for a foreign source.
-- **`marketplace list --json` fails or is malformed:** treated as "not ours":
-  no remove; hint.
+- **`marketplace list --json` fails or is malformed:** the verb fails naming
+  the tag and the listing error; no add, no remove (review round, Jev 0.87:
+  an add could replace a local source the listing would have shown).
+- **Pinned add of toolu's own marketplace fails for another reason than the
+  different-source refusal** (network, auth): the verb fails naming the tag;
+  no remove (Jev 0.92: a silent update would loop doctor's fix).
 - **Dry run:** no marketplace command runs (unchanged).
 - **Doctor:** config absent, unreadable, unparsable, or with no
   `[marketplaces.toolu]`: no pin notice (the inventory already reports missing

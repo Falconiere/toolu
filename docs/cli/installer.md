@@ -204,8 +204,11 @@ An existing `toolu` marketplace from `https://github.com/Falconiere/toolu.git`
 that follows another ref is removed and added again pinned. Codex keeps the
 installed plugins and their hook trust across that, and toolu then adds each
 installed toolu plugin again (`re-pinned to v<version>`) so its cache holds the
-tag's content. If the pinned add fails after the remove, the unpinned
-marketplace is added back and the run fails naming the tag. A `toolu`
+tag's content. Only Codex's "already added from a different source" refusal
+leads to the remove; if Codex cannot list its marketplaces, or the pinned add
+fails for another reason, the run fails naming the tag and changes nothing. If
+the pinned add fails after the remove, the unpinned marketplace is added back
+and the run fails naming the tag. A `toolu`
 marketplace from any other source, such as a local checkout, is left as it is.
 `toolu --host codex doctor` warns `plugins` while the marketplace is not
 pinned to this binary's tag.

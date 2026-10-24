@@ -31,9 +31,14 @@ pub(super) fn pin_notice(config: &str, version: &str) -> Option<String> {
   let table: toml::Table = toml::from_str(config).ok()?;
   let marketplace = table.get("marketplaces")?.get("toolu")?;
   let text = |key: &str| marketplace.get(key).and_then(toml::Value::as_str);
+  let bare = |url: &str| {
+    url
+      .trim_end_matches('/')
+      .trim_end_matches(".git")
+      .to_ascii_lowercase()
+  };
   let ours = text("source_type") == Some("git")
-    && text("source")
-      .is_some_and(|source| source.trim_end_matches(".git") == ORIGIN.trim_end_matches(".git"));
+    && text("source").is_some_and(|source| bare(source) == bare(ORIGIN));
   if !ours {
     return None;
   }

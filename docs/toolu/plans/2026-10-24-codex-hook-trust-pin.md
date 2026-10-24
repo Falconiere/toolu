@@ -36,7 +36,7 @@ live evidence → full gate.
   {"id": "s4", "title": "a launch failure whose pane shows Codex's hook review becomes approval_pending, lifecycle_outcome needs-human, effect outcome needs-human and a needs-human attention item", "check": "cargo test -p toolu-epic-orchestrator launch:: && cargo test -p toolu-epic-orchestrator effects_launch && cargo test -p toolu-epic-orchestrator commit", "ac_refs": ["AC-6"], "paths": ["crates/epic-orchestrator/src/launch.rs", "crates/epic-orchestrator/src/launch/screen.rs", "crates/epic-orchestrator/src/launch/failure.rs", "crates/epic-orchestrator/src/launch/tests/screen_test.rs", "crates/epic-orchestrator/src/launch/tests/failure_test.rs", "crates/epic-orchestrator/src/effects_launch.rs", "crates/epic-orchestrator/src/tests/effects_launch_test.rs", "crates/epic-orchestrator/src/commit.rs", "crates/epic-orchestrator/src/tests/commit_launch_test.rs"], "input": "pane text captured from a real Codex 0.164.0 hook review and the TUI singular and plural strings; boundary: tail without the screen, tail with a provider-limit line, a failed pane read keeps the original failure, a not-started refusal is not read", "model": "inherit"},
   {"id": "s5", "title": "installer doc, preflight and recovery references describe the pin, its doctor notice and the needs-human approval launch", "check": "cargo xtask check-markdown-cli && cargo test -p toolu-cli --test epic_markdown && cargo test -p toolu-cli --test epic_skill", "ac_refs": ["AC-1", "AC-5", "AC-6"], "depends_on": ["s2", "s3", "s4"], "paths": ["docs/cli/installer.md", "plugins/epic-orchestrator/skills/epic-orchestrator/references/preflight.md", "plugins/epic-orchestrator/skills/epic-orchestrator/references/recovery.md", "plugins/epic-orchestrator/README.md"], "input": "the real Markdown files", "model": "inherit"},
   {"id": "s6", "title": "live evidence on Codex 0.164.0: re-pin keeps plugins and trust, foreign source untouched, two fresh-worktree sessions after one trust show no review, untrusted home shows the review screen", "check": "test -s docs/toolu/evidence/2026-10-24-codex-hook-trust.md && grep -q 'ref = \"v8.2.0\"' docs/toolu/evidence/2026-10-24-codex-hook-trust.md && grep -q 'hooks need review before they can run' docs/toolu/evidence/2026-10-24-codex-hook-trust.md", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-7"], "depends_on": ["s2", "s4"], "paths": ["docs/toolu/evidence/2026-10-24-codex-hook-trust.md"], "input": "real codex 0.164.0 in herdr panes, private CODEX_HOME with auth linked, two `git worktree add` toolu worktrees, target/debug/toolu", "model": "inherit"},
-  {"id": "s7", "title": "full quality gate", "check": "toolu epic job -- cargo xtask gate", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6"], "depends_on": ["s1", "s2", "s3", "s4", "s5"], "model": "inherit"}
+  {"id": "s7", "title": "full quality gate", "check": "toolu epic job -- /private/tmp/w626/gate/gate.sh && grep -q '== done status=0' /private/tmp/w626/gate/gate.log", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6"], "depends_on": ["s1", "s2", "s3", "s4", "s5"], "model": "inherit"}
 ]
 ```
 
@@ -85,3 +85,20 @@ Round 2 (Approved), Jev `aligned` 0.37, gap `none` 0.42 / `live_feasibility` 0.4
   its Codex-only half (manual pinned marketplace, review screen capture, two
   fresh-worktree sessions) before s1, so s4 gets its captured fixture and a
   failure there returns to the spec before code. The installer half runs after s2.
+
+## Deviations
+
+- s2: Codex itself replaces a local `toolu` marketplace on a git add (found
+  live), so `ensure` lists marketplaces before adding. The Codex listing now
+  keeps only `marketplaceName: toolu` entries (a live update re-added
+  `gmail@openai-curated-remote` as `gmail@toolu`).
+- s2 (review): a listing failure or a non-refusal pinned-add failure on
+  toolu's own marketplace fails the verb; only the different-source refusal
+  leads to the remove. `registered_source` is shared by Codex and Muse
+  listings (jscpd).
+- s4 (review): `Attempt::explain` skips dry runs and unreserved attempts.
+- s7: the local gate runs every step but `tests`/`coverage` plus the changed
+  packages' tests and `toolu-cli` tests minus `launcher`, `muse_lifecycle`
+  and `npm_wrapper`, which fail on this machine because of the Homebrew
+  `toolu` (verified on a clean `origin/main` in #588/#619). CI runs the full
+  gate.

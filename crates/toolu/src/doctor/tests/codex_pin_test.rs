@@ -70,3 +70,27 @@ fn the_config_is_read_from_codex_home() {
   let env = Env::from_pairs([("CODEX_HOME", missing.as_str())]);
   assert_eq!(notice(&env, "8.2.0"), None);
 }
+
+#[test]
+fn toolus_origin_is_recognized_however_it_is_spelled_and_others_are_not() {
+  let spelled = UNPINNED.replace(
+    "https://github.com/Falconiere/toolu.git",
+    "https://github.com/falconiere/toolu/",
+  );
+  assert!(pin_notice(&spelled, "8.2.0").is_some_and(|text| text.contains("default branch")));
+  let fork = UNPINNED.replace(
+    "https://github.com/Falconiere/toolu.git",
+    "https://github.com/someone/toolu.git",
+  );
+  assert_eq!(pin_notice(&fork, "8.2.0"), None);
+}
+
+#[test]
+fn a_blank_codex_home_falls_back_to_home_dot_codex() {
+  let home = tempfile::tempdir().unwrap();
+  std::fs::create_dir_all(home.path().join(".codex")).unwrap();
+  std::fs::write(home.path().join(".codex/config.toml"), pinned("v8.1.4")).unwrap();
+  let home_text = home.path().display().to_string();
+  let env = Env::from_pairs([("HOME", home_text.as_str()), ("CODEX_HOME", " ")]);
+  assert!(notice(&env, "8.2.0").is_some_and(|text| text.contains("pinned to v8.1.4")));
+}
