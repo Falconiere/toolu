@@ -22,8 +22,8 @@ pub(crate) fn reply_ack(
   Ok(false)
 }
 
-/// Deliver an answer to the worker for the `answer` op, then mark the key's
-/// attention answered. A refused or undelivered answer is the caller's error.
+/// Deliver an answer to a live worker for the `answer` op, then mark the key's
+/// attention answered, or record a direction when none is open. A refused or undelivered answer is the caller's error.
 ///
 /// # Errors
 /// The journal cannot be written after the worker received the answer.
@@ -37,8 +37,8 @@ pub(crate) fn reply_answer(
   let by = request.get("by").and_then(Value::as_str).unwrap_or("user");
   let refused = if key.is_empty() || text.is_empty() {
     Some("answer needs a key and a text".to_owned())
-  } else if !crate::attention::has_live(&engine.world, key) {
-    Some(format!("no open attention for {key}"))
+  } else if !crate::attention::has_live_agent(&engine.world, key) {
+    Some(format!("no live agent for {key}"))
   } else {
     send_prompt(engine, key, text)
       .err()
@@ -48,7 +48,11 @@ pub(crate) fn reply_answer(
     let _sent = reply.send(result_value(Err(error)));
     return Ok(false);
   }
-  crate::attention::answered(&mut engine.world, key, by, text);
+  if crate::attention::has_live(&engine.world, key) {
+    crate::attention::answered(&mut engine.world, key, by, text);
+  } else {
+    crate::attention::directed(&mut engine.world, key, by, text);
+  }
   engine.flush()?;
   let _sent = reply.send(result_value(Ok(())));
   Ok(false)

@@ -200,6 +200,19 @@ pub(crate) struct Issue {
   pub tracker_seen: Seen,
   /// Its place in the merge queue and its rebase rounds.
   pub queue: crate::queue_fields::QueueState,
+  /// The last message sent to the worker with no attention item open.
+  pub direction: Option<Direction>,
+}
+
+/// A message sent to a worker with `toolu epic answer` while nothing was open.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct Direction {
+  /// The message.
+  pub text: String,
+  /// Who sent it.
+  pub by: String,
+  /// When it was delivered, milliseconds.
+  pub at_ms: u64,
 }
 
 /// What the engine saw of a merged issue's tracker item.
@@ -388,6 +401,7 @@ impl Issue {
       relaunch: None,
       tracker_seen: Seen::Open,
       queue: crate::queue_fields::QueueState::default(),
+      direction: None,
     }
   }
 }

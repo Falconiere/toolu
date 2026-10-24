@@ -174,7 +174,7 @@ fn key_command(name: &'static str, about: &'static str) -> Command {
 
 fn answer_command() -> Command {
   Command::new("answer")
-    .about("Send an answer to an issue's worker and mark its attention answered")
+    .about("Send a message to a live worker; marks its open attention answered")
     .arg(
       Arg::new("key")
         .value_name("KEY")

@@ -126,6 +126,10 @@ has nothing newer.
 
 ## Workers
 
+- **Re-scoped while it idles** (no attention item): `toolu epic answer <key>
+  "<new direction>"` delivers it, journals it and shows it in `toolu epic
+  status`. It refuses only when the issue has no live agent. Never prompt the
+  agent directly through herdr: the engine would not see the message.
 - **Keeps failing in the same phase:** one concrete redirect through
   `toolu epic answer <key> "<direction>"`. If it fails again, tear it down
   with `--abandon`, ask the user, and hold every issue that depends on it.

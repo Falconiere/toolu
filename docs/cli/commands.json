@@ -3110,7 +3110,7 @@
           "placeholder": false
         },
         {
-          "about": "Send an answer to an issue's worker and mark its attention answered",
+          "about": "Send a message to a live worker; marks its open attention answered",
           "aliases": [],
           "args": [
             {

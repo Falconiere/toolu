@@ -23,7 +23,7 @@ Commands:
   pause     Pause effects for every epic, or one epic
   resume    Resume effects for every epic, or one epic
   ack       Acknowledge an issue's attention items, or a keyless one by kind
-  answer    Send an answer to an issue's worker and mark its attention answered
+  answer    Send a message to a live worker; marks its open attention answered
   wait      Wait for a judgment, or return when the limit passes
   report    Record a worker phase
   job       Run a command under the worktree's resource lease
@@ -201,7 +201,7 @@ Options:
 ## `toolu epic answer`
 
 ```text
-Send an answer to an issue's worker and mark its attention answered
+Send a message to a live worker; marks its open attention answered
 
 Usage: toolu epic answer [OPTIONS] <KEY> <TEXT>
 
