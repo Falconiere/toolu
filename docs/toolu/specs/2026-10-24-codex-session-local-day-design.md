@@ -65,7 +65,10 @@ pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf>;
   UTC ISO date of `t ± DAY_MS`, so `2026/10/31 → 2026/11/01` and `2026/12/31 → 2027/01/01`
   are correct.
 - **`since` near the epoch**: `saturating_sub` keeps the window non-negative.
-- **More than `MAX_FILES` files across the window**: `jsonl_files` returns `None`, unchanged.
+- **More than `MAX_FILES` files across the window**: the wider window holds more old
+  rollouts, so `jsonl_files` now counts only files written at or after `since` toward the
+  cap (a stale rollout can never match anyway); past `MAX_FILES` fresh files it still
+  answers `None`.
 
 ## Acceptance criteria
 - **AC-1:** Given a Codex session for the worktree written (fresh mtime) under the UTC
@@ -83,6 +86,8 @@ pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf>;
   fixtures reproduce.
 - **AC-6:** On herdr 0.9.5, a Codex worker launched between 21:00 and midnight in UTC-3
   records `running` with its session on the first attempt (post-merge; see Open Questions).
+- **AC-7:** Given more than `MAX_FILES` (256) older rollouts in the window plus one fresh
+  session for the worktree, capture returns the fresh session id.
 
 ## Acceptance evidence
 - **AC-1:** real files in a temp `CODEX_HOME`: a `session_meta` JSONL at
@@ -106,6 +111,11 @@ pub(super) fn day_dirs(base: &Path, instants: &[u64]) -> BTreeSet<PathBuf>;
   #591. Not a ledger step: it needs the resident engine, herdr and the late-day clock, which
   this worker does not drive.
 
+- **AC-7:** 257 real `session_meta` files in the `since`-day folder with mtimes set one
+  hour before `since`, then one fresh file. Expected `Ok(None)` with only the old files and
+  `Ok(Some(id))` after the fresh one; before the change the second answer is `Ok(None)`
+  (red). Check: `cargo test -p toolu-epic-orchestrator launch::session::tests`.
+
 ## Documentation impact
 None — internal capture behaviour; no command, flag, config, or documented path changes.
 The `session.rs` and `muse_session.rs` doc comments are updated to say the day folders may
@@ -120,5 +130,6 @@ None blocking. AC-6 is verified live after merge by the epic orchestrator (owner
 **Status:** Approved
 
 - Acceptance evidence: 🔵 consider: AC-6 is post-merge and engine-driven; owned by the epic #591 run, as the issue's acceptance requires a real late-day launch. The pre-merge live layout probe (AC-5) covers the cause.
+- Re-review after local code review added AC-7 (count only fresh files toward the cap, since the window now spans more days): still Approved.
 - Re-review after plan review split the live check into AC-5 (pre-merge probe) and AC-6 (post-merge launch): still Approved.
 - No blockers: problem, non-goals, single approach, interfaces, failure modes, real-file evidence, and documentation impact are concrete.

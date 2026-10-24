@@ -23,7 +23,7 @@ and Muse → live layout probe → full gate.
 ## Steps (machine-readable)
 ```json
 [
-  {"id": "s1", "title": "Codex capture finds a session in the previous- or next-day UTC folder and still refuses ambiguity", "check": "cargo test -p toolu-epic-orchestrator launch::session::tests", "ac_refs": ["AC-1", "AC-2", "AC-3"], "paths": ["crates/epic-orchestrator/src/launch/session.rs", "crates/epic-orchestrator/src/launch/tests/session_test.rs"], "input": "real session_meta JSONL files in a temp CODEX_HOME: one under sessions/<UTC date of since - 1 day> expects Ok(Some(id)) (AC-1); one under <since + 1 day> expects Ok(Some(id)) (AC-2); a previous-day file plus a second fresh file in the since-day folder expects Ok(None) (AC-3); both single-file cases return Ok(None) before the fix (red)"},
+  {"id": "s1", "title": "Codex capture finds a session in the previous- or next-day UTC folder and still refuses ambiguity", "check": "cargo test -p toolu-epic-orchestrator launch::session::tests", "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-7"], "paths": ["crates/epic-orchestrator/src/launch/session.rs", "crates/epic-orchestrator/src/launch/tests/session_test.rs"], "input": "real session_meta JSONL files in a temp CODEX_HOME: one under sessions/<UTC date of since - 1 day> expects Ok(Some(id)) (AC-1); one under <since + 1 day> expects Ok(Some(id)) (AC-2); a previous-day file plus a second fresh file in the since-day folder expects Ok(None) (AC-3); both single-file cases return Ok(None) before the fix (red); 257 rollouts aged one hour before since plus one fresh file expects Ok(Some(id)) (AC-7)"},
   {"id": "s2", "title": "Muse capture uses the shared day window unchanged", "check": "cargo test -p toolu-epic-orchestrator launch::muse_session::tests", "ac_refs": ["AC-4"], "depends_on": ["s1"], "paths": ["crates/epic-orchestrator/src/launch/session.rs", "crates/epic-orchestrator/src/launch/muse_session.rs", "crates/epic-orchestrator/src/launch/tests/muse_session_test.rs"], "input": "existing real Muse session.jsonl fixtures in a temp XDG_DATA_HOME; every existing case keeps its expected id or None after the refactor"},
   {"id": "s3", "title": "Real Codex files its rollout under its local-date folder when that differs from UTC", "check": "/tmp/probe620.sh", "ac_refs": ["AC-5"], "depends_on": ["s2"], "paths": ["crates/epic-orchestrator/src/launch/session.rs"], "input": "real codex-cli 0.164.0 exec in a temp directory with TZ=Etc/GMT+12 (before 12:00 UTC) or Pacific/Kiritimati; expects the local date to differ from the UTC date and a rollout naming that cwd under sessions/<local date>; exits nonzero otherwise"},
   {"id": "s4", "title": "Full quality gate", "check": "toolu epic job -- /tmp/gate620.sh", "depends_on": ["s3"], "paths": ["crates/epic-orchestrator", "docs/toolu"], "input": "the whole workspace: every gate step except tests and coverage, plus cargo test -p toolu-epic-orchestrator"}
@@ -57,6 +57,8 @@ and Muse → live layout probe → full gate.
   and `coverage` cases (launcher, muse_lifecycle, npm_wrapper, contract schema; verified on
   clean `origin/main` by earlier workers). s4 runs every other gate step plus the changed
   package's tests through `/tmp/gate620.sh`; CI runs the full gate.
+- s1: local review found the wider window makes the 256-file cap likelier to trip on old
+  rollouts; `jsonl_files` now counts only files fresh since `since` (spec AC-7).
 
 ## Plan review
 

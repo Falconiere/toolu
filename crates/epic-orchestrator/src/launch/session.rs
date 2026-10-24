@@ -97,8 +97,9 @@ fn cursor(worktree: &str, since: f64, env: &Env) -> Result<Option<String>, Strin
   Ok(one(found))
 }
 
-/// Every `*.jsonl` under `root`, or `None` past [`MAX_FILES`].
-fn jsonl_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<bool, String> {
+/// Every `*.jsonl` under `root` written at or after `since` (epoch ms), or
+/// `None` past [`MAX_FILES`] of them.
+fn jsonl_files(root: &Path, since: u64, out: &mut Vec<PathBuf>) -> Result<bool, String> {
   let entries = match std::fs::read_dir(root) {
     Ok(entries) => entries,
     Err(err) if vanished(&err) => return Ok(true),
@@ -107,10 +108,10 @@ fn jsonl_files(root: &Path, out: &mut Vec<PathBuf>) -> Result<bool, String> {
   for entry in entries.filter_map(Result::ok) {
     let path = entry.path();
     if path.is_dir() {
-      if !jsonl_files(&path, out)? {
+      if !jsonl_files(&path, since, out)? {
         return Ok(false);
       }
-    } else if path.extension().is_some_and(|ext| ext == "jsonl") {
+    } else if path.extension().is_some_and(|ext| ext == "jsonl") && fresh(&path, since)? {
       out.push(path);
       if out.len() > MAX_FILES {
         return Ok(false);
@@ -140,16 +141,19 @@ fn day_dir(base: &Path, epoch_ms: u64) -> PathBuf {
     .fold(base.join("sessions"), |dir, part| dir.join(part))
 }
 
+/// Whether `path` was written at or after `since` (epoch ms); `false` once gone.
+fn fresh(path: &Path, since: u64) -> Result<bool, String> {
+  match std::fs::metadata(path).and_then(|meta| meta.modified()) {
+    Ok(modified) => Ok(modified >= UNIX_EPOCH + Duration::from_millis(since)),
+    Err(err) if vanished(&err) => Ok(false),
+    Err(err) => Err(format!("{}: {err}", path.display())),
+  }
+}
+
 /// The head of `path` when it was written at or after `since` (epoch ms);
 /// `None` when older or gone.
 pub(super) fn fresh_head(path: &Path, since: u64) -> Result<Option<String>, String> {
-  let since_time = UNIX_EPOCH + Duration::from_millis(since);
-  let fresh = match std::fs::metadata(path).and_then(|meta| meta.modified()) {
-    Ok(modified) => modified >= since_time,
-    Err(err) if vanished(&err) => false,
-    Err(err) => return Err(format!("{}: {err}", path.display())),
-  };
-  Ok(fresh.then(|| head(path)).transpose()?.flatten())
+  Ok(fresh(path, since)?.then(|| head(path)).transpose()?.flatten())
 }
 
 /// The first [`MAX_RECORDS`] JSON lines of `text`.
@@ -197,7 +201,7 @@ fn transcripts(
   };
   let mut files = Vec::new();
   for root in &roots {
-    if !jsonl_files(root, &mut files)? {
+    if !jsonl_files(root, since, &mut files)? {
       return Ok(None);
     }
   }
