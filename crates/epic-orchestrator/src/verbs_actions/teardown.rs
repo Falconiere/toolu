@@ -52,29 +52,93 @@ pub(super) fn release_command() -> Command {
 }
 
 /// Finish one issue; `cleanup-incomplete` exits 1 with the document, except
-/// a dry run, which only plans.
+/// a dry run, which only plans. A live engine is told before and after the
+/// teardown, so it neither relaunches the issue nor keeps a stale stage
+/// (#619); a refusal from it tears nothing down.
 pub(super) fn finish(matches: &ArgMatches, env: &Env) -> Outcome {
   let state = PathBuf::from(text(matches, "state-dir").unwrap_or(""));
   let key = text(matches, "key").unwrap_or("");
   let paths = Paths::from_env(env);
+  let flags = (matches.get_flag("abandon"), matches.get_flag("dry-run"));
+  let engine = !flags.1 && crate::lock::live(&paths.lock()) && paths.socket().exists();
+  let begun = if engine {
+    match tell_engine(&paths, key, "begin", None) {
+      Ok(reply) => Some(reply),
+      Err(err) => return failure("toolu epic finish", &err),
+    }
+  } else {
+    None
+  };
   let gh = Gh::new(env);
   let mut ctx = LaunchCtx::live(env, &paths, gh.as_ref().map_err(Clone::clone));
-  let flags = (matches.get_flag("abandon"), matches.get_flag("dry-run"));
-  match finish_issue(&state, key, flags, &mut ctx) {
-    Ok(report) => {
-      let planned = report.finished.get("dry_run") == Some(&Value::Bool(true));
-      let incomplete = !planned
-        && report.finished.get("stage").and_then(Value::as_str) == Some("cleanup-incomplete");
-      let mut outcome = Outcome::data(report.finished.to_string());
-      outcome.exit = if incomplete {
-        Exit::Failure
-      } else {
-        Exit::Success
-      };
-      outcome.stderr = (!report.warnings.is_empty()).then(|| report.warnings.join("\n"));
-      outcome
+  let result = finish_issue(&state, key, flags, &mut ctx);
+  let untold = begun.and_then(|reply| {
+    tell_engine(&paths, key, "end", reply.get("stage"))
+      .err()
+      .map(|err| format!("engine not told: {err}"))
+  });
+  finish_outcome(result, untold)
+}
+
+/// One `finish` step on the engine socket.
+fn tell_engine(
+  paths: &Paths,
+  key: &str,
+  step: &str,
+  stage: Option<&Value>,
+) -> Result<Value, String> {
+  let mut request = json!({"op": "finish", "key": key, "step": step});
+  if let (Some(stage), Some(map)) = (stage, request.as_object_mut()) {
+    map.insert("stage".to_owned(), stage.clone());
+  }
+  let reply = crate::client::exchange_retry(paths, crate::PROTOCOL, &request)?;
+  match reply.get("error").and_then(Value::as_str) {
+    Some("unknown op") => Err(OLD_ENGINE.to_owned()),
+    Some(err) => Err(err.to_owned()),
+    // A reply without `tracked` or `stage` came from an engine on another
+    // protocol, which is now being replaced.
+    None if reply.get("tracked").is_none() && reply.get("stage").is_none() => {
+      Err(OLD_ENGINE.to_owned())
     }
-    Err(err) => failure("toolu epic finish", &err),
+    None => Ok(reply),
+  }
+}
+
+/// Why an engine that predates the `finish` step refuses it.
+const OLD_ENGINE: &str =
+  "the running engine cannot take a finish; replace it with `toolu epic engine --replace`";
+
+fn finish_outcome(
+  result: Result<crate::finish::FinishReport, String>,
+  untold: Option<String>,
+) -> Outcome {
+  let report = match result {
+    Ok(report) => report,
+    Err(err) => {
+      let mut outcome = failure("toolu epic finish", &err);
+      outcome.stderr = outcome.stderr.map(|text| join(text, untold));
+      return outcome;
+    }
+  };
+  let planned = report.finished.get("dry_run") == Some(&Value::Bool(true));
+  let incomplete =
+    !planned && report.finished.get("stage").and_then(Value::as_str) == Some("cleanup-incomplete");
+  let mut outcome = Outcome::data(report.finished.to_string());
+  outcome.exit = if incomplete {
+    Exit::Failure
+  } else {
+    Exit::Success
+  };
+  let mut warnings = report.warnings;
+  warnings.extend(untold);
+  outcome.stderr = (!warnings.is_empty()).then(|| warnings.join("\n"));
+  outcome
+}
+
+fn join(text: String, extra: Option<String>) -> String {
+  match extra {
+    Some(extra) => format!("{text}\n{extra}"),
+    None => text,
   }
 }
 
@@ -145,3 +209,7 @@ pub(super) fn release(matches: &ArgMatches, env: &Env) -> Outcome {
 #[cfg(test)]
 #[path = "tests/teardown_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/teardown_engine_test.rs"]
+mod engine_tests;
