@@ -5,10 +5,10 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use serde_json::{Value, json};
+use toolu_engine::resources::binding::bind_worktree;
 use toolu_engine::resources::leases::{
   LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease,
 };
-use toolu_engine::resources::binding::bind_worktree;
 use toolu_http_test_support::Fixture;
 use toolu_runtime::json::ordered::Ordered;
 

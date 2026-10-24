@@ -342,26 +342,18 @@ pub(crate) fn shutdown_agent(
     .ok_or_else(|| Failure::refusal("pane shell ownership unavailable"))?;
   let cwd = Path::new(expected.cwd);
   let owned = owned_workload(cwd, Some(shell)).map_err(Failure::unknown)?;
-  if live.is_none() {
-    return Ok(if owned.is_empty() {
-      Outcome::Exited
-    } else {
-      Outcome::CleanupIncomplete
-    });
-  }
-  request_exit(herdr, name, expected.kind)?;
-  let deadline = Instant::now() + exit_wait(herdr.env);
-  loop {
-    if listing_gone(herdr, name)? {
-      break;
+  if live.is_some() {
+    request_exit(herdr, name, expected.kind)?;
+    let deadline = Instant::now() + exit_wait(herdr.env);
+    while !listing_gone(herdr, name)? {
+      if Instant::now() >= deadline {
+        return Ok(Outcome::CleanupIncomplete);
+      }
+      std::thread::sleep(Duration::from_secs(1));
     }
-    if Instant::now() >= deadline {
-      return Ok(Outcome::CleanupIncomplete);
-    }
-    std::thread::sleep(Duration::from_secs(1));
   }
-  let gone = await_owned_exit(cwd, Some(shell), &owned, exit_grace(herdr.env))
-    .map_err(Failure::unknown)?;
+  let gone =
+    await_owned_exit(cwd, Some(shell), &owned, exit_grace(herdr.env)).map_err(Failure::unknown)?;
   Ok(if gone {
     Outcome::Exited
   } else {
@@ -372,3 +364,7 @@ pub(crate) fn shutdown_agent(
 #[cfg(test)]
 #[path = "tests/lifecycle_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/lifecycle_shutdown_test.rs"]
+mod shutdown_tests;
