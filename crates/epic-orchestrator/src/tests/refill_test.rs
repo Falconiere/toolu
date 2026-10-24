@@ -157,3 +157,18 @@ fn a_failed_launch_is_not_retried_until_the_issue_moves() {
   refill(&mut world);
   assert_eq!(armed(&world), Vec::<String>::new());
 }
+
+#[test]
+fn a_resource_hold_wait_relaunches_without_a_failed_item() {
+  let mut world = world(&[("a", 1, 0)], 1);
+  refill(&mut world);
+  let _steps = crate::commit::commit_effect(
+    &mut world,
+    "a",
+    r#"{"outcome":"wait","note":"resource hold: sustained CPU/load or memory pressure"}"#,
+  );
+  assert!(world.attention.iter().all(|item| item.kind != "failed"));
+  world.now_ms += 30_000;
+  refill(&mut world);
+  assert_eq!(armed(&world), ["a"]);
+}
