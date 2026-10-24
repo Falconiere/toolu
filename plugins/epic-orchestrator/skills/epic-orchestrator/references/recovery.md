@@ -79,8 +79,11 @@ exits right after start): check `codex debug models` or `cursor-agent
 - **`merge-ready`** (a deferring merge script, a test seam), or a repair by
   hand: run the gate below, the one the engine runs.
 - **`cleanup-incomplete`:** the teardown kept the workspace because a job was
-  still running or a snapshot or removal failed (`cleanup_error`). Fix that,
-  then `toolu epic finish <state_dir> <key>` and `toolu epic ack <key>`.
+  still running or a snapshot or removal failed (`cleanup_error`). A note
+  starting `after <n> attempts: still exiting:` means the engine already
+  retried: it names the agent that did not leave herdr or the worktree pids
+  that stayed alive. Stop those first. Fix the cause, then
+  `toolu epic finish <state_dir> <key>` and `toolu epic ack <key>`.
 - **Tear an issue down without a merge** (only when the user asks):
   `toolu epic finish <state_dir> <key> --abandon` keeps the branch.
 - **Close the epic by hand:** `toolu epic close --graph <state_dir>/graph.json`
