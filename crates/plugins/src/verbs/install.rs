@@ -11,12 +11,28 @@ use crate::fail::Res;
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
+use crate::verbs::prepare::Prepared;
 use crate::verbs::{Driver, find, foreign_step, pin, prepare, trust};
 
 /// The plugin every other one builds on.
 pub(crate) const CORE: &str = "toolu";
 
-fn present(name: &str, have: &Installed, offered: Option<&Installed>, argv: Vec<String>) -> Step {
+/// The step for `name`, already installed as `have`: left alone when installed
+/// from elsewhere, added again after a re-pin, else already there or skewed.
+fn present(
+  driver: &Driver,
+  prepared: &Prepared,
+  have: &Installed,
+  offered: Option<&Installed>,
+  argv: Vec<String>,
+) -> Step {
+  let name = have.name.as_str();
+  if driver.foreign(have) {
+    return foreign_step(name, have, argv);
+  }
+  if prepared.repinned {
+    return pin::refresh(driver, name);
+  }
   match offered {
     Some(offer) if offer.version != have.version => Step::new(
       name,
@@ -57,7 +73,7 @@ pub(crate) fn run(
   let order = install_order(catalog, requested)?;
   let adapter = driver.adapter;
   let prepared = if dry_run {
-    prepare::Prepared::default()
+    Prepared::default()
   } else {
     prepare::run(driver, Verb::Install)?
   };
@@ -78,13 +94,7 @@ pub(crate) fn run(
       continue;
     }
     if let Some(have) = find(&installed, name) {
-      steps.push(if driver.foreign(have) {
-        foreign_step(name, have, argv)
-      } else if prepared.repinned {
-        pin::refresh(driver, name)
-      } else {
-        present(name, have, find(&offered, name), argv)
-      });
+      steps.push(present(driver, &prepared, have, find(&offered, name), argv));
       continue;
     }
     if dry_run {
