@@ -25,7 +25,7 @@ mod worktree;
 
 pub(crate) use agent::Resolved;
 pub(crate) use checkout::guard_budget;
-pub(crate) use failure::Failure;
+pub(crate) use failure::{Failure, PANE_BUSY};
 pub(crate) use lifecycle::Herdr;
 
 use crate::graph::{Graph, GraphIssue};
@@ -88,11 +88,17 @@ pub(crate) struct Ctx<'a> {
   pub gh: Result<&'a Gh, String>,
   /// How long to wait for the host to record its session.
   pub session_wait: Duration,
+  /// How long to retry `agent start` while a new pane's shell is not ready.
+  pub shell_wait: Duration,
 }
+
+/// How long a live launch retries `agent start` on a busy pane.
+pub(crate) const SHELL_WAIT: Duration = Duration::from_secs(30);
 
 impl<'a> Ctx<'a> {
   /// The context of one engine effect or verb: live herdr through `paths`,
-  /// and ten seconds for the host to record its session.
+  /// ten seconds for the host to record its session, and [`SHELL_WAIT`] for
+  /// a new pane's shell.
   pub(crate) fn live(
     env: &'a Env,
     paths: &'a crate::paths::Paths,
@@ -107,6 +113,7 @@ impl<'a> Ctx<'a> {
       },
       gh,
       session_wait: Duration::from_secs(10),
+      shell_wait: SHELL_WAIT,
     }
   }
 }
@@ -182,7 +189,8 @@ fn epoch_ms(at: SystemTime) -> u64 {
 ///
 /// # Errors
 /// Any refusal or failure; a failure after reservation leaves the record
-/// `uncertain` with its lease.
+/// `uncertain` with its lease, except a refusal that proves no agent started,
+/// which returns the lease and drops the stage.
 pub(crate) fn launch_issue(
   graph: &Graph,
   issue: &GraphIssue,

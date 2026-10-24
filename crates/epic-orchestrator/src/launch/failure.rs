@@ -11,6 +11,9 @@ use toolu_runtime::process::{Spec, run};
 use crate::herdr_calls::CallError;
 use crate::hosts::host_limited;
 
+/// herdr's code for an `agent start` on a pane whose shell is not ready.
+pub(crate) const PANE_BUSY: &str = "agent_pane_busy";
+
 /// Why a launch stopped.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Failure {
@@ -43,10 +46,18 @@ impl Failure {
     }
   }
 
+  /// herdr refused `agent start` because the pane's shell is not at its
+  /// prompt yet: a refusal that proves no agent started.
+  pub(crate) fn not_started(&self) -> bool {
+    self.code.as_deref() == Some(PANE_BUSY)
+  }
+
   /// `lifecycle_error`, `lifecycle_outcome` and `native_error` for the record.
   pub(crate) fn details(&self) -> Map<String, Value> {
     let outcome = if host_limited(&self.message) {
       "provider-limited"
+    } else if self.not_started() {
+      "not-started"
     } else {
       "uncertain"
     };

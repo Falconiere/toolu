@@ -9,7 +9,10 @@ its intent and outcome), and `toolu doctor` (binary, config, plugins and
 tools). The launch record `<state_dir>/issues/<key>.json` holds the agent's
 attempt, pane and session. Then fix the cause and let
 the engine retry, or run the one repair below. A timeout during an agent start
-or prompt is uncertain: it is never retried as a fresh session.
+or prompt is uncertain: it is never retried as a fresh session. An
+`agent_pane_busy` refusal (the new pane's shell is not at its prompt yet)
+starts nothing: the launch retries it for up to 30 s, then returns its lease
+and waits for the engine to launch it again, with no `--replace`.
 
 ## Engine
 

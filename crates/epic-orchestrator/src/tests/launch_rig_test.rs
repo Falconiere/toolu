@@ -71,6 +71,7 @@ impl Rig {
       },
       gh: Err("GitHub is not reachable in this test".to_owned()),
       session_wait: Duration::from_secs(5),
+      shell_wait: Duration::from_secs(2),
     }
   }
 
