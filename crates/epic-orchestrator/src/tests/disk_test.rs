@@ -41,6 +41,9 @@ fn an_engine_write_keeps_a_merged_or_abandoned_record_stage() {
     write_value(&path, &json!({"stage": recorded, "worktree": "/w"})).unwrap();
     write_issue(&issue, std::time::UNIX_EPOCH).unwrap();
     let record = read_value(&path).unwrap();
-    assert_eq!((record["stage"].clone(), record["worktree"].clone()), (json!(kept), json!("/w")));
+    assert_eq!(
+      (record["stage"].clone(), record["worktree"].clone()),
+      (json!(kept), json!("/w"))
+    );
   }
 }

@@ -3,7 +3,9 @@
 //! launch itself. The outcome is a JSON document: `applied`, `hold` (with
 //! the partner, score and source), `wait` (no host, shared capacity, a
 //! resource hold, the GitHub budget, or a pane whose shell never became
-//! ready) or `failed` (with the record's stage after the attempt).
+//! ready), `settled` (a finish already merged or abandoned the issue, so it
+//! is never relaunched, #619) or `failed` (with the record's stage after the
+//! attempt).
 
 use std::path::PathBuf;
 use std::time::SystemTime;
@@ -15,7 +17,10 @@ use crate::coupling::check;
 use crate::executor::Job;
 use crate::graph::{Graph, GraphIssue, read_graph};
 use crate::hosts::HostKind;
-use crate::launch::{Ctx, LaunchOpts, PANE_BUSY, Recovery, guard_budget, launch_issue};
+use crate::launch::{
+  Ctx, FINISHED, LaunchOpts, Launcher, PANE_BUSY, Recovery, finished_stage, guard_budget,
+  launch_issue,
+};
 use crate::paths::Paths;
 use crate::retry::{Policy, effect_scope};
 use crate::route::{RouteOptions, jev_from_env, load_host_pool, load_table, route_issues};
@@ -48,6 +53,10 @@ pub(crate) fn job(input: LaunchJob) -> Job {
 
 fn failed(note: &str, stage: Option<&str>) -> Value {
   json!({"outcome": "failed", "note": note, "stage": stage})
+}
+
+fn settled(stage: Option<&str>) -> Value {
+  json!({"outcome": "settled", "stage": stage})
 }
 
 /// Whether a launch refusal only waits for capacity, for a resource hold to
@@ -85,6 +94,12 @@ fn record_field(input: &LaunchJob, name: &str) -> Option<String> {
 }
 
 fn run(input: &LaunchJob) -> Value {
+  // A settled issue may have left the graph: settle before reading it.
+  if let Some(Value::Object(record)) = record(input)
+    && let Some(stage) = finished_stage(&record)
+  {
+    return settled(Some(stage));
+  }
   let graph = match read_graph(&input.state_dir.join("graph.json")) {
     Ok(graph) => graph,
     Err(err) => return failed(&err, None),
@@ -146,11 +161,15 @@ fn launch_routed(
     } else {
       Recovery::Fresh
     },
+    by: Launcher::Engine,
   };
   let mut ctx = Ctx::live(&input.env, &input.paths, gh.as_ref().map_err(Clone::clone));
   match launch_issue(graph, issue, &opts, &mut ctx) {
     Ok(_) => json!({"outcome": "applied", "kind": record_field(input, "kind")}),
     Err(err) if waits(&err.message) => json!({"outcome": "wait", "note": err.message}),
+    Err(err) if err.message.starts_with(FINISHED) => {
+      settled(record_field(input, "stage").as_deref())
+    }
     Err(err) => failed(&err.message, record_field(input, "stage").as_deref()),
   }
 }

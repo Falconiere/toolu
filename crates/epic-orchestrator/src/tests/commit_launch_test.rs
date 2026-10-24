@@ -142,3 +142,49 @@ fn a_fresh_launch_that_waits_leaves_its_batch() {
   assert!(world.issues["b"].pending.is_none());
   assert_eq!(world.epics["e"].batch[1].outcome.as_deref(), Some("wait"));
 }
+
+#[test]
+fn a_settled_launch_adopts_the_stage_and_raises_nothing() {
+  let mut world = launching("running", false);
+  world.issues.get_mut("b").expect("b").relaunch = Some("lost".into());
+  let steps = commit_effect(
+    &mut world,
+    "b",
+    r#"{"outcome":"settled","stage":"abandoned"}"#,
+  );
+  let line = done_line(&steps).expect("done");
+  assert_eq!((line.token.as_str(), line.note.as_str()), ("t", "settled"));
+  let issue = &world.issues["b"];
+  assert_eq!(
+    (
+      issue.stage.as_str(),
+      issue.pending.is_none(),
+      issue.relaunch.is_none()
+    ),
+    ("abandoned", true, true)
+  );
+  assert_eq!(world.attention, Vec::new());
+  assert!(!steps.iter().any(|step| matches!(step, Step::Issue { .. })));
+}
+
+#[test]
+fn a_failed_relaunch_keeps_an_abandoned_record() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let state = tmp.path().display().to_string();
+  let mut world = launching("running", false);
+  state.clone_into(&mut world.issues.get_mut("b").expect("b").state_dir);
+  let path = crate::snapshot::issue_path(&state, "b");
+  crate::disk::write_value(&path, &serde_json::json!({"stage": "abandoned"})).expect("record");
+  let doc = r#"{"outcome":"failed","note":"b is not in the graph","stage":null}"#;
+  let steps = commit_effect(&mut world, "b", doc);
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, Step::Issue { key } if key == "b"))
+  );
+  crate::disk::write_issue(&world.issues["b"], std::time::UNIX_EPOCH).expect("write");
+  assert_eq!(
+    crate::disk::read_value(&path).expect("record")["stage"],
+    "abandoned"
+  );
+}

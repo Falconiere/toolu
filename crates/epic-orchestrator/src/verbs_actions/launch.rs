@@ -75,6 +75,7 @@ fn opts(matches: &ArgMatches) -> LaunchOpts {
     dry_run: matches.get_flag("dry-run"),
     force: matches.get_flag("force"),
     recovery,
+    by: crate::launch::Launcher::Human,
   }
 }
 

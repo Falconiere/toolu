@@ -52,6 +52,27 @@ pub(crate) struct LaunchOpts {
   pub force: bool,
   /// How an earlier attempt is taken over.
   pub recovery: Recovery,
+  /// Who launches.
+  pub by: Launcher,
+}
+
+/// Who asked for a launch.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum Launcher {
+  /// `toolu epic launch`: a settled record may be launched again.
+  #[default]
+  Human,
+  /// The engine: a record a finish already settled (`merged` or
+  /// `abandoned`) is refused, so it is never relaunched (#619).
+  Engine,
+}
+
+/// The prefix of the refusal an engine launch of a settled record produces.
+pub(crate) const FINISHED: &str = "finished: ";
+
+/// The stage of a record a finish settled, if it is one.
+pub(crate) fn finished_stage(record: &record::Record) -> Option<&str> {
+  record::text(record, "stage").filter(|stage| matches!(*stage, "merged" | "abandoned"))
 }
 
 /// How a launch takes over an earlier attempt.
@@ -223,6 +244,12 @@ fn launch(
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
+  if let Some(stage) = finished_stage(&record).filter(|_| opts.by == Launcher::Engine) {
+    return Err(Failure::refusal(format!(
+      "{FINISHED}{} is {stage}",
+      issue.key
+    )));
+  }
   require_recoverable_stage(&record, opts)?;
   let previous = record::text(&record, "kind").map(str::to_owned);
   if previous

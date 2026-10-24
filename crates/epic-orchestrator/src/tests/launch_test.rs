@@ -215,3 +215,29 @@ fn a_live_launch_reserves_starts_prompts_and_records_the_session() {
   assert_eq!(retained["lifecycle_outcome"], "retained");
   assert_eq!(rig.leases(), 1);
 }
+
+#[test]
+fn an_engine_launch_refuses_a_settled_record_and_a_human_launch_does_not() {
+  let rig = Rig::new();
+  let record = rig.state().join("issues").join("comemory-255.json");
+  for stage in ["abandoned", "merged"] {
+    std::fs::create_dir_all(record.parent().expect("issues")).expect("issues");
+    std::fs::write(
+      &record,
+      json!({"stage": stage, "kind": "claude"}).to_string(),
+    )
+    .expect("record");
+    let before = std::fs::read(&record).expect("bytes");
+    let refused = dry(&rig, "Falconiere/comemory#255", |flags| {
+      flags.by = super::Launcher::Engine;
+    })
+    .expect_err("settled");
+    assert_eq!(
+      refused.message,
+      format!("finished: comemory-255 is {stage}")
+    );
+    assert!(!refused.uncertain);
+    assert_eq!(std::fs::read(&record).expect("bytes"), before);
+  }
+  assert!(dry(&rig, "Falconiere/comemory#255", |_| {}).is_ok());
+}

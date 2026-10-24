@@ -92,7 +92,12 @@ fn a_gone_issue_without_a_live_agent_arms_nothing() {
     world.issues.insert(key.into(), issue);
     note_event(&mut world, key, "gone");
   }
-  let armed = |key: &str| (world.issues[key].pending.is_some(), world.issues[key].launches);
+  let armed = |key: &str| {
+    (
+      world.issues[key].pending.is_some(),
+      world.issues[key].launches,
+    )
+  };
   assert_eq!(
     (armed("c"), armed("x"), armed("r")),
     ((false, 0), (false, 0), (true, 1))

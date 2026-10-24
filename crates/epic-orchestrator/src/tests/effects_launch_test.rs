@@ -172,3 +172,27 @@ fn a_busy_pane_refusal_waits() {
     "herdr agent.start: timeout: agent did not become ready"
   ));
 }
+
+#[test]
+fn a_settled_record_is_never_relaunched_even_after_it_left_the_graph() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let issues = tmp.path().join("issues");
+  std::fs::create_dir_all(&issues).expect("issues");
+  std::fs::write(issues.join("gone-1.json"), r#"{"stage":"abandoned"}"#).expect("record");
+  let dropped = launch(tmp.path(), "gone-1", &[]);
+  assert_eq!(
+    dropped,
+    serde_json::json!({"outcome": "settled", "stage": "abandoned"})
+  );
+  let mut graph = crate::support::graph_248();
+  graph.state_dir = tmp.path().display().to_string();
+  crate::graph::write_graph(&tmp.path().join("graph.json"), &graph).expect("graph");
+  std::fs::write(issues.join("comemory-255.json"), r#"{"stage":"merged"}"#).expect("record");
+  let merged = launch(tmp.path(), "comemory-255", &[]);
+  assert_eq!(
+    merged,
+    serde_json::json!({"outcome": "settled", "stage": "merged"})
+  );
+  assert!(!tmp.path().join("worktrees").exists());
+  assert_eq!(std::fs::read_dir(&issues).expect("issues").count(), 2);
+}
