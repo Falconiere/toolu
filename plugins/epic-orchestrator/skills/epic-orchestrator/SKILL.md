@@ -1,6 +1,6 @@
 ---
 name: epic-orchestrator
-description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, Cursor Agent, or Muse Code) that delivers its PR; the engine merges and closes the epic. Runs from any of those four hosts. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
+description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, Cursor Agent, or Muse Code) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
 ---
 
 # Epic orchestrator
