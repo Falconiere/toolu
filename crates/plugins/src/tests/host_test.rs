@@ -162,3 +162,12 @@ fn scopes_follow_each_host() {
     ))
   );
 }
+
+#[test]
+fn only_hosts_whose_removal_reaches_only_toolu_take_retired_names() {
+  let hosts = [Target::Claude, Target::Codex, Target::Cursor, Target::Muse];
+  assert_eq!(
+    hosts.map(Target::removes_only_toolu),
+    [true, true, true, false]
+  );
+}

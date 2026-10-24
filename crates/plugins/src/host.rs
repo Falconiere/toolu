@@ -49,6 +49,17 @@ impl Target {
       Target::Cursor => "cursor",
     }
   }
+
+  /// Whether removal on this host reaches only toolu's plugins
+  /// (`<name>@toolu`, or Cursor's install marker), so `remove` may hand it the
+  /// name of a plugin the marketplace retired (#615). Muse removes by bare
+  /// name, from any source. A new target must decide here.
+  pub(crate) fn removes_only_toolu(self) -> bool {
+    match self {
+      Target::Claude | Target::Codex | Target::Cursor => true,
+      Target::Muse => false,
+    }
+  }
 }
 
 /// The installer target `--host` names; Hermes is not a target yet. Cursor is

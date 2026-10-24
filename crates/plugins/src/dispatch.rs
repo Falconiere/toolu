@@ -221,8 +221,7 @@ fn remove(
     return Err(Fail::usage("remove requires --yes to confirm"));
   }
   let target = one_host(request, wanted, cx)?;
-  // Muse removes by bare name, from any source; the other hosts only toolu's.
-  removable(catalog, &request.names, target != Target::Muse)?;
+  removable(catalog, &request.names, target.removes_only_toolu())?;
   let steps = match target {
     Target::Cursor => cursor::remove(&Cursor::new(cx)?, &request.names, request.dry_run),
     Target::Claude | Target::Codex | Target::Muse => verbs::remove::run(

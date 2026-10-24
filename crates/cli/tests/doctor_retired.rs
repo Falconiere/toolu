@@ -103,12 +103,14 @@ impl Home {
   }
 
   /// A `claude` that logs its argv and, for `plugin uninstall context7@toolu`,
-  /// writes `after` as the install record; any other command fails.
+  /// copies `after` over the install record; any other command fails. The
+  /// record is copied from a file, so no JSON passes through shell quoting.
   fn stub_claude(&self, after: &str) -> Res<()> {
     let root = self.path().display().to_string();
     let record = self.record_path().display().to_string();
+    std::fs::write(self.path().join("after.json"), after)?;
     let body = format!(
-      "#!/bin/sh\necho \"$*\" >> {root}/claude.log\ncase \"$*\" in\n\"plugin uninstall context7@toolu\") printf '%s' '{after}' > {record} ;;\n*) echo \"unexpected: $*\" >&2; exit 1 ;;\nesac\n"
+      "#!/bin/sh\necho \"$*\" >> {root}/claude.log\ncase \"$*\" in\n\"plugin uninstall context7@toolu\") cp {root}/after.json {record} ;;\n*) echo \"unexpected: $*\" >&2; exit 1 ;;\nesac\n"
     );
     let temp = self.path().join("bin/.claude");
     std::fs::write(&temp, body)?;
