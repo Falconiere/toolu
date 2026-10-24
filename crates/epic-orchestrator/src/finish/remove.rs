@@ -86,6 +86,8 @@ fn exit_agent(ctx: &mut Ctx<'_>, record: &Record, shell: Option<u32>) -> Result<
     ));
   }
   let left = owned_workload(Path::new(&worktree), shell)?;
+  // Nothing owned now; `Teardown::live` still awaits the set it recorded
+  // before the exit, so a process that moved out of the worktree is caught.
   if left.is_empty() {
     return Ok(());
   }

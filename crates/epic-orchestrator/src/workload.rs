@@ -159,8 +159,10 @@ pub(crate) fn verify_owned_exit(records: &[OwnedWorkload]) -> Result<bool, Strin
   }
 }
 
-/// Poll up to `grace` until every recorded process is gone and the worktree
-/// owns no new one: a departing agent's children take a moment to exit.
+/// Poll up to `grace` until every recorded process is gone (a reused pid is a
+/// later process, by birth identity) and the worktree owns no process at all:
+/// a departing agent's children take a moment to exit. It proves the moment
+/// it returns; a caller about to remove the worktree checks again then.
 ///
 /// # Errors
 /// The inventory fails, or ownership is uncertain.
