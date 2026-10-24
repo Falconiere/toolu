@@ -66,17 +66,19 @@ that line.
 ### Before a run
 
 The skill's preflight checks each host in `--hosts`: its CLI and login, the
-five worker plugins, and `toolu --host <host> doctor`. It prints the fix for
-the first thing that fails.
+worker plugins (`toolu`, `toolu-review`, `pr-babysit`, `brainstorm`,
+`delivery-flow`), and `toolu --host <host> doctor`. It prints the fix for the
+first thing that fails.
 
 The orchestrator needs the engine's socket, herdr's socket and the epic state
-directory, so run it outside its host's sandbox. Codex's `workspace-write`
-and Muse's default sandbox block all three: commands fail with
-`Operation not permitted`. Start Codex with `--sandbox danger-full-access` and
-Muse with `--disable-sandbox`, or approve each escalation. Cursor Agent's
-sandbox reached them in the 2026-10-23 probe; if it doesn't, start it with
-`--sandbox disabled`. Claude Code runs commands unsandboxed unless you
-turned its sandbox on.
+directory, so run it outside its host's sandbox. In the 2026-10-23 probe,
+Codex's `workspace-write` sandbox and Muse's default sandbox blocked the
+engine socket and every state path. Muse's also blocked herdr. Commands
+fail with `Operation not permitted`. Start Codex with
+`--sandbox danger-full-access` and Muse with `--disable-sandbox`, or approve
+each escalation. Cursor Agent's sandbox reached them in the same probe; if
+it doesn't, start it with `--sandbox disabled`. Claude Code runs commands
+unsandboxed unless you turned its sandbox on.
 
 The orchestrator waits for judgments with `toolu epic wait --epic <epic-key>`.
 On Claude Code it runs as a background Bash call (45-minute default limit)
@@ -85,10 +87,9 @@ on Codex, Cursor Agent and Muse Code it runs as a foreground loop of
 `toolu epic wait --epic <epic-key> --max-seconds 480`, since one tool call
 there cannot block for hours. On Muse, a call that outlives its shell's yield
 returns a session id, and its result arrives on its own. The engine does the
-polling. `--epic`
-returns only that epic's items and engine-wide ones, so several orchestrators
-can share one engine; an item handed out once is not handed out again after
-an engine restart.
+polling. `--epic` returns only that epic's items and engine-wide ones, so
+several orchestrators can share one engine; an item handed out once is not
+handed out again after an engine restart.
 
 ## What it provides
 

@@ -165,6 +165,13 @@ Login checks, verified on this machine on 2026-10-23:
 - **Worker plugin missing:** a `- <name> not installed` line from
   `toolu plugins list --host <host>` fails the check. The fix is
   `toolu plugins install delivery-flow --host <host>`.
+- **`toolu plugins list` itself fails:** found at execution. Inside
+  Cursor Agent's shell, `/usr/local/bin` (a root-owned toolu 8.1.3) comes
+  before `/opt/homebrew/bin` (8.2.0). The old binary exits 64 with
+  `--host cursor is not an installer target`, and a check that only looked
+  for `not installed` rows would pass. Step 2 therefore requires the command
+  to succeed, and its failure points at the `binary` line of this session's
+  doctor.
 - **Muse plugin unapproved:** doctor prints `warn plugins: <name> capabilities
   need approval; muse plugins approve <name>`, or `… hooks are installed but
   inert; …`. Doctor still exits 0, so the skill keys on the line, not the exit

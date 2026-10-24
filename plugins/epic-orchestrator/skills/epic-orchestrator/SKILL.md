@@ -21,10 +21,11 @@ write product code. Keep your context small: a run lasts hours.
 `repo:owner/name` label or a `Repo: owner/name` line, else `--repo`.
 
 Options: `--max N` live workers (default 3); `--hosts claude:2,codex:2`
-(hosts `claude`, `codex`, `cursor`, `muse`; default `claude`); `--safe` keeps each host's
-approval prompts on; `--no-jev` routes by heuristics; `--dry-run` plans and
-launches nothing ("show me the plan", "what can run in parallel" and "don't
-launch yet" mean `--dry-run`). Subcommands: `status`, `stop`.
+(hosts `claude`, `codex`, `cursor`, `muse`; default `claude`); `--safe`
+keeps each host's approval prompts on; `--no-jev` routes by heuristics;
+`--dry-run` plans and launches nothing ("show me the plan", "what can run in
+parallel" and "don't launch yet" mean `--dry-run`). Subcommands: `status`,
+`stop`.
 
 ## Authorization boundary
 
@@ -48,8 +49,10 @@ the authorized list, ask the user before approving it.
 
 ## 1. Preflight
 
-**This session.** Run `toolu doctor` and stop on its first failure. Then
-stop and report the first of these that fails:
+**This session.** Run `toolu --host <host> doctor` for the host you run on
+(`claude`, `codex`, `cursor`, `muse`) and stop on its first failure. Name the
+host: toolu can't detect every host from its shell. Then stop and report the
+first of these that fails:
 - `HERDR_ENV` is `1` (herdr control works only from a herdr pane), and
   `herdr status` answers.
 - `toolu epic status` answers (`"engine":"down"` is fine; `start` starts it).
@@ -76,9 +79,12 @@ host's first failure and print its fix:
    | `cursor` | `cursor-agent` | `cursor-agent status` prints `Logged in` | `cursor-agent login`; for `Your macOS login keychain is locked`, `security unlock-keychain` |
    | `muse` | `muse` | `META_API_KEY` is set, or its auth file exists: `MUSE_AUTH_PATH`, else `$XDG_CONFIG_HOME/muse/auth.json`, else `~/.config/muse/auth.json` | `muse login` |
 
-2. `toolu plugins list --host <host>` shows `toolu`, `toolu-review`,
-   `pr-babysit`, `brainstorm` and `delivery-flow` installed: none of them on a
-   `not installed` row. Fix: `toolu plugins install delivery-flow --host <host>`.
+2. `toolu plugins list --host <host>` succeeds and shows `toolu`,
+   `toolu-review`, `pr-babysit`, `brainstorm` and `delivery-flow` installed:
+   none of them on a `not installed` row. Fix:
+   `toolu plugins install delivery-flow --host <host>`. If the command
+   itself fails, your `toolu` is too old for that host: check the `binary`
+   line of this session's doctor.
 3. `toolu --host <host> doctor` prints no `fail` line and no `warn plugins`
    line. A `warn plugins` line means the plugins' hooks won't run, and it names
    the fix. For example, an unapproved Muse plugin prints

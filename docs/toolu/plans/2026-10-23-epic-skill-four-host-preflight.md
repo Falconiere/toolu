@@ -90,6 +90,14 @@ READMEs → live four-host preflight evidence → full gate.
   `muse`, but the line now adds the default host after it. The bullet greps passed a
   pattern starting with `-` without `-e`, so grep read it as a flag. The
   content was unchanged; only the checks were corrected.
+- s2 and s4: Cursor's transcript showed that the plugins check must also
+  require `toolu plugins list` to succeed. Its shell resolves a stale
+  `/usr/local/bin/toolu` 8.1.3, which exits 64 for `--host cursor`. Both
+  `SKILL.md` step 2 and the mirror script now require success, and the
+  Cursor transcript was re-run.
+- s2, from self-review: the session check names the host
+  (`toolu --host <host> doctor`), because toolu's detection can't identify a
+  Cursor shell, which exports only `CURSOR_AGENT`.
 
 ## Plan review (2026-10-23)
 
