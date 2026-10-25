@@ -35,23 +35,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # The Release PR, the tag and the draft Release are created under the
+      # "Toolu - Release" GitHub App, not the default GITHUB_TOKEN. GitHub starts
+      # no workflow run from an event the built-in token raised, so under it the
+      # Release PR never got CI; an App installation token is a distinct
+      # identity, so the PR's checks run and the tag push is a real event. The
+      # mint also checks the App's installation on this repo — a missing install
+      # fails here, loudly, before anything is released.
+      - name: Mint the release token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.TOOLU_RELEASE_APP_ID }}
+          private-key: ${{ secrets.TOOLU_RELEASE_PRIVATE_KEY }}
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ github.token }} # default token; release-only PR checks still report through job-level `if`
+          token: ${{ steps.app-token.outputs.token }}
 
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
 
   # Publishing is chained here rather than triggered by `release: published`.
-  # release-please creates the draft Release with the default GITHUB_TOKEN, and GitHub
-  # does not start a workflow run from an event created by that token, so a
-  # `release:` trigger never fires. Chaining keeps it in the same run that cut
-  # the tag and needs no App token.
+  # The draft Release is created under the release App (above), so a `release:`
+  # event would now fire — chaining is kept on purpose: one run cuts the tag and
+  # publishes, so one failure is one red run, and the publish jobs below need
+  # nothing beyond the default token.
   #
   # The npm package ships the native binaries, so the binaries come first:
   # `publish` waits for `native`, which publishes the release, and embeds its
