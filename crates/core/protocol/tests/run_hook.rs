@@ -21,6 +21,13 @@ const MODE: &str = "TOOLU_PROTOCOL_CHILD";
 type Res<T> = Result<T, String>;
 
 fn main() -> ExitCode {
+  // cargo-nextest lists a harness-free binary as one test, then runs it by name.
+  if std::env::args().any(|arg| arg == "--list") {
+    if !std::env::args().any(|arg| arg == "--ignored") {
+      std::io::stdout().write_all(b"run_hook: test\n").ok();
+    }
+    return ExitCode::SUCCESS;
+  }
   if let Ok(mode) = std::env::var(MODE) {
     return child(&mode);
   }

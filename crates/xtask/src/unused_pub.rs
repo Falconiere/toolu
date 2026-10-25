@@ -24,6 +24,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
 /// One line per unused public item.
 pub(crate) fn unused(sources: &[Source<'_>]) -> Vec<String> {
   let mut found = Vec::new();
+  // Walk each file once: re-walking per public item made the step quadratic.
+  let names: Vec<BTreeSet<String>> = sources.iter().map(idents).collect();
   for source in sources {
     let Some(member) = source.member else {
       continue;
@@ -35,11 +37,11 @@ pub(crate) fn unused(sources: &[Source<'_>]) -> Vec<String> {
     let mut items = PubItems(Vec::new());
     items.visit_file(ast);
     for (line, name) in items.0 {
-      let used = sources.iter().any(|other| {
+      let used = sources.iter().zip(&names).any(|(other, idents)| {
         let elsewhere = other.member.is_none_or(|owner| owner.name != member.name);
         let own_test =
           other.member.is_some_and(|owner| owner.name == member.name) && other.is_test();
-        (elsewhere || own_test) && idents(other).contains(name.as_str())
+        (elsewhere || own_test) && idents.contains(name.as_str())
       });
       if !used {
         found.push(format!(

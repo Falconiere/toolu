@@ -12,11 +12,12 @@ on:
 
 # Superseded runs are wasted minutes: pushing twice in quick succession left the
 # first Tests run grinding to completion while the second did the same work.
-# toolu-review.yml already cancels; this matches it — except on main, where each
-# commit keeps its own result rather than being cancelled by the next.
+# toolu-review.yml already cancels; this matches it for pull requests only. A push
+# keeps each commit's own result by grouping on its SHA: one group per ref queued
+# a second main run as pending, and GitHub cancels a pending run when a third joins.
 concurrency:
-  group: tests-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -131,6 +132,14 @@ jobs:
         if: matrix.os == 'ubuntu-24.04'
         run: cargo xtask gate --only layers
 
+      # The Linux budget tests (idle_budget, status_budget) measure a release
+      # toolu. Built once here and passed as TOOLU_RELEASE_BIN, the gate skips a
+      # second fat-LTO build in its own target directory, and the launcher step
+      # below reuses it.
+      - name: Build the release binary
+        if: matrix.os == 'ubuntu-24.04'
+        run: cargo build --release -p toolu-cli --locked
+
       # The quality bar: every cargo xtask gate step, including check-gate-change
       # against the PR base (or the pushed range).
       - name: cargo xtask gate
@@ -138,6 +147,7 @@ jobs:
         env:
           GATE_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
           PR_TITLE: ${{ github.event.pull_request.title }}
+          TOOLU_RELEASE_BIN: ${{ github.workspace }}/target/release/toolu
         run: |
           if [ "$GATE_BASE" = "0000000000000000000000000000000000000000" ]; then GATE_BASE=; fi
           cargo xtask gate ${GATE_BASE:+--base "$GATE_BASE"} ${PR_TITLE:+--title "$PR_TITLE"}

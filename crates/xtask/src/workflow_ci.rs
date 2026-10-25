@@ -12,8 +12,7 @@ use crate::workflow_yaml::{Findings, at, includes, items, lists, runs, step_wher
 const GATED: [&str; 6] = ["changes", "docs", "fuzz", "hook-bench", "rust", "rust-musl"];
 
 /// The jobs allowed `contents: write`, as `<file>:<job>`.
-const WRITERS: [&str; 4] = [
-  "release-please.yml:release-please",
+const WRITERS: [&str; 3] = [
   "release-please.yml:native",
   "release-native.yml:upload",
   "release-native.yml:publish",
