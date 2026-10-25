@@ -25,9 +25,9 @@ jobs:
     if: vars.TOOLU_RELEASE_DISABLED != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
+    # release-please writes with the App token below; GITHUB_TOKEN only checks out.
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
     steps:
       # The action reads config/manifest and edits files via the GitHub API,
       # but checkout is the standard release-please-action pattern and a cheap

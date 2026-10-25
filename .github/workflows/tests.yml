@@ -12,9 +12,9 @@ on:
 
 # Superseded runs are wasted minutes: pushing twice in quick succession left the
 # first Tests run grinding to completion while the second did the same work.
-# toolu-review.yml already cancels; this matches it — except on a push, where each
-# commit keeps its own result. A push groups by SHA: one group per ref queued a
-# second main run as pending, and GitHub cancels a pending run when a third joins.
+# toolu-review.yml already cancels; this matches it for pull requests only. A push
+# keeps each commit's own result by grouping on its SHA: one group per ref queued
+# a second main run as pending, and GitHub cancels a pending run when a third joins.
 concurrency:
   group: tests-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
