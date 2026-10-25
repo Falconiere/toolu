@@ -239,9 +239,22 @@ fn tests(root: &Path) -> Result<Verdict, String> {
     &cargo_bin(),
     &["llvm-cov", "--version"],
   )?;
+  require(
+    root,
+    "cargo-nextest",
+    &cargo_bin(),
+    &["nextest", "--version"],
+  )?;
+  // nextest runs the test binaries in parallel; plain `cargo test` runs them one by one.
   for args in [
     &["llvm-cov", "clean", "--workspace"][..],
-    &["llvm-cov", "--no-report", "--workspace", "--locked"][..],
+    &[
+      "llvm-cov",
+      "nextest",
+      "--no-report",
+      "--workspace",
+      "--locked",
+    ][..],
     &["test", "--doc", "--workspace", "--locked"][..],
   ] {
     if cargo(root, args)? == Verdict::Findings {

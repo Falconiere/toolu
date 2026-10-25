@@ -1,6 +1,6 @@
 # Testing
 
-Every test is a Rust test, run by `cargo test --workspace` (and by the gate's `tests` and `coverage` steps). There is no TypeScript or Bun test suite since #440. The quality gate is `cargo xtask gate`; the rules a test must follow are in [AGENTS.md](../AGENTS.md#rust-conventions) and [rust-quality-bar.md](rust-quality-bar.md).
+Every test is a Rust test, run by `cargo test --workspace` (and by the gate's `tests` step, under `cargo llvm-cov nextest`, and its `coverage` step). There is no TypeScript or Bun test suite since #440. The quality gate is `cargo xtask gate`; the rules a test must follow are in [AGENTS.md](../AGENTS.md#rust-conventions) and [rust-quality-bar.md](rust-quality-bar.md).
 
 CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. The plugin also runs on macOS: `rust-macos` runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
 

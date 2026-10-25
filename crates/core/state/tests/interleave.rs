@@ -36,6 +36,13 @@ use toolu_state::lock::{LockOptions, with_lock};
 use writers::Writer;
 
 fn main() -> ExitCode {
+  // cargo-nextest lists a harness-free binary as one test, then runs it by name.
+  if std::env::args().any(|arg| arg == "--list") {
+    if !std::env::args().any(|arg| arg == "--ignored") {
+      std::io::stdout().write_all(b"interleave: test\n").ok();
+    }
+    return ExitCode::SUCCESS;
+  }
   let args: Vec<String> = std::env::args().skip(1).collect();
   let rest = args.get(1..).unwrap_or(&[]);
   let result = match args.first().map(String::as_str) {

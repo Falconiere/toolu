@@ -35,23 +35,37 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
+      # GitHub holds the pull_request runs of a PR that GITHUB_TOKEN opened or
+      # updated as action_required until someone approves them, so the release
+      # PR's gate and review checks never started on their own. An App token
+      # starts them. The toolu-release App; with no owner input the token covers
+      # this repository only. The App must be installed here with Contents and
+      # Pull requests write, or minting fails.
+      - name: Mint a release-please token
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          client-id: ${{ secrets.TOOLU_RELEASE_CLIENT_ID }}
+          private-key: ${{ secrets.TOOLU_RELEASE_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+
       - name: Run release-please
         id: release
         uses: googleapis/release-please-action@v5
         with:
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-          token: ${{ github.token }} # default token; release-only PR checks still report through job-level `if`
+          token: ${{ steps.app-token.outputs.token }}
 
     outputs:
       releases_created: ${{ steps.release.outputs.releases_created }}
       tag_name: ${{ steps.release.outputs.tag_name }}
 
   # Publishing is chained here rather than triggered by `release: published`.
-  # release-please creates the draft Release with the default GITHUB_TOKEN, and GitHub
-  # does not start a workflow run from an event created by that token, so a
-  # `release:` trigger never fires. Chaining keeps it in the same run that cut
-  # the tag and needs no App token.
+  # A `release:` trigger never fired while release-please used GITHUB_TOKEN, and
+  # no workflow listens for one now. Chaining keeps publishing in the same run
+  # that cut the tag.
   #
   # The npm package ships the native binaries, so the binaries come first:
   # `publish` waits for `native`, which publishes the release, and embeds its
