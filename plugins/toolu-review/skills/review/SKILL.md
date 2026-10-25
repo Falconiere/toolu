@@ -38,7 +38,7 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
    Otherwise print `ponytail-review: skipped (not installed)` and continue —
    the pre-pass is advisory and this flow never installs anything.
 1. Apply accepted deletions, then re-diff. The gate pass below always runs on the
-   final diff, and `reviewed_files` is auto-computed from it.
+   final committed diff, and `reviewed_files` is auto-computed from it.
 2. If the pre-pass errored, quote the error in one line and continue with the full
    checklist — an advisory pass never blocks the gate review.
 3. Findings style (caveman-terse): one line per finding —
