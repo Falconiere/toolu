@@ -1,0 +1,8 @@
+# The gate runs the workspace tests under `cargo llvm-cov nextest`.
+
+# status_budget times a real status server's replies (poll p90 <= 7 ms). It
+# was the only test in its binary, so `cargo test` ran it with the machine to
+# itself; it keeps every test slot here, so nothing else runs beside it.
+[[profile.default.overrides]]
+filter = 'binary(status_budget)'
+threads-required = 'num-test-threads'
