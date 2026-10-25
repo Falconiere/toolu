@@ -39,6 +39,20 @@ Resolves the diff with `git diff --no-color <base>...HEAD`, reviews every hunk a
 | 7 | **In-session migration WARNs** | Breaking changes (moved paths, removed symlinks) must surface actionable hints, not silent failures |
 | 8 | **Convention adherence** | Diff must follow the repo's own convention files the CI action gathers from the base ref (`AGENTS.md`, `CLAUDE.md`, etc.) |
 
+### Router
+
+1. Detect ponytail: if the session can invoke `/ponytail-review`, or
+   `command -v ponytail` succeeds, run its delete-list pre-pass on the working
+   diff first. Otherwise print `ponytail-review: skipped (not installed)` and
+   continue — the pre-pass is advisory and this flow never installs anything.
+2. Apply accepted deletions, then re-diff. The gate review below always runs on
+   the final `git diff --no-color <base>...HEAD`.
+3. A failing pre-pass is quoted in one line and skipped over, never blocking.
+4. Findings stay terse —
+   `path:line: <🔴 blocker|🟡 should-fix|🔵 consider>: <problem>. <fix>.` —
+   verdict stays in full sentences (`Approved` / `Needs changes`), negations intact.
+5. `--reviewers` names only the passes that ran (`"ponytail-review"` first when it ran).
+
 ### Workflow
 
 ```bash

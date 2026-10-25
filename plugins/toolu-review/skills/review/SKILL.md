@@ -31,6 +31,21 @@ Review `git diff <base>...HEAD` against these dimensions. Every finding blocks
 8. **Convention adherence** — follow `AGENTS.md` / related convention files the CI
    action reads from the base ref (same bar as `code-review@v8`).
 
+## Router
+
+0. Detect: if this session can invoke `/ponytail-review`, or `command -v ponytail`
+   succeeds, run the ponytail delete-list pre-pass on the working diff first.
+   Otherwise print `ponytail-review: skipped (not installed)` and continue —
+   the pre-pass is advisory and this flow never installs anything.
+1. Apply accepted deletions, then re-diff. The gate pass below always runs on the
+   final diff, and `reviewed_files` is auto-computed from it.
+2. If the pre-pass errored, quote the error in one line and continue with the full
+   checklist — an advisory pass never blocks the gate review.
+3. Findings style (caveman-terse): one line per finding —
+   `path:line: <🔴 blocker|🟡 should-fix|🔵 consider>: <problem>. <fix>.`
+   End with `Approved` or `Needs changes` plus full-sentence blockers.
+   Never drop `not`/`never`/`no`/`only` for brevity; never compress away a finding.
+
 ## How to run
 
 **Commit the fix first, then review.** The gate binds `git diff <base>...HEAD` —
@@ -48,6 +63,10 @@ the pre-fix tree, so committing staleifies it and the push denies.
    toolu review write-state --findings-count 0 \
      --reviewers '["toolu-review:review"]'
    ```
+
+   `--reviewers` names only the passes that actually ran: prepend
+   `"ponytail-review"` (e.g. `'["ponytail-review","toolu-review:review"]'`) when
+   the Router pre-pass ran, otherwise leave the default alone.
 
    Pass `--branch <name>` on a detached checkout — pr-babysit's
    `git worktree add --detach` + `git push origin HEAD:<name>` contract — so
