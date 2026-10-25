@@ -275,25 +275,42 @@ fn prompt(herdr: &mut Herdr<'_>, name: &str, text: &str) -> Result<(), Failure> 
 
 fn settle(herdr: &mut Herdr<'_>, name: &str) -> Result<(), Failure> {
   let until = vec!["idle".to_owned(), "done".to_owned()];
-  herdr
-    .call(&Call::Wait {
-      target: name.to_owned(),
-      until,
-      timeout_ms: 10_000,
-    })
-    .map(|_| ())
+  match herdr.call(&Call::Wait {
+    target: name.to_owned(),
+    until,
+    timeout_ms: 10_000,
+  }) {
+    Err(err) if missing(&err) => Ok(()),
+    result => result.map(|_| ()),
+  }
 }
 
-/// Ask agent `name` on host `kind` to stop its turn and exit.
+/// Whether herdr reports the agent is already gone.
+fn missing(err: &Failure) -> bool {
+  err.code.as_deref() == Some("agent_not_found")
+}
+
+/// Ask agent `name` on host `kind` to stop its turn and exit. An agent that
+/// leaves between the listing and the request is already exited, not a
+/// failure (#633).
 fn request_exit(herdr: &mut Herdr<'_>, name: &str, kind: HostKind) -> Result<(), Failure> {
-  send(herdr, name, &["esc"])?;
+  match send(herdr, name, &["esc"]) {
+    Err(err) if missing(&err) => return Ok(()),
+    result => result?,
+  }
   // Codex's turn cancellation leaves tool jobs alive; /stop is separate.
   if kind == HostKind::Codex {
     settle(herdr, name)?;
-    prompt(herdr, name, "/stop")?;
+    match prompt(herdr, name, "/stop") {
+      Err(err) if missing(&err) => return Ok(()),
+      result => result?,
+    }
     settle(herdr, name)?;
   }
-  prompt(herdr, name, "/exit")?;
+  match prompt(herdr, name, "/exit") {
+    Err(err) if missing(&err) => return Ok(()),
+    result => result?,
+  }
   if kind != HostKind::Muse {
     return Ok(());
   }
@@ -318,6 +335,18 @@ pub(crate) fn exit_grace(env: &Env) -> Duration {
   Duration::from_secs(number(env, "EPIC_AGENT_EXIT_GRACE_S", 10))
 }
 
+/// The pane's shell pid in a `pane.process_info` reply.
+///
+/// # Errors
+/// The reply names no shell pid.
+fn shell_pid(info: &Value) -> Result<u32, Failure> {
+  info
+    .pointer("/process_info/shell_pid")
+    .and_then(Value::as_u64)
+    .and_then(|pid| u32::try_from(pid).ok())
+    .ok_or_else(|| Failure::refusal("pane shell ownership unavailable"))
+}
+
 /// Ask the agent to exit, wait for herdr to stop listing it
 /// ([`exit_wait`]), then for its workload to go ([`exit_grace`]).
 ///
@@ -332,16 +361,20 @@ pub(crate) fn shutdown_agent(
   if let Some(live) = &live {
     require_identity(name, live, expected)?;
   }
-  let info = herdr.call(&Call::PaneInfo {
+  // A pane herdr no longer knows while the agent is unlisted too proves the
+  // shutdown: there is no shell to verify (#633). A listed agent with a gone
+  // pane is inconsistent and still fails.
+  let shell = match herdr.call(&Call::PaneInfo {
     pane_id: expected.pane.to_owned(),
-  })?;
-  let shell = info
-    .pointer("/process_info/shell_pid")
-    .and_then(Value::as_u64)
-    .and_then(|pid| u32::try_from(pid).ok())
-    .ok_or_else(|| Failure::refusal("pane shell ownership unavailable"))?;
+  }) {
+    Err(err) if err.code.as_deref() == Some("pane_not_found") && live.is_none() => None,
+    result => Some(shell_pid(&result?)?),
+  };
   let cwd = Path::new(expected.cwd);
-  let owned = owned_workload(cwd, Some(shell)).map_err(Failure::unknown)?;
+  if shell.is_none() && !cwd.exists() {
+    return Ok(Outcome::Exited);
+  }
+  let owned = owned_workload(cwd, shell).map_err(Failure::unknown)?;
   if live.is_some() {
     request_exit(herdr, name, expected.kind)?;
     let deadline = Instant::now() + exit_wait(herdr.env);
@@ -353,7 +386,7 @@ pub(crate) fn shutdown_agent(
     }
   }
   let gone =
-    await_owned_exit(cwd, Some(shell), &owned, exit_grace(herdr.env)).map_err(Failure::unknown)?;
+    await_owned_exit(cwd, shell, &owned, exit_grace(herdr.env)).map_err(Failure::unknown)?;
   Ok(if gone {
     Outcome::Exited
   } else {

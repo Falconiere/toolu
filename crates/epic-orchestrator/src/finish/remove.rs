@@ -5,24 +5,20 @@
 use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use serde_json::{Value, json};
+use serde_json::json;
+use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run};
 
 use super::STILL_EXITING;
 use super::branch::delete_branch;
 use super::ownership::{Cleanup, verify_no_jobs};
+use super::prepare::{await_quiet, capture_work, exit_agent, shell_pid, word};
 use super::record::{RemovalIntent, leftover_files};
-use crate::checkpoint::snapshot;
 use crate::herdr::Call;
-use crate::hosts::host_kind;
 use crate::launch::Ctx;
-use crate::launch::lifecycle::{
-  Expected, Outcome, exit_grace, exit_wait, inspect_agent, listing_gone, shutdown_agent,
-};
+use crate::launch::lifecycle::inspect_agent;
 use crate::launch::record::{Record, text, write_record};
-use crate::workload::{OwnedWorkload, await_owned_exit, owned_workload, verify_owned_exit};
-
-const LEFTOVER_LINES: usize = 20;
+use crate::workload::{owned_workload, verify_owned_exit};
 
 /// What a teardown proved.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,107 +43,83 @@ pub(crate) struct Teardown<'a> {
   pub warnings: Vec<String>,
 }
 
-fn word(record: &Record, key: &str) -> String {
-  text(record, key).unwrap_or("").to_owned()
-}
-
-/// The pids of `list`, comma-separated.
-fn pids(list: &[OwnedWorkload]) -> String {
-  let pids: Vec<String> = list.iter().map(|owned| owned.pid.to_string()).collect();
-  pids.join(", ")
-}
-
-/// Exit the agent; babysit's cron is session-scoped, so it ends too. A
-/// shutdown that did not finish says whether the agent or its workload is
-/// still exiting.
-fn exit_agent(ctx: &mut Ctx<'_>, record: &Record, shell: Option<u32>) -> Result<(), String> {
-  let agent = word(record, "agent");
-  if agent.is_empty() {
-    return Ok(());
-  }
-  let (pane, worktree) = (word(record, "pane_id"), word(record, "worktree"));
-  if pane.is_empty() || worktree.is_empty() {
-    return Err("cannot verify agent ownership without pane and worktree".to_owned());
-  }
-  let kind = host_kind(text(record, "kind").unwrap_or("claude"))?;
-  let expected = Expected {
-    kind,
-    pane: &pane,
-    cwd: &worktree,
-  };
-  let outcome = shutdown_agent(&mut ctx.herdr, &agent, &expected).map_err(|err| err.message)?;
-  if outcome == Outcome::Exited {
-    return Ok(());
-  }
-  if !listing_gone(&mut ctx.herdr, &agent).map_err(|err| err.message)? {
-    let wait = exit_wait(ctx.env).as_secs();
-    return Err(format!(
-      "{STILL_EXITING}agent {agent} did not leave herdr within {wait} s"
-    ));
-  }
-  let left = owned_workload(Path::new(&worktree), shell)?;
-  // Nothing owned now; `Teardown::live` still awaits the set it recorded
-  // before the exit, so a process that moved out of the worktree is caught.
-  if left.is_empty() {
-    return Ok(());
-  }
-  Err(format!(
-    "{STILL_EXITING}worktree processes {} remain after agent {agent} left herdr",
-    pids(&left)
-  ))
-}
-
-/// The snapshot ref when one holds the worktree's work.
-fn snapshot_ref(worktree: &str, key: &str) -> Result<Option<String>, String> {
-  let shot = snapshot(worktree, key, None);
-  match shot.skipped.as_deref() {
-    Some(reason) if reason != "nothing at risk" => {
-      Err(format!("required checkpoint failed: {reason}"))
-    }
-    _ => Ok((shot.changed || shot.sha.is_some()).then_some(shot.reference)),
-  }
-}
-
-/// The first `git status --porcelain` lines, status columns kept.
-fn leftovers(worktree: &str, ctx: &Ctx<'_>) -> Result<Vec<String>, String> {
-  if !Path::new(worktree).is_dir() {
-    return Ok(Vec::new());
-  }
-  let mut spec = Spec::new(["git", "-C", worktree, "status", "--porcelain"]);
-  spec.env = Some(ctx.env.clone());
+/// Whether git still registers `worktree` under `checkout`.
+///
+/// # Errors
+/// git cannot list its worktrees.
+fn worktree_registered(record: &Record, intent: &RemovalIntent, env: &Env) -> Result<bool, String> {
+  let mut spec = Spec::new([
+    "git",
+    "-C",
+    &word(record, "checkout"),
+    "worktree",
+    "list",
+    "--porcelain",
+    "-z",
+  ]);
+  spec.env = Some(env.clone());
   spec.timeout = Duration::from_secs(30);
-  let out = run(&spec)
+  let listed = run(&spec)
     .ok()
     .filter(|out| out.exit_code == 0 && !out.timed_out && !out.truncated);
-  let out = out.ok_or_else(|| format!("cannot inspect worktree {worktree}"))?;
+  let listed = listed.ok_or_else(|| "cannot verify removed worktree registration".to_owned())?;
   Ok(
-    out
+    listed
       .stdout
-      .lines()
-      .filter(|line| !line.is_empty())
-      .take(LEFTOVER_LINES)
-      .map(str::to_owned)
-      .collect(),
+      .split('\0')
+      .filter_map(|line| line.strip_prefix("worktree "))
+      .any(|path| Path::new(path) == Path::new(&intent.worktree)),
   )
 }
 
-fn shell_pid(ctx: &mut Ctx<'_>, record: &Record) -> Result<Option<u32>, String> {
-  let Some(pane) = text(record, "pane_id") else {
-    return Ok(None);
-  };
-  let info = ctx
-    .herdr
-    .call(&Call::PaneInfo {
-      pane_id: pane.to_owned(),
-    })
-    .map_err(|err| err.message)?;
-  let pid = info
-    .pointer("/process_info/shell_pid")
-    .and_then(Value::as_u64)
-    .and_then(|pid| u32::try_from(pid).ok());
-  pid
-    .map(Some)
-    .ok_or_else(|| "pane shell ownership unavailable".to_owned())
+/// Remove what a gone workspace left behind (#633): nothing when the path is
+/// absent and git no longer registers it, else a git removal so no
+/// registration blocks the branch delete.
+///
+/// # Errors
+/// git cannot verify or remove the worktree.
+fn remove_gone_worktree(
+  record: &Record,
+  intent: &RemovalIntent,
+  abandon: bool,
+  env: &Env,
+) -> Result<(), String> {
+  if !Path::new(&intent.worktree).exists() && !worktree_registered(record, intent, env)? {
+    return Ok(());
+  }
+  git_remove_worktree(record, intent, abandon, env)
+}
+
+/// Remove the worktree with git.
+///
+/// # Errors
+/// git cannot remove the worktree.
+fn git_remove_worktree(
+  record: &Record,
+  intent: &RemovalIntent,
+  abandon: bool,
+  env: &Env,
+) -> Result<(), String> {
+  let (checkout, worktree) = (word(record, "checkout"), intent.worktree.clone());
+  let mut argv: Vec<&str> = vec!["git", "-C", &checkout, "worktree", "remove"];
+  if !abandon {
+    argv.push("--force");
+  }
+  argv.push(&worktree);
+  let mut spec = Spec::new(argv);
+  spec.env = Some(env.clone());
+  spec.timeout = Duration::from_secs(120);
+  let out = run(&spec)
+    .ok()
+    .filter(|out| !out.timed_out && !out.truncated);
+  match out {
+    Some(out) if out.exit_code == 0 => Ok(()),
+    Some(out) => Err(format!(
+      "git worktree remove {worktree} failed: {}",
+      out.stderr.trim()
+    )),
+    None => Err(format!("git worktree remove {worktree} failed")),
+  }
 }
 
 impl Teardown<'_> {
@@ -162,27 +134,19 @@ impl Teardown<'_> {
     ownership: Option<&Cleanup>,
   ) -> Result<Removal, String> {
     let worktree = word(record, "worktree");
+    // A worktree removed by hand holds nothing to own or snapshot (#633).
+    let absent = !worktree.is_empty() && !Path::new(&worktree).exists();
     let shell = shell_pid(ctx, record)?;
-    let owned = owned_workload(Path::new(&worktree), shell)?;
+    let owned = if absent {
+      Vec::new()
+    } else {
+      owned_workload(Path::new(&worktree), shell)?
+    };
     exit_agent(ctx, record, shell)?;
-    if !await_owned_exit(Path::new(&worktree), shell, &owned, exit_grace(ctx.env))? {
-      let now = owned_workload(Path::new(&worktree), shell)?;
-      let left = if now.is_empty() { &owned } else { &now };
-      return Err(format!(
-        "{STILL_EXITING}owned background workload remains alive: {}",
-        pids(left)
-      ));
-    }
+    await_quiet(ctx, &worktree, shell, &owned, absent)?;
     verify_no_jobs(ownership, &worktree)?;
-    let wip_ref = snapshot_ref(&worktree, &word(record, "key"))?;
-    let dirty = leftovers(&worktree, ctx)?;
-    if wip_ref.is_none() && !dirty.is_empty() {
-      let what = if self.abandon { "--abandon" } else { "cleanup" };
-      return Err(format!(
-        "refusing {what}: {worktree} has uncommitted work and the snapshot failed"
-      ));
-    }
-    if !owned_workload(Path::new(&worktree), shell)?.is_empty() {
+    let (wip_ref, dirty) = capture_work(ctx, record, &worktree, absent, self.abandon)?;
+    if !absent && !owned_workload(Path::new(&worktree), shell)?.is_empty() {
       return Err(format!(
         "{STILL_EXITING}new workload appeared before cleanup; retry after it exits"
       ));
@@ -226,17 +190,38 @@ impl Teardown<'_> {
     };
     match ctx.herdr.call(&remove) {
       Ok(_) => self.removed(ctx, record, intent.wip_ref, intent.leftover_files),
-      Err(err) => {
-        self.warnings.push(err.message);
-        let branch_deleted = delete_branch(record, false, self.abandon, ctx.env)?;
-        Ok(Removal {
-          removed: false,
-          branch_deleted,
-          wip_ref: intent.wip_ref,
-          dirty: intent.leftover_files,
-        })
+      // The workspace is already gone with the agent and its pane: remove
+      // the worktree with git so no registration blocks the branch (#633).
+      Err(err) if err.code.as_deref() == Some("workspace_not_found") => {
+        match remove_gone_worktree(record, &intent, self.abandon, ctx.env) {
+          Ok(()) => self.removed(ctx, record, intent.wip_ref, intent.leftover_files),
+          Err(warning) => self.unremoved(ctx, record, intent, warning),
+        }
       }
+      Err(err) => self.unremoved(ctx, record, intent, err.message),
     }
+  }
+
+  /// Keep the record after a removal that did not happen: warn, then delete
+  /// only what a kept worktree allows.
+  ///
+  /// # Errors
+  /// git cannot verify the branch.
+  fn unremoved(
+    &mut self,
+    ctx: &Ctx<'_>,
+    record: &Record,
+    intent: RemovalIntent,
+    warning: String,
+  ) -> Result<Removal, String> {
+    self.warnings.push(warning);
+    let branch_deleted = delete_branch(record, false, self.abandon, ctx.env)?;
+    Ok(Removal {
+      removed: false,
+      branch_deleted,
+      wip_ref: intent.wip_ref,
+      dirty: intent.leftover_files,
+    })
   }
 
   /// Persist the removal boundary before touching the branch.
@@ -319,27 +304,7 @@ pub(crate) fn verify_prepared(
     return Err("owned background workload remains alive after worktree removal".to_owned());
   }
   verify_no_jobs(Some(ownership), &intent.worktree)?;
-  let mut spec = Spec::new([
-    "git",
-    "-C",
-    &word(record, "checkout"),
-    "worktree",
-    "list",
-    "--porcelain",
-    "-z",
-  ]);
-  spec.env = Some(ctx.env.clone());
-  spec.timeout = Duration::from_secs(30);
-  let listed = run(&spec)
-    .ok()
-    .filter(|out| out.exit_code == 0 && !out.timed_out && !out.truncated);
-  let listed = listed.ok_or_else(|| "cannot verify removed worktree registration".to_owned())?;
-  let registered = listed
-    .stdout
-    .split('\0')
-    .filter_map(|line| line.strip_prefix("worktree "))
-    .any(|path| Path::new(path) == Path::new(&intent.worktree));
-  if registered {
+  if worktree_registered(record, intent, ctx.env)? {
     return Err("worktree path is absent but remains registered".to_owned());
   }
   Ok(())

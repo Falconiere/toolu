@@ -63,6 +63,13 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
+## Finish recovery
+
+When the worker's agent and pane are already gone and the PR is merged,
+`toolu epic finish <state_dir> <key>` treats the shutdown as done: it
+snapshots when the worktree still exists, removes what remains, and releases
+the lease, so just retry the finish.
+
 ## Engine events
 
 The resident engine subscribes to herdr (`events.subscribe`) instead of polling.

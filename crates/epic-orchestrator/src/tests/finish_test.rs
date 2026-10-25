@@ -148,7 +148,10 @@ fn a_crash_after_a_prepared_removal_is_reconciled() {
 }
 
 #[test]
-fn an_absent_worktree_without_removal_evidence_stays_occupied() {
+fn an_absent_worktree_without_removal_evidence_is_reconciled_on_abandon() {
+  // No agent, pane, or workspace was ever recorded, and the worktree is
+  // already gone: failing closed here held the lease forever (#633), while
+  // nothing remains to clean. Abandon still keeps the branch.
   let l = layout();
   let token = agent_lease(&l, "cleaning");
   patch(
@@ -159,10 +162,21 @@ fn an_absent_worktree_without_removal_evidence_stays_occupied() {
     &l.main,
     &["worktree", "remove", "--force", &l.wt.display().to_string()],
   );
-  let refused = finish(&l, true).expect_err("absent");
-  assert!(refused.starts_with("cannot resolve worktree"), "{refused}");
-  assert_eq!(read(&l.record)["cleanup_error"], json!(refused));
-  assert_eq!(leases(&l), [(token, "cleaning".to_owned())]);
+  let report = finish(&l, true).expect("absent");
+  let record = read(&l.record);
+  assert_eq!(
+    (
+      report.finished["stage"].clone(),
+      record["worktree_removed"].clone(),
+      record["branch_deleted"].clone()
+    ),
+    (json!("abandoned"), json!(true), json!(false))
+  );
+  assert!(record.get("removal_intent").is_none());
+  assert_eq!(leases(&l), Vec::new());
+  assert!(
+    git(&l.main, &["show-ref", "--verify", "refs/heads/feat/1-x"]).ends_with("refs/heads/feat/1-x")
+  );
 }
 
 #[test]

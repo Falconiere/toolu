@@ -96,6 +96,44 @@ fn a_prepared_removal_must_match_and_leave_no_registration() {
 }
 
 #[test]
+fn already_gone_agent_and_pane_finish_merged_and_release_the_lease() {
+  let (l, rig) = (layout(), Rig::new());
+  let github = live(&l, &rig, true);
+  let client = gh(&github);
+  // The worker's agent exited and herdr dropped its pane on its own.
+  rig.herdr.state().stop_all();
+  let mut ctx = rig.ctx();
+  ctx.gh = Ok(&client);
+  let report = finish_issue(&l.state, "k-1", (false, false), &mut ctx).expect("finish");
+  assert_eq!(report.finished["stage"], json!("merged"));
+  assert_eq!(report.finished["worktree_removed"], json!(true));
+  assert_eq!(report.finished["branch_deleted"], json!(true));
+  assert_eq!(leases(&l), Vec::new());
+  assert!(read(&l.record)["finished_at"].is_string());
+}
+
+#[test]
+fn already_gone_pane_with_hand_removed_worktree_finishes_on_retry() {
+  let (l, rig) = (layout(), Rig::new());
+  let github = live(&l, &rig, true);
+  let client = gh(&github);
+  // The operator removed the worktree and branch by hand after the merge.
+  git(
+    &l.main,
+    &["worktree", "remove", "--force", &l.wt.display().to_string()],
+  );
+  git(&l.main, &["branch", "-D", "feat/1-x"]);
+  rig.herdr.state().stop_all();
+  let mut ctx = rig.ctx();
+  ctx.gh = Ok(&client);
+  let report = finish_issue(&l.state, "k-1", (false, false), &mut ctx).expect("finish");
+  assert_eq!(report.finished["stage"], json!("merged"));
+  assert_eq!(report.finished["worktree_removed"], json!(true));
+  assert_eq!(report.finished["branch_deleted"], json!(true));
+  assert_eq!(leases(&l), Vec::new());
+}
+
+#[test]
 fn a_dry_run_plans_the_teardown_and_writes_nothing() {
   let (l, rig) = (layout(), Rig::new());
   patch(&l, &json!({"workspace_id": "w-1", "agent": "k-1"}));

@@ -160,6 +160,94 @@ fn shutdown_confirms_muse_exit_even_when_it_already_left() {
 }
 
 #[test]
+fn already_gone_agent_on_prompt_counts_as_exited_once_unlisted() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "claude");
+  // The agent's process dies under herdr: its listing degrades, then drops it.
+  {
+    let mut state = rig.herdr.state();
+    let agent = state
+      .agents
+      .iter_mut()
+      .find(|agent| agent.name == "k-1")
+      .expect("agent");
+    crate::herdr_state::stop(&mut agent.process);
+  }
+  let full = format!(
+    "{{\"result\":{{\"agents\":[{{\"name\":\"k-1\",\"agent\":\"claude\",\"pane_id\":\"{pane}\",\"cwd\":\"{}\",\"agent_status\":\"idle\"}}]}}}}",
+    worktree.display()
+  );
+  rig.herdr.script("agent.list", Scripted::Raw(full));
+  rig.herdr.script(
+    "agent.list",
+    Scripted::Raw(r#"{"result":{"agents":[]}}"#.into()),
+  );
+  rig.herdr.script(
+    "agent.prompt",
+    Scripted::Error {
+      code: "agent_not_found".into(),
+      message: "scripted".into(),
+    },
+  );
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Claude, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+}
+
+#[test]
+fn already_gone_agent_on_exit_prompt_is_tolerated_while_listed() {
+  let mut rig = Rig::new();
+  rig.env = rig.env.clone().with("EPIC_AGENT_EXIT_WAIT_S", "1");
+  let (worktree, pane) = started(&rig, "claude");
+  rig.herdr.script(
+    "agent.prompt",
+    Scripted::Error {
+      code: "agent_not_found".into(),
+      message: "scripted".into(),
+    },
+  );
+  let mut ctx = rig.ctx();
+  // Still listed, so the shutdown is incomplete — but the missing agent
+  // itself is not the failure.
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Claude, &pane, &worktree)
+    ),
+    Ok(Outcome::CleanupIncomplete)
+  );
+}
+
+#[test]
+fn already_gone_agent_during_codex_settle_counts_as_exited() {
+  let rig = Rig::new();
+  let (worktree, pane) = started(&rig, "codex");
+  rig.herdr.script(
+    "agent.wait",
+    Scripted::Error {
+      code: "agent_not_found".into(),
+      message: "scripted".into(),
+    },
+  );
+  let mut ctx = rig.ctx();
+  assert_eq!(
+    shutdown_agent(
+      &mut ctx.herdr,
+      "k-1",
+      &expected(HostKind::Codex, &pane, &worktree)
+    ),
+    Ok(Outcome::Exited)
+  );
+}
+
+#[test]
 fn worktree_processes_that_exit_within_the_grace_complete_the_shutdown() {
   let mut rig = Rig::new();
   rig.env = rig.env.clone().with("EPIC_AGENT_EXIT_GRACE_S", "10");
