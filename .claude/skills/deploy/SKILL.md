@@ -1,7 +1,7 @@
 ---
 name: deploy
-description: Cut a signed toolu release from this Mac while GitHub Actions is unavailable. Builds the four native archives, signs SHA256SUMS with the release key held in Infisical, publishes the GitHub Release, and for prod updates the Homebrew tap.
-argument-hint: --env prod|dev --tag <tag> --change-log "<notes>"
+description: Cut a signed toolu production release from this Mac while GitHub Actions is unavailable. Builds the four native archives, signs SHA256SUMS with the release key held in Infisical, publishes the GitHub Release, and updates the Homebrew tap.
+argument-hint: --env prod --tag <tag> --change-log "<notes>"
 disable-model-invocation: true
 ---
 
@@ -13,24 +13,24 @@ This is the local stand-in for `release-native.yml` and `release-homebrew.yml` (
 
 Never print, echo, or write `TOOLU_MINISIGN_SECRET_KEY` to a file. It only reaches `minisign` through process substitution.
 
-Shell state does not persist between commands. Start every command with this prelude, with `<env>` and `<tag>` substituted:
+Shell state does not persist between commands. Start every command with this prelude, with `<tag>` substituted:
 
 ```bash
-ENV=<env>; TAG=<tag>; W=target/deploy/$TAG; D=$W/dist; PATH="$HOME/.cargo/bin:$PATH"
+TAG=<tag>; W=target/deploy/$TAG; D=$W/dist; PATH="$HOME/.cargo/bin:$PATH"
 INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
 ```
 
 `gh` below means `env -u GH_TOKEN gh` whenever `gh api user` fails while `GH_TOKEN` is set.
 
 1. **Read the inputs.** From the arguments, take `--env`, `--tag` and `--change-log`.
-   - Refuse unless `--env` is `prod` or `dev`, `--tag` is present, and `--change-log` is non-empty.
-   - A prod tag is `v<workspace version>`. A dev tag is `v<workspace version>-dev.<N>`.
+   - Refuse unless `--env` is `prod`, `--tag` is present, and `--change-log` is non-empty. `prod` is the only environment; there is no dev or rc channel.
+   - The tag is `v<workspace version>`, the version release-please already set.
    - Create `$W` and write the change log verbatim to `$W/notes.md` with the Write tool.
 
 2. **Preflight.** Nothing public happens here. Every check must pass:
    - `git status --porcelain` prints nothing.
-   - Prod only: `git fetch origin main && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"`.
-   - Prod: `python3 .github/scripts/release_native.py verify-tag "$TAG"`. Dev: the same command with `--test-tag`. Either must exit 0.
+   - `git fetch origin main && test "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)"`.
+   - `python3 .github/scripts/release_native.py verify-tag "$TAG"` exits 0.
    - The tag is new: `git rev-parse -q --verify "refs/tags/$TAG"` fails, and `git ls-remote --exit-code --tags origin "refs/tags/$TAG"` exits 2.
    - `cargo --version` prints the `channel` from `rust-toolchain.toml`, which proves rustup's cargo wins over Homebrew's.
    - These all succeed: `gh api user`, `docker info`, `minisign -v`, `zig version`, `cargo zigbuild --help`, `infisical --version`, `arch -x86_64 /usr/bin/true` (Rosetta), and `rustup target list --installed`. The last one must list `x86_64-apple-darwin`, `aarch64-unknown-linux-musl` and `x86_64-unknown-linux-musl`.
@@ -77,7 +77,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    minisign -Vm "$D/SHA256SUMS" -x "$D/SHA256SUMS.minisig" -P "$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)"
    ```
 
-7. **Smoke test.** Use the checks from `release-finalize.yml`. For dev, add `--test-tag` to each `verify-package`. Linux archives go to the containers on stdin, because Docker Desktop can show `/Volumes` binds stale. Every command must exit 0. Each Linux run must print `toolu <workspace version>`:
+7. **Smoke test.** Use the checks from `release-finalize.yml`. Linux archives go to the containers on stdin, because Docker Desktop can show `/Volumes` binds stale. Every command must exit 0. Each Linux run must print `toolu <workspace version>`:
 
    ```bash
    for arch in arm64 amd64; do
@@ -90,7 +90,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    done
    ```
 
-8. **Publish.** Every command must exit 0, and `cmp` must report no difference. For dev, add `--prerelease` to both `gh release` calls:
+8. **Publish.** Every command must exit 0, and `cmp` must report no difference:
 
    ```bash
    git tag -a "$TAG" -m "toolu $TAG" && git push origin "refs/tags/$TAG" &&
@@ -101,7 +101,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    gh release edit "$TAG" --draft=false
    ```
 
-9. **Update the tap and the release PR (prod only).** Skip this step for dev.
+9. **Update the tap and the release PR.**
    - Run the tap commands below. If the formula did not change, report that and do not commit.
    - Relabel the release PR. If no merged PR titled `chore(main): release <version>` carries `autorelease: pending`, say so and continue.
 
@@ -116,9 +116,9 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    [ -z "$pr" ] || gh pr edit "$pr" --repo Falconiere/toolu --remove-label "autorelease: pending" --add-label "autorelease: tagged"
    ```
 
-10. **Verify the install.** `bash install.sh --version "$TAG" --install-dir "$W/bin"` must exit 0, and `"$W/bin/toolu" --version` must print `toolu <workspace version>`. Then run `gh release view --json tagName --jq .tagName`. Prod must print `$TAG`. Dev must print the same tag `latest` had before the run.
+10. **Verify the install.** `bash install.sh --version "$TAG" --install-dir "$W/bin"` must exit 0, and `"$W/bin/toolu" --version` must print `toolu <workspace version>`. Then `gh release view --json tagName --jq .tagName` must print `$TAG`.
 
-11. **Report.** Give the release URL (`gh release view "$TAG" --json url --jq .url`), the tagged commit, and for prod the tap commit and the relabeled PR. Then name the gaps compared with CI: no SBOM and no build provenance attestation.
+11. **Report.** Give the release URL (`gh release view "$TAG" --json url --jq .url`), the tagged commit, the tap commit, and the relabeled PR. Then name the gaps compared with CI: no SBOM and no build provenance attestation.
 
 ## If a step fails after the tag push
 

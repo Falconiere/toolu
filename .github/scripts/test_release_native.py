@@ -8,8 +8,6 @@ import tomllib
 import unittest
 from pathlib import Path
 
-import release_native
-
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = Path(__file__).with_name("release_native.py")
@@ -35,21 +33,6 @@ class ReleaseNativeTest(unittest.TestCase):
         wrong = run_script("verify-tag", "v0.0.0")
         self.assertNotEqual(wrong.returncode, 0)
         self.assertIn("does not match workspace", wrong.stderr)
-
-    def test_dev_tag_matches_only_with_test_tag_and_a_number(self) -> None:
-        version = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"][
-            "version"
-        ]
-        self.assertEqual(run_script("verify-tag", f"v{version}-dev.1", "--test-tag").returncode, 0)
-        self.assertNotEqual(run_script("verify-tag", f"v{version}-dev.1").returncode, 0)
-        self.assertNotEqual(run_script("verify-tag", f"v{version}-dev", "--test-tag").returncode, 0)
-        self.assertNotEqual(run_script("verify-tag", "v0.0.0-dev.1", "--test-tag").returncode, 0)
-
-    def test_expected_version_strips_test_and_dev_suffixes(self) -> None:
-        self.assertEqual(release_native.expected_version("v8.4.1-dev.1", True), "8.4.1")
-        self.assertEqual(release_native.expected_version("v8.4.1-test.2", True), "8.4.1")
-        self.assertEqual(release_native.expected_version("v8.4.1-dev.1", False), "8.4.1-dev.1")
-        self.assertEqual(release_native.expected_version("v9.0.0-rc.1", True), "9.0.0-rc.1")
 
     def test_package_has_exact_root_layout_and_executable_mode(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

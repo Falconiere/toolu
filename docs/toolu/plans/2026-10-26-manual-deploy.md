@@ -1,6 +1,6 @@
 # Agent-run manual deploy — Plan
 
-**Date:** 2026-10-26   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-26-manual-deploy-design.md   **Topic:** `/deploy` skill, rotation of the lost minisign release key, and one live dev prerelease.
+**Date:** 2026-10-26   **Status:** Approved   **Spec:** docs/toolu/specs/2026-10-26-manual-deploy-design.md   **Topic:** `/deploy` skill (production releases only), rotation of the lost minisign release key, and verification on the first real release, v8.4.1.
 
 ## Evidence and approach
 
@@ -12,37 +12,17 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
 
 ## Workstream summary
 
-1. Helper and test.
-2. Key rotation, installer change, and installer tests.
-3. Skill and preflight checks.
-4. Docs, then a commit.
-5. The user types `/deploy` for the live dev run, which needs Rosetta and minisign installed first.
-6. Install from the published prerelease, add a new-key fixture, and run the prod commands dry.
-7. Gate.
-8. Delivery.
+1. Key rotation, installer change, and installer tests.
+2. Skill and preflight checks.
+3. Docs, then a commit.
+4. Gate, review, PR.
+5. After merge, the user types `/deploy --env prod --tag v8.4.1` for the first real release (Rosetta and minisign are installed).
+6. Run the deferred checks against v8.4.1 and add the new-key fixture.
 
 ## Steps (machine-readable)
 
 ```json
 [
-  {
-    "id": "dev-tag-helper",
-    "title": "release_native.py accepts -dev.<N> wherever -test is accepted",
-    "check": "python3 -B -m unittest discover -s .github/scripts -p 'test_release_native.py' -v",
-    "ac_refs": [
-      "AC-1"
-    ],
-    "paths": [
-      ".github/scripts/release_native.py",
-      ".github/scripts/test_release_native.py",
-      "Cargo.toml",
-      "Cargo.lock",
-      "package.json",
-      "tools/toolu-cli/npm/package.json"
-    ],
-    "input": "Real workspace manifests at 8.4.1. Tags v8.4.1-dev.1 with and without --test-tag, v8.4.1-dev (no number), and v8.4.2-dev.1 (wrong version). expected_version() for -test and -dev tags.",
-    "model": "sonnet"
-  },
   {
     "id": "rotate-key",
     "title": "Generate the new release key, embed it in install.sh with the retired key, and store the GitHub secret",
@@ -72,7 +52,7 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
       ".github/scripts/test_install_keys.py",
       ".github/scripts/fixtures/install"
     ],
-    "input": "The real v8.4.0 SHA256SUMS and SHA256SUMS.minisig (old key), a SHA256SUMS signed by a throwaway key for tag v8.4.1-dev.9, both served through TOOLU_DOWNLOAD_BASE=file://, and the live v8.4.0 release.",
+    "input": "The real v8.4.0 SHA256SUMS and SHA256SUMS.minisig (old key), the same served as v8.5.0 (past the retired key's bound), a SHA256SUMS signed by a throwaway key for tag v8.4.2, all through TOOLU_DOWNLOAD_BASE=file://, and the live v8.4.0 release.",
     "model": "sonnet"
   },
   {
@@ -109,19 +89,18 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
   {
     "id": "preflight-refusals",
     "title": "The skill's step-1 and step-2 commands refuse each bad input on this repository",
-    "check": "f=.claude/skills/deploy/SKILL.md && grep -qF 'git ls-remote --exit-code --tags origin' \"$f\" && grep -qF 'git rev-parse HEAD' \"$f\" && ! python3 .github/scripts/release_native.py verify-tag v9.9.9 2>/dev/null && ! python3 .github/scripts/release_native.py verify-tag v8.4.1-dev.1 2>/dev/null && git ls-remote --exit-code --tags origin refs/tags/v8.4.0 >/dev/null && git fetch -q origin main && test \"$(git rev-parse HEAD)\" != \"$(git rev-parse origin/main)\"",
+    "check": "f=.claude/skills/deploy/SKILL.md && grep -qF 'git ls-remote --exit-code --tags origin' \"$f\" && grep -qF 'git rev-parse HEAD' \"$f\" && ! python3 .github/scripts/release_native.py verify-tag v9.9.9 2>/dev/null && grep -qF 'Refuse unless `--env` is `prod`' \"$f\" && git ls-remote --exit-code --tags origin refs/tags/v8.4.0 >/dev/null && git fetch -q origin main && test \"$(git rev-parse HEAD)\" != \"$(git rev-parse origin/main)\"",
     "ac_refs": [
       "AC-5"
     ],
     "depends_on": [
-      "dev-tag-helper",
       "deploy-skill"
     ],
     "paths": [
       ".claude/skills/deploy/SKILL.md",
       ".github/scripts/release_native.py"
     ],
-    "input": "--env prod --tag v9.9.9 (version mismatch), --env prod --tag v8.4.1-dev.1 without --test-tag, --env dev --tag v8.4.0 (an existing remote tag), --env prod from this branch (HEAD differs from origin/main), and --env staging (refused by the skill's step-1 prose).",
+    "input": "--env dev (refused by step 1: only prod), --env prod --tag v9.9.9 (version mismatch), --env prod --tag v8.4.0 (an existing remote tag), and --env prod from this branch (HEAD differs from origin/main).",
     "model": "haiku"
   },
   {
@@ -153,7 +132,6 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
       "AC-10"
     ],
     "depends_on": [
-      "dev-tag-helper",
       "installer-keys",
       "deploy-skill",
       "docs"
@@ -173,9 +151,7 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
 
 ## Critical files
 
-- `.github/scripts/release_native.py`: add an `expected_version(tag, test_tag)` helper and accept `-(test|dev)` in `verify-tag`.
-- `.github/scripts/test_release_native.py`: add the dev-tag cases.
-- `.github/scripts/test_install_keys.py` (new) and `.github/scripts/fixtures/install/<tag>/SHA256SUMS{,.minisig}` (new). Fixtures exist for v8.4.1 (old key, real), v8.4.1-dev.9 (throwaway key), and v8.4.1-dev.1 (new key, real, added after the live run).
+- `.github/scripts/test_install_keys.py` (new) and `.github/scripts/fixtures/install/<tag>/SHA256SUMS{,.minisig}` (new). Fixtures exist for v8.4.0 (old key, real) and v8.4.2 (throwaway key). A v8.4.1 fixture (new key, real) is added after the first release.
 - `install.sh`: `TOOLU_PUBLIC_KEY` (new), `TOOLU_RETIRED_PUBLIC_KEY`, and a two-key `verify()`.
 - `.claude/skills/deploy/SKILL.md` (new).
 - `docs/releases/native.md`, `docs/install.md`, `AGENTS.md`.
@@ -183,11 +159,11 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
 
 ## Verification
 
-- End to end: the user types `/deploy --env dev --tag v8.4.1-dev.1 --change-log "<notes>"` once the skill change is committed. The agent follows the 11 steps, the prerelease goes public, `latest` stays at v8.4.1, and `install.sh --version v8.4.1-dev.1` installs it.
+- End to end: after merge, the user types `/deploy --env prod --tag v8.4.1 --change-log "<notes>"` on `main`. The agent follows the 11 steps, v8.4.1 goes public as `latest`, the tap and PR #639 are updated, and `install.sh --version v8.4.1` installs it.
 - Real inputs: the live v8.4.1 release and its old-key signature, the new key, the live prerelease, and the repository's own manifests.
 - Failure and boundary cases:
   - A throwaway-key signature is refused by `install.sh` (AC-4) and by the skill's step-6 check (AC-6).
-  - A version-mismatched tag and a dev tag without `--test-tag` fail `verify-tag`.
+  - `--env dev` is refused at step 1, and a version-mismatched tag fails `verify-tag`.
   - An existing remote tag stops the run.
   - A prod run from a branch stops.
   - Gate failures stop the run until the user confirms they are host-only.
@@ -214,41 +190,42 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
 - User request during execution: store `TOOLU_PUBLIC_KEY`, `TOOLU_RETIRED_PUBLIC_KEY`, and `MINISIGN_URL` in Infisical. The user also chose to store the signing key there and to have `/deploy` read it from Infisical. Added the `infisical-store` step, and the skill gains `INFISICAL_PROJECT_ID`.
 - Evidence during execution: v8.4.1 was never tagged or released (PR #639 merged after the workflows were disabled), so `latest` is v8.4.0. The installer, preflight, live-run, and docs checks now name v8.4.0 where they meant the last old-key release.
 - User decision during execution: Linux builds use `cargo zigbuild` on the host (zig 0.17.0, cargo-zigbuild 0.24.0) instead of `rust:1.99.0-alpine` containers. The Docker VM had 3.8 GB free.
-- User decision during execution ("open pr"): the PR opens before the live `/deploy` dev run. The four steps that need that run (`live-dev-release`, `sign-guard`, `install-dev-release`, `prod-dry`, covering AC-6 to AC-9) moved out of the ledger to **Deferred live verification** below. Their checks are kept verbatim, to run after the user types `/deploy --env dev --tag v8.4.1-dev.1 --change-log "…"`. Until then AC-6 to AC-9 are unproven.
+- User decision during execution ("open pr"): the PR opens before the live `/deploy` dev run. The four steps that need that run (`live-dev-release`, `sign-guard`, `install-dev-release`, `prod-dry`, covering AC-6 to AC-9) moved out of the ledger to **Deferred live verification** below. They are kept to run after the first live run. Until then AC-6 to AC-9 are unproven.
+
+- User decision after the PR opened: no dev channel. `/deploy` cuts production releases only (`--env prod`), so the `dev-tag-helper` step and its `release_native.py` change are dropped. The deferred checks now target the first real release, v8.4.1, after merge.
 
 ## Deferred live verification
 
-Run each check after the live dev run, in order. Each must exit 0.
+Run each check after the first real release. Merge this PR, then on an up-to-date `main` type `/deploy --env prod --tag v8.4.1 --change-log "<notes>"`. Each check below must exit 0.
 
-### live-dev-release (AC-7)
+### prod-release (AC-7)
 
-A user-typed /deploy --env dev --tag v8.4.1-dev.1 publishes the prerelease and leaves latest and the tap alone.
+v8.4.1 is a published stable release with exactly the six assets and the notes as its body. It is `latest`, and PR #639 is relabeled.
 
 ```bash
-env -u GH_TOKEN gh release view v8.4.1-dev.1 --repo Falconiere/toolu --json isPrerelease,isDraft,assets,body | jq -e --rawfile notes target/deploy/v8.4.1-dev.1/notes.md '.isPrerelease and (.isDraft | not) and ([.assets[].name] | sort) == ["SHA256SUMS", "SHA256SUMS.minisig", "toolu-darwin-amd64.tar.gz", "toolu-darwin-arm64.tar.gz", "toolu-linux-amd64.tar.gz", "toolu-linux-arm64.tar.gz"] and (.body | rtrimstr("\n")) == ($notes | rtrimstr("\n"))' && test "$(env -u GH_TOKEN gh release view --repo Falconiere/toolu --json tagName --jq .tagName)" = v8.4.0 && env -u GH_TOKEN gh api repos/Falconiere/homebrew-tap/contents/Formula/toolu.rb --jq .content | base64 -d | grep -qF 'download/v8.4.0/'
+env -u GH_TOKEN gh release view v8.4.1 --repo Falconiere/toolu --json isPrerelease,isDraft,assets,body | jq -e --rawfile notes target/deploy/v8.4.1/notes.md '(.isPrerelease | not) and (.isDraft | not) and ([.assets[].name] | sort) == ["SHA256SUMS", "SHA256SUMS.minisig", "toolu-darwin-amd64.tar.gz", "toolu-darwin-arm64.tar.gz", "toolu-linux-amd64.tar.gz", "toolu-linux-arm64.tar.gz"] and (.body | rtrimstr("\n")) == ($notes | rtrimstr("\n"))' && test "$(env -u GH_TOKEN gh release view --repo Falconiere/toolu --json tagName --jq .tagName)" = v8.4.1 && env -u GH_TOKEN gh pr view 639 --repo Falconiere/toolu --json labels --jq '[.labels[].name]' | jq -e 'index("autorelease: tagged") != null and index("autorelease: pending") == null'
 ```
 
 ### sign-guard (AC-6)
 
-The skill's step-6 signature check refuses a throwaway-key signature and accepts the release key's.
+The step-6 signature check refuses a throwaway-key signature and accepts the release key's.
 
 ```bash
-d=target/deploy/v8.4.1-dev.1/dist && w=$(mktemp -d) && key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh) && minisign -G -W -p "$w/t.pub" -s "$w/t.key" >/dev/null && cp "$d/SHA256SUMS" "$w/SHA256SUMS" && minisign -S -s "$w/t.key" -m "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -t 'toolu v8.4.1-dev.1' >/dev/null && ! minisign -Vm "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -P "$key" >/dev/null 2>&1 && minisign -Vm "$d/SHA256SUMS" -x "$d/SHA256SUMS.minisig" -P "$key" | grep -qxF 'Trusted comment: toolu v8.4.1-dev.1' && grep -qF 'minisign -Vm' .claude/skills/deploy/SKILL.md
+d=target/deploy/v8.4.1/dist && w=$(mktemp -d) && key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh) && minisign -G -W -p "$w/t.pub" -s "$w/t.key" >/dev/null && cp "$d/SHA256SUMS" "$w/SHA256SUMS" && minisign -S -s "$w/t.key" -m "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -t 'toolu v8.4.1' >/dev/null && ! minisign -Vm "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -P "$key" >/dev/null 2>&1 && minisign -Vm "$d/SHA256SUMS" -x "$d/SHA256SUMS.minisig" -P "$key" | grep -qxF 'Trusted comment: toolu v8.4.1'
 ```
 
-### install-dev-release (AC-3, AC-8)
+### install-release (AC-8)
 
-The published prerelease installs through install.sh, the Linux archives run in Alpine, and the new-key fixture is accepted.
+v8.4.1 installs through `install.sh` with the new key, and both Linux archives run in Alpine. Then copy v8.4.1's real `SHA256SUMS` and `SHA256SUMS.minisig` to `.github/scripts/fixtures/install/v8.4.1/` and add a `test_install_keys.py` case asserting that the current key reaches the checksum check.
 
 ```bash
-tmp=$(mktemp -d) && bash install.sh --version v8.4.1-dev.1 --install-dir "$tmp/bin" && test "$("$tmp/bin/toolu" --version)" = 'toolu 8.4.1' && env -u GH_TOKEN gh release download v8.4.1-dev.1 --repo Falconiere/toolu --pattern 'toolu-linux-*.tar.gz' -D "$tmp/dl" && for arch in amd64 arm64; do mkdir "$tmp/$arch" && tar -xzf "$tmp/dl/toolu-linux-$arch.tar.gz" -C "$tmp/$arch" && test "$(docker run --rm --platform linux/$arch -v "$tmp/$arch:/package:ro" --entrypoint /package/toolu alpine:3.20 --version)" = 'toolu 8.4.1' || exit 1; done && python3 -B -m unittest discover -s .github/scripts -p 'test_install_keys.py' -v
+tmp=$(mktemp -d) && bash install.sh --version v8.4.1 --install-dir "$tmp/bin" && test "$("$tmp/bin/toolu" --version)" = 'toolu 8.4.1' && env -u GH_TOKEN gh release download v8.4.1 --repo Falconiere/toolu --pattern 'toolu-linux-*.tar.gz' -D "$tmp/dl" && for arch in amd64 arm64; do test "$(docker run --rm -i --platform linux/$arch alpine:3.20 sh -c 'tar -xz -C /tmp && /tmp/toolu --version' < "$tmp/dl/toolu-linux-$arch.tar.gz")" = 'toolu 8.4.1' || exit 1; done
 ```
 
-### prod-dry (AC-9)
+### tap (AC-9)
 
-The prod-only formula and relabel query work on real data without writing.
+The tap formula points at v8.4.1, and its four hashes are the release's.
 
 ```bash
-d=target/deploy/v8.4.1-dev.1/dist && cargo xtask homebrew-formula v8.4.1-dev.1 "$d/SHA256SUMS" > /private/tmp/toolu-deploy-formula.rb && test "$(grep -c 'sha256 "' /private/tmp/toolu-deploy-formula.rb)" -eq 4 && for h in $(awk '{print $1}' "$d/SHA256SUMS"); do grep -qF "sha256 \"$h\"" /private/tmp/toolu-deploy-formula.rb || exit 1; done && env -u GH_TOKEN gh pr list --repo Falconiere/toolu --state merged --label 'autorelease: pending' --json number,title | jq -e 'type == "array"'
+f=$(env -u GH_TOKEN gh api repos/Falconiere/homebrew-tap/contents/Formula/toolu.rb --jq .content | base64 -d) && grep -qF 'download/v8.4.1/' <<<"$f" && test "$(grep -c 'sha256 "' <<<"$f")" -eq 4 && for h in $(awk '{print $1}' target/deploy/v8.4.1/dist/SHA256SUMS); do grep -qF "sha256 \"$h\"" <<<"$f" || exit 1; done
 ```
-

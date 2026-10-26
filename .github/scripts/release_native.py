@@ -25,9 +25,8 @@ def verify_tag(tag: str, test_tag: bool) -> None:
 
     root = Path.cwd()
     version = tomllib.loads((root / "Cargo.toml").read_text())["workspace"]["package"]["version"]
-    # `-dev.<N>` tags come from the local /deploy skill's dev channel.
     is_test = test_tag and re.fullmatch(
-        rf"v{re.escape(version)}-(?:test(?:\.[0-9A-Za-z-]+)*|dev\.[0-9]+)", tag
+        rf"v{re.escape(version)}-test(?:\.[0-9A-Za-z-]+)*", tag
     ) is not None
     if tag != f"v{version}" and not is_test:
         fail(f"tag {tag} does not match workspace v{version}")
@@ -53,16 +52,6 @@ def verify_tag(tag: str, test_tag: bool) -> None:
         if found != version:
             fail(f"{path.relative_to(root)} version {found} does not match {version}")
     print(f"verified {tag} against workspace and {len(paths)} manifests")
-
-
-def expected_version(tag: str, test_tag: bool) -> str:
-    """The version a binary built for `tag` prints; test and dev tags drop their suffix."""
-    version = tag[1:] if tag.startswith("v") else tag
-    if test_tag:
-        for marker in ("-test", "-dev"):
-            if marker in version:
-                return version.rpartition(marker)[0]
-    return version
 
 
 def add_member(archive: tarfile.TarFile, path: Path, name: str, mode: int) -> None:
@@ -127,7 +116,10 @@ def verify_package(tag: str, archive: Path, sums: Path, dest: Path, test_tag: bo
         check=False,
     )
     version = result.stdout.strip()
-    if result.returncode != 0 or version != f"toolu {expected_version(tag, test_tag)}":
+    expected_version = tag[1:] if tag.startswith("v") else tag
+    if test_tag and "-test" in expected_version:
+        expected_version = expected_version.rpartition("-test")[0]
+    if result.returncode != 0 or version != f"toolu {expected_version}":
         fail(f"binary version {version} differs from {tag}")
     print(f"verified {archive.name} ({version})")
 

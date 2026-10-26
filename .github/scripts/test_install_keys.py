@@ -56,7 +56,7 @@ class InstallKeysTest(unittest.TestCase):
         self.assertIn("is not signed by the toolu release key", result.stderr)
 
     def test_signature_from_an_unknown_key_is_refused(self) -> None:
-        result = install("v8.4.1-dev.9")
+        result = install("v8.4.2")
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("is not signed by the toolu release key", result.stderr)
 
