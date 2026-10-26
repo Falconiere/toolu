@@ -92,3 +92,33 @@ fn register_reports_a_failed_write_without_failing_the_session() {
     "{message}"
   );
 }
+
+#[test]
+fn a_failure_after_an_old_module_was_removed_still_shows_the_migration_notice() {
+  let dir = tempfile::tempdir().expect("config root");
+  let missing = dir.path().join("no-such-dir/startup.jsonl");
+  let env = Env::from_pairs([
+    ("TOOLU_CONFIG_DIR", dir.path().display().to_string()),
+    ("TOOLU_STARTUP_REPORT", missing.display().to_string()),
+  ]);
+  let registry = dir.path().join("toolu/pre-tools.d");
+  std::fs::create_dir_all(&registry).expect("registry");
+  let old = registry.join("ast-grep@toolu__search-nudge.js");
+  std::fs::write(&old, "old bundle").expect("old module");
+  let outcome = register(&env, Host::Claude);
+  assert_eq!(outcome.exit.code(), 0);
+  assert!(!old.exists());
+  let stdout = outcome.stdout.expect("systemMessage");
+  let json: serde_json::Value = serde_json::from_str(&stdout).expect("one JSON document");
+  let message = json["systemMessage"].as_str().expect("message");
+  let lines: Vec<&str> = message.lines().collect();
+  assert_eq!(lines.len(), 2, "{message}");
+  assert!(lines[0].contains("toolu ast-grep search"), "{message}");
+  assert!(
+    lines[1].starts_with(&format!(
+      "ast-grep registration failed: cannot open startup report {}: ",
+      missing.display()
+    )),
+    "{message}"
+  );
+}

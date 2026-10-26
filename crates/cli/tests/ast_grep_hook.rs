@@ -30,7 +30,7 @@ fn project(dir: &Path) -> Res<PathBuf> {
 
 fn register(config: &Path, project: &Path) -> Res<()> {
   for _ in 0..2 {
-    let status = Command::new(TOOLU)
+    let output = Command::new(TOOLU)
       .args([
         "ast-grep",
         "hook",
@@ -43,9 +43,11 @@ fn register(config: &Path, project: &Path) -> Res<()> {
       .env("TOOLU_CONFIG_DIR", config)
       .env("HOME", project)
       .current_dir(project)
-      .status()?;
-    if !status.success() {
-      return Err("SessionStart registration failed".into());
+      .output()?;
+    // A failed write is a `systemMessage` at exit 0, so both must be checked.
+    let stdout = String::from_utf8(output.stdout)?;
+    if !output.status.success() || stdout.contains("registration failed") {
+      return Err(format!("SessionStart registration failed: {stdout}").into());
     }
   }
   Ok(())

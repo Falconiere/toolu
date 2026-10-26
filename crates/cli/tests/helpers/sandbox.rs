@@ -138,8 +138,24 @@ impl Sandbox {
     payload: &str,
     extra: &[(&str, &str)],
   ) -> Res<Run> {
+    self.run(self.launcher("toolu", event, name)?, extra, payload)
+  }
+
+  /// [`Self::launch`] for `plugin`'s launcher, which runs `toolu <plugin> hook <name>`.
+  pub(crate) fn launch_plugin(
+    &self,
+    plugin: &str,
+    event: &str,
+    name: &str,
+    payload: &str,
+  ) -> Res<Run> {
+    self.run(self.launcher(plugin, event, name)?, &[], payload)
+  }
+
+  /// `sh -c` with `plugin`'s generated launcher and only `CLAUDE_PLUGIN_ROOT` set.
+  fn launcher(&self, plugin: &str, event: &str, name: &str) -> Res<Command> {
     let target = Target {
-      plugin: "toolu",
+      plugin,
       event,
       name,
     };
@@ -148,7 +164,7 @@ impl Sandbox {
       .arg(hook(&target, DEFAULT_TIMEOUT)?.command)
       .env_clear()
       .env("CLAUDE_PLUGIN_ROOT", &self.root);
-    self.run(sh, extra, payload)
+    Ok(sh)
   }
 
   /// Write the generated Muse resolver for `event` and `name` under the plugin

@@ -76,6 +76,17 @@ pub fn hook_name(command: &str) -> Option<&str> {
   rest.split_whitespace().next().filter(|name| is_name(name))
 }
 
+/// How a failure names the hook: `<plugin> plugin: toolu [<plugin>] hook <name> on <Event>`.
+/// The launcher and the binary's own failure reports share it (#642).
+pub fn hook_label(target: &Target<'_>) -> String {
+  format!(
+    "{} plugin: toolu {} on {}",
+    target.plugin,
+    argv(target),
+    target.event
+  )
+}
+
 /// The argv after the binary: `hook <name>` for toolu, `<plugin> hook <name>` otherwise.
 fn argv(target: &Target<'_>) -> String {
   if target.plugin == "toolu" {
@@ -93,31 +104,22 @@ fn command(target: &Target<'_>, root: &str) -> String {
     target.event
   );
   let missing = missing_message(target.plugin);
-  let abnormal = abnormal_status(target);
-  let (report, absent) = if is_enforcing(target.event) {
+  let (found, absent) = if is_enforcing(target.event) {
     (
       format!(
-        "printf '%s\\n' \"blocked: {abnormal}, so the action is blocked. See docs/install.md.\" \
-         >&2; exit 2"
+        "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; \
+         {}; exit 2; fi",
+        abnormal_status(target)
       ),
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
   } else {
-    // Codex drops a failed context hook's stderr (except on PreCompact), so only a
-    // systemMessage reliably names the hook.
-    // shortcut: a crash after toolu printed its own JSON leaves two lines on stdout;
-    // toolu prints once at exit, so capture stdout here only if that changes.
+    // `exec`, so a host that kills the hook on timeout kills toolu itself.
     (
-      format!(
-        "printf '%s\\n' \"{{\\\"systemMessage\\\":\\\"{abnormal}. See docs/install.md.\\\"}}\"; \
-         exit 0"
-      ),
+      format!("if [ -n \"$t\" ]; then exec \"$t\" {run}; fi"),
       format!("printf '%s\\n' '{{\"systemMessage\":\"{missing}\"}}'; exit 0"),
     )
   };
-  let found = format!(
-    "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; {report}; fi"
-  );
   [
     "t=".to_owned(),
     format!(
@@ -135,14 +137,13 @@ fn command(target: &Target<'_>, root: &str) -> String {
   .join("; ")
 }
 
-/// Name the hook and event with the observed shell status only; it cannot identify a
-/// signal reliably.
+/// Report the hook, its event and only the observed shell status; the status cannot
+/// identify a signal reliably.
 fn abnormal_status(target: &Target<'_>) -> String {
   format!(
-    "{} plugin: toolu {} on {} ended with status $s",
-    target.plugin,
-    argv(target),
-    target.event
+    "printf '%s\\n' \"blocked: {} ended with status $s, so the action is blocked. See \
+     docs/install.md.\" >&2",
+    hook_label(target)
   )
 }
 

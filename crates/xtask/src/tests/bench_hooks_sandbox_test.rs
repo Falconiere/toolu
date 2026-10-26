@@ -117,3 +117,20 @@ fn a_muse_entry_gets_only_what_muse_forwards_plus_the_measured_binary() {
   assert!(extra.is_empty(), "{extra:?}");
   assert!(get("PATH").is_some() && get("HOME").is_some());
 }
+
+#[test]
+fn a_register_that_reports_failure_at_exit_0_is_an_error() {
+  let dir = tempfile::tempdir().unwrap();
+  let bin = fake_toolu(dir.path());
+  let repo = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..");
+  std::fs::write(
+    &bin,
+    "#!/bin/sh\ncat >/dev/null\necho '{\"systemMessage\":\"ast-grep registration failed: read-only\"}'\n",
+  )
+  .unwrap();
+  let err = Sandbox::new(&repo, &bin, true).err().unwrap();
+  assert_eq!(
+    err,
+    "bench sandbox: register ast-grep: {\"systemMessage\":\"ast-grep registration failed: read-only\"}"
+  );
+}

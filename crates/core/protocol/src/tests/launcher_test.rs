@@ -1,4 +1,4 @@
-use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_name};
+use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_label, hook_name};
 
 const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
 const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
@@ -75,16 +75,23 @@ fn an_enforcing_entry_runs_without_exec_and_maps_other_statuses_to_2() {
 }
 
 #[test]
-fn a_context_entry_names_its_hook_in_a_system_message_for_other_statuses() {
+fn a_context_entry_execs_and_ends_with_a_system_message() {
   let command = generated("toolu", "PostToolUse", "post-tools").command;
-  assert!(command.contains("then \"$t\" hook post-tools --event PostToolUse"));
-  assert!(command.contains("case $s in 0|2) exit $s;; esac;"));
-  assert!(command.contains(
-    "\"{\\\"systemMessage\\\":\\\"toolu plugin: toolu hook post-tools on PostToolUse ended with \
-     status $s. See docs/install.md.\\\"}\"; exit 0; fi"
-  ));
+  assert!(command.contains("then exec \"$t\" hook post-tools --event PostToolUse"));
+  assert!(!command.contains("s=$?"));
   assert!(command.ends_with("\"}'; exit 0"));
-  assert!(!command.contains("exec \"$t\""));
+}
+
+#[test]
+fn the_hook_label_names_the_plugin_argv_and_event() {
+  assert_eq!(
+    hook_label(&target("toolu", "SessionStart", "session-start")),
+    "toolu plugin: toolu hook session-start on SessionStart"
+  );
+  assert_eq!(
+    hook_label(&target("jev", "UserPromptSubmit", "user-prompt-submit")),
+    "jev plugin: toolu jev hook user-prompt-submit on UserPromptSubmit"
+  );
 }
 
 #[test]

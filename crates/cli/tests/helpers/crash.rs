@@ -1,9 +1,9 @@
 //! A binary that passes the signature check and then dies by a signal or exits
-//! outside the hook contract: an enforcing event blocks (AC-8), and a context
-//! event reports a `systemMessage` (#642). Both name the hook, its event and the
-//! status, without inferring the cause from the status.
+//! outside the hook contract. An enforcing event blocks naming the hook, its event
+//! and the status, without inferring the cause from it (AC-8, #642). A context
+//! event `exec`s toolu, so its status reaches the host unchanged.
 
-use crate::sandbox::{Res, Run, STARTUP, Sandbox, script, system_message};
+use crate::sandbox::{Res, Run, STARTUP, Sandbox, script};
 
 /// Launch `name` on `event` against a stand-in that runs `body` after the signature check.
 fn stand_in(body: &str, event: &str, name: &str) -> Res<Run> {
@@ -63,45 +63,38 @@ fn a_regular_exit_in_the_signal_shaped_range_reports_only_its_status() {
   );
 }
 
-/// Codex shows a killed context hook only as "hook exited without a status code".
 #[test]
-fn a_killed_context_hook_reports_its_hook_and_status_without_failing() {
-  let run = stand_in("kill -KILL $$", "SessionStart", "session-start").unwrap();
-  assert_eq!(run.code, 0, "{run:?}");
-  assert_eq!(
-    system_message(&run).unwrap(),
-    "toolu plugin: toolu hook session-start on SessionStart ended with status 137. See \
-     docs/install.md."
-  );
-}
-
-/// Codex drops a context hook's stderr, so a panic's exit 101 was anonymous there.
-#[test]
-fn a_panicking_context_hook_reports_its_hook_and_status_without_failing() {
-  let run = stand_in(
-    "echo \"thread 'main' panicked\" >&2; exit 101",
-    "UserPromptSubmit",
-    "user-prompt-submit",
-  )
-  .unwrap();
-  assert_eq!(run.code, 0, "{run:?}");
-  assert_eq!(
-    system_message(&run).unwrap(),
-    "toolu plugin: toolu hook user-prompt-submit on UserPromptSubmit ended with status 101. See \
-     docs/install.md."
-  );
-  assert_eq!(run.stderr, "thread 'main' panicked\n");
-}
-
-#[test]
-fn a_context_hook_passes_its_feedback_exit_through() {
-  let run = stand_in(
-    "echo '{\"systemMessage\":\"own\"}'; echo feedback >&2; exit 2",
-    "PostToolUse",
-    "post-tools",
-  )
-  .unwrap();
+fn another_plugins_enforcing_crash_names_its_own_hook() {
+  let sandbox = Sandbox::new().unwrap();
+  let text = "#!/bin/sh\nif [ \"$1\" = --hook-protocol ]; then echo 1; exit 0; fi\nkill -ABRT $$\n";
+  script(&sandbox.local_bin(), text).unwrap();
+  let run = sandbox
+    .launch_plugin("jev", "PreToolUse", "probe", STARTUP)
+    .unwrap();
   assert_eq!(run.code, 2, "{run:?}");
-  assert_eq!(run.stdout, "{\"systemMessage\":\"own\"}\n");
-  assert_eq!(run.stderr, "feedback\n");
+  assert_eq!(
+    last_line(&run),
+    "blocked: jev plugin: toolu jev hook probe on PreToolUse ended with status 134, so the action \
+     is blocked. See docs/install.md."
+  );
+}
+
+/// A context launcher `exec`s toolu, so a host timeout reaches toolu itself and a
+/// signal reaches the host unchanged; toolu names its own panics and errors (`guard`).
+#[test]
+fn a_killed_context_hook_reaches_the_host_unchanged() {
+  let run = stand_in("kill -KILL $$", "SessionStart", "session-start").unwrap();
+  assert_eq!(run.code, -1, "{run:?}");
+  assert_eq!(run.stdout, "");
+}
+
+#[test]
+fn a_context_hook_status_and_output_pass_through_unchanged() {
+  for status in [2, 101] {
+    let body = format!("echo '{{\"systemMessage\":\"own\"}}'; echo detail >&2; exit {status}");
+    let run = stand_in(&body, "PostToolUse", "post-tools").unwrap();
+    assert_eq!(run.code, status, "{run:?}");
+    assert_eq!(run.stdout, "{\"systemMessage\":\"own\"}\n");
+    assert_eq!(run.stderr, "detail\n");
+  }
 }
