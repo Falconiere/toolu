@@ -52,17 +52,27 @@ fn a_tag_push_without_a_receipt_exits_2_naming_the_receipt() {
   );
 }
 
-/// The skill's hook command, from the real frontmatter.
-fn hook_command() -> Result<String, String> {
-  let skill = std::fs::read_to_string(concat!(
+/// The deploy skill, as Claude Code reads it.
+fn skill() -> Result<String, String> {
+  std::fs::read_to_string(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../../.claude/skills/deploy/SKILL.md"
   ))
-  .map_err(|err| err.to_string())?;
+  .map_err(|err| err.to_string())
+}
+
+/// The skill's frontmatter, parsed as YAML: Claude Code drops a frontmatter it
+/// cannot parse, and the hook with it.
+fn frontmatter() -> Result<serde_json::Value, String> {
+  let skill = skill()?;
   let (_, rest) = skill.split_once("---\n").ok_or("no frontmatter")?;
   let (yaml, _) = rest.split_once("\n---\n").ok_or("no frontmatter end")?;
-  let matter: serde_json::Value = serde_saphyr::from_str(yaml).map_err(|err| err.to_string())?;
-  matter
+  serde_saphyr::from_str(yaml).map_err(|err| err.to_string())
+}
+
+/// The skill's hook command, from the real frontmatter.
+fn hook_command() -> Result<String, String> {
+  frontmatter()?
     .pointer("/hooks/PreToolUse/0/hooks/0/command")
     .and_then(serde_json::Value::as_str)
     .map(str::to_owned)
@@ -125,5 +135,44 @@ fn feed(child: &mut std::process::Child, stdin: &str) -> Result<(), String> {
   match pipe.write_all(stdin.as_bytes()) {
     Err(err) if err.kind() != std::io::ErrorKind::BrokenPipe => Err(err.to_string()),
     _ => Ok(()),
+  }
+}
+
+#[test]
+fn skill_frontmatter_declares_the_blocking_guard_hook() {
+  let matter = frontmatter().unwrap();
+  assert_eq!(matter["disable-model-invocation"], true);
+  let entries = matter["hooks"]["PreToolUse"].as_array().unwrap();
+  assert_eq!(entries.len(), 1, "{entries:?}");
+  assert_eq!(
+    entries[0]["matcher"],
+    "Bash|Write|Edit|MultiEdit|NotebookEdit"
+  );
+  let hooks = entries[0]["hooks"].as_array().unwrap();
+  assert_eq!(hooks.len(), 1, "{hooks:?}");
+  assert_eq!(hooks[0]["type"], "command");
+  assert_eq!(hooks[0]["onFailure"], "block");
+  let command = hooks[0]["command"].as_str().unwrap();
+  for part in [
+    "cargo xtask deploy-guard",
+    "$HOME/.cargo/bin",
+    ".claude/tmp/deploy-guard",
+    "deploy-guard --root \"$CLAUDE_PROJECT_DIR\"",
+  ] {
+    assert!(command.contains(part), "{part} in {command}");
+  }
+}
+
+#[test]
+fn skill_step_3_runs_deploy_gate_without_a_waiver() {
+  let skill = skill().unwrap();
+  let (_, after) = skill.split_once("3. **Gate.**").unwrap();
+  let (step, _) = after.split_once("\n4. **").unwrap();
+  assert!(step.contains("cargo xtask deploy-gate"), "{step}");
+  for waiver in ["confirms", "host-environment failure"] {
+    assert!(
+      !skill.contains(waiver),
+      "the skill still offers a waiver: {waiver}"
+    );
   }
 }

@@ -29,6 +29,7 @@ mod data;
 mod deploy_gate;
 mod deploy_guard;
 mod deploy_line;
+mod deploy_tag;
 mod docs_cli;
 mod env_scrub;
 mod final_removal;

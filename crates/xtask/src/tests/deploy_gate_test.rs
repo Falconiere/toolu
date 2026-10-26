@@ -293,6 +293,8 @@ fn the_watched_gate_exits_with_the_gate_status_while_its_host_lives() {
 
 #[test]
 fn the_script_cleans_workspace_artifacts_before_the_verify_job() {
+  let lock = SCRIPT.find("flock 9").unwrap();
+  assert!(lock < SCRIPT.find("cargo clean --workspace --quiet").unwrap());
   let clean = SCRIPT.find("cargo llvm-cov clean --workspace").unwrap();
   assert!(SCRIPT.find("cargo clean --workspace --quiet").unwrap() < clean);
   assert!(clean < SCRIPT.find("npm ci --ignore-scripts").unwrap());

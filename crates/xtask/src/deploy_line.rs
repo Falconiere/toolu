@@ -1,6 +1,6 @@
 //! How `deploy-guard` reads one Bash line, through toolu-shell's parse: the
-//! command that publishes a release, a tag on another commit, and a write to a
-//! path the guard protects. A line it cannot read fails closed.
+//! command that publishes a release and a write to a path the guard protects.
+//! A line it cannot read fails closed. Tags are `deploy_tag`'s.
 
 use std::path::Path;
 
@@ -15,18 +15,6 @@ const RELEASE_WRITES: [&str; 6] = ["create", "new", "upload", "edit", "delete", 
 
 /// The `gh` flags that take the next word as their value.
 const GH_VALUES: [&str; 3] = ["-R", "--repo", "--hostname"];
-
-/// The `git tag` options that take the next word as their value.
-const TAG_VALUES: [&str; 8] = [
-  "-m",
-  "-F",
-  "-u",
-  "--message",
-  "--file",
-  "--local-user",
-  "--cleanup",
-  "--trailer",
-];
 
 /// Where the line runs: the toolu repository and the payload's `cwd`.
 pub(crate) struct Place<'a> {
@@ -83,7 +71,7 @@ fn mentions(analysis: &ShellAnalysis, needles: &[&str]) -> bool {
 }
 
 /// The base name of the command's program.
-fn name(command: &ShellCommand) -> Option<&str> {
+pub(crate) fn name(command: &ShellCommand) -> Option<&str> {
   let program = command.argv.first()?.as_deref()?;
   Path::new(program).file_name()?.to_str()
 }
@@ -111,15 +99,24 @@ fn git_publishes(
         || away(place)
         || pushes_tags_by_config(place.root)
     }
-    Some(_) => false,
+    Some(sub) => aliases_push(place.root, command, sub),
     None => mentions,
   }
+}
+
+/// Whether `sub` is a git alias, set by `-c` on the line or in the root's config, that pushes.
+fn aliases_push(root: &Path, command: &ShellCommand, sub: &str) -> bool {
+  let key = format!("alias.{}", sub.to_ascii_lowercase());
+  command.argv.iter().flatten().any(|word| {
+    let word = word.to_ascii_lowercase();
+    word.contains(&key) && word.contains("push")
+  }) || git(root, &["config", "--get", &key]).is_ok_and(|value| value.contains("push"))
 }
 
 /// A push word that may send tags: `--tags`, `--follow-tags`, `--mirror`, the
 /// `tag` keyword, or a refspec side under `refs/` but not `refs/heads/`, under
 /// `tags/`, with a wildcard, or named `v<digit>…`.
-fn tag_like(word: &str) -> bool {
+pub(crate) fn tag_like(word: &str) -> bool {
   let spec = word.trim_start_matches('+');
   matches!(spec, "--tags" | "--follow-tags" | "--mirror" | "tag")
     || spec.split(':').any(|side| {
@@ -191,37 +188,6 @@ fn gh_publishes(argv: &[Word], mentions: bool) -> bool {
   }
 }
 
-/// The `git tag` that creates a tag on a commit other than `HEAD`.
-pub(crate) fn retagging(analysis: &ShellAnalysis) -> Option<&str> {
-  analysis
-    .commands
-    .iter()
-    .find(|command| {
-      git_invocation(command)
-        .is_some_and(|git| git.subcommand == Some("tag") && tags_another_commit(git.args))
-    })
-    .map(|command| command.text.as_str())
-}
-
-/// Whether `git tag <args>` creates a tag whose target is given and is not `HEAD`.
-fn tags_another_commit(args: &[Word]) -> bool {
-  let mut operands = Vec::new();
-  let mut words = args.iter();
-  while let Some(word) = words.next() {
-    match word.as_deref() {
-      Some("-l" | "--list" | "-d" | "--delete" | "-v" | "--verify") => return false,
-      Some(option) if TAG_VALUES.contains(&option) => {
-        words.next();
-      }
-      Some(flag) if flag.starts_with('-') => {}
-      operand => operands.push(operand),
-    }
-  }
-  operands
-    .get(1)
-    .is_some_and(|target| *target != Some("HEAD"))
-}
-
 /// The text of a write to a path `protected` names; a dynamic write target on
 /// a line that mentions one of `names` counts.
 pub(crate) fn protected_write<'a>(
@@ -238,6 +204,37 @@ pub(crate) fn protected_write<'a>(
         .command
         .map_or(analysis.source.as_str(), |command| command.text.as_str())
     })
+    .or_else(|| {
+      analysis
+        .commands
+        .iter()
+        .find(|command| name(command) == Some("ln") && links(command, &protected, mentioned))
+        .map(|command| command.text.as_str())
+    })
+}
+
+/// Whether an `ln` operand, or the link it would make inside another operand, is
+/// protected: a link at the receipt forges it, and a link to it writes through.
+fn links(command: &ShellCommand, protected: &impl Fn(&str) -> bool, mentioned: bool) -> bool {
+  let words: Vec<Option<&str>> = command
+    .argv
+    .iter()
+    .skip(1)
+    .map(Option::as_deref)
+    .filter(|word| !word.is_some_and(|word| word.starts_with('-')))
+    .collect();
+  words.iter().any(|word| {
+    word.map_or(mentioned, |word| {
+      let base = Path::new(word).file_name().and_then(|base| base.to_str());
+      protected(word)
+        || base.is_some_and(|base| {
+          words
+            .iter()
+            .flatten()
+            .any(|dir| protected(&format!("{dir}/{base}")))
+        })
+    })
+  })
 }
 
 #[cfg(test)]

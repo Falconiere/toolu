@@ -41,6 +41,20 @@ fn quote_split_flagged_and_wildcard_publishing_forms_are_caught() {
 }
 
 #[test]
+fn a_git_alias_that_pushes_is_publishing() {
+  let root = repo();
+  assert!(publishes(
+    root.path(),
+    None,
+    "git -c alias.ship=push ship origin v9.9.9"
+  ));
+  assert!(!publishes(root.path(), None, "git p origin v9.9.9"));
+  git(root.path(), &["config", "alias.p", "push"]);
+  assert!(publishes(root.path(), None, "git p origin v9.9.9"));
+  assert!(!publishes(root.path(), None, "git status"));
+}
+
+#[test]
 fn a_push_from_a_cwd_in_another_repository_is_publishing() {
   let root = repo();
   let tap = root.path().join("target/deploy/v9.9.9/tap");
@@ -77,6 +91,9 @@ fn protected_writes_are_found_through_quotes_but_reads_pass() {
   for command in [
     "echo x > target/deploy/gate.js\"\"on",
     "cp /tmp/forged target/deploy/gate.json",
+    "ln -sf /tmp/forged target/deploy/gate.json",
+    "ln -s /tmp/gate.json target/deploy",
+    "ln -s target/deploy/gate.json /tmp/through",
     "R=target/deploy/gate.json; echo x > \"$R\"",
   ] {
     assert!(found(command).is_some(), "missed: {command}");

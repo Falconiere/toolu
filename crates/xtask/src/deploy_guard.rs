@@ -10,7 +10,8 @@ use serde_json::Value;
 
 use crate::Verdict;
 use crate::ci_diff::git;
-use crate::deploy_line::{Place, protected_write, publishing, retagging};
+use crate::deploy_line::{Place, protected_write, publishing};
+use crate::deploy_tag::{foreign_tag, retagging};
 use crate::options::Options;
 
 /// Where `deploy-gate` records the commit it passed, under the root.
@@ -61,6 +62,9 @@ pub(crate) fn decide(root: &Path, payload: &str) -> Result<(), String> {
   let Some(culprit) = publishing(&place, &analysis) else {
     return Ok(());
   };
+  if let Some(tag) = foreign_tag(root, &analysis) {
+    return Err(blocked(tag, "a release tag must point at HEAD"));
+  }
   receipt_matches(root).map_err(|reason| {
     blocked(
       culprit,

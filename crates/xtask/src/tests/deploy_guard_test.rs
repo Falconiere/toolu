@@ -153,54 +153,6 @@ fn a_payload_that_is_not_json_or_has_no_command_is_refused() {
   }
 }
 
-/// The deploy skill's frontmatter, parsed as YAML: Claude Code drops a
-/// frontmatter it cannot parse, and the hook with it.
-fn frontmatter() -> serde_json::Value {
-  let skill = std::fs::read_to_string(SKILL).unwrap();
-  let (_, rest) = skill.split_once("---\n").unwrap();
-  let (yaml, _) = rest.split_once("\n---\n").unwrap();
-  crate::ci_yaml::yaml_to_json(yaml).unwrap()
-}
-
-#[test]
-fn skill_frontmatter_declares_the_blocking_guard_hook() {
-  let matter = frontmatter();
-  assert_eq!(matter["disable-model-invocation"], true);
-  let entries = matter["hooks"]["PreToolUse"].as_array().unwrap();
-  assert_eq!(entries.len(), 1, "{entries:?}");
-  assert_eq!(
-    entries[0]["matcher"],
-    "Bash|Write|Edit|MultiEdit|NotebookEdit"
-  );
-  let hooks = entries[0]["hooks"].as_array().unwrap();
-  assert_eq!(hooks.len(), 1, "{hooks:?}");
-  assert_eq!(hooks[0]["type"], "command");
-  assert_eq!(hooks[0]["onFailure"], "block");
-  let command = hooks[0]["command"].as_str().unwrap();
-  assert!(command.contains("cargo xtask deploy-guard"), "{command}");
-  assert!(command.contains("$HOME/.cargo/bin"), "{command}");
-  for part in [
-    ".claude/tmp/deploy-guard",
-    "deploy-guard --root \"$CLAUDE_PROJECT_DIR\"",
-  ] {
-    assert!(command.contains(part), "{part} in {command}");
-  }
-}
-
-#[test]
-fn skill_step_3_runs_deploy_gate_without_a_waiver() {
-  let skill = std::fs::read_to_string(SKILL).unwrap();
-  let (_, after) = skill.split_once("3. **Gate.**").unwrap();
-  let (step, _) = after.split_once("\n4. **").unwrap();
-  assert!(step.contains("cargo xtask deploy-gate"), "{step}");
-  for waiver in ["confirms", "host-environment failure"] {
-    assert!(
-      !skill.contains(waiver),
-      "the skill still offers a waiver: {waiver}"
-    );
-  }
-}
-
 /// The skill's command prelude with a real tag, as the agent runs it.
 fn prelude() -> String {
   skill_block("Start every command with this prelude").replace("<tag>", "v8.4.2")
@@ -275,6 +227,33 @@ fn tagging_a_commit_other_than_head_is_blocked_even_with_a_receipt() {
     "git tag -a \"$TAG\" -m \"toolu $TAG\"",
     "git tag -d v0.0.1",
     "git tag -l 'v8*'",
+    "git tag --contains HEAD~1 'v8*'",
+  ] {
+    assert_eq!(decide(dir.path(), &payload(command)), Ok(()), "{command}");
+  }
+}
+
+#[test]
+fn pushing_a_tag_or_target_on_another_commit_is_blocked_even_with_a_receipt() {
+  let (dir, head) = repo(2);
+  git(
+    dir.path(),
+    &["-c", "tag.gpgSign=false", "tag", "v8.4.1", "HEAD~1"],
+  );
+  receipt(dir.path(), &format!("{{\"commit\":\"{head}\"}}"));
+  for command in [
+    "git push origin v8.4.1",
+    "git push origin HEAD~1:refs/tags/v8.4.2",
+    "gh release create v8.4.2 --target HEAD~1",
+  ] {
+    let reason = decide(dir.path(), &payload(command)).unwrap_err();
+    assert!(reason.contains("must point at HEAD"), "{command}: {reason}");
+  }
+  git(dir.path(), &["-c", "tag.gpgSign=false", "tag", "v8.4.2"]);
+  for command in [
+    "git push origin v8.4.2",
+    "git push origin HEAD:refs/tags/v8.4.3",
+    "git push origin refs/tags/v8.4.9",
   ] {
     assert_eq!(decide(dir.path(), &payload(command)), Ok(()), "{command}");
   }

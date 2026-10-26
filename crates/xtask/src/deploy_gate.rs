@@ -60,8 +60,11 @@ test "$head" = "$EXPECTED" || { echo "deploy-gate: the bundled HEAD is $head, no
 "#;
 
 /// The `verify` job itself, run in `$SRC` after [`CLONE`]. The cached target keeps only
-/// dependency builds, as CI's rust-cache does: workspace artifacts are cleaned first.
-pub(crate) const SCRIPT: &str = r"cargo clean --workspace --quiet
+/// dependency builds, as CI's rust-cache does: workspace artifacts are cleaned first. A lock on
+/// the shared target volume keeps two worktrees' gates from cleaning each other's build.
+pub(crate) const SCRIPT: &str = r"exec 9>target/.deploy-gate.lock
+flock 9
+cargo clean --workspace --quiet
 cargo clean --workspace --release --quiet
 cargo llvm-cov clean --workspace
 npm ci --ignore-scripts
