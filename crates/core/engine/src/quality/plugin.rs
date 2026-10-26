@@ -152,11 +152,7 @@ impl QualityPlugin {
       Ok(false) => None,
       Err(error) => Some(format!("{} registration failed: {error}", self.plugin)),
     };
-    Outcome {
-      exit: Exit::Success,
-      stdout: message.map(|text| serde_json::json!({ "systemMessage": text }).to_string()),
-      stderr: None,
-    }
+    Outcome::notice(message)
   }
 }
 

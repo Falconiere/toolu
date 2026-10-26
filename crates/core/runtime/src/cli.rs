@@ -51,6 +51,15 @@ impl Outcome {
       stderr: Some(message),
     }
   }
+
+  /// Success that shows `message`, when there is one, as a hook's `systemMessage`.
+  pub fn notice(message: Option<String>) -> Self {
+    Outcome {
+      exit: Exit::Success,
+      stdout: message.map(|text| serde_json::json!({ "systemMessage": text }).to_string()),
+      stderr: None,
+    }
+  }
 }
 
 #[cfg(test)]

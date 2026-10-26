@@ -1,4 +1,4 @@
-use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_name};
+use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_label, hook_name};
 
 const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
 const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
@@ -66,6 +66,10 @@ fn an_enforcing_entry_runs_without_exec_and_maps_other_statuses_to_2() {
   let command = generated("toolu", "PermissionRequest", "permission").command;
   assert!(command.contains("then \"$t\" hook permission --event PermissionRequest"));
   assert!(command.contains("case $s in 0|2) exit $s;; esac;"));
+  assert!(command.contains(
+    "\"blocked: toolu plugin: toolu hook permission on PermissionRequest ended with status $s, \
+     so the action is blocked. See docs/install.md.\" >&2; exit 2; fi"
+  ));
   assert!(command.ends_with("' >&2; exit 2"));
   assert!(!command.contains("exec \"$t\""));
 }
@@ -74,7 +78,20 @@ fn an_enforcing_entry_runs_without_exec_and_maps_other_statuses_to_2() {
 fn a_context_entry_execs_and_ends_with_a_system_message() {
   let command = generated("toolu", "PostToolUse", "post-tools").command;
   assert!(command.contains("then exec \"$t\" hook post-tools --event PostToolUse"));
+  assert!(!command.contains("s=$?"));
   assert!(command.ends_with("\"}'; exit 0"));
+}
+
+#[test]
+fn the_hook_label_names_the_plugin_argv_and_event() {
+  assert_eq!(
+    hook_label(&target("toolu", "SessionStart", "session-start")),
+    "toolu plugin: toolu hook session-start on SessionStart"
+  );
+  assert_eq!(
+    hook_label(&target("jev", "UserPromptSubmit", "user-prompt-submit")),
+    "jev plugin: toolu jev hook user-prompt-submit on UserPromptSubmit"
+  );
 }
 
 #[test]

@@ -16,7 +16,10 @@ thread_local! {
 static INSTALL: Once = Once::new();
 
 /// Run `f`, or the message of the panic it raised.
-pub(super) fn catch<T>(f: impl FnOnce() -> T) -> Result<T, String> {
+///
+/// # Errors
+/// The panic's message, when `f` panics.
+pub fn catch<T>(f: impl FnOnce() -> T) -> Result<T, String> {
   INSTALL.call_once(|| {
     let previous = panic::take_hook();
     panic::set_hook(Box::new(move |info| {

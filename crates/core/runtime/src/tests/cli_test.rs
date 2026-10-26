@@ -31,3 +31,15 @@ fn the_default_context_has_no_flag_set() {
     (None, None, None)
   );
 }
+
+#[test]
+fn a_notice_is_one_system_message_document_or_nothing() {
+  let shown = Outcome::notice(Some("line \"one\"\nline two".to_owned()));
+  assert_eq!(shown.exit, Exit::Success);
+  assert_eq!(
+    shown.stdout.as_deref(),
+    Some(r#"{"systemMessage":"line \"one\"\nline two"}"#)
+  );
+  assert_eq!(shown.stderr, None);
+  assert_eq!(Outcome::notice(None).stdout, None);
+}

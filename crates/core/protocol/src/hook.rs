@@ -27,7 +27,7 @@ use crate::host::Host;
 use crate::native::native_event;
 use crate::stdin::read_all;
 
-mod panic;
+pub mod panic;
 
 /// What a hook returns.
 #[derive(Debug, Clone, PartialEq, Eq)]

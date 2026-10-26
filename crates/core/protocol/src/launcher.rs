@@ -1,8 +1,10 @@
 //! The generated `hooks.json` launcher for native hooks (#412), checked by
 //! `cargo xtask check-hooks`. `command` resolves `TOOLU_BIN`, else the install
 //! directories, then `PATH`, keeping the first candidate whose `--hook-protocol`
-//! prints an integer; enforcing events map any status but 0 or 2 to 2. Without a
-//! binary an enforcing event fails closed and a context event prints the install
+//! prints an integer. Statuses 0 and 2 pass through; any other status names the
+//! hook, its event and the status, as a `blocked:` exit 2 on an enforcing event and
+//! as an exit-0 `systemMessage` on a context event (#642). Without a binary an
+//! enforcing event fails closed and a context event prints the install
 //! `systemMessage`. There is no Windows binary yet (#411), so `commandWindows`
 //! reports the missing binary the same way. [`muse`] writes the same launcher
 //! to a per-hook resolver file, since Muse hooks are argv, not shell strings.
@@ -74,6 +76,17 @@ pub fn hook_name(command: &str) -> Option<&str> {
   rest.split_whitespace().next().filter(|name| is_name(name))
 }
 
+/// How a failure names the hook: `<plugin> plugin: toolu [<plugin>] hook <name> on <Event>`.
+/// The launcher and the binary's own failure reports share it (#642).
+pub fn hook_label(target: &Target<'_>) -> String {
+  format!(
+    "{} plugin: toolu {} on {}",
+    target.plugin,
+    argv(target),
+    target.event
+  )
+}
+
 /// The argv after the binary: `hook <name>` for toolu, `<plugin> hook <name>` otherwise.
 fn argv(target: &Target<'_>) -> String {
   if target.plugin == "toolu" {
@@ -96,11 +109,12 @@ fn command(target: &Target<'_>, root: &str) -> String {
       format!(
         "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; \
          {}; exit 2; fi",
-        abnormal_status(target.plugin)
+        abnormal_status(target)
       ),
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
   } else {
+    // `exec`, so a host that kills the hook on timeout kills toolu itself.
     (
       format!("if [ -n \"$t\" ]; then exec \"$t\" {run}; fi"),
       format!("printf '%s\\n' '{{\"systemMessage\":\"{missing}\"}}'; exit 0"),
@@ -123,11 +137,13 @@ fn command(target: &Target<'_>, root: &str) -> String {
   .join("; ")
 }
 
-/// Report only the observed shell status; it cannot identify a signal reliably.
-fn abnormal_status(plugin: &str) -> String {
+/// Report the hook, its event and only the observed shell status; the status cannot
+/// identify a signal reliably.
+fn abnormal_status(target: &Target<'_>) -> String {
   format!(
-    "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
-     blocked. See docs/install.md.\" >&2"
+    "printf '%s\\n' \"blocked: {} ended with status $s, so the action is blocked. See \
+     docs/install.md.\" >&2",
+    hook_label(target)
   )
 }
 

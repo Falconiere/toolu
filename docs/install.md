@@ -101,14 +101,29 @@ A candidate counts only if `toolu --hook-protocol` prints an integer. The deprec
 
 | Situation | Enforcing event (`PreToolUse`, `PermissionRequest`) | Context event |
 |---|---|---|
-| Binary found | runs `toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>`; exit 0 and 2 pass through, and any other status (abort, SIGSEGV, SIGKILL, OOM) becomes exit 2 with `blocked: <plugin> plugin: toolu ended with status <n>, so the action is blocked.` | `exec`s the binary |
+| Binary found | runs `toolu [<plugin>] hook <name> --event <Event> --plugin-root <root>`; exit 0 and 2 pass through, and any other status (abort, SIGSEGV, SIGKILL, OOM) becomes exit 2 with `blocked: <plugin> plugin: toolu [<plugin>] hook <name> on <Event> ended with status <n>, so the action is blocked.` | `exec`s the binary, so its status reaches the host and a host timeout reaches toolu itself |
 | No binary, or a bad `TOOLU_BIN` | exit 2, stderr `blocked: <plugin> plugin: no usable native toolu - checked TOOLU_BIN, … Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash, or: brew install falconiere/tap/toolu. …` | exit 0, the same text as one `{"systemMessage": …}` |
 
-There is no fallback: #440 removed the Bun bundles the transition release (#425) ran without a binary. The command string carries no version, so it stays the same across releases and Codex does not ask for hook trust again. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` reports the missing binary the same way, because Windows has no binary yet.
+There is no fallback: #440 removed the Bun bundles the transition release (#425) ran without a binary. The command string carries no version, so it changes only when the launcher does. Codex 0.164.0 still asks for hook review after every plugin update, because its hook trust pins a hash of the whole plugin directory. Every generated entry declares a `timeout` (60 seconds by default, `--timeout` up to 600). Until the hook main wrapper keeps its own deadline (#413), a hook that hangs past it is a non-blocking host error. `commandWindows` reports the missing binary the same way, because Windows has no binary yet.
 
 On session start and resume, toolu's native `session-start` hook prints `Toolu is on!` and then `toolu runtime: native <version> at <path>`. Every entry of every plugin's `hooks.json` uses the generated native launcher.
 
 **Verifying.** `cargo xtask launcher-e2e --bin <dir>/toolu` runs the real launcher against a binary installed in one of the fixed directories, under `PATH=/usr/bin:/bin`. CI runs it at Homebrew's bin and at `/usr/local/bin` on Linux and macOS. The launcher tests (`cargo test -p toolu-cli --test launcher`, and `launcher-e2e`'s own tests) fail on purpose when a real `toolu` sits in `/opt/homebrew/bin`, `/usr/local/bin` or `/home/linuxbrew/.linuxbrew/bin`, because that binary would win. On such a machine, move it aside or run the tests in a container.
+
+### Find a failing hook on Codex
+
+Codex 0.164.0 shows a failed hook as `Hook failed` and one line, without the event, plugin or command ([openai/codex#27052](https://github.com/openai/codex/issues/27052)). The line is `hook exited with code <n>`, `hook exited without a status code` when a signal ended the process, or `hook timed out after <n>s`. Codex always prints the number, so a blank code is a display or copy artifact. Codex discards a failed hook's stderr on `SessionStart`, and on `UserPromptSubmit` and `PostToolUse` unless the exit is 2. So toolu reports its own failures itself (#642). A context hook that panics, or ends with a status its host gives no meaning, exits 0 with a `systemMessage` such as `toolu plugin: toolu hook session-start on SessionStart panicked: <message>. See docs/install.md.`. Codex shows that as a hook warning. On Cursor the same line goes to stderr with exit 1, so Cursor still counts the hook as failed. A blocking hook's panic blocks with the same line after `blocked: `. A signal cannot be reported by the process it kills, so a `Hook failed` line with no name comes from another plugin, from a timeout, or from a signal that killed toolu.
+
+Codex saves no hook run in the session rollout or its log database. Its app server reports each run as a `hook/completed` notification, and the notification names the plugin. To capture one, start `codex app-server` in the session's working directory with the same `CODEX_HOME`, so the same plugins and trusted hooks load. Send these JSON-RPC lines on its stdin, one per line, and wait for each response before sending the next. `turn/start` uses the `result.thread.id` that `thread/start` returns, together with the prompt that triggered the failure. `SessionStart` hooks run on the first turn.
+
+```json
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"probe","version":"0"}}}
+{"jsonrpc":"2.0","method":"initialized"}
+{"jsonrpc":"2.0","id":2,"method":"thread/start","params":{"cwd":"<session directory>"}}
+{"jsonrpc":"2.0","id":3,"method":"turn/start","params":{"threadId":"<thread id>","input":[{"type":"text","text":"<prompt>"}]}}
+```
+
+Pass its stdout through `jq -c 'select(.method == "hook/completed") | .params.run | {eventName, sourcePath, displayOrder, status, entries}'`. `sourcePath` is the `hooks.json` that registered the hook, and a plugin's file lies in that plugin's installed directory. `displayOrder` is the hook's place in Codex's run order, and `entries[].text` is the line the TUI showed. `codex exec` prints only `hook: <Event>` lines on stderr: they name the event, not the plugin.
 
 ### On Muse
 

@@ -22,6 +22,7 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::install::INSTALLER;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::env::Env;
+use toolu_runtime::host::detect::detect;
 use toolu_runtime::install::upgrade_command;
 use toolu_runtime::manifest;
 use toolu_runtime::skew::{Binary, Caller, Skew, assess};
@@ -30,6 +31,7 @@ use toolu_runtime::startup::native_toolu_advice;
 use crate::fast::HookRequest;
 use crate::{Context, VERSION};
 
+mod guard;
 mod plugins;
 
 /// What a native hook decided before the prelude's advisory is added.
@@ -39,9 +41,18 @@ struct HookResult {
   stderr: Option<String>,
 }
 
-/// Run the prelude and the hook `request` names.
+/// Run the prelude and the hook `request` names; a failure names the hook (`guard`).
 pub(crate) fn run(request: &HookRequest, context: &Context<'_>) -> Outcome {
   let enforcing = request.event.as_deref().is_none_or(is_enforcing);
+  guard::guarded(
+    request,
+    enforcing,
+    || detect(&(context.env)(), None).host,
+    || run_unguarded(request, context, enforcing),
+  )
+}
+
+fn run_unguarded(request: &HookRequest, context: &Context<'_>, enforcing: bool) -> Outcome {
   let exe = (context.exe)();
   let upgrade = exe.as_deref().map_or(INSTALLER, upgrade_command);
   let skew = match &request.plugin_root {

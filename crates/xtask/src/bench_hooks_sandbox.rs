@@ -7,7 +7,7 @@
 use std::ffi::OsString;
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::{Command, Output, Stdio};
 
 use crate::env_scrub::{inherited, scrub};
 use crate::scratch;
@@ -45,6 +45,27 @@ fn run(command: &mut Command, what: &str) -> Result<(), String> {
   }
   let stderr = String::from_utf8_lossy(&output.stderr);
   Err(format!("bench sandbox: {what} failed: {}", stderr.trim()))
+}
+
+/// Whether `plugin`'s `register` run succeeded. A failed registration is a
+/// `systemMessage` with exit 0, so it never fails the session (#642).
+fn registered(plugin: &str, output: &Output) -> Result<(), String> {
+  let stdout = String::from_utf8_lossy(&output.stdout);
+  if !output.status.success() {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    return Err(format!(
+      "bench sandbox: register {plugin} exited {:?}: {}",
+      output.status.code(),
+      stderr.trim()
+    ));
+  }
+  if stdout.contains("registration failed") {
+    return Err(format!(
+      "bench sandbox: register {plugin}: {}",
+      stdout.trim()
+    ));
+  }
+  Ok(())
 }
 
 fn git(project: &Path, args: &[&str]) -> Result<(), String> {
@@ -160,15 +181,7 @@ impl Sandbox {
     let output = child
       .wait_with_output()
       .map_err(|err| format!("bench sandbox: {err}"))?;
-    if output.status.success() {
-      return Ok(());
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    Err(format!(
-      "bench sandbox: register {plugin} exited {:?}: {}",
-      output.status.code(),
-      stderr.trim()
-    ))
+    registered(plugin, &output)
   }
 
   /// The hook environment: this process's minus host-session keys, then the
