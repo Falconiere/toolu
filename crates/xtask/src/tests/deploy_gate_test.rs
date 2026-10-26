@@ -73,6 +73,11 @@ fn the_image_pins_match_the_release_workflow_and_toolchain() {
       "the Dockerfile lacks {pin}"
     );
   }
+  // The golden quality harness shims `bunx` to `npx --no-install`.
+  assert!(
+    DOCKERFILE.contains("/usr/local/bin/npx"),
+    "the image has no npx"
+  );
   let toolchain = std::fs::read_to_string(format!("{ROOT}/rust-toolchain.toml")).unwrap();
   let channel = channel(Path::new(ROOT)).unwrap();
   assert!(

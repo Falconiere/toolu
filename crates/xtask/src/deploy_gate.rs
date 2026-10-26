@@ -23,6 +23,7 @@ ARG TOOLCHAIN
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+ && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
  && rustup toolchain install "$TOOLCHAIN" --profile minimal -c rustfmt,clippy,llvm-tools \
  && cargo install --locked cargo-deny@0.20.2 cargo-machete@0.9.2 cargo-llvm-cov@0.9.1 cargo-nextest@0.9.146 \
  && npm install -g @ast-grep/cli@0.50.0 \
