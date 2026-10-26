@@ -103,7 +103,10 @@ fn command(target: &Target<'_>, root: &str) -> String {
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
   } else {
-    // Codex drops stderr on these events, so only a systemMessage names the hook.
+    // Codex drops a failed context hook's stderr (except on PreCompact), so only a
+    // systemMessage reliably names the hook.
+    // shortcut: a crash after toolu printed its own JSON leaves two lines on stdout;
+    // toolu prints once at exit, so capture stdout here only if that changes.
     (
       format!(
         "printf '%s\\n' \"{{\\\"systemMessage\\\":\\\"{abnormal}. See docs/install.md.\\\"}}\"; \
