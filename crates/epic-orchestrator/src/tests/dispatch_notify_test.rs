@@ -118,6 +118,26 @@ fn ingest_applies_a_spooled_notify() {
 }
 
 #[test]
+fn notify_scrubs_secrets_before_a_relay() {
+  let (_tmp, mut engine) = running_engine();
+  let (_, value) = round(
+    &mut engine,
+    &json!({"op": "notify", "token": "n5", "key": "a", "kind": "help", "note": "leaked ghp_secret", "to": "b"}),
+  );
+  assert_eq!(value["ok"], true);
+  let direction = engine
+    .world
+    .issues
+    .get("b")
+    .expect("b")
+    .direction
+    .as_ref()
+    .expect("direction");
+  assert!(!direction.text.contains("ghp_secret"), "{}", direction.text);
+  assert!(direction.text.contains("[redacted]"), "{}", direction.text);
+}
+
+#[test]
 fn notify_cools_down_a_relayed_recipient() {
   let (_tmp, mut engine) = running_engine();
   let first =

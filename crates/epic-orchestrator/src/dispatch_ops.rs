@@ -83,7 +83,9 @@ fn relay(engine: &mut Engine, from: &str, kind: &str, note: &str, to: &str) {
   {
     return;
   }
-  let text = relay_text(from, kind, note);
+  // Bound and scrub before worker text reaches a sibling: bounded_note
+  // caps the length, flattens lines, and redacts secret prefixes.
+  let text = relay_text(from, kind, &crate::note::bounded_note(note));
   engine
     .world
     .outbox
