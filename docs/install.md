@@ -48,7 +48,7 @@ For Jev routing, create `~/.config/toolu/epic.env` with a line `TYPESAFE_API_KEY
 
 After installation or a change to either file, run `systemctl --user daemon-reload`, then `systemctl --user enable --now toolu-epic.service` (or `systemctl --user restart toolu-epic.service` when it is already enabled). Check `systemctl --user status toolu-epic.service` and `journalctl --user -u toolu-epic.service` for startup errors. To keep the user manager running after logout, run `loginctl enable-linger "$(id -un)"` with administrator privileges if required. The install command only writes the unit; it does not start or enable it.
 
-The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `install.sh` at a pinned commit of this repository, never at `main` ([CodaSignal/toolu.sh#79](https://github.com/CodaSignal/toolu.sh/pull/79)). The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
+The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `https://github.com/Falconiere/toolu/releases/latest/download/install.sh`, the `install.sh` asset of the latest stable release, never `main` ([CodaSignal/toolu.sh#101](https://github.com/CodaSignal/toolu.sh/pull/101); it replaced the commit pin of [#79](https://github.com/CodaSignal/toolu.sh/pull/79)). Publishing a stable release therefore changes the installer the one-liner runs; drafts and prereleases do not. The formula in `Falconiere/homebrew-tap` is regenerated from each stable release's `SHA256SUMS` (see [releases/native.md](releases/native.md)); `brew test toolu` checks `toolu --version`.
 
 ## Why this way
 

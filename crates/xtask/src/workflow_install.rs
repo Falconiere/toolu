@@ -1,5 +1,6 @@
 //! The install-channel half of the workflow contract (#457): `SHA256SUMS` is
-//! signed with the key `install.sh` trusts, and the Homebrew tap is updated
+//! signed with the key `install.sh` trusts, every release carries the
+//! `install.sh` that `get.toolu.sh` serves, and the Homebrew tap is updated
 //! only from a verified stable release.
 
 use std::path::Path;
@@ -57,6 +58,16 @@ fn signing(native: &Value, digest: &str, found: &mut Findings) {
   found.need(
     runs(at(native, &["jobs", "upload"])).contains("dist/SHA256SUMS.minisig"),
     "release-native.yml must upload SHA256SUMS.minisig",
+  );
+}
+
+/// `get.toolu.sh` redirects to the latest release's `install.sh` asset, so
+/// every release packages the tagged `install.sh` and uploads it.
+fn served_installer(native: &Value, found: &mut Findings) {
+  found.need(
+    runs(at(native, &["jobs", "package"])).contains("cp install.sh dist/install.sh")
+      && runs(at(native, &["jobs", "upload"])).contains("dist/install.sh"),
+    "release-native.yml must package the tagged install.sh and upload it, because get.toolu.sh serves it from the latest release",
   );
 }
 
@@ -122,10 +133,11 @@ fn tap(tap: &Value, digest: &str, found: &mut Findings) {
   );
 }
 
-/// Signing, the release-please secrets, and the tap.
+/// Signing, the served installer, the release-please secrets, and the tap.
 pub(crate) fn install_channels(root: &Path, docs: &Docs<'_>, found: &mut Findings) {
   let digest = minisign_digest(root);
   signing(docs.get("release-native.yml"), &digest, found);
+  served_installer(docs.get("release-native.yml"), found);
   caller(docs.get("release-please.yml"), found);
   tap(docs.get("release-homebrew.yml"), &digest, found);
 }
