@@ -17,7 +17,7 @@
 Brainstorm, compact: the outcome is that the served installer always comes from the latest release. The default is to upload `install.sh` from the tagged commit. Jev chose the release-asset redirect over a request-time tag API (0.99). The accepted risk: publishing a release now changes the installer directly, with no second repository involved.
 
 - `release-native.yml` `package`: copy `install.sh` from the tagged checkout into `dist/`. `upload` adds `dist/install.sh` to `gh release upload`. The existing round trip (`for file in dist/*; do cmp …`) then proves the draft holds it.
-- `crates/xtask/src/workflow_install.rs` `signing()`: one more `found.need`. Its message is "release-native.yml must upload install.sh, which get.toolu.sh serves from the latest release". If a later edit drops the asset, `cargo xtask check-workflows` fails.
+- `crates/xtask/src/workflow_install.rs` gets a new `served_installer()` (originally a `found.need` inside `signing()`; moved after review) that requires both the `package` copy and the `upload`. Its message is "release-native.yml must upload install.sh, which get.toolu.sh serves from the latest release". If a later edit drops the asset, `cargo xtask check-workflows` fails.
 - `.claude/skills/deploy/SKILL.md`:
   - Step 6 copies `install.sh` into `$D`.
   - Step 8 uploads it.
@@ -36,7 +36,7 @@ Release assets: the four `toolu-<os>-<arch>.tar.gz`, `SHA256SUMS`, `SHA256SUMS.m
 
 ## Acceptance criteria
 
-- **AC-1:** `install_channels` over an empty root reports "release-native.yml must upload install.sh, which get.toolu.sh serves from the latest release", and `cargo xtask check-workflows` on this repository reports none.
+- **AC-1:** `install_channels` over an empty root reports "release-native.yml must package the tagged install.sh and upload it, because get.toolu.sh serves it from the latest release", and `cargo xtask check-workflows` on this repository reports none.
 - **AC-2:** `release-native.yml` copies `install.sh` into `dist/` in `package` and uploads `dist/install.sh` in `upload`.
 - **AC-3:** The `/deploy` skill copies and uploads `install.sh`, and its step 10 compares both served URLs with `install.sh`.
 - **AC-4:** `docs/releases/native.md` lists `install.sh` among the release assets and describes the get.toolu.sh redirect, replacing the "pin must move" follow-up.
@@ -66,3 +66,15 @@ None blocking. The worker change ships in `CodaSignal/toolu.sh`, owned by this d
 
 - Acceptance criteria: 🔵 consider: AC-5 can be proven only after the worker deploy and the first release. It is marked deferred, and AC-3's step 10 performs the same comparison during the run.
 - No blockers. Every AC has a runnable check on real files or the live release.
+
+## Code review (2026-10-26, `/code-review high`, 9 findings, all fixed)
+
+1. `docs/install.md` still described the commit pin. It now describes the release-asset redirect.
+2. The key-leak procedure had lost its served-installer step. It now uploads the new `install.sh` to the latest release.
+3. CI publish could make an older draft Latest. A stable tag older than the newest stable release now publishes with `--latest=false`. `/deploy` only publishes a new tag equal to `main`'s version, so it is unaffected.
+4. The docs now state the trust boundary: the unsigned asset is replaceable with `--clobber`, and no second repository checks it.
+5. A step-10 mismatch now explicitly continues to step 11.
+6. The v8.4.0 asset is documented as `main`'s `install.sh` at `485271d4d`, not the tag's.
+7. Step 10 re-checks up to three times, about a minute apart, to allow for redirect caching.
+8. The contract also requires `cp install.sh dist/install.sh` in `package`.
+9. The check moved into its own `served_installer()`, and the module doc was updated.

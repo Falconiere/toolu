@@ -121,7 +121,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    - `curl -fsSL https://github.com/Falconiere/toolu/releases/latest/download/install.sh | cmp - install.sh`
    - `curl -fsSL https://get.toolu.sh/pkg/toolu/install | cmp - install.sh`
 
-   A mismatch on the second means the get.toolu.sh worker does not redirect to the release asset yet. Report it, because the curl one-liner may refuse this release.
+   GitHub can cache the latest redirect for a minute or two, so re-check a mismatch up to three times, about a minute apart. A mismatch that persists does not stop the run: the release is already public, so report it in step 11 and continue. On `releases/latest`, it means Latest did not move to `$TAG`. On `get.toolu.sh`, it means the worker does not redirect to the release asset, so the curl one-liner may refuse this release.
 
 11. **Report.** Give the release URL (`gh release view "$TAG" --json url --jq .url`), the tagged commit, the tap commit, and the relabeled PR. Then name the gaps compared with CI: no SBOM and no build provenance attestation.
 
