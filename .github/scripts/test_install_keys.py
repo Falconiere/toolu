@@ -15,15 +15,15 @@ OS_NAMES = {"Darwin": "darwin", "Linux": "linux"}
 ARCHES = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}
 
 
-def install(tag: str) -> subprocess.CompletedProcess[str]:
-    """Run install.sh for `tag` against the fixture's signed sums and a stand-in archive."""
+def install(tag: str, fixture: str = "") -> subprocess.CompletedProcess[str]:
+    """Run install.sh for `tag` against a fixture's signed sums and a stand-in archive."""
     asset = f"toolu-{OS_NAMES[platform.system()]}-{ARCHES[platform.machine()]}.tar.gz"
     with tempfile.TemporaryDirectory() as directory:
         base = Path(directory)
         release = base / "Falconiere/toolu/releases/download" / tag
         release.mkdir(parents=True)
         for name in ("SHA256SUMS", "SHA256SUMS.minisig"):
-            shutil.copy(FIXTURES / tag / name, release / name)
+            shutil.copy(FIXTURES / (fixture or tag) / name, release / name)
         (release / asset).write_bytes(b"not the release archive")
         env = {
             key: value
@@ -47,6 +47,13 @@ class InstallKeysTest(unittest.TestCase):
         result = install("v8.4.0")
         self.assertEqual(result.returncode, 1, result.stderr)
         self.assertIn("checksum mismatch", result.stderr)
+
+    def test_retired_key_is_refused_for_a_tag_after_v8_4_0(self) -> None:
+        # The real v8.4.0 signature served as v8.5.0 must fail on the key, not
+        # only on its trusted comment.
+        result = install("v8.5.0", fixture="v8.4.0")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertIn("is not signed by the toolu release key", result.stderr)
 
     def test_signature_from_an_unknown_key_is_refused(self) -> None:
         result = install("v8.4.1-dev.9")

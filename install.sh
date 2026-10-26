@@ -15,9 +15,10 @@ set -euo pipefail
 # The toolu release key. Its secret half signs SHA256SUMS in release-native.yml
 # and the /deploy skill.
 TOOLU_PUBLIC_KEY="RWSlGoH3/Fv2UVCRhbmK4oqpNwbqm6NkhP4HtGpP/4S2QQF26s6hfD59"
-# The key that signed v8.4.0 and earlier. Its secret was lost on 2026-10-26, so
-# it signs nothing new; it is kept so those releases still install.
+# The key that signed v8.4.0 and earlier. Its secret was lost on 2026-10-26; it
+# is trusted only for tags up to the last one it signed, so those still install.
 TOOLU_RETIRED_PUBLIC_KEY="RWQnIicG+ykLjLRK43obFWLb8l27IN4cpEJmb5jdEIsvb/3Xo+QY4Knc"
+TOOLU_RETIRED_KEY_LAST_TAG="v8.4.0"
 
 # minisign 0.11: its macOS zip is universal, its linux archive has both CPUs.
 MINISIGN_URL="https://github.com/jedisct1/minisign/releases/download/0.11"
@@ -281,14 +282,25 @@ minisign_bin() {
   fi
 }
 
+# A TAG_PATTERN tag's X.Y.Z as one number, so tags compare with `-le`.
+tag_number() {
+  local version="${1#v}" major minor patch
+  version="${version%%-*}"
+  IFS=. read -r major minor patch <<<"$version"
+  echo $((10#$major * 10000000000 + 10#$minor * 100000 + 10#$patch))
+}
+
 # Verify the signature, then the archive digest, then the archive layout.
 verify() {
   local tag="$1" minisign="$2" pub key verified="" expected actual listing
-  local pubs=()
+  local pubs=() keys=("$TOOLU_PUBLIC_KEY")
+  if [ "$(tag_number "$tag")" -le "$(tag_number "$TOOLU_RETIRED_KEY_LAST_TAG")" ]; then
+    keys+=("$TOOLU_RETIRED_PUBLIC_KEY")
+  fi
   if [ -n "${TOOLU_MINISIGN_PUB:-}" ]; then
     pubs=("$TOOLU_MINISIGN_PUB")
   else
-    for key in "$TOOLU_PUBLIC_KEY" "$TOOLU_RETIRED_PUBLIC_KEY"; do
+    for key in "${keys[@]}"; do
       pub="$WORK/toolu-${#pubs[@]}.pub"
       printf 'untrusted comment: toolu release key\n%s\n' "$key" >"$pub"
       pubs+=("$pub")
