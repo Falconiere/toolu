@@ -6,3 +6,17 @@
 [[profile.default.overrides]]
 filter = 'binary(status_budget)'
 threads-required = 'num-test-threads'
+
+# The golden quality replays run each hook against real tools with the hooks'
+# own timeouts (jscpd gets 10 s). Beside the xtask fixtures' nested cargo builds
+# the replays slowed from 15 s to 114 s and jscpd timed out, so they too keep
+# every test slot.
+[[profile.default.overrides]]
+filter = 'binary(golden_quality)'
+threads-required = 'num-test-threads'
+
+# This doctor case bounds its own run at 2 s; beside the fixture builds it took
+# 10.7 s while still not waiting for the descendant.
+[[profile.default.overrides]]
+filter = 'test(=doctor_does_not_wait_for_a_descendant_holding_protocol_output_open)'
+threads-required = 'num-test-threads'
