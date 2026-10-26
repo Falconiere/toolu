@@ -70,8 +70,8 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
   },
   {
     "id": "infisical-store",
-    "title": "Infisical project toolu (env prod) holds the signing key and the three reference values, matching install.sh",
-    "check": "pid=$(sed -n 's/^INFISICAL_PROJECT_ID=\\([0-9a-f-]*\\)$/\\1/p' .claude/skills/deploy/SKILL.md) && test -n \"$pid\" && g() { infisical secrets get \"$1\" --plain --silent --projectId \"$pid\" --env prod; } && for name in TOOLU_PUBLIC_KEY TOOLU_RETIRED_PUBLIC_KEY MINISIGN_URL; do test \"$(g \"$name\")\" = \"$(sed -n \"s/^$name=\\\"\\(.*\\)\\\"$/\\1/p\" install.sh)\" || exit 1; done && w=$(mktemp -d) && echo probe > \"$w/m\" && minisign -S -s <(g TOOLU_MINISIGN_SECRET_KEY) -m \"$w/m\" -x \"$w/m.minisig\" >/dev/null && minisign -Vm \"$w/m\" -x \"$w/m.minisig\" -P \"$(sed -n 's/^TOOLU_PUBLIC_KEY=\"\\(.*\\)\"$/\\1/p' install.sh)\" >/dev/null",
+    "title": "Infisical project toolu (env prod) holds the signing key and the four reference values, matching install.sh",
+    "check": "pid=$(sed -n 's/^INFISICAL_PROJECT_ID=\\([0-9a-f-]*\\)$/\\1/p' .claude/skills/deploy/SKILL.md) && test -n \"$pid\" && g() { infisical secrets get \"$1\" --plain --silent --projectId \"$pid\" --env prod; } && for name in TOOLU_PUBLIC_KEY TOOLU_RETIRED_PUBLIC_KEY TOOLU_RETIRED_KEY_LAST_TAG MINISIGN_URL; do test \"$(g \"$name\")\" = \"$(sed -n \"s/^$name=\\\"\\(.*\\)\\\"$/\\1/p\" install.sh)\" || exit 1; done && w=$(mktemp -d) && echo probe > \"$w/m\" && minisign -S -s <(g TOOLU_MINISIGN_SECRET_KEY) -m \"$w/m\" -x \"$w/m.minisig\" >/dev/null && minisign -Vm \"$w/m\" -x \"$w/m.minisig\" -P \"$(sed -n 's/^TOOLU_PUBLIC_KEY=\"\\(.*\\)\"$/\\1/p' install.sh)\" >/dev/null",
     "ac_refs": [
       "AC-2"
     ],
