@@ -248,11 +248,11 @@ fn ingest_applies_a_new_spool_and_skips_a_seen_token() {
   assert!(ingest(&mut engine).is_err());
 }
 
-fn open(root: &std::path::Path) -> Engine {
+pub(super) fn open(root: &std::path::Path) -> Engine {
   Engine::open(Paths::at(root), None, Fault::None).expect("open")
 }
 
-fn round(engine: &mut Engine, request: &Value) -> (bool, Value) {
+pub(super) fn round(engine: &mut Engine, request: &Value) -> (bool, Value) {
   let (tx, rx) = mpsc::channel();
   let mut waiters = Vec::new();
   let stop = dispatch(engine, request, &tx, &mut waiters, PROTOCOL);

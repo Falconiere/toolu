@@ -3250,6 +3250,73 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
+          "about": "Notify the orchestrator, or one sibling issue",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The notice kind",
+              "hidden": false,
+              "long": "kind",
+              "possibleValues": [
+                "blocked",
+                "unblocked",
+                "contract-changed",
+                "stuck",
+                "help"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "KIND"
+            },
+            {
+              "global": false,
+              "help": "The issue status snapshot",
+              "hidden": false,
+              "long": "status-file",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "Note stored with the notice",
+              "hidden": false,
+              "long": "note",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "TEXT"
+            },
+            {
+              "global": false,
+              "help": "One sibling issue key; the orchestrator only when omitted",
+              "hidden": false,
+              "long": "to",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "KEY"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "notify",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "notify"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Run a command under the worktree's resource lease",
           "aliases": [],
           "args": [

@@ -61,6 +61,39 @@ fn a_newer_client_spools_its_report_and_replaces_an_older_engine() {
 }
 
 #[test]
+fn a_newer_client_spools_its_notify_like_a_report() {
+  use std::io::{BufRead, BufReader, Write};
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let listener = UnixListener::bind(paths.socket()).expect("bind");
+  let stand_in = std::thread::spawn(move || {
+    let (mut stream, _) = listener.accept().expect("accept");
+    writeln!(
+      stream,
+      "{}",
+      serde_json::json!({"op": "hello", "protocol": 1})
+    )
+    .expect("hello");
+    let mut line = String::new();
+    BufReader::new(stream.try_clone().expect("clone"))
+      .read_line(&mut line)
+      .expect("request");
+    writeln!(stream, "{}", serde_json::json!({"ok": true})).expect("ack");
+    serde_json::from_str::<serde_json::Value>(&line).expect("json")
+  });
+  let notice = serde_json::json!({"op": "notify", "token": "n-7", "key": "a", "kind": "stuck"});
+  let reply = exchange_retry(&paths, crate::PROTOCOL, &notice).expect("exchange");
+  assert_eq!(reply["ok"], true);
+  let sent = stand_in.join().expect("stand-in");
+  assert_eq!(sent, serde_json::json!({"op": "replace", "protocol": 1}));
+  let spooled: serde_json::Value = serde_json::from_str(
+    &std::fs::read_to_string(spool_path(tmp.path(), "n-7").expect("path")).expect("spool"),
+  )
+  .expect("json");
+  assert_eq!(spooled, notice);
+}
+
+#[test]
 fn a_large_herdr_reply_reads_whole_and_an_endless_line_fails() {
   let (mut ours, mut theirs) = std::os::unix::net::UnixStream::pair().unwrap();
   let line = "x".repeat(200_000);

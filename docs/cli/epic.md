@@ -26,6 +26,7 @@ Commands:
   answer    Send a message to a live worker; marks its open attention answered
   wait      Wait for a judgment, or return when the limit passes
   report    Record a worker phase
+  notify    Notify the orchestrator, or one sibling issue
   job       Run a command under the worktree's resource lease
   service   Install the user service unit
   token     Manage the status bearer token
@@ -253,6 +254,25 @@ Options:
       --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --note <TEXT>         Note stored with the phase
       --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
+  -h, --help                Print help
+```
+
+## `toolu epic notify`
+
+```text
+Notify the orchestrator, or one sibling issue
+
+Usage: toolu epic notify [OPTIONS] --kind <KIND> --status-file <FILE>
+
+Options:
+      --json                Print exactly one JSON document on stdout
+      --kind <KIND>         The notice kind [possible values: blocked, unblocked, contract-changed, stuck, help]
+  -q, --quiet               Drop the diagnostics of a successful run
+      --status-file <FILE>  The issue status snapshot
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --note <TEXT>         Note stored with the notice
+      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
+      --to <KEY>            One sibling issue key; the orchestrator only when omitted
   -h, --help                Print help
 ```
 

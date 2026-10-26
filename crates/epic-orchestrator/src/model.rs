@@ -301,8 +301,25 @@ pub(crate) struct World {
   pub checkpointed: BTreeSet<String>,
   /// Steps produced by ticks and events.
   pub outbox: VecDeque<Step>,
+  /// Worker prompts waiting out their debounce window, by issue key.
+  pub prompt_queue: BTreeMap<String, QueuedPrompt>,
+  /// Last realtime relay per recipient, bounding worker ping-pong.
+  pub relayed_at_ms: BTreeMap<String, u64>,
   /// When the engine last journaled its resource use (Unix ms).
   pub usage_at_ms: u64,
+}
+
+/// A worker prompt waiting out its debounce window.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct QueuedPrompt {
+  /// The engine-signed prompt text.
+  pub text: String,
+  /// The earliest Unix-millisecond time it may be sent.
+  pub due_ms: u64,
+  /// The journal name of the flushed prompt (`relay`, `unblocked`).
+  pub name: String,
+  /// The attention kind raised when delivery fails, if one is owed.
+  pub fallback: Option<String>,
 }
 
 /// A worker report.
@@ -363,6 +380,8 @@ impl World {
       cycle: Cycle::Clear,
       checkpointed: BTreeSet::new(),
       outbox: VecDeque::new(),
+      prompt_queue: BTreeMap::new(),
+      relayed_at_ms: BTreeMap::new(),
       usage_at_ms: now_ms,
     }
   }

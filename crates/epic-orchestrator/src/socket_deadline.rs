@@ -12,10 +12,16 @@ pub(crate) fn stall_ready(world: &World) -> bool {
   next_local_ms(world).is_some_and(|at| at <= world.now_ms)
 }
 
+/// Whether a queued worker prompt is due.
+pub(crate) fn prompt_ready(world: &World) -> bool {
+  crate::schedule::next_prompt_ms(world).is_some_and(|at| at <= world.now_ms)
+}
+
 fn next_local_ms(world: &World) -> Option<u64> {
   let stall = next_stall_ms(world);
   let reminder = next_reminder_ms(world);
-  stall.into_iter().chain(reminder).min()
+  let prompt = crate::schedule::next_prompt_ms(world);
+  stall.into_iter().chain(reminder).chain(prompt).min()
 }
 
 /// Whether a GitHub watch may send a request now.

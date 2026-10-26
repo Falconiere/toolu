@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use crate::model::World;
 use crate::watch::{Kind, Watch};
 
-use super::{github_ready, wake_after};
+use super::{github_ready, prompt_ready, wake_after};
 
 #[test]
 fn github_retry_after_hold_does_not_spin_the_socket() {
@@ -25,6 +25,17 @@ fn github_retry_after_hold_does_not_spin_the_socket() {
   assert!(wake >= Duration::from_secs(59));
   world.now_ms = 61_000;
   assert!(github_ready(&world));
+}
+
+#[test]
+fn a_queued_prompt_wakes_the_socket_before_the_tick() {
+  let mut world = World::new(1_000);
+  crate::schedule::enqueue_prompt(&mut world, "a", "hi", "relay", None);
+  assert!(!prompt_ready(&world));
+  let wake = wake_after(&world, &[], Instant::now() + crate::TICK);
+  assert!(wake <= Duration::from_millis(5_000), "{wake:?}");
+  world.now_ms = 6_000;
+  assert!(prompt_ready(&world));
 }
 
 #[test]
