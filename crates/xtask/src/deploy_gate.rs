@@ -15,6 +15,14 @@ use crate::{Verdict, output};
 /// The image the gate runs in, rebuilt from [`DOCKERFILE`] on every run (layer-cached).
 const IMAGE: &str = "toolu-deploy-gate";
 
+/// The named volumes that keep cargo's registry, git checkouts and the target
+/// directory between runs. `docker volume rm` them to start cold.
+pub(crate) const CACHES: [(&str, &str); 3] = [
+  ("toolu-deploy-gate-target", "/src/target"),
+  ("toolu-deploy-gate-registry", "/usr/local/cargo/registry"),
+  ("toolu-deploy-gate-git", "/usr/local/cargo/git"),
+];
+
 /// The `verify` job's tools at `release-native.yml`'s pins (a test keeps them equal), plus
 /// the runner-image tools the tests run for real: `npx` (the golden `bunx` shim), `jq`, `gh`.
 /// Non-root uid 501 and `/src` avoid the permission and `/work` traps of a root gate.
@@ -32,17 +40,21 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh && rm
  && npm install -g @ast-grep/cli@0.50.0 \
  && useradd -m -u 501 dev \
  && git config --system user.name dev && git config --system user.email dev@toolu.invalid \
- && mkdir /src && chown -R dev "$CARGO_HOME" "$RUSTUP_HOME" /src
+ && mkdir -p /src/target /usr/local/cargo/registry /usr/local/cargo/git \
+ && chown -R dev "$CARGO_HOME" "$RUSTUP_HOME" /src
 USER dev
 "#;
 
-/// Clone the bundle (the first `$BUNDLE_BYTES` bytes of stdin) into `$SRC` with
-/// `origin/main`, and refuse any `HEAD` other than `$EXPECTED`, naming both.
+/// Check out the bundle (the first `$BUNDLE_BYTES` bytes of stdin) in `$SRC` with
+/// `origin/main`, and refuse any `HEAD` other than `$EXPECTED`, naming both. `$SRC`
+/// may already hold the cached `target/` volume, so it is `git init`, not a clone.
 pub(crate) const CLONE: &str = r#"B=$(mktemp)
 head -c "$BUNDLE_BYTES" > "$B"
-git clone -q "$B" "$SRC"
+git init -q "$SRC"
 cd "$SRC"
 git fetch -q "$B" refs/remotes/origin/main:refs/remotes/origin/main
+git fetch -q "$B" HEAD
+git checkout -q --detach FETCH_HEAD
 head=$(git rev-parse HEAD)
 test "$head" = "$EXPECTED" || { echo "deploy-gate: the bundled HEAD is $head, not $EXPECTED" >&2; exit 1; }
 "#;
@@ -179,15 +191,19 @@ pub(crate) fn build_command(channel: &str, id_file: &Path) -> Command {
 }
 
 /// `docker run` of the gate in `image` for `head` from a `bytes`-long bundle on stdin,
-/// with CI's 4 runner CPUs and nextest threads, so timing-sensitive tests see what CI sees.
+/// with every CPU of the Docker VM, and [`CACHES`] mounted so reruns skip most of
+/// the build. The checkout itself is always fresh.
 pub(crate) fn container(image: &str, head: &str, bytes: u64) -> Command {
   let mut command = Command::new("docker");
   command
-    .args(["run", "--rm", "-i", "--init", "--cpus", "4"])
-    .args(["-e", "SRC=/src", "-e", "NEXTEST_TEST_THREADS=4", "-e"])
+    .args(["run", "--rm", "-i", "--init", "-e", "SRC=/src", "-e"])
     .arg(format!("EXPECTED={head}"))
     .arg("-e")
-    .arg(format!("BUNDLE_BYTES={bytes}"))
+    .arg(format!("BUNDLE_BYTES={bytes}"));
+  for (volume, path) in CACHES {
+    command.arg("-v").arg(format!("{volume}:{path}"));
+  }
+  command
     .args([image, "sh", "-euc"])
     .arg(format!("{CLONE}{}", watched(SCRIPT)));
   command

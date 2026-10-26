@@ -2,7 +2,8 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use super::{
-  CLONE, DOCKERFILE, SCRIPT, build_command, bundle, channel, container, run, watched, with_input,
+  CACHES, CLONE, DOCKERFILE, SCRIPT, build_command, bundle, channel, container, run, watched,
+  with_input,
 };
 use crate::deploy_guard::RECEIPT;
 use crate::options::Options;
@@ -76,6 +77,13 @@ fn the_image_pins_match_the_release_workflow_and_toolchain() {
     );
   }
   // Tests run the real npx (the golden `bunx` shim), jq and gh, as on the CI runner image.
+  // A named volume takes its owner from the image path it first mounts over.
+  for (_, path) in CACHES {
+    assert!(
+      DOCKERFILE.contains(path),
+      "the image does not create {path} for dev"
+    );
+  }
   for tool in ["/usr/local/bin/npx", "--no-install-recommends jq gh"] {
     assert!(DOCKERFILE.contains(tool), "the image lacks {tool}");
   }
@@ -96,6 +104,8 @@ fn the_container_script_runs_the_full_verify_job() {
 /// Run the clone stage on the host, as the container does, with `bundle` on stdin.
 fn clone(bundle: &Path, expected: &str) -> (std::process::Output, tempfile::TempDir) {
   let parent = tempfile::tempdir().unwrap();
+  // The cached `target/` volume is already mounted when the checkout starts.
+  std::fs::create_dir_all(parent.path().join("src/target/debug")).unwrap();
   let output = Command::new("sh")
     .args(["-euc", CLONE])
     .env("SRC", parent.path().join("src"))
@@ -181,12 +191,26 @@ fn the_build_passes_the_channel_that_the_dockerfile_installs() {
 }
 
 #[test]
-fn the_container_runs_the_built_image_with_ci_runner_cpus() {
+fn the_container_runs_the_built_image_uncapped_with_the_build_caches() {
   let head = "a".repeat(40);
   let run = args(&container("sha256:feed", &head, 1234));
+  assert!(
+    !run
+      .iter()
+      .any(|arg| arg == "--cpus" || arg.contains("TEST_THREADS")),
+    "{run:?}"
+  );
+  let mounts: Vec<String> = CACHES
+    .iter()
+    .map(|(volume, path)| format!("{volume}:{path}"))
+    .collect();
+  for mount in &mounts {
+    assert!(
+      run.windows(2).any(|pair| pair == ["-v", mount.as_str()]),
+      "{mount} in {run:?}"
+    );
+  }
   for pair in [
-    ["--cpus", "4"],
-    ["-e", "NEXTEST_TEST_THREADS=4"],
     ["-e", &format!("EXPECTED={head}")],
     ["-e", "BUNDLE_BYTES=1234"],
   ] {
