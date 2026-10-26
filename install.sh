@@ -4,16 +4,20 @@
 #   curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash
 #   curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --version v1.2.3
 #
-# The release's SHA256SUMS must carry a minisign signature from the key below,
-# and the archive must match it, before anything is written to the install
+# The release's SHA256SUMS must carry a minisign signature from one of the keys
+# below, and the archive must match it, before anything is written to the install
 # directory. Needs bash, curl, tar and sha256sum (or shasum); unzip on macOS.
 #
 # Exit codes: 0 success, 1 network or verification failure, 2 usage or an
 # unsupported platform.
 set -euo pipefail
 
-# The toolu release key. Its secret half signs SHA256SUMS in release-native.yml.
-TOOLU_PUBLIC_KEY="RWQnIicG+ykLjLRK43obFWLb8l27IN4cpEJmb5jdEIsvb/3Xo+QY4Knc"
+# The toolu release key. Its secret half signs SHA256SUMS in release-native.yml
+# and the /deploy skill.
+TOOLU_PUBLIC_KEY="RWSlGoH3/Fv2UVCRhbmK4oqpNwbqm6NkhP4HtGpP/4S2QQF26s6hfD59"
+# The key that signed v8.4.0 and earlier. Its secret was lost on 2026-10-26, so
+# it signs nothing new; it is kept so those releases still install.
+TOOLU_RETIRED_PUBLIC_KEY="RWQnIicG+ykLjLRK43obFWLb8l27IN4cpEJmb5jdEIsvb/3Xo+QY4Knc"
 
 # minisign 0.11: its macOS zip is universal, its linux archive has both CPUs.
 MINISIGN_URL="https://github.com/jedisct1/minisign/releases/download/0.11"
@@ -279,13 +283,22 @@ minisign_bin() {
 
 # Verify the signature, then the archive digest, then the archive layout.
 verify() {
-  local tag="$1" minisign="$2" pub verified expected actual listing
-  pub="${TOOLU_MINISIGN_PUB:-}"
-  if [ -z "$pub" ]; then
-    pub="$WORK/toolu.pub"
-    printf 'untrusted comment: toolu release key\n%s\n' "$TOOLU_PUBLIC_KEY" >"$pub"
+  local tag="$1" minisign="$2" pub key verified="" expected actual listing
+  local pubs=()
+  if [ -n "${TOOLU_MINISIGN_PUB:-}" ]; then
+    pubs=("$TOOLU_MINISIGN_PUB")
+  else
+    for key in "$TOOLU_PUBLIC_KEY" "$TOOLU_RETIRED_PUBLIC_KEY"; do
+      pub="$WORK/toolu-${#pubs[@]}.pub"
+      printf 'untrusted comment: toolu release key\n%s\n' "$key" >"$pub"
+      pubs+=("$pub")
+    done
   fi
-  verified="$("$minisign" -Vm "$WORK/SHA256SUMS" -x "$WORK/SHA256SUMS.minisig" -p "$pub" 2>&1)" ||
+  for pub in "${pubs[@]}"; do
+    verified="$("$minisign" -Vm "$WORK/SHA256SUMS" -x "$WORK/SHA256SUMS.minisig" -p "$pub" 2>&1)" && break
+    verified=""
+  done
+  [ -n "$verified" ] ||
     die 1 "SHA256SUMS of $tag is not signed by the toolu release key; refusing to install"
   # The release workflow signs with the trusted comment `toolu <tag>`, so the
   # signed files of an older release cannot be replayed under a newer tag.
