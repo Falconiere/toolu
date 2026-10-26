@@ -100,27 +100,29 @@ fn report_one(
 }
 
 /// Write native manifests and remove this plugin's old JS and shell modules.
+/// Never fails the session: an error is a `systemMessage`, since Codex shows a
+/// failed `SessionStart` hook without its stderr (#642).
 pub fn register(env: &Env, host: Host) -> Outcome {
-  let roots = Roots::new(env.clone(), Some(host));
-  let mut migrated = false;
-  for &(event, name, matcher) in RULES {
-    let result = write_one(&roots, event, name, matcher)
-      .and_then(|removed| report_one(env, &roots, event, name, matcher).map(|()| removed));
-    match result {
-      Ok(removed) => migrated |= removed,
-      Err(error) => return Outcome::failed(Exit::Failure, error),
-    }
-  }
+  let message = match sync(env, &Roots::new(env.clone(), Some(host))) {
+    Ok(true) => Some("ast-grep's Bun modules were replaced by native rules. Run wrapper commands with `toolu ast-grep search|files|scan|debug` and reports with `toolu ast-grep savings <ledger.jsonl>`.".to_owned()),
+    Ok(false) => None,
+    Err(error) => Some(format!("ast-grep registration failed: {error}")),
+  };
   Outcome {
     exit: Exit::Success,
-    stdout: migrated.then(|| {
-      serde_json::json!({
-        "systemMessage": "ast-grep's Bun modules were replaced by native rules. Run wrapper commands with `toolu ast-grep search|files|scan|debug` and reports with `toolu ast-grep savings <ledger.jsonl>`."
-      })
-      .to_string()
-    }),
+    stdout: message.map(|text| serde_json::json!({ "systemMessage": text }).to_string()),
     stderr: None,
   }
+}
+
+/// Write and report each rule's manifest; whether an old module was removed.
+fn sync(env: &Env, roots: &Roots) -> Result<bool, String> {
+  let mut migrated = false;
+  for &(event, name, matcher) in RULES {
+    migrated |= write_one(roots, event, name, matcher)?;
+    report_one(env, roots, event, name, matcher)?;
+  }
+  Ok(migrated)
 }
 
 #[cfg(test)]

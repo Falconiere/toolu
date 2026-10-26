@@ -19,7 +19,7 @@ cargo xtask print-hook <plugin> <Event> <name>   # runs `toolu [<plugin>] hook <
 
 The printed hook has two strings:
 
-- **`command`** is a POSIX `sh -c` one-liner. It tries `$TOOLU_BIN` alone when that is set, else `/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`, `~/.local/bin` and then `PATH`. It keeps the first executable whose `toolu --hook-protocol` prints an integer. For an enforcing event it runs the hook without `exec` and maps any status but 0 or 2 (a crash, a signal, a host timeout) to 2. `${CLAUDE_PLUGIN_ROOT}` is its only braced variable: Claude Code substitutes it as text and Codex exports it.
+- **`command`** is a POSIX `sh -c` one-liner. It tries `$TOOLU_BIN` alone when that is set, else `/opt/homebrew/bin`, `/usr/local/bin`, `/home/linuxbrew/.linuxbrew/bin`, `~/.local/bin` and then `PATH`. It keeps the first executable whose `toolu --hook-protocol` prints an integer. It runs the hook without `exec` and passes statuses 0 and 2 through. Any other status (a crash, a signal, a host timeout) becomes exit 2 with `blocked:` on an enforcing event, and exit 0 with a `systemMessage` naming the hook and event on a context event. `${CLAUDE_PLUGIN_ROOT}` is its only braced variable: Claude Code substitutes it as text and Codex exports it.
 - **`commandWindows`** is Codex's `cmd.exe /C` override. No Windows binary is released yet (#411), so it reports the missing binary exactly as `command` does without one.
 
 Without a usable binary the launcher itself answers:

@@ -1,8 +1,10 @@
 //! The generated `hooks.json` launcher for native hooks (#412), checked by
 //! `cargo xtask check-hooks`. `command` resolves `TOOLU_BIN`, else the install
 //! directories, then `PATH`, keeping the first candidate whose `--hook-protocol`
-//! prints an integer; enforcing events map any status but 0 or 2 to 2. Without a
-//! binary an enforcing event fails closed and a context event prints the install
+//! prints an integer. Statuses 0 and 2 pass through; any other status names the
+//! hook, its event and the status, as a `blocked:` exit 2 on an enforcing event and
+//! as an exit-0 `systemMessage` on a context event (#642). Without a binary an
+//! enforcing event fails closed and a context event prints the install
 //! `systemMessage`. There is no Windows binary yet (#411), so `commandWindows`
 //! reports the missing binary the same way. [`muse`] writes the same launcher
 //! to a per-hook resolver file, since Muse hooks are argv, not shell strings.
@@ -91,21 +93,28 @@ fn command(target: &Target<'_>, root: &str) -> String {
     target.event
   );
   let missing = missing_message(target.plugin);
-  let (found, absent) = if is_enforcing(target.event) {
+  let abnormal = abnormal_status(target);
+  let (report, absent) = if is_enforcing(target.event) {
     (
       format!(
-        "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; \
-         {}; exit 2; fi",
-        abnormal_status(target.plugin)
+        "printf '%s\\n' \"blocked: {abnormal}, so the action is blocked. See docs/install.md.\" \
+         >&2; exit 2"
       ),
       format!("printf '%s\\n' 'blocked: {missing}' >&2; exit 2"),
     )
   } else {
+    // Codex drops stderr on these events, so only a systemMessage names the hook.
     (
-      format!("if [ -n \"$t\" ]; then exec \"$t\" {run}; fi"),
+      format!(
+        "printf '%s\\n' \"{{\\\"systemMessage\\\":\\\"{abnormal}. See docs/install.md.\\\"}}\"; \
+         exit 0"
+      ),
       format!("printf '%s\\n' '{{\"systemMessage\":\"{missing}\"}}'; exit 0"),
     )
   };
+  let found = format!(
+    "if [ -n \"$t\" ]; then \"$t\" {run}; s=$?; case $s in 0|2) exit $s;; esac; {report}; fi"
+  );
   [
     "t=".to_owned(),
     format!(
@@ -123,11 +132,14 @@ fn command(target: &Target<'_>, root: &str) -> String {
   .join("; ")
 }
 
-/// Report only the observed shell status; it cannot identify a signal reliably.
-fn abnormal_status(plugin: &str) -> String {
+/// Name the hook and event with the observed shell status only; it cannot identify a
+/// signal reliably.
+fn abnormal_status(target: &Target<'_>) -> String {
   format!(
-    "printf '%s\\n' \"blocked: {plugin} plugin: toolu ended with status $s, so the action is \
-     blocked. See docs/install.md.\" >&2"
+    "{} plugin: toolu {} on {} ended with status $s",
+    target.plugin,
+    argv(target),
+    target.event
   )
 }
 

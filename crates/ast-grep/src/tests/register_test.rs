@@ -71,3 +71,24 @@ fn register_reports_native_manifests_to_startup_verifier() {
     assert!(std::path::Path::new(path).is_file());
   }
 }
+
+#[test]
+fn register_reports_a_failed_write_without_failing_the_session() {
+  let dir = tempfile::tempdir().expect("scratch");
+  let file = dir.path().join("plain-file");
+  std::fs::write(&file, "").expect("plain file");
+  let env = Env::from_pairs([("TOOLU_CONFIG_DIR", file.display().to_string())]);
+  let failed = register(&env, Host::Claude);
+  assert_eq!(failed.exit.code(), 0);
+  assert!(failed.stderr.is_none());
+  let stdout = failed.stdout.expect("systemMessage");
+  let json: serde_json::Value = serde_json::from_str(&stdout).expect("one JSON document");
+  let message = json["systemMessage"].as_str().expect("message");
+  assert!(
+    message.starts_with(&format!(
+      "ast-grep registration failed: {}",
+      file.join("toolu/pre-tools.d").display()
+    )),
+    "{message}"
+  );
+}

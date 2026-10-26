@@ -66,15 +66,25 @@ fn an_enforcing_entry_runs_without_exec_and_maps_other_statuses_to_2() {
   let command = generated("toolu", "PermissionRequest", "permission").command;
   assert!(command.contains("then \"$t\" hook permission --event PermissionRequest"));
   assert!(command.contains("case $s in 0|2) exit $s;; esac;"));
+  assert!(command.contains(
+    "\"blocked: toolu plugin: toolu hook permission on PermissionRequest ended with status $s, \
+     so the action is blocked. See docs/install.md.\" >&2; exit 2; fi"
+  ));
   assert!(command.ends_with("' >&2; exit 2"));
   assert!(!command.contains("exec \"$t\""));
 }
 
 #[test]
-fn a_context_entry_execs_and_ends_with_a_system_message() {
+fn a_context_entry_names_its_hook_in_a_system_message_for_other_statuses() {
   let command = generated("toolu", "PostToolUse", "post-tools").command;
-  assert!(command.contains("then exec \"$t\" hook post-tools --event PostToolUse"));
+  assert!(command.contains("then \"$t\" hook post-tools --event PostToolUse"));
+  assert!(command.contains("case $s in 0|2) exit $s;; esac;"));
+  assert!(command.contains(
+    "\"{\\\"systemMessage\\\":\\\"toolu plugin: toolu hook post-tools on PostToolUse ended with \
+     status $s. See docs/install.md.\\\"}\"; exit 0; fi"
+  ));
   assert!(command.ends_with("\"}'; exit 0"));
+  assert!(!command.contains("exec \"$t\""));
 }
 
 #[test]
