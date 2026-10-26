@@ -146,82 +146,6 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
     "model": "sonnet"
   },
   {
-    "id": "live-dev-release",
-    "title": "A user-typed /deploy --env dev --tag v8.4.1-dev.1 publishes the prerelease and leaves latest and the tap alone",
-    "check": "env -u GH_TOKEN gh release view v8.4.1-dev.1 --repo Falconiere/toolu --json isPrerelease,isDraft,assets,body | jq -e --rawfile notes target/deploy/v8.4.1-dev.1/notes.md '.isPrerelease and (.isDraft | not) and ([.assets[].name] | sort) == [\"SHA256SUMS\", \"SHA256SUMS.minisig\", \"toolu-darwin-amd64.tar.gz\", \"toolu-darwin-arm64.tar.gz\", \"toolu-linux-amd64.tar.gz\", \"toolu-linux-arm64.tar.gz\"] and (.body | rtrimstr(\"\\n\")) == ($notes | rtrimstr(\"\\n\"))' && test \"$(env -u GH_TOKEN gh release view --repo Falconiere/toolu --json tagName --jq .tagName)\" = v8.4.0 && env -u GH_TOKEN gh api repos/Falconiere/homebrew-tap/contents/Formula/toolu.rb --jq .content | base64 -d | grep -qF 'download/v8.4.0/'",
-    "ac_refs": [
-      "AC-7"
-    ],
-    "depends_on": [
-      "dev-tag-helper",
-      "installer-keys",
-      "deploy-skill",
-      "preflight-refusals",
-      "docs",
-      "infisical-store"
-    ],
-    "paths": [
-      "target/deploy/v8.4.1-dev.1/notes.md"
-    ],
-    "input": "The live run of the committed skill, typed by the user. Its step 6 signs with the Infisical-held key and verifies against install.sh.",
-    "model": "inherit"
-  },
-  {
-    "id": "sign-guard",
-    "title": "The skill's step-6 signature check refuses a throwaway-key signature and accepts the release key's",
-    "check": "d=target/deploy/v8.4.1-dev.1/dist && w=$(mktemp -d) && key=$(sed -n 's/^TOOLU_PUBLIC_KEY=\"\\(.*\\)\"$/\\1/p' install.sh) && minisign -G -W -p \"$w/t.pub\" -s \"$w/t.key\" >/dev/null && cp \"$d/SHA256SUMS\" \"$w/SHA256SUMS\" && minisign -S -s \"$w/t.key\" -m \"$w/SHA256SUMS\" -x \"$w/SHA256SUMS.minisig\" -t 'toolu v8.4.1-dev.1' >/dev/null && ! minisign -Vm \"$w/SHA256SUMS\" -x \"$w/SHA256SUMS.minisig\" -P \"$key\" >/dev/null 2>&1 && minisign -Vm \"$d/SHA256SUMS\" -x \"$d/SHA256SUMS.minisig\" -P \"$key\" | grep -qxF 'Trusted comment: toolu v8.4.1-dev.1' && grep -qF 'minisign -Vm' .claude/skills/deploy/SKILL.md",
-    "ac_refs": [
-      "AC-6"
-    ],
-    "depends_on": [
-      "live-dev-release"
-    ],
-    "paths": [
-      "install.sh",
-      "target/deploy/v8.4.1-dev.1/dist/SHA256SUMS",
-      "target/deploy/v8.4.1-dev.1/dist/SHA256SUMS.minisig",
-      ".claude/skills/deploy/SKILL.md"
-    ],
-    "input": "The live run's real SHA256SUMS signed by the release key, and the same file re-signed by a throwaway key made in a temp dir.",
-    "model": "haiku"
-  },
-  {
-    "id": "install-dev-release",
-    "title": "The published prerelease installs through install.sh, the Linux archives run in Alpine, and the new-key fixture is accepted",
-    "check": "tmp=$(mktemp -d) && bash install.sh --version v8.4.1-dev.1 --install-dir \"$tmp/bin\" && test \"$(\"$tmp/bin/toolu\" --version)\" = 'toolu 8.4.1' && env -u GH_TOKEN gh release download v8.4.1-dev.1 --repo Falconiere/toolu --pattern 'toolu-linux-*.tar.gz' -D \"$tmp/dl\" && for arch in amd64 arm64; do mkdir \"$tmp/$arch\" && tar -xzf \"$tmp/dl/toolu-linux-$arch.tar.gz\" -C \"$tmp/$arch\" && test \"$(docker run --rm --platform linux/$arch -v \"$tmp/$arch:/package:ro\" --entrypoint /package/toolu alpine:3.20 --version)\" = 'toolu 8.4.1' || exit 1; done && python3 -B -m unittest discover -s .github/scripts -p 'test_install_keys.py' -v",
-    "ac_refs": [
-      "AC-3",
-      "AC-8"
-    ],
-    "depends_on": [
-      "live-dev-release"
-    ],
-    "paths": [
-      "install.sh",
-      ".github/scripts/test_install_keys.py",
-      ".github/scripts/fixtures/install"
-    ],
-    "input": "The published v8.4.1-dev.1 release; its real SHA256SUMS and SHA256SUMS.minisig added as the new-key fixture.",
-    "model": "sonnet"
-  },
-  {
-    "id": "prod-dry",
-    "title": "The prod-only formula and relabel query work on real data without writing",
-    "check": "d=target/deploy/v8.4.1-dev.1/dist && cargo xtask homebrew-formula v8.4.1-dev.1 \"$d/SHA256SUMS\" > /private/tmp/toolu-deploy-formula.rb && test \"$(grep -c 'sha256 \"' /private/tmp/toolu-deploy-formula.rb)\" -eq 4 && for h in $(awk '{print $1}' \"$d/SHA256SUMS\"); do grep -qF \"sha256 \\\"$h\\\"\" /private/tmp/toolu-deploy-formula.rb || exit 1; done && env -u GH_TOKEN gh pr list --repo Falconiere/toolu --state merged --label 'autorelease: pending' --json number,title | jq -e 'type == \"array\"'",
-    "ac_refs": [
-      "AC-9"
-    ],
-    "depends_on": [
-      "live-dev-release"
-    ],
-    "paths": [
-      "target/deploy/v8.4.1-dev.1/dist/SHA256SUMS",
-      "crates/xtask/src/homebrew_formula.rs"
-    ],
-    "input": "The live dev run's SHA256SUMS and the live release PR label query.",
-    "model": "haiku"
-  },
-  {
     "id": "gate",
     "title": "Gate every step except tests and coverage, plus every .github/scripts unit test",
     "check": "env -u npm_config_store_dir TMPDIR=/private/tmp TOOLU_RESOURCE_HOME=$(mktemp -d) cargo xtask gate --only gate-change --only fmt --only clippy --only guardrails --only layers --only reach --only deny --only machete --only unused-pub --only hooks --only workflows --only docs-cli --only cli-compat --only jscpd --only rust-quality --only docs --only context-budget --only final-removal --only gate-coverage --only packaging --only ci-paths --only bench --only pack && python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'",
@@ -232,9 +156,7 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
       "dev-tag-helper",
       "installer-keys",
       "deploy-skill",
-      "docs",
-      "install-dev-release",
-      "sign-guard"
+      "docs"
     ],
     "paths": [
       ".github",
@@ -292,3 +214,41 @@ The design is the approved spec: a Claude Code skill at `.claude/skills/deploy/S
 - User request during execution: store `TOOLU_PUBLIC_KEY`, `TOOLU_RETIRED_PUBLIC_KEY`, and `MINISIGN_URL` in Infisical. The user also chose to store the signing key there and to have `/deploy` read it from Infisical. Added the `infisical-store` step, and the skill gains `INFISICAL_PROJECT_ID`.
 - Evidence during execution: v8.4.1 was never tagged or released (PR #639 merged after the workflows were disabled), so `latest` is v8.4.0. The installer, preflight, live-run, and docs checks now name v8.4.0 where they meant the last old-key release.
 - User decision during execution: Linux builds use `cargo zigbuild` on the host (zig 0.17.0, cargo-zigbuild 0.24.0) instead of `rust:1.99.0-alpine` containers. The Docker VM had 3.8 GB free.
+- User decision during execution ("open pr"): the PR opens before the live `/deploy` dev run. The four steps that need that run (`live-dev-release`, `sign-guard`, `install-dev-release`, `prod-dry`, covering AC-6 to AC-9) moved out of the ledger to **Deferred live verification** below. Their checks are kept verbatim, to run after the user types `/deploy --env dev --tag v8.4.1-dev.1 --change-log "…"`. Until then AC-6 to AC-9 are unproven.
+
+## Deferred live verification
+
+Run each check after the live dev run, in order. Each must exit 0.
+
+### live-dev-release (AC-7)
+
+A user-typed /deploy --env dev --tag v8.4.1-dev.1 publishes the prerelease and leaves latest and the tap alone.
+
+```bash
+env -u GH_TOKEN gh release view v8.4.1-dev.1 --repo Falconiere/toolu --json isPrerelease,isDraft,assets,body | jq -e --rawfile notes target/deploy/v8.4.1-dev.1/notes.md '.isPrerelease and (.isDraft | not) and ([.assets[].name] | sort) == ["SHA256SUMS", "SHA256SUMS.minisig", "toolu-darwin-amd64.tar.gz", "toolu-darwin-arm64.tar.gz", "toolu-linux-amd64.tar.gz", "toolu-linux-arm64.tar.gz"] and (.body | rtrimstr("\n")) == ($notes | rtrimstr("\n"))' && test "$(env -u GH_TOKEN gh release view --repo Falconiere/toolu --json tagName --jq .tagName)" = v8.4.0 && env -u GH_TOKEN gh api repos/Falconiere/homebrew-tap/contents/Formula/toolu.rb --jq .content | base64 -d | grep -qF 'download/v8.4.0/'
+```
+
+### sign-guard (AC-6)
+
+The skill's step-6 signature check refuses a throwaway-key signature and accepts the release key's.
+
+```bash
+d=target/deploy/v8.4.1-dev.1/dist && w=$(mktemp -d) && key=$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh) && minisign -G -W -p "$w/t.pub" -s "$w/t.key" >/dev/null && cp "$d/SHA256SUMS" "$w/SHA256SUMS" && minisign -S -s "$w/t.key" -m "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -t 'toolu v8.4.1-dev.1' >/dev/null && ! minisign -Vm "$w/SHA256SUMS" -x "$w/SHA256SUMS.minisig" -P "$key" >/dev/null 2>&1 && minisign -Vm "$d/SHA256SUMS" -x "$d/SHA256SUMS.minisig" -P "$key" | grep -qxF 'Trusted comment: toolu v8.4.1-dev.1' && grep -qF 'minisign -Vm' .claude/skills/deploy/SKILL.md
+```
+
+### install-dev-release (AC-3, AC-8)
+
+The published prerelease installs through install.sh, the Linux archives run in Alpine, and the new-key fixture is accepted.
+
+```bash
+tmp=$(mktemp -d) && bash install.sh --version v8.4.1-dev.1 --install-dir "$tmp/bin" && test "$("$tmp/bin/toolu" --version)" = 'toolu 8.4.1' && env -u GH_TOKEN gh release download v8.4.1-dev.1 --repo Falconiere/toolu --pattern 'toolu-linux-*.tar.gz' -D "$tmp/dl" && for arch in amd64 arm64; do mkdir "$tmp/$arch" && tar -xzf "$tmp/dl/toolu-linux-$arch.tar.gz" -C "$tmp/$arch" && test "$(docker run --rm --platform linux/$arch -v "$tmp/$arch:/package:ro" --entrypoint /package/toolu alpine:3.20 --version)" = 'toolu 8.4.1' || exit 1; done && python3 -B -m unittest discover -s .github/scripts -p 'test_install_keys.py' -v
+```
+
+### prod-dry (AC-9)
+
+The prod-only formula and relabel query work on real data without writing.
+
+```bash
+d=target/deploy/v8.4.1-dev.1/dist && cargo xtask homebrew-formula v8.4.1-dev.1 "$d/SHA256SUMS" > /private/tmp/toolu-deploy-formula.rb && test "$(grep -c 'sha256 "' /private/tmp/toolu-deploy-formula.rb)" -eq 4 && for h in $(awk '{print $1}' "$d/SHA256SUMS"); do grep -qF "sha256 \"$h\"" /private/tmp/toolu-deploy-formula.rb || exit 1; done && env -u GH_TOKEN gh pr list --repo Falconiere/toolu --state merged --label 'autorelease: pending' --json number,title | jq -e 'type == "array"'
+```
+
