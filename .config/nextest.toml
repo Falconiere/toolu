@@ -15,3 +15,10 @@ threads-required = 'num-test-threads'
 [[profile.default.overrides]]
 filter = 'package(xtask) & binary(/^fixtures_/)'
 threads-required = 'num-test-threads'
+
+# This doctor case bounds its own run at 2 s. It failed in the container gate at
+# the start of the run, when every instrumented test binary loads at once (10.4 s),
+# and it fails on a slow target filesystem; alone it takes about 1 s.
+[[profile.default.overrides]]
+filter = 'test(=doctor_does_not_wait_for_a_descendant_holding_protocol_output_open)'
+threads-required = 'num-test-threads'
