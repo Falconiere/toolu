@@ -26,6 +26,10 @@ fn repo(commits: usize) -> (tempfile::TempDir, String) {
     git(dir.path(), &["add", "."]);
     git(dir.path(), &["commit", "-qm", &format!("commit {n}")]);
   }
+  git(
+    dir.path(),
+    &["update-ref", "refs/remotes/origin/main", "HEAD"],
+  );
   let head = git(dir.path(), &["rev-parse", "HEAD"]);
   (dir, head)
 }
@@ -74,6 +78,19 @@ fn tag_tap_and_release_writes_without_a_receipt_are_blocked() {
     "git push --tags".to_owned(),
     "git push origin \"$TAG\"".to_owned(),
     "git push origin 'unterminated".to_owned(),
+    "gh \"$(printf release)\" create v1".to_owned(),
+    "gh $SUB create v1 # release".to_owned(),
+    "git push origin --mirror".to_owned(),
+    "git push origin tags/v8.4.2".to_owned(),
+    "git push origin tag v8.4.2".to_owned(),
+    "git -c push.followTags=true push".to_owned(),
+    "cd \"$W/tap\" && git push".to_owned(),
+    "(cd tap; git push)".to_owned(),
+    "git --git-dir=tap/.git push".to_owned(),
+    "GIT_DIR=tap/.git git push".to_owned(),
+    "gh release delete-asset v1 foo".to_owned(),
+    "gh issue edit 639 --add-label \"autorelease: tagged\"".to_owned(),
+    "gh pr edit 639 --add-label \"$L\"".to_owned(),
   ] {
     assert!(
       decide(dir.path(), &payload(&command)).is_err(),
@@ -151,7 +168,10 @@ fn skill_frontmatter_declares_the_blocking_guard_hook() {
   assert_eq!(matter["disable-model-invocation"], true);
   let entries = matter["hooks"]["PreToolUse"].as_array().unwrap();
   assert_eq!(entries.len(), 1, "{entries:?}");
-  assert_eq!(entries[0]["matcher"], "Bash");
+  assert_eq!(
+    entries[0]["matcher"],
+    "Bash|Write|Edit|MultiEdit|NotebookEdit"
+  );
   let hooks = entries[0]["hooks"].as_array().unwrap();
   assert_eq!(hooks.len(), 1, "{hooks:?}");
   assert_eq!(hooks[0]["type"], "command");
@@ -172,5 +192,135 @@ fn skill_step_3_runs_deploy_gate_without_a_waiver() {
       !skill.contains(waiver),
       "the skill still offers a waiver: {waiver}"
     );
+  }
+}
+
+/// The skill's command prelude with a real tag, as the agent runs it.
+fn prelude() -> String {
+  skill_block("Start every command with this prelude").replace("<tag>", "v8.4.2")
+}
+
+#[test]
+fn step_2_preflight_behind_the_prelude_passes_without_a_receipt() {
+  let (dir, _) = repo(1);
+  for check in [
+    "python3 .github/scripts/release_native.py verify-tag \"$TAG\"",
+    "git ls-remote --exit-code --tags origin \"refs/tags/$TAG\"",
+  ] {
+    let command = format!("{}{check}", prelude());
+    assert_eq!(decide(dir.path(), &payload(&command)), Ok(()), "{command}");
+  }
+}
+
+#[test]
+fn a_block_names_the_publishing_command_not_the_prelude() {
+  let (dir, _) = repo(1);
+  let command = format!("{}{}", prelude(), skill_block("8. **Publish.**"));
+  let reason = decide(dir.path(), &payload(&command)).unwrap_err();
+  assert!(
+    reason.contains("blocked `git push origin \"refs/tags/$TAG\"`"),
+    "{reason}"
+  );
+}
+
+#[test]
+fn writing_the_receipt_is_blocked_even_beside_a_valid_one() {
+  let (dir, head) = repo(1);
+  receipt(dir.path(), &format!("{{\"commit\":\"{head}\"}}"));
+  let path = dir.path().join(RECEIPT);
+  for tool in ["Write", "Edit", "MultiEdit"] {
+    let write = serde_json::json!({ "tool_name": tool, "tool_input": { "file_path": path } });
+    let reason = decide(dir.path(), &write.to_string()).unwrap_err();
+    assert!(
+      reason.contains("only cargo xtask deploy-gate writes"),
+      "{tool}: {reason}"
+    );
+  }
+  let bash = format!("echo '{{\"commit\":\"{head}\"}}' > target/deploy/gate.json");
+  assert!(decide(dir.path(), &payload(&bash)).is_err());
+  let other = serde_json::json!({ "tool_name": "Edit", "tool_input": { "file_path": dir.path().join("file") } });
+  assert_eq!(decide(dir.path(), &other.to_string()), Ok(()));
+}
+
+#[test]
+fn a_gated_head_that_is_not_origin_main_is_blocked() {
+  let (dir, head) = repo(2);
+  git(
+    dir.path(),
+    &["update-ref", "refs/remotes/origin/main", "HEAD~1"],
+  );
+  receipt(dir.path(), &format!("{{\"commit\":\"{head}\"}}"));
+  let reason = decide(dir.path(), &payload("git push origin \"refs/tags/$TAG\"")).unwrap_err();
+  assert!(reason.contains("is not origin/main"), "{reason}");
+}
+
+#[test]
+fn tagging_a_commit_other_than_head_is_blocked_even_with_a_receipt() {
+  let (dir, head) = repo(1);
+  receipt(dir.path(), &format!("{{\"commit\":\"{head}\"}}"));
+  for command in [
+    "git tag -a v8.4.2 HEAD~3 -m x",
+    "git tag -a \"$TAG\" -m \"toolu $TAG\" \"$C\"",
+  ] {
+    let reason = decide(dir.path(), &payload(command)).unwrap_err();
+    assert!(reason.contains("must point at HEAD"), "{command}: {reason}");
+  }
+  for command in [
+    "git tag -a \"$TAG\" -m \"toolu $TAG\"",
+    "git tag -d v0.0.1",
+    "git tag -l 'v8*'",
+  ] {
+    assert_eq!(decide(dir.path(), &payload(command)), Ok(()), "{command}");
+  }
+}
+
+#[test]
+fn a_configured_push_follow_tags_makes_a_branch_push_publishing() {
+  let (dir, _) = repo(1);
+  git(dir.path(), &["config", "push.followTags", "true"]);
+  assert!(decide(dir.path(), &payload("git push -u origin deploy-gates")).is_err());
+}
+
+/// Run the skill's exact hook command with `payload` on stdin and no cargo on
+/// `PATH`, as on a checkout where xtask cannot run.
+fn hook_without_cargo(payload: &str) -> std::process::ExitStatus {
+  use std::io::Write as _;
+  let matter = frontmatter();
+  let command = matter["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
+    .as_str()
+    .unwrap()
+    .to_owned();
+  let home = tempfile::tempdir().unwrap();
+  let mut child = std::process::Command::new("/bin/sh")
+    .args(["-c", &command])
+    .env_clear()
+    .env("PATH", "/usr/bin:/bin")
+    .env("HOME", home.path())
+    .env("CLAUDE_PROJECT_DIR", home.path())
+    .stdin(std::process::Stdio::piped())
+    .stderr(std::process::Stdio::null())
+    .spawn()
+    .unwrap();
+  child
+    .stdin
+    .take()
+    .unwrap()
+    .write_all(payload.as_bytes())
+    .unwrap();
+  child.wait().unwrap()
+}
+
+#[test]
+fn skill_hook_skips_the_guard_for_unrelated_calls_and_fails_closed_otherwise() {
+  assert!(hook_without_cargo(&payload("git switch main")).success());
+  let write = serde_json::json!({ "tool_name": "Write", "tool_input": { "file_path": "/w/notes.md", "content": "hi" } });
+  assert!(hook_without_cargo(&write.to_string()).success());
+  for blocked in [
+    payload("git push origin \"refs/tags/$TAG\""),
+    payload("gh release create v1"),
+    payload("git tag -a v1 HEAD~1"),
+    serde_json::json!({ "tool_name": "Edit", "tool_input": { "file_path": "/w/target/deploy/gate.json" } }).to_string(),
+  ] {
+    assert!(!hook_without_cargo(&blocked).success(), "{blocked}");
   }
 }

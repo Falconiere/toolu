@@ -14,15 +14,17 @@ use crate::{Verdict, output};
 /// The image the gate runs in, rebuilt from [`DOCKERFILE`] on every run (layer-cached).
 const IMAGE: &str = "toolu-deploy-gate";
 
-/// The `verify` job's tools at `release-native.yml`'s pins; a test keeps them equal.
+/// The `verify` job's tools at `release-native.yml`'s pins (a test keeps them equal), plus
+/// the runner-image tools the tests run for real: `npx` (the golden `bunx` shim), `jq`, `gh`.
 /// Non-root uid 501 and `/src` avoid the permission and `/work` traps of a root gate.
 pub(crate) const DOCKERFILE: &str = r#"ARG TOOLCHAIN
-FROM node:22-bookworm-slim AS node
-FROM rust:${TOOLCHAIN}-bookworm
+FROM node:22-trixie-slim AS node
+FROM rust:${TOOLCHAIN}-trixie
 ARG TOOLCHAIN
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
+RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh && rm -rf /var/lib/apt/lists/* \
+ && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
  && rustup toolchain install "$TOOLCHAIN" --profile minimal -c rustfmt,clippy,llvm-tools \
  && cargo install --locked cargo-deny@0.20.2 cargo-machete@0.9.2 cargo-llvm-cov@0.9.1 cargo-nextest@0.9.146 \
@@ -34,13 +36,14 @@ USER dev
 "#;
 
 /// Clone the bundle on stdin into `$SRC` with `origin/main`, and refuse any
-/// `HEAD` other than `$EXPECTED`.
+/// `HEAD` other than `$EXPECTED`, naming both.
 pub(crate) const CLONE: &str = r#"B=$(mktemp)
 cat > "$B"
 git clone -q "$B" "$SRC"
 cd "$SRC"
 git fetch -q "$B" refs/remotes/origin/main:refs/remotes/origin/main
-test "$(git rev-parse HEAD)" = "$EXPECTED"
+head=$(git rev-parse HEAD)
+test "$head" = "$EXPECTED" || { echo "deploy-gate: the bundled HEAD is $head, not $EXPECTED" >&2; exit 1; }
 "#;
 
 /// The `verify` job itself, run in `$SRC` after [`CLONE`].
@@ -59,34 +62,12 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     }
     _ => {}
   }
-  let head = preconditions(root)?;
-  docker(
-    Command::new("docker")
-      .args(["build", "-t", IMAGE, "--build-arg"])
-      .arg(format!("TOOLCHAIN={}", channel(root)?))
-      .arg("-"),
-    Stdio::piped(),
-    Some(DOCKERFILE),
-  )
-  .and_then(|status| exited(status, "docker build"))?;
-  let bundle = std::fs::File::open(bundle(root)?).map_err(|err| format!("deploy-gate: {err}"))?;
-  let status = docker(
-    Command::new("docker")
-      .args([
-        "run",
-        "--rm",
-        "-i",
-        "--init",
-        "-e",
-        "SRC=/src",
-        "-e",
-        "NEXTEST_TEST_THREADS=1",
-      ])
-      .args(["-e", &format!("EXPECTED={head}"), IMAGE, "sh", "-euc"])
-      .arg(format!("{CLONE}{SCRIPT}")),
-    Stdio::from(bundle),
-    None,
-  )?;
+  preconditions(root)?;
+  // Bundle before the long image build, so a HEAD that moves meanwhile is not gated.
+  let (bundle, head) = bundle(root)?;
+  let image = build(root)?;
+  let bundle = std::fs::File::open(bundle).map_err(|err| format!("deploy-gate: {err}"))?;
+  let status = with_input(&mut container(&image, &head), Stdio::from(bundle), None)?;
   if !status.success() {
     output::error(&format!("deploy-gate: container gate failed ({status})"));
     return Ok(Verdict::Findings);
@@ -97,8 +78,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   Ok(Verdict::Clean)
 }
 
-/// The `HEAD` to gate: the worktree must be clean and `origin/main` known.
-fn preconditions(root: &Path) -> Result<String, String> {
+/// The worktree must be clean and `origin/main` known.
+fn preconditions(root: &Path) -> Result<(), String> {
   if !git(root, &["status", "--porcelain"])?.trim().is_empty() {
     return Err("deploy-gate: the worktree is dirty; commit first".to_owned());
   }
@@ -106,10 +87,10 @@ fn preconditions(root: &Path) -> Result<String, String> {
     root,
     &["rev-parse", "-q", "--verify", "refs/remotes/origin/main"],
   )
+  .map(drop)
   .map_err(|err| {
     format!("deploy-gate: refs/remotes/origin/main is missing; run git fetch origin main ({err})")
-  })?;
-  Ok(git(root, &["rev-parse", "HEAD"])?.trim().to_owned())
+  })
 }
 
 /// The `channel` of `rust-toolchain.toml`.
@@ -127,11 +108,12 @@ pub(crate) fn channel(root: &Path) -> Result<String, String> {
     .ok_or_else(|| format!("deploy-gate: {} has no toolchain.channel", path.display()))
 }
 
-/// Bundle `HEAD` and `origin/main` into `target/deploy/head.bundle`.
-pub(crate) fn bundle(root: &Path) -> Result<PathBuf, String> {
-  let path = root.join("target/deploy/head.bundle");
+/// Bundle `HEAD` and `origin/main` into `target/deploy/head.bundle`; the path and
+/// the bundled `HEAD`.
+pub(crate) fn bundle(root: &Path) -> Result<(PathBuf, String), String> {
   let dir = root.join("target/deploy");
   std::fs::create_dir_all(&dir).map_err(|err| format!("deploy-gate: {}: {err}", dir.display()))?;
+  let path = dir.join("head.bundle");
   let file = path
     .to_str()
     .ok_or("deploy-gate: the bundle path is not UTF-8")?;
@@ -146,29 +128,76 @@ pub(crate) fn bundle(root: &Path) -> Result<PathBuf, String> {
       "refs/remotes/origin/main",
     ],
   )?;
-  Ok(path)
+  let heads = git(root, &["bundle", "list-heads", file, "HEAD"])?;
+  let head = heads
+    .split_whitespace()
+    .next()
+    .ok_or("deploy-gate: the bundle has no HEAD")?
+    .to_owned();
+  Ok((path, head))
 }
 
-/// Run `command` with `stdin`, writing `input` to it when given; output is inherited.
-fn docker(command: &mut Command, stdin: Stdio, input: Option<&str>) -> Result<ExitStatus, String> {
-  let mut child = command
-    .stdin(stdin)
-    .spawn()
-    .map_err(|err| format!("deploy-gate: cannot run docker: {err}"))?;
-  if let (Some(text), Some(mut pipe)) = (input, child.stdin.take()) {
-    std::io::Write::write_all(&mut pipe, text.as_bytes())
-      .map_err(|err| format!("deploy-gate: cannot write to docker: {err}"))?;
+/// Build the image for the root's channel and return its ID, which the run uses
+/// rather than the shared tag another worktree may move.
+fn build(root: &Path) -> Result<String, String> {
+  let id_file = root.join("target/deploy/image.id");
+  let status = with_input(
+    &mut build_command(&channel(root)?, &id_file),
+    Stdio::piped(),
+    Some(DOCKERFILE),
+  )?;
+  if !status.success() {
+    return Err(format!("deploy-gate: docker build failed ({status})"));
   }
-  child
-    .wait()
-    .map_err(|err| format!("deploy-gate: docker: {err}"))
+  std::fs::read_to_string(&id_file)
+    .map(|id| id.trim().to_owned())
+    .map_err(|err| format!("deploy-gate: {}: {err}", id_file.display()))
 }
 
-fn exited(status: ExitStatus, what: &str) -> Result<(), String> {
-  if status.success() {
-    Ok(())
-  } else {
-    Err(format!("deploy-gate: {what} failed ({status})"))
+/// `docker build` of [`DOCKERFILE`] on stdin for `channel`, writing the image ID to `id_file`.
+pub(crate) fn build_command(channel: &str, id_file: &Path) -> Command {
+  let mut command = Command::new("docker");
+  command
+    .args(["build", "-t", &format!("{IMAGE}:{channel}"), "--build-arg"])
+    .arg(format!("TOOLCHAIN={channel}"))
+    .arg("--iidfile")
+    .arg(id_file)
+    .arg("-");
+  command
+}
+
+/// `docker run` of the gate in `image` for `head`, with CI's 4 runner CPUs and
+/// nextest threads, so timing-sensitive tests see what CI sees.
+pub(crate) fn container(image: &str, head: &str) -> Command {
+  let mut command = Command::new("docker");
+  command
+    .args(["run", "--rm", "-i", "--init", "--cpus", "4"])
+    .args(["-e", "SRC=/src", "-e", "NEXTEST_TEST_THREADS=4", "-e"])
+    .arg(format!("EXPECTED={head}"))
+    .args([image, "sh", "-euc"])
+    .arg(format!("{CLONE}{SCRIPT}"));
+  command
+}
+
+/// Run `command` with `stdin`, writing `input` to it when given; output is
+/// inherited. A child that exits before reading its input reports its own status.
+pub(crate) fn with_input(
+  command: &mut Command,
+  stdin: Stdio,
+  input: Option<&str>,
+) -> Result<ExitStatus, String> {
+  let mut child = command.stdin(stdin).spawn().map_err(|err| {
+    let program = command.get_program().to_string_lossy();
+    format!("deploy-gate: cannot run {program}: {err}")
+  })?;
+  let written = match (input, child.stdin.take()) {
+    (Some(text), Some(mut pipe)) => std::io::Write::write_all(&mut pipe, text.as_bytes()),
+    _ => Ok(()),
+  };
+  let status = child.wait().map_err(|err| format!("deploy-gate: {err}"))?;
+  match written {
+    Err(err) if status.success() => Err(format!("deploy-gate: cannot write the input: {err}")),
+    _ => Ok(status),
   }
 }
 

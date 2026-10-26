@@ -1,23 +1,9 @@
 use std::path::Path;
-use std::process::Command;
 
 use super::{run, verdict};
 use crate::Verdict;
 use crate::options::Options;
-
-fn git(root: &Path, args: &[&str]) {
-  let output = Command::new("git")
-    .arg("-C")
-    .arg(root)
-    .args(args)
-    .output()
-    .unwrap();
-  assert!(
-    output.status.success(),
-    "{}",
-    String::from_utf8_lossy(&output.stderr)
-  );
-}
+use crate::tests::git;
 
 fn write(root: &Path, rel: &str, text: &str) {
   std::fs::create_dir_all(root.join(rel).parent().unwrap()).unwrap();

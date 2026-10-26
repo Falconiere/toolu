@@ -1,30 +1,11 @@
 use std::path::Path;
-use std::process::Command;
 
 use serde_json::Value;
 
 use super::{TREE, run};
 use crate::Verdict;
 use crate::options::Options;
-
-fn git(root: &Path, args: &[&str]) {
-  let ok = Command::new("git")
-    .arg("-C")
-    .arg(root)
-    .args([
-      "-c",
-      "user.name=t",
-      "-c",
-      "user.email=t@t",
-      "-c",
-      "commit.gpgsign=false",
-    ])
-    .args(args)
-    .status()
-    .unwrap()
-    .success();
-  assert!(ok, "git {args:?}");
-}
+use crate::tests::git;
 
 /// The repository's real command tree.
 fn real() -> String {

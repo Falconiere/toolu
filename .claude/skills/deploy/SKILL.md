@@ -5,10 +5,10 @@ argument-hint: --env prod --tag <tag> --change-log "<notes>"
 disable-model-invocation: true
 hooks:
   PreToolUse:
-    - matcher: Bash
+    - matcher: Bash|Write|Edit|MultiEdit|NotebookEdit
       hooks:
         - type: command
-          command: 'cd "$CLAUDE_PROJECT_DIR" && PATH="$HOME/.cargo/bin:$PATH" cargo xtask deploy-guard'
+          command: 'p=$(cat); case "$p" in *push*|*release*|*gate.json*|*[Ee]dit*|*tag*) printf %s "$p" | (cd "$CLAUDE_PROJECT_DIR" && PATH="$HOME/.cargo/bin:$PATH" cargo xtask deploy-guard);; esac'
           timeout: 300
           onFailure: block
 ---
@@ -19,7 +19,7 @@ Arguments: $ARGUMENTS
 
 This is the local stand-in for `release-native.yml` and `release-homebrew.yml` (see `docs/releases/native.md`). Typing `/deploy` with these arguments authorizes every step below, including the public writes in steps 8 and 9. Work through the steps in order. After each command, check the stated result. On any other result, stop: report the step number and the shortest decisive output line, and run nothing further.
 
-The `PreToolUse` hook above runs `cargo xtask deploy-guard` before every Bash command for the rest of the session. It blocks tag pushes, release writes, the tap push, and the release-PR relabel unless `target/deploy/gate.json` names the clean `HEAD` that step 3 gated. A block is a failed step: stop and report it, and never work around it.
+The `PreToolUse` hook above stays registered for the rest of the session. For every Bash or file-tool call that mentions a push, a release, an edit, a tag or the receipt, it runs `cargo xtask deploy-guard`; other calls never build xtask, so a later checkout cannot lock the session out. The guard blocks tag pushes, release writes, pushes from another repository (the tap), and the release-PR relabel unless `target/deploy/gate.json` names the clean `HEAD` that step 3 gated and `HEAD` equals `origin/main`. It also blocks any write to the receipt and any tag on a commit other than `HEAD`. A block is a failed step: stop and report it, and never work around it.
 
 Never print, echo, or write `TOOLU_MINISIGN_SECRET_KEY` to a file. It only reaches `minisign` through process substitution.
 
