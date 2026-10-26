@@ -124,7 +124,8 @@ fn line_change(line: &str) -> bool {
     && !line.starts_with("--- ")
 }
 
-fn git(root: &Path, args: &[&str]) -> Result<String, String> {
+/// Run `git -C root args`; its stdout, or an error naming the exit and stderr.
+pub(crate) fn git(root: &Path, args: &[&str]) -> Result<String, String> {
   let output = Command::new("git")
     .arg("-C")
     .arg(root)

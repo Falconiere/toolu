@@ -104,6 +104,18 @@
     },
     {
       "kind": "xtask-task",
+      "id": "deploy-gate",
+      "pass": "crates/xtask/src/tests/deploy_gate_test.rs::the_clone_stage_checks_out_head_with_origin_main_and_refuses_another_sha",
+      "fail": "crates/xtask/src/tests/deploy_gate_test.rs::a_dirty_tree_is_refused_and_the_old_receipt_is_gone"
+    },
+    {
+      "kind": "xtask-task",
+      "id": "deploy-guard",
+      "pass": "crates/xtask/tests/deploy_guard.rs::an_ordinary_command_exits_0_with_no_output",
+      "fail": "crates/xtask/tests/deploy_guard.rs::a_tag_push_without_a_receipt_exits_2_naming_the_receipt"
+    },
+    {
+      "kind": "xtask-task",
       "id": "context-budget",
       "pass": "crates/xtask/src/tests/context_budget_test.rs::an_under_budget_doc_passes",
       "fail": "crates/xtask/src/tests/context_budget_test.rs::an_over_budget_skill_exits_1"
