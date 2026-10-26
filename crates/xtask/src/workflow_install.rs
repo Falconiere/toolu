@@ -54,9 +54,14 @@ fn signing(native: &Value, digest: &str, found: &mut Findings) {
       && at(native, secret) == &Value::Bool(true),
     "release-native.yml must sign SHA256SUMS with the release key and verify the install.sh key",
   );
+  let upload = runs(at(native, &["jobs", "upload"]));
   found.need(
-    runs(at(native, &["jobs", "upload"])).contains("dist/SHA256SUMS.minisig"),
+    upload.contains("dist/SHA256SUMS.minisig"),
     "release-native.yml must upload SHA256SUMS.minisig",
+  );
+  found.need(
+    upload.contains("dist/install.sh"),
+    "release-native.yml must upload install.sh, which get.toolu.sh serves from the latest release",
   );
 }
 

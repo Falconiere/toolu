@@ -63,7 +63,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    done
    ```
 
-6. **Package and sign.** The result must be exactly four archives, and the last command must print `Trusted comment: toolu $TAG`:
+6. **Package and sign.** The result must be exactly four archives plus `install.sh`, which get.toolu.sh serves from the latest release. The last command must print `Trusted comment: toolu $TAG`:
 
    ```bash
    rm -rf "$D" && mkdir -p "$D" &&
@@ -72,6 +72,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    python3 .github/scripts/release_native.py package linux arm64 target/aarch64-unknown-linux-musl/release/toolu "$D" &&
    python3 .github/scripts/release_native.py package linux amd64 target/x86_64-unknown-linux-musl/release/toolu "$D" &&
    (cd "$D" && shasum -a 256 -- *.tar.gz > SHA256SUMS) &&
+   cp install.sh "$D/install.sh" &&
    minisign -S -s <(infisical secrets get TOOLU_MINISIGN_SECRET_KEY --plain --silent --projectId "$INFISICAL_PROJECT_ID" --env prod) \
      -m "$D/SHA256SUMS" -x "$D/SHA256SUMS.minisig" -t "toolu $TAG" &&
    minisign -Vm "$D/SHA256SUMS" -x "$D/SHA256SUMS.minisig" -P "$(sed -n 's/^TOOLU_PUBLIC_KEY="\(.*\)"$/\1/p' install.sh)"
@@ -95,7 +96,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    ```bash
    git tag -a "$TAG" -m "toolu $TAG" && git push origin "refs/tags/$TAG" &&
    gh release create "$TAG" --verify-tag --draft --title "$TAG" --notes-file "$W/notes.md" &&
-   gh release upload "$TAG" "$D"/toolu-*.tar.gz "$D/SHA256SUMS" "$D/SHA256SUMS.minisig" &&
+   gh release upload "$TAG" "$D"/toolu-*.tar.gz "$D/SHA256SUMS" "$D/SHA256SUMS.minisig" "$D/install.sh" &&
    rm -rf "$W/roundtrip" && gh release download "$TAG" -D "$W/roundtrip" &&
    for f in "$D"/*; do cmp "$f" "$W/roundtrip/${f##*/}" || exit 1; done &&
    gh release edit "$TAG" --draft=false
@@ -116,7 +117,11 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    [ -z "$pr" ] || gh pr edit "$pr" --repo Falconiere/toolu --remove-label "autorelease: pending" --add-label "autorelease: tagged"
    ```
 
-10. **Verify the install.** `bash install.sh --version "$TAG" --install-dir "$W/bin"` must exit 0, and `"$W/bin/toolu" --version` must print `toolu <workspace version>`. Then `gh release view --json tagName --jq .tagName` must print `$TAG`.
+10. **Verify the install.** `bash install.sh --version "$TAG" --install-dir "$W/bin"` must exit 0, and `"$W/bin/toolu" --version` must print `toolu <workspace version>`. Then `gh release view --json tagName --jq .tagName` must print `$TAG`. Both served installers must be byte-identical to `install.sh`:
+   - `curl -fsSL https://github.com/Falconiere/toolu/releases/latest/download/install.sh | cmp - install.sh`
+   - `curl -fsSL https://get.toolu.sh/pkg/toolu/install | cmp - install.sh`
+
+   A mismatch on the second means the get.toolu.sh worker does not redirect to the release asset yet. Report it, because the curl one-liner may refuse this release.
 
 11. **Report.** Give the release URL (`gh release view "$TAG" --json url --jq .url`), the tagged commit, the tap commit, and the relabeled PR. Then name the gaps compared with CI: no SBOM and no build provenance attestation.
 

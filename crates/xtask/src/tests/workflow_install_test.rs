@@ -10,6 +10,7 @@ fn without_install_sh_and_workflows_every_channel_check_fails() {
   for line in [
     "install.sh must pin the minisign linux archive digest",
     "release-native.yml must upload SHA256SUMS.minisig",
+    "release-native.yml must upload install.sh, which get.toolu.sh serves from the latest release",
     "release-please.yml must pass the Homebrew App secrets explicitly",
     "release-homebrew.yml must mint a token scoped to homebrew-tap",
   ] {

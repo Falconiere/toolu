@@ -161,6 +161,8 @@ jobs:
           done
           (cd dist && shasum -a 256 -- *.tar.gz > SHA256SUMS)
           test "$(find dist -maxdepth 1 -name '*.tar.gz' | wc -l)" -eq 4
+          # get.toolu.sh redirects to the latest release's install.sh asset.
+          cp install.sh dist/install.sh
       # install.sh refuses a SHA256SUMS without this signature. The verifier is
       # the minisign 0.11 archive install.sh pins, checked by the same digest,
       # and the signature must verify against the key install.sh embeds.
@@ -230,7 +232,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           TAG: ${{ inputs.tag }}
-        run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/SHA256SUMS.minisig dist/toolu.spdx.json --clobber
+        run: gh release upload "$TAG" dist/toolu-*.tar.gz dist/SHA256SUMS dist/SHA256SUMS.minisig dist/toolu.spdx.json dist/install.sh --clobber
       # finalize smoke-tests the artifact, not the draft, which its read-only
       # token cannot see; this proves the draft holds exactly those bytes.
       - name: Verify the draft holds the packaged bytes
