@@ -10,7 +10,7 @@ toolu is a Rust plugin marketplace for Claude Code, Codex, and Muse Code. Its ho
 2. Keep first-party hooks, skills, and agent commands native. Do not add TypeScript, Bun, JavaScript bundles, or handwritten shell wrappers. Generated Muse resolvers, the root `install.sh`, and the dependency-free deprecation notice at `tools/toolu-cli/npm/cli.js` are deliberate exceptions. The notice prints the native install commands and exits 69. See [runtime](docs/runtime.md) and [testing](docs/testing.md).
 3. Test behavior with the real binary, Git, and host CLIs. Use the shared JSON cases in `fixtures/` when changing captured behavior. Do not use mocking crates or ignored tests. Put Rust unit tests in a sibling `tests/<module>_test.rs`, wired from the module; put black-box tests in the crate's `tests/`.
 4. Run focused checks while editing and `cargo xtask gate` before pushing. Fix every gate failure; do not add suppressions or exemptions. See [Rust quality rules](docs/rust-quality-bar.md) and the root `Cargo.toml` lints. The gate requires cargo-deny, cargo-machete, cargo-llvm-cov, cargo-nextest, ast-grep, Node, and `npm ci` for jscpd.
-5. Use Conventional Commits. Release versions and tags come only from release-please; do not bump or tag them manually. See [releases](docs/releases/native.md).
+5. Use Conventional Commits. Release versions and tags come only from release-please; do not bump or tag them manually. The one exception: while GitHub Actions is unavailable, a user who types `/deploy` (`.claude/skills/deploy/SKILL.md`) has the agent tag and publish the version release-please already set. See [releases](docs/releases/native.md).
 
 ## Architecture and ownership
 
