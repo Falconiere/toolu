@@ -1,6 +1,8 @@
 //! Muse lifecycle output through the real `toolu` binary.
 
-use std::io::{self, Write as _};
+#[path = "helpers/feed.rs"]
+mod feed;
+use std::io;
 use std::process::{Command, Output, Stdio};
 
 use serde_json::Value;
@@ -20,11 +22,7 @@ fn hook(root: &std::path::Path, name: &str, path: &str, payload: &str) -> io::Re
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
     .spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or_else(|| io::Error::other("missing hook stdin"))?
-    .write_all(payload.as_bytes())?;
+  feed::feed(child.stdin.take(), payload.as_bytes())?;
   child.wait_with_output()
 }
 

@@ -268,7 +268,7 @@ fn watch(body: &str) -> (std::process::Child, std::process::ChildStdin) {
 
 #[test]
 fn the_watched_gate_stops_when_its_host_closes_stdin() {
-  let (mut child, pipe) = watch("sleep 5");
+  let (mut child, pipe) = watch("sleep 5 >/dev/null 2>&1");
   std::thread::sleep(std::time::Duration::from_millis(300));
   let started = std::time::Instant::now();
   drop(pipe);
