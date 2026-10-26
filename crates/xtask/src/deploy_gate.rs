@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 
 use crate::ci_diff::git;
-use crate::deploy_guard::RECEIPT;
+use crate::deploy_guard::{RECEIPT, SNAPSHOT};
 use crate::options::Options;
 use crate::{Verdict, output};
 
@@ -59,8 +59,12 @@ head=$(git rev-parse HEAD)
 test "$head" = "$EXPECTED" || { echo "deploy-gate: the bundled HEAD is $head, not $EXPECTED" >&2; exit 1; }
 "#;
 
-/// The `verify` job itself, run in `$SRC` after [`CLONE`].
-pub(crate) const SCRIPT: &str = r"npm ci --ignore-scripts
+/// The `verify` job itself, run in `$SRC` after [`CLONE`]. The cached target keeps only
+/// dependency builds, as CI's rust-cache does: workspace artifacts are cleaned first.
+pub(crate) const SCRIPT: &str = r"cargo clean --workspace --quiet
+cargo clean --workspace --release --quiet
+cargo llvm-cov clean --workspace
+npm ci --ignore-scripts
 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
 cargo xtask gate
 ";
@@ -78,6 +82,7 @@ pub(crate) fn watched(body: &str) -> String {
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let root = options.root.as_path();
   let receipt = root.join(RECEIPT);
+  snapshot(root)?;
   match std::fs::remove_file(&receipt) {
     Err(err) if err.kind() != std::io::ErrorKind::NotFound => {
       return Err(format!("deploy-gate: cannot remove {RECEIPT}: {err}"));
@@ -100,6 +105,22 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     .map_err(|err| format!("deploy-gate: cannot write {RECEIPT}: {err}"))?;
   output::say(&format!("deploy-gate: ok {head}, receipt {RECEIPT}"));
   Ok(Verdict::Clean)
+}
+
+/// Copy this binary to [`SNAPSHOT`], which the skill's hook runs from then on: a
+/// later checkout or a build failure cannot stop the guard. Renamed into place, so
+/// the hook never runs a half-written file.
+fn snapshot(root: &Path) -> Result<(), String> {
+  let target = root.join(SNAPSHOT);
+  let partial = target.with_extension("partial");
+  let failed =
+    |err: std::io::Error| format!("deploy-gate: cannot snapshot the guard to {SNAPSHOT}: {err}");
+  if let Some(dir) = target.parent() {
+    std::fs::create_dir_all(dir).map_err(failed)?;
+  }
+  let exe = std::env::current_exe().map_err(failed)?;
+  std::fs::copy(exe, &partial).map_err(failed)?;
+  std::fs::rename(&partial, &target).map_err(failed)
 }
 
 /// The worktree must be clean and `origin/main` known.

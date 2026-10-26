@@ -5,7 +5,7 @@ use super::{
   CACHES, CLONE, DOCKERFILE, SCRIPT, build_command, bundle, channel, container, run, watched,
   with_input,
 };
-use crate::deploy_guard::RECEIPT;
+use crate::deploy_guard::{RECEIPT, SNAPSHOT};
 use crate::options::Options;
 use crate::tests::git;
 
@@ -15,7 +15,8 @@ const ROOT: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
 fn repo() -> (tempfile::TempDir, String) {
   let dir = tempfile::tempdir().unwrap();
   git(dir.path(), &["init", "-q"]);
-  std::fs::write(dir.path().join(".gitignore"), "target/\n").unwrap();
+  // As in this repository: the receipt and the guard snapshot are ignored.
+  std::fs::write(dir.path().join(".gitignore"), "target/\n.claude/tmp/\n").unwrap();
   std::fs::copy(
     format!("{ROOT}/rust-toolchain.toml"),
     dir.path().join("rust-toolchain.toml"),
@@ -60,6 +61,9 @@ fn a_missing_origin_main_is_refused_and_the_old_receipt_is_gone() {
   let error = run(&options(dir.path())).unwrap_err();
   assert!(error.contains("refs/remotes/origin/main"), "{error}");
   assert!(!dir.path().join(RECEIPT).exists());
+  // The guard is snapshotted first, so the hook can run it even when the gate refuses.
+  let snapshot = std::fs::metadata(dir.path().join(SNAPSHOT)).unwrap();
+  assert!(std::os::unix::fs::PermissionsExt::mode(&snapshot.permissions()) & 0o111 != 0);
 }
 
 #[test]
@@ -285,4 +289,11 @@ fn the_watched_gate_exits_with_the_gate_status_while_its_host_lives() {
     drop(pipe);
     assert_eq!(status.code(), Some(code), "{body}");
   }
+}
+
+#[test]
+fn the_script_cleans_workspace_artifacts_before_the_verify_job() {
+  let clean = SCRIPT.find("cargo llvm-cov clean --workspace").unwrap();
+  assert!(SCRIPT.find("cargo clean --workspace --quiet").unwrap() < clean);
+  assert!(clean < SCRIPT.find("npm ci --ignore-scripts").unwrap());
 }

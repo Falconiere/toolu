@@ -8,7 +8,7 @@ hooks:
     - matcher: Bash|Write|Edit|MultiEdit|NotebookEdit
       hooks:
         - type: command
-          command: 'p=$(cat); case "$p" in *push*|*release*|*gate.json*|*[Ee]dit*|*tag*) printf %s "$p" | (cd "$CLAUDE_PROJECT_DIR" && PATH="$HOME/.cargo/bin:$PATH" cargo xtask deploy-guard);; esac'
+          command: 'G="$CLAUDE_PROJECT_DIR/.claude/tmp/deploy-guard"; if [ -x "$G" ]; then "$G" deploy-guard --root "$CLAUDE_PROJECT_DIR"; else cd "$CLAUDE_PROJECT_DIR" && PATH="$HOME/.cargo/bin:$PATH" cargo xtask deploy-guard; fi'
           timeout: 300
           onFailure: block
 ---
@@ -19,7 +19,7 @@ Arguments: $ARGUMENTS
 
 This is the local stand-in for `release-native.yml` and `release-homebrew.yml` (see `docs/releases/native.md`). Typing `/deploy` with these arguments authorizes every step below, including the public writes in steps 8 and 9. Work through the steps in order. After each command, check the stated result. On any other result, stop: report the step number and the shortest decisive output line, and run nothing further.
 
-The `PreToolUse` hook above stays registered for the rest of the session. For every Bash or file-tool call that mentions a push, a release, an edit, a tag or the receipt, it runs `cargo xtask deploy-guard`; other calls never build xtask, so a later checkout cannot lock the session out. The guard blocks tag pushes, release writes, pushes from another repository (the tap), and the release-PR relabel unless `target/deploy/gate.json` names the clean `HEAD` that step 3 gated and `HEAD` equals `origin/main`. It also blocks any write to the receipt and any tag on a commit other than `HEAD`. A block is a failed step: stop and report it, and never work around it.
+The `PreToolUse` hook above stays registered for the rest of the session. It runs the guard on every Bash and file-tool call. Step 3 snapshots the guard binary to `.claude/tmp/deploy-guard`, and from then on the hook runs that binary directly, so a later checkout or a broken build cannot lock the session out; before the snapshot exists it runs `cargo xtask deploy-guard`. The guard blocks tag pushes, release writes, pushes from another repository (the tap), and the release-PR relabel unless `target/deploy/gate.json` names the clean `HEAD` that step 3 gated and `HEAD` equals `origin/main`. It also blocks any write to the receipt or the snapshot and any tag on a commit other than `HEAD`. A block is a failed step: stop and report it, and never work around it.
 
 Never print, echo, or write `TOOLU_MINISIGN_SECRET_KEY` to a file. It only reaches `minisign` through process substitution.
 

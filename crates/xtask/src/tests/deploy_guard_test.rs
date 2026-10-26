@@ -179,6 +179,12 @@ fn skill_frontmatter_declares_the_blocking_guard_hook() {
   let command = hooks[0]["command"].as_str().unwrap();
   assert!(command.contains("cargo xtask deploy-guard"), "{command}");
   assert!(command.contains("$HOME/.cargo/bin"), "{command}");
+  for part in [
+    ".claude/tmp/deploy-guard",
+    "deploy-guard --root \"$CLAUDE_PROJECT_DIR\"",
+  ] {
+    assert!(command.contains(part), "{part} in {command}");
+  }
 }
 
 #[test]
@@ -281,46 +287,32 @@ fn a_configured_push_follow_tags_makes_a_branch_push_publishing() {
   assert!(decide(dir.path(), &payload("git push -u origin deploy-gates")).is_err());
 }
 
-/// Run the skill's exact hook command with `payload` on stdin and no cargo on
-/// `PATH`, as on a checkout where xtask cannot run.
-fn hook_without_cargo(payload: &str) -> std::process::ExitStatus {
-  use std::io::Write as _;
-  let matter = frontmatter();
-  let command = matter["hooks"]["PreToolUse"][0]["hooks"][0]["command"]
-    .as_str()
-    .unwrap()
-    .to_owned();
-  let home = tempfile::tempdir().unwrap();
-  let mut child = std::process::Command::new("/bin/sh")
-    .args(["-c", &command])
-    .env_clear()
-    .env("PATH", "/usr/bin:/bin")
-    .env("HOME", home.path())
-    .env("CLAUDE_PROJECT_DIR", home.path())
-    .stdin(std::process::Stdio::piped())
-    .stderr(std::process::Stdio::null())
-    .spawn()
-    .unwrap();
-  child
-    .stdin
-    .take()
-    .unwrap()
-    .write_all(payload.as_bytes())
-    .unwrap();
-  child.wait().unwrap()
+#[test]
+fn file_tools_cannot_write_the_receipt_or_the_snapshot_under_any_spelling() {
+  let (dir, _) = repo(1);
+  let root = dir.path().display();
+  for path in [
+    format!("{root}/target/deploy/GATE.JSON"),
+    format!("{root}/target/deploy/../deploy/gate.json"),
+    format!("{root}/target/./deploy/gate.json"),
+    format!("{root}/.claude/tmp/deploy-guard"),
+  ] {
+    let write = serde_json::json!({ "tool_name": "Write", "tool_input": { "file_path": path } });
+    assert!(
+      decide(dir.path(), &write.to_string()).is_err(),
+      "allowed: {path}"
+    );
+  }
 }
 
 #[test]
-fn skill_hook_skips_the_guard_for_unrelated_calls_and_fails_closed_otherwise() {
-  assert!(hook_without_cargo(&payload("git switch main")).success());
-  let write = serde_json::json!({ "tool_name": "Write", "tool_input": { "file_path": "/w/notes.md", "content": "hi" } });
-  assert!(hook_without_cargo(&write.to_string()).success());
-  for blocked in [
-    payload("git push origin \"refs/tags/$TAG\""),
-    payload("gh release create v1"),
-    payload("git tag -a v1 HEAD~1"),
-    serde_json::json!({ "tool_name": "Edit", "tool_input": { "file_path": "/w/target/deploy/gate.json" } }).to_string(),
+fn reading_or_naming_the_receipt_is_not_a_write() {
+  let (dir, _) = repo(1);
+  for command in [
+    "cat target/deploy/gate.json",
+    "rg gate.json crates",
+    "git commit -m \"guard gate.json writes\"",
   ] {
-    assert!(!hook_without_cargo(&blocked).success(), "{blocked}");
+    assert_eq!(decide(dir.path(), &payload(command)), Ok(()), "{command}");
   }
 }

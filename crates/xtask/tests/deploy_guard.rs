@@ -56,3 +56,70 @@ fn a_tag_push_without_a_receipt_exits_2_naming_the_receipt() {
     "{output:?}"
   );
 }
+
+/// The skill's hook command, from the real frontmatter.
+fn hook_command() -> Result<String, String> {
+  let skill = std::fs::read_to_string(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../.claude/skills/deploy/SKILL.md"
+  ))
+  .map_err(|err| err.to_string())?;
+  let (_, rest) = skill.split_once("---\n").ok_or("no frontmatter")?;
+  let (yaml, _) = rest.split_once("\n---\n").ok_or("no frontmatter end")?;
+  let matter: serde_json::Value = serde_saphyr::from_str(yaml).map_err(|err| err.to_string())?;
+  matter
+    .pointer("/hooks/PreToolUse/0/hooks/0/command")
+    .and_then(serde_json::Value::as_str)
+    .map(str::to_owned)
+    .ok_or_else(|| "no hook command".to_owned())
+}
+
+/// Run the hook command for a project at `project` with no cargo on `PATH`, as
+/// on a checkout where `cargo xtask deploy-guard` cannot run.
+fn hook(project: &std::path::Path, stdin: &str) -> Result<Output, String> {
+  let mut child = Command::new("/bin/sh")
+    .args(["-c", &hook_command()?])
+    .env_clear()
+    .env("PATH", "/usr/bin:/bin")
+    .env("HOME", project)
+    .env("CLAUDE_PROJECT_DIR", project)
+    .stdin(Stdio::piped())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
+    .map_err(|err| err.to_string())?;
+  child
+    .stdin
+    .take()
+    .ok_or("no stdin pipe")?
+    .write_all(stdin.as_bytes())
+    .map_err(|err| err.to_string())?;
+  child.wait_with_output().map_err(|err| err.to_string())
+}
+
+#[test]
+fn the_hook_runs_the_snapshot_without_cargo_and_fails_closed_without_either() {
+  let project = tempfile::tempdir().unwrap();
+  let tag_push =
+    r#"{"tool_name":"Bash","tool_input":{"command":"git push origin refs/tags/v9.9.9"}}"#;
+  assert_ne!(
+    hook(project.path(), tag_push).unwrap().status.code(),
+    Some(0)
+  );
+  let snapshot = project.path().join(".claude/tmp/deploy-guard");
+  std::fs::create_dir_all(snapshot.parent().unwrap()).unwrap();
+  std::fs::copy(env!("CARGO_BIN_EXE_xtask"), &snapshot).unwrap();
+  for allowed in [
+    r#"{"tool_name":"Bash","tool_input":{"command":"git switch main"}}"#,
+    r#"{"tool_name":"Edit","permission_mode":"acceptEdits","tool_input":{"file_path":"/w/src/lib.rs"}}"#,
+  ] {
+    let output = hook(project.path(), allowed).unwrap();
+    assert_eq!(output.status.code(), Some(0), "{allowed}: {output:?}");
+  }
+  let output = hook(project.path(), tag_push).unwrap();
+  assert_eq!(output.status.code(), Some(2), "{output:?}");
+  assert!(
+    String::from_utf8_lossy(&output.stderr).contains("no gate receipt"),
+    "{output:?}"
+  );
+}
