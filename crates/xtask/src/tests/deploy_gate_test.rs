@@ -2,7 +2,7 @@ use std::path::Path;
 use std::process::{Command, Stdio};
 
 use super::{
-  CLONE, DOCKERFILE, SCRIPT, build_command, bundle, channel, container, run, with_input,
+  CLONE, DOCKERFILE, SCRIPT, build_command, bundle, channel, container, run, watched, with_input,
 };
 use crate::deploy_guard::RECEIPT;
 use crate::options::Options;
@@ -100,6 +100,10 @@ fn clone(bundle: &Path, expected: &str) -> (std::process::Output, tempfile::Temp
     .args(["-euc", CLONE])
     .env("SRC", parent.path().join("src"))
     .env("EXPECTED", expected)
+    .env(
+      "BUNDLE_BYTES",
+      std::fs::metadata(bundle).unwrap().len().to_string(),
+    )
     .stdin(Stdio::from(std::fs::File::open(bundle).unwrap()))
     .output()
     .unwrap();
@@ -179,11 +183,12 @@ fn the_build_passes_the_channel_that_the_dockerfile_installs() {
 #[test]
 fn the_container_runs_the_built_image_with_ci_runner_cpus() {
   let head = "a".repeat(40);
-  let run = args(&container("sha256:feed", &head));
+  let run = args(&container("sha256:feed", &head, 1234));
   for pair in [
     ["--cpus", "4"],
     ["-e", "NEXTEST_TEST_THREADS=4"],
     ["-e", &format!("EXPECTED={head}")],
+    ["-e", "BUNDLE_BYTES=1234"],
   ] {
     assert!(
       run.windows(2).any(|window| window == pair),
@@ -191,6 +196,12 @@ fn the_container_runs_the_built_image_with_ci_runner_cpus() {
     );
   }
   assert!(run.contains(&"sha256:feed".to_owned()), "{run:?}");
+  assert!(
+    run
+      .last()
+      .is_some_and(|script| script.contains("kill -TERM $$")),
+    "{run:?}"
+  );
 }
 
 #[test]
@@ -198,9 +209,56 @@ fn a_child_that_exits_before_reading_its_input_reports_its_own_status() {
   let input = "x".repeat(1 << 20);
   let status = with_input(
     Command::new("sh").args(["-c", "exit 3"]),
-    Stdio::piped(),
-    Some(&input),
+    &mut input.as_bytes(),
+    false,
   )
   .unwrap();
   assert_eq!(status.code(), Some(3));
+}
+
+#[test]
+fn a_held_open_pipe_still_returns_the_status_of_a_child_that_never_sees_eof() {
+  let status = with_input(
+    Command::new("sh").args(["-c", "head -c 3 >/dev/null; exit 4"]),
+    &mut "abc".as_bytes(),
+    true,
+  )
+  .unwrap();
+  assert_eq!(status.code(), Some(4));
+}
+
+/// Start `watched(body)` under `sh -eu` with a stdin pipe this test holds.
+fn watch(body: &str) -> (std::process::Child, std::process::ChildStdin) {
+  let mut child = Command::new("sh")
+    .args(["-euc", &watched(body)])
+    .stdin(Stdio::piped())
+    .spawn()
+    .unwrap();
+  let pipe = child.stdin.take().unwrap();
+  (child, pipe)
+}
+
+#[test]
+fn the_watched_gate_stops_when_its_host_closes_stdin() {
+  let (mut child, pipe) = watch("sleep 5");
+  std::thread::sleep(std::time::Duration::from_millis(300));
+  let started = std::time::Instant::now();
+  drop(pipe);
+  let status = child.wait().unwrap();
+  assert!(
+    started.elapsed() < std::time::Duration::from_secs(3),
+    "{:?}",
+    started.elapsed()
+  );
+  assert!(!status.success(), "{status}");
+}
+
+#[test]
+fn the_watched_gate_exits_with_the_gate_status_while_its_host_lives() {
+  for (body, code) in [("exit 3", 3), ("true", 0)] {
+    let (mut child, pipe) = watch(body);
+    let status = child.wait().unwrap();
+    drop(pipe);
+    assert_eq!(status.code(), Some(code), "{body}");
+  }
 }

@@ -3,6 +3,7 @@
 //! in a clean Linux container fed a bundle of `HEAD`. A pass writes the receipt
 //! `deploy-guard` requires before any tag, tap or release is published.
 
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 
@@ -35,10 +36,10 @@ RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh && rm
 USER dev
 "#;
 
-/// Clone the bundle on stdin into `$SRC` with `origin/main`, and refuse any
-/// `HEAD` other than `$EXPECTED`, naming both.
+/// Clone the bundle (the first `$BUNDLE_BYTES` bytes of stdin) into `$SRC` with
+/// `origin/main`, and refuse any `HEAD` other than `$EXPECTED`, naming both.
 pub(crate) const CLONE: &str = r#"B=$(mktemp)
-cat > "$B"
+head -c "$BUNDLE_BYTES" > "$B"
 git clone -q "$B" "$SRC"
 cd "$SRC"
 git fetch -q "$B" refs/remotes/origin/main:refs/remotes/origin/main
@@ -51,6 +52,15 @@ pub(crate) const SCRIPT: &str = r"npm ci --ignore-scripts
 python3 -B -m unittest discover -s .github/scripts -p 'test_*.py'
 cargo xtask gate
 ";
+
+/// Run `body` in the background and stop the shell when stdin closes. The host
+/// holds stdin open until the container exits, so its death, even by `SIGKILL`,
+/// stops the container instead of orphaning it.
+pub(crate) fn watched(body: &str) -> String {
+  format!(
+    "exec 3<&0\n( {body} ) &\ngate=$!\n{{ cat >/dev/null <&3; kill -TERM $$; }} &\nwait \"$gate\"\n"
+  )
+}
 
 /// Run the container gate for the clean `HEAD` of `options.root`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
@@ -66,8 +76,10 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   // Bundle before the long image build, so a HEAD that moves meanwhile is not gated.
   let (bundle, head) = bundle(root)?;
   let image = build(root)?;
-  let bundle = std::fs::File::open(bundle).map_err(|err| format!("deploy-gate: {err}"))?;
-  let status = with_input(&mut container(&image, &head), Stdio::from(bundle), None)?;
+  let opened = |err: std::io::Error| format!("deploy-gate: {}: {err}", bundle.display());
+  let bytes = std::fs::metadata(&bundle).map_err(opened)?.len();
+  let mut input = std::fs::File::open(&bundle).map_err(opened)?;
+  let status = with_input(&mut container(&image, &head, bytes), &mut input, true)?;
   if !status.success() {
     output::error(&format!("deploy-gate: container gate failed ({status})"));
     return Ok(Verdict::Findings);
@@ -143,8 +155,8 @@ fn build(root: &Path) -> Result<String, String> {
   let id_file = root.join("target/deploy/image.id");
   let status = with_input(
     &mut build_command(&channel(root)?, &id_file),
-    Stdio::piped(),
-    Some(DOCKERFILE),
+    &mut DOCKERFILE.as_bytes(),
+    false,
   )?;
   if !status.success() {
     return Err(format!("deploy-gate: docker build failed ({status})"));
@@ -166,35 +178,43 @@ pub(crate) fn build_command(channel: &str, id_file: &Path) -> Command {
   command
 }
 
-/// `docker run` of the gate in `image` for `head`, with CI's 4 runner CPUs and
-/// nextest threads, so timing-sensitive tests see what CI sees.
-pub(crate) fn container(image: &str, head: &str) -> Command {
+/// `docker run` of the gate in `image` for `head` from a `bytes`-long bundle on stdin,
+/// with CI's 4 runner CPUs and nextest threads, so timing-sensitive tests see what CI sees.
+pub(crate) fn container(image: &str, head: &str, bytes: u64) -> Command {
   let mut command = Command::new("docker");
   command
     .args(["run", "--rm", "-i", "--init", "--cpus", "4"])
     .args(["-e", "SRC=/src", "-e", "NEXTEST_TEST_THREADS=4", "-e"])
     .arg(format!("EXPECTED={head}"))
+    .arg("-e")
+    .arg(format!("BUNDLE_BYTES={bytes}"))
     .args([image, "sh", "-euc"])
-    .arg(format!("{CLONE}{SCRIPT}"));
+    .arg(format!("{CLONE}{}", watched(SCRIPT)));
   command
 }
 
-/// Run `command` with `stdin`, writing `input` to it when given; output is
-/// inherited. A child that exits before reading its input reports its own status.
+/// Run `command` with `input` piped to its stdin; output is inherited. With
+/// `hold_open` the pipe stays open until the child exits, so the child sees EOF
+/// only if this process dies. A child that exits before reading all of its input
+/// reports its own status.
 pub(crate) fn with_input(
   command: &mut Command,
-  stdin: Stdio,
-  input: Option<&str>,
+  input: &mut dyn Read,
+  hold_open: bool,
 ) -> Result<ExitStatus, String> {
-  let mut child = command.stdin(stdin).spawn().map_err(|err| {
+  let mut child = command.stdin(Stdio::piped()).spawn().map_err(|err| {
     let program = command.get_program().to_string_lossy();
     format!("deploy-gate: cannot run {program}: {err}")
   })?;
-  let written = match (input, child.stdin.take()) {
-    (Some(text), Some(mut pipe)) => std::io::Write::write_all(&mut pipe, text.as_bytes()),
-    _ => Ok(()),
-  };
+  let mut pipe = child.stdin.take();
+  let written = pipe
+    .as_mut()
+    .map_or(Ok(0), |pipe| std::io::copy(input, pipe));
+  if !hold_open {
+    drop(pipe.take());
+  }
   let status = child.wait().map_err(|err| format!("deploy-gate: {err}"))?;
+  drop(pipe);
   match written {
     Err(err) if status.success() => Err(format!("deploy-gate: cannot write the input: {err}")),
     _ => Ok(status),
