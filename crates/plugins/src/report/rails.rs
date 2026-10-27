@@ -1,6 +1,7 @@
 //! The terminal form of a verb's report: a section per host, a glyph per
-//! plugin, and one closing line with the counts and the time taken. The plain
-//! form in `report.rs` stays what pipes and scripts read.
+//! plugin, the hosts left out with why, and one closing line with the counts
+//! and the time taken. The plain form in `report.rs` stays what pipes and
+//! scripts read.
 
 use std::time::Duration;
 
