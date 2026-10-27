@@ -1,7 +1,27 @@
 use toolu_protocol::exit::Exit;
 
-use super::{ErrorKind, Report, Severity, Verdict};
+use super::{Coverage, ErrorKind, Finding, Omitted, Report, Severity, Side, Source, Usage};
 use crate::budget::Effort;
+
+fn finding(severity: Severity) -> Finding {
+  Finding {
+    id: "f1".to_owned(),
+    path: "src/lib.rs".to_owned(),
+    line: 3,
+    end_line: 3,
+    side: Side::New,
+    severity,
+    category: "correctness".to_owned(),
+    source: Source::Llm,
+    claim: "claim".to_owned(),
+    quote: "quote".to_owned(),
+    suggestion: None,
+  }
+}
+
+fn reviewed(findings: Vec<Finding>, coverage: Coverage) -> Report {
+  Report::reviewed(Effort::Medium, findings, coverage, Usage::default())
+}
 
 #[test]
 fn medium_and_above_block_and_low_and_nit_advise() {
@@ -18,28 +38,46 @@ fn medium_and_above_block_and_low_and_nit_advise() {
 }
 
 #[test]
-fn the_verdict_maps_to_the_documented_exit() {
-  let mut report = Report::failed(Effort::Auto, ErrorKind::Unconfigured, "why");
-  assert_eq!(
-    (report.exit(), report.verdict.name()),
-    (Exit::Unavailable, "error")
+fn the_verdict_is_computed_from_findings_and_coverage() {
+  let advisory = reviewed(
+    vec![finding(Severity::Low), finding(Severity::Nit)],
+    Coverage::default(),
   );
-  report.verdict = Verdict::Blocked;
   assert_eq!(
-    (report.exit(), report.verdict.name()),
-    (Exit::Blocked, "blocked")
+    (advisory.verdict.name(), advisory.exit()),
+    ("approved", Exit::Success)
   );
-  report.verdict = Verdict::Approved;
+  assert_eq!(advisory.blocking_count(), 0);
+  let blocked = reviewed(
+    vec![finding(Severity::Medium), finding(Severity::Low)],
+    Coverage::default(),
+  );
   assert_eq!(
-    (report.exit(), report.verdict.name()),
-    (Exit::Success, "approved")
+    (blocked.verdict.name(), blocked.exit()),
+    ("blocked", Exit::Blocked)
   );
+  assert_eq!(blocked.blocking_count(), 1);
+  let partial = reviewed(
+    Vec::new(),
+    Coverage {
+      unreviewed: vec![Omitted {
+        path: "src/big.rs".to_owned(),
+        reason: "over budget".to_owned(),
+      }],
+      ..Coverage::default()
+    },
+  );
+  assert_eq!((partial.verdict.name(), partial.error), ("blocked", None));
   assert_eq!(Exit::Blocked.code(), 2);
 }
 
 #[test]
 fn a_failed_report_carries_the_versions_and_its_error() {
   let report = Report::failed(Effort::High, ErrorKind::Outage, "every call failed");
+  assert_eq!(
+    (report.verdict.name(), report.exit()),
+    ("error", Exit::Unavailable)
+  );
   assert_eq!(report.schema_version, super::SCHEMA_VERSION);
   assert_eq!(report.toolu_version, env!("CARGO_PKG_VERSION"));
   assert_eq!(report.blocking_count(), 0);
@@ -49,4 +87,23 @@ fn a_failed_report_carries_the_versions_and_its_error() {
     ("outage", "every call failed")
   );
   assert_eq!(ErrorKind::Unconfigured.name(), "unconfigured");
+}
+
+#[test]
+fn a_non_finite_or_negative_cost_does_not_serialise() {
+  for cost_usd in [f64::NAN, f64::INFINITY, -0.5] {
+    let usage = Usage {
+      cost_usd,
+      ..Usage::default()
+    };
+    let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);
+    let err = serde_json::to_string(&report).unwrap_err();
+    assert!(err.to_string().contains("cost_usd"), "{err}");
+  }
+  let report = reviewed(Vec::new(), Coverage::default());
+  assert!(
+    serde_json::to_string(&report)
+      .unwrap()
+      .contains("\"cost_usd\":0.0")
+  );
 }

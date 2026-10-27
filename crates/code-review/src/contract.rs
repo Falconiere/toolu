@@ -3,7 +3,8 @@
 //! `crates/cli/src/commands.schema.json`. The verdict is computed from validated
 //! findings, never taken from the model; `blocker`, `high` and `medium` block.
 
-use serde::{Deserialize, Serialize};
+use serde::ser::Error as _;
+use serde::{Deserialize, Serialize, Serializer};
 use toolu_protocol::exit::Exit;
 
 use crate::budget::Effort;
@@ -134,10 +135,27 @@ pub struct Usage {
   pub tokens_in: u64,
   /// Completion tokens, reasoning included.
   pub tokens_out: u64,
-  /// Reported cost in US dollars.
+  /// Reported cost in US dollars; a non-finite or negative cost fails serialisation.
+  #[serde(serialize_with = "finite_cost")]
   pub cost_usd: f64,
   /// The model that served the review, when one did.
   pub model: Option<String>,
+}
+
+/// `cost_usd` as a number, or an error: `serde_json` would write NaN as `null`.
+/// Generic over the cost because `serialize_with` hands it over by reference.
+fn finite_cost<S: Serializer, C: Copy + Into<f64>>(
+  cost: &C,
+  serializer: S,
+) -> Result<S::Ok, S::Error> {
+  let cost: f64 = (*cost).into();
+  if cost.is_finite() && cost >= 0.0 {
+    serializer.serialize_f64(cost)
+  } else {
+    Err(S::Error::custom(
+      "cost_usd is not a finite, non-negative number",
+    ))
+  }
 }
 
 /// Why a run could not review.
@@ -176,7 +194,7 @@ pub struct Report {
   pub schema_version: u32,
   /// The `toolu` build that produced it.
   pub toolu_version: String,
-  /// The computed verdict.
+  /// The computed verdict; build reports with `reviewed` or `failed`, never set it.
   pub verdict: Verdict,
   /// The effort level of the run.
   pub effort: Effort,
@@ -191,20 +209,41 @@ pub struct Report {
 }
 
 impl Report {
-  /// A run that could not review: verdict `error`, nothing covered.
-  pub fn failed(effort: Effort, kind: ErrorKind, message: &str) -> Report {
+  /// A reviewed run. The verdict is computed here, never taken from the model:
+  /// `blocked` when a finding blocks or any path went unreviewed, else `approved`.
+  pub fn reviewed(
+    effort: Effort,
+    findings: Vec<Finding>,
+    coverage: Coverage,
+    usage: Usage,
+  ) -> Report {
+    let blocked =
+      findings.iter().any(|finding| finding.severity.blocking()) || !coverage.unreviewed.is_empty();
     Report {
       schema_version: SCHEMA_VERSION,
       toolu_version: env!("CARGO_PKG_VERSION").to_owned(),
-      verdict: Verdict::Error,
+      verdict: if blocked {
+        Verdict::Blocked
+      } else {
+        Verdict::Approved
+      },
       effort,
-      findings: Vec::new(),
-      coverage: Coverage::default(),
-      usage: Usage::default(),
+      findings,
+      coverage,
+      usage,
+      error: None,
+    }
+  }
+
+  /// A run that could not review: verdict `error`, nothing covered.
+  pub fn failed(effort: Effort, kind: ErrorKind, message: &str) -> Report {
+    Report {
+      verdict: Verdict::Error,
       error: Some(ReportError {
         kind,
         message: message.to_owned(),
       }),
+      ..Report::reviewed(effort, Vec::new(), Coverage::default(), Usage::default())
     }
   }
 

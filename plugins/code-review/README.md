@@ -1,6 +1,6 @@
 # code-review
 
-Native code review of the push diff: shaped diff, deterministic pre-pass, a structured OpenRouter review and a Jev judge, returning anchored findings and a computed verdict as a local report. Standalone, no dependencies.
+Native code review of the push diff with OpenRouter and Jev: anchored findings and a computed verdict as a local report. In development: `toolu code-review run` fails closed until the review pipeline lands. Standalone, no dependencies.
 
 ## Install
 
@@ -12,7 +12,7 @@ Native code review of the push diff: shaped diff, deterministic pre-pass, a stru
 
 For Codex: `codex plugin add code-review@toolu`, or `toolu plugins install code-review --host codex`.
 
-This plugin has no hook. In skills, commands and agents, write plain `toolu code-review <verb>`. When the agent command shell cannot resolve plain `toolu`, SessionStart supplies the native binary's absolute path for that session; never put a fixed binary path in static Markdown. See [docs/install.md](../../docs/install.md#agent-command-shell).
+This plugin has no hook. In skills, commands and agents, write plain `toolu code-review <verb>`; never put a fixed binary path in static Markdown. With no SessionStart hook of its own, it relies on plain `toolu` resolving in the agent command shell, or on another installed toolu plugin's SessionStart supplying the native binary's absolute path for that session. See [docs/install.md](../../docs/install.md#agent-command-shell).
 
 Standalone, no dependencies. It needs `git`, which `toolu doctor` checks.
 

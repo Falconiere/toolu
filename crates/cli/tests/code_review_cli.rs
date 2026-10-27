@@ -1,5 +1,6 @@
-//! `toolu code-review`, black-box: the help text is pinned, a bad effort is a
-//! usage error, and `run` fails closed until the review pipeline lands (#661).
+//! `toolu code-review`, black-box: a bad effort is a usage error, and `run` fails
+//! closed until the review pipeline lands (#661). The help text is pinned by the
+//! generated `docs/cli/code-review.md`, which `cargo xtask docs-cli --check` compares.
 
 use std::process::{Command, Output};
 
@@ -7,22 +8,6 @@ fn toolu(args: &[&str]) -> std::io::Result<Output> {
   Command::new(env!("CARGO_BIN_EXE_toolu"))
     .args(args)
     .output()
-}
-
-#[test]
-fn the_help_matches_its_snapshot() {
-  let mut settings = insta::Settings::clone_current();
-  settings.set_snapshot_path("fixtures");
-  settings.set_prepend_module_to_snapshot(false);
-  for (name, args) in [
-    ("code_review_help", &["code-review", "--help"][..]),
-    ("code_review_run_help", &["code-review", "run", "--help"]),
-  ] {
-    let output = toolu(args).unwrap();
-    assert_eq!(output.status.code(), Some(0), "{args:?}");
-    let text = String::from_utf8(output.stdout).unwrap();
-    settings.bind(|| insta::assert_snapshot!(name, text));
-  }
 }
 
 #[test]

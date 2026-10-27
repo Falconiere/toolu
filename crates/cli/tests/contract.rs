@@ -6,6 +6,8 @@
 
 #[path = "helpers/cli.rs"]
 mod cli;
+#[path = "helpers/code_review_schema.rs"]
+mod code_review_schema;
 #[path = "helpers/inventory.rs"]
 mod inventory;
 #[path = "helpers/schema.rs"]

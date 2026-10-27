@@ -131,8 +131,9 @@ impl Effort {
   /// The caps of this level; `auto` budgets as the fallback until Jev picks.
   pub fn budget(self) -> &'static Budget {
     match self {
+      Effort::Auto => Effort::FALLBACK.budget(),
       Effort::Small => &SMALL,
-      Effort::Auto | Effort::Medium => &MEDIUM,
+      Effort::Medium => &MEDIUM,
       Effort::High => &HIGH,
       Effort::Xhigh => &XHIGH,
     }

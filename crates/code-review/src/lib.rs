@@ -30,8 +30,7 @@ use contract::{ErrorKind, Report};
 pub const PLUGIN: &str = "code-review";
 
 /// Why a run fails closed until the pipeline stages land.
-const NOT_BUILT: &str =
-  "the review pipeline is not built yet (#662-#669); nothing was sent and no state was written";
+const NOT_BUILT: &str = "the review pipeline is not built yet (#662-#666, #668, #669); nothing was sent and no state was written";
 
 /// The `toolu code-review` namespace.
 pub fn command() -> clap::Command {

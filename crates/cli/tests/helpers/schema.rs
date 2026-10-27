@@ -12,7 +12,7 @@ fn schema() -> Res<Value> {
 }
 
 /// The errors of `document` against `$defs/<def>`, or against the root without one.
-fn violations(document: &Value, def: Option<&str>) -> Res<Vec<String>> {
+pub(crate) fn violations(document: &Value, def: Option<&str>) -> Res<Vec<String>> {
   let schema = schema()?;
   let schema = match def {
     Some(def) => json!({
@@ -124,26 +124,6 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
     );
     assert_eq!(document["namespace"], name.as_str());
   }
-}
-
-#[test]
-fn the_code_review_report_validates_and_exits_unavailable() {
-  let output = toolu(&["--json", "code-review", "run", "--effort", "high"]).unwrap();
-  assert_eq!(output.status.code(), Some(69));
-  assert_eq!(stderr(&output).unwrap(), "");
-  let document = one_document(&output).unwrap();
-  assert_eq!(
-    violations(&document, Some("codeReview")).unwrap(),
-    Vec::<String>::new()
-  );
-  assert_eq!(
-    (
-      &document["verdict"],
-      &document["effort"],
-      &document["error"]["kind"]
-    ),
-    (&json!("error"), &json!("high"), &json!("unconfigured"))
-  );
 }
 
 /// A `claude` that lists no plugin and accepts every other command, in `<home>/bin`.

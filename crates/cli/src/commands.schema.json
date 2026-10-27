@@ -919,6 +919,27 @@
             }
           ]
         }
+      },
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "error": {
+            "type": "null"
+          }
+        }
       }
     },
     "command": {

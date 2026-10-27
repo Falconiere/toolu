@@ -44,14 +44,37 @@ fn run_without_json_says_why_on_stderr() {
 
 #[test]
 fn a_report_without_an_error_prints_its_verdict_line() {
-  let mut report =
-    super::Report::failed(super::budget::Effort::Small, super::ErrorKind::Outage, "x");
-  report.verdict = super::contract::Verdict::Approved;
-  report.error = None;
+  let report = super::Report::reviewed(
+    super::budget::Effort::Small,
+    Vec::new(),
+    super::contract::Coverage::default(),
+    super::contract::Usage::default(),
+  );
   let outcome = super::present(&report, &Ctx::default());
   assert_eq!(outcome.exit, Exit::Success);
   assert_eq!(
     outcome.stdout.as_deref(),
     Some("code-review: approved, 0 blocking finding(s)")
   );
+}
+
+#[test]
+fn a_report_that_cannot_serialise_fails_under_json() {
+  let usage = super::contract::Usage {
+    cost_usd: f64::NAN,
+    ..super::contract::Usage::default()
+  };
+  let report = super::Report::reviewed(
+    super::budget::Effort::Small,
+    Vec::new(),
+    super::contract::Coverage::default(),
+    usage,
+  );
+  let ctx = Ctx {
+    json: true,
+    ..Ctx::default()
+  };
+  let outcome = super::present(&report, &ctx);
+  assert_eq!((outcome.exit, outcome.stdout), (Exit::Failure, None));
+  assert!(outcome.stderr.unwrap().contains("cost_usd"));
 }

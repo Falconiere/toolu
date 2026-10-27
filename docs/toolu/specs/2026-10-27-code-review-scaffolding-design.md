@@ -25,7 +25,7 @@ Modules:
 
 `toolu code-review run [--base REF] [--path PATH]... [--effort LEVEL]` is the one verb (Jev 0.83 over flags on the bare namespace or a `planned` placeholder). Until the pipeline lands, it fails closed (Jev 0.75): it emits a `Report` with `verdict: "error"`, `error.kind: "unconfigured"` and a message saying the pipeline is not built yet, sends nothing, writes nothing and exits 69.
 
-Schema: a `codeReview` `$def` in `crates/cli/src/commands.schema.json` (the docs copy matches). This reuses the repository convention that every `--json` document validates against its `$def` (`crates/cli/tests/helpers/schema.rs`). Black-box tests validate the binary's document against it, and a crate test validates a full report with findings against it.
+Schema: a `codeReview` `$def` in `crates/cli/src/commands.schema.json` (the docs copy matches). This reuses the repository convention that every `--json` document validates against its `$def` (`crates/cli/tests/helpers/schema.rs`). `crates/cli/tests/helpers/code_review_schema.rs` validates both the binary's document and full reports built through the contract, using the one existing validator.
 
 Registration points (each from the issue's review additions):
 - Root `Cargo.toml` members, `Cargo.lock` (updated before `cargo xtask docs-cli`, which builds `--locked`), `crates/cli/Cargo.toml` dependency, `folders.json` `crates` entry; `layers.json` unchanged (plugin crate, no new layer).
@@ -67,6 +67,8 @@ Report (`toolu --json code-review run`):
 - Memory records (serde, snake_case, used by #666/#668 and persisted by #669): `PriorFinding {fingerprint: string, id: string, severity, status: "open" | "resolved" | "dismissed"}`, where `fingerprint` is `path + category + normalized text` (normalization owned by #668); `Dismissal {id, reason, by}`; `Pass {diff_sha, verdict, counts: {blocking, advisory}}`. A crate test round-trips each through JSON.
 - `side: "old"`: `line`/`end_line` are old-side line numbers. Use it for removal-only hunks and deleted files (#662's anchor rule). `"new"` is the default.
 - Blocking severities are `blocker`, `high` and `medium` (`Severity::blocking`). `low` and `nit` are advisory.
+- Construction: `Report::reviewed(effort, findings, coverage, usage)` computes the verdict: `blocked` when a finding blocks or any path is unreviewed, otherwise `approved`. `Report::failed(effort, kind, message)` gives verdict `error`. The verdict is never taken from the model.
+- `cost_usd` must be finite and non-negative. Otherwise serialisation fails, and `--json` exits 1 rather than print `null`.
 - Exit: `approved` → 0, `blocked` → 2 (`Exit::Blocked`), `error` → 69 (`Exit::Unavailable`, for both `unconfigured` and `outage`). Bad flags → 64 (clap usage).
 - `error` is `null` unless the verdict is `error`.
 
@@ -79,7 +81,7 @@ Budget constants (`budget.rs`): `RULES_MAX_BYTES = 65_536`, `CHECKLIST_MAX_BYTES
 | high | 32/64 KiB | all + recheck | high | 65_536 | 720 s |
 | xhigh | 64/128 KiB | all + recheck + context | xhigh | 131_072 | 1200 s |
 
-`Effort::Auto` resolves to `medium` for budgeting (`Effort::level`) until #666's selector runs.
+`Effort::Auto` resolves to `medium` for budgeting (`Effort::budget`, through `Effort::FALLBACK`) until #666's selector runs.
 
 ## Failure modes and edge cases
 
@@ -90,17 +92,17 @@ Budget constants (`budget.rs`): `RULES_MAX_BYTES = 65_536`, `CHECKLIST_MAX_BYTES
 
 ## Acceptance criteria
 
-- **AC-1:** `cargo test -p toolu-code-review` passes. The tests check that the crate dir equals `PLUGIN`, the blocking severities, the exit mapping, that the effort table is monotonic, and that the full report serialisation validates against the `codeReview` schema.
+- **AC-1:** `cargo test -p toolu-code-review` passes. The tests check that the crate dir equals `PLUGIN`, the blocking severities, the exit mapping, that the effort table is monotonic, the computed verdict (blocking finding or unreviewed coverage gives `blocked`), the cost guard, and the memory round-trip.
 - **AC-2:** `toolu --json code-review run --effort high` exits 69 and prints one JSON document. That document validates against `$defs/codeReview`, with `verdict: "error"`, `error.kind: "unconfigured"` and `effort: "high"`. Stderr is empty.
 - **AC-3:** `toolu code-review run --effort huge` exits 64.
-- **AC-4:** The `toolu code-review --help` output matches a committed insta snapshot. The `docs/cli/commands.json` contract lists `code-review run` with all five `--effort` values.
+- **AC-4:** The `toolu code-review --help` output matches the committed snapshot `docs/cli/code-review.md`, generated from the binary and compared by `cargo xtask docs-cli --check`. The `docs/cli/commands.json` contract lists `code-review run` with all five `--effort` values.
 - **AC-5:** All registration points are in place, and these pass: `cargo xtask check-hooks`, `check-markdown-cli`, `check-cli-compat`, `packaging`, `context-budget`, the toolu-cli contract tests (13 plugins) and `cargo xtask gate`.
 
 ## Acceptance evidence
 
 - AC-1: `cargo test -p toolu-code-review`. The real input is a hand-built report with blocking and advisory findings and an old-side anchor. Boundaries: `medium` blocks and `low` does not; a missing `suggestion` is omitted.
 - AC-2 and AC-3: `cargo test -p toolu-cli --test code_review_cli` runs the built binary. The boundary is a bad effort value.
-- AC-4: the same test file's insta snapshot, plus `cargo xtask docs-cli` and `cargo xtask check-cli-compat`.
+- AC-4: `cargo xtask docs-cli --check` and `cargo xtask check-cli-compat`. AC-2's full-report schema cases run in `cargo test -p toolu-cli --test contract` (`code_review_schema`).
 - AC-5: `cargo test -p toolu-cli --test contract`, `cargo xtask packaging`, `cargo xtask check-hooks`, `cargo xtask check-markdown-cli`, then `cargo xtask gate` (run in the container, per the local gate notes).
 
 ## Documentation impact
@@ -119,3 +121,21 @@ Budget constants (`budget.rs`): `RULES_MAX_BYTES = 65_536`, `CHECKLIST_MAX_BYTES
 - Coverage (Jev noul 0.10, then 0.23 after fixes). Rounds 1–2 found gaps that are now fixed: an explicit registration list, the doctor row, the SKILLS/context-budget deferral, the `toolu_version` field, and memory field shapes. Jev's last gap pick (hooks, 0.64) is the issue's own conditional item. With no SessionStart line in this PR, the issue states that the hook AC does not apply, so it stays deferred to #669.
 - Config deferral to #666 (Jev 0.73): no `toolu.config.json` schema file exists, and #666 reads the setting.
 - Every AC names a real input, a boundary and a runnable check. The open questions are owned and non-blocking.
+
+## Code review (xhigh, 2026-10-27)
+
+- Fixed:
+  - `$defs/codeReview` now ties `error` to `verdict: error` (if/then/else).
+  - `Effort::Auto` budgets through `Effort::FALLBACK`.
+  - The status-name test is exact.
+  - The README no longer promises a SessionStart path.
+  - `Report::reviewed` computes the verdict (Jev 0.65).
+  - The `cost_usd` guard.
+  - The schema validation moved into the CLI's existing helper, removing the duplicate validator and the `jsonschema` dev-dependency.
+  - The insta help snapshots are dropped, because the generated `docs/cli/code-review.md` is the pinned snapshot (Jev 0.82).
+  - The plugin description now says the pipeline is in development (Jev 0.65).
+  - The issue list in the fail-closed message is exact.
+- Kept:
+  - Outage exits 69, as the issue's exit table and the epic decide (Jev 0.07 for changing it to 75).
+  - The `code-review` name, which the issue mandates.
+  - The `wip:` commit subject, which the squash merge replaces.
