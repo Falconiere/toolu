@@ -215,12 +215,15 @@ pub(crate) fn build_command(channel: &str, id_file: &Path) -> Command {
 }
 
 /// `docker run` of the gate in `image` for `head` from a `bytes`-long bundle on stdin,
-/// with every CPU of the Docker VM, and [`CACHES`] mounted so reruns skip most of
-/// the build. The checkout itself is always fresh.
+/// with [`CACHES`] mounted so reruns skip most of the build; the checkout itself is
+/// always fresh. Builds use every CPU of the Docker VM, but tests run CI's 4
+/// threads: at 8, the VM's disk could not load the instrumented binaries fast
+/// enough, and timing-bound tests (a 1 s doctor probe) failed.
 pub(crate) fn container(image: &str, head: &str, bytes: u64) -> Command {
   let mut command = Command::new("docker");
   command
-    .args(["run", "--rm", "-i", "--init", "-e", "SRC=/src", "-e"])
+    .args(["run", "--rm", "-i", "--init", "-e", "SRC=/src"])
+    .args(["-e", "NEXTEST_TEST_THREADS=4", "-e"])
     .arg(format!("EXPECTED={head}"))
     .arg("-e")
     .arg(format!("BUNDLE_BYTES={bytes}"));

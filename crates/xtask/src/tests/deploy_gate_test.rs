@@ -195,13 +195,17 @@ fn the_build_passes_the_channel_that_the_dockerfile_installs() {
 }
 
 #[test]
-fn the_container_runs_the_built_image_uncapped_with_the_build_caches() {
+fn the_container_runs_the_built_image_with_ci_test_threads_and_the_build_caches() {
   let head = "a".repeat(40);
   let run = args(&container("sha256:feed", &head, 1234));
   assert!(
-    !run
-      .iter()
-      .any(|arg| arg == "--cpus" || arg.contains("TEST_THREADS")),
+    !run.iter().any(|arg| arg == "--cpus"),
+    "builds keep every CPU: {run:?}"
+  );
+  assert!(
+    run
+      .windows(2)
+      .any(|pair| pair == ["-e", "NEXTEST_TEST_THREADS=4"]),
     "{run:?}"
   );
   let mounts: Vec<String> = CACHES

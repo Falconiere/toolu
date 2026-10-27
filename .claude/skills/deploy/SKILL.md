@@ -52,7 +52,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    - `softwareupdate --install-rosetta --agree-to-license`
    - `rustup target add x86_64-apple-darwin aarch64-unknown-linux-musl x86_64-unknown-linux-musl`
 
-3. **Gate.** Run `cargo xtask deploy-gate` with the Bash tool's `run_in_background`, then wait for its completion notice and run nothing else meanwhile. It runs the release-helper unittests and the full `cargo xtask gate` on `HEAD` in a clean `toolu-deploy-gate` container, as CI's `verify` job does; the first run builds the image and takes a long time. It must exit 0 and print `deploy-gate: ok <HEAD>, receipt target/deploy/gate.json`. On any other result, stop and report the failing gate step's shortest decisive line. The gate has no skip and no waiver.
+3. **Gate.** Run `DOCKER_CONTEXT=colima-toolu-gate cargo xtask deploy-gate` with the Bash tool's `run_in_background` (the `toolu-gate` Colima profile has the 8 CPUs the gate needs; start it with `colima start toolu-gate --cpu 8 --memory 8 --disk 60`, then `docker context use colima`), then wait for its completion notice and run nothing else meanwhile. It runs the release-helper unittests and the full `cargo xtask gate` on `HEAD` in a clean `toolu-deploy-gate` container, as CI's `verify` job does; the first run builds the image and takes a long time. It must exit 0 and print `deploy-gate: ok <HEAD>, receipt target/deploy/gate.json`. On any other result, stop and report the failing gate step's shortest decisive line. The gate has no skip and no waiver.
 
 4. **Build Darwin.** Both binaries must build, sign and verify:
 
