@@ -172,3 +172,28 @@ fn status_api_fixture() -> (tempfile::TempDir, Paths, World) {
   world.issues.insert(issue.key.clone(), issue);
   (temp, paths, world)
 }
+
+#[test]
+fn status_api_issue_and_epic_rows_carry_the_agent_status_and_its_time() {
+  let (_temp, paths, mut world) = status_api_fixture();
+  let fresh = route(&world, &paths, "/api/v1/issues/repo-449", 0, &Secrets::none())
+    .expect("worker")
+    .expect("document");
+  assert_eq!(fresh["agent_status"], "unknown");
+  assert_eq!(fresh["agent_status_at"], serde_json::Value::Null);
+  world
+    .issues
+    .get_mut("repo-449")
+    .expect("issue")
+    .set_agent_status("blocked", 1_793_109_584_251);
+  let worker = route(&world, &paths, "/api/v1/issues/repo-449", 0, &Secrets::none())
+    .expect("worker")
+    .expect("document");
+  assert_eq!(worker["agent_status"], "blocked");
+  assert_eq!(worker["agent_status_at"], "2026-10-27T13:59:44.251Z");
+  let board = route(&world, &paths, "/api/v1/epics/repo-402", 0, &Secrets::none())
+    .expect("board")
+    .expect("document");
+  assert_eq!(board["issues"][0]["agent_status"], "blocked");
+  assert_eq!(board["issues"][0]["agent_status_at"], "2026-10-27T13:59:44.251Z");
+}

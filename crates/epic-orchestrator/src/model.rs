@@ -172,6 +172,10 @@ pub(crate) struct Issue {
   pub pane: Option<String>,
   /// Herdr agent name. Defaults to the issue key.
   pub agent: String,
+  /// herdr's last agent status: `idle`, `working`, `blocked`, `done` or `unknown`.
+  pub agent_status: String,
+  /// When `agent_status` last changed, milliseconds; 0 before any change.
+  pub agent_status_at_ms: u64,
   /// Host kind for a cooldown. Empty writes no cooldown.
   pub kind: String,
   /// Status stayed `blocked` since the last change.
@@ -408,6 +412,8 @@ impl Issue {
       worktree: None,
       pane: None,
       agent: key.to_owned(),
+      agent_status: "unknown".to_owned(),
+      agent_status_at_ms: 0,
       kind: String::new(),
       blocked: false,
       scanned_at: None,
@@ -423,6 +429,25 @@ impl Issue {
       queue: crate::queue_fields::QueueState::default(),
       direction: None,
     }
+  }
+
+  /// Store herdr's status `word` (any other word is `unknown`); its time
+  /// moves only when the word changes.
+  pub(crate) fn set_agent_status(&mut self, word: &str, now_ms: u64) {
+    let word = agent_status_word(word);
+    self.queue.agent_working = word == "working";
+    if self.agent_status != word {
+      word.clone_into(&mut self.agent_status);
+      self.agent_status_at_ms = now_ms;
+    }
+  }
+}
+
+/// herdr's agent status `word`, or `unknown` for any other word.
+pub(crate) fn agent_status_word(word: &str) -> &str {
+  match word {
+    "idle" | "working" | "blocked" | "done" => word,
+    _ => "unknown",
   }
 }
 

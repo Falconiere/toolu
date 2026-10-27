@@ -52,6 +52,7 @@ fn the_endpoint_serves_the_cli_document_and_rejects_a_bad_query() {
     addr: "127.0.0.1:0".parse().unwrap(),
     secrets: Secrets::none(),
     peers: Vec::new(),
+    herdr: crate::http_live::Herdr::Off,
   };
   let running = start(
     config,

@@ -53,6 +53,7 @@ fn http_auth_requires_a_bearer_token_on_public_bind() {
       addr: "0.0.0.0:0".parse().expect("address"),
       secrets,
       peers: Vec::new(),
+      herdr: crate::http_live::Herdr::Off,
     },
     Paths::at(temp.path()),
     Arc::new(Mutex::new(World::new(0))),
@@ -93,6 +94,7 @@ fn http_boundary_checks_requests_and_poisoned_world() {
     addr: "127.0.0.1:0".parse().expect("address"),
     secrets: Secrets::none(),
     peers: Vec::new(),
+    herdr: crate::http_live::Herdr::Off,
   };
   let running = start(
     config,
@@ -167,6 +169,7 @@ fn stream_replay_crosses_journal_days_and_honors_last_event_id() {
       addr: "127.0.0.1:0".parse().expect("address"),
       secrets: Secrets::none(),
       peers: Vec::new(),
+      herdr: crate::http_live::Herdr::Off,
     },
     paths,
     Arc::new(Mutex::new(World::new(0))),
@@ -294,6 +297,7 @@ fn live_fixture(
           addr,
           secrets: Secrets::none(),
           peers: Vec::new(),
+          herdr: crate::http_live::Herdr::Off,
         }),
         tick: &(),
         attention: crate::notify::AttentionOptions::default(),

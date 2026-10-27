@@ -235,6 +235,7 @@ fn attention_options_follow_the_epic_attention_settings() {
     addr: "0.0.0.0:7800".parse().expect("addr"),
     secrets: toolu_runtime::config::secrets::Secrets::none(),
     peers: Vec::new(),
+    herdr: crate::http_live::Herdr::Off,
   };
   let options = attention_options(&env(&config), Some(&http)).expect("configured");
   assert_eq!(options.remind_ms, 5 * 60_000);

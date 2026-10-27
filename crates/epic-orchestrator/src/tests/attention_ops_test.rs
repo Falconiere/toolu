@@ -179,6 +179,7 @@ fn live(root: &Path, fixture: &Fixture) -> Live {
       addr,
       secrets,
       peers: Vec::new(),
+      herdr: crate::http_live::Herdr::Off,
     });
     let options = ServeOptions {
       http,

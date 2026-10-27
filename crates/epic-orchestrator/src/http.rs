@@ -28,6 +28,8 @@ pub(crate) struct Config {
   pub addr: SocketAddr,
   pub secrets: Secrets,
   pub peers: Vec<Peer>,
+  /// Where `/api/v1/agents/live` reads herdr.
+  pub herdr: crate::http_live::Herdr,
 }
 
 /// A listener thread and its bound address.
@@ -60,6 +62,9 @@ struct Context {
   overview: OverviewCache,
   metrics: crate::http_metrics::MetricsCache,
   fleet: Arc<FleetCache>,
+  herdr: crate::http_live::Herdr,
+  limiter: crate::http_live::Limiter,
+  live: crate::http_live::Live,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -96,6 +101,9 @@ pub(crate) fn start(
     overview: OverviewCache::new(),
     metrics: crate::http_metrics::MetricsCache::new(),
     fleet,
+    herdr: config.herdr,
+    limiter: crate::http_live::Limiter::default(),
+    live: crate::http_live::Live::default(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running {
@@ -236,6 +244,9 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       close: false,
     };
   }
+  if path == "/api/v1/agents/live" {
+    return live(context);
+  }
   if path == "/api/v1/overview" {
     let Ok(world) = context.world.lock() else {
       return Response::error(500, "status_unavailable");
@@ -274,6 +285,15 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
     &context.secrets,
   );
   json_response(document)
+}
+
+fn live(context: &Context) -> Response {
+  context.live.response(&crate::http_live::Sources {
+    herdr: &context.herdr,
+    limiter: &context.limiter,
+    world: &context.world,
+    secrets: &context.secrets,
+  })
 }
 
 fn events_page(context: &Context, query: &str, request: &Request) -> Response {

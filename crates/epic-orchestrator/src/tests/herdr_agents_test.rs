@@ -42,6 +42,7 @@ impl State {
         json!({
           "name": agent.name, "agent": agent.kind, "pane_id": agent.pane,
           "cwd": agent.cwd.display().to_string(), "agent_status": agent.status,
+          "terminal_title_stripped": agent.title,
           "workspace_id": agent.pane.split(':').next().unwrap_or(""), "terminal_id": agent.pane,
         })
       })
@@ -68,6 +69,7 @@ impl State {
       process: spawn(&cwd, &self.agent_script),
       kind: text(params, "kind"),
       status: "idle".to_owned(),
+      title: name.clone(),
       prompts: Vec::new(),
       name: name.clone(),
       pane,

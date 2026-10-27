@@ -58,9 +58,10 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
       .get("pane_id")
       .and_then(Value::as_str)
       .map(str::to_owned);
-    let working = row.get("agent_status").and_then(Value::as_str) == Some("working");
+    let status = row.get("agent_status").and_then(Value::as_str);
+    let now = engine.world.now_ms;
     if let Some(issue) = engine.world.issues.get_mut(key) {
-      issue.queue.agent_working = working;
+      issue.set_agent_status(status.unwrap_or("unknown"), now);
       if pane.is_some() {
         issue.pane = pane;
       }
@@ -68,8 +69,9 @@ fn bind_or_gone(engine: &mut Engine, key: &str, rows: Option<&Vec<Value>>) {
     return;
   }
   // An agent herdr does not list cannot be working in the worktree.
+  let now = engine.world.now_ms;
   if let Some(issue) = engine.world.issues.get_mut(key) {
-    issue.queue.agent_working = false;
+    issue.set_agent_status("unknown", now);
   }
   if running {
     note_event(&mut engine.world, key, "gone");
@@ -121,8 +123,9 @@ fn status_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Stri
     return Ok(());
   };
   let status = field(line, "agent_status").unwrap_or("unknown");
+  let now = engine.world.now_ms;
   if let Some(issue) = engine.world.issues.get_mut(&key) {
-    issue.queue.agent_working = status == "working";
+    issue.set_agent_status(status, now);
   }
   if status == "working" || (status != "blocked" && scan_done(engine, &key, status)) {
     return on_status(engine, &key, status, "");
@@ -201,6 +204,10 @@ fn outage(engine: &mut Engine) -> Result<(), String> {
     .find(|(_, issue)| issue.stage == "running")
     .map(|(key, _)| key.clone());
   note_herdr(&mut engine.world, false);
+  let now = engine.world.now_ms;
+  for issue in engine.world.issues.values_mut() {
+    issue.set_agent_status("unknown", now);
+  }
   engine.save_watch()?;
   if first && let Some(key) = running {
     push_attention(&mut engine.world, "herdr-error", &key, "herdr unreachable");

@@ -35,6 +35,8 @@ pub(crate) struct Agent {
   pub pane: String,
   pub cwd: PathBuf,
   pub status: String,
+  /// herdr's `terminal_title_stripped`.
+  pub title: String,
   pub prompts: Vec<String>,
   pub process: Child,
 }
