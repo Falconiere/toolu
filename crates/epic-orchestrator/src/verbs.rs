@@ -61,6 +61,7 @@ pub(crate) fn command() -> Command {
         ),
     )
     .subcommand(crate::verbs_token::command())
+    .subcommand(crate::verbs_hosts::command())
     .subcommands(crate::verbs_actions::commands())
     .subcommands(crate::verbs_metrics::commands())
 }
@@ -86,6 +87,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
       crate::service::service(&env)
     }
     Some(("token", args)) => crate::verbs_token::run(args, ctx),
+    Some(("hosts", args)) => crate::verbs_hosts::run(args, &env),
     Some((name, args)) => crate::verbs_actions::run(name, args, ctx, &env)
       .or_else(|| crate::verbs_metrics::run(name, args, ctx, &env))
       .unwrap_or_else(|| failed("toolu epic", &format!("unknown verb {name}"))),

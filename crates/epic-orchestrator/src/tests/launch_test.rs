@@ -86,6 +86,35 @@ fn a_routed_codex_host_gets_bypass_model_effort_and_its_skill_syntax() {
 }
 
 #[test]
+fn a_paused_host_refuses_a_manual_launch_unless_forced() {
+  let rig = Rig::new();
+  let root = rig.tmp.path().join("resources");
+  std::fs::create_dir_all(&root).expect("root");
+  std::fs::write(
+    root.join("state.json"),
+    r#"{"version":1,"leases":[],"cooldowns":{},"paused_hosts":{"codex":{"by":"user","at":5}}}"#,
+  )
+  .expect("state");
+  let refused = dry(&rig, "Falconiere/comemory#255", |flags| {
+    flags.kind = Some("codex".into());
+  })
+  .expect_err("refused");
+  assert_eq!(
+    refused.message,
+    "host codex is paused; resume it or pass --force"
+  );
+  let forced = dry(&rig, "Falconiere/comemory#255", |flags| {
+    flags.kind = Some("codex".into());
+    flags.force = true;
+  })
+  .expect("forced dry");
+  assert!(
+    line(&forced, "herdr agent start comemory-255 --kind codex").is_some(),
+    "{forced}"
+  );
+}
+
+#[test]
 fn safe_keeps_approval_prompts_on() {
   let rig = Rig::new();
   let result = dry(&rig, "Falconiere/comemory#255", |flags| {

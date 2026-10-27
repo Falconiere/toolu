@@ -30,6 +30,7 @@ Commands:
   job       Run a command under the worktree's resource lease
   service   Install the user service unit
   token     Manage the status bearer token
+  hosts     Pause or resume an agent host
   graph     Build an epic's dependency graph and the next launch batch
   route     Route sub-issues to worker hosts, models and efforts
   launch    Launch or resume one sub-issue in its herdr worktree
@@ -374,6 +375,60 @@ Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic hosts`
+
+```text
+Pause or resume an agent host
+
+Usage: toolu epic hosts [OPTIONS] <COMMAND>
+
+Commands:
+  pause   Stop sending new agents to HOST; running workers keep running
+  resume  Return HOST to rotation and clear its usage-limit cooldown
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic hosts pause`
+
+```text
+Stop sending new agents to HOST; running workers keep running
+
+Usage: toolu epic hosts pause [OPTIONS] <HOST>
+
+Arguments:
+  <HOST>  The host: claude, codex, cursor or muse
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic hosts resume`
+
+```text
+Return HOST to rotation and clear its usage-limit cooldown
+
+Usage: toolu epic hosts resume [OPTIONS] <HOST>
+
+Arguments:
+  <HOST>  The host: claude, codex, cursor or muse
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

@@ -81,3 +81,39 @@ fn every_worker_host_has_a_capacity_row_with_its_policy_cap() {
     [("claude", 3), ("codex", 3), ("cursor", 3), ("muse", 1)]
   );
 }
+
+#[test]
+fn a_paused_host_reports_by_and_at_and_an_unpaused_one_reports_nulls() {
+  let temp = tempfile::tempdir().expect("resource root");
+  let paths = Paths::at(temp.path());
+  let now = epoch_millis(parse_iso("2026-10-27T12:00:00Z").expect("time"));
+  write_value(
+    &paths.root.join("state.json"),
+    &json!({
+      "version": 1, "leases": [], "cooldowns": {},
+      "paused_hosts": {"codex": {"by": "web", "at": now - 1_000}}
+    }),
+  )
+  .expect("state");
+  let hosts = Snapshot::open(&paths, now).expect("resources").hosts();
+  let items = hosts["items"].as_array().expect("items");
+  let codex = items
+    .iter()
+    .find(|host| host["host"] == "codex")
+    .expect("codex");
+  assert_eq!(codex["paused"], true);
+  assert_eq!(codex["paused_by"], "web");
+  assert_eq!(
+    codex["paused_at"],
+    json!(toolu_state::time::iso_millis(
+      std::time::UNIX_EPOCH + std::time::Duration::from_millis(now - 1_000)
+    ))
+  );
+  let claude = items
+    .iter()
+    .find(|host| host["host"] == "claude")
+    .expect("claude");
+  assert_eq!(claude["paused"], false);
+  assert_eq!(claude["paused_by"], serde_json::Value::Null);
+  assert_eq!(claude["paused_at"], serde_json::Value::Null);
+}

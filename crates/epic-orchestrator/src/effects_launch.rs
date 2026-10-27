@@ -132,6 +132,11 @@ fn launch_routed(
   issue: &GraphIssue,
   jev: Option<Result<&toolu_jev_client::Jev, String>>,
 ) -> Value {
+  // A relaunch of a running worker whose host is paused waits for the
+  // resume, keeping its saved route and session; it never reroutes.
+  if paused_relaunch(input) {
+    return json!({"outcome": "wait", "note": "host paused"});
+  }
   let gh = (input.reach.gh)(&input.env);
   // `force` below only passes a stale graph status: a first launch still
   // waits while the GitHub budget is under its floor.
@@ -166,6 +171,21 @@ fn launch_routed(
   let mut ctx = Ctx::live(&input.env, &input.paths, gh.as_ref().map_err(Clone::clone));
   let result = launch_issue(graph, issue, &opts, &mut ctx).map(|_document| ());
   outcome_of(result, |name| record_field(input, name))
+}
+
+/// Whether this launch is a non-reroute relaunch of a running worker whose
+/// recorded host is paused in the shared store.
+fn paused_relaunch(input: &LaunchJob) -> bool {
+  if input.reroute || record_field(input, "stage").as_deref() != Some("running") {
+    return false;
+  }
+  let Some(kind) =
+    record_field(input, "kind").and_then(|name| crate::hosts::parse_host_kind(&name))
+  else {
+    return false;
+  };
+  let root = toolu_engine::resources::store::resource_home(&input.env);
+  crate::host_pause::is_paused(&root, kind).unwrap_or(false)
 }
 
 /// The effect's outcome for a launch that `launched` or failed, reading the

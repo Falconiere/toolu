@@ -73,7 +73,10 @@ fn gate(request: &Request, secrets: &Secrets) -> Result<(), Response> {
 
 /// The control-socket request for `op`, signed `by: web`.
 fn socket_request(op: &str, body: &[u8]) -> Result<Value, Response> {
-  if !matches!(op, "pause" | "resume" | "ack" | "answer" | "release") {
+  if !matches!(
+    op,
+    "pause" | "resume" | "ack" | "answer" | "release" | "host-pause" | "host-resume"
+  ) {
     return Err(Response::error(404, "unknown_op"));
   }
   let invalid = || Response::error(400, "invalid_request");
@@ -107,6 +110,13 @@ fn fields(op: &str, body: &Map<String, Value>) -> Option<Vec<(&'static str, Stri
         .and_then(Value::as_str)
         .filter(|text| valid_text(text))?;
       vec![("key", field("key")??), ("text", text.to_owned())]
+    }
+    "host-pause" | "host-resume" => {
+      let host = body
+        .get("host")
+        .and_then(Value::as_str)
+        .and_then(crate::hosts::parse_host_kind)?;
+      vec![("host", host.name().to_owned())]
     }
     _ => vec![("key", field("key")??)],
   })

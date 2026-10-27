@@ -54,6 +54,8 @@ fn operate(
     }
     "pause" => reply_pause(engine, request, &reply, true),
     "resume" => reply_pause(engine, request, &reply, false),
+    "host-pause" => crate::dispatch_hosts::reply_host_pause(engine, request, &reply, true),
+    "host-resume" => crate::dispatch_hosts::reply_host_pause(engine, request, &reply, false),
     "ack" => crate::attention_ops::reply_ack(engine, request, &reply),
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),

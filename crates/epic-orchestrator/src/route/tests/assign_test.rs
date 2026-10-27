@@ -106,6 +106,28 @@ fn a_relaunch_keeps_its_route_and_a_cooling_host_forces_a_move() {
 }
 
 #[test]
+fn a_paused_host_gets_no_new_route_while_another_has_room() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let graph = graph_in(tmp.path());
+  let root = tmp.path().join("resources");
+  std::fs::create_dir_all(&root).expect("root");
+  let state = json!({
+    "version": 1, "leases": [], "cooldowns": {},
+    "paused_hosts": {"codex": {"by": "user", "at": 5}}
+  });
+  std::fs::write(root.join("state.json"), state.to_string()).expect("state");
+  let table = default_table();
+  let opts = RouteOptions {
+    resource_root: Some(root),
+    ..options(&table)
+  };
+  assert_eq!(
+    hosts(&graph, &PAIR, "claude:1,codex:1", 1, &opts),
+    [Some("claude".into()), None]
+  );
+}
+
+#[test]
 fn no_capacity_leaves_the_host_empty_and_cached_routes_consume_slots() {
   let tmp = tempfile::tempdir().expect("temp");
   let graph = graph_in(tmp.path());

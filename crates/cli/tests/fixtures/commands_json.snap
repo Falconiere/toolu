@@ -3543,6 +3543,71 @@ source: crates/cli/tests/helpers/schema.rs
           "placeholder": false
         },
         {
+          "about": "Pause or resume an agent host",
+          "aliases": [],
+          "args": [],
+          "commands": [
+            {
+              "about": "Stop sending new agents to HOST; running workers keep running",
+              "aliases": [],
+              "args": [
+                {
+                  "help": "The host: claude, codex, cursor or muse",
+                  "multiple": false,
+                  "name": "HOST",
+                  "required": true
+                }
+              ],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "pause",
+              "owner": "epic-orchestrator",
+              "path": [
+                "epic",
+                "hosts",
+                "pause"
+              ],
+              "placeholder": false
+            },
+            {
+              "about": "Return HOST to rotation and clear its usage-limit cooldown",
+              "aliases": [],
+              "args": [
+                {
+                  "help": "The host: claude, codex, cursor or muse",
+                  "multiple": false,
+                  "name": "HOST",
+                  "required": true
+                }
+              ],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "resume",
+              "owner": "epic-orchestrator",
+              "path": [
+                "epic",
+                "hosts",
+                "resume"
+              ],
+              "placeholder": false
+            }
+          ],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "hosts",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "hosts"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Build an epic's dependency graph and the next launch batch",
           "aliases": [],
           "args": [
