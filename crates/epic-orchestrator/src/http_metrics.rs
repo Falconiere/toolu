@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime};
 use toolu_runtime::config::secrets::{self, Secrets};
 use toolu_state::time::epoch_millis;
 
-use crate::http_response::Response;
+use crate::http_response::{READ_METHODS, Response};
 use crate::metrics::{self, Query};
 use crate::paths::Paths;
 
@@ -91,6 +91,7 @@ fn ok(body: Vec<u8>) -> Response {
     body,
     head: false,
     close: false,
+    allow: READ_METHODS,
   }
 }
 

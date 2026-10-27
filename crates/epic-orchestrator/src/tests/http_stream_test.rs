@@ -36,6 +36,7 @@ fn poisoned_stream_world_sends_fixed_error() {
     world: &world,
     changed: &changed,
     stop: &stop,
+    allowed: &|| true,
   };
   let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
   let mut client = TcpStream::connect(listener.local_addr().expect("address")).expect("connect");

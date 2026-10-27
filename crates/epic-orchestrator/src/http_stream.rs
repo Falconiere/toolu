@@ -78,6 +78,7 @@ pub(crate) fn head(
       body: Vec::new(),
       head: true,
       close: request.close,
+      allow: crate::http_response::READ_METHODS,
     }
   } else {
     Response::error(400, "bad_cursor")
@@ -95,12 +96,17 @@ pub(crate) struct Feed<'a> {
   pub world: &'a Arc<Mutex<World>>,
   pub changed: &'a Arc<Condvar>,
   pub stop: &'a Arc<AtomicBool>,
+  /// Whether the client may still read; a rotated token ends its stream.
+  pub allowed: &'a dyn Fn() -> bool,
 }
 
 /// Send retained events and then follow the journal until disconnect or stop.
 pub(crate) fn serve(stream: &mut TcpStream, mut cursor: Cursor, feed: &Feed<'_>) {
   let mut heartbeat = Instant::now();
   while !feed.stop.load(Ordering::Relaxed) {
+    if !(feed.allowed)() {
+      return send_unauthorized(stream);
+    }
     let page = match status_events::page(
       &feed.paths.journal_dir(),
       cursor.since,
@@ -161,6 +167,11 @@ fn wait_for_change(stream: &mut TcpStream, feed: &Feed<'_>) -> bool {
     return false;
   }
   true
+}
+
+fn send_unauthorized(stream: &mut TcpStream) {
+  let _sent =
+    stream.write_all(b"event: error\ndata: {\"schema\":1,\"error\":\"unauthorized\"}\n\n");
 }
 
 fn send_status_error(stream: &mut TcpStream) {

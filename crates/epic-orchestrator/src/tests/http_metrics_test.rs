@@ -48,12 +48,7 @@ fn without_clock(mut doc: Value) -> Value {
 fn the_endpoint_serves_the_cli_document_and_rejects_a_bad_query() {
   let root = fixture_root();
   let stop = Arc::new(AtomicBool::new(false));
-  let config = Config {
-    addr: "127.0.0.1:0".parse().unwrap(),
-    secrets: Secrets::none(),
-    peers: Vec::new(),
-    herdr: crate::http_live::Herdr::Off,
-  };
+  let config = Config::new("127.0.0.1:0".parse().unwrap(), Secrets::none(), Vec::new());
   let running = start(
     config,
     Paths::at(root.path()),

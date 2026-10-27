@@ -65,6 +65,57 @@ Observed on 2026-10-27 with herdr 0.9.5 through `herdr agent list` during real s
 | Cursor Agent 2026.10.22 | `idle` → `working` → `done` | `Cursor Agent` until the first prompt, then a task summary ("List Files And Write"). |
 | Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name ("ws-muse") throughout; no task summary. |
 
+## Actions
+
+The engine that serves the page can be controlled from it. Peers are never controlled. `POST /api/v1/actions/{op}` sends one control operation to the engine's state loop, the same way `toolu epic` does over its control socket:
+
+| Op | JSON body | Same as |
+|---|---|---|
+| `pause` | `{}` or `{"epic": KEY}` | `toolu epic pause [EPIC]` |
+| `resume` | `{}` or `{"epic": KEY}` | `toolu epic resume [EPIC]` |
+| `ack` | `{"key": KEY}`, or `{"kind": KIND}` for a keyless item | `toolu epic ack KEY` |
+| `answer` | `{"key": KEY, "text": TEXT}` | `toolu epic answer KEY TEXT` |
+| `release` | `{"key": KEY}` | `toolu epic release KEY` |
+
+`answer` types into agents that run with approval bypass, so every action needs all of the following, even on loopback:
+
+- `Authorization: Bearer <status token>`;
+- an `Origin` equal to `http://` followed by the request's `Host`;
+- `Content-Type: application/json`;
+- a `Content-Length` of at most 16 KiB.
+
+The server sends no CORS headers. The checks run in this order:
+
+| Status | Error | When |
+|---|---|---|
+| `405` | `method_not_allowed` | The method is not `POST`; the response has `Allow: POST`. |
+| `403` | `control_disabled` | No status token is configured. |
+| `401` | `unauthorized` | The token is missing or wrong. |
+| `403` | `foreign_origin` | `Origin` is missing or foreign. |
+| `415` | `unsupported_media_type` | The body is not JSON. |
+| `404` | `unknown_op` | The op is not in the table above. |
+| `400` | `invalid_request` | The body is not an object, or a field is invalid. |
+
+Field rules:
+
+- Keys, epics and kinds match `[A-Za-z0-9._-]{1,128}`.
+- `ack` takes exactly one of `key` or `kind`.
+- `answer` text is 1 to 4,000 characters, with no control characters other than newline and tab.
+
+A `POST` without `Content-Length` is `400`, and a larger body is `413`.
+
+Replies:
+
+- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`) replies `{"ok": true, "delivered": "uncertain", "note": …}` and leaves the attention item open.
+- **`409`:** an engine refusal such as `no live agent for <key>` or `<key> is not held`. The body is `{"schema": 1, "error": <text>}`.
+- **`503 engine_busy`:** the state loop did not answer within 35 s, longer than herdr's 30 s prompt timeout. The server never retries, and the action may still apply later.
+
+Web actions are journaled like CLI actions, with `by=web` in the note. `pause` and `resume` write `action pause` or `action resume` with the note `<epic|all> by=<who>`. So every open dashboard sees the change on `/api/v1/events/stream`.
+
+`toolu epic token url` prints `http://<address>/#token=<token>` for the running engine. The engine writes its bound address to `http.json` under its resource root while it runs. A `0.0.0.0` or `::` bind prints `127.0.0.1`. The token stays in the URL fragment: it never goes on a command line, in a query string or in a log line.
+
+The listener re-reads `toolu/secrets.json` at most once a second when its content changes, so `toolu epic token new` takes effect without a restart. If a read fails, the last good token stays in use. A token from `TOOLU_EPIC_STATUS_TOKEN` or `TOOLU_EPIC_TOKEN` can change only with a restart.
+
 ## Fleet over a private network
 
 An engine can show other machines' engines beside its own. List each peer under `epic.peers` in `toolu.config.json` with a `name` and a `url`, and put its bearer token in `peer_tokens` of `toolu/secrets.json` (mode 0600) or in `TOOLU_EPIC_PEER_TOKENS`, a JSON object of peer name to token. A token never goes on the command line. The engine reads its peers at startup; `toolu epic status --fleet` reads them on every run.

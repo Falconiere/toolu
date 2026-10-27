@@ -95,13 +95,32 @@ fn reply_pause(
   pause: bool,
 ) -> Result<bool, String> {
   let epic = request.get("epic").and_then(Value::as_str);
+  let by = request.get("by").and_then(Value::as_str).unwrap_or("user");
+  let name = if pause { "pause" } else { "resume" };
   let result = if pause {
     engine.pause(epic)
   } else {
     engine.resume(epic)
-  };
+  }
+  .and_then(|()| journal_pause(engine, name, epic, by));
   let _sent = reply.send(result_value(result));
   if pause { Ok(false) } else { pump_after(engine) }
+}
+
+/// `action pause|resume`, keyed by the epic (empty for every epic), naming who acted.
+fn journal_pause(
+  engine: &mut Engine,
+  name: &str,
+  epic: Option<&str>,
+  by: &str,
+) -> Result<(), String> {
+  let note = format!("{} by={by}", epic.unwrap_or("all"));
+  let record = Record::new("action", name, epic.unwrap_or(""), "", &note);
+  engine
+    .world
+    .outbox
+    .push_back(crate::model::Step::Journal(record));
+  engine.flush()
 }
 
 fn reply_event(

@@ -41,7 +41,7 @@ fn release_clears_the_hold_and_journals() {
   let mut world = world(&[("a", 1, 0)], 1);
   let _steps = hold(&mut world, "a", "z", &json!(1.0), "heuristic");
   world.outbox.clear();
-  release(&mut world, "a").expect("release");
+  release(&mut world, "a", "web").expect("release");
   assert!(world.issues["a"].hold.is_none() && world.issues["a"].coupling_released);
   assert_eq!(
     journaled(&world),
@@ -50,7 +50,7 @@ fn release_clears_the_hold_and_journals() {
         "closed".to_owned(),
         "kind=coupling-hold waited_ms=0 by=release".to_owned()
       ),
-      ("release".to_owned(), "z".to_owned())
+      ("release".to_owned(), "z by=web".to_owned())
     ]
   );
   assert!(
@@ -63,10 +63,13 @@ fn release_clears_the_hold_and_journals() {
 fn release_refuses_an_unknown_or_unheld_issue() {
   let mut world = world(&[("a", 1, 0)], 1);
   assert_eq!(
-    release(&mut world, "nope"),
+    release(&mut world, "nope", "user"),
     Err("no registered issue nope".to_owned())
   );
-  assert_eq!(release(&mut world, "a"), Err("a is not held".to_owned()));
+  assert_eq!(
+    release(&mut world, "a", "user"),
+    Err("a is not held".to_owned())
+  );
 }
 
 #[test]
@@ -127,7 +130,7 @@ fn a_hold_outcome_from_the_launch_effect_holds_the_issue() {
 fn a_released_issue_launches_next_without_the_check_and_then_checks_again() {
   let mut world = world(&[("a", 1, 0)], 1);
   let _steps = hold(&mut world, "a", "z", &json!(1.0), "heuristic");
-  release(&mut world, "a").expect("release");
+  release(&mut world, "a", "user").expect("release");
   crate::refill::refill(&mut world);
   assert_eq!(armed(&world), ["a"]);
   let _steps = crate::commit::commit_effect(

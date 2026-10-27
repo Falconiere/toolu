@@ -66,11 +66,11 @@ pub(crate) fn hold(
   world.outbox.drain(..).collect()
 }
 
-/// Clear `key`'s hold so its next launch skips the check.
+/// Clear `key`'s hold so its next launch skips the check; the journal names `by`.
 ///
 /// # Errors
 /// The issue is unknown or not held.
-pub(crate) fn release(world: &mut World, key: &str) -> Result<(), String> {
+pub(crate) fn release(world: &mut World, key: &str, by: &str) -> Result<(), String> {
   let issue = world
     .issues
     .get_mut(key)
@@ -87,8 +87,9 @@ pub(crate) fn release(world: &mut World, key: &str) -> Result<(), String> {
     .unwrap_or("")
     .to_owned();
   crate::attention::settle(world, key, Some("coupling-hold"), "release");
+  let note = format!("{with} by={by}");
   world.outbox.push_back(Step::Journal(Record::new(
-    "action", "release", key, "", &with,
+    "action", "release", key, "", &note,
   )));
   world.outbox.push_back(Step::Issue {
     key: key.to_owned(),

@@ -35,6 +35,11 @@ impl Paths {
     self.root.join("engine.sock")
   }
 
+  /// The status listener's bound address, while the engine runs.
+  pub(crate) fn http(&self) -> PathBuf {
+    self.root.join("http.json")
+  }
+
   /// Daily journal files.
   pub(crate) fn journal_dir(&self) -> PathBuf {
     self.root.join("journal")

@@ -337,6 +337,7 @@ Usage: toolu epic token [OPTIONS] <COMMAND>
 
 Commands:
   new   Rotate the status bearer token in secrets.json
+  url   Print the running engine's dashboard URL with the token in its fragment
   help  Print this message or the help of the given subcommand(s)
 
 Options:
@@ -353,6 +354,21 @@ Options:
 Rotate the status bearer token in secrets.json
 
 Usage: toolu epic token new [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic token url`
+
+```text
+Print the running engine's dashboard URL with the token in its fragment
+
+Usage: toolu epic token url [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout

@@ -210,3 +210,37 @@ fn a_cleaning_issue_whose_finish_died_gets_its_live_stage_back_once_no_finish_ho
   super::heal_cleaning(&mut engine.world, "one");
   assert_eq!(engine.world.issues["a"].stage, "cleaning");
 }
+
+#[test]
+fn pause_and_resume_journal_who_acted_and_on_what() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = crate::paths::Paths::at(tmp.path());
+  let mut engine = Engine::open(paths, None, Fault::None).expect("open");
+  for request in [
+    json!({"op": "pause"}),
+    json!({"op": "resume", "epic": "e-1", "by": "web"}),
+  ] {
+    let (tx, rx) = mpsc::channel();
+    let protocol = crate::PROTOCOL;
+    let _stop = crate::dispatch::dispatch(&mut engine, &request, &tx, &mut Vec::new(), protocol);
+    assert_eq!(rx.recv().expect("reply"), json!({"ok": true}));
+  }
+  let rows: Vec<(String, String, String)> =
+    crate::journal::tail(&engine.paths.journal_dir(), engine.now)
+      .expect("tail")
+      .into_iter()
+      .filter(|row| row.kind == "action")
+      .map(|row| (row.name, row.key, row.note))
+      .collect();
+  assert_eq!(
+    rows,
+    [
+      ("pause".to_owned(), String::new(), "all by=user".to_owned()),
+      (
+        "resume".to_owned(),
+        "e-1".to_owned(),
+        "e-1 by=web".to_owned()
+      ),
+    ]
+  );
+}

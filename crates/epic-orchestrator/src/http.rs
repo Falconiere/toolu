@@ -1,35 +1,60 @@
-//! Bounded TCP listener for read-only epic status.
+//! Bounded TCP listener for epic status and token-gated control actions.
 
 use std::io::BufReader;
 use std::net::{SocketAddr, TcpListener, TcpStream};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::mpsc::Sender;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use toolu_runtime::config::epic::Peer;
 use toolu_runtime::config::secrets::Secrets;
+use toolu_runtime::host::roots::Roots;
 
-use crate::dashboard::HTML;
 use crate::http_access::{authorized, host_allowed};
+use crate::http_action::{self, Control};
 use crate::http_fleet::{FleetCache, REFRESH_EVERY, Refresher};
 use crate::http_request::{ReadError, Request, read_request};
-use crate::http_response::{OverviewCache, Response, json_response, send, stream_headers};
-use crate::http_stream;
+use crate::http_response::{OverviewCache, Response, send};
+use crate::http_secrets::LiveSecrets;
 use crate::model::World;
 use crate::paths::Paths;
-use crate::status_api;
+use crate::socket_loop::Msg;
 
 const CONNECTIONS: usize = 64;
-const STREAMS: usize = 8;
+/// The most live event streams served at once.
+pub(crate) const STREAMS: usize = 8;
 
-/// Bound address, private status credentials and read-only peers.
+/// Bound address, private status credentials, read-only peers and the
+/// control path.
 pub(crate) struct Config {
   pub addr: SocketAddr,
   pub secrets: Secrets,
   pub peers: Vec<Peer>,
   /// Where `/api/v1/agents/live` reads herdr.
   pub herdr: crate::http_live::Herdr,
+  /// Follow later changes to this root's `secrets.json`; `None` keeps `secrets`.
+  pub reload: Option<Roots>,
+  /// The state loop actions go to; `None` answers them `503 engine_busy`.
+  pub control: Option<Sender<Msg>>,
+  /// How long an action waits for the state loop.
+  pub deadline: Duration,
+}
+
+impl Config {
+  /// A listener with fixed secrets and no control path.
+  pub(crate) fn new(addr: SocketAddr, secrets: Secrets, peers: Vec<Peer>) -> Self {
+    Self {
+      addr,
+      secrets,
+      peers,
+      reload: None,
+      control: None,
+      deadline: http_action::DEADLINE,
+      herdr: crate::http_live::Herdr::Off,
+    }
+  }
 }
 
 /// A listener thread and its bound address.
@@ -49,21 +74,24 @@ impl Running {
   }
 }
 
-struct Context {
-  paths: Paths,
-  world: Arc<Mutex<World>>,
-  changed: Arc<Condvar>,
-  stop: Arc<AtomicBool>,
-  secrets: Secrets,
-  auth_required: bool,
-  started: Instant,
-  connections: AtomicUsize,
-  streams: AtomicUsize,
-  overview: OverviewCache,
-  metrics: crate::http_metrics::MetricsCache,
-  fleet: Arc<FleetCache>,
-  live: crate::http_live::Live,
-  herdr_calls: crate::http_live::Limiter,
+/// What every connection thread shares.
+pub(crate) struct Context {
+  pub(crate) paths: Paths,
+  pub(crate) world: Arc<Mutex<World>>,
+  pub(crate) changed: Arc<Condvar>,
+  pub(crate) stop: Arc<AtomicBool>,
+  pub(crate) secrets: LiveSecrets,
+  pub(crate) control: Option<Sender<Msg>>,
+  pub(crate) deadline: Duration,
+  pub(crate) auth_required: bool,
+  pub(crate) started: Instant,
+  pub(crate) connections: AtomicUsize,
+  pub(crate) streams: AtomicUsize,
+  pub(crate) overview: OverviewCache,
+  pub(crate) metrics: crate::http_metrics::MetricsCache,
+  pub(crate) fleet: Arc<FleetCache>,
+  pub(crate) live: crate::http_live::Live,
+  pub(crate) herdr_calls: crate::http_live::Limiter,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -92,7 +120,9 @@ pub(crate) fn start(
     world,
     changed,
     stop,
-    secrets: config.secrets,
+    secrets: LiveSecrets::new(config.secrets, config.reload),
+    control: config.control,
+    deadline: config.deadline,
     auth_required,
     started: Instant::now(),
     connections: AtomicUsize::new(0),
@@ -179,12 +209,16 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     Ok(local) => local,
     Err(_err) => return true,
   };
-  let response = if !host_allowed(&request.host, local) {
+  let secrets = context.secrets.current();
+  let host_ok = host_allowed(&request.host, local);
+  if host_ok && let Some(op) = request.target.strip_prefix(http_action::PREFIX) {
+    return act(stream, context, request, op, &secrets);
+  }
+  let response = if !host_ok {
     Some(Response::error(403, "foreign_host"))
   } else if request.method != "GET" && request.method != "HEAD" {
     Some(Response::error(405, "method_not_allowed"))
-  } else if context.auth_required && !authorized(&context.secrets, request.authorization.as_deref())
-  {
+  } else if context.auth_required && !authorized(&secrets, request.authorization.as_deref()) {
     Some(Response::error(401, "unauthorized"))
   } else {
     None
@@ -201,12 +235,12 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     .unwrap_or((request.target.as_str(), ""));
   if path == "/api/v1/events/stream" {
     return if request.method == "GET" {
-      serve_events(stream, context, request, query)
+      crate::http_read::serve_events(stream, context, request, query, &secrets)
     } else {
-      http_stream::head(stream, request, query)
+      crate::http_stream::head(stream, request, query)
     };
   }
-  let mut response = finite_response(context, path, query, request);
+  let mut response = crate::http_read::finite_response(context, path, query, request, &secrets);
   response.head = request.method == "HEAD";
   response.close = request.close || response.close;
   let close = response.close;
@@ -214,99 +248,23 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
   close
 }
 
-fn finite_response(context: &Context, path: &str, query: &str, request: &Request) -> Response {
-  if path == "/" {
-    return Response {
-      status: 200,
-      content_type: "text/html; charset=utf-8",
-      body: HTML.as_bytes().to_vec(),
-      head: request.method == "HEAD",
-      close: false,
-    };
-  }
-  if let Some(response) = engine_route(context, path, query, request) {
-    return response;
-  }
-  if let Some(response) = crate::http_fleet::response(
-    &context.fleet,
-    &context.world,
-    &context.paths,
-    &context.secrets,
-    path,
-  ) {
-    return response;
-  }
-  let world = match context.world.lock() {
-    Ok(world) => world.clone(),
-    Err(_err) => return Response::error(500, "status_unavailable"),
+fn act(
+  stream: &mut TcpStream,
+  context: &Context,
+  request: &Request,
+  op: &str,
+  secrets: &Secrets,
+) -> bool {
+  let control = Control {
+    sender: context.control.as_ref(),
+    deadline: context.deadline,
   };
-  let document = status_api::route(
-    &world,
-    &context.paths,
-    path,
-    u64::try_from(context.started.elapsed().as_millis()).unwrap_or(u64::MAX),
-    &context.secrets,
-  );
-  json_response(document)
-}
-
-/// Routes served from this engine's own caches and journal.
-fn engine_route(context: &Context, path: &str, query: &str, request: &Request) -> Option<Response> {
-  Some(match path {
-    "/api/v1/agents/live" => {
-      context
-        .live
-        .response(&context.herdr_calls, &context.world, &context.secrets)
-    }
-    "/api/v1/overview" => {
-      let Ok(world) = context.world.lock() else {
-        return Some(Response::error(500, "status_unavailable"));
-      };
-      context
-        .overview
-        .response(&world, &context.paths, &context.secrets)
-    }
-    "/api/v1/events" => http_stream::page(
-      &context.paths,
-      query,
-      request.last_event_id.as_deref(),
-      &context.secrets,
-    ),
-    "/api/v1/metrics" => context
-      .metrics
-      .response(&context.paths, query, &context.secrets),
-    _ => return None,
-  })
-}
-
-fn serve_events(stream: &mut TcpStream, context: &Context, request: &Request, query: &str) -> bool {
-  if context.streams.fetch_add(1, Ordering::AcqRel) >= STREAMS {
-    context.streams.fetch_sub(1, Ordering::AcqRel);
-    let _sent = send(stream, &Response::error(429, "stream_limit"));
-    return true;
-  }
-  let cursor = http_stream::cursor(query, request.last_event_id.as_deref());
-  match cursor {
-    Ok(cursor) if request.method == "GET" && stream_headers(stream).is_ok() => {
-      http_stream::serve(
-        stream,
-        cursor,
-        &http_stream::Feed {
-          paths: &context.paths,
-          secrets: &context.secrets,
-          world: &context.world,
-          changed: &context.changed,
-          stop: &context.stop,
-        },
-      );
-    }
-    Ok(_) => {}
-    Err(_err) => {
-      let _sent = send(stream, &Response::error(400, "bad_cursor"));
-    }
-  }
-  context.streams.fetch_sub(1, Ordering::AcqRel);
-  true
+  let mut response = http_action::respond(request, op, secrets, &control);
+  response.head = request.method == "HEAD";
+  response.close |= request.close;
+  let close = response.close;
+  let _sent = send(stream, &response);
+  close
 }
 
 #[cfg(test)]

@@ -3,14 +3,21 @@
 use std::io::{BufReader, Read as _};
 use std::net::TcpStream;
 
-/// The request fields used by the read-only router.
+/// The largest `POST` body an action may carry.
+const BODY_LIMIT: u64 = 16 * 1024;
+
+/// The request fields used by the router.
 pub(crate) struct Request {
   pub method: String,
   pub target: String,
   pub host: String,
   pub authorization: Option<String>,
   pub last_event_id: Option<String>,
+  pub origin: Option<String>,
+  pub content_type: Option<String>,
   pub close: bool,
+  /// A `POST` body; empty for every other method.
+  pub body: Vec<u8>,
 }
 
 /// Fixed errors that never include request bytes.
@@ -24,7 +31,7 @@ pub(crate) enum ReadError {
 #[derive(Default)]
 struct HeaderSeen {
   host: bool,
-  length: bool,
+  length: Option<u64>,
 }
 
 /// One request, or `None` after a clean disconnect.
@@ -49,7 +56,10 @@ pub(crate) fn read_request(
     host: String::new(),
     authorization: None,
     last_event_id: None,
+    origin: None,
+    content_type: None,
     close: false,
+    body: Vec::new(),
   };
   let mut total = start_line.len() + 2;
   let mut seen = HeaderSeen::default();
@@ -68,7 +78,32 @@ pub(crate) fn read_request(
   if request.host.is_empty() {
     return Err(ReadError::Bad);
   }
+  request.body = body(reader, &request.method, seen.length)?;
   Ok(Some(request))
+}
+
+/// A `POST` needs a `Content-Length` up to [`BODY_LIMIT`]; other methods carry none.
+fn body(
+  reader: &mut BufReader<TcpStream>,
+  method: &str,
+  length: Option<u64>,
+) -> Result<Vec<u8>, ReadError> {
+  let size = match (method, length) {
+    ("POST", None) => return Err(ReadError::Bad),
+    ("POST", Some(size)) if size <= BODY_LIMIT => size,
+    (_, Some(0) | None) => return Ok(Vec::new()),
+    _ => return Err(ReadError::TooLarge),
+  };
+  let mut bytes = Vec::new();
+  reader
+    .by_ref()
+    .take(size)
+    .read_to_end(&mut bytes)
+    .map_err(|_err| ReadError::Io)?;
+  if u64::try_from(bytes.len()).ok() != Some(size) {
+    return Err(ReadError::Io);
+  }
+  Ok(bytes)
 }
 
 fn accept_header(
@@ -89,14 +124,15 @@ fn accept_header(
       request.last_event_id = Some(value.to_owned());
     }
     "connection" => request.close = value.eq_ignore_ascii_case("close"),
-    "content-length" if !seen.length => {
-      seen.length = true;
-      let size = value.parse::<u64>().map_err(|_err| ReadError::Bad)?;
-      if size > 0 {
-        return Err(ReadError::TooLarge);
-      }
+    "origin" if request.origin.is_none() => request.origin = Some(value.to_owned()),
+    "content-type" if request.content_type.is_none() => {
+      request.content_type = Some(value.to_owned());
     }
-    "host" | "authorization" | "last-event-id" | "content-length" | "transfer-encoding" => {
+    "content-length" if seen.length.is_none() => {
+      seen.length = Some(value.parse::<u64>().map_err(|_err| ReadError::Bad)?);
+    }
+    "host" | "authorization" | "last-event-id" | "origin" | "content-type" | "content-length"
+    | "transfer-encoding" => {
       return Err(ReadError::Bad);
     }
     _ => {}

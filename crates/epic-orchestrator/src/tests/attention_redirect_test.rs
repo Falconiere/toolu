@@ -43,6 +43,12 @@ fn answer_redirects_a_live_worker_with_no_open_item() {
     .map(|row| (row.key, row.note))
     .collect();
   assert_eq!(sent, [("a".to_owned(), "NEW DIRECTION".to_owned())]);
+  let directed: Vec<String> = rows(&engine)
+    .into_iter()
+    .filter(|row| row.name == "directed")
+    .map(|row| row.note)
+    .collect();
+  assert_eq!(directed, ["by=user"]);
   let direction = engine.world.issues["a"]
     .direction
     .clone()
@@ -65,4 +71,47 @@ fn a_redirect_not_delivered_records_nothing() {
   );
   assert!(engine.world.issues["a"].direction.is_none());
   assert!(rows(&engine).iter().all(|row| row.name != "answer"));
+}
+
+#[test]
+fn an_uncertain_answer_replies_ok_journals_it_and_leaves_attention_open() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "uncertain");
+  report(&mut engine, "needs-human");
+  let request = json!({"op": "answer", "key": "a", "text": "take B", "by": "web"});
+  let reply = answer(&mut engine, &request);
+  assert_eq!(reply["ok"], true);
+  assert_eq!(reply["delivered"], "uncertain");
+  assert!(
+    reply["note"]
+      .as_str()
+      .is_some_and(|note| note.contains("prompt uncertain"))
+  );
+  assert_eq!(prompts(tmp.path()).len(), 1);
+  assert!(crate::attention::has_live(&engine.world, "a"));
+  let journaled: Vec<(String, String)> = rows(&engine)
+    .into_iter()
+    .filter(|row| row.name == "answer-uncertain")
+    .map(|row| (row.key, row.note))
+    .collect();
+  assert_eq!(
+    journaled,
+    [
+      ("a".to_owned(), "take B".to_owned()),
+      ("a".to_owned(), "by=web".to_owned())
+    ]
+  );
+}
+
+#[test]
+fn herdr_timeout_and_stall_errors_are_uncertain_and_others_are_not() {
+  let error = |code: &str| {
+    let reply = json!({"error": {"code": code, "message": "agent busy"}}).to_string();
+    crate::herdr_calls::delivered("agent.prompt", &reply).expect_err("herdr error")
+  };
+  assert!(super::uncertain(&error("timeout")));
+  assert!(super::uncertain(&error("agent_prompt_stalled")));
+  assert!(super::uncertain("read: timed out"));
+  assert!(!super::uncertain(&error("agent_not_found")));
+  assert!(!super::uncertain("prompt failed"));
 }

@@ -1,13 +1,11 @@
 //! The `toolu epic` command tree.
 
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use serde_json::{Value, json};
+use serde_json::Value;
 use toolu_engine::babysit::BabysitTick;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::config::secrets;
 use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
 
 /// The phases a worker reports, in pipeline order.
 const PHASES: [&str; 12] = [
@@ -62,7 +60,7 @@ pub(crate) fn command() -> Command {
           Command::new("install").about("Write the systemd user unit without starting it"),
         ),
     )
-    .subcommand(token_command())
+    .subcommand(crate::verbs_token::command())
     .subcommands(crate::verbs_actions::commands())
     .subcommands(crate::verbs_metrics::commands())
 }
@@ -87,7 +85,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("service", args)) if args.subcommand_name() == Some("install") => {
       crate::service::service(&env)
     }
-    Some(("token", args)) if args.subcommand_name() == Some("new") => token_new(ctx),
+    Some(("token", args)) => crate::verbs_token::run(args, ctx),
     Some((name, args)) => crate::verbs_actions::run(name, args, ctx, &env)
       .or_else(|| crate::verbs_metrics::run(name, args, ctx, &env))
       .unwrap_or_else(|| failed("toolu epic", &format!("unknown verb {name}"))),
@@ -261,37 +259,11 @@ fn job_command() -> Command {
     )
 }
 
-fn token_command() -> Command {
-  Command::new("token")
-    .about("Manage the status bearer token")
-    .subcommand_required(true)
-    .arg_required_else_help(true)
-    .subcommand(Command::new("new").about("Rotate the status bearer token in secrets.json"))
-}
-
 fn flag(name: &'static str, help: &'static str) -> Arg {
   Arg::new(name)
     .long(name)
     .action(ArgAction::SetTrue)
     .help(help)
-}
-
-/// Rotate the status token without exposing its value.
-pub(crate) fn token_new(ctx: &Ctx) -> Outcome {
-  let mut env = Env::process();
-  if let Some(dir) = &ctx.config_dir {
-    env = env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
-  }
-  match secrets::rotate_status_token(&Roots::new(env, ctx.host)) {
-    Ok(path) if ctx.json => Outcome::data(
-      json!({ "status_token": "<redacted>", "path": path, "rotated": true }).to_string(),
-    ),
-    Ok(path) => Outcome::data(format!(
-      "toolu epic: status token rotated at {}",
-      path.display()
-    )),
-    Err(error) => Outcome::failed(Exit::Failure, format!("toolu epic token new: {error}")),
-  }
 }
 
 /// The command environment with an explicit config override.

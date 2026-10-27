@@ -175,6 +175,9 @@ pub(crate) fn answered(world: &mut World, key: &str, by: &str, text: &str) {
 pub(crate) fn directed(world: &mut World, key: &str, by: &str, text: &str) {
   let record = Record::new("prompt", "answer", key, "", text);
   world.outbox.push_back(Step::Journal(record));
+  let note = format!("by={by}");
+  let record = Record::new("judgment", "directed", key, "", &note);
+  world.outbox.push_back(Step::Journal(record));
   let at_ms = world.now_ms;
   if let Some(issue) = world.issues.get_mut(key) {
     issue.direction = Some(crate::model::Direction {

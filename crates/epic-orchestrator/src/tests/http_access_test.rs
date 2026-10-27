@@ -13,18 +13,22 @@ fn loopback_accepts_only_its_own_port_and_names() {
   assert!(host_allowed("127.0.0.1:7717", addr));
   assert!(!host_allowed("localhost:7718", addr));
   assert!(!host_allowed("foreign.example:7717", addr));
+  // What a `::` bind reports for a connection to 127.0.0.1, as `token url` prints.
+  let mapped = "[::ffff:127.0.0.1]:7717".parse().expect("mapped address");
+  assert!(host_allowed("127.0.0.1:7717", mapped));
+  let public = "[::ffff:192.0.2.1]:7717".parse().expect("mapped address");
+  assert!(!host_allowed("127.0.0.1:7717", public));
 }
 
 #[test]
 fn http_boundary_refuses_public_bind_without_a_token() {
   let temp = tempfile::tempdir().expect("temp root");
   let result = start(
-    Config {
-      addr: "0.0.0.0:0".parse().expect("address"),
-      secrets: Secrets::none(),
-      peers: Vec::new(),
-      herdr: crate::http_live::Herdr::Off,
-    },
+    Config::new(
+      "0.0.0.0:0".parse().expect("address"),
+      Secrets::none(),
+      Vec::new(),
+    ),
     Paths::at(temp.path()),
     Arc::new(Mutex::new(World::new(0))),
     Arc::new(Condvar::new()),

@@ -62,6 +62,8 @@ fn judgments_count_distinct_tokens_and_closed_waits() {
       4,
     ),
     ("a", "judgment", "reminder", "t1", "", 5),
+    // An answer with no open item raises nothing.
+    ("a", "judgment", "directed", "", "by=web", 5),
     ("x", "action", "wait-reply", "", "judgment:needs-human", 6),
     ("x", "action", "wait-reply", "", "timeout", 7),
   ]);
