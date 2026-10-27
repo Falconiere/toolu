@@ -1,0 +1,9 @@
+id: no-suppression-css
+language: Css
+severity: error
+message: Fix the finding instead of suppressing a rule.
+files:
+  - '**/*.css'
+rule:
+  kind: comment
+  regex: '(oxlint-disable|eslint-disable|prettier-ignore)'

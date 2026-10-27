@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Violating dashboard fixture</title>
+    <script src="https://example.test/app.js"></script>
+    <script>window.alert(1);</script>
+    <style>body { color: var(--accent); }</style>
+  </head>
+  <body>
+    <button type="button" onclick="go()">Run</button>
+    <!-- html-validate-disable no-inline-style -->
+  </body>
+</html>

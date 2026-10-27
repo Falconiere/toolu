@@ -52,6 +52,22 @@ fn gate_files_configs_and_product_paths() {
     Some(".codex/toolu.config.json lang.rust changed")
   );
   assert!(of("crates/a/src/lib.rs", None, Some("x")).product);
+  for path in [
+    "tooling/conventions/guardrails/web/oxlintrc.json",
+    "tooling/conventions/guardrails/web/oxfmtrc.json",
+    "tooling/conventions/guardrails/web/html-validate.json",
+    "tooling/conventions/guardrails/web/jscpd.json",
+    "tooling/conventions/guardrails/web/rules.json",
+    "tooling/conventions/guardrails/web/sgconfig.yml",
+    "tooling/conventions/guardrails/web/patterns/no-bare-fetch.yml",
+    "crates/xtask/src/gate/web.rs",
+    "crates/xtask/src/gate/web/checks.rs",
+    "crates/xtask/src/gate.rs",
+  ] {
+    assert!(gate(path, None, Some("x")).is_some(), "{path}");
+    assert!(!of(path, None, Some("x")).product, "{path}");
+  }
+  assert!(of("crates/xtask/src/pack.rs", None, Some("x")).product);
   assert!(of("Cargo.lock", Some("a"), Some("b")).product);
   assert_eq!(of("docs/x.md", Some("a"), Some("b")), Change::default());
 }

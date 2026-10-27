@@ -1,0 +1,8 @@
+id: no-inline-style
+language: Html
+severity: error
+message: Inline styles violate the dashboard CSP.
+files:
+  - '**/*.html'
+rule:
+  kind: style_element

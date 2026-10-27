@@ -1,0 +1,1 @@
+setTimeout("unsafe()", 1);

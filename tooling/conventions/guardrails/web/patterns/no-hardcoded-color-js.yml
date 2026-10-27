@@ -1,0 +1,9 @@
+id: no-hardcoded-color-js
+language: JavaScript
+severity: error
+message: Put colors in tokens.css instead of JavaScript.
+files:
+  - '**/*.js'
+rule:
+  kind: string_fragment
+  regex: '(?i)#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla)\('

@@ -89,6 +89,12 @@ add a floor row at or above the default) and may ship with product code. An
 diff that deletes a task drops its row with it. Any other change to it, and any change to gate data, must ship alone in a PR
 titled `chore(gates): …`, with the reason in its body.
 
+The dashboard policy under `tooling/conventions/guardrails/web/` and the xtask
+modules that implement its `web` step are gate data. Changes to unrelated crate
+code remain product changes and cannot share a gate-policy PR. The Rust crate
+folder rule admits `assets/` for the dashboard files; [the web quality bar](web-quality-bar.md)
+describes their checks.
+
 ## Fuzzing
 
 A crate may hold an admitted `fuzz/` package (folder allowlist): its own

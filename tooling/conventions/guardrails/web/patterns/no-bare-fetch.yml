@@ -1,0 +1,14 @@
+id: no-bare-fetch
+language: JavaScript
+severity: error
+message: Only js/api.js may call fetch.
+files:
+  - '**/js/**/*.js'
+ignores:
+  - '**/js/api.js'
+rule:
+  any:
+    - pattern: 'fetch($$$ARGS)'
+    - pattern: 'window.fetch($$$ARGS)'
+    - pattern: 'self.fetch($$$ARGS)'
+    - pattern: 'globalThis.fetch($$$ARGS)'

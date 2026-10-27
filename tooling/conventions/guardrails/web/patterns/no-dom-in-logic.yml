@@ -1,0 +1,9 @@
+id: no-dom-in-logic
+language: JavaScript
+severity: error
+message: Logic modules must not access document or window.
+files:
+  - '**/js/logic/**/*.js'
+rule:
+  kind: identifier
+  regex: '^(document|window)$'

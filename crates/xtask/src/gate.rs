@@ -1,6 +1,8 @@
 //! `cargo xtask gate`: every check of the quality bar, in a fixed order,
 //! stopping at the first failure. CI requires it; it is what runs locally.
 
+mod web;
+
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Instant;
@@ -39,6 +41,7 @@ pub(crate) const STEPS: &[&str] = &[
   "docs-cli",
   "cli-compat",
   "jscpd",
+  "web",
   "rust-quality",
   "tests",
   "coverage",
@@ -116,6 +119,7 @@ fn step_run(step: &str, options: &Options) -> Result<Verdict, String> {
     "docs-cli" => docs_cli::check(options),
     "cli-compat" => cli_compat::run(options),
     "jscpd" => jscpd(root),
+    "web" => web::run(options),
     "rust-quality" => rust_quality(options),
     "tests" => tests(root),
     "coverage" => coverage_step(options),

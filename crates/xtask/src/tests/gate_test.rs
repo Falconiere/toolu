@@ -31,6 +31,7 @@ fn every_step_has_an_inventory_free_name_and_unknown_steps_are_refused() {
       "docs-cli",
       "cli-compat",
       "jscpd",
+      "web",
       "rust-quality",
       "tests",
       "coverage",
