@@ -49,13 +49,8 @@ fn public_rules_contract_reads_the_base_ref() {
   run_git(root, &["add", "-A"]);
   run_git(root, &["commit", "-m", "soften"]);
 
-  let bundle: Bundle = gather(
-    &test_env(),
-    root,
-    "main",
-    &["pkg/code.rs".to_owned()],
-  )
-  .expect("gather");
+  let bundle: Bundle =
+    gather(&test_env(), root, "main", &["pkg/code.rs".to_owned()]).expect("gather");
   assert!(bundle.available);
   let root_file: &RuleFile = &bundle.files[0];
   assert_eq!(
@@ -70,7 +65,7 @@ fn public_rules_contract_reads_the_base_ref() {
   assert_eq!(missing.files, Vec::new());
 
   let outside = tempfile::tempdir().expect("plain dir");
-  let error: RulesError = gather(&test_env(), outside.path(), "main", &[])
-    .expect_err("outside a work tree must fail");
+  let error: RulesError =
+    gather(&test_env(), outside.path(), "main", &[]).expect_err("outside a work tree must fail");
   assert!(matches!(error, RulesError::Git(_)), "{error:?}");
 }
