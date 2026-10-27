@@ -6,6 +6,19 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.5.0](https://github.com/Falconiere/toolu/compare/v8.4.1...v8.5.0) (2026-10-27)
+
+
+### Features
+
+* **epic:** bidirectional proactive worker notifications via epic notify ([#645](https://github.com/Falconiere/toolu/issues/645)) ([5d8e2d2](https://github.com/Falconiere/toolu/commit/5d8e2d2dc14ebe51f4d21d02dd4fa696efc76dab))
+* **release:** gate /deploy in a clean container and block publishing without a pass ([#643](https://github.com/Falconiere/toolu/issues/643)) ([43f8d31](https://github.com/Falconiere/toolu/commit/43f8d3137a40a37f65d1f0353aa73a1995607342))
+
+
+### Bug Fixes
+
+* **hooks:** name the hook and event when a toolu hook fails ([#644](https://github.com/Falconiere/toolu/issues/644)) ([a122364](https://github.com/Falconiere/toolu/commit/a1223645a3f21797f68e253b5bb8cb37666cd1ef))
+
 ## [8.4.1](https://github.com/Falconiere/toolu/compare/v8.4.0...v8.4.1) (2026-10-25)
 
 
