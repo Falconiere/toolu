@@ -119,7 +119,7 @@ crate → plugin assets/registration (the CLI inventory test reads the manifests
 
 ## Critical files
 
-- Create: `crates/code-review/{Cargo.toml,src/lib.rs,src/cli.rs,src/contract.rs,src/memory.rs,src/budget.rs,src/{shape,rules,prepass,review,validate,report}.rs,src/tests/*_test.rs,tests/contract.rs}`, `crates/cli/tests/code_review_cli.rs`, `crates/cli/tests/helpers/code_review_schema.rs`, and `plugins/code-review/{README.md,.claude-plugin/plugin.json,.codex-plugin/plugin.json,.muse-plugin/plugin.json}`.
+- Create: `crates/code-review/{Cargo.toml,src/lib.rs,src/cli.rs,src/contract.rs,src/memory.rs,src/budget.rs,src/{shape,rules,prepass,review,validate,report}.rs,src/tests/*_test.rs,tests/records.rs}`, `crates/cli/tests/code_review_cli.rs`, `crates/cli/tests/helpers/code_review_schema.rs`, and `plugins/code-review/{README.md,.claude-plugin/plugin.json,.codex-plugin/plugin.json,.muse-plugin/plugin.json}`.
 - Modify: `Cargo.toml`, `Cargo.lock`, `crates/cli/Cargo.toml`, `crates/cli/src/registry.rs`, `crates/cli/src/tests/tree_test.rs`, `crates/cli/tests/contract.rs`, `crates/cli/tests/helpers/{inventory.rs,schema.rs}`, `crates/cli/tests/fixtures/commands_json.snap`, `crates/cli/src/commands.schema.json` and `docs/cli/commands.schema.json`, `crates/xtask/src/packaging_assets.rs`, `crates/toolu/src/doctor/tools.rs`, both marketplaces, `release-please-config.json`, `folders.json`, `README.md`, `docs/plugins/index.md`, and `docs/cli/*`.
 
 ## Verification

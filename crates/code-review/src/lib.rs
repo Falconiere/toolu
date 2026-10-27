@@ -76,7 +76,7 @@ fn summary(report: &Report) -> String {
   };
   format!(
     "code-review: {}, {} blocking finding(s){unreviewed}",
-    report.verdict.name(),
+    report.verdict().name(),
     report.blocking_count()
   )
 }

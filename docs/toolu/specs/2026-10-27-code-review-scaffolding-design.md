@@ -67,8 +67,8 @@ Report (`toolu --json code-review run`):
 - Memory records (serde, snake_case, used by #666/#668 and persisted by #669): `PriorFinding {fingerprint: string, id: string, severity, status: "open" | "resolved" | "dismissed"}`, where `fingerprint` is `path + category + normalized text` (normalization owned by #668); `Dismissal {id, reason, by}`; `Pass {diff_sha, verdict, counts: {blocking, advisory}}`. A crate test round-trips each through JSON.
 - `side: "old"`: `line`/`end_line` are old-side line numbers. Use it for removal-only hunks and deleted files (#662's anchor rule). `"new"` is the default.
 - Blocking severities are `blocker`, `high` and `medium` (`Severity::blocking`). `low` and `nit` are advisory.
-- Construction: `Report::reviewed(effort, findings, coverage, usage)` computes the verdict: `blocked` when a finding blocks or any path is unreviewed, otherwise `approved`. `Report::failed(effort, kind, message)` gives verdict `error`. The verdict is never taken from the model.
-- `cost_usd` must be finite and non-negative. Otherwise serialisation fails, and `--json` exits 1 rather than print `null`.
+- Construction: `Report::reviewed(effort, findings, coverage, usage)` builds a reviewed run, and `Report::failed(effort, kind, message)` builds one that could not review. `Report::verdict()` computes the verdict each time it is called: `error` when `error` is set, `blocked` when a finding blocks or any path is unreviewed, otherwise `approved`. Neither the verdict nor the finding order is stored: the document is built at serialisation, with findings worst first, so later edits to findings or coverage cannot leave it stale. The verdict is never taken from the model. `Severity` orders from `nit` up, so `>= Medium` is blocking.
+- `cost_usd` is a `Cost`, built by `Cost::usd(f64) -> Option<Cost>`, so a cost is finite and non-negative by construction and never prints as `null`.
 - Exit: `approved` → 0, `blocked` → 2 (`Exit::Blocked`), `error` → 69 (`Exit::Unavailable`, for both `unconfigured` and `outage`). Bad flags → 64 (clap usage).
 - `error` is `null` unless the verdict is `error`.
 
@@ -157,3 +157,14 @@ Budget constants (`budget.rs`): `RULES_MAX_BYTES = 65_536`, `CHECKLIST_MAX_BYTES
   - The repeated schema compile in test helpers, a pre-existing helper design.
   - The test overlap and the cap-value test: `check-unused-pub` needs each public cap named by a test.
   - The `wip:` subject, which the squash merge replaces.
+
+## Code review, round 3 (after a second rebase, 2026-10-27)
+
+- Fixed:
+  - The verdict and worst-first order are computed whenever they are read or printed, so they cannot go stale after a later stage edits findings or coverage.
+  - `Cost` is validated at construction, so the same report exits the same way with or without `--json`.
+  - `Severity` orders from `nit` up.
+  - The README documents exit 1.
+  - The dead `serde(default)` on `suggestion` is removed.
+  - The crate's test binary is renamed `records`.
+- Kept: line and empty-string checks, which the validate stage (#668) owns.

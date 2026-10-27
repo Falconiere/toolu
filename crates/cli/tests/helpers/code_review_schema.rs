@@ -52,7 +52,7 @@ fn blocked_report() -> Report {
   let usage = Usage {
     tokens_in: 1200,
     tokens_out: 3400,
-    cost_usd: Cost(0.0123),
+    cost_usd: Cost::usd(0.0123).unwrap_or_default(),
     model: Some("deepseek/deepseek-v4-pro-0813".to_owned()),
   };
   Report::reviewed(Effort::Medium, findings, coverage, usage)
@@ -82,7 +82,7 @@ fn the_binary_s_report_validates_and_exits_unavailable() {
 fn a_blocked_report_validates_and_counts_blocking_findings() {
   let report = blocked_report();
   assert_eq!(
-    (report.verdict.name(), report.blocking_count()),
+    (report.verdict().name(), report.blocking_count()),
     ("blocked", 3)
   );
   let doc = serde_json::to_value(&report).unwrap();

@@ -38,36 +38,37 @@ fn medium_and_above_block_and_low_and_nit_advise() {
 }
 
 #[test]
+fn severities_order_from_nit_up() {
+  assert!(Severity::Nit < Severity::Low && Severity::Low < Severity::Medium);
+  assert!(Severity::Medium < Severity::High && Severity::High < Severity::Blocker);
+}
+
+#[test]
 fn the_verdict_is_computed_from_findings_and_coverage() {
   let advisory = reviewed(
     vec![finding(Severity::Low), finding(Severity::Nit)],
     Coverage::default(),
   );
   assert_eq!(
-    (advisory.verdict.name(), advisory.exit()),
+    (advisory.verdict().name(), advisory.exit()),
     ("approved", Exit::Success)
   );
   assert_eq!(advisory.blocking_count(), 0);
-  let blocked = reviewed(
+  let mut blocked = reviewed(
     vec![finding(Severity::Medium), finding(Severity::Low)],
     Coverage::default(),
   );
   assert_eq!(
-    (blocked.verdict.name(), blocked.exit()),
+    (blocked.verdict().name(), blocked.exit()),
     ("blocked", Exit::Blocked)
   );
   assert_eq!(blocked.blocking_count(), 1);
-  let sorted = reviewed(
-    vec![finding(Severity::Nit), finding(Severity::Blocker)],
-    Coverage::default(),
-  );
+  blocked
+    .findings
+    .retain(|finding| !finding.severity.blocking());
   assert_eq!(
-    sorted
-      .findings
-      .iter()
-      .map(|f| f.severity)
-      .collect::<Vec<_>>(),
-    [Severity::Blocker, Severity::Nit]
+    (blocked.verdict().name(), blocked.exit()),
+    ("approved", Exit::Success)
   );
   let partial = reviewed(
     Vec::new(),
@@ -79,19 +80,44 @@ fn the_verdict_is_computed_from_findings_and_coverage() {
       ..Coverage::default()
     },
   );
-  assert_eq!((partial.verdict.name(), partial.error), ("blocked", None));
+  assert_eq!((partial.verdict().name(), partial.error), ("blocked", None));
   assert_eq!(Exit::Blocked.code(), 2);
 }
 
 #[test]
-fn a_failed_report_carries_the_versions_and_its_error() {
+fn the_document_prints_findings_worst_first_with_its_versions() {
+  let report = reviewed(
+    vec![
+      finding(Severity::Nit),
+      finding(Severity::Blocker),
+      finding(Severity::Low),
+      finding(Severity::High),
+    ],
+    Coverage::default(),
+  );
+  let doc = serde_json::to_value(&report).unwrap();
+  let order: Vec<&str> = doc["findings"]
+    .as_array()
+    .unwrap()
+    .iter()
+    .map(|finding| finding["severity"].as_str().unwrap())
+    .collect();
+  assert_eq!(order, ["blocker", "high", "low", "nit"]);
+  assert_eq!(doc["schema_version"], super::SCHEMA_VERSION);
+  assert_eq!(doc["toolu_version"], env!("CARGO_PKG_VERSION"));
+  assert_eq!(
+    (doc["verdict"].as_str(), &doc["error"]),
+    (Some("blocked"), &serde_json::Value::Null)
+  );
+}
+
+#[test]
+fn a_failed_report_carries_its_error() {
   let report = Report::failed(Effort::High, ErrorKind::Outage, "every call failed");
   assert_eq!(
-    (report.verdict.name(), report.exit()),
+    (report.verdict().name(), report.exit()),
     ("error", Exit::Unavailable)
   );
-  assert_eq!(report.schema_version, super::SCHEMA_VERSION);
-  assert_eq!(report.toolu_version, env!("CARGO_PKG_VERSION"));
   assert_eq!(report.blocking_count(), 0);
   let error = report.error.unwrap();
   assert_eq!(
@@ -102,20 +128,19 @@ fn a_failed_report_carries_the_versions_and_its_error() {
 }
 
 #[test]
-fn a_non_finite_or_negative_cost_does_not_serialise() {
-  for cost_usd in [f64::NAN, f64::INFINITY, -0.5] {
-    let usage = Usage {
-      cost_usd: Cost(cost_usd),
-      ..Usage::default()
-    };
-    let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);
-    let err = serde_json::to_string(&report).unwrap_err();
-    assert!(err.to_string().contains("cost_usd"), "{err}");
+fn a_cost_is_finite_and_non_negative() {
+  for usd in [f64::NAN, f64::INFINITY, -0.5] {
+    assert_eq!(Cost::usd(usd), None, "{usd}");
   }
-  let report = reviewed(Vec::new(), Coverage::default());
+  let usage = Usage {
+    cost_usd: Cost::usd(0.25).unwrap(),
+    ..Usage::default()
+  };
+  let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);
   assert!(
     serde_json::to_string(&report)
       .unwrap()
-      .contains("\"cost_usd\":0.0")
+      .contains("\"cost_usd\":0.25")
   );
+  assert_eq!(Cost::default(), Cost::usd(0.0).unwrap());
 }

@@ -3,7 +3,8 @@
 //! `crates/cli/src/commands.schema.json`. The verdict is computed from validated
 //! findings, never taken from the model; `blocker`, `high` and `medium` block.
 
-use serde::ser::Error as _;
+use std::cmp::Reverse;
+
 use serde::{Deserialize, Serialize, Serializer};
 use toolu_protocol::exit::Exit;
 
@@ -12,26 +13,26 @@ use crate::budget::Effort;
 /// The contract's version; a breaking change to the report raises it.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// How bad a finding is; ordered worst first.
+/// How bad a finding is; ordered from `nit` up, so `>= Medium` means blocking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
-  /// Must not ship.
-  Blocker,
-  /// A real defect.
-  High,
-  /// A defect worth fixing before merge.
-  Medium,
-  /// Advisory.
-  Low,
   /// Advisory style or wording.
   Nit,
+  /// Advisory.
+  Low,
+  /// A defect worth fixing before merge.
+  Medium,
+  /// A real defect.
+  High,
+  /// Must not ship.
+  Blocker,
 }
 
 impl Severity {
   /// Whether the finding blocks the push: `blocker`, `high` and `medium`.
   pub fn blocking(self) -> bool {
-    matches!(self, Severity::Blocker | Severity::High | Severity::Medium)
+    self >= Severity::Medium
   }
 }
 
@@ -81,7 +82,7 @@ pub struct Finding {
   /// The diff text it is grounded in.
   pub quote: String,
   /// A fix, when there is one.
-  #[serde(default, skip_serializing_if = "Option::is_none")]
+  #[serde(skip_serializing_if = "Option::is_none")]
   pub suggestion: Option<String>,
 }
 
@@ -141,20 +142,15 @@ pub struct Usage {
   pub model: Option<String>,
 }
 
-/// A cost in US dollars. Serialising a non-finite or negative cost fails:
-/// `serde_json` would otherwise write NaN as `null`.
-#[derive(Debug, Clone, Copy, Default, PartialEq)]
-pub struct Cost(pub f64);
+/// A cost in US dollars: finite and non-negative by construction, so a report
+/// never prints a NaN cost as `null`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+pub struct Cost(f64);
 
-impl Serialize for Cost {
-  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-    if self.0.is_finite() && self.0 >= 0.0 {
-      serializer.serialize_f64(self.0)
-    } else {
-      Err(S::Error::custom(
-        "cost_usd is not a finite, non-negative number",
-      ))
-    }
+impl Cost {
+  /// `usd` as a cost, or `None` when it is negative, NaN or infinite.
+  pub fn usd(usd: f64) -> Option<Cost> {
+    (usd.is_finite() && usd >= 0.0).then_some(Cost(usd))
   }
 }
 
@@ -187,49 +183,63 @@ pub struct ReportError {
   pub message: String,
 }
 
-/// The whole report. It is built with `reviewed` or `failed` and only ever
-/// serialised: no read path can bring in a verdict that was not computed.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+/// The whole report. Its verdict and finding order are computed whenever they are
+/// read or printed, never stored, so editing the findings or coverage cannot leave
+/// them stale, and nothing can take a verdict from the model.
+#[derive(Debug, Clone, PartialEq)]
 pub struct Report {
-  /// `SCHEMA_VERSION`.
-  pub schema_version: u32,
-  /// The `toolu` build that produced it.
-  pub toolu_version: String,
-  /// The computed verdict; build reports with `reviewed` or `failed`, never set it.
-  pub verdict: Verdict,
   /// The effort level of the run.
   pub effort: Effort,
-  /// Findings, worst first.
+  /// Findings, in any order; the report prints them worst first.
   pub findings: Vec<Finding>,
   /// What was and was not reviewed.
   pub coverage: Coverage,
   /// What it cost.
   pub usage: Usage,
-  /// Set exactly when `verdict` is `error`.
+  /// Why the run could not review; when set, the verdict is `error`.
   pub error: Option<ReportError>,
 }
 
+/// The printed document: `Report` plus its versions and computed verdict.
+#[derive(Serialize)]
+struct Document<'a> {
+  schema_version: u32,
+  toolu_version: &'static str,
+  verdict: Verdict,
+  effort: Effort,
+  findings: Vec<&'a Finding>,
+  coverage: &'a Coverage,
+  usage: &'a Usage,
+  error: Option<&'a ReportError>,
+}
+
+impl Serialize for Report {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    let mut findings: Vec<&Finding> = self.findings.iter().collect();
+    findings.sort_by_key(|finding| Reverse(finding.severity));
+    Document {
+      schema_version: SCHEMA_VERSION,
+      toolu_version: env!("CARGO_PKG_VERSION"),
+      verdict: self.verdict(),
+      effort: self.effort,
+      findings,
+      coverage: &self.coverage,
+      usage: &self.usage,
+      error: self.error.as_ref(),
+    }
+    .serialize(serializer)
+  }
+}
+
 impl Report {
-  /// A reviewed run, its findings sorted worst first (stable). The verdict is computed
-  /// here, never taken from the model: `blocked` when a finding blocks or any path
-  /// went unreviewed, else `approved`.
+  /// A reviewed run.
   pub fn reviewed(
     effort: Effort,
-    mut findings: Vec<Finding>,
+    findings: Vec<Finding>,
     coverage: Coverage,
     usage: Usage,
   ) -> Report {
-    findings.sort_by_key(|finding| finding.severity);
-    let blocked =
-      findings.iter().any(|finding| finding.severity.blocking()) || !coverage.unreviewed.is_empty();
     Report {
-      schema_version: SCHEMA_VERSION,
-      toolu_version: env!("CARGO_PKG_VERSION").to_owned(),
-      verdict: if blocked {
-        Verdict::Blocked
-      } else {
-        Verdict::Approved
-      },
       effort,
       findings,
       coverage,
@@ -241,12 +251,24 @@ impl Report {
   /// A run that could not review: verdict `error`, nothing covered.
   pub fn failed(effort: Effort, kind: ErrorKind, message: &str) -> Report {
     Report {
-      verdict: Verdict::Error,
       error: Some(ReportError {
         kind,
         message: message.to_owned(),
       }),
       ..Report::reviewed(effort, Vec::new(), Coverage::default(), Usage::default())
+    }
+  }
+
+  /// The verdict, computed and never taken from the model: `error` when the run could
+  /// not review, `blocked` when a finding blocks or any path went unreviewed, else
+  /// `approved`.
+  pub fn verdict(&self) -> Verdict {
+    if self.error.is_some() {
+      Verdict::Error
+    } else if self.blocking_count() > 0 || !self.coverage.unreviewed.is_empty() {
+      Verdict::Blocked
+    } else {
+      Verdict::Approved
     }
   }
 
@@ -261,7 +283,7 @@ impl Report {
 
   /// The process exit: 0 approved, 2 blocked, 69 when the run could not review.
   pub fn exit(&self) -> Exit {
-    match self.verdict {
+    match self.verdict() {
       Verdict::Approved => Exit::Success,
       Verdict::Blocked => Exit::Blocked,
       Verdict::Error => Exit::Unavailable,
