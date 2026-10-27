@@ -1,0 +1,12 @@
+{
+  "files": [
+    { "path": "AGENTS.md", "text": "base rule\n" },
+    { "path": "CONTRIBUTING.md", "text": "root contrib\n" },
+    { "path": "pkg/sub/CLAUDE.md", "text": "sub claude\n" },
+    { "path": "pkg/sub/CONTRIBUTING.md", "text": "sub contrib\n" },
+    { "path": "pkg/AGENTS.md", "text": "pkg agents\n" }
+  ],
+  "prompt_override": { "path": ".github/code-review-prompt.md", "text": "prompt text\n" },
+  "dropped": [],
+  "bytes": 69
+}
