@@ -7,7 +7,7 @@ use toolu_runtime::config::secrets::Secrets;
 use crate::fleet_rig::{config, listener};
 
 const ASSET_CACHE: &str = "public, max-age=31536000, immutable";
-const ASSET_ROUTES: [(&str, &str, &str, &str); 18] = [
+const ASSET_ROUTES: [(&str, &str, &str, &str); 23] = [
   ("/", "index.html", "text/html", "no-store"),
   ("/tokens.css", "tokens.css", "text/css", ASSET_CACHE),
   ("/board.css", "board.css", "text/css", ASSET_CACHE),
@@ -19,6 +19,7 @@ const ASSET_ROUTES: [(&str, &str, &str, &str); 18] = [
   ),
   ("/panels.css", "panels.css", "text/css", ASSET_CACHE),
   ("/drawer.css", "drawer.css", "text/css", ASSET_CACHE),
+  ("/control.css", "control.css", "text/css", ASSET_CACHE),
   ("/js/app.js", "js/app.js", "text/javascript", ASSET_CACHE),
   ("/js/api.js", "js/api.js", "text/javascript", ASSET_CACHE),
   (
@@ -66,6 +67,30 @@ const ASSET_ROUTES: [(&str, &str, &str, &str); 18] = [
   (
     "/js/view/drawer.js",
     "js/view/drawer.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/control.js",
+    "js/control.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/answer-dialog.js",
+    "js/answer-dialog.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/logic/control.js",
+    "js/logic/control.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/view/controls.js",
+    "js/view/controls.js",
     "text/javascript",
     ASSET_CACHE,
   ),

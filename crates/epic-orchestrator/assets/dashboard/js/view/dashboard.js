@@ -67,7 +67,9 @@ function epicHeader(board) {
   if (board.paused) identity.append(mark({ kind: "paused", label: "‖ PAUSED" }));
   identity.append(element("h3", "", board.title || board.key));
   header.append(identity, element("p", "wave-line", waveLine(board)));
-  header.append(element("div", "epic-control-slot"));
+  const slot = element("div", "epic-control-slot");
+  slot.dataset.epic = board.key;
+  header.append(slot);
   return header;
 }
 
@@ -185,8 +187,10 @@ function renderHosts(hosts, now) {
       element("strong", "", HOST_NAMES[host.host] || host.host),
       mark(hostState(host, now)),
     );
+    const slot = element("div", "host-control-slot");
+    slot.dataset.host = host.host;
     row.append(head, element("p", "host-meta", `${host.host} · ${host.running ?? 0} running`));
-    row.append(element("p", "host-note", hostNote(host, now)));
+    row.append(element("p", "host-note", hostNote(host, now)), slot);
     target.append(row);
   }
   if (!target.children.length) target.append(element("p", "empty", "No hosts reported."));
@@ -219,7 +223,9 @@ function renderAttention(attention, boards) {
       element("time", "", `${Math.floor((item.age_ms ?? 0) / 60_000)}m`),
     );
     row.append(head, element("p", "", item.note || "Needs attention."));
-    row.append(element("span", "attention-action-slot"));
+    const slot = element("span", "attention-action-slot");
+    Object.assign(slot.dataset, { kind: item.kind || "", key: item.key || "" });
+    row.append(slot);
     target.append(row);
   }
   if (!items.length)

@@ -1,3 +1,5 @@
+import { actionRequest } from "./logic/control.js";
+
 async function get(path) {
   const response = await fetch(path, { cache: "no-store" });
   if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
@@ -37,4 +39,15 @@ export async function readScreen(key, token) {
     headers: { Authorization: `Bearer ${token}` },
   });
   return { status: response.status, body: await response.json().catch(() => null) };
+}
+
+// Actions are local only; a status, not an exception, reports an HTTP refusal.
+export async function postAction(op, body, token) {
+  const { path, init } = actionRequest(op, body, token);
+  try {
+    const response = await fetch(path, init);
+    return { status: response.status, body: await response.json().catch(() => null) };
+  } catch {
+    return { status: 0, body: null };
+  }
 }

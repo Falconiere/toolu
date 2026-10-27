@@ -5,7 +5,9 @@ import test from "node:test";
 import {
   agentState,
   cooldown,
+  findIssue,
   hostNote,
+  hostResumable,
   hostState,
   issueRows,
   liveTitle,
@@ -81,11 +83,24 @@ test("cooldown counts down, expires, and yields to a paused host", () => {
   const host = { ...captured.hosts.items[0], cooldown_until: until };
   assert.equal(hostState(host, now).label, "◷ COOLING");
   assert.equal(hostNote(host, now), "usage limit · back in 41:00");
-  assert.equal(hostState({ ...host, paused: true }, now).label, "‖ PAUSED");
-  assert.equal(hostNote({ ...host, paused: true }, now), "No new launches.");
+  assert.equal(hostState({ ...host, paused: true }, now).label, "‖ PAUSED · COOLING");
+  assert.equal(hostNote({ ...host, paused: true }, now), "Resume clears both.");
+  assert.equal(hostResumable(host, now), true);
   assert.equal(hostState(captured.hosts.items[3], now).label, "‖ PAUSED");
   assert.equal(hostState(captured.hosts.items[0], now).label, "● IN ROTATION");
   assert.equal(hostNote(captured.hosts.items[0], now), "Ready for new launches.");
+  assert.equal(hostResumable(captured.hosts.items[0], now), false);
+});
+
+test("a paused host names who paused it, when, and what still runs", () => {
+  const muse = captured.hosts.items[3];
+  const at = new Date(muse.paused_at);
+  const time = [at.getHours(), at.getMinutes()].map((n) => String(n).padStart(2, "0")).join(":");
+  assert.equal(hostNote(muse), `paused by cli · ${time} · 0 still running`);
+  assert.equal(hostResumable(muse), true);
+  const web = { ...muse, paused_by: "web", running: 2, paused_at: "garbage" };
+  assert.equal(hostNote(web), "paused by web · — · 2 still running");
+  assert.equal(hostNote({ ...web, paused_by: null }), "paused by unknown · — · 2 still running");
 });
 
 test("live titles describe the host's actual title semantics", () => {
@@ -118,4 +133,14 @@ test("peer dashboard links accept only a root HTTP URL without embedded credenti
   ]) {
     assert.equal(peerDashboardUrl(invalid), null, invalid);
   }
+});
+
+test("findIssue merges the graph node with its issue record", () => {
+  const key = captured.board.graph.issues[0].key;
+  const found = findIssue([captured.board], key);
+  assert.equal(found.board, captured.board);
+  assert.equal(found.row.key, key);
+  assert.equal(found.row.stage, captured.board.issues.find((issue) => issue.key === key)?.stage);
+  assert.equal(findIssue([captured.board], "missing"), null);
+  assert.equal(findIssue(undefined, key), null);
 });

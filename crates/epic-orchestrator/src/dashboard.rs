@@ -10,7 +10,7 @@ const JS: &str = "text/javascript";
 const FONT: &str = "font/woff2";
 
 /// Every served asset: its path under [`ASSET_PREFIX`], bytes and media type.
-const ASSETS: [(&str, &[u8], &str); 17] = [
+const ASSETS: [(&str, &[u8], &str); 22] = [
   (
     "tokens.css",
     include_bytes!("../assets/dashboard/tokens.css"),
@@ -37,6 +37,11 @@ const ASSETS: [(&str, &[u8], &str); 17] = [
     CSS,
   ),
   (
+    "control.css",
+    include_bytes!("../assets/dashboard/control.css"),
+    CSS,
+  ),
+  (
     "js/app.js",
     include_bytes!("../assets/dashboard/js/app.js"),
     JS,
@@ -49,6 +54,21 @@ const ASSETS: [(&str, &[u8], &str); 17] = [
   (
     "js/worker-drawer.js",
     include_bytes!("../assets/dashboard/js/worker-drawer.js"),
+    JS,
+  ),
+  (
+    "js/control.js",
+    include_bytes!("../assets/dashboard/js/control.js"),
+    JS,
+  ),
+  (
+    "js/answer-dialog.js",
+    include_bytes!("../assets/dashboard/js/answer-dialog.js"),
+    JS,
+  ),
+  (
+    "js/logic/control.js",
+    include_bytes!("../assets/dashboard/js/logic/control.js"),
     JS,
   ),
   (
@@ -69,6 +89,11 @@ const ASSETS: [(&str, &[u8], &str); 17] = [
   (
     "js/view/dashboard.js",
     include_bytes!("../assets/dashboard/js/view/dashboard.js"),
+    JS,
+  ),
+  (
+    "js/view/controls.js",
+    include_bytes!("../assets/dashboard/js/view/controls.js"),
     JS,
   ),
   (
