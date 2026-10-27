@@ -17,7 +17,12 @@ use crate::contract::Omitted;
 
 /// Convention basenames probed at the root and at touched ancestors: the
 /// `RULES_GLOB` equivalent (`**/<name>` restricted to touched directories).
-const BASENAMES: [&str; 4] = ["AGENTS.md", "CLAUDE.md", "CONTRIBUTING.md", "CONVENTIONS.md"];
+const BASENAMES: [&str; 4] = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "CONTRIBUTING.md",
+  "CONVENTIONS.md",
+];
 /// The repo prompt override (#666), read from the base like any rule file.
 const PROMPT_PATH: &str = ".github/code-review-prompt.md";
 /// Why a whole file was left out for size.
@@ -155,9 +160,13 @@ fn excluded(path: &str) -> bool {
     return true;
   }
   path.starts_with("docs/cli/")
-    || ["docs/toolu/plans/", "docs/toolu/specs/", "docs/toolu/brainstorms/"]
-      .iter()
-      .any(|tree| path.starts_with(tree))
+    || [
+      "docs/toolu/plans/",
+      "docs/toolu/specs/",
+      "docs/toolu/brainstorms/",
+    ]
+    .iter()
+    .any(|tree| path.starts_with(tree))
 }
 
 /// Read one candidate into the bundle, or record why it stayed out.
@@ -223,7 +232,9 @@ fn read_blob(env: &Env, root: &Path, base: &str, path: &str) -> Result<Blob, Rul
   let object = format!("{base}:{path}");
   let out = run_git(env, root, &["cat-file", "blob", &object], READ_LIMIT)?;
   if out.timed_out {
-    return Ok(Blob::Failed(format!("git cat-file blob {object}: timed out")));
+    return Ok(Blob::Failed(format!(
+      "git cat-file blob {object}: timed out"
+    )));
   }
   if out.exit_code == 0 {
     return Ok(Blob::Present(out.stdout_bytes, out.truncated));
