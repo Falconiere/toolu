@@ -7,7 +7,8 @@ use toolu_code_review::budget::{
   RULES_MAX_BYTES,
 };
 use toolu_code_review::contract::{
-  Coverage, ErrorKind, Finding, Omitted, Report, Severity, Side, Source, Usage, Verdict,
+  Coverage, ErrorKind, Finding, Omitted, Report, ReportError, Severity, Side, Source, Usage,
+  Verdict,
 };
 use toolu_code_review::memory::{Counts, Dismissal, Pass, PriorFinding, Status};
 
@@ -110,6 +111,11 @@ fn a_blocked_report_validates_and_counts_blocking_findings() {
 fn a_failed_report_validates_and_a_bad_severity_does_not() {
   for effort in Effort::ALL {
     let report = Report::failed(effort, ErrorKind::Unconfigured, "no key");
+    let error = ReportError {
+      kind: ErrorKind::Unconfigured,
+      message: "no key".to_owned(),
+    };
+    assert_eq!(report.error.as_ref(), Some(&error));
     let doc = serde_json::to_value(&report).unwrap();
     assert_eq!(violations(&doc).unwrap(), Vec::<String>::new());
   }

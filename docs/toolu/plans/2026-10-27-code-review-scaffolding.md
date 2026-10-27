@@ -36,7 +36,7 @@ crate → plugin assets/registration (the CLI inventory test reads the manifests
   {
     "id": "assets",
     "title": "plugins/code-review README + 3 manifests, both marketplaces, release-please extra-files, packaging PLUGINS 13, doctor git row",
-    "check": "cargo xtask packaging && cargo xtask check-hooks && cargo test -p toolu-hub doctor && cargo test -p xtask",
+    "check": "cargo xtask packaging && cargo xtask check-hooks && cargo test -p toolu-hub doctor && cargo test -p xtask -- --skip launcher_e2e",
     "paths": [
       "plugins",
       ".claude-plugin/marketplace.json",
@@ -134,3 +134,7 @@ crate → plugin assets/registration (the CLI inventory test reads the manifests
 - Order: should-fix, now fixed. The `contract` inventory test reads the plugin manifests, so `assets` now runs before `cli`.
 - Paths: should-fix, now fixed. The `cli` step now declares `plugins` and both marketplaces, which the inventory test reads.
 - Jev (executable and complete against the spec): 0.70. Every AC from AC-1 to AC-5 is mapped. Boundaries are covered: bad effort gives 64, `medium` vs `low` blocking, the old-side anchor and an omitted suggestion. Docs have their own step with `docs-cli --check`.
+
+## Deviations
+
+- `assets` check skips `launcher_e2e` on the host. `/opt/homebrew/bin/toolu` sits ahead of the test's `~/.local/bin` on this machine's PATH, so those four tests fail regardless of the change. The `gate` step runs the full suite, them included, in the toolu-gate container. `crates/xtask/src/tests/layers_check_test.rs` pins the workspace crate count and list, so the new crate updates it (24 → 25, plus one row).
