@@ -57,7 +57,7 @@ crate → plugin assets/registration (the CLI inventory test reads the manifests
   {
     "id": "cli",
     "title": "Register code-review in crates/cli (registry, Cargo.toml, tree_test, contract order, inventory 13, schema routing) and add tests/code_review_cli.rs with help snapshot",
-    "check": "cargo test -p toolu-cli --test code_review_cli && cargo test -p toolu-cli --test contract && cargo test -p toolu-cli --lib tree::tests::",
+    "check": "cargo test -p toolu-cli --test code_review_cli && cargo test -p toolu-cli --test contract && test \"$(cargo test -p toolu-cli --bin toolu tree::tests:: -- --list 2>/dev/null | grep -c ': test$')\" -ge 4 && cargo test -p toolu-cli --bin toolu tree::tests::",
     "paths": [
       "crates/cli",
       "crates/code-review",
@@ -137,4 +137,5 @@ crate → plugin assets/registration (the CLI inventory test reads the manifests
 
 ## Deviations
 
+- `cli` check runs the tree tests from the `toolu` bin target. They live there, not in `--lib`, so the original filter matched 0 tests; the check now also asserts at least 4 tests.
 - `assets` check skips `launcher_e2e` on the host. `/opt/homebrew/bin/toolu` sits ahead of the test's `~/.local/bin` on this machine's PATH, so those four tests fail regardless of the change. The `gate` step runs the full suite, them included, in the toolu-gate container. `crates/xtask/src/tests/layers_check_test.rs` pins the workspace crate count and list, so the new crate updates it (24 → 25, plus one row).
