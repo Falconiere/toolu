@@ -1,7 +1,7 @@
 //! Safe summaries of registered epic graphs and their live issues.
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
@@ -84,20 +84,12 @@ pub(crate) fn detail(
   };
   let graph = read_value(&dir.join("graph.json"))?;
   let (nodes, waves) = project_graph(&graph);
-  let issues: Vec<Value> = world
+  let issues = world
     .issues
     .values()
     .filter(|issue| issue.epic == *key)
-    .map(|issue| {
-      json!({
-        "key": issue.key,
-        "stage": issue.stage,
-        "phase": issue.phase,
-        "pr": issue.pr,
-        "host": issue.kind,
-      })
-    })
-    .collect();
+    .map(issue_row)
+    .collect::<Vec<_>>();
   Ok(Some(json!({
     "schema": 1,
     "key": key,
@@ -106,6 +98,25 @@ pub(crate) fn detail(
     "issues": issues,
     "queue": crate::queue::document(world, Some(key)).get("repositories").cloned(),
   })))
+}
+
+fn issue_row(issue: &Issue) -> Value {
+  // One unreadable worker record only loses that row's plan, not the board.
+  let meta = read_value(
+    &Path::new(&issue.state_dir)
+      .join("issues")
+      .join(format!("{}.json", issue.key)),
+  )
+  .unwrap_or(Value::Null);
+  let (worktree, host) = crate::status_plan::locate(issue, &meta);
+  json!({
+    "key": issue.key,
+    "stage": issue.stage,
+    "phase": issue.phase,
+    "pr": issue.pr,
+    "host": issue.kind,
+    "plan_summary": crate::status_plan::plan_summary(worktree, host),
+  })
 }
 
 fn project_graph(graph: &Value) -> (Vec<Value>, Vec<Value>) {

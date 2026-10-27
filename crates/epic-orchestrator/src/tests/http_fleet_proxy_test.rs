@@ -146,3 +146,20 @@ fn fleet_token_canary_proxy() {
   )));
   a.stop(&stop).expect("listener thread");
 }
+
+#[test]
+fn fleet_proxy_plan_redacts_secrets() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let secret = "PLAN-PEER-SECRET-7";
+  let plan = json!({"next": "s1", "steps": [{"id": "s1", "title": format!("push {secret}"), "status": "red"}]});
+  let document = json!({"schema": 1, "key": "repo-652", "plan": plan});
+  let peer = serve(200, "application/json", &document.to_string());
+  let tokens = json!({"other": secret}).to_string();
+  let secrets = secrets_of(temp.path(), &[("TOOLU_EPIC_PEER_TOKENS", &tokens)]);
+  let (a, stop) = listener(temp.path(), config(0, vec![peer.peer("peer")], secrets));
+  let issue = get_json(a.addr, "/api/v1/fleet/peers/peer/issues/repo-652");
+  assert_eq!(issue["plan"]["steps"][0]["title"], "push <redacted>");
+  assert_eq!(issue["plan"]["steps"][0]["status"], "red");
+  assert!(!issue.to_string().contains(secret), "{issue}");
+  a.stop(&stop).expect("listener thread");
+}

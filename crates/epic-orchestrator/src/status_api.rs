@@ -10,7 +10,7 @@ use crate::disk::read_value;
 use crate::model::{Issue, World};
 use crate::paths::Paths;
 use crate::status_resources::Snapshot;
-use crate::{status, status_epics, status_events};
+use crate::{status, status_epics, status_events, status_plan};
 
 /// Status for the engine, one epic or one issue.
 ///
@@ -152,7 +152,8 @@ fn issue_document(
   let route = read_value(&dir.join("routes").join(format!("{}.json", issue.key)))?;
   let events = issue_events(issue, world, paths, secrets)?;
   let history = phase_history(&status);
-  let host = field(&route, "host").or_else(|| field(&meta, "kind"));
+  let (worktree, plan_host) = status_plan::locate(issue, &meta);
+  let host = plan_host.or_else(|| field(&route, "host"));
   let model = field(&route, "model").or_else(|| field(&meta, "model"));
   let effort = field(&route, "effort").or_else(|| field(&meta, "effort"));
   let last_gate = events.iter().rev().find_map(|row| {
@@ -176,6 +177,7 @@ fn issue_document(
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
+    "plan": status_plan::plan(worktree, plan_host),
   });
   Ok(secrets::redact_json(&value, secrets))
 }
