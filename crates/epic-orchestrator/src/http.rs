@@ -203,30 +203,12 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     return if request.method == "GET" {
       serve_events(stream, context, request, query)
     } else {
-      stream_head(stream, request, query)
+      http_stream::head(stream, request, query)
     };
   }
   let mut response = finite_response(context, path, query, request);
   response.head = request.method == "HEAD";
   response.close = request.close || response.close;
-  let close = response.close;
-  let _sent = send(stream, &response);
-  close
-}
-
-fn stream_head(stream: &mut TcpStream, request: &Request, query: &str) -> bool {
-  let mut response = if http_stream::cursor(query, request.last_event_id.as_deref()).is_ok() {
-    Response {
-      status: 200,
-      content_type: "text/event-stream; charset=utf-8",
-      body: Vec::new(),
-      head: true,
-      close: request.close,
-    }
-  } else {
-    Response::error(400, "bad_cursor")
-  };
-  response.head = true;
   let close = response.close;
   let _sent = send(stream, &response);
   close

@@ -64,6 +64,30 @@ pub(crate) fn page(
   )
 }
 
+/// Answer `HEAD` on the stream route: its headers, or `400 bad_cursor`;
+/// whether the connection closes.
+pub(crate) fn head(
+  stream: &mut TcpStream,
+  request: &crate::http_request::Request,
+  query: &str,
+) -> bool {
+  let mut response = if cursor(query, request.last_event_id.as_deref()).is_ok() {
+    Response {
+      status: 200,
+      content_type: "text/event-stream; charset=utf-8",
+      body: Vec::new(),
+      head: true,
+      close: request.close,
+    }
+  } else {
+    Response::error(400, "bad_cursor")
+  };
+  response.head = true;
+  let close = response.close;
+  let _sent = crate::http_response::send(stream, &response);
+  close
+}
+
 /// Borrowed state needed by a replaying event stream.
 pub(crate) struct Feed<'a> {
   pub paths: &'a Paths,
