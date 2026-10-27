@@ -31,7 +31,8 @@
       { "property": "outerHTML", "message": "Use DOM nodes." },
       { "property": "insertAdjacentHTML", "message": "Use DOM nodes." },
       { "object": "document", "property": "write", "message": "Use DOM nodes." },
-      { "object": "document", "property": "writeln", "message": "Use DOM nodes." }
+      { "object": "document", "property": "writeln", "message": "Use DOM nodes." },
+      { "property": "localStorage", "message": "Use sessionStorage for the token." }
     ],
     "no-restricted-globals": ["error", { "name": "localStorage", "message": "Use sessionStorage for the token." }]
   }

@@ -103,6 +103,7 @@ fn web_gate_rules_oxlint_security_bans_name_file_and_line() {
     ("new-function.js", "no-new-func"),
     ("implied-eval.js", "no-implied-eval"),
     ("local-storage.js", "no-restricted-globals"),
+    ("window-storage.js", "no-restricted-properties"),
     ("script-url.js", "no-script-url"),
   ];
   for (file, rule) in cases {
