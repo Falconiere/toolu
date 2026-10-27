@@ -30,7 +30,7 @@ pub(crate) fn document(
     return Ok(value);
   }
   if let Some(selector) = selector {
-    let mut value = status_epics::detail(world, paths, selector)?
+    let mut value = status_epics::detail(world, paths, selector, secrets)?
       .ok_or_else(|| format!("unknown epic or issue: {selector}"))?;
     if let Some(map) = value.as_object_mut() {
       map.insert("engine".to_owned(), json!("running"));
@@ -46,10 +46,17 @@ pub(crate) fn document(
   let resources = Snapshot::open(paths, world.now_ms)?;
   if let Some(map) = overview.as_object_mut() {
     map.insert("schema".to_owned(), json!(1));
+    map.insert(
+      "hostname".to_owned(),
+      json!(toolu_runtime::machine::short_hostname()),
+    );
     map.insert("journal_seq".to_owned(), json!(world.seq));
     map.insert("counts".to_owned(), json!(counts));
     map.insert("attention_count".to_owned(), json!(attention_count));
-    map.insert("epics".to_owned(), json!(status_epics::list(world, paths)?));
+    map.insert(
+      "epics".to_owned(),
+      json!(status_epics::list(world, paths, secrets)?),
+    );
     map.insert("hosts".to_owned(), resources.hosts());
     map.insert("machine".to_owned(), resources.machine());
     map.insert("jobs".to_owned(), resources.jobs());
@@ -74,7 +81,9 @@ pub(crate) fn route(
       "uptime_ms": uptime_ms, "journal_seq": world.seq,
     })),
     "/api/v1/overview" => Some(document(world, paths, None, secrets)?),
-    "/api/v1/epics" => Some(json!({"schema": 1, "items": status_epics::list(world, paths)?})),
+    "/api/v1/epics" => {
+      Some(json!({"schema": 1, "items": status_epics::list(world, paths, secrets)?}))
+    }
     "/api/v1/agents" => Some(agents(world)?),
     "/api/v1/hosts" => Some(Snapshot::open(paths, world.now_ms)?.hosts()),
     "/api/v1/machine" => Some(Snapshot::open(paths, world.now_ms)?.machine()),
@@ -93,7 +102,7 @@ fn dynamic_route(
   secrets: &Secrets,
 ) -> Result<Option<Value>, String> {
   if let Some(key) = path.strip_prefix("/api/v1/epics/") {
-    return status_epics::detail(world, paths, key);
+    return status_epics::detail(world, paths, key, secrets);
   }
   if let Some(key) = path.strip_prefix("/api/v1/issues/") {
     return world
@@ -154,8 +163,7 @@ fn issue_document(
   let history = phase_history(&status);
   let (worktree, plan_host) = status_plan::locate(issue, &meta);
   let host = plan_host.or_else(|| field(&route, "host"));
-  let model = field(&route, "model").or_else(|| field(&meta, "model"));
-  let effort = field(&route, "effort").or_else(|| field(&meta, "effort"));
+  let (model, effort) = model_effort(&route, &meta);
   let last_gate = events.iter().rev().find_map(|row| {
     (row.get("kind").and_then(Value::as_str) == Some("gate"))
       .then(|| row.get("name").cloned())
@@ -179,6 +187,7 @@ fn issue_document(
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
+    "hold": status_epics::hold(issue, secrets),
     "plan": status_plan::plan(worktree, plan_host),
   });
   Ok(secrets::redact_json(&value, secrets))
@@ -213,6 +222,15 @@ fn queue_position(world: &World, key: &str) -> Option<u64> {
     .values()
     .find_map(|entries| entries.iter().position(|entry| entry.key == key))
     .and_then(|index| u64::try_from(index.saturating_add(1)).ok())
+}
+
+/// A worker's model and effort: its route first, then its launch record.
+pub(crate) fn model_effort<'a>(
+  route: &'a Value,
+  meta: &'a Value,
+) -> (Option<&'a str>, Option<&'a str>) {
+  let pick = |key: &str| field(route, key).or_else(|| field(meta, key));
+  (pick("model"), pick("effort"))
 }
 
 fn field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {

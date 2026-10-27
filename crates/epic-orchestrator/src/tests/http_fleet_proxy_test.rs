@@ -163,3 +163,39 @@ fn fleet_proxy_plan_redacts_secrets() {
   assert!(!issue.to_string().contains(secret), "{issue}");
   a.stop(&stop).expect("listener thread");
 }
+
+#[test]
+fn fleet_proxy_board_fields_redact_secrets() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let secret = "PEER-TITLE-SECRET-9";
+  let title = format!("ship {secret}");
+  let b_config = config(free_port(), Vec::new(), Secrets::none());
+  let b = Engine::start_titled(
+    &temp.path().join("b"),
+    ("repo-500", &title),
+    "repo-501",
+    b_config,
+  );
+  let tokens = json!({"other": secret}).to_string();
+  let secrets = secrets_of(temp.path(), &[("TOOLU_EPIC_PEER_TOKENS", &tokens)]);
+  let (a, stop) = listener(
+    &temp.path().join("a"),
+    config(0, vec![b.peer("server")], secrets),
+  );
+  let epic = get_json(a.addr, "/api/v1/fleet/peers/server/epics/repo-500");
+  assert!(!epic.to_string().contains(secret), "{epic}");
+  assert_eq!(
+    json!([
+      epic["title"],
+      epic["waves_total"],
+      epic["current_wave"],
+      epic["live"],
+      epic["queued"]
+    ]),
+    json!(["ship <redacted>", 1, 1, 1, 0])
+  );
+  assert!(epic["issues"][0]["phase_age_ms"].is_u64(), "{epic}");
+  assert_eq!(epic["issues"][0]["hold"], json!(null));
+  a.stop(&stop).expect("listener thread");
+  b.stop();
+}

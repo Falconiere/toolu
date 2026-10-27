@@ -76,6 +76,9 @@ pub(crate) struct Machine {
   pub state: PeerState,
   pub last_seen_ms: Option<u64>,
   pub overview: Option<Value>,
+  /// A peer's own dashboard: its configured origin, which config validation
+  /// keeps free of credentials, path, query and fragment. `None` for local.
+  pub dashboard_url: Option<String>,
 }
 
 /// A peer client: short deadline, bounded body, no redirect, no proxy.
@@ -197,6 +200,7 @@ pub(crate) fn peer_machines(
         state,
         last_seen_ms: last_seen.get(&peer.name).copied(),
         overview,
+        dashboard_url: Some(peer.url.clone()),
       }
     })
     .collect()
@@ -210,6 +214,7 @@ pub(crate) fn local_machine(overview: Value, now_ms: u64) -> Machine {
     state: PeerState::Ok,
     last_seen_ms: Some(now_ms),
     overview: Some(overview),
+    dashboard_url: None,
   }
 }
 
@@ -238,6 +243,8 @@ fn project(machine: &Machine, now_ms: u64) -> Value {
     "local": machine.local,
     "state": machine.state.name(),
     "reason": machine.state.reason(),
+    "hostname": overview.and_then(|doc| doc.get("hostname")).filter(|name| name.as_str().is_some_and(|name| !name.is_empty())).map(|name| text(Some(name))),
+    "dashboard_url": machine.dashboard_url,
     "age_ms": machine.last_seen_ms.map(|ms| now_ms.saturating_sub(ms)),
     "last_seen": last_seen,
     "engine": overview.map(|doc| text(doc.get("engine"))),

@@ -33,6 +33,13 @@ fn defaults_and_safe_unknown_keys_resolve() {
   let _: &Peer = &settings.peers[0];
   assert_eq!(settings.peers[0].name, "remote");
   assert_eq!(settings.peers[0].url, "https://peer.example:8443/");
+  let bare = parse(&config(
+    json!({"peers": [{"name": "lan", "url": "http://10.0.0.2:7717"}]}),
+  ));
+  assert_eq!(
+    bare.expect("bare origin").peers[0].url,
+    "http://10.0.0.2:7717/"
+  );
 }
 
 #[test]
@@ -55,6 +62,10 @@ fn credentials_and_bad_settings_are_rejected_without_values() {
     ),
     (
       json!({"peers": [{"name":"a","url":"https://user:pass@host"}]}),
+      "epic.peers[0].url",
+    ),
+    (
+      json!({"peers": [{"name":"a","url":"http://user:pass@10.0.0.2:7717/?x=1#y"}]}),
       "epic.peers[0].url",
     ),
     (

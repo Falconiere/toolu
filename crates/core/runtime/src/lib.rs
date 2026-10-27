@@ -16,6 +16,7 @@
 //! - `startup`: retiring the stable paths of before #440, bounded context output, Codex dependency
 //!   warnings and `TOOLU_STARTUP_REPORT` records;
 //! - `registry`: registry events, file names, the module manifest and the `Rule` trait;
+//! - `machine`: the short host name of this machine;
 //! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments;
 //! - `term`: the terminal style of human output and the rails builders.
 
@@ -30,6 +31,7 @@ pub mod host;
 pub mod install;
 pub mod invocation;
 pub mod json;
+pub mod machine;
 pub mod manifest;
 pub mod namespace;
 pub mod process;
