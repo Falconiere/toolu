@@ -22,10 +22,11 @@ fn plan_matches_the_status_ledger_for_every_host() {
   ] {
     let tree = Tree::new();
     let ledger = tree.ledger(host, STEPS);
-    assert!(
-      tree.worktree.join(dir).join("feat_x.json").is_file(),
-      "{dir}"
-    );
+    let file = tree.file(host, "feat/x");
+    assert!(file.is_file(), "{}", file.display());
+    if std::env::var_os("TOOLU_PROJECT_CONFIG_DIRNAME").is_none() {
+      assert_eq!(file, tree.worktree.join(dir).join("feat_x.json"));
+    }
     let shown = plan(Some(tree.path()), Some(host.name()));
     for key in ["plan_doc", "updated_at", "next"] {
       assert_eq!(shown[key], ledger[key], "{key}");
@@ -122,7 +123,7 @@ fn odd_shapes_fall_back_to_null_and_zero() {
 }
 
 #[test]
-fn plan_summary_rereads_only_when_the_mtime_moves() {
+fn plan_summary_rereads_only_when_the_mtime_or_file_changes() {
   let tree = Tree::new();
   tree.ledger(Host::Claude, STEPS);
   let file = tree.file(Host::Claude, "feat/x");
@@ -151,6 +152,20 @@ fn plan_summary_rereads_only_when_the_mtime_moves() {
     .set_modified(later)
     .expect("new mtime");
   assert_eq!(plan_summary(Some(tree.path()), Some("claude"))["green"], 9);
+  // A rename with the same mtime, as two `write_ledger` calls in one tick give.
+  let mut ledger: Value =
+    serde_json::from_str(&std::fs::read_to_string(&file).expect("ledger")).expect("json");
+  ledger["summary"]["green"] = json!(4);
+  let staged = file.with_extension("json.tmp");
+  std::fs::write(&staged, ledger.to_string()).expect("stage");
+  File::options()
+    .write(true)
+    .open(&staged)
+    .expect("open")
+    .set_modified(later)
+    .expect("same mtime");
+  std::fs::rename(&staged, &file).expect("rename");
+  assert_eq!(plan_summary(Some(tree.path()), Some("claude"))["green"], 4);
 }
 
 #[test]
@@ -188,26 +203,48 @@ fn head_branch_agrees_with_git_rev_parse() {
   assert_eq!(head_branch(&tree.worktree).as_deref(), Some("HEAD"));
   assert_eq!(git(&tree.worktree), "HEAD");
   assert_eq!(head_branch(&tree.worktree.join("a.txt")), None);
+  let reftable = tree.worktree.join("reftable");
+  sh(&tree.worktree, "git init -q --ref-format=reftable reftable");
+  assert_eq!(head_branch(&reftable), None);
 }
 
 #[test]
-fn locate_prefers_the_launch_record_and_the_current_route() {
+fn long_ids_and_many_steps_are_bounded() {
+  let tree = Tree::new();
+  tree.ledger(Host::Claude, STEPS);
+  tree.edit(Host::Claude, |ledger| {
+    let step =
+      json!({"id": "i".repeat(400), "status": "x".repeat(400), "last_run": "r".repeat(400)});
+    ledger["steps"] = Value::Array(vec![step; 250]);
+    ledger["plan_doc"] = json!("p".repeat(400));
+    ledger["next"] = json!("n".repeat(400));
+  });
+  let shown = plan(Some(tree.path()), Some("claude"));
+  let steps = shown["steps"].as_array().expect("steps");
+  assert_eq!(steps.len(), 200);
+  let chars = |value: &Value| value.as_str().expect("text").chars().count();
+  for value in [
+    &steps[0]["id"],
+    &steps[0]["status"],
+    &steps[0]["last_run"],
+    &shown["plan_doc"],
+    &shown["next"],
+  ] {
+    assert_eq!(chars(value), 160);
+  }
+  assert_eq!(shown["summary"]["total"], 2);
+}
+
+#[test]
+fn locate_prefers_the_launch_record_over_the_engines_copy() {
   let mut issue = Issue::blank("r-1", "r-0", "/state", 0);
-  issue.worktree = Some("/pane".to_owned());
+  issue.worktree = Some("/snapshot".to_owned());
   issue.kind = "codex".to_owned();
   let none = Value::Null;
-  assert_eq!(locate(&issue, &none, &none), (Some("/pane"), Some("codex")));
+  assert_eq!(locate(&issue, &none), (Some("/snapshot"), Some("codex")));
   let meta = json!({"worktree": "/launch", "kind": "cursor"});
-  assert_eq!(
-    locate(&issue, &meta, &none),
-    (Some("/launch"), Some("cursor"))
-  );
-  let route = json!({"host": "muse"});
-  assert_eq!(
-    locate(&issue, &meta, &route),
-    (Some("/launch"), Some("muse"))
-  );
+  assert_eq!(locate(&issue, &meta), (Some("/launch"), Some("cursor")));
   issue.kind.clear();
   issue.worktree = None;
-  assert_eq!(locate(&issue, &none, &none), (None, None));
+  assert_eq!(locate(&issue, &none), (None, None));
 }

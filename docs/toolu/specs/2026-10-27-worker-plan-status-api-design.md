@@ -85,3 +85,12 @@ None blocking. The epic's design wants a per-step "stale" mark (#655). The engin
 - Jev coverage score: 1.1 of 2 at low confidence (0.27). The manual check against each issue bullet found no remaining gap.
 
 Every section is filled, every AC has runnable real-data evidence, and no blockers remain. **Status:** Approved
+
+## Changes after code review (2026-10-27, `/code-review xhigh --fix`)
+- **Host:** the launch record's `kind` (then `Issue::kind`) wins over `routes/<key>.json` `host`. `launch/attempt.rs` writes the host the worker actually runs on into the record, while `--host` and reroutes leave the route stale. The issue document's `host` field now follows the same order, so it names the host the plan was read for.
+- **Cache key:** mtime plus inode. The worker's write renames a new file, so two writes inside one mtime tick still refresh. A rewrite in place with the old mtime stays cached (AC-5).
+- **Read:** the ledger is read once with serde instead of `read_ledger`, which parses jq-style and then needs a second parse. A missing file or dangling symlink gives `null`; any other read failure gives `unreadable`.
+- **Bounds:** every string is cut to 160 characters, `steps` is capped at 200, and the cache prunes entries for vanished ledgers once it holds 256.
+- **Reftable:** a reftable repository's `HEAD` names `.invalid`, so the branch is unknown without git and `plan` is `null`. This is documented.
+- **Environment:** the engine reads only `TOOLU_PROJECT_CONFIG_DIRNAME`, once at startup. A worker whose pane exports a different value is a known limitation, documented in the API reference.
+- **Not adopted:** using `toolu_runtime::git::discover` (it walks parent directories and hands foreign-owned repositories to git), and moving the branch reader into `toolu_runtime` for the worker too (that changes the worker's ledger path code, beyond this issue).

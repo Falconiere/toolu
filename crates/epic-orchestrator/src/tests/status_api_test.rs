@@ -29,6 +29,12 @@ fn status_api_issue_projects_worker_fields_without_brief_body() {
   write_value(&epic.join("status/repo-449.json"), &json!({
     "phase": "execution", "pr": 123, "history": [{"phase": "spec", "at": "2026-10-11T00:00:00Z", "note": "ok"}]
   })).expect("status record");
+  // A route still naming the planned host loses to the host the worker was launched on.
+  write_value(
+    &epic.join("routes/repo-449.json"),
+    &json!({"host": "claude", "model": "gpt-6-sol"}),
+  )
+  .expect("route record");
   let mut world = World::new(1_000);
   let mut issue = Issue::blank(key, "repo-402", &epic.display().to_string(), 500);
   issue.stage = "running".to_owned();

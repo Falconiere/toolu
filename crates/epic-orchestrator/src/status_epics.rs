@@ -102,16 +102,13 @@ pub(crate) fn detail(
 
 fn issue_row(issue: &Issue) -> Value {
   // One unreadable worker record only loses that row's plan, not the board.
-  let record = |dir: &str| {
-    read_value(
-      &Path::new(&issue.state_dir)
-        .join(dir)
-        .join(format!("{}.json", issue.key)),
-    )
-    .unwrap_or(Value::Null)
-  };
-  let (meta, route) = (record("issues"), record("routes"));
-  let (worktree, host) = crate::status_plan::locate(issue, &meta, &route);
+  let meta = read_value(
+    &Path::new(&issue.state_dir)
+      .join("issues")
+      .join(format!("{}.json", issue.key)),
+  )
+  .unwrap_or(Value::Null);
+  let (worktree, host) = crate::status_plan::locate(issue, &meta);
   json!({
     "key": issue.key,
     "stage": issue.stage,

@@ -144,3 +144,7 @@ End to end: real git worktrees and ledgers from `ledger_run`/`ledger_status` for
 - Jev alignment noul: 0.28 before the fixes, 0.41 after (uncertain, not a rejection). The manual check found every AC-1..AC-11 mapped to a step whose check and input observe it with real data, with dependencies ordered.
 
 **Status:** Approved
+
+## Deviations
+- After `/code-review xhigh --fix` (2026-10-27), the changes recorded in the spec's "Changes after code review" landed in the `status-plan` and `wire-documents` steps (host order, inode cache key, serde read, bounds, reftable, environment), with tests: `long_ids_and_many_steps_are_bounded`, a reftable case in `head_branch_agrees_with_git_rev_parse`, and a route-versus-record host case in `status_api_test.rs`.
+- Gate: the host's Homebrew `toolu` shadows the `toolu-cli` launcher test binary. The full `cargo xtask gate` runs under `sandbox-exec`, with a profile that denies reads of `/opt/homebrew/bin/toolu`, its Cellar and `/usr/local/bin/toolu`. No test is skipped.

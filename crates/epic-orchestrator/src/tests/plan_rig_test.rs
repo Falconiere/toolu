@@ -101,10 +101,13 @@ impl Tree {
   }
 }
 
+/// The ledger commands' environment. It keeps the runner's
+/// `TOOLU_PROJECT_CONFIG_DIRNAME`, which the engine side reads from the process.
 fn env(dir: &Path) -> Env {
   let path = std::env::var("PATH").unwrap_or_default();
   let home = dir.join("../.home").display().to_string();
-  Env::from_pairs([
+  let dirname = std::env::var("TOOLU_PROJECT_CONFIG_DIRNAME").ok();
+  let pairs = Env::from_pairs([
     ("PATH", path.as_str()),
     ("HOME", home.as_str()),
     ("TOOLU_CONFIG_DIR", home.as_str()),
@@ -114,7 +117,11 @@ fn env(dir: &Path) -> Env {
     ("GIT_COMMITTER_NAME", "t"),
     ("GIT_COMMITTER_EMAIL", "t@t"),
     ("GIT_CONFIG_NOSYSTEM", "1"),
-  ])
+  ]);
+  match dirname {
+    Some(dirname) => pairs.with("TOOLU_PROJECT_CONFIG_DIRNAME", &dirname),
+    None => pairs,
+  }
 }
 
 /// `bash -c script` in `dir`; returns its stdout.
