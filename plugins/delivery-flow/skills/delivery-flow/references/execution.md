@@ -64,7 +64,7 @@ against the committed branch diff with command output, not assertion:
 
 1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `toolu ledger status` and resolve every missing or stale AC coverage entry.
 2. Run `toolu ledger run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
-3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker.
+3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker. When `documentation-gate` is selected, invoke `documentation-gate:sync` and complete its routed editing worker and final committed-diff review before the ledger verdict. If documentation edits change the commit, rerun affected verification against the new diff.
 4. Run the active host's `toolu-review:review` invocation (see [host-mapping.md](host-mapping.md)) against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers.
 5. Run `toolu ledger verdict status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
 

@@ -32,6 +32,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "delivery-flow",
     "review",
     "code-review",
+    "docs",
     "jev",
     "ast-grep",
     "statusline",
@@ -48,35 +49,35 @@ fn unported(names: &[String]) -> Vec<&String> {
     .collect()
 }
 
+const NAMES: &[&str] = &[
+  "hook",
+  "ledger",
+  "debug",
+  "setup",
+  "doctor",
+  "config",
+  "status",
+  "ts-quality",
+  "python-quality",
+  "rust-quality",
+  "ast-grep",
+  "brainstorm",
+  "delivery-flow",
+  "review",
+  "code-review",
+  "docs",
+  "jev",
+  "statusline",
+  "babysit",
+  "epic",
+  "commands",
+  "plugins",
+];
+
 #[test]
 fn every_namespace_answers_help_on_stdout() {
   let names = namespaces().unwrap();
-  assert_eq!(
-    names,
-    [
-      "hook",
-      "ledger",
-      "debug",
-      "setup",
-      "doctor",
-      "config",
-      "status",
-      "ts-quality",
-      "python-quality",
-      "rust-quality",
-      "ast-grep",
-      "brainstorm",
-      "delivery-flow",
-      "review",
-      "code-review",
-      "jev",
-      "statusline",
-      "babysit",
-      "epic",
-      "commands",
-      "plugins",
-    ]
-  );
+  assert_eq!(names, NAMES);
   for name in &names {
     let output = toolu(&[name, "--help"]).unwrap();
     assert_eq!(output.status.code(), Some(0), "{name}");
@@ -222,6 +223,7 @@ fn every_generated_hook_form_is_in_the_clap_tree() {
     &["pr-babysit", "hook", "--help"],
     &["epic-orchestrator", "hook", "--help"],
     &["toolu-review", "hook", "--help"],
+    &["documentation-gate", "hook", "--help"],
   ] {
     let output = toolu(args).unwrap();
     assert_eq!(output.status.code(), Some(0), "{args:?}");

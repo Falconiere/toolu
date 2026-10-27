@@ -9,6 +9,7 @@
     { "name": "pr-babysit", "source": { "source": "local", "path": "./plugins/pr-babysit" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "brainstorm", "source": { "source": "local", "path": "./plugins/brainstorm" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "delivery-flow", "source": { "source": "local", "path": "./plugins/delivery-flow" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
+    {"name": "documentation-gate", "source": {"source": "local", "path": "./plugins/documentation-gate"}, "policy": {"installation": "AVAILABLE", "authentication": "ON_INSTALL"}, "category": "Productivity"},
     { "name": "epic-orchestrator", "source": { "source": "local", "path": "./plugins/epic-orchestrator" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "python-quality", "source": { "source": "local", "path": "./plugins/python-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "rust-quality", "source": { "source": "local", "path": "./plugins/rust-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },

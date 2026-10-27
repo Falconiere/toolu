@@ -26,11 +26,19 @@ fn hook_and_commands_are_the_special_actions() {
 
 #[test]
 fn renamed_namespaces_keep_their_plugin_as_owner() {
-  let owners: Vec<&str> = ["review", "babysit", "epic"]
+  let owners: Vec<&str> = ["review", "babysit", "epic", "docs"]
     .iter()
     .map(|name| find(name).unwrap().owner)
     .collect();
-  assert_eq!(owners, ["toolu-review", "pr-babysit", "epic-orchestrator"]);
+  assert_eq!(
+    owners,
+    [
+      "toolu-review",
+      "pr-babysit",
+      "epic-orchestrator",
+      "documentation-gate"
+    ]
+  );
 }
 
 #[test]

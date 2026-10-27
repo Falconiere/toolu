@@ -6,10 +6,14 @@ use std::path::Path;
 use regex::Regex;
 use serde_json::Value;
 
-pub(crate) const PLUGINS: usize = 13;
-pub(crate) const SKILLS: usize = 14;
+/// Published plugins in the marketplace.
+pub(crate) const PLUGINS: usize = 14;
+/// Discoverable plugin skills.
+pub(crate) const SKILLS: usize = 15;
+/// Published Codex agent profiles.
 pub(crate) const AGENTS: usize = 5;
-pub(crate) const HOOKS: usize = 10;
+/// Claude-compatible hook manifests.
+pub(crate) const HOOKS: usize = 11;
 
 const REQUIRED_SKILLS: [&str; 5] = [
   "plugins/toolu/skills/commit/SKILL.md",
@@ -227,6 +231,7 @@ fn collect_hooks<'a>(group: &'a Value, out: &mut Vec<&'a Value>) -> Option<()> {
   Some(())
 }
 
+/// Visible child directories, relative to the repository root.
 pub(crate) fn dirs(root: &Path, rel: &str) -> Result<Vec<String>, String> {
   let dir = root.join(rel);
   if !dir.is_dir() {
@@ -245,6 +250,7 @@ pub(crate) fn dirs(root: &Path, rel: &str) -> Result<Vec<String>, String> {
   Ok(names)
 }
 
+/// Read a required JSON packaging file.
 pub(crate) fn read_json(root: &Path, rel: &str) -> Result<Value, String> {
   let path = root.join(rel);
   if !path.is_file() {

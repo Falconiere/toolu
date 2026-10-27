@@ -1336,6 +1336,198 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
+      "about": "Inspect and record documentation reviews",
+      "aliases": [
+        "documentation-gate"
+      ],
+      "args": [],
+      "commands": [
+        {
+          "about": "Inspect the committed diff",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "branch",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "inspect",
+          "owner": "documentation-gate",
+          "path": [
+            "docs",
+            "inspect"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Choose a ready documentation worker",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "candidates",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "evidence",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "route",
+          "owner": "documentation-gate",
+          "path": [
+            "docs",
+            "route"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Record a completed review",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "report",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "branch",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "write-state",
+          "owner": "documentation-gate",
+          "path": [
+            "docs",
+            "write-state"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as its plugin's hooks.json names it",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "documentation-gate",
+          "path": [
+            "docs",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "docs",
+      "owner": "documentation-gate",
+      "path": [
+        "docs"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Typed judgments from Jev: yes/no probabilities, choices and scores",
       "aliases": [],
       "args": [],

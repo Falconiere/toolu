@@ -1,0 +1,24 @@
+{
+  "name": "documentation-gate",
+  "version": "8.5.0",
+  "hookProtocol": 2,
+  "description": "Keep documentation accurate with a Jev-routed editing sub-agent and native review records.",
+  "author": {
+    "name": "Falconiere Barbosa",
+    "email": "hello@falconiere.io"
+  },
+  "homepage": "https://github.com/falconiere/toolu",
+  "repository": "https://github.com/falconiere/toolu.git",
+  "license": "MIT",
+  "keywords": [
+    "documentation",
+    "quality",
+    "skills"
+  ],
+  "dependencies": [
+    {
+      "name": "toolu",
+      "marketplace": "toolu"
+    }
+  ]
+}

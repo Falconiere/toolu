@@ -63,7 +63,8 @@
     "epic-orchestrator",
     "plugins",
     "http-test-support",
-    "code-review"
+    "code-review",
+    "documentation-gate"
   ],
   "core": [
     "protocol",

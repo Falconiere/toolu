@@ -26,6 +26,7 @@ fn the_declared_dependents_really_depend_on_toolu() {
     dependents,
     [
       "delivery-flow",
+      "documentation-gate",
       "epic-orchestrator",
       "pr-babysit",
       "python-quality",

@@ -106,7 +106,7 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "debug" | "config" | "status" | "setup"
-      | "jev" | "review" | "code-review" | "ast-grep" | "statusline" | "babysit" | "epic"
+      | "jev" | "review" | "code-review" | "docs" | "ast-grep" | "statusline" | "babysit" | "epic"
       | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")

@@ -33,6 +33,7 @@ pub mod babysit;
 pub mod builtins;
 pub mod detect;
 pub mod dispatch;
+pub mod docs_review;
 pub mod gate;
 mod gates;
 pub mod ledger;

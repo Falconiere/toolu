@@ -79,6 +79,7 @@ fn the_lib_dir_comes_from_the_plugin_root() {
       .map(|rule| (rule.spec(), rule.name()))
       .collect::<Vec<_>>(),
     [
+      ("documentation-gate@toolu", "docs-review"),
       ("ast-grep@toolu", "search-nudge"),
       ("ast-grep@toolu", "byte-savings"),
       ("ts-quality@toolu", "ts-quality"),

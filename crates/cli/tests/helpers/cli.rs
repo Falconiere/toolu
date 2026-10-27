@@ -14,7 +14,14 @@ pub(crate) const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 
 /// One run of `toolu` with `args`, its streams captured.
 pub(crate) fn toolu(args: &[&str]) -> Res<Output> {
-  Ok(assert_cmd::Command::new(TOOLU).args(args).output()?)
+  // Contract reads must not connect to the user's resident epic engine.
+  let resources = tempfile::tempdir()?;
+  Ok(
+    assert_cmd::Command::new(TOOLU)
+      .args(args)
+      .env("TOOLU_RESOURCE_HOME", resources.path())
+      .output()?,
+  )
 }
 
 /// Standard output as text.

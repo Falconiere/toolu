@@ -92,6 +92,10 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
 `version` is reserved for future schema bumps; v1 is the current value.
 See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated example.
 
+### Documentation sync with documentation-gate
+
+When the `documentation-gate` plugin is selected, its registered native rule replaces the legacy docs-surface check. `documentation-gate:sync` routes a separate editing worker through Jev and records coverage of the committed branch diff. Missing or stale review follows the effective `docsSync` gate mode (`block`, `ask`, `advise`, or `off`); the hook makes no model call. The rule and ledger load the target repository’s configuration when evaluating that repository, including for static `git -C PATH` pushes. A supported push with an empty diff passes. Without the active registration the legacy check remains. The plugin requires the `toolu` dispatcher. See [documentation-gate](../plugins/documentation-gate/README.md).
+
 ### Loader (`toolu_runtime::config`)
 
 The loader (`toolu_runtime::config::load`,

@@ -97,6 +97,10 @@ seen too (#283). A pathname pattern (`> .en[v]`) is checked as every existing
 file it matches, and a target built from a variable (`> $HOME/.env`) by its
 text. See `writes` in `docs/shell-analysis.md`.
 
+## Documentation review
+
+When `documentation-gate` is selected, its SessionStart registration makes the native docs review rule replace the legacy docs-sync check. Run `documentation-gate:sync` to route a separate editing worker and record a review of the committed diff. Missing, stale or incomplete review follows the configured `docsSync` mode; `off` is silent. The target repository supplies the effective configuration, including for static `git -C PATH` pushes. Use an explicit `git push <remote> HEAD:<branch>`; unsupported push forms and `push.followTags=true` are rejected under that mode. The hook never calls Jev. Without the active plugin, the legacy surface check remains.
+
 ## Per-gate overrides
 
 ```json

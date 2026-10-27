@@ -17,6 +17,7 @@ serde_json.workspace = true
 toolu-brainstorm = { path = "../brainstorm" }
 toolu-code-review = { path = "../code-review" }
 toolu-delivery-flow = { path = "../delivery-flow" }
+toolu-documentation-gate = { path = "../documentation-gate" }
 toolu-engine = { path = "../core/engine" }
 toolu-epic-orchestrator = { path = "../epic-orchestrator" }
 toolu-hub = { path = "../toolu" }
