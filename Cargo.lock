@@ -1521,6 +1521,7 @@ name = "toolu-plugins"
 version = "8.5.0"
 dependencies = [
  "clap",
+ "nix",
  "serde_json",
  "tempfile",
  "toolu-protocol",

@@ -54,8 +54,7 @@ impl Context<'_> {
   /// Runs `work` under a spinner for `host` (Cursor copies plugins in-process).
   fn spinning<T>(&self, host: &str, task: &str, work: impl FnOnce(&Self) -> T) -> T {
     if let Some(progress) = &self.progress {
-      progress.begin(host, 0);
-      progress.task(task);
+      progress.begin(host, 0, task);
     }
     let done = work(self);
     if let Some(progress) = &self.progress {

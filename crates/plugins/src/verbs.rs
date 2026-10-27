@@ -52,8 +52,7 @@ impl Driver {
   /// Starts this host's progress over `total` plugins, at `task`.
   pub(crate) fn begin(&self, total: usize, task: &str) {
     if let Some(progress) = &self.progress {
-      progress.begin(self.adapter.bin(), total);
-      progress.task(task);
+      progress.begin(self.adapter.bin(), total, task);
     }
   }
 

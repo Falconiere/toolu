@@ -169,14 +169,14 @@ impl Progress {
     self.shared.write(&intro(self.shared.style, title));
   }
 
-  /// Starts `host`'s bar over `total` plugins and the spinner.
-  pub(crate) fn begin(&self, host: &str, total: usize) {
+  /// Starts `host`'s bar over `total` plugins and the spinner, at `task`.
+  pub(crate) fn begin(&self, host: &str, total: usize, task: &str) {
     self.shared.change(|state| {
       *state = State {
         host: host.to_owned(),
         total,
         done: 0,
-        task: String::new(),
+        task: task.to_owned(),
       };
     });
     self.spin();

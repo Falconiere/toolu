@@ -42,7 +42,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let Some(request) = args::request(matches) else {
     return Outcome::failed(Exit::Usage, "toolu: a plugins verb is required".to_owned());
   };
-  let mut terminal = prompt::terminal(!request.no_input && !ctx.json);
+  let mut terminal = prompt::terminal(!request.no_input && !ctx.json, ctx.style);
   let progress = Progress::open(ctx.style, ctx.quiet, ctx.json).map(Arc::new);
   if let Some(progress) = &progress {
     let verb = matches.subcommand_name().unwrap_or_default();
@@ -53,7 +53,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     host: ctx.host,
     ask: terminal
       .as_mut()
-      .map(|prompter| prompter as &mut dyn prompt::Ask),
+      .map(|ask| &mut **ask as &mut dyn prompt::Ask),
     timeout: host::run::HOST_TIMEOUT,
     version: env!("CARGO_PKG_VERSION"),
     origin: host::checkout::ORIGIN.to_owned(),
