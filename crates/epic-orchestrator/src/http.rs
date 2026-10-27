@@ -32,8 +32,10 @@ pub(crate) struct Config {
   pub addr: SocketAddr,
   pub secrets: Secrets,
   pub peers: Vec<Peer>,
-  /// Where `/api/v1/agents/live` reads herdr.
+  /// Where live-agent and worker-screen reads reach herdr.
   pub herdr: crate::http_live::Herdr,
+  /// The named herdr session, for a blocked worker's attach command.
+  pub attach_session: Option<String>,
   /// Follow later changes to this root's `secrets.json`; `None` keeps `secrets`.
   pub reload: Option<Roots>,
   /// The state loop actions go to; `None` answers them `503 engine_busy`.
@@ -53,6 +55,7 @@ impl Config {
       control: None,
       deadline: http_action::DEADLINE,
       herdr: crate::http_live::Herdr::Off,
+      attach_session: None,
     }
   }
 }
@@ -91,6 +94,7 @@ pub(crate) struct Context {
   pub(crate) metrics: crate::http_metrics::MetricsCache,
   pub(crate) fleet: Arc<FleetCache>,
   pub(crate) live: crate::http_live::Live,
+  pub(crate) screen: crate::http_screen::Screen,
   pub(crate) herdr_calls: crate::http_live::Limiter,
 }
 
@@ -130,7 +134,8 @@ pub(crate) fn start(
     overview: OverviewCache::new(),
     metrics: crate::http_metrics::MetricsCache::new(),
     fleet,
-    live: crate::http_live::Live::new(config.herdr),
+    live: crate::http_live::Live::new(config.herdr.clone()),
+    screen: crate::http_screen::Screen::new(config.herdr, config.attach_session),
     herdr_calls: crate::http_live::Limiter::default(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
@@ -214,11 +219,22 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
   if host_ok && let Some(op) = request.target.strip_prefix(http_action::PREFIX) {
     return act(stream, context, request, op, &secrets);
   }
+  let (path, query) = request
+    .target
+    .split_once('?')
+    .unwrap_or((request.target.as_str(), ""));
+  let screen_route = path
+    .strip_prefix("/api/v1/issues/")
+    .and_then(|rest| rest.strip_suffix("/screen"))
+    .is_some();
   let response = if !host_ok {
     Some(Response::error(403, "foreign_host"))
   } else if request.method != "GET" && request.method != "HEAD" {
     Some(Response::error(405, "method_not_allowed"))
-  } else if context.auth_required && !authorized(&secrets, request.authorization.as_deref()) {
+  } else if context.auth_required
+    && !screen_route
+    && !authorized(&secrets, request.authorization.as_deref())
+  {
     Some(Response::error(401, "unauthorized"))
   } else {
     None
@@ -229,10 +245,6 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     let _sent = send(stream, &response);
     return true;
   }
-  let (path, query) = request
-    .target
-    .split_once('?')
-    .unwrap_or((request.target.as_str(), ""));
   if path == "/api/v1/events/stream" {
     return if request.method == "GET" {
       crate::http_read::serve_events(stream, context, request, query, &secrets)

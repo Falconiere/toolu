@@ -35,6 +35,11 @@ const ENDPOINTS: &[Endpoint] = &[
     purpose: "One worker",
   },
   Endpoint {
+    path: "/api/v1/issues/{key}/screen",
+    fields: "key, agent_status, text, lines, sampled_at; attach when blocked; or state, or available and reason",
+    purpose: "One worker's visible terminal screen",
+  },
+  Endpoint {
     path: "/api/v1/agents",
     fields: "items (state, key, epic, worktree, session_id)",
     purpose: "Worker sessions",
@@ -95,6 +100,19 @@ const ENDPOINTS: &[Endpoint] = &[
     purpose: "Live journal feed",
   },
 ];
+
+/// The token-gated local worker-screen read route.
+const SCREEN: &str = r#"
+## Worker screens
+
+`GET /api/v1/issues/{key}/screen` shows this engine's worker pane. It always needs `Authorization: Bearer <status token>`, even on loopback: terminal text can contain code and secrets. With no token configured it returns `403 control_disabled`; a missing or wrong token returns `401 unauthorized`. HEAD makes the same checks and sends no body. The route is local only; `/api/v1/fleet/peers/{name}/issues/{key}/screen` is `404`.
+
+The engine calls herdr `agent.read` over the socket with `source: visible` and `format: text`, without a line count or CLI fallback. `recent` fails for some working alternate-screen agents. The response carries `key`, `agent_status`, `text`, `lines` (the count of returned text lines) and `sampled_at`; a blocked agent also gets `attach`, a ready-to-copy `herdr agent attach <target>` command. In a named session it begins `herdr --session <name> agent attach <target>`. The target is the worker's herdr agent name.
+
+Reads are cached per worker key for one second; cache hits keep the same `sampled_at`. Every response uses the current configured secrets to redact the screen, then cuts text from the top until the whole JSON body is at most 64 KiB. The end of the last line stays visible, even when that line alone exceeds the cap. Up to eight HTTP herdr calls may overlap across the live-agent and screen routes; a request above the limit gets `503 herdr_busy`.
+
+Herdr `agent_not_found` or `pane_not_found` returns `200` with `state: "not_running"`. Herdr off, scripted, stopped or on a different protocol returns `200` with `available: false` and `reason` (`off`, `scripted`, `not running`, `protocol <n>` or `error: <code>`). Unknown issue keys return `404`.
+"#;
 
 /// The `## Actions` section: the token-gated write route.
 const ACTIONS: &str = "\n## Actions\n\nThe engine that serves the page can be controlled from it. Peers are never controlled. `POST /api/v1/actions/{op}` sends one control operation to the engine's state loop, the same way `toolu epic` does over its control socket:
@@ -208,7 +226,7 @@ The page stacks every registered epic and shows four tiles, hosts, attention and
 /// Render the versioned API reference from the endpoint definitions.
 pub(crate) fn render() -> String {
   let mut out = String::from(
-    "# Epic status API\n\nGenerated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with `TOOLU_UPDATE_DOCS=1 cargo test -p toolu-epic-orchestrator status_api_doc`.\n\nThe resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.\n\nOnly GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`. HTML and JSON responses have `Cache-Control: no-store`; versioned dashboard assets have `Cache-Control: public, max-age=31536000, immutable`. Every response carries `X-Content-Type-Options: nosniff` and a same-origin Content-Security-Policy. No response has a CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.\n\n| Path | Purpose | Fields after `schema` |\n|---|---|---|\n",
+    "# Epic status API\n\nGenerated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with `TOOLU_UPDATE_DOCS=1 cargo test -p toolu-epic-orchestrator status_api_doc`.\n\nThe resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.\n\nRead routes accept GET and HEAD; actions accept POST. HEAD has no body. Every JSON body contains `schema: 1`. HTML and JSON responses have `Cache-Control: no-store`; versioned dashboard assets have `Cache-Control: public, max-age=31536000, immutable`. Every response carries `X-Content-Type-Options: nosniff` and a same-origin Content-Security-Policy. No response has a CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.\n\n| Path | Purpose | Fields after `schema` |\n|---|---|---|\n",
   );
   for endpoint in ENDPOINTS {
     let _written = writeln!(
@@ -218,6 +236,7 @@ pub(crate) fn render() -> String {
     );
   }
   out.push_str(NOTES);
+  out.push_str(SCREEN);
   out.push_str(ACTIONS);
   out.push_str(FLEET);
   out

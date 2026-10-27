@@ -4,7 +4,7 @@ Generated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with 
 
 The resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.
 
-Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`. HTML and JSON responses have `Cache-Control: no-store`; versioned dashboard assets have `Cache-Control: public, max-age=31536000, immutable`. Every response carries `X-Content-Type-Options: nosniff` and a same-origin Content-Security-Policy. No response has a CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.
+Read routes accept GET and HEAD; actions accept POST. HEAD has no body. Every JSON body contains `schema: 1`. HTML and JSON responses have `Cache-Control: no-store`; versioned dashboard assets have `Cache-Control: public, max-age=31536000, immutable`. Every response carries `X-Content-Type-Options: nosniff` and a same-origin Content-Security-Policy. No response has a CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.
 
 | Path | Purpose | Fields after `schema` |
 |---|---|---|
@@ -13,6 +13,7 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/api/v1/epics` | Registered epics | items (key, paused, counts, attention_count, title, url, waves_total, current_wave, live, queued) |
 | `/api/v1/epics/{id}` | One epic board | key, paused, title, url, waves_total, current_wave, live, queued, graph, issues (key, stage, phase, pr, host, agent_status, agent_status_at, model, effort, phase_age_ms, hold, plan_summary), queue |
 | `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, hold, plan |
+| `/api/v1/issues/{key}/screen` | One worker's visible terminal screen | key, agent_status, text, lines, sampled_at; attach when blocked; or state, or available and reason |
 | `/api/v1/agents` | Worker sessions | items (state, key, epic, worktree, session_id) |
 | `/api/v1/agents/live` | What each worker's agent is doing now | available, reason, sampled_at, items (key, epic, host, agent_status, title, sampled_at) |
 | `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason, paused, paused_by, paused_at) |
@@ -64,6 +65,16 @@ Observed on 2026-10-27 with herdr 0.9.5 through `herdr agent list` during real s
 | Codex 0.164.0 | `blocked` on the folder-trust dialog at startup; `done` → `working` → `done` | The folder name ("ws-codex") until the first prompt, then `<task summary> \| <folder>` ("List files and save notes \| ws-codex"). |
 | Cursor Agent 2026.10.22 | `idle` → `working` → `done` | `Cursor Agent` until the first prompt, then a task summary ("List Files And Write"). |
 | Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name ("ws-muse") throughout; no task summary. |
+
+## Worker screens
+
+`GET /api/v1/issues/{key}/screen` shows this engine's worker pane. It always needs `Authorization: Bearer <status token>`, even on loopback: terminal text can contain code and secrets. With no token configured it returns `403 control_disabled`; a missing or wrong token returns `401 unauthorized`. HEAD makes the same checks and sends no body. The route is local only; `/api/v1/fleet/peers/{name}/issues/{key}/screen` is `404`.
+
+The engine calls herdr `agent.read` over the socket with `source: visible` and `format: text`, without a line count or CLI fallback. `recent` fails for some working alternate-screen agents. The response carries `key`, `agent_status`, `text`, `lines` (the count of returned text lines) and `sampled_at`; a blocked agent also gets `attach`, a ready-to-copy `herdr agent attach <target>` command. In a named session it begins `herdr --session <name> agent attach <target>`. The target is the worker's herdr agent name.
+
+Reads are cached per worker key for one second; cache hits keep the same `sampled_at`. Every response uses the current configured secrets to redact the screen, then cuts text from the top until the whole JSON body is at most 64 KiB. The end of the last line stays visible, even when that line alone exceeds the cap. Up to eight HTTP herdr calls may overlap across the live-agent and screen routes; a request above the limit gets `503 herdr_busy`.
+
+Herdr `agent_not_found` or `pane_not_found` returns `200` with `state: "not_running"`. Herdr off, scripted, stopped or on a different protocol returns `200` with `available: false` and `reason` (`off`, `scripted`, `not running`, `protocol <n>` or `error: <code>`). Unknown issue keys return `404`.
 
 ## Actions
 

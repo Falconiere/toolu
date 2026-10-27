@@ -208,6 +208,18 @@ fn title(row: &Value, secrets: &Secrets) -> Option<String> {
 /// `agent.list` rows over the socket at protocol 22 only: a CLI fallback
 /// would spawn a process and journal a record on every poll.
 fn agent_list(socket: &Path) -> Result<Vec<Value>, String> {
+  let reply = request(socket, "agent.list", &json!({}))?;
+  Ok(
+    reply
+      .pointer("/result/agents")
+      .and_then(Value::as_array)
+      .cloned()
+      .unwrap_or_default(),
+  )
+}
+
+/// One protocol-22 herdr socket request, with no CLI fallback.
+pub(crate) fn request(socket: &Path, method: &str, params: &Value) -> Result<Value, String> {
   let pong = roundtrip(&mut connect(socket)?, "1", "ping", &json!({})).map_err(down)?;
   failed(&pong)?;
   let protocol = pong.pointer("/result/protocol").and_then(Value::as_u64);
@@ -219,18 +231,12 @@ fn agent_list(socket: &Path) -> Result<Vec<Value>, String> {
   let mut stream = connect(socket)?;
   write_json(
     &mut stream,
-    &json!({"id": "2", "method": "agent.list", "params": {}}),
+    &json!({"id": "2", "method": method, "params": params}),
   )
   .map_err(down)?;
   let reply: Value = serde_json::from_str(&read_text(&mut stream).map_err(down)?).map_err(down)?;
   failed(&reply)?;
-  Ok(
-    reply
-      .pointer("/result/agents")
-      .and_then(Value::as_array)
-      .cloned()
-      .unwrap_or_default(),
-  )
+  Ok(reply)
 }
 
 /// `error: <code>` for a herdr error object.

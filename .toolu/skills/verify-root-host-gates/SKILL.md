@@ -33,6 +33,7 @@ Use when running toolu's required Rust gates as root on a shared Linux host, esp
 - Mount the container's target volume outside the checkout, link the ignored `target` directory to it, and place a private `TMPDIR` on that volume. Confirm `git -C "$TMPDIR" rev-parse --show-toplevel` fails and the temp directory and built binary share a filesystem. This keeps outside-repository fixtures valid while allowing hard links instead of cold cross-filesystem binary copies.
 - On a constrained shared VM disk, use `CARGO_INCREMENTAL=0` for verification and monitor free space. If storage fills, stop the owned runner and discard only its build cache and incomplete coverage data before rerunning; never prune another worker's volumes.
 - Ledger state retains only the end of a failed command's output. Capture its temporary `.run.<pid>.<step>` log while the check runs when full failure diagnostics are needed; the temporary log is removed when the command finishes.
+- With a shared `CARGO_TARGET_DIR`, a reused `xtask` binary can carry another worktree's compile-time default root. Pass `--root "$PWD"` to `cargo xtask deploy-gate` and confirm `target/deploy/gate.json` names this worktree's `git rev-parse HEAD` before treating the gate as green.
 
 ## Verification
 

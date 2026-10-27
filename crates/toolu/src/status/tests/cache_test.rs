@@ -74,11 +74,11 @@ fn real_git_refresh_writes_one_atomic_record_and_obeys_the_lock() {
   assert!(!paths.cache.exists());
   release(&paths.lock, &token);
   refresh(&roots, &repo).unwrap();
-  assert_eq!(read(&roots, &repo).untracked, 1);
   assert_eq!(read_record(&paths.cache).unwrap().counts.untracked, 1);
   assert!(!paths.lock.exists());
   assert_eq!(
     fs::read_dir(paths.cache.parent().unwrap()).unwrap().count(),
     1
   );
+  assert_eq!(read(&roots, &repo).untracked, 1);
 }
