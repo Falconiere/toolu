@@ -1384,6 +1384,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toolu-brainstorm",
+ "toolu-code-review",
  "toolu-delivery-flow",
  "toolu-engine",
  "toolu-epic-orchestrator",
@@ -1396,6 +1397,17 @@ dependencies = [
  "toolu-runtime",
  "toolu-state",
  "toolu-statusline",
+]
+
+[[package]]
+name = "toolu-code-review"
+version = "8.5.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "toolu-protocol",
+ "toolu-runtime",
 ]
 
 [[package]]

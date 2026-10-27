@@ -691,6 +691,258 @@
         "meaning": { "type": "string", "minLength": 1 }
       }
     },
+    "codeReview": {
+      "description": "toolu code-review run --json: the review report (schema_version 1). Exit 0 approved, 2 blocked, 69 error.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema_version",
+        "toolu_version",
+        "verdict",
+        "effort",
+        "findings",
+        "coverage",
+        "usage",
+        "error"
+      ],
+      "properties": {
+        "schema_version": {
+          "const": 1
+        },
+        "toolu_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "enum": [
+            "approved",
+            "blocked",
+            "error"
+          ]
+        },
+        "effort": {
+          "enum": [
+            "auto",
+            "small",
+            "medium",
+            "high",
+            "xhigh"
+          ]
+        },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "path",
+              "line",
+              "end_line",
+              "side",
+              "severity",
+              "category",
+              "source",
+              "claim",
+              "quote"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "path": {
+                "type": "string",
+                "minLength": 1
+              },
+              "line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "end_line": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "side": {
+                "enum": [
+                  "new",
+                  "old"
+                ]
+              },
+              "severity": {
+                "enum": [
+                  "blocker",
+                  "high",
+                  "medium",
+                  "low",
+                  "nit"
+                ]
+              },
+              "category": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source": {
+                "enum": [
+                  "llm",
+                  "ast-grep",
+                  "secrets"
+                ]
+              },
+              "claim": {
+                "type": "string",
+                "minLength": 1
+              },
+              "quote": {
+                "type": "string",
+                "minLength": 1
+              },
+              "suggestion": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "reviewed",
+            "unreviewed",
+            "skipped"
+          ],
+          "properties": {
+            "reviewed": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "unreviewed": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "reason"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "skipped": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "path",
+                  "reason"
+                ],
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        },
+        "usage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tokens_in",
+            "tokens_out",
+            "cost_usd",
+            "model"
+          ],
+          "properties": {
+            "tokens_in": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "tokens_out": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "cost_usd": {
+              "type": "number",
+              "minimum": 0
+            },
+            "model": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "error": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "message"
+              ],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "unconfigured",
+                    "outage"
+                  ]
+                },
+                "message": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        }
+      },
+      "if": {
+        "properties": {
+          "verdict": {
+            "const": "error"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "error": {
+            "type": "object"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "error": {
+            "type": "null"
+          }
+        }
+      }
+    },
     "command": {
       "type": "object",
       "additionalProperties": false,

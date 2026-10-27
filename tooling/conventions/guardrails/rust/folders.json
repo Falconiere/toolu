@@ -62,7 +62,8 @@
     "pr-babysit",
     "epic-orchestrator",
     "plugins",
-    "http-test-support"
+    "http-test-support",
+    "code-review"
   ],
   "core": [
     "protocol",

@@ -22,6 +22,7 @@ fn the_built_in_catalog_is_the_repository_manifest() {
     [
       "ast-grep",
       "brainstorm",
+      "code-review",
       "delivery-flow",
       "epic-orchestrator",
       "jev",

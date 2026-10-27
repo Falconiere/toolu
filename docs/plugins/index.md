@@ -18,6 +18,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 10 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
 | 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
+| 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native local review of the push diff with OpenRouter and Jev (epic #660); `toolu code-review run` fails closed until the pipeline lands |
 
 ## Architecture Overview
 

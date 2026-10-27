@@ -31,6 +31,7 @@ fn every_namespace_is_a_top_level_command() {
       "brainstorm",
       "delivery-flow",
       "review",
+      "code-review",
       "jev",
       "statusline",
       "babysit",

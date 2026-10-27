@@ -1,0 +1,18 @@
+[package]
+name = "toolu-code-review"
+description = "toolu code-review plugin: the `toolu code-review` namespace and its report contract"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toolu-protocol = { path = "../core/protocol" }
+toolu-runtime = { path = "../core/runtime" }
+
+[lints]
+workspace = true

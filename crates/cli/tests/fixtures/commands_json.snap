@@ -1218,6 +1218,124 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
+      "about": "Native review of the push diff: anchored findings, coverage and a computed verdict",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Review the branch diff and print the verdict report",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The base to diff against; default: the push-review base",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "REF"
+            },
+            {
+              "global": false,
+              "help": "Review only this path; repeatable. A path-scoped run never writes passing state",
+              "hidden": false,
+              "long": "path",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
+            {
+              "global": false,
+              "help": "Review effort: auto lets Jev pick the level; a fixed level skips it",
+              "hidden": false,
+              "long": "effort",
+              "possibleValues": [
+                "auto",
+                "small",
+                "medium",
+                "high",
+                "xhigh"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "LEVEL"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "run",
+          "owner": "code-review",
+          "path": [
+            "code-review",
+            "run"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as its plugin's hooks.json names it",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "code-review",
+          "path": [
+            "code-review",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "code-review",
+      "owner": "code-review",
+      "path": [
+        "code-review"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Typed judgments from Jev: yes/no probabilities, choices and scores",
       "aliases": [],
       "args": [],

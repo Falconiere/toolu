@@ -145,6 +145,15 @@
       "category": "productivity",
       "keywords": ["typesafe", "jev", "judgment", "skills"],
       "license": "MIT"
+    },
+    {
+      "name": "code-review",
+      "source": "./plugins/code-review",
+      "description": "Native code review of the push diff with OpenRouter and Jev: anchored findings and a computed verdict as a local report. In development: `toolu code-review run` fails closed until the review pipeline lands. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["code-review", "review", "openrouter", "jev"],
+      "license": "MIT"
     }
   ]
 }
