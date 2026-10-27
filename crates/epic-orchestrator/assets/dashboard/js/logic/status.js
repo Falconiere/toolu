@@ -13,10 +13,12 @@ const HOSTS = {
   paused: { kind: "paused", label: "‖ PAUSED" },
 };
 
+export const DONE_STAGES = ["merged", "cleaning", "cleanup-incomplete", "abandoned"];
+
 const count = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 
 export function agentState(issue, fallback) {
-  if (["merged", "cleaning", "cleanup-incomplete", "abandoned"].includes(issue?.stage)) {
+  if (DONE_STAGES.includes(issue?.stage)) {
     return AGENTS.done;
   }
   if (!issue?.stage) return AGENTS.queued;

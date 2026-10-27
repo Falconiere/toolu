@@ -60,7 +60,8 @@ test("tiles aggregate the captured board, plan, hosts, and empty attention", () 
   assert.equal(summary.attention, "0 OPEN");
   assert.equal(summary.attentionNote, "Nothing waiting on you.");
   assert.equal(summary.hosts, "2 / 4");
-  assert.equal(summary.plans, "3 / 4");
+  const plan = captured.board.issues[0].plan_summary;
+  assert.equal(summary.plans, `${plan.green} / ${plan.total}`);
   assert.equal(summary.planNote, "Across 1 worker plans.");
   const withPeer = tiles(
     [captured.board, captured.peer_board],
