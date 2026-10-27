@@ -88,7 +88,11 @@ fn the_image_pins_match_the_release_workflow_and_toolchain() {
       "the image does not create {path} for dev"
     );
   }
-  for tool in ["/usr/local/bin/npx", "--no-install-recommends jq gh"] {
+  for tool in [
+    "/usr/local/bin/npx",
+    "--no-install-recommends jq gh",
+    "npm config --global set update-notifier false",
+  ] {
     assert!(DOCKERFILE.contains(tool), "the image lacks {tool}");
   }
 }

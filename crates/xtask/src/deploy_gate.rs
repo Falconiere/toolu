@@ -25,6 +25,8 @@ pub(crate) const CACHES: [(&str, &str); 3] = [
 
 /// The `verify` job's tools at `release-native.yml`'s pins (a test keeps them equal), plus
 /// the runner-image tools the tests run for real: `npx` (the golden `bunx` shim), `jq`, `gh`.
+/// npm's update notifier is off: its registry request in every `npx` stalled past the
+/// hooks' 10 s jscpd timeout during the suite.
 /// Non-root uid 501 and `/src` avoid the permission and `/work` traps of a root gate.
 pub(crate) const DOCKERFILE: &str = r#"ARG TOOLCHAIN
 FROM node:22-trixie-slim AS node
@@ -35,6 +37,7 @@ COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
 RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh && rm -rf /var/lib/apt/lists/* \
  && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
+ && npm config --global set update-notifier false \
  && rustup toolchain install "$TOOLCHAIN" --profile minimal -c rustfmt,clippy,llvm-tools \
  && cargo install --locked cargo-deny@0.20.2 cargo-machete@0.9.2 cargo-llvm-cov@0.9.1 cargo-nextest@0.9.146 \
  && npm install -g @ast-grep/cli@0.50.0 \
