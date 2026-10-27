@@ -24,6 +24,26 @@ pub(crate) fn install(path: &Path, text: &str) {
   assert!(child.wait().unwrap().success());
 }
 
+/// Run `git -C dir args` with a fixed identity and no commit signing, assert it succeeds, and return its trimmed stdout.
+pub(crate) fn git(dir: &Path, args: &[&str]) -> String {
+  let output = Command::new("git")
+    .args([
+      "-c",
+      "user.name=probe",
+      "-c",
+      "user.email=probe@example.invalid",
+      "-c",
+      "commit.gpgsign=false",
+      "-C",
+    ])
+    .arg(dir)
+    .args(args)
+    .output()
+    .unwrap();
+  assert!(output.status.success(), "git {args:?}: {output:?}");
+  String::from_utf8(output.stdout).unwrap().trim().to_owned()
+}
+
 fn words(args: &[&str]) -> Vec<String> {
   args.iter().map(|word| (*word).to_owned()).collect()
 }

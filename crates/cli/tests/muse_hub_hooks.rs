@@ -1,7 +1,9 @@
 //! Muse standalone hub hooks through the native `toolu` binary and captured payloads.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 use std::fs;
-use std::io::{self, Write as _};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
@@ -93,11 +95,7 @@ impl Fixture {
       }
     }
     let mut child = cmd.spawn()?;
-    child
-      .stdin
-      .take()
-      .ok_or_else(|| io::Error::other("piped stdin missing"))?
-      .write_all(payload.to_string().as_bytes())?;
+    feed::feed(child.stdin.take(), payload.to_string().as_bytes())?;
     child.wait_with_output()
   }
 

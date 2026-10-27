@@ -26,6 +26,10 @@ mod command_tree;
 mod context_budget;
 mod coverage;
 mod data;
+mod deploy_gate;
+mod deploy_guard;
+mod deploy_line;
+mod deploy_tag;
 mod docs_cli;
 mod env_scrub;
 mod final_removal;
@@ -118,6 +122,8 @@ const TASKS: &[(&str, Task)] = &[
   ("check-startup", startup::run),
   ("check-markdown-cli", markdown_cli::run),
   ("homebrew-formula", homebrew_formula::run),
+  ("deploy-gate", deploy_gate::run),
+  ("deploy-guard", deploy_guard::run),
   ("context-budget", context_budget::run),
   ("ci-changes", ci_changes::run),
   ("check-ci-paths", ci_check::run),
@@ -139,7 +145,7 @@ const USAGE: &str = "usage: cargo xtask <task> [--root DIR] [--base REF] [--titl
   \x20      cargo xtask measure --out FILE -- COMMAND [ARG]...\n\
   tasks: gate, guardrails, check-layers, check-reach, check-unused-pub, check-gate-change, \
   check-coverage, measure, print-hook, print-muse-hook, check-hooks, check-workflows, launcher-e2e, docs-cli, check-cli-compat, \
-  check-startup, check-markdown-cli, homebrew-formula, context-budget, ci-changes, \
+  check-startup, check-markdown-cli, homebrew-formula, deploy-gate, deploy-guard, context-budget, ci-changes, \
   check-ci-paths, ci-aggregate, final-removal, gate-coverage, packaging, bench, bench-hooks, bench-statusline, host-smoke, pack";
 
 /// Run the task named by `args[0]` and map its outcome to an exit code.

@@ -1,9 +1,10 @@
 //! ts-quality's native `SessionStart` register in a real config dir, then the
 //! real `toolu hook post-tools` on TypeScript and non-TypeScript edits.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 use std::error::Error;
 use std::fs;
-use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -93,11 +94,7 @@ fn toolu(sb: &Sandbox, args: &[&str], path: &str, stdin: &str) -> Res<Output> {
     command.env_remove(key);
   }
   let mut child = command.spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or("no stdin")?
-    .write_all(stdin.as_bytes())?;
+  feed::feed(child.stdin.take(), stdin.as_bytes())?;
   Ok(child.wait_with_output()?)
 }
 

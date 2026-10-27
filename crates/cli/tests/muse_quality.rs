@@ -1,7 +1,9 @@
 //! Muse quality registration and post-edit enforcement through the real CLI.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 use std::fs;
-use std::io::{self, Write as _};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
@@ -66,12 +68,7 @@ impl Fixture {
       .stdout(Stdio::piped())
       .stderr(Stdio::piped())
       .spawn()?;
-    let mut input = child
-      .stdin
-      .take()
-      .ok_or_else(|| io::Error::other("piped stdin missing"))?;
-    input.write_all(payload.as_bytes())?;
-    drop(input);
+    feed::feed(child.stdin.take(), payload.as_bytes())?;
     child.wait_with_output()
   }
 

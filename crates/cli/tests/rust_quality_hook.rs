@@ -2,9 +2,10 @@
 //! config dir, the real `toolu hook post-tools` on Rust and non-Rust edits, and
 //! `toolu rust-quality check` on real repositories.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 use std::error::Error;
 use std::fs;
-use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
@@ -96,11 +97,7 @@ fn run(sb: &Sandbox, args: &[&str], env: &[(&str, &str)], stdin: &str) -> Res<Ou
   }
   command.envs(env.iter().copied());
   let mut child = command.spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or("no stdin")?
-    .write_all(stdin.as_bytes())?;
+  feed::feed(child.stdin.take(), stdin.as_bytes())?;
   Ok(child.wait_with_output()?)
 }
 

@@ -1,5 +1,7 @@
 //! Native statusline rendering against real repositories and linked worktrees.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 #[macro_use]
 #[path = "helpers/ensure.rs"]
 mod ensure;
@@ -110,7 +112,6 @@ struct Instrumentation<'a> {
 }
 
 fn instrumented_render(test: &Instrumentation<'_>) -> TestResult<Output> {
-  use std::io::Write as _;
   let mut command = Command::new(TOOLU);
   command
     .args(["statusline", "render"])
@@ -134,11 +135,7 @@ fn instrumented_render(test: &Instrumentation<'_>) -> TestResult<Output> {
     command.env("LLVM_PROFILE_FILE", profile);
   }
   let mut child = command.spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or_else(|| std::io::Error::other("render stdin"))?
-    .write_all(payload(test.repo).as_bytes())?;
+  feed::feed(child.stdin.take(), payload(test.repo).as_bytes())?;
   Ok(child.wait_with_output()?)
 }
 

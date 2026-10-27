@@ -1,8 +1,9 @@
 //! Real `SessionStart` manifest registration and native pre/post hook dispatch.
 
+#[path = "helpers/feed.rs"]
+mod feed;
 use std::error::Error;
 use std::fs;
-use std::io::Write as _;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 
@@ -85,11 +86,7 @@ fn hook(call: &HookCall<'_>) -> Res<Output> {
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
   let mut child = process.spawn()?;
-  child
-    .stdin
-    .take()
-    .ok_or("no stdin")?
-    .write_all(call.payload.to_string().as_bytes())?;
+  feed::feed(child.stdin.take(), call.payload.to_string().as_bytes())?;
   Ok(child.wait_with_output()?)
 }
 

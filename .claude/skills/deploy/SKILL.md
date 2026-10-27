@@ -1,8 +1,16 @@
 ---
 name: deploy
-description: Cut a signed toolu production release from this Mac while GitHub Actions is unavailable. Builds the four native archives, signs SHA256SUMS with the release key held in Infisical, publishes the GitHub Release, and updates the Homebrew tap.
+description: Cut a signed toolu production release from this Mac while GitHub Actions is unavailable. Gates HEAD in a clean container with no waivers, builds the four native archives, signs SHA256SUMS with the release key held in Infisical, publishes the GitHub Release, and updates the Homebrew tap.
 argument-hint: --env prod --tag <tag> --change-log "<notes>"
 disable-model-invocation: true
+hooks:
+  PreToolUse:
+    - matcher: Bash|Write|Edit|MultiEdit|NotebookEdit
+      hooks:
+        - type: command
+          command: 'G="$CLAUDE_PROJECT_DIR/.claude/tmp/deploy-guard"; if [ -x "$G" ]; then "$G" deploy-guard --root "$CLAUDE_PROJECT_DIR"; else cd "$CLAUDE_PROJECT_DIR" && PATH="$HOME/.cargo/bin:$PATH" cargo xtask deploy-guard; fi'
+          timeout: 300
+          onFailure: block
 ---
 
 # Deploy toolu from this machine
@@ -10,6 +18,8 @@ disable-model-invocation: true
 Arguments: $ARGUMENTS
 
 This is the local stand-in for `release-native.yml` and `release-homebrew.yml` (see `docs/releases/native.md`). Typing `/deploy` with these arguments authorizes every step below, including the public writes in steps 8 and 9. Work through the steps in order. After each command, check the stated result. On any other result, stop: report the step number and the shortest decisive output line, and run nothing further.
+
+The `PreToolUse` hook above stays registered for the rest of the session. It runs the guard on every Bash and file-tool call. Step 3 snapshots the guard binary to `.claude/tmp/deploy-guard`, and from then on the hook runs that binary directly, so a later checkout or a broken build cannot lock the session out; before the snapshot exists it runs `cargo xtask deploy-guard`. The guard blocks tag pushes, release writes, pushes from another repository (the tap), and the release-PR relabel unless `target/deploy/gate.json` names the clean `HEAD` that step 3 gated and `HEAD` equals `origin/main`. It also blocks any write to the receipt or the snapshot and any tag on a commit other than `HEAD`. A block is a failed step: stop and report it, and never work around it.
 
 Never print, echo, or write `TOOLU_MINISIGN_SECRET_KEY` to a file. It only reaches `minisign` through process substitution.
 
@@ -42,7 +52,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
    - `softwareupdate --install-rosetta --agree-to-license`
    - `rustup target add x86_64-apple-darwin aarch64-unknown-linux-musl x86_64-unknown-linux-musl`
 
-3. **Gate.** Run `cargo xtask gate`. If it fails, list every failing step or test with its shortest decisive line. Continue only when the user confirms in this session that each listed failure is a known host-environment failure, such as a Homebrew `toolu` shadowing the launcher tests. Otherwise stop. The gate has no skip.
+3. **Gate.** Run `DOCKER_CONTEXT=colima-toolu-gate cargo xtask deploy-gate` with the Bash tool's `run_in_background` (the `toolu-gate` Colima profile has the 8 CPUs the gate needs; start it with `colima start toolu-gate --cpu 8 --memory 8 --disk 60`, then `docker context use colima`), then wait for its completion notice and run nothing else meanwhile. It runs the release-helper unittests and the full `cargo xtask gate` on `HEAD` in a clean `toolu-deploy-gate` container, as CI's `verify` job does; the first run builds the image and takes a long time. It must exit 0 and print `deploy-gate: ok <HEAD>, receipt target/deploy/gate.json`. On any other result, stop and report the failing gate step's shortest decisive line. The gate has no skip and no waiver.
 
 4. **Build Darwin.** Both binaries must build, sign and verify:
 
@@ -130,5 +140,7 @@ INFISICAL_PROJECT_ID=df71fe99-a8bf-462c-b187-0ce4df2275f0
 The tag stays, and the release stays a draft, so it is never `latest`. Report these recovery commands and run them only when the user asks:
 - `gh release delete "$TAG" --cleanup-tag --yes`
 - `git tag -d "$TAG"`
+
+If `HEAD` no longer matches the receipt, the hook blocks `gh release delete` too. The user then runs it with the `!` prefix, which is not an agent tool call.
 
 A rejected tap push leaves the release public. Report `$W/toolu.rb` so the user can push it by hand.

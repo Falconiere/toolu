@@ -4,25 +4,10 @@ use std::process::Command;
 use serde_json::json;
 
 use super::decide;
+use crate::tests::git;
 
 fn repo() -> PathBuf {
   PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../..")
-}
-
-fn git(root: &Path, args: &[&str]) {
-  let status = Command::new("git")
-    .args([
-      "-c",
-      "user.email=ci@example.com",
-      "-c",
-      "user.name=ci",
-      "-C",
-    ])
-    .arg(root)
-    .args(args)
-    .status()
-    .unwrap();
-  assert!(status.success(), "{args:?}");
 }
 
 fn rev(root: &Path) -> String {
