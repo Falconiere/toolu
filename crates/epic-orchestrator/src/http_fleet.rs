@@ -237,3 +237,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/http_fleet_proxy_test.rs"]
 mod proxy_tests;
+
+#[cfg(test)]
+#[path = "tests/http_fleet_board_test.rs"]
+mod board_tests;

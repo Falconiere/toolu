@@ -46,6 +46,10 @@ pub(crate) fn document(
   let resources = Snapshot::open(paths, world.now_ms)?;
   if let Some(map) = overview.as_object_mut() {
     map.insert("schema".to_owned(), json!(1));
+    map.insert(
+      "hostname".to_owned(),
+      json!(toolu_runtime::machine::short_hostname()),
+    );
     map.insert("journal_seq".to_owned(), json!(world.seq));
     map.insert("counts".to_owned(), json!(counts));
     map.insert("attention_count".to_owned(), json!(attention_count));

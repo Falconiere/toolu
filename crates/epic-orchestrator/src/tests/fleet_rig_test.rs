@@ -36,6 +36,31 @@ impl Engine {
   /// Register `epic` with `issue` under `root`, serve HTTP on `bind`, and report
   /// `issue` in execution so its stage is `running`.
   pub(crate) fn start(root: &Path, epic: &str, issue: &str, http: Config) -> Engine {
+    let graph =
+      json!({"issues": [{"key": issue, "title": "Fleet", "wave": 1, "open_blockers": []}]});
+    Self::start_with(root, (epic, issue), &graph, http)
+  }
+
+  /// As [`Engine::start`], with a complete graph whose epic is titled `title`.
+  /// The epic is paused, so the engine launches nothing before the report.
+  pub(crate) fn start_titled(
+    root: &Path,
+    (epic, title): (&str, &str),
+    issue: &str,
+    http: Config,
+  ) -> Engine {
+    let graph = json!({
+      "epic": {"ref": "o/r#9", "title": title, "state": "open", "url": "https://github.com/o/r/issues/9"},
+      "state_dir": root.join(epic),
+      "issues": [{"ref": "o/r#10", "title": "Fleet", "state": "open", "url": "https://github.com/o/r/issues/10",
+        "repo": "o/r", "number": 10, "key": issue, "wave": 1, "open_blockers": []}]
+    });
+    let paths = Paths::at(root.join("resources"));
+    write_value(&paths.pause(), &json!({"epics": [epic]})).expect("pause");
+    Self::start_with(root, (epic, issue), &graph, http)
+  }
+
+  fn start_with(root: &Path, (epic, issue): (&str, &str), graph: &Value, http: Config) -> Engine {
     let paths = Paths::at(root.join("resources"));
     let state = root.join(epic);
     std::fs::create_dir_all(state.join("status")).expect("status dir");
@@ -44,9 +69,7 @@ impl Engine {
       &json!({"epics": [{"key": epic, "state_dir": state}]}),
     )
     .expect("registry");
-    let graph =
-      json!({"issues": [{"key": issue, "title": "Fleet", "wave": 1, "open_blockers": []}]});
-    write_value(&state.join("graph.json"), &graph).expect("graph");
+    write_value(&state.join("graph.json"), graph).expect("graph");
     let addr = SocketAddr::from(([127, 0, 0, 1], http.addr.port()));
     let background = paths.clone();
     let thread = thread::spawn(move || {

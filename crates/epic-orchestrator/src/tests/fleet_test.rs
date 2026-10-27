@@ -27,6 +27,7 @@ fn machine(name: &str, state: PeerState, doc: Option<Value>) -> Machine {
     state,
     last_seen_ms: doc.as_ref().map(|_| 1_000),
     overview: doc,
+    dashboard_url: None,
   }
 }
 
@@ -139,8 +140,10 @@ fn assert_hostile(entry: &Value) {
     "age_ms",
     "attention_count",
     "counts",
+    "dashboard_url",
     "engine",
     "epics",
+    "hostname",
     "hosts",
     "in_flight",
     "journal_seq",
@@ -153,6 +156,7 @@ fn assert_hostile(entry: &Value) {
   ];
   assert_eq!(keys, allowed.iter().collect::<Vec<_>>());
   assert_eq!(entry["engine"], "");
+  assert_eq!(entry["hostname"], Value::Null);
   assert_eq!(entry["paused"], false);
   assert_eq!(entry["journal_seq"], 0);
   assert_eq!(entry["attention_count"], 0);
@@ -175,6 +179,7 @@ fn assert_hostile(entry: &Value) {
 fn fleet_projection_drops_hostile_fields() {
   let hostile = json!({
     "schema": 1, "engine": 7, "paused": "yes", "journal_seq": "nine", "secret": "drop-me",
+    "hostname": {"name": "drop-me"},
     "epics": [{"key": "repo-9", "counts": {"running": "1", "awaiting_merge": 2}, "extra": 1}],
     "issues": {"key": "not-a-list"},
     "hosts": {"items": [{"host": "codex", "running": "2", "cap": 4, "token": "x"}]},
@@ -182,6 +187,7 @@ fn fleet_projection_drops_hostile_fields() {
   });
   let mut long = hostile.clone();
   long["issues"] = json!([{"key": "repo-10", "stage": "running", "phase": "p".repeat(300)}]);
+  long["hostname"] = json!("h".repeat(300));
   let doc = document(
     &[
       machine("hostile", PeerState::Ok, Some(hostile)),
@@ -195,6 +201,7 @@ fn fleet_projection_drops_hostile_fields() {
     .as_str()
     .expect("phase");
   assert_eq!(phase.chars().count(), 160);
+  assert_eq!(doc["machines"][1]["hostname"], json!("h".repeat(160)));
   assert!(!doc.to_string().contains("drop-me"));
 }
 
