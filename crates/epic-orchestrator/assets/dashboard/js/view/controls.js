@@ -66,12 +66,15 @@ function fillHosts(hosts, off, now) {
 }
 
 function fillAttention(model, off) {
-  const live = new Map((model.live?.items ?? []).map((item) => [item.key, item.agent_status]));
   for (const slot of document.querySelectorAll(".attention-action-slot")) {
-    const { kind, key } = slot.dataset;
-    const action = attentionAction(kind, key);
+    const { kind, key, state } = slot.dataset;
+    const action = attentionAction(kind, key, state);
+    if (!action) {
+      slot.replaceChildren(element("span", "attention-state", `✓ ${state.toUpperCase()}`));
+      continue;
+    }
     const row = findIssue(model.docs.boards, key)?.row;
-    const noAgent = action === "answer" && !liveAgent(row, live.get(key));
+    const noAgent = action === "answer" && !liveAgent(row);
     const name = `${NAMES[action]} ${key || kind}`;
     slot.replaceChildren(
       actionButton(action, ACTION_LABELS[action], name, { key, kind }, off || noAgent),

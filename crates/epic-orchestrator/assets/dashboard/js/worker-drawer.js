@@ -42,7 +42,6 @@ function render() {
     ...controlState(),
     issue: { ...drawer.doc, ...found.row },
     attention,
-    liveStatus: liveItem?.agent_status,
   });
 }
 

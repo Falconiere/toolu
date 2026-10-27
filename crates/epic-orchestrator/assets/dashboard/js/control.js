@@ -79,6 +79,7 @@ async function act(op, body) {
   const token = readToken();
   if (current().peer || !token || control.pending) return null;
   control.pending = true;
+  $("toast").hidden = true;
   repaint();
   const reply = await postAction(op, body, token);
   control.pending = false;

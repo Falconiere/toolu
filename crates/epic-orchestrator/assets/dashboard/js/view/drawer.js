@@ -161,6 +161,7 @@ export function hideDrawer() {
   show("drawer", false);
   $("workspace").classList.remove("drawer-open");
   text("drawer-attach", "");
+  $("drawer-actions").replaceChildren();
   $("drawer-screen-text").textContent = "";
   for (const row of document.querySelectorAll("button[aria-current]")) {
     row.removeAttribute("aria-current");

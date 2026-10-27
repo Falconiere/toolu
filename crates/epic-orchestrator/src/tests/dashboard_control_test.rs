@@ -90,9 +90,10 @@ fn dashboard_control_maps_engine_kinds_and_disable_rules() {
   assert!(logic.contains("return kind === \"coupling-hold\" ? \"release\" : \"ack\";"));
   assert!(logic.contains("if (!key) return \"ack\";"));
   assert!(logic.contains("Boolean(locked || pending)"));
-  assert!(logic.contains("disabled: off || !liveAgent(issue, liveStatus)"));
+  assert!(logic.contains("disabled: off || !liveAgent(issue)"));
+  assert!(logic.contains("Boolean(issue?.stage) && !DONE_STAGES.includes(issue.stage)"));
   assert!(logic.contains("if (issue?.hold) actions.push({ action: \"release\""));
-  assert!(logic.contains("if (attention) actions.push({ action: \"ack\""));
+  assert!(logic.contains("if (attentionOpen(attention)) actions.push({ action: \"ack\""));
   assert!(logic.contains("controlDisabled({ locked, pending }) || !String(text ?? \"\").trim()"));
   for text in [
     "○ CONTROL LOCKED",

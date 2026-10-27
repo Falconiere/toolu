@@ -224,7 +224,11 @@ function renderAttention(attention, boards) {
     );
     row.append(head, element("p", "", item.note || "Needs attention."));
     const slot = element("span", "attention-action-slot");
-    Object.assign(slot.dataset, { kind: item.kind || "", key: item.key || "" });
+    Object.assign(slot.dataset, {
+      kind: item.kind || "",
+      key: item.key || "",
+      state: item.state || "open",
+    });
     row.append(slot);
     target.append(row);
   }

@@ -1,4 +1,4 @@
-import { agentState } from "./status.js";
+import { DONE_STAGES } from "./status.js";
 
 export const TOKEN_KEY = "toolu.token";
 export const TEXT_LIMIT = 4000;
@@ -16,19 +16,23 @@ export const WORKING_WARNING =
 
 // Engine attention kinds a worker asks a question with; `judgment` is a journal kind, not one.
 const ANSWER_KINDS = new Set(["needs-human", "stuck", "help", "contract-changed"]);
-const LIVE_STAGES = new Set(["running", "awaiting_merge"]);
 
 export const ACTION_LABELS = { answer: "[ ANSWER ]", release: "[ RELEASE ]", ack: "[ ACK ]" };
 
+// Acknowledged and answered items stay listed until they clear; only open ones take an action.
+export const attentionOpen = (item) => Boolean(item) && (!item.state || item.state === "open");
+
 // `answer` and `release` need a key; a keyless item can only be acknowledged by its kind.
-export function attentionAction(kind, key) {
+export function attentionAction(kind, key, state = "open") {
+  if (state !== "open") return null;
   if (!key) return "ack";
   if (ANSWER_KINDS.has(kind)) return "answer";
   return kind === "coupling-hold" ? "release" : "ack";
 }
 
-export const liveAgent = (issue, liveStatus) =>
-  LIVE_STAGES.has(issue?.stage) && agentState(issue, liveStatus).kind !== "done";
+// The engine's `has_live_agent`: launched and not finished. An agent status of `done` only
+// ends a turn (Codex reports it after every turn), so it still takes an answer.
+export const liveAgent = (issue) => Boolean(issue?.stage) && !DONE_STAGES.includes(issue.stage);
 
 export const controlDisabled = ({ locked, pending }) => Boolean(locked || pending);
 
@@ -36,13 +40,11 @@ export const sendDisabled = ({ locked, pending, text }) =>
   controlDisabled({ locked, pending }) || !String(text ?? "").trim();
 
 // A coupling hold exists only before launch, so RELEASE HOLD and ACK never wait for an agent.
-export function drawerActions({ issue, attention, locked, pending, liveStatus }) {
+export function drawerActions({ issue, attention, locked, pending }) {
   const off = controlDisabled({ locked, pending });
-  const actions = [
-    { action: "answer", label: "ANSWER →", disabled: off || !liveAgent(issue, liveStatus) },
-  ];
+  const actions = [{ action: "answer", label: "ANSWER →", disabled: off || !liveAgent(issue) }];
   if (issue?.hold) actions.push({ action: "release", label: "RELEASE HOLD", disabled: off });
-  if (attention) actions.push({ action: "ack", label: "ACK", disabled: off });
+  if (attentionOpen(attention)) actions.push({ action: "ack", label: "ACK", disabled: off });
   return actions;
 }
 

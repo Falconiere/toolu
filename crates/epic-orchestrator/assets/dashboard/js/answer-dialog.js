@@ -62,6 +62,15 @@ function restoreFocus() {
   )?.focus();
 }
 
+// showModal leaves Tab free to reach the browser's own controls; wrap it inside the dialog.
+function trapTab(event) {
+  if (event.key !== "Tab") return;
+  const items = [...$("answer-dialog").querySelectorAll("textarea, button:not(:disabled)")];
+  if (document.activeElement !== (event.shiftKey ? items[0] : items.at(-1))) return;
+  event.preventDefault();
+  (event.shiftKey ? items.at(-1) : items[0]).focus();
+}
+
 export function initAnswer(onSend) {
   $("answer-text").addEventListener("input", () => {
     $("answer-count").textContent = counter($("answer-text").value);
@@ -72,4 +81,5 @@ export function initAnswer(onSend) {
     if (!$("answer-send").disabled && dialog.key) onSend(dialog.key, $("answer-text").value);
   });
   $("answer-dialog").addEventListener("close", restoreFocus);
+  $("answer-dialog").addEventListener("keydown", trapTab);
 }

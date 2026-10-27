@@ -44,16 +44,23 @@ test("engine attention kinds map to answer, release or ack; unknown kinds ack", 
     assert.equal(attentionAction(kind, "k-1"), "ack", kind);
   }
   assert.equal(attentionAction("needs-human", ""), "ack");
+  // The engine keeps acknowledged and answered items listed with their state.
+  assert.equal(attentionAction("blocked", "k-1", "acknowledged"), null);
+  assert.equal(attentionAction("needs-human", "k-1", "answered"), null);
+  assert.equal(attentionAction("needs-human", "k-1", "open"), "answer");
   assert.equal(attentionAction("coupling-hold", null), "ack");
 });
 
-test("a live agent is launched and not done", () => {
+test("a live agent is launched and its issue not finished, as the engine decides", () => {
   assert.equal(liveAgent(running), true);
   assert.equal(liveAgent({ ...running, stage: "awaiting_merge", agent_status: "idle" }), true);
+  // herdr reports `done` at the end of every Codex turn and of a Claude Code turn.
+  assert.equal(liveAgent({ ...running, agent_status: "done" }), true);
+  assert.equal(liveAgent({ ...running, stage: "needs-human" }), true);
   assert.equal(liveAgent({ ...running, stage: "" }), false);
-  assert.equal(liveAgent({ ...running, stage: "merged" }), false);
-  assert.equal(liveAgent({ ...running, agent_status: "done" }), false);
-  assert.equal(liveAgent({ ...running, agent_status: "unknown" }, "working"), true);
+  for (const stage of ["merged", "cleaning", "cleanup-incomplete", "abandoned"]) {
+    assert.equal(liveAgent({ ...running, stage }), false, stage);
+  }
   assert.equal(liveAgent(null), false);
 });
 
@@ -75,6 +82,10 @@ test("drawer actions: answer needs a live agent, release needs a hold, ack open 
   assert.deepEqual(pick(drawerActions({ ...base, issue: running, attention: open })), [
     "answer:false",
     "ack:false",
+  ]);
+  const acked = { ...open, state: "acknowledged" };
+  assert.deepEqual(pick(drawerActions({ ...base, issue: running, attention: acked })), [
+    "answer:false",
   ]);
   // A coupling hold exists only before launch: RELEASE HOLD stays enabled without an agent.
   const held = { ...running, stage: "", hold: { with: "k-2" } };

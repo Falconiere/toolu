@@ -57,7 +57,7 @@ A host shows `RESUME` when it is paused or cooling (resume clears both, #653), e
 
 **Disable rules** (`controlDisabled({locked, pending, peer})` and `drawerActions(...)`):
 - Every action button is disabled while locked or while a request is pending.
-- `ANSWER →` and `[ ANSWER ]` are also disabled without a live agent: the issue stage is `running` or `awaiting_merge` and the agent state is not `done`.
+- `ANSWER →` and `[ ANSWER ]` are also disabled without a live agent, by the engine's own rule (`attention::has_live_agent`): the issue has launched and its stage is not `merged`, `cleaning`, `cleanup-incomplete` or `abandoned`. An agent status of `done` does not count: herdr reports it at the end of every Codex turn and, on herdr 0.9.5, of a Claude Code turn, which is exactly when a worker waits for an answer (found in the live run).
 - Decision: `RELEASE HOLD` and `ACK` in the drawer do **not** need a live agent. The issue says "All of them are disabled while locked or with no live agent", but a coupling hold only exists on an issue that has not launched (`holds.rs` `coupling_ahead` requires an empty stage), so the literal reading would leave `RELEASE HOLD` disabled forever; the engine's `ack` and `release` need no agent either. Jev split 0.51/0.47 toward this reading; the code settles it.
 - Peer mode renders none of these buttons, the chip shows only its state word, and the dialog never opens.
 
@@ -89,9 +89,9 @@ A host shows `RESUME` when it is paused or cooling (resume clears both, #653), e
 export const TOKEN_KEY = "toolu.token";
 export const TEXT_LIMIT = 4000;
 export function attentionAction(kind)            // "answer" | "release" | "ack"
-export function liveAgent(issue, liveStatus)     // boolean
+export function liveAgent(issue)                 // boolean
 export function controlDisabled({ locked, pending })
-export function drawerActions({ issue, attention, locked, pending, live }) // [{action, label, disabled}]
+export function drawerActions({ issue, attention, locked, pending }) // [{action, label, disabled}]
 export function sendDisabled({ locked, pending, text })
 export function actionRequest(op, body, token)   // {path, init}
 export function journalLine(op, body)            // "pause all by=web"
@@ -146,6 +146,12 @@ New DOM ids: `control-chip`, `control-toggle`, `pause-all`, `resume-all`, `contr
 
 - `docs/epic-orchestrator/README.md`: a "Dashboard control" section — `toolu epic token url`, the fragment moving to `sessionStorage`, lock/unlock, 401 after rotation, what each button does, peer read-only, and the warning to treat the URL like a password.
 - `docs/epic-status-api.md`: the dashboard paragraph mentions the controls and that the page posts only to its own engine.
+
+## Deviations (execution)
+
+- `liveAgent` follows the engine's `has_live_agent` instead of "stage running or awaiting_merge and agent not done" (see the disable rules); the live run showed an idle Claude Code worker reporting `done`.
+- Attention items stay listed after `ack` or `answer` with `state` `acknowledged` or `answered`; they show `✓ ACKNOWLEDGED` or `✓ ANSWERED` instead of an action, and the drawer's `ACK` appears only for an open item.
+- The CLI signs host pauses `by=user`; the hosts panel shows that as `cli`, as the issue's "paused by web|cli" asks.
 
 ## Spec review (2026-10-27)
 
