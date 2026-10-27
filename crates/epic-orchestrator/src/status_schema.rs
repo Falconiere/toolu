@@ -96,19 +96,9 @@ const ENDPOINTS: &[Endpoint] = &[
   },
 ];
 
-/// Render the versioned API reference from the endpoint definitions.
-pub(crate) fn render() -> String {
-  let mut out = String::from(
-    "# Epic status API\n\nGenerated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with `TOOLU_UPDATE_DOCS=1 cargo test -p toolu-epic-orchestrator status_api_doc`.\n\nThe resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.\n\nOnly GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`; every response has `Cache-Control: no-store` and no CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.\n\n| Path | Purpose | Fields after `schema` |\n|---|---|---|\n",
-  );
-  for endpoint in ENDPOINTS {
-    let _written = writeln!(
-      out,
-      "| `{}` | {} | {} |",
-      endpoint.path, endpoint.purpose, endpoint.fields
-    );
-  }
-  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Board header and worker rows
+/// The prose after the endpoint table: query parameters, worker plans, the
+/// board header, live agent status and the fleet.
+const NOTES: &str = "\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Board header and worker rows
 
 Each item of `/api/v1/epics`, the overview's `epics` and `/api/v1/epics/{id}` carry the board header: `title` and `url` from `graph.json` `epic` (`null` when empty or when the engine has no parsed graph), `waves_total`, `current_wave`, `live` and `queued`. Waves are stable for the run: the engine levels every graph issue, open or closed, as 1 + its deepest blocker in the epic, so a merged issue keeps its wave (the graph's own `wave` levels only open issues and renumbers after each refresh). The epic document's `graph.waves` and `graph.issues[].wave` use the same stable numbering whenever the engine has parsed the graph. They are computed once each time the engine loads the graph. An issue is done once its pull request merged (stage `merged`, or still `cleaning` or `cleanup-incomplete`), when it is `abandoned`, or when it was closed before the engine launched it. `current_wave` is the lowest wave that still holds an issue that is not done, or `null` when every issue is done; a dependency cycle among open issues gives no waves, and one through a closed issue falls back to the open issues' waves. `live` counts issues whose stage is `running` or `awaiting_merge`, and `queued` those never launched (empty stage, no launch in flight) and not done.
 
@@ -155,7 +145,21 @@ A token sent to an `http://` peer crosses the network in clear text. Use plain H
 
 `/api/v1/fleet/peers/{name}/{route}` returns a peer's own document, redacted, so the browser needs only this server's address. `{name}` is percent-decoded and matches a configured peer exactly; `{id}` and `{key}` match `[A-Za-z0-9._-]{1,128}`. An unknown peer or route is `404`; a failing peer is `502` (`peer_unreachable`, `peer_unauthorized`, `peer_version_mismatch`), and more than eight proxied calls at once get `503 proxy_limit`.
 
-The dashboard at `/` uses these same-origin endpoints. With peers configured it shows a fleet summary and a machine switcher; a peer's panels are read through the proxy every 5 s. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.\n");
+The dashboard at `/` uses these same-origin endpoints. With peers configured it shows a fleet summary and a machine switcher; a peer's panels are read through the proxy every 5 s. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.\n";
+
+/// Render the versioned API reference from the endpoint definitions.
+pub(crate) fn render() -> String {
+  let mut out = String::from(
+    "# Epic status API\n\nGenerated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with `TOOLU_UPDATE_DOCS=1 cargo test -p toolu-epic-orchestrator status_api_doc`.\n\nThe resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.\n\nOnly GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`; every response has `Cache-Control: no-store` and no CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.\n\n| Path | Purpose | Fields after `schema` |\n|---|---|---|\n",
+  );
+  for endpoint in ENDPOINTS {
+    let _written = writeln!(
+      out,
+      "| `{}` | {} | {} |",
+      endpoint.path, endpoint.purpose, endpoint.fields
+    );
+  }
+  out.push_str(NOTES);
   out
 }
 
