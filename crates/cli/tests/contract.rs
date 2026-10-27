@@ -6,6 +6,8 @@
 
 #[path = "helpers/cli.rs"]
 mod cli;
+#[path = "helpers/code_review_schema.rs"]
+mod code_review_schema;
 #[path = "helpers/inventory.rs"]
 mod inventory;
 #[path = "helpers/schema.rs"]
@@ -29,6 +31,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "brainstorm",
     "delivery-flow",
     "review",
+    "code-review",
     "jev",
     "ast-grep",
     "statusline",
@@ -65,6 +68,7 @@ fn every_namespace_answers_help_on_stdout() {
       "brainstorm",
       "delivery-flow",
       "review",
+      "code-review",
       "jev",
       "statusline",
       "babysit",

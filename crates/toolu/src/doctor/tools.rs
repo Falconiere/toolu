@@ -70,6 +70,12 @@ const ROWS: &[Row] = &[
     hint: "install the GitHub CLI: https://cli.github.com",
   },
   Row {
+    plugin: "code-review",
+    tool: "git",
+    required: true,
+    hint: "install git",
+  },
+  Row {
     plugin: "ast-grep",
     tool: "ast-grep",
     required: true,

@@ -176,7 +176,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Twelve plugins, one marketplace. Every plugin ships synchronized Claude and
+Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -191,6 +191,7 @@ plugins.
 | Code intel | **`ast-grep`** | Structural code search and rewrite plus a registry-driven text-to-AST nudge. |
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
+| Workflow | **`code-review`** | Native local review of the push diff (OpenRouter + Jev, epic #660); today the `toolu code-review run` contract, failing closed until the pipeline lands. |
 | Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
@@ -268,6 +269,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality` and `ast-grep`
     ├── delivery-flow/          # one public skill, private phase references
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     ├── toolu-review/            # toolu-review:review skill + push-review state writer
+    ├── code-review/             # native code-review plugin manifests (skill lands with #669)
     └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
 ```
 

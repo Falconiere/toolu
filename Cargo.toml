@@ -31,6 +31,7 @@ members = [
   "crates/pr-babysit",
   "crates/epic-orchestrator",
   "crates/plugins",
+  "crates/code-review",
 ]
 
 # The lockstep version: release-please bumps it with package.json and every plugin.json.

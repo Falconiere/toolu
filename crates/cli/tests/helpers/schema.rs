@@ -12,7 +12,7 @@ fn schema() -> Res<Value> {
 }
 
 /// The errors of `document` against `$defs/<def>`, or against the root without one.
-fn violations(document: &Value, def: Option<&str>) -> Res<Vec<String>> {
+pub(crate) fn violations(document: &Value, def: Option<&str>) -> Res<Vec<String>> {
   let schema = schema()?;
   let schema = match def {
     Some(def) => json!({
@@ -106,7 +106,8 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "debug" | "config" | "status" | "setup"
-      | "jev" | "review" | "ast-grep" | "statusline" | "babysit" | "epic" | "plugins" => continue,
+      | "jev" | "review" | "code-review" | "ast-grep" | "statusline" | "babysit" | "epic"
+      | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }

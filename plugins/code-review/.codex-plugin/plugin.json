@@ -1,0 +1,6 @@
+{
+  "name": "code-review",
+  "version": "8.5.0",
+  "hookProtocol": 2,
+  "description": "Native code review of the push diff with OpenRouter and Jev: anchored findings and a computed verdict as a local report. In development: `toolu code-review run` fails closed until the review pipeline lands. Standalone, no dependencies."
+}
