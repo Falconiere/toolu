@@ -1,14 +1,12 @@
-use std::time::Duration;
-
 use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 
-use super::{Context, Report, dispatch};
+use super::{Report, dispatch};
 use crate::args::{Approval, Request, Scope, Verb};
 use crate::fail::Fail;
 use crate::prompt::Ask;
-use crate::support::{Answer, Sandbox, catalog, names};
+use crate::support::{Answer, Sandbox, catalog, context, names};
 
 fn request(verb: Verb, plugins: &[&str]) -> Request {
   Request {
@@ -30,18 +28,7 @@ fn go(
   host: Option<Host>,
   ask: Option<&mut dyn Ask>,
 ) -> Result<Report, Fail> {
-  let mut cx = Context {
-    env: sb.env(),
-    host,
-    ask,
-    timeout: Duration::from_secs(10),
-    version: "7.11.0",
-    origin: String::new(),
-    style: toolu_runtime::term::Style::Plain,
-    started: std::time::Instant::now(),
-    intro_shown: false,
-    progress: None,
-  };
+  let mut cx = context(sb, host, ask, toolu_runtime::term::Style::Plain);
   dispatch(request, &catalog(), &mut cx)
 }
 
@@ -297,18 +284,12 @@ fn a_terminal_style_draws_the_rails_report_and_opens_with_the_intro() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
   );
-  let mut cx = Context {
-    env: sb.env(),
-    host: Some(Host::Claude),
-    ask: None,
-    timeout: Duration::from_secs(10),
-    version: "7.11.0",
-    origin: String::new(),
-    style: toolu_runtime::term::Style::Mono,
-    started: std::time::Instant::now(),
-    intro_shown: false,
-    progress: None,
-  };
+  let mut cx = context(
+    &sb,
+    Some(Host::Claude),
+    None,
+    toolu_runtime::term::Style::Mono,
+  );
   let Ok(listed) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
     panic!("list failed");
   };

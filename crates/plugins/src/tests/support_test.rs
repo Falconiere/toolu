@@ -306,3 +306,24 @@ fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
     }
   }
 }
+
+/// A run context over the sandbox's environment, drawn in `style`.
+pub(crate) fn context<'a>(
+  sb: &Sandbox,
+  host: Option<toolu_protocol::host::Host>,
+  ask: Option<&'a mut dyn Ask>,
+  style: toolu_runtime::term::Style,
+) -> crate::dispatch::Context<'a> {
+  crate::dispatch::Context {
+    env: sb.env(),
+    host,
+    ask,
+    timeout: std::time::Duration::from_secs(10),
+    version: "7.11.0",
+    origin: String::new(),
+    style,
+    started: std::time::Instant::now(),
+    intro_shown: false,
+    progress: None,
+  }
+}

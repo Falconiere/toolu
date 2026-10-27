@@ -1,13 +1,11 @@
-use std::time::{Duration, Instant};
-
 use serde_json::json;
 use toolu_runtime::term::Style;
 
 use crate::args::{Approval, Request, Scope, Verb};
-use crate::dispatch::{Context, Report, dispatch};
+use crate::dispatch::{Report, dispatch};
 use crate::fail::{Fail, Res};
 use crate::prompt::{Ask, Choice};
-use crate::support::{Sandbox, catalog, names};
+use crate::support::{Sandbox, catalog, context, names};
 
 /// A person who must never be asked: update without `--host` decides alone.
 struct Nobody;
@@ -40,18 +38,7 @@ fn update(
     approval: Approval::Report,
   };
   let mut nobody = Nobody;
-  let mut cx = Context {
-    env: sb.env(),
-    host: None,
-    ask: Some(&mut nobody),
-    timeout: Duration::from_secs(10),
-    version: "7.11.0",
-    origin: String::new(),
-    style,
-    started: Instant::now(),
-    intro_shown: false,
-    progress: None,
-  };
+  let mut cx = context(sb, None, Some(&mut nobody), style);
   dispatch(&request, &catalog(), &mut cx)
 }
 
