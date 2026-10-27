@@ -11,9 +11,19 @@ const HOSTS = {
   rotation: { kind: "rotation", label: "● IN ROTATION" },
   cooling: { kind: "cooling", label: "◷ COOLING" },
   paused: { kind: "paused", label: "‖ PAUSED" },
+  pausedCooling: { kind: "paused", label: "‖ PAUSED · COOLING" },
 };
 
 export const DONE_STAGES = ["merged", "cleaning", "cleanup-incomplete", "abandoned"];
+
+const pad = (value) => String(value).padStart(2, "0");
+
+export function clock(iso, seconds = false) {
+  const at = new Date(iso ?? Number.NaN);
+  if (Number.isNaN(at.getTime())) return "—";
+  const parts = [at.getHours(), at.getMinutes()].concat(seconds ? [at.getSeconds()] : []);
+  return parts.map(pad).join(":");
+}
 
 const count = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 
@@ -33,16 +43,29 @@ export function cooldown(until, now = Date.now()) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+const hostPaused = (host) => Boolean(host.paused || host.state === "paused");
+
 export function hostState(host, now = Date.now()) {
-  if (host.paused || host.state === "paused") return HOSTS.paused;
-  return cooldown(host.cooldown_until, now) ? HOSTS.cooling : HOSTS.rotation;
+  const cooling = Boolean(cooldown(host.cooldown_until, now));
+  if (hostPaused(host)) return cooling ? HOSTS.pausedCooling : HOSTS.paused;
+  return cooling ? HOSTS.cooling : HOSTS.rotation;
 }
 
+// The engine signs CLI pauses `user`.
+const pauser = (by) => (by === "user" ? "cli" : by || "unknown");
+
 export function hostNote(host, now = Date.now()) {
-  if (host.paused || host.state === "paused") return "No new launches.";
   const remaining = cooldown(host.cooldown_until, now);
+  if (hostPaused(host)) {
+    if (remaining) return "Resume clears both.";
+    return `paused by ${pauser(host.paused_by)} · ${clock(host.paused_at)} · ${count(host.running)} still running`;
+  }
   return remaining ? `usage limit · back in ${remaining}` : "Ready for new launches.";
 }
+
+// Resume clears a pause and a cooldown alike (#653).
+export const hostResumable = (host, now = Date.now()) =>
+  hostPaused(host) || Boolean(cooldown(host.cooldown_until, now));
 
 export function waveLine(board) {
   const live = count(board.live);
@@ -60,6 +83,17 @@ export function issueRows(board) {
     ...node,
     ...issues.get(node.key),
   }));
+}
+
+// One worker's board row: its graph node merged with its issue record, plus its board.
+export function findIssue(boards, key) {
+  for (const board of boards ?? []) {
+    const node = (board.graph?.issues ?? []).find((issue) => issue.key === key);
+    if (node) {
+      return { board, row: { ...node, ...board.issues?.find((issue) => issue.key === key) } };
+    }
+  }
+  return null;
 }
 
 export function phaseLine(issue, wave) {

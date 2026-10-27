@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/assets/8.5.0/board-layout.css" />
     <link rel="stylesheet" href="/assets/8.5.0/panels.css" />
     <link rel="stylesheet" href="/assets/8.5.0/drawer.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/control.css" />
     <script type="module" src="/assets/8.5.0/js/app.js"></script>
   </head>
   <body>
@@ -17,7 +18,34 @@
       <header class="topbar">
         <div class="brand"><strong>toolu</strong><span>EPIC ENGINE</span></div>
         <nav id="machines" class="machines" aria-label="Machines"></nav>
-        <div id="top-controls" class="top-controls"></div>
+        <div id="top-controls" class="top-controls">
+          <button
+            id="pause-all"
+            class="control-button"
+            type="button"
+            data-action="pause"
+            data-control="pause:all"
+            disabled
+          >
+            PAUSE ALL EPICS
+          </button>
+          <button
+            id="resume-all"
+            class="control-button"
+            type="button"
+            data-action="resume"
+            data-control="resume:all"
+            disabled
+          >
+            RESUME ALL EPICS
+          </button>
+          <span id="control-chip" class="control-chip">
+            <span id="control-state">○ CONTROL LOCKED</span>
+            <button id="control-toggle" type="button" aria-label="Unlock control">
+              [ UNLOCK ]
+            </button>
+          </span>
+        </div>
       </header>
       <main>
         <div class="heading">
@@ -28,6 +56,11 @@
           <p id="connection" class="connection" role="status">◷ CONNECTING</p>
         </div>
         <div id="error" class="error" role="alert" hidden></div>
+        <div id="control-banner" class="control-banner" role="alert" hidden>
+          <strong id="control-banner-label"></strong>
+          <span>—</span>
+          <span id="control-banner-text"></span>
+        </div>
         <div id="peer-banner" class="peer-banner" hidden>
           <p>
             ◇ <strong id="peer-name"></strong> · PEER — Fleet peers are read-only here. Plans and
@@ -145,7 +178,6 @@
               <header class="section-heading"><h3 id="drawer-phases-title">PHASES</h3></header>
               <ol id="drawer-phase-list" class="drawer-phase-list"></ol>
             </section>
-            <!-- Reserved for ANSWER →, RELEASE HOLD and ACK (#656). -->
             <div id="drawer-actions" class="drawer-actions"></div>
           </aside>
         </div>
@@ -176,7 +208,33 @@
           </section>
         </div>
       </main>
-      <footer>LOCAL ENGINE · READ-ONLY STATUS</footer>
+      <footer>LOCAL ENGINE · CONTROL NEEDS THE TOKEN URL · PEERS READ-ONLY</footer>
     </div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+      <strong id="toast-label"></strong>
+      <p id="toast-text"></p>
+    </div>
+    <dialog id="answer-dialog" class="answer-dialog" aria-labelledby="answer-title">
+      <div class="answer-head">
+        <h2 id="answer-title">Answer</h2>
+        <span id="answer-status"></span>
+      </div>
+      <h3 class="eyebrow">THE WORKER ASKED</h3>
+      <p id="answer-asked" class="answer-asked"></p>
+      <p id="answer-warning" class="answer-warning" hidden></p>
+      <label class="eyebrow" for="answer-text">YOUR ANSWER</label>
+      <textarea id="answer-text" class="answer-text" maxlength="4000" rows="6"></textarea>
+      <p id="answer-count" class="answer-count">0 / 4000</p>
+      <div id="answer-result" class="answer-result" role="status" hidden>
+        <strong id="answer-result-label"></strong>
+        <p id="answer-result-text"></p>
+      </div>
+      <div class="answer-buttons">
+        <button id="answer-cancel" class="control-button" type="button">CANCEL</button>
+        <button id="answer-send" class="control-button control-primary" type="button" disabled>
+          SEND ANSWER →
+        </button>
+      </div>
+    </dialog>
   </body>
 </html>

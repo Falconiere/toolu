@@ -1,4 +1,6 @@
-import { DONE_STAGES } from "./status.js";
+import { DONE_STAGES, clock } from "./status.js";
+
+export { clock };
 
 const STEPS = {
   green: { kind: "green", label: "✓ GREEN" },
@@ -87,15 +89,6 @@ export function attachCommand(screen) {
   return body?.agent_status === "blocked" && typeof body.attach === "string" && body.attach.trim()
     ? body.attach
     : null;
-}
-
-const pad = (value) => String(value).padStart(2, "0");
-
-export function clock(iso, seconds = false) {
-  const at = new Date(iso ?? Number.NaN);
-  if (Number.isNaN(at.getTime())) return "—";
-  const parts = [at.getHours(), at.getMinutes()].concat(seconds ? [at.getSeconds()] : []);
-  return parts.map(pad).join(":");
 }
 
 export function phaseTimeline(history, issue) {

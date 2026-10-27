@@ -1,0 +1,206 @@
+.top-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.control-button,
+.control-chip button {
+  padding: 4px 10px;
+  border: 1px solid var(--line-strong);
+  background: none;
+  color: var(--ink);
+  font:
+    500 11px/1.4 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.control-button:hover:not(:disabled),
+.control-chip button:hover {
+  border-color: var(--acid-dim);
+  color: var(--acid);
+}
+.control-button:disabled {
+  border-color: var(--line);
+  color: var(--disabled);
+  cursor: not-allowed;
+}
+.control-primary:not(:disabled) {
+  border-color: var(--acid);
+  background: var(--acid);
+  color: var(--canvas);
+}
+.control-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  color: var(--muted);
+  font:
+    500 11px/1.4 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+  white-space: nowrap;
+}
+.control-chip.control-unlocked {
+  color: var(--acid);
+}
+.control-chip button {
+  border-color: transparent;
+  color: inherit;
+}
+.control-banner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 24px;
+  padding: 12px 16px;
+  border: 1px solid var(--warn);
+  background: var(--panel);
+  color: var(--ink);
+  font:
+    400 12px/1.5 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+}
+.control-banner strong {
+  color: var(--warn);
+  font-weight: 500;
+}
+.epic-control-slot,
+.host-control-slot {
+  display: flex;
+  justify-content: flex-end;
+}
+.host-control-slot {
+  margin-top: 6px;
+}
+.attention-action-slot {
+  display: block;
+  margin-top: 6px;
+}
+.drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 10;
+  max-width: 420px;
+  padding: 12px 16px;
+  border: 1px solid var(--acid-dim);
+  background: var(--surface);
+  color: var(--ink);
+  font:
+    400 12px/1.5 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+}
+.toast strong,
+.answer-result strong {
+  color: var(--acid);
+  font-weight: 500;
+}
+.toast p,
+.answer-result p {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.toast[data-kind="failed"],
+.toast[data-kind="refused"],
+.answer-result[data-kind="refused"],
+.answer-result[data-kind="rotated"],
+.answer-result[data-kind="failed"] {
+  border-color: var(--error);
+}
+.toast[data-kind="failed"] strong,
+.toast[data-kind="refused"] strong,
+.answer-result[data-kind="refused"] strong,
+.answer-result[data-kind="rotated"] strong,
+.answer-result[data-kind="failed"] strong {
+  color: var(--error);
+}
+.answer-result[data-kind="uncertain"] strong,
+.toast[data-kind="uncertain"] strong,
+.answer-warning {
+  color: var(--warn);
+}
+.answer-dialog {
+  width: min(560px, calc(100vw - 32px));
+  padding: 24px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 10px;
+}
+.answer-dialog::backdrop {
+  background: var(--canvas);
+  opacity: 0.8;
+}
+.answer-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.answer-head h2 {
+  margin: 0;
+  font-size: 20px;
+}
+.answer-dialog .eyebrow {
+  display: block;
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+.answer-asked {
+  white-space: pre-wrap;
+}
+.answer-warning,
+.answer-count {
+  font:
+    400 12px/1.5 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+}
+.answer-text {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--canvas);
+  color: var(--ink);
+  font:
+    400 13px/1.5 "JetBrains Mono",
+    ui-monospace,
+    Menlo,
+    monospace;
+  resize: vertical;
+}
+.answer-count {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  text-align: right;
+}
+.answer-result {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--acid-dim);
+}
+.answer-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

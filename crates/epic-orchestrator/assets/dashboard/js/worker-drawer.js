@@ -1,66 +1,48 @@
 import { readIssue, readScreen } from "./api.js";
+import { controlState, readToken, rotated } from "./control.js";
+import { keyAttention } from "./logic/control.js";
 import { wantsScreen } from "./logic/drawer.js";
-import { fragmentIssue, takeToken, withIssue } from "./logic/fragment.js";
-import { peerMachine } from "./logic/status.js";
+import { fragmentIssue, withIssue } from "./logic/fragment.js";
+import { findIssue, peerMachine } from "./logic/status.js";
+import { renderDrawerActions } from "./view/controls.js";
 import { bindDrawer, hideDrawer, renderDrawer, revealDrawer } from "./view/drawer.js";
 
-const TOKEN = "toolu.token";
 const POLL_MS = 2000;
-const EMPTY = { doc: null, docFailed: false, screen: null };
+const EMPTY = { doc: null, docFailed: false, screen: null, screenToken: null };
 const drawer = { key: null, opener: null, ...EMPTY, timer: undefined, seq: 0 };
 let inflight = -1;
 let current = () => ({});
-
-function storage(action) {
-  try {
-    return action(sessionStorage);
-  } catch {
-    return null;
-  }
-}
-export const readToken = () => storage((store) => store.getItem(TOKEN));
-const saveToken = (token) => storage((store) => store.setItem(TOKEN, token));
-const dropToken = () => storage((store) => store.removeItem(TOKEN));
 
 const replaceHash = (hash) =>
   history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
 const setHash = (key) => replaceHash(withIssue(location.hash, key));
 
-// A token URL opened in this tab, on load or later as a hash change, moves to sessionStorage.
-function storeToken() {
-  const fragment = takeToken(location.hash);
-  if (!fragment.token) return;
-  saveToken(fragment.token);
-  replaceHash(fragment.hash);
-}
-
-function find(key) {
-  for (const board of current().docs?.boards ?? []) {
-    const node = (board.graph?.issues ?? []).find((issue) => issue.key === key);
-    if (node) {
-      return { board, row: { ...node, ...board.issues?.find((issue) => issue.key === key) } };
-    }
-  }
-  return null;
-}
+const find = (key) => findIssue(current().docs?.boards, key);
 
 function render() {
   const found = find(drawer.key);
   if (!found) return;
   const { docs, live, peer, fleet, sampledAt } = current();
+  const attention = keyAttention(docs.attention, drawer.key);
+  const liveItem = peer ? null : (live?.items ?? []).find((item) => item.key === drawer.key);
   renderDrawer({
     key: drawer.key,
     ...found,
     doc: drawer.doc,
     docFailed: drawer.docFailed,
     screen: drawer.screen,
-    attention: (docs.attention?.items ?? []).find((item) => item.key === drawer.key),
-    live: peer ? null : (live?.items ?? []).find((item) => item.key === drawer.key),
+    attention,
+    live: liveItem,
     token: readToken(),
     peer,
     machine: peerMachine(fleet, peer),
     now: Date.now(),
     sampledAt,
+  });
+  renderDrawerActions({
+    ...controlState(),
+    issue: { ...drawer.doc, ...found.row },
+    attention,
   });
 }
 
@@ -71,18 +53,24 @@ async function tick() {
   inflight = seq;
   const { peer } = current();
   try {
-    const doc = await readIssue(peer, key).catch(() => null);
     const token = readToken();
-    // 403 means the engine has no token configured; asking again cannot succeed.
-    let screen = drawer.screen?.status === 403 ? drawer.screen : null;
-    if (!screen && wantsScreen({ peer, issue: { ...doc, ...find(key)?.row }, token })) {
-      screen = await readScreen(key, token).catch((error) => ({ error: error.message }));
-    }
-    if (screen?.status === 401 && readToken() === token) dropToken();
+    // 403 means the engine has no token configured; ask again only with another token.
+    const disabled = drawer.screen?.status === 403 && drawer.screenToken === token;
+    // The board row decides the screen read, so both reads run at once.
+    const wanted = wantsScreen({ peer, issue: { ...drawer.doc, ...find(key)?.row }, token });
+    const [doc, read] = await Promise.all([
+      readIssue(peer, key).catch(() => null),
+      !disabled && wanted
+        ? readScreen(key, token).catch((error) => ({ error: error.message }))
+        : null,
+    ]);
+    const screen = disabled ? drawer.screen : read;
+    if (screen?.status === 401) rotated(token);
     if (seq !== drawer.seq) return;
     drawer.docFailed = !doc;
     drawer.doc = doc ?? drawer.doc;
     drawer.screen = screen;
+    drawer.screenToken = token;
     render();
   } finally {
     if (inflight === seq) inflight = -1;
@@ -133,19 +121,18 @@ export function syncDrawer() {
 
 export function initDrawer(state) {
   current = state;
-  storeToken();
   bindDrawer(() => closeDrawer(true));
   document.addEventListener("click", (event) => {
     const button = event.target.closest?.("button[data-issue]");
     if (button) openDrawer(button.dataset.issue, button);
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !drawer.key) return;
+    // Esc in the answer dialog cancels the dialog, not the drawer behind it.
+    if (event.key !== "Escape" || !drawer.key || document.querySelector("dialog[open]")) return;
     event.preventDefault();
     closeDrawer(true);
   });
   window.addEventListener("hashchange", () => {
-    storeToken();
     const key = fragmentIssue(location.hash);
     if (!key) closeDrawer();
     // Before boards load, syncDrawer opens the deep link instead.

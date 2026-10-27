@@ -9,12 +9,30 @@ import {
   showConnection,
   showError,
 } from "./view/dashboard.js";
+import { closeAnswer } from "./answer-dialog.js";
+import { controlState, initControl } from "./control.js";
+import { focusedControl, renderControls, restoreControl } from "./view/controls.js";
 import { closeDrawer, initDrawer, syncDrawer } from "./worker-drawer.js";
 
 const state = { peer: null, fleet: null, docs: null, live: null, sampledAt: 0, request: 0 };
 let stream;
 let refreshTimer;
 
+// Renders rebuild the rows that hold action buttons; keep keyboard focus on the same control.
+function paint(draw = () => {}) {
+  const focus = focusedControl();
+  draw();
+  renderControls({ ...controlState(), docs: state.docs, now: Date.now() });
+  restoreControl(focus);
+}
+
+initControl(
+  () => state,
+  () => {
+    paint();
+    syncDrawer();
+  },
+);
 initDrawer(() => state);
 
 function stopStream() {
@@ -53,14 +71,14 @@ async function refresh() {
     if (request !== state.request) return;
     state.docs = docs;
     state.sampledAt = Date.now();
-    renderDashboard(docs, state.peer ? null : state.live, state.peer, state.sampledAt);
+    paint(() => renderDashboard(docs, state.peer ? null : state.live, state.peer, state.sampledAt));
     syncDrawer();
     showError(null);
     showConnection(true);
     startStream();
   } catch (error) {
     if (request !== state.request) return;
-    if (!state.docs) renderUnavailable("Status is unavailable. Retrying…");
+    if (!state.docs) paint(() => renderUnavailable("Status is unavailable. Retrying…"));
     showError(error);
     showConnection(false);
   }
@@ -85,7 +103,7 @@ async function sampleLive() {
     if (state.peer || document.hidden) return;
     state.live = live;
     if (state.docs) {
-      renderDashboard(state.docs, state.live, null, state.sampledAt);
+      paint(() => renderDashboard(state.docs, state.live, null, state.sampledAt));
       syncDrawer();
     }
   } catch {
@@ -96,6 +114,7 @@ async function sampleLive() {
 function select(peer) {
   if (state.peer === peer) return;
   closeDrawer();
+  closeAnswer();
   state.peer = peer;
   state.docs = null;
   state.live = null;
@@ -106,7 +125,7 @@ function select(peer) {
     renderMachines(state.fleet, peer, select);
     renderPeer(peerMachine(state.fleet, peer));
   }
-  renderUnavailable("Loading status…");
+  paint(() => renderUnavailable("Loading status…"));
   refresh();
   if (!peer) sampleLive();
 }
@@ -123,7 +142,7 @@ document.addEventListener("visibilitychange", () => {
 });
 
 setInterval(() => {
-  if (!document.hidden && state.docs) renderTick(state.docs, state.sampledAt);
+  if (!document.hidden && state.docs) paint(() => renderTick(state.docs, state.sampledAt));
 }, 1000);
 setInterval(() => {
   if (!document.hidden) {

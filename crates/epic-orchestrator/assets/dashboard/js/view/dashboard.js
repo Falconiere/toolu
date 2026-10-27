@@ -11,6 +11,11 @@ import {
 } from "../logic/status.js";
 import { $, element, mark, text } from "./dom.js";
 
+// Rebuilt rows take their old action slots back, so a button mid-click survives a render.
+const slotsBy = (target, selector, id) =>
+  new Map([...target.querySelectorAll(selector)].map((slot) => [id(slot.dataset), slot]));
+const attentionSlotId = ({ kind, key, state }) => `${kind} ${key} ${state}`;
+
 export function renderMachines(fleet, selected, select) {
   const nav = $("machines");
   const focused = document.activeElement?.dataset?.machine;
@@ -60,14 +65,16 @@ function renderTiles(docs, sampledAt, now) {
   return attention;
 }
 
-function epicHeader(board) {
+function epicHeader(board, slots) {
   const header = element("header", "epic-header");
   const identity = element("div", "epic-identity");
   identity.append(element("span", "eyebrow", `EPIC #${board.key.split("-").at(-1)}`));
   if (board.paused) identity.append(mark({ kind: "paused", label: "‖ PAUSED" }));
   identity.append(element("h3", "", board.title || board.key));
   header.append(identity, element("p", "wave-line", waveLine(board)));
-  header.append(element("div", "epic-control-slot"));
+  const slot = slots.get(board.key) ?? element("div", "epic-control-slot");
+  slot.dataset.epic = board.key;
+  header.append(slot);
   return header;
 }
 
@@ -135,6 +142,7 @@ function renderBoards(boards, live, attention, peer) {
       node.scrollLeft,
     ]),
   );
+  const slots = slotsBy(target, ".epic-control-slot", (data) => data.epic);
   target.replaceChildren();
   if (!boards.length) {
     target.append(element("p", "empty", "No registered epics yet."));
@@ -143,7 +151,7 @@ function renderBoards(boards, live, attention, peer) {
   const liveByKey = new Map((live?.items ?? []).map((item) => [item.key, item]));
   for (const board of boards) {
     const section = element("section", "epic");
-    section.append(epicHeader(board));
+    section.append(epicHeader(board, slots));
     const scroll = element("div", "table-scroll");
     scroll.dataset.epic = board.key;
     const table = element("div", "issue-table");
@@ -177,6 +185,7 @@ const HOST_NAMES = {
 
 function renderHosts(hosts, now) {
   const target = $("hosts");
+  const slots = slotsBy(target, ".host-control-slot", (data) => data.host);
   target.replaceChildren();
   for (const host of hosts.items ?? []) {
     const row = element("div", "host-row");
@@ -185,8 +194,10 @@ function renderHosts(hosts, now) {
       element("strong", "", HOST_NAMES[host.host] || host.host),
       mark(hostState(host, now)),
     );
+    const slot = slots.get(host.host) ?? element("div", "host-control-slot");
+    slot.dataset.host = host.host;
     row.append(head, element("p", "host-meta", `${host.host} · ${host.running ?? 0} running`));
-    row.append(element("p", "host-note", hostNote(host, now)));
+    row.append(element("p", "host-note", hostNote(host, now)), slot);
     target.append(row);
   }
   if (!target.children.length) target.append(element("p", "empty", "No hosts reported."));
@@ -207,6 +218,7 @@ function renderAttention(attention, boards) {
   );
   const target = $("attention");
   const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
+  const slots = slotsBy(target, ".attention-action-slot", attentionSlotId);
   target.replaceChildren();
   const items = attention.items ?? [];
   text("attention-count", `${items.length} OPEN`);
@@ -219,7 +231,10 @@ function renderAttention(attention, boards) {
       element("time", "", `${Math.floor((item.age_ms ?? 0) / 60_000)}m`),
     );
     row.append(head, element("p", "", item.note || "Needs attention."));
-    row.append(element("span", "attention-action-slot"));
+    const data = { kind: item.kind || "", key: item.key || "", state: item.state || "open" };
+    const slot = slots.get(attentionSlotId(data)) ?? element("span", "attention-action-slot");
+    Object.assign(slot.dataset, data);
+    row.append(slot);
     target.append(row);
   }
   if (!items.length)
