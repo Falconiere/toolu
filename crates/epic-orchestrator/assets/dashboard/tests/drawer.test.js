@@ -4,6 +4,7 @@ import test from "node:test";
 
 import {
   wantsScreen,
+  statusTitle,
   stepMark,
   screenNotice,
   prUrl,
@@ -145,4 +146,14 @@ test("attention, epic and clock lines", () => {
   assert.match(clock("2026-10-27T21:13:54Z", true), /^\d\d:\d\d:\d\d$/);
   assert.equal(clock(null), "—");
   assert.equal(clock("garbage"), "—");
+});
+
+test("a live title equal to the issue key is not shown as a task summary", () => {
+  assert.equal(statusTitle({ title: "falconiere-toolu-655" }, "falconiere-toolu-655"), null);
+  assert.equal(
+    statusTitle({ title: "Notes.txt file listing" }, "toolu-655"),
+    "Notes.txt file listing",
+  );
+  assert.equal(statusTitle({ title: null }, "toolu-655"), null);
+  assert.equal(statusTitle(undefined, "toolu-655"), null);
 });

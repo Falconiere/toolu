@@ -10,6 +10,7 @@ import {
   planLine,
   prUrl,
   screenNotice,
+  statusTitle,
   stepMark,
 } from "../logic/drawer.js";
 import { agentState, liveTitle, peerDashboardUrl, phaseLine } from "../logic/status.js";
@@ -48,7 +49,7 @@ function renderStatus(model, issue) {
   const line = $("drawer-status");
   line.replaceChildren(mark(agentState(issue, model.live?.agent_status)));
   if (model.peer) line.append(element("span", "", "live status on peer"));
-  else if (model.live?.title) {
+  else if (statusTitle(model.live, model.key)) {
     line.append(element("span", "", liveTitle(model.live.host || issue.host, model.live.title)));
   }
 }
@@ -113,7 +114,11 @@ function renderScreen(model, issue) {
   show("drawer-screen-text", !notice);
   const screen = $("drawer-screen-text");
   const value = typeof body?.text === "string" ? body.text : "Reading the screen…";
-  if (!notice && screen.textContent !== value) screen.textContent = value;
+  if (notice || screen.textContent === value) return;
+  // Follow the newest lines, as a terminal does, unless the reader scrolled up.
+  const following = screen.scrollHeight - screen.scrollTop - screen.clientHeight < 24;
+  screen.textContent = value;
+  if (following) screen.scrollTop = screen.scrollHeight;
 }
 
 function renderPhases(issue) {

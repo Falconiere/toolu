@@ -123,6 +123,10 @@ export function attentionLine(item, now = Date.now(), sampledAt = now) {
   return `▲ ${(item.kind || "unknown").toUpperCase()} · OPEN ${Math.floor(age / 60_000)}m`;
 }
 
+// Engine-launched Claude Code workers run with `-n <key>`, so their title is the key, not a summary.
+export const statusTitle = (live, key) =>
+  live?.title && live.title.trim() !== key ? live.title : null;
+
 export const epicLine = (key, epic) =>
   `${key} · EPIC #${String(epic ?? "")
     .split("-")
