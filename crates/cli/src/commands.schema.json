@@ -1400,6 +1400,17 @@
       "additionalProperties": false,
       "required": ["engine", "paused", "epics", "issues", "attention", "github"],
       "properties": {
+        "schema": { "const": 1 },
+        "hostname": { "type": ["string", "null"] },
+        "journal_seq": { "type": "integer", "minimum": 0 },
+        "counts": {
+          "type": "object",
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        },
+        "attention_count": { "type": "integer", "minimum": 0 },
+        "hosts": { "type": "object" },
+        "machine": { "type": "object" },
+        "jobs": { "type": "object" },
         "engine": { "enum": ["running", "down"] },
         "paused": { "type": "boolean" },
         "github": {
@@ -1436,7 +1447,21 @@
             "type": "object",
             "additionalProperties": false,
             "required": ["key"],
-            "properties": { "key": { "type": "string" } }
+            "properties": {
+              "key": { "type": "string" },
+              "paused": { "type": "boolean" },
+              "counts": {
+                "type": "object",
+                "additionalProperties": { "type": "integer", "minimum": 0 }
+              },
+              "attention_count": { "type": "integer", "minimum": 0 },
+              "title": { "type": ["string", "null"] },
+              "url": { "type": ["string", "null"] },
+              "waves_total": { "type": "integer", "minimum": 0 },
+              "current_wave": { "type": ["integer", "null"], "minimum": 0 },
+              "live": { "type": "integer", "minimum": 0 },
+              "queued": { "type": "integer", "minimum": 0 }
+            }
           }
         },
         "issues": {

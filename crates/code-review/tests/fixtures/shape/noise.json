@@ -1,0 +1,15 @@
+{
+  "coverage": {
+    "reviewed": [],
+    "unreviewed": [],
+    "skipped": [
+      {"path": "Cargo.lock", "reason": "lockfile"},
+      {"path": "attr.rs", "reason": "generated"},
+      {"path": "binary.bin", "reason": "binary"},
+      {"path": "gen.rs", "reason": "generated"},
+      {"path": "target/output", "reason": "build output"},
+      {"path": "vendor/lib.rs", "reason": "vendored"}
+    ]
+  },
+  "review_lines": 0
+}

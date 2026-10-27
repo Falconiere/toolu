@@ -42,7 +42,7 @@ impl Severity {
 pub enum Side {
   /// The new file: added or context lines.
   New,
-  /// The old file: removal-only hunks and deleted files.
+  /// The old file: removed lines, including replacements and deleted files.
   Old,
 }
 

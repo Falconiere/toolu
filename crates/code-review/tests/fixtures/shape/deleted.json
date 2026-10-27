@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "path": "readme.txt",
+      "old_path": "readme.txt",
+      "kind": "deleted",
+      "lines": [
+        {"side": "old", "line": 1, "text": "one"},
+        {"side": "old", "line": 2, "text": "two"},
+        {"side": "old", "line": 3, "text": "three"},
+        {"side": "old", "line": 4, "text": "four"},
+        {"side": "old", "line": 5, "text": "five"},
+        {"side": "old", "line": 6, "text": "six"}
+      ]
+    }
+  ],
+  "coverage": {"reviewed": ["readme.txt"], "unreviewed": [], "skipped": []}
+}
