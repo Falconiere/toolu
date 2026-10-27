@@ -28,6 +28,7 @@ fn status_api_resources_project_real_lease_and_cooldown() {
         "host": "codex", "worktree": "/tmp/worktree"
       }],
       "cooldowns": {"claude": {"until": now + 60_000, "reason": "usage limit"}},
+      "paused_hosts": {"codex": {"by": "web", "at": now - 1_000}},
       "pressure": {"held": false, "badSince": null, "goodSince": null,
         "reason": null, "sample": {"at": now, "cpus": 4, "load": 1.0,
         "availableBytes": 800, "totalBytes": 1000, "steal": null}}
@@ -50,6 +51,12 @@ fn status_api_resources_project_real_lease_and_cooldown() {
     .expect("claude");
   assert_eq!(codex["cap"], 2);
   assert_eq!(codex["running"], 1);
+  assert_eq!(codex["paused"], true);
+  assert_eq!(codex["paused_by"], "web");
+  assert!(codex["paused_at"].as_str().is_some());
+  assert_eq!(claude["paused"], false);
+  assert_eq!(claude["paused_by"], serde_json::Value::Null);
+  assert_eq!(claude["paused_at"], serde_json::Value::Null);
   assert_eq!(claude["reason"], "usage limit");
   assert!(claude["cooldown_until"].as_str().is_some());
   let machine = snapshot.machine();

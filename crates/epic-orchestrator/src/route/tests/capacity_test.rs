@@ -108,6 +108,23 @@ fn local_cooldowns_cool_a_host_and_a_missing_root_counts_nothing() {
 }
 
 #[test]
+fn shared_paused_hosts_are_reported_apart_from_cooling() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let root = tmp.path().join("resources");
+  std::fs::create_dir_all(&root).expect("root");
+  let state = json!({
+    "version": 1,
+    "leases": [],
+    "cooldowns": {},
+    "paused_hosts": {"codex": {"by": "user", "at": 5}}
+  });
+  std::fs::write(root.join("state.json"), state.to_string()).expect("state");
+  let capacity = Capacity::load(&tmp.path().join("state"), Some(&root), 10).expect("capacity");
+  assert_eq!(capacity.paused, BTreeSet::from([Codex]));
+  assert_eq!(capacity.cooling, BTreeSet::new());
+}
+
+#[test]
 fn shared_cooldowns_cool_a_host_until_they_expire() {
   let tmp = tempfile::tempdir().expect("temp");
   let root = tmp.path().join("resources");

@@ -66,6 +66,7 @@ mod herdr_state;
 mod holds;
 /// Native hook commands for the epic plugin.
 pub mod hook;
+mod host_pause;
 mod hosts;
 mod http;
 mod http_access;
@@ -162,6 +163,7 @@ mod support;
 mod tracker;
 mod verbs;
 mod verbs_actions;
+mod verbs_hosts;
 mod verbs_metrics;
 mod verbs_notify;
 mod verbs_token;

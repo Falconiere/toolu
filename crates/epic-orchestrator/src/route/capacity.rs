@@ -19,6 +19,8 @@ pub(crate) struct Capacity {
   pub used: BTreeMap<HostKind, u64>,
   /// Hosts cooling down after a usage limit.
   pub cooling: BTreeSet<HostKind>,
+  /// Hosts an operator paused in the shared store.
+  pub paused: BTreeSet<HostKind>,
   /// This epic's occupied keys and their host.
   pub active: BTreeMap<String, HostKind>,
 }
@@ -43,6 +45,7 @@ impl Capacity {
     let mut capacity = Self {
       used,
       cooling: cooling_hosts(&local, now_ms),
+      paused: BTreeSet::new(),
       active,
     };
     if let Some(root) = resource_root {
@@ -71,6 +74,7 @@ impl Capacity {
         *self.used.entry(kind).or_default() += 1;
       }
     }
+    self.paused = crate::host_pause::paused_set(&state);
     let cooldowns: Value = state
       .get("cooldowns")
       .and_then(|cooldowns| serde_json::from_str(&cooldowns.to_text(false)).ok())

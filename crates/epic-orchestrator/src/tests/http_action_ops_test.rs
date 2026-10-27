@@ -124,6 +124,47 @@ fn each_op_replies_as_the_control_socket_does() {
 }
 
 #[test]
+fn a_web_host_pause_and_resume_match_the_socket_and_journal_by_web() {
+  let temp = tempfile::tempdir().expect("temp");
+  let live = live(temp.path(), Some(TOKEN), crate::http_action::DEADLINE);
+  let (code, response) = post(
+    live.addr,
+    "host-pause",
+    &allowed(live.addr),
+    &json!({"host": "cursor-agent"}).to_string(),
+  );
+  assert_eq!((code, body(&response)), (200, json!({"ok": true})), "{response}");
+  let (_, hosts) = raw(
+    live.addr,
+    &format!(
+      "GET /api/v1/hosts HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n",
+      live.addr
+    ),
+  );
+  assert!(hosts.contains("\"paused\":true"), "{hosts}");
+  assert!(hosts.contains("\"paused_by\":\"web\""), "{hosts}");
+  let (code, response) = post(
+    live.addr,
+    "host-resume",
+    &allowed(live.addr),
+    &json!({"host": "cursor"}).to_string(),
+  );
+  assert_eq!((code, body(&response)), (200, json!({"ok": true})), "{response}");
+  let rows = journal(&live.paths);
+  assert!(rows.contains("host-paused"), "{rows}");
+  assert!(rows.contains("by=web"), "{rows}");
+  // An unknown or missing host is a 400 before anything is forwarded.
+  for payload in [json!({"host": "nope"}).to_string(), "{}".to_owned()] {
+    let (code, response) = post(live.addr, "host-pause", &allowed(live.addr), &payload);
+    assert_eq!(code, 400, "{response}");
+    assert!(response.contains("\"error\":\"invalid_request\""), "{response}");
+  }
+  let rows_after = journal(&live.paths);
+  assert_eq!(rows_after.matches("host-paused").count(), 1, "{rows_after}");
+  live.stop();
+}
+
+#[test]
 fn an_uncertain_answer_is_ok_and_a_busy_engine_is_never_retried() {
   let temp = tempfile::tempdir().expect("temp");
   let live = live(temp.path(), Some(TOKEN), Duration::from_millis(200));

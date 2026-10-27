@@ -6,7 +6,7 @@
 //! `<state>/routes/<key>.json`, so relaunches keep their host and model.
 
 mod assign;
-mod capacity;
+pub(crate) mod capacity;
 mod pool;
 mod render;
 mod score;

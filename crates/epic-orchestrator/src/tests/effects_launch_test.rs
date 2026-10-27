@@ -79,6 +79,42 @@ fn an_unreadable_graph_fails_and_an_overlap_holds_before_routing() {
 }
 
 #[test]
+fn a_running_workers_relaunch_waits_when_its_host_is_paused() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut graph = crate::support::graph_248();
+  graph.state_dir = tmp.path().display().to_string();
+  crate::graph::write_graph(&tmp.path().join("graph.json"), &graph).expect("graph");
+  let issues = tmp.path().join("issues");
+  std::fs::create_dir_all(&issues).expect("issues");
+  std::fs::write(
+    issues.join("comemory-255.json"),
+    r#"{"stage":"running","kind":"codex","launches":1}"#,
+  )
+  .expect("record");
+  let routes = tmp.path().join("routes");
+  std::fs::create_dir_all(&routes).expect("routes");
+  let saved = r#"{"key":"comemory-255","host":"codex"}"#;
+  std::fs::write(routes.join("comemory-255.json"), saved).expect("route");
+  let root = tmp.path().join("r");
+  std::fs::create_dir_all(&root).expect("root");
+  std::fs::write(
+    root.join("state.json"),
+    r#"{"version":1,"leases":[],"cooldowns":{},"paused_hosts":{"codex":{"by":"user","at":5}}}"#,
+  )
+  .expect("state");
+  let wait = launch(tmp.path(), "comemory-255", &[]);
+  assert_eq!(
+    (wait["outcome"].as_str(), wait["note"].as_str()),
+    (Some("wait"), Some("host paused"))
+  );
+  // The saved route survives the wait, so the resume relaunches on codex.
+  assert_eq!(
+    std::fs::read_to_string(routes.join("comemory-255.json")).expect("route"),
+    saved
+  );
+}
+
+#[test]
 fn a_first_launch_waits_while_the_github_budget_is_under_its_floor() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut graph = crate::support::graph_248();

@@ -203,14 +203,13 @@ impl Pass<'_> {
     let tier_name = TIERS.get(scored.tier).copied().unwrap_or("standard");
     let table = self.options.table;
     let prefer = table.prefer.get(tier_name).cloned().unwrap_or_default();
-    let host = kept.or_else(|| {
-      pick_host(
-        self.pool,
-        &self.capacity.used,
-        &self.capacity.cooling,
-        &prefer,
-      )
-    });
+    let blocked: BTreeSet<HostKind> = self
+      .capacity
+      .cooling
+      .union(&self.capacity.paused)
+      .copied()
+      .collect();
+    let host = kept.or_else(|| pick_host(self.pool, &self.capacity.used, &blocked, &prefer));
     if let Some(host) = host.filter(|host| live != Some(*host)) {
       *self.capacity.used.entry(host).or_default() += 1;
     }
@@ -245,7 +244,11 @@ impl Pass<'_> {
     let room = self.pool.iter().any(|(kind, cap)| {
       *kind == host && (used.get(kind).copied().unwrap_or(0) < *cap || live == Some(host))
     });
-    (!self.options.reroute && !self.capacity.cooling.contains(&host) && room).then_some(host)
+    (!self.options.reroute
+      && !self.capacity.cooling.contains(&host)
+      && !self.capacity.paused.contains(&host)
+      && room)
+      .then_some(host)
   }
 }
 

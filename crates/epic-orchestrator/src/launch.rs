@@ -246,6 +246,15 @@ fn launch(
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
+  if !opts.force {
+    let root = toolu_engine::resources::store::resource_home(ctx.env);
+    if crate::host_pause::is_paused(&root, host.kind).map_err(Failure::unknown)? {
+      return Err(Failure::refusal(format!(
+        "host {} is paused; resume it or pass --force",
+        host.kind.name()
+      )));
+    }
+  }
   if let Some(stage) = finished_stage(&record).filter(|_| opts.by == Launcher::Engine) {
     return Err(Failure::refusal(format!(
       "{FINISHED}{} is {stage}",
