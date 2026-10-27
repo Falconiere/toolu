@@ -55,13 +55,13 @@ The route is intercepted before the loopback read-auth exception. It uses `http_
 | --- | --- | --- | --- |
 | 1 | Isolated herdr 0.9.5 session; engine-launched Claude Code and Codex workers during a long command | Visible text and no `agent_not_idle`; capture herdr request params | Live probe following `.toolu/skills/verify-epic-watcher/SKILL.md`; focused Rust socket test |
 | 2 | Loopback listener with a configured token, then no token | `401`, then `403`; herdr call count unchanged | Real HTTP listener test |
-| 3 | Pane prints a fixture file containing a configured canary; a listener test also changes the configured secrets after reload | Canary absent and `<redacted>` present; cached text uses refreshed secrets when available | Real herdr pane probe plus real listener test |
+| 3 | Pane prints a configured canary; a render test passes two secrets sets over the same cached sample | Canary absent and `<redacted>` present; cached text uses the current secrets | Real herdr pane probe plus Rust render test |
 | 4 | Pane prints a fixture over 64 KiB into an isolated headless viewport configured with `headless_cols = 800` and `headless_rows = 100`, ending with a unique Unicode line; a socket test checks the exact byte boundary | Body byte count at most 65,536, prefix removed, final line intact, `lines` matches text | Real herdr pane probe plus focused Rust socket test |
 | 5 | Close a real pane; separately run herdr off and stop its server | `not_running` or `available:false`, all `200` | Live probe plus real listener test |
-| 6 | Real blocked worker and named herdr session | Dialog, `blocked`, `herdr --session <name> agent attach <target>` | Live probe plus real listener test |
+| 6 | Real socket fixture with a blocked worker status, visible dialog, and named session | Dialog, `blocked`, `herdr --session <name> agent attach <target>` | Real listener test; live trust dialog not reproduced |
 | 7 | Configured peer with a screen URL | `404`, peer call count unchanged | Existing real peer HTTP fixture test |
 | 8 | Two immediate reads; nine overlapping stalled herdr reads, then `/overview` | One sample, at least one `503`, responsive overview | Real socket/listener concurrency test |
-| 9 | Full repository | All gate steps green | `toolu epic job -- cargo xtask gate` |
+| 9 | Full repository | All gate steps green | Native `cargo xtask gate` through ledger step s4 |
 
 ## Documentation impact
 
