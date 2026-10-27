@@ -1,0 +1,543 @@
+{
+  "attention": {
+    "items": [],
+    "schema": 1
+  },
+  "board": {
+    "current_wave": 1,
+    "graph": {
+      "issues": [
+        {
+          "key": "local-658",
+          "open_blockers": [],
+          "title": "Fleet",
+          "wave": 1
+        }
+      ],
+      "waves": [
+        {
+          "issues": [
+            "local-658"
+          ],
+          "wave": 1
+        }
+      ]
+    },
+    "issues": [
+      {
+        "agent_status": "unknown",
+        "agent_status_at": null,
+        "effort": null,
+        "hold": null,
+        "host": "",
+        "key": "local-658",
+        "model": null,
+        "phase": "execution",
+        "phase_age_ms": 0,
+        "plan_summary": {
+          "green": 1,
+          "next": "s2",
+          "pending": 3,
+          "red": 0,
+          "running": 0,
+          "stale": 0,
+          "total": 4
+        },
+        "pr": null,
+        "stage": "running"
+      }
+    ],
+    "key": "local-649",
+    "live": 1,
+    "paused": true,
+    "queue": [],
+    "queued": 0,
+    "schema": 1,
+    "title": "Dashboard redesign",
+    "url": "https://github.com/o/r/issues/9",
+    "waves_total": 1
+  },
+  "epics": {
+    "items": [
+      {
+        "attention_count": 0,
+        "counts": {
+          "running": 1
+        },
+        "current_wave": 1,
+        "key": "local-649",
+        "live": 1,
+        "paused": true,
+        "queued": 0,
+        "title": "Dashboard redesign",
+        "url": "https://github.com/o/r/issues/9",
+        "waves_total": 1
+      }
+    ],
+    "schema": 1
+  },
+  "events": {
+    "events": [
+      {
+        "at": "2026-10-27T17:55:00.078Z",
+        "epic": "",
+        "key": "",
+        "kind": "action",
+        "name": "engine-usage",
+        "note": "{\"cpu_ms\":14,\"event\":\"start\",\"max_rss_bytes\":13500416}",
+        "seq": 1
+      },
+      {
+        "at": "2026-10-27T17:55:00.094Z",
+        "epic": "local-649",
+        "key": "local-658",
+        "kind": "transition",
+        "name": "phase",
+        "note": "execution",
+        "seq": 2
+      }
+    ],
+    "next_seq": 2,
+    "oldest_seq": 1,
+    "schema": 1
+  },
+  "fleet": {
+    "machines": [
+      {
+        "age_ms": 0,
+        "attention_count": 0,
+        "counts": {
+          "running": 1
+        },
+        "dashboard_url": null,
+        "engine": "running",
+        "epics": [
+          {
+            "attention_count": 0,
+            "counts": {
+              "running": 1
+            },
+            "key": "local-649",
+            "paused": true
+          }
+        ],
+        "hostname": "macmini",
+        "hosts": [
+          {
+            "cap": 3,
+            "host": "claude",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "codex",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "cursor",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "muse",
+            "running": 0
+          }
+        ],
+        "in_flight": [
+          {
+            "epic": "local-649",
+            "key": "local-658",
+            "phase": "execution",
+            "stage": "running"
+          }
+        ],
+        "journal_seq": 0,
+        "last_seen": "2026-10-27T17:55:00.103Z",
+        "local": true,
+        "name": "local",
+        "paused": true,
+        "reason": null,
+        "state": "ok"
+      },
+      {
+        "age_ms": 15,
+        "attention_count": 0,
+        "counts": {
+          "running": 1
+        },
+        "dashboard_url": "http://127.0.0.1:61073/",
+        "engine": "running",
+        "epics": [
+          {
+            "attention_count": 0,
+            "counts": {
+              "running": 1
+            },
+            "key": "peer-649",
+            "paused": true
+          }
+        ],
+        "hostname": "macmini",
+        "hosts": [
+          {
+            "cap": 3,
+            "host": "claude",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "codex",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "cursor",
+            "running": 0
+          },
+          {
+            "cap": 3,
+            "host": "muse",
+            "running": 0
+          }
+        ],
+        "in_flight": [
+          {
+            "epic": "peer-649",
+            "key": "peer-658",
+            "phase": "execution",
+            "stage": "running"
+          }
+        ],
+        "journal_seq": 0,
+        "last_seen": "2026-10-27T17:55:00.088Z",
+        "local": false,
+        "name": "build-mini",
+        "paused": true,
+        "reason": null,
+        "state": "ok"
+      }
+    ],
+    "schema": 1,
+    "summary": {
+      "attention_count": 0,
+      "hosts": [
+        {
+          "cap": 6,
+          "host": "claude",
+          "running": 0
+        },
+        {
+          "cap": 6,
+          "host": "codex",
+          "running": 0
+        },
+        {
+          "cap": 6,
+          "host": "cursor",
+          "running": 0
+        },
+        {
+          "cap": 6,
+          "host": "muse",
+          "running": 0
+        }
+      ],
+      "in_flight": 2,
+      "machines": 2,
+      "reachable": 2
+    }
+  },
+  "hosts": {
+    "items": [
+      {
+        "cap": 3,
+        "cooldown_until": null,
+        "host": "claude",
+        "reason": null,
+        "running": 0
+      },
+      {
+        "cap": 3,
+        "cooldown_until": null,
+        "host": "codex",
+        "reason": null,
+        "running": 0
+      },
+      {
+        "cap": 3,
+        "cooldown_until": null,
+        "host": "cursor",
+        "reason": null,
+        "running": 0
+      },
+      {
+        "cap": 3,
+        "cooldown_until": null,
+        "host": "muse",
+        "reason": null,
+        "running": 0
+      }
+    ],
+    "schema": 1
+  },
+  "live": {
+    "available": false,
+    "items": [],
+    "reason": "off",
+    "sampled_at": "2026-10-27T17:55:00.104Z",
+    "schema": 1
+  },
+  "overview": {
+    "attention": [],
+    "attention_count": 0,
+    "counts": {
+      "running": 1
+    },
+    "engine": "running",
+    "epics": [
+      {
+        "attention_count": 0,
+        "counts": {
+          "running": 1
+        },
+        "current_wave": 1,
+        "key": "local-649",
+        "live": 1,
+        "paused": true,
+        "queued": 0,
+        "title": "Dashboard redesign",
+        "url": "https://github.com/o/r/issues/9",
+        "waves_total": 1
+      }
+    ],
+    "github": {
+      "effectsHeld": false,
+      "graphql": {
+        "points": 0,
+        "remaining": null,
+        "resetAt": null
+      },
+      "holdUntil": 0,
+      "rest": {
+        "points": 0,
+        "rate": null
+      }
+    },
+    "hostname": "macmini",
+    "hosts": {
+      "items": [
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "claude",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "codex",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "cursor",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "muse",
+          "reason": null,
+          "running": 0
+        }
+      ],
+      "schema": 1
+    },
+    "issues": [
+      {
+        "direction": null,
+        "epic": "local-649",
+        "github": null,
+        "key": "local-658",
+        "phase": "execution",
+        "stage": "running"
+      }
+    ],
+    "jobs": {
+      "running": [],
+      "schema": 1,
+      "waiting": []
+    },
+    "journal_seq": 0,
+    "machine": {
+      "agent_leases": [],
+      "available_memory_bytes": null,
+      "job_leases": [],
+      "load": null,
+      "policy": {
+        "max_agents": 3,
+        "max_jobs": 1,
+        "pressure": true
+      },
+      "pressure": null,
+      "schema": 1,
+      "steal": null
+    },
+    "paused": true,
+    "schema": 1
+  },
+  "peer_board": {
+    "current_wave": 1,
+    "graph": {
+      "issues": [
+        {
+          "key": "peer-658",
+          "open_blockers": [],
+          "title": "Fleet",
+          "wave": 1
+        }
+      ],
+      "waves": [
+        {
+          "issues": [
+            "peer-658"
+          ],
+          "wave": 1
+        }
+      ]
+    },
+    "issues": [
+      {
+        "agent_status": "unknown",
+        "agent_status_at": null,
+        "effort": null,
+        "hold": null,
+        "host": "",
+        "key": "peer-658",
+        "model": null,
+        "phase": "execution",
+        "phase_age_ms": 0,
+        "plan_summary": null,
+        "pr": null,
+        "stage": "running"
+      }
+    ],
+    "key": "peer-649",
+    "live": 1,
+    "paused": true,
+    "queue": [],
+    "queued": 0,
+    "schema": 1,
+    "title": "Peer dashboard",
+    "url": "https://github.com/o/r/issues/9",
+    "waves_total": 1
+  },
+  "peer_overview": {
+    "attention": [],
+    "attention_count": 0,
+    "counts": {
+      "running": 1
+    },
+    "engine": "running",
+    "epics": [
+      {
+        "attention_count": 0,
+        "counts": {
+          "running": 1
+        },
+        "current_wave": 1,
+        "key": "peer-649",
+        "live": 1,
+        "paused": true,
+        "queued": 0,
+        "title": "Peer dashboard",
+        "url": "https://github.com/o/r/issues/9",
+        "waves_total": 1
+      }
+    ],
+    "github": {
+      "effectsHeld": false,
+      "graphql": {
+        "points": 0,
+        "remaining": null,
+        "resetAt": null
+      },
+      "holdUntil": 0,
+      "rest": {
+        "points": 0,
+        "rate": null
+      }
+    },
+    "hostname": "macmini",
+    "hosts": {
+      "items": [
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "claude",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "codex",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "cursor",
+          "reason": null,
+          "running": 0
+        },
+        {
+          "cap": 3,
+          "cooldown_until": null,
+          "host": "muse",
+          "reason": null,
+          "running": 0
+        }
+      ],
+      "schema": 1
+    },
+    "issues": [
+      {
+        "direction": null,
+        "epic": "peer-649",
+        "github": null,
+        "key": "peer-658",
+        "phase": "execution",
+        "stage": "running"
+      }
+    ],
+    "jobs": {
+      "running": [],
+      "schema": 1,
+      "waiting": []
+    },
+    "journal_seq": 0,
+    "machine": {
+      "agent_leases": [],
+      "available_memory_bytes": null,
+      "job_leases": [],
+      "load": null,
+      "policy": {
+        "max_agents": 3,
+        "max_jobs": 1,
+        "pressure": true
+      },
+      "pressure": null,
+      "schema": 1,
+      "steal": null
+    },
+    "paused": true,
+    "schema": 1
+  }
+}

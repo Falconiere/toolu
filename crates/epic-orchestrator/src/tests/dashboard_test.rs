@@ -2,9 +2,11 @@ use std::io::{Read as _, Write as _};
 use std::net::TcpStream;
 use std::path::Path;
 
+use serde_json::json;
 use toolu_runtime::config::secrets::Secrets;
 
-use crate::fleet_rig::{config, listener};
+use crate::disk::write_value;
+use crate::fleet_rig::{Engine, config, free_port, get_json, listener};
 
 const ASSET_CACHE: &str = "public, max-age=31536000, immutable";
 
@@ -136,4 +138,59 @@ fn dashboard_asset_page_is_offline_and_font_licensed() {
   for license in ["OFL-Archivo.txt", "OFL-JetBrainsMono.txt"] {
     assert!(fonts.join(license).is_file(), "{license}");
   }
+}
+
+#[test]
+fn dashboard_status_capture_comes_from_running_engines() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let peer = Engine::start_titled(
+    &temp.path().join("peer"),
+    ("peer-649", "Peer dashboard"),
+    "peer-658",
+    config(free_port(), Vec::new(), Secrets::none()),
+  );
+  let local = Engine::start_titled(
+    &temp.path().join("local"),
+    ("local-649", "Dashboard redesign"),
+    "local-658",
+    config(free_port(), vec![peer.peer("build-mini")], Secrets::none()),
+  );
+  let issue_dir = local.root.join("local-649/issues");
+  std::fs::create_dir_all(&issue_dir).expect("issue dir");
+  write_value(
+    &issue_dir.join("local-658.json"),
+    &json!({
+      "key": "local-658",
+      "kind": "claude",
+      "worktree": Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
+    }),
+  )
+  .expect("issue record");
+  let captured = json!({
+    "overview": get_json(local.addr, "/api/v1/overview"),
+    "epics": get_json(local.addr, "/api/v1/epics"),
+    "board": get_json(local.addr, "/api/v1/epics/local-649"),
+    "hosts": get_json(local.addr, "/api/v1/hosts"),
+    "attention": get_json(local.addr, "/api/v1/attention"),
+    "fleet": get_json(local.addr, "/api/v1/fleet"),
+    "events": get_json(local.addr, "/api/v1/events?limit=7"),
+    "live": get_json(local.addr, "/api/v1/agents/live"),
+    "peer_overview": get_json(local.addr, "/api/v1/fleet/peers/build-mini/overview"),
+    "peer_board": get_json(local.addr, "/api/v1/fleet/peers/build-mini/epics/peer-649")
+  });
+  assert_eq!(captured["board"]["issues"][0]["key"], "local-658");
+  assert_eq!(captured["peer_board"]["issues"][0]["key"], "peer-658");
+  assert_eq!(captured["fleet"]["machines"][1]["name"], "build-mini");
+  if std::env::var_os("TOOLU_CAPTURE_DASHBOARD").is_some() {
+    let path =
+      Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/dashboard/status.json");
+    std::fs::create_dir_all(path.parent().expect("fixture parent")).expect("fixture dir");
+    std::fs::write(
+      &path,
+      serde_json::to_vec_pretty(&captured).expect("fixture json"),
+    )
+    .expect("write fixture");
+  }
+  local.stop();
+  peer.stop();
 }

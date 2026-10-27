@@ -18,36 +18,72 @@
       </header>
       <main>
         <div class="heading">
-          <div><h1>Epic engine</h1><p>Workers, hosts, and the work that needs you.</p></div>
+          <div>
+            <h1>Epic engine</h1>
+            <p>Workers, hosts, and the work that needs you.</p>
+          </div>
           <p id="connection" class="connection" role="status">◷ CONNECTING</p>
         </div>
         <div id="error" class="error" role="alert" hidden></div>
         <div id="peer-banner" class="peer-banner" hidden>
-          <p>◇ · PEER — Fleet peers are read-only here. Plans and phases are proxied; screens, live status and actions stay on the peer's own dashboard.</p>
-          <a id="peer-link" target="_blank" rel="noopener noreferrer" hidden></a>
+          <p>
+            ◇ · PEER — Fleet peers are read-only here. Plans and phases are proxied; screens, live
+            status and actions stay on the peer's own dashboard.
+          </p>
+          <a id="peer-link" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
         </div>
-        <dl class="tiles" aria-label="Engine totals">
-          <div class="tile"><dt>WORKERS LIVE</dt><dd id="tile-workers">—</dd><p id="tile-workers-note">Waiting for engine.</p></div>
-          <div class="tile"><dt>ATTENTION</dt><dd id="tile-attention">—</dd><p id="tile-attention-note">Waiting for engine.</p></div>
-          <div class="tile"><dt>HOSTS IN ROTATION</dt><dd id="tile-hosts">—</dd><p>Paused and cooling hosts take no new launches.</p></div>
-          <div class="tile"><dt>PLAN STEPS GREEN</dt><dd id="tile-plans">—</dd><p id="tile-plans-note">Waiting for plans.</p></div>
+        <dl class="tiles">
+          <div class="tile">
+            <dt>WORKERS LIVE</dt>
+            <dd id="tile-workers">—</dd>
+            <p id="tile-workers-note">Waiting for engine.</p>
+          </div>
+          <div class="tile">
+            <dt>ATTENTION</dt>
+            <dd id="tile-attention">—</dd>
+            <p id="tile-attention-note">Waiting for engine.</p>
+          </div>
+          <div class="tile">
+            <dt>HOSTS IN ROTATION</dt>
+            <dd id="tile-hosts">—</dd>
+            <p>Paused and cooling hosts take no new launches.</p>
+          </div>
+          <div class="tile">
+            <dt>PLAN STEPS GREEN</dt>
+            <dd id="tile-plans">—</dd>
+            <p id="tile-plans-note">Waiting for plans.</p>
+          </div>
         </dl>
         <section class="board-section" aria-labelledby="board-title">
-          <header class="section-heading"><h2 id="board-title">Epic board</h2><span id="sampled">LIVE · POLLED 3S</span></header>
+          <header class="section-heading">
+            <h2 id="board-title">Epic board</h2>
+            <span id="sampled">LIVE · POLLED 3S</span>
+          </header>
           <div id="board" class="board"><p class="empty">Loading registered epics…</p></div>
         </section>
         <div class="panels">
           <section class="panel" aria-labelledby="hosts-title">
-            <header class="section-heading"><h2 id="hosts-title">Hosts</h2><span>AGENT ROTATION</span></header>
+            <header class="section-heading">
+              <h2 id="hosts-title">Hosts</h2>
+              <span>AGENT ROTATION</span>
+            </header>
             <div id="hosts" class="host-list"></div>
-            <p id="hosts-help" class="help">Pause stops new launches; running workers continue. Resume also clears a cooldown.</p>
+            <p id="hosts-help" class="help">
+              Pause stops new launches; running workers continue. Resume also clears a cooldown.
+            </p>
           </section>
           <section class="panel" aria-labelledby="attention-title">
-            <header class="section-heading"><h2 id="attention-title">Attention</h2><span id="attention-count">0 OPEN</span></header>
+            <header class="section-heading">
+              <h2 id="attention-title">Attention</h2>
+              <span id="attention-count">0 OPEN</span>
+            </header>
             <ul id="attention" class="attention-list"></ul>
           </section>
           <section class="panel panel-stream" aria-labelledby="journal-title">
-            <header class="section-heading"><h2 id="journal-title">Journal</h2><span>STREAM</span></header>
+            <header class="section-heading">
+              <h2 id="journal-title">Journal</h2>
+              <span>STREAM</span>
+            </header>
             <ol id="journal" class="journal-list"></ol>
           </section>
         </div>
