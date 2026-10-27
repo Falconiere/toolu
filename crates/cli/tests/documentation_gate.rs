@@ -17,7 +17,8 @@ struct Fixture {
 impl Fixture {
   fn new() -> Res<Self> {
     let temp = tempfile::tempdir()?;
-    let repo = temp.path().join("repo");
+    // Git reports the resolved toplevel; a symlinked TMPDIR must not change the prefix.
+    let repo = temp.path().canonicalize()?.join("repo");
     fs::create_dir_all(&repo)?;
     let fixture = Self { temp, repo };
     fixture.git(&["init", "-q", "-b", "main"])?;
@@ -109,6 +110,8 @@ impl Fixture {
       &[
         "docs",
         "write-state",
+        "--host",
+        "claude",
         "--report",
         path.to_str().ok_or("report path")?,
       ],
@@ -158,6 +161,19 @@ fn native_gate_requires_current_complete_review() {
     reason(&before)
   );
   let report = fixture.report().unwrap();
+  let path = fixture.temp.path().join("report.json");
+  fs::write(&path, report.to_string()).unwrap();
+  let hostless = assert_cmd::Command::new(TOOLU)
+    .args(["docs", "write-state", "--report", path.to_str().unwrap()])
+    .current_dir(&fixture.repo)
+    .env_clear()
+    .env("PATH", std::env::var_os("PATH").unwrap())
+    .env("HOME", fixture.temp.path())
+    .env("DOCS_SYNC_BASE", "main")
+    .output()
+    .unwrap();
+  assert!(!hostless.status.success());
+  assert!(String::from_utf8_lossy(&hostless.stderr).contains("pass --host"));
   let mut partial = report.clone();
   partial
     .as_object_mut()

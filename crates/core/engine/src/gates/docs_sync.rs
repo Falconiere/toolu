@@ -143,12 +143,12 @@ fn evaluate(
   ctx: &RuleContext<'_>,
   warnings: &mut Vec<String>,
 ) -> Result<Decision, String> {
-  if crate::docs_review::active(&Roots::new(ctx.env.clone(), Some(ctx.host))) {
-    return Ok(Decision::Allow);
-  }
   let Some(diff) = diff_target(event, ctx) else {
     return Ok(Decision::Allow);
   };
+  if crate::docs_review::active(&Roots::new(ctx.env.clone(), Some(ctx.host))) {
+    return Ok(Decision::Allow);
+  }
   let config = gate_config(ctx);
   if !needs_doc(&diff.changed, &config) {
     return Ok(Decision::Allow);

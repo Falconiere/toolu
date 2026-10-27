@@ -2,20 +2,64 @@
 use crate::gates::push_target::git_at;
 use std::path::Path;
 use toolu_runtime::env::Env;
-use toolu_shell::analysis::{CommandOrigin, ShellAnalysis};
-use toolu_shell::git::{git_invocation, push_targets};
+use toolu_shell::analysis::{CommandOrigin, ShellAnalysis, Word};
+use toolu_shell::git::{GitInvocation, git_invocation, push_targets};
 
-/// Whether a dynamic command or subcommand may be an explicitly indicated push.
-pub(super) fn dynamic_push(analysis: &ShellAnalysis) -> bool {
-  analysis.commands.iter().any(|command| {
-    git_invocation(command).is_some_and(|git| git.subcommand.is_none())
-      || (matches!(command.argv.first(), Some(None))
-        && command
-          .argv
-          .iter()
-          .skip(1)
-          .any(|arg| arg.as_deref() == Some("push")))
-  })
+/// Whether `text` holds `push` as a whole word.
+fn mentions_push(text: &str) -> bool {
+  text
+    .split(|c: char| !c.is_ascii_alphanumeric())
+    .any(|word| word == "push")
+}
+
+/// Whether the invocation may define an alias: a dynamic or `alias.` global
+/// (`-c`, `--config-env`), or `git config` with a dynamic or `alias.` argument.
+fn defines_alias(git: &GitInvocation<'_>) -> bool {
+  let aliased = |words: &[Word]| {
+    words.iter().any(|word| {
+      word
+        .as_deref()
+        .is_none_or(|word| word.to_ascii_lowercase().contains("alias."))
+    })
+  };
+  let argv = &git.command.argv;
+  let globals = argv
+    .get(1..argv.len().saturating_sub(git.args.len() + 1))
+    .unwrap_or_default();
+  aliased(globals) || (git.subcommand == Some("config") && aliased(git.args))
+}
+
+/// Whether the subcommand is an alias configured, where it runs, to push.
+fn configured_push(git: &GitInvocation<'_>, cwd: &Path, env: &Env) -> bool {
+  let Some(sub) = git.subcommand.filter(|sub| *sub != "push") else {
+    return false;
+  };
+  let dir = git
+    .c_chain
+    .iter()
+    .try_fold(cwd.to_path_buf(), |dir, step| {
+      step.map(|step| dir.join(step))
+    })
+    .unwrap_or_else(|| cwd.to_path_buf());
+  git_at(&dir, &["config", "--get", &format!("alias.{sub}")], env)
+    .is_some_and(|expansion| mentions_push(&expansion))
+}
+
+/// Whether the line may push without a static `push` subcommand: a dynamic
+/// command, subcommand or script, or an alias defined in the line, when the line
+/// mentions `push`; or a configured alias that expands to one.
+pub(super) fn possible_push(analysis: &ShellAnalysis, cwd: &Path, env: &Env) -> bool {
+  let mentioned = mentions_push(&analysis.source);
+  analysis
+    .commands
+    .iter()
+    .any(|command| match git_invocation(command) {
+      Some(git) => {
+        (mentioned && (git.subcommand.is_none() || defines_alias(&git)))
+          || configured_push(&git, cwd, env)
+      }
+      None => mentioned && matches!(command.argv.first(), Some(None)),
+    })
 }
 
 fn globals(argv: &[Option<String>]) -> bool {

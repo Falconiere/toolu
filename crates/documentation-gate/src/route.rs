@@ -4,7 +4,9 @@ use std::collections::HashSet;
 
 use clap::ArgMatches;
 use serde::Deserialize;
+use toolu_engine::docs_review::worker_host;
 use toolu_jev_client::{Answer, Config, DEFAULT_MODEL, Jev, Question, Questions, Reply, State};
+use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 
 use crate::{read_json, required};
@@ -72,13 +74,13 @@ fn validate(candidates: &[Candidate]) -> Result<(), String> {
         .id
         .bytes()
         .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'));
-    let effort = match c.host.as_str() {
-      "cursor" => c.effort == "model",
-      "claude" | "codex" | "muse" => matches!(
+    let effort = match worker_host(&c.host) {
+      Some(Host::Cursor) => c.effort == "model",
+      Some(_) => matches!(
         c.effort.as_str(),
         "low" | "medium" | "high" | "xhigh" | "max" | "ultra"
       ),
-      _ => false,
+      None => false,
     };
     if !safe
       || c.id == NO_ROUTE

@@ -25,6 +25,7 @@ pub(super) fn fixture() -> (tempfile::TempDir, Roots) {
   git(repo, &["config", "user.email", "test@example.com"]);
   git(repo, &["config", "user.name", "Test"]);
   std::fs::write(repo.join("README.md"), "initial\n").expect("readme");
+  std::fs::write(repo.join("GUIDE.md"), "unchanged\n").expect("guide");
   git(repo, &["add", "."]);
   git(repo, &["commit", "-m", "initial"]);
   git(repo, &["checkout", "-b", "feature"]);
@@ -80,5 +81,24 @@ fn detached_review_requires_a_known_local_branch() {
     repo,
     &["update-ref", "refs/remotes/origin/remote-only", "HEAD"],
   );
-  assert!(inspect(&roots, repo, Some("remote-only")).is_ok());
+  // The session sweeper keeps only live local branches' state.
+  assert!(inspect(&roots, repo, Some("remote-only")).is_err());
+}
+
+#[test]
+fn missing_base_explains_how_to_name_one() {
+  let (dir, _) = fixture();
+  let repo = dir.path();
+  git(repo, &["branch", "-m", "main", "master"]);
+  let roots = Roots::new(
+    Env::from_pairs([("HOME", repo.to_str().expect("path"))]),
+    Some(Host::Claude),
+  );
+  let error = inspect(&roots, repo, None).expect_err("no main");
+  assert!(
+    error.contains("base branch 'main' not found")
+      && error.contains("git remote set-head origin")
+      && error.contains("DOCS_SYNC_BASE"),
+    "{error}"
+  );
 }

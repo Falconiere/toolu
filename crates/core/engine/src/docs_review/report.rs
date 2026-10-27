@@ -1,5 +1,5 @@
 //! Validation of review evidence against committed Git content.
-use super::git;
+use super::{git, worker_host};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Component, Path};
@@ -25,13 +25,13 @@ fn tuple(report: &Value) -> Result<(), String> {
       return Err(format!("worker {key} differs from route"));
     }
   }
-  if !["claude", "codex", "cursor", "muse"].contains(&text(route, "host")?) {
+  if worker_host(text(route, "host")?).is_none() {
     return Err("invalid host".into());
   }
   Ok(())
 }
 
-fn doc(roots: &Roots, root: &Path, path: &str) -> Result<(), String> {
+fn doc(path: &str) -> Result<(), String> {
   let p = Path::new(path);
   if p.components().any(|c| !matches!(c, Component::Normal(_))) || path.is_empty() {
     return Err(format!("invalid documentation path {path}"));
@@ -43,12 +43,30 @@ fn doc(roots: &Roots, root: &Path, path: &str) -> Result<(), String> {
   {
     return Err(format!("not a documentation file: {path}"));
   }
-  git(roots, root, &["cat-file", "-e", &format!("HEAD:{path}")])?;
-  let entry = git(roots, root, &["ls-tree", "HEAD", "--", path])?;
-  if !entry.starts_with("100644 blob ") && !entry.starts_with("100755 blob ") {
-    return Err(format!("not a committed regular file: {path}"));
-  }
   Ok(())
+}
+
+/// Every one of `docs` is a regular file committed at `HEAD`, read in one listing.
+fn committed(roots: &Roots, root: &Path, docs: &BTreeSet<&str>) -> Result<(), String> {
+  if docs.is_empty() {
+    return Ok(());
+  }
+  let mut args = vec!["--literal-pathspecs", "ls-tree", "-z", "HEAD", "--"];
+  args.extend(docs.iter().copied());
+  let listing = git(roots, root, &args)?;
+  let regular: BTreeSet<&str> = listing
+    .split('\0')
+    .filter_map(|entry| {
+      let (meta, path) = entry.split_once('\t')?;
+      (meta.starts_with("100644 blob ") || meta.starts_with("100755 blob ")).then_some(path)
+    })
+    .collect();
+  docs
+    .iter()
+    .find(|doc| !regular.contains(*doc))
+    .map_or(Ok(()), |doc| {
+      Err(format!("not a committed regular file: {doc}"))
+    })
 }
 
 fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Result<(), String> {
@@ -58,6 +76,7 @@ fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Res
     .ok_or("missing files")?;
   let expected: BTreeSet<&str> = files.iter().filter_map(Value::as_str).collect();
   let mut seen = BTreeSet::new();
+  let mut cited = BTreeSet::new();
   let rows = report
     .get("coverage")
     .and_then(Value::as_array)
@@ -85,7 +104,8 @@ fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Res
         .as_str()
         .filter(|s| !s.trim().is_empty())
         .ok_or("invalid documentation reference")?;
-      doc(roots, root, name)?;
+      doc(name)?;
+      cited.insert(name);
       updated |= expected.contains(name);
     }
     if disposition == "updated" && !updated {
@@ -95,7 +115,7 @@ fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Res
   if seen != expected {
     return Err("coverage does not match changed files".into());
   }
-  Ok(())
+  committed(roots, root, &cited)
 }
 
 /// Validate a complete report against the committed identity and documentation.

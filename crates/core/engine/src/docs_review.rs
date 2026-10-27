@@ -7,6 +7,7 @@ mod rule;
 use crate::gates::push_target::git_at;
 use serde_json::{Value, json};
 use std::path::{Path, PathBuf};
+use toolu_protocol::host::Host;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::diff_sha::diff_sha;
 use toolu_state::git::{base_branch, branch_slug};
@@ -18,23 +19,23 @@ fn git(roots: &Roots, repo: &Path, args: &[&str]) -> Result<String, String> {
 }
 
 fn known_branch(roots: &Roots, root: &Path, branch: &str) -> Result<(), String> {
-  let known = ["refs/heads", "refs/remotes/origin"].iter().any(|prefix| {
-    git(
-      roots,
-      root,
-      &[
-        "show-ref",
-        "--verify",
-        "--quiet",
-        &format!("{prefix}/{branch}"),
-      ],
-    )
-    .is_ok()
-  });
-  if !known {
-    return Err(format!("unknown branch '{branch}'"));
+  // Only a local branch: the session sweeper drops state of branches that are not.
+  let reference = format!("refs/heads/{branch}");
+  if git(
+    roots,
+    root,
+    &["show-ref", "--verify", "--quiet", &reference],
+  )
+  .is_err()
+  {
+    return Err(format!("unknown local branch '{branch}'"));
   }
   Ok(())
+}
+
+/// The agent hosts a documentation worker can run on.
+pub fn worker_host(name: &str) -> Option<Host> {
+  Host::parse(name).filter(|host| *host != Host::Hermes)
 }
 
 /// Inspect the exact committed branch diff.
@@ -61,16 +62,12 @@ pub fn inspect(roots: &Roots, repo: &Path, branch: Option<&str>) -> Result<Value
   if base.starts_with('-') || base.is_empty() {
     return Err("invalid base branch".into());
   }
-  git(
-    roots,
-    &root,
-    &[
-      "rev-parse",
-      "--verify",
-      "--quiet",
-      &format!("{base}^{{commit}}"),
-    ],
-  )?;
+  let commit = format!("{base}^{{commit}}");
+  if git(roots, &root, &["rev-parse", "--verify", "--quiet", &commit]).is_err() {
+    return Err(format!(
+      "base branch '{base}' not found; run git remote set-head origin <default-branch>, or export DOCS_SYNC_BASE before starting the host"
+    ));
+  }
   let names = git(
     roots,
     &root,
@@ -141,6 +138,17 @@ pub fn write(
 /// # Errors
 /// Returns an error if the review is absent, stale or invalid.
 pub fn assess(roots: &Roots, repo: &Path, branch: &str) -> Result<(), String> {
+  assess_push(roots, repo, branch, || Ok(()))
+}
+
+/// [`assess`], first running `shape` when the diff is not empty: a push with
+/// nothing to review passes whatever its form.
+pub(crate) fn assess_push(
+  roots: &Roots,
+  repo: &Path,
+  branch: &str,
+  shape: impl FnOnce() -> Result<(), String>,
+) -> Result<(), String> {
   let identity = inspect(roots, repo, Some(branch))?;
   if identity
     .get("reviewed_files")
@@ -149,6 +157,7 @@ pub fn assess(roots: &Roots, repo: &Path, branch: &str) -> Result<(), String> {
   {
     return Ok(());
   }
+  shape()?;
   let root = Path::new(
     identity
       .get("repo")
@@ -156,7 +165,18 @@ pub fn assess(roots: &Roots, repo: &Path, branch: &str) -> Result<(), String> {
       .ok_or("missing repo")?,
   );
   let path = state_path(roots, root, branch)?;
-  let text = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+  let text = std::fs::read_to_string(&path).map_err(|e| {
+    if e.kind() == std::io::ErrorKind::NotFound {
+      let sync = roots
+        .invocation("documentation-gate", "sync")
+        .unwrap_or_default();
+      format!(
+        "no review is recorded for this diff; run {sync} and record it with toolu docs write-state"
+      )
+    } else {
+      format!("cannot read {}: {e}", path.display())
+    }
+  })?;
   let report = serde_json::from_str(&text).map_err(|e| format!("invalid review: {e}"))?;
   report::validate(roots, root, &identity, &report)
 }

@@ -8,6 +8,7 @@ mod scan;
 
 pub use edit::{EditedFile, edited_file, in_linked_worktree, is_regular_file};
 pub use manifest_rule::ManifestRule;
+pub(crate) use plugin::publish;
 pub use plugin::{QualityPlugin, check_toolu};
 pub use run::{QualityFindings, QualityOutcome, QualityRule, run_quality, run_quality_event};
 pub use scan::{AstGrepHit, AstGrepScan, ScanFailure, ScanStage, scan_inline, scan_rule_dirs};

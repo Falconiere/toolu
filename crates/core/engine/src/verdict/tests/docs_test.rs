@@ -169,3 +169,17 @@ fn active_verdict_reads_target_config_when_project_env_points_elsewhere() {
   crate::docs_review::register(roots.env(), roots.host());
   assert!(reason(&docs_gate(&mut target.gate(&roots, "feat/x", ""))).starts_with("fail:"));
 }
+
+#[test]
+fn active_review_skips_a_detached_head_like_the_legacy_gate() {
+  let repo = Repo::new().unwrap();
+  let opts = repo.opts();
+  crate::docs_review::register(opts.env(), toolu_protocol::host::Host::Claude);
+  config(&repo, "block");
+  for branch in ["", "HEAD"] {
+    assert_eq!(
+      reason(&docs_gate(&mut repo.gate(&opts.roots, branch, ""))),
+      "skip: detached HEAD"
+    );
+  }
+}

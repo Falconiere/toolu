@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use clap::{Arg, ArgMatches, Command};
-use toolu_protocol::exit::Exit;
+use toolu_protocol::{exit::Exit, host::Host};
 use toolu_runtime::{
   cli::{Ctx, Outcome},
   env::Env,
@@ -60,8 +60,14 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       toolu_engine::docs_review::inspect(&roots, repo, branch).map(|value| value.to_string())
     }),
     Some(("write-state", args)) => with_repo(args, &roots, |repo, branch| {
+      // The gate reads the review from its host's state directory, and agent shells
+      // do not always identify their host.
+      let host = ctx
+        .host
+        .or_else(|| env.get("TOOLU_HOST_OVERRIDE").and_then(Host::parse))
+        .ok_or("pass --host naming the agent host whose gate will read the review")?;
       let report = read_json(required(args, "report")?)?;
-      toolu_engine::docs_review::write(&roots, repo, branch, &report)
+      toolu_engine::docs_review::write(&Roots::new(env.clone(), Some(host)), repo, branch, &report)
         .map(|path| serde_json::json!({"path": path}).to_string())
     }),
     _ => Err("unknown docs command".to_owned()),

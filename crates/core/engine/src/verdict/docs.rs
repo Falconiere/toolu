@@ -124,6 +124,9 @@ fn enhanced(ctx: &GateContext<'_>, config: &LoadedConfig) -> Ordered {
   if mode == GateMode::Off {
     return gate("skip", "docsSync mode is off", Vec::new());
   }
+  if ctx.branch.is_empty() || ctx.branch == "HEAD" {
+    return gate("skip", "detached HEAD", Vec::new());
+  }
   match crate::docs_review::assess(ctx.roots, &ctx.root, &ctx.branch) {
     Ok(()) => gate("pass", "documentation review is current", Vec::new()),
     Err(error) => gate(
@@ -138,30 +141,29 @@ fn enhanced(ctx: &GateContext<'_>, config: &LoadedConfig) -> Ordered {
   }
 }
 
-/// `vd_gate_docs`; the config's warnings join the context's.
+/// `vd_gate_docs`; the config's warnings join the context's. With the
+/// documentation-gate plugin active, its review replaces the doc-surface check.
 pub fn docs_gate(ctx: &mut GateContext<'_>) -> Ordered {
-  let base = match ctx.roots.env().get("DOCS_SYNC_BASE") {
-    Some(base) => base.to_owned(),
-    None => base_branch(ctx.roots.env(), Some(&ctx.root), &ctx.cwd),
-  };
-  let active = crate::docs_review::active(ctx.roots);
-  let target_roots = toolu_runtime::host::roots::Roots::new(
-    ctx
-      .roots
-      .env()
-      .clone()
-      .with("TOOLU_PROJECT_DIR", &ctx.root.to_string_lossy()),
-    Some(ctx.roots.host()),
-  );
-  let config = if active {
-    load(&target_roots, Some(&ctx.root))
+  let (config, decided) = if crate::docs_review::active(ctx.roots) {
+    let target = toolu_runtime::host::roots::Roots::new(
+      ctx
+        .roots
+        .env()
+        .clone()
+        .with("TOOLU_PROJECT_DIR", &ctx.root.to_string_lossy()),
+      Some(ctx.roots.host()),
+    );
+    let config = load(&target, Some(&ctx.root));
+    let decided = enhanced(ctx, &config);
+    (config, decided)
   } else {
-    load(ctx.roots, Some(&ctx.cwd))
-  };
-  let decided = if active {
-    enhanced(ctx, &config)
-  } else {
-    decide(ctx, &config, &base)
+    let base = match ctx.roots.env().get("DOCS_SYNC_BASE") {
+      Some(base) => base.to_owned(),
+      None => base_branch(ctx.roots.env(), Some(&ctx.root), &ctx.cwd),
+    };
+    let config = load(ctx.roots, Some(&ctx.cwd));
+    let decided = decide(ctx, &config, &base);
+    (config, decided)
   };
   ctx.warnings.extend(config.take_warnings());
   decided
