@@ -147,7 +147,11 @@ impl Screen {
       if text.is_empty() {
         return Response::error(500, "screen_unavailable");
       }
-      let mut cut = body.len().saturating_sub(MAX_BODY).min(text.len());
+      // JSON escaping can cost more bytes than the raw text; keep a suffix.
+      let mut cut = body
+        .len()
+        .saturating_sub(MAX_BODY)
+        .min(text.len().div_ceil(2));
       while !text.is_char_boundary(cut) {
         cut += 1;
       }
@@ -220,3 +224,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/http_screen_concurrency_test.rs"]
 mod concurrency_tests;
+
+#[cfg(test)]
+#[path = "tests/http_screen_render_test.rs"]
+mod render_tests;

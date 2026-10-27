@@ -2,12 +2,12 @@ use std::io::{Read as _, Write as _};
 use std::net::{SocketAddr, TcpStream};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Condvar, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use serde_json::Value;
 use toolu_runtime::config::secrets::Secrets;
 
-use super::{Sample, Screen};
+use super::Screen;
 use crate::fleet_rig::{config, listener, secrets_of};
 use crate::herdr_fixture::HerdrFixture;
 use crate::herdr_state::Scripted;
@@ -156,33 +156,6 @@ fn screen_caches_one_second_and_redacts_before_capping_json_bytes() {
   assert_ne!(after["sampled_at"], first["sampled_at"]);
   assert_eq!(fixture.calls().len(), 3);
   running.stop(&stop).expect("listener thread");
-}
-
-#[test]
-fn cached_raw_screen_uses_the_current_secrets_and_blocked_attach_target() {
-  let root = tempfile::tempdir().expect("root");
-  let first = secrets_of(root.path(), &[("TOOLU_EPIC_STATUS_TOKEN", "FIRST-CANARY")]);
-  let second = secrets_of(root.path(), &[("TOOLU_EPIC_STATUS_TOKEN", "SECOND-CANARY")]);
-  let screen = Screen::new(Herdr::Off, Some("probe session".to_owned()));
-  let sample = Sample {
-    at: Instant::now(),
-    sampled_at: "2026-10-27T00:00:00.000Z".to_owned(),
-    target: "worker".to_owned(),
-    result: Ok("FIRST-CANARY SECOND-CANARY".to_owned()),
-  };
-  let first_body: Value =
-    serde_json::from_slice(&screen.render("key", "blocked", &sample, &first).body)
-      .expect("first JSON");
-  let second_body: Value =
-    serde_json::from_slice(&screen.render("key", "blocked", &sample, &second).body)
-      .expect("second JSON");
-  assert_eq!(first_body["text"], "<redacted> SECOND-CANARY");
-  assert_eq!(second_body["text"], "FIRST-CANARY <redacted>");
-  assert_eq!(
-    first_body["attach"],
-    "herdr --session 'probe session' agent attach worker"
-  );
-  assert_eq!(first_body["agent_status"], "blocked");
 }
 
 #[test]
