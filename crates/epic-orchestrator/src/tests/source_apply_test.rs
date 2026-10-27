@@ -6,16 +6,20 @@ use crate::server::{Engine, Fault};
 use crate::source_fix::fixture;
 
 #[test]
-fn a_closed_pane_on_an_idle_issue_does_not_launch() {
+fn a_closed_pane_on_an_idle_issue_does_not_launch_and_its_agent_is_unknown() {
   let fix = fixture(true).expect("fixture");
   let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
   let issue = engine.world.issues.get_mut("a").expect("issue");
   issue.stage = "idle".to_owned();
   issue.pane = Some("w1:p1".to_owned());
+  issue.set_agent_status("working", 1);
   let line = json!({"event":"pane_closed","data":{"pane_id":"w1:p1"}});
   let env = Env::from_pairs([("HOME", "/tmp")]);
   apply(&mut engine, &env, Fact::Event(line)).expect("apply");
-  assert_eq!(engine.world.issues["a"].launches, 0);
+  let issue = &engine.world.issues["a"];
+  assert_eq!(issue.launches, 0);
+  assert_eq!(issue.agent_status, "unknown");
+  assert_ne!(issue.agent_status, "working");
 }
 
 #[test]
@@ -27,9 +31,9 @@ fn a_snapshot_tracks_whether_the_agent_works_and_an_unlisted_one_does_not() {
   let env = Env::from_pairs([("HOME", "/tmp")]);
   let working = json!({"agents": [{"name": "a", "pane_id": "w1:p1", "agent_status": "working"}]});
   apply(&mut engine, &env, Fact::Snapshot(working)).expect("working");
-  assert!(engine.world.issues["a"].queue.agent_working);
+  assert_eq!(engine.world.issues["a"].agent_status, "working");
   apply(&mut engine, &env, Fact::Snapshot(json!({"agents": []}))).expect("gone");
-  assert!(!engine.world.issues["a"].queue.agent_working);
+  assert_ne!(engine.world.issues["a"].agent_status, "working");
 }
 
 fn herdr_events(engine: &Engine) -> usize {
@@ -69,7 +73,6 @@ fn status_events_store_the_word_and_its_time_with_their_journal_row() {
       "one journal row per change"
     );
     let issue = &engine.world.issues["a"];
-    assert_eq!(issue.queue.agent_working, word == "working");
     seen.push((issue.agent_status.clone(), issue.agent_status_at_ms));
   }
   assert_eq!(
@@ -106,6 +109,6 @@ fn an_outage_marks_every_issue_unknown() {
   apply(&mut engine, &env, Fact::Outage).expect("outage");
   for issue in engine.world.issues.values() {
     assert_eq!(issue.agent_status, "unknown", "{}", issue.key);
-    assert!(!issue.queue.agent_working);
+    assert_ne!(issue.agent_status, "working");
   }
 }

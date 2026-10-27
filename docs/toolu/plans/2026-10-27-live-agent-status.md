@@ -67,3 +67,18 @@ Delivery: commit each green step and push. Open the PR against `main` with a bod
 **Status:** Approved
 
 ## Deviations
+- Review round 1 (`/code-review xhigh --fix`, 14 findings): 13 are fixed. These changes go beyond the spec:
+  - `queue.agent_working` is removed; the merge-queue gate reads `agent_status == "working"`.
+  - A closed or exited pane sets its issue to `unknown`.
+  - Any herdr error object from `ping` or `agent.list` is `available:false, reason:"error: <code>"`.
+  - Each connect runs on a helper thread bounded by the 1 s timeout.
+  - `Herdr::Socket` holds the socket path.
+  - The cache holds the body bytes.
+  - The herdr call limiter lives on the listener context (`herdr_calls`) for #654 to share.
+  - `agent.list` is read in blocks.
+  - A poisoned fill lock is recovered.
+  - The AC-9 test also checks `200` with the token.
+  - The stalled-herdr test helper stops its thread.
+
+  One finding is kept as designed: `/agents/live` maps agents by name only, because the issue's review additions require it (Jev 0.70).
+

@@ -17,8 +17,6 @@ use crate::model::Issue;
 pub(crate) struct QueueState {
   /// When the issue joined its repository's merge queue, milliseconds.
   pub queued_at_ms: Option<u64>,
-  /// herdr last reported its agent `working`.
-  pub agent_working: bool,
   /// The engine armed GitHub auto-merge and has not disarmed it.
   pub auto_armed: bool,
   /// The issue left the queue with auto-merge armed: disarm it.

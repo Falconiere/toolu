@@ -435,7 +435,6 @@ impl Issue {
   /// moves only when the word changes.
   pub(crate) fn set_agent_status(&mut self, word: &str, now_ms: u64) {
     let word = agent_status_word(word);
-    self.queue.agent_working = word == "working";
     if self.agent_status != word {
       word.clone_into(&mut self.agent_status);
       self.agent_status_at_ms = now_ms;

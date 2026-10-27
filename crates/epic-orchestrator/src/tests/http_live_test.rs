@@ -1,15 +1,18 @@
+use std::io::{Read as _, Write as _};
+use std::net::TcpStream;
 use std::os::unix::net::UnixListener;
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 use toolu_runtime::config::secrets::Secrets;
-use toolu_runtime::env::Env;
 
 use super::{Herdr, Limiter, Live};
 use crate::fleet_rig::{config, get, listener, secrets_of};
 use crate::herdr_fixture::HerdrFixture;
+use crate::herdr_state::Scripted;
 use crate::model::{Issue, World};
 
 const TOKEN: &str = "LIVE-TITLE-TOKEN-CANARY";
@@ -23,7 +26,7 @@ fn world_with(key: &str, kind: &str) -> Mutex<World> {
 }
 
 fn body(live: &Live, world: &Mutex<World>, secrets: &Secrets) -> (u16, Value) {
-  let response = live.response(world, secrets);
+  let response = live.response(&Limiter::default(), world, secrets);
   let value = serde_json::from_slice(&response.body).expect("json body");
   (response.status, value)
 }
@@ -72,7 +75,7 @@ fn live_lists_mapped_workers_from_one_shared_sample_with_safe_titles() {
   );
   let secrets = secrets_of(repo.path(), &[("TOOLU_EPIC_STATUS_TOKEN", TOKEN)]);
   let world = world_with("a", "claude");
-  let live = Live::new(Herdr::Socket(fixture.env()));
+  let live = Live::new(Herdr::Socket(fixture.socket.clone()));
   let (status, first) = body(&live, &world, &secrets);
   let (_, second) = body(&live, &world, &secrets);
   assert_eq!(status, 200);
@@ -108,7 +111,7 @@ fn live_lists_mapped_workers_from_one_shared_sample_with_safe_titles() {
 fn live_reports_a_status_change_once_the_cache_window_ends() {
   let (fixture, _repo) = two_agents();
   let world = world_with("a", "");
-  let live = Live::new(Herdr::Socket(fixture.env()));
+  let live = Live::new(Herdr::Socket(fixture.socket.clone()));
   let (_, before) = body(&live, &world, &Secrets::none());
   assert_eq!(before["items"][0]["agent_status"], "idle");
   assert_eq!(before["items"][0]["host"], Value::Null);
@@ -126,16 +129,13 @@ fn unavailable_herdr_answers_at_once_with_a_reason() {
   let fixture = HerdrFixture::start();
   fixture.state().protocol = 23;
   let absent = tempfile::tempdir().expect("absent");
-  let missing = Env::from_pairs([(
-    "HERDR_SOCKET_PATH",
-    absent.path().join("herdr.sock").display().to_string(),
-  )]);
+  let missing = absent.path().join("herdr.sock");
   let world = world_with("a", "");
   for (herdr, reason) in [
     (Herdr::Off, "off"),
     (Herdr::Scripted, "scripted"),
     (Herdr::Socket(missing), "not running"),
-    (Herdr::Socket(fixture.env()), "protocol 23"),
+    (Herdr::Socket(fixture.socket.clone()), "protocol 23"),
   ] {
     let started = Instant::now();
     let (status, value) = body(&Live::new(herdr), &world, &Secrets::none());
@@ -153,6 +153,30 @@ fn unavailable_herdr_answers_at_once_with_a_reason() {
 }
 
 #[test]
+fn a_herdr_error_object_is_unavailable_with_or_without_a_code() {
+  let fixture = HerdrFixture::start();
+  fixture.script(
+    "agent.list",
+    Scripted::Error {
+      code: "busy".to_owned(),
+      message: "busy".to_owned(),
+    },
+  );
+  fixture.script(
+    "agent.list",
+    Scripted::Raw(r#"{"id":"2","error":{"message":"boom"}}"#.to_owned()),
+  );
+  let world = world_with("a", "");
+  for reason in ["error: busy", "error: null"] {
+    let live = Live::new(Herdr::Socket(fixture.socket.clone()));
+    let (status, value) = body(&live, &world, &Secrets::none());
+    assert_eq!(status, 200);
+    assert_eq!(value["available"], false, "{value}");
+    assert_eq!(value["reason"], reason);
+  }
+}
+
+#[test]
 fn the_limiter_holds_eight_slots_and_frees_one_on_drop() {
   let limiter = Limiter::default();
   let held: Vec<_> = (0..8).filter_map(|_| limiter.try_acquire()).collect();
@@ -162,29 +186,61 @@ fn the_limiter_holds_eight_slots_and_frees_one_on_drop() {
   assert!(limiter.try_acquire().is_some());
 }
 
-/// A herdr socket that accepts and never answers: a stalled server.
-fn silent_herdr(dir: &std::path::Path) -> (Env, Arc<AtomicUsize>) {
-  let path = dir.join("herdr.sock");
-  let socket = UnixListener::bind(&path).expect("bind");
-  let accepted = Arc::new(AtomicUsize::new(0));
-  let count = Arc::clone(&accepted);
-  std::thread::spawn(move || {
-    let mut open = Vec::new();
-    for stream in socket.incoming().map_while(Result::ok) {
+/// A herdr socket that accepts and never answers: a stalled server. Its
+/// thread ends, and its connections close, when it is dropped.
+struct Silent {
+  path: PathBuf,
+  accepted: Arc<AtomicUsize>,
+  stop: Arc<AtomicBool>,
+  thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl Silent {
+  fn start(dir: &Path) -> Self {
+    let path = dir.join("herdr.sock");
+    let socket = UnixListener::bind(&path).expect("bind");
+    socket.set_nonblocking(true).expect("nonblocking");
+    let accepted = Arc::new(AtomicUsize::new(0));
+    let stop = Arc::new(AtomicBool::new(false));
+    let (count, done) = (Arc::clone(&accepted), Arc::clone(&stop));
+    let thread = std::thread::spawn(move || hold(&socket, &count, &done));
+    Self {
+      path,
+      accepted,
+      stop,
+      thread: Some(thread),
+    }
+  }
+}
+
+/// Accept and keep every connection until `done`.
+fn hold(socket: &UnixListener, count: &AtomicUsize, done: &AtomicBool) {
+  let mut open = Vec::new();
+  while !done.load(Ordering::SeqCst) {
+    if let Ok((stream, _)) = socket.accept() {
       count.fetch_add(1, Ordering::SeqCst);
       open.push(stream);
+      continue;
     }
-  });
-  let env = Env::from_pairs([("HERDR_SOCKET_PATH", path.display().to_string())]);
-  (env, accepted)
+    std::thread::sleep(Duration::from_millis(10));
+  }
+}
+
+impl Drop for Silent {
+  fn drop(&mut self) {
+    self.stop.store(true, Ordering::SeqCst);
+    if let Some(thread) = self.thread.take() {
+      thread.join().expect("silent herdr thread");
+    }
+  }
 }
 
 #[test]
 fn overlapping_requests_past_eight_get_herdr_busy_while_overview_answers() {
   let root = tempfile::tempdir().expect("root");
-  let (env, accepted) = silent_herdr(root.path());
+  let silent = Silent::start(root.path());
   let mut http = config(0, Vec::new(), Secrets::none());
-  http.herdr = Herdr::Socket(env);
+  http.herdr = Herdr::Socket(silent.path.clone());
   let (running, stop) = listener(root.path(), http);
   let addr = running.addr;
   let requests: Vec<_> = (0..9)
@@ -208,7 +264,7 @@ fn overlapping_requests_past_eight_get_herdr_busy_while_overview_answers() {
       .all(|(status, body)| *status == 200 || (*status == 503 && body.contains("herdr_busy")))
   );
   assert_eq!(
-    accepted.load(Ordering::SeqCst),
+    silent.accepted.load(Ordering::SeqCst),
     1,
     "one stalled herdr call at a time"
   );
@@ -225,6 +281,15 @@ fn live_needs_the_token_off_loopback_and_is_never_proxied() {
   let addr = std::net::SocketAddr::from(([127, 0, 0, 1], running.addr.port()));
   let (denied, _) = get(addr, "/api/v1/agents/live");
   assert_eq!(denied, 401);
+  let mut stream = TcpStream::connect(addr).expect("connect");
+  write!(
+    stream,
+    "GET /api/v1/agents/live HTTP/1.1\r\nHost: {addr}\r\nAuthorization: Bearer {TOKEN}\r\nConnection: close\r\n\r\n"
+  )
+  .expect("request");
+  let mut allowed = String::new();
+  stream.read_to_string(&mut allowed).expect("response");
+  assert!(allowed.starts_with("HTTP/1.1 200"), "{allowed}");
   running.stop(&stop).expect("listener");
   let peer = crate::peer_fixture::peer("box", addr);
   let (running, stop) = listener(root.path(), config(0, vec![peer], Secrets::none()));

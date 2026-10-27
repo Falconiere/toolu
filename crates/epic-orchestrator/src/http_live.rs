@@ -4,23 +4,25 @@
 //! thread never does.
 
 use std::os::unix::net::UnixStream;
-use std::sync::Mutex;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Mutex, PoisonError, mpsc};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
 use toolu_runtime::config::secrets::{Secrets, redact_text};
 use toolu_runtime::env::Env;
 
+use crate::client::{read_text, write_json};
 use crate::herdr::{HERDR_PROTOCOL, roundtrip, socket_path};
-use crate::http_response::{Response, json_response};
+use crate::http_response::Response;
 use crate::model::{World, agent_status_word};
 
 /// How long one `agent.list` reply serves every request.
 const FRESH: Duration = Duration::from_secs(2);
 /// Herdr calls HTTP threads may run at once.
 const HERDR_CALLS: usize = 8;
-/// Connect, write and read deadline of each herdr connection.
+/// Connect, write and read timeout of each herdr connection.
 const TIMEOUT: Duration = Duration::from_secs(1);
 const TITLE_CHARS: usize = 160;
 
@@ -31,8 +33,8 @@ pub(crate) enum Herdr {
   Off,
   /// The engine runs scripted effects (`TOOLU_EPIC_SCRIPTS`).
   Scripted,
-  /// The socket `herdr::socket_path` names for this environment.
-  Socket(Env),
+  /// The herdr socket at this path.
+  Socket(PathBuf),
 }
 
 impl Herdr {
@@ -41,14 +43,15 @@ impl Herdr {
     if env.get("TOOLU_EPIC_SCRIPTS").is_some() {
       Self::Scripted
     } else if crate::source::prompt_enabled() {
-      Self::Socket(env.clone())
+      Self::Socket(socket_path(env))
     } else {
       Self::Off
     }
   }
 }
 
-/// Caps herdr calls from HTTP threads; the worker screen route shares it.
+/// Caps herdr calls from HTTP threads; the listener owns one for every route
+/// that calls herdr.
 #[derive(Debug, Default)]
 pub(crate) struct Limiter {
   busy: AtomicUsize,
@@ -76,13 +79,12 @@ impl Drop for Permit<'_> {
   }
 }
 
-/// The route's herdr mode, its call limiter, the cached document and the
-/// lock that lets one request refill it.
+/// The route's herdr mode, the cached JSON body and the lock that lets one
+/// request refill it.
 #[derive(Debug)]
 pub(crate) struct Live {
   herdr: Herdr,
-  limiter: Limiter,
-  cached: Mutex<Option<(Instant, Value)>>,
+  cached: Mutex<Option<(Instant, Vec<u8>)>>,
   fill: Mutex<()>,
 }
 
@@ -91,51 +93,61 @@ impl Live {
   pub(crate) fn new(herdr: Herdr) -> Self {
     Self {
       herdr,
-      limiter: Limiter::default(),
       cached: Mutex::new(None),
       fill: Mutex::new(()),
     }
   }
 
   /// The live document, `503 herdr_busy` when every herdr slot is taken.
-  pub(crate) fn response(&self, world: &Mutex<World>, secrets: &Secrets) -> Response {
-    let env = match &self.herdr {
-      Herdr::Off => return ok(unavailable("off", &now())),
-      Herdr::Scripted => return ok(unavailable("scripted", &now())),
-      Herdr::Socket(env) => env,
+  pub(crate) fn response(
+    &self,
+    limiter: &Limiter,
+    world: &Mutex<World>,
+    secrets: &Secrets,
+  ) -> Response {
+    let socket = match &self.herdr {
+      Herdr::Off => return ok(unavailable("off", &now()).to_string().into_bytes()),
+      Herdr::Scripted => return ok(unavailable("scripted", &now()).to_string().into_bytes()),
+      Herdr::Socket(socket) => socket,
     };
-    if let Some(document) = self.fresh() {
-      return ok(document);
+    if let Some(body) = self.fresh() {
+      return ok(body);
     }
     // A slot is held while waiting for the fill lock, so overlapping requests
     // count toward the cap even though only one of them calls herdr.
-    let Some(_permit) = self.limiter.try_acquire() else {
+    let Some(_permit) = limiter.try_acquire() else {
       return Response::error(503, "herdr_busy");
     };
-    let Ok(_fill) = self.fill.lock() else {
-      return Response::error(500, "status_unavailable");
-    };
-    if let Some(document) = self.fresh() {
-      return ok(document);
+    // `fill` guards no data, so a panicked filler must not wedge the route.
+    let _fill = self.fill.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(body) = self.fresh() {
+      return ok(body);
     }
-    let Some(document) = sample(env, world, secrets) else {
+    let Some(document) = sample(socket, world, secrets) else {
       return Response::error(500, "status_unavailable");
     };
+    let body = document.to_string().into_bytes();
     if let Ok(mut cached) = self.cached.lock() {
-      *cached = Some((Instant::now(), document.clone()));
+      *cached = Some((Instant::now(), body.clone()));
     }
-    ok(document)
+    ok(body)
   }
 
-  fn fresh(&self) -> Option<Value> {
+  fn fresh(&self) -> Option<Vec<u8>> {
     let cached = self.cached.lock().ok()?;
-    let (at, document) = cached.as_ref()?;
-    (at.elapsed() < FRESH).then(|| document.clone())
+    let (at, body) = cached.as_ref()?;
+    (at.elapsed() < FRESH).then(|| body.clone())
   }
 }
 
-fn ok(document: Value) -> Response {
-  json_response(Ok(Some(document)))
+fn ok(body: Vec<u8>) -> Response {
+  Response {
+    status: 200,
+    content_type: "application/json; charset=utf-8",
+    body,
+    head: false,
+    close: false,
+  }
 }
 
 fn now() -> String {
@@ -147,8 +159,8 @@ fn unavailable(reason: &str, at: &str) -> Value {
 }
 
 /// One herdr sample mapped onto the world; `None` when the world is poisoned.
-fn sample(env: &Env, world: &Mutex<World>, secrets: &Secrets) -> Option<Value> {
-  let listed = agent_list(env);
+fn sample(socket: &Path, world: &Mutex<World>, secrets: &Secrets) -> Option<Value> {
+  let listed = agent_list(socket);
   let at = now();
   let rows = match listed {
     Ok(rows) => rows,
@@ -193,19 +205,23 @@ fn title(row: &Value, secrets: &Secrets) -> Option<String> {
 
 /// `agent.list` rows over the socket at protocol 22 only: a CLI fallback
 /// would spawn a process and journal a record on every poll.
-fn agent_list(env: &Env) -> Result<Vec<Value>, String> {
-  let pong = call(env, "ping")?;
-  let protocol = pong
-    .pointer("/result/protocol")
-    .and_then(Value::as_u64)
-    .unwrap_or(0);
-  if protocol != HERDR_PROTOCOL {
-    return Err(format!("protocol {protocol}"));
+fn agent_list(socket: &Path) -> Result<Vec<Value>, String> {
+  let pong = roundtrip(&mut connect(socket)?, "1", "ping", &json!({})).map_err(down)?;
+  failed(&pong)?;
+  let protocol = pong.pointer("/result/protocol").and_then(Value::as_u64);
+  if protocol != Some(HERDR_PROTOCOL) {
+    return Err(format!("protocol {}", protocol.unwrap_or(0)));
   }
-  let reply = call(env, "agent.list")?;
-  if let Some(code) = reply.pointer("/error/code").and_then(Value::as_str) {
-    return Err(format!("error: {code}"));
-  }
+  // herdr answers one request per connection; nothing follows the reply, so
+  // it is read in blocks rather than a byte at a time.
+  let mut stream = connect(socket)?;
+  write_json(
+    &mut stream,
+    &json!({"id": "2", "method": "agent.list", "params": {}}),
+  )
+  .map_err(down)?;
+  let reply: Value = serde_json::from_str(&read_text(&mut stream).map_err(down)?).map_err(down)?;
+  failed(&reply)?;
   Ok(
     reply
       .pointer("/result/agents")
@@ -215,13 +231,34 @@ fn agent_list(env: &Env) -> Result<Vec<Value>, String> {
   )
 }
 
-/// herdr answers one request per connection, so each call opens its own.
-fn call(env: &Env, method: &str) -> Result<Value, String> {
-  let down = |_err| "not running".to_owned();
-  let mut stream = UnixStream::connect(socket_path(env)).map_err(down)?;
+/// `error: <code>` for a herdr error object.
+fn failed(reply: &Value) -> Result<(), String> {
+  match reply.get("error").filter(|error| error.is_object()) {
+    Some(error) => Err(format!(
+      "error: {}",
+      error.get("code").and_then(Value::as_str).unwrap_or("null")
+    )),
+    None => Ok(()),
+  }
+}
+
+/// A connection within [`TIMEOUT`]. A Unix connect blocks while the server's
+/// backlog is full, so it runs on its own thread, which ends with the connect.
+fn connect(socket: &Path) -> Result<UnixStream, String> {
+  let (sent, received) = mpsc::channel();
+  let path = socket.to_path_buf();
+  std::thread::spawn(move || sent.send(UnixStream::connect(path)));
+  let stream = received
+    .recv_timeout(TIMEOUT)
+    .map_err(down)?
+    .map_err(down)?;
   stream.set_read_timeout(Some(TIMEOUT)).map_err(down)?;
   stream.set_write_timeout(Some(TIMEOUT)).map_err(down)?;
-  roundtrip(&mut stream, "1", method, &json!({})).map_err(|_err| "not running".to_owned())
+  Ok(stream)
+}
+
+fn down<E>(_err: E) -> String {
+  "not running".to_owned()
 }
 
 #[cfg(test)]

@@ -42,21 +42,9 @@ fn a_working_agent_or_a_herdr_outage_is_never_rebased_under() {
     },
   );
   let mut engine = engine(&tmp, &fixture);
-  engine
-    .world
-    .issues
-    .get_mut("k")
-    .expect("k")
-    .queue
-    .agent_working = true;
+  engine.world.issues.get_mut("k").expect("k").agent_status = "working".to_owned();
   assert_eq!(run(&engine, Action::Merge)["note"], "worker active");
-  engine
-    .world
-    .issues
-    .get_mut("k")
-    .expect("k")
-    .queue
-    .agent_working = false;
+  engine.world.issues.get_mut("k").expect("k").agent_status = "idle".to_owned();
   engine.world.herdr_failures = 1;
   assert_eq!(run(&engine, Action::Merge)["note"], "worker active");
   engine.world.herdr_failures = 0;

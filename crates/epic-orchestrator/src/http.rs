@@ -63,6 +63,7 @@ struct Context {
   metrics: crate::http_metrics::MetricsCache,
   fleet: Arc<FleetCache>,
   live: crate::http_live::Live,
+  herdr_calls: crate::http_live::Limiter,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -100,6 +101,7 @@ pub(crate) fn start(
     metrics: crate::http_metrics::MetricsCache::new(),
     fleet,
     live: crate::http_live::Live::new(config.herdr),
+    herdr_calls: crate::http_live::Limiter::default(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running {
@@ -269,7 +271,11 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
 /// Routes served from this engine's own caches and journal.
 fn engine_route(context: &Context, path: &str, query: &str, request: &Request) -> Option<Response> {
   Some(match path {
-    "/api/v1/agents/live" => context.live.response(&context.world, &context.secrets),
+    "/api/v1/agents/live" => {
+      context
+        .live
+        .response(&context.herdr_calls, &context.world, &context.secrets)
+    }
     "/api/v1/overview" => {
       let Ok(world) = context.world.lock() else {
         return Some(Response::error(500, "status_unavailable"));

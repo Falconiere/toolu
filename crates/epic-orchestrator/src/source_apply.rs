@@ -89,6 +89,14 @@ fn apply_event(engine: &mut Engine, env: &Env, line: &Value) -> Result<(), Strin
   }
   match kind.as_str() {
     "pane_closed" | "pane_exited" => {
+      // Its agent is gone, so no status event will follow for that pane.
+      let now = engine.world.now_ms;
+      if let Some(issue) = key
+        .as_ref()
+        .and_then(|key| engine.world.issues.get_mut(key))
+      {
+        issue.set_agent_status("unknown", now);
+      }
       if let Some(pane) = field(line, "pane_id") {
         map_pane_closed(&mut engine.world, pane);
       }
