@@ -6,7 +6,7 @@ use std::path::Path;
 use regex::Regex;
 use serde_json::Value;
 
-pub(crate) const PLUGINS: usize = 12;
+pub(crate) const PLUGINS: usize = 13;
 pub(crate) const SKILLS: usize = 14;
 pub(crate) const AGENTS: usize = 5;
 pub(crate) const HOOKS: usize = 10;

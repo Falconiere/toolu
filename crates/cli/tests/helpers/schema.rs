@@ -106,7 +106,8 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "doctor" | "ledger" | "debug" | "config" | "status" | "setup"
-      | "jev" | "review" | "ast-grep" | "statusline" | "babysit" | "epic" | "plugins" => continue,
+      | "jev" | "review" | "code-review" | "ast-grep" | "statusline" | "babysit" | "epic"
+      | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }
@@ -123,6 +124,26 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
     );
     assert_eq!(document["namespace"], name.as_str());
   }
+}
+
+#[test]
+fn the_code_review_report_validates_and_exits_unavailable() {
+  let output = toolu(&["--json", "code-review", "run", "--effort", "high"]).unwrap();
+  assert_eq!(output.status.code(), Some(69));
+  assert_eq!(stderr(&output).unwrap(), "");
+  let document = one_document(&output).unwrap();
+  assert_eq!(
+    violations(&document, Some("codeReview")).unwrap(),
+    Vec::<String>::new()
+  );
+  assert_eq!(
+    (
+      &document["verdict"],
+      &document["effort"],
+      &document["error"]["kind"]
+    ),
+    (&json!("error"), &json!("high"), &json!("unconfigured"))
+  );
 }
 
 /// A `claude` that lists no plugin and accepts every other command, in `<home>/bin`.

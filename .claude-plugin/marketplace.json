@@ -145,6 +145,15 @@
       "category": "productivity",
       "keywords": ["typesafe", "jev", "judgment", "skills"],
       "license": "MIT"
+    },
+    {
+      "name": "code-review",
+      "source": "./plugins/code-review",
+      "description": "Native code review of the push diff: shaped diff, deterministic pre-pass, a structured OpenRouter review and a Jev judge, returning anchored findings and a computed verdict as a local report. Standalone, no dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["code-review", "review", "openrouter", "jev"],
+      "license": "MIT"
     }
   ]
 }

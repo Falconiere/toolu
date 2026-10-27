@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "name": "code-review",
+  "displayName": "code-review",
+  "version": "8.5.0",
+  "description": "Native code review of the push diff: shaped diff, deterministic pre-pass, a structured OpenRouter review and a Jev judge, returning anchored findings and a computed verdict as a local report. Standalone, no dependencies.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [],
+    "commands": [],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

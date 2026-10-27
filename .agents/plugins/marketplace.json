@@ -15,6 +15,7 @@
     { "name": "statusline", "source": { "source": "local", "path": "./plugins/statusline" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "toolu", "source": { "source": "local", "path": "./plugins/toolu" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
     { "name": "toolu-review", "source": { "source": "local", "path": "./plugins/toolu-review" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
-    { "name": "ts-quality", "source": { "source": "local", "path": "./plugins/ts-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" }
+    { "name": "ts-quality", "source": { "source": "local", "path": "./plugins/ts-quality" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" },
+    { "name": "code-review", "source": { "source": "local", "path": "./plugins/code-review" }, "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }, "category": "Productivity" }
   ]
 }

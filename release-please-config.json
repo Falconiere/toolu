@@ -202,6 +202,21 @@
           "type": "toml",
           "path": "Cargo.lock",
           "jsonpath": "$.package[?(!@.source && @.name.value != 'tree-sitter-bash')].version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/code-review/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/code-review/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/code-review/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
         }
       ]
     }

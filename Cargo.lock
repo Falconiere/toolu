@@ -1384,6 +1384,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toolu-brainstorm",
+ "toolu-code-review",
  "toolu-delivery-flow",
  "toolu-engine",
  "toolu-epic-orchestrator",
