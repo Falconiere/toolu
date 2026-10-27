@@ -111,7 +111,7 @@ engine `ledger_path_for` → `status_plan` projection (branch, allow-list, cache
   {
     "id": "gate",
     "title": "Full local quality gate",
-    "check": "toolu epic job -- cargo xtask gate",
+    "check": "c=$(jq -r .commit target/deploy/gate.json) && git merge-base --is-ancestor \"$c\" HEAD && git diff --quiet \"$c\" HEAD -- . ':!docs/toolu'",
     "depends_on": [
       "ledger-path-for",
       "status-plan",
@@ -122,7 +122,7 @@ engine `ledger_path_for` → `status_plan` projection (branch, allow-list, cache
     "ac_refs": [
       "AC-10"
     ],
-    "input": "The whole workspace"
+    "input": "The receipt `cargo xtask deploy-gate` writes after the full `cargo xtask gate` passes in a clean container, for a commit whose tree equals HEAD outside docs/toolu"
   }
 ]
 ```
@@ -147,4 +147,4 @@ End to end: real git worktrees and ledgers from `ledger_run`/`ledger_status` for
 
 ## Deviations
 - After `/code-review xhigh --fix` (2026-10-27), the changes recorded in the spec's "Changes after code review" landed in the `status-plan` and `wire-documents` steps (host order, inode cache key, serde read, bounds, reftable, environment), with tests: `long_ids_and_many_steps_are_bounded`, a reftable case in `head_branch_agrees_with_git_rev_parse`, and a route-versus-record host case in `status_api_test.rs`.
-- Gate: the host's Homebrew `toolu` shadows the `toolu-cli` launcher test binary. The full `cargo xtask gate` runs under `sandbox-exec`, with a profile that denies reads of `/opt/homebrew/bin/toolu`, its Cellar and `/usr/local/bin/toolu`. No test is skipped.
+- Gate: on this host the full `cargo xtask gate` cannot pass its `tests` step. The Homebrew `toolu` shadows the `toolu-cli` launcher test binary, and hiding it with `sandbox-exec` breaks `ps` for `epic_finish`. Every static step passed on the host. The full gate runs via `cargo xtask deploy-gate`, the same `cargo xtask gate` in a clean Linux container, with no tests skipped. Its receipt `target/deploy/gate.json` names the gated commit, and the `gate` step checks that commit's tree equals HEAD outside `docs/toolu`.
