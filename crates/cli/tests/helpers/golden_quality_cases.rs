@@ -204,6 +204,14 @@ impl Case {
   pub(crate) fn hosts(&self) -> Vec<Host> {
     self.hosts.clone().unwrap_or_else(|| vec![Host::Claude])
   }
+
+  /// Whether the case links a Node tool into the project's `node_modules/.bin`,
+  /// which the hook runs under its own timeout.
+  pub(crate) fn links_a_node_tool(&self) -> bool {
+    self.setup.iter().any(|action| {
+      matches!(action, Action::Symlink { path, .. } if path.contains("/node_modules/.bin/"))
+    })
+  }
 }
 
 /// A case file: a version and the cases.

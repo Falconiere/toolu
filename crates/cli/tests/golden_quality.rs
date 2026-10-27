@@ -70,6 +70,8 @@ struct Shape {
   deviations: usize,
   /// Pairs that are the linked-worktree case.
   worktrees: usize,
+  /// Cases that link a Node tool, replayed alone after the others.
+  alone: usize,
 }
 
 const TS_SHAPE: Shape = Shape {
@@ -78,6 +80,7 @@ const TS_SHAPE: Shape = Shape {
   pairs: 121,
   deviations: 1,
   worktrees: 0,
+  alone: 3,
 };
 const PYTHON_SHAPE: Shape = Shape {
   file: "python",
@@ -85,6 +88,7 @@ const PYTHON_SHAPE: Shape = Shape {
   pairs: 97,
   deviations: 1,
   worktrees: 1,
+  alone: 0,
 };
 const RUST_SHAPE: Shape = Shape {
   file: "rust",
@@ -92,6 +96,7 @@ const RUST_SHAPE: Shape = Shape {
   pairs: 120,
   deviations: 1,
   worktrees: 1,
+  alone: 0,
 };
 
 fn replay_plugin(plugin: &Plugin, shape: &Shape) -> Res<()> {
@@ -106,6 +111,10 @@ fn replay_plugin(plugin: &Plugin, shape: &Shape) -> Res<()> {
       golden.cases.len(),
       shape.pairs
     )
+  })?;
+  let alone = cases.iter().filter(|case| case.links_a_node_tool()).count();
+  ensure(alone == shape.alone, || {
+    format!("{alone} cases link a Node tool, expected {}", shape.alone)
   })?;
   let report = replay_all(plugin, &cases, &golden)?;
   ensure(report.failures.is_empty(), || {
