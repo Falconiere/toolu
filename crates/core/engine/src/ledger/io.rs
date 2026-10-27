@@ -125,9 +125,13 @@ pub(crate) fn state_dir_for(name: &str, root: &Path, roots: &Roots) -> PathBuf {
 pub fn ledger_path(opts: &LedgerOptions) -> Option<PathBuf> {
   let root = project_root(opts)?;
   let branch = head_branch(opts.env(), &opts.cwd)?;
-  Some(
-    state_dir_for("plan-ledger", &root, &opts.roots).join(format!("{}.json", branch_slug(&branch))),
-  )
+  Some(ledger_path_for(&root, &branch, &opts.roots))
+}
+
+/// [`ledger_path`] for a caller that already knows the root and branch, such as
+/// the epic engine reading a worker's worktree without running git.
+pub fn ledger_path_for(root: &Path, branch: &str, roots: &Roots) -> PathBuf {
+  state_dir_for("plan-ledger", root, roots).join(format!("{}.json", branch_slug(branch)))
 }
 
 /// A command's result: exactly the text the TypeScript CLI prints, its exit

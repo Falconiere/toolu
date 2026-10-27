@@ -10,7 +10,8 @@ use toolu_runtime::json::jq_text;
 use toolu_runtime::process::{Spec, run};
 
 use super::{
-  LedgerOptions, Output, ReadLedger, head_branch, ledger_path, read_ledger, write_ledger,
+  LedgerOptions, Output, ReadLedger, head_branch, ledger_path, ledger_path_for, read_ledger,
+  write_ledger,
 };
 use crate::ledger::jq::parse_json;
 
@@ -154,6 +155,35 @@ fn the_ledger_path_follows_the_host_and_branch_slug() {
     Some(root.join(".codex/tmp/plan-ledger/fix_a.json"))
   );
   assert_eq!(head_branch(&env(&root), &cwd).as_deref(), Some("fix/a"));
+}
+
+#[test]
+fn ledger_path_for_names_each_hosts_state_dir() {
+  let root = Path::new("/work/tree");
+  for (host, dir) in [
+    (Host::Claude, ".claude/tmp"),
+    (Host::Codex, ".codex/tmp"),
+    (Host::Cursor, ".cursor/tmp"),
+    (Host::Muse, ".toolu/tmp/muse"),
+  ] {
+    assert_eq!(
+      ledger_path_for(root, "feat/x", &Roots::new(env(root), Some(host))),
+      root.join(dir).join("plan-ledger/feat_x.json")
+    );
+  }
+}
+
+#[test]
+fn ledger_path_for_agrees_with_ledger_path_in_a_repository() {
+  let (_dir, root) = repo();
+  git(&root, &["checkout", "-q", "-b", "feat/652-a.b"]);
+  for host in [Host::Claude, Host::Muse] {
+    let opts = options(&root, host);
+    assert_eq!(
+      ledger_path(&opts),
+      Some(ledger_path_for(&root, "feat/652-a.b", &opts.roots))
+    );
+  }
 }
 
 #[test]

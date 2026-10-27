@@ -97,6 +97,9 @@ mod paths;
 #[cfg(test)]
 #[path = "tests/peer_fixture_test.rs"]
 mod peer_fixture;
+#[cfg(test)]
+#[path = "tests/plan_rig_test.rs"]
+mod plan_rig;
 mod probe_evidence;
 mod query;
 mod queue;
@@ -145,6 +148,7 @@ mod status;
 mod status_api;
 mod status_epics;
 mod status_events;
+mod status_plan;
 mod status_resources;
 #[cfg(test)]
 mod status_schema;

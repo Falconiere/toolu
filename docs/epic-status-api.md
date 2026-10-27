@@ -11,8 +11,8 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/healthz` | Engine health | version, uptime_ms, journal_seq |
 | `/api/v1/overview` | Current aggregate | engine, paused, journal_seq, epics, issues, attention, counts, attention_count, hosts, machine, jobs |
 | `/api/v1/epics` | Registered epics | items (key, paused, counts, attention_count) |
-| `/api/v1/epics/{id}` | One epic board | key, paused, graph, issues, queue |
-| `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events |
+| `/api/v1/epics/{id}` | One epic board | key, paused, graph, issues (key, stage, phase, pr, host, plan_summary), queue |
+| `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, plan |
 | `/api/v1/agents` | Worker sessions | items (state, key, epic, worktree, session_id) |
 | `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason) |
 | `/api/v1/machine` | Shared resources | load, available_memory_bytes, steal, pressure, policy, agent_leases, job_leases |
@@ -28,6 +28,14 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 `/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.
 
 `/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.
+
+## Worker plans
+
+`plan` on `/api/v1/issues/{key}` (and in `toolu epic status --json <key>`, which builds the same document) is the worker's plan ledger, the todo list `toolu ledger` keeps. It holds `plan_doc`, `updated_at`, `next`, `summary` (`total`, `green`, `red`, `pending`, `running`, `stale`) and `steps[]` (`id`, `title`, `status`, `activity`, `last_run`). Nothing else from the ledger is exposed: no `check`, `evidence_tail`, `diff_sha`, `scope_sha`, `input` or `retries`. `title` and `activity` are cut to 160 characters, and configured secrets are redacted. A step's `status` is the one the ledger stores (`pending`, `running`, `green`, `red`); the engine does not recompute freshness, so `summary.stale` is the count from the worker's last ledger write.
+
+The engine reads the ledger on every request from the worker's worktree (its launch record, else its pane), for the host it runs on, and for the branch named by the worktree's `.git` and `HEAD` files. It reads those files directly and runs no git, so a branch switch shows the new branch's ledger at once. The ledger directory depends on the host: Claude Code `.claude/tmp/plan-ledger/`, Codex `.codex/tmp/plan-ledger/`, Cursor `.cursor/tmp/plan-ledger/`, and Muse `.toolu/tmp/muse/plan-ledger/`. `TOOLU_PROJECT_CONFIG_DIRNAME` overrides the directory as it does for the worker. `plan` is `null` when there is no worktree, no known host, no `HEAD` or no ledger yet, for example while the worker is still in its spec phase. A ledger that is empty, is not JSON or has a `version` other than 1 gives `{"error": "unreadable"}`, and the rest of the document is unaffected.
+
+Each issue on `/api/v1/epics/{id}` carries `plan_summary`: the same counts plus `next`, `null`, or `{"error": "unreadable"}`. It is cached by ledger path and modification time, so a board refresh rereads only ledgers that changed.
 
 ## Fleet over a private network
 
