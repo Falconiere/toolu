@@ -65,7 +65,7 @@ pub(crate) fn unblock_dependents(world: &mut World, key: &str) {
     .map(|(dep, _)| dep.clone())
     .collect();
   for dep in waiting {
-    let text = format!("unblocked: {key} merged; resume work.");
+    let text = format!("unblocked: {key} merged; resume once all your blockers are merged.");
     crate::schedule::enqueue_prompt(world, &dep, &text, "unblocked", Some("unblocked"));
   }
 }
