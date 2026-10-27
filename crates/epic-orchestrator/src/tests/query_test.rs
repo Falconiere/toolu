@@ -261,8 +261,8 @@ pub(super) fn parse(argv: &[&str]) -> clap::ArgMatches {
 }
 
 pub(super) fn wait_live(paths: &Paths) {
-  for _ in 0..100 {
-    if crate::lock::live(&paths.lock()) {
+  for _ in 0..500 {
+    if crate::lock::live(&paths.lock()) && paths.socket().exists() {
       return;
     }
     thread::sleep(Duration::from_millis(20));

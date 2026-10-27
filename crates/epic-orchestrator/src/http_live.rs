@@ -148,6 +148,7 @@ fn ok(body: Vec<u8>) -> Response {
     head: false,
     close: false,
     allow: crate::http_response::READ_METHODS,
+    cache: "no-store",
   }
 }
 

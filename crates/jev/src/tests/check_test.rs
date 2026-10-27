@@ -1,6 +1,7 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
+use std::process::Command;
 
 use toolu_runtime::env::Env;
 
@@ -35,14 +36,33 @@ fn a_native_toolu_in_the_shell_prints_nothing() {
 }
 
 #[test]
-fn without_toolu_one_install_line_is_printed_as_session_context_and_once_per_id() {
+fn a_missing_shell_toolu_reports_an_advisory_once_per_id() {
   let sb = Sandbox::new();
   let env = env(&sb, &sb.dir.path().join("empty"));
   let first = check_binary(&env, Some(r#"{"session_id":"abc"}"#));
   let line = context_of(&first, "SessionStart");
-  assert!(line.starts_with("toolu: native binary not found in the agent command shell."));
-  assert!(line.contains("curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash"));
-  assert!(line.contains("brew install falconiere/tap/toolu"));
+  if let Some(native) = line
+    .strip_prefix("toolu: native binary for this session: '")
+    .and_then(|rest| rest.strip_suffix("'. Use that absolute path for toolu commands."))
+  {
+    let probe = Command::new(native)
+      .arg("--hook-protocol")
+      .output()
+      .unwrap();
+    assert!(probe.status.success(), "{probe:?}");
+    assert!(
+      std::str::from_utf8(&probe.stdout)
+        .unwrap()
+        .trim()
+        .parse::<u32>()
+        .is_ok_and(|version| version > 0)
+    );
+  } else {
+    assert_eq!(
+      line,
+      "toolu: native binary not found in the agent command shell. Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash or brew install falconiere/tap/toolu. Restart the session."
+    );
+  }
   assert_silent(&check_binary(&env, Some(r#"{"session_id":"abc"}"#)));
   context_of(
     &check_binary(&env, Some(r#"{"session_id":"other"}"#)),

@@ -12,6 +12,8 @@ use crate::model::World;
 use crate::paths::Paths;
 use crate::status_api;
 
+const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+
 /// Briefly reuse an overview while its world sequence is unchanged.
 pub(crate) struct OverviewCache {
   current: Mutex<Option<CachedOverview>>,
@@ -47,6 +49,7 @@ impl OverviewCache {
         head: false,
         close: false,
         allow: READ_METHODS,
+        cache: "no-store",
       };
     }
     let value = match status_api::document(world, paths, None, secrets) {
@@ -66,6 +69,7 @@ impl OverviewCache {
       head: false,
       close: false,
       allow: READ_METHODS,
+      cache: "no-store",
     }
   }
 }
@@ -82,6 +86,7 @@ pub(crate) struct Response {
   pub close: bool,
   /// The methods a `405` names in `Allow`.
   pub allow: &'static str,
+  pub cache: &'static str,
 }
 
 impl Response {
@@ -94,6 +99,7 @@ impl Response {
       head: false,
       close: true,
       allow: READ_METHODS,
+      cache: "no-store",
     }
   }
 }
@@ -108,6 +114,7 @@ pub(crate) fn json_response(document: Result<Option<serde_json::Value>, String>)
       head: false,
       close: false,
       allow: READ_METHODS,
+      cache: "no-store",
     },
     Ok(None) => Response::error(404, "not_found"),
     Err(_err) => Response::error(500, "status_unavailable"),
@@ -126,11 +133,12 @@ pub(crate) fn send(stream: &mut TcpStream, response: &Response) -> io::Result<()
     "keep-alive"
   };
   let headers = format!(
-    "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'\r\nConnection: {}\r\n{}\r\n",
+    "HTTP/1.1 {} {}\r\nContent-Type: {}\r\nContent-Length: {}\r\nCache-Control: {}\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: {CSP}\r\nConnection: {}\r\n{}\r\n",
     response.status,
     reason,
     response.content_type,
     response.body.len(),
+    response.cache,
     connection,
     if response.status == 405 {
       format!("Allow: {}\r\n", response.allow)
@@ -150,7 +158,7 @@ pub(crate) fn send(stream: &mut TcpStream, response: &Response) -> io::Result<()
 /// # Errors
 /// The peer closed or a write failed.
 pub(crate) fn stream_headers(stream: &mut TcpStream) -> io::Result<()> {
-  stream.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nConnection: keep-alive\r\n\r\n")?;
+  stream.write_all(format!("HTTP/1.1 200 OK\r\nContent-Type: text/event-stream; charset=utf-8\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: {CSP}\r\nConnection: keep-alive\r\n\r\n").as_bytes())?;
   stream.flush()
 }
 

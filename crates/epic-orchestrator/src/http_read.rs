@@ -6,7 +6,7 @@ use std::sync::atomic::Ordering;
 
 use toolu_runtime::config::secrets::Secrets;
 
-use crate::dashboard::HTML;
+use crate::dashboard::{PAGE, asset};
 use crate::http::{Context, STREAMS};
 use crate::http_access::authorized;
 use crate::http_request::Request;
@@ -14,6 +14,7 @@ use crate::http_response::{READ_METHODS, Response, json_response, send, stream_h
 use crate::http_stream;
 use crate::status_api;
 
+/// Build a finite read response from embedded assets or status documents.
 pub(crate) fn finite_response(
   context: &Context,
   path: &str,
@@ -25,10 +26,22 @@ pub(crate) fn finite_response(
     return Response {
       status: 200,
       content_type: "text/html; charset=utf-8",
-      body: HTML.as_bytes().to_vec(),
+      body: PAGE.to_vec(),
       head: request.method == "HEAD",
       close: false,
       allow: READ_METHODS,
+      cache: "no-store",
+    };
+  }
+  if let Some(asset) = asset(path) {
+    return Response {
+      status: 200,
+      content_type: asset.content_type,
+      body: asset.bytes.to_vec(),
+      head: request.method == "HEAD",
+      close: false,
+      allow: READ_METHODS,
+      cache: "public, max-age=31536000, immutable",
     };
   }
   if let Some(response) = engine_route(context, path, query, request, secrets) {
@@ -83,6 +96,7 @@ fn engine_route(
   })
 }
 
+/// Serve one authorized journal stream until it closes.
 pub(crate) fn serve_events(
   stream: &mut TcpStream,
   context: &Context,

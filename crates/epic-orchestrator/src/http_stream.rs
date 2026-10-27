@@ -79,6 +79,7 @@ pub(crate) fn head(
       head: true,
       close: request.close,
       allow: crate::http_response::READ_METHODS,
+      cache: "no-store",
     }
   } else {
     Response::error(400, "bad_cursor")

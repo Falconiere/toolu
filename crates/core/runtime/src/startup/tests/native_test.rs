@@ -1,6 +1,7 @@
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 use super::{native_toolu_advice, native_toolu_hook_output, payload_session_id};
 use crate::env::Env;
@@ -43,6 +44,7 @@ fn a_binary_outside_path_is_quoted_once() {
   let local = dir.path().join("home with 'quote'").join(".local/bin");
   fs::create_dir_all(&local).unwrap();
   let binary = script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
+  let env = env.with("TOOLU_BIN", binary.to_str().unwrap());
   let quoted = format!("'{}'", binary.to_str().unwrap().replace('\'', r"'\''"));
   let first = native_toolu_advice(&env, Some("local")).unwrap();
   assert_eq!(
@@ -66,13 +68,26 @@ fn a_binary_outside_path_is_quoted_once() {
 }
 
 #[test]
-fn no_binary_prints_both_install_commands_once() {
+fn an_empty_shell_path_advises_a_native_binary_or_install_once() {
   let (_dir, env) = sandbox();
   let first = native_toolu_advice(&env, Some("missing")).unwrap();
-  assert_eq!(
-    first,
-    "toolu: native binary not found in the agent command shell. Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash or brew install falconiere/tap/toolu. Restart the session."
-  );
+  match first
+    .strip_prefix("toolu: native binary for this session: '")
+    .and_then(|rest| rest.strip_suffix("'. Use that absolute path for toolu commands."))
+  {
+    Some(native) => {
+      let probe = Command::new(native)
+        .arg("--hook-protocol")
+        .output()
+        .unwrap();
+      let version = String::from_utf8_lossy(&probe.stdout).trim().parse::<u32>();
+      assert!(probe.status.success() && version.is_ok_and(|value| value > 0));
+    }
+    None => assert_eq!(
+      first,
+      "toolu: native binary not found in the agent command shell. Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash or brew install falconiere/tap/toolu. Restart the session."
+    ),
+  }
   assert_eq!(native_toolu_advice(&env, Some("missing")), None);
 }
 
@@ -91,6 +106,7 @@ fn a_wrapper_on_path_yields_to_a_known_native_binary() {
   let local = dir.path().join("home with 'quote'").join(".local/bin");
   fs::create_dir_all(&local).unwrap();
   let binary = script(&local, "if [ \"$1\" = --hook-protocol ]; then echo 1; fi");
+  env = env.with("TOOLU_BIN", binary.to_str().unwrap());
   env = env.with("PATH", dir.path().join("bin").to_str().unwrap());
   let quoted = format!("'{}'", binary.to_str().unwrap().replace('\'', r"'\''"));
   assert_eq!(
@@ -123,7 +139,8 @@ fn the_hook_output_is_one_session_start_context_document_per_session() {
   let first = native_toolu_hook_output(&env, payload).unwrap();
   assert!(!first.ends_with('\n'), "{first}");
   assert!(first.contains("SessionStart"), "{first}");
-  assert!(first.contains("toolu: native binary not found"), "{first}");
+  let advice = native_toolu_advice(&env, None).unwrap();
+  assert!(first.contains(&advice), "{first}");
   assert_eq!(native_toolu_hook_output(&env, payload), None);
 }
 

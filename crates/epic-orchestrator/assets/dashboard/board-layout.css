@@ -1,0 +1,206 @@
+.board-section {
+  margin-bottom: 34px;
+}
+.section-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 13px;
+}
+.section-heading h2 {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.section-heading > span {
+  color: var(--muted);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-align: right;
+}
+.board {
+  display: grid;
+  gap: 20px;
+}
+.epic {
+  min-width: 0;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  border-radius: 10px;
+}
+.epic-header {
+  min-height: 97px;
+  padding: 19px 22px 17px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.epic-identity {
+  min-width: 0;
+  flex: 1;
+}
+.eyebrow {
+  display: inline-block;
+  margin-bottom: 5px;
+  color: var(--acid);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+}
+.epic-identity .state {
+  margin-left: 13px;
+}
+.epic h3 {
+  overflow: hidden;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wave-line {
+  margin: 0;
+  color: var(--muted);
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.epic-control-slot {
+  min-width: 0;
+}
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+.issue-table {
+  display: grid;
+  grid-template-columns: 130px minmax(250px, 1.5fr) minmax(140px, 0.9fr) 100px minmax(
+      170px,
+      1fr
+    ) 55px;
+  min-width: 935px;
+}
+.column-label {
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+}
+.issue-row {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  width: 100%;
+  min-height: 70px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.issue-row:last-child {
+  border-bottom: 0;
+}
+.issue-row:hover {
+  background: var(--row-hover);
+}
+.issue-row > * {
+  min-width: 0;
+  padding: 11px 12px;
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.state-working,
+.state-rotation {
+  color: var(--acid);
+}
+.state-blocked,
+.state-cooling,
+.state-queued {
+  color: var(--warn);
+}
+.state-done {
+  color: var(--muted);
+}
+.state-idle,
+.state-unknown,
+.state-paused {
+  color: var(--muted);
+}
+.state-working .glyph {
+  animation: working-pulse 1.8s step-end infinite;
+}
+@keyframes working-pulse {
+  50% {
+    opacity: 0.3;
+  }
+}
+.issue-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.issue-identity strong {
+  color: var(--acid-lift);
+  font-weight: 500;
+}
+.issue-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.issue-live {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.issue-host,
+.issue-phase {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.issue-plan {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--ink);
+}
+.issue-plan progress {
+  width: 75px;
+  height: 3px;
+  border: 0;
+  appearance: none;
+  background: var(--line-strong);
+}
+.issue-plan progress::-webkit-progress-bar {
+  background: var(--line-strong);
+}
+.issue-plan progress::-webkit-progress-value {
+  background: var(--acid);
+}
+.issue-plan progress::-moz-progress-bar {
+  background: var(--acid);
+}
+.issue-attention {
+  color: var(--warn);
+}

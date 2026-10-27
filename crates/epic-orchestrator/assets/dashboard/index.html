@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>toolu · Epic engine</title>
+    <link rel="stylesheet" href="/assets/8.5.0/tokens.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/board.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/board-layout.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/panels.css" />
+    <script type="module" src="/assets/8.5.0/js/app.js"></script>
+  </head>
+  <body>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand"><strong>toolu</strong><span>EPIC ENGINE</span></div>
+        <nav id="machines" class="machines" aria-label="Machines"></nav>
+        <div id="top-controls" class="top-controls"></div>
+      </header>
+      <main>
+        <div class="heading">
+          <div>
+            <h1>Epic engine</h1>
+            <p>Workers, hosts, and the work that needs you.</p>
+          </div>
+          <p id="connection" class="connection" role="status">◷ CONNECTING</p>
+        </div>
+        <div id="error" class="error" role="alert" hidden></div>
+        <div id="peer-banner" class="peer-banner" hidden>
+          <p>
+            ◇ <strong id="peer-name"></strong> · PEER — Fleet peers are read-only here. Plans and
+            phases are proxied; screens, live status and actions stay on the peer's own dashboard.
+          </p>
+          <a id="peer-link" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
+        </div>
+        <dl class="tiles">
+          <div class="tile">
+            <dt>WORKERS LIVE</dt>
+            <dd>
+              <span id="tile-workers">—</span>
+              <p id="tile-workers-note">Waiting for engine.</p>
+            </dd>
+          </div>
+          <div class="tile">
+            <dt>ATTENTION</dt>
+            <dd>
+              <span id="tile-attention">—</span>
+              <p id="tile-attention-note">Waiting for engine.</p>
+            </dd>
+          </div>
+          <div class="tile">
+            <dt>HOSTS IN ROTATION</dt>
+            <dd>
+              <span id="tile-hosts">—</span>
+              <p>Paused and cooling hosts take no new launches.</p>
+            </dd>
+          </div>
+          <div class="tile">
+            <dt>PLAN STEPS GREEN</dt>
+            <dd>
+              <span id="tile-plans">—</span>
+              <p id="tile-plans-note">Waiting for plans.</p>
+            </dd>
+          </div>
+        </dl>
+        <section class="board-section" aria-labelledby="board-title">
+          <header class="section-heading">
+            <h2 id="board-title">Epic board</h2>
+            <span id="sampled">LIVE · POLLED 3S</span>
+          </header>
+          <div id="board" class="board"><p class="empty">Loading registered epics…</p></div>
+        </section>
+        <div class="panels">
+          <section class="panel" aria-labelledby="hosts-title">
+            <header class="section-heading">
+              <h2 id="hosts-title">Hosts</h2>
+              <span>AGENT ROTATION</span>
+            </header>
+            <div id="hosts" class="host-list"></div>
+            <p id="hosts-help" class="help">
+              Pause stops new launches; running workers continue. Resume also clears a cooldown.
+            </p>
+          </section>
+          <section class="panel" aria-labelledby="attention-title">
+            <header class="section-heading">
+              <h2 id="attention-title">Attention</h2>
+              <span id="attention-count">0 OPEN</span>
+            </header>
+            <ul id="attention" class="attention-list"></ul>
+          </section>
+          <section class="panel panel-stream" aria-labelledby="journal-title">
+            <header class="section-heading">
+              <h2 id="journal-title">Journal</h2>
+              <span>STREAM</span>
+            </header>
+            <ol id="journal" class="journal-list"></ol>
+          </section>
+        </div>
+      </main>
+      <footer>LOCAL ENGINE · READ-ONLY STATUS</footer>
+    </div>
+  </body>
+</html>

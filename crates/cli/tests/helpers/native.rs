@@ -45,8 +45,10 @@ fn check_binary_advises_the_installed_path_once_per_session() {
   sandbox.install().unwrap();
   let input =
     r#"{"hook_event_name":"SessionStart","source":"startup","session_id":"native-check"}"#;
+  let bin = sandbox.local_bin();
+  let extra = [("TOOLU_BIN", bin.to_str().unwrap())];
   let first = sandbox
-    .launch("SessionStart", "check-binary", input, &[])
+    .launch("SessionStart", "check-binary", input, &extra)
     .unwrap();
   assert_eq!(first.code, 0, "{first:?}");
   assert_eq!(
@@ -57,7 +59,7 @@ fn check_binary_advises_the_installed_path_once_per_session() {
     )
   );
   let again = sandbox
-    .launch("SessionStart", "check-binary", input, &[])
+    .launch("SessionStart", "check-binary", input, &extra)
     .unwrap();
   assert_eq!(again.code, 0, "{again:?}");
   assert!(again.stdout.is_empty(), "{again:?}");

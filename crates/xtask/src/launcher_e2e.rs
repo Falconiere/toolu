@@ -37,6 +37,10 @@ enum Form {
 
 /// Run the end-to-end check for `--bin`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
+  run_inner(options, false)
+}
+
+fn run_inner(options: &Options, override_bin: bool) -> Result<Verdict, String> {
   let bin = options
     .bin
     .as_deref()
@@ -47,7 +51,9 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
       .map(PathBuf::from)
       .ok_or("HOME is not set")?,
   };
-  require_installed(bin, &home)?;
+  if !override_bin {
+    require_installed(bin, &home)?;
+  }
   let version = probe(bin, "--version")?;
   let version = version
     .strip_prefix("toolu ")
@@ -60,30 +66,28 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     std::process::id(),
     NEXT_ROOT.fetch_add(1, Ordering::Relaxed)
   ));
-  let found = check(bin, &home, &root, version, protocol);
+  let found = check(
+    bin,
+    Run {
+      home: &home,
+      root: &root,
+      version,
+      protocol,
+      form: Form::Claude,
+      bin: override_bin.then_some(bin),
+    },
+  );
   std::fs::remove_dir_all(&root).ok();
   Ok(output::findings("launcher-e2e", &found?))
 }
 
 /// The `SessionStart` and protocol-mismatch findings for an installed `bin`, for
 /// the Claude launcher, then the Muse resolver (prefixed `Muse resolver: `).
-fn check(
-  bin: &Path,
-  home: &Path,
-  root: &Path,
-  version: &str,
-  protocol: u32,
-) -> Result<Vec<String>, String> {
+fn check(bin: &Path, base: Run<'_>) -> Result<Vec<String>, String> {
   let canonical = std::fs::canonicalize(bin).map_err(|err| err.to_string())?;
   let mut found = Vec::new();
   for form in [Form::Claude, Form::Muse] {
-    let run = Run {
-      home,
-      root,
-      version,
-      protocol,
-      form,
-    };
+    let run = Run { form, ..base };
     let form_found = check_form(&run, &canonical)?;
     found.extend(form_found.into_iter().map(|finding| match form {
       Form::Claude => finding,
@@ -94,24 +98,26 @@ fn check(
 }
 
 /// One launcher form's run.
+#[derive(Clone, Copy)]
 struct Run<'r> {
   home: &'r Path,
   root: &'r Path,
   version: &'r str,
   protocol: u32,
   form: Form,
+  bin: Option<&'r Path>,
 }
 
 fn check_form(run: &Run<'_>, canonical: &Path) -> Result<Vec<String>, String> {
-  let (home, root, version, protocol) = (run.home, run.root, run.version, run.protocol);
+  let (root, version, protocol) = (run.root, run.version, run.protocol);
   let mut found = Vec::new();
   manifest(root, version, protocol)?;
-  let start = launch(home, root, "SessionStart", run.form)?;
+  let start = launch(run, "SessionStart")?;
   if let Some(finding) = session_finding(&start, version, canonical) {
     found.push(finding);
   }
   manifest(root, version, protocol + 1)?;
-  let pre = launch(home, root, "PreToolUse", run.form)?;
+  let pre = launch(run, "PreToolUse")?;
   let refusal = format!(
     "hook protocol {} needs a newer toolu - toolu {version} speaks protocol {protocol}",
     protocol + 1
@@ -181,7 +187,19 @@ fn manifest(root: &Path, version: &str, protocol: u32) -> Result<(), String> {
 /// the project variable and `TOOLU_CONFIG_DIR` stay on `root`, so session-start
 /// cannot write the caller's project or config. Muse forwards no `TOOLU_CONFIG_DIR`;
 /// the harness sets it for the same reason.
-fn launch(home: &Path, root: &Path, event: &str, form: Form) -> Result<Output, String> {
+fn launch(run: &Run<'_>, event: &str) -> Result<Output, String> {
+  let mut child = launch_command(run, event)?
+    .spawn()
+    .map_err(|err| format!("cannot run sh: {err}"))?;
+  if let Some(mut stdin) = child.stdin.take() {
+    // A launcher that fails closed may exit before it reads the payload.
+    stdin.write_all(STARTUP.as_bytes()).ok();
+  }
+  child.wait_with_output().map_err(|err| err.to_string())
+}
+
+fn launch_command(run: &Run<'_>, event: &str) -> Result<Command, String> {
+  let root = run.root;
   let config = root.join("config");
   std::fs::create_dir_all(&config).map_err(|err| err.to_string())?;
   let target = Target {
@@ -191,7 +209,10 @@ fn launch(home: &Path, root: &Path, event: &str, form: Form) -> Result<Output, S
   };
   let mut command = Command::new("/bin/sh");
   command.env_clear();
-  match form {
+  if let Some(bin) = run.bin {
+    command.env("TOOLU_BIN", bin);
+  }
+  match run.form {
     Form::Claude => {
       command
         .arg("-c")
@@ -213,21 +234,15 @@ fn launch(home: &Path, root: &Path, event: &str, form: Form) -> Result<Output, S
         .env("PLUGIN_ROOT", root);
     }
   }
-  let mut child = command
-    .env("HOME", home)
+  command
+    .env("HOME", run.home)
     .env("PATH", "/usr/bin:/bin")
     .env("TOOLU_CONFIG_DIR", &config)
     .current_dir(root)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()
-    .map_err(|err| format!("cannot run sh: {err}"))?;
-  if let Some(mut stdin) = child.stdin.take() {
-    // A launcher that fails closed may exit before it reads the payload.
-    stdin.write_all(STARTUP.as_bytes()).ok();
-  }
-  child.wait_with_output().map_err(|err| err.to_string())
+    .stderr(Stdio::piped());
+  Ok(command)
 }
 
 fn text(bytes: &[u8]) -> String {
