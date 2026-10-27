@@ -57,8 +57,14 @@ fn close(frame: &Frame, counts: &str) -> String {
   outro(frame.style, &format!("{counts}  ({secs:.1}s)"))
 }
 
-/// The steps of each host, then the counts of every status that occurred.
-pub(crate) fn steps(frame: &Frame, sections: &[(Target, Vec<Step>)], dry_run: bool) -> String {
+/// The steps of each host, the hosts left out with why, then the counts of
+/// every status that occurred.
+pub(crate) fn steps(
+  frame: &Frame,
+  sections: &[(Target, Vec<Step>)],
+  notes: &[(Target, String)],
+  dry_run: bool,
+) -> String {
   let width = sections
     .iter()
     .flat_map(|(_, steps)| steps.iter().map(|step| step.name.chars().count()))
@@ -85,6 +91,19 @@ pub(crate) fn steps(frame: &Frame, sections: &[(Target, Vec<Step>)], dry_run: bo
       ));
     }
   }
+  for (index, (target, note)) in notes.iter().enumerate() {
+    if index > 0 || !sections.is_empty() {
+      text.push_str(&gap(frame.style));
+    }
+    text.push_str(&section(frame.style, target.name()));
+    text.push_str(&row(frame.style, ("○", Tone::Dim), note, 0, ""));
+  }
+  text.push_str(&close(frame, &counts(sections)));
+  text
+}
+
+/// `<n> <status>` for every status that occurred, in `ORDER`.
+fn counts(sections: &[(Target, Vec<Step>)]) -> String {
   let counts: Vec<String> = ORDER
     .iter()
     .filter_map(|status| {
@@ -96,13 +115,11 @@ pub(crate) fn steps(frame: &Frame, sections: &[(Target, Vec<Step>)], dry_run: bo
       (count > 0).then(|| format!("{count} {}", status.name()))
     })
     .collect();
-  let counts = if counts.is_empty() {
+  if counts.is_empty() {
     "nothing to do".to_owned()
   } else {
     counts.join(" · ")
-  };
-  text.push_str(&close(frame, &counts));
-  text
+  }
 }
 
 /// The catalog joined with one host's listing.

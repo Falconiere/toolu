@@ -170,7 +170,7 @@ fn list_and_update_act_on_the_one_host() {
   let Ok(updated) = go(&sb, &request(Verb::Update, &[]), None, None) else {
     panic!("update failed");
   };
-  assert_eq!(updated.text, "  + jev              updated\n");
+  assert_eq!(updated.text, "claude:\n  + jev              updated\n");
 }
 
 #[test]

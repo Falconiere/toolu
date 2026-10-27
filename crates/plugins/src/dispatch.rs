@@ -11,7 +11,7 @@ use toolu_runtime::term::Style;
 
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
-use crate::catalog::order::{install_order, removable};
+use crate::catalog::order::removable;
 use crate::cursor::{self, Cursor};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
@@ -24,6 +24,9 @@ use crate::report;
 use crate::report::rails::{self, Frame};
 use crate::step::{Status, Step};
 use crate::verbs::{self, Driver};
+
+/// `update`, on one host or every detected one.
+mod update;
 
 /// What a run works with besides its request.
 pub(crate) struct Context<'a> {
@@ -185,7 +188,7 @@ pub(crate) fn dispatch(request: &Request, catalog: &Catalog, cx: &mut Context<'_
     }
     Verb::Remove => remove(request, catalog, wanted, cx),
     Verb::List => list(request, catalog, wanted, cx),
-    Verb::Update => update(request, catalog, wanted, cx),
+    Verb::Update => update::run(request, catalog, wanted, cx),
   }
 }
 
@@ -244,7 +247,7 @@ fn install(
   Ok(Report {
     text: cx.shown(
       "install",
-      |frame| rails::steps(frame, &sections, request.dry_run),
+      |frame| rails::steps(frame, &sections, &[], request.dry_run),
       report::install(&sections, request.dry_run),
     ),
     json: report::install_json(&sections, request.dry_run),
@@ -280,7 +283,7 @@ fn remove(
   Ok(Report {
     text: cx.shown(
       "remove",
-      |frame| rails::steps(frame, &[(target, steps.clone())], request.dry_run),
+      |frame| rails::steps(frame, &[(target, steps.clone())], &[], request.dry_run),
       dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
     ),
     json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
@@ -309,36 +312,6 @@ fn list(
     ),
     json: report::rows_json(&rows),
     failed: false,
-  })
-}
-
-fn update(
-  request: &Request,
-  catalog: &Catalog,
-  wanted: Option<Target>,
-  cx: &mut Context<'_>,
-) -> Res<Report> {
-  let target = one_host(request, wanted, cx)?;
-  install_order(catalog, &request.names)?;
-  let steps = match target {
-    Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
-      cursor::update(&Cursor::new(cx)?, catalog, &request.names, request.dry_run)
-    })?,
-    Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
-      &driver(target, request, cx)?,
-      catalog,
-      &request.names,
-      request.dry_run,
-    )?,
-  };
-  Ok(Report {
-    text: cx.shown(
-      "update",
-      |frame| rails::steps(frame, &[(target, steps.clone())], request.dry_run),
-      dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
-    ),
-    json: report::host_json(target, &steps, false),
-    failed: failed(&steps),
   })
 }
 

@@ -46,6 +46,7 @@ fn an_install_report_draws_a_section_per_host_a_glyph_per_plugin_and_the_counts(
     steps(
       &frame(Style::Mono, Some("toolu plugins install")),
       &sections,
+      &[],
       false
     ),
     "┌  toolu plugins install\n│\n\
@@ -70,7 +71,7 @@ fn a_dry_run_names_the_command_each_skipped_plugin_would_run() {
       step("jev", Status::Already, "already installed at 8.5.0"),
     ],
   )];
-  let text = steps(&frame(Style::Mono, None), &sections, true);
+  let text = steps(&frame(Style::Mono, None), &sections, &[], true);
   assert_eq!(
     text,
     "◇  claude\n\
@@ -83,8 +84,8 @@ fn a_dry_run_names_the_command_each_skipped_plugin_would_run() {
 #[test]
 fn mono_has_no_escape_and_color_paints_the_glyphs() {
   let sections = vec![(Target::Claude, vec![step("jev", Status::Failed, "boom")])];
-  assert!(!steps(&frame(Style::Mono, Some("t")), &sections, false).contains('\x1b'));
-  let color = steps(&frame(Style::Color, Some("t")), &sections, false);
+  assert!(!steps(&frame(Style::Mono, Some("t")), &sections, &[], false).contains('\x1b'));
+  let color = steps(&frame(Style::Color, Some("t")), &sections, &[], false);
   assert!(color.contains("\x1b[31m✘\x1b[0m"), "{color}");
 }
 
