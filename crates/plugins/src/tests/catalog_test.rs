@@ -24,6 +24,7 @@ fn the_built_in_catalog_is_the_repository_manifest() {
       "brainstorm",
       "code-review",
       "delivery-flow",
+      "documentation-gate",
       "epic-orchestrator",
       "jev",
       "pr-babysit",

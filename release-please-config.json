@@ -217,6 +217,21 @@
           "type": "json",
           "path": "plugins/code-review/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/documentation-gate/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/documentation-gate/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/documentation-gate/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
         }
       ]
     }

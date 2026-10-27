@@ -1,0 +1,42 @@
+{
+  "schemaVersion": 1,
+  "name": "documentation-gate",
+  "displayName": "documentation-gate",
+  "version": "8.5.0",
+  "description": "Keep documentation accurate with a Jev-routed editing sub-agent and native review records.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "sync",
+        "path": "skills/sync/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "register",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/register"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-toolu",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-toolu"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

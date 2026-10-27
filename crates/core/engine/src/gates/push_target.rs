@@ -26,14 +26,21 @@ pub(crate) fn push_target(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Opt
   if !matches!(event, NormalizedEvent::ShellPre { .. }) {
     return None;
   }
-  let analysis: ShellAnalysis = command_analysis(ctx);
-  if !is_git_push(&analysis) || !has_git(ctx.env) {
+  push_target_in(&command_analysis(ctx), ctx)
+}
+
+/// [`push_target`] of an already analyzed command line.
+pub(crate) fn push_target_in(
+  analysis: &ShellAnalysis,
+  ctx: &RuleContext<'_>,
+) -> Option<PushTarget> {
+  if !is_git_push(analysis) || !has_git(ctx.env) {
     return None;
   }
   let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
   let cwd = ctx.cwd.unwrap_or(ctx.project_root);
-  let root = push_target_root(&analysis, &roots, cwd);
-  let branch = push_target_branch(&analysis, &root, ctx.env);
+  let root = push_target_root(analysis, &roots, cwd);
+  let branch = push_target_branch(analysis, &root, ctx.env);
   Some(PushTarget { root, branch })
 }
 

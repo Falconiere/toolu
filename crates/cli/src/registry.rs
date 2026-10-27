@@ -144,6 +144,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_code_review::command,
     toolu_code_review::run,
   ),
+  verb(
+    "docs",
+    toolu_documentation_gate::PLUGIN,
+    toolu_documentation_gate::command,
+    toolu_documentation_gate::run,
+  ),
   verb("jev", toolu_jev::PLUGIN, toolu_jev::command, toolu_jev::run),
   verb(
     "statusline",

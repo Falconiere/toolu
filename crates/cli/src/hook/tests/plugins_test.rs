@@ -148,3 +148,30 @@ fn epic_orchestrator_engine_ensure_runs_in_process_and_reports_a_bad_registry() 
     "{stdout}"
   );
 }
+
+#[test]
+fn documentation_gate_registers_only_at_session_start() {
+  let dir = tempfile::tempdir().unwrap();
+  let env = Env::default()
+    .with("HOME", &dir.path().display().to_string())
+    .with("TOOLU_CONFIG_DIR", &dir.path().display().to_string())
+    .with("TOOLU_HOST_OVERRIDE", "claude");
+  let outcome = hook("documentation-gate", "register", "SessionStart", &env);
+  assert_eq!(outcome.exit.code(), 0);
+  assert!(
+    dir
+      .path()
+      .join("toolu/pre-tools.d/documentation-gate@toolu__docs-review.json")
+      .is_file()
+  );
+  assert_eq!(
+    hook("documentation-gate", "check-toolu", "SessionStart", &env)
+      .exit
+      .code(),
+    0
+  );
+  assert_eq!(
+    hook("documentation-gate", "register", "PreToolUse", &env).exit,
+    toolu_protocol::exit::Exit::Blocked
+  );
+}

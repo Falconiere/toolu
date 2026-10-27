@@ -5,7 +5,7 @@
 
 use std::fs::{self, OpenOptions};
 use std::io::Write as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
 use toolu_protocol::exit::Exit;
@@ -66,17 +66,55 @@ fn write_if_changed(target: &Path, body: &str) -> Result<(), String> {
   replace_atomic(target, body).map_err(|error| format!("{}: {error}", target.display()))
 }
 
+/// Append the published `manifest` to `TOOLU_STARTUP_REPORT`, when it is set.
+fn report(env: &Env, manifest: &ModuleManifest, target: &Path) -> Result<(), String> {
+  let Some(report) = env.get("TOOLU_STARTUP_REPORT") else {
+    return Ok(());
+  };
+  let record = serde_json::json!({
+    "kind": "native-registry",
+    "spec": manifest.spec,
+    "name": manifest.name,
+    "event": manifest.event,
+    "matcher": manifest.matcher,
+    "target": target,
+  });
+  let mut line = record.to_string().into_bytes();
+  line.push(b'\n');
+  OpenOptions::new()
+    .append(true)
+    .open(report)
+    .and_then(|mut output| output.write_all(&line))
+    .map_err(|error| format!("cannot write startup report {report}: {error}"))
+}
+
+/// Publish the manifest enabling a compiled-in rule in its event directory,
+/// unchanged files left alone, and report it; its path.
+pub(crate) fn publish(
+  env: &Env,
+  roots: &Roots,
+  manifest: &ModuleManifest,
+) -> Result<PathBuf, String> {
+  let dir = event_dir(roots, manifest.event);
+  fs::create_dir_all(&dir).map_err(|error| format!("{}: {error}", dir.display()))?;
+  let file =
+    file_name(&manifest.spec, &manifest.name, ModuleKind::Manifest).map_err(|error| error.0)?;
+  let target = dir.join(file);
+  let body = serde_json::to_string(manifest).map_err(|error| error.to_string())?;
+  write_if_changed(&target, &format!("{body}\n"))?;
+  report(env, manifest, &target)?;
+  Ok(target)
+}
+
 impl QualityPlugin {
-  fn manifest_body(&self) -> Result<String, String> {
-    let manifest = ModuleManifest {
+  fn manifest(&self) -> ModuleManifest {
+    ModuleManifest {
       version: 1,
       spec: self.spec.to_owned(),
       name: self.name.to_owned(),
       event: RegistryEvent::ToolPost,
       matcher: "*".to_owned(),
-    };
-    let body = serde_json::to_string(&manifest).map_err(|error| error.to_string())?;
-    Ok(format!("{body}\n"))
+    }
   }
 
   /// Remove this plugin's other `.js`/`.sh` modules and aged tmp residue from
@@ -107,37 +145,11 @@ impl QualityPlugin {
     Ok(migrated)
   }
 
-  fn report(&self, env: &Env, target: &Path) -> Result<(), String> {
-    let Some(report) = env.get("TOOLU_STARTUP_REPORT") else {
-      return Ok(());
-    };
-    let record = serde_json::json!({
-      "kind": "native-registry",
-      "spec": self.spec,
-      "name": self.name,
-      "event": RegistryEvent::ToolPost,
-      "matcher": "*",
-      "target": target,
-    });
-    let mut line = record.to_string().into_bytes();
-    line.push(b'\n');
-    OpenOptions::new()
-      .append(true)
-      .open(report)
-      .and_then(|mut output| output.write_all(&line))
-      .map_err(|error| format!("cannot write startup report {report}: {error}"))
-  }
-
   fn sync(&self, env: &Env, roots: &Roots) -> Result<bool, String> {
+    let manifest = publish(env, roots, &self.manifest())?;
     let post = event_dir(roots, RegistryEvent::ToolPost);
-    fs::create_dir_all(&post).map_err(|error| format!("{}: {error}", post.display()))?;
-    let named = |kind| file_name(self.spec, self.name, kind).map_err(|error| error.0);
-    let manifest = post.join(named(ModuleKind::Manifest)?);
-    write_if_changed(&manifest, &self.manifest_body()?)?;
     let pre = event_dir(roots, RegistryEvent::ToolPre);
-    let migrated = self.prune(&post, &manifest)? | self.prune(&pre, &manifest)?;
-    self.report(env, &manifest)?;
-    Ok(migrated)
+    Ok(self.prune(&post, &manifest)? | self.prune(&pre, &manifest)?)
   }
 
   /// Publish the manifest, and remove this plugin's old `.js` module and `.sh`

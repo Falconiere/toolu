@@ -11,6 +11,8 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | id | source | plugin | event | classification | support | impl | host mechanism | bash | limits |
 |----|--------|--------|-------|----------------|---------|------|----------------|------|--------|
 | `ast-grep:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/ast-grep/hooks/hooks.json` | ast-grep | SessionStart | port-native | required | #429/done | native | no | — |
+| `documentation-gate:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/documentation-gate/hooks/hooks.json` | documentation-gate | SessionStart | port-native | optional | done | native | no | — |
+| `documentation-gate:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/documentation-gate/hooks/hooks.json` | documentation-gate | SessionStart | port-native | optional | done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:hook_check-deps:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:hook_engine-ensure:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |

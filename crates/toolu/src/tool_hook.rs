@@ -35,6 +35,7 @@ pub const QUALITY_PLUGINS: &[QualityPlugin] = &[
 
 /// The compiled-in rules a manifest may enable.
 pub const RULES: &[&dyn Rule] = &[
+  toolu_engine::docs_review::RULE,
   toolu_ast_grep::SEARCH_NUDGE,
   toolu_ast_grep::BYTE_SAVINGS,
   toolu_ts_quality::TS_QUALITY,

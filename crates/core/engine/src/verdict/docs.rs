@@ -2,17 +2,17 @@
 //! without a doc surface, and no attestation for this diff. It mirrors
 //! docs-sync's surface classification and attestation lookup.
 
-use std::path::Path;
-
+use toolu_protocol::event::HostEvent;
 use toolu_runtime::config::docs_sync::{DocsSyncKey, docs_sync_globs};
+use toolu_runtime::config::gate_mode::{GateMode, gate_mode};
 use toolu_runtime::config::load::{LoadedConfig, load};
 use toolu_runtime::config::read::config_string;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::diff_sha::diff_sha;
-use toolu_state::git::{base_branch, branch_slug};
 
 use super::gates::{GateContext, field_or, gate, read_json};
 use super::glob::matches_any;
+use crate::gates::docs_sync::{attestation_file, docs_base};
 use crate::ledger::parse::is_file;
 
 /// Whether a diff with `changed` paths needs a doc it lacks.
@@ -26,21 +26,11 @@ fn needs_doc(changed: &[&str], surfaces: &[String], excludes: &[String], code: &
 
 /// Whether the docs-sync attestation for this branch names `sha`.
 fn attested(ctx: &GateContext<'_>, sha: &str) -> bool {
-  let dir = match ctx.roots.env().get("DOCS_SYNC_STATE_DIR") {
-    Some(dir) => dir.to_owned(),
-    None => ctx
-      .roots
-      .project_state_dir("docs-sync", Some(&ctx.cwd), None)
-      .ok()
-      .flatten()
-      .map(|dir| dir.display().to_string())
-      .unwrap_or_default(),
-  };
-  let file = format!("{dir}/{}.json", branch_slug(&ctx.branch));
-  if !is_file(Path::new(&file)) || sha.is_empty() {
+  let file = attestation_file(ctx.roots, &ctx.root, &ctx.branch);
+  if !is_file(&file) || sha.is_empty() {
     return false;
   }
-  let doc = read_json(Path::new(&file)).unwrap_or(Ordered::Null);
+  let doc = read_json(&file).unwrap_or(Ordered::Null);
   field_or(&doc, "diff_sha", "") == sha
 }
 
@@ -112,14 +102,54 @@ fn decide(ctx: &GateContext<'_>, config: &LoadedConfig, base: &str) -> Ordered {
   }
 }
 
-/// `vd_gate_docs`; the config's warnings join the context's.
+fn enhanced(ctx: &GateContext<'_>, config: &LoadedConfig) -> Ordered {
+  let mode = gate_mode(
+    config,
+    "docsSync",
+    Some(ctx.roots.host()),
+    Some(HostEvent::ShellPre),
+  );
+  if mode == GateMode::Off {
+    return gate("skip", "docsSync mode is off", Vec::new());
+  }
+  if ctx.branch.is_empty() || ctx.branch == "HEAD" {
+    return gate("skip", "detached HEAD", Vec::new());
+  }
+  match crate::docs_review::assess(ctx.roots, &ctx.root, &ctx.branch) {
+    Ok(()) => gate("pass", "documentation review is current", Vec::new()),
+    Err(error) => gate(
+      if matches!(mode, GateMode::Block | GateMode::Ask) {
+        "fail"
+      } else {
+        "advise"
+      },
+      &format!("documentation review required: {error}"),
+      Vec::new(),
+    ),
+  }
+}
+
+/// `vd_gate_docs`; the config's warnings join the context's. With the
+/// documentation-gate plugin active, its review replaces the doc-surface check.
 pub fn docs_gate(ctx: &mut GateContext<'_>) -> Ordered {
-  let base = match ctx.roots.env().get("DOCS_SYNC_BASE") {
-    Some(base) => base.to_owned(),
-    None => base_branch(ctx.roots.env(), Some(&ctx.root), &ctx.cwd),
+  let (config, decided) = if crate::docs_review::active(ctx.roots) {
+    let target = toolu_runtime::host::roots::Roots::new(
+      ctx
+        .roots
+        .env()
+        .clone()
+        .with("TOOLU_PROJECT_DIR", &ctx.root.to_string_lossy()),
+      Some(ctx.roots.host()),
+    );
+    let config = load(&target, Some(&ctx.root));
+    let decided = enhanced(ctx, &config);
+    (config, decided)
+  } else {
+    let base = docs_base(ctx.roots.env(), &ctx.root);
+    let config = load(ctx.roots, Some(&ctx.cwd));
+    let decided = decide(ctx, &config, &base);
+    (config, decided)
   };
-  let config = load(ctx.roots, Some(&ctx.cwd));
-  let decided = decide(ctx, &config, &base);
   ctx.warnings.extend(config.take_warnings());
   decided
 }

@@ -1386,6 +1386,7 @@ dependencies = [
  "toolu-brainstorm",
  "toolu-code-review",
  "toolu-delivery-flow",
+ "toolu-documentation-gate",
  "toolu-engine",
  "toolu-epic-orchestrator",
  "toolu-hub",
@@ -1415,6 +1416,19 @@ name = "toolu-delivery-flow"
 version = "8.5.0"
 dependencies = [
  "clap",
+ "toolu-runtime",
+]
+
+[[package]]
+name = "toolu-documentation-gate"
+version = "8.5.0"
+dependencies = [
+ "clap",
+ "serde",
+ "serde_json",
+ "toolu-engine",
+ "toolu-jev-client",
+ "toolu-protocol",
  "toolu-runtime",
 ]
 

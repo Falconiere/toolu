@@ -7,6 +7,7 @@ use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::config::docs_sync::{DocsSyncKey, docs_sync_globs};
 use toolu_runtime::config::gate_mode::GateMode;
 use toolu_runtime::config::load::LoadedConfig;
+use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::RuleContext;
 use toolu_state::ctx::StateCtx;
@@ -32,15 +33,35 @@ struct Diff {
   changed: Vec<String>,
 }
 
-fn diff_target(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Option<Diff> {
-  let PushTarget { root, branch } = push_target(event, ctx)?;
+/// `DOCS_SYNC_BASE`, else the branch `origin/HEAD` names (`main` when unset).
+pub(crate) fn docs_base(env: &Env, root: &Path) -> String {
+  env
+    .get("DOCS_SYNC_BASE")
+    .map_or_else(|| base_branch(env, Some(root), root), str::to_owned)
+}
+
+/// The legacy attestation of `branch`: under `DOCS_SYNC_STATE_DIR`, else the
+/// repository's `docs-sync` state directory.
+pub(crate) fn attestation_file(roots: &Roots, root: &Path, branch: &str) -> PathBuf {
+  let dir = roots.env().get("DOCS_SYNC_STATE_DIR").map_or_else(
+    || {
+      roots
+        .project_state_dir("docs-sync", None, Some(root))
+        .ok()
+        .flatten()
+        .unwrap_or_default()
+    },
+    PathBuf::from,
+  );
+  dir.join(format!("{}.json", branch_slug(branch)))
+}
+
+fn diff_target(target: PushTarget, ctx: &RuleContext<'_>) -> Option<Diff> {
+  let PushTarget { root, branch } = target;
   if branch.is_empty() || branch == "HEAD" {
     return None;
   }
-  let base = ctx
-    .env
-    .get("DOCS_SYNC_BASE")
-    .map_or_else(|| base_branch(ctx.env, Some(&root), &root), str::to_owned);
+  let base = docs_base(ctx.env, &root);
   if !ref_exists(&root, &base, ctx.env) || branch == base {
     return None;
   }
@@ -101,19 +122,7 @@ fn emit(
   roots: Roots,
   warnings: &mut Vec<String>,
 ) -> Result<Decision, String> {
-  let dir = roots.env().get("DOCS_SYNC_STATE_DIR").map_or_else(
-    || {
-      roots
-        .project_state_dir("docs-sync", None, Some(&diff.root))
-        .ok()
-        .flatten()
-        .unwrap_or_default()
-        .display()
-        .to_string()
-    },
-    str::to_owned,
-  );
-  let file = PathBuf::from(format!("{dir}/{}.json", branch_slug(&diff.branch)));
+  let file = attestation_file(&roots, &diff.root, &diff.branch);
   let mut state = StateCtx::new(roots);
   let result = if let Some(decision) = attested(&file, &diff.sha) {
     let _written = telemetry_append(
@@ -143,7 +152,13 @@ fn evaluate(
   ctx: &RuleContext<'_>,
   warnings: &mut Vec<String>,
 ) -> Result<Decision, String> {
-  let Some(diff) = diff_target(event, ctx) else {
+  let Some(target) = push_target(event, ctx) else {
+    return Ok(Decision::Allow);
+  };
+  if crate::docs_review::active(&Roots::new(ctx.env.clone(), Some(ctx.host))) {
+    return Ok(Decision::Allow);
+  }
+  let Some(diff) = diff_target(target, ctx) else {
     return Ok(Decision::Allow);
   };
   let config = gate_config(ctx);

@@ -31,6 +31,9 @@ pub(super) fn dispatch(
   if let Some(outcome) = review_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
+  if let Some(outcome) = docs_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
   if let Some(outcome) = ast_grep_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
@@ -168,6 +171,24 @@ fn jev_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   Some(outcome)
 }
 
+/// Documentation review registration and its dispatcher dependency check.
+pub(super) fn docs_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != toolu_documentation_gate::PLUGIN
+    || request.event.as_deref() != Some("SessionStart")
+  {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "register" => Some(toolu_engine::docs_review::register(
+      &env,
+      detect(&env, None).host,
+    )),
+    "check-toolu" => Some(check_toolu(&env)),
+    _ => None,
+  }
+}
+
 /// The two toolu-review `SessionStart` entries.
 pub(super) fn review_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   if request.plugin != "toolu-review" {
@@ -214,6 +235,7 @@ pub(super) fn plugin_root(request: &HookRequest) -> Option<&Path> {
     .map(Path::new)
 }
 
+/// A successful hook without output.
 pub(super) fn quiet() -> Outcome {
   Outcome {
     exit: Exit::Success,
