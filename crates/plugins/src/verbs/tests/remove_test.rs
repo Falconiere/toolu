@@ -18,6 +18,7 @@ fn each_name_is_removed_independently_and_a_dry_run_runs_nothing() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   let steps = run(&driver, &names(&["ast-grep", "jev"]), false);
   let seen: Vec<(Status, &str)> = steps

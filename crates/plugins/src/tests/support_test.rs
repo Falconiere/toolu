@@ -212,6 +212,7 @@ impl Sandbox {
       checkout: Some(Checkout::locate(&self.env(), version, origin).expect("checkout")),
       pin: None,
       approval,
+      progress: None,
     }
   }
 

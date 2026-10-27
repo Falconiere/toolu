@@ -40,6 +40,7 @@ fn go(
     style: toolu_runtime::term::Style::Plain,
     started: std::time::Instant::now(),
     intro_shown: false,
+    progress: None,
   };
   dispatch(request, &catalog(), &mut cx)
 }
@@ -306,6 +307,7 @@ fn a_terminal_style_draws_the_rails_report_and_opens_with_the_intro() {
     style: toolu_runtime::term::Style::Mono,
     started: std::time::Instant::now(),
     intro_shown: false,
+    progress: None,
   };
   let Ok(listed) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
     panic!("list failed");

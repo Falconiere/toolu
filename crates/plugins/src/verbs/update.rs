@@ -23,6 +23,7 @@ pub(crate) fn run(
   dry_run: bool,
 ) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
+  driver.begin(0, "preparing the marketplace");
   let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
   let installed = driver.versions(&adapter.list_installed());
   let offered = adapter
@@ -38,23 +39,30 @@ pub(crate) fn run(
       adapter.bin()
     )));
   }
+  driver.begin(targets.len(), "reading the host");
   let steps = targets
     .iter()
     .map(|name| {
+      driver.working(&format!("updating {name}"));
       let foreign = find(&installed, name).is_some_and(|entry| driver.foreign(entry));
-      if !foreign && catalog.entry(name).is_none() {
+      let step = if !foreign && catalog.entry(name).is_none() {
         retired_step(name, adapter.bin(), adapter.update(name))
       } else if repinned && !foreign {
         pin::refresh(driver, name)
       } else {
         one(driver, name, &installed, &offered, dry_run)
-      }
+      };
+      driver.advance();
+      step
     })
     .collect();
-  if dry_run {
-    return Ok(steps);
-  }
-  Ok(trust::settle(driver, steps))
+  let steps = if dry_run {
+    steps
+  } else {
+    trust::settle(driver, steps)
+  };
+  driver.end();
+  Ok(steps)
 }
 
 /// `names`, or each installed plugin toolu's marketplace put there, once.

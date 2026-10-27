@@ -21,6 +21,7 @@ fn the_catalog_is_joined_with_the_hosts_listing() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
@@ -50,6 +51,7 @@ fn a_malformed_listing_fails_and_a_failing_host_lists_nothing_installed() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   assert!(
     run(&driver, &catalog())
@@ -78,6 +80,7 @@ fn a_same_named_plugin_from_another_marketplace_is_not_installed() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
@@ -97,6 +100,7 @@ fn the_captured_claude_listing_reports_the_user_scope_toolu_row() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");

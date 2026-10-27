@@ -62,6 +62,50 @@ fn attempt(driver: &Driver, name: &str, argv: Vec<String>, add_note: &str) -> St
   Step::new(name, Status::Failed, detail, argv)
 }
 
+/// What the host already has and offers, read once before the installs.
+struct Known {
+  prepared: Prepared,
+  installed: Vec<Installed>,
+  offered: Vec<Installed>,
+}
+
+impl Known {
+  /// Makes the marketplace ready (not on a dry run), then lists the host.
+  fn read(driver: &Driver, dry_run: bool) -> Res<Known> {
+    let prepared = if dry_run {
+      Prepared::default()
+    } else {
+      prepare::run(driver, Verb::Install)?
+    };
+    let adapter = driver.adapter;
+    Ok(Known {
+      prepared,
+      installed: driver.versions(&adapter.list_installed()),
+      offered: adapter
+        .list_available()
+        .map(|argv| driver.versions(&argv))
+        .unwrap_or_default(),
+    })
+  }
+
+  /// The step for `name`: already there, a dry run, or an install attempt.
+  fn step(&self, driver: &Driver, name: &str, argv: Vec<String>, dry_run: bool) -> Step {
+    if let Some(have) = find(&self.installed, name) {
+      return present(
+        driver,
+        &self.prepared,
+        have,
+        find(&self.offered, name),
+        argv,
+      );
+    }
+    if dry_run {
+      return Step::new(name, Status::Skipped, "dry run", argv);
+    }
+    attempt(driver, name, argv, &self.prepared.hint)
+  }
+}
+
 /// Installs `requested` (all when empty) with their dependencies.
 pub(crate) fn run(
   driver: &Driver,
@@ -71,47 +115,36 @@ pub(crate) fn run(
   dry_run: bool,
 ) -> Res<Vec<Step>> {
   let order = install_order(catalog, requested)?;
-  let adapter = driver.adapter;
-  let prepared = if dry_run {
-    Prepared::default()
-  } else {
-    prepare::run(driver, Verb::Install)?
-  };
-  let installed = driver.versions(&adapter.list_installed());
-  let offered = adapter
-    .list_available()
-    .map(|argv| driver.versions(&argv))
-    .unwrap_or_default();
+  driver.begin(order.len(), "preparing the marketplace");
+  let known = Known::read(driver, dry_run)?;
   let dependents = dependents_of(catalog, CORE);
   let mut core_failed = false;
   let mut steps = Vec::new();
   for name in &order {
-    let argv = adapter.install(name, scope);
-    if core_failed && dependents.contains(name) {
-      steps.push(Step::new(
+    let argv = driver.adapter.install(name, scope);
+    driver.working(&format!("installing {name}"));
+    let step = if core_failed && dependents.contains(name) {
+      Step::new(
         name,
         Status::Skipped,
         format!("skipped: {CORE} failed"),
         argv,
-      ));
-      continue;
-    }
-    if let Some(have) = find(&installed, name) {
-      steps.push(present(driver, &prepared, have, find(&offered, name), argv));
-      continue;
-    }
-    if dry_run {
-      steps.push(Step::new(name, Status::Skipped, "dry run", argv));
-      continue;
-    }
-    let step = attempt(driver, name, argv, &prepared.hint);
-    core_failed |= name == CORE && step.failed();
+      )
+    } else {
+      known.step(driver, name, argv, dry_run)
+    };
+    // Only a failed install of the core skips its dependents, not a failed refresh.
+    core_failed |= name == CORE && step.failed() && find(&known.installed, name).is_none();
     steps.push(step);
+    driver.advance();
   }
-  if dry_run {
-    return Ok(steps);
-  }
-  Ok(trust::settle(driver, steps))
+  let steps = if dry_run {
+    steps
+  } else {
+    trust::settle(driver, steps)
+  };
+  driver.end();
+  Ok(steps)
 }
 
 #[cfg(test)]

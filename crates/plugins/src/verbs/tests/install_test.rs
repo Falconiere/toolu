@@ -16,6 +16,7 @@ fn driver(sb: &Sandbox, adapter: Adapter) -> Driver {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   }
 }
 

@@ -26,6 +26,7 @@ fn muse(sb: &Sandbox, approval: Approval) -> Driver {
     checkout: None,
     pin: None,
     approval,
+    progress: None,
   }
 }
 

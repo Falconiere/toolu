@@ -20,6 +20,7 @@ fn a_listing_that_fails_or_is_malformed_reads_as_empty() {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   };
   let installed = driver.versions(&driver.adapter.list_installed());
   assert_eq!(

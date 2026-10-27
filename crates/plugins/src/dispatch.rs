@@ -1,6 +1,7 @@
 //! Routes a request to its verb on each chosen host and turns the steps into a
 //! report (the former TypeScript installer's `src/plugins/dispatch.ts`).
 
+use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
@@ -16,6 +17,7 @@ use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::checkout::Checkout;
 use crate::host::{Mode, Target, check_scope, resolve, target_of};
+use crate::progress::Progress;
 use crate::prompt::{Ask, Choice};
 use crate::replay;
 use crate::report;
@@ -44,9 +46,24 @@ pub(crate) struct Context<'a> {
   pub(crate) started: Instant,
   /// Whether the terminal already shows the `┌  toolu plugins <verb>` intro.
   pub(crate) intro_shown: bool,
+  /// The live progress at the terminal, when there is one.
+  pub(crate) progress: Option<Arc<Progress>>,
 }
 
 impl Context<'_> {
+  /// Runs `work` under a spinner for `host` (Cursor copies plugins in-process).
+  fn spinning<T>(&self, host: &str, task: &str, work: impl FnOnce(&Self) -> T) -> T {
+    if let Some(progress) = &self.progress {
+      progress.begin(host, 0);
+      progress.task(task);
+    }
+    let done = work(self);
+    if let Some(progress) = &self.progress {
+      progress.end();
+    }
+    done
+  }
+
   /// The rails text of `verb`'s report, or `plain` when the style is plain.
   fn shown(&self, verb: &str, rails: impl FnOnce(&Frame) -> String, plain: String) -> String {
     if !self.style.rails() {
@@ -90,6 +107,7 @@ fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
     checkout,
     pin,
     approval: request.approval,
+    progress: cx.progress.as_ref().map(Arc::clone),
   })
 }
 
@@ -209,7 +227,9 @@ fn install(
       Vec::new()
     } else {
       match target {
-        Target::Cursor => cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)?,
+        Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
+          cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)
+        })?,
         Target::Claude | Target::Codex | Target::Muse => {
           let driver = driver(target, request, cx)?;
           verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
@@ -302,7 +322,9 @@ fn update(
   let target = one_host(request, wanted, cx)?;
   install_order(catalog, &request.names)?;
   let steps = match target {
-    Target::Cursor => cursor::update(&Cursor::new(cx)?, catalog, &request.names, request.dry_run)?,
+    Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
+      cursor::update(&Cursor::new(cx)?, catalog, &request.names, request.dry_run)
+    })?,
     Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
       catalog,

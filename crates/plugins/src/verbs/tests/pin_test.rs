@@ -68,6 +68,7 @@ pub(super) fn driver(sb: &Sandbox) -> Driver {
     checkout: None,
     pin: Some(TAG.to_owned()),
     approval: Approval::Report,
+    progress: None,
   }
 }
 
