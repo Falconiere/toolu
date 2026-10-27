@@ -59,16 +59,22 @@ fn seed_host_states(root: &Path) {
   .expect("host states");
 }
 
+/// A Claude Code worktree on branch `feat/fixture` holding the committed copy of a
+/// real branch ledger, so the capture never depends on the checkout's own branch.
 fn seed_issue_record(local: &Engine) {
+  let worktree = local.root.join("worktree");
+  std::fs::create_dir_all(worktree.join(".git")).expect("git dir");
+  std::fs::write(worktree.join(".git/HEAD"), "ref: refs/heads/feat/fixture\n").expect("HEAD");
+  let ledgers = worktree.join(".claude/tmp/plan-ledger");
+  std::fs::create_dir_all(&ledgers).expect("ledger dir");
+  let fixture =
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/dashboard/ledger.json");
+  std::fs::copy(fixture, ledgers.join("feat_fixture.json")).expect("ledger fixture");
   let issue_dir = local.root.join("local-649/issues");
   std::fs::create_dir_all(&issue_dir).expect("issue dir");
   write_value(
     &issue_dir.join("local-658.json"),
-    &json!({
-      "key": "local-658",
-      "kind": "claude",
-      "worktree": Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-    }),
+    &json!({"key": "local-658", "kind": "claude", "worktree": worktree}),
   )
   .expect("issue record");
 }
@@ -117,6 +123,7 @@ fn dashboard_status_capture_comes_from_running_engines() {
   seed_issue_record(&local);
   let captured = capture(&local, &peer);
   assert_eq!(captured["issue"]["key"], "local-658");
+  assert_eq!(captured["issue"]["plan"]["summary"]["total"], 7);
   assert_eq!(captured["screen_locked"]["status"], 401);
   assert_eq!(captured["screen_disabled"]["status"], 403);
   assert_eq!(captured["board"]["issues"][0]["key"], "local-658");

@@ -71,6 +71,10 @@ export function phaseLine(issue, wave) {
     : `${phase} · ${Math.floor(count(issue.phase_age_ms) / 60_000)}m`;
 }
 
+// Engine-launched Claude Code workers run with `-n <key>`, so their title is the key, not a summary.
+export const statusTitle = (live, key) =>
+  live?.title && live.title.trim() !== key ? live.title : null;
+
 export function liveTitle(host, title) {
   const kind = host === "claude" ? "session" : host === "muse" ? "folder" : "title";
   return `${kind} ${title}`;

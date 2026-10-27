@@ -71,6 +71,7 @@ fn dashboard_drawer_logic_has_step_marks_notices_and_attach_form() {
     "◇ OPEN DASHBOARD TO WATCH OR CONTROL",
     "Screens, live status and actions stay on the peer. This view shows the plan only.",
     "No plan yet. Phase history below until the worker writes its ledger.",
+    "Plan unavailable. The worker document could not be read; retrying.",
   ] {
     assert!(logic.contains(notice), "{notice}");
   }
@@ -82,7 +83,8 @@ fn dashboard_drawer_logic_has_step_marks_notices_and_attach_form() {
   assert!(tests.contains("herdr --session work agent attach"));
   let view = read_asset("js/view/drawer.js");
   assert!(view.contains("`$ ${attach}`") && view.contains("COPIED ✓"));
-  assert!(view.contains("DASHBOARD ↗ ]`"));
+  assert!(view.contains("showPeerLink($(\"drawer-peer-link\")"));
+  assert!(read_asset("js/view/peer.js").contains("DASHBOARD ↗ ]`"));
   assert!(view.contains("`Worker ${model.key}`"));
 }
 
@@ -108,8 +110,7 @@ fn dashboard_drawer_polls_only_while_open_and_visible() {
   assert!(
     logic.contains("!context.peer && !stoppedNotice(context.issue) && Boolean(context.token)")
   );
-  let app = read_asset("js/app.js");
-  assert!(app.contains("takeToken(location.hash)") && app.contains("history.replaceState"));
+  assert!(control.contains("takeToken(location.hash)") && control.contains("history.replaceState"));
   let api = read_asset("js/api.js");
   assert!(api.contains("headers: { Authorization: `Bearer ${token}` }"));
   assert!(!api.contains("screen?token") && !api.contains("token=${"));

@@ -1,5 +1,4 @@
 import { readDashboard, readFleet, readLive } from "./api.js";
-import { takeToken } from "./logic/fragment.js";
 import { peerMachine } from "./logic/status.js";
 import { renderPeer } from "./view/peer.js";
 import {
@@ -10,17 +9,12 @@ import {
   showConnection,
   showError,
 } from "./view/dashboard.js";
-import { closeDrawer, initDrawer, saveToken, syncDrawer } from "./worker-drawer.js";
+import { closeDrawer, initDrawer, syncDrawer } from "./worker-drawer.js";
 
 const state = { peer: null, fleet: null, docs: null, live: null, sampledAt: 0, request: 0 };
 let stream;
 let refreshTimer;
 
-const fragment = takeToken(location.hash);
-if (fragment.token) {
-  saveToken(fragment.token);
-  history.replaceState(null, "", `${location.pathname}${location.search}${fragment.hash}`);
-}
 initDrawer(() => state);
 
 function stopStream() {

@@ -5,6 +5,7 @@ import {
   issueRows,
   liveTitle,
   phaseLine,
+  statusTitle,
   tiles,
   waveLine,
 } from "../logic/status.js";
@@ -76,7 +77,7 @@ function rowLine(issue, live, peer) {
     return `blocked by ${issue.open_blockers.join(", ")}`;
   }
   const state = agentState(issue, live?.agent_status);
-  return live?.title
+  return statusTitle(live, issue.key)
     ? `${state.kind} · ${liveTitle(live.host || issue.host, live.title)}`
     : state.kind;
 }
@@ -126,7 +127,8 @@ function issueButton(issue, live, attention, peer) {
 
 function renderBoards(boards, live, attention, peer) {
   const target = $("board");
-  const focused = document.activeElement?.dataset?.issue;
+  // Attention keys carry `data-issue` too; restore focus only to a board row.
+  const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
   const scrolls = new Map(
     [...target.querySelectorAll(".table-scroll")].map((node) => [
       node.dataset.epic,
@@ -190,8 +192,8 @@ function renderHosts(hosts, now) {
   if (!target.children.length) target.append(element("p", "empty", "No hosts reported."));
 }
 
-function attentionKey(key) {
-  if (!key) return element("span", "", "ENGINE");
+function attentionKey(key, keys) {
+  if (!key || !keys.has(key)) return element("span", "", key || "ENGINE");
   const button = element("button", "attention-key", key);
   button.type = "button";
   button.dataset.issue = key;
@@ -199,7 +201,10 @@ function attentionKey(key) {
   return button;
 }
 
-function renderAttention(attention) {
+function renderAttention(attention, boards) {
+  const keys = new Set(
+    boards.flatMap((board) => (board.graph?.issues ?? []).map((node) => node.key)),
+  );
   const target = $("attention");
   const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
   target.replaceChildren();
@@ -210,7 +215,7 @@ function renderAttention(attention) {
     const head = element("div", "attention-head");
     head.append(
       element("strong", "", `▲ ${(item.kind || "UNKNOWN").toUpperCase()}`),
-      attentionKey(item.key),
+      attentionKey(item.key, keys),
       element("time", "", `${Math.floor((item.age_ms ?? 0) / 60_000)}m`),
     );
     row.append(head, element("p", "", item.note || "Needs attention."));
@@ -248,7 +253,7 @@ export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
   const attention = renderTiles(docs, sampledAt, now);
   renderBoards(docs.boards, live, attention, peer);
   renderHosts(docs.hosts, now);
-  renderAttention(attention);
+  renderAttention(attention, docs.boards);
   renderJournal(docs.events, peer);
   text(
     "sampled",
@@ -259,7 +264,7 @@ export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
 export function renderTick(docs, sampledAt, now = Date.now()) {
   const attention = renderTiles(docs, sampledAt, now);
   renderHosts(docs.hosts, now);
-  renderAttention(attention);
+  renderAttention(attention, docs.boards);
 }
 
 export function renderUnavailable(message) {

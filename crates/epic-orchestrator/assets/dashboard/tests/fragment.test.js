@@ -14,6 +14,8 @@ test("the token leaves the fragment and the remaining keys stay", () => {
   assert.deepEqual(takeToken("#issue=toolu-655"), { token: null, hash: "#issue=toolu-655" });
   assert.deepEqual(takeToken(""), { token: null, hash: "" });
   assert.deepEqual(takeToken("#token="), { token: null, hash: "" });
+  // `toolu epic token url` prints the token unencoded; a base64 `+` is not a space.
+  assert.deepEqual(takeToken("#token=a+b/c=&issue=k"), { token: "a+b/c=", hash: "#issue=k" });
 });
 
 test("issue deep links read, set and clear only the issue key", () => {

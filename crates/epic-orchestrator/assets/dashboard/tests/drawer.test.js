@@ -4,7 +4,6 @@ import test from "node:test";
 
 import {
   wantsScreen,
-  statusTitle,
   stepMark,
   screenNotice,
   prUrl,
@@ -16,8 +15,10 @@ import {
   attentionLine,
   attachCommand,
   PLAN_UNREADABLE,
+  PLAN_UNAVAILABLE,
   NO_PLAN,
 } from "../js/logic/drawer.js";
+import { statusTitle } from "../js/logic/status.js";
 
 const captured = JSON.parse(
   readFileSync(new URL("../../../../../fixtures/epic/dashboard/status.json", import.meta.url)),
@@ -54,6 +55,7 @@ test("plan summary and next step come from the captured ledger", () => {
     /^The ledger failed to parse\. Phase history shown instead\.$/,
   );
   assert.match(NO_PLAN, /^No plan yet\./);
+  assert.match(PLAN_UNAVAILABLE, /^Plan unavailable\./);
 });
 
 test("notices follow peer, queue, finish, token and screen replies in order", () => {

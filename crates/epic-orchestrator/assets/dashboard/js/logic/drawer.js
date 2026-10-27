@@ -36,6 +36,8 @@ export const PLAN_UNREADABLE = {
   label: "● PLAN UNREADABLE",
   text: "The ledger failed to parse. Phase history shown instead.",
 };
+export const PLAN_UNAVAILABLE =
+  "Plan unavailable. The worker document could not be read; retrying.";
 export const NO_PLAN = "No plan yet. Phase history below until the worker writes its ledger.";
 
 export const stepMark = (status) =>
@@ -105,6 +107,7 @@ export function phaseTimeline(history, issue) {
   return rows.map((row, index) => ({ ...row, current: index === rows.length - 1 }));
 }
 
+// shortcut: the board names only the epic's repository, so a PR in another repository links there; pass the issue's repository once the API serves it.
 export function prUrl(issueUrl, pr) {
   if (!Number.isInteger(pr) || pr <= 0 || !issueUrl) return null;
   try {
@@ -122,10 +125,6 @@ export function attentionLine(item, now = Date.now(), sampledAt = now) {
   const age = Math.max(0, (item.age_ms ?? 0) + now - sampledAt);
   return `▲ ${(item.kind || "unknown").toUpperCase()} · OPEN ${Math.floor(age / 60_000)}m`;
 }
-
-// Engine-launched Claude Code workers run with `-n <key>`, so their title is the key, not a summary.
-export const statusTitle = (live, key) =>
-  live?.title && live.title.trim() !== key ? live.title : null;
 
 export const epicLine = (key, epic) =>
   `${key} · EPIC #${String(epic ?? "")

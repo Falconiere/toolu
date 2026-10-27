@@ -1,5 +1,6 @@
 // The URL fragment is an `&`-separated list: `#token=<t>&issue=<key>`.
-const params = (hash) => new URLSearchParams((hash ?? "").replace(/^#/, ""));
+// `+` stays a plus: `toolu epic token url` prints the token unencoded, and base64 tokens contain `+`.
+const params = (hash) => new URLSearchParams((hash ?? "").replace(/^#/, "").replaceAll("+", "%2B"));
 const format = (list) => {
   const text = list.toString();
   return text ? `#${text}` : "";

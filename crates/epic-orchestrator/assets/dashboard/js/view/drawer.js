@@ -1,5 +1,6 @@
 import {
   NO_PLAN,
+  PLAN_UNAVAILABLE,
   PLAN_UNREADABLE,
   attachCommand,
   attentionLine,
@@ -10,15 +11,25 @@ import {
   planLine,
   prUrl,
   screenNotice,
-  statusTitle,
   stepMark,
 } from "../logic/drawer.js";
-import { agentState, liveTitle, peerDashboardUrl, phaseLine } from "../logic/status.js";
+import { agentState, liveTitle, phaseLine, statusTitle } from "../logic/status.js";
 import { $, element, mark, text } from "./dom.js";
+import { showPeerLink } from "./peer.js";
 
 const show = (id, visible) => {
   $(id).hidden = !visible;
 };
+
+// Each render rebuilds the list; keep the reader's scroll position in it.
+function refill(list, data, build) {
+  const signature = JSON.stringify(data);
+  if (list.dataset.signature === signature) return;
+  list.dataset.signature = signature;
+  const top = list.scrollTop;
+  list.replaceChildren(...data.map(build));
+  list.scrollTop = top;
+}
 
 function renderHeader(model, issue) {
   text("drawer-epic", epicLine(model.key, model.board?.key));
@@ -61,29 +72,30 @@ function renderAttention(model) {
   text("drawer-attention-text", model.attention.note || "Needs attention.");
 }
 
-function renderPlan(plan, loaded) {
+function renderPlan(plan, loaded, failed) {
   const ready = Boolean(plan && !plan.error);
   show("drawer-plan-bar", ready && plan.summary?.total > 0);
   show("drawer-next", ready && Boolean(nextStep(plan)));
   text("drawer-plan-line", ready ? planLine(plan) : "");
   const note = $("drawer-plan-note");
   note.replaceChildren();
-  if (!loaded) note.append("Loading plan…");
+  if (!loaded) note.append(failed ? PLAN_UNAVAILABLE : "Loading plan…");
   else if (plan?.error) note.append(mark(PLAN_UNREADABLE), ` ${PLAN_UNREADABLE.text}`);
   else if (!plan) note.append(NO_PLAN);
-  const steps = $("drawer-steps");
-  steps.replaceChildren();
-  if (!ready) return;
+  if (!ready) {
+    refill($("drawer-steps"), [], () => null);
+    return;
+  }
   const bar = $("drawer-plan-bar");
   bar.max = Math.max(1, plan.summary?.total ?? 0);
   bar.value = Math.min(plan.summary?.green ?? 0, bar.max);
   text("drawer-next", `NEXT ${nextStep(plan) ?? ""}`);
-  for (const step of plan.steps ?? []) {
+  refill($("drawer-steps"), plan.steps ?? [], (step) => {
     const status = stepMark(step.status);
     const row = element("li", `drawer-step step-${status.kind}`);
     row.append(mark(status), element("span", "step-title", step.title || step.id));
-    steps.append(row);
-  }
+    return row;
+  });
 }
 
 function renderScreen(model, issue) {
@@ -98,13 +110,7 @@ function renderScreen(model, issue) {
     text("drawer-notice-label", notice.label);
     text("drawer-notice-text", notice.text);
   }
-  const peerUrl = model.peer && peerDashboardUrl(model.machine?.dashboard_url);
-  const link = $("drawer-peer-link");
-  link.hidden = !peerUrl;
-  if (peerUrl) {
-    link.href = peerUrl;
-    link.textContent = `[ OPEN ${model.peer.toUpperCase()} DASHBOARD ↗ ]`;
-  }
+  showPeerLink($("drawer-peer-link"), model.peer ? model.machine : null);
   const attach = notice ? null : attachCommand(model.screen);
   show("drawer-blocked", Boolean(attach));
   if (attach && $("drawer-attach").textContent !== `$ ${attach}`) {
@@ -122,31 +128,33 @@ function renderScreen(model, issue) {
 }
 
 function renderPhases(issue) {
-  const list = $("drawer-phase-list");
-  list.replaceChildren();
-  for (const row of phaseTimeline(issue.phase_history, issue)) {
+  refill($("drawer-phase-list"), phaseTimeline(issue.phase_history, issue), (row) => {
     const item = element("li", row.current ? "phase-row phase-current" : "phase-row");
     if (row.current) item.setAttribute("aria-current", "step");
     item.append(element("span", "", row.phase), element("time", "", row.at));
-    list.append(item);
-  }
+    return item;
+  });
 }
 
 export function renderDrawer(model) {
-  const issue = { ...model.row, ...model.doc };
+  const issue = { ...model.doc, ...model.row };
   $("drawer").setAttribute("aria-label", `Worker ${model.key}`);
   show("drawer", true);
   $("workspace").classList.add("drawer-open");
   renderHeader(model, issue);
   renderStatus(model, issue);
   renderAttention(model);
-  renderPlan(model.doc?.plan, Boolean(model.doc));
+  renderPlan(model.doc?.plan, Boolean(model.doc), model.docFailed);
   renderScreen(model, issue);
   renderPhases(issue);
   for (const row of document.querySelectorAll("button[data-issue]")) {
     if (row.dataset.issue === model.key) row.setAttribute("aria-current", "true");
     else row.removeAttribute("aria-current");
   }
+}
+
+export function revealDrawer() {
+  if (matchMedia("(max-width: 900px)").matches) $("drawer").scrollIntoView({ block: "start" });
 }
 
 export function hideDrawer() {
