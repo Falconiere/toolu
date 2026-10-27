@@ -109,3 +109,7 @@ End to end: an engine-built `graph.json` from the GitHub fixture, a real engine 
 - Jev: dependency order 0.74; AC/step alignment 0.36 → 0.33 (uncertain, not a rejection). Manual check: every AC maps to a step whose check runs a counted test filter over the named real input, and AC-7 is the container gate receipt, as in the #652 plan.
 
 **Status:** Approved
+
+## Deviations
+- epic-header-rows: the production change was written before its tests in this step; red was then shown by running the new tests against the `HEAD` versions of `status_epics.rs` and `status_api.rs` (5 of 5 failed) before restoring them.
+- board-scenario: the scenario showed the graph renumbers waves over open issues after each refresh (`[2, 1, 1, 1]` instead of `[3, 2, 1, 1]` after wave 1 merged). `status_epics::stable_waves` now levels every issue; the epic #248 fixture expectations moved to 6 waves, checked by hand against its blockers.

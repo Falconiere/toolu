@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use serde_json::{Map, Value, json};
 
 use crate::disk::read_value;
+use crate::graph::GraphIssue;
 use crate::model::{Issue, World};
 use crate::paths::Paths;
 
@@ -93,11 +94,11 @@ fn header(world: &World, key: &str) -> Map<String, Value> {
       .filter(|row| row.status == "done")
       .map(|row| row.key.as_str()),
   );
-  let waves: BTreeSet<u64> = rows.iter().filter_map(|row| row.wave).collect();
-  let current = rows
+  let waves = stable_waves(rows);
+  let current = waves
     .iter()
-    .filter(|row| !done.contains(row.key.as_str()))
-    .filter_map(|row| row.wave)
+    .filter(|(key, _)| !done.contains(key.as_str()))
+    .map(|(_, wave)| *wave)
     .min();
   let count = |wanted: &dyn Fn(&Issue) -> bool| issues.iter().filter(|issue| wanted(issue)).count();
   let live = count(&|issue| matches!(issue.stage.as_str(), "running" | "awaiting_merge"));
@@ -105,12 +106,34 @@ fn header(world: &World, key: &str) -> Map<String, Value> {
   let header = json!({
     "title": graph.and_then(|graph| cut(&graph.epic.title)),
     "url": graph.and_then(|graph| cut(&graph.epic.url)),
-    "waves_total": waves.len(),
+    "waves_total": waves.values().collect::<BTreeSet<_>>().len(),
     "current_wave": current,
     "live": live,
     "queued": queued,
   });
   header.as_object().cloned().unwrap_or_default()
+}
+
+/// Each graph issue's wave by key, over open and closed issues alike. The
+/// graph levels only open issues, so its waves renumber after every merge;
+/// these keep a merged issue in its wave for the whole run. A cycle gives none.
+fn stable_waves(rows: &[GraphIssue]) -> BTreeMap<String, u64> {
+  let all: Vec<GraphIssue> = rows
+    .iter()
+    .cloned()
+    .map(|mut row| {
+      "open".clone_into(&mut row.state);
+      for state in row.blockers.values_mut() {
+        "open".clone_into(state);
+      }
+      row
+    })
+    .collect();
+  let (levels, _cycle) = crate::graph::compute_levels(&all);
+  rows
+    .iter()
+    .filter_map(|row| Some((row.key.clone(), *levels.get(&row.reference)?)))
+    .collect()
 }
 
 /// `text` cut to 160 characters, or `None` when it is empty.
@@ -246,3 +269,7 @@ fn safe_strings(value: Option<&Value>) -> Vec<&str> {
 #[cfg(test)]
 #[path = "tests/status_epics_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/status_board_test.rs"]
+mod board_tests;

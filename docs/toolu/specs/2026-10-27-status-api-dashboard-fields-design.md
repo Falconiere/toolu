@@ -22,8 +22,9 @@ All new fields are computed where the existing documents are built, so the HTTP 
   - An issue is **done** when its `World` stage is `merged` or `abandoned`, or its graph `status` is `done` (closed in the tracker before the engine saw it).
   - `live`: `World` issues of the epic whose stage is `running` or `awaiting_merge` (same rule as `fleet.rs` `in_flight`).
   - `queued`: `World` issues of the epic with an empty stage (never launched; `snapshot::load_issue` inserts every graph issue with stage `""`) that are not done.
-  - `waves_total`: distinct `wave` values of the graph issues.
-  - `current_wave`: the lowest wave holding an issue that is not done, else `null`.
+  - Waves are **stable for the run**: the status code levels every graph issue, open or closed, with the graph's own rule (`graph::compute_levels`, 1 + the deepest blocker in the epic), so a merged issue keeps its wave. The graph's `wave` field levels only open issues and renumbers after each refresh (found in execution: after wave 1 merged, the scenario's graph moved #4 to wave 1), which would keep `current_wave` at 1 for the whole run. A dependency cycle gives no waves.
+  - `waves_total`: distinct stable waves.
+  - `current_wave`: the lowest stable wave holding an issue that is not done, else `null`.
   - `title` and `url`: `EpicInfo.title` / `EpicInfo.url`, cut to 160 characters, `null` when empty or when the epic has no parsed graph.
 - **Issue rows** (`status_epics::issue_row`): add `phase_age_ms` (`now_ms - phase_at_ms`, as `/api/v1/issues/{key}`), `model` and `effort` through one helper shared with `status_api::issue_document` (route record first, then the launch record), and `hold`.
 - **`hold`** on rows and on `/api/v1/issues/{key}`: `{"kind", "with", "at"}` taken from `issue.hold` (each a string cut to 160 characters, or `null`), or `null` when there is no hold.
@@ -55,7 +56,8 @@ pub fn short_hostname() -> Option<String>;
 ## Failure modes and edge cases
 
 - Epic registered but no parsed graph (unreadable or not yet loaded): `title`, `url`, `current_wave` are `null`, `waves_total` 0; `live`/`queued` still count `World` issues. The rest of the document is unchanged.
-- Graph issues without a `wave`: not counted in `waves_total` and never pin `current_wave`.
+- Issues closed before the run keep their stable wave and count as done, so open work can start in a later wave (epic #248's fixture: 6 waves, open work from wave 3).
+- A dependency cycle among the graph issues: `waves_total` 0, `current_wave` `null`.
 - Every issue merged or abandoned: `current_wave` is `null`.
 - An `abandoned` issue in wave 1 with the rest merged: wave 1 is done.
 - `hold` not an object, or missing fields: fields are `null`; `score`/`source` never appear.
@@ -107,3 +109,7 @@ None blocking.
 - Acceptance evidence: 🟡 should-fix (fixed): AC-6 and AC-9 named a scripted document; both now use a real `graph.json` and real engines. AC-4 names `/bin/hostname` as the independent oracle.
 - Acceptance evidence: 🔵 consider: the `abandoned` boundary of AC-2 runs over a `World` built in the test, not the scenario; the scenario has no abandon path cheaper than its relaunch limit. Kept.
 - Jev (noul): scope coverage 0.61 → 0.77 after the fixes, AC5 treatment consistent 0.84, evidence completeness 0.62 (uncertain; the remaining items were checked by hand: every AC row names input, expected result and a runnable filter).
+
+## Changes during execution (2026-10-27)
+
+- Stable waves (see Architecture). Jev (choice) picked recomputing over all issues (1.0) over the graph's renumbering waves or persisting first-seen waves. It reuses `graph::compute_levels` on a copy of the issues with every state treated as open.

@@ -93,8 +93,10 @@ fn header_counts_waves_live_and_queued_from_the_engine_graph() {
     detail["url"],
     "https://github.com/Falconiere/comemory/issues/248"
   );
-  // Five issues closed before the run carry no wave and are done; nine are queued.
-  assert_eq!(header(&detail), json!([4, 1, 0, 9]));
+  // Over every issue the waves are #249; #250; #251-#255 and io#183; #256,
+  // #257, io#184; #258, io#185; tap#1. The five closed before the run fill
+  // waves 1-2 and part of 3, so open work starts in wave 3; nine are queued.
+  assert_eq!(header(&detail), json!([6, 3, 0, 9]));
   set_stage(&mut world, "comemory-254", "running");
   set_stage(&mut world, "comemory-255", "running");
   set_stage(&mut world, "comemory-io-183", "awaiting_merge");
@@ -104,7 +106,7 @@ fn header_counts_waves_live_and_queued_from_the_engine_graph() {
     &format!("/api/v1/epics/{EPIC}"),
     &Secrets::none(),
   );
-  assert_eq!(header(&detail), json!([4, 1, 3, 6]));
+  assert_eq!(header(&detail), json!([6, 3, 3, 6]));
   let items = get(&world, &paths, "/api/v1/epics", &Secrets::none());
   assert_eq!(header(&items["items"][0]), header(&detail));
   assert_eq!(items["items"][0]["title"], detail["title"]);
@@ -124,7 +126,7 @@ fn current_wave_moves_past_merged_and_abandoned_issues_then_is_null() {
     &format!("/api/v1/epics/{EPIC}"),
     &Secrets::none(),
   );
-  assert_eq!(header(&detail), json!([4, 2, 1, 5]));
+  assert_eq!(header(&detail), json!([6, 4, 1, 5]));
   let keys: Vec<String> = world.issues.keys().cloned().collect();
   for key in keys {
     set_stage(&mut world, &key, "merged");
@@ -135,7 +137,7 @@ fn current_wave_moves_past_merged_and_abandoned_issues_then_is_null() {
     &format!("/api/v1/epics/{EPIC}"),
     &Secrets::none(),
   );
-  assert_eq!(header(&detail), json!([4, null, 0, 0]));
+  assert_eq!(header(&detail), json!([6, null, 0, 0]));
 }
 
 #[test]
