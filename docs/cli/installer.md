@@ -46,7 +46,7 @@ The verb comes first:
 toolu plugins install [name...]   Install plugins, core first (terminal: pick; else all)
 toolu plugins list                Catalog joined with what the host reports
 toolu plugins remove <name...>    Uninstall, requires --yes
-toolu plugins update [name...]    Update only what is behind the marketplace
+toolu plugins update [name...]    Update toolu's plugins on every host that has them
 ```
 
 `toolu plugins install` is the install verb, and the same shape covers `list`, `remove`, and `update`.
@@ -55,8 +55,8 @@ toolu plugins update [name...]    Update only what is behind the marketplace
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex`, `muse` or `cursor`. Detected when omitted (probed in the order claude, codex, muse; Cursor is never probed, so name it with `--host cursor`). `hermes` is not an installer target and exits `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`. |
+| `--host <id>` | `claude`, `codex`, `muse` or `cursor`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`, except `update` without `--host`, which ignores it on those hosts. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. |
@@ -73,7 +73,7 @@ The exit codes are those of the `toolu` CLI contract ([README.md](README.md)):
 |------|---------|
 | `0` | Everything succeeded or was already satisfied |
 | `1` | Something failed (every failure is named), or a prompt was cancelled |
-| `64` | Usage error or missing input: unknown command, flag, host, or plugin, an ambiguous host with no terminal or with `--no-input`, a removal without `--yes`, a bad `--config` file |
+| `64` | Usage error or missing input: unknown command, flag, host, or plugin, an ambiguous host for `install`, `list` or `remove` with no terminal or with `--no-input`, a removal without `--yes`, a bad `--config` file |
 | `69` | The deprecated `@toolu/plugins` command. It installs nothing. |
 
 The TypeScript installer used `2`, `3` and `130` for these. Scripts that test for
@@ -83,11 +83,17 @@ those codes must test for `64` and `1`.
 
 `--json` prints one document. `list` prints an array of
 `{ "name", "installed", "version"?, "enabled" }`. `install` prints
-`{ "dryRun", "hosts": [{ "host", "steps": [...] }] }`. `remove` and `update`
-print `{ "host", "steps": [...] }`. A step is `{ "name", "outcome", "detail",
-"argv", "plan"? }`, and a removal step has `removed` (a boolean) instead of
-`outcome`. A run that stops on an error prints the CLI's
-`{ "error": { "code", "name", "message" } }` document.
+`{ "dryRun", "hosts": [{ "host", "steps": [...] }] }`. `remove` prints
+`{ "host", "steps": [...] }`, and so does `update --host <id>`. `update` without
+`--host` prints the `install` document, one entry per host it updated. A step is
+`{ "name", "outcome", "detail", "argv", "plan"? }`, and a removal step has
+`removed` (a boolean) instead of `outcome`. A run that stops on an error prints
+the CLI's `{ "error": { "code", "name", "message" } }` document.
+
+**Compatibility.** Before 8.6, `update --json` without `--host` printed
+`{ "host", "steps" }` when one host was installed and refused when there were
+several. It now always prints the `install` document. A script that reads one
+host's steps should pass `--host`.
 
 ## Behavior worth knowing
 
@@ -108,15 +114,12 @@ dependents are skipped, because they cannot succeed without it. Any other
 failure is recorded and the remaining plugins are still attempted. Either way the
 exit code is `1` and every failure is named.
 
-**Host ambiguity is never resolved silently.** With more than one wired host on
-`PATH` and no `--host`, a terminal prompts. `install` asks which hosts and then
-runs once per chosen host with a sectioned report. Separately, an `install` on a
-terminal with no plugin names and no `--config` asks which plugins, every
-catalog entry selected by default, whatever the host.
-`list`, `remove`, and `update` ask for one host. The prompts are numbered lines
-on the terminal (`/dev/tty`): Enter takes the default, `1 3` or `1,3` picks,
-and `q` cancels. Without a terminal, or with `--no-input` or `--json`, the run
-exits `64` and names the candidates rather than guessing.
+**Host ambiguity is never resolved silently.** `install`, `list` and `remove`
+ask when several hosts are found and there is no `--host`
+([Choosing hosts](#choosing-hosts)). Without a terminal, or with `--no-input`
+or `--json`, they exit `64` and name the candidates rather than guessing.
+`update` does not ask: it updates every host that has toolu plugins
+([Updating every host](#updating-every-host)).
 
 **`remove` also takes a plugin the marketplace retired** (#615), such as a
 leftover 7.11.0 `context7` from before the Rust rewrite. On Claude Code, Codex
@@ -156,15 +159,77 @@ pinned to this binary's tag.
 
 **Dry runs run nothing.** `--dry-run` prints the commands a real run would
 run, for `install`, `remove` and `update` alike (an `update` leaves out plugins
-already at the offered version). The TypeScript installer ignored the flag on
+already at the offered version; Claude Code offers none, so its dry run lists
+every installed toolu plugin). The TypeScript installer ignored the flag on
 `remove` and `update` for Claude Code and Codex. Muse had no TypeScript installer.
 
 **Each host command has 600 seconds.** A command that runs longer is a failed
 step whose detail says `timed out after 600 s`. Ctrl-C stops the running host
 command and `toolu` with it.
 
-**No live progress bar.** The TypeScript installer animated a progress line. The
-native report prints once, when the run ends.
+**Progress is live at a terminal.** See [Terminal output](#terminal-output).
+
+## Choosing hosts
+
+`--host` always wins. Without it, one host on `PATH` (`claude`, `codex`,
+`muse`) is used without asking. When several are found, a terminal asks:
+
+- `install` offers every supported host on the machine: Claude Code, Codex and
+  Muse on `PATH`, and Cursor when its config directory (`~/.cursor`) exists or
+  `cursor-agent` is on `PATH`. Several can be chosen.
+- `list` and `remove` ask for one host. They offer Cursor only when toolu
+  installed a plugin there, so a leftover `~/.cursor` never adds the question.
+- An `install` with no plugin names and no `--config` then asks which plugins,
+  every catalog entry selected.
+
+At a terminal the question is a checkbox list. ↑/↓ (or `k`/`j`) move, space
+toggles, `a` toggles all, Enter confirms, and `q`, Esc or Ctrl-C cancels (exit
+`1`, `cancelled`). Every option starts selected, and confirming with nothing
+selected asks again. The answered list collapses to one line. When the terminal
+cannot be put in raw mode, or stdout is not a terminal, the question is numbered
+lines instead: Enter takes the default, `1 3` or `1,3` picks, `q` cancels.
+
+Without a terminal only `PATH` hosts count, so scripts resolve as they always
+did. A script names Cursor with `--host cursor`.
+
+## Updating every host
+
+`toolu plugins update` never asks which host. Without `--host` it updates every
+detected host that has toolu plugins, in a section each. That is the `PATH`
+hosts, and Cursor when toolu installed a plugin there.
+
+- Each host's toolu plugins are read before anything is prepared, pinned or
+  cloned. A host without them is only noted (`muse: no toolu plugins
+  installed; skipped`). If no host has any, the run exits `1`.
+- Only toolu's own plugins are updated: Claude Code entries from other
+  marketplaces are never touched, and a plugin installed in several scopes is
+  updated once. A plugin the catalog retired is named with the command that
+  removes it on that host instead of being updated.
+- Names update only where they are installed. A name installed on no host
+  exits `1`.
+- A host that fails (for example, its marketplace cannot be pinned) gets a failed
+  step named after the host. The other hosts still run, and the exit is `1`.
+- `--scope` concerns Claude Code alone and is ignored on the other hosts.
+
+On Claude Code, each update runs `claude plugin update <name>@toolu --json`, and
+its result line decides `current at <version>`, `updated <old> → <new>`, or
+skipped with Claude's reason. This needs a Claude Code whose `plugin update` takes
+`--json` (verified with 2.1.311); an older one fails each update with its own
+message.
+
+## Terminal output
+
+When stdout is a terminal, `toolu plugins` and `toolu status` draw on rails. A
+`┌  toolu plugins <verb>` intro opens, each host is a `◇` section, and each plugin
+gets a glyph: `✔` done, `●` unchanged, `▲` left alone, `✘` failed, `○` would
+run. A `└` line closes with the counts and the time taken. While host commands
+run, each host shows a bar that advances per plugin and a spinner line naming
+the plugin at work. The bar draws on the terminal (`/dev/tty`), never stdout, and
+clears before the report prints. The cursor is never hidden.
+
+`NO_COLOR` (non-empty) drops color but keeps the rails. `TERM=dumb`, `--json`
+and piped or redirected stdout print the plain report, unchanged.
+`--quiet` drops the progress.
 
 ## `.toolu/plugins.json`
 

@@ -1278,17 +1278,17 @@
       }
     },
     "pluginsHost": {
-      "description": "toolu plugins remove|update --json: one host's steps.",
+      "description": "toolu plugins remove --json, and update --host --json: one host's steps.",
       "type": "object",
       "additionalProperties": false,
       "required": ["host", "steps"],
       "properties": {
-        "host": { "enum": ["claude", "codex"] },
+        "host": { "enum": ["claude", "codex", "muse", "cursor"] },
         "steps": { "type": "array", "items": { "$ref": "#/$defs/pluginsStep" } }
       }
     },
     "pluginsInstall": {
-      "description": "toolu plugins install --json: the steps of every chosen host.",
+      "description": "toolu plugins install --json, and update --json without --host: the steps of every host acted on.",
       "type": "object",
       "additionalProperties": false,
       "required": ["dryRun", "hosts"],

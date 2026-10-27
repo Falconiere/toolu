@@ -16,6 +16,9 @@ mod args;
 mod catalog;
 mod cursor;
 mod dispatch;
+#[cfg(test)]
+#[path = "tests/docs_test.rs"]
+mod docs;
 mod fail;
 mod host;
 mod progress;

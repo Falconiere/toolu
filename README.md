@@ -101,7 +101,7 @@ toolu plugins install              # everything, core first
 toolu plugins install rust-quality # one plugin and its dependency
 toolu plugins list                 # catalog joined with what is installed
 toolu plugins remove jev --yes
-toolu plugins update
+toolu plugins update               # every host with toolu plugins, no prompt
 ```
 
 Claude Code, Codex and Muse are the supported hosts. Full grammar, exit codes, and

@@ -16,8 +16,10 @@ deprecated and does not run these verbs.
 - The catalog is `.claude-plugin/marketplace.json`, embedded with
   `include_str!` from the repository layout at build time; `--catalog <path>`
   reads another file.
-- Prompts are numbered lines on `/dev/tty` (`src/prompt.rs`); stdout stays the
-  report. The crate never writes the standard streams (rule 14).
+- Prompts, progress and the rails intro go to `/dev/tty` (`src/prompt.rs`,
+  `src/progress.rs`): a checkbox list at a terminal that can go raw, numbered
+  lines otherwise. stdout stays the report. The crate never writes the standard
+  streams (rule 14).
 
 Exit codes follow the CLI contract: 64 for usage errors and missing input, 1
 for a failed step. The user guide is [docs/cli/installer.md](../../docs/cli/installer.md);
