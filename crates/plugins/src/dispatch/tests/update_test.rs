@@ -162,19 +162,35 @@ fn a_failing_host_is_its_own_section_and_the_others_still_run() {
 }
 
 #[test]
-fn a_host_whose_listing_fails_is_noted_with_the_reason() {
+fn a_host_whose_listing_fails_is_a_failed_section_and_names_the_reason() {
   let sb = Sandbox::new();
   three_hosts(&sb, "");
   sb.muse("\"plugins list --json\"");
   let report = update(&sb, &[], None, Style::Plain).expect("update");
   assert!(
-    report
-      .text
-      .ends_with("muse: could not list its plugins: boom: plugins list --json; skipped\n"),
+    report.text.ends_with(
+      "muse:\n  x muse             could not list its plugins: boom: plugins list --json\n"
+    ),
     "{}",
     report.text
   );
-  assert!(!report.failed);
+  assert!(report.failed);
+  assert_eq!(report.json["hosts"][2]["host"], json!("muse"));
+  assert_eq!(
+    report.json["hosts"][2]["steps"][0]["outcome"],
+    json!("failed")
+  );
+  sb.write("claude-installed.json", "not json");
+  let Err(fail) = update(&sb, &["jev"], None, Style::Plain) else {
+    panic!("a plugin on an unreadable host was reported updated");
+  };
+  assert!(
+    fail.message.starts_with(
+      "jev is not installed from toolu on any detected host (could not list: claude: claude plugin list --json: "
+    ),
+    "{}",
+    fail.message
+  );
 }
 
 #[test]

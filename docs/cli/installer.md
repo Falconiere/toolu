@@ -200,23 +200,25 @@ hosts, and Cursor when toolu installed a plugin there.
 
 - Each host's toolu plugins are read before anything is prepared, pinned or
   cloned. A host without them is only noted (`muse: no toolu plugins
-  installed; skipped`). If no host has any, the run exits `1`.
+  installed; skipped`). If no host has any, the run exits `1`, and the message
+  names each host whose listing could not be read.
 - Only toolu's own plugins are updated: Claude Code entries from other
   marketplaces are never touched, and a plugin installed in several scopes is
   updated once. A plugin the catalog retired is named with the command that
   removes it on that host instead of being updated.
 - Names update only where they are installed. A name installed on no host
   exits `1`.
-- A host that fails (for example, its marketplace cannot be pinned) gets a failed
-  step named after the host. The other hosts still run, and the exit is `1`.
+- A host that fails gets a failed step named after the host: its listing
+  cannot be read (`could not list its plugins: <cause>`) or its marketplace
+  cannot be pinned. The other hosts still run, and the exit is `1`.
 - `--scope` is accepted for Claude Code and not used by `update`: Claude Code
   picks the scope of each update itself.
 
 On Claude Code, each update runs `claude plugin update <name>@toolu --json`, and
 its result line decides `current at <version>`, `updated <old> → <new>`, or
 skipped with Claude's reason. This needs a Claude Code whose `plugin update` takes
-`--json` (verified with 2.1.311); an older one fails each update with its own
-message.
+`--json` (verified with 2.1.311). An older one fails each update with its own
+message followed by `; toolu needs Claude Code 2.1.311 or newer`.
 
 ## Terminal output
 

@@ -24,6 +24,9 @@ fn the_guide_documents_hosts_update_and_terminal_output() {
     "A script that reads one host's steps should pass `--host`",
     "`NO_COLOR` (non-empty) drops color but keeps the rails",
     "verified with 2.1.311",
+    "names each host whose listing could not be read",
+    "its listing cannot be read (`could not list its plugins: <cause>`)",
+    "followed by `; toolu needs Claude Code 2.1.311 or newer`",
   ] {
     assert!(guide.contains(phrase), "installer.md lacks: {phrase}");
   }
