@@ -7,10 +7,10 @@ files:
 rule:
   any:
     - kind: attribute_value
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: text
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: raw_text
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: comment
-      regex: 'https?://'
+      regex: '(?i)https?://'

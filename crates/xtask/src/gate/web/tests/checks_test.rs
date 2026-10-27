@@ -21,7 +21,7 @@ fn web_gate_limits_code_lines_exclude_blank_and_comments() {
 }
 
 #[test]
-fn web_gate_limits_html_css_and_byte_boundaries() {
+fn web_gate_limits_html_css_code_lines() {
   let dir = tempfile::tempdir().unwrap();
   let asset = dir.path().join("dashboard");
   std::fs::create_dir_all(asset.join("fonts")).unwrap();
@@ -44,17 +44,24 @@ fn web_gate_limits_html_css_and_byte_boundaries() {
       .iter()
       .any(|x| x.contains("max-code-lines"))
   );
+}
+
+#[test]
+fn web_gate_limits_served_and_font_bytes() {
+  let dir = tempfile::tempdir().unwrap();
+  let asset = dir.path().join("dashboard");
+  std::fs::create_dir_all(asset.join("fonts")).unwrap();
   std::fs::write(asset.join("index.html"), "<main></main>").unwrap();
-  let head = std::fs::metadata(asset.join("index.html")).unwrap().len() as usize;
+  let head = std::fs::read(asset.join("index.html")).unwrap().len();
   std::fs::write(
     asset.join("board.css"),
-    format!("/*{}*/", "x".repeat(150000 - head - 4)),
+    format!("/*{}*/", "x".repeat(150_000 - head - 4)),
   )
   .unwrap();
-  assert!(check(&root(), &asset).unwrap().is_empty());
+  assert_eq!(check(&root(), &asset).unwrap(), Vec::<String>::new());
   std::fs::write(
     asset.join("board.css"),
-    format!("/*{}*/", "x".repeat(150001 - head - 4)),
+    format!("/*{}*/", "x".repeat(150_001 - head - 4)),
   )
   .unwrap();
   assert!(
@@ -64,12 +71,12 @@ fn web_gate_limits_html_css_and_byte_boundaries() {
       .any(|x| x.contains("max-served-bytes"))
   );
   std::fs::write(asset.join("board.css"), "").unwrap();
-  std::fs::write(asset.join("fonts/font.woff2"), vec![0_u8; 200000]).unwrap();
+  std::fs::write(asset.join("fonts/font.woff2"), vec![0_u8; 200_000]).unwrap();
   std::fs::create_dir_all(asset.join("tests")).unwrap();
-  std::fs::write(asset.join("tests/large.test.js"), vec![b' '; 200001]).unwrap();
-  std::fs::write(asset.join("fonts/OFL.txt"), vec![b' '; 200001]).unwrap();
-  assert!(check(&root(), &asset).unwrap().is_empty());
-  std::fs::write(asset.join("fonts/font.woff2"), vec![0_u8; 200001]).unwrap();
+  std::fs::write(asset.join("tests/large.test.js"), vec![b' '; 200_001]).unwrap();
+  std::fs::write(asset.join("fonts/OFL.txt"), vec![b' '; 200_001]).unwrap();
+  assert_eq!(check(&root(), &asset).unwrap(), Vec::<String>::new());
+  std::fs::write(asset.join("fonts/font.woff2"), vec![0_u8; 200_001]).unwrap();
   assert!(
     check(&root(), &asset)
       .unwrap()
@@ -103,7 +110,7 @@ fn web_gate_tests_logic_module_requires_matching_node_test() {
       .any(|x| x.contains("logic-test-pair"))
   );
   std::fs::write(asset.join("tests/state.test.js"), "import 'node:test';\n").unwrap();
-  assert!(check(&root(), &asset).unwrap().is_empty());
+  assert_eq!(check(&root(), &asset).unwrap(), Vec::<String>::new());
 }
 
 #[test]
@@ -143,9 +150,12 @@ fn web_gate_limits_oxlint_enforces_js_file_and_function_lines() {
     )
   };
   let lines = |count: usize| {
-    (0..count)
-      .map(|i| format!("export const v{i} = {i};\n"))
-      .collect::<String>()
+    use std::fmt::Write;
+    let mut source = String::new();
+    for i in 0..count {
+      writeln!(source, "export const v{i} = {i};").unwrap();
+    }
+    source
   };
   assert!(!lint(&lines(300)).contains("max-lines"));
   assert!(lint(&lines(301)).contains("max-lines"));

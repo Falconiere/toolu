@@ -7,8 +7,8 @@ files:
 rule:
   any:
     - kind: string_content
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: plain_value
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: comment
-      regex: 'https?://'
+      regex: '(?i)https?://'

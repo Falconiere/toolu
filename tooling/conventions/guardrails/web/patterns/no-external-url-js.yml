@@ -7,6 +7,6 @@ files:
 rule:
   any:
     - kind: string_fragment
-      regex: 'https?://'
+      regex: '(?i)https?://'
     - kind: comment
-      regex: 'https?://'
+      regex: '(?i)https?://'

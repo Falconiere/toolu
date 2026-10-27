@@ -1,1 +1,1 @@
-export const accent = "hsl(80 50% 60%)";
+export const accent = "HSL(80 50% 60%)";

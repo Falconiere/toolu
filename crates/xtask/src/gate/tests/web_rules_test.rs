@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::run;
@@ -25,6 +25,27 @@ fn output(program: &str, args: &[&str]) -> (bool, String) {
   (result.status.success(), text)
 }
 
+fn assert_ast_case(base: &Path, patterns: &Path, file: &str, rule: &str, line: usize) {
+  let rule_file = patterns.join(format!("{rule}.yml"));
+  let target = base.join(file);
+  let (ok, text) = output(
+    "ast-grep",
+    &[
+      "scan",
+      "--rule",
+      &rule_file.to_string_lossy(),
+      "--report-style",
+      "short",
+      &target.to_string_lossy(),
+    ],
+  );
+  assert!(!ok, "{rule} failed to fire on {file}: {text}");
+  assert!(text.contains(rule), "{rule}: {text}");
+  assert!(text.contains(file), "{rule}: {text}");
+  assert!(text.contains(&format!(":{line}:")), "{rule}: {text}");
+  assert_eq!(text.matches(rule).count(), 1, "{rule}: {text}");
+}
+
 #[test]
 fn web_gate_rules_ast_patterns_name_one_violation_and_location() {
   let root = root();
@@ -36,44 +57,34 @@ fn web_gate_rules_ast_patterns_name_one_violation_and_location() {
     ("hsl.css", "no-hardcoded-color-css", 2),
     ("board.css", "no-external-url-css", 5),
     ("external-unquoted.css", "no-external-url-css", 2),
+    ("external-uppercase.css", "no-external-url-css", 1),
     ("external-import.css", "no-external-url-css", 1),
     ("js/view/color.js", "no-hardcoded-color-js", 1),
     ("js/view/rgb.js", "no-hardcoded-color-js", 1),
     ("js/view/hsl.js", "no-hardcoded-color-js", 1),
     ("js/view/external.js", "no-external-url-js", 1),
+    ("js/view/external-uppercase.js", "no-external-url-js", 1),
     ("js/view/fetch.js", "no-bare-fetch", 2),
+    ("js/view/window-fetch.js", "no-bare-fetch", 1),
+    ("js/view/self-fetch.js", "no-bare-fetch", 1),
+    ("js/view/global-fetch.js", "no-bare-fetch", 1),
     ("js/logic/dom.js", "no-dom-in-logic", 2),
     ("js/view/suppression.js", "no-suppression-js", 1),
     ("js/view/eslint-suppression.js", "no-suppression-js", 1),
     ("index.html", "no-external-url-html", 6),
+    ("external-uppercase.html", "no-external-url-html", 1),
     ("index.html", "no-inline-script", 7),
     ("inline-module.html", "no-inline-script", 1),
     ("index.html", "no-inline-style", 8),
     ("inline-style-media.html", "no-inline-style", 1),
     ("index.html", "no-inline-attribute", 11),
     ("inline-style-attribute.html", "no-inline-attribute", 1),
+    ("uppercase-handler.html", "no-inline-attribute", 1),
     ("index.html", "no-suppression-html", 12),
     ("suppression.css", "no-suppression-css", 1),
   ];
   for (file, rule, line) in cases {
-    let rule_file = patterns.join(format!("{rule}.yml"));
-    let target = base.join(file);
-    let (ok, text) = output(
-      "ast-grep",
-      &[
-        "scan",
-        "--rule",
-        &rule_file.to_string_lossy(),
-        "--report-style",
-        "short",
-        &target.to_string_lossy(),
-      ],
-    );
-    assert!(!ok, "{rule} failed to fire on {file}: {text}");
-    assert!(text.contains(rule), "{rule}: {text}");
-    assert!(text.contains(file), "{rule}: {text}");
-    assert!(text.contains(&format!(":{line}:")), "{rule}: {text}");
-    assert_eq!(text.matches(rule).count(), 1, "{rule}: {text}");
+    assert_ast_case(&base, &patterns, file, rule, line);
   }
 }
 
@@ -111,6 +122,27 @@ fn web_gate_rules_oxlint_security_bans_name_file_and_line() {
     assert!(text.contains(file), "{file}: {text}");
     assert!(text.contains(":1:"), "{file}: {text}");
   }
+}
+
+#[test]
+fn web_gate_rules_browser_modules_reject_node_globals() {
+  let root = root();
+  let config = root.join("tooling/conventions/guardrails/web/oxlintrc.json");
+  let file = root.join("fixtures/web-gate/violating/oxlint/node-global.js");
+  let (ok, text) = output(
+    &root.join("node_modules/.bin/oxlint").to_string_lossy(),
+    &[
+      "--config",
+      &config.to_string_lossy(),
+      "--format",
+      "unix",
+      &file.to_string_lossy(),
+    ],
+  );
+  assert!(
+    !ok && text.contains("no-undef") && text.contains("node-global.js:1:"),
+    "{text}"
+  );
 }
 
 #[test]

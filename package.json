@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "version": "8.5.0",
-  "description": "Engineering discipline for coding agents. The version anchor for release-please; jscpd is the gate's one npm tool.",
+  "description": "Engineering discipline for coding agents. The version anchor for release-please and pinned web gate tools.",
   "license": "MIT",
   "devDependencies": {
     "html-validate": "11.17.0",

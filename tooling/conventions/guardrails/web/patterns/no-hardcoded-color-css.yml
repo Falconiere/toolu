@@ -11,4 +11,4 @@ rule:
     - kind: color_value
       regex: '^#[0-9a-fA-F]{3,8}$'
     - kind: call_expression
-      regex: '^(rgb|rgba|hsl|hsla)\('
+      regex: '(?i)^(rgb|rgba|hsl|hsla)\('

@@ -6,4 +6,4 @@ files:
   - '**/*.js'
 rule:
   kind: string_fragment
-  regex: '#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla)\('
+  regex: '(?i)#[0-9a-fA-F]{3,8}\b|\b(rgb|rgba|hsl|hsla)\('

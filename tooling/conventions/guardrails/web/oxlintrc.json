@@ -1,5 +1,6 @@
 {
-  "env": { "browser": true, "node": true },
+  "env": { "browser": true },
+  "overrides": [{ "files": ["**/tests/**/*.js"], "env": { "node": true } }],
   "plugins": ["import", "unicorn"],
   "categories": {
     "correctness": "error",
@@ -17,6 +18,7 @@
     "no-debugger": "error",
     "no-console": "error",
     "no-unused-vars": ["error", { "args": "all" }],
+    "no-undef": "error",
     "import/no-cycle": "error",
     "import/no-self-import": "error",
     "import/no-duplicates": "error",

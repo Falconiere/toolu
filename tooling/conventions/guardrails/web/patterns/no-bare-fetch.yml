@@ -7,4 +7,8 @@ files:
 ignores:
   - '**/js/api.js'
 rule:
-  pattern: 'fetch($$$ARGS)'
+  any:
+    - pattern: 'fetch($$$ARGS)'
+    - pattern: 'window.fetch($$$ARGS)'
+    - pattern: 'self.fetch($$$ARGS)'
+    - pattern: 'globalThis.fetch($$$ARGS)'

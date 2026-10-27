@@ -22,8 +22,10 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let asset = options
     .files
     .first()
-    .map(|path| options.root.join(path))
-    .unwrap_or_else(|| options.root.join(ASSETS));
+    .map_or_else(|| options.root.join(ASSETS), |path| options.root.join(path));
+  if asset.is_symlink() {
+    return Err(format!("web: symlink asset directory: {}", asset.display()));
+  }
   if !asset.exists() && options.files.is_empty() {
     output::say(&format!(
       "web: {ASSETS} absent; dashboard gate will run when assets land"
@@ -39,7 +41,8 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     output::error(finding);
   }
   let mut failed = !findings.is_empty();
-  for (name, program, args) in commands(&options.root, &asset) {
+  let tests = test_files(&asset)?;
+  for (name, program, args) in commands(&options.root, &asset, &tests) {
     output::say(&format!("web: {name}"));
     if !command(&options.root, &program, &args)? {
       failed = true;
@@ -50,6 +53,27 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   } else {
     Verdict::Clean
   })
+}
+
+fn test_files(asset: &Path) -> Result<Vec<String>, String> {
+  let dir = asset.join("tests");
+  let entries =
+    std::fs::read_dir(&dir).map_err(|err| format!("web: cannot read {}: {err}", dir.display()))?;
+  let mut tests = Vec::new();
+  for entry in entries {
+    let entry = entry.map_err(|err| format!("web: {}: {err}", dir.display()))?;
+    let kind = entry
+      .file_type()
+      .map_err(|err| format!("web: {}: {err}", entry.path().display()))?;
+    if kind.is_file() && entry.file_name().to_string_lossy().ends_with(".test.js") {
+      tests.push(entry.path().display().to_string());
+    }
+  }
+  tests.sort();
+  if tests.is_empty() {
+    return Err(format!("web: no tests/*.test.js in {}", dir.display()));
+  }
+  Ok(tests)
 }
 
 fn check_tools(root: &Path) -> Result<(), String> {
@@ -71,7 +95,11 @@ fn check_tools(root: &Path) -> Result<(), String> {
   Ok(())
 }
 
-fn commands(root: &Path, asset: &Path) -> Vec<(&'static str, PathBuf, Vec<String>)> {
+fn commands(
+  root: &Path,
+  asset: &Path,
+  tests: &[String],
+) -> Vec<(&'static str, PathBuf, Vec<String>)> {
   let bin = root.join("node_modules/.bin");
   let config = root.join(CONFIG);
   let shown = asset.display().to_string();
@@ -107,16 +135,18 @@ fn commands(root: &Path, asset: &Path) -> Vec<(&'static str, PathBuf, Vec<String
       ],
     ),
   ];
-  checks.extend(other_commands(&bin, asset, &cfg, &shown));
+  checks.extend(other_commands(&bin, &cfg, &shown, tests));
   checks
 }
 
 fn other_commands(
   bin: &Path,
-  asset: &Path,
   cfg: &impl Fn(&str) -> String,
   shown: &str,
+  tests: &[String],
 ) -> Vec<(&'static str, PathBuf, Vec<String>)> {
+  let mut node = vec!["--test".into()];
+  node.extend(tests.iter().cloned());
   vec![
     (
       "ast-grep",
@@ -135,11 +165,7 @@ fn other_commands(
       bin.join("jscpd"),
       vec!["--config".into(), cfg("jscpd.json"), shown.into()],
     ),
-    (
-      "node --test",
-      PathBuf::from("node"),
-      vec!["--test".into(), asset.join("tests").display().to_string()],
-    ),
+    ("node --test", PathBuf::from("node"), node),
   ]
 }
 

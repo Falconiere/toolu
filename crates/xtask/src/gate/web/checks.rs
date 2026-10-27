@@ -7,11 +7,14 @@ use serde::Deserialize;
 use super::CONFIG;
 
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields, rename_all = "camelCase")]
+#[serde(deny_unknown_fields)]
 struct Rules {
-  max_code_lines: usize,
-  max_served_bytes: u64,
-  max_font_bytes: u64,
+  #[serde(rename = "maxCodeLines")]
+  code_lines: usize,
+  #[serde(rename = "maxServedBytes")]
+  served_bytes: u64,
+  #[serde(rename = "maxFontBytes")]
+  font_bytes: u64,
 }
 
 /// Report native size and test-pair findings for one asset tree.
@@ -39,24 +42,24 @@ pub(super) fn check(root: &Path, asset: &Path) -> Result<Vec<String>, String> {
       served = served.saturating_add(bytes);
     }
     if ["html", "css"].contains(&ext) {
-      check_lines(file, ext, rules.max_code_lines, &mut found)?;
+      check_lines(file, ext, rules.code_lines, &mut found)?;
     }
     if ext == "js" && rel.starts_with("js/logic") {
       check_test(asset, file, &mut found);
     }
   }
-  if served > rules.max_served_bytes {
+  if served > rules.served_bytes {
     found.push(format!(
       "{}:1: max-served-bytes: {served} > {}",
       asset.display(),
-      rules.max_served_bytes
+      rules.served_bytes
     ));
   }
-  if fonts > rules.max_font_bytes {
+  if fonts > rules.font_bytes {
     found.push(format!(
       "{}:1: max-font-bytes: {fonts} > {}",
       asset.join("fonts").display(),
-      rules.max_font_bytes
+      rules.font_bytes
     ));
   }
   Ok(found)
@@ -128,16 +131,25 @@ fn code_lines(text: &str, ext: &str) -> usize {
       let bytes = line.as_bytes();
       let (mut index, mut code) = (0, false);
       while index < bytes.len() {
-        if inside && bytes[index..].starts_with(close) {
+        if inside
+          && bytes
+            .get(index..)
+            .is_some_and(|rest| rest.starts_with(close))
+        {
           inside = false;
           index += close.len();
         } else if inside {
           index += 1;
-        } else if bytes[index..].starts_with(open) {
+        } else if bytes
+          .get(index..)
+          .is_some_and(|rest| rest.starts_with(open))
+        {
           inside = true;
           index += open.len();
         } else {
-          code |= !bytes[index].is_ascii_whitespace();
+          code |= bytes
+            .get(index)
+            .is_some_and(|byte| !byte.is_ascii_whitespace());
           index += 1;
         }
       }

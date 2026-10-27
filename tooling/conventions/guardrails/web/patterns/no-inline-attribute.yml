@@ -6,4 +6,4 @@ files:
   - '**/*.html'
 rule:
   kind: attribute_name
-  regex: '^(on[a-z]+|style)$'
+  regex: '(?i)^(on[a-z]+|style)$'
