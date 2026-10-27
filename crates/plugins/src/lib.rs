@@ -48,6 +48,9 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     timeout: host::run::HOST_TIMEOUT,
     version: env!("CARGO_PKG_VERSION"),
     origin: host::checkout::ORIGIN.to_owned(),
+    style: ctx.style,
+    started: std::time::Instant::now(),
+    intro_shown: false,
   };
   let report = catalog::load(request.catalog.as_deref())
     .and_then(|catalog| dispatch::dispatch(&request, &catalog, &mut cx));

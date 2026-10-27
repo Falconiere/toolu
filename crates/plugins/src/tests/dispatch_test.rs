@@ -37,6 +37,9 @@ fn go(
     timeout: Duration::from_secs(10),
     version: "7.11.0",
     origin: String::new(),
+    style: toolu_runtime::term::Style::Plain,
+    started: std::time::Instant::now(),
+    intro_shown: false,
   };
   dispatch(request, &catalog(), &mut cx)
 }
@@ -283,4 +286,41 @@ fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
     "{}",
     planned.json
   );
+}
+
+#[test]
+fn a_terminal_style_draws_the_rails_report_and_opens_with_the_intro() {
+  let sb = Sandbox::new();
+  sb.host("claude", "[]", "never");
+  sb.write(
+    "claude-installed.json",
+    r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
+  );
+  let mut cx = Context {
+    env: sb.env(),
+    host: Some(Host::Claude),
+    ask: None,
+    timeout: Duration::from_secs(10),
+    version: "7.11.0",
+    origin: String::new(),
+    style: toolu_runtime::term::Style::Mono,
+    started: std::time::Instant::now(),
+    intro_shown: false,
+  };
+  let Ok(listed) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
+    panic!("list failed");
+  };
+  assert!(
+    listed
+      .text
+      .starts_with("┌  toolu plugins list\n│\n◇  claude\n"),
+    "{}",
+    listed.text
+  );
+  assert!(listed.text.contains("│  ✔ jev "), "{}", listed.text);
+  cx.intro_shown = true;
+  let Ok(again) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
+    panic!("list failed");
+  };
+  assert!(again.text.starts_with("◇  claude\n"), "{}", again.text);
 }

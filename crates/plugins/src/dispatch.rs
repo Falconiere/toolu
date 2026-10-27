@@ -1,11 +1,12 @@
 //! Routes a request to its verb on each chosen host and turns the steps into a
 //! report (the former TypeScript installer's `src/plugins/dispatch.ts`).
 
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
+use toolu_runtime::term::Style;
 
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
@@ -18,6 +19,7 @@ use crate::host::{Mode, Target, check_scope, resolve, target_of};
 use crate::prompt::{Ask, Choice};
 use crate::replay;
 use crate::report;
+use crate::report::rails::{self, Frame};
 use crate::step::{Status, Step};
 use crate::verbs::{self, Driver};
 
@@ -36,6 +38,26 @@ pub(crate) struct Context<'a> {
   pub(crate) version: &'static str,
   /// The repository Muse's checkout is cloned from.
   pub(crate) origin: String,
+  /// How the report is drawn: plain, or rails at a terminal.
+  pub(crate) style: Style,
+  /// When the run started, for the rails footer.
+  pub(crate) started: Instant,
+  /// Whether the terminal already shows the `┌  toolu plugins <verb>` intro.
+  pub(crate) intro_shown: bool,
+}
+
+impl Context<'_> {
+  /// The rails text of `verb`'s report, or `plain` when the style is plain.
+  fn shown(&self, verb: &str, rails: impl FnOnce(&Frame) -> String, plain: String) -> String {
+    if !self.style.rails() {
+      return plain;
+    }
+    rails(&Frame {
+      style: self.style,
+      elapsed: self.started.elapsed(),
+      title: (!self.intro_shown).then(|| format!("toolu plugins {verb}")),
+    })
+  }
 }
 
 /// A verb's result: the text, the `--json` document, and whether a step failed.
@@ -201,7 +223,11 @@ fn install(
     .flat_map(|(_, steps)| steps.clone())
     .collect();
   Ok(Report {
-    text: report::install(&sections, request.dry_run),
+    text: cx.shown(
+      "install",
+      |frame| rails::steps(frame, &sections, request.dry_run),
+      report::install(&sections, request.dry_run),
+    ),
     json: report::install_json(&sections, request.dry_run),
     failed: failed(&all),
   })
@@ -233,7 +259,11 @@ fn remove(
     ),
   };
   Ok(Report {
-    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
+    text: cx.shown(
+      "remove",
+      |frame| rails::steps(frame, &[(target, steps.clone())], request.dry_run),
+      dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
+    ),
     json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
     failed: failed(&steps),
   })
@@ -253,7 +283,11 @@ fn list(
     }
   };
   Ok(Report {
-    text: report::list(&rows),
+    text: cx.shown(
+      "list",
+      |frame| rails::list(frame, target, &rows),
+      report::list(&rows),
+    ),
     json: report::rows_json(&rows),
     failed: false,
   })
@@ -277,7 +311,11 @@ fn update(
     )?,
   };
   Ok(Report {
-    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
+    text: cx.shown(
+      "update",
+      |frame| rails::steps(frame, &[(target, steps.clone())], request.dry_run),
+      dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
+    ),
     json: report::host_json(target, &steps, false),
     failed: failed(&steps),
   })
