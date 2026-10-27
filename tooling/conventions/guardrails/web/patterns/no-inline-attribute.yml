@@ -1,0 +1,9 @@
+id: no-inline-attribute
+language: Html
+severity: error
+message: Inline style or event-handler attributes violate the dashboard CSP.
+files:
+  - '**/*.html'
+rule:
+  kind: attribute_name
+  regex: '^(on[a-z]+|style)$'

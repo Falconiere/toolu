@@ -19,7 +19,8 @@
       "README.md",
       "src",
       "tests",
-      "fuzz"
+      "fuzz",
+      "assets"
     ],
     "fuzz": [
       "Cargo.toml",

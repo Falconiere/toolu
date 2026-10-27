@@ -1,0 +1,36 @@
+{
+  "env": { "browser": true, "node": true },
+  "plugins": ["import", "unicorn"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  "rules": {
+    "no-eval": "error",
+    "no-new-func": "error",
+    "no-implied-eval": "error",
+    "no-script-url": "error",
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+    "prefer-const": "error",
+    "no-var": "error",
+    "no-debugger": "error",
+    "no-console": "error",
+    "no-unused-vars": ["error", { "args": "all" }],
+    "import/no-cycle": "error",
+    "import/no-self-import": "error",
+    "import/no-duplicates": "error",
+    "import/no-default-export": "error",
+    "unicorn/filename-case": ["error", { "case": "kebabCase" }],
+    "max-lines": ["error", { "max": 300, "skipBlankLines": true, "skipComments": true }],
+    "max-lines-per-function": ["error", { "max": 50, "skipBlankLines": true, "skipComments": true }],
+    "no-restricted-properties": ["error",
+      { "property": "innerHTML", "message": "Use textContent or DOM nodes." },
+      { "property": "outerHTML", "message": "Use DOM nodes." },
+      { "property": "insertAdjacentHTML", "message": "Use DOM nodes." },
+      { "object": "document", "property": "write", "message": "Use DOM nodes." },
+      { "object": "document", "property": "writeln", "message": "Use DOM nodes." }
+    ],
+    "no-restricted-globals": ["error", { "name": "localStorage", "message": "Use sessionStorage for the token." }]
+  }
+}

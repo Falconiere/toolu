@@ -19,6 +19,7 @@
       ".codex/toolu.config.json",
       "fixtures/**",
       "tooling/conventions/guardrails/rust/**",
+      "tooling/conventions/guardrails/web/**",
       "plugins/rust-quality/**",
       "tools/toolu-cli/**",
       "plugins/*/hooks/hooks.json",

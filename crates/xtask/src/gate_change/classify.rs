@@ -29,6 +29,15 @@ const REGISTRATION: &[&str] = &["layers.json", "folders.json", "inventory.json"]
 /// Host configs that hold `lang.rust`.
 const CONFIGS: &[&str] = &[".claude/toolu.config.json", ".codex/toolu.config.json"];
 
+/// xtask modules that implement the gate itself, rather than product behavior.
+const GATE_CODE: &[&str] = &[
+  "crates/xtask/src/gate.rs",
+  "crates/xtask/src/tests/gate_test.rs",
+  "crates/xtask/src/tests/gate_change_test.rs",
+  "crates/xtask/src/gate_change/classify.rs",
+  "crates/xtask/src/gate_change/tests/classify_test.rs",
+];
+
 /// Classify `path`, given its text at the base and now (`None` when absent).
 pub(super) fn classify(
   path: &Path,
@@ -45,6 +54,14 @@ pub(super) fn classify(
     return Ok(manifest(before, after));
   }
   if GATE_FILES.contains(&name.as_str()) {
+    return Ok(gate(format!("{name} changed")));
+  }
+  if name.starts_with("tooling/conventions/guardrails/web/")
+    || name.starts_with("crates/xtask/src/gate/web/")
+    || name.starts_with("crates/xtask/src/gate/tests/web_")
+    || name == "crates/xtask/src/gate/web.rs"
+    || GATE_CODE.contains(&name.as_str())
+  {
     return Ok(gate(format!("{name} changed")));
   }
   if CONFIGS.contains(&name.as_str()) {

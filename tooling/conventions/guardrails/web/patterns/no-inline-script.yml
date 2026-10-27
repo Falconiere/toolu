@@ -1,0 +1,11 @@
+id: no-inline-script
+language: Html
+severity: error
+message: Inline scripts violate the dashboard CSP.
+files:
+  - '**/*.html'
+rule:
+  kind: raw_text
+  regex: '\S'
+  inside:
+    kind: script_element

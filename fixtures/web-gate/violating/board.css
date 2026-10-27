@@ -1,0 +1,6 @@
+.unsafe-color {
+  color: #b8d94a;
+}
+.external-image {
+  background: url("https://example.test/image.png");
+}

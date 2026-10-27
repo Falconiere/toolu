@@ -1,0 +1,9 @@
+id: no-suppression-html
+language: Html
+severity: error
+message: Fix the finding instead of suppressing a rule.
+files:
+  - '**/*.html'
+rule:
+  kind: comment
+  regex: '(oxlint-disable|eslint-disable|prettier-ignore|html-validate-disable)'

@@ -1,0 +1,16 @@
+id: no-external-url-html
+language: Html
+severity: error
+message: Dashboard assets must not load external URLs.
+files:
+  - '**/*.html'
+rule:
+  any:
+    - kind: attribute_value
+      regex: 'https?://'
+    - kind: text
+      regex: 'https?://'
+    - kind: raw_text
+      regex: 'https?://'
+    - kind: comment
+      regex: 'https?://'

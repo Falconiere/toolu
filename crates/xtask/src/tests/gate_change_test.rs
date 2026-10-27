@@ -90,6 +90,30 @@ fn a_real_diff_is_classified_against_the_merge_base() {
 }
 
 #[test]
+fn web_policy_requires_a_gate_title_and_rejects_unrelated_product_code() {
+  let dir = repo(true);
+  let root = dir.path();
+  write(
+    root,
+    "tooling/conventions/guardrails/web/oxlintrc.json",
+    "{}\n",
+  );
+  assert_eq!(
+    run(&options(root, Some("feat: dashboard"))).unwrap(),
+    Verdict::Findings
+  );
+  assert_eq!(
+    run(&options(root, Some("chore(gates): web policy"))).unwrap(),
+    Verdict::Clean
+  );
+  write(root, "crates/a/src/lib.rs", "//! changed product\n");
+  assert_eq!(
+    run(&options(root, Some("chore(gates): web policy"))).unwrap(),
+    Verdict::Findings
+  );
+}
+
+#[test]
 fn a_base_without_gate_data_is_the_bootstrap_and_a_bad_base_is_an_error() {
   let dir = repo(false);
   let root = dir.path();

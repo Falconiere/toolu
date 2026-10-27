@@ -1,0 +1,9 @@
+id: no-suppression-js
+language: JavaScript
+severity: error
+message: Fix the finding instead of suppressing a rule.
+files:
+  - '**/*.js'
+rule:
+  kind: comment
+  regex: '(oxlint-disable|eslint-disable|prettier-ignore)'

@@ -1,0 +1,12 @@
+id: no-external-url-js
+language: JavaScript
+severity: error
+message: Dashboard assets must not load external URLs.
+files:
+  - '**/*.js'
+rule:
+  any:
+    - kind: string_fragment
+      regex: 'https?://'
+    - kind: comment
+      regex: 'https?://'

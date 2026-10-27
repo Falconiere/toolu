@@ -1,0 +1,14 @@
+id: no-external-url-css
+language: Css
+severity: error
+message: Dashboard assets must not load external URLs.
+files:
+  - '**/*.css'
+rule:
+  any:
+    - kind: string_content
+      regex: 'https?://'
+    - kind: plain_value
+      regex: 'https?://'
+    - kind: comment
+      regex: 'https?://'
