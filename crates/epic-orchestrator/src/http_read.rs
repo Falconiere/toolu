@@ -75,6 +75,9 @@ fn engine_route(
   request: &Request,
   secrets: &Secrets,
 ) -> Option<Response> {
+  if let Some(response) = crate::http_logs::response(context, path, query, request, secrets) {
+    return Some(response);
+  }
   if let Some(key) = path
     .strip_prefix("/api/v1/issues/")
     .and_then(|rest| rest.strip_suffix("/screen"))

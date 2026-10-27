@@ -6,11 +6,18 @@
 pub mod docs_sync;
 /// Non-secret epic settings with forward-compatible nested keys.
 pub mod epic;
+/// Gate mode configuration.
 pub mod gate_mode;
+/// Configuration loading.
 pub mod load;
+/// Host permission configuration.
 pub mod permissions;
+/// Quality rule configuration.
 pub mod quality;
+/// Read helpers for configuration files.
 pub mod read;
+mod redaction;
 /// User-only epic credentials and output redaction.
 pub mod secrets;
+/// Host settings files.
 pub mod settings;

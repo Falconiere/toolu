@@ -13,11 +13,12 @@ use std::time::{Duration, SystemTime};
 
 use toolu_runtime::json::ordered::Ordered;
 use toolu_runtime::process::guard::GroupGuard;
-use toolu_runtime::process::{Output, Spec, group, run_with};
+use toolu_runtime::process::{ChunkObserver, Output, Spec, group, run_with_chunks};
 use toolu_state::lock::token;
 use toolu_state::time::iso_millis;
 
 use super::binding::ResourceBinding;
+use super::job_logs;
 use super::leases::{
   LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease, release_lease,
 };
@@ -27,8 +28,14 @@ const HEARTBEAT: Duration = Duration::from_secs(30);
 /// The shell that waits for the go line, then becomes the job.
 const GO_SHELL: &str = "IFS= read -r ack && [ \"$ack\" = toolu-go ] && exec \"$@\"";
 
-/// The latest heartbeat failure, cleared by the next success.
+/// One failure slot; heartbeats and log writes use separate instances.
 type Failure = Arc<Mutex<Option<String>>>;
+
+#[derive(Default)]
+struct Failures {
+  heartbeat: Failure,
+  log: Failure,
+}
 
 fn beat(root: &Path, token: &str, failure: &Failure) {
   let patch = LeasePatch {
@@ -58,6 +65,18 @@ fn lease_token(lease: &Ordered) -> Result<String, String> {
   }
 }
 
+fn log_observer(log: Arc<job_logs::Writer>, failure: &Failure) -> ChunkObserver {
+  let failure = Arc::clone(failure);
+  Arc::new(move |bytes| {
+    if let Err(err) = log.append(bytes) {
+      let mut failed = failure.lock().unwrap_or_else(PoisonError::into_inner);
+      if failed.is_none() {
+        *failed = Some(err);
+      }
+    }
+  })
+}
+
 /// The job's spec: `argv` behind the go-line shell, the go line before its stdin.
 fn wrapped(argv: &[String], spec: &Spec) -> Spec {
   let mut job = spec.clone();
@@ -84,6 +103,52 @@ fn settle(root: &Path, token: &str, group_id: Option<u32>) -> Result<(), String>
   }
 }
 
+fn finish(
+  root: &Path,
+  token: &str,
+  group_id: Option<u32>,
+  beating: Option<(Sender<()>, JoinHandle<()>)>,
+  failures: &Failures,
+) -> Result<(), String> {
+  if let Some((stop, handle)) = beating {
+    drop(stop);
+    let _joined = handle.join();
+  }
+  settle(root, token, group_id)?;
+  if let Some(failed) = failures
+    .log
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .take()
+  {
+    return Err(failed);
+  }
+  if let Some(failed) = failures
+    .heartbeat
+    .lock()
+    .unwrap_or_else(PoisonError::into_inner)
+    .take()
+  {
+    return Err(failed);
+  }
+  Ok(())
+}
+
+fn leased_log(
+  binding: &ResourceBinding,
+  token: &str,
+  argv: &[String],
+) -> Result<Arc<job_logs::Writer>, String> {
+  let root = binding.root.as_path();
+  match job_logs::start(root, token, &binding.key, argv) {
+    Ok(log) => Ok(Arc::new(log)),
+    Err(err) => {
+      settle(root, token, None)?;
+      Err(err)
+    }
+  }
+}
+
 /// `runManagedJob(argv, binding, opts)`: `argv` under a job lease on the
 /// binding's resource home.
 ///
@@ -107,36 +172,31 @@ pub fn run_managed_job(
   };
   let lease = acquire_lease(root, &request, SystemTime::now())?;
   let token = lease_token(&lease)?;
-  let failure: Failure = Arc::new(Mutex::new(None));
+  let log = leased_log(binding, &token, argv)?;
+  let failures = Failures::default();
+  let observer = log_observer(log, &failures.log);
   let mut group_id = None;
   let mut beating = None;
   let result = GroupGuard::install().and_then(|guard| {
-    run_with(&wrapped(argv, spec), &mut |pid| {
-      group_id = Some(pid);
-      guard.arm(pid);
-      let running = LeasePatch {
-        group_pid: Some(pid),
-        stage: Some("running".to_owned()),
-        ..LeasePatch::default()
-      };
-      patch_lease(root, &token, &running)?;
-      beating = Some(heartbeat(root, &token, &failure));
-      Ok(())
-    })
+    run_with_chunks(
+      &wrapped(argv, spec),
+      &mut |pid| {
+        group_id = Some(pid);
+        guard.arm(pid);
+        let running = LeasePatch {
+          group_pid: Some(pid),
+          stage: Some("running".to_owned()),
+          ..LeasePatch::default()
+        };
+        patch_lease(root, &token, &running)?;
+        beating = Some(heartbeat(root, &token, &failures.heartbeat));
+        Ok(())
+      },
+      observer,
+    )
     .map_err(|err| format!("{err:?}"))
   });
-  if let Some((stop, handle)) = beating {
-    drop(stop);
-    let _joined = handle.join();
-  }
-  settle(root, &token, group_id)?;
-  if let Some(failed) = failure
-    .lock()
-    .unwrap_or_else(PoisonError::into_inner)
-    .take()
-  {
-    return Err(failed);
-  }
+  finish(root, &token, group_id, beating, &failures)?;
   result
 }
 

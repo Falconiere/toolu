@@ -14,6 +14,8 @@ Read routes accept GET and HEAD; actions accept POST. HEAD has no body. Every JS
 | `/api/v1/epics/{id}` | One epic board | key, paused, title, url, waves_total, current_wave, live, queued, graph, issues (key, stage, phase, pr, host, agent_status, agent_status_at, model, effort, phase_age_ms, hold, plan_summary), queue |
 | `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, hold, plan |
 | `/api/v1/issues/{key}/screen` | One worker's visible terminal screen | key, agent_status, text, lines, sampled_at; attach when blocked; or state, or available and reason |
+| `/api/v1/issues/{key}/logs` | One local worker's background logs | items (id, source, label, state, size, started_at, updated_at); or available and reason |
+| `/api/v1/issues/{key}/logs/{id}` | One background log's bounded tail or next page | text, offset, next_offset, size, state, truncated; or available and reason |
 | `/api/v1/agents` | Worker sessions | items (state, key, epic, worktree, session_id) |
 | `/api/v1/agents/live` | What each worker's agent is doing now | available, reason, sampled_at, items (key, epic, host, agent_status, title, sampled_at) |
 | `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason, paused, paused_by, paused_at) |
@@ -75,6 +77,14 @@ The engine calls herdr `agent.read` over the socket with `source: visible` and `
 Reads are cached per worker key for one second; cache hits keep the same `sampled_at`. Every response uses the current configured secrets to redact the screen, then cuts text from the top until the whole JSON body is at most 64 KiB. The end of the last line stays visible, even when that line alone exceeds the cap. Up to eight HTTP herdr calls may overlap across the live-agent and screen routes; a request above the limit gets `503 herdr_busy`.
 
 Herdr `agent_not_found` or `pane_not_found` returns `200` with `state: "not_running"`. Herdr off, scripted, stopped or on a different protocol returns `200` with `available: false` and `reason` (`off`, `scripted`, `not running`, `protocol <n>` or `error: <code>`). Unknown issue keys return `404`.
+
+## Worker background logs
+
+`GET /api/v1/issues/{key}/logs` lists this machine's retained managed-job logs and regular Claude Code task `.output` files for the worker. `GET /api/v1/issues/{key}/logs/{id}` reads one selected log. Both require `Authorization: Bearer <status token>` even on loopback. With no token configured they return `403 control_disabled`; a missing or wrong token returns `401 unauthorized`. HEAD uses the same checks and has no body. Unknown keys and IDs return `404`. IDs are opaque and resolved only from that key's discovered logs; neither route accepts a filesystem path. Fleet peers cannot proxy these routes.
+
+Managed jobs stream both stdout and stderr to a per-lease file as bytes arrive, including output beyond the command's returned-output budget. A log is `running` while its resource lease is active and `done` afterward. Each file keeps its newest 8 MiB on disk; its `size` and offsets count all bytes written. Completed logs are kept for up to 24 hours and at most 20 per worker; active logs are exempt. Claude Code tasks are found under the worker's own worktree slug in the local `claude-<uid>` temporary directory. Only regular `.output` files are listed, so symlinked transcripts are excluded. A task is marked `running` when the worker is running and the file changed in the past three seconds; otherwise it is `done`. A task file's first line becomes its label, or its task ID if that line is empty, unreadable or at least 4 KiB.
+
+The list returns `items` with `id`, `source` (`job` or `claude-task`), redacted `label`, `state`, logical `size`, `started_at` and `updated_at`. The detail returns redacted `text`, effective `offset`, `next_offset`, logical `size`, `state` and `truncated`. Omit `offset` for a tail read or send `?offset=<next_offset>` to follow. If a job's requested offset fell before its retained window, `truncated` is true and the response starts at the first kept byte. An unreadable selected file returns `available: false` and `reason`; an ID absent from the fresh listing returns `404`. Text is read in bounded chunks and the complete JSON response is at most 64 KiB after redaction and escaping.
 
 ## Actions
 

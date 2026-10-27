@@ -39,6 +39,40 @@ fn active_jobs(root: &Path) -> usize {
     .count()
 }
 
+fn wait_for_log(root: &Path, needle: &str) -> PathBuf {
+  let logs = root.join("jobs/logs");
+  let deadline = Instant::now() + Duration::from_secs(4);
+  loop {
+    let found = std::fs::read_dir(&logs).ok().and_then(|entries| {
+      entries
+        .flatten()
+        .map(|entry| entry.path())
+        .find(|path| path.extension().is_some_and(|ext| ext == "log"))
+    });
+    if let Some(path) = found.filter(|path| {
+      std::fs::read_to_string(path)
+        .unwrap_or_default()
+        .contains(needle)
+    }) {
+      return path;
+    }
+    assert!(Instant::now() < deadline, "running job log never appeared");
+    std::thread::sleep(Duration::from_millis(10));
+  }
+}
+
+fn echo_job(
+  owned: ResourceBinding,
+) -> std::thread::JoinHandle<Result<toolu_runtime::process::Output, String>> {
+  std::thread::spawn(move || {
+    run_managed_job(
+      &argv(&["sh", "-c", "printf 'first\\n'; sleep 0.5; printf 'last\\n'"]),
+      &owned,
+      &spec(),
+    )
+  })
+}
+
 #[test]
 fn a_job_sees_its_running_lease_and_releases_it_after() {
   let dir = tempfile::tempdir().unwrap();
@@ -63,6 +97,63 @@ fn a_job_sees_its_running_lease_and_releases_it_after() {
     output.stdout
   );
   assert_eq!(active_jobs(&root), 0);
+}
+
+#[test]
+fn a_running_job_log_grows_and_finishes_with_the_returned_output() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let owned = binding(&root, dir.path());
+  let handle = echo_job(owned);
+  let path = wait_for_log(&root, "first");
+  assert!(
+    !handle.is_finished(),
+    "log appeared only after the job ended"
+  );
+  let output = handle.join().unwrap().unwrap();
+  assert_eq!(output.stdout, "first\nlast\n");
+  assert_eq!(std::fs::read_to_string(path).unwrap(), output.stdout);
+}
+
+#[test]
+fn a_log_write_failure_is_reported_after_the_job_finishes() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let owned = binding(&root, dir.path());
+  let handle = echo_job(owned);
+  let path = wait_for_log(&root, "first");
+  std::fs::remove_file(&path).unwrap();
+  let error = handle.join().unwrap().unwrap_err();
+  assert!(error.contains(".log"), "{error}");
+  assert_eq!(active_jobs(&root), 0);
+}
+
+#[test]
+fn a_managed_log_keeps_both_streams_past_the_returned_output_budget() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let owned = binding(&root, dir.path());
+  let mut bounded = spec();
+  bounded.max_output_bytes = 3;
+  let output = run_managed_job(
+    &argv(&[
+      "sh",
+      "-c",
+      "printf 'out\\n'; sleep 0.05; printf 'err\\n' >&2",
+    ]),
+    &owned,
+    &bounded,
+  )
+  .unwrap();
+  assert!(output.truncated);
+  assert_eq!(output.stdout.len() + output.stderr.len(), 3);
+  let log = std::fs::read_dir(root.join("jobs/logs"))
+    .unwrap()
+    .map(Result::unwrap)
+    .map(|entry| entry.path())
+    .find(|path| path.extension().is_some_and(|ext| ext == "log"))
+    .unwrap();
+  assert_eq!(std::fs::read_to_string(log).unwrap(), "out\nerr\n");
 }
 
 #[test]

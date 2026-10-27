@@ -227,12 +227,13 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     .strip_prefix("/api/v1/issues/")
     .and_then(|rest| rest.strip_suffix("/screen"))
     .is_some();
+  let private_route = screen_route || crate::http_logs::is_route(path);
   let response = if !host_ok {
     Some(Response::error(403, "foreign_host"))
   } else if request.method != "GET" && request.method != "HEAD" {
     Some(Response::error(405, "method_not_allowed"))
   } else if context.auth_required
-    && !screen_route
+    && !private_route
     && !authorized(&secrets, request.authorization.as_deref())
   {
     Some(Response::error(401, "unauthorized"))

@@ -10,10 +10,10 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use serde_json::{Map, Value};
 
-use super::epic::credential_key;
 use crate::host::roots::Roots;
 
-const REDACTED: &str = "<redacted>";
+/// Replacement shown for a configured credential.
+pub(super) const REDACTED: &str = "<redacted>";
 
 /// A failure that never includes credential bytes.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,7 +68,8 @@ impl Secrets {
     self.peer_tokens.get(name).map(String::as_str)
   }
 
-  fn values(&self) -> Vec<&str> {
+  /// Resolved and shadowed credential values for output redaction.
+  pub(super) fn values(&self) -> Vec<&str> {
     let mut values: Vec<&str> = self
       .status_token()
       .into_iter()
@@ -301,42 +302,7 @@ pub fn rotate_status_token(roots: &Roots) -> Result<PathBuf, SecretError> {
   Ok(path)
 }
 
-/// Replace every resolved secret substring in ordinary text.
-pub fn redact_text(text: &str, secrets: &Secrets) -> String {
-  secrets
-    .values()
-    .into_iter()
-    .fold(text.to_owned(), |shown, value| {
-      shown.replace(value, REDACTED)
-    })
-}
-
-/// Replace credential-named JSON fields and resolved secret substrings.
-pub fn redact_json(value: &Value, secrets: &Secrets) -> Value {
-  match value {
-    Value::Object(map) => Value::Object(
-      map
-        .iter()
-        .map(|(key, value)| {
-          let shown = if credential_key(key) {
-            Value::String(REDACTED.to_owned())
-          } else {
-            redact_json(value, secrets)
-          };
-          (key.clone(), shown)
-        })
-        .collect(),
-    ),
-    Value::Array(items) => Value::Array(
-      items
-        .iter()
-        .map(|item| redact_json(item, secrets))
-        .collect(),
-    ),
-    Value::String(text) => Value::String(redact_text(text, secrets)),
-    Value::Null | Value::Bool(_) | Value::Number(_) => value.clone(),
-  }
-}
+pub use super::redaction::{redact_json, redact_text, redact_window, redaction_overlap};
 
 #[cfg(test)]
 #[path = "tests/secrets_test.rs"]

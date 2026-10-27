@@ -6,6 +6,8 @@ use std::io::{ErrorKind, Read};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
 
+use super::ChunkObserver;
+
 /// The bytes still to keep across both streams, and whether any were dropped.
 #[derive(Debug, Clone)]
 pub(super) struct Budget(Arc<Mutex<(usize, bool)>>);
@@ -40,11 +42,15 @@ pub(super) struct Drain {
 
 impl Drain {
   /// Starts reading `stream`; a missing stream is an empty, finished drain.
-  pub(super) fn start<R: Read + Send + 'static>(stream: Option<R>, budget: &Budget) -> Drain {
+  pub(super) fn start<R: Read + Send + 'static>(
+    stream: Option<R>,
+    budget: &Budget,
+    observer: Option<ChunkObserver>,
+  ) -> Drain {
     let bytes = Arc::new(Mutex::new(Vec::new()));
     let reader = stream.map(|stream| {
       let (bytes, budget) = (Arc::clone(&bytes), budget.clone());
-      std::thread::spawn(move || read_all(stream, &bytes, &budget))
+      std::thread::spawn(move || read_all(stream, &bytes, &budget, observer.as_ref()))
     });
     Drain { bytes, reader }
   }
@@ -66,12 +72,20 @@ impl Drain {
   }
 }
 
-fn read_all<R: Read>(mut stream: R, bytes: &Mutex<Vec<u8>>, budget: &Budget) {
+fn read_all<R: Read>(
+  mut stream: R,
+  bytes: &Mutex<Vec<u8>>,
+  budget: &Budget,
+  observer: Option<&ChunkObserver>,
+) {
   let mut chunk = [0_u8; 8192];
   loop {
     match stream.read(&mut chunk) {
       Ok(0) => return,
       Ok(read) => {
+        if let Some(observer) = observer {
+          observer(chunk.get(..read).unwrap_or(&chunk));
+        }
         let kept = budget.take(read);
         lock(bytes).extend(chunk.iter().take(kept));
       }

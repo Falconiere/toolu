@@ -20,11 +20,15 @@ use std::io::{ErrorKind, Write as _};
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};
 use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
+use std::sync::Arc;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::env::Env;
 use drain::{Budget, Drain};
+
+/// Receives every stdout or stderr chunk as it is drained, before output truncation.
+pub type ChunkObserver = Arc<dyn Fn(&[u8]) + Send + Sync>;
 
 /// The deadline when a caller sets none.
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -146,6 +150,26 @@ pub fn run_with(
   spec: &Spec,
   on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
 ) -> Result<Output, RunError> {
+  run_with_impl(spec, on_spawn, None)
+}
+
+/// [`run_with`] with an observer for every raw output chunk from both streams.
+///
+/// # Errors
+/// As [`run_with`].
+pub fn run_with_chunks(
+  spec: &Spec,
+  on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
+  observer: ChunkObserver,
+) -> Result<Output, RunError> {
+  run_with_impl(spec, on_spawn, Some(observer))
+}
+
+fn run_with_impl(
+  spec: &Spec,
+  on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
+  observer: Option<ChunkObserver>,
+) -> Result<Output, RunError> {
   let program = spec.argv.first().filter(|program| !program.is_empty());
   let program = program.ok_or(RunError::EmptyArgv)?;
   if spec.timeout.is_zero() {
@@ -167,8 +191,8 @@ pub fn run_with(
   }
   let feeder = feed(&mut child, spec.stdin.clone());
   let budget = Budget::new(spec.max_output_bytes);
-  let stdout = Drain::start(child.stdout.take(), &budget);
-  let stderr = Drain::start(child.stderr.take(), &budget);
+  let stdout = Drain::start(child.stdout.take(), &budget, observer.clone());
+  let stderr = Drain::start(child.stderr.take(), &budget, observer);
   let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline, spec)?;
   if let Some(Err(err)) = feeder.and_then(fed) {
     return Err(RunError::Stdin(err));

@@ -40,6 +40,16 @@ const ENDPOINTS: &[Endpoint] = &[
     purpose: "One worker's visible terminal screen",
   },
   Endpoint {
+    path: "/api/v1/issues/{key}/logs",
+    fields: "items (id, source, label, state, size, started_at, updated_at); or available and reason",
+    purpose: "One local worker's background logs",
+  },
+  Endpoint {
+    path: "/api/v1/issues/{key}/logs/{id}",
+    fields: "text, offset, next_offset, size, state, truncated; or available and reason",
+    purpose: "One background log's bounded tail or next page",
+  },
+  Endpoint {
     path: "/api/v1/agents",
     fields: "items (state, key, epic, worktree, session_id)",
     purpose: "Worker sessions",
@@ -113,6 +123,17 @@ Reads are cached per worker key for one second; cache hits keep the same `sample
 
 Herdr `agent_not_found` or `pane_not_found` returns `200` with `state: "not_running"`. Herdr off, scripted, stopped or on a different protocol returns `200` with `available: false` and `reason` (`off`, `scripted`, `not running`, `protocol <n>` or `error: <code>`). Unknown issue keys return `404`.
 "#;
+
+/// The token-gated local worker background log routes.
+const LOGS: &str = r"
+## Worker background logs
+
+`GET /api/v1/issues/{key}/logs` lists this machine's retained managed-job logs and regular Claude Code task `.output` files for the worker. `GET /api/v1/issues/{key}/logs/{id}` reads one selected log. Both require `Authorization: Bearer <status token>` even on loopback. With no token configured they return `403 control_disabled`; a missing or wrong token returns `401 unauthorized`. HEAD uses the same checks and has no body. Unknown keys and IDs return `404`. IDs are opaque and resolved only from that key's discovered logs; neither route accepts a filesystem path. Fleet peers cannot proxy these routes.
+
+Managed jobs stream both stdout and stderr to a per-lease file as bytes arrive, including output beyond the command's returned-output budget. A log is `running` while its resource lease is active and `done` afterward. Each file keeps its newest 8 MiB on disk; its `size` and offsets count all bytes written. Completed logs are kept for up to 24 hours and at most 20 per worker; active logs are exempt. Claude Code tasks are found under the worker's own worktree slug in the local `claude-<uid>` temporary directory. Only regular `.output` files are listed, so symlinked transcripts are excluded. A task is marked `running` when the worker is running and the file changed in the past three seconds; otherwise it is `done`. A task file's first line becomes its label, or its task ID if that line is empty, unreadable or at least 4 KiB.
+
+The list returns `items` with `id`, `source` (`job` or `claude-task`), redacted `label`, `state`, logical `size`, `started_at` and `updated_at`. The detail returns redacted `text`, effective `offset`, `next_offset`, logical `size`, `state` and `truncated`. Omit `offset` for a tail read or send `?offset=<next_offset>` to follow. If a job's requested offset fell before its retained window, `truncated` is true and the response starts at the first kept byte. An unreadable selected file returns `available: false` and `reason`; an ID absent from the fresh listing returns `404`. Text is read in bounded chunks and the complete JSON response is at most 64 KiB after redaction and escaping.
+";
 
 /// The `## Actions` section: the token-gated write route.
 const ACTIONS: &str = "\n## Actions\n\nThe engine that serves the page can be controlled from it. Peers are never controlled. `POST /api/v1/actions/{op}` sends one control operation to the engine's state loop, the same way `toolu epic` does over its control socket:
@@ -241,6 +262,7 @@ pub(crate) fn render() -> String {
   }
   out.push_str(NOTES);
   out.push_str(SCREEN);
+  out.push_str(LOGS);
   out.push_str(ACTIONS);
   out.push_str(FLEET);
   out

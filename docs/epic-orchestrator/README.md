@@ -82,9 +82,14 @@ workers, hosts, jobs, machine capacity, queue and attention, and follows the
 journal without polling. `toolu epic status --json <key>` returns
 one epic or worker through the local control socket.
 Selecting a worker opens its drawer: plan ledger steps, agent status, phase
-history and, with the token, the agent's live screen, read every 2 seconds only
-while the drawer is open and the tab is visible. A blocked agent shows the
-`herdr agent attach` command to copy. `#issue=<key>` links to a drawer.
+history and Screen and Logs tabs. With the token, Screen reads the agent's live
+pane every 2 seconds while selected and visible; a blocked agent shows the
+`herdr agent attach` command to copy. Logs lists this worker's managed jobs and
+Claude Code task output, follows the selected log every second while selected
+and visible, and offers a jump to the latest output after scrolling up. The
+list distinguishes running and done sources and reports empty or unreadable
+logs. `#issue=<key>` links to a drawer. Logs are local to the serving machine;
+the peer dashboard link opens that machine's logs.
 
 ### Dashboard control
 
