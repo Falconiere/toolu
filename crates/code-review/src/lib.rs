@@ -20,7 +20,8 @@ pub mod memory;
 mod prepass;
 mod report;
 mod review;
-mod rules;
+/// Repository conventions from the base ref.
+pub mod rules;
 /// The committed diff and its reviewable anchors.
 pub mod shape;
 mod validate;
