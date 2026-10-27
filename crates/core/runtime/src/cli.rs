@@ -20,6 +20,8 @@ pub struct Ctx {
   pub config_dir: Option<PathBuf>,
   /// Stdin text when a verb reads `-`. `None` when it does not, or the read failed.
   pub stdin: Option<String>,
+  /// How human output is drawn: `Plain` unless stdout is a terminal (never under `--json`).
+  pub style: crate::term::Style,
 }
 
 /// What a verb produced: the exit, the data for stdout and the diagnostic for stderr.

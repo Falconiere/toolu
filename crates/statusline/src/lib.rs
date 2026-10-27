@@ -34,10 +34,7 @@ pub fn render(stdin: Option<String>, status: &dyn StatusSnapshot) -> Outcome {
   let roots = Roots::new(Env::process(), None);
   let ctx = Ctx {
     stdin,
-    json: false,
-    quiet: false,
-    host: None,
-    config_dir: None,
+    ..Ctx::default()
   };
   render::run(&ctx, &roots, status)
 }

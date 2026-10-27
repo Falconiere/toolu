@@ -5,6 +5,7 @@ use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::term::Style;
 
 use super::{ctx_of, finish, run, wants_json};
 use crate::tests::{context, words};
@@ -153,15 +154,25 @@ fn the_global_flags_become_the_verb_context() {
     .try_get_matches_from(argv.split(' '))
     .unwrap();
   assert_eq!(
-    ctx_of(&matches),
+    ctx_of(&matches, Style::Color),
     Ctx {
       json: true,
       quiet: true,
       host: Some(Host::Codex),
       config_dir: Some(PathBuf::from("/tmp/cfg")),
       stdin: None,
+      style: Style::Plain,
     }
   );
+}
+
+#[test]
+fn a_terminal_style_reaches_the_verb_unless_json_is_asked_for() {
+  let matches = tree::command()
+    .try_get_matches_from(["toolu", "status"])
+    .unwrap();
+  assert_eq!(ctx_of(&matches, Style::Mono).style, Style::Mono);
+  assert_eq!(ctx_of(&matches, Style::Plain).style, Style::Plain);
 }
 
 #[test]

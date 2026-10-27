@@ -1,8 +1,15 @@
 //! The only place `toolu` writes to its standard streams.
 
-use std::io::Write;
+use std::io::{IsTerminal as _, Write};
 
 use toolu_runtime::cli::Outcome;
+use toolu_runtime::env::Env;
+use toolu_runtime::term::{Style, style_of};
+
+/// What standard output can show: rails at a terminal, else the plain text.
+pub(crate) fn style() -> Style {
+  style_of(&Env::process(), std::io::stdout().is_terminal())
+}
 
 // A closed stream has nowhere left to report to, so a failed write is dropped.
 

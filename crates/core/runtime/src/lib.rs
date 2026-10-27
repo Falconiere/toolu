@@ -16,7 +16,8 @@
 //! - `startup`: retiring the stable paths of before #440, bounded context output, Codex dependency
 //!   warnings and `TOOLU_STARTUP_REPORT` records;
 //! - `registry`: registry events, file names, the module manifest and the `Rule` trait;
-//! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments.
+//! - `json`: JSON text as TypeScript and jq print it; `cli_args`: jq number arguments;
+//! - `term`: the terminal style of human output and the rails builders.
 
 pub mod atomic;
 pub mod catalog;
@@ -35,6 +36,7 @@ pub mod process;
 pub mod registry;
 pub mod skew;
 pub mod startup;
+pub mod term;
 pub mod version;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
