@@ -145,20 +145,24 @@ fn replay_one(
 
 type Done = Vec<(usize, Result<Checked, String>)>;
 
-/// The pairs to replay and the results so far, shared by the workers.
+/// The pairs to replay, the indexes of this pass, and the results so far, shared by the workers.
 struct Work<'a> {
   plugin: &'a Plugin,
   pairs: &'a [(&'a Case, Host)],
   golden: &'a Golden,
+  order: &'a [usize],
   next: AtomicUsize,
   done: Mutex<Done>,
 }
 
 impl Work<'_> {
-  /// Replay the next unclaimed pair until none is left.
+  /// Replay the next unclaimed pair of the pass until none is left.
   fn run(&self) {
     loop {
-      let index = self.next.fetch_add(1, Ordering::SeqCst);
+      let at = self.next.fetch_add(1, Ordering::SeqCst);
+      let Some(&index) = self.order.get(at) else {
+        break;
+      };
       let Some(&(case, host)) = self.pairs.get(index) else {
         break;
       };
@@ -170,28 +174,48 @@ impl Work<'_> {
   }
 }
 
-/// Replay `cases` on each of their hosts with every worker pulling the next pair.
-pub(crate) fn replay_all(plugin: &Plugin, cases: &[Case], golden: &Golden) -> Res<Report> {
-  let pairs: Vec<(&Case, Host)> = cases
-    .iter()
-    .flat_map(|case| case.hosts().into_iter().map(move |host| (case, host)))
-    .collect();
+/// Replay the pairs at `order` with `workers` threads, each pulling the next pair.
+fn replay_pass(
+  plugin: &Plugin,
+  pairs: &[(&Case, Host)],
+  golden: &Golden,
+  order: &[usize],
+  workers: usize,
+) -> Res<Done> {
   let work = Work {
     plugin,
-    pairs: &pairs,
+    pairs,
     golden,
+    order,
     next: AtomicUsize::new(0),
     done: Mutex::new(Vec::new()),
   };
-  let workers = std::thread::available_parallelism()
-    .map_or(4, usize::from)
-    .min(8);
   std::thread::scope(|scope| {
     for _ in 0..workers {
       scope.spawn(|| work.run());
     }
   });
-  let mut results = work.done.into_inner().map_err(|err| err.to_string())?;
+  work.done.into_inner().map_err(|err| err.to_string().into())
+}
+
+/// Replay `cases` on each of their hosts, in parallel and then the Node-tool cases alone.
+pub(crate) fn replay_all(plugin: &Plugin, cases: &[Case], golden: &Golden) -> Res<Report> {
+  let pairs: Vec<(&Case, Host)> = cases
+    .iter()
+    .flat_map(|case| case.hosts().into_iter().map(move |host| (case, host)))
+    .collect();
+  // The hook gives jscpd 10 s. Idle it takes 0.15 s, but beside the pool's instrumented
+  // toolu runs it took 6.5 s and timed out in the container gate, so those cases wait.
+  let (alone, pooled): (Vec<usize>, Vec<usize>) = (0..pairs.len()).partition(|&index| {
+    pairs
+      .get(index)
+      .is_some_and(|(case, _)| case.links_a_node_tool())
+  });
+  let workers = std::thread::available_parallelism()
+    .map_or(4, usize::from)
+    .min(8);
+  let mut results = replay_pass(plugin, &pairs, golden, &pooled, workers)?;
+  results.extend(replay_pass(plugin, &pairs, golden, &alone, 1)?);
   results.sort_by_key(|(index, _)| *index);
   Ok(report(&pairs, results))
 }

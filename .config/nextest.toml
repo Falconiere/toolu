@@ -27,9 +27,9 @@ threads-required = 'num-test-threads'
 filter = 'binary(doctor)'
 threads-required = 'num-test-threads'
 
-# The TypeScript replays run jscpd through npx under the hook's 10 s timeout. In the
-# container gate the run's opening disk flood made two duplication replays time out
-# and come back empty; alone the test takes about 11 s.
+# The TypeScript replays run jscpd under the hook's 10 s timeout. In the container gate
+# two duplication replays timed out and came back empty, so the test runs alone here,
+# and inside it the jscpd cases run after its worker pool. Alone it takes about 11 s.
 [[profile.default.overrides]]
 filter = 'binary(golden_quality) & test(=ts_quality_replays_every_golden_case)'
 threads-required = 'num-test-threads'

@@ -18,20 +18,21 @@ pub(crate) struct Sandbox {
   pub(crate) home: PathBuf,
   /// The Codex home, `<home>/.codex`.
   pub(crate) codex_home: PathBuf,
-  /// The steps' `PATH`: a stub `bun` and a `bunx` shim (`npx --no-install`), then this
-  /// process's `PATH`.
+  /// The steps' `PATH`: a stub `bun` and a `bunx` shim that runs the project's
+  /// `node_modules/.bin`, then this process's `PATH`.
   pub(crate) path_var: String,
 }
 
 /// The fixtures were captured in Bun projects on a machine with Bun, and toolu
 /// no longer brings Bun (#440): `bun` only needs to exist (ts-quality checks the
 /// project's package manager is installed), and `bunx` runs the project's own
-/// binaries, as it would there.
+/// binaries directly, as it would there. The hooks run in the project root.
 fn user_toolchain(root: &Path) -> Res<String> {
   use std::os::unix::fs::PermissionsExt as _;
   let bin = root.join("user-bin");
   std::fs::create_dir_all(&bin)?;
-  for (name, body) in [("bun", "exit 0"), ("bunx", "exec npx --no-install \"$@\"")] {
+  let bunx = "bin=$1; shift; exec \"node_modules/.bin/$bin\" \"$@\"";
+  for (name, body) in [("bun", "exit 0"), ("bunx", bunx)] {
     let file = bin.join(name);
     std::fs::write(&file, format!("#!/bin/sh\n{body}\n"))?;
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o755))?;
