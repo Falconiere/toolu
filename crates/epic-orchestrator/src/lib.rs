@@ -78,6 +78,7 @@ mod http_metrics;
 mod http_read;
 mod http_request;
 mod http_response;
+mod http_screen;
 mod http_secrets;
 mod http_stream;
 mod jira_cli;

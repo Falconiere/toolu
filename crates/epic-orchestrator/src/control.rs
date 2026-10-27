@@ -96,6 +96,7 @@ fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, St
   Ok(Some(HttpConfig {
     reload: Some(roots),
     herdr: crate::http_live::Herdr::of(env),
+    attach_session: crate::herdr::session_name(env).map(str::to_owned),
     ..HttpConfig::new(addr, secrets, settings.peers)
   }))
 }

@@ -60,6 +60,8 @@ replaced it in #434 and #435.)
 ## Pitfalls
 
 - Do not use or close another agent's Herdr workspace.
+- When running an isolated engine from an agent pane, set `HERDR_SOCKET_PATH` to the named session's socket: it takes precedence over `TOOLU_EPIC_HERDR_SESSION`.
+- To verify an oversized `agent.read --source visible` screen, configure a wide headless viewport, suspend your own real Claude agent with Ctrl+Z, and print the fixture from the shell in that same pane. The named Herdr agent remains readable while suspended; confirm this before using its output as evidence.
 - `toolu epic status` does not prove lock ownership, restart persistence, or
   snapshots.
 - A prewritten future deadline only proves loading. Also let a first engine run

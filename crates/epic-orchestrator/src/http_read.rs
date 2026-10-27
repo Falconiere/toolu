@@ -14,7 +14,7 @@ use crate::http_response::{READ_METHODS, Response, json_response, send, stream_h
 use crate::http_stream;
 use crate::status_api;
 
-/// Build a finite read response from embedded assets or status documents.
+/// Build a finite response from embedded assets, local status, or a peer.
 pub(crate) fn finite_response(
   context: &Context,
   path: &str,
@@ -75,6 +75,22 @@ fn engine_route(
   request: &Request,
   secrets: &Secrets,
 ) -> Option<Response> {
+  if let Some(key) = path
+    .strip_prefix("/api/v1/issues/")
+    .and_then(|rest| rest.strip_suffix("/screen"))
+  {
+    if secrets.status_token().is_none() {
+      return Some(Response::error(403, "control_disabled"));
+    }
+    if !authorized(secrets, request.authorization.as_deref()) {
+      return Some(Response::error(401, "unauthorized"));
+    }
+    return Some(
+      context
+        .screen
+        .response(key, &context.herdr_calls, &context.world, secrets),
+    );
+  }
   Some(match path {
     "/api/v1/agents/live" => context
       .live
@@ -96,7 +112,7 @@ fn engine_route(
   })
 }
 
-/// Serve one authorized journal stream until it closes.
+/// Serve an authorized journal stream until it closes or its token expires.
 pub(crate) fn serve_events(
   stream: &mut TcpStream,
   context: &Context,
