@@ -1,18 +1,20 @@
-//! Queued worker prompts: bursts collapse to one debounced prompt, and
-//! entries for dead agents are dropped on flush.
+//! Queued worker prompts: bursts collapse to one debounced prompt that keeps
+//! every distinct text, and entries for dead agents are dropped on flush.
 
 use super::{enqueue_prompt, flush_prompts, next_prompt_ms};
 use crate::logic::ensure_issue;
 use crate::model::{Step, World};
 
 #[test]
-fn a_burst_of_queued_prompts_flushes_once_with_the_latest_text() {
+fn a_burst_of_queued_prompts_flushes_once_with_every_distinct_text() {
   let mut world = World::new(0);
   let issue = ensure_issue(&mut world, "a", "one", "/epic");
   issue.stage = "running".to_owned();
   for n in 0..10 {
     enqueue_prompt(&mut world, "a", &format!("n{n}"), "relay", None);
   }
+  // A repeat of a queued text adds nothing.
+  enqueue_prompt(&mut world, "a", "n3", "relay", None);
   assert_eq!(next_prompt_ms(&world), Some(5_000));
   world.now_ms = 4_999;
   flush_prompts(&mut world);
@@ -31,7 +33,10 @@ fn a_burst_of_queued_prompts_flushes_once_with_the_latest_text() {
       | Step::Notify { .. } => None,
     })
     .collect();
-  assert_eq!(prompts, [("a".to_owned(), "n9".to_owned())]);
+  assert_eq!(
+    prompts,
+    [("a".to_owned(), "n0 n1 n2 n3 n4 n5 n6 n7 n8 n9".to_owned())]
+  );
   assert!(world.prompt_queue.is_empty());
   let journals: Vec<_> = world
     .outbox

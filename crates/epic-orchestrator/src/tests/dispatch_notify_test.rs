@@ -157,3 +157,49 @@ fn notify_cools_down_a_relayed_recipient() {
   assert_eq!(late["ok"], true);
   assert_eq!(relayed_prompts(&engine).len(), 2);
 }
+
+fn write_spool(
+  tmp: &tempfile::TempDir,
+  token: &str,
+  body: &serde_json::Value,
+) -> std::path::PathBuf {
+  let spool = tmp.path().join("spool");
+  std::fs::create_dir_all(&spool).expect("spool");
+  let path = spool.join(format!("{token}.json"));
+  std::fs::write(&path, format!("{body}\n")).expect("spool file");
+  path
+}
+
+#[test]
+fn a_refused_notify_drops_its_spool_file() {
+  let (tmp, mut engine) = running_engine();
+  let body = json!({"op": "notify", "token": "n6", "key": "a", "kind": "help", "to": "zzz"});
+  let path = write_spool(&tmp, "n6", &body);
+  let (_, refused) = round(&mut engine, &body);
+  assert_eq!(refused["error"], "unknown recipient zzz");
+  assert!(!path.is_file(), "a restart would replay the refused notice");
+}
+
+#[test]
+fn ingest_sets_a_refused_notify_aside_and_keeps_starting() {
+  let (tmp, mut engine) = running_engine();
+  let body = json!({"op": "notify", "token": "n7", "key": "a", "kind": "help", "to": "zzz"});
+  let path = write_spool(&tmp, "n7", &body);
+  crate::dispatch::ingest(&mut engine).expect("a refused notice must not fail ingest");
+  assert!(!path.is_file());
+  assert!(path.with_extension("bad").is_file());
+  assert_eq!(engine.world.attention.len(), 0);
+}
+
+#[test]
+fn notify_does_not_relay_across_epics() {
+  let (_tmp, mut engine) = running_engine();
+  let other = crate::logic::ensure_issue(&mut engine.world, "c", "two", "/other");
+  other.stage = "running".to_owned();
+  let (_, refused) = round(
+    &mut engine,
+    &json!({"op": "notify", "token": "n9", "key": "a", "kind": "help", "to": "c"}),
+  );
+  assert_eq!(refused["error"], "unknown recipient c");
+  assert_eq!(relayed_prompts(&engine).len(), 0);
+}

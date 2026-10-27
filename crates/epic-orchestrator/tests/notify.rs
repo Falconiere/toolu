@@ -1,10 +1,11 @@
 //! Worker notices against a live engine over the real binary and control
-//! socket: `notify` journals and raises attention (AC-1), and an addressed
-//! notice reaches its sibling through the debounced fan-out (AC-6).
+//! socket: `notify` journals and raises attention (AC-1), a refused
+//! recipient fails the verb, and an addressed notice reaches its sibling at
+//! once (AC-6).
 //!
-//! AC-2 shares the delivery half: merge-to-enqueue is covered by the
-//! `merge_bridge` unit tests, and no CLI verb can merge without GitHub, so
-//! the live leg below proves the shared debounce-flush path through AC-6.
+//! AC-2 (a merge prompts its waiting dependents through the debounce queue)
+//! is covered by the `merge_bridge` and `schedule_prompt` unit tests: no CLI
+//! verb can merge without GitHub.
 
 use std::path::PathBuf;
 use std::process::{Child, Command, Stdio};
@@ -243,12 +244,23 @@ fn notify_reaches_attention_and_a_sibling_through_the_live_engine() {
   // per-epic detail only counts them.
   let status = rig.toolu(&["status"]).expect("status");
   assert!(attention_has(&status, "blocked", "a"), "{status}");
+  // An unknown recipient is refused, not answered `ok`.
+  let refused = rig.toolu(&[
+    "notify",
+    "--status-file",
+    &rig.status_file("a"),
+    "--kind",
+    "help",
+    "--to",
+    "nobody",
+  ]);
+  assert!(refused.is_err(), "{refused:?}");
   // AC-6: an addressed notice is relayed to the sibling.
   relay_to_sibling(&rig).expect("relay");
 }
 
-/// AC-6: an addressed notice reaches the sibling through the live
-/// debounced fan-out, journaled and visible in status.
+/// AC-6: an addressed notice reaches the sibling through the live engine,
+/// journaled and visible in status.
 fn relay_to_sibling(rig: &Rig) -> Result<(), String> {
   let file = rig.status_file("a");
   let relayed = rig.toolu(&[

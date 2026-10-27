@@ -7,7 +7,7 @@ use std::sync::mpsc::Sender;
 
 use serde_json::{Value, json};
 
-use crate::dispatch::{pump_after, remember_spool, spool_seen};
+use crate::dispatch::{discard_spool, pump_after, remember_spool, spool_seen};
 use crate::journal::Record;
 use crate::model::{Action, Step, World};
 use crate::server::Engine;
@@ -27,11 +27,14 @@ pub(crate) fn reply_notify(
     return Ok(false);
   }
   if let Err(err) = apply_notify(engine, request) {
+    discard_spool(engine, request);
     let _sent = reply.send(json!({"error": err}));
     return Ok(false);
   }
-  remember_spool(engine, request)?;
+  // Journal first: a crash before `remember_spool` replays the spool file, a
+  // crash after it would lose the notice.
   engine.flush()?;
+  remember_spool(engine, request)?;
   let _sent = reply.send(json!({"ok": true}));
   pump_after(engine)
 }
@@ -51,7 +54,7 @@ pub(crate) fn apply_notify(engine: &mut Engine, request: &Value) -> Result<(), S
   if !crate::verbs_notify::NOTIFY_KINDS.contains(&kind) {
     return Err(format!("unknown kind {kind}"));
   }
-  if !to.is_empty() && to != key && !engine.world.issues.contains_key(to) {
+  if !to.is_empty() && to != key && !is_sibling(&engine.world, key, to) {
     return Err(format!("unknown recipient {to}"));
   }
   engine
@@ -63,6 +66,17 @@ pub(crate) fn apply_notify(engine: &mut Engine, request: &Value) -> Result<(), S
     relay(engine, key, kind, note, to);
   }
   Ok(())
+}
+
+/// Whether `to` is an issue of the sender's epic. A sender the engine does not
+/// know yet may name any known issue.
+fn is_sibling(world: &World, key: &str, to: &str) -> bool {
+  world.issues.get(to).is_some_and(|peer| {
+    world
+      .issues
+      .get(key)
+      .is_none_or(|sender| sender.epic == peer.epic)
+  })
 }
 
 /// The quiet window between two relays to one recipient.
@@ -86,17 +100,9 @@ fn relay(engine: &mut Engine, from: &str, kind: &str, note: &str, to: &str) {
   // Bound and scrub before worker text reaches a sibling: bounded_note
   // caps the length, flattens lines, and redacts secret prefixes.
   let text = relay_text(from, kind, &crate::note::bounded_note(note));
-  engine
-    .world
-    .outbox
-    .push_back(Step::Journal(Record::new("prompt", "relay", to, "", &text)));
-  engine.world.outbox.push_back(Step::Prompt {
-    key: to.to_owned(),
-    text: text.clone(),
-    // No fallback: the notice already raised its attention item above. The
-    // direction stays visible in status for workers that poll instead.
-    fallback: None,
-  });
+  // No fallback: the notice already raised its attention item above. The
+  // direction stays visible in status for workers that poll instead.
+  crate::babysit::prompt(&mut engine.world, to, "relay", text.clone(), None);
   engine.world.relayed_at_ms.insert(to.to_owned(), now);
   if let Some(issue) = engine.world.issues.get_mut(to) {
     issue.direction = Some(crate::model::Direction {

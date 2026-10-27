@@ -123,7 +123,8 @@ pub(crate) fn map_pane_closed(world: &mut World, pane_id: &str) {
 }
 
 /// Queue `text` for `key`'s worker. A burst collapses to one prompt: the
-/// first notice sets the deadline, later ones only refresh the text.
+/// first notice sets the deadline, later ones add their text, so no notice
+/// of the burst is lost.
 pub(crate) fn enqueue_prompt(
   world: &mut World,
   key: &str,
@@ -141,7 +142,12 @@ pub(crate) fn enqueue_prompt(
       name: String::new(),
       fallback: None,
     });
-  text.clone_into(&mut queued.text);
+  if queued.text.is_empty() {
+    text.clone_into(&mut queued.text);
+  } else if !queued.text.contains(text) {
+    queued.text.push(' ');
+    queued.text.push_str(text);
+  }
   name.clone_into(&mut queued.name);
   queued.fallback = fallback.map(str::to_owned);
 }
@@ -160,32 +166,20 @@ pub(crate) fn next_prompt_ms(world: &World) -> Option<u64> {
 /// fall back to attention through the prompt's own fallback kind.
 pub(crate) fn flush_prompts(world: &mut World) {
   let now = world.now_ms;
-  let mut due: Vec<String> = world
+  let due: Vec<String> = world
     .prompt_queue
     .iter()
     .filter(|(_, queued)| queued.due_ms <= now)
     .map(|(key, _)| key.clone())
     .collect();
-  due.sort();
   for key in due {
     let Some(queued) = world.prompt_queue.remove(&key) else {
       continue;
     };
-    if !crate::attention::has_live_agent(world, &key) {
-      continue;
+    if crate::attention::has_live_agent(world, &key) {
+      let fallback = queued.fallback.as_deref();
+      crate::babysit::prompt(world, &key, &queued.name, queued.text, fallback);
     }
-    world.outbox.push_back(Step::Journal(Record::new(
-      "prompt",
-      &queued.name,
-      &key,
-      "",
-      &queued.text,
-    )));
-    world.outbox.push_back(Step::Prompt {
-      key,
-      text: queued.text,
-      fallback: queued.fallback,
-    });
   }
 }
 

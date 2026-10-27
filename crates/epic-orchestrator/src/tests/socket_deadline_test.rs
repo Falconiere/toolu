@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use crate::model::World;
 use crate::watch::{Kind, Watch};
 
-use super::{github_ready, prompt_ready, wake_after};
+use super::{github_ready, prompt_ready, stall_ready, wake_after};
 
 #[test]
 fn github_retry_after_hold_does_not_spin_the_socket() {
@@ -36,6 +36,8 @@ fn a_queued_prompt_wakes_the_socket_before_the_tick() {
   assert!(wake <= Duration::from_millis(5_000), "{wake:?}");
   world.now_ms = 6_000;
   assert!(prompt_ready(&world));
+  // A due prompt is delivered on its own, without a full engine tick.
+  assert!(!stall_ready(&world));
 }
 
 #[test]

@@ -199,6 +199,15 @@ pub(crate) fn remember_spool(engine: &Engine, request: &Value) -> Result<(), Str
   Ok(())
 }
 
+/// Drop the spool file of a request the engine refused, so a restart does not
+/// replay it.
+pub(crate) fn discard_spool(engine: &Engine, request: &Value) {
+  let token = request.get("token").and_then(Value::as_str).unwrap_or("");
+  if let Ok(path) = crate::client::spool_path(&engine.paths.root, token) {
+    let _gone = std::fs::remove_file(path);
+  }
+}
+
 /// Ingest reports spooled while the engine was unavailable.
 pub(crate) fn ingest(engine: &mut Engine) -> Result<(), String> {
   let mut files = spool_files(&engine.paths.spool())?;
@@ -233,7 +242,15 @@ fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String>
     return Ok(());
   }
   match value.get("op").and_then(Value::as_str).unwrap_or("report") {
-    "notify" => crate::dispatch_ops::apply_notify(engine, &value)?,
+    "notify" => {
+      // A refused notice would fail every start; set it aside like bad JSON.
+      if crate::dispatch_ops::apply_notify(engine, &value).is_err() {
+        let _quarantined = std::fs::rename(path, path.with_extension("bad"));
+        return Ok(());
+      }
+      // Journal the notice before `remember_spool` deletes its spool file.
+      engine.flush()?;
+    }
     _ => engine.report(&report_from(&value))?,
   }
   remember_spool(engine, &value)

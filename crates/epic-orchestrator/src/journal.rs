@@ -17,7 +17,8 @@ pub(crate) struct Record {
   pub seq: u64,
   /// UTC journal timestamp.
   pub at: String,
-  /// `transition`, `action`, `prompt`, `judgment`, `admission` or `recovery`.
+  /// `transition`, `action`, `prompt`, `judgment`, `admission`, `recovery` or
+  /// `notify` (a worker notice).
   pub kind: String,
   /// What happened, for example `merge-intent`.
   pub name: String,

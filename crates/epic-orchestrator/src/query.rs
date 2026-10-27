@@ -172,7 +172,7 @@ pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
     "pr": pr,
     "note": note,
   });
-  submit_spooled(&paths, "report", &token, &request)
+  submit_spooled(&paths, "report", false, &token, &request)
 }
 
 /// Send a worker notice to the orchestrator, or one sibling issue.
@@ -202,24 +202,28 @@ pub(crate) fn notify(matches: &ArgMatches, env: &Env) -> Outcome {
     "note": text(matches, "note").unwrap_or(""),
     "to": text(matches, "to").unwrap_or(""),
   });
-  submit_spooled(&paths, "notify", &token, &request)
+  submit_spooled(&paths, "notify", true, &token, &request)
 }
 
-/// Spool `request` under `token`, then deliver it when the engine is live.
-/// An unreachable engine keeps the spool and still answers `ok`.
-fn submit_spooled(paths: &Paths, verb: &str, token: &str, request: &Value) -> Outcome {
+/// Spool `req` under `token`, then deliver it when the engine is live.
+/// An unreachable engine keeps the spool and still answers `ok`. With
+/// `checked`, an `error` reply (a refused request) is a failure.
+fn submit_spooled(paths: &Paths, verb: &str, checked: bool, token: &str, req: &Value) -> Outcome {
   let path = match crate::client::spool_path(&paths.root, token) {
     Ok(path) => path,
     Err(err) => return failed(&format!("toolu epic {verb}"), &err),
   };
-  if let Err(err) = write_value(&path, request) {
+  if let Err(err) = write_value(&path, req) {
     return failed(&format!("toolu epic {verb}"), &err);
   }
   if !paths.socket().exists() {
     return json_out(&json!({"ok": true}));
   }
-  match exchange_retry(paths, PROTOCOL, request) {
-    Ok(doc) => json_out(&doc),
+  match exchange_retry(paths, PROTOCOL, req) {
+    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
+      Some(err) if checked => failed(&format!("toolu epic {verb}"), err),
+      _ => json_out(&doc),
+    },
     Err(err) if err.starts_with("connect:") => json_out(&json!({"ok": true})),
     Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }

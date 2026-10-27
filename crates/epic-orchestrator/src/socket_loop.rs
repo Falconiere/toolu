@@ -121,8 +121,9 @@ fn on_timeout(
     tick(engine, next_tick, babysit)?;
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
     let _tick = engine.tick(babysit)?;
-    flush_prompts(engine)?;
-  } else if prompt_ready(&engine.world) {
+  }
+  // Whatever woke the loop, a due prompt goes out now, not a tick later.
+  if prompt_ready(&engine.world) {
     flush_prompts(engine)?;
   }
   let _replies = satisfy(engine, waiters);

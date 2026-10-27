@@ -52,13 +52,15 @@ pub(crate) fn merged(world: &mut World, key: &str) {
 
 /// Queue an unblock prompt for every running issue this merge unblocks. A
 /// failed delivery falls back to an `unblocked` attention item.
-fn unblock_dependents(world: &mut World, key: &str) {
+pub(crate) fn unblock_dependents(world: &mut World, key: &str) {
   let waiting: Vec<String> = world
     .issues
     .iter()
     .filter(|(_, issue)| {
+      // Only a started worker: a never-launched dependent (empty stage) has
+      // no pane, so the prompt would fail and raise a false `unblocked`.
       issue.blockers.iter().any(|blocker| blocker == key)
-        && crate::attention::has_live_agent(world, &issue.key)
+        && matches!(issue.stage.as_str(), "running" | "awaiting_merge")
     })
     .map(|(dep, _)| dep.clone())
     .collect();

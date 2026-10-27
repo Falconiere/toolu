@@ -303,7 +303,8 @@ pub(crate) struct World {
   pub outbox: VecDeque<Step>,
   /// Worker prompts waiting out their debounce window, by issue key.
   pub prompt_queue: BTreeMap<String, QueuedPrompt>,
-  /// Last realtime relay per recipient, bounding worker ping-pong.
+  /// Last relay per recipient, bounding worker ping-pong. Relays bypass
+  /// `prompt_queue` and go out at once.
   pub relayed_at_ms: BTreeMap<String, u64>,
   /// When the engine last journaled its resource use (Unix ms).
   pub usage_at_ms: u64,
@@ -316,7 +317,7 @@ pub(crate) struct QueuedPrompt {
   pub text: String,
   /// The earliest Unix-millisecond time it may be sent.
   pub due_ms: u64,
-  /// The journal name of the flushed prompt (`relay`, `unblocked`).
+  /// The journal name of the flushed prompt (`unblocked`).
   pub name: String,
   /// The attention kind raised when delivery fails, if one is owed.
   pub fallback: Option<String>,
