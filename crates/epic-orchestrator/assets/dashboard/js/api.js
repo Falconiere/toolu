@@ -4,6 +4,8 @@ async function get(path) {
   return response.json();
 }
 
+const root = (peer) => (peer ? `/api/v1/fleet/peers/${encodeURIComponent(peer)}` : "/api/v1");
+
 export const readFleet = () => get("/api/v1/fleet");
 export const readLive = () => get("/api/v1/agents/live");
 
@@ -15,7 +17,7 @@ async function readBoards(base, epics) {
 }
 
 export async function readDashboard(peer) {
-  const base = peer ? `/api/v1/fleet/peers/${encodeURIComponent(peer)}` : "/api/v1";
+  const base = root(peer);
   const [overview, epics, hosts, attention] = await Promise.all(
     ["overview", "epics", "hosts", "attention"].map((name) => get(`${base}/${name}`)),
   );
@@ -24,4 +26,15 @@ export async function readDashboard(peer) {
     ? null
     : await get(`/api/v1/events?since=${Math.max(0, (overview.journal_seq ?? 0) - 7)}&limit=7`);
   return { overview, epics, boards, hosts, attention, events };
+}
+
+export const readIssue = (peer, key) => get(`${root(peer)}/issues/${encodeURIComponent(key)}`);
+
+// The screen route is local only and always needs the bearer token.
+export async function readScreen(key, token) {
+  const response = await fetch(`/api/v1/issues/${encodeURIComponent(key)}/screen`, {
+    cache: "no-store",
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return { status: response.status, body: await response.json().catch(() => null) };
 }

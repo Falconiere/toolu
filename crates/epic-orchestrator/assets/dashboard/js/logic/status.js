@@ -13,10 +13,12 @@ const HOSTS = {
   paused: { kind: "paused", label: "‖ PAUSED" },
 };
 
+export const DONE_STAGES = ["merged", "cleaning", "cleanup-incomplete", "abandoned"];
+
 const count = (value) => (Number.isFinite(value) && value > 0 ? value : 0);
 
 export function agentState(issue, fallback) {
-  if (["merged", "cleaning", "cleanup-incomplete", "abandoned"].includes(issue?.stage)) {
+  if (DONE_STAGES.includes(issue?.stage)) {
     return AGENTS.done;
   }
   if (!issue?.stage) return AGENTS.queued;
@@ -68,6 +70,10 @@ export function phaseLine(issue, wave) {
     ? phase
     : `${phase} · ${Math.floor(count(issue.phase_age_ms) / 60_000)}m`;
 }
+
+// Engine-launched Claude Code workers run with `-n <key>`, so their title is the key, not a summary.
+export const statusTitle = (live, key) =>
+  live?.title && live.title.trim() !== key ? live.title : null;
 
 export function liveTitle(host, title) {
   const kind = host === "claude" ? "session" : host === "muse" ? "folder" : "title";

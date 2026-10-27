@@ -81,6 +81,10 @@ It shows registered epics,
 workers, hosts, jobs, machine capacity, queue and attention, and follows the
 journal without polling. `toolu epic status --json <key>` returns
 one epic or worker through the local control socket.
+Selecting a worker opens its drawer: plan ledger steps, agent status, phase
+history and, with the token, the agent's live screen, read every 2 seconds only
+while the drawer is open and the tab is visible. A blocked agent shows the
+`herdr agent attach` command to copy. `#issue=<key>` links to a drawer.
 
 The dashboard can also control the engine that serves it. It can pause or resume
 epics, acknowledge attention, answer a worker and release a hold. Each action

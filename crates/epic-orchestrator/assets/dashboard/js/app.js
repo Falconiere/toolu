@@ -9,10 +9,13 @@ import {
   showConnection,
   showError,
 } from "./view/dashboard.js";
+import { closeDrawer, initDrawer, syncDrawer } from "./worker-drawer.js";
 
 const state = { peer: null, fleet: null, docs: null, live: null, sampledAt: 0, request: 0 };
 let stream;
 let refreshTimer;
+
+initDrawer(() => state);
 
 function stopStream() {
   stream?.close();
@@ -51,6 +54,7 @@ async function refresh() {
     state.docs = docs;
     state.sampledAt = Date.now();
     renderDashboard(docs, state.peer ? null : state.live, state.peer, state.sampledAt);
+    syncDrawer();
     showError(null);
     showConnection(true);
     startStream();
@@ -82,6 +86,7 @@ async function sampleLive() {
     state.live = live;
     if (state.docs) {
       renderDashboard(state.docs, state.live, null, state.sampledAt);
+      syncDrawer();
     }
   } catch {
     state.live = null;
@@ -90,6 +95,7 @@ async function sampleLive() {
 
 function select(peer) {
   if (state.peer === peer) return;
+  closeDrawer();
   state.peer = peer;
   state.docs = null;
   state.live = null;

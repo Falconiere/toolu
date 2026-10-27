@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="/assets/8.5.0/board.css" />
     <link rel="stylesheet" href="/assets/8.5.0/board-layout.css" />
     <link rel="stylesheet" href="/assets/8.5.0/panels.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/drawer.css" />
     <script type="module" src="/assets/8.5.0/js/app.js"></script>
   </head>
   <body>
@@ -64,13 +65,90 @@
             </dd>
           </div>
         </dl>
-        <section class="board-section" aria-labelledby="board-title">
-          <header class="section-heading">
-            <h2 id="board-title">Epic board</h2>
-            <span id="sampled">LIVE · POLLED 3S</span>
-          </header>
-          <div id="board" class="board"><p class="empty">Loading registered epics…</p></div>
-        </section>
+        <div id="workspace" class="workspace">
+          <section class="board-section" aria-labelledby="board-title">
+            <header class="section-heading">
+              <h2 id="board-title">Epic board</h2>
+              <span id="sampled">LIVE · POLLED 3S</span>
+            </header>
+            <div id="board" class="board"><p class="empty">Loading registered epics…</p></div>
+          </section>
+          <aside id="drawer" class="drawer" aria-label="Worker" hidden>
+            <header id="drawer-header" class="drawer-header">
+              <div class="drawer-identity">
+                <span id="drawer-epic" class="eyebrow"></span>
+                <span id="drawer-paused" class="state state-paused" hidden>
+                  <span class="glyph">‖</span><span class="state-word">PAUSED</span>
+                </span>
+                <h2 id="drawer-title">Worker</h2>
+              </div>
+              <button id="drawer-close" class="drawer-close" type="button">[ CLOSE ]</button>
+              <dl id="drawer-meta" class="drawer-meta"></dl>
+              <p class="drawer-phase">
+                <span id="drawer-phase"></span>
+                <a id="drawer-pr" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
+              </p>
+            </header>
+            <p id="drawer-status" class="drawer-status"></p>
+            <div id="drawer-attention" class="drawer-attention" hidden>
+              <strong id="drawer-attention-head"></strong>
+              <p id="drawer-attention-text"></p>
+            </div>
+            <section id="drawer-plan" class="drawer-section" aria-labelledby="drawer-plan-title">
+              <header class="section-heading">
+                <h3 id="drawer-plan-title">PLAN</h3>
+                <span id="drawer-plan-line"></span>
+              </header>
+              <progress id="drawer-plan-bar" aria-label="Plan steps green" hidden></progress>
+              <p id="drawer-next" class="drawer-next" hidden></p>
+              <p id="drawer-plan-note" class="drawer-note"></p>
+              <ol id="drawer-steps" class="drawer-steps"></ol>
+            </section>
+            <section
+              id="drawer-screen"
+              class="drawer-section"
+              aria-labelledby="drawer-screen-title"
+            >
+              <header class="section-heading">
+                <h3 id="drawer-screen-title">SCREEN</h3>
+                <span id="drawer-screen-meta"></span>
+              </header>
+              <div id="drawer-notice" class="drawer-notice" hidden>
+                <strong id="drawer-notice-label"></strong>
+                <p id="drawer-notice-text"></p>
+                <a
+                  id="drawer-peer-link"
+                  href="/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  hidden
+                ></a>
+              </div>
+              <div id="drawer-blocked" class="drawer-blocked" hidden>
+                <strong>▲ BLOCKED · WAITING ON A KEY PRESS</strong>
+                <p>
+                  Key presses from the web are not supported. Answer it here, or attach from a
+                  terminal:
+                </p>
+                <div class="drawer-attach">
+                  <code id="drawer-attach"></code>
+                  <button id="drawer-copy" type="button">[ COPY ]</button>
+                </div>
+              </div>
+              <pre id="drawer-screen-text" class="drawer-screen-text" tabindex="0" hidden></pre>
+            </section>
+            <section
+              id="drawer-phases"
+              class="drawer-section"
+              aria-labelledby="drawer-phases-title"
+            >
+              <header class="section-heading"><h3 id="drawer-phases-title">PHASES</h3></header>
+              <ol id="drawer-phase-list" class="drawer-phase-list"></ol>
+            </section>
+            <!-- Reserved for ANSWER →, RELEASE HOLD and ACK (#656). -->
+            <div id="drawer-actions" class="drawer-actions"></div>
+          </aside>
+        </div>
         <div class="panels">
           <section class="panel" aria-labelledby="hosts-title">
             <header class="section-heading">

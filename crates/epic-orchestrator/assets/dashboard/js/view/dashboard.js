@@ -5,27 +5,11 @@ import {
   issueRows,
   liveTitle,
   phaseLine,
+  statusTitle,
   tiles,
   waveLine,
 } from "../logic/status.js";
-
-const $ = (id) => document.getElementById(id);
-const element = (tag, className, value) => {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (value !== undefined) node.textContent = String(value);
-  return node;
-};
-const text = (id, value) => {
-  $(id).textContent = value;
-};
-
-function mark(state) {
-  const [glyph, ...words] = state.label.split(" ");
-  const badge = element("span", `state state-${state.kind}`);
-  badge.append(element("span", "glyph", glyph), element("span", "state-word", words.join(" ")));
-  return badge;
-}
+import { $, element, mark, text } from "./dom.js";
 
 export function renderMachines(fleet, selected, select) {
   const nav = $("machines");
@@ -93,7 +77,7 @@ function rowLine(issue, live, peer) {
     return `blocked by ${issue.open_blockers.join(", ")}`;
   }
   const state = agentState(issue, live?.agent_status);
-  return live?.title
+  return statusTitle(live, issue.key)
     ? `${state.kind} · ${liveTitle(live.host || issue.host, live.title)}`
     : state.kind;
 }
@@ -143,7 +127,8 @@ function issueButton(issue, live, attention, peer) {
 
 function renderBoards(boards, live, attention, peer) {
   const target = $("board");
-  const focused = document.activeElement?.dataset?.issue;
+  // Attention keys carry `data-issue` too; restore focus only to a board row.
+  const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
   const scrolls = new Map(
     [...target.querySelectorAll(".table-scroll")].map((node) => [
       node.dataset.epic,
@@ -207,8 +192,21 @@ function renderHosts(hosts, now) {
   if (!target.children.length) target.append(element("p", "empty", "No hosts reported."));
 }
 
-function renderAttention(attention) {
+function attentionKey(key, keys) {
+  if (!key || !keys.has(key)) return element("span", "", key || "ENGINE");
+  const button = element("button", "attention-key", key);
+  button.type = "button";
+  button.dataset.issue = key;
+  button.setAttribute("aria-label", `Open ${key}`);
+  return button;
+}
+
+function renderAttention(attention, boards) {
+  const keys = new Set(
+    boards.flatMap((board) => (board.graph?.issues ?? []).map((node) => node.key)),
+  );
   const target = $("attention");
+  const focused = target.contains(document.activeElement) && document.activeElement.dataset.issue;
   target.replaceChildren();
   const items = attention.items ?? [];
   text("attention-count", `${items.length} OPEN`);
@@ -217,7 +215,7 @@ function renderAttention(attention) {
     const head = element("div", "attention-head");
     head.append(
       element("strong", "", `▲ ${(item.kind || "UNKNOWN").toUpperCase()}`),
-      element("span", "", item.key || "ENGINE"),
+      attentionKey(item.key, keys),
       element("time", "", `${Math.floor((item.age_ms ?? 0) / 60_000)}m`),
     );
     row.append(head, element("p", "", item.note || "Needs attention."));
@@ -226,6 +224,11 @@ function renderAttention(attention) {
   }
   if (!items.length)
     target.append(element("li", "empty", "Nothing needs you. Workers keep going."));
+  if (focused) {
+    [...target.querySelectorAll("button[data-issue]")]
+      .find((button) => button.dataset.issue === focused)
+      ?.focus({ preventScroll: true });
+  }
 }
 
 function renderJournal(events, peer) {
@@ -250,7 +253,7 @@ export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
   const attention = renderTiles(docs, sampledAt, now);
   renderBoards(docs.boards, live, attention, peer);
   renderHosts(docs.hosts, now);
-  renderAttention(attention);
+  renderAttention(attention, docs.boards);
   renderJournal(docs.events, peer);
   text(
     "sampled",
@@ -261,7 +264,7 @@ export function renderDashboard(docs, live, peer, sampledAt, now = Date.now()) {
 export function renderTick(docs, sampledAt, now = Date.now()) {
   const attention = renderTiles(docs, sampledAt, now);
   renderHosts(docs.hosts, now);
-  renderAttention(attention);
+  renderAttention(attention, docs.boards);
 }
 
 export function renderUnavailable(message) {

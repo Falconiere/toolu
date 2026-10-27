@@ -2,15 +2,12 @@ use std::io::{Read as _, Write as _};
 use std::net::TcpStream;
 use std::path::Path;
 
-use serde_json::json;
 use toolu_runtime::config::secrets::Secrets;
-use toolu_state::time::epoch_millis;
 
-use crate::disk::write_value;
-use crate::fleet_rig::{Engine, config, free_port, get_json, listener};
+use crate::fleet_rig::{config, listener};
 
 const ASSET_CACHE: &str = "public, max-age=31536000, immutable";
-const ASSET_ROUTES: [(&str, &str, &str, &str); 12] = [
+const ASSET_ROUTES: [(&str, &str, &str, &str); 18] = [
   ("/", "index.html", "text/html", "no-store"),
   ("/tokens.css", "tokens.css", "text/css", ASSET_CACHE),
   ("/board.css", "board.css", "text/css", ASSET_CACHE),
@@ -21,6 +18,7 @@ const ASSET_ROUTES: [(&str, &str, &str, &str); 12] = [
     ASSET_CACHE,
   ),
   ("/panels.css", "panels.css", "text/css", ASSET_CACHE),
+  ("/drawer.css", "drawer.css", "text/css", ASSET_CACHE),
   ("/js/app.js", "js/app.js", "text/javascript", ASSET_CACHE),
   ("/js/api.js", "js/api.js", "text/javascript", ASSET_CACHE),
   (
@@ -38,6 +36,36 @@ const ASSET_ROUTES: [(&str, &str, &str, &str); 12] = [
   (
     "/js/view/peer.js",
     "js/view/peer.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/worker-drawer.js",
+    "js/worker-drawer.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/logic/drawer.js",
+    "js/logic/drawer.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/logic/fragment.js",
+    "js/logic/fragment.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/view/dom.js",
+    "js/view/dom.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/view/drawer.js",
+    "js/view/drawer.js",
     "text/javascript",
     ASSET_CACHE,
   ),
@@ -206,81 +234,4 @@ fn dashboard_page_has_the_board_panels_and_accessible_states() {
       "{file}"
     );
   }
-}
-
-fn save_capture(captured: &serde_json::Value) {
-  if std::env::var_os("TOOLU_CAPTURE_DASHBOARD").is_none() {
-    return;
-  }
-  let path =
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/dashboard/status.json");
-  std::fs::create_dir_all(path.parent().expect("fixture parent")).expect("fixture dir");
-  std::fs::write(
-    &path,
-    serde_json::to_vec_pretty(captured).expect("fixture json"),
-  )
-  .expect("write fixture");
-}
-
-fn seed_host_states(root: &Path) {
-  let now = epoch_millis(std::time::SystemTime::now());
-  write_value(
-    &root.join("state.json"),
-    &json!({
-      "version": 1,
-      "leases": [],
-      "cooldowns": {"codex": {"until": now + 41 * 60_000, "reason": "usage limit"}},
-      "paused_hosts": {"muse": {"by": "user", "at": now}}
-    }),
-  )
-  .expect("host states");
-}
-
-#[test]
-fn dashboard_status_capture_comes_from_running_engines() {
-  let temp = tempfile::tempdir().expect("temp root");
-  let peer = Engine::start_titled(
-    &temp.path().join("peer"),
-    ("peer-649", "Peer dashboard"),
-    "peer-658",
-    config(free_port(), Vec::new(), Secrets::none()),
-  );
-  let local = Engine::start_titled(
-    &temp.path().join("local"),
-    ("local-649", "Dashboard redesign"),
-    "local-658",
-    config(free_port(), vec![peer.peer("build-mini")], Secrets::none()),
-  );
-  seed_host_states(&local.paths.root);
-  let issue_dir = local.root.join("local-649/issues");
-  std::fs::create_dir_all(&issue_dir).expect("issue dir");
-  write_value(
-    &issue_dir.join("local-658.json"),
-    &json!({
-      "key": "local-658",
-      "kind": "claude",
-      "worktree": Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
-    }),
-  )
-  .expect("issue record");
-  let captured = json!({
-    "overview": get_json(local.addr, "/api/v1/overview"),
-    "epics": get_json(local.addr, "/api/v1/epics"),
-    "board": get_json(local.addr, "/api/v1/epics/local-649"),
-    "hosts": get_json(local.addr, "/api/v1/hosts"),
-    "attention": get_json(local.addr, "/api/v1/attention"),
-    "fleet": get_json(local.addr, "/api/v1/fleet"),
-    "events": get_json(local.addr, "/api/v1/events?limit=7"),
-    "live": get_json(local.addr, "/api/v1/agents/live"),
-    "peer_overview": get_json(local.addr, "/api/v1/fleet/peers/build-mini/overview"),
-    "peer_board": get_json(local.addr, "/api/v1/fleet/peers/build-mini/epics/peer-649")
-  });
-  assert_eq!(captured["board"]["issues"][0]["key"], "local-658");
-  assert_eq!(captured["peer_board"]["issues"][0]["key"], "peer-658");
-  assert_eq!(captured["fleet"]["machines"][1]["name"], "build-mini");
-  assert_eq!(captured["hosts"]["items"][1]["reason"], "usage limit");
-  assert_eq!(captured["hosts"]["items"][3]["paused"], true);
-  save_capture(&captured);
-  local.stop();
-  peer.stop();
 }

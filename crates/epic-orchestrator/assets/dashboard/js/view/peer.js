@@ -1,6 +1,14 @@
 import { peerDashboardUrl } from "../logic/status.js";
+import { $ } from "./dom.js";
 
-const $ = (id) => document.getElementById(id);
+// The `[ OPEN <NAME> DASHBOARD ↗ ]` link, shown only for a safe peer root URL.
+export function showPeerLink(link, machine) {
+  const url = peerDashboardUrl(machine?.dashboard_url);
+  link.hidden = !url;
+  if (!url) return;
+  link.href = url;
+  link.textContent = `[ OPEN ${machine.name.toUpperCase()} DASHBOARD ↗ ]`;
+}
 
 export function renderPeer(machine) {
   const banner = $("peer-banner");
@@ -9,11 +17,5 @@ export function renderPeer(machine) {
   $("hosts-help").textContent = machine
     ? "Read-only on a peer."
     : "Pause stops new launches; running workers continue. Resume also clears a cooldown.";
-  const link = $("peer-link");
-  link.hidden = true;
-  const url = peerDashboardUrl(machine?.dashboard_url);
-  if (!url) return;
-  link.href = url;
-  link.textContent = `[ OPEN ${machine.name.toUpperCase()} DASHBOARD ↗ ]`;
-  link.hidden = false;
+  showPeerLink($("peer-link"), machine);
 }

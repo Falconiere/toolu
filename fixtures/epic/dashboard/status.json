@@ -35,13 +35,13 @@
         "phase": "execution",
         "phase_age_ms": 0,
         "plan_summary": {
-          "green": 3,
-          "next": "s4",
-          "pending": 1,
-          "red": 0,
+          "green": 6,
+          "next": "s1",
+          "pending": 0,
+          "red": 1,
           "running": 0,
-          "stale": 0,
-          "total": 4
+          "stale": 5,
+          "total": 7
         },
         "pr": null,
         "stage": "running"
@@ -79,16 +79,16 @@
   "events": {
     "events": [
       {
-        "at": "2026-10-27T19:05:57.060Z",
+        "at": "2026-10-27T21:43:39.753Z",
         "epic": "",
         "key": "",
         "kind": "action",
         "name": "engine-usage",
-        "note": "{\"cpu_ms\":20,\"event\":\"start\",\"max_rss_bytes\":13467648}",
+        "note": "{\"cpu_ms\":15,\"event\":\"start\",\"max_rss_bytes\":13795328}",
         "seq": 1
       },
       {
-        "at": "2026-10-27T19:05:57.074Z",
+        "at": "2026-10-27T21:43:39.766Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -153,7 +153,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T19:05:57.084Z",
+        "last_seen": "2026-10-27T21:43:39.775Z",
         "local": true,
         "name": "local",
         "paused": true,
@@ -161,12 +161,12 @@
         "state": "ok"
       },
       {
-        "age_ms": 16,
+        "age_ms": 13,
         "attention_count": 0,
         "counts": {
           "running": 1
         },
-        "dashboard_url": "http://127.0.0.1:63980/",
+        "dashboard_url": "http://127.0.0.1:59600/",
         "engine": "running",
         "epics": [
           {
@@ -210,7 +210,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T19:05:57.068Z",
+        "last_seen": "2026-10-27T21:43:39.762Z",
         "local": false,
         "name": "build-mini",
         "paused": true,
@@ -262,7 +262,7 @@
       },
       {
         "cap": 3,
-        "cooldown_until": "2026-10-27T19:46:57.080Z",
+        "cooldown_until": "2026-10-27T22:24:39.771Z",
         "host": "codex",
         "paused": false,
         "paused_at": null,
@@ -285,7 +285,7 @@
         "cooldown_until": null,
         "host": "muse",
         "paused": true,
-        "paused_at": "2026-10-27T19:05:57.080Z",
+        "paused_at": "2026-10-27T21:43:39.771Z",
         "paused_by": "user",
         "reason": null,
         "running": 0
@@ -293,11 +293,111 @@
     ],
     "schema": 1
   },
+  "issue": {
+    "agent_status": "unknown",
+    "agent_status_at": null,
+    "effort": null,
+    "epic": "local-649",
+    "hold": null,
+    "host": "claude",
+    "key": "local-658",
+    "last_gate_verdict": null,
+    "launches": 0,
+    "model": null,
+    "phase": "execution",
+    "phase_age_ms": 0,
+    "phase_history": [
+      {
+        "at": "2026-10-27T21:43:39Z",
+        "note": "fleet",
+        "phase": "execution"
+      }
+    ],
+    "plan": {
+      "next": "s1",
+      "plan_doc": "docs/toolu/plans/2026-10-27-dashboard-worker-drawer.md",
+      "steps": [
+        {
+          "activity": null,
+          "id": "s1",
+          "last_run": "2026-10-27T21:31:15Z",
+          "status": "green",
+          "title": "DOM-free drawer logic and fragment parsing with node tests over captured real documents"
+        },
+        {
+          "activity": null,
+          "id": "s2",
+          "last_run": "2026-10-27T21:31:21Z",
+          "status": "green",
+          "title": "capture a real issue document and token-gated screen replies into the dashboard fixture"
+        },
+        {
+          "activity": null,
+          "id": "s3",
+          "last_run": "2026-10-27T21:31:23Z",
+          "status": "green",
+          "title": "drawer view, styles, page regions, api readers and app wiring (open, Esc, deep link, 2 s visible-and-open polling)"
+        },
+        {
+          "activity": null,
+          "id": "s4",
+          "last_run": "2026-10-27T21:31:24Z",
+          "status": "green",
+          "title": "Rust page and asset tests: drawer regions, step labels, notice texts, attach form, polling gates, new routes served"
+        },
+        {
+          "activity": null,
+          "id": "s5",
+          "last_run": "2026-10-27T21:31:25Z",
+          "status": "green",
+          "title": "status API reference documents the drawer, fragment, sessionStorage token and polling"
+        },
+        {
+          "activity": null,
+          "id": "s6",
+          "last_run": "2026-10-27T21:31:25Z",
+          "status": "green",
+          "title": "live browser evidence against this branch's engine with real herdr agents"
+        },
+        {
+          "activity": null,
+          "id": "s7",
+          "last_run": "2026-10-27T21:32:18Z",
+          "status": "red",
+          "title": "full repository quality gate"
+        }
+      ],
+      "summary": {
+        "green": 6,
+        "pending": 0,
+        "red": 1,
+        "running": 0,
+        "stale": 5,
+        "total": 7
+      },
+      "updated_at": "2026-10-27T21:32:18Z"
+    },
+    "pr": null,
+    "queue_position": null,
+    "recent_events": [
+      {
+        "at": "2026-10-27T21:43:39.766Z",
+        "epic": "local-649",
+        "key": "local-658",
+        "kind": "transition",
+        "name": "phase",
+        "note": "execution",
+        "seq": 2
+      }
+    ],
+    "schema": 1,
+    "stage": "running"
+  },
   "live": {
     "available": false,
     "items": [],
     "reason": "off",
-    "sampled_at": "2026-10-27T19:05:57.085Z",
+    "sampled_at": "2026-10-27T21:43:39.776Z",
     "schema": 1
   },
   "overview": {
@@ -351,7 +451,7 @@
         },
         {
           "cap": 3,
-          "cooldown_until": "2026-10-27T19:46:57.080Z",
+          "cooldown_until": "2026-10-27T22:24:39.771Z",
           "host": "codex",
           "paused": false,
           "paused_at": null,
@@ -374,7 +474,7 @@
           "cooldown_until": null,
           "host": "muse",
           "paused": true,
-          "paused_at": "2026-10-27T19:05:57.080Z",
+          "paused_at": "2026-10-27T21:43:39.771Z",
           "paused_by": "user",
           "reason": null,
           "running": 0
@@ -460,6 +560,43 @@
     "title": "Peer dashboard",
     "url": "https://github.com/o/r/issues/9",
     "waves_total": 1
+  },
+  "peer_issue": {
+    "agent_status": "unknown",
+    "agent_status_at": null,
+    "effort": null,
+    "epic": "peer-649",
+    "hold": null,
+    "host": null,
+    "key": "peer-658",
+    "last_gate_verdict": null,
+    "launches": 0,
+    "model": null,
+    "phase": "execution",
+    "phase_age_ms": 0,
+    "phase_history": [
+      {
+        "at": "2026-10-27T21:43:39Z",
+        "note": "fleet",
+        "phase": "execution"
+      }
+    ],
+    "plan": null,
+    "pr": null,
+    "queue_position": null,
+    "recent_events": [
+      {
+        "at": "2026-10-27T21:43:39.746Z",
+        "epic": "peer-649",
+        "key": "peer-658",
+        "kind": "transition",
+        "name": "phase",
+        "note": "execution",
+        "seq": 2
+      }
+    ],
+    "schema": 1,
+    "stage": "running"
   },
   "peer_overview": {
     "attention": [],
@@ -575,5 +712,28 @@
     },
     "paused": true,
     "schema": 1
+  },
+  "screen": {
+    "body": {
+      "available": false,
+      "key": "local-658",
+      "reason": "off",
+      "schema": 1
+    },
+    "status": 200
+  },
+  "screen_disabled": {
+    "body": {
+      "error": "control_disabled",
+      "schema": 1
+    },
+    "status": 403
+  },
+  "screen_locked": {
+    "body": {
+      "error": "unauthorized",
+      "schema": 1
+    },
+    "status": 401
   }
 }

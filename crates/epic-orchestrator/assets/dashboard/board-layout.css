@@ -192,13 +192,16 @@
   appearance: none;
   background: var(--line-strong);
 }
-.issue-plan progress::-webkit-progress-bar {
+.issue-plan progress::-webkit-progress-bar,
+.drawer-section progress::-webkit-progress-bar {
   background: var(--line-strong);
 }
-.issue-plan progress::-webkit-progress-value {
+.issue-plan progress::-webkit-progress-value,
+.drawer-section progress::-webkit-progress-value {
   background: var(--acid);
 }
-.issue-plan progress::-moz-progress-bar {
+.issue-plan progress::-moz-progress-bar,
+.drawer-section progress::-moz-progress-bar {
   background: var(--acid);
 }
 .issue-attention {
