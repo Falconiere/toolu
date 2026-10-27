@@ -96,8 +96,58 @@ const ENDPOINTS: &[Endpoint] = &[
   },
 ];
 
-/// The prose after the endpoint table: query parameters, worker plans, the
-/// board header, live agent status and the fleet.
+/// The `## Actions` section: the token-gated write route.
+const ACTIONS: &str = "\n## Actions\n\nThe engine that serves the page can be controlled from it. Peers are never controlled. `POST /api/v1/actions/{op}` sends one control operation to the engine's state loop, the same way `toolu epic` does over its control socket:
+
+| Op | JSON body | Same as |
+|---|---|---|
+| `pause` | `{}` or `{\"epic\": KEY}` | `toolu epic pause [EPIC]` |
+| `resume` | `{}` or `{\"epic\": KEY}` | `toolu epic resume [EPIC]` |
+| `ack` | `{\"key\": KEY}`, or `{\"kind\": KIND}` for a keyless item | `toolu epic ack KEY` |
+| `answer` | `{\"key\": KEY, \"text\": TEXT}` | `toolu epic answer KEY TEXT` |
+| `release` | `{\"key\": KEY}` | `toolu epic release KEY` |
+
+`answer` types into agents that run with approval bypass, so every action needs all of the following, even on loopback:
+
+- `Authorization: Bearer <status token>`;
+- an `Origin` equal to `http://` followed by the request's `Host`;
+- `Content-Type: application/json`;
+- a `Content-Length` of at most 16 KiB.
+
+The server sends no CORS headers. The checks run in this order:
+
+| Status | Error | When |
+|---|---|---|
+| `405` | `method_not_allowed` | The method is not `POST`; the response has `Allow: POST`. |
+| `403` | `control_disabled` | No status token is configured. |
+| `401` | `unauthorized` | The token is missing or wrong. |
+| `403` | `foreign_origin` | `Origin` is missing or foreign. |
+| `415` | `unsupported_media_type` | The body is not JSON. |
+| `404` | `unknown_op` | The op is not in the table above. |
+| `400` | `invalid_request` | The body is not an object, or a field is invalid. |
+
+Field rules:
+
+- Keys, epics and kinds match `[A-Za-z0-9._-]{1,128}`.
+- `ack` takes exactly one of `key` or `kind`.
+- `answer` text is 1 to 4,000 characters, with no control characters other than newline and tab.
+
+A `POST` without `Content-Length` is `400`, and a larger body is `413`.
+
+Replies:
+
+- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`) replies `{\"ok\": true, \"delivered\": \"uncertain\", \"note\": …}` and leaves the attention item open.
+- **`409`:** an engine refusal such as `no live agent for <key>` or `<key> is not held`. The body is `{\"schema\": 1, \"error\": <text>}`.
+- **`503 engine_busy`:** the state loop did not answer within 35 s, longer than herdr's 30 s prompt timeout. The server never retries, and the action may still apply later.
+
+Web actions are journaled like CLI actions, with `by=web` in the note. `pause` and `resume` write `action pause` or `action resume` with the note `<epic|all> by=<who>`. So every open dashboard sees the change on `/api/v1/events/stream`.
+
+`toolu epic token url` prints `http://<address>/#token=<token>` for the running engine. The engine writes its bound address to `http.json` under its resource root while it runs. A `0.0.0.0` or `::` bind prints `127.0.0.1`. The token stays in the URL fragment: it never goes on a command line, in a query string or in a log line.
+
+The listener re-reads `toolu/secrets.json` at most once a second when its content changes, so `toolu epic token new` takes effect without a restart. If a read fails, the last good token stays in use. A token from `TOOLU_EPIC_STATUS_TOKEN` or `TOOLU_EPIC_TOKEN` can change only with a restart.\n";
+
+/// The prose after the endpoint table: query parameters, the board header,
+/// worker plans and live agent status.
 const NOTES: &str = "\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Board header and worker rows
 
 Each item of `/api/v1/epics`, the overview's `epics` and `/api/v1/epics/{id}` carry the board header: `title` and `url` from `graph.json` `epic` (`null` when empty or when the engine has no parsed graph), `waves_total`, `current_wave`, `live` and `queued`. Waves are stable for the run: the engine levels every graph issue, open or closed, as 1 + its deepest blocker in the epic, so a merged issue keeps its wave (the graph's own `wave` levels only open issues and renumbers after each refresh). The epic document's `graph.waves` and `graph.issues[].wave` use the same stable numbering whenever the engine has parsed the graph. They are computed once each time the engine loads the graph. An issue is done once its pull request merged (stage `merged`, or still `cleaning` or `cleanup-incomplete`), when it is `abandoned`, or when it was closed before the engine launched it. `current_wave` is the lowest wave that still holds an issue that is not done, or `null` when every issue is done; a dependency cycle among open issues gives no waves, and one through a closed issue falls back to the open issues' waves. `live` counts issues whose stage is `running` or `awaiting_merge`, and `queued` those never launched (empty stage, no launch in flight) and not done.
@@ -131,9 +181,10 @@ Observed on 2026-10-27 with herdr 0.9.5 through `herdr agent list` during real s
 | Claude Code 2.1.311 | `blocked` on the folder-trust dialog at startup; through a turn `idle` → `working` → `idle` (it never reports `done`) | `Claude Code` until the first prompt, then a live task summary (\"Notes.txt file listing\") that stays after the turn. A worker the engine starts gets `-n <key>`, and its title is then the key itself (\"falconiere-toolu-650\"), not a summary. |
 | Codex 0.164.0 | `blocked` on the folder-trust dialog at startup; `done` → `working` → `done` | The folder name (\"ws-codex\") until the first prompt, then `<task summary> \\| <folder>` (\"List files and save notes \\| ws-codex\"). |
 | Cursor Agent 2026.10.22 | `idle` → `working` → `done` | `Cursor Agent` until the first prompt, then a task summary (\"List Files And Write\"). |
-| Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name (\"ws-muse\") throughout; no task summary. |
+| Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name (\"ws-muse\") throughout; no task summary. |\n";
 
-## Fleet over a private network
+/// The fleet section: peers, the proxy and the dashboard.
+const FLEET: &str = "\n## Fleet over a private network
 
 An engine can show other machines' engines beside its own. List each peer under `epic.peers` in `toolu.config.json` with a `name` and a `url`, and put its bearer token in `peer_tokens` of `toolu/secrets.json` (mode 0600) or in `TOOLU_EPIC_PEER_TOKENS`, a JSON object of peer name to token. A token never goes on the command line. The engine reads its peers at startup; `toolu epic status --fleet` reads them on every run.
 
@@ -160,6 +211,8 @@ pub(crate) fn render() -> String {
     );
   }
   out.push_str(NOTES);
+  out.push_str(ACTIONS);
+  out.push_str(FLEET);
   out
 }
 

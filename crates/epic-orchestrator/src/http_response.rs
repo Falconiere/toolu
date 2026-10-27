@@ -46,6 +46,7 @@ impl OverviewCache {
         body: entry.body.clone(),
         head: false,
         close: false,
+        allow: READ_METHODS,
       };
     }
     let value = match status_api::document(world, paths, None, secrets) {
@@ -64,17 +65,23 @@ impl OverviewCache {
       body,
       head: false,
       close: false,
+      allow: READ_METHODS,
     }
   }
 }
 
-/// One finite response to a GET or HEAD request.
+/// The `Allow` value of a read-only path.
+pub(crate) const READ_METHODS: &str = "GET, HEAD";
+
+/// One finite response.
 pub(crate) struct Response {
   pub status: u16,
   pub content_type: &'static str,
   pub body: Vec<u8>,
   pub head: bool,
   pub close: bool,
+  /// The methods a `405` names in `Allow`.
+  pub allow: &'static str,
 }
 
 impl Response {
@@ -86,6 +93,7 @@ impl Response {
       body: json!({"schema": 1, "error": code}).to_string().into_bytes(),
       head: false,
       close: true,
+      allow: READ_METHODS,
     }
   }
 }
@@ -99,6 +107,7 @@ pub(crate) fn json_response(document: Result<Option<serde_json::Value>, String>)
       body: value.to_string().into_bytes(),
       head: false,
       close: false,
+      allow: READ_METHODS,
     },
     Ok(None) => Response::error(404, "not_found"),
     Err(_err) => Response::error(500, "status_unavailable"),
@@ -124,9 +133,9 @@ pub(crate) fn send(stream: &mut TcpStream, response: &Response) -> io::Result<()
     response.body.len(),
     connection,
     if response.status == 405 {
-      "Allow: GET, HEAD\r\n"
+      format!("Allow: {}\r\n", response.allow)
     } else {
-      ""
+      String::new()
     },
   );
   stream.write_all(headers.as_bytes())?;
@@ -153,7 +162,9 @@ fn reason(status: u16) -> &'static str {
     403 => "Forbidden",
     404 => "Not Found",
     405 => "Method Not Allowed",
+    409 => "Conflict",
     413 => "Content Too Large",
+    415 => "Unsupported Media Type",
     429 => "Too Many Requests",
     502 => "Bad Gateway",
     503 => "Service Unavailable",

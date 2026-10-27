@@ -147,6 +147,7 @@ fn ok(body: Vec<u8>) -> Response {
     body,
     head: false,
     close: false,
+    allow: crate::http_response::READ_METHODS,
   }
 }
 

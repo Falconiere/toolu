@@ -133,7 +133,8 @@ pub(crate) fn reply_release(
   reply: &Sender<Value>,
 ) -> Result<bool, String> {
   let key = request.get("key").and_then(Value::as_str).unwrap_or("");
-  if let Err(err) = crate::holds::release(&mut engine.world, key) {
+  let by = request.get("by").and_then(Value::as_str).unwrap_or("user");
+  if let Err(err) = crate::holds::release(&mut engine.world, key, by) {
     let _sent = reply.send(json!({"error": err}));
     return Ok(false);
   }

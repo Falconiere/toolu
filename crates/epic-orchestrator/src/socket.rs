@@ -70,7 +70,7 @@ pub(crate) fn serve_with_http(
   let signals = socket_herdr::Signals::default();
   let shared = Arc::new(Mutex::new(engine.world.clone()));
   let changed = Arc::new(Condvar::new());
-  let http = start_http(options.http, &engine, &shared, &changed, &signals.stop)?;
+  let http = start_http(options.http, &tx, &engine, &signals, (&shared, &changed))?;
   if let (Some(notifier), Some(running)) = (engine.notifier.as_mut(), http.as_ref()) {
     notifier.set_dashboard(running.addr);
   }
@@ -100,6 +100,7 @@ pub(crate) fn serve_with_http(
     http,
   };
   join_threads(&socket, &signals, &changed, threads);
+  let _gone = std::fs::remove_file(engine.paths.http());
   stopped(&mut engine, result)
 }
 
@@ -157,24 +158,37 @@ fn open_engine(
   Ok(engine)
 }
 
+/// Start the listener with a control path to the state loop, and record its
+/// bound address in `http.json` for `toolu epic token url` (it holds no secret).
 fn start_http(
   config: Option<HttpConfig>,
+  control: &Sender<Msg>,
   engine: &Engine,
-  shared: &Arc<Mutex<World>>,
-  changed: &Arc<Condvar>,
-  stop: &Arc<AtomicBool>,
+  signals: &socket_herdr::Signals,
+  (shared, changed): (&Arc<Mutex<World>>, &Arc<Condvar>),
 ) -> Result<Option<http::Running>, String> {
-  config
-    .map(|config| {
-      http::start(
-        config,
-        engine.paths.clone(),
-        Arc::clone(shared),
-        Arc::clone(changed),
-        Arc::clone(stop),
-      )
-    })
-    .transpose()
+  // A crashed run leaves its file behind; a `--no-http` engine must not serve that address.
+  let _stale = std::fs::remove_file(engine.paths.http());
+  let Some(config) = config else {
+    return Ok(None);
+  };
+  let config = HttpConfig {
+    control: Some(control.clone()),
+    ..config
+  };
+  let running = http::start(
+    config,
+    engine.paths.clone(),
+    Arc::clone(shared),
+    Arc::clone(changed),
+    Arc::clone(&signals.stop),
+  )?;
+  let addr = json!({"addr": running.addr.to_string()});
+  if let Err(err) = crate::disk::write_value(&engine.paths.http(), &addr) {
+    let _stopped = running.stop(&signals.stop);
+    return Err(err);
+  }
+  Ok(Some(running))
 }
 
 fn apply_env(engine: &mut Engine) {

@@ -117,12 +117,7 @@ pub(crate) fn free_port() -> u16 {
 
 /// A listener config on loopback `port` with `peers` and `secrets`.
 pub(crate) fn config(port: u16, peers: Vec<Peer>, secrets: Secrets) -> Config {
-  Config {
-    addr: SocketAddr::from(([127, 0, 0, 1], port)),
-    secrets,
-    peers,
-    herdr: crate::http_live::Herdr::Off,
-  }
+  Config::new(SocketAddr::from(([127, 0, 0, 1], port)), secrets, peers)
 }
 
 /// Secrets resolved from `HOME` and `pairs`, as `secrets::load` reads them.

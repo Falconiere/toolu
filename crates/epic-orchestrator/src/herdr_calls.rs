@@ -145,7 +145,7 @@ pub(crate) fn request(
   let sent = client.execute(paths, env, call);
   let exit_code = client.last_exit();
   let text = sent.map_err(|message| CallError {
-    uncertain: message.contains("timed out") || message.contains("TimedOut"),
+    uncertain: timed_out(&message),
     message: format!("herdr {name}: {}", message.trim()),
     code: None,
     exit_code,
@@ -156,6 +156,11 @@ pub(crate) fn request(
     result_of(name, &text)
   };
   reply.map_err(|err| CallError { exit_code, ..err })
+}
+
+/// Whether a transport failure passed its deadline, so the call may have happened.
+pub(crate) fn timed_out(message: &str) -> bool {
+  message.contains("timed out") || message.contains("TimedOut")
 }
 
 /// Whether a reply `Client::execute` returned means the call happened: plain

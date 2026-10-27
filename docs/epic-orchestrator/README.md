@@ -76,12 +76,22 @@ The resident engine subscribes to herdr (`events.subscribe`) instead of polling.
 herdr answers one request per socket connection, so each herdr call, the
 session's ping and snapshot included, opens its own connection; only the
 subscription stays open.
-The engine starts its read-only dashboard at `http://127.0.0.1:7717/` by default.
+The engine starts its dashboard at `http://127.0.0.1:7717/` by default.
 It shows registered epics,
 workers, hosts, jobs, machine capacity, queue and attention, and follows the
 journal without polling. `toolu epic status --json <key>` returns
-one epic or worker through the local control socket. The versioned HTTP
-contract and token rules are in [`docs/epic-status-api.md`](../epic-status-api.md).
+one epic or worker through the local control socket.
+
+The dashboard can also control the engine that serves it. It can pause or resume
+epics, acknowledge attention, answer a worker and release a hold. Each action
+needs the status token, even on loopback, and is journaled with `by=web`.
+
+`toolu epic token url` prints the running engine's dashboard URL with the token
+in its `#token=` fragment. `toolu epic token new` rotates the token without a
+restart.
+
+Peers stay read-only. The versioned HTTP contract, the action routes and the
+token rules are in [`docs/epic-status-api.md`](../epic-status-api.md).
 `toolu epic report` writes the status file and, when the engine is down, a spool
 the next start applies in order. Stall deadlines belong to each issue: 45
 minutes, or 120 minutes while the phase is babysit. The 30-second tick is for

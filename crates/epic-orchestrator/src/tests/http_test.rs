@@ -1,9 +1,9 @@
-use std::io::{BufRead as _, BufReader, Read as _, Write as _};
+use std::io::{Read as _, Write as _};
 use std::net::{SocketAddr, TcpStream};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;
-use std::time::{Duration, Instant, UNIX_EPOCH};
+use std::time::{Duration, Instant};
 
 use serde_json::json;
 use toolu_runtime::config::secrets;
@@ -15,7 +15,6 @@ use super::{Config, start};
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::disk::write_value;
-use crate::journal::{self, Record};
 use crate::model::World;
 use crate::paths::Paths;
 use crate::server::Fault;
@@ -25,6 +24,16 @@ fn request(addr: SocketAddr, method: &str, host: &str) -> String {
   raw(
     addr,
     &format!("{method} /api/v1/overview HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"),
+  )
+}
+
+/// A POST needs a Content-Length (#650); one to a read-only path is still 405.
+fn empty_post(addr: SocketAddr) -> String {
+  raw(
+    addr,
+    &format!(
+      "POST /api/v1/overview HTTP/1.1\r\nHost: {addr}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    ),
   )
 }
 
@@ -49,12 +58,7 @@ fn http_auth_requires_a_bearer_token_on_public_bind() {
   let secrets = secrets::load(&Roots::new(env, None)).expect("secrets");
   let stop = Arc::new(AtomicBool::new(false));
   let running = start(
-    Config {
-      addr: "0.0.0.0:0".parse().expect("address"),
-      secrets,
-      peers: Vec::new(),
-      herdr: crate::http_live::Herdr::Off,
-    },
+    Config::new("0.0.0.0:0".parse().expect("address"), secrets, Vec::new()),
     Paths::at(temp.path()),
     Arc::new(Mutex::new(World::new(0))),
     Arc::new(Condvar::new()),
@@ -100,7 +104,7 @@ fn http_boundary_checks_requests_and_poisoned_world() {
   )
   .expect("listener");
   let foreign = request(running.addr, "GET", "foreign.example");
-  let denied = request(running.addr, "POST", &running.addr.to_string());
+  let denied = empty_post(running.addr);
   let allowed = request(running.addr, "GET", &running.addr.to_string());
   let head = request(running.addr, "HEAD", &running.addr.to_string());
   let bad_cursor = raw(
@@ -151,73 +155,6 @@ fn assert_poisoned_world(world: Arc<Mutex<World>>, addr: SocketAddr) {
     assert!(response.starts_with("HTTP/1.1 500"), "{response}");
     assert_eq!(response.contains("status_unavailable"), method == "GET");
   }
-}
-
-#[test]
-fn stream_replay_crosses_journal_days_and_honors_last_event_id() {
-  let temp = tempfile::tempdir().expect("temp root");
-  let paths = Paths::at(temp.path());
-  seed_journal(&paths);
-  let stop = Arc::new(AtomicBool::new(false));
-  let running = start(
-    crate::fleet_rig::config(0, Vec::new(), Secrets::none()),
-    paths,
-    Arc::new(Mutex::new(World::new(0))),
-    Arc::new(Condvar::new()),
-    Arc::clone(&stop),
-  )
-  .expect("listener");
-  let mut stream = TcpStream::connect(running.addr).expect("connect");
-  stream
-    .set_read_timeout(Some(Duration::from_secs(2)))
-    .expect("timeout");
-  let request = format!(
-    "GET /api/v1/events/stream?since=0 HTTP/1.1\r\nHost: {}\r\nLast-Event-ID: 1\r\n\r\n",
-    running.addr
-  );
-  stream
-    .write_all(request.as_bytes())
-    .expect("stream request");
-  let reader = BufReader::new(stream);
-  let (ids, seen_private) = event_ids(reader);
-  assert_eq!(ids, [2, 3]);
-  assert!(!seen_private);
-  running.stop(&stop).expect("listener thread");
-}
-
-fn seed_journal(paths: &Paths) {
-  for (day, name) in [(0, "first"), (86_400, "second"), (172_800, "third")] {
-    journal::append(
-      &paths.journal_dir(),
-      &paths.journal_lock(),
-      &Record::new(
-        "transition",
-        name,
-        "repo-449",
-        "PRIVATE-TOKEN",
-        "phase changed",
-      ),
-      UNIX_EPOCH + Duration::from_secs(day),
-    )
-    .expect("journal event");
-  }
-}
-
-fn event_ids(mut reader: BufReader<TcpStream>) -> (Vec<u64>, bool) {
-  let mut ids = Vec::new();
-  let mut seen_private = false;
-  for _ in 0..20 {
-    let mut line = String::new();
-    reader.read_line(&mut line).expect("stream line");
-    seen_private |= line.contains("PRIVATE-TOKEN");
-    if let Some(id) = line.strip_prefix("id: ") {
-      ids.push(id.trim().parse::<u64>().expect("event id"));
-    }
-    if ids.len() == 2 {
-      break;
-    }
-  }
-  (ids, seen_private)
 }
 
 #[test]
@@ -283,12 +220,7 @@ fn live_fixture(
       Fault::None,
       PROTOCOL,
       ServeOptions {
-        http: Some(Config {
-          addr,
-          secrets: Secrets::none(),
-          peers: Vec::new(),
-          herdr: crate::http_live::Herdr::Off,
-        }),
+        http: Some(Config::new(addr, Secrets::none(), Vec::new())),
         tick: &(),
         attention: crate::notify::AttentionOptions::default(),
       },

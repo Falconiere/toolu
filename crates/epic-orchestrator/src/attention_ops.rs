@@ -5,6 +5,8 @@ use std::sync::mpsc::Sender;
 use serde_json::{Value, json};
 
 use crate::dispatch::result_value;
+use crate::journal::Record;
+use crate::model::Step;
 use crate::schedule::ack;
 use crate::server::Engine;
 
@@ -41,9 +43,12 @@ pub(crate) fn reply_answer(
   } else if !crate::attention::has_live_agent(&engine.world, key) {
     Some(format!("no live agent for {key}"))
   } else {
-    send_prompt(engine, key, text)
-      .err()
-      .map(|err| format!("worker prompt not delivered: {err}"))
+    match send_prompt(engine, key, text) {
+      Err(err) if uncertain(&err) => return reply_uncertain(engine, (key, text, by), &err, reply),
+      sent => sent
+        .err()
+        .map(|err| format!("worker prompt not delivered: {err}")),
+    }
   };
   if let Some(error) = refused {
     let _sent = reply.send(result_value(Err(error)));
@@ -56,6 +61,36 @@ pub(crate) fn reply_answer(
   }
   engine.flush()?;
   let _sent = reply.send(result_value(Ok(())));
+  Ok(false)
+}
+
+/// Whether a failed prompt may still have reached the worker, by the rules
+/// `herdr_calls` marks `uncertain`: herdr's `timeout` and
+/// `agent_prompt_stalled` codes (as `result_of` formats them), a transport
+/// deadline, or a scripted `uncertain` outcome.
+pub(crate) fn uncertain(err: &str) -> bool {
+  crate::herdr_calls::timed_out(err)
+    || [": timeout:", ": agent_prompt_stalled:", "prompt uncertain"]
+      .iter()
+      .any(|marker| err.contains(marker))
+}
+
+/// An answer that may have arrived: journal it and leave attention open, so
+/// the operator still sees the item.
+fn reply_uncertain(
+  engine: &mut Engine,
+  (key, text, by): (&str, &str, &str),
+  err: &str,
+  reply: &Sender<Value>,
+) -> Result<bool, String> {
+  // The text may have been typed into the agent, so it is journaled like a sent answer.
+  let sent = Record::new("prompt", "answer-uncertain", key, "", text);
+  engine.world.outbox.push_back(Step::Journal(sent));
+  let record = Record::new("action", "answer-uncertain", key, "", &format!("by={by}"));
+  engine.world.outbox.push_back(Step::Journal(record));
+  engine.flush()?;
+  let note = format!("worker prompt may not have arrived: {err}");
+  let _sent = reply.send(json!({"ok": true, "delivered": "uncertain", "note": note}));
   Ok(false)
 }
 
@@ -80,7 +115,7 @@ pub(crate) fn send_prompt(engine: &Engine, key: &str, text: &str) -> Result<(), 
     &body,
   );
   match outcome.as_str() {
-    outcome @ ("failed" | "deferred") => Err(format!("prompt {outcome}")),
+    outcome @ ("failed" | "deferred" | "uncertain") => Err(format!("prompt {outcome}")),
     _ => Ok(()),
   }
 }

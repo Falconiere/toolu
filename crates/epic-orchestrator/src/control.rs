@@ -94,10 +94,9 @@ fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, St
   };
   let secrets = secrets::load(&roots).map_err(|err| err.to_string())?;
   Ok(Some(HttpConfig {
-    addr,
-    secrets,
-    peers: settings.peers,
+    reload: Some(roots),
     herdr: crate::http_live::Herdr::of(env),
+    ..HttpConfig::new(addr, secrets, settings.peers)
   }))
 }
 

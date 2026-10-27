@@ -9,8 +9,15 @@ use serde_json::{Value, json};
 use crate::journal::Record;
 use crate::metrics::stats::pct;
 
-/// Judgment names that manage an item instead of raising one.
-const CONTROL: [&str; 5] = ["reopened", "closed", "acknowledged", "answered", "reminder"];
+/// Judgment names that manage an item, or record an answer, instead of raising one.
+const CONTROL: [&str; 6] = [
+  "reopened",
+  "closed",
+  "acknowledged",
+  "answered",
+  "reminder",
+  "directed",
+];
 
 #[derive(Debug, Default)]
 struct IssuePrompts {

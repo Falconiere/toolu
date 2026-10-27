@@ -7,7 +7,8 @@ use toolu_runtime::config::secrets::Secrets;
 /// Accept only this socket's address or local aliases on loopback.
 pub(crate) fn host_allowed(host: &str, local: SocketAddr) -> bool {
   host.eq_ignore_ascii_case(&local.to_string())
-    || (local.ip().is_loopback()
+    // A `::` bind sees IPv4 loopback as `::ffff:127.0.0.1`.
+    || (local.ip().to_canonical().is_loopback()
       && (host.eq_ignore_ascii_case(&format!("localhost:{}", local.port()))
         || host.eq_ignore_ascii_case(&format!("127.0.0.1:{}", local.port()))))
 }
