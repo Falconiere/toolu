@@ -16,22 +16,22 @@ const ENDPOINTS: &[Endpoint] = &[
   },
   Endpoint {
     path: "/api/v1/overview",
-    fields: "engine, paused, journal_seq, epics, issues, attention, counts, attention_count, hosts, machine, jobs",
+    fields: "engine, paused, hostname, journal_seq, epics, issues, attention, counts, attention_count, hosts, machine, jobs",
     purpose: "Current aggregate",
   },
   Endpoint {
     path: "/api/v1/epics",
-    fields: "items (key, paused, counts, attention_count)",
+    fields: "items (key, paused, counts, attention_count, title, url, waves_total, current_wave, live, queued)",
     purpose: "Registered epics",
   },
   Endpoint {
     path: "/api/v1/epics/{id}",
-    fields: "key, paused, graph, issues (key, stage, phase, pr, host, plan_summary), queue",
+    fields: "key, paused, title, url, waves_total, current_wave, live, queued, graph, issues (key, stage, phase, pr, host, agent_status, agent_status_at, model, effort, phase_age_ms, hold, plan_summary), queue",
     purpose: "One epic board",
   },
   Endpoint {
     path: "/api/v1/issues/{key}",
-    fields: "key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, plan",
+    fields: "key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, hold, plan",
     purpose: "One worker",
   },
   Endpoint {
@@ -76,7 +76,7 @@ const ENDPOINTS: &[Endpoint] = &[
   },
   Endpoint {
     path: "/api/v1/fleet",
-    fields: "summary (machines, reachable, hosts, in_flight, attention_count), machines (name, local, state, reason, age_ms, last_seen, engine, paused, journal_seq, epics, in_flight, hosts, counts, attention_count)",
+    fields: "summary (machines, reachable, hosts, in_flight, attention_count), machines (name, local, state, reason, hostname, dashboard_url, age_ms, last_seen, engine, paused, journal_seq, epics, in_flight, hosts, counts, attention_count)",
     purpose: "This machine and every peer",
   },
   Endpoint {
@@ -108,7 +108,17 @@ pub(crate) fn render() -> String {
       endpoint.path, endpoint.purpose, endpoint.fields
     );
   }
-  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Worker plans
+  out.push_str("\n`/api/v1/events` accepts `since` (default 0) and `limit` (default 100, maximum 500). An event contains `seq`, `at`, `kind`, `name`, `epic`, `key`, and a bounded `note`. The stream emits `id: <seq>`, `event: journal`, and `data: <JSON>`; `Last-Event-ID` overrides `since`. A cursor older than retained history receives a `reset` event.\n\n`/api/v1/metrics` accepts `epic` and `since` (`YYYY-MM-DD` or an ISO-8601 UTC time) and serves the document of `toolu epic metrics --json` (`$defs/epicMetrics` of `toolu commands --schema`), recomputed at most once a minute per query.\n\n## Board header and worker rows
+
+Each item of `/api/v1/epics`, the overview's `epics` and `/api/v1/epics/{id}` carry the board header: `title` and `url` from `graph.json` `epic` (`null` when empty or when the engine has no parsed graph), `waves_total`, `current_wave`, `live` and `queued`. Waves are stable for the run: the engine levels every graph issue, open or closed, as 1 + its deepest blocker in the epic, so a merged issue keeps its wave (the graph's own `wave` levels only open issues and renumbers after each refresh). An issue is done when its stage is `merged` or `abandoned` or it was closed before the engine launched it. `current_wave` is the lowest wave that still holds an issue that is not done, or `null` when every issue is done; a dependency cycle gives no waves. `live` counts issues whose stage is `running` or `awaiting_merge`, and `queued` those never launched (empty stage) and not done.
+
+Each issue row on `/api/v1/epics/{id}` adds `model` and `effort` (the route record, else the launch record), `phase_age_ms` and `hold`, all equal to the same fields of `/api/v1/issues/{key}`. `hold` is `{\"kind\", \"with\", \"at\"}` for a coupling hold, else `null`; its `score` and `source` are never exposed.
+
+`hostname` on `/api/v1/overview` is this machine's host name up to the first `.`, or `null` when it cannot be read. On `/api/v1/fleet` every machine carries the `hostname` of its own overview (`null` for a machine that is not `ok`) and `dashboard_url`: `null` for this machine, and for a peer its configured `url`. Config refuses a peer URL with a user name, password, path, query or fragment, so `dashboard_url` is always a bare origin such as `http://10.0.0.2:7717/`.
+
+Every string above is cut to 160 characters and configured secrets are redacted.
+
+## Worker plans
 
 `plan` on `/api/v1/issues/{key}` (and in `toolu epic status --json <key>`, which builds the same document) is the worker's plan ledger, the todo list `toolu ledger` keeps. It holds `plan_doc`, `updated_at`, `next`, `summary` (`total`, `green`, `red`, `pending`, `running`, `stale`) and `steps[]` (`id`, `title`, `status`, `activity`, `last_run`). Nothing else from the ledger is exposed: no `check`, `evidence_tail`, `diff_sha`, `scope_sha`, `input` or `retries`. Every string is cut to 160 characters, `steps` lists at most the first 200 steps (`summary` still counts all of them), and configured secrets are redacted. A step's `status` is the one the ledger stores (`pending`, `running`, `green`, `red`); the engine does not recompute freshness, so `summary.stale` is the count from the worker's last ledger write.
 
