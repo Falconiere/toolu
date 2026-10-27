@@ -170,9 +170,9 @@ the `--host` path):
   toolu plugins first, before any prepare, pin, sync or clone. Claude and Codex use the
   filtered listing; Muse uses non-`foreign` entries. Cursor is a candidate only when
   `Store` holds a toolu-marked plugin.
-- A failed or malformed listing counts as none; its note names the cause
-  (`<host>: could not list its plugins: <first stderr line>; skipped`), and the
-  nothing-to-update error lists the hosts that could not be read. The listing a
+- A failed or malformed listing is a failed step named after the host
+  (`could not list its plugins: <first stderr line>`, exit 1), and the
+  nothing-to-update and missing-name errors list the hosts that could not be read. The listing a
   host was read with is the one its update uses.
 - Hosts with none get the text note `<host>: no toolu plugins installed; skipped` (rails:
   `◇  <host>` then `│  ○ no toolu plugins installed`) and are left out of the JSON `hosts`
