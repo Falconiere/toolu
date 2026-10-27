@@ -172,20 +172,60 @@ pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
     "pr": pr,
     "note": note,
   });
-  let path = match crate::client::spool_path(&paths.root, &token) {
-    Ok(path) => path,
-    Err(err) => return failed("toolu epic report", &err),
+  submit_spooled(&paths, "report", false, &token, &request)
+}
+
+/// Send a worker notice to the orchestrator, or one sibling issue.
+pub(crate) fn notify(matches: &ArgMatches, env: &Env) -> Outcome {
+  let Some(kind) = text(matches, "kind") else {
+    return failed("toolu epic notify", "kind is required");
   };
-  if let Err(err) = write_value(&path, &request) {
-    return failed("toolu epic report", &err);
+  let Some(file) = text(matches, "status-file") else {
+    return failed("toolu epic notify", "status-file is required");
+  };
+  let (key, state_dir) = match located(Path::new(file)) {
+    Ok(pair) => pair,
+    Err(err) => return failed("toolu epic notify", &err),
+  };
+  if let Err(err) = ensure(env) {
+    return failed("toolu epic notify", &err);
+  }
+  let paths = Paths::from_env(env);
+  let token = report_token(&key);
+  let request = json!({
+    "op": "notify",
+    "token": token,
+    "key": key,
+    "epic": epic_for(&paths, &state_dir),
+    "state_dir": state_dir,
+    "kind": kind,
+    "note": text(matches, "note").unwrap_or(""),
+    "to": text(matches, "to").unwrap_or(""),
+  });
+  submit_spooled(&paths, "notify", true, &token, &request)
+}
+
+/// Spool `req` under `token`, then deliver it when the engine is live.
+/// An unreachable engine keeps the spool and still answers `ok`. With
+/// `checked`, an `error` reply (a refused request) is a failure.
+fn submit_spooled(paths: &Paths, verb: &str, checked: bool, token: &str, req: &Value) -> Outcome {
+  let path = match crate::client::spool_path(&paths.root, token) {
+    Ok(path) => path,
+    Err(err) => return failed(&format!("toolu epic {verb}"), &err),
+  };
+  if let Err(err) = write_value(&path, req) {
+    return failed(&format!("toolu epic {verb}"), &err);
   }
   if !paths.socket().exists() {
     return json_out(&json!({"ok": true}));
   }
-  match exchange_retry(&paths, PROTOCOL, &request) {
-    Ok(doc) => json_out(&doc),
+  match exchange_retry(paths, PROTOCOL, req) {
+    Ok(doc) => match doc.get("error").and_then(Value::as_str) {
+      Some(err) if checked => failed(&format!("toolu epic {verb}"), err),
+      _ => json_out(&doc),
+    },
     Err(err) if err.starts_with("connect:") => json_out(&json!({"ok": true})),
-    Err(err) => failed("toolu epic report", &err),
+    Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }
 }
 
@@ -291,6 +331,10 @@ pub(crate) fn wait_default(host: Option<Host>) -> u64 {
 #[cfg(test)]
 #[path = "tests/query_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/query_notify_test.rs"]
+mod notify_tests;
 
 #[cfg(test)]
 #[path = "tests/report_test.rs"]

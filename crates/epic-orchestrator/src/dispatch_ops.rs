@@ -1,16 +1,127 @@
-//! Socket operations protocol 2 adds: `release {key}` clears a coupling
-//! hold so the issue launches next, and `finish {key, step}` brackets a
-//! `toolu epic finish` run in another process, so the engine neither
-//! relaunches the issue it tears down nor keeps a stale stage (#619).
+//! Extra socket operations: `release {key}` clears a coupling hold so the
+//! issue launches next, `finish {key, step}` brackets a `toolu epic finish`
+//! run in another process (#619), and `notify` journals a worker notice
+//! with an optional realtime relay to one sibling issue.
 
 use std::sync::mpsc::Sender;
 
 use serde_json::{Value, json};
 
-use crate::dispatch::pump_after;
+use crate::dispatch::{discard_spool, pump_after, remember_spool, spool_seen};
 use crate::journal::Record;
 use crate::model::{Action, Step, World};
 use crate::server::Engine;
+
+/// Journal a worker notice, raise its attention, and relay an addressed
+/// notice to its sibling at once.
+pub(crate) fn reply_notify(
+  engine: &mut Engine,
+  request: &Value,
+  reply: &Sender<Value>,
+) -> Result<bool, String> {
+  if let Some(token) = request.get("token").and_then(Value::as_str)
+    && !token.is_empty()
+    && spool_seen(engine, token)?
+  {
+    let _sent = reply.send(json!({"ok": true}));
+    return Ok(false);
+  }
+  if let Err(err) = apply_notify(engine, request) {
+    discard_spool(engine, request);
+    let _sent = reply.send(json!({"error": err}));
+    return Ok(false);
+  }
+  // Journal first: a crash before `remember_spool` replays the spool file, a
+  // crash after it would lose the notice.
+  engine.flush()?;
+  remember_spool(engine, request)?;
+  let _sent = reply.send(json!({"ok": true}));
+  pump_after(engine)
+}
+
+/// Validate and record one worker notice: its journal row, attention item,
+/// and addressed relay. A relay goes only to one running sibling the sender
+/// names; anything else stays orchestrator-only.
+pub(crate) fn apply_notify(engine: &mut Engine, request: &Value) -> Result<(), String> {
+  let key = request.get("key").and_then(Value::as_str).unwrap_or("");
+  let kind = request.get("kind").and_then(Value::as_str).unwrap_or("");
+  let note = request.get("note").and_then(Value::as_str).unwrap_or("");
+  let to = request.get("to").and_then(Value::as_str).unwrap_or("");
+  let token = request.get("token").and_then(Value::as_str).unwrap_or("");
+  if key.is_empty() {
+    return Err("notify needs a key".to_owned());
+  }
+  if !crate::verbs_notify::NOTIFY_KINDS.contains(&kind) {
+    return Err(format!("unknown kind {kind}"));
+  }
+  if !to.is_empty() && to != key && !is_sibling(&engine.world, key, to) {
+    return Err(format!("unknown recipient {to}"));
+  }
+  engine
+    .world
+    .outbox
+    .push_back(Step::Journal(Record::new("notify", kind, key, token, note)));
+  crate::attention::reraise(&mut engine.world, kind, key, note);
+  if !to.is_empty() && to != key && crate::attention::has_live_agent(&engine.world, to) {
+    relay(engine, key, kind, note, to);
+  }
+  Ok(())
+}
+
+/// Whether `to` is an issue of the sender's epic. A sender the engine does not
+/// know yet may name any known issue.
+fn is_sibling(world: &World, key: &str, to: &str) -> bool {
+  world.issues.get(to).is_some_and(|peer| {
+    world
+      .issues
+      .get(key)
+      .is_none_or(|sender| sender.epic == peer.epic)
+  })
+}
+
+/// The quiet window between two relays to one recipient.
+const RELAY_COOLDOWN_MS: u64 = 60_000;
+
+/// Relay one worker's notice to a running sibling at once, journaling the
+/// delivery like a babysit prompt. Delivery itself stays best-effort: the
+/// caller already got its journal row and attention item, so a deferred
+/// herdr send keeps the `ok`. A repeat inside the cooldown window stays
+/// orchestrator-only.
+fn relay(engine: &mut Engine, from: &str, kind: &str, note: &str, to: &str) {
+  let now = engine.world.now_ms;
+  if engine
+    .world
+    .relayed_at_ms
+    .get(to)
+    .is_some_and(|at| now < at.saturating_add(RELAY_COOLDOWN_MS))
+  {
+    return;
+  }
+  // Bound and scrub before worker text reaches a sibling: bounded_note
+  // caps the length, flattens lines, and redacts secret prefixes.
+  let text = relay_text(from, kind, &crate::note::bounded_note(note));
+  // No fallback: the notice already raised its attention item above. The
+  // direction stays visible in status for workers that poll instead.
+  crate::babysit::prompt(&mut engine.world, to, "relay", text.clone(), None);
+  engine.world.relayed_at_ms.insert(to.to_owned(), now);
+  if let Some(issue) = engine.world.issues.get_mut(to) {
+    issue.direction = Some(crate::model::Direction {
+      text,
+      by: format!("relay:{from}"),
+      at_ms: now,
+    });
+  }
+}
+
+/// The engine-signed prompt relaying one worker's notice to a sibling.
+fn relay_text(from: &str, kind: &str, note: &str) -> String {
+  let head = if note.is_empty() {
+    format!("relay from {from} ({kind})")
+  } else {
+    format!("relay from {from} ({kind}): {note}")
+  };
+  format!("{head} Stay idle unless this needs you.")
+}
 
 /// Release `request.key`'s hold, or answer why not.
 ///

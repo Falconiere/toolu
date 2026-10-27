@@ -28,6 +28,7 @@ screen; it only reads the status you report. Work autonomously end to end.
 | Epic | {{EPIC_URL}} — {{EPIC_TITLE}} |
 | Worktree / branch | `{{WORKTREE}}` on `{{BRANCH}}` (base `origin/{{BASE}}`) |
 | Report status | `toolu epic report <phase> --status-file {{STATUS_FILE}}`, adding `--pr N` or `--note "..."` where a step asks |
+| Send a notice | `toolu epic notify --status-file {{STATUS_FILE}} --kind <blocked\|unblocked\|contract-changed\|stuck\|help>`, adding `--to <key>` when the news is for one sibling and `--note "..."` |
 | Closed blockers | {{BLOCKERS}} |
 | Host | {{HOST}} |
 
@@ -49,6 +50,10 @@ criteria, an external system you cannot reach).
 ## Pipeline
 
 Report each phase as you enter it — the orchestrator's only view of progress.
+Send urgent news the same way instead of waiting: a blocker, an unblock, a
+contract change siblings depend on, or a call for help. The orchestrator
+relays a `--to` notice to that sibling itself; never message another pane
+directly.
 
 1. **Sync.** `git fetch origin && git rebase origin/{{BASE}}`. Read the issue with
    {{ISSUE_READ}} and skim the

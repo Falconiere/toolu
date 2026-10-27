@@ -46,7 +46,28 @@ pub(crate) fn merged(world: &mut World, key: &str) {
   world.outbox.push_back(Step::Issue {
     key: key.to_owned(),
   });
+  unblock_dependents(world, key);
   crate::watch::after_merge(world, key);
+}
+
+/// Queue an unblock prompt for every running issue this merge unblocks. A
+/// failed delivery falls back to an `unblocked` attention item.
+pub(crate) fn unblock_dependents(world: &mut World, key: &str) {
+  let waiting: Vec<String> = world
+    .issues
+    .iter()
+    .filter(|(_, issue)| {
+      // Only a started worker: a never-launched dependent (empty stage) has
+      // no pane, so the prompt would fail and raise a false `unblocked`.
+      issue.blockers.iter().any(|blocker| blocker == key)
+        && matches!(issue.stage.as_str(), "running" | "awaiting_merge")
+    })
+    .map(|(dep, _)| dep.clone())
+    .collect();
+  for dep in waiting {
+    let text = format!("unblocked: {key} merged; resume once all your blockers are merged.");
+    crate::schedule::enqueue_prompt(world, &dep, &text, "unblocked", Some("unblocked"));
+  }
 }
 
 /// What the issue record says of the tracker item after the merge.

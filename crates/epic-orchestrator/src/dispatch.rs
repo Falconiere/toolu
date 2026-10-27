@@ -57,6 +57,7 @@ fn operate(
     "ack" => crate::attention_ops::reply_ack(engine, request, &reply),
     "event" => reply_event(engine, request, &reply),
     "report" => reply_report(engine, request, &reply, waiters),
+    "notify" => crate::dispatch_ops::reply_notify(engine, request, &reply),
     "wait" => crate::wait_ops::reply_wait(engine, request, reply, waiters),
     "answer" => crate::attention_ops::reply_answer(engine, request, &reply),
     "release" => crate::dispatch_ops::reply_release(engine, request, &reply),
@@ -179,7 +180,7 @@ fn report_from(request: &Value) -> Report {
   }
 }
 
-fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
+pub(crate) fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
   let Some(token) = request.get("token").and_then(Value::as_str) else {
     return Ok(());
   };
@@ -196,6 +197,15 @@ fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
     std::fs::remove_file(path).map_err(|err| err.to_string())?;
   }
   Ok(())
+}
+
+/// Drop the spool file of a request the engine refused, so a restart does not
+/// replay it.
+pub(crate) fn discard_spool(engine: &Engine, request: &Value) {
+  let token = request.get("token").and_then(Value::as_str).unwrap_or("");
+  if let Ok(path) = crate::client::spool_path(&engine.paths.root, token) {
+    let _gone = std::fs::remove_file(path);
+  }
 }
 
 /// Ingest reports spooled while the engine was unavailable.
@@ -231,11 +241,22 @@ fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String>
     let _gone = std::fs::remove_file(path);
     return Ok(());
   }
-  engine.report(&report_from(&value))?;
+  match value.get("op").and_then(Value::as_str).unwrap_or("report") {
+    "notify" => {
+      // A refused notice would fail every start; set it aside like bad JSON.
+      if crate::dispatch_ops::apply_notify(engine, &value).is_err() {
+        let _quarantined = std::fs::rename(path, path.with_extension("bad"));
+        return Ok(());
+      }
+      // Journal the notice before `remember_spool` deletes its spool file.
+      engine.flush()?;
+    }
+    _ => engine.report(&report_from(&value))?,
+  }
   remember_spool(engine, &value)
 }
 
-fn spool_seen(engine: &Engine, token: &str) -> Result<bool, String> {
+pub(crate) fn spool_seen(engine: &Engine, token: &str) -> Result<bool, String> {
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
   Ok(
     rows
@@ -247,3 +268,7 @@ fn spool_seen(engine: &Engine, token: &str) -> Result<bool, String> {
 #[cfg(test)]
 #[path = "tests/dispatch_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/dispatch_notify_test.rs"]
+mod notify_tests;

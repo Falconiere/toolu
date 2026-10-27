@@ -27,8 +27,9 @@ fn a_dropped_connection_is_not_retried() {
   assert!(started.elapsed() < Duration::from_millis(400), "{err}");
 }
 
-#[test]
-fn a_newer_client_spools_its_report_and_replaces_an_older_engine() {
+/// A client newer than the resident engine spools `request` under `token`, then has the engine
+/// replaced; the stand-in engine must see only the `replace` op.
+fn spools_and_replaces_an_older_engine(request: &serde_json::Value, token: &str) {
   use std::io::{BufRead, BufReader, Write};
   let tmp = tempfile::tempdir().expect("temp");
   let paths = Paths::at(tmp.path());
@@ -48,16 +49,27 @@ fn a_newer_client_spools_its_report_and_replaces_an_older_engine() {
     writeln!(stream, "{}", serde_json::json!({"ok": true})).expect("ack");
     serde_json::from_str::<serde_json::Value>(&line).expect("json")
   });
-  let report = serde_json::json!({"op": "report", "token": "t-36", "key": "a", "phase": "spec"});
-  let reply = exchange_retry(&paths, crate::PROTOCOL, &report).expect("exchange");
+  let reply = exchange_retry(&paths, crate::PROTOCOL, request).expect("exchange");
   assert_eq!(reply["ok"], true);
   let sent = stand_in.join().expect("stand-in");
   assert_eq!(sent, serde_json::json!({"op": "replace", "protocol": 1}));
   let spooled: serde_json::Value = serde_json::from_str(
-    &std::fs::read_to_string(spool_path(tmp.path(), "t-36").expect("path")).expect("spool"),
+    &std::fs::read_to_string(spool_path(tmp.path(), token).expect("path")).expect("spool"),
   )
   .expect("json");
-  assert_eq!(spooled, report);
+  assert_eq!(&spooled, request);
+}
+
+#[test]
+fn a_newer_client_spools_its_report_and_replaces_an_older_engine() {
+  let report = serde_json::json!({"op": "report", "token": "t-36", "key": "a", "phase": "spec"});
+  spools_and_replaces_an_older_engine(&report, "t-36");
+}
+
+#[test]
+fn a_newer_client_spools_its_notify_like_a_report() {
+  let notice = serde_json::json!({"op": "notify", "token": "n-7", "key": "a", "kind": "stuck"});
+  spools_and_replaces_an_older_engine(&notice, "n-7");
 }
 
 #[test]

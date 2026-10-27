@@ -24,6 +24,45 @@ fn a_deferred_merge_names_the_gate_command() {
 }
 
 #[test]
+fn a_merge_queues_an_unblock_prompt_for_a_waiting_sibling() {
+  let mut world = World::new(0);
+  running(&mut world);
+  world.issues.get_mut("a").expect("a").stage = "running".into();
+  let dep = ensure_issue(&mut world, "b", "e", "/state");
+  dep.stage = "running".into();
+  dep.blockers = vec!["a".to_owned()];
+  merged(&mut world, "a");
+  let queued = world.prompt_queue.get("b").expect("queued");
+  assert!(queued.text.contains("unblocked"), "{}", queued.text);
+  assert!(queued.text.contains('a'), "{}", queued.text);
+}
+
+#[test]
+fn the_engine_s_own_merge_queues_an_unblock_prompt_too() {
+  let mut world = World::new(0);
+  running(&mut world);
+  let dep = ensure_issue(&mut world, "b", "e", "/state");
+  dep.stage = "running".into();
+  dep.blockers = vec!["a".to_owned()];
+  let _steps = crate::commit::applied(&mut world, "a", Some(Action::Merge));
+  assert!(
+    world.prompt_queue.contains_key("b"),
+    "{:?}",
+    world.prompt_queue
+  );
+}
+
+#[test]
+fn a_merge_queues_no_unblock_prompt_for_a_dependent_that_never_launched() {
+  let mut world = World::new(0);
+  running(&mut world);
+  let dep = ensure_issue(&mut world, "b", "e", "/state");
+  dep.blockers = vec!["a".to_owned()];
+  merged(&mut world, "a");
+  assert!(world.prompt_queue.is_empty(), "{:?}", world.prompt_queue);
+}
+
+#[test]
 fn a_merge_settles_the_issue_s_merge_ready_judgment() {
   let mut world = World::new(0);
   running(&mut world);

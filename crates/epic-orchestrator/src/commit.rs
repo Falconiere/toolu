@@ -208,6 +208,8 @@ pub(crate) fn applied(world: &mut World, key: &str, action: Option<Action>) -> V
   }
   if action == Some(Action::Merge) {
     crate::watch::after_merge(world, key);
+    // The engine's own merge (the queue's) never reaches `merge_bridge::merged`.
+    crate::merge_bridge::unblock_dependents(world, key);
     // The merged issue left its queue: the next head goes.
     crate::logic::arm_ready(world);
   }

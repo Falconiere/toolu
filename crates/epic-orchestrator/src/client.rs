@@ -24,7 +24,10 @@ pub(crate) fn exchange(paths: &Paths, protocol: u64, request: &Value) -> Result<
     write_json(&mut stream, &json!({"op": "replace", "protocol": server}))?;
     return read_json(&mut stream);
   }
-  if request.get("op").and_then(Value::as_str) == Some("report") {
+  if matches!(
+    request.get("op").and_then(Value::as_str),
+    Some("report" | "notify")
+  ) {
     spool(paths, request)?;
   }
   write_json(&mut stream, &with_protocol(request, protocol))?;

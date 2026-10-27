@@ -2,7 +2,11 @@
 
 use crate::journal::Record;
 use crate::logic::{push_attention, token};
-use crate::model::{Action, Pending, Step, World};
+use crate::model::{Action, Pending, QueuedPrompt, Step, World};
+
+/// How long a queued worker prompt waits before it may be sent, so one
+/// burst of notices collapses to one prompt.
+pub(crate) const PROMPT_DEBOUNCE_MS: u64 = 5_000;
 
 /// Stall nudges and one checkpoint. Steps sit in the outbox or on the issue.
 pub(crate) fn on_tick(world: &mut World) {
@@ -116,6 +120,67 @@ pub(crate) fn map_pane_closed(world: &mut World, pane_id: &str) {
     return;
   };
   note_event(world, &key, "gone");
+}
+
+/// Queue `text` for `key`'s worker. A burst collapses to one prompt: the
+/// first notice sets the deadline, later ones add their text, so no notice
+/// of the burst is lost.
+pub(crate) fn enqueue_prompt(
+  world: &mut World,
+  key: &str,
+  text: &str,
+  name: &str,
+  fallback: Option<&str>,
+) {
+  let due_ms = world.now_ms.saturating_add(PROMPT_DEBOUNCE_MS);
+  let queued = world
+    .prompt_queue
+    .entry(key.to_owned())
+    .or_insert(QueuedPrompt {
+      text: String::new(),
+      due_ms,
+      name: String::new(),
+      fallback: None,
+    });
+  if queued.text.is_empty() {
+    text.clone_into(&mut queued.text);
+  } else if !queued.text.contains(text) {
+    queued.text.push(' ');
+    queued.text.push_str(text);
+  }
+  name.clone_into(&mut queued.name);
+  queued.fallback = fallback.map(str::to_owned);
+}
+
+/// Absolute time of the soonest queued-prompt deadline.
+pub(crate) fn next_prompt_ms(world: &World) -> Option<u64> {
+  world
+    .prompt_queue
+    .values()
+    .map(|queued| queued.due_ms)
+    .min()
+}
+
+/// Move due queued prompts to the outbox, journaling each delivery like a
+/// babysit prompt. Entries for dead agents are dropped. Delivery failures
+/// fall back to attention through the prompt's own fallback kind.
+pub(crate) fn flush_prompts(world: &mut World) {
+  let now = world.now_ms;
+  let due: Vec<String> = world
+    .prompt_queue
+    .iter()
+    .filter(|(_, queued)| queued.due_ms <= now)
+    .map(|(key, _)| key.clone())
+    .collect();
+  for key in due {
+    let Some(queued) = world.prompt_queue.remove(&key) else {
+      continue;
+    };
+    if crate::attention::has_live_agent(world, &key) {
+      let fallback = queued.fallback.as_deref();
+      crate::babysit::prompt(world, &key, &queued.name, queued.text, fallback);
+    }
+  }
 }
 
 /// A source event from #446.
@@ -238,3 +303,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/schedule_gone_test.rs"]
 mod gone_tests;
+
+#[cfg(test)]
+#[path = "tests/schedule_prompt_test.rs"]
+mod prompt_tests;

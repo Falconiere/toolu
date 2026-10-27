@@ -16,7 +16,7 @@ use crate::dispatch::dispatch;
 use crate::executor::Call;
 use crate::model::World;
 use crate::server::{Engine, Stop};
-use crate::socket_deadline::{github_ready, stall_ready, wake_after};
+use crate::socket_deadline::{github_ready, prompt_ready, stall_ready, wake_after};
 use crate::source::{self, Fact};
 use crate::wait_ops::{expire, satisfy};
 
@@ -122,8 +122,18 @@ fn on_timeout(
   } else if stall_ready(&engine.world) || github_ready(&engine.world) {
     let _tick = engine.tick(babysit)?;
   }
+  // Whatever woke the loop, a due prompt goes out now, not a tick later.
+  if prompt_ready(&engine.world) {
+    flush_prompts(engine)?;
+  }
   let _replies = satisfy(engine, waiters);
   Ok(())
+}
+
+/// Move due queued worker prompts to the outbox and deliver them.
+fn flush_prompts(engine: &mut Engine) -> Result<(), String> {
+  crate::schedule::flush_prompts(&mut engine.world);
+  engine.flush()
 }
 
 fn tick(

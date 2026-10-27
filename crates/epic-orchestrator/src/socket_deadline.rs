@@ -12,6 +12,11 @@ pub(crate) fn stall_ready(world: &World) -> bool {
   next_local_ms(world).is_some_and(|at| at <= world.now_ms)
 }
 
+/// Whether a queued worker prompt is due.
+pub(crate) fn prompt_ready(world: &World) -> bool {
+  crate::schedule::next_prompt_ms(world).is_some_and(|at| at <= world.now_ms)
+}
+
 fn next_local_ms(world: &World) -> Option<u64> {
   let stall = next_stall_ms(world);
   let reminder = next_reminder_ms(world);
@@ -35,8 +40,12 @@ pub(crate) fn wake_after(world: &World, waiters: &[Waiter], next_tick: Instant) 
     .map(|waiter| waiter.deadline)
     .min()
     .map(|deadline| deadline.saturating_duration_since(Instant::now()));
-  let until_stall =
-    next_local_ms(world).map(|at| Duration::from_millis(at.saturating_sub(world.now_ms)));
+  // A queued prompt wakes the loop, but it is not a tick: `stall_ready` leaves it out.
+  let local = next_local_ms(world)
+    .into_iter()
+    .chain(crate::schedule::next_prompt_ms(world))
+    .min();
+  let until_stall = local.map(|at| Duration::from_millis(at.saturating_sub(world.now_ms)));
   let wake = until_wait.map_or(until_tick, |wait| until_tick.min(wait));
   let wake = until_stall.map_or(wake, |stall| wake.min(stall));
   let until_github = world

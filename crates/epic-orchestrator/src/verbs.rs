@@ -51,6 +51,7 @@ pub(crate) fn command() -> Command {
     .subcommand(answer_command())
     .subcommand(wait_command())
     .subcommand(report_command())
+    .subcommand(crate::verbs_notify::command())
     .subcommand(job_command())
     .subcommand(
       Command::new("service")
@@ -81,6 +82,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("answer", args)) => crate::query::answer(ctx, args, &env),
     Some(("wait", args)) => crate::query::wait(ctx, args, &env),
     Some(("report", args)) => crate::query::report(args, &env),
+    Some(("notify", args)) => crate::query::notify(args, &env),
     Some(("job", args)) => crate::query::job(args),
     Some(("service", args)) if args.subcommand_name() == Some("install") => {
       crate::service::service(&env)
