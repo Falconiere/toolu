@@ -2,6 +2,7 @@
 //! stub stands in for `claude` or `codex` only at the process boundary, to
 //! inject the failures and listings a real host cannot be made to produce.
 
+use std::fmt::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::PathBuf;
 
@@ -102,6 +103,32 @@ impl Sandbox {
     self.stub("muse", &body);
   }
 
+  /// A `claude` stub replaying captured cases: it logs its argv to `claude.log`;
+  /// when argv is a key of `cases`, it prints that `claude.json` case's stdout and
+  /// stderr and exits with its code; any other argv exits 0 silently.
+  pub(crate) fn replay(&self, cases: &[(&str, &str)]) {
+    let root = self.root();
+    let root = root.display();
+    let mut arms = String::new();
+    for (index, (argv, name)) in cases.iter().enumerate() {
+      let case = claude_case(name);
+      self.write(&format!("replay-{index}.out"), &case["stdout"].to_string());
+      self.write(
+        &format!("replay-{index}.err"),
+        case["stderr"].as_str().unwrap_or_default(),
+      );
+      let code = case["exit"].as_i64().expect("exit");
+      writeln!(
+        arms,
+        "\"{argv}\") cat {root}/replay-{index}.out; cat {root}/replay-{index}.err >&2; exit {code} ;;"
+      )
+      .expect("write to a String");
+    }
+    let body =
+      format!("echo \"$*\" >> {root}/claude.log\ncase \"$*\" in\n{arms}*) exit 0 ;;\nesac");
+    self.stub("claude", &body);
+  }
+
   /// Writes the captured Muse case `case` at `rel`, its `/home/user` paths
   /// moved into this sandbox's home.
   pub(crate) fn capture(&self, case: &str, rel: &str) {
@@ -185,6 +212,7 @@ impl Sandbox {
       checkout: Some(Checkout::locate(&self.env(), version, origin).expect("checkout")),
       pin: None,
       approval,
+      progress: None,
     }
   }
 
@@ -239,20 +267,31 @@ impl Ask for Answer {
   }
 }
 
-/// The captured Muse 1.4.11 output of the case `name` in
-/// `fixtures/plugins/muse.json`: its stdout, re-serialized.
-pub(crate) fn muse_output(name: &str) -> String {
-  let path =
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/plugins/muse.json");
-  let text = std::fs::read_to_string(path).expect("fixtures/plugins/muse.json");
+/// The case `name` of the captured host output in `fixtures/plugins/<host>.json`.
+fn fixture_case(host: &str, name: &str) -> serde_json::Value {
+  let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join(format!("../../fixtures/plugins/{host}.json"));
+  let text = std::fs::read_to_string(path).expect("fixture file");
   let fixture: serde_json::Value = serde_json::from_str(&text).expect("fixture JSON");
-  let case = fixture["cases"]
+  fixture["cases"]
     .as_array()
     .expect("cases")
     .iter()
     .find(|case| case["name"] == name)
-    .unwrap_or_else(|| panic!("no Muse case {name}"));
-  case["stdout"].to_string()
+    .cloned()
+    .unwrap_or_else(|| panic!("no {host} case {name}"))
+}
+
+/// The captured Muse 1.4.11 output of the case `name` in
+/// `fixtures/plugins/muse.json`: its stdout, re-serialized.
+pub(crate) fn muse_output(name: &str) -> String {
+  fixture_case("muse", name)["stdout"].to_string()
+}
+
+/// The captured Claude Code 2.1.311 case `name` in `fixtures/plugins/claude.json`:
+/// `argv`, `exit`, `stdout` (a JSON value) and `stderr`.
+pub(crate) fn claude_case(name: &str) -> serde_json::Value {
+  fixture_case("claude", name)
 }
 
 fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
@@ -265,5 +304,77 @@ fn copy_tree(from: &std::path::Path, to: &std::path::Path) {
     } else {
       std::fs::copy(entry.path(), target).expect("copy");
     }
+  }
+}
+
+/// A run context over the sandbox's environment, drawn in `style`.
+pub(crate) fn context<'a>(
+  sb: &Sandbox,
+  host: Option<toolu_protocol::host::Host>,
+  ask: Option<&'a mut dyn Ask>,
+  style: toolu_runtime::term::Style,
+) -> crate::dispatch::Context<'a> {
+  crate::dispatch::Context {
+    env: sb.env(),
+    host,
+    ask,
+    timeout: std::time::Duration::from_secs(10),
+    version: "7.11.0",
+    origin: String::new(),
+    style,
+    started: std::time::Instant::now(),
+    progress: None,
+  }
+}
+
+/// A writer the test reads back.
+#[derive(Clone, Default)]
+pub(crate) struct Screen(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for Screen {
+  fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+    self
+      .0
+      .lock()
+      .map_err(|_poisoned| std::io::Error::other("poisoned"))?
+      .extend_from_slice(bytes);
+    Ok(bytes.len())
+  }
+
+  fn flush(&mut self) -> std::io::Result<()> {
+    Ok(())
+  }
+}
+
+impl Screen {
+  /// Everything written so far.
+  pub(crate) fn text(&self) -> String {
+    String::from_utf8_lossy(&self.0.lock().expect("screen")).into_owned()
+  }
+}
+
+impl Screen {
+  /// A Mono progress drawn on this screen, as a driver carries it.
+  pub(crate) fn progress(&self) -> std::sync::Arc<crate::progress::Progress> {
+    let progress = crate::progress::Progress::to_writer(
+      Box::new(self.clone()),
+      toolu_runtime::term::Style::Mono,
+    );
+    std::sync::Arc::new(progress)
+  }
+}
+
+/// A request for `verb` on `plugins`, every flag off.
+pub(crate) fn request(verb: crate::args::Verb, plugins: &[&str]) -> crate::args::Request {
+  crate::args::Request {
+    verb,
+    names: names(plugins),
+    scope: None,
+    config: None,
+    yes: false,
+    dry_run: false,
+    no_input: false,
+    catalog: None,
+    approval: Approval::Report,
   }
 }

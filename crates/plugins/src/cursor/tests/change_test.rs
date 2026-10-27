@@ -72,13 +72,13 @@ fn update_moves_to_a_newer_tag_and_reports_current_after() {
   install(&old, &catalog(), &names(&["toolu"]), false).unwrap();
   let origin = sb.cursor_origin("v9.9.9", Some("9.9.9"));
   let new = Cursor::new(&context(&sb, "9.9.9", &origin)).unwrap();
-  let steps = update(&new, &[], false).unwrap();
+  let steps = update(&new, &catalog(), &[], false).unwrap();
   assert_eq!(statuses(&steps), [("toolu", Status::Updated)]);
   assert_eq!(
     new.store.state("toolu"),
     State::Ours(Some("9.9.9".to_owned()))
   );
-  let steps = update(&new, &[], false).unwrap();
+  let steps = update(&new, &catalog(), &[], false).unwrap();
   assert_eq!(statuses(&steps), [("toolu", Status::Current)]);
 }
 
@@ -87,6 +87,24 @@ fn update_with_nothing_installed_is_an_error() {
   let sb = Sandbox::new();
   let origin = sb.cursor_origin("v9.9.8", None);
   let cursor = Cursor::new(&context(&sb, "9.9.8", &origin)).unwrap();
-  let err = update(&cursor, &[], false).unwrap_err();
+  let err = update(&cursor, &catalog(), &[], false).unwrap_err();
   assert!(err.message.contains("nothing to update"), "{}", err.message);
+}
+
+#[test]
+fn a_retired_plugin_toolu_installed_gets_a_remove_hint_instead_of_a_copy_failure() {
+  let sb = Sandbox::new();
+  let origin = sb.cursor_origin("v9.9.8", None);
+  let cursor = Cursor::new(&context(&sb, "9.9.8", &origin)).unwrap();
+  install(&cursor, &catalog(), &names(&["toolu", "ast-grep"]), false).unwrap();
+  std::fs::rename(cursor.store.path("ast-grep"), cursor.store.path("jira")).unwrap();
+  let steps = update(&cursor, &catalog(), &[], false).unwrap();
+  let jira = steps.iter().find(|step| step.name == "jira");
+  assert_eq!(
+    jira.map(|step| (step.status, step.detail.as_str())),
+    Some((
+      Status::Skew,
+      "retired from the toolu marketplace; remove it with `toolu plugins remove jira --host cursor --yes`"
+    ))
+  );
 }

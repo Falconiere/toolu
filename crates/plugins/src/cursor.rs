@@ -40,6 +40,7 @@ impl Cursor {
       checkout: Some(checkout.clone()),
       pin: None,
       approval: Approval::Report,
+      progress: None,
     };
     Ok(Cursor {
       store: Store::locate(&cx.env),

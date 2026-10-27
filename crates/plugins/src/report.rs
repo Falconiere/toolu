@@ -6,6 +6,9 @@ use serde_json::{Map, Value, json};
 use crate::host::Target;
 use crate::step::{Status, Step};
 
+/// The terminal form of the reports.
+pub(crate) mod rails;
+
 /// One catalog plugin as `list` reports it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Row {

@@ -125,12 +125,15 @@ pub(crate) fn command() -> Command {
         .arg(yes()),
     )
     .subcommand(
-      changes(Command::new("update").about("Update plugins to the marketplace version"))
-        .arg(names(
-          false,
-          "Plugins to update; none means every installed one",
-        ))
-        .arg(approve()),
+      changes(
+        Command::new("update")
+          .about("Update toolu's plugins on every host that has them, or on --host; never asks"),
+      )
+      .arg(names(
+        false,
+        "Plugins to update where installed; none means every installed toolu plugin",
+      ))
+      .arg(approve()),
     )
 }
 

@@ -5,6 +5,8 @@
 //! This crate never touches the standard streams: a verb returns one `Outcome`,
 //! and prompts use the terminal (`/dev/tty`).
 
+use std::sync::Arc;
+
 use clap::{ArgMatches, Command};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -12,10 +14,17 @@ use toolu_runtime::env::Env;
 
 mod args;
 mod catalog;
+#[cfg(test)]
+#[path = "tests/codex_stub_test.rs"]
+mod codex_stub;
 mod cursor;
 mod dispatch;
+#[cfg(test)]
+#[path = "tests/docs_test.rs"]
+mod docs;
 mod fail;
 mod host;
+mod progress;
 mod prompt;
 mod replay;
 mod report;
@@ -27,6 +36,7 @@ mod verbs;
 
 use dispatch::{Context, Report};
 use fail::Fail;
+use progress::Progress;
 
 /// The `toolu plugins` namespace.
 pub fn command() -> Command {
@@ -38,16 +48,24 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let Some(request) = args::request(matches) else {
     return Outcome::failed(Exit::Usage, "toolu: a plugins verb is required".to_owned());
   };
-  let mut terminal = prompt::terminal(!request.no_input && !ctx.json);
+  let mut terminal = prompt::terminal(!request.no_input && !ctx.json, ctx.style);
+  let progress = Progress::open(ctx.style, ctx.quiet).map(Arc::new);
+  if let Some(progress) = &progress {
+    let verb = matches.subcommand_name().unwrap_or_default();
+    progress.intro(&format!("toolu plugins {verb}"));
+  }
   let mut cx = Context {
     env: Env::process(),
     host: ctx.host,
     ask: terminal
       .as_mut()
-      .map(|prompter| prompter as &mut dyn prompt::Ask),
+      .map(|ask| &mut **ask as &mut dyn prompt::Ask),
     timeout: host::run::HOST_TIMEOUT,
     version: env!("CARGO_PKG_VERSION"),
     origin: host::checkout::ORIGIN.to_owned(),
+    style: ctx.style,
+    started: std::time::Instant::now(),
+    progress,
   };
   let report = catalog::load(request.catalog.as_deref())
     .and_then(|catalog| dispatch::dispatch(&request, &catalog, &mut cx));

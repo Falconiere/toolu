@@ -16,6 +16,7 @@ fn driver(sb: &Sandbox, adapter: Adapter) -> Driver {
     checkout: None,
     pin: None,
     approval: Approval::Report,
+    progress: None,
   }
 }
 
@@ -51,10 +52,7 @@ fn a_dry_run_orders_every_dependent_after_the_core_and_runs_no_install() {
       .iter()
       .all(|step| step.argv.contains(&"--scope".to_owned()))
   );
-  assert_eq!(
-    sb.log("claude"),
-    ["plugin list --json", "plugin list --available --json"]
-  );
+  assert_eq!(sb.log("claude"), ["plugin list --json"]);
 }
 
 #[test]
@@ -296,4 +294,24 @@ fn a_muse_dry_run_clones_nothing_and_changes_no_marketplace() {
     sb.log("muse"),
     ["plugins list --json", "plugins list --available --json"]
   );
+}
+
+#[test]
+fn an_install_advances_its_bar_per_plugin_and_clears_it() {
+  let sb = Sandbox::new();
+  sb.host("claude", "[]", "never");
+  let screen = crate::support::Screen::default();
+  let mut driver = driver(&sb, Adapter::Claude);
+  driver.progress = Some(screen.progress());
+  run(&driver, &catalog(), &names(&["toolu", "jev"]), None, false).expect("install");
+  let drawn = screen.text();
+  assert!(
+    drawn.contains("  1/2") && drawn.contains("installing jev…"),
+    "{drawn}"
+  );
+  assert!(
+    drawn.contains("◇  claude  ████████████████████  2/2"),
+    "{drawn}"
+  );
+  assert!(drawn.ends_with("\r\x1b[2K\x1b[1A\r\x1b[2K"), "{drawn:?}");
 }

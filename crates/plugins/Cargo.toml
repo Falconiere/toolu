@@ -9,6 +9,8 @@ publish.workspace = true
 
 [dependencies]
 clap.workspace = true
+# termios for the checkbox picker's raw mode (and a real pty in its tests).
+nix = { workspace = true, features = ["term"] }
 serde_json.workspace = true
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }

@@ -17,7 +17,7 @@ Commands:
   install  Install plugins, dependencies first (no names: all)
   list     Show the catalog and what the host has installed
   remove   Uninstall plugins (requires --yes)
-  update   Update plugins to the marketplace version
+  update   Update toolu's plugins on every host that has them, or on --host; never asks
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -97,12 +97,12 @@ Options:
 ## `toolu plugins update`
 
 ```text
-Update plugins to the marketplace version
+Update toolu's plugins on every host that has them, or on --host; never asks
 
 Usage: toolu plugins update [OPTIONS] [NAME]...
 
 Arguments:
-  [NAME]...  Plugins to update; none means every installed one
+  [NAME]...  Plugins to update where installed; none means every installed toolu plugin
 
 Options:
       --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in

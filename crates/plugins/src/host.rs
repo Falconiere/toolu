@@ -1,6 +1,9 @@
-//! The hosts the installer targets and how one is chosen: an explicit `--host`
-//! always wins, a single host on `PATH` is used without asking, and several are
-//! never resolved silently (a terminal asks, otherwise the run refuses).
+//! The hosts the installer targets and how `install`, `list` and `remove` choose
+//! one: an explicit `--host` always wins, a single host on `PATH` is used
+//! without asking, and several are never resolved silently (a terminal asks,
+//! otherwise the run refuses). At a terminal, install offers every supported
+//! host on the machine, Cursor included when `~/.cursor` or `cursor-agent` is
+//! there. `update` without `--host` asks nothing: it takes `with_toolu`.
 
 use std::path::Path;
 
@@ -8,6 +11,7 @@ use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 
 use crate::args::Scope;
+use crate::cursor::store::Store;
 use crate::fail::{Fail, Res};
 use crate::prompt::Ask;
 
@@ -15,7 +19,8 @@ use crate::prompt::Ask;
 pub(crate) mod adapter;
 /// The toolu checkout Muse installs from.
 pub(crate) mod checkout;
-mod claude;
+/// Claude Code's plugin listing and update result line.
+pub(crate) mod claude;
 /// Codex's plugin listing and marketplace commands.
 pub(crate) mod codex;
 /// Muse's plugin documents and marketplace commands.
@@ -51,6 +56,16 @@ impl Target {
     }
   }
 
+  /// How the host picker names the host.
+  fn label(self) -> &'static str {
+    match self {
+      Target::Claude => "Claude Code",
+      Target::Codex => "Codex",
+      Target::Muse => "Muse",
+      Target::Cursor => "Cursor",
+    }
+  }
+
   /// Whether removal on this host reaches only toolu's plugins
   /// (`<name>@toolu`, or Cursor's install marker), so `remove` may hand it the
   /// name of a plugin the marketplace retired (#615). Muse removes by bare
@@ -63,9 +78,9 @@ impl Target {
   }
 }
 
-/// The installer target `--host` names; Hermes is not a target yet. Cursor is
-/// never probed on `PATH` (a machine with `cursor-agent` and another host would
-/// stop resolving silently), so it is chosen with `--host cursor`.
+/// The installer target `--host` names; Hermes is not a target yet. Without a
+/// terminal Cursor is never detected (a machine with Cursor and another host
+/// would stop resolving silently), so a script names it with `--host cursor`.
 pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
@@ -101,12 +116,33 @@ pub(crate) fn available(env: &Env) -> Vec<Target> {
     .collect()
 }
 
+/// Every supported host on this machine: those on `PATH`, then Cursor when
+/// `~/.cursor` exists or `cursor-agent` is on `PATH` (install's picker).
+pub(crate) fn detected(env: &Env) -> Vec<Target> {
+  let mut found = available(env);
+  // `~/.cursor` itself: `TOOLU_CONFIG_DIR` would answer for every host.
+  if env.home().join(".cursor").is_dir() || on_path("cursor-agent", env) {
+    found.push(Target::Cursor);
+  }
+  found
+}
+
+/// The hosts on `PATH`, then Cursor when toolu installed a plugin there, so a
+/// leftover `~/.cursor` never asks which host `list`, `remove` or `update` means.
+pub(crate) fn with_toolu(env: &Env) -> Vec<Target> {
+  let mut found = available(env);
+  if !Store::locate(env).ours().is_empty() {
+    found.push(Target::Cursor);
+  }
+  found
+}
+
 /// How many hosts a verb acts on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Mode {
   /// `install`: every chosen host.
   Many,
-  /// `list`, `remove`, `update`: one host.
+  /// `list`, `remove`: one host.
   One,
 }
 
@@ -116,6 +152,14 @@ fn joined(targets: &[Target]) -> String {
     .map(|target| target.name())
     .collect::<Vec<_>>()
     .join(", ")
+}
+
+/// The refusal when no host is on `PATH`.
+pub(crate) fn none_found() -> Fail {
+  Fail::usage(format!(
+    "no host found on PATH (probed {}). Choose one with --host.",
+    joined(&PROBED)
+  ))
 }
 
 fn ambiguous(found: &[Target]) -> Fail {
@@ -135,12 +179,14 @@ pub(crate) fn resolve(
   if let Some(target) = requested {
     return Ok(vec![target]);
   }
-  let found = available(env);
+  // Without a terminal only PATH hosts count, so scripts resolve as they always did.
+  let found = match (&ask, mode) {
+    (None, _any) => available(env),
+    (Some(_ask), Mode::Many) => detected(env),
+    (Some(_ask), Mode::One) => with_toolu(env),
+  };
   match found.as_slice() {
-    [] => Err(Fail::usage(format!(
-      "no host found on PATH (probed {}). Choose one with --host.",
-      joined(&PROBED)
-    ))),
+    [] => Err(none_found()),
     [only] => Ok(vec![*only]),
     _several => {
       let Some(ask) = ask else {
@@ -148,7 +194,7 @@ pub(crate) fn resolve(
       };
       let labels: Vec<(String, Option<String>)> = found
         .iter()
-        .map(|target| (target.name().to_owned(), None))
+        .map(|target| (target.name().to_owned(), Some(target.label().to_owned())))
         .collect();
       let chosen = match mode {
         Mode::Many => ask.many("Which hosts should receive the plugins?", &labels)?,

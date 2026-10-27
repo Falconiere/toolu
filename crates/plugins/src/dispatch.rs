@@ -1,25 +1,32 @@
 //! Routes a request to its verb on each chosen host and turns the steps into a
 //! report (the former TypeScript installer's `src/plugins/dispatch.ts`).
 
-use std::time::Duration;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use serde_json::Value;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
+use toolu_runtime::term::Style;
 
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
-use crate::catalog::order::{install_order, removable};
+use crate::catalog::order::removable;
 use crate::cursor::{self, Cursor};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::checkout::Checkout;
 use crate::host::{Mode, Target, check_scope, resolve, target_of};
+use crate::progress::Progress;
 use crate::prompt::{Ask, Choice};
 use crate::replay;
 use crate::report;
+use crate::report::rails::{self, Frame};
 use crate::step::{Status, Step};
 use crate::verbs::{self, Driver};
+
+/// `update`, on one host or every detected one.
+mod update;
 
 /// What a run works with besides its request.
 pub(crate) struct Context<'a> {
@@ -36,6 +43,42 @@ pub(crate) struct Context<'a> {
   pub(crate) version: &'static str,
   /// The repository Muse's checkout is cloned from.
   pub(crate) origin: String,
+  /// How the report is drawn: plain, or rails at a terminal.
+  pub(crate) style: Style,
+  /// When the run started, for the rails footer.
+  pub(crate) started: Instant,
+  /// The live progress at the terminal, when there is one; it drew the
+  /// `┌  toolu plugins <verb>` intro, so the report leaves it out.
+  pub(crate) progress: Option<Arc<Progress>>,
+}
+
+impl Context<'_> {
+  /// Runs `work` under a spinner for `host` (Cursor copies plugins in-process).
+  fn spinning<T>(&self, host: &str, task: &str, work: impl FnOnce(&Self) -> T) -> T {
+    if let Some(progress) = &self.progress {
+      progress.begin(host, 0, task);
+    }
+    let done = work(self);
+    if let Some(progress) = &self.progress {
+      progress.end();
+    }
+    done
+  }
+
+  /// The rails text of `verb`'s report, or `plain` when the style is plain.
+  fn shown(&self, verb: &str, rails: impl FnOnce(&Frame) -> String, plain: String) -> String {
+    if !self.style.rails() {
+      return plain;
+    }
+    rails(&Frame {
+      style: self.style,
+      elapsed: self.started.elapsed(),
+      title: self
+        .progress
+        .is_none()
+        .then(|| format!("toolu plugins {verb}")),
+    })
+  }
 }
 
 /// A verb's result: the text, the `--json` document, and whether a step failed.
@@ -68,6 +111,7 @@ fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
     checkout,
     pin,
     approval: request.approval,
+    progress: cx.progress.as_ref().map(Arc::clone),
   })
 }
 
@@ -146,7 +190,7 @@ pub(crate) fn dispatch(request: &Request, catalog: &Catalog, cx: &mut Context<'_
     }
     Verb::Remove => remove(request, catalog, wanted, cx),
     Verb::List => list(request, catalog, wanted, cx),
-    Verb::Update => update(request, catalog, wanted, cx),
+    Verb::Update => update::run(request, catalog, wanted, cx),
   }
 }
 
@@ -187,7 +231,9 @@ fn install(
       Vec::new()
     } else {
       match target {
-        Target::Cursor => cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)?,
+        Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
+          cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)
+        })?,
         Target::Claude | Target::Codex | Target::Muse => {
           let driver = driver(target, request, cx)?;
           verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
@@ -201,7 +247,11 @@ fn install(
     .flat_map(|(_, steps)| steps.clone())
     .collect();
   Ok(Report {
-    text: report::install(&sections, request.dry_run),
+    text: cx.shown(
+      "install",
+      |frame| rails::steps(frame, &sections, &[], request.dry_run),
+      report::install(&sections, request.dry_run),
+    ),
     json: report::install_json(&sections, request.dry_run),
     failed: failed(&all),
   })
@@ -233,7 +283,11 @@ fn remove(
     ),
   };
   Ok(Report {
-    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
+    text: cx.shown(
+      "remove",
+      |frame| rails::steps(frame, &[(target, steps.clone())], &[], request.dry_run),
+      dry_text(request.dry_run, &steps).unwrap_or_else(|| report::remove(&steps)),
+    ),
     json: report::host_json(target, &as_reported(&steps, request.dry_run), true),
     failed: failed(&steps),
   })
@@ -253,32 +307,13 @@ fn list(
     }
   };
   Ok(Report {
-    text: report::list(&rows),
+    text: cx.shown(
+      "list",
+      |frame| rails::list(frame, target, &rows),
+      report::list(&rows),
+    ),
     json: report::rows_json(&rows),
     failed: false,
-  })
-}
-
-fn update(
-  request: &Request,
-  catalog: &Catalog,
-  wanted: Option<Target>,
-  cx: &mut Context<'_>,
-) -> Res<Report> {
-  let target = one_host(request, wanted, cx)?;
-  install_order(catalog, &request.names)?;
-  let steps = match target {
-    Target::Cursor => cursor::update(&Cursor::new(cx)?, &request.names, request.dry_run)?,
-    Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
-      &driver(target, request, cx)?,
-      &request.names,
-      request.dry_run,
-    )?,
-  };
-  Ok(Report {
-    text: dry_text(request.dry_run, &steps).unwrap_or_else(|| report::update(&steps)),
-    json: report::host_json(target, &steps, false),
-    failed: failed(&steps),
   })
 }
 

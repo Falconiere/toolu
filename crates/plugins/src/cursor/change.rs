@@ -7,6 +7,7 @@ use crate::cursor::store::{State, version_of};
 use crate::fail::{Fail, Res};
 use crate::step::{Status, Step};
 use crate::verbs::install::CORE;
+use crate::verbs::retired_step;
 
 impl Cursor {
   fn tag(&self) -> &str {
@@ -143,8 +144,14 @@ fn update_one(cursor: &Cursor, name: &str, dry_run: bool) -> Step {
   }
 }
 
-/// Updates `names`, or every plugin toolu installed when empty.
-pub(crate) fn update(cursor: &Cursor, names: &[String], dry_run: bool) -> Res<Vec<Step>> {
+/// Updates `names`, or every plugin toolu installed when empty; one the catalog
+/// no longer has is retired and only named.
+pub(crate) fn update(
+  cursor: &Cursor,
+  catalog: &Catalog,
+  names: &[String],
+  dry_run: bool,
+) -> Res<Vec<Step>> {
   if !dry_run {
     cursor.sync()?;
   }
@@ -161,7 +168,10 @@ pub(crate) fn update(cursor: &Cursor, names: &[String], dry_run: bool) -> Res<Ve
   Ok(
     targets
       .iter()
-      .map(|name| update_one(cursor, name, dry_run))
+      .map(|name| match catalog.entry(name) {
+        Some(_known) => update_one(cursor, name, dry_run),
+        None => retired_step(name, "cursor", cursor.copy_argv(name)),
+      })
       .collect(),
   )
 }

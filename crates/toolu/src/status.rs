@@ -1,4 +1,5 @@
-//! `toolu status`: the repository, gate and push-review snapshot (#445).
+//! `toolu status`: the repository, gate and push-review snapshot (#445): a table
+//! at a terminal, the JSON document otherwise.
 
 use std::path::Path;
 
@@ -11,6 +12,7 @@ use toolu_runtime::host::roots::Roots;
 mod cache;
 mod gate;
 mod repo;
+mod table;
 
 /// Show the repository, gate and push-review status.
 pub fn command() -> Command {
@@ -21,7 +23,7 @@ pub fn command() -> Command {
 pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let (roots, cwd) = crate::overlaid_roots(ctx);
   match Snapshot.snapshot(&roots, &cwd) {
-    Ok(document) => Outcome::data(render(&document, ctx.json)),
+    Ok(document) => Outcome::data(render(&document, ctx)),
     Err(error) => Outcome::failed(toolu_protocol::exit::Exit::Failure, error.to_string()),
   }
 }
@@ -80,9 +82,12 @@ fn document_with(roots: &Roots, dir: &Path, found: &repo::Repo) -> Value {
   })
 }
 
-fn render(document: &Value, json_out: bool) -> String {
-  if json_out {
+/// One JSON line under `--json`, the rails table at a terminal, else pretty JSON.
+fn render(document: &Value, ctx: &Ctx) -> String {
+  if ctx.json {
     document.to_string()
+  } else if ctx.style.rails() {
+    table::render(document, ctx.style).trim_end().to_owned()
   } else {
     serde_json::to_string_pretty(document).unwrap_or_else(|_err| document.to_string())
   }

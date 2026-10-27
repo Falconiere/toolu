@@ -10,9 +10,10 @@ use toolu_protocol::HOOK_PROTOCOL;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::term::Style;
 
 use crate::registry::{self, Action};
-use crate::{Context, clap_error, commands, fast, hook};
+use crate::{Context, clap_error, commands, fast, hook, output};
 
 /// Run `words` (argv after the program name) through `tree`.
 pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Command) -> Outcome {
@@ -21,7 +22,7 @@ pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Co
     Ok(matches) => matches,
     Err(err) => return clap_error::outcome(&err, wants_json(words)),
   };
-  let mut ctx = ctx_of(&matches);
+  let mut ctx = ctx_of(&matches, output::style());
   if reads_stdin(&matches) {
     ctx.stdin = (context.stdin)().ok();
   }
@@ -48,15 +49,19 @@ pub(crate) fn wants_json(words: &[String]) -> bool {
     .any(|word| word == "--json")
 }
 
-fn ctx_of(matches: &ArgMatches) -> Ctx {
+/// The verb context of `matches`; `style` is what stdout can show, and `--json`
+/// keeps it plain.
+fn ctx_of(matches: &ArgMatches, style: Style) -> Ctx {
+  let json = matches.get_flag("json");
   Ctx {
-    json: matches.get_flag("json"),
+    json,
     quiet: matches.get_flag("quiet"),
     host: matches
       .get_one::<String>("host")
       .and_then(|name| Host::parse(name)),
     config_dir: matches.get_one::<PathBuf>("config-dir").cloned(),
     stdin: None,
+    style: if json { Style::Plain } else { style },
   }
 }
 

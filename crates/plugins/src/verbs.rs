@@ -1,6 +1,7 @@
 //! The four verbs on a host driven through its own plugin CLI (Claude Code,
 //! Codex, Muse).
 
+use std::sync::Arc;
 use std::time::Duration;
 
 use toolu_runtime::env::Env;
@@ -9,6 +10,7 @@ use crate::args::Approval;
 use crate::host::adapter::{Adapter, Installed};
 use crate::host::checkout::Checkout;
 use crate::host::run::{Ran, run};
+use crate::progress::Progress;
 use crate::step::{Status, Step};
 
 /// Dependency-ordered install.
@@ -42,9 +44,49 @@ pub(crate) struct Driver {
   pub(crate) pin: Option<String>,
   /// What to do with hooks awaiting approval after an install or update.
   pub(crate) approval: Approval,
+  /// The live progress at the terminal, when there is one.
+  pub(crate) progress: Option<Arc<Progress>>,
 }
 
 impl Driver {
+  /// Starts this host's progress over `total` plugins, at `task`.
+  pub(crate) fn begin(&self, total: usize, task: &str) {
+    if let Some(progress) = &self.progress {
+      progress.begin(self.adapter.bin(), total, task);
+    }
+  }
+
+  /// Names the plugin at work.
+  pub(crate) fn working(&self, task: &str) {
+    if let Some(progress) = &self.progress {
+      progress.task(task);
+    }
+  }
+
+  /// One plugin done.
+  pub(crate) fn advance(&self) {
+    if let Some(progress) = &self.progress {
+      progress.advance();
+    }
+  }
+
+  /// Clears this host's progress.
+  pub(crate) fn end(&self) {
+    if let Some(progress) = &self.progress {
+      progress.end();
+    }
+  }
+
+  /// What the marketplace offers; nothing on Claude Code, which lists no
+  /// versions for what is installed.
+  pub(crate) fn offered(&self) -> Vec<Installed> {
+    self
+      .adapter
+      .list_available()
+      .map(|argv| self.versions(&argv))
+      .unwrap_or_default()
+  }
+
   /// Runs one host command.
   pub(crate) fn run(&self, argv: &[String]) -> Ran {
     run(argv, &self.env, self.timeout)
@@ -79,6 +121,22 @@ pub(crate) fn foreign_step(name: &str, have: &Installed, argv: Vec<String>) -> S
     format!(
       "installed from {source}, outside the toolu marketplace; left untouched. Run `muse plugins remove {name}`, then `toolu plugins install {name} --host muse`."
     ),
+    argv,
+  )
+}
+
+/// The step for `name`, installed from toolu's marketplace but gone from the
+/// catalog: left alone, naming the command that removes it on `host` (Muse
+/// removes by bare name, so its own command, as `toolu doctor` names it).
+pub(crate) fn retired_step(name: &str, host: &str, argv: Vec<String>) -> Step {
+  let remove = match host {
+    "muse" => format!("muse plugins remove {name}"),
+    _plugin_cli_or_cursor => format!("toolu plugins remove {name} --host {host} --yes"),
+  };
+  Step::new(
+    name,
+    Status::Skew,
+    format!("retired from the toolu marketplace; remove it with `{remove}`"),
     argv,
   )
 }

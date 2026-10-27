@@ -1,28 +1,12 @@
-use std::time::Duration;
-
 use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 
-use super::{Context, Report, dispatch};
-use crate::args::{Approval, Request, Scope, Verb};
+use super::{Report, dispatch};
+use crate::args::{Request, Scope, Verb};
 use crate::fail::Fail;
 use crate::prompt::Ask;
-use crate::support::{Answer, Sandbox, catalog, names};
-
-fn request(verb: Verb, plugins: &[&str]) -> Request {
-  Request {
-    verb,
-    names: names(plugins),
-    scope: None,
-    config: None,
-    yes: false,
-    dry_run: false,
-    no_input: false,
-    catalog: None,
-    approval: Approval::Report,
-  }
-}
+use crate::support::{Answer, Sandbox, catalog, context, request};
 
 fn go(
   sb: &Sandbox,
@@ -30,14 +14,7 @@ fn go(
   host: Option<Host>,
   ask: Option<&mut dyn Ask>,
 ) -> Result<Report, Fail> {
-  let mut cx = Context {
-    env: sb.env(),
-    host,
-    ask,
-    timeout: Duration::from_secs(10),
-    version: "7.11.0",
-    origin: String::new(),
-  };
+  let mut cx = context(sb, host, ask, toolu_runtime::term::Style::Plain);
   dispatch(request, &catalog(), &mut cx)
 }
 
@@ -151,10 +128,6 @@ fn list_and_update_act_on_the_one_host() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
   );
-  sb.write(
-    "claude-available.json",
-    r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
-  );
   let Ok(listed) = go(&sb, &request(Verb::List, &[]), None, None) else {
     panic!("list failed");
   };
@@ -170,7 +143,7 @@ fn list_and_update_act_on_the_one_host() {
   let Ok(updated) = go(&sb, &request(Verb::Update, &[]), None, None) else {
     panic!("update failed");
   };
-  assert_eq!(updated.text, "  = jev              current at 7.11.0\n");
+  assert_eq!(updated.text, "claude:\n  + jev              updated\n");
 }
 
 #[test]
@@ -247,7 +220,7 @@ fn host_cli_remove_and_update_check_names_and_dry_runs_list_the_commands() {
   };
   assert_eq!(
     updated.text,
-    "Planned commands (nothing was run):\n  claude plugin update jev@toolu\n"
+    "Planned commands (nothing was run):\n  claude plugin update jev@toolu --json\n"
   );
   assert!(
     !sb
@@ -265,10 +238,6 @@ fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.10.0"}]"#,
   );
-  sb.write(
-    "claude-available.json",
-    r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"toolu@toolu","version":"7.11.0"}]"#,
-  );
   let mut dry = request(Verb::Update, &[]);
   dry.dry_run = true;
   let Ok(report) = go(&sb, &dry, Some(Host::Claude), None) else {
@@ -276,7 +245,7 @@ fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
   };
   assert_eq!(
     report.text,
-    "Planned commands (nothing was run):\n  claude plugin update toolu@toolu\n"
+    "Planned commands (nothing was run):\n  claude plugin update jev@toolu --json\n  claude plugin update toolu@toolu --json\n"
   );
   let mut remove = request(Verb::Remove, &["jev"]);
   remove.yes = true;
