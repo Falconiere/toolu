@@ -152,7 +152,8 @@ fn host(
   }
 }
 
-/// Every detected host with toolu plugins; the others are only noted.
+/// Every detected host: a section for each one with toolu plugins or a
+/// failure, a note for each one without them.
 fn all(request: &Request, catalog: &Catalog, cx: &mut Context<'_>) -> Res<Report> {
   let hosts = with_toolu(&cx.env);
   if hosts.is_empty() {
