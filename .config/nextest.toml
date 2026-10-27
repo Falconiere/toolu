@@ -16,9 +16,20 @@ threads-required = 'num-test-threads'
 filter = 'package(xtask) & binary(/^fixtures_/)'
 threads-required = 'num-test-threads'
 
-# This doctor case bounds its own run at 2 s. It failed in the container gate at
-# the start of the run, when every instrumented test binary loads at once (10.4 s),
-# and it fails on a slow target filesystem; alone it takes about 1 s.
+# Every doctor case runs doctor's 1 s `command -v` and `--hook-protocol` probes, and
+# two bound their own run at 2 s or 5 s. They failed in the container gate at the
+# start of the run, when every instrumented test binary loads at once (10.4 s), and
+# on a slow target filesystem. Two of them probe a copy of the instrumented toolu:
+# in the container the hard link fails across the target volume, so the copy loads
+# cold. Alone each takes about 1.5 s. The whole binary is matched so a new or
+# renamed case cannot silently fall out of the override.
 [[profile.default.overrides]]
-filter = 'test(=doctor_does_not_wait_for_a_descendant_holding_protocol_output_open)'
+filter = 'binary(doctor)'
+threads-required = 'num-test-threads'
+
+# The TypeScript replays run jscpd through npx under the hook's 10 s timeout. In the
+# container gate the run's opening disk flood made two duplication replays time out
+# and come back empty; alone the test takes about 11 s.
+[[profile.default.overrides]]
+filter = 'binary(golden_quality) & test(=ts_quality_replays_every_golden_case)'
 threads-required = 'num-test-threads'
