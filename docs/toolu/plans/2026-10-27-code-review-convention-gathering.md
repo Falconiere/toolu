@@ -55,6 +55,8 @@ No blockers. Every AC maps to a step with a matching real-Git input and runnable
 
 The full gate's `unused-pub` check requires every public item to have a consumer outside its crate. A black-box contract test (`crates/code-review/tests/rules_contract.rs`, mirroring `tests/shape_contract.rs`) now exercises `gather`, `Bundle`, `RuleFile`, and `RulesError` through the public API; its path is declared in the `base` and `docs-gate` steps.
 
+The xhigh review replaced per-candidate `git cat-file blob <base>:<path>` probes, which classified absence by matching Git's English `does not exist` message, with one `git --literal-pathspecs ls-tree -z -l` listing at the resolved commit id plus by-id blob reads. The old probe reported a rule file that exists only in the branch or working tree as a dropped Git failure, depended on the locale, and returned a symlink's link path as rule text. Symlinked candidates are now dropped with a reason (Jev: drop-visible 0.99).
+
 ## Verification
 
 Focused real-Git tests prove the six ACs and compare stable bundle shape (ordered paths, prompt field, drops, bytes) to the golden fixture. `cargo xtask gate` verifies repository guardrails. Before implementation run `toolu ledger preflight` on this plan. After implementation, make a scoped commit and run `toolu ledger run --verify`; run the local xhigh review, fix its findings, and rerun the gate. Rebase on current `origin/main`, repeat review and gate if it moved, push, verify the PR, resolve threads, and squash-merge with `--admin` (CI is disabled; see the run instructions).

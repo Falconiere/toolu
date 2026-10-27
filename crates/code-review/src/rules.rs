@@ -1,10 +1,11 @@
 //! Repository conventions from the base ref, within `budget::RULES_MAX_BYTES`.
-//! Every blob is read with `git cat-file` at the caller-supplied base commit
-//! (the shape stage's merge-base), never from HEAD or the working tree, so a
+//! The caller-supplied base (the shape stage's merge-base) is resolved once to
+//! a commit id; candidates are listed with `git ls-tree` at that commit and read
+//! by blob id with `git cat-file`, never from HEAD or the working tree, so a
 //! branch cannot soften its own review. Rule text is reference data for the
 //! prompt builder (#666); nothing here feeds a verdict.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use serde::Serialize;
@@ -27,8 +28,21 @@ const BASENAMES: [&str; 4] = [
 const PROMPT_PATH: &str = ".github/code-review-prompt.md";
 /// Why a whole file was left out for size.
 const CAP_REASON: &str = "exceeds rules byte cap";
+/// Why a symlinked candidate was left out: its blob is a link path, not rules.
+const LINK_REASON: &str = "rule file is a symlink";
 /// One byte past the cap, so an over-cap blob is known without reading it all.
 const READ_LIMIT: usize = RULES_MAX_BYTES + 1;
+/// Candidates per `ls-tree` call, so a wide diff stays inside argv limits.
+const LIST_CHUNK: usize = 256;
+/// Output bound of one `ls-tree` listing of at most `LIST_CHUNK` entries.
+const LIST_MAX_BYTES: usize = 1024 * 1024;
+/// Generated CLI docs and this repo's plan/spec trees; never conventions.
+const EXCLUDED_TREES: [&str; 4] = [
+  "docs/cli/",
+  "docs/toolu/plans/",
+  "docs/toolu/specs/",
+  "docs/toolu/brainstorms/",
+];
 
 /// One gathered convention file, verbatim from the base ref.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -87,11 +101,16 @@ pub fn gather(
   let top =
     toplevel(env, root).ok_or_else(|| RulesError::Git("not inside a Git work tree".to_owned()))?;
   let root = top.as_path();
-  if !base_resolves(env, root, base)? {
+  let Some(commit) = resolve(env, root, base)? else {
     return Ok(unavailable(&format!(
       "base ref {base} does not resolve to a commit"
     )));
-  }
+  };
+  let paths: Vec<String> = candidates(touched)
+    .into_iter()
+    .filter(|path| !excluded(path))
+    .collect();
+  let entries = list(env, root, &commit, &paths)?;
   let mut bundle = Bundle {
     available: true,
     files: Vec::new(),
@@ -100,9 +119,9 @@ pub fn gather(
     notices: Vec::new(),
     bytes: 0,
   };
-  for path in candidates(touched) {
-    if !excluded(&path) {
-      consider(env, root, base, &path, &mut bundle)?;
+  for path in &paths {
+    if let Some(entry) = entries.get(path) {
+      consider(env, root, path, entry, &mut bundle)?;
     }
   }
   Ok(bundle)
@@ -152,103 +171,148 @@ fn depth(path: &str) -> usize {
 }
 
 /// Paths the review never treats as conventions, checked before any read:
-/// fixture trees, generated CLI docs, and this repo's plan/spec trees.
+/// any `fixtures` directory, generated CLI docs, and plan/spec trees.
 fn excluded(path: &str) -> bool {
-  let parts: Vec<&str> = path.split('/').collect();
-  let Some((_, dirs)) = parts.split_last() else {
-    return false;
-  };
-  if dirs.contains(&"fixtures") {
-    return true;
-  }
-  path.starts_with("docs/cli/")
-    || [
-      "docs/toolu/plans/",
-      "docs/toolu/specs/",
-      "docs/toolu/brainstorms/",
-    ]
-    .iter()
-    .any(|tree| path.starts_with(tree))
+  let dirs = path.rsplit_once('/').map_or("", |(dirs, _)| dirs);
+  dirs.split('/').any(|dir| dir == "fixtures")
+    || EXCLUDED_TREES.iter().any(|tree| path.starts_with(tree))
 }
 
-/// Read one candidate into the bundle, or record why it stayed out.
+/// One candidate's blob entry in the base commit's tree.
+struct Entry {
+  /// Blob id, read by id so the base cannot move between reads.
+  oid: String,
+  /// Blob size, so an over-budget file is dropped without being read.
+  size: usize,
+  /// Mode 120000: the blob holds a link path, not rule text.
+  link: bool,
+}
+
+/// Blob entries among `paths` at `commit`. An absent path is simply not listed,
+/// so absence never depends on Git's (translatable) messages or on whether the
+/// path exists in the working tree.
+fn list(
+  env: &Env,
+  root: &Path,
+  commit: &str,
+  paths: &[String],
+) -> Result<BTreeMap<String, Entry>, RulesError> {
+  let mut entries = BTreeMap::new();
+  for chunk in paths.chunks(LIST_CHUNK) {
+    let mut args = vec!["--literal-pathspecs", "ls-tree", "-z", "-l", commit, "--"];
+    args.extend(chunk.iter().map(String::as_str));
+    let out = run_git(env, root, &args, LIST_MAX_BYTES)?;
+    if out.exit_code != 0 || out.timed_out || out.truncated {
+      return Err(RulesError::Git(format!(
+        "git ls-tree {commit}: exit {}, truncated={}, timed_out={}: {}",
+        out.exit_code,
+        out.truncated,
+        out.timed_out,
+        out.stderr.trim()
+      )));
+    }
+    entries.extend(parse_listing(&out.stdout_bytes)?);
+  }
+  Ok(entries)
+}
+
+/// The blob records of one `ls-tree -z -l` listing (`mode type oid size\tpath`);
+/// trees and submodules named like a rule file are not files and are skipped.
+fn parse_listing(stdout: &[u8]) -> Result<Vec<(String, Entry)>, RulesError> {
+  let mut blobs = Vec::new();
+  for record in stdout
+    .split(|byte| *byte == 0)
+    .filter(|record| !record.is_empty())
+  {
+    let text = String::from_utf8_lossy(record);
+    let bad = || RulesError::Git(format!("unusable git ls-tree record {text:?}"));
+    let (meta, path) = text.split_once('\t').ok_or_else(bad)?;
+    let fields: Vec<&str> = meta.split_whitespace().collect();
+    let [mode, kind, oid, size] = fields.as_slice() else {
+      return Err(bad());
+    };
+    if *kind == "blob" {
+      let size: usize = size.parse().ok().ok_or_else(bad)?;
+      let entry = Entry {
+        oid: (*oid).to_owned(),
+        size,
+        link: *mode == "120000",
+      };
+      blobs.push((path.to_owned(), entry));
+    }
+  }
+  Ok(blobs)
+}
+
+/// Read one listed candidate into the bundle, or record why it stayed out.
 fn consider(
   env: &Env,
   root: &Path,
-  base: &str,
   path: &str,
+  entry: &Entry,
   bundle: &mut Bundle,
 ) -> Result<(), RulesError> {
-  let (bytes, truncated) = match read_blob(env, root, base, path)? {
-    Blob::Absent => return Ok(()),
-    Blob::Failed(reason) => {
-      bundle.dropped.push(Omitted {
+  match admit(
+    env,
+    root,
+    entry,
+    RULES_MAX_BYTES.saturating_sub(bundle.bytes),
+  )? {
+    Ok(text) => {
+      bundle.bytes += text.len();
+      let file = RuleFile {
         path: path.to_owned(),
-        reason,
-      });
-      return Ok(());
+        text,
+      };
+      if path == PROMPT_PATH {
+        bundle.prompt_override = Some(file);
+      } else {
+        bundle.files.push(file);
+      }
     }
-    Blob::Present(bytes, truncated) => (bytes, truncated),
-  };
-  if truncated || bytes.len() > RULES_MAX_BYTES.saturating_sub(bundle.bytes) {
-    bundle.dropped.push(Omitted {
+    Err(reason) => bundle.dropped.push(Omitted {
       path: path.to_owned(),
-      reason: CAP_REASON.to_owned(),
-    });
-    return Ok(());
-  }
-  let Ok(text) = String::from_utf8(bytes) else {
-    bundle.dropped.push(Omitted {
-      path: path.to_owned(),
-      reason: "rule file is not UTF-8".to_owned(),
-    });
-    return Ok(());
-  };
-  bundle.bytes += text.len();
-  let file = RuleFile {
-    path: path.to_owned(),
-    text,
-  };
-  if path == PROMPT_PATH {
-    bundle.prompt_override = Some(file);
-  } else {
-    bundle.files.push(file);
+      reason,
+    }),
   }
   Ok(())
 }
 
-/// One candidate's committed content.
-enum Blob {
-  /// No blob at the base for this path.
-  Absent,
-  /// Blob bytes and whether more was cut at the read limit.
-  Present(Vec<u8>, bool),
-  /// Git failed for this path; the reason is shown to people.
-  Failed(String),
+/// The entry's text when it fits `remaining`, else why it stays out. A Git
+/// failure on this blob is such a reason, so one bad file cannot hide the rest.
+fn admit(
+  env: &Env,
+  root: &Path,
+  entry: &Entry,
+  remaining: usize,
+) -> Result<Result<String, String>, RulesError> {
+  if entry.link {
+    return Ok(Err(LINK_REASON.to_owned()));
+  }
+  if entry.size > remaining {
+    return Ok(Err(CAP_REASON.to_owned()));
+  }
+  let out = run_git(env, root, &["cat-file", "blob", &entry.oid], READ_LIMIT)?;
+  if out.timed_out || out.exit_code != 0 {
+    let detail = if out.timed_out {
+      "timed out"
+    } else {
+      out.stderr.lines().next().unwrap_or_default().trim()
+    };
+    return Ok(Err(format!("git cat-file blob {}: {detail}", entry.oid)));
+  }
+  if out.truncated || out.stdout_bytes.len() > remaining {
+    return Ok(Err(CAP_REASON.to_owned()));
+  }
+  Ok(
+    String::from_utf8(out.stdout_bytes)
+      .ok()
+      .ok_or_else(|| "rule file is not UTF-8".to_owned()),
+  )
 }
 
-fn read_blob(env: &Env, root: &Path, base: &str, path: &str) -> Result<Blob, RulesError> {
-  let object = format!("{base}:{path}");
-  let out = run_git(env, root, &["cat-file", "blob", &object], READ_LIMIT)?;
-  if out.timed_out {
-    return Ok(Blob::Failed(format!(
-      "git cat-file blob {object}: timed out"
-    )));
-  }
-  if out.exit_code == 0 {
-    return Ok(Blob::Present(out.stdout_bytes, out.truncated));
-  }
-  let stderr = out.stderr.trim();
-  if stderr.contains("does not exist") {
-    return Ok(Blob::Absent);
-  }
-  Ok(Blob::Failed(format!(
-    "git cat-file blob {object}: {stderr}"
-  )))
-}
-
-/// Whether `base` names a commit; exit 1 alone means it does not.
-fn base_resolves(env: &Env, root: &Path, base: &str) -> Result<bool, RulesError> {
+/// The commit id `base` names, or `None` when it names none (exit 1 alone).
+fn resolve(env: &Env, root: &Path, base: &str) -> Result<Option<String>, RulesError> {
   let commit = format!("{base}^{{commit}}");
   let out = run_git(
     env,
@@ -256,11 +320,12 @@ fn base_resolves(env: &Env, root: &Path, base: &str) -> Result<bool, RulesError>
     &["rev-parse", "--verify", "--quiet", &commit],
     4096,
   )?;
-  if out.exit_code == 0 && !out.timed_out && !out.truncated {
-    return Ok(true);
+  let oid = out.stdout.trim();
+  if out.exit_code == 0 && !out.timed_out && !out.truncated && !oid.is_empty() {
+    return Ok(Some(oid.to_owned()));
   }
   if out.exit_code == 1 && !out.timed_out {
-    return Ok(false);
+    return Ok(None);
   }
   Err(RulesError::Git(format!(
     "git rev-parse {commit}: {}",
