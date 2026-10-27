@@ -110,7 +110,8 @@ fn dashboard_drawer_polls_only_while_open_and_visible() {
   assert!(
     logic.contains("!context.peer && !stoppedNotice(context.issue) && Boolean(context.token)")
   );
-  assert!(control.contains("takeToken(location.hash)") && control.contains("history.replaceState"));
+  let token = read_asset("js/control.js");
+  assert!(token.contains("takeToken(location.hash)") && token.contains("history.replaceState"));
   let api = read_asset("js/api.js");
   assert!(api.contains("headers: { Authorization: `Bearer ${token}` }"));
   assert!(!api.contains("screen?token") && !api.contains("token=${"));

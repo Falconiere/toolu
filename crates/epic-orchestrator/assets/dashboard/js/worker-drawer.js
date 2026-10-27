@@ -121,7 +121,8 @@ export function initDrawer(state) {
     if (button) openDrawer(button.dataset.issue, button);
   });
   document.addEventListener("keydown", (event) => {
-    if (event.key !== "Escape" || !drawer.key) return;
+    // Esc in the answer dialog cancels the dialog, not the drawer behind it.
+    if (event.key !== "Escape" || !drawer.key || document.querySelector("dialog[open]")) return;
     event.preventDefault();
     closeDrawer(true);
   });

@@ -86,9 +86,26 @@ history and, with the token, the agent's live screen, read every 2 seconds only
 while the drawer is open and the tab is visible. A blocked agent shows the
 `herdr agent attach` command to copy. `#issue=<key>` links to a drawer.
 
-The dashboard can also control the engine that serves it. It can pause or resume
-epics, acknowledge attention, answer a worker and release a hold. Each action
-needs the status token, even on loopback, and is journaled with `by=web`.
+### Dashboard control
+
+The dashboard can also control the engine that serves it: pause or resume all
+epics, one epic or a host, answer a worker, release a coupling hold and
+acknowledge attention. Peers stay read-only.
+
+To unlock it, run `toolu epic token url` and open the URL it prints. The token
+travels in the `#token=` fragment, so it never reaches a server log; the page
+keeps it in this tab's `sessionStorage` and removes it from the address bar, so
+a copied dashboard URL holds no token. Treat the token URL like a password:
+anyone who opens it can type into agents that run with approval bypass.
+`[ LOCK ]` forgets the token in this tab. After `toolu epic token new`, the next
+action gets `401`, nothing changes on the engine, and the page shows
+`● 401 · TOKEN ROTATED` until you open the new URL.
+
+Every action needs the token, even on loopback, and is journaled with `by=web`;
+the page shows the result and then the change as the journal stream arrives.
+`ANSWER` reports `✓ DELIVERED`, `● REFUSED · <code>` or `▲ UNCERTAIN`; an
+uncertain answer may still reach the worker, so check its screen before sending
+again.
 
 ## Hosts
 

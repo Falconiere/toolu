@@ -152,3 +152,7 @@ mod drawer_tests;
 #[cfg(test)]
 #[path = "tests/dashboard_capture_test.rs"]
 mod capture_tests;
+
+#[cfg(test)]
+#[path = "tests/dashboard_control_test.rs"]
+mod control_tests;
