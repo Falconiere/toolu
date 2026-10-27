@@ -14,7 +14,6 @@ pub(crate) fn context(sb: &Sandbox, version: &'static str, origin: &str) -> Cont
     origin: origin.to_owned(),
     style: toolu_runtime::term::Style::Plain,
     started: std::time::Instant::now(),
-    intro_shown: false,
     progress: None,
   }
 }

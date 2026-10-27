@@ -46,7 +46,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     return Outcome::failed(Exit::Usage, "toolu: a plugins verb is required".to_owned());
   };
   let mut terminal = prompt::terminal(!request.no_input && !ctx.json, ctx.style);
-  let progress = Progress::open(ctx.style, ctx.quiet, ctx.json).map(Arc::new);
+  let progress = Progress::open(ctx.style, ctx.quiet).map(Arc::new);
   if let Some(progress) = &progress {
     let verb = matches.subcommand_name().unwrap_or_default();
     progress.intro(&format!("toolu plugins {verb}"));
@@ -62,7 +62,6 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     origin: host::checkout::ORIGIN.to_owned(),
     style: ctx.style,
     started: std::time::Instant::now(),
-    intro_shown: progress.is_some(),
     progress,
   };
   let report = catalog::load(request.catalog.as_deref())

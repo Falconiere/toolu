@@ -70,13 +70,7 @@ fn installed(target: Target, request: &Request, cx: &Context<'_>) -> Vec<String>
     return Vec::new();
   };
   let listing = driver.versions(&driver.adapter.list_installed());
-  let mut names: Vec<String> = Vec::new();
-  for entry in listing.iter().filter(|entry| !driver.foreign(entry)) {
-    if !names.contains(&entry.name) {
-      names.push(entry.name.clone());
-    }
-  }
-  names
+  verbs::update::targets(&driver, &[], &listing)
 }
 
 /// Every detected host with toolu plugins; the others are only noted.

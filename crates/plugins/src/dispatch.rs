@@ -47,9 +47,8 @@ pub(crate) struct Context<'a> {
   pub(crate) style: Style,
   /// When the run started, for the rails footer.
   pub(crate) started: Instant,
-  /// Whether the terminal already shows the `┌  toolu plugins <verb>` intro.
-  pub(crate) intro_shown: bool,
-  /// The live progress at the terminal, when there is one.
+  /// The live progress at the terminal, when there is one; it drew the
+  /// `┌  toolu plugins <verb>` intro, so the report leaves it out.
   pub(crate) progress: Option<Arc<Progress>>,
 }
 
@@ -74,7 +73,10 @@ impl Context<'_> {
     rails(&Frame {
       style: self.style,
       elapsed: self.started.elapsed(),
-      title: (!self.intro_shown).then(|| format!("toolu plugins {verb}")),
+      title: self
+        .progress
+        .is_none()
+        .then(|| format!("toolu plugins {verb}")),
     })
   }
 }

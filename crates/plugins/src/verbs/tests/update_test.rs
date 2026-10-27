@@ -143,23 +143,26 @@ fn nothing_requested_and_nothing_installed_says_so() {
   );
 }
 
-#[test]
-fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
-  let sb = Sandbox::new();
+/// A Muse at 8.0.4 whose captured listing has each `(from, to)` edit applied.
+fn muse(sb: &Sandbox, edits: &[(&str, &str)]) -> Driver {
   sb.muse("never");
   let origin = sb.origin(&["v8.0.4"]);
   sb.capture("list", "muse-installed.json");
-  let listing =
+  let mut listing =
     std::fs::read_to_string(sb.path("muse-installed.json")).expect("a file the test wrote");
-  sb.write(
-    "muse-installed.json",
-    &listing
-      .replace("hooky", "brainstorm")
-      .replace("8.0.4", "8.0.3"),
-  );
+  for (from, to) in edits {
+    listing = listing.replace(from, to);
+  }
+  sb.write("muse-installed.json", &listing);
   sb.capture("available", "muse-available.json");
+  sb.muse_driver("8.0.4", &origin, Approval::Report)
+}
+
+#[test]
+fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
+  let sb = Sandbox::new();
+  let driver = muse(&sb, &[("hooky", "brainstorm"), ("8.0.4", "8.0.3")]);
   sb.capture("inspect-modified", "muse-inspect-toolu.json");
-  let driver = sb.muse_driver("8.0.4", &origin, Approval::Report);
   let Ok(steps) = run(&driver, &catalog(), &[], false) else {
     panic!("the Muse update failed outright");
   };
@@ -193,22 +196,16 @@ fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
 #[test]
 fn a_retired_muse_plugin_from_the_checkout_gets_muses_own_remove_command() {
   let sb = Sandbox::new();
-  sb.muse("never");
-  let origin = sb.origin(&["v8.0.4"]);
-  sb.capture("list", "muse-installed.json");
-  let listing =
-    std::fs::read_to_string(sb.path("muse-installed.json")).expect("a file the test wrote");
-  sb.write(
-    "muse-installed.json",
-    &listing
-      .replace(
+  let driver = muse(
+    &sb,
+    &[
+      (
         "src/hooky-marketplace/plugins/hooky",
         ".local/share/toolu/muse-marketplace/plugins/jira",
-      )
-      .replace("hooky", "jira"),
+      ),
+      ("hooky", "jira"),
+    ],
   );
-  sb.capture("available", "muse-available.json");
-  let driver = sb.muse_driver("8.0.4", &origin, Approval::Report);
   let Ok(steps) = run(&driver, &catalog(), &[], true) else {
     panic!("the Muse dry update failed outright");
   };

@@ -26,10 +26,7 @@ pub(crate) fn run(
   driver.begin(0, "preparing the marketplace");
   let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
   let installed = driver.versions(&adapter.list_installed());
-  let offered = adapter
-    .list_available()
-    .map(|argv| driver.versions(&argv))
-    .unwrap_or_default();
+  let offered = driver.offered();
   let targets = targets(driver, names, &installed);
   if targets.is_empty() {
     // An empty request and an empty listing mean the host said nothing; saying
@@ -66,7 +63,7 @@ pub(crate) fn run(
 }
 
 /// `names`, or each installed plugin toolu's marketplace put there, once.
-fn targets(driver: &Driver, names: &[String], installed: &[Installed]) -> Vec<String> {
+pub(crate) fn targets(driver: &Driver, names: &[String], installed: &[Installed]) -> Vec<String> {
   if !names.is_empty() {
     return names.to_vec();
   }

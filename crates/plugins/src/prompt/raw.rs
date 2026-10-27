@@ -58,11 +58,9 @@ impl KeyInput for Raw<'_> {
     self.read(1, 0)
   }
 
+  // The next `byte()` sets VMIN 1 again before it blocks.
   fn byte_soon(&mut self) -> io::Result<Option<u8>> {
-    let byte = self.read(0, 1);
-    wait(&mut self.current, 1, 0);
-    termios::tcsetattr(self.tty.as_fd(), SetArg::TCSANOW, &self.current)?;
-    byte
+    self.read(0, 1)
   }
 }
 

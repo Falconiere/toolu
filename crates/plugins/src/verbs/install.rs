@@ -81,10 +81,7 @@ impl Known {
     Ok(Known {
       prepared,
       installed: driver.versions(&adapter.list_installed()),
-      offered: adapter
-        .list_available()
-        .map(|argv| driver.versions(&argv))
-        .unwrap_or_default(),
+      offered: driver.offered(),
     })
   }
 

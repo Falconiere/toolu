@@ -6,6 +6,19 @@ use crate::host::adapter::Adapter;
 use crate::support::{Sandbox, catalog};
 use crate::verbs::Driver;
 
+/// A Claude Code driver over the sandbox's stub `claude`.
+fn claude(sb: &Sandbox) -> Driver {
+  Driver {
+    adapter: Adapter::Claude,
+    env: sb.env(),
+    timeout: Duration::from_secs(10),
+    checkout: None,
+    pin: None,
+    approval: Approval::Report,
+    progress: None,
+  }
+}
+
 #[test]
 fn the_catalog_is_joined_with_the_hosts_listing() {
   let sb = Sandbox::new();
@@ -14,15 +27,7 @@ fn the_catalog_is_joined_with_the_hosts_listing() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0","enabled":false}]"#,
   );
-  let driver = Driver {
-    adapter: Adapter::Claude,
-    env: sb.env(),
-    timeout: Duration::from_secs(10),
-    checkout: None,
-    pin: None,
-    approval: Approval::Report,
-    progress: None,
-  };
+  let driver = claude(&sb);
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
   };
@@ -44,15 +49,7 @@ fn a_malformed_listing_fails_and_a_failing_host_lists_nothing_installed() {
   let sb = Sandbox::new();
   sb.host("claude", "[]", "never");
   sb.write("claude-installed.json", r#"{"installed":[]}"#);
-  let driver = Driver {
-    adapter: Adapter::Claude,
-    env: sb.env(),
-    timeout: Duration::from_secs(10),
-    checkout: None,
-    pin: None,
-    approval: Approval::Report,
-    progress: None,
-  };
+  let driver = claude(&sb);
   assert!(
     run(&driver, &catalog())
       .is_err_and(|fail| fail.message.starts_with("claude plugin list --json: "))
@@ -73,15 +70,7 @@ fn a_same_named_plugin_from_another_marketplace_is_not_installed() {
     "claude-installed.json",
     r#"[{"id":"jev@other","version":"9.0.0"}]"#,
   );
-  let driver = Driver {
-    adapter: Adapter::Claude,
-    env: sb.env(),
-    timeout: Duration::from_secs(10),
-    checkout: None,
-    pin: None,
-    approval: Approval::Report,
-    progress: None,
-  };
+  let driver = claude(&sb);
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
   };
@@ -93,15 +82,7 @@ fn a_same_named_plugin_from_another_marketplace_is_not_installed() {
 fn the_captured_claude_listing_reports_the_user_scope_toolu_row() {
   let sb = Sandbox::new();
   sb.replay(&[("plugin list --json", "list")]);
-  let driver = Driver {
-    adapter: Adapter::Claude,
-    env: sb.env(),
-    timeout: Duration::from_secs(10),
-    checkout: None,
-    pin: None,
-    approval: Approval::Report,
-    progress: None,
-  };
+  let driver = claude(&sb);
   let Ok(rows) = run(&driver, &catalog()) else {
     panic!("list failed");
   };

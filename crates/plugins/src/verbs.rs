@@ -77,6 +77,16 @@ impl Driver {
     }
   }
 
+  /// What the marketplace offers; nothing on Claude Code, which lists no
+  /// versions for what is installed.
+  pub(crate) fn offered(&self) -> Vec<Installed> {
+    self
+      .adapter
+      .list_available()
+      .map(|argv| self.versions(&argv))
+      .unwrap_or_default()
+  }
+
   /// Runs one host command.
   pub(crate) fn run(&self, argv: &[String]) -> Ran {
     run(argv, &self.env, self.timeout)

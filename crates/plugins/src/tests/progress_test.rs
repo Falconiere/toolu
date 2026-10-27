@@ -88,8 +88,7 @@ fn the_spinner_turns_on_its_own_until_the_end() {
 }
 
 #[test]
-fn there_is_no_progress_for_plain_output_quiet_or_json() {
-  assert!(Progress::open(Style::Plain, false, false).is_none());
-  assert!(Progress::open(Style::Mono, true, false).is_none());
-  assert!(Progress::open(Style::Color, false, true).is_none());
+fn there_is_no_progress_for_plain_output_or_quiet() {
+  assert!(Progress::open(Style::Plain, false).is_none());
+  assert!(Progress::open(Style::Mono, true).is_none());
 }

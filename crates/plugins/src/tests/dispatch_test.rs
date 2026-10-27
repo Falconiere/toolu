@@ -301,7 +301,10 @@ fn a_terminal_style_draws_the_rails_report_and_opens_with_the_intro() {
     listed.text
   );
   assert!(listed.text.contains("│  ✔ jev "), "{}", listed.text);
-  cx.intro_shown = true;
+  cx.progress = Some(std::sync::Arc::new(crate::progress::Progress::to_writer(
+    Box::new(std::io::sink()),
+    toolu_runtime::term::Style::Mono,
+  )));
   let Ok(again) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
     panic!("list failed");
   };

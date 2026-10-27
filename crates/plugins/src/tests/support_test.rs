@@ -323,7 +323,6 @@ pub(crate) fn context<'a>(
     origin: String::new(),
     style,
     started: std::time::Instant::now(),
-    intro_shown: false,
     progress: None,
   }
 }

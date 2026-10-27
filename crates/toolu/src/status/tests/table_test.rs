@@ -8,22 +8,11 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::process::{Spec, run};
 use toolu_runtime::term::Style;
+use toolu_state::ctx::StateCtx;
+use toolu_state::gate_file::{GateFailure, record_gate_failure};
 
 use super::render;
 use crate::status::Snapshot;
-
-const GATE: &str = r#"{
-  "status": "failing",
-  "reason": "lint",
-  "source": "ts-quality",
-  "file": "src/b.ts",
-  "violations": "b\n",
-  "entries": {
-    "src/a.ts": {"source": "ts-quality", "reason": "lint", "violations": "a\n", "updatedAt": "t1"},
-    "src/b.ts": {"source": "ts-quality", "reason": "lint", "violations": "b\n", "updatedAt": "t2"}
-  },
-  "updatedAt": "t2"
-}"#;
 
 fn roots(home: &Path) -> Roots {
   let home = home.display().to_string();
@@ -105,14 +94,27 @@ fn outside_a_repository_the_table_says_so() {
   assert!(table.contains("│  branch        —\n"), "{table}");
 }
 
-/// The table of a fresh repository whose state directory holds `files`.
-fn table_with(files: &[(&str, &str)], style: Style) -> String {
+/// The table of a fresh repository whose gate failed on each of `failing`
+/// (recorded as the post-edit hook records it) and whose state directory holds
+/// `files`.
+fn table_with(failing: &[&str], files: &[(&str, &str)], style: Style) -> String {
   let (dir, document) = repository();
   let root = document["repo_root"]
     .as_str()
     .unwrap_or_default()
     .to_owned();
   let state = Path::new(&root).join(".claude/tmp");
+  std::fs::create_dir_all(&state).expect("state dir");
+  let mut ctx = StateCtx::new(roots(dir.path()));
+  for file in failing {
+    let failure = GateFailure {
+      file,
+      source: "ts-quality",
+      reason: "lint",
+      violations: "x\n",
+    };
+    record_gate_failure(&mut ctx, &state.join("quality-gate-status.json"), &failure);
+  }
   for (name, text) in files {
     let path = state.join(name);
     std::fs::create_dir_all(path.parent().expect("parent")).expect("state dir");
@@ -127,7 +129,6 @@ fn table_with(files: &[(&str, &str)], style: Style) -> String {
 #[test]
 fn a_failing_gate_a_recorded_review_and_both_waivers_show_their_state() {
   let files = [
-    ("quality-gate-status.json", GATE),
     ("push-review/main.json", r#"{"version":2}"#),
     ("push-review/main.waiver.json", r#"{"diff_sha":"a"}"#),
     (
@@ -135,7 +136,7 @@ fn a_failing_gate_a_recorded_review_and_both_waivers_show_their_state() {
       r#"{"diff_sha":"b"}"#,
     ),
   ];
-  let table = table_with(&files, Style::Mono);
+  let table = table_with(&["src/a.ts", "src/b.ts"], &files, Style::Mono);
   assert!(
     table.contains("│  gate          ✘ failing: lint (2 files)\n"),
     "{table}"
@@ -145,12 +146,13 @@ fn a_failing_gate_a_recorded_review_and_both_waivers_show_their_state() {
     table.contains("│  waivers       waiver active, waiver pending\n"),
     "{table}"
   );
-  assert!(table_with(&files, Style::Color).contains("\x1b[31m✘\x1b[0m"));
+  assert!(table_with(&["src/a.ts"], &files, Style::Color).contains("\x1b[31m✘\x1b[0m"));
 }
 
 #[test]
 fn a_malformed_gate_and_review_read_as_invalid_and_a_lone_pending_waiver_shows() {
   let table = table_with(
+    &[],
     &[
       ("quality-gate-status.json", "not json"),
       ("push-review/main.json", "not json"),

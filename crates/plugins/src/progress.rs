@@ -141,10 +141,10 @@ impl fmt::Debug for Progress {
 }
 
 impl Progress {
-  /// Progress on `/dev/tty`; `None` for plain output, `--quiet`, `--json`, or
-  /// when there is no terminal to open.
-  pub(crate) fn open(style: Style, quiet: bool, json: bool) -> Option<Progress> {
-    if !style.rails() || quiet || json {
+  /// Progress on `/dev/tty`; `None` for plain output (which `--json` forces),
+  /// `--quiet`, or when there is no terminal to open.
+  pub(crate) fn open(style: Style, quiet: bool) -> Option<Progress> {
+    if !style.rails() || quiet {
       return None;
     }
     let tty = OpenOptions::new().write(true).open("/dev/tty").ok()?;
