@@ -58,12 +58,11 @@ fn entry(item: &Value) -> Result<Option<Installed>, String> {
 /// line Claude Code 2.1.311 prints (`fixtures/plugins/claude.json`); without a
 /// readable line the exit code decides.
 pub(crate) fn update_step(name: &str, ran: &Ran, argv: Vec<String>) -> Step {
-  let result = ran
-    .stdout
-    .lines()
-    .rev()
-    .find_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
-    .filter(Value::is_object);
+  let result = ran.stdout.lines().rev().find_map(|line| {
+    serde_json::from_str::<Value>(line.trim())
+      .ok()
+      .filter(Value::is_object)
+  });
   let Some(result) = result else {
     return without_result(name, ran, argv);
   };

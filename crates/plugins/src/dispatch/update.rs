@@ -15,7 +15,7 @@ use crate::dispatch::{Context, Report, driver, dry_text, failed};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
-use crate::host::{Target, check_scope, with_toolu};
+use crate::host::{Target, check_scope, none_found, with_toolu};
 use crate::report::{self, rails};
 use crate::step::{Status, Step};
 use crate::verbs;
@@ -157,9 +157,7 @@ fn host(
 fn all(request: &Request, catalog: &Catalog, cx: &mut Context<'_>) -> Res<Report> {
   let hosts = with_toolu(&cx.env);
   if hosts.is_empty() {
-    return Err(Fail::usage(
-      "no host found on PATH (probed claude, codex, muse). Choose one with --host.",
-    ));
+    return Err(none_found());
   }
   let found: Vec<(Target, Result<Have, String>)> = hosts
     .into_iter()

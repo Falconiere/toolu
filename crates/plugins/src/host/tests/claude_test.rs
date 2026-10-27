@@ -134,3 +134,14 @@ fn unknown_or_missing_versions_and_an_unknown_outcome_still_read_sensibly() {
     (Status::Failed, "locked".to_owned())
   );
 }
+
+#[test]
+fn a_trailing_json_line_that_is_not_an_object_does_not_hide_the_result() {
+  use crate::step::Status;
+  let stdout =
+    "{\"outcome\":\"ok\",\"updateOutcome\":\"up_to_date\",\"newVersion\":\"8.5.0\"}\n1\n";
+  assert_eq!(
+    stepped(0, stdout, ""),
+    (Status::Current, "current at 8.5.0".to_owned())
+  );
+}

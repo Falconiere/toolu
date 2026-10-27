@@ -24,6 +24,19 @@ pub(crate) fn run(
   dry_run: bool,
   listed: Option<Vec<Installed>>,
 ) -> Res<Vec<Step>> {
+  let steps = updates(driver, catalog, names, dry_run, listed);
+  // An early error ends the progress too, so a failed host leaves no spinner.
+  driver.end();
+  steps
+}
+
+fn updates(
+  driver: &Driver,
+  catalog: &Catalog,
+  names: &[String],
+  dry_run: bool,
+  listed: Option<Vec<Installed>>,
+) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
   driver.begin(0, "preparing the marketplace");
   let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
@@ -55,13 +68,11 @@ pub(crate) fn run(
       step
     })
     .collect();
-  let steps = if dry_run {
+  Ok(if dry_run {
     steps
   } else {
     trust::settle(driver, steps)
-  };
-  driver.end();
-  Ok(steps)
+  })
 }
 
 /// `names`, or each installed plugin toolu's marketplace put there, once.

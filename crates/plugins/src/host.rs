@@ -154,6 +154,14 @@ fn joined(targets: &[Target]) -> String {
     .join(", ")
 }
 
+/// The refusal when no host is on `PATH`.
+pub(crate) fn none_found() -> Fail {
+  Fail::usage(format!(
+    "no host found on PATH (probed {}). Choose one with --host.",
+    joined(&PROBED)
+  ))
+}
+
 fn ambiguous(found: &[Target]) -> Fail {
   Fail::usage(format!(
     "several hosts found ({}). Choose one with --host.",
@@ -178,10 +186,7 @@ pub(crate) fn resolve(
     (Some(_ask), Mode::One) => with_toolu(env),
   };
   match found.as_slice() {
-    [] => Err(Fail::usage(format!(
-      "no host found on PATH (probed {}). Choose one with --host.",
-      joined(&PROBED)
-    ))),
+    [] => Err(none_found()),
     [only] => Ok(vec![*only]),
     _several => {
       let Some(ask) = ask else {
