@@ -104,8 +104,11 @@ impl Snapshot {
       .and_then(|cooldowns| cooldowns.get(host));
     let until = cooldown.and_then(|cooldown| integer(cooldown, "until"));
     let active = until.filter(|until| *until > self.now_ms);
-    let paused = crate::hosts::parse_host_kind(host)
-      .and_then(|kind| crate::host_pause::paused_hosts(&self.state).get(&kind).cloned());
+    let paused = crate::hosts::parse_host_kind(host).and_then(|kind| {
+      crate::host_pause::paused_hosts(&self.state)
+        .get(&kind)
+        .cloned()
+    });
     json!({
       "host": host,
       "cap": cap,

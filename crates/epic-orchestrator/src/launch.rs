@@ -189,6 +189,29 @@ pub(crate) fn find_issue<'g>(graph: &'g Graph, wanted: &str) -> Result<&'g Graph
   })
 }
 
+/// A manual launch on a paused host is refused; `--force` (which the
+/// engine's own launches always carry) launches anyway.
+///
+/// # Errors
+/// The host is paused without `--force`, or the resource store is unreadable.
+fn refuse_paused_host(
+  opts: &LaunchOpts,
+  ctx: &Ctx<'_>,
+  kind: crate::hosts::HostKind,
+) -> Result<(), Failure> {
+  if opts.force {
+    return Ok(());
+  }
+  let root = toolu_engine::resources::store::resource_home(ctx.env);
+  if crate::host_pause::is_paused(&root, kind).map_err(Failure::unknown)? {
+    return Err(Failure::refusal(format!(
+      "host {} is paused; resume it or pass --force",
+      kind.name()
+    )));
+  }
+  Ok(())
+}
+
 fn require_recoverable_stage(record: &record::Record, opts: &LaunchOpts) -> Result<(), Failure> {
   match record::text(record, "stage") {
     Some("cleaning" | "cleanup-incomplete") => Err(Failure::refusal(
@@ -246,15 +269,7 @@ fn launch(
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
-  if !opts.force {
-    let root = toolu_engine::resources::store::resource_home(ctx.env);
-    if crate::host_pause::is_paused(&root, host.kind).map_err(Failure::unknown)? {
-      return Err(Failure::refusal(format!(
-        "host {} is paused; resume it or pass --force",
-        host.kind.name()
-      )));
-    }
-  }
+  refuse_paused_host(opts, ctx, host.kind)?;
   if let Some(stage) = finished_stage(&record).filter(|_| opts.by == Launcher::Engine) {
     return Err(Failure::refusal(format!(
       "{FINISHED}{} is {stage}",

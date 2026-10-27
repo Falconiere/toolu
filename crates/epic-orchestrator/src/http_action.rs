@@ -115,7 +115,7 @@ fn fields(op: &str, body: &Map<String, Value>) -> Option<Vec<(&'static str, Stri
       let host = body
         .get("host")
         .and_then(Value::as_str)
-        .and_then(|host| crate::hosts::parse_host_kind(host))?;
+        .and_then(crate::hosts::parse_host_kind)?;
       vec![("host", host.name().to_owned())]
     }
     _ => vec![("key", field("key")??)],

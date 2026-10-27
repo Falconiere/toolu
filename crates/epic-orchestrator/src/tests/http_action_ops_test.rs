@@ -133,7 +133,11 @@ fn a_web_host_pause_and_resume_match_the_socket_and_journal_by_web() {
     &allowed(live.addr),
     &json!({"host": "cursor-agent"}).to_string(),
   );
-  assert_eq!((code, body(&response)), (200, json!({"ok": true})), "{response}");
+  assert_eq!(
+    (code, body(&response)),
+    (200, json!({"ok": true})),
+    "{response}"
+  );
   let (_, hosts) = raw(
     live.addr,
     &format!(
@@ -149,7 +153,11 @@ fn a_web_host_pause_and_resume_match_the_socket_and_journal_by_web() {
     &allowed(live.addr),
     &json!({"host": "cursor"}).to_string(),
   );
-  assert_eq!((code, body(&response)), (200, json!({"ok": true})), "{response}");
+  assert_eq!(
+    (code, body(&response)),
+    (200, json!({"ok": true})),
+    "{response}"
+  );
   let rows = journal(&live.paths);
   assert!(rows.contains("host-paused"), "{rows}");
   assert!(rows.contains("by=web"), "{rows}");
@@ -157,7 +165,10 @@ fn a_web_host_pause_and_resume_match_the_socket_and_journal_by_web() {
   for payload in [json!({"host": "nope"}).to_string(), "{}".to_owned()] {
     let (code, response) = post(live.addr, "host-pause", &allowed(live.addr), &payload);
     assert_eq!(code, 400, "{response}");
-    assert!(response.contains("\"error\":\"invalid_request\""), "{response}");
+    assert!(
+      response.contains("\"error\":\"invalid_request\""),
+      "{response}"
+    );
   }
   let rows_after = journal(&live.paths);
   assert_eq!(rows_after.matches("host-paused").count(), 1, "{rows_after}");

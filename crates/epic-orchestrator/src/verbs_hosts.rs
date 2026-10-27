@@ -51,7 +51,15 @@ pub(crate) fn run(matches: &ArgMatches, env: &Env) -> Outcome {
   };
   let op = if pausing { "host-pause" } else { "host-resume" };
   let request = json!({"op": op, "host": kind.name(), "by": "user"});
-  ask_checked(env, if pausing { "hosts pause" } else { "hosts resume" }, &request)
+  ask_checked(
+    env,
+    if pausing {
+      "hosts pause"
+    } else {
+      "hosts resume"
+    },
+    &request,
+  )
 }
 
 #[cfg(test)]

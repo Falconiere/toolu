@@ -179,8 +179,8 @@ fn paused_relaunch(input: &LaunchJob) -> bool {
   if input.reroute || record_field(input, "stage").as_deref() != Some("running") {
     return false;
   }
-  let Some(kind) = record_field(input, "kind")
-    .and_then(|name| crate::hosts::parse_host_kind(&name))
+  let Some(kind) =
+    record_field(input, "kind").and_then(|name| crate::hosts::parse_host_kind(&name))
   else {
     return false;
   };

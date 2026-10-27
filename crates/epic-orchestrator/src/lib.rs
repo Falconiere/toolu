@@ -21,6 +21,7 @@ mod dashboard;
 mod disarm;
 mod disk;
 mod dispatch;
+mod dispatch_hosts;
 mod dispatch_ops;
 mod effect_thread;
 mod effects;
