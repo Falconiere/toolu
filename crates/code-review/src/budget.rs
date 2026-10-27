@@ -18,6 +18,8 @@ pub const JEV_STATE_MAX_BYTES: usize = 90_000;
 pub const JEV_REQUEST_MAX_BYTES: usize = 180_000;
 /// One model response body; explicit rather than the `core/http` default.
 pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
+/// One review evidence chunk; files larger than this are explicitly unreviewed.
+pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
 
 /// How much a run reviews around the diff. Every level reviews every changed line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

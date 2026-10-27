@@ -1407,8 +1407,10 @@ dependencies = [
  "clap",
  "serde",
  "serde_json",
+ "tempfile",
  "toolu-protocol",
  "toolu-runtime",
+ "toolu-state",
 ]
 
 [[package]]

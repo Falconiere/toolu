@@ -21,7 +21,8 @@ mod prepass;
 mod report;
 mod review;
 mod rules;
-mod shape;
+/// The committed diff and its reviewable anchors.
+pub mod shape;
 mod validate;
 
 use contract::{ErrorKind, Report};

@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "path": "docs/readme.txt",
+      "old_path": "readme.txt",
+      "kind": "renamed",
+      "lines": [
+        {"side": "old", "line": 2, "text": "two"},
+        {"side": "new", "line": 2, "text": "TWO"},
+        {"side": "new", "line": 7, "text": "seven"}
+      ]
+    }
+  ],
+  "renames": [{"old_path": "readme.txt", "path": "docs/readme.txt"}],
+  "coverage": {"reviewed": ["docs/readme.txt"], "unreviewed": [], "skipped": []}
+}

@@ -13,6 +13,10 @@ serde.workspace = true
 serde_json.workspace = true
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-state = { path = "../core/state" }
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true
