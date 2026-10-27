@@ -5,6 +5,99 @@ pub(crate) const PAGE: &[u8] = include_bytes!("../assets/dashboard/index.html");
 /// The versioned path prefix for immutable assets.
 pub(crate) const ASSET_PREFIX: &str = concat!("/assets/", env!("CARGO_PKG_VERSION"), "/");
 
+const CSS: &str = "text/css";
+const JS: &str = "text/javascript";
+const FONT: &str = "font/woff2";
+
+/// Every served asset: its path under [`ASSET_PREFIX`], bytes and media type.
+const ASSETS: [(&str, &[u8], &str); 17] = [
+  (
+    "tokens.css",
+    include_bytes!("../assets/dashboard/tokens.css"),
+    CSS,
+  ),
+  (
+    "board.css",
+    include_bytes!("../assets/dashboard/board.css"),
+    CSS,
+  ),
+  (
+    "board-layout.css",
+    include_bytes!("../assets/dashboard/board-layout.css"),
+    CSS,
+  ),
+  (
+    "panels.css",
+    include_bytes!("../assets/dashboard/panels.css"),
+    CSS,
+  ),
+  (
+    "drawer.css",
+    include_bytes!("../assets/dashboard/drawer.css"),
+    CSS,
+  ),
+  (
+    "js/app.js",
+    include_bytes!("../assets/dashboard/js/app.js"),
+    JS,
+  ),
+  (
+    "js/api.js",
+    include_bytes!("../assets/dashboard/js/api.js"),
+    JS,
+  ),
+  (
+    "js/worker-drawer.js",
+    include_bytes!("../assets/dashboard/js/worker-drawer.js"),
+    JS,
+  ),
+  (
+    "js/logic/drawer.js",
+    include_bytes!("../assets/dashboard/js/logic/drawer.js"),
+    JS,
+  ),
+  (
+    "js/logic/fragment.js",
+    include_bytes!("../assets/dashboard/js/logic/fragment.js"),
+    JS,
+  ),
+  (
+    "js/logic/status.js",
+    include_bytes!("../assets/dashboard/js/logic/status.js"),
+    JS,
+  ),
+  (
+    "js/view/dashboard.js",
+    include_bytes!("../assets/dashboard/js/view/dashboard.js"),
+    JS,
+  ),
+  (
+    "js/view/dom.js",
+    include_bytes!("../assets/dashboard/js/view/dom.js"),
+    JS,
+  ),
+  (
+    "js/view/drawer.js",
+    include_bytes!("../assets/dashboard/js/view/drawer.js"),
+    JS,
+  ),
+  (
+    "js/view/peer.js",
+    include_bytes!("../assets/dashboard/js/view/peer.js"),
+    JS,
+  ),
+  (
+    "fonts/archivo.woff2",
+    include_bytes!("../assets/dashboard/fonts/archivo.woff2"),
+    FONT,
+  ),
+  (
+    "fonts/jetbrains-mono.woff2",
+    include_bytes!("../assets/dashboard/fonts/jetbrains-mono.woff2"),
+    FONT,
+  ),
+];
+
 /// An embedded asset and its HTTP media type.
 pub(crate) struct Asset {
   pub bytes: &'static [u8],
@@ -14,71 +107,23 @@ pub(crate) struct Asset {
 /// Find a public, versioned dashboard asset.
 pub(crate) fn asset(path: &str) -> Option<Asset> {
   let file = path.strip_prefix(ASSET_PREFIX)?;
-  let (bytes, content_type): (&'static [u8], &'static str) = match file {
-    "tokens.css" => (include_bytes!("../assets/dashboard/tokens.css"), "text/css"),
-    "board.css" => (include_bytes!("../assets/dashboard/board.css"), "text/css"),
-    "board-layout.css" => (
-      include_bytes!("../assets/dashboard/board-layout.css"),
-      "text/css",
-    ),
-    "panels.css" => (include_bytes!("../assets/dashboard/panels.css"), "text/css"),
-    "drawer.css" => (include_bytes!("../assets/dashboard/drawer.css"), "text/css"),
-    "js/app.js" => (
-      include_bytes!("../assets/dashboard/js/app.js"),
-      "text/javascript",
-    ),
-    "js/api.js" => (
-      include_bytes!("../assets/dashboard/js/api.js"),
-      "text/javascript",
-    ),
-    "js/worker-drawer.js" => (
-      include_bytes!("../assets/dashboard/js/worker-drawer.js"),
-      "text/javascript",
-    ),
-    "js/logic/drawer.js" => (
-      include_bytes!("../assets/dashboard/js/logic/drawer.js"),
-      "text/javascript",
-    ),
-    "js/logic/fragment.js" => (
-      include_bytes!("../assets/dashboard/js/logic/fragment.js"),
-      "text/javascript",
-    ),
-    "js/logic/status.js" => (
-      include_bytes!("../assets/dashboard/js/logic/status.js"),
-      "text/javascript",
-    ),
-    "js/view/dashboard.js" => (
-      include_bytes!("../assets/dashboard/js/view/dashboard.js"),
-      "text/javascript",
-    ),
-    "js/view/dom.js" => (
-      include_bytes!("../assets/dashboard/js/view/dom.js"),
-      "text/javascript",
-    ),
-    "js/view/drawer.js" => (
-      include_bytes!("../assets/dashboard/js/view/drawer.js"),
-      "text/javascript",
-    ),
-    "js/view/peer.js" => (
-      include_bytes!("../assets/dashboard/js/view/peer.js"),
-      "text/javascript",
-    ),
-    "fonts/archivo.woff2" => (
-      include_bytes!("../assets/dashboard/fonts/archivo.woff2"),
-      "font/woff2",
-    ),
-    "fonts/jetbrains-mono.woff2" => (
-      include_bytes!("../assets/dashboard/fonts/jetbrains-mono.woff2"),
-      "font/woff2",
-    ),
-    _ => return None,
-  };
-  Some(Asset {
-    bytes,
-    content_type,
-  })
+  ASSETS
+    .iter()
+    .find(|(name, _, _)| *name == file)
+    .map(|&(_, bytes, content_type)| Asset {
+      bytes,
+      content_type,
+    })
 }
 
 #[cfg(test)]
 #[path = "tests/dashboard_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/dashboard_drawer_test.rs"]
+mod drawer_tests;
+
+#[cfg(test)]
+#[path = "tests/dashboard_capture_test.rs"]
+mod capture_tests;
