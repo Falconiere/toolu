@@ -2,8 +2,9 @@
 //! smoke of the native toolu hooks in real Claude Code, Codex, Muse and Cursor sessions
 //! (`both`, the default, means Claude Code, Codex and Muse; Cursor is asked for by
 //! name), with no `bun` on the children's `PATH`.
-//! Claude Code and Codex run on macOS only; Muse and Cursor on any Unix (#552, #589). Per host it
-//! checks that a protected `.env` write
+//! Every host runs on macOS and Linux (on macOS, Linux runs inside `toolu sandbox`); on
+//! Linux, Codex and Muse sandbox their commands with bubblewrap. Per host it checks that
+//! a protected `.env` write
 //! is denied, an allowed `cat` of the project's nonce file runs, a post-edit quality
 //! failure is recorded, a `git commit` is denied by the quality gate and a `git push` by
 //! push review.
@@ -62,13 +63,17 @@ pub(crate) fn hosts(arg: Option<&str>) -> Result<Vec<Host>, String> {
   }
 }
 
-/// `Ok` when every host in `hosts` runs on `os`: Claude Code and Codex need macOS.
-pub(crate) fn require_platform(hosts: &[Host], os: &str) -> Result<(), String> {
-  let needs_macos = hosts
+/// `Ok` unless `hosts` include Codex or Muse on Linux without `bwrap`: both sandbox
+/// their commands with bubblewrap there and refuse to run without it.
+pub(crate) fn require_bwrap(hosts: &[Host], os: &str, has_bwrap: bool) -> Result<(), String> {
+  let sandboxed = hosts
     .iter()
-    .any(|host| !matches!(host, Host::Muse | Host::Cursor));
-  if needs_macos && os != "macos" {
-    return Err("live Claude Code and Codex smoke requires macOS".to_owned());
+    .any(|host| matches!(host, Host::Codex | Host::Muse));
+  if sandboxed && os == "linux" && !has_bwrap {
+    return Err(
+      "Codex and Muse sandbox with bubblewrap on Linux; install bwrap (apt install bubblewrap)"
+        .to_owned(),
+    );
   }
   Ok(())
 }
@@ -127,11 +132,11 @@ fn muse_plan(env: &ChildEnv, bin: &Path) -> Result<(PathBuf, PathBuf), String> {
 
 fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
   let hosts = hosts(options.host.as_deref())?;
-  require_platform(&hosts, std::env::consts::OS)?;
   let default = options.root.join("target/debug/toolu");
   let bin = require_bin(options.bin.as_deref().unwrap_or(&default))?;
   let path = std::env::var_os("PATH").ok_or("PATH is not set")?;
   let env = ChildEnv::new(&bin, &path, &root.join("shims"))?;
+  require_bwrap(&hosts, std::env::consts::OS, env.tool("bwrap").is_ok())?;
   let home = std::env::var_os("HOME")
     .map(PathBuf::from)
     .ok_or("HOME is not set")?;

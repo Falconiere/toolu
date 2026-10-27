@@ -35,8 +35,9 @@ startup behavior in Codex, Claude Code, or Muse.
    deselection cleanup, hook inventory and the packed catalog. A repeated
    SessionStart must preserve byte-identical manifest files and their timestamps.
 7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|muse|both`
-   with the checkout binary (`both` is all three; Claude Code and Codex need macOS, Muse
-   runs on Linux too). It hides Bun, installs temporary host profiles and
+   with the checkout binary (`both` is all three; every host runs on macOS and Linux, where
+   Codex and Muse need `bwrap`; on macOS, `toolu sandbox run --clone -- cargo xtask host-smoke`
+   runs it in the Linux VM). It hides Bun, installs temporary host profiles and
    checks a denied `.env` write, a post-edit quality failure, a denied
    commit, and a denied push in actual Claude Code, Codex and Muse sessions.
 8. For Muse, use a fresh temporary profile with isolated `HOME`, `XDG_CONFIG_HOME`,

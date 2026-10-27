@@ -232,6 +232,21 @@
           "type": "json",
           "path": "plugins/documentation-gate/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/sandbox/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/sandbox/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/sandbox/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
         }
       ]
     }

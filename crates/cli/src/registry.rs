@@ -169,6 +169,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_epic_orchestrator::command,
     links::epic,
   ),
+  verb(
+    "sandbox",
+    toolu_sandbox::PLUGIN,
+    toolu_sandbox::command,
+    toolu_sandbox::run,
+  ),
   Namespace {
     name: "commands",
     owner: BUILTIN,

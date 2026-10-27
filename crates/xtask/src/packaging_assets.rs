@@ -7,9 +7,9 @@ use regex::Regex;
 use serde_json::Value;
 
 /// Published plugins in the marketplace.
-pub(crate) const PLUGINS: usize = 14;
+pub(crate) const PLUGINS: usize = 15;
 /// Discoverable plugin skills.
-pub(crate) const SKILLS: usize = 15;
+pub(crate) const SKILLS: usize = 16;
 /// Published Codex agent profiles.
 pub(crate) const AGENTS: usize = 5;
 /// Claude-compatible hook manifests.

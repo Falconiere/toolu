@@ -1615,6 +1615,83 @@
           "enabled": { "type": "boolean" }
         }
       }
+    },
+    "sandboxSettings": {
+      "description": "The sandbox settings of toolu.config.json with their defaults filled in.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "cpus", "memory_gib", "disk_gib", "template", "mounts"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,62}$" },
+        "cpus": { "type": "integer", "minimum": 1 },
+        "memory_gib": { "type": "integer", "minimum": 1 },
+        "disk_gib": { "type": "integer", "minimum": 1 },
+        "template": { "type": ["string", "null"] },
+        "mounts": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "sandboxBackend": { "enum": ["lima", "host"] },
+    "sandboxStatus": {
+      "description": "toolu sandbox status --json: the backend, its state, why it cannot run when it cannot, the settings and this project.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "backend", "state", "reason", "settings", "project"],
+      "properties": {
+        "namespace": { "const": "sandbox" },
+        "verb": { "const": "status" },
+        "backend": { "$ref": "#/$defs/sandboxBackend" },
+        "state": { "enum": ["absent", "stopped", "running", "broken", "host", "unavailable"] },
+        "reason": { "type": ["string", "null"] },
+        "settings": { "$ref": "#/$defs/sandboxSettings" },
+        "project": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cwd", "root"],
+          "properties": {
+            "cwd": { "type": "string", "minLength": 1 },
+            "root": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "sandboxSetup": {
+      "description": "toolu sandbox setup --json: the tools still missing (exit 69 while any is) and how to install and log in to each agent CLI.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "backend", "state", "missing", "next"],
+      "properties": {
+        "namespace": { "const": "sandbox" },
+        "verb": { "const": "setup" },
+        "backend": { "$ref": "#/$defs/sandboxBackend" },
+        "state": { "type": "string", "minLength": 1 },
+        "missing": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "next": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["cli", "install", "login"],
+            "properties": {
+              "cli": { "type": "string", "minLength": 1 },
+              "install": { "type": "string", "minLength": 1 },
+              "login": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    },
+    "sandboxVm": {
+      "description": "toolu sandbox start, stop and delete --json: the state after the verb and whether it changed anything.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "backend", "state", "changed"],
+      "properties": {
+        "namespace": { "const": "sandbox" },
+        "verb": { "enum": ["start", "stop", "delete"] },
+        "backend": { "$ref": "#/$defs/sandboxBackend" },
+        "state": { "type": "string", "minLength": 1 },
+        "changed": { "type": "boolean" }
+      }
     }
   }
 }

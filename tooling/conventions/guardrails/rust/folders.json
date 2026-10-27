@@ -64,7 +64,8 @@
     "plugins",
     "http-test-support",
     "code-review",
-    "documentation-gate"
+    "documentation-gate",
+    "sandbox"
   ],
   "core": [
     "protocol",

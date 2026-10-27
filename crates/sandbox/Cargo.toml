@@ -1,0 +1,21 @@
+[package]
+name = "toolu-sandbox"
+description = "toolu sandbox plugin: the `toolu sandbox` namespace, a Linux VM (Lima on macOS) or the Linux host for builds, gates and agent CLIs"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+serde_json.workspace = true
+toolu-protocol = { path = "../core/protocol" }
+toolu-runtime = { path = "../core/runtime" }
+toolu-state = { path = "../core/state" }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true
