@@ -209,7 +209,7 @@ impl Case {
   /// which the hook runs under its own timeout.
   pub(crate) fn links_a_node_tool(&self) -> bool {
     self.setup.iter().any(|action| {
-      matches!(action, Action::Symlink { path, .. } if path.contains("/node_modules/.bin/"))
+      matches!(action, Action::Symlink { path, .. } if path.contains("node_modules/.bin/"))
     })
   }
 }

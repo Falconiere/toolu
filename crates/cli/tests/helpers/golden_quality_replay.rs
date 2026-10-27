@@ -195,7 +195,7 @@ fn replay_pass(
       scope.spawn(|| work.run());
     }
   });
-  Ok(work.done.into_inner().map_err(|err| err.to_string())?)
+  work.done.into_inner().map_err(|err| err.to_string().into())
 }
 
 /// Replay `cases` on each of their hosts, in parallel and then the Node-tool cases alone.
