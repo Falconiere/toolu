@@ -1,13 +1,15 @@
 //! Safe summaries of registered epic graphs and their live issues.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 
 use crate::disk::read_value;
 use crate::model::{Issue, World};
 use crate::paths::Paths;
+
+const TEXT_LIMIT: usize = 160;
 
 /// Registered epic keys and their state directories.
 ///
@@ -58,12 +60,62 @@ fn summary(world: &World, key: &str) -> Value {
     .iter()
     .filter(|item| item.epic == key)
     .count();
-  json!({
+  let mut value = json!({
     "key": key,
     "paused": world.paused_all || world.paused.contains(key),
     "counts": counts,
     "attention_count": attention,
-  })
+  });
+  if let Some(map) = value.as_object_mut() {
+    map.extend(header(world, key));
+  }
+  value
+}
+
+/// The board header of `key`: title, URL, waves and the live and queued counts.
+/// An issue merged, abandoned or closed before launch is done.
+fn header(world: &World, key: &str) -> Map<String, Value> {
+  let graph = world.epics.get(key).and_then(|epic| epic.graph.as_ref());
+  let rows = graph.map_or(&[][..], |graph| graph.issues.as_slice());
+  let issues: Vec<&Issue> = world
+    .issues
+    .values()
+    .filter(|issue| issue.epic == key)
+    .collect();
+  let mut done: BTreeSet<&str> = issues
+    .iter()
+    .filter(|issue| matches!(issue.stage.as_str(), "merged" | "abandoned"))
+    .map(|issue| issue.key.as_str())
+    .collect();
+  done.extend(
+    rows
+      .iter()
+      .filter(|row| row.status == "done")
+      .map(|row| row.key.as_str()),
+  );
+  let waves: BTreeSet<u64> = rows.iter().filter_map(|row| row.wave).collect();
+  let current = rows
+    .iter()
+    .filter(|row| !done.contains(row.key.as_str()))
+    .filter_map(|row| row.wave)
+    .min();
+  let count = |wanted: &dyn Fn(&Issue) -> bool| issues.iter().filter(|issue| wanted(issue)).count();
+  let live = count(&|issue| matches!(issue.stage.as_str(), "running" | "awaiting_merge"));
+  let queued = count(&|issue| issue.stage.is_empty() && !done.contains(issue.key.as_str()));
+  let header = json!({
+    "title": graph.and_then(|graph| cut(&graph.epic.title)),
+    "url": graph.and_then(|graph| cut(&graph.epic.url)),
+    "waves_total": waves.len(),
+    "current_wave": current,
+    "live": live,
+    "queued": queued,
+  });
+  header.as_object().cloned().unwrap_or_default()
+}
+
+/// `text` cut to 160 characters, or `None` when it is empty.
+fn cut(text: &str) -> Option<String> {
+  (!text.is_empty()).then(|| text.chars().take(TEXT_LIMIT).collect())
 }
 
 /// One epic's safe graph, live issues and its merge-queue entries.
@@ -88,27 +140,35 @@ pub(crate) fn detail(
     .issues
     .values()
     .filter(|issue| issue.epic == *key)
-    .map(issue_row)
+    .map(|issue| issue_row(issue, world.now_ms))
     .collect::<Vec<_>>();
-  Ok(Some(json!({
+  let mut value = json!({
     "schema": 1,
     "key": key,
     "paused": world.paused_all || world.paused.contains(key),
     "graph": {"issues": nodes, "waves": waves},
     "issues": issues,
     "queue": crate::queue::document(world, Some(key)).get("repositories").cloned(),
-  })))
+  });
+  if let Some(map) = value.as_object_mut() {
+    map.extend(header(world, key));
+  }
+  Ok(Some(value))
 }
 
-fn issue_row(issue: &Issue) -> Value {
-  // One unreadable worker record only loses that row's plan, not the board.
-  let meta = read_value(
-    &Path::new(&issue.state_dir)
-      .join("issues")
-      .join(format!("{}.json", issue.key)),
-  )
-  .unwrap_or(Value::Null);
+fn issue_row(issue: &Issue, now_ms: u64) -> Value {
+  // One unreadable worker record only loses that row's fields, not the board.
+  let record = |dir: &str| {
+    read_value(
+      &Path::new(&issue.state_dir)
+        .join(dir)
+        .join(format!("{}.json", issue.key)),
+    )
+    .unwrap_or(Value::Null)
+  };
+  let (meta, route) = (record("issues"), record("routes"));
   let (worktree, host) = crate::status_plan::locate(issue, &meta);
+  let (model, effort) = crate::status_api::model_effort(&route, &meta);
   json!({
     "key": issue.key,
     "stage": issue.stage,
@@ -117,6 +177,10 @@ fn issue_row(issue: &Issue) -> Value {
     "host": issue.kind,
     "agent_status": issue.agent_status,
     "agent_status_at": agent_status_at(issue),
+    "model": model,
+    "effort": effort,
+    "phase_age_ms": now_ms.saturating_sub(issue.phase_at_ms),
+    "hold": hold(issue),
     "plan_summary": crate::status_plan::plan_summary(worktree, host),
   })
 }
@@ -127,6 +191,15 @@ pub(crate) fn agent_status_at(issue: &Issue) -> Option<String> {
     toolu_state::time::iso_millis(
       std::time::UNIX_EPOCH + std::time::Duration::from_millis(issue.agent_status_at_ms),
     )
+  })
+}
+
+/// An issue's coupling hold as `{kind, with, at}`, or `null`; its `score` and
+/// `source` stay private.
+pub(crate) fn hold(issue: &Issue) -> Value {
+  issue.hold.as_ref().map_or(Value::Null, |hold| {
+    let text = |key: &str| hold.get(key).and_then(Value::as_str).and_then(cut);
+    json!({"kind": text("kind"), "with": text("with"), "at": text("at")})
   })
 }
 

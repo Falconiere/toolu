@@ -154,8 +154,7 @@ fn issue_document(
   let history = phase_history(&status);
   let (worktree, plan_host) = status_plan::locate(issue, &meta);
   let host = plan_host.or_else(|| field(&route, "host"));
-  let model = field(&route, "model").or_else(|| field(&meta, "model"));
-  let effort = field(&route, "effort").or_else(|| field(&meta, "effort"));
+  let (model, effort) = model_effort(&route, &meta);
   let last_gate = events.iter().rev().find_map(|row| {
     (row.get("kind").and_then(Value::as_str) == Some("gate"))
       .then(|| row.get("name").cloned())
@@ -179,6 +178,7 @@ fn issue_document(
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
+    "hold": status_epics::hold(issue),
     "plan": status_plan::plan(worktree, plan_host),
   });
   Ok(secrets::redact_json(&value, secrets))
@@ -213,6 +213,15 @@ fn queue_position(world: &World, key: &str) -> Option<u64> {
     .values()
     .find_map(|entries| entries.iter().position(|entry| entry.key == key))
     .and_then(|index| u64::try_from(index.saturating_add(1)).ok())
+}
+
+/// A worker's model and effort: its route first, then its launch record.
+pub(crate) fn model_effort<'a>(
+  route: &'a Value,
+  meta: &'a Value,
+) -> (Option<&'a str>, Option<&'a str>) {
+  let pick = |key: &str| field(route, key).or_else(|| field(meta, key));
+  (pick("model"), pick("effort"))
 }
 
 fn field<'a>(value: &'a Value, key: &str) -> Option<&'a str> {
