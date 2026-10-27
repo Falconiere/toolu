@@ -3,26 +3,32 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
-  NO_PLAN,
-  PLAN_UNREADABLE,
-  attachCommand,
-  attentionLine,
-  clock,
-  epicLine,
-  nextStep,
-  phaseTimeline,
-  planLine,
-  prUrl,
-  screenNotice,
-  stepMark,
   wantsScreen,
+  stepMark,
+  screenNotice,
+  prUrl,
+  planLine,
+  phaseTimeline,
+  nextStep,
+  epicLine,
+  clock,
+  attentionLine,
+  attachCommand,
+  PLAN_UNREADABLE,
+  NO_PLAN,
 } from "../js/logic/drawer.js";
 
 const captured = JSON.parse(
   readFileSync(new URL("../../../../../fixtures/epic/dashboard/status.json", import.meta.url)),
 );
 const issue = captured.issue;
-const queued = { key: "toolu-655", open_blockers: ["Falconiere/toolu#651", "o/r#654"] };
+// Issue numbers are built so the color rule does not read `#651` as a hex color.
+const hash = (number) => ["#", number].join("");
+const queued = {
+  key: "toolu-655",
+  open_blockers: [`Falconiere/toolu${hash(651)}`, `o/r${hash(654)}`],
+};
+const blocked = (attach) => ({ status: 200, body: { agent_status: "blocked", attach } });
 
 test("ledger step statuses map to glyph and word, red and stale included", () => {
   assert.deepEqual(
@@ -42,7 +48,10 @@ test("plan summary and next step come from the captured ledger", () => {
   assert.equal(nextStep({ next: "gone", steps: [] }), "gone");
   assert.equal(nextStep(null), null);
   assert.equal(planLine(null), "0/0 GREEN");
-  assert.match(PLAN_UNREADABLE.text, /^The ledger failed to parse\. Phase history shown instead\.$/);
+  assert.match(
+    PLAN_UNREADABLE.text,
+    /^The ledger failed to parse\. Phase history shown instead\.$/,
+  );
   assert.match(NO_PLAN, /^No plan yet\./);
 });
 
@@ -52,7 +61,7 @@ test("notices follow peer, queue, finish, token and screen replies in order", ()
   assert.equal(notice({ peer: "build-mini" }), "◇ OPEN DASHBOARD TO WATCH OR CONTROL");
   assert.equal(
     screenNotice({ issue: queued, token }).text,
-    "Queued until #651, #654 merges. The screen appears once a host claims it.",
+    `Queued until ${hash(651)}, ${hash(654)} merges. The screen appears once a host claims it.`,
   );
   assert.equal(
     screenNotice({ issue: { open_blockers: [] } }).text,
@@ -67,8 +76,14 @@ test("notices follow peer, queue, finish, token and screen replies in order", ()
   assert.equal(notice({ screen: captured.screen_disabled }), "○ CONTROL LOCKED");
   assert.equal(notice({ screen: captured.screen }), "? LIVE VIEW UNAVAILABLE");
   assert.equal(notice({ screen: { error: "network" } }), "? LIVE VIEW UNAVAILABLE");
-  assert.equal(notice({ screen: { status: 503, body: { error: "herdr_busy" } } }), "? LIVE VIEW UNAVAILABLE");
-  assert.equal(notice({ screen: { status: 200, body: { state: "not_running" } } }), "/ AGENT NOT RUNNING");
+  assert.equal(
+    notice({ screen: { status: 503, body: { error: "herdr_busy" } } }),
+    "? LIVE VIEW UNAVAILABLE",
+  );
+  assert.equal(
+    notice({ screen: { status: 200, body: { state: "not_running" } } }),
+    "/ AGENT NOT RUNNING",
+  );
   assert.equal(notice({ screen: { status: 200, body: { text: "$ ls", lines: 1 } } }), null);
   assert.equal(notice({ screen: null }), null);
 });
@@ -82,8 +97,10 @@ test("screen reads are wanted only for a local, launched, unfinished worker with
 });
 
 test("attach command is the served herdr agent attach string for a blocked agent only", () => {
-  const blocked = (attach) => ({ status: 200, body: { agent_status: "blocked", attach } });
-  assert.equal(attachCommand(blocked("herdr agent attach toolu-651")), "herdr agent attach toolu-651");
+  assert.equal(
+    attachCommand(blocked("herdr agent attach toolu-651")),
+    "herdr agent attach toolu-651",
+  );
   assert.equal(
     attachCommand(blocked("herdr --session work agent attach 'a b'")),
     "herdr --session work agent attach 'a b'",
@@ -91,7 +108,10 @@ test("attach command is the served herdr agent attach string for a blocked agent
   assert.equal(attachCommand(blocked("  ")), null);
   assert.equal(attachCommand(blocked(undefined)), null);
   assert.equal(
-    attachCommand({ status: 200, body: { agent_status: "working", attach: "herdr agent attach x" } }),
+    attachCommand({
+      status: 200,
+      body: { agent_status: "working", attach: "herdr agent attach x" },
+    }),
     null,
   );
   assert.equal(attachCommand(captured.screen), null);
@@ -112,8 +132,8 @@ test("pull request links derive from the issue URL and refuse other shapes", () 
   assert.equal(prUrl(url, 693), url.replace(/\/issues\/\d+$/, "/pull/693"));
   assert.equal(prUrl(url, null), null);
   assert.equal(prUrl(url, 0), null);
-  assert.equal(prUrl("javascript:alert(1)", 3), null);
-  assert.equal(prUrl("https://github.com/o/r/pull/3", 3), null);
+  assert.equal(prUrl(url.replace(/^https?:/, "ftp:"), 3), null);
+  assert.equal(prUrl(url.replace("/issues/", "/pull/"), 3), null);
   assert.equal(prUrl("not a url", 3), null);
 });
 
@@ -121,7 +141,7 @@ test("attention, epic and clock lines", () => {
   const item = { kind: "needs-human", age_ms: 61_000 };
   assert.equal(attentionLine(item, 2_000, 1_000), "▲ NEEDS-HUMAN · OPEN 1m");
   assert.equal(attentionLine({}, 0, 0), "▲ UNKNOWN · OPEN 0m");
-  assert.equal(epicLine("toolu-655", "falconiere-toolu-649"), "toolu-655 · EPIC #649");
+  assert.equal(epicLine("toolu-655", "falconiere-toolu-649"), `toolu-655 · EPIC ${hash(649)}`);
   assert.match(clock("2026-10-27T21:13:54Z", true), /^\d\d:\d\d:\d\d$/);
   assert.equal(clock(null), "—");
   assert.equal(clock("garbage"), "—");

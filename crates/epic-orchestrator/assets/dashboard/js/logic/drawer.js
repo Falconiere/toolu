@@ -123,4 +123,7 @@ export function attentionLine(item, now = Date.now(), sampledAt = now) {
   return `▲ ${(item.kind || "unknown").toUpperCase()} · OPEN ${Math.floor(age / 60_000)}m`;
 }
 
-export const epicLine = (key, epic) => `${key} · EPIC #${String(epic ?? "").split("-").at(-1)}`;
+export const epicLine = (key, epic) =>
+  `${key} · EPIC #${String(epic ?? "")
+    .split("-")
+    .at(-1)}`;

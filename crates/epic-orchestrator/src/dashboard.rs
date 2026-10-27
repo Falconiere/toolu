@@ -22,6 +22,7 @@ pub(crate) fn asset(path: &str) -> Option<Asset> {
       "text/css",
     ),
     "panels.css" => (include_bytes!("../assets/dashboard/panels.css"), "text/css"),
+    "drawer.css" => (include_bytes!("../assets/dashboard/drawer.css"), "text/css"),
     "js/app.js" => (
       include_bytes!("../assets/dashboard/js/app.js"),
       "text/javascript",
@@ -30,12 +31,32 @@ pub(crate) fn asset(path: &str) -> Option<Asset> {
       include_bytes!("../assets/dashboard/js/api.js"),
       "text/javascript",
     ),
+    "js/worker-drawer.js" => (
+      include_bytes!("../assets/dashboard/js/worker-drawer.js"),
+      "text/javascript",
+    ),
+    "js/logic/drawer.js" => (
+      include_bytes!("../assets/dashboard/js/logic/drawer.js"),
+      "text/javascript",
+    ),
+    "js/logic/fragment.js" => (
+      include_bytes!("../assets/dashboard/js/logic/fragment.js"),
+      "text/javascript",
+    ),
     "js/logic/status.js" => (
       include_bytes!("../assets/dashboard/js/logic/status.js"),
       "text/javascript",
     ),
     "js/view/dashboard.js" => (
       include_bytes!("../assets/dashboard/js/view/dashboard.js"),
+      "text/javascript",
+    ),
+    "js/view/dom.js" => (
+      include_bytes!("../assets/dashboard/js/view/dom.js"),
+      "text/javascript",
+    ),
+    "js/view/drawer.js" => (
+      include_bytes!("../assets/dashboard/js/view/drawer.js"),
       "text/javascript",
     ),
     "js/view/peer.js" => (

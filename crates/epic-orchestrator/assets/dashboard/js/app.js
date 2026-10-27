@@ -1,4 +1,5 @@
 import { readDashboard, readFleet, readLive } from "./api.js";
+import { takeToken } from "./logic/fragment.js";
 import { peerMachine } from "./logic/status.js";
 import { renderPeer } from "./view/peer.js";
 import {
@@ -9,10 +10,18 @@ import {
   showConnection,
   showError,
 } from "./view/dashboard.js";
+import { closeDrawer, initDrawer, saveToken, syncDrawer } from "./worker-drawer.js";
 
 const state = { peer: null, fleet: null, docs: null, live: null, sampledAt: 0, request: 0 };
 let stream;
 let refreshTimer;
+
+const fragment = takeToken(location.hash);
+if (fragment.token) {
+  saveToken(fragment.token);
+  history.replaceState(null, "", `${location.pathname}${location.search}${fragment.hash}`);
+}
+initDrawer(() => state);
 
 function stopStream() {
   stream?.close();
@@ -51,6 +60,7 @@ async function refresh() {
     state.docs = docs;
     state.sampledAt = Date.now();
     renderDashboard(docs, state.peer ? null : state.live, state.peer, state.sampledAt);
+    syncDrawer();
     showError(null);
     showConnection(true);
     startStream();
@@ -82,6 +92,7 @@ async function sampleLive() {
     state.live = live;
     if (state.docs) {
       renderDashboard(state.docs, state.live, null, state.sampledAt);
+      syncDrawer();
     }
   } catch {
     state.live = null;
@@ -90,6 +101,7 @@ async function sampleLive() {
 
 function select(peer) {
   if (state.peer === peer) return;
+  closeDrawer();
   state.peer = peer;
   state.docs = null;
   state.live = null;
