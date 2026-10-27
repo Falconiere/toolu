@@ -185,7 +185,7 @@ fn a_repin_adds_every_installed_plugin_again_on_update_even_when_current() {
   let listing = r#"{"installed":[{"name":"jev","version":"8.2.0"}]}"#;
   sb.write("codex-installed.json", listing);
   sb.write("codex-available.json", listing);
-  let Ok(steps) = update::run(&driver(&sb), &[], false) else {
+  let Ok(steps) = update::run(&driver(&sb), &catalog(), &[], false) else {
     panic!("the update failed outright");
   };
   assert_eq!(steps.len(), 1);
@@ -203,7 +203,7 @@ fn a_pinned_update_leaves_a_current_plugin_alone() {
   let listing = r#"{"installed":[{"name":"jev","version":"8.2.0"}]}"#;
   sb.write("codex-installed.json", listing);
   sb.write("codex-available.json", listing);
-  let Ok(steps) = update::run(&driver(&sb), &[], false) else {
+  let Ok(steps) = update::run(&driver(&sb), &catalog(), &[], false) else {
     panic!("the update failed outright");
   };
   assert_eq!(steps[0].status, Status::Current);
@@ -231,7 +231,7 @@ fn a_repin_on_install_adds_an_installed_plugin_again() {
 fn a_dry_run_runs_no_marketplace_command() {
   let sb = Sandbox::new();
   codex(&sb, "git -");
-  let Ok(_steps) = update::run(&driver(&sb), &names(&["jev"]), true) else {
+  let Ok(_steps) = update::run(&driver(&sb), &catalog(), &names(&["jev"]), true) else {
     panic!("the dry run failed");
   };
   assert!(marketplace_log(&sb).is_empty(), "{:?}", sb.log("codex"));

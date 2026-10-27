@@ -1,0 +1,274 @@
+{
+  "version": 1,
+  "claude": "2.1.311 (Claude Code)",
+  "captured": "2026-10-27",
+  "note": "Real `claude` output; home and worktree paths are rewritten to /home/user, and the list is trimmed to the rows the tests need. Cases marked derived are the captured up_to_date line with fields changed to the updateOutcome values and flags the 2.1.311 binary emits (updated, skipped, refreshFailed), because a real update cannot be forced.",
+  "cases": [
+    {
+      "name": "list",
+      "description": "plugin list --json: toolu rows, two project pins before the user-scope toolu row, retired context7 and exa-search, foreign cloudflare and exa",
+      "argv": [
+        "plugin",
+        "list",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": [
+        {
+          "id": "ast-grep@toolu",
+          "version": "8.5.0",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/ast-grep/8.5.0",
+          "installedAt": "2026-08-27T06:49:04.813Z",
+          "lastUpdated": "2026-10-27T01:01:27.291Z",
+          "projectEnabled": false
+        },
+        {
+          "id": "cloudflare@cloudflare",
+          "version": "1.0.1",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/cloudflare/cloudflare/1.0.1",
+          "installedAt": "2026-09-27T11:37:33.096Z",
+          "lastUpdated": "2026-09-27T11:37:33.096Z",
+          "mcpServers": {
+            "cloudflare": {
+              "type": "http",
+              "url": "https://mcp.cloudflare.com/mcp"
+            }
+          },
+          "projectEnabled": false
+        },
+        {
+          "id": "context7@toolu",
+          "version": "7.11.0",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/context7/7.11.0",
+          "installedAt": "2026-08-27T06:49:04.861Z",
+          "lastUpdated": "2026-10-05T19:35:05.541Z",
+          "errors": [
+            "Plugin context7 not found in marketplace toolu"
+          ],
+          "errorDetails": [
+            {
+              "type": "plugin-not-found",
+              "plugin": "context7",
+              "marketplace": "toolu"
+            }
+          ],
+          "projectEnabled": false
+        },
+        {
+          "id": "exa-search@toolu",
+          "version": "7.11.0",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/exa-search/7.11.0",
+          "installedAt": "2026-08-27T06:49:04.871Z",
+          "lastUpdated": "2026-10-05T19:35:05.546Z",
+          "errors": [
+            "Plugin exa-search not found in marketplace toolu"
+          ],
+          "errorDetails": [
+            {
+              "type": "plugin-not-found",
+              "plugin": "exa-search",
+              "marketplace": "toolu"
+            }
+          ],
+          "projectEnabled": false
+        },
+        {
+          "id": "exa@claude-plugins-official",
+          "version": "3.4.1",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/claude-plugins-official/exa/3.4.1",
+          "installedAt": "2026-10-06T23:14:31.990Z",
+          "lastUpdated": "2026-10-06T23:14:31.990Z",
+          "mcpServers": {
+            "exa": {
+              "type": "http",
+              "url": "https://mcp.exa.ai/mcp?client=claude-code-plugin",
+              "headers": {
+                "x-exa-source": "claude-code-plugin"
+              }
+            }
+          },
+          "notes": [
+            "The packages it lists were not installed, because its package.json sets overrides, which this install does not apply"
+          ],
+          "noteDetails": [
+            {
+              "type": "dependencies-refused",
+              "plugin": "exa"
+            }
+          ],
+          "projectEnabled": false
+        },
+        {
+          "id": "jev@toolu",
+          "version": "8.5.0",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/jev/8.5.0",
+          "installedAt": "2026-09-20T02:03:37.535Z",
+          "lastUpdated": "2026-10-27T01:01:27.293Z",
+          "projectEnabled": false
+        },
+        {
+          "id": "toolu@toolu",
+          "version": "8.1.3",
+          "scope": "project",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/toolu/8.1.3",
+          "installedAt": "2026-10-23T17:15:21.982Z",
+          "lastUpdated": "2026-10-23T17:15:21.982Z",
+          "projectPath": "/home/user/project",
+          "projectEnabled": false
+        },
+        {
+          "id": "toolu@toolu",
+          "version": "8.1.3",
+          "scope": "project",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/toolu/8.1.3",
+          "installedAt": "2026-10-23T17:15:25.208Z",
+          "lastUpdated": "2026-10-23T17:15:25.208Z",
+          "projectPath": "/home/user/project",
+          "projectEnabled": false
+        },
+        {
+          "id": "toolu@toolu",
+          "version": "8.5.0",
+          "scope": "user",
+          "enabled": true,
+          "installPath": "/home/user/.claude/plugins/cache/toolu/toolu/8.5.0",
+          "installedAt": "2026-08-27T06:49:04.968Z",
+          "lastUpdated": "2026-10-27T01:01:27.286Z",
+          "projectEnabled": false
+        }
+      ],
+      "stderr": ""
+    },
+    {
+      "name": "update-up-to-date",
+      "description": "plugin update of a current plugin",
+      "argv": [
+        "plugin",
+        "update",
+        "jev@toolu",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "command": "update",
+        "outcome": "ok",
+        "plugin": "jev@toolu",
+        "pluginId": "jev@toolu",
+        "scope": "user",
+        "message": "jev is already at the latest version (8.5.0).",
+        "updateOutcome": "up_to_date",
+        "oldVersion": "8.5.0",
+        "newVersion": "8.5.0"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "update-not-found",
+      "description": "plugin update of a name the toolu marketplace lacks",
+      "argv": [
+        "plugin",
+        "update",
+        "cloudflare@toolu",
+        "--json"
+      ],
+      "exit": 1,
+      "stdout": {
+        "command": "update",
+        "outcome": "failed",
+        "plugin": "cloudflare@toolu",
+        "pluginId": "cloudflare@toolu",
+        "message": "Plugin \"cloudflare\" not found",
+        "failureCode": "not_found"
+      },
+      "stderr": "✘ Failed to update plugin \"cloudflare@toolu\": Plugin \"cloudflare\" not found\n"
+    },
+    {
+      "name": "update-updated",
+      "description": "plugin update that moved the version",
+      "derived": true,
+      "argv": [
+        "plugin",
+        "update",
+        "jev@toolu",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "command": "update",
+        "outcome": "ok",
+        "plugin": "jev@toolu",
+        "pluginId": "jev@toolu",
+        "scope": "user",
+        "message": "jev updated from 8.5.0 to 8.6.0.",
+        "updateOutcome": "updated",
+        "oldVersion": "8.5.0",
+        "newVersion": "8.6.0"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "update-skipped",
+      "description": "plugin update Claude skipped",
+      "derived": true,
+      "argv": [
+        "plugin",
+        "update",
+        "jev@toolu",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "command": "update",
+        "outcome": "ok",
+        "plugin": "jev@toolu",
+        "pluginId": "jev@toolu",
+        "scope": "user",
+        "message": "jev is pinned to 8.5.0; skipped.",
+        "updateOutcome": "skipped",
+        "oldVersion": "8.5.0",
+        "newVersion": "8.5.0",
+        "skipReason": "pinned"
+      },
+      "stderr": ""
+    },
+    {
+      "name": "update-refresh-failed",
+      "description": "plugin update whose marketplace refresh failed",
+      "derived": true,
+      "argv": [
+        "plugin",
+        "update",
+        "jev@toolu",
+        "--json"
+      ],
+      "exit": 0,
+      "stdout": {
+        "command": "update",
+        "outcome": "ok",
+        "plugin": "jev@toolu",
+        "pluginId": "jev@toolu",
+        "scope": "user",
+        "message": "jev is already at the latest version (8.5.0).",
+        "updateOutcome": "up_to_date",
+        "oldVersion": "8.5.0",
+        "newVersion": "8.5.0",
+        "refreshFailed": true
+      },
+      "stderr": ""
+    }
+  ]
+}

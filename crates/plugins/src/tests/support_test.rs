@@ -2,6 +2,7 @@
 //! stub stands in for `claude` or `codex` only at the process boundary, to
 //! inject the failures and listings a real host cannot be made to produce.
 
+use std::fmt::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::PathBuf;
 
@@ -100,6 +101,32 @@ impl Sandbox {
        esac"
     );
     self.stub("muse", &body);
+  }
+
+  /// A `claude` stub replaying captured cases: it logs its argv to `claude.log`;
+  /// when argv is a key of `cases`, it prints that `claude.json` case's stdout and
+  /// stderr and exits with its code; any other argv exits 0 silently.
+  pub(crate) fn replay(&self, cases: &[(&str, &str)]) {
+    let root = self.root();
+    let root = root.display();
+    let mut arms = String::new();
+    for (index, (argv, name)) in cases.iter().enumerate() {
+      let case = claude_case(name);
+      self.write(&format!("replay-{index}.out"), &case["stdout"].to_string());
+      self.write(
+        &format!("replay-{index}.err"),
+        case["stderr"].as_str().unwrap_or_default(),
+      );
+      let code = case["exit"].as_i64().expect("exit");
+      writeln!(
+        arms,
+        "\"{argv}\") cat {root}/replay-{index}.out; cat {root}/replay-{index}.err >&2; exit {code} ;;"
+      )
+      .expect("write to a String");
+    }
+    let body =
+      format!("echo \"$*\" >> {root}/claude.log\ncase \"$*\" in\n{arms}*) exit 0 ;;\nesac");
+    self.stub("claude", &body);
   }
 
   /// Writes the captured Muse case `case` at `rel`, its `/home/user` paths
@@ -239,20 +266,31 @@ impl Ask for Answer {
   }
 }
 
-/// The captured Muse 1.4.11 output of the case `name` in
-/// `fixtures/plugins/muse.json`: its stdout, re-serialized.
-pub(crate) fn muse_output(name: &str) -> String {
-  let path =
-    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/plugins/muse.json");
-  let text = std::fs::read_to_string(path).expect("fixtures/plugins/muse.json");
+/// The case `name` of the captured host output in `fixtures/plugins/<host>.json`.
+fn fixture_case(host: &str, name: &str) -> serde_json::Value {
+  let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+    .join(format!("../../fixtures/plugins/{host}.json"));
+  let text = std::fs::read_to_string(path).expect("fixture file");
   let fixture: serde_json::Value = serde_json::from_str(&text).expect("fixture JSON");
-  let case = fixture["cases"]
+  fixture["cases"]
     .as_array()
     .expect("cases")
     .iter()
     .find(|case| case["name"] == name)
-    .unwrap_or_else(|| panic!("no Muse case {name}"));
-  case["stdout"].to_string()
+    .cloned()
+    .unwrap_or_else(|| panic!("no {host} case {name}"))
+}
+
+/// The captured Muse 1.4.11 output of the case `name` in
+/// `fixtures/plugins/muse.json`: its stdout, re-serialized.
+pub(crate) fn muse_output(name: &str) -> String {
+  fixture_case("muse", name)["stdout"].to_string()
+}
+
+/// The captured Claude Code 2.1.311 case `name` in `fixtures/plugins/claude.json`:
+/// `argv`, `exit`, `stdout` (a JSON value) and `stderr`.
+pub(crate) fn claude_case(name: &str) -> serde_json::Value {
+  fixture_case("claude", name)
 }
 
 fn copy_tree(from: &std::path::Path, to: &std::path::Path) {

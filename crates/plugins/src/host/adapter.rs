@@ -91,17 +91,15 @@ impl Adapter {
     )
   }
 
-  /// Updates `name`: Codex re-adds it.
+  /// Updates `name`: Codex re-adds it; Claude Code prints its result as one JSON
+  /// line (`claude::update_step` reads it).
   pub(crate) fn update(self, name: &str) -> Vec<String> {
-    let verb = match self {
-      Adapter::Claude => "update",
-      Adapter::Codex => "add",
-      Adapter::Muse => return muse::argv(&["plugins", "update", name, "--json"]),
-    };
-    words(
-      &[self.bin(), "plugin", verb],
-      &[format!("{name}@{MARKETPLACE}")],
-    )
+    let id = format!("{name}@{MARKETPLACE}");
+    match self {
+      Adapter::Claude => words(&["claude", "plugin", "update"], &[id, "--json".to_owned()]),
+      Adapter::Codex => words(&["codex", "plugin", "add"], &[id]),
+      Adapter::Muse => muse::argv(&["plugins", "update", name, "--json"]),
+    }
   }
 
   /// The host's plugin noun: Muse says `plugins`.
@@ -117,12 +115,16 @@ impl Adapter {
     words(&[self.bin(), self.noun(), "list", "--json"], &[])
   }
 
-  /// Lists what the marketplaces offer.
-  pub(crate) fn list_available(self) -> Vec<String> {
-    words(
-      &[self.bin(), self.noun(), "list", "--available", "--json"],
-      &[],
-    )
+  /// Lists what the marketplaces offer; `None` on Claude Code, whose
+  /// `--available` listing carries no versions for what is installed.
+  pub(crate) fn list_available(self) -> Option<Vec<String>> {
+    match self {
+      Adapter::Claude => None,
+      Adapter::Codex | Adapter::Muse => Some(words(
+        &[self.bin(), self.noun(), "list", "--available", "--json"],
+        &[],
+      )),
+    }
   }
 
   /// Reads `name`'s trust state; `None` on a host without an approval step.

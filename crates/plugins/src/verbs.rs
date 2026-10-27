@@ -83,6 +83,22 @@ pub(crate) fn foreign_step(name: &str, have: &Installed, argv: Vec<String>) -> S
   )
 }
 
+/// The step for `name`, installed from toolu's marketplace but gone from the
+/// catalog: left alone, naming the command that removes it on `host` (Muse
+/// removes by bare name, so its own command, as `toolu doctor` names it).
+pub(crate) fn retired_step(name: &str, host: &str, argv: Vec<String>) -> Step {
+  let remove = match host {
+    "muse" => format!("muse plugins remove {name}"),
+    _plugin_cli_or_cursor => format!("toolu plugins remove {name} --host {host} --yes"),
+  };
+  Step::new(
+    name,
+    Status::Skew,
+    format!("retired from the toolu marketplace; remove it with `{remove}`"),
+    argv,
+  )
+}
+
 /// The entry for `name` in a listing.
 pub(crate) fn find<'a>(list: &'a [Installed], name: &str) -> Option<&'a Installed> {
   list.iter().find(|entry| entry.name == name)

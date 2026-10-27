@@ -13,7 +13,6 @@ fn a_listing_that_fails_or_is_malformed_reads_as_empty() {
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
   );
-  sb.write("claude-available.json", "not json");
   let driver = Driver {
     adapter: Adapter::Claude,
     env: sb.env(),
@@ -28,10 +27,7 @@ fn a_listing_that_fails_or_is_malformed_reads_as_empty() {
     Some("7.11.0")
   );
   assert_eq!(find(&installed, "toolu"), None);
-  assert_eq!(
-    driver.versions(&driver.adapter.list_available()),
-    Vec::new()
-  );
+  assert_eq!(driver.adapter.list_available(), None);
   let gone = Driver {
     adapter: Adapter::Codex,
     ..driver

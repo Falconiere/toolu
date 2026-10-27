@@ -15,7 +15,8 @@ use crate::prompt::Ask;
 pub(crate) mod adapter;
 /// The toolu checkout Muse installs from.
 pub(crate) mod checkout;
-mod claude;
+/// Claude Code's plugin listing and update result line.
+pub(crate) mod claude;
 /// Codex's plugin listing and marketplace commands.
 pub(crate) mod codex;
 /// Muse's plugin documents and marketplace commands.

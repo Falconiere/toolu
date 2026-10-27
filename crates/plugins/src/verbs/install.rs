@@ -78,7 +78,10 @@ pub(crate) fn run(
     prepare::run(driver, Verb::Install)?
   };
   let installed = driver.versions(&adapter.list_installed());
-  let offered = driver.versions(&adapter.list_available());
+  let offered = adapter
+    .list_available()
+    .map(|argv| driver.versions(&argv))
+    .unwrap_or_default();
   let dependents = dependents_of(catalog, CORE);
   let mut core_failed = false;
   let mut steps = Vec::new();

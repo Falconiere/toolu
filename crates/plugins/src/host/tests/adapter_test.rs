@@ -26,13 +26,10 @@ fn claude_builds_marketplace_install_with_scope_remove_and_update() {
   );
   assert_eq!(
     words(&claude.update("ast-grep")),
-    "claude plugin update ast-grep@toolu"
+    "claude plugin update ast-grep@toolu --json"
   );
   assert_eq!(words(&claude.list_installed()), "claude plugin list --json");
-  assert_eq!(
-    words(&claude.list_available()),
-    "claude plugin list --available --json"
-  );
+  assert_eq!(claude.list_available(), None);
 }
 
 #[test]
@@ -94,8 +91,8 @@ fn muse_builds_its_plugins_argv_with_json_and_no_scope() {
   assert_eq!(words(&muse.update("jev")), "muse plugins update jev --json");
   assert_eq!(words(&muse.list_installed()), "muse plugins list --json");
   assert_eq!(
-    words(&muse.list_available()),
-    "muse plugins list --available --json"
+    muse.list_available().map(|argv| words(&argv)).as_deref(),
+    Some("muse plugins list --available --json")
   );
   assert_eq!(
     muse.inspect("jev").map(|argv| words(&argv)).as_deref(),

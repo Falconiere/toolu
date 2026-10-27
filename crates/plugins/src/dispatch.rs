@@ -268,9 +268,10 @@ fn update(
   let target = one_host(request, wanted, cx)?;
   install_order(catalog, &request.names)?;
   let steps = match target {
-    Target::Cursor => cursor::update(&Cursor::new(cx)?, &request.names, request.dry_run)?,
+    Target::Cursor => cursor::update(&Cursor::new(cx)?, catalog, &request.names, request.dry_run)?,
     Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
+      catalog,
       &request.names,
       request.dry_run,
     )?,

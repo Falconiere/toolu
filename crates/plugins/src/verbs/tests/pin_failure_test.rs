@@ -98,7 +98,7 @@ fn no_marketplace_and_a_failed_add_hint_on_a_failed_install_and_fail_an_update()
     "codex-installed.json",
     r#"{"installed":[{"name":"jev","version":"8.2.0"}]}"#,
   );
-  let Err(fail) = update::run(&driver(&sb), &[], false) else {
+  let Err(fail) = update::run(&driver(&sb), &catalog(), &[], false) else {
     panic!("an update with no marketplace to pin passed");
   };
   assert_eq!(

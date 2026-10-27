@@ -1,30 +1,35 @@
 //! `update`: only what differs from the offered version, then hook approval
 //! (Muse). On Muse the checkout moves to this binary's tag first, and a plugin
 //! installed from elsewhere is left alone. On Codex the marketplace is pinned
-//! to the tag first; a re-pin adds every installed plugin again (#626).
+//! to the tag first; a re-pin adds every installed plugin again (#626). Claude
+//! Code offers no versions, so each plugin is updated and its result line read.
+//! A plugin the catalog no longer has is retired: never updated, only named.
 
 use crate::args::Verb;
+use crate::catalog::Catalog;
 use crate::fail::{Fail, Res};
-use crate::host::adapter::Installed;
+use crate::host::adapter::{Adapter, Installed};
+use crate::host::claude;
 use crate::host::run::first_line;
 use crate::step::{Status, Step};
-use crate::verbs::{Driver, find, foreign_step, pin, prepare, trust};
+use crate::verbs::{Driver, find, foreign_step, pin, prepare, retired_step, trust};
 
-/// Updates `names`, or every installed plugin when empty; a dry run runs no update.
-pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<Step>> {
+/// Updates `names`, or every installed toolu plugin when empty; a dry run runs
+/// no update.
+pub(crate) fn run(
+  driver: &Driver,
+  catalog: &Catalog,
+  names: &[String],
+  dry_run: bool,
+) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
   let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
   let installed = driver.versions(&adapter.list_installed());
-  let offered = driver.versions(&adapter.list_available());
-  let targets: Vec<String> = if names.is_empty() {
-    installed
-      .iter()
-      .filter(|entry| !driver.foreign(entry))
-      .map(|entry| entry.name.clone())
-      .collect()
-  } else {
-    names.to_vec()
-  };
+  let offered = adapter
+    .list_available()
+    .map(|argv| driver.versions(&argv))
+    .unwrap_or_default();
+  let targets = targets(driver, names, &installed);
   if targets.is_empty() {
     // An empty request and an empty listing mean the host said nothing; saying
     // so beats an empty report that reads as success.
@@ -36,7 +41,10 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<S
   let steps = targets
     .iter()
     .map(|name| {
-      if repinned && !find(&installed, name).is_some_and(|entry| driver.foreign(entry)) {
+      let foreign = find(&installed, name).is_some_and(|entry| driver.foreign(entry));
+      if !foreign && catalog.entry(name).is_none() {
+        retired_step(name, adapter.bin(), adapter.update(name))
+      } else if repinned && !foreign {
         pin::refresh(driver, name)
       } else {
         one(driver, name, &installed, &offered, dry_run)
@@ -47,6 +55,20 @@ pub(crate) fn run(driver: &Driver, names: &[String], dry_run: bool) -> Res<Vec<S
     return Ok(steps);
   }
   Ok(trust::settle(driver, steps))
+}
+
+/// `names`, or each installed plugin toolu's marketplace put there, once.
+fn targets(driver: &Driver, names: &[String], installed: &[Installed]) -> Vec<String> {
+  if !names.is_empty() {
+    return names.to_vec();
+  }
+  let mut targets: Vec<String> = Vec::new();
+  for entry in installed.iter().filter(|entry| !driver.foreign(entry)) {
+    if !targets.contains(&entry.name) {
+      targets.push(entry.name.clone());
+    }
+  }
+  targets
 }
 
 /// Updates `name` unless it is current or installed from elsewhere.
@@ -75,6 +97,9 @@ fn one(
     return Step::new(name, Status::Skipped, "dry run", argv);
   }
   let ran = driver.run(&argv);
+  if driver.adapter == Adapter::Claude {
+    return claude::update_step(name, &ran, argv);
+  }
   if !ran.ok() {
     return Step::new(
       name,

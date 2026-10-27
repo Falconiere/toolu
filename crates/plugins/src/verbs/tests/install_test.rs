@@ -51,10 +51,7 @@ fn a_dry_run_orders_every_dependent_after_the_core_and_runs_no_install() {
       .iter()
       .all(|step| step.argv.contains(&"--scope".to_owned()))
   );
-  assert_eq!(
-    sb.log("claude"),
-    ["plugin list --json", "plugin list --available --json"]
-  );
+  assert_eq!(sb.log("claude"), ["plugin list --json"]);
 }
 
 #[test]
