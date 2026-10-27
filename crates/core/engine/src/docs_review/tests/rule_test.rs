@@ -150,7 +150,7 @@ fn reviewed_head_does_not_authorize_other_or_implicit_pushes() {
   .unwrap();
   for (command, allowed) in [
     ("git push origin HEAD:feature", true),
-    ("git push origin main", false),
+    ("git push origin main", true),
     ("git push origin", false),
     ("git push --mirror origin", false),
   ] {
@@ -177,44 +177,41 @@ fn reviewed_head_does_not_authorize_other_or_implicit_pushes() {
 }
 
 #[test]
-fn dynamic_push_indicators_follow_mode_without_blocking_other_dynamic_commands() {
+fn possible_pushes_follow_the_target_repositorys_mode() {
   use crate::ledger::context::test_repo::Repo;
-  let repo = Repo::new().unwrap();
-  repo
-    .sh("mkdir -p .claude && git config alias.configured push && git config alias.lg log")
-    .unwrap();
-  let config = repo.root.join(".claude/toolu.config.json");
-  let env = repo.env();
-  for (mode, command, denied) in [
-    ("block", "action=push; git \"$action\" origin main", true),
-    ("block", "$git_command push origin main", true),
-    ("block", "git -c alias.p=push p origin main", true),
-    (
-      "block",
-      "git config alias.p push && git p origin main",
-      true,
-    ),
-    ("block", "CMD='git push origin main'; sh -c \"$CMD\"", true),
-    ("block", "git configured origin main", true),
-    ("block", "git lg", false),
-    ("block", "git \"$sub\" log", false),
-    ("block", "for c in status log; do git \"$c\"; done", false),
-    ("block", "eval \"$(brew shellenv)\"", false),
-    ("block", "$formatter file", false),
-    ("off", "action=push; git \"$action\" origin main", false),
-    ("off", "$git_command push origin main", false),
-  ] {
-    std::fs::write(
-      &config,
-      format!(r#"{{"version":1,"docsSync":{{"mode":"{mode}"}}}}"#),
-    )
-    .unwrap();
-    assert_eq!(
-      matches!(run_in(&repo.root, &env, command), Decision::Deny { .. }),
-      denied,
-      "{command}"
-    );
-  }
+  let session = Repo::new().unwrap();
+  let target = Repo::new().unwrap();
+  target.sh("git config alias.p push").unwrap();
+  let mode = |repo: &Repo, mode: &str| {
+    let config = format!(r#"{{"version":1,"docsSync":{{"mode":"{mode}"}}}}"#);
+    repo
+      .sh(&format!(
+        "mkdir -p .claude && printf '%s' '{config}' > .claude/toolu.config.json"
+      ))
+      .unwrap();
+  };
+  mode(&session, "block");
+  mode(&target, "off");
+  let env = session.env();
+  let aliased = format!("git -C '{}' p origin main", target.root.display());
+  assert!(matches!(
+    run_in(&session.root, &env, &aliased),
+    Decision::Allow
+  ));
+  mode(&target, "block");
+  let Decision::Deny { reason } = run_in(&session.root, &env, &aliased) else {
+    panic!("the target repository blocks");
+  };
+  assert!(reason.as_str().contains("may push"), "{}", reason.as_str());
+  assert!(matches!(
+    run_in(&session.root, &env, "git \"$sub\" log"),
+    Decision::Deny { .. }
+  ));
+  mode(&session, "off");
+  assert!(matches!(
+    run_in(&session.root, &env, "git \"$sub\" log"),
+    Decision::Allow
+  ));
 }
 
 fn run_in(repo: &std::path::Path, env: &Env, command: &str) -> Decision {
@@ -236,16 +233,11 @@ fn run_in(repo: &std::path::Path, env: &Env, command: &str) -> Decision {
 }
 
 #[test]
-fn nothing_to_review_passes_any_push_and_a_missing_review_names_the_skill() {
+fn a_missing_review_names_the_skill() {
   use crate::docs_review::tests::fixture;
   let (dir, roots) = fixture();
   let repo = dir.path();
-  std::fs::create_dir_all(repo.join(".claude")).unwrap();
-  std::fs::write(
-    repo.join(".claude/toolu.config.json"),
-    r#"{"version":1,"gates":{"preset":"strict"}}"#,
-  )
-  .unwrap();
+  strict(repo);
   let Decision::Deny { reason } = run_in(repo, roots.env(), "git push origin HEAD:feature") else {
     panic!("an unreviewed diff must be denied");
   };
@@ -256,21 +248,47 @@ fn nothing_to_review_passes_any_push_and_a_missing_review_names_the_skill() {
     "{}",
     reason.as_str()
   );
-  assert!(matches!(
-    run_in(repo, roots.env(), "git push"),
-    Decision::Deny { .. }
-  ));
-  let status = std::process::Command::new("git")
-    .arg("-C")
-    .arg(repo)
-    .args(["checkout", "-q", "main"])
-    .status()
-    .unwrap();
-  assert!(status.success());
-  for command in ["git push", "git push origin v1.0"] {
-    assert!(
+}
+
+fn strict(repo: &std::path::Path) {
+  std::fs::create_dir_all(repo.join(".claude")).unwrap();
+  std::fs::write(
+    repo.join(".claude/toolu.config.json"),
+    r#"{"version":1,"gates":{"preset":"strict"}}"#,
+  )
+  .unwrap();
+}
+
+#[test]
+fn only_a_lone_push_of_commits_already_in_base_skips_the_review() {
+  use crate::docs_review::tests::{fixture, git};
+  let (dir, roots) = fixture();
+  let repo = dir.path();
+  strict(repo);
+  git(repo, &["update-ref", "refs/tags/v1.0", "main"]);
+  git(repo, &["update-ref", "refs/tags/v2.0", "feature"]);
+  let decide = |command: &str, allowed: bool| {
+    assert_eq!(
       matches!(run_in(repo, roots.env(), command), Decision::Allow),
+      allowed,
       "{command}"
     );
+  };
+  decide("git push", false);
+  decide("git push origin v2.0", false);
+  git(repo, &["checkout", "-q", "-b", "fresh", "main"]);
+  decide("git push -u origin HEAD", true);
+  decide(
+    "git add -A && git commit -m x && git push -u origin HEAD",
+    false,
+  );
+  decide("cd .. && git push origin HEAD:fresh", false);
+  git(repo, &["checkout", "-q", "main"]);
+  for command in ["git push", "git push origin main", "git push origin v1.0"] {
+    decide(command, true);
   }
+  decide("git push origin feature", false);
+  decide("git push origin v2.0", false);
+  git(repo, &["checkout", "-q", "--detach", "main"]);
+  decide("git push origin HEAD", true);
 }

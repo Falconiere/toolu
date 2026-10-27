@@ -119,6 +119,23 @@ impl Fixture {
     )
   }
 
+  /// `toolu` with no host override or project dir pointing at the repository.
+  fn bare(&self, args: &[&str]) -> Res<Output> {
+    let mut command = assert_cmd::Command::new(TOOLU);
+    command
+      .args(args)
+      .current_dir(&self.repo)
+      .env_clear()
+      .env("PATH", std::env::var_os("PATH").ok_or("PATH missing")?)
+      .env("HOME", self.temp.path())
+      .env("TOOLU_PROJECT_DIR", self.temp.path())
+      .env("DOCS_SYNC_BASE", "main");
+    if let Some(profile) = std::env::var_os("LLVM_PROFILE_FILE") {
+      command.env("LLVM_PROFILE_FILE", profile);
+    }
+    Ok(command.output()?)
+  }
+
   fn register(&self) -> Res<Output> {
     self.command(
       &[
@@ -161,26 +178,19 @@ fn native_gate_requires_current_complete_review() {
     reason(&before)
   );
   let report = fixture.report().unwrap();
-  let path = fixture.temp.path().join("report.json");
-  fs::write(&path, report.to_string()).unwrap();
-  let hostless = assert_cmd::Command::new(TOOLU)
-    .args(["docs", "write-state", "--report", path.to_str().unwrap()])
-    .current_dir(&fixture.repo)
-    .env_clear()
-    .env("PATH", std::env::var_os("PATH").unwrap())
-    .env("HOME", fixture.temp.path())
-    .env("DOCS_SYNC_BASE", "main")
-    .output()
-    .unwrap();
-  assert!(!hostless.status.success());
-  assert!(String::from_utf8_lossy(&hostless.stderr).contains("pass --host"));
   let mut partial = report.clone();
   partial
     .as_object_mut()
     .unwrap()
     .insert("coverage".into(), json!([]));
   assert!(!fixture.write(&partial).unwrap().status.success());
-  let written = fixture.write(&report).unwrap();
+  let path = fixture.temp.path().join("report.json");
+  fs::write(&path, report.to_string()).unwrap();
+  // No host flag or marker and a project dir elsewhere: the repository is the
+  // current directory, and every host's gate reads the review.
+  let written = fixture
+    .bare(&["docs", "write-state", "--report", path.to_str().unwrap()])
+    .unwrap();
   assert!(
     written.status.success(),
     "{}",
@@ -189,7 +199,7 @@ fn native_gate_requires_current_complete_review() {
   let path: Value = serde_json::from_slice(&written.stdout).unwrap();
   let state = Path::new(path["path"].as_str().unwrap());
   assert!(state.is_file());
-  assert!(state.starts_with(fixture.repo.join(".claude/tmp/docs-sync")));
+  assert!(state.starts_with(fixture.repo.join(".claude/tmp/docs-review")));
   assert!(!reason(&fixture.push().unwrap()).contains("documentation-gate"));
   fs::write(fixture.repo.join("code.rs"), "newer behavior\n").unwrap();
   fixture.commit("new change").unwrap();

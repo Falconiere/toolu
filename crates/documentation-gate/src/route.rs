@@ -63,6 +63,21 @@ pub(crate) fn run(args: &ArgMatches, env: &Env) -> Result<String, String> {
   select(&candidates, &reply).map(|value| value.to_string())
 }
 
+/// The efforts each host's CLI accepts: `claude --help`, `codex debug models`
+/// (per model; the skill checks the chosen one) and `muse --help`, 2026-10-27.
+/// Cursor encodes effort in the model ID.
+fn efforts(host: Option<Host>) -> &'static [&'static str] {
+  match host {
+    Some(Host::Claude) => &["low", "medium", "high", "xhigh", "max"],
+    Some(Host::Codex) => &["low", "medium", "high", "xhigh", "max", "ultra"],
+    Some(Host::Muse) => &[
+      "none", "minimal", "low", "medium", "high", "xhigh", "max", "ultra",
+    ],
+    Some(Host::Cursor) => &["model"],
+    Some(Host::Hermes) | None => &[],
+  }
+}
+
 fn validate(candidates: &[Candidate]) -> Result<(), String> {
   if !(1..=254).contains(&candidates.len()) {
     return Err("candidates must contain 1 to 254 profiles".to_owned());
@@ -74,14 +89,7 @@ fn validate(candidates: &[Candidate]) -> Result<(), String> {
         .id
         .bytes()
         .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'-' | b'_'));
-    let effort = match worker_host(&c.host) {
-      Some(Host::Cursor) => c.effort == "model",
-      Some(_) => matches!(
-        c.effort.as_str(),
-        "low" | "medium" | "high" | "xhigh" | "max" | "ultra"
-      ),
-      None => false,
-    };
+    let effort = efforts(worker_host(&c.host)).contains(&c.effort.as_str());
     if !safe
       || c.id == NO_ROUTE
       || !ids.insert(&c.id)

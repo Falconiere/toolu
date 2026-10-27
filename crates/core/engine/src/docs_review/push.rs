@@ -1,66 +1,29 @@
 //! Restrict reviewed pushes to one explicitly named HEAD source.
+use super::{base, git};
 use crate::gates::push_target::git_at;
 use std::path::Path;
 use toolu_runtime::env::Env;
-use toolu_shell::analysis::{CommandOrigin, ShellAnalysis, Word};
-use toolu_shell::git::{GitInvocation, git_invocation, push_targets};
+use toolu_runtime::host::roots::Roots;
+use toolu_shell::analysis::{CommandOrigin, ShellAnalysis};
+use toolu_shell::git::{GitPush, push_targets};
 
-/// Whether `text` holds `push` as a whole word.
-fn mentions_push(text: &str) -> bool {
-  text
-    .split(|c: char| !c.is_ascii_alphanumeric())
-    .any(|word| word == "push")
-}
+const SHAPE: &str = "push one reviewed HEAD using git push <remote> HEAD:<branch>";
 
-/// Whether the invocation may define an alias: a dynamic or `alias.` global
-/// (`-c`, `--config-env`), or `git config` with a dynamic or `alias.` argument.
-fn defines_alias(git: &GitInvocation<'_>) -> bool {
-  let aliased = |words: &[Word]| {
-    words.iter().any(|word| {
-      word
-        .as_deref()
-        .is_none_or(|word| word.to_ascii_lowercase().contains("alias."))
-    })
-  };
-  let argv = &git.command.argv;
-  let globals = argv
-    .get(1..argv.len().saturating_sub(git.args.len() + 1))
-    .unwrap_or_default();
-  aliased(globals) || (git.subcommand == Some("config") && aliased(git.args))
-}
-
-/// Whether the subcommand is an alias configured, where it runs, to push.
-fn configured_push(git: &GitInvocation<'_>, cwd: &Path, env: &Env) -> bool {
-  let Some(sub) = git.subcommand.filter(|sub| *sub != "push") else {
-    return false;
-  };
-  let dir = git
-    .c_chain
-    .iter()
-    .try_fold(cwd.to_path_buf(), |dir, step| {
-      step.map(|step| dir.join(step))
-    })
-    .unwrap_or_else(|| cwd.to_path_buf());
-  git_at(&dir, &["config", "--get", &format!("alias.{sub}")], env)
-    .is_some_and(|expansion| mentions_push(&expansion))
-}
-
-/// Whether the line may push without a static `push` subcommand: a dynamic
-/// command, subcommand or script, or an alias defined in the line, when the line
-/// mentions `push`; or a configured alias that expands to one.
-pub(super) fn possible_push(analysis: &ShellAnalysis, cwd: &Path, env: &Env) -> bool {
-  let mentioned = mentions_push(&analysis.source);
-  analysis
-    .commands
-    .iter()
-    .any(|command| match git_invocation(command) {
-      Some(git) => {
-        (mentioned && (git.subcommand.is_none() || defines_alias(&git)))
-          || configured_push(&git, cwd, env)
-      }
-      None => mentioned && matches!(command.argv.first(), Some(None)),
-    })
-}
+/// The flags a reviewed push may carry.
+const FLAGS: [&str; 12] = [
+  "-u",
+  "--set-upstream",
+  "-f",
+  "--force",
+  "--force-with-lease",
+  "--no-verify",
+  "--atomic",
+  "--quiet",
+  "-q",
+  "--verbose",
+  "-v",
+  "--no-follow-tags",
+];
 
 fn globals(argv: &[Option<String>]) -> bool {
   let mut words = argv.iter().skip(1);
@@ -73,33 +36,42 @@ fn globals(argv: &[Option<String>]) -> bool {
   }
 }
 
-fn source(args: &[Option<String>]) -> Option<(&str, &str)> {
+/// The line's only command, when it is a plain static `git push`.
+fn single_push(analysis: &ShellAnalysis) -> Option<GitPush<'_>> {
+  if analysis.unknown || analysis.commands.len() != 1 {
+    return None;
+  }
+  let push = push_targets(analysis).into_iter().next()?;
+  let cmd = push.invocation.command;
+  let plain = cmd.origin == CommandOrigin::Line
+    && cmd.wrappers.is_empty()
+    && cmd.words == cmd.argv
+    && cmd
+      .text
+      .trim_start()
+      .strip_prefix("git")
+      .is_some_and(|rest| rest.starts_with(char::is_whitespace))
+    && cmd.redirects.is_empty()
+    && globals(&cmd.argv);
+  plain.then_some(push)
+}
+
+/// The push's operands, when every flag is one of [`FLAGS`].
+fn operands<'a>(push: &GitPush<'a>) -> Option<Vec<&'a str>> {
   let mut operands = Vec::new();
-  for arg in args {
+  for arg in push.invocation.args {
     let arg = arg.as_deref()?;
-    if arg.starts_with('-') {
-      if ![
-        "-u",
-        "--set-upstream",
-        "-f",
-        "--force",
-        "--force-with-lease",
-        "--no-verify",
-        "--atomic",
-        "--quiet",
-        "-q",
-        "--verbose",
-        "-v",
-      ]
-      .contains(&arg)
-      {
-        return None;
-      }
-    } else {
+    if !arg.starts_with('-') {
       operands.push(arg);
+    } else if !FLAGS.contains(&arg) {
+      return None;
     }
   }
-  let [remote, spec] = operands.as_slice() else {
+  Some(operands)
+}
+
+fn source<'a>(operands: &[&'a str]) -> Option<(&'a str, &'a str)> {
+  let [remote, spec] = operands else {
     return None;
   };
   if remote.is_empty() || spec.is_empty() {
@@ -157,43 +129,70 @@ fn tags_disabled(root: &Path, env: &Env) -> bool {
   .is_some_and(|value| value.trim() == "false")
 }
 
-/// Verify the only pushed source resolves to the reviewed HEAD.
-pub(super) fn reviewed_head(analysis: &ShellAnalysis, root: &Path, env: &Env) -> bool {
-  if analysis.unknown || analysis.commands.len() != 1 || !tags_disabled(root, env) {
-    return false;
-  }
-  let pushes = push_targets(analysis);
-  let [push] = pushes.as_slice() else {
-    return false;
-  };
-  let cmd = push.invocation.command;
-  if cmd.origin != CommandOrigin::Line
-    || !cmd.wrappers.is_empty()
-    || cmd.words != cmd.argv
-    || !cmd
-      .text
-      .trim_start()
-      .strip_prefix("git")
-      .is_some_and(|rest| rest.starts_with(char::is_whitespace))
-    || !cmd.redirects.is_empty()
-    || !globals(&cmd.argv)
-  {
-    return false;
-  }
-  let Some((src, dst)) = source(push.invocation.args) else {
-    return false;
-  };
-  if !branch_refs(root, env, src, dst) {
-    return false;
-  }
-  let revision = format!("{src}^{{commit}}");
-  let current = git_at(root, &["rev-parse", "--verify", "HEAD^{commit}"], env);
-  let source_commit = git_at(
+fn commit(root: &Path, env: &Env, revision: &str) -> Option<String> {
+  let revision = format!("{revision}^{{commit}}");
+  git_at(
     root,
     &["rev-parse", "--verify", "--end-of-options", &revision],
     env,
-  );
-  matches!((current, source_commit), (Some(a), Some(b)) if !a.trim().is_empty() && a == b)
+  )
+  .map(|sha| sha.trim().to_owned())
+  .filter(|sha| !sha.is_empty())
+}
+
+/// Verify the only pushed source resolves to the reviewed HEAD.
+pub(super) fn reviewed_head(
+  analysis: &ShellAnalysis,
+  root: &Path,
+  env: &Env,
+) -> Result<(), String> {
+  let push = single_push(analysis).ok_or(SHAPE)?;
+  let operands = operands(&push).ok_or(SHAPE)?;
+  let (src, dst) = source(&operands).ok_or(SHAPE)?;
+  let no_follow = push
+    .invocation
+    .args
+    .iter()
+    .any(|arg| arg.as_deref() == Some("--no-follow-tags"));
+  if !no_follow && !tags_disabled(root, env) {
+    return Err(
+      "push.followTags is true, so the push would also send tags; add --no-follow-tags".into(),
+    );
+  }
+  if !branch_refs(root, env, src, dst) {
+    return Err(SHAPE.into());
+  }
+  match (commit(root, env, "HEAD"), commit(root, env, src)) {
+    (Some(head), Some(source)) if head == source => Ok(()),
+    _ => Err(SHAPE.into()),
+  }
+}
+
+/// Whether the line is one plain push whose every source commit (`HEAD` for an
+/// implicit refspec) is already in the base branch: nothing to review.
+pub(super) fn nothing_to_review(analysis: &ShellAnalysis, roots: &Roots, root: &Path) -> bool {
+  let Some(push) = single_push(analysis) else {
+    return false;
+  };
+  let Some(operands) = operands(&push) else {
+    return false;
+  };
+  let Ok(base) = base(roots, root) else {
+    return false;
+  };
+  // shortcut: an implicit push is taken to send HEAD, as push.default=simple does; matching pushes more.
+  let specs = operands
+    .get(1..)
+    .filter(|specs| !specs.is_empty())
+    .unwrap_or(&["HEAD"][..]);
+  specs.iter().all(|spec| {
+    let spec = spec.strip_prefix('+').unwrap_or(spec);
+    let src = spec.split_once(':').map_or(spec, |(src, _)| src);
+    !src.is_empty()
+      && !src.contains('*')
+      && commit(root, roots.env(), src)
+        .is_some_and(|sha| git(roots, root, &["merge-base", "--is-ancestor", &sha, &base]).is_ok())
+  })
 }
 
 #[cfg(test)]

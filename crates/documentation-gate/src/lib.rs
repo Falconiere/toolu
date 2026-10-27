@@ -3,7 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use clap::{Arg, ArgMatches, Command};
-use toolu_protocol::{exit::Exit, host::Host};
+use toolu_protocol::exit::Exit;
 use toolu_runtime::{
   cli::{Ctx, Outcome},
   env::Env,
@@ -56,19 +56,13 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   let roots = Roots::new(env.clone(), ctx.host);
   let result = match matches.subcommand() {
     Some(("route", args)) => route::run(args, &env),
-    Some(("inspect", args)) => with_repo(args, &roots, |repo, branch| {
+    Some(("inspect", args)) => with_repo(args, |repo, branch| {
       toolu_engine::docs_review::inspect(&roots, repo, branch).map(|value| value.to_string())
     }),
-    Some(("write-state", args)) => with_repo(args, &roots, |repo, branch| {
-      // The gate reads the review from its host's state directory, and agent shells
-      // do not always identify their host.
-      let host = ctx
-        .host
-        .or_else(|| env.get("TOOLU_HOST_OVERRIDE").and_then(Host::parse))
-        .ok_or("pass --host naming the agent host whose gate will read the review")?;
+    Some(("write-state", args)) => with_repo(args, |repo, branch| {
       let report = read_json(required(args, "report")?)?;
-      toolu_engine::docs_review::write(&Roots::new(env.clone(), Some(host)), repo, branch, &report)
-        .map(|path| serde_json::json!({"path": path}).to_string())
+      toolu_engine::docs_review::write(&roots, repo, branch, &report)
+        .map(|path| serde_json::json!({"path": path.to_string_lossy()}).to_string())
     }),
     _ => Err("unknown docs command".to_owned()),
   };
@@ -90,16 +84,14 @@ fn read_json(path: &str) -> Result<serde_json::Value, String> {
   serde_json::from_str(&text).map_err(|e| format!("invalid JSON in {path}: {e}"))
 }
 
+/// Run `f` on `--repo`, else the current directory, as `toolu review write-state` does.
 fn with_repo(
   args: &ArgMatches,
-  roots: &Roots,
   f: impl FnOnce(&Path, Option<&str>) -> Result<String, String>,
 ) -> Result<String, String> {
   let repo = args
     .get_one::<String>("repo")
-    .map(PathBuf::from)
-    .or_else(|| roots.project_root(None))
-    .ok_or_else(|| "cannot find repository; pass --repo".to_owned())?;
+    .map_or_else(|| PathBuf::from("."), PathBuf::from);
   let branch = args.get_one::<String>("branch").map(String::as_str);
   f(&repo, branch)
 }

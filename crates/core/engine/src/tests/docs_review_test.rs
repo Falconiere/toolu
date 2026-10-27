@@ -4,7 +4,7 @@ use std::process::Command;
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 
-fn git(repo: &Path, args: &[&str]) {
+pub(super) fn git(repo: &Path, args: &[&str]) {
   let output = Command::new("git")
     .arg("-C")
     .arg(repo)
@@ -86,19 +86,48 @@ fn detached_review_requires_a_known_local_branch() {
 }
 
 #[test]
-fn missing_base_explains_how_to_name_one() {
+fn base_falls_back_to_origin_then_master_and_otherwise_explains() {
   let (dir, _) = fixture();
   let repo = dir.path();
-  git(repo, &["branch", "-m", "main", "master"]);
   let roots = Roots::new(
     Env::from_pairs([("HOME", repo.to_str().expect("path"))]),
     Some(Host::Claude),
   );
-  let error = inspect(&roots, repo, None).expect_err("no main");
+  git(repo, &["update-ref", "refs/remotes/origin/main", "main"]);
+  git(repo, &["branch", "-m", "main", "trunk"]);
+  assert_eq!(
+    identify(&roots, repo, None)
+      .expect("origin/main")
+      .base_branch,
+    "origin/main"
+  );
+  git(repo, &["update-ref", "-d", "refs/remotes/origin/main"]);
+  git(repo, &["branch", "-m", "trunk", "master"]);
+  assert_eq!(
+    identify(&roots, repo, None).expect("master").base_branch,
+    "master"
+  );
+  git(repo, &["branch", "-m", "master", "trunk"]);
+  let error = inspect(&roots, repo, None).expect_err("no base");
   assert!(
     error.contains("base branch 'main' not found")
       && error.contains("git remote set-head origin")
       && error.contains("DOCS_SYNC_BASE"),
     "{error}"
   );
+}
+
+#[test]
+fn a_review_written_for_any_host_is_read_by_every_host() {
+  let (dir, roots) = fixture();
+  let repo = dir.path();
+  let codex = Roots::new(roots.env().clone(), Some(Host::Codex));
+  let path = write(&codex, repo, None, &report(&roots, repo)).expect("write review");
+  assert!(
+    path.starts_with(repo.join(".codex/tmp/docs-review")),
+    "{}",
+    path.display()
+  );
+  assess(&roots, repo, "feature").expect("Claude reads the Codex review");
+  assert!(!repo.join(".claude/tmp/docs-sync").exists());
 }

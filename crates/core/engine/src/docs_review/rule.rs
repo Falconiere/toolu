@@ -1,9 +1,10 @@
 //! Native pre-push rule and session registration.
 use super::{
-  assess_push,
-  push::{possible_push, reviewed_head},
+  assess,
+  push::{nothing_to_review, reviewed_head},
 };
-use crate::gates::{command_analysis, decided, gate_config, pre_mode, push_target::push_target_in};
+use crate::detect::possible_push;
+use crate::gates::{command_analysis, decided, pre_mode, push_target::push_target_in};
 use crate::quality::publish;
 use toolu_protocol::{decision::Decision, host::Host, normalized::NormalizedEvent};
 use toolu_runtime::{
@@ -83,6 +84,23 @@ impl Rule for DocsReview {
   }
 }
 
+/// The target repository's roots and effective `docsSync` mode.
+fn target_mode(
+  ctx: &RuleContext<'_>,
+  root: &std::path::Path,
+  warnings: &mut Vec<String>,
+) -> (Roots, GateMode) {
+  let env = ctx
+    .env
+    .clone()
+    .with("TOOLU_PROJECT_DIR", &root.to_string_lossy());
+  let roots = Roots::new(env, Some(ctx.host));
+  let config = toolu_runtime::config::load::load(&roots, Some(root));
+  let mode = pre_mode(&config, "docsSync", ctx, true);
+  warnings.extend(config.take_warnings());
+  (roots, mode)
+}
+
 fn evaluate(
   event: &NormalizedEvent,
   ctx: &RuleContext<'_>,
@@ -92,38 +110,25 @@ fn evaluate(
     return Decision::Allow;
   }
   let analysis = command_analysis(ctx);
-  if possible_push(&analysis, ctx.cwd.unwrap_or(ctx.project_root), ctx.env) {
-    let config = gate_config(ctx);
-    let mode = pre_mode(&config, "docsSync", ctx, true);
-    warnings.extend(config.take_warnings());
+  if let Some(dir) = possible_push(&analysis, ctx.cwd.unwrap_or(ctx.project_root), ctx.env) {
+    let root = toolu_runtime::git::toplevel(ctx.env, &dir).unwrap_or(dir);
+    let (_, mode) = target_mode(ctx, &root, warnings);
     return decided(
       mode,
-      "documentation-gate: use a static git push <remote> HEAD:<branch>".to_owned(),
+      "documentation-gate: this command may push through a dynamic git subcommand, a Git alias or a plumbing command; run a static git push <remote> HEAD:<branch> on its own".to_owned(),
     )
     .unwrap_or(Decision::Allow);
   }
   let Some(target) = push_target_in(&analysis, ctx) else {
     return Decision::Allow;
   };
-  let env = ctx
-    .env
-    .clone()
-    .with("TOOLU_PROJECT_DIR", &target.root.to_string_lossy());
-  let roots = Roots::new(env, Some(ctx.host));
-  let config = toolu_runtime::config::load::load(&roots, Some(&target.root));
-  let mode = pre_mode(&config, "docsSync", ctx, true);
-  warnings.extend(config.take_warnings());
-  if mode == GateMode::Off {
+  let (roots, mode) = target_mode(ctx, &target.root, warnings);
+  if mode == GateMode::Off || nothing_to_review(&analysis, &roots, &target.root) {
     return Decision::Allow;
   }
-  let shape = || {
-    if reviewed_head(&analysis, &target.root, ctx.env) {
-      Ok(())
-    } else {
-      Err("push one reviewed HEAD using git push <remote> HEAD:<branch>".to_owned())
-    }
-  };
-  match assess_push(&roots, &target.root, &target.branch, shape) {
+  match reviewed_head(&analysis, &target.root, ctx.env)
+    .and_then(|()| assess(&roots, &target.root, &target.branch))
+  {
     Ok(()) => Decision::Allow,
     // The fixed prefix makes the reason nonempty, so conversion cannot fail.
     Err(error) => decided(

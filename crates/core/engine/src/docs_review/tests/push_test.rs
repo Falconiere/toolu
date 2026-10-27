@@ -11,7 +11,11 @@ fn only_an_explicit_single_head_source_is_accepted() {
     "git push -u origin feature",
     "git -C . push --force-with-lease origin HEAD:feature",
   ] {
-    assert!(reviewed_head(&analyze(cmd), repo, roots.env()), "{cmd}");
+    assert_eq!(
+      reviewed_head(&analyze(cmd), repo, roots.env()),
+      Ok(()),
+      "{cmd}"
+    );
   }
   for cmd in [
     "git push",
@@ -29,7 +33,11 @@ fn only_an_explicit_single_head_source_is_accepted() {
     "git push --follow-tags origin HEAD:feature",
     "git push origin HEAD:refs/tags/release",
   ] {
-    assert!(!reviewed_head(&analyze(cmd), repo, roots.env()), "{cmd}");
+    assert_eq!(
+      reviewed_head(&analyze(cmd), repo, roots.env()),
+      Err(SHAPE.to_owned()),
+      "{cmd}"
+    );
   }
 }
 
@@ -45,9 +53,15 @@ fn configured_follow_tags_disallows_even_an_explicit_head_push() {
     .status()
     .unwrap();
   assert!(status.success());
-  assert!(!reviewed_head(
-    &analyze("git push origin HEAD:feature"),
-    repo,
-    roots.env()
-  ));
+  let error = reviewed_head(&analyze("git push origin HEAD:feature"), repo, roots.env())
+    .expect_err("tags would be pushed");
+  assert!(error.contains("add --no-follow-tags"), "{error}");
+  assert_eq!(
+    reviewed_head(
+      &analyze("git push --no-follow-tags origin HEAD:feature"),
+      repo,
+      roots.env()
+    ),
+    Ok(())
+  );
 }

@@ -1,7 +1,7 @@
 //! The transient-state sweeper for `<root>/<host dir>/tmp` (`state-sweeper.ts`),
 //! run once per session. It reclaims only state that is provably spent:
 //!
-//! - `push-review/`, `plan-ledger/`, `docs-sync/`: per-branch `*.json`, dropped
+//! - `push-review/`, `plan-ledger/`, `docs-sync/`, `docs-review/`: per-branch `*.json`, dropped
 //!   when the branch is merged into base, gone, or older than the TTL; the
 //!   current branch is never touched;
 //! - `quality-gate-status.json`: dropped when passing, or failing only about
@@ -34,7 +34,7 @@ pub const SWEEP_DEFAULT_TTL_HOURS: u64 = 24;
 /// Days telemetry is kept (`gates.telemetryRetentionDays`).
 pub const SWEEP_DEFAULT_RETENTION_DAYS: u64 = 7;
 /// The per-branch state directories.
-pub const SWEEP_BRANCH_DIRS: [&str; 3] = ["push-review", "plan-ledger", "docs-sync"];
+pub const SWEEP_BRANCH_DIRS: [&str; 4] = ["push-review", "plan-ledger", "docs-sync", "docs-review"];
 
 const HOUR: Duration = Duration::from_hours(1);
 

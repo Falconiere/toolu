@@ -1,5 +1,5 @@
 //! Validation of review evidence against committed Git content.
-use super::{git, worker_host};
+use super::{Identity, git, worker_host};
 use serde_json::Value;
 use std::collections::BTreeSet;
 use std::path::{Component, Path};
@@ -69,12 +69,8 @@ fn committed(roots: &Roots, root: &Path, docs: &BTreeSet<&str>) -> Result<(), St
     })
 }
 
-fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Result<(), String> {
-  let files = identity
-    .get("reviewed_files")
-    .and_then(Value::as_array)
-    .ok_or("missing files")?;
-  let expected: BTreeSet<&str> = files.iter().filter_map(Value::as_str).collect();
+fn coverage(roots: &Roots, identity: &Identity, report: &Value) -> Result<(), String> {
+  let expected: BTreeSet<&str> = identity.reviewed_files.iter().map(String::as_str).collect();
   let mut seen = BTreeSet::new();
   let mut cited = BTreeSet::new();
   let rows = report
@@ -115,16 +111,12 @@ fn coverage(roots: &Roots, root: &Path, identity: &Value, report: &Value) -> Res
   if seen != expected {
     return Err("coverage does not match changed files".into());
   }
-  committed(roots, root, &cited)
+  committed(roots, identity.root(), &cited)
 }
 
 /// Validate a complete report against the committed identity and documentation.
-pub(super) fn validate(
-  roots: &Roots,
-  root: &Path,
-  identity: &Value,
-  report: &Value,
-) -> Result<(), String> {
+pub(super) fn validate(roots: &Roots, identity: &Identity, report: &Value) -> Result<(), String> {
+  let expected = identity.json();
   for key in [
     "version",
     "repo",
@@ -133,7 +125,7 @@ pub(super) fn validate(
     "diff_sha",
     "reviewed_files",
   ] {
-    if report.get(key) != identity.get(key) {
+    if report.get(key) != expected.get(key) {
       return Err(format!("review {key} is stale or missing"));
     }
   }
@@ -156,7 +148,7 @@ pub(super) fn validate(
   {
     return Err("findings must be empty".into());
   }
-  coverage(roots, root, identity, report)
+  coverage(roots, identity, report)
 }
 
 #[cfg(test)]

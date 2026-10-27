@@ -54,3 +54,28 @@ fn validates_profiles_and_choices() {
   let value = select(&[c], &reply(choice("worker")));
   assert!(value.is_ok_and(|v| v["candidate_id"] == "worker" && v["model"] == "configured"));
 }
+
+#[test]
+fn efforts_follow_each_hosts_cli() {
+  let profile = |host: &str, effort: &str| Candidate {
+    host: host.into(),
+    effort: effort.into(),
+    ..candidate()
+  };
+  for (host, effort, valid) in [
+    ("claude", "max", true),
+    ("claude", "ultra", false),
+    ("codex", "ultra", true),
+    ("codex", "minimal", false),
+    ("muse", "minimal", true),
+    ("cursor", "model", true),
+    ("cursor", "high", false),
+    ("hermes", "high", false),
+  ] {
+    assert_eq!(
+      validate(&[profile(host, effort)]).is_ok(),
+      valid,
+      "{host} {effort}"
+    );
+  }
+}
