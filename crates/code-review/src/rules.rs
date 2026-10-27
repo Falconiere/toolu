@@ -82,13 +82,13 @@ pub fn gather(
   touched: &[String],
 ) -> Result<Bundle, RulesError> {
   if base.is_empty() || base.starts_with('-') {
-    return Ok(unavailable(format!("invalid base ref {base:?}")));
+    return Ok(unavailable(&format!("invalid base ref {base:?}")));
   }
   let top =
     toplevel(env, root).ok_or_else(|| RulesError::Git("not inside a Git work tree".to_owned()))?;
   let root = top.as_path();
   if !base_resolves(env, root, base)? {
-    return Ok(unavailable(format!(
+    return Ok(unavailable(&format!(
       "base ref {base} does not resolve to a commit"
     )));
   }
@@ -108,7 +108,7 @@ pub fn gather(
   Ok(bundle)
 }
 
-fn unavailable(reason: String) -> Bundle {
+fn unavailable(reason: &str) -> Bundle {
   Bundle {
     available: false,
     files: Vec::new(),
@@ -155,7 +155,9 @@ fn depth(path: &str) -> usize {
 /// fixture trees, generated CLI docs, and this repo's plan/spec trees.
 fn excluded(path: &str) -> bool {
   let parts: Vec<&str> = path.split('/').collect();
-  let dirs = &parts[..parts.len().saturating_sub(1)];
+  let Some((_, dirs)) = parts.split_last() else {
+    return false;
+  };
   if dirs.contains(&"fixtures") {
     return true;
   }
@@ -195,15 +197,12 @@ fn consider(
     });
     return Ok(());
   }
-  let text = match String::from_utf8(bytes) {
-    Ok(text) => text,
-    Err(_) => {
-      bundle.dropped.push(Omitted {
-        path: path.to_owned(),
-        reason: "rule file is not UTF-8".to_owned(),
-      });
-      return Ok(());
-    }
+  let Ok(text) = String::from_utf8(bytes) else {
+    bundle.dropped.push(Omitted {
+      path: path.to_owned(),
+      reason: "rule file is not UTF-8".to_owned(),
+    });
+    return Ok(());
   };
   bundle.bytes += text.len();
   let file = RuleFile {

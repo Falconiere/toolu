@@ -82,7 +82,7 @@ fn rules_base_missing_ref_is_unavailable() {
   )
   .expect("gather");
   assert!(!bundle.available, "{bundle:?}");
-  assert!(bundle.files.is_empty());
+  assert_eq!(bundle.files, Vec::new());
   assert!(bundle.prompt_override.is_none());
   assert_eq!(bundle.bytes, 0);
   assert_eq!(bundle.notices.len(), 1);
@@ -98,7 +98,7 @@ fn rules_base_invalid_ref_is_unavailable() {
   for base in ["", "-evil"] {
     let bundle = gather(&isolated(), dir.path(), base, &[]).expect("gather");
     assert!(!bundle.available, "base {base:?}: {bundle:?}");
-    assert!(bundle.files.is_empty());
+    assert_eq!(bundle.files, Vec::new());
   }
 }
 
@@ -112,10 +112,10 @@ fn rules_base_rule_free_repo_is_available_and_empty() {
   commit_all(dir.path(), "base");
   let bundle = gather(&isolated(), dir.path(), "main", &["readme.txt".to_owned()]).expect("gather");
   assert!(bundle.available, "{bundle:?}");
-  assert!(bundle.files.is_empty());
+  assert_eq!(bundle.files, Vec::new());
   assert!(bundle.prompt_override.is_none());
-  assert!(bundle.dropped.is_empty());
-  assert!(bundle.notices.is_empty());
+  assert_eq!(bundle.dropped, Vec::new());
+  assert_eq!(bundle.notices, Vec::<String>::new());
   assert_eq!(bundle.bytes, 0);
 }
 
@@ -198,7 +198,7 @@ fn rules_bundle_excluded_trees_never_appear() {
   let bundle = gather(&isolated(), dir.path(), "main", &touched).expect("gather");
   let paths: Vec<&str> = bundle.files.iter().map(|file| file.path.as_str()).collect();
   assert_eq!(paths, ["AGENTS.md"]);
-  assert!(bundle.dropped.is_empty(), "{bundle:?}");
+  assert_eq!(bundle.dropped, Vec::new(), "{bundle:?}");
 }
 
 #[test]
@@ -243,7 +243,7 @@ fn rules_bundle_oversized_single_file_is_dropped() {
   sh(dir.path(), &["switch", "feature"]);
   let bundle = gather(&isolated(), dir.path(), "main", &[]).expect("gather");
   assert!(bundle.available);
-  assert!(bundle.files.is_empty(), "{bundle:?}");
+  assert_eq!(bundle.files, Vec::new(), "{bundle:?}");
   assert_eq!(bundle.bytes, 0);
   assert_eq!(bundle.dropped.len(), 1);
   assert_eq!(bundle.dropped[0].path, "AGENTS.md");
