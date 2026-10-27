@@ -12,8 +12,9 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/api/v1/overview` | Current aggregate | engine, paused, journal_seq, epics, issues, attention, counts, attention_count, hosts, machine, jobs |
 | `/api/v1/epics` | Registered epics | items (key, paused, counts, attention_count) |
 | `/api/v1/epics/{id}` | One epic board | key, paused, graph, issues (key, stage, phase, pr, host, plan_summary), queue |
-| `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, plan |
+| `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, plan |
 | `/api/v1/agents` | Worker sessions | items (state, key, epic, worktree, session_id) |
+| `/api/v1/agents/live` | What each worker's agent is doing now | available, reason, sampled_at, items (key, epic, host, agent_status, title, sampled_at) |
 | `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason) |
 | `/api/v1/machine` | Shared resources | load, available_memory_bytes, steal, pressure, policy, agent_leases, job_leases |
 | `/api/v1/jobs` | Expensive jobs | running, waiting |
@@ -36,6 +37,23 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 The engine reads the ledger on every request from the worker's worktree, for the host it was launched on (both from its launch record, else the engine's copy of it), and for the branch named by the worktree's `.git` and `HEAD` files. It reads those files directly and runs no git, so a branch switch shows the new branch's ledger at once. The ledger directory depends on the host: Claude Code `.claude/tmp/plan-ledger/`, Codex `.codex/tmp/plan-ledger/`, Cursor `.cursor/tmp/plan-ledger/`, and Muse `.toolu/tmp/muse/plan-ledger/`. `TOOLU_PROJECT_CONFIG_DIRNAME` in the engine's environment overrides the directory as it does for the worker. `plan` is `null` when there is no worktree, no known host, no `HEAD`, a reftable repository (whose `HEAD` names no branch without git) or no ledger yet, for example while the worker is still in its spec phase. A ledger that is empty, is not JSON or has a `version` other than 1 gives `{"error": "unreadable"}`, and the rest of the document is unaffected.
 
 Each issue on `/api/v1/epics/{id}` carries `plan_summary`: the same counts plus `next`, `null`, or `{"error": "unreadable"}`. It is cached by ledger path, modification time and inode, so a board refresh rereads only ledgers that changed.
+
+## Live agent status
+
+Each issue keeps herdr's last `agent_status` (`idle`, `working`, `blocked`, `done` or `unknown`) and `agent_status_at`, the ISO time it last changed (`null` before any change). The engine's herdr subscription sets them: a `session.snapshot` seeds every issue (an agent herdr does not list is `unknown`), each `pane.agent_status_changed` updates one in the same step that journals its `herdr-event` row, a closed or exited pane sets its issue to `unknown`, and a herdr outage sets every issue to `unknown`. `/api/v1/issues/{key}` and the `issues` rows of `/api/v1/epics/{id}` carry both fields, so a page that follows `/api/v1/events/stream` sees a change without calling herdr.
+
+`/api/v1/agents/live` adds each worker agent's terminal title and is the status source while the subscription is down. It lists one item per issue whose herdr agent `name` equals the issue's agent name; herdr agents that map to no worker are never listed. `title` is herdr's `terminal_title_stripped` with configured secrets redacted, then cut to 160 characters, or `null`. The items come from one `agent.list` call over the herdr socket, cached for 2 s and shared by every request; `sampled_at` is the time of that call. Only HTTP threads call herdr, each on its own connection with a 1 s connect, read and write timeout, and at most 8 herdr calls from HTTP run at once: a request that needs herdr while every slot is taken gets `503 herdr_busy`. When herdr cannot be read, the route answers `200` with `available: false`, a `reason` and no items: `off` (`TOOLU_EPIC_HERDR=off`), `scripted` (`TOOLU_EPIC_SCRIPTS`), `not running` (no socket or no reply: herdr is not installed or its server is down), `protocol <n>` (a herdr protocol other than 22; no CLI is run) or `error: <code>` (herdr answered an error). The route follows the other routes' authorization and is never proxied to a peer.
+
+### Host probe
+
+Observed on 2026-10-27 with herdr 0.9.5 through `herdr agent list` during real sessions:
+
+| Host | `agent_status` values seen through a turn | Terminal title |
+|---|---|---|
+| Claude Code 2.1.311 | `blocked` on the folder-trust dialog at startup; through a turn `idle` → `working` → `idle` (it never reports `done`) | `Claude Code` until the first prompt, then a live task summary ("Notes.txt file listing") that stays after the turn. A worker the engine starts gets `-n <key>`, and its title is then the key itself ("falconiere-toolu-650"), not a summary. |
+| Codex 0.164.0 | `blocked` on the folder-trust dialog at startup; `done` → `working` → `done` | The folder name ("ws-codex") until the first prompt, then `<task summary> \| <folder>` ("List files and save notes \| ws-codex"). |
+| Cursor Agent 2026.10.22 | `idle` → `working` → `done` | `Cursor Agent` until the first prompt, then a task summary ("List Files And Write"). |
+| Muse Code 1.4.13 | `idle` → `working` → `done` | The folder name ("ws-muse") throughout; no task summary. |
 
 ## Fleet over a private network
 

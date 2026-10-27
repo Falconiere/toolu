@@ -63,7 +63,7 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
 
 /// The worker may be rebased under: `ready`, not working, herdr reachable.
 fn parked(engine: &Engine, issue: &Issue) -> bool {
-  issue.phase == "ready" && !issue.queue.agent_working && engine.world.herdr_failures == 0
+  issue.phase == "ready" && issue.agent_status != "working" && engine.world.herdr_failures == 0
 }
 
 /// The agent lease the launch recorded.

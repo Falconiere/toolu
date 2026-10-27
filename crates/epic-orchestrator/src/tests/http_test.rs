@@ -53,6 +53,7 @@ fn http_auth_requires_a_bearer_token_on_public_bind() {
       addr: "0.0.0.0:0".parse().expect("address"),
       secrets,
       peers: Vec::new(),
+      herdr: crate::http_live::Herdr::Off,
     },
     Paths::at(temp.path()),
     Arc::new(Mutex::new(World::new(0))),
@@ -89,11 +90,7 @@ fn http_boundary_checks_requests_and_poisoned_world() {
   let temp = tempfile::tempdir().expect("temp root");
   let stop = Arc::new(AtomicBool::new(false));
   let world = Arc::new(Mutex::new(World::new(0)));
-  let config = Config {
-    addr: "127.0.0.1:0".parse().expect("address"),
-    secrets: Secrets::none(),
-    peers: Vec::new(),
-  };
+  let config = crate::fleet_rig::config(0, Vec::new(), Secrets::none());
   let running = start(
     config,
     Paths::at(temp.path()),
@@ -163,11 +160,7 @@ fn stream_replay_crosses_journal_days_and_honors_last_event_id() {
   seed_journal(&paths);
   let stop = Arc::new(AtomicBool::new(false));
   let running = start(
-    Config {
-      addr: "127.0.0.1:0".parse().expect("address"),
-      secrets: Secrets::none(),
-      peers: Vec::new(),
-    },
+    crate::fleet_rig::config(0, Vec::new(), Secrets::none()),
     paths,
     Arc::new(Mutex::new(World::new(0))),
     Arc::new(Condvar::new()),
@@ -294,6 +287,7 @@ fn live_fixture(
           addr,
           secrets: Secrets::none(),
           peers: Vec::new(),
+          herdr: crate::http_live::Herdr::Off,
         }),
         tick: &(),
         attention: crate::notify::AttentionOptions::default(),

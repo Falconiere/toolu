@@ -98,6 +98,7 @@ pub(crate) fn config(port: u16, peers: Vec<Peer>, secrets: Secrets) -> Config {
     addr: SocketAddr::from(([127, 0, 0, 1], port)),
     secrets,
     peers,
+    herdr: crate::http_live::Herdr::Off,
   }
 }
 

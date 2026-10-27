@@ -97,6 +97,7 @@ fn http_config(env: &Env, matches: &ArgMatches) -> Result<Option<HttpConfig>, St
     addr,
     secrets,
     peers: settings.peers,
+    herdr: crate::http_live::Herdr::of(env),
   }))
 }
 

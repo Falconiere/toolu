@@ -28,6 +28,8 @@ pub(crate) struct Config {
   pub addr: SocketAddr,
   pub secrets: Secrets,
   pub peers: Vec<Peer>,
+  /// Where `/api/v1/agents/live` reads herdr.
+  pub herdr: crate::http_live::Herdr,
 }
 
 /// A listener thread and its bound address.
@@ -60,6 +62,8 @@ struct Context {
   overview: OverviewCache,
   metrics: crate::http_metrics::MetricsCache,
   fleet: Arc<FleetCache>,
+  live: crate::http_live::Live,
+  herdr_calls: crate::http_live::Limiter,
 }
 
 /// Bind before returning so a startup bind error stops the engine.
@@ -96,6 +100,8 @@ pub(crate) fn start(
     overview: OverviewCache::new(),
     metrics: crate::http_metrics::MetricsCache::new(),
     fleet,
+    live: crate::http_live::Live::new(config.herdr),
+    herdr_calls: crate::http_live::Limiter::default(),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running {
@@ -197,30 +203,12 @@ fn respond(stream: &mut TcpStream, context: &Context, request: &Request) -> bool
     return if request.method == "GET" {
       serve_events(stream, context, request, query)
     } else {
-      stream_head(stream, request, query)
+      http_stream::head(stream, request, query)
     };
   }
   let mut response = finite_response(context, path, query, request);
   response.head = request.method == "HEAD";
   response.close = request.close || response.close;
-  let close = response.close;
-  let _sent = send(stream, &response);
-  close
-}
-
-fn stream_head(stream: &mut TcpStream, request: &Request, query: &str) -> bool {
-  let mut response = if http_stream::cursor(query, request.last_event_id.as_deref()).is_ok() {
-    Response {
-      status: 200,
-      content_type: "text/event-stream; charset=utf-8",
-      body: Vec::new(),
-      head: true,
-      close: request.close,
-    }
-  } else {
-    Response::error(400, "bad_cursor")
-  };
-  response.head = true;
   let close = response.close;
   let _sent = send(stream, &response);
   close
@@ -236,25 +224,11 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       close: false,
     };
   }
-  if path == "/api/v1/overview" {
-    let Ok(world) = context.world.lock() else {
-      return Response::error(500, "status_unavailable");
-    };
-    return context
-      .overview
-      .response(&world, &context.paths, &context.secrets);
+  if let Some(response) = engine_route(context, path, query, request) {
+    return response;
   }
-  if path == "/api/v1/events" {
-    return events_page(context, query, request);
-  }
-  if path == "/api/v1/metrics" {
-    return context
-      .metrics
-      .response(&context.paths, query, &context.secrets);
-  }
-  let fleet = &context.fleet;
   if let Some(response) = crate::http_fleet::response(
-    fleet,
+    &context.fleet,
     &context.world,
     &context.paths,
     &context.secrets,
@@ -276,19 +250,33 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   json_response(document)
 }
 
-fn events_page(context: &Context, query: &str, request: &Request) -> Response {
-  if http_stream::cursor(query, request.last_event_id.as_deref()).is_err() {
-    return Response::error(400, "bad_cursor");
-  }
-  json_response(
-    http_stream::page(
+/// Routes served from this engine's own caches and journal.
+fn engine_route(context: &Context, path: &str, query: &str, request: &Request) -> Option<Response> {
+  Some(match path {
+    "/api/v1/agents/live" => {
+      context
+        .live
+        .response(&context.herdr_calls, &context.world, &context.secrets)
+    }
+    "/api/v1/overview" => {
+      let Ok(world) = context.world.lock() else {
+        return Some(Response::error(500, "status_unavailable"));
+      };
+      context
+        .overview
+        .response(&world, &context.paths, &context.secrets)
+    }
+    "/api/v1/events" => http_stream::page(
       &context.paths,
       query,
       request.last_event_id.as_deref(),
       &context.secrets,
-    )
-    .map(Some),
-  )
+    ),
+    "/api/v1/metrics" => context
+      .metrics
+      .response(&context.paths, query, &context.secrets),
+    _ => return None,
+  })
 }
 
 fn serve_events(stream: &mut TcpStream, context: &Context, request: &Request, query: &str) -> bool {

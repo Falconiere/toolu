@@ -115,7 +115,18 @@ fn issue_row(issue: &Issue) -> Value {
     "phase": issue.phase,
     "pr": issue.pr,
     "host": issue.kind,
+    "agent_status": issue.agent_status,
+    "agent_status_at": agent_status_at(issue),
     "plan_summary": crate::status_plan::plan_summary(worktree, host),
+  })
+}
+
+/// When the issue's agent status last changed, as ISO UTC; `None` before any change.
+pub(crate) fn agent_status_at(issue: &Issue) -> Option<String> {
+  (issue.agent_status_at_ms > 0).then(|| {
+    toolu_state::time::iso_millis(
+      std::time::UNIX_EPOCH + std::time::Duration::from_millis(issue.agent_status_at_ms),
+    )
   })
 }
 

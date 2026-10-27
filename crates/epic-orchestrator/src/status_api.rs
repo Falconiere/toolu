@@ -168,6 +168,8 @@ fn issue_document(
     "stage": issue.stage,
     "phase": issue.phase,
     "phase_age_ms": world.now_ms.saturating_sub(issue.phase_at_ms),
+    "agent_status": issue.agent_status,
+    "agent_status_at": status_epics::agent_status_at(issue),
     "host": host,
     "model": model,
     "effort": effort,

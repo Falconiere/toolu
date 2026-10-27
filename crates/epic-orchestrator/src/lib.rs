@@ -70,6 +70,7 @@ mod hosts;
 mod http;
 mod http_access;
 mod http_fleet;
+mod http_live;
 mod http_metrics;
 mod http_request;
 mod http_response;
