@@ -82,8 +82,8 @@ not be written, the stdout report starts with it.
 
 **Progress** (`crates/plugins/src/progress.rs`, new):
 
-- `Progress::open(style, quiet, json)` opens `/dev/tty`. It returns `None` for `Plain`,
-  `quiet`, `json` or an open error. `Progress::to_writer(Box<dyn Write + Send>, Style)`
+- `Progress::open(style, quiet)` opens `/dev/tty`. It returns `None` for `Plain`
+  (which `--json` forces), `quiet` or an open error. `Progress::to_writer(Box<dyn Write + Send>, Style)`
   is the test seam.
 - `begin(host, total)`, `task(label)`, `advance()` and `end()` draw synchronously. A std
   thread only re-draws the spinner frame every 80 ms; `end()` and `Drop` stop and join
@@ -170,7 +170,10 @@ the `--host` path):
   toolu plugins first, before any prepare, pin, sync or clone. Claude and Codex use the
   filtered listing; Muse uses non-`foreign` entries. Cursor is a candidate only when
   `Store` holds a toolu-marked plugin.
-- A failed or malformed listing counts as none.
+- A failed or malformed listing counts as none; its note names the cause
+  (`<host>: could not list its plugins: <first stderr line>; skipped`), and the
+  nothing-to-update error lists the hosts that could not be read. The listing a
+  host was read with is the one its update uses.
 - Hosts with none get the text note `<host>: no toolu plugins installed; skipped` (rails:
   `◇  <host>` then `│  ○ no toolu plugins installed`) and are left out of the JSON `hosts`
   array.
@@ -220,7 +223,7 @@ pub fn style_of(env: &Env, is_terminal: bool) -> Style;
 pub fn paint(style: Style, tone: Tone, text: &str) -> String;
 pub fn intro(style: Style, title: &str) -> String;
 pub fn section(style: Style, title: &str) -> String;
-pub fn row(style: Style, glyph: &str, tone: Tone, name: &str, width: usize, detail: &str) -> String;
+pub fn row(style: Style, (glyph, tone): (&str, Tone), name: &str, width: usize, detail: &str) -> String;
 pub fn label_row(style: Style, label: &str, width: usize, value: &str) -> String;
 pub fn outro(style: Style, text: &str) -> String;
 pub fn truncate(text: &str, cols: usize) -> String;
@@ -229,12 +232,12 @@ pub(crate) fn list_available(self) -> Option<Vec<String>>; // None for Claude
 // toolu_runtime::cli::Ctx
 pub style: Style,
 // crates/plugins
-pub(crate) struct Progress; // open(style, quiet, json) -> Option<Self>; to_writer(Box<dyn Write + Send>, Style) -> Self
+pub(crate) struct Progress; // open(style, quiet) -> Option<Self> (`--json` already forces Plain); to_writer(Box<dyn Write + Send>, Style) -> Self
 pub(crate) fn frame(state: &State, tick: usize, style: Style) -> String;
 pub(crate) trait KeyInput { fn byte(&mut self) -> io::Result<Option<u8>>; fn byte_soon(&mut self) -> io::Result<Option<u8>>; }
 pub(crate) enum Key { Up, Down, Toggle, All, Enter, Cancel, Other }
 pub(crate) fn read_key(input: &mut impl KeyInput) -> io::Result<Key>;
-pub(crate) struct Checkbox; // new(tty: File, style: Style) -> io::Result<Self>; impl Ask
+pub(crate) struct Checkbox; // new(tty: File, style: Style) -> Self; impl Ask
 pub(crate) fn detected(env: &Env) -> Vec<Target>;
 ```
 
@@ -329,7 +332,7 @@ stdout and stderr and exits with its code when argv matches. It also gains
 - **AC-8:** `Progress::to_writer` over a shared buffer: after `begin("claude", 3)`,
   `task("installing jev")` and `advance()`, the bytes hold a frame with the bar, `1/3` and
   `installing jev…`. After `end()` the buffer ends with the clear sequence and grows no more
-  within 200 ms. `open` returns `None` for `Plain`, quiet and json.
+  within 200 ms. `open` returns `None` for `Plain` (which `--json` forces) and for quiet.
 - **AC-9:** On a real pty (`nix::pty::openpty`; master writes keys, `Checkbox::new` gets
   the slave), over [claude, codex, muse] all preselected:
   - `\x1b[B`, space, `\r` returns [0, 2];
