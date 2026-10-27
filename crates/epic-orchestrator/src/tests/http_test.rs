@@ -90,12 +90,7 @@ fn http_boundary_checks_requests_and_poisoned_world() {
   let temp = tempfile::tempdir().expect("temp root");
   let stop = Arc::new(AtomicBool::new(false));
   let world = Arc::new(Mutex::new(World::new(0)));
-  let config = Config {
-    addr: "127.0.0.1:0".parse().expect("address"),
-    secrets: Secrets::none(),
-    peers: Vec::new(),
-    herdr: crate::http_live::Herdr::Off,
-  };
+  let config = crate::fleet_rig::config(0, Vec::new(), Secrets::none());
   let running = start(
     config,
     Paths::at(temp.path()),
@@ -165,12 +160,7 @@ fn stream_replay_crosses_journal_days_and_honors_last_event_id() {
   seed_journal(&paths);
   let stop = Arc::new(AtomicBool::new(false));
   let running = start(
-    Config {
-      addr: "127.0.0.1:0".parse().expect("address"),
-      secrets: Secrets::none(),
-      peers: Vec::new(),
-      herdr: crate::http_live::Herdr::Off,
-    },
+    crate::fleet_rig::config(0, Vec::new(), Secrets::none()),
     paths,
     Arc::new(Mutex::new(World::new(0))),
     Arc::new(Condvar::new()),

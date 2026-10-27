@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 use toolu_runtime::config::secrets::Secrets;
 
+use crate::http_response::{Response, json_response};
 use crate::model::World;
 use crate::paths::Paths;
 use crate::status_events;
@@ -48,18 +49,19 @@ pub(crate) fn cursor(query: &str, last_event_id: Option<&str>) -> Result<Cursor,
   Ok(Cursor { since, limit })
 }
 
-/// One versioned journal page.
-///
-/// # Errors
-/// The query is invalid or the retained journal cannot be read.
+/// One versioned journal page; `400 bad_cursor` for an invalid query.
 pub(crate) fn page(
   paths: &Paths,
   query: &str,
   last_event_id: Option<&str>,
   secrets: &Secrets,
-) -> Result<Value, String> {
-  let cursor = cursor(query, last_event_id)?;
-  status_events::page(&paths.journal_dir(), cursor.since, cursor.limit, secrets)
+) -> Response {
+  let Ok(cursor) = cursor(query, last_event_id) else {
+    return Response::error(400, "bad_cursor");
+  };
+  json_response(
+    status_events::page(&paths.journal_dir(), cursor.since, cursor.limit, secrets).map(Some),
+  )
 }
 
 /// Borrowed state needed by a replaying event stream.

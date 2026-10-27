@@ -62,8 +62,6 @@ struct Context {
   overview: OverviewCache,
   metrics: crate::http_metrics::MetricsCache,
   fleet: Arc<FleetCache>,
-  herdr: crate::http_live::Herdr,
-  limiter: crate::http_live::Limiter,
   live: crate::http_live::Live,
 }
 
@@ -101,9 +99,7 @@ pub(crate) fn start(
     overview: OverviewCache::new(),
     metrics: crate::http_metrics::MetricsCache::new(),
     fleet,
-    herdr: config.herdr,
-    limiter: crate::http_live::Limiter::default(),
-    live: crate::http_live::Live::default(),
+    live: crate::http_live::Live::new(config.herdr),
   });
   let thread = thread::spawn(move || accept_loop(&listener, &context));
   Ok(Running {
@@ -244,28 +240,11 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
       close: false,
     };
   }
-  if path == "/api/v1/agents/live" {
-    return live(context);
+  if let Some(response) = engine_route(context, path, query, request) {
+    return response;
   }
-  if path == "/api/v1/overview" {
-    let Ok(world) = context.world.lock() else {
-      return Response::error(500, "status_unavailable");
-    };
-    return context
-      .overview
-      .response(&world, &context.paths, &context.secrets);
-  }
-  if path == "/api/v1/events" {
-    return events_page(context, query, request);
-  }
-  if path == "/api/v1/metrics" {
-    return context
-      .metrics
-      .response(&context.paths, query, &context.secrets);
-  }
-  let fleet = &context.fleet;
   if let Some(response) = crate::http_fleet::response(
-    fleet,
+    &context.fleet,
     &context.world,
     &context.paths,
     &context.secrets,
@@ -287,28 +266,29 @@ fn finite_response(context: &Context, path: &str, query: &str, request: &Request
   json_response(document)
 }
 
-fn live(context: &Context) -> Response {
-  context.live.response(&crate::http_live::Sources {
-    herdr: &context.herdr,
-    limiter: &context.limiter,
-    world: &context.world,
-    secrets: &context.secrets,
-  })
-}
-
-fn events_page(context: &Context, query: &str, request: &Request) -> Response {
-  if http_stream::cursor(query, request.last_event_id.as_deref()).is_err() {
-    return Response::error(400, "bad_cursor");
-  }
-  json_response(
-    http_stream::page(
+/// Routes served from this engine's own caches and journal.
+fn engine_route(context: &Context, path: &str, query: &str, request: &Request) -> Option<Response> {
+  Some(match path {
+    "/api/v1/agents/live" => context.live.response(&context.world, &context.secrets),
+    "/api/v1/overview" => {
+      let Ok(world) = context.world.lock() else {
+        return Some(Response::error(500, "status_unavailable"));
+      };
+      context
+        .overview
+        .response(&world, &context.paths, &context.secrets)
+    }
+    "/api/v1/events" => http_stream::page(
       &context.paths,
       query,
       request.last_event_id.as_deref(),
       &context.secrets,
-    )
-    .map(Some),
-  )
+    ),
+    "/api/v1/metrics" => context
+      .metrics
+      .response(&context.paths, query, &context.secrets),
+    _ => return None,
+  })
 }
 
 fn serve_events(stream: &mut TcpStream, context: &Context, request: &Request, query: &str) -> bool {

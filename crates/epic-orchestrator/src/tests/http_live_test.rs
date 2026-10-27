@@ -7,7 +7,7 @@ use serde_json::{Value, json};
 use toolu_runtime::config::secrets::Secrets;
 use toolu_runtime::env::Env;
 
-use super::{Herdr, Limiter, Live, Sources};
+use super::{Herdr, Limiter, Live};
 use crate::fleet_rig::{config, get, listener, secrets_of};
 use crate::herdr_fixture::HerdrFixture;
 use crate::model::{Issue, World};
@@ -22,14 +22,8 @@ fn world_with(key: &str, kind: &str) -> Mutex<World> {
   Mutex::new(world)
 }
 
-fn body(live: &Live, herdr: &Herdr, world: &Mutex<World>, secrets: &Secrets) -> (u16, Value) {
-  let limiter = Limiter::default();
-  let response = live.response(&Sources {
-    herdr,
-    limiter: &limiter,
-    world,
-    secrets,
-  });
+fn body(live: &Live, world: &Mutex<World>, secrets: &Secrets) -> (u16, Value) {
+  let response = live.response(world, secrets);
   let value = serde_json::from_slice(&response.body).expect("json body");
   (response.status, value)
 }
@@ -43,7 +37,10 @@ fn start_agent(fixture: &HerdrFixture, pane: &str, name: &str) {
 
 fn agent_lists(fixture: &HerdrFixture) -> usize {
   let calls = fixture.calls();
-  calls.iter().filter(|(method, _)| method == "agent.list").count()
+  calls
+    .iter()
+    .filter(|(method, _)| method == "agent.list")
+    .count()
 }
 
 fn set_agent(fixture: &HerdrFixture, name: &str, status: &str, title: &str) {
@@ -67,13 +64,17 @@ fn two_agents() -> (HerdrFixture, tempfile::TempDir) {
 #[test]
 fn live_lists_mapped_workers_from_one_shared_sample_with_safe_titles() {
   let (fixture, repo) = two_agents();
-  set_agent(&fixture, "a", "working", &format!("{TOKEN} {}", "é".repeat(200)));
+  set_agent(
+    &fixture,
+    "a",
+    "working",
+    &format!("{TOKEN} {}", "é".repeat(200)),
+  );
   let secrets = secrets_of(repo.path(), &[("TOOLU_EPIC_STATUS_TOKEN", TOKEN)]);
   let world = world_with("a", "claude");
-  let herdr = Herdr::Socket(fixture.env());
-  let live = Live::default();
-  let (status, first) = body(&live, &herdr, &world, &secrets);
-  let (_, second) = body(&live, &herdr, &world, &secrets);
+  let live = Live::new(Herdr::Socket(fixture.env()));
+  let (status, first) = body(&live, &world, &secrets);
+  let (_, second) = body(&live, &world, &secrets);
   assert_eq!(status, 200);
   assert_eq!(first["sampled_at"], second["sampled_at"]);
   assert_eq!(agent_lists(&fixture), 1, "one herdr call per cache window");
@@ -81,12 +82,25 @@ fn live_lists_mapped_workers_from_one_shared_sample_with_safe_titles() {
   assert_eq!(items.len(), 1, "an unmapped agent is never listed: {first}");
   let item = &items[0];
   assert_eq!(
-    (&item["key"], &item["epic"], &item["host"], &item["agent_status"]),
-    (&json!("a"), &json!("one"), &json!("claude"), &json!("working"))
+    (
+      &item["key"],
+      &item["epic"],
+      &item["host"],
+      &item["agent_status"]
+    ),
+    (
+      &json!("a"),
+      &json!("one"),
+      &json!("claude"),
+      &json!("working")
+    )
   );
   assert_eq!(item["sampled_at"], first["sampled_at"]);
   let title = item["title"].as_str().expect("title");
-  assert!(title.starts_with("<redacted> é") && !title.contains(TOKEN), "{title}");
+  assert!(
+    title.starts_with("<redacted> é") && !title.contains(TOKEN),
+    "{title}"
+  );
   assert_eq!(title.chars().count(), 160);
 }
 
@@ -94,14 +108,13 @@ fn live_lists_mapped_workers_from_one_shared_sample_with_safe_titles() {
 fn live_reports_a_status_change_once_the_cache_window_ends() {
   let (fixture, _repo) = two_agents();
   let world = world_with("a", "");
-  let herdr = Herdr::Socket(fixture.env());
-  let live = Live::default();
-  let (_, before) = body(&live, &herdr, &world, &Secrets::none());
+  let live = Live::new(Herdr::Socket(fixture.env()));
+  let (_, before) = body(&live, &world, &Secrets::none());
   assert_eq!(before["items"][0]["agent_status"], "idle");
   assert_eq!(before["items"][0]["host"], Value::Null);
   set_agent(&fixture, "a", "working", "");
   std::thread::sleep(Duration::from_millis(2_100));
-  let (_, after) = body(&live, &herdr, &world, &Secrets::none());
+  let (_, after) = body(&live, &world, &Secrets::none());
   assert_ne!(after["sampled_at"], before["sampled_at"]);
   assert_eq!(after["items"][0]["agent_status"], "working");
   assert_eq!(after["items"][0]["title"], Value::Null);
@@ -125,14 +138,18 @@ fn unavailable_herdr_answers_at_once_with_a_reason() {
     (Herdr::Socket(fixture.env()), "protocol 23"),
   ] {
     let started = Instant::now();
-    let (status, value) = body(&Live::default(), &herdr, &world, &Secrets::none());
+    let (status, value) = body(&Live::new(herdr), &world, &Secrets::none());
     assert!(started.elapsed() < Duration::from_secs(2), "{reason}");
     assert_eq!(status, 200);
     assert_eq!(value["available"], false);
     assert_eq!(value["reason"], reason);
     assert_eq!(value["items"], json!([]));
   }
-  assert_eq!(agent_lists(&fixture), 0, "no agent.list on a protocol mismatch");
+  assert_eq!(
+    agent_lists(&fixture),
+    0,
+    "no agent.list on a protocol mismatch"
+  );
 }
 
 #[test]
@@ -185,9 +202,16 @@ fn overlapping_requests_past_eight_get_herdr_busy_while_overview_answers() {
   assert!(took < Duration::from_millis(500), "overview took {took:?}");
   let busy = answers.iter().filter(|(status, _)| *status == 503).count();
   assert!(busy >= 1, "{answers:?}");
-  assert!(answers.iter().all(|(status, body)| *status == 200
-    || (*status == 503 && body.contains("herdr_busy"))));
-  assert_eq!(accepted.load(Ordering::SeqCst), 1, "one stalled herdr call at a time");
+  assert!(
+    answers
+      .iter()
+      .all(|(status, body)| *status == 200 || (*status == 503 && body.contains("herdr_busy")))
+  );
+  assert_eq!(
+    accepted.load(Ordering::SeqCst),
+    1,
+    "one stalled herdr call at a time"
+  );
   running.stop(&stop).expect("listener");
 }
 
@@ -203,10 +227,7 @@ fn live_needs_the_token_off_loopback_and_is_never_proxied() {
   assert_eq!(denied, 401);
   running.stop(&stop).expect("listener");
   let peer = crate::peer_fixture::peer("box", addr);
-  let (running, stop) = listener(
-    root.path(),
-    config(0, vec![peer], Secrets::none()),
-  );
+  let (running, stop) = listener(root.path(), config(0, vec![peer], Secrets::none()));
   let (local, value) = get(running.addr, "/api/v1/agents/live");
   let (proxied, _) = get(running.addr, "/api/v1/fleet/peers/box/agents/live");
   assert_eq!(local, 200);

@@ -4,8 +4,8 @@
 //! thread never does.
 
 use std::os::unix::net::UnixStream;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
@@ -76,25 +76,30 @@ impl Drop for Permit<'_> {
   }
 }
 
-/// The cached document and the lock that lets one request refill it.
-#[derive(Debug, Default)]
+/// The route's herdr mode, its call limiter, the cached document and the
+/// lock that lets one request refill it.
+#[derive(Debug)]
 pub(crate) struct Live {
+  herdr: Herdr,
+  limiter: Limiter,
   cached: Mutex<Option<(Instant, Value)>>,
   fill: Mutex<()>,
 }
 
-/// What a live request reads besides the cache.
-pub(crate) struct Sources<'a> {
-  pub herdr: &'a Herdr,
-  pub limiter: &'a Limiter,
-  pub world: &'a Mutex<World>,
-  pub secrets: &'a Secrets,
-}
-
 impl Live {
+  /// A route that reads herdr as `herdr` says.
+  pub(crate) fn new(herdr: Herdr) -> Self {
+    Self {
+      herdr,
+      limiter: Limiter::default(),
+      cached: Mutex::new(None),
+      fill: Mutex::new(()),
+    }
+  }
+
   /// The live document, `503 herdr_busy` when every herdr slot is taken.
-  pub(crate) fn response(&self, sources: &Sources<'_>) -> Response {
-    let env = match sources.herdr {
+  pub(crate) fn response(&self, world: &Mutex<World>, secrets: &Secrets) -> Response {
+    let env = match &self.herdr {
       Herdr::Off => return ok(unavailable("off", &now())),
       Herdr::Scripted => return ok(unavailable("scripted", &now())),
       Herdr::Socket(env) => env,
@@ -104,7 +109,7 @@ impl Live {
     }
     // A slot is held while waiting for the fill lock, so overlapping requests
     // count toward the cap even though only one of them calls herdr.
-    let Some(_permit) = sources.limiter.try_acquire() else {
+    let Some(_permit) = self.limiter.try_acquire() else {
       return Response::error(503, "herdr_busy");
     };
     let Ok(_fill) = self.fill.lock() else {
@@ -113,7 +118,7 @@ impl Live {
     if let Some(document) = self.fresh() {
       return ok(document);
     }
-    let Some(document) = sample(env, sources.world, sources.secrets) else {
+    let Some(document) = sample(env, world, secrets) else {
       return Response::error(500, "status_unavailable");
     };
     if let Ok(mut cached) = self.cached.lock() {
@@ -178,7 +183,12 @@ fn title(row: &Value, secrets: &Secrets) -> Option<String> {
     .get("terminal_title_stripped")
     .and_then(Value::as_str)
     .filter(|title| !title.is_empty())?;
-  Some(redact_text(raw, secrets).chars().take(TITLE_CHARS).collect())
+  Some(
+    redact_text(raw, secrets)
+      .chars()
+      .take(TITLE_CHARS)
+      .collect(),
+  )
 }
 
 /// `agent.list` rows over the socket at protocol 22 only: a CLI fallback

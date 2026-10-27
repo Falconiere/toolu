@@ -63,7 +63,11 @@ fn status_events_store_the_word_and_its_time_with_their_journal_row() {
     let line = json!({"event": "pane.agent_status_changed",
       "data": {"pane_id": "w1:p1", "agent_status": word}});
     apply(&mut engine, &env, Fact::Event(line)).expect("event");
-    assert_eq!(herdr_events(&engine), before + 1, "one journal row per change");
+    assert_eq!(
+      herdr_events(&engine),
+      before + 1,
+      "one journal row per change"
+    );
     let issue = &engine.world.issues["a"];
     assert_eq!(issue.queue.agent_working, word == "working");
     seen.push((issue.agent_status.clone(), issue.agent_status_at_ms));
