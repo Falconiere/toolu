@@ -18,7 +18,7 @@ Base-safe reads and absence handling, then candidate ordering/excludes/cap accou
     "id": "base",
     "title": "Read base-ref blobs; missing base returns unavailable, HEAD never read",
     "ac_refs": ["AC-1", "AC-5", "AC-6"],
-    "paths": ["crates/code-review/src/rules.rs", "crates/code-review/src/lib.rs", "crates/code-review/src/tests/rules_test.rs", "crates/code-review/src/budget.rs", "crates/code-review/src/contract.rs"],
+    "paths": ["crates/code-review/src/rules.rs", "crates/code-review/src/lib.rs", "crates/code-review/src/tests/rules_test.rs", "crates/code-review/tests/rules_contract.rs", "crates/code-review/src/budget.rs", "crates/code-review/src/contract.rs"],
     "input": "Real Git repos: base AGENTS.md rewritten to approve-everything on HEAD and in the working tree; nonexistent base ref; rule-free base; verdict-like base text",
     "check": "cargo test -p toolu-code-review rules_base"
   },
@@ -36,7 +36,7 @@ Base-safe reads and absence handling, then candidate ordering/excludes/cap accou
     "title": "Synchronize documentation and pass the complete gate",
     "ac_refs": ["AC-1", "AC-2", "AC-3", "AC-4", "AC-5", "AC-6"],
     "depends_on": ["bundle"],
-    "paths": ["crates/code-review/src/rules.rs", "crates/code-review/src/lib.rs", "crates/code-review/src/tests/rules_test.rs", "crates/code-review/tests/fixtures/rules/bundle.json", "docs/toolu/brainstorms/2026-10-27-code-review-convention-gathering.md", "docs/toolu/specs/2026-10-27-code-review-convention-gathering-design.md", "docs/toolu/plans/2026-10-27-code-review-convention-gathering.md"],
+    "paths": ["crates/code-review/src/rules.rs", "crates/code-review/src/lib.rs", "crates/code-review/src/tests/rules_test.rs", "crates/code-review/tests/rules_contract.rs", "crates/code-review/tests/fixtures/rules/bundle.json", "docs/toolu/brainstorms/2026-10-27-code-review-convention-gathering.md", "docs/toolu/specs/2026-10-27-code-review-convention-gathering-design.md", "docs/toolu/plans/2026-10-27-code-review-convention-gathering.md"],
     "input": "The branch diff and the real Git fixtures from the preceding steps",
     "check": "cargo xtask gate"
   }
@@ -50,6 +50,10 @@ Base-safe reads and absence handling, then candidate ordering/excludes/cap accou
 ## Plan review (2026-10-27)
 
 No blockers. Every AC maps to a step with a matching real-Git input and runnable check (Jev coverage 0.6, uncertain-leaning-true; manual mapping confirms AC-1/5/6 in `base`, AC-2/3/4 in `bundle`, all six re-verified in `docs-gate`). Paths declare production, test, fixture, and doc files; order is base → bundle → docs-gate. No user-facing documentation step applies (spec: internal stage only); the doc trio syncs in `docs-gate`.
+
+## Deviations
+
+The full gate's `unused-pub` check requires every public item to have a consumer outside its crate. A black-box contract test (`crates/code-review/tests/rules_contract.rs`, mirroring `tests/shape_contract.rs`) now exercises `gather`, `Bundle`, `RuleFile`, and `RulesError` through the public API; its path is declared in the `base` and `docs-gate` steps.
 
 ## Verification
 
