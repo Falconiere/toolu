@@ -1,0 +1,56 @@
+.drawer-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 12px 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+.drawer-tabs button {
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  border-bottom: 0;
+  background: var(--panel);
+  color: var(--muted);
+  font:
+    600 11px "JetBrains Mono",
+    ui-monospace,
+    monospace;
+}
+.drawer-tabs button[aria-selected="true"] {
+  background: var(--surface);
+  color: var(--acid);
+}
+.drawer-log-list {
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+}
+.drawer-log-list button {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  font:
+    11px "JetBrains Mono",
+    ui-monospace,
+    monospace;
+  text-align: left;
+}
+.drawer-log-list button[aria-pressed="true"] {
+  border-color: var(--acid-dim);
+  color: var(--acid);
+}
+.drawer-log-jump {
+  margin-bottom: 8px;
+  padding: 4px 8px;
+  border: 1px solid var(--acid-dim);
+  background: var(--panel);
+  color: var(--acid);
+  font:
+    11px "JetBrains Mono",
+    ui-monospace,
+    monospace;
+}

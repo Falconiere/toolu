@@ -33,8 +33,8 @@ export async function readDashboard(peer) {
 export const readIssue = (peer, key) => get(`${root(peer)}/issues/${encodeURIComponent(key)}`);
 
 // The screen route is local only and always needs the bearer token.
-export async function readScreen(key, token) {
-  const response = await fetch(`/api/v1/issues/${encodeURIComponent(key)}/screen`, {
+async function privateGet(path, token) {
+  const response = await fetch(path, {
     cache: "no-store",
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -50,4 +50,19 @@ export async function postAction(op, body, token) {
   } catch {
     return { status: 0, body: null };
   }
+}
+
+export function readScreen(key, token) {
+  const path = `/api/v1/issues/${encodeURIComponent(key)}/screen`;
+  return privateGet(path, token);
+}
+
+export function readLogs(key, token) {
+  const path = `/api/v1/issues/${encodeURIComponent(key)}/logs`;
+  return privateGet(path, token);
+}
+
+export function readLog(key, id, offset, token) {
+  const path = `/api/v1/issues/${encodeURIComponent(key)}/logs/${encodeURIComponent(id)}${offset == null ? "" : `?offset=${offset}`}`;
+  return privateGet(path, token);
 }

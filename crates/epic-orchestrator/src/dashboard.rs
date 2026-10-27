@@ -10,7 +10,7 @@ const JS: &str = "text/javascript";
 const FONT: &str = "font/woff2";
 
 /// Every served asset: its path under [`ASSET_PREFIX`], bytes and media type.
-const ASSETS: [(&str, &[u8], &str); 22] = [
+const ASSETS: [(&str, &[u8], &str); 25] = [
   (
     "tokens.css",
     include_bytes!("../assets/dashboard/tokens.css"),
@@ -39,6 +39,11 @@ const ASSETS: [(&str, &[u8], &str); 22] = [
   (
     "control.css",
     include_bytes!("../assets/dashboard/control.css"),
+    CSS,
+  ),
+  (
+    "logs.css",
+    include_bytes!("../assets/dashboard/logs.css"),
     CSS,
   ),
   (
@@ -82,6 +87,11 @@ const ASSETS: [(&str, &[u8], &str); 22] = [
     JS,
   ),
   (
+    "js/logic/logs.js",
+    include_bytes!("../assets/dashboard/js/logic/logs.js"),
+    JS,
+  ),
+  (
     "js/logic/status.js",
     include_bytes!("../assets/dashboard/js/logic/status.js"),
     JS,
@@ -104,6 +114,11 @@ const ASSETS: [(&str, &[u8], &str); 22] = [
   (
     "js/view/drawer.js",
     include_bytes!("../assets/dashboard/js/view/drawer.js"),
+    JS,
+  ),
+  (
+    "js/view/logs.js",
+    include_bytes!("../assets/dashboard/js/view/logs.js"),
     JS,
   ),
   (

@@ -7,6 +7,11 @@ pub fn short_hostname() -> Option<String> {
   short(name.to_str()?)
 }
 
+/// The current Unix user's numeric ID, for host-owned temporary paths.
+pub fn user_id() -> u32 {
+  nix::unistd::getuid().as_raw()
+}
+
 /// `name` up to its first `.`, or `None` when that part is empty.
 fn short(name: &str) -> Option<String> {
   name

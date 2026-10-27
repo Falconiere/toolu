@@ -15,6 +15,7 @@ import {
 } from "../logic/drawer.js";
 import { agentState, liveTitle, phaseLine, statusTitle } from "../logic/status.js";
 import { $, element, mark, text } from "./dom.js";
+import { bindLogs, renderLogs } from "./logs.js";
 import { showPeerLink } from "./peer.js";
 
 const show = (id, visible) => {
@@ -145,7 +146,15 @@ export function renderDrawer(model) {
   renderStatus(model, issue);
   renderAttention(model);
   renderPlan(model.doc?.plan, Boolean(model.doc), model.docFailed);
+  for (const tab of ["screen", "logs"]) {
+    const selected = model.tab === tab;
+    const button = $(`drawer-${tab}-tab`);
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    show(`drawer-${tab}`, selected);
+  }
   renderScreen(model, issue);
+  renderLogs(model);
   renderPhases(issue);
   // Attention keys carry `data-issue` too; only the board row is the current one.
   for (const row of document.querySelectorAll("#board button[data-issue]")) {
@@ -164,13 +173,27 @@ export function hideDrawer() {
   text("drawer-attach", "");
   $("drawer-actions").replaceChildren();
   $("drawer-screen-text").textContent = "";
+  $("drawer-log-text").textContent = "";
+  $("drawer-log-text").dataset.selected = "";
   for (const row of document.querySelectorAll("button[aria-current]")) {
     row.removeAttribute("aria-current");
   }
 }
 
-export function bindDrawer(onClose) {
+export function bindDrawer(onClose, onTab, onLog) {
   $("drawer-close").addEventListener("click", onClose);
+  for (const tab of ["screen", "logs"]) {
+    const button = $(`drawer-${tab}-tab`);
+    button.addEventListener("click", () => onTab(tab));
+    button.addEventListener("keydown", (event) => {
+      if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      const next = tab === "screen" ? "logs" : "screen";
+      onTab(next);
+      $(`drawer-${next}-tab`).focus();
+    });
+  }
+  bindLogs(onLog);
   const button = $("drawer-copy");
   button.addEventListener("click", async () => {
     try {

@@ -7,6 +7,8 @@
 pub mod agents;
 /// A worktree's resource binding.
 pub mod binding;
+/// Persistent output for managed jobs.
+pub mod job_logs;
 /// A command under a job lease.
 pub mod jobs;
 /// Admission, patches, release and reconciliation.

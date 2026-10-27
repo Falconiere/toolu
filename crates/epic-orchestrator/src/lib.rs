@@ -74,6 +74,7 @@ mod http_access;
 mod http_action;
 mod http_fleet;
 mod http_live;
+mod http_logs;
 mod http_metrics;
 mod http_read;
 mod http_request;

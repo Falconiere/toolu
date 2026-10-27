@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/assets/8.5.0/panels.css" />
     <link rel="stylesheet" href="/assets/8.5.0/drawer.css" />
     <link rel="stylesheet" href="/assets/8.5.0/control.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/logs.css" />
     <script type="module" src="/assets/8.5.0/js/app.js"></script>
   </head>
   <body>
@@ -137,10 +138,31 @@
               <p id="drawer-plan-note" class="drawer-note"></p>
               <ol id="drawer-steps" class="drawer-steps"></ol>
             </section>
+            <div class="drawer-tabs" role="tablist" aria-label="Worker output">
+              <button
+                id="drawer-screen-tab"
+                role="tab"
+                type="button"
+                aria-controls="drawer-screen"
+                aria-selected="true"
+              >
+                SCREEN
+              </button>
+              <button
+                id="drawer-logs-tab"
+                role="tab"
+                type="button"
+                aria-controls="drawer-logs"
+                aria-selected="false"
+              >
+                LOGS
+              </button>
+            </div>
             <section
               id="drawer-screen"
               class="drawer-section"
-              aria-labelledby="drawer-screen-title"
+              role="tabpanel"
+              aria-labelledby="drawer-screen-tab"
             >
               <header class="section-heading">
                 <h3 id="drawer-screen-title">SCREEN</h3>
@@ -169,6 +191,24 @@
                 </div>
               </div>
               <pre id="drawer-screen-text" class="drawer-screen-text" tabindex="0" hidden></pre>
+            </section>
+            <section
+              id="drawer-logs"
+              class="drawer-section"
+              role="tabpanel"
+              aria-labelledby="drawer-logs-tab"
+              hidden
+            >
+              <header class="section-heading">
+                <h3>LOGS</h3>
+                <span>POLLED 1S · LOCAL ONLY</span>
+              </header>
+              <p id="drawer-logs-note" class="drawer-note" role="status"></p>
+              <ul id="drawer-log-list" class="drawer-log-list" aria-label="Worker logs"></ul>
+              <button id="drawer-log-jump" class="drawer-log-jump" type="button" hidden>
+                [ JUMP TO LATEST ]
+              </button>
+              <pre id="drawer-log-text" class="drawer-screen-text" tabindex="0" hidden></pre>
             </section>
             <section
               id="drawer-phases"

@@ -1,3 +1,4 @@
+use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use super::{RunError, Spec, Wait, detach, group, run};
@@ -60,6 +61,23 @@ fn output_past_the_budget_is_dropped() {
   assert!(output.truncated);
   assert_eq!(output.stdout.len(), 100);
   assert_eq!(output.exit_code, 0);
+}
+
+#[test]
+fn chunk_observer_sees_both_streams_before_the_output_budget_drops_bytes() {
+  let seen = Arc::new(Mutex::new(Vec::new()));
+  let captured = Arc::clone(&seen);
+  let mut spec = sh("printf 'out\\n'; sleep 0.05; printf 'err\\n' >&2");
+  spec.max_output_bytes = 3;
+  let output = super::run_with_chunks(
+    &spec,
+    &mut |_| Ok(()),
+    Arc::new(move |bytes| captured.lock().unwrap().extend_from_slice(bytes)),
+  )
+  .unwrap();
+  assert_eq!(*seen.lock().unwrap(), b"out\nerr\n");
+  assert!(output.truncated);
+  assert_eq!(output.stdout.len() + output.stderr.len(), 3);
 }
 
 #[test]
