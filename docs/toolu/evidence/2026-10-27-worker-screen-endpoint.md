@@ -24,4 +24,4 @@ The real-socket listener test presents a blocked issue and visible dialog, and c
 
 The configured peer HTTP test verifies that `/api/v1/fleet/peers/{name}/issues/{key}/screen` is 404 and does not call the peer. AC-7: pass.
 
-AC-9: the pre-review snapshot passed the complete `cargo xtask gate` in the isolated Linux `deploy-gate` runner (receipt `f32e9dc1c93dadba0937febd0f063713e5e052f5`). The final rebased branch gate receipt is recorded in PR #693 before merge.
+AC-9: the pre-review snapshot passed the complete `cargo xtask gate` in the isolated Linux `deploy-gate` runner (receipt `f32e9dc1c93dadba0937febd0f063713e5e052f5`). The final rebased branch's native `cargo xtask gate` result is recorded in PR #693 before merge.
