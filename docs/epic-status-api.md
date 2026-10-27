@@ -4,7 +4,7 @@ Generated from `crates/epic-orchestrator/src/status_schema.rs`. Regenerate with 
 
 The resident engine serves HTTP/1.1 on `127.0.0.1:7717` by default. `toolu epic serve --http ADDR` selects another address; `--no-http` disables the listener. Non-loopback binds require a status token from `toolu/secrets.json` or `TOOLU_EPIC_STATUS_TOKEN` / `TOOLU_EPIC_TOKEN`, sent as `Authorization: Bearer <token>`.
 
-Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`; every response has `Cache-Control: no-store` and no CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.
+Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `schema: 1`. HTML and JSON responses have `Cache-Control: no-store`; versioned dashboard assets have `Cache-Control: public, max-age=31536000, immutable`. Every response carries `X-Content-Type-Options: nosniff` and a same-origin Content-Security-Policy. No response has a CORS header. Errors use fixed JSON codes. The listener accepts only its bound Host and loopback aliases.
 
 | Path | Purpose | Fields after `schema` |
 |---|---|---|
@@ -135,4 +135,8 @@ A token sent to an `http://` peer crosses the network in clear text. Use plain H
 
 `/api/v1/fleet/peers/{name}/{route}` returns a peer's own document, redacted, so the browser needs only this server's address. `{name}` is percent-decoded and matches a configured peer exactly; `{id}` and `{key}` match `[A-Za-z0-9._-]{1,128}`. An unknown peer or route is `404`; a failing peer is `502` (`peer_unreachable`, `peer_unauthorized`, `peer_version_mismatch`), and more than eight proxied calls at once get `503 proxy_limit`.
 
-The dashboard at `/` uses these same-origin endpoints. With peers configured it shows a fleet summary and a machine switcher; a peer's panels are read through the proxy every 5 s. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.
+## Dashboard
+
+The read-only dashboard at `/` serves embedded HTML. `/assets/<binary-version>/` serves embedded CSS, JS and Latin-subset variable fonts; these routes have immutable caching, while the root HTML and JSON do not. The font OFL files remain in the repository and are not served. The strict Content-Security-Policy allows same-origin scripts, styles, fonts and connections, and forbids inline script and style.
+
+The page stacks every registered epic and shows four tiles, hosts, attention and seven recent journal events. Local documents update from `/api/v1/events/stream`; `/api/v1/agents/live` supplies terminal titles every 3 seconds only while the tab is visible. A peer is read-only: its overview, epic, host and attention documents use the GET-only fleet proxy every 5 seconds while visible, and the browser never requests peer live-agent or event routes. Waiting jobs are recent refused admissions; their markers expire after two minutes. Queue entries are the engine's merge queue: per repository, ready issues with a pull request, ordered by `unblocks`, then ready time, then key; `head` marks the one the engine works.

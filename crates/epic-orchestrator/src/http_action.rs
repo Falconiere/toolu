@@ -173,6 +173,7 @@ fn forward(control: &Control<'_>, request: Value) -> Response {
     head: false,
     close,
     allow: "POST",
+    cache: "no-store",
   }
 }
 

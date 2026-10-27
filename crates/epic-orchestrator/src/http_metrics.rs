@@ -92,6 +92,7 @@ fn ok(body: Vec<u8>) -> Response {
     head: false,
     close: false,
     allow: READ_METHODS,
+    cache: "no-store",
   }
 }
 

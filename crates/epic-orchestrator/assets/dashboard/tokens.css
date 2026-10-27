@@ -1,0 +1,35 @@
+@font-face {
+  font-family: Archivo;
+  src: url("/assets/8.5.0/fonts/archivo.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("/assets/8.5.0/fonts/jetbrains-mono.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+}
+
+:root {
+  --canvas: #0e0f0d;
+  --surface: #111210;
+  --panel: #1f1f1f;
+  --line: #23251f;
+  --line-soft: #1e201c;
+  --line-strong: #33362e;
+  --row-hover: #1b1d18;
+  --ink: #f2f2ef;
+  --muted: #8a8d86;
+  --faint: #52554e;
+  --disabled: #3e4139;
+  --warn: #c99a3a;
+  --error: #c9553a;
+  --acid: #b8d94a;
+  --acid-lift: #d2ec7c;
+  --acid-dim: #7e9a26;
+  --acid-wash: #1e2310;
+}
