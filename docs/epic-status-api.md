@@ -15,7 +15,7 @@ Only GET and HEAD are accepted. HEAD has no body. Every JSON body contains `sche
 | `/api/v1/issues/{key}` | One worker | key, epic, stage, phase, phase_age_ms, agent_status, agent_status_at, host, model, effort, pr, last_gate_verdict, queue_position, launches, phase_history, recent_events, hold, plan |
 | `/api/v1/agents` | Worker sessions | items (state, key, epic, worktree, session_id) |
 | `/api/v1/agents/live` | What each worker's agent is doing now | available, reason, sampled_at, items (key, epic, host, agent_status, title, sampled_at) |
-| `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason) |
+| `/api/v1/hosts` | Host capacity | items (host, cap, running, cooldown_until, reason, paused, paused_by, paused_at) |
 | `/api/v1/machine` | Shared resources | load, available_memory_bytes, steal, pressure, policy, agent_leases, job_leases |
 | `/api/v1/jobs` | Expensive jobs | running, waiting |
 | `/api/v1/queue` | Ready work by repository | repositories (repo, items) |
@@ -76,6 +76,8 @@ The engine that serves the page can be controlled from it. Peers are never contr
 | `ack` | `{"key": KEY}`, or `{"kind": KIND}` for a keyless item | `toolu epic ack KEY` |
 | `answer` | `{"key": KEY, "text": TEXT}` | `toolu epic answer KEY TEXT` |
 | `release` | `{"key": KEY}` | `toolu epic release KEY` |
+| `host-pause` | `{"host": HOST}` | `toolu epic hosts pause HOST` |
+| `host-resume` | `{"host": HOST}` | `toolu epic hosts resume HOST` |
 
 `answer` types into agents that run with approval bypass, so every action needs all of the following, even on loopback:
 
@@ -101,6 +103,7 @@ Field rules:
 - Keys, epics and kinds match `[A-Za-z0-9._-]{1,128}`.
 - `ack` takes exactly one of `key` or `kind`.
 - `answer` text is 1 to 4,000 characters, with no control characters other than newline and tab.
+- `host-pause` and `host-resume` take a `host`: `claude`, `codex`, `cursor` or `muse` (aliases `claude-code`, `cursor-agent` accepted); anything else is `400 invalid_request`.
 
 A `POST` without `Content-Length` is `400`, and a larger body is `413`.
 
@@ -110,7 +113,11 @@ Replies:
 - **`409`:** an engine refusal such as `no live agent for <key>` or `<key> is not held`. The body is `{"schema": 1, "error": <text>}`.
 - **`503 engine_busy`:** the state loop did not answer within 35 s, longer than herdr's 30 s prompt timeout. The server never retries, and the action may still apply later.
 
-Web actions are journaled like CLI actions, with `by=web` in the note. `pause` and `resume` write `action pause` or `action resume` with the note `<epic|all> by=<who>`. So every open dashboard sees the change on `/api/v1/events/stream`.
+Web actions are journaled like CLI actions, with `by=web` in the note. `pause` and `resume` write `action pause` or `action resume` with the note `<epic|all> by=<who>`. `host-pause` and `host-resume` write `action host-paused` or `action host-resumed`, keyed by the host, with the note `by=<who>`. So every open dashboard sees the change on `/api/v1/events/stream`.
+
+## Host pause
+
+A host pause lives in the shared resource store (`paused_hosts`, next to `cooldowns`), so it is machine-wide and survives an engine restart. Routing skips a paused host like a cooling one, but `/api/v1/hosts` reports the two apart: each item carries `paused`, `paused_by` and `paused_at` beside `cooldown_until` and `reason`, and a host can be paused and cooling at once. Pausing never stops a running worker; a relaunch of a running worker whose host is paused waits with the reason `host paused` and keeps its session for the resume. Resuming clears the pause and any active cooldown — in the shared store and in every registered epic's `hosts.json` — so the next route may pick the host again; if the provider is still limited, the next limit line cools it again. A manual `toolu epic launch --kind <paused host>` is refused with `host <name> is paused; resume it or pass --force`; `--force` launches anyway.
 
 `toolu epic token url` prints `http://<address>/#token=<token>` for the running engine. The engine writes its bound address to `http.json` under its resource root while it runs. A `0.0.0.0` or `::` bind prints `127.0.0.1`. The token stays in the URL fragment: it never goes on a command line, in a query string or in a log line.
 

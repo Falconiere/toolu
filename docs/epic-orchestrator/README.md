@@ -86,6 +86,21 @@ The dashboard can also control the engine that serves it. It can pause or resume
 epics, acknowledge attention, answer a worker and release a hold. Each action
 needs the status token, even on loopback, and is journaled with `by=web`.
 
+## Hosts
+
+`toolu epic hosts pause <host>` takes one host (`claude`, `codex`, `cursor` or
+`muse`) out of rotation, and `toolu epic hosts resume <host>` brings it back;
+the dashboard does the same through `POST /api/v1/actions/host-pause` and
+`host-resume`. The pause lives in the shared resource store, so it is
+machine-wide and survives an engine restart. New agents route to the other
+hosts; workers already running keep running, and a relaunch that would return
+to the paused host waits with the reason `host paused`. Resuming also clears
+the host's usage-limit cooldown, in the shared store and in every epic's
+`hosts.json`, so an operator who knows a limit has reset can put the host back
+at once. `/api/v1/hosts` reports `paused`, `paused_by` and `paused_at` for each
+host. A manual `toolu epic launch --kind <paused host>` is refused unless
+`--force` is passed.
+
 `toolu epic token url` prints the running engine's dashboard URL with the token
 in its `#token=` fragment. `toolu epic token new` rotates the token without a
 restart.
