@@ -8,22 +8,17 @@ use toolu_runtime::env::Env;
 use super::gather;
 use crate::budget::RULES_MAX_BYTES;
 
-fn sh(root: &Path, args: &[&str]) -> String {
-  let out = Command::new("git")
+fn sh(root: &Path, args: &[&str]) {
+  let status = Command::new("git")
     .arg("-C")
     .arg(root)
     .args(args)
     .env("GIT_CONFIG_NOSYSTEM", "1")
     .env("GIT_CONFIG_GLOBAL", "/dev/null")
     .env("XDG_CONFIG_HOME", "/dev/null")
-    .output()
+    .status()
     .expect("git starts");
-  assert!(
-    out.status.success(),
-    "git {args:?}: {}",
-    String::from_utf8_lossy(&out.stderr)
-  );
-  String::from_utf8(out.stdout).expect("git text")
+  assert!(status.success(), "git {args:?} failed");
 }
 
 fn isolated() -> Env {
