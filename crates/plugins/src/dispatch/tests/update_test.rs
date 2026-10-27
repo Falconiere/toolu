@@ -214,3 +214,27 @@ fn nothing_to_update_anywhere_says_so_and_names_hosts_that_could_not_be_read() {
     "no detected host has toolu plugins installed, so there is nothing to update (could not list: muse: boom: plugins list --json)"
   );
 }
+
+#[test]
+fn a_dry_run_shows_why_a_host_failed_alongside_the_planned_commands() {
+  let sb = Sandbox::new();
+  three_hosts(&sb, "");
+  sb.muse("\"plugins list --json\"");
+  let mut request = crate::support::request(Verb::Update, &[]);
+  request.dry_run = true;
+  let mut nobody = Nobody;
+  let mut cx = context(&sb, None, Some(&mut nobody), Style::Plain);
+  let report = dispatch(&request, &catalog(), &mut cx).expect("dry update");
+  assert_eq!(
+    report.text,
+    "claude:\nPlanned commands (nothing was run):\n  claude plugin update jev@toolu --json\n\n\
+     codex:\nPlanned commands (nothing was run):\n  codex plugin add ast-grep@toolu\n\n\
+     muse:\n  x muse             could not list its plugins: boom: plugins list --json\n"
+  );
+  assert!(report.failed);
+  assert_eq!(report.json["dryRun"], json!(true));
+  assert_eq!(
+    report.json["hosts"][2]["steps"][0]["outcome"],
+    json!("failed")
+  );
+}

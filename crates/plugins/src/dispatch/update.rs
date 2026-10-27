@@ -223,6 +223,21 @@ fn skipped_note(have: &[String], names: &[String]) -> String {
   }
 }
 
+/// A host section's plain body: the outcome marks, or on a dry run the commands
+/// that would run followed by any failure, whose reason a dry run must show too.
+fn plain_body(steps: &[Step], dry_run: bool) -> String {
+  let (failures, rest): (Vec<Step>, Vec<Step>) = steps.iter().cloned().partition(Step::failed);
+  if !dry_run || failures.is_empty() {
+    return dry_text(dry_run, steps).unwrap_or_else(|| report::update(steps));
+  }
+  let planned = if rest.is_empty() {
+    String::new()
+  } else {
+    dry_text(true, &rest).unwrap_or_default()
+  };
+  format!("{planned}{}", report::update(&failures))
+}
+
 fn report(
   request: &Request,
   sections: &[(Target, Vec<Step>)],
@@ -231,10 +246,7 @@ fn report(
 ) -> Report {
   let mut plain: Vec<String> = sections
     .iter()
-    .map(|(target, steps)| {
-      let body = dry_text(request.dry_run, steps).unwrap_or_else(|| report::update(steps));
-      format!("{}:\n{body}", target.name())
-    })
+    .map(|(target, steps)| format!("{}:\n{}", target.name(), plain_body(steps, request.dry_run)))
     .collect();
   plain.extend(
     notes
