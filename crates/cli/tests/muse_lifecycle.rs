@@ -54,7 +54,7 @@ fn muse_startup_and_resume_use_system_message_with_runtime_line() {
 }
 
 #[test]
-fn muse_check_binary_reports_missing_native_once_per_session() {
+fn muse_check_binary_reports_an_advisory_once_per_session() {
   let root = tempfile::tempdir().unwrap();
   let payload = r#"{"session_id":"muse-missing"}"#;
   let first = hook(root.path(), "check-binary", "/nonexistent", payload).unwrap();
@@ -69,7 +69,7 @@ fn muse_check_binary_reports_missing_native_once_per_session() {
 
 #[cfg(unix)]
 #[test]
-fn muse_check_binary_advises_install_when_a_shim_shadows_it() {
+fn muse_check_binary_rejects_a_path_shim() {
   use std::os::unix::fs::PermissionsExt as _;
 
   let root = tempfile::tempdir().unwrap();
@@ -87,10 +87,28 @@ fn muse_check_binary_advises_install_when_a_shim_shadows_it() {
   .unwrap();
   assert_eq!(output.status.code(), Some(0), "{output:?}");
   let value: Value = serde_json::from_slice(&output.stdout).unwrap();
-  assert!(
-    value["systemMessage"]
-      .as_str()
-      .unwrap()
-      .contains("Install it with:")
-  );
+  let message = value["systemMessage"].as_str().unwrap();
+  if let Some(native) = message
+    .strip_prefix("toolu: native binary for this Muse session: '")
+    .and_then(|rest| rest.strip_suffix("'. Use that absolute path for toolu commands."))
+  {
+    assert_ne!(native, shim.to_str().unwrap());
+    let probe = Command::new(native)
+      .arg("--hook-protocol")
+      .output()
+      .unwrap();
+    assert!(probe.status.success(), "{probe:?}");
+    assert!(
+      std::str::from_utf8(&probe.stdout)
+        .unwrap()
+        .trim()
+        .parse::<u32>()
+        .is_ok_and(|version| version > 0)
+    );
+  } else {
+    assert_eq!(
+      message,
+      "toolu: native binary not found in the Muse command shell. Install it with: curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash or brew install falconiere/tap/toolu. Restart the Muse session."
+    );
+  }
 }

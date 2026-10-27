@@ -7,6 +7,8 @@
     <title>toolu · Epic engine</title>
     <link rel="stylesheet" href="/assets/8.5.0/tokens.css" />
     <link rel="stylesheet" href="/assets/8.5.0/board.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/board-layout.css" />
+    <link rel="stylesheet" href="/assets/8.5.0/panels.css" />
     <script type="module" src="/assets/8.5.0/js/app.js"></script>
   </head>
   <body>
@@ -27,31 +29,39 @@
         <div id="error" class="error" role="alert" hidden></div>
         <div id="peer-banner" class="peer-banner" hidden>
           <p>
-            ◇ · PEER — Fleet peers are read-only here. Plans and phases are proxied; screens, live
-            status and actions stay on the peer's own dashboard.
+            ◇ <strong id="peer-name"></strong> · PEER — Fleet peers are read-only here. Plans and
+            phases are proxied; screens, live status and actions stay on the peer's own dashboard.
           </p>
           <a id="peer-link" href="/" target="_blank" rel="noopener noreferrer" hidden></a>
         </div>
         <dl class="tiles">
           <div class="tile">
             <dt>WORKERS LIVE</dt>
-            <dd id="tile-workers">—</dd>
-            <p id="tile-workers-note">Waiting for engine.</p>
+            <dd>
+              <span id="tile-workers">—</span>
+              <p id="tile-workers-note">Waiting for engine.</p>
+            </dd>
           </div>
           <div class="tile">
             <dt>ATTENTION</dt>
-            <dd id="tile-attention">—</dd>
-            <p id="tile-attention-note">Waiting for engine.</p>
+            <dd>
+              <span id="tile-attention">—</span>
+              <p id="tile-attention-note">Waiting for engine.</p>
+            </dd>
           </div>
           <div class="tile">
             <dt>HOSTS IN ROTATION</dt>
-            <dd id="tile-hosts">—</dd>
-            <p>Paused and cooling hosts take no new launches.</p>
+            <dd>
+              <span id="tile-hosts">—</span>
+              <p>Paused and cooling hosts take no new launches.</p>
+            </dd>
           </div>
           <div class="tile">
             <dt>PLAN STEPS GREEN</dt>
-            <dd id="tile-plans">—</dd>
-            <p id="tile-plans-note">Waiting for plans.</p>
+            <dd>
+              <span id="tile-plans">—</span>
+              <p id="tile-plans-note">Waiting for plans.</p>
+            </dd>
           </div>
         </dl>
         <section class="board-section" aria-labelledby="board-title">

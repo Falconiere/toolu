@@ -5,8 +5,12 @@ import test from "node:test";
 import {
   agentState,
   cooldown,
+  hostNote,
   hostState,
   issueRows,
+  liveTitle,
+  peerDashboardUrl,
+  peerMachine,
   phaseLine,
   tiles,
   waveLine,
@@ -49,15 +53,21 @@ test("wave line and rows use the engine's stable wave and graph title", () => {
 });
 
 test("tiles aggregate the captured board, plan, hosts, and empty attention", () => {
-  const summary = tiles([captured.board], captured.hosts, captured.attention);
+  const capturedAt = Date.parse(captured.hosts.items[1].cooldown_until) - 41 * 60_000;
+  const summary = tiles([captured.board], captured.hosts, captured.attention, capturedAt);
   assert.equal(summary.workers, "1 / 1 ISSUES");
   assert.equal(summary.workerNote, "0 working, 0 blocked, 0 idle.");
   assert.equal(summary.attention, "0 OPEN");
   assert.equal(summary.attentionNote, "Nothing waiting on you.");
-  assert.equal(summary.hosts, "4 / 4");
-  assert.equal(summary.plans, "1 / 4");
+  assert.equal(summary.hosts, "2 / 4");
+  assert.equal(summary.plans, "3 / 4");
   assert.equal(summary.planNote, "Across 1 worker plans.");
-  const withPeer = tiles([captured.board, captured.peer_board], captured.hosts, captured.attention);
+  const withPeer = tiles(
+    [captured.board, captured.peer_board],
+    captured.hosts,
+    captured.attention,
+    capturedAt,
+  );
   assert.equal(withPeer.workers, "2 / 2 ISSUES");
 });
 
@@ -69,6 +79,42 @@ test("cooldown counts down, expires, and yields to a paused host", () => {
   assert.equal(cooldown(until, now + 2_460_000), null);
   const host = { ...captured.hosts.items[0], cooldown_until: until };
   assert.equal(hostState(host, now).label, "◷ COOLING");
+  assert.equal(hostNote(host, now), "usage limit · back in 41:00");
   assert.equal(hostState({ ...host, paused: true }, now).label, "‖ PAUSED");
+  assert.equal(hostNote({ ...host, paused: true }, now), "No new launches.");
+  assert.equal(hostState(captured.hosts.items[3], now).label, "‖ PAUSED");
   assert.equal(hostState(captured.hosts.items[0], now).label, "● IN ROTATION");
+  assert.equal(hostNote(captured.hosts.items[0], now), "Ready for new launches.");
+});
+
+test("live titles describe the host's actual title semantics", () => {
+  assert.equal(liveTitle("claude", "local-658"), "session local-658");
+  assert.equal(liveTitle("muse", "worktree"), "folder worktree");
+  assert.equal(liveTitle("codex", "Fix dashboard | worktree"), "title Fix dashboard | worktree");
+});
+
+test("peer lookup distinguishes a reachable peer from local and unavailable machines", () => {
+  assert.equal(peerMachine(captured.fleet, "build-mini")?.state, "ok");
+  assert.equal(peerMachine(captured.fleet, "local"), undefined);
+  const unavailable = structuredClone(captured.fleet);
+  unavailable.machines[1].state = "unreachable";
+  assert.equal(peerMachine(unavailable, "build-mini")?.state, "unreachable");
+});
+
+test("peer dashboard links accept only a root HTTP URL without embedded credentials", () => {
+  const valid = captured.fleet.machines[1].dashboard_url;
+  const credential = new URL(valid);
+  credential.username = "user";
+  credential.password = "password";
+  assert.equal(peerDashboardUrl(valid), valid);
+  for (const invalid of [
+    ["javascript", ":alert(1)"].join(""),
+    credential.href,
+    new URL("/path", valid).href,
+    new URL("/?token=secret", valid).href,
+    new URL("/#fragment", valid).href,
+    "not a URL",
+  ]) {
+    assert.equal(peerDashboardUrl(invalid), null, invalid);
+  }
 });

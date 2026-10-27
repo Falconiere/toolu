@@ -27,12 +27,16 @@ pub(crate) const REDUCED_PATH: &str = "/usr/bin:/bin";
 /// The startup payload of a session.
 pub(crate) const STARTUP: &str = r#"{"hook_event_name":"SessionStart","source":"startup"}"#;
 
-/// The fixed install directories the launcher searches before `PATH`.
-const FIXED_DIRS: &[&str] = &[
-  "/opt/homebrew/bin",
-  "/usr/local/bin",
-  "/home/linuxbrew/.linuxbrew/bin",
-];
+/// Host installations must not shadow the temporary binaries in these tests.
+const HOST_CANDIDATES: &str =
+  "/opt/homebrew/bin/toolu /usr/local/bin/toolu /home/linuxbrew/.linuxbrew/bin/toolu";
+
+fn isolated_command(command: &str) -> Res<String> {
+  if !command.contains(HOST_CANDIDATES) {
+    return Err("generated launcher lost its fixed install candidates".into());
+  }
+  Ok(command.replacen(HOST_CANDIDATES, "", 1))
+}
 
 /// Writers of executables hold it exclusively, spawners shared: a child forked
 /// while an executable is open for writing would make its `exec` fail with
@@ -77,23 +81,8 @@ pub(crate) struct Sandbox {
 }
 
 impl Sandbox {
-  /// A fresh sandbox whose plugin manifest matches this binary. Fails when a
-  /// real `toolu` sits in a fixed install directory, since it would win.
+  /// A fresh sandbox whose plugin manifest matches this binary.
   pub(crate) fn new() -> Res<Self> {
-    if let Some(found) = FIXED_DIRS
-      .iter()
-      .map(|dir| Path::new(dir).join("toolu"))
-      .find(|found| found.exists())
-    {
-      return Err(
-        format!(
-          "{} would shadow the test binary; move it aside or run in a container \
-         (docs/install.md)",
-          found.display()
-        )
-        .into(),
-      );
-    }
     let dir = tempfile::tempdir()?;
     let home = dir.path().join("a home");
     let root = dir.path().join("plugin root");
@@ -161,7 +150,7 @@ impl Sandbox {
     };
     let mut sh = Command::new("/bin/sh");
     sh.arg("-c")
-      .arg(hook(&target, DEFAULT_TIMEOUT)?.command)
+      .arg(isolated_command(&hook(&target, DEFAULT_TIMEOUT)?.command)?)
       .env_clear()
       .env("CLAUDE_PLUGIN_ROOT", &self.root);
     Ok(sh)
@@ -180,7 +169,7 @@ impl Sandbox {
     let generated = muse::hook(&target, DEFAULT_TIMEOUT_MS)?;
     let resolver = self.root.join(&generated.resolver_path);
     std::fs::create_dir_all(resolver.parent().ok_or("no resolver directory")?)?;
-    std::fs::write(&resolver, &generated.resolver)?;
+    std::fs::write(&resolver, isolated_command(&generated.resolver)?)?;
     let shell = generated.entry.command.first().ok_or("no command")?;
     let mut sh = Command::new(shell);
     sh.arg(&resolver)

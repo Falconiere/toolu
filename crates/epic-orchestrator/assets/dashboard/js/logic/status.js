@@ -36,6 +36,12 @@ export function hostState(host, now = Date.now()) {
   return cooldown(host.cooldown_until, now) ? HOSTS.cooling : HOSTS.rotation;
 }
 
+export function hostNote(host, now = Date.now()) {
+  if (host.paused || host.state === "paused") return "No new launches.";
+  const remaining = cooldown(host.cooldown_until, now);
+  return remaining ? `usage limit · back in ${remaining}` : "Ready for new launches.";
+}
+
 export function waveLine(board) {
   const live = count(board.live);
   const queued = count(board.queued);
@@ -61,6 +67,32 @@ export function phaseLine(issue, wave) {
   return issue.phase_age_ms == null
     ? phase
     : `${phase} · ${Math.floor(count(issue.phase_age_ms) / 60_000)}m`;
+}
+
+export function liveTitle(host, title) {
+  const kind = host === "claude" ? "session" : host === "muse" ? "folder" : "title";
+  return `${kind} ${title}`;
+}
+
+export function peerMachine(fleet, name) {
+  return fleet?.machines?.find((machine) => !machine.local && machine.name === name);
+}
+
+export function peerDashboardUrl(raw) {
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    return ["http:", "https:"].includes(url.protocol) &&
+      !url.username &&
+      !url.password &&
+      url.pathname === "/" &&
+      !url.search &&
+      !url.hash
+      ? url.href
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function tiles(boards, hosts, attention, now = Date.now()) {

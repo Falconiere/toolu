@@ -17,6 +17,11 @@ pub(crate) fn asset(path: &str) -> Option<Asset> {
   let (bytes, content_type): (&'static [u8], &'static str) = match file {
     "tokens.css" => (include_bytes!("../assets/dashboard/tokens.css"), "text/css"),
     "board.css" => (include_bytes!("../assets/dashboard/board.css"), "text/css"),
+    "board-layout.css" => (
+      include_bytes!("../assets/dashboard/board-layout.css"),
+      "text/css",
+    ),
+    "panels.css" => (include_bytes!("../assets/dashboard/panels.css"), "text/css"),
     "js/app.js" => (
       include_bytes!("../assets/dashboard/js/app.js"),
       "text/javascript",
@@ -31,6 +36,10 @@ pub(crate) fn asset(path: &str) -> Option<Asset> {
     ),
     "js/view/dashboard.js" => (
       include_bytes!("../assets/dashboard/js/view/dashboard.js"),
+      "text/javascript",
+    ),
+    "js/view/peer.js" => (
+      include_bytes!("../assets/dashboard/js/view/peer.js"),
       "text/javascript",
     ),
     "fonts/archivo.woff2" => (

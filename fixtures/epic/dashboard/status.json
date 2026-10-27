@@ -35,9 +35,9 @@
         "phase": "execution",
         "phase_age_ms": 0,
         "plan_summary": {
-          "green": 1,
-          "next": "s2",
-          "pending": 3,
+          "green": 3,
+          "next": "s4",
+          "pending": 1,
           "red": 0,
           "running": 0,
           "stale": 0,
@@ -79,16 +79,16 @@
   "events": {
     "events": [
       {
-        "at": "2026-10-27T17:55:00.078Z",
+        "at": "2026-10-27T19:05:57.060Z",
         "epic": "",
         "key": "",
         "kind": "action",
         "name": "engine-usage",
-        "note": "{\"cpu_ms\":14,\"event\":\"start\",\"max_rss_bytes\":13500416}",
+        "note": "{\"cpu_ms\":20,\"event\":\"start\",\"max_rss_bytes\":13467648}",
         "seq": 1
       },
       {
-        "at": "2026-10-27T17:55:00.094Z",
+        "at": "2026-10-27T19:05:57.074Z",
         "epic": "local-649",
         "key": "local-658",
         "kind": "transition",
@@ -153,7 +153,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T17:55:00.103Z",
+        "last_seen": "2026-10-27T19:05:57.084Z",
         "local": true,
         "name": "local",
         "paused": true,
@@ -161,12 +161,12 @@
         "state": "ok"
       },
       {
-        "age_ms": 15,
+        "age_ms": 16,
         "attention_count": 0,
         "counts": {
           "running": 1
         },
-        "dashboard_url": "http://127.0.0.1:61073/",
+        "dashboard_url": "http://127.0.0.1:63980/",
         "engine": "running",
         "epics": [
           {
@@ -210,7 +210,7 @@
           }
         ],
         "journal_seq": 0,
-        "last_seen": "2026-10-27T17:55:00.088Z",
+        "last_seen": "2026-10-27T19:05:57.068Z",
         "local": false,
         "name": "build-mini",
         "paused": true,
@@ -254,20 +254,29 @@
         "cap": 3,
         "cooldown_until": null,
         "host": "claude",
+        "paused": false,
+        "paused_at": null,
+        "paused_by": null,
         "reason": null,
         "running": 0
       },
       {
         "cap": 3,
-        "cooldown_until": null,
+        "cooldown_until": "2026-10-27T19:46:57.080Z",
         "host": "codex",
-        "reason": null,
+        "paused": false,
+        "paused_at": null,
+        "paused_by": null,
+        "reason": "usage limit",
         "running": 0
       },
       {
         "cap": 3,
         "cooldown_until": null,
         "host": "cursor",
+        "paused": false,
+        "paused_at": null,
+        "paused_by": null,
         "reason": null,
         "running": 0
       },
@@ -275,6 +284,9 @@
         "cap": 3,
         "cooldown_until": null,
         "host": "muse",
+        "paused": true,
+        "paused_at": "2026-10-27T19:05:57.080Z",
+        "paused_by": "user",
         "reason": null,
         "running": 0
       }
@@ -285,7 +297,7 @@
     "available": false,
     "items": [],
     "reason": "off",
-    "sampled_at": "2026-10-27T17:55:00.104Z",
+    "sampled_at": "2026-10-27T19:05:57.085Z",
     "schema": 1
   },
   "overview": {
@@ -331,20 +343,29 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "claude",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         },
         {
           "cap": 3,
-          "cooldown_until": null,
+          "cooldown_until": "2026-10-27T19:46:57.080Z",
           "host": "codex",
-          "reason": null,
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
+          "reason": "usage limit",
           "running": 0
         },
         {
           "cap": 3,
           "cooldown_until": null,
           "host": "cursor",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         },
@@ -352,6 +373,9 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "muse",
+          "paused": true,
+          "paused_at": "2026-10-27T19:05:57.080Z",
+          "paused_by": "user",
           "reason": null,
           "running": 0
         }
@@ -480,6 +504,9 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "claude",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         },
@@ -487,6 +514,9 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "codex",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         },
@@ -494,6 +524,9 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "cursor",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         },
@@ -501,6 +534,9 @@
           "cap": 3,
           "cooldown_until": null,
           "host": "muse",
+          "paused": false,
+          "paused_at": null,
+          "paused_by": null,
           "reason": null,
           "running": 0
         }

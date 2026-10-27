@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use super::run;
+use super::{run, run_inner};
 use crate::Verdict;
 use crate::options::Options;
 use crate::tests::install;
@@ -42,7 +42,7 @@ fn a_binary_in_local_bin_that_reports_itself_passes() {
   let home = std::fs::canonicalize(home.path()).unwrap();
   let at = home.join(".local/bin/toolu");
   let bin = stand_in(&home, &at.display().to_string());
-  assert_eq!(run(&options(&home, &bin)), Ok(Verdict::Clean));
+  assert_eq!(run_inner(&options(&home, &bin), true), Ok(Verdict::Clean));
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn the_muse_resolver_runs_both_events_with_muses_plugin_root() {
   let home = std::fs::canonicalize(home.path()).unwrap();
   let at = home.join(".local/bin/toolu");
   let bin = stand_in(&home, &at.display().to_string());
-  assert_eq!(run(&options(&home, &bin)), Ok(Verdict::Clean));
+  assert_eq!(run_inner(&options(&home, &bin), true), Ok(Verdict::Clean));
   let calls = std::fs::read_to_string(home.join("muse-calls.log")).unwrap();
   let events: Vec<&str> = calls
     .lines()
@@ -72,14 +72,20 @@ fn a_muse_mismatch_that_does_not_block_is_a_finding() {
   let home = std::fs::canonicalize(home.path()).unwrap();
   let at = home.join(".local/bin/toolu");
   let bin = stand_in_with(&home, &at.display().to_string(), "exit 0");
-  assert_eq!(run(&options(&home, &bin)), Ok(Verdict::Findings));
+  assert_eq!(
+    run_inner(&options(&home, &bin), true),
+    Ok(Verdict::Findings)
+  );
 }
 
 #[test]
 fn a_binary_that_reports_another_path_is_a_finding() {
   let home = tempfile::tempdir().unwrap();
   let bin = stand_in(home.path(), "/somewhere/else/toolu");
-  assert_eq!(run(&options(home.path(), &bin)), Ok(Verdict::Findings));
+  assert_eq!(
+    run_inner(&options(home.path(), &bin), true),
+    Ok(Verdict::Findings)
+  );
 }
 
 #[test]

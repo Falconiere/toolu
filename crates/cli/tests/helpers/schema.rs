@@ -61,7 +61,6 @@ fn a_snapshot_pins_the_command_tree() {
 fn every_other_json_document_validates_against_its_definition() {
   for (args, def) in [
     (&["--json", "epik", "start"][..], "error"),
-    (&["epic", "status", "--json"], "epicStatus"),
     (&["--json", "--version"], "version"),
     (&["--json", "--help"], "help"),
     (&["--json", "epic", "--help"], "help"),
@@ -82,6 +81,22 @@ fn every_other_json_document_validates_against_its_definition() {
   );
   assert_ne!(
     violations(&json!({ "error": { "code": 64 } }), Some("error")).unwrap(),
+    Vec::<String>::new()
+  );
+}
+
+#[test]
+fn epic_status_json_validates_with_an_isolated_resource_home() {
+  let home = tempfile::tempdir().unwrap();
+  let output = assert_cmd::Command::new(crate::cli::TOOLU)
+    .args(["epic", "status", "--json"])
+    .env("TOOLU_RESOURCE_HOME", home.path())
+    .output()
+    .unwrap();
+  let document = one_document(&output).unwrap();
+  assert_eq!(document["engine"], "down");
+  assert_eq!(
+    violations(&document, Some("epicStatus")).unwrap(),
     Vec::<String>::new()
   );
 }

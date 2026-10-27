@@ -4,11 +4,56 @@ use std::path::Path;
 
 use serde_json::json;
 use toolu_runtime::config::secrets::Secrets;
+use toolu_state::time::epoch_millis;
 
 use crate::disk::write_value;
 use crate::fleet_rig::{Engine, config, free_port, get_json, listener};
 
 const ASSET_CACHE: &str = "public, max-age=31536000, immutable";
+const ASSET_ROUTES: [(&str, &str, &str, &str); 12] = [
+  ("/", "index.html", "text/html", "no-store"),
+  ("/tokens.css", "tokens.css", "text/css", ASSET_CACHE),
+  ("/board.css", "board.css", "text/css", ASSET_CACHE),
+  (
+    "/board-layout.css",
+    "board-layout.css",
+    "text/css",
+    ASSET_CACHE,
+  ),
+  ("/panels.css", "panels.css", "text/css", ASSET_CACHE),
+  ("/js/app.js", "js/app.js", "text/javascript", ASSET_CACHE),
+  ("/js/api.js", "js/api.js", "text/javascript", ASSET_CACHE),
+  (
+    "/js/logic/status.js",
+    "js/logic/status.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/view/dashboard.js",
+    "js/view/dashboard.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/js/view/peer.js",
+    "js/view/peer.js",
+    "text/javascript",
+    ASSET_CACHE,
+  ),
+  (
+    "/fonts/archivo.woff2",
+    "fonts/archivo.woff2",
+    "font/woff2",
+    ASSET_CACHE,
+  ),
+  (
+    "/fonts/jetbrains-mono.woff2",
+    "fonts/jetbrains-mono.woff2",
+    "font/woff2",
+    ASSET_CACHE,
+  ),
+];
 
 fn request(addr: std::net::SocketAddr, method: &str, path: &str) -> (String, Vec<u8>) {
   let mut stream = TcpStream::connect(addr).expect("connect");
@@ -27,65 +72,44 @@ fn request(addr: std::net::SocketAddr, method: &str, path: &str) -> (String, Vec
   (head, response[split + 4..].to_vec())
 }
 
+fn assert_asset(
+  addr: std::net::SocketAddr,
+  version: &str,
+  assets: &Path,
+  (route, file, kind, cache): (&str, &str, &str, &str),
+) {
+  let path = if route == "/" {
+    route.to_owned()
+  } else {
+    format!("/assets/{version}{route}")
+  };
+  let (headers, body) = request(addr, "GET", &path);
+  assert!(headers.starts_with("HTTP/1.1 200 OK"), "{path}: {headers}");
+  assert_eq!(
+    body,
+    std::fs::read(assets.join(file)).expect(file),
+    "{path}"
+  );
+  assert!(headers.contains(&format!("Content-Type: {kind}")), "{path}");
+  assert!(
+    headers.contains(&format!("Cache-Control: {cache}")),
+    "{path}"
+  );
+  assert!(
+    headers.contains("X-Content-Type-Options: nosniff"),
+    "{path}"
+  );
+  assert!(headers.contains("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"), "{path}");
+}
+
 #[test]
 fn dashboard_asset_routes_match_embedded_bytes_and_security_headers() {
   let temp = tempfile::tempdir().expect("temp root");
   let (running, stop) = listener(temp.path(), config(0, Vec::new(), Secrets::none()));
   let version = env!("CARGO_PKG_VERSION");
   let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/dashboard");
-  for (route, file, kind, cache) in [
-    ("/", "index.html", "text/html", "no-store"),
-    ("/tokens.css", "tokens.css", "text/css", ASSET_CACHE),
-    ("/board.css", "board.css", "text/css", ASSET_CACHE),
-    ("/js/app.js", "js/app.js", "text/javascript", ASSET_CACHE),
-    ("/js/api.js", "js/api.js", "text/javascript", ASSET_CACHE),
-    (
-      "/js/logic/status.js",
-      "js/logic/status.js",
-      "text/javascript",
-      ASSET_CACHE,
-    ),
-    (
-      "/js/view/dashboard.js",
-      "js/view/dashboard.js",
-      "text/javascript",
-      ASSET_CACHE,
-    ),
-    (
-      "/fonts/archivo.woff2",
-      "fonts/archivo.woff2",
-      "font/woff2",
-      ASSET_CACHE,
-    ),
-    (
-      "/fonts/jetbrains-mono.woff2",
-      "fonts/jetbrains-mono.woff2",
-      "font/woff2",
-      ASSET_CACHE,
-    ),
-  ] {
-    let path = if route == "/" {
-      route.to_owned()
-    } else {
-      format!("/assets/{version}{route}")
-    };
-    let (headers, body) = request(running.addr, "GET", &path);
-    assert!(headers.starts_with("HTTP/1.1 200 OK"), "{path}: {headers}");
-    assert_eq!(
-      body,
-      std::fs::read(assets.join(file)).expect(file),
-      "{path}"
-    );
-    assert!(headers.contains(&format!("Content-Type: {kind}")), "{path}");
-    assert!(
-      headers.contains(&format!("Cache-Control: {cache}")),
-      "{path}"
-    );
-    assert!(
-      headers.contains("X-Content-Type-Options: nosniff"),
-      "{path}"
-    );
-    assert!(headers.contains("Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"), "{path}");
+  for spec in ASSET_ROUTES {
+    assert_asset(running.addr, version, &assets, spec);
   }
   let (headers, _) = request(
     running.addr,
@@ -141,6 +165,78 @@ fn dashboard_asset_page_is_offline_and_font_licensed() {
 }
 
 #[test]
+fn dashboard_page_has_the_board_panels_and_accessible_states() {
+  let assets = Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/dashboard");
+  let page = std::fs::read_to_string(assets.join("index.html")).expect("page");
+  for id in [
+    "tile-workers",
+    "tile-attention",
+    "tile-hosts",
+    "tile-plans",
+    "board",
+    "hosts",
+    "attention",
+    "journal",
+    "peer-banner",
+    "peer-link",
+  ] {
+    assert!(page.contains(&format!("id=\"{id}\"")), "{id}");
+  }
+  let states = std::fs::read_to_string(assets.join("js/logic/status.js")).expect("states");
+  for label in [
+    "● WORKING",
+    "▲ BLOCKED",
+    "/ IDLE",
+    "✓ DONE",
+    "? UNKNOWN",
+    "○ QUEUED",
+    "● IN ROTATION",
+    "◷ COOLING",
+    "‖ PAUSED",
+  ] {
+    assert!(states.contains(label), "{label}");
+  }
+  let motion = std::fs::read_to_string(assets.join("panels.css")).expect("motion");
+  assert!(motion.contains("@media (prefers-reduced-motion: reduce)"));
+  assert!(motion.contains("animation: none"));
+  for file in ["tokens.css", "board.css", "board-layout.css", "panels.css"] {
+    let css = std::fs::read_to_string(assets.join(file)).expect(file);
+    assert!(
+      !css.contains("http://") && !css.contains("https://"),
+      "{file}"
+    );
+  }
+}
+
+fn save_capture(captured: &serde_json::Value) {
+  if std::env::var_os("TOOLU_CAPTURE_DASHBOARD").is_none() {
+    return;
+  }
+  let path =
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/dashboard/status.json");
+  std::fs::create_dir_all(path.parent().expect("fixture parent")).expect("fixture dir");
+  std::fs::write(
+    &path,
+    serde_json::to_vec_pretty(captured).expect("fixture json"),
+  )
+  .expect("write fixture");
+}
+
+fn seed_host_states(root: &Path) {
+  let now = epoch_millis(std::time::SystemTime::now());
+  write_value(
+    &root.join("state.json"),
+    &json!({
+      "version": 1,
+      "leases": [],
+      "cooldowns": {"codex": {"until": now + 41 * 60_000, "reason": "usage limit"}},
+      "paused_hosts": {"muse": {"by": "user", "at": now}}
+    }),
+  )
+  .expect("host states");
+}
+
+#[test]
 fn dashboard_status_capture_comes_from_running_engines() {
   let temp = tempfile::tempdir().expect("temp root");
   let peer = Engine::start_titled(
@@ -155,6 +251,7 @@ fn dashboard_status_capture_comes_from_running_engines() {
     "local-658",
     config(free_port(), vec![peer.peer("build-mini")], Secrets::none()),
   );
+  seed_host_states(&local.paths.root);
   let issue_dir = local.root.join("local-649/issues");
   std::fs::create_dir_all(&issue_dir).expect("issue dir");
   write_value(
@@ -181,16 +278,9 @@ fn dashboard_status_capture_comes_from_running_engines() {
   assert_eq!(captured["board"]["issues"][0]["key"], "local-658");
   assert_eq!(captured["peer_board"]["issues"][0]["key"], "peer-658");
   assert_eq!(captured["fleet"]["machines"][1]["name"], "build-mini");
-  if std::env::var_os("TOOLU_CAPTURE_DASHBOARD").is_some() {
-    let path =
-      Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/epic/dashboard/status.json");
-    std::fs::create_dir_all(path.parent().expect("fixture parent")).expect("fixture dir");
-    std::fs::write(
-      &path,
-      serde_json::to_vec_pretty(&captured).expect("fixture json"),
-    )
-    .expect("write fixture");
-  }
+  assert_eq!(captured["hosts"]["items"][1]["reason"], "usage limit");
+  assert_eq!(captured["hosts"]["items"][3]["paused"], true);
+  save_capture(&captured);
   local.stop();
   peer.stop();
 }

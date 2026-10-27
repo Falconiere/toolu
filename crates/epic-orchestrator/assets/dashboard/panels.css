@@ -1,0 +1,189 @@
+.panels {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+.panel {
+  min-width: 0;
+  min-height: 260px;
+  padding: 19px 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  border-radius: 10px;
+}
+.panel .section-heading {
+  margin-bottom: 17px;
+}
+.panel .section-heading h2 {
+  font-size: 16px;
+}
+.host-list,
+.attention-list,
+.journal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.host-row {
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+.host-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.host-head strong {
+  font-weight: 500;
+}
+.host-meta,
+.host-note {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+.host-note {
+  color: var(--muted);
+}
+.help {
+  margin: 15px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.attention-row,
+.journal-row {
+  padding: 11px 0;
+  border-top: 1px solid var(--line);
+}
+.attention-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.attention-head strong {
+  color: var(--warn);
+  font-weight: 500;
+}
+.attention-head time {
+  margin-left: auto;
+  color: var(--muted);
+}
+.attention-row p {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+}
+.attention-action-slot {
+  display: block;
+}
+.journal-row {
+  display: flex;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.journal-row time {
+  flex: none;
+  color: var(--muted);
+}
+.journal-row span {
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.empty {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 20px;
+  color: var(--muted);
+  font-size: 12px;
+}
+footer {
+  padding: 24px 0 32px;
+  border-top: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+}
+@media (max-width: 600px) {
+  .shell {
+    padding: 0 16px;
+  }
+  .topbar {
+    min-height: 0;
+    flex-wrap: wrap;
+    gap: 0;
+    padding-top: 15px;
+  }
+  .brand {
+    width: 100%;
+  }
+  .machines {
+    min-height: 48px;
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .machine {
+    padding: 0 10px;
+  }
+  main {
+    padding: 28px 0 36px;
+  }
+  .heading {
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 24px;
+  }
+  .connection {
+    margin: 0;
+  }
+  .peer-banner {
+    display: block;
+  }
+  .peer-banner a {
+    display: inline-block;
+    margin-top: 9px;
+  }
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1px;
+    margin-bottom: 32px;
+  }
+  .tile {
+    min-height: 137px;
+    padding: 15px 13px;
+  }
+  .tile dd {
+    margin-top: 14px;
+    font-size: 24px;
+  }
+  .tile p {
+    font-size: 12px;
+  }
+  .epic-header {
+    align-items: start;
+    flex-direction: column;
+    gap: 7px;
+    padding: 15px;
+  }
+  .epic h3 {
+    font-size: 16px;
+  }
+  .panels {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .panel {
+    min-height: 0;
+  }
+  .section-heading > span {
+    font-size: 11px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .state-working .glyph {
+    animation: none;
+  }
+}
