@@ -29,7 +29,7 @@ Schema: a `codeReview` `$def` in `crates/cli/src/commands.schema.json` (the docs
 
 Registration points (each from the issue's review additions):
 - Root `Cargo.toml` members, `Cargo.lock` (updated before `cargo xtask docs-cli`, which builds `--locked`), `crates/cli/Cargo.toml` dependency, `folders.json` `crates` entry; `layers.json` unchanged (plugin crate, no new layer).
-- `crates/cli/src/registry.rs` `verb("code-review", …)`, additive; `crates/cli/src/tests/tree_test.rs` and `crates/cli/tests/contract.rs` namespace order; `crates/cli/tests/fixtures/commands_json.snap` regenerated; `crates/cli/tests/helpers/inventory.rs` plugin count 12 → 13; `crates/cli/tests/helpers/schema.rs` routes the new namespace to `codeReview`.
+- `crates/cli/src/registry.rs` `verb("code-review", …)`, additive; `crates/cli/src/tests/tree_test.rs` and `crates/cli/tests/contract.rs` namespace order; `crates/cli/tests/fixtures/commands_json.snap` regenerated; `crates/cli/tests/helpers/inventory.rs` plugin count 12 → 13; `crates/cli/tests/helpers/schema.rs` skips `code-review` in its every-namespace exit-0 loop, because `run` exits 69. Its `violations` is shared with `crates/cli/tests/helpers/code_review_schema.rs`, which validates the namespace against `codeReview`.
 - `crates/xtask/src/packaging_assets.rs` `PLUGINS` 12 → 13. `SKILLS` and `HOOKS` unchanged and the `context_budget.rs` `SKILLS` entry not added, because this PR ships no skill and no hook; #669 adds the skill, its count and its budget entry together (a budget entry for a missing `SKILL.md` would fail the check).
 - `plugins/code-review/` with `README.md` and `.claude-plugin`, `.codex-plugin`, `.muse-plugin` `plugin.json` (`hookProtocol: 2` on Claude and Codex only; descriptions byte-identical); `.claude-plugin/marketplace.json` and `.agents/plugins/marketplace.json` entries; three `release-please-config.json` `extra-files` rows.
 - `crates/toolu/src/doctor/tools.rs`: `code-review` requires `git`.
@@ -139,3 +139,21 @@ Budget constants (`budget.rs`): `RULES_MAX_BYTES = 65_536`, `CHECKLIST_MAX_BYTES
   - Outage exits 69, as the issue's exit table and the epic decide (Jev 0.07 for changing it to 75).
   - The `code-review` name, which the issue mandates.
   - The `wip:` commit subject, which the squash merge replaces.
+
+## Code review, round 2 (after rebase on main, 2026-10-27)
+
+- Fixed:
+  - Findings are sorted worst first.
+  - The summary line names unreviewed paths.
+  - The report types are serialise-only, so no read path can bring in an uncomputed verdict or a negative cost.
+  - `Cost` is a newtype whose `Serialize` rejects non-finite or negative values, replacing the generic workaround.
+  - `quote` must be non-empty in the schema.
+  - `present` builds its `Outcome` once.
+  - The spec now matches the schema helper routing.
+- Kept:
+  - The public `verdict` field, because siblings read the report and #669 owns writes.
+  - Line `>= 1` and `end_line >= line`, which the validate stage (#668) enforces.
+  - The `code-review` name, which the issue mandates.
+  - The repeated schema compile in test helpers, a pre-existing helper design.
+  - The test overlap and the cap-value test: `check-unused-pub` needs each public cap named by a test.
+  - The `wip:` subject, which the squash merge replaces.

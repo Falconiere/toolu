@@ -4,7 +4,7 @@
 use serde_json::{Value, json};
 use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::{
-  Coverage, ErrorKind, Finding, Omitted, Report, ReportError, Severity, Side, Source, Usage,
+  Cost, Coverage, ErrorKind, Finding, Omitted, Report, ReportError, Severity, Side, Source, Usage,
 };
 
 use crate::cli::{one_document, stderr, toolu};
@@ -52,7 +52,7 @@ fn blocked_report() -> Report {
   let usage = Usage {
     tokens_in: 1200,
     tokens_out: 3400,
-    cost_usd: 0.0123,
+    cost_usd: Cost(0.0123),
     model: Some("deepseek/deepseek-v4-pro-0813".to_owned()),
   };
   Report::reviewed(Effort::Medium, findings, coverage, usage)
@@ -90,10 +90,12 @@ fn a_blocked_report_validates_and_counts_blocking_findings() {
     violations(&doc, Some("codeReview")).unwrap(),
     Vec::<String>::new()
   );
+  let ids: Vec<&Value> = (0..5).map(|index| &doc["findings"][index]["id"]).collect();
+  assert_eq!(ids, ["f1", "f5", "f2", "f3", "f4"], "worst first");
   assert_eq!(doc["findings"][0]["suggestion"], "Use items.last().");
   assert!(doc["findings"][1].get("suggestion").is_none());
-  assert_eq!(doc["findings"][1]["side"], "old");
-  assert_eq!(doc["findings"][3]["source"], "ast-grep");
+  assert_eq!(doc["findings"][2]["side"], "old");
+  assert_eq!(doc["findings"][4]["source"], "ast-grep");
   assert_eq!(doc["error"], Value::Null);
 }
 

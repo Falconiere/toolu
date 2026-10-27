@@ -22,7 +22,7 @@ Standalone, no dependencies. It needs `git`, which `toolu doctor` checks.
 
 ## What it provides
 
-- `toolu code-review run`: the review verb. Exit 0 means approved, 2 means blocking findings (`blocker`, `high` or `medium`), 64 means a usage error, and 69 means unconfigured or a total model outage.
+- `toolu code-review run`: the review verb. Exit 0 means approved, 2 means blocking findings (`blocker`, `high` or `medium`) or a path left unreviewed, 64 means a usage error, and 69 means unconfigured or a total model outage.
 - The skill that runs it ships with the verdict report (#669).
 
 ## Muse

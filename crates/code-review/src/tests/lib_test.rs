@@ -56,12 +56,30 @@ fn a_report_without_an_error_prints_its_verdict_line() {
     outcome.stdout.as_deref(),
     Some("code-review: approved, 0 blocking finding(s)")
   );
+  let partial = super::Report::reviewed(
+    super::budget::Effort::Small,
+    Vec::new(),
+    super::contract::Coverage {
+      unreviewed: vec![super::contract::Omitted {
+        path: "src/big.rs".to_owned(),
+        reason: "over budget".to_owned(),
+      }],
+      ..super::contract::Coverage::default()
+    },
+    super::contract::Usage::default(),
+  );
+  let outcome = super::present(&partial, &Ctx::default());
+  assert_eq!(outcome.exit, Exit::Blocked);
+  assert_eq!(
+    outcome.stdout.as_deref(),
+    Some("code-review: blocked, 0 blocking finding(s), 1 unreviewed path(s)")
+  );
 }
 
 #[test]
 fn a_report_that_cannot_serialise_fails_under_json() {
   let usage = super::contract::Usage {
-    cost_usd: f64::NAN,
+    cost_usd: super::contract::Cost(f64::NAN),
     ..super::contract::Usage::default()
   };
   let report = super::Report::reviewed(

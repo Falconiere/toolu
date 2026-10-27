@@ -1,6 +1,6 @@
 use toolu_protocol::exit::Exit;
 
-use super::{Coverage, ErrorKind, Finding, Omitted, Report, Severity, Side, Source, Usage};
+use super::{Cost, Coverage, ErrorKind, Finding, Omitted, Report, Severity, Side, Source, Usage};
 use crate::budget::Effort;
 
 fn finding(severity: Severity) -> Finding {
@@ -57,6 +57,18 @@ fn the_verdict_is_computed_from_findings_and_coverage() {
     ("blocked", Exit::Blocked)
   );
   assert_eq!(blocked.blocking_count(), 1);
+  let sorted = reviewed(
+    vec![finding(Severity::Nit), finding(Severity::Blocker)],
+    Coverage::default(),
+  );
+  assert_eq!(
+    sorted
+      .findings
+      .iter()
+      .map(|f| f.severity)
+      .collect::<Vec<_>>(),
+    [Severity::Blocker, Severity::Nit]
+  );
   let partial = reviewed(
     Vec::new(),
     Coverage {
@@ -93,7 +105,7 @@ fn a_failed_report_carries_the_versions_and_its_error() {
 fn a_non_finite_or_negative_cost_does_not_serialise() {
   for cost_usd in [f64::NAN, f64::INFINITY, -0.5] {
     let usage = Usage {
-      cost_usd,
+      cost_usd: Cost(cost_usd),
       ..Usage::default()
     };
     let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);

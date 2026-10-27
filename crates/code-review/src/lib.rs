@@ -50,31 +50,35 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
 
 /// The report as one JSON document under `--json`, otherwise one line.
 fn present(report: &Report, ctx: &Ctx) -> Outcome {
-  if ctx.json {
-    return match serde_json::to_string(report) {
-      Ok(doc) => Outcome {
-        exit: report.exit(),
-        stdout: Some(doc),
-        stderr: None,
-      },
-      Err(err) => Outcome::failed(Exit::Failure, format!("code-review: {err}")),
-    };
+  let stdout = if ctx.json {
+    match serde_json::to_string(report) {
+      Ok(doc) => doc,
+      Err(err) => return Outcome::failed(Exit::Failure, format!("code-review: {err}")),
+    }
+  } else if let Some(error) = &report.error {
+    let line = format!("code-review: {}: {}", error.kind.name(), error.message);
+    return Outcome::failed(report.exit(), line);
+  } else {
+    summary(report)
+  };
+  Outcome {
+    exit: report.exit(),
+    stdout: Some(stdout),
+    stderr: None,
   }
-  match &report.error {
-    Some(error) => Outcome::failed(
-      report.exit(),
-      format!("code-review: {}: {}", error.kind.name(), error.message),
-    ),
-    None => Outcome {
-      exit: report.exit(),
-      stdout: Some(format!(
-        "code-review: {}, {} blocking finding(s)",
-        report.verdict.name(),
-        report.blocking_count()
-      )),
-      stderr: None,
-    },
-  }
+}
+
+/// The verdict line; unreviewed paths block too, so a blocked run names them.
+fn summary(report: &Report) -> String {
+  let unreviewed = match report.coverage.unreviewed.len() {
+    0 => String::new(),
+    count => format!(", {count} unreviewed path(s)"),
+  };
+  format!(
+    "code-review: {}, {} blocking finding(s){unreviewed}",
+    report.verdict.name(),
+    report.blocking_count()
+  )
 }
 
 #[cfg(test)]

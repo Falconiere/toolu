@@ -12,8 +12,8 @@ use crate::budget::Effort;
 /// The contract's version; a breaking change to the report raises it.
 pub const SCHEMA_VERSION: u32 = 1;
 
-/// How bad a finding is.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+/// How bad a finding is; ordered worst first.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Severity {
   /// Must not ship.
@@ -36,7 +36,7 @@ impl Severity {
 }
 
 /// Which side of the diff a finding's lines number.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Side {
   /// The new file: added or context lines.
@@ -46,7 +46,7 @@ pub enum Side {
 }
 
 /// What produced a finding.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Source {
   /// The review model.
@@ -58,7 +58,7 @@ pub enum Source {
 }
 
 /// One anchored finding.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Finding {
   /// Stable within a branch's review memory.
   pub id: String,
@@ -91,7 +91,7 @@ pub struct Finding {
 pub enum Verdict {
   /// No blocking finding and full coverage.
   Approved,
-  /// At least one blocking finding.
+  /// At least one blocking finding, or a path left unreviewed.
   Blocked,
   /// The run could not review; `error` says why.
   Error,
@@ -109,7 +109,7 @@ impl Verdict {
 }
 
 /// A path left out of the review, and why.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Omitted {
   /// Repository-relative path.
   pub path: String,
@@ -118,7 +118,7 @@ pub struct Omitted {
 }
 
 /// What the run covered.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct Coverage {
   /// Paths reviewed in full.
   pub reviewed: Vec<String>,
@@ -129,37 +129,37 @@ pub struct Coverage {
 }
 
 /// What the run cost.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Serialize)]
 pub struct Usage {
   /// Prompt tokens.
   pub tokens_in: u64,
   /// Completion tokens, reasoning included.
   pub tokens_out: u64,
-  /// Reported cost in US dollars; a non-finite or negative cost fails serialisation.
-  #[serde(serialize_with = "finite_cost")]
-  pub cost_usd: f64,
+  /// Reported cost.
+  pub cost_usd: Cost,
   /// The model that served the review, when one did.
   pub model: Option<String>,
 }
 
-/// `cost_usd` as a number, or an error: `serde_json` would write NaN as `null`.
-/// Generic over the cost because `serialize_with` hands it over by reference.
-fn finite_cost<S: Serializer, C: Copy + Into<f64>>(
-  cost: &C,
-  serializer: S,
-) -> Result<S::Ok, S::Error> {
-  let cost: f64 = (*cost).into();
-  if cost.is_finite() && cost >= 0.0 {
-    serializer.serialize_f64(cost)
-  } else {
-    Err(S::Error::custom(
-      "cost_usd is not a finite, non-negative number",
-    ))
+/// A cost in US dollars. Serialising a non-finite or negative cost fails:
+/// `serde_json` would otherwise write NaN as `null`.
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct Cost(pub f64);
+
+impl Serialize for Cost {
+  fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+    if self.0.is_finite() && self.0 >= 0.0 {
+      serializer.serialize_f64(self.0)
+    } else {
+      Err(S::Error::custom(
+        "cost_usd is not a finite, non-negative number",
+      ))
+    }
   }
 }
 
 /// Why a run could not review.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ErrorKind {
   /// Missing key, missing opt-in, or a pipeline not built: nothing was sent.
@@ -179,7 +179,7 @@ impl ErrorKind {
 }
 
 /// The error of a run whose verdict is `error`.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct ReportError {
   /// Which failure.
   pub kind: ErrorKind,
@@ -187,8 +187,9 @@ pub struct ReportError {
   pub message: String,
 }
 
-/// The whole report.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+/// The whole report. It is built with `reviewed` or `failed` and only ever
+/// serialised: no read path can bring in a verdict that was not computed.
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Report {
   /// `SCHEMA_VERSION`.
   pub schema_version: u32,
@@ -209,14 +210,16 @@ pub struct Report {
 }
 
 impl Report {
-  /// A reviewed run. The verdict is computed here, never taken from the model:
-  /// `blocked` when a finding blocks or any path went unreviewed, else `approved`.
+  /// A reviewed run, its findings sorted worst first (stable). The verdict is computed
+  /// here, never taken from the model: `blocked` when a finding blocks or any path
+  /// went unreviewed, else `approved`.
   pub fn reviewed(
     effort: Effort,
-    findings: Vec<Finding>,
+    mut findings: Vec<Finding>,
     coverage: Coverage,
     usage: Usage,
   ) -> Report {
+    findings.sort_by_key(|finding| finding.severity);
     let blocked =
       findings.iter().any(|finding| finding.severity.blocking()) || !coverage.unreviewed.is_empty();
     Report {

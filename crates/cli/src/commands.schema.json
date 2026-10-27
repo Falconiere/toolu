@@ -794,7 +794,8 @@
                 "minLength": 1
               },
               "quote": {
-                "type": "string"
+                "type": "string",
+                "minLength": 1
               },
               "suggestion": {
                 "type": "string"
