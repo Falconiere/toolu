@@ -14,6 +14,9 @@ use toolu_runtime::env::Env;
 
 mod args;
 mod catalog;
+#[cfg(test)]
+#[path = "tests/codex_stub_test.rs"]
+mod codex_stub;
 mod cursor;
 mod dispatch;
 #[cfg(test)]

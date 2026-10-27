@@ -56,7 +56,7 @@ toolu plugins update [name...]    Update toolu's plugins on every host that has 
 | Flag | Meaning |
 |------|---------|
 | `--host <id>` | `claude`, `codex`, `muse` or `cursor`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`, except `update` without `--host`, which ignores it on those hosts. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`, except `update` without `--host`, which does not use it. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. |
@@ -209,7 +209,8 @@ hosts, and Cursor when toolu installed a plugin there.
   exits `1`.
 - A host that fails (for example, its marketplace cannot be pinned) gets a failed
   step named after the host. The other hosts still run, and the exit is `1`.
-- `--scope` concerns Claude Code alone and is ignored on the other hosts.
+- `--scope` is accepted for Claude Code and not used by `update`: Claude Code
+  picks the scope of each update itself.
 
 On Claude Code, each update runs `claude plugin update <name>@toolu --json`, and
 its result line decides `current at <version>`, `updated <old> → <new>`, or

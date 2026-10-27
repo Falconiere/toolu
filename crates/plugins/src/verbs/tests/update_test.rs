@@ -36,7 +36,7 @@ fn only_toolu_plugins_are_updated_once_each_and_retired_ones_get_a_hint() {
     ("plugin update jev@toolu --json", "update-up-to-date"),
     ("plugin update toolu@toolu --json", "update-up-to-date"),
   ]);
-  let Ok(steps) = run(&driver(&sb), &catalog(), &[], false) else {
+  let Ok(steps) = run(&driver(&sb), &catalog(), &[], false, None) else {
     panic!("update failed outright");
   };
   let hint = |name: &str| {
@@ -102,7 +102,7 @@ fn each_captured_claude_result_line_maps_to_its_step() {
   for (case, status, detail) in cases {
     let sb = Sandbox::new();
     sb.replay(&[("plugin update jev@toolu --json", case)]);
-    let Ok(steps) = run(&driver(&sb), &catalog(), &names(&["jev"]), false) else {
+    let Ok(steps) = run(&driver(&sb), &catalog(), &names(&["jev"]), false, None) else {
       panic!("update failed outright for {case}");
     };
     assert_eq!(
@@ -117,14 +117,14 @@ fn each_captured_claude_result_line_maps_to_its_step() {
 fn a_named_plugin_the_host_does_not_report_is_still_attempted() {
   let sb = Sandbox::new();
   sb.host("claude", "[]", "never");
-  let Ok(steps) = run(&driver(&sb), &catalog(), &names(&["jev"]), false) else {
+  let Ok(steps) = run(&driver(&sb), &catalog(), &names(&["jev"]), false, None) else {
     panic!("update failed outright");
   };
   assert_eq!(
     (steps[0].status, steps[0].detail.as_str()),
     (Status::Updated, "updated")
   );
-  let Ok(dry) = run(&driver(&sb), &catalog(), &names(&["jev"]), true) else {
+  let Ok(dry) = run(&driver(&sb), &catalog(), &names(&["jev"]), true, None) else {
     panic!("the dry run failed");
   };
   assert_eq!(dry[0].status, Status::Skipped);
@@ -134,7 +134,7 @@ fn a_named_plugin_the_host_does_not_report_is_still_attempted() {
 fn nothing_requested_and_nothing_installed_says_so() {
   let sb = Sandbox::new();
   sb.host("claude", "[]", "never");
-  let Err(fail) = run(&driver(&sb), &catalog(), &[], false) else {
+  let Err(fail) = run(&driver(&sb), &catalog(), &[], false, None) else {
     panic!("an empty update reported success");
   };
   assert_eq!(
@@ -163,7 +163,7 @@ fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
   let sb = Sandbox::new();
   let driver = muse(&sb, &[("hooky", "brainstorm"), ("8.0.4", "8.0.3")]);
   sb.capture("inspect-modified", "muse-inspect-toolu.json");
-  let Ok(steps) = run(&driver, &catalog(), &[], false) else {
+  let Ok(steps) = run(&driver, &catalog(), &[], false, None) else {
     panic!("the Muse update failed outright");
   };
   let seen: Vec<(&str, Status, &str)> = steps
@@ -187,7 +187,7 @@ fn muse_updates_its_own_plugins_and_names_a_changed_hook_for_approval() {
     !log.iter().any(|line| line.contains("update brainstorm")),
     "{log:?}"
   );
-  let Ok(named) = run(&driver, &catalog(), &names(&["brainstorm"]), false) else {
+  let Ok(named) = run(&driver, &catalog(), &names(&["brainstorm"]), false, None) else {
     panic!("the named Muse update failed outright");
   };
   assert_eq!(named[0].status, Status::Skew);
@@ -206,7 +206,7 @@ fn a_retired_muse_plugin_from_the_checkout_gets_muses_own_remove_command() {
       ("hooky", "jira"),
     ],
   );
-  let Ok(steps) = run(&driver, &catalog(), &[], true) else {
+  let Ok(steps) = run(&driver, &catalog(), &[], true, None) else {
     panic!("the Muse dry update failed outright");
   };
   let jira = steps.iter().find(|step| step.name == "jira");
@@ -217,4 +217,24 @@ fn a_retired_muse_plugin_from_the_checkout_gets_muses_own_remove_command() {
       "retired from the toolu marketplace; remove it with `muse plugins remove jira`"
     ))
   );
+}
+
+#[test]
+fn an_update_draws_its_bar_to_the_end_and_clears_it() {
+  let sb = Sandbox::new();
+  sb.replay(&[("plugin update jev@toolu --json", "update-up-to-date")]);
+  let screen = crate::support::Screen::default();
+  let mut driver = driver(&sb);
+  driver.progress = Some(screen.progress());
+  let Ok(steps) = run(&driver, &catalog(), &names(&["jev"]), false, None) else {
+    panic!("update failed outright");
+  };
+  assert_eq!(steps[0].status, Status::Current);
+  let drawn = screen.text();
+  assert!(
+    drawn.contains("◇  claude  ████████████████████  1/1"),
+    "{drawn}"
+  );
+  assert!(drawn.contains("updating jev…"), "{drawn}");
+  assert!(drawn.ends_with("\r\x1b[2K\x1b[1A\r\x1b[2K"), "{drawn:?}");
 }

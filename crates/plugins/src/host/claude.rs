@@ -65,24 +65,17 @@ pub(crate) fn update_step(name: &str, ran: &Ran, argv: Vec<String>) -> Step {
     .find_map(|line| serde_json::from_str::<Value>(line.trim()).ok())
     .filter(Value::is_object);
   let Some(result) = result else {
-    return if ran.ok() {
-      Step::new(name, Status::Updated, "updated", argv)
-    } else {
-      Step::new(
-        name,
-        Status::Failed,
-        first_line(&ran.stderr, "update failed"),
-        argv,
-      )
-    };
+    return without_result(name, ran, argv);
   };
   let text = |key: &str| result.get(key).and_then(Value::as_str);
+  // Claude Code says "unknown" when it cannot tell a version.
+  let version = |key: &str| text(key).filter(|version| *version != "unknown");
   let message = text("message").map(str::to_owned);
   if !ran.ok() || text("outcome") == Some("failed") {
     let detail = message.unwrap_or_else(|| first_line(&ran.stderr, "update failed"));
     return Step::new(name, Status::Failed, detail, argv);
   }
-  let new = text("newVersion").filter(|version| *version != "unknown");
+  let new = version("newVersion");
   let refresh_failed = result.get("refreshFailed").and_then(Value::as_bool) == Some(true);
   match (text("updateOutcome"), new) {
     (Some("up_to_date"), Some(new)) if refresh_failed => Step::new(
@@ -95,9 +88,12 @@ pub(crate) fn update_step(name: &str, ran: &Ran, argv: Vec<String>) -> Step {
       Step::new(name, Status::Current, format!("current at {new}"), argv)
     }
     (Some("up_to_date"), None) => Step::new(name, Status::Current, "current", argv),
-    (Some("updated"), new) => {
-      Step::new(name, Status::Updated, moved(text("oldVersion"), new), argv)
-    }
+    (Some("updated"), new) => Step::new(
+      name,
+      Status::Updated,
+      moved(version("oldVersion"), new),
+      argv,
+    ),
     _skipped_or_unknown => Step::new(
       name,
       Status::Skew,
@@ -105,6 +101,19 @@ pub(crate) fn update_step(name: &str, ran: &Ran, argv: Vec<String>) -> Step {
       argv,
     ),
   }
+}
+
+/// The step when Claude Code printed no result line: an update when it exited
+/// 0, else a failure; a Claude Code without `plugin update --json` gets a hint.
+fn without_result(name: &str, ran: &Ran, argv: Vec<String>) -> Step {
+  if ran.ok() {
+    return Step::new(name, Status::Updated, "updated", argv);
+  }
+  let mut detail = first_line(&ran.stderr, "update failed");
+  if detail.contains("--json") {
+    detail.push_str("; toolu needs Claude Code 2.1.311 or newer (`claude plugin update --json`)");
+  }
+  Step::new(name, Status::Failed, detail, argv)
 }
 
 /// `updated <old> → <new>`, or as much of it as Claude Code reported.

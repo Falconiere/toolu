@@ -3,24 +3,10 @@ use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 
 use super::{Report, dispatch};
-use crate::args::{Approval, Request, Scope, Verb};
+use crate::args::{Request, Scope, Verb};
 use crate::fail::Fail;
 use crate::prompt::Ask;
-use crate::support::{Answer, Sandbox, catalog, context, names};
-
-fn request(verb: Verb, plugins: &[&str]) -> Request {
-  Request {
-    verb,
-    names: names(plugins),
-    scope: None,
-    config: None,
-    yes: false,
-    dry_run: false,
-    no_input: false,
-    catalog: None,
-    approval: Approval::Report,
-  }
-}
+use crate::support::{Answer, Sandbox, catalog, context, request};
 
 fn go(
   sb: &Sandbox,
@@ -274,39 +260,4 @@ fn a_dry_update_lists_only_what_would_run_and_a_dry_removal_removes_nothing() {
     "{}",
     planned.json
   );
-}
-
-#[test]
-fn a_terminal_style_draws_the_rails_report_and_opens_with_the_intro() {
-  let sb = Sandbox::new();
-  sb.host("claude", "[]", "never");
-  sb.write(
-    "claude-installed.json",
-    r#"[{"id":"jev@toolu","version":"7.11.0"}]"#,
-  );
-  let mut cx = context(
-    &sb,
-    Some(Host::Claude),
-    None,
-    toolu_runtime::term::Style::Mono,
-  );
-  let Ok(listed) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
-    panic!("list failed");
-  };
-  assert!(
-    listed
-      .text
-      .starts_with("┌  toolu plugins list\n│\n◇  claude\n"),
-    "{}",
-    listed.text
-  );
-  assert!(listed.text.contains("│  ✔ jev "), "{}", listed.text);
-  cx.progress = Some(std::sync::Arc::new(crate::progress::Progress::to_writer(
-    Box::new(std::io::sink()),
-    toolu_runtime::term::Style::Mono,
-  )));
-  let Ok(again) = dispatch(&request(Verb::List, &[]), &catalog(), &mut cx) else {
-    panic!("list failed");
-  };
-  assert!(again.text.starts_with("◇  claude\n"), "{}", again.text);
 }

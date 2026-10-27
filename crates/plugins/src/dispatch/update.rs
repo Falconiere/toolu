@@ -1,20 +1,32 @@
 //! `update`: one host with `--host`, as before; without it every detected host
 //! that has toolu plugins, with no prompt. Each host's toolu plugins are read
-//! before anything is prepared, pinned or cloned, so a host without them is
-//! only noted. A host that fails is reported in its own section and the others
-//! still run. `--scope` concerns Claude Code alone and is ignored elsewhere.
+//! before anything is prepared, pinned or cloned, so a host without them (or
+//! whose listing fails, with the reason) is only noted, and that listing is the
+//! one the update then uses. A host that fails is reported in its own section
+//! and the others still run. `--scope` is checked with `--host` and otherwise
+//! unused: Claude Code picks the scope of each update itself.
 
 use crate::args::Request;
 use crate::catalog::Catalog;
 use crate::catalog::order::install_order;
 use crate::cursor::store::Store;
 use crate::cursor::{self, Cursor};
-use crate::dispatch::{Context, Report, driver, dry_text, failed, one_host};
+use crate::dispatch::{Context, Report, driver, dry_text, failed};
 use crate::fail::{Fail, Res};
-use crate::host::{Target, with_toolu};
+use crate::host::adapter::Installed;
+use crate::host::run::first_line;
+use crate::host::{Target, check_scope, with_toolu};
 use crate::report::{self, rails};
 use crate::step::{Status, Step};
 use crate::verbs;
+
+/// One host's toolu plugins as read before anything changes.
+struct Have {
+  /// Each plugin once.
+  names: Vec<String>,
+  /// The host's listing, for the update to reuse (none for Cursor).
+  listing: Option<Vec<Installed>>,
+}
 
 /// Updates on `wanted`, or on every detected host when `--host` is absent.
 pub(super) fn run(
@@ -24,11 +36,15 @@ pub(super) fn run(
   cx: &mut Context<'_>,
 ) -> Res<Report> {
   install_order(catalog, &request.names)?;
-  let Some(_named) = wanted else {
+  let Some(target) = wanted else {
     return all(request, catalog, cx);
   };
-  let target = one_host(request, wanted, cx)?;
-  let steps = on(target, request, catalog, &request.names, cx)?;
+  check_scope(request.scope, target)?;
+  let have = Have {
+    names: request.names.clone(),
+    listing: None,
+  };
+  let steps = on(target, request, catalog, have, cx)?;
   Ok(Report {
     text: cx.shown(
       "update",
@@ -40,37 +56,48 @@ pub(super) fn run(
   })
 }
 
-/// Updates `names` on `target`.
+/// Updates `have.names` on `target`.
 fn on(
   target: Target,
   request: &Request,
   catalog: &Catalog,
-  names: &[String],
+  have: Have,
   cx: &Context<'_>,
 ) -> Res<Vec<Step>> {
   match target {
     Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
-      cursor::update(&Cursor::new(cx)?, catalog, names, request.dry_run)
+      cursor::update(&Cursor::new(cx)?, catalog, &have.names, request.dry_run)
     }),
     Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
       catalog,
-      names,
+      &have.names,
       request.dry_run,
+      have.listing,
     ),
   }
 }
 
-/// The toolu plugins `target` reports, read without changing anything.
-fn installed(target: Target, request: &Request, cx: &Context<'_>) -> Vec<String> {
+/// The toolu plugins `target` reports, read without changing anything; why
+/// they could not be read otherwise.
+fn installed(target: Target, request: &Request, cx: &Context<'_>) -> Result<Have, String> {
   if target == Target::Cursor {
-    return Store::locate(&cx.env).ours();
+    let names = Store::locate(&cx.env).ours();
+    return Ok(Have {
+      names,
+      listing: None,
+    });
   }
-  let Ok(driver) = driver(target, request, cx) else {
-    return Vec::new();
-  };
-  let listing = driver.versions(&driver.adapter.list_installed());
-  verbs::update::targets(&driver, &[], &listing)
+  let driver = driver(target, request, cx).map_err(|fail| fail.message)?;
+  let ran = driver.run(&driver.adapter.list_installed());
+  if !ran.ok() {
+    return Err(first_line(&ran.stderr, "plugin list failed"));
+  }
+  let listing = driver.adapter.parse_list(&ran.stdout)?;
+  Ok(Have {
+    names: verbs::update::targets(&driver, &[], &listing),
+    listing: Some(listing),
+  })
 }
 
 /// Every detected host with toolu plugins; the others are only noted.
@@ -81,29 +108,40 @@ fn all(request: &Request, catalog: &Catalog, cx: &mut Context<'_>) -> Res<Report
       "no host found on PATH (probed claude, codex, muse). Choose one with --host.",
     ));
   }
-  let found: Vec<(Target, Vec<String>)> = hosts
+  let found: Vec<(Target, Result<Have, String>)> = hosts
     .into_iter()
     .map(|target| (target, installed(target, request, cx)))
     .collect();
   anything_to_update(&found, &request.names)?;
   let mut sections = Vec::new();
   let mut notes = Vec::new();
-  for (target, have) in found {
+  for (target, read) in found {
+    let have = match read {
+      Ok(have) => have,
+      Err(cause) => {
+        notes.push((target, format!("could not list its plugins: {cause}")));
+        continue;
+      }
+    };
     let names: Vec<String> = if request.names.is_empty() {
-      have.clone()
+      have.names.clone()
     } else {
       request
         .names
         .iter()
-        .filter(|name| have.contains(name))
+        .filter(|name| have.names.contains(name))
         .cloned()
         .collect()
     };
     if names.is_empty() {
-      notes.push((target, skipped_note(&have, &request.names)));
+      notes.push((target, skipped_note(&have.names, &request.names)));
       continue;
     }
-    let steps = on(target, request, catalog, &names, cx).unwrap_or_else(|fail| {
+    let work = Have {
+      names,
+      listing: have.listing,
+    };
+    let steps = on(target, request, catalog, work, cx).unwrap_or_else(|fail| {
       vec![Step::new(
         target.name(),
         Status::Failed,
@@ -117,20 +155,39 @@ fn all(request: &Request, catalog: &Catalog, cx: &mut Context<'_>) -> Res<Report
 }
 
 /// Refuses a run with nothing to update: a named plugin no host has, or no
-/// toolu plugin anywhere.
-fn anything_to_update(found: &[(Target, Vec<String>)], names: &[String]) -> Res<()> {
-  if let Some(missing) = names
-    .iter()
-    .find(|name| !found.iter().any(|(_, have)| have.contains(name)))
-  {
+/// toolu plugin anywhere (naming each host that could not be read).
+fn anything_to_update(found: &[(Target, Result<Have, String>)], names: &[String]) -> Res<()> {
+  let has = |name: &String| {
+    found
+      .iter()
+      .any(|(_, read)| read.as_ref().is_ok_and(|have| have.names.contains(name)))
+  };
+  if let Some(missing) = names.iter().find(|name| !has(name)) {
     return Err(Fail::failed(format!(
       "{missing} is not installed from toolu on any detected host"
     )));
   }
-  if found.iter().all(|(_, have)| have.is_empty()) {
-    return Err(Fail::failed(
-      "no detected host has toolu plugins installed, so there is nothing to update",
-    ));
+  if found
+    .iter()
+    .all(|(_, read)| read.as_ref().map_or(true, |have| have.names.is_empty()))
+  {
+    let unread: Vec<String> = found
+      .iter()
+      .filter_map(|(target, read)| {
+        read
+          .as_ref()
+          .err()
+          .map(|cause| format!("{}: {cause}", target.name()))
+      })
+      .collect();
+    let why = if unread.is_empty() {
+      String::new()
+    } else {
+      format!(" (could not list: {})", unread.join("; "))
+    };
+    return Err(Fail::failed(format!(
+      "no detected host has toolu plugins installed, so there is nothing to update{why}"
+    )));
   }
   Ok(())
 }

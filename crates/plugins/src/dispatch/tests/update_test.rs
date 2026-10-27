@@ -2,6 +2,7 @@ use serde_json::json;
 use toolu_runtime::term::Style;
 
 use crate::args::{Approval, Request, Scope, Verb};
+use crate::codex_stub::codex;
 use crate::dispatch::{Report, dispatch};
 use crate::fail::{Fail, Res};
 use crate::prompt::{Ask, Choice};
@@ -42,14 +43,18 @@ fn update(
   dispatch(&request, &catalog(), &mut cx)
 }
 
-/// claude and codex with toolu plugins, muse with none.
-fn three_hosts(sb: &Sandbox, codex_fails: &str) {
+/// claude and codex with toolu plugins, muse with none; `codex_flag` names a
+/// failure the Codex stub acts out (`codex-fail-pin`), or nothing.
+fn three_hosts(sb: &Sandbox, codex_flag: &str) {
   sb.host("claude", "[]", "never");
   sb.write(
     "claude-installed.json",
     r#"[{"id":"jev@toolu","version":"7.11.0"},{"id":"cloudflare@cloudflare","version":"1.0.1"}]"#,
   );
-  sb.host("codex", r#"{"installed":[]}"#, codex_fails);
+  codex(sb, "none");
+  if !codex_flag.is_empty() {
+    sb.write(codex_flag, "");
+  }
   sb.write(
     "codex-installed.json",
     r#"{"installed":[{"name":"ast-grep","version":"7.11.0","marketplaceName":"toolu"}]}"#,
@@ -57,20 +62,26 @@ fn three_hosts(sb: &Sandbox, codex_fails: &str) {
   sb.muse("never");
 }
 
+/// `text` with the closing line's elapsed time made fixed.
+fn timeless(text: &str) -> String {
+  match text.rsplit_once("  (") {
+    Some((head, tail)) if tail.ends_with("s)\n") => format!("{head}  (Ts)\n"),
+    _other => text.to_owned(),
+  }
+}
+
 #[test]
 fn every_host_with_toolu_plugins_is_updated_without_asking() {
   let sb = Sandbox::new();
-  three_hosts(&sb, "never");
+  three_hosts(&sb, "");
   let report = update(&sb, &[], None, Style::Plain).expect("update");
-  assert!(report.text.contains("claude:\n  + jev "), "{}", report.text);
-  assert!(report.text.contains("codex:\n"), "{}", report.text);
-  assert!(
-    report
-      .text
-      .contains("muse: no toolu plugins installed; skipped"),
-    "{}",
-    report.text
+  assert_eq!(
+    report.text,
+    "claude:\n  + jev              updated\n\n\
+     codex:\n  + ast-grep         updated\n\n\
+     muse: no toolu plugins installed; skipped\n"
   );
+  assert!(!report.failed);
   let hosts: Vec<&str> = report.json["hosts"]
     .as_array()
     .expect("hosts")
@@ -90,17 +101,39 @@ fn every_host_with_toolu_plugins_is_updated_without_asking() {
       .any(|line| line.contains("cloudflare"))
   );
   assert_eq!(sb.log("muse"), ["plugins list --json"]);
+  let listings = sb
+    .log("claude")
+    .iter()
+    .filter(|line| *line == "plugin list --json")
+    .count();
+  assert_eq!(listings, 1, "claude was listed more than once");
+}
+
+#[test]
+fn the_rails_report_sections_every_host_and_notes_the_ones_left_out() {
+  let sb = Sandbox::new();
+  three_hosts(&sb, "");
+  let report = update(&sb, &[], None, Style::Mono).expect("update");
+  assert_eq!(
+    timeless(&report.text),
+    "┌  toolu plugins update\n│\n\
+     ◇  claude\n│  ✔ jev      updated\n│\n\
+     ◇  codex\n│  ✔ ast-grep updated\n│\n\
+     ◇  muse\n│  ○ no toolu plugins installed\n\
+     └  2 updated  (Ts)\n"
+  );
 }
 
 #[test]
 fn names_go_only_where_they_are_installed_and_nowhere_is_an_error() {
   let sb = Sandbox::new();
-  three_hosts(&sb, "never");
+  three_hosts(&sb, "");
   let report = update(&sb, &["jev"], None, Style::Plain).expect("update");
-  assert!(
-    report.text.contains("codex: jev not installed; skipped"),
-    "{}",
-    report.text
+  assert_eq!(
+    report.text,
+    "claude:\n  + jev              updated\n\n\
+     codex: jev not installed; skipped\n\n\
+     muse: no toolu plugins installed; skipped\n"
   );
   assert!(!sb.log("codex").iter().any(|line| line.contains("jev")));
   let Err(fail) = update(&sb, &["statusline"], None, Style::Plain) else {
@@ -115,7 +148,7 @@ fn names_go_only_where_they_are_installed_and_nowhere_is_an_error() {
 #[test]
 fn a_failing_host_is_its_own_section_and_the_others_still_run() {
   let sb = Sandbox::new();
-  three_hosts(&sb, "\"plugin marketplace add\"*");
+  three_hosts(&sb, "codex-fail-pin");
   let report = update(&sb, &[], Some(Scope::User), Style::Plain).expect("update");
   assert!(report.failed);
   let codex = &report.json["hosts"][1];
@@ -129,7 +162,23 @@ fn a_failing_host_is_its_own_section_and_the_others_still_run() {
 }
 
 #[test]
-fn nothing_to_update_anywhere_says_so() {
+fn a_host_whose_listing_fails_is_noted_with_the_reason() {
+  let sb = Sandbox::new();
+  three_hosts(&sb, "");
+  sb.muse("\"plugins list --json\"");
+  let report = update(&sb, &[], None, Style::Plain).expect("update");
+  assert!(
+    report
+      .text
+      .ends_with("muse: could not list its plugins: boom: plugins list --json; skipped\n"),
+    "{}",
+    report.text
+  );
+  assert!(!report.failed);
+}
+
+#[test]
+fn nothing_to_update_anywhere_says_so_and_names_hosts_that_could_not_be_read() {
   let sb = Sandbox::new();
   sb.host("claude", "[]", "never");
   sb.muse("never");
@@ -140,18 +189,12 @@ fn nothing_to_update_anywhere_says_so() {
     fail.message,
     "no detected host has toolu plugins installed, so there is nothing to update"
   );
-}
-
-#[test]
-fn the_rails_report_notes_the_hosts_left_out() {
-  let sb = Sandbox::new();
-  three_hosts(&sb, "never");
-  let report = update(&sb, &[], None, Style::Mono).expect("update");
-  assert!(
-    report
-      .text
-      .contains("│\n◇  muse\n│  ○ no toolu plugins installed\n└  "),
-    "{}",
-    report.text
+  sb.muse("\"plugins list --json\"");
+  let Err(fail) = update(&sb, &[], None, Style::Plain) else {
+    panic!("an empty update reported success");
+  };
+  assert_eq!(
+    fail.message,
+    "no detected host has toolu plugins installed, so there is nothing to update (could not list: muse: boom: plugins list --json)"
   );
 }

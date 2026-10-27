@@ -21,11 +21,14 @@ const FRAMES: [&str; 10] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 const TICK: Duration = Duration::from_millis(80);
 /// The bar's cells.
 const CELLS: usize = 20;
-/// The widest a host name or task may be drawn, so a line stays within 64
-/// columns and never wraps (a wrapped line would break the redraw).
+/// The widest a host name or task may be drawn, so every line stays within 64
+/// columns and never wraps (a wrapped line would break the redraw): the task
+/// line is `│  ⠋ <task>…`, the spinner-only line `◇  <host>  ⠋ <task>…`.
 const NAME_COLS: usize = 18;
 /// See `NAME_COLS`.
 const TASK_COLS: usize = 56;
+/// See `NAME_COLS`.
+const SPIN_TASK_COLS: usize = 38;
 
 /// What the progress shows.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -44,7 +47,11 @@ pub(crate) struct State {
 pub(crate) fn frame(state: &State, tick: usize, style: Style) -> String {
   let spinner = FRAMES.get(tick % FRAMES.len()).copied().unwrap_or("⠋");
   let host = truncate(&state.host, NAME_COLS);
-  let task = truncate(&state.task, TASK_COLS);
+  let task = if state.total == 0 {
+    truncate(&state.task, SPIN_TASK_COLS)
+  } else {
+    truncate(&state.task, TASK_COLS)
+  };
   let diamond = paint(style, Tone::Accent, "◇");
   let spin = paint(style, Tone::Accent, spinner);
   if state.total == 0 {

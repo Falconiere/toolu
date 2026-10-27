@@ -69,3 +69,68 @@ fn a_foreign_row_without_a_version_does_not_break_the_listing() {
     ["jev"]
   );
 }
+
+fn stepped(code: i32, stdout: &str, stderr: &str) -> (crate::step::Status, String) {
+  let ran = crate::host::run::Ran {
+    code,
+    stdout: stdout.to_owned(),
+    stderr: stderr.to_owned(),
+  };
+  let step = super::update_step("jev", &ran, Vec::new());
+  (step.status, step.detail)
+}
+
+#[test]
+fn an_update_without_a_result_line_reads_the_exit_code_and_names_an_old_claude() {
+  use crate::step::Status;
+  assert_eq!(stepped(0, "", ""), (Status::Updated, "updated".to_owned()));
+  assert_eq!(
+    stepped(1, "", "\n  boom: network\n"),
+    (Status::Failed, "boom: network".to_owned())
+  );
+  assert_eq!(
+    stepped(1, "", "error: unknown option '--json'\n"),
+    (
+      Status::Failed,
+      "error: unknown option '--json'; toolu needs Claude Code 2.1.311 or newer (`claude plugin update --json`)".to_owned()
+    )
+  );
+}
+
+#[test]
+fn unknown_or_missing_versions_and_an_unknown_outcome_still_read_sensibly() {
+  use crate::step::Status;
+  let line = |fields: &str| format!(r#"{{"command":"update","outcome":"ok",{fields}}}"#);
+  assert_eq!(
+    stepped(
+      0,
+      &line(r#""updateOutcome":"updated","oldVersion":"unknown","newVersion":"8.6.0""#),
+      ""
+    ),
+    (Status::Updated, "updated to 8.6.0".to_owned())
+  );
+  assert_eq!(
+    stepped(
+      0,
+      &line(r#""updateOutcome":"updated","newVersion":"unknown""#),
+      ""
+    ),
+    (Status::Updated, "updated".to_owned())
+  );
+  assert_eq!(
+    stepped(0, &line(r#""updateOutcome":"up_to_date""#), ""),
+    (Status::Current, "current".to_owned())
+  );
+  assert_eq!(
+    stepped(0, &line(r#""updateOutcome":"something_new""#), ""),
+    (Status::Skew, "skipped".to_owned())
+  );
+  assert_eq!(
+    stepped(
+      1,
+      &line(r#""updateOutcome":"up_to_date","message":"locked""#),
+      ""
+    ),
+    (Status::Failed, "locked".to_owned())
+  );
+}

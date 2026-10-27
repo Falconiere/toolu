@@ -4478,11 +4478,11 @@
           "placeholder": false
         },
         {
-          "about": "Update plugins to the marketplace version",
+          "about": "Update toolu's plugins on every host that has them, or on --host; never asks",
           "aliases": [],
           "args": [
             {
-              "help": "Plugins to update; none means every installed one",
+              "help": "Plugins to update where installed; none means every installed toolu plugin",
               "multiple": true,
               "name": "NAME",
               "required": false

@@ -1,8 +1,9 @@
 //! The pin's failure paths: what is left alone, what fails the verb, and the
 //! hint a failed plugin install carries.
 
-use super::tests::{TAG, codex, driver, marketplace_log, state};
+use super::tests::{TAG, driver, marketplace_log, state};
 use super::{Pin, ensure};
+use crate::codex_stub::codex;
 use crate::step::Status;
 use crate::support::{Sandbox, catalog, names};
 use crate::verbs::{install, update};
@@ -98,7 +99,7 @@ fn no_marketplace_and_a_failed_add_hint_on_a_failed_install_and_fail_an_update()
     "codex-installed.json",
     r#"{"installed":[{"name":"jev","version":"8.2.0"}]}"#,
   );
-  let Err(fail) = update::run(&driver(&sb), &catalog(), &[], false) else {
+  let Err(fail) = update::run(&driver(&sb), &catalog(), &[], false, None) else {
     panic!("an update with no marketplace to pin passed");
   };
   assert_eq!(

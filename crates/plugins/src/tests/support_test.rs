@@ -326,3 +326,55 @@ pub(crate) fn context<'a>(
     progress: None,
   }
 }
+
+/// A writer the test reads back.
+#[derive(Clone, Default)]
+pub(crate) struct Screen(std::sync::Arc<std::sync::Mutex<Vec<u8>>>);
+
+impl std::io::Write for Screen {
+  fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+    self
+      .0
+      .lock()
+      .map_err(|_poisoned| std::io::Error::other("poisoned"))?
+      .extend_from_slice(bytes);
+    Ok(bytes.len())
+  }
+
+  fn flush(&mut self) -> std::io::Result<()> {
+    Ok(())
+  }
+}
+
+impl Screen {
+  /// Everything written so far.
+  pub(crate) fn text(&self) -> String {
+    String::from_utf8_lossy(&self.0.lock().expect("screen")).into_owned()
+  }
+}
+
+impl Screen {
+  /// A Mono progress drawn on this screen, as a driver carries it.
+  pub(crate) fn progress(&self) -> std::sync::Arc<crate::progress::Progress> {
+    let progress = crate::progress::Progress::to_writer(
+      Box::new(self.clone()),
+      toolu_runtime::term::Style::Mono,
+    );
+    std::sync::Arc::new(progress)
+  }
+}
+
+/// A request for `verb` on `plugins`, every flag off.
+pub(crate) fn request(verb: crate::args::Verb, plugins: &[&str]) -> crate::args::Request {
+  crate::args::Request {
+    verb,
+    names: names(plugins),
+    scope: None,
+    config: None,
+    yes: false,
+    dry_run: false,
+    no_input: false,
+    catalog: None,
+    approval: Approval::Report,
+  }
+}

@@ -1,14 +1,14 @@
-//! The hosts the installer targets and how one is chosen: an explicit `--host`
-//! always wins, a single host on `PATH` is used without asking, and several are
-//! never resolved silently (a terminal asks, otherwise the run refuses). At a
-//! terminal, install offers every supported host on the machine, Cursor
-//! included when its config directory or `cursor-agent` is there.
+//! The hosts the installer targets and how `install`, `list` and `remove` choose
+//! one: an explicit `--host` always wins, a single host on `PATH` is used
+//! without asking, and several are never resolved silently (a terminal asks,
+//! otherwise the run refuses). At a terminal, install offers every supported
+//! host on the machine, Cursor included when `~/.cursor` or `cursor-agent` is
+//! there. `update` without `--host` asks nothing: it takes `with_toolu`.
 
 use std::path::Path;
 
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
 
 use crate::args::Scope;
 use crate::cursor::store::Store;
@@ -116,12 +116,12 @@ pub(crate) fn available(env: &Env) -> Vec<Target> {
     .collect()
 }
 
-/// Every supported host on this machine: those on `PATH`, then Cursor when its
-/// config directory exists or `cursor-agent` is on `PATH` (install's picker).
+/// Every supported host on this machine: those on `PATH`, then Cursor when
+/// `~/.cursor` exists or `cursor-agent` is on `PATH` (install's picker).
 pub(crate) fn detected(env: &Env) -> Vec<Target> {
   let mut found = available(env);
-  let cursor = Roots::new(env.clone(), Some(Host::Cursor)).config_root();
-  if cursor.is_dir() || on_path("cursor-agent", env) {
+  // `~/.cursor` itself: `TOOLU_CONFIG_DIR` would answer for every host.
+  if env.home().join(".cursor").is_dir() || on_path("cursor-agent", env) {
     found.push(Target::Cursor);
   }
   found
@@ -142,7 +142,7 @@ pub(crate) fn with_toolu(env: &Env) -> Vec<Target> {
 pub(crate) enum Mode {
   /// `install`: every chosen host.
   Many,
-  /// `list`, `remove`, `update`: one host.
+  /// `list`, `remove`: one host.
   One,
 }
 

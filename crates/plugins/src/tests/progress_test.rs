@@ -1,35 +1,9 @@
-use std::io::Write;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use toolu_runtime::term::Style;
 
 use super::{Progress, State, frame};
-
-/// A writer the test reads back.
-#[derive(Clone, Default)]
-struct Screen(Arc<Mutex<Vec<u8>>>);
-
-impl Write for Screen {
-  fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-    self
-      .0
-      .lock()
-      .map_err(|_poisoned| std::io::Error::other("poisoned"))?
-      .extend_from_slice(bytes);
-    Ok(bytes.len())
-  }
-
-  fn flush(&mut self) -> std::io::Result<()> {
-    Ok(())
-  }
-}
-
-impl Screen {
-  fn text(&self) -> String {
-    String::from_utf8_lossy(&self.0.lock().expect("screen")).into_owned()
-  }
-}
+use crate::support::Screen;
 
 #[test]
 fn a_frame_shows_the_bar_the_count_and_the_task() {
@@ -91,4 +65,29 @@ fn the_spinner_turns_on_its_own_until_the_end() {
 fn there_is_no_progress_for_plain_output_or_quiet() {
   assert!(Progress::open(Style::Plain, false).is_none());
   assert!(Progress::open(Style::Mono, true).is_none());
+}
+
+#[test]
+fn no_line_of_a_frame_passes_64_columns_however_long_its_names() {
+  let long = State {
+    host: "h".repeat(40),
+    total: 12,
+    done: 3,
+    task: "t".repeat(120),
+  };
+  let spinner_only = State {
+    total: 0,
+    ..long.clone()
+  };
+  for state in [long, spinner_only] {
+    let drawn = frame(&state, 0, Style::Mono);
+    for line in drawn.lines() {
+      assert!(
+        line.chars().count() <= 64,
+        "{} columns: {line}",
+        line.chars().count()
+      );
+    }
+    assert!(drawn.contains('…'), "{drawn}");
+  }
 }

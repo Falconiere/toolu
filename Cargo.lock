@@ -1378,6 +1378,7 @@ dependencies = [
  "clap",
  "insta",
  "jsonschema",
+ "nix",
  "regex",
  "serde",
  "serde_json",

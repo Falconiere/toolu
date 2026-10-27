@@ -15,17 +15,19 @@ use crate::step::{Status, Step};
 use crate::verbs::{Driver, find, foreign_step, pin, prepare, retired_step, trust};
 
 /// Updates `names`, or every installed toolu plugin when empty; a dry run runs
-/// no update.
+/// no update. `listed` is the host's listing when the caller already read it
+/// (preparing the marketplace never adds or removes an installed plugin).
 pub(crate) fn run(
   driver: &Driver,
   catalog: &Catalog,
   names: &[String],
   dry_run: bool,
+  listed: Option<Vec<Installed>>,
 ) -> Res<Vec<Step>> {
   let adapter = driver.adapter;
   driver.begin(0, "preparing the marketplace");
   let repinned = !dry_run && prepare::run(driver, Verb::Update)?.repinned;
-  let installed = driver.versions(&adapter.list_installed());
+  let installed = listed.unwrap_or_else(|| driver.versions(&adapter.list_installed()));
   let offered = driver.offered();
   let targets = targets(driver, names, &installed);
   if targets.is_empty() {

@@ -295,3 +295,23 @@ fn a_muse_dry_run_clones_nothing_and_changes_no_marketplace() {
     ["plugins list --json", "plugins list --available --json"]
   );
 }
+
+#[test]
+fn an_install_advances_its_bar_per_plugin_and_clears_it() {
+  let sb = Sandbox::new();
+  sb.host("claude", "[]", "never");
+  let screen = crate::support::Screen::default();
+  let mut driver = driver(&sb, Adapter::Claude);
+  driver.progress = Some(screen.progress());
+  run(&driver, &catalog(), &names(&["toolu", "jev"]), None, false).expect("install");
+  let drawn = screen.text();
+  assert!(
+    drawn.contains("  1/2") && drawn.contains("installing jev…"),
+    "{drawn}"
+  );
+  assert!(
+    drawn.contains("◇  claude  ████████████████████  2/2"),
+    "{drawn}"
+  );
+  assert!(drawn.ends_with("\r\x1b[2K\x1b[1A\r\x1b[2K"), "{drawn:?}");
+}

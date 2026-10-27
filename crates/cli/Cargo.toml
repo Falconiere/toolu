@@ -31,6 +31,8 @@ toolu-statusline = { path = "../statusline" }
 assert_cmd.workspace = true
 insta.workspace = true
 jsonschema.workspace = true
+# A real pty for the terminal-output tests (tests/terminal_output.rs).
+nix = { workspace = true, features = ["term"] }
 regex.workspace = true
 serde.workspace = true
 tempfile.workspace = true
