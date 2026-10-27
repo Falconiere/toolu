@@ -20,7 +20,7 @@ pub(crate) use batch::pick_batch;
 pub(crate) use checkouts::{herdr_roots, repo_roots, resolve_checkouts, resolve_clone_root};
 pub(crate) use classify::{classify, occupies_slot};
 pub(crate) use from_tracker::{BuildInput, build};
-pub(crate) use levels::{chain_lengths, compute_levels, downstream_counts};
+pub(crate) use levels::{chain_lengths, compute_levels, downstream_counts, stable_waves};
 pub(crate) use render::render_table;
 
 /// One sub-issue in `graph.json`.

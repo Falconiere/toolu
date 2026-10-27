@@ -243,7 +243,7 @@ fn project(machine: &Machine, now_ms: u64) -> Value {
     "local": machine.local,
     "state": machine.state.name(),
     "reason": machine.state.reason(),
-    "hostname": overview.and_then(|doc| doc.get("hostname")).filter(|name| name.is_string()).map(|name| text(Some(name))),
+    "hostname": overview.and_then(|doc| doc.get("hostname")).filter(|name| name.as_str().is_some_and(|name| !name.is_empty())).map(|name| text(Some(name))),
     "dashboard_url": machine.dashboard_url,
     "age_ms": machine.last_seen_ms.map(|ms| now_ms.saturating_sub(ms)),
     "last_seen": last_seen,

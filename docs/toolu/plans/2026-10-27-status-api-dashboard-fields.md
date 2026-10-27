@@ -32,6 +32,9 @@ runtime hostname → epic header and row fields → issue `hold` → scenario bo
     "paths": [
       "crates/epic-orchestrator/src/status_epics.rs",
       "crates/epic-orchestrator/src/status_api.rs",
+      "crates/epic-orchestrator/src/epics.rs",
+      "crates/epic-orchestrator/src/graph.rs",
+      "crates/epic-orchestrator/src/graph/levels.rs",
       "crates/epic-orchestrator/src/tests/status_epics_test.rs",
       "crates/epic-orchestrator/src/tests/status_api_test.rs"
     ],
@@ -46,7 +49,9 @@ runtime hostname → epic header and row fields → issue `hold` → scenario bo
     "paths": [
       "crates/epic-orchestrator/src/status_epics.rs",
       "crates/epic-orchestrator/src/status_api.rs",
-      "crates/epic-orchestrator/src/tests/status_board_test.rs",
+      "crates/epic-orchestrator/src/epics.rs",
+      "crates/epic-orchestrator/src/graph/levels.rs",
+      "crates/epic-orchestrator/src/tests/status_epics_board_test.rs",
       "crates/epic-orchestrator/src/tests/scenario_rig_test.rs"
     ],
     "depends_on": ["epic-header-rows"],
@@ -116,3 +121,4 @@ End to end: an engine-built `graph.json` from the GitHub fixture, a real engine 
 - epic-header-rows: the production change was written before its tests in this step; red was then shown by running the new tests against the `HEAD` versions of `status_epics.rs` and `status_api.rs` (5 of 5 failed) before restoring them.
 - board-scenario: the scenario showed the graph renumbers waves over open issues after each refresh (`[2, 1, 1, 1]` instead of `[3, 2, 1, 1]` after wave 1 merged). `status_epics::stable_waves` now levels every issue; the epic #248 fixture expectations moved to 6 waves, checked by hand against its blockers.
 - fleet-fields: the hostname, dashboard URL and socket-parity tests live in a new `tests/http_fleet_board_test.rs` (`http_fleet::board_tests`), since `http_fleet_test.rs` would pass 300 code lines. `fleet_rig::Engine::start_titled` writes a complete graph (so the engine parses its title) and pauses the epic: with a parsed graph the engine journals `launch-intent` before the worker's report, and the report then no longer adopts the worker as `running`.
+- After `/code-review xhigh --fix` (2026-10-27): the review fixed a stale cycle between closed issues (it falls back to the open waves). Its other findings were fixed as listed in the spec's "Changes after code review". The scenario test moved to `tests/status_epics_board_test.rs`, and `epics.rs` and `graph/levels.rs` joined the step paths.

@@ -2,6 +2,7 @@
 //! `max_parallel`, and the launch batch it is working through. Epic-level
 //! journal records carry the epic key in `key`.
 
+use std::collections::BTreeMap;
 use std::path::Path;
 
 use serde_json::{Value, json};
@@ -32,6 +33,9 @@ pub(crate) struct Epic {
   pub max_parallel: u32,
   /// The full graph, when `graph.json` is one.
   pub graph: Option<Graph>,
+  /// Each issue's wave over open and closed issues (`graph::stable_waves`),
+  /// computed when the graph loads.
+  pub waves: BTreeMap<String, u64>,
   /// The batch being launched, in pick order.
   pub batch: Vec<Member>,
   /// `github`, `jira` or `linear`.
@@ -65,6 +69,7 @@ impl Epic {
       reference: String::new(),
       max_parallel: 1,
       graph: None,
+      waves: BTreeMap::new(),
       batch: Vec::new(),
       tracker: tracker.map(str::to_owned),
       default_repo: None,
@@ -123,6 +128,11 @@ pub(crate) fn load_epic_state(world: &mut World, key: &str, state_dir: &str, gra
     epic.closed || graph.pointer("/epic/state").and_then(Value::as_str) == Some("closed");
   epic.tracker = tracker;
   epic.graph = serde_json::from_value::<Graph>(graph.clone()).ok();
+  epic.waves = epic
+    .graph
+    .as_ref()
+    .map(|graph| crate::graph::stable_waves(&graph.issues))
+    .unwrap_or_default();
   world.epics.insert(key.to_owned(), epic);
 }
 

@@ -113,3 +113,27 @@ None blocking.
 ## Changes during execution (2026-10-27)
 
 - Stable waves (see Architecture). Jev (choice) picked recomputing over all issues (1.0) over the graph's renumbering waves or persisting first-seen waves. It reuses `graph::compute_levels` on a copy of the issues with every state treated as open.
+
+## Changes after code review (2026-10-27)
+
+`/code-review xhigh --fix` reported 15 findings. The user's delivery instruction was to fix everything it reports. Jev triage: caching the waves 0.82; graph.waves numbering 0.53 and cleanup stages 0.55, both uncertain and fixed per that instruction; a history rewrite 0.23 and dropping the hostname oracle 0.36, both kept.
+
+Fixed:
+- A stale cycle through closed issues falls back to the open issues' waves (fixed by the review itself, with a test).
+- Stages `cleaning` and `cleanup-incomplete` mean the pull request merged, so they count as done.
+- Secrets are redacted before the 160-character cut on `title`, `url` and `hold`, so a secret across the cut never leaks a prefix. `list`, `detail` and `hold` take the `Secrets`.
+- `graph.waves` and `graph.issues[].wave` use the stable waves, so one document has one numbering.
+- Stable waves are computed once per graph load and stored on `Epic.waves` (`graph::stable_waves` in `graph/levels.rs`), not on every request.
+- `header` takes the epic's issues from the caller, so they are scanned once.
+- An issue with a launch in flight is not counted as `queued`.
+- A `url` over 160 characters is `null`, not a cut link.
+- A peer's empty `hostname` is `null`.
+- The scenario test file is renamed `tests/status_epics_board_test.rs`.
+- The docs now name exactly the fields that are cut.
+
+Kept, with reasons:
+- `live` stays `running | awaiting_merge`, as the issue defines it.
+- The header uses the engine's parsed graph while `graph` re-reads `graph.json`. They disagree only between a write and the reload, or when the graph does not parse; in that case the header fields are `null` and the docs say so.
+- The three 160-character helpers have different null rules; merging them would touch the existing `status_plan` and `fleet` code.
+- The tests still use the `hostname` binary as an independent oracle. The gate image has it, and comparing against `gethostname` itself would be circular.
+- The `wip:` commit subject disappears in the squash merge, whose title is conventional.

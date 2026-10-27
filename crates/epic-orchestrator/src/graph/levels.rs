@@ -76,6 +76,36 @@ pub(crate) fn compute_levels(issues: &[GraphIssue]) -> (BTreeMap<String, u64>, V
   (levels, Vec::new())
 }
 
+/// Each graph issue's wave by key, over open and closed issues alike. The
+/// graph levels only open issues, so its waves renumber after every merge;
+/// these keep a merged issue in its wave for the whole run. A cycle through a
+/// closed issue falls back to the open issues' waves; one among open issues
+/// gives none.
+pub(crate) fn stable_waves(rows: &[GraphIssue]) -> BTreeMap<String, u64> {
+  let all: Vec<GraphIssue> = rows
+    .iter()
+    .cloned()
+    .map(|mut row| {
+      "open".clone_into(&mut row.state);
+      for state in row.blockers.values_mut() {
+        "open".clone_into(state);
+      }
+      row
+    })
+    .collect();
+  // A stale blocker between closed issues can close a cycle the live graph never sees.
+  let (levels, cycle) = compute_levels(&all);
+  let levels = if cycle.is_empty() {
+    levels
+  } else {
+    compute_levels(rows).0
+  };
+  rows
+    .iter()
+    .filter_map(|row| Some((row.key.clone(), *levels.get(&row.reference)?)))
+    .collect()
+}
+
 /// Each blocker's open dependents.
 fn dependents(issues: &[GraphIssue]) -> BTreeMap<&str, BTreeSet<&str>> {
   let mut map: BTreeMap<&str, BTreeSet<&str>> = issues

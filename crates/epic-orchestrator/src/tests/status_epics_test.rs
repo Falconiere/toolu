@@ -5,7 +5,7 @@ use toolu_runtime::config::secrets::Secrets;
 
 use super::list;
 use crate::disk::write_value;
-use crate::model::World;
+use crate::model::{Action, Pending, World};
 use crate::paths::Paths;
 use crate::status_api::route;
 
@@ -23,7 +23,7 @@ fn empty_registered_epic_still_has_a_status_board() {
     }),
   )
   .expect("registry");
-  let items = list(&World::new(0), &paths).expect("epic list");
+  let items = list(&World::new(0), &paths, &Secrets::none()).expect("epic list");
   assert_eq!(items.len(), 1);
   assert_eq!(items[0]["key"], "repo-402");
   assert_eq!(items[0]["counts"], json!({}));
@@ -37,15 +37,14 @@ fn empty_registered_epic_still_has_a_status_board() {
   );
 }
 
-/// The epic #248 graph saved under `root` and loaded by the engine's snapshot.
-fn board(root: &std::path::Path, title: Option<&str>) -> (Paths, World) {
+/// The epic #248 graph, changed by `edit`, saved under `root` and loaded by
+/// the engine's snapshot.
+fn board(root: &std::path::Path, edit: impl FnOnce(&mut crate::graph::Graph)) -> (Paths, World) {
   let paths = Paths::at(root.join("resources"));
   let state = root.join("state");
   let mut graph = crate::support::graph_248();
   graph.state_dir = state.display().to_string();
-  if let Some(title) = title {
-    title.clone_into(&mut graph.epic.title);
-  }
+  edit(&mut graph);
   crate::graph::write_graph(&state.join("graph.json"), &graph).expect("graph");
   write_value(
     &paths.registry(),
@@ -78,7 +77,7 @@ fn header(doc: &Value) -> Value {
 #[test]
 fn header_counts_waves_live_and_queued_from_the_engine_graph() {
   let temp = tempfile::tempdir().expect("temp root");
-  let (paths, mut world) = board(temp.path(), None);
+  let (paths, mut world) = board(temp.path(), |_| {});
   let detail = get(
     &world,
     &paths,
@@ -115,18 +114,34 @@ fn header_counts_waves_live_and_queued_from_the_engine_graph() {
 #[test]
 fn current_wave_moves_past_merged_and_abandoned_issues_then_is_null() {
   let temp = tempfile::tempdir().expect("temp root");
-  let (paths, mut world) = board(temp.path(), None);
-  set_stage(&mut world, "comemory-254", "merged");
+  let (paths, mut world) = board(temp.path(), |_| {});
+  // Merged pull requests still cleaning up count as done.
+  set_stage(&mut world, "comemory-254", "cleaning");
   set_stage(&mut world, "comemory-255", "abandoned");
-  set_stage(&mut world, "comemory-io-183", "merged");
+  set_stage(&mut world, "comemory-io-183", "cleanup-incomplete");
   set_stage(&mut world, "comemory-256", "running");
+  // A launch in flight is neither queued nor live yet.
+  world.issues.get_mut("comemory-257").expect("257").pending = Some(Pending {
+    action: Action::Launch,
+    token: "t".to_owned(),
+    phase: 0,
+    recovered: false,
+    follow: None,
+    reroute: false,
+  });
   let detail = get(
     &world,
     &paths,
     &format!("/api/v1/epics/{EPIC}"),
     &Secrets::none(),
   );
-  assert_eq!(header(&detail), json!([6, 4, 1, 5]));
+  assert_eq!(header(&detail), json!([6, 4, 1, 4]));
+  // The graph block keeps the same stable numbering as the header.
+  assert_eq!(
+    detail["graph"]["waves"][0],
+    json!({"wave": 1, "issues": ["comemory-249"]})
+  );
+  assert_eq!(detail["graph"]["waves"].as_array().map(Vec::len), Some(6));
   let keys: Vec<String> = world.issues.keys().cloned().collect();
   for key in keys {
     set_stage(&mut world, &key, "merged");
@@ -141,15 +156,44 @@ fn current_wave_moves_past_merged_and_abandoned_issues_then_is_null() {
 }
 
 #[test]
+fn a_stale_cycle_between_closed_issues_keeps_the_open_waves() {
+  let temp = tempfile::tempdir().expect("temp root");
+  // #250 is blocked by #249; this closes a cycle only the closed issues see.
+  let (paths, world) = board(temp.path(), |graph| {
+    if let Some(closed) = graph
+      .issues
+      .iter_mut()
+      .find(|row| row.key == "comemory-249")
+    {
+      closed
+        .blockers
+        .insert("Falconiere/comemory#250".into(), "closed".into());
+    }
+  });
+  let detail = get(
+    &world,
+    &paths,
+    &format!("/api/v1/epics/{EPIC}"),
+    &Secrets::none(),
+  );
+  assert_eq!(header(&detail), json!([4, 1, 0, 9]));
+}
+
+#[test]
 fn a_long_title_is_cut_and_a_secret_in_it_redacted() {
   let temp = tempfile::tempdir().expect("temp root");
   let secret = "TITLE-SECRET-657";
   let title = format!("ship {secret} {}", "x".repeat(200));
-  let (paths, world) = board(temp.path(), Some(&title));
+  let (paths, world) = board(temp.path(), |graph| {
+    title.clone_into(&mut graph.epic.title);
+  });
   let tokens = json!({"peer": secret}).to_string();
   let secrets = crate::fleet_rig::secrets_of(temp.path(), &[("TOOLU_EPIC_PEER_TOKENS", &tokens)]);
-  let cut: String = title.chars().take(160).collect();
-  let expected = cut.replace(secret, "<redacted>");
+  let expected: String = title
+    .replace(secret, "<redacted>")
+    .chars()
+    .take(160)
+    .collect();
   for path in [
     format!("/api/v1/epics/{EPIC}"),
     "/api/v1/overview".to_owned(),
@@ -164,7 +208,9 @@ fn a_long_title_is_cut_and_a_secret_in_it_redacted() {
     assert_eq!(served, &json!(expected), "{path}");
   }
   let exact = "y".repeat(160);
-  let (paths, world) = board(&temp.path().join("exact"), Some(&exact));
+  let (paths, world) = board(&temp.path().join("exact"), |graph| {
+    exact.clone_into(&mut graph.epic.title);
+  });
   let detail = get(
     &world,
     &paths,
@@ -172,6 +218,25 @@ fn a_long_title_is_cut_and_a_secret_in_it_redacted() {
     &Secrets::none(),
   );
   assert_eq!(detail["title"], json!(exact));
+}
+
+#[test]
+fn a_secret_across_the_cut_never_leaks_and_a_long_url_is_left_out() {
+  let temp = tempfile::tempdir().expect("temp root");
+  let secret = "STRADDLE-SECRET-657";
+  let title = format!("{}{secret} tail", "x".repeat(150));
+  let url = format!("https://jira.example/browse/{}", "a".repeat(140));
+  let (paths, world) = board(temp.path(), |graph| {
+    title.clone_into(&mut graph.epic.title);
+    url.clone_into(&mut graph.epic.url);
+  });
+  let tokens = json!({"peer": secret}).to_string();
+  let secrets = crate::fleet_rig::secrets_of(temp.path(), &[("TOOLU_EPIC_PEER_TOKENS", &tokens)]);
+  let detail = get(&world, &paths, &format!("/api/v1/epics/{EPIC}"), &secrets);
+  let served = detail["title"].as_str().expect("title");
+  assert!(!served.contains("STRADDLE"), "{served}");
+  assert_eq!(served, format!("{}<redacted>", "x".repeat(150)));
+  assert_eq!(detail["url"], Value::Null);
 }
 
 /// The board with a route for comemory-254 and a held launch record for
@@ -190,7 +255,7 @@ fn held_board(root: &std::path::Path) -> (Paths, World) {
     &json!({"stage": "running", "kind": "codex", "model": "gpt-6-sol", "hold": hold}),
   )
   .expect("record");
-  let (paths, mut world) = board(root, None);
+  let (paths, mut world) = board(root, |_| {});
   set_stage(&mut world, "comemory-254", "running");
   world.now_ms = world.now_ms.saturating_add(1_500);
   (paths, world)

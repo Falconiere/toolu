@@ -188,10 +188,13 @@ fn fleet_projection_drops_hostile_fields() {
   let mut long = hostile.clone();
   long["issues"] = json!([{"key": "repo-10", "stage": "running", "phase": "p".repeat(300)}]);
   long["hostname"] = json!("h".repeat(300));
+  let mut blank = long.clone();
+  blank["hostname"] = json!("");
   let doc = document(
     &[
       machine("hostile", PeerState::Ok, Some(hostile)),
       machine("long", PeerState::Ok, Some(long)),
+      machine("blank", PeerState::Ok, Some(blank)),
     ],
     2_000,
     &Secrets::none(),
@@ -202,6 +205,7 @@ fn fleet_projection_drops_hostile_fields() {
     .expect("phase");
   assert_eq!(phase.chars().count(), 160);
   assert_eq!(doc["machines"][1]["hostname"], json!("h".repeat(160)));
+  assert_eq!(doc["machines"][2]["hostname"], Value::Null);
   assert!(!doc.to_string().contains("drop-me"));
 }
 

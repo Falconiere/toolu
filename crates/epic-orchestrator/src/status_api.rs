@@ -30,7 +30,7 @@ pub(crate) fn document(
     return Ok(value);
   }
   if let Some(selector) = selector {
-    let mut value = status_epics::detail(world, paths, selector)?
+    let mut value = status_epics::detail(world, paths, selector, secrets)?
       .ok_or_else(|| format!("unknown epic or issue: {selector}"))?;
     if let Some(map) = value.as_object_mut() {
       map.insert("engine".to_owned(), json!("running"));
@@ -53,7 +53,10 @@ pub(crate) fn document(
     map.insert("journal_seq".to_owned(), json!(world.seq));
     map.insert("counts".to_owned(), json!(counts));
     map.insert("attention_count".to_owned(), json!(attention_count));
-    map.insert("epics".to_owned(), json!(status_epics::list(world, paths)?));
+    map.insert(
+      "epics".to_owned(),
+      json!(status_epics::list(world, paths, secrets)?),
+    );
     map.insert("hosts".to_owned(), resources.hosts());
     map.insert("machine".to_owned(), resources.machine());
     map.insert("jobs".to_owned(), resources.jobs());
@@ -78,7 +81,9 @@ pub(crate) fn route(
       "uptime_ms": uptime_ms, "journal_seq": world.seq,
     })),
     "/api/v1/overview" => Some(document(world, paths, None, secrets)?),
-    "/api/v1/epics" => Some(json!({"schema": 1, "items": status_epics::list(world, paths)?})),
+    "/api/v1/epics" => {
+      Some(json!({"schema": 1, "items": status_epics::list(world, paths, secrets)?}))
+    }
     "/api/v1/agents" => Some(agents(world)?),
     "/api/v1/hosts" => Some(Snapshot::open(paths, world.now_ms)?.hosts()),
     "/api/v1/machine" => Some(Snapshot::open(paths, world.now_ms)?.machine()),
@@ -97,7 +102,7 @@ fn dynamic_route(
   secrets: &Secrets,
 ) -> Result<Option<Value>, String> {
   if let Some(key) = path.strip_prefix("/api/v1/epics/") {
-    return status_epics::detail(world, paths, key);
+    return status_epics::detail(world, paths, key, secrets);
   }
   if let Some(key) = path.strip_prefix("/api/v1/issues/") {
     return world
@@ -182,7 +187,7 @@ fn issue_document(
     "launches": meta.get("launches").and_then(Value::as_u64).unwrap_or(u64::from(issue.launches)),
     "phase_history": history,
     "recent_events": events,
-    "hold": status_epics::hold(issue),
+    "hold": status_epics::hold(issue, secrets),
     "plan": status_plan::plan(worktree, plan_host),
   });
   Ok(secrets::redact_json(&value, secrets))
