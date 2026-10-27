@@ -131,6 +131,7 @@
   color: var(--error);
 }
 .answer-result[data-kind="uncertain"] strong,
+.toast[data-kind="uncertain"] strong,
 .answer-warning {
   color: var(--warn);
 }

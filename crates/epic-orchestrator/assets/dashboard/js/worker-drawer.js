@@ -1,5 +1,6 @@
 import { readIssue, readScreen } from "./api.js";
 import { controlState, readToken, rotated } from "./control.js";
+import { keyAttention } from "./logic/control.js";
 import { wantsScreen } from "./logic/drawer.js";
 import { fragmentIssue, withIssue } from "./logic/fragment.js";
 import { findIssue, peerMachine } from "./logic/status.js";
@@ -7,7 +8,7 @@ import { renderDrawerActions } from "./view/controls.js";
 import { bindDrawer, hideDrawer, renderDrawer, revealDrawer } from "./view/drawer.js";
 
 const POLL_MS = 2000;
-const EMPTY = { doc: null, docFailed: false, screen: null };
+const EMPTY = { doc: null, docFailed: false, screen: null, screenToken: null };
 const drawer = { key: null, opener: null, ...EMPTY, timer: undefined, seq: 0 };
 let inflight = -1;
 let current = () => ({});
@@ -22,7 +23,7 @@ function render() {
   const found = find(drawer.key);
   if (!found) return;
   const { docs, live, peer, fleet, sampledAt } = current();
-  const attention = (docs.attention?.items ?? []).find((item) => item.key === drawer.key);
+  const attention = keyAttention(docs.attention, drawer.key);
   const liveItem = peer ? null : (live?.items ?? []).find((item) => item.key === drawer.key);
   renderDrawer({
     key: drawer.key,
@@ -52,18 +53,24 @@ async function tick() {
   inflight = seq;
   const { peer } = current();
   try {
-    const doc = await readIssue(peer, key).catch(() => null);
     const token = readToken();
-    // 403 means the engine has no token configured; asking again cannot succeed.
-    let screen = drawer.screen?.status === 403 ? drawer.screen : null;
-    if (!screen && wantsScreen({ peer, issue: { ...doc, ...find(key)?.row }, token })) {
-      screen = await readScreen(key, token).catch((error) => ({ error: error.message }));
-    }
+    // 403 means the engine has no token configured; ask again only with another token.
+    const disabled = drawer.screen?.status === 403 && drawer.screenToken === token;
+    // The board row decides the screen read, so both reads run at once.
+    const wanted = wantsScreen({ peer, issue: { ...drawer.doc, ...find(key)?.row }, token });
+    const [doc, read] = await Promise.all([
+      readIssue(peer, key).catch(() => null),
+      !disabled && wanted
+        ? readScreen(key, token).catch((error) => ({ error: error.message }))
+        : null,
+    ]);
+    const screen = disabled ? drawer.screen : read;
     if (screen?.status === 401) rotated(token);
     if (seq !== drawer.seq) return;
     drawer.docFailed = !doc;
     drawer.doc = doc ?? drawer.doc;
     drawer.screen = screen;
+    drawer.screenToken = token;
     render();
   } finally {
     if (inflight === seq) inflight = -1;

@@ -22,12 +22,7 @@ let refreshTimer;
 function paint(draw = () => {}) {
   const focus = focusedControl();
   draw();
-  renderControls({
-    ...controlState(),
-    docs: state.docs,
-    live: state.peer ? null : state.live,
-    now: Date.now(),
-  });
+  renderControls({ ...controlState(), docs: state.docs, now: Date.now() });
   restoreControl(focus);
 }
 

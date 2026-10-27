@@ -10,15 +10,32 @@ import { $, element } from "./dom.js";
 
 const NAMES = { answer: "Answer", release: "Release hold on", ack: "Acknowledge" };
 
-function actionButton(action, label, name, data, disabled) {
+// `id` stays the same when the action flips (PAUSE ↔ RESUME), so focus survives the change.
+function actionButton(
+  action,
+  label,
+  name,
+  data,
+  disabled,
+  id = [action, ...Object.values(data)].join(":"),
+) {
   const button = element("button", "control-button", label);
   button.type = "button";
   button.dataset.action = action;
   Object.assign(button.dataset, data);
-  button.dataset.control = [action, ...Object.values(data)].join(":");
+  button.dataset.control = id;
   button.setAttribute("aria-label", name);
   button.disabled = disabled;
   return button;
+}
+
+// A button replaced between mousedown and mouseup loses its click; keep unchanged nodes.
+function place(target, nodes) {
+  const old = target.children;
+  if (old.length === nodes.length && nodes.every((node, index) => node.isEqualNode(old[index]))) {
+    return;
+  }
+  target.replaceChildren(...nodes);
 }
 
 export const focusedControl = () => document.activeElement?.dataset?.control ?? null;
@@ -45,7 +62,8 @@ function fillEpics(boards, off) {
     const action = board?.paused ? "resume" : "pause";
     const label = board?.paused ? "RESUME EPIC" : "PAUSE EPIC";
     const name = `${board?.paused ? "Resume" : "Pause"} epic ${slot.dataset.epic}`;
-    slot.replaceChildren(actionButton(action, label, name, { epic: slot.dataset.epic }, off));
+    const data = { epic: slot.dataset.epic };
+    place(slot, [actionButton(action, label, name, data, off, `epic:${slot.dataset.epic}`)]);
   }
 }
 
@@ -53,15 +71,16 @@ function fillHosts(hosts, off, now) {
   for (const slot of document.querySelectorAll(".host-control-slot[data-host]")) {
     const host = hosts.find((item) => item.host === slot.dataset.host);
     const resume = host && hostResumable(host, now);
-    slot.replaceChildren(
+    place(slot, [
       actionButton(
         resume ? "host-resume" : "host-pause",
         resume ? "RESUME" : "PAUSE",
         `${resume ? "Resume" : "Pause"} host ${slot.dataset.host}`,
         { host: slot.dataset.host },
         off,
+        `host:${slot.dataset.host}`,
       ),
-    );
+    ]);
   }
 }
 
@@ -70,19 +89,18 @@ function fillAttention(model, off) {
     const { kind, key, state } = slot.dataset;
     const action = attentionAction(kind, key, state);
     if (!action) {
-      slot.replaceChildren(element("span", "attention-state", `✓ ${state.toUpperCase()}`));
+      place(slot, [element("span", "attention-state", `✓ ${state.toUpperCase()}`)]);
       continue;
     }
     const row = findIssue(model.docs.boards, key)?.row;
     const noAgent = action === "answer" && !liveAgent(row);
     const name = `${NAMES[action]} ${key || kind}`;
-    slot.replaceChildren(
-      actionButton(action, ACTION_LABELS[action], name, { key, kind }, off || noAgent),
-    );
+    const data = { key, kind, with: row?.hold?.with ?? "" };
+    place(slot, [actionButton(action, ACTION_LABELS[action], name, data, off || noAgent)]);
   }
 }
 
-// `model`: {docs, live, peer, locked, pending, now}.
+// `model`: {docs, peer, locked, pending, now}.
 export function renderControls(model) {
   const peer = Boolean(model.peer);
   const off = controlDisabled(model);
@@ -112,13 +130,19 @@ export function renderDrawerActions(model) {
     target.replaceChildren();
     return;
   }
-  target.replaceChildren(
-    ...drawerActions(model).map(({ action, label, disabled }) =>
+  place(
+    target,
+    drawerActions(model).map(({ action, label, disabled }) =>
       actionButton(
         action,
         label,
         `${NAMES[action]} ${model.issue.key}`,
-        { key: model.issue.key, kind: model.attention?.kind ?? "", from: "drawer" },
+        {
+          key: model.issue.key,
+          kind: model.attention?.kind ?? "",
+          with: model.issue.hold?.with ?? "",
+          from: "drawer",
+        },
         disabled,
       ),
     ),

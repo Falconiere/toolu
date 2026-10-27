@@ -1,13 +1,6 @@
 //! Page tests for the worker drawer: regions, labels, notices and polling gates.
 
-use std::path::Path;
-
-fn read_asset(file: &str) -> String {
-  let path = Path::new(env!("CARGO_MANIFEST_DIR"))
-    .join("assets/dashboard")
-    .join(file);
-  std::fs::read_to_string(&path).expect(file)
-}
+use super::control_tests::{flat, read_asset};
 
 #[test]
 fn dashboard_drawer_has_regions_step_marks_notices_and_attach_block() {
@@ -36,9 +29,7 @@ fn dashboard_drawer_has_regions_step_marks_notices_and_attach_block() {
     "Key presses from the web are not supported. Answer it here, or attach from a terminal:",
     "[ COPY ]",
   ] {
-    // oxfmt wraps long text lines in the HTML.
-    let flat = page.split_whitespace().collect::<Vec<_>>().join(" ");
-    assert!(flat.contains(text), "{text}");
+    assert!(flat(&page).contains(text), "{text}");
   }
 }
 

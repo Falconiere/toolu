@@ -2,10 +2,12 @@ import { WORKING_WARNING, counter, sendDisabled } from "./logic/control.js";
 import { agentState } from "./logic/status.js";
 import { $, mark } from "./view/dom.js";
 
-const dialog = { key: null, opener: null, state: { locked: true, pending: false } };
+const dialog = { key: null, opener: null, sent: null, state: { locked: true, pending: false } };
 
+// After an uncertain delivery the same text may already be in the agent; Send waits for an edit.
 const syncSend = () => {
-  $("answer-send").disabled = sendDisabled({ ...dialog.state, text: $("answer-text").value });
+  const text = $("answer-text").value;
+  $("answer-send").disabled = sendDisabled({ ...dialog.state, text }) || text === dialog.sent;
 };
 
 // After each control change: Send follows the lock and pending rules; a peer closes the dialog.
@@ -18,6 +20,7 @@ export function syncAnswer(state) {
 export function openAnswer({ key, row, attention, liveStatus }, opener) {
   dialog.key = key;
   dialog.opener = opener;
+  dialog.sent = null;
   const status = agentState(row, liveStatus);
   $("answer-title").textContent = `Answer ${key}`;
   $("answer-status").replaceChildren(mark(status));
@@ -45,6 +48,8 @@ export function showAnswerResult(result) {
     result.detail && result.detail !== result.text
       ? `${result.text} Engine: ${result.detail}`
       : result.text;
+  dialog.sent = result.kind === "uncertain" ? $("answer-text").value : null;
+  syncSend();
 }
 
 // Focus goes back to the opener, or to its re-rendered twin with the same control id.

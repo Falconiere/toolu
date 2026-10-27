@@ -64,7 +64,7 @@ A host shows `RESUME` when it is paused or cooling (resume clears both, #653), e
 **Requests.** `actionRequest(op, body, token)` returns `{path: "/api/v1/actions/<op>", init: {method: "POST", cache: "no-store", headers: {Authorization: "Bearer <token>", "Content-Type": "application/json"}, body: JSON.stringify(body)}}`. The browser adds the same-origin `Origin`. The path never contains the token. `postAction` returns `{status, body}` and never throws for an HTTP status; a network error becomes `{status: 0, body: null}`.
 
 **Results** (`actionResult(op, body, status, reply)` → `{kind, label, text}`):
-- `200`, not `answer`: toast `✓ SENT <journal line>` — "The effect lands through the journal stream." Journal lines: `pause|resume <epic|all> by=web`, `host-paused|host-resumed <host> by=web`, `release <key> by=web`, `ack <key|kind> by=web`.
+- `200`, not `answer`: toast `✓ SENT <journal line>` — "The effect lands through the journal stream." Journal lines are the records the engine writes: `pause|resume <epic|all> by=web`, `host-paused|host-resumed <host> by=web`, `release <key> <partner> by=web` (the hold's partner, when known) and `acknowledged <key|kind> by=web`.
 - `answer` `200` without `delivered: "uncertain"`: `✓ DELIVERED` — "Attention marked answered."
 - `answer` `200` with `delivered: "uncertain"`: `▲ UNCERTAIN` — "Delivery uncertain; check the screen."
 - `409`: `● REFUSED · <code>` — for `answer` "The engine refused the answer. Attach from a terminal.", else the engine message. `<code>` is the herdr code in `… herdr <method>: <code>: …` (for example `agent_blocked`), otherwise the whole engine error text. The dialog shows the full engine message too.
@@ -80,7 +80,7 @@ A host shows `RESUME` when it is paused or cooling (resume clears both, #653), e
 - Esc (the dialog's `cancel` event) and `CANCEL` close it; focus returns to the button that opened it (`ANSWER →` or `[ ANSWER ]`), or the drawer's `ANSWER →` when that node was re-rendered.
 - Delivered: the dialog closes and the toast shows the result. Refused or uncertain: the dialog stays open with the result line (`role="status"`) and the engine message; the text is kept.
 
-**Focus.** The 1 s re-render rebuilds hosts and attention rows. Each action button carries a stable `data-control` (`<op>:<target>`); the controls view restores focus to the button with the same id after a render.
+**Focus.** The 1 s re-render rebuilds hosts and attention rows. Each action button carries a stable `data-control`: `epic:<key>` and `host:<name>` for buttons that flip between pause and resume, otherwise `<op>:<target>`. A render keeps an unchanged button node in place, so a click that spans a re-render still lands, and the controls view restores focus to the button with the same id.
 
 ## Interfaces / Schema
 
@@ -151,6 +151,7 @@ New DOM ids: `control-chip`, `control-toggle`, `pause-all`, `resume-all`, `contr
 
 - `liveAgent` follows the engine's `has_live_agent` instead of "stage running or awaiting_merge and agent not done" (see the disable rules); the live run showed an idle Claude Code worker reporting `done`.
 - Attention items stay listed after `ack` or `answer` with `state` `acknowledged` or `answered`; they show `✓ ACKNOWLEDGED` or `✓ ANSWERED` instead of an action, and the drawer's `ACK` appears only for an open item.
+- Code review (2026-10-27): stable focus ids for flipping buttons, unchanged buttons kept across renders, journal lines named as the engine writes them, the drawer and dialog pick the key's open attention item, a 403 screen read is retried with a new token, a result for a dialog closed while pending becomes a toast, Send stays disabled after an uncertain delivery until the text changes, and the drawer's issue and screen reads run in parallel.
 - The CLI signs host pauses `by=user`; the hosts panel shows that as `cli`, as the issue's "paused by web|cli" asks.
 
 ## Spec review (2026-10-27)

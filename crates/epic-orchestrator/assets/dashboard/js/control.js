@@ -12,6 +12,7 @@ import {
   TOKEN_KEY,
   actionBody,
   actionResult,
+  keyAttention,
 } from "./logic/control.js";
 import { takeToken } from "./logic/fragment.js";
 import { findIssue } from "./logic/status.js";
@@ -75,7 +76,7 @@ function toast(result) {
 }
 
 // One request at a time, never from a peer view, never without a token.
-async function act(op, body) {
+async function act(op, body, partner) {
   const token = readToken();
   if (current().peer || !token || control.pending) return null;
   control.pending = true;
@@ -87,7 +88,7 @@ async function act(op, body) {
   repaint();
   return reply.status === 401
     ? { kind: "rotated", ...ROTATED_BANNER }
-    : actionResult(op, body, reply.status, reply.body);
+    : actionResult(op, body, reply.status, reply.body, partner);
 }
 
 function answerFor(key, opener) {
@@ -97,7 +98,7 @@ function answerFor(key, opener) {
     {
       key,
       row: findIssue(docs.boards, key)?.row ?? { key },
-      attention: (docs.attention?.items ?? []).find((item) => item.key === key),
+      attention: keyAttention(docs.attention, key),
       liveStatus: (live?.items ?? []).find((item) => item.key === key)?.agent_status,
     },
     opener,
@@ -108,12 +109,13 @@ function answerFor(key, opener) {
 async function send(key, text) {
   const result = await act("answer", { key, text });
   if (!result) return;
-  if (result.kind !== "delivered") {
+  // A dialog cancelled while the answer was pending cannot show the result; the toast can.
+  if (result.kind !== "delivered" && $("answer-dialog").open) {
     showAnswerResult(result);
     return;
   }
   closeAnswer();
-  toast(result);
+  if (result.kind !== "rotated") toast(result);
 }
 
 async function onClick(event) {
@@ -124,8 +126,30 @@ async function onClick(event) {
     answerFor(button.dataset.key, button);
     return;
   }
-  const result = await act(action, actionBody(action, button.dataset));
+  const result = await act(action, actionBody(action, button.dataset), button.dataset.with);
   if (result && result.kind !== "rotated") toast(result);
+}
+
+// Renders rebuild the rows that hold buttons, and a button moved between pointerdown and
+// pointerup gets no click. Replay it when the press starts and ends on the same control.
+const press = { id: null, clicked: false };
+const pressed = (event) => event.target.closest?.("button[data-control]");
+
+function trackPress() {
+  document.addEventListener("pointerdown", (event) => {
+    press.id = pressed(event)?.dataset.control ?? null;
+    press.clicked = false;
+  });
+  document.addEventListener("click", () => (press.clicked = true), true);
+  document.addEventListener("pointerup", (event) => {
+    const { id } = press;
+    press.id = null;
+    const button = pressed(event);
+    if (!id || button?.dataset.control !== id) return;
+    setTimeout(() => {
+      if (!press.clicked) button.click();
+    });
+  });
 }
 
 export function initControl(state, onRepaint) {
@@ -137,6 +161,7 @@ export function initControl(state, onRepaint) {
   storeToken();
   initAnswer(send);
   document.addEventListener("click", onClick);
+  trackPress();
   window.addEventListener("hashchange", storeToken);
   $("control-toggle").addEventListener("click", () => {
     if (readToken()) {

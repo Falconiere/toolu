@@ -22,6 +22,12 @@ export const ACTION_LABELS = { answer: "[ ANSWER ]", release: "[ RELEASE ]", ack
 // Acknowledged and answered items stay listed until they clear; only open ones take an action.
 export const attentionOpen = (item) => Boolean(item) && (!item.state || item.state === "open");
 
+// A key can hold several items, some already handled; its open one is the one to act on.
+export function keyAttention(attention, key) {
+  const items = (attention?.items ?? []).filter((item) => item.key === key);
+  return items.find(attentionOpen) ?? items[0];
+}
+
 // `answer` and `release` need a key; a keyless item can only be acknowledged by its kind.
 export function attentionAction(kind, key, state = "open") {
   if (state !== "open") return null;
@@ -69,14 +75,17 @@ export function actionRequest(op, body, token) {
   };
 }
 
-const HOST_RECORDS = { "host-pause": "host-paused", "host-resume": "host-resumed" };
+// The record names the engine journals: `ack` writes `acknowledged`, host ops their past tense.
+const RECORDS = { ack: "acknowledged", "host-pause": "host-paused", "host-resume": "host-resumed" };
 
-export function journalLine(op, body) {
+// `partner` is the hold's other issue, which the engine's `release` note names before `by=`.
+export function journalLine(op, body, partner = "") {
   const target =
     op === "pause" || op === "resume"
       ? body.epic || "all"
       : (body.host ?? body.key ?? body.kind ?? "");
-  return `${HOST_RECORDS[op] ?? op} ${target} by=web`;
+  const note = op === "release" && partner ? `${partner} by=web` : "by=web";
+  return `${RECORDS[op] ?? op} ${target} ${note}`;
 }
 
 // herdr refusals read `… herdr <method>: <code>: <message>`; other refusals are plain text.
@@ -85,7 +94,7 @@ export function refusalCode(error) {
   return text.match(/herdr [^:\s]+: ([a-z][a-z0-9_]*):/)?.[1] ?? text;
 }
 
-export function actionResult(op, body, status, reply) {
+export function actionResult(op, body, status, reply, partner = "") {
   if (status === 409) {
     const error = String(reply?.error ?? "");
     const text = op === "answer" ? "The engine refused the answer. Attach from a terminal." : error;
@@ -101,7 +110,7 @@ export function actionResult(op, body, status, reply) {
   if (op !== "answer") {
     return {
       kind: "sent",
-      label: `✓ SENT ${journalLine(op, body)}`,
+      label: `✓ SENT ${journalLine(op, body, partner)}`,
       text: "The effect lands through the journal stream.",
     };
   }

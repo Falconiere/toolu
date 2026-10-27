@@ -147,7 +147,8 @@ export function renderDrawer(model) {
   renderPlan(model.doc?.plan, Boolean(model.doc), model.docFailed);
   renderScreen(model, issue);
   renderPhases(issue);
-  for (const row of document.querySelectorAll("button[data-issue]")) {
+  // Attention keys carry `data-issue` too; only the board row is the current one.
+  for (const row of document.querySelectorAll("#board button[data-issue]")) {
     if (row.dataset.issue === model.key) row.setAttribute("aria-current", "true");
     else row.removeAttribute("aria-current");
   }

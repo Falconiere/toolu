@@ -11,6 +11,7 @@ import {
   counter,
   drawerActions,
   journalLine,
+  keyAttention,
   liveAgent,
   refusalCode,
   sendDisabled,
@@ -49,6 +50,16 @@ test("engine attention kinds map to answer, release or ack; unknown kinds ack", 
   assert.equal(attentionAction("needs-human", "k-1", "answered"), null);
   assert.equal(attentionAction("needs-human", "k-1", "open"), "answer");
   assert.equal(attentionAction("coupling-hold", null), "ack");
+});
+
+test("a key's open attention item wins over its handled ones", () => {
+  const acked = { key: "k-1", kind: "stall", state: "acknowledged", note: "old" };
+  const open = { key: "k-1", kind: "needs-human", state: "open", note: "which API?" };
+  const other = { key: "k-2", kind: "failed", state: "open" };
+  assert.equal(keyAttention({ items: [acked, other, open] }, "k-1"), open);
+  assert.equal(keyAttention({ items: [acked, other] }, "k-1"), acked);
+  assert.equal(keyAttention({ items: [other] }, "k-1"), undefined);
+  assert.equal(keyAttention(null, "k-1"), undefined);
 });
 
 test("a live agent is launched and its issue not finished, as the engine decides", () => {
@@ -119,7 +130,9 @@ test("journal lines match the engine's action records", () => {
   assert.equal(journalLine("host-resume", { host: "codex" }), "host-resumed codex by=web");
   assert.equal(journalLine("host-pause", { host: "claude" }), "host-paused claude by=web");
   assert.equal(journalLine("release", { key: "k-1" }), "release k-1 by=web");
-  assert.equal(journalLine("ack", { kind: "babysit" }), "ack babysit by=web");
+  assert.equal(journalLine("release", { key: "k-1" }, "k-2"), "release k-1 k-2 by=web");
+  assert.equal(journalLine("ack", { key: "k-1" }), "acknowledged k-1 by=web");
+  assert.equal(journalLine("ack", { kind: "babysit" }), "acknowledged babysit by=web");
 });
 
 test("results read sent, delivered, uncertain, refused and failed", () => {

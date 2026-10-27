@@ -3,11 +3,17 @@
 
 use std::path::Path;
 
-fn read_asset(file: &str) -> String {
+/// One dashboard asset file as text; the drawer tests share it.
+pub(super) fn read_asset(file: &str) -> String {
   let path = Path::new(env!("CARGO_MANIFEST_DIR"))
     .join("assets/dashboard")
     .join(file);
   std::fs::read_to_string(&path).expect(file)
+}
+
+/// `text` with every whitespace run collapsed, since oxfmt wraps long HTML lines.
+pub(super) fn flat(text: &str) -> String {
+  text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// Every served text asset with its name, plus the page.
@@ -42,7 +48,10 @@ fn dashboard_control_keeps_the_token_only_in_session_storage() {
     assert!(!text.contains("localStorage"), "{name} uses localStorage");
     assert!(!text.contains("document.cookie"), "{name} uses cookies");
     if name != "js/control.js" {
-      assert!(!text.contains("sessionStorage"), "{name} touches sessionStorage");
+      assert!(
+        !text.contains("sessionStorage"),
+        "{name} touches sessionStorage"
+      );
     }
   }
   let control = read_asset("js/control.js");
@@ -62,15 +71,25 @@ fn dashboard_control_actions_send_bearer_and_json() {
   let api = read_asset("js/api.js");
   assert!(api.contains("const { path, init } = actionRequest(op, body, token);"));
   assert!(api.contains("const response = await fetch(path, init);"));
+  // A press whose button a render moved still sends exactly one click.
+  let control = read_asset("js/control.js");
+  assert!(control.contains("if (!id || button?.dataset.control !== id) return;"));
+  assert!(control.contains("if (!press.clicked) button.click();"));
 }
 
 #[test]
 fn dashboard_control_builds_no_url_with_the_token() {
   for (name, text) in served_text() {
     for line in text.lines() {
-      let builds_url = ["/api/v1", "fetch(", "EventSource(", "replaceState(", "href ="]
-        .iter()
-        .any(|marker| line.contains(marker));
+      let builds_url = [
+        "/api/v1",
+        "fetch(",
+        "EventSource(",
+        "replaceState(",
+        "href =",
+      ]
+      .iter()
+      .any(|marker| line.contains(marker));
       assert!(
         !(builds_url && line.to_lowercase().contains("token")),
         "{name}: {line}"
@@ -82,11 +101,9 @@ fn dashboard_control_builds_no_url_with_the_token() {
 #[test]
 fn dashboard_control_maps_engine_kinds_and_disable_rules() {
   let logic = read_asset("js/logic/control.js");
-  assert!(
-    logic.contains(
-      "const ANSWER_KINDS = new Set([\"needs-human\", \"stuck\", \"help\", \"contract-changed\"]);"
-    )
-  );
+  assert!(logic.contains(
+    "const ANSWER_KINDS = new Set([\"needs-human\", \"stuck\", \"help\", \"contract-changed\"]);"
+  ));
   assert!(logic.contains("return kind === \"coupling-hold\" ? \"release\" : \"ack\";"));
   assert!(logic.contains("if (!key) return \"ack\";"));
   assert!(logic.contains("Boolean(locked || pending)"));
@@ -117,7 +134,7 @@ fn dashboard_control_maps_engine_kinds_and_disable_rules() {
 #[test]
 fn dashboard_control_labels_every_control_and_the_dialog() {
   let page = read_asset("index.html");
-  let flat = page.split_whitespace().collect::<Vec<_>>().join(" ");
+  let flat = flat(&page);
   for text in [
     "PAUSE ALL EPICS",
     "RESUME ALL EPICS",
