@@ -68,6 +68,15 @@ Uncertain launches and incomplete cleanup retain ownership. See the
 [epic orchestrator contract](../plugins/epic-orchestrator/README.md) for policy,
 host verification limits and recovery.
 
+## Commands that take over the terminal
+
+`toolu sandbox run` and `toolu sandbox shell` end in `toolu_runtime::process::exec`,
+which replaces the toolu process with the command (`execvp`). The command keeps
+toolu's pid, process group, terminal and standard streams, so its output, its
+signals and its exit status are the caller's own, with nothing buffered in
+between. `exec` finds the program on `PATH` first and refuses a missing one
+before std changes any process state.
+
 ## Decision record
 
 - **Decision (epic #402):** every plugin is a Rust crate behind one `toolu` binary plus Markdown; hooks run the binary through the generated launcher. #425 switched the core plugin and kept a Bun fallback for one release; #440 removed the fallback, the bundles and the TypeScript tree.

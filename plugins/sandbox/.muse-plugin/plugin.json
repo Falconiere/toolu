@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "sandbox",
+  "displayName": "sandbox",
+  "version": "8.5.0",
+  "description": "A Linux sandbox for builds, gates and agent CLIs: a Lima VM on macOS that mounts only the project, this machine on Linux. `toolu sandbox setup` provisions the toolchain, and `toolu sandbox run` runs any command there at the same path. Standalone, no dependencies.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "sandbox",
+        "path": "skills/sandbox/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

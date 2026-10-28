@@ -87,7 +87,11 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
                                  "remind_after_minutes": 30 },
                   "peers": [{ "name": "server", "url": "http://192.168.1.20:7717" }] },
   "codeReview": { "enabled": true,
-                  "effort": "auto|small|medium|high|xhigh" }
+                  "effort": "auto|small|medium|high|xhigh" },
+  "sandbox":    { "backend": "lima|host", "name": "toolu-sandbox",
+                  "cpus": 10, "memory": 16, "disk": 100,
+                  "template": "template:_images/debian-13",
+                  "mounts": ["~/.herdr/worktrees"] }
 }
 ```
 
@@ -546,6 +550,24 @@ masked zero-context patch, bounded `HEAD` source of modified files, pre-pass
 findings, and open prior findings with dismissals. Secrets found by the pre-pass
 are replaced with `[REDACTED]` before any request.
 
+### VM sandbox (`sandbox`)
+
+Read by `toolu sandbox` (the `sandbox` plugin). The loader accepts the section
+without inspecting it; `toolu sandbox` refuses an unknown key or an invalid
+value with exit 1, naming the setting. Every key is optional:
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `backend` | `lima` on macOS, `host` elsewhere | `lima` runs commands in a Lima VM that mounts only the project; `host` runs them on this machine. |
+| `name` | `toolu-sandbox` | The VM name: 1 to 63 lowercase letters, digits or dashes, starting with a letter or digit. Another name is another VM. |
+| `cpus` | host cores minus 2, at least 2 | The VM's CPUs, 1 to 256. Applied when the VM boots. |
+| `memory` | half the host memory, from 2 to 32 | The VM's memory in whole GiB, 1 to 1024. Applied when the VM boots. |
+| `disk` | `100` | The VM's disk in whole GiB, 10 to 8192. Used only when the VM is created; a later change leaves an existing VM as it is. |
+| `template` | `template:_images/debian-13` | The Lima template the VM builds on. Used only when the VM is created. |
+| `mounts` | `[]` | Host directories mounted besides the project, absolute or starting with `~/`. |
+
+`backend`, `name`, `mounts` and `template` decide where commands run, which Lima VM that is and what they can reach, so `toolu sandbox` reads them from your user config file only: a project's checked-in `toolu.config.json` can set `cpus`, `memory` and `disk`, but a value it gives for `backend`, `name`, `mounts` or `template` is ignored. A project directory that holds your home directory (running from `~`, or in a repository rooted there) is refused unless `mounts` lists it.
+
 ### Recognized names
 
 | Category | Names                                                                              |
@@ -556,6 +578,7 @@ are replaced with `[REDACTED]` before any request.
 | `mcp`    | any MCP server name — e.g. `canva`, `figma`                                        |
 | `models` | `enabled`, the six Claude class aliases, and `codex.<class>.{model,reasoningEffort}` |
 | `prBabysit` | `dispatch`, `hosts`, `prefer`, `routing`, `unattended`, `jev` (read by `pr-babysit`; invalid values stop the fixer route with `config_invalid`) |
+| `sandbox` | `backend`, `name`, `cpus`, `memory`, `disk`, `template`, `mounts` (read by `toolu sandbox`; an unknown key or invalid value exits 1) |
 
 Unknown names are silently ignored (forward compatible).
 

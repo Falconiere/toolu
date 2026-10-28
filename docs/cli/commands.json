@@ -4622,6 +4622,223 @@
       "placeholder": false
     },
     {
+      "about": "Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Create and provision the sandbox, then print how to install and log in to the agent CLIs",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "setup",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "setup"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Show the backend, the sandbox's state, its settings and this project",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Start the sandbox, applying its settings and this project's mounts",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Stop a running sandbox first; every command running in it stops",
+              "hidden": false,
+              "long": "restart",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "start",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "start"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Stop the sandbox",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "stop",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "stop"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Delete the sandbox with its disk, caches and agent CLI logins",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Confirm the deletion",
+              "hidden": false,
+              "long": "yes",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "delete",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "delete"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a command in the sandbox at this directory; the exit status is the command's",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The command and its arguments",
+              "multiple": true,
+              "name": "COMMAND",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Run in a clone of this checkout on the sandbox's own disk, with its uncommitted and untracked changes",
+              "hidden": false,
+              "long": "clone",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "run",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "run"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Open a login shell in the sandbox at this directory",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "shell",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "shell"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as its plugin's hooks.json names it",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "sandbox",
+      "owner": "sandbox",
+      "path": [
+        "sandbox"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "List every toolu command; --json exports the tree for tools and docs",
       "aliases": [],
       "args": [],

@@ -19,6 +19,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 | 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native local review of the push diff with OpenRouter and Jev (epic #660); `toolu code-review run` fails closed until the pipeline lands |
+| 14 | [**sandbox**](../../plugins/sandbox/README.md) | Environment | — | A Linux place for builds, gates and agent CLIs: a Lima VM on macOS, the host on Linux; `toolu sandbox run` runs a command there |
 
 ## Architecture Overview
 

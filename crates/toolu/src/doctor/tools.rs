@@ -113,11 +113,27 @@ const ROWS: &[Row] = &[
   },
 ];
 
+/// The rows that apply on macOS only: the sandbox's default backend there is a
+/// Lima VM, while on Linux it runs on the machine itself.
+const MACOS_ROWS: &[Row] = &[Row {
+  plugin: "sandbox",
+  tool: "limactl",
+  required: false,
+  hint: "install Lima 2 for toolu sandbox: brew install lima",
+}];
+
 /// Fail when a required tool is missing, else warn when an optional one is.
 pub(super) fn check(inventory: &Inventory, env: &Env) -> Check {
+  check_on(inventory, env, std::env::consts::OS)
+}
+
+/// [`check`] on an `os` named as `std::env::consts::OS` names it.
+fn check_on(inventory: &Inventory, env: &Env, os: &str) -> Check {
   let names = installed_names(&inventory.plugins);
+  let platform: &[Row] = if os == "macos" { MACOS_ROWS } else { &[] };
   let mut missing: Vec<&Row> = ROWS
     .iter()
+    .chain(platform)
     .filter(|row| names.contains(&row.plugin) && !tool_available(row.tool, env))
     .collect();
   missing.sort_by_key(|row| !row.required);

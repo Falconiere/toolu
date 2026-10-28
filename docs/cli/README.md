@@ -34,6 +34,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`statusline`](statusline.md) | `plugins/statusline` | available | Render and set up the native Claude status line |
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | available | Babysit a PR until CI, review threads and the review-bot verdict are clear |
 | [`epic`](epic.md) | `plugins/epic-orchestrator` | available | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
+| [`sandbox`](sandbox.md) | `plugins/sandbox` | available | Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
 | [`plugins`](plugins.md) | built into `crates/cli` | available | Install, list, remove and update toolu plugins on every host |
 
@@ -69,6 +70,7 @@ Commands:
   statusline      Render and set up the native Claude status line
   babysit         Babysit a PR until CI, review threads and the review-bot verdict are clear [alias: pr-babysit]
   epic            Drive an epic to merged PRs: the resident engine, merge queue and trackers [alias: epic-orchestrator]
+  sandbox         Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux
   commands        List every toolu command; --json exports the tree for tools and docs
   plugins         Install, list, remove and update toolu plugins on every host
   help            Print this message or the help of the given subcommand(s)

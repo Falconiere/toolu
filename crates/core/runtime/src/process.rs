@@ -3,6 +3,8 @@
 //! and a deadline after which the whole group is terminated. Only this module
 //! spawns processes (rule 14).
 //!
+//! - `exec`: replace this process with another program, which keeps the
+//!   terminal, the streams and the exit status (`toolu sandbox run`);
 //! - `file`: a command whose stdout and stderr share one file (the plan
 //!   ledger's unmanaged check);
 //! - `guard`: a detached group that dies with its runner on SIGINT, SIGTERM or
@@ -11,6 +13,7 @@
 
 pub mod commands;
 mod drain;
+pub mod exec;
 pub mod file;
 pub mod group;
 pub mod guard;

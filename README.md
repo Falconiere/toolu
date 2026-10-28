@@ -177,7 +177,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Thirteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Fifteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -198,6 +198,7 @@ plugins.
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
 | Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge. |
+| Environment | **`sandbox`** | A Linux place for builds, gates and agent CLIs: `toolu sandbox run` on a Lima VM that mounts only the project (macOS) or this machine (Linux). |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
 Beyond the plugins, the core (`toolu`) also ships:
@@ -273,6 +274,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep` an
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     ├── toolu-review/            # toolu-review:review skill + push-review state writer
     ├── code-review/             # native code-review plugin manifests (skill lands with #669)
+    ├── sandbox/                 # toolu sandbox: a Linux VM (Lima) or the host for builds and agent CLIs
     └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
 ```
 

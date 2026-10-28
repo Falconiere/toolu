@@ -169,6 +169,16 @@ fn versions_compare_numerically_and_print_as_javascript_does() {
 }
 
 #[test]
+fn a_sandbox_section_is_a_known_key_the_loader_does_not_inspect() {
+  let (_dir, open) = loaded(
+    None,
+    Some(r#"{"version":1,"sandbox":{"backend":"host","futureKnob":1}}"#),
+  );
+  assert_eq!(open.invalid, None);
+  assert_eq!(open.data["sandbox"]["backend"], "host");
+}
+
+#[test]
 fn an_epic_section_is_never_inspected_but_a_sibling_unknown_key_fails() {
   let (_dir, open) = loaded(
     None,

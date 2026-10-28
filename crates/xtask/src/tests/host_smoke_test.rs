@@ -1,6 +1,6 @@
 use std::os::unix::fs::PermissionsExt as _;
 
-use super::{Host, hosts, require_auth, require_bin, require_platform, run, settle};
+use super::{Host, hosts, require_auth, require_bin, require_bwrap, run, settle};
 use crate::Verdict;
 use crate::options::Options;
 
@@ -25,18 +25,19 @@ fn an_unknown_host_is_an_error() {
 }
 
 #[test]
-fn muse_and_cursor_run_anywhere_and_claude_and_codex_need_macos() {
-  assert_eq!(require_platform(&[Host::Muse], "linux"), Ok(()));
-  assert_eq!(require_platform(&[Host::Cursor], "linux"), Ok(()));
-  assert_eq!(require_platform(&[Host::Muse], "macos"), Ok(()));
-  assert_eq!(
-    require_platform(&[Host::Claude, Host::Codex], "macos"),
-    Ok(())
-  );
-  for planned in [vec![Host::Claude], vec![Host::Codex], hosts(None).unwrap()] {
+fn every_host_runs_anywhere_and_codex_and_muse_need_bwrap_on_linux() {
+  for os in ["macos", "linux"] {
+    assert_eq!(require_bwrap(&hosts(None).unwrap(), os, true), Ok(()));
     assert_eq!(
-      require_platform(&planned, "linux").unwrap_err(),
-      "live Claude Code and Codex smoke requires macOS"
+      require_bwrap(&[Host::Claude, Host::Cursor], os, false),
+      Ok(())
+    );
+  }
+  assert_eq!(require_bwrap(&[Host::Codex], "macos", false), Ok(()));
+  for planned in [vec![Host::Codex], vec![Host::Muse], hosts(None).unwrap()] {
+    assert_eq!(
+      require_bwrap(&planned, "linux", false).unwrap_err(),
+      "Codex and Muse sandbox with bubblewrap on Linux; install bwrap (apt install bubblewrap)"
     );
   }
 }

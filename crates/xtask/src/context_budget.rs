@@ -32,6 +32,12 @@ struct Skill {
 
 const SKILLS: &[Skill] = &[
   Skill {
+    name: "sandbox",
+    path: "plugins/sandbox/skills/sandbox/SKILL.md",
+    budget: 60,
+    phrases: &["run the gate in the sandbox", "test on Linux"],
+  },
+  Skill {
     name: "delivery-flow",
     path: "plugins/delivery-flow/skills/delivery-flow/SKILL.md",
     budget: 50,

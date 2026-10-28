@@ -27,6 +27,7 @@ toolu-pr-babysit = { path = "../pr-babysit" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-review = { path = "../toolu-review" }
 toolu-runtime = { path = "../core/runtime" }
+toolu-sandbox = { path = "../sandbox" }
 toolu-statusline = { path = "../statusline" }
 
 [dev-dependencies]

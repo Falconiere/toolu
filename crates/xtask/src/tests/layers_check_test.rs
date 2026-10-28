@@ -24,7 +24,7 @@ fn the_repository_has_no_violation() {
     "{:?}",
     report.violations
   );
-  assert_eq!(report.crates, 27);
+  assert_eq!(report.crates, 28);
 }
 
 #[test]
@@ -66,6 +66,7 @@ fn a_capability_crate_linked_outside_its_owner_is_named() {
       "crates/ts-quality (toolu-ts-quality) depends on serde_json: only toolu-http may link a `example-json` crate",
       "crates/plugins (toolu-plugins) depends on serde_json: only toolu-http may link a `example-json` crate",
       "crates/toolu-review (toolu-review) depends on serde_json: only toolu-http may link a `example-json` crate",
+      "crates/sandbox (toolu-sandbox) depends on serde_json: only toolu-http may link a `example-json` crate",
       "crates/statusline (toolu-statusline) depends on serde_json: only toolu-http may link a `example-json` crate",
       "crates/xtask (xtask) depends on serde_json: only toolu-http may link a `example-json` crate",
     ]

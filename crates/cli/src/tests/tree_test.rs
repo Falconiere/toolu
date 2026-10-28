@@ -37,6 +37,7 @@ fn every_namespace_is_a_top_level_command() {
       "statusline",
       "babysit",
       "epic",
+      "sandbox",
       "commands",
       "plugins",
     ]
