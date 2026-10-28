@@ -56,7 +56,10 @@ impl Jev {
         Ok(response) if (200..300).contains(&response.status) => {
           return Ok(String::from_utf8_lossy(&response.body).into_owned());
         }
-        Ok(response) => (self.retry_status(&response, attempt)?, self.http_error(&response)),
+        Ok(response) => (
+          self.retry_status(&response, attempt)?,
+          self.http_error(&response),
+        ),
         Err(err @ (toolu_http::Error::Timeout | toolu_http::Error::Transport(_)))
           if attempt < ATTEMPTS =>
         {
@@ -129,7 +132,12 @@ const HEADERS: [(&str, &str); 2] = [
 fn failure(err: toolu_http::Error) -> Error {
   match err {
     toolu_http::Error::Timeout => Error::Timeout,
-    err => Error::Transport(err),
+    err @ (toolu_http::Error::InvalidConfig(_)
+    | toolu_http::Error::HttpStatus(_)
+    | toolu_http::Error::BodyTooLarge
+    | toolu_http::Error::Encode(_)
+    | toolu_http::Error::Decode(_)
+    | toolu_http::Error::Transport(_)) => Error::Transport(err),
   }
 }
 

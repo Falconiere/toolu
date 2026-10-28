@@ -29,7 +29,10 @@ fn a_far_deadline_retries_like_ask_and_keeps_the_cost() {
   let endpoint = Endpoint::start().expect("endpoint");
   endpoint
     .fixture
-    .sequence(PATH, vec![Reply::new(503, "busy"), Reply::new(200, answer())])
+    .sequence(
+      PATH,
+      vec![Reply::new(503, "busy"), Reply::new(200, answer())],
+    )
     .expect("route");
   let reply = ask(&endpoint, Instant::now() + Duration::from_secs(30)).expect("reply");
   assert_eq!(reply.usage.cost_usd, Some(0.0001));
@@ -50,7 +53,11 @@ fn a_slow_answer_times_out_at_the_deadline() {
   let started = Instant::now();
   let result = ask(&endpoint, started + Duration::from_millis(400));
   assert_eq!(result.map(|_| ()), Err(Error::Timeout));
-  assert!(started.elapsed() < Duration::from_secs(2), "{:?}", started.elapsed());
+  assert!(
+    started.elapsed() < Duration::from_secs(2),
+    "{:?}",
+    started.elapsed()
+  );
 }
 
 #[test]

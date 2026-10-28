@@ -23,7 +23,8 @@ pub mod model;
 /// Deterministic scanners that run before the model.
 pub mod prepass;
 mod report;
-mod review;
+/// The prompt, the review call and the Jev judge.
+pub mod review;
 /// Repository conventions from the base ref.
 pub mod rules;
 /// The `codeReview` config section: the opt-in and the effort preference.

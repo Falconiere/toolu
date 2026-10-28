@@ -14,6 +14,7 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 toolu-engine = { path = "../core/engine" }
+toolu-jev-client = { path = "../core/jev" }
 toolu-openrouter = { path = "../core/openrouter" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }
@@ -21,6 +22,7 @@ toolu-state = { path = "../core/state" }
 
 [dev-dependencies]
 jsonschema.workspace = true
+toolu-http-test-support = { path = "../http-test-support" }
 
 [lints]
 workspace = true

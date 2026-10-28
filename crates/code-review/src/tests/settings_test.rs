@@ -38,7 +38,11 @@ fn only_the_project_file_can_opt_in() {
 fn an_invalid_envelope_fails_closed() {
   let found = settings(None, Some(r#"{"codeReview":{"enabled":true},"nope":1}"#));
   assert!(!found.enabled);
-  assert!(found.notes[0].contains("unknown top-level key 'nope'"), "{:?}", found.notes);
+  assert!(
+    found.notes[0].contains("unknown top-level key 'nope'"),
+    "{:?}",
+    found.notes
+  );
 }
 
 #[test]
@@ -52,5 +56,9 @@ fn effort_comes_from_the_merged_config_and_a_bad_value_is_noted() {
   assert_eq!(both.effort, Some(Effort::Xhigh));
   let bad = settings(None, Some(r#"{"codeReview":{"effort":"huge"}}"#));
   assert_eq!(bad.effort, None);
-  assert!(bad.notes[0].contains("codeReview.effort"), "{:?}", bad.notes);
+  assert!(
+    bad.notes[0].contains("codeReview.effort"),
+    "{:?}",
+    bad.notes
+  );
 }

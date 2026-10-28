@@ -1,7 +1,7 @@
 //! The committed review diff: base, noise, renames, and citable changed lines.
 
 mod file;
-mod git_io;
+pub(crate) mod git_io;
 mod noise;
 mod parse;
 mod source;

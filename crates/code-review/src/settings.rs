@@ -38,18 +38,24 @@ pub fn load(roots: &Roots, cwd: Option<&Path>) -> Settings {
 pub fn from_config(config: &LoadedConfig) -> Settings {
   let mut settings = Settings::default();
   if let Some(reason) = &config.invalid {
-    settings.notes.push(format!("invalid config ({reason}); code review stays disabled"));
+    settings.notes.push(format!(
+      "invalid config ({reason}); code review stays disabled"
+    ));
     return settings;
   }
   settings.enabled = config.files.project.as_deref().is_some_and(project_enabled);
-  match config.data.get(SECTION).and_then(|section| section.get("effort")) {
+  match config
+    .data
+    .get(SECTION)
+    .and_then(|section| section.get("effort"))
+  {
     None => {}
     Some(Value::String(name)) if Effort::parse(name).is_some() => {
       settings.effort = Effort::parse(name);
     }
-    Some(_) => settings
-      .notes
-      .push(format!("{SECTION}.effort is not one of auto|small|medium|high|xhigh; ignored")),
+    Some(_) => settings.notes.push(format!(
+      "{SECTION}.effort is not one of auto|small|medium|high|xhigh; ignored"
+    )),
   }
   settings
 }

@@ -2,7 +2,7 @@
 //! pr-babysit (#433) and the epic engine (#435) share.
 //!
 //! - The key comes from `TYPESAFE_API_KEY` and is never printed; `from_env_key`
-//!   names another variable, as code-review does for OpenRouter's System One.
+//!   names another variable, as code-review does for `OpenRouter`'s System One.
 //! - `JEV_TIMEOUT` is the per-attempt deadline in seconds (60 by default).
 //! - A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does;
 //!   `ask_until` also bounds every attempt and pause by one wall deadline.
@@ -33,10 +33,10 @@ pub const ENDPOINT: &str = "https://api.typesafe.ai/v1/systemone";
 /// The model when the caller names none.
 pub const DEFAULT_MODEL: &str = "jev-latest";
 
-/// The same System One request body, served by OpenRouter with its key.
+/// The same System One request body, served by `OpenRouter` with its key.
 pub const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/systemone";
 
-/// The Jev model pinned on OpenRouter.
+/// The Jev model pinned on `OpenRouter`.
 pub const OPENROUTER_MODEL: &str = "typesafe/jev-1.13";
 
 /// The key variable `from_env` reads.
@@ -157,10 +157,10 @@ impl Jev {
   }
 }
 
-/// The exact byte length of the request body `ask` sends, so callers can hold
-/// a request cap before any network call.
-pub fn request_bytes(state: &State, model: &str, questions: &Questions) -> usize {
-  body(state, model, questions).len()
+/// The exact request body `ask` sends, so callers can hold a request cap, or
+/// record the request, before any network call.
+pub fn request_body(state: &State, model: &str, questions: &Questions) -> String {
+  body(state, model, questions)
 }
 
 fn body(state: &State, model: &str, questions: &Questions) -> String {

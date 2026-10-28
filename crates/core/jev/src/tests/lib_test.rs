@@ -4,7 +4,7 @@ use toolu_runtime::env::Env;
 
 use crate::{
   Config, DEFAULT_MODEL, ENDPOINT, Error, Jev, OPENROUTER_ENDPOINT, OPENROUTER_MODEL, Question,
-  Questions, State, request_bytes, timeout,
+  Questions, State, request_body, timeout,
 };
 
 #[test]
@@ -117,16 +117,17 @@ fn from_env_key_reads_only_the_named_variable() {
 
 #[test]
 fn the_openrouter_transport_is_pinned() {
-  assert_eq!(OPENROUTER_ENDPOINT, "https://openrouter.ai/api/v1/systemone");
+  assert_eq!(
+    OPENROUTER_ENDPOINT,
+    "https://openrouter.ai/api/v1/systemone"
+  );
   assert_eq!(OPENROUTER_MODEL, "typesafe/jev-1.13");
 }
 
 #[test]
-fn request_bytes_counts_the_body_in_key_order() {
+fn request_body_is_the_sent_text_in_key_order() {
   let questions = Questions::single("q", Question::noul("Ok?", None, None).expect("noul"));
-  let expected = r#"{"state":"é","model":"m","questions":{"q":{"type":"noul","instructions":"Ok?"}}}"#;
-  assert_eq!(
-    request_bytes(&State::text("é"), "m", &questions),
-    expected.len()
-  );
+  let expected =
+    r#"{"state":"é","model":"m","questions":{"q":{"type":"noul","instructions":"Ok?"}}}"#;
+  assert_eq!(request_body(&State::text("é"), "m", &questions), expected);
 }

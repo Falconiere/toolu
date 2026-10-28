@@ -89,7 +89,7 @@ deterministic except the model/Jev calls:
     and response (Jev reply body; the completion as JSON).
 
 `core/jev` additions (existing `toolu jev`, pr-babysit, epic engine unchanged):
-`from_env_key`, `ask_until(deadline)`, `request_bytes`, `OPENROUTER_ENDPOINT`,
+`from_env_key`, `ask_until(deadline)`, `request_body`, `OPENROUTER_ENDPOINT`,
 `OPENROUTER_MODEL`, and `Usage::cost_usd` (`usage.cost` when present).
 
 ## Interfaces / Schema
@@ -102,7 +102,7 @@ impl Jev {
   pub fn from_env_key(env: &Env, key_var: &str, config: Config) -> Result<Jev, Error>;
   pub fn ask_until(&self, state: &State, model: &str, questions: &Questions, deadline: Instant) -> Result<Reply, Error>;
 }
-pub fn request_bytes(state: &State, model: &str, questions: &Questions) -> usize;
+pub fn request_body(state: &State, model: &str, questions: &Questions) -> String; // its len() is the cap check
 pub struct Usage { pub input_tokens: u64, pub output_tokens: u64, pub cost_usd: Option<f64> }
 
 // crates/code-review
@@ -195,7 +195,7 @@ nor config sets one) so flag vs config is distinguishable; values unchanged.
   `medium` (`fallback`); `--effort xhigh` sends no selector request and notes the floor
   when one applies.
 - **AC-8:** `core/jev`: `ask_until` stops retrying when the deadline would be passed;
-  `from_env_key` reads the named variable; `request_bytes` equals the body length sent;
+  `from_env_key` reads the named variable; `request_body` equals the body sent;
   `usage.cost` parses into `cost_usd`; existing `toolu jev` tests stay green.
 - **AC-10:** Given memory with one open, one resolved and one dismissed prior finding,
   the chunk block sends the open one (id, path, category, severity, claim) and the

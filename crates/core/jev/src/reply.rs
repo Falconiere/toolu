@@ -15,7 +15,7 @@ pub struct Usage {
   pub input_tokens: u64,
   /// Output tokens.
   pub output_tokens: u64,
-  /// US dollars, when the endpoint reports a valid `usage.cost` (OpenRouter does).
+  /// US dollars, when the endpoint reports a valid `usage.cost` (`OpenRouter` does).
   pub cost_usd: Option<f64>,
 }
 
