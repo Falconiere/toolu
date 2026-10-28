@@ -53,6 +53,14 @@ the real VM.
 - The shared mount is about 35x slower than the VM disk for small-file writes.
   Build output, `TMPDIR` and `node_modules` belong on the VM disk; run the gate
   and `npm ci` with `--clone`.
+- Check free space on both the guest and the host volume holding Lima's instance.
+  Coverage grows its sparse disk: a full Mac volume caused guest commands to fail
+  with I/O errors despite 81 GiB free inside Linux. To relocate a task-owned VM,
+  cancel queued sandbox runs, stop it, and verify its disk handles are closed;
+  queued runs can otherwise boot it during the copy. Copy allocated data extents
+  to a spacious host volume, sync the copy and verify the source stayed unchanged
+  before replacing the instance's disk with a symlink. Boot and rerun the failed
+  check. Copying data/hole extents avoids reading the disk's entire logical size.
 - On the Mac, the first run of a freshly written script can stall for tens of
   seconds while macOS scans it. Tests with stub executables may take that long
   locally; it is the reason this sandbox exists, not a test bug.

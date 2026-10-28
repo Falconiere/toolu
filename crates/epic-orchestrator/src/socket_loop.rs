@@ -41,6 +41,7 @@ pub(crate) enum Msg {
   Effect { call: Call, outcome: String },
 }
 
+/// Shared snapshots, wake signals and integrations for the state thread.
 pub(crate) struct StateContext<'a> {
   pub(crate) protocol: u64,
   pub(crate) shared: &'a Mutex<World>,
@@ -51,6 +52,7 @@ pub(crate) struct StateContext<'a> {
   pub(crate) babysit: &'a dyn BabysitTick,
 }
 
+/// Process control requests, effect outcomes and host facts until shutdown.
 pub(crate) fn state_loop(
   engine: &mut Engine,
   rx: &Receiver<Msg>,
@@ -69,7 +71,7 @@ pub(crate) fn state_loop(
       Ok(Msg::Line { request, reply }) => {
         engine.refresh_clock();
         // `stop` and `replace` issue no more calls and exit once the running one returns.
-        stopping |= dispatch(engine, &request, &reply, &mut waiters, context.protocol);
+        stopping |= request_line(engine, &request, &reply, &mut waiters, context)?;
       }
       Ok(Msg::Effect { call, outcome }) => {
         engine.refresh_clock();
@@ -98,6 +100,31 @@ pub(crate) fn state_loop(
       Err(RecvTimeoutError::Disconnected) => return Ok(()),
     }
   }
+}
+
+fn request_line(
+  engine: &mut Engine,
+  request: &Value,
+  reply: &Sender<Value>,
+  waiters: &mut Vec<Waiter>,
+  context: &StateContext<'_>,
+) -> Result<bool, String> {
+  if request.get("op").and_then(Value::as_str) != Some("cleanup") {
+    return Ok(dispatch(engine, request, reply, waiters, context.protocol));
+  }
+  // HTTP readers must see the committed snapshot when cleanup's SSE event arrives.
+  let mut shared = context
+    .shared
+    .lock()
+    .map_err(|_err| "status_unavailable".to_owned())?;
+  let (tx, rx) = std::sync::mpsc::channel();
+  let stop = dispatch(engine, request, &tx, waiters, context.protocol);
+  *shared = engine.world.clone();
+  context.changed.notify_all();
+  drop(shared);
+  let value = rx.try_recv().map_err(|err| err.to_string())?;
+  let _sent = reply.send(value);
+  Ok(stop)
 }
 
 fn publish(shared: &Mutex<World>, changed: &Condvar, engine: &Engine) -> Result<(), String> {

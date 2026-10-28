@@ -71,6 +71,7 @@ impl Engine {
     .expect("registry");
     write_value(&state.join("graph.json"), graph).expect("graph");
     let addr = SocketAddr::from(([127, 0, 0, 1], http.addr.port()));
+    let token = http.secrets.status_token().map(str::to_owned);
     let background = paths.clone();
     let thread = thread::spawn(move || {
       let options = ServeOptions {
@@ -85,6 +86,7 @@ impl Engine {
       "state_dir": state.display().to_string(), "phase": "execution", "note": "fleet"});
     let reply = exchange_retry(&paths, PROTOCOL, &report).expect("report");
     assert_eq!(reply["ok"], true, "{reply}");
+    wait_for_report(addr, issue, token.as_deref());
     Engine {
       paths,
       addr,
@@ -107,6 +109,24 @@ impl Engine {
       .expect("engine thread")
       .expect("engine result");
   }
+}
+
+fn wait_for_report(addr: SocketAddr, issue: &str, token: Option<&str>) {
+  for _ in 0..200 {
+    let (code, body) = get_with_token(addr, "/api/v1/overview", token);
+    assert_eq!(code, 200);
+    let status: Value = serde_json::from_str(&body).expect("overview");
+    let published = status["issues"].as_array().is_some_and(|issues| {
+      issues
+        .iter()
+        .any(|row| row["key"] == issue && row["stage"] == "running")
+    });
+    if published {
+      return;
+    }
+    thread::sleep(Duration::from_millis(10));
+  }
+  panic!("worker report {issue} was not published");
 }
 
 /// A free loopback port, released for the caller to bind.
@@ -155,8 +175,15 @@ fn wait_for(addr: SocketAddr) {
 
 /// `GET path` with `Host: addr`; the status code and the raw body.
 pub(crate) fn get(addr: SocketAddr, path: &str) -> (u16, String) {
+  get_with_token(addr, path, None)
+}
+
+fn get_with_token(addr: SocketAddr, path: &str, token: Option<&str>) -> (u16, String) {
   let mut stream = TcpStream::connect(addr).expect("connect");
-  let request = format!("GET {path} HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
+  let auth = token
+    .map(|token| format!("Authorization: Bearer {token}\r\n"))
+    .unwrap_or_default();
+  let request = format!("GET {path} HTTP/1.1\r\nHost: {addr}\r\n{auth}Connection: close\r\n\r\n");
   stream.write_all(request.as_bytes()).expect("request");
   let mut bytes = Vec::new();
   stream.read_to_end(&mut bytes).expect("response");

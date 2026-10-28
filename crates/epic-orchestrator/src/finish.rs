@@ -15,7 +15,8 @@ use serde_json::{Value, json};
 mod branch;
 mod ownership;
 mod prepare;
-mod record;
+/// Durable issue records and evidence used to verify teardown.
+pub(crate) mod record;
 mod remove;
 
 use ownership::{fence_cleanup_ownership, release_recorded_ownership};

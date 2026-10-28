@@ -23,8 +23,26 @@ pub(crate) fn load(paths: &Paths, now: SystemTime) -> Result<World, String> {
   let mut world = World::new(now_ms);
   apply_pause(&mut world, &read_value(&paths.pause())?);
   apply_watch(&mut world, &read_value(&paths.watch())?);
-  let stages = load_registry(&mut world, &read_value(&paths.registry())?)?;
+  let registry = read_value(&paths.registry())?;
+  let stages = load_registry(&mut world, &registry)?;
+  if registry.is_object() {
+    world.paused.retain(|key| world.epics.contains_key(key));
+  }
   for record in journal::tail(&paths.journal_dir(), now)? {
+    // Registry membership is authoritative; history must not revive removed epics.
+    if registry.is_object() && !record.epic.is_empty() && !world.epics.contains_key(&record.epic) {
+      world.seq = world.seq.max(record.seq);
+      continue;
+    }
+    if registry.is_object()
+      && record.kind == "judgment"
+      && !record.key.is_empty()
+      && !world.epics.contains_key(&record.key)
+      && !world.issues.contains_key(&record.key)
+    {
+      world.seq = world.seq.max(record.seq);
+      continue;
+    }
     observe(&mut world, &record);
   }
   overlay_stages(&mut world, &stages);
@@ -207,7 +225,8 @@ fn strings(value: Option<&Value>) -> Vec<String> {
     .unwrap_or_default()
 }
 
-fn overlay_stages(world: &mut World, stages: &BTreeMap<String, String>) {
+/// Restore durable stages that outrank transitions replayed from the journal.
+pub(crate) fn overlay_stages(world: &mut World, stages: &BTreeMap<String, String>) {
   for (key, stage) in stages {
     if let Some(issue) = world.issues.get_mut(key)
       && rank(stage) >= rank(&issue.stage)

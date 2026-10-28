@@ -32,6 +32,14 @@ pub(crate) fn command() -> Command {
     .subcommand(engine_command())
     .subcommand(serve_command())
     .subcommand(start_command())
+    .subcommand(
+      Command::new("cleanup")
+        .about("Unregister finished epics and missing state directories; preserve files")
+        .arg(flag(
+          "dry-run",
+          "Preview eligible entries without changing the registry",
+        )),
+    )
     .subcommand(crate::query::status_command())
     .subcommand(queue_command())
     .subcommand(pause_command(
@@ -73,6 +81,7 @@ pub(crate) fn run(matches: &ArgMatches, ctx: &Ctx, tick: &dyn BabysitTick) -> Ou
     Some(("engine", args)) => crate::control::engine(args, &env, tick),
     Some(("serve", args)) => crate::control::serve(args, &env, tick),
     Some(("start", args)) => crate::control::start(args, &env),
+    Some(("cleanup", args)) => crate::cleanup::run(args, &env),
     Some(("status", args)) => crate::query::status(args, &env),
     Some(("queue", args)) => crate::query::queue(args, &env),
     Some(("pause", args)) => crate::query::pause(args, &env, true),

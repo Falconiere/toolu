@@ -211,7 +211,11 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
 
 /// Add an epic directory to the registry once.
 pub(crate) fn register(paths: &Paths, state_dir: &str) -> Result<(), String> {
-  let current = read_value(&paths.registry())?;
+  crate::registry::update(paths, || register_locked(paths, state_dir))
+}
+
+fn register_locked(paths: &Paths, state_dir: &str) -> Result<(), String> {
+  let mut current = crate::registry::read(paths)?;
   let mut epics = current
     .get("epics")
     .and_then(Value::as_array)
@@ -223,7 +227,11 @@ pub(crate) fn register(paths: &Paths, state_dir: &str) -> Result<(), String> {
   if !present {
     epics.push(json!({"key": epic_key(Path::new(state_dir)), "state_dir": state_dir}));
   }
-  write_value(&paths.registry(), &json!({"version": 1, "epics": epics}))
+  let rows = current
+    .get_mut("epics")
+    .ok_or_else(|| "invalid registry".to_owned())?;
+  *rows = json!(epics);
+  write_value(&paths.registry(), &current)
 }
 
 /// Resolve the registered key from the graph or directory name.

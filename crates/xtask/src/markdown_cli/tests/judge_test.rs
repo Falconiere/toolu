@@ -37,7 +37,7 @@ fn an_unknown_verb_names_the_closest_and_the_valid_ones() {
       &[
         "unknown command `queu` under `toolu epic`",
         "closest: `queue`",
-        "valid: engine, serve, start, status, queue, pause, resume, ack, answer, wait, report, notify, job, service, token",
+        "valid: engine, serve, start, cleanup, status, queue, pause, resume, ack, answer, wait, report, notify, job, service, token",
       ],
     );
   }

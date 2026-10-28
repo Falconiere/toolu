@@ -8,7 +8,8 @@ use serde_json::{Value, json};
 use crate::launch::record::{Record, text};
 use crate::workload::OwnedWorkload;
 
-const STAGES: [&str; 9] = [
+/// Known persisted worker stages shared by teardown and cleanup validation.
+pub(crate) const STAGES: [&str; 9] = [
   "starting",
   "running",
   "awaiting_merge",
