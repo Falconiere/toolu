@@ -37,7 +37,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --path <PATH>       Review only this path; repeatable. A path-scoped run never writes passing state
   -q, --quiet             Drop the diagnostics of a successful run
-      --effort <LEVEL>    Review effort: auto lets Jev pick the level; a fixed level skips it [default: auto] [possible values: auto, small, medium, high, xhigh]
+      --effort <LEVEL>    Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto [possible values: auto, small, medium, high, xhigh]
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help

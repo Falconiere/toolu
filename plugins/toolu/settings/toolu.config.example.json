@@ -133,5 +133,9 @@
     "prefer": { "critical": ["claude"] },
     "unattended": true,
     "jev": true
+  },
+  "codeReview": {
+    "enabled": false,
+    "effort": "auto"
   }
 }

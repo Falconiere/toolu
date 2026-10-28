@@ -1249,7 +1249,7 @@
             },
             {
               "global": false,
-              "help": "Review effort: auto lets Jev pick the level; a fixed level skips it",
+              "help": "Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto",
               "hidden": false,
               "long": "effort",
               "possibleValues": [
