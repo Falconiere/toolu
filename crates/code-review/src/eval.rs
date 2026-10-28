@@ -33,6 +33,7 @@ pub mod setting;
 /// The document `eval` prints, with its verdict.
 pub mod suite;
 
+pub use arms::{ArmChoice, Mode, Plan};
 pub use calibration::{AutoChoice, Calibration, SettingTotals, calibrate};
 pub use expectations::{Case, CaseSet, Class, Expectation, Gate, Kind};
 pub use fixtures::{DEFAULT_BASE, Fixtures};
@@ -43,7 +44,6 @@ pub use report::{
   Arm, ArmReport, CallRecord, EvalReport, FindingsSummary, LiveOrReplayed, Revisions, Run,
   UsageTotals,
 };
-pub use arms::{ArmChoice, Mode, Plan};
 pub use runner::{run_all, run_case};
 pub use setting::Setting;
 pub use suite::{CaseReport, SuiteReport, Verdict};

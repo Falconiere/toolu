@@ -12,9 +12,9 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 
+use super::arms::{ArmChoice, Mode, Plan};
 use super::fixtures::Fixtures;
 use super::replay::Store;
-use super::arms::{ArmChoice, Mode, Plan};
 use super::runner::run_all;
 use super::setting::Setting;
 use super::suite::{SuiteReport, Verdict};
