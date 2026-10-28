@@ -1,6 +1,6 @@
 # Code-review paired-comparison eval harness — Design
 
-**Date:** 2026-10-28   **Status:** Draft   **Author:** Cursor epic worker   **Topic:** #670 expectation-based eval
+**Date:** 2026-10-28   **Status:** Approved   **Author:** Cursor epic worker   **Topic:** #670 expectation-based eval
 
 ## Problem
 
@@ -14,25 +14,34 @@ an explicit command.
 ## Non-Goals
 
 1. Changing the production `run` path beyond consuming the #666 `skip_judge` /
-   `recorder` hooks already shipped.
+   `recorder` hooks already shipped, plus a narrow replay transport hook the
+   eval module needs to inject recorded responses into `Options.openrouter` /
+   `Options.jev` (loopback or custom base URL already used by crate tests).
 2. Putting live OpenRouter or Jev calls inside `cargo xtask gate` or ordinary
    `cargo test`.
 3. GitHub comment posting, auto-fix, MCP, or a new JS runtime.
 4. A spend ceiling; cost is reported, never used to cut a run.
 5. Replacing the push-review gate; the harness only asserts the gate contract
-   through expectations over harness outputs.
+   through expectations over harness outputs and the same severity/blocking
+   helpers the pipeline uses.
 
 ## Architecture
 
 Add an `eval` module in `crates/code-review` that:
 
-1. Loads a case set from `fixtures/code-review-eval/` (pinned diff or mini-repo
-   revision, expectations JSON, optional committed replay blobs).
+1. Loads a case set from `fixtures/code-review-eval/`. Each case is a **mini
+   Git repository** under `cases/<id>/repo/` with two commits (base + tip) so
+   the real `shape` module can produce a `Shaped` diff — same pattern as
+   existing `crates/code-review` Git fixture tests (Jev `mini_git` 0.77).
+   `expectations.json` lists case ids, expectation rows, optional memory
+   seed JSON, and gate-contract flags. Optional `replay/` holds committed
+   response blobs for the explicit eval command.
 2. Runs two arms over the same shaped input via existing `review::Options`:
    baseline (`skip_judge: true`) and enhanced (`skip_judge: false`).
 3. Matches findings to expectations by exact `path` and case-insensitive
    substring over `claim` only. Unmatched findings are reported as
-   `unclassified` for human adjudication; unmatched expectations are misses.
+   `unclassified` for human adjudication; unmatched defect expectations are
+   misses.
 4. Writes a machine-readable report (revisions, coverage, findings, calls with
    live/replayed, usage, cost, runtime, tokens-per-finding, budget adherence,
    per-effort calibration when requested).
@@ -42,9 +51,10 @@ Add an `eval` module in `crates/code-review` that:
 
 `toolu code-review eval` is the explicit paid/replay entry. Offline
 `cargo test` covers expectation load, matcher, report shaping, gate-contract
-assertions, and memory expectation cases over synthetic findings and
-committed fixture files — not a live network. A missing key on a live-required
-run fails closed as blocked/unverified, never a green skip.
+assertions, and memory expectation cases over synthetic findings / seeded
+memory JSON and the committed mini-repos' metadata — not a live network. A
+missing key on a live-required run fails closed as blocked/unverified, never a
+green skip.
 
 Decisive trade-off: keep the gate networkless by testing the matcher/report in
 CI, and reserve full pipeline + replay/live for the explicit CLI (Jev
@@ -67,6 +77,16 @@ toolu code-review eval --cases <DIR> [--arm both|baseline|enhanced]
   2 when expectations miss or gate-contract checks fail; 69 when live was
   required and the key/opt-in/provider is unavailable; 64 on usage errors.
 
+### Layout
+
+```text
+fixtures/code-review-eval/
+  expectations.json
+  cases/<id>/repo/          # mini git repo (base commit + tip with the defect)
+  cases/<id>/memory.json    # optional prior Memory seed for memory classes
+  replay/<stage>-<sha256>.json   # optional; written/read by eval CLI
+```
+
 ### Expectations file (`expectations.json`)
 
 ```json
@@ -76,15 +96,17 @@ toolu code-review eval --cases <DIR> [--arm both|baseline|enhanced]
     {
       "id": "slice-underflow",
       "class": "supported",
-      "diff": "diffs/slice-underflow.diff",
+      "base": "HEAD~1",
       "memory": null,
       "expectations": [
         {
+          "id": "defect-underflow",
           "path": "src/lib.rs",
           "claim": "slice underflows",
           "kind": "defect"
         },
         {
+          "id": "fp-rewrite",
           "path": "src/lib.rs",
           "claim": "prefer rewrite",
           "kind": "false_positive"
@@ -111,7 +133,17 @@ For each expectation, a finding matches when `finding.path == expectation.path`
 and `expectation.claim` is a case-insensitive substring of `finding.claim`.
 First unused matching finding wins. Leftover findings → `unclassified`.
 Missing defect expectations → miss. A `false_positive` expectation that matches
-is a flagged known FP (counted, not a miss); absence of that FP is fine.
+is a flagged known FP (counted for the quality report, not a defect miss). The
+golden set includes at least one case whose synthetic findings exercise the FP
+flag path and one that leaves an unmatched finding for `unclassified`.
+
+### Offline gate-contract checks
+
+Unit/black-box tests call the same `Severity::blocking` / report
+`blocking_count` helpers and the pipeline's "may write passing state" predicate
+(or equivalent pure function extracted if needed) with synthetic `Report` /
+coverage values — no GitHub, no push-review file I/O required for the AC, but
+real predicate code paths, not reimplemented copies.
 
 ### Replay store
 
@@ -132,14 +164,13 @@ arms by fewer findings or fewer tokens alone. Document that bar in
 
 ### Starting fixture set
 
-Commit at least: the two epic probe diffs (slice underflow; inverted ownership),
-one cross-file defect case, one prompt false-positive case, one contradicted /
-insufficient class stub if expressible offline, and memory cases for drifted
-line (stays open), unreexamined (never resolved), and missing history (full
-review). Gate-contract expectations assert blocking severities drive
-`findings_count`, advisory never blocks, and unreviewed coverage never writes
-passing state (checked against harness-derived counts / synthetic state inputs
-offline).
+Commit mini-repos for at least: the two epic probe defects (slice underflow;
+inverted ownership), one cross-file defect, one prompt false-positive, plus
+memory seed files for drifted line (stays open), unreexamined (never resolved),
+and missing history (full review). Classes `contradicted` / `insufficient` /
+`adversarial` appear as expectation `class` labels with synthetic finding
+fixtures when a full live judge path is not in the gate. Gate-contract rows in
+`expectations.json` are checked offline as above.
 
 ## Failure modes and edge cases
 
@@ -206,9 +237,9 @@ offline).
 
 ## Open Questions
 
-None blocking. Defaults settled by issue #670, epic #660, and brainstorm Jev
-choices (`cli_eval`, `repo_fixtures`, `skip_judge`, `sha256_request`,
-`matcher_only`, `claim_only`). Live full-matrix calibration may use replay
-blobs recorded in a developer run; committing those blobs is in scope when size
-is reasonable, otherwise the CLI documents how to record them without failing
-the gate.
+None blocking. Fixture layout is mini-git under `fixtures/code-review-eval/cases/<id>/repo/`
+(Jev after review). Replay blobs for the full live matrix are optional in the
+PR: the CLI documents `eval --live` recording into `replay/`; the gate never
+requires them. Defaults settled by issue #670, epic #660, and Jev
+(`cli_eval`, `repo_fixtures`, `skip_judge`, `sha256_request`, `matcher_only`,
+`claim_only`, `mini_git`).
