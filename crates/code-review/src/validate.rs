@@ -335,6 +335,7 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
       quote: text,
       suggestion,
       redaction_spans: spans(ctx, finding),
+      assessment: finding.assessment,
     },
     prior: matched.cloned(),
   })))

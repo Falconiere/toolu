@@ -19,6 +19,7 @@ fn finding(severity: Severity) -> Finding {
     quote: "quote".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

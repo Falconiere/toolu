@@ -26,6 +26,7 @@ fn arm(setting: Setting, found: bool) -> ArmReport {
       quote: "q".to_owned(),
       suggestion: None,
       redaction_spans: Vec::new(),
+      assessment: None,
     }]
   } else {
     Vec::new()

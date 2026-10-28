@@ -17,6 +17,7 @@ fn finding() -> Finding {
     quote: "items[-1]".into(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

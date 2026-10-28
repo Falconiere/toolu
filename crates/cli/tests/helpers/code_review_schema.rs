@@ -4,8 +4,8 @@
 use serde_json::{Value, json};
 use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::{
-  Cost, Coverage, ErrorKind, Finding, Omitted, RedactionSpan, Report, ReportError, Severity, Side,
-  Source, Usage,
+  Assessment, Cost, Coverage, ErrorKind, Finding, Omitted, RedactionSpan, Report, ReportError,
+  Severity, Side, Source, Usage,
 };
 
 use crate::cli::{TOOLU, one_document, stderr};
@@ -25,6 +25,7 @@ fn finding(id: &str, severity: Severity, side: Side, source: Source) -> Finding 
     quote: "let last = items[items.len() - 1];".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 
@@ -33,9 +34,13 @@ fn blocked_report() -> Report {
   let findings = vec![
     Finding {
       suggestion: Some("Use items.last().".to_owned()),
+      assessment: Some(Assessment::Supported),
       ..finding("f1", Severity::Blocker, Side::New, Source::Llm)
     },
-    finding("f2", Severity::Medium, Side::Old, Source::Llm),
+    Finding {
+      assessment: Some(Assessment::NotJudged),
+      ..finding("f2", Severity::Medium, Side::Old, Source::Llm)
+    },
     finding("f3", Severity::Low, Side::New, Source::Llm),
     finding("f4", Severity::Nit, Side::New, Source::AstGrep),
     finding("f5", Severity::High, Side::New, Source::Secrets),

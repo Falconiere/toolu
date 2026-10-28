@@ -3,6 +3,7 @@
 use crate::budget::Effort;
 use crate::contract::{Coverage, Finding, Omitted, Report, Severity, Side, Source};
 use crate::memory;
+use crate::model::ModelFinding;
 use crate::prepass::{self, PrepassResult};
 use crate::review::{self, RunError};
 use crate::shape::Shaped;
@@ -19,7 +20,10 @@ pub(crate) fn completed(
   let models: Vec<_> = reviewed
     .findings
     .iter()
-    .map(|item| item.finding.clone())
+    .map(|item| ModelFinding {
+      assessment: Some(item.assessment),
+      ..item.finding.clone()
+    })
     .collect();
   let mut validated = validate::validate(&validate::Input {
     shaped,
@@ -168,6 +172,7 @@ pub(super) fn system_blocker(id: &str, category: &str, claim: &str, quote: &str)
     quote: quote.to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

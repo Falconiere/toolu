@@ -6,7 +6,7 @@ use toolu_openrouter::{
 };
 
 use crate::budget::Effort;
-use crate::contract::{Cost, ErrorKind, Report, Severity, Side, Usage};
+use crate::contract::{Assessment, Cost, ErrorKind, Report, Severity, Side, Usage};
 
 /// The committed schema sent as `response_format.json_schema.schema`.
 pub const SCHEMA_JSON: &str = include_str!("model.schema.json");
@@ -50,6 +50,8 @@ pub struct ModelFinding {
   pub suggestion: Option<String>,
   /// Identity of an open prior finding, when re-raised.
   pub prior_id: Option<String>,
+  /// Jev's assessment once the judge stage ran; `None` before it.
+  pub assessment: Option<Assessment>,
 }
 
 /// Locally valid findings and whether any model text was omitted or normalized.
@@ -228,6 +230,7 @@ fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
       quote,
       suggestion,
       prior_id,
+      assessment: None,
     },
     normalized,
   ))

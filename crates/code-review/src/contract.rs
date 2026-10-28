@@ -122,6 +122,40 @@ pub struct Finding {
   /// Byte ranges of secrets in the unmasked line; the `quote` is already masked.
   #[serde(skip_serializing_if = "Vec::is_empty")]
   pub redaction_spans: Vec<RedactionSpan>,
+  /// Jev's assessment of a model finding; absent for deterministic findings.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub assessment: Option<Assessment>,
+}
+
+/// How Jev assessed a model finding. Advisory: the verdict never reads it, and
+/// Jev alone never removes a finding.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Assessment {
+  /// The evidence shows the defect.
+  Supported,
+  /// Jev found the claim contradicted; no valid dismissal followed, so it stays.
+  Contradicted,
+  /// Neither, or Jev was uncertain.
+  Insufficient,
+  /// Jev could not judge it: failure, deadline, or evidence over the cap.
+  Unavailable,
+  /// Not sent to Jev: a re-raised prior finding, below the level's judge depth,
+  /// or the Jev stage was switched off.
+  NotJudged,
+}
+
+impl Assessment {
+  /// The name the report uses.
+  pub fn name(self) -> &'static str {
+    match self {
+      Assessment::Supported => "supported",
+      Assessment::Contradicted => "contradicted",
+      Assessment::Insufficient => "insufficient",
+      Assessment::Unavailable => "unavailable",
+      Assessment::NotJudged => "not-judged",
+    }
+  }
 }
 
 /// The run's outcome.

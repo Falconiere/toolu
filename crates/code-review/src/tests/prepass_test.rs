@@ -65,6 +65,7 @@ pub(super) fn synthetic(source: Source, severity: Severity, index: u32) -> Findi
     quote: "q".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

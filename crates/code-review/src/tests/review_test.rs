@@ -64,6 +64,7 @@ pub(crate) fn trusted(source: Source) -> Finding {
     quote: "[REDACTED]".into(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 
@@ -80,6 +81,7 @@ pub(crate) fn finding(path: &str, severity: Severity) -> ModelFinding {
     quote: "let last = items[items.len() - 1];".into(),
     suggestion: None,
     prior_id: None,
+    assessment: None,
   }
 }
 

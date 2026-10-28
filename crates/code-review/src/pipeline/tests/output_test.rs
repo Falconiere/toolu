@@ -87,6 +87,7 @@ fn settle_keeps_reraised_and_renamed_priors_open_and_resolves_ones_out_of_the_di
     quote: "[REDACTED]".into(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   };
   settle(&mut recap, &[raised], &shaped(), &state);
   assert_eq!(recap.resolved, ["gone"]);

@@ -71,6 +71,7 @@ fn cite(shaped: &Shaped, path: &str, needle: &str, claim: &str) -> Result<ModelF
     quote: line.text.clone(),
     suggestion: None,
     prior_id: None,
+    assessment: None,
   })
 }
 

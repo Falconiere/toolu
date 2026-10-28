@@ -44,21 +44,8 @@ const KEY_VAR: &str = "OPENROUTER_API_KEY";
 /// The effort selector's own wall deadline.
 const SELECTOR_DEADLINE: Duration = Duration::from_secs(60);
 
-/// How Jev assessed a model finding.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Assessment {
-  /// The evidence shows the defect.
-  Supported,
-  /// Jev found the claim contradicted; no valid dismissal followed, so it stays.
-  Contradicted,
-  /// Neither, or Jev was uncertain.
-  Insufficient,
-  /// Jev could not judge it: failure, deadline, or evidence over the cap.
-  Unavailable,
-  /// Not sent to Jev: a re-raised prior finding, below the level's judge depth,
-  /// or the Jev stage was switched off.
-  NotJudged,
-}
+/// How Jev assessed a model finding; the report carries it on each one.
+pub use crate::contract::Assessment;
 
 /// A retained model finding and its assessment.
 #[derive(Debug, Clone, PartialEq, Eq)]

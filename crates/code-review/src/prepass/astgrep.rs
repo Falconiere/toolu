@@ -146,6 +146,7 @@ fn findings(shaped: &Shaped, hits: &[AstGrepHit]) -> Vec<Finding> {
           quote,
           suggestion: None,
           redaction_spans,
+          assessment: None,
         }
       })
     })

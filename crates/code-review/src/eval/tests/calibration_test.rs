@@ -29,6 +29,7 @@ fn finding(claim: &str) -> Finding {
     quote: "q".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

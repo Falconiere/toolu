@@ -47,6 +47,7 @@ fn finding(claim: &str) -> ModelFinding {
     quote: "let x = items[0];".to_owned(),
     suggestion: None,
     prior_id: None,
+    assessment: None,
   }
 }
 

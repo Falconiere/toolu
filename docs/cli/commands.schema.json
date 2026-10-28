@@ -801,6 +801,15 @@
               "suggestion": {
                 "type": "string"
               },
+              "assessment": {
+                "enum": [
+                  "supported",
+                  "contradicted",
+                  "insufficient",
+                  "unavailable",
+                  "not-judged"
+                ]
+              },
               "redaction_spans": {
                 "type": "array",
                 "minItems": 1,

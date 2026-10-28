@@ -159,6 +159,7 @@ fn a_failed_review_path_is_not_reexamined_and_a_deterministic_winner_keeps_the_p
     quote: "let x = 1;".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   };
   let raised = model("src/a.rs", 1, "let x = 1;");
   let out = run((&diff, &[raised], &[trusted], &priors, &[], &[]));
