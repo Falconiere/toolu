@@ -47,6 +47,7 @@ fn operate(
   match op {
     "stop" | "replace" => finish(engine, &reply, op == "replace"),
     "status" => reply_status(engine, request, &reply),
+    "cleanup" => crate::cleanup::reply(engine, request, &reply),
     "queue" => {
       let epic = request.get("epic").and_then(Value::as_str);
       let _sent = reply.send(crate::queue::document(&engine.world, epic));
@@ -158,6 +159,7 @@ fn reply_report(
   pump_after(engine)
 }
 
+/// Pump armed effects and report whether a scripted fault stopped the engine.
 pub(crate) fn pump_after(engine: &mut Engine) -> Result<bool, String> {
   Ok(engine.pump()? == Stop::Fault)
 }
@@ -201,6 +203,7 @@ fn report_from(request: &Value) -> Report {
   }
 }
 
+/// Journal a spooled request before removing its queued file.
 pub(crate) fn remember_spool(engine: &Engine, request: &Value) -> Result<(), String> {
   let Some(token) = request.get("token").and_then(Value::as_str) else {
     return Ok(());
@@ -277,6 +280,7 @@ fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String>
   remember_spool(engine, &value)
 }
 
+/// Whether the journal has already recorded this request token.
 pub(crate) fn spool_seen(engine: &Engine, token: &str) -> Result<bool, String> {
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
   Ok(

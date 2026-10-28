@@ -3422,6 +3422,34 @@
           "placeholder": false
         },
         {
+          "about": "Unregister finished epics and missing state directories; preserve files",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Preview eligible entries without changing the registry",
+              "hidden": false,
+              "long": "dry-run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "cleanup",
+          "owner": "epic-orchestrator",
+          "path": [
+            "epic",
+            "cleanup"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Print the engine, issues and attention",
           "aliases": [],
           "args": [

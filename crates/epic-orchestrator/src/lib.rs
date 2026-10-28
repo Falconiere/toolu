@@ -11,6 +11,8 @@ mod attention_ops;
 pub mod babysit;
 mod babysit_next;
 mod checkpoint;
+mod cleanup;
+mod cleanup_state;
 mod client;
 mod close;
 mod commit;
@@ -128,6 +130,7 @@ mod refill;
 mod refill_rig;
 mod refresh;
 mod refs;
+mod registry;
 mod retry;
 mod route;
 #[cfg(test)]

@@ -18,6 +18,7 @@ Commands:
   engine    Run the resident engine in the foreground
   serve     Run the resident engine with its HTTP status listener
   start     Register an epic state directory and start the engine
+  cleanup   Unregister finished epics and missing state directories; preserve files
   status    Print the engine, issues and attention
   queue     Print the merge queue of every repository, in merge order
   pause     Pause effects for every epic, or one epic
@@ -103,6 +104,22 @@ Options:
       --json              Print exactly one JSON document on stdout
       --safe              Keep approval prompts on in this epic's workers, until a start without it
       --no-jev            Route and check coupling by heuristics only, until a start without it
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu epic cleanup`
+
+```text
+Unregister finished epics and missing state directories; preserve files
+
+Usage: toolu epic cleanup [OPTIONS]
+
+Options:
+      --dry-run           Preview eligible entries without changing the registry
+      --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default

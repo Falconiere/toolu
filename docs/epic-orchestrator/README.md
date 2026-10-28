@@ -53,6 +53,7 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `launch`  | Clone/fetch, herdr worktree + routed host agent, worker brief                                |
 | `gate`    | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks  |
 | `finish`  | Snapshot, then tear down agent/worktree after merge; a live engine is told, never relaunches |
+| `cleanup` | Unregister locally finished epics or missing state directories; preserve files and Git state |
 | `close`   | Post the summary and close the epic in its tracker                                           |
 | `release` | Release a coupling hold so the issue launches next                                           |
 | `report`  | Worker phase reporter                                                                        |
@@ -62,6 +63,22 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `baseline`| Derive the TypeScript-era baseline from recorded epic state directories                      |
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
+
+## Registry cleanup
+
+Use `toolu epic cleanup --dry-run` to preview stale registry entries, then
+`toolu epic cleanup` to unregister them. Both return JSON with `dry_run`,
+`removed` (proposed removals in a preview), and `retained`; each item has its
+original registry `entry` and a `reason`.
+
+Cleanup uses local completion, closure and directory evidence, with no age
+threshold or tracker requests. Active workers, pending actions, unfinished
+teardown, failed or uncertain closure, and unreadable or malformed state keep
+an entry registered. State files, journal history, worktrees, branches and
+tracker issues stay in place. Repeating cleanup is harmless. It runs through
+the resident engine when one owns the state, or takes its ownership lock
+without starting workers. It affects this machine only; run it separately on
+peers. To remove abandoned unfinished work, finish it explicitly first.
 
 ## Finish recovery
 

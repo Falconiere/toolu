@@ -20,6 +20,11 @@ pub(crate) fn exchange(paths: &Paths, protocol: u64, request: &Value) -> Result<
   let hello = read_json(&mut stream)?;
   let server = hello.get("protocol").and_then(Value::as_u64).unwrap_or(0);
   if server != protocol {
+    if request.get("op").and_then(Value::as_str) == Some("cleanup") {
+      return Err(
+        "cleanup requires a matching engine protocol; replace the engine first".to_owned(),
+      );
+    }
     spool(paths, request)?;
     write_json(&mut stream, &json!({"op": "replace", "protocol": server}))?;
     return read_json(&mut stream);
@@ -55,11 +60,13 @@ pub(crate) fn exchange_retry(
   Err(last)
 }
 
+/// Read one JSON reply line without consuming the next one.
 pub(crate) fn read_json(stream: &mut UnixStream) -> Result<Value, String> {
   let line = read_line(stream)?;
   serde_json::from_str(&line).map_err(|err| err.to_string())
 }
 
+/// Write one JSON document followed by a newline.
 pub(crate) fn write_json(stream: &mut UnixStream, value: &Value) -> Result<(), String> {
   let mut line = serde_json::to_string(value).map_err(|err| err.to_string())?;
   line.push('\n');
