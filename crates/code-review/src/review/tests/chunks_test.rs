@@ -7,6 +7,7 @@ fn sent() -> Call {
     stage: Stage::Review,
     model: "m".into(),
     provider: None,
+    quantization: None,
     tokens_in: 1,
     tokens_out: 1,
     cost_usd: None,

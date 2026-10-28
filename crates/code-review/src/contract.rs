@@ -67,6 +67,8 @@ pub enum Source {
   AstGrep,
   /// The secret scanner of the pre-pass.
   Secrets,
+  /// A local failure that prevented model judgment.
+  System,
 }
 
 impl Source {
@@ -76,6 +78,7 @@ impl Source {
       Source::Llm => "llm",
       Source::AstGrep => "ast-grep",
       Source::Secrets => "secrets",
+      Source::System => "system",
     }
   }
 }
@@ -175,6 +178,29 @@ pub struct Usage {
   pub cost_usd: Option<Cost>,
   /// The model that served the review, when one did.
   pub model: Option<String>,
+  /// Metadata for each external call, with no prompt or source text.
+  pub calls: Vec<UsageCall>,
+}
+
+/// Per-call attribution kept small enough for the agent report.
+#[derive(Debug, Clone, PartialEq, Serialize)]
+pub struct UsageCall {
+  /// Selector, review, judge, or recheck.
+  pub stage: String,
+  /// Served model.
+  pub model: String,
+  /// Serving provider, when the endpoint reports it.
+  pub provider: Option<String>,
+  /// Serving quantization, when the endpoint reports it.
+  pub quantization: Option<String>,
+  /// Input tokens.
+  pub tokens_in: u64,
+  /// Output tokens, including reasoning.
+  pub tokens_out: u64,
+  /// Reported cost.
+  pub cost_usd: Option<f64>,
+  /// Wall time in milliseconds.
+  pub millis: u64,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report
@@ -239,6 +265,14 @@ pub struct Report {
   pub usage: Usage,
   /// Why the run could not review; when set, the verdict is `error`.
   pub error: Option<ReportError>,
+  /// Where the effort level came from and any deterministic floor.
+  pub effort_source: Option<String>,
+  /// Resolved, still-open and new finding IDs.
+  pub recap: Vec<String>,
+  /// Pre-pass findings and notices; retained during an outage.
+  pub mechanical_checks: Vec<String>,
+  /// Review degradation notes, not full source evidence.
+  pub notes: Vec<String>,
 }
 
 /// The printed document: `Report` plus its versions and computed verdict.
@@ -252,6 +286,14 @@ struct Document<'a> {
   coverage: &'a Coverage,
   usage: &'a Usage,
   error: Option<&'a ReportError>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  effort_source: Option<&'a String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  recap: &'a Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  mechanical_checks: &'a Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  notes: &'a Vec<String>,
 }
 
 impl Serialize for Report {
@@ -267,6 +309,10 @@ impl Serialize for Report {
       coverage: &self.coverage,
       usage: &self.usage,
       error: self.error.as_ref(),
+      effort_source: self.effort_source.as_ref(),
+      recap: &self.recap,
+      mechanical_checks: &self.mechanical_checks,
+      notes: &self.notes,
     }
     .serialize(serializer)
   }
@@ -286,6 +332,10 @@ impl Report {
       coverage,
       usage,
       error: None,
+      effort_source: None,
+      recap: Vec::new(),
+      mechanical_checks: Vec::new(),
+      notes: Vec::new(),
     }
   }
 

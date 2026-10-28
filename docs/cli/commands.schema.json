@@ -786,7 +786,8 @@
                 "enum": [
                   "llm",
                   "ast-grep",
-                  "secrets"
+                  "secrets",
+                  "system"
                 ]
               },
               "claim": {
@@ -892,7 +893,8 @@
             "tokens_in",
             "tokens_out",
             "cost_usd",
-            "model"
+            "model",
+            "calls"
           ],
           "properties": {
             "tokens_in": {
@@ -915,9 +917,31 @@
                 "string",
                 "null"
               ]
+            },
+            "calls": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["stage", "model", "provider", "quantization", "tokens_in", "tokens_out", "cost_usd", "millis"],
+                "properties": {
+                  "stage": {"enum": ["selector", "review", "judge", "recheck"]},
+                  "model": {"type": "string"},
+                  "provider": {"type": ["string", "null"]},
+                  "quantization": {"type": ["string", "null"]},
+                  "tokens_in": {"type": "integer", "minimum": 0},
+                  "tokens_out": {"type": "integer", "minimum": 0},
+                  "cost_usd": {"type": ["number", "null"], "minimum": 0},
+                  "millis": {"type": "integer", "minimum": 0}
+                }
+              }
             }
           }
         },
+        "effort_source": {"type": "string"},
+        "recap": {"type": "array", "items": {"type": "string"}},
+        "mechanical_checks": {"type": "array", "items": {"type": "string"}},
+        "notes": {"type": "array", "items": {"type": "string"}},
         "error": {
           "oneOf": [
             {

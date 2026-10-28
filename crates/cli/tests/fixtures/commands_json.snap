@@ -1,5 +1,6 @@
 ---
 source: crates/cli/tests/helpers/schema.rs
+assertion_line: 57
 ---
 {
   "about": "The one binary behind every toolu plugin's hooks, skills and commands",
@@ -1275,6 +1276,41 @@ source: crates/cli/tests/helpers/schema.rs
           "path": [
             "code-review",
             "run"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Settle a branch finding by exact ID without a model call",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "FINDING-ID",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "reason",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "TEXT"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "dismiss",
+          "owner": "code-review",
+          "path": [
+            "code-review",
+            "dismiss"
           ],
           "placeholder": false
         },

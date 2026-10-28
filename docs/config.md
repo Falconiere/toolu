@@ -550,6 +550,18 @@ masked zero-context patch, bounded `HEAD` source of modified files, pre-pass
 findings, and open prior findings with dismissals. Secrets found by the pre-pass
 are replaced with `[REDACTED]` before any request.
 
+The [review skill](../plugins/code-review/skills/review/SKILL.md) runs
+`toolu --json code-review run`; `toolu code-review dismiss <finding-id> --reason TEXT`
+settles an exact finding without another model call. The run reports a derived
+verdict, validated findings, coverage, recap and per-call usage. It writes the
+same v2 push-review file as `toolu review write-state` (last writer wins) and a
+separate locked branch-memory file. Medium and above block; low and nit advise.
+A path-scoped run, unreviewed file, dirty worktree or failed Mechanical check
+cannot write passing gate state. Total model outage exits 69 with a blocking
+finding and Mechanical checks. The append-only usage log holds model, provider,
+reported quantization, tokens, cost and timing, but no source, quotes or key.
+Codex requires outbound network enabled; Muse must forward the exported key.
+
 ### VM sandbox (`sandbox`)
 
 Read by `toolu sandbox` (the `sandbox` plugin). The loader accepts the section

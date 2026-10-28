@@ -6,6 +6,7 @@ fn call(stage: Stage, tokens: (u64, u64), cost_usd: Option<f64>) -> Call {
     stage,
     model: "m".into(),
     provider: None,
+    quantization: None,
     tokens_in: tokens.0,
     tokens_out: tokens.1,
     cost_usd,

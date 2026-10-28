@@ -12,6 +12,7 @@ fn completion(content: &str, finish_reason: &str) -> Completion {
     finish_reason: Some(finish_reason.to_owned()),
     model: "deepseek/deepseek-v4-pro-0813".into(),
     provider: Some("Parasail".into()),
+    quantization: Some("fp8".into()),
     usage: Usage {
       prompt_tokens: 1,
       completion_tokens: 10,

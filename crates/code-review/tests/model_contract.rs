@@ -10,6 +10,7 @@ fn a_downstream_crate_can_read_valid_findings_and_partial_status() {
     finish_reason: Some("stop".into()),
     model: "deepseek/deepseek-v4-pro-0813".into(),
     provider: Some("Parasail".into()),
+    quantization: Some("fp8".into()),
     usage: Usage { prompt_tokens: 1, completion_tokens: 2, reasoning_tokens: 0, cost_usd: None },
   };
   let output: ModelOutput = parse(&completion).expect("output");

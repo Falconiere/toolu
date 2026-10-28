@@ -30,6 +30,8 @@ pub struct Completion {
   pub model: String,
   /// The serving provider, unknown when absent.
   pub provider: Option<String>,
+  /// Quantization of the serving endpoint, when reported.
+  pub quantization: Option<String>,
   /// Observed usage and optional cost.
   pub usage: Usage,
 }
@@ -76,6 +78,10 @@ pub(crate) fn parse(body: &[u8], model: &str) -> Result<Completion, Error> {
     model,
     provider: doc
       .get("provider")
+      .and_then(Value::as_str)
+      .map(str::to_owned),
+    quantization: doc
+      .get("provider_quantization")
       .and_then(Value::as_str)
       .map(str::to_owned),
     usage,

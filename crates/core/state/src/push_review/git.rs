@@ -2,9 +2,9 @@
 
 use std::path::{Path, PathBuf};
 
+use crate::git::current_branch;
 use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run};
-use toolu_state::git::current_branch;
 
 fn git(env: &Env, dir: &Path, args: &[&str]) -> Option<String> {
   let mut spec = Spec::new(["git", "-C", &dir.display().to_string()]);

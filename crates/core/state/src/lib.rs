@@ -22,6 +22,7 @@ pub mod git;
 pub mod io;
 pub mod js_order;
 pub mod lock;
+pub mod push_review;
 pub mod push_waiver;
 mod sweep_telemetry;
 pub mod sweeper;

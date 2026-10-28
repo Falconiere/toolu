@@ -131,6 +131,7 @@ fn convert_usage(observed: &OpenRouterUsage, model: Option<String>) -> Usage {
     tokens_out: observed.completion_tokens,
     cost_usd: observed.cost_usd.and_then(Cost::usd),
     model,
+    calls: Vec::new(),
   }
 }
 
