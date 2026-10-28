@@ -16,6 +16,8 @@ mod cli;
 pub mod contract;
 /// Review-memory records.
 pub mod memory;
+/// Strict model findings before grounding and anchoring.
+pub mod model;
 
 /// Deterministic scanners that run before the model.
 pub mod prepass;

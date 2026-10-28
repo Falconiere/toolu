@@ -54,7 +54,7 @@ fn blocked_report() -> Report {
   let usage = Usage {
     tokens_in: 1200,
     tokens_out: 3400,
-    cost_usd: Cost::usd(0.0123).unwrap_or_default(),
+    cost_usd: Cost::usd(0.0123),
     model: Some("deepseek/deepseek-v4-pro-0813".to_owned()),
   };
   Report::reviewed(Effort::Medium, findings, coverage, usage)

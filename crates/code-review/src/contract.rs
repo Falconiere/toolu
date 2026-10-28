@@ -172,14 +172,14 @@ pub struct Usage {
   /// Completion tokens, reasoning included.
   pub tokens_out: u64,
   /// Reported cost.
-  pub cost_usd: Cost,
+  pub cost_usd: Option<Cost>,
   /// The model that served the review, when one did.
   pub model: Option<String>,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report
 /// never prints a NaN cost as `null`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Cost(f64);
 
 impl Cost {

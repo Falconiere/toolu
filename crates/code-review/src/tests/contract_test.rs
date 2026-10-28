@@ -136,7 +136,7 @@ fn a_cost_is_finite_and_non_negative() {
     assert_eq!(Cost::usd(usd), None, "{usd}");
   }
   let usage = Usage {
-    cost_usd: Cost::usd(0.25).unwrap(),
+    cost_usd: Cost::usd(0.25),
     ..Usage::default()
   };
   let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);
@@ -145,7 +145,17 @@ fn a_cost_is_finite_and_non_negative() {
       .unwrap()
       .contains("\"cost_usd\":0.25")
   );
-  assert_eq!(Cost::default(), Cost::usd(0.0).unwrap());
+  assert_eq!(Cost::usd(0.0), Some(Cost::usd(0.0).unwrap()));
+  let unknown = Report::reviewed(
+    Effort::Small,
+    Vec::new(),
+    Coverage::default(),
+    Usage::default(),
+  );
+  assert_eq!(
+    serde_json::to_value(&unknown).unwrap()["usage"]["cost_usd"],
+    serde_json::Value::Null
+  );
 }
 
 #[test]
