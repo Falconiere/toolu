@@ -1,7 +1,7 @@
 //! Where `OpenCode` loads plugins. `OpenCode` V2 loads every plugin under
 //! `plugins/` of its global config directory, a directory through its
 //! `server.js`, so `toolu plugins` copies each toolu plugin there as a directory
-//! carrying the generated shim and the install marker of [`super::cursor`].
+//! carrying the generated shim and the install marker [`crate::host::cursor::MARKER`].
 
 use std::path::PathBuf;
 
