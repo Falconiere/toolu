@@ -20,13 +20,13 @@ const LEGACY: &str = "@toolu/opencode";
 /// The toolu plugins `OpenCode` has, and a warning naming any without its shim
 /// and any file that still names `@toolu/opencode`.
 pub(super) fn collect(roots: &Roots) -> Inventory {
-  let found = ours(&plugins_dir(roots));
+  let (found, unreadable) = ours(&plugins_dir(roots));
   let broken: Vec<&str> = found
     .iter()
     .filter(|(_, dir)| !dir.join(FILE).is_file())
     .map(|(name, _)| name.as_str())
     .collect();
-  let mut warnings = Vec::new();
+  let mut warnings: Vec<String> = unreadable.into_iter().collect();
   if !broken.is_empty() {
     warnings.push(format!(
       "OpenCode does not load {} without {FILE}; run `toolu plugins update --host opencode`",
@@ -80,23 +80,33 @@ fn legacy(config: &Path) -> Vec<PathBuf> {
     .collect()
 }
 
-/// The plugin directories toolu installed (they carry its marker), sorted.
-fn ours(dir: &Path) -> Vec<(String, PathBuf)> {
-  let Ok(entries) = std::fs::read_dir(dir) else {
-    return Vec::new();
+/// The plugin directories toolu installed (they carry its marker), sorted, and
+/// why the directory could not be read in full; a missing directory has none.
+fn ours(dir: &Path) -> (Vec<(String, PathBuf)>, Option<String>) {
+  let entries = match std::fs::read_dir(dir) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return (Vec::new(), None),
+    Err(err) => {
+      return (
+        Vec::new(),
+        Some(format!("cannot read {}: {err}", dir.display())),
+      );
+    }
   };
-  let mut found: Vec<(String, PathBuf)> = entries
-    .filter_map(Result::ok)
-    .filter(|entry| entry.path().join(MARKER).is_file())
-    .map(|entry| {
-      (
+  let mut found = Vec::new();
+  let mut unreadable = None;
+  for entry in entries {
+    match entry {
+      Ok(entry) if entry.path().join(MARKER).is_file() => found.push((
         entry.file_name().to_string_lossy().into_owned(),
         entry.path(),
-      )
-    })
-    .collect();
+      )),
+      Ok(_) => {}
+      Err(err) => unreadable = Some(format!("cannot read {}: {err}", dir.display())),
+    }
+  }
   found.sort();
-  found
+  (found, unreadable)
 }
 
 fn version_of(root: &Path) -> Option<String> {

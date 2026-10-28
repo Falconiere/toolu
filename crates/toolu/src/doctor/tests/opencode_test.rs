@@ -85,3 +85,13 @@ fn a_config_that_still_names_the_deprecated_package_is_warned_about() {
     "{both}"
   );
 }
+
+#[test]
+fn a_plugins_path_that_is_not_a_directory_is_warned_about() {
+  let home = tempfile::tempdir().unwrap();
+  let config = home.path().join(".config/opencode");
+  std::fs::create_dir_all(&config).unwrap();
+  std::fs::write(config.join("plugins"), "not a directory").unwrap();
+  let warning = inventory(home.path()).warning.unwrap();
+  assert!(warning.contains("cannot read"), "{warning}");
+}

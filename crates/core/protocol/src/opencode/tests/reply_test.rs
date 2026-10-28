@@ -161,6 +161,10 @@ fn a_malformed_decision_object_fails_closed_before_a_tool_only() {
       "a permissionDecision that is not a string",
     ),
     (r#"{"decision":true}"#, "a decision that is not a string"),
+    (
+      r#"{"continue":"false"}"#,
+      "a continue that is not a boolean",
+    ),
   ] {
     let reply = folded(Hook::ToolBefore, &[ran(0, stdout, "")]);
     assert_eq!(reply["action"], "deny", "{stdout}");
