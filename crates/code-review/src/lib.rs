@@ -4,7 +4,7 @@
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
 //! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
 //! output contract that `review` consumes. `run` sends nothing without the
-//! repository's opt-in (`not-enabled`); until #668 and #669 land it then fails
+//! repository's opt-in (`not-enabled`); until #669 lands it then fails
 //! closed as `unconfigured`, sends nothing and writes no state.
 
 use clap::ArgMatches;
@@ -34,7 +34,8 @@ pub mod rules;
 pub mod settings;
 /// The committed diff and its reviewable anchors.
 pub mod shape;
-mod validate;
+/// Grounding and anchoring of findings in the shaped diff.
+pub mod validate;
 
 use budget::Effort;
 use contract::{ErrorKind, Report};
@@ -44,7 +45,7 @@ pub const PLUGIN: &str = "code-review";
 
 /// Why an enabled run fails closed until the last pipeline stages land.
 const NOT_BUILT: &str =
-  "the review pipeline is not built yet (#668, #669); nothing was sent and no state was written";
+  "the review pipeline is not built yet (#669); nothing was sent and no state was written";
 
 /// The `toolu code-review` namespace.
 pub fn command() -> clap::Command {

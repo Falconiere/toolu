@@ -8,7 +8,7 @@ mod calls;
 mod chunks;
 mod effort;
 mod judge;
-mod mask;
+pub(crate) mod mask;
 mod prompt;
 mod recheck;
 mod source;

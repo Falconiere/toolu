@@ -1,6 +1,6 @@
 //! `toolu code-review`, black-box: a bad effort is a usage error, a repository
 //! without the opt-in gets `not-enabled`, and an opted-in one still fails closed
-//! until the last pipeline stages land (#668, #669). The help text is pinned by
+//! until the last pipeline stage lands (#669). The help text is pinned by
 //! the generated `docs/cli/code-review.md`, which `cargo xtask docs-cli --check`
 //! compares.
 
@@ -65,7 +65,7 @@ fn an_opted_in_run_still_fails_closed_and_uses_the_configured_effort() {
   assert_eq!(doc["error"]["kind"], "unconfigured");
   assert_eq!(doc["effort"], "small");
   let message = doc["error"]["message"].as_str().unwrap();
-  assert!(message.contains("not built yet (#668, #669)"), "{message}");
+  assert!(message.contains("not built yet (#669)"), "{message}");
 }
 
 #[test]
