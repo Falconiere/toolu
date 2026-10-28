@@ -144,7 +144,7 @@ fn delivery_stops_at_failed_reviews_and_resumes_from_the_failed_phase() -> Res {
 fn invocation_authorizes_checked_delivery_and_prerequisite_failures_block_it() -> Res {
   let list = "Invoking this skill authorizes|gh api user|non-default branch";
   has("SKILL", list)?;
-  let list = "toolu-review:review|toolu ledger verdict status|overall: ready";
+  let list = "code-review:review|toolu ledger verdict status|overall: ready";
   has("SKILL", list)?;
   has("SKILL", "PR creation|pr-babysit:babysit|with no arguments")
 }
@@ -165,7 +165,7 @@ fn execution_requires_per_step_real_data_evidence_and_documentation_sync() -> Re
 
 #[test]
 fn execution_owns_the_v2_review_state_and_ready_unified_verdict() -> Res {
-  let list = &["(?i)toolu-review.*version: 2|version: 2.*toolu-review"];
+  let list = &["(?i)code-review.*version: 2|version: 2.*code-review"];
   re("execution", list)?;
   has("execution", "toolu ledger verdict status")?;
   re("execution", &["(?i)overall: ready"])
@@ -178,7 +178,7 @@ fn execution_attests_the_committed_branch_before_delivery() -> Res {
   let order = [
     line_of(&body, "(?i)commit the scoped changes")?,
     line_of(&body, "toolu ledger run <plan_doc> --verify")?,
-    line_of(&body, "toolu-review:review")?,
+    line_of(&body, "code-review:review")?,
     line_of(&body, "toolu ledger verdict status")?,
     line_of(&body, "(?i)push the non-default feature branch")?,
   ];
@@ -243,7 +243,10 @@ fn execution_uses_private_routing_and_host_neutral_delivery_invocations() -> Res
   has("execution", list)?;
   let list = "plugins/toolu/skills/orchestrator/references/model-routing.md";
   lacks("execution", list)?;
-  lacks("execution", "$toolu-review:review|$pr-babysit:babysit")
+  lacks(
+    "execution",
+    "$code-review:review|$toolu-review:review|$pr-babysit:babysit",
+  )
 }
 
 // ---- plan-ledger-contract ----

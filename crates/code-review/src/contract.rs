@@ -200,7 +200,7 @@ impl Cost {
 pub enum ErrorKind {
   /// Missing or unusable key, or a pipeline not built: nothing was sent.
   Unconfigured,
-  /// The repository has not opted in: nothing was sent.
+  /// Review is disabled by configuration: nothing was sent.
   NotEnabled,
   /// Every model call failed.
   Outage,

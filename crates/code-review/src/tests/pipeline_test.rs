@@ -20,7 +20,7 @@ mod fixture_test;
 use fixture_test::{clean_case, env, finding_case, invoke, options, repo, saved_state};
 
 #[test]
-fn clean_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
+fn default_enabled_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
   let (repo, state, fixture) = clean_case();
   let env = env(repo.path(), state.path(), &fixture);
   let report = invoke(&env, &options(&fixture));

@@ -23,7 +23,7 @@ pub struct Input<'a> {
   pub prepass: &'a PrepassResult,
   /// Earlier rounds' findings and dismissals.
   pub memory: &'a Memory,
-  /// The `codeReview` settings: opt-in and configured effort.
+  /// The `codeReview` settings: enablement and configured effort.
   pub settings: &'a Settings,
   /// `--effort`, when given.
   pub flag: Option<Effort>,

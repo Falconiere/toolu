@@ -1,5 +1,5 @@
 //! `toolu code-review`, black-box: a bad effort is a usage error, a repository
-//! without the opt-in gets `not-enabled`, and an opted-in one with no key
+//! explicitly disabled gets `not-enabled`, and an enabled one with no key
 //! fails closed before reading the diff. The help text is pinned by
 //! the generated `docs/cli/code-review.md`, which `cargo xtask docs-cli --check`
 //! compares.
@@ -36,7 +36,7 @@ fn an_unknown_effort_exits_64_with_nothing_on_stdout() {
 }
 
 #[test]
-fn run_without_the_opt_in_exits_69_and_says_how_to_enable() {
+fn explicitly_disabled_review_exits_69_and_explains_configuration() {
   let off = project(r#"{"codeReview":{"enabled":false}}"#).unwrap();
   let output = toolu(
     &["--host", "claude", "code-review", "run"],
@@ -47,15 +47,15 @@ fn run_without_the_opt_in_exits_69_and_says_how_to_enable() {
   assert!(output.stderr.is_empty(), "{:?}", output.stderr);
   let stderr = String::from_utf8(output.stdout).unwrap();
   assert!(
-    stderr.contains("not-enabled: code review is not enabled"),
+    stderr.contains("not-enabled: code review is disabled"),
     "{stderr}"
   );
   assert!(stderr.contains("project toolu.config.json"), "{stderr}");
 }
 
 #[test]
-fn an_opted_in_run_without_a_key_fails_closed_and_uses_the_configured_effort() {
-  let on = project(r#"{"codeReview":{"enabled":true,"effort":"small"}}"#).unwrap();
+fn a_default_enabled_run_without_a_key_fails_closed_and_uses_the_configured_effort() {
+  let on = project(r#"{"codeReview":{"effort":"small"}}"#).unwrap();
   let output = toolu(
     &["--json", "--host", "claude", "code-review", "run"],
     Some(on.path()),
@@ -96,6 +96,41 @@ fn config_dir_supplies_the_user_level_effort() {
   assert_eq!(doc["effort"], "xhigh");
 }
 
+#[test]
+fn absent_configuration_is_enabled_and_invalid_configuration_reports_why() {
+  let absent = tempfile::tempdir().unwrap();
+  let output = toolu(
+    &[
+      "--json",
+      "--host",
+      "claude",
+      "code-review",
+      "run",
+      "--effort",
+      "xhigh",
+    ],
+    Some(absent.path()),
+  )
+  .unwrap();
+  assert_eq!(output.status.code(), Some(69));
+  let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+  assert_eq!(doc["error"]["kind"], "unconfigured");
+  assert_eq!(doc["effort"], "xhigh");
+  for config in ["{", r#"{"codeReview":{"enabled":"yes"}}"#, r#"{"nope":1}"#] {
+    let invalid = project(config).unwrap();
+    let output = toolu(
+      &["--json", "--host", "claude", "code-review", "run"],
+      Some(invalid.path()),
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(69));
+    let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(doc["error"]["kind"], "not-enabled");
+    assert_ne!(doc["notes"], serde_json::json!([]));
+    assert_eq!(doc["findings"], serde_json::json!([]));
+  }
+}
+
 /// The committed golden set.
 fn cases() -> std::path::PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/code-review-eval")
@@ -103,7 +138,7 @@ fn cases() -> std::path::PathBuf {
 
 #[test]
 fn eval_without_live_needs_no_key_and_a_replay_miss_exits_69_unverified() {
-  // Not opted in and keyless: a replay run must not care about either.
+  // Disabled and keyless: a replay run must not care about either.
   let off = project(r#"{"codeReview":{"enabled":false}}"#).unwrap();
   let empty = tempfile::tempdir().unwrap();
   let cases = cases();
@@ -139,7 +174,7 @@ fn eval_without_live_needs_no_key_and_a_replay_miss_exits_69_unverified() {
 
 #[test]
 fn eval_live_without_a_key_exits_69_before_anything_is_sent_or_recorded() {
-  let on = project(r#"{"codeReview":{"enabled":true}}"#).unwrap();
+  let on = project("{}").unwrap();
   let store = tempfile::tempdir().unwrap();
   let record = store.path().join("replay");
   let cases = cases();
@@ -161,6 +196,44 @@ fn eval_live_without_a_key_exits_69_before_anything_is_sent_or_recorded() {
   assert!(stderr.contains("OPENROUTER_API_KEY is missing"), "{stderr}");
   assert!(stderr.contains("unverified"), "{stderr}");
   assert!(!record.exists());
+}
+
+#[test]
+fn eval_live_disabled_or_invalid_configuration_is_unverified_without_recordings() {
+  for (config, reason) in [
+    (
+      r#"{"codeReview":{"enabled":false}}"#,
+      "disabled by configuration",
+    ),
+    (r#"{"codeReview":{"enabled":"yes"}}"#, "must be a boolean"),
+    ("{", "malformed JSON"),
+  ] {
+    let off = project(config).unwrap();
+    let store = tempfile::tempdir().unwrap();
+    let record = store.path().join("replay");
+    let cases = cases();
+    let output = toolu(
+      &[
+        "--host",
+        "claude",
+        "code-review",
+        "eval",
+        "--cases",
+        cases.to_str().unwrap(),
+        "--live",
+        "--replay-dir",
+        record.to_str().unwrap(),
+      ],
+      Some(off.path()),
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(69));
+    assert_eq!(output.stdout, [] as [u8; 0]);
+    let message = String::from_utf8(output.stderr).unwrap();
+    assert!(message.contains(reason), "{message}");
+    assert!(message.contains("unverified"), "{message}");
+    assert!(!record.exists());
+  }
 }
 
 #[test]

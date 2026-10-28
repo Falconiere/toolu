@@ -1,7 +1,7 @@
 //! Pipeline stage, owned by #666: wires the shaped diff (#662), the base-ref rules
 //! (#663) and the pre-pass (#664) into the structured review call (#665), then
 //! judges fresh findings with Jev over `OpenRouter`'s System One endpoint. Nothing is
-//! sent before the repository opts in and a key is present; every outbound text is
+//! sent when review is disabled or a key is absent; every outbound text is
 //! masked. The output is judged model findings for #668 to ground and anchor.
 
 mod calls;
@@ -100,7 +100,7 @@ pub struct Reviewed {
 /// Why a run produced no review.
 #[derive(Debug, Clone, PartialEq)]
 pub enum RunError {
-  /// The repository has not opted in; nothing was sent.
+  /// Review is disabled by configuration; nothing was sent.
   NotEnabled,
   /// No usable key, or an unusable configuration; nothing was sent.
   Unconfigured(String),
@@ -153,7 +153,7 @@ pub(crate) struct Ctx<'a, 'r> {
   pub(crate) memory: &'a Memory,
 }
 
-/// Review `input`. The opt-in and the key are checked before anything is sent.
+/// Review `input`. Enablement and the key are checked before anything is sent.
 ///
 /// # Errors
 /// `NotEnabled` or `Unconfigured` before any request; `Outage` or `Deadline`

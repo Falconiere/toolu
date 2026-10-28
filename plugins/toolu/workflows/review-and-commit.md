@@ -15,16 +15,19 @@ real findings, and commit. Do not merge or push.
 - Stop with `nothing to review` if both scopes are empty. Otherwise group
   changed files by package or crate.
 
-## 2. Review each package
+## 2. Review the diff
 
-Use the host mapping in `workflows/host-mapping.md`. Independent packages may
-be reviewed concurrently; within one package, passes are sequential so every
-reviewer sees the latest diff.
+Use the host mapping in `workflows/host-mapping.md`. Run one correctness review
+over the requested committed scope; passes are sequential so every reviewer
+sees the latest diff and writes state for that scope.
 
-Prefer the installed toolu reviewer (`toolu-review:review` in the active host's
-invocation syntax). An installed repository-specific reviewer may be used when
-it writes a compatible push-review attestation. Optional clarity/simplification
-passes run before correctness review, never concurrently with it.
+Prefer `code-review:review` for the committed diff. Follow its automatic
+`toolu-review:review` fallback when native review cannot complete, preserving
+scope and real findings. If the native skill is unavailable, invoke the fallback
+directly. Failed or unavailable fallback blocks completion without approval.
+Review uncommitted changes directly against the checklist below; native review
+covers committed changes only. Optional clarity/simplification passes run before
+correctness review, never concurrently with it.
 
 Review correctness, security, boundary error handling, regressions, missing
 tests, dead code, unnecessary abstraction, unclear naming, and tests that mock
@@ -49,6 +52,10 @@ Fix failures and rerun all required gates until green.
 Stage only files belonging to each logical commit. Use Conventional Commit
 messages and split unrelated changes. Never use `--no-verify`; fix hook
 failures instead.
+
+After the final commit, run `code-review:review` (with the same automatic
+fallback) on the final committed diff. Fix findings, rerun gates and commit
+before re-reviewing until complete and clean.
 
 Report reviewed scope, fixes, final gate results, and produced commit hashes.
 Completion requires green gates and a clean working tree.

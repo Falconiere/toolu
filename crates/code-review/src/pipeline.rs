@@ -1,4 +1,4 @@
-//! Compose the committed-diff review stages after repository consent.
+//! Compose the committed-diff review stages after configuration validation.
 
 mod output;
 mod state;
@@ -31,14 +31,15 @@ pub(crate) fn run(
   options: &Options<'_>,
 ) -> Result<Report, String> {
   let roots = Roots::new(env.clone(), ctx.host);
-  // Outside a repository there is no opt-in, so that run is still `not-enabled`.
   let root = project_root(&roots);
   let settings = settings::load(&roots, root.as_deref().ok());
   let effort = crate::cli::effort(verb)
     .or(settings.effort)
     .unwrap_or(Effort::Auto);
   if !settings.enabled {
-    return Ok(RunError::NotEnabled.report(effort));
+    let mut report = RunError::NotEnabled.report(effort);
+    report.notes.clone_from(&settings.notes);
+    return Ok(report);
   }
   if env.get("OPENROUTER_API_KEY").is_none() {
     return Ok(RunError::Unconfigured("OPENROUTER_API_KEY is missing".to_owned()).report(effort));

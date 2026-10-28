@@ -533,16 +533,19 @@ the babysit slot state) and is skipped while cooling.
 
 ### Native code review (`codeReview`)
 
-`toolu code-review run` sends the committed diff to OpenRouter only after the
-repository opts in. `enabled: true` counts only in the **project**
-`toolu.config.json`; a user-level `enabled` is ignored, so an exported
-`OPENROUTER_API_KEY` never sends code from every repository an agent opens.
-Without the opt-in the run makes no request and exits 69 with
-`error.kind: "not-enabled"`. An invalid config envelope also leaves it disabled.
+`toolu code-review run` is enabled by default. With an exported
+`OPENROUTER_API_KEY`, it sends the committed diff to OpenRouter without a
+per-repository opt-in. Set `"codeReview": {"enabled": false}` in user or project
+`toolu.config.json` to opt out; project settings take precedence. Disabled or
+invalid configuration makes no request and exits 69 with
+`error.kind: "not-enabled"` and a reason. Malformed JSON, invalid envelopes,
+non-object `codeReview` and non-boolean `enabled` values disable native review.
+Unreadable config paths and existing paths that are not regular files also
+disable review; genuinely missing files use the defaults.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `false` | Project file only: allow the review to call OpenRouter (the review model and Jev over OpenRouter's System One endpoint, with the same key). |
+| `enabled` | `true` | User or project: allow the review to call OpenRouter (the review model and Jev over OpenRouter's System One endpoint, with the same key). |
 | `effort` | `auto` | User or project. `auto` lets Jev pick `small`, `medium`, `high` or `xhigh` from shape metadata, floored to `high` for secrets, CI workflows, gate policy, credential or security paths, and diffs over 1,000 changed lines; `--effort` wins over this setting. An unknown value is ignored with a note. |
 
 What leaves the machine: the base-ref conventions and prompt override, the
@@ -551,7 +554,11 @@ findings, and open prior findings with dismissals. Secrets found by the pre-pass
 are replaced with `[REDACTED]` before any request.
 
 The [review skill](../plugins/code-review/skills/review/SKILL.md) runs
-`toolu --json code-review run`; `toolu code-review dismiss <finding-id> --reason TEXT`
+`toolu --json code-review run` and automatically invokes `toolu-review:review`
+if native review is disabled, unavailable, unconfigured, fails operationally or
+has incomplete coverage. Fallback preserves scope and real findings; failed or
+unavailable fallback never records approval. Standalone CLI failures keep their
+exit codes and JSON interfaces. The command `toolu code-review dismiss <finding-id> --reason TEXT`
 settles an exact finding without another model call. The run reports a derived
 verdict, validated findings, coverage, recap and per-call usage. It writes the
 same v2 push-review file as `toolu review write-state` (last writer wins) and a

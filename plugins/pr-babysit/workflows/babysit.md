@@ -603,10 +603,11 @@ tick and do not count the tick as done.
 2. **Review the committed diff** and write the state file the gate reads under
    the active host's `<worktree>/.claude/tmp/push-review/` or
    `<worktree>/.codex/tmp/push-review/` directory; push is denied otherwise.
-   Prefer the `toolu-review:review` workflow, which mirrors the CI bot and writes
-   compatible state. Claude may use its built-in code-review skill; Codex may
-   use its native review interface or a read-only review subagent. Apply
-   findings, then record the reviewer name in `reviewers[]`.
+   Prefer `code-review:review` and its automatic `toolu-review:review` fallback
+   when native review cannot complete, including detached-branch state errors
+   or incomplete coverage. Preserve scope and all real findings. If the native
+   skill is unavailable, invoke fallback directly. Failed or unavailable fallback
+   blocks the push without approval; never manufacture passing state.
    - Findings that need code changes → amend or add a commit, then re-review. `review_round` restarts whenever the diff changes, and caps at 5 rewrites against an *unchanged* diff.
    - The state file must live under the worktree's own root — pass `--repo <worktree>` to `toolu review write-state` when the session is rooted elsewhere. A state file written under the main checkout is invisible to the gate.
    - The worktree is **detached** (`git worktree add --detach`), so pass `--branch "$BRANCH"` too: the writer keys the state file to the branch the push targets, and the gate resolves that same branch from the `HEAD:$BRANCH` refspec.
