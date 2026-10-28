@@ -1411,6 +1411,8 @@ dependencies = [
  "serde_json",
  "tempfile",
  "toolu-engine",
+ "toolu-http-test-support",
+ "toolu-jev-client",
  "toolu-openrouter",
  "toolu-protocol",
  "toolu-runtime",

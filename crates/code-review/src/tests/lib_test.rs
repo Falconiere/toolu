@@ -17,7 +17,7 @@ fn the_code_review_crate_is_its_plugin() {
 }
 
 #[test]
-fn run_fails_closed_as_unconfigured_with_a_json_report() {
+fn run_without_the_opt_in_is_not_enabled_with_a_json_report() {
   let ctx = Ctx {
     json: true,
     ..Ctx::default()
@@ -28,7 +28,13 @@ fn run_fails_closed_as_unconfigured_with_a_json_report() {
   let doc: serde_json::Value = serde_json::from_str(outcome.stdout.as_deref().unwrap()).unwrap();
   assert_eq!(doc["verdict"], "error");
   assert_eq!(doc["effort"], "xhigh");
-  assert_eq!(doc["error"]["kind"], "unconfigured");
+  assert_eq!(doc["error"]["kind"], "not-enabled");
+  assert!(
+    doc["error"]["message"]
+      .as_str()
+      .unwrap()
+      .contains("\"codeReview\": {\"enabled\": true}")
+  );
   assert_eq!(doc["findings"], serde_json::json!([]));
 }
 
@@ -38,7 +44,7 @@ fn run_without_json_says_why_on_stderr() {
   assert_eq!(outcome.exit, Exit::Unavailable);
   assert_eq!(outcome.stdout, None);
   let line = outcome.stderr.unwrap();
-  assert!(line.starts_with("code-review: unconfigured: "), "{line}");
+  assert!(line.starts_with("code-review: not-enabled: "), "{line}");
   assert!(line.contains("nothing was sent"), "{line}");
 }
 

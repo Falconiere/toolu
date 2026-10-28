@@ -9,12 +9,14 @@ use toolu_runtime::json::ordered::Ordered;
 use crate::{Error, Questions};
 
 /// Tokens the call used.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Usage {
   /// Input tokens.
   pub input_tokens: u64,
   /// Output tokens.
   pub output_tokens: u64,
+  /// US dollars, when the endpoint reports a valid `usage.cost` (`OpenRouter` does).
+  pub cost_usd: Option<f64>,
 }
 
 /// One typed answer.
@@ -72,6 +74,10 @@ pub(crate) fn parse(body: &str, questions: &Questions) -> Result<Reply, Error> {
   let usage = Usage {
     input_tokens: count(usage.get("input_tokens"))?,
     output_tokens: count(usage.get("output_tokens"))?,
+    cost_usd: usage
+      .get("cost")
+      .and_then(Value::as_f64)
+      .filter(|cost| cost.is_finite() && *cost >= 0.0),
   };
   let answers = object(envelope.get("answers"))?;
   let entries = questions.entries();

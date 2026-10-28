@@ -2,7 +2,10 @@ use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
-use crate::{Config, DEFAULT_MODEL, ENDPOINT, Error, Jev, timeout};
+use crate::{
+  Config, DEFAULT_MODEL, ENDPOINT, Error, Jev, OPENROUTER_ENDPOINT, OPENROUTER_MODEL, Question,
+  Questions, State, request_body, timeout,
+};
 
 #[test]
 fn the_key_is_required_and_refused_with_a_line_break() {
@@ -95,4 +98,36 @@ fn the_loopback_test_root_wins_over_node_extra_ca_certs() {
     Jev::from_env(&env, config),
     Err(Error::Transport(toolu_http::Error::InvalidConfig(reason))) if reason.contains("test root")
   ));
+}
+
+#[test]
+fn from_env_key_reads_only_the_named_variable() {
+  let env = Env::from_pairs([("OPENROUTER_API_KEY", "or-key"), ("JEV_TIMEOUT", "0")]);
+  assert_eq!(
+    Jev::from_env(&env, Config::default()).map(|_| ()),
+    Err(Error::MissingKey)
+  );
+  assert!(Jev::from_env_key(&env, "OPENROUTER_API_KEY", Config::default()).is_ok());
+  let broken = Env::from_pairs([("OPENROUTER_API_KEY", "or\nkey")]);
+  assert_eq!(
+    Jev::from_env_key(&broken, "OPENROUTER_API_KEY", Config::default()).map(|_| ()),
+    Err(Error::KeyLineBreak)
+  );
+}
+
+#[test]
+fn the_openrouter_transport_is_pinned() {
+  assert_eq!(
+    OPENROUTER_ENDPOINT,
+    "https://openrouter.ai/api/v1/systemone"
+  );
+  assert_eq!(OPENROUTER_MODEL, "typesafe/jev-1.13");
+}
+
+#[test]
+fn request_body_is_the_sent_text_in_key_order() {
+  let questions = Questions::single("q", Question::noul("Ok?", None, None).expect("noul"));
+  let expected =
+    r#"{"state":"é","model":"m","questions":{"q":{"type":"noul","instructions":"Ok?"}}}"#;
+  assert_eq!(request_body(&State::text("é"), "m", &questions), expected);
 }

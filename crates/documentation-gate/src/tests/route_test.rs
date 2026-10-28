@@ -18,6 +18,7 @@ fn reply(answer: Answer) -> Reply {
     usage: Usage {
       input_tokens: 0,
       output_tokens: 0,
+      cost_usd: None,
     },
     answers: vec![("route".into(), answer)],
     body: String::new(),

@@ -76,7 +76,7 @@ fn the_binary_s_report_validates_and_exits_unavailable() {
       &document["effort"],
       &document["error"]["kind"]
     ),
-    (&json!("error"), &json!("high"), &json!("unconfigured"))
+    (&json!("error"), &json!("high"), &json!("not-enabled"))
   );
 }
 
@@ -103,10 +103,16 @@ fn a_blocked_report_validates_and_counts_blocking_findings() {
 
 #[test]
 fn every_failed_report_validates_and_a_bad_severity_does_not() {
-  for effort in Effort::ALL {
-    let report = Report::failed(effort, ErrorKind::Unconfigured, "no key");
+  let kinds = [
+    ErrorKind::Unconfigured,
+    ErrorKind::NotEnabled,
+    ErrorKind::Outage,
+    ErrorKind::Deadline,
+  ];
+  for (effort, kind) in Effort::ALL.into_iter().zip(kinds.into_iter().cycle()) {
+    let report = Report::failed(effort, kind, "no key");
     let error = ReportError {
-      kind: ErrorKind::Unconfigured,
+      kind,
       message: "no key".to_owned(),
     };
     assert_eq!(report.error.as_ref(), Some(&error));

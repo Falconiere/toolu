@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["rechecks"],
+  "properties": {
+    "rechecks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "decision", "explanation", "evidence_quotes"],
+        "properties": {
+          "id": {"type": "string"},
+          "decision": {"type": "string", "enum": ["keep", "dismiss"]},
+          "explanation": {"type": "string"},
+          "evidence_quotes": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

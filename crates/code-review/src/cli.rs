@@ -34,18 +34,18 @@ pub(crate) fn command() -> Command {
             .long("effort")
             .value_name("LEVEL")
             .value_parser(PossibleValuesParser::new(Effort::ALL.map(Effort::name)))
-            .default_value(Effort::Auto.name())
-            .help("Review effort: auto lets Jev pick the level; a fixed level skips it"),
+            .help(
+              "Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto",
+            ),
         ),
     )
 }
 
-/// The `--effort` of a `run`; its default is `auto`.
-pub(crate) fn effort(verb: &ArgMatches) -> Effort {
+/// The `--effort` of a `run`, when given.
+pub(crate) fn effort(verb: &ArgMatches) -> Option<Effort> {
   verb
     .get_one::<String>("effort")
     .and_then(|name| Effort::parse(name))
-    .unwrap_or(Effort::Auto)
 }
 
 #[cfg(test)]

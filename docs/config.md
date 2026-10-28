@@ -85,7 +85,9 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
   "epic":       { "http": { "bind": "127.0.0.1", "port": 7717 },
                   "attention": { "enabled": false, "herdr": true,
                                  "remind_after_minutes": 30 },
-                  "peers": [{ "name": "server", "url": "http://192.168.1.20:7717" }] }
+                  "peers": [{ "name": "server", "url": "http://192.168.1.20:7717" }] },
+  "codeReview": { "enabled": true,
+                  "effort": "auto|small|medium|high|xhigh" }
 }
 ```
 
@@ -524,6 +526,25 @@ fixer agent in the slot's worktree. Every key is optional:
 
 A host that hits a provider usage limit cools down for 60 minutes (recorded in
 the babysit slot state) and is skipped while cooling.
+
+### Native code review (`codeReview`)
+
+`toolu code-review run` sends the committed diff to OpenRouter only after the
+repository opts in. `enabled: true` counts only in the **project**
+`toolu.config.json`; a user-level `enabled` is ignored, so an exported
+`OPENROUTER_API_KEY` never sends code from every repository an agent opens.
+Without the opt-in the run makes no request and exits 69 with
+`error.kind: "not-enabled"`. An invalid config envelope also leaves it disabled.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `enabled` | `false` | Project file only: allow the review to call OpenRouter (the review model and Jev over OpenRouter's System One endpoint, with the same key). |
+| `effort` | `auto` | User or project. `auto` lets Jev pick `small`, `medium`, `high` or `xhigh` from shape metadata, floored to `high` for secrets, CI workflows, gate policy, credential or security paths, and diffs over 1,000 changed lines; `--effort` wins over this setting. An unknown value is ignored with a note. |
+
+What leaves the machine: the base-ref conventions and prompt override, the
+masked zero-context patch, bounded `HEAD` source of modified files, pre-pass
+findings, and open prior findings with dismissals. Secrets found by the pre-pass
+are replaced with `[REDACTED]` before any request.
 
 ### Recognized names
 

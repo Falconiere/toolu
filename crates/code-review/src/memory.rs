@@ -18,13 +18,20 @@ pub enum Status {
   Dismissed,
 }
 
-/// A finding from an earlier round.
+/// A finding from an earlier round. `path`, `category` and `claim` let a later
+/// round show the model what was raised, so it can echo `prior_id`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PriorFinding {
   /// Line-independent: `path + category + normalized text` (normalized by #668).
   pub fingerprint: String,
   /// The finding's id.
   pub id: String,
+  /// Repository-relative path.
+  pub path: String,
+  /// Its kind, for example `correctness`.
+  pub category: String,
+  /// The defect, in one sentence.
+  pub claim: String,
   /// Its severity.
   pub severity: Severity,
   /// Where it stands.
@@ -40,6 +47,16 @@ pub struct Dismissal {
   pub reason: String,
   /// Who dismissed it.
   pub by: String,
+}
+
+/// What a review round remembers from earlier ones: prior findings and the
+/// agent's dismissals. Only open findings and dismissals are ever sent.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Memory {
+  /// Findings from earlier rounds.
+  pub prior: Vec<PriorFinding>,
+  /// Settled dismissals, with their reasons.
+  pub dismissals: Vec<Dismissal>,
 }
 
 /// Blocking and advisory finding counts.

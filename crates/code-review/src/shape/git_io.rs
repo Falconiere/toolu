@@ -62,7 +62,7 @@ fn failure(args: &[&str], out: &Output) -> ShapeError {
 }
 
 /// Run Git and retain its exit code for commands with expected nonzero results.
-pub(super) fn git_process(
+pub(crate) fn git_process(
   env: &Env,
   root: &Path,
   args: &[&str],

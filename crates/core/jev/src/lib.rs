@@ -1,14 +1,16 @@
 //! toolu core, `jev` layer: the Jev HTTP client (#460) that `toolu jev` (#430),
 //! pr-babysit (#433) and the epic engine (#435) share.
 //!
-//! - The key comes from `TYPESAFE_API_KEY` and is never printed.
+//! - The key comes from `TYPESAFE_API_KEY` and is never printed; `from_env_key`
+//!   names another variable, as code-review does for `OpenRouter`'s System One.
 //! - `JEV_TIMEOUT` is the per-attempt deadline in seconds (60 by default).
-//! - A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does.
+//! - A call makes up to three attempts, as `plugins/jev/hooks/src/jev.ts` does;
+//!   `ask_until` also bounds every attempt and pause by one wall deadline.
 //! - State and questions keep their JSON key order, so a request carries the
 //!   text `jev.ts` sends. The reply is checked into typed answers.
 
 use std::fmt;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use toolu_runtime::env::Env;
 use toolu_runtime::json::ordered::Ordered;
@@ -30,6 +32,15 @@ pub const ENDPOINT: &str = "https://api.typesafe.ai/v1/systemone";
 
 /// The model when the caller names none.
 pub const DEFAULT_MODEL: &str = "jev-latest";
+
+/// The same System One request body, served by `OpenRouter` with its key.
+pub const OPENROUTER_ENDPOINT: &str = "https://openrouter.ai/api/v1/systemone";
+
+/// The Jev model pinned on `OpenRouter`.
+pub const OPENROUTER_MODEL: &str = "typesafe/jev-1.13";
+
+/// The key variable `from_env` reads.
+const KEY_VAR: &str = "TYPESAFE_API_KEY";
 
 /// The per-attempt deadline without `JEV_TIMEOUT`.
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(60);
@@ -62,6 +73,9 @@ struct Key(String);
 pub struct Jev {
   /// `None` when `JEV_TIMEOUT` is 0: every attempt times out unsent.
   http: Option<toolu_http::Client>,
+  /// What a shorter, deadline-bound attempt client is built from.
+  env: Env,
+  root: Option<Vec<u8>>,
   key: Key,
   endpoint: String,
   pause: Duration,
@@ -85,7 +99,15 @@ impl Jev {
   /// `Transport` for a transport setting toolu-http refuses, such as a
   /// `NODE_EXTRA_CA_CERTS` file that is missing or holds no certificate.
   pub fn from_env(env: &Env, config: Config) -> Result<Jev, Error> {
-    let key = env.get("TYPESAFE_API_KEY").ok_or(Error::MissingKey)?;
+    Jev::from_env_key(env, KEY_VAR, config)
+  }
+
+  /// `from_env` with the key read from `key_var` instead of `TYPESAFE_API_KEY`.
+  ///
+  /// # Errors
+  /// As `from_env`, for the named variable.
+  pub fn from_env_key(env: &Env, key_var: &str, config: Config) -> Result<Jev, Error> {
+    let key = env.get(key_var).ok_or(Error::MissingKey)?;
     if key.contains(['\r', '\n']) {
       return Err(Error::KeyLineBreak);
     }
@@ -94,16 +116,12 @@ impl Jev {
     let http = if timeout.is_zero() {
       None
     } else {
-      let http = toolu_http::Config {
-        timeout,
-        max_redirects: 0,
-        test_root_ca_der: root,
-        ..toolu_http::Config::default()
-      };
-      Some(toolu_http::Client::new(http, env).map_err(Error::Transport)?)
+      Some(http_client(env, timeout, root.clone())?)
     };
     Ok(Jev {
       http,
+      env: env.clone(),
+      root,
       key: Key(key.to_owned()),
       endpoint: config.endpoint,
       pause: config.pause,
@@ -117,15 +135,55 @@ impl Jev {
   /// `Http`, `Timeout` or `Transport` after the attempts, and
   /// `InvalidResponse` when the reply is not a typed answer for every question.
   pub fn ask(&self, state: &State, model: &str, questions: &Questions) -> Result<Reply, Error> {
-    let body = Ordered::Object(vec![
-      ("state".to_owned(), state.value().clone()),
-      ("model".to_owned(), Ordered::String(model.to_owned())),
-      ("questions".to_owned(), questions.value()),
-    ])
-    .to_text(false);
-    let text = self.post(body.as_bytes())?;
+    let text = self.post(request_body(state, model, questions).as_bytes(), None)?;
     reply::parse(&text, questions)
   }
+
+  /// `ask` within one wall `deadline` shared by every attempt and pause: an
+  /// attempt never outlives it, and a pause that would pass it ends the call.
+  ///
+  /// # Errors
+  /// As `ask`; `Timeout` once the deadline has passed, or the last failure
+  /// when the next pause would pass it.
+  pub fn ask_until(
+    &self,
+    state: &State,
+    model: &str,
+    questions: &Questions,
+    deadline: Instant,
+  ) -> Result<Reply, Error> {
+    let text = self.post(
+      request_body(state, model, questions).as_bytes(),
+      Some(deadline),
+    )?;
+    reply::parse(&text, questions)
+  }
+}
+
+/// The exact request body `ask` sends, so callers can hold a request cap, or
+/// record the request, before any network call.
+pub fn request_body(state: &State, model: &str, questions: &Questions) -> String {
+  Ordered::Object(vec![
+    ("state".to_owned(), state.value().clone()),
+    ("model".to_owned(), Ordered::String(model.to_owned())),
+    ("questions".to_owned(), questions.value()),
+  ])
+  .to_text(false)
+}
+
+/// An HTTP client with `timeout` per attempt and no redirects.
+fn http_client(
+  env: &Env,
+  timeout: Duration,
+  root: Option<Vec<u8>>,
+) -> Result<toolu_http::Client, Error> {
+  let http = toolu_http::Config {
+    timeout,
+    max_redirects: 0,
+    test_root_ca_der: root,
+    ..toolu_http::Config::default()
+  };
+  toolu_http::Client::new(http, env).map_err(Error::Transport)
 }
 
 /// The one root the client trusts: the loopback test root, else the first

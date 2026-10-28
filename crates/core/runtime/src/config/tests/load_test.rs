@@ -186,6 +186,19 @@ fn an_epic_section_is_never_inspected_but_a_sibling_unknown_key_fails() {
 }
 
 #[test]
+fn a_code_review_section_is_a_known_key() {
+  let (_dir, config) = loaded(
+    Some(r#"{"codeReview":{"effort":"high"}}"#),
+    Some(r#"{"version":1,"codeReview":{"enabled":true}}"#),
+  );
+  assert_eq!(config.invalid, None);
+  assert_eq!(
+    config.data["codeReview"],
+    json!({"effort": "high", "enabled": true})
+  );
+}
+
+#[test]
 fn the_user_reason_wins_when_both_files_are_invalid() {
   let (_dir, config) = loaded(Some("[]"), Some(&fixture("fail-closed-unknown-key.json")));
   assert!(
