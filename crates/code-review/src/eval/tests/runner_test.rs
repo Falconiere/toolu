@@ -30,7 +30,7 @@ fn enhanced_at_the_known_weak_none_setting_runs_no_arm() {
     .find(|case| case.id == "slice-underflow")
     .unwrap();
   let report = run_case(&fixtures, case, &plan).unwrap();
-  assert!(report.report.arms.is_empty());
+  assert_eq!(report.report.arms.len(), 0);
   assert_eq!(report.unverified.len(), 1);
   assert!(
     report.unverified[0].contains("no arm selected") && report.unverified[0].contains("Enhanced"),
