@@ -42,6 +42,7 @@ fn the_shim_fails_closed_and_never_holds_policy() {
     "\"--hook-protocol\"",
     "process.env.TOOLU_BIN",
     "ctx.session.instructions.entry.put",
+    "await keep(event.sessionID, \"compaction\", reply.context);",
   ] {
     assert!(text.contains(needle), "{needle}");
   }

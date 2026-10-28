@@ -158,9 +158,20 @@ fn a_malformed_decision_object_fails_closed_before_a_tool_only() {
     ),
     (
       r#"{"hookSpecificOutput":{"permissionDecision":["deny"]}}"#,
-      "a permissionDecision that is not a string",
+      "a permissionDecision that is not allow, deny or ask",
     ),
-    (r#"{"decision":true}"#, "a decision that is not a string"),
+    (
+      r#"{"decision":true}"#,
+      "a decision that is not approve or block",
+    ),
+    (
+      r#"{"hookSpecificOutput":{"permissionDecision":"denied"}}"#,
+      "a permissionDecision that is not allow, deny or ask",
+    ),
+    (
+      r#"{"decision":"blocked"}"#,
+      "a decision that is not approve or block",
+    ),
     (
       r#"{"continue":"false"}"#,
       "a continue that is not a boolean",

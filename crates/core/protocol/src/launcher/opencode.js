@@ -167,7 +167,9 @@ const hooks = async (ctx, toolu) => {
   }
   if (has("session.compaction")) {
     await ctx.session.hook("compaction", async (event) => {
-      note(await bridge(toolu, "session.compaction", directory, { sessionID: event.sessionID }));
+      const reply = await bridge(toolu, "session.compaction", directory, { sessionID: event.sessionID });
+      note(reply);
+      await keep(event.sessionID, "compaction", reply.context);
     });
   }
   if (has("session.start") || has(ENFORCING)) {

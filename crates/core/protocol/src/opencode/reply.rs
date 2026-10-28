@@ -180,8 +180,8 @@ fn refusal(doc: &Map<String, Value>, specific: Option<&Map<String, Value>>) -> O
 }
 
 /// What makes a decision object unreadable: a `hookSpecificOutput` that is not an
-/// object, a `permissionDecision` or `decision` that is not a string, or a
-/// `continue` that is not a boolean. Before a
+/// object, a `permissionDecision` other than `allow`, `deny` or `ask`, a `decision`
+/// other than `approve` or `block`, or a `continue` that is not a boolean. Before a
 /// tool such output fails closed rather than reading as no decision.
 fn malformed(doc: &Map<String, Value>) -> Option<&'static str> {
   let specific = doc.get("hookSpecificOutput");
@@ -189,11 +189,14 @@ fn malformed(doc: &Map<String, Value>) -> Option<&'static str> {
     return Some("a hookSpecificOutput that is not an object");
   }
   let decision = specific.and_then(|specific| specific.get("permissionDecision"));
-  if decision.is_some_and(|value| !value.is_string()) {
-    return Some("a permissionDecision that is not a string");
+  if decision.is_some_and(|value| !matches!(value.as_str(), Some("allow" | "deny" | "ask"))) {
+    return Some("a permissionDecision that is not allow, deny or ask");
   }
-  if doc.get("decision").is_some_and(|value| !value.is_string()) {
-    return Some("a decision that is not a string");
+  if doc
+    .get("decision")
+    .is_some_and(|value| !matches!(value.as_str(), Some("approve" | "block")))
+  {
+    return Some("a decision that is not approve or block");
   }
   if doc.get("continue").is_some_and(|value| !value.is_boolean()) {
     return Some("a continue that is not a boolean");
