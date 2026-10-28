@@ -60,12 +60,23 @@ fn io(path: &Path, error: &std::io::Error) -> String {
   format!("{}: {error}", path.display())
 }
 
-/// Copy the tree `from` into `to`, creating directories as needed.
+/// Copy the tree `from` into `to`, creating directories as needed. A committed
+/// `.rs.fixture` lands as `.rs` so `check-reach` never sees fixture sources as
+/// workspace Rust (same spelling as `fixtures/guardrails`).
 fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
   std::fs::create_dir_all(to).map_err(|error| io(to, &error))?;
   for entry in std::fs::read_dir(from).map_err(|error| io(from, &error))? {
     let entry = entry.map_err(|error| io(from, &error))?;
-    let target = to.join(entry.file_name());
+    let name = entry.file_name();
+    let name = Path::new(&name)
+      .file_stem()
+      .filter(|_| {
+        Path::new(&name)
+          .extension()
+          .is_some_and(|ext| ext == "fixture")
+      })
+      .map_or_else(|| name.clone(), std::ffi::OsStr::to_os_string);
+    let target = to.join(name);
     let kind = entry
       .file_type()
       .map_err(|error| io(&entry.path(), &error))?;
