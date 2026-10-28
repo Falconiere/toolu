@@ -14,6 +14,8 @@ clap.workspace = true
 nix = { workspace = true, features = ["hostname", "user"] }
 serde.workspace = true
 serde_json.workspace = true
+# Codex marketplace pin status from config.toml (#626).
+toml.workspace = true
 toolu-protocol = { path = "../protocol" }
 url.workspace = true
 

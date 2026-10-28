@@ -13,7 +13,6 @@ publish.workspace = true
 clap.workspace = true
 regex.workspace = true
 serde_json.workspace = true
-toml.workspace = true
 toolu-ast-grep = { path = "../ast-grep" }
 toolu-python-quality = { path = "../python-quality" }
 toolu-rust-quality = { path = "../rust-quality" }

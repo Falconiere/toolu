@@ -5023,7 +5023,7 @@
       "placeholder": false
     },
     {
-      "about": "Install, list, remove and update toolu plugins on every host",
+      "about": "Install, list, remove, update and doctor toolu plugins on every host",
       "aliases": [],
       "args": [],
       "commands": [
@@ -5323,6 +5323,34 @@
           "path": [
             "plugins",
             "update"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Diagnose plugin install health on every host that has them, or on --host",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read the plugin catalog from PATH instead of the one built in",
+              "hidden": false,
+              "long": "catalog",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "doctor",
+          "owner": "toolu-cli",
+          "path": [
+            "plugins",
+            "doctor"
           ],
           "placeholder": false
         }

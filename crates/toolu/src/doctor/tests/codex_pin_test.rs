@@ -1,6 +1,7 @@
 use toolu_runtime::env::Env;
+use toolu_runtime::host::codex::marketplace_pin_notice as pin_notice;
 
-use super::{notice, pin_notice};
+use super::notice;
 
 /// `[marketplaces.toolu]` as `codex plugin marketplace add Falconiere/toolu`
 /// wrote it on this machine (Codex 0.164.0), with neighbours.

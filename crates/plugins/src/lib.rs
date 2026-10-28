@@ -1,5 +1,5 @@
-//! `toolu plugins install|list|remove|update` (#438): the plugin installer, ported
-//! from the former Node CLI that npm published as `@toolu/plugins`.
+//! `toolu plugins install|list|remove|update|doctor` (#438): the plugin installer,
+//! ported from the former Node CLI that npm published as `@toolu/plugins`.
 //! Claude Code, Codex and Muse are driven through their own plugin CLIs. The npm
 //! package `@toolu/plugins` is a deprecated notice and does not run these verbs.
 //! This crate never touches the standard streams: a verb returns one `Outcome`,

@@ -2,14 +2,14 @@
 
 # `toolu plugins`
 
-Install, list, remove and update toolu plugins on every host.
+Install, list, remove, update and doctor toolu plugins on every host.
 
 Owner: built into `crates/cli`.
 
 ## `toolu plugins`
 
 ```text
-Install, list, remove and update toolu plugins on every host
+Install, list, remove, update and doctor toolu plugins on every host
 
 Usage: toolu plugins [OPTIONS] <COMMAND>
 
@@ -18,6 +18,7 @@ Commands:
   list     Show the catalog and what the host has installed
   remove   Uninstall plugins (requires --yes)
   update   Update toolu's plugins on every host that has them, or on --host; never asks
+  doctor   Diagnose plugin install health on every host that has them, or on --host
   help     Print this message or the help of the given subcommand(s)
 
 Options:
@@ -27,7 +28,7 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. Install the native binary, then run these verbs. The npm package @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.
+Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. Install the native binary, then run these verbs. `doctor` diagnoses plugin health; `toolu doctor` covers the binary, config, registry and tools. The npm package @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.
 ```
 
 ## `toolu plugins install`
@@ -114,5 +115,21 @@ Options:
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --no-input          Never prompt; fail naming what is missing
       --approve           Approve each plugin's hooks after installing or updating it (Muse only)
+  -h, --help              Print help
+```
+
+## `toolu plugins doctor`
+
+```text
+Diagnose plugin install health on every host that has them, or on --host
+
+Usage: toolu plugins doctor [OPTIONS]
+
+Options:
+      --catalog <PATH>    Read the plugin catalog from PATH instead of the one built in
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

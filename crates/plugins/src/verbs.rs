@@ -1,5 +1,5 @@
-//! The four verbs on a host driven through its own plugin CLI (Claude Code,
-//! Codex, Muse).
+//! The host-driven verbs on Claude Code, Codex and Muse (install, list, remove,
+//! update, doctor).
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -13,6 +13,8 @@ use crate::host::run::{Ran, run};
 use crate::progress::Progress;
 use crate::step::{Status, Step};
 
+/// Diagnose plugin install health.
+pub(crate) mod doctor;
 /// Dependency-ordered install.
 pub(crate) mod install;
 /// The catalog joined with the host's state.

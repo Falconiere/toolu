@@ -14,6 +14,8 @@ fn guide() -> String {
 fn the_guide_documents_hosts_update_and_terminal_output() {
   let guide = guide();
   for phrase in [
+    "## Doctor",
+    "`toolu plugins doctor` diagnoses plugin install health",
     "## Choosing hosts",
     "## Updating every host",
     "## Terminal output",

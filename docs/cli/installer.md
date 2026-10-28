@@ -95,6 +95,18 @@ the CLI's `{ "error": { "code", "name", "message" } }` document.
 several. It now always prints the `install` document. A script that reads one
 host's steps should pass `--host`.
 
+## Doctor
+
+`toolu plugins doctor` diagnoses plugin install health on every host that has
+toolu plugins (or on `--host`), without changing anything. It reports inventory
+problems, version and hook-protocol skew, retired and foreign plugins, Muse
+approval state, Codex marketplace pin drift, missing catalog dependencies, and
+secrets: `secrets.json` load/permissions plus whether installed plugins have the
+env keys they need (`OPENROUTER_API_KEY`, `TYPESAFE_API_KEY`). Fix hints name the
+exact command; secret values never appear. Exit is `1` only when a finding
+fails. Top-level `toolu doctor` stays the install-wide umbrella (binary, config,
+registry, tools); use `plugins doctor` for the plugins domain.
+
 ## Behavior worth knowing
 
 **Install order comes from the catalog, not the CLI.** `.claude-plugin/marketplace.json`
