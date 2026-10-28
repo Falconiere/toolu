@@ -48,19 +48,21 @@ fn the_toolu_plugin_lists_its_skills_and_commands_namespaced() {
 
 #[test]
 fn a_command_description_comes_from_its_frontmatter_first() {
-  let doc = catalog(&repo_plugin("code-review")).unwrap();
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("reviewer");
+  std::fs::create_dir_all(root.join("commands")).unwrap();
+  std::fs::write(
+    root.join("commands/review.md"),
+    "---\ndescription: Review the diff.\n---\n\n# Native review\n\nRun ${CLAUDE_PLUGIN_ROOT}/x.\n",
+  )
+  .unwrap();
+  let doc = catalog(&root).unwrap();
   let command = &doc["commands"][0];
-  assert_eq!(command["name"], "code-review:review");
-  assert_eq!(
-    command["description"],
-    "Review the committed push diff with the native code-review skill."
-  );
-  assert!(
-    command["template"]
-      .as_str()
-      .unwrap()
-      .starts_with("# Native")
-  );
+  assert_eq!(command["name"], "reviewer:review");
+  assert_eq!(command["description"], "Review the diff.");
+  let template = command["template"].as_str().unwrap();
+  assert!(template.starts_with("# Native review"), "{template}");
+  assert!(template.contains(&format!("Run {}/x.", root.display())));
 }
 
 #[test]
