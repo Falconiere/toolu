@@ -21,6 +21,11 @@ pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
 /// One review evidence chunk; files larger than this are explicitly unreviewed.
 pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
 
+/// One assembled review prompt: rules, checklist, memory, pre-pass, diff and source.
+pub const PROMPT_MAX_BYTES: usize = 384 * KIB;
+/// A repository prompt override; a larger one is ignored and the checklist kept.
+pub const PROMPT_OVERRIDE_MAX_BYTES: usize = 16 * KIB;
+
 /// Findings the deterministic pre-pass may hand on; the rest is counted, not sent.
 pub const PREPASS_FINDINGS_MAX: usize = 50;
 
@@ -66,6 +71,8 @@ pub struct Budget {
   pub max_tokens: u32,
   /// The review call's wall-clock deadline.
   pub deadline_secs: u64,
+  /// One wall deadline shared by every Jev attempt and recheck call.
+  pub judge_deadline_secs: u64,
 }
 
 const SMALL: Budget = Budget {
@@ -75,6 +82,7 @@ const SMALL: Budget = Budget {
   reasoning: "low",
   max_tokens: 16_384,
   deadline_secs: 180,
+  judge_deadline_secs: 60,
 };
 
 const MEDIUM: Budget = Budget {
@@ -84,6 +92,7 @@ const MEDIUM: Budget = Budget {
   reasoning: "medium",
   max_tokens: 32_768,
   deadline_secs: 360,
+  judge_deadline_secs: 180,
 };
 
 const HIGH: Budget = Budget {
@@ -93,6 +102,7 @@ const HIGH: Budget = Budget {
   reasoning: "high",
   max_tokens: 65_536,
   deadline_secs: 720,
+  judge_deadline_secs: 360,
 };
 
 const XHIGH: Budget = Budget {
@@ -102,6 +112,7 @@ const XHIGH: Budget = Budget {
   reasoning: "xhigh",
   max_tokens: 131_072,
   deadline_secs: 1200,
+  judge_deadline_secs: 600,
 };
 
 impl Effort {

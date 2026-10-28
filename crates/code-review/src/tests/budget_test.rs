@@ -23,6 +23,7 @@ fn higher_levels_never_get_less() {
     assert!(low.source_package_bytes < high.source_package_bytes);
     assert!(low.max_tokens < high.max_tokens);
     assert!(low.deadline_secs < high.deadline_secs);
+    assert!(low.judge_deadline_secs < high.judge_deadline_secs);
   }
 }
 

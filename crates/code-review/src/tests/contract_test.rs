@@ -128,7 +128,19 @@ fn a_failed_report_carries_its_error() {
     (error.kind.name(), error.message.as_str()),
     ("outage", "every call failed")
   );
-  assert_eq!(ErrorKind::Unconfigured.name(), "unconfigured");
+  let kinds = [
+    ErrorKind::Unconfigured,
+    ErrorKind::NotEnabled,
+    ErrorKind::Outage,
+    ErrorKind::Deadline,
+  ];
+  for kind in kinds {
+    assert_eq!(
+      serde_json::to_value(kind).unwrap(),
+      serde_json::json!(kind.name())
+    );
+  }
+  assert_eq!(ErrorKind::NotEnabled.name(), "not-enabled");
 }
 
 #[test]

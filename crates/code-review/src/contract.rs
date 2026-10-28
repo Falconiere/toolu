@@ -191,12 +191,16 @@ impl Cost {
 
 /// Why a run could not review.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "lowercase")]
+#[serde(rename_all = "kebab-case")]
 pub enum ErrorKind {
-  /// Missing key, missing opt-in, or a pipeline not built: nothing was sent.
+  /// Missing or unusable key, or a pipeline not built: nothing was sent.
   Unconfigured,
+  /// The repository has not opted in: nothing was sent.
+  NotEnabled,
   /// Every model call failed.
   Outage,
+  /// Every review call ran out of its level's wall deadline.
+  Deadline,
 }
 
 impl ErrorKind {
@@ -204,7 +208,9 @@ impl ErrorKind {
   pub fn name(self) -> &'static str {
     match self {
       ErrorKind::Unconfigured => "unconfigured",
+      ErrorKind::NotEnabled => "not-enabled",
       ErrorKind::Outage => "outage",
+      ErrorKind::Deadline => "deadline",
     }
   }
 }

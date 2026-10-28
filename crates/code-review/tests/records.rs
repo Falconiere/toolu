@@ -7,13 +7,16 @@ use toolu_code_review::budget::{
   RULES_MAX_BYTES,
 };
 use toolu_code_review::contract::{Severity, Verdict};
-use toolu_code_review::memory::{Counts, Dismissal, Pass, PriorFinding, Status};
+use toolu_code_review::memory::{Counts, Dismissal, Memory, Pass, PriorFinding, Status};
 
 #[test]
 fn the_memory_records_round_trip() {
   let prior = PriorFinding {
     fingerprint: "src/lib.rs\u{1f}correctness\u{1f}slice underflows".to_owned(),
     id: "f1".to_owned(),
+    path: "src/lib.rs".to_owned(),
+    category: "correctness".to_owned(),
+    claim: "slice underflows".to_owned(),
     severity: Severity::Blocker,
     status: Status::Dismissed,
   };
@@ -36,7 +39,13 @@ fn the_memory_records_round_trip() {
     "{text}"
   );
   let back: (PriorFinding, Dismissal, Pass) = serde_json::from_str(&text).unwrap();
-  assert_eq!(back, (prior, dismissal, pass));
+  assert_eq!(back, (prior.clone(), dismissal.clone(), pass));
+  let memory = Memory {
+    prior: vec![prior],
+    dismissals: vec![dismissal],
+  };
+  let text = serde_json::to_string(&memory).unwrap();
+  assert_eq!(serde_json::from_str::<Memory>(&text).unwrap(), memory);
   let names =
     [Status::Open, Status::Resolved].map(|status| serde_json::to_string(&status).unwrap());
   assert_eq!(names, ["\"open\"", "\"resolved\""]);

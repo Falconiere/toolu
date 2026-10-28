@@ -26,6 +26,8 @@ mod report;
 mod review;
 /// Repository conventions from the base ref.
 pub mod rules;
+/// The `codeReview` config section: the opt-in and the effort preference.
+pub mod settings;
 /// The committed diff and its reviewable anchors.
 pub mod shape;
 mod validate;

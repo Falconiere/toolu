@@ -934,7 +934,9 @@
                 "kind": {
                   "enum": [
                     "unconfigured",
-                    "outage"
+                    "not-enabled",
+                    "outage",
+                    "deadline"
                   ]
                 },
                 "message": {
