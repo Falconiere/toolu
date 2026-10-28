@@ -244,6 +244,20 @@ fn high_effort_sends_the_callers_of_the_definition_a_change_sits_in() {
   );
 }
 
+/// The high-effort caller context and notes for a body change in `src/levels.rs`
+/// when the repository also holds `others`.
+fn high_callers(others: &[(&str, String)]) -> (Option<String>, Vec<String>) {
+  let mut base = others.to_vec();
+  base.push(("src/levels.rs", LEVELS.to_owned()));
+  let changed = LEVELS.replace("_ => 2", "_ => 1");
+  let dir = repo(&base, &[("src/levels.rs", changed)]);
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let budget = Effort::High.budget();
+  let (found, notes) = packages(&env, dir.path(), &shaped, budget, &Mask::default());
+  (found[0].context.clone(), notes)
+}
+
 #[test]
 fn a_definition_named_too_often_is_skipped_with_a_note() {
   let users: Vec<(String, String)> = (0..=crate::budget::CONTEXT_HITS_MAX)
@@ -254,51 +268,23 @@ fn a_definition_named_too_often_is_skipped_with_a_note() {
       )
     })
     .collect();
-  let mut base: Vec<(&str, String)> = users
+  let others: Vec<(&str, String)> = users
     .iter()
     .map(|(path, text)| (path.as_str(), text.clone()))
     .collect();
-  base.push(("src/levels.rs", LEVELS.to_owned()));
-  let changed = LEVELS.replace("_ => 2", "_ => 1");
-  let dir = repo(&base, &[("src/levels.rs", changed)]);
-  let env = env();
-  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
-  let (found, notes) = packages(
-    &env,
-    dir.path(),
-    &shaped,
-    Effort::High.budget(),
-    &Mask::default(),
-  );
-  assert_eq!(found[0].context, None);
+  let (context, notes) = high_callers(&others);
+  assert_eq!(context, None);
+  let skipped = "callers of parse_level left out: over 20";
   assert!(
-    notes
-      .iter()
-      .any(|note| note.starts_with("callers of parse_level left out: over 20")),
+    notes.iter().any(|note| note.starts_with(skipped)),
     "{notes:?}"
   );
 }
 
 #[test]
 fn a_caller_in_a_path_holding_a_colon_keeps_its_path_and_line() {
-  let changed = LEVELS.replace("_ => 2", "_ => 1");
-  let dir = repo(
-    &[
-      ("src/levels.rs", LEVELS.to_owned()),
-      ("src/odd:name.rs", REPORT.to_owned()),
-    ],
-    &[("src/levels.rs", changed)],
-  );
-  let env = env();
-  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
-  let (found, notes) = packages(
-    &env,
-    dir.path(),
-    &shaped,
-    Effort::High.budget(),
-    &Mask::default(),
-  );
-  let context = found[0].context.as_deref().unwrap_or_default();
+  let (context, notes) = high_callers(&[("src/odd:name.rs", REPORT.to_owned())]);
+  let context = context.unwrap_or_default();
   assert!(
     context.contains("src/odd:name.rs:4:     LABELS[parse_level(name) as usize]\n"),
     "{context} {notes:?}"
