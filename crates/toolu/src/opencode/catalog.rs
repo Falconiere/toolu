@@ -55,17 +55,19 @@ fn plugin_name(root: &Path) -> String {
     .unwrap_or_default()
 }
 
-/// The entries of `dir`, sorted; none when it does not exist.
+/// The entries of `dir`, sorted; none when it does not exist. An entry that cannot
+/// be read fails the catalog rather than leaving a skill or command out.
 fn entries(dir: &Path) -> Result<Vec<PathBuf>, String> {
   let read = match std::fs::read_dir(dir) {
     Ok(read) => read,
     Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
     Err(err) => return Err(format!("cannot read {}: {err}", dir.display())),
   };
-  let mut paths: Vec<PathBuf> = read
-    .filter_map(Result::ok)
-    .map(|entry| entry.path())
-    .collect();
+  let mut paths = Vec::new();
+  for entry in read {
+    let entry = entry.map_err(|err| format!("cannot read {}: {err}", dir.display()))?;
+    paths.push(entry.path());
+  }
   paths.sort();
   Ok(paths)
 }

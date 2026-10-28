@@ -148,3 +148,27 @@ fn a_bridge_failure_denies_before_a_tool_and_is_a_message_elsewhere() {
   assert!(!prompt.denied());
   assert!(prompt.json().contains("\"message\":\"no hooks.json\""));
 }
+
+#[test]
+fn a_malformed_decision_object_fails_closed_before_a_tool_only() {
+  for (stdout, problem) in [
+    (
+      r#"{"hookSpecificOutput":"deny"}"#,
+      "a hookSpecificOutput that is not an object",
+    ),
+    (
+      r#"{"hookSpecificOutput":{"permissionDecision":["deny"]}}"#,
+      "a permissionDecision that is not a string",
+    ),
+    (r#"{"decision":true}"#, "a decision that is not a string"),
+  ] {
+    let reply = folded(Hook::ToolBefore, &[ran(0, stdout, "")]);
+    assert_eq!(reply["action"], "deny", "{stdout}");
+    assert!(
+      reply["reason"].as_str().unwrap().ends_with(problem),
+      "{reply}"
+    );
+    let after = folded(Hook::ToolAfter, &[ran(0, stdout, "")]);
+    assert_eq!(after["action"], "continue", "{stdout}");
+  }
+}

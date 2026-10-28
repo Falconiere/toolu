@@ -118,6 +118,12 @@ impl Reply {
       }
       return;
     };
+    if hook == Hook::ToolBefore
+      && let Some(problem) = malformed(&doc)
+    {
+      self.fail(hook, format!("{} printed {problem}", ran.label));
+      return;
+    }
     let specific = doc.get("hookSpecificOutput").and_then(Value::as_object);
     if let Some(reason) = refusal(&doc, specific) {
       self.refuse(hook, reason);
@@ -169,6 +175,24 @@ fn refusal(doc: &Map<String, Value>, specific: Option<&Map<String, Value>>) -> O
   }
   if doc.get("continue").and_then(Value::as_bool) == Some(false) {
     return Some(field(doc, "stopReason").unwrap_or_else(|| "stopped by a toolu hook".to_owned()));
+  }
+  None
+}
+
+/// What makes a decision object unreadable: a `hookSpecificOutput` that is not an
+/// object, or a `permissionDecision` or `decision` that is not a string. Before a
+/// tool such output fails closed rather than reading as no decision.
+fn malformed(doc: &Map<String, Value>) -> Option<&'static str> {
+  let specific = doc.get("hookSpecificOutput");
+  if specific.is_some_and(|value| !value.is_object()) {
+    return Some("a hookSpecificOutput that is not an object");
+  }
+  let decision = specific.and_then(|specific| specific.get("permissionDecision"));
+  if decision.is_some_and(|value| !value.is_string()) {
+    return Some("a permissionDecision that is not a string");
+  }
+  if doc.get("decision").is_some_and(|value| !value.is_string()) {
+    return Some("a decision that is not a string");
   }
   None
 }
