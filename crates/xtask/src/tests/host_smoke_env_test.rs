@@ -214,20 +214,25 @@ fn a_muse_child_gets_the_private_home_and_no_xdg_roots_or_muse_keys() {
 }
 
 #[test]
-fn an_opencode_child_gets_the_private_config_home() {
+fn an_opencode_child_gets_the_private_config_and_no_outer_opencode_session() {
   let dir = tempfile::tempdir().unwrap();
   let path = OsString::from("/usr/bin:/bin");
   let env = ChildEnv::new(Path::new("/x/toolu"), &path, &dir.path().join("shims")).unwrap();
   let config = dir.path().join("opencode-config");
   let mut command = Command::new("/bin/sh");
   command
-    .args(["-c", "echo \"$XDG_CONFIG_HOME\""])
-    .env("XDG_CONFIG_HOME", "/user/config");
+    .args([
+      "-c",
+      "echo \"$XDG_CONFIG_HOME|${OPENCODE-none}|${OPENCODE_SESSION_ID-none}\"",
+    ])
+    .env("XDG_CONFIG_HOME", "/user/config")
+    .env("OPENCODE", "1")
+    .env("OPENCODE_SESSION_ID", "ses_outer");
   env.with_opencode_config(&config).apply(&mut command);
   let out = command.output().unwrap();
   assert_eq!(
     String::from_utf8_lossy(&out.stdout).trim(),
-    config.display().to_string()
+    format!("{}|none|none", config.display())
   );
   let mut plain = Command::new("true");
   env.apply(&mut plain);

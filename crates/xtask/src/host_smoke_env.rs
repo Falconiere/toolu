@@ -1,7 +1,8 @@
 //! The environment every `host-smoke` child runs in: a `PATH` where `bun` and `bunx`
 //! are gone but every other tool of the same directories stays, no `TOOLU_BUN`, no
 //! inherited repository selection from `GIT_*`, no Muse session or credential
-//! variable (`MUSE_*`), and `TOOLU_BIN` set to the native binary, so only native
+//! variable (`MUSE_*`) or `OpenCode` session variable (`OPENCODE*`), and `TOOLU_BIN` set
+//! to the native binary, so only native
 //! hooks can answer. `OpenCode` gets a private `XDG_CONFIG_HOME` holding its plugins.
 
 use std::ffi::{OsStr, OsString};
@@ -32,6 +33,11 @@ const MUSE_XDG: [&str; 2] = ["XDG_CONFIG_HOME", "XDG_DATA_HOME"];
 /// `MUSE_PLUGIN_ROOT`, `MUSE_SESSION_ID`, …), which a smoke run started from inside
 /// a Muse session would otherwise pass to every child.
 const MUSE_PREFIX: &str = "MUSE_";
+
+/// The prefix of `OpenCode`'s session variables (`OPENCODE`, `OPENCODE_SESSION_ID`, …),
+/// which a smoke run started from inside an `OpenCode` session would otherwise pass on,
+/// tying a child session to the outer one.
+const OPENCODE_PREFIX: &str = "OPENCODE";
 
 fn is_executable(path: &Path) -> bool {
   std::fs::metadata(path).is_ok_and(|meta| meta.is_file() && meta.permissions().mode() & 0o111 != 0)
@@ -149,7 +155,9 @@ impl ChildEnv {
     let inherited = std::env::vars_os().map(|(key, _)| key);
     let set: Vec<OsString> = command.get_envs().map(|(key, _)| key.to_owned()).collect();
     for key in inherited.chain(set) {
-      if key.as_encoded_bytes().starts_with(MUSE_PREFIX.as_bytes()) {
+      let bytes = key.as_encoded_bytes();
+      if bytes.starts_with(MUSE_PREFIX.as_bytes()) || bytes.starts_with(OPENCODE_PREFIX.as_bytes())
+      {
         command.env_remove(key);
       }
     }
