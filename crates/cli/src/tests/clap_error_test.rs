@@ -59,7 +59,7 @@ fn the_message_is_clap_s_whole_first_paragraph_on_one_line() {
   assert_eq!(
     host["message"],
     "invalid value 'cladue' for '--host <HOST>' \
-     [possible values: claude, codex, cursor, hermes, muse]"
+     [possible values: claude, codex, cursor, hermes, muse, opencode]"
   );
   assert_eq!(host["suggestion"], "claude");
 }

@@ -24,6 +24,8 @@ pub mod ledger;
 pub mod lifecycle;
 /// The standalone MCP blocker hook.
 pub mod mcp_hook;
+/// `toolu opencode`: the `OpenCode` plugin shim's bridge and catalog.
+pub mod opencode;
 /// `toolu setup`.
 pub mod setup;
 /// `toolu status`.

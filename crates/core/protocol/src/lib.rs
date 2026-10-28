@@ -11,6 +11,7 @@
 //! - `decision`: a gate's verdict and the TypeScript merge precedence;
 //! - `encode`: writes a decision as each host's output, degrading `ask`;
 //! - `native`: each host's event names;
+//! - `opencode`: `OpenCode`'s hook calls as Claude payloads, and the bridge's answer;
 //! - `hook`: `run_hook`, the hook main, which catches a panic and never exits 101.
 
 pub mod decision;
@@ -24,6 +25,7 @@ pub mod launcher;
 pub mod native;
 pub mod normalize;
 pub mod normalized;
+pub mod opencode;
 pub mod payload;
 pub mod stdin;
 pub mod text;

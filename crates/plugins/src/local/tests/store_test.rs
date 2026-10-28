@@ -2,7 +2,8 @@ use std::path::Path;
 
 use toolu_runtime::env::Env;
 
-use super::{State, Store, version_of};
+use super::{State, Store, opencode_shim, version_of};
+use crate::host::Target;
 
 fn repo_plugin(name: &str) -> std::path::PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -10,8 +11,12 @@ fn repo_plugin(name: &str) -> std::path::PathBuf {
     .join(name)
 }
 
+fn env(home: &Path) -> Env {
+  Env::from_pairs([("HOME", home.to_str().unwrap())])
+}
+
 fn store(home: &Path) -> Store {
-  Store::locate(&Env::from_pairs([("HOME", home.to_str().unwrap())]))
+  Store::locate(&env(home), Target::Cursor)
 }
 
 #[test]
@@ -74,4 +79,38 @@ fn symlinks_are_not_followed_into_the_copy() {
   store.put(&source, "p", "v1").unwrap();
   assert!(!store.path("p").join("out").exists());
   assert_eq!(store.state("p"), State::Ours(Some("1.2.3".to_owned())));
+}
+
+#[test]
+fn an_opencode_copy_gets_the_shim_for_its_hooks_and_catalog() {
+  let home = tempfile::tempdir().unwrap();
+  let opencode = Store::locate(&env(home.path()), Target::Opencode);
+  assert!(opencode.shim);
+  assert!(opencode.dir.ends_with(".config/opencode/plugins"));
+  opencode.put(&repo_plugin("toolu"), "toolu", "v1").unwrap();
+  let shim = std::fs::read_to_string(opencode.path("toolu/server.js")).unwrap();
+  assert!(shim.contains("const PLUGIN = \"toolu\";"), "{shim}");
+  assert!(shim.contains("\"tool.execute.before\""));
+  assert!(shim.contains("const CATALOG = true;"));
+  assert!(matches!(opencode.state("toolu"), State::Ours(Some(_))));
+  let cursor = store(home.path());
+  cursor.put(&repo_plugin("toolu"), "toolu", "v1").unwrap();
+  assert!(!cursor.path("toolu/server.js").exists());
+}
+
+#[test]
+fn the_shim_of_a_plugin_without_hooks_registers_none() {
+  let shim = opencode_shim(&repo_plugin("brainstorm"), "brainstorm").unwrap();
+  assert!(shim.contains("const HOOKS = [];"), "{shim}");
+  assert!(shim.contains("const CATALOG = true;"));
+  let bare = tempfile::tempdir().unwrap();
+  let none = opencode_shim(bare.path(), "bare").unwrap();
+  assert!(none.contains("const CATALOG = false;"));
+  std::fs::create_dir_all(bare.path().join("hooks")).unwrap();
+  std::fs::write(bare.path().join("hooks/hooks.json"), "{").unwrap();
+  assert!(
+    opencode_shim(bare.path(), "bare")
+      .unwrap_err()
+      .contains("not JSON")
+  );
 }

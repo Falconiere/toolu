@@ -13,7 +13,7 @@ const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 const TIMEOUT: Duration = Duration::from_secs(30);
 
 /// Host-session variables that must never leak from the developer's own agent.
-const HOST_PREFIXES: [&str; 4] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"];
+const HOST_PREFIXES: [&str; 5] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "OPENCODE"];
 
 fn is_host_key(key: &str) -> bool {
   key == "PLUGIN_ROOT" || HOST_PREFIXES.iter().any(|prefix| key.starts_with(prefix))

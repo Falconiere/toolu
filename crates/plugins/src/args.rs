@@ -86,8 +86,9 @@ pub(crate) enum Approval {
 const ABOUT: &str = "Install, list, remove and update toolu plugins on every host";
 
 const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs; \
-  Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. \
-  Install the native binary, then run these verbs. The npm package @toolu/plugins \
+  Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local, \
+  and --host opencode copies each into ~/.config/opencode/plugins with a generated \
+  server.js. Install the native binary, then run these verbs. The npm package @toolu/plugins \
   is deprecated. Its guide is docs/cli/installer.md.";
 
 /// The `toolu plugins` namespace.

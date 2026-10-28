@@ -9,13 +9,13 @@
 use crate::args::Request;
 use crate::catalog::Catalog;
 use crate::catalog::order::install_order;
-use crate::cursor::store::Store;
-use crate::cursor::{self, Cursor};
 use crate::dispatch::{Context, Report, driver, dry_text, failed};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Installed;
 use crate::host::run::first_line;
 use crate::host::{Target, check_scope, none_found, with_toolu};
+use crate::local::store::Store;
+use crate::local::{self, Local};
 use crate::report::{self, rails};
 use crate::step::{Status, Step};
 use crate::verbs;
@@ -24,7 +24,7 @@ use crate::verbs;
 struct Have {
   /// Each plugin once.
   names: Vec<String>,
-  /// The host's listing, for the update to reuse (none for Cursor).
+  /// The host's listing, for the update to reuse (none for Cursor and `OpenCode`).
   listing: Option<Vec<Installed>>,
 }
 
@@ -65,8 +65,13 @@ fn on(
   cx: &Context<'_>,
 ) -> Res<Vec<Step>> {
   match target {
-    Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
-      cursor::update(&Cursor::new(cx)?, catalog, &have.names, request.dry_run)
+    Target::Cursor | Target::Opencode => cx.spinning(target.name(), "copying plugins", |cx| {
+      local::update(
+        &Local::new(cx, target)?,
+        catalog,
+        &have.names,
+        request.dry_run,
+      )
     }),
     Target::Claude | Target::Codex | Target::Muse => verbs::update::run(
       &driver(target, request, cx)?,
@@ -81,8 +86,8 @@ fn on(
 /// The toolu plugins `target` reports, read without changing anything; why
 /// they could not be read otherwise.
 fn installed(target: Target, request: &Request, cx: &Context<'_>) -> Result<Have, String> {
-  if target == Target::Cursor {
-    let names = Store::locate(&cx.env).ours();
+  if matches!(target, Target::Cursor | Target::Opencode) {
+    let names = Store::locate(&cx.env, target).ours();
     return Ok(Have {
       names,
       listing: None,

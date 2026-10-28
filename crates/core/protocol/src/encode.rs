@@ -58,7 +58,8 @@ pub fn supports_ask(host: Host, event: HostEvent) -> bool {
     Host::Codex => event == HostEvent::PermissionEvaluate,
     // Cursor accepts but does not enforce ask on preToolUse.
     Host::Cursor => event == HostEvent::ShellPre,
-    Host::Hermes | Host::Muse => false,
+    // OpenCode's `tool.execute.before` can only throw; the bridge has no prompt to show.
+    Host::Hermes | Host::Muse | Host::Opencode => false,
   }
 }
 
@@ -84,7 +85,10 @@ pub fn encode(host: Host, event: HostEvent, decision: &Decision) -> Result<Encod
   let native = native_event(host, event).ok_or(EncodeError { host, event })?;
   let normal = normalize(host, event, decision);
   Ok(match host {
-    Host::Claude | Host::Codex => Encoded::Command(hook::output(native, event, normal)),
+    // The OpenCode bridge reads Claude's output and translates it (`crate::opencode::reply`).
+    Host::Claude | Host::Codex | Host::Opencode => {
+      Encoded::Command(hook::output(native, event, normal))
+    }
     Host::Cursor => Encoded::Command(cursor::output(event, normal)),
     Host::Hermes => Encoded::Command(hermes::output(event, normal)),
     Host::Muse => Encoded::Command(muse::output(normal)),

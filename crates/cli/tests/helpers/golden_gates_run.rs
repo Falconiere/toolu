@@ -37,7 +37,7 @@ pub(crate) fn plugin_dir(plugin: &str) -> PathBuf {
 fn host_key(key: &str) -> bool {
   key == "PLUGIN_ROOT"
     || key.starts_with("GIT_")
-    || ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_"]
+    || ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "OPENCODE"]
       .iter()
       .any(|prefix| key.starts_with(prefix))
 }

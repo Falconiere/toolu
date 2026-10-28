@@ -5,10 +5,10 @@ that installs toolu's plugins on each host (#438). The generated reference of
 every verb and flag is [plugins.md](plugins.md). The
 [README](../../README.md#install) install snippets use these commands.
 
-Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor has
-none, so toolu copies plugins into its local plugins directory. The code is
-`crates/plugins` (`toolu-plugins`); Muse is [below](#muse) and Cursor
-[after it](#cursor).
+Claude Code, Codex and Muse are driven through their own plugin CLIs. Cursor and
+OpenCode have none, so toolu copies plugins into the directory each loads. The
+code is `crates/plugins` (`toolu-plugins`); Muse is [below](#muse), then
+[Cursor](#cursor) and [OpenCode](#opencode).
 
 Design: `docs/toolu/specs/2026-10-12-toolu-plugins-in-rust-design.md`.
 
@@ -55,8 +55,8 @@ toolu plugins update [name...]    Update toolu's plugins on every host that has 
 
 | Flag | Meaning |
 |------|---------|
-| `--host <id>` | `claude`, `codex`, `muse` or `cursor`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
-| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse or Cursor exits `64`, except `update` without `--host`, which does not use it. |
+| `--host <id>` | `claude`, `codex`, `muse`, `cursor` or `opencode`. Detected when omitted; see [Choosing hosts](#choosing-hosts). Without `--host`, `update` acts on every host that has toolu plugins. `hermes` is not an installer target and exits `64`. |
+| `--scope <scope>` | `user`, `project` or `local` (Claude Code only). Any scope with Codex, Muse, Cursor or OpenCode exits `64`, except `update` without `--host`, which does not use it. |
 | `--approve` | `install` and `update` only: approve each plugin's pending hooks on Muse. Does nothing on Claude Code and Codex. |
 | `--config <path>` | `install` only: replay a [`.toolu/plugins.json`](#tooluplugins-json) selection. Not combined with names. |
 | `--catalog <path>` | Read the plugin catalog from a file instead of the one built into the binary. |
@@ -123,10 +123,10 @@ or `--json`, they exit `64` and name the candidates rather than guessing.
 
 **`remove` also takes a plugin the marketplace retired** (#615), such as a
 leftover 7.11.0 `context7` from before the Rust rewrite. On Claude Code, Codex
-and Cursor, a name outside the catalog that is shaped like a plugin name
+Cursor and OpenCode, a name outside the catalog that is shaped like a plugin name
 (lowercase letters and digits, single inner hyphens) goes to the host's own
 removal, which only reaches toolu's plugins: `claude plugin uninstall
-<name>@toolu`, `codex plugin remove <name>@toolu`, or a Cursor directory with
+<name>@toolu`, `codex plugin remove <name>@toolu`, or a Cursor or OpenCode directory with
 toolu's install marker. A name the host does not have is a failed step with the
 host's message, exit `1`. Muse removes by bare name from any source, so there
 `remove` takes catalog names only, and `toolu doctor` names `muse plugins remove
@@ -175,10 +175,12 @@ command and `toolu` with it.
 `muse`) is used without asking. When several are found, a terminal asks:
 
 - `install` offers every supported host on the machine: Claude Code, Codex and
-  Muse on `PATH`, and Cursor when its config directory (`~/.cursor`) exists or
-  `cursor-agent` is on `PATH`. Several can be chosen.
-- `list` and `remove` ask for one host. They offer Cursor only when toolu
-  installed a plugin there, so a leftover `~/.cursor` never adds the question.
+  Muse on `PATH`, Cursor when its config directory (`~/.cursor`) exists or
+  `cursor-agent` is on `PATH`, and OpenCode when its config directory
+  (`~/.config/opencode`) exists or `opencode` is on `PATH`. Several can be chosen.
+- `list` and `remove` ask for one host. They offer Cursor and OpenCode only when
+  toolu installed a plugin there, so a leftover config directory never adds the
+  question.
 - An `install` with no plugin names and no `--config` then asks which plugins,
   every catalog entry selected.
 
@@ -190,13 +192,13 @@ cannot be put in raw mode, or stdout is not a terminal, the question is numbered
 lines instead: Enter takes the default, `1 3` or `1,3` picks, `q` cancels.
 
 Without a terminal only `PATH` hosts count, so scripts resolve as they always
-did. A script names Cursor with `--host cursor`.
+did. A script names Cursor with `--host cursor` and OpenCode with `--host opencode`.
 
 ## Updating every host
 
 `toolu plugins update` never asks which host. Without `--host` it updates every
 detected host that has toolu plugins, in a section each. That is the `PATH`
-hosts, and Cursor when toolu installed a plugin there.
+hosts, and Cursor and OpenCode when toolu installed a plugin there.
 
 - Each host's toolu plugins are read before anything is prepared, pinned or
   cloned. A host without them is only noted (`muse: no toolu plugins
@@ -252,7 +254,7 @@ The run installs `enabled` with its dependencies, as if the names had been
 given, and an empty list installs nothing. `version` is the file format: an
 unknown or missing value exits `64` rather than being guessed at.
 `generatorVersion` records the CLI that wrote the file, and a file from a newer
-major exits `64` with both versions named. `host` (`claude`, `codex`, `muse` or `cursor`)
+major exits `64` with both versions named. `host` (`claude`, `codex`, `muse`, `cursor` or `opencode`)
 is used when `--host` is absent; `--host` wins. A file that is missing, is not JSON or is malformed also
 exits `64`. Nothing writes this file. The TypeScript installer parsed
 `--config` but never read it.
@@ -325,3 +327,25 @@ its keychain login:
   `~/.cursor/plugins/cache/toolu/<plugin>/<rev>`; `toolu doctor --host cursor`
   lists both kinds, and Cursor also runs plugins installed for Claude Code under
   `~/.claude`, so install in one place only.
+
+## OpenCode
+
+`toolu plugins … --host opencode` installs into OpenCode V2. `opencode plugin
+add` installs npm packages, so there is no command to drive. OpenCode loads
+every plugin directory under `<config>/plugins` through its `server.js`, and
+OpenCode plugins can only be JavaScript, so each copy gets a generated shim:
+
+- **The checkout** is `$XDG_DATA_HOME/toolu/opencode-marketplace` (else
+  `~/.local/share/toolu/opencode-marketplace`), as for Cursor.
+- **`install`** copies `plugins/<name>/` into `<opencode config>/plugins/<name>`,
+  writes `server.js` and `.toolu-install.json` there, and renames the finished
+  copy into place. The OpenCode config is `$XDG_CONFIG_HOME/opencode` (else
+  `~/.config/opencode`), or `TOOLU_CONFIG_DIR` when set. `list`, `update` and
+  `remove` work as on Cursor; `update` also rewrites the shim.
+- **The shim** holds no policy. It registers the OpenCode hooks the plugin's
+  `hooks/hooks.json` needs and hands each call to `toolu opencode bridge`
+  ([OpenCode](../opencode.md)). It finds `toolu` as the `hooks.json` launcher
+  does: `TOOLU_BIN` alone when set, else the install directories, then `PATH`.
+- **Plugins that are not toolu's.** A directory without the marker is reported
+  as `skew` and never touched. `toolu doctor --host opencode` lists toolu's
+  copies and warns about one without its `server.js`.

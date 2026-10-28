@@ -13,6 +13,7 @@ use crate::event::is_enforcing;
 use crate::install::missing_message;
 
 pub mod muse;
+pub mod opencode;
 
 /// The marker that makes a `hooks.json` command a native launcher entry.
 pub const MARKER: &str = "--hook-protocol";
@@ -74,6 +75,17 @@ pub fn hook(target: &Target<'_>, timeout: u32) -> Result<LauncherHook, String> {
 pub fn hook_name(command: &str) -> Option<&str> {
   let (_, rest) = command.split_once(" hook ")?;
   rest.split_whitespace().next().filter(|name| is_name(name))
+}
+
+/// The plugin namespace in a native `command`: the word before its first ` hook `,
+/// `toolu` when that word is the resolved binary itself (`"$t" hook <name>`).
+pub fn hook_plugin(command: &str) -> Option<&str> {
+  let (before, _) = command.split_once(" hook ")?;
+  match before.rsplit(' ').next()? {
+    "\"$t\"" => Some("toolu"),
+    word if is_name(word) => Some(word),
+    _ => None,
+  }
 }
 
 /// How a failure names the hook: `<plugin> plugin: toolu [<plugin>] hook <name> on <Event>`.

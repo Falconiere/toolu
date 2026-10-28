@@ -9,6 +9,10 @@ fn each_host_parses_into_its_own_payload_type() {
   assert!(matches!(parse(Host::Cursor, doc), Ok(Payload::Cursor(_))));
   assert!(matches!(parse(Host::Hermes, doc), Ok(Payload::Hermes(_))));
   assert!(matches!(parse(Host::Muse, doc), Ok(Payload::Muse(_))));
+  assert!(matches!(
+    parse(Host::Opencode, doc),
+    Ok(Payload::Opencode(_))
+  ));
 }
 
 #[test]

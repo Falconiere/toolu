@@ -94,7 +94,7 @@ fn advice(
     .and_then(|decision: Decision| {
       let host = match roots.host() {
         Host::Codex | Host::Muse => roots.host(),
-        Host::Claude | Host::Cursor | Host::Hermes => Host::Claude,
+        Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => Host::Claude,
       };
       encode(host, HostEvent::ToolPre, &decision).ok()
     });

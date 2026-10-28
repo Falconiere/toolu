@@ -1,15 +1,15 @@
-//! `install` and `update` on Cursor's local plugins directory.
+//! `install` and `update` on a local-directory host's plugins directory.
 
 use crate::catalog::Catalog;
 use crate::catalog::order::{dependents_of, install_order};
-use crate::cursor::Cursor;
-use crate::cursor::store::{State, version_of};
 use crate::fail::{Fail, Res};
+use crate::local::Local;
+use crate::local::store::{State, version_of};
 use crate::step::{Status, Step};
 use crate::verbs::install::CORE;
 use crate::verbs::retired_step;
 
-impl Cursor {
+impl Local {
   fn tag(&self) -> &str {
     &self.checkout.tag
   }
@@ -64,8 +64,9 @@ impl Cursor {
             name,
             Status::Skew,
             format!(
-              "installed at {shown}, {} offers {offer}; left untouched. Run `toolu plugins update {name} --host cursor` to change it.",
-              self.tag()
+              "installed at {shown}, {} offers {offer}; left untouched. Run `toolu plugins update {name} --host {}` to change it.",
+              self.tag(),
+              self.host()
             ),
             argv,
           ),
@@ -86,14 +87,14 @@ impl Cursor {
 /// Installs `requested` (all when empty) with their dependencies; a failed core
 /// plugin skips its dependents.
 pub(crate) fn install(
-  cursor: &Cursor,
+  local: &Local,
   catalog: &Catalog,
   requested: &[String],
   dry_run: bool,
 ) -> Res<Vec<Step>> {
   let order = install_order(catalog, requested)?;
   if !dry_run {
-    cursor.sync()?;
+    local.sync()?;
   }
   let dependents = dependents_of(catalog, CORE);
   let mut core_failed = false;
@@ -104,10 +105,10 @@ pub(crate) fn install(
         name,
         Status::Skipped,
         format!("skipped: {CORE} failed"),
-        cursor.copy_argv(name),
+        local.copy_argv(name),
       )
     } else {
-      cursor.install_one(name, dry_run)
+      local.install_one(name, dry_run)
     };
     core_failed |= name == CORE && step.failed();
     steps.push(step);
@@ -115,10 +116,10 @@ pub(crate) fn install(
   Ok(steps)
 }
 
-fn update_one(cursor: &Cursor, name: &str, dry_run: bool) -> Step {
-  let argv = cursor.copy_argv(name);
-  let State::Ours(have) = cursor.store.state(name) else {
-    let absent = cursor.store.state(name) == State::Absent;
+fn update_one(local: &Local, name: &str, dry_run: bool) -> Step {
+  let argv = local.copy_argv(name);
+  let State::Ours(have) = local.store.state(name) else {
+    let absent = local.store.state(name) == State::Absent;
     return if absent {
       Step::new(
         name,
@@ -135,42 +136,43 @@ fn update_one(cursor: &Cursor, name: &str, dry_run: bool) -> Step {
       )
     };
   };
-  match cursor.offered(name) {
+  match local.offered(name) {
     Some(want) if have.as_deref() == Some(want.as_str()) => {
       Step::new(name, Status::Current, format!("current at {want}"), argv)
     }
     _behind if dry_run => Step::new(name, Status::Skipped, "dry run", argv),
-    _behind => cursor.copy(name, Status::Updated, argv),
+    _behind => local.copy(name, Status::Updated, argv),
   }
 }
 
 /// Updates `names`, or every plugin toolu installed when empty; one the catalog
 /// no longer has is retired and only named.
 pub(crate) fn update(
-  cursor: &Cursor,
+  local: &Local,
   catalog: &Catalog,
   names: &[String],
   dry_run: bool,
 ) -> Res<Vec<Step>> {
   if !dry_run {
-    cursor.sync()?;
+    local.sync()?;
   }
   let targets = if names.is_empty() {
-    cursor.store.ours()
+    local.store.ours()
   } else {
     names.to_vec()
   };
   if targets.is_empty() {
-    return Err(Fail::failed(
-      "cursor has no toolu plugins installed, so there is nothing to update",
-    ));
+    return Err(Fail::failed(format!(
+      "{} has no toolu plugins installed, so there is nothing to update",
+      local.host()
+    )));
   }
   Ok(
     targets
       .iter()
       .map(|name| match catalog.entry(name) {
-        Some(_known) => update_one(cursor, name, dry_run),
-        None => retired_step(name, "cursor", cursor.copy_argv(name)),
+        Some(_known) => update_one(local, name, dry_run),
+        None => retired_step(name, local.host(), local.copy_argv(name)),
       })
       .collect(),
   )

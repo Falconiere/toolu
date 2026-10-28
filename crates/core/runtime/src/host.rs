@@ -5,5 +5,6 @@
 
 pub mod cursor;
 pub mod detect;
+pub mod opencode;
 pub mod roots;
 pub mod snapshot;

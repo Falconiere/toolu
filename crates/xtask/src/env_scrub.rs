@@ -16,7 +16,9 @@ const SELECTION: [&str; 6] = [
 ];
 
 /// Environment key prefixes a host session sets.
-const HOST_PREFIXES: [&str; 5] = ["CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "MUSE_"];
+const HOST_PREFIXES: [&str; 6] = [
+  "CLAUDE_", "CODEX_", "TOOLU_", "CURSOR_", "MUSE_", "OPENCODE",
+];
 
 /// What `cargo xtask` (cargo run, rustup) adds to the environment. A host never
 /// passes it to a hook, and a larger environment raises a hook's measured RSS.

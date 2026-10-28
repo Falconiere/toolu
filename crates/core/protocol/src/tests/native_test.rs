@@ -117,11 +117,23 @@ fn names_from_another_host_or_unknown_names_are_none() {
 }
 
 #[test]
-fn pascal_case_names_belong_to_claude_codex_and_muse() {
+fn pascal_case_names_belong_to_claude_codex_muse_and_opencode() {
   assert_eq!(
     hosts_for_native("PreToolUse"),
-    [Host::Claude, Host::Codex, Host::parse("muse").unwrap()]
+    [Host::Claude, Host::Codex, Host::Muse, Host::Opencode]
   );
+}
+
+#[test]
+fn opencode_speaks_claude_names_through_its_bridge() {
+  for event in HostEvent::ALL {
+    assert_eq!(
+      native_event(Host::Opencode, event),
+      native_event(Host::Claude, event),
+      "{event:?}"
+    );
+  }
+  assert_eq!(canonical_event(Host::Opencode, "tool.execute.before"), None);
 }
 
 #[test]

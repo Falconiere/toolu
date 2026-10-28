@@ -1,4 +1,6 @@
-use super::{DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_label, hook_name};
+use super::{
+  DEFAULT_TIMEOUT, MARKER, MAX_TIMEOUT, Target, hook, hook_label, hook_name, hook_plugin,
+};
 
 const PRE_TOOL_USE: &str = include_str!("fixtures/launcher-pre-tool-use.txt");
 const SESSION_START: &str = include_str!("fixtures/launcher-session-start.txt");
@@ -186,4 +188,15 @@ fn the_hook_name_is_the_word_after_the_first_hook() {
   assert_eq!(hook_name("toolu --hook-protocol"), None);
   assert_eq!(hook_name("x hook Bad_Name --event E"), None);
   assert_eq!(hook_name("x hook "), None);
+}
+
+#[test]
+fn the_hook_plugin_is_the_namespace_before_the_first_hook() {
+  assert_eq!(hook_plugin(PRE_TOOL_USE), Some("toolu"));
+  let jev = generated("jev", "SessionStart", "session-start").command;
+  assert_eq!(hook_plugin(&jev), Some("jev"));
+  let quality = generated("ts-quality", "SessionStart", "register").command;
+  assert_eq!(hook_plugin(&quality), Some("ts-quality"));
+  assert_eq!(hook_plugin("toolu --hook-protocol"), None);
+  assert_eq!(hook_plugin("$(x) hook a"), None);
 }

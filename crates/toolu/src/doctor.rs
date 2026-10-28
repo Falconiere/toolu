@@ -12,6 +12,7 @@ mod config_check;
 mod cursor;
 mod inventory;
 mod muse;
+mod opencode;
 mod registry_check;
 mod skew_check;
 mod tools;
