@@ -89,28 +89,41 @@ fn an_override_replaces_only_the_checklist_unless_it_is_too_large() {
   assert!(note.unwrap().contains("ignored: over 16384 bytes"));
 }
 
-#[test]
-fn the_chunk_sends_open_priors_and_dismissals_but_never_resolved_ones() {
-  let memory = Memory {
-    prior: vec![
-      prior("open", Status::Open),
-      prior("done", Status::Resolved),
-      prior("gone", Status::Dismissed),
-    ],
-    dismissals: vec![Dismissal {
-      id: "gone".into(),
-      reason: "the caller validates it".into(),
-      by: "agent".into(),
-    }],
+/// `priors` plus the agent's dismissal of `gone`.
+fn dismissed(priors: Vec<PriorFinding>, reason: &str) -> Memory {
+  let dismissal = Dismissal {
+    id: "gone".into(),
+    reason: reason.into(),
+    by: "agent".into(),
   };
+  Memory {
+    prior: priors,
+    dismissals: vec![dismissal],
+  }
+}
+
+/// The chunk message for `file()` with `memory`, source included.
+fn sent(memory: &Memory) -> Value {
   let (file, package) = file();
-  let doc = body(&chunk(
+  body(&chunk(
     &[(&file, &package)],
     &[],
-    &memory,
+    memory,
     &Mask::default(),
     true,
-  ));
+  ))
+}
+
+#[test]
+fn the_chunk_sends_open_priors_and_dismissals_but_never_resolved_ones() {
+  let priors = vec![
+    prior("open", Status::Open),
+    prior("done", Status::Resolved),
+    prior("gone", Status::Dismissed),
+  ];
+  let memory = dismissed(priors, "the caller validates it");
+  let (file, package) = file();
+  let doc = sent(&memory);
   assert_eq!(doc["memory"]["open"].as_array().unwrap().len(), 1);
   assert_eq!(doc["memory"]["open"][0]["claim"], "claim open");
   assert_eq!(
@@ -137,22 +150,11 @@ fn a_chunk_sends_only_its_own_files_memory_and_masks_convention_secrets() {
   elsewhere.path = "src/other.rs".into();
   let mut gone = prior("gone", Status::Dismissed);
   gone.path = "src/other.rs".into();
-  let memory = Memory {
-    prior: vec![prior("open", Status::Open), elsewhere, gone],
-    dismissals: vec![Dismissal {
-      id: "gone".into(),
-      reason: "elsewhere".into(),
-      by: "agent".into(),
-    }],
-  };
-  let (file, package) = file();
-  let doc = body(&chunk(
-    &[(&file, &package)],
-    &[],
-    &memory,
-    &Mask::default(),
-    true,
-  ));
+  let memory = dismissed(
+    vec![prior("open", Status::Open), elsewhere, gone],
+    "elsewhere",
+  );
+  let doc = sent(&memory);
   assert_eq!(doc["memory"]["open"].as_array().unwrap().len(), 1);
   assert_eq!(doc["memory"]["dismissals"], serde_json::json!([]));
   let mut rules = bundle(None);
