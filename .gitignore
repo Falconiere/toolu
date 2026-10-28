@@ -19,3 +19,5 @@ node_modules/
 
 # Cargo build output
 /target/
+# LLVM coverage output an instrumented binary writes into its working directory
+*.profraw
