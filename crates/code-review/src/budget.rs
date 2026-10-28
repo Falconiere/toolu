@@ -21,9 +21,9 @@ pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
 /// One review evidence chunk; files larger than this are explicitly unreviewed.
 pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
 /// The most bytes read from one `HEAD` blob, by the pre-pass and for source.
-pub const BLOB_MAX_BYTES: usize = 8 * 1024 * KIB;
+pub(crate) const BLOB_MAX_BYTES: usize = 8 * 1024 * KIB;
 /// `HEAD` lines kept on each side of a change when a file is too big to send whole.
-pub const SOURCE_WINDOW_LINES: usize = 30;
+pub(crate) const SOURCE_WINDOW_LINES: usize = 30;
 /// References kept for one changed definition; a name with more is skipped.
 pub const CONTEXT_HITS_MAX: usize = 20;
 
