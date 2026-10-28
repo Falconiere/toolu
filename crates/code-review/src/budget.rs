@@ -20,6 +20,12 @@ pub const JEV_REQUEST_MAX_BYTES: usize = 180_000;
 pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
 /// One review evidence chunk; files larger than this are explicitly unreviewed.
 pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
+/// The most bytes read from one `HEAD` blob, by the pre-pass and for source.
+pub(crate) const BLOB_MAX_BYTES: usize = 8 * 1024 * KIB;
+/// `HEAD` lines kept on each side of a change when a file is too big to send whole.
+pub(crate) const SOURCE_WINDOW_LINES: usize = 30;
+/// References kept for one changed definition; a name with more is skipped.
+pub const CONTEXT_HITS_MAX: usize = 20;
 
 /// One assembled review prompt: rules, checklist, memory, pre-pass, diff and source.
 pub const PROMPT_MAX_BYTES: usize = 384 * KIB;
@@ -52,8 +58,8 @@ pub enum Judge {
   BlockingOnly,
   /// Every fresh finding, plus a recheck of the contradicted ones.
   AllWithRecheck,
-  /// Reserved for related cross-file context, which is not built yet: today
-  /// it judges exactly as `AllWithRecheck`.
+  /// Judges as `AllWithRecheck`, at the level whose evidence carries the most
+  /// caller context (`Budget::context_bytes`), which Jev reads with the source.
   AllWithContext,
 }
 
@@ -64,6 +70,8 @@ pub struct Budget {
   pub source_file_bytes: usize,
   /// Surrounding source per package.
   pub source_package_bytes: usize,
+  /// Callers of the changed definitions per file, found in `HEAD`; 0 sends none.
+  pub context_bytes: usize,
   /// Jev judge depth.
   pub judge: Judge,
   /// The model's `reasoning.effort`.
@@ -79,6 +87,7 @@ pub struct Budget {
 const SMALL: Budget = Budget {
   source_file_bytes: 8 * KIB,
   source_package_bytes: 16 * KIB,
+  context_bytes: 0,
   judge: Judge::BlockingOnly,
   reasoning: "low",
   max_tokens: 16_384,
@@ -89,6 +98,7 @@ const SMALL: Budget = Budget {
 const MEDIUM: Budget = Budget {
   source_file_bytes: 16 * KIB,
   source_package_bytes: 32 * KIB,
+  context_bytes: 0,
   judge: Judge::AllWithRecheck,
   reasoning: "medium",
   max_tokens: 32_768,
@@ -99,6 +109,7 @@ const MEDIUM: Budget = Budget {
 const HIGH: Budget = Budget {
   source_file_bytes: 32 * KIB,
   source_package_bytes: 64 * KIB,
+  context_bytes: 16 * KIB,
   judge: Judge::AllWithRecheck,
   reasoning: "high",
   max_tokens: 65_536,
@@ -109,6 +120,7 @@ const HIGH: Budget = Budget {
 const XHIGH: Budget = Budget {
   source_file_bytes: 64 * KIB,
   source_package_bytes: 128 * KIB,
+  context_bytes: 32 * KIB,
   judge: Judge::AllWithContext,
   reasoning: "xhigh",
   max_tokens: 131_072,

@@ -36,15 +36,10 @@ fn deterministic_findings_are_exempt_and_model_quotes_are_masked() {
     quote: "not in the diff".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   };
-  let out = run((
-    &diff,
-    &[finding],
-    &[trusted],
-    &Memory::default(),
-    &redactions,
-    &[],
-  ));
+  let memory = Memory::default();
+  let out = run((&diff, &[finding], &[trusted], &memory, &redactions, &[]));
   assert_eq!(out.findings.len(), 2);
   let masked = out
     .findings

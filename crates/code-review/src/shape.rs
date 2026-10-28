@@ -22,6 +22,7 @@ pub(crate) use dirty::dirty_except_state;
 use file::{FileDecision, inspect_file};
 use git_io::{git, git_found, git_output, text};
 use noise::status_noise;
+pub(crate) use parse::hunk_start;
 use parse::{Status, names, statuses};
 use source::batch_generated;
 

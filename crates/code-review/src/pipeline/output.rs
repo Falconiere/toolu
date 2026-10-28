@@ -3,6 +3,7 @@
 use crate::budget::Effort;
 use crate::contract::{Coverage, Finding, Omitted, Report, Severity, Side, Source};
 use crate::memory;
+use crate::model::ModelFinding;
 use crate::prepass::{self, PrepassResult};
 use crate::review::{self, RunError};
 use crate::shape::Shaped;
@@ -19,7 +20,10 @@ pub(crate) fn completed(
   let models: Vec<_> = reviewed
     .findings
     .iter()
-    .map(|item| item.finding.clone())
+    .map(|item| ModelFinding {
+      assessment: Some(item.assessment),
+      ..item.finding.clone()
+    })
     .collect();
   let mut validated = validate::validate(&validate::Input {
     shaped,
@@ -43,6 +47,7 @@ pub(crate) fn completed(
   ));
   report.recap = recap_lines(&validated.recap, &prior.passes);
   report.notes = reviewed.notes;
+  report.notes.append(&mut validated.notes);
   if !prepass.findings.is_empty() || !prepass.notices.is_empty() {
     report.mechanical_checks = prepass::mechanical_checks_lines(prepass);
   }
@@ -167,6 +172,7 @@ pub(super) fn system_blocker(id: &str, category: &str, claim: &str, quote: &str)
     quote: quote.to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   }
 }
 

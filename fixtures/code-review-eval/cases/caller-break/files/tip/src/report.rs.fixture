@@ -1,0 +1,8 @@
+use crate::levels::parse_level;
+
+const LABELS: [&str; 5] = ["trace", "debug", "info", "warn", "error"];
+
+/// The label printed for a configured level name.
+pub fn label(name: &str) -> &'static str {
+    LABELS[parse_level(name) as usize]
+}

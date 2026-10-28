@@ -71,6 +71,7 @@ fn cite(shaped: &Shaped, path: &str, needle: &str, claim: &str) -> Result<ModelF
     quote: line.text.clone(),
     suggestion: None,
     prior_id: None,
+    assessment: None,
   })
 }
 
@@ -110,7 +111,7 @@ fn none() -> Vec<String> {
 #[test]
 fn every_case_materializes_and_shapes_a_nonempty_committed_diff() {
   let fixtures = golden().expect("fixture");
-  assert_eq!(fixtures.set().cases.len(), 7);
+  assert_eq!(fixtures.set().cases.len(), 10);
   for case in &fixtures.set().cases {
     let shaped = diff_of(&fixtures, case).expect("fixture");
     assert!(!shaped.files.is_empty(), "{} has no diff", case.id);
@@ -161,7 +162,7 @@ fn the_probe_defects_are_caught_and_the_known_false_positive_is_flagged() {
 }
 
 #[test]
-fn the_cross_file_defect_is_caught_in_the_file_that_divides() {
+fn the_cross_file_defect_is_caught_where_the_zero_is_introduced() {
   let fixtures = golden().expect("fixture");
   let cross = case(&fixtures, "cross-file-defect").expect("fixture");
   let shaped = diff_of(&fixtures, cross).expect("fixture");
@@ -169,9 +170,9 @@ fn the_cross_file_defect_is_caught_in_the_file_that_divides() {
   assert_eq!(paths, ["src/limits.rs", "src/pages.rs"]);
   let found = cite(
     &shaped,
-    "src/pages.rs",
-    "total / page_size()",
-    "limits now returns a page size of zero, so this division panics",
+    "src/limits.rs",
+    "    0",
+    "page_size now returns zero, so page_count divides by zero and panics",
   )
   .expect("fixture");
   let out = grounded(&shaped, &Memory::default(), &[found]);

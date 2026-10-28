@@ -225,6 +225,7 @@ pub(super) fn scan(shaped: &Shaped) -> (Vec<Finding>, Vec<Redaction>, Vec<Notice
           quote: mask(&line.text, &hit.spans),
           suggestion: None,
           redaction_spans: hit.spans.clone(),
+          assessment: None,
         });
       }
       redactions.push(Redaction {

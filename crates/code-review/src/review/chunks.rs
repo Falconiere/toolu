@@ -120,7 +120,10 @@ fn last_message(
   if prompt::fits(prefix, &with_source) {
     return Some(with_source);
   }
-  if files.iter().all(|(_, package)| package.source.is_none()) {
+  if files
+    .iter()
+    .all(|(_, package)| package.source.is_none() && package.context.is_none())
+  {
     return None;
   }
   reviews.notes.push(format!(

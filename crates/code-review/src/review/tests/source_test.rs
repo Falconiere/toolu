@@ -87,9 +87,20 @@ fn source_is_bounded_per_file_and_per_package_and_never_for_added_files() {
     None,
     "the patch is the whole file"
   );
-  assert_eq!(by_path("big/c.rs").source, None);
+  // Too big to send whole: the window around the appended line instead.
+  let window = by_path("big/c.rs").source.clone().unwrap();
+  assert!(
+    window.starts_with("@@ lines 1971-2001 @@\nc 1970\n"),
+    "{window}"
+  );
+  assert!(window.ends_with("c 1999\nc 2000\n"), "{window}");
   assert!(by_path("big/c.rs").patch.contains("+c 2000"));
-  assert_eq!(notes, ["source of big/c.rs left out: over 8192 bytes"]);
+  assert_eq!(
+    notes,
+    [
+      "source of big/c.rs: 1 of 1 windows around its changes sent, the whole file is over 8192 bytes"
+    ]
+  );
   let evidence = by_path("pkg/a.rs").evidence();
   assert!(evidence.starts_with(&by_path("pkg/a.rs").patch) && evidence.ends_with("a 10\n"));
 }
@@ -191,4 +202,91 @@ fn a_secret_on_an_unchanged_line_is_masked_in_the_source() {
   let source = found[0].source.as_deref().unwrap();
   assert!(!source.contains(&token), "{source}");
   assert!(source.ends_with("fn a() { b() }\n"), "{source}");
+}
+
+const LEVELS: &str = "/// The level of `name`.\npub fn parse_level(name: &str) -> u8 {\n    match name {\n        \"warn\" => 3,\n        _ => 2,\n    }\n}\n";
+const REPORT: &str = "use crate::levels::parse_level;\n\npub fn label(name: &str) -> &'static str {\n    LABELS[parse_level(name) as usize]\n}\n";
+
+#[test]
+fn high_effort_sends_the_callers_of_the_definition_a_change_sits_in() {
+  let changed = LEVELS.replace("\"warn\" => 3", "\"warn\" => 4");
+  let dir = repo(
+    &[
+      ("src/levels.rs", LEVELS.to_owned()),
+      ("src/report.rs", REPORT.to_owned()),
+    ],
+    &[("src/levels.rs", changed)],
+  );
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let high = Effort::High.budget();
+  let (found, notes) = packages(&env, dir.path(), &shaped, high, &Mask::default());
+  // The definition line itself is not a caller; the unchanged report.rs lines are.
+  assert_eq!(
+    found[0].context.as_deref(),
+    Some(
+      "parse_level:\nsrc/report.rs:1: use crate::levels::parse_level;\nsrc/report.rs:4:     LABELS[parse_level(name) as usize]\n"
+    ),
+    "{notes:?}"
+  );
+  assert!(
+    found[0].evidence().ends_with("as usize]\n"),
+    "the recheck may quote callers"
+  );
+  // Medium sends none, so its packages serialize exactly as before.
+  let medium = Effort::Medium.budget();
+  let (found, _) = packages(&env, dir.path(), &shaped, medium, &Mask::default());
+  assert_eq!(found[0].context, None);
+  assert!(
+    !serde_json::to_string(&found[0])
+      .unwrap()
+      .contains("context")
+  );
+}
+
+/// The high-effort caller context and notes for a body change in `src/levels.rs`
+/// when the repository also holds `others`.
+fn high_callers(others: &[(&str, String)]) -> (Option<String>, Vec<String>) {
+  let mut base = others.to_vec();
+  base.push(("src/levels.rs", LEVELS.to_owned()));
+  let changed = LEVELS.replace("_ => 2", "_ => 1");
+  let dir = repo(&base, &[("src/levels.rs", changed)]);
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let budget = Effort::High.budget();
+  let (found, notes) = packages(&env, dir.path(), &shaped, budget, &Mask::default());
+  (found[0].context.clone(), notes)
+}
+
+#[test]
+fn a_definition_named_too_often_is_skipped_with_a_note() {
+  let users: Vec<(String, String)> = (0..=crate::budget::CONTEXT_HITS_MAX)
+    .map(|index| {
+      (
+        format!("src/u{index}.rs"),
+        "fn go() { parse_level(\"x\"); }\n".to_owned(),
+      )
+    })
+    .collect();
+  let others: Vec<(&str, String)> = users
+    .iter()
+    .map(|(path, text)| (path.as_str(), text.clone()))
+    .collect();
+  let (context, notes) = high_callers(&others);
+  assert_eq!(context, None);
+  let skipped = "callers of parse_level left out: over 20";
+  assert!(
+    notes.iter().any(|note| note.starts_with(skipped)),
+    "{notes:?}"
+  );
+}
+
+#[test]
+fn a_caller_in_a_path_holding_a_colon_keeps_its_path_and_line() {
+  let (context, notes) = high_callers(&[("src/odd:name.rs", REPORT.to_owned())]);
+  let context = context.unwrap_or_default();
+  assert!(
+    context.contains("src/odd:name.rs:4:     LABELS[parse_level(name) as usize]\n"),
+    "{context} {notes:?}"
+  );
 }

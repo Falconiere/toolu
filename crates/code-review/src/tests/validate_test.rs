@@ -76,6 +76,7 @@ pub(crate) fn model(path: &str, line_no: u32, quote: &str) -> ModelFinding {
     quote: quote.to_owned(),
     suggestion: None,
     prior_id: None,
+    assessment: None,
   }
 }
 
@@ -195,6 +196,7 @@ fn duplicates_keep_the_highest_severity_and_deterministic_wins_ties() {
     quote: "let x = 1;".to_owned(),
     suggestion: None,
     redaction_spans: Vec::new(),
+    assessment: None,
   };
   let mut copy = model("src/a.rs", 1, "let x = 1;");
   copy.severity = Severity::Blocker;

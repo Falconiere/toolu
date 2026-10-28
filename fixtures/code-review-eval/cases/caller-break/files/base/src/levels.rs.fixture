@@ -1,0 +1,10 @@
+/// The numeric level of `name`, from 0 (trace) to 4 (error); unknown names are info.
+pub fn parse_level(name: &str) -> u8 {
+    match name {
+        "trace" => 0,
+        "debug" => 1,
+        "warn" => 3,
+        "error" => 4,
+        _ => 2,
+    }
+}

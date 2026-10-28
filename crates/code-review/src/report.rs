@@ -59,8 +59,14 @@ fn append_sections(report: &Report, lines: &mut Vec<String>) {
     lines.push("Findings".to_owned());
     lines.extend(findings.into_iter().map(|finding| {
       format!(
-        "[{}] {}:{} {}{}",
+        "[{}{}] {}:{} {}{}",
         finding.severity.name(),
+        finding
+          .assessment
+          .map_or(String::new(), |assessment| format!(
+            ", jev: {}",
+            assessment.name()
+          )),
         finding.path,
         finding.line,
         finding.claim,

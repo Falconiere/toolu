@@ -17,13 +17,12 @@ use toolu_runtime::registry::rule::RuleContext;
 
 use super::secrets::redact_line;
 use super::{Notice, NoticeKind, Scan, finding_id};
+use crate::budget::BLOB_MAX_BYTES;
 use crate::contract::{Finding, Severity, Side, Source};
 use crate::shape::Shaped;
 
 /// The embedded review ruleset; each document carries its own `message`.
 const RULES: &str = include_str!("rules.yaml");
-/// The most bytes read from one blob.
-const BLOB_MAX_BYTES: usize = 8 * 1024 * 1024;
 
 fn notice(kind: NoticeKind, text: String) -> Notice {
   Notice { kind, text }
@@ -147,6 +146,7 @@ fn findings(shaped: &Shaped, hits: &[AstGrepHit]) -> Vec<Finding> {
           quote,
           suggestion: None,
           redaction_spans,
+          assessment: None,
         }
       })
     })

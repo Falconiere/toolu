@@ -1,0 +1,114 @@
+//! Per-metric means over collected samples.
+
+/// Samples per metric.
+#[derive(Debug, Default)]
+pub struct Stats {
+    pub latency: Vec<u64>,
+    pub bytes: Vec<u64>,
+    pub retries: Vec<u64>,
+    pub queue: Vec<u64>,
+    pub errors: Vec<u64>,
+    pub hits: Vec<u64>,
+    pub misses: Vec<u64>,
+    pub writes: Vec<u64>,
+    pub reads: Vec<u64>,
+    pub stalls: Vec<u64>,
+}
+
+/// Mean latency over the samples in `stats`.
+pub fn mean_latency(stats: &Stats) -> u64 {
+    let total: u64 = stats.latency.iter().sum();
+    let count = stats.latency.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean bytes over the samples in `stats`.
+pub fn mean_bytes(stats: &Stats) -> u64 {
+    let total: u64 = stats.bytes.iter().sum();
+    let count = stats.bytes.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean retries over the samples in `stats`.
+pub fn mean_retries(stats: &Stats) -> u64 {
+    let total: u64 = stats.retries.iter().sum();
+    let count = stats.retries.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean queue over the samples in `stats`.
+pub fn mean_queue(stats: &Stats) -> u64 {
+    let total: u64 = stats.queue.iter().sum();
+    let count = stats.queue.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean errors over the samples in `stats`.
+pub fn mean_errors(stats: &Stats) -> u64 {
+    let total: u64 = stats.errors.iter().sum();
+    let count = stats.errors.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean hits over the samples in `stats`.
+pub fn mean_hits(stats: &Stats) -> u64 {
+    let total: u64 = stats.hits.iter().sum();
+    let count = stats.hits.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean misses over the samples in `stats`.
+pub fn mean_misses(stats: &Stats) -> u64 {
+    let total: u64 = stats.misses.iter().sum();
+    let count = stats.misses.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean writes over the samples in `stats`.
+pub fn mean_writes(stats: &Stats) -> u64 {
+    let total: u64 = stats.writes.iter().sum();
+    let count = stats.writes.len() as u64;
+    total / count
+}
+
+/// Mean reads over the samples in `stats`.
+pub fn mean_reads(stats: &Stats) -> u64 {
+    let total: u64 = stats.reads.iter().sum();
+    let count = stats.reads.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean stalls over the samples in `stats`.
+pub fn mean_stalls(stats: &Stats) -> u64 {
+    let total: u64 = stats.stalls.iter().sum();
+    let count = stats.stalls.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
