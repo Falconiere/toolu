@@ -3,7 +3,7 @@
 use crate::contract::{Finding, Omitted, Report, Source};
 use crate::memory;
 use crate::prepass::{NoticeKind, PrepassResult};
-use crate::shape::{self, Shaped};
+use crate::shape::Shaped;
 use crate::validate::Recap;
 use serde_json::json;
 use std::io::Write as _;
@@ -12,7 +12,6 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
-use toolu_state::git::current_branch;
 use toolu_state::push_review::{Input as StateInput, write as write_state};
 
 pub(super) struct RunState<'a> {
@@ -84,32 +83,22 @@ fn mark_coverage(
       .to_owned(),
     });
   }
-  report.error.is_none()
-    && report.coverage.unreviewed.is_empty()
-    && !scoped
-    && !shaped.uncommitted
-    && !prepass_degraded(prepass)
+  // Every incomplete condition above left an unreviewed entry.
+  report.error.is_none() && report.coverage.unreviewed.is_empty()
 }
 
 /// Dismiss exactly one stored finding; only a complete unchanged review can refresh gate state.
 pub(crate) fn dismiss(env: &Env, ctx: &Ctx, id: &str, reason: &str) -> Result<String, String> {
   let roots = Roots::new(env.clone(), ctx.host);
-  let root = roots
-    .project_root(None)
-    .ok_or_else(|| "not inside a Git repository".to_owned())?;
-  let branch = current_branch(env, &root);
-  if branch.is_empty() || branch == "HEAD" {
-    return Err("detached branch".to_owned());
-  }
-  let path = memory::path(&roots, &root, &branch)?;
+  let root = super::project_root(&roots)?;
+  let path = super::branch_memory_path(env, &roots, &root)?;
   let state = memory::dismiss(&path, id, reason)?;
   if !state.complete || state.base_ref.is_empty() {
     return Ok(format!(
       "code-review: dismissed {id}; review coverage is incomplete, re-run review"
     ));
   }
-  let shaped =
-    shape::shape(env, &root, Some(&state.base_ref)).map_err(|err| format!("shape: {err:?}"))?;
+  let shaped = super::review_shape(env, &roots, &root, Some(&state.base_ref))?;
   if shaped.uncommitted || shaped.diff_sha != state.diff_sha {
     return Ok(format!(
       "code-review: dismissed {id}; diff changed, re-run review"

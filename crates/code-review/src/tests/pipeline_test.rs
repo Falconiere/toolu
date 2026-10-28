@@ -13,7 +13,7 @@ use toolu_state::push_review::{Input as StateInput, write as write_state};
 
 use super::run;
 use crate::cli;
-use crate::contract::{UsageCall, Verdict};
+use crate::contract::{ErrorKind, UsageCall, Verdict};
 use crate::review::Options;
 
 mod fixture_test;
@@ -35,7 +35,10 @@ fn clean_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
     doc["reviewed_files"],
     json!([r#""caf\303\251.rs""#, "src.txt"])
   );
-  let roots = Roots::new(env.with("PUSH_REVIEW_BASE", "main"), Some(Host::Codex));
+  let roots = Roots::new(
+    env.clone().with("PUSH_REVIEW_BASE", "main"),
+    Some(Host::Codex),
+  );
   let gate = GateContext {
     roots: &roots,
     root: repo.path().to_path_buf(),
@@ -53,8 +56,14 @@ fn clean_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
   );
   let usage =
     std::fs::read_to_string(repo.path().join(".codex/tmp/code-review-usage.jsonl")).unwrap();
-  assert!(usage.contains("Parasail") && usage.contains("fp8"));
+  assert!(
+    usage.contains("Parasail") && usage.contains("fp8") && usage.contains(r#""outcome":"ok""#)
+  );
   assert!(!usage.contains("private-sentinel-669") && !usage.contains("pub fn value"));
+  assert_eq!(
+    invoke(&env, &options(&fixture)).verdict(),
+    Verdict::Approved
+  );
 }
 
 #[test]
@@ -79,6 +88,27 @@ fn model_outage_keeps_mechanical_checks_and_blocks_gate() {
     serde_json::from_str(&std::fs::read_to_string(state.path().join("feature.json")).unwrap())
       .unwrap();
   assert!(saved["findings_count"].as_u64().unwrap() > 0);
+}
+
+#[test]
+fn state_write_failure_keeps_paid_review_findings_in_report() {
+  let (repo, state, fixture) = finding_case(false);
+  std::fs::create_dir(state.path().join("feature.json")).unwrap();
+  let env = env(repo.path(), state.path(), &fixture);
+  let report = invoke(
+    &env,
+    &Options {
+      skip_judge: true,
+      ..options(&fixture)
+    },
+  );
+  assert_eq!(report.verdict(), Verdict::Error);
+  assert_eq!(
+    report.error.as_ref().map(|error| error.kind),
+    Some(ErrorKind::State)
+  );
+  assert_eq!(report.findings.len(), 1);
+  assert_ne!(report.usage.calls.len(), 0);
 }
 
 #[test]

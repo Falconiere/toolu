@@ -1,5 +1,6 @@
 //! The committed review diff: base, noise, renames, and citable changed lines.
 
+mod dirty;
 mod file;
 pub(crate) mod git_io;
 mod noise;
@@ -17,6 +18,7 @@ use toolu_state::git::base_branch;
 
 use crate::budget::DIFF_CHUNK_MAX_BYTES;
 use crate::contract::{Coverage, Omitted, Side};
+pub(crate) use dirty::dirty_except_state;
 use file::{FileDecision, inspect_file};
 use git_io::{git, git_found, git_output, text};
 use noise::status_noise;

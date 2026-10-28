@@ -4,7 +4,7 @@ mod output;
 mod state;
 
 use crate::budget::Effort;
-use crate::contract::{Omitted, Report};
+use crate::contract::{ErrorKind, Omitted, Report, ReportError};
 use crate::memory;
 use crate::prepass;
 use crate::review::{self, Options, RunError};
@@ -30,8 +30,9 @@ pub(crate) fn run(
   options: &Options<'_>,
 ) -> Result<Report, String> {
   let roots = Roots::new(env.clone(), ctx.host);
-  let root = project_root(&roots)?;
-  let settings = settings::load(&roots, Some(&root));
+  // Outside a repository there is no opt-in, so that run is still `not-enabled`.
+  let root = project_root(&roots);
+  let settings = settings::load(&roots, root.as_deref().ok());
   let effort = crate::cli::effort(verb)
     .or(settings.effort)
     .unwrap_or(Effort::Auto);
@@ -41,12 +42,8 @@ pub(crate) fn run(
   if env.get("OPENROUTER_API_KEY").is_none() {
     return Ok(RunError::Unconfigured("OPENROUTER_API_KEY is missing".to_owned()).report(effort));
   }
-  let base = verb.get_one::<String>("base").map(String::as_str);
-  let mut shaped = shape::shape(env, &root, base).map_err(|err| format!("shape: {err:?}"))?;
-  let scoped = verb.get_many::<String>("path").is_some();
-  if let Some(paths) = verb.get_many::<String>("path") {
-    scope(&mut shaped, &paths.map(String::as_str).collect::<Vec<_>>());
-  }
+  let root = root?;
+  let (shaped, scoped) = shaped(env, &roots, &root, verb)?;
   let prepass = prepass::run(env, &root, &shaped);
   let rules = rules::gather(env, &root, &shaped.merge_base, &shaped.gate_files)
     .map_err(|err| format!("rules: {err:?}"))?;
@@ -71,7 +68,41 @@ pub(crate) fn run(
     settings: &settings,
     flag: crate::cli::effort(verb),
   };
-  review_and_persist(&state, &input, options, &prior, effort)
+  Ok(review_and_persist(&state, &input, options, &prior, effort))
+}
+
+/// The committed diff, narrowed to `--path` selections; `true` when scoped.
+fn shaped(
+  env: &Env,
+  roots: &Roots,
+  root: &std::path::Path,
+  verb: &ArgMatches,
+) -> Result<(Shaped, bool), String> {
+  let base = verb.get_one::<String>("base").map(String::as_str);
+  let mut shaped = review_shape(env, roots, root, base)?;
+  let paths = verb.get_many::<String>("path");
+  let scoped = paths.is_some();
+  if let Some(paths) = paths {
+    scope(&mut shaped, &paths.map(String::as_str).collect::<Vec<_>>());
+  }
+  Ok((shaped, scoped))
+}
+
+fn review_shape(
+  env: &Env,
+  roots: &Roots,
+  root: &std::path::Path,
+  base: Option<&str>,
+) -> Result<Shaped, String> {
+  let mut shaped = shape::shape(env, root, base).map_err(|err| format!("shape: {err:?}"))?;
+  if shaped.uncommitted {
+    let state_root = roots
+      .project_state_root(None, Some(root))
+      .ok_or("state root unavailable")?;
+    shaped.uncommitted =
+      shape::dirty_except_state(env, root, &state_root).map_err(|err| format!("shape: {err:?}"))?;
+  }
+  Ok(shaped)
 }
 
 fn project_root(roots: &Roots) -> Result<std::path::PathBuf, String> {
@@ -98,13 +129,20 @@ fn review_and_persist(
   options: &Options<'_>,
   prior: &memory::BranchState,
   effort: Effort,
-) -> Result<Report, String> {
+) -> Report {
   let (mut report, recap) = match review::run(state.env, input, options) {
     Ok(reviewed) => completed(state.shaped, state.prepass, prior, reviewed),
+    // Nothing was sent, so nothing is recorded: no pass, usage row or gate round.
+    Err(err @ (RunError::NotEnabled | RunError::Unconfigured(_))) => return err.report(effort),
     Err(err) => failed(state.shaped, state.prepass, effort, &err),
   };
-  state::persist(state, &mut report, &recap)?;
-  Ok(report)
+  if let Err(message) = state::persist(state, &mut report, &recap) {
+    report.error = Some(ReportError {
+      kind: ErrorKind::State,
+      message,
+    });
+  }
+  report
 }
 
 /// A path-scoped run sends only selected file chunks to the model.

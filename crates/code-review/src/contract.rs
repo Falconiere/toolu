@@ -11,7 +11,7 @@ use toolu_protocol::exit::Exit;
 use crate::budget::Effort;
 
 /// The contract's version; a breaking change to the report raises it.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// How bad a finding is; ordered from `nit` up, so `>= Medium` means blocking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -201,6 +201,8 @@ pub struct UsageCall {
   pub cost_usd: Option<f64>,
   /// Wall time in milliseconds.
   pub millis: u64,
+  /// `ok`, or the failure's description.
+  pub outcome: String,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report
@@ -227,6 +229,8 @@ pub enum ErrorKind {
   Outage,
   /// Every review call ran out of its level's wall deadline.
   Deadline,
+  /// The review finished, but local state could not be saved.
+  State,
 }
 
 impl ErrorKind {
@@ -237,6 +241,7 @@ impl ErrorKind {
       ErrorKind::NotEnabled => "not-enabled",
       ErrorKind::Outage => "outage",
       ErrorKind::Deadline => "deadline",
+      ErrorKind::State => "state",
     }
   }
 }

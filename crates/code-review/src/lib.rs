@@ -47,26 +47,25 @@ pub fn command() -> clap::Command {
 /// Run a `toolu code-review` verb.
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
-    Some(("run", verb)) => {
-      let mut env = Env::process();
-      if let Some(dir) = &ctx.config_dir {
-        env = env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
-      }
-      match pipeline::run(&env, ctx, verb, &review::Options::default()) {
-        Ok(report) => report::present(&report, ctx),
-        Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
-      }
-    }
+    Some(("run", verb)) => match pipeline::run(&env(ctx), ctx, verb, &review::Options::default()) {
+      Ok(report) => report::present(&report, ctx),
+      Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
+    },
     Some(("dismiss", verb)) => dismiss(verb, ctx),
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
   }
 }
 
-fn dismiss(verb: &ArgMatches, ctx: &Ctx) -> Outcome {
-  let mut env = Env::process();
-  if let Some(dir) = &ctx.config_dir {
-    env = env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
+/// The process environment, with `--config-dir` as `TOOLU_CONFIG_DIR`.
+fn env(ctx: &Ctx) -> Env {
+  let env = Env::process();
+  match &ctx.config_dir {
+    Some(dir) => env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy()),
+    None => env,
   }
+}
+
+fn dismiss(verb: &ArgMatches, ctx: &Ctx) -> Outcome {
   let id = verb
     .get_one::<String>("finding-id")
     .map(String::as_str)
@@ -75,7 +74,11 @@ fn dismiss(verb: &ArgMatches, ctx: &Ctx) -> Outcome {
     .get_one::<String>("reason")
     .map(String::as_str)
     .unwrap_or_default();
-  match pipeline::dismiss(&env, ctx, id, reason) {
+  match pipeline::dismiss(&env(ctx), ctx, id, reason) {
+    // `--json` promises one JSON document on stdout.
+    Ok(message) if ctx.json => {
+      Outcome::data(serde_json::json!({"id": id, "message": message}).to_string())
+    }
     Ok(message) => Outcome::data(message),
     Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
   }

@@ -20,7 +20,7 @@ pub(super) fn completed(
     .iter()
     .map(|item| item.finding.clone())
     .collect();
-  let validated = validate::validate(&validate::Input {
+  let mut validated = validate::validate(&validate::Input {
     shaped,
     model: &models,
     deterministic: &prepass.findings,
@@ -28,6 +28,7 @@ pub(super) fn completed(
     redactions: &prepass.redactions,
     unreviewed: &reviewed.unreviewed,
   });
+  settle(&mut validated.recap, &validated.findings, shaped, prior);
   let coverage = coverage(shaped, prior, &validated, reviewed.unreviewed);
   let mut report = Report::reviewed(
     reviewed.effort.level,
@@ -45,6 +46,38 @@ pub(super) fn completed(
     report.mechanical_checks = prepass::mechanical_checks_lines(prepass);
   }
   (report, validated.recap)
+}
+
+/// A prior raised again this round (a pre-pass finding re-raises its own id)
+/// stays open; one whose path left the committed diff can never be re-examined,
+/// so it is resolved instead of blocking every later run.
+fn settle(recap: &mut Recap, raised: &[Finding], shaped: &Shaped, prior: &memory::BranchState) {
+  let raised: BTreeSet<&str> = raised.iter().map(|finding| finding.id.as_str()).collect();
+  let (again, resolved): (Vec<String>, Vec<String>) = std::mem::take(&mut recap.resolved)
+    .into_iter()
+    .partition(|id| raised.contains(id.as_str()));
+  recap.resolved = resolved;
+  recap.still_open.extend(again);
+  let in_diff = |id: &String| {
+    prior
+      .memory
+      .prior
+      .iter()
+      .find(|finding| &finding.id == id)
+      .is_none_or(|finding| {
+        let path = shaped
+          .renames
+          .iter()
+          .find(|rename| rename.old_path == finding.path)
+          .map_or(finding.path.as_str(), |rename| rename.path.as_str());
+        shaped.gate_files.iter().any(|file| file == path)
+      })
+  };
+  let (open, gone): (Vec<String>, Vec<String>) = std::mem::take(&mut recap.still_open)
+    .into_iter()
+    .partition(in_diff);
+  recap.still_open = open;
+  recap.resolved.extend(gone);
 }
 
 fn coverage(

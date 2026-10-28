@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use toolu_runtime::atomic::replace_atomic;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::git::branch_slug;
-use toolu_state::lock::{LockOptions, with_lock};
+use toolu_state::lock::{LockOptions, with_lock_strict};
 
 use crate::contract::Finding;
 use crate::validate::{Recap, fingerprint};
@@ -238,12 +238,7 @@ fn locked<T>(path: &Path, f: impl FnOnce() -> Result<T, String>) -> Result<T, St
   if let Some(dir) = path.parent() {
     std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
   }
-  let mut warnings = Vec::new();
-  let result = with_lock(path, LockOptions::default(), &mut warnings, f);
-  if !warnings.is_empty() {
-    return Err(warnings.join("; "));
-  }
-  result
+  with_lock_strict(path, LockOptions::default(), f)?
 }
 
 #[cfg(test)]

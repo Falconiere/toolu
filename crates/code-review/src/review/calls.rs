@@ -187,6 +187,7 @@ impl<'a> Ledger<'a> {
           tokens_out: call.tokens_out,
           cost_usd: call.cost_usd,
           millis: call.millis,
+          outcome: call.outcome.clone(),
         })
         .collect(),
     }

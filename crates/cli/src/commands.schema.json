@@ -692,7 +692,7 @@
       }
     },
     "codeReview": {
-      "description": "toolu code-review run --json: the review report (schema_version 2). Exit 0 approved, 2 blocked, 69 error.",
+      "description": "toolu code-review run --json: the review report (schema_version 3). Exit 0 approved, 2 blocked, 69 error.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -707,7 +707,7 @@
       ],
       "properties": {
         "schema_version": {
-          "const": 2
+          "const": 3
         },
         "toolu_version": {
           "type": "string",
@@ -923,7 +923,7 @@
               "items": {
                 "type": "object",
                 "additionalProperties": false,
-                "required": ["stage", "model", "provider", "quantization", "tokens_in", "tokens_out", "cost_usd", "millis"],
+                "required": ["stage", "model", "provider", "quantization", "tokens_in", "tokens_out", "cost_usd", "millis", "outcome"],
                 "properties": {
                   "stage": {"enum": ["selector", "review", "judge", "recheck"]},
                   "model": {"type": "string"},
@@ -932,7 +932,8 @@
                   "tokens_in": {"type": "integer", "minimum": 0},
                   "tokens_out": {"type": "integer", "minimum": 0},
                   "cost_usd": {"type": ["number", "null"], "minimum": 0},
-                  "millis": {"type": "integer", "minimum": 0}
+                  "millis": {"type": "integer", "minimum": 0},
+                  "outcome": {"type": "string"}
                 }
               }
             }
@@ -960,7 +961,8 @@
                     "unconfigured",
                     "not-enabled",
                     "outage",
-                    "deadline"
+                    "deadline",
+                    "state"
                   ]
                 },
                 "message": {
