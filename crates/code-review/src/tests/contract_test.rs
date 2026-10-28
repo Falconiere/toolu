@@ -1,6 +1,8 @@
 use toolu_protocol::exit::Exit;
 
-use super::{Cost, Coverage, ErrorKind, Finding, Omitted, Report, Severity, Side, Source, Usage};
+use super::{
+  Cost, Coverage, ErrorKind, Finding, Omitted, RedactionSpan, Report, Severity, Side, Source, Usage,
+};
 use crate::budget::Effort;
 
 fn finding(severity: Severity) -> Finding {
@@ -16,6 +18,7 @@ fn finding(severity: Severity) -> Finding {
     claim: "claim".to_owned(),
     quote: "quote".to_owned(),
     suggestion: None,
+    redaction_spans: Vec::new(),
   }
 }
 
@@ -143,4 +146,21 @@ fn a_cost_is_finite_and_non_negative() {
       .contains("\"cost_usd\":0.25")
   );
   assert_eq!(Cost::default(), Cost::usd(0.0).unwrap());
+}
+
+#[test]
+fn contract_redaction_spans_serialize_only_when_present() {
+  let plain = serde_json::to_value(finding(Severity::Low)).unwrap();
+  assert!(plain.get("redaction_spans").is_none());
+  let secret = Finding {
+    source: Source::Secrets,
+    redaction_spans: vec![RedactionSpan { start: 4, end: 9 }],
+    ..finding(Severity::Blocker)
+  };
+  let doc = serde_json::to_value(&secret).unwrap();
+  assert_eq!(
+    doc["redaction_spans"],
+    serde_json::json!([{ "start": 4, "end": 9 }])
+  );
+  assert_eq!(doc["source"], "secrets");
 }

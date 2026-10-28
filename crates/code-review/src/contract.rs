@@ -34,6 +34,17 @@ impl Severity {
   pub fn blocking(self) -> bool {
     self >= Severity::Medium
   }
+
+  /// The name the report uses.
+  pub fn name(self) -> &'static str {
+    match self {
+      Severity::Nit => "nit",
+      Severity::Low => "low",
+      Severity::Medium => "medium",
+      Severity::High => "high",
+      Severity::Blocker => "blocker",
+    }
+  }
 }
 
 /// Which side of the diff a finding's lines number.
@@ -56,6 +67,27 @@ pub enum Source {
   AstGrep,
   /// The secret scanner of the pre-pass.
   Secrets,
+}
+
+impl Source {
+  /// The name the report uses.
+  pub fn name(self) -> &'static str {
+    match self {
+      Source::Llm => "llm",
+      Source::AstGrep => "ast-grep",
+      Source::Secrets => "secrets",
+    }
+  }
+}
+
+/// A byte range of the unmasked source line that held a secret: `start` inclusive,
+/// `end` exclusive, UTF-8 offsets. Later stages mask outbound text with it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct RedactionSpan {
+  /// First byte of the secret.
+  pub start: usize,
+  /// One past the last byte of the secret.
+  pub end: usize,
 }
 
 /// One anchored finding.
@@ -84,6 +116,9 @@ pub struct Finding {
   /// A fix, when there is one.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub suggestion: Option<String>,
+  /// Byte ranges of secrets in the unmasked line; the `quote` is already masked.
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub redaction_spans: Vec<RedactionSpan>,
 }
 
 /// The run's outcome.

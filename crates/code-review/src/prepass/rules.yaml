@@ -1,0 +1,9 @@
+id: review-todo-macro
+language: Rust
+severity: warning
+message: remove todo!/unimplemented! before merge
+rule:
+  kind: macro_invocation
+  has:
+    field: macro
+    regex: ^((::)?(std|core)::)?(todo|unimplemented)$
