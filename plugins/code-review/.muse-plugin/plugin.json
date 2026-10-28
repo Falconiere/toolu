@@ -2,15 +2,25 @@
   "schemaVersion": 1,
   "name": "code-review",
   "displayName": "code-review",
-  "version": "8.5.0",
+  "version": "8.6.0",
   "description": "Native code review of the committed push diff with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "compat": {
     "source": "native",
     "manifestDir": ".muse-plugin"
   },
   "capabilities": {
-    "skills": [{"id":"review","path":"skills/review/SKILL.md"}],
-    "commands": [{"id":"review-command","path":"commands/review.md"}],
+    "skills": [
+      {
+        "id": "review",
+        "path": "skills/review/SKILL.md"
+      }
+    ],
+    "commands": [
+      {
+        "id": "review-command",
+        "path": "commands/review.md"
+      }
+    ],
     "hooks": [],
     "mcpServers": [],
     "reminders": []
