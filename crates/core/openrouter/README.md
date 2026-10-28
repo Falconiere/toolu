@@ -14,7 +14,9 @@ limited to 1 MiB. Authentication, rate limit, no eligible provider, timeout,
 transport, empty content, and reasoning-only truncation are typed errors. Error
 text never includes the key, prompt, or upstream body.
 
-A successful `Completion` records the requested model, serving provider when
-OpenRouter supplies one, finish reason, token counts, and cost. Missing cost or
-provider stays unknown. The code-review crate owns the findings schema and
-local validation; future streaming and tool calls extend this shared crate.
+A successful `Completion` records the served model (the requested one when
+OpenRouter omits it), serving provider when OpenRouter supplies one, finish
+reason, token counts, and cost. Empty and truncated errors retain reported
+billed usage. Missing cost or provider stays unknown. The code-review crate owns
+the findings schema and local validation; future streaming and tool calls extend
+this shared crate.

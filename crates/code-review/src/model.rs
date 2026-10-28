@@ -1,7 +1,9 @@
 //! Strict review finding schema and fail-closed normalization of model text.
 
 use serde_json::Value;
-use toolu_openrouter::{Completion, Error as OpenRouterError, Message, StructuredRequest};
+use toolu_openrouter::{
+  Completion, Error as OpenRouterError, Message, StructuredRequest, Usage as OpenRouterUsage,
+};
 
 use crate::budget::Effort;
 use crate::contract::{Cost, ErrorKind, Report, Severity, Side, Usage};
@@ -62,33 +64,42 @@ pub struct ModelOutput {
 }
 
 /// Model text that yielded no usable structured result.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ModelError {
   /// Invalid JSON or no valid findings to salvage.
   Malformed {
     /// The provider's finish reason, if supplied.
     finish_reason: Option<String>,
+    /// Billed usage of the unusable completion.
+    usage: Usage,
   },
 }
 
 impl ModelError {
-  /// Convert unusable model text into a typed `error` verdict.
+  /// Convert unusable model text into a typed `error` verdict that keeps its cost.
   pub fn report(&self, effort: Effort) -> Report {
-    let Self::Malformed { finish_reason } = self;
-    Report::failed(
-      effort,
-      ErrorKind::Outage,
-      &format!("unusable structured review (finish_reason: {finish_reason:?})"),
-    )
+    let Self::Malformed {
+      finish_reason,
+      usage,
+    } = self;
+    Report {
+      usage: usage.clone(),
+      ..Report::failed(
+        effort,
+        ErrorKind::Outage,
+        &format!("unusable structured review (finish_reason: {finish_reason:?})"),
+      )
+    }
   }
 }
 
 /// Convert a transport or provider error into a typed `error` verdict.
 pub fn error_report(error: &OpenRouterError, effort: Effort) -> Report {
   let kind = match error {
-    OpenRouterError::Unconfigured | OpenRouterError::InvalidKey => ErrorKind::Unconfigured,
-    OpenRouterError::InvalidConfig
-    | OpenRouterError::Authentication(_)
+    OpenRouterError::Unconfigured
+    | OpenRouterError::InvalidKey
+    | OpenRouterError::InvalidConfig => ErrorKind::Unconfigured,
+    OpenRouterError::Authentication(_)
     | OpenRouterError::RateLimited { .. }
     | OpenRouterError::NoProvider
     | OpenRouterError::Upstream(_)
@@ -99,16 +110,24 @@ pub fn error_report(error: &OpenRouterError, effort: Effort) -> Report {
     | OpenRouterError::Empty { .. }
     | OpenRouterError::Truncated { .. } => ErrorKind::Outage,
   };
-  Report::failed(effort, kind, &error.to_string())
+  let mut report = Report::failed(effort, kind, &error.to_string());
+  if let Some(observed) = error.usage() {
+    report.usage = convert_usage(observed, None);
+  }
+  report
 }
 
 /// Carry observed review-call usage into the report without inventing a cost.
 pub fn usage(completion: &Completion) -> Usage {
+  convert_usage(&completion.usage, Some(completion.model.clone()))
+}
+
+fn convert_usage(observed: &OpenRouterUsage, model: Option<String>) -> Usage {
   Usage {
-    tokens_in: completion.usage.prompt_tokens,
-    tokens_out: completion.usage.completion_tokens,
-    cost_usd: completion.usage.cost_usd.and_then(Cost::usd),
-    model: Some(completion.model.clone()),
+    tokens_in: observed.prompt_tokens,
+    tokens_out: observed.completion_tokens,
+    cost_usd: observed.cost_usd.and_then(Cost::usd),
+    model,
   }
 }
 
@@ -118,27 +137,26 @@ pub fn usage(completion: &Completion) -> Usage {
 /// Returns `Malformed` when there is no structured finding array or a
 /// truncated body has no valid finding to salvage.
 pub fn parse(completion: &Completion) -> Result<ModelOutput, ModelError> {
-  let (values, truncated, incomplete) = match serde_json::from_str::<Value>(&completion.content) {
-    Ok(doc) => {
-      let Some(values) = doc.get("findings").and_then(Value::as_array) else {
-        return Err(malformed(completion));
-      };
-      (
-        values.clone(),
-        doc.as_object().is_none_or(|map| map.len() != 1),
-        0,
-      )
-    }
-    Err(_err) => {
-      let Some((values, incomplete)) = salvage(&completion.content) else {
-        return Err(malformed(completion));
-      };
-      (values, true, incomplete)
-    }
-  };
+  let (values, malformed_source, incomplete) =
+    match serde_json::from_str::<Value>(&completion.content) {
+      Ok(mut doc) => {
+        let extra = doc.as_object().is_none_or(|map| map.len() != 1);
+        let Some(Value::Array(values)) = doc.get_mut("findings").map(Value::take) else {
+          return Err(malformed(completion));
+        };
+        (values, extra, 0)
+      }
+      Err(_err) => {
+        let Some((values, incomplete)) = salvage(&completion.content) else {
+          return Err(malformed(completion));
+        };
+        (values, true, incomplete)
+      }
+    };
+  let abnormal_finish = completion.finish_reason.as_deref() != Some("stop");
   let mut output = ModelOutput {
     findings: Vec::new(),
-    partial: truncated || completion.finish_reason.as_deref() == Some("length"),
+    partial: malformed_source || abnormal_finish,
     dropped: incomplete,
   };
   for value in &values {
@@ -151,9 +169,7 @@ pub fn parse(completion: &Completion) -> Result<ModelOutput, ModelError> {
     }
   }
   output.partial |= output.dropped > 0;
-  if output.findings.is_empty()
-    && (truncated || completion.finish_reason.as_deref() == Some("length"))
-  {
+  if output.findings.is_empty() && (malformed_source || abnormal_finish) {
     return Err(malformed(completion));
   }
   Ok(output)
@@ -162,12 +178,15 @@ pub fn parse(completion: &Completion) -> Result<ModelOutput, ModelError> {
 fn malformed(completion: &Completion) -> ModelError {
   ModelError::Malformed {
     finish_reason: completion.finish_reason.clone(),
+    usage: usage(completion),
   }
 }
 
 fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
   let map = value.as_object()?;
-  let (path, path_changed) = text(value, "path")?;
+  let raw_path = text(value, "path")?;
+  let path = raw_path.trim().to_owned();
+  let path_changed = path != raw_path;
   let (line, line_changed) = parse_line(value, "line")?;
   let (end_line, end_changed) = parse_line(value, "end_line")?;
   if end_line < line {
@@ -175,21 +194,18 @@ fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
   }
   let (side, side_changed) = side(value.get("side")?)?;
   let (severity, severity_changed) = severity(value.get("severity")?)?;
-  let (category, category_changed) = text(value, "category")?;
-  let (claim, claim_changed) = text(value, "claim")?;
-  let (quote, quote_changed) = text(value, "quote")?;
+  let category = text(value, "category")?;
+  let claim = text(value, "claim")?;
+  let quote = text(value, "quote")?;
   let (suggestion, suggestion_changed) = optional(value, "suggestion")?;
   let (prior_id, prior_changed) = optional(value, "prior_id")?;
   let normalized = map.len() != 10
     || [
-      path_changed,
       line_changed,
       end_changed,
+      path_changed,
       side_changed,
       severity_changed,
-      category_changed,
-      claim_changed,
-      quote_changed,
       suggestion_changed,
       prior_changed,
     ]
@@ -211,26 +227,20 @@ fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
   ))
 }
 
-fn text(value: &Value, key: &str) -> Option<(String, bool)> {
+fn text(value: &Value, key: &str) -> Option<String> {
   let raw = value.get(key)?.as_str()?;
-  let trimmed = raw.trim();
-  if trimmed.is_empty() {
+  if raw.trim().is_empty() {
     return None;
   }
-  Some((trimmed.to_owned(), trimmed != raw))
+  Some(raw.to_owned())
 }
 
 fn optional(value: &Value, key: &str) -> Option<(Option<String>, bool)> {
   match value.get(key) {
     None => Some((None, true)),
     Some(Value::Null) => Some((None, false)),
-    Some(Value::String(raw)) => {
-      let trimmed = raw.trim();
-      Some((
-        (!trimmed.is_empty()).then(|| trimmed.to_owned()),
-        trimmed != raw || trimmed.is_empty(),
-      ))
-    }
+    Some(Value::String(raw)) if raw.trim().is_empty() => Some((None, true)),
+    Some(Value::String(raw)) => Some((Some(raw.to_owned()), false)),
     Some(_) => None,
   }
 }
@@ -274,21 +284,15 @@ fn severity(value: &Value) -> Option<(Severity, bool)> {
   Some((parsed, raw != lower))
 }
 
-/// Closed JSON objects inside a truncated `findings` array; trailing fragments
-/// count once and never become a finding.
+/// Closed JSON objects inside a truncated `findings` array; an open trailing
+/// object counts once and never becomes a finding.
 fn salvage(content: &str) -> Option<(Vec<Value>, usize)> {
-  if !content.trim_start().starts_with('{') {
-    return None;
-  }
-  let (_, after_key) = content.split_once("\"findings\"")?;
-  let (_, after_colon) = after_key.split_once(':')?;
-  let array = after_colon.trim_start().strip_prefix('[')?;
+  let array = array_body(content)?;
   let mut values = Vec::new();
   let mut start = None;
   let mut depth = 0_u32;
   let mut in_string = false;
   let mut escape = false;
-  let mut closed = false;
   let mut dropped = 0;
   for (index, ch) in array.char_indices() {
     if in_string {
@@ -318,15 +322,20 @@ fn salvage(content: &str) -> Option<(Vec<Value>, usize)> {
           start = None;
         }
       }
-      ']' if depth == 0 => {
-        closed = true;
-        break;
-      }
+      ']' if depth == 0 => break,
       _ => {}
     }
   }
-  let incomplete = dropped + usize::from(depth > 0 || !closed);
-  Some((values, incomplete))
+  Some((values, dropped + usize::from(depth > 0)))
+}
+
+fn array_body(content: &str) -> Option<&str> {
+  if !content.trim_start().starts_with('{') {
+    return None;
+  }
+  let (_, after_key) = content.split_once("\"findings\"")?;
+  let (_, after_colon) = after_key.split_once(':')?;
+  after_colon.trim_start().strip_prefix('[')
 }
 
 fn closed_object(array: &str, start: usize, end: usize) -> Option<Value> {

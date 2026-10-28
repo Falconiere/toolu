@@ -74,11 +74,23 @@ impl Client {
       .get("OPENROUTER_API_KEY")
       .filter(|key| !key.is_empty())
       .ok_or(Error::Unconfigured)?;
-    if key.contains(['\r', '\n']) {
+    // A control character cannot travel in a header; refuse it before any retry.
+    if key.contains(char::is_control) {
       return Err(Error::InvalidKey);
     }
-    toolu_http::check_url(&config.endpoint).map_err(|_err| Error::InvalidConfig)?;
-    let model = env.get("OPENROUTER_MODEL").unwrap_or(DEFAULT_MODEL);
+    // The key travels as a bearer header, so a plaintext endpoint is refused.
+    let https = config
+      .endpoint
+      .get(..8)
+      .is_some_and(|scheme| scheme.eq_ignore_ascii_case("https://"));
+    if !https || toolu_http::check_url(&config.endpoint).is_err() {
+      return Err(Error::InvalidConfig);
+    }
+    // An empty override, as CI renders an unset variable, keeps the pinned default.
+    let model = env
+      .get("OPENROUTER_MODEL")
+      .filter(|model| !model.is_empty())
+      .unwrap_or(DEFAULT_MODEL);
     if model.trim().is_empty() || model.contains(['\r', '\n']) {
       return Err(Error::InvalidConfig);
     }
@@ -95,3 +107,7 @@ impl Client {
     &self.model
   }
 }
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;

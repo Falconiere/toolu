@@ -64,6 +64,13 @@ Create `crates/core/openrouter/{Cargo.toml,README.md,src/*.rs,src/tests/*_test.r
 
 TLS fixture checks actual request body, routing, key behavior, error mapping, retry count and wall-time bound. Parser cases check complete, truncated, deviating and garbage input with no invented fields. Contract tests check unknown cost stays `null`. The final gate covers registration, layers, clippy, docs, tests and coverage. Before push, rerun the gate and local xhigh code review on any new `origin/main` commits, per the user's delivery cycle.
 
+## Deviations
+
+- The xhigh review found that whitespace trimming changed evidence and produced false partial results. Model text now keeps quote and suggestion bytes; enum casing and exact decimal line strings remain the safe normalization boundary.
+- Billed usage is retained on empty/truncated errors, and embedded transient 429/5xx errors retry within the shared deadline. The request omits an unrequested temperature parameter so `require_parameters` does not exclude providers unnecessarily.
+- A second xhigh pass kept evidence whitespace while normalizing padded path identifiers and blank optional fields. Pre-send invalid configuration is reported as unconfigured; unusable billed completions retain their usage.
+- The repository gate required colocated tests for every new function-bearing module and an integration consumer for public model output types. Those tests are part of the client/parser checks.
+
 ## Plan review
 
 - The core registration step runs the real xtask layer inventory test and declares its count fixture.

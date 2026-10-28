@@ -26,7 +26,7 @@ pub struct Completion {
   pub content: String,
   /// `OpenRouter`'s finish reason, if supplied.
   pub finish_reason: Option<String>,
-  /// The requested model id.
+  /// The served model id, or the requested one when `OpenRouter` omits it.
   pub model: String,
   /// The serving provider, unknown when absent.
   pub provider: Option<String>,
@@ -48,17 +48,13 @@ impl fmt::Debug for Completion {
 /// Decode a bounded response without echoing provider text in errors.
 pub(crate) fn parse(body: &[u8], model: &str) -> Result<Completion, Error> {
   let doc: Value = serde_json::from_slice(body).map_err(|_err| Error::InvalidResponse)?;
-  if let Some(error) = doc.get("error") {
-    return Err(embedded(error));
-  }
+  embedded(&doc)?;
   let choice = doc
     .get("choices")
     .and_then(Value::as_array)
     .and_then(|choices| choices.first())
     .ok_or(Error::InvalidResponse)?;
-  if let Some(error) = choice.get("error") {
-    return Err(embedded(error));
-  }
+  embedded(choice)?;
   let finish_reason = choice
     .get("finish_reason")
     .and_then(Value::as_str)
@@ -66,73 +62,92 @@ pub(crate) fn parse(body: &[u8], model: &str) -> Result<Completion, Error> {
   if finish_reason.as_deref() == Some("error") {
     return Err(Error::Upstream(502));
   }
-  let content = choice
-    .get("message")
-    .and_then(|message| message.get("content"))
-    .and_then(Value::as_str)
-    .ok_or(Error::InvalidResponse)?;
-  if content.trim().is_empty() && finish_reason.as_deref() == Some("length") {
-    return Err(Error::Truncated { finish_reason });
+  let content = visible(choice)?;
+  let observed_usage = doc.get("usage").and_then(usage);
+  if content.trim().is_empty() {
+    return Err(if finish_reason.as_deref() == Some("length") {
+      Error::Truncated {
+        finish_reason,
+        usage: observed_usage,
+      }
+    } else {
+      Error::Empty {
+        finish_reason,
+        usage: observed_usage,
+      }
+    });
   }
-  if content.trim().is_empty() && finish_reason.as_deref() != Some("length") {
-    return Err(Error::Empty { finish_reason });
-  }
-  let usage = usage(doc.get("usage"))?;
+  let usage = observed_usage.ok_or(Error::InvalidResponse)?;
   if finish_reason.as_deref() == Some("length")
     && usage
       .completion_tokens
       .saturating_sub(usage.reasoning_tokens)
       <= 2
   {
-    return Err(Error::Truncated { finish_reason });
+    return Err(Error::Truncated {
+      finish_reason,
+      usage: Some(usage),
+    });
   }
-  Ok(Completion {
+  Ok(completion(&doc, content, finish_reason, usage, model))
+}
+
+fn completion(
+  doc: &Value,
+  content: &str,
+  finish_reason: Option<String>,
+  usage: Usage,
+  model: &str,
+) -> Completion {
+  Completion {
     content: content.to_owned(),
     finish_reason,
-    model: model.to_owned(),
+    model: doc
+      .get("model")
+      .and_then(Value::as_str)
+      .filter(|served| !served.is_empty())
+      .unwrap_or(model)
+      .to_owned(),
     provider: doc
       .get("provider")
       .and_then(Value::as_str)
       .map(str::to_owned),
     usage,
-  })
+  }
 }
 
-fn embedded(error: &Value) -> Error {
-  if error
+/// Visible text; OpenAI-compatible envelopes report none as `content: null`.
+fn visible(choice: &Value) -> Result<&str, Error> {
+  match choice
     .get("message")
-    .and_then(Value::as_str)
-    .is_some_and(|message| {
-      let message = message.to_ascii_lowercase();
-      message.contains("no endpoints") || message.contains("no provider")
-    })
+    .and_then(|message| message.get("content"))
   {
-    return Error::NoProvider;
+    Some(Value::String(content)) => Ok(content),
+    Some(Value::Null) => Ok(""),
+    _ => Err(Error::InvalidResponse),
   }
+}
+
+/// The typed failure in `holder`'s non-null `error` object, if any.
+fn embedded(holder: &Value) -> Result<(), Error> {
+  let Some(error) = holder.get("error").filter(|error| !error.is_null()) else {
+    return Ok(());
+  };
   let code = error
     .get("code")
     .and_then(Value::as_u64)
     .and_then(|code| u16::try_from(code).ok())
     .unwrap_or(502);
-  match code {
-    401 | 403 => Error::Authentication(code),
-    429 => Error::RateLimited {
-      retry_after_secs: None,
-    },
-    _ => Error::Upstream(code),
-  }
+  Err(Error::from_status(
+    code,
+    error.get("message").and_then(Value::as_str),
+    None,
+  ))
 }
 
-fn usage(value: Option<&Value>) -> Result<Usage, Error> {
-  let value = value.ok_or(Error::InvalidResponse)?;
-  let prompt_tokens = value
-    .get("prompt_tokens")
-    .and_then(Value::as_u64)
-    .ok_or(Error::InvalidResponse)?;
-  let completion_tokens = value
-    .get("completion_tokens")
-    .and_then(Value::as_u64)
-    .ok_or(Error::InvalidResponse)?;
+fn usage(value: &Value) -> Option<Usage> {
+  let prompt_tokens = value.get("prompt_tokens").and_then(Value::as_u64)?;
+  let completion_tokens = value.get("completion_tokens").and_then(Value::as_u64)?;
   let reasoning_tokens = value
     .get("completion_tokens_details")
     .and_then(|details| details.get("reasoning_tokens"))
@@ -142,7 +157,7 @@ fn usage(value: Option<&Value>) -> Result<Usage, Error> {
     .get("cost")
     .and_then(Value::as_f64)
     .filter(|cost| cost.is_finite() && *cost >= 0.0);
-  Ok(Usage {
+  Some(Usage {
     prompt_tokens,
     completion_tokens,
     reasoning_tokens,

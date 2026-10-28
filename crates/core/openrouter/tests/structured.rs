@@ -84,11 +84,18 @@ fn structured_request_keeps_schema_reasoning_and_routing() {
 #[test]
 fn missing_key_is_unconfigured_and_never_sends() {
   let fixture = Fixture::start().expect("TLS fixture");
+  let config = Config {
+    endpoint: fixture.url(PATH),
+    pause: Duration::from_millis(10),
+    test_root_ca_der: Some(fixture.root_ca_der().to_vec()),
+  };
+  let env = Env::from_pairs([("HTTPS_PROXY", fixture.proxy_url())]);
   assert!(matches!(
-    Client::from_env(&Env::default(), Config::default()),
+    Client::from_env(&env, config),
     Err(Error::Unconfigured)
   ));
   assert_eq!(fixture.requests().expect("requests").len(), 0);
+  assert_eq!(fixture.connects().expect("connects").len(), 0);
 }
 
 #[test]
@@ -144,13 +151,14 @@ fn missing_cost_stays_unknown_and_override_changes_model() {
 fn reasoning_only_length_and_empty_are_typed_errors() {
   let fixture = Fixture::start().expect("TLS fixture");
   let schema = json!({"type":"object"});
-  let length = json!({"choices":[{"message":{"content":""},"finish_reason":"length"}],"usage":{"completion_tokens":100,"completion_tokens_details":{"reasoning_tokens":100}}}).to_string();
+  let length = json!({"choices":[{"message":{"content":""},"finish_reason":"length"}],"usage":{"prompt_tokens":12,"completion_tokens":100,"completion_tokens_details":{"reasoning_tokens":100},"cost":0.5}}).to_string();
   fixture.route(PATH, Reply::new(200, length)).expect("route");
   let err = client(&fixture, &[])
     .expect("client")
     .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2))
     .expect_err("truncated");
   assert!(matches!(err, Error::Truncated { .. }));
+  assert_eq!(err.usage().and_then(|usage| usage.cost_usd), Some(0.5));
   assert!(format!("{err}").contains("length"));
   fixture
     .route(PATH, Reply::new(200, response("")))
@@ -257,4 +265,29 @@ fn explicit_no_provider_and_embedded_error_fail_closed() {
       .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(1)),
     Err(Error::Upstream(502))
   ));
+}
+
+#[test]
+fn embedded_transient_error_retries_with_the_same_routing() {
+  let fixture = Fixture::start().expect("TLS fixture");
+  let schema = json!({"type":"object"});
+  let embedded = json!({"choices":[{"message":{"content":"partial"},"finish_reason":"error","error":{"code":429,"message":"busy"}}]}).to_string();
+  fixture
+    .sequence(
+      PATH,
+      vec![Reply::new(200, embedded), Reply::new(200, response("{}"))],
+    )
+    .expect("route");
+  let completion = client(&fixture, &[])
+    .expect("client")
+    .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2))
+    .expect("retried");
+  assert_eq!(completion.content, "{}");
+  let seen = fixture.requests().expect("requests");
+  assert_eq!(seen.len(), 2);
+  for request in seen {
+    let body: Value = serde_json::from_slice(&request.body).expect("body");
+    assert_eq!(body["provider"]["zdr"], true);
+    assert_eq!(body["provider"]["require_parameters"], true);
+  }
 }

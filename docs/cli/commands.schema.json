@@ -903,10 +903,13 @@
               "type": "integer",
               "minimum": 0
             },
-    "cost_usd": {
-      "type": ["number", "null"],
-      "minimum": 0
-    },
+            "cost_usd": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
             "model": {
               "type": [
                 "string",

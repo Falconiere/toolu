@@ -49,7 +49,12 @@ fn no_provider_is_typed_only_for_an_explicit_no_endpoint_error() {
   };
   assert_eq!(status(&overloaded), Error::NoProvider);
   assert_eq!(
-    status_delay(&overloaded, 1, Duration::from_millis(10)),
+    status_delay(
+      &overloaded,
+      1,
+      Duration::from_millis(10),
+      &status(&overloaded)
+    ),
     Err(Error::NoProvider)
   );
   let other = Response {

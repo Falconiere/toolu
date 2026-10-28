@@ -29,9 +29,37 @@ fn empty_content_keeps_finish_reason_even_without_usage() {
   assert_eq!(
     parse(body, "model"),
     Err(Error::Empty {
-      finish_reason: Some("stop".into())
+      finish_reason: Some("stop".into()),
+      usage: None,
     })
   );
+}
+
+#[test]
+fn null_content_is_a_typed_truncation_or_empty_error() {
+  let length = br#"{"choices":[{"message":{"content":null},"finish_reason":"length"}]}"#;
+  assert_eq!(
+    parse(length, "model"),
+    Err(Error::Truncated {
+      finish_reason: Some("length".into()),
+      usage: None,
+    })
+  );
+  let stop = br#"{"choices":[{"message":{"content":null},"finish_reason":"stop"}]}"#;
+  assert_eq!(
+    parse(stop, "model"),
+    Err(Error::Empty {
+      finish_reason: Some("stop".into()),
+      usage: None,
+    })
+  );
+}
+
+#[test]
+fn a_null_error_field_is_success_and_the_served_model_is_recorded() {
+  let body = json!({"error":null,"model":"served/model","choices":[{"error":null,"message":{"content":"{}"},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":2}}).to_string();
+  let completion = parse(body.as_bytes(), "requested/model").expect("completion");
+  assert_eq!(completion.model, "served/model");
 }
 
 #[test]

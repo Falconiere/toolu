@@ -22,12 +22,12 @@ toolu is a Rust plugin marketplace for Claude Code, Codex, and Muse Code. Its ho
 | Host environment, config, Git detection, processes | `crates/core/runtime` | `crates/core/runtime/src/lib.rs` |
 | Shell analysis, HTTP, persistent state | `crates/core/{shell,http,state}` | [shell analysis](docs/shell-analysis.md), [detection](docs/detect.md) |
 | Gate dispatch, registry, quality rules, ledger | `crates/core/engine` | [registry](docs/registry.md), `crates/core/engine/src/lib.rs` |
-| GitHub and Jev clients | `crates/core/{github,jev}` | Each crate's `src/lib.rs` |
+| GitHub, Jev and OpenRouter clients | `crates/core/{github,jev,openrouter}` | Each crate's `src/lib.rs` |
 | Plugin namespaces and hub commands | `crates/<plugin>`, `crates/toolu` | `crates/cli/src/registry.rs` |
 | Epic engine and PR babysitter | `crates/epic-orchestrator`, `crates/pr-babysit` | [epic docs](docs/epic-orchestrator/), [babysit docs](docs/pr-babysit/) |
 | Gate tasks, generated hooks, CI checks | `crates/xtask` | `crates/xtask/src/main.rs` |
 
-Core dependency layers are `protocol` ← `runtime` ← {`shell`, `http`, `state`} ← {`engine`, `github`, `jev`}. Plugin crates depend on core; the hub connects rule crates; the CLI wires namespaces together. Check `tooling/conventions/guardrails/rust/layers.json` before adding dependencies. Keep plugin directories self-contained, without symlinks out.
+Core dependency layers are `protocol` ← `runtime` ← {`shell`, `http`, `state`} ← {`engine`, `github`, `jev`, `openrouter`}. Plugin crates depend on core; the hub connects rule crates; the CLI wires namespaces together. Check `tooling/conventions/guardrails/rust/layers.json` before adding dependencies. Keep plugin directories self-contained, without symlinks out.
 
 ## Change recipes
 

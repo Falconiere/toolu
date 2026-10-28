@@ -21,39 +21,16 @@ impl Client {
   ) -> Result<crate::Completion, Error> {
     let body = request.encode(&self.model)?;
     let auth = Auth::Bearer(self.key.clone());
-    let headers = [
-      ("content-type", "application/json"),
-      ("accept", "application/json"),
-    ];
     for attempt in 1..=ATTEMPTS {
-      let remaining = deadline
-        .checked_duration_since(Instant::now())
-        .filter(|left| !left.is_zero())
-        .ok_or(Error::Timeout)?;
-      let http = toolu_http::Client::new(
-        toolu_http::Config {
-          timeout: remaining,
-          max_body_bytes: MAX_BODY_BYTES,
-          max_redirects: 0,
-          test_root_ca_der: self.config.test_root_ca_der.clone(),
-        },
-        &self.env,
-      )
-      .map_err(|_err| Error::InvalidConfig)?;
-      let outcome = http.send(&Request {
-        method: Method::Post,
-        url: &self.config.endpoint,
-        auth: &auth,
-        headers: &headers,
-        body: Some(&body),
-      });
+      let outcome = self.send_once(&body, &auth, deadline);
       match outcome {
-        Ok(response) if (200..300).contains(&response.status) => {
-          return crate::response::parse(&response.body, &self.model);
-        }
         Ok(response) => {
-          let delay = status_delay(&response, attempt, self.config.pause)?;
-          wait(deadline, delay, status(&response))?;
+          let failure = match answer(&response, &self.model) {
+            Ok(completion) => return Ok(completion),
+            Err(failure) => failure,
+          };
+          let delay = status_delay(&response, attempt, self.config.pause, &failure)?;
+          wait(deadline, delay, failure)?;
         }
         Err(err) => {
           let (delay, failure) = transport_delay(&err, attempt, self.config.pause)?;
@@ -63,11 +40,58 @@ impl Client {
     }
     Err(Error::Timeout)
   }
+
+  fn send_once(
+    &self,
+    body: &[u8],
+    auth: &Auth,
+    deadline: Instant,
+  ) -> Result<Response, toolu_http::Error> {
+    let remaining = deadline
+      .checked_duration_since(Instant::now())
+      .filter(|left| !left.is_zero())
+      .ok_or(toolu_http::Error::Timeout)?;
+    let http = toolu_http::Client::new(
+      toolu_http::Config {
+        timeout: remaining,
+        max_body_bytes: MAX_BODY_BYTES,
+        max_redirects: 0,
+        test_root_ca_der: self.config.test_root_ca_der.clone(),
+      },
+      &self.env,
+    )?;
+    http.send(&Request {
+      method: Method::Post,
+      url: &self.config.endpoint,
+      auth,
+      headers: &[
+        ("content-type", "application/json"),
+        ("accept", "application/json"),
+      ],
+      body: Some(body),
+    })
+  }
 }
 
-fn status_delay(response: &Response, attempt: u32, pause: Duration) -> Result<Duration, Error> {
-  if attempt == ATTEMPTS || !retryable(response.status) || no_provider(&response.body) {
-    return Err(status(response));
+/// A 2xx completion, or the typed failure of its body or of a non-2xx status.
+fn answer(response: &Response, model: &str) -> Result<crate::Completion, Error> {
+  if (200..300).contains(&response.status) {
+    crate::response::parse(&response.body, model)
+  } else {
+    Err(status(response))
+  }
+}
+
+/// The wait before another attempt after a status or embedded `failure`, or
+/// the failure itself when it is final.
+fn status_delay(
+  response: &Response,
+  attempt: u32,
+  pause: Duration,
+  failure: &Error,
+) -> Result<Duration, Error> {
+  if attempt == ATTEMPTS || !transient(failure) {
+    return Err(failure.clone());
   }
   Ok(retry_delay(response, attempt, pause))
 }
@@ -81,8 +105,8 @@ fn transport_delay(
     toolu_http::Error::Timeout => Error::Timeout,
     toolu_http::Error::Transport(_) => Error::Transport,
     toolu_http::Error::BodyTooLarge => return Err(Error::BodyTooLarge),
-    toolu_http::Error::InvalidConfig(_)
-    | toolu_http::Error::HttpStatus(_)
+    toolu_http::Error::InvalidConfig(_) => return Err(Error::InvalidConfig),
+    toolu_http::Error::HttpStatus(_)
     | toolu_http::Error::Encode(_)
     | toolu_http::Error::Decode(_) => return Err(Error::Transport),
   };
@@ -104,31 +128,19 @@ fn retryable(status: u16) -> bool {
   status == 408 || status == 429 || status >= 500
 }
 
-fn status(response: &Response) -> Error {
-  if no_provider(&response.body) {
-    return Error::NoProvider;
-  }
-  match response.status {
-    401 | 403 => Error::Authentication(response.status),
-    429 => Error::RateLimited {
-      retry_after_secs: retry_after(response),
-    },
-    code => Error::Upstream(code),
-  }
+fn transient(error: &Error) -> bool {
+  matches!(error, Error::RateLimited { .. })
+    || matches!(error, Error::Upstream(code) if retryable(*code))
 }
 
-fn no_provider(body: &[u8]) -> bool {
-  let Ok(doc) = serde_json::from_slice::<serde_json::Value>(body) else {
-    return false;
-  };
-  doc
-    .get("error")
+fn status(response: &Response) -> Error {
+  let doc = serde_json::from_slice::<serde_json::Value>(&response.body).ok();
+  let message = doc
+    .as_ref()
+    .and_then(|doc| doc.get("error"))
     .and_then(|error| error.get("message"))
-    .and_then(serde_json::Value::as_str)
-    .is_some_and(|message| {
-      let message = message.to_ascii_lowercase();
-      message.contains("no endpoints") || message.contains("no provider")
-    })
+    .and_then(serde_json::Value::as_str);
+  Error::from_status(response.status, message, retry_after(response))
 }
 
 fn retry_after(response: &Response) -> Option<u64> {

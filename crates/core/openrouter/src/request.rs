@@ -51,7 +51,6 @@ impl StructuredRequest<'_> {
       "model": model,
       "messages": messages,
       "stream": false,
-      "temperature": 0,
       "max_tokens": self.max_tokens,
       "response_format": {"type":"json_schema","json_schema":{"name":self.schema_name,"strict":true,"schema":self.schema}},
       "reasoning": {"effort":self.reasoning_effort,"exclude":true},
@@ -60,3 +59,7 @@ impl StructuredRequest<'_> {
     serde_json::to_vec(&body).map_err(|_err| Error::InvalidConfig)
   }
 }
+
+#[cfg(test)]
+#[path = "tests/request_test.rs"]
+mod tests;
