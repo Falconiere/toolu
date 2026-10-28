@@ -161,6 +161,28 @@ fn run_arm(
 /// # Errors
 /// A call failed or the review left a path unreviewed: the arm is unverified, since
 /// an outage or an incomplete review must not read as a pass or an ordinary miss.
+/// Why an arm's review cannot be scored, when it cannot.
+fn unscored(failed_calls: &[String], report: &crate::contract::Report) -> Option<String> {
+  if !report.is_complete() {
+    let mut why: Vec<String> = failed_calls.to_vec();
+    why.extend(
+      report
+        .error
+        .iter()
+        .map(|error| format!("review error: {}", error.message)),
+    );
+    why.extend(
+      report
+        .coverage
+        .unreviewed
+        .iter()
+        .map(|item| format!("unreviewed {}: {}", item.path, item.reason)),
+    );
+    return Some(format!("incomplete review: {}", why.join(", ")));
+  }
+  (!failed_calls.is_empty()).then(|| format!("failed calls: {}", failed_calls.join(", ")))
+}
+
 fn arm_report(
   prepared: &Prepared,
   plan: &Plan<'_>,
@@ -186,25 +208,8 @@ fn arm_report(
     &prepared.prior,
     reviewed,
   );
-  if !report.is_complete() {
-    let mut why = failed;
-    why.extend(
-      report
-        .error
-        .iter()
-        .map(|error| format!("review error: {}", error.message)),
-    );
-    why.extend(
-      report
-        .coverage
-        .unreviewed
-        .iter()
-        .map(|item| format!("unreviewed {}: {}", item.path, item.reason)),
-    );
-    return Err(format!("incomplete review: {}", why.join(", ")));
-  }
-  if !failed.is_empty() {
-    return Err(format!("failed calls: {}", failed.join(", ")));
+  if let Some(why) = unscored(&failed, &report) {
+    return Err(why);
   }
   let run = Run {
     arm,
