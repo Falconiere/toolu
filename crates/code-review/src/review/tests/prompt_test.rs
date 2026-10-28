@@ -53,6 +53,7 @@ fn file() -> (ShapedFile, Package) {
     path: file.path.clone(),
     patch: file.patch.clone(),
     source: Some("b\n".into()),
+    context: None,
   };
   (file, package)
 }

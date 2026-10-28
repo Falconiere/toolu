@@ -95,9 +95,16 @@ pub(crate) fn chunk(
   let files: Vec<Value> = files
     .iter()
     .map(|(file, package)| {
-      json!({"path": file.path, "old_path": file.old_path, "kind": file.kind,
+      let mut entry = json!({"path": file.path, "old_path": file.old_path, "kind": file.kind,
              "patch": package.patch,
-             "source": if with_source { package.source.as_deref() } else { None }})
+             "source": if with_source { package.source.as_deref() } else { None }});
+      // Only levels that send callers add the key, so other prompts stay byte for byte.
+      if let (true, Some(context), Some(fields)) =
+        (with_source, &package.context, entry.as_object_mut())
+      {
+        fields.insert("callers".to_owned(), json!(context));
+      }
+      entry
     })
     .collect();
   let doc =

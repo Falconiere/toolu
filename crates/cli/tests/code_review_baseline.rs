@@ -27,7 +27,7 @@ fn the_committed_replay_store_answers_every_case_and_pins_the_baseline() {
     .args(["--effort", "medium", "--effort", "high"])
     .output()
     .unwrap();
-  // Exit 2: `caller-break` is a known miss until callers reach the evidence.
+  // Exit 2: medium sends no callers, so it still misses `caller-break`.
   assert_eq!(output.status.code(), Some(2), "{output:?}");
   let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
   for case in doc["cases"].as_array().unwrap() {
@@ -36,9 +36,10 @@ fn the_committed_replay_store_answers_every_case_and_pins_the_baseline() {
   let settings = doc["calibration"]["settings"].as_array().unwrap();
   assert_eq!(settings.len(), 4);
   for setting in settings {
+    let caught = if setting["setting"] == "high" { 8 } else { 7 };
     assert_eq!(setting["cases"], 10, "{setting}");
-    assert_eq!(setting["defects_caught"], 7, "{setting}");
-    assert_eq!(setting["defects_missed"], 1, "{setting}");
+    assert_eq!(setting["defects_caught"], caught, "{setting}");
+    assert_eq!(setting["defects_missed"], 8 - caught, "{setting}");
     assert_eq!(setting["false_positives"], 0, "{setting}");
   }
 }

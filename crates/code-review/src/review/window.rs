@@ -38,7 +38,7 @@ pub(super) fn windows(text: &str, file: &ShapedFile, cap: usize) -> (String, usi
 
 /// New-side lines each change sits at: every added line, and each hunk's new
 /// start, which is where a pure deletion leaves its mark.
-fn centers(file: &ShapedFile) -> BTreeSet<usize> {
+pub(super) fn centers(file: &ShapedFile) -> BTreeSet<usize> {
   let added = file
     .lines
     .iter()

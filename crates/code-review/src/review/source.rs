@@ -13,6 +13,7 @@ use std::path::Path;
 use serde::Serialize;
 use toolu_runtime::env::Env;
 
+use super::context::callers;
 use super::mask::Mask;
 use super::window::windows;
 use crate::budget::{BLOB_MAX_BYTES, Budget};
@@ -29,15 +30,24 @@ pub(crate) struct Package {
   pub patch: String,
   /// The masked `HEAD` source, when it fits the caps.
   pub source: Option<String>,
+  /// The masked `HEAD` lines naming the changed definitions, at levels that send them.
+  #[serde(skip_serializing_if = "Option::is_none")]
+  pub context: Option<String>,
 }
 
 impl Package {
   /// The text a dismissal quote must come from.
   pub(crate) fn evidence(&self) -> String {
-    match &self.source {
-      Some(source) => format!("{}\n{source}", self.patch),
-      None => self.patch.clone(),
-    }
+    [
+      Some(&self.patch),
+      self.source.as_ref(),
+      self.context.as_ref(),
+    ]
+    .into_iter()
+    .flatten()
+    .map(String::as_str)
+    .collect::<Vec<_>>()
+    .join("\n")
   }
 }
 
@@ -57,20 +67,35 @@ pub(crate) fn packages(
     .iter()
     .flat_map(|chunk| chunk.files.iter().copied())
     .collect();
+  let clean = |text: String| mask.apply(&redact_text(&text));
   let packages = shaped
     .files
     .iter()
     .enumerate()
     .map(|(index, file)| {
-      let source = if chunked.contains(&index) {
-        surrounding((env, root), file, budget, &mut used, &mut notes)
+      let text = if chunked.contains(&index) {
+        head((env, root), file, &mut notes)
       } else {
         None
       };
+      let context = text
+        .as_deref()
+        .filter(|_| budget.context_bytes > 0)
+        .and_then(|text| {
+          callers(
+            (env, root),
+            shaped,
+            (file, text),
+            budget.context_bytes,
+            &mut notes,
+          )
+        });
+      let source = text.and_then(|text| surrounding(file, text, budget, &mut used, &mut notes));
       Package {
         path: file.path.clone(),
         patch: mask.apply(&file.patch),
-        source: source.map(|text| mask.apply(&redact_text(&text))),
+        source: source.map(clean),
+        context: context.map(clean),
       }
     })
     .collect();
@@ -95,15 +120,8 @@ fn fit(file: &ShapedFile, text: String, cap: usize, notes: &mut Vec<String>) -> 
   Some(kept)
 }
 
-/// `file`'s `HEAD` text, or windows of it, when its kind needs context and it
-/// fits both caps.
-fn surrounding<'a>(
-  (env, root): (&Env, &Path),
-  file: &'a ShapedFile,
-  budget: &Budget,
-  used: &mut BTreeMap<&'a str, usize>,
-  notes: &mut Vec<String>,
-) -> Option<String> {
+/// `file`'s `HEAD` text when its kind needs context; a note when unreadable.
+fn head((env, root): (&Env, &Path), file: &ShapedFile, notes: &mut Vec<String>) -> Option<String> {
   if matches!(file.kind, FileKind::Added | FileKind::Deleted) {
     return None;
   }
@@ -122,10 +140,21 @@ fn surrounding<'a>(
     }
     Ok(_) | Err(_) => None,
   };
-  let Some(text) = text else {
+  if text.is_none() {
     notes.push(format!("source of {path} left out: unreadable at HEAD"));
-    return None;
-  };
+  }
+  text
+}
+
+/// `text`, or windows of it, when it fits both the file and the package cap.
+fn surrounding<'a>(
+  file: &'a ShapedFile,
+  text: String,
+  budget: &Budget,
+  used: &mut BTreeMap<&'a str, usize>,
+  notes: &mut Vec<String>,
+) -> Option<String> {
+  let path = &file.path;
   let text = fit(file, text, budget.source_file_bytes, notes)?;
   let package = path.rsplit_once('/').map_or("", |(dir, _)| dir);
   let total = used.entry(package).or_insert(0);

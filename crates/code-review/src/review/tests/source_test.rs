@@ -203,3 +203,78 @@ fn a_secret_on_an_unchanged_line_is_masked_in_the_source() {
   assert!(!source.contains(&token), "{source}");
   assert!(source.ends_with("fn a() { b() }\n"), "{source}");
 }
+
+const LEVELS: &str = "/// The level of `name`.\npub fn parse_level(name: &str) -> u8 {\n    match name {\n        \"warn\" => 3,\n        _ => 2,\n    }\n}\n";
+const REPORT: &str = "use crate::levels::parse_level;\n\npub fn label(name: &str) -> &'static str {\n    LABELS[parse_level(name) as usize]\n}\n";
+
+#[test]
+fn high_effort_sends_the_callers_of_the_definition_a_change_sits_in() {
+  let changed = LEVELS.replace("\"warn\" => 3", "\"warn\" => 4");
+  let dir = repo(
+    &[
+      ("src/levels.rs", LEVELS.to_owned()),
+      ("src/report.rs", REPORT.to_owned()),
+    ],
+    &[("src/levels.rs", changed)],
+  );
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let high = Effort::High.budget();
+  let (found, notes) = packages(&env, dir.path(), &shaped, high, &Mask::default());
+  // The definition line itself is not a caller; the unchanged report.rs lines are.
+  assert_eq!(
+    found[0].context.as_deref(),
+    Some(
+      "parse_level:\nsrc/report.rs:1: use crate::levels::parse_level;\nsrc/report.rs:4:     LABELS[parse_level(name) as usize]\n"
+    ),
+    "{notes:?}"
+  );
+  assert!(
+    found[0].evidence().ends_with("as usize]\n"),
+    "the recheck may quote callers"
+  );
+  // Medium sends none, so its packages serialize exactly as before.
+  let medium = Effort::Medium.budget();
+  let (found, _) = packages(&env, dir.path(), &shaped, medium, &Mask::default());
+  assert_eq!(found[0].context, None);
+  assert!(
+    !serde_json::to_string(&found[0])
+      .unwrap()
+      .contains("context")
+  );
+}
+
+#[test]
+fn a_definition_named_too_often_is_skipped_with_a_note() {
+  let users: Vec<(String, String)> = (0..=crate::budget::CONTEXT_HITS_MAX)
+    .map(|index| {
+      (
+        format!("src/u{index}.rs"),
+        "fn go() { parse_level(\"x\"); }\n".to_owned(),
+      )
+    })
+    .collect();
+  let mut base: Vec<(&str, String)> = users
+    .iter()
+    .map(|(path, text)| (path.as_str(), text.clone()))
+    .collect();
+  base.push(("src/levels.rs", LEVELS.to_owned()));
+  let changed = LEVELS.replace("_ => 2", "_ => 1");
+  let dir = repo(&base, &[("src/levels.rs", changed)]);
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let (found, notes) = packages(
+    &env,
+    dir.path(),
+    &shaped,
+    Effort::High.budget(),
+    &Mask::default(),
+  );
+  assert_eq!(found[0].context, None);
+  assert!(
+    notes
+      .iter()
+      .any(|note| note.starts_with("callers of parse_level left out: over 20")),
+    "{notes:?}"
+  );
+}

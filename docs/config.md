@@ -549,8 +549,11 @@ disable review; genuinely missing files use the defaults.
 | `effort` | `auto` | User or project. `auto` lets Jev pick `small`, `medium`, `high` or `xhigh` from shape metadata, floored to `high` for secrets, CI workflows, gate policy, credential or security paths, and diffs over 1,000 changed lines; `--effort` wins over this setting. An unknown value is ignored with a note. |
 
 What leaves the machine: the base-ref conventions and prompt override, the
-masked zero-context patch, bounded `HEAD` source of modified files, pre-pass
-findings, and open prior findings with dismissals. Secrets found by the pre-pass
+masked zero-context patch, bounded `HEAD` source of modified files (line
+windows around the changes when a file is over the level's cap), at `high` and
+`xhigh` the bounded `HEAD` lines elsewhere in the repository that name the
+changed definitions, pre-pass findings, and open prior findings with
+dismissals. Secrets found by the pre-pass
 are replaced with `[REDACTED]` before any request.
 
 The [review skill](../plugins/code-review/skills/review/SKILL.md) runs
