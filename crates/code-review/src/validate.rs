@@ -1,8 +1,10 @@
 //! Pipeline stage, owned by #668: grounds every finding in the diff, anchors it and drops what cannot be quoted.
 //!
 //! Model findings are checked against the shaped diff before anything is
-//! reported: hallucinated anchors and mismatched quotes are dropped and the
-//! lost coverage is returned as `unreviewed`, never as a clean pass. Withdrawn
+//! reported. A finding whose lines miss its quote moves to the one run of
+//! changed lines that holds the quote, with a note; otherwise hallucinated
+//! anchors and mismatched quotes are dropped and the lost coverage is returned
+//! as `unreviewed`, never as a clean pass. Withdrawn
 //! findings vanish without a count, duplicates collapse to the highest
 //! severity, and deterministic (`ast-grep`/`secrets`) findings pass through
 //! exempt. Cross-round matching echoes `prior_id` first, then the
@@ -10,8 +12,10 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+mod reanchor;
 mod round;
 
+use reanchor::reanchor;
 use round::{build_recap, dedupe, fresh_id, is_code, match_prior, withdrawn};
 
 use crate::contract::{Finding, Omitted, RedactionSpan, Severity, Side, Source};
@@ -56,6 +60,8 @@ pub struct Validated {
   pub recap: Recap,
   /// Grounding drops only: withdrawals and settled suppressions never count.
   pub dropped: usize,
+  /// One line per model finding moved to the changed lines its quote is on.
+  pub notes: Vec<String>,
 }
 
 /// Text as fingerprints see it: lowercased, with every whitespace run
@@ -124,7 +130,8 @@ pub fn validate(input: &Input<'_>) -> Validated {
     redactions: input.redactions,
     bad: &bad,
   };
-  let (kept, dropped, lost) = collect(&ctx, input.model, input.deterministic);
+  let mut notes = Vec::new();
+  let (kept, dropped, lost) = collect(&ctx, input.model, input.deterministic, &mut notes);
   let mut out = Validated {
     findings: Vec::new(),
     unreviewed: lost
@@ -136,6 +143,7 @@ pub fn validate(input: &Input<'_>) -> Validated {
       .collect(),
     recap: Recap::default(),
     dropped,
+    notes,
   };
   let blocked: BTreeSet<String> = lost
     .keys()
@@ -154,6 +162,7 @@ fn collect(
   ctx: &Ctx<'_>,
   model: &[ModelFinding],
   deterministic: &[Finding],
+  notes: &mut Vec<String>,
 ) -> (Vec<Candidate>, usize, BTreeMap<String, String>) {
   let mut candidates: Vec<Candidate> = deterministic
     .iter()
@@ -173,7 +182,7 @@ fn collect(
       dropped += drop_lost(&mut lost, finding, "its secret spans cannot be masked");
       continue;
     }
-    match ground(ctx, finding) {
+    match ground_or_reanchor(ctx, finding, notes) {
       Some(Ground::Kept(candidate)) => candidates.push(*candidate),
       Some(Ground::Suppressed) => {}
       None => {
@@ -255,6 +264,30 @@ fn cited(finding: &ModelFinding, anchors: &Anchors<'_>) -> Option<String> {
     .map(|line| anchors.get(&(finding.path.as_str(), side, line)).copied())
     .collect::<Option<Vec<_>>>()
     .map(|texts| texts.join("\n"))
+}
+
+/// `ground`, or else `ground` at the one changed-line run that holds the quote:
+/// models misnumber lines far more often than they misquote them.
+fn ground_or_reanchor(
+  ctx: &Ctx<'_>,
+  finding: &ModelFinding,
+  notes: &mut Vec<String>,
+) -> Option<Ground> {
+  if let Some(grounded) = ground(ctx, finding) {
+    return Some(grounded);
+  }
+  let moved = reanchor(finding, ctx.anchors, ctx.mask?)?;
+  let grounded = ground(ctx, &moved)?;
+  notes.push(format!(
+    "{}:{}..{} ({}) re-anchored to {}..{}, where its quote is",
+    finding.path,
+    finding.line,
+    finding.end_line,
+    side_name(finding.side),
+    moved.line,
+    moved.end_line
+  ));
+  Some(grounded)
 }
 
 fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {

@@ -52,9 +52,11 @@ fn finding(claim: &str) -> ModelFinding {
 
 #[test]
 fn a_grounded_finding_survives_and_a_hallucinated_one_marks_coverage_unreviewed() {
+  // Invented both ways: a line outside the diff quoting text it never had.
   let mut hallucinated = finding("invented defect");
   hallucinated.line = 42;
   hallucinated.end_line = 42;
+  hallucinated.quote = "let y = items.pop();".to_owned();
   let shaped = shaped();
   let out: Validated = validate(&Input {
     shaped: &shaped,

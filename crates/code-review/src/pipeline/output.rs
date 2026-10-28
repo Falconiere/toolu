@@ -43,6 +43,7 @@ pub(crate) fn completed(
   ));
   report.recap = recap_lines(&validated.recap, &prior.passes);
   report.notes = reviewed.notes;
+  report.notes.append(&mut validated.notes);
   if !prepass.findings.is_empty() || !prepass.notices.is_empty() {
     report.mechanical_checks = prepass::mechanical_checks_lines(prepass);
   }
