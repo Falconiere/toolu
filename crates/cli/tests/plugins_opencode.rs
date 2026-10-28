@@ -171,3 +171,27 @@ fn a_users_own_plugin_is_left_alone_and_a_scope_is_refused() {
   assert_eq!(scoped.status.code(), Some(64), "{}", text(&scoped.stderr));
   assert!(text(&scoped.stderr).contains("has no scope concept"));
 }
+
+#[test]
+fn plugins_doctor_reads_the_opencode_inventory() {
+  let sb = Sb::new().unwrap();
+  sb.seed_checkout().unwrap();
+  let health = |sb: &Sb| -> String {
+    let out = sb
+      .run(&["--json", "plugins", "doctor", "--host", "opencode"])
+      .unwrap();
+    text(&out.stdout)
+  };
+  let empty = health(&sb);
+  assert!(empty.contains("\"host\":\"opencode\""), "{empty}");
+  assert!(empty.contains("no toolu plugin is installed"), "{empty}");
+  let out = sb
+    .run(&["plugins", "install", "toolu", "--host", "opencode"])
+    .unwrap();
+  assert_eq!(out.status.code(), Some(0), "{}", text(&out.stderr));
+  let installed = health(&sb);
+  assert!(
+    !installed.contains("no toolu plugin is installed"),
+    "{installed}"
+  );
+}
