@@ -73,6 +73,40 @@ fn a_newer_client_spools_its_notify_like_a_report() {
 }
 
 #[test]
+fn cleanup_protocol_mismatch_neither_spools_nor_replaces_the_engine() {
+  use std::io::{BufRead as _, BufReader};
+  let tmp = tempfile::tempdir().unwrap();
+  let paths = Paths::at(tmp.path());
+  let listener = UnixListener::bind(paths.socket()).unwrap();
+  let peer = std::thread::spawn(move || {
+    let (mut stream, _) = listener.accept().unwrap();
+    stream
+      .set_read_timeout(Some(Duration::from_secs(1)))
+      .unwrap();
+    super::write_json(
+      &mut stream,
+      &serde_json::json!({"op": "hello", "protocol": crate::PROTOCOL - 1}),
+    )
+    .unwrap();
+    let mut request = String::new();
+    BufReader::new(stream).read_line(&mut request).unwrap();
+    request
+  });
+  let error = exchange_retry(
+    &paths,
+    crate::PROTOCOL,
+    &serde_json::json!({"op": "cleanup"}),
+  )
+  .unwrap_err();
+  assert_eq!(
+    error,
+    "cleanup requires a matching engine protocol; replace the engine first"
+  );
+  assert_eq!(peer.join().unwrap(), "");
+  assert!(!paths.spool().exists());
+}
+
+#[test]
 fn a_large_herdr_reply_reads_whole_and_an_endless_line_fails() {
   let (mut ours, mut theirs) = std::os::unix::net::UnixStream::pair().unwrap();
   let line = "x".repeat(200_000);

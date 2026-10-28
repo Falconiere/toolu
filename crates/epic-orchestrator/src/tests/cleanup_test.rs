@@ -218,3 +218,49 @@ fn registry_write_failure_keeps_live_state_and_the_original_registry() {
     1
   );
 }
+
+#[test]
+fn settled_abandonment_is_not_rewound_by_a_completed_launch() {
+  let tmp = tempfile::tempdir().unwrap();
+  let paths = Paths::at(tmp.path());
+  let dir = add(&paths, "done", true, true);
+  let record = json!({"key": "a", "repo": "o/r", "branch": "a",
+    "checkout": dir.join("checkout"), "worktree": dir.join("gone"),
+    "stage": "abandoned", "worktree_removed": true});
+  crate::disk::write_value(&dir.join("issues/a.json"), &record).unwrap();
+  for name in ["launch-intent", "launch-done"] {
+    let mut line = crate::journal::Record::new("action", name, "a", "t1", "");
+    line.epic = "done".into();
+    crate::journal::append(
+      &paths.journal_dir(),
+      &paths.journal_lock(),
+      &line,
+      std::time::SystemTime::now(),
+    )
+    .unwrap();
+    if name == "launch-intent" {
+      assert_eq!(removed(&apply(&paths, None, true).unwrap()), 0);
+    }
+  }
+  let doc = apply(&paths, None, false).unwrap();
+  assert_eq!(removed(&doc), 1, "{doc}");
+}
+
+#[test]
+fn an_unknown_graph_worker_stage_is_retained() {
+  let tmp = tempfile::tempdir().unwrap();
+  let paths = Paths::at(tmp.path());
+  let dir = add(&paths, "done", true, true);
+  let mut graph = crate::graph::read_graph(&dir.join("graph.json")).unwrap();
+  let mut child = crate::support::graph_248().issues.remove(0);
+  child.key = "a".into();
+  child.state = "closed".into();
+  child.stage = Some("unrecognized-stage".into());
+  graph.issues.push(child);
+  crate::graph::write_graph(&dir.join("graph.json"), &graph).unwrap();
+  assert_eq!(
+    apply(&paths, None, false).unwrap(),
+    json!({"dry_run": false, "removed": [],
+    "retained": [{"entry": {"key": "done", "state_dir": dir}, "reason": "unrecognized graph stage for a"}]})
+  );
+}

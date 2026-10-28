@@ -64,11 +64,7 @@ pub(crate) fn inspect(
   if !missing {
     load(&mut world, key, Path::new(dir))?;
   }
-  for record in records {
-    if record.key == key || record.epic == key || world.issues.contains_key(&record.key) {
-      crate::recover::observe(&mut world, record);
-    }
-  }
+  replay(&mut world, key, records);
   journal_safety(key, &world, records)?;
   if let Some(reason) = safety(&world, key) {
     return Err(reason.to_owned());
@@ -89,11 +85,29 @@ pub(crate) fn inspect(
   }
 }
 
+fn replay(world: &mut World, key: &str, records: &[Record]) {
+  let stages = world
+    .issues
+    .iter()
+    .map(|(key, issue)| (key.clone(), issue.stage.clone()))
+    .collect();
+  for record in records {
+    if record.key == key || record.epic == key || world.issues.contains_key(&record.key) {
+      crate::recover::observe(world, record);
+    }
+  }
+  crate::snapshot::overlay_stages(world, &stages);
+}
+
 fn load(world: &mut World, key: &str, dir: &Path) -> Result<(), String> {
   let graph = crate::graph::read_graph(&dir.join("graph.json"))?;
   let value = serde_json::to_value(&graph).map_err(|err| err.to_string())?;
   crate::epics::load_epic_state(world, key, &dir.display().to_string(), &value);
   for item in &graph.issues {
+    let stage = item.stage.as_deref().unwrap_or("");
+    if !stage.is_empty() && !crate::finish::record::STAGES.contains(&stage) {
+      return Err(format!("unrecognized graph stage for {}", item.key));
+    }
     let mut issue = Issue::blank(&item.key, key, &dir.display().to_string(), 0);
     issue.stage = item.stage.clone().unwrap_or_default();
     world.issues.insert(item.key.clone(), issue);

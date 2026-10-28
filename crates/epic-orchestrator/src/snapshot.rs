@@ -225,7 +225,8 @@ fn strings(value: Option<&Value>) -> Vec<String> {
     .unwrap_or_default()
 }
 
-fn overlay_stages(world: &mut World, stages: &BTreeMap<String, String>) {
+/// Restore durable stages that outrank transitions replayed from the journal.
+pub(crate) fn overlay_stages(world: &mut World, stages: &BTreeMap<String, String>) {
   for (key, stage) in stages {
     if let Some(issue) = world.issues.get_mut(key)
       && rank(stage) >= rank(&issue.stage)
