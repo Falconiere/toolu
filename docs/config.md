@@ -566,7 +566,7 @@ value with exit 1, naming the setting. Every key is optional:
 | `template` | `template:_images/debian-13` | The Lima template the VM builds on. Used only when the VM is created. |
 | `mounts` | `[]` | Host directories mounted besides the project, absolute or starting with `~/`. |
 
-`backend`, `mounts` and `template` decide where commands run and what they can reach, so `toolu sandbox` reads them from your user config file only: a project's checked-in `toolu.config.json` can set `name`, `cpus`, `memory` and `disk`, but a value it gives for those three is ignored. A project directory that holds your home directory (running from `~`, or in a repository rooted there) is refused unless `mounts` lists it.
+`backend`, `name`, `mounts` and `template` decide where commands run, which Lima VM that is and what they can reach, so `toolu sandbox` reads them from your user config file only: a project's checked-in `toolu.config.json` can set `cpus`, `memory` and `disk`, but a value it gives for `backend`, `name`, `mounts` or `template` is ignored. A project directory that holds your home directory (running from `~`, or in a repository rooted there) is refused unless `mounts` lists it.
 
 ### Recognized names
 

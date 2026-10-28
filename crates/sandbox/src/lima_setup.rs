@@ -25,8 +25,9 @@ impl Lima<'_> {
   pub(super) fn setup(&self) -> Result<Step, Failure> {
     self.guard_project()?;
     let _lock = self.state.lock()?;
+    let existing = self.instance()?;
     self.state.clear_stamp();
-    match self.instance()? {
+    match existing {
       None => self.create()?,
       Some(instance) if instance.status == Status::Running => self.mounted(&instance)?,
       Some(_) => self.boot()?,

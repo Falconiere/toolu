@@ -45,6 +45,25 @@ fn the_argv_passes_every_value_as_an_argument() {
 }
 
 #[test]
+fn a_clone_carries_the_changes_whatever_the_git_diff_settings_say() {
+  let dir = tempfile::tempdir().unwrap();
+  let base = std::fs::canonicalize(dir.path()).unwrap();
+  let src = base.join("src");
+  std::fs::create_dir_all(&src).unwrap();
+  git(&src, &["init", "-q"]).unwrap();
+  std::fs::write(src.join("kept.txt"), "one\n").unwrap();
+  git(&src, &["add", "-A"]).unwrap();
+  git(&src, &["commit", "-q", "-m", "init"]).unwrap();
+  // With no prefixes or with mnemonic ones, `git diff` paths are not a/ and b/ and
+  // `git apply` would strip the wrong component and drop the change.
+  git(&src, &["config", "diff.noprefix", "true"]).unwrap();
+  git(&src, &["config", "diff.mnemonicPrefix", "true"]).unwrap();
+  std::fs::write(src.join("kept.txt"), "two\n").unwrap();
+  let (code, out) = in_clone(&src, &base.join("clone"), "", "cat kept.txt");
+  assert_eq!((code, out.as_str()), (0, "two\n"));
+}
+
+#[test]
 fn a_clone_carries_head_changes_untracked_files_and_remotes_then_resets() {
   let dir = tempfile::tempdir().unwrap();
   let base = std::fs::canonicalize(dir.path()).unwrap();

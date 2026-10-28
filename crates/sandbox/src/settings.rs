@@ -75,10 +75,11 @@ const MAX_DEFAULT_MEMORY_GIB: u32 = 32;
 const MIN_CPUS: u32 = 2;
 /// The cores left to the host by default.
 const HOST_CORES: u32 = 2;
-/// The settings that decide where commands run and what they can reach. They come
-/// from the user's own config file, never from a project's checked-in one, which
-/// a cloned repository controls.
-const USER_ONLY: [&str; 3] = ["backend", "mounts", "template"];
+/// The settings that decide where commands run, which Lima VM that is (the name
+/// picks an instance toolu then edits and boots, whoever created it) and what
+/// they can reach. They come from the user's own config file, never from a
+/// project's checked-in one, which a cloned repository controls.
+const USER_ONLY: [&str; 4] = ["backend", "name", "mounts", "template"];
 const KEYS: [&str; 7] = [
   "backend", "name", "cpus", "memory", "disk", "template", "mounts",
 ];
