@@ -247,6 +247,14 @@
           "type": "json",
           "path": "plugins/sandbox/.muse-plugin/plugin.json",
           "jsonpath": "$.version"
+        },
+        {
+          "type": "generic",
+          "path": "crates/epic-orchestrator/assets/dashboard/index.html"
+        },
+        {
+          "type": "generic",
+          "path": "crates/epic-orchestrator/assets/dashboard/tokens.css"
         }
       ]
     }
