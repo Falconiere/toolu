@@ -254,3 +254,31 @@ fn config_values_that_cannot_be_read_are_reported_with_the_decision() {
     "{reason}"
   );
 }
+
+#[test]
+fn commands_without_git_and_other_tools_are_not_inspected() {
+  let repo = repo(None);
+  let raw = Map::new();
+  let ctx = repo.context(Host::Claude, &raw);
+  let tool = |name: &str, command: &str| Tool {
+    call_id: text("c"),
+    name: text(name),
+    input: json!({ "command": command }).as_object().cloned().unwrap(),
+  };
+  let shell = NormalizedEvent::ShellPre {
+    session: repo.session("s"),
+    tool: tool("Bash", "ls -la"),
+    command: text("ls -la"),
+  };
+  assert!(!SEMANTIC_GIT.applies(&shell, &ctx));
+  let other = NormalizedEvent::ToolPre {
+    session: repo.session("s"),
+    tool: tool("Edit", "git commit -m x"),
+  };
+  assert!(!SEMANTIC_GIT.applies(&other, &ctx));
+  let branch = advice(&decide(&repo, "git -C \"$D\" checkout -b x"));
+  assert!(
+    branch.contains("the new branch name, as its `-C` directory expands at run time"),
+    "{branch}"
+  );
+}

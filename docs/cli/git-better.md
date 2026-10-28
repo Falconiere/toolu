@@ -24,7 +24,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -42,7 +42,7 @@ Options:
   -F, --message-file <FILE>  Read the message from FILE, or from stdin with `-`
   -q, --quiet                Drop the diagnostics of a successful run
       --branch <NAME>        A new branch name to check
-      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
   -h, --help                 Print help
 ```
@@ -61,7 +61,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -77,7 +77,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -94,7 +94,7 @@ Options:
       --squash            Print the squash commit message, its trailers merged
       --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -109,7 +109,7 @@ Usage: toolu git-better setup [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

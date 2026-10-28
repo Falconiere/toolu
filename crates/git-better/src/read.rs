@@ -75,10 +75,17 @@ pub(crate) fn pr(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
     Err(failed) => return failed,
   };
   if context.on_base {
-    let why = format!(
-      "{} is the base branch: there are no branch commits to draft a PR from",
-      context.branch
-    );
+    let why = if context.branch == context.base {
+      format!(
+        "{} is the base branch: there are no branch commits to draft a PR from",
+        context.branch
+      )
+    } else {
+      format!(
+        "the base branch {} exists neither locally nor on origin, so the branch's own commits are unknown",
+        context.base
+      )
+    };
     return Outcome::failed(Exit::Failure, why);
   }
   let found = draft(&context);

@@ -106,3 +106,16 @@ fn the_context_reads_the_branch_its_commits_and_the_tree() {
   assert_eq!(document["dirty"]["untracked"], 2);
   assert_eq!(document["commits"].as_array().map(Vec::len), Some(2));
 }
+
+#[test]
+fn a_context_read_from_part_of_the_branch_says_how_much() {
+  let mut partial = context(false);
+  partial.total = 12;
+  let text = context_text(&partial);
+  assert!(
+    text.starts_with(
+      "Branch feat/653-pause-it (feat, ref 653: pause it): 12 commits ahead of main; of the newest 2 read, 1 semantic."
+    ),
+    "{text}"
+  );
+}

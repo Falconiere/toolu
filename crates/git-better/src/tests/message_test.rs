@@ -71,6 +71,14 @@ fn what_only_exists_at_run_time_is_reported() {
       "its file `m.txt` is written by the same command",
     ),
     (
+      "printf x > \"$F\" && git commit -F m.txt",
+      "its file `m.txt` is written by the same command",
+    ),
+    (
+      "printf x > m*.txt && git commit -F m.txt",
+      "its file `m.txt` is written by the same command",
+    ),
+    (
       "cd sub && git commit -F m.txt",
       "its file `m.txt` is read after the line changes directory",
     ),

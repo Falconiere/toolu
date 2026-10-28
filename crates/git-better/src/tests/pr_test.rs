@@ -114,3 +114,20 @@ fn without_semantic_commits_the_draft_leaves_placeholders() {
       .ends_with("Intent: <why this change is needed>")
   );
 }
+
+#[test]
+fn a_draft_from_part_of_the_branch_says_so() {
+  let mut partial = context(
+    "feat/1-x",
+    vec![commit("feat(x): add y", Some("y is needed"), None)],
+  );
+  partial.total = 30;
+  let found = draft(&partial);
+  assert!(
+    found
+      .body
+      .ends_with("\n\n_Drafted from the newest 1 of 30 commits._"),
+    "{}",
+    found.body
+  );
+}

@@ -117,6 +117,18 @@ fn slugify(text: &str) -> String {
   words.join("-")
 }
 
+/// A reference that leads `rest` but is glued to the words by something other
+/// than `-` (`ENG-4_login`, `12 retry`); digits glued to letters (`2fa`) are none.
+fn glued_reference(rest: &str) -> Option<(&str, &str)> {
+  let candidate = format!(
+    "{}-",
+    rest.replace(|c: char| !c.is_ascii_alphanumeric() && c != '-', "-")
+  );
+  let (found, _) = reference(&candidate)?;
+  let (whole, tail) = (rest.get(..found.len())?, rest.get(found.len()..)?);
+  (!tail.starts_with(|c: char| c.is_ascii_alphanumeric())).then_some((whole, tail))
+}
+
 /// A corrected branch name for `name`, keeping its type, reference and words.
 pub(crate) fn example_branch(name: &str, settings: &Settings) -> String {
   let parsed = parse(name);
@@ -124,10 +136,15 @@ pub(crate) fn example_branch(name: &str, settings: &Settings) -> String {
     .map(|branch| branch.kind)
     .filter(|kind| settings.types.iter().any(|known| known == kind))
     .unwrap_or("<type>");
-  let reference = parsed
-    .and_then(|branch| branch.reference)
-    .map_or_else(String::new, |found| format!("{found}-"));
-  let words = parsed.map_or(name, |branch| branch.slug);
+  let rest = name.split_once('/').map_or(name, |(_, rest)| rest);
+  let (reference, words) = match parsed.and_then(|branch| branch.reference) {
+    Some(found) => (Some(found), parsed.map_or(name, |branch| branch.slug)),
+    None => match glued_reference(rest) {
+      Some((found, words)) => (Some(found), words),
+      None => (None, parsed.map_or(name, |branch| branch.slug)),
+    },
+  };
+  let reference = reference.map_or_else(String::new, |found| format!("{found}-"));
   let slug = Some(slugify(words))
     .filter(|slug| !slug.is_empty())
     .unwrap_or_else(|| "<short-description>".to_owned());

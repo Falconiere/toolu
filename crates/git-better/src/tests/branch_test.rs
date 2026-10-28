@@ -93,7 +93,7 @@ fn the_example_keeps_the_type_reference_and_words() {
   );
   assert_eq!(
     example_branch("feature/ENG-4 Fix Login", &settings),
-    "<type>/eng-4-fix-login"
+    "<type>/ENG-4-fix-login"
   );
   assert_eq!(example_branch("fix/12-Retry", &settings), "fix/12-retry");
   assert_eq!(example_branch("my_branch", &settings), "<type>/my-branch");
@@ -101,4 +101,23 @@ fn the_example_keeps_the_type_reference_and_words() {
     example_branch("feat/!!", &settings),
     "feat/<short-description>"
   );
+}
+
+#[test]
+fn a_glued_reference_is_kept_so_the_example_itself_passes() {
+  let strict = Settings {
+    format: Format {
+      reference: true,
+      ..Format::default()
+    },
+    ..Settings::default()
+  };
+  for (name, example) in [
+    ("fix/ENG-4_login", "fix/ENG-4-login"),
+    ("feat/12 Retry Timeouts", "feat/12-retry-timeouts"),
+  ] {
+    assert_eq!(example_branch(name, &strict), example, "{name}");
+    assert_eq!(codes(example, &strict), Vec::<&str>::new(), "{example}");
+  }
+  assert_eq!(example_branch("feat/2fa_login", &strict), "feat/2fa-login");
 }

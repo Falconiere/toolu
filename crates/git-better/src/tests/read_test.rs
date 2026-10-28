@@ -136,3 +136,38 @@ fn pr_on_the_base_branch_has_nothing_to_draft() {
     Some("main is the base branch: there are no branch commits to draft a PR from")
   );
 }
+
+#[test]
+fn pr_reads_past_the_log_default_and_refuses_a_branch_without_a_base() {
+  let (repo, place) = branch();
+  for index in 0..20 {
+    repo.commit(
+      &format!("n/{index}.md"),
+      &format!("docs(n): add {index}\n\nIntent: n"),
+      None,
+    );
+  }
+  let full = pr(&verb(&["git-better", "pr"]), &Ctx::default(), &place)
+    .stdout
+    .unwrap();
+  assert!(!full.contains("_Drafted from the newest"), "{full}");
+  let capped = pr(
+    &verb(&["git-better", "pr", "--limit", "20"]),
+    &Ctx::default(),
+    &place,
+  );
+  assert!(
+    capped
+      .stdout
+      .unwrap()
+      .ends_with("_Drafted from the newest 20 of 22 commits._")
+  );
+  git(&repo.root, &["branch", "-m", "main", "trunk"]);
+  let orphaned = pr(&verb(&["git-better", "pr"]), &Ctx::default(), &place);
+  assert_eq!(
+    orphaned.stderr.as_deref(),
+    Some(
+      "the base branch main exists neither locally nor on origin, so the branch's own commits are unknown"
+    )
+  );
+}

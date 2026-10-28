@@ -21,6 +21,8 @@ pub(crate) const MAX_MESSAGE_BYTES: u64 = 64 * 1024;
 pub(crate) struct Line {
   /// Every static path the line writes, moves or copies to.
   written: Vec<String>,
+  /// The line also writes somewhere only known at run time (`> "$F"`, `> m*.txt`).
+  unresolved: bool,
   /// The line changes directory, so a relative path may name another file.
   moves: bool,
 }
@@ -28,24 +30,33 @@ pub(crate) struct Line {
 impl Line {
   /// The line `analysis` read.
   pub(crate) fn of(analysis: &ShellAnalysis) -> Line {
-    let written = write_targets(analysis)
-      .into_iter()
-      .filter_map(|target| target.path)
-      .collect();
+    let mut written = Vec::new();
+    let mut unresolved = false;
+    for target in write_targets(analysis) {
+      match target.path {
+        Some(path) if target.pattern.is_none() => written.push(path),
+        _ => unresolved = true,
+      }
+    }
     let moves = analysis.commands.iter().any(|command| {
       let name = command.argv.first().and_then(Option::as_deref);
       matches!(name, Some("cd" | "pushd" | "popd"))
     });
-    Line { written, moves }
+    Line {
+      written,
+      unresolved,
+      moves,
+    }
   }
 
-  /// The line writes `path`, or a file of the same name.
+  /// The line writes `path`, a file of the same name, or a file it cannot name.
   fn writes(&self, path: &str) -> bool {
     let name = Path::new(path).file_name();
-    self
-      .written
-      .iter()
-      .any(|written| written == path || Path::new(written).file_name() == name)
+    self.unresolved
+      || self
+        .written
+        .iter()
+        .any(|written| written == path || Path::new(written).file_name() == name)
   }
 }
 
