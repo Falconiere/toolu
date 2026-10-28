@@ -196,3 +196,21 @@ fn contract_redaction_spans_serialize_only_when_present() {
   );
   assert_eq!(doc["source"], "secrets");
 }
+
+#[test]
+fn a_review_is_complete_only_without_an_error_or_an_unreviewed_path() {
+  let whole = reviewed(vec![finding(Severity::Low)], Coverage::default());
+  assert!(whole.is_complete());
+  let partial = reviewed(
+    Vec::new(),
+    Coverage {
+      unreviewed: vec![Omitted {
+        path: "src/lib.rs".to_owned(),
+        reason: "lost".to_owned(),
+      }],
+      ..Coverage::default()
+    },
+  );
+  assert!(!partial.is_complete());
+  assert!(!Report::failed(Effort::Medium, ErrorKind::Outage, "down").is_complete());
+}

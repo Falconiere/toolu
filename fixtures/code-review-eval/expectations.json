@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "slice-underflow",
+      "class": "supported",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-underflow", "path": "src/lib.rs", "claim": "slice underflows", "kind": "defect"},
+        {"id": "fp-rewrite", "path": "src/lib.rs", "claim": "prefer rewrite", "kind": "false_positive"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "advisory_never_blocks": true,
+        "unreviewed_never_writes_pass": true
+      }
+    },
+    {
+      "id": "inverted-ownership",
+      "class": "supported",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-ownership", "path": "src/access.rs", "claim": "ownership check is inverted", "kind": "defect"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "advisory_never_blocks": true
+      }
+    },
+    {
+      "id": "cross-file-defect",
+      "class": "cross_file",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-zero-page", "path": "src/pages.rs", "claim": "page size of zero", "kind": "defect"},
+        {"id": "fp-div-ceil", "path": "src/pages.rs", "claim": "use div_ceil", "kind": "false_positive"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "unreviewed_never_writes_pass": true
+      }
+    },
+    {
+      "id": "prompt-false-positive",
+      "class": "prompt_false_positive",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "fp-credential", "path": "src/hint.rs", "claim": "hardcoded credential", "kind": "false_positive"}
+      ],
+      "gate": {
+        "advisory_never_blocks": true
+      }
+    },
+    {
+      "id": "memory-drift",
+      "class": "memory_drift",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-drifted", "path": "src/lib.rs", "claim": "slice underflows", "kind": "defect"}
+      ]
+    },
+    {
+      "id": "memory-unreexamined",
+      "class": "memory_unreexamined",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "fp-label", "path": "src/extra.rs", "claim": "label is wrong", "kind": "false_positive"}
+      ]
+    },
+    {
+      "id": "memory-missing",
+      "class": "memory_missing",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-triple", "path": "src/lib.rs", "claim": "no longer doubles", "kind": "defect"}
+      ]
+    }
+  ]
+}

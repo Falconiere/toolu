@@ -354,6 +354,12 @@ impl Report {
       .count()
   }
 
+  /// Whether the run reviewed the whole clean committed diff: no error and no
+  /// unreviewed path. Only a complete review may leave a passing gate state.
+  pub fn is_complete(&self) -> bool {
+    self.error.is_none() && self.coverage.unreviewed.is_empty()
+  }
+
   /// The process exit: 0 approved, 2 blocked, 69 when the run could not review.
   pub fn exit(&self) -> Exit {
     match self.verdict() {

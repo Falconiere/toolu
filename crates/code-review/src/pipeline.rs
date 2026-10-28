@@ -20,7 +20,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::git::current_branch;
 
-pub(crate) use state::dismiss;
+pub(crate) use state::{dismiss, settle};
 
 /// Run one committed-diff review with the supplied endpoint configuration.
 pub(crate) fn run(

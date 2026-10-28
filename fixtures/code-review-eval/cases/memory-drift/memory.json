@@ -1,0 +1,14 @@
+{
+  "prior": [
+    {
+      "fingerprint": "src/lib.rs\u001fcorrectness\u001fslice underflows when count exceeds length",
+      "id": "mem-drift-1",
+      "path": "src/lib.rs",
+      "category": "correctness",
+      "claim": "Slice underflows when count exceeds length",
+      "severity": "high",
+      "status": "open"
+    }
+  ],
+  "dismissals": []
+}
