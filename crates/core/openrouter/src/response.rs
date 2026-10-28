@@ -63,57 +63,69 @@ pub(crate) fn parse(body: &[u8], model: &str) -> Result<Completion, Error> {
     return Err(Error::Upstream(502));
   }
   let content = visible(choice)?;
-  let observed_usage = doc.get("usage").and_then(usage);
-  if content.trim().is_empty() {
-    return Err(if finish_reason.as_deref() == Some("length") {
-      Error::Truncated {
-        finish_reason,
-        usage: observed_usage,
-      }
-    } else {
-      Error::Empty {
-        finish_reason,
-        usage: observed_usage,
-      }
-    });
-  }
-  let usage = observed_usage.ok_or(Error::InvalidResponse)?;
-  if finish_reason.as_deref() == Some("length")
-    && usage
-      .completion_tokens
-      .saturating_sub(usage.reasoning_tokens)
-      <= 2
-  {
-    return Err(Error::Truncated {
-      finish_reason,
-      usage: Some(usage),
-    });
-  }
-  Ok(completion(&doc, content, finish_reason, usage, model))
-}
-
-fn completion(
-  doc: &Value,
-  content: &str,
-  finish_reason: Option<String>,
-  usage: Usage,
-  model: &str,
-) -> Completion {
-  Completion {
+  let model = served(&doc, model);
+  let usage = billed(
+    content,
+    finish_reason.as_deref(),
+    &model,
+    doc.get("usage").and_then(usage),
+  )?;
+  Ok(Completion {
     content: content.to_owned(),
     finish_reason,
-    model: doc
-      .get("model")
-      .and_then(Value::as_str)
-      .filter(|served| !served.is_empty())
-      .unwrap_or(model)
-      .to_owned(),
+    model,
     provider: doc
       .get("provider")
       .and_then(Value::as_str)
       .map(str::to_owned),
     usage,
+  })
+}
+
+/// The usage of visible output, or the empty or truncated error that billed it.
+fn billed(
+  content: &str,
+  finish_reason: Option<&str>,
+  model: &str,
+  observed: Option<Usage>,
+) -> Result<Usage, Error> {
+  let length = finish_reason == Some("length");
+  let truncated = |usage| Error::Truncated {
+    finish_reason: finish_reason.map(str::to_owned),
+    model: model.to_owned(),
+    usage,
+  };
+  if content.trim().is_empty() {
+    return Err(if length {
+      truncated(observed)
+    } else {
+      Error::Empty {
+        finish_reason: finish_reason.map(str::to_owned),
+        model: model.to_owned(),
+        usage: observed,
+      }
+    });
   }
+  let usage = observed.ok_or(Error::InvalidResponse)?;
+  if length
+    && usage
+      .completion_tokens
+      .saturating_sub(usage.reasoning_tokens)
+      <= 2
+  {
+    return Err(truncated(Some(usage)));
+  }
+  Ok(usage)
+}
+
+/// The served model id, or the requested one when `OpenRouter` omits it.
+fn served(doc: &Value, model: &str) -> String {
+  doc
+    .get("model")
+    .and_then(Value::as_str)
+    .filter(|served| !served.is_empty())
+    .unwrap_or(model)
+    .to_owned()
 }
 
 /// Visible text; OpenAI-compatible envelopes report none as `content: null`.

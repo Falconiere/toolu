@@ -30,6 +30,7 @@ fn empty_content_keeps_finish_reason_even_without_usage() {
     parse(body, "model"),
     Err(Error::Empty {
       finish_reason: Some("stop".into()),
+      model: "model".into(),
       usage: None,
     })
   );
@@ -42,6 +43,7 @@ fn null_content_is_a_typed_truncation_or_empty_error() {
     parse(length, "model"),
     Err(Error::Truncated {
       finish_reason: Some("length".into()),
+      model: "model".into(),
       usage: None,
     })
   );
@@ -50,6 +52,7 @@ fn null_content_is_a_typed_truncation_or_empty_error() {
     parse(stop, "model"),
     Err(Error::Empty {
       finish_reason: Some("stop".into()),
+      model: "model".into(),
       usage: None,
     })
   );

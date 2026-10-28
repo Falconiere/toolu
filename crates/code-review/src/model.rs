@@ -87,7 +87,10 @@ impl ModelError {
       ..Report::failed(
         effort,
         ErrorKind::Outage,
-        &format!("unusable structured review (finish_reason: {finish_reason:?})"),
+        &format!(
+          "unusable structured review (finish_reason: {})",
+          finish_reason.as_deref().unwrap_or("none")
+        ),
       )
     }
   }
@@ -111,8 +114,8 @@ pub fn error_report(error: &OpenRouterError, effort: Effort) -> Report {
     | OpenRouterError::Truncated { .. } => ErrorKind::Outage,
   };
   let mut report = Report::failed(effort, kind, &error.to_string());
-  if let Some(observed) = error.usage() {
-    report.usage = convert_usage(observed, None);
+  if let Some((observed, model)) = error.usage() {
+    report.usage = convert_usage(observed, Some(model.to_owned()));
   }
   report
 }
@@ -134,8 +137,9 @@ fn convert_usage(observed: &OpenRouterUsage, model: Option<String>) -> Usage {
 /// Parse model text, retaining only complete and locally valid findings.
 ///
 /// # Errors
-/// Returns `Malformed` when there is no structured finding array or a
-/// truncated body has no valid finding to salvage.
+/// Returns `Malformed` when there is no structured finding array, or when no
+/// valid finding survives a partial answer: salvaged, dropped, extra fields or
+/// a finish other than `stop`.
 pub fn parse(completion: &Completion) -> Result<ModelOutput, ModelError> {
   let (values, malformed_source, incomplete) =
     match serde_json::from_str::<Value>(&completion.content) {
@@ -169,7 +173,8 @@ pub fn parse(completion: &Completion) -> Result<ModelOutput, ModelError> {
     }
   }
   output.partial |= output.dropped > 0;
-  if output.findings.is_empty() && (malformed_source || abnormal_finish) {
+  // A partial answer with nothing usable left is never a clean review.
+  if output.findings.is_empty() && output.partial {
     return Err(malformed(completion));
   }
   Ok(output)
@@ -184,9 +189,7 @@ fn malformed(completion: &Completion) -> ModelError {
 
 fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
   let map = value.as_object()?;
-  let raw_path = text(value, "path")?;
-  let path = raw_path.trim().to_owned();
-  let path_changed = path != raw_path;
+  let (path, path_changed) = trimmed(value, "path")?;
   let (line, line_changed) = parse_line(value, "line")?;
   let (end_line, end_changed) = parse_line(value, "end_line")?;
   if end_line < line {
@@ -194,7 +197,8 @@ fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
   }
   let (side, side_changed) = side(value.get("side")?)?;
   let (severity, severity_changed) = severity(value.get("severity")?)?;
-  let category = text(value, "category")?;
+  // Category feeds the memory fingerprint, so it is trimmed like the path.
+  let (category, category_changed) = trimmed(value, "category")?;
   let claim = text(value, "claim")?;
   let quote = text(value, "quote")?;
   let (suggestion, suggestion_changed) = optional(value, "suggestion")?;
@@ -204,6 +208,7 @@ fn finding(value: &Value) -> Option<(ModelFinding, bool)> {
       line_changed,
       end_changed,
       path_changed,
+      category_changed,
       side_changed,
       severity_changed,
       suggestion_changed,
@@ -233,6 +238,12 @@ fn text(value: &Value, key: &str) -> Option<String> {
     return None;
   }
   Some(raw.to_owned())
+}
+
+fn trimmed(value: &Value, key: &str) -> Option<(String, bool)> {
+  let raw = text(value, key)?;
+  let trimmed = raw.trim();
+  Some((trimmed.to_owned(), trimmed != raw))
 }
 
 fn optional(value: &Value, key: &str) -> Option<(Option<String>, bool)> {

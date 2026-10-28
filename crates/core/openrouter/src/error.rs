@@ -36,6 +36,8 @@ pub enum Error {
   Empty {
     /// `OpenRouter`'s finish reason, if supplied.
     finish_reason: Option<String>,
+    /// The served model, or the requested one when `OpenRouter` omits it.
+    model: String,
     /// Billed usage, when the response includes it.
     usage: Option<Usage>,
   },
@@ -43,6 +45,8 @@ pub enum Error {
   Truncated {
     /// `OpenRouter`'s finish reason, if supplied.
     finish_reason: Option<String>,
+    /// The served model, or the requested one when `OpenRouter` omits it.
+    model: String,
     /// Billed usage, when the response includes it.
     usage: Option<Usage>,
   },
@@ -55,10 +59,15 @@ impl fmt::Display for Error {
       Self::InvalidKey => f.write_str("OPENROUTER_API_KEY contains a control character"),
       Self::InvalidConfig => f.write_str("invalid OpenRouter configuration or request"),
       Self::Authentication(status) => write!(f, "OpenRouter authentication failed (HTTP {status})"),
-      Self::RateLimited { retry_after_secs } => write!(
+      Self::RateLimited {
+        retry_after_secs: Some(secs),
+      } => write!(
         f,
-        "OpenRouter rate limited the request (retry-after: {retry_after_secs:?})"
+        "OpenRouter rate limited the request (retry after {secs}s)"
       ),
+      Self::RateLimited {
+        retry_after_secs: None,
+      } => f.write_str("OpenRouter rate limited the request"),
       Self::NoProvider => f.write_str("no OpenRouter provider met the routing constraints"),
       Self::Upstream(status) => write!(f, "OpenRouter or provider failed (HTTP {status})"),
       Self::Timeout => f.write_str("OpenRouter call exceeded its deadline"),
@@ -67,11 +76,13 @@ impl fmt::Display for Error {
       Self::InvalidResponse => f.write_str("OpenRouter returned an invalid response envelope"),
       Self::Empty { finish_reason, .. } => write!(
         f,
-        "OpenRouter returned no visible content (finish_reason: {finish_reason:?})"
+        "OpenRouter returned no visible content (finish_reason: {})",
+        finish_reason.as_deref().unwrap_or("none")
       ),
       Self::Truncated { finish_reason, .. } => write!(
         f,
-        "OpenRouter reasoning exhausted the completion budget (finish_reason: {finish_reason:?})"
+        "OpenRouter reasoning exhausted the completion budget (finish_reason: {})",
+        finish_reason.as_deref().unwrap_or("none")
       ),
     }
   }
@@ -80,10 +91,13 @@ impl fmt::Display for Error {
 impl std::error::Error for Error {}
 
 impl Error {
-  /// Usage reported on an empty or truncated billed completion, if any.
-  pub fn usage(&self) -> Option<&Usage> {
+  /// Usage reported on an empty or truncated billed completion, with the model
+  /// that served it, if any.
+  pub fn usage(&self) -> Option<(&Usage, &str)> {
     match self {
-      Self::Empty { usage, .. } | Self::Truncated { usage, .. } => usage.as_ref(),
+      Self::Empty { usage, model, .. } | Self::Truncated { usage, model, .. } => {
+        usage.as_ref().map(|usage| (usage, model.as_str()))
+      }
       Self::Unconfigured
       | Self::InvalidKey
       | Self::InvalidConfig
@@ -104,10 +118,13 @@ impl Error {
     message: Option<&str>,
     retry_after_secs: Option<u64>,
   ) -> Self {
-    if message.is_some_and(|message| {
-      let message = message.to_ascii_lowercase();
-      message.contains("no endpoints") || message.contains("no provider")
-    }) {
+    if (400..500).contains(&code)
+      && !matches!(code, 401 | 403 | 408 | 429)
+      && message.is_some_and(|message| {
+        let message = message.to_ascii_lowercase();
+        message.contains("no endpoints") || message.contains("no provider")
+      })
+    {
       return Self::NoProvider;
     }
     match code {

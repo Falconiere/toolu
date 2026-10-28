@@ -20,7 +20,16 @@ fn transient_statuses_and_retry_after_are_bounded() {
   };
   assert_eq!(
     retry_delay(&response, 1, Duration::from_millis(10)),
-    Duration::from_millis(50)
+    Some(Duration::from_millis(50))
+  );
+  let long = Response {
+    headers: vec![("retry-after".into(), "1190".into())],
+    ..response.clone()
+  };
+  assert_eq!(retry_delay(&long, 1, Duration::from_millis(1)), None);
+  assert_eq!(
+    status_delay(&long, 1, Duration::from_millis(1), &status(&long)),
+    Err(status(&long))
   );
   assert_eq!(
     status(&response),
@@ -47,16 +56,14 @@ fn no_provider_is_typed_only_for_an_explicit_no_endpoint_error() {
     status: 503,
     ..response.clone()
   };
-  assert_eq!(status(&overloaded), Error::NoProvider);
-  assert_eq!(
-    status_delay(
-      &overloaded,
-      1,
-      Duration::from_millis(10),
-      &status(&overloaded)
-    ),
-    Err(Error::NoProvider)
-  );
+  assert_eq!(status(&overloaded), Error::Upstream(503));
+  for code in [401, 429] {
+    let response = Response {
+      status: code,
+      ..response.clone()
+    };
+    assert_ne!(status(&response), Error::NoProvider);
+  }
   let other = Response {
     body: br#"{"error":{"message":"model not found"}}"#.to_vec(),
     ..response

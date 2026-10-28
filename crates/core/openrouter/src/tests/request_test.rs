@@ -27,4 +27,14 @@ fn malformed_request_fields_are_rejected_before_network_work() {
   request.max_tokens = 100;
   request.reasoning_effort = "none";
   assert_eq!(request.encode("model"), Err(Error::InvalidConfig));
+  request.reasoning_effort = "high";
+  for name in [
+    "code review",
+    "a/b",
+    "",
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789---",
+  ] {
+    request.schema_name = name;
+    assert_eq!(request.encode("model"), Err(Error::InvalidConfig));
+  }
 }

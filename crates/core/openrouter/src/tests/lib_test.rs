@@ -49,3 +49,12 @@ fn the_key_and_model_come_only_from_the_supplied_environment() {
     DEFAULT_MODEL
   );
 }
+
+#[test]
+fn a_blank_key_is_unconfigured() {
+  let env = Env::from_pairs([("OPENROUTER_API_KEY", "  ")]);
+  assert!(matches!(
+    Client::from_env(&env, Config::default()),
+    Err(Error::Unconfigured)
+  ));
+}

@@ -115,6 +115,7 @@ fn schema_valid_whitespace_preserves_exact_evidence_without_marking_partial() {
 fn path_and_blank_optional_fields_normalize_without_changing_evidence() {
   let mut value = finding();
   value["path"] = json!(" src/lib.rs ");
+  value["category"] = json!(" correctness ");
   value["quote"] = json!("  value[0] ");
   value["suggestion"] = json!("");
   value["prior_id"] = json!(" ");
@@ -125,6 +126,7 @@ fn path_and_blank_optional_fields_normalize_without_changing_evidence() {
   .expect("finding");
   assert!(parsed.partial);
   assert_eq!(parsed.findings[0].path, "src/lib.rs");
+  assert_eq!(parsed.findings[0].category, "correctness");
   assert_eq!(parsed.findings[0].quote, "  value[0] ");
   assert_eq!(parsed.findings[0].suggestion, None);
   assert_eq!(parsed.findings[0].prior_id, None);
@@ -143,6 +145,13 @@ fn extra_top_level_fields_and_abnormal_finishes_never_approve_empty_findings() {
   missing_reason.finish_reason = None;
   assert!(matches!(
     parse(&missing_reason),
+    Err(ModelError::Malformed { .. })
+  ));
+  let mut invalid = finding();
+  invalid["severity"] = json!("critical");
+  let all_dropped = completion(&json!({"findings":[invalid]}).to_string(), "stop");
+  assert!(matches!(
+    parse(&all_dropped),
     Err(ModelError::Malformed { .. })
   ));
   let with_finding = completion(
@@ -197,6 +206,7 @@ fn transport_errors_map_to_error_verdict_and_cost_stays_unknown() {
   let report = error_report(
     &toolu_openrouter::Error::Truncated {
       finish_reason: Some("length".into()),
+      model: "deepseek/deepseek-v4-pro-0813".into(),
       usage: Some(Usage {
         prompt_tokens: 12,
         completion_tokens: 100,
@@ -208,6 +218,10 @@ fn transport_errors_map_to_error_verdict_and_cost_stays_unknown() {
   );
   assert_eq!(report.verdict(), Verdict::Error);
   assert_eq!(report.usage.tokens_out, 100);
+  assert_eq!(
+    report.usage.model.as_deref(),
+    Some("deepseek/deepseek-v4-pro-0813")
+  );
   assert_eq!(
     serde_json::to_value(&report).expect("report")["usage"]["cost_usd"],
     0.5

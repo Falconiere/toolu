@@ -2,7 +2,8 @@
 //! push diff (epic #660). `contract` is the JSON report agents read, `memory` the
 //! records carried between review rounds, and `budget` every byte and token cap with
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
-//! `prepass`, `review`, `validate`, `report`); until they land, `run` fails closed as
+//! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
+//! output contract that `review` consumes. Until they land, `run` fails closed as
 //! `unconfigured`, sends nothing and writes no state.
 
 use clap::ArgMatches;

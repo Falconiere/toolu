@@ -4,9 +4,11 @@ use super::Error;
 fn typed_errors_keep_safe_diagnostic_fields() {
   let truncated = Error::Truncated {
     finish_reason: Some("length".into()),
+    model: "model".into(),
     usage: None,
   };
   assert!(truncated.to_string().contains("length"));
+  assert!(!truncated.to_string().contains("Some("));
   let rate = Error::RateLimited {
     retry_after_secs: Some(5),
   };

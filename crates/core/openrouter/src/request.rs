@@ -32,7 +32,11 @@ impl StructuredRequest<'_> {
   /// Encode the fixed strict-schema request after validating its public fields.
   pub(crate) fn encode(&self, model: &str) -> Result<Vec<u8>, Error> {
     if self.messages.is_empty()
-      || self.schema_name.is_empty()
+      || !(1..=64).contains(&self.schema_name.len())
+      || !self
+        .schema_name
+        .bytes()
+        .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'_' | b'-'))
       || self.max_tokens == 0
       || !matches!(self.reasoning_effort, "low" | "medium" | "high" | "xhigh")
       || self

@@ -69,6 +69,7 @@ TLS fixture checks actual request body, routing, key behavior, error mapping, re
 - The xhigh review found that whitespace trimming changed evidence and produced false partial results. Model text now keeps quote and suggestion bytes; enum casing and exact decimal line strings remain the safe normalization boundary.
 - Billed usage is retained on empty/truncated errors, and embedded transient 429/5xx errors retry within the shared deadline. The request omits an unrequested temperature parameter so `require_parameters` does not exclude providers unnecessarily.
 - A second xhigh pass kept evidence whitespace while normalizing padded path identifiers and blank optional fields. Pre-send invalid configuration is reported as unconfigured; unusable billed completions retain their usage.
+- The committed-diff xhigh pass retained served model identity on billed errors, failed closed when all findings were invalid, capped long retry waits, kept status precedence over no-provider text, validated JSON schema names, and raised the report schema version for nullable cost.
 - The repository gate required colocated tests for every new function-bearing module and an integration consumer for public model output types. Those tests are part of the client/parser checks.
 
 ## Plan review

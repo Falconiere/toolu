@@ -8,6 +8,7 @@ use toolu_http::{Auth, Method, Request, Response};
 use crate::{Client, Error, MAX_BODY_BYTES};
 
 const ATTEMPTS: u32 = 3;
+const MAX_RETRY_AFTER_SECS: u64 = 60;
 
 impl Client {
   /// Send one structured chat request before `deadline`.
@@ -93,7 +94,7 @@ fn status_delay(
   if attempt == ATTEMPTS || !transient(failure) {
     return Err(failure.clone());
   }
-  Ok(retry_delay(response, attempt, pause))
+  retry_delay(response, attempt, pause).ok_or_else(|| failure.clone())
 }
 
 fn transport_delay(
@@ -150,9 +151,17 @@ fn retry_after(response: &Response) -> Option<u64> {
     .and_then(|value| value.parse().ok())
 }
 
-fn retry_delay(response: &Response, attempt: u32, pause: Duration) -> Duration {
-  let units = retry_after(response).unwrap_or(u64::from(attempt));
-  pause.saturating_mul(u32::try_from(units).unwrap_or(u32::MAX))
+fn retry_delay(response: &Response, attempt: u32, pause: Duration) -> Option<Duration> {
+  let units = match response.header("retry-after") {
+    Some(value) if !value.is_empty() && value.bytes().all(|byte| byte.is_ascii_digit()) => {
+      value.parse::<u64>().ok()?
+    }
+    _ => u64::from(attempt),
+  };
+  if units > MAX_RETRY_AFTER_SECS {
+    return None;
+  }
+  Some(pause.saturating_mul(u32::try_from(units).ok()?))
 }
 
 fn fits(deadline: Instant, delay: Duration) -> bool {

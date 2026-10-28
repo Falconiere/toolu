@@ -72,7 +72,7 @@ impl Client {
   pub fn from_env(env: &Env, config: Config) -> Result<Self, Error> {
     let key = env
       .get("OPENROUTER_API_KEY")
-      .filter(|key| !key.is_empty())
+      .filter(|key| !key.trim().is_empty())
       .ok_or(Error::Unconfigured)?;
     // A control character cannot travel in a header; refuse it before any retry.
     if key.contains(char::is_control) {

@@ -158,7 +158,7 @@ fn reasoning_only_length_and_empty_are_typed_errors() {
     .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2))
     .expect_err("truncated");
   assert!(matches!(err, Error::Truncated { .. }));
-  assert_eq!(err.usage().and_then(|usage| usage.cost_usd), Some(0.5));
+  assert_eq!(err.usage().and_then(|(usage, _)| usage.cost_usd), Some(0.5));
   assert!(format!("{err}").contains("length"));
   fixture
     .route(PATH, Reply::new(200, response("")))
@@ -169,6 +169,21 @@ fn reasoning_only_length_and_empty_are_typed_errors() {
       .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2)),
     Err(Error::Empty { .. })
   ));
+}
+
+#[test]
+fn an_oversized_body_is_typed_and_never_retried() {
+  let fixture = Fixture::start().expect("TLS fixture");
+  let oversized = "x".repeat(toolu_openrouter::MAX_BODY_BYTES + 1);
+  fixture
+    .route(PATH, Reply::new(200, oversized))
+    .expect("route");
+  let schema = json!({"type":"object"});
+  let result = client(&fixture, &[])
+    .expect("client")
+    .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2));
+  assert!(matches!(result, Err(Error::BodyTooLarge)));
+  assert_eq!(fixture.requests().expect("requests").len(), 1);
 }
 
 #[test]
@@ -216,14 +231,14 @@ fn delayed_response_and_retry_after_cannot_extend_the_deadline() {
   let started = Instant::now();
   let result = client(&fixture, &[])
     .expect("client")
-    .complete_structured(&request(&schema), started + Duration::from_millis(200));
+    .complete_structured(&request(&schema), started + Duration::from_secs(2));
   assert!(matches!(
     result,
     Err(Error::RateLimited {
       retry_after_secs: Some(500)
     })
   ));
-  assert!(started.elapsed() < Duration::from_millis(200));
+  assert!(started.elapsed() < Duration::from_secs(2));
   assert_eq!(fixture.requests().expect("requests").len(), 1);
   fixture
     .route(

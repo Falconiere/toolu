@@ -11,7 +11,7 @@ use toolu_protocol::exit::Exit;
 use crate::budget::Effort;
 
 /// The contract's version; a breaking change to the report raises it.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// How bad a finding is; ordered from `nit` up, so `>= Medium` means blocking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
