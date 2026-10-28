@@ -2,16 +2,16 @@ use super::{command, effort};
 use crate::budget::Effort;
 
 #[test]
-fn effort_defaults_to_auto_and_takes_every_level() {
+fn effort_is_unset_by_default_and_takes_every_level() {
   let run = |args: &[&str]| {
     let matches = command().try_get_matches_from(args).unwrap();
     effort(matches.subcommand_matches("run").unwrap())
   };
-  assert_eq!(run(&["code-review", "run"]), Effort::Auto);
+  assert_eq!(run(&["code-review", "run"]), None);
   for level in Effort::ALL {
     assert_eq!(
       run(&["code-review", "run", "--effort", level.name()]),
-      level
+      Some(level)
     );
   }
 }

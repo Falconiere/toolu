@@ -76,7 +76,7 @@ fn the_binary_s_report_validates_and_exits_unavailable() {
       &document["effort"],
       &document["error"]["kind"]
     ),
-    (&json!("error"), &json!("high"), &json!("unconfigured"))
+    (&json!("error"), &json!("high"), &json!("not-enabled"))
   );
 }
 

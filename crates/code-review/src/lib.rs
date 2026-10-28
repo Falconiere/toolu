@@ -3,12 +3,15 @@
 //! records carried between review rounds, and `budget` every byte and token cap with
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
 //! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
-//! output contract that `review` consumes. Until they land, `run` fails closed as
-//! `unconfigured`, sends nothing and writes no state.
+//! output contract that `review` consumes. `run` sends nothing without the
+//! repository's opt-in (`not-enabled`); until #668 and #669 land it then fails
+//! closed as `unconfigured`, sends nothing and writes no state.
 
 use clap::ArgMatches;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
+use toolu_runtime::env::Env;
+use toolu_runtime::host::roots::Roots;
 
 /// Byte and token caps, and the effort levels.
 pub mod budget;
@@ -33,13 +36,15 @@ pub mod settings;
 pub mod shape;
 mod validate;
 
+use budget::Effort;
 use contract::{ErrorKind, Report};
 
 /// The plugin this crate belongs to: `plugins/code-review`.
 pub const PLUGIN: &str = "code-review";
 
-/// Why a run fails closed until the pipeline stages land.
-const NOT_BUILT: &str = "the review pipeline is not built yet (#662-#666, #668, #669); nothing was sent and no state was written";
+/// Why an enabled run fails closed until the last pipeline stages land.
+const NOT_BUILT: &str =
+  "the review pipeline is not built yet (#668, #669); nothing was sent and no state was written";
 
 /// The `toolu code-review` namespace.
 pub fn command() -> clap::Command {
@@ -50,7 +55,15 @@ pub fn command() -> clap::Command {
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
     Some(("run", verb)) => {
-      let report = Report::failed(cli::effort(verb), ErrorKind::Unconfigured, NOT_BUILT);
+      let settings = settings::load(&Roots::new(Env::process(), ctx.host), None);
+      let effort = cli::effort(verb)
+        .or(settings.effort)
+        .unwrap_or(Effort::Auto);
+      let report = if settings.enabled {
+        Report::failed(effort, ErrorKind::Unconfigured, NOT_BUILT)
+      } else {
+        review::RunError::NotEnabled.report(effort)
+      };
       present(&report, ctx)
     }
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
