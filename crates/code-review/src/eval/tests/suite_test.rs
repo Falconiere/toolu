@@ -123,3 +123,14 @@ fn the_document_names_its_schema_and_omits_an_absent_calibration() {
   assert_eq!(doc["cases"][0]["class"], "supported");
   assert!(doc.get("calibration").is_none());
 }
+
+#[test]
+fn a_run_that_produced_no_arm_is_unverified_never_satisfied() {
+  let empty = suite(vec![case(Vec::new(), &[], &[])]);
+  assert_eq!(empty.verdict(), Verdict::Unverified);
+  assert!(
+    empty.summary().contains("c: unverified: no arm ran"),
+    "{}",
+    empty.summary()
+  );
+}

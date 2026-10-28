@@ -115,12 +115,18 @@ fn describe(err: &RunError) -> String {
   }
 }
 
-fn origin(call: &Call) -> LiveOrReplayed {
-  if call.outcome == REPLAYED {
-    LiveOrReplayed::Replayed
-  } else {
-    LiveOrReplayed::Live
+/// Where a call's answer came from: a replay run never sends a request, so even a
+/// call the store could not answer is replayed, not live.
+fn origin(mode: &Mode) -> LiveOrReplayed {
+  match mode {
+    Mode::Replay(_) => LiveOrReplayed::Replayed,
+    Mode::Live(_) => LiveOrReplayed::Live,
   }
+}
+
+/// Whether `call` was answered: a live call says `ok`, a replayed one `replayed`.
+fn answered(call: &Call) -> bool {
+  call.outcome == "ok" || call.outcome == REPLAYED
 }
 
 /// The replay lookup of a run: only a replay run has one, and every request the
@@ -210,25 +216,31 @@ fn run_arm(
     return Err(problems.join("; "));
   }
   let reviewed = result.map_err(|err| describe(&err))?;
-  Ok(arm_report(
-    prepared,
-    case,
-    (setting, arm, runtime_ms),
-    reviewed,
-  ))
+  arm_report(prepared, plan, case, (setting, arm, runtime_ms), reviewed)
 }
 
 /// Ground `reviewed`, match it against `case` and shape the arm.
+///
+/// # Errors
+/// A call failed or the review left a path unreviewed: the arm is unverified, since
+/// an outage or an incomplete review must not read as a pass or an ordinary miss.
 fn arm_report(
   prepared: &Prepared,
+  plan: &Plan<'_>,
   case: &Case,
   (setting, arm, runtime_ms): (Setting, Arm, u64),
   reviewed: review::Reviewed,
-) -> ArmReport {
+) -> Result<ArmReport, String> {
+  let failed: Vec<String> = reviewed
+    .calls
+    .iter()
+    .filter(|call| !answered(call))
+    .map(|call| format!("{} call: {}", call.stage.name(), call.outcome))
+    .collect();
   let calls: Vec<CallRecord> = reviewed
     .calls
     .iter()
-    .map(|call| CallRecord::from_call(call, origin(call)))
+    .map(|call| CallRecord::from_call(call, origin(plan.mode)))
     .collect();
   let effort = reviewed.effort.level;
   let (report, _recap) = pipeline::completed(
@@ -237,6 +249,26 @@ fn arm_report(
     &prepared.prior,
     reviewed,
   );
+  if !report.is_complete() {
+    let mut why = failed;
+    why.extend(
+      report
+        .error
+        .iter()
+        .map(|error| format!("review error: {}", error.message)),
+    );
+    why.extend(
+      report
+        .coverage
+        .unreviewed
+        .iter()
+        .map(|item| format!("unreviewed {}: {}", item.path, item.reason)),
+    );
+    return Err(format!("incomplete review: {}", why.join(", ")));
+  }
+  if !failed.is_empty() {
+    return Err(format!("failed calls: {}", failed.join(", ")));
+  }
   let run = Run {
     arm,
     setting,
@@ -246,7 +278,7 @@ fn arm_report(
     runtime_ms,
   };
   let outcome = match_findings(&case.expectations, &report.findings);
-  ArmReport::new(run, &report.findings, outcome)
+  Ok(ArmReport::new(run, &report.findings, outcome))
 }
 
 fn prepare(
@@ -292,6 +324,16 @@ pub fn run_case(fixtures: &Fixtures, case: &Case, plan: &Plan<'_>) -> Result<Cas
   let (repo, prepared) = prepare(fixtures, case, plan)?;
   let mut arms = Vec::new();
   let mut unverified = Vec::new();
+  if plan
+    .settings
+    .iter()
+    .all(|setting| plan.arms.arms(*setting).is_empty())
+  {
+    unverified.push(format!(
+      "no arm selected: {:?} runs nothing at the chosen effort",
+      plan.arms
+    ));
+  }
   for setting in plan.settings {
     for arm in plan.arms.arms(*setting) {
       match run_arm(&prepared, plan, (*setting, arm), case) {

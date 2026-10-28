@@ -14,7 +14,9 @@ const FILE: &str = r#"{
       ],
       "gate": {"blocking_severities_drive_count": true, "advisory_never_blocks": true}
     },
-    {"id": "drift", "class": "memory_drift", "expectations": []}
+    {"id": "drift", "class": "memory_drift", "expectations": [
+      {"id": "kept-open", "path": "src/lib.rs", "claim": "stale", "kind": "defect"}
+    ]}
   ]
 }"#;
 
@@ -52,4 +54,50 @@ fn malformed_json_and_unknown_kinds_are_errors() {
   assert!(CaseSet::parse("not json").is_err());
   let bad = FILE.replace("\"defect\"", "\"typo\"");
   assert!(CaseSet::parse(&bad).is_err());
+}
+
+fn one_case(id: &str, rows: &str) -> String {
+  format!(
+    r#"{{"version": 1, "cases": [{{"id": "{id}", "class": "supported", "expectations": [{rows}]}}]}}"#
+  )
+}
+
+const ROW: &str = r#"{"id": "d", "path": "a.rs", "claim": "x", "kind": "defect"}"#;
+
+#[test]
+fn an_empty_set_is_refused() {
+  let error = CaseSet::parse(r#"{"version": 1, "cases": []}"#).unwrap_err();
+  assert!(error.contains("no cases"), "{error}");
+}
+
+#[test]
+fn a_case_without_expectations_is_refused() {
+  let error = CaseSet::parse(&one_case("c", "")).unwrap_err();
+  assert!(error.contains("case c has no expectations"), "{error}");
+}
+
+#[test]
+fn duplicate_case_ids_and_duplicate_expectation_ids_are_refused() {
+  let twice = format!(
+    r#"{{"version": 1, "cases": [
+      {{"id": "c", "class": "supported", "expectations": [{ROW}]}},
+      {{"id": "c", "class": "supported", "expectations": [{ROW}]}}
+    ]}}"#
+  );
+  let error = CaseSet::parse(&twice).unwrap_err();
+  assert!(error.contains("duplicate case id c"), "{error}");
+  let error = CaseSet::parse(&one_case("c", &format!("{ROW},{ROW}"))).unwrap_err();
+  assert!(error.contains("repeats expectation id d"), "{error}");
+}
+
+#[test]
+fn a_case_id_must_be_a_plain_name() {
+  assert!(CaseSet::parse(&one_case("ok_Case-1", ROW)).is_ok());
+  for bad in ["", "../escape", "a/b", "has space", "dot.ted"] {
+    let error = CaseSet::parse(&one_case(bad, ROW)).unwrap_err();
+    assert!(
+      error.contains("must match [A-Za-z0-9_-]+"),
+      "{bad}: {error}"
+    );
+  }
 }

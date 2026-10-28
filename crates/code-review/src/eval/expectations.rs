@@ -1,6 +1,8 @@
 //! The committed expectations file: the cases a harness run is judged against.
 //! The matcher reads `Expectation` rows; the runner (a later step) reads the rest.
 
+use std::collections::HashSet;
+
 use serde::{Deserialize, Serialize};
 
 /// The expectations file's version; any other value is refused.
@@ -85,6 +87,37 @@ pub struct Case {
   pub gate: Option<Gate>,
 }
 
+impl Case {
+  /// Refuse an id that is not a plain name, no expectations, or a repeated row id.
+  fn check(&self) -> Result<(), String> {
+    let plain = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-';
+    if self.id.is_empty() || !self.id.bytes().all(plain) {
+      return Err(format!(
+        "invalid expectations: case id {:?} must match [A-Za-z0-9_-]+",
+        self.id
+      ));
+    }
+    if self.expectations.is_empty() {
+      return Err(format!(
+        "invalid expectations: case {} has no expectations",
+        self.id
+      ));
+    }
+    let mut rows = HashSet::new();
+    match self
+      .expectations
+      .iter()
+      .find(|row| !rows.insert(row.id.as_str()))
+    {
+      Some(row) => Err(format!(
+        "invalid expectations: case {} repeats expectation id {}",
+        self.id, row.id
+      )),
+      None => Ok(()),
+    }
+  }
+}
+
 /// The whole expectations file.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CaseSet {
@@ -98,18 +131,38 @@ impl CaseSet {
   /// Parse the expectations file's text.
   ///
   /// # Errors
-  /// An unreadable document or an unknown version, never an empty set.
+  /// An unreadable document, an unknown version, an empty set, a case with an
+  /// invalid or duplicate id, a case without expectations, or a duplicate
+  /// expectation id within a case.
   pub fn parse(text: &str) -> Result<CaseSet, String> {
     let set: CaseSet =
       serde_json::from_str(text).map_err(|error| format!("invalid expectations: {error}"))?;
-    if set.version == SET_VERSION {
-      Ok(set)
-    } else {
-      Err(format!(
+    if set.version != SET_VERSION {
+      return Err(format!(
         "unsupported expectations version {} (expected {SET_VERSION})",
         set.version
-      ))
+      ));
     }
+    set.check()?;
+    Ok(set)
+  }
+
+  /// Refuse a set that could pass without asserting anything.
+  fn check(&self) -> Result<(), String> {
+    if self.cases.is_empty() {
+      return Err("invalid expectations: no cases".to_owned());
+    }
+    let mut ids = HashSet::new();
+    for case in &self.cases {
+      case.check()?;
+      if !ids.insert(case.id.as_str()) {
+        return Err(format!(
+          "invalid expectations: duplicate case id {}",
+          case.id
+        ));
+      }
+    }
+    Ok(())
   }
 
   /// The case named `id`.

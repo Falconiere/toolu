@@ -48,16 +48,21 @@ pub enum Verdict {
   Satisfied,
   /// A defect was missed or a gate-contract flag failed.
   Missed,
-  /// Something could not be verified: a replay miss or an unavailable provider.
+  /// Something could not be verified: a replay miss, an unavailable provider, an
+  /// incomplete review, or a case in which no arm ran.
   Unverified,
 }
 
 impl SuiteReport {
   /// How the run ended. A `none` arm is the known-weak baseline calibration measures
   /// against, so its misses never fail the run; every other arm must catch every
-  /// defect row.
+  /// defect row. A case with no arm proved nothing, so it is never satisfied.
   pub fn verdict(&self) -> Verdict {
-    if self.cases.iter().any(|case| !case.unverified.is_empty()) {
+    if self
+      .cases
+      .iter()
+      .any(|case| !case.unverified.is_empty() || case.report.arms.is_empty())
+    {
       return Verdict::Unverified;
     }
     let missed = self.cases.iter().any(|case| {
@@ -94,6 +99,9 @@ impl SuiteReport {
           arm.usage.cost_usd
         )
       }));
+      if case.report.arms.is_empty() && case.unverified.is_empty() {
+        lines.push(format!("{}: unverified: no arm ran", case.id));
+      }
       lines.extend(
         case
           .unverified
