@@ -167,7 +167,7 @@ impl Sandbox {
   /// A toolu origin repository whose `plugins/` holds real copies of the
   /// `toolu` and `ast-grep` plugins (the cursor installer's source); commits and
   /// tags `tag`, setting every plugin's version to `version` when given.
-  pub(crate) fn cursor_origin(&self, tag: &str, version: Option<&str>) -> String {
+  pub(crate) fn local_origin(&self, tag: &str, version: Option<&str>) -> String {
     let dir = self.path("origin");
     if !dir.join(".git").is_dir() {
       self.git(&["init", "--quiet", &dir.display().to_string()]);

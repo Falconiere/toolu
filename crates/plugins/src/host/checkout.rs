@@ -22,6 +22,9 @@ const SUBDIR: &str = "toolu/muse-marketplace";
 /// The checkout directory of Cursor's installer under the data home (#589).
 pub(crate) const CURSOR_SUBDIR: &str = "toolu/cursor-marketplace";
 
+/// The checkout directory of `OpenCode`'s installer under the data home.
+pub(crate) const OPENCODE_SUBDIR: &str = "toolu/opencode-marketplace";
+
 /// The checkout of one release.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Checkout {

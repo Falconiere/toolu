@@ -22,7 +22,7 @@ Commands:
 Options:
       --json              Print exactly one JSON document on stdout
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -40,7 +40,7 @@ Options:
       --path <PATH>       Review only this path; repeatable. A path-scoped run never writes passing state
   -q, --quiet             Drop the diagnostics of a successful run
       --effort <LEVEL>    Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto [possible values: auto, small, medium, high, xhigh]
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```
@@ -58,7 +58,7 @@ Options:
       --arm <ARM>         Which arms to run: the Jev judge off, on, or both [default: both] [possible values: both, baseline, enhanced]
   -q, --quiet             Drop the diagnostics of a successful run
       --effort <LEVEL>    Effort setting to run; repeatable for calibration. none is the known-weak baseline (lowest level, never judged); default: auto [possible values: auto, small, medium, high, xhigh, none]
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
       --live              Call OpenRouter and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent
       --replay-dir <DIR>  Where recorded responses are read (replay) or written (--live); default: <cases>/replay
@@ -80,7 +80,7 @@ Options:
       --json              Print exactly one JSON document on stdout
       --reason <TEXT>
   -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help
 ```

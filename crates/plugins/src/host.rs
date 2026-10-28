@@ -3,7 +3,8 @@
 //! without asking, and several are never resolved silently (a terminal asks,
 //! otherwise the run refuses). At a terminal, install offers every supported
 //! host on the machine, Cursor included when `~/.cursor` or `cursor-agent` is
-//! there. `update` without `--host` asks nothing: it takes `with_toolu`.
+//! there and `OpenCode` when its config directory or `opencode` is. `update`
+//! without `--host` asks nothing: it takes `with_toolu`.
 
 use std::path::Path;
 
@@ -11,8 +12,8 @@ use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 
 use crate::args::Scope;
-use crate::cursor::store::Store;
 use crate::fail::{Fail, Res};
+use crate::local::store::Store;
 use crate::prompt::Ask;
 
 /// The plugin commands of Claude Code, Codex and Muse, normalized.
@@ -39,6 +40,8 @@ pub(crate) enum Target {
   Muse,
   /// Cursor, through its local plugins directory (#589).
   Cursor,
+  /// `OpenCode` V2, through its plugins directory and a generated shim.
+  Opencode,
 }
 
 /// The probe order: Muse comes last, so the order Claude Code and Codex users
@@ -53,6 +56,7 @@ impl Target {
       Target::Codex => "codex",
       Target::Muse => "muse",
       Target::Cursor => "cursor",
+      Target::Opencode => "opencode",
     }
   }
 
@@ -63,32 +67,35 @@ impl Target {
       Target::Codex => "Codex",
       Target::Muse => "Muse",
       Target::Cursor => "Cursor",
+      Target::Opencode => "OpenCode",
     }
   }
 
   /// Whether removal on this host reaches only toolu's plugins
-  /// (`<name>@toolu`, or Cursor's install marker), so `remove` may hand it the
+  /// (`<name>@toolu`, or the install marker of a copied directory), so `remove` may hand it the
   /// name of a plugin the marketplace retired (#615). Muse removes by bare
   /// name, from any source. A new target must decide here.
   pub(crate) fn removes_only_toolu(self) -> bool {
     match self {
-      Target::Claude | Target::Codex | Target::Cursor => true,
+      Target::Claude | Target::Codex | Target::Cursor | Target::Opencode => true,
       Target::Muse => false,
     }
   }
 }
 
 /// The installer target `--host` names; Hermes is not a target yet. Without a
-/// terminal Cursor is never detected (a machine with Cursor and another host
-/// would stop resolving silently), so a script names it with `--host cursor`.
+/// terminal Cursor and `OpenCode` are never detected (a machine with one of them
+/// and another host would stop resolving silently), so a script names them with
+/// `--host cursor` or `--host opencode`.
 pub(crate) fn target_of(host: Host) -> Res<Target> {
   match host {
     Host::Claude => Ok(Target::Claude),
     Host::Codex => Ok(Target::Codex),
     Host::Muse => Ok(Target::Muse),
     Host::Cursor => Ok(Target::Cursor),
+    Host::Opencode => Ok(Target::Opencode),
     Host::Hermes => Err(Fail::usage(format!(
-      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse or cursor",
+      "--host {} is not an installer target; toolu plugins installs into claude, codex, muse, cursor or opencode",
       host.name()
     ))),
   }
@@ -117,22 +124,37 @@ pub(crate) fn available(env: &Env) -> Vec<Target> {
 }
 
 /// Every supported host on this machine: those on `PATH`, then Cursor when
-/// `~/.cursor` exists or `cursor-agent` is on `PATH` (install's picker).
+/// `~/.cursor` exists or `cursor-agent` is on `PATH`, then `OpenCode` when its
+/// config directory exists or `opencode` is on `PATH` (install's picker).
 pub(crate) fn detected(env: &Env) -> Vec<Target> {
   let mut found = available(env);
   // `~/.cursor` itself: `TOOLU_CONFIG_DIR` would answer for every host.
   if env.home().join(".cursor").is_dir() || on_path("cursor-agent", env) {
     found.push(Target::Cursor);
   }
+  if opencode_config(env).is_dir() || on_path("opencode", env) {
+    found.push(Target::Opencode);
+  }
   found
 }
 
-/// The hosts on `PATH`, then Cursor when toolu installed a plugin there, so a
-/// leftover `~/.cursor` never asks which host `list`, `remove` or `update` means.
+/// `OpenCode`'s global config directory, read without `TOOLU_CONFIG_DIR`.
+fn opencode_config(env: &Env) -> std::path::PathBuf {
+  env
+    .get("XDG_CONFIG_HOME")
+    .map_or_else(|| env.home().join(".config"), std::path::PathBuf::from)
+    .join("opencode")
+}
+
+/// The hosts on `PATH`, then Cursor and `OpenCode` when toolu installed a plugin
+/// there, so a leftover `~/.cursor` never asks which host `list`, `remove` or
+/// `update` means.
 pub(crate) fn with_toolu(env: &Env) -> Vec<Target> {
   let mut found = available(env);
-  if !Store::locate(env).ours().is_empty() {
-    found.push(Target::Cursor);
+  for target in [Target::Cursor, Target::Opencode] {
+    if !Store::locate(env, target).ours().is_empty() {
+      found.push(target);
+    }
   }
   found
 }
@@ -215,10 +237,12 @@ pub(crate) fn resolve(
 /// Claude Code takes every scope, the other hosts none.
 pub(crate) fn check_scope(scope: Option<Scope>, target: Target) -> Res<()> {
   match (scope, target) {
-    (Some(_), Target::Codex | Target::Muse | Target::Cursor) => Err(Fail::usage(format!(
-      "--scope is for Claude Code; {} has no scope concept",
-      target.name()
-    ))),
+    (Some(_), Target::Codex | Target::Muse | Target::Cursor | Target::Opencode) => {
+      Err(Fail::usage(format!(
+        "--scope is for Claude Code; {} has no scope concept",
+        target.name()
+      )))
+    }
     (None, _) | (Some(_), Target::Claude) => Ok(()),
   }
 }

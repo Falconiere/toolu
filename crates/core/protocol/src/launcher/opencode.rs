@@ -1,0 +1,66 @@
+//! The `OpenCode` V2 plugin shim: the `server.js` the `OpenCode` installer
+//! (`toolu plugins install --host opencode`) writes into each plugin directory
+//! it copies, so `OpenCode` loads the directory as a plugin. `OpenCode` plugins can only be JavaScript, so the shim is
+//! the one JavaScript toolu ships, filled in from `opencode.js`. It holds no
+//! policy: it registers the `OpenCode` hooks the plugin's `hooks.json` needs,
+//! resolves `toolu` as the `hooks.json` launcher does, and hands every call to
+//! `toolu opencode bridge`. A missing binary or a failed bridge refuses a tool
+//! call and is logged on every other hook; a setup failure refuses every tool
+//! call, because `OpenCode` runs tools without a plugin whose setup throws.
+
+use serde_json::Value;
+
+use super::is_name;
+use crate::install::missing_message;
+use crate::opencode::Hook;
+
+/// The shim's file name: `OpenCode` loads a plugin directory's `server.js`.
+pub const FILE: &str = "server.js";
+
+/// The template; every `"__NAME__"` literal is replaced by a JSON value.
+const TEMPLATE: &str = include_str!("opencode.js");
+
+/// The shim of `plugin`, registering `hooks` and, when `catalog` is set, the
+/// plugin's skills and commands.
+///
+/// # Errors
+/// When `plugin` fails the name pattern.
+pub fn shim(plugin: &str, hooks: &[Hook], catalog: bool) -> Result<String, String> {
+  if !is_name(plugin) {
+    return Err(format!(
+      "plugin must match ^[a-z0-9]+(-[a-z0-9]+)*$: {plugin:?}"
+    ));
+  }
+  let names: Vec<Value> = Hook::ALL
+    .into_iter()
+    .filter(|hook| hooks.contains(hook))
+    .map(|hook| hook.name().into())
+    .collect();
+  let fill = [
+    ("PLUGIN", Value::from(plugin)),
+    ("HOOKS", Value::Array(names)),
+    ("CATALOG", Value::from(catalog)),
+    ("MISSING", Value::from(missing_message(plugin))),
+  ];
+  Ok(
+    fill
+      .into_iter()
+      .fold(TEMPLATE.to_owned(), |text, (name, value)| {
+        text.replace(&format!("\"__{name}__\""), &value.to_string())
+      }),
+  )
+}
+
+/// The `OpenCode` hooks a `hooks.json` document needs, in [`Hook::ALL`] order;
+/// events `OpenCode` has no hook for are left out.
+pub fn hooks_of(hooks_json: &Value) -> Vec<Hook> {
+  let events = hooks_json.get("hooks").and_then(Value::as_object);
+  Hook::ALL
+    .into_iter()
+    .filter(|hook| events.is_some_and(|events| events.contains_key(hook.claude_event())))
+    .collect()
+}
+
+#[cfg(test)]
+#[path = "tests/opencode_test.rs"]
+mod tests;

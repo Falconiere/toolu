@@ -86,6 +86,10 @@ impl Roots {
         },
         PathBuf::from,
       ),
+      Host::Opencode => env
+        .get("XDG_CONFIG_HOME")
+        .map_or_else(|| env.home().join(".config"), PathBuf::from)
+        .join("opencode"),
     }
   }
 
@@ -95,7 +99,7 @@ impl Roots {
     let own = match self.host {
       Host::Claude => self.env.get("CLAUDE_PROJECT_DIR"),
       Host::Cursor => self.env.get("CURSOR_PROJECT_DIR"),
-      Host::Codex | Host::Hermes | Host::Muse => None,
+      Host::Codex | Host::Hermes | Host::Muse | Host::Opencode => None,
     };
     if let Some(dir) = self.env.get("TOOLU_PROJECT_DIR").or(own) {
       return Some(PathBuf::from(dir));
@@ -107,7 +111,7 @@ impl Roots {
     git::toplevel(&self.env, &cwd)
   }
 
-  /// `.claude`, `.codex`, `.cursor`, `.hermes` or Muse's `.agents`, unless
+  /// `.claude`, `.codex`, `.cursor`, `.hermes`, `.opencode` or Muse's `.agents`, unless
   /// `TOOLU_PROJECT_CONFIG_DIRNAME` names another.
   pub fn project_dirname(&self) -> String {
     match self.env.get("TOOLU_PROJECT_CONFIG_DIRNAME") {
@@ -162,7 +166,8 @@ impl Roots {
       Host::Codex => self.env.get("PLUGIN_ROOT"),
       Host::Cursor => self.env.get("CURSOR_PLUGIN_ROOT"),
       Host::Muse => self.env.get("MUSE_PLUGIN_ROOT"),
-      Host::Claude | Host::Hermes => None,
+      // The OpenCode bridge exports `CLAUDE_PLUGIN_ROOT` to the hooks it runs.
+      Host::Claude | Host::Hermes | Host::Opencode => None,
     };
     own
       .or(self.env.get("CLAUDE_PLUGIN_ROOT"))
@@ -174,7 +179,7 @@ impl Roots {
     let own = match self.host {
       Host::Codex => self.env.get("PLUGIN_DATA"),
       Host::Muse => self.env.get("MUSE_PLUGIN_DATA_DIR"),
-      Host::Claude | Host::Cursor | Host::Hermes => None,
+      Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => None,
     };
     own
       .or(self.env.get("CLAUDE_PLUGIN_DATA"))
@@ -190,7 +195,7 @@ impl Roots {
     require("invocation", "name", name)?;
     Ok(match self.host {
       Host::Codex => format!("${namespace}:{name}"),
-      Host::Claude | Host::Cursor | Host::Hermes | Host::Muse => {
+      Host::Claude | Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode => {
         format!("/{namespace}:{name}")
       }
     })
@@ -206,7 +211,7 @@ impl Roots {
       Host::Claude => Some(format!("/plugin install {spec}")),
       Host::Codex => Some(format!("codex plugin add {spec}")),
       Host::Muse => Some(format!("muse plugins install {spec}")),
-      Host::Cursor | Host::Hermes => None,
+      Host::Cursor | Host::Hermes | Host::Opencode => None,
     })
   }
 
@@ -220,7 +225,7 @@ impl Roots {
       Host::Claude => Some(format!("claude plugin uninstall {name}@toolu")),
       Host::Codex => Some(format!("codex plugin remove {name}@toolu")),
       Host::Muse => Some(format!("muse plugins remove {name}")),
-      Host::Cursor | Host::Hermes => None,
+      Host::Cursor | Host::Hermes | Host::Opencode => None,
     })
   }
 }

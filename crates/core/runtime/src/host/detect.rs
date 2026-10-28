@@ -16,8 +16,9 @@ pub struct Detected {
 
 /// Resolves the host, first hit wins: `TOOLU_HOST_OVERRIDE`, a hook event name
 /// only one host uses, Cursor's per-hook variables, Muse's identity variables,
-/// Codex's `PLUGIN_ROOT`, then Claude. Hermes documents no hook environment,
-/// so only its event names (or the override) select it.
+/// Codex's `PLUGIN_ROOT`, `OpenCode`'s shell variables, then Claude. Hermes
+/// documents no hook environment, so only its event names (or the override)
+/// select it. The `OpenCode` bridge sets the override for the hooks it runs.
 pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
   let mut warning = None;
   if let Some(name) = env.get("TOOLU_HOST_OVERRIDE") {
@@ -49,9 +50,18 @@ pub fn detect(env: &Env, hook_event_name: Option<&str>) -> Detected {
       Host::Muse
     }
     _ if env.get("PLUGIN_ROOT").is_some() => Host::Codex,
+    _ if opencode(env) => Host::Opencode,
     _ => Host::Claude,
   };
   Detected { host, warning }
+}
+
+/// `OpenCode`'s shell exports `OPENCODE=1` and `OPENCODE_SESSION_ID` to every
+/// command it runs. Claude Code started from that shell inherits them, so its
+/// own `CLAUDECODE` marker wins.
+fn opencode(env: &Env) -> bool {
+  env.get("CLAUDECODE").is_none()
+    && (env.get("OPENCODE_SESSION_ID").is_some() || env.get("OPENCODE") == Some("1"))
 }
 
 #[cfg(test)]

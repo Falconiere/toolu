@@ -64,6 +64,9 @@ pub(crate) fn install(hook: &Hook, specs: &[&str]) -> Res<()> {
         &format!(r#"{{"version":2,"plugins":{{{}}}}}"#, plugins.join(",")),
       )
     }
-    Host::Muse => Err("Muse install records are not supported yet".to_owned()),
+    Host::Muse | Host::Opencode => Err(format!(
+      "{} install records are not supported yet",
+      hook.host.name()
+    )),
   }
 }

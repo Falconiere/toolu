@@ -59,6 +59,9 @@ pub enum Payload {
   Hermes(HermesPayload),
   /// Muse Code: Claude's shape with Muse's own tool names.
   Muse(HookPayload),
+  /// `OpenCode`: Claude's shape, which `toolu opencode bridge` translates its
+  /// hook events into before a hook runs (`crate::opencode::event`).
+  Opencode(HookPayload),
 }
 
 /// Parse `text` as `host`'s payload.
@@ -73,6 +76,7 @@ pub fn parse(host: Host, text: &str) -> Result<Payload, serde_json::Error> {
     Host::Cursor => Payload::Cursor(serde_json::from_str(text)?),
     Host::Hermes => Payload::Hermes(serde_json::from_str(text)?),
     Host::Muse => Payload::Muse(serde_json::from_str(text)?),
+    Host::Opencode => Payload::Opencode(serde_json::from_str(text)?),
   })
 }
 

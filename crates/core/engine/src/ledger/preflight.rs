@@ -40,7 +40,7 @@ fn heal_ledger_for(opts: &LedgerOptions) -> String {
 fn review_remedy(host: Host, phase: &str) -> String {
   let action = match host {
     Host::Claude | Host::Codex => "run /delivery-flow:delivery-flow",
-    Host::Cursor | Host::Hermes | Host::Muse => "load the delivery-flow skill",
+    Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode => "load the delivery-flow skill",
   };
   format!("{action} ({phase} review phase)")
 }

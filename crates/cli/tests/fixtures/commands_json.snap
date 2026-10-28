@@ -537,6 +537,95 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
+      "about": "Run toolu plugins under OpenCode; their generated server.js calls these",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Run a plugin's hooks for one OpenCode hook call read from stdin",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The OpenCode hook the call came from",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [
+                "session.start",
+                "session.prompt",
+                "session.compaction",
+                "tool.execute.before",
+                "tool.execute.after"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "HOOK"
+            },
+            {
+              "global": false,
+              "help": "The plugin directory: the shim's own",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "bridge",
+          "owner": "toolu",
+          "path": [
+            "opencode",
+            "bridge"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Print a plugin's skills and commands as OpenCode registers them",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The plugin directory: the shim's own",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "catalog",
+          "owner": "toolu",
+          "path": [
+            "opencode",
+            "catalog"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "opencode",
+      "owner": "toolu",
+      "path": [
+        "opencode"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "TypeScript quality rules that run after each edit",
       "aliases": [],
       "args": [],
@@ -5434,7 +5523,8 @@ source: crates/cli/tests/helpers/schema.rs
         "codex",
         "cursor",
         "hermes",
-        "muse"
+        "muse",
+        "opencode"
       ],
       "required": false,
       "short": null,

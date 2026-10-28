@@ -1,6 +1,6 @@
 //! Plugin install records as session-start saw them (`plugin-presence.ts`).
 //! Codex reads its snapshot; Cursor and Hermes use Claude's install file.
-//! Muse has no shared install record, so its presence is unknown here.
+//! Muse and `OpenCode` have no shared install record, so their presence is unknown here.
 
 use toolu_engine::registry::gate::plugin_presence;
 use toolu_protocol::host::Host;
@@ -13,7 +13,8 @@ pub(crate) fn presence(spec: &str, env: &Env, host: Host) -> Installed {
   let mapped = match host {
     Host::Cursor | Host::Hermes => Host::Claude,
     Host::Claude | Host::Codex => host,
-    Host::Muse => {
+    // Neither keeps an install record the engine reads: unknown runs the rules.
+    Host::Muse | Host::Opencode => {
       return if spec.is_empty() {
         Installed::Absent
       } else {
@@ -34,6 +35,10 @@ pub(crate) fn install_command(spec: &str, host: Host) -> String {
   match host {
     Host::Codex => format!("codex plugin add {spec}"),
     Host::Muse => format!("muse plugins install {spec}"),
+    Host::Opencode => format!(
+      "toolu plugins install {} --host opencode",
+      spec.split('@').next().unwrap_or(spec)
+    ),
     Host::Claude | Host::Cursor | Host::Hermes => format!("/plugin install {spec}"),
   }
 }

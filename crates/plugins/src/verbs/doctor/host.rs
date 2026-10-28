@@ -7,10 +7,10 @@ use toolu_runtime::host::roots::Roots;
 use super::{Finding, HostReport, Scope, codex_pin, host_of, plugin, secrets};
 use crate::args::Request;
 use crate::catalog::Catalog;
-use crate::cursor;
 use crate::dispatch::{Context, driver};
 use crate::host::Target;
 use crate::host::adapter::Installed;
+use crate::local;
 
 /// Why inventory could not be read; never includes host stderr.
 pub(super) enum InventoryFail {
@@ -89,8 +89,8 @@ fn inventory(
   request: &Request,
   cx: &Context<'_>,
 ) -> (Vec<Installed>, Option<InventoryFail>) {
-  if target == Target::Cursor {
-    return (cursor_inventory(cx), None);
+  if matches!(target, Target::Cursor | Target::Opencode) {
+    return (local_inventory(target, cx), None);
   }
   let driver = match driver(target, request, cx) {
     Ok(driver) => driver,
@@ -109,15 +109,16 @@ fn inventory(
   }
 }
 
-fn cursor_inventory(cx: &Context<'_>) -> Vec<Installed> {
-  let store = cursor::store::Store::locate(&cx.env);
+/// The plugins toolu copied into a local-directory host (Cursor, `OpenCode`).
+fn local_inventory(target: Target, cx: &Context<'_>) -> Vec<Installed> {
+  let store = local::store::Store::locate(&cx.env, target);
   store
     .ours()
     .into_iter()
     .map(|name| {
       let version = match store.state(&name) {
-        cursor::store::State::Ours(version) => version.unwrap_or_else(|| "?".to_owned()),
-        cursor::store::State::Absent | cursor::store::State::Foreign => "?".to_owned(),
+        local::store::State::Ours(version) => version.unwrap_or_else(|| "?".to_owned()),
+        local::store::State::Absent | local::store::State::Foreign => "?".to_owned(),
       };
       Installed {
         name: name.clone(),

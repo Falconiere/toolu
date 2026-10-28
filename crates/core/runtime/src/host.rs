@@ -11,6 +11,8 @@ pub mod cursor;
 pub mod detect;
 /// Muse config paths and sandbox readability probes.
 pub mod muse;
+/// `OpenCode` plugin directories.
+pub mod opencode;
 /// Config, project, state and plugin roots.
 pub mod roots;
 /// Codex plugin inventory snapshot.

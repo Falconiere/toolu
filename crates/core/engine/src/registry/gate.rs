@@ -21,7 +21,7 @@ pub fn plugin_presence(spec: &str, roots: &Roots) -> Installed {
   match roots.host() {
     Host::Codex => codex_plugin_installed(spec, roots),
     Host::Claude => claude_presence(spec, roots.env()),
-    Host::Cursor | Host::Hermes | Host::Muse => Installed::Unknown,
+    Host::Cursor | Host::Hermes | Host::Muse | Host::Opencode => Installed::Unknown,
   }
 }
 

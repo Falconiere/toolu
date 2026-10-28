@@ -88,6 +88,8 @@ toolu supports Claude Code, Codex and Muse Code. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux. Muse Code
 is installed through `toolu plugins install --host muse`; see
 [docs/install.md](docs/install.md#on-muse) for the install, approve and verify steps.
+OpenCode V2 is installed through `toolu plugins install --host opencode`; see
+[docs/opencode.md](docs/opencode.md).
 
 **Prerequisite:** the native `toolu` binary. Every hook, skill command and agent command runs it; Bun is not used or needed on any host. Resolution order, missing-binary behaviour, and rationale: [docs/runtime.md](docs/runtime.md).
 

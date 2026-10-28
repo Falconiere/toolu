@@ -35,6 +35,8 @@ A `TOOLU_BIN` that does not name a native `toolu` is never replaced by another c
 
 On Muse, startup and resume put that title, runtime line and any session guidance in one `systemMessage`. Prompt hints use the same field. The native binary check shares a once-per-session marker across plugin hooks and gives a Muse install command or an absolute native path when plain `toolu` is unavailable to agent commands.
 
+On OpenCode, hooks.json is not run by the host: each installed plugin's generated `server.js` resolves `toolu` in the same order and hands every hook call to `toolu opencode bridge`, which runs the plugin's `hooks.json` entries as the binary itself. A missing binary refuses tool calls and is logged on the other hooks ([OpenCode](opencode.md)).
+
 Agent command tools use a non-login shell. Their plain `toolu` reachability and the SessionStart absolute-path advice are checked separately; see [Agent command shell](install.md#agent-command-shell).
 
 ## Migrating from the Bun runtime

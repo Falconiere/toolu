@@ -6,17 +6,20 @@ use crate::args::Scope;
 use crate::support::{Answer, Sandbox};
 
 #[test]
-fn installer_targets_are_claude_codex_muse_and_cursor() {
+fn installer_targets_are_claude_codex_muse_cursor_and_opencode() {
   assert_eq!(target_of(Host::Claude), Ok(Target::Claude));
   assert_eq!(target_of(Host::Codex), Ok(Target::Codex));
   assert_eq!(target_of(Host::Muse), Ok(Target::Muse));
   assert_eq!(target_of(Host::Cursor), Ok(Target::Cursor));
+  assert_eq!(target_of(Host::Opencode), Ok(Target::Opencode));
   let Err(fail) = target_of(Host::Hermes) else {
     panic!("hermes was accepted");
   };
   assert_eq!(fail.exit, Exit::Usage);
   assert!(
-    fail.message.contains("claude, codex, muse or cursor"),
+    fail
+      .message
+      .contains("claude, codex, muse, cursor or opencode"),
     "{}",
     fail.message
   );
@@ -165,10 +168,16 @@ fn scopes_follow_each_host() {
 
 #[test]
 fn only_hosts_whose_removal_reaches_only_toolu_take_retired_names() {
-  let hosts = [Target::Claude, Target::Codex, Target::Cursor, Target::Muse];
+  let hosts = [
+    Target::Claude,
+    Target::Codex,
+    Target::Cursor,
+    Target::Opencode,
+    Target::Muse,
+  ];
   assert_eq!(
     hosts.map(Target::removes_only_toolu),
-    [true, true, true, false]
+    [true, true, true, true, false]
   );
 }
 
