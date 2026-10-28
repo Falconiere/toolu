@@ -21,7 +21,7 @@ use toolu_jev_client::{Answer, Jev, Question, Questions, State};
 use toolu_openrouter::Client;
 use toolu_runtime::env::Env;
 
-pub use calls::{Call, Record, Recorder, Stage};
+pub use calls::{Call, Record, Stage};
 pub use effort::{EffortChoice, EffortSource};
 
 use crate::budget::{Budget, Effort, Judge};
@@ -70,7 +70,7 @@ pub struct Options<'a> {
   /// `false` skips the Jev stage: the baseline arm of #670.
   pub skip_judge: bool,
   /// Receives every raw exchange (#670).
-  pub recorder: Option<Recorder<'a>>,
+  pub recorder: Option<&'a dyn Fn(&Record<'_>)>,
   /// Overrides the level's review-call deadline.
   pub review_deadline: Option<Duration>,
   /// Overrides the level's shared judge deadline.

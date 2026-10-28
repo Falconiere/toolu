@@ -15,7 +15,7 @@ use crate::budget::Effort;
 const SECTION: &str = "codeReview";
 
 /// What a run without the opt-in tells the agent; it sends nothing.
-pub const ENABLE_HINT: &str = "code review is not enabled for this repository, so nothing was sent; ask the user to opt in with \"codeReview\": {\"enabled\": true} in the project toolu.config.json (a user-level setting cannot enable it)";
+pub(crate) const ENABLE_HINT: &str = "code review is not enabled for this repository, so nothing was sent; ask the user to opt in with \"codeReview\": {\"enabled\": true} in the project toolu.config.json (a user-level setting cannot enable it)";
 
 /// The plugin's settings for one repository.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -35,7 +35,7 @@ pub fn load(roots: &Roots, cwd: Option<&Path>) -> Settings {
 }
 
 /// The settings in an already loaded config.
-pub fn from_config(config: &LoadedConfig) -> Settings {
+fn from_config(config: &LoadedConfig) -> Settings {
   let mut settings = Settings::default();
   if let Some(reason) = &config.invalid {
     settings.notes.push(format!(

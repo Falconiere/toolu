@@ -58,7 +58,7 @@ pub struct Record<'a> {
 }
 
 /// Receives every exchange of a run.
-pub type Recorder<'a> = &'a dyn Fn(&Record<'_>);
+pub(crate) type Recorder<'a> = &'a dyn Fn(&Record<'_>);
 
 /// The calls of one run.
 pub(crate) struct Ledger<'a> {

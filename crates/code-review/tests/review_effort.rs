@@ -12,7 +12,7 @@ use serde_json::{Value, json};
 use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::Severity;
 use toolu_code_review::memory::{Memory, PriorFinding, Status};
-use toolu_code_review::review::{EffortSource, Options, RunError, Stage};
+use toolu_code_review::review::{EffortChoice, EffortSource, Options, RunError, Stage};
 use toolu_code_review::settings::Settings;
 use toolu_http_test_support::Reply;
 
@@ -88,7 +88,8 @@ fn a_docs_change_picks_small_and_logs_the_selector() {
     !state.to_string().contains("two"),
     "no source in the selector state"
   );
-  let doc = serde_json::to_value(&reviewed.effort).unwrap();
+  let choice: &EffortChoice = &reviewed.effort;
+  let doc = serde_json::to_value(choice).unwrap();
   assert_eq!(
     doc,
     json!({"level": "small", "source": "auto", "reason": "Jev score 0.20"})
