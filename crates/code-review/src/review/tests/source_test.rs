@@ -278,3 +278,29 @@ fn a_definition_named_too_often_is_skipped_with_a_note() {
     "{notes:?}"
   );
 }
+
+#[test]
+fn a_caller_in_a_path_holding_a_colon_keeps_its_path_and_line() {
+  let changed = LEVELS.replace("_ => 2", "_ => 1");
+  let dir = repo(
+    &[
+      ("src/levels.rs", LEVELS.to_owned()),
+      ("src/odd:name.rs", REPORT.to_owned()),
+    ],
+    &[("src/levels.rs", changed)],
+  );
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let (found, notes) = packages(
+    &env,
+    dir.path(),
+    &shaped,
+    Effort::High.budget(),
+    &Mask::default(),
+  );
+  let context = found[0].context.as_deref().unwrap_or_default();
+  assert!(
+    context.contains("src/odd:name.rs:4:     LABELS[parse_level(name) as usize]\n"),
+    "{context} {notes:?}"
+  );
+}

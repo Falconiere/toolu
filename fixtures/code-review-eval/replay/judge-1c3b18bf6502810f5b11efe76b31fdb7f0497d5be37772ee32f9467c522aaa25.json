@@ -1,1 +1,1 @@
-{"model":"typesafe/jev-1.13-20260917","answers":{"f0":{"type":"choice","choice":"supported","probabilities":{"contradicted":0,"insufficient":0,"supported":1},"confidence":1}},"usage":{"input_tokens":585,"output_tokens":45,"cost":0.00002457},"id":"gen-dec-1793218852-UUtNQdfWtNEROCSSnzrj","provider":"TypeSafe"}
+{"model":"typesafe/jev-1.13-20260917","answers":{"f0":{"type":"choice","choice":"supported","probabilities":{"contradicted":0,"insufficient":0,"supported":1},"confidence":1}},"usage":{"input_tokens":585,"output_tokens":45,"cost":0.00002457},"provider":"TypeSafe"}

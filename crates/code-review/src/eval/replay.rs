@@ -7,6 +7,7 @@
 use std::path::{Path, PathBuf};
 
 use ring::digest::{SHA256, digest};
+use serde_json::Value;
 
 use crate::review::Stage;
 
@@ -62,7 +63,8 @@ impl Store {
     }
   }
 
-  /// Record `response` as the answer to `request`, replacing an earlier one.
+  /// Record `response` as the answer to `request`, replacing an earlier one,
+  /// without the provider's top-level `id`.
   ///
   /// # Errors
   /// The directory or file cannot be written.
@@ -70,8 +72,22 @@ impl Store {
     std::fs::create_dir_all(&self.dir)
       .map_err(|error| format!("{}: {error}", self.dir.display()))?;
     let file = self.file(stage, request);
-    std::fs::write(&file, response).map_err(|error| format!("{}: {error}", file.display()))
+    std::fs::write(&file, without_id(response))
+      .map_err(|error| format!("{}: {error}", file.display()))
   }
+}
+
+/// `response` without a JSON object's top-level `id`: the provider's random
+/// per-request token, which no client reads and which the secrets scanner flags
+/// once recordings are committed. Any other text is kept as it is.
+fn without_id(response: &str) -> String {
+  let Ok(Value::Object(mut fields)) = serde_json::from_str::<Value>(response) else {
+    return response.to_owned();
+  };
+  if fields.remove("id").is_none() {
+    return response.to_owned();
+  }
+  Value::Object(fields).to_string()
 }
 
 #[cfg(test)]

@@ -36,3 +36,25 @@ fn a_written_response_reads_back_and_a_different_request_misses() {
     .join(format!("{}.json", Store::key(Stage::Review, "req")));
   assert!(file.is_file());
 }
+
+#[test]
+fn a_recorded_response_drops_the_provider_id_and_keeps_everything_else() {
+  let dir = tempfile::tempdir().expect("fs");
+  let store = Store::new(dir.path());
+  let body = r#"{"model":"m","answers":{"f0":{"choice":"supported"}},"id":"gen-dec-1-UUtNQdfWtNEROCSSnzrj"}"#;
+  store.write(Stage::Judge, "req", body).expect("fs");
+  let read = store
+    .read(Stage::Judge, "req")
+    .expect("fs")
+    .expect("recorded");
+  let value: serde_json::Value = serde_json::from_str(&read).expect("json");
+  assert_eq!(
+    value,
+    serde_json::json!({"model": "m", "answers": {"f0": {"choice": "supported"}}})
+  );
+  // Text that is not an object with an id is stored byte for byte.
+  for kept in ["{\"a\":1}", "[1,2]", "not json"] {
+    store.write(Stage::Review, kept, kept).expect("fs");
+    assert_eq!(store.read(Stage::Review, kept), Ok(Some(kept.to_owned())));
+  }
+}

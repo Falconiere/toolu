@@ -99,7 +99,10 @@ fn enclosing(file: &ShapedFile, text: &str, notes: &mut Vec<String>) -> BTreeMap
 /// Every `HEAD` line naming `name` as a whole word, as `(path, line, text)`;
 /// `None` when Git fails or there are more than `CONTEXT_HITS_MAX`.
 fn references(env: &Env, root: &Path, name: &str) -> Option<Vec<(String, u32, String)>> {
-  let args = ["grep", "-n", "-w", "-I", "-F", "-e", name, "HEAD", "--"];
+  // `-z` ends the path and the line number with NUL, so a path may hold `:`.
+  let args = [
+    "grep", "-n", "-z", "-w", "-I", "-F", "-e", name, "HEAD", "--",
+  ];
   let out = git_process(env, root, &args, GREP_MAX_BYTES).ok()?;
   // Exit 1 is Git's "no match": an empty answer, not a failure.
   if out.timed_out || out.truncated || !matches!(out.exit_code, 0 | 1) {
@@ -108,7 +111,7 @@ fn references(env: &Env, root: &Path, name: &str) -> Option<Vec<(String, u32, St
   let hits: Vec<(String, u32, String)> = String::from_utf8_lossy(&out.stdout_bytes)
     .lines()
     .filter_map(|hit| {
-      let mut parts = hit.strip_prefix("HEAD:")?.splitn(3, ':');
+      let mut parts = hit.strip_prefix("HEAD:")?.splitn(3, '\0');
       let (path, line, text) = (parts.next()?, parts.next()?, parts.next()?);
       Some((
         path.to_owned(),
