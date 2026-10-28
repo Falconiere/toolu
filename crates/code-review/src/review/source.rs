@@ -2,7 +2,8 @@
 //! surrounding source from `HEAD`. Added files carry no source (their patch is the
 //! whole file) and deleted files have none. A source over the level's per-file cap,
 //! or one that would take its package (parent directory) over the package cap, is
-//! left out whole with a note, never cut mid-file.
+//! left out whole with a note, never cut mid-file. Source lines are outside the
+//! pre-pass scan, so the secret scanner masks them here before they leave.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -12,6 +13,7 @@ use toolu_runtime::env::Env;
 
 use super::mask::Mask;
 use crate::budget::Budget;
+use crate::prepass::redact_text;
 use crate::shape::git_io::git_process;
 use crate::shape::{FileKind, Shaped, ShapedFile};
 
@@ -54,7 +56,7 @@ pub(crate) fn packages(
       Package {
         path: file.path.clone(),
         patch: mask.apply(&file.patch),
-        source: source.map(|text| mask.apply(&text)),
+        source: source.map(|text| mask.apply(&redact_text(&text))),
       }
     })
     .collect();
@@ -78,7 +80,7 @@ fn surrounding<'a>(
     env,
     root,
     &["cat-file", "blob", &object],
-    budget.source_file_bytes + 1,
+    budget.source_file_bytes,
   );
   let text = match read {
     Ok(out) if out.exit_code == 0 && !out.timed_out && !out.truncated => {

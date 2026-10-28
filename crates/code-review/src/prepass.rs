@@ -24,6 +24,23 @@ use crate::contract::{Finding, RedactionSpan, Side, Source};
 use crate::shape::Shaped;
 pub use mechanical::mechanical_checks_lines;
 
+/// `text` with every secret the scanner knows masked, line by line: for
+/// repository text outside the changed lines, which the scan never sees.
+pub(crate) fn redact_text(text: &str) -> String {
+  text
+    .split_inclusive('\n')
+    .map(|line| {
+      let body = line.strip_suffix('\n').unwrap_or(line);
+      let (masked, _) = secrets::redact_line(body);
+      if body.len() == line.len() {
+        masked
+      } else {
+        masked + "\n"
+      }
+    })
+    .collect()
+}
+
 /// Why the pre-pass says something besides findings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "kebab-case")]

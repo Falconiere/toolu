@@ -52,7 +52,7 @@ impl Jev {
     let auth = Auth::Bearer(self.key.0.clone());
     let mut attempt = 1;
     loop {
-      let (units, failure) = match self.send(body, &auth, deadline) {
+      let (units, last) = match self.send(body, &auth, deadline) {
         Ok(response) if (200..300).contains(&response.status) => {
           return Ok(String::from_utf8_lossy(&response.body).into_owned());
         }
@@ -69,7 +69,7 @@ impl Jev {
       };
       let pause = self.pause.saturating_mul(units);
       if deadline.is_some_and(|deadline| !fits(deadline, pause)) {
-        return Err(failure);
+        return Err(last);
       }
       thread::sleep(pause);
       attempt += 1;

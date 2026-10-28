@@ -10,7 +10,11 @@ use std::process::{Command, Output};
 fn toolu(args: &[&str], project: Option<&Path>) -> std::io::Result<Output> {
   let mut command = Command::new(env!("CARGO_BIN_EXE_toolu"));
   if let Some(project) = project {
-    command.env("TOOLU_PROJECT_DIR", project);
+    // The user config comes from the project root, which holds none, never from $HOME.
+    command
+      .env("TOOLU_PROJECT_DIR", project)
+      .env("TOOLU_CONFIG_DIR", project)
+      .env_remove("TOOLU_USER_CONFIG_DIR");
   }
   command.args(args).output()
 }
@@ -62,4 +66,28 @@ fn an_opted_in_run_still_fails_closed_and_uses_the_configured_effort() {
   assert_eq!(doc["effort"], "small");
   let message = doc["error"]["message"].as_str().unwrap();
   assert!(message.contains("not built yet (#668, #669)"), "{message}");
+}
+
+#[test]
+fn config_dir_supplies_the_user_level_effort() {
+  let on = project(r#"{"codeReview":{"enabled":true}}"#).unwrap();
+  let user = tempfile::tempdir().unwrap();
+  std::fs::write(
+    user.path().join("toolu.config.json"),
+    r#"{"codeReview":{"effort":"xhigh"}}"#,
+  )
+  .unwrap();
+  let dir = user.path().to_str().unwrap();
+  let args = [
+    "--json",
+    "--host",
+    "claude",
+    "--config-dir",
+    dir,
+    "code-review",
+    "run",
+  ];
+  let output = toolu(&args, Some(on.path())).unwrap();
+  let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+  assert_eq!(doc["effort"], "xhigh");
 }

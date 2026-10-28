@@ -50,9 +50,10 @@ pub enum Effort {
 pub enum Judge {
   /// Blocking findings only, no recheck.
   BlockingOnly,
-  /// Every fresh finding, plus a recheck of prior ones.
+  /// Every fresh finding, plus a recheck of the contradicted ones.
   AllWithRecheck,
-  /// As `AllWithRecheck`, with related cross-file context.
+  /// Reserved for related cross-file context, which is not built yet: today
+  /// it judges exactly as `AllWithRecheck`.
   AllWithContext,
 }
 

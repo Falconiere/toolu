@@ -33,6 +33,8 @@ fn anything_short_of_a_verified_dismissal_keeps_the_finding() {
     with("evidence_quotes", json!([])),
     with("evidence_quotes", json!(["if items.len() > 0"])),
     with("evidence_quotes", json!(["  "])),
+    with("evidence_quotes", json!(["}"])),
+    with("evidence_quotes", json!(["None; }"])),
     with("id", json!("f9")),
     "not json".to_owned(),
   ];

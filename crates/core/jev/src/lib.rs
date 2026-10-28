@@ -135,7 +135,7 @@ impl Jev {
   /// `Http`, `Timeout` or `Transport` after the attempts, and
   /// `InvalidResponse` when the reply is not a typed answer for every question.
   pub fn ask(&self, state: &State, model: &str, questions: &Questions) -> Result<Reply, Error> {
-    let text = self.post(body(state, model, questions).as_bytes(), None)?;
+    let text = self.post(request_body(state, model, questions).as_bytes(), None)?;
     reply::parse(&text, questions)
   }
 
@@ -152,7 +152,10 @@ impl Jev {
     questions: &Questions,
     deadline: Instant,
   ) -> Result<Reply, Error> {
-    let text = self.post(body(state, model, questions).as_bytes(), Some(deadline))?;
+    let text = self.post(
+      request_body(state, model, questions).as_bytes(),
+      Some(deadline),
+    )?;
     reply::parse(&text, questions)
   }
 }
@@ -160,10 +163,6 @@ impl Jev {
 /// The exact request body `ask` sends, so callers can hold a request cap, or
 /// record the request, before any network call.
 pub fn request_body(state: &State, model: &str, questions: &Questions) -> String {
-  body(state, model, questions)
-}
-
-fn body(state: &State, model: &str, questions: &Questions) -> String {
   Ordered::Object(vec![
     ("state".to_owned(), state.value().clone()),
     ("model".to_owned(), Ordered::String(model.to_owned())),

@@ -84,24 +84,22 @@ impl<'a> Ledger<'a> {
   ) -> Result<Reply, toolu_jev_client::Error> {
     let started = Instant::now();
     let result = jev.ask_until(state, OPENROUTER_MODEL, questions, deadline);
-    let (call, response) = match &result {
-      Ok(reply) => (
-        Call {
-          tokens_in: reply.usage.input_tokens,
-          tokens_out: reply.usage.output_tokens,
-          cost_usd: reply.usage.cost_usd,
-          ..call(step, &reply.model, "ok")
-        },
-        reply.body.as_str(),
-      ),
-      Err(err) => (call(step, OPENROUTER_MODEL, &jev_failure(err)), ""),
+    let call = match &result {
+      Ok(reply) => Call {
+        tokens_in: reply.usage.input_tokens,
+        tokens_out: reply.usage.output_tokens,
+        cost_usd: reply.usage.cost_usd,
+        ..call(step, &reply.model, "ok")
+      },
+      Err(err) => call(step, OPENROUTER_MODEL, &jev_failure(err)),
     };
-    self.push(
-      call,
-      started,
-      &request_body(state, OPENROUTER_MODEL, questions),
-      response,
-    );
+    self.push(call, started, || {
+      let response = result.as_ref().map_or("", |reply| reply.body.as_str());
+      (
+        request_body(state, OPENROUTER_MODEL, questions),
+        response.to_owned(),
+      )
+    });
     result
   }
 
@@ -115,52 +113,49 @@ impl<'a> Ledger<'a> {
   ) -> Result<Completion, toolu_openrouter::Error> {
     let started = Instant::now();
     let result = client.complete_structured(request, deadline);
-    let messages: Vec<_> = request
-      .messages
-      .iter()
-      .map(|message| json!({"role": message.role, "content": message.content}))
-      .collect();
-    let sent = json!({"messages": messages, "schema": request.schema_name,
-                      "reasoning_effort": request.reasoning_effort, "max_tokens": request.max_tokens});
-    let (call, response) = match &result {
-      Ok(done) => {
-        let usage = &done.usage;
-        let response = json!({"content": done.content, "finish_reason": done.finish_reason,
-          "model": done.model, "provider": done.provider,
-          "usage": {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens,
-                    "reasoning_tokens": usage.reasoning_tokens, "cost": usage.cost_usd}});
-        let call = Call {
-          provider: done.provider.clone(),
-          tokens_in: usage.prompt_tokens,
-          tokens_out: usage.completion_tokens,
-          cost_usd: usage.cost_usd,
-          ..call(stage, &done.model, "ok")
-        };
-        (call, response.to_string())
-      }
+    let call = match &result {
+      Ok(done) => Call {
+        provider: done.provider.clone(),
+        tokens_in: done.usage.prompt_tokens,
+        tokens_out: done.usage.completion_tokens,
+        cost_usd: done.usage.cost_usd,
+        ..call(stage, &done.model, "ok")
+      },
       Err(err) => {
         let failed = call(stage, client.model(), &err.to_string());
-        let call = err.usage().map_or(failed.clone(), |(usage, model)| Call {
-          model: model.to_owned(),
-          tokens_in: usage.prompt_tokens,
-          tokens_out: usage.completion_tokens,
-          cost_usd: usage.cost_usd,
-          ..failed
-        });
-        (call, String::new())
+        match err.usage() {
+          Some((usage, model)) => Call {
+            model: model.to_owned(),
+            tokens_in: usage.prompt_tokens,
+            tokens_out: usage.completion_tokens,
+            cost_usd: usage.cost_usd,
+            ..failed
+          },
+          None => failed,
+        }
       }
     };
-    self.push(call, started, &sent.to_string(), &response);
+    self.push(call, started, || {
+      let response = result.as_ref().map_or_else(|_| String::new(), received);
+      (sent(request), response)
+    });
     result
   }
 
-  fn push(&mut self, mut call: Call, started: Instant, request: &str, response: &str) {
+  /// Log `call`; the recorder, when there is one, gets the `exchange` texts.
+  fn push(
+    &mut self,
+    mut call: Call,
+    started: Instant,
+    exchange: impl FnOnce() -> (String, String),
+  ) {
     call.millis = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
     if let Some(recorder) = self.recorder {
+      let (request, response) = exchange();
       recorder(&Record {
         stage: call.stage,
-        request,
-        response,
+        request: &request,
+        response: &response,
       });
     }
     self.calls.push(call);
@@ -193,6 +188,28 @@ fn call(stage: Stage, model: &str, outcome: &str) -> Call {
     millis: 0,
     outcome: outcome.to_owned(),
   }
+}
+
+/// A structured request's messages and settings, as the recorder sees them.
+fn sent(request: &StructuredRequest<'_>) -> String {
+  let messages: Vec<_> = request
+    .messages
+    .iter()
+    .map(|message| json!({"role": message.role, "content": message.content}))
+    .collect();
+  json!({"messages": messages, "schema": request.schema_name,
+         "reasoning_effort": request.reasoning_effort, "max_tokens": request.max_tokens})
+  .to_string()
+}
+
+/// A completion as JSON, as the recorder sees it.
+fn received(done: &Completion) -> String {
+  let usage = &done.usage;
+  json!({"content": done.content, "finish_reason": done.finish_reason,
+    "model": done.model, "provider": done.provider,
+    "usage": {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens,
+              "reasoning_tokens": usage.reasoning_tokens, "cost": usage.cost_usd}})
+  .to_string()
 }
 
 /// A Jev failure in a few words, without its response body.

@@ -44,12 +44,17 @@ impl Reviews {
       return None;
     }
     let usage = ledger.usage(Some(model.to_owned()));
+    let sent = ledger.calls.iter().any(|call| call.stage == Stage::Review);
     Some(match &self.last_error {
-      Some(message) if !self.only_deadlines => RunError::Outage {
+      Some(_) if self.only_deadlines => RunError::Deadline { usage },
+      Some(message) if sent => RunError::Outage {
         message: format!("every review call failed: {message}"),
         usage,
       },
-      Some(_) | None => RunError::Deadline { usage },
+      Some(_) | None => RunError::Outage {
+        message: "no chunk fit the prompt budget, so no review call was sent".to_owned(),
+        usage,
+      },
     })
   }
 
@@ -114,6 +119,9 @@ fn last_message(
   let with_source = prompt::chunk(files, &prepass, input.memory, mask, true);
   if prompt::fits(prefix, &with_source) {
     return Some(with_source);
+  }
+  if files.iter().all(|(_, package)| package.source.is_none()) {
+    return None;
   }
   reviews.notes.push(format!(
     "surrounding source left out of a {}-file chunk: prompt over budget",

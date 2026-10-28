@@ -94,6 +94,39 @@ fn source_is_bounded_per_file_and_per_package_and_never_for_added_files() {
   assert!(evidence.starts_with(&by_path("pkg/a.rs").patch) && evidence.ends_with("a 10\n"));
 }
 
+/// `bytes` bytes of distinct 64-byte lines, the remainder unterminated.
+fn sized(bytes: usize) -> String {
+  let text = (0..bytes / 64).fold(String::new(), |text, index| {
+    text + "line " + &format!("{index:058}") + "\n"
+  });
+  text + &"y".repeat(bytes % 64)
+}
+
+#[test]
+fn a_source_of_exactly_the_cap_is_kept_and_one_byte_more_is_not() {
+  let small = Effort::Small.budget();
+  let cap = small.source_file_bytes;
+  let dir = repo(
+    &[
+      ("a/fit.rs", "a\n".to_owned()),
+      ("b/over.rs", "b\n".to_owned()),
+    ],
+    &[("a/fit.rs", sized(cap)), ("b/over.rs", sized(cap + 1))],
+  );
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let (found, notes) = packages(&env, dir.path(), &shaped, small, &Mask::default());
+  let source = |path: &str| {
+    let package = found.iter().find(|package| package.path == path).unwrap();
+    package.source.as_ref().map(String::len)
+  };
+  assert_eq!((source("a/fit.rs"), source("b/over.rs")), (Some(cap), None));
+  assert_eq!(
+    notes,
+    [format!("source of b/over.rs left out: over {cap} bytes")]
+  );
+}
+
 #[test]
 fn a_package_over_its_cap_drops_the_next_whole_source() {
   let small = Effort::Small.budget();
@@ -119,4 +152,19 @@ fn a_package_over_its_cap_drops_the_next_whole_source() {
     notes[0].contains("package \"pkg\" over 16384 bytes"),
     "{notes:?}"
   );
+}
+
+#[test]
+fn a_secret_on_an_unchanged_line_is_masked_in_the_source() {
+  let token = format!("ghp_{}", "Ab1".repeat(12));
+  let base = format!("const T: &str = \"{token}\";\nfn a() {{}}\n");
+  let change = format!("const T: &str = \"{token}\";\nfn a() {{ b() }}\n");
+  let dir = repo(&[("src/a.rs", base)], &[("src/a.rs", change)]);
+  let env = env();
+  let shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let budget = Effort::Medium.budget();
+  let (found, _) = packages(&env, dir.path(), &shaped, budget, &Mask::default());
+  let source = found[0].source.as_deref().unwrap();
+  assert!(!source.contains(&token), "{source}");
+  assert!(source.ends_with("fn a() { b() }\n"), "{source}");
 }

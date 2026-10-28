@@ -117,6 +117,7 @@ fn the_chunk_sends_open_priors_and_dismissals_but_never_resolved_ones() {
     doc["memory"]["dismissals"][0]["reason"],
     "the caller validates it"
   );
+  assert_eq!(doc["memory"]["dismissals"][0]["claim"], "claim gone");
   assert!(!doc.to_string().contains("claim done"));
   assert_eq!(doc["files"][0]["source"], "b\n");
   let bare = body(&chunk(
@@ -128,6 +129,42 @@ fn the_chunk_sends_open_priors_and_dismissals_but_never_resolved_ones() {
   ));
   assert_eq!(bare["files"][0]["source"], Value::Null);
   assert_eq!(bare["files"][0]["kind"], "modified");
+}
+
+#[test]
+fn a_chunk_sends_only_its_own_files_memory_and_masks_convention_secrets() {
+  let mut elsewhere = prior("other", Status::Open);
+  elsewhere.path = "src/other.rs".into();
+  let mut gone = prior("gone", Status::Dismissed);
+  gone.path = "src/other.rs".into();
+  let memory = Memory {
+    prior: vec![prior("open", Status::Open), elsewhere, gone],
+    dismissals: vec![Dismissal {
+      id: "gone".into(),
+      reason: "elsewhere".into(),
+      by: "agent".into(),
+    }],
+  };
+  let (file, package) = file();
+  let doc = body(&chunk(
+    &[(&file, &package)],
+    &[],
+    &memory,
+    &Mask::default(),
+    true,
+  ));
+  assert_eq!(doc["memory"]["open"].as_array().unwrap().len(), 1);
+  assert_eq!(doc["memory"]["dismissals"], serde_json::json!([]));
+  let mut rules = bundle(None);
+  let token = format!("ghp_{}", "Ab1".repeat(12));
+  rules.files[0].text = format!("Deploy with {token}\nthen wait.\n");
+  let (prefix, _) = prefix(&rules, &Mask::default());
+  assert!(
+    !prefix.conventions.contains(&token),
+    "{}",
+    prefix.conventions
+  );
+  assert!(prefix.conventions.contains("then wait."));
 }
 
 #[test]

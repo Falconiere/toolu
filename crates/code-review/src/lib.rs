@@ -55,7 +55,11 @@ pub fn command() -> clap::Command {
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
     Some(("run", verb)) => {
-      let settings = settings::load(&Roots::new(Env::process(), ctx.host), None);
+      let mut env = Env::process();
+      if let Some(dir) = &ctx.config_dir {
+        env = env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
+      }
+      let settings = settings::load(&Roots::new(env, ctx.host), None);
       let effort = cli::effort(verb)
         .or(settings.effort)
         .unwrap_or(Effort::Auto);

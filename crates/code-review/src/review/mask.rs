@@ -3,8 +3,6 @@
 //! text is looked up there once and then replaced wherever it appears, context
 //! lines and source included.
 
-use std::cmp::Reverse;
-
 use crate::prepass::Redaction;
 use crate::shape::Shaped;
 
@@ -41,7 +39,8 @@ impl Mask {
         secrets.push(secret.to_owned());
       }
     }
-    secrets.sort_by_key(|secret| Reverse(secret.len()));
+    // Equal texts must be adjacent for `dedup`, so ties sort by text.
+    secrets.sort_by(|a, b| b.len().cmp(&a.len()).then_with(|| a.cmp(b)));
     secrets.dedup();
     Ok(Mask(secrets))
   }

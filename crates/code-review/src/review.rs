@@ -67,7 +67,7 @@ pub struct Options<'a> {
   pub openrouter: toolu_openrouter::Config,
   /// Jev's endpoint; its default is replaced by `OpenRouter`'s System One.
   pub jev: Option<toolu_jev_client::Config>,
-  /// `false` skips the Jev stage: the baseline arm of #670.
+  /// `true` skips the Jev stage: the baseline arm of #670.
   pub skip_judge: bool,
   /// Receives every raw exchange (#670).
   pub recorder: Option<&'a dyn Fn(&Record<'_>)>,

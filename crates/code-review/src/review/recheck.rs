@@ -1,6 +1,7 @@
 //! The generative recheck of findings Jev judged `contradicted`. A challenge alone
 //! never removes a finding: the review model must explicitly dismiss it with an
-//! explanation of at least 20 characters and evidence quotes found verbatim in the
+//! explanation of at least 20 characters and evidence quotes (10 or more non-space
+//! characters each) found verbatim in the
 //! supplied evidence package, never the working tree. Any other answer, or any
 //! failure, keeps the finding.
 
@@ -18,6 +19,10 @@ const SCHEMA_JSON: &str = include_str!("recheck.schema.json");
 
 /// The shortest explanation a dismissal may carry.
 const MIN_EXPLANATION_CHARS: usize = 20;
+
+/// The fewest non-space characters a dismissal quote may have, so a quote like
+/// `}` that appears in any evidence cannot prove anything.
+const MIN_QUOTE_CHARS: usize = 10;
 
 /// What each finding is told about Jev's judgment.
 const CHALLENGE: &str = "An independent judge found that the evidence contradicts this claim.";
@@ -143,7 +148,7 @@ fn user_message(judged: &[Judged], ids: &[usize], package: &Package, ctx: &Ctx<'
     .collect();
   format!(
     "Recheck these findings:\n{}",
-    json!({"memory": memory_context(ctx.memory, ctx.mask), "evidence": package, "findings": findings})
+    json!({"memory": memory_context(ctx.memory, ctx.mask, &[package.path.as_str()]), "evidence": package, "findings": findings})
   )
 }
 
@@ -156,10 +161,10 @@ fn dismissal(answer: &Value, evidence: &str) -> Option<bool> {
       && explanation.trim().chars().count() >= MIN_EXPLANATION_CHARS
       && !quotes.is_empty()
       && quotes.iter().all(|quote| {
-        quote
-          .as_str()
-          .map(str::trim)
-          .is_some_and(|quote| !quote.is_empty() && evidence.contains(quote))
+        quote.as_str().map(str::trim).is_some_and(|quote| {
+          quote.chars().filter(|ch| !ch.is_whitespace()).count() >= MIN_QUOTE_CHARS
+            && evidence.contains(quote)
+        })
       }),
   )
 }

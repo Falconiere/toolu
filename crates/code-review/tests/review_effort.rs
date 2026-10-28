@@ -241,11 +241,11 @@ fn secrets_are_masked_and_added_files_carry_no_separate_source() {
     Value::Null,
     "an added file's patch is its source"
   );
+  let lib = source("src/lib.rs");
+  let lib = lib.as_str().unwrap();
   assert!(
-    source("src/lib.rs")
-      .as_str()
-      .unwrap()
-      .contains("[REDACTED]")
+    lib.contains("const T") && !lib.contains(SECRET_TAIL),
+    "{lib}"
   );
 }
 
