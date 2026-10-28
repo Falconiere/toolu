@@ -4,34 +4,16 @@
 use std::cmp::Reverse;
 
 use super::PrepassResult;
-use crate::contract::{Finding, Severity, Source};
+use crate::contract::Finding;
 
 /// The line shown when the pre-pass found and noticed nothing.
 const NOTHING: &str = "No mechanical findings.";
 
-fn source_name(source: Source) -> &'static str {
-  match source {
-    Source::Llm => "llm",
-    Source::AstGrep => "ast-grep",
-    Source::Secrets => "secrets",
-  }
-}
-
-fn severity_name(severity: Severity) -> &'static str {
-  match severity {
-    Severity::Nit => "nit",
-    Severity::Low => "low",
-    Severity::Medium => "medium",
-    Severity::High => "high",
-    Severity::Blocker => "blocker",
-  }
-}
-
 fn line(finding: &Finding) -> String {
   format!(
     "[{}/{}] {}:{} {}",
-    source_name(finding.source),
-    severity_name(finding.severity),
+    finding.source.name(),
+    finding.severity.name(),
     finding.path,
     finding.line,
     finding.claim

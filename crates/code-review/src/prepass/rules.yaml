@@ -3,6 +3,7 @@ language: Rust
 severity: warning
 message: remove todo!/unimplemented! before merge
 rule:
-  any:
-    - pattern: todo!()
-    - pattern: unimplemented!()
+  kind: macro_invocation
+  has:
+    field: macro
+    regex: ^((::)?(std|core)::)?(todo|unimplemented)$

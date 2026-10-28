@@ -63,7 +63,7 @@ fn repo(base: &str, change: &str) -> Result<tempfile::TempDir, String> {
 fn prepass_astgrep_production_run_flags_a_changed_todo_macro_only() {
   let dir = repo(
     "fn old() {\n    todo!()\n}\n",
-    "fn old() {\n    todo!()\n}\nfn fresh() {\n    unimplemented!()\n}\n",
+    "fn old() {\n    todo!()\n}\nfn fresh() {\n    unimplemented!(\"not yet\")\n}\n",
   )
   .expect("repo");
   let shaped = shape(&env(), dir.path(), Some("main")).expect("shape");
@@ -82,7 +82,7 @@ fn prepass_astgrep_production_run_flags_a_changed_todo_macro_only() {
     ("src/lib.rs", 5, 5)
   );
   assert_eq!(found.claim, "remove todo!/unimplemented! before merge");
-  assert_eq!(found.quote, "    unimplemented!()");
+  assert_eq!(found.quote, "    unimplemented!(\"not yet\")");
   assert_eq!(found.id, "prepass:ast-grep:src/lib.rs:5:review-todo-macro");
   assert_eq!(found.redaction_spans.len(), 0);
 }

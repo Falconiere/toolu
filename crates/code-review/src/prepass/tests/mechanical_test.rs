@@ -13,6 +13,7 @@ fn prepass_mechanical_lists_findings_worst_first_then_notices() {
   );
   let result = PrepassResult {
     findings: kept,
+    redactions: Vec::new(),
     notices: vec![Notice {
       kind: NoticeKind::MissingAstGrep,
       text: "prepass: ast-grep not installed; structural rules skipped".to_owned(),

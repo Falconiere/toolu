@@ -4,6 +4,8 @@
 //! stages (#666) must treat them as trusted and non-dismissible: neither the model
 //! nor Jev may drop them. Each secret finding carries `redaction_spans` into the
 //! unmasked line and an already-masked `quote`, so cleartext never leaves here.
+//! `redactions` lists every changed line on either side that holds a secret,
+//! never capped, so later stages can mask all outbound text, removed lines too.
 
 mod astgrep;
 mod cap;
@@ -18,7 +20,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 
 use crate::budget::PREPASS_FINDINGS_MAX;
-use crate::contract::Finding;
+use crate::contract::{Finding, RedactionSpan, Side, Source};
 use crate::shape::Shaped;
 pub use mechanical::mechanical_checks_lines;
 
@@ -45,12 +47,27 @@ pub struct Notice {
   pub text: String,
 }
 
+/// The secrets in one changed line of a shaped file.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct Redaction {
+  /// The shaped file's `path`.
+  pub path: String,
+  /// The side `line` numbers.
+  pub side: Side,
+  /// One-based line on `side`.
+  pub line: u32,
+  /// Byte ranges of the secrets in that line's unmasked text.
+  pub spans: Vec<RedactionSpan>,
+}
+
 /// What the scanners found. Every finding is trusted: `source` is `ast-grep` or
 /// `secrets`, and later stages must not dismiss them.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct PrepassResult {
   /// Capped findings, secrets first, each group worst first.
   pub findings: Vec<Finding>,
+  /// Every changed line, old or new, that holds a secret; the cap never drops one.
+  pub redactions: Vec<Redaction>,
   /// Degrade and overflow lines.
   pub notices: Vec<Notice>,
   /// Whether findings were dropped at the cap.
@@ -68,7 +85,7 @@ pub fn run(env: &Env, root: &Path, shaped: &Shaped) -> PrepassResult {
 /// `run` with the ast-grep scan injected, so a test can drive its `Missing` and
 /// `Failed` outcomes without touching `PATH`.
 pub fn run_with(env: &Env, root: &Path, shaped: &Shaped, scan: Scan<'_>) -> PrepassResult {
-  let (secrets, mut notices) = secrets::scan(shaped);
+  let (secrets, redactions, mut notices) = secrets::scan(shaped);
   let (structural, found) = astgrep::scan(env, root, shaped, scan);
   notices.extend(found);
   let (findings, overflow) = cap::cap(secrets, structural, PREPASS_FINDINGS_MAX);
@@ -76,14 +93,15 @@ pub fn run_with(env: &Env, root: &Path, shaped: &Shaped, scan: Scan<'_>) -> Prep
   notices.extend(overflow);
   PrepassResult {
     findings,
+    redactions,
     notices,
     overflow: capped,
   }
 }
 
 /// The run-stable id of a pre-pass finding.
-fn finding_id(tag: &str, path: &str, line: u32, category: &str) -> String {
-  format!("prepass:{tag}:{path}:{line}:{category}")
+fn finding_id(source: Source, path: &str, line: u32, category: &str) -> String {
+  format!("prepass:{}:{path}:{line}:{category}", source.name())
 }
 
 #[cfg(test)]

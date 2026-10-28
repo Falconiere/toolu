@@ -34,6 +34,17 @@ impl Severity {
   pub fn blocking(self) -> bool {
     self >= Severity::Medium
   }
+
+  /// The name the report uses.
+  pub fn name(self) -> &'static str {
+    match self {
+      Severity::Nit => "nit",
+      Severity::Low => "low",
+      Severity::Medium => "medium",
+      Severity::High => "high",
+      Severity::Blocker => "blocker",
+    }
+  }
 }
 
 /// Which side of the diff a finding's lines number.
@@ -56,6 +67,17 @@ pub enum Source {
   AstGrep,
   /// The secret scanner of the pre-pass.
   Secrets,
+}
+
+impl Source {
+  /// The name the report uses.
+  pub fn name(self) -> &'static str {
+    match self {
+      Source::Llm => "llm",
+      Source::AstGrep => "ast-grep",
+      Source::Secrets => "secrets",
+    }
+  }
 }
 
 /// A byte range of the unmasked source line that held a secret: `start` inclusive,

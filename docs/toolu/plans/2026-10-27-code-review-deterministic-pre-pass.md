@@ -113,6 +113,8 @@ Contract/budget extensions → secrets+entropy → ast-grep materialize+scan →
 
 - Secrets: when any known pattern matches a line, category/claim come from the first matching table entry, but `redaction_spans` union every known-pattern match on that line so the quote never leaves a second secret cleartext.
 - Ast-grep: repo-relative paths that start with `-` are skipped with an `AstGrepFailed` notice so they cannot be parsed as argv flags.
+- Redactions: `PrepassResult.redactions` lists every changed line, old or new side, that holds a secret, and the cap never drops one, so later stages can mask capped and removed lines too. Findings stay New-side only.
+- Rule: `review-todo-macro` matches any `todo!`/`unimplemented!` invocation (`kind: macro_invocation`), so `todo!("msg")`, `std::todo!()` and `todo![]` hit too; the `todo!()` pattern matched only the empty call.
 - Tests: colocated under `prepass/tests/*_test.rs` (shape pattern); orchestration helpers live in `src/tests/prepass_test.rs` as `pub(super)` because a non-`*_test.rs` helpers file is forbidden.
 
 ## Plan review (2026-10-27)

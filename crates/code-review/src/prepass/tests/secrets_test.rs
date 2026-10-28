@@ -4,7 +4,7 @@ use crate::prepass::tests::{added, shaped, token};
 use crate::shape::{ChangedLine, Shaped};
 
 fn secrets_of(shaped: &Shaped) -> Vec<Finding> {
-  let (findings, notices) = scan(shaped);
+  let (findings, _, notices) = scan(shaped);
   assert_eq!(notices, Vec::new());
   findings
 }

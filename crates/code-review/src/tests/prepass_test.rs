@@ -5,8 +5,9 @@ use std::process::Command;
 use toolu_engine::quality::{AstGrepScan, ScanFailure, ScanStage};
 use toolu_runtime::env::Env;
 
-use super::{NoticeKind, PrepassResult, run_with};
-use crate::contract::{Coverage, Finding, Severity, Side, Source};
+use super::{NoticeKind, PrepassResult, Redaction, run_with};
+use crate::budget::PREPASS_FINDINGS_MAX;
+use crate::contract::{Coverage, Finding, RedactionSpan, Severity, Side, Source};
 use crate::shape::{ChangedLine, FileKind, Shaped, ShapedFile, shape};
 
 pub(super) fn token() -> String {
@@ -44,6 +45,7 @@ pub(super) fn shaped(path: &str, lines: Vec<ChangedLine>) -> Shaped {
 pub(super) fn empty() -> PrepassResult {
   PrepassResult {
     findings: Vec::new(),
+    redactions: Vec::new(),
     notices: Vec::new(),
     overflow: false,
   }
@@ -143,4 +145,39 @@ fn prepass_run_failed_astgrep_names_the_failure_and_secrets_still_run() {
     "prepass: ast-grep failed (exit 2): bad rule"
   );
   assert_eq!(result.findings.len(), 1);
+}
+
+#[test]
+fn prepass_run_redactions_survive_the_cap_and_cover_removed_lines() {
+  let (dir, _) = secret_repo();
+  let mut lines: Vec<ChangedLine> = (1..=60)
+    .map(|line| added(line, &format!("k = \"{}\"", token())))
+    .collect();
+  lines.push(ChangedLine {
+    side: Side::Old,
+    line: 3,
+    text: token(),
+  });
+  let shaped = shaped("src/lib.rs", lines);
+  let result = run_with(&env(), dir.path(), &shaped, &|_, _, _| AstGrepScan::Ok {
+    hits: Vec::new(),
+    empty: true,
+  });
+  assert_eq!(result.findings.len(), PREPASS_FINDINGS_MAX);
+  assert!(result.overflow);
+  assert!(result.findings.iter().all(|found| found.side == Side::New));
+  assert_eq!(result.redactions.len(), 61);
+  let removed: &Redaction = result
+    .redactions
+    .iter()
+    .find(|redaction| redaction.side == Side::Old)
+    .expect("removed line");
+  assert_eq!(removed.line, 3);
+  assert_eq!(
+    removed.spans,
+    [RedactionSpan {
+      start: 0,
+      end: token().len()
+    }]
+  );
 }
