@@ -52,6 +52,19 @@ fn copy_toolu(dir: &Path) -> std::io::Result<PathBuf> {
   Ok(path)
 }
 
+/// Scratch on the same filesystem as the built `toolu`, so [`copy_toolu`]'s hard
+/// link succeeds. In the container gate, default `TMPDIR` is on another volume
+/// and a cold copy of the llvm-cov binary can miss the 1 s `--hook-protocol` probe.
+fn scratch() -> tempfile::TempDir {
+  let parent = Path::new(TOOLU)
+    .parent()
+    .expect("CARGO_BIN_EXE_toolu has a parent");
+  tempfile::Builder::new()
+    .prefix("toolu-doctor-")
+    .tempdir_in(parent)
+    .expect("scratch beside the built toolu")
+}
+
 fn schema_accepts(document: &Value) -> bool {
   let schema_file = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/commands.schema.json");
   let Ok(text) = std::fs::read_to_string(schema_file) else {
@@ -73,7 +86,7 @@ fn schema_accepts(document: &Value) -> bool {
 
 #[test]
 fn doctor_finds_the_real_binary_that_sh_resolves() {
-  let temp = tempfile::tempdir().unwrap();
+  let temp = scratch();
   let home = temp.path().join("home");
   std::fs::create_dir(&home).unwrap();
   let alias = temp.path().join("alias");
@@ -115,7 +128,7 @@ fn doctor_finds_the_real_binary_that_sh_resolves() {
 
 #[test]
 fn doctor_prints_brew_upgrade_only_for_a_cellar_binary() {
-  let temp = tempfile::tempdir().unwrap();
+  let temp = scratch();
   let home = temp.path().join("home");
   std::fs::create_dir(&home).unwrap();
   let cellar = temp.path().join("Cellar/toolu/9.0.0/bin");
