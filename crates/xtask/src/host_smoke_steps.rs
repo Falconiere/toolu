@@ -7,7 +7,7 @@ use crate::host_smoke_checks as checks;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_exec::run as run_child;
 use crate::host_smoke_project::{PushProject, git, head, nonce, remote_has, state_dir};
-use crate::host_smoke_prompts::{DENY, PUSH_REF};
+use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH, DENY, PUSH_REF};
 
 /// Where a host's transcripts go and how its children are started.
 pub(crate) struct Run<'a> {
@@ -45,6 +45,32 @@ pub(crate) trait Driver {
   }
   /// The quality-failing edit, left recorded in the gate file.
   fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String>;
+}
+
+/// Codex's control, commit and push prompts, with `sample.ts` staged by the harness:
+/// what a host gets whose shell tool is not called Bash.
+pub(crate) fn staged_prompts() -> Prompts {
+  Prompts {
+    allowed: CODEX_ALLOWED,
+    commit: CODEX_COMMIT,
+    push: CODEX_PUSH,
+    stages_first: true,
+  }
+}
+
+/// The quality-failing edit as one session with `prompt`.
+pub(crate) fn edit_session(
+  driver: &dyn Driver,
+  run: &Run<'_>,
+  project: &Path,
+  prompt: &str,
+) -> Result<(), String> {
+  let step = Step {
+    name: "edit",
+    tools: "",
+    prompt,
+  };
+  session(driver, run, project, &step).map(drop)
 }
 
 /// Run `step` in `project`, keeping the transcript as `<host>-<step>.jsonl`.

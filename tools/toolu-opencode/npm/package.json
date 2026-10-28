@@ -1,0 +1,32 @@
+{
+  "name": "@toolu/opencode",
+  "version": "8.6.0",
+  "description": "Deprecated. Install the native toolu binary, then run toolu plugins install --host opencode.",
+  "keywords": [
+    "toolu",
+    "opencode",
+    "plugin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Falconiere/toolu.git",
+    "directory": "tools/toolu-opencode/npm"
+  },
+  "homepage": "https://github.com/Falconiere/toolu/blob/main/docs/opencode.md",
+  "bugs": {
+    "url": "https://github.com/Falconiere/toolu/issues"
+  },
+  "license": "MIT",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "files": [
+    "index.js"
+  ]
+}

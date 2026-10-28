@@ -39,7 +39,7 @@ pub(crate) struct Options {
   pub(crate) assert: bool,
   /// Measured runs per entry (`--runs`, the benches).
   pub(crate) runs: Option<String>,
-  /// Which hosts `host-smoke` drives (`--host claude|codex|both`).
+  /// Which hosts `host-smoke` drives (`--host claude|codex|muse|cursor|opencode|both`).
   pub(crate) host: Option<String>,
 }
 

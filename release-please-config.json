@@ -194,6 +194,11 @@
           "jsonpath": "$.version"
         },
         {
+          "type": "json",
+          "path": "tools/toolu-opencode/npm/package.json",
+          "jsonpath": "$.version"
+        },
+        {
           "type": "toml",
           "path": "Cargo.toml",
           "jsonpath": "$.workspace.package.version"

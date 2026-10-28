@@ -2,7 +2,7 @@
 //! are gone but every other tool of the same directories stays, no `TOOLU_BUN`, no
 //! inherited repository selection from `GIT_*`, no Muse session or credential
 //! variable (`MUSE_*`), and `TOOLU_BIN` set to the native binary, so only native
-//! hooks can answer.
+//! hooks can answer. `OpenCode` gets a private `XDG_CONFIG_HOME` holding its plugins.
 
 use std::ffi::{OsStr, OsString};
 use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _, symlink};
@@ -22,6 +22,7 @@ pub(crate) struct ChildEnv {
   bin: PathBuf,
   codex_home: Option<PathBuf>,
   muse_home: Option<PathBuf>,
+  opencode_config: Option<PathBuf>,
 }
 
 /// What would point Muse at the user's own config and data instead of the private home.
@@ -104,6 +105,7 @@ impl ChildEnv {
       bin: bin.to_path_buf(),
       codex_home: None,
       muse_home: None,
+      opencode_config: None,
     })
   }
 
@@ -119,6 +121,14 @@ impl ChildEnv {
   pub(crate) fn with_muse_home(&self, home: &Path) -> ChildEnv {
     ChildEnv {
       muse_home: Some(home.to_path_buf()),
+      ..self.clone()
+    }
+  }
+
+  /// The same environment with a private `XDG_CONFIG_HOME` for `OpenCode`.
+  pub(crate) fn with_opencode_config(&self, config: &Path) -> ChildEnv {
+    ChildEnv {
+      opencode_config: Some(config.to_path_buf()),
       ..self.clone()
     }
   }
@@ -145,6 +155,9 @@ impl ChildEnv {
     }
     if let Some(home) = &self.codex_home {
       command.env("CODEX_HOME", home);
+    }
+    if let Some(config) = &self.opencode_config {
+      command.env("XDG_CONFIG_HOME", config);
     }
     if let Some(home) = &self.muse_home {
       command.env("HOME", home);

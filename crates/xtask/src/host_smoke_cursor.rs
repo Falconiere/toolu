@@ -5,8 +5,8 @@
 
 use std::path::{Path, PathBuf};
 
-use crate::host_smoke_prompts::{CODEX_ALLOWED, CODEX_COMMIT, CODEX_PUSH, CURSOR_EDIT};
-use crate::host_smoke_steps::{Driver, Prompts, Run, Step, session};
+use crate::host_smoke_prompts::CURSOR_EDIT;
+use crate::host_smoke_steps::{Driver, Prompts, Run, Step, edit_session, staged_prompts};
 
 /// A Cursor Agent installation and the checkout whose plugins it loads.
 pub(crate) struct Cursor {
@@ -43,21 +43,11 @@ impl Driver for Cursor {
   }
 
   fn prompts(&self) -> Prompts {
-    Prompts {
-      allowed: CODEX_ALLOWED,
-      commit: CODEX_COMMIT,
-      push: CODEX_PUSH,
-      stages_first: true,
-    }
+    staged_prompts()
   }
 
   fn edit(&self, run: &Run<'_>, project: &Path) -> Result<(), String> {
-    let step = Step {
-      name: "edit",
-      tools: "",
-      prompt: CURSOR_EDIT,
-    };
-    session(self, run, project, &step).map(drop)
+    edit_session(self, run, project, CURSOR_EDIT)
   }
 }
 

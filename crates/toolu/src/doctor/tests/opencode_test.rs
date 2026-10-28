@@ -62,3 +62,26 @@ fn a_copy_without_its_shim_is_named_in_a_warning() {
   assert!(warning.contains("jev without server.js"), "{warning}");
   assert!(warning.contains("--host opencode"));
 }
+
+#[test]
+fn a_config_that_still_names_the_deprecated_package_is_warned_about() {
+  let home = tempfile::tempdir().unwrap();
+  let config = home.path().join(".config/opencode");
+  std::fs::create_dir_all(config.join("toolu")).unwrap();
+  std::fs::write(
+    config.join("toolu/package.json"),
+    r#"{"dependencies":{"@toolu/opencode":"7.9.0"}}"#,
+  )
+  .unwrap();
+  std::fs::write(config.join("opencode.json"), r#"{"plugins":["./toolu"]}"#).unwrap();
+  let warning = inventory(home.path()).warning.unwrap();
+  assert!(warning.contains("deprecated @toolu/opencode"), "{warning}");
+  assert!(warning.contains("toolu/package.json"), "{warning}");
+  assert!(!warning.contains("opencode.json,"), "{warning}");
+  plugin(home.path(), "jev", true, false);
+  let both = inventory(home.path()).warning.unwrap();
+  assert!(
+    both.contains("without server.js; ") && both.contains("@toolu/opencode"),
+    "{both}"
+  );
+}

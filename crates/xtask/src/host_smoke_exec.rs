@@ -41,6 +41,8 @@ pub(crate) fn exec(
     .stdout(Stdio::piped())
     .stderr(Stdio::piped());
   env.apply(&mut command);
+  // OpenCode takes its project directory from `PWD`, not the process directory.
+  command.env("PWD", cwd);
   let mut child =
     spawn_retrying(&mut command).map_err(|err| format!("cannot run {program}: {err}"))?;
   let out = child.stdout.take().ok_or("no stdout pipe")?;

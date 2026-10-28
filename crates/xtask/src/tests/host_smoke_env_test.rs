@@ -212,3 +212,24 @@ fn a_muse_child_gets_the_private_home_and_no_xdg_roots_or_muse_keys() {
   let out = claude.output().unwrap();
   assert_eq!(String::from_utf8_lossy(&out.stdout).trim(), "none|/x/toolu");
 }
+
+#[test]
+fn an_opencode_child_gets_the_private_config_home() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = OsString::from("/usr/bin:/bin");
+  let env = ChildEnv::new(Path::new("/x/toolu"), &path, &dir.path().join("shims")).unwrap();
+  let config = dir.path().join("opencode-config");
+  let mut command = Command::new("/bin/sh");
+  command
+    .args(["-c", "echo \"$XDG_CONFIG_HOME\""])
+    .env("XDG_CONFIG_HOME", "/user/config");
+  env.with_opencode_config(&config).apply(&mut command);
+  let out = command.output().unwrap();
+  assert_eq!(
+    String::from_utf8_lossy(&out.stdout).trim(),
+    config.display().to_string()
+  );
+  let mut plain = Command::new("true");
+  env.apply(&mut plain);
+  assert!(plain.get_envs().all(|(name, _)| name != "XDG_CONFIG_HOME"));
+}

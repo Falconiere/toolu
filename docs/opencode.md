@@ -65,5 +65,24 @@ its `exit`. Any other tool keeps its name.
 ## Checking it
 
 `toolu doctor --host opencode` lists toolu's copies and warns about one without
-its `server.js`. Inside OpenCode's shell, `toolu` detects the host from
+its `server.js`, and about any file in the OpenCode config that still names
+`@toolu/opencode`. Inside OpenCode's shell, `toolu` detects the host from
 `OPENCODE` and `OPENCODE_SESSION_ID`.
+
+`cargo xtask host-smoke --host opencode` checks a denied `.env` write, a
+recorded quality failure, a denied commit and a denied push in real OpenCode
+sessions ([testing](testing.md#benchmarks-and-live-checks)).
+
+## Migrating from `@toolu/opencode`
+
+The npm package `@toolu/opencode` is deprecated. It implemented OpenCode V1's
+plugin API, so OpenCode V2 loads it without running any of its hooks. Its last
+release is a notice: loaded by OpenCode V2, it logs the deprecation and puts it
+in each session's instructions, and every published version is marked
+deprecated on npm. To move:
+
+1. Install the native binary and run `toolu plugins install --host opencode`.
+2. Remove `@toolu/opencode`, or the local plugin directory that depends on it
+   (an older setup used `~/.config/opencode/toolu`), from the `plugins` of
+   `opencode.json`.
+3. Run `toolu doctor --host opencode`; its `plugins` check no longer names it.
