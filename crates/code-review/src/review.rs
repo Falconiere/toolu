@@ -14,6 +14,7 @@ mod prompt;
 mod recheck;
 mod replayed;
 mod source;
+mod window;
 
 use std::time::{Duration, Instant};
 

@@ -20,6 +20,10 @@ pub const JEV_REQUEST_MAX_BYTES: usize = 180_000;
 pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
 /// One review evidence chunk; files larger than this are explicitly unreviewed.
 pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
+/// The most bytes read from one `HEAD` blob, by the pre-pass and for source.
+pub const BLOB_MAX_BYTES: usize = 8 * 1024 * KIB;
+/// `HEAD` lines kept on each side of a change when a file is too big to send whole.
+pub const SOURCE_WINDOW_LINES: usize = 30;
 
 /// One assembled review prompt: rules, checklist, memory, pre-pass, diff and source.
 pub const PROMPT_MAX_BYTES: usize = 384 * KIB;

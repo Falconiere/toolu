@@ -115,7 +115,8 @@ pub(super) fn patch_lines(patch: &str) -> Result<Vec<ChangedLine>, ShapeError> {
   Ok(lines)
 }
 
-fn hunk_start(line: &str) -> Result<(u32, u32), ShapeError> {
+/// The old and new start lines of a `@@ -a,b +c,d @@` hunk header.
+pub(crate) fn hunk_start(line: &str) -> Result<(u32, u32), ShapeError> {
   let mut parts = line.split_whitespace();
   if parts.next() != Some("@@") {
     return Err(ShapeError::Git("bad hunk header".to_owned()));

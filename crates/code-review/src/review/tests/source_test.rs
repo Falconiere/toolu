@@ -87,9 +87,20 @@ fn source_is_bounded_per_file_and_per_package_and_never_for_added_files() {
     None,
     "the patch is the whole file"
   );
-  assert_eq!(by_path("big/c.rs").source, None);
+  // Too big to send whole: the window around the appended line instead.
+  let window = by_path("big/c.rs").source.clone().unwrap();
+  assert!(
+    window.starts_with("@@ lines 1971-2001 @@\nc 1970\n"),
+    "{window}"
+  );
+  assert!(window.ends_with("c 1999\nc 2000\n"), "{window}");
   assert!(by_path("big/c.rs").patch.contains("+c 2000"));
-  assert_eq!(notes, ["source of big/c.rs left out: over 8192 bytes"]);
+  assert_eq!(
+    notes,
+    [
+      "source of big/c.rs: 1 of 1 windows around its changes sent, the whole file is over 8192 bytes"
+    ]
+  );
   let evidence = by_path("pkg/a.rs").evidence();
   assert!(evidence.starts_with(&by_path("pkg/a.rs").patch) && evidence.ends_with("a 10\n"));
 }
