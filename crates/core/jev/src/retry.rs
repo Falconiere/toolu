@@ -2,10 +2,11 @@
 //! 408, 429 and 5xx answers and for transport failures.
 
 use std::thread;
+use std::time::{Duration, Instant};
 
 use toolu_http::{Auth, Method, Request, Response};
 
-use crate::{Error, Jev};
+use crate::{Error, Jev, http_client};
 
 /// Attempts per call.
 const ATTEMPTS: u32 = 3;
@@ -46,37 +47,61 @@ pub(crate) fn delay(response: &Response, attempt: u32) -> Option<u32> {
 
 impl Jev {
   /// POST `body` with up to three attempts: the 2xx body, or the last failure.
-  pub(crate) fn post(&self, body: &[u8]) -> Result<String, Error> {
+  /// With a `deadline`, no attempt outlives it and no pause runs past it.
+  pub(crate) fn post(&self, body: &[u8], deadline: Option<Instant>) -> Result<String, Error> {
     let auth = Auth::Bearer(self.key.0.clone());
-    let headers = [
-      ("content-type", "application/json"),
-      ("accept", "application/json"),
-    ];
     let mut attempt = 1;
     loop {
-      let outcome = match &self.http {
-        Some(http) => http.send(&Request {
-          method: Method::Post,
-          url: &self.endpoint,
-          auth: &auth,
-          headers: &headers,
-          body: Some(body),
-        }),
-        None => Err(toolu_http::Error::Timeout),
-      };
-      let units = match outcome {
+      let (units, failure) = match self.send(body, &auth, deadline) {
         Ok(response) if (200..300).contains(&response.status) => {
           return Ok(String::from_utf8_lossy(&response.body).into_owned());
         }
-        Ok(response) => self.retry_status(&response, attempt)?,
-        Err(toolu_http::Error::Timeout | toolu_http::Error::Transport(_)) if attempt < ATTEMPTS => {
-          1_u32 << (attempt - 1)
+        Ok(response) => (self.retry_status(&response, attempt)?, self.http_error(&response)),
+        Err(err @ (toolu_http::Error::Timeout | toolu_http::Error::Transport(_)))
+          if attempt < ATTEMPTS =>
+        {
+          (1_u32 << (attempt - 1), failure(err))
         }
-        Err(toolu_http::Error::Timeout) => return Err(Error::Timeout),
-        Err(err) => return Err(Error::Transport(err)),
+        Err(err) => return Err(failure(err)),
       };
-      self.pause(units);
+      let pause = self.pause.saturating_mul(units);
+      if deadline.is_some_and(|deadline| !fits(deadline, pause)) {
+        return Err(failure);
+      }
+      thread::sleep(pause);
       attempt += 1;
+    }
+  }
+
+  /// One attempt; under a deadline nearer than the per-attempt timeout, the
+  /// attempt's client times out at the deadline instead.
+  fn send(
+    &self,
+    body: &[u8],
+    auth: &Auth,
+    deadline: Option<Instant>,
+  ) -> Result<Response, toolu_http::Error> {
+    let remaining = deadline.map(|deadline| deadline.saturating_duration_since(Instant::now()));
+    if remaining.is_some_and(|left| left.is_zero()) {
+      return Err(toolu_http::Error::Timeout);
+    }
+    let Some(http) = &self.http else {
+      return Err(toolu_http::Error::Timeout);
+    };
+    let request = Request {
+      method: Method::Post,
+      url: &self.endpoint,
+      auth,
+      headers: &HEADERS,
+      body: Some(body),
+    };
+    match remaining.filter(|left| *left < self.timeout) {
+      Some(left) => match http_client(&self.env, left, self.root.clone()) {
+        Ok(short) => short.send(&request),
+        Err(Error::Transport(err)) => Err(err),
+        Err(_) => Err(toolu_http::Error::Timeout),
+      },
+      None => http.send(&request),
     }
   }
 
@@ -84,15 +109,35 @@ impl Jev {
   fn retry_status(&self, response: &Response, attempt: u32) -> Result<u32, Error> {
     delay(response, attempt)
       .filter(|_| attempt < ATTEMPTS && retryable(response.status))
-      .ok_or_else(|| Error::Http {
-        status: response.status,
-        body: String::from_utf8_lossy(&response.body).replace(self.key.0.as_str(), "<redacted>"),
-      })
+      .ok_or_else(|| self.http_error(response))
   }
 
-  fn pause(&self, units: u32) {
-    thread::sleep(self.pause.saturating_mul(units));
+  /// A non-2xx answer as an error, with the key redacted from its body.
+  fn http_error(&self, response: &Response) -> Error {
+    Error::Http {
+      status: response.status,
+      body: String::from_utf8_lossy(&response.body).replace(self.key.0.as_str(), "<redacted>"),
+    }
   }
+}
+
+const HEADERS: [(&str, &str); 2] = [
+  ("content-type", "application/json"),
+  ("accept", "application/json"),
+];
+
+fn failure(err: toolu_http::Error) -> Error {
+  match err {
+    toolu_http::Error::Timeout => Error::Timeout,
+    err => Error::Transport(err),
+  }
+}
+
+/// Whether a `pause` still leaves time before `deadline` for another attempt.
+fn fits(deadline: Instant, pause: Duration) -> bool {
+  deadline
+    .checked_duration_since(Instant::now())
+    .is_some_and(|remaining| pause < remaining)
 }
 
 #[cfg(test)]

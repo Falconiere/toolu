@@ -21,7 +21,8 @@ fn a_typed_noul_answer_is_read_and_the_body_kept() {
     reply.usage,
     Usage {
       input_tokens: 3,
-      output_tokens: 2
+      output_tokens: 2,
+      cost_usd: None
     }
   );
   assert_eq!(
@@ -29,6 +30,19 @@ fn a_typed_noul_answer_is_read_and_the_body_kept() {
     [("q".to_owned(), Answer::Noul { noul: 0.92 })]
   );
   assert_eq!(reply.body, body);
+}
+
+#[test]
+fn a_reported_cost_is_kept_and_an_invalid_one_is_unknown() {
+  let with = |cost: Value| {
+    json!({ "model": "m", "answers": { "q": { "type": "noul", "noul": 0.5 } },
+            "usage": { "input_tokens": 1, "output_tokens": 1, "cost": cost } })
+    .to_string()
+  };
+  let cost = |body: String| parse(&body, &noul()).expect("reply").usage.cost_usd;
+  assert_eq!(cost(with(json!(0.0012))), Some(0.0012));
+  assert_eq!(cost(with(json!(-1.0))), None);
+  assert_eq!(cost(with(json!("0.1"))), None);
 }
 
 #[test]
