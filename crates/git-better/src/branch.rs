@@ -119,6 +119,8 @@ fn slugify(text: &str) -> String {
 
 /// A reference that leads `rest` but is glued to the words by something other
 /// than `-` (`ENG-4_login`, `12 retry`); digits glued to letters (`2fa`) are none.
+/// A reference is ASCII, so a non-ASCII character before its end makes the
+/// byte offsets disagree and `get` or the tail check rejects it.
 fn glued_reference(rest: &str) -> Option<(&str, &str)> {
   let candidate = format!(
     "{}-",

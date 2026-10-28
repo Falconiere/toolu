@@ -34,3 +34,17 @@ fn off_or_outside_a_repository_says_nothing() {
   let empty = tempfile::tempdir().unwrap();
   assert_eq!(summary(&off.env, empty.path()), None);
 }
+
+#[test]
+fn a_branch_without_a_base_says_so_instead_of_claiming_to_be_it() {
+  let repo = Repo::new(".claude", None);
+  git(&repo.root, &["switch", "-q", "feat/1-x"]);
+  git(&repo.root, &["branch", "-m", "main", "trunk"]);
+  let text = summary(&repo.env, &repo.root).unwrap();
+  assert_eq!(
+    text,
+    format!(
+      "{FORMAT}\nBranch feat/1-x (feat, ref 1: x): the base branch main exists neither locally nor on origin, so the branch's own commits are unknown."
+    )
+  );
+}

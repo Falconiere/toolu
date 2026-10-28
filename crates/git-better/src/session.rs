@@ -44,6 +44,12 @@ pub(crate) fn summary(env: &Env, dir: &Path) -> Option<String> {
   if context.on_base {
     return Some(FORMAT.to_owned());
   }
+  if !context.base_found {
+    return Some(format!(
+      "{FORMAT}\n{}",
+      context_text(&context).lines().next().unwrap_or_default()
+    ));
+  }
   Some(format!("{FORMAT}\n{}", context_text(&context)))
 }
 

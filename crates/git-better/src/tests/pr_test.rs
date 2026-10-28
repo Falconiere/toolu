@@ -32,6 +32,7 @@ fn context(branch: &str, newest_first: Vec<Commit>) -> Context {
     base: "main".to_owned(),
     range: "refs/heads/main..HEAD".to_owned(),
     on_base: false,
+    base_found: true,
     total,
     commits: newest_first,
     dirty: Dirty::default(),

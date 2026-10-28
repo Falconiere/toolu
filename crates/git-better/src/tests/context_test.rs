@@ -9,7 +9,7 @@ use crate::settings::Settings;
 fn on_the_base_branch_the_range_is_head() {
   let repo = Repo::new(".claude", None);
   let found = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
-  assert!(found.on_base);
+  assert!(found.on_base && found.base_found);
   assert_eq!(
     (found.branch.as_str(), found.range.as_str()),
     ("main", "HEAD")
@@ -101,6 +101,7 @@ fn an_unborn_branch_is_named_and_a_detached_head_is_head() {
   git(dir.path(), &["init", "-q", "-b", "feat/9-new"]);
   let unborn = gather(&repo.env, dir.path(), &Settings::default(), None, 5).unwrap();
   assert_eq!((unborn.branch.as_str(), unborn.total), ("feat/9-new", 0));
+  assert!(!unborn.on_base && !unborn.base_found);
   assert_eq!(unborn.commits, []);
   git(&repo.root, &["switch", "-q", "feat/1-x"]);
   repo.commit("d.txt", "docs(d): d", None);

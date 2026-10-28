@@ -37,6 +37,7 @@ fn context(on_base: bool) -> Context {
     base: "main".to_owned(),
     range: "refs/heads/main..HEAD".to_owned(),
     on_base,
+    base_found: true,
     total: 2,
     commits: vec![
       Commit {
@@ -117,5 +118,21 @@ fn a_context_read_from_part_of_the_branch_says_how_much() {
       "Branch feat/653-pause-it (feat, ref 653: pause it): 12 commits ahead of main; of the newest 2 read, 1 semantic."
     ),
     "{text}"
+  );
+}
+
+#[test]
+fn a_branch_whose_base_is_missing_is_not_called_the_base() {
+  let mut orphan = context(false);
+  orphan.base_found = false;
+  assert_eq!(
+    context_text(&orphan),
+    "Branch feat/653-pause-it (feat, ref 653: pause it): the base branch main exists neither locally nor on origin, so the branch's own commits are unknown.\n\
+     Working tree: 1 staged, 0 unstaged, 2 untracked."
+  );
+  let document = context_json(&orphan);
+  assert_eq!(
+    (document["onBase"].clone(), document["baseFound"].clone()),
+    (json!(false), json!(false))
   );
 }

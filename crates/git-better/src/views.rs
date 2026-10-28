@@ -151,6 +151,11 @@ pub(crate) fn context_text(context: &Context) -> String {
       "Branch {}{parsed}: the base branch.",
       context.branch
     ));
+  } else if !context.base_found {
+    lines.push(format!(
+      "Branch {}{parsed}: the base branch {} exists neither locally nor on origin, so the branch's own commits are unknown.",
+      context.branch, context.base
+    ));
   } else {
     let semantic = context
       .commits
@@ -192,6 +197,7 @@ pub(crate) fn context_json(context: &Context) -> Value {
     "base": context.base,
     "range": context.range,
     "onBase": context.on_base,
+    "baseFound": context.base_found,
     "total": context.total,
     "commits": context.commits.iter().map(commit_json).collect::<Vec<_>>(),
     "areas": union(&context.commits).iter().map(area_json).collect::<Vec<_>>(),

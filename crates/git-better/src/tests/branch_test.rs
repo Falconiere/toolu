@@ -120,4 +120,6 @@ fn a_glued_reference_is_kept_so_the_example_itself_passes() {
     assert_eq!(codes(example, &strict), Vec::<&str>::new(), "{example}");
   }
   assert_eq!(example_branch("feat/2fa_login", &strict), "feat/2fa-login");
+  assert_eq!(example_branch("fix/ENG\u{e9}4_x", &strict), "fix/eng-4-x");
+  assert_eq!(example_branch("feat/\u{e9}1 x", &strict), "feat/1-x");
 }

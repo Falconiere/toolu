@@ -31,8 +31,10 @@ pub(crate) struct Context {
   pub(crate) base: String,
   /// The range read: `<base>..HEAD` on a feature branch, else `HEAD`.
   pub(crate) range: String,
-  /// The branch is the base branch, or no base ref exists.
+  /// The branch is the base branch.
   pub(crate) on_base: bool,
+  /// The base branch exists locally or on origin (always, on the base branch).
+  pub(crate) base_found: bool,
   /// The newest commits of `range`, newest first, at most the limit.
   pub(crate) commits: Vec<Commit>,
   /// How many commits `range` holds, whatever the limit.
@@ -122,7 +124,8 @@ pub(crate) fn gather(
   let reference = (branch != base)
     .then(|| base_ref(env, dir, &base))
     .flatten();
-  let on_base = reference.is_none();
+  let on_base = branch == base;
+  let base_found = on_base || reference.is_some();
   let range = match (range, &reference) {
     (Some(given), _) => given.to_owned(),
     (None, Some(reference)) => format!("{reference}..HEAD"),
@@ -140,6 +143,7 @@ pub(crate) fn gather(
     base,
     range,
     on_base,
+    base_found,
     commits,
     total,
     dirty: dirty(env, dir)?,

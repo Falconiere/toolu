@@ -74,8 +74,8 @@ pub(crate) fn pr(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
     Ok(context) => context,
     Err(failed) => return failed,
   };
-  if context.on_base {
-    let why = if context.branch == context.base {
+  if context.on_base || !context.base_found {
+    let why = if context.on_base {
       format!(
         "{} is the base branch: there are no branch commits to draft a PR from",
         context.branch
