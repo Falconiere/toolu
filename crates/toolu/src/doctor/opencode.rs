@@ -6,12 +6,12 @@
 
 use std::path::{Path, PathBuf};
 
-use serde_json::Value;
 use toolu_protocol::launcher::opencode::FILE;
 use toolu_runtime::host::cursor::MARKER;
 use toolu_runtime::host::opencode::plugins_dir;
 use toolu_runtime::host::roots::Roots;
 
+use super::cursor::version_of;
 use super::inventory::{Inventory, Plugin};
 
 /// The deprecated package `OpenCode` loaded before `toolu plugins` did.
@@ -107,12 +107,6 @@ fn ours(dir: &Path) -> (Vec<(String, PathBuf)>, Option<String>) {
   }
   found.sort();
   (found, unreadable)
-}
-
-fn version_of(root: &Path) -> Option<String> {
-  let text = std::fs::read_to_string(root.join(".claude-plugin/plugin.json")).ok()?;
-  let json: Value = serde_json::from_str(&text).ok()?;
-  json.get("version")?.as_str().map(str::to_owned)
 }
 
 #[cfg(test)]
