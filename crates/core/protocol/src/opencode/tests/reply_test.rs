@@ -95,8 +95,19 @@ fn session_output_is_context_and_messages() {
     folded(Hook::Prompt, &[ran(0, block, "")]),
     json!({"action": "continue", "context": "secret in prompt"})
   );
+  for garbage in ["plain text", "[1]", "{not json", "\"text\""] {
+    let reply = folded(Hook::ToolBefore, &[ran(0, garbage, "")]);
+    assert_eq!(reply["action"], "deny", "{garbage}");
+    assert!(
+      reply["reason"]
+        .as_str()
+        .unwrap()
+        .ends_with("printed output that is not a JSON object"),
+      "{reply}"
+    );
+  }
   assert_eq!(
-    folded(Hook::ToolBefore, &[ran(0, "plain text", "")]),
+    folded(Hook::ToolAfter, &[ran(0, "plain text", "")]),
     json!({"action": "continue"})
   );
 }

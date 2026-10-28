@@ -7,7 +7,8 @@
 //! - exit 0 reads stdout: `hookSpecificOutput.permissionDecision` `deny` or
 //!   `ask` and `decision: "block"` refuse, `additionalContext` is context for the
 //!   model, `systemMessage` a message for the user, and plain text on
-//!   `SessionStart` or `UserPromptSubmit` is context;
+//!   `SessionStart` or `UserPromptSubmit` is context, and any other output before a
+//!   tool fails closed, since a toolu hook prints a JSON object or nothing;
 //! - any other status, or a timeout, fails closed before a tool and is reported
 //!   on every other event, as the `hooks.json` launcher does.
 //!
@@ -75,7 +76,7 @@ impl Reply {
       return;
     }
     match ran.exit_code {
-      0 => self.stdout(hook, ran.stdout),
+      0 => self.stdout(hook, ran),
       2 => {
         let reason = stripped(ran.stderr);
         let reason = if reason.is_empty() {
@@ -100,14 +101,20 @@ impl Reply {
     }
   }
 
-  fn stdout(&mut self, hook: Hook, stdout: &str) {
-    let text = stdout.trim();
+  fn stdout(&mut self, hook: Hook, ran: &Ran<'_>) {
+    let text = ran.stdout.trim();
     if text.is_empty() {
       return;
     }
     let Ok(Value::Object(doc)) = serde_json::from_str::<Value>(text) else {
-      if matches!(hook, Hook::SessionStart | Hook::Prompt) {
-        self.context.push(text.to_owned());
+      match hook {
+        Hook::SessionStart | Hook::Prompt => self.context.push(text.to_owned()),
+        // A hook that meant to refuse and printed something else must not let the tool run.
+        Hook::ToolBefore => self.fail(
+          hook,
+          format!("{} printed output that is not a JSON object", ran.label),
+        ),
+        Hook::ToolAfter | Hook::Compaction => {}
       }
       return;
     };
