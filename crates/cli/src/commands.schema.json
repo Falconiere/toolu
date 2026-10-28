@@ -1774,6 +1774,43 @@
         "state": { "type": "string", "minLength": 1 },
         "changed": { "type": "boolean" }
       }
+    },
+    "gitBetterCheck": {
+      "description": "toolu git-better check --json: the failed checks of a commit message and a branch name. Exit 0 when ok, 1 when a check failed.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "ok", "findings", "notes"],
+      "properties": {
+        "namespace": { "const": "git-better" },
+        "verb": { "const": "check" },
+        "ok": { "type": "boolean" },
+        "findings": { "type": "array", "items": { "$ref": "#/$defs/gitBetterFinding" } },
+        "notes": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "gitBetterFinding": {
+      "description": "One commit message or branch name that failed its checks, with a corrected example.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "name", "violations", "example"],
+      "properties": {
+        "target": { "enum": ["message", "branch"] },
+        "name": { "type": "string" },
+        "violations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["code", "message"],
+            "properties": {
+              "code": { "type": "string", "pattern": "^[a-z]+(-[a-z]+)*$" },
+              "message": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "example": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

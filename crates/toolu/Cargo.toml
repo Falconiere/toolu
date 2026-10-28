@@ -14,6 +14,7 @@ clap.workspace = true
 regex.workspace = true
 serde_json.workspace = true
 toolu-ast-grep = { path = "../ast-grep" }
+toolu-git-better = { path = "../git-better" }
 toolu-python-quality = { path = "../python-quality" }
 toolu-rust-quality = { path = "../rust-quality" }
 toolu-ts-quality = { path = "../ts-quality" }

@@ -98,7 +98,8 @@ describe meaningful progress; job heartbeats only establish liveness.
 Your session can end at any moment (usage limit, crash, host switch). Keep
 the branch recoverable:
 - Commit as soon as a phase leaves working changes (`wip:` subjects are fine;
-  the PR squash-merges), and `git push -u origin {{BRANCH}}` after each commit
+  the PR squash-merges; any other subject needs an `Intent:` trailer when
+  git-better is installed), and `git push -u origin {{BRANCH}}` after each commit
   that passes the affected tests. Pushing this branch is authorized.
 - Report each phase before starting it, so a relaunch resumes there.
 - Hit a provider usage or rate limit? `report failed --note "rate-limited: <message>"`

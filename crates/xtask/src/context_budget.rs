@@ -32,6 +32,12 @@ struct Skill {
 
 const SKILLS: &[Skill] = &[
   Skill {
+    name: "git-better",
+    path: "plugins/git-better/skills/git-better/SKILL.md",
+    budget: 60,
+    phrases: &["write a commit message", "name a branch", "Intent:"],
+  },
+  Skill {
     name: "sandbox",
     path: "plugins/sandbox/skills/sandbox/SKILL.md",
     budget: 60,

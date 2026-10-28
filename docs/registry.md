@@ -90,3 +90,15 @@ The ast-grep plugin's native SessionStart hook publishes two manifests. `crates/
 - **byte-savings** (`tool/post`) appends `{"kind","returned","full"}` records to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob and ast-grep commands. Hosts stay silent about it. `toolu ast-grep savings <ledger.jsonl>` prints the report on demand.
 
 The compiled rules run only when their manifests exist and the plugin is selected. `fixtures/ast-grep/{nudge,savings,golden}.json` and the native hook integration tests cover the behavior. `cargo xtask bench-hooks` measures every hook entry; budgets are in [resource-budgets.md](resource-budgets.md).
+
+## git-better rule
+
+The git-better plugin's native SessionStart hook publishes one manifest. `crates/git-better` supplies the compiled rule:
+
+- **semantic-git** (`tool/pre`, `Bash|Shell`) reads each `git commit`, `checkout -b`, `switch -c`, `branch` and `worktree add -b` with `toolu_shell::git::{commit_args, new_branches}`.
+  - A commit message must be a scoped Conventional Commit subject with an `Intent:` trailer. The message can come from `-m` values, `-F` files, a heredoc on `-F -` or `--trailer` values.
+  - A new branch name must be `<type>/[<ref>-]<slug>`.
+  - Under `gitBetter.mode: block` a failure is denied with each failed check and a corrected example. Under `advise` it is an advisory.
+  - A message or name that only exists at run time is never guessed, and is explained instead.
+
+`fixtures/git-better/commands.json` is replayed through `toolu hook pre-tools` on claude, codex and muse by `crates/cli/tests/git_better_hook.rs`.

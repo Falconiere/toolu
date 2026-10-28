@@ -14,8 +14,9 @@ use toolu_runtime::host::detect::detect;
 use crate::Context;
 use crate::fast::HookRequest;
 
-/// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev,
-/// toolu-review, ast-grep, the quality plugins, the statusline, pr-babysit and epic-orchestrator.
+/// The other plugins' hooks: `agent-tier` and `mcp-tools`, jev, toolu-review,
+/// ast-grep, git-better, the quality plugins, the statusline, pr-babysit and
+/// epic-orchestrator.
 /// Each reports through the prelude's advisory.
 pub(super) fn dispatch(
   request: &HookRequest,
@@ -35,6 +36,9 @@ pub(super) fn dispatch(
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   if let Some(outcome) = ast_grep_hook(request, context) {
+    return Some(super::prefix(advisory.cloned(), outcome));
+  }
+  if let Some(outcome) = git_better_hook(request, context) {
     return Some(super::prefix(advisory.cloned(), outcome));
   }
   if let Some(outcome) = quality_hook(request, context) {
@@ -111,6 +115,24 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
   }
   let env = (context.env)();
   Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
+}
+
+/// git-better's `SessionStart` registration and its dispatcher dependency check.
+pub(super) fn git_better_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
+  if request.plugin != toolu_hub::git_better::PLUGIN
+    || request.event.as_deref() != Some("SessionStart")
+  {
+    return None;
+  }
+  let env = (context.env)();
+  match request.name.as_str() {
+    "register" => Some(toolu_hub::git_better::register(
+      &env,
+      detect(&env, None).host,
+    )),
+    "check-toolu" => Some(check_toolu(&env)),
+    _ => None,
+  }
 }
 
 /// A quality plugin's two `SessionStart` entries (the hub's `QUALITY_PLUGINS`) and

@@ -26,6 +26,7 @@ fn the_built_in_catalog_is_the_repository_manifest() {
       "delivery-flow",
       "documentation-gate",
       "epic-orchestrator",
+      "git-better",
       "jev",
       "pr-babysit",
       "python-quality",

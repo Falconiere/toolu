@@ -7,13 +7,13 @@ use regex::Regex;
 use serde_json::Value;
 
 /// Published plugins in the marketplace.
-pub(crate) const PLUGINS: usize = 15;
+pub(crate) const PLUGINS: usize = 16;
 /// Discoverable plugin skills.
-pub(crate) const SKILLS: usize = 17;
+pub(crate) const SKILLS: usize = 18;
 /// Published Codex agent profiles.
 pub(crate) const AGENTS: usize = 5;
 /// Claude-compatible hook manifests.
-pub(crate) const HOOKS: usize = 11;
+pub(crate) const HOOKS: usize = 12;
 
 const REQUIRED_SKILLS: [&str; 5] = [
   "plugins/toolu/skills/commit/SKILL.md",

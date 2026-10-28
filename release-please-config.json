@@ -254,6 +254,21 @@
           "jsonpath": "$.version"
         },
         {
+          "type": "json",
+          "path": "plugins/git-better/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/git-better/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/git-better/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
           "type": "generic",
           "path": "crates/epic-orchestrator/assets/dashboard/index.html"
         },

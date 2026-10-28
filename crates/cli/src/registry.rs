@@ -181,6 +181,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_sandbox::command,
     toolu_sandbox::run,
   ),
+  verb(
+    "git-better",
+    toolu_hub::git_better::PLUGIN,
+    toolu_hub::git_better::command,
+    toolu_hub::git_better::run,
+  ),
   Namespace {
     name: "commands",
     owner: BUILTIN,

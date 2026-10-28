@@ -1,0 +1,23 @@
+[package]
+name = "toolu-git-better"
+description = "git-better plugin: semantic branch and commit rules and the toolu git-better namespace"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+clap.workspace = true
+serde_json.workspace = true
+toolu-engine = { path = "../core/engine" }
+toolu-protocol = { path = "../core/protocol" }
+toolu-runtime = { path = "../core/runtime" }
+toolu-shell = { path = "../core/shell" }
+toolu-state = { path = "../core/state" }
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

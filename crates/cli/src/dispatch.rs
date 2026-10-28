@@ -72,6 +72,7 @@ fn reads_stdin(matches: &ArgMatches) -> bool {
     "statusline" => toolu_statusline::needs_stdin(sub),
     "babysit" => toolu_pr_babysit::needs_stdin(sub),
     "opencode" => toolu_hub::opencode::needs_stdin(sub),
+    "git-better" => toolu_hub::git_better::needs_stdin(sub),
     "debug" => sub
       .subcommand()
       .is_some_and(|(_, verb)| verb.get_one::<PathBuf>("file").is_none()),

@@ -8,6 +8,8 @@
 mod cli;
 #[path = "helpers/code_review_schema.rs"]
 mod code_review_schema;
+#[path = "helpers/git_better_schema.rs"]
+mod git_better_schema;
 #[path = "helpers/inventory.rs"]
 mod inventory;
 #[path = "helpers/sandbox_schema.rs"]
@@ -42,6 +44,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "babysit",
     "epic",
     "sandbox",
+    "git-better",
     "ts-quality",
     "rust-quality",
     "python-quality",
@@ -76,6 +79,7 @@ const NAMES: &[&str] = &[
   "babysit",
   "epic",
   "sandbox",
+  "git-better",
   "commands",
   "plugins",
 ];

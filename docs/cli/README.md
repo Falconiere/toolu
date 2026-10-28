@@ -36,6 +36,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`babysit`](babysit.md) | `plugins/pr-babysit` | available | Babysit a PR until CI, review threads and the review-bot verdict are clear |
 | [`epic`](epic.md) | `plugins/epic-orchestrator` | available | Drive an epic to merged PRs: the resident engine, merge queue and trackers |
 | [`sandbox`](sandbox.md) | `plugins/sandbox` | available | Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux |
+| [`git-better`](git-better.md) | `plugins/git-better` | available | Semantic branches and commits that agents can read |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
 | [`plugins`](plugins.md) | built into `crates/cli` | available | Install, list, remove, update and doctor toolu plugins on every host |
 
@@ -73,6 +74,7 @@ Commands:
   babysit         Babysit a PR until CI, review threads and the review-bot verdict are clear [alias: pr-babysit]
   epic            Drive an epic to merged PRs: the resident engine, merge queue and trackers [alias: epic-orchestrator]
   sandbox         Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux
+  git-better      Semantic branches and commits that agents can read
   commands        List every toolu command; --json exports the tree for tools and docs
   plugins         Install, list, remove, update and doctor toolu plugins on every host
   help            Print this message or the help of the given subcommand(s)

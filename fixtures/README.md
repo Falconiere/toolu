@@ -21,6 +21,7 @@ Every new named case file below has `{ "version": 1, "cases": [...] }`. Each cas
 | Ast-grep nudge | `ast-grep/nudge.json` | 38 | `crates/ast-grep/src/tests/`, `crates/cli/tests/ast_grep_hook.rs` |
 | Ast-grep savings | `ast-grep/savings.json` | 35 | `crates/ast-grep/src/tests/savings_test.rs` |
 | Ast-grep report | `ast-grep/report.json` | 6 | `crates/ast-grep/src/tests/report_test.rs` |
+| git-better commands | `git-better/commands.json` | 16 | `crates/cli/tests/git_better_hook.rs` |
 | Shared quality runner | `quality/runner.json` | 16 | `crates/core/engine/tests/quality_{fixture,run_fixture,scan_fixture}.rs` |
 | Host roots | `host/root.json` | 18 | `crates/core/runtime/tests/host_roots_fixture.rs` |
 | Host output encoders | `host/encode.json` | 241 | `crates/core/protocol/tests/encode_fixture.rs` |

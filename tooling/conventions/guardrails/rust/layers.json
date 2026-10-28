@@ -1,6 +1,6 @@
 {
   "core": [["protocol"], ["runtime"], ["shell", "http", "state"], ["engine", "github", "jev", "openrouter"]],
-  "rules": ["ts-quality", "python-quality", "rust-quality", "ast-grep"],
+  "rules": ["ts-quality", "python-quality", "rust-quality", "ast-grep", "git-better"],
   "hub": "toolu",
   "binary": "cli",
   "tooling": "xtask"

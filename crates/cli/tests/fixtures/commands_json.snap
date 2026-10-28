@@ -5088,6 +5088,118 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
+      "about": "Semantic branches and commits that agents can read",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Check a commit message or branch name against the semantic format; exit 1 when it fails",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "A message paragraph, as `git commit -m` takes it; repeat for more",
+              "hidden": false,
+              "long": "message",
+              "possibleValues": [],
+              "required": false,
+              "short": "m",
+              "takesValue": true,
+              "valueName": "TEXT"
+            },
+            {
+              "global": false,
+              "help": "Read the message from FILE, or from stdin with `-`",
+              "hidden": false,
+              "long": "message-file",
+              "possibleValues": [],
+              "required": false,
+              "short": "F",
+              "takesValue": true,
+              "valueName": "FILE"
+            },
+            {
+              "global": false,
+              "help": "A new branch name to check",
+              "hidden": false,
+              "long": "branch",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "check",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "check"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as its plugin's hooks.json names it",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "git-better",
+      "owner": "git-better",
+      "path": [
+        "git-better"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "List every toolu command; --json exports the tree for tools and docs",
       "aliases": [],
       "args": [],
