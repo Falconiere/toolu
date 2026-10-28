@@ -12,7 +12,7 @@ use crate::rules;
 use crate::settings;
 use crate::shape::{self, Shaped};
 use clap::ArgMatches;
-use output::{completed, failed};
+use output::failed;
 use state::RunState;
 use std::collections::BTreeSet;
 use toolu_runtime::cli::Ctx;
@@ -20,7 +20,8 @@ use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_state::git::current_branch;
 
-pub(crate) use state::dismiss;
+pub(crate) use output::completed;
+pub(crate) use state::{dismiss, mark_coverage, settle};
 
 /// Run one committed-diff review with the supplied endpoint configuration.
 pub(crate) fn run(

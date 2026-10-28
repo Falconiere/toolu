@@ -1,0 +1,14 @@
+{
+  "prior": [
+    {
+      "fingerprint": "src/legacy.rs\u001fcorrectness\u001findexing the first item panics on an empty slice",
+      "id": "mem-legacy-1",
+      "path": "src/legacy.rs",
+      "category": "correctness",
+      "claim": "Indexing the first item panics on an empty slice",
+      "severity": "medium",
+      "status": "open"
+    }
+  ],
+  "dismissals": []
+}

@@ -76,7 +76,9 @@ pub(super) fn persist(
   write_gate((env, ctx), root, diff, count, &findings)
 }
 
-fn mark_coverage(
+/// Mark `report` incomplete for every condition production gates on: a scoped
+/// run, an uncommitted worktree, or a degraded pre-pass. Returns whether it is complete.
+pub(crate) fn mark_coverage(
   report: &mut Report,
   scoped: bool,
   shaped: &Shaped,
@@ -96,7 +98,13 @@ fn mark_coverage(
     });
   }
   // Every incomplete condition above left an unreviewed entry.
-  let complete = report.error.is_none() && report.coverage.unreviewed.is_empty();
+  settle(report)
+}
+
+/// Whether `report` is complete; an incomplete one with no blocking finding gains a
+/// system blocker, so its gate state can never pass.
+pub(crate) fn settle(report: &mut Report) -> bool {
+  let complete = report.is_complete();
   if !complete && report.blocking_count() == 0 {
     report.findings.push(super::output::system_blocker(
       "code-review:incomplete",

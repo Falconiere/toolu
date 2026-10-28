@@ -1276,6 +1276,100 @@
           "placeholder": false
         },
         {
+          "about": "Compare a baseline and a Jev-enhanced review against committed expectations; replays recorded responses unless --live",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The case set: expectations.json and cases/<id>/files/{base,tip}",
+              "hidden": false,
+              "long": "cases",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            },
+            {
+              "global": false,
+              "help": "Which arms to run: the Jev judge off, on, or both",
+              "hidden": false,
+              "long": "arm",
+              "possibleValues": [
+                "both",
+                "baseline",
+                "enhanced"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "ARM"
+            },
+            {
+              "global": false,
+              "help": "Effort setting to run; repeatable for calibration. none is the known-weak baseline (lowest level, never judged); default: auto",
+              "hidden": false,
+              "long": "effort",
+              "possibleValues": [
+                "auto",
+                "small",
+                "medium",
+                "high",
+                "xhigh",
+                "none"
+              ],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "LEVEL"
+            },
+            {
+              "global": false,
+              "help": "Call OpenRouter and Jev for real (needs the repository opt-in and OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
+              "hidden": false,
+              "long": "live",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Where recorded responses are read (replay) or written (--live); default: <cases>/replay",
+              "hidden": false,
+              "long": "replay-dir",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            },
+            {
+              "global": false,
+              "help": "Also write the JSON report to this file",
+              "hidden": false,
+              "long": "report",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "eval",
+          "owner": "code-review",
+          "path": [
+            "code-review",
+            "eval"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Settle a branch finding by exact ID without a model call",
           "aliases": [],
           "args": [

@@ -16,6 +16,8 @@ pub mod budget;
 mod cli;
 /// The JSON report contract.
 pub mod contract;
+/// The expectation-based eval harness: schema, matcher and report.
+pub mod eval;
 /// Review-memory records.
 pub mod memory;
 /// Strict model findings before grounding and anchoring.
@@ -51,6 +53,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       Ok(report) => report::present(&report, ctx),
       Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
     },
+    Some(("eval", verb)) => eval::cli::run(verb, ctx, &env(ctx)),
     Some(("dismiss", verb)) => dismiss(verb, ctx),
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
   }

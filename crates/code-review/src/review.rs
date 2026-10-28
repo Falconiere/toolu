@@ -9,11 +9,12 @@ mod chunks;
 mod effort;
 mod judge;
 pub(crate) mod mask;
+mod options;
 mod prompt;
 mod recheck;
+mod replayed;
 mod source;
 
-use std::path::Path;
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
@@ -23,15 +24,15 @@ use toolu_runtime::env::Env;
 
 pub use calls::{Call, Record, Stage};
 pub use effort::{EffortChoice, EffortSource};
+pub use options::{Input, Options};
+pub(crate) use replayed::REPLAYED;
+pub use replayed::Replay;
 
 use crate::budget::{Budget, Effort, Judge};
 use crate::contract::{ErrorKind, Omitted, Report, Usage};
 use crate::memory::{Memory, Status};
 use crate::model::ModelFinding;
-use crate::prepass::PrepassResult;
-use crate::rules::Bundle;
-use crate::settings::{ENABLE_HINT, Settings};
-use crate::shape::Shaped;
+use crate::settings::ENABLE_HINT;
 use calls::Ledger;
 use mask::Mask;
 use source::Package;
@@ -40,42 +41,6 @@ use source::Package;
 const KEY_VAR: &str = "OPENROUTER_API_KEY";
 /// The effort selector's own wall deadline.
 const SELECTOR_DEADLINE: Duration = Duration::from_secs(60);
-
-/// What one run reviews.
-#[derive(Debug, Clone, Copy)]
-pub struct Input<'a> {
-  /// The repository top level.
-  pub root: &'a Path,
-  /// The committed diff.
-  pub shaped: &'a Shaped,
-  /// Base-ref conventions and the prompt override.
-  pub rules: &'a Bundle,
-  /// Trusted scanner findings and secret spans.
-  pub prepass: &'a PrepassResult,
-  /// Earlier rounds' findings and dismissals.
-  pub memory: &'a Memory,
-  /// The `codeReview` settings: opt-in and configured effort.
-  pub settings: &'a Settings,
-  /// `--effort`, when given.
-  pub flag: Option<Effort>,
-}
-
-/// How one run calls out; production uses the defaults of each client.
-#[derive(Clone, Default)]
-pub struct Options<'a> {
-  /// The review model's endpoint.
-  pub openrouter: toolu_openrouter::Config,
-  /// Jev's endpoint; its default is replaced by `OpenRouter`'s System One.
-  pub jev: Option<toolu_jev_client::Config>,
-  /// `true` skips the Jev stage: the baseline arm of #670.
-  pub skip_judge: bool,
-  /// Receives every raw exchange (#670).
-  pub recorder: Option<&'a dyn Fn(&Record<'_>)>,
-  /// Overrides the level's review-call deadline.
-  pub review_deadline: Option<Duration>,
-  /// Overrides the level's shared judge deadline.
-  pub judge_deadline: Option<Duration>,
-}
 
 /// How Jev assessed a model finding.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -199,7 +164,9 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
   }
   let (client, jev) = clients(env, options)?;
   let (mask, schema) = local(input)?;
-  let mut ledger = Ledger::new(options.recorder);
+  let mut ledger = Ledger::new(options.recorder)
+    .replaying(options.replay)
+    .live_on_miss(options.live_on_miss);
   let effort = select(input, options, &jev, &mut ledger);
   let budget = effort.level.budget();
   let (packages, mut notes) = source::packages(env, input.root, input.shaped, budget, &mask);

@@ -10,7 +10,7 @@ use crate::validate::{self, Recap};
 use std::collections::BTreeSet;
 
 /// Derive a report from validated model and deterministic findings.
-pub(super) fn completed(
+pub(crate) fn completed(
   shaped: &Shaped,
   prepass: &PrepassResult,
   prior: &memory::BranchState,
