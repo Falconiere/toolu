@@ -6,6 +6,34 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.6.0](https://github.com/Falconiere/toolu/compare/v8.5.0...v8.6.0) (2026-10-28)
+
+
+### Features
+
+* **code-review:** add structured OpenRouter client ([#723](https://github.com/Falconiere/toolu/issues/723)) ([a170497](https://github.com/Falconiere/toolu/commit/a17049705649354abf78443a4eb96f67d44cf9c4))
+* **code-review:** deterministic pre-pass for trusted scanners ([#722](https://github.com/Falconiere/toolu/issues/722)) ([268b22a](https://github.com/Falconiere/toolu/commit/268b22a61f24f4cdd030dd60d280385156f4c1d0))
+* **code-review:** gather base-ref conventions with caps and excludes ([#721](https://github.com/Falconiere/toolu/issues/721)) ([c1e1b49](https://github.com/Falconiere/toolu/commit/c1e1b49be1411dc48adc9c047d0c685c888f7b93))
+* **code-review:** paired-comparison eval harness with expectations ([#728](https://github.com/Falconiere/toolu/issues/728)) ([fca153e](https://github.com/Falconiere/toolu/commit/fca153e94bc556380ae518692be74d8445ab0689))
+* **code-review:** prompt build, review call and Jev judge ([#724](https://github.com/Falconiere/toolu/issues/724)) ([c8bd61d](https://github.com/Falconiere/toolu/commit/c8bd61dc873570f82a77c03a4fd1aa8694bc52dd))
+* **code-review:** publish verdict and push-review state ([#727](https://github.com/Falconiere/toolu/issues/727)) ([ecb730d](https://github.com/Falconiere/toolu/commit/ecb730d1d94900af005194ff9b27b4ea4d4c44ff))
+* **code-review:** scaffold the native code-review plugin ([#691](https://github.com/Falconiere/toolu/issues/691)) ([1e22cdd](https://github.com/Falconiere/toolu/commit/1e22cdd47c523207d0215a2d6237db70ba51d1ff))
+* **code-review:** shape merge-base diff and anchors ([#720](https://github.com/Falconiere/toolu/issues/720)) ([48278f5](https://github.com/Falconiere/toolu/commit/48278f5663e7454891708fe7d7f13cbcecb85f8d))
+* **code-review:** validate and anchor findings in the diff ([#725](https://github.com/Falconiere/toolu/issues/725)) ([398300e](https://github.com/Falconiere/toolu/commit/398300e5fe7a200383c3f4d0e897f3e8356ba60e))
+* **documentation-gate:** review docs with Jev-routed workers ([#692](https://github.com/Falconiere/toolu/issues/692)) ([e201e50](https://github.com/Falconiere/toolu/commit/e201e50169407a37b10be2e54879aba49ee1836f))
+* **epic:** add worker screen endpoint ([#693](https://github.com/Falconiere/toolu/issues/693)) ([ef6e946](https://github.com/Falconiere/toolu/commit/ef6e9460857391f05543d4320d4859a7f401e8fe))
+* **epic:** dashboard control UI with unlock, actions and host controls ([#719](https://github.com/Falconiere/toolu/issues/719)) ([e7f4a3f](https://github.com/Falconiere/toolu/commit/e7f4a3f9aa8f714a05fe3f7f9fc572ec3b2a5912))
+* **epic:** dashboard worker drawer with plan, live status and screen ([#717](https://github.com/Falconiere/toolu/issues/717)) ([19c51f4](https://github.com/Falconiere/toolu/commit/19c51f432d97c539b1222c1ae000f306b95364d0))
+* **epic:** follow worker background logs ([#718](https://github.com/Falconiere/toolu/issues/718)) ([7ce3e80](https://github.com/Falconiere/toolu/commit/7ce3e80a68f5fe1151c1b2700283c3e9e4b11add))
+* **epic:** live agent status in the status API and /api/v1/agents/live ([#667](https://github.com/Falconiere/toolu/issues/667)) ([858afaf](https://github.com/Falconiere/toolu/commit/858afaf151a6ea3c990a860188710798f55ec221))
+* **epic:** pause and resume an agent host from the CLI and the dashboard ([#697](https://github.com/Falconiere/toolu/issues/697)) ([c9099d3](https://github.com/Falconiere/toolu/commit/c9099d35da076b222724d991980724b8f4f6cb30))
+* **epic:** redesign dashboard shell and boards ([#694](https://github.com/Falconiere/toolu/issues/694)) ([47fc7aa](https://github.com/Falconiere/toolu/commit/47fc7aa24ada53b49a837577b1e3723c603b0364))
+* **epic:** status API fields for the redesigned dashboard ([#688](https://github.com/Falconiere/toolu/issues/688)) ([c1bed5f](https://github.com/Falconiere/toolu/commit/c1bed5f14cecaba1d33a08b1b0bd658201865da9))
+* **epic:** token-gated dashboard control actions on the status listener ([#671](https://github.com/Falconiere/toolu/issues/671)) ([31b16c4](https://github.com/Falconiere/toolu/commit/31b16c4a868b498566c721e602468061503f0326))
+* **epic:** worker plan ledger in the status API ([#687](https://github.com/Falconiere/toolu/issues/687)) ([170acb2](https://github.com/Falconiere/toolu/commit/170acb22e274e54478c13c9ef30679ab3b681feb))
+* **plugins:** clack-style installer UI, progress, and prompt-free update of toolu plugins only ([#690](https://github.com/Falconiere/toolu/issues/690)) ([c08510f](https://github.com/Falconiere/toolu/commit/c08510fa446c9dc5eb5d2700c8a2c8a5cc5f8132))
+* **sandbox:** add the sandbox plugin for Linux builds and agent CLIs ([#726](https://github.com/Falconiere/toolu/issues/726)) ([b3f5d82](https://github.com/Falconiere/toolu/commit/b3f5d82ad17dc965fedcdd1bdaeb4cc76b39b367))
+
 ## [8.5.0](https://github.com/Falconiere/toolu/compare/v8.4.1...v8.5.0) (2026-10-27)
 
 
