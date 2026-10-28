@@ -17,7 +17,7 @@ pub(super) fn flat(text: &str) -> String {
 }
 
 /// Every served text asset with its name, plus the page.
-fn served_text() -> Vec<(String, String)> {
+pub(super) fn served_text() -> Vec<(String, String)> {
   let mut files = vec![(
     "index.html".to_owned(),
     String::from_utf8_lossy(super::PAGE).into_owned(),

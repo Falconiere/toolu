@@ -203,21 +203,6 @@ fn dashboard_asset_page_is_offline_and_font_licensed() {
   let version = env!("CARGO_PKG_VERSION");
   assert!(page.contains(&format!("/assets/{version}/tokens.css")));
   assert!(page.contains(&format!("/assets/{version}/js/app.js")));
-  assert!(
-    page.contains("x-release-please-start-version") && page.contains("x-release-please-end"),
-    "index.html must mark asset URLs for release-please"
-  );
-  let tokens = std::fs::read_to_string(concat!(
-    env!("CARGO_MANIFEST_DIR"),
-    "/assets/dashboard/tokens.css"
-  ))
-  .expect("tokens");
-  assert!(
-    tokens.contains(&format!("/assets/{version}/fonts/"))
-      && tokens.contains("x-release-please-start-version")
-      && tokens.contains("x-release-please-end"),
-    "tokens.css must mark font URLs for release-please"
-  );
   for forbidden in ["<style", "<script>", "http://", "https://"] {
     assert!(!page.contains(forbidden), "{forbidden}");
   }
@@ -229,6 +214,36 @@ fn dashboard_asset_page_is_offline_and_font_licensed() {
   assert!(bytes < 200_000, "font bytes: {bytes}");
   for license in ["OFL-Archivo.txt", "OFL-JetBrainsMono.txt"] {
     assert!(fonts.join(license).is_file(), "{license}");
+  }
+}
+
+#[test]
+fn dashboard_asset_urls_sit_inside_registered_release_please_blocks() {
+  let current = format!("/assets/{}/", env!("CARGO_PKG_VERSION"));
+  let release = std::fs::read_to_string(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../release-please-config.json"
+  ))
+  .expect("release-please config");
+  for (name, text) in super::control_tests::served_text() {
+    // release-please's generic updater rewrites only the first version per line, inside its markers.
+    let mut marked = false;
+    for line in text.lines() {
+      if line.contains("x-release-please-start-version") {
+        marked = true;
+      } else if line.contains("x-release-please-end") {
+        marked = false;
+      } else if line.contains("/assets/") {
+        assert!(marked, "{name}: unmarked asset URL: {line}");
+        assert_eq!(line.matches("/assets/").count(), 1, "{name}: {line}");
+        assert!(line.contains(&current), "{name}: stale asset URL: {line}");
+      }
+    }
+    let entry = format!("\"crates/epic-orchestrator/assets/dashboard/{name}\"");
+    assert!(
+      !text.contains(&current) || release.contains(&entry),
+      "{name} is not a release-please extra-file"
+    );
   }
 }
 
