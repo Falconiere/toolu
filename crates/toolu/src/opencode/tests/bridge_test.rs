@@ -164,7 +164,8 @@ fn each_entry_runs_as_the_binary_with_its_argv_in_the_call_directory() {
 #[test]
 fn a_failure_before_a_tool_denies_and_elsewhere_is_a_message() {
   let root = repo_plugin("toolu");
-  let call = json!({"event": {"tool": "edit", "input": {"path": "a"}}}).to_string();
+  let call =
+    json!({"directory": "/", "event": {"tool": "edit", "input": {"path": "a"}}}).to_string();
   let denied: Value =
     serde_json::from_str(&bridge(Hook::ToolBefore, &root, "/usr/bin/false").run(Some(&call)))
       .unwrap();
@@ -211,4 +212,31 @@ fn a_plugin_without_hooks_continues_and_a_broken_hooks_file_fails() {
       .unwrap();
   assert_eq!(broken["action"], "deny");
   assert!(broken["reason"].as_str().unwrap().contains("is not JSON"));
+}
+
+#[test]
+fn a_call_without_an_existing_directory_is_refused_before_a_tool() {
+  let root = repo_plugin("toolu");
+  for directory in [json!(null), json!("/nonexistent-toolu-dir")] {
+    let call = json!({"directory": directory, "event": {"tool": "edit", "input": {"path": "a"}}});
+    let reply: Value = serde_json::from_str(
+      &bridge(Hook::ToolBefore, &root, "/bin/echo").run(Some(&call.to_string())),
+    )
+    .unwrap();
+    assert_eq!(reply["action"], "deny", "{reply}");
+    assert!(
+      reply["reason"]
+        .as_str()
+        .unwrap()
+        .contains("names no existing directory"),
+      "{reply}"
+    );
+  }
+  let missing_workdir = json!({"directory": "/", "event": {"tool": "shell",
+    "input": {"command": "ls", "workdir": "/nonexistent-toolu-dir"}}});
+  let reply: Value = serde_json::from_str(
+    &bridge(Hook::ToolBefore, &root, "/usr/bin/true").run(Some(&missing_workdir.to_string())),
+  )
+  .unwrap();
+  assert_eq!(reply["action"], "continue", "{reply}");
 }

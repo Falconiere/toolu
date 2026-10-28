@@ -67,8 +67,11 @@ impl Bridge<'_> {
       matcher_subject(self.hook, &payload),
       self.root,
     )?;
+    if planned.is_empty() {
+      return Ok(());
+    }
     let input = Value::Object(payload).to_string();
-    let cwd = call.cwd().map(PathBuf::from).filter(|dir| dir.is_dir());
+    let cwd = hook_cwd(&call)?;
     let root = self.root.display().to_string();
     let env = self
       .env
@@ -78,7 +81,7 @@ impl Bridge<'_> {
     for one in planned {
       let mut spec =
         Spec::new(std::iter::once(self.exe.display().to_string()).chain(one.args.iter().cloned()));
-      spec.cwd.clone_from(&cwd);
+      spec.cwd = Some(cwd.clone());
       spec.env = Some(env.clone());
       spec.stdin = input.clone().into_bytes();
       spec.timeout = one.timeout;
@@ -99,6 +102,18 @@ impl Bridge<'_> {
     }
     Ok(())
   }
+}
+
+/// Where the hooks run: a shell call's `workdir` when it exists, else the call's
+/// directory. A call naming neither is refused, so a hook never judges the
+/// repository the bridge happened to start in.
+fn hook_cwd(call: &Call) -> Result<PathBuf, String> {
+  [call.cwd(), call.directory.clone()]
+    .into_iter()
+    .flatten()
+    .map(PathBuf::from)
+    .find(|dir| dir.is_dir())
+    .ok_or_else(|| "the OpenCode call names no existing directory".to_owned())
 }
 
 /// `<root>/hooks/hooks.json`; a plugin without one has no hooks.

@@ -60,3 +60,28 @@ fn the_driver_names_itself_opencode_and_gets_the_staged_prompts() {
   let words = driver.argv(&step, Path::new("/p"));
   assert!(words.ends_with(&["--model".to_owned(), "m/x".to_owned(), "go".to_owned()]));
 }
+
+#[test]
+fn a_source_server_js_is_never_written_through() {
+  let dir = tempfile::tempdir().unwrap();
+  let repo = dir.path().join("repo");
+  let plugin = repo.join("plugins/toolu");
+  std::fs::create_dir_all(plugin.join("hooks")).unwrap();
+  std::fs::write(plugin.join("hooks/hooks.json"), r#"{"hooks":{}}"#).unwrap();
+  std::fs::write(plugin.join("server.js"), "keep").unwrap();
+  let source = repo.join("plugins/ts-quality");
+  std::fs::create_dir_all(source.join("hooks")).unwrap();
+  std::fs::write(source.join("hooks/hooks.json"), r#"{"hooks":{}}"#).unwrap();
+  let config = private_config(&dir.path().join("evidence"), &repo).unwrap();
+  assert_eq!(
+    std::fs::read_to_string(plugin.join("server.js")).unwrap(),
+    "keep"
+  );
+  let shim = config.join("opencode/plugins/toolu/server.js");
+  assert!(!shim.is_symlink());
+  assert!(
+    std::fs::read_to_string(shim)
+      .unwrap()
+      .contains("const PLUGIN = \"toolu\";")
+  );
+}

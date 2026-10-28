@@ -85,6 +85,10 @@ fn link_plugin(source: &Path, target: &Path, name: &str) -> Result<(), String> {
   let entries = std::fs::read_dir(source).map_err(|err| io("list", source, err))?;
   for entry in entries {
     let entry = entry.map_err(|err| io("list", source, err))?;
+    // The shim is written below; a link there would let the write reach the checkout.
+    if entry.file_name() == FILE {
+      continue;
+    }
     let link = target.join(entry.file_name());
     symlink(entry.path(), &link).map_err(|err| io("link", &link, err))?;
   }
