@@ -97,6 +97,35 @@ fn a_foreign_command_or_missing_event_is_handled() {
 }
 
 #[test]
+fn a_malformed_hooks_document_is_an_error_not_an_empty_plan() {
+  let root = Path::new("/p");
+  for doc in [
+    json!([]),
+    json!({"hooks": []}),
+    json!({"hooks": {"PreToolUse": {}}}),
+    json!({"hooks": {"PreToolUse": ["not a group"]}}),
+    json!({"hooks": {"PreToolUse": [{"matcher": 1, "hooks": []}]}}),
+    json!({"hooks": {"PreToolUse": [{"hooks": {}}]}}),
+  ] {
+    assert!(
+      plan(Hook::ToolBefore, &doc, Some("Bash"), root).is_err(),
+      "{doc}"
+    );
+  }
+  for empty in [
+    json!({}),
+    json!({"hooks": {}}),
+    json!({"hooks": {"PreToolUse": [{}]}}),
+  ] {
+    assert_eq!(
+      plan(Hook::ToolBefore, &empty, Some("Bash"), root).unwrap(),
+      [],
+      "{empty}"
+    );
+  }
+}
+
+#[test]
 fn matchers_search_like_claude_code() {
   assert!(matches("", Some("Bash")));
   assert!(matches("*", Some("Bash")));

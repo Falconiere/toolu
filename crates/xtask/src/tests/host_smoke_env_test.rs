@@ -231,5 +231,8 @@ fn an_opencode_child_gets_the_private_config_home() {
   );
   let mut plain = Command::new("true");
   env.apply(&mut plain);
-  assert!(plain.get_envs().all(|(name, _)| name != "XDG_CONFIG_HOME"));
+  let set = plain
+    .get_envs()
+    .any(|(name, value)| name == "XDG_CONFIG_HOME" && value.is_some());
+  assert!(!set, "a plain child got an XDG_CONFIG_HOME");
 }

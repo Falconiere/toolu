@@ -113,10 +113,13 @@ fn read_hooks(root: &Path) -> Result<Value, String> {
   }
 }
 
-/// The entries of `hooks_json` that `hook` runs for `subject`, in file order.
+/// The entries of `hooks_json` that `hook` runs for `subject`, in file order. No
+/// document (`null`) or no `hooks` has no entries.
 ///
 /// # Errors
-/// When an entry is not a native `toolu` launcher.
+/// When the document has the wrong shape, so a malformed file refuses a tool call
+/// rather than running none of its hooks, or an entry is not a native `toolu`
+/// launcher.
 pub(crate) fn plan(
   hook: Hook,
   hooks_json: &Value,
@@ -124,23 +127,51 @@ pub(crate) fn plan(
   root: &Path,
 ) -> Result<Vec<Planned>, String> {
   let event = hook.claude_event();
-  let groups = hooks_json
-    .get("hooks")
-    .and_then(|hooks| hooks.get(event))
-    .and_then(Value::as_array)
-    .map_or(&[][..], Vec::as_slice);
+  let hooks = match hooks_json {
+    Value::Null => return Ok(Vec::new()),
+    Value::Object(doc) => match doc.get("hooks") {
+      None => return Ok(Vec::new()),
+      Some(Value::Object(hooks)) => hooks,
+      Some(_) => return Err("hooks.json: `hooks` must be an object".to_owned()),
+    },
+    Value::Bool(_) | Value::Number(_) | Value::String(_) | Value::Array(_) => {
+      return Err("hooks.json must be a JSON object".to_owned());
+    }
+  };
   let mut planned = Vec::new();
-  for group in groups {
-    let matcher = group.get("matcher").and_then(Value::as_str).unwrap_or("");
+  for group in array(hooks.get(event), &format!("hooks.{event}"))? {
+    let group = group
+      .as_object()
+      .ok_or_else(|| format!("hooks.json: a hooks.{event} group must be an object"))?;
+    let matcher = match group.get("matcher") {
+      None => "",
+      Some(Value::String(matcher)) => matcher,
+      Some(_) => {
+        return Err(format!(
+          "hooks.json: a hooks.{event} matcher must be a string"
+        ));
+      }
+    };
     if !matches(matcher, subject) {
       continue;
     }
-    let entries = group.get("hooks").and_then(Value::as_array);
-    for entry in entries.map_or(&[][..], Vec::as_slice) {
+    for entry in array(
+      group.get("hooks"),
+      &format!("a hooks.{event} group's hooks"),
+    )? {
       planned.push(planned_entry(entry, event, root)?);
     }
   }
   Ok(planned)
+}
+
+/// `value` as an array; absent is empty, anything else is malformed.
+fn array<'v>(value: Option<&'v Value>, what: &str) -> Result<&'v [Value], String> {
+  match value {
+    None => Ok(&[]),
+    Some(Value::Array(items)) => Ok(items),
+    Some(_) => Err(format!("hooks.json: {what} must be an array")),
+  }
 }
 
 fn planned_entry(entry: &Value, event: &str, root: &Path) -> Result<Planned, String> {

@@ -5,5 +5,8 @@
       "maxFnLines": 50,
       "maxImplLines": 200
     }
+  },
+  "codeReview": {
+    "enabled": true
   }
 }
