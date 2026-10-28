@@ -102,10 +102,20 @@ impl Default for Settings {
 /// The settings for the project found from `cwd`; `plugin_root` locates the
 /// toolu settings directory that holds `commit-prefixes.txt`.
 pub(crate) fn load(roots: &Roots, cwd: Option<&Path>, plugin_root: Option<&Path>) -> Settings {
-  let prefixes = settings_dir(roots, plugin_root)
-    .and_then(|dir| read_list(&dir.join(COMMIT_PREFIXES)).ok())
-    .unwrap_or_default();
-  from_config(&load_config(roots, cwd), prefixes)
+  let listed = settings_dir(roots, plugin_root).map(|dir| read_list(&dir.join(COMMIT_PREFIXES)));
+  let (prefixes, problem) = match listed {
+    Some(Ok(prefixes)) => (prefixes, None),
+    Some(Err(why)) => (
+      Vec::new(),
+      Some(format!(
+        "{COMMIT_PREFIXES} cannot be read ({why}); the default types apply"
+      )),
+    ),
+    None => (Vec::new(), None),
+  };
+  let mut settings = from_config(&load_config(roots, cwd), prefixes);
+  settings.notes.extend(problem);
+  settings
 }
 
 fn flag(section: &Map<String, Value>, key: &str, value: &mut bool, notes: &mut Vec<String>) {

@@ -1,8 +1,10 @@
 //! The git-better plugin's crate: semantic branches and commits that agents can
 //! read. Its `semantic-git` registry rule checks every Bash/Shell command that
 //! commits or names a new branch: a Conventional Commit subject with a scope, an
-//! `Intent:` trailer, and `<type>/[<ref>-]<slug>` branch names. `toolu
-//! git-better check` runs the same checks before the command does.
+//! `Intent:` trailer, and `<type>/[<ref>-]<slug>` branch names. Its
+//! `commit-note` rule attaches a provenance note to each commit. `toolu
+//! git-better check` runs the checks first; `log`, `context`, `pr` and the
+//! `SessionStart` summary read a branch from its commits.
 
 use clap::ArgMatches;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -15,6 +17,7 @@ mod context;
 mod format;
 mod gitio;
 mod history;
+mod message;
 mod note;
 mod post;
 mod pr;

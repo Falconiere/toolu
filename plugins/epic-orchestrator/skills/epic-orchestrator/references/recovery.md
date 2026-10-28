@@ -141,8 +141,9 @@ lack the right: tell the user.
 ## Lost work
 
 Every snapshot is in `git -C <checkout> reflog refs/epic-wip/<key>`. Recover
-on a new branch (`git -C <checkout> checkout -b recover/<key>
-refs/epic-wip/<key>`), compare with the issue branch, and have the worker
+on a new branch (`git -C <checkout> checkout -b fix/recover-<key>
+refs/epic-wip/<key>`, with `<key>` in lowercase so the name passes git-better),
+compare with the issue branch, and have the worker
 continue from it; push with `--force-with-lease` only after checking the remote
 has nothing newer.
 

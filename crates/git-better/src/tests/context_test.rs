@@ -67,3 +67,48 @@ fn a_base_only_on_origin_is_used_and_no_repository_is_an_error() {
   let error = gather(&repo.env, empty.path(), &Settings::default(), None, 5).unwrap_err();
   assert!(error.ends_with("is not in a git repository"), "{error}");
 }
+
+#[test]
+fn a_short_renamed_path_is_counted_once_and_the_total_ignores_the_limit() {
+  let repo = Repo::new(".claude", None);
+  repo.commit("a", "docs(a): a", None);
+  git(&repo.root, &["switch", "-q", "feat/1-x"]);
+  git(&repo.root, &["merge", "-q", "--ff-only", "main"]);
+  git(&repo.root, &["mv", "a", "b"]);
+  std::fs::write(repo.root.join("zz"), "z\n").unwrap();
+  git(&repo.root, &["add", "zz"]);
+  let dirty = gather(&repo.env, &repo.root, &Settings::default(), None, 5)
+    .unwrap()
+    .dirty;
+  assert_eq!(
+    dirty,
+    Dirty {
+      staged: 2,
+      unstaged: 0,
+      untracked: 0
+    }
+  );
+  git(&repo.root, &["commit", "-q", "-m", "docs(a): move"]);
+  repo.commit("c", "docs(c): c", None);
+  let limited = gather(&repo.env, &repo.root, &Settings::default(), None, 1).unwrap();
+  assert_eq!((limited.commits.len(), limited.total), (1, 2));
+}
+
+#[test]
+fn an_unborn_branch_is_named_and_a_detached_head_is_head() {
+  let dir = tempfile::tempdir().unwrap();
+  let repo = Repo::new(".claude", None);
+  git(dir.path(), &["init", "-q", "-b", "feat/9-new"]);
+  let unborn = gather(&repo.env, dir.path(), &Settings::default(), None, 5).unwrap();
+  assert_eq!((unborn.branch.as_str(), unborn.total), ("feat/9-new", 0));
+  assert_eq!(unborn.commits, []);
+  git(&repo.root, &["switch", "-q", "feat/1-x"]);
+  repo.commit("d.txt", "docs(d): d", None);
+  git(&repo.root, &["switch", "-q", "--detach", "HEAD"]);
+  let detached = gather(&repo.env, &repo.root, &Settings::default(), None, 5).unwrap();
+  assert_eq!(detached.branch, "HEAD");
+  assert_eq!(
+    (detached.range.as_str(), detached.total),
+    ("refs/heads/main..HEAD", 1)
+  );
+}

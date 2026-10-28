@@ -29,26 +29,30 @@ fn is_slug(text: &str) -> bool {
     })
 }
 
-/// `653-rest` or `ENG-12-rest`: the reference and the rest after its `-`.
+/// `653-rest` or `ENG-12-rest` (or the bare reference): the reference and the
+/// rest after its `-`. Digits glued to more text (`2fa-login`) are no reference.
 fn reference(rest: &str) -> Option<(&str, &str)> {
   let digits = rest.bytes().take_while(u8::is_ascii_digit).count();
-  if digits > 0 {
-    let (number, tail) = (rest.get(..digits)?, rest.get(digits..)?);
-    return Some((number, tail.strip_prefix('-').unwrap_or(tail)));
-  }
-  let key = rest
-    .bytes()
-    .take_while(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
-    .count();
-  let (project, tail) = (rest.get(..key)?, rest.get(key..)?);
-  let number = tail.strip_prefix('-')?;
-  let digits = number.bytes().take_while(u8::is_ascii_digit).count();
-  if key == 0 || !project.starts_with(|c: char| c.is_ascii_uppercase()) || digits == 0 {
-    return None;
-  }
-  let end = key + 1 + digits;
+  let end = if digits > 0 {
+    digits
+  } else {
+    let key = rest
+      .bytes()
+      .take_while(|b| b.is_ascii_uppercase() || b.is_ascii_digit())
+      .count();
+    let number = rest.get(key..)?.strip_prefix('-')?;
+    let count = number.bytes().take_while(u8::is_ascii_digit).count();
+    if key == 0 || !rest.starts_with(|c: char| c.is_ascii_uppercase()) || count == 0 {
+      return None;
+    }
+    key + 1 + count
+  };
   let (whole, tail) = (rest.get(..end)?, rest.get(end..)?);
-  Some((whole, tail.strip_prefix('-').unwrap_or(tail)))
+  match tail.strip_prefix('-') {
+    Some(slug) => Some((whole, slug)),
+    None if tail.is_empty() => Some((whole, tail)),
+    None => None,
+  }
 }
 
 /// `name` split into its parts, or `None` when it has no `<type>/` prefix.

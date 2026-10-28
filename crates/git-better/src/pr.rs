@@ -102,6 +102,16 @@ fn body(context: &Context, oldest: &[&Commit]) -> String {
   if let Some(number) = reference {
     lines.extend([String::new(), format!("Closes #{number}")]);
   }
+  if context.commits.len() < context.total {
+    let read = context.commits.len();
+    lines.extend([
+      String::new(),
+      format!(
+        "_Drafted from the newest {read} of {} commits._",
+        context.total
+      ),
+    ]);
+  }
   lines.join("\n")
 }
 

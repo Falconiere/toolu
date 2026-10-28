@@ -26,11 +26,13 @@ fn commit(subject: &str, intent: Option<&str>, risk: Option<&str>) -> Commit {
 }
 
 fn context(branch: &str, newest_first: Vec<Commit>) -> Context {
+  let total = newest_first.len();
   Context {
     branch: branch.to_owned(),
     base: "main".to_owned(),
     range: "refs/heads/main..HEAD".to_owned(),
     on_base: false,
+    total,
     commits: newest_first,
     dirty: Dirty::default(),
   }

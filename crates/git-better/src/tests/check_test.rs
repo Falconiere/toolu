@@ -19,5 +19,11 @@ fn findings_cover_the_message_and_the_branch() {
     false,
   );
   assert_eq!(clean, []);
-  assert_eq!(findings(Some("wip"), None, &settings, true).len(), 1);
+  let wip = findings(Some("wip"), None, &settings, true);
+  let codes: Vec<&str> = wip[0]
+    .violations
+    .iter()
+    .map(|violation| violation.code)
+    .collect();
+  assert_eq!((wip.len(), codes), (1, vec!["wip"]));
 }

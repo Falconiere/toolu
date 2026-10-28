@@ -1,7 +1,8 @@
 //! The provenance note: JSON under `refs/notes/git-better` with what a squash
 //! merge or a rebase loses (the branch, base, host and session the commit was
 //! made on) and the areas and files it changed. Trailers stay the source of
-//! truth; a missing note is recomputed from the diff by every reader.
+//! truth: readers take areas from the diff and only the provenance from a note,
+//! so a missing note loses only the provenance.
 
 use std::path::Path;
 
@@ -90,8 +91,32 @@ pub(crate) fn write(
   let found = changes(env, dir, commit)?;
   let text = body(provenance, &found, roots).to_string();
   let args = ["notes", "--ref", NOTES_REF, "add", "-F", "-", commit];
-  git(env, dir, &args, text.as_bytes())?;
+  git(
+    &as_committer(env, dir, commit)?,
+    dir,
+    &args,
+    text.as_bytes(),
+  )?;
   Ok(true)
+}
+
+/// `env` with `commit`'s committer as the note's author and committer: storing a
+/// note makes a commit on the notes ref, and the hook's own environment may have
+/// no identity even though the agent's commit had one.
+fn as_committer(env: &Env, dir: &Path, commit: &str) -> Result<Env, String> {
+  let who = git(env, dir, &["log", "-1", "--format=%cn%x1f%ce", commit], &[])?;
+  let (name, email) = who
+    .trim_end()
+    .split_once('\x1f')
+    .ok_or_else(|| format!("no committer on {commit}"))?;
+  Ok(
+    env
+      .clone()
+      .with("GIT_AUTHOR_NAME", name)
+      .with("GIT_AUTHOR_EMAIL", email)
+      .with("GIT_COMMITTER_NAME", name)
+      .with("GIT_COMMITTER_EMAIL", email),
+  )
 }
 
 #[cfg(test)]

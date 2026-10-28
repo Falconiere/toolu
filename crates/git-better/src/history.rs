@@ -76,15 +76,20 @@ fn parse(sha: &str, body: &str, note: &str) -> Commit {
   }
 }
 
+/// A full commit hash: 40 or 64 hex digits.
+fn is_sha(text: &str) -> bool {
+  matches!(text.len(), 40 | 64) && text.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
 /// `added deleted path` lines per commit, from `--numstat` records.
 fn numstat(text: &str, roots: &[String]) -> BTreeMap<String, Vec<Area>> {
   let mut found = BTreeMap::new();
-  for record in text
-    .split('\x1e')
-    .filter(|record| !record.trim().is_empty())
-  {
+  for record in text.split('\x1e') {
     let mut lines = record.lines();
-    let sha = lines.next().unwrap_or_default().trim().to_owned();
+    let sha = lines.next().unwrap_or_default().trim();
+    if !is_sha(sha) {
+      continue;
+    }
     let mut areas: BTreeMap<String, Area> = BTreeMap::new();
     for line in lines.filter(|line| !line.is_empty()) {
       let mut parts = line.splitn(3, '\t');
@@ -103,15 +108,17 @@ fn numstat(text: &str, roots: &[String]) -> BTreeMap<String, Vec<Area>> {
         .and_then(|count| count.parse::<u64>().ok())
         .unwrap_or_default();
     }
-    found.insert(sha, areas.into_values().collect());
+    found.insert(sha.to_owned(), areas.into_values().collect());
   }
   found
 }
 
-/// The newest `limit` commits of `range`, newest first.
+/// The newest `limit` commits of `range`, newest first. Messages and notes are
+/// read NUL-separated, since git stores no NUL in either; a merge's areas are
+/// its changes against its first parent.
 ///
 /// # Errors
-/// When git cannot read the range.
+/// When `range` starts with `-`, or git cannot read the range.
 pub(crate) fn history(
   env: &Env,
   dir: &Path,
@@ -119,13 +126,17 @@ pub(crate) fn history(
   limit: usize,
   roots: &[String],
 ) -> Result<Vec<Commit>, String> {
+  if range.starts_with('-') {
+    return Err(format!("`{range}` is not a revision range"));
+  }
   let count = format!("--max-count={limit}");
   let notes = format!("--notes={NOTES_REF}");
   let format = [
     "log",
+    "-z",
     &count,
     &notes,
-    "--format=%H%x1f%B%x1f%N%x1e",
+    "--format=%H%n%B%x00%N",
     range,
     "--",
   ];
@@ -137,23 +148,27 @@ pub(crate) fn history(
     &count,
     "--no-renames",
     "--numstat",
+    "--diff-merges=first-parent",
     "--format=%x1e%H",
     range,
     "--",
   ];
   let mut areas = numstat(&git(env, dir, &stat_args, &[])?, roots);
+  let fields: Vec<&str> = text.split('\0').collect();
   let mut commits = Vec::new();
-  for record in text
-    .split('\x1e')
-    .filter(|record| !record.trim().is_empty())
-  {
-    let mut fields = record.trim_start_matches('\n').split('\x1f');
-    let (sha, body, note) = (fields.next(), fields.next(), fields.next());
-    let (Some(sha), Some(body)) = (sha, body) else {
+  for pair in fields.chunks(2) {
+    let (head, note) = (
+      pair.first().copied().unwrap_or_default(),
+      pair.get(1).copied(),
+    );
+    let Some((sha, body)) = head.split_once('\n') else {
       continue;
     };
-    let mut commit = parse(sha.trim(), body, note.unwrap_or_default());
-    commit.areas = areas.remove(&commit.sha).unwrap_or_default();
+    if !is_sha(sha) {
+      continue;
+    }
+    let mut commit = parse(sha, body, note.unwrap_or_default());
+    commit.areas = areas.remove(sha).unwrap_or_default();
     commits.push(commit);
   }
   Ok(commits)

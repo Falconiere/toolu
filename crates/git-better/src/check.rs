@@ -1,18 +1,15 @@
 //! `toolu git-better check`: the rule's checks on a message and a branch name,
 //! as text or one `gitBetterCheck` document, exit 1 when one fails.
 
-use std::path::Path;
-
 use clap::ArgMatches;
 use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
-use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
-use toolu_state::git::{base_branch, current_branch};
 
 use crate::branch::{check_branch, example_branch};
 use crate::cli::Place;
+use crate::context::on_base_branch;
 use crate::format::{check_message, example_message, is_wip};
 use crate::report::{Finding, Target, render};
 use crate::settings::{self, Settings};
@@ -50,7 +47,7 @@ pub(crate) fn findings(
         target: Target::Message,
         name: String::new(),
         violations,
-        example: example_message(text),
+        example: example_message(text, settings),
       });
     }
   }
@@ -110,7 +107,7 @@ pub(crate) fn check(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
   let roots = Roots::new(env.clone(), ctx.host);
   let settings = settings::load(&roots, Some(cwd), None);
   let wip = message.as_deref().is_some_and(is_wip);
-  let base = wip && on_base(env, cwd);
+  let base = wip && on_base_branch(env, cwd);
   let found = findings(message.as_deref(), branch, &settings, base);
   let exit = if found.is_empty() {
     Exit::Success
@@ -130,10 +127,6 @@ pub(crate) fn check(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
     stdout: Some(stdout),
     stderr,
   }
-}
-
-fn on_base(env: &Env, cwd: &Path) -> bool {
-  current_branch(env, cwd) == base_branch(env, None, cwd)
 }
 
 #[cfg(test)]

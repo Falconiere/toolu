@@ -18,7 +18,7 @@ fn a_feature_branch_gets_its_summary() {
   let text = summary(&repo.env, &repo.root).unwrap();
   assert!(text.starts_with(FORMAT), "{text}");
   assert!(
-    text.contains("\nBranch feat/1-x (feat, ref 1: x): 1 commit ahead of main, 1 semantic."),
+    text.contains("\nBranch feat/1-x (feat, ref 1: x): 1 commit ahead of main; 1 semantic."),
     "{text}"
   );
   assert!(text.contains("- docs(a): add: readers need a"), "{text}");

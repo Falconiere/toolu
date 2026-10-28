@@ -13,7 +13,8 @@ Commit the current working tree without broad re-exploration.
    configuration. If none exists, record that and continue.
 5. On failure, fix only the reported issue, re-stage, and rerun every required
    gate until green.
-6. Commit with a concise Conventional Commit subject of at most 72 characters.
+6. Commit with a concise, scoped Conventional Commit subject
+   (`type(scope): description`) of at most 72 characters.
    Group a body by package only when it adds useful context. When git-better
    is installed, add an `Intent:` trailer saying why the change is needed.
 7. If commit hooks fail, fix only their findings, re-stage, and retry. Stop

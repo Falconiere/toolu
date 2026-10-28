@@ -26,7 +26,7 @@ fn only_a_message_file_of_dash_reads_stdin() {
 }
 
 #[test]
-fn the_namespace_has_check_and_setup() {
+fn the_namespace_has_its_five_verbs() {
   let tree = command();
   let names: Vec<&str> = tree
     .get_subcommands()

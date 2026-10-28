@@ -134,6 +134,28 @@ pub(crate) fn with_trailers(message: &str, extra: &[String]) -> String {
   format!("{message}{separator}{}", extra.join("\n"))
 }
 
+/// A `git commit --trailer` value as git writes it: `key=value` and
+/// `key: value` both become `key: value`.
+pub(crate) fn trailer_arg(value: &str) -> String {
+  match value.find([':', '=']) {
+    Some(at) => {
+      let (key, rest) = (
+        value.get(..at).unwrap_or_default(),
+        value.get(at + 1..).unwrap_or_default(),
+      );
+      format!("{}: {}", key.trim(), rest.trim())
+    }
+    None => value.trim().to_owned(),
+  }
+}
+
+/// A word written with a capital first letter and lowercase after it (`Add`),
+/// not an acronym (`JWT`) or a single letter.
+fn capitalized(word: &str) -> bool {
+  let mut letters = word.chars();
+  letters.next().is_some_and(char::is_uppercase) && letters.next().is_some_and(char::is_lowercase)
+}
+
 /// A `wip` subject, which a branch squashes away before it merges.
 pub(crate) fn is_wip(message: &str) -> bool {
   let first = message.lines().next().unwrap_or_default().trim();
@@ -174,7 +196,7 @@ fn check_subject(first: &str, settings: &Settings, found: &mut Vec<Violation>) -
       "end the subject without a period",
     ));
   }
-  if parsed.description.starts_with(|c: char| c.is_uppercase()) {
+  if capitalized(parsed.description) {
     let why = "start the description in lowercase, in the imperative: `add …`, `fix …`";
     found.push(Violation::new("subject-case", why));
   }
@@ -261,19 +283,26 @@ pub(crate) fn check_message(message: &str, settings: &Settings, on_base: bool) -
 }
 
 /// A corrected skeleton for `message`, keeping what can be kept of its subject.
-pub(crate) fn example_message(message: &str) -> String {
+pub(crate) fn example_message(message: &str, settings: &Settings) -> String {
   let first = message.lines().next().unwrap_or_default().trim();
   let parsed = subject(first);
-  let kind = parsed.map_or("<type>", |found| found.kind);
+  let kind = parsed
+    .map(|found| found.kind)
+    .filter(|kind| settings.types.iter().any(|known| known == kind))
+    .unwrap_or("<type>");
   let scope = parsed.and_then(|found| found.scope).unwrap_or("<area>");
   let bang = parsed.is_some_and(|found| found.breaking);
   let description = parsed.map_or("<what changed>", |found| {
     found.description.trim().trim_end_matches('.')
   });
-  let mut lower = description.chars();
-  let description = lower.next().map_or_else(String::new, |c| {
-    c.to_lowercase().chain(lower).collect::<String>()
-  });
+  let description = if capitalized(description) {
+    let mut letters = description.chars();
+    letters.next().map_or_else(String::new, |c| {
+      c.to_lowercase().chain(letters).collect::<String>()
+    })
+  } else {
+    description.to_owned()
+  };
   let found = trailers(message);
   let intent = trailer(&found, INTENT)
     .filter(|intent| !intent.is_empty())

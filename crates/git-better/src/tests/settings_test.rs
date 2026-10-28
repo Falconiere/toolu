@@ -94,7 +94,14 @@ fn a_value_that_cannot_be_read_keeps_its_default_and_is_reported() {
   assert_eq!(settings.mode, Mode::Block);
   assert!(settings.format.scope);
   assert_eq!(settings.types, Settings::default().types);
-  assert_eq!(settings.notes.len(), 3, "{:?}", settings.notes);
+  assert_eq!(
+    settings.notes,
+    [
+      "gitBetter.mode is not one of block|advise|off; ignored",
+      "gitBetter.requireScope must be a boolean; ignored",
+      "gitBetter.types must be a non-empty array of lowercase words; ignored",
+    ]
+  );
   let shape = loaded(Some(r#"{"version":1,"gitBetter":true}"#));
   assert_eq!(shape.mode, Mode::Block);
   assert_eq!(
@@ -107,7 +114,14 @@ fn a_value_that_cannot_be_read_keeps_its_default_and_is_reported() {
 fn an_invalid_config_keeps_enforcing_the_defaults() {
   let settings = loaded(Some(r#"{"version":1,"unknownKey":1}"#));
   assert_eq!(settings.mode, Mode::Block);
-  assert_eq!(settings.notes.len(), 1, "{:?}", settings.notes);
+  assert_eq!(settings.notes.len(), 1);
+  assert!(
+    settings.notes[0].starts_with("invalid config (")
+      && settings.notes[0]
+        .ends_with("unknown top-level key 'unknownKey'); gitBetter uses its defaults"),
+    "{:?}",
+    settings.notes
+  );
 }
 
 #[test]
@@ -138,4 +152,39 @@ fn the_default_types_match_the_shipped_commit_prefixes() {
   let shipped =
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../../plugins/toolu/settings/commit-prefixes.txt");
   assert_eq!(read_list(&shipped).unwrap(), DEFAULT_TYPES);
+}
+
+#[test]
+fn an_unreadable_type_list_is_reported_unless_the_user_can_still_read_it() {
+  use std::os::unix::fs::PermissionsExt;
+  let dir = tempfile::tempdir().unwrap();
+  let settings_dir = dir.path().join("settings");
+  std::fs::create_dir_all(&settings_dir).unwrap();
+  let list = settings_dir.join("commit-prefixes.txt");
+  std::fs::write(&list, "feat\n").unwrap();
+  std::fs::set_permissions(&list, std::fs::Permissions::from_mode(0o000)).unwrap();
+  let readable = std::fs::read(&list).is_ok();
+  let env = Env::from_pairs([
+    ("HOME", dir.path().display().to_string()),
+    (
+      "TOOLU_CONFIG_DIR",
+      dir.path().join("user").display().to_string(),
+    ),
+    ("TOOLU_SETTINGS_DIR", settings_dir.display().to_string()),
+  ]);
+  let settings = load(&Roots::new(env, Some(Host::Claude)), Some(dir.path()), None);
+  if readable {
+    assert_eq!(
+      (settings.types, settings.notes),
+      (vec!["feat".to_owned()], Vec::new())
+    );
+  } else {
+    assert_eq!(settings.types, Settings::default().types);
+    assert_eq!(settings.notes.len(), 1);
+    assert!(
+      settings.notes[0].starts_with("commit-prefixes.txt cannot be read ("),
+      "{:?}",
+      settings.notes
+    );
+  }
 }

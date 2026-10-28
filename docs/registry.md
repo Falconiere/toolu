@@ -101,7 +101,7 @@ The git-better plugin's native SessionStart hook publishes two manifests. `crate
   - Under `gitBetter.mode: block` a failure is denied with each failed check and a corrected example. Under `advise` it is an advisory.
   - A message or name that only exists at run time is never guessed, and is explained instead.
 
-- **commit-note** (`tool/post`, `Bash|Shell`) runs after a command that statically ran `git commit`. It writes a note only when HEAD's newest reflog entry is a commit from the last two minutes and the host reported no failure, so a failed commit never labels an older one.
+- **commit-note** (`tool/post`, `Bash|Shell`) runs after a command that statically ran `git commit`. It writes a note only when HEAD's newest reflog entry is a commit from the last two minutes and the host reported no failure, so an older commit is not labeled.
   - **Note location:** a JSON note under `refs/notes/git-better`, written once per commit.
   - **Note contents:** the branch, base, host and session, the changed areas, and up to 200 files.
   - **Off switch:** `gitBetter.notes: false`.

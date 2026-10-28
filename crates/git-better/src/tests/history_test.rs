@@ -84,3 +84,38 @@ fn areas_sum_and_the_highest_risk_wins() {
   assert_eq!(highest_risk(&found[1..]), Some("low"));
   assert_eq!(highest_risk(&[Commit::default()]), None);
 }
+
+#[test]
+fn a_dash_range_is_refused_before_git_sees_it() {
+  let repo = branch();
+  let target = repo.root.join("written");
+  let range = format!("--output={}", target.display());
+  let error = history(&repo.env, &repo.root, &range, 5, &roots()).unwrap_err();
+  assert_eq!(error, format!("`{range}` is not a revision range"));
+  assert!(!target.exists());
+}
+
+#[test]
+fn separator_bytes_in_a_message_make_no_phantom_commit() {
+  let repo = branch();
+  repo.commit("x.txt", "docs(x): odd\n\nIntent: a\u{1e}b\u{1f}c", None);
+  let found = history(&repo.env, &repo.root, "main..HEAD", 20, &roots()).unwrap();
+  assert_eq!(found.len(), 4);
+  assert_eq!(found[0].intent.as_deref(), Some("a\u{1e}b\u{1f}c"));
+}
+
+#[test]
+fn a_merge_reads_its_changes_against_the_first_parent() {
+  let repo = branch();
+  git(&repo.root, &["switch", "-q", "-c", "fix/2-y", "main"]);
+  repo.commit("crates/other/c.rs", "fix(other): c\n\nIntent: c", None);
+  git(&repo.root, &["switch", "-q", "feat/1-x"]);
+  git(&repo.root, &["merge", "-q", "--no-edit", "fix/2-y"]);
+  let found = history(&repo.env, &repo.root, "main..HEAD", 1, &roots()).unwrap();
+  let names: Vec<&str> = found[0]
+    .areas
+    .iter()
+    .map(|area| area.name.as_str())
+    .collect();
+  assert_eq!(names, ["crates/other"]);
+}

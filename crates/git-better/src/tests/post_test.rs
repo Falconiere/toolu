@@ -24,11 +24,15 @@ fn commit(repo: &Repo, date: Option<&str>) {
 }
 
 fn after(repo: &Repo, command: &str, output: Option<Value>) -> Decision {
+  after_tool(repo, "Bash", command, output)
+}
+
+fn after_tool(repo: &Repo, tool: &str, command: &str, output: Option<Value>) -> Decision {
   let event = NormalizedEvent::ToolPost {
     session: repo.session("session-7"),
     tool: Tool {
       call_id: Text::new("c").unwrap(),
-      name: Text::new("Bash").unwrap(),
+      name: Text::new(tool).unwrap(),
       input: json!({ "command": command }).as_object().cloned().unwrap(),
     },
     output,
@@ -103,4 +107,48 @@ fn notes_false_turns_the_note_off() {
   commit(&repo, None);
   after(&repo, "git commit -m 'docs(x): y'", None);
   assert_eq!(note(&repo), None);
+}
+
+#[test]
+fn a_commit_in_a_c_directory_on_a_shell_tool_is_noted_there() {
+  let outer = repo(None);
+  let inner = outer.root.join("inner");
+  std::fs::create_dir_all(&inner).unwrap();
+  git(&inner, &["init", "-q", "-b", "main"]);
+  std::fs::write(inner.join("x.txt"), "x\n").unwrap();
+  git(&inner, &["add", "-A"]);
+  git(&inner, &["commit", "-q", "-m", "docs(x): x"]);
+  after_tool(&outer, "Shell", "git -C inner commit -m 'docs(x): x'", None);
+  let listed = git(&inner, &["notes", "--ref", NOTES_REF, "list"]);
+  assert_eq!(listed.lines().count(), 1, "{listed}");
+  assert_eq!(note(&outer), None);
+  after(&outer, "git -C \"$D\" commit -m 'docs(x): x'", None);
+  assert_eq!(note(&outer), None);
+}
+
+#[test]
+fn a_camel_case_failure_writes_nothing_and_an_amend_is_noted() {
+  let repo = repo(None);
+  commit(&repo, None);
+  after(
+    &repo,
+    "git commit -m 'docs(x): y'",
+    Some(json!({"exitCode": 128})),
+  );
+  assert_eq!(note(&repo), None);
+  git(
+    &repo.root,
+    &["commit", "-q", "--amend", "-m", "docs(readme): amended"],
+  );
+  after(&repo, "git commit --amend -m 'docs(readme): amended'", None);
+  assert_eq!(note(&repo).unwrap()["branch"], "feat/1-x");
+}
+
+#[test]
+fn a_detached_commit_names_head_as_its_branch() {
+  let repo = repo(None);
+  git(&repo.root, &["switch", "-q", "--detach", "HEAD"]);
+  commit(&repo, None);
+  after(&repo, "git commit -m 'docs(readme): x'", None);
+  assert_eq!(note(&repo).unwrap()["branch"], "HEAD");
 }

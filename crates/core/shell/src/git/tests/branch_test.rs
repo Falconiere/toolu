@@ -100,6 +100,11 @@ fn listing_deleting_and_switching_to_existing_branches_name_nothing() {
     "git branch -u origin/x feat/x",
     "git branch --set-upstream-to=origin/x",
     "git branch --edit-description",
+    "git branch -r",
+    "git branch --remotes --list 'origin/*'",
+    "git branch --unset-upstream",
+    "git branch --format '%(refname)' --sort -committerdate",
+    "git branch -m",
     "git checkout feat/x",
     "git checkout -- file.rs",
     "git switch main",
@@ -126,5 +131,22 @@ fn a_dynamic_name_is_reported_as_unknown() {
       verb: BranchVerb::Create,
       name: None
     }]
+  );
+}
+
+#[test]
+fn several_names_in_one_command_are_each_reported() {
+  assert_eq!(
+    branches("git checkout -b feat/a -B feat/b"),
+    [
+      NewBranch {
+        verb: BranchVerb::Checkout,
+        name: Some("feat/a".to_owned())
+      },
+      NewBranch {
+        verb: BranchVerb::Checkout,
+        name: Some("feat/b".to_owned())
+      },
+    ]
   );
 }

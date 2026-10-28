@@ -2,8 +2,8 @@
 //! a new branch is checked against the semantic format. A failure is denied
 //! (`gitBetter.mode: block`) or explained (`advise`); a message or name that
 //! only exists at run time is never guessed, and earns an advisory instead.
+//! Config values the plugin could not read are reported with the decision.
 
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -18,18 +18,18 @@ use toolu_runtime::registry::rule::{Rule, RuleContext};
 use toolu_shell::git::{
   CommitArgs, GitInvocation, MessageOrigin, NewBranch, commit_args, git_invocation, new_branches,
 };
-use toolu_state::git::{base_branch, current_branch};
+use toolu_state::git::base_branch;
 
 use crate::SPEC;
 use crate::branch::{check_branch, example_branch};
-use crate::format::{check_message, example_message, is_wip, with_trailers};
+use crate::context::on_base_branch;
+use crate::format::{check_message, example_message, is_wip};
+use crate::message::{Line, message};
 use crate::report::{CHECK_HINT, Finding, Target, render};
 use crate::settings::{self, Mode, Settings};
 
 /// The rule's manifest name.
 pub(crate) const NAME: &str = "semantic-git";
-/// The subcommands that can commit or name a branch.
-const SUBCOMMANDS: [&str; 5] = ["commit", "checkout", "switch", "branch", "worktree"];
 
 /// The compiled pre-tool rule.
 struct SemanticGit;
@@ -41,6 +41,13 @@ pub const SEMANTIC_GIT: &dyn Rule = &SemanticGit;
 enum Outcome {
   Failed(Finding),
   Unread(String),
+}
+
+/// A commit or new branch to check, in the directory git runs in (`None` when
+/// a `-C` expands at run time).
+enum Item {
+  Commit(Option<PathBuf>, CommitArgs),
+  Branch(Option<PathBuf>, NewBranch),
 }
 
 fn command_of(event: &NormalizedEvent) -> Option<String> {
@@ -57,68 +64,53 @@ fn command_of(event: &NormalizedEvent) -> Option<String> {
     .map(str::to_owned)
 }
 
-/// The directory a git invocation works in: `cwd`, then each static `-C`.
-fn repo_dir(cwd: &Path, git: &GitInvocation<'_>) -> PathBuf {
-  git
-    .c_chain
-    .iter()
-    .fold(cwd.to_path_buf(), |dir, step| match step {
-      Some(step) => dir.join(step),
-      None => dir,
-    })
+/// The directory a git invocation works in: `cwd`, then each `-C`; `None` when
+/// one expands at run time.
+fn repo_dir(cwd: &Path, git: &GitInvocation<'_>) -> Option<PathBuf> {
+  let mut dir = cwd.to_path_buf();
+  for step in &git.c_chain {
+    dir = dir.join(step.as_deref()?);
+  }
+  Some(dir)
 }
 
-/// The commit's message as git will write it, `Ok(None)` when it is not new
-/// text, or why it cannot be read before the command runs.
-fn message(args: &CommitArgs, dir: &Path) -> Result<Option<String>, String> {
-  if args.origin != MessageOrigin::Written {
-    return Ok(None);
-  }
-  let mut parts = Vec::new();
-  for value in &args.messages {
-    parts.push(value.clone().ok_or("its `-m` value expands at run time")?);
-  }
-  for file in &args.files {
-    let text = match file.as_deref() {
-      None => return Err("its `-F` path expands at run time".to_owned()),
-      Some("-") => args.stdin.clone().ok_or("it is piped into `-F -`")?,
-      Some(path) => fs::read_to_string(dir.join(path))
-        .map_err(|error| format!("its file `{path}` cannot be read yet ({error})"))?,
-    };
-    parts.push(text);
-  }
-  if parts.is_empty() {
-    return Err("it is written in an editor".to_owned());
-  }
-  let mut extra = Vec::new();
-  for value in &args.trailers {
-    extra.push(
-      value
-        .clone()
-        .ok_or("a `--trailer` value expands at run time")?,
+/// Every commit with new text and every new branch name in the line.
+fn items(analysis: &toolu_shell::analysis::ShellAnalysis, cwd: &Path) -> Vec<Item> {
+  let mut found = Vec::new();
+  for git in analysis.commands.iter().filter_map(git_invocation) {
+    let dir = repo_dir(cwd, &git);
+    if let Some(args) = commit_args(&git).filter(|args| args.origin == MessageOrigin::Written) {
+      found.push(Item::Commit(dir.clone(), args));
+    }
+    found.extend(
+      new_branches(&git)
+        .into_iter()
+        .map(|name| Item::Branch(dir.clone(), name)),
     );
   }
-  Ok(Some(with_trailers(&parts.join("\n\n"), &extra)))
+  found
 }
 
-fn on_base(env: &Env, dir: &Path) -> bool {
-  current_branch(env, dir) == base_branch(env, None, dir)
-}
-
-fn commit(args: &CommitArgs, settings: &Settings, env: &Env, dir: &Path) -> Option<Outcome> {
-  let text = match message(args, dir) {
+fn commit(
+  args: &CommitArgs,
+  settings: &Settings,
+  env: &Env,
+  dir: &Path,
+  line: &Line,
+) -> Option<Outcome> {
+  let text = match message(args, dir, line) {
     Ok(Some(text)) => text,
     Ok(None) => return None,
     Err(why) => return Some(Outcome::Unread(format!("the commit message, as {why}"))),
   };
-  let base = is_wip(&text) && on_base(env, dir);
+  let base = is_wip(&text) && on_base_branch(env, dir);
   let violations = check_message(&text, settings, base);
   (!violations.is_empty()).then(|| {
     Outcome::Failed(Finding {
       target: Target::Message,
       name: String::new(),
       violations,
-      example: example_message(&text),
+      example: example_message(&text, settings),
     })
   })
 }
@@ -160,7 +152,21 @@ fn branch(found: &NewBranch, settings: &Settings, env: &Env, dir: &Path) -> Opti
   }))
 }
 
-fn decide(outcomes: Vec<Outcome>, mode: Mode) -> Decision {
+fn outcome(item: &Item, settings: &Settings, env: &Env, line: &Line) -> Option<Outcome> {
+  let dynamic = |what: &str| {
+    Some(Outcome::Unread(format!(
+      "{what}, as its `-C` directory expands at run time"
+    )))
+  };
+  match item {
+    Item::Commit(Some(dir), args) => commit(args, settings, env, dir, line),
+    Item::Commit(None, _) => dynamic("the commit message"),
+    Item::Branch(Some(dir), found) => branch(found, settings, env, dir),
+    Item::Branch(None, _) => dynamic("the new branch name"),
+  }
+}
+
+fn decide(outcomes: Vec<Outcome>, settings: &Settings) -> Decision {
   let mut failed = Vec::new();
   let mut unread = Vec::new();
   for outcome in outcomes {
@@ -169,8 +175,8 @@ fn decide(outcomes: Vec<Outcome>, mode: Mode) -> Decision {
       Outcome::Unread(why) => unread.push(why),
     }
   }
-  let text = if !failed.is_empty() {
-    let headline = match mode {
+  let mut text = if !failed.is_empty() {
+    let headline = match settings.mode {
       Mode::Block => "git-better blocked this command: it is not semantic.",
       Mode::Advise | Mode::Off => {
         "git-better: this is not semantic (gitBetter.mode is advise, so it was not stopped)."
@@ -183,15 +189,22 @@ fn decide(outcomes: Vec<Outcome>, mode: Mode) -> Decision {
       unread.join("; or ")
     )
   } else {
-    return Decision::Allow;
+    String::new()
   };
+  if !settings.notes.is_empty() {
+    let separator = if text.is_empty() { "" } else { "\n" };
+    text = format!(
+      "{text}{separator}git-better config: {}",
+      settings.notes.join("; ")
+    );
+  }
   let Ok(text) = Text::new(text) else {
     return Decision::Allow;
   };
-  match mode {
-    Mode::Block if !failed.is_empty() => Decision::Deny { reason: text },
-    Mode::Off => Decision::Allow,
-    Mode::Block | Mode::Advise => Decision::Advisory { message: text },
+  if settings.mode == Mode::Block && !failed.is_empty() {
+    Decision::Deny { reason: text }
+  } else {
+    Decision::Advisory { message: text }
   }
 }
 
@@ -207,9 +220,10 @@ impl Rule for SemanticGit {
   }
 
   fn applies(&self, event: &NormalizedEvent, _ctx: &RuleContext<'_>) -> bool {
-    event
+    let shell = event
       .tool()
-      .is_some_and(|tool| matches!(tool.name.as_str(), "Bash" | "Shell"))
+      .is_some_and(|tool| matches!(tool.name.as_str(), "Bash" | "Shell"));
+    shell && command_of(event).is_some_and(|command| command.contains("git"))
   }
 
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Decision {
@@ -217,32 +231,22 @@ impl Rule for SemanticGit {
       return Decision::Allow;
     };
     let analysis = toolu_shell::analyze(&command);
-    let gits: Vec<GitInvocation<'_>> = analysis
-      .commands
-      .iter()
-      .filter_map(git_invocation)
-      .filter(|git| git.subcommand.is_some_and(|sub| SUBCOMMANDS.contains(&sub)))
-      .collect();
-    if gits.is_empty() {
+    let cwd = ctx.cwd.unwrap_or(ctx.project_root);
+    let work = items(&analysis, cwd);
+    if work.is_empty() {
       return Decision::Allow;
     }
-    let cwd = ctx.cwd.unwrap_or(ctx.project_root);
     let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
     let settings = settings::load(&roots, Some(cwd), ctx.plugin_root);
     if settings.mode == Mode::Off {
       return Decision::Allow;
     }
-    let mut outcomes = Vec::new();
-    for git in &gits {
-      let dir = repo_dir(cwd, git);
-      if let Some(args) = commit_args(git) {
-        outcomes.extend(commit(&args, &settings, ctx.env, &dir));
-      }
-      for found in new_branches(git) {
-        outcomes.extend(branch(&found, &settings, ctx.env, &dir));
-      }
-    }
-    decide(outcomes, settings.mode)
+    let line = Line::of(&analysis);
+    let outcomes = work
+      .iter()
+      .filter_map(|item| outcome(item, &settings, ctx.env, &line))
+      .collect();
+    decide(outcomes, &settings)
   }
 }
 

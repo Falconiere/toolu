@@ -33,8 +33,10 @@ pub(crate) struct Context {
   pub(crate) range: String,
   /// The branch is the base branch, or no base ref exists.
   pub(crate) on_base: bool,
-  /// The commits of `range`, newest first.
+  /// The newest commits of `range`, newest first, at most the limit.
   pub(crate) commits: Vec<Commit>,
+  /// How many commits `range` holds, whatever the limit.
+  pub(crate) total: usize,
   /// The working tree.
   pub(crate) dirty: Dirty,
 }
@@ -49,6 +51,11 @@ fn exists(env: &Env, dir: &Path, reference: &str) -> bool {
   .is_ok()
 }
 
+/// HEAD is on the base branch.
+pub(crate) fn on_base_branch(env: &Env, dir: &Path) -> bool {
+  current_branch(env, dir) == base_branch(env, None, dir)
+}
+
 /// The local base branch, else origin's.
 fn base_ref(env: &Env, dir: &Path, base: &str) -> Option<String> {
   [
@@ -60,11 +67,14 @@ fn base_ref(env: &Env, dir: &Path, base: &str) -> Option<String> {
 }
 
 /// `git status --porcelain -z`, counted.
-fn dirty(env: &Env, dir: &Path) -> Dirty {
+///
+/// # Errors
+/// When git cannot read the working tree.
+fn dirty(env: &Env, dir: &Path) -> Result<Dirty, String> {
   let args = ["status", "--porcelain=v1", "-z", "--untracked-files=normal"];
-  let text = git(env, dir, &args, &[]).unwrap_or_default();
+  let text = git(env, dir, &args, &[])?;
   let mut found = Dirty::default();
-  let mut entries = text.split('\0').filter(|entry| entry.len() > 3);
+  let mut entries = text.split('\0').filter(|entry| !entry.is_empty());
   while let Some(entry) = entries.next() {
     let mut letters = entry.chars();
     let (index, tree) = (letters.next(), letters.next());
@@ -78,13 +88,25 @@ fn dirty(env: &Env, dir: &Path) -> Dirty {
       entries.next();
     }
   }
-  found
+  Ok(found)
+}
+
+/// The branch HEAD names: an unborn branch by its name, `HEAD` when detached,
+/// empty outside a repository.
+fn branch_of(env: &Env, dir: &Path) -> String {
+  let branch = current_branch(env, dir);
+  if branch != "HEAD" {
+    return branch;
+  }
+  let args = ["symbolic-ref", "--quiet", "--short", "HEAD"];
+  git(env, dir, &args, &[]).map_or(branch, |name| name.trim().to_owned())
 }
 
 /// The context of the repository at `dir`, reading at most `limit` commits.
 ///
 /// # Errors
-/// When `dir` is not in a git repository, or git cannot read the range.
+/// When `dir` is not in a git repository, or git cannot read the range or the
+/// working tree.
 pub(crate) fn gather(
   env: &Env,
   dir: &Path,
@@ -92,7 +114,7 @@ pub(crate) fn gather(
   range: Option<&str>,
   limit: usize,
 ) -> Result<Context, String> {
-  let branch = current_branch(env, dir);
+  let branch = branch_of(env, dir);
   if branch.is_empty() {
     return Err(format!("{} is not in a git repository", dir.display()));
   }
@@ -106,10 +128,12 @@ pub(crate) fn gather(
     (None, Some(reference)) => format!("{reference}..HEAD"),
     (None, None) => "HEAD".to_owned(),
   };
-  let commits = if exists(env, dir, "HEAD") {
-    history(env, dir, &range, limit, &settings.area_roots)?
+  let (commits, total) = if exists(env, dir, "HEAD") {
+    let commits = history(env, dir, &range, limit, &settings.area_roots)?;
+    let counted = git(env, dir, &["rev-list", "--count", &range, "--"], &[])?;
+    (commits, counted.trim().parse().unwrap_or_default())
   } else {
-    Vec::new()
+    (Vec::new(), 0)
   };
   Ok(Context {
     branch,
@@ -117,7 +141,8 @@ pub(crate) fn gather(
     range,
     on_base,
     commits,
-    dirty: dirty(env, dir),
+    total,
+    dirty: dirty(env, dir)?,
   })
 }
 

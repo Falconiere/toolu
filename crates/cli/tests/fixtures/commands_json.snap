@@ -5157,7 +5157,7 @@ source: crates/cli/tests/helpers/schema.rs
           "flags": [
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],
@@ -5185,7 +5185,7 @@ source: crates/cli/tests/helpers/schema.rs
           "flags": [
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],
@@ -5224,7 +5224,7 @@ source: crates/cli/tests/helpers/schema.rs
             },
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],

@@ -120,3 +120,19 @@ fn outside_a_repository_the_reads_fail() {
   let failed = context(&verb(&["git-better", "context"]), &Ctx::default(), &outside);
   assert_eq!(failed.exit, Exit::Failure);
 }
+
+#[test]
+fn pr_on_the_base_branch_has_nothing_to_draft() {
+  let (repo, _place) = branch();
+  git(&repo.root, &["switch", "-q", "main"]);
+  let place = Place {
+    env: repo.env.clone(),
+    dir: repo.root,
+  };
+  let refused = pr(&verb(&["git-better", "pr"]), &Ctx::default(), &place);
+  assert_eq!(refused.exit, Exit::Failure);
+  assert_eq!(
+    refused.stderr.as_deref(),
+    Some("main is the base branch: there are no branch commits to draft a PR from")
+  );
+}

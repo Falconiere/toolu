@@ -1,4 +1,5 @@
-//! Registration publishes the `semantic-git` manifest, idempotently.
+//! Registration publishes the `semantic-git` and `commit-note` manifests,
+//! idempotently.
 
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
@@ -6,7 +7,7 @@ use toolu_runtime::env::Env;
 use super::register;
 
 #[test]
-fn register_publishes_the_pre_tool_manifest_once() {
+fn register_publishes_both_manifests_once() {
   let dir = tempfile::tempdir().unwrap();
   let env = Env::from_pairs([
     ("HOME", dir.path().display().to_string()),
@@ -21,6 +22,13 @@ fn register_publishes_the_pre_tool_manifest_once() {
   assert_eq!(
     body,
     "{\"version\":1,\"spec\":\"git-better@toolu\",\"name\":\"semantic-git\",\"event\":\"tool/pre\",\"matcher\":\"Bash|Shell\"}\n"
+  );
+  let post = dir
+    .path()
+    .join("toolu/post-tools.d/git-better@toolu__commit-note.json");
+  assert_eq!(
+    std::fs::read_to_string(&post).unwrap(),
+    "{\"version\":1,\"spec\":\"git-better@toolu\",\"name\":\"commit-note\",\"event\":\"tool/post\",\"matcher\":\"Bash|Shell\"}\n"
   );
   assert_eq!(register(&env, Host::Claude).stdout, None);
   assert_eq!(std::fs::read_to_string(&manifest).unwrap(), body);

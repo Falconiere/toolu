@@ -1871,7 +1871,7 @@
       "description": "toolu git-better context --json: the current branch against its base, its commits, areas, highest risk, breaking changes, refs and working tree.",
       "type": "object",
       "additionalProperties": false,
-      "required": ["namespace", "verb", "branch", "base", "range", "onBase", "commits", "areas", "risk", "breaking", "refs", "dirty"],
+      "required": ["namespace", "verb", "branch", "base", "range", "onBase", "total", "commits", "areas", "risk", "breaking", "refs", "dirty"],
       "properties": {
         "namespace": { "const": "git-better" },
         "verb": { "const": "context" },
@@ -1879,6 +1879,7 @@
         "base": { "type": "string", "minLength": 1 },
         "range": { "type": "string", "minLength": 1 },
         "onBase": { "type": "boolean" },
+        "total": { "type": "integer", "minimum": 0 },
         "commits": { "type": "array", "items": { "$ref": "#/$defs/gitBetterCommit" } },
         "areas": { "type": "array", "items": { "$ref": "#/$defs/gitBetterArea" } },
         "risk": { "enum": ["low", "medium", "high", null] },

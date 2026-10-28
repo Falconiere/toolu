@@ -5154,7 +5154,7 @@
           "flags": [
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],
@@ -5182,7 +5182,7 @@
           "flags": [
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],
@@ -5221,7 +5221,7 @@
             },
             {
               "global": false,
-              "help": "Read at most N commits, newest first (default 20)",
+              "help": "Read at most N commits, newest first (default 20; 200 for pr)",
               "hidden": false,
               "long": "limit",
               "possibleValues": [],

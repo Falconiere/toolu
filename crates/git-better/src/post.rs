@@ -1,7 +1,9 @@
 //! The `commit-note` post-tool rule: after a Bash/Shell command that ran `git
 //! commit`, attach the provenance note to the commit it made. It writes only
-//! when HEAD's newest reflog entry is a commit from the last two minutes, so a
-//! failed commit never labels an older one, and never changes the decision.
+//! when HEAD's newest reflog entry is a commit from the last two minutes and
+//! the host reported no failure, so an older commit is not labeled; a failed
+//! attempt within two minutes of an un-noted commit can still label that one,
+//! whose diff the note then still describes. It never changes the decision.
 
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -106,8 +108,10 @@ fn note_after(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<(), Stri
   }
   let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
   let settings = settings::load(&roots, Some(&dir), ctx.plugin_root);
-  let commit = fresh_commit(ctx.env, &dir).filter(|_| settings.write_notes);
-  let Some(commit) = commit else {
+  if !settings.write_notes {
+    return Ok(());
+  }
+  let Some(commit) = fresh_commit(ctx.env, &dir) else {
     return Ok(());
   };
   let provenance = Provenance {

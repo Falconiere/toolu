@@ -92,6 +92,11 @@ fn log_context_and_pr_are_valid_documents_about_the_branch() {
   let context = document(&root, home.path(), &context_args, "gitBetterContext").unwrap();
   assert_eq!(context["risk"], "medium");
   assert_eq!(context["onBase"], false);
+  assert_eq!(context["total"], 2);
+  assert_eq!(context["commits"].as_array().map(Vec::len), Some(2));
+  assert_eq!(context["commits"][1]["intent"], "workers can wait");
+  assert_eq!(context["areas"][0]["area"], "crates/epic");
+  assert_eq!(context["areas"][0]["files"], 2);
   let pr = document(
     &root,
     home.path(),
@@ -124,7 +129,9 @@ fn the_session_summary_names_the_branch_and_outside_a_repository_reads_fail() {
     .as_str()
     .unwrap();
   assert!(
-    text.contains("Branch feat/653-pause-it (feat, ref 653: pause it): 2 commits ahead of main"),
+    text.contains(
+      "Branch feat/653-pause-it (feat, ref 653: pause it): 2 commits ahead of main; 2 semantic."
+    ),
     "{text}"
   );
   let outside = toolu(home.path(), home.path(), &["git-better", "context"]).unwrap();

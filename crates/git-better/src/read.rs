@@ -13,14 +13,17 @@ use crate::pr::draft;
 use crate::settings;
 use crate::views::{commit_json, commit_text, context_json, context_text};
 
-/// The commits read when `--limit` is not given.
+/// The commits `log` and `context` read when `--limit` is not given.
 pub(crate) const DEFAULT_LIMIT: usize = 20;
+/// The commits `pr` reads when `--limit` is not given: the most `--limit` takes.
+const PR_LIMIT: usize = 200;
 
 fn context_of(
   args: &ArgMatches,
   ctx: &Ctx,
   place: &Place,
   range: Option<&str>,
+  default: usize,
 ) -> Result<Context, Outcome> {
   let (env, cwd) = (&place.env, &place.dir);
   let roots = Roots::new(env.clone(), ctx.host);
@@ -28,14 +31,14 @@ fn context_of(
   let limit = args
     .get_one::<u64>("limit")
     .and_then(|limit| usize::try_from(*limit).ok())
-    .unwrap_or(DEFAULT_LIMIT);
+    .unwrap_or(default);
   gather(env, cwd, &settings, range, limit).map_err(|why| Outcome::failed(Exit::Failure, why))
 }
 
 /// Run `log`.
 pub(crate) fn log(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
   let range = args.get_one::<String>("range").map(String::as_str);
-  let context = match context_of(args, ctx, place, range) {
+  let context = match context_of(args, ctx, place, range, DEFAULT_LIMIT) {
     Ok(context) => context,
     Err(failed) => return failed,
   };
@@ -58,7 +61,7 @@ pub(crate) fn log(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
 
 /// Run `context`.
 pub(crate) fn context(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
-  match context_of(args, ctx, place, None) {
+  match context_of(args, ctx, place, None, DEFAULT_LIMIT) {
     Ok(context) if ctx.json => Outcome::data(context_json(&context).to_string()),
     Ok(context) => Outcome::data(context_text(&context)),
     Err(failed) => failed,
@@ -67,10 +70,17 @@ pub(crate) fn context(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
 
 /// Run `pr`.
 pub(crate) fn pr(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
-  let context = match context_of(args, ctx, place, None) {
+  let context = match context_of(args, ctx, place, None, PR_LIMIT) {
     Ok(context) => context,
     Err(failed) => return failed,
   };
+  if context.on_base {
+    let why = format!(
+      "{} is the base branch: there are no branch commits to draft a PR from",
+      context.branch
+    );
+    return Outcome::failed(Exit::Failure, why);
+  }
   let found = draft(&context);
   if ctx.json {
     let document = json!({

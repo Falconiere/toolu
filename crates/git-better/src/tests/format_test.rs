@@ -84,12 +84,13 @@ fn a_semantic_message_passes() {
 
 #[test]
 fn each_check_names_what_is_wrong() {
-  let cases: [(&str, &[&str]); 12] = [
+  let cases: [(&str, &[&str]); 13] = [
     ("", &["empty"]),
     ("fix stuff", &["subject-format", "missing-intent"]),
     ("wibble(x): y\n\nIntent: z", &["unknown-type"]),
     ("fix: y\n\nIntent: z", &["missing-scope"]),
     ("fix(x): Add y\n\nIntent: z", &["subject-case"]),
+    ("feat(auth): JWT support\n\nIntent: z", &[]),
     ("fix(x): add y.\n\nIntent: z", &["subject-period"]),
     ("fix(x): y\nbody\n\nIntent: z", &["body-spacing"]),
     ("fix(x): y", &["missing-intent"]),
@@ -116,6 +117,13 @@ fn an_intent_outside_the_trailer_paragraph_is_named() {
   assert_eq!(codes(split), ["intent-placement"]);
   let joined = "feat(x): y\n\nIntent: z\nCo-Authored-By: A <a@example.com>";
   assert_eq!(codes(joined), Vec::<&str>::new());
+}
+
+#[test]
+fn a_trailer_argument_reads_as_git_writes_it() {
+  assert_eq!(super::trailer_arg("Intent=why"), "Intent: why");
+  assert_eq!(super::trailer_arg(" Risk :  low "), "Risk: low");
+  assert_eq!(super::trailer_arg("Refs"), "Refs");
 }
 
 #[test]
@@ -164,19 +172,26 @@ fn settings_change_what_is_required() {
 #[test]
 fn the_example_keeps_the_subject_and_adds_what_is_missing() {
   assert_eq!(
-    example_message("fix(cli): Handle a missing flag."),
+    example_message("fix(cli): Handle a missing flag.", &Settings::default()),
     "fix(cli): handle a missing flag\n\nIntent: <why this change is needed>"
   );
   assert_eq!(
-    example_message("feat!: drop it"),
+    example_message("feat!: drop it", &Settings::default()),
     "feat(<area>)!: drop it\n\nIntent: <why this change is needed>\nBREAKING-CHANGE: <what breaks and how to migrate>"
   );
   assert_eq!(
-    example_message("fix(cli): Keep it\n\nIntent: users lose work"),
+    example_message(
+      "fix(cli): Keep it\n\nIntent: users lose work",
+      &Settings::default()
+    ),
     "fix(cli): keep it\n\nIntent: users lose work"
   );
   assert_eq!(
-    example_message("fixed stuff"),
+    example_message("feature(auth): JWT support", &Settings::default()),
+    "<type>(auth): JWT support\n\nIntent: <why this change is needed>"
+  );
+  assert_eq!(
+    example_message("fixed stuff", &Settings::default()),
     "<type>(<area>): <what changed>\n\nIntent: <why this change is needed>"
   );
 }

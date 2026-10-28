@@ -1,6 +1,6 @@
 //! The `toolu git-better` namespace: `check` runs the rule's checks on a message
-//! or branch name before the agent commits or creates it, and `setup` makes
-//! amend and rebase carry the provenance notes.
+//! or branch name before the agent commits or creates it; `log`, `context` and
+//! `pr` read the branch; `setup` makes amend and rebase carry the notes.
 
 use std::path::PathBuf;
 
@@ -79,7 +79,7 @@ fn limit() -> Arg {
     .long("limit")
     .value_name("N")
     .value_parser(clap::value_parser!(u64).range(1..=200))
-    .help("Read at most N commits, newest first (default 20)")
+    .help("Read at most N commits, newest first (default 20; 200 for pr)")
 }
 
 /// Whether the verb reads its message from stdin.

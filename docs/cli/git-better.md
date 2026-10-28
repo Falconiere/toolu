@@ -59,7 +59,7 @@ Arguments:
 
 Options:
       --json              Print exactly one JSON document on stdout
-      --limit <N>         Read at most N commits, newest first (default 20)
+      --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
@@ -75,7 +75,7 @@ Usage: toolu git-better context [OPTIONS]
 
 Options:
       --json              Print exactly one JSON document on stdout
-      --limit <N>         Read at most N commits, newest first (default 20)
+      --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
@@ -92,7 +92,7 @@ Usage: toolu git-better pr [OPTIONS]
 Options:
       --json              Print exactly one JSON document on stdout
       --squash            Print the squash commit message, its trailers merged
-      --limit <N>         Read at most N commits, newest first (default 20)
+      --limit <N>         Read at most N commits, newest first (default 20; 200 for pr)
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default

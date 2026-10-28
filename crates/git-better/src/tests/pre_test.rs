@@ -72,7 +72,9 @@ fn a_semantic_commit_or_branch_is_allowed() {
     "git checkout -b feat/2-add-x",
     "git switch -c fix/ENG-3-retry",
     "git worktree add -b docs/readme ../wt",
+    "git commit -m 'fix(x): y' --trailer 'Intent=z'",
     "git status && git log --oneline",
+    "git checkout main && git branch",
     "echo 'git commit -m bad'",
   ] {
     assert_eq!(decide(&repo, command), Decision::Allow, "{command}");
@@ -109,7 +111,13 @@ fn a_new_branch_that_is_not_semantic_is_denied_but_existing_ones_are_not() {
   let reason = denial(&decide(&repo, "git checkout -b My_Branch"));
   assert!(reason.contains("Branch `My_Branch`:"), "{reason}");
   assert!(reason.contains("  <type>/my-branch"), "{reason}");
-  denial(&decide(&repo, "git branch -m feature/x"));
+  let renamed = denial(&decide(&repo, "git branch -m feature/x"));
+  assert!(
+    renamed.contains("`feature` is not a commit type"),
+    "{renamed}"
+  );
+  let worktree = denial(&decide(&repo, "git worktree add -b Bad ../wt"));
+  assert!(worktree.contains("Branch `Bad`:"), "{worktree}");
   git(&repo.root, &["branch", "legacy"]);
   for command in [
     "git checkout -B legacy",
@@ -126,10 +134,12 @@ fn a_message_file_is_read_from_the_repository() {
   std::fs::write(repo.root.join("msg.txt"), "fix(x): y\n\nIntent: z\n").unwrap();
   assert_eq!(decide(&repo, "git commit -F msg.txt"), Decision::Allow);
   std::fs::write(repo.root.join("bad.txt"), "fix stuff\n").unwrap();
-  denial(&decide(&repo, "git commit -F bad.txt"));
+  let bad = denial(&decide(&repo, "git commit -F bad.txt"));
+  assert!(bad.contains("the subject `fix stuff` is not"), "{bad}");
   std::fs::create_dir_all(repo.root.join("sub")).unwrap();
-  std::fs::write(repo.root.join("sub/msg.txt"), "fix stuff\n").unwrap();
-  denial(&decide(&repo, "git -C sub commit -F msg.txt"));
+  std::fs::write(repo.root.join("sub/msg.txt"), "fix sub\n").unwrap();
+  let sub = denial(&decide(&repo, "git -C sub commit -F msg.txt"));
+  assert!(sub.contains("the subject `fix sub` is not"), "{sub}");
 }
 
 #[test]
@@ -192,4 +202,55 @@ fn advise_mode_explains_and_off_mode_checks_nothing() {
   let off = repo(Some(r#"{"version":1,"gitBetter":{"mode":"off"}}"#));
   assert_eq!(decide(&off, "git commit -m 'fix stuff'"), Decision::Allow);
   assert_eq!(decide(&off, "git commit -m \"$MSG\""), Decision::Allow);
+}
+
+#[test]
+fn a_dynamic_directory_or_branch_is_explained_and_a_failure_still_blocks() {
+  let repo = repo(None);
+  let dynamic = advice(&decide(&repo, "git -C \"$D\" commit -m 'fix stuff'"));
+  assert!(
+    dynamic.contains("the commit message, as its `-C` directory expands at run time"),
+    "{dynamic}"
+  );
+  let both = denial(&decide(
+    &repo,
+    "git commit -m 'fix stuff'; git checkout -b \"$B\"",
+  ));
+  assert!(both.contains("the subject `fix stuff` is not"), "{both}");
+}
+
+#[test]
+fn the_base_branch_is_exempt_even_where_it_exists_only_on_origin() {
+  let repo = repo(None);
+  git(
+    &repo.root,
+    &["update-ref", "refs/remotes/origin/trunk", "main"],
+  );
+  git(
+    &repo.root,
+    &[
+      "symbolic-ref",
+      "refs/remotes/origin/HEAD",
+      "refs/remotes/origin/trunk",
+    ],
+  );
+  assert_eq!(
+    decide(&repo, "git checkout -b trunk origin/trunk"),
+    Decision::Allow
+  );
+}
+
+#[test]
+fn config_values_that_cannot_be_read_are_reported_with_the_decision() {
+  let repo = repo(Some(r#"{"version":1,"gitBetter":{"mode":"of"}}"#));
+  let note = advice(&decide(&repo, "git commit -m 'fix(x): y' -m 'Intent: z'"));
+  assert_eq!(
+    note,
+    "git-better config: gitBetter.mode is not one of block|advise|off; ignored"
+  );
+  let reason = denial(&decide(&repo, "git commit -m 'fix stuff'"));
+  assert!(
+    reason.ends_with("\ngit-better config: gitBetter.mode is not one of block|advise|off; ignored"),
+    "{reason}"
+  );
 }

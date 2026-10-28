@@ -37,6 +37,7 @@ fn context(on_base: bool) -> Context {
     base: "main".to_owned(),
     range: "refs/heads/main..HEAD".to_owned(),
     on_base,
+    total: 2,
     commits: vec![
       Commit {
         subject: "wip: half".to_owned(),
@@ -86,7 +87,7 @@ fn a_commit_reads_why_where_and_risk() {
 fn the_context_reads_the_branch_its_commits_and_the_tree() {
   assert_eq!(
     context_text(&context(false)),
-    "Branch feat/653-pause-it (feat, ref 653: pause it): 2 commits ahead of main, 1 semantic.\n\
+    "Branch feat/653-pause-it (feat, ref 653: pause it): 2 commits ahead of main; 1 semantic.\n\
      Areas: crates/cli (+4 -0, 1 file)\n\
      Highest risk: medium\n\
      Refs: #1\n\

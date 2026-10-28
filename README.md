@@ -141,7 +141,7 @@ toolu plugins install --host codex
 After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
 
-> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins, `pr-babysit`, and `documentation-gate` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins, `pr-babysit`, `documentation-gate`, and `git-better` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a

@@ -157,10 +157,15 @@ pub(crate) fn context_text(context: &Context) -> String {
       .iter()
       .filter(|commit| commit.semantic())
       .count();
+    let read = if context.commits.len() < context.total {
+      format!("of the newest {} read, ", context.commits.len())
+    } else {
+      String::new()
+    };
     lines.push(format!(
-      "Branch {}{parsed}: {} ahead of {}, {semantic} semantic.",
+      "Branch {}{parsed}: {} ahead of {}; {read}{semantic} semantic.",
       context.branch,
-      count(context.commits.len(), "commit"),
+      count(context.total, "commit"),
       context.base
     ));
     lines.extend(branch_lines(context));
@@ -187,6 +192,7 @@ pub(crate) fn context_json(context: &Context) -> Value {
     "base": context.base,
     "range": context.range,
     "onBase": context.on_base,
+    "total": context.total,
     "commits": context.commits.iter().map(commit_json).collect::<Vec<_>>(),
     "areas": union(&context.commits).iter().map(area_json).collect::<Vec<_>>(),
     "risk": highest_risk(&context.commits),

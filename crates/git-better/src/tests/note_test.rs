@@ -77,3 +77,16 @@ fn a_note_is_written_once_per_commit() {
     json!([{ "area": ".", "files": 1, "added": 1, "deleted": 0 }])
   );
 }
+
+#[test]
+fn the_note_is_written_as_the_commit_s_committer_when_git_has_no_identity() {
+  let repo = Repo::new(".claude", None);
+  repo.commit("README.md", "docs: x", None);
+  crate::git_support::git(&repo.root, &["config", "user.useConfigOnly", "true"]);
+  assert_eq!(
+    write(&repo.env, &repo.root, "HEAD", &provenance(), &roots()),
+    Ok(true)
+  );
+  let author = crate::git_support::git(&repo.root, &["log", "-1", "--format=%an <%ae>", NOTES_REF]);
+  assert_eq!(author, "t <t@example.com>\n");
+}

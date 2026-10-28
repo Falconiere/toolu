@@ -33,6 +33,14 @@ fn a_branch_splits_into_type_reference_and_slug() {
     Some(None)
   );
   assert_eq!(parse("main"), None);
+  let glued = parse("feat/2fa-login").unwrap();
+  assert_eq!((glued.reference, glued.slug), (None, "2fa-login"));
+  let bare = parse("fix/ENG-12").unwrap();
+  assert_eq!((bare.reference, bare.slug), (Some("ENG-12"), ""));
+  assert_eq!(
+    parse("fix/ENG-12x").map(|branch| branch.reference),
+    Some(None)
+  );
 }
 
 #[test]
@@ -73,6 +81,7 @@ fn each_check_names_what_is_wrong() {
   };
   assert_eq!(codes("feat/retry", &strict), ["branch-ref"]);
   assert_eq!(codes("feat/12-retry", &strict), Vec::<&str>::new());
+  assert_eq!(codes("feat/2fa-login", &strict), ["branch-ref"]);
 }
 
 #[test]
@@ -84,7 +93,7 @@ fn the_example_keeps_the_type_reference_and_words() {
   );
   assert_eq!(
     example_branch("feature/ENG-4 Fix Login", &settings),
-    "<type>/ENG-4-fix-login"
+    "<type>/eng-4-fix-login"
   );
   assert_eq!(example_branch("fix/12-Retry", &settings), "fix/12-retry");
   assert_eq!(example_branch("my_branch", &settings), "<type>/my-branch");
