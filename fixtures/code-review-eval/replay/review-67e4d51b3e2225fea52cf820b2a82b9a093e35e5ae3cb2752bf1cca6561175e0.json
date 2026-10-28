@@ -1,0 +1,1 @@
+{"content":"{\"findings\":[]}","finish_reason":"stop","model":"deepseek/deepseek-v4-pro-0813","provider":"CoreWeave","provider_quantization":null,"usage":{"completion_tokens":170,"cost":0.00140336262,"prompt_tokens":1063,"reasoning_tokens":164}}

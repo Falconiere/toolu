@@ -7,7 +7,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-underflow", "path": "src/lib.rs", "claim": "slice underflows", "kind": "defect"},
+        {"id": "defect-underflow", "path": "src/lib.rs", "claim": "exceeds", "kind": "defect"},
         {"id": "fp-rewrite", "path": "src/lib.rs", "claim": "prefer rewrite", "kind": "false_positive"}
       ],
       "gate": {
@@ -22,7 +22,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-ownership", "path": "src/access.rs", "claim": "ownership check is inverted", "kind": "defect"}
+        {"id": "defect-ownership", "path": "src/access.rs", "claim": "inverted", "kind": "defect"}
       ],
       "gate": {
         "blocking_severities_drive_count": true,
@@ -35,7 +35,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-zero-page", "path": "src/pages.rs", "claim": "page size of zero", "kind": "defect"},
+        {"id": "defect-zero-page", "path": "src/limits.rs", "claim": "zero", "kind": "defect"},
         {"id": "fp-div-ceil", "path": "src/pages.rs", "claim": "use div_ceil", "kind": "false_positive"}
       ],
       "gate": {
@@ -61,7 +61,7 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-drifted", "path": "src/lib.rs", "claim": "slice underflows", "kind": "defect"}
+        {"id": "defect-drifted", "path": "src/lib.rs", "claim": "exceeds", "kind": "defect"}
       ]
     },
     {
@@ -79,8 +79,47 @@
       "base": "HEAD~1",
       "memory": null,
       "expectations": [
-        {"id": "defect-triple", "path": "src/lib.rs", "claim": "no longer doubles", "kind": "defect"}
+        {"id": "defect-triple", "path": "src/lib.rs", "claim": "double", "kind": "defect"}
       ]
+    },
+    {
+      "id": "large-file-defect",
+      "class": "supported",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-inclusive-limit", "path": "src/ledger.rs", "claim": "limit", "kind": "defect"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "unreviewed_never_writes_pass": true
+      }
+    },
+    {
+      "id": "caller-break",
+      "class": "cross_file",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-label-index", "path": "src/levels.rs", "claim": "out of", "kind": "defect"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "unreviewed_never_writes_pass": true
+      }
+    },
+    {
+      "id": "misanchor-prone",
+      "class": "supported",
+      "base": "HEAD~1",
+      "memory": null,
+      "expectations": [
+        {"id": "defect-writes-zero-count", "path": "src/metrics.rs", "claim": "zero", "kind": "defect"}
+      ],
+      "gate": {
+        "blocking_severities_drive_count": true,
+        "unreviewed_never_writes_pass": true
+      }
     }
   ]
 }

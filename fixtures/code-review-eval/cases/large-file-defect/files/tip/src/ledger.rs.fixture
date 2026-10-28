@@ -1,0 +1,1235 @@
+//! Account ledger: balances, limits and the rules that move money between accounts.
+
+use std::collections::BTreeMap;
+
+/// One account's state.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Account {
+    pub balance: u64,
+    pub limit: u64,
+    pub frozen: bool,
+}
+
+/// Every account, by id.
+#[derive(Debug, Default)]
+pub struct Ledger {
+    accounts: BTreeMap<u32, Account>,
+}
+
+/// Fee in basis points for transfers in tier 1.
+pub fn tier_1_fee(amount: u64) -> u64 {
+    let basis = 1 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 2.
+pub fn tier_2_fee(amount: u64) -> u64 {
+    let basis = 2 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 3.
+pub fn tier_3_fee(amount: u64) -> u64 {
+    let basis = 3 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 4.
+pub fn tier_4_fee(amount: u64) -> u64 {
+    let basis = 4 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 5.
+pub fn tier_5_fee(amount: u64) -> u64 {
+    let basis = 5 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 6.
+pub fn tier_6_fee(amount: u64) -> u64 {
+    let basis = 6 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 7.
+pub fn tier_7_fee(amount: u64) -> u64 {
+    let basis = 7 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 8.
+pub fn tier_8_fee(amount: u64) -> u64 {
+    let basis = 8 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 9.
+pub fn tier_9_fee(amount: u64) -> u64 {
+    let basis = 9 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 10.
+pub fn tier_10_fee(amount: u64) -> u64 {
+    let basis = 10 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 11.
+pub fn tier_11_fee(amount: u64) -> u64 {
+    let basis = 11 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 12.
+pub fn tier_12_fee(amount: u64) -> u64 {
+    let basis = 12 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 13.
+pub fn tier_13_fee(amount: u64) -> u64 {
+    let basis = 13 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 14.
+pub fn tier_14_fee(amount: u64) -> u64 {
+    let basis = 14 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 15.
+pub fn tier_15_fee(amount: u64) -> u64 {
+    let basis = 15 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 16.
+pub fn tier_16_fee(amount: u64) -> u64 {
+    let basis = 16 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 17.
+pub fn tier_17_fee(amount: u64) -> u64 {
+    let basis = 17 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 18.
+pub fn tier_18_fee(amount: u64) -> u64 {
+    let basis = 18 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 19.
+pub fn tier_19_fee(amount: u64) -> u64 {
+    let basis = 19 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 20.
+pub fn tier_20_fee(amount: u64) -> u64 {
+    let basis = 20 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 21.
+pub fn tier_21_fee(amount: u64) -> u64 {
+    let basis = 21 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 22.
+pub fn tier_22_fee(amount: u64) -> u64 {
+    let basis = 22 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 23.
+pub fn tier_23_fee(amount: u64) -> u64 {
+    let basis = 23 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 24.
+pub fn tier_24_fee(amount: u64) -> u64 {
+    let basis = 24 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 25.
+pub fn tier_25_fee(amount: u64) -> u64 {
+    let basis = 25 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 26.
+pub fn tier_26_fee(amount: u64) -> u64 {
+    let basis = 26 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 27.
+pub fn tier_27_fee(amount: u64) -> u64 {
+    let basis = 27 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 28.
+pub fn tier_28_fee(amount: u64) -> u64 {
+    let basis = 28 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 29.
+pub fn tier_29_fee(amount: u64) -> u64 {
+    let basis = 29 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 30.
+pub fn tier_30_fee(amount: u64) -> u64 {
+    let basis = 30 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 31.
+pub fn tier_31_fee(amount: u64) -> u64 {
+    let basis = 31 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 32.
+pub fn tier_32_fee(amount: u64) -> u64 {
+    let basis = 32 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 33.
+pub fn tier_33_fee(amount: u64) -> u64 {
+    let basis = 33 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 34.
+pub fn tier_34_fee(amount: u64) -> u64 {
+    let basis = 34 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 35.
+pub fn tier_35_fee(amount: u64) -> u64 {
+    let basis = 35 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 36.
+pub fn tier_36_fee(amount: u64) -> u64 {
+    let basis = 36 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 37.
+pub fn tier_37_fee(amount: u64) -> u64 {
+    let basis = 37 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 38.
+pub fn tier_38_fee(amount: u64) -> u64 {
+    let basis = 38 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 39.
+pub fn tier_39_fee(amount: u64) -> u64 {
+    let basis = 39 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 40.
+pub fn tier_40_fee(amount: u64) -> u64 {
+    let basis = 40 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 41.
+pub fn tier_41_fee(amount: u64) -> u64 {
+    let basis = 41 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 42.
+pub fn tier_42_fee(amount: u64) -> u64 {
+    let basis = 42 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 43.
+pub fn tier_43_fee(amount: u64) -> u64 {
+    let basis = 43 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 44.
+pub fn tier_44_fee(amount: u64) -> u64 {
+    let basis = 44 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 45.
+pub fn tier_45_fee(amount: u64) -> u64 {
+    let basis = 45 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 46.
+pub fn tier_46_fee(amount: u64) -> u64 {
+    let basis = 46 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 47.
+pub fn tier_47_fee(amount: u64) -> u64 {
+    let basis = 47 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 48.
+pub fn tier_48_fee(amount: u64) -> u64 {
+    let basis = 48 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 49.
+pub fn tier_49_fee(amount: u64) -> u64 {
+    let basis = 49 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 50.
+pub fn tier_50_fee(amount: u64) -> u64 {
+    let basis = 50 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 51.
+pub fn tier_51_fee(amount: u64) -> u64 {
+    let basis = 51 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 52.
+pub fn tier_52_fee(amount: u64) -> u64 {
+    let basis = 52 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 53.
+pub fn tier_53_fee(amount: u64) -> u64 {
+    let basis = 53 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 54.
+pub fn tier_54_fee(amount: u64) -> u64 {
+    let basis = 54 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 55.
+pub fn tier_55_fee(amount: u64) -> u64 {
+    let basis = 55 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 56.
+pub fn tier_56_fee(amount: u64) -> u64 {
+    let basis = 56 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 57.
+pub fn tier_57_fee(amount: u64) -> u64 {
+    let basis = 57 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 58.
+pub fn tier_58_fee(amount: u64) -> u64 {
+    let basis = 58 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 59.
+pub fn tier_59_fee(amount: u64) -> u64 {
+    let basis = 59 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 60.
+pub fn tier_60_fee(amount: u64) -> u64 {
+    let basis = 60 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 61.
+pub fn tier_61_fee(amount: u64) -> u64 {
+    let basis = 61 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 62.
+pub fn tier_62_fee(amount: u64) -> u64 {
+    let basis = 62 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 63.
+pub fn tier_63_fee(amount: u64) -> u64 {
+    let basis = 63 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 64.
+pub fn tier_64_fee(amount: u64) -> u64 {
+    let basis = 64 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 65.
+pub fn tier_65_fee(amount: u64) -> u64 {
+    let basis = 65 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 66.
+pub fn tier_66_fee(amount: u64) -> u64 {
+    let basis = 66 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 67.
+pub fn tier_67_fee(amount: u64) -> u64 {
+    let basis = 67 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 68.
+pub fn tier_68_fee(amount: u64) -> u64 {
+    let basis = 68 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 69.
+pub fn tier_69_fee(amount: u64) -> u64 {
+    let basis = 69 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 70.
+pub fn tier_70_fee(amount: u64) -> u64 {
+    let basis = 70 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 71.
+pub fn tier_71_fee(amount: u64) -> u64 {
+    let basis = 71 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 72.
+pub fn tier_72_fee(amount: u64) -> u64 {
+    let basis = 72 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 73.
+pub fn tier_73_fee(amount: u64) -> u64 {
+    let basis = 73 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 74.
+pub fn tier_74_fee(amount: u64) -> u64 {
+    let basis = 74 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 75.
+pub fn tier_75_fee(amount: u64) -> u64 {
+    let basis = 75 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 76.
+pub fn tier_76_fee(amount: u64) -> u64 {
+    let basis = 76 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 77.
+pub fn tier_77_fee(amount: u64) -> u64 {
+    let basis = 77 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 78.
+pub fn tier_78_fee(amount: u64) -> u64 {
+    let basis = 78 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 79.
+pub fn tier_79_fee(amount: u64) -> u64 {
+    let basis = 79 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 80.
+pub fn tier_80_fee(amount: u64) -> u64 {
+    let basis = 80 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 81.
+pub fn tier_81_fee(amount: u64) -> u64 {
+    let basis = 81 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 82.
+pub fn tier_82_fee(amount: u64) -> u64 {
+    let basis = 82 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 83.
+pub fn tier_83_fee(amount: u64) -> u64 {
+    let basis = 83 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 84.
+pub fn tier_84_fee(amount: u64) -> u64 {
+    let basis = 84 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 85.
+pub fn tier_85_fee(amount: u64) -> u64 {
+    let basis = 85 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 86.
+pub fn tier_86_fee(amount: u64) -> u64 {
+    let basis = 86 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 87.
+pub fn tier_87_fee(amount: u64) -> u64 {
+    let basis = 87 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 88.
+pub fn tier_88_fee(amount: u64) -> u64 {
+    let basis = 88 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 89.
+pub fn tier_89_fee(amount: u64) -> u64 {
+    let basis = 89 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 90.
+pub fn tier_90_fee(amount: u64) -> u64 {
+    let basis = 90 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 91.
+pub fn tier_91_fee(amount: u64) -> u64 {
+    let basis = 91 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 92.
+pub fn tier_92_fee(amount: u64) -> u64 {
+    let basis = 92 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 93.
+pub fn tier_93_fee(amount: u64) -> u64 {
+    let basis = 93 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 94.
+pub fn tier_94_fee(amount: u64) -> u64 {
+    let basis = 94 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 95.
+pub fn tier_95_fee(amount: u64) -> u64 {
+    let basis = 95 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 96.
+pub fn tier_96_fee(amount: u64) -> u64 {
+    let basis = 96 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 97.
+pub fn tier_97_fee(amount: u64) -> u64 {
+    let basis = 97 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 98.
+pub fn tier_98_fee(amount: u64) -> u64 {
+    let basis = 98 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 99.
+pub fn tier_99_fee(amount: u64) -> u64 {
+    let basis = 99 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 100.
+pub fn tier_100_fee(amount: u64) -> u64 {
+    let basis = 100 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+impl Ledger {
+    /// Credits `amount` to account `id`. The limit is inclusive: a balance
+    /// exactly equal to `limit` is allowed; only a balance above it is refused.
+    pub fn credit(&mut self, id: u32, amount: u64) -> Result<u64, String> {
+        let account = self.accounts.entry(id).or_default();
+        if account.frozen {
+            return Err(format!("account {id} is frozen"));
+        }
+        let balance = account.balance.saturating_add(amount);
+        if balance >= account.limit {
+            return Err(format!("account {id} would exceed its limit"));
+        }
+        account.balance = balance;
+        Ok(balance)
+    }
+}
+
+/// Fee in basis points for transfers in tier 101.
+pub fn tier_101_fee(amount: u64) -> u64 {
+    let basis = 101 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 102.
+pub fn tier_102_fee(amount: u64) -> u64 {
+    let basis = 102 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 103.
+pub fn tier_103_fee(amount: u64) -> u64 {
+    let basis = 103 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 104.
+pub fn tier_104_fee(amount: u64) -> u64 {
+    let basis = 104 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 105.
+pub fn tier_105_fee(amount: u64) -> u64 {
+    let basis = 105 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 106.
+pub fn tier_106_fee(amount: u64) -> u64 {
+    let basis = 106 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 107.
+pub fn tier_107_fee(amount: u64) -> u64 {
+    let basis = 107 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 108.
+pub fn tier_108_fee(amount: u64) -> u64 {
+    let basis = 108 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 109.
+pub fn tier_109_fee(amount: u64) -> u64 {
+    let basis = 109 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 110.
+pub fn tier_110_fee(amount: u64) -> u64 {
+    let basis = 110 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 111.
+pub fn tier_111_fee(amount: u64) -> u64 {
+    let basis = 111 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 112.
+pub fn tier_112_fee(amount: u64) -> u64 {
+    let basis = 112 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 113.
+pub fn tier_113_fee(amount: u64) -> u64 {
+    let basis = 113 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 114.
+pub fn tier_114_fee(amount: u64) -> u64 {
+    let basis = 114 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 115.
+pub fn tier_115_fee(amount: u64) -> u64 {
+    let basis = 115 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 116.
+pub fn tier_116_fee(amount: u64) -> u64 {
+    let basis = 116 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 117.
+pub fn tier_117_fee(amount: u64) -> u64 {
+    let basis = 117 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 118.
+pub fn tier_118_fee(amount: u64) -> u64 {
+    let basis = 118 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 119.
+pub fn tier_119_fee(amount: u64) -> u64 {
+    let basis = 119 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 120.
+pub fn tier_120_fee(amount: u64) -> u64 {
+    let basis = 120 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 121.
+pub fn tier_121_fee(amount: u64) -> u64 {
+    let basis = 121 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 122.
+pub fn tier_122_fee(amount: u64) -> u64 {
+    let basis = 122 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 123.
+pub fn tier_123_fee(amount: u64) -> u64 {
+    let basis = 123 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 124.
+pub fn tier_124_fee(amount: u64) -> u64 {
+    let basis = 124 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 125.
+pub fn tier_125_fee(amount: u64) -> u64 {
+    let basis = 125 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 126.
+pub fn tier_126_fee(amount: u64) -> u64 {
+    let basis = 126 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 127.
+pub fn tier_127_fee(amount: u64) -> u64 {
+    let basis = 127 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 128.
+pub fn tier_128_fee(amount: u64) -> u64 {
+    let basis = 128 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 129.
+pub fn tier_129_fee(amount: u64) -> u64 {
+    let basis = 129 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 130.
+pub fn tier_130_fee(amount: u64) -> u64 {
+    let basis = 130 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 131.
+pub fn tier_131_fee(amount: u64) -> u64 {
+    let basis = 131 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 132.
+pub fn tier_132_fee(amount: u64) -> u64 {
+    let basis = 132 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 133.
+pub fn tier_133_fee(amount: u64) -> u64 {
+    let basis = 133 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 134.
+pub fn tier_134_fee(amount: u64) -> u64 {
+    let basis = 134 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 135.
+pub fn tier_135_fee(amount: u64) -> u64 {
+    let basis = 135 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 136.
+pub fn tier_136_fee(amount: u64) -> u64 {
+    let basis = 136 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 137.
+pub fn tier_137_fee(amount: u64) -> u64 {
+    let basis = 137 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 138.
+pub fn tier_138_fee(amount: u64) -> u64 {
+    let basis = 138 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 139.
+pub fn tier_139_fee(amount: u64) -> u64 {
+    let basis = 139 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 140.
+pub fn tier_140_fee(amount: u64) -> u64 {
+    let basis = 140 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 141.
+pub fn tier_141_fee(amount: u64) -> u64 {
+    let basis = 141 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 142.
+pub fn tier_142_fee(amount: u64) -> u64 {
+    let basis = 142 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 143.
+pub fn tier_143_fee(amount: u64) -> u64 {
+    let basis = 143 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 144.
+pub fn tier_144_fee(amount: u64) -> u64 {
+    let basis = 144 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 145.
+pub fn tier_145_fee(amount: u64) -> u64 {
+    let basis = 145 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 146.
+pub fn tier_146_fee(amount: u64) -> u64 {
+    let basis = 146 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 147.
+pub fn tier_147_fee(amount: u64) -> u64 {
+    let basis = 147 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 148.
+pub fn tier_148_fee(amount: u64) -> u64 {
+    let basis = 148 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 149.
+pub fn tier_149_fee(amount: u64) -> u64 {
+    let basis = 149 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 150.
+pub fn tier_150_fee(amount: u64) -> u64 {
+    let basis = 150 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 151.
+pub fn tier_151_fee(amount: u64) -> u64 {
+    let basis = 151 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 152.
+pub fn tier_152_fee(amount: u64) -> u64 {
+    let basis = 152 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 153.
+pub fn tier_153_fee(amount: u64) -> u64 {
+    let basis = 153 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 154.
+pub fn tier_154_fee(amount: u64) -> u64 {
+    let basis = 154 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 155.
+pub fn tier_155_fee(amount: u64) -> u64 {
+    let basis = 155 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 156.
+pub fn tier_156_fee(amount: u64) -> u64 {
+    let basis = 156 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 157.
+pub fn tier_157_fee(amount: u64) -> u64 {
+    let basis = 157 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 158.
+pub fn tier_158_fee(amount: u64) -> u64 {
+    let basis = 158 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 159.
+pub fn tier_159_fee(amount: u64) -> u64 {
+    let basis = 159 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 160.
+pub fn tier_160_fee(amount: u64) -> u64 {
+    let basis = 160 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 161.
+pub fn tier_161_fee(amount: u64) -> u64 {
+    let basis = 161 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 162.
+pub fn tier_162_fee(amount: u64) -> u64 {
+    let basis = 162 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 163.
+pub fn tier_163_fee(amount: u64) -> u64 {
+    let basis = 163 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 164.
+pub fn tier_164_fee(amount: u64) -> u64 {
+    let basis = 164 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 165.
+pub fn tier_165_fee(amount: u64) -> u64 {
+    let basis = 165 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 166.
+pub fn tier_166_fee(amount: u64) -> u64 {
+    let basis = 166 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 167.
+pub fn tier_167_fee(amount: u64) -> u64 {
+    let basis = 167 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 168.
+pub fn tier_168_fee(amount: u64) -> u64 {
+    let basis = 168 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 169.
+pub fn tier_169_fee(amount: u64) -> u64 {
+    let basis = 169 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 170.
+pub fn tier_170_fee(amount: u64) -> u64 {
+    let basis = 170 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 171.
+pub fn tier_171_fee(amount: u64) -> u64 {
+    let basis = 171 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 172.
+pub fn tier_172_fee(amount: u64) -> u64 {
+    let basis = 172 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 173.
+pub fn tier_173_fee(amount: u64) -> u64 {
+    let basis = 173 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 174.
+pub fn tier_174_fee(amount: u64) -> u64 {
+    let basis = 174 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 175.
+pub fn tier_175_fee(amount: u64) -> u64 {
+    let basis = 175 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 176.
+pub fn tier_176_fee(amount: u64) -> u64 {
+    let basis = 176 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 177.
+pub fn tier_177_fee(amount: u64) -> u64 {
+    let basis = 177 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 178.
+pub fn tier_178_fee(amount: u64) -> u64 {
+    let basis = 178 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 179.
+pub fn tier_179_fee(amount: u64) -> u64 {
+    let basis = 179 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 180.
+pub fn tier_180_fee(amount: u64) -> u64 {
+    let basis = 180 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 181.
+pub fn tier_181_fee(amount: u64) -> u64 {
+    let basis = 181 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 182.
+pub fn tier_182_fee(amount: u64) -> u64 {
+    let basis = 182 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 183.
+pub fn tier_183_fee(amount: u64) -> u64 {
+    let basis = 183 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 184.
+pub fn tier_184_fee(amount: u64) -> u64 {
+    let basis = 184 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 185.
+pub fn tier_185_fee(amount: u64) -> u64 {
+    let basis = 185 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 186.
+pub fn tier_186_fee(amount: u64) -> u64 {
+    let basis = 186 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 187.
+pub fn tier_187_fee(amount: u64) -> u64 {
+    let basis = 187 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 188.
+pub fn tier_188_fee(amount: u64) -> u64 {
+    let basis = 188 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 189.
+pub fn tier_189_fee(amount: u64) -> u64 {
+    let basis = 189 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 190.
+pub fn tier_190_fee(amount: u64) -> u64 {
+    let basis = 190 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 191.
+pub fn tier_191_fee(amount: u64) -> u64 {
+    let basis = 191 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 192.
+pub fn tier_192_fee(amount: u64) -> u64 {
+    let basis = 192 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 193.
+pub fn tier_193_fee(amount: u64) -> u64 {
+    let basis = 193 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 194.
+pub fn tier_194_fee(amount: u64) -> u64 {
+    let basis = 194 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 195.
+pub fn tier_195_fee(amount: u64) -> u64 {
+    let basis = 195 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 196.
+pub fn tier_196_fee(amount: u64) -> u64 {
+    let basis = 196 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 197.
+pub fn tier_197_fee(amount: u64) -> u64 {
+    let basis = 197 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 198.
+pub fn tier_198_fee(amount: u64) -> u64 {
+    let basis = 198 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 199.
+pub fn tier_199_fee(amount: u64) -> u64 {
+    let basis = 199 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+
+/// Fee in basis points for transfers in tier 200.
+pub fn tier_200_fee(amount: u64) -> u64 {
+    let basis = 200 % 17 + 3;
+    amount.saturating_mul(basis) / 10_000
+}
+

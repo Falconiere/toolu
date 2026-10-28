@@ -1,0 +1,37 @@
+//! Per-metric means over collected samples.
+
+/// Samples per metric.
+#[derive(Debug, Default)]
+pub struct Stats {
+    pub latency: Vec<u64>,
+    pub bytes: Vec<u64>,
+    pub retries: Vec<u64>,
+    pub queue: Vec<u64>,
+    pub errors: Vec<u64>,
+    pub hits: Vec<u64>,
+    pub misses: Vec<u64>,
+    pub writes: Vec<u64>,
+    pub reads: Vec<u64>,
+    pub stalls: Vec<u64>,
+}
+
+/// Mean latency over the samples in `stats`.
+pub fn mean_latency(stats: &Stats) -> u64 {
+    let total: u64 = stats.latency.iter().sum();
+    let count = stats.latency.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+
+/// Mean bytes over the samples in `stats`.
+pub fn mean_bytes(stats: &Stats) -> u64 {
+    let total: u64 = stats.bytes.iter().sum();
+    let count = stats.bytes.len() as u64;
+    if count == 0 {
+        return 0;
+    }
+    total / count
+}
+

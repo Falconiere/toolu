@@ -161,7 +161,7 @@ fn eval_without_live_needs_no_key_and_a_replay_miss_exits_69_unverified() {
   assert_eq!(output.status.code(), Some(69), "{output:?}");
   let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
   let suite = doc["cases"].as_array().unwrap();
-  assert_eq!(suite.len(), 7);
+  assert_eq!(suite.len(), 10);
   for case in suite {
     assert_eq!(case["arms"].as_array().unwrap().len(), 0);
     let why = case["unverified"][0].as_str().unwrap();
