@@ -29,7 +29,7 @@ tests → docs + generated CLI docs → full gate.
   {"id":"s4","title":"review/mask, review/source, review/prompt with unit tests","check":"cargo test -p toolu-code-review review::","ac_refs":["AC-2","AC-10","AC-15"],"paths":["crates/code-review/src/review"],"input":"temp git repos with modified/added files, a committed secret, a base-ref override","depends_on":["s3"],"model":"inherit"},
   {"id":"s5","title":"review/effort: floors, Jev score selector, fallback, explicit levels","check":"cargo test -p toolu-code-review effort","ac_refs":["AC-7","AC-13","AC-14"],"paths":["crates/code-review/src/review"],"input":"shaped temp repos per floor; loopback Jev score replies","depends_on":["s4"],"model":"inherit"},
   {"id":"s6","title":"review/judge (batching, caps, uncertainty, deadline) and review/recheck (dismissal validation)","check":"cargo test -p toolu-code-review judge && cargo test -p toolu-code-review recheck","ac_refs":["AC-3","AC-4","AC-5","AC-6","AC-12"],"paths":["crates/code-review/src/review"],"input":"loopback Jev + OpenRouter replies; >90,000-byte evidence","depends_on":["s5"],"model":"inherit"},
-  {"id":"s7","title":"review::run orchestration, usage/calls/recorder, CLI opt-in; black-box review_contract tests","check":"cargo test -p toolu-code-review --test review_contract && cargo test -p toolu-cli --test code_review_cli","ac_refs":["AC-1","AC-2","AC-3","AC-4","AC-5","AC-6","AC-7","AC-9","AC-10","AC-11","AC-12","AC-14","AC-15"],"paths":["crates/code-review","crates/cli/tests/code_review_cli.rs"],"input":"temp git repo diff + loopback OpenRouter and Jev origins","depends_on":["s6"],"model":"inherit"},
+  {"id":"s7","title":"review::run orchestration, usage/calls/recorder, CLI opt-in; black-box review_contract tests","check":"cargo test -p toolu-code-review --test review_contract --test review_effort && cargo test -p toolu-cli --test code_review_cli --test contract","ac_refs":["AC-1","AC-2","AC-3","AC-4","AC-5","AC-6","AC-7","AC-9","AC-10","AC-11","AC-12","AC-14","AC-15"],"paths":["crates/code-review","crates/cli/tests","crates/cli/src/commands.schema.json"],"input":"temp git repo diff + loopback OpenRouter and Jev origins","depends_on":["s6"],"model":"inherit"},
   {"id":"s8","title":"Docs: config.md codeReview, example config, code-review README, regenerated docs/cli","check":"cargo xtask docs-cli --check && cargo xtask check-markdown-cli","ac_refs":["AC-1","AC-15"],"paths":["docs/config.md","plugins/toolu/settings/toolu.config.example.json","plugins/code-review/README.md","docs/cli"],"depends_on":["s7"],"model":"inherit"},
   {"id":"s9","title":"Full quality gate","check":"cargo xtask gate","ac_refs":["AC-1","AC-2","AC-3","AC-4","AC-5","AC-6","AC-7","AC-8","AC-9","AC-10","AC-11","AC-12","AC-13","AC-14","AC-15"],"depends_on":["s8"],"model":"inherit"}
 ]
@@ -61,3 +61,13 @@ then `toolu epic report babysit --pr N` (epic worker handoff instead of babysit)
 ## Plan review (2026-10-27)
 
 Jev step/AC alignment 0.51 (uncertain): the black-box step s7 now also cites the ACs its loopback tests prove (AC-2, AC-5, AC-7, AC-15). Every AC maps to a step with a real-input check; docs have s8; dependencies are linear. Approved.
+
+## Deviations
+
+- s4–s6 were implemented together with s7: the workspace denies dead code, so the
+  crate-private review modules cannot compile green until `review::run` uses them.
+  Their checks ran after s7 wired them.
+- `core/jev` exposes `request_body` (the exact text) instead of `request_bytes`, so
+  the recorder can capture the Jev request; the cap check uses its `len()`.
+- Unit-level loopback scenarios moved to the black-box `review_contract.rs` and
+  `review_effort.rs` (shared rig in `tests/helpers/rig.rs`); s7's check runs both.
