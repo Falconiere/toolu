@@ -12,10 +12,10 @@ use toolu_runtime::version::{Comparison, compare};
 
 use super::{Finding, Scope};
 use crate::catalog::Catalog;
-use crate::cursor;
 use crate::dispatch::Context;
 use crate::host::adapter::Installed;
 use crate::host::{Target, muse};
+use crate::local;
 use crate::verbs::{self, foreign_step, retired_step};
 
 /// Findings for one installed plugin.
@@ -181,8 +181,8 @@ fn version_only(entry: &Installed, cx: &Context<'_>, update: String) -> Vec<Find
 
 fn plugin_root(target: Target, entry: &Installed, cx: &Context<'_>) -> Option<PathBuf> {
   match target {
-    Target::Cursor => {
-      let path = cursor::store::Store::locate(&cx.env).path(&entry.name);
+    Target::Cursor | Target::Opencode => {
+      let path = local::store::Store::locate(&cx.env, target).path(&entry.name);
       path.is_dir().then_some(path)
     }
     Target::Muse => entry

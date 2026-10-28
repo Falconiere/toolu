@@ -133,7 +133,7 @@ pub(crate) fn foreign_step(name: &str, have: &Installed, argv: Vec<String>) -> S
 pub(crate) fn retired_step(name: &str, host: &str, argv: Vec<String>) -> Step {
   let remove = match host {
     "muse" => format!("muse plugins remove {name}"),
-    _plugin_cli_or_cursor => format!("toolu plugins remove {name} --host {host} --yes"),
+    _plugin_cli_or_local => format!("toolu plugins remove {name} --host {host} --yes"),
   };
   Step::new(
     name,

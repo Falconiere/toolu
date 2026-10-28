@@ -72,7 +72,8 @@ fn local(roots: &Roots) -> Vec<(String, PathBuf)> {
     .collect()
 }
 
-fn version_of(root: &Path) -> Option<String> {
+/// The `version` of a plugin directory's Claude-format manifest.
+pub(super) fn version_of(root: &Path) -> Option<String> {
   let text = std::fs::read_to_string(root.join(".claude-plugin/plugin.json")).ok()?;
   let json: Value = serde_json::from_str(&text).ok()?;
   json.get("version")?.as_str().map(str::to_owned)

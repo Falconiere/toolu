@@ -1,7 +1,7 @@
-//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|cursor|both]`: a live
-//! smoke of the native toolu hooks in real Claude Code, Codex, Muse and Cursor sessions
-//! (`both`, the default, means Claude Code, Codex and Muse; Cursor is asked for by
-//! name), with no `bun` on the children's `PATH`.
+//! `cargo xtask host-smoke [--bin PATH] [--host claude|codex|muse|cursor|opencode|both]`:
+//! a live smoke of the native toolu hooks in real Claude Code, Codex, Muse, Cursor and
+//! `OpenCode` sessions (`both`, the default, means Claude Code, Codex and Muse; Cursor and
+//! `OpenCode` are asked for by name), with no `bun` on the children's `PATH`.
 //! Every host runs on macOS and Linux (on macOS, Linux runs inside `toolu sandbox`); on
 //! Linux, Codex and Muse sandbox their commands with bubblewrap. Per host it checks that
 //! a protected `.env` write
@@ -22,6 +22,7 @@ use crate::host_smoke_codex::{Codex, private_home};
 use crate::host_smoke_cursor::Cursor;
 use crate::host_smoke_env::ChildEnv;
 use crate::host_smoke_muse::{self as muse, Muse};
+use crate::host_smoke_opencode as opencode;
 use crate::host_smoke_project::{create, create_push};
 use crate::host_smoke_steps::{self as steps, Driver, Run};
 use crate::launcher_e2e::SYSTEM_DIRS;
@@ -36,6 +37,7 @@ pub(crate) enum Host {
   Codex,
   Muse,
   Cursor,
+  Opencode,
 }
 
 impl Host {
@@ -45,6 +47,7 @@ impl Host {
       Host::Codex => "codex",
       Host::Muse => "muse",
       Host::Cursor => "cursor",
+      Host::Opencode => "opencode",
     }
   }
 }
@@ -57,8 +60,9 @@ pub(crate) fn hosts(arg: Option<&str>) -> Result<Vec<Host>, String> {
     Some("codex") => Ok(vec![Host::Codex]),
     Some("muse") => Ok(vec![Host::Muse]),
     Some("cursor") => Ok(vec![Host::Cursor]),
+    Some("opencode") => Ok(vec![Host::Opencode]),
     Some(other) => Err(format!(
-      "--host must be claude, codex, muse, cursor or both, not {other}"
+      "--host must be claude, codex, muse, cursor, opencode or both, not {other}"
     )),
   }
 }
@@ -117,6 +121,7 @@ struct Plan {
   codex: Option<(PathBuf, PathBuf)>,
   muse: Option<(PathBuf, PathBuf)>,
   cursor: Option<PathBuf>,
+  opencode: Option<PathBuf>,
 }
 
 /// The Muse CLI and credential, when Muse is planned and no fixed-directory
@@ -157,6 +162,10 @@ fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
     .contains(&Host::Cursor)
     .then(|| env.tool("cursor-agent"))
     .transpose()?;
+  let opencode = hosts
+    .contains(&Host::Opencode)
+    .then(|| env.tool("opencode"))
+    .transpose()?;
   Ok(Plan {
     hosts,
     repo: options.root.clone(),
@@ -166,6 +175,7 @@ fn plan(options: &Options, root: &Path) -> Result<Plan, String> {
     codex,
     muse,
     cursor,
+    opencode,
   })
 }
 
@@ -215,7 +225,7 @@ fn push_steps(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
 
 /// Every step of one host, one finding per failed step. A host that cannot be set
 /// up stops there: its later sessions would only spend credits on a broken profile.
-fn sweep(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
+pub(crate) fn sweep(driver: &dyn Driver, run: &Run<'_>) -> Vec<String> {
   let mut found = project_steps(driver, run);
   found.extend(push_steps(driver, run));
   found
@@ -235,6 +245,10 @@ fn drive_host(plan: &Plan, host: Host, root: &Path) -> Vec<String> {
         &plan.env,
       ),
       None => vec!["cursor: cursor-agent not planned".to_owned()],
+    },
+    (Host::Opencode, ..) => match &plan.opencode {
+      Some(exe) => opencode::drive(exe, &plan.repo, root, &plan.env),
+      None => vec!["opencode: opencode not planned".to_owned()],
     },
     (Host::Claude, Some(exe), _, _) => run(
       &Claude {

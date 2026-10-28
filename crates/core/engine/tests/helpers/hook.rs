@@ -65,6 +65,7 @@ impl Hook {
       Host::Codex => self.sb.path("codex"),
       Host::Claude | Host::Cursor | Host::Hermes => self.sb.path("home/.claude"),
       Host::Muse => self.sb.path("home/.config/muse"),
+      Host::Opencode => self.sb.path("home/.config/opencode"),
     }
   }
 
@@ -98,6 +99,9 @@ impl Hook {
         env.with("CLAUDE_PROJECT_DIR", &self.sb.text("project"))
       }
       Host::Muse => env.with("MUSE_PLUGIN_ROOT", &self.sb.text("plugin")),
+      Host::Opencode => env
+        .with("TOOLU_HOST_OVERRIDE", "opencode")
+        .with("CLAUDE_PLUGIN_ROOT", &self.sb.text("plugin")),
     };
     self
       .extra

@@ -49,7 +49,7 @@ fn delivery_install(host: Host) -> &'static str {
     Host::Claude => CLAUDE_INSTALL,
     Host::Codex => CODEX_INSTALL,
     Host::Muse => MUSE_INSTALL,
-    Host::Cursor | Host::Hermes => NEUTRAL_INSTALL,
+    Host::Cursor | Host::Hermes | Host::Opencode => NEUTRAL_INSTALL,
   }
 }
 

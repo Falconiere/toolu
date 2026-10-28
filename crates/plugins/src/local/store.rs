@@ -1,14 +1,19 @@
-//! The directory Cursor loads local plugins from, and the plugins toolu put in it. A
-//! plugin directory toolu installed carries a marker file; one without it is the
-//! user's and is never touched.
+//! The directory a local-directory host loads plugins from, and the plugins toolu
+//! put in it. A plugin directory toolu installed carries a marker file; one
+//! without it is the user's and is never touched. An `OpenCode` copy also gets the
+//! generated `server.js` shim, written before the copy is renamed into place.
 
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 use toolu_protocol::host::Host;
+use toolu_protocol::launcher::opencode::{FILE, hooks_of, shim};
 use toolu_runtime::env::Env;
 use toolu_runtime::host::cursor::{MARKER, local_dir};
+use toolu_runtime::host::opencode::plugins_dir;
 use toolu_runtime::host::roots::Roots;
+
+use crate::host::Target;
 
 /// What is at a plugin's directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,11 +26,13 @@ pub(crate) enum State {
   Foreign,
 }
 
-/// Cursor's local plugins directory.
+/// A host's local plugins directory.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Store {
-  /// `<cursor config>/plugins/local`.
+  /// Cursor's `<config>/plugins/local`, `OpenCode`'s `<config>/plugins`.
   pub(crate) dir: PathBuf,
+  /// Whether each copy gets `OpenCode`'s `server.js` shim.
+  pub(crate) shim: bool,
 }
 
 /// The `version` of a plugin directory's Claude-format manifest.
@@ -35,11 +42,33 @@ pub(crate) fn version_of(plugin: &Path) -> Option<String> {
   json.get("version")?.as_str().map(str::to_owned)
 }
 
+/// The `OpenCode` shim for the plugin copied from `source` as `name`: the hooks its
+/// `hooks.json` needs, and its skills and commands when it has any.
+pub(crate) fn opencode_shim(source: &Path, name: &str) -> Result<String, String> {
+  let hooks = match std::fs::read_to_string(source.join("hooks/hooks.json")) {
+    Ok(text) => serde_json::from_str::<Value>(&text)
+      .map_err(|err| format!("{name}: hooks/hooks.json is not JSON: {err}"))?,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => Value::Null,
+    Err(err) => return Err(format!("{name}: cannot read hooks/hooks.json: {err}")),
+  };
+  let catalog = ["skills", "commands"]
+    .iter()
+    .any(|dir| source.join(dir).is_dir());
+  shim(name, &hooks_of(&hooks), catalog)
+}
+
 impl Store {
-  /// The store under the Cursor config of `env`.
-  pub(crate) fn locate(env: &Env) -> Store {
+  /// The store of `target` under the config of `env`.
+  pub(crate) fn locate(env: &Env, target: Target) -> Store {
+    if target == Target::Opencode {
+      return Store {
+        dir: plugins_dir(&Roots::new(env.clone(), Some(Host::Opencode))),
+        shim: true,
+      };
+    }
     Store {
       dir: local_dir(&Roots::new(env.clone(), Some(Host::Cursor))),
+      shim: false,
     }
   }
 
@@ -84,6 +113,10 @@ impl Store {
       std::fs::remove_dir_all(&staged).map_err(|err| io("cannot clear", err))?;
     }
     copy_tree(source, &staged).map_err(|err| io("cannot copy into", err))?;
+    if self.shim {
+      let text = opencode_shim(source, name)?;
+      std::fs::write(staged.join(FILE), text).map_err(|err| io("cannot write the shim in", err))?;
+    }
     let marker = json!({"tag": tag, "version": version_of(source)});
     std::fs::write(staged.join(MARKER), format!("{marker}\n"))
       .map_err(|err| io("cannot mark", err))?;

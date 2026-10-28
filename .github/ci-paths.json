@@ -22,6 +22,7 @@
       "tooling/conventions/guardrails/web/**",
       "plugins/rust-quality/**",
       "tools/toolu-cli/**",
+      "tools/toolu-opencode/**",
       "plugins/*/hooks/hooks.json",
       "plugins/*/hooks/muse/*",
       "plugins/*/.claude-plugin/plugin.json",

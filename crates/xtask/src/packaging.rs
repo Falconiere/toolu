@@ -12,7 +12,10 @@ use crate::packaging_muse_identity;
 use crate::{Verdict, output};
 
 /// The published npm manifests that move in lockstep with the workspace.
-const WORKSPACE_PACKAGES: [&str; 1] = ["tools/toolu-cli/npm/package.json"];
+const WORKSPACE_PACKAGES: [&str; 2] = [
+  "tools/toolu-cli/npm/package.json",
+  "tools/toolu-opencode/npm/package.json",
+];
 
 /// Validate plugin packaging under `--root`.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {

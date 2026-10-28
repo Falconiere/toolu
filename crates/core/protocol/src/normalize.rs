@@ -38,7 +38,9 @@ impl Payload {
   /// The normalized form of this payload for `event`.
   pub fn normalize(&self, event: HostEvent, roots: &Roots) -> Option<NormalizedEvent> {
     let view = match self {
-      Payload::Claude(payload) | Payload::Codex(payload) => hook_view(payload),
+      Payload::Claude(payload) | Payload::Codex(payload) | Payload::Opencode(payload) => {
+        hook_view(payload)
+      }
       Payload::Cursor(payload) => cursor_view(payload),
       Payload::Hermes(payload) => hermes_view(payload),
       Payload::Muse(payload) => muse::view(payload),

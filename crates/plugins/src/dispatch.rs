@@ -12,11 +12,11 @@ use toolu_runtime::term::Style;
 use crate::args::{Request, Verb};
 use crate::catalog::Catalog;
 use crate::catalog::order::removable;
-use crate::cursor::{self, Cursor};
 use crate::fail::{Fail, Res};
 use crate::host::adapter::Adapter;
 use crate::host::checkout::Checkout;
 use crate::host::{Mode, Target, check_scope, resolve, target_of};
+use crate::local::{self, Local};
 use crate::progress::Progress;
 use crate::prompt::{Ask, Choice};
 use crate::replay;
@@ -53,7 +53,7 @@ pub(crate) struct Context<'a> {
 }
 
 impl Context<'_> {
-  /// Runs `work` under a spinner for `host` (Cursor copies plugins in-process).
+  /// Runs `work` under a spinner for `host` (Cursor and `OpenCode` copy plugins in-process).
   fn spinning<T>(&self, host: &str, task: &str, work: impl FnOnce(&Self) -> T) -> T {
     if let Some(progress) = &self.progress {
       progress.begin(host, 0, task);
@@ -101,8 +101,13 @@ pub(crate) fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res
       Adapter::Muse,
       Some(Checkout::locate(&cx.env, cx.version, &cx.origin)?),
     ),
-    // Cursor has no plugin CLI; every verb branches to `crate::cursor` before here.
-    Target::Cursor => return Err(Fail::failed("cursor has no plugin command to drive")),
+    // Cursor and OpenCode have no plugin CLI; every verb branches to `crate::local` before here.
+    Target::Cursor | Target::Opencode => {
+      return Err(Fail::failed(format!(
+        "{} has no plugin command to drive",
+        target.name()
+      )));
+    }
   };
   let pin = (adapter == Adapter::Codex).then(|| format!("v{}", cx.version));
   Ok(Driver {
@@ -232,15 +237,7 @@ fn install(
     let steps = if nothing {
       Vec::new()
     } else {
-      match target {
-        Target::Cursor => cx.spinning("cursor", "copying plugins", |cx| {
-          cursor::install(&Cursor::new(cx)?, catalog, &names, request.dry_run)
-        })?,
-        Target::Claude | Target::Codex | Target::Muse => {
-          let driver = driver(target, request, cx)?;
-          verbs::install::run(&driver, catalog, &names, request.scope, request.dry_run)?
-        }
-      }
+      install_on(target, request, catalog, &names, cx)?
     };
     sections.push((target, steps));
   }
@@ -257,6 +254,25 @@ fn install(
     json: report::install_json(&sections, request.dry_run),
     failed: failed(&all),
   })
+}
+
+/// The install steps of `names` on one host.
+fn install_on(
+  target: Target,
+  request: &Request,
+  catalog: &Catalog,
+  names: &[String],
+  cx: &Context<'_>,
+) -> Res<Vec<Step>> {
+  match target {
+    Target::Cursor | Target::Opencode => cx.spinning(target.name(), "copying plugins", |cx| {
+      local::install(&Local::new(cx, target)?, catalog, names, request.dry_run)
+    }),
+    Target::Claude | Target::Codex | Target::Muse => {
+      let driver = driver(target, request, cx)?;
+      verbs::install::run(&driver, catalog, names, request.scope, request.dry_run)
+    }
+  }
 }
 
 fn remove(
@@ -277,7 +293,9 @@ fn remove(
   let target = one_host(request, wanted, cx)?;
   removable(catalog, &request.names, target.removes_only_toolu())?;
   let steps = match target {
-    Target::Cursor => cursor::remove(&Cursor::new(cx)?, &request.names, request.dry_run),
+    Target::Cursor | Target::Opencode => {
+      local::remove(&Local::new(cx, target)?, &request.names, request.dry_run)
+    }
     Target::Claude | Target::Codex | Target::Muse => verbs::remove::run(
       &driver(target, request, cx)?,
       &request.names,
@@ -303,7 +321,7 @@ fn list(
 ) -> Res<Report> {
   let target = one_host(request, wanted, cx)?;
   let rows = match target {
-    Target::Cursor => cursor::list(&Cursor::new(cx)?, catalog),
+    Target::Cursor | Target::Opencode => local::list(&Local::new(cx, target)?, catalog),
     Target::Claude | Target::Codex | Target::Muse => {
       verbs::list::run(&driver(target, request, cx)?, catalog)?
     }

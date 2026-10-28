@@ -1,5 +1,6 @@
 .claude/tmp/
 .codex/tmp/
+.opencode/tmp/
 .toolu/tmp/
 # Atomic-write leftovers (e.g. interrupted editor writes: file.sh.tmp.PID.HASH)
 *.tmp.*
@@ -18,3 +19,5 @@ node_modules/
 
 # Cargo build output
 /target/
+# LLVM coverage output an instrumented binary writes into its working directory
+*.profraw

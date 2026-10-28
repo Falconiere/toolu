@@ -34,8 +34,9 @@ startup behavior in Codex, Claude Code, or Muse.
 6. When a plugin registers a native manifest, check
    deselection cleanup, hook inventory and the packed catalog. A repeated
    SessionStart must preserve byte-identical manifest files and their timestamps.
-7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|muse|both`
-   with the checkout binary (`both` is all three; every host runs on macOS and Linux, where
+7. For native hook acceptance, run `cargo xtask host-smoke --host claude|codex|muse|cursor|opencode|both`
+   with the checkout binary (`both` is Claude Code, Codex and Muse; Cursor and OpenCode
+   run when named; every host runs on macOS and Linux, where
    Codex and Muse need `bwrap`; on macOS, `toolu sandbox run --clone -- cargo xtask host-smoke`
    runs it in the Linux VM). It hides Bun, installs temporary host profiles and
    checks a denied `.env` write, a post-edit quality failure, a denied
@@ -59,6 +60,10 @@ startup behavior in Codex, Claude Code, or Muse.
   does not wait for more input. Stage a fixture outside Codex's workspace-write
   sandbox before testing a `git commit` hook, since that sandbox blocks writes
   to `.git/index.lock`.
+- OpenCode V2 serves sessions from a shared background service that has the
+  user's environment and plugins, and takes the project directory from `PWD`.
+  Run `opencode run --standalone` with `PWD` set to the project, so the session
+  gets a private server that inherits the smoke's environment.
 - Muse forwards a hook only `HOME LANG LOGNAME PATH PWD SHELL TERM USER` and its
   plugin variables, never `TOOLU_BIN` or `XDG_*`. Its resolver therefore takes a
   `toolu` from `/opt/homebrew/bin`, `/usr/local/bin` or linuxbrew before the

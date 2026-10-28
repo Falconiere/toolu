@@ -24,6 +24,7 @@ fn every_namespace_is_a_top_level_command() {
       "doctor",
       "config",
       "status",
+      "opencode",
       "ts-quality",
       "python-quality",
       "rust-quality",

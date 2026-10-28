@@ -23,7 +23,7 @@ use crate::trace::{Step, StepKind, StepStatus};
 pub(crate) fn encoded(host: Host, event: HostEvent, decision: &Decision) -> String {
   let target = match host {
     Host::Codex | Host::Muse => host,
-    Host::Claude | Host::Cursor | Host::Hermes => Host::Claude,
+    Host::Claude | Host::Cursor | Host::Hermes | Host::Opencode => Host::Claude,
   };
   match encode(target, event, decision) {
     Ok(Encoded::Command(stdout)) => substituted(&stdout).to_owned(),

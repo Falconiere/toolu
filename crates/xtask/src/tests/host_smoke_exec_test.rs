@@ -129,3 +129,16 @@ fn a_grandchild_left_behind_does_not_hold_the_pipes_open() {
   assert_eq!(done.output, "hi\n");
   assert!(started.elapsed() < Duration::from_secs(10));
 }
+
+#[test]
+fn the_child_pwd_names_its_working_directory() {
+  let dir = tempfile::tempdir().unwrap();
+  let out = run(
+    &["/usr/bin/printenv".to_owned(), "PWD".to_owned()],
+    dir.path(),
+    &env(dir.path()),
+    None,
+  )
+  .unwrap();
+  assert_eq!(out.trim(), dir.path().display().to_string());
+}

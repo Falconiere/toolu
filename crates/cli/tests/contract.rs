@@ -30,6 +30,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "config",
     "status",
     "setup",
+    "opencode",
     "brainstorm",
     "delivery-flow",
     "review",
@@ -60,6 +61,7 @@ const NAMES: &[&str] = &[
   "doctor",
   "config",
   "status",
+  "opencode",
   "ts-quality",
   "python-quality",
   "rust-quality",
@@ -207,7 +209,7 @@ fn host_must_be_a_known_host_and_config_dir_is_accepted() {
   assert!(
     stderr(&bogus)
       .unwrap()
-      .contains("[possible values: claude, codex, cursor, hermes, muse]")
+      .contains("[possible values: claude, codex, cursor, hermes, muse, opencode]")
   );
   let known = toolu(&["--host", "codex", "--config-dir", "/tmp", "commands"]).unwrap();
   assert_eq!(known.status.code(), Some(0));

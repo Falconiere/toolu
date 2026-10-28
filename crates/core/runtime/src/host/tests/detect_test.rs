@@ -56,6 +56,28 @@ fn cursor_variables_win_over_plugin_root() {
 }
 
 #[test]
+fn opencode_shell_variables_select_opencode_unless_claude_code_runs_inside() {
+  assert_eq!(host(&[("OPENCODE", "1")], None), Host::Opencode);
+  assert_eq!(
+    host(&[("OPENCODE_SESSION_ID", "ses_1")], Some("PreToolUse")),
+    Host::Opencode
+  );
+  assert_eq!(host(&[("OPENCODE", "0")], None), Host::Claude);
+  assert_eq!(
+    host(&[("OPENCODE", "1"), ("CLAUDECODE", "1")], None),
+    Host::Claude
+  );
+  assert_eq!(
+    host(&[("OPENCODE", "1"), ("PLUGIN_ROOT", "/p")], None),
+    Host::Codex
+  );
+  assert_eq!(
+    host(&[("TOOLU_HOST_OVERRIDE", "opencode")], None),
+    Host::Opencode
+  );
+}
+
+#[test]
 fn hermes_home_alone_never_selects_hermes() {
   assert_eq!(
     host(&[("HERMES_HOME", "/home/u/.hermes")], None),

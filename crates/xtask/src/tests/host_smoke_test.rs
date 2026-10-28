@@ -13,6 +13,7 @@ fn host_defaults_to_all_three_and_names_one() {
   assert_eq!(hosts(Some("codex")).unwrap(), vec![Host::Codex]);
   assert_eq!(hosts(Some("muse")).unwrap(), vec![Host::Muse]);
   assert_eq!(hosts(Some("cursor")).unwrap(), vec![Host::Cursor]);
+  assert_eq!(hosts(Some("opencode")).unwrap(), vec![Host::Opencode]);
 }
 
 #[test]
@@ -20,7 +21,7 @@ fn an_unknown_host_is_an_error() {
   let err = hosts(Some("vim")).unwrap_err();
   assert_eq!(
     err,
-    "--host must be claude, codex, muse, cursor or both, not vim"
+    "--host must be claude, codex, muse, cursor, opencode or both, not vim"
   );
 }
 
@@ -29,7 +30,7 @@ fn every_host_runs_anywhere_and_codex_and_muse_need_bwrap_on_linux() {
   for os in ["macos", "linux"] {
     assert_eq!(require_bwrap(&hosts(None).unwrap(), os, true), Ok(()));
     assert_eq!(
-      require_bwrap(&[Host::Claude, Host::Cursor], os, false),
+      require_bwrap(&[Host::Claude, Host::Cursor, Host::Opencode], os, false),
       Ok(())
     );
   }

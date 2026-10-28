@@ -50,7 +50,7 @@ fn report(problems: &[String]) -> Verdict {
 }
 
 fn expectations() -> Vec<Expectation> {
-  vec![plugins_package()]
+  vec![plugins_package(), opencode_package()]
 }
 
 fn plugins_package() -> Expectation {
@@ -67,6 +67,19 @@ fn plugins_package() -> Expectation {
       "bin/",
       "assets/",
     ],
+    patterns: PLUGINS_PATTERNS,
+    exact: true,
+  }
+}
+
+/// `@toolu/opencode`: a deprecation notice that `OpenCode` V2 loads as a plugin.
+fn opencode_package() -> Expectation {
+  Expectation {
+    name: "@toolu/opencode",
+    dir: "tools/toolu-opencode/npm",
+    required: owned(&["package.json", "README.md", "LICENSE", "index.js"]),
+    optional: Vec::new(),
+    forbidden: &["src/", "generated/", "plugins/", "node_modules/", ".env"],
     patterns: PLUGINS_PATTERNS,
     exact: true,
   }

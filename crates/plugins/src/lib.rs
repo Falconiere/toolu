@@ -1,6 +1,7 @@
 //! `toolu plugins install|list|remove|update|doctor` (#438): the plugin installer,
 //! ported from the former Node CLI that npm published as `@toolu/plugins`.
-//! Claude Code, Codex and Muse are driven through their own plugin CLIs. The npm
+//! Claude Code, Codex and Muse are driven through their own plugin CLIs; Cursor
+//! and `OpenCode` get plugin directories copied into the directory they load. The npm
 //! package `@toolu/plugins` is a deprecated notice and does not run these verbs.
 //! This crate never touches the standard streams: a verb returns one `Outcome`,
 //! and prompts use the terminal (`/dev/tty`).
@@ -17,13 +18,13 @@ mod catalog;
 #[cfg(test)]
 #[path = "tests/codex_stub_test.rs"]
 mod codex_stub;
-mod cursor;
 mod dispatch;
 #[cfg(test)]
 #[path = "tests/docs_test.rs"]
 mod docs;
 mod fail;
 mod host;
+mod local;
 mod progress;
 mod prompt;
 mod replay;

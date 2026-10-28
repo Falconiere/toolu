@@ -10,10 +10,13 @@ name: npm publish
 # event created by that token -- a `release:` trigger here is silently ignored,
 # which is exactly how the 6.7.0 release published nothing.
 #
-# One package publishes: @toolu/plugins, a deprecation notice. Its tarball is
+# Two packages publish, both deprecation notices. @toolu/plugins' tarball is
 # package.json, README.md, LICENSE, and cli.js. cli.js prints the native
-# install commands and exits 69. It ships no binary. After a stable publish
-# the job marks every version deprecated. A prerelease still uses the `next`
+# install commands and exits 69. It ships no binary. @toolu/opencode's tarball
+# is package.json, README.md, LICENSE, and index.js, an OpenCode V2 plugin that
+# only reports the deprecation; `toolu plugins install --host opencode`
+# replaced it. After a stable publish the job marks every version of both
+# deprecated. A prerelease still uses the `next`
 # dist-tag and does not deprecate, so it cannot move stable `latest`.
 # @toolu/core is no longer published (#440); its last
 # version stays on the registry, deprecated.
@@ -97,7 +100,7 @@ jobs:
         run: |
           set -euo pipefail
           tag="$TAG"
-          for dir in tools/toolu-cli/npm; do
+          for dir in tools/toolu-cli/npm tools/toolu-opencode/npm; do
             if [ ! -f "$dir/package.json" ]; then
               echo "$dir/package.json not found at $tag" >&2
               exit 1
@@ -122,7 +125,7 @@ jobs:
           set -uo pipefail
           npm_tag=latest
           if [[ "$TAG" == *-* ]]; then npm_tag=next; fi
-          for dir in tools/toolu-cli/npm; do
+          for dir in tools/toolu-cli/npm tools/toolu-opencode/npm; do
             if [ "$(node -p "require('./$dir/package.json').private === true")" = "true" ]; then
               echo "$dir is private at $TAG; skipping"
               continue
@@ -158,6 +161,7 @@ jobs:
             exit 0
           fi
           npm deprecate @toolu/plugins@"*" "@toolu/plugins is deprecated. Install the native binary with the installer or Homebrew, then run toolu plugins install. https://github.com/Falconiere/toolu/blob/main/docs/install.md"
+          npm deprecate @toolu/opencode@"*" "@toolu/opencode is deprecated. Install the native binary with the installer or Homebrew, then run toolu plugins install --host opencode. https://github.com/Falconiere/toolu/blob/main/docs/opencode.md"
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ inputs.tag }}
@@ -185,7 +189,7 @@ jobs:
       - name: Wait until every package resolves on the registry
         run: |
           set -euo pipefail
-          for dir in tools/toolu-cli/npm; do
+          for dir in tools/toolu-cli/npm tools/toolu-opencode/npm; do
             if [ "$(jq -r '.private == true' "$dir/package.json")" = "true" ]; then
               echo "$dir is private; nothing to wait for"
               continue

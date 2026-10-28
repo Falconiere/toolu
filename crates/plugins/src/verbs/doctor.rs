@@ -230,6 +230,7 @@ pub(super) fn host_of(target: Target) -> Host {
     Target::Codex => Host::Codex,
     Target::Muse => Host::Muse,
     Target::Cursor => Host::Cursor,
+    Target::Opencode => Host::Opencode,
   }
 }
 
