@@ -13,6 +13,8 @@
 | `git_invocation(command)` | The subcommand past git's global options, its arguments, and the `-C` chain |
 | `push_targets(analysis)` | Each push's cumulative `-C` chain, refspec, and destination branch |
 | `commit_messages(invocation)` | Static `-m`/`--message` values, including `"$(cat <<'EOF' … EOF)"` |
+| `commit_args(invocation)` | Every message source of a commit: `-m` values, `-F` files with the static heredoc or herestring `-F -` reads, `--trailer` values, whether it amends, and its `MessageOrigin`: written here, reused by `-C`/`-c`, derived by `--fixup`/`--squash`, or kept by `--amend --no-edit` |
+| `new_branches(invocation)` | Branch names introduced by `checkout -b/-B/--orphan`, `switch -c/-C/--create/--force-create/--orphan`, `branch <new>`, `branch -m/-M/-c/-C [<old>] <new>` and `worktree add -b/-B`; listing, deleting and checking out an existing branch name none, and a dynamic name is `None` |
 | `write_targets(analysis)` from **`toolu_shell::writes`** | Paths written by redirects (every target, `/dev/null` included; a dynamic one has no path), `tee`, `sed -i`, `perl -i`, `cp`/`mv`/`install` (the destination and each `DEST/basename(SRC)`, since `DEST` may be a directory), `dd of=`, and python (`-c STRING` or a static heredoc on stdin): a static `open(<literal>, <write mode>)` in any literal form reports its path, while any other `open(`, `Path(…).open`, `write_text`/`write_bytes`/`touch`, `shutil.copy*`/`move` or `os.rename`/`replace`/`symlink`/`link` reports an unknown target |
 | `matches_rule(command, "node -e")` | An argv rule tested against one simple command |
 

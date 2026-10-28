@@ -3,7 +3,9 @@
 //! `bash -c`/`eval` re-parse, and the git and write readers.
 #![no_main]
 
-use toolu_shell::git::{commit_messages, git_invocation, push_targets, runs_git_subcommand};
+use toolu_shell::git::{
+  commit_args, commit_messages, git_invocation, new_branches, push_targets, runs_git_subcommand,
+};
 use toolu_shell::rules::matches_rule;
 use toolu_shell::writes::write_targets;
 
@@ -19,6 +21,8 @@ libfuzzer_sys::fuzz_target!(|data: &[u8]| {
     std::hint::black_box(matches_rule(command, "node -e"));
     if let Some(git) = git_invocation(command) {
       std::hint::black_box(commit_messages(&git).len());
+      std::hint::black_box(commit_args(&git));
+      std::hint::black_box(new_branches(&git).len());
     }
   }
 });
