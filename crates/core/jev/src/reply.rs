@@ -62,8 +62,13 @@ pub struct Reply {
   pub body: String,
 }
 
-/// Check `body` against `questions`.
-pub(crate) fn parse(body: &str, questions: &Questions) -> Result<Reply, Error> {
+/// Check a recorded or received reply `body` against `questions`, as `ask` does
+/// with the endpoint's answer; the eval replay store (#670) calls it with no
+/// request sent.
+///
+/// # Errors
+/// `InvalidResponse` unless `body` is a typed answer for every question.
+pub fn parse(body: &str, questions: &Questions) -> Result<Reply, Error> {
   let envelope: Value = serde_json::from_str(body).map_err(|_err| Error::InvalidResponse)?;
   let model = envelope
     .get("model")

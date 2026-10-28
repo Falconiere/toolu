@@ -53,6 +53,7 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
       Ok(report) => report::present(&report, ctx),
       Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
     },
+    Some(("eval", verb)) => eval::cli::run(verb, ctx, &env(ctx)),
     Some(("dismiss", verb)) => dismiss(verb, ctx),
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
   }

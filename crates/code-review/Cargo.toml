@@ -10,6 +10,8 @@ publish.workspace = true
 [dependencies]
 clap.workspace = true
 regex.workspace = true
+# SHA-256 of the replay store's request keys; already linked by toolu-http's rustls.
+ring = { version = "0.17", default-features = false }
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

@@ -7,6 +7,7 @@
 use serde::Serialize;
 
 use super::matcher::{Match, Outcome, Tally};
+use super::setting::Setting;
 use crate::budget::Effort;
 use crate::contract::{Coverage, Finding};
 use crate::review::{Call, Stage};
@@ -118,7 +119,9 @@ impl FindingsSummary {
 pub struct ArmReport {
   /// Baseline or enhanced.
   pub arm: Arm,
-  /// The effort level.
+  /// The effort setting that was requested; `auto` and `none` are not levels.
+  pub setting: Setting,
+  /// The effort level the run used; for `auto`, the one Jev picked.
   pub effort: Effort,
   /// What the arm reported.
   pub findings: FindingsSummary,
@@ -152,7 +155,9 @@ fn as_f64(value: u64) -> f64 {
 pub struct Run {
   /// Baseline or enhanced.
   pub arm: Arm,
-  /// The effort level.
+  /// The effort setting that was requested.
+  pub setting: Setting,
+  /// The effort level the run used.
   pub effort: Effort,
   /// What the run covered.
   pub coverage: Coverage,
@@ -178,6 +183,7 @@ impl ArmReport {
       (count > 0).then(|| as_f64(usage.tokens_in.saturating_add(usage.tokens_out)) / as_f64(count));
     ArmReport {
       arm: run.arm,
+      setting: run.setting,
       effort: run.effort,
       findings: summary,
       coverage: run.coverage,

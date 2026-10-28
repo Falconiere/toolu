@@ -4,6 +4,9 @@
 //! diffs, the gate contract holds against the production predicates, and seeded
 //! review memory behaves as specified. No network, no model.
 
+#[path = "helpers/replay.rs"]
+mod replay;
+
 use std::path::{Path, PathBuf};
 
 use toolu_code_review::contract::{Finding, Severity, Side};

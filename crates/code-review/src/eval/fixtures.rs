@@ -23,7 +23,7 @@ pub struct Fixtures {
 }
 
 /// Git's environment for a hermetic repository: no system or global config.
-fn git_env() -> Env {
+pub(super) fn git_env() -> Env {
   Env::process()
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
@@ -31,16 +31,29 @@ fn git_env() -> Env {
 }
 
 fn git(root: &Path, args: &[&str]) -> Result<(), String> {
+  git_output(root, args).map(drop)
+}
+
+/// The trimmed stdout of `git args` in `root`.
+fn git_output(root: &Path, args: &[&str]) -> Result<String, String> {
   let mut spec = Spec::new(["git"]);
   spec.argv.extend(args.iter().map(|arg| (*arg).to_owned()));
   spec.cwd = Some(root.to_path_buf());
   spec.env = Some(git_env());
   let output = run(&spec).map_err(|error| format!("git {args:?}: {error:?}"))?;
   if output.exit_code == 0 {
-    Ok(())
+    Ok(output.stdout.trim().to_owned())
   } else {
     Err(format!("git {args:?}: {}", output.stderr.trim()))
   }
+}
+
+/// The commit `rev` names in the repository at `root`.
+///
+/// # Errors
+/// Git fails or `rev` names nothing.
+pub(super) fn rev_parse(root: &Path, rev: &str) -> Result<String, String> {
+  git_output(root, &["rev-parse", "--verify", rev])
 }
 
 fn io(path: &Path, error: &std::io::Error) -> String {

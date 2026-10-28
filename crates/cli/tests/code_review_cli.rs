@@ -95,3 +95,117 @@ fn config_dir_supplies_the_user_level_effort() {
   let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
   assert_eq!(doc["effort"], "xhigh");
 }
+
+/// The committed golden set.
+fn cases() -> std::path::PathBuf {
+  Path::new(env!("CARGO_MANIFEST_DIR")).join("../../fixtures/code-review-eval")
+}
+
+#[test]
+fn eval_without_live_needs_no_key_and_a_replay_miss_exits_69_unverified() {
+  // Not opted in and keyless: a replay run must not care about either.
+  let off = project(r#"{"codeReview":{"enabled":false}}"#).unwrap();
+  let empty = tempfile::tempdir().unwrap();
+  let cases = cases();
+  let args = [
+    "--json",
+    "--host",
+    "claude",
+    "code-review",
+    "eval",
+    "--cases",
+    cases.to_str().unwrap(),
+    "--replay-dir",
+    empty.path().to_str().unwrap(),
+    "--effort",
+    "small",
+    "--arm",
+    "baseline",
+  ];
+  let output = toolu(&args, Some(off.path())).unwrap();
+  assert_eq!(output.status.code(), Some(69), "{output:?}");
+  let doc: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+  let suite = doc["cases"].as_array().unwrap();
+  assert_eq!(suite.len(), 7);
+  for case in suite {
+    assert_eq!(case["arms"].as_array().unwrap().len(), 0);
+    let why = case["unverified"][0].as_str().unwrap();
+    assert!(why.contains("replay miss: review-"), "{why}");
+  }
+  assert!(String::from_utf8_lossy(&output.stderr).contains("unverified"));
+  // Nothing was recorded either: replay never writes.
+  assert_eq!(std::fs::read_dir(empty.path()).unwrap().count(), 0);
+}
+
+#[test]
+fn eval_live_without_a_key_exits_69_before_anything_is_sent_or_recorded() {
+  let on = project(r#"{"codeReview":{"enabled":true}}"#).unwrap();
+  let store = tempfile::tempdir().unwrap();
+  let record = store.path().join("replay");
+  let cases = cases();
+  let args = [
+    "--host",
+    "claude",
+    "code-review",
+    "eval",
+    "--cases",
+    cases.to_str().unwrap(),
+    "--live",
+    "--replay-dir",
+    record.to_str().unwrap(),
+  ];
+  let output = toolu(&args, Some(on.path())).unwrap();
+  assert_eq!(output.status.code(), Some(69), "{output:?}");
+  assert!(output.stdout.is_empty(), "{:?}", output.stdout);
+  let stderr = String::from_utf8(output.stderr).unwrap();
+  assert!(stderr.contains("OPENROUTER_API_KEY is missing"), "{stderr}");
+  assert!(stderr.contains("unverified"), "{stderr}");
+  assert!(!record.exists());
+}
+
+#[test]
+fn eval_usage_errors_exit_64() {
+  let cases = cases();
+  let cases = cases.to_str().unwrap();
+  let missing = tempfile::tempdir().unwrap();
+  let attempts: [&[&str]; 4] = [
+    &["code-review", "eval"],
+    &["code-review", "eval", "--cases", cases, "--effort", "huge"],
+    &["code-review", "eval", "--cases", cases, "--arm", "third"],
+    &[
+      "code-review",
+      "eval",
+      "--cases",
+      missing.path().to_str().unwrap(),
+    ],
+  ];
+  for args in attempts {
+    let output = toolu(args, None).unwrap();
+    assert_eq!(output.status.code(), Some(64), "{args:?}: {output:?}");
+    assert!(output.stdout.is_empty(), "{args:?}");
+  }
+}
+
+#[test]
+fn eval_help_lists_the_arms_the_levels_with_none_and_the_replay_flags() {
+  let output = toolu(&["code-review", "eval", "--help"], None).unwrap();
+  assert_eq!(output.status.code(), Some(0));
+  let help = String::from_utf8(output.stdout).unwrap();
+  for needle in [
+    "--cases",
+    "--arm",
+    "--effort",
+    "--live",
+    "--replay-dir",
+    "--report",
+    "baseline",
+    "enhanced",
+    "none",
+    "xhigh",
+  ] {
+    assert!(help.contains(needle), "{needle} missing from {help}");
+  }
+  // `none` is an eval-only baseline; `run` still refuses it.
+  let output = toolu(&["code-review", "run", "--effort", "none"], None).unwrap();
+  assert_eq!(output.status.code(), Some(64));
+}

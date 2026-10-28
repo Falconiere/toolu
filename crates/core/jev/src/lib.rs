@@ -22,7 +22,7 @@ mod retry;
 
 pub use error::Error;
 pub use question::{Question, Questions, State};
-pub use reply::{Answer, Reply, Usage};
+pub use reply::{Answer, Reply, Usage, parse as parse_reply};
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "jev";

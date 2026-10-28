@@ -39,6 +39,7 @@ pub(crate) fn command() -> Command {
             ),
         ),
     )
+    .subcommand(crate::eval::cli::command())
     .subcommand(Command::new("dismiss")
       .about("Settle a branch finding by exact ID without a model call")
       .arg(Arg::new("finding-id").required(true))

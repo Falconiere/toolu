@@ -3,7 +3,7 @@ use super::{
 };
 use crate::budget::Effort;
 use crate::contract::{Coverage, Finding, Severity, Side, Source};
-use crate::eval::{Expectation, Kind, match_findings};
+use crate::eval::{Expectation, Kind, Setting, match_findings};
 use crate::review::{Call, Stage};
 
 fn finding(id: &str, claim: &str, severity: Severity) -> Finding {
@@ -48,6 +48,7 @@ fn arm(calls: Vec<CallRecord>, findings: &[Finding]) -> ArmReport {
   ArmReport::new(
     Run {
       arm: Arm::Baseline,
+      setting: Setting::Medium,
       effort: Effort::Medium,
       coverage: Coverage::default(),
       calls,

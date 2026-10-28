@@ -6,9 +6,10 @@ use std::time::Instant;
 
 use serde::Serialize;
 use serde_json::json;
-use toolu_jev_client::{Jev, OPENROUTER_MODEL, Questions, Reply, State, request_body};
+use toolu_jev_client::{Jev, OPENROUTER_MODEL, Questions, Reply, State, parse_reply, request_body};
 use toolu_openrouter::{Client, Completion, StructuredRequest};
 
+use super::replayed::{REPLAY_MISS, REPLAYED, Replay, replay_failure, restored};
 use crate::contract::{Cost, Usage};
 
 /// Which stage made a call.
@@ -23,6 +24,18 @@ pub enum Stage {
   Judge,
   /// The generative recheck of contradicted findings.
   Recheck,
+}
+
+impl Stage {
+  /// The lowercase name the usage log and the replay store use.
+  pub fn name(self) -> &'static str {
+    match self {
+      Stage::Selector => "selector",
+      Stage::Review => "review",
+      Stage::Judge => "judge",
+      Stage::Recheck => "recheck",
+    }
+  }
 }
 
 /// One call, for the usage log: no source, prompt or credential.
@@ -66,6 +79,7 @@ pub(crate) type Recorder<'a> = &'a dyn Fn(&Record<'_>);
 pub(crate) struct Ledger<'a> {
   pub(crate) calls: Vec<Call>,
   recorder: Option<Recorder<'a>>,
+  replay: Option<Replay<'a>>,
 }
 
 impl<'a> Ledger<'a> {
@@ -73,7 +87,14 @@ impl<'a> Ledger<'a> {
     Ledger {
       calls: Vec::new(),
       recorder,
+      replay: None,
     }
+  }
+
+  /// Answer every call from `replay`, before any network call, when it is set.
+  pub(crate) fn replaying(mut self, replay: Option<Replay<'a>>) -> Ledger<'a> {
+    self.replay = replay;
+    self
   }
 
   /// Ask Jev before `deadline`, recording the call.
@@ -84,6 +105,9 @@ impl<'a> Ledger<'a> {
     (state, questions): (&State, &Questions),
     deadline: Instant,
   ) -> Result<Reply, toolu_jev_client::Error> {
+    if let Some(replay) = self.replay {
+      return self.replayed_jev(replay, step, (state, questions));
+    }
     let started = Instant::now();
     let result = jev.ask_until(state, OPENROUTER_MODEL, questions, deadline);
     let call = match &result {
@@ -113,6 +137,9 @@ impl<'a> Ledger<'a> {
     request: &StructuredRequest<'_>,
     deadline: Instant,
   ) -> Result<Completion, toolu_openrouter::Error> {
+    if let Some(replay) = self.replay {
+      return self.replayed_complete(replay, stage, client, request);
+    }
     let started = Instant::now();
     let result = client.complete_structured(request, deadline);
     let call = match &result {
@@ -145,6 +172,69 @@ impl<'a> Ledger<'a> {
     result
   }
 
+  /// Answer a Jev question from `replay`: no request is sent and nothing is charged.
+  fn replayed_jev(
+    &mut self,
+    replay: Replay<'_>,
+    step: Stage,
+    (state, questions): (&State, &Questions),
+  ) -> Result<Reply, toolu_jev_client::Error> {
+    let started = Instant::now();
+    let request = request_body(state, OPENROUTER_MODEL, questions);
+    let result = match replay(step, &request) {
+      Some(body) => parse_reply(&body, questions),
+      None => Err(toolu_jev_client::Error::InvalidQuestion(
+        REPLAY_MISS.to_owned(),
+      )),
+    };
+    let call = match &result {
+      Ok(answer) => Call {
+        tokens_in: answer.usage.input_tokens,
+        tokens_out: answer.usage.output_tokens,
+        cost_usd: Some(0.0),
+        ..call(step, &answer.model, REPLAYED)
+      },
+      Err(err) => call(step, OPENROUTER_MODEL, &jev_failure(err)),
+    };
+    self.calls.push(Call {
+      millis: elapsed(started),
+      ..call
+    });
+    result
+  }
+
+  /// Answer a structured request from `replay`: no request is sent and nothing is
+  /// charged.
+  fn replayed_complete(
+    &mut self,
+    replay: Replay<'_>,
+    stage: Stage,
+    client: &Client,
+    request: &StructuredRequest<'_>,
+  ) -> Result<Completion, toolu_openrouter::Error> {
+    let started = Instant::now();
+    let result = match replay(stage, &sent(request)) {
+      Some(body) => restored(&body),
+      None => Err(toolu_openrouter::Error::InvalidConfig),
+    };
+    let call = match &result {
+      Ok(done) => Call {
+        provider: done.provider.clone(),
+        quantization: done.quantization.clone(),
+        tokens_in: done.usage.prompt_tokens,
+        tokens_out: done.usage.completion_tokens,
+        cost_usd: done.usage.cost_usd,
+        ..call(stage, &done.model, REPLAYED)
+      },
+      Err(err) => call(stage, client.model(), &replay_failure(err)),
+    };
+    self.calls.push(Call {
+      millis: elapsed(started),
+      ..call
+    });
+    result
+  }
+
   /// Log `call`; the recorder, when there is one, gets the `exchange` texts.
   fn push(
     &mut self,
@@ -152,7 +242,7 @@ impl<'a> Ledger<'a> {
     started: Instant,
     exchange: impl FnOnce() -> (String, String),
   ) {
-    call.millis = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+    call.millis = elapsed(started);
     if let Some(recorder) = self.recorder {
       let (request, response) = exchange();
       recorder(&Record {
@@ -178,6 +268,11 @@ impl<'a> Ledger<'a> {
       calls: self.calls.clone(),
     }
   }
+}
+
+/// Whole milliseconds since `started`.
+fn elapsed(started: Instant) -> u64 {
+  u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX)
 }
 
 /// A call that used nothing yet; the caller fills in what it observed.

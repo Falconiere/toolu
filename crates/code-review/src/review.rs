@@ -11,6 +11,7 @@ mod judge;
 pub(crate) mod mask;
 mod prompt;
 mod recheck;
+mod replayed;
 mod source;
 
 use std::path::Path;
@@ -23,6 +24,8 @@ use toolu_runtime::env::Env;
 
 pub use calls::{Call, Record, Stage};
 pub use effort::{EffortChoice, EffortSource};
+pub(crate) use replayed::REPLAYED;
+pub use replayed::Replay;
 
 use crate::budget::{Budget, Effort, Judge};
 use crate::contract::{ErrorKind, Omitted, Report, Usage};
@@ -71,6 +74,9 @@ pub struct Options<'a> {
   pub skip_judge: bool,
   /// Receives every raw exchange (#670).
   pub recorder: Option<&'a dyn Fn(&Record<'_>)>,
+  /// Answers calls from recorded responses before any network call, and fails a
+  /// miss closed instead of sending it (#670).
+  pub replay: Option<Replay<'a>>,
   /// Overrides the level's review-call deadline.
   pub review_deadline: Option<Duration>,
   /// Overrides the level's shared judge deadline.
@@ -199,7 +205,7 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
   }
   let (client, jev) = clients(env, options)?;
   let (mask, schema) = local(input)?;
-  let mut ledger = Ledger::new(options.recorder);
+  let mut ledger = Ledger::new(options.recorder).replaying(options.replay);
   let effort = select(input, options, &jev, &mut ledger);
   let budget = effort.level.budget();
   let (packages, mut notes) = source::packages(env, input.root, input.shaped, budget, &mask);
