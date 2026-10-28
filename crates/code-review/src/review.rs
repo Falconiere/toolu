@@ -1,1 +1,1 @@
-//! Pipeline stage, owned by #665 and #666: the prompt, the structured model call and the Jev judge.
+//! Pipeline stage, owned by #666: the prompt, the structured model call through `model` (#665) and the Jev judge.

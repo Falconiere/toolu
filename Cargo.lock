@@ -1405,11 +1405,13 @@ name = "toolu-code-review"
 version = "8.5.0"
 dependencies = [
  "clap",
+ "jsonschema",
  "regex",
  "serde",
  "serde_json",
  "tempfile",
  "toolu-engine",
+ "toolu-openrouter",
  "toolu-protocol",
  "toolu-runtime",
  "toolu-state",
@@ -1541,6 +1543,16 @@ name = "toolu-jev-client"
 version = "8.5.0"
 dependencies = [
  "base64 0.23.1",
+ "serde_json",
+ "toolu-http",
+ "toolu-http-test-support",
+ "toolu-runtime",
+]
+
+[[package]]
+name = "toolu-openrouter"
+version = "8.5.0"
+dependencies = [
  "serde_json",
  "toolu-http",
  "toolu-http-test-support",

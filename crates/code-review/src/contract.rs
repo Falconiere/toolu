@@ -11,7 +11,7 @@ use toolu_protocol::exit::Exit;
 use crate::budget::Effort;
 
 /// The contract's version; a breaking change to the report raises it.
-pub const SCHEMA_VERSION: u32 = 1;
+pub const SCHEMA_VERSION: u32 = 2;
 
 /// How bad a finding is; ordered from `nit` up, so `>= Medium` means blocking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -171,15 +171,15 @@ pub struct Usage {
   pub tokens_in: u64,
   /// Completion tokens, reasoning included.
   pub tokens_out: u64,
-  /// Reported cost.
-  pub cost_usd: Cost,
+  /// Reported cost, or unknown when the provider omitted it.
+  pub cost_usd: Option<Cost>,
   /// The model that served the review, when one did.
   pub model: Option<String>,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report
-/// never prints a NaN cost as `null`.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Serialize)]
+/// never turns an invalid number into a reported cost.
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
 pub struct Cost(f64);
 
 impl Cost {

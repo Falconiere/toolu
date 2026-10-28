@@ -107,6 +107,7 @@ fn the_document_prints_findings_worst_first_with_its_versions() {
     .collect();
   assert_eq!(order, ["blocker", "high", "low", "nit"]);
   assert_eq!(doc["schema_version"], super::SCHEMA_VERSION);
+  assert_eq!(doc["schema_version"], 2);
   assert_eq!(doc["toolu_version"], env!("CARGO_PKG_VERSION"));
   assert_eq!(
     (doc["verdict"].as_str(), &doc["error"]),
@@ -136,7 +137,7 @@ fn a_cost_is_finite_and_non_negative() {
     assert_eq!(Cost::usd(usd), None, "{usd}");
   }
   let usage = Usage {
-    cost_usd: Cost::usd(0.25).unwrap(),
+    cost_usd: Cost::usd(0.25),
     ..Usage::default()
   };
   let report = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), usage);
@@ -145,7 +146,25 @@ fn a_cost_is_finite_and_non_negative() {
       .unwrap()
       .contains("\"cost_usd\":0.25")
   );
-  assert_eq!(Cost::default(), Cost::usd(0.0).unwrap());
+  let zero = Usage {
+    cost_usd: Cost::usd(0.0),
+    ..Usage::default()
+  };
+  let zero = Report::reviewed(Effort::Small, Vec::new(), Coverage::default(), zero);
+  assert_eq!(
+    serde_json::to_value(&zero).unwrap()["usage"]["cost_usd"],
+    0.0
+  );
+  let unknown = Report::reviewed(
+    Effort::Small,
+    Vec::new(),
+    Coverage::default(),
+    Usage::default(),
+  );
+  assert_eq!(
+    serde_json::to_value(&unknown).unwrap()["usage"]["cost_usd"],
+    serde_json::Value::Null
+  );
 }
 
 #[test]

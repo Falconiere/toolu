@@ -692,7 +692,7 @@
       }
     },
     "codeReview": {
-      "description": "toolu code-review run --json: the review report (schema_version 1). Exit 0 approved, 2 blocked, 69 error.",
+      "description": "toolu code-review run --json: the review report (schema_version 2). Exit 0 approved, 2 blocked, 69 error.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -707,7 +707,7 @@
       ],
       "properties": {
         "schema_version": {
-          "const": 1
+          "const": 2
         },
         "toolu_version": {
           "type": "string",
@@ -904,7 +904,10 @@
               "minimum": 0
             },
             "cost_usd": {
-              "type": "number",
+              "type": [
+                "number",
+                "null"
+              ],
               "minimum": 0
             },
             "model": {

@@ -1,0 +1,27 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["findings"],
+  "properties": {
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "line", "end_line", "side", "severity", "category", "claim", "quote", "suggestion", "prior_id"],
+        "properties": {
+          "path": {"type": "string"},
+          "line": {"type": "integer", "minimum": 1},
+          "end_line": {"type": "integer", "minimum": 1},
+          "side": {"type": "string", "enum": ["new", "old"]},
+          "severity": {"type": "string", "enum": ["blocker", "high", "medium", "low", "nit"]},
+          "category": {"type": "string"},
+          "claim": {"type": "string"},
+          "quote": {"type": "string"},
+          "suggestion": {"type": ["string", "null"]},
+          "prior_id": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}
