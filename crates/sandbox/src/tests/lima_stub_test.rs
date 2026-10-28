@@ -6,6 +6,8 @@
 use std::io;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::Duration;
 
 use toolu_runtime::env::Env;
 
@@ -32,6 +34,23 @@ fi
 exit 0
 "#;
 
+/// Run `program` once so that nothing holds it open for writing any more. A thread
+/// that forked while this one wrote the file keeps a copy of the write descriptor
+/// until its child execs, and until then `exec` of the file fails with `ETXTBSY`
+/// ("text file busy"). Once one run succeeds no such copy is left, and the file
+/// is never written again.
+fn settle(program: &Path) -> io::Result<()> {
+  for _ in 0..500 {
+    match Command::new(program).arg("--version").output() {
+      Err(err) if err.kind() == io::ErrorKind::ExecutableFileBusy => {
+        std::thread::sleep(Duration::from_millis(10));
+      }
+      other => return other.map(|_| ()),
+    }
+  }
+  Err(io::Error::other("the stub limactl stayed busy"))
+}
+
 /// The stub and a project beside it.
 pub(crate) struct Stub {
   _dir: tempfile::TempDir,
@@ -54,6 +73,7 @@ impl Stub {
       root.join("bin/version"),
       format!("limactl version {version}\n"),
     )?;
+    settle(&program)?;
     let stub = Stub { _dir: dir, root };
     stub.list(None)?;
     let state = stub.root.join("state/toolu/sandbox");

@@ -227,7 +227,8 @@ impl Lima<'_> {
     if instance.status == Status::Running {
       return self.mounted(&instance);
     }
-    let _lock = self.state.lock()?;
+    // Another command may be booting the VM: wait for it, up to a boot's time.
+    let _lock = self.state.clone().waiting(BOOT).lock()?;
     // Another command may have booted the VM while this one went for the lock,
     // and `limactl edit` refuses a running VM.
     let instance = self.existing()?;

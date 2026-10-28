@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+use std::time::{Duration, Instant};
 
 use toolu_protocol::exit::Exit;
 use toolu_runtime::env::Env;
@@ -28,9 +29,10 @@ fn the_files_live_under_the_xdg_state_home_or_local_state() {
 fn the_lock_is_exclusive_and_released_on_drop() {
   let dir = tempfile::tempdir().unwrap();
   let env = Env::from_pairs([("XDG_STATE_HOME", dir.path().to_str().unwrap())]);
-  let state = State::new(&env, "vm");
-  let held = state.lock().unwrap();
-  let busy = state.lock().unwrap_err();
+  let fast = State::new(&env, "vm").waiting(Duration::ZERO);
+  let patient = State::new(&env, "vm");
+  let held = fast.lock().unwrap();
+  let busy = fast.lock().unwrap_err();
   assert_eq!(busy.exit, Exit::TempFail);
   assert!(
     busy
@@ -38,7 +40,35 @@ fn the_lock_is_exclusive_and_released_on_drop() {
       .starts_with("another toolu sandbox command is changing vm")
   );
   drop(held);
-  assert!(state.lock().is_ok());
+  assert!(patient.lock().is_ok());
+}
+
+#[test]
+fn a_lock_waits_for_a_holder_that_lets_go_and_gives_up_after_its_wait() {
+  let dir = tempfile::tempdir().unwrap();
+  let env = Env::from_pairs([("XDG_STATE_HOME", dir.path().to_str().unwrap())]);
+  let state = State::new(&env, "vm");
+  let held = state.lock().unwrap();
+  let holder = std::thread::spawn(move || {
+    std::thread::sleep(Duration::from_millis(300));
+    drop(held);
+  });
+  let started = Instant::now();
+  assert!(
+    state
+      .clone()
+      .waiting(Duration::from_secs(30))
+      .lock()
+      .is_ok()
+  );
+  assert!(started.elapsed() >= Duration::from_millis(250));
+  holder.join().unwrap();
+  let held = state.lock().unwrap();
+  let started = Instant::now();
+  let busy = state.waiting(Duration::from_millis(200)).lock();
+  assert_eq!(busy.unwrap_err().exit, Exit::TempFail);
+  assert!(started.elapsed() >= Duration::from_millis(200));
+  drop(held);
 }
 
 #[test]

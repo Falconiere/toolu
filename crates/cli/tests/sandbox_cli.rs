@@ -261,9 +261,28 @@ fn stub_lima(home: &Path, list: &str) -> Res<String> {
   std::fs::create_dir_all(&bin)?;
   std::fs::write(bin.join("list.json"), list)?;
   let script = "#!/bin/sh\nd=$(dirname \"$0\")\ncase \"$1\" in\n  --version) echo 'limactl version 2.2.1' ;;\n  list) cat \"$d/list.json\" ;;\n  shell) cd \"$3\" && shift 5 && exec \"$@\" ;;\nesac\n";
-  std::fs::write(bin.join("limactl"), script)?;
-  std::fs::set_permissions(bin.join("limactl"), std::fs::Permissions::from_mode(0o755))?;
+  let program = bin.join("limactl");
+  if !program.exists() {
+    std::fs::write(&program, script)?;
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755))?;
+    first_run(&program)?;
+  }
   Ok(format!("{}:{}", bin.display(), std::env::var("PATH")?))
+}
+
+/// Run a script just written until the OS stops answering "text file busy": a
+/// thread that forked while the file was open for writing holds a copy of the
+/// descriptor until its child execs, and the file is never written again after.
+fn first_run(program: &Path) -> Res<()> {
+  let mut waited = 0;
+  while let Err(err) = Command::new(program).arg("--version").output() {
+    if err.kind() != std::io::ErrorKind::ExecutableFileBusy || waited >= 500 {
+      return Err(err.into());
+    }
+    waited += 1;
+    std::thread::sleep(std::time::Duration::from_millis(10));
+  }
+  Ok(())
 }
 
 #[test]

@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use std::time::Duration;
+
 use toolu_protocol::exit::Exit;
 
 use crate::lima::Lima;
@@ -18,7 +20,7 @@ fn backend<'a>(stub: &Stub, context: &'a crate::context::Context) -> Lima<'a> {
   Lima {
     context,
     program: stub.program(),
-    state: State::new(&context.env, "toolu-sandbox"),
+    state: State::new(&context.env, "toolu-sandbox").waiting(Duration::from_millis(500)),
   }
 }
 

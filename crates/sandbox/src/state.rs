@@ -5,6 +5,7 @@
 
 use std::fs::{File, TryLockError};
 use std::path::{Path, PathBuf};
+use std::time::{Duration, Instant};
 
 use toolu_protocol::exit::Exit;
 use toolu_runtime::atomic::write_atomic;
@@ -12,11 +13,20 @@ use toolu_runtime::env::Env;
 
 use crate::step::Failure;
 
+/// How long a command waits for the VM's lock before it reports the VM busy: long
+/// enough for the moment another command takes to let go (a `flock` is also held
+/// by a process that forked in another thread until that child execs), short
+/// enough to fail fast while a boot or a setup is really running.
+const LOCK_WAIT: Duration = Duration::from_secs(2);
+/// How often a waiting command looks at the lock again.
+const LOCK_POLL: Duration = Duration::from_millis(50);
+
 /// The files of one VM.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct State {
   dir: PathBuf,
   name: String,
+  wait: Duration,
 }
 
 impl State {
@@ -28,7 +38,14 @@ impl State {
     State {
       dir: base.join("toolu/sandbox"),
       name: name.to_owned(),
+      wait: LOCK_WAIT,
     }
+  }
+
+  /// The same state, waiting up to `wait` for the VM's lock before reporting it busy.
+  pub(crate) fn waiting(mut self, wait: Duration) -> State {
+    self.wait = wait;
+    self
   }
 
   /// The generated Lima file.
@@ -59,10 +76,11 @@ impl State {
     })
   }
 
-  /// The VM's lock, held until the returned file drops.
+  /// The VM's lock, held until the returned file drops, waiting up to the state's
+  /// wait for a holder to let go.
   ///
   /// # Errors
-  /// Exit 75 when another sandbox command holds it; 1 when it cannot be opened.
+  /// Exit 75 when another sandbox command still holds it; 1 when it cannot be opened.
   pub(crate) fn lock(&self) -> Result<File, Failure> {
     self.create()?;
     let path = self.dir.join(format!("{}.lock", self.name));
@@ -72,19 +90,29 @@ impl State {
         format!("cannot open {}: {err}", path.display()),
       )
     })?;
-    match file.try_lock() {
-      Ok(()) => Ok(file),
-      Err(TryLockError::WouldBlock) => Err(Failure::new(
-        Exit::TempFail,
-        format!(
-          "another toolu sandbox command is changing {}; try again when it ends",
-          self.name
-        ),
-      )),
-      Err(TryLockError::Error(err)) => Err(Failure::new(
-        Exit::Failure,
-        format!("cannot lock {}: {err}", path.display()),
-      )),
+    let deadline = Instant::now() + self.wait;
+    loop {
+      match file.try_lock() {
+        Ok(()) => return Ok(file),
+        Err(TryLockError::WouldBlock) if Instant::now() < deadline => {
+          std::thread::sleep(LOCK_POLL);
+        }
+        Err(TryLockError::WouldBlock) => {
+          return Err(Failure::new(
+            Exit::TempFail,
+            format!(
+              "another toolu sandbox command is changing {}; try again when it ends",
+              self.name
+            ),
+          ));
+        }
+        Err(TryLockError::Error(err)) => {
+          return Err(Failure::new(
+            Exit::Failure,
+            format!("cannot lock {}: {err}", path.display()),
+          ));
+        }
+      }
     }
   }
 
