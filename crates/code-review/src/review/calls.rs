@@ -34,6 +34,8 @@ pub struct Call {
   pub model: String,
   /// The serving provider, when reported.
   pub provider: Option<String>,
+  /// Serving quantization, when reported.
+  pub quantization: Option<String>,
   /// Input tokens.
   pub tokens_in: u64,
   /// Output tokens, reasoning included.
@@ -116,6 +118,7 @@ impl<'a> Ledger<'a> {
     let call = match &result {
       Ok(done) => Call {
         provider: done.provider.clone(),
+        quantization: done.quantization.clone(),
         tokens_in: done.usage.prompt_tokens,
         tokens_out: done.usage.completion_tokens,
         cost_usd: done.usage.cost_usd,
@@ -172,6 +175,7 @@ impl<'a> Ledger<'a> {
         .then(|| reported.iter().sum())
         .and_then(Cost::usd),
       model,
+      calls: self.calls.clone(),
     }
   }
 }
@@ -182,6 +186,7 @@ fn call(stage: Stage, model: &str, outcome: &str) -> Call {
     stage,
     model: model.to_owned(),
     provider: None,
+    quantization: None,
     tokens_in: 0,
     tokens_out: 0,
     cost_usd: None,
@@ -206,7 +211,7 @@ fn sent(request: &StructuredRequest<'_>) -> String {
 fn received(done: &Completion) -> String {
   let usage = &done.usage;
   json!({"content": done.content, "finish_reason": done.finish_reason,
-    "model": done.model, "provider": done.provider,
+    "model": done.model, "provider": done.provider, "provider_quantization": done.quantization,
     "usage": {"prompt_tokens": usage.prompt_tokens, "completion_tokens": usage.completion_tokens,
               "reasoning_tokens": usage.reasoning_tokens, "cost": usage.cost_usd}})
   .to_string()

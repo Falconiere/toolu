@@ -3,14 +3,14 @@
   "name": "code-review",
   "displayName": "code-review",
   "version": "8.5.0",
-  "description": "Native code review of the push diff with OpenRouter and Jev: anchored findings and a computed verdict as a local report. In development: `toolu code-review run` fails closed until the review pipeline lands. Standalone, no dependencies.",
+  "description": "Native code review of the committed push diff with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "compat": {
     "source": "native",
     "manifestDir": ".muse-plugin"
   },
   "capabilities": {
-    "skills": [],
-    "commands": [],
+    "skills": [{"id":"review","path":"skills/review/SKILL.md"}],
+    "commands": [{"id":"review-command","path":"commands/review.md"}],
     "hooks": [],
     "mcpServers": [],
     "reminders": []

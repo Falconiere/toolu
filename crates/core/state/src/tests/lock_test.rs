@@ -2,7 +2,7 @@ use std::fs::File;
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
 
-use super::{LockOptions, lock_path, token, with_lock};
+use super::{LockOptions, lock_path, token, with_lock, with_lock_strict};
 
 fn age(lock: &Path, by: Duration) {
   let file = File::options().write(true).open(lock).unwrap();
@@ -108,6 +108,20 @@ fn a_live_fresh_lock_times_out_warns_and_runs_unlocked() {
     [format!("state: lock {lock} still held; writing without it")]
   );
   assert_eq!(std::fs::read_to_string(lock_path(&file)).unwrap(), theirs);
+}
+
+#[test]
+fn strict_lock_never_runs_a_writer_after_timeout() {
+  let dir = tempfile::tempdir().unwrap();
+  let file = dir.path().join("memory.json");
+  std::fs::write(lock_path(&file), format!("{} live\n", std::process::id())).unwrap();
+  let options = LockOptions {
+    timeout: Duration::from_millis(20),
+    ..LockOptions::default()
+  };
+  let result = with_lock_strict(&file, options, || std::fs::write(&file, "lost update"));
+  assert!(result.is_err_and(|err| err.ends_with("nothing was written")));
+  assert!(!file.exists());
 }
 
 #[test]

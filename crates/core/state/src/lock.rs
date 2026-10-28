@@ -60,6 +60,31 @@ pub fn with_lock<T>(
   warnings: &mut Vec<String>,
   f: impl FnOnce() -> T,
 ) -> T {
+  let _release = acquire(file, options, warnings);
+  f()
+}
+
+/// Runs `f` only when `<file>.lock` was acquired.
+///
+/// # Errors
+/// A held or unavailable lock prevents the write.
+pub fn with_lock_strict<T>(
+  file: &Path,
+  options: LockOptions,
+  f: impl FnOnce() -> T,
+) -> Result<T, String> {
+  // The shared timeout warning says "writing without it"; strict mode never does.
+  let release = acquire(file, options, &mut Vec::new());
+  if !release.held {
+    return Err(format!(
+      "state: lock {} held or unavailable; nothing was written",
+      release.lock.display()
+    ));
+  }
+  Ok(f())
+}
+
+fn acquire(file: &Path, options: LockOptions, warnings: &mut Vec<String>) -> Release {
   let lock = lock_path(file);
   let ours = format!("{} {}\n", std::process::id(), token());
   let deadline = Instant::now() + options.timeout;
@@ -78,25 +103,24 @@ pub fn with_lock<T>(
       std::thread::sleep(POLL);
     }
   }
-  let _release = Release {
-    lock: &lock,
-    ours: &ours,
+  Release {
+    lock,
+    ours,
     held: state == Take::Held,
-  };
-  f()
+  }
 }
 
 /// Removes the lock on drop if this call took it and still owns it.
-struct Release<'a> {
-  lock: &'a Path,
-  ours: &'a str,
+struct Release {
+  lock: PathBuf,
+  ours: String,
   held: bool,
 }
 
-impl Drop for Release<'_> {
+impl Drop for Release {
   fn drop(&mut self) {
-    if self.held && content(self.lock).as_deref() == Some(self.ours) {
-      let _gone = std::fs::remove_file(self.lock);
+    if self.held && content(&self.lock).as_deref() == Some(self.ours.as_str()) {
+      let _gone = std::fs::remove_file(&self.lock);
     }
   }
 }

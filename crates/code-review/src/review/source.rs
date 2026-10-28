@@ -5,7 +5,7 @@
 //! left out whole with a note, never cut mid-file. Source lines are outside the
 //! pre-pass scan, so the secret scanner masks them here before they leave.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::Path;
 
 use serde::Serialize;
@@ -48,11 +48,22 @@ pub(crate) fn packages(
 ) -> (Vec<Package>, Vec<String>) {
   let mut used: BTreeMap<&str, usize> = BTreeMap::new();
   let mut notes = Vec::new();
+  // Files a path scope left out of every chunk would only spend the package cap.
+  let chunked: BTreeSet<usize> = shaped
+    .chunks
+    .iter()
+    .flat_map(|chunk| chunk.files.iter().copied())
+    .collect();
   let packages = shaped
     .files
     .iter()
-    .map(|file| {
-      let source = surrounding((env, root), file, budget, &mut used, &mut notes);
+    .enumerate()
+    .map(|(index, file)| {
+      let source = if chunked.contains(&index) {
+        surrounding((env, root), file, budget, &mut used, &mut notes)
+      } else {
+        None
+      };
       Package {
         path: file.path.clone(),
         patch: mask.apply(&file.patch),

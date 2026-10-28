@@ -1,18 +1,8 @@
-//! The transient-state sweeper for `<root>/<host dir>/tmp` (`state-sweeper.ts`),
-//! run once per session. It reclaims only state that is provably spent:
-//!
-//! - `push-review/`, `plan-ledger/`, `docs-sync/`, `docs-review/`: per-branch `*.json`, dropped
-//!   when the branch is merged into base, gone, or older than the TTL; the
-//!   current branch is never touched;
-//! - `quality-gate-status.json`: dropped when passing, or failing only about
-//!   files that no longer exist; an unrecognized document is kept;
-//! - `telemetry/*.jsonl`: trimmed to the retention window (`sweep_telemetry`).
-//!
-//! Best effort: failures become `toolu-sweep: …` warnings, never errors. Two
-//! deliberate departures from TypeScript (#415 review): when git cannot list the
-//! branches the branch state is kept, not judged all spent; and a symlinked
-//! state dir or entry is never followed, so nothing outside the repository is
-//! deleted or rewritten.
+//! Session sweeper for transient host state under `<root>/<host dir>/tmp`.
+//! It reclaims spent per-branch JSON in push-review, code-review, plan-ledger,
+//! docs-sync and docs-review; trims telemetry; and drops spent gate status.
+//! The current branch is kept. Git failures and symlinked paths stay untouched,
+//! and all sweep failures are warnings.
 
 use std::collections::BTreeSet;
 use std::path::{Path, PathBuf};
@@ -34,7 +24,13 @@ pub const SWEEP_DEFAULT_TTL_HOURS: u64 = 24;
 /// Days telemetry is kept (`gates.telemetryRetentionDays`).
 pub const SWEEP_DEFAULT_RETENTION_DAYS: u64 = 7;
 /// The per-branch state directories.
-pub const SWEEP_BRANCH_DIRS: [&str; 4] = ["push-review", "plan-ledger", "docs-sync", "docs-review"];
+pub const SWEEP_BRANCH_DIRS: [&str; 5] = [
+  "push-review",
+  "code-review",
+  "plan-ledger",
+  "docs-sync",
+  "docs-review",
+];
 
 const HOUR: Duration = Duration::from_hours(1);
 

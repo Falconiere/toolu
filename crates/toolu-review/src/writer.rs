@@ -6,7 +6,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 use toolu_runtime::json::ordered::Ordered;
 
-use crate::state::{Input, write};
+use toolu_state::push_review::{Input, write};
 
 fn value<'a>(matches: &'a ArgMatches, name: &str) -> Option<&'a str> {
   matches.get_one::<String>(name).map(String::as_str)
@@ -36,6 +36,7 @@ fn input(matches: &ArgMatches) -> Result<Input<'_>, Outcome> {
     repo: value(matches, "repo").unwrap_or("."),
     branch: value(matches, "branch"),
     reviewed_files: value(matches, "reviewed-files"),
+    expected_diff_sha: None,
   })
 }
 

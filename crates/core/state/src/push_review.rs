@@ -1,29 +1,37 @@
 //! The v2 push-review file, preserving the old writer's field order and values.
 
+mod git;
+
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
+use crate::diff_sha::diff_sha;
+use crate::git::{base_branch, branch_slug, has_git};
+use crate::time::iso_seconds;
 use toolu_runtime::atomic::write_atomic;
 use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
-use toolu_state::diff_sha::diff_sha;
-use toolu_state::git::{base_branch, branch_slug, has_git};
-use toolu_state::time::iso_seconds;
-
-use crate::git;
 
 const EMPTY_BLOB_SHA: &str = "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391";
 
 /// Parsed CLI input whose JSON values retain their original order.
-pub(crate) struct Input<'a> {
-  pub(crate) findings_count: u64,
-  pub(crate) reviewers: Ordered,
-  pub(crate) findings: Ordered,
-  pub(crate) repo: &'a str,
-  pub(crate) branch: Option<&'a str>,
-  pub(crate) reviewed_files: Option<&'a str>,
+pub struct Input<'a> {
+  /// Number of open blocking findings.
+  pub findings_count: u64,
+  /// Accepted reviewer identities.
+  pub reviewers: Ordered,
+  /// Finding records retained for human inspection.
+  pub findings: Ordered,
+  /// Git repository path.
+  pub repo: &'a str,
+  /// Branch name for a detached checkout.
+  pub branch: Option<&'a str>,
+  /// Optional comma-separated reviewed paths in the gate's spelling.
+  pub reviewed_files: Option<&'a str>,
+  /// Reject a diff change between shaping and state writing.
+  pub expected_diff_sha: Option<&'a str>,
 }
 
 struct Prepared {
@@ -66,6 +74,12 @@ fn prepare(input: &Input<'_>, ctx: &Ctx, env: &Env) -> Result<Prepared, String> 
     .get("PUSH_REVIEW_BASE")
     .map_or_else(|| base_branch(env, Some(&root), &root), str::to_owned);
   let sha = diff_sha(env, &root, &base).ok_or_else(|| format!("git diff {base}...HEAD failed"))?;
+  if input
+    .expected_diff_sha
+    .is_some_and(|expected| expected != sha)
+  {
+    return Err("committed diff changed during review".to_owned());
+  }
   if sha == EMPTY_BLOB_SHA {
     return Err(format!(
       "diff against {base} is empty; nothing to review yet"
@@ -127,7 +141,10 @@ fn document(input: &Input<'_>, prepared: &Prepared) -> Ordered {
 }
 
 /// Atomically write the review document and return its absolute file path.
-pub(crate) fn write(input: &Input<'_>, ctx: &Ctx, env: &Env) -> Result<PathBuf, String> {
+///
+/// # Errors
+/// Git, branch, diff, or atomic write failures prevent the state update.
+pub fn write(input: &Input<'_>, ctx: &Ctx, env: &Env) -> Result<PathBuf, String> {
   let prepared = prepare(input, ctx, env)?;
   let body = format!("{}\n", document(input, &prepared).to_text(true));
   if !write_atomic(&prepared.path, &body) {
@@ -140,5 +157,5 @@ pub(crate) fn write(input: &Input<'_>, ctx: &Ctx, env: &Env) -> Result<PathBuf, 
 }
 
 #[cfg(test)]
-#[path = "tests/state_test.rs"]
+#[path = "tests/push_review_test.rs"]
 mod tests;

@@ -107,7 +107,7 @@ fn the_document_prints_findings_worst_first_with_its_versions() {
     .collect();
   assert_eq!(order, ["blocker", "high", "low", "nit"]);
   assert_eq!(doc["schema_version"], super::SCHEMA_VERSION);
-  assert_eq!(doc["schema_version"], 2);
+  assert_eq!(doc["schema_version"], 3);
   assert_eq!(doc["toolu_version"], env!("CARGO_PKG_VERSION"));
   assert_eq!(
     (doc["verdict"].as_str(), &doc["error"]),
@@ -133,6 +133,7 @@ fn a_failed_report_carries_its_error() {
     ErrorKind::NotEnabled,
     ErrorKind::Outage,
     ErrorKind::Deadline,
+    ErrorKind::State,
   ];
   for kind in kinds {
     assert_eq!(

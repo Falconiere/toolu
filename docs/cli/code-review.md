@@ -14,8 +14,9 @@ Native review of the push diff: anchored findings, coverage and a computed verdi
 Usage: toolu code-review [OPTIONS] <COMMAND>
 
 Commands:
-  run   Review the branch diff and print the verdict report
-  help  Print this message or the help of the given subcommand(s)
+  run      Review the branch diff and print the verdict report
+  dismiss  Settle a branch finding by exact ID without a model call
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -38,6 +39,25 @@ Options:
       --path <PATH>       Review only this path; repeatable. A path-scoped run never writes passing state
   -q, --quiet             Drop the diagnostics of a successful run
       --effort <LEVEL>    Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto [possible values: auto, small, medium, high, xhigh]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu code-review dismiss`
+
+```text
+Settle a branch finding by exact ID without a model call
+
+Usage: toolu code-review dismiss [OPTIONS] --reason <TEXT> <finding-id>
+
+Arguments:
+  <finding-id>
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --reason <TEXT>
+  -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
   -h, --help              Print help

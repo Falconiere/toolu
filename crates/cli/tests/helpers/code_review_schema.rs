@@ -56,6 +56,7 @@ fn blocked_report() -> Report {
     tokens_out: 3400,
     cost_usd: Cost::usd(0.0123),
     model: Some("deepseek/deepseek-v4-pro-0813".to_owned()),
+    calls: Vec::new(),
   };
   Report::reviewed(Effort::Medium, findings, coverage, usage)
 }

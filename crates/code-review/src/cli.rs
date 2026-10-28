@@ -39,6 +39,10 @@ pub(crate) fn command() -> Command {
             ),
         ),
     )
+    .subcommand(Command::new("dismiss")
+      .about("Settle a branch finding by exact ID without a model call")
+      .arg(Arg::new("finding-id").required(true))
+      .arg(Arg::new("reason").long("reason").required(true).value_name("TEXT")))
 }
 
 /// The `--effort` of a `run`, when given.

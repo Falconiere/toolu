@@ -86,6 +86,7 @@ fn branch_state_of_spent_branches_is_reclaimed() {
 #[test]
 fn every_branch_state_dir_is_swept_and_telemetry_keeps_its_default_window() {
   let (sb, state) = repo("{\"version\":1}").unwrap();
+  assert!(SWEEP_BRANCH_DIRS.contains(&"code-review"));
   for dir in SWEEP_BRANCH_DIRS {
     put(&state.join(dir).join("feat_gone.json"), "{}", FRESH).unwrap();
   }

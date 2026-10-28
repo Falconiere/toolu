@@ -1,6 +1,6 @@
 //! `toolu code-review`, black-box: a bad effort is a usage error, a repository
-//! without the opt-in gets `not-enabled`, and an opted-in one still fails closed
-//! until the last pipeline stage lands (#669). The help text is pinned by
+//! without the opt-in gets `not-enabled`, and an opted-in one with no key
+//! fails closed before reading the diff. The help text is pinned by
 //! the generated `docs/cli/code-review.md`, which `cargo xtask docs-cli --check`
 //! compares.
 
@@ -14,6 +14,7 @@ fn toolu(args: &[&str], project: Option<&Path>) -> std::io::Result<Output> {
     command
       .env("TOOLU_PROJECT_DIR", project)
       .env("TOOLU_CONFIG_DIR", project)
+      .env_remove("OPENROUTER_API_KEY")
       .env_remove("TOOLU_USER_CONFIG_DIR");
   }
   command.args(args).output()
@@ -43,17 +44,17 @@ fn run_without_the_opt_in_exits_69_and_says_how_to_enable() {
   )
   .unwrap();
   assert_eq!(output.status.code(), Some(69));
-  assert!(output.stdout.is_empty(), "{:?}", output.stdout);
-  let stderr = String::from_utf8(output.stderr).unwrap();
+  assert!(output.stderr.is_empty(), "{:?}", output.stderr);
+  let stderr = String::from_utf8(output.stdout).unwrap();
   assert!(
-    stderr.starts_with("code-review: not-enabled: code review is not enabled"),
+    stderr.contains("not-enabled: code review is not enabled"),
     "{stderr}"
   );
   assert!(stderr.contains("project toolu.config.json"), "{stderr}");
 }
 
 #[test]
-fn an_opted_in_run_still_fails_closed_and_uses_the_configured_effort() {
+fn an_opted_in_run_without_a_key_fails_closed_and_uses_the_configured_effort() {
   let on = project(r#"{"codeReview":{"enabled":true,"effort":"small"}}"#).unwrap();
   let output = toolu(
     &["--json", "--host", "claude", "code-review", "run"],
@@ -65,7 +66,10 @@ fn an_opted_in_run_still_fails_closed_and_uses_the_configured_effort() {
   assert_eq!(doc["error"]["kind"], "unconfigured");
   assert_eq!(doc["effort"], "small");
   let message = doc["error"]["message"].as_str().unwrap();
-  assert!(message.contains("not built yet (#669)"), "{message}");
+  assert!(
+    message.contains("OPENROUTER_API_KEY is missing"),
+    "{message}"
+  );
 }
 
 #[test]

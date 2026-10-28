@@ -4,14 +4,12 @@
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
 //! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
 //! output contract that `review` consumes. `run` sends nothing without the
-//! repository's opt-in (`not-enabled`); until #669 lands it then fails
-//! closed as `unconfigured`, sends nothing and writes no state.
+//! repository's opt-in (`not-enabled`).
 
 use clap::ArgMatches;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
-use toolu_runtime::host::roots::Roots;
 
 /// Byte and token caps, and the effort levels.
 pub mod budget;
@@ -22,6 +20,7 @@ pub mod contract;
 pub mod memory;
 /// Strict model findings before grounding and anchoring.
 pub mod model;
+mod pipeline;
 
 /// Deterministic scanners that run before the model.
 pub mod prepass;
@@ -37,15 +36,8 @@ pub mod shape;
 /// Grounding and anchoring of findings in the shaped diff.
 pub mod validate;
 
-use budget::Effort;
-use contract::{ErrorKind, Report};
-
 /// The plugin this crate belongs to: `plugins/code-review`.
 pub const PLUGIN: &str = "code-review";
-
-/// Why an enabled run fails closed until the last pipeline stages land.
-const NOT_BUILT: &str =
-  "the review pipeline is not built yet (#669); nothing was sent and no state was written";
 
 /// The `toolu code-review` namespace.
 pub fn command() -> clap::Command {
@@ -55,57 +47,41 @@ pub fn command() -> clap::Command {
 /// Run a `toolu code-review` verb.
 pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
   match matches.subcommand() {
-    Some(("run", verb)) => {
-      let mut env = Env::process();
-      if let Some(dir) = &ctx.config_dir {
-        env = env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy());
-      }
-      let settings = settings::load(&Roots::new(env, ctx.host), None);
-      let effort = cli::effort(verb)
-        .or(settings.effort)
-        .unwrap_or(Effort::Auto);
-      let report = if settings.enabled {
-        Report::failed(effort, ErrorKind::Unconfigured, NOT_BUILT)
-      } else {
-        review::RunError::NotEnabled.report(effort)
-      };
-      present(&report, ctx)
-    }
+    Some(("run", verb)) => match pipeline::run(&env(ctx), ctx, verb, &review::Options::default()) {
+      Ok(report) => report::present(&report, ctx),
+      Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
+    },
+    Some(("dismiss", verb)) => dismiss(verb, ctx),
     _ => Outcome::failed(Exit::Usage, "code-review: a verb is required".to_owned()),
   }
 }
 
-/// The report as one JSON document under `--json`, otherwise one line.
-fn present(report: &Report, ctx: &Ctx) -> Outcome {
-  let stdout = if ctx.json {
-    match serde_json::to_string(report) {
-      Ok(doc) => doc,
-      Err(err) => return Outcome::failed(Exit::Failure, format!("code-review: {err}")),
-    }
-  } else if let Some(error) = &report.error {
-    let line = format!("code-review: {}: {}", error.kind.name(), error.message);
-    return Outcome::failed(report.exit(), line);
-  } else {
-    summary(report)
-  };
-  Outcome {
-    exit: report.exit(),
-    stdout: Some(stdout),
-    stderr: None,
+/// The process environment, with `--config-dir` as `TOOLU_CONFIG_DIR`.
+fn env(ctx: &Ctx) -> Env {
+  let env = Env::process();
+  match &ctx.config_dir {
+    Some(dir) => env.with("TOOLU_CONFIG_DIR", &dir.to_string_lossy()),
+    None => env,
   }
 }
 
-/// The verdict line; unreviewed paths block too, so a blocked run names them.
-fn summary(report: &Report) -> String {
-  let unreviewed = match report.coverage.unreviewed.len() {
-    0 => String::new(),
-    count => format!(", {count} unreviewed path(s)"),
-  };
-  format!(
-    "code-review: {}, {} blocking finding(s){unreviewed}",
-    report.verdict().name(),
-    report.blocking_count()
-  )
+fn dismiss(verb: &ArgMatches, ctx: &Ctx) -> Outcome {
+  let id = verb
+    .get_one::<String>("finding-id")
+    .map(String::as_str)
+    .unwrap_or_default();
+  let reason = verb
+    .get_one::<String>("reason")
+    .map(String::as_str)
+    .unwrap_or_default();
+  match pipeline::dismiss(&env(ctx), ctx, id, reason) {
+    // `--json` promises one JSON document on stdout.
+    Ok(message) if ctx.json => {
+      Outcome::data(serde_json::json!({"id": id, "message": message}).to_string())
+    }
+    Ok(message) => Outcome::data(message),
+    Err(message) => Outcome::failed(Exit::Failure, format!("code-review: {message}")),
+  }
 }
 
 #[cfg(test)]

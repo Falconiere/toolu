@@ -155,6 +155,30 @@ fn a_package_over_its_cap_drops_the_next_whole_source() {
 }
 
 #[test]
+fn files_left_out_of_every_chunk_spend_no_package_budget() {
+  let small = Effort::Small.budget();
+  let half = lines(1000, "x");
+  let names = ["pkg/a.rs", "pkg/b.rs", "pkg/c.rs"];
+  let base: Vec<(&str, String)> = names.iter().map(|name| (*name, half.clone())).collect();
+  let change: Vec<(&str, String)> = names
+    .iter()
+    .map(|name| (*name, format!("{half}end\n")))
+    .collect();
+  let dir = repo(&base, &change);
+  let env = env();
+  let mut shaped = shape(&env, dir.path(), Some("main")).unwrap();
+  let last = shaped.files.len() - 1;
+  // What a `--path pkg/c.rs` scope leaves: only the last file is chunked.
+  for chunk in &mut shaped.chunks {
+    chunk.files.retain(|index| *index == last);
+  }
+  let (found, notes) = packages(&env, dir.path(), &shaped, small, &Mask::default());
+  assert!(found[last].source.is_some(), "{notes:?}");
+  assert!(found[..last].iter().all(|package| package.source.is_none()));
+  assert!(notes.is_empty(), "{notes:?}");
+}
+
+#[test]
 fn a_secret_on_an_unchanged_line_is_masked_in_the_source() {
   let token = format!("ghp_{}", "Ab1".repeat(12));
   let base = format!("const T: &str = \"{token}\";\nfn a() {{}}\n");

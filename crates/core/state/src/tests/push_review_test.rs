@@ -8,7 +8,7 @@ use super::prior_round;
 fn an_old_state_increments_only_for_the_same_diff() {
   let dir = tempfile::tempdir().unwrap();
   let path = dir.path().join("feature.json");
-  let old = include_str!("../../../cli/tests/fixtures/review_legacy.json");
+  let old = include_str!("../../../../cli/tests/fixtures/review_legacy.json");
   fs::write(&path, old).unwrap();
   let sha = Ordered::parse(old)
     .unwrap()

@@ -90,6 +90,7 @@ fn a_failed_run_reports_its_kind_and_keeps_its_usage() {
     tokens_out: 7,
     cost_usd: Cost::usd(0.5),
     model: Some("m".into()),
+    calls: Vec::new(),
   };
   let cases = [
     (RunError::NotEnabled, "not-enabled"),

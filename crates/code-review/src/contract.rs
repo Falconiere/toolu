@@ -11,7 +11,7 @@ use toolu_protocol::exit::Exit;
 use crate::budget::Effort;
 
 /// The contract's version; a breaking change to the report raises it.
-pub const SCHEMA_VERSION: u32 = 2;
+pub const SCHEMA_VERSION: u32 = 3;
 
 /// How bad a finding is; ordered from `nit` up, so `>= Medium` means blocking.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -67,6 +67,8 @@ pub enum Source {
   AstGrep,
   /// The secret scanner of the pre-pass.
   Secrets,
+  /// A local failure that prevented model judgment.
+  System,
 }
 
 impl Source {
@@ -76,6 +78,7 @@ impl Source {
       Source::Llm => "llm",
       Source::AstGrep => "ast-grep",
       Source::Secrets => "secrets",
+      Source::System => "system",
     }
   }
 }
@@ -175,6 +178,8 @@ pub struct Usage {
   pub cost_usd: Option<Cost>,
   /// The model that served the review, when one did.
   pub model: Option<String>,
+  /// Metadata for each external call, with no prompt or source text.
+  pub calls: Vec<crate::review::Call>,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report
@@ -201,6 +206,8 @@ pub enum ErrorKind {
   Outage,
   /// Every review call ran out of its level's wall deadline.
   Deadline,
+  /// The review finished, but local state could not be saved.
+  State,
 }
 
 impl ErrorKind {
@@ -211,6 +218,7 @@ impl ErrorKind {
       ErrorKind::NotEnabled => "not-enabled",
       ErrorKind::Outage => "outage",
       ErrorKind::Deadline => "deadline",
+      ErrorKind::State => "state",
     }
   }
 }
@@ -239,6 +247,14 @@ pub struct Report {
   pub usage: Usage,
   /// Why the run could not review; when set, the verdict is `error`.
   pub error: Option<ReportError>,
+  /// Where the effort level came from and any deterministic floor.
+  pub effort_source: Option<String>,
+  /// Resolved, still-open and new finding IDs.
+  pub recap: Vec<String>,
+  /// Pre-pass findings and notices; retained during an outage.
+  pub mechanical_checks: Vec<String>,
+  /// Review degradation notes, not full source evidence.
+  pub notes: Vec<String>,
 }
 
 /// The printed document: `Report` plus its versions and computed verdict.
@@ -252,6 +268,14 @@ struct Document<'a> {
   coverage: &'a Coverage,
   usage: &'a Usage,
   error: Option<&'a ReportError>,
+  #[serde(skip_serializing_if = "Option::is_none")]
+  effort_source: Option<&'a String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  recap: &'a Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  mechanical_checks: &'a Vec<String>,
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  notes: &'a Vec<String>,
 }
 
 impl Serialize for Report {
@@ -267,6 +291,10 @@ impl Serialize for Report {
       coverage: &self.coverage,
       usage: &self.usage,
       error: self.error.as_ref(),
+      effort_source: self.effort_source.as_ref(),
+      recap: &self.recap,
+      mechanical_checks: &self.mechanical_checks,
+      notes: &self.notes,
     }
     .serialize(serializer)
   }
@@ -286,6 +314,10 @@ impl Report {
       coverage,
       usage,
       error: None,
+      effort_source: None,
+      recap: Vec::new(),
+      mechanical_checks: Vec::new(),
+      notes: Vec::new(),
     }
   }
 
