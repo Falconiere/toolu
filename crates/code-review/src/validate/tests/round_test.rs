@@ -1,78 +1,8 @@
-use crate::contract::{Coverage, Severity, Side};
-use crate::memory::{Memory, PriorFinding, Status};
-use crate::model::ModelFinding;
-use crate::shape::{ChangedLine, FileKind, Rename, Shaped, ShapedFile};
+use crate::contract::{Severity, Side};
+use crate::memory::Status;
+use crate::shape::Rename;
+use crate::validate::tests::{file, line, memory, model, prior, shaped};
 use crate::validate::{fingerprint, validate};
-
-fn line(side: Side, line: u32, text: &str) -> ChangedLine {
-  ChangedLine {
-    side,
-    line,
-    text: text.to_owned(),
-  }
-}
-
-fn shaped(files: Vec<ShapedFile>, reviewed: &[&str]) -> Shaped {
-  Shaped {
-    base_ref: "main".to_owned(),
-    merge_base: "abc".to_owned(),
-    diff_sha: "def".to_owned(),
-    gate_files: files.iter().map(|file| file.path.clone()).collect(),
-    files,
-    chunks: Vec::new(),
-    coverage: Coverage {
-      reviewed: reviewed.iter().map(|path| (*path).to_owned()).collect(),
-      unreviewed: Vec::new(),
-      skipped: Vec::new(),
-    },
-    renames: Vec::new(),
-    uncommitted: false,
-  }
-}
-
-fn file(path: &str, lines: Vec<ChangedLine>) -> ShapedFile {
-  ShapedFile {
-    path: path.to_owned(),
-    old_path: None,
-    kind: FileKind::Modified,
-    patch: String::new(),
-    lines,
-  }
-}
-
-fn model(path: &str, line_no: u32, quote: &str) -> ModelFinding {
-  ModelFinding {
-    path: path.to_owned(),
-    line: line_no,
-    end_line: line_no,
-    side: Side::New,
-    severity: Severity::High,
-    category: "correctness".to_owned(),
-    claim: "the slice underflows when empty".to_owned(),
-    quote: quote.to_owned(),
-    suggestion: None,
-    prior_id: None,
-  }
-}
-
-fn prior(id: &str, path: &str, status: Status, severity: Severity) -> PriorFinding {
-  PriorFinding {
-    fingerprint: fingerprint(path, "correctness", "the slice underflows when empty"),
-    id: id.to_owned(),
-    path: path.to_owned(),
-    category: "correctness".to_owned(),
-    claim: "the slice underflows when empty".to_owned(),
-    severity,
-    status,
-  }
-}
-
-fn memory(prior: Vec<PriorFinding>) -> Memory {
-  Memory {
-    prior,
-    dismissals: Vec::new(),
-  }
-}
 
 #[test]
 fn cross_round_match_uses_prior_id_then_fingerprint_through_a_rename() {
@@ -100,7 +30,7 @@ fn cross_round_match_uses_prior_id_then_fingerprint_through_a_rename() {
   assert_eq!(out.findings[0].id, "f1");
   assert_eq!(out.findings[0].severity, Severity::Blocker);
   assert_eq!(out.recap.still_open, ["f1"]);
-  assert!(out.recap.new.is_empty());
+  assert_eq!(out.recap.new.len(), 0);
   assert_eq!(out.recap.severity_changes.len(), 1);
   assert_eq!(out.recap.severity_changes[0].from, Severity::High);
   assert_eq!(out.recap.severity_changes[0].to, Severity::Blocker);
@@ -131,7 +61,7 @@ fn recap_resolves_only_reexamined_priors() {
   let out = validate(&diff, &[], &[], &memory(vec![gone, kept]), &[]);
   assert_eq!(out.recap.resolved, ["gone"]);
   assert_eq!(out.recap.still_open, ["kept"]);
-  assert!(out.recap.new.is_empty());
+  assert_eq!(out.recap.new.len(), 0);
 }
 
 #[test]
@@ -172,5 +102,5 @@ fn dismissals_suppress_nonblocking_by_fingerprint_and_blockers_only_by_exact_id(
   blocker_exact.claim = "blocker claim".to_owned();
   blocker_exact.prior_id = Some("settled-blocker".to_owned());
   let out = validate(&diff, &[blocker_exact], &[], &priors, &[]);
-  assert!(out.findings.is_empty());
+  assert_eq!(out.findings.len(), 0);
 }

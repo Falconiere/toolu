@@ -1,11 +1,11 @@
 use super::{fingerprint, normalize_text, validate};
 use crate::contract::{Coverage, Finding, Omitted, RedactionSpan, Severity, Side, Source};
-use crate::memory::Memory;
+use crate::memory::{Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
 use crate::prepass::Redaction;
 use crate::shape::{ChangedLine, FileKind, Shaped, ShapedFile};
 
-fn line(side: Side, line: u32, text: &str) -> ChangedLine {
+pub(crate) fn line(side: Side, line: u32, text: &str) -> ChangedLine {
   ChangedLine {
     side,
     line,
@@ -13,7 +13,7 @@ fn line(side: Side, line: u32, text: &str) -> ChangedLine {
   }
 }
 
-fn shaped(files: Vec<ShapedFile>, reviewed: &[&str]) -> Shaped {
+pub(crate) fn shaped(files: Vec<ShapedFile>, reviewed: &[&str]) -> Shaped {
   Shaped {
     base_ref: "main".to_owned(),
     merge_base: "abc".to_owned(),
@@ -31,7 +31,7 @@ fn shaped(files: Vec<ShapedFile>, reviewed: &[&str]) -> Shaped {
   }
 }
 
-fn file(path: &str, lines: Vec<ChangedLine>) -> ShapedFile {
+pub(crate) fn file(path: &str, lines: Vec<ChangedLine>) -> ShapedFile {
   ShapedFile {
     path: path.to_owned(),
     old_path: None,
@@ -41,7 +41,7 @@ fn file(path: &str, lines: Vec<ChangedLine>) -> ShapedFile {
   }
 }
 
-fn model(path: &str, line_no: u32, quote: &str) -> ModelFinding {
+pub(crate) fn model(path: &str, line_no: u32, quote: &str) -> ModelFinding {
   ModelFinding {
     path: path.to_owned(),
     line: line_no,
@@ -53,6 +53,25 @@ fn model(path: &str, line_no: u32, quote: &str) -> ModelFinding {
     quote: quote.to_owned(),
     suggestion: None,
     prior_id: None,
+  }
+}
+
+pub(crate) fn prior(id: &str, path: &str, status: Status, severity: Severity) -> PriorFinding {
+  PriorFinding {
+    fingerprint: fingerprint(path, "correctness", "the slice underflows when empty"),
+    id: id.to_owned(),
+    path: path.to_owned(),
+    category: "correctness".to_owned(),
+    claim: "the slice underflows when empty".to_owned(),
+    severity,
+    status,
+  }
+}
+
+pub(crate) fn memory(prior: Vec<PriorFinding>) -> Memory {
+  Memory {
+    prior,
+    dismissals: Vec::new(),
   }
 }
 
@@ -100,12 +119,13 @@ fn quote_mismatch_drops_but_whitespace_only_difference_survives() {
   );
   let wrong = model("src/a.rs", 1, "let last = items[0];");
   let out = validate(&diff, &[wrong], &[], &Memory::default(), &[]);
-  assert!(out.findings.is_empty() && out.dropped == 1);
+  assert_eq!(out.findings.len(), 0);
+  assert_eq!(out.dropped, 1);
   assert_eq!(paths(&out.unreviewed), ["src/a.rs"]);
   let spaced = model("src/a.rs", 1, "let  last = items[items.len()  - 1];");
   let out = validate(&diff, &[spaced], &[], &Memory::default(), &[]);
   assert_eq!(out.findings.len(), 1);
-  assert!(out.unreviewed.is_empty());
+  assert_eq!(out.unreviewed.len(), 0);
 }
 
 #[test]
@@ -176,7 +196,7 @@ fn withdrawals_are_absent_and_uncounted_but_a_real_defect_survives() {
   );
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.dropped, 0);
-  assert!(out.unreviewed.is_empty());
+  assert_eq!(out.unreviewed.len(), 0);
 }
 
 #[test]
@@ -268,6 +288,6 @@ fn an_unresolvable_redaction_drops_the_paths_findings_as_unreviewed() {
     &Memory::default(),
     &redactions,
   );
-  assert!(out.findings.is_empty());
+  assert_eq!(out.findings.len(), 0);
   assert_eq!(paths(&out.unreviewed), ["src/a.rs"]);
 }

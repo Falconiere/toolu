@@ -12,10 +12,10 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 mod round;
 
-use round::{build_recap, dedupe, generated_id, match_prior};
+use round::{bad_redaction_paths, build_recap, dedupe, generated_id, match_prior};
 
-use crate::contract::{Finding, Omitted, Severity, Side, Source};
-use crate::memory::{Memory, Status};
+use crate::contract::{Finding, Omitted, RedactionSpan, Severity, Side, Source};
+use crate::memory::{Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
 use crate::prepass::Redaction;
 use crate::review::mask::Mask;
@@ -98,13 +98,40 @@ pub fn validate(
     .cloned()
     .collect();
   let mask = Mask::new(shaped, &maskable).ok();
+  let ctx = Ctx {
+    anchors: &anchors,
+    mask: mask.as_ref(),
+    memory,
+    shaped,
+    redactions,
+    bad: &bad,
+  };
+  let (kept, dropped, lost) = collect(&ctx, model, deterministic);
   let mut out = Validated {
     findings: Vec::new(),
-    unreviewed: Vec::new(),
+    unreviewed: lost
+      .iter()
+      .map(|(path, reason)| Omitted {
+        path: path.clone(),
+        reason: reason.clone(),
+      })
+      .collect(),
     recap: Recap::default(),
-    dropped: 0,
+    dropped,
   };
-  let mut lost: BTreeMap<String, String> = BTreeMap::new();
+  build_recap(&kept, shaped, memory, &lost, &mut out.recap);
+  out.findings = kept
+    .into_iter()
+    .map(|candidate| candidate.finding)
+    .collect();
+  out
+}
+
+fn collect(
+  ctx: &Ctx<'_>,
+  model: &[ModelFinding],
+  deterministic: &[Finding],
+) -> (Vec<Candidate>, usize, BTreeMap<String, String>) {
   let mut candidates: Vec<Candidate> = deterministic
     .iter()
     .cloned()
@@ -113,67 +140,53 @@ pub fn validate(
       prior: None,
     })
     .collect();
+  let mut dropped = 0;
+  let mut lost: BTreeMap<String, String> = BTreeMap::new();
   for finding in model {
     if withdrawn(finding) {
       continue;
     }
-    if bad.contains(&finding.path) || mask.is_none() {
-      drop_lost(
-        &mut out,
-        &mut lost,
-        finding,
-        "its secret spans cannot be masked",
-      );
+    if ctx.bad.contains(&finding.path) || ctx.mask.is_none() {
+      dropped += drop_lost(&mut lost, finding, "its secret spans cannot be masked");
       continue;
     }
-    let Some(candidate) = ground(finding, &anchors, mask.as_ref(), memory, shaped, redactions)
-    else {
-      let reason = if anchored(finding, &anchors) {
-        "its quote does not match the cited changed lines"
-      } else {
-        "it cites no changed line on the cited side"
-      };
-      drop_lost(&mut out, &mut lost, finding, reason);
-      continue;
-    };
-    if let Ground::Suppressed = candidate {
-      continue;
+    match ground(ctx, finding) {
+      Some(Ground::Kept(candidate)) => candidates.push(*candidate),
+      Some(Ground::Suppressed) => {}
+      None => {
+        let reason = if anchored(finding, ctx.anchors) {
+          "its quote does not match the cited changed lines"
+        } else {
+          "it cites no changed line on the cited side"
+        };
+        dropped += drop_lost(&mut lost, finding, reason);
+      }
     }
-    let Ground::Kept(candidate) = candidate else {
-      continue;
-    };
-    candidates.push(candidate);
   }
-  let kept = dedupe(candidates);
-  build_recap(&kept, shaped, memory, &lost, &mut out.recap);
-  out.findings = kept
-    .into_iter()
-    .map(|candidate| candidate.finding)
-    .collect();
-  out.unreviewed = lost
-    .into_iter()
-    .map(|(path, reason)| Omitted { path, reason })
-    .collect();
-  out
+  (dedupe(candidates), dropped, lost)
 }
 
 enum Ground {
-  Kept(Candidate),
+  Kept(Box<Candidate>),
   Suppressed,
 }
 
 pub(super) struct Candidate {
   pub(super) finding: Finding,
-  pub(super) prior: Option<usize>,
+  pub(super) prior: Option<PriorFinding>,
 }
 
-fn drop_lost(
-  out: &mut Validated,
-  lost: &mut BTreeMap<String, String>,
-  finding: &ModelFinding,
-  why: &str,
-) {
-  out.dropped += 1;
+/// What grounding one model finding needs.
+struct Ctx<'a> {
+  anchors: &'a Anchors,
+  mask: Option<&'a Mask>,
+  memory: &'a Memory,
+  shaped: &'a Shaped,
+  redactions: &'a [Redaction],
+  bad: &'a BTreeSet<String>,
+}
+
+fn drop_lost(lost: &mut BTreeMap<String, String>, finding: &ModelFinding, why: &str) -> usize {
   lost.entry(finding.path.clone()).or_insert_with(|| {
     format!(
       "{}:{}..{} ({}) dropped: {why}; this coverage is unreviewed",
@@ -183,6 +196,7 @@ fn drop_lost(
       side_name(finding.side)
     )
   });
+  1
 }
 
 fn side_name(side: Side) -> &'static str {
@@ -245,33 +259,24 @@ fn withdrawn(finding: &ModelFinding) -> bool {
     || claim.starts_with("abstain,")
 }
 
-fn ground(
-  finding: &ModelFinding,
-  anchors: &Anchors,
-  mask: Option<&Mask>,
-  memory: &Memory,
-  shaped: &Shaped,
-  redactions: &[Redaction],
-) -> Option<Ground> {
-  let text = cited(finding, anchors)?;
+fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
+  let text = cited(finding, ctx.anchors)?;
   if normalize_text(&finding.quote) != normalize_text(&text) {
     return None;
   }
-  let mask = mask?;
-  let matched = match_prior(finding, memory, shaped);
-  if let Some(index) = matched
-    && memory.prior[index].status == Status::Dismissed
-    && (!finding.severity.blocking()
-      || finding.prior_id.as_deref() == Some(memory.prior[index].id.as_str()))
-  {
+  let mask = ctx.mask?;
+  let matched = match_prior(finding, ctx.memory, ctx.shaped);
+  if matched.is_some_and(|prior| {
+    prior.status == Status::Dismissed
+      && (!finding.severity.blocking() || finding.prior_id.as_deref() == Some(prior.id.as_str()))
+  }) {
     return Some(Ground::Suppressed);
   }
-  let mut severity = finding.severity;
-  if let Some(index) = matched
-    && memory.prior[index].status == Status::Open
-  {
-    severity = severity.max(memory.prior[index].severity);
-  }
+  let severity = matched
+    .filter(|prior| prior.status == Status::Open)
+    .map_or(finding.severity, |prior| {
+      finding.severity.max(prior.severity)
+    });
   let id = matched.map_or_else(
     || {
       generated_id(&fingerprint(
@@ -280,14 +285,14 @@ fn ground(
         &finding.claim,
       ))
     },
-    |index| memory.prior[index].id.clone(),
+    |prior| prior.id.clone(),
   );
   let suggestion = finding
     .suggestion
     .as_deref()
     .map(|text| mask.apply(text))
     .filter(|text| is_code(text));
-  Some(Ground::Kept(Candidate {
+  Some(Ground::Kept(Box::new(Candidate {
     finding: Finding {
       id,
       path: finding.path.clone(),
@@ -300,18 +305,23 @@ fn ground(
       claim: mask.apply(&finding.claim),
       quote: mask.apply(&finding.quote),
       suggestion,
-      redaction_spans: redactions
-        .iter()
-        .filter(|redaction| {
-          redaction.path == finding.path
-            && redaction.side == finding.side
-            && (finding.line..=finding.end_line).contains(&redaction.line)
-        })
-        .flat_map(|redaction| redaction.spans.iter().copied())
-        .collect(),
+      redaction_spans: spans(ctx, finding),
     },
-    prior: matched,
-  }))
+    prior: matched.cloned(),
+  })))
+}
+
+fn spans(ctx: &Ctx<'_>, finding: &ModelFinding) -> Vec<RedactionSpan> {
+  ctx
+    .redactions
+    .iter()
+    .filter(|redaction| {
+      redaction.path == finding.path
+        && redaction.side == finding.side
+        && (finding.line..=finding.end_line).contains(&redaction.line)
+    })
+    .flat_map(|redaction| redaction.spans.iter().copied())
+    .collect()
 }
 
 /// A suggestion is literal replacement code, not prose: prose has no code
@@ -322,31 +332,6 @@ fn is_code(suggestion: &str) -> bool {
     return false;
   }
   text.chars().any(|ch| "(){}[];=`<>".contains(ch)) || text.split_whitespace().count() < 3
-}
-
-/// Paths whose secret spans cannot be located in the shaped lines: their
-/// model findings may not be sent or stored unmasked.
-fn bad_redaction_paths(shaped: &Shaped, redactions: &[Redaction]) -> BTreeSet<String> {
-  redactions
-    .iter()
-    .filter(|redaction| {
-      let line = shaped
-        .files
-        .iter()
-        .filter(|file| file.path == redaction.path)
-        .flat_map(|file| &file.lines)
-        .find(|line| line.side == redaction.side && line.line == redaction.line);
-      line.is_none_or(|line| {
-        redaction.spans.iter().any(|span| {
-          line
-            .text
-            .get(span.start..span.end)
-            .is_none_or(str::is_empty)
-        })
-      })
-    })
-    .map(|redaction| redaction.path.clone())
-    .collect()
 }
 
 #[cfg(test)]

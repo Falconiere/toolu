@@ -3,42 +3,41 @@
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::contract::Source;
-use crate::memory::{Memory, Status};
+use crate::memory::{Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
+use crate::prepass::Redaction;
 use crate::shape::Shaped;
 
 use super::{Candidate, Recap, SeverityChange, fingerprint};
 
 /// Match by echoed `prior_id` first, then by fingerprint through the rename
 /// map; fingerprint ties prefer an open prior, then a dismissed one.
-pub(super) fn match_prior(
+pub(super) fn match_prior<'a>(
   finding: &ModelFinding,
-  memory: &Memory,
+  memory: &'a Memory,
   shaped: &Shaped,
-) -> Option<usize> {
+) -> Option<&'a PriorFinding> {
   if let Some(id) = &finding.prior_id
-    && let Some(index) = memory.prior.iter().position(|prior| &prior.id == id)
+    && let Some(prior) = memory.prior.iter().find(|prior| &prior.id == id)
   {
-    return Some(index);
+    return Some(prior);
   }
   let wanted = fingerprint(&finding.path, &finding.category, &finding.claim);
   memory
     .prior
     .iter()
-    .enumerate()
-    .filter(|(_, prior)| {
+    .filter(|prior| {
       fingerprint(
         &mapped_path(&prior.path, shaped),
         &prior.category,
         &prior.claim,
       ) == wanted
     })
-    .min_by_key(|(_, prior)| match prior.status {
+    .min_by_key(|prior| match prior.status {
       Status::Open => 0,
       Status::Dismissed => 1,
       Status::Resolved => 2,
     })
-    .map(|(index, _)| index)
 }
 
 pub(super) fn mapped_path(path: &str, shaped: &Shaped) -> String {
@@ -77,13 +76,14 @@ pub(super) fn dedupe(candidates: Vec<Candidate>) -> Vec<Candidate> {
         kept.push(candidate);
       }
       Some(&slot) => {
-        let current = &kept[slot].finding;
-        let wins = candidate.finding.severity > current.severity
-          || (candidate.finding.severity == current.severity
-            && current.source == Source::Llm
-            && candidate.finding.source != Source::Llm);
-        if wins {
-          kept[slot] = candidate;
+        let wins = kept.get(slot).is_some_and(|current| {
+          candidate.finding.severity > current.finding.severity
+            || (candidate.finding.severity == current.finding.severity
+              && current.finding.source == Source::Llm
+              && candidate.finding.source != Source::Llm)
+        });
+        if wins && let Some(current) = kept.get_mut(slot) {
+          *current = candidate;
         }
       }
     }
@@ -101,37 +101,21 @@ pub(super) fn build_recap(
   lost: &BTreeMap<String, String>,
   recap: &mut Recap,
 ) {
-  let mut re_raised: BTreeSet<usize> = BTreeSet::new();
+  let mut re_raised: BTreeSet<String> = BTreeSet::new();
   for candidate in kept
     .iter()
     .filter(|item| item.finding.source == Source::Llm)
   {
-    match candidate.prior {
-      None => recap.new.push(candidate.finding.id.clone()),
-      Some(index) => {
-        let prior = &memory.prior[index];
-        if prior.status == Status::Open {
-          re_raised.insert(index);
-          if candidate.finding.severity != prior.severity {
-            recap.severity_changes.push(SeverityChange {
-              id: prior.id.clone(),
-              from: prior.severity,
-              to: candidate.finding.severity,
-            });
-          }
-        } else {
-          recap.new.push(candidate.finding.id.clone());
-        }
-      }
-    }
+    note_survivor(candidate, recap, &mut re_raised);
   }
-  for (index, prior) in memory.prior.iter().enumerate() {
-    if prior.status != Status::Open {
-      continue;
-    }
+  for prior in memory
+    .prior
+    .iter()
+    .filter(|prior| prior.status == Status::Open)
+  {
     let path = mapped_path(&prior.path, shaped);
     let reexamined = shaped.coverage.reviewed.contains(&path) && !lost.contains_key(&path);
-    if re_raised.contains(&index) || !reexamined {
+    if re_raised.contains(&prior.id) || !reexamined {
       recap.still_open.push(prior.id.clone());
     } else {
       recap.resolved.push(prior.id.clone());
@@ -139,6 +123,50 @@ pub(super) fn build_recap(
   }
 }
 
+fn note_survivor(candidate: &Candidate, recap: &mut Recap, re_raised: &mut BTreeSet<String>) {
+  let Some(prior) = &candidate.prior else {
+    recap.new.push(candidate.finding.id.clone());
+    return;
+  };
+  if prior.status != Status::Open {
+    recap.new.push(candidate.finding.id.clone());
+    return;
+  }
+  re_raised.insert(prior.id.clone());
+  if candidate.finding.severity != prior.severity {
+    recap.severity_changes.push(SeverityChange {
+      id: prior.id.clone(),
+      from: prior.severity,
+      to: candidate.finding.severity,
+    });
+  }
+}
+
+/// Paths whose secret spans cannot be located in the shaped lines: their
+/// model findings may not be sent or stored unmasked.
+pub(super) fn bad_redaction_paths(shaped: &Shaped, redactions: &[Redaction]) -> BTreeSet<String> {
+  redactions
+    .iter()
+    .filter(|redaction| {
+      let line = shaped
+        .files
+        .iter()
+        .filter(|file| file.path == redaction.path)
+        .flat_map(|file| &file.lines)
+        .find(|line| line.side == redaction.side && line.line == redaction.line);
+      line.is_none_or(|line| {
+        redaction.spans.iter().any(|span| {
+          line
+            .text
+            .get(span.start..span.end)
+            .is_none_or(str::is_empty)
+        })
+      })
+    })
+    .map(|redaction| redaction.path.clone())
+    .collect()
+}
+
 #[cfg(test)]
-#[path = "../tests/validate_round_test.rs"]
+#[path = "tests/round_test.rs"]
 mod tests;

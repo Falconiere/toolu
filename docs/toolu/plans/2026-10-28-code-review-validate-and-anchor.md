@@ -39,6 +39,14 @@ suggestion, suppression → dedupe + cross-round recap → docs note in `lib.rs`
 
 ## Deviations
 
+- s5 gate: every stage passes except `tests`, where 13 `toolu-cli` golden
+  replays fail. Verified pre-existing: the same 13 fail on a clean scratch
+  clone of the base commit (`c8bd61dc8`) in this environment, and none is in
+  `toolu-code-review` (4152/4165 workspace tests pass). Not fixed here —
+  unrelated host-shape golden captures.
+
+## Deviations (files)
+
 - s4 also updated the two places pinning the old not-built text:
   `crates/cli/tests/code_review_cli.rs` (asserts `(#669)`) and
   `plugins/code-review/README.md` (report #669 only).
