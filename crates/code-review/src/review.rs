@@ -198,13 +198,7 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     return Err(RunError::NotEnabled);
   }
   let (client, jev) = clients(env, options)?;
-  let outage = |message: String| RunError::Outage {
-    message,
-    usage: Usage::default(),
-  };
-  let mask = Mask::new(input.shaped, &input.prepass.redactions).map_err(outage)?;
-  let schema: Value = serde_json::from_str(crate::model::SCHEMA_JSON)
-    .map_err(|err| outage(format!("review schema: {err}")))?;
+  let (mask, schema) = local(input)?;
   let mut ledger = Ledger::new(options.recorder);
   let effort = select(input, options, &jev, &mut ledger);
   let budget = effort.level.budget();
@@ -237,17 +231,9 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     mask: &mask,
     memory: input.memory,
   };
-  let reviewed = Reviewed {
-    effort,
-    findings: Vec::new(),
-    dismissed: Vec::new(),
-    unreviewed: reviews.unreviewed,
-    notes: Vec::new(),
-    usage: Usage::default(),
-    calls: Vec::new(),
-  };
+  let partial = (effort, reviews.unreviewed);
   Ok(finish(
-    reviewed,
+    partial,
     reviews.findings,
     &packages,
     !options.skip_judge,
@@ -255,14 +241,35 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
   ))
 }
 
+/// The mask and the review schema; failing either sends nothing.
+fn local(input: &Input<'_>) -> Result<(Mask, Value), RunError> {
+  let outage = |message: String| RunError::Outage {
+    message,
+    usage: Usage::default(),
+  };
+  let mask = Mask::new(input.shaped, &input.prepass.redactions).map_err(outage)?;
+  let schema = serde_json::from_str(crate::model::SCHEMA_JSON)
+    .map_err(|err| outage(format!("review schema: {err}")))?;
+  Ok((mask, schema))
+}
+
 /// Judge the findings unless the stage is off, then account for every call.
 fn finish(
-  mut reviewed: Reviewed,
+  (effort, unreviewed): (EffortChoice, Vec<Omitted>),
   findings: Vec<ModelFinding>,
   packages: &[Package],
   judge: bool,
   mut ctx: Ctx<'_, '_>,
 ) -> Reviewed {
+  let mut reviewed = Reviewed {
+    effort,
+    findings: Vec::new(),
+    dismissed: Vec::new(),
+    unreviewed,
+    notes: Vec::new(),
+    usage: Usage::default(),
+    calls: Vec::new(),
+  };
   reviewed.findings = findings
     .into_iter()
     .map(|finding| Judged {

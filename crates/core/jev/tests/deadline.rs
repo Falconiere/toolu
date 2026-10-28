@@ -89,5 +89,5 @@ fn an_expired_deadline_sends_nothing() {
     .expect("route");
   let result = ask(&endpoint, Instant::now());
   assert_eq!(result.map(|_| ()), Err(Error::Timeout));
-  assert!(endpoint.bodies().is_empty());
+  assert_eq!(endpoint.bodies(), Vec::<String>::new());
 }

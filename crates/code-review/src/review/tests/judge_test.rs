@@ -30,7 +30,7 @@ fn the_size_is_the_request_body_and_keys_map_back_to_findings() {
   let one = single("f0", &question(&judged()));
   let size = bytes(&state, &one);
   assert!(size > Value::Object(one.clone()).to_string().len());
-  let mut two = one.clone();
+  let mut two = one;
   two.insert("f1".into(), question(&judged()));
   assert!(bytes(&state, &two) > size);
   let mut list = vec![judged(), judged()];

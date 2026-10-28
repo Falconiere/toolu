@@ -33,7 +33,11 @@ fn an_unknown_effort_exits_64_with_nothing_on_stdout() {
 #[test]
 fn run_without_the_opt_in_exits_69_and_says_how_to_enable() {
   let off = project(r#"{"codeReview":{"enabled":false}}"#).unwrap();
-  let output = toolu(&["--host", "claude", "code-review", "run"], Some(off.path())).unwrap();
+  let output = toolu(
+    &["--host", "claude", "code-review", "run"],
+    Some(off.path()),
+  )
+  .unwrap();
   assert_eq!(output.status.code(), Some(69));
   assert!(output.stdout.is_empty(), "{:?}", output.stdout);
   let stderr = String::from_utf8(output.stderr).unwrap();

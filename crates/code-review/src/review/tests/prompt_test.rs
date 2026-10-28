@@ -134,7 +134,7 @@ fn the_chunk_sends_open_priors_and_dismissals_but_never_resolved_ones() {
 fn the_prompt_budget_counts_every_message() {
   let (prefix, _) = prefix(&bundle(None), &Mask::default());
   assert!(fits(&prefix, "small"));
-  let over = "x".repeat(PROMPT_MAX_BYTES - prefix.system.len() - prefix.conventions.len() + 1);
-  assert!(!fits(&prefix, &over));
-  assert!(fits(&prefix, &over[1..]));
+  let room = PROMPT_MAX_BYTES - prefix.system.len() - prefix.conventions.len();
+  assert!(!fits(&prefix, &"x".repeat(room + 1)));
+  assert!(fits(&prefix, &"x".repeat(room)));
 }

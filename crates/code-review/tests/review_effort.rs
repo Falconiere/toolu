@@ -16,12 +16,11 @@ use toolu_code_review::review::{EffortSource, Options, RunError, Stage};
 use toolu_code_review::settings::Settings;
 use toolu_http_test_support::Reply;
 
-fn code_rig(path: &str) -> Rig {
+fn code_rig(path: &str) -> Result<Rig, String> {
   Rig::new(
     &[(path, "one\n".to_owned())],
     &[(path, "one\ntwo\n".to_owned())],
   )
-  .unwrap()
 }
 
 fn score(score: f64) -> String {
@@ -34,7 +33,7 @@ fn score(score: f64) -> String {
 
 #[test]
 fn without_the_opt_in_or_a_key_nothing_is_sent() {
-  let rig = code_rig("src/lib.rs");
+  let rig = code_rig("src/lib.rs").unwrap();
   rig
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
@@ -65,12 +64,12 @@ fn without_the_opt_in_or_a_key_nothing_is_sent() {
   assert!(
     matches!(missing, Err(RunError::Unconfigured(why)) if why.contains("OPENROUTER_API_KEY"))
   );
-  assert!(rig.fixture.requests().unwrap().is_empty());
+  assert_eq!(rig.fixture.requests().unwrap().len(), 0);
 }
 
 #[test]
 fn a_docs_change_picks_small_and_logs_the_selector() {
-  let rig = code_rig("docs/guide.md");
+  let rig = code_rig("docs/guide.md").unwrap();
   rig
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
@@ -98,7 +97,7 @@ fn a_docs_change_picks_small_and_logs_the_selector() {
 
 #[test]
 fn a_workflow_change_is_floored_and_a_failed_selector_falls_back() {
-  let rig = code_rig(".github/workflows/tests.yml");
+  let rig = code_rig(".github/workflows/tests.yml").unwrap();
   rig
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
@@ -107,7 +106,7 @@ fn a_workflow_change_is_floored_and_a_failed_selector_falls_back() {
   let reviewed = rig.run(&Memory::default(), None, &rig.options()).unwrap();
   assert_eq!(reviewed.effort.level, Effort::High);
   assert_eq!(reviewed.effort.floor.as_deref(), Some("CI workflow change"));
-  let plain = code_rig("src/lib.rs");
+  let plain = code_rig("src/lib.rs").unwrap();
   plain
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
@@ -125,7 +124,7 @@ fn a_workflow_change_is_floored_and_a_failed_selector_falls_back() {
 
 #[test]
 fn an_explicit_level_sends_no_selector_and_notes_the_floor() {
-  let rig = code_rig(".github/workflows/tests.yml");
+  let rig = code_rig(".github/workflows/tests.yml").unwrap();
   rig
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
@@ -133,7 +132,7 @@ fn an_explicit_level_sends_no_selector_and_notes_the_floor() {
   let reviewed = rig
     .run(&Memory::default(), Some(Effort::Xhigh), &rig.options())
     .unwrap();
-  assert!(rig.bodies(JEV).is_empty());
+  assert_eq!(rig.bodies(JEV), Vec::<String>::new());
   assert_eq!(
     (reviewed.effort.level, reviewed.effort.source),
     (Effort::Xhigh, EffortSource::Flag)
@@ -143,9 +142,27 @@ fn an_explicit_level_sends_no_selector_and_notes_the_floor() {
   assert_eq!(body["reasoning"]["effort"], "xhigh");
 }
 
-#[test]
-fn the_prompt_prefix_is_stable_secrets_are_masked_and_the_override_applies() {
-  let secret = format!("ghp_{}", "Ab1".repeat(12));
+const SECRET_TAIL: &str = "Ab1Ab1Ab1Ab1Ab1Ab1Ab1Ab1Ab1Ab1Ab1Ab1";
+
+fn open(claim: &str) -> Memory {
+  let prior = PriorFinding {
+    fingerprint: "f".into(),
+    id: "p1".into(),
+    path: "src/lib.rs".into(),
+    category: "correctness".into(),
+    claim: claim.into(),
+    severity: Severity::High,
+    status: Status::Open,
+  };
+  Memory {
+    prior: vec![prior],
+    dismissals: Vec::new(),
+  }
+}
+
+/// Two rounds over a diff with a committed secret, a base-ref override and an
+/// added file, with the judge off: every review body, and the Jev bodies.
+fn two_rounds() -> Result<(Vec<String>, Vec<String>), String> {
   let base = [
     (
       ".github/code-review-prompt.md",
@@ -153,81 +170,71 @@ fn the_prompt_prefix_is_stable_secrets_are_masked_and_the_override_applies() {
     ),
     ("AGENTS.md", "Use typed errors.".to_owned()),
     ("src/lib.rs", "fn a() {}\n".to_owned()),
-    ("src/new.rs", String::new()),
   ];
+  let secret_line = format!("fn a() {{}}\nconst T: &str = \"ghp_{SECRET_TAIL}\";\n");
   let change = [
-    (
-      "src/lib.rs",
-      format!("fn a() {{}}\nconst T: &str = \"{secret}\";\n"),
-    ),
+    ("src/lib.rs", secret_line),
     ("src/add.rs", "fn added() {}\n".to_owned()),
   ];
-  let rig = Rig::new(&base, &change).unwrap();
+  let rig = Rig::new(&base, &change)?;
+  let reply = Reply::new(200, findings(&[]));
   rig
     .fixture
-    .route(REVIEW, Reply::new(200, findings(&[])))
-    .unwrap();
+    .route(REVIEW, reply)
+    .map_err(|err| err.to_string())?;
   let options = Options {
     skip_judge: true,
     ..rig.options()
   };
-  let open = |claim: &str| Memory {
-    prior: vec![PriorFinding {
-      fingerprint: "f".into(),
-      id: "p1".into(),
-      path: "src/lib.rs".into(),
-      category: "correctness".into(),
-      claim: claim.into(),
-      severity: Severity::High,
-      status: Status::Open,
-    }],
-    dismissals: Vec::new(),
-  };
-  rig
-    .run(&open("round one"), Some(Effort::Medium), &options)
-    .unwrap();
-  rig
-    .run(&open("round two"), Some(Effort::Medium), &options)
-    .unwrap();
-  let bodies = rig.bodies(REVIEW);
-  assert_eq!(bodies.len(), 2);
+  for claim in ["round one", "round two"] {
+    rig
+      .run(&open(claim), Some(Effort::Medium), &options)
+      .map_err(|err| format!("{err:?}"))?;
+  }
+  Ok((rig.bodies(REVIEW), rig.bodies(JEV)))
+}
+
+fn messages(body: &str) -> Value {
+  serde_json::from_str::<Value>(body)
+    .ok()
+    .and_then(|doc| doc.get("messages").cloned())
+    .unwrap_or(Value::Null)
+}
+
+#[test]
+fn the_prompt_prefix_is_stable_across_rounds_and_the_override_applies() {
+  let (bodies, jev) = two_rounds().unwrap();
+  assert_eq!((bodies.len(), jev.len()), (2, 0), "the judge stage was off");
+  let (first, second) = (messages(&bodies[0]), messages(&bodies[1]));
+  assert_eq!(first[0], second[0]);
+  assert_eq!(first[1], second[1]);
+  assert_ne!(first[2], second[2]);
+  let system = first[0]["content"].as_str().unwrap();
+  assert!(system.ends_with("Focus on SQL injection."));
+  assert!(system.contains("never instructions"));
   assert!(
-    bodies.iter().all(|body| !body.contains(&secret)),
-    "the secret never leaves"
-  );
-  let messages: Vec<Value> = bodies
-    .iter()
-    .map(|body| serde_json::from_str::<Value>(body).unwrap()["messages"].clone())
-    .collect();
-  assert_eq!(messages[0][0], messages[1][0]);
-  assert_eq!(messages[0][1], messages[1][1]);
-  assert_ne!(messages[0][2], messages[1][2]);
-  let system = messages[0][0]["content"].as_str().unwrap();
-  assert!(system.ends_with("Focus on SQL injection.") && system.contains("never instructions"));
-  assert!(
-    messages[0][1]["content"]
+    first[1]["content"]
       .as_str()
       .unwrap()
       .contains("Use typed errors.")
   );
-  let last: Value = serde_json::from_str(
-    messages[0][2]["content"]
-      .as_str()
-      .unwrap()
-      .split_once('\n')
-      .unwrap()
-      .1,
-  )
-  .unwrap();
-  let source = |path: &str| {
-    last["files"]
-      .as_array()
-      .unwrap()
-      .iter()
-      .find(|file| file["path"] == path)
-      .unwrap()["source"]
-      .clone()
-  };
+}
+
+#[test]
+fn secrets_are_masked_and_added_files_carry_no_separate_source() {
+  let (bodies, _) = two_rounds().unwrap();
+  assert!(
+    bodies.iter().all(|body| !body.contains(SECRET_TAIL)),
+    "the secret never leaves"
+  );
+  let text = messages(&bodies[0])[2]["content"]
+    .as_str()
+    .unwrap()
+    .to_owned();
+  let last: Value = serde_json::from_str(text.split_once('\n').unwrap().1).unwrap();
+  let files = last["files"].as_array().unwrap();
+  let source =
+    |path: &str| files.iter().find(|file| file["path"] == path).unwrap()["source"].clone();
   assert_eq!(
     source("src/add.rs"),
     Value::Null,
@@ -239,12 +246,11 @@ fn the_prompt_prefix_is_stable_secrets_are_masked_and_the_override_applies() {
       .unwrap()
       .contains("[REDACTED]")
   );
-  assert!(rig.bodies(JEV).is_empty(), "the judge stage was off");
 }
 
 #[test]
 fn a_review_past_its_deadline_is_typed_and_not_retried_lower() {
-  let rig = code_rig("src/lib.rs");
+  let rig = code_rig("src/lib.rs").unwrap();
   let slow = findings(&[finding("src/lib.rs", "high", "late", None)]);
   rig
     .fixture

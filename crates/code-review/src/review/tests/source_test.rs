@@ -52,9 +52,9 @@ fn env() -> Env {
 }
 
 fn lines(count: usize, word: &str) -> String {
-  (0..count)
-    .map(|index| format!("{word} {index}\n"))
-    .collect()
+  (0..count).fold(String::new(), |text, index| {
+    text + word + " " + &index.to_string() + "\n"
+  })
 }
 
 #[test]

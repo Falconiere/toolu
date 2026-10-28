@@ -13,7 +13,9 @@ pub(crate) fn shaped(files: &[(&str, &[&str])]) -> Shaped {
       path: (*path).into(),
       old_path: None,
       kind: FileKind::Modified,
-      patch: added.iter().map(|line| format!("+{line}\n")).collect(),
+      patch: added
+        .iter()
+        .fold(String::new(), |patch, line| patch + "+" + line + "\n"),
       lines: (1..)
         .zip(added.iter())
         .map(|(line, text)| ChangedLine {

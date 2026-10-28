@@ -19,7 +19,7 @@ fn a_run_fails_only_when_every_chunk_failed() {
   reviews.fail(&["b.rs"], "OpenRouter transport failed", false);
   match reviews.error(2, &ledger, "m") {
     Some(RunError::Outage { message, .. }) => {
-      assert!(message.ends_with("transport failed"), "{message}")
+      assert!(message.ends_with("transport failed"), "{message}");
     }
     other => panic!("{other:?}"),
   }
