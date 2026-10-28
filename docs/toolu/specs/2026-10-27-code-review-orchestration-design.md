@@ -265,3 +265,21 @@ Jev alignment checks flagged coverage gaps (effort output 0.39, override budget 
 both now have ACs (AC-14, AC-15), plus AC-10..AC-13 for memory, review deadline,
 small judge depth and every floor. Remaining non-blocking: the report schema's
 `effort` object and the usage log file are #669's (Non-Goals 2). No blockers.
+
+## Post-review amendments (2026-10-28, `/code-review xhigh --fix`)
+
+- Surrounding `HEAD` source and base-ref convention text pass through the pre-pass
+  secret scanner (`prepass::redact_text`) before the mask, since secrets outside
+  changed lines are never in `redactions`.
+- A dismissal quote must have at least 10 non-space characters besides being a
+  verbatim substring of the package evidence, so `}` cannot prove a dismissal.
+- Memory context is filtered to the chunk's paths (old paths included); a recheck
+  gets its file's memory only. Dismissals carry the dismissed prior's path,
+  category and claim.
+- When no chunk fits the prompt budget, the `outage` message says no call was sent.
+- `--config-dir` is honoured when `run` loads `codeReview` settings.
+- `Judge::AllWithContext` is documented as judging like `AllWithRecheck` until
+  cross-file context is built.
+- Not changed: Jev `InvalidResponse` usage stays unrecorded (the shared
+  `core/jev` error carries no body), and source reads stay one `git cat-file` per
+  modified file (bounded by the chunk cap).
