@@ -8,6 +8,8 @@
 //! committed golden set and materializes each case into a real Git repository, and
 //! `gate` checks the gate contract with the production blocking predicates.
 
+/// Which arms run and replay vs live mode.
+pub mod arms;
 /// Per-setting totals and how often `auto` chose too low.
 pub mod calibration;
 /// The `eval` verb.
@@ -41,6 +43,7 @@ pub use report::{
   Arm, ArmReport, CallRecord, EvalReport, FindingsSummary, LiveOrReplayed, Revisions, Run,
   UsageTotals,
 };
-pub use runner::{ArmChoice, Mode, Plan, run_all, run_case};
+pub use arms::{ArmChoice, Mode, Plan};
+pub use runner::{run_all, run_case};
 pub use setting::Setting;
 pub use suite::{CaseReport, SuiteReport, Verdict};

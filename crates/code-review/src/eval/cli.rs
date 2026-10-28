@@ -14,7 +14,8 @@ use toolu_runtime::host::roots::Roots;
 
 use super::fixtures::Fixtures;
 use super::replay::Store;
-use super::runner::{ArmChoice, Mode, Plan, run_all};
+use super::arms::{ArmChoice, Mode, Plan};
+use super::runner::run_all;
 use super::setting::Setting;
 use super::suite::{SuiteReport, Verdict};
 use crate::settings::{self, ENABLE_HINT};
