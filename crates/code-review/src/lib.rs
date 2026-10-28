@@ -16,6 +16,8 @@ pub mod budget;
 mod cli;
 /// The JSON report contract.
 pub mod contract;
+/// The expectation-based eval harness: schema, matcher and report.
+pub mod eval;
 /// Review-memory records.
 pub mod memory;
 /// Strict model findings before grounding and anchoring.
