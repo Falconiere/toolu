@@ -15,6 +15,7 @@ Usage: toolu git-better [OPTIONS] <COMMAND>
 
 Commands:
   check  Check a commit message or branch name against the semantic format; exit 1 when it fails
+  setup  Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef
   help   Print this message or the help of the given subcommand(s)
 
 Options:
@@ -41,4 +42,19 @@ Options:
       --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
   -h, --help                 Print help
+```
+
+## `toolu git-better setup`
+
+```text
+Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef
+
+Usage: toolu git-better setup [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
 ```

@@ -91,7 +91,7 @@ pub(crate) fn check_branch(name: &str, settings: &Settings) -> Vec<Violation> {
     );
     found.push(Violation::new("branch-slug", why));
   }
-  if settings.require_ref && branch.reference.is_none() {
+  if settings.format.reference && branch.reference.is_none() {
     let why = "start the description with the issue reference: `<type>/<ref>-<slug>`";
     found.push(Violation::new("branch-ref", why));
   }

@@ -70,22 +70,31 @@ fn project(dir: &Path, case: &Value, host: &str) -> Res<(PathBuf, PathBuf)> {
   Ok((project, config))
 }
 
-fn pre_tools(dir: &Path, project: &Path, config: &Path, host: &str, command: &str) -> Res<Output> {
+/// One `toolu hook <phase>` run for a Bash `command` in the project that
+/// [`project`] made under `dir`.
+fn tool_hook(dir: &Path, host: &str, command: &str, phase: &str) -> Res<Output> {
+  let (project, config) = (dir.join("project"), dir.join("config"));
+  let event = if phase == "pre-tools" {
+    "PreToolUse"
+  } else {
+    "PostToolUse"
+  };
   let payload = json!({
     "session_id": "git-better",
-    "hook_event_name": "PreToolUse",
+    "hook_event_name": event,
     "tool_name": "Bash",
     "tool_input": { "command": command },
+    "tool_response": { "stdout": "", "stderr": "", "interrupted": false },
     "cwd": project,
   });
   let mut child = Command::new(TOOLU)
-    .args(["hook", "pre-tools", "--event", "PreToolUse"])
-    .env("TOOLU_CONFIG_DIR", config)
+    .args(["hook", phase, "--event", event])
+    .env("TOOLU_CONFIG_DIR", &config)
     .env("TOOLU_HOST_OVERRIDE", host)
     .env("TOOLU_SETTINGS_DIR", dir.join("settings"))
-    .env("CLAUDE_PROJECT_DIR", project)
+    .env("CLAUDE_PROJECT_DIR", &project)
     .env("HOME", dir)
-    .current_dir(project)
+    .current_dir(&project)
     .stdin(Stdio::piped())
     .stdout(Stdio::piped())
     .stderr(Stdio::piped())
@@ -128,8 +137,8 @@ fn replay(case: &Value, host: &str) -> Res<()> {
   let command = case["command"].as_str().ok_or("case command")?;
   let expect = case["expect"].as_str().ok_or("case expect")?;
   let dir = tempfile::tempdir()?;
-  let (project, config) = project(dir.path(), case, host)?;
-  let output = pre_tools(dir.path(), &project, &config, host, command)?;
+  project(dir.path(), case, host)?;
+  let output = tool_hook(dir.path(), host, command, "pre-tools")?;
   if !output.status.success() {
     return Err(format!("{name} [{host}]: {output:?}").into());
   }
@@ -160,6 +169,40 @@ fn every_fixture_case_is_decided_the_same_on_every_host() -> Res<()> {
     for host in HOSTS {
       replay(case, host)?;
     }
+  }
+  Ok(())
+}
+
+#[test]
+fn a_commit_through_post_tools_gets_its_provenance_note() -> Res<()> {
+  let dir = tempfile::tempdir()?;
+  let case = json!({ "branch": "feat/1-x" });
+  let (project, _config) = project(dir.path(), &case, "claude")?;
+  fs::write(project.join("notes.md"), "x\n")?;
+  git(&project, &["add", "notes.md"])?;
+  git(
+    &project,
+    &["commit", "-q", "-m", "docs(notes): add\n\nIntent: y"],
+  )?;
+  let command = "git commit -m 'docs(notes): add' -m 'Intent: y'";
+  let output = tool_hook(dir.path(), "claude", command, "post-tools")?;
+  if !output.status.success() || !output.stderr.is_empty() {
+    return Err(format!("post-tools: {output:?}").into());
+  }
+  let shown = Command::new("git")
+    .args(["notes", "--ref", "refs/notes/git-better", "show", "HEAD"])
+    .current_dir(&project)
+    .output()?;
+  let note: Value = serde_json::from_slice(&shown.stdout)?;
+  let expected = json!({ "schema": "git-better/v1", "branch": "feat/1-x", "host": "claude",
+    "session": "git-better" });
+  for (key, value) in expected.as_object().ok_or("object")? {
+    if note.get(key) != Some(value) {
+      return Err(format!("note {key}: {note}").into());
+    }
+  }
+  if note.pointer("/areas/0/area") != Some(&json!(".")) {
+    return Err(format!("note areas: {note}").into());
   }
   Ok(())
 }

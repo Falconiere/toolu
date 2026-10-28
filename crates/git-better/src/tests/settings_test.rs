@@ -8,7 +8,7 @@ use toolu_runtime::config::settings::read_list;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 
-use super::{DEFAULT_TYPES, Mode, Settings, load};
+use super::{DEFAULT_TYPES, Format, Mode, Settings, load};
 
 /// The settings for a project whose `.claude/toolu.config.json` is `config`.
 fn loaded(config: Option<&str>) -> Settings {
@@ -39,22 +39,45 @@ fn the_defaults_block_and_require_a_scope() {
   assert_eq!(loaded(None), Settings::default());
   let defaults = Settings::default();
   assert_eq!(defaults.mode, Mode::Block);
-  assert!(defaults.require_scope && defaults.allow_wip && !defaults.require_ref);
+  assert_eq!(
+    defaults.format,
+    Format {
+      scope: true,
+      reference: false,
+      wip: true
+    }
+  );
+  assert!(defaults.write_notes);
 }
 
 #[test]
 fn every_key_is_read() {
   let settings = loaded(Some(
-    r#"{"version":1,"gitBetter":{"mode":"advise","requireScope":false,"requireRef":true,"allowWip":false,"types":["feat","fix"]}}"#,
+    r#"{"version":1,"gitBetter":{"mode":"advise","requireScope":false,"requireRef":true,"allowWip":false,"types":["feat","fix"],"notes":false,"areaRoots":["crates/core/"]}}"#,
   ));
   assert_eq!(
     settings,
     Settings {
       mode: Mode::Advise,
-      require_scope: false,
-      require_ref: true,
-      allow_wip: false,
+      format: Format {
+        scope: false,
+        reference: true,
+        wip: false,
+      },
       types: vec!["feat".to_owned(), "fix".to_owned()],
+      write_notes: false,
+      area_roots: [
+        "crates",
+        "packages",
+        "apps",
+        "libs",
+        "plugins",
+        "services",
+        "modules",
+        "crates/core"
+      ]
+      .map(str::to_owned)
+      .to_vec(),
       notes: Vec::new(),
     }
   );
@@ -68,7 +91,7 @@ fn a_value_that_cannot_be_read_keeps_its_default_and_is_reported() {
     r#"{"version":1,"gitBetter":{"mode":"loud","requireScope":"yes","types":["Feat"]}}"#,
   ));
   assert_eq!(settings.mode, Mode::Block);
-  assert!(settings.require_scope);
+  assert!(settings.format.scope);
   assert_eq!(settings.types, Settings::default().types);
   assert_eq!(settings.notes.len(), 3, "{:?}", settings.notes);
   let shape = loaded(Some(r#"{"version":1,"gitBetter":true}"#));

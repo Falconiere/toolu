@@ -5140,6 +5140,22 @@
           "placeholder": false
         },
         {
+          "about": "Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "setup",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "setup"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Run a hook entry; hooks.json calls it (internal)",
           "aliases": [],
           "args": [

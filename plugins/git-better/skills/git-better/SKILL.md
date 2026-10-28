@@ -67,6 +67,14 @@ checks new names from `checkout -b/-B`, `switch -c/-C`, `branch <new>`,
 toolu git-better check --branch feat/740-git-better
 ```
 
+## Provenance notes
+
+After each successful commit, git-better attaches a JSON note under
+`refs/notes/git-better`. It records the branch, base, host and session, and the
+changed areas and files. Read it with
+`git notes --ref git-better show <commit>`. Run `toolu git-better setup` once per
+repository so amend and rebase carry the notes.
+
 ## Settings
 
 `gitBetter` in `toolu.config.json`:
@@ -74,5 +82,6 @@ toolu git-better check --branch feat/740-git-better
 - `requireScope` and `requireRef`.
 - `allowWip`.
 - `types`.
+- `notes` and `areaRoots`.
 
 See `docs/config.md`.

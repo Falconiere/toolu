@@ -9,10 +9,13 @@ use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::RegistryEvent;
 use toolu_runtime::registry::manifest::ModuleManifest;
 
-use crate::{SPEC, pre};
+use crate::{SPEC, post, pre};
 
 /// Each rule's event, name and tool matcher.
-const RULES: [(RegistryEvent, &str, &str); 1] = [(RegistryEvent::ToolPre, pre::NAME, "Bash|Shell")];
+const RULES: [(RegistryEvent, &str, &str); 2] = [
+  (RegistryEvent::ToolPre, pre::NAME, "Bash|Shell"),
+  (RegistryEvent::ToolPost, post::NAME, "Bash|Shell"),
+];
 
 /// Publish every manifest. Never fails the session: an error is a `systemMessage`.
 pub fn register(env: &Env, host: Host) -> Outcome {

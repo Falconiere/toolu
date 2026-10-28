@@ -92,3 +92,43 @@ fn nothing_to_check_is_a_usage_error_and_a_bad_target_is_refused() {
     Vec::<String>::new()
   );
 }
+
+#[test]
+fn setup_adds_the_rewrite_ref_once() {
+  let home = tempfile::tempdir().unwrap();
+  let repo = home.path().join("repo");
+  std::fs::create_dir_all(&repo).unwrap();
+  let init = std::process::Command::new("git")
+    .args(["init", "-q"])
+    .arg(&repo)
+    .status()
+    .unwrap();
+  assert!(init.success());
+  let setup = || {
+    let output = std::process::Command::new(TOOLU)
+      .args(["--json", "git-better", "setup"])
+      .current_dir(&repo)
+      .env("HOME", home.path())
+      .env("TOOLU_CONFIG_DIR", home.path().join("config"))
+      .output()
+      .unwrap();
+    assert_eq!(output.status.code(), Some(0), "{output:?}");
+    let document = one_document(&output).unwrap();
+    assert_eq!(
+      violations(&document, Some("gitBetterSetup")).unwrap(),
+      Vec::<String>::new()
+    );
+    document["changed"].clone()
+  };
+  assert_eq!(setup(), json!(true));
+  assert_eq!(setup(), json!(false));
+  let refs = std::process::Command::new("git")
+    .args(["config", "--get-all", "notes.rewriteRef"])
+    .current_dir(&repo)
+    .output()
+    .unwrap();
+  assert_eq!(
+    String::from_utf8(refs.stdout).unwrap(),
+    "refs/notes/git-better\n"
+  );
+}

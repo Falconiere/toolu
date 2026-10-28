@@ -159,7 +159,7 @@ fn check_subject(first: &str, settings: &Settings, found: &mut Vec<Violation>) -
     );
     found.push(Violation::new("unknown-type", why));
   }
-  if settings.require_scope && parsed.scope.is_none() {
+  if settings.format.scope && parsed.scope.is_none() {
     let why = "the subject has no scope; name the area it changes: `type(scope): …`";
     found.push(Violation::new("missing-scope", why));
   }
@@ -236,7 +236,7 @@ pub(crate) fn check_message(message: &str, settings: &Settings, on_base: bool) -
     return found;
   }
   if is_wip(message) {
-    if settings.allow_wip && !on_base {
+    if settings.format.wip && !on_base {
       return found;
     }
     let why = if on_base {

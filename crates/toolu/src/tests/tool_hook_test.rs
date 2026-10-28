@@ -85,7 +85,8 @@ fn the_lib_dir_comes_from_the_plugin_root() {
       ("ts-quality@toolu", "ts-quality"),
       ("rust-quality@toolu", "rust-quality"),
       ("python-quality@toolu", "python-quality"),
-      ("git-better@toolu", "semantic-git")
+      ("git-better@toolu", "semantic-git"),
+      ("git-better@toolu", "commit-note")
     ]
   );
 }

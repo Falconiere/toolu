@@ -9,6 +9,8 @@ use toolu_runtime::config::load::{LoadedConfig, load as load_config};
 use toolu_runtime::config::settings::{COMMIT_PREFIXES, read_list, settings_dir};
 use toolu_runtime::host::roots::Roots;
 
+use crate::areas::AREA_ROOTS;
+
 /// The config section this plugin owns.
 pub(crate) const SECTION: &str = "gitBetter";
 
@@ -40,19 +42,40 @@ impl Mode {
   }
 }
 
+/// What the semantic format requires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Format {
+  /// `gitBetter.requireScope`: a subject needs `(scope)`; on by default.
+  pub(crate) scope: bool,
+  /// `gitBetter.requireRef`: a branch needs an issue reference; off by default.
+  pub(crate) reference: bool,
+  /// `gitBetter.allowWip`: `wip` commits are allowed off the base branch; on by default.
+  pub(crate) wip: bool,
+}
+
+impl Default for Format {
+  fn default() -> Self {
+    Format {
+      scope: true,
+      reference: false,
+      wip: true,
+    }
+  }
+}
+
 /// The plugin's settings for one repository.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct Settings {
   /// `gitBetter.mode`: `block` by default.
   pub(crate) mode: Mode,
-  /// `gitBetter.requireScope`: a subject needs `(scope)`; on by default.
-  pub(crate) require_scope: bool,
-  /// `gitBetter.requireRef`: a branch needs an issue reference; off by default.
-  pub(crate) require_ref: bool,
-  /// `gitBetter.allowWip`: `wip` commits off the base branch; on by default.
-  pub(crate) allow_wip: bool,
+  /// What the format requires.
+  pub(crate) format: Format,
   /// The commit types: `gitBetter.types`, else `commit-prefixes.txt`, else [`DEFAULT_TYPES`].
   pub(crate) types: Vec<String>,
+  /// `gitBetter.notes`: write a provenance note for each commit; on by default.
+  pub(crate) write_notes: bool,
+  /// [`AREA_ROOTS`] plus `gitBetter.areaRoots`.
+  pub(crate) area_roots: Vec<String>,
   /// Why a value was ignored.
   pub(crate) notes: Vec<String>,
 }
@@ -61,13 +84,13 @@ impl Default for Settings {
   fn default() -> Self {
     Settings {
       mode: Mode::Block,
-      require_scope: true,
-      require_ref: false,
-      allow_wip: true,
+      format: Format::default(),
       types: DEFAULT_TYPES
         .iter()
         .map(|kind| (*kind).to_owned())
         .collect(),
+      write_notes: true,
+      area_roots: AREA_ROOTS.iter().map(|root| (*root).to_owned()).collect(),
       notes: Vec::new(),
     }
   }
@@ -112,6 +135,30 @@ fn types(section: &Map<String, Value>, notes: &mut Vec<String>) -> Option<Vec<St
   kinds
 }
 
+fn area_roots(section: &Map<String, Value>, notes: &mut Vec<String>) -> Vec<String> {
+  let Some(list) = section.get("areaRoots") else {
+    return Vec::new();
+  };
+  let read: Option<Vec<String>> = list.as_array().and_then(|items| {
+    items
+      .iter()
+      .map(|item| {
+        item
+          .as_str()
+          .map(|root| root.trim_matches('/'))
+          .filter(|root| !root.is_empty())
+          .map(str::to_owned)
+      })
+      .collect()
+  });
+  read.unwrap_or_else(|| {
+    notes.push(format!(
+      "{SECTION}.areaRoots must be an array of directory paths; ignored"
+    ));
+    Vec::new()
+  })
+}
+
 fn valid_type(kind: &str) -> bool {
   !kind.is_empty() && kind.bytes().all(|byte| byte.is_ascii_lowercase())
 }
@@ -151,9 +198,11 @@ pub(crate) fn from_config(config: &LoadedConfig, prefixes: Vec<String>) -> Setti
       "{SECTION}.mode is not one of block|advise|off; ignored"
     )),
   }
-  flag(section, "requireScope", &mut settings.require_scope, notes);
-  flag(section, "requireRef", &mut settings.require_ref, notes);
-  flag(section, "allowWip", &mut settings.allow_wip, notes);
+  flag(section, "requireScope", &mut settings.format.scope, notes);
+  flag(section, "requireRef", &mut settings.format.reference, notes);
+  flag(section, "allowWip", &mut settings.format.wip, notes);
+  flag(section, "notes", &mut settings.write_notes, notes);
+  settings.area_roots.extend(area_roots(section, notes));
   if let Some(kinds) = types(section, notes) {
     settings.types = kinds;
   }

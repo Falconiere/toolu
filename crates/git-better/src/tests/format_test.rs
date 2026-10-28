@@ -4,7 +4,7 @@
 use super::{
   Subject, check_message, example_message, is_wip, subject, trailer, trailers, with_trailers,
 };
-use crate::settings::Settings;
+use crate::settings::{Format, Settings};
 
 const GOOD: &str = "feat(git-better): block commits without an intent\n\nBody text.\n\nIntent: agents learn why a commit exists\nRisk: low\nRefs: #740";
 
@@ -131,7 +131,10 @@ fn autosquash_subjects_always_pass_and_wip_passes_off_the_base_branch() {
   assert_eq!(codes_with("WIP", &settings, false), Vec::<&str>::new());
   assert_eq!(codes_with("wip: half done", &settings, true), ["wip"]);
   let strict = Settings {
-    allow_wip: false,
+    format: Format {
+      wip: false,
+      ..Format::default()
+    },
     ..Settings::default()
   };
   assert_eq!(codes_with("wip(x): y", &strict, false), ["wip"]);
@@ -141,7 +144,10 @@ fn autosquash_subjects_always_pass_and_wip_passes_off_the_base_branch() {
 #[test]
 fn settings_change_what_is_required() {
   let loose = Settings {
-    require_scope: false,
+    format: Format {
+      scope: false,
+      ..Format::default()
+    },
     types: vec!["feat".to_owned(), "wibble".to_owned()],
     ..Settings::default()
   };

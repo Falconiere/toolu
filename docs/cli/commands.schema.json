@@ -1811,6 +1811,18 @@
         },
         "example": { "type": "string", "minLength": 1 }
       }
+    },
+    "gitBetterSetup": {
+      "description": "toolu git-better setup --json: the notes ref this repository's notes.rewriteRef now includes, and whether setup added it.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "rewriteRef", "changed"],
+      "properties": {
+        "namespace": { "const": "git-better" },
+        "verb": { "const": "setup" },
+        "rewriteRef": { "const": "refs/notes/git-better" },
+        "changed": { "type": "boolean" }
+      }
     }
   }
 }

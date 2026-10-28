@@ -42,6 +42,7 @@ pub const RULES: &[&dyn Rule] = &[
   toolu_rust_quality::RUST_QUALITY,
   toolu_python_quality::PYTHON_QUALITY,
   toolu_git_better::SEMANTIC_GIT,
+  toolu_git_better::COMMIT_NOTE,
 ];
 
 /// The payload `crates/cli` read, as the stream the hook main reads it from.

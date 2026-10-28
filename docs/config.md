@@ -94,7 +94,8 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
                   "mounts": ["~/.herdr/worktrees"] },
   "gitBetter":  { "mode": "block|advise|off", "requireScope": true,
                   "requireRef": false, "allowWip": true,
-                  "types": ["feat", "fix", "…"] }
+                  "types": ["feat", "fix", "…"],
+                  "notes": true, "areaRoots": ["crates/core"] }
 }
 ```
 
@@ -107,7 +108,7 @@ When the `documentation-gate` plugin is selected, its registered native rule rep
 
 ### Semantic branches and commits with git-better
 
-When the `git-better` plugin is selected, its `semantic-git` rule checks every Bash/Shell command that commits or names a new branch. `gitBetter.mode` is `block` (the default: deny and explain the fix), `advise` (explain only) or `off`. `requireScope` (default `true`) requires `type(scope):` subjects, `requireRef` (default `false`) requires an issue reference in branch names, and `allowWip` (default `true`) allows `wip` commits off the base branch. `types` replaces the commit types, which otherwise come from `commit-prefixes.txt`. A value the plugin cannot read keeps its default and is reported, so enforcement never turns off by accident. Under the `strict` gate preset the core `commitGate` blocks a `wip:` subject before git-better sees it; add `wip` to `commit-prefixes.txt` to allow it. See [git-better](../plugins/git-better/README.md).
+When the `git-better` plugin is selected, its `semantic-git` rule checks every Bash/Shell command that commits or names a new branch. `gitBetter.mode` is `block` (the default: deny and explain the fix), `advise` (explain only) or `off`. `requireScope` (default `true`) requires `type(scope):` subjects, `requireRef` (default `false`) requires an issue reference in branch names, and `allowWip` (default `true`) allows `wip` commits off the base branch. `types` replaces the commit types, which otherwise come from `commit-prefixes.txt`. `notes` (default `true`) lets the `commit-note` rule attach a provenance note to each commit under `refs/notes/git-better`, and `areaRoots` adds directories whose children count as areas of their own, after `crates`, `packages`, `apps`, `libs`, `plugins`, `services` and `modules`. A value the plugin cannot read keeps its default and is reported, so enforcement never turns off by accident. Under the `strict` gate preset the core `commitGate` blocks a `wip:` subject before git-better sees it; add `wip` to `commit-prefixes.txt` to allow it. See [git-better](../plugins/git-better/README.md).
 
 ### Loader (`toolu_runtime::config`)
 

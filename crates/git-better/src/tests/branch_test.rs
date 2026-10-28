@@ -1,7 +1,7 @@
 //! Semantic branch names: the parts, every check and the corrected example.
 
 use super::{Branch, check_branch, example_branch, parse};
-use crate::settings::Settings;
+use crate::settings::{Format, Settings};
 
 fn codes(name: &str, settings: &Settings) -> Vec<&'static str> {
   check_branch(name, settings)
@@ -65,7 +65,10 @@ fn each_check_names_what_is_wrong() {
   let long = format!("feat/{}", "a".repeat(60));
   assert_eq!(codes(&long, &settings), ["branch-length"]);
   let strict = Settings {
-    require_ref: true,
+    format: Format {
+      reference: true,
+      ..Format::default()
+    },
     ..Settings::default()
   };
   assert_eq!(codes("feat/retry", &strict), ["branch-ref"]);

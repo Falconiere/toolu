@@ -7,14 +7,22 @@
 use clap::ArgMatches;
 use toolu_runtime::cli::{Ctx, Outcome};
 
+mod areas;
 mod branch;
+mod check;
 mod cli;
 mod format;
+mod gitio;
+mod note;
+mod post;
 mod pre;
 mod register;
 mod report;
 mod settings;
+mod setup;
 
+/// The `commit-note` rule enabled by its manifest.
+pub use post::COMMIT_NOTE;
 /// The `semantic-git` rule enabled by its manifest.
 pub use pre::SEMANTIC_GIT;
 /// Publish this plugin's rule manifests at `SessionStart`.
