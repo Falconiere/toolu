@@ -20,6 +20,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
 | 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native local review of the push diff with OpenRouter and Jev (epic #660); `toolu code-review run` fails closed until the pipeline lands |
 | 14 | [**sandbox**](../../plugins/sandbox/README.md) | Environment | — | A Linux place for builds, gates and agent CLIs: a Lima VM on macOS, the host on Linux; `toolu sandbox run` runs a command there |
+| 15 | [**git-better**](../../plugins/git-better/README.md) | Workflow | `toolu` | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs |
 
 ## Architecture Overview
 

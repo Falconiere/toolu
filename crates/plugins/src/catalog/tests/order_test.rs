@@ -28,6 +28,7 @@ fn the_declared_dependents_really_depend_on_toolu() {
       "delivery-flow",
       "documentation-gate",
       "epic-orchestrator",
+      "git-better",
       "pr-babysit",
       "python-quality",
       "rust-quality",

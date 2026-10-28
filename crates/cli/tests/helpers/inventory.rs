@@ -87,7 +87,7 @@ fn mismatches(
 }
 
 #[test]
-fn the_fifteen_plugins_have_a_manifest_a_crate_and_a_namespace() {
+fn the_sixteen_plugins_have_a_manifest_a_crate_and_a_namespace() {
   let (manifests, crates, owners) = (
     manifests().unwrap(),
     plugin_crates().unwrap(),
@@ -97,7 +97,7 @@ fn the_fifteen_plugins_have_a_manifest_a_crate_and_a_namespace() {
     mismatches(&manifests, &crates, &owners),
     Vec::<String>::new()
   );
-  assert_eq!(manifests.len(), 15, "{manifests:?}");
+  assert_eq!(manifests.len(), 16, "{manifests:?}");
   assert!(manifests.contains("brainstorm") && manifests.contains("delivery-flow"));
 }
 

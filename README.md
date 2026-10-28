@@ -141,7 +141,7 @@ toolu plugins install --host codex
 After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
 
-> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins, `pr-babysit`, and `documentation-gate` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins, `pr-babysit`, `documentation-gate`, and `git-better` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -169,6 +169,7 @@ Codex discovers the same canonical workflows as namespaced skills:
 - `$delivery-flow:delivery-flow` for checked delivery
 - `$pr-babysit:babysit`
 - `$documentation-gate:sync` for a routed documentation review
+- `$git-better:git-better` to write semantic commits and branch names
 - `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
 
 Codex requires explicit hash-based trust before plugin hooks execute. Review and
@@ -179,7 +180,7 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Fifteen plugins, one marketplace. Every plugin ships synchronized Claude and
+Sixteen plugins, one marketplace. Every plugin ships synchronized Claude and
 Codex manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
@@ -200,6 +201,7 @@ plugins.
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
 | Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge. |
+| Workflow | **`git-better`** | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs. |
 | Environment | **`sandbox`** | A Linux place for builds, gates and agent CLIs: `toolu sandbox run` on a Lima VM that mounts only the project (macOS) or this machine (Linux). |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
 
@@ -247,7 +249,7 @@ flowchart TD
     D -- "runs a module only while its plugin is installed" --> OUT([enforced edit])
 ```
 
-At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep` and `documentation-gate` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
+At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `documentation-gate` and `git-better` register manifests (`<plugin-spec>__<name>.json`) that enable rules compiled into `toolu`. The core runs a module **only while the owning plugin is installed** — uninstall the plugin and its rules vanish, fail-closed. See [docs/registry.md](docs/registry.md).
 
 <details>
 <summary><b>Full repository layout</b></summary>
@@ -277,6 +279,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep` an
     ├── toolu-review/            # toolu-review:review skill + push-review state writer
     ├── code-review/             # native code-review plugin manifests (skill lands with #669)
     ├── sandbox/                 # toolu sandbox: a Linux VM (Lima) or the host for builds and agent CLIs
+    ├── git-better/              # semantic-git rule: semantic commit messages and branch names
     └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
 ```
 

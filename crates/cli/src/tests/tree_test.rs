@@ -39,6 +39,7 @@ fn every_namespace_is_a_top_level_command() {
       "babysit",
       "epic",
       "sandbox",
+      "git-better",
       "commands",
       "plugins",
     ]

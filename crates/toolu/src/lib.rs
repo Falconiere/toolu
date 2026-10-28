@@ -34,6 +34,7 @@ pub mod status;
 pub mod tool_hook;
 
 pub use toolu_ast_grep as ast_grep;
+pub use toolu_git_better as git_better;
 pub use toolu_python_quality as python_quality;
 pub use toolu_rust_quality as rust_quality;
 pub use toolu_ts_quality as ts_quality;

@@ -185,6 +185,16 @@
       "category": "productivity",
       "keywords": ["sandbox", "linux", "lima", "vm"],
       "license": "MIT"
+    },
+    {
+      "name": "git-better",
+      "source": "./plugins/git-better",
+      "description": "Semantic branches and commits agents can read: scoped Conventional Commit subjects with an Intent trailer and <type>/<ref>-<slug> branch names, checked before git runs.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["git", "commits", "branches", "semantic"],
+      "license": "MIT",
+      "dependencies": [{ "name": "toolu", "marketplace": "toolu" }]
     }
   ]
 }

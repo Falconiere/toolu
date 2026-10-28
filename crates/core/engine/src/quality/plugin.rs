@@ -90,11 +90,11 @@ fn report(env: &Env, manifest: &ModuleManifest, target: &Path) -> Result<(), Str
 
 /// Publish the manifest enabling a compiled-in rule in its event directory,
 /// unchanged files left alone, and report it; its path.
-pub(crate) fn publish(
-  env: &Env,
-  roots: &Roots,
-  manifest: &ModuleManifest,
-) -> Result<PathBuf, String> {
+///
+/// # Errors
+/// When the event directory or the manifest cannot be written, or the startup
+/// report cannot be appended.
+pub fn publish(env: &Env, roots: &Roots, manifest: &ModuleManifest) -> Result<PathBuf, String> {
   let dir = event_dir(roots, manifest.event);
   fs::create_dir_all(&dir).map_err(|error| format!("{}: {error}", dir.display()))?;
   let file =

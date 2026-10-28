@@ -179,6 +179,16 @@ fn a_sandbox_section_is_a_known_key_the_loader_does_not_inspect() {
 }
 
 #[test]
+fn a_git_better_section_is_a_known_key_the_loader_does_not_inspect() {
+  let (_dir, open) = loaded(
+    None,
+    Some(r#"{"version":1,"gitBetter":{"mode":"advise","futureKnob":1}}"#),
+  );
+  assert_eq!(open.invalid, None);
+  assert_eq!(open.data["gitBetter"]["mode"], "advise");
+}
+
+#[test]
 fn an_epic_section_is_never_inspected_but_a_sibling_unknown_key_fails() {
   let (_dir, open) = loaded(
     None,

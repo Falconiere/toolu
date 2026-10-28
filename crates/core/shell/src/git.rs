@@ -1,10 +1,15 @@
 //! Git operations in a command line (`shell-git.ts`): the subcommand past git's
 //! global options, the cumulative `-C` chain and refspec destination of a push,
-//! and the static `-m` messages of a commit.
+//! the message sources of a commit, and the branch names a command introduces.
+
+mod branch;
+mod commit;
 
 use crate::analysis::{ShellAnalysis, ShellCommand, Tristate, Word};
 use crate::argv::basename;
 use crate::options::{OptionSpec, Value, parse_args};
+pub use branch::{BranchVerb, NewBranch, new_branches};
+pub use commit::{CommitArgs, MessageOrigin, commit_args, commit_messages};
 
 /// One `git` invocation.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -145,29 +150,6 @@ pub fn push_targets(analysis: &ShellAnalysis) -> Vec<GitPush<'_>> {
     });
   }
   pushes
-}
-
-const COMMIT_OPTIONS: OptionSpec = OptionSpec {
-  value_short: "mFCct",
-  rest_short: "Su",
-  value_long: "message file reuse-message reedit-message template author date cleanup fixup \
-               squash trailer pathspec-from-file",
-  numeric: false,
-  stop_at_operand: false,
-  plus: false,
-};
-
-/// The `-m`/`--message` values of a commit, in order; `None` for a dynamic one.
-pub fn commit_messages(invocation: &GitInvocation<'_>) -> Vec<Option<String>> {
-  if invocation.subcommand != Some("commit") {
-    return Vec::new();
-  }
-  let parsed = parse_args(invocation.args, 0, &COMMIT_OPTIONS);
-  let values = parsed.values("m message");
-  values
-    .into_iter()
-    .map(|value| value.text().map(str::to_owned))
-    .collect()
 }
 
 #[cfg(test)]

@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "name": "git-better",
+  "displayName": "git-better",
+  "version": "8.6.0",
+  "description": "Semantic branches and commits agents can read: scoped Conventional Commit subjects with an Intent trailer and <type>/<ref>-<slug> branch names, checked before git runs.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "git-better",
+        "path": "skills/git-better/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [
+      {
+        "id": "register",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/register"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "check-toolu",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/check-toolu"
+        ],
+        "timeoutMs": 60000
+      },
+      {
+        "id": "session-start",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/session-start"
+        ],
+        "timeoutMs": 60000
+      }
+    ],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

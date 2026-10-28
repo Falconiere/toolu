@@ -65,7 +65,8 @@
     "http-test-support",
     "code-review",
     "documentation-gate",
-    "sandbox"
+    "sandbox",
+    "git-better"
   ],
   "core": [
     "protocol",

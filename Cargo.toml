@@ -35,6 +35,7 @@ members = [
   "crates/plugins",
   "crates/code-review",
   "crates/sandbox",
+  "crates/git-better",
 ]
 
 # The lockstep version: release-please bumps it with package.json and every plugin.json.

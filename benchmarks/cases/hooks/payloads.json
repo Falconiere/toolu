@@ -587,6 +587,63 @@
         "hook_event_name": "SessionStart",
         "source": "startup"
       }
+    },
+    "git-better/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "git-better/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:git-better/register": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:git-better/check-toolu": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "git-better/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "cwd": "${PROJECT}",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
+    },
+    "muse:git-better/session-start": {
+      "stdin": {
+        "session_id": "hook-bench",
+        "transcript_path": null,
+        "cwd": "${PROJECT}",
+        "model": "muse-spark-1.3-contributor",
+        "permission_mode": "bypassPermissions",
+        "hook_event_name": "SessionStart",
+        "source": "startup"
+      }
     }
   }
 }

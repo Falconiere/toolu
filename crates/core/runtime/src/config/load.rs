@@ -41,6 +41,7 @@ const KNOWN_KEYS: &[&str] = &[
   "epic",
   "codeReview",
   "sandbox",
+  "gitBetter",
 ];
 
 /// Where the two config files are.

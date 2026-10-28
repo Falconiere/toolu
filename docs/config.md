@@ -91,7 +91,12 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
   "sandbox":    { "backend": "lima|host", "name": "toolu-sandbox",
                   "cpus": 10, "memory": 16, "disk": 100,
                   "template": "template:_images/debian-13",
-                  "mounts": ["~/.herdr/worktrees"] }
+                  "mounts": ["~/.herdr/worktrees"] },
+  "gitBetter":  { "mode": "block|advise|off", "requireScope": true,
+                  "requireRef": false, "allowWip": true,
+                  "types": ["feat", "fix", "…"],
+                  "notes": true, "areaRoots": ["crates/core"],
+                  "sessionContext": true }
 }
 ```
 
@@ -101,6 +106,10 @@ See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated exa
 ### Documentation sync with documentation-gate
 
 When the `documentation-gate` plugin is selected, its registered native rule replaces the legacy docs-surface check. `documentation-gate:sync` routes a separate editing worker through Jev and records coverage of the committed branch diff. Missing or stale review follows the effective `docsSync` gate mode (`block`, `ask`, `advise`, or `off`); the hook makes no model call. The rule and ledger load the target repository’s configuration when evaluating that repository, including for static `git -C PATH` pushes. A lone plain push whose commits are already in the base branch passes in any form. Without the active registration the legacy check remains. The plugin requires the `toolu` dispatcher. See [documentation-gate](../plugins/documentation-gate/README.md).
+
+### Semantic branches and commits with git-better
+
+When the `git-better` plugin is selected, its `semantic-git` rule checks every Bash/Shell command that commits or names a new branch. `gitBetter.mode` is `block` (the default: deny and explain the fix), `advise` (explain only) or `off`. `requireScope` (default `true`) requires `type(scope):` subjects, `requireRef` (default `false`) requires an issue reference in branch names, and `allowWip` (default `true`) allows `wip` commits off the base branch. `types` replaces the commit types, which otherwise come from `commit-prefixes.txt`. `notes` (default `true`) lets the `commit-note` rule attach a provenance note to each commit under `refs/notes/git-better`, and `areaRoots` adds directories whose children count as areas of their own, after `crates`, `packages`, `apps`, `libs`, `plugins`, `services` and `modules`. `sessionContext` (default `true`) lets the `session-start` hook summarize the current branch. A value the plugin cannot read keeps its default and is reported, so enforcement never turns off by accident. Under the `strict` gate preset the core `commitGate` blocks a `wip:` subject before git-better sees it; add `wip` to `commit-prefixes.txt` to allow it. See [git-better](../plugins/git-better/README.md).
 
 ### Loader (`toolu_runtime::config`)
 

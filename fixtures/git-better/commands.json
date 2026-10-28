@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "description": "Bash commands the git-better semantic-git rule checks, replayed through `toolu hook pre-tools` on claude, codex and muse in a real repository on `main` with branches `feat/1-x` and `legacy`. `expect` is deny, advise or allow; `contains` must appear in the deny reason or advisory; an allowed command leaves no git-better text. `config` is the project toolu.config.json; `branch` is checked out first.",
+  "cases": [
+    {
+      "name": "a semantic heredoc commit is allowed",
+      "command": "git add -A && git commit -m \"$(cat <<'EOF'\nfeat(cli): add the check verb\n\nIntent: agents can validate a message before committing\nRisk: low\nEOF\n)\"",
+      "expect": "allow"
+    },
+    {
+      "name": "an intent given with --trailer is allowed",
+      "command": "git commit -m 'fix(shell): read -F messages' --trailer 'Intent: heredoc commits were unchecked'",
+      "expect": "allow"
+    },
+    {
+      "name": "a -F - heredoc commit is read and allowed",
+      "command": "git commit -F - <<'EOF'\ndocs(readme): describe git-better\n\nIntent: users find the plugin\nEOF",
+      "expect": "allow"
+    },
+    {
+      "name": "a breaking change with its trailer is allowed",
+      "command": "git commit -m 'feat(cli)!: drop --old' -m 'Intent: one way to do it\nBREAKING-CHANGE: --old is gone; use --new'",
+      "expect": "allow"
+    },
+    {
+      "name": "a plain subject is denied with an example",
+      "command": "git commit -am 'Fixed stuff.'",
+      "expect": "deny",
+      "contains": "  <type>(<area>): <what changed>"
+    },
+    {
+      "name": "a conventional subject without intent is denied",
+      "command": "git commit -m 'feat(cli): add x'",
+      "expect": "deny",
+      "contains": "add an `Intent:` trailer"
+    },
+    {
+      "name": "a spaced BREAKING CHANGE is denied",
+      "command": "git commit -m 'feat(cli)!: drop x' -m 'Intent: y\nBREAKING CHANGE: z'",
+      "expect": "deny",
+      "contains": "write `BREAKING-CHANGE:`"
+    },
+    {
+      "name": "a new branch that is not semantic is denied",
+      "command": "git checkout -b My_Branch",
+      "expect": "deny",
+      "contains": "  <type>/my-branch"
+    },
+    {
+      "name": "a semantic new branch is allowed",
+      "command": "git switch -c feat/740-git-better",
+      "expect": "allow"
+    },
+    {
+      "name": "recreating an existing branch is allowed",
+      "command": "git checkout -B legacy",
+      "expect": "allow"
+    },
+    {
+      "name": "a dynamic message is explained, not blocked",
+      "command": "git commit -m \"$MSG\"",
+      "expect": "advise",
+      "contains": "its `-m` value expands at run time"
+    },
+    {
+      "name": "a fixup commit is allowed",
+      "command": "git commit --fixup HEAD",
+      "expect": "allow"
+    },
+    {
+      "name": "wip is denied on the base branch",
+      "command": "git commit -m 'wip: half done'",
+      "expect": "deny",
+      "contains": "allowed only off the base branch"
+    },
+    {
+      "name": "wip is allowed on a feature branch",
+      "command": "git commit -m 'wip: half done'",
+      "branch": "feat/1-x",
+      "expect": "allow"
+    },
+    {
+      "name": "advise mode explains without blocking",
+      "command": "git commit -m 'fix stuff'",
+      "config": "{\"version\":1,\"gitBetter\":{\"mode\":\"advise\"}}",
+      "expect": "advise",
+      "contains": "gitBetter.mode is advise"
+    },
+    {
+      "name": "off mode checks nothing",
+      "command": "git commit -m 'fix stuff'",
+      "config": "{\"version\":1,\"gitBetter\":{\"mode\":\"off\"}}",
+      "expect": "allow"
+    }
+  ]
+}

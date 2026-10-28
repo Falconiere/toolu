@@ -16,6 +16,9 @@ Every live hook and built-in gate in this inventory is `port-native` and runs on
 | `epic-orchestrator:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:hook_check-deps:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
 | `epic-orchestrator:hooks.json:SessionStart:hook_engine-ensure:startup|resume|clear|compact` | `plugins/epic-orchestrator/hooks/hooks.json` | epic-orchestrator | SessionStart | port-native | required | #435/done | native | no | — |
+| `git-better:hooks.json:SessionStart:hook_check-toolu:startup|resume|clear|compact` | `plugins/git-better/hooks/hooks.json` | git-better | SessionStart | port-native | optional | done | native | no | — |
+| `git-better:hooks.json:SessionStart:hook_register:startup|resume|clear|compact` | `plugins/git-better/hooks/hooks.json` | git-better | SessionStart | port-native | optional | done | native | no | — |
+| `git-better:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/git-better/hooks/hooks.json` | git-better | SessionStart | port-native | optional | done | native | no | — |
 | `jev:hooks.json:SessionStart:hook_check-binary:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #443/done | native | no | — |
 | `jev:hooks.json:SessionStart:hook_session-start:startup|resume|clear|compact` | `plugins/jev/hooks/hooks.json` | jev | SessionStart | port-native | required | #269/done | native | no | — |
 | `jev:hooks.json:UserPromptSubmit:hook_user-prompt-submit` | `plugins/jev/hooks/hooks.json` | jev | UserPromptSubmit | port-native | required | #271/done | native | no | — |

@@ -49,9 +49,10 @@ Fix failures and rerun all required gates until green.
 
 ## 5. Commit intentionally
 
-Stage only files belonging to each logical commit. Use Conventional Commit
-messages and split unrelated changes. Never use `--no-verify`; fix hook
-failures instead.
+Stage only files belonging to each logical commit. Use scoped Conventional
+Commit messages (`type(scope): description`) and split unrelated changes. When
+git-better is installed, end each message with an `Intent:` trailer saying why
+the change is needed. Never use `--no-verify`; fix hook failures instead.
 
 After the final commit, run `code-review:review` (with the same automatic
 fallback) on the final committed diff. Fix findings, rerun gates and commit

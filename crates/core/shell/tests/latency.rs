@@ -11,7 +11,9 @@ use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use toolu_shell::analyze;
-use toolu_shell::git::{push_targets, runs_git_subcommand};
+use toolu_shell::git::{
+  commit_args, git_invocation, new_branches, push_targets, runs_git_subcommand,
+};
 use toolu_shell::writes::write_targets;
 
 const ROUNDS: usize = 200;
@@ -23,6 +25,10 @@ fn analyze_once(source: &str) -> Duration {
   black_box(runs_git_subcommand(&analysis, "push"));
   black_box(push_targets(&analysis).len());
   black_box(write_targets(&analysis).len());
+  for git in analysis.commands.iter().filter_map(git_invocation) {
+    black_box(commit_args(&git));
+    black_box(new_branches(&git).len());
+  }
   started.elapsed()
 }
 

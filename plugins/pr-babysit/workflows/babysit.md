@@ -597,7 +597,7 @@ tick and do not count the tick as done.
 
 1. **Commit the fix:**
    - Extract ticket from branch if present (`feature/CORE-1234-desc` → `CORE-1234`).
-   - Conventional commits: `fix(<scope>): address PR review feedback` (add ticket prefix to subject when present).
+   - Conventional commits: `fix(<scope>): address PR review feedback`, with the ticket in a `Refs: CORE-1234` trailer when present (never in front of the subject) and an `Intent:` trailer naming the findings the fix answers; git-better requires `Intent:` when installed.
    - Only the PR's changed-file set may be staged. Unrelated file appears → abort + flag user.
 
 2. **Review the committed diff** and write the state file the gate reads under
