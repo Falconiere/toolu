@@ -4,7 +4,8 @@
 use serde_json::{Value, json};
 use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::{
-  Cost, Coverage, ErrorKind, Finding, Omitted, Report, ReportError, Severity, Side, Source, Usage,
+  Cost, Coverage, ErrorKind, Finding, Omitted, RedactionSpan, Report, ReportError, Severity, Side,
+  Source, Usage,
 };
 
 use crate::cli::{one_document, stderr, toolu};
@@ -23,6 +24,7 @@ fn finding(id: &str, severity: Severity, side: Side, source: Source) -> Finding 
     claim: "The slice underflows when len is 0.".to_owned(),
     quote: "let last = items[items.len() - 1];".to_owned(),
     suggestion: None,
+    redaction_spans: Vec::new(),
   }
 }
 
@@ -135,6 +137,39 @@ fn error_is_set_exactly_when_the_verdict_is_error() {
   blocked["error"] = json!({ "kind": "outage", "message": "down" });
   assert_ne!(
     violations(&blocked, Some("codeReview")).unwrap(),
+    Vec::<String>::new()
+  );
+}
+
+#[test]
+fn redaction_spans_validate_and_are_omitted_when_empty() {
+  let secret = Finding {
+    claim: "possible committed secret (github-token)".to_owned(),
+    quote: "let t = \"***\";".to_owned(),
+    redaction_spans: vec![RedactionSpan { start: 9, end: 49 }],
+    ..finding("s1", Severity::Blocker, Side::New, Source::Secrets)
+  };
+  let plain = finding("s2", Severity::Low, Side::New, Source::AstGrep);
+  let report = Report::reviewed(
+    Effort::Medium,
+    vec![secret, plain],
+    Coverage::default(),
+    Usage::default(),
+  );
+  let mut doc = serde_json::to_value(&report).unwrap();
+  assert_eq!(
+    violations(&doc, Some("codeReview")).unwrap(),
+    Vec::<String>::new()
+  );
+  let (start, end) = (
+    &doc["findings"][0]["redaction_spans"][0]["start"],
+    &doc["findings"][0]["redaction_spans"][0]["end"],
+  );
+  assert!(end.as_u64() > start.as_u64(), "end is past start");
+  assert!(doc["findings"][1].get("redaction_spans").is_none());
+  doc["findings"][0]["redaction_spans"][0]["start"] = json!(-1);
+  assert_ne!(
+    violations(&doc, Some("codeReview")).unwrap(),
     Vec::<String>::new()
   );
 }

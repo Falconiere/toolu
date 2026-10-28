@@ -73,7 +73,7 @@ Contract/budget extensions → secrets+entropy → ast-grep materialize+scan →
       "crates/code-review/src/tests/prepass_test.rs"
     ],
     "input": "Synthetic finding lists over PREPASS_FINDINGS_MAX; empty PrepassResult for Mechanical checks",
-    "check": "cargo test -p toolu-code-review prepass_cap prepass_mechanical"
+    "check": "cargo test -p toolu-code-review prepass_cap && cargo test -p toolu-code-review prepass_mechanical"
   },
   {
     "id": "docs-gate",
@@ -108,6 +108,12 @@ Contract/budget extensions → secrets+entropy → ast-grep materialize+scan →
 ## Critical files
 
 `crates/code-review/src/prepass/` (mod, secrets, astgrep, cap, mechanical, rules.yaml), `lib.rs` (`pub mod prepass`), `contract.rs`, `budget.rs`, `Cargo.toml`, `crates/cli/src/commands.schema.json`, tests, and this brainstorm/spec/plan trio.
+
+## Deviations
+
+- Secrets: when any known pattern matches a line, category/claim come from the first matching table entry, but `redaction_spans` union every known-pattern match on that line so the quote never leaves a second secret cleartext.
+- Ast-grep: repo-relative paths that start with `-` are skipped with an `AstGrepFailed` notice so they cannot be parsed as argv flags.
+- Tests: colocated under `prepass/tests/*_test.rs` (shape pattern); orchestration helpers live in `src/tests/prepass_test.rs` as `pub(super)` because a non-`*_test.rs` helpers file is forbidden.
 
 ## Plan review (2026-10-27)
 

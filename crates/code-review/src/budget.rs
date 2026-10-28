@@ -21,6 +21,9 @@ pub const HTTP_RESPONSE_MAX_BYTES: usize = 1024 * KIB;
 /// One review evidence chunk; files larger than this are explicitly unreviewed.
 pub const DIFF_CHUNK_MAX_BYTES: usize = 128 * KIB;
 
+/// Findings the deterministic pre-pass may hand on; the rest is counted, not sent.
+pub const PREPASS_FINDINGS_MAX: usize = 50;
+
 /// How much a run reviews around the diff. Every level reviews every changed line.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]

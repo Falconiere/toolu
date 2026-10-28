@@ -1,0 +1,8 @@
+id: review-todo-macro
+language: Rust
+severity: warning
+message: remove todo!/unimplemented! before merge
+rule:
+  any:
+    - pattern: todo!()
+    - pattern: unimplemented!()

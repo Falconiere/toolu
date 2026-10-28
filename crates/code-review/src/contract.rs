@@ -58,6 +58,16 @@ pub enum Source {
   Secrets,
 }
 
+/// A byte range of the unmasked source line that held a secret: `start` inclusive,
+/// `end` exclusive, UTF-8 offsets. Later stages mask outbound text with it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+pub struct RedactionSpan {
+  /// First byte of the secret.
+  pub start: usize,
+  /// One past the last byte of the secret.
+  pub end: usize,
+}
+
 /// One anchored finding.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Finding {
@@ -84,6 +94,9 @@ pub struct Finding {
   /// A fix, when there is one.
   #[serde(skip_serializing_if = "Option::is_none")]
   pub suggestion: Option<String>,
+  /// Byte ranges of secrets in the unmasked line; the `quote` is already masked.
+  #[serde(skip_serializing_if = "Vec::is_empty")]
+  pub redaction_spans: Vec<RedactionSpan>,
 }
 
 /// The run's outcome.

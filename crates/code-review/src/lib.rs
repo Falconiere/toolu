@@ -17,7 +17,8 @@ pub mod contract;
 /// Review-memory records.
 pub mod memory;
 
-mod prepass;
+/// Deterministic scanners that run before the model.
+pub mod prepass;
 mod report;
 mod review;
 /// Repository conventions from the base ref.
