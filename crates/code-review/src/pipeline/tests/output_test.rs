@@ -1,5 +1,5 @@
 use super::{recap_lines, settle};
-use crate::contract::{Coverage, Finding, Severity, Side, Source, Verdict};
+use crate::contract::{Coverage, Finding, Omitted, Severity, Side, Source, Verdict};
 use crate::memory::{BranchState, Counts, Pass, PriorFinding, Status};
 use crate::shape::{Rename, Shaped};
 use crate::validate::Recap;
@@ -94,4 +94,25 @@ fn settle_keeps_reraised_and_renamed_priors_open_and_resolves_ones_out_of_the_di
     recap.still_open,
     ["kept", "moved", "prepass:secrets:a.rs:1:key"]
   );
+}
+
+#[test]
+fn a_prior_on_a_now_skipped_path_does_not_block_forever() {
+  let mut shaped = shaped();
+  shaped.coverage.skipped.push(Omitted {
+    path: "a.rs".into(),
+    reason: "generated".into(),
+  });
+  let mut state = BranchState::default();
+  state
+    .memory
+    .prior
+    .push(prior("prepass:secrets:a.rs:1:key", "a.rs"));
+  let mut recap = Recap {
+    still_open: vec!["prepass:secrets:a.rs:1:key".into()],
+    ..Recap::default()
+  };
+  settle(&mut recap, &[], &shaped, &state);
+  assert_eq!(recap.still_open, Vec::<String>::new());
+  assert_eq!(recap.resolved, ["prepass:secrets:a.rs:1:key"]);
 }

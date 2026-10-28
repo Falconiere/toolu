@@ -133,6 +133,7 @@ fn a_failed_report_carries_its_error() {
     ErrorKind::NotEnabled,
     ErrorKind::Outage,
     ErrorKind::Deadline,
+    ErrorKind::State,
   ];
   for kind in kinds {
     assert_eq!(

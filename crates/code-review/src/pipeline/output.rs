@@ -9,6 +9,7 @@ use crate::shape::Shaped;
 use crate::validate::{self, Recap};
 use std::collections::BTreeSet;
 
+/// Derive a report from validated model and deterministic findings.
 pub(super) fn completed(
   shaped: &Shaped,
   prepass: &PrepassResult,
@@ -71,6 +72,7 @@ fn settle(recap: &mut Recap, raised: &[Finding], shaped: &Shaped, prior: &memory
           .find(|rename| rename.old_path == finding.path)
           .map_or(finding.path.as_str(), |rename| rename.path.as_str());
         shaped.gate_files.iter().any(|file| file == path)
+          && !shaped.coverage.skipped.iter().any(|item| item.path == path)
       })
   };
   let (open, gone): (Vec<String>, Vec<String>) = std::mem::take(&mut recap.still_open)
@@ -121,13 +123,14 @@ fn coverage(
   coverage
 }
 
+/// Preserve mechanical findings when every model review call fails.
 pub(super) fn failed(
   shaped: &Shaped,
   prepass: &PrepassResult,
   effort: Effort,
   err: &RunError,
 ) -> (Report, Recap) {
-  let outage = matches!(err, RunError::Outage { .. } | RunError::Deadline { .. });
+  // Only an outage or a deadline gets here: nothing-sent errors return before persisting.
   let mut report = err.report(effort);
   report.coverage = shaped.coverage.clone();
   report
@@ -139,24 +142,32 @@ pub(super) fn failed(
     }));
   report.coverage.reviewed.clear();
   report.findings.clone_from(&prepass.findings);
-  if outage {
-    report.findings.push(Finding {
-      id: "code-review:outage".to_owned(),
-      path: "(review)".to_owned(),
-      line: 1,
-      end_line: 1,
-      side: Side::New,
-      severity: Severity::Blocker,
-      category: "provider".to_owned(),
-      source: Source::System,
-      claim: "The review model delivered no judgment; this diff cannot pass review".to_owned(),
-      quote: "provider unavailable".to_owned(),
-      suggestion: None,
-      redaction_spans: Vec::new(),
-    });
-  }
+  report.findings.push(system_blocker(
+    "code-review:outage",
+    "provider",
+    "The review model delivered no judgment; this diff cannot pass review",
+    "provider unavailable",
+  ));
   report.mechanical_checks = prepass::mechanical_checks_lines(prepass);
   (report, Recap::default())
+}
+
+/// A local failure that blocks the gate without claiming a source-code anchor.
+pub(super) fn system_blocker(id: &str, category: &str, claim: &str, quote: &str) -> Finding {
+  Finding {
+    id: id.to_owned(),
+    path: "(review)".to_owned(),
+    line: 1,
+    end_line: 1,
+    side: Side::New,
+    severity: Severity::Blocker,
+    category: category.to_owned(),
+    source: Source::System,
+    claim: claim.to_owned(),
+    quote: quote.to_owned(),
+    suggestion: None,
+    redaction_spans: Vec::new(),
+  }
 }
 
 fn recap_lines(recap: &Recap, passes: &[memory::Pass]) -> Vec<String> {

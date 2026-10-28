@@ -24,9 +24,11 @@ The native pipeline picks effort, builds a bounded prompt from the committed dif
 
 The command writes v2 push-review state through the same `toolu-state` writer as `toolu review write-state`; the last writer wins. Medium and above count as blocking. Path-scoped, dirty or incomplete reviews cannot write passing state. A separate locked branch file holds finding memory and recent passes. The append-only usage log records model, provider, reported quantization, tokens, cost and timing without source or credentials.
 
+The dirty-worktree check excludes only this plugin's untracked review state and usage files. Other untracked host files still count as uncommitted changes; ignore them in the repository if they are intentionally local.
+
 ## What it provides
 
-- `toolu code-review run`: exit 0 approved, 2 blocked by a finding or incomplete coverage, 64 usage, 69 not enabled/unconfigured/outage/deadline (`error.kind` distinguishes them), and 1 local Git or state failure.
+- `toolu code-review run`: exit 0 approved, 2 blocked by a finding or incomplete coverage, 64 usage, 69 not enabled/unconfigured/outage/deadline or a state write that failed after the review (`error.kind` distinguishes them), and 1 when Git, the branch or branch memory cannot be read before the review.
 - `toolu code-review dismiss`: records an exact-ID dismissal and refreshes gate state without a model call only when the prior full review matches the clean committed diff.
 - Codex needs outbound network enabled; its `workspace-write` sandbox blocks OpenRouter. Muse needs the key exported in its command environment.
 

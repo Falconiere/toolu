@@ -9,7 +9,7 @@ use serde_json::json;
 use toolu_jev_client::{Jev, OPENROUTER_MODEL, Questions, Reply, State, request_body};
 use toolu_openrouter::{Client, Completion, StructuredRequest};
 
-use crate::contract::{Cost, Usage, UsageCall};
+use crate::contract::{Cost, Usage};
 
 /// Which stage made a call.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -175,21 +175,7 @@ impl<'a> Ledger<'a> {
         .then(|| reported.iter().sum())
         .and_then(Cost::usd),
       model,
-      calls: self
-        .calls
-        .iter()
-        .map(|call| UsageCall {
-          stage: format!("{:?}", call.stage).to_lowercase(),
-          model: call.model.clone(),
-          provider: call.provider.clone(),
-          quantization: call.quantization.clone(),
-          tokens_in: call.tokens_in,
-          tokens_out: call.tokens_out,
-          cost_usd: call.cost_usd,
-          millis: call.millis,
-          outcome: call.outcome.clone(),
-        })
-        .collect(),
+      calls: self.calls.clone(),
     }
   }
 }

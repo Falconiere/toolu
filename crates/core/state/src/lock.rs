@@ -73,14 +73,13 @@ pub fn with_lock_strict<T>(
   options: LockOptions,
   f: impl FnOnce() -> T,
 ) -> Result<T, String> {
-  let mut warnings = Vec::new();
-  let release = acquire(file, options, &mut warnings);
+  // The shared timeout warning says "writing without it"; strict mode never does.
+  let release = acquire(file, options, &mut Vec::new());
   if !release.held {
-    return Err(
-      warnings
-        .pop()
-        .unwrap_or_else(|| format!("state: lock {} unavailable", release.lock.display())),
-    );
+    return Err(format!(
+      "state: lock {} held or unavailable; nothing was written",
+      release.lock.display()
+    ));
   }
   Ok(f())
 }

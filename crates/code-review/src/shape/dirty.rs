@@ -1,4 +1,4 @@
-//! Ignore only this plugin's own untracked state in the dirty-worktree probe.
+//! Ignore only this plugin's own state in the dirty-worktree probe.
 
 use std::path::Path;
 use toolu_runtime::env::Env;
@@ -6,55 +6,38 @@ use toolu_runtime::env::Env;
 use super::git_io::git_output;
 use super::{STATUS_PROBE_BYTES, ShapeError};
 
-/// Whether Git sees changes besides the review plugin's own untracked state files.
+/// The state entries a review run writes itself.
+const OWN_STATE: [&str; 3] = ["code-review", "code-review-usage.jsonl", "push-review"];
+
+/// Whether Git sees changes besides the review plugin's own state files.
 pub(crate) fn dirty_except_state(
   env: &Env,
   root: &Path,
   state_root: &Path,
 ) -> Result<bool, ShapeError> {
-  let Ok(prefix) = state_root.strip_prefix(root) else {
-    return Ok(true);
-  };
-  let Some(prefix) = prefix.to_str() else {
-    return Ok(true);
-  };
-  let (status, truncated) = git_output(
-    env,
-    root,
-    &[
-      "--no-optional-locks",
-      "status",
-      "--porcelain=v1",
-      "-z",
-      "--untracked-files=all",
-    ],
-    STATUS_PROBE_BYTES,
-  )?;
-  if truncated {
-    return Ok(true);
-  }
-  let prefix = format!("{prefix}/");
-  for entry in status
-    .split(|byte| *byte == 0)
-    .filter(|entry| !entry.is_empty())
-  {
-    let Some(path) = entry.strip_prefix(b"?? ") else {
-      return Ok(true);
-    };
-    let Ok(path) = std::str::from_utf8(path) else {
-      return Ok(true);
-    };
-    let Some(state_path) = path.strip_prefix(&prefix) else {
-      return Ok(true);
-    };
-    if !state_path.starts_with("code-review/")
-      && state_path != "code-review-usage.jsonl"
-      && !state_path.starts_with("push-review/")
-    {
-      return Ok(true);
+  // Pathspecs resolve against `root`, which may sit below the toplevel that
+  // porcelain paths are relative to; Git also keeps own state out of the bounded probe.
+  let mut excludes = Vec::new();
+  if let Ok(prefix) = state_root.strip_prefix(root) {
+    for name in OWN_STATE {
+      let Some(path) = prefix.join(name).to_str().map(str::to_owned) else {
+        return Ok(true);
+      };
+      excludes.push(format!(":(exclude,literal){path}"));
     }
   }
-  Ok(false)
+  let mut args = vec![
+    "--no-optional-locks",
+    "status",
+    "--porcelain=v1",
+    "-z",
+    "--untracked-files=all",
+    "--",
+    ":/",
+  ];
+  args.extend(excludes.iter().map(String::as_str));
+  let (status, truncated) = git_output(env, root, &args, STATUS_PROBE_BYTES)?;
+  Ok(truncated || !status.is_empty())
 }
 
 #[cfg(test)]

@@ -120,7 +120,7 @@ fn strict_lock_never_runs_a_writer_after_timeout() {
     ..LockOptions::default()
   };
   let result = with_lock_strict(&file, options, || std::fs::write(&file, "lost update"));
-  assert!(result.is_err());
+  assert!(result.is_err_and(|err| err.ends_with("nothing was written")));
   assert!(!file.exists());
 }
 

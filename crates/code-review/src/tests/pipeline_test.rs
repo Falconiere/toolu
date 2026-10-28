@@ -13,8 +13,8 @@ use toolu_state::push_review::{Input as StateInput, write as write_state};
 
 use super::run;
 use crate::cli;
-use crate::contract::{ErrorKind, UsageCall, Verdict};
-use crate::review::Options;
+use crate::contract::{ErrorKind, Verdict};
+use crate::review::{Call, Options};
 
 mod fixture_test;
 use fixture_test::{clean_case, env, finding_case, invoke, options, repo, saved_state};
@@ -25,7 +25,7 @@ fn clean_real_git_diff_writes_gate_spelled_paths_and_metadata_only_usage() {
   let env = env(repo.path(), state.path(), &fixture);
   let report = invoke(&env, &options(&fixture));
   assert_eq!(report.verdict(), Verdict::Approved, "{report:?}");
-  let call: &UsageCall = &report.usage.calls[0];
+  let call: &Call = &report.usage.calls[0];
   assert_eq!(call.provider.as_deref(), Some("Parasail"));
   assert_eq!(call.quantization.as_deref(), Some("fp8"));
   let file = state.path().join("feature.json");
@@ -112,6 +112,29 @@ fn state_write_failure_keeps_paid_review_findings_in_report() {
 }
 
 #[test]
+fn failed_usage_write_replaces_an_older_passing_gate_state() {
+  let (repo, state, fixture) = clean_case();
+  let env = env(repo.path(), state.path(), &fixture);
+  assert_eq!(
+    invoke(&env, &options(&fixture)).verdict(),
+    Verdict::Approved
+  );
+  let log = repo.path().join(".codex/tmp/code-review-usage.jsonl");
+  std::fs::remove_file(&log).unwrap();
+  std::fs::create_dir(&log).unwrap();
+  let report = invoke(&env, &options(&fixture));
+  assert_eq!(
+    report.error.as_ref().map(|error| error.kind),
+    Some(ErrorKind::State)
+  );
+  assert_eq!(report.blocking_count(), 1);
+  assert_eq!(
+    saved_state(state.path())["findings_count"],
+    report.blocking_count()
+  );
+}
+
+#[test]
 fn a_model_approved_verdict_with_a_high_finding_is_blocked() {
   let (repo, state, fixture) = finding_case(true);
   let env = env(repo.path(), state.path(), &fixture);
@@ -160,12 +183,31 @@ fn a_path_scoped_clean_response_cannot_write_passing_state() {
 }
 
 #[test]
+fn a_path_scope_narrows_the_packed_chunk_instead_of_splitting_it() {
+  let repo = repo();
+  let git = Env::process()
+    .with("GIT_CONFIG_NOSYSTEM", "1")
+    .with("GIT_CONFIG_GLOBAL", "/dev/null");
+  let mut shaped = crate::shape::shape(&git, repo.path(), Some("main")).unwrap();
+  assert_eq!(shaped.chunks.len(), 1);
+  super::scope(&mut shaped, &["src.txt"]);
+  let index = shaped.files.iter().position(|file| file.path == "src.txt");
+  assert_eq!(shaped.chunks.len(), 1);
+  assert_eq!(shaped.chunks[0].files, [index.unwrap()]);
+  assert_eq!(
+    shaped.chunks[0].bytes,
+    shaped.files[index.unwrap()].patch.len()
+  );
+}
+
+#[test]
 fn dirty_worktree_cannot_write_passing_state() {
   let (repo, state, fixture) = clean_case();
   std::fs::write(repo.path().join("src.txt"), "uncommitted\n").unwrap();
   let env = env(repo.path(), state.path(), &fixture);
   let report = invoke(&env, &options(&fixture));
   assert_eq!(report.verdict(), Verdict::Blocked);
+  assert_eq!(report.blocking_count(), 1);
   assert!(
     report
       .coverage

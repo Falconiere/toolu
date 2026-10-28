@@ -10,7 +10,7 @@ use crate::prepass;
 use crate::review::{self, Options, RunError};
 use crate::rules;
 use crate::settings;
-use crate::shape::{self, Chunk, Shaped};
+use crate::shape::{self, Shaped};
 use clap::ArgMatches;
 use output::{completed, failed};
 use state::RunState;
@@ -137,10 +137,16 @@ fn review_and_persist(
     Err(err) => failed(state.shaped, state.prepass, effort, &err),
   };
   if let Err(message) = state::persist(state, &mut report, &recap) {
-    report.error = Some(ReportError {
-      kind: ErrorKind::State,
-      message,
-    });
+    // An outage or deadline keeps its kind: agents branch on it.
+    match &mut report.error {
+      Some(error) => error.message = format!("{}; state: {message}", error.message),
+      None => {
+        report.error = Some(ReportError {
+          kind: ErrorKind::State,
+          message,
+        });
+      }
+    }
   }
   report
 }
@@ -148,16 +154,23 @@ fn review_and_persist(
 /// A path-scoped run sends only selected file chunks to the model.
 fn scope(shaped: &mut Shaped, requested: &[&str]) {
   let selected: BTreeSet<&str> = requested.iter().copied().collect();
-  shaped.chunks = shaped
-    .files
-    .iter()
-    .enumerate()
-    .filter(|(_, file)| selected.contains(file.path.as_str()))
-    .map(|(index, file)| Chunk {
-      files: vec![index],
-      bytes: file.patch.len(),
-    })
-    .collect();
+  let files = &shaped.files;
+  let wanted = |index: &usize| {
+    files
+      .get(*index)
+      .is_some_and(|file| selected.contains(file.path.as_str()))
+  };
+  // Narrowing the shaper's chunks keeps its packing, so a scope costs no extra calls.
+  for chunk in &mut shaped.chunks {
+    chunk.files.retain(wanted);
+    chunk.bytes = chunk
+      .files
+      .iter()
+      .filter_map(|index| files.get(*index))
+      .map(|file| file.patch.len())
+      .sum();
+  }
+  shaped.chunks.retain(|chunk| !chunk.files.is_empty());
   let omitted: Vec<String> = shaped
     .coverage
     .reviewed

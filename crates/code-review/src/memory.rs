@@ -191,7 +191,9 @@ fn update_findings(memory: &mut Memory, findings: &[Finding], recap: &Recap) {
       status: Status::Open,
     };
     if let Some(old) = memory.prior.iter_mut().find(|old| old.id == finding.id) {
-      *old = prior;
+      if old.status != Status::Dismissed {
+        *old = prior;
+      }
     } else {
       memory.prior.push(prior);
     }

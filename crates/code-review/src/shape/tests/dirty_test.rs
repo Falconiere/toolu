@@ -27,3 +27,30 @@ fn only_untracked_plugin_state_is_ignored() {
   std::fs::write(root.join("user.txt"), "dirty").unwrap();
   assert!(dirty_except_state(&env, root, &state).unwrap());
 }
+
+#[test]
+fn own_state_below_a_subdirectory_root_or_past_the_probe_cap_stays_clean() {
+  let dir = tempfile::tempdir().unwrap();
+  assert!(
+    Command::new("git")
+      .arg("init")
+      .arg("-q")
+      .current_dir(dir.path())
+      .status()
+      .unwrap()
+      .success()
+  );
+  // Porcelain prints toplevel-relative paths even when the project root is a subdirectory.
+  let root = dir.path().join("app");
+  let state = root.join(".claude/tmp");
+  std::fs::create_dir_all(state.join("code-review")).unwrap();
+  // More own-state names than the 4 KB status probe holds.
+  for index in 0..200 {
+    let name = format!("code-review/feature-branch-number-{index}.json");
+    std::fs::write(state.join(name), "{}").unwrap();
+  }
+  let env = Env::process();
+  assert!(!dirty_except_state(&env, &root, &state).unwrap());
+  std::fs::write(dir.path().join("top.txt"), "dirty").unwrap();
+  assert!(dirty_except_state(&env, &root, &state).unwrap());
+}

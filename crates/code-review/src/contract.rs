@@ -179,30 +179,7 @@ pub struct Usage {
   /// The model that served the review, when one did.
   pub model: Option<String>,
   /// Metadata for each external call, with no prompt or source text.
-  pub calls: Vec<UsageCall>,
-}
-
-/// Per-call attribution kept small enough for the agent report.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-pub struct UsageCall {
-  /// Selector, review, judge, or recheck.
-  pub stage: String,
-  /// Served model.
-  pub model: String,
-  /// Serving provider, when the endpoint reports it.
-  pub provider: Option<String>,
-  /// Serving quantization, when the endpoint reports it.
-  pub quantization: Option<String>,
-  /// Input tokens.
-  pub tokens_in: u64,
-  /// Output tokens, including reasoning.
-  pub tokens_out: u64,
-  /// Reported cost.
-  pub cost_usd: Option<f64>,
-  /// Wall time in milliseconds.
-  pub millis: u64,
-  /// `ok`, or the failure's description.
-  pub outcome: String,
+  pub calls: Vec<crate::review::Call>,
 }
 
 /// A cost in US dollars: finite and non-negative by construction, so a report

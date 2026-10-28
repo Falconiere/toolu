@@ -76,3 +76,23 @@ fn malformed_memory_fails_closed() {
   std::fs::write(&path, "{broken").unwrap();
   assert!(load(&path).is_err());
 }
+
+#[test]
+fn a_late_record_does_not_reopen_a_dismissal() {
+  let dir = tempfile::tempdir().unwrap();
+  let path = dir.path().join("feature.json");
+  let input = RecordInput {
+    base: "main",
+    sha: "sha",
+    findings: &[finding()],
+    recap: &Recap::default(),
+    verdict: Verdict::Blocked,
+    complete: true,
+  };
+  record(&path, &input).unwrap();
+  dismiss(&path, "f1", "not applicable").unwrap();
+  record(&path, &input).unwrap();
+  let state = load(&path).unwrap();
+  assert_eq!(state.memory.prior[0].status, Status::Dismissed);
+  assert_eq!(state.memory.dismissals[0].reason, "not applicable");
+}

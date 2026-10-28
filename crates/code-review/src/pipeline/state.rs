@@ -3,7 +3,7 @@
 use crate::contract::{Finding, Omitted, Report, Source};
 use crate::memory;
 use crate::prepass::{NoticeKind, PrepassResult};
-use crate::shape::Shaped;
+use crate::shape::{self, Shaped};
 use crate::validate::Recap;
 use serde_json::json;
 use std::io::Write as _;
@@ -12,8 +12,10 @@ use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
+use toolu_state::diff_sha::diff_sha;
 use toolu_state::push_review::{Input as StateInput, write as write_state};
 
+/// Context needed to persist one review and write the shared gate state.
 pub(super) struct RunState<'a> {
   pub(super) env: &'a Env,
   pub(super) ctx: &'a Ctx,
@@ -25,6 +27,7 @@ pub(super) struct RunState<'a> {
   pub(super) memory_path: &'a Path,
 }
 
+/// Persist memory and usage, then refresh the push-review gate state.
 pub(super) fn persist(
   state: &RunState<'_>,
   report: &mut Report,
@@ -47,7 +50,7 @@ pub(super) fn persist(
     .filter(|finding| finding.source != Source::System)
     .cloned()
     .collect();
-  memory::record(
+  let saved = memory::record(
     memory_path,
     &memory::RecordInput {
       base: &shaped.base_ref,
@@ -57,11 +60,20 @@ pub(super) fn persist(
       verdict: report.verdict(),
       complete,
     },
-  )?;
-  log_usage(roots, root, &shaped.diff_sha, report)?;
-  let count = report.blocking_count() + usize::from(!complete);
+  )
+  .and_then(|()| log_usage(roots, root, &shaped.diff_sha, report));
+  if saved.is_err() {
+    state_blocker(report);
+  }
+  let count = report.blocking_count();
   let findings = serde_json::to_string(&report.findings).map_err(|err| err.to_string())?;
-  write_gate((env, ctx), root, shaped, count, &findings)
+  let diff = (shaped.base_ref.as_str(), shaped.diff_sha.as_str());
+  if let Err(err) = saved {
+    write_gate((env, ctx), root, diff, count, &findings)
+      .map_err(|gate| format!("{err}; failed to block push-review state: {gate}"))?;
+    return Err(err);
+  }
+  write_gate((env, ctx), root, diff, count, &findings)
 }
 
 fn mark_coverage(
@@ -84,7 +96,27 @@ fn mark_coverage(
     });
   }
   // Every incomplete condition above left an unreviewed entry.
-  report.error.is_none() && report.coverage.unreviewed.is_empty()
+  let complete = report.error.is_none() && report.coverage.unreviewed.is_empty();
+  if !complete && report.blocking_count() == 0 {
+    report.findings.push(super::output::system_blocker(
+      "code-review:incomplete",
+      "coverage",
+      "The review did not cover a clean committed diff",
+      "review incomplete",
+    ));
+  }
+  complete
+}
+
+fn state_blocker(report: &mut Report) {
+  if report.blocking_count() == 0 {
+    report.findings.push(super::output::system_blocker(
+      "code-review:state",
+      "state",
+      "The review state could not be saved",
+      "state unavailable",
+    ));
+  }
 }
 
 /// Dismiss exactly one stored finding; only a complete unchanged review can refresh gate state.
@@ -98,8 +130,13 @@ pub(crate) fn dismiss(env: &Env, ctx: &Ctx, id: &str, reason: &str) -> Result<St
       "code-review: dismissed {id}; review coverage is incomplete, re-run review"
     ));
   }
-  let shaped = super::review_shape(env, &roots, &root, Some(&state.base_ref))?;
-  if shaped.uncommitted || shaped.diff_sha != state.diff_sha {
+  // No model call follows, so the hash and the dirty probe are all the shaped diff would add.
+  let state_root = roots
+    .project_state_root(None, Some(&root))
+    .ok_or("state root unavailable")?;
+  let dirty =
+    shape::dirty_except_state(env, &root, &state_root).map_err(|err| format!("shape: {err:?}"))?;
+  if dirty || diff_sha(env, &root, &state.base_ref).as_deref() != Some(state.diff_sha.as_str()) {
     return Ok(format!(
       "code-review: dismissed {id}; diff changed, re-run review"
     ));
@@ -115,7 +152,8 @@ pub(crate) fn dismiss(env: &Env, ctx: &Ctx, id: &str, reason: &str) -> Result<St
     .filter(|finding| finding.severity.blocking())
     .count();
   let findings = serde_json::to_string(&open).map_err(|err| err.to_string())?;
-  write_gate((env, ctx), &root, &shaped, count, &findings)?;
+  let diff = (state.base_ref.as_str(), state.diff_sha.as_str());
+  write_gate((env, ctx), &root, diff, count, &findings)?;
   Ok(format!(
     "code-review: dismissed {id}; push-review state refreshed"
   ))
@@ -146,10 +184,11 @@ fn log_usage(roots: &Roots, root: &Path, sha: &str, report: &Report) -> Result<(
   writeln!(file, "{row}").map_err(|err| err.to_string())
 }
 
+/// `(base, sha)` is the reviewed diff; the writer refuses a different current hash.
 fn write_gate(
   (env, ctx): (&Env, &Ctx),
   root: &Path,
-  shaped: &Shaped,
+  (base, sha): (&str, &str),
   count: usize,
   findings: &str,
 ) -> Result<(), String> {
@@ -162,9 +201,9 @@ fn write_gate(
       .ok_or_else(|| "non-UTF8 repository path".to_owned())?,
     branch: None,
     reviewed_files: None,
-    expected_diff_sha: Some(&shaped.diff_sha),
+    expected_diff_sha: Some(sha),
   };
-  let env = env.clone().with("PUSH_REVIEW_BASE", &shaped.base_ref);
+  let env = env.clone().with("PUSH_REVIEW_BASE", base);
   write_state(&input, ctx, &env).map(|_| ())
 }
 
