@@ -113,6 +113,23 @@ fn numstat(text: &str, roots: &[String]) -> BTreeMap<String, Vec<Area>> {
   found
 }
 
+/// The `%H%n%B%x00%N` records of `log -z`, NUL-separated pairs, as commits
+/// with their `areas`.
+fn records(text: &str, areas: &mut BTreeMap<String, Vec<Area>>) -> Vec<Commit> {
+  let mut commits = Vec::new();
+  let fields: Vec<&str> = text.split('\0').collect();
+  for pair in fields.chunks(2) {
+    let head = pair.first().copied().unwrap_or_default();
+    let Some((sha, body)) = head.split_once('\n').filter(|(sha, _)| is_sha(sha)) else {
+      continue;
+    };
+    let mut commit = parse(sha, body, pair.get(1).copied().unwrap_or_default());
+    commit.areas = areas.remove(sha).unwrap_or_default();
+    commits.push(commit);
+  }
+  commits
+}
+
 /// The newest `limit` commits of `range`, newest first. Messages and notes are
 /// read NUL-separated, since git stores no NUL in either; a merge's areas are
 /// its changes against its first parent.
@@ -154,24 +171,7 @@ pub(crate) fn history(
     "--",
   ];
   let mut areas = numstat(&git(env, dir, &stat_args, &[])?, roots);
-  let fields: Vec<&str> = text.split('\0').collect();
-  let mut commits = Vec::new();
-  for pair in fields.chunks(2) {
-    let (head, note) = (
-      pair.first().copied().unwrap_or_default(),
-      pair.get(1).copied(),
-    );
-    let Some((sha, body)) = head.split_once('\n') else {
-      continue;
-    };
-    if !is_sha(sha) {
-      continue;
-    }
-    let mut commit = parse(sha, body, note.unwrap_or_default());
-    commit.areas = areas.remove(sha).unwrap_or_default();
-    commits.push(commit);
-  }
-  Ok(commits)
+  Ok(records(&text, &mut areas))
 }
 
 /// The areas of `commits` summed.
