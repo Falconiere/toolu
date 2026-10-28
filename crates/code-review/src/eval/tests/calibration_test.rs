@@ -164,6 +164,20 @@ fn auto_below_the_lowest_level_that_caught_every_defect_is_counted() {
 }
 
 #[test]
+fn an_auto_run_that_caught_every_defect_is_never_too_low() {
+  // Auto chose small and caught the defect; small was not run as a fixed level.
+  let caught = [
+    level(Effort::Medium, &["slice underflow"]),
+    arm(Setting::Auto, Effort::Small, &["slice underflow"], 40, 0.1),
+  ];
+  let out = calibrate(&[("caught", &caught)]);
+  assert_eq!(out.auto.len(), 1);
+  assert_eq!(out.auto[0].lowest_catching, Some(Effort::Medium));
+  assert!(!out.auto[0].below);
+  assert_eq!(out.auto_below_lowest, 0);
+}
+
+#[test]
 fn an_auto_run_with_no_fixed_level_beside_it_is_not_measured() {
   let arms = [arm(Setting::Auto, Effort::Medium, &[], 40, 0.1)];
   let out = calibrate(&[("alone", &arms)]);

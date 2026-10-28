@@ -56,12 +56,13 @@ pub enum Verdict {
 impl SuiteReport {
   /// How the run ended. A `none` arm is the known-weak baseline calibration measures
   /// against, so its misses never fail the run; every other arm must catch every
-  /// defect row. A case with no arm proved nothing, so it is never satisfied.
+  /// defect row. A case with no arm, or only `none` arms, proved nothing, so it is
+  /// never satisfied.
   pub fn verdict(&self) -> Verdict {
     if self
       .cases
       .iter()
-      .any(|case| !case.unverified.is_empty() || case.report.arms.is_empty())
+      .any(|case| !case.unverified.is_empty() || proved_nothing(case))
     {
       return Verdict::Unverified;
     }
@@ -99,8 +100,11 @@ impl SuiteReport {
           arm.usage.cost_usd
         )
       }));
-      if case.report.arms.is_empty() && case.unverified.is_empty() {
-        lines.push(format!("{}: unverified: no arm ran", case.id));
+      if proved_nothing(case) && case.unverified.is_empty() {
+        lines.push(format!(
+          "{}: unverified: no arm ran beyond the known-weak none baseline",
+          case.id
+        ));
       }
       lines.extend(
         case
@@ -124,6 +128,15 @@ impl SuiteReport {
     }
     lines.join("\n")
   }
+}
+
+/// Whether `case` ran no arm whose misses count: none at all, or only `none`.
+fn proved_nothing(case: &CaseReport) -> bool {
+  case
+    .report
+    .arms
+    .iter()
+    .all(|arm| arm.setting == Setting::None)
 }
 
 #[cfg(test)]

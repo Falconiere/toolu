@@ -77,7 +77,8 @@ pub struct Case {
   /// The base revision of the diff, when not the tip's parent.
   #[serde(default)]
   pub base: Option<String>,
-  /// A prior review-memory seed for the memory classes.
+  /// Must stay `null`: a memory seed lives in `cases/<id>/memory.json`, and an
+  /// inline one would be silently ignored, so it is refused.
   #[serde(default)]
   pub memory: Option<serde_json::Value>,
   /// What the review is judged against.
@@ -88,13 +89,20 @@ pub struct Case {
 }
 
 impl Case {
-  /// Refuse an id that is not a plain name, no expectations, or a repeated row id.
+  /// Refuse an id that is not a plain name, an inline memory seed, no expectations,
+  /// or a repeated row id.
   fn check(&self) -> Result<(), String> {
     let plain = |byte: u8| byte.is_ascii_alphanumeric() || byte == b'_' || byte == b'-';
     if self.id.is_empty() || !self.id.bytes().all(plain) {
       return Err(format!(
         "invalid expectations: case id {:?} must match [A-Za-z0-9_-]+",
         self.id
+      ));
+    }
+    if self.memory.is_some() {
+      return Err(format!(
+        "invalid expectations: case {} has an inline memory seed; put it in cases/{}/memory.json",
+        self.id, self.id
       ));
     }
     if self.expectations.is_empty() {

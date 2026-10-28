@@ -1,4 +1,5 @@
-use super::command;
+use super::{command, settings_of};
+use crate::eval::Setting;
 
 fn parse(args: &[&str]) -> Result<clap::ArgMatches, clap::Error> {
   command().try_get_matches_from(std::iter::once("eval").chain(args.iter().copied()))
@@ -64,4 +65,15 @@ fn live_and_the_paths_are_read_as_given() {
     matches.get_one::<String>("arm").map(String::as_str),
     Some("enhanced")
   );
+}
+
+#[test]
+fn a_repeated_effort_runs_once_in_first_seen_order() {
+  let matches = parse(&[
+    "--cases", "set", "--effort", "small", "--effort", "auto", "--effort", "small",
+  ])
+  .expect("parses");
+  assert_eq!(settings_of(&matches), [Setting::Small, Setting::Auto]);
+  let default = parse(&["--cases", "set"]).expect("parses");
+  assert_eq!(settings_of(&default), [Setting::Auto]);
 }

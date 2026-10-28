@@ -7,9 +7,12 @@
 #[path = "helpers/replay.rs"]
 mod replay;
 
+#[path = "helpers/replay_fail.rs"]
+mod replay_fail;
+
 use std::path::{Path, PathBuf};
 
-use toolu_code_review::contract::{Finding, Severity, Side};
+use toolu_code_review::contract::{Finding, Omitted, Severity, Side};
 use toolu_code_review::eval::{Case, Fixtures, Gate, Status, match_findings, violations};
 use toolu_code_review::memory::{self, Memory};
 use toolu_code_review::model::ModelFinding;
@@ -72,13 +75,23 @@ fn cite(shaped: &Shaped, path: &str, needle: &str, claim: &str) -> Result<ModelF
 }
 
 fn grounded(shaped: &Shaped, memory: &Memory, model: &[ModelFinding]) -> Validated {
+  grounded_without(shaped, memory, model, &[])
+}
+
+/// As [`grounded`], with `lost` paths whose review call failed.
+fn grounded_without(
+  shaped: &Shaped,
+  memory: &Memory,
+  model: &[ModelFinding],
+  lost: &[Omitted],
+) -> Validated {
   validate(&Input {
     shaped,
     model,
     deterministic: &[],
     memory,
     redactions: &[],
-    unreviewed: &[],
+    unreviewed: lost,
   })
 }
 
@@ -268,10 +281,22 @@ fn a_drifted_line_stays_open_under_its_prior_id() {
 fn an_unreexamined_prior_stays_open_and_is_never_resolved() {
   let fixtures = golden().expect("fixture");
   let (shaped, memory) = seeded(&fixtures, "memory-unreexamined").expect("fixture");
-  assert!(shaped.files.iter().all(|file| file.path != "src/legacy.rs"));
-  let out = grounded(&shaped, &memory, &[]);
+  // The prior's file is in the committed diff, so settling never resolves it as
+  // gone; the review lost that file, so nothing re-examined the prior.
+  assert!(shaped.gate_files.iter().any(|path| path == "src/legacy.rs"));
+  assert!(shaped.files.iter().any(|file| file.path == "src/legacy.rs"));
+  let lost = [Omitted {
+    path: "src/legacy.rs".to_owned(),
+    reason: "review call failed".to_owned(),
+  }];
+  let out = grounded_without(&shaped, &memory, &[], &lost);
   assert_eq!(out.recap.still_open, ["mem-legacy-1"]);
   assert_eq!(out.recap.resolved, none());
+
+  // Re-examined and not re-raised, the same prior would be resolved instead.
+  let silent = grounded(&shaped, &memory, &[]);
+  assert_eq!(silent.recap.resolved, ["mem-legacy-1"]);
+  assert_eq!(silent.recap.still_open, none());
 }
 
 #[test]

@@ -101,3 +101,12 @@ fn a_case_id_must_be_a_plain_name() {
     );
   }
 }
+
+#[test]
+fn an_inline_memory_seed_is_refused_instead_of_ignored() {
+  let inline = r#"{"version": 1, "cases": [{"id": "c", "class": "memory_drift",
+    "memory": {"prior": [], "dismissals": []}, "expectations": [
+    {"id": "d", "path": "a.rs", "claim": "x", "kind": "defect"}]}]}"#;
+  let error = CaseSet::parse(inline).unwrap_err();
+  assert!(error.contains("cases/c/memory.json"), "{error}");
+}

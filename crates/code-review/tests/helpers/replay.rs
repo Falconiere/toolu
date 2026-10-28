@@ -11,8 +11,8 @@ use toolu_code_review::eval::calibration::{Calibration, SettingTotals};
 use toolu_code_review::eval::expectations::SET_VERSION;
 use toolu_code_review::eval::suite::SuiteReport;
 use toolu_code_review::eval::{
-  Arm, ArmChoice, ArmReport, CaseReport, Fixtures, LiveOrReplayed, Mode, Plan, Setting, Store,
-  Tally, UsageTotals, Verdict, run_all, run_case,
+  ArmChoice, ArmReport, CaseReport, Fixtures, LiveOrReplayed, Mode, Plan, Setting, Store, Tally,
+  UsageTotals, Verdict, run_all, run_case,
 };
 use toolu_code_review::review::Stage;
 use toolu_http_test_support::{Fixture, Reply};
@@ -20,12 +20,12 @@ use toolu_runtime::env::Env;
 
 use super::{case, golden};
 
-const REVIEW: &str = "/api/v1/chat/completions";
-const JEV: &str = "/api/v1/systemone";
+pub(super) const REVIEW: &str = "/api/v1/chat/completions";
+pub(super) const JEV: &str = "/api/v1/systemone";
 const KEY: &str = "private-sentinel-670";
 
 /// The environment of a run without a key: Git's isolation and the process's paths.
-fn keyless() -> Env {
+pub(super) fn keyless() -> Env {
   let mut env = Env::from_pairs([
     ("GIT_CONFIG_NOSYSTEM", "1".to_owned()),
     ("GIT_CONFIG_GLOBAL", "/dev/null".to_owned()),
@@ -41,7 +41,7 @@ fn keyless() -> Env {
 }
 
 /// A review answer naming the slice-underflow defect on its changed line.
-fn answer() -> String {
+pub(super) fn answer() -> String {
   let content = json!({"findings": [{
     "path": "src/lib.rs", "line": 2, "end_line": 2, "side": "new", "severity": "high",
     "category": "correctness", "claim": "The slice underflows when count exceeds the length",
@@ -130,7 +130,11 @@ fn endpoints(origin: &Fixture) -> (toolu_openrouter::Config, Option<toolu_jev_cl
 }
 
 /// A live run of both arms against the loopback origin, recording into `store`.
-fn record(fixtures: &Fixtures, origin: &Fixture, store: &Path) -> Result<CaseReport, String> {
+pub(super) fn record(
+  fixtures: &Fixtures,
+  origin: &Fixture,
+  store: &Path,
+) -> Result<CaseReport, String> {
   let env = keyless()
     .with("OPENROUTER_API_KEY", KEY)
     .with("OPENROUTER_MODEL", "")
@@ -174,22 +178,36 @@ fn file_names(dir: &Path) -> Result<Vec<String>, String> {
   Ok(names)
 }
 
-/// The baseline bills the review call; the enhanced arm adds Jev's judgment.
+/// The baseline bills the review call; the enhanced arm reuses that recorded answer
+/// for the identical request and bills only Jev's judgment.
 fn assert_billed_live(base: &ArmReport, enhanced: &ArmReport) {
-  let all_live = |arm: &toolu_code_review::eval::ArmReport| {
+  let origins = |arm: &ArmReport, stage: Stage| -> Vec<LiveOrReplayed> {
     arm
       .calls
       .iter()
-      .all(|call| call.live_or_replayed == LiveOrReplayed::Live)
+      .filter(|call| call.stage == stage)
+      .map(|call| call.live_or_replayed)
+      .collect()
   };
-  assert!(all_live(base) && all_live(enhanced));
+  assert!(
+    base
+      .calls
+      .iter()
+      .all(|call| call.live_or_replayed == LiveOrReplayed::Live)
+  );
+  assert_eq!(
+    origins(enhanced, Stage::Review),
+    [LiveOrReplayed::Replayed],
+    "the enhanced arm must not bill the baseline's review request again"
+  );
+  assert_eq!(origins(enhanced, Stage::Judge), [LiveOrReplayed::Live]);
   assert!(
     (base.usage.cost_usd - 0.01).abs() < 1e-9,
     "{:?}",
     base.usage
   );
   assert!(
-    (enhanced.usage.cost_usd - 0.012).abs() < 1e-9,
+    (enhanced.usage.cost_usd - 0.002).abs() < 1e-9,
     "{:?}",
     enhanced.usage
   );
@@ -237,7 +255,9 @@ fn a_live_run_bills_and_records_each_distinct_request_once() {
   assert_eq!(names.len(), 2, "{names:?}");
   assert!(names.iter().any(|name| name.starts_with("judge-")));
   assert!(names.iter().any(|name| name.starts_with("review-")));
-  assert_eq!(origin.requests().expect("requests").len(), 3);
+  // One review request (baseline) and one judgment (enhanced): no duplicate billing.
+  let sent = origin.requests().expect("requests");
+  assert_eq!(sent.len(), 2, "{} requests", sent.len());
 }
 
 #[test]
@@ -278,46 +298,4 @@ fn a_replayed_call_costs_nothing_and_matches_what_the_live_call_found() {
     sent,
     "replay sent nothing"
   );
-}
-
-#[test]
-fn a_failed_judge_call_makes_the_enhanced_arm_unverified_not_a_pass() {
-  let fixtures = golden().expect("fixture");
-  let origin = Fixture::start().expect("loopback");
-  origin
-    .route(REVIEW, Reply::new(200, answer()))
-    .expect("route");
-  origin
-    .route(JEV, Reply::new(500, "down".to_owned()))
-    .expect("route");
-  let store = tempfile::tempdir().expect("fs");
-  let live = record(&fixtures, &origin, store.path()).expect("live run");
-  assert_eq!(live.report.arms.len(), 1, "{:?}", live.unverified);
-  assert_eq!(
-    live.report.arms.first().map(|arm| arm.arm),
-    Some(Arm::Baseline)
-  );
-  let why = live.unverified.first().expect("enhanced is unverified");
-  assert!(why.contains("Enhanced at small"), "{why}");
-  assert!(why.contains("failed calls: judge call"), "{why}");
-  assert_eq!(live.unverified.len(), 1, "{:?}", live.unverified);
-}
-
-#[test]
-fn a_selection_that_yields_no_arm_is_unverified_never_satisfied() {
-  let fixtures = golden().expect("fixture");
-  let empty = tempfile::tempdir().expect("fs");
-  let mode = Mode::Replay(Store::new(empty.path()));
-  let plan = Plan {
-    env: &keyless(),
-    arms: ArmChoice::Enhanced,
-    settings: &[Setting::None],
-    mode: &mode,
-    openrouter: toolu_openrouter::Config::default(),
-    jev: None,
-  };
-  let suite = run_all(&fixtures, &plan).expect("shapes");
-  assert!(suite.cases.iter().all(|case| case.report.arms.is_empty()));
-  assert!(suite.cases.iter().all(|case| !case.unverified.is_empty()));
-  assert_eq!(suite.verdict(), Verdict::Unverified);
 }

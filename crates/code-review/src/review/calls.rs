@@ -80,6 +80,7 @@ pub(crate) struct Ledger<'a> {
   pub(crate) calls: Vec<Call>,
   recorder: Option<Recorder<'a>>,
   replay: Option<Replay<'a>>,
+  live_on_miss: bool,
 }
 
 impl<'a> Ledger<'a> {
@@ -88,12 +89,19 @@ impl<'a> Ledger<'a> {
       calls: Vec::new(),
       recorder,
       replay: None,
+      live_on_miss: false,
     }
   }
 
   /// Answer every call from `replay`, before any network call, when it is set.
   pub(crate) fn replaying(mut self, replay: Option<Replay<'a>>) -> Ledger<'a> {
     self.replay = replay;
+    self
+  }
+
+  /// Send a request the replay lookup does not hold instead of failing it closed.
+  pub(crate) fn live_on_miss(mut self, live: bool) -> Ledger<'a> {
+    self.live_on_miss = live;
     self
   }
 
@@ -106,7 +114,10 @@ impl<'a> Ledger<'a> {
     deadline: Instant,
   ) -> Result<Reply, toolu_jev_client::Error> {
     if let Some(replay) = self.replay {
-      return self.replayed_jev(replay, step, (state, questions));
+      let body = replay(step, &request_body(state, OPENROUTER_MODEL, questions));
+      if body.is_some() || !self.live_on_miss {
+        return self.replayed_jev(body, step, questions);
+      }
     }
     let started = Instant::now();
     let result = jev.ask_until(state, OPENROUTER_MODEL, questions, deadline);
@@ -138,7 +149,10 @@ impl<'a> Ledger<'a> {
     deadline: Instant,
   ) -> Result<Completion, toolu_openrouter::Error> {
     if let Some(replay) = self.replay {
-      return self.replayed_complete(replay, stage, client, request);
+      let body = replay(stage, &sent(request, client.model()));
+      if body.is_some() || !self.live_on_miss {
+        return self.replayed_complete(body, stage, client);
+      }
     }
     let started = Instant::now();
     let result = client.complete_structured(request, deadline);
@@ -167,21 +181,20 @@ impl<'a> Ledger<'a> {
     };
     self.push(call, started, || {
       let response = result.as_ref().map_or_else(|_| String::new(), received);
-      (sent(request), response)
+      (sent(request, client.model()), response)
     });
     result
   }
 
-  /// Answer a Jev question from `replay`: no request is sent and nothing is charged.
+  /// Answer a Jev question from its replayed `body`, `None` for a miss: no request is sent and nothing is charged.
   fn replayed_jev(
     &mut self,
-    replay: Replay<'_>,
+    body: Option<String>,
     step: Stage,
-    (state, questions): (&State, &Questions),
+    questions: &Questions,
   ) -> Result<Reply, toolu_jev_client::Error> {
     let started = Instant::now();
-    let request = request_body(state, OPENROUTER_MODEL, questions);
-    let result = match replay(step, &request) {
+    let result = match body {
       Some(body) => parse_reply(&body, questions),
       None => Err(toolu_jev_client::Error::InvalidQuestion(
         REPLAY_MISS.to_owned(),
@@ -207,13 +220,12 @@ impl<'a> Ledger<'a> {
   /// charged.
   fn replayed_complete(
     &mut self,
-    replay: Replay<'_>,
+    body: Option<String>,
     stage: Stage,
     client: &Client,
-    request: &StructuredRequest<'_>,
   ) -> Result<Completion, toolu_openrouter::Error> {
     let started = Instant::now();
-    let result = match replay(stage, &sent(request)) {
+    let result = match body {
       Some(body) => restored(&body),
       None => Err(toolu_openrouter::Error::InvalidConfig),
     };
@@ -290,14 +302,16 @@ fn call(stage: Stage, model: &str, outcome: &str) -> Call {
   }
 }
 
-/// A structured request's messages and settings, as the recorder sees them.
-fn sent(request: &StructuredRequest<'_>) -> String {
+/// A structured request's model, messages and settings, as the recorder sees them;
+/// the model is part of the replay key, so `OPENROUTER_MODEL` never replays another
+/// model's answers.
+fn sent(request: &StructuredRequest<'_>, model: &str) -> String {
   let messages: Vec<_> = request
     .messages
     .iter()
     .map(|message| json!({"role": message.role, "content": message.content}))
     .collect();
-  json!({"messages": messages, "schema": request.schema_name,
+  json!({"model": model, "messages": messages, "schema": request.schema_name,
          "reasoning_effort": request.reasoning_effort, "max_tokens": request.max_tokens})
   .to_string()
 }

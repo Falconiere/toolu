@@ -105,3 +105,26 @@ fn memory_seeds_load_with_line_independent_fingerprints() {
   let none = fixtures.set().case("slice-underflow").unwrap();
   assert!(fixtures.memory(none).unwrap().is_none());
 }
+
+#[test]
+fn a_symlink_in_a_case_tree_is_refused_not_followed() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::write(
+    dir.path().join("expectations.json"),
+    r#"{"version":1,"cases":[{"id":"link","class":"supported","expectations":[
+      {"id":"d","path":"src/lib.rs","claim":"x","kind":"defect"}]}]}"#,
+  )
+  .unwrap();
+  let outside = dir.path().join("outside.txt");
+  std::fs::write(&outside, "not part of the case").unwrap();
+  for side in ["base", "tip"] {
+    let tree = dir.path().join("cases/link/files").join(side);
+    std::fs::create_dir_all(&tree).unwrap();
+    std::fs::write(tree.join("lib.rs"), side).unwrap();
+  }
+  std::os::unix::fs::symlink(&outside, dir.path().join("cases/link/files/tip/leak.rs")).unwrap();
+  let fixtures = Fixtures::load(dir.path()).unwrap();
+  let case = fixtures.set().case("link").unwrap();
+  let error = fixtures.materialize_repo(case).unwrap_err();
+  assert!(error.contains("symlink is not allowed"), "{error}");
+}

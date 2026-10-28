@@ -22,9 +22,9 @@ pub struct Fixtures {
   set: CaseSet,
 }
 
-/// Git's environment for a hermetic repository: no system or global config.
-pub(super) fn git_env() -> Env {
-  Env::process()
+/// `env` without Git's system or global config, for a hermetic repository.
+pub(super) fn isolated(env: Env) -> Env {
+  env
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
     .with("XDG_CONFIG_HOME", "/dev/null")
@@ -39,7 +39,7 @@ fn git_output(root: &Path, args: &[&str]) -> Result<String, String> {
   let mut spec = Spec::new(["git"]);
   spec.argv.extend(args.iter().map(|arg| (*arg).to_owned()));
   spec.cwd = Some(root.to_path_buf());
-  spec.env = Some(git_env());
+  spec.env = Some(isolated(Env::process()));
   let output = run(&spec).map_err(|error| format!("git {args:?}: {error:?}"))?;
   if output.exit_code == 0 {
     Ok(output.stdout.trim().to_owned())
@@ -62,7 +62,8 @@ fn io(path: &Path, error: &std::io::Error) -> String {
 
 /// Copy the tree `from` into `to`, creating directories as needed. A committed
 /// `.rs.fixture` lands as `.rs` so `check-reach` never sees fixture sources as
-/// workspace Rust (same spelling as `fixtures/guardrails`).
+/// workspace Rust (same spelling as `fixtures/guardrails`). A symlink is refused:
+/// copying would commit, and a live run would send, whatever it points at.
 fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
   std::fs::create_dir_all(to).map_err(|error| io(to, &error))?;
   for entry in std::fs::read_dir(from).map_err(|error| io(from, &error))? {
@@ -80,6 +81,12 @@ fn copy_tree(from: &Path, to: &Path) -> Result<(), String> {
     let kind = entry
       .file_type()
       .map_err(|error| io(&entry.path(), &error))?;
+    if kind.is_symlink() {
+      return Err(format!(
+        "{}: a symlink is not allowed in a case tree",
+        entry.path().display()
+      ));
+    }
     if kind.is_dir() {
       copy_tree(&entry.path(), &target)?;
     } else {

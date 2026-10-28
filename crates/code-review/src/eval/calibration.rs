@@ -1,7 +1,7 @@
 //! Effort calibration over a set of arm reports: per effort setting, the defects
 //! caught, the known false positives raised, the tokens and the dollars; and how
-//! often `auto` chose a level below the lowest fixed level that caught every
-//! defect of the case. A pure function over `ArmReport`s: it reads the matcher's
+//! often `auto` missed a defect at a level below the lowest fixed level that
+//! caught every defect of the case. A pure function over `ArmReport`s: it reads the matcher's
 //! tallies and the usage totals, never a finding count or a token count alone.
 
 use serde::Serialize;
@@ -43,7 +43,8 @@ pub struct AutoChoice {
   pub chose: Effort,
   /// The lowest fixed level that caught every defect, when any did.
   pub lowest_catching: Option<Effort>,
-  /// `auto` chose below `lowest_catching`.
+  /// `auto` missed a defect and chose below `lowest_catching`; an `auto` run that
+  /// caught every defect itself was not too low.
   pub below: bool,
 }
 
@@ -124,7 +125,8 @@ fn auto_choices(case: &str, arms: &[ArmReport]) -> Vec<AutoChoice> {
         arm: auto.arm,
         chose: auto.effort,
         lowest_catching: lowest,
-        below: lowest.is_some_and(|lowest| rank(auto.effort) < rank(lowest)),
+        below: auto.tally.missed > 0
+          && lowest.is_some_and(|lowest| rank(auto.effort) < rank(lowest)),
       })
     })
     .collect()

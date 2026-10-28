@@ -76,7 +76,9 @@ pub(super) fn persist(
   write_gate((env, ctx), root, diff, count, &findings)
 }
 
-fn mark_coverage(
+/// Mark `report` incomplete for every condition production gates on: a scoped
+/// run, an uncommitted worktree, or a degraded pre-pass. Returns whether it is complete.
+pub(crate) fn mark_coverage(
   report: &mut Report,
   scoped: bool,
   shaped: &Shaped,

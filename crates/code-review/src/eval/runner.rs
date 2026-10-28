@@ -14,7 +14,7 @@ use toolu_runtime::env::Env;
 use super::arms::{Mode, Plan};
 use super::calibration::calibrate;
 use super::expectations::Case;
-use super::fixtures::{Fixtures, rev_parse};
+use super::fixtures::{Fixtures, isolated, rev_parse};
 use super::gate::violations;
 use super::matcher::match_findings;
 use super::replay::Store;
@@ -53,10 +53,12 @@ fn describe(err: &RunError) -> String {
 }
 
 /// Where a call's answer came from: a replay run never sends a request, so even a
-/// call the store could not answer is replayed, not live.
-fn origin(mode: &Mode) -> LiveOrReplayed {
+/// call the store could not answer is replayed, not live. A live run with a store
+/// answers a request an earlier arm recorded from it, which bills nothing.
+fn origin(mode: &Mode, call: &Call) -> LiveOrReplayed {
   match mode {
     Mode::Replay(_) => LiveOrReplayed::Replayed,
+    Mode::Live(_) if call.outcome == REPLAYED => LiveOrReplayed::Replayed,
     Mode::Live(_) => LiveOrReplayed::Live,
   }
 }
@@ -66,21 +68,24 @@ fn answered(call: &Call) -> bool {
   call.outcome == "ok" || call.outcome == REPLAYED
 }
 
-/// The replay lookup of a run: only a replay run has one, and every request the
-/// store lacks or cannot read is noted in `problems`.
+/// The store lookup of a run. A replay run notes every request the store lacks or
+/// cannot read in `problems`; a live run with a store only reads, so a miss goes
+/// live; a live run without a store has no lookup.
 fn lookup<'a>(
   plan: &'a Plan<'_>,
   problems: &'a RefCell<Vec<String>>,
 ) -> impl Fn(Stage, &str) -> Option<String> + 'a {
   move |stage, request| {
-    let Mode::Replay(store) = plan.mode else {
+    let (Mode::Replay(store) | Mode::Live(Some(store))) = plan.mode else {
       return None;
     };
     match store.read(stage, request) {
       Ok(Some(body)) => Some(body),
       Ok(None) => {
-        let key = Store::key(stage, request);
-        problems.borrow_mut().push(format!("replay miss: {key}"));
+        if matches!(plan.mode, Mode::Replay(_)) {
+          let key = Store::key(stage, request);
+          problems.borrow_mut().push(format!("replay miss: {key}"));
+        }
         None
       }
       Err(why) => {
@@ -131,7 +136,14 @@ fn run_arm(
   };
   match plan.mode {
     Mode::Replay(_) => options.replay = Some(&replay),
-    Mode::Live(_) => options.recorder = Some(&record),
+    // The baseline arm runs first and records; the enhanced arm's identical review
+    // request then hits the store instead of billing a second time.
+    Mode::Live(Some(_)) => {
+      options.recorder = Some(&record);
+      options.replay = Some(&replay);
+      options.live_on_miss = true;
+    }
+    Mode::Live(None) => options.recorder = Some(&record),
   }
   let input = Input {
     root: &prepared.root,
@@ -156,11 +168,6 @@ fn run_arm(
   arm_report(prepared, plan, case, (setting, arm, runtime_ms), reviewed)
 }
 
-/// Ground `reviewed`, match it against `case` and shape the arm.
-///
-/// # Errors
-/// A call failed or the review left a path unreviewed: the arm is unverified, since
-/// an outage or an incomplete review must not read as a pass or an ordinary miss.
 /// Why an arm's review cannot be scored, when it cannot.
 fn unscored(failed_calls: &[String], report: &crate::contract::Report) -> Option<String> {
   if !report.is_complete() {
@@ -183,6 +190,11 @@ fn unscored(failed_calls: &[String], report: &crate::contract::Report) -> Option
   (!failed_calls.is_empty()).then(|| format!("failed calls: {}", failed_calls.join(", ")))
 }
 
+/// Ground `reviewed`, match it against `case` and shape the arm.
+///
+/// # Errors
+/// A call failed or the review left a path unreviewed: the arm is unverified, since
+/// an outage or an incomplete review must not read as a pass or an ordinary miss.
 fn arm_report(
   prepared: &Prepared,
   plan: &Plan<'_>,
@@ -199,15 +211,19 @@ fn arm_report(
   let calls: Vec<CallRecord> = reviewed
     .calls
     .iter()
-    .map(|call| CallRecord::from_call(call, origin(plan.mode)))
+    .map(|call| CallRecord::from_call(call, origin(plan.mode, call)))
     .collect();
   let effort = reviewed.effort.level;
-  let (report, _recap) = pipeline::completed(
+  let (mut report, _recap) = pipeline::completed(
     &prepared.shaped,
     &prepared.prepass,
     &prepared.prior,
     reviewed,
   );
+  // The coverage production adds before it persists: a degraded pre-pass (a missing
+  // or failed scanner, a secrets compile failure, an overflow) or a dirty worktree
+  // is never a complete review, here or there.
+  pipeline::mark_coverage(&mut report, false, &prepared.shaped, &prepared.prepass);
   if let Some(why) = unscored(&failed, &report) {
     return Err(why);
   }
@@ -229,12 +245,7 @@ fn prepare(
   plan: &Plan<'_>,
 ) -> Result<(tempfile::TempDir, Prepared), String> {
   let repo = fixtures.materialize_repo(case)?;
-  let env = plan
-    .env
-    .clone()
-    .with("GIT_CONFIG_NOSYSTEM", "1")
-    .with("GIT_CONFIG_GLOBAL", "/dev/null")
-    .with("XDG_CONFIG_HOME", "/dev/null");
+  let env = isolated(plan.env.clone());
   let root = repo.path().to_path_buf();
   let fail = |stage: &str, err: &dyn std::fmt::Debug| format!("{}: {stage}: {err:?}", case.id);
   let shaped =

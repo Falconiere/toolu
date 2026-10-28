@@ -92,13 +92,19 @@ fn selected<'a>(verb: &'a ArgMatches, name: &str) -> Option<&'a str> {
   verb.get_one::<String>(name).map(String::as_str)
 }
 
+/// The `--effort` settings in first-seen order; a repeat would bill and count twice.
 fn settings_of(verb: &ArgMatches) -> Vec<Setting> {
-  let chosen: Vec<Setting> = verb
+  let mut chosen: Vec<Setting> = Vec::new();
+  for setting in verb
     .get_many::<String>("effort")
     .into_iter()
     .flatten()
     .filter_map(|name| Setting::parse(name))
-    .collect();
+  {
+    if !chosen.contains(&setting) {
+      chosen.push(setting);
+    }
+  }
   if chosen.is_empty() {
     vec![Setting::Auto]
   } else {
@@ -111,12 +117,20 @@ fn present(suite: &SuiteReport, verb: &ArgMatches, ctx: &Ctx) -> Outcome {
     Ok(document) => document,
     Err(error) => return Outcome::failed(Exit::Failure, format!("code-review eval: {error}")),
   };
-  if let Some(path) = selected(verb, "report")
-    && let Err(error) = std::fs::write(Path::new(path), &document)
-  {
-    return Outcome::failed(Exit::Failure, format!("code-review eval: {path}: {error}"));
-  }
+  let written = selected(verb, "report").and_then(|path| {
+    std::fs::write(Path::new(path), &document)
+      .err()
+      .map(|error| format!("code-review eval: {path}: {error}"))
+  });
   let stdout = if ctx.json { document } else { suite.summary() };
+  // A paid live run's results still reach stdout when the report file cannot be written.
+  if let Some(error) = written {
+    return Outcome {
+      exit: Exit::Failure,
+      stdout: Some(stdout),
+      stderr: Some(error),
+    };
+  }
   match suite.verdict() {
     Verdict::Satisfied => Outcome::data(stdout),
     Verdict::Missed => Outcome {

@@ -93,6 +93,19 @@ fn the_known_weak_baseline_may_miss_without_failing_the_run() {
 }
 
 #[test]
+fn a_case_where_only_the_known_weak_baseline_ran_is_unverified() {
+  let weak_only = suite(vec![case(vec![arm(Setting::None, false)], &[], &[])]);
+  assert_eq!(weak_only.verdict(), Verdict::Unverified);
+  assert!(
+    weak_only
+      .summary()
+      .contains("c: unverified: no arm ran beyond the known-weak none baseline"),
+    "{}",
+    weak_only.summary()
+  );
+}
+
+#[test]
 fn anything_unverified_outranks_a_miss_and_is_never_a_pass() {
   let both = suite(vec![
     case(vec![arm(Setting::Small, false)], &[], &[]),

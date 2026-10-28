@@ -9,7 +9,7 @@ use super::calls::Stage;
 
 /// Looks up the recorded response to a stage's exact masked request text (#670).
 /// With a lookup in place a run never reaches the network: a hit is replayed and a
-/// miss fails that call closed.
+/// miss fails that call closed, unless `Options::live_on_miss` lets it through.
 pub type Replay<'a> = &'a dyn Fn(Stage, &str) -> Option<String>;
 
 /// The `Call::outcome` of a call answered from the replay store.
