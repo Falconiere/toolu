@@ -17,6 +17,8 @@ pub(crate) enum Verb {
   Remove,
   /// Update plugins to the marketplace version.
   Update,
+  /// Diagnose plugin health on each host.
+  Doctor,
 }
 
 /// `--scope`: where a host installs.
@@ -83,12 +85,13 @@ pub(crate) enum Approval {
   Approve,
 }
 
-const ABOUT: &str = "Install, list, remove and update toolu plugins on every host";
+const ABOUT: &str = "Install, list, remove, update and doctor toolu plugins on every host";
 
 const AFTER: &str = "Claude Code, Codex and Muse are driven through their own plugin CLIs; \
   Cursor has none, so --host cursor copies each plugin into ~/.cursor/plugins/local. \
-  Install the native binary, then run these verbs. The npm package @toolu/plugins \
-  is deprecated. Its guide is docs/cli/installer.md.";
+  Install the native binary, then run these verbs. `doctor` diagnoses plugin health; \
+  `toolu doctor` covers the binary, config, registry and tools. The npm package \
+  @toolu/plugins is deprecated. Its guide is docs/cli/installer.md.";
 
 /// The `toolu plugins` namespace.
 pub(crate) fn command() -> Command {
@@ -134,6 +137,11 @@ pub(crate) fn command() -> Command {
         "Plugins to update where installed; none means every installed toolu plugin",
       ))
       .arg(approve()),
+    )
+    .subcommand(
+      Command::new("doctor")
+        .about("Diagnose plugin install health on every host that has them, or on --host")
+        .arg(catalog()),
     )
 }
 
@@ -201,6 +209,7 @@ pub(crate) fn request(matches: &ArgMatches) -> Option<Request> {
     "list" => Verb::List,
     "remove" => Verb::Remove,
     "update" => Verb::Update,
+    "doctor" => Verb::Doctor,
     _other => return None,
   };
   let has = |id: &str| {

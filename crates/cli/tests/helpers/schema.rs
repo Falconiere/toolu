@@ -195,6 +195,14 @@ fn the_plugins_json_documents_validate() {
     violations(&list, Some("pluginsList")).unwrap(),
     Vec::<String>::new()
   );
+  let doctor = plugins_json(home.path(), &["doctor", "--host", "claude"]).unwrap();
+  assert_eq!(
+    violations(&doctor, Some("pluginsDoctor")).unwrap(),
+    Vec::<String>::new(),
+    "{doctor}"
+  );
+  assert_eq!(doctor["namespace"], "plugins");
+  assert_eq!(doctor["verb"], "doctor");
   let remove = plugins_json(home.path(), &["remove", "jev", "--yes", "--host", "claude"]).unwrap();
   assert_eq!(
     violations(&remove, Some("pluginsHost")).unwrap(),

@@ -92,7 +92,8 @@ pub(crate) struct Report {
   pub(crate) failed: bool,
 }
 
-fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
+/// The host CLI driver for `target`, or an error when Cursor is asked to drive one.
+pub(crate) fn driver(target: Target, request: &Request, cx: &Context<'_>) -> Res<Driver> {
   let (adapter, checkout) = match target {
     Target::Claude => (Adapter::Claude, None),
     Target::Codex => (Adapter::Codex, None),
@@ -191,6 +192,7 @@ pub(crate) fn dispatch(request: &Request, catalog: &Catalog, cx: &mut Context<'_
     Verb::Remove => remove(request, catalog, wanted, cx),
     Verb::List => list(request, catalog, wanted, cx),
     Verb::Update => update::run(request, catalog, wanted, cx),
+    Verb::Doctor => verbs::doctor::run(request, catalog, wanted, cx),
   }
 }
 

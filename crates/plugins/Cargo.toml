@@ -1,6 +1,6 @@
 [package]
 name = "toolu-plugins"
-description = "toolu plugins: install, list, remove and update toolu plugins on every host"
+description = "toolu plugins: install, list, remove, update and doctor toolu plugins on every host"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

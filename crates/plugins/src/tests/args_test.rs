@@ -66,6 +66,11 @@ fn every_verb_parses_and_takes_the_catalog_flag() {
     list.as_ref().map(|r| (r.verb, r.catalog.clone())),
     Ok((Verb::List, Some("c.json".into())))
   );
+  let doctor = parse(&["doctor", "--catalog", "c.json"]);
+  assert_eq!(
+    doctor.as_ref().map(|r| (r.verb, r.catalog.clone())),
+    Ok((Verb::Doctor, Some("c.json".into())))
+  );
   let update = parse(&["update"]);
   assert_eq!(
     update.as_ref().map(|r| (r.verb, r.names.len())),

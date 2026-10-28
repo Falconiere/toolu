@@ -1642,6 +1642,53 @@
         }
       }
     },
+    "pluginsDoctor": {
+      "description": "toolu plugins doctor --json: plugin lifecycle findings per host, with counts.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "ok", "hosts", "counts"],
+      "properties": {
+        "namespace": { "const": "plugins" },
+        "verb": { "const": "doctor" },
+        "ok": { "type": "boolean" },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["host", "findings"],
+            "properties": {
+              "host": { "enum": ["claude", "codex", "muse", "cursor"] },
+              "findings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["status", "scope", "name", "summary", "fix"],
+                  "properties": {
+                    "status": { "enum": ["ok", "warn", "fail"] },
+                    "scope": { "enum": ["host", "plugin", "deps", "secrets"] },
+                    "name": { "type": ["string", "null"] },
+                    "summary": { "type": "string", "minLength": 1 },
+                    "fix": { "type": ["string", "null"] }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ok", "warn", "fail"],
+          "properties": {
+            "ok": { "type": "integer", "minimum": 0 },
+            "warn": { "type": "integer", "minimum": 0 },
+            "fail": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
     "sandboxSettings": {
       "description": "The sandbox settings of toolu.config.json with their defaults filled in.",
       "type": "object",

@@ -6,6 +6,9 @@ use std::process::{Command, Output};
 
 use serde_json::{Value, json};
 
+#[path = "helpers/review_compat_env.rs"]
+mod review_compat_env;
+
 const TOOLU: &str = env!("CARGO_BIN_EXE_toolu");
 type Res<T> = Result<T, Box<dyn std::error::Error>>;
 
@@ -34,15 +37,14 @@ fn repo(dir: &Path) -> Res<()> {
 
 fn gate(dir: &Path) -> Res<Output> {
   let payload = json!({"tool_name":"Bash","tool_input":{"command":"git push origin feature"}});
-  Ok(
-    assert_cmd::Command::new(TOOLU)
-      .args(["hook", "pre-tools", "--event", "PreToolUse"])
-      .env("TOOLU_HOST_OVERRIDE", "codex")
-      .env("PUSH_REVIEW_BASE", "main")
-      .current_dir(dir)
-      .write_stdin(payload.to_string())
-      .output()?,
-  )
+  let mut command = assert_cmd::Command::new(TOOLU);
+  command
+    .args(["hook", "pre-tools", "--event", "PreToolUse"])
+    .env("TOOLU_HOST_OVERRIDE", "codex")
+    .current_dir(dir)
+    .write_stdin(payload.to_string());
+  review_compat_env::isolate(&mut command, dir, "codex");
+  Ok(command.output()?)
 }
 
 fn writer(dir: &Path, args: &[&str]) -> Res<Output> {
@@ -50,15 +52,14 @@ fn writer(dir: &Path, args: &[&str]) -> Res<Output> {
 }
 
 fn writer_host(dir: &Path, host: &str, args: &[&str]) -> Res<Output> {
-  Ok(
-    assert_cmd::Command::new(TOOLU)
-      .args(["review", "write-state"])
-      .args(args)
-      .env("TOOLU_HOST_OVERRIDE", host)
-      .env("PUSH_REVIEW_BASE", "main")
-      .current_dir(dir)
-      .output()?,
-  )
+  let mut command = assert_cmd::Command::new(TOOLU);
+  command
+    .args(["review", "write-state"])
+    .args(args)
+    .env("TOOLU_HOST_OVERRIDE", host)
+    .current_dir(dir);
+  review_compat_env::isolate(&mut command, dir, host);
+  Ok(command.output()?)
 }
 
 #[test]
