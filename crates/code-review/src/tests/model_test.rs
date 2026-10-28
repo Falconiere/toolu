@@ -91,6 +91,14 @@ fn truncated_array_keeps_only_closed_valid_findings() {
   assert_eq!(parsed.findings.len(), 1);
   assert!(parsed.partial);
   assert_eq!(parsed.dropped, 0);
+  let mut escaped = finding();
+  escaped["quote"] = json!("a \"}\" {b}");
+  let content = format!("{{\"findings\":[{escaped},{{\"path\":\"unfinished\"");
+  let parsed = parse(&completion(&content, "length")).expect("escaped finding");
+  assert_eq!(parsed.findings.len(), 1);
+  assert_eq!(parsed.findings[0].quote, "a \"}\" {b}");
+  assert_eq!(parsed.dropped, 1);
+  assert!(parsed.partial);
 }
 
 #[test]

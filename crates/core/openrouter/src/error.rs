@@ -122,7 +122,9 @@ impl Error {
       && !matches!(code, 401 | 403 | 408 | 429)
       && message.is_some_and(|message| {
         let message = message.to_ascii_lowercase();
-        message.contains("no endpoints") || message.contains("no provider")
+        message.contains("no endpoints")
+          || message.contains("no provider")
+          || message.contains("no allowed providers")
       })
     {
       return Self::NoProvider;

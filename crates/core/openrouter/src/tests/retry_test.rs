@@ -52,6 +52,11 @@ fn no_provider_is_typed_only_for_an_explicit_no_endpoint_error() {
     body: body.to_vec(),
   };
   assert_eq!(status(&response), Error::NoProvider);
+  let allowed = Response {
+    body: br#"{"error":{"message":"No allowed providers are available"}}"#.to_vec(),
+    ..response.clone()
+  };
+  assert_eq!(status(&allowed), Error::NoProvider);
   let overloaded = Response {
     status: 503,
     ..response.clone()

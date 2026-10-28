@@ -96,7 +96,7 @@ impl Client {
     }
     Ok(Self {
       env: env.clone(),
-      key: key.to_owned(),
+      key: key.trim().to_owned(),
       model: model.to_owned(),
       config,
     })

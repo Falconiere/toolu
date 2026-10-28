@@ -57,7 +57,7 @@ fn structured_request_keeps_schema_reasoning_and_routing() {
     .route(PATH, Reply::new(200, response("{\"findings\":[]}")))
     .expect("route");
   let schema = json!({"type":"object","properties":{"findings":{"type":"array"}},"required":["findings"],"additionalProperties":false});
-  let result = client(&fixture, &[])
+  let result = client(&fixture, &[("OPENROUTER_API_KEY", " private-sentinel ")])
     .expect("client")
     .complete_structured(&request(&schema), Instant::now() + Duration::from_secs(2))
     .expect("completion");
