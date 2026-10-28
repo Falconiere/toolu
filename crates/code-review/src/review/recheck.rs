@@ -5,9 +5,10 @@
 //! failure, keeps the finding.
 
 use serde_json::{Map, Value, json};
-use toolu_openrouter::{Message, StructuredRequest};
+use toolu_openrouter::StructuredRequest;
 
 use super::calls::Stage;
+use super::chunks::message;
 use super::prompt::memory_context;
 use super::source::Package;
 use super::{Assessment, Ctx, Dismissed, Judged, shown};
@@ -75,30 +76,8 @@ fn file(
   schema: &Value,
   ctx: &mut Ctx<'_, '_>,
 ) -> Vec<(usize, (String, Vec<String>))> {
-  let findings: Map<String, Value> = ids
-    .iter()
-    .filter_map(|index| {
-      let mut shown = shown(&judged.get(*index)?.finding);
-      shown
-        .as_object_mut()?
-        .insert("challenge".to_owned(), json!(CHALLENGE));
-      Some((format!("f{index}"), shown))
-    })
-    .collect();
-  let user = format!(
-    "Recheck these findings:\n{}",
-    json!({"memory": memory_context(ctx.memory, ctx.mask), "evidence": package, "findings": findings})
-  );
-  let messages = [
-    Message {
-      role: "system",
-      content: RULES,
-    },
-    Message {
-      role: "user",
-      content: &user,
-    },
-  ];
+  let user = user_message(judged, ids, package, ctx);
+  let messages = [message("system", RULES), message("user", &user)];
   let request = StructuredRequest {
     messages: &messages,
     schema_name: "code_review_recheck",
@@ -148,6 +127,24 @@ fn valid_dismissals(
       valid.then(|| (index, explained(answer)))
     })
     .collect()
+}
+
+/// The memory, the evidence package and the challenged findings, as JSON.
+fn user_message(judged: &[Judged], ids: &[usize], package: &Package, ctx: &Ctx<'_, '_>) -> String {
+  let findings: Map<String, Value> = ids
+    .iter()
+    .filter_map(|index| {
+      let mut shown = shown(&judged.get(*index)?.finding);
+      shown
+        .as_object_mut()?
+        .insert("challenge".to_owned(), json!(CHALLENGE));
+      Some((format!("f{index}"), shown))
+    })
+    .collect();
+  format!(
+    "Recheck these findings:\n{}",
+    json!({"memory": memory_context(ctx.memory, ctx.mask), "evidence": package, "findings": findings})
+  )
 }
 
 /// Whether `answer` is a valid dismissal against `evidence`.

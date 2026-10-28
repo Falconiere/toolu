@@ -10,11 +10,13 @@ use toolu_openrouter::{Client, Message};
 
 use super::calls::{Ledger, Stage};
 use super::mask::Mask;
+use super::prompt::{self, Prefix};
 use super::source::Package;
-use super::{Input, RunError, prompt};
+use super::{Input, RunError};
 use crate::budget::Effort;
 use crate::contract::Omitted;
 use crate::model::{self, ModelFinding};
+use crate::shape::ShapedFile;
 
 /// How each review call is made.
 pub(crate) struct Call<'a> {
@@ -80,41 +82,49 @@ pub(crate) fn review(
       .filter_map(|index| Some((input.shaped.files.get(*index)?, packages.get(*index)?)))
       .collect();
     let paths: Vec<&str> = files.iter().map(|(file, _)| file.path.as_str()).collect();
-    let prepass: Vec<_> = input
-      .prepass
-      .findings
-      .iter()
-      .filter(|finding| paths.contains(&finding.path.as_str()))
-      .collect();
-    let mut last = prompt::chunk(&files, &prepass, input.memory, mask, true);
-    if !prompt::fits(&prefix, &last) {
-      reviews.notes.push(format!(
-        "surrounding source left out of a {}-file chunk: prompt over budget",
-        paths.len()
-      ));
-      last = prompt::chunk(&files, &prepass, input.memory, mask, false);
-    }
-    if !prompt::fits(&prefix, &last) {
+    let Some(last) = last_message(input, &files, &paths, mask, (&prefix, &mut reviews)) else {
       reviews.fail(&paths, "prompt over budget", false);
       continue;
-    }
+    };
     let messages = [
-      Message {
-        role: "system",
-        content: &prefix.system,
-      },
-      Message {
-        role: "user",
-        content: &prefix.conventions,
-      },
-      Message {
-        role: "user",
-        content: &last,
-      },
+      message("system", &prefix.system),
+      message("user", &prefix.conventions),
+      message("user", &last),
     ];
     send(&mut reviews, &paths, &messages, call, ledger);
   }
   reviews
+}
+
+/// The chunk's message within the prompt budget: with source when it fits,
+/// else without it (noted), else none.
+fn last_message(
+  input: &Input<'_>,
+  files: &[(&ShapedFile, &Package)],
+  paths: &[&str],
+  mask: &Mask,
+  (prefix, reviews): (&Prefix, &mut Reviews),
+) -> Option<String> {
+  let prepass: Vec<_> = input
+    .prepass
+    .findings
+    .iter()
+    .filter(|finding| paths.contains(&finding.path.as_str()))
+    .collect();
+  let with_source = prompt::chunk(files, &prepass, input.memory, mask, true);
+  if prompt::fits(prefix, &with_source) {
+    return Some(with_source);
+  }
+  reviews.notes.push(format!(
+    "surrounding source left out of a {}-file chunk: prompt over budget",
+    paths.len()
+  ));
+  let bare = prompt::chunk(files, &prepass, input.memory, mask, false);
+  prompt::fits(prefix, &bare).then_some(bare)
+}
+
+pub(crate) fn message<'a>(role: &'a str, content: &'a str) -> Message<'a> {
+  Message { role, content }
 }
 
 fn send(
