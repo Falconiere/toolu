@@ -1,9 +1,9 @@
 use std::fs;
 
-use toolu_engine::quality::AstGrepScan;
+use toolu_engine::quality::{AstGrepHit, AstGrepScan};
 
-use crate::contract::Side;
-use crate::prepass::tests::{added, empty, env, secret_repo, shaped};
+use crate::contract::{Side, Source};
+use crate::prepass::tests::{added, empty, env, secret_repo, shaped, token};
 use crate::prepass::{NoticeKind, run_with};
 use crate::shape::ChangedLine;
 
@@ -70,4 +70,34 @@ fn prepass_astgrep_a_path_starting_with_a_dash_is_skipped_not_passed_as_a_flag()
     result.notices[0].text,
     "prepass: ast-grep skipped -rf.rs: path starts with '-' and could be read as a flag"
   );
+}
+
+#[test]
+fn prepass_astgrep_a_finding_on_a_line_with_a_secret_is_masked_with_spans() {
+  let (dir, _) = secret_repo();
+  let secret = token();
+  let text = format!("todo!(); // {secret}");
+  let shaped = shaped("src/lib.rs", vec![added(2, &text)]);
+  let hit = AstGrepHit {
+    rule_id: "review-todo-macro".to_owned(),
+    file: "./src/lib.rs".to_owned(),
+    line: 2,
+    excerpt: format!("src/lib.rs:2:{text}"),
+    text: text.clone(),
+    first: true,
+  };
+  let result = run_with(&env(), dir.path(), &shaped, &|_, _, _| AstGrepScan::Ok {
+    hits: vec![hit.clone()],
+    empty: false,
+  });
+  let structural: Vec<_> = result
+    .findings
+    .iter()
+    .filter(|found| found.source == Source::AstGrep)
+    .collect();
+  assert_eq!(structural.len(), 1);
+  assert_eq!(structural[0].quote, "todo!(); // ***");
+  assert!(!structural[0].quote.contains(&secret));
+  let span = structural[0].redaction_spans[0];
+  assert_eq!(text.get(span.start..span.end), Some(secret.as_str()));
 }

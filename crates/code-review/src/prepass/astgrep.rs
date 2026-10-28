@@ -15,6 +15,7 @@ use toolu_runtime::git::toplevel;
 use toolu_runtime::process::{Spec, run};
 use toolu_runtime::registry::rule::RuleContext;
 
+use super::secrets::redact_line;
 use super::{Notice, NoticeKind, Scan, finding_id};
 use crate::contract::{Finding, Severity, Side, Source};
 use crate::shape::Shaped;
@@ -127,19 +128,22 @@ fn findings(shaped: &Shaped, hits: &[AstGrepHit]) -> Vec<Finding> {
         .lines
         .iter()
         .find(|line| line.side == Side::New && line.line == number)?;
-      seen.insert((path, number, &hit.rule_id)).then(|| Finding {
-        id: finding_id(TAG, path, number, &hit.rule_id),
-        path: file.path.clone(),
-        line: number,
-        end_line: number,
-        side: Side::New,
-        severity: Severity::Medium,
-        category: hit.rule_id.clone(),
-        source: Source::AstGrep,
-        claim: message(&hit.rule_id),
-        quote: line.text.clone(),
-        suggestion: None,
-        redaction_spans: Vec::new(),
+      seen.insert((path, number, &hit.rule_id)).then(|| {
+        let (quote, redaction_spans) = redact_line(&line.text);
+        Finding {
+          id: finding_id(TAG, path, number, &hit.rule_id),
+          path: file.path.clone(),
+          line: number,
+          end_line: number,
+          side: Side::New,
+          severity: Severity::Medium,
+          category: hit.rule_id.clone(),
+          source: Source::AstGrep,
+          claim: message(&hit.rule_id),
+          quote,
+          suggestion: None,
+          redaction_spans,
+        }
       })
     })
     .collect()

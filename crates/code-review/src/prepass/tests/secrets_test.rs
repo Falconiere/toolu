@@ -1,4 +1,4 @@
-use super::scan;
+use super::{redact_line, scan};
 use crate::contract::{Finding, Severity, Side, Source};
 use crate::prepass::tests::{added, shaped, token};
 use crate::shape::{ChangedLine, Shaped};
@@ -71,7 +71,7 @@ fn prepass_secrets_low_entropy_long_tokens_and_short_tokens_are_ignored() {
 }
 
 #[test]
-fn prepass_secrets_a_known_pattern_beats_entropy_and_old_lines_are_not_scanned() {
+fn prepass_secrets_a_known_pattern_sets_the_category_and_old_lines_are_not_scanned() {
   let both = format!("\"{}\" \"Zx9Qk2Lm7Pv4Rt8Wn3Yc6Bd1Fh5Gj0Sa\"", token());
   let old = ChangedLine {
     side: Side::Old,
@@ -81,7 +81,9 @@ fn prepass_secrets_a_known_pattern_beats_entropy_and_old_lines_are_not_scanned()
   let found = secrets_of(&shaped("a.rs", vec![added(1, &both), old]));
   assert_eq!(found.len(), 1);
   assert_eq!(found[0].category, "secret-github-token");
-  assert_eq!(found[0].redaction_spans.len(), 1);
+  assert_eq!(found[0].severity, Severity::Blocker);
+  assert_eq!(found[0].redaction_spans.len(), 2);
+  assert_eq!(found[0].quote, "\"***\" \"***\"");
 }
 
 #[test]
@@ -102,4 +104,48 @@ fn prepass_secrets_two_known_secrets_on_one_line_are_both_masked() {
     .filter_map(|span| text.get(span.start..span.end))
     .collect();
   assert_eq!(masked, [github.as_str(), aws.as_str()]);
+}
+
+#[test]
+fn prepass_secrets_a_known_secret_and_a_high_entropy_token_are_both_masked() {
+  let aws = format!("AKIA{}", "ABCDEFGHIJKLMNOP");
+  let entropic = "Zx9Qk2Lm7Pv4Rt8Wn3Yc6Bd1Fh5Gj0SaQw2Er4Ty6U";
+  assert_eq!(entropic.len(), 42);
+  let text = format!("\"{aws}\" \"{entropic}\"");
+  let found = secrets_of(&shaped("a.rs", vec![added(5, &text)]));
+  assert_eq!(found.len(), 1);
+  let one = &found[0];
+  assert_eq!(one.category, "secret-aws-access-key");
+  assert_eq!(one.severity, Severity::Blocker);
+  assert_eq!(one.quote, "\"***\" \"***\"");
+  assert!(!one.quote.contains(entropic));
+  let masked: Vec<&str> = one
+    .redaction_spans
+    .iter()
+    .filter_map(|span| text.get(span.start..span.end))
+    .collect();
+  assert_eq!(masked, [aws.as_str(), entropic]);
+}
+
+#[test]
+fn prepass_secrets_redact_line_masks_known_and_entropy_tokens_with_spans() {
+  let secret = token();
+  let text = format!("todo!(); // {secret} Zx9Qk2Lm7Pv4Rt8Wn3Yc6Bd1Fh5Gj0Sa");
+  let (quote, spans) = redact_line(&text);
+  assert_eq!(quote, "todo!(); // *** ***");
+  let masked: Vec<&str> = spans
+    .iter()
+    .filter_map(|span| text.get(span.start..span.end))
+    .collect();
+  assert_eq!(
+    masked,
+    [secret.as_str(), "Zx9Qk2Lm7Pv4Rt8Wn3Yc6Bd1Fh5Gj0Sa"]
+  );
+}
+
+#[test]
+fn prepass_secrets_redact_line_leaves_a_clean_line_alone() {
+  let (quote, spans) = redact_line("    todo!()");
+  assert_eq!(quote, "    todo!()");
+  assert_eq!(spans, Vec::new());
 }

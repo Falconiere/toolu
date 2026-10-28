@@ -3,6 +3,7 @@
 //! `rules.json`, read at compile time, so there is one source of patterns.
 
 use std::collections::BTreeMap;
+use std::sync::OnceLock;
 
 use regex::Regex;
 use serde::Deserialize;
@@ -68,19 +69,24 @@ impl Scanner {
     Ok(Scanner { known, token })
   }
 
-  /// A known pattern wins; only a line without one is checked for entropy.
+  /// Category, claim and severity come from the first matching known pattern, else
+  /// from entropy alone. The spans always cover every known match and every
+  /// high-entropy token, so a second secret on the line is masked too.
   fn inspect(&self, text: &str) -> Option<Hit> {
-    self.known_hit(text).or_else(|| self.entropy_hit(text))
-  }
-
-  /// Category, claim and severity come from the first matching pattern; the spans
-  /// come from every known pattern, so a second secret on the line is masked too.
-  fn known_hit(&self, text: &str) -> Option<Hit> {
-    let first = self.known.iter().find(|rule| rule.regex.is_match(text))?;
+    let entropic = spans(&self.token, text, |token| entropy(token) >= ENTROPY_MIN);
+    let Some(first) = self.known.iter().find(|rule| rule.regex.is_match(text)) else {
+      return (!entropic.is_empty()).then(|| Hit {
+        category: "secret-entropy".to_owned(),
+        claim: "high-entropy token looks like a secret".to_owned(),
+        severity: Severity::Medium,
+        spans: merge(entropic),
+      });
+    };
     let all = self
       .known
       .iter()
       .flat_map(|rule| spans(&rule.regex, text, |_| true))
+      .chain(entropic)
       .collect();
     Some(Hit {
       category: format!("secret-{}", first.id),
@@ -90,14 +96,31 @@ impl Scanner {
     })
   }
 
-  fn entropy_hit(&self, text: &str) -> Option<Hit> {
-    let spans = spans(&self.token, text, |token| entropy(token) >= ENTROPY_MIN);
-    (!spans.is_empty()).then(|| Hit {
-      category: "secret-entropy".to_owned(),
-      claim: "high-entropy token looks like a secret".to_owned(),
-      severity: Severity::Medium,
-      spans,
-    })
+  /// `text` masked at every known and entropy span, and the spans.
+  fn redact(&self, text: &str) -> (String, Vec<RedactionSpan>) {
+    let mut all: Vec<RedactionSpan> = self
+      .known
+      .iter()
+      .flat_map(|rule| spans(&rule.regex, text, |_| true))
+      .collect();
+    all.extend(spans(&self.token, text, |token| {
+      entropy(token) >= ENTROPY_MIN
+    }));
+    let merged = merge(all);
+    (mask(text, &merged), merged)
+  }
+}
+
+/// The compiled scanner, built once for `redact_line`.
+static SCANNER: OnceLock<Result<Scanner, String>> = OnceLock::new();
+
+/// `text` with every secret masked, and the byte spans of what was masked, for
+/// quotes of findings that do not come from the secrets scan. If the table cannot
+/// be compiled the text is returned as is; `scan` already reports that.
+pub(super) fn redact_line(text: &str) -> (String, Vec<RedactionSpan>) {
+  match SCANNER.get_or_init(Scanner::compile) {
+    Ok(scanner) => scanner.redact(text),
+    Err(_) => (text.to_owned(), Vec::new()),
   }
 }
 

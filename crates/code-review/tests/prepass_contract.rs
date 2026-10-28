@@ -111,6 +111,26 @@ fn prepass_astgrep_a_changed_todo_is_found_alongside_a_secret() {
 }
 
 #[test]
+fn prepass_astgrep_finding_on_a_secret_line_never_leaks_the_secret() {
+  let secret = format!("ghp_{}", "Ab1".repeat(12));
+  let dir = repo(
+    "fn a() {}\n",
+    &format!("fn a() {{\n    todo!() // {secret}\n}}\n"),
+  )
+  .expect("repo");
+  let shaped = shape(&env(), dir.path(), Some("main")).expect("shape");
+  let result = run(&env(), dir.path(), &shaped);
+  let sources: Vec<Source> = result.findings.iter().map(|f| f.source).collect();
+  assert_eq!(sources, [Source::Secrets, Source::AstGrep]);
+  for found in &result.findings {
+    assert_eq!(found.quote, "    todo!() // ***");
+    assert_eq!(found.redaction_spans.len(), 1);
+  }
+  let doc = serde_json::to_string(&result.findings).expect("json");
+  assert!(!doc.contains(&secret));
+}
+
+#[test]
 fn prepass_astgrep_missing_never_reads_as_a_clean_structural_pass() {
   let dir = repo("fn a() {}\n", "fn a() {}\nfn b() {}\n").expect("repo");
   let shaped = shape(&env(), dir.path(), Some("main")).expect("shape");
