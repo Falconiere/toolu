@@ -32,6 +32,18 @@ The dirty-worktree check excludes only this plugin's untracked review state and 
 - `toolu code-review dismiss`: records an exact-ID dismissal and refreshes gate state without a model call only when the prior full review matches the clean committed diff.
 - Codex needs outbound network enabled; its `workspace-write` sandbox blocks OpenRouter. Muse needs the key exported in its command environment.
 
+## Eval
+
+`toolu code-review eval --cases DIR [--arm baseline|enhanced|both] [--effort LEVEL]... [--live] [--replay-dir DIR] [--report PATH]` runs a paired comparison of the review with the Jev judge off (baseline) and on (enhanced) against committed expectations. `--cases` points at a set such as `fixtures/code-review-eval` (`expectations.json` and `cases/<id>/files/{base,tip}`). `--arm` defaults to `both`.
+
+`--effort` repeats for calibration and accepts `none`, `auto`, `small`, `medium`, `high` and `xhigh`; the default is `auto`. `none` is the known-weak baseline: the lowest level, never judged.
+
+Replay is the default. Without `--live` every model call is answered from recorded responses in `--replay-dir` (default `<cases>/replay`), nothing is sent and no key is needed; a request with no recording fails that case closed and the run is unverified. `--live` calls OpenRouter and Jev for real, records every exchange into the replay directory, and needs the repository opt-in and `OPENROUTER_API_KEY`. Without them it exits 69, unverified, before any request. Exit 0 means expectations were satisfied, 2 means they were missed, and 69 means unverified, which is not a pass.
+
+### Quality bar
+
+Fewer findings or fewer tokens alone is not better. A review is judged by expectation outcomes: defects caught, false positives raised and unclassified findings. A finding that matches no expectation is reported as unclassified; it is neither credited nor silently dropped. Compare arms and effort levels on those outcomes first, and read tokens per finding only as a cost beside them.
+
 ## Muse
 
 Muse Code loads this plugin from `.muse-plugin/plugin.json`. Validate it with `muse plugins validate plugins/code-review`.

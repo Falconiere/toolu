@@ -15,6 +15,7 @@ Usage: toolu code-review [OPTIONS] <COMMAND>
 
 Commands:
   run      Review the branch diff and print the verdict report
+  eval     Compare a baseline and a Jev-enhanced review against committed expectations; replays recorded responses unless --live
   dismiss  Settle a branch finding by exact ID without a model call
   help     Print this message or the help of the given subcommand(s)
 
@@ -41,6 +42,27 @@ Options:
       --effort <LEVEL>    Review effort: auto lets Jev pick the level; a fixed level skips it; default: codeReview.effort, else auto [possible values: auto, small, medium, high, xhigh]
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu code-review eval`
+
+```text
+Compare a baseline and a Jev-enhanced review against committed expectations; replays recorded responses unless --live
+
+Usage: toolu code-review eval [OPTIONS] --cases <DIR>
+
+Options:
+      --cases <DIR>       The case set: expectations.json and cases/<id>/files/{base,tip}
+      --json              Print exactly one JSON document on stdout
+      --arm <ARM>         Which arms to run: the Jev judge off, on, or both [default: both] [possible values: both, baseline, enhanced]
+  -q, --quiet             Drop the diagnostics of a successful run
+      --effort <LEVEL>    Effort setting to run; repeatable for calibration. none is the known-weak baseline (lowest level, never judged); default: auto [possible values: auto, small, medium, high, xhigh, none]
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+      --live              Call OpenRouter and Jev for real (needs the repository opt-in and OPENROUTER_API_KEY) and record every exchange; without it nothing is sent
+      --replay-dir <DIR>  Where recorded responses are read (replay) or written (--live); default: <cases>/replay
+      --report <PATH>     Also write the JSON report to this file
   -h, --help              Print help
 ```
 

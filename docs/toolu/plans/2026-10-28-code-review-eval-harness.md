@@ -54,3 +54,8 @@ lacks a key. Replay hit marks `replayed` and does not add cost. Delivery:
 `cargo xtask gate`, push-review verdict `overall: ready`, push, PR with
 `Closes Falconiere/toolu#670` / `Part of Falconiere/toolu#660`, then babysit
 handoff per the epic brief.
+
+## Deviations
+
+- `--effort none` runs the baseline arm only at a small budget, because the OpenRouter client rejects reasoning `none`; it is not a true reasoning-off run.
+- Fixture sources are `*.rs.fixture` files that materialize to `*.rs`, so `check-reach` stays clean.
