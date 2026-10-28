@@ -1,4 +1,8 @@
 {
+  "codeReview": {
+    "effort": "auto",
+    "enabled": true
+  },
   "comemory": {
     "setup_done": true
   },

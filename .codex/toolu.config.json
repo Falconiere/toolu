@@ -1,4 +1,8 @@
 {
+  "codeReview": {
+    "effort": "auto",
+    "enabled": true
+  },
   "lang": {
     "rust": {
       "maxFileLines": 300,
