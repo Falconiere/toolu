@@ -203,6 +203,21 @@ fn dashboard_asset_page_is_offline_and_font_licensed() {
   let version = env!("CARGO_PKG_VERSION");
   assert!(page.contains(&format!("/assets/{version}/tokens.css")));
   assert!(page.contains(&format!("/assets/{version}/js/app.js")));
+  assert!(
+    page.contains("x-release-please-start-version") && page.contains("x-release-please-end"),
+    "index.html must mark asset URLs for release-please"
+  );
+  let tokens = std::fs::read_to_string(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/assets/dashboard/tokens.css"
+  ))
+  .expect("tokens");
+  assert!(
+    tokens.contains(&format!("/assets/{version}/fonts/"))
+      && tokens.contains("x-release-please-start-version")
+      && tokens.contains("x-release-please-end"),
+    "tokens.css must mark font URLs for release-please"
+  );
   for forbidden in ["<style", "<script>", "http://", "https://"] {
     assert!(!page.contains(forbidden), "{forbidden}");
   }
