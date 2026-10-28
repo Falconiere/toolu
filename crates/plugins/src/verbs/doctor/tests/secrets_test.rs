@@ -50,10 +50,18 @@ fn unsafe_secrets_json_permissions_fail() {
   std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
   let roots = roots(home.path());
   let findings = check(&roots, roots.env(), &BTreeSet::new());
+  let fail = findings
+    .iter()
+    .find(|finding| finding.status == Level::Fail)
+    .expect("fail finding");
+  assert!(fail.summary.contains("unsafe permissions"), "{fail:?}");
+  assert!(!fail.summary.contains("canary"), "{fail:?}");
+  assert_ne!(fail.name.as_deref(), Some("canary"));
   assert!(
-    findings.iter().any(
-      |finding| finding.status == Level::Fail && finding.summary.contains("unsafe permissions")
-    ),
-    "{findings:?}"
+    fail
+      .fix
+      .as_deref()
+      .is_some_and(|fix| fix.contains("chmod 600") && !fix.contains("canary")),
+    "{fail:?}"
   );
 }

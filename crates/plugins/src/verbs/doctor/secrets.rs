@@ -95,7 +95,10 @@ fn fix_for(error: &SecretError, path: &Path) -> String {
   if text.contains("unsafe permissions") {
     return format!("chmod 600 {}", path.display());
   }
-  if text.contains("invalid") {
+  if text.contains("TOOLU_EPIC_PEER_TOKENS") {
+    return "export TOOLU_EPIC_PEER_TOKENS='{\"peer\":\"token\"}'".to_owned();
+  }
+  if text.contains("invalid secrets.json") {
     return format!("fix or recreate {}", path.display());
   }
   format!("ensure {} is readable", path.display())

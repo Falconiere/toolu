@@ -197,7 +197,8 @@ pub(crate) fn run(
   })
 }
 
-fn redact_text_all(text: &str, env: &toolu_runtime::env::Env, hosts: &[Host]) -> String {
+/// Redact using every selected host's secrets.json values.
+pub(super) fn redact_text_all(text: &str, env: &toolu_runtime::env::Env, hosts: &[Host]) -> String {
   let mut out = text.to_owned();
   for host in hosts {
     out = epic_secrets::redact_text(&out, &load_secrets(env, Some(*host)));

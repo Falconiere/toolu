@@ -38,6 +38,15 @@ impl Sb {
     Ok(())
   }
 
+  fn stub_fail(&self, name: &str, stderr: &str) -> Res<()> {
+    let temp = self.root().join(format!("bin/.{name}"));
+    let body = format!("#!/bin/sh\nprintf '%s\\n' '{stderr}' >&2\nexit 1\n");
+    std::fs::write(&temp, body)?;
+    std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755))?;
+    std::fs::rename(&temp, self.root().join(format!("bin/{name}")))?;
+    Ok(())
+  }
+
   fn run(&self, args: &[&str]) -> Res<Output> {
     let path = format!("{}:/usr/bin:/bin", self.root().join("bin").display());
     let mut command = Command::new(TOOLU);
@@ -105,6 +114,31 @@ fn doctor_warns_when_code_review_lacks_openrouter_key() {
     secrets
       .iter()
       .any(|finding| { finding["name"] == "OPENROUTER_API_KEY" && finding["status"] == "warn" }),
+    "{doc}"
+  );
+}
+
+#[test]
+fn doctor_fails_when_host_list_fails_without_echoing_stderr() {
+  let sb = Sb::new().unwrap();
+  sb.stub_fail("claude", "CANARY_SECRET_stderr").unwrap();
+  let out = sb
+    .run(&["--json", "plugins", "doctor", "--host", "claude"])
+    .unwrap();
+  assert_eq!(out.status.code(), Some(1), "{}", text(&out));
+  let shown = format!("{}{}", text(&out), String::from_utf8_lossy(&out.stderr));
+  assert!(
+    !shown.contains("CANARY_SECRET_stderr"),
+    "stderr leaked: {shown}"
+  );
+  let doc: Value = serde_json::from_str(&text(&out)).unwrap();
+  assert_eq!(doc["ok"], false);
+  assert!(
+    doc["hosts"][0]["findings"]
+      .as_array()
+      .unwrap()
+      .iter()
+      .any(|finding| finding["status"] == "fail" && finding["scope"] == "host"),
     "{doc}"
   );
 }

@@ -217,11 +217,23 @@ fn claude_root(name: &str, env: &toolu_runtime::env::Env) -> Option<PathBuf> {
 }
 
 fn muse_approval(entry: &Installed, cx: &Context<'_>) -> Vec<Finding> {
+  let config = toolu_runtime::host::muse::config_dir(&cx.env);
+  if toolu_runtime::host::muse::dir_unreadable(&config)
+    || toolu_runtime::host::muse::file_unreadable(&config.join("settings.json"))
+  {
+    return vec![Finding::warn(
+      Scope::Plugin,
+      Some(entry.name.clone()),
+      "approval status is unknown inside the Muse sandbox; run toolu plugins doctor from a terminal"
+        .to_owned(),
+      None,
+    )];
+  }
   let argv = muse::argv(&["plugins", "inspect", &entry.name, "--json"]);
   let ran = verbs::Driver {
     adapter: crate::host::adapter::Adapter::Muse,
     env: cx.env.clone(),
-    timeout: cx.timeout,
+    timeout: cx.timeout.min(std::time::Duration::from_secs(10)),
     checkout: None,
     pin: None,
     approval: crate::args::Approval::Report,
