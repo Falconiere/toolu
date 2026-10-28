@@ -2,23 +2,26 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
-use crate::contract::Source;
+use crate::contract::{Omitted, Side, Source};
 use crate::memory::{Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
-use crate::prepass::Redaction;
 use crate::shape::Shaped;
 
 use super::{Candidate, Recap, SeverityChange, fingerprint};
 
-/// Match by echoed `prior_id` first, then by fingerprint through the rename
-/// map; fingerprint ties prefer an open prior, then a dismissed one.
+/// Match by echoed `prior_id` first (a prior on the finding's rename-mapped
+/// path only), then by fingerprint through the rename map; fingerprint ties
+/// prefer an open prior, then a dismissed one.
 pub(super) fn match_prior<'a>(
   finding: &ModelFinding,
   memory: &'a Memory,
   shaped: &Shaped,
 ) -> Option<&'a PriorFinding> {
   if let Some(id) = &finding.prior_id
-    && let Some(prior) = memory.prior.iter().find(|prior| &prior.id == id)
+    && let Some(prior) = memory
+      .prior
+      .iter()
+      .find(|prior| &prior.id == id && mapped_path(&prior.path, shaped) == finding.path)
   {
     return Some(prior);
   }
@@ -57,15 +60,16 @@ pub(super) fn generated_id(fingerprint: &str) -> String {
   format!("cr-{hash:016x}")
 }
 
-/// Collapse `(path, line, end_line, text-fingerprint)` duplicates: highest
+/// Collapse `(path, side, line, end_line, text-fingerprint)` duplicates: highest
 /// severity survives, deterministic findings win ties.
 pub(super) fn dedupe(candidates: Vec<Candidate>) -> Vec<Candidate> {
   let mut kept: Vec<Candidate> = Vec::new();
-  let mut slots: HashMap<(String, u32, u32, String), usize> = HashMap::new();
+  let mut slots: HashMap<(String, bool, u32, u32, String), usize> = HashMap::new();
   for candidate in candidates {
     let finding = &candidate.finding;
     let key = (
       finding.path.clone(),
+      finding.side == Side::Old,
       finding.line,
       finding.end_line,
       fingerprint(&finding.path, &finding.category, &finding.claim),
@@ -84,6 +88,11 @@ pub(super) fn dedupe(candidates: Vec<Candidate>) -> Vec<Candidate> {
         });
         if wins && let Some(current) = kept.get_mut(slot) {
           *current = candidate;
+        } else if let Some(current) = kept.get_mut(slot)
+          && current.prior.is_none()
+        {
+          // A deterministic winner still re-raises the loser's prior.
+          current.prior = candidate.prior;
         }
       }
     }
@@ -99,12 +108,13 @@ pub(super) fn build_recap(
   shaped: &Shaped,
   memory: &Memory,
   lost: &BTreeMap<String, String>,
+  unreviewed: &[Omitted],
   recap: &mut Recap,
 ) {
   let mut re_raised: BTreeSet<String> = BTreeSet::new();
   for candidate in kept
     .iter()
-    .filter(|item| item.finding.source == Source::Llm)
+    .filter(|item| item.prior.is_some() || item.finding.source == Source::Llm)
   {
     note_survivor(candidate, recap, &mut re_raised);
   }
@@ -114,7 +124,9 @@ pub(super) fn build_recap(
     .filter(|prior| prior.status == Status::Open)
   {
     let path = mapped_path(&prior.path, shaped);
-    let reexamined = shaped.coverage.reviewed.contains(&path) && !lost.contains_key(&path);
+    let reexamined = shaped.coverage.reviewed.contains(&path)
+      && !lost.contains_key(&path)
+      && !unreviewed.iter().any(|item| item.path == path);
     if re_raised.contains(&prior.id) || !reexamined {
       recap.still_open.push(prior.id.clone());
     } else {
@@ -140,31 +152,6 @@ fn note_survivor(candidate: &Candidate, recap: &mut Recap, re_raised: &mut BTree
       to: candidate.finding.severity,
     });
   }
-}
-
-/// Paths whose secret spans cannot be located in the shaped lines: their
-/// model findings may not be sent or stored unmasked.
-pub(super) fn bad_redaction_paths(shaped: &Shaped, redactions: &[Redaction]) -> BTreeSet<String> {
-  redactions
-    .iter()
-    .filter(|redaction| {
-      let line = shaped
-        .files
-        .iter()
-        .filter(|file| file.path == redaction.path)
-        .flat_map(|file| &file.lines)
-        .find(|line| line.side == redaction.side && line.line == redaction.line);
-      line.is_none_or(|line| {
-        redaction.spans.iter().any(|span| {
-          line
-            .text
-            .get(span.start..span.end)
-            .is_none_or(str::is_empty)
-        })
-      })
-    })
-    .map(|redaction| redaction.path.clone())
-    .collect()
 }
 
 #[cfg(test)]

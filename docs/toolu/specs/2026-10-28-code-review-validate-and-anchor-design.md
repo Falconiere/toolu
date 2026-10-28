@@ -37,8 +37,13 @@ pub fn validate(
   deterministic: &[Finding],
   memory: &Memory,
   redactions: &[Redaction],
+  unreviewed: &[Omitted],
 ) -> Validated
 ```
+
+`unreviewed` is the review stage's lost coverage (failed or oversized
+review calls, #666's `Reviewed.unreviewed`): those paths were not
+re-examined, so their open priors cannot resolve.
 
 No I/O, no network, no verdict. `Validated` carries the anchored findings,
 the added `unreviewed` coverage, a round `Recap`, and the grounding-drop
@@ -76,9 +81,12 @@ pub fn normalize_text(text: &str) -> String
 - Fingerprint: `path \u{1f} category \u{1f} normalized claim`, matching the
   shape #661's records already serialize. Normalization lowercases, collapses
   every whitespace run to one space, and trims; it is line-independent.
-- Finding ids: a finding matched to a prior keeps that prior's id; a new
-  finding gets `cr-<16 hex>` from an FNV-1a hash of its fingerprint, so the
-  same claim re-raised next round re-derives the same id.
+- Finding ids: a finding matched to an open or resolved prior keeps that
+  prior's id; a new finding gets `cr-<16 hex>` from an FNV-1a hash of its
+  fingerprint plus its cited range and side, so identical claims at
+  different lines are different findings. A blocker re-raised against a
+  dismissed prior (not suppressed, below) reopens under that fresh id
+  instead of inheriting the settled one.
 - Anchor lookup: a `HashMap<(path, side, line), &str>` built once from every
   `ShapedFile.lines`; removals and deleted files anchor on `Side::Old`, so a
   finding about a removed line is not dropped as hallucinated.
@@ -94,16 +102,24 @@ Processing order per model finding:
 3. **Quote.** The whitespace-normalized quote must equal the normalized cited
    lines joined by `\n`. A mismatch drops the finding, counts it, and marks
    that coverage `unreviewed` — never a clean pass.
-4. **Mask, then suggestion.** Quote, claim, and suggestion are masked. On a
-   surviving finding, a suggestion is literal replacement code or it is
-   dropped (the finding stays): prose has no code punctuation
-   (`(){}[];` etc.) and at least three words. A finding whose cited range
-   did not survive anchoring is already dropped at step 2, suggestion and
-   all — deterministic findings carry no model suggestion to check.
-5. **Settled suppression.** Matched against a `Dismissed` prior (step order
-   below): non-blocking findings are suppressed on any match; a blocking
-   finding is suppressed only on an exact `prior_id` echo. Suppressed
-   findings are not counted and never resent.
+4. **Mask, then suggestion.** Quote, claim, and suggestion are masked; the
+   reported quote is the masked cited diff text itself (the model only ever
+   saw the masked patch, so quotes are compared masked, case-sensitively,
+   with whitespace runs collapsed). On a surviving finding, a suggestion is
+   literal replacement code or it is dropped (the finding stays): prose has
+   no code punctuation (`(){}[];` etc.) and at least three words, or starts
+   with a prose word (`consider`, `you`, `this`, `prefer`, `try`, or `use`
+   without `::`) even when it carries inline code. A finding whose cited
+   range did not survive anchoring is already dropped at step 2, suggestion
+   and all — deterministic findings carry no model suggestion to check.
+   `redaction_spans` are carried only for single-line findings: spans index
+   one line in the contract, and a multi-line quote is already masked.
+5. **Settled suppression.** An echoed id present in `memory.dismissals`
+   suppresses at any severity (the echo is the exact match). Matched
+   against a `Dismissed` prior (step order below): non-blocking findings
+   are suppressed on any match; a blocking finding is suppressed only on
+   an exact `prior_id` echo. Suppressed findings are not counted and never
+   resent.
 6. **Dedupe.** By `(path, line, end_line, text-fingerprint)` over model and
    deterministic findings together, before any send (#669). Highest severity
    survives; ties keep the deterministic finding, then the first seen.
@@ -115,8 +131,11 @@ a matched open prior keeps the highest severity and records the change in
 `recap.severity_changes`.
 
 Recap over `Open` priors only: matched by a survivor → `still_open` (prior
-id); unmatched but its (rename-mapped) path is in `shaped.coverage.reviewed`
-and not in this stage's added `unreviewed` → `resolved` (it was re-examined
+id) — including when a deterministic finding wins the dedupe tie over the
+model duplicate that re-raised it, whose prior match transfers to the
+winner; unmatched but its (rename-mapped) path is in
+`shaped.coverage.reviewed` and in neither this stage's added `unreviewed`
+nor the review stage's `unreviewed` input → `resolved` (it was re-examined
 and not re-raised); otherwise → `still_open` (unreexamined findings are never
 marked resolved). Survivors with no prior match → `new`.
 
@@ -198,4 +217,9 @@ report contract (`contract.rs`, `commands.json`) is untouched.
 
 None blocking. The two Jev-settled defaults (whitespace-normalized quotes,
 explicit-marker withdrawals) and the re-examined = reviewed-and-not-lost
-definition are recorded above for #669 to consume as-is.
+definition are recorded above for #669 to consume as-is. The local
+`/code-review xhigh --fix` pass (2026-10-28) added the masked quote
+comparison, the failed-review `unreviewed` input, dismissal-by-id,
+range-scoped fresh ids, prose-starter suggestions, dedupe prior transfer,
+and single-line spans; each has a regression test that fails on the
+pre-review code.

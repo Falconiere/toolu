@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 mod round;
 
-use round::{bad_redaction_paths, build_recap, dedupe, generated_id, match_prior};
+use round::{build_recap, dedupe, generated_id, match_prior};
 
 use crate::contract::{Finding, Omitted, RedactionSpan, Severity, Side, Source};
 use crate::memory::{Memory, PriorFinding, Status};
@@ -58,14 +58,15 @@ pub struct Validated {
   pub dropped: usize,
 }
 
-/// Text as fingerprints and quote comparisons see it: lowercased, with every
-/// whitespace run collapsed to one space and the ends trimmed.
+/// Text as fingerprints see it: lowercased, with every whitespace run
+/// collapsed to one space and the ends trimmed.
 pub fn normalize_text(text: &str) -> String {
-  text
-    .split_whitespace()
-    .collect::<Vec<_>>()
-    .join(" ")
-    .to_lowercase()
+  collapse_whitespace(text).to_lowercase()
+}
+
+/// Text as quote comparisons see it: case kept, whitespace runs collapsed.
+fn collapse_whitespace(text: &str) -> String {
+  text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
 /// The line-independent memory fingerprint: `path`, category, normalized claim.
@@ -78,24 +79,30 @@ pub fn fingerprint(path: &str, category: &str, claim: &str) -> String {
   )
 }
 
-type Anchors = HashMap<(String, bool, u32), String>;
+type Anchors<'a> = HashMap<(&'a str, bool, u32), &'a str>;
 
 /// Ground `model` findings in `shaped`, merge the trusted `deterministic`
 /// findings, and match both against `memory` for the round recap.
-/// `redactions` are #664's secret spans over the shaped lines.
+/// `redactions` are #664's secret spans over the shaped lines; `unreviewed`
+/// is the review stage's lost coverage (failed or oversized review calls),
+/// whose paths were not re-examined this round.
 pub fn validate(
   shaped: &Shaped,
   model: &[ModelFinding],
   deterministic: &[Finding],
   memory: &Memory,
   redactions: &[Redaction],
+  unreviewed: &[Omitted],
 ) -> Validated {
   let anchors = anchors(shaped);
-  let bad = bad_redaction_paths(shaped, redactions);
-  let maskable: Vec<Redaction> = redactions
+  // A redaction `Mask` cannot locate makes its path's model findings unsendable.
+  let (maskable, unmaskable): (Vec<Redaction>, Vec<Redaction>) = redactions
     .iter()
-    .filter(|redaction| !bad.contains(&redaction.path))
     .cloned()
+    .partition(|redaction| Mask::new(shaped, std::slice::from_ref(redaction)).is_ok());
+  let bad: BTreeSet<String> = unmaskable
+    .into_iter()
+    .map(|redaction| redaction.path)
     .collect();
   let mask = Mask::new(shaped, &maskable).ok();
   let ctx = Ctx {
@@ -119,7 +126,7 @@ pub fn validate(
     recap: Recap::default(),
     dropped,
   };
-  build_recap(&kept, shaped, memory, &lost, &mut out.recap);
+  build_recap(&kept, shaped, memory, &lost, unreviewed, &mut out.recap);
   out.findings = kept
     .into_iter()
     .map(|candidate| candidate.finding)
@@ -154,7 +161,7 @@ fn collect(
       Some(Ground::Kept(candidate)) => candidates.push(*candidate),
       Some(Ground::Suppressed) => {}
       None => {
-        let reason = if anchored(finding, ctx.anchors) {
+        let reason = if cited(finding, ctx.anchors).is_some() {
           "its quote does not match the cited changed lines"
         } else {
           "it cites no changed line on the cited side"
@@ -178,7 +185,7 @@ pub(super) struct Candidate {
 
 /// What grounding one model finding needs.
 struct Ctx<'a> {
-  anchors: &'a Anchors,
+  anchors: &'a Anchors<'a>,
   mask: Option<&'a Mask>,
   memory: &'a Memory,
   shaped: &'a Shaped,
@@ -206,65 +213,68 @@ fn side_name(side: Side) -> &'static str {
   }
 }
 
-fn anchors(shaped: &Shaped) -> Anchors {
+fn anchors(shaped: &Shaped) -> Anchors<'_> {
   shaped
     .files
     .iter()
     .flat_map(|file| {
       file.lines.iter().map(move |line| {
         (
-          (file.path.clone(), line.side == Side::Old, line.line),
-          line.text.clone(),
+          (file.path.as_str(), line.side == Side::Old, line.line),
+          line.text.as_str(),
         )
       })
     })
     .collect()
 }
 
-fn anchored(finding: &ModelFinding, anchors: &Anchors) -> bool {
-  finding.line > 0
-    && finding.end_line >= finding.line
-    && (finding.line..=finding.end_line)
-      .all(|line| anchors.contains_key(&(finding.path.clone(), finding.side == Side::Old, line)))
-}
-
 /// The cited lines' text, or `None` when any line in the range is not a
 /// changed line on the cited side.
-fn cited(finding: &ModelFinding, anchors: &Anchors) -> Option<String> {
+fn cited(finding: &ModelFinding, anchors: &Anchors<'_>) -> Option<String> {
   if finding.line == 0 || finding.end_line < finding.line {
     return None;
   }
-  let mut texts = Vec::new();
-  for line in finding.line..=finding.end_line {
-    texts.push(
-      anchors
-        .get(&(finding.path.clone(), finding.side == Side::Old, line))?
-        .clone(),
-    );
-  }
-  Some(texts.join("\n"))
+  let side = finding.side == Side::Old;
+  (finding.line..=finding.end_line)
+    .map(|line| anchors.get(&(finding.path.as_str(), side, line)).copied())
+    .collect::<Option<Vec<_>>>()
+    .map(|texts| texts.join("\n"))
 }
 
 fn withdrawn(finding: &ModelFinding) -> bool {
   let category = normalize_text(&finding.category);
-  if matches!(category.as_str(), "no_defect" | "no-defect" | "nodefect") {
+  if matches!(
+    category.as_str(),
+    "no_defect" | "no-defect" | "nodefect" | "no defect"
+  ) {
     return true;
   }
+  // A marker ends at a non-alphanumeric: "No defect." and "abstain:" withdraw.
   let claim = normalize_text(&finding.claim);
-  claim == "no defect"
-    || claim == "abstain"
-    || claim.starts_with("no defect ")
-    || claim.starts_with("no defect,")
-    || claim.starts_with("abstain ")
-    || claim.starts_with("abstain,")
+  ["no defect", "abstain"].iter().any(|marker| {
+    claim
+      .strip_prefix(marker)
+      .is_some_and(|rest| !rest.starts_with(char::is_alphanumeric))
+  })
 }
 
 fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
-  let text = cited(finding, ctx.anchors)?;
-  if normalize_text(&finding.quote) != normalize_text(&text) {
+  let mask = ctx.mask?;
+  // The model saw the masked patch, so both sides are compared masked.
+  let text = mask.apply(&cited(finding, ctx.anchors)?);
+  if collapse_whitespace(&mask.apply(&finding.quote)) != collapse_whitespace(&text) {
     return None;
   }
-  let mask = ctx.mask?;
+  // A settled dismissal by exact id suppresses any severity: the echo is exact.
+  if finding.prior_id.as_deref().is_some_and(|id| {
+    ctx
+      .memory
+      .dismissals
+      .iter()
+      .any(|dismissal| dismissal.id == id)
+  }) {
+    return Some(Ground::Suppressed);
+  }
   let matched = match_prior(finding, ctx.memory, ctx.shaped);
   if matched.is_some_and(|prior| {
     prior.status == Status::Dismissed
@@ -277,16 +287,10 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
     .map_or(finding.severity, |prior| {
       finding.severity.max(prior.severity)
     });
-  let id = matched.map_or_else(
-    || {
-      generated_id(&fingerprint(
-        &finding.path,
-        &finding.category,
-        &finding.claim,
-      ))
-    },
-    |prior| prior.id.clone(),
-  );
+  let id = match matched {
+    Some(prior) if prior.status != Status::Dismissed => prior.id.clone(),
+    _ => fresh_id(finding),
+  };
   let suggestion = finding
     .suggestion
     .as_deref()
@@ -303,7 +307,7 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
       category: finding.category.clone(),
       source: Source::Llm,
       claim: mask.apply(&finding.claim),
-      quote: mask.apply(&finding.quote),
+      quote: text,
       suggestion,
       redaction_spans: spans(ctx, finding),
     },
@@ -312,6 +316,11 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
 }
 
 fn spans(ctx: &Ctx<'_>, finding: &ModelFinding) -> Vec<RedactionSpan> {
+  // Spans index one line (contract), so a multi-line finding carries none:
+  // its quote is already masked, and merged spans would name no line.
+  if finding.line != finding.end_line {
+    return Vec::new();
+  }
   ctx
     .redactions
     .iter()
@@ -324,6 +333,20 @@ fn spans(ctx: &Ctx<'_>, finding: &ModelFinding) -> Vec<RedactionSpan> {
     .collect()
 }
 
+/// A new finding's id: the fingerprint plus its cited range and side, so
+/// two identical claims at different lines are different findings, and a
+/// blocker re-raised against a dismissed prior reopens under a fresh id
+/// instead of inheriting the settled one.
+fn fresh_id(finding: &ModelFinding) -> String {
+  generated_id(&format!(
+    "{}\u{1f}{}\u{1f}{}\u{1f}{}",
+    fingerprint(&finding.path, &finding.category, &finding.claim),
+    finding.line,
+    finding.end_line,
+    side_name(finding.side)
+  ))
+}
+
 /// A suggestion is literal replacement code, not prose: prose has no code
 /// punctuation and at least three words.
 fn is_code(suggestion: &str) -> bool {
@@ -331,7 +354,21 @@ fn is_code(suggestion: &str) -> bool {
   if text.is_empty() {
     return false;
   }
-  text.chars().any(|ch| "(){}[];=`<>".contains(ch)) || text.split_whitespace().count() < 3
+  let words: Vec<&str> = text.split_whitespace().collect();
+  // Prose can carry inline code: "Use `items.last()` instead of indexing".
+  let first = words.first().map(|word| {
+    word
+      .trim_matches(|ch: char| !ch.is_alphanumeric())
+      .to_lowercase()
+  });
+  let prose_start = matches!(
+    first.as_deref(),
+    Some("consider" | "instead" | "you" | "this" | "prefer" | "try")
+  ) || (first.as_deref() == Some("use") && !text.contains("::"));
+  if words.len() >= 3 && prose_start {
+    return false;
+  }
+  text.chars().any(|ch| "(){}[];=`<>".contains(ch)) || words.len() < 3
 }
 
 #[cfg(test)]

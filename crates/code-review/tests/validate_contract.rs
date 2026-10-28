@@ -61,6 +61,7 @@ fn a_grounded_finding_survives_and_a_hallucinated_one_marks_coverage_unreviewed(
     &[],
     &Memory::default(),
     &[],
+    &[],
   );
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.dropped, 1);
@@ -89,6 +90,7 @@ fn severity_drift_against_an_open_prior_is_recorded() {
     &[finding("indexing can panic")],
     &[],
     &memory,
+    &[],
     &[],
   );
   assert_eq!(out.findings[0].id, "f1");
