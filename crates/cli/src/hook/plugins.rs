@@ -117,7 +117,8 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
   Some(toolu_hub::ast_grep::register(&env, detect(&env, None).host))
 }
 
-/// git-better's `SessionStart` registration and its dispatcher dependency check.
+/// git-better's `SessionStart` registration, its dispatcher dependency check and
+/// the branch summary.
 pub(super) fn git_better_hook(request: &HookRequest, context: &Context<'_>) -> Option<Outcome> {
   if request.plugin != toolu_hub::git_better::PLUGIN
     || request.event.as_deref() != Some("SessionStart")
@@ -131,6 +132,7 @@ pub(super) fn git_better_hook(request: &HookRequest, context: &Context<'_>) -> O
       detect(&env, None).host,
     )),
     "check-toolu" => Some(check_toolu(&env)),
+    "session-start" => Some(toolu_hub::git_better::session_start(&env)),
     _ => None,
   }
 }

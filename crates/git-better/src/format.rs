@@ -274,8 +274,12 @@ pub(crate) fn example_message(message: &str) -> String {
   let description = lower.next().map_or_else(String::new, |c| {
     c.to_lowercase().chain(lower).collect::<String>()
   });
+  let found = trailers(message);
+  let intent = trailer(&found, INTENT)
+    .filter(|intent| !intent.is_empty())
+    .unwrap_or("<why this change is needed>");
   let mut example = format!(
-    "{kind}({scope}){}: {description}\n\nIntent: <why this change is needed>",
+    "{kind}({scope}){}: {description}\n\nIntent: {intent}",
     if bang { "!" } else { "" }
   );
   if bang {

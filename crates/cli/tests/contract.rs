@@ -8,6 +8,8 @@
 mod cli;
 #[path = "helpers/code_review_schema.rs"]
 mod code_review_schema;
+#[path = "helpers/git_better_read.rs"]
+mod git_better_read;
 #[path = "helpers/git_better_schema.rs"]
 mod git_better_schema;
 #[path = "helpers/inventory.rs"]

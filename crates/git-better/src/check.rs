@@ -12,7 +12,7 @@ use toolu_runtime::host::roots::Roots;
 use toolu_state::git::{base_branch, current_branch};
 
 use crate::branch::{check_branch, example_branch};
-use crate::cli::env_of;
+use crate::cli::Place;
 use crate::format::{check_message, example_message, is_wip};
 use crate::report::{Finding, Target, render};
 use crate::settings::{self, Settings};
@@ -96,7 +96,7 @@ fn document(found: &[Finding], notes: &[String]) -> String {
 }
 
 /// Run `check`.
-pub(crate) fn check(args: &ArgMatches, ctx: &Ctx) -> Outcome {
+pub(crate) fn check(args: &ArgMatches, ctx: &Ctx, place: &Place) -> Outcome {
   let message = match read_message(args, ctx) {
     Ok(message) => message,
     Err(why) => return Outcome::failed(Exit::Failure, why),
@@ -106,12 +106,11 @@ pub(crate) fn check(args: &ArgMatches, ctx: &Ctx) -> Outcome {
     let why = "give a message (--message or --message-file) or --branch";
     return Outcome::failed(Exit::Usage, why.to_owned());
   }
-  let env = env_of(ctx);
-  let cwd = std::env::current_dir().unwrap_or_default();
+  let (env, cwd) = (&place.env, &place.dir);
   let roots = Roots::new(env.clone(), ctx.host);
-  let settings = settings::load(&roots, Some(&cwd), None);
+  let settings = settings::load(&roots, Some(cwd), None);
   let wip = message.as_deref().is_some_and(is_wip);
-  let base = wip && on_base(&env, &cwd);
+  let base = wip && on_base(env, cwd);
   let found = findings(message.as_deref(), branch, &settings, base);
   let exit = if found.is_empty() {
     Exit::Success

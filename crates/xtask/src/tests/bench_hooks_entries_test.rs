@@ -89,7 +89,7 @@ fn every_muse_manifest_hook_is_an_entry_after_the_hooks_json_ones() {
     .iter()
     .filter(|entry| entry.id.starts_with("muse:"))
     .collect();
-  assert_eq!(muse.len(), 28, "{muse:?}");
+  assert_eq!(muse.len(), 31, "{muse:?}");
   let first_muse = entries
     .iter()
     .position(|entry| entry.id.starts_with("muse:"))

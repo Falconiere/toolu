@@ -1823,6 +1823,93 @@
         "rewriteRef": { "const": "refs/notes/git-better" },
         "changed": { "type": "boolean" }
       }
+    },
+    "gitBetterArea": {
+      "description": "Where a change landed: an area (the longest area root plus its next segment, else the first directory, else .) with its files and lines.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["area", "files", "added", "deleted"],
+      "properties": {
+        "area": { "type": "string", "minLength": 1 },
+        "files": { "type": "integer", "minimum": 0 },
+        "added": { "type": "integer", "minimum": 0 },
+        "deleted": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "gitBetterCommit": {
+      "description": "One commit as git-better reads it: subject parts, trailers, areas and the branch its provenance note names.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha", "subject", "type", "scope", "semantic", "intent", "risk", "refs", "breaking", "areas", "branch"],
+      "properties": {
+        "sha": { "type": "string", "minLength": 1 },
+        "subject": { "type": "string" },
+        "type": { "type": ["string", "null"] },
+        "scope": { "type": ["string", "null"] },
+        "semantic": { "type": "boolean" },
+        "intent": { "type": ["string", "null"] },
+        "risk": { "type": ["string", "null"] },
+        "refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "breaking": { "type": ["string", "null"] },
+        "areas": { "type": "array", "items": { "$ref": "#/$defs/gitBetterArea" } },
+        "branch": { "type": ["string", "null"] }
+      }
+    },
+    "gitBetterLog": {
+      "description": "toolu git-better log --json: the commits of a range, newest first.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "range", "commits"],
+      "properties": {
+        "namespace": { "const": "git-better" },
+        "verb": { "const": "log" },
+        "range": { "type": "string", "minLength": 1 },
+        "commits": { "type": "array", "items": { "$ref": "#/$defs/gitBetterCommit" } }
+      }
+    },
+    "gitBetterContext": {
+      "description": "toolu git-better context --json: the current branch against its base, its commits, areas, highest risk, breaking changes, refs and working tree.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "branch", "base", "range", "onBase", "commits", "areas", "risk", "breaking", "refs", "dirty"],
+      "properties": {
+        "namespace": { "const": "git-better" },
+        "verb": { "const": "context" },
+        "branch": { "type": "string", "minLength": 1 },
+        "base": { "type": "string", "minLength": 1 },
+        "range": { "type": "string", "minLength": 1 },
+        "onBase": { "type": "boolean" },
+        "commits": { "type": "array", "items": { "$ref": "#/$defs/gitBetterCommit" } },
+        "areas": { "type": "array", "items": { "$ref": "#/$defs/gitBetterArea" } },
+        "risk": { "enum": ["low", "medium", "high", null] },
+        "breaking": { "type": "array", "items": { "type": "string" } },
+        "refs": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "dirty": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["staged", "unstaged", "untracked"],
+          "properties": {
+            "staged": { "type": "integer", "minimum": 0 },
+            "unstaged": { "type": "integer", "minimum": 0 },
+            "untracked": { "type": "integer", "minimum": 0 }
+          }
+        }
+      }
+    },
+    "gitBetterPr": {
+      "description": "toolu git-better pr --json: a draft PR title and Markdown body, and a squash message whose trailers merge the branch's commits.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["namespace", "verb", "branch", "base", "title", "body", "squash"],
+      "properties": {
+        "namespace": { "const": "git-better" },
+        "verb": { "const": "pr" },
+        "branch": { "type": "string", "minLength": 1 },
+        "base": { "type": "string", "minLength": 1 },
+        "title": { "type": "string", "minLength": 1 },
+        "body": { "type": "string", "minLength": 1 },
+        "squash": { "type": "string", "minLength": 1 }
+      }
     }
   }
 }

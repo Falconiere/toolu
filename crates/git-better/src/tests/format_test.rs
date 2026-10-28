@@ -172,6 +172,10 @@ fn the_example_keeps_the_subject_and_adds_what_is_missing() {
     "feat(<area>)!: drop it\n\nIntent: <why this change is needed>\nBREAKING-CHANGE: <what breaks and how to migrate>"
   );
   assert_eq!(
+    example_message("fix(cli): Keep it\n\nIntent: users lose work"),
+    "fix(cli): keep it\n\nIntent: users lose work"
+  );
+  assert_eq!(
     example_message("fixed stuff"),
     "<type>(<area>): <what changed>\n\nIntent: <why this change is needed>"
   );

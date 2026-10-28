@@ -74,6 +74,8 @@ pub(crate) struct Settings {
   pub(crate) types: Vec<String>,
   /// `gitBetter.notes`: write a provenance note for each commit; on by default.
   pub(crate) write_notes: bool,
+  /// `gitBetter.sessionContext`: summarize the branch at `SessionStart`; on by default.
+  pub(crate) session_context: bool,
   /// [`AREA_ROOTS`] plus `gitBetter.areaRoots`.
   pub(crate) area_roots: Vec<String>,
   /// Why a value was ignored.
@@ -90,6 +92,7 @@ impl Default for Settings {
         .map(|kind| (*kind).to_owned())
         .collect(),
       write_notes: true,
+      session_context: true,
       area_roots: AREA_ROOTS.iter().map(|root| (*root).to_owned()).collect(),
       notes: Vec::new(),
     }
@@ -202,6 +205,12 @@ pub(crate) fn from_config(config: &LoadedConfig, prefixes: Vec<String>) -> Setti
   flag(section, "requireRef", &mut settings.format.reference, notes);
   flag(section, "allowWip", &mut settings.format.wip, notes);
   flag(section, "notes", &mut settings.write_notes, notes);
+  flag(
+    section,
+    "sessionContext",
+    &mut settings.session_context,
+    notes,
+  );
   settings.area_roots.extend(area_roots(section, notes));
   if let Some(kinds) = types(section, notes) {
     settings.types = kinds;

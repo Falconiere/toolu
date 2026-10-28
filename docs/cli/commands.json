@@ -5140,6 +5140,108 @@
           "placeholder": false
         },
         {
+          "about": "Each commit of a range with its intent, areas, risk and refs; the branch's commits by default",
+          "aliases": [],
+          "args": [
+            {
+              "help": "A revision range, such as main..HEAD",
+              "multiple": false,
+              "name": "RANGE",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read at most N commits, newest first (default 20)",
+              "hidden": false,
+              "long": "limit",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "log",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "log"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "What the current branch does against its base: commits, intents, areas, risk, refs and the working tree",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Read at most N commits, newest first (default 20)",
+              "hidden": false,
+              "long": "limit",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "context",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "context"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Draft a PR title and body, or with --squash a squash message, from the branch's commits",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Print the squash commit message, its trailers merged",
+              "hidden": false,
+              "long": "squash",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Read at most N commits, newest first (default 20)",
+              "hidden": false,
+              "long": "limit",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "N"
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "pr",
+          "owner": "git-better",
+          "path": [
+            "git-better",
+            "pr"
+          ],
+          "placeholder": false
+        },
+        {
           "about": "Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef",
           "aliases": [],
           "args": [],

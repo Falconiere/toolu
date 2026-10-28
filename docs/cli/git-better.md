@@ -14,9 +14,12 @@ Semantic branches and commits that agents can read
 Usage: toolu git-better [OPTIONS] <COMMAND>
 
 Commands:
-  check  Check a commit message or branch name against the semantic format; exit 1 when it fails
-  setup  Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef
-  help   Print this message or the help of the given subcommand(s)
+  check    Check a commit message or branch name against the semantic format; exit 1 when it fails
+  log      Each commit of a range with its intent, areas, risk and refs; the branch's commits by default
+  context  What the current branch does against its base: commits, intents, areas, risk, refs and the working tree
+  pr       Draft a PR title and body, or with --squash a squash message, from the branch's commits
+  setup    Make amend and rebase carry git-better notes: add refs/notes/git-better to this repository's notes.rewriteRef
+  help     Print this message or the help of the given subcommand(s)
 
 Options:
       --json              Print exactly one JSON document on stdout
@@ -42,6 +45,58 @@ Options:
       --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
   -h, --help                 Print help
+```
+
+## `toolu git-better log`
+
+```text
+Each commit of a range with its intent, areas, risk and refs; the branch's commits by default
+
+Usage: toolu git-better log [OPTIONS] [RANGE]
+
+Arguments:
+  [RANGE]  A revision range, such as main..HEAD
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --limit <N>         Read at most N commits, newest first (default 20)
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu git-better context`
+
+```text
+What the current branch does against its base: commits, intents, areas, risk, refs and the working tree
+
+Usage: toolu git-better context [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --limit <N>         Read at most N commits, newest first (default 20)
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
+```
+
+## `toolu git-better pr`
+
+```text
+Draft a PR title and body, or with --squash a squash message, from the branch's commits
+
+Usage: toolu git-better pr [OPTIONS]
+
+Options:
+      --json              Print exactly one JSON document on stdout
+      --squash            Print the squash commit message, its trailers merged
+      --limit <N>         Read at most N commits, newest first (default 20)
+  -q, --quiet             Drop the diagnostics of a successful run
+      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
+      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
+  -h, --help              Print help
 ```
 
 ## `toolu git-better setup`

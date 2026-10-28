@@ -6,20 +6,19 @@ use serde_json::json;
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::{Ctx, Outcome};
 
-use crate::cli::env_of;
+use crate::cli::Place;
 use crate::gitio::git;
 use crate::note::NOTES_REF;
 
-/// Run `setup` in the repository of the current directory.
-pub(crate) fn setup(ctx: &Ctx) -> Outcome {
-  let env = env_of(ctx);
-  let cwd = std::env::current_dir().unwrap_or_default();
+/// Run `setup` in the repository at `place`.
+pub(crate) fn setup(ctx: &Ctx, place: &Place) -> Outcome {
+  let (env, cwd) = (&place.env, &place.dir);
   let get = ["config", "--local", "--get-all", "notes.rewriteRef"];
   let present =
-    git(&env, &cwd, &get, &[]).is_ok_and(|refs| refs.lines().any(|line| line.trim() == NOTES_REF));
+    git(env, cwd, &get, &[]).is_ok_and(|refs| refs.lines().any(|line| line.trim() == NOTES_REF));
   if !present {
     let add = ["config", "--local", "--add", "notes.rewriteRef", NOTES_REF];
-    if let Err(why) = git(&env, &cwd, &add, &[]) {
+    if let Err(why) = git(env, cwd, &add, &[]) {
       return Outcome::failed(Exit::Failure, why);
     }
   }
@@ -38,3 +37,7 @@ pub(crate) fn setup(ctx: &Ctx) -> Outcome {
   };
   Outcome::data(text)
 }
+
+#[cfg(test)]
+#[path = "tests/setup_test.rs"]
+mod tests;

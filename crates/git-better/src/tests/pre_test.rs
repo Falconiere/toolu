@@ -1,66 +1,18 @@
 //! The `semantic-git` rule over real git repositories: what it denies, what it
 //! only explains, and what it leaves alone.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
 use serde_json::{Map, json};
-use tempfile::TempDir;
 use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
+use toolu_protocol::normalized::{NormalizedEvent, Tool};
 use toolu_protocol::text::Text;
-use toolu_runtime::env::Env;
 use toolu_runtime::registry::RegistryEvent;
-use toolu_runtime::registry::rule::RuleContext;
 
 use super::SEMANTIC_GIT;
-
-/// A repository on `main` with one commit and a feature branch `feat/1-x`.
-struct Repo {
-  _dir: TempDir,
-  root: PathBuf,
-  env: Env,
-}
-
-fn git(root: &Path, args: &[&str]) {
-  let status = Command::new("git")
-    .args(["-c", "user.name=t", "-c", "user.email=t@example.com", "-C"])
-    .arg(root)
-    .args(args)
-    .status()
-    .unwrap();
-  assert!(status.success(), "git {args:?}");
-}
+use crate::git_support::{Repo, git};
 
 fn repo(config: Option<&str>) -> Repo {
-  let dir = tempfile::tempdir().unwrap();
-  let root = dir.path().join("repo");
-  std::fs::create_dir_all(root.join(".claude")).unwrap();
-  git(&root, &["init", "-q", "-b", "main"]);
-  git(&root, &["commit", "-q", "--allow-empty", "-m", "init"]);
-  git(&root, &["branch", "feat/1-x"]);
-  if let Some(config) = config {
-    std::fs::write(root.join(".claude/toolu.config.json"), config).unwrap();
-  }
-  let env = Env::from_pairs([
-    ("PATH", std::env::var("PATH").unwrap_or_default()),
-    ("HOME", dir.path().display().to_string()),
-    (
-      "TOOLU_CONFIG_DIR",
-      dir.path().join("user").display().to_string(),
-    ),
-    ("TOOLU_PROJECT_DIR", root.display().to_string()),
-    (
-      "TOOLU_SETTINGS_DIR",
-      dir.path().join("settings").display().to_string(),
-    ),
-  ]);
-  Repo {
-    _dir: dir,
-    root,
-    env,
-  }
+  Repo::new(".claude", config)
 }
 
 fn text(value: &str) -> Text {
@@ -68,33 +20,18 @@ fn text(value: &str) -> Text {
 }
 
 fn decide(repo: &Repo, command: &str) -> Decision {
-  let session = Session {
-    session_id: text("s"),
-    cwd: text(&repo.root.display().to_string()),
-    project_root: text(&repo.root.display().to_string()),
-    worktree: text(&repo.root.display().to_string()),
-  };
   let tool = Tool {
     call_id: text("c"),
     name: text("Bash"),
     input: json!({ "command": command }).as_object().cloned().unwrap(),
   };
   let event = NormalizedEvent::ShellPre {
-    session,
+    session: repo.session("s"),
     tool,
     command: text(command),
   };
   let raw = Map::new();
-  let ctx = RuleContext {
-    host: Host::Claude,
-    env: &repo.env,
-    config_root: &repo.root,
-    project_root: &repo.root,
-    cwd: Some(&repo.root),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = repo.context(Host::Claude, &raw);
   assert!(SEMANTIC_GIT.applies(&event, &ctx));
   SEMANTIC_GIT.run(&event, &ctx)
 }

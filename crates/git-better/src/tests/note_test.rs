@@ -1,13 +1,11 @@
 //! The provenance note: its JSON, the file cap, and an idempotent write to
 //! `refs/notes/git-better` in a real repository.
 
-use std::process::Command;
-
 use serde_json::json;
-use toolu_runtime::env::Env;
 
 use super::{MAX_FILES, NOTES_REF, Provenance, body, write};
 use crate::areas::AREA_ROOTS;
+use crate::git_support::Repo;
 use crate::gitio::FileChange;
 
 fn provenance() -> Provenance {
@@ -67,28 +65,13 @@ fn a_large_commit_lists_the_first_files_and_says_so() {
 
 #[test]
 fn a_note_is_written_once_per_commit() {
-  let dir = tempfile::tempdir().unwrap();
-  let root = dir.path();
-  let git = |args: &[&str]| {
-    Command::new("git")
-      .args(["-c", "user.name=t", "-c", "user.email=t@example.com", "-C"])
-      .arg(root)
-      .args(args)
-      .output()
-      .unwrap()
-  };
-  git(&["init", "-q", "-b", "main"]);
-  std::fs::write(root.join("README.md"), "x\n").unwrap();
-  git(&["add", "-A"]);
-  git(&["commit", "-q", "-m", "init"]);
-  let env = Env::from_pairs([("PATH", std::env::var("PATH").unwrap_or_default())]);
-  assert_eq!(write(&env, root, "HEAD", &provenance(), &roots()), Ok(true));
-  assert_eq!(
-    write(&env, root, "HEAD", &provenance(), &roots()),
-    Ok(false)
-  );
-  let shown = git(&["notes", "--ref", NOTES_REF, "show", "HEAD"]);
-  let note: serde_json::Value = serde_json::from_slice(&shown.stdout).unwrap();
+  let repo = Repo::new(".claude", None);
+  repo.commit("README.md", "docs: x", None);
+  let (env, root) = (&repo.env, repo.root.as_path());
+  assert_eq!(write(env, root, "HEAD", &provenance(), &roots()), Ok(true));
+  assert_eq!(write(env, root, "HEAD", &provenance(), &roots()), Ok(false));
+  let shown = crate::git_support::git(root, &["notes", "--ref", NOTES_REF, "show", "HEAD"]);
+  let note: serde_json::Value = serde_json::from_str(&shown).unwrap();
   assert_eq!(
     note["areas"],
     json!([{ "area": ".", "files": 1, "added": 1, "deleted": 0 }])

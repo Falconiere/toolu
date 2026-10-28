@@ -10,7 +10,7 @@ Semantic branches and commits agents can read. A commit has a scoped Conventiona
 
 **Prerequisites:** the native [`toolu` binary](../../docs/install.md) and the `toolu` plugin. See [runtime](../../docs/runtime.md).
 
-**Hooks:** the SessionStart hook runs `toolu git-better hook register` from the generated launcher. That publishes the `semantic-git` and `commit-note` manifests in the toolu registry. From then on, toolu's own PreToolUse and PostToolUse dispatchers run the compiled-in rules on every Bash/Shell command. A second SessionStart entry, `check-toolu`, warns on Codex when the `toolu` plugin is missing.
+**Hooks:** the SessionStart hook runs `toolu git-better hook register` from the generated launcher. That publishes the `semantic-git` and `commit-note` manifests in the toolu registry. From then on, toolu's own PreToolUse and PostToolUse dispatchers run the compiled-in rules on every Bash/Shell command. A second SessionStart entry, `check-toolu`, warns on Codex when the `toolu` plugin is missing. A third, `session-start`, gives the agent the format and, on a feature branch, a summary of the branch: its commits' intents, areas, highest risk and refs.
 
 Skills write plain `toolu git-better <verb>`, never a fixed binary path. See [docs/install.md](../../docs/install.md#agent-command-shell).
 
@@ -23,6 +23,10 @@ Keep `name`, `version`, and `description` identical in `.claude-plugin/plugin.js
 `crates/git-better` is this plugin's Rust library.
 - **Namespace:** it provides `toolu git-better`.
   - `check` validates a commit message (`-m`, `--message-file FILE|-`) and a branch name (`--branch`), and exits 1 when one fails.
+  - `log [<range>] [--limit N]` lists each commit with its intent, areas, risk and refs. The default range is the branch's commits since its base.
+  - `context` summarizes the current branch against its base: commits, intents, areas, highest risk, breaking changes, refs and the working tree.
+  - `pr [--squash]` drafts a PR title and body, or a squash message whose trailers merge the branch's commits, so a squash merge keeps them.
+  - Every read verb takes `--json`.
   - `setup` adds `refs/notes/git-better` to the repository's `notes.rewriteRef`, so amend and rebase carry the notes. See the [CLI reference](../../docs/cli/README.md).
 - **Rules:** the `semantic-git` and `commit-note` registry rules are linked into the hub, `crates/toolu`.
 
@@ -41,7 +45,7 @@ Keep `name`, `version`, and `description` identical in `.claude-plugin/plugin.js
   - **Contents:** the branch, base, host and session the commit was made on, plus its changed areas and files.
   - **Why:** a squash merge or rebase loses that provenance, while trailers stay the source of truth.
   - **Sharing:** notes stay local unless you push `refs/notes/git-better` yourself.
-- **Configuration:** `gitBetter` in `toolu.config.json` sets `mode` (`block` by default, `advise` or `off`), `requireScope`, `requireRef`, `allowWip`, `types`, `notes` and `areaRoots`. See [docs/config.md](../../docs/config.md#semantic-branches-and-commits-with-git-better).
+- **Configuration:** `gitBetter` in `toolu.config.json` sets `mode` (`block` by default, `advise` or `off`), `requireScope`, `requireRef`, `allowWip`, `types`, `notes`, `areaRoots` and `sessionContext`. See [docs/config.md](../../docs/config.md#semantic-branches-and-commits-with-git-better).
   - A value the plugin cannot read keeps its default and is reported.
   - On hosts that cannot tell whether a plugin is installed (Muse, Cursor), the manifest outlives an uninstall. Set `gitBetter.mode` to `off` there.
   - Upgrade the `toolu` binary before adding a `gitBetter` section: an older binary rejects the unknown key.

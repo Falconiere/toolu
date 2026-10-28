@@ -1,22 +1,10 @@
 //! A commit's file changes from real git: a root commit, a rename with an
 //! edit, a binary file and a merge against its first parent.
 
-use std::path::Path;
-use std::process::Command;
-
 use toolu_runtime::env::Env;
 
 use super::{FileChange, changes, git};
-
-fn run(root: &Path, args: &[&str]) {
-  let status = Command::new("git")
-    .args(["-c", "user.name=t", "-c", "user.email=t@example.com", "-C"])
-    .arg(root)
-    .args(args)
-    .status()
-    .unwrap();
-  assert!(status.success(), "git {args:?}");
-}
+use crate::git_support::git as run;
 
 fn env() -> Env {
   Env::from_pairs([("PATH", std::env::var("PATH").unwrap_or_default())])

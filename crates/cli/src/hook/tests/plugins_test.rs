@@ -198,6 +198,12 @@ fn git_better_registers_only_at_session_start() {
     0
   );
   assert_eq!(
+    hook("git-better", "session-start", "SessionStart", &env)
+      .exit
+      .code(),
+    0
+  );
+  assert_eq!(
     hook("git-better", "register", "PreToolUse", &env).exit,
     toolu_protocol::exit::Exit::Blocked
   );

@@ -67,6 +67,21 @@ checks new names from `checkout -b/-B`, `switch -c/-C`, `branch <new>`,
 toolu git-better check --branch feat/740-git-better
 ```
 
+## Reading a branch
+
+Read what a branch did from its commits, not its diff:
+
+```bash
+toolu git-better context        # this branch against its base: intents, areas, risk, refs
+toolu git-better log            # each commit since the base; or: toolu git-better log main..HEAD --limit 50
+toolu git-better pr             # draft PR title and body
+toolu git-better pr --squash    # squash message with every commit's trailers merged
+```
+
+Add `--json` for one machine-readable document. A session that starts on a
+feature branch gets the same summary as `context`. Edit the `pr` draft before
+using it: it keeps each `Intent:` and `Refs:`, so a squash merge keeps them too.
+
 ## Provenance notes
 
 After each successful commit, git-better attaches a JSON note under
@@ -82,6 +97,6 @@ repository so amend and rebase carry the notes.
 - `requireScope` and `requireRef`.
 - `allowWip`.
 - `types`.
-- `notes` and `areaRoots`.
+- `notes`, `areaRoots` and `sessionContext`.
 
 See `docs/config.md`.

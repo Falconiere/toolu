@@ -92,6 +92,33 @@ fn fresh_commit(env: &Env, dir: &Path) -> Option<String> {
   (subject.starts_with("commit") && recent).then(|| sha.to_owned())
 }
 
+/// Attach the note to the commit the command just made, when it made one.
+///
+/// # Errors
+/// When git cannot read the commit or store its note.
+fn note_after(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Result<(), String> {
+  let cwd = ctx.cwd.unwrap_or(ctx.project_root);
+  let Some(dir) = command_of(event).and_then(|command| commit_dir(command, cwd)) else {
+    return Ok(());
+  };
+  if failed(event) {
+    return Ok(());
+  }
+  let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
+  let settings = settings::load(&roots, Some(&dir), ctx.plugin_root);
+  let commit = fresh_commit(ctx.env, &dir).filter(|_| settings.write_notes);
+  let Some(commit) = commit else {
+    return Ok(());
+  };
+  let provenance = Provenance {
+    branch: current_branch(ctx.env, &dir),
+    base: base_branch(ctx.env, None, &dir),
+    host: ctx.host.name().to_owned(),
+    session: event.session().session_id.as_str().to_owned(),
+  };
+  write(ctx.env, &dir, &commit, &provenance, &settings.area_roots).map(drop)
+}
+
 impl Rule for CommitNote {
   fn spec(&self) -> &'static str {
     SPEC
@@ -111,7 +138,8 @@ impl Rule for CommitNote {
   }
 
   fn run(&self, event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Decision {
-    self.run_warning(event, ctx, &mut Vec::new())
+    note_after(event, ctx).unwrap_or_default();
+    Decision::Allow
   }
 
   fn run_warning(
@@ -120,28 +148,7 @@ impl Rule for CommitNote {
     ctx: &RuleContext<'_>,
     warnings: &mut Vec<String>,
   ) -> Decision {
-    let cwd = ctx.cwd.unwrap_or(ctx.project_root);
-    let Some(dir) = command_of(event).and_then(|command| commit_dir(command, cwd)) else {
-      return Decision::Allow;
-    };
-    if failed(event) {
-      return Decision::Allow;
-    }
-    let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
-    let settings = settings::load(&roots, Some(&dir), ctx.plugin_root);
-    if !settings.write_notes {
-      return Decision::Allow;
-    }
-    let Some(commit) = fresh_commit(ctx.env, &dir) else {
-      return Decision::Allow;
-    };
-    let provenance = Provenance {
-      branch: current_branch(ctx.env, &dir),
-      base: base_branch(ctx.env, None, &dir),
-      host: ctx.host.name().to_owned(),
-      session: event.session().session_id.as_str().to_owned(),
-    };
-    if let Err(error) = write(ctx.env, &dir, &commit, &provenance, &settings.area_roots) {
+    if let Err(error) = note_after(event, ctx) {
       warnings.push(format!(
         "git-better could not write the commit note: {error}"
       ));

@@ -53,7 +53,7 @@ fn the_defaults_block_and_require_a_scope() {
 #[test]
 fn every_key_is_read() {
   let settings = loaded(Some(
-    r#"{"version":1,"gitBetter":{"mode":"advise","requireScope":false,"requireRef":true,"allowWip":false,"types":["feat","fix"],"notes":false,"areaRoots":["crates/core/"]}}"#,
+    r#"{"version":1,"gitBetter":{"mode":"advise","requireScope":false,"requireRef":true,"allowWip":false,"types":["feat","fix"],"notes":false,"sessionContext":false,"areaRoots":["crates/core/"]}}"#,
   ));
   assert_eq!(
     settings,
@@ -66,6 +66,7 @@ fn every_key_is_read() {
       },
       types: vec!["feat".to_owned(), "fix".to_owned()],
       write_notes: false,
+      session_context: false,
       area_roots: [
         "crates",
         "packages",

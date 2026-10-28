@@ -34,6 +34,15 @@
           "hooks/muse/check-toolu"
         ],
         "timeoutMs": 60000
+      },
+      {
+        "id": "session-start",
+        "event": "SessionStart",
+        "command": [
+          "/bin/sh",
+          "hooks/muse/session-start"
+        ],
+        "timeoutMs": 60000
       }
     ],
     "mcpServers": [],

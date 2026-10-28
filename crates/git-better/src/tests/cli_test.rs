@@ -32,5 +32,5 @@ fn the_namespace_has_check_and_setup() {
     .get_subcommands()
     .map(clap::Command::get_name)
     .collect();
-  assert_eq!(names, ["check", "setup"]);
+  assert_eq!(names, ["check", "log", "context", "pr", "setup"]);
 }

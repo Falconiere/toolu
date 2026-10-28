@@ -1,106 +1,40 @@
 //! The `commit-note` rule over real commits: it notes a fresh commit, and
 //! leaves a failed, stale or disabled one alone, always allowing.
 
-use std::path::{Path, PathBuf};
-use std::process::Command;
-
 use serde_json::{Map, Value, json};
-use tempfile::TempDir;
 use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
+use toolu_protocol::normalized::{NormalizedEvent, Tool};
 use toolu_protocol::text::Text;
-use toolu_runtime::env::Env;
 use toolu_runtime::registry::RegistryEvent;
-use toolu_runtime::registry::rule::RuleContext;
 
 use super::COMMIT_NOTE;
+use crate::git_support::{Repo, git};
 use crate::note::NOTES_REF;
 
-struct Repo {
-  _dir: TempDir,
-  root: PathBuf,
-  env: Env,
-}
-
-fn git(root: &Path, args: &[&str], date: Option<&str>) -> String {
-  let mut command = Command::new("git");
-  command
-    .args(["-c", "user.name=t", "-c", "user.email=t@example.com", "-C"])
-    .arg(root)
-    .args(args);
-  if let Some(date) = date {
-    command.env("GIT_COMMITTER_DATE", date);
-  }
-  let output = command.output().unwrap();
-  String::from_utf8(output.stdout).unwrap()
-}
-
+/// A repository on `feat/1-x`, read by Codex.
 fn repo(config: Option<&str>) -> Repo {
-  let dir = tempfile::tempdir().unwrap();
-  let root = dir.path().join("repo");
-  std::fs::create_dir_all(root.join(".codex")).unwrap();
-  git(&root, &["init", "-q", "-b", "main"], None);
-  git(&root, &["switch", "-q", "-c", "feat/1-x"], None);
-  if let Some(config) = config {
-    std::fs::write(root.join(".codex/toolu.config.json"), config).unwrap();
-  }
-  let env = Env::from_pairs([
-    ("PATH", std::env::var("PATH").unwrap_or_default()),
-    ("HOME", dir.path().display().to_string()),
-    (
-      "TOOLU_CONFIG_DIR",
-      dir.path().join("user").display().to_string(),
-    ),
-    ("TOOLU_PROJECT_DIR", root.display().to_string()),
-    (
-      "TOOLU_SETTINGS_DIR",
-      dir.path().join("settings").display().to_string(),
-    ),
-  ]);
-  Repo {
-    _dir: dir,
-    root,
-    env,
-  }
+  let repo = Repo::new(".codex", config);
+  git(&repo.root, &["switch", "-q", "feat/1-x"]);
+  repo
 }
 
 fn commit(repo: &Repo, date: Option<&str>) {
-  std::fs::write(repo.root.join("README.md"), "x\n").unwrap();
-  git(&repo.root, &["add", "-A"], None);
-  git(&repo.root, &["commit", "-q", "-m", "docs(readme): x"], date);
-}
-
-fn text(value: &str) -> Text {
-  Text::new(value).unwrap()
+  repo.commit("README.md", "docs(readme): x", date);
 }
 
 fn after(repo: &Repo, command: &str, output: Option<Value>) -> Decision {
   let event = NormalizedEvent::ToolPost {
-    session: Session {
-      session_id: text("session-7"),
-      cwd: text(&repo.root.display().to_string()),
-      project_root: text(&repo.root.display().to_string()),
-      worktree: text(&repo.root.display().to_string()),
-    },
+    session: repo.session("session-7"),
     tool: Tool {
-      call_id: text("c"),
-      name: text("Bash"),
+      call_id: Text::new("c").unwrap(),
+      name: Text::new("Bash").unwrap(),
       input: json!({ "command": command }).as_object().cloned().unwrap(),
     },
     output,
   };
   let raw = Map::new();
-  let ctx = RuleContext {
-    host: Host::Codex,
-    env: &repo.env,
-    config_root: &repo.root,
-    project_root: &repo.root,
-    cwd: Some(&repo.root),
-    plugin_root: None,
-    raw: &raw,
-    edit: None,
-  };
+  let ctx = repo.context(Host::Codex, &raw);
   if !COMMIT_NOTE.applies(&event, &ctx) {
     return Decision::Allow;
   }
@@ -111,11 +45,11 @@ fn after(repo: &Repo, command: &str, output: Option<Value>) -> Decision {
 }
 
 fn note(repo: &Repo) -> Option<Value> {
-  let shown = git(
-    &repo.root,
-    &["notes", "--ref", NOTES_REF, "show", "HEAD"],
-    None,
-  );
+  let listed = git(&repo.root, &["notes", "--ref", NOTES_REF, "list"]);
+  if listed.trim().is_empty() {
+    return None;
+  }
+  let shown = git(&repo.root, &["notes", "--ref", NOTES_REF, "show", "HEAD"]);
   serde_json::from_str(&shown).ok()
 }
 
@@ -158,7 +92,7 @@ fn a_failed_stale_or_other_command_writes_nothing() {
   commit(&stale, Some("2001-01-01T00:00:00Z"));
   after(&stale, "git commit -m 'docs(x): y'", None);
   assert_eq!(note(&stale), None);
-  git(&stale.root, &["switch", "-q", "-c", "fix/2-y"], None);
+  git(&stale.root, &["switch", "-q", "-c", "fix/2-y"]);
   after(&stale, "git commit -m 'docs(x): y'", None);
   assert_eq!(note(&stale), None);
 }

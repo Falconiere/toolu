@@ -11,15 +11,21 @@ mod areas;
 mod branch;
 mod check;
 mod cli;
+mod context;
 mod format;
 mod gitio;
+mod history;
 mod note;
 mod post;
+mod pr;
 mod pre;
+mod read;
 mod register;
 mod report;
+mod session;
 mod settings;
 mod setup;
+mod views;
 
 /// The `commit-note` rule enabled by its manifest.
 pub use post::COMMIT_NOTE;
@@ -27,6 +33,8 @@ pub use post::COMMIT_NOTE;
 pub use pre::SEMANTIC_GIT;
 /// Publish this plugin's rule manifests at `SessionStart`.
 pub use register::register;
+/// The `SessionStart` summary of the branch.
+pub use session::session_start;
 
 /// The plugin this crate belongs to: `plugins/git-better`.
 pub const PLUGIN: &str = "git-better";
@@ -47,3 +55,11 @@ pub fn run(matches: &ArgMatches, ctx: &Ctx) -> Outcome {
 pub fn needs_stdin(matches: &ArgMatches) -> bool {
   cli::needs_stdin(matches)
 }
+
+#[cfg(test)]
+#[path = "tests/git_support_test.rs"]
+mod git_support;
+
+#[cfg(test)]
+#[path = "tests/lib_test.rs"]
+mod tests;
