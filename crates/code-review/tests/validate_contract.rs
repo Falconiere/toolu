@@ -5,7 +5,7 @@ use toolu_code_review::contract::{Coverage, Severity, Side};
 use toolu_code_review::memory::{Memory, PriorFinding, Status};
 use toolu_code_review::model::ModelFinding;
 use toolu_code_review::shape::{ChangedLine, FileKind, Shaped, ShapedFile};
-use toolu_code_review::validate::{Recap, SeverityChange, Validated, fingerprint, validate};
+use toolu_code_review::validate::{Input, Recap, SeverityChange, Validated, fingerprint, validate};
 
 fn shaped() -> Shaped {
   Shaped {
@@ -55,14 +55,15 @@ fn a_grounded_finding_survives_and_a_hallucinated_one_marks_coverage_unreviewed(
   let mut hallucinated = finding("invented defect");
   hallucinated.line = 42;
   hallucinated.end_line = 42;
-  let out: Validated = validate(
-    &shaped(),
-    &[finding("indexing can panic"), hallucinated],
-    &[],
-    &Memory::default(),
-    &[],
-    &[],
-  );
+  let shaped = shaped();
+  let out: Validated = validate(&Input {
+    shaped: &shaped,
+    model: &[finding("indexing can panic"), hallucinated],
+    deterministic: &[],
+    memory: &Memory::default(),
+    redactions: &[],
+    unreviewed: &[],
+  });
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.dropped, 1);
   assert_eq!(out.unreviewed.len(), 1);
@@ -85,14 +86,15 @@ fn severity_drift_against_an_open_prior_is_recorded() {
     }],
     dismissals: Vec::new(),
   };
-  let out = validate(
-    &shaped(),
-    &[finding("indexing can panic")],
-    &[],
-    &memory,
-    &[],
-    &[],
-  );
+  let shaped = shaped();
+  let out = validate(&Input {
+    shaped: &shaped,
+    model: &[finding("indexing can panic")],
+    deterministic: &[],
+    memory: &memory,
+    redactions: &[],
+    unreviewed: &[],
+  });
   assert_eq!(out.findings[0].id, "f1");
   assert_eq!(
     out.recap.severity_changes,

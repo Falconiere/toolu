@@ -1,13 +1,13 @@
 //! Cross-round matching, dedupe, and the round recap for `validate`.
 
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap};
 
-use crate::contract::{Omitted, Side, Source};
+use crate::contract::{Side, Source};
 use crate::memory::{Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
 use crate::shape::Shaped;
 
-use super::{Candidate, Recap, SeverityChange, fingerprint};
+use super::{Candidate, Recap, SeverityChange, fingerprint, normalize_text};
 
 /// Match by echoed `prior_id` first (a prior on the finding's rename-mapped
 /// path only), then by fingerprint through the rename map; fingerprint ties
@@ -107,8 +107,7 @@ pub(super) fn build_recap(
   kept: &[Candidate],
   shaped: &Shaped,
   memory: &Memory,
-  lost: &BTreeMap<String, String>,
-  unreviewed: &[Omitted],
+  blocked: &BTreeSet<String>,
   recap: &mut Recap,
 ) {
   let mut re_raised: BTreeSet<String> = BTreeSet::new();
@@ -124,9 +123,7 @@ pub(super) fn build_recap(
     .filter(|prior| prior.status == Status::Open)
   {
     let path = mapped_path(&prior.path, shaped);
-    let reexamined = shaped.coverage.reviewed.contains(&path)
-      && !lost.contains_key(&path)
-      && !unreviewed.iter().any(|item| item.path == path);
+    let reexamined = shaped.coverage.reviewed.contains(&path) && !blocked.contains(&path);
     if re_raised.contains(&prior.id) || !reexamined {
       recap.still_open.push(prior.id.clone());
     } else {
@@ -152,6 +149,61 @@ fn note_survivor(candidate: &Candidate, recap: &mut Recap, re_raised: &mut BTree
       to: candidate.finding.severity,
     });
   }
+}
+
+pub(super) fn withdrawn(finding: &ModelFinding) -> bool {
+  let category = normalize_text(&finding.category);
+  if matches!(
+    category.as_str(),
+    "no_defect" | "no-defect" | "nodefect" | "no defect"
+  ) {
+    return true;
+  }
+  // A marker ends at a non-alphanumeric: "No defect." and "abstain:" withdraw.
+  let claim = normalize_text(&finding.claim);
+  ["no defect", "abstain"].iter().any(|marker| {
+    claim
+      .strip_prefix(marker)
+      .is_some_and(|rest| !rest.starts_with(char::is_alphanumeric))
+  })
+}
+
+/// A new finding's id: the fingerprint plus its cited range and side, so
+/// two identical claims at different lines are different findings, and a
+/// blocker re-raised against a dismissed prior reopens under a fresh id
+/// instead of inheriting the settled one.
+pub(super) fn fresh_id(finding: &ModelFinding) -> String {
+  generated_id(&format!(
+    "{}\u{1f}{}\u{1f}{}\u{1f}{}",
+    fingerprint(&finding.path, &finding.category, &finding.claim),
+    finding.line,
+    finding.end_line,
+    super::side_name(finding.side)
+  ))
+}
+
+/// A suggestion is literal replacement code, not prose: prose has no code
+/// punctuation and at least three words.
+pub(super) fn is_code(suggestion: &str) -> bool {
+  let text = suggestion.trim();
+  if text.is_empty() {
+    return false;
+  }
+  let words: Vec<&str> = text.split_whitespace().collect();
+  // Prose can carry inline code: "Use `items.last()` instead of indexing".
+  let first = words.first().map(|word| {
+    word
+      .trim_matches(|ch: char| !ch.is_alphanumeric())
+      .to_lowercase()
+  });
+  let prose_start = matches!(
+    first.as_deref(),
+    Some("consider" | "instead" | "you" | "this" | "prefer" | "try")
+  ) || (first.as_deref() == Some("use") && !text.contains("::"));
+  if words.len() >= 3 && prose_start {
+    return false;
+  }
+  text.chars().any(|ch| "(){}[];=`<>".contains(ch)) || words.len() < 3
 }
 
 #[cfg(test)]

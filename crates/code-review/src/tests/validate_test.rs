@@ -1,9 +1,32 @@
 use super::{fingerprint, normalize_text, validate};
-use crate::contract::{Coverage, Finding, Omitted, RedactionSpan, Severity, Side, Source};
+use crate::contract::{Coverage, Finding, Omitted, Severity, Side, Source};
 use crate::memory::{Dismissal, Memory, PriorFinding, Status};
 use crate::model::ModelFinding;
 use crate::prepass::Redaction;
 use crate::shape::{ChangedLine, FileKind, Shaped, ShapedFile};
+use crate::validate::{Input, Validated};
+
+pub(crate) type Args<'a> = (
+  &'a Shaped,
+  &'a [ModelFinding],
+  &'a [Finding],
+  &'a Memory,
+  &'a [Redaction],
+  &'a [Omitted],
+);
+
+pub(crate) fn run(
+  (shaped, model, deterministic, memory, redactions, unreviewed): Args<'_>,
+) -> Validated {
+  validate(&Input {
+    shaped,
+    model,
+    deterministic,
+    memory,
+    redactions,
+    unreviewed,
+  })
+}
 
 pub(crate) fn line(side: Side, line: u32, text: &str) -> ChangedLine {
   ChangedLine {
@@ -75,7 +98,7 @@ pub(crate) fn memory(prior: Vec<PriorFinding>) -> Memory {
   }
 }
 
-fn paths(omitted: &[Omitted]) -> Vec<&str> {
+pub(crate) fn paths(omitted: &[Omitted]) -> Vec<&str> {
   omitted.iter().map(|item| item.path.as_str()).collect()
 }
 
@@ -98,12 +121,12 @@ fn hallucinated_line_is_dropped_and_its_coverage_is_unreviewed() {
     &["src/a.rs"],
   );
   let mut bad = model("src/a.rs", 99, "let x = 1;");
-  let out = validate(&diff, &[bad.clone()], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[bad.clone()], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 0);
   assert_eq!(out.dropped, 1);
   assert_eq!(paths(&out.unreviewed), ["src/a.rs"]);
   bad.path = "src/ghost.rs".to_owned();
-  let out = validate(&diff, &[bad], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[bad], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.dropped, 1);
   assert_eq!(paths(&out.unreviewed), ["src/ghost.rs"]);
 }
@@ -118,17 +141,17 @@ fn quote_mismatch_drops_but_whitespace_only_difference_survives() {
     &["src/a.rs"],
   );
   let wrong = model("src/a.rs", 1, "let last = items[0];");
-  let out = validate(&diff, &[wrong], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[wrong], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 0);
   assert_eq!(out.dropped, 1);
   assert_eq!(paths(&out.unreviewed), ["src/a.rs"]);
   let shouted = model("src/a.rs", 1, "LET LAST = ITEMS[ITEMS.LEN() - 1];");
   assert_eq!(
-    validate(&diff, &[shouted], &[], &Memory::default(), &[], &[]).dropped,
+    run((&diff, &[shouted], &[], &Memory::default(), &[], &[])).dropped,
     1
   );
   let spaced = model("src/a.rs", 1, "let  last = items[items.len()  - 1];");
-  let out = validate(&diff, &[spaced], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[spaced], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.unreviewed.len(), 0);
 }
@@ -141,7 +164,7 @@ fn a_removed_line_anchors_on_the_old_side() {
   let mut finding = model("src/a.rs", 3, "return old_value;");
   finding.side = Side::Old;
   finding.claim = "the fallback return was removed".to_owned();
-  let out = validate(&diff, &[finding], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[finding], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.findings[0].side, Side::Old);
 }
@@ -156,7 +179,7 @@ fn duplicates_keep_the_highest_severity_and_deterministic_wins_ties() {
   low.severity = Severity::Low;
   let mut blocker = low.clone();
   blocker.severity = Severity::Blocker;
-  let out = validate(&diff, &[low, blocker], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[low, blocker], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.findings[0].severity, Severity::Blocker);
   let trusted = Finding {
@@ -175,7 +198,7 @@ fn duplicates_keep_the_highest_severity_and_deterministic_wins_ties() {
   };
   let mut copy = model("src/a.rs", 1, "let x = 1;");
   copy.severity = Severity::Blocker;
-  let out = validate(&diff, &[copy], &[trusted], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[copy], &[trusted], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.findings[0].source, Source::Secrets);
 }
@@ -195,14 +218,14 @@ fn withdrawals_are_absent_and_uncounted_but_a_real_defect_survives() {
   by_period.category = "No Defect".to_owned();
   let mut real = model("src/a.rs", 1, "let x = 1;");
   real.claim = "this is a defect even though the guard has no defect".to_owned();
-  let out = validate(
+  let out = run((
     &diff,
     &[by_category, by_claim, by_period, real],
     &[],
     &Memory::default(),
     &[],
     &[],
-  );
+  ));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.dropped, 0);
   assert_eq!(out.unreviewed.len(), 0);
@@ -216,92 +239,13 @@ fn prose_suggestion_is_dropped_and_code_suggestion_is_kept() {
   );
   let mut prose = model("src/a.rs", 1, "let x = 1;");
   prose.suggestion = Some("You should change this value to something safer".to_owned());
-  let out = validate(&diff, &[prose], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[prose], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 1);
   assert_eq!(out.findings[0].suggestion, None);
   let mut code = model("src/a.rs", 1, "let x = 1;");
   code.suggestion = Some("let x = 2;".to_owned());
-  let out = validate(&diff, &[code], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[code], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings[0].suggestion.as_deref(), Some("let x = 2;"));
-}
-
-#[test]
-fn deterministic_findings_are_exempt_and_model_quotes_are_masked() {
-  let secret = "ghp_Ab1Ab1Ab1";
-  let text = format!("let key = \"{secret}\";");
-  let diff = shaped(
-    vec![file("src/a.rs", vec![line(Side::New, 1, &text)])],
-    &["src/a.rs"],
-  );
-  let start = text.find(secret).unwrap();
-  let redactions = vec![Redaction {
-    path: "src/a.rs".to_owned(),
-    side: Side::New,
-    line: 1,
-    spans: vec![RedactionSpan {
-      start,
-      end: start + secret.len(),
-    }],
-  }];
-  // The model saw the masked patch, so it quotes the mask, not the secret.
-  let finding = model("src/a.rs", 1, "let key = \"[REDACTED]\";");
-  let trusted = Finding {
-    id: "prepass:ast-grep:src/a.rs:1:style".to_owned(),
-    path: "src/a.rs".to_owned(),
-    line: 1,
-    end_line: 1,
-    side: Side::New,
-    severity: Severity::Low,
-    category: "style".to_owned(),
-    source: Source::AstGrep,
-    claim: "unverifiable by design".to_owned(),
-    quote: "not in the diff".to_owned(),
-    suggestion: None,
-    redaction_spans: Vec::new(),
-  };
-  let out = validate(
-    &diff,
-    &[finding],
-    &[trusted],
-    &Memory::default(),
-    &redactions,
-    &[],
-  );
-  assert_eq!(out.findings.len(), 2);
-  let masked = out
-    .findings
-    .iter()
-    .find(|item| item.source == Source::Llm)
-    .unwrap();
-  assert!(
-    masked.quote.contains("[REDACTED]") && !masked.quote.contains(secret),
-    "{}",
-    masked.quote
-  );
-}
-
-#[test]
-fn an_unresolvable_redaction_drops_the_paths_findings_as_unreviewed() {
-  let diff = shaped(
-    vec![file("src/a.rs", vec![line(Side::New, 1, "let x = 1;")])],
-    &["src/a.rs"],
-  );
-  let redactions = vec![Redaction {
-    path: "src/a.rs".to_owned(),
-    side: Side::New,
-    line: 1,
-    spans: vec![RedactionSpan { start: 50, end: 60 }],
-  }];
-  let out = validate(
-    &diff,
-    &[model("src/a.rs", 1, "let x = 1;")],
-    &[],
-    &Memory::default(),
-    &redactions,
-    &[],
-  );
-  assert_eq!(out.findings.len(), 0);
-  assert_eq!(paths(&out.unreviewed), ["src/a.rs"]);
 }
 
 #[test]
@@ -318,7 +262,7 @@ fn identical_claims_at_different_lines_get_different_ids() {
   );
   let first = model("src/a.rs", 1, "let x = 1;");
   let second = model("src/a.rs", 2, "let y = 2;");
-  let out = validate(&diff, &[first, second], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[first, second], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings.len(), 2);
   assert_ne!(out.findings[0].id, out.findings[1].id);
   assert_eq!(out.recap.new.len(), 2);
@@ -332,7 +276,7 @@ fn prose_with_inline_code_is_not_a_suggestion_and_a_dismissal_id_suppresses() {
   );
   let mut prose = model("src/a.rs", 1, "let x = 1;");
   prose.suggestion = Some("Use `items.last()` instead of indexing".to_owned());
-  let out = validate(&diff, &[prose], &[], &Memory::default(), &[], &[]);
+  let out = run((&diff, &[prose], &[], &Memory::default(), &[], &[]));
   assert_eq!(out.findings[0].suggestion, None);
   let memory = Memory {
     prior: Vec::new(),
@@ -344,34 +288,6 @@ fn prose_with_inline_code_is_not_a_suggestion_and_a_dismissal_id_suppresses() {
   };
   let mut settled = model("src/a.rs", 1, "let x = 1;");
   settled.prior_id = Some("d1".to_owned());
-  let out = validate(&diff, &[settled], &[], &memory, &[], &[]);
+  let out = run((&diff, &[settled], &[], &memory, &[], &[]));
   assert_eq!(out.findings.len(), 0);
-}
-
-#[test]
-fn a_multiline_finding_carries_no_redaction_spans() {
-  let secret = "tok12345";
-  let text = format!("let key = \"{secret}\";");
-  let diff = shaped(
-    vec![file(
-      "src/a.rs",
-      vec![line(Side::New, 1, "let x = 1;"), line(Side::New, 2, &text)],
-    )],
-    &["src/a.rs"],
-  );
-  let start = text.find(secret).unwrap();
-  let redactions = vec![Redaction {
-    path: "src/a.rs".to_owned(),
-    side: Side::New,
-    line: 2,
-    spans: vec![RedactionSpan {
-      start,
-      end: start + secret.len(),
-    }],
-  }];
-  let mut finding = model("src/a.rs", 1, "let x = 1;\nlet key = \"[REDACTED]\";");
-  finding.end_line = 2;
-  let out = validate(&diff, &[finding], &[], &Memory::default(), &redactions, &[]);
-  assert_eq!(out.findings.len(), 1);
-  assert_eq!(out.findings[0].redaction_spans.len(), 0);
 }

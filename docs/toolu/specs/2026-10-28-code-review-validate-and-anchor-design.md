@@ -31,14 +31,7 @@ A new public `validate` module in `crates/code-review`, beside the existing
 stage modules (`shape`, `prepass`, `review`). One pure function:
 
 ```rust
-pub fn validate(
-  shaped: &Shaped,
-  model: &[ModelFinding],
-  deterministic: &[Finding],
-  memory: &Memory,
-  redactions: &[Redaction],
-  unreviewed: &[Omitted],
-) -> Validated
+pub fn validate(input: &Input<'_>) -> Validated   // Input bundles the six slices above
 ```
 
 `unreviewed` is the review stage's lost coverage (failed or oversized

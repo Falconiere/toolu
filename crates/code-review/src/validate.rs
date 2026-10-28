@@ -12,7 +12,7 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 mod round;
 
-use round::{build_recap, dedupe, generated_id, match_prior};
+use round::{build_recap, dedupe, fresh_id, is_code, match_prior, withdrawn};
 
 use crate::contract::{Finding, Omitted, RedactionSpan, Severity, Side, Source};
 use crate::memory::{Memory, PriorFinding, Status};
@@ -81,22 +81,33 @@ pub fn fingerprint(path: &str, category: &str, claim: &str) -> String {
 
 type Anchors<'a> = HashMap<(&'a str, bool, u32), &'a str>;
 
+/// What one validation pass consumes: the stage outputs #669 assembles.
+pub struct Input<'a> {
+  /// The committed diff and its citable changed lines.
+  pub shaped: &'a Shaped,
+  /// Judged model findings to ground.
+  pub model: &'a [ModelFinding],
+  /// Trusted deterministic findings, exempt from quote checks.
+  pub deterministic: &'a [Finding],
+  /// Earlier rounds' findings and dismissals.
+  pub memory: &'a Memory,
+  /// #664's secret spans over the shaped lines.
+  pub redactions: &'a [Redaction],
+  /// The review stage's lost coverage: paths not re-examined this round.
+  pub unreviewed: &'a [Omitted],
+}
+
 /// Ground `model` findings in `shaped`, merge the trusted `deterministic`
 /// findings, and match both against `memory` for the round recap.
 /// `redactions` are #664's secret spans over the shaped lines; `unreviewed`
 /// is the review stage's lost coverage (failed or oversized review calls),
 /// whose paths were not re-examined this round.
-pub fn validate(
-  shaped: &Shaped,
-  model: &[ModelFinding],
-  deterministic: &[Finding],
-  memory: &Memory,
-  redactions: &[Redaction],
-  unreviewed: &[Omitted],
-) -> Validated {
+pub fn validate(input: &Input<'_>) -> Validated {
+  let (shaped, memory) = (input.shaped, input.memory);
   let anchors = anchors(shaped);
   // A redaction `Mask` cannot locate makes its path's model findings unsendable.
-  let (maskable, unmaskable): (Vec<Redaction>, Vec<Redaction>) = redactions
+  let (maskable, unmaskable): (Vec<Redaction>, Vec<Redaction>) = input
+    .redactions
     .iter()
     .cloned()
     .partition(|redaction| Mask::new(shaped, std::slice::from_ref(redaction)).is_ok());
@@ -110,10 +121,10 @@ pub fn validate(
     mask: mask.as_ref(),
     memory,
     shaped,
-    redactions,
+    redactions: input.redactions,
     bad: &bad,
   };
-  let (kept, dropped, lost) = collect(&ctx, model, deterministic);
+  let (kept, dropped, lost) = collect(&ctx, input.model, input.deterministic);
   let mut out = Validated {
     findings: Vec::new(),
     unreviewed: lost
@@ -126,7 +137,12 @@ pub fn validate(
     recap: Recap::default(),
     dropped,
   };
-  build_recap(&kept, shaped, memory, &lost, unreviewed, &mut out.recap);
+  let blocked: BTreeSet<String> = lost
+    .keys()
+    .cloned()
+    .chain(input.unreviewed.iter().map(|item| item.path.clone()))
+    .collect();
+  build_recap(&kept, shaped, memory, &blocked, &mut out.recap);
   out.findings = kept
     .into_iter()
     .map(|candidate| candidate.finding)
@@ -206,7 +222,7 @@ fn drop_lost(lost: &mut BTreeMap<String, String>, finding: &ModelFinding, why: &
   1
 }
 
-fn side_name(side: Side) -> &'static str {
+pub(super) fn side_name(side: Side) -> &'static str {
   match side {
     Side::New => "new",
     Side::Old => "old",
@@ -241,23 +257,6 @@ fn cited(finding: &ModelFinding, anchors: &Anchors<'_>) -> Option<String> {
     .map(|texts| texts.join("\n"))
 }
 
-fn withdrawn(finding: &ModelFinding) -> bool {
-  let category = normalize_text(&finding.category);
-  if matches!(
-    category.as_str(),
-    "no_defect" | "no-defect" | "nodefect" | "no defect"
-  ) {
-    return true;
-  }
-  // A marker ends at a non-alphanumeric: "No defect." and "abstain:" withdraw.
-  let claim = normalize_text(&finding.claim);
-  ["no defect", "abstain"].iter().any(|marker| {
-    claim
-      .strip_prefix(marker)
-      .is_some_and(|rest| !rest.starts_with(char::is_alphanumeric))
-  })
-}
-
 fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
   let mask = ctx.mask?;
   // The model saw the masked patch, so both sides are compared masked.
@@ -265,14 +264,7 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
   if collapse_whitespace(&mask.apply(&finding.quote)) != collapse_whitespace(&text) {
     return None;
   }
-  // A settled dismissal by exact id suppresses any severity: the echo is exact.
-  if finding.prior_id.as_deref().is_some_and(|id| {
-    ctx
-      .memory
-      .dismissals
-      .iter()
-      .any(|dismissal| dismissal.id == id)
-  }) {
+  if settled(ctx, finding) {
     return Some(Ground::Suppressed);
   }
   let matched = match_prior(finding, ctx.memory, ctx.shaped);
@@ -315,6 +307,17 @@ fn ground(ctx: &Ctx<'_>, finding: &ModelFinding) -> Option<Ground> {
   })))
 }
 
+/// A settled dismissal by exact id suppresses any severity: the echo is exact.
+fn settled(ctx: &Ctx<'_>, finding: &ModelFinding) -> bool {
+  finding.prior_id.as_deref().is_some_and(|id| {
+    ctx
+      .memory
+      .dismissals
+      .iter()
+      .any(|dismissal| dismissal.id == id)
+  })
+}
+
 fn spans(ctx: &Ctx<'_>, finding: &ModelFinding) -> Vec<RedactionSpan> {
   // Spans index one line (contract), so a multi-line finding carries none:
   // its quote is already masked, and merged spans would name no line.
@@ -333,44 +336,10 @@ fn spans(ctx: &Ctx<'_>, finding: &ModelFinding) -> Vec<RedactionSpan> {
     .collect()
 }
 
-/// A new finding's id: the fingerprint plus its cited range and side, so
-/// two identical claims at different lines are different findings, and a
-/// blocker re-raised against a dismissed prior reopens under a fresh id
-/// instead of inheriting the settled one.
-fn fresh_id(finding: &ModelFinding) -> String {
-  generated_id(&format!(
-    "{}\u{1f}{}\u{1f}{}\u{1f}{}",
-    fingerprint(&finding.path, &finding.category, &finding.claim),
-    finding.line,
-    finding.end_line,
-    side_name(finding.side)
-  ))
-}
-
-/// A suggestion is literal replacement code, not prose: prose has no code
-/// punctuation and at least three words.
-fn is_code(suggestion: &str) -> bool {
-  let text = suggestion.trim();
-  if text.is_empty() {
-    return false;
-  }
-  let words: Vec<&str> = text.split_whitespace().collect();
-  // Prose can carry inline code: "Use `items.last()` instead of indexing".
-  let first = words.first().map(|word| {
-    word
-      .trim_matches(|ch: char| !ch.is_alphanumeric())
-      .to_lowercase()
-  });
-  let prose_start = matches!(
-    first.as_deref(),
-    Some("consider" | "instead" | "you" | "this" | "prefer" | "try")
-  ) || (first.as_deref() == Some("use") && !text.contains("::"));
-  if words.len() >= 3 && prose_start {
-    return false;
-  }
-  text.chars().any(|ch| "(){}[];=`<>".contains(ch)) || words.len() < 3
-}
-
 #[cfg(test)]
 #[path = "tests/validate_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/validate_mask_test.rs"]
+mod mask_tests;
