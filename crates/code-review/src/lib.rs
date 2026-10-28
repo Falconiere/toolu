@@ -3,8 +3,8 @@
 //! records carried between review rounds, and `budget` every byte and token cap with
 //! the effort levels. Each pipeline stage owns one module (`shape`, `rules`,
 //! `prepass`, `review`, `validate`, `report`); `model` is the structured call's
-//! output contract that `review` consumes. `run` sends nothing without the
-//! repository's opt-in (`not-enabled`).
+//! output contract that `review` consumes. `run` is enabled by default and sends nothing when
+//! disabled by configuration (`not-enabled`).
 
 use clap::ArgMatches;
 use toolu_protocol::exit::Exit;
@@ -31,7 +31,7 @@ mod report;
 pub mod review;
 /// Repository conventions from the base ref.
 pub mod rules;
-/// The `codeReview` config section: the opt-in and the effort preference.
+/// The `codeReview` config section: enablement and the effort preference.
 pub mod settings;
 /// The committed diff and its reviewable anchors.
 pub mod shape;

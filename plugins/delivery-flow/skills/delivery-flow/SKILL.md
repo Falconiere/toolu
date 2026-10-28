@@ -21,7 +21,7 @@ not contain toolu's source tree.
 4. **Plan:** Read [plan.md](references/plan.md) and [ledger.md](references/ledger.md). Write a machine-readable plan with runnable checks, paths, dependencies, and AC references. A small fix still gets a compact ledger plan.
 5. **Plan review:** Read [plan-review.md](references/plan-review.md). Correct and repeat until `Status: Approved`. Do not execute a rejected plan.
 6. **Execution:** Read [execution.md](references/execution.md) and use [test.md](references/test.md) during each behavior step. Run `toolu ledger preflight` before editing. Produce real-data red → green evidence, stamp each step, keep docs synchronized, and run the full quality gate. A failed check stops progress; fix it and resume from that phase. No new runtime state gate is needed.
-7. **Delivery:** The execution reference owns the exact order: scoped commit; final ledger `run <plan_doc> --verify`; `toolu-review:review` with complete version: 2 state; `toolu ledger verdict status` reporting `overall: ready`; push; locate or create and verify the default-branch PR; invoke `pr-babysit:babysit` with no arguments.
+7. **Delivery:** The execution reference owns the exact order: scoped commit; final ledger `run <plan_doc> --verify`; `code-review:review` with complete version: 2 state; `toolu ledger verdict status` reporting `overall: ready`; push; locate or create and verify the default-branch PR; invoke `pr-babysit:babysit` with no arguments.
 
 ## Blockers and resume
 

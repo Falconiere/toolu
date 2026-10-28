@@ -8,7 +8,7 @@ use toolu_code_review::contract::{
   Source, Usage,
 };
 
-use crate::cli::{one_document, stderr, toolu};
+use crate::cli::{TOOLU, one_document, stderr};
 use crate::schema::violations;
 
 fn finding(id: &str, severity: Severity, side: Side, source: Source) -> Finding {
@@ -63,7 +63,24 @@ fn blocked_report() -> Report {
 
 #[test]
 fn the_binary_s_report_validates_and_exits_unavailable() {
-  let output = toolu(&["--json", "code-review", "run", "--effort", "high"]).unwrap();
+  let project = tempfile::tempdir().unwrap();
+  let output = std::process::Command::new(TOOLU)
+    .args([
+      "--host",
+      "claude",
+      "--json",
+      "code-review",
+      "run",
+      "--effort",
+      "high",
+    ])
+    .current_dir(project.path())
+    .env("TOOLU_PROJECT_DIR", project.path())
+    .env("TOOLU_CONFIG_DIR", project.path())
+    .env_remove("TOOLU_USER_CONFIG_DIR")
+    .env_remove("OPENROUTER_API_KEY")
+    .output()
+    .unwrap();
   assert_eq!(output.status.code(), Some(69));
   assert_eq!(stderr(&output).unwrap(), "");
   let document = one_document(&output).unwrap();
@@ -77,7 +94,7 @@ fn the_binary_s_report_validates_and_exits_unavailable() {
       &document["effort"],
       &document["error"]["kind"]
     ),
-    (&json!("error"), &json!("high"), &json!("not-enabled"))
+    (&json!("error"), &json!("high"), &json!("unconfigured"))
   );
 }
 

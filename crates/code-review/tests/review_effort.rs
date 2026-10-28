@@ -1,4 +1,4 @@
-//! The review stage's gates and inputs against loopback servers: no opt-in or no
+//! The review stage's gates and inputs against loopback servers: disabled review or no
 //! key sends nothing, the effort selector and its floors, the cache-friendly
 //! prompt with masked secrets and the base-ref override, and the review deadline.
 
@@ -32,13 +32,16 @@ fn score(score: f64) -> String {
 }
 
 #[test]
-fn without_the_opt_in_or_a_key_nothing_is_sent() {
+fn disabled_or_keyless_review_sends_nothing() {
   let rig = code_rig("src/lib.rs").unwrap();
   rig
     .fixture
     .route(REVIEW, Reply::new(200, findings(&[])))
     .unwrap();
-  let off = Settings::default();
+  let off = Settings {
+    enabled: false,
+    ..Settings::default()
+  };
   let result = rig.run_with(&Memory::default(), &off, Some(Effort::High), &rig.options());
   assert_eq!(result.map(|_| ()), Err(RunError::NotEnabled));
   let report = RunError::NotEnabled.report(Effort::High);

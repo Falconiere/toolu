@@ -1,6 +1,6 @@
 //! `toolu code-review eval`: the explicit paired-comparison entry. Without `--live`
 //! every call is answered from the replay store and nothing is sent, so no key is
-//! needed; `--live` requires the repository's opt-in and `OPENROUTER_API_KEY`, and
+//! needed; `--live` requires the enabled review configuration and `OPENROUTER_API_KEY`, and
 //! without them exits 69 unverified before any request.
 
 use std::path::{Path, PathBuf};
@@ -54,7 +54,7 @@ pub(crate) fn command() -> Command {
         .long("live")
         .action(ArgAction::SetTrue)
         .help(
-          "Call OpenRouter and Jev for real (needs the repository opt-in and OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
+          "Call OpenRouter and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
         ),
     )
     .arg(
@@ -77,15 +77,21 @@ fn usage(message: &str) -> Outcome {
 
 /// Why a live run may not send anything, when it may not.
 fn live_blocked(env: &Env, ctx: &Ctx) -> Option<String> {
-  if env
-    .get("OPENROUTER_API_KEY")
-    .is_none_or(|key| key.trim().is_empty())
-  {
-    return Some("OPENROUTER_API_KEY is missing".to_owned());
-  }
   let roots = Roots::new(env.clone(), ctx.host);
   let project = roots.project_root(None);
-  (!settings::load(&roots, project.as_deref()).enabled).then(|| ENABLE_HINT.to_owned())
+  let settings = settings::load(&roots, project.as_deref());
+  if !settings.enabled {
+    return Some(
+      std::iter::once(ENABLE_HINT.to_owned())
+        .chain(settings.notes)
+        .collect::<Vec<_>>()
+        .join("; "),
+    );
+  }
+  env
+    .get("OPENROUTER_API_KEY")
+    .is_none_or(|key| key.trim().is_empty())
+    .then(|| "OPENROUTER_API_KEY is missing".to_owned())
 }
 
 fn selected<'a>(verb: &'a ArgMatches, name: &str) -> Option<&'a str> {

@@ -135,7 +135,7 @@
     "jev": true
   },
   "codeReview": {
-    "enabled": false,
+    "enabled": true,
     "effort": "auto"
   }
 }

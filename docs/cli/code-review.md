@@ -60,7 +60,7 @@ Options:
       --effort <LEVEL>    Effort setting to run; repeatable for calibration. none is the known-weak baseline (lowest level, never judged); default: auto [possible values: auto, small, medium, high, xhigh, none]
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-      --live              Call OpenRouter and Jev for real (needs the repository opt-in and OPENROUTER_API_KEY) and record every exchange; without it nothing is sent
+      --live              Call OpenRouter and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent
       --replay-dir <DIR>  Where recorded responses are read (replay) or written (--live); default: <cases>/replay
       --report <PATH>     Also write the JSON report to this file
   -h, --help              Print help

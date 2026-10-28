@@ -33,11 +33,7 @@ pub(super) fn repo() -> tempfile::TempDir {
   git(root, &["config", "user.name", "Test"]);
   git(root, &["config", "user.email", "test@example.com"]);
   std::fs::create_dir_all(root.join(".codex")).unwrap();
-  std::fs::write(
-    root.join(".codex/toolu.config.json"),
-    r#"{"codeReview":{"enabled":true}}"#,
-  )
-  .unwrap();
+  std::fs::write(root.join(".codex/toolu.config.json"), "{}").unwrap();
   std::fs::write(root.join("src.txt"), "old\n").unwrap();
   git(root, &["add", "-A"]);
   git(root, &["commit", "-qm", "base"]);

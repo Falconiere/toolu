@@ -1,12 +1,11 @@
-//! The `codeReview` section of `toolu.config.json` (#666). `enabled` is the
-//! per-repository opt-in: it is read from the project file only, so a user-level
-//! setting can never send code from every repository an agent opens. `effort` is a
-//! preference, read from the merged user and project config.
+//! The `codeReview` section of `toolu.config.json`. Review is enabled by default;
+//! user and project settings merge with project precedence. Invalid config fails
+//! closed before any outbound request.
 
 use std::path::Path;
 
 use serde_json::Value;
-use toolu_runtime::config::load::{LoadedConfig, check_text, is_file, load as load_config};
+use toolu_runtime::config::load::{LoadedConfig, check_text, load as load_config};
 use toolu_runtime::host::roots::Roots;
 
 use crate::budget::Effort;
@@ -14,18 +13,28 @@ use crate::budget::Effort;
 /// The config section this plugin owns.
 const SECTION: &str = "codeReview";
 
-/// What a run without the opt-in tells the agent; it sends nothing.
-pub(crate) const ENABLE_HINT: &str = "code review is not enabled for this repository, so nothing was sent; ask the user to opt in with \"codeReview\": {\"enabled\": true} in the project toolu.config.json (a user-level setting cannot enable it)";
+/// What a disabled run tells the agent; it sends nothing.
+pub(crate) const ENABLE_HINT: &str = "code review is disabled by configuration, so nothing was sent; inspect codeReview.enabled in user and project toolu.config.json (project settings take precedence)";
 
 /// The plugin's settings for one repository.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Settings {
-  /// The project config sets `codeReview.enabled: true`.
+  /// Enabled unless the merged config explicitly disables it.
   pub enabled: bool,
   /// `codeReview.effort`, when it names a level.
   pub effort: Option<Effort>,
   /// Why a setting was ignored.
   pub notes: Vec<String>,
+}
+
+impl Default for Settings {
+  fn default() -> Self {
+    Self {
+      enabled: true,
+      effort: None,
+      notes: Vec::new(),
+    }
+  }
 }
 
 /// The settings for the project found from `cwd`. An invalid config envelope
@@ -38,12 +47,18 @@ pub fn load(roots: &Roots, cwd: Option<&Path>) -> Settings {
 fn from_config(config: &LoadedConfig) -> Settings {
   let mut settings = Settings::default();
   if let Some(reason) = &config.invalid {
+    settings.enabled = false;
     settings.notes.push(format!(
       "invalid config ({reason}); code review stays disabled"
     ));
     return settings;
   }
-  settings.enabled = config.files.project.as_deref().is_some_and(project_enabled);
+  if let Some(reason) = malformed_config(config) {
+    settings.enabled = false;
+    settings.notes.push(reason);
+    return settings;
+  }
+  settings.enabled = enabled(config, &mut settings.notes);
   match config
     .data
     .get(SECTION)
@@ -60,21 +75,53 @@ fn from_config(config: &LoadedConfig) -> Settings {
   settings
 }
 
-/// Whether the project file itself holds `codeReview.enabled: true`.
-fn project_enabled(path: &Path) -> bool {
-  if !is_file(path) {
-    return false;
+/// Keep the review fail-closed even though the shared loader ignores malformed files.
+fn malformed_config(config: &LoadedConfig) -> Option<String> {
+  for path in [Some(&config.files.user), config.files.project.as_ref()]
+    .into_iter()
+    .flatten()
+  {
+    let checked = match std::fs::metadata(path) {
+      Ok(metadata) if metadata.is_file() => std::fs::read_to_string(path)
+        .map_err(|err| err.to_string())
+        .and_then(|text| check_text(&text)),
+      Ok(_) => Err("config path is not a regular file".to_owned()),
+      Err(error)
+        if error.kind() == std::io::ErrorKind::NotFound
+          && std::fs::symlink_metadata(path)
+            .is_err_and(|error| error.kind() == std::io::ErrorKind::NotFound) =>
+      {
+        continue;
+      }
+      Err(error) => Err(error.to_string()),
+    };
+    if let Err(reason) = checked {
+      return Some(format!(
+        "invalid config ({}: {reason}); code review stays disabled",
+        path.display()
+      ));
+    }
   }
-  let Ok(text) = std::fs::read_to_string(path) else {
-    return false;
-  };
-  check_text(&text).is_ok_and(|map| {
-    map
-      .get(SECTION)
-      .and_then(|section| section.get("enabled"))
-      .and_then(Value::as_bool)
-      == Some(true)
-  })
+  None
+}
+
+/// Enablement from the merged user and project setting, rejecting invalid values.
+fn enabled(config: &LoadedConfig, notes: &mut Vec<String>) -> bool {
+  match config.data.get(SECTION) {
+    None => true,
+    Some(Value::Object(section)) => match section.get("enabled") {
+      None => true,
+      Some(Value::Bool(enabled)) => *enabled,
+      Some(_) => {
+        notes.push("codeReview.enabled must be a boolean; code review stays disabled".to_owned());
+        false
+      }
+    },
+    Some(_) => {
+      notes.push("codeReview must be an object; code review stays disabled".to_owned());
+      false
+    }
+  }
 }
 
 #[cfg(test)]
