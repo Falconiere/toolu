@@ -4,11 +4,17 @@
 //! wins for the whole patch); everything else is walked once. Each walk runs the
 //! built-in gates, then the registry.
 
+mod batch;
 mod edits;
+/// Normalized module event and raw context.
 pub(crate) mod event;
+/// Result folding and stopping precedence.
 pub(crate) mod fold;
+/// Hook output parsing and rendering.
 pub(crate) mod output;
+/// Fixed host and project context for one call.
 pub(crate) mod session;
+/// Built-in and registry walk.
 pub(crate) mod walk;
 
 use std::collections::BTreeSet;

@@ -15,7 +15,7 @@ use super::{ModuleResult, Phase};
 use toolu_runtime::registry::rule::RuleContext;
 
 use crate::gate::Gate;
-use crate::registry::phase::{RegistryWalk, run_registry};
+use crate::registry::phase::{RegistryPlan, RegistryWalk, run_registry};
 use crate::trace::{Step, StepKind, StepStatus};
 
 /// A decision as the hook JSON a bash module would have printed: Codex output
@@ -32,7 +32,7 @@ pub(crate) fn encoded(host: Host, event: HostEvent, decision: &Decision) -> Stri
 }
 
 /// The dispatcher's own failure, which blocks like `hook-main.ts` does.
-fn failed(phase: Phase, message: &str) -> ModuleResult {
+pub(super) fn failed(phase: Phase, message: &str) -> ModuleResult {
   let prefix = if phase == Phase::Pre { "blocked: " } else { "" };
   ModuleResult {
     stdout: String::new(),
@@ -89,7 +89,7 @@ fn run_gate(
 
 /// Walk `payload`: built-ins, then the registry.
 pub(crate) fn walk(
-  payload: &Payload,
+  payload: &Payload<'_>,
   session: &Session<'_>,
   trace: &mut Vec<Step>,
 ) -> ModuleResult {
@@ -97,6 +97,17 @@ pub(crate) fn walk(
     Ok(view) => view,
     Err(message) => return failed(session.phase, &message),
   };
+  walk_with_view(payload, &view, session, trace, &mut None)
+}
+
+/// Walk a split path against the outer event's reused view.
+pub(crate) fn walk_with_view<'a>(
+  payload: &Payload<'_>,
+  view: &View,
+  session: &Session<'a>,
+  trace: &mut Vec<Step>,
+  registry_plan: &mut Option<RegistryPlan<'a>>,
+) -> ModuleResult {
   let ctx = view.rule_context(payload, session);
   let event = host_event(&view.event);
   let mut state = WalkState::new(session.phase, session.host);
@@ -119,7 +130,8 @@ pub(crate) fn walk(
     ctx: &ctx,
     event,
   };
-  for folded in run_registry(&registry, &mut state.stderr, trace) {
+  let plan = registry_plan.get_or_insert_with(|| RegistryPlan::new(session));
+  for folded in run_registry(&registry, &mut state.stderr, trace, plan) {
     if let Some(done) = state.consume(&folded) {
       return done;
     }

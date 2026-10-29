@@ -4,6 +4,7 @@
 //! on any path wins for the whole patch.
 
 use serde_json::Value;
+use std::cell::OnceCell;
 use toolu_protocol::event::HostEvent;
 use toolu_protocol::host::Host;
 use toolu_protocol::normalize::Roots as ProtocolRoots;
@@ -13,11 +14,12 @@ use toolu_runtime::json::jq_text;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::edit_records::{EditOperation, EditRecord, EditRecords, normalize_edit_records};
 
+use super::batch::Batch;
 use super::event::{EditFields, Payload};
 use super::fold::{Folded, WalkState};
 use super::output::{Unreadable, parse_document, plain, read_field, substituted};
 use super::session::Session;
-use super::walk::walk;
+use super::walk::{failed, walk};
 use super::{ModuleResult, Phase};
 use crate::trace::Step;
 
@@ -142,35 +144,40 @@ pub(crate) fn dispatch_input(
     Err(reason) => return refusal(session.phase, session.host, &reason),
   };
   if let Some(edit) = caller_split(session) {
-    let payload = Payload {
-      text: text.to_owned(),
-      doc,
-      tool_name,
-      edit: Some(edit),
-    };
-    return walk(&payload, session, trace);
+    return walk_one(text, doc.as_ref(), &tool_name, Some(edit), session, trace);
   }
   let value = doc.as_ref().map_or(Value::Null, plain);
   let malformed = || malformed_edit(session.phase, session.host);
-  match (normalize_edit_records(&value, &tool_name), doc) {
-    (EditRecords::NotEdit, doc) => {
-      let payload = Payload {
-        text: text.to_owned(),
-        doc,
-        tool_name,
-        edit: None,
-      };
-      walk(&payload, session, trace)
-    }
+  match (normalize_edit_records(&value, &tool_name), doc.as_ref()) {
+    (EditRecords::NotEdit, doc) => walk_one(text, doc, &tool_name, None, session, trace),
     (EditRecords::Records(records), Some(doc @ Ordered::Object(_))) if !records.is_empty() => {
-      fold_records(&doc, &records, session, trace)
+      fold_records(doc, &records, session, trace)
     }
     (EditRecords::Malformed | EditRecords::Records(_), _) => malformed(),
   }
 }
 
+fn walk_one(
+  text: &str,
+  doc: Option<&Ordered>,
+  tool_name: &str,
+  edit: Option<EditFields>,
+  session: &Session<'_>,
+  trace: &mut Vec<Step>,
+) -> ModuleResult {
+  let payload = Payload {
+    text,
+    doc,
+    synthetic: None,
+    rendered: OnceCell::new(),
+    tool_name,
+    edit,
+  };
+  walk(&payload, session, trace)
+}
+
 /// The synthetic single-path `Edit` payload `toolu_dispatch_hook` builds with `jq -c`.
-fn synthetic_edit(doc: &Ordered, record: &EditRecord) -> Ordered {
+pub(super) fn synthetic_edit(doc: &Ordered, record: &EditRecord) -> Ordered {
   let mut input = match doc.get("tool_input") {
     Some(input @ Ordered::Object(_)) => input.clone(),
     Some(_) | None => Ordered::Object(Vec::new()),
@@ -200,11 +207,18 @@ fn fold_records(
   session: &Session<'_>,
   trace: &mut Vec<Step>,
 ) -> ModuleResult {
+  let Some(first) = records.first() else {
+    return malformed_edit(session.phase, session.host);
+  };
+  let mut batch = match Batch::new(doc, first, session) {
+    Ok(batch) => batch,
+    Err(message) => return failed(session.phase, &message),
+  };
   let collect_blocks = session.phase == Phase::Post && session.options.continue_post_blocks;
   let mut outer = WalkState::new(session.phase, session.host);
   let mut blocks: Vec<String> = Vec::new();
   for record in records {
-    let result = walk_path(doc, record, session, trace);
+    let result = batch.walk_path(doc, record, session, trace);
     outer.stderr.push_str(&result.stderr);
     if collect_blocks && result.exit_code != 0 {
       return ModuleResult {
@@ -219,16 +233,7 @@ fn fold_records(
       blocks.push(reason);
       continue;
     }
-    let folded = Folded {
-      name: String::new(),
-      result: ModuleResult {
-        stdout: substituted(&result.stdout).to_owned(),
-        stderr: String::new(),
-        exit_code: result.exit_code,
-      },
-      truncated: false,
-    };
-    if let Some(done) = outer.consume(&folded) {
+    if let Some(done) = outer.consume(&folded_path(&result)) {
       return done;
     }
   }
@@ -238,21 +243,16 @@ fn fold_records(
   joined_block(&blocks, outer.stderr)
 }
 
-/// One path's walk over its synthetic `Edit` payload.
-fn walk_path(
-  doc: &Ordered,
-  record: &EditRecord,
-  session: &Session<'_>,
-  trace: &mut Vec<Step>,
-) -> ModuleResult {
-  let synthetic = synthetic_edit(doc, record);
-  let payload = Payload {
-    text: jq_text(&synthetic, false),
-    doc: Some(synthetic),
-    tool_name: "Edit".to_owned(),
-    edit: Some(EditFields::of(record)),
-  };
-  walk(&payload, session, trace)
+fn folded_path(result: &ModuleResult) -> Folded {
+  Folded {
+    name: String::new(),
+    result: ModuleResult {
+      stdout: substituted(&result.stdout).to_owned(),
+      stderr: String::new(),
+      exit_code: result.exit_code,
+    },
+    truncated: false,
+  }
 }
 
 /// The reason of a path's `{"decision":"block"}` output, or `check blocked` when it has none.

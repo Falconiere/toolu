@@ -13,7 +13,7 @@ use toolu_runtime::registry::{ModuleKind, RegistryEvent};
 use super::executable::run_executable;
 use super::gate::plugin_active;
 use super::manifests::{Manifests, Read};
-use super::{Entry, list_dir};
+use super::{Entry, Listing, list_dir};
 use crate::dispatch::event::{Payload, View};
 use crate::dispatch::fold::{Folded, stops_walk};
 use crate::dispatch::output::parse_document;
@@ -24,11 +24,39 @@ use crate::trace::{Skip, Step, StepKind, StepStatus};
 
 /// One walk, as the registry phase needs it.
 pub(crate) struct RegistryWalk<'w> {
-  pub(crate) payload: &'w Payload,
+  pub(crate) payload: &'w Payload<'w>,
   pub(crate) session: &'w Session<'w>,
   pub(crate) view: &'w View,
   pub(crate) ctx: &'w RuleContext<'w>,
   pub(crate) event: HostEvent,
+}
+
+/// Event-local registry snapshot, reused by every split path.
+pub(crate) struct RegistryPlan<'r> {
+  listing: Listing,
+  manifests: Manifests<'r>,
+  skips: Vec<Option<Skip>>,
+}
+
+impl<'r> RegistryPlan<'r> {
+  /// Capture the event's directory, manifests, and active plugin facts once.
+  pub(crate) fn new(session: &Session<'r>) -> Self {
+    let event = registry_event(session.phase);
+    let dir = session.config_root.join("toolu").join(event.dir_name());
+    let listing = list_dir(&dir);
+    let manifests = Manifests::read(&listing.entries, event, session.options.rules);
+    let mut admit = Admission::new(session, &manifests);
+    let skips = listing
+      .entries
+      .iter()
+      .map(|entry| admit.skip(entry))
+      .collect();
+    RegistryPlan {
+      listing,
+      manifests,
+      skips,
+    }
+  }
 }
 
 /// The phase's running state: results, stderr and trace, and whether it stopped.
@@ -86,11 +114,8 @@ pub(crate) fn run_registry(
   walk: &RegistryWalk<'_>,
   stderr: &mut String,
   trace: &mut Vec<Step>,
+  plan: &RegistryPlan<'_>,
 ) -> Vec<Folded> {
-  let session = walk.session;
-  let event = registry_event(session.phase);
-  let dir = session.config_root.join("toolu").join(event.dir_name());
-  let listing = list_dir(&dir);
   let mut run = Run {
     walk,
     out: Vec::new(),
@@ -98,22 +123,20 @@ pub(crate) fn run_registry(
     trace,
     stopped: false,
   };
-  for file in &listing.rejected {
+  for file in &plan.listing.rejected {
     run.warn(&format!(
       "toolu-registry: registry module {file} lacks <plugin-spec>__<name> namespace; skipped"
     ));
   }
-  let manifests = Manifests::read(&listing.entries, event, session.options.rules);
-  let mut admit = Admission::new(session, &manifests);
-  for entry in &listing.entries {
-    if let Some(skip) = admit.skip(entry) {
-      run.step(entry, step_kind(entry.kind), StepStatus::Skipped(skip));
+  for (entry, skip) in plan.listing.entries.iter().zip(&plan.skips) {
+    if let Some(skip) = skip {
+      run.step(entry, step_kind(entry.kind), StepStatus::Skipped(*skip));
       continue;
     }
     match entry.kind {
       ModuleKind::Esm => run.step(entry, StepKind::Esm, StepStatus::Skipped(Skip::Unsupported)),
       ModuleKind::Bash => executable(&mut run, entry),
-      ModuleKind::Manifest => manifest(&mut run, &manifests, entry),
+      ModuleKind::Manifest => manifest(&mut run, &plan.manifests, entry),
     }
     if run.stopped {
       return run.out;
@@ -123,16 +146,16 @@ pub(crate) fn run_registry(
 }
 
 /// Gating and shadowing for one directory.
-struct Admission<'a> {
-  session: &'a Session<'a>,
+struct Admission<'s, 'o> {
+  session: &'s Session<'o>,
   /// Specs with a usable manifest: their `.js` and `.sh` modules are shadowed.
   usable: BTreeSet<String>,
   /// Whether each spec's plugin is active, asked once per walk.
   active: BTreeMap<String, bool>,
 }
 
-impl<'a> Admission<'a> {
-  fn new(session: &'a Session<'a>, manifests: &Manifests<'_>) -> Admission<'a> {
+impl<'s, 'o> Admission<'s, 'o> {
+  fn new(session: &'s Session<'o>, manifests: &Manifests<'_>) -> Admission<'s, 'o> {
     Admission {
       session,
       usable: manifests.usable_specs(),
