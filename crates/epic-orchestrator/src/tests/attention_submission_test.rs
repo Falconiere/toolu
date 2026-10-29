@@ -204,7 +204,7 @@ fn chmod_tree(root: &Path, file_mode: u32, dir_mode: u32) {
 }
 
 #[test]
-fn a_refuse_journal_failure_still_allows_the_same_submission_to_retry() {
+fn a_refuse_journal_failure_fails_closed_as_uncertain() {
   use crate::journal::{self, Record};
 
   let tmp = tempfile::tempdir().expect("temp");
@@ -226,13 +226,9 @@ fn a_refuse_journal_failure_still_allows_the_same_submission_to_retry() {
     engine.now,
   )
   .expect("admit");
-  // Open admit alone recalls as uncertain; a refuse write that cannot land
-  // must still free the id in-memory so a retry can prompt.
-  assert_eq!(answer(&mut engine, &request)["delivered"], "uncertain");
-  assert_eq!(prompts(tmp.path()).len(), 0);
   let journal = engine.paths.journal_dir();
   chmod_tree(&journal, 0o444, 0o555);
-  super::refuse_admitted(
+  let refused = super::refuse_admitted(
     &mut engine,
     &super::Answer {
       key: "a",
@@ -241,10 +237,11 @@ fn a_refuse_journal_failure_still_allows_the_same_submission_to_retry() {
       submission: Some("s-1"),
     },
   );
-  assert!(engine.refused_ids.contains_key("s-1"));
+  assert!(refused.is_err(), "{refused:?}");
   chmod_tree(&journal, 0o644, 0o755);
-  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
-  assert_eq!(prompts(tmp.path()).len(), 1);
+  // Open admit remains: same-id retry stays uncertain (no re-prompt after restart either).
+  assert_eq!(answer(&mut engine, &request)["delivered"], "uncertain");
+  assert_eq!(prompts(tmp.path()).len(), 0);
 }
 
 #[test]

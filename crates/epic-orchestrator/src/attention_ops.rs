@@ -100,10 +100,13 @@ fn attempt(engine: &mut Engine, answer: &Answer<'_>) -> Result<Attempt, String> 
   match send_prompt(engine, answer.key, answer.text) {
     Ok(()) => Ok(Attempt::Sent),
     Err(err) if uncertain(&err) => Ok(Attempt::Maybe(err)),
-    Err(err) => {
-      refuse_admitted(engine, answer);
-      refuse(format!("worker prompt not delivered: {err}"))
-    }
+    Err(err) => match refuse_admitted(engine, answer) {
+      Ok(()) => refuse(format!("worker prompt not delivered: {err}")),
+      // Leave the open admit so a restart cannot re-prompt; same-id retry is uncertain.
+      Err(refuse_err) => refuse(format!(
+        "worker prompt not delivered: {err}; answer-refused not journaled: {refuse_err}"
+      )),
+    },
   }
 }
 
@@ -173,18 +176,12 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
   let note = format!("fp={fp} by={}", answer.by);
   let record = Record::new("action", "answer-admit", answer.key, id, &note);
   engine.world.outbox.push_back(Step::Journal(record));
-  engine.flush()?;
-  engine.refused_ids.remove(id);
-  Ok(())
+  engine.flush()
 }
 
 /// The fingerprint journaled for `id` and how far delivery got, from the
-/// retained journal (and in-memory refuses when the refuse row could not be
-/// written). `None` when the id was never admitted.
+/// retained journal. `None` when the id was never admitted.
 fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String> {
-  if let Some(fp) = engine.refused_ids.get(id) {
-    return Ok(Some((fp.clone(), Delivery::Refused)));
-  }
   let mut state = None;
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
   for row in rows
@@ -216,12 +213,12 @@ fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String
 }
 
 /// Close an admission whose prompt was refused, so a retry of the id prompts.
-/// Writes `answer-refused` straight to the journal (same path as a flushed
-/// Journal step). When that write fails, remember the id in-memory so a
-/// same-id retry is not stuck as false `delivered: uncertain`.
-fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) {
+/// Writes `answer-refused` straight to the journal and retries briefly so the
+/// refuse is durable across restart. When every attempt fails, returns Err and
+/// leaves the open admit (fail closed: same-id retry is `delivered: uncertain`).
+fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) -> Result<(), String> {
   let Some(id) = answer.submission else {
-    return;
+    return Ok(());
   };
   let note = format!("by={}", answer.by);
   let mut record = Record::new("action", "answer-refused", answer.key, id, &note);
@@ -230,20 +227,24 @@ fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) {
   {
     record.epic.clone_from(&issue.epic);
   }
-  if journal::append(
-    &engine.paths.journal_dir(),
-    &engine.paths.journal_lock(),
-    &record,
-    engine.now,
-  )
-  .is_ok()
-  {
-    engine.refused_ids.remove(id);
-  } else {
-    engine
-      .refused_ids
-      .insert(id.to_owned(), fingerprint(answer.key, answer.text));
+  let mut last = String::new();
+  for attempt in 0..4 {
+    match journal::append(
+      &engine.paths.journal_dir(),
+      &engine.paths.journal_lock(),
+      &record,
+      engine.now,
+    ) {
+      Ok(_) => return Ok(()),
+      Err(err) => {
+        last = err;
+        if attempt + 1 < 4 {
+          std::thread::sleep(std::time::Duration::from_millis(25));
+        }
+      }
+    }
   }
+  Err(last)
 }
 
 /// Journal an answer the worker received and mark attention. A journal
