@@ -107,22 +107,25 @@ pub(super) fn pr_reply() -> String {
   json!({"state":"open","merged":false,"head":{"sha":"abc"},"base":{"ref":"main"}}).to_string()
 }
 
-pub(super) fn rest_routes(fixture: &Fixture) {
+/// Every REST path the engine's probe and pr-babysit's collection read, with
+/// its body; `comments` is the issue-comments page.
+pub(super) fn rest_bodies(comments: String) -> [(String, String); 6] {
   let root = "/repos/o/r";
-  for (path, body) in [
+  [
     (format!("{root}/pulls/1"), pr_reply()),
     (
       format!("{root}/commits/abc/check-runs?per_page=100"),
       r#"{"check_runs":[]}"#.into(),
     ),
     (format!("{root}/commits/abc/status"), "{}".into()),
-    (
-      format!("{root}/issues/1/comments?per_page=100"),
-      "[]".into(),
-    ),
+    (format!("{root}/issues/1/comments?per_page=100"), comments),
     (format!("{root}/pulls/1/comments?per_page=100"), "[]".into()),
     (format!("{root}/pulls/1/reviews?per_page=100"), "[]".into()),
-  ] {
+  ]
+}
+
+pub(super) fn rest_routes(fixture: &Fixture) {
+  for (path, body) in rest_bodies("[]".into()) {
     fixture
       .sequence(
         &path,

@@ -6,9 +6,10 @@
 //! `toolu.statusline-benchmark/v1` result. `--assert` fails when the warm p50 is over
 //! 4000 us wall or 6 MiB max RSS. Exit 0 ok, 1 over budget, 2 usage or setup error.
 
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
+use crate::bench_hooks::toolu_bin;
 use crate::bench_hooks_measure::{MEASURER_VAR, SPAWN_DEADLINE, Spawn, measurer, samples};
 use crate::bench_hooks_report::{Sample, percentile};
 use crate::bench_statusline_repo::{Fixture, payload};
@@ -21,7 +22,7 @@ const RUNS: usize = 30;
 
 /// Measure, print, write and judge.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
-  let bin = toolu_bin(options)?;
+  let bin = toolu_bin(options, "bench-statusline")?;
   let runs = runs(options)?;
   let fixture_json = options.root.join("fixtures/statusline/performance.json");
   let fixture_json = std::fs::read_to_string(&fixture_json)
@@ -42,20 +43,6 @@ pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
     return Ok(Verdict::Clean);
   }
   Ok(output::findings("bench-statusline", &violations(&measured)))
-}
-
-fn toolu_bin(options: &Options) -> Result<PathBuf, String> {
-  let bin = options
-    .bin
-    .clone()
-    .unwrap_or_else(|| options.root.join("target/release/toolu"));
-  if bin.is_file() {
-    return std::fs::canonicalize(&bin).map_err(|err| format!("bench-statusline: {err}"));
-  }
-  Err(format!(
-    "bench-statusline: no toolu at {}; build it with cargo build --release --locked --bin toolu",
-    bin.display()
-  ))
 }
 
 fn runs(options: &Options) -> Result<usize, String> {

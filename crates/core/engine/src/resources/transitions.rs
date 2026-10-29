@@ -304,7 +304,7 @@ pub fn active_jobs(root: &Path, worktree: &str) -> Result<bool, String> {
 
 #[cfg(test)]
 #[path = "tests/transitions_rig_test.rs"]
-mod rig;
+pub mod rig;
 
 #[cfg(test)]
 #[path = "tests/transitions_test.rs"]

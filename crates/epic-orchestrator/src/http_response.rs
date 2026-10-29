@@ -42,15 +42,7 @@ impl OverviewCache {
       && entry.seq == world.seq
       && entry.at.elapsed() < Duration::from_millis(100)
     {
-      return Response {
-        status: 200,
-        content_type: "application/json; charset=utf-8",
-        body: entry.body.clone(),
-        head: false,
-        close: false,
-        allow: READ_METHODS,
-        cache: "no-store",
-      };
+      return Response::json(entry.body.clone());
     }
     let value = match status_api::document(world, paths, None, secrets) {
       Ok(value) => value,
@@ -62,15 +54,7 @@ impl OverviewCache {
       at: Instant::now(),
       body: body.clone(),
     });
-    Response {
-      status: 200,
-      content_type: "application/json; charset=utf-8",
-      body,
-      head: false,
-      close: false,
-      allow: READ_METHODS,
-      cache: "no-store",
-    }
+    Response::json(body)
   }
 }
 
@@ -90,6 +74,19 @@ pub(crate) struct Response {
 }
 
 impl Response {
+  /// A `200` JSON body the client must not cache.
+  pub(crate) fn json(body: Vec<u8>) -> Self {
+    Self {
+      status: 200,
+      content_type: "application/json; charset=utf-8",
+      body,
+      head: false,
+      close: false,
+      allow: READ_METHODS,
+      cache: "no-store",
+    }
+  }
+
   /// A fixed failure body with no request or source bytes.
   pub(crate) fn error(status: u16, code: &'static str) -> Self {
     Self {
@@ -107,15 +104,7 @@ impl Response {
 /// A JSON document as `200`, `None` as `404` and a read failure as `500`.
 pub(crate) fn json_response(document: Result<Option<serde_json::Value>, String>) -> Response {
   match document {
-    Ok(Some(value)) => Response {
-      status: 200,
-      content_type: "application/json; charset=utf-8",
-      body: value.to_string().into_bytes(),
-      head: false,
-      close: false,
-      allow: READ_METHODS,
-      cache: "no-store",
-    },
+    Ok(Some(value)) => Response::json(value.to_string().into_bytes()),
     Ok(None) => Response::error(404, "not_found"),
     Err(_err) => Response::error(500, "status_unavailable"),
   }

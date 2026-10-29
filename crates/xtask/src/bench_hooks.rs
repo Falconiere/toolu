@@ -29,7 +29,7 @@ const MAX_ELAPSED_MS: u128 = 60_000;
 /// Measure, print, write and judge.
 pub(crate) fn run(options: &Options) -> Result<Verdict, String> {
   let root = &options.root;
-  let bin = toolu_bin(options)?;
+  let bin = toolu_bin(options, "bench-hooks")?;
   let runs = runs(options)?;
   let payloads = entries_of(&read_json(
     &root.join("benchmarks/cases/hooks/payloads.json"),
@@ -76,16 +76,17 @@ struct Bench<'b> {
   runs: usize,
 }
 
-fn toolu_bin(options: &Options) -> Result<PathBuf, String> {
+/// `--bin` or the release build, canonical; `task` prefixes the errors.
+pub(crate) fn toolu_bin(options: &Options, task: &str) -> Result<PathBuf, String> {
   let bin = options
     .bin
     .clone()
     .unwrap_or_else(|| options.root.join("target/release/toolu"));
   if bin.is_file() {
-    return std::fs::canonicalize(&bin).map_err(|err| format!("bench-hooks: {err}"));
+    return std::fs::canonicalize(&bin).map_err(|err| format!("{task}: {err}"));
   }
   Err(format!(
-    "bench-hooks: no toolu at {}; build it with cargo build --release --locked --bin toolu",
+    "{task}: no toolu at {}; build it with cargo build --release --locked --bin toolu",
     bin.display()
   ))
 }

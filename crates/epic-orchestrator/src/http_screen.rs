@@ -139,7 +139,7 @@ impl Screen {
       }
       let body = value.to_string().into_bytes();
       if body.len() <= MAX_BODY {
-        return ok(body);
+        return Response::json(body);
       }
       if text.is_empty() {
         return Response::error(500, "screen_unavailable");
@@ -237,18 +237,6 @@ fn not_running(key: &str, secrets: &Secrets) -> Response {
   json_response(Ok(Some(json!({
     "schema": 1, "key": redact_text(key, secrets), "state": "not_running",
   }))))
-}
-
-fn ok(body: Vec<u8>) -> Response {
-  Response {
-    status: 200,
-    content_type: "application/json; charset=utf-8",
-    body,
-    head: false,
-    close: false,
-    allow: crate::http_response::READ_METHODS,
-    cache: "no-store",
-  }
 }
 
 fn attach(session: Option<&str>, target: &str) -> String {

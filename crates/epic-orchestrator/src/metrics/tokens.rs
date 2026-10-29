@@ -114,17 +114,26 @@ fn claude(agent: &Agent, session: &str, env: &Env) -> Result<(&'static str, Valu
       last.insert(id.to_owned(), usage);
     }
   }
+  Ok((
+    "claude-code transcript",
+    field_totals(&last, &CLAUDE_FIELDS),
+  ))
+}
+
+/// Each of `fields` summed over every usage object, saturating; a missing
+/// field counts as zero.
+pub(super) fn field_totals(usages: &BTreeMap<String, Value>, fields: &[&str]) -> Value {
   let sum = |field: &str| -> u64 {
-    last
+    usages
       .values()
       .map(|usage| usage.get(field).and_then(Value::as_u64).unwrap_or(0))
       .fold(0, u64::saturating_add)
   };
-  let tokens: serde_json::Map<String, Value> = CLAUDE_FIELDS
+  let tokens: serde_json::Map<String, Value> = fields
     .iter()
     .map(|field| ((*field).to_owned(), json!(sum(field))))
     .collect();
-  Ok(("claude-code transcript", Value::Object(tokens)))
+  Value::Object(tokens)
 }
 
 fn codex(session: &str, env: &Env) -> Result<(&'static str, Value), &'static str> {
