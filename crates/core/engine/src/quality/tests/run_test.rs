@@ -141,6 +141,15 @@ pub(super) fn context<'a>(
   }
 }
 
+fn write(path: &str) -> EditRecord {
+  EditRecord {
+    path: path.to_owned(),
+    operation: EditOperation::Write,
+    moved_to: None,
+    from: None,
+  }
+}
+
 #[test]
 fn inline_rules_join_the_one_scan() {
   let temp = tempfile::tempdir().unwrap();
@@ -285,12 +294,7 @@ fn batch_keeps_exact_paths_order_and_each_rules_hits() {
   let ctx = context(temp.path(), &env, &raw);
   let records: Vec<_> = ["a.ts", "nested/a.ts", "ba.ts"]
     .into_iter()
-    .map(|path| EditRecord {
-      path: path.to_owned(),
-      operation: EditOperation::Write,
-      moved_to: None,
-      from: None,
-    })
+    .map(write)
     .collect();
   let outcome = run_quality(
     &records,
@@ -303,18 +307,16 @@ fn batch_keeps_exact_paths_order_and_each_rules_hits() {
   let messages: Vec<_> = outcome
     .decisions
     .iter()
-    .map(|decision| match decision {
-      toolu_protocol::decision::Decision::Advisory { message } => message.as_str(),
-      toolu_protocol::decision::Decision::Allow => "allow",
-      other @ (toolu_protocol::decision::Decision::Ask { .. }
-      | toolu_protocol::decision::Decision::Deny { .. }
-      | toolu_protocol::decision::Decision::Block { .. }
-      | toolu_protocol::decision::Decision::RuntimeFailure { .. }) => {
-        panic!("unexpected decision: {other:?}")
+    .filter_map(|decision| {
+      if let toolu_protocol::decision::Decision::Advisory { message } = decision {
+        Some(message.as_str())
+      } else {
+        None
       }
     })
     .collect();
-  assert_eq!(messages.len(), 6);
+  assert_eq!(outcome.decisions.len(), 6);
+  assert_eq!(messages.len(), 4);
   assert!(
     messages[0].contains("throw-first a.ts:1:throw \"first\";\nthrow-first a.ts:2:throw \"last\";")
   );
@@ -324,7 +326,11 @@ fn batch_keeps_exact_paths_order_and_each_rules_hits() {
   );
   assert!(messages[2].contains("throw-first nested/a.ts:1:throw \"nested\";"));
   assert!(messages[3].contains("throw-second nested/a.ts:1:throw \"nested\";"));
-  assert_eq!(&messages[4..], &["allow", "allow"]);
+  assert!(
+    outcome.decisions[4..]
+      .iter()
+      .all(|decision| matches!(decision, toolu_protocol::decision::Decision::Allow))
+  );
 }
 
 #[test]
@@ -339,12 +345,7 @@ fn failed_batch_scan_reaches_each_rule_and_keeps_gate_failure() {
   let env = process.with("PATH", &path);
   let raw = Map::new();
   let ctx = context(temp.path(), &env, &raw);
-  let records = [EditRecord {
-    path: "a.ts".to_owned(),
-    operation: EditOperation::Write,
-    moved_to: None,
-    from: None,
-  }];
+  let records = [write("a.ts")];
   for (target, stage) in [
     ("/usr/bin/false", "stage: AstGrep"),
     ("/bin/echo", "stage: Parse"),
