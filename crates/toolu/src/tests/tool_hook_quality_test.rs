@@ -168,3 +168,56 @@ fn production_multi_path_quality_uses_one_real_scan() {
     ]
   );
 }
+
+#[test]
+fn a_later_executable_edit_refreshes_the_next_paths_quality_scan() {
+  let temp = tempfile::tempdir().unwrap();
+  let project = quality_project(temp.path());
+  std::fs::write(project.join("a.ts"), "export const a = 1;\n").unwrap();
+  let module = temp
+    .path()
+    .join("home/.claude/toolu/post-tools.d/zz@toolu__rewrite.sh");
+  std::fs::write(
+    &module,
+    "#!/bin/sh\nif [ ! -e .rewritten ]; then\n  printf 'throw \"later\";\\n' > b.ts\n  : > .rewritten\nfi\n",
+  )
+  .unwrap();
+  std::fs::set_permissions(&module, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let (env, count) = counted_ast_grep(temp.path(), &project);
+  let options = DispatchOptions {
+    env: &env,
+    cwd: &project,
+    lib_dir: Path::new("/lib"),
+    builtins: &[],
+    rules: RULES,
+    quality_rules: QUALITY_RULES,
+    selected_specs: None,
+    continue_post_blocks: false,
+    split_by_caller: false,
+    module_timeout: DEFAULT_MODULE_TIMEOUT,
+  };
+  let patch = "*** Begin Patch\n*** Update File: a.ts\n@@\n-old\n+new\n*** Update File: b.ts\n@@\n-old\n+new\n*** End Patch\n";
+  let payload = serde_json::json!({"session_id":"mutate", "cwd":project, "tool_name":"apply_patch", "tool_input":{"command":patch}}).to_string();
+  let result = toolu_engine::dispatch::dispatch(Phase::Post, &payload, &options);
+  assert_eq!(result.result.exit_code, 0, "{result:?}");
+  assert_eq!(result.result.stderr, "", "{result:?}");
+  assert_eq!(std::fs::read_to_string(&count).unwrap(), "scan\nscan\n");
+  let gate = project.join(".claude/tmp/quality-gate-status.json");
+  let GateRead::Ok(GateFile::Failing {
+    entries: Some(entries),
+    ..
+  }) = read_gate_file(&gate)
+  else {
+    panic!("missing quality gate");
+  };
+  assert_eq!(entries.len(), 1);
+  assert_eq!(entries[0].0, "b.ts");
+  assert_eq!(entries[0].1.source, "ts-quality-hook");
+  assert!(entries[0].1.violations.contains("b.ts:1:throw \"later\";"));
+  let unchanged = toolu_engine::dispatch::dispatch(Phase::Post, &payload, &options);
+  assert_eq!(unchanged.result.exit_code, 0, "{unchanged:?}");
+  assert_eq!(
+    std::fs::read_to_string(count).unwrap(),
+    "scan\nscan\nscan\n"
+  );
+}

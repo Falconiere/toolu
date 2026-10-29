@@ -234,6 +234,9 @@ fn selected(session: &Session<'_>, spec: &str) -> bool {
 /// Run one `.sh` entry and decide whether it stops the walk.
 fn executable(run: &mut Run<'_>, entry: &Entry) {
   let folded = run_executable(entry, run.walk.payload, run.walk.session);
+  if let Some((quality, _)) = run.walk.quality {
+    quality.borrow_mut().invalidate();
+  }
   let code = folded.result.exit_code;
   run.step(entry, StepKind::Executable, StepStatus::Exited(code));
   let doc = parse_document(&folded.result.stdout).ok();

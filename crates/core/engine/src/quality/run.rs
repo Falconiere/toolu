@@ -14,7 +14,7 @@ use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
 use super::edit::edited_record;
-use super::scan::{partition_hits, scan_rules};
+use super::scan::partition_hits;
 use super::{
   AstGrepHit, AstGrepScan, EditedFile, QualityBinding, edited_file, in_linked_worktree,
   is_regular_file,
@@ -225,30 +225,15 @@ fn file_scan(
 ) -> AstGrepScan {
   match scan {
     AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
-      hits: by_path.get(&file.path).cloned().unwrap_or_default(),
+      hits: by_path
+        .get(&file.path)
+        .or_else(|| by_path.get(file.path.trim_start_matches("./")))
+        .cloned()
+        .unwrap_or_default(),
       empty: *empty,
     },
     other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
   }
-}
-
-/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
-fn batch_scan(
-  enabled: &[&dyn QualityRule],
-  live: &[EditedFile],
-  ctx: &RuleContext<'_>,
-) -> AstGrepScan {
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
-  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_inline(ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
-  scan_rules(live, &paths, &inline, ctx)
 }
 
 fn run_files(
@@ -290,6 +275,7 @@ fn run_files(
 mod batch;
 
 pub(crate) use batch::QualityBatch;
+use batch::batch_scan;
 
 /// Last occurrence of each exact `path`, counting one membership probe per record.
 fn last_edit_records_probed<'a>(

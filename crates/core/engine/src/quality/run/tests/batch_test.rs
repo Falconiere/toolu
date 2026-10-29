@@ -27,7 +27,7 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
   let temp = tempfile::tempdir().unwrap();
   let root = std::fs::canonicalize(temp.path()).unwrap();
   std::fs::write(root.join("a.ts"), "throw \"a\";\n").unwrap();
-  std::fs::write(root.join("b.ts"), "throw \"b\";\n").unwrap();
+  std::fs::write(root.join("b.ts"), "export const b = 1;\n").unwrap();
   let env = Env::process();
   let raw = Map::new();
   let ctx = RuleContext {
@@ -40,7 +40,7 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     raw: &raw,
     edit: None,
   };
-  let records = ["a.ts", "b.ts"].map(|path| EditRecord {
+  let records = ["./a.ts", "b.ts"].map(|path| EditRecord {
     path: path.to_owned(),
     operation: EditOperation::Write,
     from: None,
@@ -61,12 +61,14 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     first,
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
-  assert_eq!(gate_paths(&gate), ["a.ts"]);
+  assert_eq!(gate_paths(&gate), ["./a.ts"]);
+  std::fs::write(root.join("b.ts"), "throw \"b\";\n").unwrap();
+  batch.invalidate();
   let (second, warnings) = batch.decide(1, (0, &[0], &binding), &ctx);
   assert_eq!(warnings, Vec::<String>::new());
   assert!(matches!(
     second,
     toolu_protocol::decision::Decision::Advisory { .. }
   ));
-  assert_eq!(gate_paths(&gate), ["a.ts", "b.ts"]);
+  assert_eq!(gate_paths(&gate), ["./a.ts", "b.ts"]);
 }

@@ -1,7 +1,9 @@
 //! Deferred quality decisions over one shared scan of edited paths.
 
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
-use std::path::PathBuf;
+use std::hash::{Hash, Hasher};
+use std::path::{Path, PathBuf};
 
 use toolu_protocol::decision::Decision;
 use toolu_runtime::host::roots::Roots;
@@ -10,10 +12,30 @@ use toolu_state::ctx::StateCtx;
 use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::clear_gate_file;
 
+use super::super::scan::scan_rules;
 use super::{
-  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, QualityRule, batch_scan, edited_record,
-  file_scan, owns, partition_hits, selected_facts, settle,
+  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, QualityRule, edited_record, file_scan, owns,
+  partition_hits, selected_facts, settle,
 };
+
+/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
+pub(super) fn batch_scan(
+  enabled: &[&dyn QualityRule],
+  live: &[EditedFile],
+  ctx: &RuleContext<'_>,
+) -> AstGrepScan {
+  let dirs: Vec<PathBuf> = enabled
+    .iter()
+    .flat_map(|rule| rule.ast_rule_dirs())
+    .collect();
+  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
+  let inline: Vec<String> = enabled
+    .iter()
+    .map(|rule| rule.ast_rules_inline(ctx))
+    .filter(|rules| !rules.is_empty())
+    .collect();
+  scan_rules(live, &paths, &inline, ctx)
+}
 
 struct PreparedFile {
   file: EditedFile,
@@ -26,7 +48,32 @@ struct Prepared {
   enabled: Vec<usize>,
   scan: AstGrepScan,
   by_path: HashMap<String, Vec<AstGrepHit>>,
+  fingerprints: HashMap<PathBuf, Option<u64>>,
+  checked: HashSet<usize>,
+  rescanned: HashMap<PathBuf, (AstGrepScan, HashMap<String, Vec<AstGrepHit>>)>,
   state: StateCtx,
+}
+
+fn fingerprint(path: &Path) -> Option<u64> {
+  let bytes = std::fs::read(path).ok()?;
+  let mut hash = DefaultHasher::new();
+  bytes.hash(&mut hash);
+  Some(hash.finish())
+}
+
+fn selected_file(
+  record: &EditRecord,
+  rules: &[&dyn QualityRule],
+  ctx: &RuleContext<'_>,
+  roots: &Roots,
+) -> Option<PreparedFile> {
+  let file = edited_record(record, ctx)?;
+  let facts = selected_facts(std::slice::from_ref(&file), rules, ctx, roots);
+  facts.first().map(|facts| PreparedFile {
+    file: file.clone(),
+    linked: facts.linked,
+    gate: facts.gate.clone(),
+  })
 }
 
 fn selected_files(
@@ -37,22 +84,92 @@ fn selected_files(
 ) -> Vec<Option<PreparedFile>> {
   records
     .iter()
-    .map(|record| {
-      let file = edited_record(record, ctx)?;
-      let facts = selected_facts(std::slice::from_ref(&file), rules, ctx, roots);
-      facts.first().map(|facts| PreparedFile {
-        file: file.clone(),
-        linked: facts.linked,
-        gate: facts.gate.clone(),
-      })
-    })
+    .map(|record| selected_file(record, rules, ctx, roots))
     .collect()
+}
+
+impl Prepared {
+  fn refresh(
+    &mut self,
+    record: usize,
+    edit: &EditRecord,
+    bindings: &[QualityBinding<'_>],
+    ctx: &RuleContext<'_>,
+  ) {
+    let rules: Vec<&dyn QualityRule> = self
+      .enabled
+      .iter()
+      .filter_map(|index| bindings.get(*index).map(|binding| binding.rule))
+      .collect();
+    let Some(slot) = self.files.get_mut(record) else {
+      return;
+    };
+    *slot = selected_file(edit, &rules, ctx, &self.state.roots);
+    let Some(facts) = slot.as_ref() else {
+      return;
+    };
+    if facts.file.removed
+      || !rules
+        .iter()
+        .any(|rule| owns(*rule, &facts.file) && !(rule.skip_linked_worktrees() && facts.linked))
+    {
+      return;
+    }
+    let path = facts.file.absolute.clone();
+    let current = fingerprint(&path);
+    if self.fingerprints.get(&path).copied() == Some(current) {
+      return;
+    }
+    let mut scan = batch_scan(&rules, std::slice::from_ref(&facts.file), ctx);
+    let by_path = partition_hits(&mut scan);
+    self.rescanned.insert(path.clone(), (scan, by_path));
+    self.fingerprints.insert(path, current);
+  }
+
+  fn decide(
+    &mut self,
+    record: usize,
+    binding: usize,
+    rule: &dyn QualityRule,
+    ctx: &RuleContext<'_>,
+  ) -> Decision {
+    if !self.enabled.contains(&binding) {
+      return Decision::Allow;
+    }
+    let Some(facts) = self.files.get(record).and_then(Option::as_ref) else {
+      return Decision::Allow;
+    };
+    if !owns(rule, &facts.file) {
+      Decision::Allow
+    } else if facts.file.removed {
+      clear_gate_file(
+        &mut self.state,
+        &facts.gate,
+        &facts.file.path,
+        rule.source(),
+      );
+      Decision::Allow
+    } else if rule.skip_linked_worktrees() && facts.linked {
+      Decision::Allow
+    } else {
+      let (scan, by_path) = self
+        .rescanned
+        .get(&facts.file.absolute)
+        .map_or((&self.scan, &self.by_path), |(scan, by_path)| {
+          (scan, by_path)
+        });
+      let scan = file_scan(scan, by_path, &facts.file);
+      let findings = rule.check(&facts.file, ctx, &scan);
+      settle(&facts.file, rule, &facts.gate, &mut self.state, findings)
+    }
+  }
 }
 
 /// One event's scan, with decisions settled only when their manifests are reached.
 pub(crate) struct QualityBatch {
   records: Vec<EditRecord>,
   prepared: Option<Prepared>,
+  invalidated: bool,
 }
 
 impl QualityBatch {
@@ -61,6 +178,15 @@ impl QualityBatch {
     Self {
       records: records.to_vec(),
       prepared: None,
+      invalidated: false,
+    }
+  }
+
+  /// Executables may change files that the first quality manifest already scanned.
+  pub(crate) fn invalidate(&mut self) {
+    if let Some(prepared) = self.prepared.as_mut() {
+      prepared.checked.clear();
+      self.invalidated = true;
     }
   }
 
@@ -100,11 +226,18 @@ impl QualityBatch {
       .collect();
     let mut scan = batch_scan(&rules, &live, ctx);
     let by_path = partition_hits(&mut scan);
+    let fingerprints = live
+      .iter()
+      .map(|file| (file.absolute.clone(), fingerprint(&file.absolute)))
+      .collect();
     Prepared {
       files,
       enabled,
       scan,
       by_path,
+      fingerprints,
+      checked: HashSet::new(),
+      rescanned: HashMap::new(),
       state,
     }
   }
@@ -118,6 +251,7 @@ impl QualityBatch {
   ) -> (Decision, Vec<String>) {
     if self.prepared.is_none() {
       self.prepared = Some(self.prepare(active, bindings, ctx));
+      self.invalidated = false;
     }
     let Some(prepared) = self.prepared.as_mut() else {
       return (Decision::Allow, Vec::new());
@@ -125,35 +259,13 @@ impl QualityBatch {
     let Some(rule) = bindings.get(binding).map(|binding| binding.rule) else {
       return (Decision::Allow, Vec::new());
     };
-    let decision = if !prepared.enabled.contains(&binding) {
-      Decision::Allow
-    } else if let Some(facts) = prepared.files.get(record).and_then(Option::as_ref) {
-      if !owns(rule, &facts.file) {
-        Decision::Allow
-      } else if facts.file.removed {
-        clear_gate_file(
-          &mut prepared.state,
-          &facts.gate,
-          &facts.file.path,
-          rule.source(),
-        );
-        Decision::Allow
-      } else if rule.skip_linked_worktrees() && facts.linked {
-        Decision::Allow
-      } else {
-        let scan = file_scan(&prepared.scan, &prepared.by_path, &facts.file);
-        let findings = rule.check(&facts.file, ctx, &scan);
-        settle(
-          &facts.file,
-          rule,
-          &facts.gate,
-          &mut prepared.state,
-          findings,
-        )
-      }
-    } else {
-      Decision::Allow
-    };
+    if self.invalidated
+      && prepared.checked.insert(record)
+      && let Some(edit) = self.records.get(record)
+    {
+      prepared.refresh(record, edit, bindings, ctx);
+    }
+    let decision = prepared.decide(record, binding, rule, ctx);
     (decision, std::mem::take(&mut prepared.state.warnings))
   }
 }
