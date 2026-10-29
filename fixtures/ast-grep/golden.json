@@ -21,6 +21,11 @@
       "stderr": "",
       "exitCode": 0
     },
+    "bats: Grep for a function name is silent [claude]": {
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0
+    },
     "bats: Bash grep on structural pattern nudges to ast-grep [claude]": {
       "stdout": "{\n  \"hookSpecificOutput\": {\n    \"hookEventName\": \"PreToolUse\",\n    \"additionalContext\": \"grep/rg in Bash detected. Use ast-grep for structural patterns on code files, Grep tool for exact literals on non-code files. Bash grep/rg only for piping command output.\"\n  }\n}\n",
       "stderr": "",

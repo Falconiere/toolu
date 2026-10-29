@@ -223,7 +223,7 @@ fn every_nudge_descriptor_and_savings_payload_parses() {
       savings += 1;
     }
   }
-  assert_eq!((nudges, savings), (38 * 3, 35 * 2));
+  assert_eq!((nudges, savings), (39 * 3, 35 * 2));
 }
 
 /// Every step of the quality case file `file`, rendered for Claude and Codex.

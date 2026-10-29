@@ -981,6 +981,7 @@
         "bats: no-op on unrelated tool",
         "bats: Grep with non-code glob allowed silently",
         "bats: Grep with structural pattern nudges to ast-grep",
+        "bats: Grep for a function name is silent",
         "bats: Bash grep on structural pattern nudges to ast-grep",
         "bats: Bash without grep is silent",
         "bats: output does not leak source-repo names",

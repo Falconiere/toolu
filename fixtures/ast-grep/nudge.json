@@ -19,6 +19,14 @@
       "hosts": ["claude", "codex"],
       "toolName": "Grep",
       "toolInput": {
+        "pattern": "impl Foo for Bar",
+        "glob": "*.rs"
+      }
+    },
+    {
+      "name": "bats: Grep for a function name is silent",
+      "toolName": "Grep",
+      "toolInput": {
         "pattern": "fn handle_request",
         "glob": "*.rs"
       }
@@ -45,7 +53,7 @@
       "name": "bats: output does not leak source-repo names",
       "toolName": "Grep",
       "toolInput": {
-        "pattern": "fn x"
+        "pattern": "impl Foo"
       }
     },
     {
@@ -53,7 +61,7 @@
       "state": "missing",
       "toolName": "Grep",
       "toolInput": {
-        "pattern": "fn x"
+        "pattern": "impl Foo"
       }
     },
     {
@@ -61,7 +69,7 @@
       "state": "opt-out",
       "toolName": "Grep",
       "toolInput": {
-        "pattern": "fn x"
+        "pattern": "impl Foo"
       }
     },
     {
@@ -100,7 +108,7 @@
       "name": "Grep code glob still nudges",
       "toolName": "Grep",
       "toolInput": {
-        "pattern": "class Foo",
+        "pattern": "impl Foo",
         "glob": "*.{ts,tsx}"
       }
     },
@@ -154,7 +162,7 @@
       "name": "Bash structural grep",
       "toolName": "Bash",
       "toolInput": {
-        "command": "grep -rn \"pub fn main\" src"
+        "command": "grep -rn \"impl Foo\" src"
       }
     },
     {
@@ -162,7 +170,7 @@
       "state": "missing",
       "toolName": "Bash",
       "toolInput": {
-        "command": "grep -rn \"pub fn main\" src"
+        "command": "grep -rn \"impl Foo\" src"
       }
     },
     {
@@ -170,7 +178,7 @@
       "state": "opt-out",
       "toolName": "Bash",
       "toolInput": {
-        "command": "grep -rn \"pub fn main\" src"
+        "command": "grep -rn \"impl Foo\" src"
       }
     },
     {
@@ -212,7 +220,7 @@
       "name": "Bash structural grep run by find -exec",
       "toolName": "Bash",
       "toolInput": {
-        "command": "find . -name '*.rs' -exec grep -n 'fn main' {} +"
+        "command": "find . -name '*.rs' -exec grep -n 'impl Foo' {} +"
       },
       "deviation": {
         "contains": "STOP: grep/rg for structural code search."
@@ -229,7 +237,7 @@
       "name": "Bash structural grep in a substitution",
       "toolName": "Bash",
       "toolInput": {
-        "command": "echo $(grep -rn \"pub fn x\" src)"
+        "command": "echo $(grep -rn \"impl Foo\" src)"
       },
       "deviation": {
         "contains": "STOP: grep/rg for structural code search."
@@ -278,7 +286,7 @@
       "name": "283-10d: structural pattern as one argument",
       "toolName": "Bash",
       "toolInput": {
-        "command": "rg -n \"fn main\" src/"
+        "command": "rg -n \"impl Foo\" src/"
       },
       "deviation": {
         "contains": "STOP: grep/rg for structural code search."

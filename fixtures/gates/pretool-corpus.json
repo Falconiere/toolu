@@ -1051,7 +1051,7 @@
         "event": "PreToolUse",
         "toolName": "Grep",
         "toolInput": {
-          "pattern": "fn handle_request",
+          "pattern": "impl Foo for Bar",
           "glob": "*.rs"
         }
       }
