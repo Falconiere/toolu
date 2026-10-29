@@ -15,6 +15,7 @@ quality gate is not evidence that an agent follows the text correctly.
 | `plugins/epic-orchestrator/skills/epic-orchestrator/evals/evals.json` | Plan/run/status/pause and recovery boundaries |
 | `plugins/pr-babysit/skills/babysit/evals/evals.json` | Host continuation, strict clearance, uncertain outcomes and cancellation |
 | `plugins/toolu/skills/debug/evals/cases.json` | Description-only positive and negative routing |
+| `plugins/toolu/evals/test-writer/` | Live `claude plugin eval` cases: routing, spec-derived tests, red before green, lean mock-free suites, E2E locator style, the `test-author` receipt |
 | `plugins/jev/skills/jev/evals/README.md` | Optional live judgments, evidence changes and unavailable-service fallback |
 
 ## Run a trial
