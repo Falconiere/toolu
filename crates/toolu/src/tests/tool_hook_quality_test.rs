@@ -7,7 +7,7 @@ use toolu_engine::dispatch::DEFAULT_MODULE_TIMEOUT;
 use toolu_engine::trace::StepStatus;
 use toolu_runtime::env::Env;
 use toolu_state::gate_file::{GateRead, read_gate_file};
-use toolu_state::gate_schema::GateFile;
+use toolu_state::gate_schema::{GateEntry, GateFile};
 
 use super::{Phase, QUALITY_RULES, RULES};
 
@@ -115,14 +115,10 @@ fn counted_ast_grep(root: &Path, project: &Path) -> (Env, PathBuf) {
   (env, count)
 }
 
-#[test]
-fn production_multi_path_quality_uses_one_real_scan() {
-  let temp = tempfile::tempdir().unwrap();
-  let project = quality_project(temp.path());
-  let (env, count) = counted_ast_grep(temp.path(), &project);
-  let options = DispatchOptions {
-    env: &env,
-    cwd: &project,
+fn options<'a>(env: &'a Env, project: &'a Path) -> DispatchOptions<'a> {
+  DispatchOptions {
+    env,
+    cwd: project,
     lib_dir: Path::new("/lib"),
     builtins: &[],
     rules: RULES,
@@ -131,7 +127,26 @@ fn production_multi_path_quality_uses_one_real_scan() {
     continue_post_blocks: false,
     split_by_caller: false,
     module_timeout: DEFAULT_MODULE_TIMEOUT,
+  }
+}
+
+fn failing_entries(gate: &Path) -> Vec<(String, GateEntry)> {
+  let GateRead::Ok(GateFile::Failing {
+    entries: Some(entries),
+    ..
+  }) = read_gate_file(gate)
+  else {
+    panic!("missing quality gate");
   };
+  entries
+}
+
+#[test]
+fn production_multi_path_quality_uses_one_real_scan() {
+  let temp = tempfile::tempdir().unwrap();
+  let project = quality_project(temp.path());
+  let (env, count) = counted_ast_grep(temp.path(), &project);
+  let options = options(&env, &project);
   let patch = "*** Begin Patch\n*** Update File: a.ts\n@@\n-old\n+new\n*** Update File: b.ts\n@@\n-old\n+new\n*** Update File: c.py\n@@\n-old\n+new\n*** Update File: src.rs\n@@\n-old\n+new\n*** End Patch\n";
   let payload = serde_json::json!({"session_id":"quality", "cwd":project, "tool_name":"apply_patch", "tool_input":{"command":patch}}).to_string();
   let result = toolu_engine::dispatch::dispatch(Phase::Post, &payload, &options);
@@ -139,13 +154,7 @@ fn production_multi_path_quality_uses_one_real_scan() {
   assert_eq!(result.result.stderr, "", "{result:?}");
   assert_eq!(std::fs::read_to_string(count).unwrap(), "scan\n");
   let gate = project.join(".claude/tmp/quality-gate-status.json");
-  let GateRead::Ok(GateFile::Failing {
-    entries: Some(entries),
-    ..
-  }) = read_gate_file(&gate)
-  else {
-    panic!("missing quality gate");
-  };
+  let entries = failing_entries(&gate);
   assert_eq!(entries.len(), 1);
   assert_eq!(entries.first().map(|entry| entry.0.as_str()), Some("a.ts"));
   assert_eq!(
@@ -184,18 +193,7 @@ fn a_later_executable_edit_refreshes_the_next_paths_quality_scan() {
   .unwrap();
   std::fs::set_permissions(&module, std::fs::Permissions::from_mode(0o755)).unwrap();
   let (env, count) = counted_ast_grep(temp.path(), &project);
-  let options = DispatchOptions {
-    env: &env,
-    cwd: &project,
-    lib_dir: Path::new("/lib"),
-    builtins: &[],
-    rules: RULES,
-    quality_rules: QUALITY_RULES,
-    selected_specs: None,
-    continue_post_blocks: false,
-    split_by_caller: false,
-    module_timeout: DEFAULT_MODULE_TIMEOUT,
-  };
+  let options = options(&env, &project);
   let patch = "*** Begin Patch\n*** Update File: a.ts\n@@\n-old\n+new\n*** Update File: b.ts\n@@\n-old\n+new\n*** End Patch\n";
   let payload = serde_json::json!({"session_id":"mutate", "cwd":project, "tool_name":"apply_patch", "tool_input":{"command":patch}}).to_string();
   let result = toolu_engine::dispatch::dispatch(Phase::Post, &payload, &options);
@@ -203,13 +201,7 @@ fn a_later_executable_edit_refreshes_the_next_paths_quality_scan() {
   assert_eq!(result.result.stderr, "", "{result:?}");
   assert_eq!(std::fs::read_to_string(&count).unwrap(), "scan\nscan\n");
   let gate = project.join(".claude/tmp/quality-gate-status.json");
-  let GateRead::Ok(GateFile::Failing {
-    entries: Some(entries),
-    ..
-  }) = read_gate_file(&gate)
-  else {
-    panic!("missing quality gate");
-  };
+  let entries = failing_entries(&gate);
   assert_eq!(entries.len(), 1);
   assert_eq!(entries[0].0, "b.ts");
   assert_eq!(entries[0].1.source, "ts-quality-hook");
