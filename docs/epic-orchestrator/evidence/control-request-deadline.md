@@ -1,13 +1,13 @@
 # Control request deadline: release resource evidence
 
-Measured 2026-10-29 on macOS Darwin 27.0.0, arm64 (macmini). Both binaries were built with `cargo build --release -p toolu-cli`. Baseline source is `origin/main` at `5abc923924363082be7ced8ce8fbd6ff7f2614ac`; fixed source is this branch with the request deadline diff. The measurement uses a fresh `TOOLU_RESOURCE_HOME` and config directory for each sample.
+Measured 2026-10-29 on macOS Darwin 27.0.0, arm64 (macmini). Both binaries were built with `cargo build --release -p toolu-cli`. Baseline source is `origin/main` at `916b53e1225d0d2297d1dc08f2b1fb50ab456966`; fixed source is this branch with the request deadline diff. The measurement uses a fresh `TOOLU_RESOURCE_HOME` and config directory for each sample.
 
 Each sample opens 24 real Unix control peers (12 send nothing, 12 send `{"op":` without a newline), reads the greeting, and leaves them connected. It samples process threads with `ps -M -p <pid>` and numeric descriptors with `lsof -p <pid> -Ff` before connection, just after connection, and 6.3 seconds later. It then opens 24 more stalled peers, sends a valid `stop` request, and times process exit. Three independent samples were run per build.
 
 | Build | Samples | Threads idle / loaded / after 6.3 s | FDs idle / loaded / after 6.3 s | Peers closed by 6.3 s | First close | Stop with 24 new stalled peers |
 | --- | ---: | --- | --- | ---: | --- | --- |
-| Baseline | 3 | 5 / 29 / 29 in every sample | 7 / 31 / 31 in every sample | 0 / 24 in every sample | None | 0.034–0.045 s; process exit closes sessions |
-| Fixed | 3 | 5 / 29 / 5 in every sample | 7 / 31 / 7 in every sample | 24 / 24 in every sample | 4.960–4.970 s | 4.903–4.914 s; server joins incomplete readers |
+| Baseline | 3 | 5 / 29 / 29 in every sample | 7 / 31 / 31 in every sample | 0 / 24 in every sample | None | 0.017–0.054 s; process exit closes sessions |
+| Fixed | 3 | 5 / 29 / 5 in every sample | 7 / 31 / 7 in every sample | 24 / 24 in every sample | 4.938–4.978 s | 4.910–4.931 s; server joins incomplete readers |
 
 The baseline retains all 24 session threads and descriptors while the process remains alive. The fixed engine releases them after the five-second request bound. Shutdown intentionally waits for incomplete readers to finish within that bound; observed process exit includes scheduler and process overhead. This is a resource-retention measurement, not a throughput or CPU speedup claim. The real-socket Rust regressions also cover byte trickle, accepted late `wait`/`replace` replies, malformed and oversized requests, protocol checks, permissions, and shutdown with a large accepted reply whose peer stops reading.
 
@@ -17,7 +17,7 @@ From a clean checkout with the branch diff applied:
 
 ```sh
 mkdir -p /tmp/toolu-748-base
-TOOLU_748_BASE=5abc923924363082be7ced8ce8fbd6ff7f2614ac
+TOOLU_748_BASE=916b53e1225d0d2297d1dc08f2b1fb50ab456966
 git archive "$TOOLU_748_BASE" | tar -x -C /tmp/toolu-748-base
 (cd /tmp/toolu-748-base && cargo build --release -p toolu-cli)
 cargo build --release -p toolu-cli
