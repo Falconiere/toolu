@@ -6,11 +6,13 @@ use toolu_engine::DispatchOptions;
 use toolu_engine::dispatch::DEFAULT_MODULE_TIMEOUT;
 use toolu_engine::trace::StepStatus;
 use toolu_runtime::env::Env;
+use toolu_state::gate_file::{GateRead, read_gate_file};
+use toolu_state::gate_schema::GateFile;
 
 use super::{Phase, QUALITY_RULES, RULES};
 
 fn quality_sources(project: &Path) {
-  std::fs::write(project.join("a.ts"), "export const a = 1;\n").unwrap();
+  std::fs::write(project.join("a.ts"), "throw \"bad\";\n").unwrap();
   std::fs::write(project.join("b.ts"), "export const b = 2;\n").unwrap();
   std::fs::write(
     project.join("pyproject.toml"),
@@ -136,6 +138,20 @@ fn production_multi_path_quality_uses_one_real_scan() {
   assert_eq!(result.result.exit_code, 0, "{result:?}");
   assert_eq!(result.result.stderr, "", "{result:?}");
   assert_eq!(std::fs::read_to_string(count).unwrap(), "scan\n");
+  let gate = project.join(".claude/tmp/quality-gate-status.json");
+  let GateRead::Ok(GateFile::Failing {
+    entries: Some(entries),
+    ..
+  }) = read_gate_file(&gate)
+  else {
+    panic!("missing quality gate");
+  };
+  assert_eq!(entries.len(), 1);
+  assert_eq!(entries.first().map(|entry| entry.0.as_str()), Some("a.ts"));
+  assert_eq!(
+    entries.first().map(|entry| entry.1.source.as_str()),
+    Some("ts-quality-hook")
+  );
   let decided: Vec<&str> = result
     .trace
     .iter()
