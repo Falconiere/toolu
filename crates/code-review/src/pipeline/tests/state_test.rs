@@ -145,6 +145,8 @@ fn usage_partial_append_rolls_back_on_a_real_file_limit() {
       .arg(std::env::current_exe().unwrap())
       .arg("usage_partial_append_rolls_back_on_a_real_file_limit")
       .env("TOOLU_USAGE_FILE_LIMIT_CHILD", "1")
+      // The low file limit would truncate llvm-cov's exit profile.
+      .env("LLVM_PROFILE_FILE", "/dev/null")
       .output()
       .unwrap();
     assert!(
