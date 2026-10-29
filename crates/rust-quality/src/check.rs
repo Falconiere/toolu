@@ -312,7 +312,7 @@ fn scan_groups(
               hits: by_path.remove(&file.path).unwrap_or_default(),
               empty: *empty,
             },
-            other => other.clone(),
+            other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
           },
         );
       }
