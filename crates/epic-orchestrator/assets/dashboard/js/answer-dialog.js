@@ -2,7 +2,14 @@ import { WORKING_WARNING, counter, sendDisabled } from "./logic/control.js";
 import { agentState } from "./logic/status.js";
 import { $, mark } from "./view/dom.js";
 
-const dialog = { key: null, opener: null, sent: null, state: { locked: true, pending: false } };
+const dialog = {
+  key: null,
+  opener: null,
+  sent: null,
+  submissionId: null,
+  submissionText: null,
+  state: { locked: true, pending: false },
+};
 
 // After an uncertain delivery the same text may already be in the agent; Send waits for an edit.
 const syncSend = () => {
@@ -17,10 +24,22 @@ export function syncAnswer(state) {
   syncSend();
 }
 
+// Reuse one submission id for the same key+text while this dialog stays open.
+export function submissionFor(key, text, mint) {
+  if (dialog.submissionId && dialog.key === key && dialog.submissionText === text) {
+    return dialog.submissionId;
+  }
+  dialog.submissionId = mint();
+  dialog.submissionText = text;
+  return dialog.submissionId;
+}
+
 export function openAnswer({ key, row, attention, liveStatus }, opener) {
   dialog.key = key;
   dialog.opener = opener;
   dialog.sent = null;
+  dialog.submissionId = null;
+  dialog.submissionText = null;
   const status = agentState(row, liveStatus);
   $("answer-title").textContent = `Answer ${key}`;
   $("answer-status").replaceChildren(mark(status));
@@ -36,6 +55,8 @@ export function openAnswer({ key, row, attention, liveStatus }, opener) {
 }
 
 export function closeAnswer() {
+  dialog.submissionId = null;
+  dialog.submissionText = null;
   if ($("answer-dialog").open) $("answer-dialog").close();
 }
 

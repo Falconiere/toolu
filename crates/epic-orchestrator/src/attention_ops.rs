@@ -83,13 +83,15 @@ fn attempt(engine: &mut Engine, answer: &Answer<'_>) -> Result<Attempt, String> 
   if answer.key.is_empty() || answer.text.is_empty() {
     return refuse("answer needs a key and a text".to_owned());
   }
-  if !crate::attention::has_live_agent(&engine.world, answer.key) {
-    return refuse(format!("no live agent for {}", answer.key));
-  }
+  // Dedupe before the live-agent gate so a retry of an already-admitted id
+  // still returns the prior outcome after the worker has finished.
   if let Some(id) = answer.submission
     && let Some(prior) = admit(engine, answer, id)?
   {
     return Ok(Attempt::Reply(prior));
+  }
+  if !crate::attention::has_live_agent(&engine.world, answer.key) {
+    return refuse(format!("no live agent for {}", answer.key));
   }
   match send_prompt(engine, answer.key, answer.text) {
     Ok(()) => Ok(Attempt::Sent),

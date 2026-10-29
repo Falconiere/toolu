@@ -264,6 +264,18 @@ fn a_reopened_engine_dedupes_from_the_retained_journal_only() {
   assert_eq!(prompts(tmp.path()).len(), 2);
 }
 
+#[test]
+fn a_delivered_submission_dedupes_after_the_agent_is_gone() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "sent");
+  report(&mut engine, "needs-human");
+  let request = submitted("take B", "s-1");
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  engine.world.issues.get_mut("a").expect("issue").stage = "merged".to_owned();
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(prompts(tmp.path()).len(), 1);
+}
+
 /// A prompt script that records the body, then replaces the journal directory
 /// with a file so the next journal write fails.
 fn breaking_script(root: &Path) {

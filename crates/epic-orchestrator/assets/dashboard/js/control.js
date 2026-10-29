@@ -4,6 +4,7 @@ import {
   initAnswer,
   openAnswer,
   showAnswerResult,
+  submissionFor,
   syncAnswer,
 } from "./answer-dialog.js";
 import {
@@ -109,8 +110,11 @@ function answerFor(key, opener) {
 }
 
 async function send(key, text) {
-  // A new click mints a new id; the engine dedupes only when this exact id is retried.
-  const result = await act("answer", answerBody(key, text, mintSubmissionId()));
+  // Same key+text while the dialog is open reuses the id so a retry cannot double-type.
+  const result = await act(
+    "answer",
+    answerBody(key, text, submissionFor(key, text, mintSubmissionId)),
+  );
   if (!result) return;
   // A dialog cancelled while the answer was pending cannot show the result; the toast can.
   if (result.kind !== "delivered" && $("answer-dialog").open) {
