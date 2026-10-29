@@ -72,13 +72,12 @@ fn receipt(
   Ok(json!({"ok": true, "key": key, "commentId": id, "url": url}))
 }
 
-fn reconcile(
+fn matching_comments(
   client: &Client,
   slot: &Slot<'_>,
-  state: &mut Value,
   key: &str,
   intent: &Intent,
-) -> Result<Value> {
+) -> Result<Vec<Value>> {
   let pages = Reader::new(client)
     .rest_pages("reply_reconcile", &intent.list_path)
     .map_err(|err| uncertain(slot, key, intent, &err.message))?;
@@ -101,7 +100,17 @@ fn reconcile(
       }
     }
   }
-  match found.as_slice() {
+  Ok(found)
+}
+
+fn reconcile_found(
+  slot: &Slot<'_>,
+  state: &mut Value,
+  key: &str,
+  intent: &Intent,
+  found: &[Value],
+) -> Result<Value> {
+  match found {
     [posted] => receipt(slot, state, key, intent, posted),
     [] => Err(uncertain(slot, key, intent, "no matching remote comment")),
     _ => Err(uncertain(
@@ -111,6 +120,17 @@ fn reconcile(
       "multiple matching remote comments",
     )),
   }
+}
+
+fn reconcile(
+  client: &Client,
+  slot: &Slot<'_>,
+  state: &mut Value,
+  key: &str,
+  intent: &Intent,
+) -> Result<Value> {
+  let found = matching_comments(client, slot, key, intent)?;
+  reconcile_found(slot, state, key, intent, &found)
 }
 
 fn definitely_unsent(err: &Error) -> bool {
@@ -156,7 +176,16 @@ fn send_prepared(
     }
     Err(err) if definitely_unsent(&err) => {
       intent.status = "prepared".into();
-      save_intent(slot, state, key, &intent)?;
+      if let Err(save_error) = save_intent(slot, state, key, &intent) {
+        return Err(uncertain(
+          slot,
+          key,
+          &intent,
+          &format!(
+            "GitHub refused the reply, but the prepared intent could not be saved: {save_error}; restore the state file, inspect GitHub, then use --confirm-unsent with this marker"
+          ),
+        ));
+      }
       Err(failure("reply", &err))
     }
     Ok(_) | Err(_) => reconcile(client, slot, state, key, &intent),
@@ -175,6 +204,43 @@ fn continue_intent(
   } else {
     send_prepared(client, slot, state, key, intent)
   }
+}
+
+/// Confirm an operator-verified unsent intent without posting in this call.
+pub(crate) fn recover_unsent(
+  slot: &Slot<'_>,
+  to: &Target<'_>,
+  marker: &str,
+  make_client: impl FnOnce() -> Result<Client>,
+) -> Result<Value> {
+  let (_lock, mut state) = open(slot.path, slot.env)?;
+  let key = to.key();
+  ensure_unreplied(&mut state, &key)?;
+  let value = actions(&mut state, "replyIntents")?
+    .get(&key)
+    .ok_or_else(|| Failure::usage("no reply intent exists for --confirm-unsent"))?;
+  let intent = Intent::read(value)?;
+  validate_target(&key, &intent, to)?;
+  if intent.status != "sending" || marker != intent.marker {
+    return Err(Failure::usage(
+      "--confirm-unsent requires the marker of a sending reply intent",
+    ));
+  }
+  let found = matching_comments(&make_client()?, slot, &key, &intent)?;
+  if !found.is_empty() {
+    return reconcile_found(slot, &mut state, &key, &intent, &found);
+  }
+  let mut prepared = intent.clone();
+  prepared.status = "prepared".into();
+  save_intent(slot, &mut state, &key, &prepared)?;
+  Err(
+    Failure::new(
+      "reply_retry_ready",
+      format!("reply intent for {key} is ready; rerun reply without --confirm-unsent to post"),
+    )
+    .with("key", key)
+    .with("marker", intent.marker),
+  )
 }
 
 /// Resume a stored reply when the original body file cannot be read.

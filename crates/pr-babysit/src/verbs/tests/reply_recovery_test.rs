@@ -79,10 +79,15 @@ fn a_prepared_intent_uses_its_original_body_when_the_file_is_gone() {
     .as_str()
     .unwrap()
     .to_owned();
-  std::fs::remove_file(&body).unwrap();
+  std::fs::write(&body, "").unwrap();
   fixture
     .route(endpoint, Reply::new(201, r#"{"id":100}"#))
     .unwrap();
+  let (exit, empty) = run(&args, &on(&fixture, &env));
+  assert_eq!(exit, Exit::Usage, "{empty}");
+  assert_eq!(empty["errors"][0]["message"], "reply body is empty");
+  assert_eq!(post_count(&fixture), 1);
+  std::fs::remove_file(&body).unwrap();
   let (exit, done) = run(&args, &on(&fixture, &env));
   assert_eq!(exit, Exit::Success, "{done}");
   assert_eq!(done["commentId"], 100);

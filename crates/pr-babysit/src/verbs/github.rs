@@ -146,17 +146,27 @@ pub(super) fn collect(matches: &ArgMatches, world: &World<'_>) -> Outcome {
   }
 }
 
-fn reply_body(matches: &ArgMatches) -> Result<String> {
+enum ReplyBody {
+  Ready(String),
+  Recoverable(Failure),
+}
+
+fn reply_body(matches: &ArgMatches) -> Result<ReplyBody> {
   let file = required(matches, "body-file")?;
-  let body = std::fs::read_to_string(file)
-    .map_err(|_error| Failure::usage("--body-file <existing file> required"))?;
+  let Ok(body) = std::fs::read_to_string(file) else {
+    return Ok(ReplyBody::Recoverable(Failure::usage(
+      "--body-file <existing file> required",
+    )));
+  };
   if body.is_empty() {
     return Err(Failure::usage("reply body is empty"));
   }
   if body.len() > MAX_BODY {
-    return Err(Failure::usage("reply body exceeds the 65536-byte limit"));
+    return Ok(ReplyBody::Recoverable(Failure::usage(
+      "reply body exceeds the 65536-byte limit",
+    )));
   }
-  Ok(body)
+  Ok(ReplyBody::Ready(body))
 }
 
 fn target(matches: &ArgMatches) -> Result<Target<'_>> {
@@ -185,20 +195,26 @@ fn target(matches: &ArgMatches) -> Result<Target<'_>> {
 /// The one reply to a thread, conversation comment or review.
 pub(super) fn reply(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
   let state_file = required(matches, "state-file")?;
-  let body = reply_body(matches);
-  let to = target(matches).map_err(|err| body.as_ref().err().cloned().unwrap_or(err))?;
+  let body = reply_body(matches)?;
+  let to = target(matches).map_err(|err| match &body {
+    ReplyBody::Ready(_) => err,
+    ReplyBody::Recoverable(error) => error.clone(),
+  })?;
   let now = now();
   let slot = Slot {
     path: state_file,
     env: world.env,
     now: &now,
   };
+  if let Some(marker) = text(matches, "confirm-unsent") {
+    return writes::recover_unsent(&slot, &to, marker, || client(matches, world, "reply"));
+  }
   match body {
-    Ok(body) => writes::reply(&client(matches, world, "reply")?, &slot, &to, &body),
-    Err(error) if state_file.is_file() => {
+    ReplyBody::Ready(body) => writes::reply(&client(matches, world, "reply")?, &slot, &to, &body),
+    ReplyBody::Recoverable(error) if state_file.is_file() => {
       writes::reply_existing(&slot, &to, || client(matches, world, "reply"))?.ok_or(error)
     }
-    Err(error) => Err(error),
+    ReplyBody::Recoverable(error) => Err(error),
   }
 }
 

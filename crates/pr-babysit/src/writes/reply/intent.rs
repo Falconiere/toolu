@@ -11,6 +11,7 @@ use crate::sha1;
 const MAX_BODY: usize = 65_536;
 
 /// One reply's durable body, route and delivery marker.
+#[derive(Clone)]
 pub(super) struct Intent {
   pub(super) status: String,
   pub(super) marker: String,

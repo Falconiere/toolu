@@ -8,7 +8,7 @@ use toolu_http_test_support::{Fixture, Reply};
 use toolu_runtime::env::Env;
 
 use super::tests::{posts, read, slot, state};
-use super::{Target, reply};
+use super::{Target, recover_unsent, reply};
 use crate::recorded;
 
 fn start_reply(fixture: &Fixture, path: &Path) -> thread::JoinHandle<crate::error::Result<Value>> {
@@ -33,6 +33,19 @@ fn wait_for_post(fixture: &Fixture) {
   assert_eq!(posts(fixture), 1);
 }
 
+fn block_state_directory(dir: &Path, state_dir: &Path) -> std::path::PathBuf {
+  let parked = dir.join("parked");
+  std::fs::rename(state_dir, &parked).unwrap();
+  std::fs::write(state_dir, "blocks atomic replacement").unwrap();
+  parked
+}
+
+fn restore_state_directory(state_dir: &Path, parked: &Path) {
+  std::fs::remove_file(state_dir).unwrap();
+  std::fs::remove_dir_all(parked.join("next.json.lock")).unwrap();
+  std::fs::rename(parked, state_dir).unwrap();
+}
+
 #[test]
 fn a_failed_receipt_write_recovers_the_original_remote_comment() {
   let dir = TempDir::new().unwrap();
@@ -50,15 +63,12 @@ fn a_failed_receipt_write_recovers_the_original_remote_comment() {
     .unwrap();
   let worker = start_reply(&fixture, &path);
   wait_for_post(&fixture);
-  let parked = dir.path().join("parked");
-  std::fs::rename(&state_dir, &parked).unwrap();
-  std::fs::write(&state_dir, "blocks atomic replacement").unwrap();
+  let parked = block_state_directory(dir.path(), &state_dir);
   let failed = worker.join().unwrap().unwrap_err();
   assert_eq!(failed.code, "invalid_json");
-  std::fs::remove_file(&state_dir).unwrap();
-  std::fs::remove_dir_all(parked.join("next.json.lock")).unwrap();
-  std::fs::rename(&parked, &state_dir).unwrap();
-  let intent = &read(&path)["actions"]["replyIntents"]["conversation:5"];
+  restore_state_directory(&state_dir, &parked);
+  let state = read(&path);
+  let intent = &state["actions"]["replyIntents"]["conversation:5"];
   assert_eq!(intent["status"], "sending");
   let body = intent["body"].as_str().unwrap().to_owned();
   fixture
@@ -80,6 +90,62 @@ fn a_failed_receipt_write_recovers_the_original_remote_comment() {
   .unwrap();
   assert_eq!(done["commentId"], 77);
   assert_eq!(posts(&fixture), 1);
+}
+
+#[test]
+fn a_failed_refusal_revert_can_be_confirmed_and_retried() {
+  let dir = TempDir::new().unwrap();
+  let state_dir = dir.path().join("state");
+  std::fs::create_dir(&state_dir).unwrap();
+  let path = state(&state_dir);
+  let fixture = Fixture::start().unwrap();
+  let post = "/repos/Falconiere/toolu/issues/165/comments";
+  fixture
+    .route(
+      post,
+      Reply::new(404, "{}").delayed(Duration::from_millis(700)),
+    )
+    .unwrap();
+  let worker = start_reply(&fixture, &path);
+  wait_for_post(&fixture);
+  let parked = block_state_directory(dir.path(), &state_dir);
+  let failed = worker.join().unwrap().unwrap_err();
+  assert_eq!(failed.code, "reply_uncertain");
+  restore_state_directory(&state_dir, &parked);
+  let state = read(&path);
+  let intent = &state["actions"]["replyIntents"]["conversation:5"];
+  assert_eq!(intent["status"], "sending");
+  let marker = intent["marker"].as_str().unwrap();
+  confirm_and_retry(&path, &fixture, marker);
+}
+
+fn confirm_and_retry(path: &Path, fixture: &Fixture, marker: &str) {
+  let env = Env::default();
+  let to = Target::Conversation(5);
+  let wrong = recover_unsent(&slot(path, &env), &to, "wrong", || {
+    Ok(recorded::client(fixture))
+  })
+  .unwrap_err();
+  assert_eq!(wrong.code, "usage");
+  let list = "/repos/Falconiere/toolu/issues/165/comments?per_page=100";
+  fixture.route(list, Reply::new(200, "[]")).unwrap();
+  let ready = recover_unsent(&slot(path, &env), &to, marker, || {
+    Ok(recorded::client(fixture))
+  })
+  .unwrap_err();
+  assert_eq!(ready.code, "reply_retry_ready");
+  assert_eq!(posts(fixture), 1);
+  assert_eq!(
+    read(path)["actions"]["replyIntents"]["conversation:5"]["status"],
+    "prepared"
+  );
+  let post = "/repos/Falconiere/toolu/issues/165/comments";
+  fixture
+    .route(post, Reply::new(201, r#"{"id":79}"#))
+    .unwrap();
+  let done = reply(&recorded::client(fixture), &slot(path, &env), &to, "fixed").unwrap();
+  assert_eq!(done["commentId"], 79);
+  assert_eq!(posts(fixture), 2);
 }
 
 #[test]

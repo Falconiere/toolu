@@ -47,6 +47,12 @@ keeps that intent and will not send another comment until the remote outcome
 is established. The full reply body, including its marker, must fit GitHub's
 65 536-byte limit.
 
+If GitHub definitively rejects a reply but the local state cannot save the
+rejection, restore the state file and inspect the remote comments. After
+confirming the marked comment is absent, rerun `reply` with
+`--confirm-unsent <marker>`. That call checks the remote list and makes the
+intent ready without posting; a separate `reply` call sends it.
+
 ## What It Provides
 
 ### `/pr-babysit:babysit` Command

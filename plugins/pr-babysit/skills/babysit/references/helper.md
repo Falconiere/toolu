@@ -197,11 +197,22 @@ toolu babysit stop --state-file <path>
   `stateFile` and `reason`; it keeps the `sending` intent and does not POST
   again. The `--body-file` argument remains required, but its file may be gone
   or oversized on retry: the persisted intent supplies the original body.
+  An existing empty body file is always a `usage` error (exit `64`) and never
+  resumes or posts a persisted intent.
   A retry with a different thread root returns `slot_mismatch` before any
   GitHub call; use the original target to resume the intent.
   Inspect GitHub and retry to reconcile. A definitive refusal leaves a
   `prepared` intent; a valid changed body file replaces its text and marker in
   state before the next send. An unreadable body file uses the persisted text.
+  If saving `prepared` after a definitive refusal fails, the result is
+  `reply_uncertain` with the persisted marker and recovery instructions. Once
+  the state file is writable and an operator independently confirms that the
+  marked comment is absent, run `reply` with `--confirm-unsent <marker>` and
+  the original target. It checks the remote list and records any match. If
+  none is found, it saves `prepared` and returns `reply_retry_ready` (exit
+  `75`), without POSTing. Rerun `reply` without the flag to send. Do not use
+  this recovery option based only on an empty API list; a recent comment may
+  not yet appear there.
 - `toolu babysit resolve` returns `0` only after the mutation response shows
   `isResolved: true`; three false responses → `resolve_unconfirmed` (exit `75`), nothing recorded, and
   the thread stays in `staleUnresolved` next tick. A confirmed thread is not

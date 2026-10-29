@@ -219,20 +219,21 @@ Post the one reply to a thread, comment or review
 Usage: toolu babysit reply [OPTIONS] --state-file <VALUE> --kind <VALUE> --body-file <VALUE>
 
 Options:
-      --json                  Print exactly one JSON document on stdout
-      --state-file <VALUE>    The slot's state file
-      --kind <VALUE>          What the reply answers [possible values: thread, conversation, review]
-  -q, --quiet                 Drop the diagnostics of a successful run
-      --host <HOST>           The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --thread <VALUE>        The thread's GraphQL id (thread)
-      --config-dir <DIR>      Read the toolu config from DIR instead of the host's default
-      --root-comment <VALUE>  The thread's first comment id (thread)
-      --in-reply-to <VALUE>   The comment answered (thread)
-      --comment-id <VALUE>    The conversation comment answered
-      --review-id <VALUE>     The review answered
-      --body-file <VALUE>     The reply's Markdown
-      --timeout <VALUE>       Seconds each GitHub call may take
-  -h, --help                  Print help
+      --json                    Print exactly one JSON document on stdout
+      --state-file <VALUE>      The slot's state file
+      --kind <VALUE>            What the reply answers [possible values: thread, conversation, review]
+  -q, --quiet                   Drop the diagnostics of a successful run
+      --host <HOST>             The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --thread <VALUE>          The thread's GraphQL id (thread)
+      --config-dir <DIR>        Read the toolu config from DIR instead of the host's default
+      --root-comment <VALUE>    The thread's first comment id (thread)
+      --in-reply-to <VALUE>     The comment answered (thread)
+      --comment-id <VALUE>      The conversation comment answered
+      --review-id <VALUE>       The review answered
+      --body-file <VALUE>       The reply's Markdown
+      --confirm-unsent <VALUE>  Confirm the stored marker has no remote comment; prepare a separate retry
+      --timeout <VALUE>         Seconds each GitHub call may take
+  -h, --help                    Print help
 ```
 
 ## `toolu babysit resolve`

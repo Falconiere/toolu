@@ -19,7 +19,7 @@ const RESOLVE_ATTEMPTS: u32 = 3;
 
 mod reply;
 
-pub(crate) use reply::{reply, reply_existing};
+pub(crate) use reply::{recover_unsent, reply, reply_existing};
 
 /// What a reply answers.
 pub(crate) enum Target<'a> {
