@@ -16,7 +16,7 @@ fn cached_redacted_screen_keeps_text_and_redacts_blocked_attach_target() {
     at: Instant::now(),
     sampled_at: "2026-10-27T00:00:00.000Z".to_owned(),
     target: "FIRST-CANARY".to_owned(),
-    redaction_fingerprint: 0,
+    redaction_fingerprint: [0; 32],
     result: Ok("<redacted> SECOND-CANARY".to_owned()),
   };
   let first_body: Value =
@@ -37,7 +37,7 @@ fn escaped_screen_text_keeps_its_tail_within_the_json_cap() {
     at: Instant::now(),
     sampled_at: "2026-10-27T00:00:00.000Z".to_owned(),
     target: "worker".to_owned(),
-    redaction_fingerprint: 0,
+    redaction_fingerprint: [0; 32],
     result: Ok(format!("{}TAIL-Ω", "\0".repeat(20_000))),
   };
   let response = screen.render("key", "working", &sample, &Secrets::none());

@@ -22,8 +22,14 @@ struct Sample {
   at: Instant,
   sampled_at: String,
   target: String,
-  redaction_fingerprint: u64,
-  result: Result<String, String>,
+  redaction_fingerprint: [u8; 32],
+  result: Result<String, SampleError>,
+}
+
+#[derive(Clone)]
+enum SampleError {
+  NotRunning,
+  Reason(String),
 }
 
 /// One cache per key, backed by the listener's shared herdr limiter.
@@ -77,15 +83,8 @@ impl Screen {
     };
     match &sample.result {
       Ok(_raw) => self.render(key, &status, &sample, secrets),
-      Err(reason)
-        if matches!(
-          reason.as_str(),
-          "error: agent_not_found" | "error: pane_not_found"
-        ) =>
-      {
-        not_running(key, secrets)
-      }
-      Err(reason) => state(key, reason, secrets),
+      Err(SampleError::NotRunning) => not_running(key, secrets),
+      Err(SampleError::Reason(reason)) => state_redacted(key, reason, secrets),
     }
   }
 
@@ -183,7 +182,10 @@ fn sample(
   };
   let result = read(socket, target)
     .map(|raw| bounded_redacted(&raw, secrets))
-    .map_err(|reason| redact_text(&reason, secrets).chars().take(160).collect());
+    .map_err(|reason| match reason.as_str() {
+      "error: agent_not_found" | "error: pane_not_found" => SampleError::NotRunning,
+      _ => SampleError::Reason(redact_text(&reason, secrets).chars().take(160).collect()),
+    });
   let sample = Sample {
     at: Instant::now(),
     sampled_at: toolu_state::time::iso_millis(SystemTime::now()),
@@ -221,9 +223,13 @@ fn read(socket: &Path, target: &str) -> Result<String, String> {
 }
 
 fn state(key: &str, reason: &str, secrets: &Secrets) -> Response {
+  state_redacted(key, &redact_text(reason, secrets), secrets)
+}
+
+fn state_redacted(key: &str, reason: &str, secrets: &Secrets) -> Response {
   json_response(Ok(Some(json!({
     "schema": 1, "key": redact_text(key, secrets), "available": false,
-    "reason": redact_text(reason, secrets).chars().take(160).collect::<String>(),
+    "reason": reason.chars().take(160).collect::<String>(),
   }))))
 }
 

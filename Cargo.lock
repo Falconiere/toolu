@@ -1657,6 +1657,7 @@ version = "8.7.0"
 dependencies = [
  "clap",
  "nix",
+ "ring",
  "serde",
  "serde_json",
  "tempfile",

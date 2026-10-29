@@ -106,6 +106,33 @@ fn worker_screen_error_redacts_before_retention_cap() {
 }
 
 #[test]
+fn worker_screen_error_classification_survives_secret_overlap() {
+  let fixture = HerdrFixture::start();
+  let root = tempfile::tempdir().expect("config root");
+  let world = Mutex::new(super::tests::world_with("worker", "working"));
+  let limiter = Limiter::default();
+  for (code, expected_field, expected) in [
+    ("agent_not_found", "state", "not_running"),
+    ("pane_not_found", "state", "not_running"),
+    ("redacted", "reason", "error: <redacted>"),
+  ] {
+    fixture.script(
+      "agent.read",
+      Scripted::Error {
+        code: code.to_owned(),
+        message: "gone".to_owned(),
+      },
+    );
+    let secrets = secrets_of(root.path(), &[("TOOLU_EPIC_STATUS_TOKEN", code)]);
+    let screen = Screen::new(Herdr::Socket(fixture.socket.clone()), None);
+    let response = screen.response("worker", &limiter, &world, &secrets);
+    let body: Value = serde_json::from_slice(&response.body).expect("error body");
+    assert_eq!(response.status, 200);
+    assert_eq!(body[expected_field], expected);
+  }
+}
+
+#[test]
 fn worker_screen_redaction_marker_is_not_redacted_twice() {
   let fixture = HerdrFixture::start();
   fixture.state().tail = "redacted".to_owned();
