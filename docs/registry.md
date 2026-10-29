@@ -89,7 +89,7 @@ For each selected file, the runner shares its file eligibility, linked-worktree 
 The ast-grep plugin's native SessionStart hook publishes two manifests. `crates/ast-grep` supplies both compiled rules:
 
 - **search-nudge** (`tool/pre`) advises on structural Grep patterns and Bash or Shell file searches. It uses `toolu-shell` to tell a file search from a grep filtering a pipe, and honors `skills.ast-grep: false`.
-- **byte-savings** (`tool/post`) appends `{"kind","returned","full"}` records to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob and ast-grep commands. Hosts stay silent about it. `toolu ast-grep savings <ledger.jsonl>` prints the report on demand.
+- **byte-savings** (`tool/post`) appends `{"kind","returned","full"}` records to `<config>/toolu/byte-savings/<session>.jsonl` for Read, Grep, Glob and ast-grep commands. Hosts stay silent about it. `toolu ast-grep savings <ledger.jsonl>` prints the report on demand. SessionStart reclaim deletes whole completed ledgers older than seven days and caps non-active files at 64; the active session file and append-only line contents are preserved.
 
 The compiled rules run only when their manifests exist and the plugin is selected. `fixtures/ast-grep/{nudge,savings,golden}.json` and the native hook integration tests cover the behavior. `cargo xtask bench-hooks` measures every hook entry; budgets are in [resource-budgets.md](resource-budgets.md).
 

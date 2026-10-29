@@ -8,7 +8,7 @@ fn register_writes_real_valid_manifests_twice() {
   let dir = tempfile::tempdir().expect("config root");
   let env = Env::from_pairs([("TOOLU_CONFIG_DIR", dir.path().display().to_string())]);
   for _ in 0..2 {
-    let result = register(&env, Host::Claude);
+    let result = register(&env, Host::Claude, "{}");
     assert_eq!(result.exit.code(), 0);
   }
   let pre = dir
@@ -34,7 +34,7 @@ fn register_replaces_stale_module_with_migration_hint_once() {
   std::fs::create_dir_all(&registry).expect("registry");
   let old = registry.join("ast-grep@toolu__search-nudge.js");
   std::fs::write(&old, "old bundle").expect("old module");
-  let first = register(&env, Host::Claude);
+  let first = register(&env, Host::Claude, "{}");
   assert_eq!(first.exit.code(), 0);
   assert!(!old.exists());
   assert!(
@@ -42,7 +42,7 @@ fn register_replaces_stale_module_with_migration_hint_once() {
       .stdout
       .is_some_and(|message| message.contains("toolu ast-grep search"))
   );
-  assert!(register(&env, Host::Claude).stdout.is_none());
+  assert!(register(&env, Host::Claude, "{}").stdout.is_none());
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn register_reports_native_manifests_to_startup_verifier() {
     ("TOOLU_CONFIG_DIR", dir.path().display().to_string()),
     ("TOOLU_STARTUP_REPORT", report.display().to_string()),
   ]);
-  assert_eq!(register(&env, Host::Cursor).exit.code(), 0);
+  assert_eq!(register(&env, Host::Cursor, "{}").exit.code(), 0);
   let lines = std::fs::read_to_string(&report).expect("report lines");
   let records: Vec<serde_json::Value> = lines
     .lines()
@@ -78,7 +78,7 @@ fn register_reports_a_failed_write_without_failing_the_session() {
   let file = dir.path().join("plain-file");
   std::fs::write(&file, "").expect("plain file");
   let env = Env::from_pairs([("TOOLU_CONFIG_DIR", file.display().to_string())]);
-  let failed = register(&env, Host::Claude);
+  let failed = register(&env, Host::Claude, "{}");
   assert_eq!(failed.exit.code(), 0);
   assert!(failed.stderr.is_none());
   let stdout = failed.stdout.expect("systemMessage");
@@ -105,7 +105,7 @@ fn a_failure_after_an_old_module_was_removed_still_shows_the_migration_notice() 
   std::fs::create_dir_all(&registry).expect("registry");
   let old = registry.join("ast-grep@toolu__search-nudge.js");
   std::fs::write(&old, "old bundle").expect("old module");
-  let outcome = register(&env, Host::Claude);
+  let outcome = register(&env, Host::Claude, "{}");
   assert_eq!(outcome.exit.code(), 0);
   assert!(!old.exists());
   let stdout = outcome.stdout.expect("systemMessage");

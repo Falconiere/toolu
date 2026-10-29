@@ -168,4 +168,4 @@ toolu ast-grep savings ~/.claude/toolu/byte-savings/<session>.jsonl
 
 The wrapper prefers `sg`, falls back to `ast-grep`, and does nothing when neither is installed. Verbs: `search`, `files`, `scan`, `debug`, `savings`.
 
-The byte-savings ledger sits under the project's data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/`). Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand.
+The byte-savings ledger sits under the config data root (`$TOOLU_CONFIG_DIR/toolu/byte-savings/<session>.jsonl`). Run `toolu ast-grep savings <ledger.jsonl>` for a report on demand. At SessionStart, completed ledgers are reclaimed as whole files only: the active session id is never deleted, files newer than seven days stay unless more than 64 non-active ledgers remain (oldest non-active removed first), and cleanup errors are `toolu-byte-savings-sweep:` warnings. Lines are never truncated.
