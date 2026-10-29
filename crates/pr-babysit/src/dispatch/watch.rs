@@ -10,6 +10,7 @@ use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command, screen, stop_agent, try_herdr};
 use super::launch::Launch;
 use super::outcome::fixer_outcome;
+use super::remote::RemoteOutcome;
 use crate::error::{Failure, Result};
 use crate::fixer::host::Fixer;
 
@@ -82,9 +83,12 @@ impl Dispatcher<'_> {
 
   fn settle_group(&mut self, seq: u64) -> Result<()> {
     if self.remote().is_some() {
-      let head = self.remote_result(seq, &self.group(seq)?)?;
+      let outcome = self.remote_result(seq, &self.group(seq)?)?;
       self.stop_hc(&self.group(seq)?)?;
-      return self.settle(seq, "done", &head, "");
+      return match outcome {
+        RemoteOutcome::Done(head) => self.settle(seq, "done", &head, ""),
+        RemoteOutcome::Failed(note) => self.settle(seq, "reported_failed", "", &note),
+      };
     }
     let (outcome, error) = self.outcome(&self.group(seq)?)?;
     if outcome != "done" {

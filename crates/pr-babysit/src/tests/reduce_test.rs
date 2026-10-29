@@ -311,3 +311,12 @@ fn backoff_is_gone_and_the_result_names_its_files() {
   );
   assert_eq!(next.state["schedule"], previous["schedule"]);
 }
+
+#[test]
+fn tick_preserves_remote_attempt_history() {
+  let input = open_165();
+  let mut previous = run(&input, None, NOW).state;
+  previous["remoteHistory"] = json!([{"remote":{"run":"old"},"fixer":{"status":"failed"}}]);
+  let next = run(&input, Some(&previous), LATER).state;
+  assert_eq!(next["remoteHistory"], previous["remoteHistory"]);
+}

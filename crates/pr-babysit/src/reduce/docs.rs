@@ -53,7 +53,7 @@ pub(super) fn state(tick: &Tick<'_>) -> Value {
   let pr = snapshot.get("pr").unwrap_or(&Value::Null);
   let repo = text(snapshot, "repo");
   let number = field(snapshot, "number");
-  json!({
+  let mut next = json!({
     "version": 2,
     "slot": crate::state::slot(repo, number.as_u64().unwrap_or(0)),
     "repo": repo,
@@ -91,7 +91,17 @@ pub(super) fn state(tick: &Tick<'_>) -> Value {
     },
     "actions": tick.memory.actions,
     "lastGoodSnapshot": tick.paths.snapshot,
-  })
+  });
+  carry_history(&mut next, tick.previous);
+  next
+}
+
+fn carry_history(next: &mut Value, previous: Option<&Value>) {
+  if let Some(history) = previous.and_then(|state| state.get("remoteHistory"))
+    && let Some(root) = next.as_object_mut()
+  {
+    root.insert("remoteHistory".into(), history.clone());
+  }
 }
 
 fn pr_doc(tick: &Tick<'_>) -> Value {

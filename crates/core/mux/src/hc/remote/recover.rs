@@ -61,30 +61,50 @@ fn path(env: &Env, repo: &str, run: &str) -> Result<PathBuf, Error> {
   Ok(dir.join("snapshot.bundle"))
 }
 
-fn local_file(path: &Path, bytes: &[u8]) -> Result<(), Error> {
+fn local_file(path: &Path, bytes: &[u8], allow_partial: bool) -> Result<(), Error> {
   if bytes.len() > BUNDLE_LIMIT {
     return Err(Error::new("too_large", "bundle exceeds 512 MiB"));
   }
-  match std::fs::OpenOptions::new()
+  let current = match std::fs::symlink_metadata(path) {
+    Ok(metadata) if metadata.is_file() => {
+      Some(std::fs::read(path).map_err(|e| Error::new("io", e.to_string()))?)
+    }
+    Ok(_) => return Err(Error::new("identity_mismatch", "invalid bundle file")),
+    Err(error) if error.kind() == std::io::ErrorKind::NotFound => None,
+    Err(error) => return Err(Error::new("io", error.to_string())),
+  };
+  if let Some(current) = &current {
+    if current == bytes {
+      return Ok(());
+    }
+    if !allow_partial || !bytes.starts_with(current) {
+      return Err(Error::new("identity_mismatch", "transfer bundle differs"));
+    }
+  }
+  let parent = path
+    .parent()
+    .ok_or_else(|| Error::new("io", "invalid bundle path"))?;
+  let build = fresh_build(parent)?;
+  let candidate = build.join("bundle");
+  let mut file = std::fs::OpenOptions::new()
     .write(true)
     .create_new(true)
-    .open(path)
-  {
-    Ok(mut file) => file
-      .write_all(bytes)
-      .map_err(|e| Error::new("io", e.to_string())),
-    Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-      let metadata =
-        std::fs::symlink_metadata(path).map_err(|e| Error::new("io", e.to_string()))?;
-      if !metadata.is_file()
-        || std::fs::read(path).map_err(|e| Error::new("io", e.to_string()))? != bytes
-      {
-        return Err(Error::new("identity_mismatch", "transfer bundle differs"));
-      }
-      Ok(())
+    .open(&candidate)
+    .map_err(|e| Error::new("io", e.to_string()))?;
+  file
+    .write_all(bytes)
+    .map_err(|e| Error::new("io", e.to_string()))?;
+  if let Some(current) = &current {
+    let backup = build.join("previous");
+    std::fs::rename(path, &backup).map_err(|e| Error::new("io", e.to_string()))?;
+    if std::fs::read(backup).map_err(|e| Error::new("io", e.to_string()))? != *current {
+      return Err(Error::new(
+        "identity_mismatch",
+        "partial bundle changed during recovery",
+      ));
     }
-    Err(e) => Err(Error::new("io", e.to_string())),
   }
+  std::fs::hard_link(candidate, path).map_err(|e| Error::new("io", e.to_string()))
 }
 
 fn verify_local(
@@ -102,7 +122,21 @@ fn verify_local(
     &local_git(env, repo, &["bundle", "list-heads", file])?,
     expected,
     reference,
-  )
+  )?;
+  local_git(env, repo, &["bundle", "unbundle", file])?;
+  Ok(())
+}
+
+fn fresh_build(parent: &Path) -> Result<PathBuf, Error> {
+  for index in 0..10000 {
+    let path = parent.join(format!("build-{}-{index}", std::process::id()));
+    match std::fs::create_dir(&path) {
+      Ok(()) => return Ok(path),
+      Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => (),
+      Err(error) => return Err(Error::new("io", error.to_string())),
+    }
+  }
+  Err(Error::new("io", "no available build directory"))
 }
 
 /// Resume an export, retaining and verifying any existing ref and bundle.
@@ -116,11 +150,10 @@ pub fn export_recover(env: &Env, repo: &str, run: &str, expected: &str) -> Resul
     local_git(env, repo, &["update-ref", &reference, expected, ""])?;
   }
   if !path.exists() {
-    let build = path
+    let parent = path
       .parent()
-      .ok_or_else(|| Error::new("io", "invalid bundle path"))?
-      .join("build");
-    std::fs::create_dir(&build).map_err(|e| Error::new("io", e.to_string()))?;
+      .ok_or_else(|| Error::new("io", "invalid bundle path"))?;
+    let build = fresh_build(parent)?;
     let candidate = build.join("bundle");
     let file = candidate
       .to_str()
@@ -151,7 +184,7 @@ pub fn import_recover(
   let reference = identity(run, expected)?;
   let path = path(env, repo, run)?;
   let existing = local_ref(env, repo, &reference, expected)?;
-  local_file(&path, bytes)?;
+  local_file(&path, bytes, !existing)?;
   verify_local(env, repo, &path, &reference, expected)?;
   if !existing {
     let file = path
@@ -204,18 +237,9 @@ impl Transfer<'_> {
       &self.git(&["bundle", "list-heads", &file])?,
       expected,
       reference,
-    )
-  }
-
-  pub(super) fn put_once(&self, name: &str, bytes: &[u8]) -> Result<(), Error> {
-    match self.write(name, bytes) {
-      Ok(()) => Ok(()),
-      Err(err) => match self.read(name) {
-        Ok(found) if found == bytes => Ok(()),
-        Ok(_) => Err(Error::new("identity_mismatch", "transfer file differs")),
-        Err(_) => Err(err),
-      },
-    }
+    )?;
+    self.git(&["bundle", "unbundle", &file])?;
+    Ok(())
   }
 
   /// Resume upload and import, matching existing bytes and private ref exactly.
@@ -226,7 +250,13 @@ impl Transfer<'_> {
     let reference = identity(self.run, expected)?;
     self.ensure_run()?;
     let existing = self.ref_exists(&reference, expected)?;
-    self.put_bundle(name, bytes)?;
+    if existing {
+      if self.read_bundle(name)? != bytes {
+        return Err(Error::new("identity_mismatch", "bundle differs"));
+      }
+    } else {
+      self.put_bundle(name, bytes)?;
+    }
     self.verified(name, &reference, expected)?;
     if !existing {
       self.import(name, expected)?;

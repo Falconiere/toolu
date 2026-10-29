@@ -198,12 +198,14 @@ impl Dispatcher<'_> {
   pub(crate) fn cleanup(&mut self) -> Result<Value> {
     self.stop_active()?;
     if self.remote().is_some() {
-      if let Some(path) = self.worktree_field("path") {
+      if let Some(path) = self
+        .worktree_field("path")
+        .filter(|path| Path::new(path).exists())
+      {
         clean_or_fail(self, path)?;
       }
       self.remove_remote()?;
     }
-    self.clear("fixer")?;
     let worktree = self
       .state
       .get("herdrWorktree")
@@ -216,6 +218,7 @@ impl Dispatcher<'_> {
       ),
       Some(worktree) => self.retire(&worktree)?,
     };
+    self.clear("fixer")?;
     if self.dry {
       return Ok(json!({"dryRun": true, "commands": self.commands}));
     }

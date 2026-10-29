@@ -1,7 +1,7 @@
 //! Recoverable remote fixer setup, bound to one committed local worktree.
 
 use std::path::Path;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use serde_json::{Value, json};
 use toolu_mux::hc::remote::{self, Target, Transfer};
@@ -80,32 +80,18 @@ impl Dispatcher<'_> {
           "remote target or base differs from the saved attempt",
         ));
       }
+      if self.new_remote_attempt() {
+        self.require_prior_stopped()?;
+        self.record_remote(machine, repo, base)?;
+      }
     } else {
       self.record_remote(machine, repo, base)?;
     }
     self.prepare_remote(hosts, base)
   }
+}
 
-  fn record_remote(&mut self, machine: &str, repo: &str, base: &str) -> Result<()> {
-    let path = self.worktree_field("path").unwrap_or_default().to_owned();
-    let head = self.git(
-      &argv(&["git", "-C", &path, "rev-parse", "HEAD"]),
-      "git_error",
-      "cannot read fixer head".into(),
-    )?;
-    let tick = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .map_or(0, |d| d.as_nanos());
-    let hash = crate::sha1::hex(format!("{}:{tick}", self.file.display()).as_bytes());
-    let short: String = hash.chars().take(24).collect();
-    let state = json!({"machine": machine, "repo": repo, "run": format!("pb-{short}"), "expectedBase": head, "baseBranch": base});
-    self.save(|root| {
-      if let Some(tree) = root.get_mut("herdrWorktree").and_then(Value::as_object_mut) {
-        tree.insert("remote".into(), state);
-      }
-    })
-  }
-
+impl Dispatcher<'_> {
   fn preflight_remote(
     &self,
     transport: &Transfer<'_>,
@@ -262,3 +248,7 @@ fn ensure_worktree(transport: &Transfer<'_>, path: &str, head: &str) -> Result<(
 #[cfg(test)]
 #[path = "tests/remote_setup_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/remote_live_test.rs"]
+mod live_tests;

@@ -7,7 +7,7 @@ use toolu_mux::hc::remote::{self, Target, Transfer};
 
 use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command};
-use super::remote_finish::verify_remote_result;
+use super::remote_finish::{verify_remote_result, verify_reported_commit};
 use crate::error::{Failure, Result};
 
 pub(super) fn fail(error: &toolu_mux::hc::Error) -> Failure {
@@ -46,6 +46,11 @@ impl Dispatcher<'_> {
 #[cfg(test)]
 #[path = "tests/remote_test.rs"]
 mod tests;
+
+pub(super) enum RemoteOutcome {
+  Done(String),
+  Failed(String),
+}
 
 impl Dispatcher<'_> {
   pub(super) fn prepare_remote_group(&mut self, seq: u64) -> Result<Value> {
@@ -101,7 +106,7 @@ impl Dispatcher<'_> {
     }
   }
 
-  pub(super) fn remote_result(&mut self, seq: u64, group: &Value) -> Result<String> {
+  pub(super) fn remote_result(&mut self, seq: u64, group: &Value) -> Result<RemoteOutcome> {
     let remote = self
       .remote()
       .cloned()
@@ -110,7 +115,7 @@ impl Dispatcher<'_> {
       .get("remote")
       .ok_or_else(|| Failure::new("state_malformed", "missing remote group"))?;
     if let Some(commit) = group.get("remoteImported").and_then(Value::as_str) {
-      return self.confirm_imported(commit);
+      return self.confirm_imported(commit).map(RemoteOutcome::Done);
     }
     let run = field(data, "run")?;
     let transport = transfer(self.env, &remote, run)?;
@@ -118,10 +123,18 @@ impl Dispatcher<'_> {
     let report: Value = serde_json::from_slice(&bytes)
       .map_err(|_error| Failure::new("remote_error", "invalid remote report"))?;
     let commit = validate_report(&report, data)?.to_owned();
+    if report.get("status").and_then(Value::as_str) == Some("failed") {
+      verify_reported_commit(&transport, &remote, data, &commit)?;
+      let note = report
+        .get("note")
+        .and_then(Value::as_str)
+        .unwrap_or_default();
+      return Ok(RemoteOutcome::Failed(note.to_owned()));
+    }
     verify_remote_result(&transport, &remote, data, &commit)?;
     self.patch_group(seq, &json!({"remoteExportStarted": true}))?;
     self.import_remote_result(seq, &remote, run, &commit)?;
-    Ok(commit)
+    Ok(RemoteOutcome::Done(commit))
   }
   fn confirm_imported(&self, commit: &str) -> Result<String> {
     let local = self.worktree_field("path").unwrap_or_default();
@@ -170,7 +183,10 @@ fn validate_report<'a>(report: &'a Value, expected: &Value) -> Result<&'a str> {
   let run = field(expected, "run")?;
   let base = field(expected, "base")?;
   if report.get("version").and_then(Value::as_u64) != Some(1)
-    || report.get("status").and_then(Value::as_str) != Some("done")
+    || !matches!(
+      report.get("status").and_then(Value::as_str),
+      Some("done" | "failed")
+    )
     || report.get("runId").and_then(Value::as_str) != Some(run)
     || report.get("expectedBase").and_then(Value::as_str) != Some(base)
   {

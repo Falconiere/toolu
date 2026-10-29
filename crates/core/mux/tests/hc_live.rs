@@ -178,3 +178,129 @@ fn direct_round_trip(fixture: &Fixture, src: &str, dst: &str, sha: &str) -> Resu
   }
   Ok(())
 }
+
+#[test]
+fn interrupted_remote_chunks_and_assembly_resume_without_replacing_wrong_bytes() {
+  let fixture = Fixture::new().unwrap();
+  let source = tempfile::tempdir_in(fixture.dir.path()).unwrap();
+  let destination = tempfile::tempdir_in(fixture.dir.path()).unwrap();
+  let src = source.path().to_str().unwrap();
+  let dst = destination.path().to_str().unwrap();
+  for repo in [src, dst] {
+    fixture.git(repo, &["init", "-q"]).unwrap();
+    fixture.git(repo, &["config", "user.name", "Test"]).unwrap();
+    fixture
+      .git(repo, &["config", "user.email", "test@example.invalid"])
+      .unwrap();
+  }
+  std::fs::write(source.path().join("file"), b"binary\0snapshot").unwrap();
+  fixture.git(src, &["add", "file"]).unwrap();
+  fixture.git(src, &["commit", "-qm", "one"]).unwrap();
+  let sha = fixture.git(src, &["rev-parse", "HEAD"]).unwrap();
+  let bytes = remote::export_recover(&fixture.env, src, "partial", &sha).unwrap();
+  let transfer = Transfer {
+    target: Target::new(Some("loop"), Some(dst)).unwrap().unwrap(),
+    env: &fixture.env,
+    run: "partial",
+  };
+  transfer.allocate().unwrap();
+  transfer.write("bad-chunk-0", b"wrong").unwrap();
+  assert!(transfer.upload("bad", &sha, &bytes).is_err());
+  assert_eq!(transfer.read("bad-chunk-0").unwrap(), b"wrong");
+  transfer.write("input-chunk-0", &bytes[..12]).unwrap();
+  transfer.write("input", &bytes[..19]).unwrap();
+  transfer.upload("input", &sha, &bytes).unwrap();
+  assert_eq!(transfer.read_bundle("input").unwrap(), bytes);
+  let dir = repo_transfer_dir(dst, "partial", "input");
+  assert!(std::fs::read_dir(dir).unwrap().flatten().any(|entry| {
+    std::fs::read(entry.path().join("previous")).is_ok_and(|prior| prior == bytes[..19])
+  }));
+  let mut wrong = bytes.clone();
+  wrong.push(0);
+  assert!(transfer.upload("input", &sha, &wrong).is_err());
+  assert_eq!(transfer.read_bundle("input").unwrap(), bytes);
+}
+
+#[test]
+fn remote_get_by_name_and_address_keeps_machine_qualification() {
+  let fixture = Fixture::new().unwrap();
+  let client = Client::new(&fixture.env);
+  let argv = vec![
+    "sh".into(),
+    "-c".into(),
+    "while read line; do :; done".into(),
+  ];
+  let terminal = client
+    .launch(&Launch {
+      name: "remote-owned",
+      cwd: fixture.dir.path().to_str().unwrap(),
+      owner: "toolu.owner=remote",
+      machine: Some("loop"),
+      argv: &argv,
+    })
+    .unwrap();
+  let target = address(&terminal).unwrap();
+  assert!(target.starts_with("loop/t"));
+  assert_eq!(
+    address(&client.get("loop/remote-owned").unwrap()).unwrap(),
+    target
+  );
+  assert_eq!(address(&client.get(target).unwrap()).unwrap(), target);
+  client.kill_owned(target, "remote").unwrap();
+}
+
+#[test]
+fn interrupted_remote_export_resumes_from_partial_bundle() {
+  let fixture = Fixture::new().unwrap();
+  let repo = tempfile::tempdir_in(fixture.dir.path()).unwrap();
+  let root = repo.path().to_str().unwrap();
+  fixture.git(root, &["init", "-q"]).unwrap();
+  fixture.git(root, &["config", "user.name", "Test"]).unwrap();
+  fixture
+    .git(root, &["config", "user.email", "test@example.invalid"])
+    .unwrap();
+  std::fs::write(repo.path().join("file"), b"snapshot").unwrap();
+  fixture.git(root, &["add", "file"]).unwrap();
+  fixture.git(root, &["commit", "-qm", "one"]).unwrap();
+  let sha = fixture.git(root, &["rev-parse", "HEAD"]).unwrap();
+  let transfer = Transfer {
+    target: Target::new(Some("loop"), Some(root)).unwrap().unwrap(),
+    env: &fixture.env,
+    run: "export-partial",
+  };
+  transfer.allocate().unwrap();
+  transfer
+    .git(&[
+      "update-ref",
+      "refs/toolu-transfer/export-partial/snapshot",
+      &sha,
+      "",
+    ])
+    .unwrap();
+  let reference = transfer.path("reference").unwrap();
+  let parent = std::path::Path::new(&reference)
+    .parent()
+    .unwrap()
+    .to_str()
+    .unwrap();
+  transfer.exec(&["mkdir", parent], &[]).unwrap();
+  transfer
+    .git(&[
+      "bundle",
+      "create",
+      &reference,
+      "refs/toolu-transfer/export-partial/snapshot",
+    ])
+    .unwrap();
+  let bytes = transfer.read_bundle("reference").unwrap();
+  transfer.write("result", &bytes[..19]).unwrap();
+  assert_eq!(transfer.export_recover("result", &sha).unwrap(), bytes);
+  assert_eq!(transfer.export_recover("result", &sha).unwrap(), bytes);
+}
+
+fn repo_transfer_dir(repo: &str, run: &str, name: &str) -> std::path::PathBuf {
+  std::path::Path::new(repo)
+    .join(".git/toolu-transfer")
+    .join(run)
+    .join(name)
+}

@@ -29,7 +29,12 @@ and waits for the engine to launch it again, with no `--replace`.
 
 ## herdr
 
-- **`HERDR_ENV` unset:** the orchestrator is not inside herdr. Stop and tell
+These steps apply to the legacy herdr backend. For `herdr-app` workers,
+restore the recorded `HC_SESSION`, inspect the saved terminal address and
+ownership, and do not repeat an uncertain send. See
+[Herdr App recovery](../../../../../docs/epic-orchestrator/README.md#herdr-app-and-remote-workers).
+
+- **`HERDR_ENV` unset with the herdr backend:** the orchestrator is not inside herdr. Stop and tell
   the user to start the session from a herdr pane.
 - **`herdr-error` that persists:** `herdr status`; the engine backs off 30
   seconds, doubling to 5 minutes, and recovers once herdr answers.

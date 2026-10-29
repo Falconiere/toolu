@@ -18,12 +18,15 @@ fn report_requires_the_exact_run_base_and_full_lowercase_commit() {
     ("runId", json!("other")),
     ("expectedBase", json!("bad")),
     ("commit", json!("ABC")),
-    ("status", json!("failed")),
+    ("status", json!("other")),
   ] {
     let mut bad = good.clone();
     bad[key] = value;
     assert!(validate_report(&bad, &expected).is_err(), "{key}");
   }
+  let mut failed = good.clone();
+  failed["status"] = json!("failed");
+  assert_eq!(validate_report(&failed, &expected).unwrap(), commit);
   assert!(validate_report(&good, &json!({})).is_err());
 }
 

@@ -31,6 +31,7 @@ pub(super) fn registered(listing: &str, path: &str, branch: &str) -> Result<bool
   Ok(found)
 }
 
+/// Stop the owned remote worker and reconcile its worktree removal.
 pub(super) fn remote_teardown(
   ctx: &Ctx<'_>,
   teardown: &Teardown<'_>,
@@ -83,6 +84,25 @@ fn stop_remote(ctx: &Ctx<'_>, record: &Record) -> Result<String, String> {
   stop(ctx, &remote)
 }
 
+fn check_worktree(
+  transfer: &Transfer<'_>,
+  tree: &str,
+  record: &Record,
+  abandon: bool,
+) -> Result<(), String> {
+  let git = |args: &[&str]| transfer.git(args).map_err(|err| err.message);
+  if !git(&["-C", tree, "status", "--porcelain", "--untracked-files=all"])?.is_empty() {
+    return Err("remote worktree has uncommitted work; preserve it for inspection".to_owned());
+  }
+  if !abandon
+    && git(&["-C", tree, "rev-parse", "HEAD"])?
+      != text(record, "remote_result_commit").ok_or("missing imported remote commit")?
+  {
+    return Err("remote worktree has untransferred commits; preserve it for inspection".to_owned());
+  }
+  Ok(())
+}
+
 fn remove(
   transfer: &Transfer<'_>,
   teardown: &Teardown<'_>,
@@ -109,18 +129,25 @@ fn remove(
   }
   let listing = git(&["worktree", "list", "--porcelain", "-z"])?;
   if registered(&listing, tree, branch)? {
-    let dirty = git(&["-C", tree, "status", "--porcelain", "--untracked-files=all"])?;
-    if !dirty.is_empty() {
-      return Err("remote worktree has uncommitted work; preserve it for inspection".to_owned());
-    }
+    check_worktree(transfer, tree, record, teardown.abandon)?;
     record.insert("stage".to_owned(), json!("cleanup-incomplete"));
     record.insert("remote_removal_intent".to_owned(), intent.clone());
     write_record(teardown.path, record)?;
     git(&["worktree", "remove", "--", tree])?;
-  } else if record.get("remote_removal_intent") != Some(intent)
-    || record.get("remote_worktree_removed") != Some(&Value::Bool(true))
-  {
-    return Err("remote worktree removal is uncertain; inspect it before cleanup".to_owned());
+  } else {
+    if record.get("remote_removal_intent") != Some(intent) {
+      return Err("remote worktree removal is uncertain; inspect it before cleanup".to_owned());
+    }
+    for flag in ["-e", "-L"] {
+      transfer
+        .exec(&["test", "!", flag, tree], &[])
+        .map_err(|error| {
+          format!(
+            "remote worktree path still exists or cannot be verified: {}",
+            error.message
+          )
+        })?;
+    }
   }
   finalize(transfer, teardown, record, tree, branch)
 }
@@ -145,9 +172,16 @@ fn finalize(
   write_record(teardown.path, record)?;
   if !teardown.abandon {
     let reference = format!("refs/heads/{branch}");
+    if listing
+      .split('\0')
+      .any(|field| field == format!("branch {reference}"))
+    {
+      return Err("remote branch is checked out in another worktree".to_owned());
+    }
     let refs = git(&["for-each-ref", "--format=%(refname)", &reference])?;
     if refs.lines().any(|line| line == reference) {
-      git(&["branch", "-D", "--", branch])?;
+      let commit = text(record, "remote_result_commit").ok_or("missing imported remote commit")?;
+      git(&["update-ref", "-d", &reference, commit])?;
     }
   }
   Ok(())

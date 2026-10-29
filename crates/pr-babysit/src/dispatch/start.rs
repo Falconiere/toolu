@@ -127,6 +127,12 @@ impl Dispatcher<'_> {
       "groups": recorded,
     });
     self.save(|state| {
+      if let Some(remote) = state
+        .pointer_mut("/herdrWorktree/remote")
+        .and_then(Value::as_object_mut)
+      {
+        remote.insert("setupPending".into(), json!(false));
+      }
       if let Value::Object(root) = state {
         root.insert("fixer".into(), fixer);
       }

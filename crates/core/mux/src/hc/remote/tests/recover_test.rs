@@ -29,7 +29,13 @@ fn retries_reuse_only_matching_git_refs_and_bytes() {
     &["update-ref", "-d", "refs/toolu-transfer/run/snapshot"],
   );
   assert_eq!(export_recover(&env, src, "run", &sha).unwrap(), bytes);
+  let pending = b.path().join(".git/toolu-transfer/run");
+  std::fs::create_dir_all(&pending).unwrap();
+  std::fs::write(pending.join("snapshot.bundle"), &bytes[..19]).unwrap();
   import_recover(&env, dst, "run", &sha, &bytes).unwrap();
+  assert!(std::fs::read_dir(&pending).unwrap().flatten().any(|entry| {
+    std::fs::read(entry.path().join("previous")).is_ok_and(|prior| prior == bytes[..19])
+  }));
   import_recover(&env, dst, "run", &sha, &bytes).unwrap();
   git(
     dst,
@@ -85,4 +91,34 @@ fn large_binary_bundle_round_trips_and_recovers() {
     git(dst, &["rev-parse", "refs/toolu-transfer/large/snapshot"]),
     sha
   );
+}
+
+#[test]
+fn interrupted_export_build_preserves_old_artifacts_and_resumes() {
+  let repo = tempfile::tempdir().unwrap();
+  let root = repo.path().to_str().unwrap();
+  git(root, &["init", "-q"]);
+  git(root, &["config", "user.name", "Test"]);
+  git(root, &["config", "user.email", "t@example.invalid"]);
+  std::fs::write(repo.path().join("file"), b"snapshot").unwrap();
+  git(root, &["add", "file"]);
+  git(root, &["commit", "-qm", "snapshot"]);
+  let sha = git(root, &["rev-parse", "HEAD"]);
+  let old = repo.path().join(".git/toolu-transfer/staged/build");
+  std::fs::create_dir_all(&old).unwrap();
+  std::fs::write(old.join("bundle"), b"interrupted").unwrap();
+  let bytes = export_recover(&Env::process(), root, "staged", &sha).unwrap();
+  assert_ne!(bytes, [] as [u8; 0]);
+  assert_eq!(std::fs::read(old.join("bundle")).unwrap(), b"interrupted");
+  assert_eq!(
+    export_recover(&Env::process(), root, "staged", &sha).unwrap(),
+    bytes
+  );
+  let bundle = repo
+    .path()
+    .join(".git/toolu-transfer/staged/snapshot.bundle");
+  let corrupt = &bytes[..bytes.len() - 8];
+  std::fs::write(&bundle, corrupt).unwrap();
+  assert!(export_recover(&Env::process(), root, "staged", &sha).is_err());
+  assert_eq!(std::fs::read(bundle).unwrap(), corrupt);
 }

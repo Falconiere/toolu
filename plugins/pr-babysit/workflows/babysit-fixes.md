@@ -34,13 +34,14 @@ falls back to a task/severity heuristic and says why in `note`. Any single
 item one tier: route again with `--raise <id>` and say so in the report. Never
 lower a tier. `dispatch: "herdr"` → **Multi-host dispatch**; `dispatch:
 "inline"` (the config says so, or every pool host is cooling or has no CLI on
-`PATH`) → **Inline delegation**, using each group's `class`. herdr itself is
+`PATH`) → **Inline delegation**, using each group's `class`. Legacy herdr is
 probed by `toolu babysit dispatch-fix start`: `herdr_unavailable` also means inline.
+For `herdr-app` and remote dispatch, see [Herdr App fixer dispatch](../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
 
-### Multi-host dispatch (herdr)
+### Multi-host dispatch
 
 Fixers run as real agent sessions — Claude Code, Codex or Cursor Agent in a
-herdr pane, per group — in the slot's worktree on branch `pr-babysit/<slot>`,
+selected worker backend, per group — in the slot's worktree on branch `pr-babysit/<slot>`,
 fast-forwarded from the PR branch. One group runs at a time; the fixer edits,
 tests and commits only. You keep verification, push, replies and resolves.
 
@@ -71,7 +72,7 @@ reply to and resolve the fixer's items from those `fixing[]` lists. Act on
 | --- | --- |
 | `running` | Keep going; call `wait` again next tick. |
 | `done` | Verify, then Step 4. `commits[]` and `worktree` are in the result. |
-| `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the herdr worktree** (`worktree`), which already holds the earlier groups' commits. `worktree_lost`: the worktree is gone — run `cleanup`, then `start` again. |
+| `failed` | `host_limited`: the host is cooling for 60 min — route the remaining items again (another host) and `start`. `no_report` / `reported_failed` / `agent_start_failed` (herdr's message is in `groups[].error`): route again, or fix that group inline **in the fixer worktree** (`worktree`), which already holds the earlier groups' commits. `worktree_lost`: the worktree is gone — run `cleanup`, then `start` again. |
 | `blocked` | The fixer waits at a prompt (safe mode). Surface it to the user; never answer it. Once the user answers, the next `wait` picks the group up again. |
 
 **After a failed group.** `start` and `cleanup` refuse a worktree with
@@ -85,7 +86,7 @@ the `prBabysit` config), `fixer_running` (run `wait`), `herdr_unavailable`
 retry next tick), `worktree_dirty` or `stale_branch` (see
 [references/helper.md](../skills/babysit/references/helper.md)).
 
-**Verify before push.** In the herdr worktree (`WORKTREE` = `worktree` from the
+**Verify before push.** In the fixer worktree (`WORKTREE` = `worktree` from the
 result): re-run the tests for the touched files, check that only the PR's
 changed-file set moved, then write the push-review state with the writer's
 `--repo "$WORKTREE" --branch "$BRANCH"` and push with
@@ -111,8 +112,8 @@ Deciding and doing are different classes: decide the approach at the higher
 tier, then implement at the lower one. Trivial fixes may be done inline when
 the delegation round trip would cost more than the edit.
 
-Babysit is autonomous and never edits the user's main checkout. Herdr dispatch
-works only in the slot's herdr worktree (`toolu babysit dispatch-fix` owns it). Inline,
+Babysit is autonomous and never edits the user's main checkout. Dispatch
+works only in the slot's fixer worktree (`toolu babysit dispatch-fix` owns it). Inline,
 Claude uses `EnterWorktree`/`ExitWorktree`. Codex creates one native isolated worktree at
 `${CODEX_HOME:-$HOME/.codex}/toolu/pr-babysit/worktrees/$SLOT`: validate the
 exact path, then run `git worktree add --detach "$WORKTREE" "$HEAD_SHA"`

@@ -61,9 +61,14 @@ pub(crate) fn job(engine: &Engine, key: &str, action: Action) -> Job {
   crate::queue_step::job(input)
 }
 
-/// The worker may be rebased under: `ready`, not working, herdr reachable.
+/// The worker may be rebased under only when its own backend is reachable.
 fn parked(engine: &Engine, issue: &Issue) -> bool {
-  issue.phase == "ready" && issue.agent_status != "working" && engine.world.herdr_failures == 0
+  issue.phase == "ready"
+    && if issue.agent.starts_with("hc:") {
+      matches!(issue.agent_status.as_str(), "idle" | "done")
+    } else {
+      issue.agent_status != "working" && engine.world.herdr_failures == 0
+    }
 }
 
 /// The agent lease the launch recorded.

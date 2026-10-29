@@ -9,12 +9,16 @@ use super::dispatcher::Dispatcher;
 use super::launch::Agent;
 use crate::error::{Failure, Result};
 
+mod recover;
+
 fn failure(error: &hc::Error) -> Failure {
   Failure::new("hc_error", format!("hc {}: {}", error.code, error.message))
     .with("uncertain", error.uncertain)
+    .with("hcKind", error.code.clone())
 }
 
 impl Dispatcher<'_> {
+  /// Resolve hc while preserving the recorded worktree backend.
   pub(super) fn hc_backend(&self) -> bool {
     if let Some(backend) = self.worktree_field("multiplexer") {
       return backend == "herdr-app";
@@ -36,6 +40,7 @@ impl Dispatcher<'_> {
     configured == "herdr-app" || (configured == "auto" && self.env.get("HC_TERMINAL_ID").is_some())
   }
 
+  /// Save the command and ownership before starting the interactive fixer.
   pub(super) fn launch_hc(&mut self, seq: u64, agent: &Agent<'_>) -> Result<()> {
     let name = agent.name;
     let digest = crate::sha1::hex(format!("{}:{name}", self.file.display()).as_bytes());
@@ -55,12 +60,13 @@ impl Dispatcher<'_> {
       .and_then(Value::as_str)
       .map(str::to_owned);
     let session = self.env.get("HC_SESSION").unwrap_or("default");
-    self.patch_group(
-      seq,
-      &json!({"hcName": terminal_name, "hcOwner": owner, "hcSession": session}),
-    )?;
     let mut command = vec![agent.host.cli().to_owned()];
     command.extend_from_slice(agent.args);
+    self.patch_group(
+      seq,
+      &json!({"hcName": terminal_name, "hcOwner": owner, "hcSession": session,
+        "hcCommand": command}),
+    )?;
     if self.dry {
       return Ok(());
     }
@@ -105,36 +111,14 @@ impl Dispatcher<'_> {
 }
 
 impl Dispatcher<'_> {
-  pub(super) fn recover_hc(&mut self, seq: u64, group: &Value) -> Result<()> {
-    let terminal = self.hc_terminal(group)?;
-    let address = hc::address(&terminal)
-      .map_err(|error| failure(&error))?
-      .to_owned();
-    self.patch_group(seq, &json!({"hcAddress": address}))?;
-    if group.get("hcSendStarted") == Some(&Value::Bool(true)) || hc::status(&terminal) != "idle" {
-      return self.block_hc(seq);
-    }
-    let brief = group
-      .get("brief")
-      .and_then(Value::as_str)
-      .unwrap_or_default();
-    if brief.is_empty() {
-      return Err(Failure::new("state_malformed", "missing fixer brief"));
-    }
-    let message = format!("You are a pr-babysit fixer. Read {brief} and follow it exactly.");
-    self.patch_group(seq, &json!({"hcSendStarted": true}))?;
-    Client::new(self.env)
-      .send(&address, &message)
-      .map_err(|error| failure(&error))?;
-    self.patch_group(seq, &json!({"status": "running", "hcSendConfirmed": true}))
-  }
-
+  /// Preserve a blocked fixer for an explicit answer.
   pub(super) fn block_hc(&mut self, seq: u64) -> Result<()> {
     let blocked = json!({"status": "blocked", "reason": "agent_blocked"});
     self.patch_fixer(&blocked)?;
     self.patch_group(seq, &blocked)
   }
 
+  /// Verify the saved terminal owner, session, and immutable address.
   pub(super) fn hc_terminal(&self, group: &Value) -> Result<Value> {
     let saved = group.get("hcAddress").and_then(Value::as_str);
     let name = group
@@ -179,6 +163,7 @@ impl Dispatcher<'_> {
     Ok(terminal)
   }
 
+  /// Stop only the recorded owned terminal.
   pub(super) fn stop_hc(&self, group: &Value) -> Result<()> {
     let terminal = self.hc_terminal(group)?;
     let address = hc::address(&terminal).map_err(|error| failure(&error))?;
@@ -194,6 +179,7 @@ impl Dispatcher<'_> {
     Ok(())
   }
 
+  /// Wait for the recorded terminal to report a settled status.
   pub(super) fn wait_hc(&self, group: &Value, remaining: u64) -> Result<Option<String>> {
     let terminal = self.hc_terminal(group)?;
     let address = hc::address(&terminal).map_err(|error| failure(&error))?;
@@ -215,6 +201,7 @@ impl Dispatcher<'_> {
     })
   }
 
+  /// Read the recorded terminal for failure context.
   pub(super) fn screen_hc(&self, group: &Value) -> Result<String> {
     let terminal = self.hc_terminal(group)?;
     let address = hc::address(&terminal).map_err(|error| failure(&error))?;
