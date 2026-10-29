@@ -339,3 +339,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/run_facts_test.rs"]
 mod facts_tests;
+
+#[cfg(test)]
+#[path = "tests/run_edit_test.rs"]
+mod edit_tests;
