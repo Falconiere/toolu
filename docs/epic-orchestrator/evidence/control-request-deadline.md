@@ -1,6 +1,6 @@
 # Control request deadline: release resource evidence
 
-Measured 2026-10-29 on macOS Darwin 27.0.0, arm64 (macmini). Both binaries were built with `cargo build --release -p toolu-cli`. Baseline source is `origin/main` at `916b53e1225d0d2297d1dc08f2b1fb50ab456966`; fixed source is this branch with the request deadline diff. The measurement uses a fresh `TOOLU_RESOURCE_HOME` and config directory for each sample.
+Measured 2026-10-29 on macOS Darwin 27.0.0, arm64 (macmini). Both binaries were built with `cargo build --release -p toolu-cli`. Baseline source is commit `916b53e1225d0d2297d1dc08f2b1fb50ab456966` (then `origin/main`); fixed source is this branch with the request deadline diff. The measurement uses a fresh `TOOLU_RESOURCE_HOME` and config directory for each sample.
 
 Each sample opens 24 real Unix control peers (12 send nothing, 12 send `{"op":` without a newline), reads the greeting, and leaves them connected. It samples process threads with `ps -M -p <pid>` and numeric descriptors with `lsof -p <pid> -Ff` before connection, just after connection, and 6.3 seconds later. It then opens 24 more stalled peers, sends a valid `stop` request, and times process exit. Three independent samples were run per build.
 
