@@ -143,13 +143,20 @@ The loader validates each file's envelope, and bash never did:
 
 ## Pane manager (`multiplexer`)
 
-The top-level `multiplexer` key selects which pane manager runs worker agents
-for the epic engine and PR babysitter. It is `"auto"` (the default), `"herdr"`,
-or `"tmux"`. `auto` prefers herdr and falls back to plain tmux when herdr is
-not reachable; a pinned value is used even when that manager is missing, so the
-engine can report the outage. When neither herdr nor tmux is installed, the
-doctor fails the epic-orchestrator check and warns for pr-babysit. The
-`TOOLU_EPIC_MULTIPLEXER` environment variable overrides the configured value.
+The top-level `multiplexer` key selects which pane manager runs the epic
+engine's worker agents. It is `"auto"` (the default), `"herdr"`, or `"tmux"`.
+`auto` prefers herdr and falls back to plain tmux when herdr is not reachable;
+a pinned value is used even when that manager is missing, so the engine can
+report the outage. When neither herdr nor tmux is installed, the doctor fails
+the epic-orchestrator check and warns for pr-babysit.
+
+The key is read once, when `toolu epic start` or `ensure` launches the
+resident engine process (an already-running engine keeps its original
+choice until the next `--replace` or restart), and carries over as the
+`TOOLU_EPIC_MULTIPLEXER` environment variable the engine process reads from
+then on. Setting `TOOLU_EPIC_MULTIPLEXER` directly on that launch overrides
+the config file. pr-babysit's own `dispatch` setting does not yet read this
+key; see [PR babysit fixers](#pr-babysit-fixers-prbabysit).
 
 ## Epic engine settings and secrets
 

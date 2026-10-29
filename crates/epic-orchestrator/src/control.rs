@@ -152,8 +152,25 @@ pub(crate) fn detach_engine(env: &Env) -> Result<(), String> {
     "epic".to_owned(),
     "engine".to_owned(),
   ]);
-  spec.env = Some(env.clone());
+  spec.env = Some(with_configured_multiplexer(env));
   detach(&spec).map(|_| ()).map_err(|err| format!("{err:?}"))
+}
+
+/// `env` with `TOOLU_EPIC_MULTIPLEXER` set from the `multiplexer` config key,
+/// unless the caller already pinned one. The new engine process then resolves
+/// its herdr/tmux backend from this env alone, with no config file re-read.
+fn with_configured_multiplexer(env: &Env) -> Env {
+  if env.get("TOOLU_EPIC_MULTIPLEXER").is_some() {
+    return env.clone();
+  }
+  let roots = Roots::new(env.clone(), None);
+  let loaded = load::load(&roots, None);
+  let Ok(multiplexer) = toolu_runtime::config::multiplexer::Multiplexer::parse(&loaded) else {
+    return env.clone();
+  };
+  env
+    .clone()
+    .with("TOOLU_EPIC_MULTIPLEXER", multiplexer.as_str())
 }
 
 /// How long `engine --replace` waits for the old engine's running effect.

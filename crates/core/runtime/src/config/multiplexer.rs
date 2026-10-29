@@ -34,6 +34,16 @@ impl Multiplexer {
       _ => Err("multiplexer must be auto, herdr or tmux".to_owned()),
     }
   }
+
+  /// The spelling the config file and `TOOLU_EPIC_MULTIPLEXER` both use.
+  #[must_use]
+  pub fn as_str(self) -> &'static str {
+    match self {
+      Multiplexer::Auto => "auto",
+      Multiplexer::Herdr => "herdr",
+      Multiplexer::Tmux => "tmux",
+    }
+  }
 }
 
 #[cfg(test)]
