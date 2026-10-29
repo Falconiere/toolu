@@ -161,7 +161,9 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
   let note = format!("fp={fp} by={}", answer.by);
   let record = Record::new("action", "answer-admit", answer.key, id, &note);
   engine.world.outbox.push_back(Step::Journal(record));
-  engine.flush()
+  engine.flush()?;
+  engine.refused_ids.remove(id);
+  Ok(())
 }
 
 /// The fingerprint journaled for `id` and whether its answer was delivered,
@@ -243,16 +245,20 @@ fn deliver(engine: &mut Engine, answer: &Answer<'_>, reply: &Sender<Value>) {
   } else {
     crate::attention::directed(&mut engine.world, key, by, text);
   }
-  if let Some(id) = answer.submission {
-    let record = Record::new("action", "answer", key, id, &format!("by={by}"));
-    engine.world.outbox.push_back(Step::Journal(record));
-  }
+  let record = Record::new(
+    "action",
+    "answer",
+    key,
+    answer.token(),
+    &format!("by={by}"),
+  );
+  engine.world.outbox.push_back(Step::Journal(record));
   if let Err(err) = engine.flush() {
     // Rows still queued would be journaled twice by a later flush.
     engine.world.outbox.clear();
     engine.world.attention = before.0;
-    if let (Some(issue), Some(direction)) = (engine.world.issues.get_mut(key), before.1) {
-      issue.direction = direction;
+    if let Some(issue) = engine.world.issues.get_mut(key) {
+      issue.direction = before.1.flatten();
     }
     reply_uncertain(engine, answer, &format!("journal: {err}"), reply);
     return;

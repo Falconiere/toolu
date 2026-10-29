@@ -96,6 +96,12 @@ fn answer_reaches_the_prompt_script_and_the_next_report_closes_it() {
       ("judgment", "answered", "by=user")
     ]
   );
+  assert!(
+    journal.iter().any(|row| {
+      row.kind == "action" && row.name == "answer" && row.token.is_empty() && row.note == "by=user"
+    }),
+    "CLI answers without submission_id still journal action/answer: {journal:?}"
+  );
   report(&mut engine, "execution");
   assert_eq!(engine.world.attention.len(), 0);
   let closed = rows(&engine)
