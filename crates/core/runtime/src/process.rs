@@ -30,6 +30,7 @@ use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
 use crate::env::Env;
@@ -54,8 +55,8 @@ const GROUP_POLL: Duration = Duration::from_millis(250);
 pub enum Wait {
   /// The child exited, its streams closed and its process group has no live member.
   Group,
-  /// The child exited and its streams closed, as `Bun.spawnSync` returns; a process it
-  /// started with its streams redirected is left running.
+  /// The child exited, its output streams closed and stdin feeding completed;
+  /// a process it started with its streams redirected is left running.
   Streams,
 }
 
@@ -137,7 +138,8 @@ pub enum RunError {
 }
 
 /// Run `spec` and return once the child exited and its group has no live
-/// member (or, with [`Wait::Streams`], once its streams closed), or the
+/// member (or, with [`Wait::Streams`], once its output streams closed and stdin
+/// feeding completed), or the
 /// deadline passed and the group was terminated.
 ///
 /// # Errors
@@ -190,13 +192,7 @@ fn run_with_impl(
   let mut child = guard::unblocked(|| command(program, spec).spawn())
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
   let pid = child.id();
-  if let Err(err) = on_spawn(pid) {
-    let _stopped = group::terminate_reaping(pid, &mut || {
-      let _reaped = child.try_wait();
-    });
-    let _waited = child.wait();
-    return Err(RunError::Callback(err));
-  }
+  notify_spawn(&mut child, on_spawn)?;
   let (stdin, stdout_pipe, stderr_pipe) =
     pipe::take_pipes(&mut child).map_err(|err| pipe::failed_setup(&mut child, pid, &err))?;
   let cancel = Arc::new(AtomicBool::new(false));
@@ -204,7 +200,14 @@ fn run_with_impl(
   let budget = Budget::new(spec.max_output_bytes);
   let mut stdout = Drain::start(stdout_pipe, &budget, observer.clone(), Arc::clone(&cancel));
   let mut stderr = Drain::start(stderr_pipe, &budget, observer, Arc::clone(&cancel));
-  let settled = settle(&mut child, pid, [&stdout, &stderr], deadline, spec);
+  let settled = settle(
+    &mut child,
+    pid,
+    [&stdout, &stderr],
+    feeder.as_ref(),
+    deadline,
+    spec,
+  );
   let fed = pipe::finish_workers(&cancel, feeder, &mut stdout, &mut stderr, settled.is_ok());
   let (status, timed_out) = settled?;
   if let Some(Err(err)) = fed {
@@ -269,6 +272,21 @@ fn detached_child(spec: &Spec) -> Result<Child, RunError> {
   guard::unblocked(|| command.spawn()).map_err(|err| RunError::Spawn(format!("{program}: {err}")))
 }
 
+/// Invoke the spawn callback, stopping and reaping the child if it fails.
+fn notify_spawn(
+  child: &mut Child,
+  on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
+) -> Result<(), RunError> {
+  if let Err(err) = on_spawn(child.id()) {
+    let _stopped = group::terminate_reaping(child.id(), &mut || {
+      let _reaped = child.try_wait();
+    });
+    let _waited = child.wait();
+    return Err(RunError::Callback(err));
+  }
+  Ok(())
+}
+
 fn command(program: &str, spec: &Spec) -> Command {
   let mut command = Command::new(program);
   command
@@ -286,12 +304,13 @@ fn command(program: &str, spec: &Spec) -> Command {
   command
 }
 
-/// Waits for the child, both streams and (with [`Wait::Group`]) its group until
+/// Waits for the child, all pipe workers and (with [`Wait::Group`]) its group until
 /// `deadline`; past it, terminates the group and gives the streams a last moment to close.
 fn settle(
   child: &mut Child,
   pid: u32,
   drains: [&Drain; 2],
+  feeder: Option<&JoinHandle<Result<(), String>>>,
   deadline: Instant,
   spec: &Spec,
 ) -> Result<(ExitStatus, bool), RunError> {
@@ -303,10 +322,11 @@ fn settle(
     }
     let now = Instant::now();
     let streams_done = drains.iter().all(|drain| drain.finished());
-    if let Some(status) = status.filter(|_| streams_done && spec.wait == Wait::Streams) {
+    let pipes_done = streams_done && feeder.is_none_or(JoinHandle::is_finished);
+    if let Some(status) = status.filter(|_| pipes_done && spec.wait == Wait::Streams) {
       return Ok((status, false));
     }
-    if let Some(status) = status.filter(|_| streams_done && now >= next_group_check) {
+    if let Some(status) = status.filter(|_| pipes_done && now >= next_group_check) {
       if !group::alive(pid) {
         return Ok((status, false));
       }

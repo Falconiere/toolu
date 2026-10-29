@@ -141,7 +141,7 @@ fn escaped_resources_remain_stable_across_repeated_runs() {
 }
 
 #[test]
-fn escaped_reader_gets_the_existing_feeder_grace() {
+fn escaped_slow_reader_receives_full_stdin_before_deadline() {
   let dir = tempfile::tempdir().unwrap();
   let pidfile = dir.path().join("escaped.pid");
   let countfile = dir.path().join("count");
@@ -149,7 +149,7 @@ fn escaped_reader_gets_the_existing_feeder_grace() {
     _dir: dir,
     pidfile: pidfile.clone(),
   };
-  let script = "perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.05; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", $ARGV[1] or die; print $out $n; close $out' \"$1\" \"$2\" <&0 >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
+  let script = "perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.35; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", $ARGV[1] or die; print $out $n; close $out' \"$1\" \"$2\" <&0 >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
   let mut spec = Spec::new([
     "sh",
     "-c",
@@ -161,7 +161,9 @@ fn escaped_reader_gets_the_existing_feeder_grace() {
   spec.stdin = vec![b'x'; 1024 * 1024];
   spec.timeout = Duration::from_secs(2);
   spec.wait = Wait::Streams;
-  assert_eq!(run(&spec).unwrap().exit_code, 0);
+  let output = run(&spec).unwrap();
+  assert_eq!(output.exit_code, 0);
+  assert!(!output.timed_out);
   let deadline = Instant::now() + Duration::from_secs(1);
   while !countfile.exists() && Instant::now() < deadline {
     std::thread::sleep(Duration::from_millis(10));

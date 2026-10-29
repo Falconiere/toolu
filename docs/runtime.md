@@ -75,12 +75,14 @@ host verification limits and recovery.
 `toolu_runtime::process::run` starts a subprocess in its own process group and
 drains stdout and stderr while feeding stdin. A descendant that calls `setsid`
 can escape that group and hold an inherited pipe open. The runtime uses
-nonblocking pipe I/O so that, after settlement succeeds (including a handled
-timeout), it gives an unfinished feeder up to 250 ms to complete, then cancels
-the workers and waits for them against one shared 250 ms cleanup deadline.
-Settlement errors skip the feeder grace and cancel immediately. These waits
-are additional to the command timeout, group termination, and existing final
-stream-drain grace.
+nonblocking pipe I/O and returns successfully only after stdin feeding and
+output draining finish (and, in group mode, the process group exits). A slow
+escaped stdin reader may keep the call active up to the command deadline. After
+a handled timeout, an unfinished feeder gets up to 250 ms to complete; then the
+runtime cancels the workers and waits for them against one shared 250 ms cleanup
+deadline. Settlement errors skip the feeder grace and cancel immediately. These
+waits are additional to the command timeout, group termination, and existing
+final stream-drain grace.
 This releases their descriptors, input copy, and observer captures even while
 the escaped descendant is still alive. The existing group termination and
 reaping path remains in force. An observer callback that itself never returns
@@ -100,9 +102,9 @@ build used this fix. The same workload and assertions are in
 
 | Held pipe | Before: threads / fds / observer refs after return | After: threads / fds / observer refs after return | Return time before → after |
 | --- | --- | --- | --- |
-| stdin | 2 / 5 / 1 | 1 / 4 / 1 | 284–292 ms → 299–321 ms |
-| stdout | 2 / 5 / 2 | 1 / 4 / 1 | 402–415 ms → 420–430 ms |
-| stderr | 2 / 5 / 2 | 1 / 4 / 1 | 401–419 ms → 417–428 ms |
+| stdin | 2 / 5 / 1 | 1 / 4 / 1 | 284–292 ms → 415–433 ms |
+| stdout | 2 / 5 / 2 | 1 / 4 / 1 | 402–415 ms → 417–442 ms |
+| stderr | 2 / 5 / 2 | 1 / 4 / 1 | 401–419 ms → 415–433 ms |
 
 Idle baseline was 1 thread, 4 descriptors, and 1 caller-owned observer reference.
 The before build returned to baseline only after the escaped descendant was
