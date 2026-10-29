@@ -96,7 +96,9 @@ pub(crate) fn http_failure(
 
 fn transport(label: &str, url: &str, err: &toolu_http::Error) -> Failure {
   let class = match err {
-    toolu_http::Error::Timeout | toolu_http::Error::Transport(_) => Class::Transient,
+    toolu_http::Error::Timeout
+    | toolu_http::Error::Transport(_)
+    | toolu_http::Error::NotSent(_) => Class::Transient,
     toolu_http::Error::InvalidConfig(_)
     | toolu_http::Error::HttpStatus(_)
     | toolu_http::Error::BodyTooLarge

@@ -33,6 +33,13 @@ pub(crate) fn observe(world: &mut World, record: &Record) {
     // uncertain.
     if let Some(issue) = world.issues.get_mut(&record.key) {
       issue.pending = None;
+      let outcome = record
+        .note
+        .split_once(':')
+        .map_or(record.note.as_str(), |(outcome, _)| outcome);
+      if record.name == "merge-done" && matches!(outcome, "uncertain" | "refused") {
+        issue.deferred = Some("merge".to_owned());
+      }
     }
   } else if record.name.ends_with("-done") {
     let _steps = finish_action(world, &record.key);

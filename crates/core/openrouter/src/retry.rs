@@ -104,7 +104,7 @@ fn transport_delay(
 ) -> Result<(Duration, Error), Error> {
   let failure = match err {
     toolu_http::Error::Timeout => Error::Timeout,
-    toolu_http::Error::Transport(_) => Error::Transport,
+    toolu_http::Error::Transport(_) | toolu_http::Error::NotSent(_) => Error::Transport,
     toolu_http::Error::BodyTooLarge => return Err(Error::BodyTooLarge),
     toolu_http::Error::InvalidConfig(_) => return Err(Error::InvalidConfig),
     toolu_http::Error::HttpStatus(_)

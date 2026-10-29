@@ -61,7 +61,7 @@ fn rejects_malformed_or_non_http_urls_before_network_access() {
   for url in ["https://[broken", "ftp://example.test/data"] {
     assert!(matches!(
       client.get_bytes(url, &Auth::None),
-      Err(Error::Transport(_))
+      Err(Error::NotSent(_))
     ));
   }
 }

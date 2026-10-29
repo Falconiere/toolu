@@ -19,6 +19,9 @@ pub enum Error {
   Encode(String),
   /// JSON response deserialization failed.
   Decode(String),
+  /// Request construction, DNS, or connection setup failed before the target
+  /// HTTP request was sent.
+  NotSent(String),
   /// A URL, TLS, proxy, redirect, or network error.
   Transport(String),
 }
@@ -32,6 +35,7 @@ impl fmt::Display for Error {
       Self::BodyTooLarge => f.write_str("HTTP response body exceeds limit"),
       Self::Encode(reason) => write!(f, "cannot encode JSON request: {reason}"),
       Self::Decode(reason) => write!(f, "cannot decode JSON response: {reason}"),
+      Self::NotSent(reason) => write!(f, "HTTP request was not sent: {reason}"),
       Self::Transport(reason) => write!(f, "HTTP transport error: {reason}"),
     }
   }
@@ -41,15 +45,28 @@ impl std::error::Error for Error {}
 
 /// A request that could not be built.
 pub(crate) fn map_http(err: &ureq::http::Error) -> Error {
-  Error::Transport(err.to_string())
+  Error::NotSent(err.to_string())
 }
 
-/// A failed ureq call: a deadline becomes `Timeout`, the rest `Transport`.
+/// A failed ureq call: distinguish deadlines and known pre-send failures from
+/// errors that may have happened after the request was sent.
 pub(crate) fn map_ureq(err: &ureq::Error) -> Error {
   if matches!(err, ureq::Error::Timeout(_)) {
     return Error::Timeout;
   }
+  if matches!(
+    err,
+    ureq::Error::HostNotFound | ureq::Error::ConnectionFailed | ureq::Error::ConnectProxyFailed(_)
+  ) {
+    return Error::NotSent(err.to_string());
+  }
   if let ureq::Error::Io(io) = err {
+    if matches!(
+      io.kind(),
+      std::io::ErrorKind::ConnectionRefused | std::io::ErrorKind::AddrNotAvailable
+    ) {
+      return Error::NotSent(err.to_string());
+    }
     return map_io(io);
   }
   Error::Transport(err.to_string())

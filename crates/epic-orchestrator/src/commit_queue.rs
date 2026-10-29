@@ -104,6 +104,9 @@ fn closed(world: &mut World, key: &str) {
 fn held(world: &mut World, key: &str, outcome: &str, note: &str) {
   if let Some(issue) = world.issues.get_mut(key) {
     issue.deferred = Some("merge".to_owned());
+    world.outbox.push_back(Step::Issue {
+      key: key.to_owned(),
+    });
   }
   push_attention(world, "failed", key, &format!("merge {outcome}: {note}"));
 }

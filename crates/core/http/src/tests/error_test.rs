@@ -1,7 +1,7 @@
 use std::io;
 
 use crate::Error;
-use crate::error::map_io;
+use crate::error::{map_io, map_ureq};
 
 #[test]
 fn errors_have_actionable_messages() {
@@ -22,6 +22,10 @@ fn errors_have_actionable_messages() {
       "cannot decode JSON response: bad JSON",
     ),
     (
+      Error::NotSent("host not found".into()),
+      "HTTP request was not sent: host not found",
+    ),
+    (
       Error::Transport("offline".into()),
       "HTTP transport error: offline",
     ),
@@ -39,6 +43,26 @@ fn a_timed_out_read_is_a_timeout_and_any_other_read_failure_transport() {
   );
   assert_eq!(
     map_io(&io::Error::new(io::ErrorKind::ConnectionReset, "reset")),
+    Error::Transport("reset".into())
+  );
+}
+
+#[test]
+fn dns_and_connect_failures_are_known_before_send_but_resets_are_not() {
+  for error in [
+    ureq::Error::HostNotFound,
+    ureq::Error::ConnectionFailed,
+    ureq::Error::ConnectProxyFailed("proxy".into()),
+    ureq::Error::Io(io::Error::new(io::ErrorKind::ConnectionRefused, "refused")),
+  ] {
+    let mapped = map_ureq(&error);
+    assert!(matches!(mapped, Error::NotSent(_)), "{mapped:?}");
+  }
+  assert_eq!(
+    map_ureq(&ureq::Error::Io(io::Error::new(
+      io::ErrorKind::ConnectionReset,
+      "reset"
+    ))),
     Error::Transport("reset".into())
   );
 }

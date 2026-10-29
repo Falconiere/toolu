@@ -152,6 +152,30 @@ fn a_green_head_merges_pinned_to_its_sha_with_the_preferred_method() {
 }
 
 #[test]
+fn a_gateway_timeout_holds_the_pinned_merge_as_uncertain() {
+  let fixture = served(&PrState::default());
+  fixture
+    .route(
+      "/repos/o/r/pulls/7/merge",
+      Reply::new(504, r#"{"message":"Gateway Timeout"}"#),
+    )
+    .expect("merge");
+  let out = step(&input(&fixture, HEAD));
+  assert_eq!(out["outcome"], "uncertain", "{out}");
+  assert_eq!(out["admin_used"], false);
+  assert_eq!(out["head"], "abc123");
+  assert!(
+    out["note"]
+      .as_str()
+      .is_some_and(|text| text.contains("504"))
+  );
+  assert_eq!(
+    sent(&fixture).1,
+    [json!({"merge_method": "squash", "sha": "abc123"})]
+  );
+}
+
+#[test]
 fn a_push_between_gate_and_merge_is_stale_and_never_retried_with_admin() {
   let fixture = served(&PrState::default());
   let moved = r#"{"message":"Head branch was modified. Review and try the merge again."}"#;

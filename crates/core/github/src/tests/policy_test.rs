@@ -125,6 +125,12 @@ fn statuses_are_classed_as_gh_ts_does() {
     Class::Transient
   );
   assert_eq!(
+    classify(&Err(toolu_http::Error::NotSent(
+      "connection refused".into()
+    ))),
+    Class::Transient
+  );
+  assert_eq!(
     classify(&Err(toolu_http::Error::BodyTooLarge)),
     Class::Permanent
   );

@@ -1,6 +1,6 @@
 //! A merge pinned to the verified head (`doMerge`): the plain merge first,
 //! administrator privileges only after a protection-only refusal, an
-//! uncertain (timed-out) merge reported and never retried.
+//! uncertain merge reported and never retried.
 
 use std::time::Duration;
 
@@ -19,17 +19,20 @@ pub(crate) const PROTECTION: &str = "protected branch|branch policy|required sta
 pub(crate) enum Attempt {
   /// GitHub merged.
   Merged,
-  /// Refused: the HTTP status (0 before any request) and GitHub's message.
+  /// Refused: GitHub's HTTP status (or 0 for the blocked-PR precheck) and message.
   Refused(u16, String),
-  /// The effect is unknown: the request timed out.
-  Uncertain(String),
+  /// A known local error before transmission.
+  Local(String),
+  /// The remote effect is unknown: HTTP status, error code and explanation.
+  Uncertain(u16, &'static str, String),
 }
 
 /// `success`, `admin`, `failed` or `uncertain`.
 pub(crate) fn outcome(attempt: &Attempt) -> &'static str {
   match attempt {
     Attempt::Merged => "success",
-    Attempt::Uncertain(_) => "uncertain",
+    Attempt::Uncertain(..) => "uncertain",
+    Attempt::Local(_) => "failed",
     Attempt::Refused(_, message) => {
       let protected = RegexBuilder::new(PROTECTION)
         .case_insensitive(true)
@@ -91,18 +94,50 @@ fn attempt(gh: &Gh, target: &Target<'_>, admin: bool) -> Attempt {
     &json!({"merge_method": method, "sha": head}),
   ) {
     Ok(_) => Attempt::Merged,
-    Err(toolu_github::Error::Status { status, message }) => Attempt::Refused(status, message),
-    Err(toolu_github::Error::Transport(toolu_http::Error::Timeout)) => {
-      Attempt::Uncertain("merge command timed out".to_owned())
+    Err(err) => classify(err),
+  }
+}
+
+fn classify(err: toolu_github::Error) -> Attempt {
+  use toolu_github::Error;
+  use toolu_http::Error as HttpError;
+
+  match err {
+    Error::Status { status, message } if (500..=599).contains(&status) => {
+      let detail = if message.is_empty() {
+        format!("GitHub answered HTTP {status}")
+      } else {
+        format!("GitHub answered HTTP {status}: {message}")
+      };
+      Attempt::Uncertain(status, "http", detail)
     }
-    Err(err) => Attempt::Refused(0, err.to_string()),
+    Error::Status { status, message } => Attempt::Refused(status, message),
+    Error::Unauthorized => Attempt::Refused(401, Error::Unauthorized.to_string()),
+    Error::RateLimited { status, .. } => Attempt::Refused(status, err.to_string()),
+    Error::Transport(HttpError::Timeout) => {
+      Attempt::Uncertain(0, "timeout", "merge command timed out".to_owned())
+    }
+    Error::Transport(
+      HttpError::InvalidConfig(_) | HttpError::Encode(_) | HttpError::NotSent(_),
+    )
+    | Error::Config(_)
+    | Error::Token(_)
+    | Error::GraphQl(_) => Attempt::Local(err.to_string()),
+    Error::Transport(HttpError::HttpStatus(status)) if (400..=499).contains(&status) => {
+      Attempt::Refused(status, err.to_string())
+    }
+    Error::Transport(HttpError::Decode(_) | HttpError::BodyTooLarge) | Error::Decode(_) => {
+      Attempt::Uncertain(0, "response", err.to_string())
+    }
+    Error::Transport(_) => Attempt::Uncertain(0, "transport", err.to_string()),
   }
 }
 
 fn failure(attempt: &Attempt, admin: bool) -> Map<String, Value> {
   let (status, code, error, uncertain) = match attempt {
     Attempt::Refused(status, message) => (*status, "exit", message.clone(), false),
-    Attempt::Uncertain(message) => (0, "timeout", message.clone(), true),
+    Attempt::Local(message) => (0, "local", message.clone(), false),
+    Attempt::Uncertain(status, code, message) => (*status, *code, message.clone(), true),
     Attempt::Merged => (0, "exit", String::new(), false),
   };
   let mut out = Map::new();

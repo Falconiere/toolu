@@ -112,7 +112,9 @@ pub(crate) enum Class {
 pub(crate) fn classify(outcome: &Result<Response, toolu_http::Error>) -> Class {
   let response = match outcome {
     Ok(response) => response,
-    Err(toolu_http::Error::Timeout | toolu_http::Error::Transport(_)) => return Class::Transient,
+    Err(
+      toolu_http::Error::Timeout | toolu_http::Error::Transport(_) | toolu_http::Error::NotSent(_),
+    ) => return Class::Transient,
     Err(_) => return Class::Permanent,
   };
   match response.status {
