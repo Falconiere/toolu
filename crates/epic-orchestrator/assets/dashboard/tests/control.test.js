@@ -169,6 +169,14 @@ test("results read sent, delivered, uncertain, refused and failed", () => {
     "k-1 is not held",
   );
   assert.equal(
+    actionResult("pause", {}, 200, {
+      ok: true,
+      delivered: "uncertain",
+      note: "engine reply not confirmed before deadline",
+    }).label,
+    "▲ UNCERTAIN",
+  );
+  assert.equal(
     actionResult("pause", {}, 503, { schema: 1, error: "engine_busy" }).label,
     "● FAILED · engine_busy",
   );

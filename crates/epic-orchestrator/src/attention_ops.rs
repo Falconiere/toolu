@@ -83,15 +83,19 @@ fn attempt(engine: &mut Engine, answer: &Answer<'_>) -> Result<Attempt, String> 
   if answer.key.is_empty() || answer.text.is_empty() {
     return refuse("answer needs a key and a text".to_owned());
   }
-  // Dedupe before the live-agent gate so a retry of an already-admitted id
-  // still returns the prior outcome after the worker has finished.
+  // Look up an existing admission before the live-agent gate so a retry of a
+  // finished id still returns its prior outcome. Journal a new admit only once
+  // a live agent exists, or a no-agent refusal would poison later retries.
   if let Some(id) = answer.submission
-    && let Some(prior) = admit(engine, answer, id)?
+    && let Some(prior) = recalled(engine, answer, id)?
   {
     return Ok(Attempt::Reply(prior));
   }
   if !crate::attention::has_live_agent(&engine.world, answer.key) {
     return refuse(format!("no live agent for {}", answer.key));
+  }
+  if let Some(id) = answer.submission {
+    record_admit(engine, answer, id)?;
   }
   match send_prompt(engine, answer.key, answer.text) {
     Ok(()) => Ok(Attempt::Sent),
@@ -132,32 +136,34 @@ fn fingerprint(key: &str, text: &str) -> String {
     .collect()
 }
 
-/// Check the retained journal for `id`: the reply to give when it was already
-/// used (the earlier outcome, or a mismatch error), or `None` after journaling
-/// `answer-admit` and flushing it before the caller prompts, so a crash or
-/// retry cannot type the text twice. The state loop is single-threaded, so
-/// retries serialize here.
-fn admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<Option<Value>, String> {
+/// The reply to give when `id` was already used, or `None` when it is new.
+fn recalled(engine: &Engine, answer: &Answer<'_>, id: &str) -> Result<Option<Value>, String> {
   let fp = fingerprint(answer.key, answer.text);
-  match prior(engine, id)? {
+  Ok(match prior(engine, id)? {
     Some((seen, _)) if seen != fp => {
-      let error = "submission_id reuse with different payload".to_owned();
-      return Ok(Some(result_value(Err(error))));
+      Some(result_value(Err(
+        "submission_id reuse with different payload".to_owned(),
+      )))
     }
-    Some((_, true)) => return Ok(Some(json!({"ok": true}))),
-    Some((_, false)) => {
-      let note = "worker prompt may not have arrived: earlier submission with this id";
-      return Ok(Some(
-        json!({"ok": true, "delivered": "uncertain", "note": note}),
-      ));
-    }
-    None => {}
-  }
+    Some((_, true)) => Some(json!({"ok": true})),
+    Some((_, false)) => Some(json!({
+      "ok": true,
+      "delivered": "uncertain",
+      "note": "worker prompt may not have arrived: earlier submission with this id",
+    })),
+    None => None,
+  })
+}
+
+/// Journal `answer-admit` and flush it before the prompt, so a crash or retry
+/// cannot type the text twice. The state loop is single-threaded, so retries
+/// serialize here.
+fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<(), String> {
+  let fp = fingerprint(answer.key, answer.text);
   let note = format!("fp={fp} by={}", answer.by);
   let record = Record::new("action", "answer-admit", answer.key, id, &note);
   engine.world.outbox.push_back(Step::Journal(record));
-  engine.flush()?;
-  Ok(None)
+  engine.flush()
 }
 
 /// The fingerprint journaled for `id` and whether its answer was delivered,

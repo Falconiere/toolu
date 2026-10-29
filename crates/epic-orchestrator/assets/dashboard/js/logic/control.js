@@ -120,6 +120,10 @@ export function actionResult(op, body, status, reply, partner = "") {
       text: "Nothing changed on the page; the action may still apply (see the journal).",
     };
   }
+  // Post-admit HTTP timeouts use the same uncertain shape for every op.
+  if (reply?.delivered === "uncertain") {
+    return { kind: "uncertain", label: "▲ UNCERTAIN", text: "Delivery uncertain; check the screen." };
+  }
   if (op !== "answer") {
     return {
       kind: "sent",
@@ -127,9 +131,7 @@ export function actionResult(op, body, status, reply, partner = "") {
       text: "The effect lands through the journal stream.",
     };
   }
-  return reply?.delivered === "uncertain"
-    ? { kind: "uncertain", label: "▲ UNCERTAIN", text: "Delivery uncertain; check the screen." }
-    : { kind: "delivered", label: "✓ DELIVERED", text: "Attention marked answered." };
+  return { kind: "delivered", label: "✓ DELIVERED", text: "Attention marked answered." };
 }
 
 export const counter = (text) => `${String(text ?? "").length} / ${TEXT_LIMIT}`;
