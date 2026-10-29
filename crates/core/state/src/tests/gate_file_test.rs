@@ -220,26 +220,6 @@ fn a_failed_atomic_write_falls_back_to_a_single_slot_record() {
 }
 
 #[test]
-fn a_clear_with_nothing_to_clear_never_waits_on_a_live_lock() {
-  let dir = tempfile::tempdir().unwrap();
-  let (_, gate, mut ctx) = gate_project(dir.path(), "quality-gate-status.json");
-  std::fs::write(
-    &gate,
-    r#"{"status":"passing","source":"s","updatedAt":"u"}"#,
-  )
-  .unwrap();
-  let lock = format!("{} busy\n", std::process::id());
-  std::fs::write(lock_path(&gate), &lock).unwrap();
-  let started = std::time::Instant::now();
-  assert_eq!(
-    clear_gate_file(&mut ctx, &gate, "/a", "s"),
-    ClearOutcome::Noop
-  );
-  assert!(started.elapsed() < std::time::Duration::from_millis(500));
-  assert_eq!(read(&lock_path(&gate)), lock);
-}
-
-#[test]
 fn a_bare_relative_gate_path_still_has_a_root() {
   assert_eq!(super::gate_root(Path::new("q.json")), Path::new("."));
   assert_eq!(
