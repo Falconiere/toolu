@@ -16,7 +16,7 @@ Each review appends a usage row to project state without any retention limit. Lo
 
 Keep `code-review-usage.jsonl` as the active append-only file. Serialize each row and reject one over 1 MiB before acquiring `with_lock_strict`. Under the lock, rotate before the append would exceed 1 MiB. Move a full active file to `code-review-usage/<sequence>.jsonl`; after appending, reclaim the oldest archives under the same lock to keep the four newest complete archives. An oversized pre-policy active file is reclaimed at its first rotation because it cannot fit a bounded generation. Preserve `persist`'s existing error-to-blocker path.
 
-Use a stale lock interval long enough for a live writer and a five-second acquisition timeout; a busy or unavailable lock fails the write. The exact active file and lock, plus archived `*.jsonl` files, are the only new dirty-probe exclusions. An unrelated file in the archive directory remains dirty.
+Use a stale lock interval long enough for a live writer and a five-second acquisition timeout; a busy or unavailable lock fails the write. The exact active file and lock, plus 20-digit numbered archive `.jsonl` files, are the only new dirty-probe exclusions. An unrelated file in the archive directory remains dirty.
 
 ## Interfaces / Schema
 
@@ -45,7 +45,7 @@ Use a stale lock interval long enough for a live writer and a five-second acquis
 | AC-1 | Repeated 1 MiB-scale JSONL rows in a temp project state root | Valid JSONL, at most four archives plus active, <=5 MiB | Exact limit and oversized legacy file | `cargo test -p toolu-code-review usage_retention` |
 | AC-2 | Temp file path made unwritable or occupied by a directory; held lock | Error; no passing gate state; no incomplete row after recoverable write failure | Denied rotation/append and busy lock | `cargo test -p toolu-code-review usage_failure` |
 | AC-3 | Parallel real filesystem appends through `log_usage` | Each successful row occurs once | Shared archive transition | `cargo test -p toolu-code-review usage_concurrent` |
-| AC-4 | Real temporary Git repository with usage artifacts and another file | Own artifacts clean, other file dirty | Lock present and unrelated file in archive directory | `cargo test -p toolu-code-review only_untracked_plugin_state_is_ignored` |
+| AC-4 | Real temporary Git repository with usage artifacts and `notes.jsonl` | Own artifacts clean, unrelated JSONL dirty | Lock present and unrelated JSONL in archive directory | `cargo test -p toolu-code-review only_untracked_plugin_state_is_ignored` |
 | AC-5 | Final committed and pushed branch diff | Green ledger and gate; two clean review passes | All changed files | `toolu ledger run docs/toolu/plans/2026-10-29-code-review-usage-retention.md --verify`; `toolu epic job -- cargo xtask gate`; two skill reviews |
 
 ## Documentation impact

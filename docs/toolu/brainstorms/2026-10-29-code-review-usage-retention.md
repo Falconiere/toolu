@@ -14,7 +14,7 @@ Rotate before a row would exceed 1 MiB, retain four archived generations plus th
 
 ## Boundaries and risk
 
-No new CLI, configuration, compression, or change to the usage JSON shape. The active file and archives are read after reviews quiesce, oldest archive first. A failed append must truncate a partial row back to the old length; failed rollback still blocks the review and reports both errors. Existing oversized logs may be reclaimed at first rotation under the documented policy. Concurrent writers must serialize before inspecting sizes or deleting archives. The dirty-tree filter excludes the exact active file and lock, plus archived JSONL files; unrelated files inside that directory remain visible to Git.
+No new CLI, configuration, compression, or change to the usage JSON shape. The active file and archives are read after reviews quiesce, oldest archive first. A failed append must truncate a partial row back to the old length; failed rollback still blocks the review and reports both errors. Existing oversized logs may be reclaimed at first rotation under the documented policy. Concurrent writers must serialize before inspecting sizes or deleting archives. The dirty-tree filter excludes the exact active file and lock, plus 20-digit numbered archive files; unrelated files inside that directory remain visible to Git.
 
 ## Handoff
 

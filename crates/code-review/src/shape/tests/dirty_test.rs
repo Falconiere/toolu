@@ -31,7 +31,7 @@ fn only_untracked_plugin_state_is_ignored() {
   .unwrap();
   let env = Env::process();
   assert!(!dirty_except_state(&env, root, &state).unwrap());
-  let other = state.join("code-review-usage/note.txt");
+  let other = state.join("code-review-usage/notes.jsonl");
   std::fs::write(&other, "unrelated").unwrap();
   assert!(dirty_except_state(&env, root, &state).unwrap());
   std::fs::remove_file(other).unwrap();

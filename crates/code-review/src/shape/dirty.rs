@@ -31,7 +31,7 @@ pub(crate) fn dirty_except_state(
       excludes.push(format!(":(exclude,literal){path}"));
     }
     let Some(archives) = prefix
-      .join("code-review-usage/*.jsonl")
+      .join(format!("code-review-usage/{}.jsonl", "[0-9]".repeat(20)))
       .to_str()
       .map(str::to_owned)
     else {
