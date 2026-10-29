@@ -3,7 +3,7 @@ use tempfile::TempDir;
 use toolu_http_test_support::{Fixture, Reply};
 use toolu_protocol::exit::Exit;
 
-use super::tests::{on, state};
+use super::tests::{conversation_reply_args, on, state};
 use crate::recorded;
 use crate::verbs::tests::{read, run};
 
@@ -33,17 +33,7 @@ fn a_reply_recovers_after_its_body_file_is_removed_or_oversized() {
     let list = "/repos/Falconiere/toolu/issues/165/comments?per_page=100";
     fixture.route(list, Reply::new(200, "[]")).unwrap();
     let env = recorded::env(&fixture);
-    let args = [
-      "reply",
-      "--kind",
-      "conversation",
-      "--comment-id",
-      "5",
-      "--state-file",
-      state.to_str().unwrap(),
-      "--body-file",
-      body.to_str().unwrap(),
-    ];
+    let args = conversation_reply_args(&state, &body);
     let (exit, first) = run(&args, &on(&fixture, &env));
     assert_eq!(exit, Exit::TempFail, "{first}");
     assert_eq!(first["errors"][0]["code"], "reply_uncertain");
