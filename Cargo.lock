@@ -1594,6 +1594,7 @@ dependencies = [
 name = "toolu-mux"
 version = "8.7.0"
 dependencies = [
+ "serde_json",
  "tempfile",
  "toolu-runtime",
  "toolu-state",

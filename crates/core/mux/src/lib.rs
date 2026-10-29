@@ -7,6 +7,8 @@
 pub mod backend;
 /// Reachability probes for herdr and tmux.
 pub mod detect;
+/// The plain-tmux driver: sessions, panes and worktrees.
+pub mod tmux;
 
 pub use backend::{Backend, resolve};
 pub use detect::{herdr_reachable, session_name, socket_path, tmux_available};
