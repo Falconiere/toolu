@@ -78,6 +78,19 @@ pub fn partition_hits(scan: &mut AstGrepScan) -> HashMap<String, Vec<AstGrepHit>
   by_path
 }
 
+/// Give each use of a path its hits, moving them on the final use.
+pub fn file_hits<S: std::hash::BuildHasher>(
+  by_path: &mut HashMap<String, Vec<AstGrepHit>, S>,
+  path: &str,
+  last: bool,
+) -> Vec<AstGrepHit> {
+  if last {
+    by_path.remove(path).unwrap_or_default()
+  } else {
+    by_path.get(path).cloned().unwrap_or_default()
+  }
+}
+
 fn failed(stage: ScanStage, exit_code: i32, stderr: &str) -> AstGrepScan {
   let stderr_first = stderr
     .lines()

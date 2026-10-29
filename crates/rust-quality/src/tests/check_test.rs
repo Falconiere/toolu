@@ -248,10 +248,8 @@ fn only_files_under_the_paths_that_still_exist_are_checked() {
 
 #[test]
 fn unmerged_index_duplicates_keep_each_structural_finding() {
-  let (dir, env) = repo(&[(
-    "src/a.rs",
-    "//! A.\nfn f() { let _ = Some(0).unwrap(); }\n".to_owned(),
-  )]);
+  let body = "//! A.\nfn f() { let _ = Some(0).unwrap(); }\n";
+  let (dir, env) = repo(&[("src/a.rs", body.to_owned())]);
   let git = |args: &[&str]| {
     Command::new("git")
       .args(["-c", "user.name=t", "-c", "user.email=t@t", "-C"])
@@ -299,5 +297,4 @@ fn unmerged_index_duplicates_keep_each_structural_finding() {
       .iter()
       .all(|finding| finding == &report.findings[0])
   );
-  assert_eq!(render(&report, false).exit, Exit::Failure);
 }

@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, ArgMatches, Command};
 use serde_json::{Map, json};
-use toolu_engine::quality::{AstGrepScan, EditedFile, partition_hits, scan_inline};
+use toolu_engine::quality::{AstGrepScan, EditedFile, file_hits, partition_hits, scan_inline};
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -310,15 +310,16 @@ fn scan_groups(
         .map(|(index, (_, file))| (file.path.as_str(), index))
         .collect();
       for (index, (at, file)) in batch.iter().enumerate() {
+        let hits = file_hits(
+          &mut by_path,
+          &file.path,
+          last.get(file.path.as_str()) == Some(&index),
+        );
         scans.insert(
           *at,
           match &scan {
             AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
-              hits: if last.get(file.path.as_str()) == Some(&index) {
-                by_path.remove(&file.path).unwrap_or_default()
-              } else {
-                by_path.get(&file.path).cloned().unwrap_or_default()
-              },
+              hits,
               empty: *empty,
             },
             other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
