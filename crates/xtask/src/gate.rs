@@ -258,6 +258,13 @@ fn tests(root: &Path) -> Result<Verdict, String> {
       "--no-report",
       "--workspace",
       "--locked",
+      // Cleanup discards incremental state; keep its codegen parallelism and backtrace lines.
+      "--config",
+      "profile.test.debug=\"line-tables-only\"",
+      "--config",
+      "profile.test.incremental=false",
+      "--config",
+      "profile.test.codegen-units=256",
     ][..],
     &["test", "--doc", "--workspace", "--locked"][..],
   ] {
