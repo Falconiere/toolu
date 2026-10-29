@@ -245,13 +245,7 @@ fn deliver(engine: &mut Engine, answer: &Answer<'_>, reply: &Sender<Value>) {
   } else {
     crate::attention::directed(&mut engine.world, key, by, text);
   }
-  let record = Record::new(
-    "action",
-    "answer",
-    key,
-    answer.token(),
-    &format!("by={by}"),
-  );
+  let record = Record::new("action", "answer", key, answer.token(), &format!("by={by}"));
   engine.world.outbox.push_back(Step::Journal(record));
   if let Err(err) = engine.flush() {
     // Rows still queued would be journaled twice by a later flush.
