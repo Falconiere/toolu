@@ -29,6 +29,26 @@ struct Prepared {
   state: StateCtx,
 }
 
+fn selected_files(
+  records: &[EditRecord],
+  rules: &[&dyn QualityRule],
+  ctx: &RuleContext<'_>,
+  roots: &Roots,
+) -> Vec<Option<PreparedFile>> {
+  records
+    .iter()
+    .map(|record| {
+      let file = edited_record(record, ctx)?;
+      let facts = selected_facts(std::slice::from_ref(&file), rules, ctx, roots);
+      facts.first().map(|facts| PreparedFile {
+        file: file.clone(),
+        linked: facts.linked,
+        gate: facts.gate.clone(),
+      })
+    })
+    .collect()
+}
+
 /// One event's scan, with decisions settled only when their manifests are reached.
 pub(crate) struct QualityBatch {
   records: Vec<EditRecord>,
@@ -64,19 +84,7 @@ impl QualityBatch {
       .filter_map(|index| bindings.get(*index).map(|binding| binding.rule))
       .collect();
     let state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
-    let files: Vec<Option<PreparedFile>> = self
-      .records
-      .iter()
-      .map(|record| {
-        let file = edited_record(record, ctx)?;
-        let facts = selected_facts(std::slice::from_ref(&file), &rules, ctx, &state.roots);
-        facts.first().map(|facts| PreparedFile {
-          file: file.clone(),
-          linked: facts.linked,
-          gate: facts.gate.clone(),
-        })
-      })
-      .collect();
+    let files = selected_files(&self.records, &rules, ctx, &state.roots);
     let mut seen = HashSet::new();
     let live: Vec<EditedFile> = files
       .iter()
@@ -151,5 +159,5 @@ impl QualityBatch {
 }
 
 #[cfg(test)]
-#[path = "../tests/run_batch_test.rs"]
+#[path = "tests/batch_test.rs"]
 mod tests;

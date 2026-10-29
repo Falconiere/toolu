@@ -16,7 +16,8 @@ use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 use super::edit::edited_record;
 use super::scan::{partition_hits, scan_rules};
 use super::{
-  AstGrepHit, AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file,
+  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, edited_file, in_linked_worktree,
+  is_regular_file,
 };
 
 /// Violations and nonblocking advice in check order.
@@ -51,16 +52,6 @@ pub trait QualityRule: Send + Sync {
   }
   /// Check one file with the batch scan restricted to that file.
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings;
-}
-
-/// A compiled quality rule paired with the manifest that enables it.
-pub struct QualityBinding<'a> {
-  /// Registry spec.
-  pub spec: &'a str,
-  /// Registry rule name.
-  pub name: &'a str,
-  /// Rule used by the shared scan.
-  pub rule: &'a dyn QualityRule,
 }
 
 /// Ordered decisions and state warnings from one edit event.
@@ -296,18 +287,11 @@ fn run_files(
   }
 }
 
-#[path = "run/batch.rs"]
 mod batch;
 
 pub(crate) use batch::QualityBatch;
 
-/// Last occurrence of each exact `path`, in last-occurrence order.
-fn last_edit_records(records: &[EditRecord]) -> Vec<&EditRecord> {
-  let mut probes = 0_u64;
-  last_edit_records_probed(records, &mut probes)
-}
-
-/// Same selection as [`last_edit_records`], counting one membership probe per record.
+/// Last occurrence of each exact `path`, counting one membership probe per record.
 fn last_edit_records_probed<'a>(
   records: &'a [EditRecord],
   probes: &mut u64,
@@ -330,7 +314,8 @@ pub fn run_quality(
   ctx: &RuleContext<'_>,
   rules: &[&dyn QualityRule],
 ) -> QualityOutcome {
-  let files: Vec<EditedFile> = last_edit_records(records)
+  let mut probes = 0_u64;
+  let files: Vec<EditedFile> = last_edit_records_probed(records, &mut probes)
     .into_iter()
     .filter_map(|record| edited_record(record, ctx))
     .collect();
