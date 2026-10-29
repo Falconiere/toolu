@@ -19,7 +19,7 @@ From a clean checkout with the branch diff applied:
 mkdir -p /tmp/toolu-748-base
 TOOLU_748_BASE=5abc923924363082be7ced8ce8fbd6ff7f2614ac
 git archive "$TOOLU_748_BASE" | tar -x -C /tmp/toolu-748-base
-(cd /tmp/toolu-748-base && CARGO_TARGET_DIR=/tmp/toolu-748-base/target cargo build --release -p toolu-cli)
+(cd /tmp/toolu-748-base && cargo build --release -p toolu-cli)
 cargo build --release -p toolu-cli
 # Save the Python block below as /tmp/toolu-748-measure.py.
 toolu epic job -- python3 /tmp/toolu-748-measure.py /tmp/toolu-748-base/target/release/toolu baseline
