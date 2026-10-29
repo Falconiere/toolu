@@ -597,6 +597,11 @@ A path-scoped run, unreviewed file, dirty worktree or failed Mechanical check
 cannot write passing gate state. Total model outage exits 69 with a blocking
 finding and Mechanical checks. The append-only usage log holds model, provider,
 reported quantization, tokens, cost and timing, but no source, quotes or key.
+It keeps a 1 MiB active file and four complete archives under the project state
+root's `code-review-usage/` directory. Read the numbered archives oldest first,
+then `code-review-usage.jsonl`, while reviews are idle. Older archives and an
+oversized legacy active file are reclaimed under the usage lock; a failed append,
+rotation or cleanup blocks passing review state.
 Codex requires outbound network enabled; Muse must forward the exported key.
 
 ### VM sandbox (`sandbox`)

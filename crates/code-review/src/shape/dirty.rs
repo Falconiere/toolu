@@ -7,7 +7,12 @@ use super::git_io::git_output;
 use super::{STATUS_PROBE_BYTES, ShapeError};
 
 /// The state entries a review run writes itself.
-const OWN_STATE: [&str; 3] = ["code-review", "code-review-usage.jsonl", "push-review"];
+const OWN_STATE: [&str; 4] = [
+  "code-review",
+  "code-review-usage.jsonl",
+  "code-review-usage.jsonl.lock",
+  "push-review",
+];
 
 /// Whether Git sees changes besides the review plugin's own state files.
 pub(crate) fn dirty_except_state(
@@ -25,7 +30,69 @@ pub(crate) fn dirty_except_state(
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
+    let Some(archives) = archive_excludes(env, root, state_root, prefix)? else {
+      return Ok(true);
+    };
+    excludes.extend(archives);
   }
+  dirty_with_excludes(env, root, &excludes)
+}
+
+fn archive_excludes(
+  env: &Env,
+  root: &Path,
+  state_root: &Path,
+  prefix: &Path,
+) -> Result<Option<Vec<String>>, ShapeError> {
+  let archive_dir = prefix.join("code-review-usage");
+  let Some(archive_dir_str) = archive_dir.to_str() else {
+    return Ok(None);
+  };
+  let (tracked, truncated) = git_output(
+    env,
+    root,
+    &[
+      "--no-optional-locks",
+      "status",
+      "--porcelain=v1",
+      "-z",
+      "--untracked-files=no",
+      "--",
+      &format!(":(literal){archive_dir_str}"),
+    ],
+    STATUS_PROBE_BYTES,
+  )?;
+  if truncated || !tracked.is_empty() {
+    return Ok(None);
+  }
+  let entries = match std::fs::read_dir(state_root.join("code-review-usage")) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Some(Vec::new())),
+    Err(_) => return Ok(None),
+  };
+  let mut excludes = Vec::new();
+  for entry in entries {
+    let Ok(entry) = entry else { return Ok(None) };
+    let name = entry.file_name();
+    let Some(name) = name.to_str() else {
+      return Ok(None);
+    };
+    if writer_archive(name) && entry.file_type().is_ok_and(|kind| kind.is_file()) {
+      excludes.push(format!(":(exclude,literal){archive_dir_str}/{name}"));
+    }
+  }
+  Ok(Some(excludes))
+}
+
+fn writer_archive(name: &str) -> bool {
+  name.strip_suffix(".jsonl").is_some_and(|digits| {
+    digits.len() == 20
+      && digits.bytes().all(|byte| byte.is_ascii_digit())
+      && digits.parse::<u64>().is_ok()
+  })
+}
+
+fn dirty_with_excludes(env: &Env, root: &Path, excludes: &[String]) -> Result<bool, ShapeError> {
   let mut args = vec![
     "--no-optional-locks",
     "status",

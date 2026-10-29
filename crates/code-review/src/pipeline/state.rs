@@ -7,12 +7,14 @@ use crate::shape::{self, Shaped};
 use crate::validate::Recap;
 use serde_json::json;
 use std::io::Write as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::diff_sha::diff_sha;
+use toolu_state::lock::{LockOptions, with_lock_strict};
 use toolu_state::push_review::{Input as StateInput, write as write_state};
 
 /// Context needed to persist one review and write the shared gate state.
@@ -184,12 +186,108 @@ fn log_usage(roots: &Roots, root: &Path, sha: &str, report: &Report) -> Result<(
   std::fs::create_dir_all(&dir).map_err(|err| err.to_string())?;
   let path = dir.join("code-review-usage.jsonl");
   let row = json!({"diff_sha": sha, "verdict": report.verdict(), "usage": report.usage});
+  let line = format!("{row}\n");
+  if line.len() > USAGE_LIMIT {
+    return Err("usage record exceeds 1 MiB retention limit".to_owned());
+  }
+  with_lock_strict(
+    &path,
+    LockOptions {
+      timeout: Duration::from_secs(5),
+      stale: Duration::from_secs(3600),
+    },
+    || append_usage(&path, line.as_bytes()),
+  )?
+}
+
+const USAGE_LIMIT: usize = 1_048_576;
+const USAGE_ARCHIVES: usize = 4;
+
+fn append_usage(path: &Path, line: &[u8]) -> Result<(), String> {
+  let old_len = match std::fs::metadata(path) {
+    Ok(meta) => meta.len(),
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => 0,
+    Err(err) => return Err(format!("usage metadata: {err}")),
+  };
+  let rotated = old_len
+    .checked_add(u64::try_from(line.len()).map_err(|err| err.to_string())?)
+    .is_none_or(|size| size > USAGE_LIMIT as u64);
+  if rotated && old_len > 0 {
+    rotate_usage(path)?;
+  }
   let mut file = std::fs::OpenOptions::new()
     .create(true)
     .append(true)
     .open(path)
-    .map_err(|err| err.to_string())?;
-  writeln!(file, "{row}").map_err(|err| err.to_string())
+    .map_err(|err| format!("usage append open: {err}"))?;
+  if let Err(err) = file.write_all(line) {
+    let prior = if rotated { 0 } else { old_len };
+    return match file.set_len(prior) {
+      Ok(()) => Err(format!("usage append: {err}")),
+      Err(rollback) => Err(format!("usage append: {err}; rollback: {rollback}")),
+    };
+  }
+  prune_usage(path)
+}
+
+fn usage_archives(path: &Path) -> Result<Vec<(u64, PathBuf, u64)>, String> {
+  let dir = path.with_file_name("code-review-usage");
+  let entries = match std::fs::read_dir(&dir) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+    Err(err) => return Err(format!("usage archives: {err}")),
+  };
+  let mut archives = Vec::new();
+  for entry in entries {
+    let entry = entry.map_err(|err| format!("usage archives: {err}"))?;
+    let name = entry.file_name();
+    let Some(sequence) = name
+      .to_str()
+      .and_then(|name| name.strip_suffix(".jsonl"))
+      .filter(|digits| digits.len() == 20 && digits.bytes().all(|byte| byte.is_ascii_digit()))
+      .and_then(|digits| digits.parse::<u64>().ok())
+    else {
+      continue;
+    };
+    let meta = entry
+      .metadata()
+      .map_err(|err| format!("usage archives: {err}"))?;
+    if !meta.is_file() {
+      return Err(format!(
+        "usage archive {} is not a file",
+        entry.path().display()
+      ));
+    }
+    archives.push((sequence, entry.path(), meta.len()));
+  }
+  archives.sort_by_key(|(sequence, _, _)| *sequence);
+  Ok(archives)
+}
+
+fn rotate_usage(path: &Path) -> Result<(), String> {
+  let dir = path.with_file_name("code-review-usage");
+  std::fs::create_dir_all(&dir).map_err(|err| format!("usage rotation: {err}"))?;
+  let next = usage_archives(path)?
+    .last()
+    .map_or(Some(1), |(sequence, _, _)| sequence.checked_add(1))
+    .ok_or("usage archive sequence exhausted")?;
+  let target = dir.join(format!("{next:020}.jsonl"));
+  std::fs::rename(path, target).map_err(|err| format!("usage rotation: {err}"))
+}
+
+fn prune_usage(path: &Path) -> Result<(), String> {
+  let archives = usage_archives(path)?;
+  prune_archives(&archives)
+}
+
+fn prune_archives(archives: &[(u64, PathBuf, u64)]) -> Result<(), String> {
+  let excess = archives.len().saturating_sub(USAGE_ARCHIVES);
+  for (index, (_, archive, len)) in archives.iter().enumerate() {
+    if index < excess || *len > USAGE_LIMIT as u64 {
+      std::fs::remove_file(archive).map_err(|err| format!("usage cleanup: {err}"))?;
+    }
+  }
+  Ok(())
 }
 
 /// `(base, sha)` is the reviewed diff; the writer refuses a different current hash.
