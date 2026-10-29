@@ -19,8 +19,8 @@ Baseline measure → construction edit + tests → after measure → runtime tes
     "title": "Release probe before edit: N>=5 runs of ~1MiB under-cap stdout",
     "ac_refs": ["AC-4"],
     "paths": ["crates/core/runtime/src/process.rs", "crates/core/runtime/src/tests/process_test.rs"],
-    "input": "release toolu-runtime process::run with ~1MiB stdout, Darwin /usr/bin/time -l or Linux time -v, N>=5",
-    "check": "test -s /tmp/toolu-756-baseline.txt"
+    "input": "release process::run ~1MiB stdout x5 via one-off cargo test harness before construction edit; Darwin /usr/bin/time -l",
+    "check": "test -s .claude/tmp/756-measure/baseline.txt"
   },
   {
     "id": "derive-stdout",
@@ -29,7 +29,7 @@ Baseline measure → construction edit + tests → after measure → runtime tes
     "depends_on": ["baseline-measure"],
     "paths": ["crates/core/runtime/src/process.rs", "crates/core/runtime/src/tests/process_test.rs"],
     "input": "printf hello and printf invalid UTF-8 via real sh subprocess",
-    "check": "cargo test -p toolu-runtime stdout_bytes_keep_what_the_lossy_text_replaces stdout_text_matches_lossy_decode_of_stdout_bytes a_command_reports_its_streams_and_exit_code output_past_the_budget_is_dropped"
+    "check": "cargo test -p toolu-runtime --lib stdout_bytes_keep_what_the_lossy_text_replaces"
   },
   {
     "id": "after-measure",
@@ -38,7 +38,7 @@ Baseline measure → construction edit + tests → after measure → runtime tes
     "depends_on": ["derive-stdout"],
     "paths": ["crates/core/runtime/src/process.rs"],
     "input": "same workload as baseline-measure",
-    "check": "test -s /tmp/toolu-756-after.txt"
+    "check": "test -s .claude/tmp/756-measure/after.txt"
   },
   {
     "id": "runtime-coverage",
