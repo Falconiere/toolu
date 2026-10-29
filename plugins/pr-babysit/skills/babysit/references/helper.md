@@ -197,6 +197,8 @@ toolu babysit stop --state-file <path>
   `stateFile` and `reason`; it keeps the `sending` intent and does not POST
   again. The `--body-file` argument remains required, but its file may be gone
   or oversized on retry: the persisted intent supplies the original body.
+  A retry with a different thread root returns `slot_mismatch` before any
+  GitHub call; use the original target to resume the intent.
   Inspect GitHub and retry to reconcile. A definitive refusal leaves a
   `prepared` intent that can be sent later with its original body.
 - `toolu babysit resolve` returns `0` only after the mutation response shows
