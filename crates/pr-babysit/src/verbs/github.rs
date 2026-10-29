@@ -154,9 +154,7 @@ fn reply_body(matches: &ArgMatches) -> Result<String> {
     return Err(Failure::usage("reply body is empty"));
   }
   if body.len() > MAX_BODY {
-    return Err(Failure::usage(
-      "reply body exceeds GitHub's 65536-character limit",
-    ));
+    return Err(Failure::usage("reply body exceeds the 65536-byte limit"));
   }
   Ok(body)
 }

@@ -22,6 +22,7 @@ impl Client {
       path: "/graphql",
       body: Some(body.into_bytes()),
       etag: None,
+      retry_transient: true,
     })?;
     let mut document: Value =
       serde_json::from_slice(&response.body).map_err(|err| crate::error::decode(&err))?;

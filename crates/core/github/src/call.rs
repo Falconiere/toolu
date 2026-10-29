@@ -25,6 +25,8 @@ pub(crate) struct Call<'a> {
   pub(crate) body: Option<Vec<u8>>,
   /// The `ETag` of the caller's cached copy.
   pub(crate) etag: Option<&'a str>,
+  /// Whether a transient response can safely lead to another send.
+  pub(crate) retry_transient: bool,
 }
 
 /// What an attempt leaves the call to do.
@@ -59,7 +61,7 @@ impl Client {
         attempt -= 1;
         continue;
       }
-      match self.step(outcome, class, attempt)? {
+      match self.step(outcome, class, attempt, call.retry_transient)? {
         Step::Done(response) => return Ok((response, attempt)),
         Step::Wait(wait) => thread::sleep(wait),
       }
@@ -72,6 +74,7 @@ impl Client {
     outcome: Result<Response, toolu_http::Error>,
     class: Class,
     attempt: u32,
+    retry_transient: bool,
   ) -> Result<Step, Error> {
     let retry = &self.config.retry;
     match (class, outcome) {
@@ -79,7 +82,7 @@ impl Client {
       (Class::Unauthorized, _) => Err(Error::Unauthorized),
       (Class::RateLimited { wait }, Ok(response)) => {
         let pause = wait.unwrap_or_else(|| retry.backoff(attempt));
-        if pause > retry.max_wait || attempt >= retry.attempts {
+        if !retry_transient || pause > retry.max_wait || attempt >= retry.attempts {
           let (status, rate, secondary) = rate_detail(&response);
           return Err(Error::RateLimited {
             status,
@@ -90,7 +93,9 @@ impl Client {
         }
         Ok(Step::Wait(pause))
       }
-      (Class::Transient, _) if attempt < retry.attempts => Ok(Step::Wait(retry.backoff(attempt))),
+      (Class::Transient, _) if retry_transient && attempt < retry.attempts => {
+        Ok(Step::Wait(retry.backoff(attempt)))
+      }
       // Unreachable: `classify` never maps a transport error to
       // `RateLimited`, so no rate detail exists to report.
       (Class::RateLimited { .. }, Err(err)) => Err(Error::Transport(err)),

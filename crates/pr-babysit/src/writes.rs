@@ -6,7 +6,7 @@ use std::path::Path;
 use std::time::Duration;
 
 use serde_json::{Value, json};
-use toolu_github::{Client, Method, Rest, RestRequest};
+use toolu_github::Client;
 use toolu_runtime::env::Env;
 
 use crate::collect::failure;
@@ -16,6 +16,10 @@ use crate::state::{actions, open, target, write_json};
 const RESOLVE: &str = "mutation($threadId:ID!){ resolveReviewThread(input:{threadId:$threadId}){ \
                        thread{ id isResolved } } }";
 const RESOLVE_ATTEMPTS: u32 = 3;
+
+mod reply;
+
+pub(crate) use reply::reply;
 
 /// What a reply answers.
 pub(crate) enum Target<'a> {
@@ -64,68 +68,6 @@ pub(crate) struct Slot<'a> {
   pub(crate) env: &'a Env,
   /// The time recorded, `YYYY-MM-DDTHH:MM:SSZ`.
   pub(crate) now: &'a str,
-}
-
-fn reply_path(repo: &str, number: u64, to: &Target<'_>) -> String {
-  match to {
-    Target::Thread { root, .. } => format!("/repos/{repo}/pulls/{number}/comments/{root}/replies"),
-    Target::Conversation(_) | Target::Review(_) => {
-      format!("/repos/{repo}/issues/{number}/comments")
-    }
-  }
-}
-
-/// Post `body` as the one reply to `to`, and record it.
-///
-/// # Errors
-/// `duplicate_reply` when a reply is already recorded, the slot's failures,
-/// and GitHub's.
-pub(crate) fn reply(
-  client: &Client,
-  slot: &Slot<'_>,
-  to: &Target<'_>,
-  body: &str,
-) -> Result<Value> {
-  let (_lock, mut state) = open(slot.path, slot.env)?;
-  let key = to.key();
-  let replied = actions(&mut state, "replied")?;
-  if let Some(recorded) = replied.get(&key).filter(|recorded| !recorded.is_null()) {
-    return Err(
-      Failure::new(
-        "duplicate_reply",
-        format!("a reply to {key} is already recorded; not posting again"),
-      )
-      .with("key", key.clone())
-      .with("recorded", recorded.clone()),
-    );
-  }
-  let (repo, number, head) = target(&state);
-  let path = reply_path(repo, number, to);
-  let payload = json!({ "body": body });
-  let request = RestRequest {
-    method: Method::Post,
-    path: &path,
-    body: Some(&payload),
-    etag: None,
-  };
-  let reply = client
-    .rest(&request)
-    .map_err(|err| failure("reply", &err))?;
-  let Rest::Fresh(fresh) = reply.data else {
-    return Err(Failure::new("invalid_json", "reply answered 304").with("source", "reply"));
-  };
-  let posted: Value = fresh.json().map_err(|err| failure("reply", &err))?;
-  let Some(id) = posted.get("id").filter(|id| id.is_u64()).cloned() else {
-    return Err(
-      Failure::new("invalid_json", "reply response carried no comment id").with("source", "reply"),
-    );
-  };
-  let url = posted.get("html_url").cloned().unwrap_or(Value::Null);
-  let record =
-    json!({"commentId": id, "url": url, "at": slot.now, "headSha": head, "kind": to.kind()});
-  actions(&mut state, "replied")?.insert(key.clone(), record);
-  write_json(slot.path, &state, "state")?;
-  Ok(json!({"ok": true, "key": key, "commentId": id, "url": url}))
 }
 
 /// Resolve `thread` and record it once GitHub reports it resolved, trying up

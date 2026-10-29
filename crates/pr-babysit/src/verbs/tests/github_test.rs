@@ -244,7 +244,7 @@ fn reply_refuses_an_empty_or_oversized_body_and_a_missing_target() {
     "reply body is empty"
   );
   let long = "x".repeat(65_537);
-  let limit = "reply body exceeds GitHub's 65536-character limit";
+  let limit = "reply body exceeds the 65536-byte limit";
   assert_eq!(reply_error(&dir, &long, &["--kind", "review"]), limit);
   let missing = "--in-reply-to <id> required for --kind thread";
   assert_eq!(reply_error(&dir, "ok", &thread), missing);
