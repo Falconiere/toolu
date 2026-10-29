@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: "Use to write tests or TDD a change — unit, integration, Playwright, Appium, React Native — or when a suite is bloated or slow. Produces few spec-derived tests that catch real bugs, without mocks, and runs only affected tests. Not for diagnosing a failing test (debug)."
+description: "Load BEFORE you write tests, add a test, or TDD a change, even a small one — unit, integration, Playwright, Appium, React Native — and when a suite is bloated or slow. Gives few spec-derived, mock-free tests and cheap runs. Not for diagnosing a failing test (debug)."
 ---
 
 # Test writer
