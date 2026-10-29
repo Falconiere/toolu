@@ -5,7 +5,7 @@ use std::time::{Duration, Instant};
 
 use toolu_http::{Auth, Method, Request, Response};
 
-use crate::{Client, Error, MAX_BODY_BYTES};
+use crate::{Client, Error};
 
 const ATTEMPTS: u32 = 3;
 const MAX_RETRY_AFTER_SECS: u64 = 60;
@@ -52,16 +52,7 @@ impl Client {
       .checked_duration_since(Instant::now())
       .filter(|left| !left.is_zero())
       .ok_or(toolu_http::Error::Timeout)?;
-    let http = toolu_http::Client::new(
-      toolu_http::Config {
-        timeout: remaining,
-        max_body_bytes: MAX_BODY_BYTES,
-        max_redirects: 0,
-        test_root_ca_der: self.config.test_root_ca_der.clone(),
-      },
-      &self.env,
-    )?;
-    http.send(&Request {
+    self.http.with_timeout(remaining)?.send(&Request {
       method: Method::Post,
       url: &self.config.endpoint,
       auth,

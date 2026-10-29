@@ -48,10 +48,10 @@ impl Default for Config {
 
 /// A client whose key is never printed or exposed.
 pub struct Client {
-  env: Env,
   key: String,
   model: String,
   config: Config,
+  http: toolu_http::Client,
 }
 
 impl fmt::Debug for Client {
@@ -94,11 +94,21 @@ impl Client {
     if model.trim().is_empty() || model.contains(['\r', '\n']) {
       return Err(Error::InvalidConfig);
     }
+    let http = toolu_http::Client::new(
+      toolu_http::Config {
+        timeout: Duration::from_secs(30),
+        max_body_bytes: MAX_BODY_BYTES,
+        max_redirects: 0,
+        test_root_ca_der: config.test_root_ca_der.clone(),
+      },
+      env,
+    )
+    .map_err(|_http| Error::InvalidConfig)?;
     Ok(Self {
-      env: env.clone(),
       key: key.trim().to_owned(),
       model: model.to_owned(),
       config,
+      http,
     })
   }
 

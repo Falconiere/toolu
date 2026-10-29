@@ -1,6 +1,7 @@
 //! Small synchronous HTTP transport for the Rust Jev and GitHub clients.
 //! Every request has a deadline and a bounded response body. TLS uses rustls
-//! with the `ring` crypto provider.
+//! with the `ring` crypto provider. One client retains a ureq Agent per scheme
+//! so eligible requests can reuse connections.
 
 use std::fmt;
 use std::io::Read;
@@ -10,9 +11,8 @@ use std::time::Duration;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use toolu_runtime::env::Env;
-use ureq::config::RedirectAuthHeaders;
-use ureq::tls::{Certificate, RootCerts, TlsConfig, TlsProvider};
 
+mod agent;
 mod auth;
 mod error;
 mod pem;
@@ -23,6 +23,8 @@ pub use error::Error;
 use error::map_io;
 pub use pem::{pem_file_to_der, pem_to_der};
 pub use send::{Method, Request, Response, check_url};
+
+use agent::AgentPool;
 
 /// This crate's layer in `tooling/conventions/guardrails/rust/layers.json`.
 pub const LAYER: &str = "http";
@@ -52,10 +54,23 @@ impl Default for Config {
 }
 
 /// A blocking client with explicit environment and a per-request deadline.
-#[derive(Clone)]
+///
+/// `Clone` and [`Self::with_timeout`] share the retained scheme Agents. A new
+/// [`Self::new`] gets its own Agents so proxy and TLS settings stay isolated.
 pub struct Client {
-  config: Config,
-  env: Env,
+  pub(crate) config: Config,
+  pub(crate) env: Env,
+  pub(crate) agents: Arc<AgentPool>,
+}
+
+impl Clone for Client {
+  fn clone(&self) -> Self {
+    Self {
+      config: self.config.clone(),
+      env: self.env.clone(),
+      agents: Arc::clone(&self.agents),
+    }
+  }
 }
 
 impl fmt::Debug for Client {
@@ -93,6 +108,27 @@ impl Client {
     Ok(Self {
       config,
       env: env.clone(),
+      agents: AgentPool::new(),
+    })
+  }
+
+  /// Same Agent pools with a different whole-request timeout.
+  ///
+  /// # Errors
+  /// Returns `InvalidConfig` when `timeout` is zero.
+  pub fn with_timeout(&self, timeout: Duration) -> Result<Self, Error> {
+    if timeout.is_zero() {
+      return Err(Error::InvalidConfig("timeout must be nonzero".into()));
+    }
+    Ok(Self {
+      config: Config {
+        timeout,
+        max_body_bytes: self.config.max_body_bytes,
+        max_redirects: self.config.max_redirects,
+        test_root_ca_der: self.config.test_root_ca_der.clone(),
+      },
+      env: self.env.clone(),
+      agents: Arc::clone(&self.agents),
     })
   }
 
@@ -176,32 +212,8 @@ impl Client {
     Ok(response.body)
   }
 
-  fn agent(&self, scheme: &str) -> Result<ureq::Agent, Error> {
-    let certs = match &self.config.test_root_ca_der {
-      Some(der) => RootCerts::new_with_certs(&[Certificate::from_der(der).to_owned()]),
-      None => RootCerts::WebPki,
-    };
-    let tls = TlsConfig::builder()
-      .provider(TlsProvider::Rustls)
-      .root_certs(certs)
-      .unversioned_rustls_crypto_provider(Arc::new(rustls::crypto::ring::default_provider()))
-      .build();
-    let proxy = proxy_for(&self.env, scheme)
-      .map(ureq::Proxy::new)
-      .transpose()
-      .map_err(|err| Error::InvalidConfig(err.to_string()))?;
-    let config = ureq::Agent::config_builder()
-      .timeout_global(Some(self.config.timeout))
-      .max_redirects(self.config.max_redirects)
-      .redirect_auth_headers(RedirectAuthHeaders::Never)
-      .http_status_as_error(false)
-      .proxy(proxy)
-      .tls_config(tls)
-      .build();
-    Ok(ureq::Agent::new_with_config(config))
-  }
-
-  fn read_response(
+  /// Bound the response body and collect status plus headers.
+  pub(crate) fn read_response(
     &self,
     mut response: ureq::http::Response<ureq::Body>,
   ) -> Result<Response, Error> {
@@ -238,7 +250,8 @@ fn decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T, Error> {
   serde_json::from_slice(bytes).map_err(|err| Error::Decode(err.to_string()))
 }
 
-fn proxy_for<'a>(env: &'a Env, scheme: &str) -> Option<&'a str> {
+/// Proxy URL for `scheme` from the explicit environment snapshot.
+pub(crate) fn proxy_for<'a>(env: &'a Env, scheme: &str) -> Option<&'a str> {
   let names = if scheme == "https" {
     ["HTTPS_PROXY", "https_proxy"]
   } else {

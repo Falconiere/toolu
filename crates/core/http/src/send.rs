@@ -91,7 +91,7 @@ impl Client {
       )));
     }
     let (uri, scheme) = parse(request.url)?;
-    let agent = self.agent(&scheme)?;
+    let agent = self.agent_for(&scheme)?;
     let mut builder = ureq::http::Request::builder()
       .method(request.method.http())
       .uri(uri);
@@ -101,13 +101,34 @@ impl Client {
     for (name, value) in request.headers {
       builder = builder.header(*name, *value);
     }
-    let response = match request.body {
-      Some(bytes) => agent.run(builder.body(bytes).map_err(|err| map_http(&err))?),
-      None => agent.run(builder.body(()).map_err(|err| map_http(&err))?),
+    let response = if let Some(bytes) = request.body {
+      run_timed(
+        &agent,
+        builder.body(bytes).map_err(|err| map_http(&err))?,
+        self.config.timeout,
+      )
+    } else {
+      run_timed(
+        &agent,
+        builder.body(()).map_err(|err| map_http(&err))?,
+        self.config.timeout,
+      )
     }
     .map_err(|err| map_ureq(&err))?;
     self.read_response(response)
   }
+}
+
+fn run_timed<B: ureq::AsSendBody>(
+  agent: &ureq::Agent,
+  request: ureq::http::Request<B>,
+  timeout: std::time::Duration,
+) -> Result<ureq::http::Response<ureq::Body>, ureq::Error> {
+  let timed = agent
+    .configure_request(request)
+    .timeout_global(Some(timeout))
+    .build();
+  agent.run(timed)
 }
 
 /// Check `url` as [`Client::send`] parses it, so a caller can refuse a URL
