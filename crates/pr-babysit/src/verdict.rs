@@ -166,22 +166,22 @@ fn must_fix(lines: &[&str]) -> Vec<String> {
 }
 
 /// The lines after each `head` line up to the next `end` line, exclusive.
-fn section<'l>(lines: &[&'l str], head: &pattern::Pattern, end: &pattern::Pattern) -> Vec<&'l str> {
+fn section<'l>(
+  lines: &[&'l str],
+  head: &'static pattern::Pattern,
+  end: &'static pattern::Pattern,
+) -> impl Iterator<Item = &'l str> {
   let mut inside = false;
-  lines
-    .iter()
-    .copied()
-    .filter(|line| {
-      if is(head, line) {
-        inside = true;
-        return false;
-      }
-      if is(end, line) {
-        inside = false;
-      }
-      inside
-    })
-    .collect()
+  lines.iter().copied().filter(move |line| {
+    if is(head, line) {
+      inside = true;
+      return false;
+    }
+    if is(end, line) {
+      inside = false;
+    }
+    inside
+  })
 }
 
 fn strip(pattern: &pattern::Pattern, text: &str) -> String {

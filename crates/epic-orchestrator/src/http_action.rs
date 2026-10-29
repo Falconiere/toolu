@@ -177,15 +177,7 @@ fn forward(control: &Control<'_>, request: Value) -> Response {
     Some(error) => (409, json!({"schema": 1, "error": error}), true),
     None => (200, value, false),
   };
-  Response {
-    status,
-    content_type: "application/json; charset=utf-8",
-    body: body.to_string().into_bytes(),
-    head: false,
-    close,
-    allow: "POST",
-    cache: "no-store",
-  }
+  Response::json_status(status, body.to_string().into_bytes(), close, "POST")
 }
 
 #[cfg(test)]

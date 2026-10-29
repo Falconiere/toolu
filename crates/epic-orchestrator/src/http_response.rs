@@ -74,30 +74,28 @@ pub(crate) struct Response {
 }
 
 impl Response {
-  /// A `200` JSON body the client must not cache.
-  pub(crate) fn json(body: Vec<u8>) -> Self {
+  /// A JSON body the client must not cache.
+  pub(crate) fn json_status(status: u16, body: Vec<u8>, close: bool, allow: &'static str) -> Self {
     Self {
-      status: 200,
+      status,
       content_type: "application/json; charset=utf-8",
       body,
       head: false,
-      close: false,
-      allow: READ_METHODS,
+      close,
+      allow,
       cache: "no-store",
     }
   }
 
+  /// A `200` JSON body the client must not cache.
+  pub(crate) fn json(body: Vec<u8>) -> Self {
+    Self::json_status(200, body, false, READ_METHODS)
+  }
+
   /// A fixed failure body with no request or source bytes.
   pub(crate) fn error(status: u16, code: &'static str) -> Self {
-    Self {
-      status,
-      content_type: "application/json; charset=utf-8",
-      body: json!({"schema": 1, "error": code}).to_string().into_bytes(),
-      head: false,
-      close: true,
-      allow: READ_METHODS,
-      cache: "no-store",
-    }
+    let body = json!({"schema": 1, "error": code}).to_string().into_bytes();
+    Self::json_status(status, body, true, READ_METHODS)
   }
 }
 

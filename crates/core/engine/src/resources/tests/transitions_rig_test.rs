@@ -6,7 +6,9 @@ use std::time::SystemTime;
 use toolu_runtime::json::ordered::Ordered;
 
 use super::{MigrationCaps, prepare_agent_migration};
-use crate::resources::leases::{LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease};
+use crate::resources::leases::{
+  LeaseKind, LeasePatch, LeaseRequest, acquire_lease, epoch_ms, patch_lease,
+};
 use crate::resources::pressure::{ResourceSample, advance_pressure};
 use crate::resources::store::{leases, read_resource_state, update_resources};
 
@@ -104,9 +106,7 @@ pub(super) fn prepare(root: &Path, token: &str, target: &str) -> Result<Ordered,
 
 /// A held pressure sample in the resource state; the lease tests share it.
 pub(crate) fn hold_pressure(root: &Path) {
-  let at = f64::from(
-    u32::try_from(toolu_state::time::epoch_millis(SystemTime::now()) / 1000).expect("secs"),
-  ) * 1000.0;
+  let at = epoch_ms(SystemTime::now());
   let low = |at| ResourceSample {
     at,
     cpus: 10.0,
