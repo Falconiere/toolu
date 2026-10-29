@@ -109,7 +109,12 @@ fn fields(op: &str, body: &Map<String, Value>) -> Option<Vec<(&'static str, Stri
         .get("text")
         .and_then(Value::as_str)
         .filter(|text| valid_text(text))?;
-      vec![("key", field("key")??), ("text", text.to_owned())]
+      // The web path always dedupes: a retry of one click reuses its id.
+      vec![
+        ("key", field("key")??),
+        ("text", text.to_owned()),
+        ("submission_id", field("submission_id")??),
+      ]
     }
     "host-pause" | "host-resume" => {
       let host = body
@@ -148,7 +153,9 @@ fn valid_text(text: &str) -> bool {
       .all(|ch| !ch.is_control() || matches!(ch, '\n' | '\t'))
 }
 
-/// Send once and wait up to the deadline; a busy engine is never retried.
+/// Send once and wait up to the deadline. A request the state loop never took
+/// is `503` and is never retried; one it took may still run, so a missed
+/// deadline or dropped reply is `200 delivered: uncertain`, never a rejection.
 fn forward(control: &Control<'_>, request: Value) -> Response {
   let busy = || Response::error(503, "engine_busy");
   let Some(sender) = control.sender else {
@@ -158,9 +165,13 @@ fn forward(control: &Control<'_>, request: Value) -> Response {
   if sender.send(Msg::Line { request, reply }).is_err() {
     return busy();
   }
-  let Ok(value) = answer.recv_timeout(control.deadline) else {
-    return busy();
-  };
+  let value = answer.recv_timeout(control.deadline).unwrap_or_else(|_| {
+    json!({
+      "ok": true,
+      "delivered": "uncertain",
+      "note": "engine reply not confirmed before deadline",
+    })
+  });
   let refused = value.get("error").cloned();
   let (status, body, close) = match refused {
     Some(error) => (409, json!({"schema": 1, "error": error}), true),

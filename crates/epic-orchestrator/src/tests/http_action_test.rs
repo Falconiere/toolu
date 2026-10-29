@@ -180,13 +180,24 @@ fn gate_refusals(addr: SocketAddr) -> [(String, u16); 5] {
 }
 
 /// Each body refusal with allowed headers: op, body and status.
-const BODY_REFUSALS: [(&str, &str, u16); 7] = [
+const BODY_REFUSALS: [(&str, &str, u16); 10] = [
   ("nope", "{}", 404),
   ("pause", "[]", 400),
   ("pause", r#"{"epic": "bad key"}"#, 400),
   ("release", "{}", 400),
   ("ack", r#"{"key": "a", "kind": "budget"}"#, 400),
   ("answer", r#"{"key": "a", "text": ""}"#, 400),
+  ("answer", r#"{"key": "a", "text": "go"}"#, 400),
+  (
+    "answer",
+    r#"{"key": "a", "text": "go", "submission_id": "bad id"}"#,
+    400,
+  ),
+  (
+    "answer",
+    r#"{"key": "a", "text": "go", "submission_id": ""}"#,
+    400,
+  ),
   ("answer", r#"{"key": "a", "text": "ring\u0007"}"#, 400),
 ];
 

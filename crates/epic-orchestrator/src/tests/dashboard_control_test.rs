@@ -68,6 +68,8 @@ fn dashboard_control_actions_send_bearer_and_json() {
   assert!(logic.contains(
     "headers: { Authorization: `Bearer ${token}`, \"Content-Type\": \"application/json\" },"
   ));
+  assert!(logic.contains("export function mintSubmissionId()"));
+  assert!(logic.contains("submission_id: submissionId"));
   let api = read_asset("js/api.js");
   assert!(api.contains("const { path, init } = actionRequest(op, body, token);"));
   assert!(api.contains("const response = await fetch(path, init);"));
@@ -75,6 +77,7 @@ fn dashboard_control_actions_send_bearer_and_json() {
   let control = read_asset("js/control.js");
   assert!(control.contains("if (!id || button?.dataset.control !== id) return;"));
   assert!(control.contains("if (!press.clicked) button.click();"));
+  assert!(control.contains("answerBody(key, text, mintSubmissionId())"));
 }
 
 #[test]

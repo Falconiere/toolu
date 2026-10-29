@@ -54,12 +54,25 @@ export function drawerActions({ issue, attention, locked, pending }) {
   return actions;
 }
 
+// One intentional answer click: a fresh id the engine dedupes retries against.
+export function mintSubmissionId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
 // The op and JSON body a `data-action` button sends; `answer` opens the dialog instead.
 export function actionBody(action, { epic, host, key, kind } = {}) {
   if (action === "pause" || action === "resume") return epic ? { epic } : {};
   if (action === "host-pause" || action === "host-resume") return { host };
   if (action === "ack") return key ? { key } : { kind };
   return { key };
+}
+
+// The JSON body `answer` POSTs: key, text, and a stable submission id for this click.
+export function answerBody(key, text, submissionId = mintSubmissionId()) {
+  return { key, text, submission_id: submissionId };
 }
 
 // The token rides only in the Authorization header, never in the path.

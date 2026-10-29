@@ -12,7 +12,9 @@ import {
   TOKEN_KEY,
   actionBody,
   actionResult,
+  answerBody,
   keyAttention,
+  mintSubmissionId,
 } from "./logic/control.js";
 import { takeToken } from "./logic/fragment.js";
 import { findIssue } from "./logic/status.js";
@@ -107,7 +109,8 @@ function answerFor(key, opener) {
 }
 
 async function send(key, text) {
-  const result = await act("answer", { key, text });
+  // A new click mints a new id; the engine dedupes only when this exact id is retried.
+  const result = await act("answer", answerBody(key, text, mintSubmissionId()));
   if (!result) return;
   // A dialog cancelled while the answer was pending cannot show the result; the toast can.
   if (result.kind !== "delivered" && $("answer-dialog").open) {

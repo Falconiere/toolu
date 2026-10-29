@@ -1481,6 +1481,7 @@ dependencies = [
  "clap",
  "nix",
  "regex",
+ "ring",
  "serde",
  "serde_json",
  "tempfile",

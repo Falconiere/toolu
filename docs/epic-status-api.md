@@ -95,7 +95,7 @@ The engine that serves the page can be controlled from it. Peers are never contr
 | `pause` | `{}` or `{"epic": KEY}` | `toolu epic pause [EPIC]` |
 | `resume` | `{}` or `{"epic": KEY}` | `toolu epic resume [EPIC]` |
 | `ack` | `{"key": KEY}`, or `{"kind": KIND}` for a keyless item | `toolu epic ack KEY` |
-| `answer` | `{"key": KEY, "text": TEXT}` | `toolu epic answer KEY TEXT` |
+| `answer` | `{"key": KEY, "text": TEXT, "submission_id": ID}` | `toolu epic answer KEY TEXT` (CLI has no submission id; the web path requires one) |
 | `release` | `{"key": KEY}` | `toolu epic release KEY` |
 | `host-pause` | `{"host": HOST}` | `toolu epic hosts pause HOST` |
 | `host-resume` | `{"host": HOST}` | `toolu epic hosts resume HOST` |
@@ -121,18 +121,18 @@ The server sends no CORS headers. The checks run in this order:
 
 Field rules:
 
-- Keys, epics and kinds match `[A-Za-z0-9._-]{1,128}`.
+- Keys, epics, kinds and `submission_id` match `[A-Za-z0-9._-]{1,128}`.
 - `ack` takes exactly one of `key` or `kind`.
-- `answer` text is 1 to 4,000 characters, with no control characters other than newline and tab.
+- `answer` takes `key`, `text` and `submission_id`. The text is 1 to 4,000 characters, with no control characters other than newline and tab. A missing or invalid `submission_id` is `400 invalid_request`. The same `submission_id` and payload cannot deliver twice; reusing the id with a different payload is `409` `submission_id reuse with different payload`. A new id with the same text is a new intentional answer. Dedupe is rebuilt from retained journal `answer-admit` rows (the same day-file retention as the rest of the journal).
 - `host-pause` and `host-resume` take a `host`: `claude`, `codex`, `cursor` or `muse` (aliases `claude-code`, `cursor-agent` accepted); anything else is `400 invalid_request`.
 
 A `POST` without `Content-Length` is `400`, and a larger body is `413`.
 
 Replies:
 
-- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`) replies `{"ok": true, "delivered": "uncertain", "note": …}` and leaves the attention item open.
-- **`409`:** an engine refusal such as `no live agent for <key>` or `<key> is not held`. The body is `{"schema": 1, "error": <text>}`.
-- **`503 engine_busy`:** the state loop did not answer within 35 s, longer than herdr's 30 s prompt timeout. The server never retries, and the action may still apply later.
+- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`), a flush or post-write socket failure after the prompt, or a reply the HTTP handler never received after the state loop took the request, replies `{"ok": true, "delivered": "uncertain", "note": …}` and leaves the attention item open when delivery was uncertain.
+- **`409`:** an engine refusal such as `no live agent for <key>`, `<key> is not held`, or `submission_id reuse with different payload`. The body is `{"schema": 1, "error": <text>}`.
+- **`503 engine_busy`:** the request was never admitted (no control sender, or the state-loop send failed). Once the state loop has taken the request, a missed reply deadline is `200` with `delivered: uncertain`, not `503`. The server never retries.
 
 Web actions are journaled like CLI actions, with `by=web` in the note. `pause` and `resume` write `action pause` or `action resume` with the note `<epic|all> by=<who>`. `host-pause` and `host-resume` write `action host-paused` or `action host-resumed`, keyed by the host, with the note `by=<who>`. So every open dashboard sees the change on `/api/v1/events/stream`.
 
