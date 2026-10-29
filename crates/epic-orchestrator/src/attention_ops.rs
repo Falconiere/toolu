@@ -316,3 +316,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/attention_redirect_test.rs"]
 mod redirect_tests;
+
+#[cfg(test)]
+#[path = "tests/attention_submission_test.rs"]
+mod submission_tests;
