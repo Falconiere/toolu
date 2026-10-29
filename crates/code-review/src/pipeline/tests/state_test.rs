@@ -172,6 +172,40 @@ fn usage_partial_append_rolls_back_on_a_real_file_limit() {
 }
 
 #[test]
+fn usage_cleanup_reports_real_deletion_failure_and_keeps_rows() {
+  let dir = tempfile::tempdir().unwrap();
+  let state = dir.path().join(".codex/tmp");
+  let archive_dir = state.join("code-review-usage");
+  std::fs::create_dir_all(&archive_dir).unwrap();
+  let active = state.join("code-review-usage.jsonl");
+  std::fs::write(&active, "{\"diff_sha\":\"active\"}\n").unwrap();
+  for sequence in 1..=5 {
+    std::fs::write(
+      archive_dir.join(format!("{sequence:020}.jsonl")),
+      format!("{{\"diff_sha\":\"{sequence}\"}}\n"),
+    )
+    .unwrap();
+  }
+  let archives = super::usage_archives(&active).unwrap();
+  let oldest = &archives[0].1;
+  std::fs::remove_file(oldest).unwrap();
+  std::fs::create_dir(oldest).unwrap();
+  let error = super::prune_archives(&archives).unwrap_err();
+  assert!(error.contains("usage cleanup"), "{error}");
+  assert_eq!(
+    std::fs::read_to_string(active).unwrap(),
+    "{\"diff_sha\":\"active\"}\n"
+  );
+  for sequence in 2..=5 {
+    let row = std::fs::read_to_string(archive_dir.join(format!("{sequence:020}.jsonl"))).unwrap();
+    assert_eq!(
+      serde_json::from_str::<serde_json::Value>(&row).unwrap()["diff_sha"],
+      sequence.to_string()
+    );
+  }
+}
+
+#[test]
 fn usage_retention_reclaims_legacy_and_rejects_oversized_row() {
   let dir = tempfile::tempdir().unwrap();
   let roots = Roots::new(Env::process(), Some(Host::Codex));

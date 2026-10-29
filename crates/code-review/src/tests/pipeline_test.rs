@@ -17,7 +17,6 @@ use crate::contract::{ErrorKind, Verdict};
 use crate::review::{Call, Options};
 
 mod fixture_test;
-#[path = "state_failure_test.rs"]
 mod state_failure_test;
 use fixture_test::{clean_case, env, finding_case, invoke, options, repo, saved_state};
 

@@ -277,6 +277,10 @@ fn rotate_usage(path: &Path) -> Result<(), String> {
 
 fn prune_usage(path: &Path) -> Result<(), String> {
   let archives = usage_archives(path)?;
+  prune_archives(&archives)
+}
+
+fn prune_archives(archives: &[(u64, PathBuf, u64)]) -> Result<(), String> {
   let excess = archives.len().saturating_sub(USAGE_ARCHIVES);
   for (index, (_, archive, len)) in archives.iter().enumerate() {
     if index < excess || *len > USAGE_LIMIT as u64 {

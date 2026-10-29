@@ -77,18 +77,19 @@ fn archive_excludes(
     let Some(name) = name.to_str() else {
       return Ok(None);
     };
-    let Some(digits) = name.strip_suffix(".jsonl") else {
-      continue;
-    };
-    if digits.len() == 20
-      && digits.bytes().all(|byte| byte.is_ascii_digit())
-      && digits.parse::<u64>().is_ok()
-      && entry.file_type().is_ok_and(|kind| kind.is_file())
-    {
+    if writer_archive(name) && entry.file_type().is_ok_and(|kind| kind.is_file()) {
       excludes.push(format!(":(exclude,literal){archive_dir_str}/{name}"));
     }
   }
   Ok(Some(excludes))
+}
+
+fn writer_archive(name: &str) -> bool {
+  name.strip_suffix(".jsonl").is_some_and(|digits| {
+    digits.len() == 20
+      && digits.bytes().all(|byte| byte.is_ascii_digit())
+      && digits.parse::<u64>().is_ok()
+  })
 }
 
 fn dirty_with_excludes(env: &Env, root: &Path, excludes: &[String]) -> Result<bool, ShapeError> {
