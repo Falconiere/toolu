@@ -5,10 +5,30 @@ use std::path::{Path, PathBuf};
 
 use toolu_runtime::registry::rule::RuleContext;
 
-use super::super::super::scan::{
-  output_limited, partition_hits, scan_inline, scan_rule_dirs, scan_rules,
-};
-use super::super::{AstGrepHit, AstGrepScan, EditedFile, QualityRule};
+use super::super::scan::{output_limited, partition_hits, scan_inline, scan_rule_dirs, scan_rules};
+use super::{AstGrepHit, AstGrepScan, EditedFile, QualityRule};
+
+fn rule_inputs(
+  enabled: &[&dyn QualityRule],
+  file: Option<&EditedFile>,
+  ctx: &RuleContext<'_>,
+) -> (Vec<PathBuf>, Vec<String>) {
+  let dirs: Vec<PathBuf> = enabled
+    .iter()
+    .flat_map(|rule| rule.ast_rule_dirs())
+    .collect();
+  let inline: Vec<String> = enabled
+    .iter()
+    .map(|rule| {
+      file.map_or_else(
+        || rule.ast_rules_inline(ctx),
+        |file| rule.ast_rules_for_file(file, ctx),
+      )
+    })
+    .filter(|rules| !rules.is_empty())
+    .collect();
+  (dirs, inline)
+}
 
 /// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
 pub(super) fn batch_scan(
@@ -16,16 +36,8 @@ pub(super) fn batch_scan(
   live: &[EditedFile],
   ctx: &RuleContext<'_>,
 ) -> AstGrepScan {
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
+  let (dirs, inline) = rule_inputs(enabled, None, ctx);
   let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_inline(ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
   scan_rules(live, &paths, &inline, ctx)
 }
 
@@ -35,16 +47,8 @@ pub(super) fn retry_file(
   enabled: &[&dyn QualityRule],
   ctx: &RuleContext<'_>,
 ) -> AstGrepScan {
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
+  let (dirs, inline) = rule_inputs(enabled, Some(file), ctx);
   let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_for_file(file, ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
   let one = std::slice::from_ref(file);
   let scan = scan_rules(one, &paths, &inline, ctx);
   if !output_limited(&scan) {
@@ -77,7 +81,7 @@ pub(super) fn retry_file(
 }
 
 /// Keep normal batches in one scan; isolate files only when their combined output overflows.
-pub(in crate::quality::run) fn scan_batch_with_fallback(
+pub(super) fn scan_batch_with_fallback(
   enabled: &[&dyn QualityRule],
   live: &[EditedFile],
   ctx: &RuleContext<'_>,
@@ -97,3 +101,7 @@ pub(in crate::quality::run) fn scan_batch_with_fallback(
   let by_path = partition_hits(&mut scan);
   (scan, by_path, HashMap::new())
 }
+
+#[cfg(test)]
+#[path = "tests/batch_scan_test.rs"]
+mod tests;

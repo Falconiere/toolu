@@ -8,6 +8,7 @@ use toolu_engine::quality::{AstGrepScan, EditedFile, ManifestRule, QualityFindin
 use toolu_runtime::config::load::load;
 use toolu_runtime::config::quality::{QualityLang, quality_flag, quality_threshold};
 use toolu_runtime::config::settings::{RUST_UNSAFE_EXEMPTIONS, read_list, settings_dir};
+use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::{Rule, RuleContext};
 use toolu_state::detect::project::detect_rust;
@@ -65,6 +66,23 @@ pub(crate) fn read(file: &EditedFile) -> Result<String, String> {
   std::fs::read(&file.absolute)
     .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
     .map_err(|error| format!("Cannot read {} for Rust quality checks: {error}", file.path))
+}
+
+fn rs_file<'a>(
+  file: &'a EditedFile,
+  text: &'a str,
+  limits: &'a Limits,
+  env: &'a Env,
+  cwd: &'a Path,
+) -> RsFile<'a> {
+  RsFile {
+    file,
+    scope: &file.path,
+    lines: crate::file::split_lines(text),
+    limits,
+    env,
+    cwd,
+  }
 }
 
 /// The structural scans of one file; `None` where its rules do not apply.
@@ -136,14 +154,7 @@ impl QualityRule for RustQuality {
       return String::new();
     };
     let limits = limits(ctx);
-    let f = RsFile {
-      file,
-      scope: &file.path,
-      lines: crate::file::split_lines(&text),
-      limits: &limits,
-      env: ctx.env,
-      cwd: cwd(ctx),
-    };
+    let f = rs_file(file, &text, &limits, ctx.env, cwd(ctx));
     let is_test = is_rust_test(&f);
     error_rules(&f, is_test)
       .into_iter()
@@ -164,14 +175,7 @@ impl QualityRule for RustQuality {
       }
     };
     let limits = limits(ctx);
-    let f = RsFile {
-      file,
-      scope: &file.path,
-      lines: crate::file::split_lines(&text),
-      limits: &limits,
-      env: ctx.env,
-      cwd: cwd(ctx),
-    };
+    let f = rs_file(file, &text, &limits, ctx.env, cwd(ctx));
     let is_test = is_rust_test(&f);
     let scans = Scans {
       errors: error_rules(&f, is_test).map(|_| scan.clone()),

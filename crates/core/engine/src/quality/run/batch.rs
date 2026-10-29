@@ -17,9 +17,8 @@ use super::{
   selected_facts, settle,
 };
 
-mod scan;
-use scan::retry_file;
-pub(super) use scan::scan_batch_with_fallback;
+use super::batch_scan::retry_file;
+pub(super) use super::batch_scan::scan_batch_with_fallback;
 
 struct PreparedFile {
   file: EditedFile,

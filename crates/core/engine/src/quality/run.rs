@@ -279,6 +279,7 @@ fn run_files(
 }
 
 mod batch;
+mod batch_scan;
 
 pub(crate) use batch::QualityBatch;
 use batch::scan_batch_with_fallback;
