@@ -245,3 +245,59 @@ fn only_files_under_the_paths_that_still_exist_are_checked() {
     }
   );
 }
+
+#[test]
+fn unmerged_index_duplicates_keep_each_structural_finding() {
+  let (dir, env) = repo(&[(
+    "src/a.rs",
+    "//! A.\nfn f() { let _ = Some(0).unwrap(); }\n".to_owned(),
+  )]);
+  let git = |args: &[&str]| {
+    Command::new("git")
+      .args(["-c", "user.name=t", "-c", "user.email=t@t", "-C"])
+      .arg(dir.path())
+      .args(args)
+      .output()
+      .unwrap()
+  };
+  for args in [
+    &["add", "-A"][..],
+    &["commit", "-qm", "base"],
+    &["checkout", "-qb", "left"],
+  ] {
+    assert!(git(args).status.success(), "git {args:?}");
+  }
+  let file = dir.path().join("src/a.rs");
+  std::fs::write(&file, "fn f() { let _ = Some(1).unwrap(); }\n").unwrap();
+  assert!(git(&["commit", "-qam", "left"]).status.success());
+  assert!(
+    git(&["checkout", "-qb", "right", "HEAD~1"])
+      .status
+      .success()
+  );
+  std::fs::write(&file, "fn f() { let _ = Some(2).unwrap(); }\n").unwrap();
+  assert!(git(&["commit", "-qam", "right"]).status.success());
+  assert!(!git(&["merge", "left"]).status.success());
+  let listed = git(&[
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--full-name",
+    "--",
+    "src/a.rs",
+  ]);
+  assert_eq!(listed.stdout, b"src/a.rs\0".repeat(3));
+  std::fs::write(&file, "fn f() { let _ = Some(7).unwrap(); }\n").unwrap();
+  let report = check(&env, Host::Claude, dir.path(), &[]).unwrap();
+  assert_eq!(report.files, 3);
+  assert_eq!(report.findings.len(), 3, "{:?}", report.findings);
+  assert!(
+    report
+      .findings
+      .iter()
+      .all(|finding| finding == &report.findings[0])
+  );
+  assert_eq!(render(&report, false).exit, Exit::Failure);
+}

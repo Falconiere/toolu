@@ -2,7 +2,7 @@
 //! `.rs` file of a repository, with its limits, as `cargo xtask gate` runs them.
 //! Files sharing rule YAML share an `ast-grep scan`, a chunk at a time.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 use clap::{Arg, ArgMatches, Command};
@@ -304,12 +304,21 @@ fn scan_groups(
       let files: Vec<EditedFile> = batch.iter().map(|(_, file)| file.clone()).collect();
       let mut scan = scan_inline(&files, &rules, ctx);
       let mut by_path = partition_hits(&mut scan);
-      for (at, file) in batch {
+      let last: HashMap<&str, usize> = batch
+        .iter()
+        .enumerate()
+        .map(|(index, (_, file))| (file.path.as_str(), index))
+        .collect();
+      for (index, (at, file)) in batch.iter().enumerate() {
         scans.insert(
-          at,
+          *at,
           match &scan {
             AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
-              hits: by_path.remove(&file.path).unwrap_or_default(),
+              hits: if last.get(file.path.as_str()) == Some(&index) {
+                by_path.remove(&file.path).unwrap_or_default()
+              } else {
+                by_path.get(&file.path).cloned().unwrap_or_default()
+              },
               empty: *empty,
             },
             other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
