@@ -122,6 +122,7 @@ impl GitSite {
       lib_dir: &self.config,
       builtins: if post { POST_TOOL } else { PRE_TOOL },
       rules: &[],
+      quality_rules: &[],
       selected_specs: None,
       continue_post_blocks: false,
       split_by_caller: false,

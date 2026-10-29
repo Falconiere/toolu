@@ -16,7 +16,7 @@ use toolu_state::detect::tools::tool_available;
 use crate::docs::docs;
 use crate::file::{Limits, PyFile, base_name, is_python_test_name};
 use crate::layout_rules::test_layout;
-use crate::no_mocks::no_mocks;
+use crate::no_mocks::{RULES, no_mocks};
 use crate::size_rules::{file_too_long, function_too_long};
 use crate::suppression::suppression;
 
@@ -29,6 +29,9 @@ pub const PYTHON_QUALITY: &dyn Rule = &ManifestRule {
   name: NAME,
   rule: PythonQuality,
 };
+
+/// The same rule for an event-wide dispatch scan.
+pub const PYTHON_QUALITY_BATCH: &dyn QualityRule = &PythonQuality;
 
 /// The manifest spec.
 pub(crate) const SPEC: &str = "python-quality@toolu";
@@ -62,21 +65,26 @@ fn read(file: &EditedFile) -> Result<String, String> {
 }
 
 /// Every rule in the numeric order of the bash fragments they replace.
-fn errors(f: &PyFile<'_>, ctx: &RuleContext<'_>) -> Vec<String> {
+fn errors(f: &PyFile<'_>, scan: &AstGrepScan) -> Vec<String> {
   let is_test = is_python_test_name(base_name(&f.file.path));
   let mut errors: Vec<String> = file_too_long(f).into_iter().collect();
   errors.extend(test_layout(f));
   errors.extend(suppression(f));
   errors.extend(function_too_long(f));
-  errors.extend(no_mocks(f, ctx, is_test));
+  errors.extend(no_mocks(f, scan, is_test));
   errors
 }
 
 /// The blocking errors, then the docs advisory, shown only when nothing blocks.
-fn findings(file: &EditedFile, text: &str, ctx: &RuleContext<'_>) -> QualityFindings {
+fn findings(
+  file: &EditedFile,
+  text: &str,
+  ctx: &RuleContext<'_>,
+  scan: &AstGrepScan,
+) -> QualityFindings {
   let f = PyFile::new(file, text, limits(ctx));
   QualityFindings {
-    errors: errors(&f, ctx),
+    errors: errors(&f, scan),
     advisories: Some(docs(&f))
       .filter(|text| !text.is_empty())
       .into_iter()
@@ -113,16 +121,13 @@ impl QualityRule for PythonQuality {
     Vec::new()
   }
 
-  /// The batch scan is always empty here: no-mocks scans each test file on its
-  /// own (see `no_mocks`), so editing any other Python file spawns no ast-grep.
-  fn check(
-    &self,
-    file: &EditedFile,
-    ctx: &RuleContext<'_>,
-    _scan: &AstGrepScan,
-  ) -> QualityFindings {
+  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
+    RULES.to_owned()
+  }
+
+  fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings {
     match read(file) {
-      Ok(text) => findings(file, &text, ctx),
+      Ok(text) => findings(file, &text, ctx, scan),
       Err(error) => QualityFindings {
         errors: vec![error],
         advisories: Vec::new(),

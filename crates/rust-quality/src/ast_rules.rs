@@ -1,5 +1,5 @@
 //! The structural rules: panic-on-error in production code (60) and mock
-//! frameworks (70), each its own `ast-grep scan` of the file. Without ast-grep
+//! frameworks (70), read from the shared `ast-grep scan`. Without ast-grep
 //! they are skipped; a broken scan is itself a violation. Hits are filtered per
 //! rule, which keeps ast-grep's order stable.
 
@@ -134,25 +134,39 @@ pub(crate) fn no_mocks(f: &RsFile<'_>, scan: Option<&AstGrepScan>) -> Vec<String
     failure_detail(scan)
   };
   let tail = "— write against real data/fixtures instead";
+  let in_src = f.path_has("/src/");
+  let in_tests = f.path_has("/tests/") || test_file_name(f.path());
   [
-    group(
-      f,
-      scan,
-      &format!("no-mocks: #[automock] mock definition in $F {tail}"),
-      &[("automock-attr", 5), ("automock-cfg-attr", 5)],
-    ),
-    group(
-      f,
-      scan,
-      &format!("no-mocks: mock! {{ ... }} mock definition in $F {tail}"),
-      &[("mock-macro", 5)],
-    ),
-    group(
-      f,
-      scan,
-      &format!("no-mocks: mockall/faux import in $F {tail}"),
-      &[("mockall-import", 5), ("faux-import", 5)],
-    ),
+    if in_src {
+      group(
+        f,
+        scan,
+        &format!("no-mocks: #[automock] mock definition in $F {tail}"),
+        &[("automock-attr", 5), ("automock-cfg-attr", 5)],
+      )
+    } else {
+      Vec::new()
+    },
+    if in_src {
+      group(
+        f,
+        scan,
+        &format!("no-mocks: mock! {{ ... }} mock definition in $F {tail}"),
+        &[("mock-macro", 5)],
+      )
+    } else {
+      Vec::new()
+    },
+    if in_tests {
+      group(
+        f,
+        scan,
+        &format!("no-mocks: mockall/faux import in $F {tail}"),
+        &[("mockall-import", 5), ("faux-import", 5)],
+      )
+    } else {
+      Vec::new()
+    },
     failure(f, detail, "no-mocks"),
   ]
   .concat()

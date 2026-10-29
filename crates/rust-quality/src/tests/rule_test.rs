@@ -119,7 +119,12 @@ fn the_manifest_enables_the_rule_on_rs_edits_of_cargo_projects() {
     raw: &raw,
     edit: None,
   };
-  assert_eq!(RustQuality.ast_rules_inline(&ctx), "");
+  assert!(RustQuality.ast_rules_inline(&ctx).contains("id: unwrap"));
+  assert!(
+    RustQuality
+      .ast_rules_inline(&ctx)
+      .contains("id: mockall-import")
+  );
   assert!(!RUST_QUALITY.applies(&wrote(root, "a.ts"), &ctx));
   assert!(!RustQuality.project_enabled(&ctx), "no Cargo.toml");
   let env = cargo_repo(root);
@@ -174,7 +179,7 @@ fn a_crashing_ast_grep_fails_each_group_that_applies() {
   assert_eq!(
     decide(&env, root, concat!("build", ".rs"), "fn main() {}\n"),
     Decision::Allow,
-    "no YAML, no spawn"
+    "no applicable findings"
   );
 }
 
@@ -207,6 +212,19 @@ fn limits_come_from_lang_rust_and_the_exemption_list() {
     (300, 50, 90, false)
   );
   assert_eq!(got.unsafe_exemptions, ["ffi"]);
+  std::fs::create_dir_all(root.join("src")).unwrap();
+  let absolute = root.join("src/lib.rs");
+  std::fs::write(&absolute, "pub fn f() {}\n").unwrap();
+  let scoped = RustQuality.ast_rules_for_file(
+    &EditedFile {
+      path: absolute.display().to_string(),
+      absolute,
+      removed: false,
+    },
+    &ctx,
+  );
+  assert!(scoped.contains("id: unwrap"));
+  assert!(!scoped.contains("id: automock-attr"));
   let list = settings.join("rust-unsafe-exemptions.txt");
   std::fs::set_permissions(&list, std::fs::Permissions::from_mode(0o000)).unwrap();
   assert!(

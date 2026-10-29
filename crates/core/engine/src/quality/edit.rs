@@ -76,12 +76,13 @@ fn absolute(cwd: &Path, path: &str) -> PathBuf {
 /// Resolve one normalized edit record for the shared batch runner.
 pub(crate) fn edited_record(record: &EditRecord, ctx: &RuleContext<'_>) -> Option<EditedFile> {
   let cwd = ctx.cwd.unwrap_or(ctx.project_root);
-  if record.path.is_empty() {
+  let path = ctx.env.get("CLAUDE_FILE_PATHS").unwrap_or(&record.path);
+  if path.is_empty() {
     return None;
   }
   Some(EditedFile {
-    path: record.path.clone(),
-    absolute: absolute(cwd, &record.path),
+    path: path.to_owned(),
+    absolute: absolute(cwd, path),
     removed: record.operation == EditOperation::Delete
       || record.moved_to.as_deref().is_some_and(|to| !to.is_empty()),
   })

@@ -4,11 +4,17 @@
 //! wins for the whole patch); everything else is walked once. Each walk runs the
 //! built-in gates, then the registry.
 
+mod batch;
 mod edits;
+/// Normalized module event and raw context.
 pub(crate) mod event;
+/// Result folding and stopping precedence.
 pub(crate) mod fold;
+/// Hook output parsing and rendering.
 pub(crate) mod output;
+/// Fixed host and project context for one call.
 pub(crate) mod session;
+/// Built-in and registry walk.
 pub(crate) mod walk;
 
 use std::collections::BTreeSet;
@@ -19,6 +25,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::Rule;
 
 use crate::gate::Gate;
+use crate::quality::QualityBinding;
 use crate::trace::Step;
 
 /// How long one `.sh` module may run.
@@ -49,6 +56,8 @@ pub struct DispatchOptions<'a> {
   pub builtins: &'a [&'a dyn Gate],
   /// Compiled-in rules a manifest may enable.
   pub rules: &'a [&'a dyn Rule],
+  /// Compiled quality rules eligible for an event-wide post-edit scan.
+  pub quality_rules: &'a [QualityBinding<'a>],
   /// A host-resolved selection of plugin specs (`selectedRegistrySpecs`).
   pub selected_specs: Option<&'a BTreeSet<String>>,
   /// After a tool, check every patch path past a block (`continuePostBlocks`).

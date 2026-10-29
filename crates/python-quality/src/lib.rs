@@ -16,7 +16,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Guide;
 
 /// The rule the manifest enables.
-pub use rule::PYTHON_QUALITY;
+pub use rule::{PYTHON_QUALITY, PYTHON_QUALITY_BATCH};
 
 /// The plugin this crate belongs to: `plugins/python-quality`.
 pub const PLUGIN: &str = "python-quality";

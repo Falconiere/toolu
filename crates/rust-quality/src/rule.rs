@@ -4,18 +4,18 @@
 
 use std::path::{Path, PathBuf};
 
-use toolu_engine::quality::{
-  AstGrepScan, EditedFile, ManifestRule, QualityFindings, QualityRule, scan_inline,
-};
+use toolu_engine::quality::{AstGrepScan, EditedFile, ManifestRule, QualityFindings, QualityRule};
 use toolu_runtime::config::load::load;
 use toolu_runtime::config::quality::{QualityLang, quality_flag, quality_threshold};
 use toolu_runtime::config::settings::{RUST_UNSAFE_EXEMPTIONS, read_list, settings_dir};
+use toolu_runtime::env::Env;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::{Rule, RuleContext};
 use toolu_state::detect::project::detect_rust;
 use toolu_state::detect::tools::tool_available;
 
 use crate::ast_rules::{error_handling, error_rules, mock_rules, no_mocks};
+use crate::ast_yaml::{ERROR_RULES, MOCK_SRC_RULES, MOCK_TEST_RULES};
 use crate::docs::docs;
 use crate::file::{Limits, RsFile};
 use crate::layout_rules::{is_rust_test, test_layout};
@@ -31,6 +31,9 @@ pub const RUST_QUALITY: &dyn Rule = &ManifestRule {
   name: NAME,
   rule: RustQuality,
 };
+
+/// The same rule for an event-wide dispatch scan.
+pub const RUST_QUALITY_BATCH: &dyn QualityRule = &RustQuality;
 
 /// The manifest spec.
 pub(crate) const SPEC: &str = "rust-quality@toolu";
@@ -63,6 +66,23 @@ pub(crate) fn read(file: &EditedFile) -> Result<String, String> {
   std::fs::read(&file.absolute)
     .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
     .map_err(|error| format!("Cannot read {} for Rust quality checks: {error}", file.path))
+}
+
+fn rs_file<'a>(
+  file: &'a EditedFile,
+  text: &'a str,
+  limits: &'a Limits,
+  env: &'a Env,
+  cwd: &'a Path,
+) -> RsFile<'a> {
+  RsFile {
+    file,
+    scope: &file.path,
+    lines: crate::file::split_lines(text),
+    limits,
+    env,
+    cwd,
+  }
 }
 
 /// The structural scans of one file; `None` where its rules do not apply.
@@ -125,12 +145,26 @@ impl QualityRule for RustQuality {
     Vec::new()
   }
 
-  fn check(
-    &self,
-    file: &EditedFile,
-    ctx: &RuleContext<'_>,
-    _scan: &AstGrepScan,
-  ) -> QualityFindings {
+  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
+    [ERROR_RULES, MOCK_SRC_RULES, MOCK_TEST_RULES].join("\n---\n")
+  }
+
+  fn ast_rules_for_file(&self, file: &EditedFile, ctx: &RuleContext<'_>) -> String {
+    let Ok(text) = read(file) else {
+      return String::new();
+    };
+    let limits = limits(ctx);
+    let f = rs_file(file, &text, &limits, ctx.env, cwd(ctx));
+    let is_test = is_rust_test(&f);
+    error_rules(&f, is_test)
+      .into_iter()
+      .map(str::to_owned)
+      .chain(mock_rules(&f))
+      .collect::<Vec<_>>()
+      .join("\n---\n")
+  }
+
+  fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings {
     let text = match read(file) {
       Ok(text) => text,
       Err(error) => {
@@ -141,19 +175,11 @@ impl QualityRule for RustQuality {
       }
     };
     let limits = limits(ctx);
-    let f = RsFile {
-      file,
-      scope: &file.path,
-      lines: crate::file::split_lines(&text),
-      limits: &limits,
-      env: ctx.env,
-      cwd: cwd(ctx),
-    };
+    let f = rs_file(file, &text, &limits, ctx.env, cwd(ctx));
     let is_test = is_rust_test(&f);
-    let one = std::slice::from_ref(file);
     let scans = Scans {
-      errors: error_rules(&f, is_test).map(|rules| scan_inline(one, rules, ctx)),
-      mocks: mock_rules(&f).map(|rules| scan_inline(one, &rules, ctx)),
+      errors: error_rules(&f, is_test).map(|_| scan.clone()),
+      mocks: mock_rules(&f).map(|_| scan.clone()),
     };
     findings(&f, is_test, &scans)
   }

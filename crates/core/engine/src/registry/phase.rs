@@ -3,6 +3,7 @@
 //! and run, until one stops the walk. Warnings go to stderr as they happen; the
 //! results are returned for the walk to fold afterwards, as TypeScript does.
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
 use toolu_protocol::decision::Decision;
@@ -13,22 +14,79 @@ use toolu_runtime::registry::{ModuleKind, RegistryEvent};
 use super::executable::run_executable;
 use super::gate::plugin_active;
 use super::manifests::{Manifests, Read};
-use super::{Entry, list_dir};
+use super::{Entry, Listing, list_dir};
 use crate::dispatch::event::{Payload, View};
 use crate::dispatch::fold::{Folded, stops_walk};
 use crate::dispatch::output::parse_document;
 use crate::dispatch::session::Session;
 use crate::dispatch::walk::encoded;
 use crate::dispatch::{ModuleResult, Phase};
+use crate::quality::{QualityBatch, QualityBinding};
 use crate::trace::{Skip, Step, StepKind, StepStatus};
 
 /// One walk, as the registry phase needs it.
 pub(crate) struct RegistryWalk<'w> {
-  pub(crate) payload: &'w Payload,
+  pub(crate) payload: &'w Payload<'w>,
   pub(crate) session: &'w Session<'w>,
   pub(crate) view: &'w View,
   pub(crate) ctx: &'w RuleContext<'w>,
   pub(crate) event: HostEvent,
+  pub(crate) quality: Option<(&'w RefCell<QualityBatch>, usize)>,
+}
+
+/// Event-local registry snapshot, reused by every split path.
+pub(crate) struct RegistryPlan<'r> {
+  listing: Listing,
+  manifests: Manifests<'r>,
+  skips: Vec<Option<Skip>>,
+  active_quality: Vec<usize>,
+}
+
+impl<'r> RegistryPlan<'r> {
+  /// Capture the event's directory, manifests, and active plugin facts once.
+  pub(crate) fn new(session: &Session<'r>, tool_name: &str) -> Self {
+    let event = registry_event(session.phase);
+    let dir = session.config_root.join("toolu").join(event.dir_name());
+    let listing = list_dir(&dir);
+    let manifests = Manifests::read(&listing.entries, event, session.options.rules);
+    let mut admit = Admission::new(session, &manifests);
+    let skips = listing
+      .entries
+      .iter()
+      .map(|entry| admit.skip(entry))
+      .collect();
+    let mut plan = RegistryPlan {
+      listing,
+      manifests,
+      skips,
+      active_quality: Vec::new(),
+    };
+    plan.active_quality = plan.select_quality(session.options.quality_rules, tool_name);
+    plan
+  }
+
+  fn select_quality(&self, bindings: &[QualityBinding<'_>], tool_name: &str) -> Vec<usize> {
+    self
+      .listing
+      .entries
+      .iter()
+      .zip(&self.skips)
+      .filter_map(|(entry, skip)| {
+        if skip.is_some() || entry.kind != ModuleKind::Manifest {
+          return None;
+        }
+        let Some(Read::Valid(manifest, Some(_))) = self.manifests.get(&entry.file) else {
+          return None;
+        };
+        if !manifest.matches(tool_name) {
+          return None;
+        }
+        bindings
+          .iter()
+          .position(|binding| binding.spec == manifest.spec && binding.name == manifest.name)
+      })
+      .collect()
+  }
 }
 
 /// The phase's running state: results, stderr and trace, and whether it stopped.
@@ -38,6 +96,7 @@ struct Run<'r> {
   stderr: &'r mut String,
   trace: &'r mut Vec<Step>,
   stopped: bool,
+  active_quality: &'r [usize],
 }
 
 impl Run<'_> {
@@ -86,34 +145,30 @@ pub(crate) fn run_registry(
   walk: &RegistryWalk<'_>,
   stderr: &mut String,
   trace: &mut Vec<Step>,
+  plan: &RegistryPlan<'_>,
 ) -> Vec<Folded> {
-  let session = walk.session;
-  let event = registry_event(session.phase);
-  let dir = session.config_root.join("toolu").join(event.dir_name());
-  let listing = list_dir(&dir);
   let mut run = Run {
     walk,
     out: Vec::new(),
     stderr,
     trace,
     stopped: false,
+    active_quality: &plan.active_quality,
   };
-  for file in &listing.rejected {
+  for file in &plan.listing.rejected {
     run.warn(&format!(
       "toolu-registry: registry module {file} lacks <plugin-spec>__<name> namespace; skipped"
     ));
   }
-  let manifests = Manifests::read(&listing.entries, event, session.options.rules);
-  let mut admit = Admission::new(session, &manifests);
-  for entry in &listing.entries {
-    if let Some(skip) = admit.skip(entry) {
-      run.step(entry, step_kind(entry.kind), StepStatus::Skipped(skip));
+  for (entry, skip) in plan.listing.entries.iter().zip(&plan.skips) {
+    if let Some(skip) = skip {
+      run.step(entry, step_kind(entry.kind), StepStatus::Skipped(*skip));
       continue;
     }
     match entry.kind {
       ModuleKind::Esm => run.step(entry, StepKind::Esm, StepStatus::Skipped(Skip::Unsupported)),
       ModuleKind::Bash => executable(&mut run, entry),
-      ModuleKind::Manifest => manifest(&mut run, &manifests, entry),
+      ModuleKind::Manifest => manifest(&mut run, &plan.manifests, entry),
     }
     if run.stopped {
       return run.out;
@@ -123,16 +178,16 @@ pub(crate) fn run_registry(
 }
 
 /// Gating and shadowing for one directory.
-struct Admission<'a> {
-  session: &'a Session<'a>,
+struct Admission<'s, 'o> {
+  session: &'s Session<'o>,
   /// Specs with a usable manifest: their `.js` and `.sh` modules are shadowed.
   usable: BTreeSet<String>,
   /// Whether each spec's plugin is active, asked once per walk.
   active: BTreeMap<String, bool>,
 }
 
-impl<'a> Admission<'a> {
-  fn new(session: &'a Session<'a>, manifests: &Manifests<'_>) -> Admission<'a> {
+impl<'s, 'o> Admission<'s, 'o> {
+  fn new(session: &'s Session<'o>, manifests: &Manifests<'_>) -> Admission<'s, 'o> {
     Admission {
       session,
       usable: manifests.usable_specs(),
@@ -179,6 +234,9 @@ fn selected(session: &Session<'_>, spec: &str) -> bool {
 /// Run one `.sh` entry and decide whether it stops the walk.
 fn executable(run: &mut Run<'_>, entry: &Entry) {
   let folded = run_executable(entry, run.walk.payload, run.walk.session);
+  if let Some((quality, _)) = run.walk.quality {
+    quality.borrow_mut().invalidate();
+  }
   let code = folded.result.exit_code;
   run.step(entry, StepKind::Executable, StepStatus::Exited(code));
   let doc = parse_document(&folded.result.stdout).ok();
@@ -189,6 +247,28 @@ fn executable(run: &mut Run<'_>, entry: &Entry) {
   run.out.push(folded);
 }
 
+fn quality_decision(run: &Run<'_>, spec: &str, name: &str) -> Option<(Decision, Vec<String>)> {
+  let (quality, record) = run.walk.quality?;
+  let binding = run.active_quality.iter().copied().find(|index| {
+    run
+      .walk
+      .session
+      .options
+      .quality_rules
+      .get(*index)
+      .is_some_and(|binding| binding.spec == spec && binding.name == name)
+  })?;
+  Some(quality.borrow_mut().decide(
+    record,
+    (
+      binding,
+      run.active_quality,
+      run.walk.session.options.quality_rules,
+    ),
+    run.walk.ctx,
+  ))
+}
+
 /// One manifest: read, matcher, rule, `applies`, then the rule's decision.
 fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   let (manifest, rule) = match manifests.get(&entry.file) {
@@ -197,7 +277,7 @@ fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
     None => return,
   };
   let not_matching = StepStatus::Skipped(Skip::NotMatching);
-  if !manifest.matches(&run.walk.payload.tool_name) {
+  if !manifest.matches(run.walk.payload.tool_name) {
     return run.step(entry, StepKind::Rule, not_matching);
   }
   let Some(rule) = rule else {
@@ -213,7 +293,13 @@ fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   }
   if !run.stopped {
     let mut warnings = Vec::new();
-    let decision = rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings);
+    let decision =
+      if let Some((decision, lines)) = quality_decision(run, &manifest.spec, &manifest.name) {
+        warnings.extend(lines);
+        decision
+      } else {
+        rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings)
+      };
     for line in &warnings {
       run.warn(line);
     }

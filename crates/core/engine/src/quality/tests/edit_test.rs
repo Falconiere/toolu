@@ -51,6 +51,19 @@ fn quality_edit_prefers_the_edit_path_and_resolves_it() {
   assert_eq!(file.path, "src/a.ts");
   assert_eq!(file.absolute, root.join("src/a.ts"));
   assert!(!file.removed);
+
+  let override_env = env.with("CLAUDE_FILE_PATHS", "override.py");
+  let override_ctx = context(&override_env, &raw, root);
+  let record = EditRecord {
+    path: "src/a.ts".to_owned(),
+    operation: EditOperation::Write,
+    moved_to: None,
+    from: None,
+  };
+  let from_event = edited_file(&event, &override_ctx).unwrap();
+  let from_record = edited_record(&record, &override_ctx).unwrap();
+  assert_eq!(from_record, from_event);
+  assert_eq!(from_record.path, "override.py");
 }
 
 #[test]

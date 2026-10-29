@@ -126,6 +126,7 @@ impl Hook {
       lib_dir: &lib,
       builtins,
       rules,
+      quality_rules: &[],
       selected_specs: self.selected.as_ref(),
       continue_post_blocks: self.continue_blocks,
       split_by_caller: self.split_by_caller,

@@ -22,14 +22,14 @@ pub(crate) const TIMED_OUT: i32 = 124;
 const NOT_RUN: i32 = 127;
 
 /// The environment `mod.sh` exports to its modules for `payload`.
-fn module_env(payload: &Payload, session: &Session<'_>) -> toolu_runtime::env::Env {
+fn module_env(payload: &Payload<'_>, session: &Session<'_>) -> toolu_runtime::env::Env {
   let config = session.config_root.to_string_lossy().into_owned();
   let lib = session.options.lib_dir.to_string_lossy().into_owned();
   let env = session
     .env
     .clone()
-    .with("input", &payload.text)
-    .with("tool_name", &payload.tool_name)
+    .with("input", payload.text())
+    .with("tool_name", payload.tool_name)
     .with("TOOLU_LIB_DIR", &lib)
     .with("TOOLU_CONFIG_DIR", &config);
   match &payload.edit {
@@ -42,11 +42,15 @@ fn module_env(payload: &Payload, session: &Session<'_>) -> toolu_runtime::env::E
 }
 
 /// Run one `.sh` module over `payload`.
-pub(crate) fn run_executable(entry: &Entry, payload: &Payload, session: &Session<'_>) -> Folded {
+pub(crate) fn run_executable(
+  entry: &Entry,
+  payload: &Payload<'_>,
+  session: &Session<'_>,
+) -> Folded {
   let mut spec = Spec::new(["bash".to_owned(), entry.path.to_string_lossy().into_owned()]);
   spec.cwd = Some(session.cwd().to_path_buf());
   spec.env = Some(module_env(payload, session));
-  spec.stdin = format!("{}\n", payload.text).into_bytes();
+  spec.stdin = format!("{}\n", payload.text()).into_bytes();
   spec.timeout = session.options.module_timeout;
   spec.max_output_bytes = MAX_OUTPUT_BYTES;
   spec.wait = Wait::Streams;

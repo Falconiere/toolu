@@ -1,13 +1,11 @@
 //! No-mocks (70-no-mocks): mock-framework imports and `mocker` / `monkeypatch`
-//! fixture parameters in test files, one `ast-grep scan` of the edited file.
+//! fixture parameters in test files, read from the shared `ast-grep scan`.
 //! Each match shows as `<line>: <its first line>`, cut at a tab as
 //! `awk -F'\t'` cut it; without ast-grep the rule is skipped, and a broken scan
 //! is itself a violation. Severity is `warning` on purpose: `scan` exits
 //! non-zero on an error-level match, which would look like a crashed tool.
 
-use toolu_engine::quality::{AstGrepHit, AstGrepScan, ScanStage, scan_inline};
-
-use toolu_runtime::registry::rule::RuleContext;
+use toolu_engine::quality::{AstGrepHit, AstGrepScan, ScanStage};
 
 use crate::file::{PyFile, head};
 
@@ -102,14 +100,12 @@ pub(crate) fn mock_findings(f: &PyFile<'_>, scan: &AstGrepScan) -> Vec<String> {
   errors
 }
 
-/// Only for `test_*.py` / `*_test.py`, unless `lang.python.noMocks` is false:
-/// then one scan of the file.
-pub(crate) fn no_mocks(f: &PyFile<'_>, ctx: &RuleContext<'_>, is_test: bool) -> Vec<String> {
+/// Only for `test_*.py` / `*_test.py`, unless `lang.python.noMocks` is false.
+pub(crate) fn no_mocks(f: &PyFile<'_>, scan: &AstGrepScan, is_test: bool) -> Vec<String> {
   if !is_test || !f.limits.no_mocks {
     return Vec::new();
   }
-  let scan = scan_inline(std::slice::from_ref(f.file), RULES, ctx);
-  mock_findings(f, &scan)
+  mock_findings(f, scan)
 }
 
 #[cfg(test)]

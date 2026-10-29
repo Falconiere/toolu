@@ -3,6 +3,7 @@
 //! `RuleContext` for gates and rules.
 
 use serde_json::{Map, Value, json};
+use std::cell::OnceCell;
 use toolu_protocol::event::HostEvent;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::json::ordered::Ordered;
@@ -35,14 +36,27 @@ impl EditFields {
 }
 
 /// The text every module of one walk reads, and what it was built from.
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct Payload {
-  pub(crate) text: String,
+pub(crate) struct Payload<'a> {
+  pub(crate) text: &'a str,
   /// `text` as `JSON.parse` reads it, keys in JavaScript order; `None` when it is not JSON.
-  pub(crate) doc: Option<Ordered>,
+  pub(crate) doc: Option<&'a Ordered>,
+  /// A split path renders its full JSON only if an executable needs it.
+  pub(crate) synthetic: Option<(&'a Ordered, &'a EditRecord)>,
+  pub(crate) rendered: OnceCell<String>,
   /// The walk's tool name: `"Edit"` for a split path, `""` when stdin is not JSON.
-  pub(crate) tool_name: String,
+  pub(crate) tool_name: &'a str,
   pub(crate) edit: Option<EditFields>,
+}
+
+impl Payload<'_> {
+  /// Original text, or the per-path JSON when a module first needs it.
+  pub(crate) fn text(&self) -> &str {
+    self.synthetic.map_or(self.text, |(doc, record)| {
+      self.rendered.get_or_init(|| {
+        toolu_runtime::json::jq_text(&super::edits::synthetic_edit(doc, record), false)
+      })
+    })
+  }
 }
 
 /// What one walk's modules see.
@@ -77,12 +91,54 @@ pub(crate) fn host_event(event: &NormalizedEvent) -> HostEvent {
 }
 
 impl View {
+  /// Change the split path while keeping the outer patch and event setup.
+  pub(crate) fn set_record(&mut self, record: &EditRecord) {
+    let update = |input: &mut Map<String, Value>| {
+      for (key, value) in [
+        ("file_path", record.path.as_str()),
+        ("path", record.path.as_str()),
+        ("toolu_edit_operation", record.operation.name()),
+        (
+          "toolu_edit_from",
+          record.from.as_deref().unwrap_or_default(),
+        ),
+        (
+          "toolu_edit_moved_to",
+          record.moved_to.as_deref().unwrap_or_default(),
+        ),
+      ] {
+        input.insert(key.to_owned(), value.into());
+      }
+    };
+    match &mut self.event {
+      NormalizedEvent::ToolPre { tool, .. } | NormalizedEvent::ToolPost { tool, .. } => {
+        update(&mut tool.input);
+      }
+      NormalizedEvent::SessionStart(_)
+      | NormalizedEvent::SessionResume(_)
+      | NormalizedEvent::SessionClear(_)
+      | NormalizedEvent::SessionUnload(_)
+      | NormalizedEvent::Prompt { .. }
+      | NormalizedEvent::PreCompact(_)
+      | NormalizedEvent::Compaction(_)
+      | NormalizedEvent::PermissionEvaluate { .. }
+      | NormalizedEvent::ShellPre { .. } => {}
+    }
+    if let Some(input) = self
+      .raw
+      .get_mut("tool_input")
+      .and_then(Value::as_object_mut)
+    {
+      update(input);
+    }
+  }
+
   /// The event and context for `payload`.
   ///
   /// # Errors
   /// When the event does not form, which the fallbacks rule out.
-  pub(crate) fn of(payload: &Payload, session: &Session<'_>) -> Result<View, String> {
-    let raw = match payload.doc.as_ref().map(plain) {
+  pub(crate) fn of(payload: &Payload<'_>, session: &Session<'_>) -> Result<View, String> {
+    let raw = match payload.doc.map(plain) {
       Some(Value::Object(map)) => map,
       Some(_) | None => Map::new(),
     };
@@ -95,7 +151,7 @@ impl View {
   /// The context a gate or rule sees for this view.
   pub(crate) fn rule_context<'v>(
     &'v self,
-    payload: &'v Payload,
+    payload: &'v Payload<'_>,
     session: &'v Session<'_>,
   ) -> RuleContext<'v> {
     RuleContext {
@@ -132,7 +188,7 @@ fn runtime_operation(operation: toolu_state::edit_records::EditOperation) -> Edi
 
 /// The event's fields, in `toolEvent`'s key order.
 fn fields(
-  payload: &Payload,
+  payload: &Payload<'_>,
   session: &Session<'_>,
   raw: &Map<String, Value>,
 ) -> Vec<(String, Value)> {
@@ -145,7 +201,7 @@ fn fields(
   let tool = if payload.tool_name.is_empty() {
     "unknown"
   } else {
-    payload.tool_name.as_str()
+    payload.tool_name
   };
   let mut wire = Vec::new();
   let mut put = |key: &str, value: Value| wire.push((key.to_owned(), value));

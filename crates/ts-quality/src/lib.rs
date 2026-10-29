@@ -18,7 +18,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::namespace::Guide;
 
 /// The rule the manifest enables.
-pub use rule::TS_QUALITY;
+pub use rule::{TS_QUALITY, TS_QUALITY_BATCH};
 
 /// The plugin this crate belongs to: `plugins/ts-quality`.
 pub const PLUGIN: &str = "ts-quality";

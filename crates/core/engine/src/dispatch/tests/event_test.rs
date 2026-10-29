@@ -4,7 +4,7 @@ use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::registry::rule::EditOperation as Runtime;
 use toolu_state::edit_records::{EditOperation, EditRecord};
 
-use super::{EditFields, host_event, runtime_operation, text};
+use super::{EditFields, View, host_event, runtime_operation, text};
 
 #[test]
 fn absent_or_empty_strings_take_the_fallback() {
@@ -56,4 +56,34 @@ fn a_record_gives_its_edit_fields_with_empty_defaults() {
   for (state, runtime) in pairs {
     assert_eq!(runtime_operation(state), runtime);
   }
+}
+
+#[test]
+fn a_shared_edit_view_updates_the_record_without_losing_the_patch() {
+  let event = serde_json::from_value(json!({
+    "type": "tool/post", "sessionId": "s", "cwd": "/p", "projectRoot": "/p",
+    "worktree": "/p", "toolCallId": "c", "toolName": "Edit",
+    "toolInput": {"command": "large patch", "path": "first.rs"}
+  }))
+  .unwrap();
+  let mut view = View {
+    event,
+    raw: json!({"tool_input": {"command": "large patch", "path": "first.rs"}})
+      .as_object()
+      .unwrap()
+      .clone(),
+  };
+  let record = EditRecord {
+    path: "second.rs".to_owned(),
+    operation: EditOperation::Move,
+    moved_to: Some("third.rs".to_owned()),
+    from: Some("first.rs".to_owned()),
+  };
+  view.set_record(&record);
+  let input = &view.event.tool().unwrap().input;
+  assert_eq!(input.get("command"), Some(&json!("large patch")));
+  assert_eq!(input.get("path"), Some(&json!("second.rs")));
+  assert_eq!(input.get("toolu_edit_from"), Some(&json!("first.rs")));
+  assert_eq!(input.get("toolu_edit_moved_to"), Some(&json!("third.rs")));
+  assert_eq!(view.raw["tool_input"]["path"], "second.rs");
 }

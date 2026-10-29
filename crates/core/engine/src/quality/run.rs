@@ -14,9 +14,9 @@ use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
 use super::edit::edited_record;
-use super::scan::{partition_hits, scan_rules};
 use super::{
-  AstGrepHit, AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file,
+  AstGrepHit, AstGrepScan, EditedFile, QualityBinding, edited_file, in_linked_worktree,
+  is_regular_file,
 };
 
 /// Violations and nonblocking advice in check order.
@@ -48,6 +48,10 @@ pub trait QualityRule: Send + Sync {
   /// directories' rules into the event's one scan; empty adds nothing.
   fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
     String::new()
+  }
+  /// Rules that can affect one file when an overflowed event scan is retried.
+  fn ast_rules_for_file(&self, _file: &EditedFile, ctx: &RuleContext<'_>) -> String {
+    self.ast_rules_inline(ctx)
   }
   /// Check one file with the batch scan restricted to that file.
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings;
@@ -224,30 +228,15 @@ fn file_scan(
 ) -> AstGrepScan {
   match scan {
     AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
-      hits: by_path.get(&file.path).cloned().unwrap_or_default(),
+      hits: by_path
+        .get(&file.path)
+        .or_else(|| by_path.get(file.path.trim_start_matches("./")))
+        .cloned()
+        .unwrap_or_default(),
       empty: *empty,
     },
     other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
   }
-}
-
-/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
-fn batch_scan(
-  enabled: &[&dyn QualityRule],
-  live: &[EditedFile],
-  ctx: &RuleContext<'_>,
-) -> AstGrepScan {
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
-  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_inline(ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
-  scan_rules(live, &paths, &inline, ctx)
 }
 
 fn run_files(
@@ -263,8 +252,7 @@ fn run_files(
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
   let facts = selected_facts(files, &enabled, ctx, &state.roots);
   let live = live_files(&facts, &enabled);
-  let mut scan = batch_scan(&enabled, &live, ctx);
-  let by_path = partition_hits(&mut scan);
+  let (scan, by_path, fallback) = scan_batch_with_fallback(&enabled, &live, ctx);
   let mut decisions = Vec::new();
   for facts in facts {
     let file = facts.file;
@@ -275,7 +263,11 @@ fn run_files(
       if file.removed {
         clear_gate_file(&mut state, &facts.gate, &file.path, rule.source());
       } else if !(rule.skip_linked_worktrees() && facts.linked) {
-        let findings = rule.check(file, ctx, &file_scan(&scan, &by_path, file));
+        let scanned = fallback
+          .get(&file.path)
+          .cloned()
+          .unwrap_or_else(|| file_scan(&scan, &by_path, file));
+        let findings = rule.check(file, ctx, &scanned);
         decisions.push(settle(file, *rule, &facts.gate, &mut state, findings));
       }
     }
@@ -286,13 +278,13 @@ fn run_files(
   }
 }
 
-/// Last occurrence of each exact `path`, in last-occurrence order.
-fn last_edit_records(records: &[EditRecord]) -> Vec<&EditRecord> {
-  let mut probes = 0_u64;
-  last_edit_records_probed(records, &mut probes)
-}
+mod batch;
+mod batch_scan;
 
-/// Same selection as [`last_edit_records`], counting one membership probe per record.
+pub(crate) use batch::QualityBatch;
+use batch::scan_batch_with_fallback;
+
+/// Last occurrence of each exact `path`, counting one membership probe per record.
 fn last_edit_records_probed<'a>(
   records: &'a [EditRecord],
   probes: &mut u64,
@@ -315,7 +307,8 @@ pub fn run_quality(
   ctx: &RuleContext<'_>,
   rules: &[&dyn QualityRule],
 ) -> QualityOutcome {
-  let files: Vec<EditedFile> = last_edit_records(records)
+  let mut probes = 0_u64;
+  let files: Vec<EditedFile> = last_edit_records_probed(records, &mut probes)
     .into_iter()
     .filter_map(|record| edited_record(record, ctx))
     .collect();

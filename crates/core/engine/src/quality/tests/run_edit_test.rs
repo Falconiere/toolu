@@ -1,6 +1,11 @@
 use toolu_state::edit_records::{EditOperation, EditRecord};
 
-use super::{last_edit_records, last_edit_records_probed};
+use super::last_edit_records_probed;
+
+fn last_edit_records(records: &[EditRecord]) -> Vec<&EditRecord> {
+  let mut probes = 0_u64;
+  last_edit_records_probed(records, &mut probes)
+}
 
 fn record(
   path: &str,

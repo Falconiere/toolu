@@ -1,12 +1,12 @@
 use std::path::Path;
 
 use serde_json::Map;
-use toolu_engine::quality::{AstGrepScan, EditedFile, ScanFailure, ScanStage};
+use toolu_engine::quality::{AstGrepScan, EditedFile, ScanFailure, ScanStage, scan_inline};
 use toolu_protocol::host::Host;
 use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 
-use super::{mock_findings, no_mocks};
+use super::{RULES, mock_findings, no_mocks};
 use crate::file::{Limits, PyFile};
 
 /// The real `ast-grep scan` of `text` as `test_m.py` in a fresh directory.
@@ -30,7 +30,8 @@ fn scan_test_file(text: &str, limits: Limits, is_test: bool) -> Vec<String> {
     raw: &raw,
     edit: None,
   };
-  no_mocks(&PyFile::new(&file, text, limits), &ctx, is_test)
+  let scan = scan_inline(std::slice::from_ref(&file), RULES, &ctx);
+  no_mocks(&PyFile::new(&file, text, limits), &scan, is_test)
 }
 
 #[test]
