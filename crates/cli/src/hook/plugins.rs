@@ -114,7 +114,7 @@ pub(super) fn ast_grep_hook(request: &HookRequest, context: &Context<'_>) -> Opt
     return None;
   }
   let env = (context.env)();
-  let payload = (context.stdin)();
+  let payload = (context.stdin)().unwrap_or_default();
   Some(toolu_hub::ast_grep::register(
     &env,
     detect(&env, None).host,
