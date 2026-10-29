@@ -182,9 +182,15 @@ fn mock_hits_are_grouped_by_kind() {
       format!(
         "no-mocks: mock! {{ ... }} mock definition in /r/src/a.rs {tail}\n/r/src/a.rs:2:  x.mock-macro()"
       ),
-      format!(
-        "no-mocks: mockall/faux import in /r/src/a.rs {tail}\n/r/src/a.rs:3:  x.faux-import()"
-      ),
     ]
+  );
+  let test_out = on("/r/tests/a.rs", &Limits::default(), |f| {
+    no_mocks(f, Some(&scan))
+  });
+  assert_eq!(
+    test_out,
+    [format!(
+      "no-mocks: mockall/faux import in /r/tests/a.rs {tail}\n/r/src/a.rs:3:  x.faux-import()"
+    )]
   );
 }
