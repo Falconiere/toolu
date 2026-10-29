@@ -7,6 +7,11 @@
 pub mod backend;
 /// Reachability probes for herdr and tmux.
 pub mod detect;
+/// The capture-pane fallback for `agent_status`.
+pub mod status;
+#[cfg(test)]
+#[path = "tests/support_test.rs"]
+mod test_support;
 /// The plain-tmux driver: sessions, panes and worktrees.
 pub mod tmux;
 
