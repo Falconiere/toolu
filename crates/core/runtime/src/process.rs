@@ -211,10 +211,12 @@ fn run_with_impl(
   if let Some(Err(err)) = fed {
     return Err(RunError::Stdin(err));
   }
+  let stdout_bytes = stdout.bytes();
+  let stdout = String::from_utf8_lossy(&stdout_bytes).into_owned();
   Ok(Output {
     pid,
-    stdout: stdout.text(),
-    stdout_bytes: stdout.bytes(),
+    stdout,
+    stdout_bytes,
     stderr: stderr.text(),
     exit_code: exit_code(status),
     duration: started.elapsed(),

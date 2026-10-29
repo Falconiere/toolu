@@ -140,6 +140,15 @@ fn stdout_bytes_keep_what_the_lossy_text_replaces() {
   let output = run(&sh("printf 'a\\377\\376b'")).unwrap();
   assert_eq!(output.stdout_bytes, b"a\xff\xfeb".to_vec());
   assert_eq!(output.stdout, "a\u{fffd}\u{fffd}b");
+  assert_eq!(output.stdout, String::from_utf8_lossy(&output.stdout_bytes));
+}
+
+#[test]
+fn stdout_text_matches_lossy_decode_of_stdout_bytes() {
+  let output = run(&sh("printf 'hello'")).unwrap();
+  assert_eq!(output.stdout_bytes, b"hello");
+  assert_eq!(output.stdout, "hello");
+  assert_eq!(output.stdout, String::from_utf8_lossy(&output.stdout_bytes));
 }
 
 #[test]
