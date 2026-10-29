@@ -27,7 +27,7 @@ fn a_worktree_is_created_listed_and_removed() {
   );
 
   client
-    .remove_worktree(&world.repo, &worktree.workspace_id, true)
+    .remove_worktree(&worktree.workspace_id, true)
     .unwrap();
   assert!(!client.session_exists(&worktree.workspace_id));
   assert!(!Path::new(&worktree.path).exists());
@@ -65,7 +65,7 @@ fn removing_an_unknown_workspace_fails() {
     .unwrap();
   let err = world
     .client
-    .remove_worktree(&world.repo, "toolu-missing", true)
+    .remove_worktree("toolu-missing", true)
     .unwrap_err();
   assert_eq!(err.code, "workspace_not_found");
 }

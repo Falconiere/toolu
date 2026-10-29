@@ -96,24 +96,20 @@ impl Tmux {
     })
   }
 
-  /// Remove the session for `workspace_id` and its worktree.
+  /// Remove the session for `workspace_id` and its worktree. `git worktree
+  /// remove` is run from the worktree itself, so no repository root is needed.
   ///
   /// # Errors
   /// git or tmux fails.
-  pub fn remove_worktree(
-    &self,
-    cwd: &Path,
-    workspace_id: &str,
-    force: bool,
-  ) -> Result<(), TmuxError> {
-    let path = self.session_path(workspace_id)?;
+  pub fn remove_worktree(&self, workspace_id: &str, force: bool) -> Result<(), TmuxError> {
+    let path = self.session_cwd(workspace_id)?;
     self.kill_session(workspace_id)?;
     let mut args = vec!["worktree", "remove"];
     if force {
       args.push("--force");
     }
     args.push(&path);
-    self.git(cwd, &args).map(|_| ())
+    self.git(Path::new(&path), &args).map(|_| ())
   }
 
   /// The worktrees of the repository at `cwd`, with their open sessions.
@@ -158,7 +154,10 @@ impl Tmux {
   }
 
   /// The start directory of session `name`.
-  fn session_path(&self, name: &str) -> Result<String, TmuxError> {
+  ///
+  /// # Errors
+  /// The session is missing or tmux fails.
+  pub fn session_cwd(&self, name: &str) -> Result<String, TmuxError> {
     let text = self.run(&["list-sessions", "-F", "#{session_name}@#{session_path}"])?;
     text
       .lines()

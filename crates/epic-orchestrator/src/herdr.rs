@@ -83,6 +83,9 @@ pub(crate) struct Client {
   warned: bool,
   seq: u64,
   last_exit: Option<i32>,
+  /// The resolved backend, cached after the first call so one `Client` does
+  /// not flap between herdr and tmux mid-session.
+  backend: Option<toolu_mux::Backend>,
 }
 
 impl Client {
@@ -104,6 +107,10 @@ impl Client {
     call: &Call,
   ) -> Result<String, String> {
     self.last_exit = None;
+    let backend = *self.backend.get_or_insert_with(|| resolve_backend(env));
+    if backend == toolu_mux::Backend::Tmux {
+      return Ok(crate::tmux_backend::execute(call, env));
+    }
     if self.newer {
       return self.cli(paths, env, call);
     }
@@ -188,6 +195,17 @@ pub(crate) fn socket_path(env: &Env) -> PathBuf {
 /// The herdr session name from the env.
 pub(crate) fn session_name(env: &Env) -> Option<&str> {
   toolu_mux::detect::session_name(env)
+}
+
+/// The configured pane manager, from `TOOLU_EPIC_MULTIPLEXER` ("auto" when
+/// unset or unrecognized), resolved against `env`'s herdr reachability.
+fn resolve_backend(env: &Env) -> toolu_mux::Backend {
+  let configured = match env.get("TOOLU_EPIC_MULTIPLEXER") {
+    Some("herdr") => toolu_mux::Multiplexer::Herdr,
+    Some("tmux") => toolu_mux::Multiplexer::Tmux,
+    Some(_) | None => toolu_mux::Multiplexer::Auto,
+  };
+  toolu_mux::resolve(configured, env)
 }
 
 fn ping(stream: &mut UnixStream, id: &str) -> Result<u64, String> {

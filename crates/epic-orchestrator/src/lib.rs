@@ -166,6 +166,7 @@ mod status_schema;
 #[cfg(test)]
 #[path = "tests/support_test.rs"]
 mod support;
+mod tmux_backend;
 mod tracker;
 mod verbs;
 mod verbs_actions;

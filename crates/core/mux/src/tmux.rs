@@ -163,8 +163,13 @@ impl Tmux {
   /// # Errors
   /// The pane is missing or tmux fails.
   pub fn send_literal(&self, pane: &str, text: &str) -> Result<(), TmuxError> {
-    self.run(&["send-keys", "-t", pane, "-l", text])?;
-    self.run(&["send-keys", "-t", pane, "Enter"]).map(|_| ())
+    self
+      .run(&["send-keys", "-t", pane, "-l", text])
+      .map_err(|err| not_found_as_pane(pane, &err))?;
+    self
+      .run(&["send-keys", "-t", pane, "Enter"])
+      .map(|_| ())
+      .map_err(|err| not_found_as_pane(pane, &err))
   }
 
   /// Send named keys to `pane`.
@@ -174,7 +179,10 @@ impl Tmux {
   pub fn send_keys(&self, pane: &str, keys: &[&str]) -> Result<(), TmuxError> {
     let mut args = vec!["send-keys", "-t", pane];
     args.extend_from_slice(keys);
-    self.run(&args).map(|_| ())
+    self
+      .run(&args)
+      .map(|_| ())
+      .map_err(|err| not_found_as_pane(pane, &err))
   }
 
   /// Capture the last `lines` lines of `pane`, joined into one string.
@@ -183,7 +191,9 @@ impl Tmux {
   /// The pane is missing or tmux fails.
   pub fn capture(&self, pane: &str, lines: usize) -> Result<String, TmuxError> {
     let start = format!("-{lines}");
-    self.run(&["capture-pane", "-p", "-t", pane, "-S", &start, "-J"])
+    self
+      .run(&["capture-pane", "-p", "-t", pane, "-S", &start, "-J"])
+      .map_err(|err| not_found_as_pane(pane, &err))
   }
 
   /// Show `text` in session `name`'s status line.
