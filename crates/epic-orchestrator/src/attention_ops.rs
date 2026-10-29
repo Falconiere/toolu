@@ -140,11 +140,9 @@ fn fingerprint(key: &str, text: &str) -> String {
 fn recalled(engine: &Engine, answer: &Answer<'_>, id: &str) -> Result<Option<Value>, String> {
   let fp = fingerprint(answer.key, answer.text);
   Ok(match prior(engine, id)? {
-    Some((seen, _)) if seen != fp => {
-      Some(result_value(Err(
-        "submission_id reuse with different payload".to_owned(),
-      )))
-    }
+    Some((seen, _)) if seen != fp => Some(result_value(Err(
+      "submission_id reuse with different payload".to_owned(),
+    ))),
     Some((_, true)) => Some(json!({"ok": true})),
     Some((_, false)) => Some(json!({
       "ok": true,
