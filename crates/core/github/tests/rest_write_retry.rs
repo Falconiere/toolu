@@ -51,10 +51,7 @@ fn a_committed_comment_with_a_lost_response_is_sent_once() {
     .fixture
     .sequence(
       "/comments",
-      vec![
-        Reply::committed_then_dropped(),
-        Reply::new(201, r#"{"id":1}"#),
-      ],
+      vec![Reply::dropped_recorded(), Reply::new(201, r#"{"id":1}"#)],
     )
     .expect("route");
   assert!(matches!(
