@@ -130,6 +130,7 @@ fn post_write_socket_failures_are_uncertain_and_pre_send_ones_are_not() {
   for err in [
     "write: Broken pipe (os error 32)",
     "send: broken pipe",
+    "connect: Connection reset by peer (os error 54)",
     "connect: Connection refused (os error 61)",
     "connect: No such file or directory (os error 2)",
     "no live agent for a",
