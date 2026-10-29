@@ -19,10 +19,7 @@ pub(crate) fn reply_notify(
   request: &Value,
   reply: &Sender<Value>,
 ) -> Result<bool, String> {
-  if let Some(token) = request.get("token").and_then(Value::as_str)
-    && !token.is_empty()
-    && spool_seen(engine, token)?
-  {
+  if spool_seen(engine, request)? {
     let _sent = reply.send(json!({"ok": true}));
     return Ok(false);
   }

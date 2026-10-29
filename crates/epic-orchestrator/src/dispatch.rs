@@ -145,10 +145,7 @@ fn reply_report(
   reply: &Sender<Value>,
   waiters: &mut Vec<Waiter>,
 ) -> Result<bool, String> {
-  if let Some(token) = request.get("token").and_then(Value::as_str)
-    && !token.is_empty()
-    && spool_seen(engine, token)?
-  {
+  if spool_seen(engine, request)? {
     let _sent = reply.send(json!({"ok": true}));
     return Ok(false);
   }
@@ -261,7 +258,7 @@ fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String>
     return Ok(());
   };
   let token = value.get("token").and_then(Value::as_str).unwrap_or("");
-  if token.is_empty() || spool_seen(engine, token)? {
+  if token.is_empty() || spool_seen(engine, &value)? {
     let _gone = std::fs::remove_file(path);
     return Ok(());
   }
@@ -281,7 +278,19 @@ fn ingest_one(engine: &mut Engine, path: &std::path::Path) -> Result<(), String>
 }
 
 /// Whether the journal has already recorded this request token.
-pub(crate) fn spool_seen(engine: &Engine, token: &str) -> Result<bool, String> {
+pub(crate) fn spool_seen(engine: &Engine, request: &Value) -> Result<bool, String> {
+  let token = request.get("token").and_then(Value::as_str).unwrap_or("");
+  if token.is_empty() {
+    return Ok(false);
+  }
+  if request.get("op").and_then(Value::as_str) == Some("notify") {
+    let mut seen = false;
+    journal::each(&engine.paths.journal_dir(), "", |row| {
+      seen |= row.token == token && (row.name == "spool" || row.kind == "notify");
+      Ok(())
+    })?;
+    return Ok(seen);
+  }
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
   Ok(
     rows
@@ -297,3 +306,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/dispatch_notify_test.rs"]
 mod notify_tests;
+
+#[cfg(test)]
+#[path = "tests/dispatch_notify_replay_test.rs"]
+mod notify_replay_tests;
