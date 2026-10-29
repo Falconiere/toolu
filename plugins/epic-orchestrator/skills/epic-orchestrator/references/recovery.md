@@ -83,6 +83,11 @@ exits right after start): check `codex debug models` or `cursor-agent
 
 ## Merge and teardown
 
+- **`failed`, note `rebase push uncertain`:** the force-with-lease push may
+  have landed, but remote inspection did not prove its outcome. Inspect the
+  remote branch and PR head before taking manual action; do not send `REBASE`
+  or repeat the push while the outcome is unknown. The queue head stays held
+  across engine restarts.
 - **`failed`, note `merge uncertain`:** never resend a merge. Check the PR;
   merged or not, `toolu epic ack <key>` and let the engine's next PR check
   settle it.
