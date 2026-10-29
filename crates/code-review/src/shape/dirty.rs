@@ -30,22 +30,68 @@ pub(crate) fn dirty_except_state(
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
-    let archive_dir = prefix.join("code-review-usage");
-    let Some(archive_dir) = archive_dir.to_str() else {
+    let Some(archives) = archive_excludes(env, root, state_root, prefix)? else {
       return Ok(true);
     };
-    let mut archives = String::new();
-    for ch in archive_dir.chars() {
-      if matches!(ch, '\\' | '*' | '?' | '[' | ']') {
-        archives.push('\\');
-      }
-      archives.push(ch);
-    }
-    excludes.push(format!(
-      ":(exclude,glob){archives}/{}.jsonl",
-      "[0-9]".repeat(20)
-    ));
+    excludes.extend(archives);
   }
+  dirty_with_excludes(env, root, &excludes)
+}
+
+fn archive_excludes(
+  env: &Env,
+  root: &Path,
+  state_root: &Path,
+  prefix: &Path,
+) -> Result<Option<Vec<String>>, ShapeError> {
+  let archive_dir = prefix.join("code-review-usage");
+  let Some(archive_dir_str) = archive_dir.to_str() else {
+    return Ok(None);
+  };
+  let (tracked, truncated) = git_output(
+    env,
+    root,
+    &[
+      "--no-optional-locks",
+      "status",
+      "--porcelain=v1",
+      "-z",
+      "--untracked-files=no",
+      "--",
+      &format!(":(literal){archive_dir_str}"),
+    ],
+    STATUS_PROBE_BYTES,
+  )?;
+  if truncated || !tracked.is_empty() {
+    return Ok(None);
+  }
+  let entries = match std::fs::read_dir(state_root.join("code-review-usage")) {
+    Ok(entries) => entries,
+    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok(Some(Vec::new())),
+    Err(_) => return Ok(None),
+  };
+  let mut excludes = Vec::new();
+  for entry in entries {
+    let Ok(entry) = entry else { return Ok(None) };
+    let name = entry.file_name();
+    let Some(name) = name.to_str() else {
+      return Ok(None);
+    };
+    let Some(digits) = name.strip_suffix(".jsonl") else {
+      continue;
+    };
+    if digits.len() == 20
+      && digits.bytes().all(|byte| byte.is_ascii_digit())
+      && digits.parse::<u64>().is_ok()
+      && entry.file_type().is_ok_and(|kind| kind.is_file())
+    {
+      excludes.push(format!(":(exclude,literal){archive_dir_str}/{name}"));
+    }
+  }
+  Ok(Some(excludes))
+}
+
+fn dirty_with_excludes(env: &Env, root: &Path, excludes: &[String]) -> Result<bool, ShapeError> {
   let mut args = vec![
     "--no-optional-locks",
     "status",

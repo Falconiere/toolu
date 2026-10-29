@@ -138,6 +138,40 @@ fn usage_failure_on_rotation_or_lock_preserves_the_last_complete_row() {
 }
 
 #[test]
+fn usage_partial_append_rolls_back_on_a_real_file_limit() {
+  if std::env::var_os("TOOLU_USAGE_FILE_LIMIT_CHILD").is_none() {
+    let child = std::process::Command::new("sh")
+      .args(["-c", "trap '' XFSZ; ulimit -f 1; exec \"$@\"", "sh"])
+      .arg(std::env::current_exe().unwrap())
+      .arg("usage_partial_append_rolls_back_on_a_real_file_limit")
+      .env("TOOLU_USAGE_FILE_LIMIT_CHILD", "1")
+      .output()
+      .unwrap();
+    assert!(
+      child.status.success(),
+      "{}",
+      String::from_utf8_lossy(&child.stderr)
+    );
+    assert!(String::from_utf8_lossy(&child.stdout).contains("1 passed"));
+    return;
+  }
+  let dir = tempfile::tempdir().unwrap();
+  let roots = Roots::new(Env::process(), Some(Host::Codex));
+  log_usage(&roots, dir.path(), "before", &usage_report(None)).unwrap();
+  let active = dir.path().join(".codex/tmp/code-review-usage.jsonl");
+  let before = std::fs::read(&active).unwrap();
+  let error = log_usage(
+    &roots,
+    dir.path(),
+    "partial",
+    &usage_report(Some("m".repeat(5000))),
+  )
+  .unwrap_err();
+  assert!(error.contains("usage append"), "{error}");
+  assert_eq!(std::fs::read(active).unwrap(), before);
+}
+
+#[test]
 fn usage_retention_reclaims_legacy_and_rejects_oversized_row() {
   let dir = tempfile::tempdir().unwrap();
   let roots = Roots::new(Env::process(), Some(Host::Codex));

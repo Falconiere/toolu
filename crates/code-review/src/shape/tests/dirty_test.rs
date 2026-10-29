@@ -1,21 +1,25 @@
+use std::path::Path;
 use std::process::Command;
 
 use super::dirty_except_state;
 use toolu_runtime::env::Env;
 
-#[test]
-fn only_untracked_plugin_state_is_ignored() {
-  let dir = tempfile::tempdir().unwrap();
-  let root = dir.path();
+fn init_repo(root: &Path) {
   assert!(
     Command::new("git")
-      .arg("init")
-      .arg("-q")
+      .args(["init", "-q"])
       .current_dir(root)
       .status()
       .unwrap()
       .success()
   );
+}
+
+#[test]
+fn only_untracked_plugin_state_is_ignored() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path();
+  init_repo(root);
   let state = root.join(".codex/tmp");
   std::fs::create_dir_all(state.join("code-review")).unwrap();
   std::fs::create_dir_all(state.join("push-review")).unwrap();
@@ -42,15 +46,7 @@ fn only_untracked_plugin_state_is_ignored() {
 #[test]
 fn own_state_below_a_subdirectory_root_or_past_the_probe_cap_stays_clean() {
   let dir = tempfile::tempdir().unwrap();
-  assert!(
-    Command::new("git")
-      .arg("init")
-      .arg("-q")
-      .current_dir(dir.path())
-      .status()
-      .unwrap()
-      .success()
-  );
+  init_repo(dir.path());
   // Porcelain prints toplevel-relative paths even when the project root is a subdirectory.
   let root = dir.path().join("app");
   let state = root.join(".claude/tmp");
@@ -70,15 +66,7 @@ fn own_state_below_a_subdirectory_root_or_past_the_probe_cap_stays_clean() {
 fn archive_exclusion_treats_configured_state_root_literally() {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path();
-  assert!(
-    Command::new("git")
-      .arg("init")
-      .arg("-q")
-      .current_dir(root)
-      .status()
-      .unwrap()
-      .success()
-  );
+  init_repo(root);
   let state = root.join("config[1]/tmp");
   let archives = state.join("code-review-usage");
   std::fs::create_dir_all(&archives).unwrap();
@@ -86,5 +74,38 @@ fn archive_exclusion_treats_configured_state_root_literally() {
   let env = Env::process();
   assert!(!dirty_except_state(&env, root, &state).unwrap());
   std::fs::write(archives.join("notes.jsonl"), "unrelated\n").unwrap();
+  assert!(dirty_except_state(&env, root, &state).unwrap());
+  std::fs::remove_file(archives.join("notes.jsonl")).unwrap();
+  let overflow = archives.join("99999999999999999999.jsonl");
+  std::fs::write(&overflow, "not a writer sequence\n").unwrap();
+  assert!(dirty_except_state(&env, root, &state).unwrap());
+  std::fs::remove_file(overflow).unwrap();
+  assert!(
+    Command::new("git")
+      .arg("add")
+      .arg("-A")
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  assert!(
+    Command::new("git")
+      .args([
+        "-c",
+        "user.name=Test",
+        "-c",
+        "user.email=test@example.com",
+        "commit",
+        "-qm",
+        "state"
+      ])
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  assert!(!dirty_except_state(&env, root, &state).unwrap());
+  std::fs::write(archives.join("00000000000000000001.jsonl"), "modified\n").unwrap();
   assert!(dirty_except_state(&env, root, &state).unwrap());
 }

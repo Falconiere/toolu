@@ -17,6 +17,8 @@ use crate::contract::{ErrorKind, Verdict};
 use crate::review::{Call, Options};
 
 mod fixture_test;
+#[path = "state_failure_test.rs"]
+mod state_failure_test;
 use fixture_test::{clean_case, env, finding_case, invoke, options, repo, saved_state};
 
 #[test]
@@ -109,39 +111,6 @@ fn state_write_failure_keeps_paid_review_findings_in_report() {
   );
   assert_eq!(report.findings.len(), 1);
   assert_ne!(report.usage.calls.len(), 0);
-}
-
-#[test]
-fn failed_usage_append_and_rotation_replace_an_older_passing_gate_state() {
-  let (repo, state, fixture) = clean_case();
-  let env = env(repo.path(), state.path(), &fixture);
-  assert_eq!(
-    invoke(&env, &options(&fixture)).verdict(),
-    Verdict::Approved
-  );
-  let log = repo.path().join(".codex/tmp/code-review-usage.jsonl");
-  std::fs::remove_file(&log).unwrap();
-  std::fs::create_dir(&log).unwrap();
-  let report = invoke(&env, &options(&fixture));
-  assert_eq!(
-    report.error.as_ref().map(|error| error.kind),
-    Some(ErrorKind::State)
-  );
-  assert_eq!(report.blocking_count(), 1);
-  assert_eq!(
-    saved_state(state.path())["findings_count"],
-    report.blocking_count()
-  );
-  std::fs::remove_dir(&log).unwrap();
-  std::fs::write(&log, "{}\n".repeat(350_000)).unwrap();
-  std::fs::write(repo.path().join(".codex/tmp/code-review-usage"), "occupied").unwrap();
-  let report = invoke(&env, &options(&fixture));
-  assert_eq!(
-    report.error.as_ref().map(|error| error.kind),
-    Some(ErrorKind::State)
-  );
-  assert_eq!(report.blocking_count(), 1);
-  assert_eq!(saved_state(state.path())["findings_count"], 1);
 }
 
 #[test]
