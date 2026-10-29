@@ -6,7 +6,8 @@ use toolu_runtime::env::Env;
 use super::{accept_claude_trust, argv, command, herdr, reachable, stop_agent, try_herdr};
 use crate::fixer::host::Fixer;
 
-const SECOND: Duration = Duration::from_secs(1);
+/// Long enough that a saturated `llvm-cov` run can still start the stub.
+const SECOND: Duration = Duration::from_secs(15);
 
 fn with_herdr(dir: &std::path::Path, reply: &str) -> Env {
   let bin = dir.join("bin");
