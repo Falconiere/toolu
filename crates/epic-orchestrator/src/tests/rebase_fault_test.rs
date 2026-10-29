@@ -3,9 +3,10 @@ use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::time::Duration;
 
-use super::tests::{Repo, env, repo};
-use super::{Rebased, git::Git, rebase, replay};
+use super::tests::{Repo, env, repo, resources, stage, take};
+use super::{Lease, Rebased, git::Git, rebase, replay};
 use crate::support::git;
+use toolu_engine::resources::leases::LeaseKind;
 
 fn hook(path: &Path, script: &str) {
   fs::write(path, script).expect("hook");
@@ -124,4 +125,32 @@ fn a_pre_push_hook_refusal_hands_off_even_if_remote_inspection_fails() {
   };
   assert!(reason.contains("pre-push"), "{reason}");
   assert_eq!(git(&moved, &["rev-parse", "feat/x"]), repo.target().head);
+}
+
+#[test]
+fn an_unfence_failure_keeps_the_reason_and_can_be_recovered() {
+  let repo = repo(("b.txt", "feature\n"), ("a.txt", "ONE\ntwo\n"));
+  let root = resources(&repo);
+  let agent = take(&root, LeaseKind::Agent, &repo.work);
+  let lease = Lease {
+    root: root.clone(),
+    token: agent.clone(),
+  };
+  super::set_stage(&lease, "rebasing").expect("fence");
+  let state = root.join("state.json");
+  let saved = fs::read(&state).expect("state");
+  hook(
+    &repo.work.join(".git/hooks/pre-push"),
+    &format!("#!/bin/sh\nprintf '{{' > '{}'\nexit 1\n", state.display()),
+  );
+  let outcome = rebase(&repo.target(), Some(&lease), &env(&repo), None);
+  let Rebased::Handoff(reason) = outcome else {
+    panic!("{outcome:?}");
+  };
+  assert!(reason.contains("unfence failed:"), "{reason}");
+  assert!(reason.contains("recovery failed:"), "{reason}");
+  fs::write(state, saved).expect("restore state");
+  super::recover(Some(&repo.work), Some(&lease), &env(&repo)).expect("recover");
+  assert_eq!(stage(&root, &agent), "running");
+  assert_eq!(repo.remote("feat/x"), repo.target().head);
 }

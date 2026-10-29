@@ -173,7 +173,7 @@ fn unsafe_worktrees_are_handed_to_the_worker_without_a_git_write() {
   );
 }
 
-fn resources(repo: &Repo) -> PathBuf {
+pub(super) fn resources(repo: &Repo) -> PathBuf {
   let root = repo.tmp.path().join("resources");
   std::fs::create_dir_all(&root).expect("root");
   std::fs::write(
@@ -184,7 +184,7 @@ fn resources(repo: &Repo) -> PathBuf {
   root
 }
 
-fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
+pub(super) fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
   let request = LeaseRequest {
     kind,
     key: "k".into(),
@@ -203,7 +203,7 @@ fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
   }
 }
 
-fn stage(root: &Path, token: &str) -> String {
+pub(super) fn stage(root: &Path, token: &str) -> String {
   let resources = read_resource_state(root).expect("state");
   leases(&resources)
     .iter()

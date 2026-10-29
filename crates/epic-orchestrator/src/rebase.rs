@@ -69,12 +69,14 @@ pub(crate) fn rebase(
   let outcome = snapshot(&git, target, trace).map_or_else(Rebased::Busy, |()| replay(&git, target));
   if let Some(lease) = lease
     && let Err(reason) = set_stage(lease, "running")
+    && let Err(recovery) = recover(Some(&target.worktree), Some(lease), env)
   {
+    let reason = format!("unfence failed: {reason}; recovery failed: {recovery}");
     return match outcome {
-      Rebased::Pushed(head) => Rebased::Busy(format!("pushed {head}; unfence failed: {reason}")),
-      Rebased::Uncertain(note) => Rebased::Uncertain(format!("{note}; unfence failed: {reason}")),
-      Rebased::Handoff(note) => Rebased::Handoff(format!("{note}; unfence failed: {reason}")),
-      Rebased::Busy(note) => Rebased::Busy(format!("{note}; unfence failed: {reason}")),
+      Rebased::Pushed(head) => Rebased::Busy(format!("pushed {head}; {reason}")),
+      Rebased::Uncertain(note) => Rebased::Uncertain(format!("{note}; {reason}")),
+      Rebased::Handoff(note) => Rebased::Handoff(format!("{note}; {reason}")),
+      Rebased::Busy(note) => Rebased::Busy(format!("{note}; {reason}")),
     };
   }
   outcome
