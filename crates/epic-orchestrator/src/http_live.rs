@@ -3,12 +3,19 @@
 //! the cache window shares. Only HTTP threads call herdr here; the state
 //! thread never does.
 
+use std::os::fd::AsRawFd;
 use std::os::unix::net::UnixStream;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, PoisonError, mpsc};
+use std::sync::{Mutex, PoisonError};
 use std::time::{Duration, Instant, SystemTime};
 
+use nix::errno::Errno;
+#[cfg(not(target_os = "linux"))]
+use nix::fcntl::{FcntlArg, FdFlag, fcntl};
+use nix::sys::socket::{
+  AddressFamily, SockFlag, SockType, UnixAddr, connect as socket_connect, socket as new_socket,
+};
 use serde_json::{Value, json};
 use toolu_runtime::config::secrets::{Secrets, redact_text};
 use toolu_runtime::env::Env;
@@ -250,16 +257,39 @@ fn failed(reply: &Value) -> Result<(), String> {
   }
 }
 
-/// A connection within [`TIMEOUT`]. A Unix connect blocks while the server's
-/// backlog is full, so it runs on its own thread, which ends with the connect.
+/// A connection within [`TIMEOUT`], with no connector thread left behind.
 fn connect(socket: &Path) -> Result<UnixStream, String> {
-  let (sent, received) = mpsc::channel();
-  let path = socket.to_path_buf();
-  std::thread::spawn(move || sent.send(UnixStream::connect(path)));
-  let stream = received
-    .recv_timeout(TIMEOUT)
-    .map_err(down)?
-    .map_err(down)?;
+  let deadline = Instant::now() + TIMEOUT;
+  let address = UnixAddr::new(socket).map_err(down)?;
+  #[cfg(target_os = "linux")]
+  let flags = SockFlag::SOCK_NONBLOCK | SockFlag::SOCK_CLOEXEC;
+  #[cfg(not(target_os = "linux"))]
+  let flags = SockFlag::empty();
+  let fd = new_socket(AddressFamily::Unix, SockType::Stream, flags, None).map_err(down)?;
+  #[cfg(not(target_os = "linux"))]
+  fcntl(&fd, FcntlArg::F_SETFD(FdFlag::FD_CLOEXEC)).map_err(down)?;
+  let stream = UnixStream::from(fd);
+  stream.set_nonblocking(true).map_err(down)?;
+  loop {
+    if Instant::now() >= deadline {
+      return Err(down(()));
+    }
+    match socket_connect(stream.as_raw_fd(), &address) {
+      Ok(()) | Err(Errno::EISCONN) => break,
+      Err(Errno::EAGAIN | Errno::EINPROGRESS | Errno::EALREADY | Errno::EINTR) => {
+        let remaining = deadline.saturating_duration_since(Instant::now());
+        if remaining.is_zero() {
+          return Err(down(()));
+        }
+        std::thread::sleep(remaining.min(Duration::from_millis(10)));
+      }
+      Err(err) => return Err(down(err)),
+    }
+  }
+  if Instant::now() >= deadline {
+    return Err(down(()));
+  }
+  stream.set_nonblocking(false).map_err(down)?;
   stream.set_read_timeout(Some(TIMEOUT)).map_err(down)?;
   stream.set_write_timeout(Some(TIMEOUT)).map_err(down)?;
   Ok(stream)
@@ -272,3 +302,7 @@ fn down<E>(_err: E) -> String {
 #[cfg(test)]
 #[path = "tests/http_live_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/http_live_backlog_test.rs"]
+mod backlog_tests;
