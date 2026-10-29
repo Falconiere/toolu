@@ -219,8 +219,12 @@ fn an_uncertain_launch_done_line_replays_without_a_stage_change() {
 }
 
 #[test]
-fn a_held_merge_done_line_prevents_a_second_put_after_restart() {
-  for outcome in ["uncertain: GitHub answered HTTP 504", "refused: 409"] {
+fn a_held_merge_or_rebase_done_line_prevents_a_second_write_after_restart() {
+  for (outcome, deferred) in [
+    ("uncertain: GitHub answered HTTP 504", "merge"),
+    ("refused: 409", "merge"),
+    ("rebase-uncertain: remote inspection failed", "rebase"),
+  ] {
     let mut world = World::new(0);
     let issue = ensure_issue(&mut world, "a", "e", "/state");
     issue.stage = "running".into();
@@ -238,11 +242,17 @@ fn a_held_merge_done_line_prevents_a_second_put_after_restart() {
     crate::logic::arm_ready(&mut world);
     assert_eq!(
       world.issues["a"].deferred.as_deref(),
-      Some("merge"),
+      Some(deferred),
       "{outcome}"
     );
     assert!(world.issues["a"].pending.is_none(), "{outcome}");
     assert_eq!(first_call(&mut world), None, "{outcome}");
+    assert!(
+      !world
+        .outbox
+        .iter()
+        .any(|step| matches!(step, Step::Prompt { .. }))
+    );
   }
 }
 

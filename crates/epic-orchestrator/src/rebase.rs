@@ -42,6 +42,8 @@ pub(crate) struct Lease {
 pub(crate) enum Rebased {
   /// Rebased and pushed; the new head.
   Pushed(String),
+  /// The push may have landed, but the remote did not prove it.
+  Uncertain(String),
   /// Not safe for the engine; the worker rebases. The reason.
   Handoff(String),
   /// Not now (a job runs there, the snapshot failed); retried at the next check.
@@ -70,6 +72,7 @@ pub(crate) fn rebase(
   {
     return match outcome {
       Rebased::Pushed(head) => Rebased::Busy(format!("pushed {head}; unfence failed: {reason}")),
+      Rebased::Uncertain(note) => Rebased::Uncertain(format!("{note}; unfence failed: {reason}")),
       Rebased::Handoff(note) => Rebased::Handoff(format!("{note}; unfence failed: {reason}")),
       Rebased::Busy(note) => Rebased::Busy(format!("{note}; unfence failed: {reason}")),
     };
@@ -100,8 +103,35 @@ fn replay(git: &Git<'_>, target: &Target) -> Rebased {
   let refspec = format!("HEAD:refs/heads/{}", target.branch);
   match git.ok(&["push", "--quiet", &lease, "origin", &refspec]) {
     Ok(()) => Rebased::Pushed(new_head),
-    Err(reason) => Rebased::Handoff(format!("push refused: {reason}")),
+    Err(reason) => reconcile_push(git, target, &new_head, &reason),
   }
+}
+
+/// Inspect the exact remote ref once; a transport error cannot prove refusal.
+fn reconcile_push(git: &Git<'_>, target: &Target, new_head: &str, reason: &str) -> Rebased {
+  let reference = format!("refs/heads/{}", target.branch);
+  let remote = git.out(&["ls-remote", "origin", &reference]);
+  let head = remote
+    .as_ref()
+    .ok()
+    .and_then(|text| text.split_once('\t'))
+    .filter(|(sha, name)| {
+      *name == reference
+        && sha.len() == new_head.len()
+        && sha.bytes().all(|b| b.is_ascii_hexdigit())
+    })
+    .map(|(sha, _)| sha);
+  if head == Some(new_head) {
+    return Rebased::Pushed(new_head.to_owned());
+  }
+  if head.is_some() && (reason.contains("[rejected]") || reason.contains("[remote rejected]")) {
+    return Rebased::Handoff(format!("push refused: {reason}"));
+  }
+  let inspection = match remote {
+    Ok(_) => "remote inspection inconclusive".to_owned(),
+    Err(err) => format!("remote inspection failed: {err}"),
+  };
+  Rebased::Uncertain(format!("push outcome uncertain: {reason}; {inspection}"))
 }
 
 /// `git rebase --abort`, then prove the worktree is back where it was.
@@ -201,3 +231,7 @@ fn set_stage(lease: &Lease, stage: &str) -> Result<(), String> {
 #[cfg(test)]
 #[path = "tests/rebase_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/rebase_fault_test.rs"]
+mod fault_tests;

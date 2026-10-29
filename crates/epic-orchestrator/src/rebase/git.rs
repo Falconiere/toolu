@@ -18,14 +18,21 @@ const MAX_OUTPUT: usize = 1 << 20;
 pub(super) struct Git<'a> {
   worktree: String,
   env: &'a Env,
+  timeout: Duration,
 }
 
 impl<'a> Git<'a> {
   /// git in `worktree`.
   pub(super) fn new(worktree: &Path, env: &'a Env) -> Self {
+    Self::with_timeout(worktree, env, TIMEOUT)
+  }
+
+  /// Git with a bounded command deadline, shortened for fault tests.
+  pub(super) fn with_timeout(worktree: &Path, env: &'a Env, timeout: Duration) -> Self {
     Self {
       worktree: worktree.display().to_string(),
       env,
+      timeout,
     }
   }
 
@@ -36,7 +43,7 @@ impl<'a> Git<'a> {
       .chain(args.iter().copied());
     let mut spec = Spec::new(line);
     spec.env = Some(self.env.clone());
-    spec.timeout = TIMEOUT;
+    spec.timeout = self.timeout;
     spec.max_output_bytes = MAX_OUTPUT;
     let out = run(&spec).map_err(|err| format!("git did not run: {err:?}"))?;
     if out.timed_out {
