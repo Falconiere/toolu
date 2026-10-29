@@ -50,7 +50,7 @@ fn answer_redirects_a_live_worker_with_no_open_item() {
     .filter(|row| row.kind == "action" && row.name == "answer")
     .map(|row| (row.token, row.note))
     .collect();
-  assert_eq!(action, [("".to_owned(), "by=user".to_owned())]);
+  assert_eq!(action, [(String::new(), "by=user".to_owned())]);
   let directed: Vec<String> = rows(&engine)
     .into_iter()
     .filter(|row| row.name == "directed")
