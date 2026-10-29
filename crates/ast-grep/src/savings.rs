@@ -101,7 +101,8 @@ fn full_bytes(path: Option<&Value>, cwd: &Path) -> u64 {
     .map_or(0, |meta| meta.len())
 }
 
-fn session_id(raw: Option<&Value>) -> String {
+/// Sanitize a session id for the ledger filename.
+pub(crate) fn session_id(raw: Option<&Value>) -> String {
   let unknown = Value::String("unknown".to_owned());
   let id: String = jq_raw(jq_or(raw, &unknown))
     .chars()
@@ -114,17 +115,18 @@ fn session_id(raw: Option<&Value>) -> String {
   }
 }
 
-fn ledger_path(ctx: &RuleContext<'_>) -> PathBuf {
-  let root = ctx
-    .env
+/// Config-root directory that holds `<session_id>.jsonl` ledgers.
+pub(crate) fn byte_savings_dir(env: &toolu_runtime::env::Env) -> PathBuf {
+  let root = env
     .get("TOOLU_CONFIG_DIR")
-    .or_else(|| ctx.env.get("CODEX_HOME"))
-    .or_else(|| ctx.env.get("CLAUDE_CONFIG_DIR"))
-    .map_or_else(|| ctx.env.home().join(".claude"), PathBuf::from);
-  root
-    .join("toolu")
-    .join("byte-savings")
-    .join(format!("{}.jsonl", session_id(ctx.raw.get("session_id"))))
+    .or_else(|| env.get("CODEX_HOME"))
+    .or_else(|| env.get("CLAUDE_CONFIG_DIR"))
+    .map_or_else(|| env.home().join(".claude"), PathBuf::from);
+  root.join("toolu").join("byte-savings")
+}
+
+fn ledger_path(ctx: &RuleContext<'_>) -> PathBuf {
+  byte_savings_dir(ctx.env).join(format!("{}.jsonl", session_id(ctx.raw.get("session_id"))))
 }
 
 #[derive(serde::Serialize)]

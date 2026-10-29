@@ -104,13 +104,15 @@ const MIGRATED: &str = "ast-grep's Bun modules were replaced by native rules. Ru
 /// Write native manifests and remove this plugin's old JS and shell modules.
 /// Never fails the session: an error is a `systemMessage`, since Codex shows a
 /// failed `SessionStart` hook without its stderr (#642).
-pub fn register(env: &Env, host: Host) -> Outcome {
+pub fn register(env: &Env, host: Host, payload: &str) -> Outcome {
   let roots = Roots::new(env.clone(), Some(host));
   let mut migrated = false;
   let result = RULES.iter().try_for_each(|&(event, name, matcher)| {
     migrated |= write_one(&roots, event, name, matcher)?;
     report_one(env, &roots, event, name, matcher)
   });
+  let active = crate::retention::active_session_from_payload(payload);
+  let sweep_warnings = crate::retention::sweep_byte_savings(env, active.as_deref());
   // A module removed before a later rule failed is gone, so its notice shows now.
   let lines: Vec<String> = migrated
     .then(|| MIGRATED.to_owned())
@@ -120,6 +122,7 @@ pub fn register(env: &Env, host: Host) -> Outcome {
         .err()
         .map(|error| format!("ast-grep registration failed: {error}")),
     )
+    .chain(sweep_warnings)
     .collect();
   Outcome::notice((!lines.is_empty()).then(|| lines.join("\n")))
 }

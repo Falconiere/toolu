@@ -6,6 +6,7 @@ mod launched;
 mod nudge;
 mod register;
 mod report;
+mod retention;
 mod savings;
 
 /// The search nudge rule enabled by its manifest.
@@ -19,6 +20,8 @@ pub use cli::command;
 pub use cli::run;
 /// Publish this plugin's native rule manifests at `SessionStart`.
 pub use register::register;
+/// Reclaim completed byte-savings ledgers under the config root.
+pub use retention::sweep_byte_savings;
 
 /// The plugin this crate belongs to: `plugins/ast-grep`.
 pub const PLUGIN: &str = "ast-grep";
