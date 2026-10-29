@@ -306,7 +306,12 @@ fn batch_keeps_exact_paths_order_and_each_rules_hits() {
     .map(|decision| match decision {
       toolu_protocol::decision::Decision::Advisory { message } => message.as_str(),
       toolu_protocol::decision::Decision::Allow => "allow",
-      other => panic!("unexpected decision: {other:?}"),
+      other @ (toolu_protocol::decision::Decision::Ask { .. }
+      | toolu_protocol::decision::Decision::Deny { .. }
+      | toolu_protocol::decision::Decision::Block { .. }
+      | toolu_protocol::decision::Decision::RuntimeFailure { .. }) => {
+        panic!("unexpected decision: {other:?}")
+      }
     })
     .collect();
   assert_eq!(messages.len(), 6);
