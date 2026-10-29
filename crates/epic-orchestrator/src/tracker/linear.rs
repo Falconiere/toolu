@@ -73,7 +73,7 @@ impl LinearTracker {
     })
   }
 
-  fn gql(&self, query: &str, variables: &Value, write: bool) -> Result<Value, String> {
+  pub(super) fn gql(&self, query: &str, variables: &Value, write: bool) -> Result<Value, String> {
     let body = json!({"query": query, "variables": variables});
     let reply = self
       .http

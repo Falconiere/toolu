@@ -21,6 +21,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
+| [`herdr-app`](herdr-app.md) | `plugins/toolu` | available | Show a worker in an already running Herdr App |
 | [`opencode`](opencode.md) | `plugins/toolu` | available | Run toolu plugins under OpenCode; their generated server.js calls these |
 | [`ts-quality`](ts-quality.md) | `plugins/ts-quality` | available | TypeScript quality rules that run after each edit |
 | [`python-quality`](python-quality.md) | `plugins/python-quality` | available | Python quality rules that run after each edit |
@@ -60,6 +61,7 @@ Commands:
   doctor          Report binary, config, plugin and tool health
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
+  herdr-app       Show a worker in an already running Herdr App
   opencode        Run toolu plugins under OpenCode; their generated server.js calls these
   ts-quality      TypeScript quality rules that run after each edit
   python-quality  Python quality rules that run after each edit

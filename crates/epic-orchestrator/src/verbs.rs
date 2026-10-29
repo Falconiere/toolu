@@ -135,6 +135,7 @@ fn http_arg() -> Arg {
 
 fn start_command() -> Command {
   Command::new("start")
+    .args(crate::hc_target::args())
     .about("Register an epic state directory and start the engine")
     .arg(
       Arg::new("state-dir")
@@ -226,6 +227,18 @@ fn wait_command() -> Command {
 
 fn report_command() -> Command {
   Command::new("report")
+    .arg(
+      Arg::new("run")
+        .long("run")
+        .requires("expected-base")
+        .help("Remote worker run identity; write a transfer report only"),
+    )
+    .arg(
+      Arg::new("expected-base")
+        .long("expected-base")
+        .requires("run")
+        .help("Remote worker's committed input revision"),
+    )
     .about("Record a worker phase")
     .arg(
       Arg::new("phase")

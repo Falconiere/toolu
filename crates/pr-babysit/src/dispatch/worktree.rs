@@ -236,7 +236,41 @@ impl Dispatcher<'_> {
       format!("git -C {root} worktree prune failed"),
     )?;
     self.drop_branch(root, branch, pr)?;
+    if self.hc_backend() {
+      return self.create_local(root, branch, pr);
+    }
     self.create_herdr(root, branch, &format!("origin/{pr}"))
+  }
+
+  fn create_local(&mut self, root: &str, branch: &str, pr: &str) -> Result<(String, Pane)> {
+    let path = self
+      .file
+      .with_extension("fixer-worktree")
+      .display()
+      .to_string();
+    let add = argv(&[
+      "git",
+      "-C",
+      root,
+      "worktree",
+      "add",
+      "-b",
+      branch,
+      &path,
+      &format!("origin/{pr}"),
+    ]);
+    self.git(
+      &add,
+      "git_error",
+      format!("could not create fixer worktree {path}"),
+    )?;
+    Ok((
+      path,
+      Pane {
+        workspace: Value::Null,
+        pane: Value::Null,
+      },
+    ))
   }
 
   /// The slot worktree for PR branch `pr` in `root`, recorded in the state.
@@ -263,7 +297,7 @@ impl Dispatcher<'_> {
           workspace: id(&recorded, "/workspaceId"),
           pane: id(&recorded, "/paneId"),
         };
-        if !self.dry && !self.pane_listed(&pane.workspace, &pane.pane) {
+        if !self.hc_backend() && !self.dry && !self.pane_listed(&pane.workspace, &pane.pane) {
           let label = self.label();
           pane = self.open_pane(root, &path, &label)?;
         }
@@ -274,6 +308,7 @@ impl Dispatcher<'_> {
     let worktree = json!({
       "path": path, "workspaceId": pane.workspace, "paneId": pane.pane, "branch": branch,
       "prBranch": pr, "repoRoot": root, "base": format!("origin/{pr}"),
+      "multiplexer": if self.hc_backend() { "herdr-app" } else { "herdr" },
     });
     let recorded = worktree.clone();
     self.save(|state| {

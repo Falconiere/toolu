@@ -35,14 +35,19 @@ fn each_named_backend_parses() {
 #[test]
 fn an_unknown_value_is_rejected() {
   let err = Multiplexer::parse(&config(json!("screen"))).unwrap_err();
-  assert_eq!(err, "multiplexer must be auto, herdr or tmux");
+  assert_eq!(err, "multiplexer must be auto, herdr, herdr-app or tmux");
   let err = Multiplexer::parse(&config(json!(1))).unwrap_err();
-  assert_eq!(err, "multiplexer must be auto, herdr or tmux");
+  assert_eq!(err, "multiplexer must be auto, herdr, herdr-app or tmux");
 }
 
 #[test]
 fn as_str_round_trips_through_parse() {
-  for value in [Multiplexer::Auto, Multiplexer::Herdr, Multiplexer::Tmux] {
+  for value in [
+    Multiplexer::Auto,
+    Multiplexer::Herdr,
+    Multiplexer::HerdrApp,
+    Multiplexer::Tmux,
+  ] {
     assert_eq!(
       Multiplexer::parse(&config(json!(value.as_str()))).unwrap(),
       value

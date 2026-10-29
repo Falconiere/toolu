@@ -41,6 +41,8 @@ fn dry_start(state: &Path, plan: &Path, repo: &str) -> Value {
     repo_root: repo,
     branch: "feat/fix",
     base: "main",
+    machine: None,
+    remote_repo: None,
   };
   Dispatcher::new(&options).unwrap().start(&start).unwrap()
 }

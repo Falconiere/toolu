@@ -44,6 +44,9 @@ impl Attempt<'_> {
   /// # Errors
   /// Any step fails.
   pub(super) fn go(&mut self, record: &mut Record, ctx: &mut Ctx<'_>) -> Result<Value, Failure> {
+    if super::record::text(record, "backend") == Some("herdr-app") {
+      return self.hc_go(record, ctx);
+    }
     self.initialize(record)?;
     let (wt, base) = self.prepare(record, ctx)?;
     let start = self.start(record, &wt, ctx)?;

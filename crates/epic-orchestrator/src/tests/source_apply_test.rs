@@ -112,3 +112,80 @@ fn an_outage_marks_every_issue_unknown() {
     assert_ne!(issue.agent_status, "working");
   }
 }
+
+#[test]
+fn hc_and_legacy_snapshots_and_outages_are_scoped() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  let mut hc = engine.world.issues["a"].clone();
+  hc.key = "hc-worker".to_owned();
+  hc.agent = "hc:t1".to_owned();
+  hc.pane = Some("hc:t1".to_owned());
+  hc.stage = "idle".to_owned();
+  hc.set_agent_status("working", 1);
+  engine.world.issues.insert(hc.key.clone(), hc);
+  engine
+    .world
+    .issues
+    .get_mut("a")
+    .expect("legacy")
+    .set_agent_status("working", 1);
+  apply(&mut engine, &env, Fact::Snapshot(json!({"agents":[]}))).expect("legacy snapshot");
+  assert_eq!(engine.world.issues["hc-worker"].agent_status, "working");
+  engine
+    .world
+    .issues
+    .get_mut("a")
+    .expect("legacy")
+    .set_agent_status("working", 2);
+  apply(
+    &mut engine,
+    &env,
+    Fact::Snapshot(json!({"backend":"herdr-app", "agents":[]})),
+  )
+  .expect("hc snapshot");
+  assert_eq!(engine.world.issues["a"].agent_status, "working");
+  engine
+    .world
+    .issues
+    .get_mut("hc-worker")
+    .expect("hc")
+    .set_agent_status("working", 3);
+  apply(&mut engine, &env, Fact::Outage).expect("legacy outage");
+  assert_eq!(engine.world.issues["hc-worker"].agent_status, "working");
+  engine
+    .world
+    .issues
+    .get_mut("a")
+    .expect("legacy")
+    .set_agent_status("working", 4);
+  apply(&mut engine, &env, Fact::HcOutage).expect("hc outage");
+  assert_eq!(engine.world.issues["a"].agent_status, "working");
+  assert_eq!(engine.world.issues["hc-worker"].agent_status, "unknown");
+}
+
+#[test]
+fn missing_hc_terminal_does_not_automatically_relaunch() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  let issue = engine.world.issues.get_mut("a").expect("issue");
+  issue.stage = "running".to_owned();
+  issue.agent = "hc:t7".to_owned();
+  issue.pane = Some("hc:t7".to_owned());
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  apply(
+    &mut engine,
+    &env,
+    Fact::Snapshot(json!({"backend":"herdr-app", "agents":[]})),
+  )
+  .expect("snapshot");
+  assert!(engine.world.issues["a"].pending.is_none());
+  assert!(
+    engine
+      .world
+      .attention
+      .iter()
+      .any(|item| item.key == "a" && item.kind == "needs-human")
+  );
+}

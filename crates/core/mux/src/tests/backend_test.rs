@@ -48,7 +48,7 @@ fn availability_tracks_the_backend() {
   let sock = dir.path().join("herdr.sock");
   std::fs::write(&sock, "").unwrap();
   let herdr_env = Env::from_pairs([
-    ("PATH", "/bin"),
+    ("PATH", "/nonexistent"),
     ("HOME", "/nonexistent-home"),
     ("HERDR_SOCKET_PATH", sock.to_str().unwrap()),
   ]);
@@ -61,4 +61,13 @@ fn availability_tracks_the_backend() {
     ("HERDR_SOCKET_PATH", "/nonexistent/herdr.sock"),
   ]);
   assert!(!available(Backend::Herdr, &missing));
+}
+
+#[test]
+fn hc_context_selects_app_even_when_unavailable() {
+  let env = env("/nonexistent").with("HC_TERMINAL_ID", "t7");
+  assert_eq!(resolve(Multiplexer::Auto, &env), Backend::HerdrApp);
+  assert_eq!(resolve(Multiplexer::HerdrApp, &env), Backend::HerdrApp);
+  assert!(!available(Backend::HerdrApp, &env));
+  assert_eq!(Backend::HerdrApp.name(), "herdr-app");
 }

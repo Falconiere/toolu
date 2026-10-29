@@ -77,8 +77,41 @@ fn check_identity(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(
     && !awaiting_capture(record)
     && (text(record, "stage") == Some("running")
       || text(record, "prompt_state") == Some("acknowledged"));
-  if managed && text(record, "session_id").is_none() {
+  if managed && text(record, "backend") == Some("herdr-app") {
+    check_hc(record, invalid)?;
+  } else if managed && text(record, "session_id").is_none() {
     return Err(invalid("a managed running launch requires session_id"));
+  }
+  Ok(())
+}
+
+fn check_hc(record: &Record, invalid: &dyn Fn(&str) -> String) -> Result<(), String> {
+  let name = text(record, "terminal_name").unwrap_or("");
+  let owner = text(record, "terminal_owner").unwrap_or("");
+  let address = text(record, "terminal_address").unwrap_or("");
+  let session = text(record, "hc_session").unwrap_or("");
+  let valid_name = !name.is_empty()
+    && name.len() <= 32
+    && name
+      .bytes()
+      .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || matches!(c, b'-' | b'_'));
+  let valid_address =
+    !address.is_empty() && !address.starts_with('-') && !address.chars().any(char::is_control);
+  if !valid_name
+    || !valid_address
+    || session.is_empty()
+    || session.chars().any(char::is_control)
+    || owner.strip_prefix("toolu.owner=") != text(record, "lease_token")
+  {
+    return Err(invalid(
+      "a managed hc launch requires matching terminal identity and session",
+    ));
+  }
+  let target = format!("hc:{address}");
+  if text(record, "agent") != Some(target.as_str())
+    || text(record, "pane_id") != Some(target.as_str())
+  {
+    return Err(invalid("hc target differs from terminal address"));
   }
   Ok(())
 }

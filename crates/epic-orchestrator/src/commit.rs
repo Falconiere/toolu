@@ -59,7 +59,12 @@ fn commit_launch(world: &mut World, key: &str, outcome: &str) -> Vec<Step> {
     )));
   }
   match text("outcome").as_str() {
-    "applied" => launched(world, key, doc.get("kind").and_then(Value::as_str)),
+    "applied" => {
+      if let Some(issue) = world.issues.get_mut(key) {
+        crate::hc_backend::overlay_target(issue, &doc);
+      }
+      launched(world, key, doc.get("kind").and_then(Value::as_str))
+    }
     "hold" => {
       let _closed = close_launch(world, key, "hold");
       let score = doc.get("score").cloned().unwrap_or(Value::Null);

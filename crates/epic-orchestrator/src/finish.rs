@@ -13,7 +13,10 @@ use std::time::SystemTime;
 use serde_json::{Value, json};
 
 mod branch;
+mod hc;
+mod hc_remote;
 mod ownership;
+mod plan;
 mod prepare;
 /// Durable issue records and evidence used to verify teardown.
 pub(crate) mod record;
@@ -92,57 +95,12 @@ pub(crate) fn finish_issue(
 ) -> Result<FinishReport, String> {
   let (abandon, dry_run) = flags;
   if dry_run {
-    return plan(state_dir, key, abandon, ctx);
+    return plan::plan(state_dir, key, abandon, ctx);
   }
   with_launch_ownership(state_dir, key, || {
     finish(state_dir, key, abandon, ctx).map_err(Failure::unknown)
   })
   .map_err(|err| err.message)
-}
-
-fn plan(state_dir: &Path, key: &str, abandon: bool, ctx: &Ctx<'_>) -> Result<FinishReport, String> {
-  let path = state_dir.join("issues").join(format!("{key}.json"));
-  let record = read_issue_record(&path, key)?;
-  let word = |field: &str| text(&record, field).unwrap_or("").to_owned();
-  let abandon = abandon || word("stage") == "abandoned";
-  if !abandon {
-    require_merged(state_dir, key, &word("repo"), ctx.gh.clone())?;
-  }
-  if abandon && never_started(&record) {
-    let lease = text(&record, "lease_token").map(|token| format!("release lease {token}"));
-    let finished = json!({"dry_run": true, "key": key, "stage": word("stage"), "actions": lease.into_iter().collect::<Vec<_>>()});
-    return Ok(FinishReport {
-      finished,
-      warnings: Vec::new(),
-    });
-  }
-  let mut actions = Vec::new();
-  if !word("agent").is_empty() {
-    actions.push(format!("herdr agent prompt {} /exit", word("agent")));
-  }
-  actions.push(format!(
-    "snapshot {} at refs/epic-wip/{key}",
-    word("worktree")
-  ));
-  if !word("workspace_id").is_empty() {
-    let force = if abandon { "" } else { " --force" };
-    actions.push(format!(
-      "herdr worktree remove --workspace {}{force}",
-      word("workspace_id")
-    ));
-  }
-  if !abandon {
-    actions.push(format!(
-      "git -C {} branch -D {}",
-      word("checkout"),
-      word("branch")
-    ));
-  }
-  let finished = json!({"dry_run": true, "key": key, "stage": word("stage"), "actions": actions});
-  Ok(FinishReport {
-    finished,
-    warnings: Vec::new(),
-  })
 }
 
 fn finish(
@@ -156,7 +114,8 @@ fn finish(
   let mut record = read_issue_record(&path, key)?;
   let stage = text(&record, "stage").unwrap_or("").to_owned();
   let terminal = matches!(stage.as_str(), "merged" | "abandoned");
-  if terminal && terminal_cleanup_complete(&record) {
+  let complete = cleanup_complete(&record);
+  if terminal && complete {
     release_recorded_ownership(&record, &dir)?;
     return Ok(FinishReport {
       finished: finished(&record),
@@ -193,6 +152,15 @@ fn finish(
     (&removal, abandon),
     teardown.warnings,
   )
+}
+
+fn cleanup_complete(record: &Record) -> bool {
+  if text(record, "backend") == Some("herdr-app") && hc::remote(record) {
+    record.get("remote_worktree_removed") == Some(&Value::Bool(true))
+      && terminal_cleanup_complete(record)
+  } else {
+    terminal_cleanup_complete(record)
+  }
 }
 
 /// Abandon an attempt that made nothing to remove: settle it and release its
@@ -265,6 +233,9 @@ fn tear_down(
   key: &str,
   record: &mut Record,
 ) -> Result<Removal, String> {
+  if text(record, "backend") == Some("herdr-app") {
+    return hc::tear_down(ctx, teardown, state, key, record);
+  }
   let ownership = fence_cleanup_ownership(teardown.path, state, key, record)?;
   let absent = !text(record, "worktree").is_some_and(|path| Path::new(path).exists());
   let intent = removal_intent(record)?;

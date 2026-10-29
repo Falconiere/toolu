@@ -39,17 +39,36 @@ fn one_line(text: &str, limit: usize) -> String {
 }
 
 impl Dispatcher<'_> {
-  fn outcome(&self, group: &Value) -> (&'static str, String) {
+  fn outcome(&self, group: &Value) -> Result<(&'static str, String)> {
     let report = Path::new(text(group, "report"));
     let agent = text(group, "agent");
-    let read = screen(self.env, agent);
+    let read = if self.hc_backend() {
+      match self.screen_hc(group) {
+        Ok(output) => super::herdr::Ran {
+          status: 0,
+          output,
+          errors: String::new(),
+        },
+        Err(error) => super::herdr::Ran {
+          status: 1,
+          output: error.message,
+          errors: String::new(),
+        },
+      }
+    } else {
+      screen(self.env, agent)
+    };
     let shown = if read.status == 0 {
       read.output.as_str()
     } else {
       ""
     };
     let outcome = fixer_outcome(report, shown);
-    stop_agent(self.env, agent, host(group));
+    if self.hc_backend() {
+      self.stop_hc(group)?;
+    } else {
+      stop_agent(self.env, agent, host(group));
+    }
     let error = if outcome == "no_report" && read.status != 0 {
       format!(
         "could not read the fixer's last screen: {}",
@@ -58,11 +77,16 @@ impl Dispatcher<'_> {
     } else {
       String::new()
     };
-    (outcome, error)
+    Ok((outcome, error))
   }
 
   fn settle_group(&mut self, seq: u64) -> Result<()> {
-    let (outcome, error) = self.outcome(&self.group(seq)?);
+    if self.remote().is_some() {
+      let head = self.remote_result(seq, &self.group(seq)?)?;
+      self.stop_hc(&self.group(seq)?)?;
+      return self.settle(seq, "done", &head, "");
+    }
+    let (outcome, error) = self.outcome(&self.group(seq)?)?;
     if outcome != "done" {
       return self.settle(seq, outcome, "", &error);
     }
@@ -81,7 +105,9 @@ impl Dispatcher<'_> {
 
   /// Ends a group's fixer before it is launched again or cleaned up.
   pub(super) fn stop_fixer(&self, group: &Value) {
-    if let Some(agent) = group.get("agent").and_then(Value::as_str) {
+    if self.hc_backend() {
+      let _ = self.stop_hc(group);
+    } else if let Some(agent) = group.get("agent").and_then(Value::as_str) {
       stop_agent(self.env, agent, host(group));
     }
   }
@@ -93,6 +119,22 @@ impl Dispatcher<'_> {
       .unwrap_or(1);
     let group = self.group(current)?;
     let agent = text(&group, "agent");
+    if self.hc_backend() {
+      let terminal = self.hc_terminal(&group)?;
+      if group.get("hcSendStarted") != Some(&Value::Bool(true))
+        && toolu_mux::hc::status(&terminal) == "idle"
+      {
+        self.patch_fixer(&json!({"status": "running", "reason": null}))?;
+        return self.recover_hc(current, &group);
+      }
+      if group.get("hcSendConfirmed") != Some(&Value::Bool(true))
+        || toolu_mux::hc::status(&terminal) == "blocked"
+      {
+        return Ok(());
+      }
+      self.patch_fixer(&json!({"status": "running", "reason": null}))?;
+      return self.patch_group(current, &json!({"status": "running", "reason": null}));
+    }
     let status = match try_herdr(
       self.env,
       &argv(&["agent", "get", agent]),
@@ -169,6 +211,14 @@ impl Dispatcher<'_> {
       .and_then(Value::as_array)
       .map_or(0, Vec::len);
     let count = u64::try_from(count).unwrap_or(u64::MAX);
+    if self.hc_backend() && text(&group, "status") == "launching" {
+      if group.get("hcName").and_then(Value::as_str).is_none() {
+        self.relaunch(seq, &group)?;
+        return Ok(true);
+      }
+      self.recover_hc(seq, &group)?;
+      return Ok(self.fixer_field("status").and_then(Value::as_str) == Some("running"));
+    }
     if matches!(text(&group, "status"), "pending" | "launching") {
       if !*fresh && remaining < 250 {
         return Ok(false);
@@ -178,7 +228,12 @@ impl Dispatcher<'_> {
       return Ok(true);
     }
     *fresh = false;
-    let Some(status) = self.waited(text(&group, "agent"), remaining)? else {
+    let waited = if self.hc_backend() {
+      self.wait_hc(&group, remaining)?
+    } else {
+      self.waited(text(&group, "agent"), remaining)?
+    };
+    let Some(status) = waited else {
       return Ok(false);
     };
     if status == "blocked" {

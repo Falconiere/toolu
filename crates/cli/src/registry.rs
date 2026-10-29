@@ -99,6 +99,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_hub::status::run,
   ),
   verb(
+    "herdr-app",
+    toolu_hub::herdr_app::PLUGIN,
+    toolu_hub::herdr_app::command,
+    toolu_hub::herdr_app::run,
+  ),
+  verb(
     "opencode",
     toolu_hub::PLUGIN,
     toolu_hub::opencode::command,

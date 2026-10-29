@@ -299,3 +299,11 @@ fn a_prompt_is_delivered_by_plain_text_or_a_reply_without_an_error() {
     Err("herdr agent.prompt: agent_not_found: no k".to_owned())
   );
 }
+
+#[test]
+fn structured_transport_uncertainty_survives_adapter() {
+  let reply = r#"{"error":{"code":"transport","message":"reply lost","uncertain":true}}"#;
+  let error = result_of("agent.prompt", reply).unwrap_err();
+  assert!(error.uncertain);
+  assert_eq!(error.code.as_deref(), Some("transport"));
+}

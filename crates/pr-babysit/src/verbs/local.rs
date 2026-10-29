@@ -195,6 +195,8 @@ pub(super) fn dispatch_fix(matches: &ArgMatches, world: &World<'_>) -> Result<Va
         repo_root: text(sub, "repo-root").unwrap_or_default(),
         branch: text(sub, "branch").unwrap_or_default(),
         base: text(sub, "base").unwrap_or_default(),
+        machine: text(sub, "machine"),
+        remote_repo: text(sub, "remote-repo"),
       };
       run_dispatch(&Verb::Start(start), &options)
     }
@@ -206,12 +208,19 @@ pub(super) fn dispatch_fix(matches: &ArgMatches, world: &World<'_>) -> Result<Va
 /// A fixer's report on its group.
 pub(super) fn fixer_report(matches: &ArgMatches) -> Result<Value> {
   let file = required(matches, "report")?;
-  report(
-    file,
-    text(matches, "status").unwrap_or_default(),
-    text(matches, "note"),
-    &now(),
-  )
+  let status = text(matches, "status").unwrap_or_default();
+  let note = text(matches, "note");
+  let at = now();
+  if let Some(run) = text(matches, "run-id") {
+    if !matches!(status, "done" | "failed") {
+      return Err(Failure::usage("invalid report status"));
+    }
+    let result = json!({"version": 1, "status": status, "note": note, "at": at,
+      "runId": run, "expectedBase": text(matches, "expected-base"), "commit": text(matches, "commit")});
+    write_json(file, &result, "report")?;
+    return Ok(result);
+  }
+  report(file, status, note, &at)
 }
 
 /// End the fixer round, then record the loop cancelled.

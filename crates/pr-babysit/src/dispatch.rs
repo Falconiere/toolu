@@ -8,11 +8,15 @@ use crate::error::{Failure, Result};
 pub(crate) mod brief;
 pub(crate) mod cleanup;
 pub(crate) mod dispatcher;
+pub(crate) mod hc;
 pub(crate) mod herdr;
 pub(crate) mod launch;
 pub(crate) mod names;
 pub(crate) mod outcome;
 pub(crate) mod plan;
+pub(crate) mod remote;
+pub(crate) mod remote_finish;
+pub(crate) mod remote_setup;
 #[cfg(test)]
 #[path = "tests/sandbox_test.rs"]
 mod sandbox;

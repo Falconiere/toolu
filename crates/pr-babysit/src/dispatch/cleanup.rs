@@ -18,7 +18,7 @@ fn text<'v>(value: &'v Value, key: &str) -> &'v str {
 }
 
 impl Dispatcher<'_> {
-  fn stop_active(&self) {
+  fn stop_active(&self) -> Result<()> {
     let groups = self
       .fixer_field("groups")
       .and_then(Value::as_array)
@@ -28,8 +28,13 @@ impl Dispatcher<'_> {
       .iter()
       .find(|group| matches!(text(group, "status"), "running" | "launching" | "blocked"));
     if let Some(active) = active.filter(|_| !self.dry) {
-      self.stop_fixer(active);
+      if self.hc_backend() {
+        self.stop_hc(active)?;
+      } else {
+        self.stop_fixer(active);
+      }
     }
+    Ok(())
   }
 
   fn remove_worktree(&mut self, worktree: &Value) -> Result<()> {
@@ -191,7 +196,13 @@ impl Dispatcher<'_> {
   /// # Errors
   /// `worktree_dirty`, `herdr_unavailable` and git failures.
   pub(crate) fn cleanup(&mut self) -> Result<Value> {
-    self.stop_active();
+    self.stop_active()?;
+    if self.remote().is_some() {
+      if let Some(path) = self.worktree_field("path") {
+        clean_or_fail(self, path)?;
+      }
+      self.remove_remote()?;
+    }
     self.clear("fixer")?;
     let worktree = self
       .state

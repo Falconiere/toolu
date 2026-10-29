@@ -47,7 +47,11 @@ pub(crate) struct Teardown<'a> {
 ///
 /// # Errors
 /// git cannot list its worktrees.
-fn worktree_registered(record: &Record, intent: &RemovalIntent, env: &Env) -> Result<bool, String> {
+pub(super) fn worktree_registered(
+  record: &Record,
+  intent: &RemovalIntent,
+  env: &Env,
+) -> Result<bool, String> {
   let mut spec = Spec::new([
     "git",
     "-C",
@@ -78,7 +82,7 @@ fn worktree_registered(record: &Record, intent: &RemovalIntent, env: &Env) -> Re
 ///
 /// # Errors
 /// git cannot verify or remove the worktree.
-fn remove_gone_worktree(
+pub(super) fn remove_gone_worktree(
   record: &Record,
   intent: &RemovalIntent,
   abandon: bool,

@@ -98,3 +98,26 @@ fn route_fix_collects_every_raise() {
   let raised: Vec<&String> = route.get_many::<String>("raise").unwrap().collect();
   assert_eq!(raised, ["a", "b"]);
 }
+
+#[test]
+fn remote_target_and_report_identity_are_paired() {
+  let start = [
+    "dispatch-fix",
+    "start",
+    "--state-file",
+    "s",
+    "--plan",
+    "p",
+    "--items",
+    "i",
+    "--repo-root",
+    "/r",
+    "--branch",
+    "b",
+    "--base",
+    "main",
+  ];
+  assert!(parse(&[&start[..], &["--machine", "vm"]].concat()).is_err());
+  assert!(parse(&[&start[..], &["--machine", "vm", "--remote-repo", "/r"]].concat()).is_ok());
+  assert!(parse(&["fixer-report", "r", "done", "--run-id", "run"]).is_err());
+}

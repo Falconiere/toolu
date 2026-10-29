@@ -211,7 +211,8 @@ pub(crate) fn result_of(name: &str, text: &str) -> Result<Value, CallError> {
     let code = error.get("code").and_then(Value::as_str).map(str::to_owned);
     let message = error.get("message").and_then(Value::as_str).unwrap_or("");
     return Err(CallError {
-      uncertain: matches!(code.as_deref(), Some("timeout" | "agent_prompt_stalled")),
+      uncertain: error.get("uncertain").and_then(Value::as_bool) == Some(true)
+        || matches!(code.as_deref(), Some("timeout" | "agent_prompt_stalled")),
       message: format!(
         "herdr {name}: {}: {message}",
         code.as_deref().unwrap_or("null")

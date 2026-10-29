@@ -218,3 +218,23 @@ fn an_adopted_running_record_may_lack_its_session_until_acknowledged() {
     json!({"stage": "running", "prompt_state": "acknowledged", "lease_token": "lease-1"});
   assert!(refused(tmp.path(), &managed).ends_with("a managed running launch requires session_id"));
 }
+
+#[test]
+fn managed_hc_records_require_bound_terminal_identity() {
+  let tmp = tempfile::tempdir().unwrap();
+  let valid = json!({"stage":"running", "backend":"herdr-app", "lease_token":"lease-1",
+    "terminal_owner":"toolu.owner=lease-1", "terminal_name":"toolu-123", "terminal_address":"t1",
+    "hc_session":"default", "agent":"hc:t1", "pane_id":"hc:t1", "worktree":"/w", "prompt_state":"acknowledged"});
+  assert!(load_launch_record(&put(tmp.path(), "hc.json", &valid.to_string())).is_ok());
+  for (key, value) in [
+    ("terminal_owner", json!("toolu.owner=other")),
+    ("terminal_address", json!("")),
+    ("terminal_name", json!("Bad Name")),
+    ("hc_session", json!("")),
+    ("pane_id", json!("hc:t2")),
+  ] {
+    let mut bad = valid.clone();
+    bad[key] = value;
+    assert!(refused(tmp.path(), &bad).contains("hc"), "{key}");
+  }
+}

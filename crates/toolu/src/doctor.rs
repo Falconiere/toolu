@@ -11,6 +11,7 @@ mod codex_pin;
 mod config_check;
 mod cursor;
 mod inventory;
+mod multiplexer;
 mod muse;
 mod opencode;
 mod registry_check;
@@ -38,6 +39,7 @@ pub fn run(_matches: &ArgMatches, ctx: &Ctx) -> Outcome {
     skew_check::check(&found, &roots),
     registry_check::check(&roots),
     tools::check(&found, roots.env()),
+    multiplexer::check(roots.env()),
   ];
   outcome(&report, &secrets, ctx.json)
 }

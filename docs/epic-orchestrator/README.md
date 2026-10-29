@@ -19,8 +19,48 @@ toolu plugins install delivery-flow epic-orchestrator --host cursor
 toolu plugins install delivery-flow epic-orchestrator --host muse --approve
 ```
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, `herdr`
-(orchestrator session must run inside a herdr pane with `HERDR_ENV=1`).
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies. Runtime binaries: `toolu`, `gh`, and the selected multiplexer: `herdr`, `hc` (`herdr-app` backend), or `tmux`.
+
+## Herdr App and remote workers
+
+Set `multiplexer` to `herdr-app` to use herdr-core's `hc` CLI. With `auto`, an
+`HC_TERMINAL_ID` selects this backend; otherwise the existing Herdr/tmux choice
+applies. An unavailable selected backend fails without switching. Worker
+records retain their backend, session, ownership and immutable terminal address
+across restarts. Background launches do not change desktop spaces, tabs or focus.
+
+To show a worker explicitly in an already running app:
+
+```bash
+toolu herdr-app show <terminal-address>
+```
+
+Remote dispatch requires an existing configured Herdr machine and checkout:
+
+```bash
+toolu epic graph <epic-ref> --save --machine <name> --remote-repo <absolute-path>
+toolu epic start <state_dir> --machine <name> --remote-repo <absolute-path>
+```
+
+Both options are required together and require the `herdr-app` backend. The
+target is saved separately from graph refreshes. Preflight checks repository
+origin, Git, Toolu version and the selected host CLI; it installs nothing.
+Only committed revisions cross machines, in verified bundles under private
+transfer refs. Dirty files, credentials and host configuration are not copied.
+Bundles use 4 MiB transport chunks and have a 512 MiB total limit.
+
+The remote worker implements and commits the issue, then writes a report bound
+to its run and input revision. The initiating controller verifies the reported
+commit and ancestry, imports it into its local mirror, and launches a local
+delivery worker for the normal gates, review, PR and babysit pipeline. Merge
+ownership stays with the initiating engine.
+
+Disconnects, dirty worktrees, missing reports and uncertain sends retain their
+recorded identities and work for inspection. An uncertain send is not blindly
+repeated. A blocked worker is surfaced without answering its dialog. Cleanup
+checks ownership and preserves dirty remote work; remote replacement refuses
+when background workload ownership cannot be verified. Restore the recorded
+`HC_SESSION` before recovery rather than pointing an old address at another core.
 
 ## Usage
 

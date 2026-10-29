@@ -1,0 +1,62 @@
+{
+  "baseline": {
+    "cost": null,
+    "label": "full-read",
+    "tokens": {
+      "cache_read": 0,
+      "cache_write": 0,
+      "input": 0,
+      "output": 0,
+      "total": 0
+    }
+  },
+  "cases": [
+    {
+      "baseline_tokens": 0,
+      "id": "toolu-export-fn",
+      "note": "missing-or-empty-target",
+      "saved": 0,
+      "treatment_tokens": 0
+    },
+    {
+      "baseline_tokens": 0,
+      "id": "toolu-const-arrow",
+      "note": "missing-or-empty-target",
+      "saved": 0,
+      "treatment_tokens": 0
+    }
+  ],
+  "delta": {
+    "abs_tokens": 0,
+    "cost_pct": null,
+    "mean": null,
+    "stddev": null,
+    "tokens_pct": 0
+  },
+  "mechanism": "retrieval",
+  "method": "tool-bytes",
+  "notes": "toolu-export-fn:missing-target; toolu-const-arrow:missing-target; ",
+  "provenance": {
+    "commit": "bc236452876b9583d2e6b663d8261b0d5db8598a",
+    "date": "2026-10-29",
+    "model": null,
+    "n_runs": 1,
+    "pricing_id": "2026-06-15"
+  },
+  "tier": "deterministic",
+  "tokenizer": {
+    "mode": "heuristic",
+    "source": "bytes-div-4"
+  },
+  "treatment": {
+    "cost": null,
+    "label": "ast-grep",
+    "tokens": {
+      "cache_read": 0,
+      "cache_write": 0,
+      "input": 0,
+      "output": 0,
+      "total": 0
+    }
+  }
+}

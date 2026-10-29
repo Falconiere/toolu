@@ -192,7 +192,8 @@ fn paused_relaunch(input: &LaunchJob) -> bool {
 /// record's fields after the attempt through `field`.
 fn outcome_of(launched: Result<(), Failure>, field: impl Fn(&str) -> Option<String>) -> Value {
   match launched {
-    Ok(()) => json!({"outcome": "applied", "kind": field("kind")}),
+    Ok(()) => json!({"outcome": "applied", "kind": field("kind"),
+      "agent":field("agent"),"pane_id":field("pane_id"),"worktree":field("worktree")}),
     Err(err) if waits(&err.message) => json!({"outcome": "wait", "note": err.message}),
     Err(err) if err.message.starts_with(FINISHED) => settled(field("stage").as_deref()),
     Err(err) if err.awaits_approval() => json!({

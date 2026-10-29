@@ -13,6 +13,7 @@ regex.workspace = true
 serde_json.workspace = true
 toolu-engine = { path = "../core/engine" }
 toolu-github = { path = "../core/github" }
+toolu-mux = { path = "../core/mux" }
 toolu-jev-client = { path = "../core/jev" }
 toolu-protocol = { path = "../core/protocol" }
 toolu-runtime = { path = "../core/runtime" }

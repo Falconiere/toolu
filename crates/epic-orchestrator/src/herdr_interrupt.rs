@@ -14,6 +14,7 @@ pub(crate) const IDLE: Duration = Duration::from_secs(30);
 #[derive(Debug, Default)]
 struct Slot {
   stream: Option<UnixStream>,
+  process: Option<u32>,
   pending: bool,
 }
 
@@ -46,6 +47,33 @@ impl Interrupt {
     }
   }
 
+  /// Register the hc stream process group for cancellation.
+  pub(crate) fn publish_process(&self, pid: u32) {
+    if let Ok(mut slot) = self.slot.lock() {
+      if slot.pending {
+        let _stopped = toolu_runtime::process::group::terminate(pid);
+        return;
+      }
+      slot.process = Some(pid);
+    }
+  }
+
+  /// Forget the hc process after it is reaped.
+  pub(crate) fn clear_process(&self) {
+    if let Ok(mut slot) = self.slot.lock() {
+      slot.process = None;
+    }
+  }
+
+  /// Stop only the hc stream so a failed snapshot can reconnect.
+  pub(crate) fn end_process(&self) {
+    if let Ok(mut slot) = self.slot.lock()
+      && let Some(pid) = slot.process.take()
+    {
+      let _stopped = toolu_runtime::process::group::terminate(pid);
+    }
+  }
+
   /// End the current read and any pause: stop or resubscribe.
   pub(crate) fn trigger(&self) {
     let Ok(mut slot) = self.slot.lock() else {
@@ -54,6 +82,9 @@ impl Interrupt {
     slot.pending = true;
     if let Some(stream) = slot.stream.take() {
       let _closed = stream.shutdown(Shutdown::Both);
+    }
+    if let Some(pid) = slot.process.take() {
+      let _stopped = toolu_runtime::process::group::terminate(pid);
     }
     self.signal.notify_all();
   }

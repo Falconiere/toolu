@@ -190,6 +190,8 @@ esac
       repo_root: &self.root,
       branch: "feat/fix",
       base: "main",
+      machine: None,
+      remote_repo: None,
     }
   }
 

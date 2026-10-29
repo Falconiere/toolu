@@ -180,7 +180,7 @@ fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
   std::fs::create_dir_all(&resources).expect("resources");
   std::fs::write(resources.join("policy.json"), r#"{"maxAgents":1}"#).expect("policy");
   let leftover = format!(
-    r#"{{"token":"old","type":"agent","key":"issue-0","stateDir":"s","host":"claude","ownerPid":{dead},"stage":"running","createdAt":"c","heartbeatAt":"h"}}"#
+    r#"{{"token":"old","type":"agent","key":"issue-0","stateDir":"s","host":"claude","pane":"pane-0","ownerPid":{dead},"stage":"running","createdAt":"c","heartbeatAt":"h"}}"#
   );
   std::fs::write(
     resources.join("state.json"),
@@ -188,6 +188,7 @@ fn a_lease_whose_owner_and_agent_are_gone_no_longer_blocks_a_launch() {
   )
   .expect("state");
   let mut ctx = rig.ctx();
+  ctx.herdr.client.pin(toolu_mux::Backend::Herdr);
   launch_reservation(
     &reserve(&rig, &state, HostKind::Claude, false),
     &mut Record::new(),
@@ -227,4 +228,25 @@ fn a_same_host_replacement_at_the_agent_cap_keeps_its_own_slot() {
   .map_err(|err| err.message);
   assert_eq!(moved, Ok(owner));
   assert_eq!(rig.leases(), 1);
+}
+
+#[test]
+fn reclaim_only_treats_matching_backend_panes_as_absent() {
+  assert!(super::pane_matches_backend(
+    Some("hc:t1"),
+    toolu_mux::Backend::HerdrApp
+  ));
+  assert!(!super::pane_matches_backend(
+    Some("%1"),
+    toolu_mux::Backend::HerdrApp
+  ));
+  assert!(!super::pane_matches_backend(
+    Some("hc:t1"),
+    toolu_mux::Backend::Herdr
+  ));
+  assert!(super::pane_matches_backend(
+    Some("%1"),
+    toolu_mux::Backend::Tmux
+  ));
+  assert!(!super::pane_matches_backend(None, toolu_mux::Backend::Tmux));
 }
