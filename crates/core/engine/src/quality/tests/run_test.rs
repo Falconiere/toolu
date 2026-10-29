@@ -94,7 +94,7 @@ impl QualityRule for Inline {
 }
 
 /// A Claude Code context rooted at `dir`.
-fn context<'a>(
+pub(super) fn context<'a>(
   dir: &'a std::path::Path,
   env: &'a Env,
   raw: &'a Map<String, serde_json::Value>,
