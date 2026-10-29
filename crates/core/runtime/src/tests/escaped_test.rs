@@ -124,6 +124,19 @@ fn escaped_stdin_releases_pipe_worker_before_descendant_cleanup() {
 }
 
 #[test]
+fn escaped_group_returns_before_deadline_with_unread_stdin() {
+  let baseline = resource_counts();
+  let (escape, mut spec) = Escape::new("stdin");
+  spec.timeout = Duration::from_secs(2);
+  let started = Instant::now();
+  let output = run(&spec).unwrap();
+  assert!(!output.timed_out);
+  assert!(started.elapsed() < Duration::from_secs(1));
+  assert!(group::pid_alive(i64::from(escape.pid())).unwrap());
+  assert_resources_settle(baseline);
+}
+
+#[test]
 fn escaped_output_releases_each_drain_and_observer_before_descendant_cleanup() {
   escaped_case("stdout");
   escaped_case("stderr");

@@ -53,7 +53,7 @@ const GROUP_POLL: Duration = Duration::from_millis(250);
 /// When a run is over, short of its deadline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Wait {
-  /// The child exited, its streams closed and its process group has no live member.
+  /// The child exited, its output streams closed and its process group has no live member.
   Group,
   /// The child exited, its output streams closed and stdin feeding completed;
   /// a process it started with its streams redirected is left running.
@@ -137,10 +137,9 @@ pub enum RunError {
   Callback(String),
 }
 
-/// Run `spec` and return once the child exited and its group has no live
-/// member (or, with [`Wait::Streams`], once its output streams closed and stdin
-/// feeding completed), or the
-/// deadline passed and the group was terminated.
+/// Run `spec` until the child exited and its output streams closed, then wait
+/// for its group ([`Wait::Group`]) or stdin feeder ([`Wait::Streams`]), or until
+/// the deadline passes and the group is terminated.
 ///
 /// # Errors
 /// [`RunError`] when the spec is unusable, the program cannot start, or the
@@ -303,8 +302,9 @@ fn command(program: &str, spec: &Spec) -> Command {
   command
 }
 
-/// Waits for the child, all pipe workers and (with [`Wait::Group`]) its group until
-/// `deadline`; past it, terminates the group and gives the streams a last moment to close.
+/// Waits for the child, output streams, and the selected group or feeder
+/// condition until `deadline`; past it, terminates the group and gives the
+/// streams a last moment to close.
 fn settle(
   child: &mut Child,
   drains: [&Drain; 2],
@@ -325,7 +325,9 @@ fn settle(
     if let Some(status) = status.filter(|_| pipes_done && spec.wait == Wait::Streams) {
       return Ok((status, false));
     }
-    if let Some(status) = status.filter(|_| pipes_done && now >= next_group_check) {
+    if let Some(status) =
+      status.filter(|_| streams_done && spec.wait == Wait::Group && now >= next_group_check)
+    {
       if !group::alive(pid) {
         return Ok((status, false));
       }
