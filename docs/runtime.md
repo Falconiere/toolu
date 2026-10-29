@@ -70,6 +70,49 @@ Uncertain launches and incomplete cleanup retain ownership. See the
 [epic orchestrator contract](../plugins/epic-orchestrator/README.md) for policy,
 host verification limits and recovery.
 
+## Bounded subprocess pipe cleanup
+
+`toolu_runtime::process::run` starts a subprocess in its own process group and
+drains stdout and stderr while feeding stdin. A descendant that calls `setsid`
+can escape that group and hold an inherited pipe open. The runtime uses
+nonblocking pipe I/O. Without a timeout, `Wait::Streams` waits for stdin feeding
+and output draining; `Wait::Group` waits for output draining and the process
+group to exit. A slow escaped stdin reader can keep `Wait::Streams` active up to
+the command deadline. After early group completion or a handled timeout, an
+unfinished feeder gets up to 250 ms to complete; then the runtime cancels the
+workers and waits for them against one shared 250 ms cleanup deadline. An
+escaped process may receive only the stdin bytes written before cancellation
+when it outlives the group. Settlement errors skip the feeder grace and cancel
+immediately. These waits are additional to the command timeout, group
+termination, and existing final stream-drain grace.
+This releases their descriptors, input copy, and observer captures even while
+the escaped descendant is still alive. The existing group termination and
+reaping path remains in force. An observer callback that itself never returns
+cannot be interrupted; the caller still stops waiting at its cleanup deadline,
+but that callback's reader retains its descriptor and captures until it returns.
+
+The following release-build probe ran on Darwin 27.0.0 arm64 on 2026-10-29,
+five times per pipe. A real Perl descendant called `setsid`, inherited exactly
+one pipe, wrote its PID to a temporary file, and slept without reading or
+closing that pipe. The parent `sh` exited; stdin runs fed 8 MiB and each run
+had a 150 ms timeout. Each escaped descendant was terminated only after the
+post-return measurement. Counts were measured in the caller process. The
+baseline was commit `611f0d0d2f9e60c9997ebd3899a8e60433f62cbb`; the after
+build used this fix. The same workload and assertions are in
+`crates/core/runtime/src/tests/escaped_test.rs` and can be rerun with
+`cargo test -p toolu-runtime --release escaped_resources -- --test-threads=1 --nocapture`.
+
+| Held pipe | Before: threads / fds / observer refs after return | After: threads / fds / observer refs after return | Return time before → after |
+| --- | --- | --- | --- |
+| stdin | 2 / 5 / 1 | 1 / 4 / 1 | 284–292 ms → 296–336 ms |
+| stdout | 2 / 5 / 2 | 1 / 4 / 1 | 402–415 ms → 422–427 ms |
+| stderr | 2 / 5 / 2 | 1 / 4 / 1 | 401–419 ms → 420–442 ms |
+
+Idle baseline was 1 thread, 4 descriptors, and 1 caller-owned observer reference.
+The before build returned to baseline only after the escaped descendant was
+terminated. These timings describe this workload and machine; they are not a
+general subprocess speedup claim.
+
 ## Commands that take over the terminal
 
 `toolu sandbox run` and `toolu sandbox shell` end in `toolu_runtime::process::exec`,

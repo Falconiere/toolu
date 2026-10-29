@@ -13,17 +13,23 @@
 
 pub mod commands;
 mod drain;
+/// Replace the current process with a command.
 pub mod exec;
+/// Run a command with combined output in one file.
 pub mod file;
+/// Signal and inspect Unix process groups.
 pub mod group;
+/// Guard detached process groups across signals.
 pub mod guard;
+mod pipe;
+/// Read process resource usage.
 pub mod usage;
 
-use std::io::{ErrorKind, Write as _};
 use std::os::unix::process::{CommandExt as _, ExitStatusExt as _};
 use std::path::PathBuf;
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::Arc;
+use std::sync::atomic::AtomicBool;
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
@@ -37,7 +43,7 @@ pub type ChunkObserver = Arc<dyn Fn(&[u8]) + Send + Sync>;
 pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 /// The bytes of stdout and stderr kept, together, when a caller sets no budget.
 const DEFAULT_MAX_OUTPUT_BYTES: usize = 1_048_576;
-/// How long the streams may take to close once the group was terminated.
+/// Grace for final stream draining, feeder completion, and canceled worker cleanup.
 const FINAL_DRAIN: Duration = Duration::from_millis(250);
 /// The wait between two looks at a running command.
 const POLL: Duration = Duration::from_millis(10);
@@ -47,10 +53,10 @@ const GROUP_POLL: Duration = Duration::from_millis(250);
 /// When a run is over, short of its deadline.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Wait {
-  /// The child exited, its streams closed and its process group has no live member.
+  /// The child exited, its output streams closed and its process group has no live member.
   Group,
-  /// The child exited and its streams closed, as `Bun.spawnSync` returns; a process it
-  /// started with its streams redirected is left running.
+  /// The child exited, its output streams closed and stdin feeding completed;
+  /// a process it started with its streams redirected is left running.
   Streams,
 }
 
@@ -131,9 +137,9 @@ pub enum RunError {
   Callback(String),
 }
 
-/// Run `spec` and return once the child exited and its group has no live
-/// member (or, with [`Wait::Streams`], once its streams closed), or the
-/// deadline passed and the group was terminated.
+/// Run `spec` until the child exited and its output streams closed, then wait
+/// for its group ([`Wait::Group`]) or stdin feeder ([`Wait::Streams`]), or until
+/// the deadline passes and the group is terminated.
 ///
 /// # Errors
 /// [`RunError`] when the spec is unusable, the program cannot start, or the
@@ -185,19 +191,24 @@ fn run_with_impl(
   let mut child = guard::unblocked(|| command(program, spec).spawn())
     .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
   let pid = child.id();
-  if let Err(err) = on_spawn(pid) {
-    let _stopped = group::terminate_reaping(pid, &mut || {
-      let _reaped = child.try_wait();
-    });
-    let _waited = child.wait();
-    return Err(RunError::Callback(err));
-  }
-  let feeder = feed(&mut child, spec.stdin.clone());
+  notify_spawn(&mut child, on_spawn)?;
+  let (stdin, stdout_pipe, stderr_pipe) =
+    pipe::take_pipes(&mut child).map_err(|err| pipe::failed_setup(&mut child, pid, &err))?;
+  let cancel = Arc::new(AtomicBool::new(false));
+  let feeder = pipe::feed(stdin, spec.stdin.clone(), Arc::clone(&cancel));
   let budget = Budget::new(spec.max_output_bytes);
-  let stdout = Drain::start(child.stdout.take(), &budget, observer.clone());
-  let stderr = Drain::start(child.stderr.take(), &budget, observer);
-  let (status, timed_out) = settle(&mut child, pid, [&stdout, &stderr], deadline, spec)?;
-  if let Some(Err(err)) = feeder.and_then(fed) {
+  let mut stdout = Drain::start(stdout_pipe, &budget, observer.clone(), Arc::clone(&cancel));
+  let mut stderr = Drain::start(stderr_pipe, &budget, observer, Arc::clone(&cancel));
+  let settled = settle(
+    &mut child,
+    [&stdout, &stderr],
+    feeder.as_ref(),
+    deadline,
+    spec,
+  );
+  let fed = pipe::finish_workers(&cancel, feeder, &mut stdout, &mut stderr, settled.is_ok());
+  let (status, timed_out) = settled?;
+  if let Some(Err(err)) = fed {
     return Err(RunError::Stdin(err));
   }
   Ok(Output {
@@ -259,6 +270,21 @@ fn detached_child(spec: &Spec) -> Result<Child, RunError> {
   guard::unblocked(|| command.spawn()).map_err(|err| RunError::Spawn(format!("{program}: {err}")))
 }
 
+/// Invoke the spawn callback, stopping and reaping the child if it fails.
+fn notify_spawn(
+  child: &mut Child,
+  on_spawn: &mut dyn FnMut(u32) -> Result<(), String>,
+) -> Result<(), RunError> {
+  if let Err(err) = on_spawn(child.id()) {
+    let _stopped = group::terminate_reaping(child.id(), &mut || {
+      let _reaped = child.try_wait();
+    });
+    let _waited = child.wait();
+    return Err(RunError::Callback(err));
+  }
+  Ok(())
+}
+
 fn command(program: &str, spec: &Spec) -> Command {
   let mut command = Command::new(program);
   command
@@ -276,43 +302,17 @@ fn command(program: &str, spec: &Spec) -> Command {
   command
 }
 
-/// Writes `input` to the child's stdin on a thread, then closes it. A child
-/// that closed its stdin first is not an error.
-fn feed(child: &mut Child, input: Vec<u8>) -> Option<JoinHandle<Result<(), String>>> {
-  let mut pipe = child.stdin.take()?;
-  if input.is_empty() {
-    return None;
-  }
-  Some(std::thread::spawn(move || match pipe.write_all(&input) {
-    Err(err) if err.kind() != ErrorKind::BrokenPipe => Err(err.to_string()),
-    Ok(()) | Err(_) => Ok(()),
-  }))
-}
-
-/// The feeder's result once it ends, waiting at most [`FINAL_DRAIN`]: a process
-/// that left the group may hold stdin open without reading it, and that writer
-/// is left behind rather than waited for.
-fn fed(feeder: JoinHandle<Result<(), String>>) -> Option<Result<(), String>> {
-  let deadline = Instant::now() + FINAL_DRAIN;
-  while !feeder.is_finished() && Instant::now() < deadline {
-    std::thread::sleep(POLL);
-  }
-  if feeder.is_finished() {
-    feeder.join().ok()
-  } else {
-    None
-  }
-}
-
-/// Waits for the child, both streams and (with [`Wait::Group`]) its group until
-/// `deadline`; past it, terminates the group and gives the streams a last moment to close.
+/// Waits for the child, output streams, and the selected group or feeder
+/// condition until `deadline`; past it, terminates the group and gives the
+/// streams a last moment to close.
 fn settle(
   child: &mut Child,
-  pid: u32,
   drains: [&Drain; 2],
+  feeder: Option<&JoinHandle<Result<(), String>>>,
   deadline: Instant,
   spec: &Spec,
 ) -> Result<(ExitStatus, bool), RunError> {
+  let pid = child.id();
   let mut status = None;
   let mut next_group_check = Instant::now();
   loop {
@@ -321,10 +321,13 @@ fn settle(
     }
     let now = Instant::now();
     let streams_done = drains.iter().all(|drain| drain.finished());
-    if let Some(status) = status.filter(|_| streams_done && spec.wait == Wait::Streams) {
+    let pipes_done = streams_done && feeder.is_none_or(JoinHandle::is_finished);
+    if let Some(status) = status.filter(|_| pipes_done && spec.wait == Wait::Streams) {
       return Ok((status, false));
     }
-    if let Some(status) = status.filter(|_| streams_done && now >= next_group_check) {
+    if let Some(status) =
+      status.filter(|_| streams_done && spec.wait == Wait::Group && now >= next_group_check)
+    {
       if !group::alive(pid) {
         return Ok((status, false));
       }
@@ -373,3 +376,7 @@ pub(crate) fn exit_code(status: ExitStatus) -> i32 {
 #[cfg(test)]
 #[path = "tests/process_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/escaped_test.rs"]
+mod escaped_tests;
