@@ -6,6 +6,7 @@
     ".claude-plugin",
     ".codex",
     ".config",
+    ".cursor",
     ".gitattributes",
     ".github",
     ".gitignore",
