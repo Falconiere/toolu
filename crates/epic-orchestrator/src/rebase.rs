@@ -130,8 +130,8 @@ fn reconcile_push(
   if head == Some(new_head) {
     return Rebased::Pushed(new_head.to_owned());
   }
-  if head.is_some()
-    && (hook_refused || reason.contains("[rejected]") || reason.contains("[remote rejected]"))
+  if hook_refused
+    || (head.is_some() && (reason.contains("[rejected]") || reason.contains("[remote rejected]")))
   {
     return Rebased::Handoff(format!("push refused: {reason}"));
   }

@@ -105,3 +105,23 @@ fn a_pre_push_hook_refusal_hands_off_without_a_remote_write() {
   assert!(reason.contains("pre-push"), "{reason}");
   assert_eq!(repo.remote("feat/x"), repo.target().head);
 }
+
+#[test]
+fn a_pre_push_hook_refusal_hands_off_even_if_remote_inspection_fails() {
+  let repo = repo(("b.txt", "feature\n"), ("a.txt", "ONE\ntwo\n"));
+  let moved = repo.tmp.path().join("origin.git.gone");
+  hook(
+    &repo.work.join(".git/hooks/pre-push"),
+    &format!(
+      "#!/bin/sh\nmv '{}' '{}'\nprintf 'blocked by pre-push\\n' >&2\nexit 1\n",
+      repo.origin.display(),
+      moved.display()
+    ),
+  );
+  let result = rebase(&repo.target(), None, &env(&repo), None);
+  let Rebased::Handoff(reason) = result else {
+    panic!("{result:?}");
+  };
+  assert!(reason.contains("pre-push"), "{reason}");
+  assert_eq!(git(&moved, &["rev-parse", "feat/x"]), repo.target().head);
+}
