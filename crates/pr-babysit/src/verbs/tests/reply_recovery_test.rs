@@ -7,6 +7,15 @@ use super::{on, state};
 use crate::recorded;
 use crate::verbs::tests::{read, run};
 
+fn post_count(fixture: &Fixture) -> usize {
+  fixture
+    .requests()
+    .unwrap()
+    .iter()
+    .filter(|request| request.method == "POST")
+    .count()
+}
+
 #[test]
 fn a_reply_recovers_after_its_body_file_is_removed_or_oversized() {
   for oversized in [false, true] {
@@ -56,14 +65,6 @@ fn a_reply_recovers_after_its_body_file_is_removed_or_oversized() {
     let (exit, done) = run(&args, &on(&fixture, &env));
     assert_eq!(exit, Exit::Success, "{done}");
     assert_eq!(done["commentId"], 99);
-    assert_eq!(
-      fixture
-        .requests()
-        .unwrap()
-        .iter()
-        .filter(|request| request.method == "POST")
-        .count(),
-      1
-    );
+    assert_eq!(post_count(&fixture), 1);
   }
 }
