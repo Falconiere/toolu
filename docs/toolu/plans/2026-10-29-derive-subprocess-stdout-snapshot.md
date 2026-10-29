@@ -4,7 +4,7 @@
 
 ## Evidence and approach
 
-Issue #756 / approved spec: `Output` construction in `crates/core/runtime/src/process.rs` calls `stdout.text()` then `stdout.bytes()` (two locks). Change the site to `let stdout_bytes = stdout.bytes(); let stdout = String::from_utf8_lossy(&stdout_bytes).into_owned();`. Keep public `Output` fields; leave stderr and `Drain` helpers alone. Existing `process_test` covers invalid UTF-8, truncation, timeout, stderr; extend with valid UTF-8 + lossy-equality. Measure release probe before then after. Local-gate protocol (orchestrator): ledger+gate green on pushed head; dual independent `toolu-review:review` + `write-state reviewers=["toolu-review:review"]`; report `ready`; no pr-babysit, no merge.
+Issue #756 / approved spec: `Output` construction in `crates/core/runtime/src/process.rs` calls `stdout.text()` then `stdout.bytes()` (two locks). Change the site to `let stdout_bytes = stdout.bytes(); let stdout = String::from_utf8_lossy(&stdout_bytes).into_owned();`. Keep public `Output` fields; leave stderr and `Drain` helpers alone. Existing `process_test` covers invalid UTF-8, truncation, timeout, stderr; extend with valid UTF-8 + lossy-equality. Measure release probe before then after. Local-gate protocol (orchestrator; finish-then-stop): ledger+gate green on pushed head; dual independent `toolu-review:review` + `write-state reviewers=["toolu-review:review"]`; report `ready`; no pr-babysit, no merge.
 
 ## Workstream summary
 
