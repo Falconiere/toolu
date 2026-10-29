@@ -45,13 +45,30 @@ struct PreparedFile {
 
 struct Prepared {
   files: Vec<Option<PreparedFile>>,
+  active: Vec<usize>,
   enabled: Vec<usize>,
   scan: AstGrepScan,
   by_path: HashMap<String, Vec<AstGrepHit>>,
-  fingerprints: HashMap<PathBuf, Option<u64>>,
+  fingerprints: HashMap<String, Option<u64>>,
   checked: HashSet<usize>,
-  rescanned: HashMap<PathBuf, (AstGrepScan, HashMap<String, Vec<AstGrepHit>>)>,
+  rescanned: HashMap<String, (AstGrepScan, HashMap<String, Vec<AstGrepHit>>)>,
   state: StateCtx,
+}
+
+fn enabled_bindings(
+  active: &[usize],
+  bindings: &[QualityBinding<'_>],
+  ctx: &RuleContext<'_>,
+) -> Vec<usize> {
+  active
+    .iter()
+    .copied()
+    .filter(|index| {
+      bindings
+        .get(*index)
+        .is_some_and(|binding| binding.rule.project_enabled(ctx))
+    })
+    .collect()
 }
 
 fn fingerprint(path: &Path) -> Option<u64> {
@@ -96,6 +113,12 @@ impl Prepared {
     bindings: &[QualityBinding<'_>],
     ctx: &RuleContext<'_>,
   ) {
+    let enabled = enabled_bindings(&self.active, bindings, ctx);
+    if enabled != self.enabled {
+      self.enabled = enabled;
+      self.fingerprints.clear();
+      self.rescanned.clear();
+    }
     let rules: Vec<&dyn QualityRule> = self
       .enabled
       .iter()
@@ -115,8 +138,8 @@ impl Prepared {
     {
       return;
     }
-    let path = facts.file.absolute.clone();
-    let current = fingerprint(&path);
+    let path = facts.file.path.clone();
+    let current = fingerprint(&facts.file.absolute);
     if self.fingerprints.get(&path).copied() == Some(current) {
       return;
     }
@@ -154,7 +177,7 @@ impl Prepared {
     } else {
       let (scan, by_path) = self
         .rescanned
-        .get(&facts.file.absolute)
+        .get(&facts.file.path)
         .map_or((&self.scan, &self.by_path), |(scan, by_path)| {
           (scan, by_path)
         });
@@ -196,15 +219,7 @@ impl QualityBatch {
     bindings: &[QualityBinding<'_>],
     ctx: &RuleContext<'_>,
   ) -> Prepared {
-    let enabled: Vec<usize> = active
-      .iter()
-      .copied()
-      .filter(|index| {
-        bindings
-          .get(*index)
-          .is_some_and(|binding| binding.rule.project_enabled(ctx))
-      })
-      .collect();
+    let enabled = enabled_bindings(active, bindings, ctx);
     let rules: Vec<&dyn QualityRule> = enabled
       .iter()
       .filter_map(|index| bindings.get(*index).map(|binding| binding.rule))
@@ -228,10 +243,11 @@ impl QualityBatch {
     let by_path = partition_hits(&mut scan);
     let fingerprints = live
       .iter()
-      .map(|file| (file.absolute.clone(), fingerprint(&file.absolute)))
+      .map(|file| (file.path.clone(), fingerprint(&file.absolute)))
       .collect();
     Prepared {
       files,
+      active: active.to_vec(),
       enabled,
       scan,
       by_path,
