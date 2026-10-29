@@ -66,10 +66,12 @@ impl Screen {
     if target.is_empty() {
       return not_running(key, secrets);
     }
-    let sample = match self
-      .cell(key)
-      .and_then(|cell| sample(&cell, &target, socket, limiter, secrets))
-    {
+    // Keep the cell owned through rendering so churn cannot evict this request.
+    let cell = match self.cell(key) {
+      Ok(cell) => cell,
+      Err(response) => return response,
+    };
+    let sample = match sample(&cell, &target, socket, limiter, secrets) {
       Ok(sample) => sample,
       Err(response) => return response,
     };
