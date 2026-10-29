@@ -90,3 +90,18 @@ fn a_real_lease_rejection_hands_off_without_overwriting_the_remote() {
   assert_eq!(repo.remote("feat/x"), rival);
   assert_ne!(git(&repo.work, &["rev-parse", "HEAD"]), rival);
 }
+
+#[test]
+fn a_pre_push_hook_refusal_hands_off_without_a_remote_write() {
+  let repo = repo(("b.txt", "feature\n"), ("a.txt", "ONE\ntwo\n"));
+  hook(
+    &repo.work.join(".git/hooks/pre-push"),
+    "#!/bin/sh\nprintf 'blocked by pre-push\\n' >&2\nexit 1\n",
+  );
+  let result = rebase(&repo.target(), None, &env(&repo), None);
+  let Rebased::Handoff(reason) = result else {
+    panic!("{result:?}");
+  };
+  assert!(reason.contains("pre-push"), "{reason}");
+  assert_eq!(repo.remote("feat/x"), repo.target().head);
+}

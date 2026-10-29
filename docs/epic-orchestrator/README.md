@@ -82,8 +82,9 @@ is available only for a protection refusal.
 The engine rebases a parked worker's branch and pushes it with
 `--force-with-lease`. If the push reports an error, it reads the exact remote
 branch once. A remote SHA equal to the rebased local HEAD confirms success.
-An explicit Git rejection with a different readable remote SHA hands the
-rebase to the worker; the engine never overwrites the other writer's ref.
+An explicit Git rejection or failed local pre-push hook with a different
+readable remote SHA hands the rebase to the worker; the engine never
+overwrites the other writer's ref.
 If the remote cannot be read or the result is inconclusive, the engine holds
 the queue head and raises `rebase push uncertain` attention. It does not push
 again or send a worker `REBASE` prompt. Inspect the remote branch and PR head

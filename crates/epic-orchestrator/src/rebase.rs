@@ -101,14 +101,20 @@ fn replay(git: &Git<'_>, target: &Target) -> Rebased {
     target.branch, target.head
   );
   let refspec = format!("HEAD:refs/heads/{}", target.branch);
-  match git.ok(&["push", "--quiet", &lease, "origin", &refspec]) {
+  match git.push(&["push", "--quiet", &lease, "origin", &refspec]) {
     Ok(()) => Rebased::Pushed(new_head),
-    Err(reason) => reconcile_push(git, target, &new_head, &reason),
+    Err((reason, hook_refused)) => reconcile_push(git, target, &new_head, &reason, hook_refused),
   }
 }
 
 /// Inspect the exact remote ref once; a transport error cannot prove refusal.
-fn reconcile_push(git: &Git<'_>, target: &Target, new_head: &str, reason: &str) -> Rebased {
+fn reconcile_push(
+  git: &Git<'_>,
+  target: &Target,
+  new_head: &str,
+  reason: &str,
+  hook_refused: bool,
+) -> Rebased {
   let reference = format!("refs/heads/{}", target.branch);
   let remote = git.out(&["ls-remote", "origin", &reference]);
   let head = remote
@@ -124,7 +130,9 @@ fn reconcile_push(git: &Git<'_>, target: &Target, new_head: &str, reason: &str) 
   if head == Some(new_head) {
     return Rebased::Pushed(new_head.to_owned());
   }
-  if head.is_some() && (reason.contains("[rejected]") || reason.contains("[remote rejected]")) {
+  if head.is_some()
+    && (hook_refused || reason.contains("[rejected]") || reason.contains("[remote rejected]"))
+  {
     return Rebased::Handoff(format!("push refused: {reason}"));
   }
   let inspection = match remote {
