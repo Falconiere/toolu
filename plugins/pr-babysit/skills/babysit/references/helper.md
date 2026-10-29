@@ -25,14 +25,15 @@ Fields not listed are not part of the contract.
 
 Exit codes, for every command: `0` result · `64` usage · `69`
 `gh_unavailable` (no GitHub token) or `herdr_unavailable` · `75` `locked`,
-`api_error`, `head_moved`, `resolve_unconfirmed` or `reply_uncertain` (try again later) · `1`
+`api_error`, `head_moved`, `resolve_unconfirmed`, `reply_uncertain` or
+`reply_retry_ready` (temporary outcome; follow the error message) · `1`
 every other structured error.
 
 Structured errors are one JSON document on stdout:
 `{"version":1,"errors":[{"code":"…","message":"…", …}]}`. `code` is a closed set:
 `usage`, `gh_unavailable`, `api_error`, `invalid_json`, `io_error`,
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
-`resolve_unconfirmed`, `reply_uncertain` — plus, from fixer routing and dispatch:
+`resolve_unconfirmed`, `reply_uncertain`, `reply_retry_ready` — plus, from fixer routing and dispatch:
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
 `herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`, `process_error`.
 An `api_error` carries `source`, `class` and `lastMessage`; a rate limit is
