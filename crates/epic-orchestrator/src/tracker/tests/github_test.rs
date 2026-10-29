@@ -63,11 +63,19 @@ fn epic_reads_title_state_and_caches_the_body_for_the_task_list() {
 #[test]
 fn close_issue_waits_for_the_pull_request_then_closes_by_hand() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   ok(&fixture, "/repos/O/R/issues/2", &json!({"state": "open"}));
   ok(&fixture, "/repos/O/R/issues/2/comments", &json!({"id": 1}));
+  ok(
+    &fixture,
+    "/repos/O/R/issues/2/comments?per_page=100",
+    &json!([]),
+  );
   let tracker = tracker(&fixture);
   assert_eq!(
-    tracker.close_issue("O/R#2", "Delivered").expect("close"),
+    tracker
+      .close_issue("O/R#2", "Delivered", state.path())
+      .expect("close"),
     "closed-manually"
   );
   let requests = fixture.requests().expect("requests");
@@ -75,8 +83,8 @@ fn close_issue_waits_for_the_pull_request_then_closes_by_hand() {
     .iter()
     .map(|request| request.method.as_str())
     .collect();
-  assert_eq!(methods, ["GET", "GET", "POST", "PATCH"]);
-  let patch: serde_json::Value = serde_json::from_slice(&requests[3].body).expect("json");
+  assert_eq!(methods, ["GET", "GET", "GET", "POST", "PATCH"]);
+  let patch: serde_json::Value = serde_json::from_slice(&requests[4].body).expect("json");
   assert_eq!(
     patch,
     json!({"state": "closed", "state_reason": "completed"})
@@ -87,9 +95,12 @@ fn close_issue_waits_for_the_pull_request_then_closes_by_hand() {
 #[test]
 fn close_issue_reports_an_issue_the_pull_request_closed() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   ok(&fixture, "/repos/O/R/issues/3", &json!({"state": "closed"}));
   assert_eq!(
-    tracker(&fixture).close_issue("O/R#3", "x").expect("close"),
+    tracker(&fixture)
+      .close_issue("O/R#3", "x", state.path())
+      .expect("close"),
     "closed-by-pr"
   );
   assert_eq!(fixture.requests().expect("requests").len(), 1);
@@ -118,11 +129,17 @@ fn tick_epic_patches_only_a_changed_body() {
 #[test]
 fn close_epic_comments_then_closes() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   ok(&fixture, "/repos/O/R/issues/1/comments", &json!({"id": 1}));
-  ok(&fixture, "/repos/O/R/issues/1", &json!({"state": "closed"}));
+  ok(
+    &fixture,
+    "/repos/O/R/issues/1/comments?per_page=100",
+    &json!([]),
+  );
+  ok(&fixture, "/repos/O/R/issues/1", &json!({"state": "open"}));
   assert_eq!(
     tracker(&fixture)
-      .close_epic("Epic complete.")
+      .close_epic("Epic complete.", state.path())
       .expect("close"),
     "closed"
   );
@@ -132,15 +149,27 @@ fn close_epic_comments_then_closes() {
     .iter()
     .map(|r| r.method.clone())
     .collect();
-  assert_eq!(methods, ["POST", "PATCH"]);
+  assert_eq!(methods, ["GET", "GET", "POST", "PATCH"]);
 }
+
+#[cfg(test)]
+#[path = "tests/github_close_test.rs"]
+mod close_tests;
 
 #[test]
 fn a_failed_comment_stops_the_close() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
+  ok(&fixture, "/repos/O/R/issues/1", &json!({"state": "open"}));
   fixture
     .route("/repos/O/R/issues/1/comments", Reply::new(503, "{}"))
     .expect("route");
-  assert!(tracker(&fixture).close_epic("x").is_err());
-  assert_eq!(fixture.requests().expect("requests").len(), 1);
+  fixture
+    .route(
+      "/repos/O/R/issues/1/comments?per_page=100",
+      Reply::new(200, "[]"),
+    )
+    .expect("list");
+  assert!(tracker(&fixture).close_epic("x", state.path()).is_err());
+  assert_eq!(fixture.requests().expect("requests").len(), 3);
 }

@@ -159,6 +159,10 @@ impl Scenario {
         json!(subs),
       ),
       ("/repos/o/r/issues/1/comments".to_owned(), json!({})),
+      (
+        "/repos/o/r/issues/1/comments?per_page=100".to_owned(),
+        json!([]),
+      ),
       ("/repos/o/r".to_owned(), json!({"default_branch": "main"})),
       (
         "/graphql".to_owned(),
@@ -170,6 +174,7 @@ impl Scenario {
       let base = format!("/repos/o/r/issues/{number}");
       routes.push((format!("{base}/dependencies/blocked_by"), json!(blockers)));
       routes.push((format!("{base}/comments"), json!({})));
+      routes.push((format!("{base}/comments?per_page=100"), json!([])));
       routes.push((base, item(*number)));
       let pull = json!({"merged": true, "state": "closed", "number": 100 + number});
       routes.push((format!("/repos/o/r/pulls/{}", 100 + number), pull));
@@ -202,7 +207,6 @@ impl Scenario {
       tracker: Some(kind.into()),
       default_repo: repo.into(),
       max_parallel: max,
-      recovered: false,
       env: self.env.clone(),
       paths: self.paths.clone(),
       reach: crate::support::reach(&self.github, FAST),

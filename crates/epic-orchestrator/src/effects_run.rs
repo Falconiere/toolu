@@ -73,10 +73,6 @@ fn epic_job(engine: &Engine, epic: &crate::epics::Epic) -> crate::effects_epic::
     tracker: epic.tracker.clone(),
     default_repo: epic.default_repo.clone().unwrap_or_default(),
     max_parallel: u64::from(epic.max_parallel),
-    recovered: epic
-      .pending
-      .as_ref()
-      .is_some_and(|pending| pending.recovered),
     env: engine.env.clone(),
     paths: engine.paths.clone(),
     reach: engine.reach.clone(),

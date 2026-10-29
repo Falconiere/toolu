@@ -2,11 +2,14 @@
 //! issue (children are its sub-issues) or a project (children are its issues).
 //! A blocker is an inverse `blocks` relation.
 
+use std::path::Path;
+
 use serde_json::{Value, json};
 use toolu_http::{Auth, Method};
 use toolu_runtime::env::Env;
 
 use super::Tracker;
+use super::close_intent;
 use super::detect::{LinearRef, TrackerKind, parse_linear_ref};
 use super::linear_parse::{child, closed, linear_auth_header, lowest_completed};
 use super::rest::Http;
@@ -17,6 +20,7 @@ const CHILD_FIELDS: &str = "id identifier title url description state{type}\nlab
 const FINISH: &str = "query($id:String!){issue(id:$id){id state{type}\nteam{states(filter:{type:{eq:\"completed\"}}){nodes{id position}}}}}";
 const COMMENT: &str =
   "mutation($i:String!,$b:String!){commentCreate(input:{issueId:$i,body:$b}){success}}";
+const COMMENTS: &str = "query($id:String!,$after:String){issue(id:$id){comments(first:100,after:$after){nodes{body} pageInfo{hasNextPage endCursor}}}}";
 const UPDATE: &str =
   "mutation($id:String!,$s:String!){issueUpdate(id:$id,input:{stateId:$s}){success}}";
 
@@ -112,9 +116,58 @@ impl LinearTracker {
     }
   }
 
+  fn has_comment(&self, id: &str, note: &str) -> Result<bool, String> {
+    let mut after: Option<String> = None;
+    for _ in 0..100 {
+      let data = self.gql(COMMENTS, &json!({"id": id, "after": after}), false)?;
+      let comments = data
+        .pointer("/issue/comments")
+        .ok_or("Linear: invalid comments response")?;
+      let nodes = comments
+        .get("nodes")
+        .and_then(Value::as_array)
+        .ok_or("Linear: invalid comments response")?;
+      let bodies = nodes
+        .iter()
+        .map(|node| {
+          node
+            .get("body")
+            .and_then(Value::as_str)
+            .ok_or("Linear: invalid comments response")
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+      if bodies.contains(&note) {
+        return Ok(true);
+      }
+      let page = comments
+        .get("pageInfo")
+        .ok_or("Linear: invalid comments response")?;
+      let more = page
+        .get("hasNextPage")
+        .and_then(Value::as_bool)
+        .ok_or("Linear: invalid comments response")?;
+      if !more {
+        return Ok(false);
+      }
+      let next = page
+        .get("endCursor")
+        .and_then(Value::as_str)
+        .filter(|next| !next.is_empty() && Some(*next) != after.as_deref())
+        .ok_or("Linear: invalid comments cursor")?;
+      after = Some(next.to_owned());
+    }
+    Err("Linear: comments exceed 100 pages".to_owned())
+  }
+
   /// Comment on an open issue, then move it to its team's lowest completed
   /// state; a done issue gets no second comment.
-  fn finish(&self, identifier: &str, note: &str) -> Result<String, String> {
+  fn finish(
+    &self,
+    identifier: &str,
+    note: &str,
+    state_dir: &Path,
+    role: &str,
+  ) -> Result<String, String> {
     let data = self.gql(FINISH, &json!({"id": identifier}), false)?;
     let issue = data.get("issue").cloned().unwrap_or(Value::Null);
     let uuid = issue
@@ -122,15 +175,32 @@ impl LinearTracker {
       .and_then(Value::as_str)
       .unwrap_or("")
       .to_owned();
+    if uuid.is_empty() {
+      return Err("Linear: invalid issue response".to_owned());
+    }
     if closed(issue.get("state")) {
       return Ok("already-done".to_owned());
     }
-    self.gql(COMMENT, &json!({"i": uuid, "b": note}), true)?;
+    close_intent::comment(
+      state_dir,
+      ("linear", role, &uuid),
+      note,
+      |body| self.has_comment(&uuid, body),
+      |body| {
+        let reply = self.gql(COMMENT, &json!({"i": uuid, "b": body}), true)?;
+        (reply.pointer("/commentCreate/success") == Some(&Value::Bool(true)))
+          .then_some(())
+          .ok_or_else(|| "Linear: commentCreate failed".to_owned())
+      },
+    )?;
     let target = lowest_completed(&issue);
     let Some(state) = target else {
       return Ok("no-completed-state".to_owned());
     };
-    self.gql(UPDATE, &json!({"id": uuid, "s": state}), true)?;
+    let reply = self.gql(UPDATE, &json!({"id": uuid, "s": state}), true)?;
+    if reply.pointer("/issueUpdate/success") != Some(&Value::Bool(true)) {
+      return Err("Linear: issueUpdate failed".to_owned());
+    }
     Ok("completed".to_owned())
   }
 }
@@ -138,10 +208,6 @@ impl LinearTracker {
 impl Tracker for LinearTracker {
   fn kind(&self) -> TrackerKind {
     TrackerKind::Linear
-  }
-
-  fn epic_ref(&self) -> &str {
-    &self.reference
   }
 
   fn epic(&self) -> Result<EpicInfo, String> {
@@ -235,19 +301,19 @@ impl Tracker for LinearTracker {
     Ok(closed(data.pointer("/issue/state")))
   }
 
-  fn close_issue(&self, reference: &str, note: &str) -> Result<String, String> {
-    self.finish(reference, note)
+  fn close_issue(&self, reference: &str, note: &str, state_dir: &Path) -> Result<String, String> {
+    self.finish(reference, note, state_dir, "issue")
   }
 
   fn tick_epic(&self, _reference: &str, _title: &str) -> Result<bool, String> {
     Ok(false)
   }
 
-  fn close_epic(&self, summary: &str) -> Result<String, String> {
+  fn close_epic(&self, summary: &str, state_dir: &Path) -> Result<String, String> {
     match &self.target {
       // Project status is workspace-configured; leave the close to a human.
       LinearRef::Project(_) => Ok("project-left-open".to_owned()),
-      LinearRef::Issue(id) => self.finish(id, summary),
+      LinearRef::Issue(id) => self.finish(id, summary, state_dir, "epic"),
     }
   }
 

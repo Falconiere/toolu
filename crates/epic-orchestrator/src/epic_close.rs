@@ -1,8 +1,8 @@
 //! Close a complete epic once. The close is armed after a refresh shows every
 //! sub-issue done and no issue occupies a slot; it posts the summary, closes
 //! the epic, journals `epic-closed` and raises `epic-complete`. A close
-//! recovered after a restart only asks the tracker: closed is done, open is
-//! `epic close uncertain`. A failed or uncertain close is never tried again.
+//! recovered after a restart resumes through the durable comment receipt.
+//! A persistently failed close is blocked until explicitly rerun.
 
 use serde_json::Value;
 

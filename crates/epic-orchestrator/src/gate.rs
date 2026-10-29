@@ -9,8 +9,11 @@ use std::time::Duration;
 use serde_json::{Map, Value, json};
 use toolu_engine::resources::lock::acquire_lock;
 
+/// PR assessment.
 pub(crate) mod assess;
+/// Auto-merge policy.
 pub(crate) mod auto;
+/// Pinned merge writes.
 pub(crate) mod merge;
 mod settle;
 
@@ -120,12 +123,18 @@ fn settle_merged(
     .and_then(Value::as_str)
     .unwrap_or("")
     .to_owned();
+  let fallback = crate::paths::Paths::from_env(at.env);
+  let state_dir = opts
+    .state_dir
+    .as_deref()
+    .or_else(|| graph.as_ref().map(|graph| Path::new(&graph.state_dir)))
+    .unwrap_or(&fallback.root);
   result.extend(settle::settle_issue(
     at,
     issue,
     &url,
     opts.epic.as_deref(),
-    graph.as_ref(),
+    (graph.as_ref(), state_dir),
   )?);
   Ok(())
 }

@@ -79,7 +79,10 @@ impl Gh {
         serde_json::from_slice(&body).map_err(|err| format!("GitHub {page}: {err}"))?;
       items.extend(rows);
       pages += 1;
-      next = link.filter(|_| pages < 100);
+      if pages == 100 && link.is_some() {
+        return Err(format!("GitHub {path}: too many pages"));
+      }
+      next = link;
     }
     Ok(items)
   }

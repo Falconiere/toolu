@@ -94,6 +94,7 @@ fn an_empty_parent_search_falls_back_to_epic_link_and_tolerates_its_400() {
 #[test]
 fn close_issue_skips_done_items_and_transitions_open_ones() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   route(
     &fixture,
     "/rest/api/3/issue/PAY-1?fields=status",
@@ -105,15 +106,22 @@ fn close_issue_skips_done_items_and_transitions_open_ones() {
     &issue("PAY-2", false),
   );
   route(&fixture, "/rest/api/3/issue/PAY-2/comment", &json!({}));
+  route(
+    &fixture,
+    "/rest/api/3/issue/PAY-2/comment?startAt=0&maxResults=100",
+    &json!({"startAt": 0, "total": 0, "comments": []}),
+  );
   let done = json!({"transitions": [{"id": "31", "name": "Done", "to": {"statusCategory": {"key": "done"}}}]});
   route(&fixture, "/rest/api/3/issue/PAY-2/transitions", &done);
   let jira = tracker(&fixture);
   assert_eq!(
-    jira.close_issue("PAY-1", "x").expect("close"),
+    jira.close_issue("PAY-1", "x", state.path()).expect("close"),
     "already-done"
   );
   assert_eq!(
-    jira.close_issue("PAY-2", "Delivered").expect("close"),
+    jira
+      .close_issue("PAY-2", "Delivered", state.path())
+      .expect("close"),
     "transitioned-done"
   );
   let last = fixture
@@ -130,21 +138,38 @@ fn close_issue_skips_done_items_and_transitions_open_ones() {
 #[test]
 fn close_epic_comments_in_adf_and_reports_a_missing_done_transition() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
+  route(
+    &fixture,
+    "/rest/api/3/issue/PAY-7?fields=status",
+    &issue("PAY-7", false),
+  );
   route(&fixture, "/rest/api/3/issue/PAY-7/comment", &json!({}));
+  route(
+    &fixture,
+    "/rest/api/3/issue/PAY-7/comment?startAt=0&maxResults=100",
+    &json!({"startAt": 0, "total": 0, "comments": []}),
+  );
   route(
     &fixture,
     "/rest/api/3/issue/PAY-7/transitions",
     &json!({"transitions": []}),
   );
   assert_eq!(
-    tracker(&fixture).close_epic("Shipped").expect("close"),
+    tracker(&fixture)
+      .close_epic("Shipped", state.path())
+      .expect("close"),
     "no-done-transition"
   );
-  let first = fixture.requests().expect("requests").remove(0);
-  let body: Value = serde_json::from_slice(&first.body).expect("json");
+  let comment = fixture.requests().expect("requests").remove(2);
+  let body: Value = serde_json::from_slice(&comment.body).expect("json");
   assert_eq!(body["body"]["content"][0]["content"][0]["text"], "Shipped");
   assert!(!tracker(&fixture).tick_epic("PAY-1", "t").expect("tick"));
 }
+
+#[cfg(test)]
+#[path = "tests/jira_close_test.rs"]
+mod close_tests;
 
 #[test]
 fn blockers_come_from_both_link_directions_and_blocking_wordings() {

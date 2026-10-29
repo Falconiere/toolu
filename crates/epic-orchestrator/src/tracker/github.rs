@@ -1,5 +1,6 @@
 //! GitHub epics (`scripts/trackers/github.ts`).
 
+use std::path::Path;
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
@@ -9,6 +10,7 @@ use toolu_github::Method;
 use toolu_runtime::env::Env;
 
 use super::Tracker;
+use super::close_intent;
 use super::detect::TrackerKind;
 use super::gh::Gh;
 use super::github_body::tick_body;
@@ -102,15 +104,57 @@ impl GitHubTracker {
         .to_owned(),
     )
   }
+
+  fn has_comment(&self, path: &str, note: &str) -> Result<bool, String> {
+    for row in self.gh.get_all(&format!("{path}/comments?per_page=100"))? {
+      let body = row
+        .get("body")
+        .and_then(Value::as_str)
+        .ok_or_else(|| format!("GitHub {path}: invalid comment response"))?;
+      if body == note {
+        return Ok(true);
+      }
+    }
+    Ok(false)
+  }
+
+  fn close_with_note(
+    &self,
+    issue: &IssueRef,
+    role: &str,
+    note: &str,
+    state_dir: &Path,
+  ) -> Result<(), String> {
+    let path = format!(
+      "/repos/{}/{}/issues/{}",
+      issue.owner, issue.repo, issue.number
+    );
+    close_intent::comment(
+      state_dir,
+      ("github", role, &issue.canonical()),
+      note,
+      |body| self.has_comment(&path, body),
+      |body| {
+        self.gh.write(
+          Method::Post,
+          &format!("{path}/comments"),
+          &json!({"body": body}),
+        )?;
+        Ok(())
+      },
+    )?;
+    self.gh.write(
+      Method::Patch,
+      &path,
+      &json!({"state": "closed", "state_reason": "completed"}),
+    )?;
+    Ok(())
+  }
 }
 
 impl Tracker for GitHubTracker {
   fn kind(&self) -> TrackerKind {
     TrackerKind::Github
-  }
-
-  fn epic_ref(&self) -> &str {
-    &self.reference
   }
 
   fn epic(&self) -> Result<EpicInfo, String> {
@@ -147,7 +191,7 @@ impl Tracker for GitHubTracker {
     Ok(self.issue_state(&parse_ref(reference, None)?)? == "closed")
   }
 
-  fn close_issue(&self, reference: &str, note: &str) -> Result<String, String> {
+  fn close_issue(&self, reference: &str, note: &str, state_dir: &Path) -> Result<String, String> {
     let issue = parse_ref(reference, None)?;
     for poll in 0..self.polls.count {
       if self.issue_state(&issue)? == "closed" {
@@ -157,20 +201,7 @@ impl Tracker for GitHubTracker {
         thread::sleep(self.polls.wait);
       }
     }
-    let path = format!(
-      "/repos/{}/{}/issues/{}",
-      issue.owner, issue.repo, issue.number
-    );
-    self.gh.write(
-      Method::Post,
-      &format!("{path}/comments"),
-      &json!({"body": note}),
-    )?;
-    self.gh.write(
-      Method::Patch,
-      &path,
-      &json!({"state": "closed", "state_reason": "completed"}),
-    )?;
+    self.close_with_note(&issue, "issue", note, state_dir)?;
     Ok("closed-manually".to_owned())
   }
 
@@ -187,18 +218,11 @@ impl Tracker for GitHubTracker {
     Ok(true)
   }
 
-  fn close_epic(&self, summary: &str) -> Result<String, String> {
-    let path = self.path();
-    self.gh.write(
-      Method::Post,
-      &format!("{path}/comments"),
-      &json!({"body": summary}),
-    )?;
-    self.gh.write(
-      Method::Patch,
-      &path,
-      &json!({"state": "closed", "state_reason": "completed"}),
-    )?;
+  fn close_epic(&self, summary: &str, state_dir: &Path) -> Result<String, String> {
+    if self.issue_state(&self.epic)? == "closed" {
+      return Ok("already-done".to_owned());
+    }
+    self.close_with_note(&self.epic, "epic", summary, state_dir)?;
     Ok("closed".to_owned())
   }
 

@@ -148,7 +148,7 @@ fn settle(input: &CleanupJob, gh: Result<&Gh, String>) -> Result<Value, String> 
     &issue.reference,
     &pr_url,
     Some(&graph.epic.reference),
-    Some(&graph),
+    (Some(&graph), &input.state_dir),
   )
   .map(Value::Object)
 }

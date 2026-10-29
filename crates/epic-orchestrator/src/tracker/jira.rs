@@ -3,12 +3,14 @@
 //! links whose wording from the child's side is "is blocked by" or "depends on".
 
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use regex::RegexBuilder;
 use serde_json::Value;
 use toolu_runtime::env::Env;
 
 use super::Tracker;
+use super::close_intent;
 use super::detect::{TrackerKind, parse_jira_ref};
 use super::jira_client::JiraClient;
 use super::types::{EpicInfo, TrackedIssue, excerpt, repo_for, state_word};
@@ -104,10 +106,6 @@ impl Tracker for JiraTracker {
     TrackerKind::Jira
   }
 
-  fn epic_ref(&self) -> &str {
-    &self.reference
-  }
-
   fn epic(&self) -> Result<EpicInfo, String> {
     let issue = self.client.issue(&self.reference, &["summary", "status"])?;
     let fields = issue.get("fields").cloned().unwrap_or(Value::Null);
@@ -142,11 +140,17 @@ impl Tracker for JiraTracker {
     Ok(done(issue.pointer("/fields/status")))
   }
 
-  fn close_issue(&self, reference: &str, note: &str) -> Result<String, String> {
+  fn close_issue(&self, reference: &str, note: &str, state_dir: &Path) -> Result<String, String> {
     if self.is_closed(reference)? {
       return Ok("already-done".to_owned());
     }
-    self.client.comment(reference, note)?;
+    close_intent::comment(
+      state_dir,
+      ("jira", "issue", reference),
+      note,
+      |body| self.client.has_comment(reference, body),
+      |body| self.client.comment(reference, body),
+    )?;
     Ok(done_word(self.transition_done(reference)?))
   }
 
@@ -155,8 +159,17 @@ impl Tracker for JiraTracker {
     Ok(false)
   }
 
-  fn close_epic(&self, summary: &str) -> Result<String, String> {
-    self.client.comment(&self.reference, summary)?;
+  fn close_epic(&self, summary: &str, state_dir: &Path) -> Result<String, String> {
+    if self.is_closed(&self.reference)? {
+      return Ok("already-done".to_owned());
+    }
+    close_intent::comment(
+      state_dir,
+      ("jira", "epic", &self.reference),
+      summary,
+      |body| self.client.has_comment(&self.reference, body),
+      |body| self.client.comment(&self.reference, body),
+    )?;
     Ok(done_word(self.transition_done(&self.reference)?))
   }
 

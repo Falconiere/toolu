@@ -107,6 +107,26 @@ fn v2_basic_search_pages_by_total_and_comments_as_plain_text() {
   assert_eq!(basic, "Basic YWdlbnRAZXhhbXBsZS5jb206YXBpLXRva2Vu");
 }
 
+#[test]
+fn v2_comment_reconciliation_reads_plain_text() {
+  let fixture = Fixture::start().expect("fixture");
+  fixture
+    .route(
+      "/rest/api/2/issue/PAY-12/comment?startAt=0&maxResults=100",
+      Reply::new(
+        200,
+        json!({"startAt": 0, "total": 1, "comments": [
+          {"body": "Delivered"}
+        ]})
+        .to_string(),
+      ),
+    )
+    .expect("list");
+  let jira = client(&fixture, &proxy_env_v2(&fixture)).expect("client");
+  assert!(jira.has_comment("PAY-12", "Delivered").expect("found"));
+  assert!(!jira.has_comment("PAY-12", "other").expect("absent"));
+}
+
 fn proxy_env_v2(fixture: &Fixture) -> Env {
   crate::support::proxy_env(fixture)
     .with("JIRA_BASE_URL", &fixture.url(""))

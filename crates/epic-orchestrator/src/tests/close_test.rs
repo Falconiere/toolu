@@ -74,6 +74,12 @@ fn a_complete_epic_is_summarized_and_closed_in_github() {
   ] {
     fixture.route(path, Reply::new(200, "{}")).expect("route");
   }
+  fixture
+    .route(
+      "/repos/Falconiere/comemory/issues/248/comments?per_page=100",
+      Reply::new(200, "[]"),
+    )
+    .expect("comments");
   let tracker =
     GitHubTracker::with("Falconiere/comemory#248", gh(&fixture), CLOSE_POLLS).expect("tracker");
   let metrics = "## Epic metrics\n\n| Measure | This epic | TypeScript baseline |\n";
@@ -83,7 +89,11 @@ fn a_complete_epic_is_summarized_and_closed_in_github() {
     json!({"epic": "Falconiere/comemory#248", "tracker": "github", "result": "closed"})
   );
   let requests = fixture.requests().expect("requests");
-  let comment: Value = serde_json::from_slice(&requests[0].body).expect("comment");
+  let comment_request = requests
+    .iter()
+    .find(|request| request.method == "POST")
+    .expect("comment request");
+  let comment: Value = serde_json::from_slice(&comment_request.body).expect("comment");
   assert!(
     comment["body"]
       .as_str()
@@ -94,7 +104,11 @@ fn a_complete_epic_is_summarized_and_closed_in_github() {
     body.ends_with("\n\n## Epic metrics\n\n| Measure | This epic | TypeScript baseline |"),
     "{body}"
   );
-  let closed: Value = serde_json::from_slice(&requests[1].body).expect("close");
+  let close_request = requests
+    .iter()
+    .find(|request| request.method == "PATCH")
+    .expect("close request");
+  let closed: Value = serde_json::from_slice(&close_request.body).expect("close");
   assert_eq!(
     closed,
     json!({"state": "closed", "state_reason": "completed"})

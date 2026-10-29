@@ -106,6 +106,7 @@ fn epic_and_children_are_normalized_from_graphql() {
 #[test]
 fn closing_comments_first_then_moves_to_the_lowest_completed_state() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   let read = json!({"issue": {"id": "uuid-5", "state": {"type": "started"},
     "team": {"states": {"nodes": [{"id": "st-late", "position": 2}, {"id": "st-done", "position": 1}]}}}});
   replies(
@@ -116,15 +117,29 @@ fn closing_comments_first_then_moves_to_the_lowest_completed_state() {
       json!({"issueUpdate": {"success": true}}),
     ],
   );
-  let outcome = tracker(&fixture, "linear:ENG-1", "k").close_issue("ENG-5", "Delivered in PR 7");
+  fixture
+    .sequence_when(
+      "/graphql",
+      "comments(first:100",
+      vec![Reply::new(
+        200,
+        json!({"data": {"issue": {"comments": {
+          "nodes": [], "pageInfo": {"hasNextPage": false, "endCursor": null}
+        }}}})
+        .to_string(),
+      )],
+    )
+    .expect("list");
+  let outcome =
+    tracker(&fixture, "linear:ENG-1", "k").close_issue("ENG-5", "Delivered in PR 7", state.path());
   assert_eq!(outcome.as_deref(), Ok("completed"));
   let bodies = sent(&fixture);
   assert_eq!(
-    bodies[1]["variables"],
+    bodies[2]["variables"],
     json!({"i": "uuid-5", "b": "Delivered in PR 7"})
   );
   assert_eq!(
-    bodies[2]["variables"],
+    bodies[3]["variables"],
     json!({"id": "uuid-5", "s": "st-done"})
   );
 }
@@ -132,6 +147,7 @@ fn closing_comments_first_then_moves_to_the_lowest_completed_state() {
 #[test]
 fn a_project_epic_is_left_open_and_graphql_errors_surface() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   fixture
     .route(
       "/graphql",
@@ -142,9 +158,9 @@ fn a_project_epic_is_left_open_and_graphql_errors_surface() {
     )
     .expect("route");
   let project = tracker(&fixture, "https://linear.app/acme/project/sync-abc123", "k");
-  assert_eq!(project.epic_ref(), "project:abc123");
+  assert_eq!(project.reference, "project:abc123");
   assert_eq!(
-    project.close_epic("done").as_deref(),
+    project.close_epic("done", state.path()).as_deref(),
     Ok("project-left-open")
   );
   assert_eq!(
@@ -157,10 +173,16 @@ fn a_project_epic_is_left_open_and_graphql_errors_surface() {
 #[test]
 fn a_done_issue_is_left_without_a_second_comment() {
   let fixture = Fixture::start().expect("fixture");
+  let state = tempfile::tempdir().expect("state");
   let read = json!({"issue": {"id": "uuid-5", "state": {"type": "completed"},
     "team": {"states": {"nodes": [{"id": "st-done", "position": 1}]}}}});
   replies(&fixture, &[read]);
-  let outcome = tracker(&fixture, "linear:ENG-1", "k").close_issue("ENG-5", "Delivered in PR 7");
+  let outcome =
+    tracker(&fixture, "linear:ENG-1", "k").close_issue("ENG-5", "Delivered in PR 7", state.path());
   assert_eq!(outcome.as_deref(), Ok("already-done"));
   assert_eq!(sent(&fixture).len(), 1);
 }
+
+#[cfg(test)]
+#[path = "tests/linear_close_test.rs"]
+mod close_tests;

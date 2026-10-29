@@ -1,6 +1,6 @@
 //! The epic-level effects: refresh rebuilds `graph.json` from the tracker,
-//! close posts the summary and closes the epic once, and a recovered close
-//! only asks the tracker whether the epic is already closed.
+//! close posts the summary and closes the epic once. A recovered close uses
+//! the durable comment intent to resume without a second comment.
 
 use std::path::PathBuf;
 
@@ -28,8 +28,6 @@ pub(crate) struct EpicJob {
   pub default_repo: String,
   /// Live issue agents at once.
   pub max_parallel: u64,
-  /// A close recovered after a restart: check, never comment again.
-  pub recovered: bool,
   /// The environment effects run with.
   pub env: Env,
   /// The engine's resource root, for herdr.
@@ -49,7 +47,6 @@ pub(crate) fn job(action: Action, input: EpicJob) -> Job {
 /// Run `action` and describe its outcome.
 pub(crate) fn run(action: Action, input: &EpicJob) -> Value {
   let result = match action {
-    Action::Close if input.recovered => check_closed(input),
     Action::Close => close(input),
     Action::Refresh => refresh(input),
     Action::Merge
@@ -92,19 +89,6 @@ fn close(input: &EpicJob) -> Result<Value, String> {
   let metrics = crate::metrics::closing(&input.paths, &input.state_dir, now);
   let result = close_epic(&graph, tracker.as_ref(), metrics.as_deref())?;
   Ok(json!({"outcome": "applied", "result": result}))
-}
-
-/// After a restart the close may already have happened: never comment twice.
-fn check_closed(input: &EpicJob) -> Result<Value, String> {
-  let kind = detect_tracker(&input.reference, input.tracker.as_deref(), &input.env)?;
-  let tracker = (input.reach.tracker)(kind, &input.reference, &input.default_repo, &input.env)?;
-  let info = tracker.epic()?;
-  let outcome = if info.state == "closed" {
-    "closed"
-  } else {
-    "open"
-  };
-  Ok(json!({"outcome": outcome, "epic": tracker.epic_ref()}))
 }
 
 #[cfg(test)]
