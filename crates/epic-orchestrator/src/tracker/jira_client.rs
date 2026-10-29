@@ -5,7 +5,7 @@ use serde_json::{Value, json};
 use toolu_http::{Auth, Method};
 use toolu_runtime::env::Env;
 
-use super::jira_comment::comment_matches;
+use super::jira_comment::page_has_comment;
 use super::rest::Http;
 
 const FIELDS: [&str; 5] = ["summary", "status", "issuelinks", "description", "labels"];
@@ -273,10 +273,7 @@ impl JiraClient {
       {
         return Err("invalid Jira comments response".to_owned());
       }
-      let found = rows.iter().try_fold(false, |found, row| {
-        Ok::<bool, String>(found | comment_matches(row, note)?)
-      })?;
-      if found {
+      if page_has_comment(rows, note)? {
         return Ok(true);
       }
       start += rows.len() as u64;

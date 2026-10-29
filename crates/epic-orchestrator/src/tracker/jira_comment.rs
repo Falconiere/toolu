@@ -2,8 +2,17 @@
 
 use serde_json::Value;
 
-/// Compare a v2 string or v3 ADF body with the exact close note.
-pub(super) fn comment_matches(row: &Value, note: &str) -> Result<bool, String> {
+/// Stop at the first matching note without parsing later comment bodies.
+pub(super) fn page_has_comment(rows: &[Value], note: &str) -> Result<bool, String> {
+  for row in rows {
+    if comment_matches(row, note)? {
+      return Ok(true);
+    }
+  }
+  Ok(false)
+}
+
+fn comment_matches(row: &Value, note: &str) -> Result<bool, String> {
   let invalid = || "invalid Jira comments response".to_owned();
   let body = row.get("body").ok_or_else(invalid)?;
   if let Some(text) = body.as_str() {

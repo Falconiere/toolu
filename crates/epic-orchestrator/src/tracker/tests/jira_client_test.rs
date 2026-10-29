@@ -174,6 +174,28 @@ fn malformed_v3_comment_body_does_not_authorize_another_post() {
   );
 }
 
+#[test]
+fn a_found_comment_does_not_depend_on_later_bodies() {
+  let fixture = Fixture::start().expect("fixture");
+  fixture
+    .route(
+      "/rest/api/3/issue/PAY-12/comment?startAt=0&maxResults=100",
+      Reply::new(
+        200,
+        json!({"startAt": 0, "total": 2, "comments": [
+          {"body": {"type": "doc", "content": [{"type": "paragraph", "content": [
+            {"type": "text", "text": "Delivered"}
+          ]}]}},
+          {"body": {"type": "doc", "content": "invalid"}}
+        ]})
+        .to_string(),
+      ),
+    )
+    .expect("list");
+  let jira = client(&fixture, &jira_env(&fixture, "3")).expect("client");
+  assert_eq!(jira.has_comment("PAY-12", "Delivered"), Ok(true));
+}
+
 fn proxy_env_v2(fixture: &Fixture) -> Env {
   crate::support::proxy_env(fixture)
     .with("JIRA_BASE_URL", &fixture.url(""))
