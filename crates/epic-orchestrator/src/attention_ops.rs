@@ -101,7 +101,7 @@ fn attempt(engine: &mut Engine, answer: &Answer<'_>) -> Result<Attempt, String> 
     Ok(()) => Ok(Attempt::Sent),
     Err(err) if uncertain(&err) => Ok(Attempt::Maybe(err)),
     Err(err) => {
-      refuse_admitted(engine, answer)?;
+      refuse_admitted(engine, answer);
       refuse(format!("worker prompt not delivered: {err}"))
     }
   }
@@ -166,8 +166,13 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
 
 /// The fingerprint journaled for `id` and whether its answer was delivered,
 /// from the retained journal; `None` when the id was never admitted or its
-/// last attempt was refused (so a retry is a fresh admission).
+/// last attempt was refused (so a retry is a fresh admission). An in-memory
+/// refuse (journal write failed after a definite undelivered prompt) also
+/// clears the id for this process.
 fn prior(engine: &Engine, id: &str) -> Result<Option<(String, bool)>, String> {
+  if engine.refused_ids.contains(id) {
+    return Ok(None);
+  }
   let mut state = None;
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
   for row in rows
@@ -192,14 +197,32 @@ fn prior(engine: &Engine, id: &str) -> Result<Option<(String, bool)>, String> {
 }
 
 /// Close an admission whose prompt was refused, so a retry of the id prompts.
-fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) -> Result<(), String> {
+/// Writes `answer-refused` straight to the journal (same path as a flushed
+/// Journal step). When that write fails, remember the id in-memory so a
+/// same-id retry is not stuck as false `delivered: uncertain`.
+fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) {
   let Some(id) = answer.submission else {
-    return Ok(());
+    return;
   };
   let note = format!("by={}", answer.by);
-  let record = Record::new("action", "answer-refused", answer.key, id, &note);
-  engine.world.outbox.push_back(Step::Journal(record));
-  engine.flush()
+  let mut record = Record::new("action", "answer-refused", answer.key, id, &note);
+  if record.epic.is_empty()
+    && let Some(issue) = engine.world.issues.get(answer.key)
+  {
+    record.epic.clone_from(&issue.epic);
+  }
+  if journal::append(
+    &engine.paths.journal_dir(),
+    &engine.paths.journal_lock(),
+    &record,
+    engine.now,
+  )
+  .is_ok()
+  {
+    engine.refused_ids.remove(id);
+  } else {
+    engine.refused_ids.insert(id.to_owned());
+  }
 }
 
 /// Journal an answer the worker received and mark attention. A journal

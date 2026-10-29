@@ -189,3 +189,60 @@ fn a_journal_failure_after_the_prompt_is_uncertain_and_leaves_attention_open() {
   assert_eq!(engine.world.attention[0].state, Ack::Open);
   assert!(engine.world.outbox.is_empty());
 }
+
+fn chmod_tree(root: &Path, file_mode: u32, dir_mode: u32) {
+  use std::os::unix::fs::PermissionsExt;
+  for entry in std::fs::read_dir(root).expect("list") {
+    let path = entry.expect("entry").path();
+    let mut perms = std::fs::metadata(&path).expect("meta").permissions();
+    perms.set_mode(file_mode);
+    std::fs::set_permissions(&path, perms).expect("file mode");
+  }
+  let mut perms = std::fs::metadata(root).expect("meta").permissions();
+  perms.set_mode(dir_mode);
+  std::fs::set_permissions(root, perms).expect("dir mode");
+}
+
+#[test]
+fn a_refuse_journal_failure_still_allows_the_same_submission_to_retry() {
+  use crate::journal::{self, Record};
+
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "sent");
+  report(&mut engine, "needs-human");
+  let request = submitted("take B", "s-1");
+  let fp = super::fingerprint("a", "take B");
+  let admit = Record::new(
+    "action",
+    "answer-admit",
+    "a",
+    "s-1",
+    &format!("fp={fp} by=web"),
+  );
+  journal::append(
+    &engine.paths.journal_dir(),
+    &engine.paths.journal_lock(),
+    &admit,
+    engine.now,
+  )
+  .expect("admit");
+  // Open admit alone recalls as uncertain; a refuse write that cannot land
+  // must still free the id in-memory so a retry can prompt.
+  assert_eq!(answer(&mut engine, &request)["delivered"], "uncertain");
+  assert_eq!(prompts(tmp.path()).len(), 0);
+  let journal = engine.paths.journal_dir();
+  chmod_tree(&journal, 0o444, 0o555);
+  super::refuse_admitted(
+    &mut engine,
+    &super::Answer {
+      key: "a",
+      text: "take B",
+      by: "web",
+      submission: Some("s-1"),
+    },
+  );
+  assert!(engine.refused_ids.contains("s-1"));
+  chmod_tree(&journal, 0o644, 0o755);
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(prompts(tmp.path()).len(), 1);
+}
