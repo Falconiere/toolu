@@ -214,9 +214,16 @@ pub(crate) fn reply(
   ensure_unreplied(&mut state, &key)?;
   let existing = actions(&mut state, "replyIntents")?.get(&key).cloned();
   let intent = if let Some(value) = existing {
-    let intent = Intent::read(&value)?;
-    validate_target(&key, &intent, to)?;
-    intent
+    let previous = Intent::read(&value)?;
+    validate_target(&key, &previous, to)?;
+    if previous.status == "prepared" && previous.original_body()? != body {
+      let (repo, number, _) = target(&state);
+      let replacement = Intent::new(repo, number, to, body, slot.now)?;
+      save_intent(slot, &mut state, &key, &replacement)?;
+      replacement
+    } else {
+      previous
+    }
   } else {
     let (repo, number, _) = target(&state);
     let intent = Intent::new(repo, number, to, body, slot.now)?;

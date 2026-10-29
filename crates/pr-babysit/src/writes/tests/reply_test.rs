@@ -263,6 +263,17 @@ fn a_definitive_refusal_leaves_a_prepared_intent_that_can_send() {
   .unwrap();
   assert_eq!(done["commentId"], 55);
   assert_eq!(posts(&fixture), 2);
+  let requests = fixture.requests().unwrap();
+  let original: Value = serde_json::from_slice(&requests[0].body).unwrap();
+  let replacement: Value = serde_json::from_slice(&requests[1].body).unwrap();
+  assert!(original["body"].as_str().unwrap().starts_with("fixed\n\n"));
+  assert!(
+    replacement["body"]
+      .as_str()
+      .unwrap()
+      .starts_with("different\n\n")
+  );
+  assert_ne!(original["body"], replacement["body"]);
 }
 
 #[test]

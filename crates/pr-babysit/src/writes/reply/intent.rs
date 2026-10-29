@@ -109,6 +109,15 @@ impl Intent {
       "kind": self.kind, "rootCommentId": self.root_comment_id,
     })
   }
+
+  /// Return the supplied Markdown without the delivery marker we appended.
+  pub(super) fn original_body(&self) -> Result<&str> {
+    self
+      .body
+      .strip_suffix(&self.marker)
+      .and_then(|body| body.strip_suffix("\n\n"))
+      .ok_or_else(|| malformed("body"))
+  }
 }
 
 fn malformed(field: &str) -> Failure {

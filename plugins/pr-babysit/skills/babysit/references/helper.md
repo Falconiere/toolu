@@ -200,7 +200,8 @@ toolu babysit stop --state-file <path>
   A retry with a different thread root returns `slot_mismatch` before any
   GitHub call; use the original target to resume the intent.
   Inspect GitHub and retry to reconcile. A definitive refusal leaves a
-  `prepared` intent that can be sent later with its original body.
+  `prepared` intent; a valid changed body file replaces its text and marker in
+  state before the next send. An unreadable body file uses the persisted text.
 - `toolu babysit resolve` returns `0` only after the mutation response shows
   `isResolved: true`; three false responses → `resolve_unconfirmed` (exit `75`), nothing recorded, and
   the thread stays in `staleUnresolved` next tick. A confirmed thread is not

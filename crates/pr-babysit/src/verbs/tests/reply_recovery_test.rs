@@ -58,3 +58,36 @@ fn a_reply_recovers_after_its_body_file_is_removed_or_oversized() {
     assert_eq!(post_count(&fixture), 1);
   }
 }
+
+#[test]
+fn a_prepared_intent_uses_its_original_body_when_the_file_is_gone() {
+  let dir = TempDir::new().unwrap();
+  let state = state(&dir);
+  let body = dir.path().join("body.md");
+  std::fs::write(&body, "original").unwrap();
+  let fixture = Fixture::start().unwrap();
+  let endpoint = "/repos/Falconiere/toolu/issues/165/comments";
+  fixture
+    .route(endpoint, Reply::new(404, r#"{"message":"Not Found"}"#))
+    .unwrap();
+  let env = recorded::env(&fixture);
+  let args = conversation_reply_args(&state, &body);
+  let (exit, refused) = run(&args, &on(&fixture, &env));
+  assert_eq!(exit, Exit::TempFail, "{refused}");
+  assert_eq!(refused["errors"][0]["code"], "api_error");
+  let saved = read(&state)["actions"]["replyIntents"]["conversation:5"]["body"]
+    .as_str()
+    .unwrap()
+    .to_owned();
+  std::fs::remove_file(&body).unwrap();
+  fixture
+    .route(endpoint, Reply::new(201, r#"{"id":100}"#))
+    .unwrap();
+  let (exit, done) = run(&args, &on(&fixture, &env));
+  assert_eq!(exit, Exit::Success, "{done}");
+  assert_eq!(done["commentId"], 100);
+  assert_eq!(post_count(&fixture), 2);
+  let requests = fixture.requests().unwrap();
+  let posted: serde_json::Value = serde_json::from_slice(&requests[1].body).unwrap();
+  assert_eq!(posted["body"], saved);
+}

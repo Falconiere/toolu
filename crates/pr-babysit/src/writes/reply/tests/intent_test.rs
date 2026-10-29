@@ -10,6 +10,7 @@ fn an_intent_preserves_its_original_thread_root_and_refuses_a_changed_one() {
   };
   let intent = Intent::new("Falconiere/toolu", 165, &original, "fixed", "now").unwrap();
   let restored = Intent::read(&intent.value()).unwrap();
+  assert_eq!(restored.original_body().unwrap(), "fixed");
   assert_eq!(restored.root_comment_id, Some(41));
   assert_eq!(
     restored.post_path,
@@ -26,6 +27,19 @@ fn an_intent_preserves_its_original_thread_root_and_refuses_a_changed_one() {
       .unwrap_err()
       .code,
     "slot_mismatch"
+  );
+}
+
+#[test]
+fn an_intent_with_a_body_missing_its_marker_is_malformed() {
+  let to = Target::Conversation(5);
+  let intent = Intent::new("Falconiere/toolu", 165, &to, "fixed", "now").unwrap();
+  let mut value = intent.value();
+  value["body"] = "fixed".into();
+  let restored = Intent::read(&value).unwrap();
+  assert_eq!(
+    restored.original_body().unwrap_err().code,
+    "state_malformed"
   );
 }
 
