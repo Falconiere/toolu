@@ -122,7 +122,11 @@ export function actionResult(op, body, status, reply, partner = "") {
   }
   // Post-admit HTTP timeouts use the same uncertain shape for every op.
   if (reply?.delivered === "uncertain") {
-    return { kind: "uncertain", label: "▲ UNCERTAIN", text: "Delivery uncertain; check the screen." };
+    return {
+      kind: "uncertain",
+      label: "▲ UNCERTAIN",
+      text: "Delivery uncertain; check the screen.",
+    };
   }
   if (op !== "answer") {
     return {
