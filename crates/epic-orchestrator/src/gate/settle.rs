@@ -2,6 +2,8 @@
 //! (`settleIssue`): the saved graph's tracker, else the one the epic
 //! reference names.
 
+use std::path::Path;
+
 use serde_json::{Map, Value, json};
 use toolu_runtime::env::Env;
 
@@ -32,8 +34,9 @@ pub(crate) fn settle_issue(
   issue: &str,
   pr_url: &str,
   epic: Option<&str>,
-  graph: Option<&Graph>,
+  context: (Option<&Graph>, &Path),
 ) -> Result<Map<String, Value>, String> {
+  let (graph, state_dir) = context;
   let epic = epic
     .map(str::to_owned)
     .or_else(|| graph.map(|graph| graph.epic.reference.clone()));
@@ -54,7 +57,7 @@ pub(crate) fn settle_issue(
   let mut out = Map::new();
   out.insert(
     "issue".to_owned(),
-    json!(tracker.close_issue(issue, &note)?),
+    json!(tracker.close_issue(issue, &note, state_dir)?),
   );
   if epic.is_none() {
     return Ok(out);

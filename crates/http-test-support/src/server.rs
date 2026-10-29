@@ -96,6 +96,9 @@ fn serve_https(
     .next(&request.path, &request.body);
   let reply = or_missing(routed);
   if reply.dropped {
+    if reply.record_dropped {
+      data.requests.lock().map_err(error)?.push(request);
+    }
     return Ok(());
   }
   data.requests.lock().map_err(error)?.push(request);

@@ -5,12 +5,12 @@ use serde_json::{Value, json};
 use toolu_http::{Auth, Method};
 use toolu_runtime::env::Env;
 
+use super::jira_comment::page_has_comment;
 use super::rest::Http;
 
 const FIELDS: [&str; 5] = ["summary", "status", "issuelinks", "description", "labels"];
 const SETUP: &str =
   "Jira requires JIRA_BASE_URL and either JIRA_PAT or JIRA_EMAIL with JIRA_API_TOKEN";
-const PAGES: usize = 20;
 
 /// A Jira REST client.
 pub(crate) struct JiraClient {
@@ -125,7 +125,7 @@ impl JiraClient {
   pub(crate) fn search(&self, jql: &str) -> Result<Vec<Value>, String> {
     let mut issues = Vec::new();
     let mut token: Option<String> = None;
-    for _ in 0..PAGES {
+    for _ in 0..20 {
       let (page, more) = if self.version == "2" {
         self.search_v2(jql, issues.len())?
       } else {
@@ -242,6 +242,49 @@ impl JiraClient {
         true,
       )
       .map(|_| ())
+  }
+
+  /// Whether a complete comment listing contains the exact original note.
+  ///
+  /// # Errors
+  /// A page fails, is malformed, or cannot be fully traversed.
+  pub(crate) fn has_comment(&self, key: &str, note: &str) -> Result<bool, String> {
+    let mut start = 0_u64;
+    for _ in 0..100 {
+      let reply = self.call(
+        Method::Get,
+        &format!(
+          "issue/{}/comment?startAt={start}&maxResults=100",
+          encode(key)
+        ),
+        None,
+        false,
+      )?;
+      let rows = reply
+        .get("comments")
+        .and_then(Value::as_array)
+        .ok_or("invalid Jira comments response")?;
+      let total = reply
+        .get("total")
+        .and_then(Value::as_u64)
+        .ok_or("invalid Jira comments response")?;
+      if reply.get("startAt").and_then(Value::as_u64) != Some(start)
+        || start + rows.len() as u64 > total
+      {
+        return Err("invalid Jira comments response".to_owned());
+      }
+      if page_has_comment(rows, note)? {
+        return Ok(true);
+      }
+      start += rows.len() as u64;
+      if start == total {
+        return Ok(false);
+      }
+      if rows.is_empty() {
+        return Err("incomplete Jira comments response".to_owned());
+      }
+    }
+    Err("Jira comments exceed 100 pages".to_owned())
   }
 }
 

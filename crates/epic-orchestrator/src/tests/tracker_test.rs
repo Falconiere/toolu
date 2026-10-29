@@ -22,12 +22,9 @@ fn make_tracker_builds_each_tracker_from_settings() {
     ("LINEAR_API_KEY", "k"),
   ]);
   let github = make_tracker(TrackerKind::Github, "o/r#1", "", &env).expect("github");
-  assert_eq!(
-    (github.kind(), github.epic_ref()),
-    (TrackerKind::Github, "o/r#1")
-  );
+  assert_eq!(github.kind(), TrackerKind::Github);
   let jira = make_tracker(TrackerKind::Jira, "jira:pay-7", "a/b", &env).expect("jira");
-  assert_eq!(jira.epic_ref(), "PAY-7");
+  assert_eq!(jira.kind(), TrackerKind::Jira);
   let linear = make_tracker(TrackerKind::Linear, "ENG-1", "a/b", &env).expect("linear");
   assert_eq!(linear.kind(), TrackerKind::Linear);
 }

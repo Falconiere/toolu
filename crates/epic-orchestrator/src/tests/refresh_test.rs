@@ -229,7 +229,6 @@ fn a_rate_limited_refresh_spends_its_retry_budget_then_waits_the_fixed_deadline(
       tracker: Some("github".into()),
       default_repo: String::new(),
       max_parallel: 2,
-      recovered: false,
       reach: crate::support::reach(&fixture, Policy::from_env(&env)),
       env,
       paths: Paths::at(tmp.path()),

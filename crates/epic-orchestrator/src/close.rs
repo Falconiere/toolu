@@ -80,7 +80,7 @@ pub(crate) fn close_epic(
   metrics: Option<&str>,
 ) -> Result<Value, String> {
   require_complete(graph)?;
-  let result = tracker.close_epic(&summary_table(graph, metrics))?;
+  let result = tracker.close_epic(&summary_table(graph, metrics), Path::new(&graph.state_dir))?;
   Ok(json!({"epic": graph.epic.reference, "tracker": tracker.kind().name(), "result": result}))
 }
 

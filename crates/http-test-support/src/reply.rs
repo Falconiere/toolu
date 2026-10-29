@@ -16,6 +16,8 @@ pub struct Reply {
   /// Close the connection after reading the request, without a response and
   /// without recording the request; set by [`Reply::dropped`].
   pub(crate) dropped: bool,
+  /// Record a committed request before dropping its response.
+  pub(crate) record_dropped: bool,
 }
 
 impl Reply {
@@ -27,6 +29,7 @@ impl Reply {
       body: body.into(),
       delay: Duration::ZERO,
       dropped: false,
+      record_dropped: false,
     }
   }
 
@@ -35,6 +38,14 @@ impl Reply {
     Self {
       dropped: true,
       ..Self::new(0, Vec::new())
+    }
+  }
+
+  /// Record a received request, then close without a response.
+  pub fn dropped_recorded() -> Self {
+    Self {
+      record_dropped: true,
+      ..Self::dropped()
     }
   }
 

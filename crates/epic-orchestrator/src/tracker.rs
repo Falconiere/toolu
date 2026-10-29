@@ -1,17 +1,25 @@
 //! Where an epic's plan lives (`scripts/trackers/*`): GitHub, Jira or Linear.
 //! The code, branches and pull requests always live in GitHub repositories.
 
+use std::path::Path;
+
 use toolu_runtime::env::Env;
 
+mod close_intent;
 mod detect;
 mod gh;
+/// GitHub tracker adapter.
 pub(crate) mod github;
 mod github_body;
 mod github_fetch;
+/// Jira tracker adapter.
 pub(crate) mod jira;
+/// Jira REST client.
 pub(crate) mod jira_client;
+mod jira_comment;
 mod linear;
 mod linear_parse;
+/// Shared JSON HTTP transport for Jira and Linear.
 pub(crate) mod rest;
 mod types;
 
@@ -23,8 +31,6 @@ pub(crate) use types::{EpicInfo, PrNode, TrackedIssue};
 pub(crate) trait Tracker {
   /// The tracker this epic lives in.
   fn kind(&self) -> TrackerKind;
-  /// Canonical epic reference: `owner/repo#N`, `ABC-12` or `project:<id>`.
-  fn epic_ref(&self) -> &str;
   /// The epic's title, state and URL.
   ///
   /// # Errors
@@ -44,7 +50,7 @@ pub(crate) trait Tracker {
   ///
   /// # Errors
   /// A tracker call fails.
-  fn close_issue(&self, reference: &str, note: &str) -> Result<String, String>;
+  fn close_issue(&self, reference: &str, note: &str, state_dir: &Path) -> Result<String, String>;
   /// Tick the child in the epic body checklist, where the tracker has one.
   ///
   /// # Errors
@@ -54,7 +60,7 @@ pub(crate) trait Tracker {
   ///
   /// # Errors
   /// A tracker call fails.
-  fn close_epic(&self, summary: &str) -> Result<String, String>;
+  fn close_epic(&self, summary: &str, state_dir: &Path) -> Result<String, String>;
   /// The epic's state directory name.
   fn state_slug(&self) -> String;
 }
