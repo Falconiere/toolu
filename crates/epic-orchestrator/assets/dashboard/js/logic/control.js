@@ -62,6 +62,16 @@ export function mintSubmissionId() {
   return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 }
 
+// Reuse one id per key+text for the life of an open answer dialog (A→B→A keeps A's id).
+export function rememberSubmission(map, key, text, mint) {
+  const pair = `${key}\u0000${text}`;
+  const seen = map.get(pair);
+  if (seen) return seen;
+  const id = mint();
+  map.set(pair, id);
+  return id;
+}
+
 // The op and JSON body a `data-action` button sends; `answer` opens the dialog instead.
 export function actionBody(action, { epic, host, key, kind } = {}) {
   if (action === "pause" || action === "resume") return epic ? { epic } : {};

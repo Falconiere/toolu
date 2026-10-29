@@ -16,6 +16,7 @@ import {
   liveAgent,
   mintSubmissionId,
   refusalCode,
+  rememberSubmission,
   sendDisabled,
 } from "../js/logic/control.js";
 
@@ -222,4 +223,16 @@ test("answer bodies mint a submission_id the engine can dedupe", () => {
   assert.equal(minted.key, "k-1");
   assert.equal(minted.text, "take B");
   assert.match(minted.submission_id, /^[A-Za-z0-9._-]+$/);
+});
+
+test("rememberSubmission reuses an id for A after A→B→A in one dialog", () => {
+  const map = new Map();
+  let n = 0;
+  const mint = () => `id-${++n}`;
+  const a1 = rememberSubmission(map, "k-1", "A", mint);
+  const b = rememberSubmission(map, "k-1", "B", mint);
+  const a2 = rememberSubmission(map, "k-1", "A", mint);
+  assert.equal(a1, "id-1");
+  assert.equal(b, "id-2");
+  assert.equal(a2, "id-1");
 });

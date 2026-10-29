@@ -1,4 +1,9 @@
-import { WORKING_WARNING, counter, sendDisabled } from "./logic/control.js";
+import {
+  WORKING_WARNING,
+  counter,
+  rememberSubmission,
+  sendDisabled,
+} from "./logic/control.js";
 import { agentState } from "./logic/status.js";
 import { $, mark } from "./view/dom.js";
 
@@ -6,8 +11,7 @@ const dialog = {
   key: null,
   opener: null,
   sent: null,
-  submissionId: null,
-  submissionText: null,
+  submissions: new Map(),
   state: { locked: true, pending: false },
 };
 
@@ -24,22 +28,16 @@ export function syncAnswer(state) {
   syncSend();
 }
 
-// Reuse one submission id for the same key+text while this dialog stays open.
+// Reuse one submission id per key+text while this dialog stays open (A→B→A keeps A's id).
 export function submissionFor(key, text, mint) {
-  if (dialog.submissionId && dialog.key === key && dialog.submissionText === text) {
-    return dialog.submissionId;
-  }
-  dialog.submissionId = mint();
-  dialog.submissionText = text;
-  return dialog.submissionId;
+  return rememberSubmission(dialog.submissions, key, text, mint);
 }
 
 export function openAnswer({ key, row, attention, liveStatus }, opener) {
   dialog.key = key;
   dialog.opener = opener;
   dialog.sent = null;
-  dialog.submissionId = null;
-  dialog.submissionText = null;
+  dialog.submissions = new Map();
   const status = agentState(row, liveStatus);
   $("answer-title").textContent = `Answer ${key}`;
   $("answer-status").replaceChildren(mark(status));
@@ -55,8 +53,7 @@ export function openAnswer({ key, row, attention, liveStatus }, opener) {
 }
 
 export function closeAnswer() {
-  dialog.submissionId = null;
-  dialog.submissionText = null;
+  dialog.submissions = new Map();
   if ($("answer-dialog").open) $("answer-dialog").close();
 }
 

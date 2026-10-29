@@ -69,7 +69,9 @@ fn dashboard_control_actions_send_bearer_and_json() {
     "headers: { Authorization: `Bearer ${token}`, \"Content-Type\": \"application/json\" },"
   ));
   assert!(logic.contains("export function mintSubmissionId()"));
+  assert!(logic.contains("export function rememberSubmission(map, key, text, mint)"));
   assert!(logic.contains("submission_id: submissionId"));
+  assert!(read_asset("js/answer-dialog.js").contains("rememberSubmission(dialog.submissions"));
   let api = read_asset("js/api.js");
   assert!(api.contains("const { path, init } = actionRequest(op, body, token);"));
   assert!(api.contains("const response = await fetch(path, init);"));
