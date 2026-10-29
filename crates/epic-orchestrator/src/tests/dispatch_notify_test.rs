@@ -182,12 +182,17 @@ fn a_journaled_notify_replay_without_a_spool_marker_has_no_second_effect() {
   assert_eq!(before.iter().filter(|row| row.kind == "notify").count(), 1);
   let (_, duplicate) = round(&mut engine, &body);
   assert_eq!(duplicate["ok"], true);
+  assert!(
+    !path.is_file(),
+    "the durable duplicate can discard its spool"
+  );
   assert_eq!(
     crate::journal::tail(&engine.paths.journal_dir(), engine.now)
       .expect("tail")
       .len(),
     before.len()
   );
+  write_spool(&tmp, "n-replay", &body);
   drop(engine);
 
   let mut restarted = open(tmp.path());

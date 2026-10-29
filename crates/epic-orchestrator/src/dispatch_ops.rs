@@ -20,6 +20,7 @@ pub(crate) fn reply_notify(
   reply: &Sender<Value>,
 ) -> Result<bool, String> {
   if spool_seen(engine, request)? {
+    discard_spool(engine, request);
     let _sent = reply.send(json!({"ok": true}));
     return Ok(false);
   }

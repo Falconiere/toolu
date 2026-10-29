@@ -187,6 +187,7 @@ checkpoints, not for herdr.
 the durable notify journal before recording the spool marker and deleting the
 file. If it restarts between those writes, it recognizes that token across the
 retained journal and does not raise attention or relay to a sibling again.
+An already recorded token also discards a stale spool file on a live retry.
 Distinct tokens remain distinct notices; the existing recipient cooldown still
 limits relay frequency. A crash after journaling but before the herdr prompt
 can leave the sibling without that prompt. A prompt whose result is uncertain
