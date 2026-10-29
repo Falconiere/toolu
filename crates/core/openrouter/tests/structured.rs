@@ -118,6 +118,10 @@ fn rate_limit_retries_but_auth_does_not() {
       .is_ok()
   );
   assert_eq!(fixture.requests().expect("requests").len(), 2);
+  // Retained http client: CONNECT count stays within the request count for a
+  // single completion (fixture replies with Connection: close, so reuse is a
+  // soft upper bound rather than accepts << requests).
+  assert!(fixture.connects().expect("connects").len() <= 2);
   fixture
     .route(PATH, Reply::new(401, "private-sentinel"))
     .expect("route");

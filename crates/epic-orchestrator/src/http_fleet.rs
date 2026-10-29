@@ -8,7 +8,6 @@ use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use toolu_http::Client;
 use toolu_runtime::config::epic::Peer;
 use toolu_runtime::config::secrets::{self, Secrets};
 
@@ -36,10 +35,12 @@ const ROUTES: [&str; 8] = [
   "attention",
 ];
 
-/// Configured peers, their client and the last shared round.
+/// Configured peers and the last shared round.
+///
+/// Each refresh and proxy builds a fresh [`fleet::client`] so peer death is
+/// not hidden by a keep-alive socket left open after the peer's acceptor stops.
 pub(crate) struct FleetCache {
   targets: Vec<Target>,
-  client: Option<Client>,
   round: Mutex<Round>,
   proxies: AtomicUsize,
 }
@@ -56,7 +57,6 @@ impl FleetCache {
   pub(crate) fn new(peers: &[Peer], secrets: &Secrets) -> Self {
     Self {
       targets: fleet::targets(peers, secrets),
-      client: fleet::client().ok(),
       round: Mutex::new(Round::default()),
       proxies: AtomicUsize::new(0),
     }
@@ -69,9 +69,9 @@ impl FleetCache {
   pub(crate) fn refresh(&self, max_age: Duration) -> Result<Vec<Machine>, ()> {
     let mut round = self.round.lock().map_err(|_err| ())?;
     if round.at.is_none_or(|at| at.elapsed() >= max_age) {
-      let fetched = match &self.client {
-        Some(client) => fleet::fetch_all(client, &self.targets),
-        None => vec![Fetched::Failed(PeerState::Unreachable); self.targets.len()],
+      let fetched = match fleet::client() {
+        Ok(client) => fleet::fetch_all(&client, &self.targets),
+        Err(_err) => vec![Fetched::Failed(PeerState::Unreachable); self.targets.len()],
       };
       let round = &mut *round;
       round.machines = fleet::peer_machines(
@@ -165,8 +165,11 @@ fn proxy(fleet: &FleetCache, rest: &str, secrets: &Secrets) -> Response {
   };
   let target =
     decode(name).and_then(|name| fleet.targets.iter().find(|target| target.peer.name == name));
-  let (Some(target), Some(client)) = (target, fleet.client.as_ref()) else {
+  let Some(target) = target else {
     return not_found();
+  };
+  let Ok(client) = fleet::client() else {
+    return Response::error(502, "peer_unreachable");
   };
   if !route_allowed(route) {
     return not_found();
@@ -175,7 +178,7 @@ fn proxy(fleet: &FleetCache, rest: &str, secrets: &Secrets) -> Response {
     fleet.proxies.fetch_sub(1, Ordering::AcqRel);
     return Response::error(503, "proxy_limit");
   }
-  let fetched = fleet::fetch(client, &target.peer, target.token.as_deref(), route);
+  let fetched = fleet::fetch(&client, &target.peer, target.token.as_deref(), route);
   fleet.proxies.fetch_sub(1, Ordering::AcqRel);
   match fetched {
     Fetched::Doc(value) => json_response(Ok(Some(secrets::redact_json(&value, secrets)))),

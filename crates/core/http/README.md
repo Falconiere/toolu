@@ -7,10 +7,13 @@ response-body cap (default 1 MiB), and at most five redirects. JSON GET, POST,
 and PUT decode with `serde`; `get_bytes` returns bounded download bytes.
 
 Construct `Client::new(Config, &Env)` with a `toolu-runtime::env::Env`
-snapshot. For HTTPS it selects `HTTPS_PROXY`, then `https_proxy`, then
-`ALL_PROXY`, then `all_proxy`; HTTP selects its `HTTP_PROXY` and `http_proxy`
-equivalents first. Empty values are absent. Without a selected proxy it
-connects directly. A malformed selected proxy fails client construction.
+snapshot. The client retains one ureq `Agent` per URL scheme so compatible
+requests can reuse keep-alive connections. `Clone` and `with_timeout` share
+those Agents; a separately constructed client gets its own pools. For HTTPS it
+selects `HTTPS_PROXY`, then `https_proxy`, then `ALL_PROXY`, then `all_proxy`;
+HTTP selects its `HTTP_PROXY` and `http_proxy` equivalents first. Empty values
+are absent. Without a selected proxy it connects directly. A malformed selected
+proxy fails client construction.
 
 `Auth::Basic` and `Auth::Bearer` set the initial `Authorization` header.
 Redirects are followed for downloads, and **every redirected request drops
