@@ -106,12 +106,6 @@ Examples:
 5. Run the project's own typecheck and lint commands (with its package manager) to verify zero regressions.
 6. Save the pattern if reusable — when the `comemory` plugin is installed, persist it via its wrapper: `comemory.sh save "ast-grep <name> pattern" "<pattern + what it matches>" --kind pattern --tags "ast-grep"`.
 
-## Self-Check Before Editing
-
-> "Am I about to write a regex over multi-line code? → ast-grep instead."
-> "Am I about to Edit-loop the same change across many files? → ast-grep rewrite instead."
-> "Am I searching for code by shape (call form, signature, control flow)? → ast-grep, not Grep."
-
 ## Config (sgconfig.yml — optional, lazy)
 
 If a recurring rule emerges (e.g. forbid `console.log` in apps/api), promote it to `sgconfig.yml`:

@@ -1,6 +1,7 @@
 # debug — trigger eval
 
-A held-out eval of whether the `debug` skill's `description` reliably routes the right prompts to it (spec acceptance criterion 1: 100% positive recall, 0 false-positives).
+A regression eval of the `debug` description's routing boundaries. These prompts
+have been inspected during maintenance; they are not a held-out generalization set.
 
 ## Method
 
@@ -8,7 +9,9 @@ A held-out eval of whether the `debug` skill's `description` reliably routes the
 2. A **router judge** is given ONLY the skill's frontmatter `description` (the real selection signal — not the body) plus each prompt, with no gold labels, and predicts fire/no-fire.
 3. Predictions are scored against the gold labels → precision, recall, F1 (`results.json`).
 
-This is an **LLM-judged** gate: `results.json` is a snapshot, and re-runs may vary slightly. To regenerate, re-run the router judge over `cases.json` prompts (judge sees the description only) and re-score.
+`results.json` records a single description-only smoke trial, not host activation.
+For isolated repeats, baselines and evidence grading, follow
+[the evaluation guide](../../../../../docs/agent-text-evals.md).
 
 ## Latest result
 

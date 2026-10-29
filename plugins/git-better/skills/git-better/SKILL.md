@@ -1,14 +1,13 @@
 ---
 name: git-better
-description: Write semantic commits and branch names that other agents can read without opening the diff — a scoped Conventional Commit subject plus an `Intent:` trailer, and `<type>/<ref>-<slug>` branches. Use to write a commit message, name a branch, or fix a commit git-better blocked; `toolu git-better check` validates first.
+description: "Use to write a commit message, name a branch, or fix a git-better rejection. Follow scoped Conventional Commits with an Intent: trailer and semantic branch names."
 ---
 
 # git-better
 
-The `semantic-git` rule checks every Bash command that commits or creates a
-branch, before git runs. In `block` mode (the default) a message or name that
-fails is denied with each failed check and a corrected example. Fix it and run
-the command again; never work around the rule.
+The `semantic-git` rule checks Bash commits and branch creation before git runs.
+In default `block` mode it denies invalid messages or names with failed checks
+and an example. Correct and retry; never work around the rule.
 
 ## Commit messages
 

@@ -1,6 +1,7 @@
 # toolu-review
 
-Project-tuned pre-push code review mirroring this repo's CI Toolu Code Review action (`falconiere/toolu-ghactions/code-review@v8`, with Jev assessment enabled), writing the toolu `push-review` state so the gate passes.
+Review committed changes for actionable defects and record complete-coverage
+`push-review` state. Also serves as the native review fallback.
 
 ## Install
 

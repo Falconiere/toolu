@@ -80,7 +80,6 @@ never overwrite an existing file — add a `-2` suffix instead.
 
 ## Handoff
 
-In Delivery mode, Minimal and Compact both hand off to `spec`; Full does the
-same after resolving material choices. Carry forward real-data tests, concise
-docs, and any user-facing documentation updates. In Standalone mode, stop after
-the capsule.
+In Delivery mode, hand off to `spec` after resolving material choices; carry
+forward real-data tests, concise docs, and user-facing documentation updates.
+In Standalone mode, stop after the capsule.

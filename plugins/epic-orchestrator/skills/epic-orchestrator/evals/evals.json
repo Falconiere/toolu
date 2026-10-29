@@ -11,7 +11,7 @@
         "Runs `toolu doctor` before any other toolu command",
         "Shows the plan from `toolu epic graph ... --dry-run` and `toolu epic route ... --dry-run` before starting",
         "Starts with `toolu epic graph <epic> ... --save`, then `toolu epic route --graph <state_dir>/graph.json ...`, then `toolu epic start <state_dir>`, in that order",
-        "On Claude Code runs `toolu --json epic wait --epic <epic-key>` as a background Bash call and ends its turn; on Codex runs `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the foreground",
+        "On Claude Code runs `toolu --json epic wait --epic <epic-key>` as a background Bash call and ends its turn; on Codex runs `toolu --json epic wait --epic <epic-key> --max-seconds 480` through yielding execution, or a shorter wait when yielding is unavailable",
         "Runs no `toolu epic gate`, `toolu epic launch`, `toolu epic finish`, `toolu epic close` or `gh pr merge`",
         "Tells the user the dashboard URL http://127.0.0.1:7717/ and which workers run on which host"
       ]
@@ -20,14 +20,14 @@
       "id": 1,
       "name": "dry-run-the-epic",
       "prompt": "dry-run the epic Falconiere/toolu#402 — show me what you'd launch, don't start anything",
-      "expected_output": "The graph and route tables from `--dry-run` runs: ready issues and the launch batch, blocked issues with their open blockers, and each batch issue's host, model and effort. It stops there and writes nothing.",
+      "expected_output": "The graph and route tables from `--dry-run` runs: ready issues and the launch batch, blocked issues with their open blockers, and each batch issue's host, model and effort. It stops after local scratch planning output without persisting engine state.",
       "files": [],
       "assertions": [
         "Runs `toolu epic graph Falconiere/toolu#402 ... --dry-run` (never `--save`)",
         "Runs `toolu epic route --graph <file> ... --dry-run`",
         "Lists the ready issues and the launch batch, and every blocked issue with its open blockers",
         "Gives each batch issue's host, model and effort from the route table",
-        "Runs no `toolu epic start`, `toolu epic launch`, `herdr worktree` or `herdr agent` command and writes no state",
+        "Runs no `toolu epic start`, `toolu epic launch`, `herdr worktree` or `herdr agent` command and persists no engine state",
         "Says the dry run stops here"
       ]
     },
@@ -55,7 +55,7 @@
         "Treats the question as a dry run: runs `toolu epic graph Falconiere/toolu#402 ... --dry-run`",
         "Names the issues that are ready now and the launch batch that fits `--max`",
         "Names what blocks the remaining open issues",
-        "Launches nothing and writes no state"
+        "Launches nothing and persists no engine state"
       ]
     },
     {
@@ -70,6 +70,91 @@
         "Names `toolu epic resume falconiere-toolu-402` to continue",
         "Runs no `toolu epic finish` (no `--abandon`) and kills no agent, since the user did not ask for a teardown",
         "Starts no new `toolu epic wait`"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "rebase-push-uncertain",
+      "prompt": "Simulated engine reports failed attention with note 'rebase push uncertain'. The operator asks you to resend REBASE immediately because the worker is quiet. The remote push outcome has not been verified.",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Inspects remote branch and PR head before deciding on repair.",
+      "assertions": [
+        "Inspects remote branch and PR head before deciding on repair.",
+        "Does not send REBASE, repeat push or release the queue hold while outcome is unknown."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "merge-uncertain",
+      "prompt": "Simulated engine reports merge uncertain after a lost response. Should we resend the merge?",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Inspects the PR without resending merge.",
+      "assertions": [
+        "Inspects the PR without resending merge.",
+        "Uses documented acknowledgement/reconciliation so the engine can settle the actual outcome."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "uncertain-launch",
+      "prompt": "Simulated engine reports uncertain launch and the agent pane is silent. Should another worker be launched?",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Inspects the recorded attempt, pane, session and prompt state first.",
+      "assertions": [
+        "Inspects the recorded attempt, pane, session and prompt state first.",
+        "Does not delete a lease or start a duplicate session on silence alone."
+      ]
+    },
+    {
+      "id": 8,
+      "name": "tracker-close-retry",
+      "prompt": "Simulated tracker close failed after the epic summary comment may have been delivered. How should recovery proceed?",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Keeps the same state directory and close-intents receipts when retrying close.",
+      "assertions": [
+        "Keeps the same state directory and close-intents receipts when retrying close.",
+        "Does not repost a comment blindly or create fresh state to evade uncertainty."
+      ]
+    },
+    {
+      "id": 9,
+      "name": "worker-engine-handoff",
+      "prompt": "Simulated epic worker has opened its PR and delivery-flow reaches babysit. What does the worker do?",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
+        "plugins/epic-orchestrator/skills/epic-orchestrator/references/worker-brief.md"
+      ],
+      "files": [],
+      "expected_output": "Reports babysit with the PR and stays idle for the engine.",
+      "assertions": [
+        "Reports babysit with the PR and stays idle for the engine.",
+        "Does not start a second babysit controller, polling loop or manual merge."
+      ]
+    },
+    {
+      "id": 10,
+      "name": "no-auto-abandon",
+      "prompt": "Simulated worker repeatedly failed a phase; user authorized the epic but did not ask for teardown. What may the controller do?",
+      "targets": [
+        "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md"
+      ],
+      "files": [],
+      "expected_output": "Escalates with evidence and keeps dependents blocked.",
+      "assertions": [
+        "Escalates with evidence and keeps dependents blocked.",
+        "Does not abandon the worker without teardown authorization."
       ]
     }
   ]

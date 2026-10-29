@@ -58,9 +58,9 @@ toolu sandbox run --clone -- cargo xtask host-smoke --host codex
 
 ## What stays with the user
 
-- `toolu sandbox setup` creates and provisions the VM. It takes a few minutes the
-  first time, longer than a tool call may wait: ask the user to run it, or run it
-  in the background. Its logs are under `~/.local/state/toolu/sandbox/`.
+- `toolu sandbox setup` provisions the VM. It may outlast a tool call: ask the
+  user to run it, or run it in the background. Logs are under
+  `~/.local/state/toolu/sandbox/`.
 - Agent CLI installs and logins. `setup` prints each vendor's install and login
   command; the user runs them inside `toolu sandbox shell`. Logins live in the
   VM, and deleting the VM removes them.

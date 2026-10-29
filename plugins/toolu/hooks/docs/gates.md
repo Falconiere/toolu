@@ -36,43 +36,12 @@ reaches it only via `gates.<name>.mode`.
 
 ⚠️ = security guardrail. See the warning below.
 
-## ⚠️ Guardrails now ASK instead of denying — read this
+## Security guardrails
 
-> **This changed the security posture of toolu. Read it before upgrading.**
->
-> `protectedFiles`, `mcpBlocker` and `bashCommands` used to be **hard denies**
-> you could not get past in-session. They now **ask you**, and a yes lets the
-> call through.
->
-> **What that means in practice:** an agent that wants to write your `.env`,
-> rewrite a toolu hook, call a blocked MCP server, or run `node -e` no longer
-> hits a wall. It puts a prompt in front of **you**, and you are the control.
-> If you approve without reading, nothing protects you. The old behavior is one
-> config line away — see *Restoring the hard denies* below.
->
-> **Why:** the hard deny was unanswerable. A user could tell the agent "yes,
-> edit that `.env.example`" and the agent was still refused, with deny text
-> that claimed an override existed when none did
-> ([#176](https://github.com/Falconiere/toolu/issues/176)). A guardrail nobody
-> can answer gets routed around — via `Bash`, which the old check never saw —
-> and a bypassed guardrail protects less than an honest prompt.
-
-The three guardrails are in the preset table above, and every mode works on
-them (`block` / `ask` / `advise` / `off`). Two things stay special:
-
-1. **They ask at every preset except `strict`.** `relaxed` relaxes judgement
-   calls; it does not silence a guardrail. `relaxed` means "stop lecturing me",
-   not "write my `.env` without telling me".
-2. **`ask` degrades to `block`, never to `advise`,** on a host that cannot
-   prompt (Codex). Judgement gates degrade to `advise` — say it, don't stop the
-   work. A guardrail fails **closed**: the whole point is that a human decides,
-   so where no human can be reached the answer is no. Degrading these to
-   `advise` would silently disable them exactly where nobody is watching.
-
-The prompt itself is deliberately loud — a banner, the specific path or rule,
-**why that thing is guarded**, and a note that approval covers one call only.
-A guardrail prompt that reads like a routine "allow this?" trains people to
-wave it through.
+`protectedFiles`, `mcpBlocker`, and `bashCommands` ask under balanced and
+relaxed presets; approval applies to one call. On Codex, where prompting is
+unavailable, guardrail `ask` fails closed as `block`. Judgment gates instead
+degrade to `advise`. Set individual modes to `block` for hard denies.
 
 ### Restoring the hard denies
 
@@ -86,16 +55,9 @@ Or `{"gates": {"preset": "strict"}}`, which blocks everything.
 
 ### Bash coverage
 
-`protected-files` also inspects `Bash`/`Shell` commands for redirects, `tee`,
-`sed -i`/`perl -i`, `cp`/`mv`/`install`, `dd of=`, `python -c open(..., "w")`
-write targets, and command substitutions inside unquoted heredocs — so a
-protected path cannot be written through Bash to dodge the prompt
-(github.com/Falconiere/toolu/issues/176). The command is parsed once by
-`toolu_shell::analyze`, so a redirect without a space or on any descriptor
-(`>.env`, `2>.env`), `cp -t DIR`, and writes inside `bash -c` or `eval` are
-seen too (#283). A pathname pattern (`> .en[v]`) is checked as every existing
-file it matches, and a target built from a variable (`> $HOME/.env`) by its
-text. See `writes` in `docs/shell-analysis.md`.
+`protected-files` inspects shell writes including redirects, write commands,
+nested shell commands and substitutions. See `writes` in
+`docs/shell-analysis.md` for parsing and target resolution.
 
 ## Documentation review
 

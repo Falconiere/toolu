@@ -2,15 +2,14 @@
 
 ## Behaviour
 - Evidence before claims: verify (tests/logs/runtime).
-- Failed twice? STOP — change hypothesis; exhaust tools first.
-- Only what's asked: no drive-by refactors or unsolicited files (gate excepted).
-- Match effort to task: low + thinking off for routine work; full for hard.
+- Failed twice? Stop and change hypothesis.
+- No unsolicited changes (gate excepted).
+- Follow installed Ponytail's selected mode unless user-disabled; discover it in the host skill catalog, never auto-install.
 
 ## Delegation
-Inline by default. Delegate only to isolate a large read or run truly independent
-units — never for small work. One question and one return shape per agent. Quiet
-agent? Take it back inline.
+Inline by default. Delegate only large reads or independent units, with one
+question and return shape per agent. Take quiet agents back inline.
 
 ## Mandatory
-- Quality gate: never advance while any error/warning/test failure stands, even unrelated.
+- Do not ship with a failing quality gate; continue work needed to repair it.
 - Tests use real data; no mocks hiding integration.

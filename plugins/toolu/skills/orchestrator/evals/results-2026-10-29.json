@@ -1,0 +1,329 @@
+{
+  "date": "2026-10-29",
+  "mode": "smoke; description-only model judge and isolated read-only behavioral actors",
+  "limits": [
+    "One trial per prompt, not a reliability estimate.",
+    "Routing was batched through Jev with hidden expected labels; this is not a host auto-selection test.",
+    "Behavioral actors used fresh agent contexts; review used repository fixtures, research/epic cases used simulated observations. Their outcomes were observed in the session, but transcripts and tool traces were not retained; wall-clock and token costs were not recorded.",
+    "No cross-host live integrations, skill-unloaded baseline, or exhaustive behavioral suite run."
+  ],
+  "routing": {
+    "model": "jev-1.14.0",
+    "usage": {
+      "input_tokens": 25063,
+      "output_tokens": 5468
+    },
+    "initial": {
+      "passed": 21,
+      "total": 22,
+      "failure": {
+        "id": "not-debug-feature",
+        "actual": "delivery-flow:delivery-flow",
+        "expected": "none"
+      },
+      "fix": "Narrowed delivery-flow description to requested PR delivery; preserved explicit invocation and authorized handoffs."
+    },
+    "revised": {
+      "passed": 22,
+      "total": 22
+    },
+    "results": [
+      {
+        "id": "research-report",
+        "expected": "toolu:deep-research",
+        "actual": "toolu:deep-research",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "not-research-local",
+        "expected": "none",
+        "actual": "none",
+        "confidence": 0.89,
+        "pass": true
+      },
+      {
+        "id": "debug-flaky",
+        "expected": "toolu:debug",
+        "actual": "toolu:debug",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "not-debug-feature",
+        "expected": "none",
+        "actual": "none",
+        "confidence": 0.88,
+        "pass": true
+      },
+      {
+        "id": "native-review",
+        "expected": "code-review:review",
+        "actual": "code-review:review",
+        "confidence": 0.9,
+        "pass": true
+      },
+      {
+        "id": "fallback-review",
+        "expected": "toolu-review:review",
+        "actual": "toolu-review:review",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "epic-plan",
+        "expected": "epic-orchestrator:epic-orchestrator",
+        "actual": "epic-orchestrator:epic-orchestrator",
+        "confidence": 0.95,
+        "pass": true
+      },
+      {
+        "id": "not-epic-single",
+        "expected": "none",
+        "actual": "none",
+        "confidence": 0.95,
+        "pass": true
+      },
+      {
+        "id": "babysit-explicit",
+        "expected": "pr-babysit:babysit",
+        "actual": "pr-babysit:babysit",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "not-babysit-status",
+        "expected": "statusline:status",
+        "actual": "statusline:status",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "commit-all",
+        "expected": "toolu:commit",
+        "actual": "toolu:commit",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "review-commit",
+        "expected": "toolu:review-and-commit",
+        "actual": "toolu:review-and-commit",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "design-only",
+        "expected": "brainstorm:brainstorm",
+        "actual": "brainstorm:brainstorm",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "deliver",
+        "expected": "delivery-flow:delivery-flow",
+        "actual": "delivery-flow:delivery-flow",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "delegate-decision",
+        "expected": "toolu:orchestrator",
+        "actual": "toolu:orchestrator",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "not-orchestrate-small",
+        "expected": "none",
+        "actual": "none",
+        "confidence": 0.97,
+        "pass": true
+      },
+      {
+        "id": "setup-agents",
+        "expected": "toolu:setup",
+        "actual": "toolu:setup",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "docs-sync",
+        "expected": "documentation-gate:sync",
+        "actual": "documentation-gate:sync",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "git-message",
+        "expected": "git-better:git-better",
+        "actual": "git-better:git-better",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "sandbox",
+        "expected": "sandbox:sandbox",
+        "actual": "sandbox:sandbox",
+        "confidence": 1,
+        "pass": true
+      },
+      {
+        "id": "structural",
+        "expected": "ast-grep:ast-grep",
+        "actual": "ast-grep:ast-grep",
+        "confidence": 0.63,
+        "pass": true
+      },
+      {
+        "id": "judgment",
+        "expected": "jev:jev",
+        "actual": "jev:jev",
+        "confidence": 1,
+        "pass": true
+      }
+    ],
+    "final_catalog_check": {
+      "passed": 22,
+      "total": 22,
+      "reason": "Reran the complete catalog after restoring all required context-budget trigger phrases."
+    }
+  },
+  "behavioral": [
+    {
+      "case": "cross-file-regression",
+      "actor": "gpt-6.1-terra",
+      "effort": "high",
+      "mode": "read-only source fixture review",
+      "pass": true,
+      "evidence": "Actor read both base/tip files, found page_size=0 division panic and loss of div_ceil causing omitted partial pages, distinguished masking, did not edit or approve whole branch.",
+      "checks": [
+        "Caller/constant interaction inspected",
+        "Reachable triggers and changed locations reported",
+        "No fixture writes or whole-branch approval"
+      ],
+      "executed_tests": false
+    },
+    {
+      "case": "context7-first",
+      "actor": "gpt-6.1-terra",
+      "effort": "medium",
+      "mode": "simulated retrieval planning",
+      "pass": true,
+      "evidence": "Actor read research-agent and research-tools, selected Context7 resolve then version-matching query, Exa/native fallback; made no fictional retrieval or source claims.",
+      "checks": [
+        "Preferred tool selected",
+        "Resolve before query",
+        "Actual tools distinguished from proposed calls"
+      ],
+      "live_retrieval": false
+    },
+    {
+      "case": "rebase-push-uncertain",
+      "actor": "gpt-6.1-terra",
+      "effort": "medium",
+      "mode": "simulated recovery planning",
+      "pass": true,
+      "evidence": "Actor read epic skill and recovery, refused REBASE/repeated push until remote branch and PR head inspected, retained hold, made no controller mutation.",
+      "checks": [
+        "Unknown outcome retained",
+        "No duplicate push",
+        "Read-only reconciliation proposed"
+      ],
+      "live_engine": false
+    },
+    {
+      "case": "codex-slot-after-split",
+      "actor": "gpt-6.1-terra",
+      "effort": "medium",
+      "mode": "simulated state derivation",
+      "pass": true,
+      "evidence": "Fresh actor loaded shared and Codex controller only, derived acme-widget-17 and /tmp/widget/.codex/tmp/pr-babysit/acme-widget-17.json; created no files/goals.",
+      "checks": [
+        "Slot comes from shared target resolution",
+        "Exact Codex path",
+        "No mutation"
+      ],
+      "live_controller": false
+    }
+  ],
+  "review": {
+    "finding": "Splitting babysit controllers left SLOT defined only in Claude text.",
+    "fix": "Moved lowercased owner-repo-number definition into shared target resolution for both controllers.",
+    "status": "fixed; concrete-slot regression case added"
+  },
+  "source_catalog": {
+    "toolu:commit": {
+      "path": "plugins/toolu/skills/commit/SKILL.md",
+      "description": "Use when the user asks to commit all current changes after running the repository's required quality gates."
+    },
+    "toolu:deep-research": {
+      "path": "plugins/toolu/skills/deep-research/SKILL.md",
+      "description": "Use for deep research that needs a verified, multi-source cited report. Use research-agent for bounded lookups and deep-explore for local code questions."
+    },
+    "toolu:setup": {
+      "path": "plugins/toolu/skills/setup/SKILL.md",
+      "description": "Use when installing, previewing, updating, backing up, or removing toolu's custom Codex agent profiles."
+    },
+    "toolu:review-and-commit": {
+      "path": "plugins/toolu/skills/review-and-commit/SKILL.md",
+      "description": "Use when completed branch work needs a final code review, fixes, full quality gates, and intentional local commits without pushing or merging."
+    },
+    "toolu:orchestrator": {
+      "path": "plugins/toolu/skills/orchestrator/SKILL.md",
+      "description": "Decide whether and how to delegate substantial work. Use for independent parallel tasks or isolating large reads; keep small or dependent work inline."
+    },
+    "toolu:debug": {
+      "path": "plugins/toolu/skills/debug/SKILL.md",
+      "description": "Find and fix the root cause of a crash, failing/flaky test, wrong result or regression. Use for broken behavior; not feature design, routine review or external research."
+    },
+    "ast-grep:ast-grep": {
+      "path": "plugins/ast-grep/skills/ast-grep/SKILL.md",
+      "description": "ALWAYS ACTIVE — Structural code search and rewrite protocol. You MUST use ast-grep instead of Grep/sed for any 'find/rewrite by code shape' task (AST patterns, not text). Falls back to Grep for exact literals only."
+    },
+    "brainstorm:brainstorm": {
+      "path": "plugins/brainstorm/skills/brainstorm/SKILL.md",
+      "description": "Use to think a change through before building — scope, evidence, alternatives, trade-offs, and a recommended approach — without editing code. Triggers on \"brainstorm\", \"think through\", \"design options\", \"how should we approach\", \"trade-offs\". delivery-flow runs it as phase 1."
+    },
+    "delivery-flow:delivery-flow": {
+      "path": "plugins/delivery-flow/skills/delivery-flow/SKILL.md",
+      "description": "Use when asked to implement and deliver repository work through a PR and CI/review clearance, or explicitly invoke delivery-flow. Covers real-data execution; not for a local edit, explanation or review alone."
+    },
+    "pr-babysit:babysit": {
+      "path": "plugins/pr-babysit/skills/babysit/SKILL.md",
+      "description": "Use when the user explicitly asks Codex, or an authorized verified execution handoff invokes it, to monitor and autonomously clear the current branch's pull request until CI, review threads, and the review-bot verdict are all green."
+    },
+    "code-review:review": {
+      "path": "plugins/code-review/skills/review/SKILL.md",
+      "description": "Review a committed push diff using native review, with toolu-review fallback when it cannot complete. Use for code review or before pushing."
+    },
+    "statusline:status": {
+      "path": "plugins/statusline/skills/status/SKILL.md",
+      "description": "Use when the user asks for current repository, branch, working-tree, quality-gate, push-review, or waiver status in Codex."
+    },
+    "sandbox:sandbox": {
+      "path": "plugins/sandbox/skills/sandbox/SKILL.md",
+      "description": "Run builds, gates and agent CLIs in toolu's Linux sandbox (a Lima VM on macOS, this machine on Linux) with `toolu sandbox run`, outside macOS seatbelt, TCC and Gatekeeper, and faster. Use to run the gate in the sandbox, test on Linux, run host-smoke, or when macOS policy blocks or slows a build."
+    },
+    "jev:jev": {
+      "path": "plugins/jev/skills/jev/SKILL.md",
+      "description": "Mandatory for semantic decisions during search, debugging, planning, execution, and review — classify, rank, rate, route, or assess supplied evidence."
+    },
+    "git-better:git-better": {
+      "path": "plugins/git-better/skills/git-better/SKILL.md",
+      "description": "Use to write a commit message, name a branch, or fix a git-better rejection. Follow scoped Conventional Commits with an Intent: trailer and semantic branch names."
+    },
+    "documentation-gate:sync": {
+      "path": "plugins/documentation-gate/skills/sync/SKILL.md",
+      "description": "Audit and update documentation for the committed branch diff with a Jev-routed editing worker, then record its review."
+    },
+    "epic-orchestrator:epic-orchestrator": {
+      "path": "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
+      "description": "Run, resume, inspect or pause a GitHub, Jira or Linear epic through the resident toolu engine. Use dry-run for planning questions; not for a single issue. Triggers include \"dry-run the epic\" and \"where is the epic at\"."
+    },
+    "toolu-review:review": {
+      "path": "plugins/toolu-review/skills/review/SKILL.md",
+      "description": "Review committed changes and record push-review state for review before push, when explicitly requested or when native code-review cannot complete. Preserve the caller's scope and findings."
+    }
+  }
+}

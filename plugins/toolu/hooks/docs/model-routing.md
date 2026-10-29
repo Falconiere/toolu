@@ -1,6 +1,6 @@
 ## Model routing (mandatory)
 
-Pass `model:` on EVERY Agent call; never leave it default. Tier by work class:
+When delegating, select the available host's model and effort for the work class:
 
 - mechanical (`{{model_mechanical}}`{{effort_mechanical}}) — lookups, listings, renames, formatting.
 - exploration (`{{model_exploration}}`{{effort_exploration}}) — read-only search across files.

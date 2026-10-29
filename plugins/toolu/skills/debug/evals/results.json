@@ -1,34 +1,152 @@
 {
   "skill": "debug",
-  "generated_at": "2026-06-18",
-  "judge": "LLM router judge given the skill description only (no gold labels). Snapshot — LLM-judged, re-runs may vary slightly.",
+  "generated_at": "2026-10-29",
+  "judge": "Jev description-only choice classifier; expected labels withheld. Single batched smoke trial, not host activation or reliability evidence.",
+  "model": "jev-1.14.0",
+  "description": "Find and fix the root cause of a crash, failing/flaky test, wrong result or regression. Use for broken behavior; not feature design, routine review or external research.",
+  "usage": {
+    "input_tokens": 2148,
+    "output_tokens": 528
+  },
   "n": 18,
   "positives": 12,
   "negatives": 6,
-  "confusion": { "tp": 12, "fp": 0, "fn": 0, "tn": 6 },
+  "confusion": {
+    "tp": 12,
+    "fp": 0,
+    "fn": 0,
+    "tn": 6
+  },
   "precision": 1,
   "recall": 1,
   "f1": 1,
-  "threshold": 0.9,
   "pass": true,
   "predictions": [
-    { "id": "p1",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p2",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p3",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p4",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p5",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p6",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p7",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p8",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p9",  "expected": true,  "fire": true,  "correct": true },
-    { "id": "p10", "expected": true,  "fire": true,  "correct": true },
-    { "id": "p11", "expected": true,  "fire": true,  "correct": true },
-    { "id": "p12", "expected": true,  "fire": true,  "correct": true },
-    { "id": "n1",  "expected": false, "fire": false, "correct": true },
-    { "id": "n2",  "expected": false, "fire": false, "correct": true },
-    { "id": "n3",  "expected": false, "fire": false, "correct": true },
-    { "id": "n4",  "expected": false, "fire": false, "correct": true },
-    { "id": "n5",  "expected": false, "fire": false, "correct": true },
-    { "id": "n6",  "expected": false, "fire": false, "correct": true }
+    {
+      "id": "p1",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.98
+    },
+    {
+      "id": "p2",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "p3",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.98
+    },
+    {
+      "id": "p4",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.9
+    },
+    {
+      "id": "p5",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.98
+    },
+    {
+      "id": "p6",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.96
+    },
+    {
+      "id": "p7",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.98
+    },
+    {
+      "id": "p8",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "p9",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.98
+    },
+    {
+      "id": "p10",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 0.94
+    },
+    {
+      "id": "p11",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "p12",
+      "expected": true,
+      "fire": true,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n1",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n2",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n3",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n4",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n5",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 1
+    },
+    {
+      "id": "n6",
+      "expected": false,
+      "fire": false,
+      "correct": true,
+      "confidence": 0.96
+    }
   ]
 }

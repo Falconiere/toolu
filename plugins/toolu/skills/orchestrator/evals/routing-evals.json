@@ -1,0 +1,115 @@
+{
+  "method": "Description-only routing; primary entrypoint only, not always-active supporting rules. Actor sees catalog and prompt, never expected. none means a direct task or agent role outside this skill catalog. Run each prompt independently; see docs/agent-text-evals.md.",
+  "cases": [
+    {
+      "id": "research-report",
+      "prompt": "Write a multi-source cited research report on durable agent workflows.",
+      "expected": "toolu:deep-research"
+    },
+    {
+      "id": "not-research-local",
+      "prompt": "Explain where this repository defines its CLI entrypoint.",
+      "expected": "none"
+    },
+    {
+      "id": "debug-flaky",
+      "prompt": "Find the root cause of this intermittently failing test and fix it.",
+      "expected": "toolu:debug"
+    },
+    {
+      "id": "not-debug-feature",
+      "prompt": "Add a tooltip to this button; no existing behavior is broken.",
+      "expected": "none"
+    },
+    {
+      "id": "native-review",
+      "prompt": "Review the committed diff before I push this branch.",
+      "expected": "code-review:review"
+    },
+    {
+      "id": "fallback-review",
+      "prompt": "Native code review is unavailable. Use toolu-review on the same committed diff.",
+      "expected": "toolu-review:review"
+    },
+    {
+      "id": "epic-plan",
+      "prompt": "Which issues in epic #402 can run in parallel? Do not launch anything.",
+      "expected": "epic-orchestrator:epic-orchestrator"
+    },
+    {
+      "id": "not-epic-single",
+      "prompt": "Explain issue #402; it has no sub-issues.",
+      "expected": "none"
+    },
+    {
+      "id": "babysit-explicit",
+      "prompt": "Babysit this branch's PR until checks and review are clear.",
+      "expected": "pr-babysit:babysit"
+    },
+    {
+      "id": "not-babysit-status",
+      "prompt": "Show the current repository and quality gate status in Codex.",
+      "expected": "statusline:status"
+    },
+    {
+      "id": "commit-all",
+      "prompt": "Commit all current changes after running required checks.",
+      "expected": "toolu:commit"
+    },
+    {
+      "id": "review-commit",
+      "prompt": "Review, fix and commit the completed branch work locally, without pushing.",
+      "expected": "toolu:review-and-commit"
+    },
+    {
+      "id": "design-only",
+      "prompt": "Brainstorm the design alternatives before we build; don't implement.",
+      "expected": "brainstorm:brainstorm"
+    },
+    {
+      "id": "deliver",
+      "prompt": "Implement this repository task end to end, open its PR and handle CI/review.",
+      "expected": "delivery-flow:delivery-flow"
+    },
+    {
+      "id": "delegate-decision",
+      "prompt": "Decide whether these large independent investigations should use subagents.",
+      "expected": "toolu:orchestrator"
+    },
+    {
+      "id": "not-orchestrate-small",
+      "prompt": "Print the value of this known configuration field.",
+      "expected": "none"
+    },
+    {
+      "id": "setup-agents",
+      "prompt": "Preview the managed Codex agent profile installation.",
+      "expected": "toolu:setup"
+    },
+    {
+      "id": "docs-sync",
+      "prompt": "Audit and update docs for this committed branch and record its documentation review.",
+      "expected": "documentation-gate:sync"
+    },
+    {
+      "id": "git-message",
+      "prompt": "Write a scoped Conventional Commit message with an Intent trailer.",
+      "expected": "git-better:git-better"
+    },
+    {
+      "id": "sandbox",
+      "prompt": "Run the quality gate in the Linux sandbox.",
+      "expected": "sandbox:sandbox"
+    },
+    {
+      "id": "structural",
+      "prompt": "Find every implementation of this Rust trait using structural search.",
+      "expected": "ast-grep:ast-grep"
+    },
+    {
+      "id": "judgment",
+      "prompt": "Assess which supplied evidence best supports this claim using Jev.",
+      "expected": "jev:jev"
+    }
+  ]
+}
