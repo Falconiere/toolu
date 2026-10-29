@@ -1,3 +1,4 @@
+use std::os::unix::fs::symlink;
 use std::path::PathBuf;
 
 use serde_json::Map;
@@ -71,7 +72,7 @@ impl QualityRule for Rule {
   }
 }
 
-struct Inline;
+struct Inline(&'static str, &'static str);
 
 impl QualityRule for Inline {
   fn language(&self) -> &'static str {
@@ -81,7 +82,7 @@ impl QualityRule for Inline {
     &["ts"]
   }
   fn source(&self) -> &'static str {
-    "inline-quality"
+    self.1
   }
   fn reason(&self) -> &'static str {
     "inline failed"
@@ -96,8 +97,10 @@ impl QualityRule for Inline {
     Vec::new()
   }
   fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
-    "id: throw-string\nlanguage: ts\nseverity: warning\nmessage: x\nrule:\n  pattern: 'throw \"$S\"'"
-      .to_owned()
+    format!(
+      "id: {}\nlanguage: ts\nseverity: warning\nmessage: x\nrule:\n  pattern: 'throw \"$S\"'",
+      self.0
+    )
   }
   fn check(
     &self,
@@ -108,6 +111,7 @@ impl QualityRule for Inline {
     let errors = match scan {
       AstGrepScan::Ok { hits, .. } => hits
         .iter()
+        .filter(|hit| hit.rule_id == self.0)
         .map(|hit| format!("{} {}", hit.rule_id, hit.excerpt))
         .collect(),
       other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => vec![format!("{other:?}")],
@@ -150,7 +154,11 @@ fn inline_rules_join_the_one_scan() {
     moved_to: None,
     from: None,
   }];
-  let outcome = run_quality(&records, &ctx, &[&Inline, &Rule]);
+  let outcome = run_quality(
+    &records,
+    &ctx,
+    &[&Inline("throw-string", "inline-quality"), &Rule],
+  );
   let [toolu_protocol::decision::Decision::Advisory { message }] = outcome.decisions.as_slice()
   else {
     panic!("one advisory expected: {:?}", outcome.decisions);
@@ -258,6 +266,107 @@ fn last_edit_records_probed_scales_with_one_probe_per_record() {
     assert_eq!(survivors.len(), n);
     assert_eq!(survivors[0].path, "p0");
     assert_eq!(survivors[n - 1].path, format!("p{}", n - 1));
+  }
+}
+
+#[test]
+fn batch_keeps_exact_paths_order_and_each_rules_hits() {
+  let temp = tempfile::tempdir().unwrap();
+  std::fs::create_dir(temp.path().join("nested")).unwrap();
+  std::fs::write(
+    temp.path().join("a.ts"),
+    "throw \"first\";\nthrow \"last\";\n",
+  )
+  .unwrap();
+  std::fs::write(temp.path().join("nested/a.ts"), "throw \"nested\";\n").unwrap();
+  std::fs::write(temp.path().join("ba.ts"), "const ok = 1;\n").unwrap();
+  let env = Env::process();
+  let raw = Map::new();
+  let ctx = context(temp.path(), &env, &raw);
+  let records: Vec<_> = ["a.ts", "nested/a.ts", "ba.ts"]
+    .into_iter()
+    .map(|path| EditRecord {
+      path: path.to_owned(),
+      operation: EditOperation::Write,
+      moved_to: None,
+      from: None,
+    })
+    .collect();
+  let outcome = run_quality(
+    &records,
+    &ctx,
+    &[
+      &Inline("throw-first", "first-quality"),
+      &Inline("throw-second", "second-quality"),
+    ],
+  );
+  let messages: Vec<_> = outcome
+    .decisions
+    .iter()
+    .map(|decision| match decision {
+      toolu_protocol::decision::Decision::Advisory { message } => message.as_str(),
+      toolu_protocol::decision::Decision::Allow => "allow",
+      other => panic!("unexpected decision: {other:?}"),
+    })
+    .collect();
+  assert_eq!(messages.len(), 6);
+  assert!(
+    messages[0].contains("throw-first a.ts:1:throw \"first\";\nthrow-first a.ts:2:throw \"last\";")
+  );
+  assert!(
+    messages[1]
+      .contains("throw-second a.ts:1:throw \"first\";\nthrow-second a.ts:2:throw \"last\";")
+  );
+  assert!(messages[2].contains("throw-first nested/a.ts:1:throw \"nested\";"));
+  assert!(messages[3].contains("throw-second nested/a.ts:1:throw \"nested\";"));
+  assert_eq!(&messages[4..], &["allow", "allow"]);
+}
+
+#[test]
+fn failed_batch_scan_reaches_each_rule_and_keeps_gate_failure() {
+  let temp = tempfile::tempdir().unwrap();
+  std::fs::write(temp.path().join("a.ts"), "throw \"boom\";\n").unwrap();
+  let bin = temp.path().join("bin");
+  std::fs::create_dir(&bin).unwrap();
+  let tool = bin.join("ast-grep");
+  let process = Env::process();
+  let path = format!("{}:{}", bin.display(), process.get("PATH").unwrap());
+  let env = process.with("PATH", &path);
+  let raw = Map::new();
+  let ctx = context(temp.path(), &env, &raw);
+  let records = [EditRecord {
+    path: "a.ts".to_owned(),
+    operation: EditOperation::Write,
+    moved_to: None,
+    from: None,
+  }];
+  for (target, stage) in [
+    ("/usr/bin/false", "stage: AstGrep"),
+    ("/bin/echo", "stage: Parse"),
+  ] {
+    symlink(target, &tool).unwrap();
+    let outcome = run_quality(
+      &records,
+      &ctx,
+      &[
+        &Inline("throw-first", "first-quality"),
+        &Inline("throw-second", "second-quality"),
+      ],
+    );
+    assert_eq!(outcome.decisions.len(), 2);
+    for decision in &outcome.decisions {
+      let toolu_protocol::decision::Decision::Advisory { message } = decision else {
+        panic!("expected failure advisory: {decision:?}");
+      };
+      assert!(message.as_str().contains(stage), "{message:?}");
+    }
+    assert!(
+      temp
+        .path()
+        .join(".claude/tmp/quality-gate-status.json")
+        .exists()
+    );
+    std::fs::remove_file(&tool).unwrap();
   }
 }
 

@@ -7,7 +7,7 @@ use std::path::Path;
 
 use clap::{Arg, ArgMatches, Command};
 use serde_json::{Map, json};
-use toolu_engine::quality::{AstGrepScan, EditedFile, scan_inline};
+use toolu_engine::quality::{AstGrepScan, EditedFile, partition_hits, scan_inline};
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -302,28 +302,23 @@ fn scan_groups(
         .filter_map(|at| loaded.get(*at).map(|one| (*at, one.file.clone())))
         .collect();
       let files: Vec<EditedFile> = batch.iter().map(|(_, file)| file.clone()).collect();
-      let scan = scan_inline(&files, &rules, ctx);
+      let mut scan = scan_inline(&files, &rules, ctx);
+      let mut by_path = partition_hits(&mut scan);
       for (at, file) in batch {
-        scans.insert(at, own_hits(&scan, &file));
+        scans.insert(
+          at,
+          match &scan {
+            AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
+              hits: by_path.remove(&file.path).unwrap_or_default(),
+              empty: *empty,
+            },
+            other => other.clone(),
+          },
+        );
       }
     }
   }
   scans
-}
-
-fn own_hits(scan: &AstGrepScan, file: &EditedFile) -> AstGrepScan {
-  let AstGrepScan::Ok { hits, empty } = scan else {
-    return scan.clone();
-  };
-  let hits = hits
-    .iter()
-    .filter(|hit| hit.file == file.path)
-    .cloned()
-    .collect();
-  AstGrepScan::Ok {
-    hits,
-    empty: *empty,
-  }
 }
 
 #[cfg(test)]
