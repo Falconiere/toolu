@@ -219,6 +219,34 @@ fn an_uncertain_launch_done_line_replays_without_a_stage_change() {
 }
 
 #[test]
+fn a_held_merge_done_line_prevents_a_second_put_after_restart() {
+  for outcome in ["uncertain: GitHub answered HTTP 504", "refused: 409"] {
+    let mut world = World::new(0);
+    let issue = ensure_issue(&mut world, "a", "e", "/state");
+    issue.stage = "running".into();
+    issue.phase = "ready".into();
+    issue.repo = "o/r".into();
+    issue.pr = Some(7);
+    observe(
+      &mut world,
+      &Record::new("action", "merge-intent", "a", "t1", ""),
+    );
+    observe(
+      &mut world,
+      &Record::new("action", "merge-done", "a", "t1", outcome),
+    );
+    crate::logic::arm_ready(&mut world);
+    assert_eq!(
+      world.issues["a"].deferred.as_deref(),
+      Some("merge"),
+      "{outcome}"
+    );
+    assert!(world.issues["a"].pending.is_none(), "{outcome}");
+    assert_eq!(first_call(&mut world), None, "{outcome}");
+  }
+}
+
+#[test]
 fn a_restart_after_a_held_waiting_or_failed_launch_runs_nothing_again() {
   for note in ["hold", "wait", "failed"] {
     let mut world = World::new(0);

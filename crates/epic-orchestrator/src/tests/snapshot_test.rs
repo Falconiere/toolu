@@ -35,6 +35,35 @@ fn loads_blockers_from_the_graph() {
 }
 
 #[test]
+fn a_deferred_merge_round_trips_through_the_issue_record() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let epic = tmp.path().join("epic");
+  std::fs::create_dir_all(epic.join("issues")).expect("issues");
+  std::fs::create_dir_all(epic.join("status")).expect("status");
+  std::fs::write(
+    epic.join("graph.json"),
+    json!({"issues": [{"key": "a", "repo": "o/r"}]}).to_string(),
+  )
+  .expect("graph");
+  std::fs::write(
+    tmp.path().join("registry.json"),
+    json!({"epics": [{"key": "e", "state_dir": epic.display().to_string()}]}).to_string(),
+  )
+  .expect("registry");
+  std::fs::write(epic.join("status/a.json"), r#"{"phase":"ready","pr":7}"#).expect("status");
+  let mut issue = crate::model::Issue::blank("a", "e", "", 0);
+  issue.stage = "running".into();
+  issue.deferred = Some("merge".into());
+  crate::disk::write_issue_fields(&epic.join("issues/a.json"), &issue).expect("record");
+  let world = load(&Paths::at(tmp.path()), std::time::SystemTime::now()).expect("load");
+  assert_eq!(world.issues["a"].deferred.as_deref(), Some("merge"));
+  assert!(
+    world.issues["a"].pending.is_none(),
+    "restart must not rearm merge"
+  );
+}
+
+#[test]
 fn adopt_typescript() {
   let tmp = tempfile::tempdir().expect("temp");
   let epic = tmp.path().join("epic");

@@ -161,7 +161,20 @@ fn an_uncertain_merge_is_held_and_a_closed_pr_frees_the_queue() {
   .expect("doc");
   assert_eq!(world.issues["a"].deferred.as_deref(), Some("merge"));
   assert_eq!(world.attention[0].kind, "failed");
+  assert_eq!(world.attention[0].note, "merge uncertain: timed out");
+  crate::logic::arm_ready(&mut world);
+  assert!(
+    world.issues["a"].pending.is_none(),
+    "held merge must not rearm"
+  );
+  assert!(world.issues["b"].pending.is_none(), "head stays held");
   assert!(names(&steps)[0].starts_with("merge-done:uncertain"));
+  assert!(
+    steps
+      .iter()
+      .any(|step| matches!(step, Step::Issue { key } if key == "a")),
+    "the deferred guard must be persisted"
+  );
   let mut world = self::world();
   let _ = commit(&mut world, "a", r#"{"outcome":"closed"}"#).expect("doc");
   assert_eq!(world.issues["a"].stage, "closed");

@@ -124,7 +124,7 @@ pub(crate) fn write_pretty<T: serde::Serialize>(path: &Path, value: &T) -> Resul
 }
 
 /// Write the engine's fields of an issue record: its stage (when known),
-/// its coupling hold, whether a hold was released, and a waiting relaunch.
+/// its coupling hold, deferred action, whether a hold was released, and a waiting relaunch.
 /// A record a finish settled (`merged` or `abandoned`) keeps its stage
 /// (#619).
 ///
@@ -152,6 +152,10 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
     Some(relaunch) => map.insert("relaunch".to_owned(), json!(relaunch)),
     None => map.remove("relaunch"),
   };
+  match &issue.deferred {
+    Some(action) => map.insert("deferred".to_owned(), json!(action)),
+    None => map.remove("deferred"),
+  };
   crate::queue_fields::write(&mut map, issue);
   write_value(path, &Value::Object(map))
 }
@@ -166,6 +170,7 @@ pub(crate) fn write_issue_fields(path: &Path, issue: &Issue) -> Result<(), Strin
 pub(crate) fn write_issue(issue: &Issue, now: std::time::SystemTime) -> Result<(), String> {
   if issue.stage.is_empty()
     && issue.hold.is_none()
+    && issue.deferred.is_none()
     && !issue.coupling_released
     && issue.queue.queued_at_ms.is_none()
   {

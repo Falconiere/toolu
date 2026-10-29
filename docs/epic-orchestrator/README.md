@@ -64,6 +64,18 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
+## Uncertain merges
+
+The merge queue sends one PUT pinned to the verified PR head. If GitHub times
+out, drops the response or answers 5xx, the engine holds that queue head and
+raises `merge uncertain` attention. The PUT may have applied; inspect the PR on
+GitHub before taking manual action. A later observation that the PR merged
+releases the hold and starts cleanup. The hold survives an engine restart.
+The engine does not resend an uncertain
+PUT or try the admin merge path. Definite policy, authentication and validation
+refusals remain refusals; the admin path is available only for a protection
+refusal.
+
 ## Registry cleanup
 
 Use `toolu epic cleanup --dry-run` to preview stale registry entries, then

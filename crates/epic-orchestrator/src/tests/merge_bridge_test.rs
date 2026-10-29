@@ -100,6 +100,31 @@ fn a_merge_seen_or_sent_moves_a_running_issue_to_cleaning_and_arms_cleanup() {
 }
 
 #[test]
+fn an_observed_merge_releases_an_uncertain_head_into_cleanup() {
+  let mut world = World::new(0);
+  running(&mut world);
+  let issue = world.issues.get_mut("a").expect("a");
+  issue.phase = "ready".into();
+  issue.pending = Some(fresh(Action::Merge, "t1".into()));
+  let _steps = crate::commit_queue::commit(
+    &mut world,
+    "a",
+    r#"{"outcome":"uncertain","note":"GitHub answered HTTP 504"}"#,
+  )
+  .expect("queue outcome");
+  assert_eq!(world.issues["a"].deferred.as_deref(), Some("merge"));
+  crate::logic::arm_ready(&mut world);
+  assert!(world.issues["a"].pending.is_none());
+  merged(&mut world, "a");
+  assert_eq!(world.issues["a"].stage, "cleaning");
+  assert!(world.issues["a"].deferred.is_none());
+  assert_eq!(
+    world.issues["a"].pending.as_ref().map(|p| p.action),
+    Some(Action::Cleanup)
+  );
+}
+
+#[test]
 fn a_checkpoint_finishes_first_and_a_scripted_merge_arms_its_own_cleanup() {
   let mut world = World::new(0);
   running(&mut world);
