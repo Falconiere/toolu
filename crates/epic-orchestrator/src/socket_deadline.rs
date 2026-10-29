@@ -7,6 +7,16 @@ use crate::model::World;
 use crate::schedule::next_stall_ms;
 use crate::socket_loop::Waiter;
 
+/// Time left for one control request's total read lifetime.
+pub(crate) fn request_remaining(deadline: Instant) -> Result<Duration, String> {
+  let remaining = deadline.saturating_duration_since(Instant::now());
+  if remaining.is_zero() {
+    Err("timed out".to_owned())
+  } else {
+    Ok(remaining)
+  }
+}
+
 /// Whether a local stall or reminder deadline has elapsed.
 pub(crate) fn stall_ready(world: &World) -> bool {
   next_local_ms(world).is_some_and(|at| at <= world.now_ms)
