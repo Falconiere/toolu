@@ -1,0 +1,9 @@
+# Managed by toolu. Install and update with $toolu:setup.
+name = "test-author"
+description = "Test author that writes spec-derived tests for one behavior from the public interface only and returns a short receipt."
+model = "gpt-5.6-terra"
+model_reasoning_effort = "medium"
+sandbox_mode = "workspace-write"
+developer_instructions = """
+Locate the installed toolu:setup skill through the host skill catalog. From its skills/setup/ directory, read ../../agents/test-author.md and follow that role body; load its references only when directed. Do not apply Claude frontmatter model/tools settings: this Codex profile controls model, effort and sandbox. If the installed role cannot be read, report the missing dependency instead of guessing or installing it.
+"""

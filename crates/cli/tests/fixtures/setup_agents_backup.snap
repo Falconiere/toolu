@@ -10,8 +10,9 @@ PLAN quick-task conflict
 PLAN deep-explore absent
 PLAN research-agent absent
 PLAN implementer absent
+PLAN test-author absent
 PLAN architect absent
-REMOVED 1 ABSENT 4
+REMOVED 1 ABSENT 5
 BACKUP ROOT/codex/agents/.toolu-backups/20260813T190300Z
 Restart Codex to reload custom agent profiles.
 --- stderr
@@ -24,8 +25,9 @@ PLAN quick-task install
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
-INSTALLED 5 UPDATED 0 UNCHANGED 0
+INSTALLED 6 UPDATED 0 UNCHANGED 0
 Restart Codex to reload custom agent profiles.
 --- stderr
 
@@ -37,6 +39,7 @@ PLAN quick-task remove
 PLAN deep-explore remove
 PLAN research-agent remove
 PLAN implementer remove
+PLAN test-author remove
 PLAN architect remove
 --- stderr
 toolu setup: invalid backup timestamp: ../x
@@ -49,6 +52,7 @@ PLAN quick-task update
 PLAN deep-explore unchanged
 PLAN research-agent unchanged
 PLAN implementer unchanged
+PLAN test-author unchanged
 PLAN architect unchanged
 --- stderr
 toolu setup: backup already exists: ROOT/codex/agents/.toolu-backups/20260813T190400Z/quick-task.toml

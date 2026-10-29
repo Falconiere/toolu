@@ -9,16 +9,17 @@ use serde_json::Value;
 /// Published plugins in the marketplace.
 pub(crate) const PLUGINS: usize = 16;
 /// Discoverable plugin skills.
-pub(crate) const SKILLS: usize = 18;
+pub(crate) const SKILLS: usize = 19;
 /// Published Codex agent profiles.
-pub(crate) const AGENTS: usize = 5;
+pub(crate) const AGENTS: usize = 6;
 /// Claude-compatible hook manifests.
 pub(crate) const HOOKS: usize = 12;
 
-const REQUIRED_SKILLS: [&str; 5] = [
+const REQUIRED_SKILLS: [&str; 6] = [
   "plugins/toolu/skills/commit/SKILL.md",
   "plugins/toolu/skills/review-and-commit/SKILL.md",
   "plugins/toolu/skills/setup/SKILL.md",
+  "plugins/toolu/skills/test-writer/SKILL.md",
   "plugins/statusline/skills/status/SKILL.md",
   "plugins/pr-babysit/skills/babysit/SKILL.md",
 ];

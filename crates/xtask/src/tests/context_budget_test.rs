@@ -81,6 +81,35 @@ fn an_over_budget_skill_exits_1() {
 }
 
 #[test]
+fn test_writer_files_fit_their_budgets_and_an_over_budget_body_is_red() {
+  let lines = check(&repo(), Mode::Skills);
+  let mine: Vec<_> = lines
+    .iter()
+    .filter(|line| line.text.starts_with("test-writer") || line.text.starts_with("test-author"))
+    .collect();
+  assert_eq!(mine.len(), 9, "{mine:?}");
+  assert!(mine.iter().all(|line| !line.red), "{mine:?}");
+
+  let dir = tempfile::tempdir().unwrap();
+  let words = vec!["word"; 961].join(" ");
+  write(
+    dir.path(),
+    "plugins/toolu/skills/test-writer/SKILL.md",
+    &format!("---\nname: test-writer\ndescription: write tests TDD\n---\n{words}\n"),
+  );
+  let lines = check(dir.path(), Mode::Skills);
+  let body = lines
+    .iter()
+    .find(|line| line.text.starts_with("test-writer body"))
+    .unwrap();
+  assert!(
+    body.red && body.text.contains("EXCEEDS 960"),
+    "{}",
+    body.text
+  );
+}
+
+#[test]
 fn a_missing_doc_is_red_and_an_unknown_mode_is_exit_2() {
   let dir = tempfile::tempdir().unwrap();
   let lines = check(dir.path(), Mode::Docs);

@@ -10,6 +10,7 @@ PLAN quick-task conflict
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
 NOTICE use install --force only after confirming each conflict
 --- stderr
@@ -22,6 +23,7 @@ PLAN quick-task conflict
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
 --- stderr
 REFUSED unmanaged profile conflict; preview it and confirm install/remove --force
@@ -34,8 +36,9 @@ PLAN quick-task conflict
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
-INSTALLED 4 UPDATED 1 UNCHANGED 0
+INSTALLED 5 UPDATED 1 UNCHANGED 0
 BACKUP ROOT/codex/agents/.toolu-backups/20260813T190100Z
 Restart Codex to reload custom agent profiles.
 --- stderr
@@ -48,6 +51,7 @@ PLAN quick-task remove
 PLAN deep-explore remove
 PLAN research-agent remove
 PLAN implementer remove
+PLAN test-author remove
 PLAN architect remove
 --- stderr
 REFUSED removal requires --yes after explicit user confirmation
@@ -60,8 +64,9 @@ PLAN quick-task remove
 PLAN deep-explore remove
 PLAN research-agent remove
 PLAN implementer remove
+PLAN test-author remove
 PLAN architect remove
-REMOVED 5 ABSENT 0
+REMOVED 6 ABSENT 0
 BACKUP ROOT/codex/agents/.toolu-backups/20260813T190200Z
 Restart Codex to reload custom agent profiles.
 --- stderr

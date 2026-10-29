@@ -1272,8 +1272,8 @@
         "target": { "type": "string", "minLength": 1 },
         "plans": {
           "type": "array",
-          "minItems": 5,
-          "maxItems": 5,
+          "minItems": 6,
+          "maxItems": 6,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -1285,6 +1285,7 @@
                   "deep-explore",
                   "research-agent",
                   "implementer",
+                  "test-author",
                   "architect"
                 ]
               },

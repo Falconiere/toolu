@@ -167,7 +167,10 @@ fn intent_line(lower: &str) -> Option<String> {
       RENAME,
       "Rename: find all refs (ast-grep + Grep on configs) before rewriting.",
     ),
-    (TESTS, "Tests: real-world data only, NO mocks."),
+    (
+      TESTS,
+      "Tests: use the test-writer skill; spec-derived, real data, no mocks.",
+    ),
     (FIX, "Fix in code. Never suppress with disable comments."),
     (DELETE, "Verify no deps before removing."),
     (

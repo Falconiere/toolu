@@ -10,8 +10,9 @@ PLAN quick-task install
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
-INSTALLED 5 UPDATED 0 UNCHANGED 0
+INSTALLED 6 UPDATED 0 UNCHANGED 0
 Restart Codex to reload custom agent profiles.
 --- stderr
 
@@ -23,8 +24,9 @@ PLAN quick-task unchanged
 PLAN deep-explore unchanged
 PLAN research-agent unchanged
 PLAN implementer unchanged
+PLAN test-author unchanged
 PLAN architect unchanged
-INSTALLED 0 UPDATED 0 UNCHANGED 5
+INSTALLED 0 UPDATED 0 UNCHANGED 6
 Restart Codex to reload custom agent profiles.
 --- stderr
 
@@ -36,8 +38,9 @@ PLAN quick-task update
 PLAN deep-explore unchanged
 PLAN research-agent unchanged
 PLAN implementer unchanged
+PLAN test-author unchanged
 PLAN architect unchanged
-INSTALLED 0 UPDATED 1 UNCHANGED 4
+INSTALLED 0 UPDATED 1 UNCHANGED 5
 BACKUP ROOT/codex/agents/.toolu-backups/20260813T190000Z
 Restart Codex to reload custom agent profiles.
 --- stderr

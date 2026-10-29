@@ -164,6 +164,7 @@ and print the exact repair command: `codex plugin add toolu@toolu`.
 Codex discovers the same canonical workflows as namespaced skills:
 
 - `$toolu:commit`, `$toolu:review-and-commit`
+- `$toolu:test-writer` to write few spec-derived tests and run only the affected ones
 - `$statusline:status`
 - `$brainstorm:brainstorm` to think a change through without delivering it
 - `$delivery-flow:delivery-flow` for checked delivery
@@ -211,7 +212,7 @@ Beyond the plugins, the core (`toolu`) also ships:
 - **docs-sync backstop** — checks documentation on push using the configured gate mode. With `documentation-gate` active, it requires a current committed-diff worker review; otherwise it uses the legacy documentation-surface check. See [config](docs/config.md#documentation-sync-with-documentation-gate).
 - **Commit workflows** — Claude exposes `/commit` and `/review-and-commit`; Codex exposes `$toolu:commit` and `$toolu:review-and-commit`. Both read the same canonical workflow files, preventing host drift.
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
-- **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
+- **Tier-pinned agents** — Claude reads the bundled agent definitions directly. `$toolu:setup` manages Codex TOML profiles for `quick-task` (Luna/medium, read-only), `deep-explore` and `research-agent` (Terra/medium, read-only), `implementer` and `test-author` (Terra/medium, workspace-write), and `architect` (Sol/high, read-only), with previews, conflict refusal, timestamped backups, and recoverable removal.
 
 ## Delivery workflow
 
@@ -261,9 +262,9 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `
     ├── toolu/                  # Core plugin: hook engine + process gates
     │   ├── .claude-plugin/     # Claude Code plugin.json manifest
     │   ├── .codex-plugin/      # Codex plugin.json manifest
-    │   ├── skills/             # core orchestration, debug, research, and command skills
-    │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, architect
-    │   ├── commands/           # commit, review-and-commit
+    │   ├── skills/             # core orchestration, debug, research, test-writer, and command skills
+    │   ├── agents/             # quick-task, deep-explore, research-agent, implementer, test-author, architect
+    │   ├── commands/           # commit, review-and-commit, test-writer, doctor, status
     │   ├── hooks/              # PreToolUse / PostToolUse / SessionStart hook entries
     │   └── settings/           # reusable settings fragments
     ├── ast-grep/               # ast-grep skill + nudge and byte-savings rules, native manifests

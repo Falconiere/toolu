@@ -3,12 +3,13 @@ use std::path::{Path, PathBuf};
 use serde_json::{Value, json};
 
 const MANIFEST: &str = "plugins/toolu/.muse-plugin/plugin.json";
-const AGENTS: [&str; 5] = [
+const AGENTS: [&str; 6] = [
   "architect",
   "deep-explore",
   "implementer",
   "quick-task",
   "research-agent",
+  "test-author",
 ];
 
 fn repo() -> PathBuf {
@@ -63,12 +64,12 @@ fn assert_err(root: &Path, needle: &str) {
 #[test]
 fn the_real_toolu_bundle_maps_every_agent() {
   let tmp = copy_of_repo();
-  assert_eq!(check(tmp.path()), Ok(5));
+  assert_eq!(check(tmp.path()), Ok(6));
 }
 
 #[test]
 fn this_repository_maps_every_agent() {
-  assert_eq!(check(&repo()), Ok(5));
+  assert_eq!(check(&repo()), Ok(6));
 }
 
 #[test]
@@ -77,7 +78,7 @@ fn an_edited_agent_body_needs_no_muse_update() {
   let path = tmp.path().join("plugins/toolu/agents/implementer.md");
   let body = std::fs::read_to_string(&path).unwrap();
   std::fs::write(&path, format!("{body}\nOne more rule.\n")).unwrap();
-  assert_eq!(check(tmp.path()), Ok(5));
+  assert_eq!(check(tmp.path()), Ok(6));
 }
 
 #[test]
@@ -208,7 +209,7 @@ fn plugins_without_agents_and_commands_outside_agents_pass() {
   edit_manifest(tmp.path(), |manifest| {
     commands(manifest).push(json!({"id": "doctor", "path": "commands/doctor.md"}));
   });
-  assert_eq!(check(tmp.path()), Ok(5));
+  assert_eq!(check(tmp.path()), Ok(6));
 }
 
 fn read(root: &Path, rel: &str) -> Value {
