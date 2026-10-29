@@ -3,7 +3,7 @@ use tempfile::TempDir;
 use toolu_http_test_support::{Fixture, Reply};
 use toolu_protocol::exit::Exit;
 
-use super::{on, state};
+use super::tests::{on, state};
 use crate::recorded;
 use crate::verbs::tests::{read, run};
 

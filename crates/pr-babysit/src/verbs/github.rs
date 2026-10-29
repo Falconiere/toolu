@@ -224,3 +224,7 @@ pub(super) fn resolve(matches: &ArgMatches, world: &World<'_>) -> Result<Value> 
 #[cfg(test)]
 #[path = "tests/github_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/reply_recovery_test.rs"]
+mod recovery_tests;

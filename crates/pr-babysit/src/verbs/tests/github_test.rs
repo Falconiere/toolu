@@ -13,11 +13,11 @@ use crate::{fixture, recorded};
 
 const NOW: &str = "2026-10-11T12:00:00Z";
 
-fn state(dir: &TempDir) -> PathBuf {
+pub(super) fn state(dir: &TempDir) -> PathBuf {
   initial_state(dir.path())
 }
 
-fn on<'a>(fixture: &Fixture, env: &'a Env) -> World<'a> {
+pub(super) fn on<'a>(fixture: &Fixture, env: &'a Env) -> World<'a> {
   let mut world = world(env, None);
   world.github = Ok(recorded::config(fixture));
   world
@@ -298,6 +298,3 @@ fn resolve_resolves_the_thread_and_records_it() {
   assert_eq!(exit, Exit::Success, "{done}");
   assert!(read(&state)["actions"]["resolved"].get("PRRT_a").is_some());
 }
-
-#[path = "reply_recovery_test.rs"]
-mod recovery_tests;

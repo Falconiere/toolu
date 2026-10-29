@@ -138,3 +138,7 @@ pub(super) fn validate_target(key: &str, intent: &Intent, to: &Target<'_>) -> Re
   }
   Ok(())
 }
+
+#[cfg(test)]
+#[path = "tests/intent_test.rs"]
+mod tests;
