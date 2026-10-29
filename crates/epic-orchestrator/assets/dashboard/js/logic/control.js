@@ -54,12 +54,35 @@ export function drawerActions({ issue, attention, locked, pending }) {
   return actions;
 }
 
+// One intentional answer click: a fresh id the engine dedupes retries against.
+export function mintSubmissionId() {
+  if (globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID();
+  }
+  return `s${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+}
+
+// Reuse one id per key+text for the life of an open answer dialog (A→B→A keeps A's id).
+export function rememberSubmission(map, key, text, mint) {
+  const pair = `${key}\u0000${text}`;
+  const seen = map.get(pair);
+  if (seen) return seen;
+  const id = mint();
+  map.set(pair, id);
+  return id;
+}
+
 // The op and JSON body a `data-action` button sends; `answer` opens the dialog instead.
 export function actionBody(action, { epic, host, key, kind } = {}) {
   if (action === "pause" || action === "resume") return epic ? { epic } : {};
   if (action === "host-pause" || action === "host-resume") return { host };
   if (action === "ack") return key ? { key } : { kind };
   return { key };
+}
+
+// The JSON body `answer` POSTs: key, text, and a stable submission id for this click.
+export function answerBody(key, text, submissionId = mintSubmissionId()) {
+  return { key, text, submission_id: submissionId };
 }
 
 // The token rides only in the Authorization header, never in the path.
@@ -107,6 +130,14 @@ export function actionResult(op, body, status, reply, partner = "") {
       text: "Nothing changed on the page; the action may still apply (see the journal).",
     };
   }
+  // Post-admit HTTP timeouts use the same uncertain shape for every op.
+  if (reply?.delivered === "uncertain") {
+    return {
+      kind: "uncertain",
+      label: "▲ UNCERTAIN",
+      text: "Delivery uncertain; check the screen.",
+    };
+  }
   if (op !== "answer") {
     return {
       kind: "sent",
@@ -114,9 +145,7 @@ export function actionResult(op, body, status, reply, partner = "") {
       text: "The effect lands through the journal stream.",
     };
   }
-  return reply?.delivered === "uncertain"
-    ? { kind: "uncertain", label: "▲ UNCERTAIN", text: "Delivery uncertain; check the screen." }
-    : { kind: "delivered", label: "✓ DELIVERED", text: "Attention marked answered." };
+  return { kind: "delivered", label: "✓ DELIVERED", text: "Attention marked answered." };
 }
 
 export const counter = (text) => `${String(text ?? "").length} / ${TEXT_LIMIT}`;

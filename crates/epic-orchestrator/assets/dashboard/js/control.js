@@ -4,6 +4,7 @@ import {
   initAnswer,
   openAnswer,
   showAnswerResult,
+  submissionFor,
   syncAnswer,
 } from "./answer-dialog.js";
 import {
@@ -12,7 +13,9 @@ import {
   TOKEN_KEY,
   actionBody,
   actionResult,
+  answerBody,
   keyAttention,
+  mintSubmissionId,
 } from "./logic/control.js";
 import { takeToken } from "./logic/fragment.js";
 import { findIssue } from "./logic/status.js";
@@ -107,7 +110,11 @@ function answerFor(key, opener) {
 }
 
 async function send(key, text) {
-  const result = await act("answer", { key, text });
+  // Same key+text while the dialog is open reuses the id so a retry cannot double-type.
+  const result = await act(
+    "answer",
+    answerBody(key, text, submissionFor(key, text, mintSubmissionId)),
+  );
   if (!result) return;
   // A dialog cancelled while the answer was pending cannot show the result; the toast can.
   if (result.kind !== "delivered" && $("answer-dialog").open) {

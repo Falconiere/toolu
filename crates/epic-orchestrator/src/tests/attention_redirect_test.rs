@@ -1,3 +1,5 @@
+//! Redirect answers and uncertain-delivery classifiers for `answer`.
+
 use serde_json::{Value, json};
 
 use super::tests::{answer, engine, prompts, report, rows};
@@ -39,10 +41,16 @@ fn answer_redirects_a_live_worker_with_no_open_item() {
   assert_eq!(prompts(tmp.path()).len(), 1);
   let sent: Vec<(String, String)> = rows(&engine)
     .into_iter()
-    .filter(|row| row.name == "answer")
+    .filter(|row| row.kind == "prompt" && row.name == "answer")
     .map(|row| (row.key, row.note))
     .collect();
   assert_eq!(sent, [("a".to_owned(), "NEW DIRECTION".to_owned())]);
+  let action: Vec<(String, String)> = rows(&engine)
+    .into_iter()
+    .filter(|row| row.kind == "action" && row.name == "answer")
+    .map(|row| (row.token, row.note))
+    .collect();
+  assert_eq!(action, [(String::new(), "by=user".to_owned())]);
   let directed: Vec<String> = rows(&engine)
     .into_iter()
     .filter(|row| row.name == "directed")
@@ -114,4 +122,27 @@ fn herdr_timeout_and_stall_errors_are_uncertain_and_others_are_not() {
   assert!(super::uncertain("read: timed out"));
   assert!(!super::uncertain(&error("agent_not_found")));
   assert!(!super::uncertain("prompt failed"));
+}
+
+#[test]
+fn post_write_socket_failures_are_uncertain_and_pre_send_ones_are_not() {
+  for err in [
+    "read: connection reset by peer",
+    "read: Connection reset by peer (os error 104)",
+    "read: Connection reset by peer (os error 54)",
+  ] {
+    assert!(super::uncertain(err), "{err}");
+  }
+  for err in [
+    "write: Broken pipe (os error 32)",
+    "write: Connection reset by peer (os error 54)",
+    "Connection reset by peer (os error 54)",
+    "send: broken pipe",
+    "connect: Connection reset by peer (os error 54)",
+    "connect: Connection refused (os error 61)",
+    "connect: No such file or directory (os error 2)",
+    "no live agent for a",
+  ] {
+    assert!(!super::uncertain(err), "{err}");
+  }
 }

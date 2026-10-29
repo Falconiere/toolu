@@ -6,6 +6,7 @@ import {
   actionBody,
   actionRequest,
   actionResult,
+  answerBody,
   attentionAction,
   controlDisabled,
   counter,
@@ -13,7 +14,9 @@ import {
   journalLine,
   keyAttention,
   liveAgent,
+  mintSubmissionId,
   refusalCode,
+  rememberSubmission,
   sendDisabled,
 } from "../js/logic/control.js";
 
@@ -167,6 +170,14 @@ test("results read sent, delivered, uncertain, refused and failed", () => {
     "k-1 is not held",
   );
   assert.equal(
+    actionResult("pause", {}, 200, {
+      ok: true,
+      delivered: "uncertain",
+      note: "engine reply not confirmed before deadline",
+    }).label,
+    "▲ UNCERTAIN",
+  );
+  assert.equal(
     actionResult("pause", {}, 503, { schema: 1, error: "engine_busy" }).label,
     "● FAILED · engine_busy",
   );
@@ -195,4 +206,33 @@ test("buttons send the op body the action API validates", () => {
   assert.deepEqual(actionBody("ack", { key: "k-1", kind: "failed" }), { key: "k-1" });
   assert.deepEqual(actionBody("ack", { key: "", kind: "babysit" }), { kind: "babysit" });
   assert.deepEqual(actionBody("release", { key: "k-1" }), { key: "k-1" });
+});
+
+test("answer bodies mint a submission_id the engine can dedupe", () => {
+  const first = mintSubmissionId();
+  const second = mintSubmissionId();
+  assert.ok(first.length >= 1 && first.length <= 128);
+  assert.match(first, /^[A-Za-z0-9._-]+$/);
+  assert.notEqual(first, second);
+  assert.deepEqual(answerBody("k-1", "take B", "sub-1"), {
+    key: "k-1",
+    text: "take B",
+    submission_id: "sub-1",
+  });
+  const minted = answerBody("k-1", "take B");
+  assert.equal(minted.key, "k-1");
+  assert.equal(minted.text, "take B");
+  assert.match(minted.submission_id, /^[A-Za-z0-9._-]+$/);
+});
+
+test("rememberSubmission reuses an id for A after A→B→A in one dialog", () => {
+  const map = new Map();
+  let n = 0;
+  const mint = () => `id-${++n}`;
+  const a1 = rememberSubmission(map, "k-1", "A", mint);
+  const b = rememberSubmission(map, "k-1", "B", mint);
+  const a2 = rememberSubmission(map, "k-1", "A", mint);
+  assert.equal(a1, "id-1");
+  assert.equal(b, "id-2");
+  assert.equal(a2, "id-1");
 });

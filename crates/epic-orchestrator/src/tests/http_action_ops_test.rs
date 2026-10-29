@@ -1,5 +1,6 @@
 //! Allowed actions on a real engine: the same replies as the control socket,
-//! journaled `by=web`, and a busy engine answered `503` without a retry.
+//! journaled `by=web`, an admitted request that misses the deadline answered
+//! `200 uncertain`, and an engine that never took it answered `503`.
 
 use std::io::{BufRead as _, BufReader, Write as _};
 use std::net::TcpStream;
@@ -88,12 +89,12 @@ fn each_op_replies_as_the_control_socket_does() {
     ("ack", json!({"key": "a"}), json!({"op": "ack", "key": "a"})),
     (
       "answer",
-      json!({"key": "a", "text": "take B"}),
+      json!({"key": "a", "text": "take B", "submission_id": "s-take-b"}),
       json!({"op": "answer", "key": "a", "text": "take B"}),
     ),
     (
       "answer",
-      json!({"key": "zz", "text": "line\n\ttab"}),
+      json!({"key": "zz", "text": "line\n\ttab", "submission_id": "s-zz"}),
       json!({"op": "answer", "key": "zz", "text": "x"}),
     ),
     (
@@ -175,22 +176,151 @@ fn a_web_host_pause_and_resume_match_the_socket_and_journal_by_web() {
   live.stop();
 }
 
+/// A web `answer` body carrying `submission_id`.
+fn answer_body(text: &str, submission_id: &str) -> String {
+  json!({"key": "a", "text": text, "submission_id": submission_id}).to_string()
+}
+
+/// How many prompts the script recorded that hold `needle`.
+fn prompted(live: &super::tests::Live, needle: &str) -> usize {
+  std::fs::read_to_string(live.root.join("prompts"))
+    .unwrap_or_default()
+    .matches(needle)
+    .count()
+}
+
 #[test]
-fn an_uncertain_answer_is_ok_and_a_busy_engine_is_never_retried() {
+fn an_uncertain_answer_is_ok_and_an_admitted_timeout_is_uncertain_not_busy() {
   let temp = tempfile::tempdir().expect("temp");
   let live = live(temp.path(), Some(TOKEN), Duration::from_millis(200));
-  let maybe = json!({"key": "a", "text": "MAYBE"}).to_string();
+  let maybe = answer_body("MAYBE", "s-maybe");
   let (code, response) = post(live.addr, "answer", &allowed(live.addr), &maybe);
   assert_eq!(code, 200, "{response}");
   assert_eq!(body(&response)["delivered"], "uncertain");
-  let slow = json!({"key": "a", "text": "SLOW"}).to_string();
+  let slow = answer_body("SLOW", "s-slow");
   let start = Instant::now();
   let (code, response) = post(live.addr, "answer", &allowed(live.addr), &slow);
-  assert_eq!(code, 503, "{response}");
-  assert!(response.contains("\"error\":\"engine_busy\""));
+  assert_eq!(code, 200, "{response}");
+  assert_eq!(
+    body(&response),
+    json!({"ok": true, "delivered": "uncertain",
+      "note": "engine reply not confirmed before deadline"})
+  );
   assert!(start.elapsed() < Duration::from_millis(900));
   std::thread::sleep(Duration::from_millis(1_300));
-  let prompts = std::fs::read_to_string(live.root.join("prompts")).expect("prompts");
-  assert_eq!(prompts.matches("SLOW").count(), 1, "{prompts}");
+  assert_eq!(prompted(&live, "SLOW"), 1);
+  // The retry of the same click, after the first finished, types nothing more.
+  let (code, response) = post(live.addr, "answer", &allowed(live.addr), &slow);
+  assert_eq!((code, body(&response)), (200, json!({"ok": true})));
+  assert_eq!(prompted(&live, "SLOW"), 1);
   live.stop();
+}
+
+#[test]
+fn the_same_submission_id_and_text_prompts_once() {
+  let temp = tempfile::tempdir().expect("temp");
+  let live = live(temp.path(), Some(TOKEN), crate::http_action::DEADLINE);
+  let once = answer_body("DUP", "s-dup");
+  for _ in 0..2 {
+    let (code, response) = post(live.addr, "answer", &allowed(live.addr), &once);
+    assert_eq!((code, body(&response)), (200, json!({"ok": true})));
+  }
+  assert_eq!(prompted(&live, "DUP"), 1);
+  let rows = journal(&live.paths);
+  assert_eq!(rows.matches("answer-admit").count(), 1, "{rows}");
+  live.stop();
+}
+
+#[test]
+fn the_same_submission_id_with_other_text_is_a_409_and_prompts_nothing() {
+  let temp = tempfile::tempdir().expect("temp");
+  let live = live(temp.path(), Some(TOKEN), crate::http_action::DEADLINE);
+  let (code, response) = post(
+    live.addr,
+    "answer",
+    &allowed(live.addr),
+    &answer_body("FIRST", "s-mix"),
+  );
+  assert_eq!(code, 200, "{response}");
+  let (code, response) = post(
+    live.addr,
+    "answer",
+    &allowed(live.addr),
+    &answer_body("SECOND", "s-mix"),
+  );
+  assert_eq!(code, 409, "{response}");
+  assert_eq!(
+    body(&response),
+    json!({"schema": 1, "error": "submission_id reuse with different payload"})
+  );
+  assert_eq!(
+    (prompted(&live, "FIRST"), prompted(&live, "SECOND")),
+    (1, 0)
+  );
+  live.stop();
+}
+
+#[test]
+fn a_new_submission_id_with_the_same_text_prompts_again() {
+  let temp = tempfile::tempdir().expect("temp");
+  let live = live(temp.path(), Some(TOKEN), crate::http_action::DEADLINE);
+  for id in ["s-one", "s-two"] {
+    let (code, response) = post(
+      live.addr,
+      "answer",
+      &allowed(live.addr),
+      &answer_body("AGAIN", id),
+    );
+    assert_eq!((code, body(&response)), (200, json!({"ok": true})));
+  }
+  assert_eq!(prompted(&live, "AGAIN"), 2);
+  live.stop();
+}
+
+fn status_of(response: &crate::http_response::Response) -> (u16, Value) {
+  let body = serde_json::from_slice(&response.body).expect("json body");
+  (response.status, body)
+}
+
+#[test]
+fn only_a_request_the_state_loop_never_took_is_busy() {
+  let request = || json!({"op": "pause", "by": "web"});
+  let none = super::Control {
+    sender: None,
+    deadline: Duration::from_millis(50),
+  };
+  let (code, body) = status_of(&super::forward(&none, request()));
+  assert_eq!((code, &body["error"]), (503, &json!("engine_busy")));
+  // A closed state loop never admitted the line.
+  let (closed, receiver) = std::sync::mpsc::channel();
+  drop(receiver);
+  let gone = super::Control {
+    sender: Some(&closed),
+    deadline: Duration::from_millis(50),
+  };
+  let (code, body) = status_of(&super::forward(&gone, request()));
+  assert_eq!((code, &body["error"]), (503, &json!("engine_busy")));
+  // An admitted line whose reply never comes, or whose reply handle is dropped.
+  let (open, held) = std::sync::mpsc::channel();
+  let silent = super::Control {
+    sender: Some(&open),
+    deadline: Duration::from_millis(50),
+  };
+  let uncertain = json!({"ok": true, "delivered": "uncertain",
+    "note": "engine reply not confirmed before deadline"});
+  assert_eq!(
+    status_of(&super::forward(&silent, request())),
+    (200, uncertain.clone())
+  );
+  let dropper = std::thread::spawn(move || {
+    for message in held {
+      drop(message);
+    }
+  });
+  assert_eq!(
+    status_of(&super::forward(&silent, request())),
+    (200, uncertain)
+  );
+  drop(open);
+  dropper.join().expect("dropper");
 }

@@ -11,6 +11,8 @@ publish.workspace = true
 clap.workspace = true
 nix = { workspace = true, features = ["fs", "socket"] }
 regex.workspace = true
+# SHA-256 of `answer` submission fingerprints; already linked by toolu-http's rustls.
+ring.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toolu-engine = { path = "../core/engine" }

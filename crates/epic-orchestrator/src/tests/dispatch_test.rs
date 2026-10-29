@@ -269,7 +269,7 @@ fn set_mode(dir: &std::path::Path, mode: u32) {
 }
 
 #[test]
-fn an_answer_whose_journal_fails_after_delivery_replies_the_journal_error() {
+fn an_answer_whose_journal_fails_after_delivery_replies_uncertain_with_the_journal_error() {
   let tmp = tempfile::tempdir().expect("temp");
   let scripts = tmp.path().join("scripts");
   std::fs::create_dir_all(&scripts).expect("scripts");
@@ -290,8 +290,14 @@ fn an_answer_whose_journal_fails_after_delivery_replies_the_journal_error() {
   let (stop, value) = round(&mut engine, &answer);
   set_mode(&journal, 0o755);
   assert!(!stop);
-  let error = value["error"].as_str().expect("error");
-  assert!(!error.starts_with("worker prompt not delivered"), "{error}");
+  assert_eq!(
+    (&value["ok"], &value["delivered"]),
+    (&json!(true), &json!("uncertain"))
+  );
+  let note = value["note"].as_str().expect("note");
+  assert!(note.contains("journal"), "{note}");
+  assert!(crate::attention::has_live(&engine.world, "a"));
+  assert_eq!(engine.world.attention[0].state, crate::model::Ack::Open);
   assert_eq!(
     std::fs::read_to_string(&prompts).expect("prompts"),
     r#"{"key":"a","text":"take B"}"#
