@@ -150,3 +150,35 @@ fn combined_scan_overflow_retries_each_file() {
     assert_eq!(hits.len(), 4000);
   }
 }
+
+#[test]
+fn one_file_overflow_retries_each_rule_group() {
+  let temp = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(temp.path()).unwrap();
+  let absolute = root.join("a.ts");
+  std::fs::write(&absolute, "throw \"x\";\n".repeat(4000)).unwrap();
+  let file = EditedFile {
+    path: "a.ts".to_owned(),
+    absolute,
+    removed: false,
+  };
+  let env = Env::process();
+  let raw = Map::new();
+  let ctx = context(&root, &env, &raw);
+  let first = Inline("first", "first");
+  let second = Inline("second", "second");
+  let (scan, _, fallback) = scan_batch_with_fallback(&[&first, &second], &[file], &ctx);
+  assert!(super::super::super::scan::output_limited(&scan));
+  let Some(AstGrepScan::Ok { hits, .. }) = fallback.get("a.ts") else {
+    panic!("file scan did not recover");
+  };
+  assert_eq!(hits.len(), 8000);
+  assert_eq!(
+    hits.iter().filter(|hit| hit.rule_id == "first").count(),
+    4000
+  );
+  assert_eq!(
+    hits.iter().filter(|hit| hit.rule_id == "second").count(),
+    4000
+  );
+}

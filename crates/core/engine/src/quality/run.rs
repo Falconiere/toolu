@@ -49,6 +49,10 @@ pub trait QualityRule: Send + Sync {
   fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
     String::new()
   }
+  /// Rules that can affect one file when an overflowed event scan is retried.
+  fn ast_rules_for_file(&self, _file: &EditedFile, ctx: &RuleContext<'_>) -> String {
+    self.ast_rules_inline(ctx)
+  }
   /// Check one file with the batch scan restricted to that file.
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings;
 }

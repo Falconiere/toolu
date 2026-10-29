@@ -131,6 +131,28 @@ impl QualityRule for RustQuality {
     [ERROR_RULES, MOCK_SRC_RULES, MOCK_TEST_RULES].join("\n---\n")
   }
 
+  fn ast_rules_for_file(&self, file: &EditedFile, ctx: &RuleContext<'_>) -> String {
+    let Ok(text) = read(file) else {
+      return String::new();
+    };
+    let limits = limits(ctx);
+    let f = RsFile {
+      file,
+      scope: &file.path,
+      lines: crate::file::split_lines(&text),
+      limits: &limits,
+      env: ctx.env,
+      cwd: cwd(ctx),
+    };
+    let is_test = is_rust_test(&f);
+    error_rules(&f, is_test)
+      .into_iter()
+      .map(str::to_owned)
+      .chain(mock_rules(&f))
+      .collect::<Vec<_>>()
+      .join("\n---\n")
+  }
+
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings {
     let text = match read(file) {
       Ok(text) => text,
