@@ -29,7 +29,8 @@ pub(super) fn batch_scan(
   scan_rules(live, &paths, &inline, ctx)
 }
 
-fn retry_file(
+/// Retry one changed file with only its applicable rules, splitting overflowed YAML groups.
+pub(super) fn retry_file(
   file: &EditedFile,
   enabled: &[&dyn QualityRule],
   ctx: &RuleContext<'_>,

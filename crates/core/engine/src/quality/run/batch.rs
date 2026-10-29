@@ -18,7 +18,7 @@ use super::{
 };
 
 mod scan;
-use scan::batch_scan;
+use scan::retry_file;
 pub(super) use scan::scan_batch_with_fallback;
 
 struct PreparedFile {
@@ -129,7 +129,7 @@ impl Prepared {
     if self.fingerprints.get(&path).copied() == Some(current) {
       return;
     }
-    let scan = batch_scan(&rules, std::slice::from_ref(&facts.file), ctx);
+    let scan = retry_file(&facts.file, &rules, ctx);
     self.rescanned.insert(path.clone(), scan);
     self.fingerprints.insert(path, current);
   }
