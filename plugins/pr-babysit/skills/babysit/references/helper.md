@@ -58,7 +58,7 @@ toolu babysit wait --repo <owner/repo> --pr <n> --state-file <path>
 - `--timeout` — per GitHub call (default 60 s, `PB_GH_TIMEOUT`). Non-POST REST
   and GraphQL calls use `PB_GH_ATTEMPTS` (default 3) with `PB_GH_BACKOFF`
   waits (`2 4 8` s) on timeouts, 5xx, 429, rate-limit 403 and connection
-  errors, and never on other 4xx. A comment-creating REST POST gets one
+  errors, and never on other 4xx. A REST POST gets one
   transient attempt. A 401 may still retry once with a refreshed token. The
   token comes from `GH_TOKEN`, else `gh auth token`.
 - `--page-size` — GraphQL/REST page size (default 100). Exists so pagination is
