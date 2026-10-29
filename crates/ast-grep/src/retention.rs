@@ -9,7 +9,7 @@ use toolu_runtime::env::Env;
 use crate::savings::{byte_savings_dir, session_id};
 
 /// Age after which a non-active ledger is cold and reclaimable.
-pub(crate) const BYTE_SAVINGS_RETENTION: Duration = Duration::from_secs(7 * 24 * 60 * 60);
+pub(crate) const BYTE_SAVINGS_RETENTION: Duration = Duration::from_hours(24 * 7);
 
 /// Maximum non-active ledgers kept after cold files are removed.
 pub(crate) const BYTE_SAVINGS_MAX_COMPLETED: usize = 64;
@@ -86,9 +86,8 @@ fn enforce_capacity(ledgers: &[PathBuf], active: Option<&str>, warnings: &mut Ve
     if !path.is_file() || is_active(path, active) {
       continue;
     }
-    match modified(path, warnings) {
-      Some(mtime) => survivors.push((mtime, path.clone())),
-      None => {}
+    if let Some(mtime) = modified(path, warnings) {
+      survivors.push((mtime, path.clone()));
     }
   }
   if survivors.len() <= BYTE_SAVINGS_MAX_COMPLETED {
@@ -140,17 +139,17 @@ fn remove(path: &Path, warnings: &mut Vec<String>) {
   }
 }
 
-/// Sanitize a SessionStart payload's `session_id` the same way append does.
+/// Sanitize a `SessionStart` payload's `session_id` the same way append does.
 pub(crate) fn active_session_from_payload(payload: &str) -> Option<String> {
   let value: serde_json::Value = serde_json::from_str(payload).ok()?;
   let raw = value.get("session_id")?;
   if matches!(raw, serde_json::Value::Null) {
     return None;
   }
-  if let serde_json::Value::String(text) = raw {
-    if text.is_empty() {
-      return None;
-    }
+  if let serde_json::Value::String(text) = raw
+    && text.is_empty()
+  {
+    return None;
   }
   Some(session_id(Some(raw)))
 }

@@ -14,7 +14,7 @@ use super::{
 use crate::report::{parse, read_ledger, render};
 use crate::savings::byte_savings_dir;
 
-const DAY: Duration = Duration::from_secs(24 * 60 * 60);
+const DAY: Duration = Duration::from_hours(24);
 const LINE: &str = "{\"kind\":\"read\",\"returned\":10,\"full\":100}\n";
 
 fn put(path: &Path, body: &str, age: Duration) {
@@ -31,14 +31,12 @@ fn ledger(dir: &Path, stem: &str) -> PathBuf {
 }
 
 fn count_jsonl(dir: &Path) -> usize {
-  fs::read_dir(dir)
-    .map(|entries| {
-      entries
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "jsonl"))
-        .count()
-    })
-    .unwrap_or(0)
+  fs::read_dir(dir).map_or(0, |entries| {
+    entries
+      .filter_map(Result::ok)
+      .filter(|entry| entry.path().extension().is_some_and(|ext| ext == "jsonl"))
+      .count()
+  })
 }
 
 #[test]
@@ -68,7 +66,7 @@ fn sweep_deletes_cold_keeps_active_and_caps_completed() {
   let before = count_jsonl(&dir);
   assert_eq!(before, 81);
   let warnings = sweep_dir(&dir, Some("active-session"), SystemTime::now());
-  assert!(warnings.is_empty(), "{warnings:?}");
+  assert_eq!(warnings, Vec::<String>::new());
   assert!(ledger(&dir, "active-session").is_file());
   for i in 0..70 {
     assert!(!ledger(&dir, &format!("cold-{i}")).exists());
@@ -93,7 +91,7 @@ fn sweep_enforces_max_completed_among_hot_non_active() {
   }
   put(&ledger(&dir, "live"), LINE, Duration::from_secs(1));
   let warnings = sweep_dir(&dir, Some("live"), SystemTime::now());
-  assert!(warnings.is_empty(), "{warnings:?}");
+  assert_eq!(warnings, Vec::<String>::new());
   assert!(ledger(&dir, "live").is_file());
   assert_eq!(count_jsonl(&dir), BYTE_SAVINGS_MAX_COMPLETED + 1);
   // Oldest five hot-* must be gone (highest age offset).
@@ -118,7 +116,10 @@ fn retained_ledger_bytes_and_savings_report_unchanged() {
   put(&ledger(&dir, "cold"), LINE, BYTE_SAVINGS_RETENTION + DAY);
   let before = fs::read(&retained).expect("read");
   let report_before = render(&parse(&read_ledger(&retained).expect("ledger")).expect("parse"));
-  assert!(sweep_dir(&dir, Some("keep-me"), SystemTime::now()).is_empty());
+  assert_eq!(
+    sweep_dir(&dir, Some("keep-me"), SystemTime::now()),
+    Vec::<String>::new()
+  );
   assert_eq!(fs::read(&retained).expect("read"), before);
   let report_after = render(&parse(&read_ledger(&retained).expect("ledger")).expect("parse"));
   assert_eq!(report_before, report_after);
@@ -145,7 +146,6 @@ fn concurrent_append_on_active_ledger_loses_no_line() {
     })
   };
   let sweeper = {
-    let dir = dir.clone();
     let barrier = Arc::clone(&barrier);
     thread::spawn(move || {
       barrier.wait();
@@ -166,7 +166,7 @@ fn concurrent_append_on_active_ledger_loses_no_line() {
 fn missing_directory_is_noop_and_roots_stay_isolated() {
   let missing = tempfile::tempdir().expect("missing root");
   let env = Env::from_pairs([("TOOLU_CONFIG_DIR", missing.path().display().to_string())]);
-  assert!(sweep_byte_savings(&env, Some("s")).is_empty());
+  assert_eq!(sweep_byte_savings(&env, Some("s")), Vec::<String>::new());
   assert!(!byte_savings_dir(&env).exists());
 
   let other = tempfile::tempdir().expect("other");
@@ -184,7 +184,7 @@ fn missing_directory_is_noop_and_roots_stay_isolated() {
     BYTE_SAVINGS_RETENTION + DAY,
   );
   let env = Env::from_pairs([("TOOLU_CONFIG_DIR", mine.path().display().to_string())]);
-  assert!(sweep_byte_savings(&env, None).is_empty());
+  assert_eq!(sweep_byte_savings(&env, None), Vec::<String>::new());
   assert!(!ledger(&mine_dir, "cold").exists());
   assert!(ledger(&other_dir, "foreign").is_file());
 }
