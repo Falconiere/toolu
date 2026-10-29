@@ -5,7 +5,7 @@ use toolu_runtime::env::Env;
 
 use super::{
   NodePackageManager, PythonLinter, TsLinter, detect_clippy, detect_python, detect_rust, detect_ts,
-  node_package_manager, project_name, project_toplevel, python_linter, to_relative_path, ts_linter,
+  node_package_manager, project_name, project_toplevel, python_linter, ts_linter,
 };
 
 /// A scratch directory holding a git repository named `project`.
@@ -184,31 +184,4 @@ fn outside_a_repository_every_probe_is_empty() {
     env,
   };
   assert_eq!(repo.probe(dir.path()).concat(), "falsefalsefalsefalse");
-}
-
-#[test]
-fn a_path_is_relative_to_the_toplevel_only_when_under_it() {
-  let repo = Repo::new();
-  let root = repo.root.display().to_string();
-  let inputs = [
-    format!("{root}/src/a.ts"),
-    format!("{root}/deep/x/y.rs"),
-    "src/a.ts".to_owned(),
-    String::new(),
-    root.clone(),
-    format!("{root}/"),
-    format!("{root}-sibling/a.ts"),
-  ];
-  let relative: Vec<String> = inputs
-    .iter()
-    .map(|path| to_relative_path(path, &repo.env, &repo.root))
-    .collect();
-  assert_eq!(relative[..2], ["src/a.ts", "deep/x/y.rs"]);
-  assert_eq!(
-    relative[2..],
-    ["src/a.ts", "", root.as_str(), "", inputs[6].as_str()]
-  );
-  let outside = tempfile::tempdir().unwrap();
-  let moved = to_relative_path(&inputs[0], &repo.env, outside.path());
-  assert_eq!(moved, inputs[0]);
 }

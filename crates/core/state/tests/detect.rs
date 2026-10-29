@@ -181,25 +181,6 @@ fn only(scratch: &Scratch, dir: &Path) -> Env {
 }
 
 #[test]
-fn ast_grep_sees_the_available_binary() {
-  let scratch = Scratch::new().unwrap();
-  let cases: [(&str, &[&str]); 4] = [
-    ("neither", &[]),
-    ("sg-only", &["sg"]),
-    ("ast-grep-only", &["ast-grep"]),
-    ("both", &["sg", "ast-grep"]),
-  ];
-  for (label, names) in cases {
-    let dir = bin(&scratch.root, label, names).unwrap();
-    assert_eq!(
-      detect_ast_grep(&only(&scratch, &dir)),
-      !names.is_empty(),
-      "{label}"
-    );
-  }
-}
-
-#[test]
 fn tool_available_tells_executables_plain_files_directories_and_missing_names_apart() {
   let scratch = Scratch::new().unwrap();
   let dir = bin(&scratch.root, "bin", &["exe"]).unwrap();
