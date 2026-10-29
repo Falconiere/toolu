@@ -177,6 +177,11 @@ fn rebased(input: &StepJob, result: &Map<String, Value>, parked: bool) -> Map<St
     input.trace.as_deref(),
   ) {
     Rebased::Pushed(head) => with(outcome("rebased"), "new_head", json!(head)),
+    Rebased::Uncertain(note) => with(
+      outcome("rebase-uncertain"),
+      "note",
+      json!(redact(&input.env, &note)),
+    ),
     Rebased::Handoff(note) => with(outcome("handoff"), "note", json!(redact(&input.env, &note))),
     Rebased::Busy(note) => with(outcome("busy"), "note", json!(redact(&input.env, &note))),
   }

@@ -11,16 +11,16 @@ use crate::support::{git, origin_with_clone};
 
 /// A bare origin, the worker's clone on `feat/x` (pushed), and `main` moved
 /// on by another clone.
-struct Repo {
-  tmp: tempfile::TempDir,
-  work: PathBuf,
-  origin: PathBuf,
+pub(super) struct Repo {
+  pub(super) tmp: tempfile::TempDir,
+  pub(super) work: PathBuf,
+  pub(super) origin: PathBuf,
   head: String,
 }
 
 const BASE: [(&str, &str); 2] = [("a.txt", "one\ntwo\n"), ("b.txt", "b\n")];
 
-fn repo(branch_edit: (&str, &str), main_edit: (&str, &str)) -> Repo {
+pub(super) fn repo(branch_edit: (&str, &str), main_edit: (&str, &str)) -> Repo {
   let tmp = tempfile::tempdir().expect("temp");
   let origin = tmp.path().join("origin.git");
   let work = tmp.path().join("work");
@@ -49,7 +49,7 @@ fn repo(branch_edit: (&str, &str), main_edit: (&str, &str)) -> Repo {
 }
 
 impl Repo {
-  fn target(&self) -> Target {
+  pub(super) fn target(&self) -> Target {
     Target {
       worktree: self.work.clone(),
       key: "k".to_owned(),
@@ -59,7 +59,7 @@ impl Repo {
     }
   }
 
-  fn remote(&self, branch: &str) -> String {
+  pub(super) fn remote(&self, branch: &str) -> String {
     git(&self.origin, &["rev-parse", branch])
   }
 
@@ -76,7 +76,7 @@ impl Repo {
   }
 }
 
-fn env(repo: &Repo) -> Env {
+pub(super) fn env(repo: &Repo) -> Env {
   Env::from_pairs([
     (
       "PATH",
@@ -173,7 +173,7 @@ fn unsafe_worktrees_are_handed_to_the_worker_without_a_git_write() {
   );
 }
 
-fn resources(repo: &Repo) -> PathBuf {
+pub(super) fn resources(repo: &Repo) -> PathBuf {
   let root = repo.tmp.path().join("resources");
   std::fs::create_dir_all(&root).expect("root");
   std::fs::write(
@@ -184,7 +184,7 @@ fn resources(repo: &Repo) -> PathBuf {
   root
 }
 
-fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
+pub(super) fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
   let request = LeaseRequest {
     kind,
     key: "k".into(),
@@ -203,7 +203,7 @@ fn take(root: &Path, kind: LeaseKind, worktree: &Path) -> String {
   }
 }
 
-fn stage(root: &Path, token: &str) -> String {
+pub(super) fn stage(root: &Path, token: &str) -> String {
   let resources = read_resource_state(root).expect("state");
   leases(&resources)
     .iter()

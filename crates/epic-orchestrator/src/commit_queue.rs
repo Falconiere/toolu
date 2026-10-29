@@ -49,6 +49,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
       crate::disarm::committed(world, key, Some(&note));
     }
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
+    "rebase-uncertain" => held_rebase(world, key, &note),
     "handoff" => handoff(world, key, &note),
     "fix" => {
       set_armed(world, key, false);
@@ -59,7 +60,9 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
     "uncertain" | "refused" => held(world, key, &outcome, &note),
     _ => {}
   }
-  release_held(world, key);
+  if outcome != "rebase-uncertain" {
+    release_held(world, key);
+  }
   Ok(world.outbox.drain(..).collect())
 }
 
@@ -109,6 +112,22 @@ fn held(world: &mut World, key: &str, outcome: &str, note: &str) {
     });
   }
   push_attention(world, "failed", key, &format!("merge {outcome}: {note}"));
+}
+
+/// Keep an indeterminate push at the queue head without a worker replay.
+fn held_rebase(world: &mut World, key: &str, note: &str) {
+  if let Some(issue) = world.issues.get_mut(key) {
+    issue.deferred = Some("rebase".to_owned());
+    world.outbox.push_back(Step::Issue {
+      key: key.to_owned(),
+    });
+  }
+  push_attention(
+    world,
+    "failed",
+    key,
+    &format!("rebase push uncertain: {note}"),
+  );
 }
 
 /// End the pending step without a stage change; its done line carries the
@@ -239,3 +258,7 @@ fn journal(world: &mut World, kind: &str, name: &str, key: &str, note: &str) {
 #[cfg(test)]
 #[path = "tests/commit_queue_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/commit_queue_rebase_test.rs"]
+mod rebase_tests;
