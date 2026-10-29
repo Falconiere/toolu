@@ -149,35 +149,35 @@ fn check_manifests(
       return Err(format!("release-please is missing {manifest}"));
     }
   }
-  skills_decl(root, plugin_root, name, &codex)?;
-  hooks_decl(root, plugin_root, name, &codex)?;
+  component_decls(root, plugin_root, name, &codex)?;
   packaging_muse_identity::check(root, plugin_root, name, &claude)
 }
 
-fn skills_decl(root: &Path, plugin_root: &str, name: &str, codex: &Value) -> Result<(), String> {
-  let present = root.join(plugin_root).join("skills").exists();
-  let declared = codex
-    .as_object()
-    .is_some_and(|obj| obj.contains_key("skills"));
-  if present && codex.get("skills").and_then(Value::as_str) != Some("./skills/") {
-    return Err(format!("{name} must declare ./skills/"));
-  }
-  if !present && declared {
-    return Err(format!("{name} declares skills without a skills directory"));
-  }
-  Ok(())
-}
-
-fn hooks_decl(root: &Path, plugin_root: &str, name: &str, codex: &Value) -> Result<(), String> {
-  let present = root.join(plugin_root).join("hooks/hooks.json").exists();
-  let declared = codex
-    .as_object()
-    .is_some_and(|obj| obj.contains_key("hooks"));
-  if present && codex.get("hooks").and_then(Value::as_str) != Some("./hooks/hooks.json") {
-    return Err(format!("{name} must declare ./hooks/hooks.json"));
-  }
-  if !present && declared {
-    return Err(format!("{name} declares hooks without hooks/hooks.json"));
+/// Each component the plugin ships is declared at its path in the Codex
+/// manifest, and none is declared without the files on disk.
+fn component_decls(
+  root: &Path,
+  plugin_root: &str,
+  name: &str,
+  codex: &Value,
+) -> Result<(), String> {
+  for (key, file, expected, missing) in [
+    ("skills", "skills", "./skills/", "a skills directory"),
+    (
+      "hooks",
+      "hooks/hooks.json",
+      "./hooks/hooks.json",
+      "hooks/hooks.json",
+    ),
+  ] {
+    let present = root.join(plugin_root).join(file).exists();
+    let declared = codex.as_object().is_some_and(|obj| obj.contains_key(key));
+    if present && codex.get(key).and_then(Value::as_str) != Some(expected) {
+      return Err(format!("{name} must declare {expected}"));
+    }
+    if !present && declared {
+      return Err(format!("{name} declares {key} without {missing}"));
+    }
   }
   Ok(())
 }

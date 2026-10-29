@@ -10,7 +10,7 @@ use toolu_runtime::config::secrets::{Secrets, redact_text, redact_window, redact
 use crate::http::Context;
 use crate::http_access::authorized;
 use crate::http_request::Request;
-use crate::http_response::{READ_METHODS, Response, json_response};
+use crate::http_response::{Response, json_response};
 use crate::model::{Issue, World};
 
 mod claude;
@@ -172,15 +172,7 @@ fn bounded(
     });
     let body = value.to_string().into_bytes();
     if body.len() <= PAGE_BYTES {
-      return Response {
-        status: 200,
-        content_type: "application/json; charset=utf-8",
-        body,
-        head: false,
-        close: false,
-        allow: READ_METHODS,
-        cache: "no-store",
-      };
+      return Response::json(body);
     }
     if end == start {
       return Response::error(500, "log_unavailable");

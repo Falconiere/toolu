@@ -113,12 +113,14 @@ impl Live {
     secrets: &Secrets,
   ) -> Response {
     let socket = match &self.herdr {
-      Herdr::Off => return ok(unavailable("off", &now()).to_string().into_bytes()),
-      Herdr::Scripted => return ok(unavailable("scripted", &now()).to_string().into_bytes()),
+      Herdr::Off => return Response::json(unavailable("off", &now()).to_string().into_bytes()),
+      Herdr::Scripted => {
+        return Response::json(unavailable("scripted", &now()).to_string().into_bytes());
+      }
       Herdr::Socket(socket) => socket,
     };
     if let Some(body) = self.fresh() {
-      return ok(body);
+      return Response::json(body);
     }
     // A slot is held while waiting for the fill lock, so overlapping requests
     // count toward the cap even though only one of them calls herdr.
@@ -128,7 +130,7 @@ impl Live {
     // `fill` guards no data, so a panicked filler must not wedge the route.
     let _fill = self.fill.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some(body) = self.fresh() {
-      return ok(body);
+      return Response::json(body);
     }
     let Some(document) = sample(socket, world, secrets) else {
       return Response::error(500, "status_unavailable");
@@ -137,25 +139,13 @@ impl Live {
     if let Ok(mut cached) = self.cached.lock() {
       *cached = Some((Instant::now(), body.clone()));
     }
-    ok(body)
+    Response::json(body)
   }
 
   fn fresh(&self) -> Option<Vec<u8>> {
     let cached = self.cached.lock().ok()?;
     let (at, body) = cached.as_ref()?;
     (at.elapsed() < FRESH).then(|| body.clone())
-  }
-}
-
-fn ok(body: Vec<u8>) -> Response {
-  Response {
-    status: 200,
-    content_type: "application/json; charset=utf-8",
-    body,
-    head: false,
-    close: false,
-    allow: crate::http_response::READ_METHODS,
-    cache: "no-store",
   }
 }
 

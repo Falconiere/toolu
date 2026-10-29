@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 
 use toolu_runtime::process::{Output, Spec};
 
-use super::rig::{HOSTS, cool, field, home, lease, prepare, request, source};
+use super::rig::{HOSTS, cool, field, hold_pressure, home, lease, prepare, request, source};
 use super::{
   FenceError, MigrationCaps, active_jobs, cancel_agent_migration, fence_worktree,
   migrate_agent_lease, prepare_agent_migration,
@@ -14,8 +14,6 @@ use super::{
 use crate::resources::binding::ResourceBinding;
 use crate::resources::jobs::run_managed_job;
 use crate::resources::leases::{LeaseKind, LeasePatch, acquire_lease, patch_lease, release_lease};
-use crate::resources::pressure::{ResourceSample, advance_pressure};
-use crate::resources::store::update_resources;
 
 #[test]
 fn a_full_or_cooling_destination_leaves_the_source_running() {
@@ -233,33 +231,6 @@ fn a_fence_blocks_new_jobs_and_refuses_another_worktree() {
     Err("invalid fenced worktree".to_owned())
   );
   release_lease(&fenced.root, &fenced.agent).expect("release");
-}
-
-/// A held pressure sample in the resource state.
-fn hold_pressure(root: &Path) {
-  let at = f64::from(
-    u32::try_from(toolu_state::time::epoch_millis(SystemTime::now()) / 1000).expect("secs"),
-  ) * 1000.0;
-  let low = |at| ResourceSample {
-    at,
-    cpus: 10.0,
-    load: 1.0,
-    available_bytes: 1e9,
-    total_bytes: 32e9,
-    steal: None,
-    ticks: None,
-  };
-  let held = advance_pressure(
-    Some(&advance_pressure(None, &low(at - 60_000.0)).expect("first")),
-    &low(at),
-  )
-  .expect("held");
-  assert!(held.held);
-  update_resources(root, |state| {
-    state.set("pressure", held.to_ordered());
-    Ok(())
-  })
-  .expect("pressure");
 }
 
 /// The source is still running on claude with nothing reserved.

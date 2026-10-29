@@ -6,7 +6,7 @@ use toolu_http_test_support::{Fixture, Reply};
 use toolu_pr_babysit::GitHubTick;
 use toolu_runtime::env::Env;
 
-use super::fixture::{engine, pr_reply};
+use super::fixture::{engine, rest_bodies};
 use crate::journal::Record;
 use crate::model::{Action, Step, fresh};
 use crate::server::Engine;
@@ -53,21 +53,7 @@ fn graphql(conclusion: &str, threads: &[Value]) -> String {
 
 /// Every route the engine's probe and pr-babysit's collection read.
 fn serve(fixture: &Fixture, graphql_body: String, comments: &Value) {
-  let root = "/repos/o/r";
-  for (path, body) in [
-    (format!("{root}/pulls/1"), pr_reply()),
-    (
-      format!("{root}/commits/abc/check-runs?per_page=100"),
-      r#"{"check_runs":[]}"#.into(),
-    ),
-    (format!("{root}/commits/abc/status"), "{}".into()),
-    (
-      format!("{root}/issues/1/comments?per_page=100"),
-      comments.to_string(),
-    ),
-    (format!("{root}/pulls/1/comments?per_page=100"), "[]".into()),
-    (format!("{root}/pulls/1/reviews?per_page=100"), "[]".into()),
-  ] {
+  for (path, body) in rest_bodies(comments.to_string()) {
     fixture
       .route(&path, Reply::new(200, body))
       .expect("REST route");

@@ -9,7 +9,7 @@ use std::time::{Duration, Instant, SystemTime};
 use toolu_runtime::config::secrets::{self, Secrets};
 use toolu_state::time::epoch_millis;
 
-use crate::http_response::{READ_METHODS, Response};
+use crate::http_response::Response;
 use crate::metrics::{self, Query};
 use crate::paths::Paths;
 
@@ -47,7 +47,7 @@ impl MetricsCache {
     };
     entries.retain(|entry| entry.at.elapsed() < FRESH);
     if let Some(entry) = entries.iter().find(|entry| entry.key == key) {
-      return ok(entry.body.clone());
+      return Response::json(entry.body.clone());
     }
     let query = Query {
       epic: key.0.clone(),
@@ -66,7 +66,7 @@ impl MetricsCache {
       at: Instant::now(),
       body: body.clone(),
     });
-    ok(body)
+    Response::json(body)
   }
 }
 
@@ -82,18 +82,6 @@ fn parse(query: &str) -> Result<(Option<String>, Option<u64>), String> {
     }
   }
   Ok((epic, since))
-}
-
-fn ok(body: Vec<u8>) -> Response {
-  Response {
-    status: 200,
-    content_type: "application/json; charset=utf-8",
-    body,
-    head: false,
-    close: false,
-    allow: READ_METHODS,
-    cache: "no-store",
-  }
 }
 
 #[cfg(test)]

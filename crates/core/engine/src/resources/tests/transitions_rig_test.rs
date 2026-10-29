@@ -6,7 +6,10 @@ use std::time::SystemTime;
 use toolu_runtime::json::ordered::Ordered;
 
 use super::{MigrationCaps, prepare_agent_migration};
-use crate::resources::leases::{LeaseKind, LeasePatch, LeaseRequest, acquire_lease, patch_lease};
+use crate::resources::leases::{
+  LeaseKind, LeasePatch, LeaseRequest, acquire_lease, epoch_ms, patch_lease,
+};
+use crate::resources::pressure::{ResourceSample, advance_pressure};
 use crate::resources::store::{leases, read_resource_state, update_resources};
 
 pub(super) const CAPS: MigrationCaps = MigrationCaps {
@@ -99,4 +102,29 @@ pub(super) fn source(root: &Path, worktree: &Path) -> String {
 
 pub(super) fn prepare(root: &Path, token: &str, target: &str) -> Result<Ordered, String> {
   prepare_agent_migration(root, token, target, CAPS, SystemTime::now())
+}
+
+/// A held pressure sample in the resource state; the lease tests share it.
+pub(crate) fn hold_pressure(root: &Path) {
+  let at = epoch_ms(SystemTime::now());
+  let low = |at| ResourceSample {
+    at,
+    cpus: 10.0,
+    load: 1.0,
+    available_bytes: 1e9,
+    total_bytes: 32e9,
+    steal: None,
+    ticks: None,
+  };
+  let held = advance_pressure(
+    Some(&advance_pressure(None, &low(at - 60_000.0)).expect("first")),
+    &low(at),
+  )
+  .expect("held");
+  assert!(held.held);
+  update_resources(root, |state| {
+    state.set("pressure", held.to_ordered());
+    Ok(())
+  })
+  .expect("pressure");
 }

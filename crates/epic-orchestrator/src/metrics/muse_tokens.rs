@@ -7,9 +7,10 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use serde_json::{Value, json};
+use serde_json::Value;
 use toolu_runtime::env::Env;
 
+use super::tokens::field_totals;
 use crate::launch::muse_session::data_root;
 
 const FIELDS: [&str; 4] = [
@@ -97,17 +98,7 @@ pub(super) fn muse(session: &str, env: &Env) -> Result<(&'static str, Value), &'
       Err(_err) => return Err("a subagent log cannot be read"),
     }
   }
-  let sum = |field: &str| -> u64 {
-    usage
-      .values()
-      .map(|quantity| quantity.get(field).and_then(Value::as_u64).unwrap_or(0))
-      .fold(0, u64::saturating_add)
-  };
-  let tokens: serde_json::Map<String, Value> = FIELDS
-    .iter()
-    .map(|field| ((*field).to_owned(), json!(sum(field))))
-    .collect();
-  Ok(("muse session log", Value::Object(tokens)))
+  Ok(("muse session log", field_totals(&usage, &FIELDS)))
 }
 
 #[cfg(test)]

@@ -12,9 +12,8 @@ use super::{
   LeaseKind, LeasePatch, LeaseRequest, acquire_lease, epoch_ms, patch_lease,
   reconcile_resource_jobs, release_lease,
 };
-use crate::resources::lock::write_json_atomic;
-use crate::resources::pressure::{ResourceSample, advance_pressure};
 use crate::resources::store::{leases, read_resource_state};
+use crate::resources::transitions::rig::hold_pressure;
 
 fn policy(root: &Path, body: &str) {
   std::fs::create_dir_all(root).unwrap();
@@ -202,29 +201,7 @@ fn patches_need_a_known_token_and_a_positive_group() {
 fn held_pressure_refuses_admission_unless_policy_disables_it() {
   let dir = tempfile::tempdir().unwrap();
   let root = dir.path();
-  let at = epoch_ms(now());
-  let low = |at| ResourceSample {
-    at,
-    cpus: 10.0,
-    load: 1.0,
-    available_bytes: 1e9,
-    total_bytes: 32e9,
-    steal: None,
-    ticks: None,
-  };
-  let held = advance_pressure(
-    Some(&advance_pressure(None, &low(at - 60_000.0)).unwrap()),
-    &low(at),
-  )
-  .unwrap();
-  assert!(held.held);
-  let state = Ordered::Object(vec![
-    ("version".to_owned(), Ordered::Number(1.into())),
-    ("leases".to_owned(), Ordered::Array(Vec::new())),
-    ("cooldowns".to_owned(), Ordered::Object(Vec::new())),
-    ("pressure".to_owned(), held.to_ordered()),
-  ]);
-  write_json_atomic(&root.join("state.json"), &state).unwrap();
+  hold_pressure(root);
   policy(root, r#"{"maxAgents":1}"#);
   let refused = acquire_lease(root, &agent("a", "e", "claude"), now());
   assert_eq!(

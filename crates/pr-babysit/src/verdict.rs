@@ -123,18 +123,7 @@ fn verdict_of(label: &str, input: &str, lines: &[&str]) -> &'static str {
 
 fn findings(lines: &[&str]) -> Vec<Value> {
   let mut found = Vec::new();
-  let mut inside = false;
-  for line in lines {
-    if is(&FINDINGS_HEAD, line) {
-      inside = true;
-      continue;
-    }
-    if is(&ANY_HEAD, line) {
-      inside = false;
-    }
-    if !inside {
-      continue;
-    }
+  for line in section(lines, &FINDINGS_HEAD, &ANY_HEAD) {
     if let Some(caps) = captures(&FINDING, line) {
       let field = |at: usize| caps.get(at).map_or("", |found| found.as_str());
       found.push(finding(field(1), field(2), field(3)));
@@ -163,17 +152,9 @@ fn finding(raw_path: &str, severity: &str, text: &str) -> Value {
 
 fn must_fix(lines: &[&str]) -> Vec<String> {
   let mut items = Vec::new();
-  let mut inside = false;
-  for line in lines {
-    if is(&TOP_N_HEAD, line) {
-      inside = true;
-      continue;
-    }
-    if is(&TOP_N_END, line) {
-      inside = false;
-    }
+  for line in section(lines, &TOP_N_HEAD, &TOP_N_END) {
     let item = line.trim();
-    if !inside || item.is_empty() {
+    if item.is_empty() {
       continue;
     }
     let item = strip(&NUMBERED, &strip(&BULLET, item));
@@ -182,6 +163,25 @@ fn must_fix(lines: &[&str]) -> Vec<String> {
     }
   }
   items
+}
+
+/// The lines after each `head` line up to the next `end` line, exclusive.
+fn section<'l>(
+  lines: &[&'l str],
+  head: &'static pattern::Pattern,
+  end: &'static pattern::Pattern,
+) -> impl Iterator<Item = &'l str> {
+  let mut inside = false;
+  lines.iter().copied().filter(move |line| {
+    if is(head, line) {
+      inside = true;
+      return false;
+    }
+    if is(end, line) {
+      inside = false;
+    }
+    inside
+  })
 }
 
 fn strip(pattern: &pattern::Pattern, text: &str) -> String {
