@@ -125,6 +125,7 @@ fn post_write_socket_failures_are_uncertain_and_pre_send_ones_are_not() {
     "write: Broken pipe (os error 32)",
     "read: connection reset by peer",
     "read: Connection reset by peer (os error 104)",
+    "read: Connection reset by peer (os error 54)",
     "send: broken pipe",
   ] {
     assert!(super::uncertain(err), "{err}");

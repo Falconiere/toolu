@@ -243,6 +243,7 @@ fn deliver(engine: &mut Engine, answer: &Answer<'_>, reply: &Sender<Value>) {
 /// deadline, a scripted `uncertain` outcome, or a socket that broke after the
 /// write (`broken pipe`, `connection reset`, errno 32 or 104).
 pub(crate) fn uncertain(err: &str) -> bool {
+  let lower = err.to_ascii_lowercase();
   crate::herdr_calls::timed_out(err)
     || [
       ": timeout:",
@@ -251,10 +252,11 @@ pub(crate) fn uncertain(err: &str) -> bool {
       "broken pipe",
       "connection reset",
       "os error 32",
+      "os error 54",
       "os error 104",
     ]
     .iter()
-    .any(|marker| err.contains(marker))
+    .any(|marker| lower.contains(marker))
 }
 
 /// An answer that may have arrived: journal it and leave attention open, so
