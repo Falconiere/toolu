@@ -80,13 +80,15 @@ is available only for a protection refusal.
 ## Tracker close recovery
 
 Closing a GitHub, Jira, or Linear issue or supported epic writes its delivery
-comment intent under the epic state directory before posting. A manual gate
-without `--state-dir` uses the local resource root. Before any new POST, toolu
-checks the tracker's comments for the original text; a receipt also keeps that
-text if a later summary changes. If the comment landed but the close or Done
-transition failed, rerun `toolu epic close` or the merged issue's gate to finish
-the transition without another comment. A recovered resident close tries this
-safe path once. A persistent failure remains blocked for explicit action.
+comment intent under `close-intents/` in the epic state directory before
+posting. A manual gate without `--state-dir` uses the local resource root.
+Before any new POST, toolu checks the tracker's comments for the original text.
+The receipt keeps that text if a later summary changes. If the comment landed
+but the close or Done transition failed, rerun `toolu epic close` or the merged
+issue's gate using the same state directory to finish the transition without
+another comment.
+A recovered resident close tries this safe path once. A persistent failure
+remains blocked for explicit action.
 An incomplete comment listing or unreadable receipt stops the close; it does
 not authorize a second POST. Already-done items receive no delivery comment.
 

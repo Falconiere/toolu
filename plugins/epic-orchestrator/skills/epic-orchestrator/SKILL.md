@@ -110,7 +110,7 @@ or a settled cause closes an item; ack the rest once handled. To redirect a live
 | kind | action |
 |---|---|
 | `needs-human` | If the issue, epic or code answers the `note`, `toolu epic answer <key> "<answer>"`; else ask the user and relay it the same way. |
-| `failed` | Read the note (`herdr agent read <key> --lines 80` if unclear). `toolu epic answer <key> "<new direction>"`, or escalate. Notes `uncertain launch`, `merge uncertain`, `merge refused` and, on the epic key, `epic close uncertain`: follow `references/recovery.md`. |
+| `failed` | Read the note (`herdr agent read <key> --lines 80` if unclear). `toolu epic answer <key> "<new direction>"`, or escalate. Notes `uncertain launch`, `merge uncertain`, `merge refused` and tracker close failures on the epic key: follow `references/recovery.md`. |
 | `blocked` | Read `pending`. Inside the boundary: approve with `herdr agent send-keys`; else ask the user. Then `toolu epic ack <key>`. |
 | `stall` | The engine sent `STATUS?`. Read the reply, then `toolu epic answer <key> "<nudge>"` or `toolu epic ack <key>` to wait one more stall length. |
 | `babysit` | The PR check needs the worker or a human (the note says why). `toolu epic answer <key> "<direction>"` or escalate, then `toolu epic ack <key>`. |

@@ -90,9 +90,12 @@ exits right after start): check `codex debug models` or `cursor-agent
   push after the gate, or protection), and the engine holds the issue without
   resending. Fix the cause or ask the user, merge with the gate below once it
   says `merge`, then `toolu epic ack <key>`; the PR check sees the merge.
-- **`failed` on the epic key, note `epic close uncertain`:** the epic may be
-  closed already. Check it in the tracker and never close it twice; then
-  `toolu epic ack <epic-key>`.
+- **`failed` on the epic key after a tracker close:** fix the reported cause,
+  then rerun `toolu epic close --graph <state_dir>/graph.json`. Keep the same
+  state directory and its `close-intents/` receipts: a pending comment is
+  checked against the tracker, and a delivered one is not posted again.
+  A recovered resident close tries once; a persistent failure waits for this
+  explicit repair. Then `toolu epic ack <epic-key>`.
 - **`merge-ready`** (a deferring merge script, a test seam), or a repair by
   hand: run the gate below, the one the engine runs.
 - **`cleanup-incomplete`:** the teardown kept the workspace because a job was
@@ -109,7 +112,8 @@ exits right after start): check `codex debug models` or `cursor-agent
   replace an older engine with `toolu epic engine --replace`. An issue removed
   from the epic's tracker leaves the engine at its next refresh.
 - **Close the epic by hand:** `toolu epic close --graph <state_dir>/graph.json`
-  (`--dry-run` prints the summary only). Never close it twice.
+  (`--dry-run` prints the summary only). Retrying with the same state directory
+  resumes comment delivery and closure; an already-done epic gets no comment.
 
 ```bash
 toolu epic gate --pr <repo>#<pr> --issue <ref> --epic <epic> --state-dir <state_dir> --key <key>
