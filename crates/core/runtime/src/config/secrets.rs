@@ -302,7 +302,9 @@ pub fn rotate_status_token(roots: &Roots) -> Result<PathBuf, SecretError> {
   Ok(path)
 }
 
-pub use super::redaction::{redact_json, redact_text, redact_window, redaction_overlap};
+pub use super::redaction::{
+  redact_json, redact_text, redact_window, redaction_fingerprint, redaction_overlap,
+};
 
 #[cfg(test)]
 #[path = "tests/secrets_test.rs"]

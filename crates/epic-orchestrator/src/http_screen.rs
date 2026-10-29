@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::{Duration, Instant, SystemTime};
 
 use serde_json::{Value, json};
-use toolu_runtime::config::secrets::{Secrets, redact_text};
+use toolu_runtime::config::secrets::{Secrets, redact_text, redaction_fingerprint};
 
 use crate::http_live::{Herdr, Limiter, request};
 use crate::http_response::{Response, json_response};
@@ -14,12 +14,15 @@ use crate::model::World;
 
 const FRESH: Duration = Duration::from_secs(1);
 const MAX_BODY: usize = 64 * 1024;
+const MAX_ENTRIES: usize = 64;
+const MAX_SAMPLE: usize = 64 * 1024;
 
 #[derive(Clone)]
 struct Sample {
   at: Instant,
   sampled_at: String,
   target: String,
+  redaction_fingerprint: u64,
   result: Result<String, String>,
 }
 
@@ -63,7 +66,10 @@ impl Screen {
     if target.is_empty() {
       return not_running(key, secrets);
     }
-    let sample = match self.sample(key, &target, socket, limiter) {
+    let sample = match self
+      .cell(key)
+      .and_then(|cell| sample(&cell, &target, socket, limiter, secrets))
+    {
       Ok(sample) => sample,
       Err(response) => return response,
     };
@@ -81,48 +87,38 @@ impl Screen {
     }
   }
 
-  fn sample(
-    &self,
-    key: &str,
-    target: &str,
-    socket: &Path,
-    limiter: &Limiter,
-  ) -> Result<Sample, Response> {
-    let cell = {
-      let mut cached = self.cached.lock().unwrap_or_else(PoisonError::into_inner);
-      Arc::clone(
-        cached
-          .entry(key.to_owned())
-          .or_insert_with(|| Arc::new(Mutex::new(None))),
-      )
-    };
-    let mut cached = cell.lock().unwrap_or_else(PoisonError::into_inner);
-    if let Some(sample) = cached
-      .as_ref()
-      .filter(|sample| sample.target == target && sample.at.elapsed() < FRESH)
-      .cloned()
-    {
-      return Ok(sample);
+  fn cell(&self, key: &str) -> Result<Arc<Mutex<Option<Sample>>>, Response> {
+    let mut cached = self.cached.lock().unwrap_or_else(PoisonError::into_inner);
+    if let Some(cell) = cached.get(key) {
+      return Ok(Arc::clone(cell));
     }
-    let Some(_permit) = limiter.try_acquire() else {
-      return Err(Response::error(503, "herdr_busy"));
-    };
-    let result = read(socket, target);
-    let sample = Sample {
-      at: Instant::now(),
-      sampled_at: toolu_state::time::iso_millis(SystemTime::now()),
-      target: target.to_owned(),
-      result,
-    };
-    *cached = Some(sample.clone());
-    Ok(sample)
+    if cached.len() >= MAX_ENTRIES {
+      let victim = cached
+        .iter()
+        .filter(|(_, cell)| Arc::strong_count(cell) == 1)
+        .min_by_key(|(_, cell)| {
+          cell
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .as_ref()
+            .map(|sample| sample.at)
+        })
+        .map(|(key, _)| key.clone());
+      let Some(victim) = victim else {
+        return Err(Response::error(503, "herdr_busy"));
+      };
+      cached.remove(&victim);
+    }
+    let cell = Arc::new(Mutex::new(None));
+    cached.insert(key.to_owned(), Arc::clone(&cell));
+    Ok(cell)
   }
 
   fn render(&self, key: &str, status: &str, sample: &Sample, secrets: &Secrets) -> Response {
-    let Ok(raw) = &sample.result else {
+    let Ok(shown) = &sample.result else {
       return Response::error(500, "screen_unavailable");
     };
-    let mut text = redact_text(raw, secrets);
+    let mut text = shown.clone();
     loop {
       let mut value = json!({
         "schema": 1, "key": redact_text(key, secrets),
@@ -158,6 +154,55 @@ impl Screen {
       text = text.get(cut..).unwrap_or_default().to_owned();
     }
   }
+}
+
+fn sample(
+  cell: &Mutex<Option<Sample>>,
+  target: &str,
+  socket: &Path,
+  limiter: &Limiter,
+  secrets: &Secrets,
+) -> Result<Sample, Response> {
+  let fingerprint = redaction_fingerprint(secrets);
+  let mut cached = cell.lock().unwrap_or_else(PoisonError::into_inner);
+  if let Some(sample) = cached
+    .as_ref()
+    .filter(|sample| {
+      sample.target == target
+        && sample.redaction_fingerprint == fingerprint
+        && sample.at.elapsed() < FRESH
+    })
+    .cloned()
+  {
+    return Ok(sample);
+  }
+  let Some(_permit) = limiter.try_acquire() else {
+    return Err(Response::error(503, "herdr_busy"));
+  };
+  let result = read(socket, target)
+    .map(|raw| bounded_redacted(&raw, secrets))
+    .map_err(|reason| redact_text(&reason, secrets).chars().take(160).collect());
+  let sample = Sample {
+    at: Instant::now(),
+    sampled_at: toolu_state::time::iso_millis(SystemTime::now()),
+    target: target.to_owned(),
+    redaction_fingerprint: fingerprint,
+    result,
+  };
+  *cached = Some(sample.clone());
+  Ok(sample)
+}
+
+fn bounded_redacted(raw: &str, secrets: &Secrets) -> String {
+  let mut shown = redact_text(raw, secrets);
+  if shown.len() > MAX_SAMPLE {
+    let mut cut = shown.len() - MAX_SAMPLE;
+    while !shown.is_char_boundary(cut) {
+      cut += 1;
+    }
+    shown = shown.split_off(cut);
+  }
+  shown
 }
 
 fn read(socket: &Path, target: &str) -> Result<String, String> {
@@ -224,6 +269,10 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/http_screen_concurrency_test.rs"]
 mod concurrency_tests;
+
+#[cfg(test)]
+#[path = "tests/http_screen_retention_test.rs"]
+mod retention_tests;
 
 #[cfg(test)]
 #[path = "tests/http_screen_render_test.rs"]

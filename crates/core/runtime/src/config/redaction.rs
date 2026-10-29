@@ -1,6 +1,7 @@
 //! Secret redaction for complete fields and bounded log pages.
 
 use serde_json::Value;
+use std::hash::{Hash as _, Hasher as _};
 
 use super::epic::credential_key;
 use super::secrets::{REDACTED, Secrets};
@@ -13,6 +14,13 @@ pub fn redact_text(text: &str, secrets: &Secrets) -> String {
     .fold(text.to_owned(), |shown, value| {
       shown.replace(value, REDACTED)
     })
+}
+
+/// Change when any current or shadowed redaction value changes.
+pub fn redaction_fingerprint(secrets: &Secrets) -> u64 {
+  let mut hash = std::collections::hash_map::DefaultHasher::new();
+  secrets.values().hash(&mut hash);
+  hash.finish()
 }
 
 /// Bytes of context needed on each side of a page to detect split secrets.
