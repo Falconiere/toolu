@@ -136,20 +136,32 @@ fn fingerprint(key: &str, text: &str) -> String {
     .collect()
 }
 
-/// The reply to give when `id` was already used, or `None` when it is new.
+/// How far a submission id got after its last `answer-admit`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Delivery {
+  /// Admitted; prompt outcome unknown → uncertain on retry.
+  Open,
+  /// Worker received the answer → ok dedupe on retry.
+  Done,
+  /// Prompt was refused → same fingerprint may re-admit; other fp is 409.
+  Refused,
+}
+
+/// The reply to give when `id` was already used, or `None` when it is new or
+/// was refused with the same fingerprint (so a retry is a fresh admission).
 fn recalled(engine: &Engine, answer: &Answer<'_>, id: &str) -> Result<Option<Value>, String> {
   let fp = fingerprint(answer.key, answer.text);
   Ok(match prior(engine, id)? {
     Some((seen, _)) if seen != fp => Some(result_value(Err(
       "submission_id reuse with different payload".to_owned(),
     ))),
-    Some((_, true)) => Some(json!({"ok": true})),
-    Some((_, false)) => Some(json!({
+    Some((_, Delivery::Done)) => Some(json!({"ok": true})),
+    Some((_, Delivery::Open)) => Some(json!({
       "ok": true,
       "delivered": "uncertain",
       "note": "worker prompt may not have arrived: earlier submission with this id",
     })),
-    None => None,
+    Some((_, Delivery::Refused)) | None => None,
   })
 }
 
@@ -166,14 +178,12 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
   Ok(())
 }
 
-/// The fingerprint journaled for `id` and whether its answer was delivered,
-/// from the retained journal; `None` when the id was never admitted or its
-/// last attempt was refused (so a retry is a fresh admission). An in-memory
-/// refuse (journal write failed after a definite undelivered prompt) also
-/// clears the id for this process.
-fn prior(engine: &Engine, id: &str) -> Result<Option<(String, bool)>, String> {
-  if engine.refused_ids.contains(id) {
-    return Ok(None);
+/// The fingerprint journaled for `id` and how far delivery got, from the
+/// retained journal (and in-memory refuses when the refuse row could not be
+/// written). `None` when the id was never admitted.
+fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String> {
+  if let Some(fp) = engine.refused_ids.get(id) {
+    return Ok(Some((fp.clone(), Delivery::Refused)));
   }
   let mut state = None;
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;
@@ -184,14 +194,21 @@ fn prior(engine: &Engine, id: &str) -> Result<Option<(String, bool)>, String> {
     match row.name.as_str() {
       "answer-admit" => {
         let fp = row.note.strip_prefix("fp=").unwrap_or("");
-        state = Some((fp.split(' ').next().unwrap_or("").to_owned(), false));
+        state = Some((
+          fp.split(' ').next().unwrap_or("").to_owned(),
+          Delivery::Open,
+        ));
       }
       "answer" => {
-        if let Some((_, delivered)) = state.as_mut() {
-          *delivered = true;
+        if let Some((_, delivery)) = state.as_mut() {
+          *delivery = Delivery::Done;
         }
       }
-      "answer-refused" => state = None,
+      "answer-refused" => {
+        if let Some((_, delivery)) = state.as_mut() {
+          *delivery = Delivery::Refused;
+        }
+      }
       _ => {}
     }
   }
@@ -223,7 +240,9 @@ fn refuse_admitted(engine: &mut Engine, answer: &Answer<'_>) {
   {
     engine.refused_ids.remove(id);
   } else {
-    engine.refused_ids.insert(id.to_owned());
+    engine
+      .refused_ids
+      .insert(id.to_owned(), fingerprint(answer.key, answer.text));
   }
 }
 

@@ -1,6 +1,6 @@
 //! Apply state-machine steps: journal, snapshots, and scripts.
 
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -76,9 +76,10 @@ pub(crate) struct Engine {
   /// How in-process effects reach GitHub and the trackers.
   pub(crate) reach: crate::reach::Reach,
   /// Submission ids whose `answer-refused` row could not be journaled after a
-  /// definite undelivered prompt. `prior` treats them as refused until a later
-  /// durable refuse lands or the process restarts.
-  pub(crate) refused_ids: HashSet<String>,
+  /// definite undelivered prompt, mapped to the admitted fingerprint. `prior`
+  /// treats them as refused (same fp may retry; other fp is a mismatch) until
+  /// a durable refuse lands or the process restarts.
+  pub(crate) refused_ids: HashMap<String, String>,
 }
 
 impl Engine {
@@ -105,7 +106,7 @@ impl Engine {
       notifier: None,
       env: toolu_runtime::env::Env::process(),
       reach: crate::reach::Reach::live(),
-      refused_ids: HashSet::new(),
+      refused_ids: HashMap::new(),
     })
   }
 

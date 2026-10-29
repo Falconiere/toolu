@@ -241,8 +241,22 @@ fn a_refuse_journal_failure_still_allows_the_same_submission_to_retry() {
       submission: Some("s-1"),
     },
   );
-  assert!(engine.refused_ids.contains("s-1"));
+  assert!(engine.refused_ids.contains_key("s-1"));
   chmod_tree(&journal, 0o644, 0o755);
   assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(prompts(tmp.path()).len(), 1);
+}
+
+#[test]
+fn a_refused_submission_id_still_rejects_a_different_payload() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "failed");
+  report(&mut engine, "needs-human");
+  let refused = json!({"error": "worker prompt not delivered: prompt failed"});
+  assert_eq!(answer(&mut engine, &submitted("one", "s-1")), refused);
+  assert_eq!(
+    answer(&mut engine, &submitted("two", "s-1")),
+    json!({"error": "submission_id reuse with different payload"})
+  );
   assert_eq!(prompts(tmp.path()).len(), 1);
 }
