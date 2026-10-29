@@ -127,6 +127,53 @@ fn v2_comment_reconciliation_reads_plain_text() {
   assert!(!jira.has_comment("PAY-12", "other").expect("absent"));
 }
 
+#[test]
+fn v3_comment_reconciliation_skips_other_rich_text_and_finds_the_note() {
+  let fixture = Fixture::start().expect("fixture");
+  let response = json!({"startAt": 0, "total": 2, "comments": [
+    {"body": {"type": "doc", "version": 1, "content": [{
+      "type": "paragraph", "content": [
+        {"type": "mention", "attrs": {"id": "user-1"}},
+        {"type": "text", "text": "Other"}
+      ]
+    }]}},
+    {"body": {"type": "doc", "version": 1, "content": [{
+      "type": "paragraph", "content": [{"type": "text", "text": "Delivered"}]
+    }]}}
+  ]});
+  fixture
+    .route(
+      "/rest/api/3/issue/PAY-12/comment?startAt=0&maxResults=100",
+      Reply::new(200, response.to_string()),
+    )
+    .expect("list");
+  let jira = client(&fixture, &jira_env(&fixture, "3")).expect("client");
+  assert!(jira.has_comment("PAY-12", "Delivered").expect("found"));
+  assert!(!jira.has_comment("PAY-12", "absent").expect("absent"));
+}
+
+#[test]
+fn malformed_v3_comment_body_does_not_authorize_another_post() {
+  let fixture = Fixture::start().expect("fixture");
+  fixture
+    .route(
+      "/rest/api/3/issue/PAY-12/comment?startAt=0&maxResults=100",
+      Reply::new(
+        200,
+        json!({"startAt": 0, "total": 1, "comments": [
+          {"body": {"type": "doc", "content": "invalid"}}
+        ]})
+        .to_string(),
+      ),
+    )
+    .expect("list");
+  let jira = client(&fixture, &jira_env(&fixture, "3")).expect("client");
+  assert_eq!(
+    jira.has_comment("PAY-12", "Delivered"),
+    Err("invalid Jira comments response".to_owned())
+  );
+}
+
 fn proxy_env_v2(fixture: &Fixture) -> Env {
   crate::support::proxy_env(fixture)
     .with("JIRA_BASE_URL", &fixture.url(""))

@@ -16,6 +16,7 @@ mod github_fetch;
 pub(crate) mod jira;
 /// Jira REST client.
 pub(crate) mod jira_client;
+mod jira_comment;
 mod linear;
 mod linear_parse;
 /// Shared JSON HTTP transport for Jira and Linear.

@@ -5,6 +5,7 @@ use serde_json::{Value, json};
 use toolu_http::{Auth, Method};
 use toolu_runtime::env::Env;
 
+use super::jira_comment::comment_matches;
 use super::rest::Http;
 
 const FIELDS: [&str; 5] = ["summary", "status", "issuelinks", "description", "labels"];
@@ -288,20 +289,6 @@ impl JiraClient {
     }
     Err("Jira comments exceed 100 pages".to_owned())
   }
-}
-
-fn comment_matches(row: &Value, note: &str) -> Result<bool, String> {
-  let text = row
-    .get("body")
-    .and_then(|body| {
-      body.as_str().or_else(|| {
-        body
-          .pointer("/content/0/content/0/text")
-          .and_then(Value::as_str)
-      })
-    })
-    .ok_or("invalid Jira comments response")?;
-  Ok(text == note)
 }
 
 struct Page {
