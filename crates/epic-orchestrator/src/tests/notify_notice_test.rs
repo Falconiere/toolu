@@ -68,3 +68,31 @@ fn dashboard_shows_an_unspecified_bind_as_loopback() {
     assert_eq!(dashboard(addr), url);
   }
 }
+
+#[test]
+fn replayed_notify_does_not_reopen_an_acknowledged_notice() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = crate::server::Engine::open(
+    crate::paths::Paths::at(tmp.path()),
+    None,
+    crate::server::Fault::None,
+  )
+  .expect("engine");
+  ensure_issue(&mut engine.world, "a", "one", "/epic");
+  let body = json!({"op": "notify", "token": "notice-1", "key": "a", "kind": "help"});
+  crate::dispatch_ops::apply_notify(&mut engine, &body).expect("notice");
+  engine
+    .flush()
+    .expect("durable notify without a spool marker");
+  crate::attention::ack(&mut engine.world, "a", "user");
+  engine.flush().expect("durable acknowledgment");
+  let token = engine.world.attention[0].token.clone();
+  let before = build(&engine.world, &token, false, None).expect("notice");
+  let (reply, answer) = std::sync::mpsc::channel();
+  crate::dispatch::dispatch(&mut engine, &body, &reply, &mut Vec::new(), crate::PROTOCOL);
+  assert_eq!(answer.try_recv().expect("reply")["ok"], true);
+  assert_eq!(
+    build(&engine.world, &token, false, None).expect("notice"),
+    before
+  );
+}

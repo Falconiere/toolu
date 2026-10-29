@@ -183,6 +183,16 @@ the next start applies in order. Stall deadlines belong to each issue: 45
 minutes, or 120 minutes while the phase is babysit. The 30-second tick is for
 checkpoints, not for herdr.
 
+`toolu epic notify` also spools a worker notice. The engine writes its token to
+the durable notify journal before recording the spool marker and deleting the
+file. If it restarts between those writes, it recognizes that token across the
+retained journal and does not raise attention or relay to a sibling again.
+An already recorded token also discards a stale spool file on a live retry.
+Distinct tokens remain distinct notices; the existing recipient cooldown still
+limits relay frequency. A crash after journaling but before the herdr prompt
+can leave the sibling without that prompt. A prompt whose result is uncertain
+cannot be proved delivered exactly once without a receiver acknowledgment.
+
 Resource leases use a `state.lock` directory under the resource home. If an
 external command creates a regular file there, lease commands report its path
 and ask you to confirm no resource update is using it, then remove the file.

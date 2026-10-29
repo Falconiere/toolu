@@ -50,6 +50,7 @@ fn notify_journals_and_applies_a_token_once() {
       .iter()
       .any(|item| item.kind == "blocked" && item.key == "a")
   );
+  assert_eq!(relayed_prompts(&engine).len(), 0);
   let lines = rows.len();
   let (_, again) = round(&mut engine, &body);
   assert_eq!(again["ok"], true);
@@ -168,6 +169,95 @@ fn write_spool(
   let path = spool.join(format!("{token}.json"));
   std::fs::write(&path, format!("{body}\n")).expect("spool file");
   path
+}
+
+#[test]
+fn a_journaled_notify_replay_without_a_spool_marker_has_no_second_effect() {
+  let (tmp, mut engine) = running_engine();
+  let body = json!({"op": "notify", "token": "n-replay", "key": "a", "kind": "help", "note": "same", "to": "b"});
+  let path = write_spool(&tmp, "n-replay", &body);
+  crate::dispatch_ops::apply_notify(&mut engine, &body).expect("valid notice");
+  engine.flush().expect("durable notify before spool marker");
+  let before = crate::journal::tail(&engine.paths.journal_dir(), engine.now).expect("tail");
+  assert_eq!(before.iter().filter(|row| row.kind == "notify").count(), 1);
+  let (_, duplicate) = round(&mut engine, &body);
+  assert_eq!(duplicate["ok"], true);
+  assert!(
+    !path.is_file(),
+    "the durable duplicate can discard its spool"
+  );
+  assert_eq!(
+    crate::journal::tail(&engine.paths.journal_dir(), engine.now)
+      .expect("tail")
+      .len(),
+    before.len()
+  );
+  write_spool(&tmp, "n-replay", &body);
+  drop(engine);
+
+  let mut restarted = open(tmp.path());
+  for key in ["a", "b"] {
+    let issue = crate::logic::ensure_issue(&mut restarted.world, key, "one", "/epic");
+    issue.stage = "running".to_owned();
+  }
+  crate::dispatch::ingest(&mut restarted).expect("replay");
+  assert!(!path.is_file());
+  let after = crate::journal::tail(&restarted.paths.journal_dir(), restarted.now).expect("tail");
+  assert_eq!(after.iter().filter(|row| row.kind == "notify").count(), 1);
+  assert_eq!(
+    after.iter().filter(|row| row.kind == "judgment").count(),
+    before.iter().filter(|row| row.kind == "judgment").count()
+  );
+  assert_eq!(
+    after
+      .iter()
+      .filter(|row| row.kind == "prompt" && row.name == "relay")
+      .count(),
+    before
+      .iter()
+      .filter(|row| row.kind == "prompt" && row.name == "relay")
+      .count()
+  );
+}
+
+#[test]
+fn an_old_journaled_notify_still_suppresses_spool_replay() {
+  let (tmp, mut engine) = running_engine();
+  let body = json!({"op": "notify", "token": "n-old", "key": "a", "kind": "help", "to": "b"});
+  let path = write_spool(&tmp, "n-old", &body);
+  crate::dispatch_ops::apply_notify(&mut engine, &body).expect("valid notice");
+  engine.flush().expect("durable notify");
+  let journal = engine.paths.journal_dir();
+  let old = engine.now - std::time::Duration::from_hours(72);
+  std::fs::rename(
+    crate::journal::file_for(&journal, engine.now),
+    crate::journal::file_for(&journal, old),
+  )
+  .expect("move retained journal day");
+  drop(engine);
+
+  let mut restarted = open(tmp.path());
+  for key in ["a", "b"] {
+    let issue = crate::logic::ensure_issue(&mut restarted.world, key, "one", "/epic");
+    issue.stage = "running".to_owned();
+  }
+  crate::dispatch::ingest(&mut restarted).expect("replay older token");
+  assert!(!path.is_file());
+  let mut rows = Vec::new();
+  crate::journal::each(&journal, "", |row| {
+    rows.push(row);
+    Ok(())
+  })
+  .expect("retained journal");
+  assert_eq!(rows.iter().filter(|row| row.kind == "notify").count(), 1);
+  assert_eq!(rows.iter().filter(|row| row.kind == "judgment").count(), 1);
+  assert_eq!(
+    rows
+      .iter()
+      .filter(|row| row.kind == "prompt" && row.name == "relay")
+      .count(),
+    1
+  );
 }
 
 #[test]
