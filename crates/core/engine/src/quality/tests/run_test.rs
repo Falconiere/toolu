@@ -183,7 +183,7 @@ fn last_edit_records_mixed_ops_keep_last_occurrence_order_and_metadata() {
 
 #[test]
 fn last_edit_records_empty_distinct_identical_and_path_aliases() {
-  assert!(last_edit_records(&[]).is_empty());
+  assert_eq!(last_edit_records(&[]).len(), 0);
 
   let distinct = [
     record("a", EditOperation::Write, None, None),
