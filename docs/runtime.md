@@ -75,13 +75,17 @@ host verification limits and recovery.
 `toolu_runtime::process::run` starts a subprocess in its own process group and
 drains stdout and stderr while feeding stdin. A descendant that calls `setsid`
 can escape that group and hold an inherited pipe open. The runtime uses
-nonblocking pipe I/O so that, after settlement, it can give the feeder its
-existing 250 ms completion grace, then cancel the workers and wait for them
-against one shared 250 ms cleanup deadline before returning.
+nonblocking pipe I/O so that, after settlement succeeds (including a handled
+timeout), it gives an unfinished feeder up to 250 ms to complete, then cancels
+the workers and waits for them against one shared 250 ms cleanup deadline.
+Settlement errors skip the feeder grace and cancel immediately. These waits
+are additional to the command timeout, group termination, and existing final
+stream-drain grace.
 This releases their descriptors, input copy, and observer captures even while
 the escaped descendant is still alive. The existing group termination and
 reaping path remains in force. An observer callback that itself never returns
-cannot be interrupted; the caller still stops waiting at its cleanup deadline.
+cannot be interrupted; the caller still stops waiting at its cleanup deadline,
+but that callback's reader retains its descriptor and captures until it returns.
 
 The following release-build probe ran on Darwin 27.0.0 arm64 on 2026-10-29,
 five times per pipe. A real Perl descendant called `setsid`, inherited exactly
