@@ -120,9 +120,9 @@ fn a_wait_judgment_validates_and_an_unknown_state_does_not() {
 fn every_namespace_s_json_run_is_its_own_valid_document() {
   for name in namespaces().unwrap() {
     let (args, def) = match name.as_str() {
-      "hook" | "commands" | "doctor" | "ledger" | "debug" | "config" | "status" | "setup"
-      | "opencode" | "jev" | "review" | "code-review" | "docs" | "ast-grep" | "statusline"
-      | "babysit" | "epic" | "sandbox" | "git-better" | "plugins" => continue,
+      "hook" | "commands" | "completions" | "doctor" | "ledger" | "debug" | "config" | "status"
+      | "setup" | "opencode" | "jev" | "review" | "code-review" | "docs" | "ast-grep"
+      | "statusline" | "babysit" | "epic" | "sandbox" | "git-better" | "plugins" => continue,
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }

@@ -38,6 +38,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`sandbox`](sandbox.md) | `plugins/sandbox` | available | Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux |
 | [`git-better`](git-better.md) | `plugins/git-better` | available | Semantic branches and commits that agents can read |
 | [`commands`](commands.md) | built into `crates/cli` | available | List every toolu command; --json exports the tree for tools and docs |
+| [`completions`](completions.md) | built into `crates/cli` | available | Print a bash, zsh, or fish completion script |
 | [`plugins`](plugins.md) | built into `crates/cli` | available | Install, list, remove, update and doctor toolu plugins on every host |
 
 ## Hook entries
@@ -76,6 +77,7 @@ Commands:
   sandbox         Run builds, gates and agent CLIs in a Linux sandbox: a Lima VM on macOS, this machine on Linux
   git-better      Semantic branches and commits that agents can read
   commands        List every toolu command; --json exports the tree for tools and docs
+  completions     Print a bash, zsh, or fish completion script
   plugins         Install, list, remove, update and doctor toolu plugins on every host
   help            Print this message or the help of the given subcommand(s)
 

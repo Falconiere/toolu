@@ -5,7 +5,7 @@
 use clap::{ArgMatches, Command};
 use toolu_runtime::cli::{Ctx, Outcome};
 
-use crate::{commands, fast, links};
+use crate::{commands, completions, fast, links};
 
 /// The owner of the commands `crates/cli` provides itself.
 pub(crate) const BUILTIN: &str = "toolu-cli";
@@ -22,6 +22,8 @@ pub(crate) enum Action {
   Hook,
   /// `toolu commands`: the command tree, which needs the tree itself.
   Commands,
+  /// `toolu completions`: a shell script for the tree, which needs the tree itself.
+  Completions,
 }
 
 /// One top-level command.
@@ -192,6 +194,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     owner: BUILTIN,
     command: commands::command,
     action: Action::Commands,
+  },
+  Namespace {
+    name: "completions",
+    owner: BUILTIN,
+    command: completions::command,
+    action: Action::Completions,
   },
   verb(
     "plugins",

@@ -89,7 +89,7 @@ pub(crate) fn formula(tag: &str, sums: &str) -> Result<String, Vec<String>> {
     "class Toolu < Formula\n  desc \"Code-quality rules for coding agents, as one native binary\"\n  \
      homepage \"{REPOSITORY}\"\n  version \"{version}\"\n  license \"MIT\"\n\n  \
      on_macos do\n{darwin_arm}{darwin_intel}  end\n\n  on_linux do\n{linux_arm}{linux_intel}  end\n\n  \
-     def install\n    bin.install \"toolu\"\n  end\n\n  test do\n    \
+     def install\n    bin.install \"toolu\"\n    generate_completions_from_executable(bin/\"toolu\", \"completions\")\n  end\n\n  test do\n    \
      assert_match \"toolu #{{version}}\", shell_output(\"#{{bin}}/toolu --version\")\n  end\nend"
   ))
 }

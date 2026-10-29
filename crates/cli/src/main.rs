@@ -7,6 +7,7 @@
 
 mod clap_error;
 mod commands;
+mod completions;
 mod dispatch;
 mod export;
 mod fast;

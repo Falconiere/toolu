@@ -13,7 +13,7 @@ use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::term::Style;
 
 use crate::registry::{self, Action};
-use crate::{Context, clap_error, commands, fast, hook, output};
+use crate::{Context, clap_error, commands, completions, fast, hook, output};
 
 /// Run `words` (argv after the program name) through `tree`.
 pub(crate) fn run(words: &[String], context: &Context<'_>, tree: &dyn Fn() -> Command) -> Outcome {
@@ -106,6 +106,7 @@ fn route(
     Action::Verb(run) => run(sub, ctx),
     Action::Hook => hook::run(&fast::request(namespace.owner, sub), context),
     Action::Commands => commands::run(sub, ctx, tree),
+    Action::Completions => completions::run(sub, ctx, tree),
   }
 }
 

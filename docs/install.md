@@ -20,7 +20,7 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | bash -s -- --install-dir ~/.
 | Upgrade | `brew upgrade toolu` | re-run `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash` |
 | Uninstall | `brew uninstall toolu` | `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash -s -- --uninstall` |
 | Pin a version | — | `curl -fsSL https://get.toolu.sh/pkg/toolu/install \| bash -s -- --version v1.2.3` |
-| See the plan | — | `--check` prints the platform, version, directory and download URL, and downloads nothing |
+| See the plan | — | `--check` prints the platform, version, directory, completion paths and download URL, and downloads nothing |
 
 Pass the same `--install-dir` to `--uninstall` when you installed elsewhere. `--version` accepts a `vX.Y.Z` tag and installs that tag only.
 
@@ -38,7 +38,31 @@ curl -fsSL https://get.toolu.sh/pkg/toolu/install | TOOLU_REPO=example/toolu bas
 
 **Rate limits.** Finding the newest release asks GitHub's API, which allows 60 unauthenticated requests per hour per address. Behind a shared address, set `TOOLU_GITHUB_TOKEN` (or `GITHUB_TOKEN`) for that call; the installer sends it only to the API, never on its command line. `--version` skips the API altogether.
 
-Exit codes: 0 installed, checked or removed; 1 a network, signature, checksum, archive or permission failure; 2 a usage error, a bad tag or `TOOLU_REPO`, or an unsupported platform (only Darwin and Linux, on arm64 or amd64).
+Exit codes: 0 installed, checked or removed; 1 a network, signature, checksum, archive or permission failure; 2 a usage error, a bad tag or `TOOLU_REPO`, or an unsupported platform (only Darwin and Linux, on arm64 or amd64). A completion directory that is not writable is a permission failure: the binary stays installed, and running the installer again writes the scripts.
+
+## Shell completions
+
+Both install paths set up bash, zsh, and fish completions for the `toolu` command tree (subcommands, flags, and known values such as `--host`). PowerShell is deferred with Windows. The scripts do not edit `.bashrc` or `.zshrc`.
+
+Homebrew's formula runs `toolu completions bash`, `toolu completions zsh`, and `toolu completions fish` and installs the scripts into Homebrew's completion directories. `brew uninstall toolu` removes them.
+
+The curl installer writes the same three scripts after the binary is in place, under the prefix of `--install-dir`. When that directory is named `bin`, the prefix is its parent (`/usr/local/bin` → `/usr/local`, `~/.local/bin` → `~/.local`). Otherwise the prefix is `--install-dir` itself.
+
+- `$prefix/share/bash-completion/completions/toolu`
+- `$prefix/share/zsh/site-functions/_toolu`
+- `$prefix/share/fish/vendor_completions.d/toolu.fish`
+
+`--uninstall` removes those three files and then the binary. It does not remove the shared directories. Pass the same `--install-dir` you installed with. A Homebrew Cellar link is still refused before any completion file is removed; use `brew uninstall toolu` for that install.
+
+`/usr`, `/usr/local`, `/opt/homebrew`, and `/home/linuxbrew/.linuxbrew` are already on the default search path of bash-completion, zsh, and fish. For any other prefix the installer prints one line telling zsh to add `$prefix/share/zsh/site-functions` to `fpath` before `compinit`. Bash-completion and fish already load `~/.local/share`.
+
+To print a script without installing it:
+
+```bash
+toolu completions bash
+toolu completions zsh
+toolu completions fish
+```
 
 ## Run the epic engine as a Linux user service
 
@@ -66,7 +90,8 @@ The `get.toolu.sh` Worker answers `/pkg/toolu/install` with a 302 to `https://gi
 | macOS | curl and brew do not set quarantine. Finalize runs `codesign --verify` on darwin binaries (ad-hoc signature after strip). Notarization is deferred. |
 | Rollback | `install.sh --version <tag>` (#457) and pinning the plugin version in each host. |
 | Upgrade | `brew upgrade toolu`, or re-run the installer. `toolu doctor` names the right command for how the binary was installed. No self-update command in this version. |
-| Removal | `brew uninstall toolu`, or `install.sh --uninstall`. |
+| Removal | `brew uninstall toolu`, or `install.sh --uninstall`. Either one also removes the completion scripts it installed. |
+| Completions | bash, zsh, and fish, from `toolu completions`. Homebrew installs them with the formula. The curl installer writes them under the prefix of `--install-dir`. |
 | Bun | Not used or needed on Claude Code, Codex or Muse since #440. |
 
 ## Version skew

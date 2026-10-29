@@ -50,8 +50,12 @@ publish = false
 # Black-box tests of the `toolu` binary (#442).
 assert_cmd = "2"
 # The `toolu` command tree (#442): the builder API only, without derive's
-# proc-macro dependencies or colour's anstream stack.
-clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions"] }
+# proc-macro dependencies or colour's anstream stack. `string` lets
+# `toolu completions` copy that tree under owned names so hidden hook verbs
+# can be left out of the script.
+clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions", "string"] }
+# Shell completion scripts for `toolu completions` (bash, zsh, fish).
+clap_complete = { version = "4.5", default-features = false }
 # Format-preserving edits of OpenCode's JSONC config files in `toolu plugins` (#438):
 # dprint's parser, scanner and CST.
 # The `toolu commands --json` snapshot and its schema validation (#442).
