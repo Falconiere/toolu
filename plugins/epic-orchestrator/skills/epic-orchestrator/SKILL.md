@@ -1,16 +1,16 @@
 ---
 name: epic-orchestrator
-description: Drive a GitHub, Jira, or Linear epic to done with the resident `toolu epic` engine. Each open sub-issue gets a herdr worktree and a worker agent (Claude Code, Codex, Cursor Agent, or Muse Code) that delivers its PR; the engine merges and closes the epic. Use to work, resume, or stop an epic — "work epic #248", "dry-run the epic", "which issues can run in parallel", "where is the epic at". Not for a single issue.
+description: Run, resume, inspect or pause a GitHub, Jira or Linear epic through the resident toolu engine. Use dry-run for planning questions; not for a single issue. Triggers include "dry-run the epic" and "where is the epic at".
 ---
 
 # Epic orchestrator
 
-You start an epic, then handle only the judgments the engine raises. The
-resident engine (`toolu epic`) does everything deterministic: it launches each
-batch, routes hosts, checks each PR every 3 minutes, rebases, merges, cleans
-up, refreshes the graph and closes the epic. **The engine merges, not you.**
-Never run a gate, merge, launch or teardown yourself in the normal flow, nor
-write product code. Keep your context small: a run lasts hours.
+The resident `toolu epic` engine owns launches, PR checks, rebases, cleanup
+and closure. **The engine merges, not you.** Handle its judgments; do not
+write product code. Read [recovery](references/recovery.md) only for a matching failure.
+
+Route status and stop requests directly to their section below; they do not
+authorize a new run. Planning questions use dry-run and stop after the plan.
 
 ## Inputs
 
@@ -48,8 +48,8 @@ the authorized list, ask the user before approving it.
 
 ## 1. Preflight
 
-Run `toolu doctor` with `--host <host>` for the host you run on and stop on its first failure.
-Then stop and report the first of these that fails (`references/preflight.md` has each fix):
+Use [`references/preflight.md`](references/preflight.md) for host-specific fixes.
+Run `toolu doctor` with `--host <host>` first; stop with the fix for the first failure:
 - `HERDR_ENV` is `1`, and `herdr status` and `toolu epic status` answer.
   `Operation not permitted` from either means your host's sandbox blocks the engine: run outside it.
 - `gh auth status` succeeds and `gh api rate_limit` shows core above 1000; a Jira or Linear epic has its tracker variables.
@@ -66,15 +66,16 @@ toolu --json epic graph <epic> --max 3 --dry-run > /tmp/epic-graph.json
 toolu epic route --graph /tmp/epic-graph.json --hosts claude:2,codex:1 --dry-run
 ```
 
-Add `--tracker jira --repo owner/name` for Jira or Linear, `--no-jev` to the
-route when passed. Show both tables: ready issues and the launch batch, blocked
+For Jira or Linear, use the matching `--tracker jira` or `--tracker linear`
+and `--repo owner/name` when needed. Add `--no-jev` to route when passed. Show both tables: ready issues and the launch batch, blocked
 issues with their blockers, each issue's host, model and effort. Then:
 - `complete: true`: nothing to launch; say so and stop.
 - a non-empty `cycle`: report it and ask which edge is wrong.
 - `external_blocked`: name the outside blockers; the engine never launches them.
 - `missing_checkouts`: the engine clones those repos; tell the user.
 
-**A dry run stops here.** It wrote nothing.
+**A dry run stops here:** no engine state, workers or tracker mutations;
+the scratch graph file is local planning output.
 
 ## 3. Run
 
@@ -96,10 +97,10 @@ named after its key). Resume: the same commands.
   (`run_in_background: true`) and end your turn. Its completion (a judgment,
   or `waiting` after 45 minutes) wakes you: handle it, then start the next one
   while any issue is active. Keep exactly one; answer the user meanwhile.
-- **Codex:** one tool call cannot block for hours, so loop:
-  run `toolu --json epic wait --epic <epic-key> --max-seconds 480` in the
-  foreground, handle what it returns, and run it again while any issue is active.
-- **Cursor Agent** and **Muse Code:** the same `--max-seconds 480` loop. On Muse, a call
+- **Codex:** run `toolu --json epic wait --epic <epic-key> --max-seconds 480`
+  through yielding execution (tool returns within 60 seconds), handle its result,
+  and run it again while any issue is active. Without yielding, use a shorter wait.
+- **Cursor Agent** and **Muse Code:** the same bounded loop. On Muse, a call
   that returns a session id delivers its result on its own and wakes you: don't poll it.
 
 It returns one judgment of this epic or an engine-wide one (`kind`, `key`, `note`, `pending` for `blocked`) or
@@ -128,7 +129,8 @@ or a settled cause closes an item; ack the rest once handled. To redirect a live
 
 ## 5. Done
 
-The engine closes the epic, posting its metrics beside the TypeScript baseline (a Linear project stays open: tell the user).
+The engine closes the epic and posts metrics (a Linear project stays open:
+tell the user).
 Report PRs merged, admin merges, hosts and models, what needed a human, and `toolu epic summary <epic>` (measures, budgets, token use).
 
 ## Status and stop
@@ -142,10 +144,7 @@ Report PRs merged, admin merges, hosts and models, what needed a human, and `too
 
 ## Guardrails
 
-- **Progress is never lost.** Workers commit, push and report each phase. The
-  engine snapshots every active worktree to `refs/epic-wip/<key>` every 15
-  minutes and before any cleanup, journals each action before it acts, and
-  never starts a second agent for an uncertain launch.
+- Preserve journals and `refs/epic-wip/<key>` snapshots; never duplicate an uncertain launch.
 - **Budgets.** Launches and merges wait while GitHub core is under 1000
   (`EPIC_GH_CORE_FLOOR`); API calls retry with backoff and honor resets.
 - **Lean.** Trust `toolu epic` output; don't re-fetch it with `gh`, read

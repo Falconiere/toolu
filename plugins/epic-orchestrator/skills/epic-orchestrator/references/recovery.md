@@ -164,8 +164,10 @@ has nothing newer.
   agent directly through herdr: the engine would not see the message.
 - **Keeps failing in the same phase:** one concrete redirect through
   `toolu epic answer <key> "<direction>"`. If it fails again, tear it down
-  with `--abandon`, ask the user, and hold every issue that depends on it.
+  with `--abandon` only if the user authorizes teardown; otherwise escalate
+  and keep dependent issues blocked.
 - **Review loops without converging:** after 3 rounds, have the worker record
-  the disagreement as a decision in its spec and move on.
+  the disagreement and evidence in its spec and escalate. Unresolved findings
+  still block delivery; a recorded disagreement is not approval.
 - **Off scope** (its diff touches other issues' areas): send it back to its
   plan with the files named; scope creep causes conflicts for other workers.

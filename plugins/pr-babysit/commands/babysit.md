@@ -1,7 +1,8 @@
 # Babysit a PR
 
-Read `${CLAUDE_PLUGIN_ROOT}/workflows/babysit.md` completely and execute its
-Claude Code controller plus the shared strict-clearance workflow. Pass
+Read `${CLAUDE_PLUGIN_ROOT}/workflows/babysit.md` and its linked Claude Code
+controller completely; load its fix procedure whenever directed. Execute the
+controller and shared strict-clearance workflow. Pass
 `$ARGUMENTS` as the workflow input. Between cycles, Claude Code runs
 `toolu babysit wait` as a background Bash call, as defined there.
 

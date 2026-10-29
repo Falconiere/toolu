@@ -1,117 +1,43 @@
 # Model routing
 
-How to pick the model for a delegated task. The rule is: **route on the class of
-work, not on how the request is phrased.** A one-line prompt can hide an
-architecture decision; a long prompt can be a file listing.
+Use the session's configured routing first. This reference supplies defaults
+and override semantics when that information is missing. Route by work class,
+not prompt length.
 
-Referenced by `orchestrator`, `brainstorm`, `plan`, and `execution`. The runtime
-copy of the table is injected into every session by the toolu SessionStart hook
-(`plugins/toolu/hooks/docs/model-routing.md`), so the tiers are in context from
-turn one even when no skill has fired.
+| Class | Claude alias | Codex default | Work |
+| --- | --- | --- | --- |
+| mechanical | haiku | Luna / medium | Exact lookup, formatting, one command |
+| exploration | sonnet | Terra / medium | Read-only subsystem evidence |
+| implementation | sonnet | Terra / medium | Decided edit and verification |
+| review | sonnet | Terra / high | Diff review or audit |
+| synthesis | opus | Sol / high | Reconcile findings |
+| architecture | opus | Sol / high | Ambiguous or cross-cutting design |
 
-## The ladder
+Escalate for hard-to-reverse changes, broad impact or unresolved trade-offs.
+De-escalate for bounded work with one verifiable answer. Deciding a public
+contract and implementing it are different work classes. On `ESCALATE`, supply
+the missing evidence or use a higher tier; do not repeat the same failed brief.
 
-Claude tiers use stable aliases. Codex routes each class through the model and
-reasoning-effort pair in `models.codex.<class>`.
+Use available host model IDs and reasoning settings, not an inferred model
+name. The [orchestrator](../SKILL.md) owns role selection and host limitations.
 
-| Class | Claude | Codex | What belongs here |
-|---|---|---|---|
-| `mechanical` | `haiku` | Luna / medium | Exact lookups, formatting, one command. |
-| `exploration` | `sonnet` | Terra / medium | Read-only subsystem mapping. |
-| `implementation` | `sonnet` | Terra / medium | A bounded decided edit plus tests. |
-| `review` | `sonnet` | Terra / high | Diff review and audits. |
-| `synthesis` | `opus` | Sol / high | Reconciling several findings. |
-| `architecture` | `opus` | Sol / high | Cross-cutting design and trade-offs. |
+## Overrides and profiles
 
-`inherit` is also a valid value — "whatever the lead thread runs". Use it when a
-subagent must match the session's model exactly rather than a fixed tier.
-
-## Classify by signal, not by vibe
-
-Score the task on four signals. Any single **yes** in the escalate column pulls
-the task up a tier; all-no in a bounded task pulls it down.
-
-| Signal | Escalate | De-escalate |
-|---|---|---|
-| **Reversibility** | Hard to undo — schema, public interface, migration, deletion | Trivially revertable edit |
-| **Blast radius** | Cross-cutting: many callers, several subsystems | One file, one function |
-| **Ambiguity** | The *how* is not decided; requirements are implicit | Fully specified — what, where, and how to verify are all given |
-| **Reasoning depth** | Must weigh alternatives or reconcile conflicting inputs | One correct answer, verifiable on sight |
-
-Two worked examples:
-
-- *"Find every call site of `pl_recompute`"* — reversible, no ambiguity, no
-  reasoning. Mechanical → `haiku`, even though the codebase is large.
-- *"Add a `model` field to the ledger steps"* — touches a persisted contract
-  every reader parses. Hard to reverse, cross-cutting → `opus` decides the
-  shape, `sonnet` implements it once decided.
-
-Note what the second example shows: **one task can split across tiers.** Deciding
-and doing are different classes. Don't buy frontier reasoning to type out an
-agreed edit, and don't hand an undecided design to the cheap tier because the
-diff looks small.
-
-## Escalation is one-way and cheap
-
-If a subagent returns `ESCALATE: <reason>`, re-run the task one tier up with that
-reason included in the prompt. That is the designed path, not a failure — the
-`quick-task` and `implementer` agents are told to escalate rather than guess.
-Never re-run a failed task on the *same* tier hoping for a better roll.
-
-## Pre-tiered agents
-
-Pinning the tier in the agent's own frontmatter is stronger than remembering to
-pass `model:`, so prefer these when one fits:
-
-| Agent | Tier | Job |
-|---|---|---|
-| `toolu:quick-task` | `haiku` | Mechanical lookups and bounded mechanical edits |
-| `toolu:deep-explore` | `sonnet` | Structural exploration via ast-grep |
-| `toolu:research-agent` | `sonnet` | External docs / web research |
-| `toolu:implementer` | `sonnet` | One bounded plan step + its tests |
-| `toolu:architect` | `opus` | Design, trade-offs, synthesis (read-only) |
-
-Codex has the same five names as custom agents once `$toolu:setup` installs
-them. Muse plugins cannot ship agents:
-each one is the command `/toolu:<agent>` (for example `/toolu:architect`), which
-applies the role to the current thread with no tier pin.
-
-For anything else, route explicitly with the active host's delegation interface.
-Leaving routing unset inherits host defaults.
-
-## Plan steps carry their tier
-
-A machine-readable plan step may declare `"model": "<alias>"`:
-
-```json
-{ "id": "s3", "title": "Add the resolver", "check": "cargo test -p toolu-hub",
-  "model": "sonnet" }
-```
-
-`plan` assigns it while the complexity is still fresh; `execution` reads it back
-(`toolu ledger status` prints `model=<alias>` for the next step) and delegates
-at that tier without re-deriving the judgment. The field is optional — a legacy
-step without it is still valid, and the executor falls back to this rubric.
-
-## Configuring the tiers
-
-Remap any class in `toolu.config.json`:
+Claude class overrides live under `models` in `toolu.config.json`:
 
 ```json
 { "models": { "review": "opus", "mechanical": "sonnet" } }
 ```
 
-Values must be one of `haiku`, `sonnet`, `opus`, `fable`, `inherit`; anything
-else is rejected with a warning and falls back to the default, so a typo
-mis-tiers nothing. `{"models": {"enabled": false}}` turns off the session
-injection entirely.
+Aliases: `haiku`, `sonnet`, `opus`, `fable`, `inherit`; invalid values warn
+and fall back to defaults. `inherit` uses the lead thread's model.
+`models.enabled: false` disables session routing injection.
 
-**Limit:** Claude config remaps the rubric but cannot rewrite a pre-built agent's
-frontmatter. Codex custom-agent files also take precedence over class routing;
-run `$toolu:setup` after plugin upgrades to install current profile templates.
+Codex uses `models.codex.<class>` model/effort pairs. Installed custom-agent
+profiles take precedence over class routing. Neither a class override nor this
+text rewrites an agent's fixed frontmatter. Run `$toolu:setup` after plugin
+upgrades to update managed Codex profiles.
 
-## Budget note
-
-Routing saves money only if it is paired with restraint on fan-out. A wide
-parallel sweep on the top tier is the expensive failure mode this rubric is meant
-to prevent, not enable — cap the agent count first, then tier each one.
+Plan steps may store an optional `model` alias; `toolu ledger status` displays
+it. Reuse the recorded decision during execution; legacy steps without it use
+configured class routing. Keep agent count bounded independently of tier.

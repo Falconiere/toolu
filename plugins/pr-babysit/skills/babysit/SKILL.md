@@ -10,8 +10,8 @@ for the current repository and PR. A verified execution handoff is sufficient au
 when execution already confirmed delivery authorization, GitHub
 auth, a non-default branch, and this installed plugin; do not ask again or
 introduce handoff arguments. Read [the canonical workflow](../../workflows/babysit.md)
-completely and follow only its Codex controller branches plus every shared
-strict-clearance step. Each check is one command — `toolu babysit wait` (or
+and its linked Codex controller completely; load its fix procedure whenever
+directed. Follow every shared strict-clearance step. Each check is one command — `toolu babysit wait` (or
 `toolu babysit tick` for a check right now) with `--state-file` set to the Codex
 slot path; its output contract is [references/helper.md](references/helper.md).
 Trust that result: never write a polling script or controller of your own,

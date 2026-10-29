@@ -1,51 +1,41 @@
 ---
 name: deep-research
-description: "Use when the ask is deep research that must end in a multi-source cited report — tells: \"deep research\", \"research report\", \"cited report\", \"survey the state of the art\", \"investigate thoroughly\". Picks guiding questions, then fans out per-question researchers using native web search and fetch. NOT for quick single-fact or API lookups — the research-agent subagent handles those internally — and NOT for local codebase questions (the deep-explore subagent). Standalone knowledge workflow — not part of the build chain."
+description: "Use for deep research that needs a verified, multi-source cited report. Use research-agent for bounded lookups and deep-explore for local code questions."
 ---
 
-# Deep Research
+# Deep research
 
-A standalone knowledge workflow — outside the build chain; its reports can feed `brainstorm` or `spec`. It exists because the expensive failure in research is not weak sources — it is aiming a whole fan-out at a misunderstood question. So the target is written down first, then the pipeline spends tokens. Do not wait for approval.
+Produce a cited report that answers the user's question. State the scope,
+guiding questions and assumptions, then proceed without a separate approval
+step. Ask only for missing information that materially changes the research.
 
-Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) to rank
-retrieved excerpts, detect no answer, and judge claim/source support. Verify quotes and provenance with tools.
+1. **Retrieve.** Read [research tools](../../workflows/research-tools.md).
+   Discover available Context7/Exa tools; prefer Context7 for library/API docs
+   and Exa for broader web research, with native search/fetch fallback.
+   Keep a compact claim → source passage → URL/date ledger.
+2. **Divide only when useful.** Work inline for dependent or small questions.
+   For independent substantial questions, use bounded `research-agent`
+   assignments with explicit scope, available tools and a compact evidence
+   return. Respect host concurrency and the user's budget; a report does not
+   require a fixed number of agents. Use the orchestrator's model-routing
+   reference only when delegating.
+3. **Verify.** Read original passages behind load-bearing claims. Check date,
+   version, provenance and contrary evidence; multiple copies of one source
+   are not independent corroboration. An independent verifier is useful for
+   disputed/high-impact claims, not mandatory for every source. Use
+   [Jev](../../workflows/semantic-judgments.md) for semantic support judgments;
+   tools verify quotations and provenance.
+4. **Resolve gaps.** Mark claims confirmed, unsupported or source-unreachable.
+   Drop unsupported conclusions or label the uncertainty. A failed worker/tool
+   leaves an explicit gap; a targeted retry or alternative source must address
+   its cause. With no live sources, label the report unverified.
+5. **Deliver.** Synthesize the answer, disagreements and remaining questions.
+   Save `docs/research/<slug>.md` unless the user requested another destination.
+   On collision use a numeric suffix; overwrite only when requested.
+   Return a short answer and the report path.
 
-## When this fires
-
-The user wants a real research deliverable: multi-source, verified, cited. Not a quick fact or API lookup — that stays with `research-agent` — and not a question about this codebase — that is `deep-explore`'s job. Every run is multi-agent by design; if the fan-out isn't warranted, the ask wasn't deep research.
-
-## How to run it
-
-Four phases, driven from the main thread. Workers run on sonnet, synthesis stays on the frontier tier — rubric: `plugins/toolu/skills/orchestrator/references/model-routing.md`.
-
-1. **Target (main thread).** Restate the topic in one sentence. Decompose it into guiding questions with sub-questions — 5 is the typical fan-out, 7 the hard cap (the orchestrator skill's parallel-agent guardrail is the reason). Name the assumptions and what is out of scope. Print the numbered question set, then run it immediately without waiting for approval. Do not open the host mapping's user-choice interface ([host-mapping.md](../../workflows/host-mapping.md)).
-2. **Research fan-out.** One `research-agent` (sonnet) per question, launched in parallel. Each researcher uses native web search and fetch to find and read sources, including official library/API docs when relevant. Override the agent's default depth per call: ask for a 10–15 sentence synthesis, up to 8 sources, and `Claim → source URL` pairs for the 2–3 load-bearing claims.
-3. **Verification wave.** One `research-agent` (sonnet) per finding set, prompted as an adversarial verifier: re-fetch up to 2 cited URLs per load-bearing claim with the host's native web fetch tool and return a per-claim verdict — confirmed / unsupported / source-unreachable. Unsupported claims are dropped or flagged in the report — never silently kept. If every researcher answered from training knowledge only (`Tools used: none`), skip the wave — nothing is fetchable — and banner the report "unverified — no live sources".
-4. **Synthesis + delivery (main thread).** Merge the verified findings into the report format below, write it under `docs/research/`, and give the user a TLDR in chat.
-
-**Failure semantics** — nothing fails silently: a researcher or verifier that returns nothing, errors, or is killed renders its section as `⚠ no findings returned` and is named as degraded in Reliability notes — never silently dropped, no automatic retry. Worst-case fan-out: 7 researchers + 7 verifiers = 14 subagents; typical ~10.
-
-## Report format
-
-Destination `docs/research/<slug>.md` — kebab-case slug from the topic. Create the directory if absent. On collision append a numeric suffix (`<slug>-2.md`); never overwrite an existing report unless the user explicitly asks.
-
-```markdown
-# <Topic>: Research Report
-
-> Date: <YYYY-MM-DD> · Questions: <n> · Scope: <one line>
-
-## TL;DR
-<the answer in ≤5 bullets>
-
-## <Guiding question 1>
-<verified synthesis; flagged claims marked ⚠ unverified>
-
-## Sources
-- <title> — <url>
-
-> Reliability notes: <per-claim verdicts; degraded workers; the unverified banner if no live sources were reachable>
-```
-
-## What "done" looks like
-
-A report at `docs/research/<slug>.md` with a TL;DR, one section per guiding question, real source URLs, and Reliability notes carrying the verification verdicts — plus the TLDR in chat. If targeting produced zero questions, "done" is: nothing ran and nothing was written.
+The report needs its date/scope, concise answer, sections for the guiding
+questions, claim-level citations and reliability notes (verification gaps,
+failed retrieval/workers and limits). Use as many sources as the claims need;
+do not pad with a quota or paste raw pages. Stop when questions are supported
+or the remaining gaps and effort limit are explicit.

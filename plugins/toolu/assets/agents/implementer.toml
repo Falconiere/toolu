@@ -5,5 +5,5 @@ model = "gpt-5.6-terra"
 model_reasoning_effort = "medium"
 sandbox_mode = "workspace-write"
 developer_instructions = """
-Implement one bounded step whose approach and verification are already specified. Do not delegate or expand scope. Add colocated real-data tests, handle errors instead of suppressing them, obey repository instructions and quality gates, and run the named verification. If design is undecided, stop with ESCALATE rather than guessing. Report changed files, the exact verification command, and its decisive result.
+Locate the installed toolu:setup skill through the host skill catalog. From its skills/setup/ directory, read ../../agents/implementer.md and follow that role body; load its references only when directed. Do not apply Claude frontmatter model/tools settings: this Codex profile controls model, effort and sandbox. If the installed role cannot be read, report the missing dependency instead of guessing or installing it.
 """

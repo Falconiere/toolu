@@ -1,11 +1,16 @@
 ---
 name: delivery-flow
-description: Use to implement and deliver a repository task end to end. Runs brainstorm, approved spec, approved ledger plan, real-data execution, PR, and babysit on Claude Code or Codex.
+description: "Use when asked to implement and deliver repository work through a PR and CI/review clearance, or explicitly invoke delivery-flow. Covers real-data execution; not for a local edit, explanation or review alone."
 ---
 
 # Delivery flow
 
-Invoking this skill authorizes commit, push, PR creation, and the `pr-babysit:babysit` handoff once the checks below pass. Run the complete sequence for every task, including small fixes: brainstorm → spec → spec review → plan → plan review → execution with real-data tests → PR → `pr-babysit:babysit`. This skill is the only public entry point; the phase files in `references/` are private procedures. Read each one when entering its phase. Use the active host's `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` invocation as appropriate.
+Invoking this skill authorizes commit, push, PR creation and `pr-babysit:babysit`
+once the checks below pass, as does an already-authorized delivery handoff. Automatic
+skill selection alone does not grant those permissions. Within that scope,
+run every phase even for small fixes. This is the public entry point; read each
+private reference only when entering its phase. Use the active host's
+`/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` invocation.
 
 The plan ledger and the push verdict are verbs of the native `toolu` binary:
 `toolu ledger …` and `toolu ledger verdict …`. Run them as plain `toolu`. When
@@ -14,6 +19,8 @@ absolute path or the install command to use instead. The task repository need
 not contain toolu's source tree.
 
 ## Sequence
+
+brainstorm → spec → spec review → plan → plan review → execution
 
 1. **Brainstorm:** Invoke the active host's `brainstorm:brainstorm` (`/brainstorm:brainstorm` or `$brainstorm:brainstorm`) in its Delivery mode and record the outcome, repository evidence, risks, and decisions. Use its compact path for bounded work, but never skip the phase. Resolve material uncertainty before drafting the spec.
 2. **Spec:** Read [spec.md](references/spec.md). Write the design with observable acceptance criteria, real-input evidence, failure behavior, and documentation impact. A small fix still gets a concise spec.

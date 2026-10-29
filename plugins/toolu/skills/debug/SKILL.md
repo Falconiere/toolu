@@ -1,13 +1,11 @@
 ---
 name: debug
-description: "Use when something is broken and you need the root cause — a failing or flaky test, a crash, a stack trace, wrong output, a regression, a Sentry issue. Drives a scientific-debug loop: reproduce → observe evidence → falsifiable hypothesis → instrument/bisect → isolate the ROOT cause (not the symptom) → fix → regression test → record. Tells: \"why does X fail\", \"it crashes\", \"this is broken\", \"flaky test\", \"debug this\", \"root cause\", \"it worked before\", \"track down this bug\", \"stack trace\". A non-chain break-glass loop in the toolu workflow — any phase can drop into it and return."
+description: Find and fix the root cause of a crash, failing/flaky test, wrong result or regression. Use for broken behavior; not feature design, routine review or external research.
 ---
 
 # Debug
 
-The break-glass loop of the toolu workflow. The six-stage delivery chain builds; this is what you reach for when something *broke*. It is not a chain step — any phase (most often `execution`, using the reusable `test` method) drops into it and returns. Its discipline is the session protocol made concrete: **evidence before claims; the same approach failed twice → stop and change the hypothesis, don't retry harder.**
-
-**Trigger phrases:** why does X fail, it crashes, this is broken, flaky test, debug this, find the root cause, it worked before, track down this bug, what's wrong with, stack trace.
+This break-glass loop is not a chain step: any phase can enter it and return. Gather evidence before claims; if the same approach fails twice, change the hypothesis.
 
 Use the mandatory [Jev workflow](../../workflows/semantic-judgments.md) after
 observations to compare hypotheses and prioritize experiments; allow insufficient evidence.
@@ -15,7 +13,7 @@ Reproduction/tests establish causes.
 
 ## The one rule that matters
 
-**Find the root cause, then fix the root cause.** Patching the symptom — silencing the error, adding a retry, special-casing the failing input — is the single most expensive mistake in debugging, because the bug survives and the next occurrence is harder to see. Every step below exists to push you toward the cause and away from the symptom.
+**Find and fix the root cause.** Silencing errors, adding retries, or special-casing an input can leave the defect intact.
 
 ## The loop
 

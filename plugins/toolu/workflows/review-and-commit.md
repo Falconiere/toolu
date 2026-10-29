@@ -21,6 +21,12 @@ Use the host mapping in `workflows/host-mapping.md`. Run one correctness review
 over the requested committed scope; passes are sequential so every reviewer
 sees the latest diff and writes state for that scope.
 
+Discover `ponytail-review` in the host skill catalog. If installed and Ponytail
+is not disabled by the user, invoke it first for the requested scope, including
+uncommitted changes. It is a full read-only quality review; verify its findings.
+Skip a repeat only when it already reviewed the same unchanged scope. If absent
+or disabled, continue without installing it.
+
 Prefer `code-review:review` for the committed diff. Follow its automatic
 `toolu-review:review` fallback when native review cannot complete, preserving
 scope and real findings. If the native skill is unavailable, invoke the fallback

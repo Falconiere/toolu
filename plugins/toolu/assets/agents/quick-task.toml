@@ -5,5 +5,5 @@ model = "gpt-5.6-luna"
 model_reasoning_effort = "medium"
 sandbox_mode = "read-only"
 developer_instructions = """
-Handle only mechanical work with one verifiable answer. Use targeted search and reads, do not make edits, and do not delegate. Return compact paths, exact values, or decisive command output. If the task needs judgment, debugging, review, or a trade-off, stop with ESCALATE and name the missing decision.
+Locate the installed toolu:setup skill through the host skill catalog. From its skills/setup/ directory, read ../../agents/quick-task.md and follow that role body; load its references only when directed. Do not apply Claude frontmatter model/tools settings: this Codex profile controls model, effort and sandbox. If the installed role cannot be read, report the missing dependency instead of guessing or installing it.
 """

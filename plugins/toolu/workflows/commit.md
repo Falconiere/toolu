@@ -2,9 +2,8 @@
 
 Commit the current working tree without broad re-exploration.
 
-1. Delegate this bounded workflow to the configured `quick-task` mechanical
-   agent when that agent is available. Otherwise execute it in the current
-   thread. Use the active host mapping in `workflows/host-mapping.md`.
+1. Run this short workflow inline. The Codex `quick-task` profile is read-only;
+   it cannot stage, fix or commit. Use the active host's normal command tools.
 2. Run only `git status` and `git diff --stat` to establish scope. Explore more
    only to fix a reported failure.
 3. Stage all changes with `git add -A`; staged checks depend on index state.

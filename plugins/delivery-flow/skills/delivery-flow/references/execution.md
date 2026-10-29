@@ -5,14 +5,14 @@ description: Private delivery-flow execution phase. Implement the approved ledge
 
 # Execution
 
-The execution phase comes after approved `plan-review`. It carries out a reviewed plan with discipline: small steps, evidence before claims, and no skipped gate. `brainstorm` has already run; `test` is the execution-time method for producing high-signal evidence.
-
-**Trigger phrases:** execute the plan, implement this, start building, work through the plan.
+After approved `plan-review`, execute the plan in small steps using `test` for evidence.
 
 ## Precondition
 
 A reviewed ledger plan exists for every task, including small fixes. If there is
 no approved plan, return to `plan` and `plan-review` before editing.
+
+The required brainstorm phase has already run; preserve its decisions and evidence.
 
 ## Loop (per step)
 
@@ -23,8 +23,8 @@ Before the first step run `toolu ledger preflight` — it refuses to start unles
 
 1. **Take one step** from the plan — the smallest shippable unit.
 2. **Produce per-step real-data evidence** (use `test`) — map the relevant AC or risk to a representative real input/fixture, observable result, applicable boundary/failure case, and runner command. For a bugfix, reproduce first; record the passing output before the ledger step is stamped green.
-3. **Handle errors in code, never suppress them.** Every fallible call gets a real handler — propagate (`?`, rethrow), match, or convert; never swallow, never silence with a disable comment (`@ts-ignore`, `eslint-disable`, `#[allow]`). The gate enforces this on every edit; write it right the first time.
-4. **Land it clean.** A PostToolUse quality gate runs on every TS/Rust edit. If it reports a violation the gate goes **failing** and blocks further edits until fixed — fix immediately; do not pile on more changes.
+3. **Handle errors, never suppress them.** Propagate (`?`, rethrow), match, or convert each fallible call; never swallow it or silence it with a disable comment (`@ts-ignore`, `eslint-disable`, `#[allow]`).
+4. **Land it clean.** PostToolUse records quality violations. Repair them before advancing the plan or shipping; investigation and corrective edits remain available.
 5. **Verify, don't assume.** Run the command, read the output. "Done" requires evidence (test pass, log, runtime check), never a guess.
 6. **Checkpoint** with the user at meaningful boundaries, or after each independent workstream.
 
@@ -38,9 +38,7 @@ Before the first step run `toolu ledger preflight` — it refuses to start unles
 - **Docs in sync** — when a step changes a user-facing surface (behavior, interfaces, CLI flags, commands, config), update the prose docs that describe it (README, `docs/` guides, `SKILL.md` triggers, release notes) in the same step; it's part of "done", not a follow-up.
 - **Same approach failed twice? Stop.** Change the hypothesis (`systematic-debugging`), don't retry harder.
 
-## What "done" looks like
-
-Working, verified increments that match the plan, with real error handling and per-step real-data evidence, landed under a green gate. Execution owns the final local review; do not hand work to a separate review or terminal-test phase.
+Execution owns the final local review; do not hand work to a separate review or terminal-test phase.
 
 ## Authorized delivery preflight
 
@@ -65,7 +63,7 @@ against the committed branch diff with command output, not assertion:
 1. Re-run each affected step's real-data runner and ensure its AC/risk evidence is current. Read `toolu ledger status` and resolve every missing or stale AC coverage entry.
 2. Run `toolu ledger run <plan_doc> --verify`. This is the supported branch-wide verification command: it validates every step against the final diff and stamps the ledger only when all steps are fresh-green.
 3. Confirm user-facing documentation is synchronized for every changed behavior, interface, CLI, command, or configuration surface. Treat a missing applicable doc update as a blocker. When `documentation-gate` is selected, invoke `documentation-gate:sync` and complete its routed editing worker and final committed-diff review before the ledger verdict. If documentation edits change the commit, rerun affected verification against the new diff.
-4. Run the active host's `code-review:review` invocation (see [host-mapping.md](host-mapping.md)) against the committed branch diff. Its resulting push-review state must be v2 (`version: 2`) and cover every changed file; open findings or stale/incomplete coverage are blockers. Follow the native skill's automatic `toolu-review:review` fallback for operational failures or incomplete coverage, preserving scope and real findings. If the native skill is unavailable, invoke that fallback directly; failed or unavailable fallback blocks delivery without approval.
+4. Run the active host's `code-review:review` against the committed diff (see [host-mapping.md](host-mapping.md)); it owns installed Ponytail priority and fallback. If unavailable, invoke `toolu-review:review` directly with the same scope and findings. Require v2 (`version: 2`) push-review state covering every changed file. Failed review, unresolved findings and stale/incomplete coverage end without approval and block delivery.
 5. Run `toolu ledger verdict status`. Advance only when it reports `overall: ready`; quality, plan, review, and docs must each pass or be legitimately skipped.
 
 ## PR delivery
