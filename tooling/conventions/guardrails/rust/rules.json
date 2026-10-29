@@ -36,6 +36,7 @@
       "agents",
       "assets",
       "commands",
+      "evals",
       "hooks",
       "scripts",
       "settings",
