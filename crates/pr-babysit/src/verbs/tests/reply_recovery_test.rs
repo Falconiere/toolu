@@ -27,7 +27,7 @@ fn a_reply_recovers_after_its_body_file_is_removed_or_oversized() {
     fixture
       .route(
         "/repos/Falconiere/toolu/issues/165/comments",
-        Reply::committed_then_dropped(),
+        Reply::dropped_recorded(),
       )
       .unwrap();
     let list = "/repos/Falconiere/toolu/issues/165/comments?per_page=100";
