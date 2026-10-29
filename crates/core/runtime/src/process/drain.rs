@@ -3,10 +3,14 @@
 //! never blocks on a full pipe.
 
 use std::io::{ErrorKind, Read};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use super::ChunkObserver;
+
+const POLL: Duration = Duration::from_millis(10);
 
 /// The bytes still to keep across both streams, and whether any were dropped.
 #[derive(Debug, Clone)]
@@ -46,11 +50,12 @@ impl Drain {
     stream: Option<R>,
     budget: &Budget,
     observer: Option<ChunkObserver>,
+    cancel: Arc<AtomicBool>,
   ) -> Drain {
     let bytes = Arc::new(Mutex::new(Vec::new()));
     let reader = stream.map(|stream| {
       let (bytes, budget) = (Arc::clone(&bytes), budget.clone());
-      std::thread::spawn(move || read_all(stream, &bytes, &budget, observer.as_ref()))
+      std::thread::spawn(move || read_all(stream, &bytes, &budget, observer.as_ref(), &cancel))
     });
     Drain { bytes, reader }
   }
@@ -60,8 +65,20 @@ impl Drain {
     self.reader.as_ref().is_none_or(JoinHandle::is_finished)
   }
 
-  /// The bytes kept so far, decoded lossily. A reader still blocked on a pipe
-  /// that a stray process holds open is left behind.
+  /// Wait for a canceled reader using the shared cleanup deadline.
+  pub(super) fn finish_by(&mut self, deadline: Instant) {
+    // shortcut: a blocked observer callback cannot be interrupted; use a cancellable observer contract if that changes.
+    while !self.finished() && Instant::now() < deadline {
+      std::thread::sleep(POLL.min(deadline.saturating_duration_since(Instant::now())));
+    }
+    if self.finished()
+      && let Some(reader) = self.reader.take()
+    {
+      let _finished = reader.join();
+    }
+  }
+
+  /// The bytes kept so far, decoded lossily.
   pub(super) fn text(&self) -> String {
     String::from_utf8_lossy(&lock(&self.bytes)).into_owned()
   }
@@ -77,9 +94,13 @@ fn read_all<R: Read>(
   bytes: &Mutex<Vec<u8>>,
   budget: &Budget,
   observer: Option<&ChunkObserver>,
+  cancel: &AtomicBool,
 ) {
   let mut chunk = [0_u8; 8192];
   loop {
+    if cancel.load(Ordering::Acquire) {
+      return;
+    }
     match stream.read(&mut chunk) {
       Ok(0) => return,
       Ok(read) => {
@@ -90,6 +111,7 @@ fn read_all<R: Read>(
         lock(bytes).extend(chunk.iter().take(kept));
       }
       Err(err) if err.kind() == ErrorKind::Interrupted => {}
+      Err(err) if err.kind() == ErrorKind::WouldBlock => std::thread::sleep(POLL),
       Err(_) => return,
     }
   }
