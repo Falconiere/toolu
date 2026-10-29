@@ -1,5 +1,5 @@
 //! The structural rules: panic-on-error in production code (60) and mock
-//! frameworks (70), each its own `ast-grep scan` of the file. Without ast-grep
+//! frameworks (70), read from the shared `ast-grep scan`. Without ast-grep
 //! they are skipped; a broken scan is itself a violation. Hits are filtered per
 //! rule, which keeps ast-grep's order stable.
 

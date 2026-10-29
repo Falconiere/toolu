@@ -25,6 +25,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::Rule;
 
 use crate::gate::Gate;
+use crate::quality::QualityBinding;
 use crate::trace::Step;
 
 /// How long one `.sh` module may run.
@@ -55,6 +56,8 @@ pub struct DispatchOptions<'a> {
   pub builtins: &'a [&'a dyn Gate],
   /// Compiled-in rules a manifest may enable.
   pub rules: &'a [&'a dyn Rule],
+  /// Compiled quality rules eligible for an event-wide post-edit scan.
+  pub quality_rules: &'a [QualityBinding<'a>],
   /// A host-resolved selection of plugin specs (`selectedRegistrySpecs`).
   pub selected_specs: Option<&'a BTreeSet<String>>,
   /// After a tool, check every patch path past a block (`continuePostBlocks`).

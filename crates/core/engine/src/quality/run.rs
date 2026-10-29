@@ -53,6 +53,16 @@ pub trait QualityRule: Send + Sync {
   fn check(&self, file: &EditedFile, ctx: &RuleContext<'_>, scan: &AstGrepScan) -> QualityFindings;
 }
 
+/// A compiled quality rule paired with the manifest that enables it.
+pub struct QualityBinding<'a> {
+  /// Registry spec.
+  pub spec: &'a str,
+  /// Registry rule name.
+  pub name: &'a str,
+  /// Rule used by the shared scan.
+  pub rule: &'a dyn QualityRule,
+}
+
 /// Ordered decisions and state warnings from one edit event.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
 pub struct QualityOutcome {
@@ -285,6 +295,11 @@ fn run_files(
     warnings: state.warnings,
   }
 }
+
+#[path = "run/batch.rs"]
+mod batch;
+
+pub(crate) use batch::QualityBatch;
 
 /// Last occurrence of each exact `path`, in last-occurrence order.
 fn last_edit_records(records: &[EditRecord]) -> Vec<&EditRecord> {

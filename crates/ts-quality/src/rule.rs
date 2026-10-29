@@ -36,6 +36,9 @@ pub const TS_QUALITY: &dyn Rule = &ManifestRule {
   rule: TsQuality,
 };
 
+/// The same rule for an event-wide dispatch scan.
+pub const TS_QUALITY_BATCH: &dyn QualityRule = &TsQuality;
+
 /// The manifest spec.
 pub(crate) const SPEC: &str = "ts-quality@toolu";
 /// The manifest and rule name.

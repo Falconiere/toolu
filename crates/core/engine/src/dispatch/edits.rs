@@ -144,12 +144,12 @@ pub(crate) fn dispatch_input(
     Err(reason) => return refusal(session.phase, session.host, &reason),
   };
   if let Some(edit) = caller_split(session) {
-    return walk_one(text, doc.as_ref(), &tool_name, Some(edit), session, trace);
+    return walk_one((text, doc.as_ref(), &tool_name), Some(edit), session, trace);
   }
   let value = doc.as_ref().map_or(Value::Null, plain);
   let malformed = || malformed_edit(session.phase, session.host);
   match (normalize_edit_records(&value, &tool_name), doc.as_ref()) {
-    (EditRecords::NotEdit, doc) => walk_one(text, doc, &tool_name, None, session, trace),
+    (EditRecords::NotEdit, doc) => walk_one((text, doc, &tool_name), None, session, trace),
     (EditRecords::Records(records), Some(doc @ Ordered::Object(_))) if !records.is_empty() => {
       fold_records(doc, &records, session, trace)
     }
@@ -158,9 +158,7 @@ pub(crate) fn dispatch_input(
 }
 
 fn walk_one(
-  text: &str,
-  doc: Option<&Ordered>,
-  tool_name: &str,
+  (text, doc, tool_name): (&str, Option<&Ordered>, &str),
   edit: Option<EditFields>,
   session: &Session<'_>,
   trace: &mut Vec<Step>,
@@ -210,15 +208,15 @@ fn fold_records(
   let Some(first) = records.first() else {
     return malformed_edit(session.phase, session.host);
   };
-  let mut batch = match Batch::new(doc, first, session) {
+  let mut batch = match Batch::new(doc, first, records, session) {
     Ok(batch) => batch,
     Err(message) => return failed(session.phase, &message),
   };
   let collect_blocks = session.phase == Phase::Post && session.options.continue_post_blocks;
   let mut outer = WalkState::new(session.phase, session.host);
   let mut blocks: Vec<String> = Vec::new();
-  for record in records {
-    let result = batch.walk_path(doc, record, session, trace);
+  for (index, record) in records.iter().enumerate() {
+    let result = batch.walk_path((doc, record, index), session, trace);
     outer.stderr.push_str(&result.stderr);
     if collect_blocks && result.exit_code != 0 {
       return ModuleResult {

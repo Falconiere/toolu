@@ -3,6 +3,7 @@
 //! and run, until one stops the walk. Warnings go to stderr as they happen; the
 //! results are returned for the walk to fold afterwards, as TypeScript does.
 
+use std::cell::RefCell;
 use std::collections::{BTreeMap, BTreeSet};
 
 use toolu_protocol::decision::Decision;
@@ -20,6 +21,7 @@ use crate::dispatch::output::parse_document;
 use crate::dispatch::session::Session;
 use crate::dispatch::walk::encoded;
 use crate::dispatch::{ModuleResult, Phase};
+use crate::quality::{QualityBatch, QualityBinding};
 use crate::trace::{Skip, Step, StepKind, StepStatus};
 
 /// One walk, as the registry phase needs it.
@@ -29,6 +31,7 @@ pub(crate) struct RegistryWalk<'w> {
   pub(crate) view: &'w View,
   pub(crate) ctx: &'w RuleContext<'w>,
   pub(crate) event: HostEvent,
+  pub(crate) quality: Option<(&'w RefCell<QualityBatch>, usize)>,
 }
 
 /// Event-local registry snapshot, reused by every split path.
@@ -36,11 +39,12 @@ pub(crate) struct RegistryPlan<'r> {
   listing: Listing,
   manifests: Manifests<'r>,
   skips: Vec<Option<Skip>>,
+  active_quality: Vec<usize>,
 }
 
 impl<'r> RegistryPlan<'r> {
   /// Capture the event's directory, manifests, and active plugin facts once.
-  pub(crate) fn new(session: &Session<'r>) -> Self {
+  pub(crate) fn new(session: &Session<'r>, tool_name: &str) -> Self {
     let event = registry_event(session.phase);
     let dir = session.config_root.join("toolu").join(event.dir_name());
     let listing = list_dir(&dir);
@@ -51,11 +55,37 @@ impl<'r> RegistryPlan<'r> {
       .iter()
       .map(|entry| admit.skip(entry))
       .collect();
-    RegistryPlan {
+    let mut plan = RegistryPlan {
       listing,
       manifests,
       skips,
-    }
+      active_quality: Vec::new(),
+    };
+    plan.active_quality = plan.select_quality(session.options.quality_rules, tool_name);
+    plan
+  }
+
+  fn select_quality(&self, bindings: &[QualityBinding<'_>], tool_name: &str) -> Vec<usize> {
+    self
+      .listing
+      .entries
+      .iter()
+      .zip(&self.skips)
+      .filter_map(|(entry, skip)| {
+        if skip.is_some() || entry.kind != ModuleKind::Manifest {
+          return None;
+        }
+        let Some(Read::Valid(manifest, Some(_))) = self.manifests.get(&entry.file) else {
+          return None;
+        };
+        if !manifest.matches(tool_name) {
+          return None;
+        }
+        bindings
+          .iter()
+          .position(|binding| binding.spec == manifest.spec && binding.name == manifest.name)
+      })
+      .collect()
   }
 }
 
@@ -66,6 +96,7 @@ struct Run<'r> {
   stderr: &'r mut String,
   trace: &'r mut Vec<Step>,
   stopped: bool,
+  active_quality: &'r [usize],
 }
 
 impl Run<'_> {
@@ -122,6 +153,7 @@ pub(crate) fn run_registry(
     stderr,
     trace,
     stopped: false,
+    active_quality: &plan.active_quality,
   };
   for file in &plan.listing.rejected {
     run.warn(&format!(
@@ -220,7 +252,7 @@ fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
     None => return,
   };
   let not_matching = StepStatus::Skipped(Skip::NotMatching);
-  if !manifest.matches(&run.walk.payload.tool_name) {
+  if !manifest.matches(run.walk.payload.tool_name) {
     return run.step(entry, StepKind::Rule, not_matching);
   }
   let Some(rule) = rule else {
@@ -236,7 +268,30 @@ fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   }
   if !run.stopped {
     let mut warnings = Vec::new();
-    let decision = rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings);
+    let binding = run.active_quality.iter().copied().find(|index| {
+      run
+        .walk
+        .session
+        .options
+        .quality_rules
+        .get(*index)
+        .is_some_and(|binding| binding.spec == manifest.spec && binding.name == manifest.name)
+    });
+    let decision = if let (Some((quality, record)), Some(binding)) = (run.walk.quality, binding) {
+      let (decision, lines) = quality.borrow_mut().decide(
+        record,
+        (
+          binding,
+          run.active_quality,
+          run.walk.session.options.quality_rules,
+        ),
+        run.walk.ctx,
+      );
+      warnings.extend(lines);
+      decision
+    } else {
+      rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings)
+    };
     for line in &warnings {
       run.warn(line);
     }

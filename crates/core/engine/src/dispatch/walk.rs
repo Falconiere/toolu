@@ -12,9 +12,11 @@ use super::fold::{Folded, WalkState, event_name};
 use super::output::substituted;
 use super::session::Session;
 use super::{ModuleResult, Phase};
+use std::cell::RefCell;
 use toolu_runtime::registry::rule::RuleContext;
 
 use crate::gate::Gate;
+use crate::quality::QualityBatch;
 use crate::registry::phase::{RegistryPlan, RegistryWalk, run_registry};
 use crate::trace::{Step, StepKind, StepStatus};
 
@@ -97,7 +99,7 @@ pub(crate) fn walk(
     Ok(view) => view,
     Err(message) => return failed(session.phase, &message),
   };
-  walk_with_view(payload, &view, session, trace, &mut None)
+  walk_with_view(payload, &view, session, trace, (&mut None, None))
 }
 
 /// Walk a split path against the outer event's reused view.
@@ -106,7 +108,10 @@ pub(crate) fn walk_with_view<'a>(
   view: &View,
   session: &Session<'a>,
   trace: &mut Vec<Step>,
-  registry_plan: &mut Option<RegistryPlan<'a>>,
+  (registry_plan, quality): (
+    &mut Option<RegistryPlan<'a>>,
+    Option<(&RefCell<QualityBatch>, usize)>,
+  ),
 ) -> ModuleResult {
   let ctx = view.rule_context(payload, session);
   let event = host_event(&view.event);
@@ -114,7 +119,7 @@ pub(crate) fn walk_with_view<'a>(
   for gate in session.options.builtins {
     let folded = run_gate(
       *gate,
-      (&view, &ctx),
+      (view, &ctx),
       (session.host, event),
       &mut state.stderr,
       trace,
@@ -126,11 +131,12 @@ pub(crate) fn walk_with_view<'a>(
   let registry = RegistryWalk {
     payload,
     session,
-    view: &view,
+    view,
     ctx: &ctx,
     event,
+    quality,
   };
-  let plan = registry_plan.get_or_insert_with(|| RegistryPlan::new(session));
+  let plan = registry_plan.get_or_insert_with(|| RegistryPlan::new(session, payload.tool_name));
   for folded in run_registry(&registry, &mut state.stderr, trace, plan) {
     if let Some(done) = state.consume(&folded) {
       return done;

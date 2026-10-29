@@ -119,7 +119,12 @@ fn the_manifest_enables_the_rule_on_rs_edits_of_cargo_projects() {
     raw: &raw,
     edit: None,
   };
-  assert_eq!(RustQuality.ast_rules_inline(&ctx), "");
+  assert!(RustQuality.ast_rules_inline(&ctx).contains("id: unwrap"));
+  assert!(
+    RustQuality
+      .ast_rules_inline(&ctx)
+      .contains("id: mockall-import")
+  );
   assert!(!RUST_QUALITY.applies(&wrote(root, "a.ts"), &ctx));
   assert!(!RustQuality.project_enabled(&ctx), "no Cargo.toml");
   let env = cargo_repo(root);
@@ -174,7 +179,7 @@ fn a_crashing_ast_grep_fails_each_group_that_applies() {
   assert_eq!(
     decide(&env, root, concat!("build", ".rs"), "fn main() {}\n"),
     Decision::Allow,
-    "no YAML, no spawn"
+    "no applicable findings"
   );
 }
 

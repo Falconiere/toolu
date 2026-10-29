@@ -59,6 +59,7 @@ impl MuseSite {
       lib_dir: &self.plugin,
       builtins: PRE_TOOL,
       rules: &[],
+      quality_rules: &[],
       selected_specs: None,
       continue_post_blocks: false,
       split_by_caller: false,

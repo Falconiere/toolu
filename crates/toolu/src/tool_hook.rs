@@ -10,7 +10,7 @@ use std::process::ExitCode;
 
 use toolu_engine::builtins::{POST_TOOL, PRE_TOOL};
 use toolu_engine::dispatch::{DEFAULT_MODULE_TIMEOUT, dispatch};
-use toolu_engine::quality::QualityPlugin;
+use toolu_engine::quality::{QualityBinding, QualityPlugin};
 use toolu_engine::{DispatchOptions, Phase as EnginePhase};
 use toolu_protocol::event::HostEvent;
 use toolu_protocol::exit::Exit;
@@ -43,6 +43,25 @@ pub const RULES: &[&dyn Rule] = &[
   toolu_python_quality::PYTHON_QUALITY,
   toolu_git_better::SEMANTIC_GIT,
   toolu_git_better::COMMIT_NOTE,
+];
+
+/// Quality rules for one scan across every path of a split edit.
+pub const QUALITY_RULES: &[QualityBinding<'static>] = &[
+  QualityBinding {
+    spec: "ts-quality@toolu",
+    name: "ts-quality",
+    rule: toolu_ts_quality::TS_QUALITY_BATCH,
+  },
+  QualityBinding {
+    spec: "rust-quality@toolu",
+    name: "rust-quality",
+    rule: toolu_rust_quality::RUST_QUALITY_BATCH,
+  },
+  QualityBinding {
+    spec: "python-quality@toolu",
+    name: "python-quality",
+    rule: toolu_python_quality::PYTHON_QUALITY_BATCH,
+  },
 ];
 
 /// The payload `crates/cli` read, as the stream the hook main reads it from.
@@ -138,6 +157,7 @@ fn run(
       (None, EnginePhase::Post) => POST_TOOL,
     },
     rules: RULES,
+    quality_rules: QUALITY_RULES,
     selected_specs: selected.as_ref(),
     continue_post_blocks: false,
     split_by_caller: only.is_some(),
@@ -196,3 +216,7 @@ fn hook_main(
 #[cfg(test)]
 #[path = "tests/tool_hook_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/tool_hook_quality_test.rs"]
+mod quality_tests;

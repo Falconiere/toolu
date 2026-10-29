@@ -19,7 +19,7 @@ use toolu_engine::quality::QualityPlugin;
 use toolu_runtime::cli::{Ctx, Outcome};
 
 /// The rule the manifest enables.
-pub use rule::RUST_QUALITY;
+pub use rule::{RUST_QUALITY, RUST_QUALITY_BATCH};
 
 /// The plugin this crate belongs to: `plugins/rust-quality`.
 pub const PLUGIN: &str = "rust-quality";

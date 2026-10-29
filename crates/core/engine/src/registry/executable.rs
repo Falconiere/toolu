@@ -29,7 +29,7 @@ fn module_env(payload: &Payload<'_>, session: &Session<'_>) -> toolu_runtime::en
     .env
     .clone()
     .with("input", payload.text())
-    .with("tool_name", &payload.tool_name)
+    .with("tool_name", payload.tool_name)
     .with("TOOLU_LIB_DIR", &lib)
     .with("TOOLU_CONFIG_DIR", &config);
   match &payload.edit {

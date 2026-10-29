@@ -125,6 +125,7 @@ fn a_panicking_gate_blocks_before_and_after_a_tool() {
     lib_dir: Path::new("/lib"),
     builtins: &[&Panics],
     rules: RULES,
+    quality_rules: &[],
     selected_specs: None,
     continue_post_blocks: false,
     split_by_caller: false,

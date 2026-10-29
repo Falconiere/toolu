@@ -19,6 +19,7 @@ fn invalid_config_warnings_come_first_and_an_empty_registry_says_nothing() {
     lib_dir: Path::new("/lib"),
     builtins: &[],
     rules: &[],
+    quality_rules: &[],
     selected_specs: None,
     continue_post_blocks: false,
     split_by_caller: false,

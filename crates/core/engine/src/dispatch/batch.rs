@@ -1,6 +1,6 @@
 //! One multi-path edit's reusable event view and registry plan.
 
-use std::cell::OnceCell;
+use std::cell::{OnceCell, RefCell};
 
 use toolu_runtime::json::ordered::Ordered;
 use toolu_state::edit_records::EditRecord;
@@ -10,6 +10,7 @@ use super::edits::synthetic_edit;
 use super::event::{EditFields, Payload, View};
 use super::session::Session;
 use super::walk::walk_with_view;
+use crate::quality::QualityBatch;
 use crate::registry::phase::RegistryPlan;
 use crate::trace::Step;
 
@@ -17,6 +18,7 @@ use crate::trace::Step;
 pub(super) struct Batch<'a> {
   view: View,
   registry_plan: Option<RegistryPlan<'a>>,
+  quality: RefCell<QualityBatch>,
 }
 
 impl<'a> Batch<'a> {
@@ -24,6 +26,7 @@ impl<'a> Batch<'a> {
   pub(super) fn new(
     doc: &Ordered,
     first: &EditRecord,
+    records: &[EditRecord],
     session: &Session<'a>,
   ) -> Result<Self, String> {
     let initial = synthetic_edit(doc, first);
@@ -38,14 +41,14 @@ impl<'a> Batch<'a> {
     Ok(Batch {
       view: View::of(&payload, session)?,
       registry_plan: None,
+      quality: RefCell::new(QualityBatch::new(records)),
     })
   }
 
   /// Walk this record, rendering its full JSON only for an executable.
   pub(super) fn walk_path(
     &mut self,
-    doc: &Ordered,
-    record: &EditRecord,
+    (doc, record, index): (&Ordered, &EditRecord, usize),
     session: &Session<'a>,
     trace: &mut Vec<Step>,
   ) -> ModuleResult {
@@ -63,7 +66,11 @@ impl<'a> Batch<'a> {
       &self.view,
       session,
       trace,
-      &mut self.registry_plan,
+      (&mut self.registry_plan, Some((&self.quality, index))),
     )
   }
 }
+
+#[cfg(test)]
+#[path = "tests/batch_test.rs"]
+mod tests;

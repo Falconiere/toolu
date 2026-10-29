@@ -114,7 +114,15 @@ impl View {
       NormalizedEvent::ToolPre { tool, .. } | NormalizedEvent::ToolPost { tool, .. } => {
         update(&mut tool.input);
       }
-      _ => {}
+      NormalizedEvent::SessionStart(_)
+      | NormalizedEvent::SessionResume(_)
+      | NormalizedEvent::SessionClear(_)
+      | NormalizedEvent::SessionUnload(_)
+      | NormalizedEvent::Prompt { .. }
+      | NormalizedEvent::PreCompact(_)
+      | NormalizedEvent::Compaction(_)
+      | NormalizedEvent::PermissionEvaluate { .. }
+      | NormalizedEvent::ShellPre { .. } => {}
     }
     if let Some(input) = self
       .raw
