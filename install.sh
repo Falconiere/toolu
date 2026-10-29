@@ -46,8 +46,8 @@ usage: install.sh [--version <tag>] [--install-dir <dir>] [--check | --uninstall
 
   --version <tag>      install this release tag (vX.Y.Z) instead of the newest
   --install-dir <dir>  install into <dir> (default /usr/local/bin)
-  --check              print what would be installed; download nothing
-  --uninstall          remove <install-dir>/toolu
+  --check              print what would be installed, including completion paths; download nothing
+  --uninstall          remove <install-dir>/toolu and its completion scripts
   -h, --help           show this help
 
 environment:
@@ -123,6 +123,56 @@ detect_platform() {
   ASSET="toolu-$OS-$ARCH.tar.gz"
 }
 
+perm_hint() {
+  echo "re-run with sudo, or pass --install-dir (for example --install-dir ~/.local/bin)"
+}
+
+# The directory that owns share/ when INSTALL_DIR is a bin directory.
+completion_prefix() {
+  if [ "$(basename "$INSTALL_DIR")" = bin ]; then
+    dirname "$INSTALL_DIR"
+  else
+    printf '%s\n' "$INSTALL_DIR"
+  fi
+}
+
+# The bash, zsh, and fish scripts for this install, one path per line.
+completion_paths() {
+  local prefix
+  prefix="$(completion_prefix)"
+  printf '%s\n' \
+    "$prefix/share/bash-completion/completions/toolu" \
+    "$prefix/share/zsh/site-functions/_toolu" \
+    "$prefix/share/fish/vendor_completions.d/toolu.fish"
+}
+
+write_completion() {
+  local shell="$1" path="$2" dir staged hint
+  hint="$(perm_hint)"
+  dir="$(dirname "$path")"
+  mkdir -p "$dir" 2>/dev/null || die 1 "cannot create $dir; $hint"
+  [ -w "$dir" ] || die 1 "$dir is not writable; $hint"
+  staged="$dir/.toolu-completion.$$"
+  STAGED="$staged"
+  "$INSTALL_DIR/toolu" completions "$shell" >"$staged" || die 1 "cannot generate $shell completions"
+  chmod 0644 "$staged" || die 1 "cannot set mode on $staged; $hint"
+  mv -f "$staged" "$path" || die 1 "cannot write $path; $hint"
+  STAGED=""
+}
+
+# Write bash, zsh, and fish scripts from the binary just installed.
+install_completions() {
+  local prefix
+  prefix="$(completion_prefix)"
+  write_completion bash "$prefix/share/bash-completion/completions/toolu"
+  write_completion zsh "$prefix/share/zsh/site-functions/_toolu"
+  write_completion fish "$prefix/share/fish/vendor_completions.d/toolu.fish"
+  case "$prefix" in
+    /usr | /usr/local | /opt/homebrew | /home/linuxbrew/.linuxbrew) ;;
+    *) printf '%s\n' "zsh: add $prefix/share/zsh/site-functions to fpath before compinit" ;;
+  esac
+}
+
 # Refuse a target this script does not own: Homebrew's link into its Cellar
 # (Intel Homebrew's prefix is /usr/local) or a directory.
 check_target() {
@@ -138,24 +188,38 @@ check_target() {
 }
 
 uninstall() {
-  local target="$INSTALL_DIR/toolu"
+  local target="$INSTALL_DIR/toolu" removed=0 path hint
+  hint="$(perm_hint)"
   check_target
-  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
-    echo "toolu is not installed in $INSTALL_DIR"
-    return
+  while IFS= read -r path; do
+    if [ -e "$path" ] || [ -L "$path" ]; then
+      rm -f "$path" 2>/dev/null || die 1 "cannot remove $path; $hint"
+      [ ! -e "$path" ] || die 1 "cannot remove $path; $hint"
+      echo "removed $path"
+      removed=1
+    fi
+  done < <(completion_paths)
+  if [ -e "$target" ] || [ -L "$target" ]; then
+    rm -f "$target" 2>/dev/null || die 1 "cannot remove $target; $hint"
+    [ ! -e "$target" ] || die 1 "cannot remove $target; $hint"
+    echo "removed $target"
+    removed=1
   fi
-  rm -f "$target" 2>/dev/null || die 1 "cannot remove $target; re-run with sudo or pass --install-dir"
-  [ ! -e "$target" ] || die 1 "cannot remove $target; re-run with sudo or pass --install-dir"
-  echo "removed $target"
+  if [ "$removed" -eq 0 ]; then
+    echo "toolu is not installed in $INSTALL_DIR"
+  fi
 }
 
 print_plan() {
-  local label="${VERSION:-latest}"
+  local label="${VERSION:-latest}" path
   echo "os:          $OS"
   echo "arch:        $ARCH"
   echo "version:     $label"
   echo "install dir: $INSTALL_DIR"
   echo "download:    $(asset_url "${VERSION:-<latest>}" "$ASSET")"
+  while IFS= read -r path; do
+    echo "completion:  $path"
+  done < <(completion_paths)
 }
 
 asset_url() {
@@ -330,8 +394,8 @@ verify() {
 }
 
 install_binary() {
-  local tag="$1"
-  local hint="re-run with sudo, or pass --install-dir (for example --install-dir ~/.local/bin)"
+  local tag="$1" hint
+  hint="$(perm_hint)"
   if [ ! -d "$INSTALL_DIR" ]; then
     mkdir -p "$INSTALL_DIR" 2>/dev/null || die 1 "cannot create $INSTALL_DIR; $hint"
   fi
@@ -344,6 +408,7 @@ install_binary() {
   mv -f "$STAGED" "$INSTALL_DIR/toolu" || die 1 "cannot replace $INSTALL_DIR/toolu; $hint"
   STAGED=""
   echo "installed toolu $tag to $INSTALL_DIR/toolu"
+  install_completions
   echo
   echo "next steps:"
   echo "  toolu plugins install"
@@ -377,4 +442,9 @@ main() {
   install_binary "$tag"
 }
 
-main "$@"
+# A pipe into bash leaves BASH_SOURCE unset ($0 is bash); the default keeps
+# `set -u` from aborting that check. Sourcing sets BASH_SOURCE to this file,
+# so tests can call the functions without installing.
+if [ -z "${BASH_SOURCE[0]-}" ] || [ "${BASH_SOURCE[0]}" = "$0" ]; then
+  main "$@"
+fi

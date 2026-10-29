@@ -123,11 +123,11 @@ fn a_review_written_for_any_host_is_read_by_every_host() {
   let repo = dir.path();
   let codex = Roots::new(roots.env().clone(), Some(Host::Codex));
   let path = write(&codex, repo, None, &report(&roots, repo)).expect("write review");
-  assert!(
-    path.starts_with(repo.join(".codex/tmp/docs-review")),
-    "{}",
-    path.display()
-  );
+  let prefix = repo
+    .canonicalize()
+    .expect("repo")
+    .join(".codex/tmp/docs-review");
+  assert!(path.starts_with(&prefix), "{}", path.display());
   assess(&roots, repo, "feature").expect("Claude reads the Codex review");
   assert!(!repo.join(".claude/tmp/docs-sync").exists());
 }

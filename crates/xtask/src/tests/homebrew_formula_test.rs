@@ -57,6 +57,7 @@ fn homebrew_formula_prints_the_four_checksums() {
   assert!(text.find("toolu-darwin-amd64").unwrap() < linux);
   assert!(linux < text.find("toolu-linux-arm64").unwrap());
   assert!(text.contains("bin.install \"toolu\""));
+  assert!(text.contains("generate_completions_from_executable(bin/\"toolu\", \"completions\")"));
   assert!(text.contains("assert_match \"toolu #{version}\""));
   assert!(!text.contains("pkgshare"));
   let dir = tempfile::tempdir().unwrap();

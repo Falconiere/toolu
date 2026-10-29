@@ -20,6 +20,9 @@ fn hook_and_commands_are_the_special_actions() {
   let commands = find("commands").unwrap();
   assert!(matches!(commands.action, Action::Commands));
   assert_eq!(commands.owner, BUILTIN);
+  let completions = find("completions").unwrap();
+  assert!(matches!(completions.action, Action::Completions));
+  assert_eq!(completions.owner, BUILTIN);
   assert!(matches!(find("plugins").unwrap().action, Action::Verb(_)));
   assert!(find("nope").is_none());
 }
@@ -62,7 +65,15 @@ fn a_plugin_s_own_name_or_an_unknown_name_starts_a_plugin_hook_line() {
     assert!(starts_hook_line(word), "{word}");
   }
   for word in [
-    "review", "babysit", "epic", "toolu", BUILTIN, "commands", "ledger", "hook",
+    "review",
+    "babysit",
+    "epic",
+    "toolu",
+    BUILTIN,
+    "commands",
+    "completions",
+    "ledger",
+    "hook",
   ] {
     assert!(!starts_hook_line(word), "{word}");
   }

@@ -30,6 +30,7 @@ fn unported(names: &[String]) -> Vec<&String> {
     "ledger",
     "debug",
     "commands",
+    "completions",
     "doctor",
     "config",
     "status",
@@ -83,6 +84,7 @@ const NAMES: &[&str] = &[
   "sandbox",
   "git-better",
   "commands",
+  "completions",
   "plugins",
 ];
 

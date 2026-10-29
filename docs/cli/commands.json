@@ -5342,6 +5342,28 @@
       "placeholder": false
     },
     {
+      "about": "Print a bash, zsh, or fish completion script",
+      "aliases": [],
+      "args": [
+        {
+          "help": "The shell the script is for",
+          "multiple": false,
+          "name": "SHELL",
+          "required": true
+        }
+      ],
+      "commands": [],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "completions",
+      "owner": "toolu-cli",
+      "path": [
+        "completions"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Install, list, remove, update and doctor toolu plugins on every host",
       "aliases": [],
       "args": [],
