@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use toolu_protocol::decision::Decision;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_protocol::text::Text;
-use toolu_runtime::git::toplevel;
+use toolu_runtime::git::{Discovery, discover, toplevel};
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::RuleContext;
 use toolu_state::ctx::StateCtx;
@@ -67,26 +67,115 @@ fn owns(rule: &dyn QualityRule, file: &EditedFile) -> bool {
     .is_some_and(|extension| rule.extensions().contains(&extension))
 }
 
-fn gate_path(file: &EditedFile, ctx: &RuleContext<'_>, state: &StateCtx) -> PathBuf {
-  let parent = file.absolute.parent().unwrap_or(&file.absolute);
-  let root = toplevel(ctx.env, parent).unwrap_or_else(|| ctx.project_root.to_path_buf());
-  state
-    .roots
-    .project_state_root(None, Some(&root))
-    .unwrap_or_else(|| root.join(state.roots.project_dirname()).join("tmp"))
+/// Repository facts for one selected file, valid only during this run.
+struct FileFacts<'a> {
+  file: &'a EditedFile,
+  linked: bool,
+  gate: PathBuf,
+}
+
+fn gate_path(root: &Path, roots: &Roots) -> PathBuf {
+  roots
+    .project_state_root(None, Some(root))
+    .unwrap_or_else(|| root.join(roots.project_dirname()).join("tmp"))
     .join("quality-gate-status.json")
+}
+
+fn file_facts<'a>(
+  file: &'a EditedFile,
+  ctx: &RuleContext<'_>,
+  roots: &Roots,
+  check_linked: bool,
+  all_skip_linked: bool,
+) -> Option<FileFacts<'a>> {
+  if !file.removed && !is_regular_file(file) {
+    return None;
+  }
+  let parent = file.absolute.parent().unwrap_or(&file.absolute);
+  let (root, linked) = match discover(ctx.env, parent) {
+    Discovery::Repo(repo) => {
+      let linked = repo.git_dir != repo.common_dir;
+      if linked && all_skip_linked {
+        return None;
+      }
+      (
+        repo
+          .toplevel
+          .unwrap_or_else(|| ctx.project_root.to_path_buf()),
+        linked,
+      )
+    }
+    Discovery::NotFound => (ctx.project_root.to_path_buf(), false),
+    Discovery::AskGit => {
+      let linked = check_linked && in_linked_worktree(file, ctx);
+      if linked && all_skip_linked {
+        return None;
+      }
+      (
+        toplevel(ctx.env, parent).unwrap_or_else(|| ctx.project_root.to_path_buf()),
+        linked,
+      )
+    }
+  };
+  Some(FileFacts {
+    file,
+    linked,
+    gate: gate_path(&root, roots),
+  })
+}
+
+fn selected_facts<'a>(
+  files: &'a [EditedFile],
+  enabled: &[&dyn QualityRule],
+  ctx: &RuleContext<'_>,
+  roots: &Roots,
+) -> Vec<FileFacts<'a>> {
+  files
+    .iter()
+    .filter_map(|file| {
+      let mut owned = false;
+      let mut check_linked = false;
+      let mut all_skip_linked = true;
+      for rule in enabled {
+        if owns(*rule, file) {
+          owned = true;
+          let skips = rule.skip_linked_worktrees();
+          check_linked |= skips;
+          all_skip_linked &= skips;
+        }
+      }
+      if !owned {
+        return None;
+      }
+      check_linked &= !file.removed;
+      all_skip_linked &= check_linked;
+      file_facts(file, ctx, roots, check_linked, all_skip_linked)
+    })
+    .collect()
+}
+
+fn live_files(facts: &[FileFacts<'_>], enabled: &[&dyn QualityRule]) -> Vec<EditedFile> {
+  facts
+    .iter()
+    .filter(|facts| {
+      !facts.file.removed
+        && enabled
+          .iter()
+          .any(|rule| owns(*rule, facts.file) && !(rule.skip_linked_worktrees() && facts.linked))
+    })
+    .map(|facts| facts.file.clone())
+    .collect()
 }
 
 fn settle(
   file: &EditedFile,
   rule: &dyn QualityRule,
-  ctx: &RuleContext<'_>,
+  gate: &Path,
   state: &mut StateCtx,
   findings: QualityFindings,
 ) -> Decision {
-  let gate = gate_path(file, ctx, state);
   if findings.errors.is_empty() {
-    clear_gate_file(state, &gate, &file.path, rule.source());
+    clear_gate_file(state, gate, &file.path, rule.source());
     let advice = findings
       .advisories
       .into_iter()
@@ -113,7 +202,7 @@ fn settle(
   }
   record_gate_failure(
     state,
-    &gate,
+    gate,
     &GateFailure {
       file: &file.path,
       source: rule.source(),
@@ -168,32 +257,22 @@ fn run_files(
     .copied()
     .filter(|rule| rule.project_enabled(ctx))
     .collect();
-  let live: Vec<EditedFile> = files
-    .iter()
-    .filter(|file| !file.removed && is_regular_file(file))
-    .filter(|file| {
-      enabled.iter().any(|rule| {
-        owns(*rule, file) && !(rule.skip_linked_worktrees() && in_linked_worktree(file, ctx))
-      })
-    })
-    .cloned()
-    .collect();
-  let scan = batch_scan(&enabled, &live, ctx);
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
+  let facts = selected_facts(files, &enabled, ctx, &state.roots);
+  let live = live_files(&facts, &enabled);
+  let scan = batch_scan(&enabled, &live, ctx);
   let mut decisions = Vec::new();
-  for file in files {
+  for facts in facts {
+    let file = facts.file;
     for rule in &enabled {
       if !owns(*rule, file) {
         continue;
       }
       if file.removed {
-        let gate = gate_path(file, ctx, &state);
-        clear_gate_file(&mut state, &gate, &file.path, rule.source());
-      } else if is_regular_file(file)
-        && !(rule.skip_linked_worktrees() && in_linked_worktree(file, ctx))
-      {
+        clear_gate_file(&mut state, &facts.gate, &file.path, rule.source());
+      } else if !(rule.skip_linked_worktrees() && facts.linked) {
         let findings = rule.check(file, ctx, &file_scan(&scan, file));
-        decisions.push(settle(file, *rule, ctx, &mut state, findings));
+        decisions.push(settle(file, *rule, &facts.gate, &mut state, findings));
       }
     }
   }
@@ -236,3 +315,7 @@ pub fn run_quality_event(
 #[cfg(test)]
 #[path = "tests/run_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/run_facts_test.rs"]
+mod facts_tests;
