@@ -30,14 +30,21 @@ pub(crate) fn dirty_except_state(
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
-    let Some(archives) = prefix
-      .join(format!("code-review-usage/{}.jsonl", "[0-9]".repeat(20)))
-      .to_str()
-      .map(str::to_owned)
-    else {
+    let archive_dir = prefix.join("code-review-usage");
+    let Some(archive_dir) = archive_dir.to_str() else {
       return Ok(true);
     };
-    excludes.push(format!(":(exclude,glob){archives}"));
+    let mut archives = String::new();
+    for ch in archive_dir.chars() {
+      if matches!(ch, '\\' | '*' | '?' | '[' | ']') {
+        archives.push('\\');
+      }
+      archives.push(ch);
+    }
+    excludes.push(format!(
+      ":(exclude,glob){archives}/{}.jsonl",
+      "[0-9]".repeat(20)
+    ));
   }
   let mut args = vec![
     "--no-optional-locks",

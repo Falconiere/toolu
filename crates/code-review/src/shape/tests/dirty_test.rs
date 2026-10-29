@@ -65,3 +65,26 @@ fn own_state_below_a_subdirectory_root_or_past_the_probe_cap_stays_clean() {
   std::fs::write(dir.path().join("top.txt"), "dirty").unwrap();
   assert!(dirty_except_state(&env, &root, &state).unwrap());
 }
+
+#[test]
+fn archive_exclusion_treats_configured_state_root_literally() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path();
+  assert!(
+    Command::new("git")
+      .arg("init")
+      .arg("-q")
+      .current_dir(root)
+      .status()
+      .unwrap()
+      .success()
+  );
+  let state = root.join("config[1]/tmp");
+  let archives = state.join("code-review-usage");
+  std::fs::create_dir_all(&archives).unwrap();
+  std::fs::write(archives.join("00000000000000000001.jsonl"), "{}\n").unwrap();
+  let env = Env::process();
+  assert!(!dirty_except_state(&env, root, &state).unwrap());
+  std::fs::write(archives.join("notes.jsonl"), "unrelated\n").unwrap();
+  assert!(dirty_except_state(&env, root, &state).unwrap());
+}
