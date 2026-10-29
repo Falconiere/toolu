@@ -6,6 +6,18 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.7.0](https://github.com/Falconiere/toolu/compare/v8.6.0...v8.7.0) (2026-10-29)
+
+
+### Features
+
+* **code-review:** deterministic evidence for more reliable reviews ([#738](https://github.com/Falconiere/toolu/issues/738)) ([6047c50](https://github.com/Falconiere/toolu/commit/6047c50edd68860b775aa1e87d52d1303c70eb93))
+* **code-review:** enable native review by default with fallback ([#734](https://github.com/Falconiere/toolu/issues/734)) ([3e21913](https://github.com/Falconiere/toolu/commit/3e21913ce30f9c6b5ad8b6105c2556118f3d48b3))
+* **epic:** add cleanup for stale epic registrations ([#735](https://github.com/Falconiere/toolu/issues/735)) ([4c0cbf0](https://github.com/Falconiere/toolu/commit/4c0cbf0446f90630109391e3c093986ec822f5f0))
+* **git-better:** semantic branches and commits agents can read ([#764](https://github.com/Falconiere/toolu/issues/764)) ([691011e](https://github.com/Falconiere/toolu/commit/691011e86550ca4fa4cab68d1292c784c596da32))
+* **opencode:** support OpenCode V2 and deprecate @toolu/opencode ([#733](https://github.com/Falconiere/toolu/issues/733)) ([a238412](https://github.com/Falconiere/toolu/commit/a2384120444af574145550c123ef234ab090712e))
+* **plugins:** add plugins doctor ([#736](https://github.com/Falconiere/toolu/issues/736)) ([e829add](https://github.com/Falconiere/toolu/commit/e829adda0b889830e49d13fe86ff7934f2501ecc))
+
 ## [8.6.0](https://github.com/Falconiere/toolu/compare/v8.5.0...v8.6.0) (2026-10-28)
 
 
