@@ -7,9 +7,9 @@ Each sample opens 24 real Unix control peers (12 send nothing, 12 send `{"op":` 
 | Build | Samples | Threads idle / loaded / after 6.3 s | FDs idle / loaded / after 6.3 s | Peers closed by 6.3 s | First close | Stop with 24 new stalled peers |
 | --- | ---: | --- | --- | ---: | --- | --- |
 | Baseline | 3 | 5 / 29 / 29 in every sample | 7 / 31 / 31 in every sample | 0 / 24 in every sample | None | 0.034–0.045 s; process exit closes sessions |
-| Fixed | 3 | 5 / 29 / 5 in every sample | 7 / 31 / 7 in every sample | 24 / 24 in every sample | 4.978–4.988 s | 4.915–5.196 s; server joins sessions |
+| Fixed | 3 | 5 / 29 / 5 in every sample | 7 / 31 / 7 in every sample | 24 / 24 in every sample | 4.960–4.970 s | 4.903–4.914 s; server joins incomplete readers |
 
-The baseline retains all 24 session threads and descriptors while the process remains alive. The fixed engine releases them after the five-second request bound. Shutdown intentionally waits for incomplete sessions to finish within that bound; observed process exit includes scheduler and process overhead. This is a resource-retention measurement, not a throughput or CPU speedup claim. The real-socket Rust regressions also cover byte trickle, accepted late `wait`/`replace` replies, malformed and oversized requests, protocol checks, permissions, and shutdown.
+The baseline retains all 24 session threads and descriptors while the process remains alive. The fixed engine releases them after the five-second request bound. Shutdown intentionally waits for incomplete readers to finish within that bound; observed process exit includes scheduler and process overhead. This is a resource-retention measurement, not a throughput or CPU speedup claim. The real-socket Rust regressions also cover byte trickle, accepted late `wait`/`replace` replies, malformed and oversized requests, protocol checks, permissions, and shutdown with a large accepted reply whose peer stops reading.
 
 ## Reproduce
 

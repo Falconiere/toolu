@@ -138,7 +138,8 @@ The local control socket is mode `0600`. A connected peer has five seconds
 total to finish one JSON request line (up to 16 MiB); idle, incomplete and
 slow-trickling requests close at that deadline. Once a valid request is read,
 its reply is not subject to the read deadline, so `wait` and `replace` may
-finish later. Stopping the engine joins its control sessions. [Release resource
+finish later. Stopping the engine joins incomplete request readers; accepted
+reply workers keep their existing lifetime. [Release resource
 measurements](evidence/control-request-deadline.md) show the before/after
 thread and descriptor counts for stalled peers.
 The engine starts its dashboard at `http://127.0.0.1:7717/` by default.

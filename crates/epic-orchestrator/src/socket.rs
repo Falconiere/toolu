@@ -10,7 +10,7 @@ use std::sync::{
 use std::thread;
 use std::time::{Duration, Instant};
 
-use serde_json::json;
+use serde_json::{Value, json};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::env::Env;
 
@@ -246,6 +246,11 @@ fn session(mut stream: UnixStream, tx: &Sender<Msg>, protocol: u64, deadline: In
   let Ok(request) = read_request(&mut stream, deadline) else {
     return;
   };
+  let tx = tx.clone();
+  thread::spawn(move || reply_session(stream, &tx, request));
+}
+
+fn reply_session(mut stream: UnixStream, tx: &Sender<Msg>, request: Value) {
   hold_before_ack();
   let (reply, rx) = mpsc::channel();
   if tx.send(Msg::Line { request, reply }).is_err() {

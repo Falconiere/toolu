@@ -1,12 +1,13 @@
 use std::io::Write;
-use std::os::unix::net::UnixStream;
-use std::sync::mpsc;
+use std::os::unix::net::{UnixListener, UnixStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
 use serde_json::json;
 
-use super::{Msg, session};
+use super::{Msg, accept_loop, session};
 use crate::PROTOCOL;
 use crate::client::{read_json, write_json};
 
@@ -107,4 +108,34 @@ fn malformed_and_oversized_requests_close_without_dispatch() {
       0
     );
   }
+}
+
+#[test]
+fn shutdown_does_not_join_a_blocked_accepted_reply_writer() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let path = tmp.path().join("engine.sock");
+  let listener = UnixListener::bind(&path).expect("bind");
+  let (tx, rx) = mpsc::channel();
+  let stop = Arc::new(AtomicBool::new(false));
+  let flag = Arc::clone(&stop);
+  let accept = thread::spawn(move || accept_loop(listener, tx, flag, PROTOCOL));
+  let mut peer = UnixStream::connect(&path).expect("connect");
+  assert_eq!(read_json(&mut peer).expect("hello")["op"], "hello");
+  write_json(&mut peer, &json!({"op": "status", "protocol": PROTOCOL})).expect("request");
+  let Msg::Line { request, reply } = rx.recv_timeout(Duration::from_secs(1)).expect("accepted")
+  else {
+    panic!("request")
+  };
+  assert_eq!(request["op"], "status");
+  reply
+    .send(json!({"body": "x".repeat(4 * 1024 * 1024)}))
+    .expect("reply");
+  thread::sleep(Duration::from_millis(200));
+  stop.store(true, Ordering::Relaxed);
+  let _wake = UnixStream::connect(&path).expect("wake");
+  thread::sleep(Duration::from_millis(200));
+  let finished = accept.is_finished();
+  drop(peer);
+  accept.join().expect("accept");
+  assert!(finished, "shutdown joined a blocked accepted reply writer");
 }
