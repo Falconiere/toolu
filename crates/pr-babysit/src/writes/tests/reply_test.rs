@@ -52,9 +52,7 @@ fn paths(to: &Target<'_>) -> (&'static str, &'static str) {
 
 fn lose_and_capture(fixture: &Fixture, path: &Path, env: &Env, to: &Target<'_>) -> String {
   let (post_path, list_path) = paths(to);
-  fixture
-    .route(post_path, Reply::dropped_recorded())
-    .unwrap();
+  fixture.route(post_path, Reply::dropped_recorded()).unwrap();
   fixture.route(list_path, Reply::new(200, "[]")).unwrap();
   let first = reply(&recorded::client(fixture), &slot(path, env), to, "fixed").unwrap_err();
   assert_eq!(first.code, "reply_uncertain");
@@ -165,9 +163,7 @@ fn an_unresolved_send_never_posts_again_and_keeps_its_intent() {
   let fixture = Fixture::start().unwrap();
   let post = "/repos/Falconiere/toolu/issues/165/comments";
   let list = "/repos/Falconiere/toolu/issues/165/comments?per_page=100";
-  fixture
-    .route(post, Reply::dropped_recorded())
-    .unwrap();
+  fixture.route(post, Reply::dropped_recorded()).unwrap();
   fixture.route(list, Reply::new(200, "[]")).unwrap();
   let env = Env::default();
   let to = Target::Conversation(5);
