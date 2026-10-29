@@ -117,7 +117,9 @@ fn classify(err: toolu_github::Error) -> Attempt {
     Error::Transport(HttpError::Timeout) => {
       Attempt::Uncertain(0, "timeout", "merge command timed out".to_owned())
     }
-    Error::Transport(HttpError::InvalidConfig(_) | HttpError::Encode(_))
+    Error::Transport(
+      HttpError::InvalidConfig(_) | HttpError::Encode(_) | HttpError::NotSent(_),
+    )
     | Error::Config(_)
     | Error::Token(_)
     | Error::GraphQl(_) => Attempt::Local(err.to_string()),

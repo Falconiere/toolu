@@ -190,7 +190,7 @@ fn status_decode_and_connection_failures_have_typed_errors() {
   ));
   assert!(matches!(
     client.get_bytes("http://127.0.0.1:1/", &Auth::None),
-    Err(Error::Transport(_))
+    Err(Error::NotSent(_))
   ));
 }
 

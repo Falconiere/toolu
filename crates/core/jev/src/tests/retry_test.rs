@@ -1,6 +1,8 @@
 use toolu_http::Response;
 
 use crate::retry::{delay, retryable};
+use crate::{Config, Error, Jev};
+use toolu_runtime::env::Env;
 
 /// Response headers, the attempt, and the expected pause units.
 type Case<'a> = (&'a [(&'a str, &'a str)], u32, Option<u32>);
@@ -55,4 +57,26 @@ fn the_delay_follows_jev_ts() {
       "{headers:?} {attempt}"
     );
   }
+}
+
+#[test]
+fn a_jev_connection_refusal_remains_a_transport_failure() {
+  let listener = std::net::TcpListener::bind("127.0.0.1:0").expect("bind");
+  let port = listener.local_addr().expect("address").port();
+  drop(listener);
+  let config = Config {
+    endpoint: format!("http://127.0.0.1:{port}/ask"),
+    pause: std::time::Duration::ZERO,
+    ..Config::default()
+  };
+  let env = Env::from_pairs([("TYPESAFE_API_KEY", "test-key")]);
+  let client = Jev::from_env(&env, config).expect("client");
+  let outcome = client.post(b"{}", None);
+  assert!(
+    matches!(
+      outcome,
+      Err(Error::Transport(toolu_http::Error::NotSent(_)))
+    ),
+    "{outcome:?}"
+  );
 }

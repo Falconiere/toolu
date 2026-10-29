@@ -141,3 +141,14 @@ fn github_errors_map_to_their_retry_class() {
     Class::Permanent
   );
 }
+
+#[test]
+fn an_unsent_http_request_remains_retryable_for_reads() {
+  let failure = http_failure(
+    "Linear",
+    "https://example.invalid/graphql",
+    Err(toolu_http::Error::NotSent("connection refused".into())),
+  )
+  .expect_err("unsent request");
+  assert_eq!(failure.class, Class::Transient);
+}

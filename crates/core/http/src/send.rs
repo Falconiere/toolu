@@ -77,8 +77,9 @@ impl Client {
   /// Send `request` and return its response whatever the status.
   ///
   /// # Errors
-  /// `InvalidConfig` for a credential header, `Transport` for a bad URL or a
-  /// network failure, `Timeout` past the deadline, `BodyTooLarge` past the cap.
+  /// `InvalidConfig` for a credential header, `NotSent` for a bad URL or
+  /// connection setup failure, `Transport` for other network failures,
+  /// `Timeout` past the deadline, `BodyTooLarge` past the cap.
   pub fn send(&self, request: &Request<'_>) -> Result<Response, Error> {
     if let Some((name, _)) = request.headers.iter().find(|(name, _)| {
       CREDENTIAL_HEADERS
@@ -113,7 +114,7 @@ impl Client {
 /// that no attempt could send before it retries anything.
 ///
 /// # Errors
-/// `Transport` naming why the URL is unusable: not a URI, or no `http` or
+/// `NotSent` naming why the URL is unusable: not a URI, or no `http` or
 /// `https` scheme and host.
 pub fn check_url(url: &str) -> Result<(), Error> {
   parse(url).map(|_| ())
@@ -123,11 +124,11 @@ pub fn check_url(url: &str) -> Result<(), Error> {
 fn parse(url: &str) -> Result<(ureq::http::Uri, String), Error> {
   let uri: ureq::http::Uri = url
     .parse()
-    .map_err(|err: ureq::http::uri::InvalidUri| Error::Transport(format!("invalid URL: {err}")))?;
+    .map_err(|err: ureq::http::uri::InvalidUri| Error::NotSent(format!("invalid URL: {err}")))?;
   let scheme = uri
     .scheme_str()
     .filter(|scheme| matches!(*scheme, "http" | "https") && uri.host().is_some())
-    .ok_or_else(|| Error::Transport("URL must have an HTTP(S) scheme and host".into()))?
+    .ok_or_else(|| Error::NotSent("URL must have an HTTP(S) scheme and host".into()))?
     .to_owned();
   Ok((uri, scheme))
 }

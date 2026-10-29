@@ -60,11 +60,11 @@ impl Jev {
           self.retry_status(&response, attempt)?,
           self.http_error(&response),
         ),
-        Err(err @ (toolu_http::Error::Timeout | toolu_http::Error::Transport(_)))
-          if attempt < ATTEMPTS =>
-        {
-          (1_u32 << (attempt - 1), failure(err))
-        }
+        Err(
+          err @ (toolu_http::Error::Timeout
+          | toolu_http::Error::Transport(_)
+          | toolu_http::Error::NotSent(_)),
+        ) if attempt < ATTEMPTS => (1_u32 << (attempt - 1), failure(err)),
         Err(err) => return Err(failure(err)),
       };
       let pause = self.pause.saturating_mul(units);
@@ -137,6 +137,7 @@ fn failure(err: toolu_http::Error) -> Error {
     | toolu_http::Error::BodyTooLarge
     | toolu_http::Error::Encode(_)
     | toolu_http::Error::Decode(_)
+    | toolu_http::Error::NotSent(_)
     | toolu_http::Error::Transport(_)) => Error::Transport(err),
   }
 }

@@ -71,10 +71,11 @@ out, drops the response or answers 5xx, the engine holds that queue head and
 raises `merge uncertain` attention. The PUT may have applied; inspect the PR on
 GitHub before taking manual action. A later observation that the PR merged
 releases the hold and starts cleanup. The hold survives an engine restart.
-The engine does not resend an uncertain
-PUT or try the admin merge path. Definite policy, authentication and validation
-refusals remain refusals; the admin path is available only for a protection
-refusal.
+The engine does not resend an uncertain PUT or try the admin merge path.
+Definite policy, authentication and validation refusals remain refusals. An
+invalid URL, or a DNS or connection failure known to happen before the PUT is
+sent, is reported as a local failure. The admin path
+is available only for a protection refusal.
 
 ## Registry cleanup
 

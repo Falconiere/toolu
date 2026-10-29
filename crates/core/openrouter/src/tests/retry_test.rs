@@ -2,7 +2,7 @@ use std::time::{Duration, Instant};
 
 use toolu_http::Response;
 
-use super::{fits, retry_delay, retryable, status, status_delay};
+use super::{fits, retry_delay, retryable, status, status_delay, transport_delay};
 use crate::Error;
 
 #[test]
@@ -74,4 +74,16 @@ fn no_provider_is_typed_only_for_an_explicit_no_endpoint_error() {
     ..response
   };
   assert_eq!(status(&other), Error::Upstream(404));
+}
+
+#[test]
+fn a_request_that_never_reached_openrouter_can_retry() {
+  assert_eq!(
+    transport_delay(
+      &toolu_http::Error::NotSent("connection refused".into()),
+      1,
+      Duration::from_millis(10),
+    ),
+    Ok((Duration::from_millis(10), Error::Transport))
+  );
 }

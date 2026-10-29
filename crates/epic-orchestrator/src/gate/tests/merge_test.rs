@@ -303,6 +303,10 @@ fn local_failures_cannot_trigger_admin_and_response_failures_are_uncertain() {
     toolu_http::Error::InvalidConfig("protected branch".into()),
   ));
   assert_eq!(outcome(&local), "failed");
+  let no_send = classify(toolu_github::Error::Transport(toolu_http::Error::NotSent(
+    "host not found".into(),
+  )));
+  assert_eq!(outcome(&no_send), "failed");
   let response = classify(toolu_github::Error::Transport(
     toolu_http::Error::BodyTooLarge,
   ));
