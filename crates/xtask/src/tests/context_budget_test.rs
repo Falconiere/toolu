@@ -102,7 +102,11 @@ fn test_writer_files_fit_their_budgets_and_an_over_budget_body_is_red() {
     .iter()
     .find(|line| line.text.starts_with("test-writer body"))
     .unwrap();
-  assert!(body.red && body.text.contains("EXCEEDS 960"), "{}", body.text);
+  assert!(
+    body.red && body.text.contains("EXCEEDS 960"),
+    "{}",
+    body.text
+  );
 }
 
 #[test]
