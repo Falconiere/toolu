@@ -70,7 +70,7 @@ pub(super) fn retry_file(
         hits.extend(part_hits);
         empty &= part_empty;
       }
-      failure => return failure,
+      failure @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => return failure,
     }
   }
   AstGrepScan::Ok { hits, empty }
