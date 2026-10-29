@@ -151,11 +151,7 @@ fn an_admit_older_than_the_tail_window_does_not_dedupe() {
     "token": "s-old",
     "note": format!("fp={fp} by=web"),
   });
-  std::fs::write(
-    crate::journal::file_for(&journal, old),
-    format!("{line}\n"),
-  )
-  .expect("old admit");
+  std::fs::write(crate::journal::file_for(&journal, old), format!("{line}\n")).expect("old admit");
   engine.now = SystemTime::now();
   let request = submitted("take B", "s-old");
   assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
