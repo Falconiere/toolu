@@ -26,7 +26,7 @@ struct Profile {
   body: &'static str,
 }
 
-const PROFILES: [Profile; 5] = [
+const PROFILES: [Profile; 6] = [
   Profile {
     name: "quick-task",
     model: "gpt-5.6-luna",
@@ -54,6 +54,13 @@ const PROFILES: [Profile; 5] = [
     effort: "medium",
     sandbox: "workspace-write",
     body: include_str!("../../../../plugins/toolu/assets/agents/implementer.toml"),
+  },
+  Profile {
+    name: "test-author",
+    model: "gpt-5.6-terra",
+    effort: "medium",
+    sandbox: "workspace-write",
+    body: include_str!("../../../../plugins/toolu/assets/agents/test-author.toml"),
   },
   Profile {
     name: "architect",

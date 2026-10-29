@@ -33,6 +33,10 @@
       {
         "id": "setup",
         "path": "skills/setup/SKILL.md"
+      },
+      {
+        "id": "test-writer",
+        "path": "skills/test-writer/SKILL.md"
       }
     ],
     "commands": [
@@ -53,6 +57,10 @@
         "path": "commands/status.md"
       },
       {
+        "id": "test-writer-command",
+        "path": "commands/test-writer.md"
+      },
+      {
         "id": "architect",
         "path": "agents/architect.md"
       },
@@ -71,6 +79,10 @@
       {
         "id": "research-agent",
         "path": "agents/research-agent.md"
+      },
+      {
+        "id": "test-author",
+        "path": "agents/test-author.md"
       }
     ],
     "hooks": [

@@ -12,11 +12,12 @@ const TEMPLATES: &str = concat!(
   env!("CARGO_MANIFEST_DIR"),
   "/../../plugins/toolu/assets/agents"
 );
-const NAMES: [&str; 5] = [
+const NAMES: [&str; 6] = [
   "quick-task",
   "deep-explore",
   "research-agent",
   "implementer",
+  "test-author",
   "architect",
 ];
 

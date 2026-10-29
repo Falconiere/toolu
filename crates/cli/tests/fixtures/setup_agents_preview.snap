@@ -10,6 +10,7 @@ PLAN quick-task install
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
 --- stderr
 
@@ -21,8 +22,9 @@ PLAN quick-task install
 PLAN deep-explore install
 PLAN research-agent install
 PLAN implementer install
+PLAN test-author install
 PLAN architect install
-INSTALLED 5 UPDATED 0 UNCHANGED 0
+INSTALLED 6 UPDATED 0 UNCHANGED 0
 Restart Codex to reload custom agent profiles.
 --- stderr
 

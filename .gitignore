@@ -21,3 +21,5 @@ node_modules/
 /target/
 # LLVM coverage output an instrumented binary writes into its working directory
 *.profraw
+# `claude plugin eval` run output (scores, traces, HTML report)
+/plugins/*/evals/results/

@@ -5,7 +5,7 @@ description: Use when installing, previewing, updating, backing up, or removing 
 
 # Set up toolu agents
 
-`toolu setup agents` manages `quick-task`, `deep-explore`, `research-agent`, `implementer`, and `architect`.
+`toolu setup agents` manages `quick-task`, `deep-explore`, `research-agent`, `implementer`, `test-author`, and `architect`.
 
 1. Run `toolu setup agents preview` and show the exact plan.
 2. For installs and managed upgrades, run `toolu setup agents install`.

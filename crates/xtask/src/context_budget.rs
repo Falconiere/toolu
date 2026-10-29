@@ -1,9 +1,14 @@
-//! `cargo xtask context-budget`: word ceilings for injected docs and skill descriptions.
+//! `cargo xtask context-budget`: word ceilings for injected docs, skill descriptions,
+//! and the skill, agent and command files listed in `FILE_BUDGETS`.
 
 use std::path::{Path, PathBuf};
 
 use crate::options::Options;
 use crate::{Verdict, output};
+
+mod budgets;
+
+use budgets::{DOC_BUDGETS, FILE_BUDGETS, SKILLS, Skill};
 
 /// One reported line. The CLI prefixes it with `ok   ` or `RED  `.
 #[derive(Debug, PartialEq, Eq)]
@@ -13,79 +18,6 @@ pub(crate) struct Line {
 }
 
 const FOLDED: &[&str] = &["", ">", ">-", "|", "|-"];
-
-const DOC_BUDGETS: &[(&str, u32)] = &[
-  ("session-start", 110),
-  ("model-routing", 90),
-  ("post-compaction", 28),
-  ("session-start-ts", 30),
-  ("session-start-rust", 36),
-  ("session-start-python", 36),
-];
-
-struct Skill {
-  name: &'static str,
-  path: &'static str,
-  budget: u32,
-  phrases: &'static [&'static str],
-}
-
-const SKILLS: &[Skill] = &[
-  Skill {
-    name: "git-better",
-    path: "plugins/git-better/skills/git-better/SKILL.md",
-    budget: 60,
-    phrases: &["write a commit message", "name a branch", "Intent:"],
-  },
-  Skill {
-    name: "sandbox",
-    path: "plugins/sandbox/skills/sandbox/SKILL.md",
-    budget: 60,
-    phrases: &["run the gate in the sandbox", "test on Linux"],
-  },
-  Skill {
-    name: "delivery-flow",
-    path: "plugins/delivery-flow/skills/delivery-flow/SKILL.md",
-    budget: 50,
-    phrases: &["implement and deliver", "real-data execution", "PR"],
-  },
-  Skill {
-    name: "brainstorm",
-    path: "plugins/brainstorm/skills/brainstorm/SKILL.md",
-    budget: 50,
-    phrases: &["brainstorm", "trade-offs"],
-  },
-  Skill {
-    name: "deep-research",
-    path: "plugins/toolu/skills/deep-research/SKILL.md",
-    budget: 80,
-    phrases: &["deep research", "cited report"],
-  },
-  Skill {
-    name: "toolu-review",
-    path: "plugins/toolu-review/skills/review/SKILL.md",
-    budget: 65,
-    phrases: &["review before push"],
-  },
-  Skill {
-    name: "epic-orchestrator",
-    path: "plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md",
-    budget: 80,
-    phrases: &["epic", "dry-run the epic", "where is the epic at"],
-  },
-  Skill {
-    name: "ast-grep",
-    path: "plugins/ast-grep/skills/ast-grep/SKILL.md",
-    budget: 40,
-    phrases: &[],
-  },
-  Skill {
-    name: "jev",
-    path: "plugins/jev/skills/jev/SKILL.md",
-    budget: 60,
-    phrases: &[],
-  },
-];
 
 /// Which targets to check.
 #[derive(Clone, Copy)]
@@ -148,6 +80,11 @@ pub(crate) fn check(root: &Path, mode: Mode) -> Vec<Line> {
   }
   if matches!(mode, Mode::Skills | Mode::All) {
     lines.extend(SKILLS.iter().flat_map(|skill| check_skill(root, skill)));
+    lines.extend(
+      FILE_BUDGETS
+        .iter()
+        .flat_map(|(name, rel, budget)| check_doc(root, name, rel, *budget)),
+    );
   }
   lines
 }

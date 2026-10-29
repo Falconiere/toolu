@@ -34,6 +34,7 @@ Use SessionStart's configured class/model/effort values when present; read
 | `deep-explore` | Local code relationships and architecture evidence |
 | `research-agent` | External facts and documentation |
 | `implementer` | One decided step plus verification |
+| `test-author` | Spec-only tests for one behavior |
 | `architect` | Design recommendation or synthesis |
 
 Claude names these `toolu:<agent>`; Codex custom profiles use the agent name.

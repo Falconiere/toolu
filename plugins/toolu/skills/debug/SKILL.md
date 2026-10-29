@@ -23,7 +23,7 @@ Reproduction/tests establish causes.
 4. **Instrument & test the hypothesis.** Prove or kill it: add a targeted log/assert, bisect (`git bisect`, or halve the input/code path), or inspect the exact value. One change at a time — change two things and you learn nothing from the result.
 5. **Isolate the root cause.** Trace from symptom to the actual defect. Confirm it explains *all* the observed evidence, not just the loudest symptom. If your fix wouldn't explain every data point from step 2, you haven't found the cause yet.
 6. **Fix at the root, verify red → green.** Apply the minimal fix at the cause. Re-run the step-1 reproduction: it must go from failing to passing. No green reproduction, no fix.
-7. **Regression test (real data, no mocks).** Add a test that fails before the fix and passes after, in the toolu layout — see the `test` skill (TS `__tests__/`, Rust `tests/`). This is what stops the bug coming back.
+7. **Regression test (real data, no mocks).** Add a test that fails before the fix and passes after, in the repository's layout — see the `test-writer` skill. This is what stops the bug coming back.
 8. **Record.** Save the bug to comemory so the next encounter is a hit, not a re-investigation:
    `comemory.sh save "<symptom>" "Root cause: <cause>. Fix: <what changed + path>." --kind bug`
 
@@ -50,4 +50,4 @@ When the bug originates from a Sentry issue and the Sentry MCP is authenticated,
 
 ## Return to the chain
 
-A debug session ends by handing back: the fix re-enters `execution`, uses `test` to write and confirm the regression evidence, then completes execution's local readiness checks and authorized PR handoff. Don't call the work done from inside the loop — a fix without a regression test and a green gate isn't done.
+A debug session ends by handing back: the fix re-enters `execution`, uses `test-writer` to write and confirm the regression evidence, then completes execution's local readiness checks and authorized PR handoff. Don't call the work done from inside the loop — a fix without a regression test and a green gate isn't done.
