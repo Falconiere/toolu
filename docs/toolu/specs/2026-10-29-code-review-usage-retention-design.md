@@ -16,7 +16,7 @@ Each review appends a usage row to project state without any retention limit. Lo
 
 Keep `code-review-usage.jsonl` as the active append-only file. Under `with_lock_strict`, serialize each row first, reject a row over 1 MiB, and rotate before the append would exceed 1 MiB. Move a full active file to `code-review-usage/<sequence>.jsonl`; keep the four newest complete archives. Reclaim oldest archives under the same lock before moving the active file. An oversized pre-policy active file is reclaimed at its first rotation because it cannot fit a bounded generation. Preserve `persist`'s existing error-to-blocker path.
 
-Use a stale lock interval long enough for a live writer and a five-second acquisition timeout; a busy or unavailable lock fails the write. The archive directory, exact active file, and exact lock file are the only new dirty-probe exclusions.
+Use a stale lock interval long enough for a live writer and a five-second acquisition timeout; a busy or unavailable lock fails the write. The exact active file and lock, plus archived `*.jsonl` files, are the only new dirty-probe exclusions. An unrelated file in the archive directory remains dirty.
 
 ## Interfaces / Schema
 
@@ -35,7 +35,7 @@ Use a stale lock interval long enough for a live writer and a five-second acquis
 - **AC-1:** Repeated real usage writes crossing 1 MiB create only complete JSONL rows in the active file and at most four numbered archives; retained size is at most 5 MiB after success.
 - **AC-2:** An append, rotation, cleanup, or lock failure returns an error and cannot write passing push-review state; a short write cannot leave a partial retained row when rollback succeeds.
 - **AC-3:** Concurrent local writers each return success only after their row appears exactly once in retained output, provided the test does not exceed the retention window.
-- **AC-4:** In a temporary Git worktree, active usage, archive directory, and lock artifacts do not mark the review dirty; an unrelated file still does.
+- **AC-4:** In a temporary Git worktree, active usage, archived JSONL, and lock artifacts do not mark the review dirty; an unrelated file, including one in the archive directory, still does.
 - **AC-5:** The final pushed head passes focused crate tests, ledger verification, and `cargo xtask gate`; two independent `toolu-review:review` passes report clean findings and write review state.
 
 ## Acceptance evidence
@@ -45,7 +45,7 @@ Use a stale lock interval long enough for a live writer and a five-second acquis
 | AC-1 | Repeated 1 MiB-scale JSONL rows in a temp project state root | Valid JSONL, at most four archives plus active, <=5 MiB | Exact limit and oversized legacy file | `cargo test -p toolu-code-review usage_retention` |
 | AC-2 | Temp file path made unwritable or occupied by a directory; held lock | Error; no passing gate state; no incomplete row after recoverable write failure | Denied rotation/append and busy lock | `cargo test -p toolu-code-review usage_failure` |
 | AC-3 | Parallel real filesystem appends through `log_usage` | Each successful row occurs once | Shared archive transition | `cargo test -p toolu-code-review usage_concurrent` |
-| AC-4 | Real temporary Git repository with usage artifacts and another file | Own artifacts clean, other file dirty | Lock present during probe | `cargo test -p toolu-code-review only_untracked_plugin_state_is_ignored` |
+| AC-4 | Real temporary Git repository with usage artifacts and another file | Own artifacts clean, other file dirty | Lock present and unrelated file in archive directory | `cargo test -p toolu-code-review only_untracked_plugin_state_is_ignored` |
 | AC-5 | Final committed and pushed branch diff | Green ledger and gate; two clean review passes | All changed files | `toolu ledger run docs/toolu/plans/2026-10-29-code-review-usage-retention.md --verify`; `toolu epic job -- cargo xtask gate`; two skill reviews |
 
 ## Documentation impact

@@ -112,7 +112,7 @@ fn state_write_failure_keeps_paid_review_findings_in_report() {
 }
 
 #[test]
-fn failed_usage_write_replaces_an_older_passing_gate_state() {
+fn failed_usage_append_and_rotation_replace_an_older_passing_gate_state() {
   let (repo, state, fixture) = clean_case();
   let env = env(repo.path(), state.path(), &fixture);
   assert_eq!(
@@ -132,6 +132,16 @@ fn failed_usage_write_replaces_an_older_passing_gate_state() {
     saved_state(state.path())["findings_count"],
     report.blocking_count()
   );
+  std::fs::remove_dir(&log).unwrap();
+  std::fs::write(&log, "{}\n".repeat(350_000)).unwrap();
+  std::fs::write(repo.path().join(".codex/tmp/code-review-usage"), "occupied").unwrap();
+  let report = invoke(&env, &options(&fixture));
+  assert_eq!(
+    report.error.as_ref().map(|error| error.kind),
+    Some(ErrorKind::State)
+  );
+  assert_eq!(report.blocking_count(), 1);
+  assert_eq!(saved_state(state.path())["findings_count"], 1);
 }
 
 #[test]

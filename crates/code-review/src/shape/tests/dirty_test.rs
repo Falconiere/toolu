@@ -19,11 +19,22 @@ fn only_untracked_plugin_state_is_ignored() {
   let state = root.join(".codex/tmp");
   std::fs::create_dir_all(state.join("code-review")).unwrap();
   std::fs::create_dir_all(state.join("push-review")).unwrap();
+  std::fs::create_dir_all(state.join("code-review-usage")).unwrap();
   std::fs::write(state.join("code-review/feature.json"), "{}").unwrap();
   std::fs::write(state.join("push-review/feature.json"), "{}").unwrap();
   std::fs::write(state.join("code-review-usage.jsonl"), "{}\n").unwrap();
+  std::fs::write(state.join("code-review-usage.jsonl.lock"), "locked\n").unwrap();
+  std::fs::write(
+    state.join("code-review-usage/00000000000000000001.jsonl"),
+    "{}\n",
+  )
+  .unwrap();
   let env = Env::process();
   assert!(!dirty_except_state(&env, root, &state).unwrap());
+  let other = state.join("code-review-usage/note.txt");
+  std::fs::write(&other, "unrelated").unwrap();
+  assert!(dirty_except_state(&env, root, &state).unwrap());
+  std::fs::remove_file(other).unwrap();
   std::fs::write(root.join("user.txt"), "dirty").unwrap();
   assert!(dirty_except_state(&env, root, &state).unwrap());
 }

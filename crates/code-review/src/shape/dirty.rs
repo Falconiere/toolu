@@ -7,7 +7,12 @@ use super::git_io::git_output;
 use super::{STATUS_PROBE_BYTES, ShapeError};
 
 /// The state entries a review run writes itself.
-const OWN_STATE: [&str; 3] = ["code-review", "code-review-usage.jsonl", "push-review"];
+const OWN_STATE: [&str; 4] = [
+  "code-review",
+  "code-review-usage.jsonl",
+  "code-review-usage.jsonl.lock",
+  "push-review",
+];
 
 /// Whether Git sees changes besides the review plugin's own state files.
 pub(crate) fn dirty_except_state(
@@ -25,6 +30,14 @@ pub(crate) fn dirty_except_state(
       };
       excludes.push(format!(":(exclude,literal){path}"));
     }
+    let Some(archives) = prefix
+      .join("code-review-usage/*.jsonl")
+      .to_str()
+      .map(str::to_owned)
+    else {
+      return Ok(true);
+    };
+    excludes.push(format!(":(exclude,glob){archives}"));
   }
   let mut args = vec![
     "--no-optional-locks",
