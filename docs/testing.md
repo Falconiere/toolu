@@ -10,6 +10,23 @@ CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate -
 
 A test spawns the real thing: the built `toolu` (`env!("CARGO_BIN_EXE_toolu")` in `crates/cli/tests`), `git`, `npm`, `node`, `ast-grep` or a host CLI. It runs against real temporary repositories, homes and config roots. There are no mocking crates (cargo-deny bans them) and no `#[ignore]` (the guardrails reject it). A tool a test needs is installed in CI; a test that cannot find it fails rather than skips.
 
+The `toolu-mux` integration tests require `hc` 0.1.14 on `PATH`. They start
+isolated local and loopback remote cores in temporary configuration and runtime
+directories, then stop only those cores. CI downloads the pinned release and
+verifies its SHA-256 before running the Rust gate. To install it in a disposable
+directory for a local gate, use the upstream installer with a pinned version:
+
+```bash
+hc_test_dir=$(mktemp -d)
+curl -fsSL https://releases.herdr.dev/core/install.sh -o "$hc_test_dir/install.sh"
+HC_VERSION=0.1.14 HC_INSTALL_DIR="$hc_test_dir/bin" /bin/sh "$hc_test_dir/install.sh"
+PATH="$hc_test_dir/bin:$PATH" cargo test -p toolu-mux
+```
+
+The installer verifies the download against the versioned upstream manifest.
+For a Linux sandbox gate, install `hc` inside the sandbox and add its binary
+directory to the sandbox command's `PATH`.
+
 ## Where tests live
 
 - **Unit tests** sit beside their module in `src/<dir>/tests/<module>_test.rs`, wired by `#[cfg(test)] #[path = "tests/<module>_test.rs"] mod tests;`. They keep private access, and every module with a function has one.

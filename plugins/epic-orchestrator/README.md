@@ -1,7 +1,7 @@
 # epic-orchestrator
 
 Drive a GitHub, Jira, or Linear epic to merged PRs. Builds the sub-issue
-dependency graph, launches herdr worktrees with workers (delivery-flow from
+dependency graph, launches worktrees with workers (delivery-flow from
 brainstorm through PR and babysit), merges green PRs, and cleans up until the
 epic is complete.
 
@@ -14,8 +14,8 @@ routing table picks the model and effort per host.
 
 **Prerequisite:** the native `toolu` binary on `PATH`. See [docs/install.md](../../docs/install.md).
 
-Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `toolu`, `gh`, and `herdr`
-(with `HERDR_ENV=1` inside a herdr pane).
+Requires `delivery-flow` and its `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm` dependencies, in every worker host. Runtime: `toolu`, `gh`, and the selected worker backend: `herdr`, `hc`
+(`herdr-app`), or `tmux`. See [Herdr App and remote workers](../../docs/epic-orchestrator/README.md#herdr-app-and-remote-workers).
 
 Optional: `jev` with `TYPESAFE_API_KEY` (complexity routing; without it tiers
 come from a heuristic), Jira environment credentials (Jira epics), and `LINEAR_API_KEY`
@@ -130,7 +130,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `token new` | Rotate the status bearer token in secrets.json. |
 | `graph <epic>` | Build the dependency graph and the next launch batch; `--save` writes `graph.json`. |
 | `route --graph <file>` | Score and route issues to hosts, models and efforts; saves routes and `pool.json`. |
-| `launch --graph <file> --issue <ref>` | Launch or resume one issue in its herdr worktree (`--dry-run` plans only). |
+| `launch --graph <file> --issue <ref>` | Launch or resume one issue in its worker worktree (`--dry-run` plans only). |
 | `gate --pr <ref>` | Verify a PR against the merge policy; `--merge` merges pinned to the head, `--auto` arms auto-merge. |
 | `finish <state-dir> <key>` | Tear down an issue after its merge (`--abandon` keeps the branch). A running engine is told, so it never relaunches the issue. |
 | `close --graph <file>` | Post the merged-PR summary and close a complete epic. |

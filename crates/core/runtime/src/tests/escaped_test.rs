@@ -15,13 +15,13 @@ impl Escape {
     let dir = tempfile::tempdir().unwrap();
     let pidfile = dir.path().join("escaped.pid");
     let redirect = match mode {
-      "stdin" => "<&0 >/dev/null 2>&1",
+      "stdin" => "<&3 >/dev/null 2>&1",
       "stdout" => "</dev/null 2>/dev/null",
       "stderr" => "</dev/null >/dev/null",
       _ => panic!("unknown pipe mode"),
     };
     let script = format!(
-      "perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; sleep 30' \"$1\" {redirect} & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0"
+      "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; sleep 30' \"$1\" {redirect} 3<&- & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0"
     );
     let mut spec = Spec::new(["sh", "-c", &script, "sh", &pidfile.to_string_lossy()]);
     spec.timeout = Duration::from_millis(150);
@@ -162,7 +162,7 @@ fn escaped_slow_reader_receives_full_stdin_before_deadline() {
     _dir: dir,
     pidfile: pidfile.clone(),
   };
-  let script = "perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.35; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", $ARGV[1] or die; print $out $n; close $out' \"$1\" \"$2\" <&0 >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
+  let script = "exec 3<&0; perl -MPOSIX -e 'POSIX::setsid() or die; open my $f, \">\", $ARGV[0] or die; print $f \"$$\\n\"; close $f; select undef, undef, undef, 0.35; my $n = 0; while (my $r = sysread(STDIN, my $b, 8192)) { $n += $r }; open my $out, \">\", $ARGV[1] or die; print $out $n; close $out' \"$1\" \"$2\" <&3 3<&- >/dev/null 2>&1 & while [ ! -s \"$1\" ]; do sleep 0.01; done; exit 0";
   let mut spec = Spec::new([
     "sh",
     "-c",

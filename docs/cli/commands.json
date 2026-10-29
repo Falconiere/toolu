@@ -534,6 +534,45 @@
       "placeholder": false
     },
     {
+      "about": "Show a worker in an already running Herdr App",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Focus an existing local or remote terminal",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "TERMINAL-ADDRESS",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "show",
+          "owner": "toolu",
+          "path": [
+            "herdr-app",
+            "show"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "herdr-app",
+      "owner": "toolu",
+      "path": [
+        "herdr-app"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Run toolu plugins under OpenCode; their generated server.js calls these",
       "aliases": [],
       "args": [],
@@ -3129,6 +3168,28 @@
                 },
                 {
                   "global": false,
+                  "help": "Configured hc machine",
+                  "hidden": false,
+                  "long": "machine",
+                  "possibleValues": [],
+                  "required": false,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": "VALUE"
+                },
+                {
+                  "global": false,
+                  "help": "Absolute remote checkout path",
+                  "hidden": false,
+                  "long": "remote-repo",
+                  "possibleValues": [],
+                  "required": false,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": "VALUE"
+                },
+                {
+                  "global": false,
                   "help": "Print the commands; run and write nothing",
                   "hidden": false,
                   "long": "dry-run",
@@ -3266,6 +3327,39 @@
               "help": "A one-line summary or the reason",
               "hidden": false,
               "long": "note",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Remote fixer run identity",
+              "hidden": false,
+              "long": "run-id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Remote fixer base commit",
+              "hidden": false,
+              "long": "expected-base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
+              "help": "Remote fixer result commit",
+              "hidden": false,
+              "long": "commit",
               "possibleValues": [],
               "required": false,
               "short": null,
@@ -3488,6 +3582,28 @@
           ],
           "commands": [],
           "flags": [
+            {
+              "global": false,
+              "help": "Existing Herdr machine for workers; requires herdr-app",
+              "hidden": false,
+              "long": "machine",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            },
+            {
+              "global": false,
+              "help": "Existing absolute checkout on the worker machine",
+              "hidden": false,
+              "long": "remote-repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
             {
               "global": false,
               "help": "Keep approval prompts on in this epic's workers, until a start without it",
@@ -3769,6 +3885,28 @@
           ],
           "commands": [],
           "flags": [
+            {
+              "global": false,
+              "help": "Remote worker run identity; write a transfer report only",
+              "hidden": false,
+              "long": "run",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Remote worker's committed input revision",
+              "hidden": false,
+              "long": "expected-base",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
             {
               "global": false,
               "help": "The issue status snapshot",
@@ -4066,6 +4204,28 @@
           ],
           "commands": [],
           "flags": [
+            {
+              "global": false,
+              "help": "Existing Herdr machine for workers; requires herdr-app",
+              "hidden": false,
+              "long": "machine",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "NAME"
+            },
+            {
+              "global": false,
+              "help": "Existing absolute checkout on the worker machine",
+              "hidden": false,
+              "long": "remote-repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "PATH"
+            },
             {
               "global": false,
               "help": "Live issue agents at once",

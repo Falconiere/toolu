@@ -78,6 +78,7 @@ pub(crate) fn serve_with_http(
   }
   let herdr = socket_herdr::spawn(tx.clone(), Arc::clone(&shared), signals.clone());
   let flag = Arc::clone(&signals.stop);
+  let state_tx = tx.clone();
   let accept = thread::spawn(move || accept_loop(listener, tx, flag, protocol));
   let result = {
     let _stop_accept = StopAccept {
@@ -88,6 +89,7 @@ pub(crate) fn serve_with_http(
       &rx,
       &StateContext {
         protocol,
+        sender: &state_tx,
         shared: &shared,
         changed: &changed,
         resub: &signals.wake,

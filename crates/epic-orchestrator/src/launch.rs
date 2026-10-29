@@ -9,15 +9,21 @@ use std::time::{Duration, SystemTime};
 use serde_json::{Map, Value, json};
 use toolu_runtime::env::Env;
 
+/// Durable launch ownership.
 pub(crate) mod admission;
+/// Adopt an existing worker.
 pub(crate) mod adoption;
 mod agent;
 mod attempt;
 mod brief;
 mod checkout;
 mod deliver;
+/// Stable host session identifiers.
 pub(crate) mod digest;
 mod failure;
+mod hc;
+mod hc_prepare;
+mod hc_remote;
 pub(crate) mod lifecycle;
 pub(crate) mod muse_session;
 pub(crate) mod record;
@@ -267,6 +273,7 @@ fn launch(
   let state = Path::new(&graph.state_dir);
   let mut record =
     record::load_launch_record(&state.join("issues").join(format!("{}.json", issue.key)))?;
+  hc::pin(&mut record, ctx, state)?;
   let route = load_launch_route(&state.join("routes").join(format!("{}.json", issue.key)))?;
   let host = resolve_host(opts, route.as_ref())?;
   refuse_paused_host(opts, ctx, host.kind)?;
@@ -290,7 +297,7 @@ fn launch(
     checkout::guard_budget(ctx.gh.clone(), ctx.env)?;
   }
   let mut run = attempt::Attempt::new(graph, issue, opts, host, epoch_ms(SystemTime::now()));
-  run.resuming = !record.is_empty() || issue.status == "in_flight";
+  run.resuming = record.contains_key("worktree") || launches > 0 || issue.status == "in_flight";
   run.previous = previous;
   run.launches = launches;
   run.reserve(&mut record, ctx)?;

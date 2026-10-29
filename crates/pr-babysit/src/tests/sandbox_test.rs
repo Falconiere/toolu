@@ -190,6 +190,8 @@ esac
       repo_root: &self.root,
       branch: "feat/fix",
       base: "main",
+      machine: None,
+      remote_repo: None,
     }
   }
 
@@ -215,4 +217,38 @@ fn the_sandbox_holds_a_pushed_pr_branch_and_the_captured_slot_state() {
   let start = sb.start(&plan, &items);
   assert_eq!((start.branch, start.base), ("feat/fix", "main"));
   assert_eq!(start.repo_root, sb.repo.display().to_string());
+}
+
+pub(crate) struct Core {
+  _dir: tempfile::TempDir,
+  pub(crate) env: Env,
+}
+
+impl Core {
+  pub(crate) fn new(base: &Env) -> std::io::Result<Self> {
+    let dir = tempfile::Builder::new()
+      .prefix("pb-hc-")
+      .tempdir_in("/tmp")?;
+    let root = dir.path().to_string_lossy();
+    let path = std::env::var("PATH").map_err(std::io::Error::other)?;
+    let env = base
+      .clone()
+      .with("PATH", &path)
+      .with("HC_SESSION", "test")
+      .with("XDG_CONFIG_HOME", &format!("{root}/c"))
+      .with("XDG_DATA_HOME", &format!("{root}/d"))
+      .with("XDG_RUNTIME_DIR", &format!("{root}/r"));
+    std::fs::create_dir_all(format!("{root}/r"))?;
+    Ok(Self { _dir: dir, env })
+  }
+}
+
+impl Drop for Core {
+  fn drop(&mut self) {
+    for session in ["test", "remote"] {
+      let mut spec = Spec::new(["hc", "server", "stop"]);
+      spec.env = Some(self.env.clone().with("HC_SESSION", session));
+      let _stopped = run(&spec);
+    }
+  }
 }

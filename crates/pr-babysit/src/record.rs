@@ -81,6 +81,15 @@ fn round(state: &mut Value, had_rejection: bool, fix_pushed: bool, now: &str) ->
       let status = fixer.get("status").and_then(Value::as_str);
       !matches!(status, Some("running" | "blocked"))
     });
+  if settled {
+    let fixer = state.get("fixer").cloned().unwrap_or(Value::Null);
+    if let Some(remote) = state
+      .pointer_mut("/herdrWorktree/remote")
+      .and_then(Value::as_object_mut)
+    {
+      remote.insert("lastFixer".into(), fixer);
+    }
+  }
   if let Some(object) = state.as_object_mut() {
     let last =
       json!({"at": now, "hadRejection": had_rejection, "fixPushed": fix_pushed, "headSha": head});

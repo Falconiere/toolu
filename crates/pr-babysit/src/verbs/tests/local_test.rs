@@ -267,3 +267,27 @@ fn dispatch_fix_wait_without_a_round_says_so() {
   assert_eq!(exit, Exit::Usage);
   assert_eq!(message(&error), "--timeout-seconds must be a whole number");
 }
+
+#[test]
+fn remote_fixer_report_atomically_records_identity() {
+  let dir = TempDir::new().unwrap();
+  let path = dir.path().join("report.json");
+  let env = Env::default();
+  let args = [
+    "fixer-report",
+    path.to_str().unwrap(),
+    "done",
+    "--run-id",
+    "pb-a-g1",
+    "--expected-base",
+    "base",
+    "--commit",
+    "head",
+  ];
+  let (exit, result) = run(&args, &world(&env, None));
+  assert_eq!(exit, Exit::Success);
+  assert_eq!(read(&path), result);
+  assert_eq!(result["runId"], "pb-a-g1");
+  assert_eq!(result["expectedBase"], "base");
+  assert_eq!(result["commit"], "head");
+}

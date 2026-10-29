@@ -53,6 +53,11 @@ mod github_budget;
 mod github_engine;
 mod github_probe;
 mod graph;
+mod hc_backend;
+mod hc_report;
+mod hc_results;
+mod hc_source;
+mod hc_target;
 mod herdr;
 #[cfg(test)]
 #[path = "tests/herdr_agents_test.rs"]

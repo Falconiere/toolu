@@ -89,6 +89,15 @@ pub(crate) struct Client {
 }
 
 impl Client {
+  /// Honor the backend saved with the worker, even after configuration changes.
+  pub(crate) fn pin(&mut self, backend: toolu_mux::Backend) {
+    self.backend = Some(backend);
+  }
+  /// The backend selected for this client, if a call or pin selected one.
+  pub(crate) fn backend(&self) -> Option<toolu_mux::Backend> {
+    self.backend
+  }
+
   /// A client that still has to read the server protocol.
   pub(crate) fn new() -> Self {
     // Construct every control call so the socket and CLI arms stay live.
@@ -108,6 +117,9 @@ impl Client {
   ) -> Result<String, String> {
     self.last_exit = None;
     let backend = *self.backend.get_or_insert_with(|| resolve_backend(env));
+    if let Some(reply) = crate::hc_backend::execute(paths, env, backend, call) {
+      return reply;
+    }
     if backend == toolu_mux::Backend::Tmux {
       return Ok(crate::tmux_backend::execute(call, env));
     }
@@ -202,6 +214,7 @@ pub(crate) fn session_name(env: &Env) -> Option<&str> {
 fn resolve_backend(env: &Env) -> toolu_mux::Backend {
   let configured = match env.get("TOOLU_EPIC_MULTIPLEXER") {
     Some("herdr") => toolu_mux::Multiplexer::Herdr,
+    Some("herdr-app") => toolu_mux::Multiplexer::HerdrApp,
     Some("tmux") => toolu_mux::Multiplexer::Tmux,
     Some(_) | None => toolu_mux::Multiplexer::Auto,
   };

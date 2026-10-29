@@ -304,18 +304,20 @@ Start a fixer round
 Usage: toolu babysit dispatch-fix start [OPTIONS] --state-file <VALUE> --plan <VALUE> --items <VALUE> --repo-root <VALUE> --branch <VALUE> --base <VALUE>
 
 Options:
-      --json                Print exactly one JSON document on stdout
-      --state-file <VALUE>  The slot's state file
-      --plan <VALUE>        The route plan
-  -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --items <VALUE>       The items file
-      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
-      --repo-root <VALUE>   The repository the PR branch lives in
-      --branch <VALUE>      The PR branch
-      --base <VALUE>        The PR's base branch
-      --dry-run             Print the commands; run and write nothing
-  -h, --help                Print help
+      --json                 Print exactly one JSON document on stdout
+      --state-file <VALUE>   The slot's state file
+      --plan <VALUE>         The route plan
+  -q, --quiet                Drop the diagnostics of a successful run
+      --host <HOST>          The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --items <VALUE>        The items file
+      --config-dir <DIR>     Read the toolu config from DIR instead of the host's default
+      --repo-root <VALUE>    The repository the PR branch lives in
+      --branch <VALUE>       The PR branch
+      --base <VALUE>         The PR's base branch
+      --machine <VALUE>      Configured hc machine
+      --remote-repo <VALUE>  Absolute remote checkout path
+      --dry-run              Print the commands; run and write nothing
+  -h, --help                 Print help
 ```
 
 ## `toolu babysit dispatch-fix wait`
@@ -364,12 +366,15 @@ Arguments:
   <STATUS>  done or failed [possible values: done, failed]
 
 Options:
-      --json              Print exactly one JSON document on stdout
-      --note <VALUE>      A one-line summary or the reason
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --json                   Print exactly one JSON document on stdout
+      --note <VALUE>           A one-line summary or the reason
+  -q, --quiet                  Drop the diagnostics of a successful run
+      --run-id <VALUE>         Remote fixer run identity
+      --expected-base <VALUE>  Remote fixer base commit
+      --host <HOST>            The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --commit <VALUE>         Remote fixer result commit
+      --config-dir <DIR>       Read the toolu config from DIR instead of the host's default
+  -h, --help                   Print help
 ```
 
 ## `toolu babysit stop`

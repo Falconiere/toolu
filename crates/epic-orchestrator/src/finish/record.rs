@@ -187,6 +187,9 @@ pub(crate) fn never_started(record: &Record) -> bool {
     "pane_id",
     "session_id",
     "removal_intent",
+    "terminal_name",
+    "terminal_owner",
+    "terminal_address",
   ]
   .iter()
   .all(|field| empty(field))
@@ -194,6 +197,11 @@ pub(crate) fn never_started(record: &Record) -> bool {
 
 /// Whether a terminal record proves its cleanup finished.
 pub(crate) fn terminal_cleanup_complete(record: &Record) -> bool {
+  if text(record, "machine").is_some()
+    && record.get("remote_worktree_removed") != Some(&Value::Bool(true))
+  {
+    return false;
+  }
   let removed = record.get("worktree_removed") == Some(&Value::Bool(true))
     && !text(record, "worktree").is_some_and(|path| Path::new(path).exists());
   removed

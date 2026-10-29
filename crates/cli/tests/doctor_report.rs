@@ -14,7 +14,7 @@ CLAUDE_PLUGINS_REGISTRY CODEX_HOME CURSOR_PROJECT_DIR HERMES_HOME XDG_CONFIG_HOM
 TOOLU_CODEX_PLUGIN_SNAPSHOT TOOLU_BUN TOOLU_EPIC_TOKEN \
 TOOLU_EPIC_STATUS_TOKEN TOOLU_EPIC_PEER_TOKENS TOOLU_EPIC_NOTIFY_URL";
 
-const CHECKS: &str = "binary,reachability,host,config,plugins,skew,registry,tools";
+const CHECKS: &str = "binary,reachability,host,config,plugins,skew,registry,tools,multiplexer";
 
 fn repo() -> PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")

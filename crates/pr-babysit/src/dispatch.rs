@@ -5,19 +5,40 @@ use serde_json::Value;
 
 use crate::error::{Failure, Result};
 
+/// Render fixer briefs.
 pub(crate) mod brief;
+/// Retire completed fixer work.
 pub(crate) mod cleanup;
+/// Persist and execute fixer dispatch operations.
 pub(crate) mod dispatcher;
+/// Manage owned herdr-core fixer terminals.
+pub(crate) mod hc;
+/// Call the legacy Herdr backend.
 pub(crate) mod herdr;
+/// Prepare and launch a fixer group.
 pub(crate) mod launch;
+/// Name fixer agents and round artifacts.
 pub(crate) mod names;
+/// Classify fixer reports and screens.
 pub(crate) mod outcome;
+/// Validate fixer route plans.
 pub(crate) mod plan;
+/// Transfer bound remote fixer results.
+pub(crate) mod remote;
+/// Verify and retire remote worktrees.
+pub(crate) mod remote_finish;
+/// Rotate completed remote attempts safely.
+pub(crate) mod remote_round;
+/// Prepare committed remote fixer inputs.
+pub(crate) mod remote_setup;
 #[cfg(test)]
 #[path = "tests/sandbox_test.rs"]
 mod sandbox;
+/// Begin a fixer round.
 pub(crate) mod start;
+/// Follow fixer execution and settlement.
 pub(crate) mod watch;
+/// Prepare and reuse slot worktrees.
 pub(crate) mod worktree;
 
 /// A `dispatch-fix` subcommand.

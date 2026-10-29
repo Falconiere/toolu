@@ -1,0 +1,4 @@
+{
+  "external": ["hc", "herdr-app"],
+  "allow": []
+}

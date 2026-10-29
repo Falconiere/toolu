@@ -9,12 +9,12 @@ use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
 use toolu_runtime::env::Env;
 use toolu_runtime::invocation::current_dir;
-use toolu_state::time::epoch_millis;
 
 use crate::PROTOCOL;
 use crate::client::exchange_retry;
 use crate::control::{ensure, registry_nonempty};
 use crate::disk::{read_value, write_status, write_value};
+use crate::hc_report::report_token;
 use crate::job::run_job;
 use crate::lock::live;
 use crate::model::World;
@@ -141,6 +141,9 @@ pub(crate) fn wait(ctx: &Ctx, matches: &ArgMatches, env: &Env) -> Outcome {
 
 /// Persist and submit a worker phase report.
 pub(crate) fn report(matches: &ArgMatches, env: &Env) -> Outcome {
+  if let Some(outcome) = crate::hc_report::report(matches, env) {
+    return outcome;
+  }
   let Some(phase) = text(matches, "phase") else {
     return failed("toolu epic report", "phase is required");
   };
@@ -227,18 +230,6 @@ fn submit_spooled(paths: &Paths, verb: &str, checked: bool, token: &str, req: &V
     Err(err) if err.starts_with("connect:") => json_out(&json!({"ok": true})),
     Err(err) => failed(&format!("toolu epic {verb}"), &err),
   }
-}
-
-fn report_token(key: &str) -> String {
-  use std::sync::atomic::{AtomicU32, Ordering};
-  static NEXT: AtomicU32 = AtomicU32::new(0);
-  let n = NEXT.fetch_add(1, Ordering::Relaxed);
-  let millis = epoch_millis(SystemTime::now());
-  let safe: String = key
-    .chars()
-    .filter(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '_' | '-'))
-    .collect();
-  format!("r{millis:013}-{}-{n:04}-{safe}", std::process::id())
 }
 
 /// Exchange a control request and format its response.

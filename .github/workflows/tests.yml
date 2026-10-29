@@ -110,6 +110,25 @@ jobs:
         with:
           tool: cargo-deny@0.20.2,cargo-machete@0.9.2,cargo-llvm-cov@0.9.1,cargo-nextest@0.9.146
 
+      # Real hc integration tests use isolated sessions, not the runner's desktop.
+      - name: Install pinned herdr-core
+        run: |
+          set -euo pipefail
+          case "$RUNNER_OS:$(uname -m)" in
+            Linux:x86_64) target=linux-x86_64; sha=e9dbabdead0ce0ce3de51b6f54cc9549efedbb41b2f8448b6932ab0d1442343e ;;
+            Linux:aarch64|Linux:arm64) target=linux-aarch64; sha=19cef6a2e52f14c22c4b6f3fdaf1a462d2dafc78e8b03fabbfad5b063477a370 ;;
+            macOS:arm64) target=macos-aarch64; sha=ca524329d2e0630219550055dcc71f42aafd85fba356e0d543d6f51244487970 ;;
+            macOS:x86_64) target=macos-x86_64; sha=8e16ec43a17656f80e7d7f98292bf710c60c4aeff52941cca98fb24f37f35028 ;;
+            *) echo "unsupported hc target" >&2; exit 1 ;;
+          esac
+          curl -fsSL "https://releases.herdr.dev/core/0.1.14/herdr-core-${target}.tar.gz" -o "$RUNNER_TEMP/hc.tar.gz"
+          echo "$sha  $RUNNER_TEMP/hc.tar.gz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/hc-bin"
+          tar -xzf "$RUNNER_TEMP/hc.tar.gz" -C "$RUNNER_TEMP/hc-bin"
+          ln -s herdr-core "$RUNNER_TEMP/hc-bin/hc"
+          "$RUNNER_TEMP/hc-bin/hc" --version
+          echo "$RUNNER_TEMP/hc-bin" >> "$GITHUB_PATH"
+
       # jscpd, the gate's duplication check, is the one npm devDependency.
       - name: Install dependencies
         run: npm ci --ignore-scripts

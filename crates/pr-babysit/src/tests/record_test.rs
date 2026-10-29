@@ -59,13 +59,10 @@ fn a_round_rotates_the_keys_records_the_rejection_and_caps_fix_attempts() {
   assert_eq!(after["pr"]["lastRoundHadRejection"], false);
 }
 
-#[test]
-fn a_round_keeps_a_running_fixer() {
-  let dir = TempDir::new().unwrap();
-  let path = state(&dir, |value| value["fixer"] = json!({"status": "running"}));
+fn record_empty_round(path: &PathBuf) {
   let env = Env::default();
   let slot = Slot {
-    path: &path,
+    path,
     env: &env,
     now: NOW,
   };
@@ -77,6 +74,13 @@ fn a_round_keeps_a_running_fixer() {
     },
   )
   .unwrap();
+}
+
+#[test]
+fn a_round_keeps_a_running_fixer() {
+  let dir = TempDir::new().unwrap();
+  let path = state(&dir, |value| value["fixer"] = json!({"status": "running"}));
+  record_empty_round(&path);
   assert_eq!(read(&path)["fixer"]["status"], "running");
 }
 
@@ -119,4 +123,18 @@ fn a_missing_state_fails_without_creating_a_file() {
   assert_eq!(failure.code, "state_malformed");
   assert!(failure.message.contains("run toolu babysit tick first"));
   assert!(!path.exists());
+}
+
+#[test]
+fn a_recorded_round_preserves_remote_fixer_identity_for_the_next_attempt() {
+  let dir = TempDir::new().unwrap();
+  let fixer = json!({"status":"failed", "groups":[{"status":"failed", "hcName":"old"}]});
+  let path = state(&dir, |value| {
+    value["fixer"] = fixer.clone();
+    value["herdrWorktree"] = json!({"remote":{"run":"old"}});
+  });
+  record_empty_round(&path);
+  let after = read(&path);
+  assert_eq!(after["fixer"], Value::Null);
+  assert_eq!(after["herdrWorktree"]["remote"]["lastFixer"], fixer);
 }

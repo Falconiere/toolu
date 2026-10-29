@@ -196,6 +196,7 @@ fn load_issue(
 /// The engine's fields of an issue record: its hold, release, waiting
 /// relaunch, tracker sighting, worktree and host.
 fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
+  crate::hc_backend::overlay_target(issue, record);
   issue.hold = record.get("hold").filter(|hold| !hold.is_null()).cloned();
   issue.coupling_released = record.get("coupling_released") == Some(&Value::Bool(true));
   issue.relaunch = record

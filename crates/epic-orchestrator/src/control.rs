@@ -211,6 +211,9 @@ pub(crate) fn start(matches: &ArgMatches, env: &Env) -> Outcome {
     safe: matches.get_flag("safe"),
     no_jev: matches.get_flag("no-jev"),
   };
+  if let Err(err) = crate::hc_target::configure(matches, Path::new(dir), env) {
+    return failed("toolu epic start", &err);
+  }
   // The settings first: a registered epic never runs without them.
   let saved = crate::epics::write_launch_settings(Path::new(dir), settings)
     .and_then(|()| register(&paths, dir));

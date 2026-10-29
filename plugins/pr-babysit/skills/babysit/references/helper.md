@@ -20,7 +20,7 @@ Fields not listed are not part of the contract.
 | `toolu babysit stop` | `dispatch-fix cleanup`, then `record status --status cancelled`. |
 | `toolu babysit parse-verdict` | Parse the CI review-bot comment from stdin. |
 | `toolu babysit route-fix` | Fix routing: Jev-scores the round's items file, tiers and groups it, picks host/model/effort per group from `prBabysit` config. Reads no GitHub. |
-| `toolu babysit dispatch-fix` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents in herdr panes. |
+| `toolu babysit dispatch-fix` | Fixer dispatch: `start` / `wait` / `cleanup` of the slot's worktree and fixer agents in the selected backend. |
 | `toolu babysit fixer-report` | Run by a fixer agent, never by the controller: writes its done/failed report. |
 
 Exit codes, for every command: `0` result · `64` usage · `69`
@@ -225,6 +225,10 @@ toolu babysit stop --state-file <path>
 
 ## Fixer dispatch
 
+The descriptions below cover local dispatch unless specified. For `herdr-app`
+and remote target requirements, transfer, and recovery, see [Herdr App fixer
+dispatch](../../../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
+
 ```
 toolu babysit route-fix --items <file> --host claude|codex|cursor|muse [--state-file <path>] [--raise <itemId>]... [--no-jev]
                         [--jev-answers-in <file>] [--now <iso8601>]
@@ -251,7 +255,7 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   (tests, debugging — the workflow never passes it) and wins over both.
 - **Start** validates everything before a side effect: the plan and items (`plan_invalid`, including a
   `round` that is not a positive integer, and a `--base` or `--branch` starting with `-`), each group's host and model/effort (`config_invalid`), an
-  active fixer (`fixer_running`, also when blocked), then herdr (`herdr_unavailable`). It fetches
+  active fixer (`fixer_running`, also when blocked), then the selected backend (legacy herdr can return `herdr_unavailable`). It fetches
   `origin/<base>` (the brief's changed-file rule diffs against it) and the PR branch; a failed git
   step is `git_error`.
 - **Wait** waits at most `--timeout-seconds` (default 480) for the running group. A group moves
@@ -267,7 +271,7 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   — `error` carries herdr's message when a group failed to start.
   `commits[]` = `git rev-list --reverse origin/<pr-branch>..HEAD` in the worktree. `--dry-run`
   prints `{dryRun:true, commands:[[argv…]…], brief}` and writes nothing.
-- **Agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
+- **Legacy herdr agents** are named `pb-<6 hex of the slot>-r<round>g<seq>` and started with
   `herdr agent start <name> --kind <host> --pane <pane> -- <host args>`:
   - Claude: `--dangerously-skip-permissions -n <name> --model --effort`
   - Codex: `--dangerously-bypass-approvals-and-sandbox --model -c model_reasoning_effort=<e>`
@@ -277,13 +281,15 @@ toolu babysit fixer-report <report-file> done|failed [--note <text>]
   These are the unattended flags; `prBabysit.unattended: false` selects safe mode. Codex also
   gets `--no-daemon` first in both modes. Stopping a fixer sends `esc` and `/exit`; a Muse fixer
   then gets `enter`, which confirms Muse's exit prompt while background work runs.
-- **Brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
+- **Local brief and report** sit beside the state file: `<state>.fixer-r<round>g<seq>.md` and
   `.report.json`. A settled agent with no report is `no_report`, or `host_limited` when its pane
   shows a provider usage/rate limit (the host then cools for 60 min).
-- **Startup trust prompt.** A Claude fixer in a new worktree starts blocked (`agent_not_ready`) at
+- **Legacy herdr startup trust prompt.** A Claude fixer in a new worktree starts blocked (`agent_not_ready`) at
   Claude Code's first-run workspace-trust prompt. The dispatcher accepts that prompt only when it is
   the standard one naming exactly this worktree (epic-orchestrator's recovery rule); any other
-  blocked screen fails the group with `agent_start_failed` and is never answered.
+  blocked screen fails the group with `agent_start_failed` and is never answered. With
+  `herdr-app`, blocked prompts are surfaced and never answered automatically. See
+  [Herdr App fixer dispatch](../../../../../docs/pr-babysit/README.md#herdr-app-fixer-dispatch).
 - **Session artifacts are not work.** Untracked files under `.claude/`, `.codex/`, `.cursor/` or
   `.toolu/tmp/` (a fixer's own SessionStart hooks write `.claude/settings.local.json` and
   `.claude/tmp/`; toolu's hooks under Muse write `.toolu/tmp/muse/`) do not make the worktree

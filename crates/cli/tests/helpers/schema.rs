@@ -122,7 +122,9 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
     let (args, def) = match name.as_str() {
       "hook" | "commands" | "completions" | "doctor" | "ledger" | "debug" | "config" | "status"
       | "setup" | "opencode" | "jev" | "review" | "code-review" | "docs" | "ast-grep"
-      | "statusline" | "babysit" | "epic" | "sandbox" | "git-better" | "plugins" => continue,
+      | "statusline" | "babysit" | "epic" | "sandbox" | "git-better" | "plugins" | "herdr-app" => {
+        continue;
+      }
       "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
         (vec!["--json", name.as_str()], "guide")
       }

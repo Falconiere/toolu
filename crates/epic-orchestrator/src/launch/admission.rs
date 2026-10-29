@@ -2,6 +2,8 @@
 //! (`admission.ts`): the agent lease, its replacement on another host, the
 //! per-issue launch lock, and each attempt's persisted stage.
 
+mod hc;
+
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime};
 
@@ -191,13 +193,17 @@ pub(crate) fn launch_reservation(
 /// lists (#583). herdr is asked only for such a lease, and only once; without
 /// its answer nothing is proven gone, so nothing is freed.
 fn reclaim_dead_agents(root: &Path, herdr: &mut Herdr<'_>) {
-  let mut listing: Option<Option<Vec<serde_json::Value>>> = None;
+  let mut listing: Option<Option<(toolu_mux::Backend, Vec<serde_json::Value>)>> = None;
   let listed = |name: &str, pane: Option<&str>| {
     let agents = listing.get_or_insert_with(|| {
       let reply = herdr.call(&Call::AgentList).ok()?;
-      reply.get("agents")?.as_array().cloned()
+      let backend = herdr.client.backend()?;
+      Some((backend, reply.get("agents")?.as_array()?.clone()))
     });
-    agents.as_ref().is_none_or(|agents| {
+    agents.as_ref().is_none_or(|(backend, agents)| {
+      if !pane_matches_backend(pane, *backend) {
+        return true;
+      }
       agents.iter().any(|agent| {
         let text = |key: &str| agent.get(key).and_then(serde_json::Value::as_str);
         text("name") == Some(name) || pane.is_some_and(|p| text("pane_id") == Some(p))
@@ -206,6 +212,17 @@ fn reclaim_dead_agents(root: &Path, herdr: &mut Herdr<'_>) {
   };
   // A failed reclaim leaves the leases, as before; admission reports capacity.
   let _freed = reconcile_agent_leases(root, listed);
+}
+
+fn pane_matches_backend(pane: Option<&str>, backend: toolu_mux::Backend) -> bool {
+  let Some(pane) = pane else {
+    return false;
+  };
+  match backend {
+    toolu_mux::Backend::HerdrApp => pane.starts_with("hc:"),
+    toolu_mux::Backend::Tmux => pane.starts_with('%'),
+    toolu_mux::Backend::Herdr => !pane.starts_with("hc:") && !pane.starts_with('%'),
+  }
 }
 
 /// The live agent a replacement moves away from.
@@ -271,7 +288,11 @@ fn migrate(
     pane: &source.pane,
     cwd: &source.worktree,
   };
-  let stopped = shutdown_agent(herdr, input.key, &expected)?;
+  let stopped = if text(record, "backend") == Some("herdr-app") {
+    hc::stop(record, herdr)?
+  } else {
+    shutdown_agent(herdr, input.key, &expected)?
+  };
   reconcile_resource_jobs(&owner.root).map_err(Failure::unknown)?;
   let busy = active_jobs(&owner.root, &source.worktree).map_err(Failure::unknown)?;
   if stopped != Outcome::Exited || busy {

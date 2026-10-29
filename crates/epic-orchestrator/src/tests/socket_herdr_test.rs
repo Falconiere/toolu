@@ -30,6 +30,31 @@ fn a_stopped_subscription_returns_at_once() {
 }
 
 #[test]
+fn both_idle_subscribers_stop_without_consuming_each_others_wake() {
+  let (tx, rx) = mpsc::channel();
+  let signals = signals(false);
+  let thread = super::subscribe(
+    tx,
+    Arc::new(Mutex::new(World::new(0))),
+    signals.clone(),
+    Env::from_pairs([
+      ("HOME", "/nonexistent"),
+      ("TOOLU_EPIC_MULTIPLEXER", "tmux"),
+      ("HERDR_SOCKET_PATH", "/nonexistent/toolu-test.sock"),
+    ]),
+  );
+  rx.recv_timeout(Duration::from_secs(5)).expect("outage");
+  std::thread::sleep(Duration::from_millis(100));
+  let started = Instant::now();
+  signals
+    .stop
+    .store(true, std::sync::atomic::Ordering::Relaxed);
+  signals.interrupt.trigger();
+  thread.join().expect("both subscriptions joined");
+  assert!(started.elapsed() < Duration::from_secs(1));
+}
+
+#[test]
 fn a_missing_socket_waits_the_idle_interval_until_stopped() {
   assert_eq!(IDLE, Duration::from_secs(30));
   let (tx, rx) = mpsc::channel();

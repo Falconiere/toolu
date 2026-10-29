@@ -21,12 +21,12 @@ const NOT_TRUST_PROMPT: &str =
   " (the blocked screen is not the standard trust prompt for this worktree; left unanswered)";
 
 /// A herdr agent's launch.
-struct Agent<'a> {
-  host: Fixer,
-  name: &'a str,
-  pane: &'a str,
-  args: &'a [String],
-  message: &'a str,
+pub(super) struct Agent<'a> {
+  pub(super) host: Fixer,
+  pub(super) name: &'a str,
+  pub(super) pane: &'a str,
+  pub(super) args: &'a [String],
+  pub(super) message: &'a str,
 }
 
 /// One group's launch.
@@ -43,14 +43,30 @@ fn text<'v>(value: &'v Value, key: &str) -> Option<&'v str> {
 }
 
 impl Dispatcher<'_> {
-  fn brief(&self, launch: &Launch<'_>, group: &Value, report: &Path) -> Result<String> {
+  fn brief(
+    &self,
+    launch: &Launch<'_>,
+    group: &Value,
+    report: &Path,
+    remote: Option<&Value>,
+  ) -> Result<String> {
+    let toolu = self.toolu.display().to_string();
     let command = format!(
       "{} babysit fixer-report {}",
-      shell_quote(&self.toolu.display().to_string()),
+      shell_quote(if remote.is_some() { "toolu" } else { &toolu }),
       shell_quote(&report.display().to_string())
     );
     let done = format!("{command} done --note \"<one-line summary>\"");
     let failed = format!("{command} failed --note \"<the reason>\"");
+    let binding = remote.map_or_else(String::new, |data| {
+      format!(
+        " --run-id {} --expected-base {} --commit \"$(git rev-parse HEAD)\"",
+        shell_quote(text(data, "run").unwrap_or_default()),
+        shell_quote(text(data, "base").unwrap_or_default())
+      )
+    });
+    let done = format!("{done}{binding}");
+    let failed = format!("{failed}{binding}");
     let shown = launch.items_file.display();
     let message = format!("items file is missing or not JSON: {shown}");
     let items = read_object(launch.items_file, "plan_invalid", message)?;
@@ -91,15 +107,25 @@ impl Dispatcher<'_> {
       group_file(self.file, round, seq, ".md"),
       group_file(self.file, round, seq, ".report.json"),
     );
-    let rendered = self.brief(launch, &group, &report)?;
+    let remote = if self.remote().is_some() {
+      Some(self.prepare_remote_group(seq)?)
+    } else {
+      None
+    };
+    let report_path = remote
+      .as_ref()
+      .and_then(|data| text(data, "report"))
+      .map_or(report.as_path(), Path::new);
+    let rendered = self.brief(launch, &group, report_path, remote.as_ref())?;
     let host = Fixer::parse(text(&group, "host").unwrap_or_default())?;
     let (model, effort) = (text(&group, "model"), text(&group, "effort"));
     let args = host.args(&agent, model, effort, launch.unattended)?;
+    let brief_path = self.brief_target(remote.as_ref(), &rendered, &brief)?;
     self.record_launch(seq, &agent, (&brief, &report), &rendered)?;
-    let message = format!(
-      "You are a pr-babysit fixer. Read {} and follow it exactly.",
-      brief.display()
-    );
+    if remote.is_some() {
+      self.patch_group(seq, &json!({"brief": brief_path}))?;
+    }
+    let message = format!("You are a pr-babysit fixer. Read {brief_path} and follow it exactly.");
     let started = Agent {
       host,
       name: &agent,
@@ -107,8 +133,21 @@ impl Dispatcher<'_> {
       args: &args,
       message: &message,
     };
-    self.launch_agent(seq, &started)?;
+    if self.hc_backend() {
+      self.launch_hc(seq, &started)?;
+    } else {
+      self.launch_agent(seq, &started)?;
+    }
     Ok(rendered)
+  }
+
+  fn brief_target(&self, remote: Option<&Value>, rendered: &str, brief: &Path) -> Result<String> {
+    if let Some(data) = remote {
+      self.write_remote_brief(data, rendered)?;
+      let path = text(data, "brief").unwrap_or_default();
+      return Ok(path.to_owned());
+    }
+    Ok(brief.display().to_string())
   }
 
   /// Writes the brief (not in a dry run) and marks group `seq` launching.

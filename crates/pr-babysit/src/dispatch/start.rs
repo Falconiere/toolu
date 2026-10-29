@@ -24,6 +24,10 @@ pub(crate) struct Start<'a> {
   pub(crate) branch: &'a str,
   /// The PR's base branch.
   pub(crate) base: &'a str,
+  /// Optional remote hc machine and checkout.
+  pub(crate) machine: Option<&'a str>,
+  /// Absolute path to an existing remote checkout.
+  pub(crate) remote_repo: Option<&'a str>,
 }
 
 fn text<'v>(value: &'v Value, key: &str) -> Option<&'v str> {
@@ -86,7 +90,7 @@ impl Dispatcher<'_> {
     let field = |key: &str| worktree.get(key).cloned().unwrap_or(Value::Null);
     json!({
       "pr": format!("{repo}#{number}"), "round": round, "groups": groups,
-      "worktree": field("path"), "slotBranch": field("branch"),
+      "worktree": worktree.pointer("/remote/path").cloned().unwrap_or_else(|| field("path")), "slotBranch": field("branch"),
       "branch": start.branch, "base": start.base,
     })
   }
@@ -123,6 +127,12 @@ impl Dispatcher<'_> {
       "groups": recorded,
     });
     self.save(|state| {
+      if let Some(remote) = state
+        .pointer_mut("/herdrWorktree/remote")
+        .and_then(Value::as_object_mut)
+      {
+        remote.insert("setupPending".into(), json!(false));
+      }
       if let Value::Object(root) = state {
         root.insert("fixer".into(), fixer);
       }
@@ -143,24 +153,45 @@ impl Dispatcher<'_> {
     Ok(copy)
   }
 
-  /// Starts the round `start` describes.
-  ///
-  /// # Errors
-  /// Plan, config, herdr and git failures, each before the step it guards.
-  pub(crate) fn start(&mut self, start: &Start<'_>) -> Result<Value> {
+  fn remote_target<'a>(
+    &self,
+    start: &Start<'a>,
+  ) -> Result<Option<toolu_mux::hc::remote::Target<'a>>> {
     if [start.base, start.branch]
       .iter()
       .any(|name| name.starts_with('-'))
     {
       return Err(Failure::usage("--base and --branch must not start with -"));
     }
+    let target = toolu_mux::hc::remote::Target::new(start.machine, start.remote_repo)
+      .map_err(|error| Failure::usage(error.message))?;
+    if target.is_some() && (!self.hc_backend() || self.dry) {
+      return Err(Failure::usage(
+        "remote fixers require herdr-app and cannot be dry-run",
+      ));
+    }
+    if self.remote().is_some() && target.is_none() {
+      return Err(Failure::new(
+        "remote_mismatch",
+        "resume requires the saved remote machine and repository",
+      ));
+    }
+    Ok(target)
+  }
+
+  /// Starts the round `start` describes.
+  ///
+  /// # Errors
+  /// Plan, config, herdr and git failures, each before the step it guards.
+  pub(crate) fn start(&mut self, start: &Start<'_>) -> Result<Value> {
+    let target = self.remote_target(start)?;
     let (plan, items) = self.checked(start)?;
     let groups = plan
       .get("groups")
       .and_then(Value::as_array)
       .cloned()
       .unwrap_or_default();
-    if !self.dry && !reachable(self.env) {
+    if !self.dry && !self.hc_backend() && !reachable(self.env) {
       let message = "herdr is not reachable (not installed, or its server is not running); \
                      run this round inline";
       return Err(Failure::new("herdr_unavailable", message));
@@ -172,7 +203,19 @@ impl Dispatcher<'_> {
       "git_error",
       format!("git fetch origin {base} failed in {root}"),
     )?;
-    let worktree = self.worktree(root, start.branch)?;
+    let mut worktree = if self.remote().is_some() {
+      self.resume_remote_worktree(start)?
+    } else {
+      self.worktree(root, start.branch)?
+    };
+    if let Some(target) = target {
+      self.setup_remote(target.machine, target.repo, &groups, start.base)?;
+      worktree = self
+        .state
+        .get("herdrWorktree")
+        .cloned()
+        .unwrap_or(Value::Null);
+    }
     let round = crate::json::round(&items).unwrap_or(1);
     let context = self.context(start, &worktree, round, groups.len());
     let items_file = self.copy_items(start)?;

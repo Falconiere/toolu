@@ -7,6 +7,8 @@
 pub mod backend;
 /// Reachability probes for herdr and tmux.
 pub mod detect;
+/// Native herdr-core CLI client.
+pub mod hc;
 /// The capture-pane fallback for `agent_status`.
 pub mod status;
 #[cfg(test)]

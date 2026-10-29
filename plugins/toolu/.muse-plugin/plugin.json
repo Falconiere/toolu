@@ -23,6 +23,10 @@
         "path": "skills/deep-research/SKILL.md"
       },
       {
+        "id": "herdr-app",
+        "path": "skills/herdr-app/SKILL.md"
+      },
+      {
         "id": "orchestrator",
         "path": "skills/orchestrator/SKILL.md"
       },

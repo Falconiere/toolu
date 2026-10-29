@@ -101,13 +101,15 @@ Arguments:
   <STATE_DIR>  The epic state directory
 
 Options:
-      --json              Print exactly one JSON document on stdout
-      --safe              Keep approval prompts on in this epic's workers, until a start without it
-      --no-jev            Route and check coupling by heuristics only, until a start without it
-  -q, --quiet             Drop the diagnostics of a successful run
-      --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
-  -h, --help              Print help
+      --json                Print exactly one JSON document on stdout
+      --machine <NAME>      Existing Herdr machine for workers; requires herdr-app
+  -q, --quiet               Drop the diagnostics of a successful run
+      --remote-repo <PATH>  Existing absolute checkout on the worker machine
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --safe                Keep approval prompts on in this epic's workers, until a start without it
+      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
+      --no-jev              Route and check coupling by heuristics only, until a start without it
+  -h, --help                Print help
 ```
 
 ## `toolu epic cleanup`
@@ -265,14 +267,16 @@ Arguments:
   <PHASE>  The phase to record [possible values: brainstorm, spec, spec-review, plan, plan-review, execution, pr-open, babysit, rebasing, ready, needs-human, failed]
 
 Options:
-      --json                Print exactly one JSON document on stdout
-      --status-file <FILE>  The issue status snapshot
-      --pr <N>              Pull request number
-  -q, --quiet               Drop the diagnostics of a successful run
-      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --note <TEXT>         Note stored with the phase
-      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
-  -h, --help                Print help
+      --json                           Print exactly one JSON document on stdout
+      --run <run>                      Remote worker run identity; write a transfer report only
+      --expected-base <expected-base>  Remote worker's committed input revision
+  -q, --quiet                          Drop the diagnostics of a successful run
+      --host <HOST>                    The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --status-file <FILE>             The issue status snapshot
+      --config-dir <DIR>               Read the toolu config from DIR instead of the host's default
+      --pr <N>                         Pull request number
+      --note <TEXT>                    Note stored with the phase
+  -h, --help                           Print help
 ```
 
 ## `toolu epic notify`
@@ -461,17 +465,19 @@ Arguments:
   <EPIC>  The epic: a GitHub issue, Jira key or Linear issue
 
 Options:
-      --json               Print exactly one JSON document on stdout
-      --max <N>            Live issue agents at once [default: 3]
-  -q, --quiet              Drop the diagnostics of a successful run
-      --tracker <TRACKER>  The epic's tracker [possible values: github, jira, linear]
-      --host <HOST>        The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
-      --repo <O/R>         The code repository of Jira and Linear children
-      --config-dir <DIR>   Read the toolu config from DIR instead of the host's default
-      --out <FILE>         Also write graph.json to FILE
-      --save               Write graph.json into the epic's state directory
-      --dry-run            Read the tracker and write nothing
-  -h, --help               Print help
+      --json                Print exactly one JSON document on stdout
+      --machine <NAME>      Existing Herdr machine for workers; requires herdr-app
+  -q, --quiet               Drop the diagnostics of a successful run
+      --remote-repo <PATH>  Existing absolute checkout on the worker machine
+      --host <HOST>         The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
+      --max <N>             Live issue agents at once [default: 3]
+      --config-dir <DIR>    Read the toolu config from DIR instead of the host's default
+      --tracker <TRACKER>   The epic's tracker [possible values: github, jira, linear]
+      --repo <O/R>          The code repository of Jira and Linear children
+      --out <FILE>          Also write graph.json to FILE
+      --save                Write graph.json into the epic's state directory
+      --dry-run             Read the tracker and write nothing
+  -h, --help                Print help
 ```
 
 ## `toolu epic route`
