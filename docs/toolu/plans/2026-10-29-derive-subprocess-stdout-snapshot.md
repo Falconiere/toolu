@@ -56,7 +56,7 @@ Baseline measure → construction edit + tests → after measure → runtime tes
     "depends_on": ["runtime-coverage", "after-measure"],
     "paths": ["crates/core/runtime/**", "docs/toolu/specs/2026-10-29-derive-subprocess-stdout-snapshot-design.md", "docs/toolu/plans/2026-10-29-derive-subprocess-stdout-snapshot.md"],
     "input": "repository gate on this branch",
-    "check": "toolu epic job -- cargo xtask gate"
+    "check": "toolu epic job -- env PATH=/opt/homebrew/bin:/usr/bin:/bin cargo xtask gate"
   }
 ]
 ```
