@@ -282,22 +282,15 @@ fn a_no_live_agent_refusal_does_not_poison_a_later_admission() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut engine = engine(tmp.path(), "sent");
   let request = submitted("take B", "s-1");
-  assert_eq!(
-    answer(&mut engine, &request),
-    json!({"error": "no live agent for a"})
-  );
+  assert_eq!(answer(&mut engine, &request), json!({"error": "no live agent for a"}));
   assert_eq!(prompts(tmp.path()), [] as [Value; 0]);
-  assert_eq!(
-    named(&engine, "answer-admit"),
-    [] as [(String, String, String); 0]
-  );
+  assert_eq!(named(&engine, "answer-admit"), [] as [(String, String, String); 0]);
   report(&mut engine, "needs-human");
   assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
   assert_eq!(prompts(tmp.path()).len(), 1);
 }
 
-/// A prompt script that records the body, then replaces the journal directory
-/// with a file so the next journal write fails.
+// Prompt records the body, then replaces the journal dir so the next write fails.
 fn breaking_script(root: &Path) {
   let script = format!(
     "cat >> '{prompts}'\necho >> '{prompts}'\nrm -rf '{journal}'\n: > '{journal}'\nprintf '{{\"outcome\":\"sent\"}}'\n",
