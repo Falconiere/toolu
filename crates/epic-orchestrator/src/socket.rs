@@ -8,13 +8,13 @@ use std::sync::{
   mpsc::{self, Sender},
 };
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
-use serde_json::json;
+use serde_json::{Value, json};
 use toolu_engine::babysit::BabysitTick;
 use toolu_runtime::env::Env;
 
-use crate::client::{read_json, write_json};
+use crate::client::{read_request, write_json};
 use crate::dispatch::ingest;
 use crate::effect_thread::EffectThread;
 use crate::executor::Executor;
@@ -26,6 +26,8 @@ use crate::paths::Paths;
 use crate::server::{Engine, Fault, Stop};
 use crate::socket_herdr;
 use crate::socket_loop::{Msg, StateContext, state_loop};
+
+const REQUEST_DEADLINE: Duration = Duration::from_secs(5);
 
 /// Sets the accept-loop stop flag if `state_loop` unwinds before `serve` joins it.
 struct StopAccept<'a> {
@@ -94,6 +96,7 @@ pub(crate) fn serve_with_http(
       },
     )
   };
+  drop(rx);
   let threads = Threads {
     accept,
     herdr,
@@ -220,26 +223,34 @@ fn bind(paths: &Paths) -> Result<UnixListener, String> {
 }
 
 fn accept_loop(listener: UnixListener, tx: Sender<Msg>, stop: Arc<AtomicBool>, protocol: u64) {
-  for stream in listener.incoming() {
-    if stop.load(Ordering::Relaxed) {
-      break;
+  thread::scope(|scope| {
+    for stream in listener.incoming() {
+      if stop.load(Ordering::Relaxed) {
+        break;
+      }
+      let Ok(stream) = stream else { break };
+      let deadline = Instant::now() + REQUEST_DEADLINE;
+      let tx = tx.clone();
+      scope.spawn(move || session(stream, &tx, protocol, deadline));
     }
-    let Ok(stream) = stream else { break };
-    let tx = tx.clone();
-    thread::spawn(move || session(stream, &tx, protocol));
-  }
+  });
   drop(listener);
   drop(tx);
   drop(stop);
 }
 
-fn session(mut stream: UnixStream, tx: &Sender<Msg>, protocol: u64) {
+fn session(mut stream: UnixStream, tx: &Sender<Msg>, protocol: u64, deadline: Instant) {
   if write_json(&mut stream, &json!({"op": "hello", "protocol": protocol})).is_err() {
     return;
   }
-  let Ok(request) = read_json(&mut stream) else {
+  let Ok(request) = read_request(&mut stream, deadline) else {
     return;
   };
+  let tx = tx.clone();
+  thread::spawn(move || reply_session(stream, &tx, request));
+}
+
+fn reply_session(mut stream: UnixStream, tx: &Sender<Msg>, request: Value) {
   hold_before_ack();
   let (reply, rx) = mpsc::channel();
   if tx.send(Msg::Line { request, reply }).is_err() {
@@ -262,3 +273,7 @@ fn hold_before_ack() {
 #[cfg(test)]
 #[path = "tests/socket_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/socket_request_test.rs"]
+mod request_tests;

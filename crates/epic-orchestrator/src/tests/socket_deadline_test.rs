@@ -3,7 +3,15 @@ use std::time::{Duration, Instant};
 use crate::model::World;
 use crate::watch::{Kind, Watch};
 
-use super::{github_ready, prompt_ready, stall_ready, wake_after};
+use super::{github_ready, prompt_ready, request_remaining, stall_ready, wake_after};
+
+#[test]
+fn a_request_deadline_is_total_not_refreshed_by_activity() {
+  let deadline = Instant::now() + Duration::from_millis(20);
+  assert!(request_remaining(deadline).is_ok());
+  std::thread::sleep(Duration::from_millis(30));
+  assert_eq!(request_remaining(deadline), Err("timed out".to_owned()));
+}
 
 #[test]
 fn github_retry_after_hold_does_not_spin_the_socket() {

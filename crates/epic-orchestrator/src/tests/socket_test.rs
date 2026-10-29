@@ -1,3 +1,4 @@
+use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
@@ -79,6 +80,77 @@ fn wait_limit() {
   assert_eq!(body, json!({"state": "waiting"}));
   stop(&paths, PROTOCOL);
   handle.join().expect("joined");
+}
+
+#[test]
+fn a_wait_reply_can_arrive_after_the_request_deadline() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let background = paths.clone();
+  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let started = std::time::Instant::now();
+  let reply =
+    exchange_retry(&paths, PROTOCOL, &json!({"op": "wait", "max_seconds": 6})).expect("wait");
+  assert_eq!(reply, json!({"state": "waiting"}));
+  assert!(started.elapsed() >= Duration::from_secs(5));
+  stop(&paths, PROTOCOL);
+  handle.join().expect("engine");
+}
+
+#[test]
+fn shutdown_joins_idle_sessions_and_preserves_socket_mode() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let background = paths.clone();
+  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let mut peers = Vec::new();
+  for _ in 0..2 {
+    let mut peer = wait_socket(&paths, &tmp.path().join("unused"));
+    assert_eq!(read_json(&mut peer).expect("hello")["protocol"], PROTOCOL);
+    peer
+      .set_read_timeout(Some(Duration::from_secs(1)))
+      .expect("timeout");
+    peers.push(peer);
+  }
+  let mode = std::fs::metadata(paths.socket())
+    .expect("socket")
+    .permissions()
+    .mode();
+  assert_eq!(mode & 0o777, 0o600);
+  stop(&paths, PROTOCOL);
+  handle.join().expect("engine");
+  for mut peer in peers {
+    let mut byte = [0];
+    assert_eq!(
+      std::io::Read::read(&mut peer, &mut byte).expect("closed"),
+      0
+    );
+  }
+}
+
+#[test]
+fn a_wrong_protocol_request_is_rejected_without_stopping_the_engine() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let paths = Paths::at(tmp.path());
+  let background = paths.clone();
+  let handle = thread::spawn(move || serve_until_stopped(background, PROTOCOL));
+  let mut peer = wait_socket(&paths, &tmp.path().join("unused"));
+  assert_eq!(read_json(&mut peer).expect("hello")["protocol"], PROTOCOL);
+  write_json(
+    &mut peer,
+    &json!({"op": "status", "protocol": PROTOCOL + 1}),
+  )
+  .expect("request");
+  assert_eq!(
+    read_json(&mut peer).expect("reply"),
+    json!({"error": "protocol"})
+  );
+  assert_eq!(
+    exchange_retry(&paths, PROTOCOL, &json!({"op": "queue"})).expect("queue")["error"],
+    Value::Null
+  );
+  stop(&paths, PROTOCOL);
+  handle.join().expect("engine");
 }
 
 #[test]

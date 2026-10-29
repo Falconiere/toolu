@@ -4,12 +4,15 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
 use std::thread;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 
 use crate::disk::write_value;
 use crate::paths::Paths;
+use crate::socket_deadline::request_remaining;
+
+const LINE_CAP: usize = 16 * 1024 * 1024;
 
 /// Send `request` and return the engine's one-line reply.
 ///
@@ -66,6 +69,45 @@ pub(crate) fn read_json(stream: &mut UnixStream) -> Result<Value, String> {
   serde_json::from_str(&line).map_err(|err| err.to_string())
 }
 
+/// Read one server-side request within a total deadline, even if bytes keep arriving.
+pub(crate) fn read_request(stream: &mut UnixStream, deadline: Instant) -> Result<Value, String> {
+  let mut line = Vec::new();
+  let mut block = [0; 4096];
+  loop {
+    stream
+      .set_read_timeout(Some(request_remaining(deadline)?))
+      .map_err(|err| err.to_string())?;
+    let size = stream.read(&mut block).map_err(|err| {
+      if matches!(
+        err.kind(),
+        std::io::ErrorKind::WouldBlock | std::io::ErrorKind::TimedOut
+      ) {
+        "timed out".to_owned()
+      } else {
+        err.to_string()
+      }
+    })?;
+    request_remaining(deadline)?;
+    let bytes = block
+      .get(..size)
+      .ok_or_else(|| "invalid socket read length".to_owned())?;
+    let end = bytes.iter().position(|byte| *byte == b'\n');
+    let length = end.unwrap_or(size);
+    if line.len() + length > LINE_CAP {
+      return Err(format!("request line exceeds {LINE_CAP} bytes"));
+    }
+    line.extend(bytes.iter().take(length).copied());
+    if size == 0 || end.is_some() {
+      break;
+    }
+  }
+  let value = serde_json::from_slice(&line).map_err(|err| err.to_string())?;
+  stream
+    .set_read_timeout(None)
+    .map_err(|err| err.to_string())?;
+  Ok(value)
+}
+
 /// Write one JSON document followed by a newline.
 pub(crate) fn write_json(stream: &mut UnixStream, value: &Value) -> Result<(), String> {
   let mut line = serde_json::to_string(value).map_err(|err| err.to_string())?;
@@ -97,13 +139,13 @@ fn spool(paths: &Paths, request: &Value) -> Result<(), String> {
 /// # Errors
 /// The read fails or times out, the line passes 16 MiB, or it is not UTF-8.
 pub(crate) fn read_text(stream: &mut UnixStream) -> Result<String, String> {
-  read_capped(stream, 64 * 1024, 16 * 1024 * 1024)
+  read_capped(stream, 64 * 1024, LINE_CAP)
 }
 
 /// One line, read a byte at a time so a later line stays on the stream; up to
 /// 16 MiB, as a herdr `session.snapshot` or an engine `status` can be large.
 fn read_line(stream: &mut UnixStream) -> Result<String, String> {
-  read_capped(stream, 1, 16 * 1024 * 1024)
+  read_capped(stream, 1, LINE_CAP)
 }
 
 fn read_capped(stream: &mut UnixStream, block: usize, cap: usize) -> Result<String, String> {
