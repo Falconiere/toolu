@@ -1,113 +1,33 @@
 //! Durable comment creation: an intent is written before the POST, and an
 //! uncertain send is reconciled against remote comments before any later send.
 
-use std::time::{SystemTime, UNIX_EPOCH};
-
 use serde_json::{Value, json};
 use toolu_github::{Client, Error, Method, Rest, RestRequest};
 
 use super::{Slot, Target};
 use crate::collect::{Reader, failure};
 use crate::error::{Failure, Result};
-use crate::sha1;
 use crate::state::{actions, open, target, write_json};
 
-const MAX_BODY: usize = 65_536;
+mod intent;
 
-struct Intent {
-  status: String,
-  marker: String,
-  body: String,
-  post_path: String,
-  list_path: String,
-  kind: String,
-  root_comment_id: Option<u64>,
-}
+use intent::{Intent, validate_target};
 
-impl Intent {
-  fn new(repo: &str, number: u64, to: &Target<'_>, body: &str, now: &str) -> Result<Self> {
-    let key = to.key();
-    let nonce = SystemTime::now()
-      .duration_since(UNIX_EPOCH)
-      .map_or(0, |elapsed| elapsed.as_nanos());
-    let seed = format!(
-      "{repo}\0{number}\0{key}\0{body}\0{now}\0{}\0{nonce}",
-      std::process::id()
+fn ensure_unreplied(state: &mut Value, key: &str) -> Result<()> {
+  if let Some(recorded) = actions(state, "replied")?
+    .get(key)
+    .filter(|value| !value.is_null())
+  {
+    return Err(
+      Failure::new(
+        "duplicate_reply",
+        format!("a reply to {key} is already recorded; not posting again"),
+      )
+      .with("key", key)
+      .with("recorded", recorded.clone()),
     );
-    let marker = format!("<!-- toolu-reply:{} -->", sha1::hex(seed.as_bytes()));
-    let body = format!("{body}\n\n{marker}");
-    if body.len() > MAX_BODY {
-      return Err(Failure::usage(
-        "reply body with delivery marker exceeds the 65536-byte limit",
-      ));
-    }
-    let (post_path, list_path, root_comment_id) = match to {
-      Target::Thread { root, .. } => (
-        format!("/repos/{repo}/pulls/{number}/comments/{root}/replies"),
-        format!("/repos/{repo}/pulls/{number}/comments?per_page=100"),
-        Some(*root),
-      ),
-      Target::Conversation(_) | Target::Review(_) => (
-        format!("/repos/{repo}/issues/{number}/comments"),
-        format!("/repos/{repo}/issues/{number}/comments?per_page=100"),
-        None,
-      ),
-    };
-    Ok(Self {
-      status: "prepared".into(),
-      marker,
-      body,
-      post_path,
-      list_path,
-      kind: to.kind().into(),
-      root_comment_id,
-    })
   }
-
-  fn read(value: &Value) -> Result<Self> {
-    let field = |name: &str| {
-      value
-        .get(name)
-        .and_then(Value::as_str)
-        .filter(|text| !text.is_empty())
-        .map(str::to_owned)
-        .ok_or_else(|| malformed(name))
-    };
-    let status = field("status")?;
-    if !matches!(status.as_str(), "prepared" | "sending") {
-      return Err(malformed("status"));
-    }
-    let kind = field("kind")?;
-    let root_comment_id = value.get("rootCommentId").and_then(Value::as_u64);
-    if kind == "thread" && root_comment_id.is_none() {
-      return Err(malformed("rootCommentId"));
-    }
-    Ok(Self {
-      status,
-      marker: field("marker")?,
-      body: field("body")?,
-      post_path: field("postPath")?,
-      list_path: field("listPath")?,
-      kind,
-      root_comment_id,
-    })
-  }
-
-  fn value(&self) -> Value {
-    json!({
-      "status": self.status, "marker": self.marker, "body": self.body,
-      "postPath": self.post_path, "listPath": self.list_path,
-      "kind": self.kind, "rootCommentId": self.root_comment_id,
-    })
-  }
-}
-
-fn malformed(field: &str) -> Failure {
-  Failure::new(
-    "state_malformed",
-    format!("reply intent has no valid {field}"),
-  )
-  .with("source", "state")
+  Ok(())
 }
 
 fn save_intent(slot: &Slot<'_>, state: &mut Value, key: &str, intent: &Intent) -> Result<()> {
@@ -243,6 +163,41 @@ fn send_prepared(
   }
 }
 
+fn continue_intent(
+  client: &Client,
+  slot: &Slot<'_>,
+  state: &mut Value,
+  key: &str,
+  intent: Intent,
+) -> Result<Value> {
+  if intent.status == "sending" {
+    reconcile(client, slot, state, key, &intent)
+  } else {
+    send_prepared(client, slot, state, key, intent)
+  }
+}
+
+/// Resume a stored reply when the original body file cannot be read.
+///
+/// Returns `None` when there is no intent and the caller must report its
+/// original body-file error. The GitHub client is created only for an intent.
+pub(crate) fn reply_existing(
+  slot: &Slot<'_>,
+  to: &Target<'_>,
+  make_client: impl FnOnce() -> Result<Client>,
+) -> Result<Option<Value>> {
+  let (_lock, mut state) = open(slot.path, slot.env)?;
+  let key = to.key();
+  ensure_unreplied(&mut state, &key)?;
+  let Some(value) = actions(&mut state, "replyIntents")?.get(&key).cloned() else {
+    return Ok(None);
+  };
+  let intent = Intent::read(&value)?;
+  validate_target(&key, &intent, to)?;
+  let client = make_client()?;
+  continue_intent(&client, slot, &mut state, &key, intent).map(Some)
+}
+
 /// Post one target-scoped reply, or reconcile a prior uncertain send.
 ///
 /// # Errors
@@ -256,33 +211,19 @@ pub(crate) fn reply(
 ) -> Result<Value> {
   let (_lock, mut state) = open(slot.path, slot.env)?;
   let key = to.key();
-  if let Some(recorded) = actions(&mut state, "replied")?
-    .get(&key)
-    .filter(|value| !value.is_null())
-  {
-    return Err(
-      Failure::new(
-        "duplicate_reply",
-        format!("a reply to {key} is already recorded; not posting again"),
-      )
-      .with("key", key)
-      .with("recorded", recorded.clone()),
-    );
-  }
+  ensure_unreplied(&mut state, &key)?;
   let existing = actions(&mut state, "replyIntents")?.get(&key).cloned();
   let intent = if let Some(value) = existing {
-    Intent::read(&value)?
+    let intent = Intent::read(&value)?;
+    validate_target(&key, &intent, to)?;
+    intent
   } else {
     let (repo, number, _) = target(&state);
     let intent = Intent::new(repo, number, to, body, slot.now)?;
     save_intent(slot, &mut state, &key, &intent)?;
     intent
   };
-  if intent.status == "sending" {
-    reconcile(client, slot, &mut state, &key, &intent)
-  } else {
-    send_prepared(client, slot, &mut state, &key, intent)
-  }
+  continue_intent(client, slot, &mut state, &key, intent)
 }
 
 #[cfg(test)]

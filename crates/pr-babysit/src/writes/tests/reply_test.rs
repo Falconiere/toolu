@@ -197,6 +197,38 @@ fn an_unresolved_send_never_posts_again_and_keeps_its_intent() {
 }
 
 #[test]
+fn a_retry_with_a_different_thread_root_is_rejected_before_reconciliation() {
+  let dir = TempDir::new().unwrap();
+  let path = state(dir.path());
+  let fixture = Fixture::start().unwrap();
+  let env = Env::default();
+  let original = Target::Thread {
+    thread: "PRRT_a",
+    root: 41,
+    in_reply_to: 42,
+  };
+  lose_and_capture(&fixture, &path, &env, &original);
+  let requests = fixture.requests().unwrap().len();
+  let changed = Target::Thread {
+    thread: "PRRT_a",
+    root: 99,
+    in_reply_to: 42,
+  };
+  let error = reply(
+    &recorded::client(&fixture),
+    &slot(&path, &env),
+    &changed,
+    "changed",
+  )
+  .unwrap_err();
+  assert_eq!(error.code, "slot_mismatch");
+  assert_eq!(error.extra["persistedRootCommentId"], 41);
+  assert_eq!(error.extra["requestedRootCommentId"], 99);
+  assert_eq!(fixture.requests().unwrap().len(), requests);
+  assert_eq!(posts(&fixture), 1);
+}
+
+#[test]
 fn a_definitive_refusal_leaves_a_prepared_intent_that_can_send() {
   let dir = TempDir::new().unwrap();
   let path = state(dir.path());

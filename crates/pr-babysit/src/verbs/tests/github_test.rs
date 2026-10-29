@@ -298,3 +298,6 @@ fn resolve_resolves_the_thread_and_records_it() {
   assert_eq!(exit, Exit::Success, "{done}");
   assert!(read(&state)["actions"]["resolved"].get("PRRT_a").is_some());
 }
+
+#[path = "reply_recovery_test.rs"]
+mod recovery_tests;

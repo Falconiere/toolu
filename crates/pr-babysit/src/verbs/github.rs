@@ -185,15 +185,21 @@ fn target(matches: &ArgMatches) -> Result<Target<'_>> {
 /// The one reply to a thread, conversation comment or review.
 pub(super) fn reply(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
   let state_file = required(matches, "state-file")?;
-  let body = reply_body(matches)?;
-  let to = target(matches)?;
+  let body = reply_body(matches);
+  let to = target(matches).map_err(|err| body.as_ref().err().cloned().unwrap_or(err))?;
   let now = now();
   let slot = Slot {
     path: state_file,
     env: world.env,
     now: &now,
   };
-  writes::reply(&client(matches, world, "reply")?, &slot, &to, &body)
+  match body {
+    Ok(body) => writes::reply(&client(matches, world, "reply")?, &slot, &to, &body),
+    Err(error) if state_file.is_file() => {
+      writes::reply_existing(&slot, &to, || client(matches, world, "reply"))?.ok_or(error)
+    }
+    Err(error) => Err(error),
+  }
 }
 
 /// Resolve a review thread and confirm it.

@@ -195,7 +195,9 @@ toolu babysit stop --state-file <path>
   target. One match records the remote `commentId`. An absent, ambiguous or
   unreadable result returns `reply_uncertain` (exit `75`) with `key`, `marker`,
   `stateFile` and `reason`; it keeps the `sending` intent and does not POST
-  again. Inspect GitHub and retry to reconcile. A definitive refusal leaves a
+  again. The `--body-file` argument remains required, but its file may be gone
+  or oversized on retry: the persisted intent supplies the original body.
+  Inspect GitHub and retry to reconcile. A definitive refusal leaves a
   `prepared` intent that can be sent later with its original body.
 - `toolu babysit resolve` returns `0` only after the mutation response shows
   `isResolved: true`; three false responses → `resolve_unconfirmed` (exit `75`), nothing recorded, and
