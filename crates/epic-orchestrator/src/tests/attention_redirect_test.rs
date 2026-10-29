@@ -286,7 +286,10 @@ fn a_no_live_agent_refusal_does_not_poison_a_later_admission() {
     json!({"error": "no live agent for a"})
   );
   assert_eq!(prompts(tmp.path()), [] as [Value; 0]);
-  assert!(named(&engine, "answer-admit").is_empty());
+  assert_eq!(
+    named(&engine, "answer-admit"),
+    [] as [(String, String, String); 0]
+  );
   report(&mut engine, "needs-human");
   assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
   assert_eq!(prompts(tmp.path()).len(), 1);
