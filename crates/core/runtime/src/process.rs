@@ -202,7 +202,6 @@ fn run_with_impl(
   let mut stderr = Drain::start(stderr_pipe, &budget, observer, Arc::clone(&cancel));
   let settled = settle(
     &mut child,
-    pid,
     [&stdout, &stderr],
     feeder.as_ref(),
     deadline,
@@ -308,12 +307,12 @@ fn command(program: &str, spec: &Spec) -> Command {
 /// `deadline`; past it, terminates the group and gives the streams a last moment to close.
 fn settle(
   child: &mut Child,
-  pid: u32,
   drains: [&Drain; 2],
   feeder: Option<&JoinHandle<Result<(), String>>>,
   deadline: Instant,
   spec: &Spec,
 ) -> Result<(ExitStatus, bool), RunError> {
+  let pid = child.id();
   let mut status = None;
   let mut next_group_check = Instant::now();
   loop {
