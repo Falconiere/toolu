@@ -1,7 +1,7 @@
 //! Herdr socket client and the CLI used when the server protocol is newer.
 
 use std::os::unix::net::UnixStream;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use serde_json::{Value, json};
@@ -182,29 +182,12 @@ fn connect(env: &Env, call: &Call) -> Result<UnixStream, String> {
 
 /// Where the herdr API socket lives for `env`.
 pub(crate) fn socket_path(env: &Env) -> PathBuf {
-  if let Some(path) = env.get("HERDR_SOCKET_PATH") {
-    return PathBuf::from(path);
-  }
-  let config = config_dir(env);
-  match session_name(env) {
-    Some(name) => config.join("sessions").join(name).join("herdr.sock"),
-    None => config.join("herdr.sock"),
-  }
+  toolu_mux::detect::socket_path(env)
 }
 
-fn config_dir(env: &Env) -> PathBuf {
-  match env.get("HERDR_CONFIG_PATH") {
-    Some(path) => Path::new(path)
-      .parent()
-      .map_or_else(|| PathBuf::from("."), Path::to_path_buf),
-    None => env.home().join(".config/herdr"),
-  }
-}
-
+/// The herdr session name from the env.
 pub(crate) fn session_name(env: &Env) -> Option<&str> {
-  env
-    .get("TOOLU_EPIC_HERDR_SESSION")
-    .or_else(|| env.get("HERDR_SESSION"))
+  toolu_mux::detect::session_name(env)
 }
 
 fn ping(stream: &mut UnixStream, id: &str) -> Result<u64, String> {

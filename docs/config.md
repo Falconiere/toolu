@@ -47,6 +47,7 @@ key under `epic` is refused: it belongs in `toolu/secrets.json`.
 ```json
 {
   "version": 1,
+  "multiplexer": "auto|herdr|tmux",
   "skills":  { "<name>": true | false },
   "agents":  { "<name>": true | false },
   "hooks":   { "<name>": true | false },
@@ -139,6 +140,16 @@ The loader validates each file's envelope, and bash never did:
 - An invalid value under a known key (a mode that is not a mode, a
   non-numeric threshold) still warns, where bash warns, and falls back for that
   key only.
+
+## Pane manager (`multiplexer`)
+
+The top-level `multiplexer` key selects which pane manager runs worker agents
+for the epic engine and PR babysitter. It is `"auto"` (the default), `"herdr"`,
+or `"tmux"`. `auto` prefers herdr and falls back to plain tmux when herdr is
+not reachable; a pinned value is used even when that manager is missing, so the
+engine can report the outage. When neither herdr nor tmux is installed, the
+doctor fails the epic-orchestrator check and warns for pr-babysit. The
+`TOOLU_EPIC_MULTIPLEXER` environment variable overrides the configured value.
 
 ## Epic engine settings and secrets
 

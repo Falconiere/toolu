@@ -189,6 +189,13 @@ fn a_git_better_section_is_a_known_key_the_loader_does_not_inspect() {
 }
 
 #[test]
+fn a_multiplexer_key_is_known_and_parsed() {
+  let (_dir, open) = loaded(None, Some(r#"{"version":1,"multiplexer":"tmux"}"#));
+  assert_eq!(open.invalid, None);
+  assert_eq!(open.data["multiplexer"], "tmux");
+}
+
+#[test]
 fn an_epic_section_is_never_inspected_but_a_sibling_unknown_key_fails() {
   let (_dir, open) = loaded(
     None,

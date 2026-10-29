@@ -1,5 +1,5 @@
 {
-  "core": [["protocol"], ["runtime"], ["shell", "http", "state"], ["engine", "github", "jev", "openrouter"]],
+  "core": [["protocol"], ["runtime"], ["shell", "http", "state"], ["engine", "github", "jev", "openrouter", "mux"]],
   "rules": ["ts-quality", "python-quality", "rust-quality", "ast-grep", "git-better"],
   "hub": "toolu",
   "binary": "cli",

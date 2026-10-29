@@ -10,6 +10,8 @@ pub mod epic;
 pub mod gate_mode;
 /// Configuration loading.
 pub mod load;
+/// The global pane-manager (multiplexer) selection.
+pub mod multiplexer;
 /// Host permission configuration.
 pub mod permissions;
 /// Quality rule configuration.

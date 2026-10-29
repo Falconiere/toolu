@@ -78,6 +78,7 @@
     "engine",
     "github",
     "jev",
-    "openrouter"
+    "openrouter",
+    "mux"
   ]
 }
