@@ -282,11 +282,8 @@ fn last_edit_records_probed_scales_with_one_probe_per_record() {
 fn batch_keeps_exact_paths_order_and_each_rules_hits() {
   let temp = tempfile::tempdir().unwrap();
   std::fs::create_dir(temp.path().join("nested")).unwrap();
-  std::fs::write(
-    temp.path().join("a.ts"),
-    "throw \"first\";\nthrow \"last\";\n",
-  )
-  .unwrap();
+  let body = "throw \"first\";\nthrow \"last\";\n";
+  std::fs::write(temp.path().join("a.ts"), body).unwrap();
   std::fs::write(temp.path().join("nested/a.ts"), "throw \"nested\";\n").unwrap();
   std::fs::write(temp.path().join("ba.ts"), "const ok = 1;\n").unwrap();
   let env = Env::process();
