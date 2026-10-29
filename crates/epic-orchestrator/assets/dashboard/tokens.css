@@ -1,7 +1,7 @@
 /* x-release-please-start-version */
 @font-face {
   font-family: Archivo;
-  src: url("/assets/8.6.0/fonts/archivo.woff2") format("woff2");
+  src: url("/assets/8.7.0/fonts/archivo.woff2") format("woff2");
   font-style: normal;
   font-weight: 400 600;
   font-display: swap;
@@ -9,7 +9,7 @@
 
 @font-face {
   font-family: "JetBrains Mono";
-  src: url("/assets/8.6.0/fonts/jetbrains-mono.woff2") format("woff2");
+  src: url("/assets/8.7.0/fonts/jetbrains-mono.woff2") format("woff2");
   font-style: normal;
   font-weight: 400 500;
   font-display: swap;
