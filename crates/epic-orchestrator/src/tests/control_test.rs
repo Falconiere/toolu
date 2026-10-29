@@ -6,7 +6,7 @@ use toolu_runtime::env::Env;
 
 use super::{
   attention_options, engine, ensure, epic_key, fault_of, http_config, register, registry_nonempty,
-  start,
+  start, with_configured_multiplexer,
 };
 use crate::disk::read_value;
 use crate::paths::Paths;
@@ -241,4 +241,37 @@ fn attention_options_follow_the_epic_attention_settings() {
   let notify = options.notify.expect("notifier");
   assert_eq!((notify.post, notify.herdr), (true, false));
   assert_eq!(notify.dashboard.as_deref(), Some("http://127.0.0.1:7800/"));
+}
+
+#[test]
+fn an_explicit_env_override_is_never_replaced() {
+  let env = Env::from_pairs([("TOOLU_EPIC_MULTIPLEXER", "herdr")]);
+  let resolved = with_configured_multiplexer(&env);
+  assert_eq!(resolved.get("TOOLU_EPIC_MULTIPLEXER"), Some("herdr"));
+}
+
+#[test]
+fn the_configured_multiplexer_is_read_from_the_config_file() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let config = tmp.path().join("config");
+  std::fs::create_dir_all(&config).expect("config dir");
+  std::fs::write(
+    config.join("toolu.config.json"),
+    r#"{"version":1,"multiplexer":"tmux"}"#,
+  )
+  .expect("config");
+  let env = Env::from_pairs([
+    ("HOME", tmp.path().display().to_string()),
+    ("TOOLU_CONFIG_DIR", config.display().to_string()),
+  ]);
+  let resolved = with_configured_multiplexer(&env);
+  assert_eq!(resolved.get("TOOLU_EPIC_MULTIPLEXER"), Some("tmux"));
+}
+
+#[test]
+fn an_absent_config_defaults_to_auto() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let env = Env::from_pairs([("HOME", tmp.path().display().to_string())]);
+  let resolved = with_configured_multiplexer(&env);
+  assert_eq!(resolved.get("TOOLU_EPIC_MULTIPLEXER"), Some("auto"));
 }

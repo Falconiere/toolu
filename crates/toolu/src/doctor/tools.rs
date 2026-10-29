@@ -10,104 +10,140 @@ use super::inventory::{Inventory, Plugin};
 struct Row {
   plugin: &'static str,
   tool: &'static str,
+  /// Other tools that also satisfy the row, checked as `tool OR any of these`.
+  alternatives: &'static [&'static str],
   required: bool,
   hint: &'static str,
+}
+
+impl Row {
+  /// `plugin needs tool` or `plugin needs tool or alt1 or alt2`.
+  fn needs(&self) -> String {
+    if self.alternatives.is_empty() {
+      format!("{} needs {}", self.plugin, self.tool)
+    } else {
+      let mut names = vec![self.tool];
+      names.extend(self.alternatives);
+      format!("{} needs {}", self.plugin, names.join(" or "))
+    }
+  }
+
+  /// Whether the tool or any alternative is on `PATH`.
+  fn available(&self, env: &Env) -> bool {
+    tool_available(self.tool, env) || self.alternatives.iter().any(|alt| tool_available(alt, env))
+  }
 }
 
 const ROWS: &[Row] = &[
   Row {
     plugin: "toolu",
     tool: "git",
+    alternatives: &[],
     required: true,
     hint: "install git",
   },
   Row {
     plugin: "pr-babysit",
     tool: "gh",
+    alternatives: &[],
     required: true,
     hint: "install the GitHub CLI: https://cli.github.com",
   },
   Row {
     plugin: "pr-babysit",
     tool: "git",
+    alternatives: &[],
     required: true,
     hint: "install git",
   },
   Row {
     plugin: "pr-babysit",
     tool: "herdr",
+    alternatives: &["tmux"],
     required: false,
-    hint: "install herdr",
+    hint: "install herdr or tmux",
   },
   Row {
     plugin: "epic-orchestrator",
     tool: "gh",
+    alternatives: &[],
     required: true,
     hint: "install the GitHub CLI: https://cli.github.com",
   },
   Row {
     plugin: "epic-orchestrator",
     tool: "git",
+    alternatives: &[],
     required: true,
     hint: "install git",
   },
   Row {
     plugin: "epic-orchestrator",
     tool: "herdr",
+    alternatives: &["tmux"],
     required: true,
-    hint: "install herdr",
+    hint: "install herdr or tmux",
   },
   Row {
     plugin: "toolu-review",
     tool: "git",
+    alternatives: &[],
     required: true,
     hint: "install git",
   },
   Row {
     plugin: "toolu-review",
     tool: "gh",
+    alternatives: &[],
     required: false,
     hint: "install the GitHub CLI: https://cli.github.com",
   },
   Row {
     plugin: "code-review",
     tool: "git",
+    alternatives: &[],
     required: true,
     hint: "install git",
   },
   Row {
     plugin: "ast-grep",
     tool: "ast-grep",
+    alternatives: &[],
     required: true,
     hint: "install ast-grep: https://ast-grep.github.io",
   },
   Row {
     plugin: "python-quality",
     tool: "python3",
+    alternatives: &[],
     required: false,
     hint: "install Python 3",
   },
   Row {
     plugin: "python-quality",
     tool: "ast-grep",
+    alternatives: &[],
     required: false,
     hint: "install ast-grep: https://ast-grep.github.io",
   },
   Row {
     plugin: "rust-quality",
     tool: "cargo",
+    alternatives: &[],
     required: false,
     hint: "install Rust: https://rustup.rs",
   },
   Row {
     plugin: "rust-quality",
     tool: "ast-grep",
+    alternatives: &[],
     required: false,
     hint: "install ast-grep: https://ast-grep.github.io",
   },
   Row {
     plugin: "ts-quality",
     tool: "node",
+    alternatives: &[],
     required: false,
     hint: "install Node.js",
   },
@@ -118,6 +154,7 @@ const ROWS: &[Row] = &[
 const MACOS_ROWS: &[Row] = &[Row {
   plugin: "sandbox",
   tool: "limactl",
+  alternatives: &[],
   required: false,
   hint: "install Lima 2 for toolu sandbox: brew install lima",
 }];
@@ -134,7 +171,7 @@ fn check_on(inventory: &Inventory, env: &Env, os: &str) -> Check {
   let mut missing: Vec<&Row> = ROWS
     .iter()
     .chain(platform)
-    .filter(|row| names.contains(&row.plugin) && !tool_available(row.tool, env))
+    .filter(|row| names.contains(&row.plugin) && !row.available(env))
     .collect();
   missing.sort_by_key(|row| !row.required);
   if missing.is_empty() {
@@ -149,7 +186,7 @@ fn check_on(inventory: &Inventory, env: &Env, os: &str) -> Check {
   let required = missing.iter().any(|row| row.required);
   let summary = missing
     .iter()
-    .map(|row| format!("{} needs {}", row.plugin, row.tool))
+    .map(|row| row.needs())
     .collect::<Vec<_>>()
     .join("; ");
   let hint = missing

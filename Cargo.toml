@@ -16,6 +16,7 @@ members = [
   "crates/core/github",
   "crates/core/jev",
   "crates/core/openrouter",
+  "crates/core/mux",
   "crates/http-test-support",
   "crates/cli",
   "crates/xtask",

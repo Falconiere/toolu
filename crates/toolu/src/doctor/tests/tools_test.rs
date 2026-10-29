@@ -50,8 +50,19 @@ fn a_missing_optional_tool_warns_when_required_tools_exist() {
   let inventory = named(&["pr-babysit"]);
   let check = check(&inventory, &env(dir.path().to_str().unwrap()));
   assert_eq!(check.status, Status::Warn);
-  assert_eq!(check.summary, "pr-babysit needs herdr");
-  assert_eq!(check.hint.as_deref(), Some("install herdr"));
+  assert_eq!(check.summary, "pr-babysit needs herdr or tmux");
+  assert_eq!(check.hint.as_deref(), Some("install herdr or tmux"));
+}
+
+#[test]
+fn tmux_satisfies_the_herdr_row() {
+  let dir = tempfile::tempdir().unwrap();
+  std::fs::write(dir.path().join("git"), "").unwrap();
+  std::fs::write(dir.path().join("gh"), "").unwrap();
+  std::fs::write(dir.path().join("tmux"), "").unwrap();
+  let inventory = named(&["epic-orchestrator"]);
+  let check = check(&inventory, &env(dir.path().to_str().unwrap()));
+  assert_eq!(check.status, Status::Ok);
 }
 
 #[test]
