@@ -140,7 +140,7 @@ fn an_admit_older_than_the_tail_window_does_not_dedupe() {
   let journal = engine.paths.journal_dir();
   std::fs::create_dir_all(&journal).expect("journal");
   let fp = super::fingerprint("a", "take B");
-  let old = UNIX_EPOCH + Duration::from_secs(1_577_836_800); // 2020-01-01
+  let old = UNIX_EPOCH + Duration::from_hours(438_288); // 2020-01-01 UTC
   let line = json!({
     "seq": 1,
     "at": "2020-01-01T00:00:00.000Z",
