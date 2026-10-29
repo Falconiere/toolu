@@ -41,10 +41,16 @@ fn answer_redirects_a_live_worker_with_no_open_item() {
   assert_eq!(prompts(tmp.path()).len(), 1);
   let sent: Vec<(String, String)> = rows(&engine)
     .into_iter()
-    .filter(|row| row.name == "answer")
+    .filter(|row| row.kind == "prompt" && row.name == "answer")
     .map(|row| (row.key, row.note))
     .collect();
   assert_eq!(sent, [("a".to_owned(), "NEW DIRECTION".to_owned())]);
+  let action: Vec<(String, String)> = rows(&engine)
+    .into_iter()
+    .filter(|row| row.kind == "action" && row.name == "answer")
+    .map(|row| (row.token, row.note))
+    .collect();
+  assert_eq!(action, [("".to_owned(), "by=user".to_owned())]);
   let directed: Vec<String> = rows(&engine)
     .into_iter()
     .filter(|row| row.name == "directed")
