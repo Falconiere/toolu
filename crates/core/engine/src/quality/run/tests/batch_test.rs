@@ -9,7 +9,7 @@ use toolu_state::gate_file::{GateRead, read_gate_file};
 use toolu_state::gate_schema::GateFile;
 
 use super::super::tests::Inline;
-use super::{QualityBatch, QualityBinding};
+use super::{AstGrepScan, EditedFile, QualityBatch, QualityBinding, scan_batch_with_fallback};
 
 fn gate_paths(gate: &Path) -> Vec<String> {
   let GateRead::Ok(GateFile::Failing {
@@ -117,4 +117,36 @@ fn a_changed_file_is_rescanned_for_each_reached_path_spelling() {
   ));
   let gate = root.join(".claude/tmp/quality-gate-status.json");
   assert_eq!(gate_paths(&gate), ["same.ts", absolute.as_str()]);
+}
+
+#[test]
+fn combined_scan_overflow_retries_each_file() {
+  let temp = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(temp.path()).unwrap();
+  let source = "throw \"x\";\n".repeat(4000);
+  let files: Vec<EditedFile> = ["a.ts", "b.ts"]
+    .into_iter()
+    .map(|path| {
+      let absolute = root.join(path);
+      std::fs::write(&absolute, &source).unwrap();
+      EditedFile {
+        path: path.to_owned(),
+        absolute,
+        removed: false,
+      }
+    })
+    .collect();
+  let env = Env::process();
+  let raw = Map::new();
+  let ctx = context(&root, &env, &raw);
+  let inline = Inline("throw-test", "throw-test");
+  let (scan, _, fallback) = scan_batch_with_fallback(&[&inline], &files, &ctx);
+  assert!(super::super::super::scan::output_limited(&scan));
+  assert_eq!(fallback.len(), 2);
+  for file in &files {
+    let Some(AstGrepScan::Ok { hits, .. }) = fallback.get(&file.path) else {
+      panic!("file scan did not recover: {}", file.path);
+    };
+    assert_eq!(hits.len(), 4000);
+  }
 }

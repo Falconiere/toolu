@@ -63,6 +63,13 @@ pub enum AstGrepScan {
   Failed(ScanFailure),
 }
 
+const OUTPUT_LIMIT: &str = "ast-grep output exceeded limit";
+
+/// Whether only the combined output limit, rather than a rule or tool, failed.
+pub(super) fn output_limited(scan: &AstGrepScan) -> bool {
+  matches!(scan, AstGrepScan::Failed(failure) if failure.stage == ScanStage::AstGrep && failure.stderr_first == OUTPUT_LIMIT)
+}
+
 /// Move successful scan hits into exact-path groups, preserving encounter order.
 pub fn partition_hits(scan: &mut AstGrepScan) -> HashMap<String, Vec<AstGrepHit>> {
   let mut by_path: HashMap<String, Vec<AstGrepHit>> = HashMap::new();
@@ -176,7 +183,7 @@ fn parse(output: &Output) -> AstGrepScan {
     let reason = if output.timed_out {
       "ast-grep timed out"
     } else if output.truncated {
-      "ast-grep output exceeded limit"
+      OUTPUT_LIMIT
     } else {
       &output.stderr
     };

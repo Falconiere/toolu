@@ -12,30 +12,14 @@ use toolu_state::ctx::StateCtx;
 use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::clear_gate_file;
 
-use super::super::scan::scan_rules;
 use super::{
   AstGrepHit, AstGrepScan, EditedFile, QualityBinding, QualityRule, edited_record, file_scan, owns,
-  partition_hits, selected_facts, settle,
+  selected_facts, settle,
 };
 
-/// One ast-grep scan of `live` with every enabled rule's YAML, directories and inline.
-pub(super) fn batch_scan(
-  enabled: &[&dyn QualityRule],
-  live: &[EditedFile],
-  ctx: &RuleContext<'_>,
-) -> AstGrepScan {
-  let dirs: Vec<PathBuf> = enabled
-    .iter()
-    .flat_map(|rule| rule.ast_rule_dirs())
-    .collect();
-  let paths: Vec<&Path> = dirs.iter().map(PathBuf::as_path).collect();
-  let inline: Vec<String> = enabled
-    .iter()
-    .map(|rule| rule.ast_rules_inline(ctx))
-    .filter(|rules| !rules.is_empty())
-    .collect();
-  scan_rules(live, &paths, &inline, ctx)
-}
+mod scan;
+use scan::batch_scan;
+pub(super) use scan::scan_batch_with_fallback;
 
 struct PreparedFile {
   file: EditedFile,
@@ -49,9 +33,10 @@ struct Prepared {
   enabled: Vec<usize>,
   scan: AstGrepScan,
   by_path: HashMap<String, Vec<AstGrepHit>>,
+  fallback: HashMap<String, AstGrepScan>,
   fingerprints: HashMap<String, Option<u64>>,
   checked: HashSet<usize>,
-  rescanned: HashMap<String, (AstGrepScan, HashMap<String, Vec<AstGrepHit>>)>,
+  rescanned: HashMap<String, AstGrepScan>,
   state: StateCtx,
 }
 
@@ -117,6 +102,7 @@ impl Prepared {
     if enabled != self.enabled {
       self.enabled = enabled;
       self.fingerprints.clear();
+      self.fallback.clear();
       self.rescanned.clear();
     }
     let rules: Vec<&dyn QualityRule> = self
@@ -143,9 +129,8 @@ impl Prepared {
     if self.fingerprints.get(&path).copied() == Some(current) {
       return;
     }
-    let mut scan = batch_scan(&rules, std::slice::from_ref(&facts.file), ctx);
-    let by_path = partition_hits(&mut scan);
-    self.rescanned.insert(path.clone(), (scan, by_path));
+    let scan = batch_scan(&rules, std::slice::from_ref(&facts.file), ctx);
+    self.rescanned.insert(path.clone(), scan);
     self.fingerprints.insert(path, current);
   }
 
@@ -175,13 +160,12 @@ impl Prepared {
     } else if rule.skip_linked_worktrees() && facts.linked {
       Decision::Allow
     } else {
-      let (scan, by_path) = self
+      let scan = self
         .rescanned
         .get(&facts.file.path)
-        .map_or((&self.scan, &self.by_path), |(scan, by_path)| {
-          (scan, by_path)
-        });
-      let scan = file_scan(scan, by_path, &facts.file);
+        .or_else(|| self.fallback.get(&facts.file.path))
+        .cloned()
+        .unwrap_or_else(|| file_scan(&self.scan, &self.by_path, &facts.file));
       let findings = rule.check(&facts.file, ctx, &scan);
       settle(&facts.file, rule, &facts.gate, &mut self.state, findings)
     }
@@ -239,8 +223,7 @@ impl QualityBatch {
       })
       .map(|facts| facts.file.clone())
       .collect();
-    let mut scan = batch_scan(&rules, &live, ctx);
-    let by_path = partition_hits(&mut scan);
+    let (scan, by_path, fallback) = scan_batch_with_fallback(&rules, &live, ctx);
     let fingerprints = live
       .iter()
       .map(|file| (file.path.clone(), fingerprint(&file.absolute)))
@@ -251,6 +234,7 @@ impl QualityBatch {
       enabled,
       scan,
       by_path,
+      fallback,
       fingerprints,
       checked: HashSet::new(),
       rescanned: HashMap::new(),

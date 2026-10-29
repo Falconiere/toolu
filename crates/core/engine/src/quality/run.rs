@@ -14,7 +14,6 @@ use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
 use super::edit::edited_record;
-use super::scan::partition_hits;
 use super::{
   AstGrepHit, AstGrepScan, EditedFile, QualityBinding, edited_file, in_linked_worktree,
   is_regular_file,
@@ -249,8 +248,7 @@ fn run_files(
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
   let facts = selected_facts(files, &enabled, ctx, &state.roots);
   let live = live_files(&facts, &enabled);
-  let mut scan = batch_scan(&enabled, &live, ctx);
-  let by_path = partition_hits(&mut scan);
+  let (scan, by_path, fallback) = scan_batch_with_fallback(&enabled, &live, ctx);
   let mut decisions = Vec::new();
   for facts in facts {
     let file = facts.file;
@@ -261,7 +259,11 @@ fn run_files(
       if file.removed {
         clear_gate_file(&mut state, &facts.gate, &file.path, rule.source());
       } else if !(rule.skip_linked_worktrees() && facts.linked) {
-        let findings = rule.check(file, ctx, &file_scan(&scan, &by_path, file));
+        let scanned = fallback
+          .get(&file.path)
+          .cloned()
+          .unwrap_or_else(|| file_scan(&scan, &by_path, file));
+        let findings = rule.check(file, ctx, &scanned);
         decisions.push(settle(file, *rule, &facts.gate, &mut state, findings));
       }
     }
@@ -275,7 +277,7 @@ fn run_files(
 mod batch;
 
 pub(crate) use batch::QualityBatch;
-use batch::batch_scan;
+use batch::scan_batch_with_fallback;
 
 /// Last occurrence of each exact `path`, counting one membership probe per record.
 fn last_edit_records_probed<'a>(
