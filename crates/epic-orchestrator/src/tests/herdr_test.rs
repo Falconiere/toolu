@@ -250,3 +250,22 @@ fn a_socket_read_past_its_deadline_reads_as_timed_out() {
   );
   drop(peer.join());
 }
+
+#[test]
+fn on_socket_phase_tags_from_real_transport_errors_drive_uncertain() {
+  // AF_UNIX on macOS does not RST via SO_LINGER, so Client::execute cannot
+  // force a post-write reset. Compose the same `write:` / `read:` tags
+  // `on_socket` applies around real transport Err values from a pair.
+  let (mut ours, peer) = std::os::unix::net::UnixStream::pair().expect("pair");
+  drop(peer);
+  let write_err = write_json(&mut ours, &json!({"id": 1})).expect_err("broken pipe");
+  let write_tagged = format!("write: {write_err}");
+  assert!(
+    !crate::attention_ops::uncertain(&write_tagged),
+    "{write_tagged}"
+  );
+
+  // Read-side reset text is what `on_socket` prefixes; covered live in redirect tests.
+  let read_tagged = "read: Connection reset by peer (os error 54)".to_owned();
+  assert!(crate::attention_ops::uncertain(&read_tagged), "{read_tagged}");
+}
