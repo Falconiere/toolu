@@ -244,6 +244,28 @@ fn executable(run: &mut Run<'_>, entry: &Entry) {
   run.out.push(folded);
 }
 
+fn quality_decision(run: &Run<'_>, spec: &str, name: &str) -> Option<(Decision, Vec<String>)> {
+  let (quality, record) = run.walk.quality?;
+  let binding = run.active_quality.iter().copied().find(|index| {
+    run
+      .walk
+      .session
+      .options
+      .quality_rules
+      .get(*index)
+      .is_some_and(|binding| binding.spec == spec && binding.name == name)
+  })?;
+  Some(quality.borrow_mut().decide(
+    record,
+    (
+      binding,
+      run.active_quality,
+      run.walk.session.options.quality_rules,
+    ),
+    run.walk.ctx,
+  ))
+}
+
 /// One manifest: read, matcher, rule, `applies`, then the rule's decision.
 fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   let (manifest, rule) = match manifests.get(&entry.file) {
@@ -268,30 +290,13 @@ fn manifest(run: &mut Run<'_>, manifests: &Manifests<'_>, entry: &Entry) {
   }
   if !run.stopped {
     let mut warnings = Vec::new();
-    let binding = run.active_quality.iter().copied().find(|index| {
-      run
-        .walk
-        .session
-        .options
-        .quality_rules
-        .get(*index)
-        .is_some_and(|binding| binding.spec == manifest.spec && binding.name == manifest.name)
-    });
-    let decision = if let (Some((quality, record)), Some(binding)) = (run.walk.quality, binding) {
-      let (decision, lines) = quality.borrow_mut().decide(
-        record,
-        (
-          binding,
-          run.active_quality,
-          run.walk.session.options.quality_rules,
-        ),
-        run.walk.ctx,
-      );
-      warnings.extend(lines);
-      decision
-    } else {
-      rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings)
-    };
+    let decision =
+      if let Some((decision, lines)) = quality_decision(run, &manifest.spec, &manifest.name) {
+        warnings.extend(lines);
+        decision
+      } else {
+        rule.run_warning(&run.walk.view.event, run.walk.ctx, &mut warnings)
+      };
     for line in &warnings {
       run.warn(line);
     }
