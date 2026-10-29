@@ -10,7 +10,7 @@ Keep the project review usage log bounded while preserving complete JSONL rows i
 
 `pipeline/state.rs::log_usage` currently appends one row to an unbounded file. `persist` already adds a blocker when the write fails. `shape/dirty.rs` excludes that exact file. `toolu_state::lock::with_lock_strict` provides a shared strict lock protocol; use it with a long stale interval so a live cleanup cannot lose ownership. Jev favored size-based rotation over age-only retention or rewriting a single file (0.92 relative probability).
 
-Rotate before a row would exceed 1 MiB, retain four archived generations plus the active file, and reject a row larger than 1 MiB. Keep archives in a dedicated `code-review-usage/` directory with monotonically numbered names. Delete the oldest complete archives under the same lock before rotating. An already oversized legacy active file is outside the new retention limit and is reclaimed on its first rotation.
+Rotate before a row would exceed 1 MiB, retain four archived generations plus the active file, and reject a row larger than 1 MiB. Keep archives in a dedicated `code-review-usage/` directory with monotonically numbered names. Delete the oldest complete archives under the same lock after appending. An already oversized legacy active file is outside the new retention limit and is reclaimed on its first rotation.
 
 ## Boundaries and risk
 

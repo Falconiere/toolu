@@ -14,7 +14,7 @@ Each review appends a usage row to project state without any retention limit. Lo
 
 ## Architecture
 
-Keep `code-review-usage.jsonl` as the active append-only file. Under `with_lock_strict`, serialize each row first, reject a row over 1 MiB, and rotate before the append would exceed 1 MiB. Move a full active file to `code-review-usage/<sequence>.jsonl`; keep the four newest complete archives. Reclaim oldest archives under the same lock before moving the active file. An oversized pre-policy active file is reclaimed at its first rotation because it cannot fit a bounded generation. Preserve `persist`'s existing error-to-blocker path.
+Keep `code-review-usage.jsonl` as the active append-only file. Serialize each row and reject one over 1 MiB before acquiring `with_lock_strict`. Under the lock, rotate before the append would exceed 1 MiB. Move a full active file to `code-review-usage/<sequence>.jsonl`; after appending, reclaim the oldest archives under the same lock to keep the four newest complete archives. An oversized pre-policy active file is reclaimed at its first rotation because it cannot fit a bounded generation. Preserve `persist`'s existing error-to-blocker path.
 
 Use a stale lock interval long enough for a live writer and a five-second acquisition timeout; a busy or unavailable lock fails the write. The exact active file and lock, plus archived `*.jsonl` files, are the only new dirty-probe exclusions. An unrelated file in the archive directory remains dirty.
 
