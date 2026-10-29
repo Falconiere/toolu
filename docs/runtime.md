@@ -75,8 +75,8 @@ host verification limits and recovery.
 `toolu_runtime::process::run` starts a subprocess in its own process group and
 drains stdout and stderr while feeding stdin. A descendant that calls `setsid`
 can escape that group and hold an inherited pipe open. The runtime uses
-nonblocking pipe I/O and returns successfully only after stdin feeding and
-output draining finish (and, in group mode, the process group exits). A slow
+nonblocking pipe I/O and completes without a timeout only after stdin feeding
+and output draining finish (and, in group mode, the process group exits). A slow
 escaped stdin reader may keep the call active up to the command deadline. After
 a handled timeout, an unfinished feeder gets up to 250 ms to complete; then the
 runtime cancels the workers and waits for them against one shared 250 ms cleanup
