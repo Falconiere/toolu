@@ -1,5 +1,6 @@
 //! Secret redaction for complete fields and bounded log pages.
 
+use ring::digest::{Context, SHA256};
 use serde_json::Value;
 
 use super::epic::credential_key;
@@ -13,6 +14,18 @@ pub fn redact_text(text: &str, secrets: &Secrets) -> String {
     .fold(text.to_owned(), |shown, value| {
       shown.replace(value, REDACTED)
     })
+}
+
+/// Change when any current or shadowed redaction value changes.
+pub fn redaction_fingerprint(secrets: &Secrets) -> [u8; 32] {
+  let mut hash = Context::new(&SHA256);
+  for value in secrets.values() {
+    hash.update(&value.len().to_le_bytes());
+    hash.update(value.as_bytes());
+  }
+  let mut fingerprint = [0; 32];
+  fingerprint.copy_from_slice(hash.finish().as_ref());
+  fingerprint
 }
 
 /// Bytes of context needed on each side of a page to detect split secrets.
