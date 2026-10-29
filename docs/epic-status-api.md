@@ -130,7 +130,7 @@ A `POST` without `Content-Length` is `400`, and a larger body is `413`.
 
 Replies:
 
-- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`), a flush or post-write socket failure after the prompt, or a reply the HTTP handler never received after the state loop took the request, replies `{"ok": true, "delivered": "uncertain", "note": …}` and leaves the attention item open when delivery was uncertain.
+- **`200`:** the engine's reply, which has no `schema` field. An `answer` whose delivery herdr cannot confirm (`timeout` or `agent_prompt_stalled`), a flush failure after the prompt, a connection reset after a possibly completed write, or a reply the HTTP handler never received after the state loop took the request, replies `{"ok": true, "delivered": "uncertain", "note": …}` and leaves the attention item open when delivery was uncertain. An EPIPE (`broken pipe`) while writing the prompt is a plain engine refusal so the same `submission_id` may retry.
 - **`409`:** an engine refusal such as `no live agent for <key>`, `<key> is not held`, or `submission_id reuse with different payload`. The body is `{"schema": 1, "error": <text>}`.
 - **`503 engine_busy`:** the request was never admitted (no control sender, or the state-loop send failed). Once the state loop has taken the request, a missed reply deadline is `200` with `delivered: uncertain`, not `503`. The server never retries.
 

@@ -121,15 +121,15 @@ fn herdr_timeout_and_stall_errors_are_uncertain_and_others_are_not() {
 #[test]
 fn post_write_socket_failures_are_uncertain_and_pre_send_ones_are_not() {
   for err in [
-    "write: Broken pipe (os error 32)",
     "read: connection reset by peer",
     "read: Connection reset by peer (os error 104)",
     "read: Connection reset by peer (os error 54)",
-    "send: broken pipe",
   ] {
     assert!(super::uncertain(err), "{err}");
   }
   for err in [
+    "write: Broken pipe (os error 32)",
+    "send: broken pipe",
     "connect: Connection refused (os error 61)",
     "connect: No such file or directory (os error 2)",
     "no live agent for a",

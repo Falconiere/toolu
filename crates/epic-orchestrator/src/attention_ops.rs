@@ -240,8 +240,11 @@ fn deliver(engine: &mut Engine, answer: &Answer<'_>, reply: &Sender<Value>) {
 /// Whether a failed prompt may still have reached the worker, by the rules
 /// `herdr_calls` marks `uncertain`: herdr's `timeout` and
 /// `agent_prompt_stalled` codes (as `result_of` formats them), a transport
-/// deadline, a scripted `uncertain` outcome, or a socket that broke after the
-/// write (`broken pipe`, `connection reset`, errno 32 or 104).
+/// deadline, a scripted `uncertain` outcome, or a connection reset after a
+/// possibly completed write (macOS `os error 54`, Linux `os error 104`).
+/// An EPIPE (`broken pipe` / `os error 32`) is a definite write rejection, not
+/// uncertain: `attempt` records `answer-refused` so the same submission id may
+/// prompt again.
 pub(crate) fn uncertain(err: &str) -> bool {
   let lower = err.to_ascii_lowercase();
   crate::herdr_calls::timed_out(err)
@@ -249,9 +252,7 @@ pub(crate) fn uncertain(err: &str) -> bool {
       ": timeout:",
       ": agent_prompt_stalled:",
       "prompt uncertain",
-      "broken pipe",
       "connection reset",
-      "os error 32",
       "os error 54",
       "os error 104",
     ]
