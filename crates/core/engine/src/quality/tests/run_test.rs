@@ -46,7 +46,7 @@ impl QualityRule for Rule {
   }
 }
 
-struct Inline(&'static str, &'static str);
+pub(super) struct Inline(pub(super) &'static str, pub(super) &'static str);
 
 impl QualityRule for Inline {
   fn language(&self) -> &'static str {

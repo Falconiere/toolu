@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use serde_json::Map;
 use toolu_protocol::host::Host;
@@ -8,51 +8,8 @@ use toolu_state::edit_records::{EditOperation, EditRecord};
 use toolu_state::gate_file::{GateRead, read_gate_file};
 use toolu_state::gate_schema::GateFile;
 
-use super::{AstGrepScan, EditedFile, QualityBatch, QualityBinding, QualityRule};
-use crate::quality::QualityFindings;
-
-struct ThrowRule;
-
-impl QualityRule for ThrowRule {
-  fn language(&self) -> &'static str {
-    "ts"
-  }
-  fn extensions(&self) -> &[&str] {
-    &["ts"]
-  }
-  fn source(&self) -> &'static str {
-    "throw-test"
-  }
-  fn reason(&self) -> &'static str {
-    "throw found"
-  }
-  fn project_enabled(&self, _ctx: &RuleContext<'_>) -> bool {
-    true
-  }
-  fn skip_linked_worktrees(&self) -> bool {
-    false
-  }
-  fn ast_rule_dirs(&self) -> Vec<PathBuf> {
-    Vec::new()
-  }
-  fn ast_rules_inline(&self, _ctx: &RuleContext<'_>) -> String {
-    "id: throw-test\nlanguage: ts\nseverity: warning\nmessage: x\nrule:\n  pattern: 'throw \"$S\"'\n".to_owned()
-  }
-  fn check(
-    &self,
-    _file: &EditedFile,
-    _ctx: &RuleContext<'_>,
-    scan: &AstGrepScan,
-  ) -> QualityFindings {
-    let AstGrepScan::Ok { hits, .. } = scan else {
-      panic!("{scan:?}")
-    };
-    QualityFindings {
-      errors: hits.iter().map(|hit| hit.excerpt.clone()).collect(),
-      advisories: Vec::new(),
-    }
-  }
-}
+use super::super::tests::Inline;
+use super::{QualityBatch, QualityBinding};
 
 fn gate_paths(gate: &Path) -> Vec<String> {
   let GateRead::Ok(GateFile::Failing {
@@ -89,10 +46,11 @@ fn gate_entries_are_written_only_when_each_path_is_reached() {
     from: None,
     moved_to: None,
   });
+  let inline = Inline("throw-test", "throw-test");
   let binding = [QualityBinding {
     spec: "x@t",
     name: "throw",
-    rule: &ThrowRule as &dyn QualityRule,
+    rule: &inline,
   }];
   let mut batch = QualityBatch::new(&records);
   let gate = root.join(".claude/tmp/quality-gate-status.json");
