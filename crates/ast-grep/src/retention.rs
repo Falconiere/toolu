@@ -30,7 +30,9 @@ pub(crate) fn sweep_dir(dir: &Path, active_session: Option<&str>, now: SystemTim
   let Some(ledgers) = list_ledgers(dir, &mut warnings) else {
     return warnings;
   };
-  let active = active_session.map(str::to_owned).filter(|id| !id.is_empty());
+  let active = active_session
+    .map(str::to_owned)
+    .filter(|id| !id.is_empty());
   remove_cold(&ledgers, active.as_deref(), now, &mut warnings);
   enforce_capacity(&ledgers, active.as_deref(), &mut warnings);
   warnings
@@ -53,7 +55,10 @@ fn list_ledgers(dir: &Path, warnings: &mut Vec<String>) -> Option<Vec<PathBuf>> 
           ledgers.push(path);
         }
       }
-      Err(_) => warnings.push(format!("{WARN}: could not read an entry in {}", dir.display())),
+      Err(_) => warnings.push(format!(
+        "{WARN}: could not read an entry in {}",
+        dir.display()
+      )),
     }
   }
   Some(ledgers)
@@ -105,7 +110,9 @@ fn is_active(path: &Path, active: Option<&str>) -> bool {
 
 fn is_cold(path: &Path, now: SystemTime, warnings: &mut Vec<String>) -> bool {
   match modified(path, warnings) {
-    Some(mtime) => now.duration_since(mtime).is_ok_and(|age| age > BYTE_SAVINGS_RETENTION),
+    Some(mtime) => now
+      .duration_since(mtime)
+      .is_ok_and(|age| age > BYTE_SAVINGS_RETENTION),
     None => false,
   }
 }
@@ -126,7 +133,10 @@ fn stem_id(path: &Path) -> Option<&str> {
 
 fn remove(path: &Path, warnings: &mut Vec<String>) {
   if let Err(err) = fs::remove_file(path) {
-    warnings.push(format!("{WARN}: could not remove {}: {err}", path.display()));
+    warnings.push(format!(
+      "{WARN}: could not remove {}: {err}",
+      path.display()
+    ));
   }
 }
 

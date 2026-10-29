@@ -8,8 +8,8 @@ use std::time::{Duration, SystemTime};
 use toolu_runtime::env::Env;
 
 use super::{
-  BYTE_SAVINGS_MAX_COMPLETED, BYTE_SAVINGS_RETENTION, active_session_from_payload, sweep_dir,
-  sweep_byte_savings,
+  BYTE_SAVINGS_MAX_COMPLETED, BYTE_SAVINGS_RETENTION, active_session_from_payload,
+  sweep_byte_savings, sweep_dir,
 };
 use crate::report::{parse, read_ledger, render};
 use crate::savings::byte_savings_dir;
@@ -23,9 +23,7 @@ fn put(path: &Path, body: &str, age: Duration) {
   }
   fs::write(path, body).expect("write");
   let file = File::options().write(true).open(path).expect("open");
-  file
-    .set_modified(SystemTime::now() - age)
-    .expect("mtime");
+  file.set_modified(SystemTime::now() - age).expect("mtime");
 }
 
 fn ledger(dir: &Path, stem: &str) -> PathBuf {
@@ -49,12 +47,24 @@ fn sweep_deletes_cold_keeps_active_and_caps_completed() {
   let dir = root.path().join("toolu/byte-savings");
   fs::create_dir_all(&dir).expect("dir");
   for i in 0..70 {
-    put(&ledger(&dir, &format!("cold-{i}")), LINE, BYTE_SAVINGS_RETENTION + DAY);
+    put(
+      &ledger(&dir, &format!("cold-{i}")),
+      LINE,
+      BYTE_SAVINGS_RETENTION + DAY,
+    );
   }
   for i in 0..10 {
-    put(&ledger(&dir, &format!("hot-{i}")), LINE, Duration::from_secs(60));
+    put(
+      &ledger(&dir, &format!("hot-{i}")),
+      LINE,
+      Duration::from_secs(60),
+    );
   }
-  put(&ledger(&dir, "active-session"), LINE, BYTE_SAVINGS_RETENTION + DAY * 30);
+  put(
+    &ledger(&dir, "active-session"),
+    LINE,
+    BYTE_SAVINGS_RETENTION + DAY * 30,
+  );
   let before = count_jsonl(&dir);
   assert_eq!(before, 81);
   let warnings = sweep_dir(&dir, Some("active-session"), SystemTime::now());
@@ -105,11 +115,7 @@ fn retained_ledger_bytes_and_savings_report_unchanged() {
     body.push_str(LINE);
   }
   put(&retained, &body, Duration::from_secs(30));
-  put(
-    &ledger(&dir, "cold"),
-    LINE,
-    BYTE_SAVINGS_RETENTION + DAY,
-  );
+  put(&ledger(&dir, "cold"), LINE, BYTE_SAVINGS_RETENTION + DAY);
   let before = fs::read(&retained).expect("read");
   let report_before = render(&parse(&read_ledger(&retained).expect("ledger")).expect("parse"));
   assert!(sweep_dir(&dir, Some("keep-me"), SystemTime::now()).is_empty());
@@ -132,10 +138,7 @@ fn concurrent_append_on_active_ledger_loses_no_line() {
     let barrier = Arc::clone(&barrier);
     thread::spawn(move || {
       barrier.wait();
-      let mut file = File::options()
-        .append(true)
-        .open(&*active)
-        .expect("append");
+      let mut file = File::options().append(true).open(&*active).expect("append");
       for _ in 0..200 {
         file.write_all(LINE.as_bytes()).expect("write");
       }
@@ -199,9 +202,17 @@ fn retention_churn_bounds_completed_ledgers() {
     );
   }
   for i in 0..10 {
-    put(&ledger(&dir, &format!("hot-{i}")), LINE, Duration::from_secs(30));
+    put(
+      &ledger(&dir, &format!("hot-{i}")),
+      LINE,
+      Duration::from_secs(30),
+    );
   }
-  put(&ledger(&dir, "active"), LINE, BYTE_SAVINGS_RETENTION + DAY * 40);
+  put(
+    &ledger(&dir, "active"),
+    LINE,
+    BYTE_SAVINGS_RETENTION + DAY * 40,
+  );
   let before_count = count_jsonl(&dir);
   let before_bytes: u64 = fs::read_dir(&dir)
     .expect("list")
