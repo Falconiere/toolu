@@ -14,7 +14,7 @@ Fields not listed are not part of the contract.
 | `toolu babysit wait` | **The read side the workflow runs.** Ticks every 180 s on the slot's fixed schedule, in its own process, and prints the first result that needs the agent — or the waiting document at its deadline. |
 | `toolu babysit collect` | Read side: PR metadata, review threads (paginated, nested comment pages), issue comments, reviews; head re-checked after the fan-out; bot verdict parsed. Prints or writes one snapshot. |
 | `toolu babysit reduce-state` | Pure decision layer: snapshot + prior state + `--now` → next state + result. No network, no clock. |
-| `toolu babysit reply` | Write side: post one reply (thread / conversation / review-level), idempotent per reviewer comment. |
+| `toolu babysit reply` | Write side: persist an intent, post one reply (thread / conversation / review-level), and reconcile uncertain delivery. |
 | `toolu babysit resolve` | Write side: `resolveReviewThread`, confirmed from the response, retried, recorded. |
 | `toolu babysit record` | Hand agent decisions to the reducer: `round`, `flag-injection`, `status`. |
 | `toolu babysit stop` | `dispatch-fix cleanup`, then `record status --status cancelled`. |
@@ -25,14 +25,15 @@ Fields not listed are not part of the contract.
 
 Exit codes, for every command: `0` result · `64` usage · `69`
 `gh_unavailable` (no GitHub token) or `herdr_unavailable` · `75` `locked`,
-`api_error`, `head_moved` or `resolve_unconfirmed` (try again later) · `1`
+`api_error`, `head_moved`, `resolve_unconfirmed`, `reply_uncertain` or
+`reply_retry_ready` (temporary outcome; follow the error message) · `1`
 every other structured error.
 
 Structured errors are one JSON document on stdout:
 `{"version":1,"errors":[{"code":"…","message":"…", …}]}`. `code` is a closed set:
 `usage`, `gh_unavailable`, `api_error`, `invalid_json`, `io_error`,
 `head_moved`, `state_malformed`, `slot_mismatch`, `locked`, `duplicate_reply`,
-`resolve_unconfirmed` — plus, from fixer routing and dispatch:
+`resolve_unconfirmed`, `reply_uncertain`, `reply_retry_ready` — plus, from fixer routing and dispatch:
 `config_invalid`, `plan_invalid`, `fixer_running`, `herdr_unavailable`,
 `herdr_error`, `git_error`, `worktree_dirty`, `stale_branch`, `process_error`.
 An `api_error` carries `source`, `class` and `lastMessage`; a rate limit is
@@ -55,9 +56,11 @@ toolu babysit wait --repo <owner/repo> --pr <n> --state-file <path>
   The result is always written beside it, to `<stem>.result.json`.
 - `--snapshot-in` — replay a captured snapshot instead of collecting (tests,
   debugging). The workflow never passes it.
-- `--timeout` — per GitHub call (default 60 s, `PB_GH_TIMEOUT`); a call is tried
-  `PB_GH_ATTEMPTS` times (3) with `PB_GH_BACKOFF` waits (`2 4 8` s) on timeouts,
-  5xx, 429, rate-limit 403 and connection errors, and never on other 4xx. The
+- `--timeout` — per GitHub call (default 60 s, `PB_GH_TIMEOUT`). Non-POST REST
+  and GraphQL calls use `PB_GH_ATTEMPTS` (default 3) with `PB_GH_BACKOFF`
+  waits (`2 4 8` s) on timeouts, 5xx, 429, rate-limit 403 and connection
+  errors, and never on other 4xx. A REST POST gets one
+  transient attempt. A 401 may still retry once with a refreshed token. The
   token comes from `GH_TOKEN`, else `gh auth token`.
 - `--page-size` — GraphQL/REST page size (default 100). Exists so pagination is
   testable on small real PRs.
@@ -158,6 +161,7 @@ through the result, and writes it only through `toolu babysit record`, `reply`,
 | `pr.unresolvedAfterClearance` | Audit count at the last tick; non-zero on a completed tick is a bug. |
 | `pr.lastError` | `{code, message, at}` of the last failed tick, or `null`. |
 | `actions.replied` | `key → {commentId, url, at, headSha, kind}`; keys `thread:<id>@<inReplyTo>`, `conversation:<id>`, `review:<id>`. |
+| `actions.replyIntents` | `key → {status: prepared|sending, marker, body, postPath, listPath, kind, rootCommentId}`. The body includes the hidden delivery marker. |
 | `actions.resolved` | `threadId → {confirmed, at, attempts, headSha}`. |
 | `actions.flagged` | `threadId → {reason, at}`. |
 | `lastGoodSnapshot` | Path of the last snapshot that produced a result. |
@@ -183,8 +187,33 @@ toolu babysit stop --state-file <path>
 - The body comes from a file so untrusted text never enters argv.
 - A reply is idempotent per reviewer comment: the same `--in-reply-to` twice is
   `duplicate_reply` (exit `1`) and nothing is posted; a reviewer follow-up has a
-  new `inReplyTo`. A body over 65 536 bytes or a malformed thread id is refused
-  before any call.
+  new `inReplyTo`. The command persists a `prepared` intent, then `sending`
+  before POST. The posted Markdown ends with a unique hidden HTML marker. The
+  body including that marker must fit 65 536 bytes; an oversized body or
+  malformed thread id is refused before any call.
+- After a lost response, malformed success reply or failed receipt write,
+  rerunning the command searches every remote comment page for the marker and
+  target. One match records the remote `commentId`. An absent, ambiguous or
+  unreadable result returns `reply_uncertain` (exit `75`) with `key`, `marker`,
+  `stateFile` and `reason`; it keeps the `sending` intent and does not POST
+  again. The `--body-file` argument remains required, but its file may be gone
+  or oversized on retry: the persisted intent supplies the original body.
+  An existing empty body file is always a `usage` error (exit `64`) and never
+  resumes or posts a persisted intent.
+  A retry with a different thread root returns `slot_mismatch` before any
+  GitHub call; use the original target to resume the intent.
+  Inspect GitHub and retry to reconcile. A definitive refusal leaves a
+  `prepared` intent; a valid changed body file replaces its text and marker in
+  state before the next send. An unreadable body file uses the persisted text.
+  If saving `prepared` after a definitive refusal fails, the result is
+  `reply_uncertain` with the persisted marker and recovery instructions. Once
+  the state file is writable and an operator independently confirms that the
+  marked comment is absent, run `reply` with `--confirm-unsent <marker>` and
+  the original target. It checks the remote list and records any match. If
+  none is found, it saves `prepared` and returns `reply_retry_ready` (exit
+  `75`), without POSTing. Rerun `reply` without the flag to send. Do not use
+  this recovery option based only on an empty API list; a recent comment may
+  not yet appear there.
 - `toolu babysit resolve` returns `0` only after the mutation response shows
   `isResolved: true`; three false responses → `resolve_unconfirmed` (exit `75`), nothing recorded, and
   the thread stays in `staleUnresolved` next tick. A confirmed thread is not

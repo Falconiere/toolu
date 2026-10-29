@@ -60,6 +60,11 @@ holds the `x-ratelimit-*` headers. `Cost` serializes for the engine's journal.
   - A rate limit waits for an integer `retry-after`, or for
     `x-ratelimit-reset` when `x-ratelimit-remaining` is 0. A wait over 60 s
     returns `Error::RateLimited` without sleeping.
+  - REST POST requests are sent once on transient and rate-limit outcomes.
+    The caller must reconcile a possibly committed write before
+    deciding what to do next. A 401 can still retry once after token refresh;
+    non-POST REST calls and GraphQL reads or `resolveReviewThread` retain their
+    existing retry behavior.
 - `Config::scheduled()` is for the engine's fixed 3-minute checks. It makes one
   attempt, and returns a rate limit with its wait instead of sleeping.
 

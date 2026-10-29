@@ -2886,6 +2886,17 @@
             },
             {
               "global": false,
+              "help": "Confirm the stored marker has no remote comment; prepare a separate retry",
+              "hidden": false,
+              "long": "confirm-unsent",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "VALUE"
+            },
+            {
+              "global": false,
               "help": "Seconds each GitHub call may take",
               "hidden": false,
               "long": "timeout",

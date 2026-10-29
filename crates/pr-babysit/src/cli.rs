@@ -120,6 +120,10 @@ fn reply() -> Command {
     .arg(count("comment-id", "The conversation comment answered"))
     .arg(count("review-id", "The review answered"))
     .arg(required("body-file", "The reply's Markdown"))
+    .arg(value(
+      "confirm-unsent",
+      "Confirm the stored marker has no remote comment; prepare a separate retry",
+    ))
     .arg(positive("timeout", "Seconds each GitHub call may take"))
 }
 

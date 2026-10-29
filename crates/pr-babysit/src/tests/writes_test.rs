@@ -60,7 +60,9 @@ fn a_thread_reply_posts_once_records_its_id_and_refuses_a_duplicate() {
   assert_eq!(record["at"], NOW);
   let requests = fixture.requests().unwrap();
   let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
-  assert_eq!(body, json!({"body": "Fixed the empty case.\n"}));
+  let posted_body = body["body"].as_str().unwrap();
+  assert!(posted_body.starts_with("Fixed the empty case.\n\n\n<!-- toolu-reply:"));
+  assert!(posted_body.ends_with(" -->"));
   assert_eq!(requests[0].method, "POST");
 
   let duplicate = reply(&client, &slot, &to, "again").err().unwrap();
@@ -94,10 +96,9 @@ fn conversation_and_review_replies_post_issue_comments_under_their_own_keys() {
 }
 
 #[test]
-fn a_reply_without_a_comment_id_records_nothing() {
+fn a_reply_without_a_comment_id_stays_uncertain() {
   let dir = TempDir::new().unwrap();
   let path = state(&dir);
-  let original = std::fs::read(&path).unwrap();
   let fixture = Fixture::start().unwrap();
   fixture
     .route(
@@ -115,8 +116,17 @@ fn a_reply_without_a_comment_id_records_nothing() {
   let failure = reply(&client, &slot, &Target::Conversation(5), "ok")
     .err()
     .unwrap();
-  assert_eq!(failure.code, "invalid_json");
-  assert_eq!(std::fs::read(&path).unwrap(), original);
+  assert_eq!(failure.code, "reply_uncertain");
+  assert_eq!(
+    read(&path)["actions"]["replyIntents"]["conversation:5"]["status"],
+    "sending"
+  );
+  assert!(
+    read(&path)["actions"]["replied"]
+      .as_object()
+      .unwrap()
+      .is_empty()
+  );
 }
 
 #[test]

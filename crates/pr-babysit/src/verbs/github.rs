@@ -146,19 +146,27 @@ pub(super) fn collect(matches: &ArgMatches, world: &World<'_>) -> Outcome {
   }
 }
 
-fn reply_body(matches: &ArgMatches) -> Result<String> {
+enum ReplyBody {
+  Ready(String),
+  Recoverable(Failure),
+}
+
+fn reply_body(matches: &ArgMatches) -> Result<ReplyBody> {
   let file = required(matches, "body-file")?;
-  let body = std::fs::read_to_string(file)
-    .map_err(|_error| Failure::usage("--body-file <existing file> required"))?;
+  let Ok(body) = std::fs::read_to_string(file) else {
+    return Ok(ReplyBody::Recoverable(Failure::usage(
+      "--body-file <existing file> required",
+    )));
+  };
   if body.is_empty() {
     return Err(Failure::usage("reply body is empty"));
   }
   if body.len() > MAX_BODY {
-    return Err(Failure::usage(
-      "reply body exceeds GitHub's 65536-character limit",
-    ));
+    return Ok(ReplyBody::Recoverable(Failure::usage(
+      "reply body exceeds the 65536-byte limit",
+    )));
   }
-  Ok(body)
+  Ok(ReplyBody::Ready(body))
 }
 
 fn target(matches: &ArgMatches) -> Result<Target<'_>> {
@@ -188,14 +196,26 @@ fn target(matches: &ArgMatches) -> Result<Target<'_>> {
 pub(super) fn reply(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
   let state_file = required(matches, "state-file")?;
   let body = reply_body(matches)?;
-  let to = target(matches)?;
+  let to = target(matches).map_err(|err| match &body {
+    ReplyBody::Ready(_) => err,
+    ReplyBody::Recoverable(error) => error.clone(),
+  })?;
   let now = now();
   let slot = Slot {
     path: state_file,
     env: world.env,
     now: &now,
   };
-  writes::reply(&client(matches, world, "reply")?, &slot, &to, &body)
+  if let Some(marker) = text(matches, "confirm-unsent") {
+    return writes::recover_unsent(&slot, &to, marker, || client(matches, world, "reply"));
+  }
+  match body {
+    ReplyBody::Ready(body) => writes::reply(&client(matches, world, "reply")?, &slot, &to, &body),
+    ReplyBody::Recoverable(error) if state_file.is_file() => {
+      writes::reply_existing(&slot, &to, || client(matches, world, "reply"))?.ok_or(error)
+    }
+    ReplyBody::Recoverable(error) => Err(error),
+  }
 }
 
 /// Resolve a review thread and confirm it.
@@ -220,3 +240,7 @@ pub(super) fn resolve(matches: &ArgMatches, world: &World<'_>) -> Result<Value> 
 #[cfg(test)]
 #[path = "tests/github_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/reply_recovery_test.rs"]
+mod recovery_tests;

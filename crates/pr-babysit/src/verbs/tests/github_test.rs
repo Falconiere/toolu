@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use serde_json::{Value, json};
@@ -13,14 +13,28 @@ use crate::{fixture, recorded};
 
 const NOW: &str = "2026-10-11T12:00:00Z";
 
-fn state(dir: &TempDir) -> PathBuf {
+pub(super) fn state(dir: &TempDir) -> PathBuf {
   initial_state(dir.path())
 }
 
-fn on<'a>(fixture: &Fixture, env: &'a Env) -> World<'a> {
+pub(super) fn on<'a>(fixture: &Fixture, env: &'a Env) -> World<'a> {
   let mut world = world(env, None);
   world.github = Ok(recorded::config(fixture));
   world
+}
+
+pub(super) fn conversation_reply_args<'a>(state: &'a Path, body: &'a Path) -> [&'a str; 9] {
+  [
+    "reply",
+    "--kind",
+    "conversation",
+    "--comment-id",
+    "5",
+    "--state-file",
+    state.to_str().unwrap(),
+    "--body-file",
+    body.to_str().unwrap(),
+  ]
 }
 
 fn pr_115<'a>(verb: &'a str, state: &'a str) -> Vec<&'a str> {
@@ -192,17 +206,7 @@ fn reply_posts_a_conversation_reply_from_the_body_file() {
     .route(endpoint, Reply::new(201, r#"{"id": 9}"#))
     .unwrap();
   let env = recorded::env(&fixture);
-  let args = [
-    "reply",
-    "--kind",
-    "conversation",
-    "--comment-id",
-    "5",
-    "--state-file",
-    state.to_str().unwrap(),
-    "--body-file",
-    body.to_str().unwrap(),
-  ];
+  let args = conversation_reply_args(&state, &body);
   let (exit, done) = run(&args, &on(&fixture, &env));
   assert_eq!(exit, Exit::Success, "{done}");
   assert_eq!(done["commentId"], 9);
@@ -244,7 +248,7 @@ fn reply_refuses_an_empty_or_oversized_body_and_a_missing_target() {
     "reply body is empty"
   );
   let long = "x".repeat(65_537);
-  let limit = "reply body exceeds GitHub's 65536-character limit";
+  let limit = "reply body exceeds the 65536-byte limit";
   assert_eq!(reply_error(&dir, &long, &["--kind", "review"]), limit);
   let missing = "--in-reply-to <id> required for --kind thread";
   assert_eq!(reply_error(&dir, "ok", &thread), missing);

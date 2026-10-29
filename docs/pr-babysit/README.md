@@ -31,7 +31,7 @@ One `toolu babysit` command set, called the same way on Claude Code and Codex
 |---------|---------|
 | `toolu babysit tick` | One check: lock → collect → reduce → persist → print a result with `decision`, `reasons[]`, `threads.actionable[]`, `threads.staleUnresolved[]`, `verdict`, `ci`, `attention`, `nextCheckAt`. |
 | `toolu babysit wait` | Ticks at each `nextCheckAt` (every 180 s) until success, escalation, pending work (`attention.needed`) or an active fixer, or until `--max-seconds` (1800 on Claude Code, 55 elsewhere). |
-| `toolu babysit reply` / `toolu babysit resolve` | Write side: idempotent replies; resolves confirmed from the mutation response. |
+| `toolu babysit reply` / `toolu babysit resolve` | Write side: durable reply intents and remote reconciliation; resolves confirmed from the mutation response. |
 | `toolu babysit record` | Agent decisions back to the reducer: round outcome, injection skip, terminal status. |
 | `toolu babysit route-fix` / `toolu babysit dispatch-fix` | Jev-scored fixer routing, and herdr fixer agents. |
 | `toolu babysit parse-verdict` | Verdict parser for the CI review-bot comment. |
@@ -39,6 +39,19 @@ One `toolu babysit` command set, called the same way on Claude Code and Codex
 
 The agent never writes a controller of its own and never re-fetches what the
 result reports; it triages, fixes, writes the replies, and decides escalations.
+
+Reply creation persists a target-scoped intent before sending. Each posted
+comment includes a hidden marker so a lost response or failed local receipt
+write can be reconciled after restart. A `reply_uncertain` result (exit `75`)
+keeps that intent and will not send another comment until the remote outcome
+is established. The full reply body, including its marker, must fit GitHub's
+65 536-byte limit.
+
+If GitHub definitively rejects a reply but the local state cannot save the
+rejection, restore the state file and inspect the remote comments. After
+confirming the marked comment is absent, rerun `reply` with
+`--confirm-unsent <marker>`. That call checks the remote list and makes the
+intent ready without posting; a separate `reply` call sends it.
 
 ## What It Provides
 

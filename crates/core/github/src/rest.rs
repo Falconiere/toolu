@@ -84,6 +84,7 @@ impl Client {
       path: request.path,
       body,
       etag: request.etag,
+      retry_transient: request.method != Method::Post,
     })?;
     let cost = Cost::rest(&response);
     let data = if response.status == 304 {

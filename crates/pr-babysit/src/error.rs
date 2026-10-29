@@ -46,7 +46,12 @@ impl Failure {
     match self.code {
       "usage" => Exit::Usage,
       "gh_unavailable" | "herdr_unavailable" => Exit::Unavailable,
-      "locked" | "api_error" | "head_moved" | "resolve_unconfirmed" => Exit::TempFail,
+      "locked"
+      | "api_error"
+      | "head_moved"
+      | "resolve_unconfirmed"
+      | "reply_uncertain"
+      | "reply_retry_ready" => Exit::TempFail,
       _ => Exit::Failure,
     }
   }
