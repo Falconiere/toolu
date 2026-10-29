@@ -123,7 +123,7 @@ Field rules:
 
 - Keys, epics, kinds and `submission_id` match `[A-Za-z0-9._-]{1,128}`.
 - `ack` takes exactly one of `key` or `kind`.
-- `answer` takes `key`, `text` and `submission_id`. The text is 1 to 4,000 characters, with no control characters other than newline and tab. A missing or invalid `submission_id` is `400 invalid_request`. The same `submission_id` and payload cannot deliver twice; reusing the id with a different payload is `409` `submission_id reuse with different payload`. A new id with the same text is a new intentional answer. Dedupe is rebuilt from retained journal `answer-admit` rows (the same day-file retention as the rest of the journal).
+- `answer` takes `key`, `text` and `submission_id`. The text is 1 to 4,000 characters, with no control characters other than newline and tab. A missing or invalid `submission_id` is `400 invalid_request`. The same `submission_id` and payload cannot deliver twice; reusing the id with a different payload is `409` `submission_id reuse with different payload`. A new id with the same text is a new intentional answer. Dedupe is rebuilt from journal `answer-admit` rows in `journal::tail` (today's and the previous UTC day's files); older retained day files are not consulted.
 - `host-pause` and `host-resume` take a `host`: `claude`, `codex`, `cursor` or `muse` (aliases `claude-code`, `cursor-agent` accepted); anything else is `400 invalid_request`.
 
 A `POST` without `Content-Length` is `400`, and a larger body is `413`.

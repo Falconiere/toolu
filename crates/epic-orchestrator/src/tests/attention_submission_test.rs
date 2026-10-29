@@ -131,6 +131,38 @@ fn a_reopened_engine_dedupes_from_the_retained_journal_only() {
 }
 
 #[test]
+fn an_admit_older_than_the_tail_window_does_not_dedupe() {
+  use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut engine = engine(tmp.path(), "sent");
+  report(&mut engine, "needs-human");
+  let journal = engine.paths.journal_dir();
+  std::fs::create_dir_all(&journal).expect("journal");
+  let fp = super::fingerprint("a", "take B");
+  let old = UNIX_EPOCH + Duration::from_secs(1_577_836_800); // 2020-01-01
+  let line = json!({
+    "seq": 1,
+    "at": "2020-01-01T00:00:00.000Z",
+    "kind": "action",
+    "name": "answer-admit",
+    "epic": "",
+    "key": "a",
+    "token": "s-old",
+    "note": format!("fp={fp} by=web"),
+  });
+  std::fs::write(
+    crate::journal::file_for(&journal, old),
+    format!("{line}\n"),
+  )
+  .expect("old admit");
+  engine.now = SystemTime::now();
+  let request = submitted("take B", "s-old");
+  assert_eq!(answer(&mut engine, &request), json!({"ok": true}));
+  assert_eq!(prompts(tmp.path()).len(), 1, "outside the tail window");
+}
+
+#[test]
 fn a_delivered_submission_dedupes_after_the_agent_is_gone() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut engine = engine(tmp.path(), "sent");

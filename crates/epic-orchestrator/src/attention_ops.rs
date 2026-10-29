@@ -179,8 +179,9 @@ fn record_admit(engine: &mut Engine, answer: &Answer<'_>, id: &str) -> Result<()
   engine.flush()
 }
 
-/// The fingerprint journaled for `id` and how far delivery got, from the
-/// retained journal. `None` when the id was never admitted.
+/// The fingerprint journaled for `id` and how far delivery got, from
+/// `journal::tail` (today's and the previous UTC day's files). `None` when the
+/// id was never admitted in that window.
 fn prior(engine: &Engine, id: &str) -> Result<Option<(String, Delivery)>, String> {
   let mut state = None;
   let rows = journal::tail(&engine.paths.journal_dir(), engine.now)?;

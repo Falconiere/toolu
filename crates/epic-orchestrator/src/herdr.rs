@@ -129,11 +129,14 @@ impl Client {
     }
     let mut stream = connect(env, call)?;
     let id = self.next_id();
+    // Tag the failing phase so `attention_ops::uncertain` can tell a post-write
+    // `read:` connection reset (maybe delivered) from a `write:` / connect failure.
     write_json(
       &mut stream,
       &json!({"id": id, "method": call.method(), "params": call.params()}),
-    )?;
-    read_text(&mut stream)
+    )
+    .map_err(|err| format!("write: {err}"))?;
+    read_text(&mut stream).map_err(|err| format!("read: {err}"))
   }
 
   fn cli(&mut self, paths: &Paths, env: &Env, call: &Call) -> Result<String, String> {
