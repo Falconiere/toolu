@@ -267,5 +267,8 @@ fn on_socket_phase_tags_from_real_transport_errors_drive_uncertain() {
 
   // Read-side reset text is what `on_socket` prefixes; covered live in redirect tests.
   let read_tagged = "read: Connection reset by peer (os error 54)".to_owned();
-  assert!(crate::attention_ops::uncertain(&read_tagged), "{read_tagged}");
+  assert!(
+    crate::attention_ops::uncertain(&read_tagged),
+    "{read_tagged}"
+  );
 }
