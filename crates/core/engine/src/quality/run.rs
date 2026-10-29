@@ -1,5 +1,6 @@
 //! One post-edit batch: select owners, scan once, then settle their gate entries.
 
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use toolu_protocol::decision::Decision;
@@ -282,22 +283,38 @@ fn run_files(
   }
 }
 
+/// Last occurrence of each exact `path`, in last-occurrence order.
+fn last_edit_records(records: &[EditRecord]) -> Vec<&EditRecord> {
+  let mut probes = 0_u64;
+  last_edit_records_probed(records, &mut probes)
+}
+
+/// Same selection as [`last_edit_records`], counting one membership probe per record.
+fn last_edit_records_probed<'a>(
+  records: &'a [EditRecord],
+  probes: &mut u64,
+) -> Vec<&'a EditRecord> {
+  let mut seen = HashSet::new();
+  let mut survivors = Vec::new();
+  for record in records.iter().rev() {
+    *probes += 1;
+    if seen.insert(record.path.as_str()) {
+      survivors.push(record);
+    }
+  }
+  survivors.reverse();
+  survivors
+}
+
 /// Run all enabled quality rules over normalized edit records of one tool call.
 pub fn run_quality(
   records: &[EditRecord],
   ctx: &RuleContext<'_>,
   rules: &[&dyn QualityRule],
 ) -> QualityOutcome {
-  let files: Vec<EditedFile> = records
-    .iter()
-    .enumerate()
-    .filter(|(index, record)| {
-      !records
-        .iter()
-        .skip(index + 1)
-        .any(|next| next.path == record.path)
-    })
-    .filter_map(|(_, record)| edited_record(record, ctx))
+  let files: Vec<EditedFile> = last_edit_records(records)
+    .into_iter()
+    .filter_map(|record| edited_record(record, ctx))
     .collect();
   run_files(&files, ctx, rules)
 }
