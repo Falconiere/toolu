@@ -2,12 +2,12 @@
 //! `.rs` file of a repository, with its limits, as `cargo xtask gate` runs them.
 //! Files sharing rule YAML share an `ast-grep scan`, a chunk at a time.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
 
 use clap::{Arg, ArgMatches, Command};
 use serde_json::{Map, json};
-use toolu_engine::quality::{AstGrepScan, EditedFile, scan_inline};
+use toolu_engine::quality::{AstGrepScan, EditedFile, file_hits, partition_hits, scan_inline};
 use toolu_protocol::exit::Exit;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::{Ctx, Outcome};
@@ -302,28 +302,33 @@ fn scan_groups(
         .filter_map(|at| loaded.get(*at).map(|one| (*at, one.file.clone())))
         .collect();
       let files: Vec<EditedFile> = batch.iter().map(|(_, file)| file.clone()).collect();
-      let scan = scan_inline(&files, &rules, ctx);
-      for (at, file) in batch {
-        scans.insert(at, own_hits(&scan, &file));
+      let mut scan = scan_inline(&files, &rules, ctx);
+      let mut by_path = partition_hits(&mut scan);
+      let last: HashMap<&str, usize> = batch
+        .iter()
+        .enumerate()
+        .map(|(index, (_, file))| (file.path.as_str(), index))
+        .collect();
+      for (index, (at, file)) in batch.iter().enumerate() {
+        let hits = file_hits(
+          &mut by_path,
+          &file.path,
+          last.get(file.path.as_str()) == Some(&index),
+        );
+        scans.insert(
+          *at,
+          match &scan {
+            AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
+              hits,
+              empty: *empty,
+            },
+            other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
+          },
+        );
       }
     }
   }
   scans
-}
-
-fn own_hits(scan: &AstGrepScan, file: &EditedFile) -> AstGrepScan {
-  let AstGrepScan::Ok { hits, empty } = scan else {
-    return scan.clone();
-  };
-  let hits = hits
-    .iter()
-    .filter(|hit| hit.file == file.path)
-    .cloned()
-    .collect();
-  AstGrepScan::Ok {
-    hits,
-    empty: *empty,
-  }
 }
 
 #[cfg(test)]

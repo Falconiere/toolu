@@ -1,5 +1,6 @@
 //! One structural scan for all quality rules and edited files in an event.
 
+use std::collections::HashMap;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
@@ -60,6 +61,34 @@ pub enum AstGrepScan {
   },
   /// The process or its output failed.
   Failed(ScanFailure),
+}
+
+/// Move successful scan hits into exact-path groups, preserving encounter order.
+pub fn partition_hits(scan: &mut AstGrepScan) -> HashMap<String, Vec<AstGrepHit>> {
+  let mut by_path: HashMap<String, Vec<AstGrepHit>> = HashMap::new();
+  if let AstGrepScan::Ok { hits, .. } = scan {
+    for hit in std::mem::take(hits) {
+      if let Some(group) = by_path.get_mut(&hit.file) {
+        group.push(hit);
+      } else {
+        by_path.insert(hit.file.clone(), vec![hit]);
+      }
+    }
+  }
+  by_path
+}
+
+/// Give each use of a path its hits, moving them on the final use.
+pub fn file_hits<S: std::hash::BuildHasher>(
+  by_path: &mut HashMap<String, Vec<AstGrepHit>, S>,
+  path: &str,
+  last: bool,
+) -> Vec<AstGrepHit> {
+  if last {
+    by_path.remove(path).unwrap_or_default()
+  } else {
+    by_path.get(path).cloned().unwrap_or_default()
+  }
 }
 
 fn failed(stage: ScanStage, exit_code: i32, stderr: &str) -> AstGrepScan {

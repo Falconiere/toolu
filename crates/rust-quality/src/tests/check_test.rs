@@ -1,4 +1,5 @@
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::symlink;
 use std::process::Command;
 
 use serde_json::Value;
@@ -103,6 +104,11 @@ fn a_top_level_src_gets_the_src_rules_and_scans_are_shared_per_chunk() {
     })
     .collect();
   files.push((
+    "src/nested/m00.rs".to_owned(),
+    "//! Nested.\nfn f() { let _ = Some(70).unwrap(); }\n".to_owned(),
+  ));
+  files.push(("src/nomatch.rs".to_owned(), "//! No hits.\n".to_owned()));
+  files.push((
     "src/tests/a_test.rs".to_owned(),
     "use mockall::predicate;\n".to_owned(),
   ));
@@ -114,7 +120,7 @@ fn a_top_level_src_gets_the_src_rules_and_scans_are_shared_per_chunk() {
   let report = check(&env, Host::Claude, dir.path(), &[]).unwrap();
   assert_eq!(
     (report.files, report.findings.len()),
-    (71, 71),
+    (73, 72),
     "{:?}",
     report.findings
   );
@@ -125,13 +131,16 @@ fn a_top_level_src_gets_the_src_rules_and_scans_are_shared_per_chunk() {
     ".unwrap() in src/m69.rs — use ? or match on Result/Option\nsrc/m69.rs:2:fn f() { let _ = Some(69).unwrap(); }"
   );
   let (path, message) = &report.findings[70];
+  assert_eq!(path, "src/nested/m00.rs");
+  assert!(message.contains("src/nested/m00.rs:2:fn f()"), "{message}");
+  let (path, message) = &report.findings[71];
   assert_eq!(path, "src/tests/a_test.rs");
   assert!(
     message.starts_with("no-mocks: mockall/faux import in src/tests/a_test.rs"),
     "{message}"
   );
   let doc: Value = serde_json::from_str(&render(&report, true).stdout.unwrap()).unwrap();
-  assert_eq!(doc["findings"][70]["path"], "src/tests/a_test.rs");
+  assert_eq!(doc["findings"][71]["path"], "src/tests/a_test.rs");
 }
 
 #[test]
@@ -171,6 +180,43 @@ fn it_fails_closed_without_ast_grep_or_a_repository() {
 }
 
 #[test]
+fn scan_execution_and_json_failures_remain_findings_for_every_file() {
+  let (dir, env) = repo(&[
+    (
+      "src/a.rs",
+      "//! A.\nfn f() { let _ = Some(1).unwrap(); }\n".to_owned(),
+    ),
+    (
+      "src/nested/a.rs",
+      "//! B.\nfn f() { let _ = Some(2).unwrap(); }\n".to_owned(),
+    ),
+  ]);
+  let bin = dir.path().join("bin");
+  std::fs::create_dir(&bin).unwrap();
+  let tool = bin.join("ast-grep");
+  let path = format!("{}:{}", bin.display(), env.get("PATH").unwrap());
+  let broken = env.with("PATH", &path);
+  for (target, detail) in [
+    ("/usr/bin/false", "ast-grep exit 1"),
+    (
+      "/bin/echo",
+      "ast-grep exited 0 but its output did not parse as the documented JSON array",
+    ),
+  ] {
+    symlink(target, &tool).unwrap();
+    let report = check(&broken, Host::Claude, dir.path(), &[]).unwrap();
+    assert_eq!(report.files, 2);
+    assert_eq!(report.findings.len(), 4, "{:?}", report.findings);
+    for (path, message) in &report.findings {
+      assert!(message.contains(detail), "{path}: {message}");
+      assert!(path == "src/a.rs" || path == "src/nested/a.rs");
+    }
+    assert_eq!(render(&report, false).exit, Exit::Failure);
+    std::fs::remove_file(&tool).unwrap();
+  }
+}
+
+#[test]
 fn only_files_under_the_paths_that_still_exist_are_checked() {
   let (dir, env) = repo(&[
     ("crates/demo/src/kept.rs", "//! Kept.\n".to_owned()),
@@ -197,5 +243,58 @@ fn only_files_under_the_paths_that_still_exist_are_checked() {
       files: 1,
       findings: Vec::new()
     }
+  );
+}
+
+#[test]
+fn unmerged_index_duplicates_keep_each_structural_finding() {
+  let body = "//! A.\nfn f() { let _ = Some(0).unwrap(); }\n";
+  let (dir, env) = repo(&[("src/a.rs", body.to_owned())]);
+  let git = |args: &[&str]| {
+    Command::new("git")
+      .args(["-c", "user.name=t", "-c", "user.email=t@t", "-C"])
+      .arg(dir.path())
+      .args(args)
+      .output()
+      .unwrap()
+  };
+  for args in [
+    &["add", "-A"][..],
+    &["commit", "-qm", "base"],
+    &["checkout", "-qb", "left"],
+  ] {
+    assert!(git(args).status.success(), "git {args:?}");
+  }
+  let file = dir.path().join("src/a.rs");
+  std::fs::write(&file, "fn f() { let _ = Some(1).unwrap(); }\n").unwrap();
+  assert!(git(&["commit", "-qam", "left"]).status.success());
+  assert!(
+    git(&["checkout", "-qb", "right", "HEAD~1"])
+      .status
+      .success()
+  );
+  std::fs::write(&file, "fn f() { let _ = Some(2).unwrap(); }\n").unwrap();
+  assert!(git(&["commit", "-qam", "right"]).status.success());
+  assert!(!git(&["merge", "left"]).status.success());
+  let listed = git(&[
+    "ls-files",
+    "-z",
+    "--cached",
+    "--others",
+    "--exclude-standard",
+    "--full-name",
+    "--",
+    "src/a.rs",
+  ]);
+  assert_eq!(listed.stdout, b"src/a.rs\0".repeat(3));
+  std::fs::write(&file, "fn f() { let _ = Some(7).unwrap(); }\n").unwrap();
+  let report = check(&env, Host::Claude, dir.path(), &[]).unwrap();
+  assert_eq!(report.files, 3);
+  assert_eq!(report.findings.len(), 3, "{:?}", report.findings);
+  assert!(
+    report
+      .findings
+      .iter()
+      .all(|finding| finding == &report.findings[0])
   );
 }

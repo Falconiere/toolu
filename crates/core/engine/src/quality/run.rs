@@ -1,6 +1,6 @@
 //! One post-edit batch: select owners, scan once, then settle their gate entries.
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 use toolu_protocol::decision::Decision;
@@ -14,8 +14,10 @@ use toolu_state::edit_records::EditRecord;
 use toolu_state::gate_file::{GateFailure, clear_gate_file, record_gate_failure};
 
 use super::edit::edited_record;
-use super::scan::scan_rules;
-use super::{AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file};
+use super::scan::{partition_hits, scan_rules};
+use super::{
+  AstGrepHit, AstGrepScan, EditedFile, edited_file, in_linked_worktree, is_regular_file,
+};
 
 /// Violations and nonblocking advice in check order.
 #[derive(Debug, Default, Clone, PartialEq, Eq)]
@@ -215,14 +217,14 @@ fn settle(
   Text::new(message).map_or(Decision::Allow, |message| Decision::Advisory { message })
 }
 
-fn file_scan(scan: &AstGrepScan, file: &EditedFile) -> AstGrepScan {
+fn file_scan(
+  scan: &AstGrepScan,
+  by_path: &HashMap<String, Vec<AstGrepHit>>,
+  file: &EditedFile,
+) -> AstGrepScan {
   match scan {
-    AstGrepScan::Ok { hits, empty } => AstGrepScan::Ok {
-      hits: hits
-        .iter()
-        .filter(|hit| hit.file == file.path)
-        .cloned()
-        .collect(),
+    AstGrepScan::Ok { empty, .. } => AstGrepScan::Ok {
+      hits: by_path.get(&file.path).cloned().unwrap_or_default(),
       empty: *empty,
     },
     other @ (AstGrepScan::Missing | AstGrepScan::Failed(_)) => other.clone(),
@@ -261,7 +263,8 @@ fn run_files(
   let mut state = StateCtx::new(Roots::new(ctx.env.clone(), Some(ctx.host)));
   let facts = selected_facts(files, &enabled, ctx, &state.roots);
   let live = live_files(&facts, &enabled);
-  let scan = batch_scan(&enabled, &live, ctx);
+  let mut scan = batch_scan(&enabled, &live, ctx);
+  let by_path = partition_hits(&mut scan);
   let mut decisions = Vec::new();
   for facts in facts {
     let file = facts.file;
@@ -272,7 +275,7 @@ fn run_files(
       if file.removed {
         clear_gate_file(&mut state, &facts.gate, &file.path, rule.source());
       } else if !(rule.skip_linked_worktrees() && facts.linked) {
-        let findings = rule.check(file, ctx, &file_scan(&scan, file));
+        let findings = rule.check(file, ctx, &file_scan(&scan, &by_path, file));
         decisions.push(settle(file, *rule, &facts.gate, &mut state, findings));
       }
     }
@@ -336,3 +339,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/run_facts_test.rs"]
 mod facts_tests;
+
+#[cfg(test)]
+#[path = "tests/run_edit_test.rs"]
+mod edit_tests;
