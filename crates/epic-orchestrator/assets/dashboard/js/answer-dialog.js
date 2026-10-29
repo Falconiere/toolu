@@ -1,9 +1,4 @@
-import {
-  WORKING_WARNING,
-  counter,
-  rememberSubmission,
-  sendDisabled,
-} from "./logic/control.js";
+import { WORKING_WARNING, counter, rememberSubmission, sendDisabled } from "./logic/control.js";
 import { agentState } from "./logic/status.js";
 import { $, mark } from "./view/dom.js";
 
