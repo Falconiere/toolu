@@ -58,6 +58,9 @@ pub enum Wait {
   /// The child exited, its output streams closed and stdin feeding completed;
   /// a process it started with its streams redirected is left running.
   Streams,
+  /// The direct child has exited. Leftover group members are signaled and not
+  /// waited on, so a descendant holding an inherited pipe cannot extend the run.
+  Child,
 }
 
 /// One command to run.
@@ -139,7 +142,8 @@ pub enum RunError {
 
 /// Run `spec` until the child exited and its output streams closed, then wait
 /// for its group ([`Wait::Group`]) or stdin feeder ([`Wait::Streams`]), or until
-/// the deadline passes and the group is terminated.
+/// the direct child has exited ([`Wait::Child`]). The deadline terminates the
+/// group either way.
 ///
 /// # Errors
 /// [`RunError`] when the spec is unusable, the program cannot start, or the
@@ -181,15 +185,7 @@ fn run_with_impl(
 ) -> Result<Output, RunError> {
   let program = spec.argv.first().filter(|program| !program.is_empty());
   let program = program.ok_or(RunError::EmptyArgv)?;
-  if spec.timeout.is_zero() {
-    return Err(RunError::ZeroTimeout);
-  }
-  let started = Instant::now();
-  let deadline = started
-    .checked_add(spec.timeout)
-    .ok_or(RunError::TimeoutTooLong)?;
-  let mut child = guard::unblocked(|| command(program, spec).spawn())
-    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
+  let (mut child, started, deadline) = spawn_limited(spec, program)?;
   let pid = child.id();
   notify_spawn(&mut child, on_spawn)?;
   let (stdin, stdout_pipe, stderr_pipe) =
@@ -223,6 +219,24 @@ fn run_with_impl(
     timed_out,
     truncated: budget.truncated(),
   })
+}
+
+/// Start `program` and begin its deadline after spawn, so spawn latency is not part of the budget.
+fn spawn_limited(spec: &Spec, program: &str) -> Result<(Child, Instant, Instant), RunError> {
+  if spec.timeout.is_zero() {
+    return Err(RunError::ZeroTimeout);
+  }
+  if Instant::now().checked_add(spec.timeout).is_none() {
+    return Err(RunError::TimeoutTooLong);
+  }
+  let child = guard::unblocked(|| command(program, spec).spawn())
+    .map_err(|err| RunError::Spawn(format!("{program}: {err}")))?;
+  let started = Instant::now();
+  Ok((
+    child,
+    started,
+    started.checked_add(spec.timeout).unwrap_or(started),
+  ))
 }
 
 /// Spawn `spec` in its own process group and return its pid without waiting.
@@ -322,6 +336,9 @@ fn settle(
       status = child.try_wait().map_err(|err| abandon(pid, &err))?;
     }
     let now = Instant::now();
+    if let Some(status) = release_child(status, spec.wait, pid) {
+      return Ok((status, false));
+    }
     let streams_done = drains.iter().all(|drain| drain.finished());
     let pipes_done = streams_done && feeder.is_none_or(JoinHandle::is_finished);
     if let Some(status) = status.filter(|_| pipes_done && spec.wait == Wait::Streams) {
@@ -336,10 +353,29 @@ fn settle(
       next_group_check = now + GROUP_POLL;
     }
     if now >= deadline {
-      break;
+      return stop_group(child, pid, status, drains);
     }
     std::thread::sleep(spec.poll_interval.min(deadline - now));
   }
+}
+
+/// [`Wait::Child`]: the leader has exited, so stop leftover members without waiting.
+fn release_child(status: Option<ExitStatus>, wait: Wait, pid: u32) -> Option<ExitStatus> {
+  if wait != Wait::Child {
+    return None;
+  }
+  let status = status?;
+  let _signaled = group::signal(pid, group::Signal::SIGKILL);
+  Some(status)
+}
+
+/// The deadline passed: stop the group and keep the leader's status.
+fn stop_group(
+  child: &mut Child,
+  pid: u32,
+  mut status: Option<ExitStatus>,
+  drains: [&Drain; 2],
+) -> Result<(ExitStatus, bool), RunError> {
   let terminated = group::terminate_reaping(pid, &mut || {
     if status.is_none() {
       status = child.try_wait().ok().flatten();

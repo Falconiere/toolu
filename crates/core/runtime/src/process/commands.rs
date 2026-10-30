@@ -4,7 +4,7 @@
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
-use super::{Spec, run};
+use super::{Spec, Wait, run};
 use crate::env::Env;
 
 /// How long `command -v` and `--hook-protocol` may run.
@@ -129,6 +129,7 @@ fn protocol_is_native(env: &Env, path: &Path) -> Result<bool, String> {
     .ok_or_else(|| "non-login shell returned a non-UTF-8 toolu path".to_owned())?;
   let mut probe = Spec::new([program, "--hook-protocol"]);
   probe.timeout = PROBE_TIMEOUT;
+  probe.wait = Wait::Child;
   probe.max_output_bytes = 32;
   probe.env = Some(env.clone());
   let output = run(&probe).map_err(|error| format!("cannot probe toolu: {error:?}"))?;
