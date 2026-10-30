@@ -36,7 +36,7 @@ fn expected() -> [(&'static str, Entries); 5] {
       "PostToolUse",
       vec![(
         "post-tools",
-        Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell|Grep"),
+        Some("apply_patch|Edit|Write|MultiEdit|Bash|Shell"),
       )],
     ),
   ]

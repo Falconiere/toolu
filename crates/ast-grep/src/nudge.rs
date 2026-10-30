@@ -17,7 +17,8 @@ use toolu_state::detect::tools::detect_ast_grep;
 
 use crate::launched::{program_at, program_indexes};
 
-const STRUCT: &str = r"(^|\s)(fn |impl |async fn|async |class |function |struct |trait |interface |type |pub (fn|struct|enum|trait|mod|type|async)|export (function|class|interface|type|const|default)|enum |mod |const fn|#\[derive|#\[cfg|#\[test|@Component|@Injectable|@Module|=>|-> Result|-> impl|dyn |Box<|Arc<|Vec<|Option<|where |for .*in )";
+/// Shapes a text search cannot express. A declaration name (`fn foo`, `class Foo`) stays on Grep.
+const STRUCT: &str = r"(^|\s)(impl |#\[derive|#\[cfg|#\[test|@Component|@Injectable|@Module|=>|-> Result|-> impl|dyn |Box<|Arc<|Vec<|Option<|where |for .*in )";
 const NON_CODE_GLOB: &str = r"(?i)\*\.(toml|md|markdown|json|jsonc|yaml|yml|txt|env|sql|sh|bash|zsh|fish|lock|cfg|ini|conf|csv|xml|html|svg|css|graphql|gql|proto|makefile|dockerfile)";
 const NON_CODE_TYPE: &str = r"(?im)^(toml|json|yaml|md|markdown|html|css|sql|sh|bash|make|docker|config|xml|csv|graphql|proto)$";
 const NON_CODE_PATH: &str = r"(?i)(\.claude/|docs/|\.github/|infra/|scripts/|\.config|Makefile|Dockerfile|Cargo\.toml|package\.json|tsconfig)";

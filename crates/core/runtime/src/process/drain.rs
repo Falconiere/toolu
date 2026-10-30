@@ -99,22 +99,30 @@ fn read_all<R: Read>(
   let mut chunk = [0_u8; 8192];
   loop {
     if cancel.load(Ordering::Acquire) {
+      // Bytes already written stay readable after a descendant is signaled.
+      if let Ok(read) = stream.read(&mut chunk)
+        && read > 0
+      {
+        keep(chunk.get(..read).unwrap_or(&chunk), bytes, budget, observer);
+      }
       return;
     }
     match stream.read(&mut chunk) {
       Ok(0) => return,
-      Ok(read) => {
-        if let Some(observer) = observer {
-          observer(chunk.get(..read).unwrap_or(&chunk));
-        }
-        let kept = budget.take(read);
-        lock(bytes).extend(chunk.iter().take(kept));
-      }
+      Ok(read) => keep(chunk.get(..read).unwrap_or(&chunk), bytes, budget, observer),
       Err(err) if err.kind() == ErrorKind::Interrupted => {}
       Err(err) if err.kind() == ErrorKind::WouldBlock => std::thread::sleep(POLL),
       Err(_) => return,
     }
   }
+}
+
+fn keep(chunk: &[u8], bytes: &Mutex<Vec<u8>>, budget: &Budget, observer: Option<&ChunkObserver>) {
+  if let Some(observer) = observer {
+    observer(chunk);
+  }
+  let kept = budget.take(chunk.len());
+  lock(bytes).extend(chunk.iter().take(kept));
 }
 
 /// A poisoned lock still holds the bytes gathered before the panic.

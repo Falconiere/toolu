@@ -168,6 +168,23 @@ fn streams_mode_returns_once_the_child_exited_and_its_streams_closed() {
 }
 
 #[test]
+fn child_mode_returns_when_the_leader_exits_even_if_a_descendant_holds_stdout() {
+  let mut spec = sh("sleep 30 & printf '1\\n'");
+  spec.wait = Wait::Child;
+  spec.timeout = Duration::from_secs(10);
+  let started = std::time::Instant::now();
+  let output = run(&spec).unwrap();
+  assert_eq!(output.stdout, "1\n");
+  assert_eq!(output.exit_code, 0);
+  assert!(!output.timed_out);
+  assert!(
+    started.elapsed() < Duration::from_secs(2),
+    "{:?}",
+    started.elapsed()
+  );
+}
+
+#[test]
 fn streams_mode_still_waits_for_a_descendant_holding_stdout_and_kills_it_at_the_deadline() {
   let mut spec = sh("sleep 30 & echo started");
   spec.wait = Wait::Streams;
