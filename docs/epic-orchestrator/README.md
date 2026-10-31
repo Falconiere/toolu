@@ -104,6 +104,12 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 
 Full procedure: `plugins/epic-orchestrator/skills/epic-orchestrator/SKILL.md`.
 
+For GitHub epics, the tracker uses body and labels from a native sub-issue
+listing when they are present. If the native list omits either field, it fetches
+that child once for the missing details. Task-list children reuse their initial
+issue GET. Dependency and closing-PR requests still run for every child; an API
+rate limit fails graph construction rather than silently dropping blockers.
+
 ## Uncertain merges
 
 The merge queue sends one PUT pinned to the verified PR head. If GitHub times

@@ -17,13 +17,15 @@ pub(super) const FETCH_CONCURRENCY: usize = 4;
 
 const CLOSING_PRS: &str = "query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){issue(number:$n){\nclosedByPullRequestsReferences(first:10,includeClosedPrs:true){nodes{number state url headRefName}}}}}";
 
-/// A child before its details are fetched.
+/// A child with any details already present in its listing or task-list GET.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct SubIssue {
   pub reference: String,
   pub title: String,
   pub state: String,
   pub url: String,
+  pub body: Option<String>,
+  pub labels: Option<Vec<String>>,
 }
 
 /// `owner/repo#N` from an issue's `repository_url` and `number`.
@@ -56,6 +58,11 @@ fn sub_of(item: &Value, reference: String) -> SubIssue {
     title: text(item, "title"),
     state: text(item, "state"),
     url: text(item, "html_url"),
+    body: item.get("body").and_then(Value::as_str).map(str::to_owned),
+    labels: item
+      .get("labels")
+      .and_then(Value::as_array)
+      .map(|_| labels(item)),
   }
 }
 
@@ -120,9 +127,19 @@ pub(super) fn details(gh: &Gh, sub: &SubIssue) -> Result<TrackedIssue, String> {
       }
       None => false,
     };
-  let item: Value = gh.get(&path)?;
-  let body = text(&item, "body");
-  text_blockers(gh, &body, &repo, &sub.reference, &mut blockers)?;
+  let fetched = if sub.body.is_none() || sub.labels.is_none() {
+    Some(gh.get::<Value>(&path)?)
+  } else {
+    None
+  };
+  let body = sub.body.as_deref().unwrap_or_else(|| {
+    fetched
+      .as_ref()
+      .and_then(|item| item.get("body"))
+      .and_then(Value::as_str)
+      .unwrap_or("")
+  });
+  text_blockers(gh, body, &repo, &sub.reference, &mut blockers)?;
   Ok(TrackedIssue {
     reference: sub.reference.clone(),
     title: sub.title.clone(),
@@ -133,8 +150,11 @@ pub(super) fn details(gh: &Gh, sub: &SubIssue) -> Result<TrackedIssue, String> {
     blockers,
     prs: closing_prs(gh, &issue)?,
     deps_source: if deps_api { "native+text" } else { "text" }.to_owned(),
-    labels: labels(&item),
-    excerpt: excerpt(&body),
+    labels: sub
+      .labels
+      .clone()
+      .unwrap_or_else(|| fetched.as_ref().map_or_else(Vec::new, labels)),
+    excerpt: excerpt(body),
   })
 }
 
@@ -198,3 +218,7 @@ pub(super) fn labels(item: &Value) -> Vec<String> {
 #[cfg(test)]
 #[path = "tests/github_fetch_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/github_fetch_reuse_test.rs"]
+mod reuse_tests;

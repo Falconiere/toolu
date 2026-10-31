@@ -64,6 +64,29 @@ fn without_sub_issues_the_task_list_names_the_children() {
     sub_issues(&gh(&fixture), &parse_ref("o/r#1", None).expect("ref"), body).expect("subs");
   let refs: Vec<&str> = found.iter().map(|sub| sub.reference.as_str()).collect();
   assert_eq!(refs, ["o/r#4", "x/y#5"]);
+  for (owner, repo, number) in [("o", "r", 4), ("x", "y", 5)] {
+    ok(
+      &fixture,
+      &format!("/repos/{owner}/{repo}/issues/{number}/dependencies/blocked_by"),
+      &json!([]),
+    );
+  }
+  closing(&fixture, &json!([]));
+  for sub in &found {
+    details(&gh(&fixture), sub).expect("task-list details");
+  }
+  let requests = fixture.requests().expect("requests");
+  for path in ["/repos/o/r/issues/4", "/repos/x/y/issues/5"] {
+    assert_eq!(
+      requests
+        .iter()
+        .filter(|request| request.path == path)
+        .count(),
+      1,
+      "{path}"
+    );
+  }
+  assert_eq!(requests.len(), 7);
 }
 
 #[test]
@@ -99,11 +122,12 @@ fn details_join_native_and_text_blockers_labels_and_closing_prs() {
     title: "Two".into(),
     state: "open".into(),
     url: "https://github.com/o/r/issues/2".into(),
+    body: None,
+    labels: None,
   };
   let tracked = details(&gh(&fixture), &sub).expect("details");
   assert_eq!(tracked.deps_source, "native+text");
-  assert_eq!(tracked.number, Some(2));
-  assert_eq!(tracked.repo, "o/r");
+  assert_eq!((tracked.number, tracked.repo.as_str()), (Some(2), "o/r"));
   let blockers: Vec<(&str, &str)> = tracked
     .blockers
     .iter()
@@ -146,6 +170,8 @@ fn an_absent_or_closed_dependency_api_falls_back_to_text_blockers() {
       title: "Two".into(),
       state: "closed".into(),
       url: String::new(),
+      body: None,
+      labels: None,
     };
     let tracked = details(&gh(&fixture), &sub).expect("details");
     assert_eq!(tracked.deps_source, "text", "{status}");
@@ -184,6 +210,8 @@ fn a_rate_limited_dependency_api_fails_instead_of_dropping_native_blockers() {
     title: "Two".into(),
     state: "open".into(),
     url: String::new(),
+    body: None,
+    labels: None,
   };
   let err = details(&gh(&fixture), &sub).expect_err("rate limited");
   assert!(err.contains("rate limit"), "{err}");
