@@ -110,6 +110,20 @@ that child once for the missing details. Task-list children reuse their initial
 issue GET. Dependency and closing-PR requests still run for every child; an API
 rate limit fails graph construction rather than silently dropping blockers.
 
+## Quiet babysit checks
+
+Each PR check first sends six conditional REST requests. On a scheduled check
+where all six answer `304`, the engine may reuse the last pr-babysit
+collection instead of collecting again. Four more conditions must hold. That
+collection ended in keep-going. The issue is in `babysit`, never `ready`. The
+babysit state file is byte-identical. The collection is less than 15 minutes
+old. A worker report or another immediate check always collects. GitHub shows
+review-thread resolution only through GraphQL, so a thread resolved in the UI
+is seen at most 15 minutes late. A skipped check decides nothing, so it never
+queues a merge. Its `github-check` journal row carries `"babysit":"skipped"`
+and `babysitCollectedAt`, and it is not counted as a decided check. The memo
+lives in memory, so after a restart the engine collects first.
+
 ## Uncertain merges
 
 The merge queue sends one PUT pinned to the verified PR head. If GitHub times

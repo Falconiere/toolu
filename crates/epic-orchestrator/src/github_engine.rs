@@ -3,11 +3,12 @@
 use std::time::Duration;
 
 use serde_json::{Value, json};
-use toolu_engine::babysit::{BabysitTick, TickRequest};
+use toolu_engine::babysit::BabysitTick;
 use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
 
 use crate::babysit;
+use crate::babysit_fresh;
 use crate::github_probe::{self, Change, Report};
 use crate::journal::Record;
 use crate::logic::push_attention;
@@ -105,11 +106,11 @@ fn note_report(
 ) -> bool {
   let rest_rate = report.rate.clone();
   let rest_points = report.rest_points;
+  let quiet = cause == Cause::Scheduled && report.fresh == 0 && report.changes.is_empty();
   for change in report.changes {
     note_change(world, change);
   }
-  let checked = babysit_request(world, key, checks.paths)
-    .map(|request| babysit::check(checks.babysit, &request));
+  let (checked, skipped) = babysit_fresh::run(world, key, quiet, checks.babysit, checks.paths);
   world.rest_points = world.rest_points.saturating_add(rest_points);
   if let Some(rate) = &rest_rate {
     world.rest_rate = Some(rate.clone());
@@ -129,9 +130,7 @@ fn note_report(
     "graphqlRetryAfter": retry_after.map(|wait| wait.as_secs()),
   });
   let mut note = with_watch(world, key, note);
-  if let (Some(map), Some(checked)) = (note.as_object_mut(), checked.as_ref()) {
-    map.insert("next".to_owned(), json!(checked.next.name()));
-  }
+  babysit_outcome(&mut note, checked.as_ref(), skipped);
   journal(world, key, "github-check", &note.to_string());
   if let Some(checked) = checked {
     crate::babysit_next::apply(world, key, checked.next);
@@ -142,6 +141,20 @@ fn note_report(
     crate::logic::arm_merge(world, &issue);
   }
   retry_after.is_some()
+}
+
+/// Add the babysit decision, or the skipped collection's time, to `note`.
+fn babysit_outcome(note: &mut Value, checked: Option<&babysit::Checked>, skipped: Option<u64>) {
+  let Some(map) = note.as_object_mut() else {
+    return;
+  };
+  if let Some(checked) = checked {
+    map.insert("next".to_owned(), json!(checked.next.name()));
+  }
+  if let Some(at_ms) = skipped {
+    map.insert("babysit".to_owned(), json!("skipped"));
+    map.insert("babysitCollectedAt".to_owned(), json!(at_ms));
+  }
 }
 
 fn observe_graphql(world: &mut World, checked: Option<&babysit::Checked>) -> Option<Duration> {
@@ -164,30 +177,6 @@ fn observe_graphql(world: &mut World, checked: Option<&babysit::Checked>) -> Opt
       .max(world.now_ms.saturating_add(millis));
   }
   retry_after
-}
-
-fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest> {
-  let watch = world.watches.get(watch_key)?;
-  let crate::watch::Kind::Pr { key, repo, number } = &watch.kind else {
-    return None;
-  };
-  let issue = world.issues.get(key)?;
-  if !matches!(issue.phase.as_str(), "babysit" | "ready")
-    || matches!(issue.stage.as_str(), "cleaning" | "closed" | "merged")
-  {
-    return None;
-  }
-  Some(TickRequest {
-    repo: repo.clone(),
-    number: *number,
-    state_file: paths
-      .root
-      .join("babysit")
-      .join(format!("{}-{number}.json", repo.replace('/', "__"))),
-    now: Some(toolu_state::time::iso_seconds(
-      std::time::UNIX_EPOCH + Duration::from_millis(world.now_ms),
-    )),
-  })
 }
 
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
@@ -307,6 +296,14 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/github_engine_babysit_test.rs"]
 mod babysit_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_fresh_test.rs"]
+mod fresh_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_quiet_test.rs"]
+mod quiet_tests;
 
 #[cfg(test)]
 #[path = "tests/github_engine_epic_test.rs"]
