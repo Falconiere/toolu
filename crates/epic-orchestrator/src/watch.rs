@@ -79,6 +79,10 @@ pub(crate) struct Watch {
   /// forget it; a fresh, shorter last page clears it.
   #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
   pub full_tails: std::collections::BTreeSet<String>,
+  /// `full_tails` was learned from fresh pages. A watch saved before it existed
+  /// loads `false`, and its next probe drops its `ETag`s to learn it.
+  #[serde(default)]
+  pub tails_known: bool,
 }
 
 impl Watch {
@@ -96,6 +100,7 @@ impl Watch {
       base_ref: String::new(),
       babysit: None,
       full_tails: std::collections::BTreeSet::new(),
+      tails_known: true,
     }
   }
 

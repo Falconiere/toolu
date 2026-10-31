@@ -165,13 +165,23 @@ fn a_rate_limited_collection_keeps_the_shared_client() {
 }
 
 #[test]
-fn a_missing_resource_keeps_the_shared_client() {
+fn a_missing_resource_rebuilds_the_client_but_an_unprocessable_one_keeps_it() {
   let dir = TempDir::new().expect("temp dir");
   let log = logging_gh(dir.path()).expect("gh script");
   let fixture = Fixture::start().expect("fixture");
   serve(&fixture).expect("routes");
   let (tick, request) = engine_tick(dir.path(), &fixture);
   tick.tick(&request).expect("first tick");
+  let unprocessable = vec![
+    Reply::new(422, r#"{"message":"Validation Failed"}"#),
+    Reply::new(200, head()),
+  ];
+  fixture
+    .sequence(HEAD_PATH, unprocessable)
+    .expect("422 route");
+  assert!(tick.tick(&request).is_err(), "the 422 fails the tick");
+  tick.tick(&request).expect("tick after the 422");
+  assert_eq!(runs(&log), 1, "a 422 is no token problem");
   let missing = vec![
     Reply::new(404, r#"{"message":"Not Found"}"#),
     Reply::new(200, head()),
@@ -179,8 +189,8 @@ fn a_missing_resource_keeps_the_shared_client() {
   fixture.sequence(HEAD_PATH, missing).expect("404 route");
   assert!(
     tick.tick(&request).is_err(),
-    "the missing PR fails the tick"
+    "a token that lost the repository sees 404"
   );
   tick.tick(&request).expect("tick after the 404");
-  assert_eq!(runs(&log), 1, "a 404 is no token problem");
+  assert_eq!(runs(&log), 2, "the 404 dropped the client, so gh ran again");
 }

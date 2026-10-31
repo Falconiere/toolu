@@ -250,12 +250,16 @@ fn github(
   Ok((collected.snapshot, None, Some(collected.graphql)))
 }
 
-/// A refusal that a changed or rescoped token can cause (`401`, `403`); rate
-/// limits, outages, missing resources and malformed replies keep the client.
+/// A refusal that a changed or rescoped token can cause: `401`, `403`, `404`
+/// (a private repository the token no longer sees) or a GraphQL error such as
+/// `FORBIDDEN`. Rate limits, outages and malformed replies keep the client.
+/// While such a refusal persists each check reads the token again, as every
+/// check did before the client was kept.
 fn token_suspect(failure: &Failure) -> bool {
   let class = failure.extra.get("class").and_then(Value::as_str);
   let status = failure.extra.get("status").and_then(Value::as_u64);
-  class == Some("unauthorized") || (class == Some("permanent") && status == Some(403))
+  matches!(class, Some("unauthorized" | "graphql"))
+    || (class == Some("permanent") && matches!(status, Some(403 | 404)))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

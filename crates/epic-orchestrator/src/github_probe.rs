@@ -89,6 +89,12 @@ fn pr(client: &Client, watch: &mut Watch, report: &mut Report, kind: &Kind) -> R
   let Kind::Pr { key, repo, number } = kind else {
     return Err(Error::Config("expected a pull request watch".into()));
   };
+  if !watch.tails_known {
+    // Saved before full tails were tracked: fetch every list fresh once.
+    watch.etags.clear();
+    watch.page_links.clear();
+    watch.tails_known = true;
+  }
   let root = root(repo)?;
   let path = format!("{root}/pulls/{number}");
   let before = report.fresh;

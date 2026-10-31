@@ -245,3 +245,14 @@ fn full_tails_survive_a_restart_with_the_etags_they_qualify_and_stay_off_old_sna
     "the memo itself stays in memory"
   );
 }
+
+#[test]
+fn a_watch_saved_before_full_tails_existed_loads_them_as_unknown() {
+  let mut saved = serde_json::to_value(Watch::new(pr(), 0)).expect("serialize");
+  let object = saved.as_object_mut().expect("watch object");
+  object.remove("tailsKnown");
+  object.remove("fullTails");
+  let old: Watch = serde_json::from_value(saved).expect("deserialize");
+  assert!(!old.tails_known);
+  assert!(Watch::new(pr(), 0).tails_known, "a new watch starts known");
+}

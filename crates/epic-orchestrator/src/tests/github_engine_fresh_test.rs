@@ -304,3 +304,24 @@ fn a_base_move_drops_the_memos_of_that_repositorys_pull_requests() {
   assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
   assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
 }
+
+#[test]
+fn an_upgraded_watch_fetches_its_lists_fresh_once_before_it_can_skip() {
+  let fixture = Fixture::start().expect("fixture");
+  let (_temp, mut engine, tick, comments) = settled(&fixture);
+  let watch = engine.world.watches.get_mut("pr:o/r#1").expect("watch");
+  watch.tails_known = false;
+  let before = fixture.requests().expect("requests").len();
+  quiet_slot(&mut engine, &fixture, &tick, &comments, 1);
+  let requests = fixture.requests().expect("requests");
+  let probe = requests[before..]
+    .iter()
+    .find(|request| request.path == "/repos/o/r/pulls/1")
+    .expect("PR probe");
+  assert!(
+    !probe.headers.contains_key("if-none-match"),
+    "{:?}",
+    probe.headers
+  );
+  assert!(engine.world.watches["pr:o/r#1"].tails_known);
+}
