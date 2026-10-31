@@ -48,6 +48,8 @@ pub(crate) fn run(
     return (None, Some(memo.at_ms));
   }
   let checked = babysit::check(tick, &request);
+  // shortcut: a worker write landing between the tick and this read joins the
+  // memo; REFRESH_MS bounds the delay, and the worker's report forces a check.
   let memo = (checked.next == Next::KeepGoing)
     .then(|| state_hash(&request.state_file))
     .flatten()
