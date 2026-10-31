@@ -59,9 +59,7 @@ pub(crate) fn page(
   let Ok(cursor) = cursor(query, last_event_id) else {
     return Response::error(400, "bad_cursor");
   };
-  json_response(
-    status_events::page(&paths.journal_dir(), cursor.since, cursor.limit, secrets).map(Some),
-  )
+  json_response(status_events::page(paths, cursor.since, cursor.limit, secrets).map(Some))
 }
 
 /// Answer `HEAD` on the stream route: its headers, or `400 bad_cursor`;
@@ -108,12 +106,7 @@ pub(crate) fn serve(stream: &mut TcpStream, mut cursor: Cursor, feed: &Feed<'_>)
     if !(feed.allowed)() {
       return send_unauthorized(stream);
     }
-    let page = match status_events::page(
-      &feed.paths.journal_dir(),
-      cursor.since,
-      cursor.limit,
-      feed.secrets,
-    ) {
+    let page = match status_events::page(feed.paths, cursor.since, cursor.limit, feed.secrets) {
       Ok(page) => page,
       Err(_err) => {
         let _sent = stream

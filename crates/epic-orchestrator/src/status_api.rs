@@ -199,12 +199,7 @@ fn issue_events(
   paths: &Paths,
   secrets: &Secrets,
 ) -> Result<Vec<Value>, String> {
-  let page = status_events::page(
-    &paths.journal_dir(),
-    world.seq.saturating_sub(200),
-    200,
-    secrets,
-  )?;
+  let page = status_events::page(paths, world.seq.saturating_sub(200), 200, secrets)?;
   Ok(
     page
       .get("events")

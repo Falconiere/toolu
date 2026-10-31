@@ -1,11 +1,16 @@
 //! Append-only JSON lines under `<root>/journal/`, one file a day, with a
 //! sequence number. A line without a trailing newline is ignored.
+//! `sequence.index` and `sequence.offsets` are a rebuildable cache of the last
+//! sequence and each complete line's offset. The JSONL line is synced first.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use serde_json::{Value, json};
-use toolu_state::time::{epoch_millis, iso_millis, iso_seconds};
+use serde_json::Value;
+use toolu_state::time::{epoch_millis, iso_seconds};
+
+/// Rebuildable sequence and offset cache for the daily JSONL log.
+pub(crate) mod index;
 
 use crate::lock::Held;
 use crate::note::bounded_note;
@@ -48,7 +53,8 @@ impl Record {
   }
 }
 
-fn journal_held(lock: &Path) -> Result<Held, String> {
+/// Take the journal lock, retrying a live holder for two seconds.
+pub(super) fn journal_held(lock: &Path) -> Result<Held, String> {
   let start = std::time::Instant::now();
   let limit = Duration::from_secs(2);
   loop {
@@ -74,35 +80,9 @@ pub(crate) fn append(
 ) -> Result<Record, String> {
   let _held = journal_held(lock)?;
   std::fs::create_dir_all(dir).map_err(|err| err.to_string())?;
-  let seq = last_seq(dir)?.saturating_add(1);
   let mut stored = record.clone();
-  stored.seq = seq;
-  stored.at = iso_millis(now);
   stored.note = bounded_note(&stored.note);
-  let line = json!({
-    "seq": seq,
-    "at": stored.at,
-    "kind": stored.kind,
-    "name": stored.name,
-    "epic": stored.epic,
-    "key": stored.key,
-    "token": stored.token,
-    "note": stored.note,
-  });
-  let mut text = serde_json::to_string(&line).map_err(|err| err.to_string())?;
-  text.push('\n');
-  let path = file_for(dir, now);
-  let broken = std::fs::read(&path).is_ok_and(|bytes| !bytes.is_empty() && !bytes.ends_with(b"\n"));
-  let mut file = std::fs::OpenOptions::new()
-    .create(true)
-    .append(true)
-    .open(&path)
-    .map_err(|err| err.to_string())?;
-  if broken {
-    std::io::Write::write_all(&mut file, b"\n").map_err(|err| err.to_string())?;
-  }
-  std::io::Write::write_all(&mut file, text.as_bytes()).map_err(|err| err.to_string())?;
-  file.sync_all().map_err(|err| err.to_string())?;
+  index::append_locked(dir, &mut stored, now)?;
   Ok(stored)
 }
 
@@ -150,7 +130,8 @@ pub(crate) fn retain(dir: &Path, days: u32, now: SystemTime) -> Result<(), Strin
   Ok(())
 }
 
-fn day(now: SystemTime) -> String {
+/// `YYYY-MM-DD` for `now`.
+pub(super) fn day(now: SystemTime) -> String {
   iso_seconds(now).chars().take(10).collect()
 }
 
@@ -158,21 +139,6 @@ fn file_name(path: &Path) -> Option<String> {
   path
     .file_name()
     .map(|name| name.to_string_lossy().into_owned())
-}
-
-fn last_seq(dir: &Path) -> Result<u64, String> {
-  let entries = std::fs::read_dir(dir).map_err(|err| err.to_string())?;
-  let mut newest = 0;
-  for entry in entries {
-    let path = entry.map_err(|err| err.to_string())?.path();
-    if path.extension().is_none_or(|ext| ext != "jsonl") {
-      continue;
-    }
-    for row in read_file(&path)? {
-      newest = newest.max(row.seq);
-    }
-  }
-  Ok(newest)
 }
 
 fn read_file(path: &Path) -> Result<Vec<Record>, String> {
@@ -193,7 +159,8 @@ fn read_file(path: &Path) -> Result<Vec<Record>, String> {
   Ok(rows)
 }
 
-fn parse(line: &str) -> Option<Record> {
+/// One complete JSON object, or nothing when `line` is not a record.
+pub(super) fn parse(line: &str) -> Option<Record> {
   let value: Value = serde_json::from_str(line).ok()?;
   let field = |key: &str| {
     value
@@ -221,31 +188,11 @@ fn parse(line: &str) -> Option<Record> {
 /// A journal directory or file cannot be read.
 pub(crate) fn page(
   dir: &Path,
+  lock: &Path,
   since: u64,
   limit: usize,
 ) -> Result<(Option<u64>, Vec<Record>), String> {
-  let entries = match std::fs::read_dir(dir) {
-    Ok(entries) => entries,
-    Err(err) if err.kind() == std::io::ErrorKind::NotFound => return Ok((None, Vec::new())),
-    Err(err) => return Err(err.to_string()),
-  };
-  let mut rows = Vec::new();
-  for entry in entries {
-    let path = entry.map_err(|err| err.to_string())?.path();
-    if path.extension().is_some_and(|ext| ext == "jsonl") {
-      rows.extend(read_file(&path)?);
-    }
-  }
-  rows.sort_by_key(|row| row.seq);
-  let oldest = rows.first().map(|row| row.seq);
-  Ok((
-    oldest,
-    rows
-      .into_iter()
-      .filter(|row| row.seq > since)
-      .take(limit)
-      .collect(),
-  ))
+  index::page(dir, lock, since, limit)
 }
 
 /// Hand every retained record from files dated `from_day` (`YYYY-MM-DD`) or

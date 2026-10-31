@@ -4,6 +4,7 @@ use toolu_runtime::config::secrets::Secrets;
 
 use super::page;
 use crate::journal::{Record, append};
+use crate::paths::Paths;
 
 #[test]
 fn status_journal_page_is_ordered_and_omits_tokens() {
@@ -32,7 +33,7 @@ fn status_journal_page_is_ordered_and_omits_tokens() {
     later_day,
   )
   .expect("later event");
-  let doc = page(&dir, first.seq, 100, &Secrets::none()).expect("event page");
+  let doc = page(&Paths::at(root.path()), first.seq, 100, &Secrets::none()).expect("event page");
   let events = doc["events"].as_array().expect("events");
   assert_eq!(events.len(), 1);
   assert_eq!(events[0]["seq"], first.seq + 1);
