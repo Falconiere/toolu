@@ -143,12 +143,14 @@ fn document(
   paths: &Paths,
   secrets: &Secrets,
 ) -> Response {
-  let snapshot = match world.lock() {
-    Ok(world) => world.clone(),
-    Err(_err) => return Response::error(500, "status_unavailable"),
-  };
-  let Ok(local) = status_api::document(&snapshot, paths, None, secrets) else {
-    return Response::error(500, "status_unavailable");
+  let local = {
+    let Ok(world) = world.lock() else {
+      return Response::error(500, "status_unavailable");
+    };
+    match status_api::document(&world, paths, None, secrets) {
+      Ok(value) => value,
+      Err(_err) => return Response::error(500, "status_unavailable"),
+    }
   };
   let Ok(peers) = fleet.refresh(REQUEST_AGE) else {
     return Response::error(500, "status_unavailable");

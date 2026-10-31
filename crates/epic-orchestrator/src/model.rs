@@ -312,6 +312,8 @@ pub(crate) struct World {
   pub relayed_at_ms: BTreeMap<String, u64>,
   /// When the engine last journaled its resource use (Unix ms).
   pub usage_at_ms: u64,
+  /// Id of the committed snapshot. Status JSON is cached for one id.
+  pub(crate) generation: u64,
 }
 
 /// A worker prompt waiting out its debounce window.
@@ -388,6 +390,7 @@ impl World {
       prompt_queue: BTreeMap::new(),
       relayed_at_ms: BTreeMap::new(),
       usage_at_ms: now_ms,
+      generation: 0,
     }
   }
 }

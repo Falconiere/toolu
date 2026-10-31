@@ -67,6 +67,8 @@ pub(crate) struct Engine {
   pub(crate) now: SystemTime,
   /// A new pane matched a running worktree, so the subscription should reopen.
   pub resubscribe: bool,
+  /// The state loop changed the world since the last successful publish.
+  pub(crate) dirty: bool,
   /// Shared GitHub client, created only when a watch first becomes due.
   pub(crate) github: Option<Client>,
   /// The attention notifier thread, when notifications are on.
@@ -97,6 +99,7 @@ impl Engine {
       herdr_session: None,
       now,
       resubscribe: false,
+      dirty: false,
       github: None,
       notifier: None,
       env: toolu_runtime::env::Env::process(),

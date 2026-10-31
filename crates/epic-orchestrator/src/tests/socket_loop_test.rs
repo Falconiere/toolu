@@ -12,7 +12,7 @@ use crate::server::{Engine, Fault};
 #[test]
 fn poisoned_snapshot_publish_returns_error() {
   let root = tempfile::tempdir().expect("root");
-  let engine = Engine::open(Paths::at(root.path()), None, Fault::None).expect("engine");
+  let mut engine = Engine::open(Paths::at(root.path()), None, Fault::None).expect("engine");
   let shared = Mutex::new(World::new(0));
   let _poisoned = std::panic::catch_unwind(|| {
     let _guard = shared.lock().expect("shared lock");
@@ -20,7 +20,7 @@ fn poisoned_snapshot_publish_returns_error() {
   });
   let changed = Condvar::new();
   assert_eq!(
-    publish(&shared, &changed, &engine),
+    publish(&shared, &changed, &mut engine),
     Err("status_unavailable".to_owned())
   );
 }

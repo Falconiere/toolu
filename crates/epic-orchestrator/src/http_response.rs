@@ -3,7 +3,7 @@
 use std::io::{self, Write as _};
 use std::net::TcpStream;
 use std::sync::Mutex;
-use std::time::{Duration, Instant};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::json;
 use toolu_runtime::config::secrets::Secrets;
@@ -14,14 +14,15 @@ use crate::status_api;
 
 const CSP: &str = "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
-/// Briefly reuse an overview while its world sequence is unchanged.
+/// Reuse status JSON while the committed world generation is unchanged.
 pub(crate) struct OverviewCache {
-  current: Mutex<Option<CachedOverview>>,
+  current: Mutex<Option<CachedStatus>>,
+  /// Documents built, not copies served from the generation cache.
+  pub(crate) serializations: AtomicU64,
 }
 
-struct CachedOverview {
-  seq: u64,
-  at: Instant,
+struct CachedStatus {
+  generation: u64,
   body: Vec<u8>,
 }
 
@@ -30,28 +31,27 @@ impl OverviewCache {
   pub(crate) fn new() -> Self {
     Self {
       current: Mutex::new(None),
+      serializations: AtomicU64::new(0),
     }
   }
 
-  /// Return the current overview or a recent response for the same sequence.
+  /// The overview for this world's generation.
   pub(crate) fn response(&self, world: &World, paths: &Paths, secrets: &Secrets) -> Response {
     let Ok(mut current) = self.current.lock() else {
       return Response::error(500, "status_unavailable");
     };
     if let Some(entry) = current.as_ref()
-      && entry.seq == world.seq
-      && entry.at.elapsed() < Duration::from_millis(100)
+      && entry.generation == world.generation
     {
       return Response::json(entry.body.clone());
     }
-    let value = match status_api::document(world, paths, None, secrets) {
-      Ok(value) => value,
+    let body = match status_api::document(world, paths, None, secrets) {
+      Ok(value) => value.to_string().into_bytes(),
       Err(_err) => return Response::error(500, "status_unavailable"),
     };
-    let body = value.to_string().into_bytes();
-    *current = Some(CachedOverview {
-      seq: world.seq,
-      at: Instant::now(),
+    self.serializations.fetch_add(1, Ordering::Relaxed);
+    *current = Some(CachedStatus {
+      generation: world.generation,
       body: body.clone(),
     });
     Response::json(body)
