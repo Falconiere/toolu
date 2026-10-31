@@ -120,6 +120,14 @@ fn external_journal_writer() {
 }
 
 #[test]
+fn missing_journal_directory_pages_empty() {
+  let dir = tempfile::tempdir().unwrap();
+  let lock = dir.path().join("journal.lock");
+  let page = page(&dir.path().join("absent"), &lock, 0, 1).unwrap();
+  assert_eq!((page.0, page.1.len()), (None, 0));
+}
+
+#[test]
 fn two_writers_restart_and_rollover_do_not_reuse_sequences() {
   let dir = tempfile::tempdir().unwrap();
   let journal = dir.path().join("journal");
@@ -259,9 +267,7 @@ fn indexed_page_matches_a_full_scan_and_bounds_reads() {
     started.elapsed().as_millis()
   );
   std::fs::write("/tmp/toolu-757-measure.txt", line).unwrap();
-  assert_eq!(idle, 0);
-  assert_eq!(append_bytes, 0);
-  assert!(journal_bytes > 0);
+  assert_eq!((idle, append_bytes, journal_bytes > 0), (0, 0, true));
 }
 
 struct Disarm;
