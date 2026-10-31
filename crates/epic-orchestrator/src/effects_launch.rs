@@ -107,6 +107,11 @@ fn run(input: &LaunchJob) -> Value {
   let Some(issue) = graph.find(&input.key) else {
     return failed(&format!("{} is not in the graph", input.key), None);
   };
+  // A launch armed before a refresh showed the tracker item done, or one
+  // recovered from the journal, never passed refill's check again.
+  if issue.status == "done" && record_field(input, "stage").is_none() {
+    return settled(None);
+  }
   let jev = jev_from_env(&input.env);
   let keyed = jev_allowed(input);
   let jev_arg = || keyed.then(|| jev.as_ref().map_err(Clone::clone));

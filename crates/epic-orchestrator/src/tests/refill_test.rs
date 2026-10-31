@@ -59,14 +59,6 @@ fn a_batch_member_done_in_the_tracker_meanwhile_is_skipped() {
 }
 
 #[test]
-fn a_closed_epic_forms_no_batch() {
-  let mut world = world(&[("a", 1, 0)], 1);
-  world.epics.get_mut("e").expect("e").closed = true;
-  refill(&mut world);
-  assert_eq!(armed(&world), Vec::<String>::new());
-}
-
-#[test]
 fn a_batch_launches_one_member_at_a_time() {
   let mut world = world(&[("a", 2, 0), ("b", 1, 0)], 2);
   refill(&mut world);

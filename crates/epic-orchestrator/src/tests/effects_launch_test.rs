@@ -79,6 +79,23 @@ fn an_unreadable_graph_fails_and_an_overlap_holds_before_routing() {
 }
 
 #[test]
+fn a_first_launch_of_an_issue_done_in_the_tracker_settles_without_launching() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let mut graph = crate::support::graph_248();
+  graph.state_dir = tmp.path().display().to_string();
+  for issue in &mut graph.issues {
+    if issue.key == "comemory-255" {
+      "done".clone_into(&mut issue.status);
+    }
+  }
+  crate::graph::write_graph(&tmp.path().join("graph.json"), &graph).expect("graph");
+  let settled = launch(tmp.path(), "comemory-255", &[]);
+  assert_eq!(settled["outcome"], "settled");
+  assert!(settled["stage"].is_null());
+  assert!(!tmp.path().join("issues/comemory-255.json").exists());
+}
+
+#[test]
 fn a_running_workers_relaunch_waits_when_its_host_is_paused() {
   let tmp = tempfile::tempdir().expect("temp");
   let mut graph = crate::support::graph_248();

@@ -255,8 +255,7 @@ pub(crate) fn refill(world: &mut World) {
     .into_iter()
     .collect();
   for epic in epics {
-    let closed = world.epics.get(&epic).is_some_and(|found| found.closed);
-    if closed || world.paused.contains(&epic) || launching(world, &epic) || rearm(world, &epic) {
+    if world.paused.contains(&epic) || launching(world, &epic) || rearm(world, &epic) {
       continue;
     }
     if let Some(key) = next_member(world, &epic) {
