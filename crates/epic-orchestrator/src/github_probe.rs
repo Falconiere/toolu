@@ -7,7 +7,7 @@ use toolu_github::{Client, Error, RateLimit, Rest};
 
 use crate::watch::{Kind, Watch};
 
-/// Items per page the array probes ask for (`per_page=100`).
+/// Items per page every probe asks for; a full last page has this many.
 const PAGE_ITEMS: usize = 100;
 
 /// A GitHub change that the resident state thread can consume.
@@ -63,7 +63,7 @@ fn probe_into(client: &Client, watch: &mut Watch, report: &mut Report) -> Result
     Kind::Base { repo, branch } => base(client, watch, report, repo, branch)?,
     Kind::Epic { key, repo, number } => {
       let root = root(repo)?;
-      let path = format!("{root}/issues/{number}/sub_issues?per_page=100");
+      let path = format!("{root}/issues/{number}/sub_issues?per_page={PAGE_ITEMS}");
       let _pages = pages(client, watch, report, &path, true)?;
       if report.fresh > 0 {
         report
@@ -106,15 +106,15 @@ fn pr(client: &Client, watch: &mut Watch, report: &mut Report, kind: &Kind) -> R
     return Err(Error::Decode("PR has no cached head SHA".into()));
   }
   for path in [
-    format!("{root}/commits/{head}/check-runs?per_page=100"),
+    format!("{root}/commits/{head}/check-runs?per_page={PAGE_ITEMS}"),
     format!("{root}/commits/{head}/status"),
   ] {
     let _reply = pages(client, watch, report, &path, false)?;
   }
   for path in [
-    format!("{root}/issues/{number}/comments?per_page=100"),
-    format!("{root}/pulls/{number}/comments?per_page=100"),
-    format!("{root}/pulls/{number}/reviews?per_page=100"),
+    format!("{root}/issues/{number}/comments?per_page={PAGE_ITEMS}"),
+    format!("{root}/pulls/{number}/comments?per_page={PAGE_ITEMS}"),
+    format!("{root}/pulls/{number}/reviews?per_page={PAGE_ITEMS}"),
   ] {
     let _reply = pages(client, watch, report, &path, true)?;
   }
