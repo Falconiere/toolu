@@ -6,6 +6,51 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.8.0](https://github.com/Falconiere/toolu/compare/v8.7.0...v8.8.0) (2026-10-31)
+
+
+### Features
+
+* add plain-tmux support as a herdr-fallback pane manager ([#781](https://github.com/Falconiere/toolu/issues/781)) ([08e63ef](https://github.com/Falconiere/toolu/commit/08e63ef7b6cdbc528770b3f891d01ba15ac642a1))
+* **cli:** install bash, zsh, and fish completions ([2b9e699](https://github.com/Falconiere/toolu/commit/2b9e6993ef51b8b1381646c89634eb5f313f09cd))
+* **herdr-app:** support local and remote workers ([#809](https://github.com/Falconiere/toolu/issues/809)) ([d5af034](https://github.com/Falconiere/toolu/commit/d5af034ef32822994decb5be384402d8e56495cf))
+* **toolu:** add test-writer skill, test-author agent, command and evals ([#803](https://github.com/Falconiere/toolu/issues/803)) ([9a2dc97](https://github.com/Falconiere/toolu/commit/9a2dc97c8ae13c11e0e1ade5152e2052a20f6a11))
+
+
+### Bug Fixes
+
+* **ast-grep:** bound completed byte-savings ledger retention ([#782](https://github.com/Falconiere/toolu/issues/782)) ([3fa4255](https://github.com/Falconiere/toolu/commit/3fa42559e4e5b9115e1c9e01b838f05b7a534079))
+* **code-review:** bound review usage log retention ([#807](https://github.com/Falconiere/toolu/issues/807)) ([f411881](https://github.com/Falconiere/toolu/commit/f411881ef0303a808ac23aed734dd6a09c64b9f2))
+* **epic:** bound idle control socket request sessions ([#780](https://github.com/Falconiere/toolu/issues/780)) ([f696d62](https://github.com/Falconiere/toolu/commit/f696d62e1973fa14dba9bc98ab424df9855e61a2))
+* **epic:** bound retained worker screen samples ([#777](https://github.com/Falconiere/toolu/issues/777)) ([f16b345](https://github.com/Falconiere/toolu/commit/f16b345eab178ac69b3d1bcb663e069fef73e1f7))
+* **epic:** cancel timed-out herdr socket connects ([#779](https://github.com/Falconiere/toolu/issues/779)) ([5abc923](https://github.com/Falconiere/toolu/commit/5abc923924363082be7ced8ce8fbd6ff7f2614ac))
+* **epic:** deduplicate admitted dashboard answers by submission id ([#772](https://github.com/Falconiere/toolu/issues/772)) ([916b53e](https://github.com/Falconiere/toolu/commit/916b53e1225d0d2297d1dc08f2b1fb50ab456966))
+* **epic:** never launch a sub-issue the tracker already closed ([#819](https://github.com/Falconiere/toolu/issues/819)) ([b07f1bc](https://github.com/Falconiere/toolu/commit/b07f1bcd7c0242aec440d06bb63fadb5d0a6b3b7))
+* **epic:** preserve uncertain merge outcomes without resending ([#773](https://github.com/Falconiere/toolu/issues/773)) ([1741d9f](https://github.com/Falconiere/toolu/commit/1741d9f57abf0f812404d4f8d4fda03fe3a5384b))
+* **epic:** reconcile tracker close comments on retry ([#774](https://github.com/Falconiere/toolu/issues/774)) ([68fc52f](https://github.com/Falconiere/toolu/commit/68fc52f34be8fa0376b24bea450169d12cd738c2))
+* **epic:** reconcile uncertain force-with-lease pushes ([#776](https://github.com/Falconiere/toolu/issues/776)) ([611f0d0](https://github.com/Falconiere/toolu/commit/611f0d0d2f9e60c9997ebd3899a8e60433f62cbb))
+* **epic:** suppress duplicate worker notify relays after replay ([#775](https://github.com/Falconiere/toolu/issues/775)) ([7dd9757](https://github.com/Falconiere/toolu/commit/7dd97577929e3af4709fd51c5f8634b76d1ee200))
+* **mux:** stop the tmux test servers when a test world drops ([#820](https://github.com/Falconiere/toolu/issues/820)) ([c70c734](https://github.com/Falconiere/toolu/commit/c70c73430fd57f538778c2e9c8aa732ea3878883))
+* **pr-babysit:** reconcile uncertain comment creation ([#771](https://github.com/Falconiere/toolu/issues/771)) ([45bd86f](https://github.com/Falconiere/toolu/commit/45bd86f4eac2b803e0b37d1e84e8548cc5aa39ba))
+* **runtime:** cancel escaped subprocess pipe workers ([#778](https://github.com/Falconiere/toolu/issues/778)) ([483dbdb](https://github.com/Falconiere/toolu/commit/483dbdbc580fd2af43497e92c0d39e8aa6c1d52f))
+
+
+### Performance Improvements
+
+* **code-review:** cache caller reference searches for one review ([#816](https://github.com/Falconiere/toolu/issues/816)) ([10b1f62](https://github.com/Falconiere/toolu/commit/10b1f62f6088c1b5dbaa61cca143c050919b4d1a))
+* **engine:** batch multi-path quality dispatch ([#810](https://github.com/Falconiere/toolu/issues/810)) ([d00182e](https://github.com/Falconiere/toolu/commit/d00182ee532ea3197adfb91aa4f7115e9db2ad2e))
+* **engine:** memoize shell analysis and gate config per hook walk ([#814](https://github.com/Falconiere/toolu/issues/814)) ([8f729d0](https://github.com/Falconiere/toolu/commit/8f729d07cb9a6cea6875d711bba6e46e7c23d48e))
+* **epic:** index journal sequences and stream retained tails ([#815](https://github.com/Falconiere/toolu/issues/815)) ([5021bb8](https://github.com/Falconiere/toolu/commit/5021bb85f69bbcd1729c524ef5dbcf92494bf9af))
+* **epic:** publish World and status JSON once per generation ([#812](https://github.com/Falconiere/toolu/issues/812)) ([2556d4c](https://github.com/Falconiere/toolu/commit/2556d4c1432c044b8c21d0088212115947883c93))
+* **epic:** reuse fetched GitHub child details ([#813](https://github.com/Falconiere/toolu/issues/813)) ([ddee8d7](https://github.com/Falconiere/toolu/commit/ddee8d73bf06c3e43df53fc6099917966777effe))
+* **epic:** skip redundant babysit collections with a safe freshness contract ([#817](https://github.com/Falconiere/toolu/issues/817)) ([ec4ff2f](https://github.com/Falconiere/toolu/commit/ec4ff2f3581e1a1fbeef01d5d55cad4b3eb6b3a0))
+* **hooks:** avoid extra search and scan work ([#806](https://github.com/Falconiere/toolu/issues/806)) ([b4c76ad](https://github.com/Falconiere/toolu/commit/b4c76ad671c7003ae5bfc302c672f85db5fcf41e))
+* **http:** retain agents and OpenRouter clients for reuse ([#799](https://github.com/Falconiere/toolu/issues/799)) ([ddba85f](https://github.com/Falconiere/toolu/commit/ddba85f82fe6560bc438a0a650e39b2f44f4dd0a))
+* **quality:** partition structural hits once per scan ([#769](https://github.com/Falconiere/toolu/issues/769)) ([da4f098](https://github.com/Falconiere/toolu/commit/da4f098e4ca26dae34fff00f8039c3544945ee20))
+* **quality:** preserve last-record ordering with linear edit deduplication ([#768](https://github.com/Falconiere/toolu/issues/768)) ([929f702](https://github.com/Falconiere/toolu/commit/929f70255cef8909e57028db9f09179d825d6979))
+* **quality:** reuse per-file facts within one event ([#770](https://github.com/Falconiere/toolu/issues/770)) ([2e8f937](https://github.com/Falconiere/toolu/commit/2e8f937916ef60727f64acce0b58487bea4dcd83))
+* **runtime:** derive subprocess stdout views from one byte snapshot ([#805](https://github.com/Falconiere/toolu/issues/805)) ([890bdc1](https://github.com/Falconiere/toolu/commit/890bdc148b3b5080207e5c8b92b71610f2cea455))
+
 ## [8.7.0](https://github.com/Falconiere/toolu/compare/v8.6.0...v8.7.0) (2026-10-29)
 
 

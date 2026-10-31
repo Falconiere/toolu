@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "rust-quality",
   "displayName": "rust-quality",
-  "version": "8.7.0",
+  "version": "8.8.0",
   "description": "Rust PostToolUse quality checks registered into the toolu hook engine.",
   "compat": {
     "source": "native",

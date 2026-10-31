@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "brainstorm",
   "displayName": "brainstorm",
-  "version": "8.7.0",
+  "version": "8.8.0",
   "description": "Think a change through before building: evidence-backed triage, alternatives, trade-offs, and a recommended approach, without editing code. Standalone, and phase 1 of delivery-flow. No dependencies.",
   "compat": {
     "source": "native",
