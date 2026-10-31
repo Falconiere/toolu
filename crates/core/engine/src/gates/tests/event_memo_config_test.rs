@@ -1,13 +1,9 @@
-use std::cell::Cell;
-use std::path::Path;
+#[path = "memo_support_test.rs"]
+mod support;
 
-use serde_json::{Map, Value, json};
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
-use toolu_protocol::text::Text;
 use toolu_runtime::config::gate_mode::GateMode;
 use toolu_runtime::env::Env;
-use toolu_runtime::registry::rule::RuleContext;
 
 use super::super::commit_gate::COMMIT_GATE;
 use super::super::docs_sync::DOCS_SYNC;
@@ -18,66 +14,7 @@ use super::super::{command_analysis, gate_config, pre_mode};
 use super::EventMemoGuard;
 use crate::gate::Gate;
 use crate::ledger::context::test_repo::Repo;
-
-fn reset_counts() {
-  super::PARSES.with(|count| count.set(0));
-  super::LOADS.with(|count| count.set(0));
-}
-
-fn analysis_parses() -> usize {
-  super::PARSES.with(Cell::get)
-}
-
-fn config_loads() -> usize {
-  super::LOADS.with(Cell::get)
-}
-
-fn text(value: &str) -> Text {
-  Text::new(value).expect("text")
-}
-
-fn shell(command: &str) -> (NormalizedEvent, Map<String, Value>) {
-  let raw = json!({"tool_input": {"command": command}})
-    .as_object()
-    .expect("object")
-    .clone();
-  (
-    NormalizedEvent::ShellPre {
-      session: Session {
-        session_id: text("s"),
-        cwd: text("cwd"),
-        project_root: text("root"),
-        worktree: text("tree"),
-      },
-      tool: Tool {
-        call_id: text("c"),
-        name: text("Bash"),
-        input: Map::new(),
-      },
-      command: text(command),
-    },
-    raw,
-  )
-}
-
-fn context<'a>(
-  env: &'a Env,
-  root: &'a Path,
-  raw: &'a Map<String, Value>,
-  cwd: Option<&'a Path>,
-  host: Host,
-) -> RuleContext<'a> {
-  RuleContext {
-    host,
-    env,
-    config_root: root,
-    project_root: root,
-    cwd,
-    plugin_root: None,
-    raw,
-    edit: None,
-  }
-}
+use support::{analysis_parses, config_loads, context, reset_counts, shell};
 
 #[test]
 fn invalid_config_is_loaded_once_and_each_push_gate_keeps_the_warning() {

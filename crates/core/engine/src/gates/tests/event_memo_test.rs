@@ -1,11 +1,12 @@
-use std::cell::Cell;
+#[path = "memo_support_test.rs"]
+mod support;
+
 use std::path::Path;
 
-use serde_json::{Map, Value, json};
+use serde_json::{Map, Value};
 use toolu_protocol::decision::Decision;
 use toolu_protocol::host::Host;
-use toolu_protocol::normalized::{NormalizedEvent, Session, Tool};
-use toolu_protocol::text::Text;
+use toolu_protocol::normalized::NormalizedEvent;
 use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 use toolu_shell::analyze;
@@ -25,102 +26,30 @@ use crate::builtins::PRE_TOOL;
 use crate::dispatch::{DEFAULT_MODULE_TIMEOUT, DispatchOptions, dispatch_pre_tool};
 use crate::docs_review::RULE;
 use crate::gate::Gate;
-
-fn reset_counts() {
-  super::PARSES.with(|count| count.set(0));
-  super::LOADS.with(|count| count.set(0));
-}
-
-fn analysis_parses() -> usize {
-  super::PARSES.with(Cell::get)
-}
-
-fn config_loads() -> usize {
-  super::LOADS.with(Cell::get)
-}
-
-fn text(value: &str) -> Text {
-  Text::new(value).expect("text")
-}
-
-fn shell(command: &str) -> (NormalizedEvent, Map<String, Value>) {
-  let raw = json!({"tool_input": {"command": command}})
-    .as_object()
-    .expect("object")
-    .clone();
-  let event = NormalizedEvent::ShellPre {
-    session: Session {
-      session_id: text("s"),
-      cwd: text("cwd"),
-      project_root: text("root"),
-      worktree: text("tree"),
-    },
-    tool: Tool {
-      call_id: text("c"),
-      name: text("Bash"),
-      input: Map::new(),
-    },
-    command: text(command),
-  };
-  (event, raw)
-}
+use support::{
+  analysis_parses, bash_session, bash_tool, command_raw, config_loads, context, reset_counts, shell,
+};
 
 fn tool_post(command: &str) -> (NormalizedEvent, Map<String, Value>) {
-  let raw = json!({"tool_input": {"command": command}})
-    .as_object()
-    .expect("object")
-    .clone();
   let event = NormalizedEvent::ToolPost {
-    session: Session {
-      session_id: text("s"),
-      cwd: text("cwd"),
-      project_root: text("root"),
-      worktree: text("tree"),
-    },
-    tool: Tool {
-      call_id: text("c"),
-      name: text("Bash"),
-      input: Map::new(),
-    },
+    session: bash_session(),
+    tool: bash_tool(),
     output: None,
   };
-  (event, raw)
+  (event, command_raw(command))
 }
 
-fn context<'a>(
-  env: &'a Env,
-  root: &'a Path,
-  raw: &'a Map<String, Value>,
-  cwd: Option<&'a Path>,
-  host: Host,
-) -> RuleContext<'a> {
-  RuleContext {
-    host,
-    env,
-    config_root: root,
-    project_root: root,
-    cwd,
-    plugin_root: None,
-    raw,
-    edit: None,
-  }
-}
-
-fn pre_gates() -> [&'static dyn Gate; 5] {
+fn run_pre(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Vec<Result<Decision, String>> {
   [
-    &COMMIT_GATE,
+    &COMMIT_GATE as &dyn Gate,
     &DOCS_SYNC,
     &PLAN_LEDGER,
     &PUSH_REVIEW,
     &QUALITY_GATE,
   ]
-}
-
-fn run_pre(event: &NormalizedEvent, ctx: &RuleContext<'_>) -> Vec<Result<Decision, String>> {
-  pre_gates()
-    .into_iter()
-    .map(|gate| gate.run(event, ctx))
-    .collect()
+  .into_iter()
+  .map(|gate| gate.run(event, ctx))
+  .collect()
 }
 
 #[test]
