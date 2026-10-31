@@ -217,13 +217,14 @@ fn github(
   let collected = match kept {
     None => collect::collect(&build()?, &request)?,
     Some(slot) => {
-      let mut slot = slot.lock().unwrap_or_else(PoisonError::into_inner);
-      let client = match slot.take() {
+      // The lock is not held across the collection's network reads.
+      let kept = slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+      let client = match kept {
         Some(client) => client,
         None => build()?,
       };
       let collected = collect::collect(&client, &request);
-      *slot = Some(client);
+      *slot.lock().unwrap_or_else(PoisonError::into_inner) = Some(client);
       collected?
     }
   };
