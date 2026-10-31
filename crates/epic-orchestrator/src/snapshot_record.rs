@@ -25,3 +25,7 @@ pub(crate) fn overlay_record(issue: &mut crate::model::Issue, record: &Value) {
     kind.clone_into(&mut issue.kind);
   }
 }
+
+#[cfg(test)]
+#[path = "tests/snapshot_record_test.rs"]
+mod tests;

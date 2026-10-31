@@ -42,3 +42,7 @@ impl Issue {
     }
   }
 }
+
+#[cfg(test)]
+#[path = "tests/model_issue_test.rs"]
+mod tests;
