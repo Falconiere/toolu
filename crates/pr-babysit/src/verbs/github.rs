@@ -70,6 +70,7 @@ pub(super) fn tick(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
     None => Source::GitHub {
       config: config(matches, world)?,
       page_size: page_size(matches),
+      client: None,
     },
   };
   tick::tick(&request, source, world.env).map(|ticked| ticked.result)
@@ -115,6 +116,7 @@ pub(super) fn wait(matches: &ArgMatches, world: &World<'_>) -> Result<Value> {
     let source = Source::GitHub {
       config: config.clone(),
       page_size,
+      client: None,
     };
     tick::tick(&request, source, world.env).map(|ticked| ticked.result)
   };

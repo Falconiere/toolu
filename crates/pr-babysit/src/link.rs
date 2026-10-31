@@ -3,6 +3,7 @@
 //! work by id and location only, never by reviewer prose.
 
 use std::path::Path;
+use std::sync::Mutex;
 use std::time::{Duration, SystemTime};
 
 use serde_json::Value;
@@ -18,17 +19,23 @@ use crate::tick::{self, Source};
 /// The most items a prompt lists.
 const PROMPT_ITEMS: usize = 10;
 
-/// pr-babysit's [`BabysitTick`] against one GitHub API and environment.
-#[derive(Debug, Clone)]
+/// pr-babysit's [`BabysitTick`] against one GitHub API and environment. It
+/// keeps its client, so the token is read once (and again on a `401`).
+#[derive(Debug)]
 pub struct GitHubTick {
   config: toolu_github::Config,
   env: Env,
+  client: Mutex<Option<toolu_github::Client>>,
 }
 
 impl GitHubTick {
   /// A tick that reads GitHub through `config` with `env`'s token and proxy.
   pub fn new(config: toolu_github::Config, env: Env) -> Self {
-    GitHubTick { config, env }
+    GitHubTick {
+      config,
+      env,
+      client: Mutex::new(None),
+    }
   }
 }
 
@@ -37,6 +44,7 @@ impl BabysitTick for GitHubTick {
     let source = Source::GitHub {
       config: self.config.clone(),
       page_size: 100,
+      client: Some(&self.client),
     };
     tick(request, source, &self.env)
   }

@@ -3,6 +3,7 @@
 //! are clear, and the plugin's `SessionStart` hooks.
 
 use std::path::PathBuf;
+use std::sync::Mutex;
 use std::time::Duration;
 
 use clap::{ArgMatches, Command};
@@ -80,9 +81,22 @@ pub fn needs_stdin(matches: &ArgMatches) -> bool {
 }
 
 /// pr-babysit's [`BabysitTick`], which `crates/cli` hands the epic engine:
-/// one scheduled check of the pull request with the process environment.
-#[derive(Debug, Clone, Copy, Default)]
-pub struct Tick;
+/// one scheduled check of the pull request with the process environment. It
+/// keeps its GitHub client for its lifetime, so the token is read once (and
+/// again on a `401`) rather than on every check.
+#[derive(Debug, Default)]
+pub struct Tick {
+  client: Mutex<Option<toolu_github::Client>>,
+}
+
+impl Tick {
+  /// A tick with no client yet; the first check builds it.
+  pub const fn new() -> Tick {
+    Tick {
+      client: Mutex::new(None),
+    }
+  }
+}
 
 impl BabysitTick for Tick {
   fn tick(&self, request: &TickRequest) -> Result<TickReport, LinkError> {
@@ -90,6 +104,7 @@ impl BabysitTick for Tick {
     let source = tick::Source::GitHub {
       config,
       page_size: 100,
+      client: Some(&self.client),
     };
     link::tick(request, source, &Env::process())
   }
