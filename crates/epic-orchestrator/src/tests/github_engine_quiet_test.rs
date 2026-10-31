@@ -45,7 +45,10 @@ fn measure() -> Counts {
   config.api_url = fixture.url("");
   config.http.test_root_ca_der = Some(fixture.root_ca_der().to_vec());
   let path = dir.path().display().to_string();
-  let env = Env::from_pairs([("PATH", path.as_str()), ("HTTPS_PROXY", &fixture.proxy_url())]);
+  let env = Env::from_pairs([
+    ("PATH", path.as_str()),
+    ("HTTPS_PROXY", &fixture.proxy_url()),
+  ]);
   let tick = GitHubTick::new(config, env);
   let start = Instant::now();
   engine.github_tick(&tick);
@@ -77,5 +80,9 @@ fn quiet_slots_collect_three_times_in_eleven_checks_with_one_gh_run() {
     counts.elapsed_ms
   );
   assert_eq!(counts.gh, 1, "one token resolution");
-  assert_eq!(counts.graphql, 3 * 2, "slots 0, 5 and 10 collect, two queries each");
+  assert_eq!(
+    counts.graphql,
+    3 * 2,
+    "slots 0, 5 and 10 collect, two queries each"
+  );
 }

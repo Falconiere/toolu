@@ -12,8 +12,8 @@ use crate::server::Engine;
 /// CI still running and the review bot still working: keep going, no prompt.
 pub(super) fn pending() -> (String, Value) {
   let mut body: Value = serde_json::from_str(&graphql("SUCCESS", &[])).expect("GraphQL");
-  let check = &mut body["data"]["repository"]["pullRequest"]["commits"]["nodes"][0]["commit"]
-    ["statusCheckRollup"]["contexts"]["nodes"][0];
+  let check = &mut body["data"]["repository"]["pullRequest"]["commits"]["nodes"][0]["commit"]["statusCheckRollup"]
+    ["contexts"]["nodes"][0];
   check["status"] = json!("IN_PROGRESS");
   check["conclusion"] = Value::Null;
   let comments = bot_comment("in-progress.txt", "2026-10-11T10:05:00Z");
@@ -107,7 +107,10 @@ fn a_thread_resolved_only_in_graphql_is_seen_within_the_bound_and_never_merged_e
   let approved = bot_comment("pr122-verdict-approved.txt", "2026-10-11T10:05:00Z");
   rest(&fixture, &approved, true);
   fixture
-    .route("/graphql", Reply::new(200, graphql("SUCCESS", &[ci_thread(false)])))
+    .route(
+      "/graphql",
+      Reply::new(200, graphql("SUCCESS", &[ci_thread(false)])),
+    )
     .expect("GraphQL route");
   let (_temp, mut engine, _) = engine(&fixture);
   let tick = babysit(&fixture);
@@ -118,7 +121,10 @@ fn a_thread_resolved_only_in_graphql_is_seen_within_the_bound_and_never_merged_e
     "a prompt is not reused"
   );
   fixture
-    .route("/graphql", Reply::new(200, graphql("SUCCESS", &[ci_thread(true)])))
+    .route(
+      "/graphql",
+      Reply::new(200, graphql("SUCCESS", &[ci_thread(true)])),
+    )
     .expect("resolved in the UI");
   for slot in 2..6 {
     assert!(!quiet_slot(&mut engine, &fixture, &tick, &approved, slot));
