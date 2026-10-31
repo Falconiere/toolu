@@ -5,6 +5,7 @@ use super::herdr::{argv, command};
 use super::remote::{fail, field, transfer};
 use crate::error::{Failure, Result};
 use serde_json::{Value, json};
+use std::path::Path;
 use std::time::Duration;
 use toolu_mux::hc::remote::Transfer;
 
@@ -19,6 +20,7 @@ pub(super) fn verify_remote_result(
   verify_reported_commit(transport, remote, data, commit)
 }
 
+/// Require the reported commit to match remote HEAD and descend from the dispatched base.
 pub(super) fn verify_reported_commit(
   transport: &Transfer<'_>,
   remote: &Value,
@@ -152,11 +154,32 @@ fn registered(transport: &Transfer<'_>, path: &str) -> Result<bool> {
   let listed = transport
     .git(&["worktree", "list", "--porcelain", "-z"])
     .map_err(|error| fail(&error))?;
-  Ok(
-    listed
-      .split('\0')
-      .any(|line| line == format!("worktree {path}")),
-  )
+  if listed
+    .split('\0')
+    .any(|line| line == format!("worktree {path}"))
+  {
+    return Ok(true);
+  }
+  let path = Path::new(path);
+  let parent = path
+    .parent()
+    .and_then(Path::to_str)
+    .ok_or_else(|| Failure::new("state_malformed", "invalid remote worktree path"))?;
+  let name = path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .ok_or_else(|| Failure::new("state_malformed", "invalid remote worktree path"))?;
+  let resolved = transport
+    .exec(&["realpath", parent], &[])
+    .map_err(|error| fail(&error))?;
+  let resolved = std::str::from_utf8(&resolved)
+    .map_err(|error| Failure::new("remote_error", error.to_string()))?;
+  let resolved = Path::new(resolved.trim_end_matches(['\r', '\n']));
+  if !resolved.is_absolute() {
+    return Err(Failure::new("remote_error", "invalid remote realpath"));
+  }
+  let expected = format!("worktree {}", resolved.join(name).display());
+  Ok(listed.split('\0').any(|line| line == expected))
 }
 
 fn absent(transport: &Transfer<'_>, path: &str) -> Result<()> {
