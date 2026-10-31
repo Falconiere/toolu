@@ -32,6 +32,33 @@ fn closed_abandoned_and_merged_issues_never_launch() {
 }
 
 #[test]
+fn an_issue_done_in_the_tracker_never_launches() {
+  let mut world = world(&[("a", 1, 0), ("b", 1, 0)], 2);
+  world.issues.get_mut("a").expect("a").graph_status = "done".into();
+  refill(&mut world);
+  assert_eq!(batch(&world), ["b"]);
+  assert_eq!(armed(&world), ["b"]);
+  assert!(!ready(&world, &world.issues["a"]));
+}
+
+#[test]
+fn a_batch_member_done_in_the_tracker_meanwhile_is_skipped() {
+  let mut world = world(&[("a", 2, 0), ("b", 1, 0)], 2);
+  refill(&mut world);
+  assert_eq!(batch(&world), ["a", "b"]);
+  let launched = world.issues.get_mut("a").expect("a");
+  launched.pending = None;
+  launched.stage = "running".into();
+  world.issues.get_mut("b").expect("b").graph_status = "done".into();
+  refill(&mut world);
+  assert_eq!(armed(&world), Vec::<String>::new());
+  assert_eq!(
+    world.epics["e"].batch[1].outcome.as_deref(),
+    Some("skipped")
+  );
+}
+
+#[test]
 fn a_batch_launches_one_member_at_a_time() {
   let mut world = world(&[("a", 2, 0), ("b", 1, 0)], 2);
   refill(&mut world);

@@ -22,14 +22,15 @@ pub(crate) fn done(issue: &Issue) -> bool {
   matches!(issue.stage.as_str(), "merged" | "abandoned")
 }
 
-/// Whether `issue` may join a batch: never launched, unblocked, not held,
-/// deferred, paused or waiting out a retry.
+/// Whether `issue` may join a batch: never launched, open in the tracker,
+/// unblocked, not held, deferred, paused or waiting out a retry.
 pub(crate) fn ready(world: &World, issue: &Issue) -> bool {
   let unblocked = issue
     .blockers
     .iter()
     .all(|blocker| world.issues.get(blocker).is_some_and(done));
   issue.stage.is_empty()
+    && issue.graph_status != "done"
     && issue.pending.is_none()
     && issue.hold.is_none()
     && issue.deferred.is_none()
