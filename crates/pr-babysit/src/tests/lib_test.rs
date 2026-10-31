@@ -31,7 +31,7 @@ fn the_pr_babysit_crate_is_its_plugin_and_runs_its_verbs() {
 
 #[test]
 fn the_engine_tick_runs_the_port_and_reports_its_failure() {
-  let tick: &dyn BabysitTick = &Tick;
+  let tick: &dyn BabysitTick = &Tick::new();
   let request = TickRequest {
     repo: "Falconiere/toolu".into(),
     number: 460,

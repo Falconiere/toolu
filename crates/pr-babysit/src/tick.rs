@@ -4,6 +4,7 @@
 //! `pr.lastError` on the previous state and changes nothing else.
 
 use std::path::Path;
+use std::sync::{Mutex, PoisonError};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{Value, json};
@@ -29,6 +30,8 @@ pub(crate) enum Source<'a> {
     config: Config,
     /// Items per page.
     page_size: u64,
+    /// Keeps the built client for later ticks; `None` builds one per tick.
+    client: Option<&'a Mutex<Option<Client>>>,
   },
 }
 
@@ -188,18 +191,44 @@ fn snapshot(request: &Request<'_>, source: Source<'_>, env: &Env) -> Result<Read
       }
       Ok((snapshot, Some(raw), None))
     }
-    Source::GitHub { config, page_size } => {
-      let client = Client::new(config, env).map_err(|err| collect::failure("client", &err))?;
-      let request = collect::Request {
-        repo: request.repo,
-        number: request.number,
-        page_size,
-        now: request.now,
-      };
-      let collected = collect::collect(&client, &request)?;
-      Ok((collected.snapshot, None, Some(collected.graphql)))
-    }
+    Source::GitHub {
+      config,
+      page_size,
+      client,
+    } => github(request, config, page_size, client, env),
   }
+}
+
+/// Collect `request` from GitHub, through the kept client when there is a slot.
+fn github(
+  request: &Request<'_>,
+  config: Config,
+  page_size: u64,
+  kept: Option<&Mutex<Option<Client>>>,
+  env: &Env,
+) -> Result<Read> {
+  let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
+  let request = collect::Request {
+    repo: request.repo,
+    number: request.number,
+    page_size,
+    now: request.now,
+  };
+  let collected = match kept {
+    None => collect::collect(&build()?, &request)?,
+    Some(slot) => {
+      // The lock is not held across the collection's network reads.
+      let kept = slot.lock().unwrap_or_else(PoisonError::into_inner).take();
+      let client = match kept {
+        Some(client) => client,
+        None => build()?,
+      };
+      let collected = collect::collect(&client, &request);
+      *slot.lock().unwrap_or_else(PoisonError::into_inner) = Some(client);
+      collected?
+    }
+  };
+  Ok((collected.snapshot, None, Some(collected.graphql)))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

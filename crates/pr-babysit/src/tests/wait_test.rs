@@ -73,6 +73,7 @@ fn ticker<'a>(
     let source = Source::GitHub {
       config: recorded::config(fixture),
       page_size: 100,
+      client: None,
     };
     tick(&request, source, &env).map(|ticked| ticked.result)
   }

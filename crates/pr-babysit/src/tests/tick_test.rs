@@ -206,6 +206,7 @@ fn a_failed_collection_keeps_the_prior_tick_and_stamps_last_error() {
   let source = Source::GitHub {
     config: recorded::config(&fixture),
     page_size: 100,
+    client: None,
   };
   let later = "2026-09-19T12:03:00Z";
   let failure = tick(
@@ -235,6 +236,7 @@ fn no_token_is_gh_unavailable() {
   let source = Source::GitHub {
     config: toolu_github::Config::scheduled(),
     page_size: 100,
+    client: None,
   };
   let failure = tick(&request(&state, NOW, 165), source, &env)
     .err()
@@ -252,6 +254,7 @@ fn a_live_tick_collects_reduces_and_reports_its_graphql_cost() {
   let source = Source::GitHub {
     config: recorded::config(&fixture),
     page_size: 2,
+    client: None,
   };
   let ticked = tick(&request(&state, NOW, 115), source, &recorded::env(&fixture)).unwrap();
   assert_eq!(ticked.graphql.map(|usage| usage.points), Some(10));

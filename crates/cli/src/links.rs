@@ -8,8 +8,11 @@ use toolu_engine::babysit::BabysitTick;
 use toolu_engine::status::StatusSnapshot;
 use toolu_runtime::cli::{Ctx, Outcome};
 
+/// pr-babysit's tick, kept for the process so the engine keeps one client.
+static TICK: toolu_pr_babysit::Tick = toolu_pr_babysit::Tick::new();
+
 /// pr-babysit's tick, which the epic engine runs.
-pub(crate) const BABYSIT_TICK: &dyn BabysitTick = &toolu_pr_babysit::Tick;
+pub(crate) static BABYSIT_TICK: &dyn BabysitTick = &TICK;
 
 /// The hub's status snapshot, which statusline renders.
 pub(crate) const STATUS_SNAPSHOT: &dyn StatusSnapshot = &toolu_hub::status::Snapshot;
