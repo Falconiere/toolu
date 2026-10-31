@@ -14,6 +14,7 @@ struct World {
   _dir: tempfile::TempDir,
   env: Env,
   repo: std::path::PathBuf,
+  socket: std::path::PathBuf,
 }
 
 impl World {
@@ -21,18 +22,22 @@ impl World {
     let dir = tempfile::tempdir().unwrap();
     let repo = dir.path().join("repo");
     std::fs::create_dir(&repo).unwrap();
+    let socket = dir.path().join("tmux.sock");
     let env = Env::from_pairs([
       ("PATH", PATH),
-      (
-        "TOOLU_EPIC_TMUX_SOCKET",
-        dir.path().join("tmux.sock").to_str().unwrap(),
-      ),
+      ("TOOLU_EPIC_TMUX_SOCKET", socket.to_str().unwrap()),
     ]);
     World {
       _dir: dir,
       env,
       repo,
+      socket,
     }
+  }
+
+  /// A client on this world's socket.
+  fn tmux(&self) -> Tmux {
+    Tmux::new(&self.env, Some(self.socket.clone()))
   }
 
   /// A git repository with one committed file, bootstrapped in one go so a
@@ -69,6 +74,19 @@ impl World {
       path: None,
       label: Some(branch.to_owned()),
       workspace: None,
+    }
+  }
+}
+
+impl Drop for World {
+  /// Removing the scratch directory alone leaves the server running forever.
+  fn drop(&mut self) {
+    // No socket file: no server ever started; "no server": it already exited.
+    if self.socket.exists()
+      && let Err(err) = self.tmux().kill_server()
+      && !err.message.contains("no server running")
+    {
+      eprintln!("tmux test server left running: {err:?}");
     }
   }
 }
@@ -150,12 +168,7 @@ fn start_send_keys_and_read_round_trip() {
 fn a_missing_pane_is_reported_as_agent_not_found() {
   let world = World::new();
   // Anchor the server with a real session so the socket exists.
-  let tmux = Tmux::new(
-    &world.env,
-    Some(std::path::PathBuf::from(
-      world.env.get("TOOLU_EPIC_TMUX_SOCKET").unwrap(),
-    )),
-  );
+  let tmux = world.tmux();
   tmux.create_session("toolu-anchor", &world.repo).unwrap();
   let read = Call::Read {
     target: "%999999".to_owned(),
@@ -234,14 +247,27 @@ fn worktree_list_pane_list_and_agent_list_report_the_open_session() {
 }
 
 #[test]
+fn dropping_the_world_stops_its_server_and_shells() {
+  let world = World::new();
+  let tmux = world.tmux();
+  tmux.create_session("toolu-drop", &world.repo).unwrap();
+  let shell = tmux
+    .pane_pid(&tmux.first_pane("toolu-drop").unwrap())
+    .unwrap();
+  drop(world);
+  // The pane shell leads its own group; `alive` ignores an unreaped zombie.
+  let alive = || toolu_runtime::process::group::alive(shell);
+  let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+  while alive() && std::time::Instant::now() < deadline {
+    std::thread::sleep(std::time::Duration::from_millis(50));
+  }
+  assert!(!alive(), "shell {shell} outlived its world");
+}
+
+#[test]
 fn notify_shows_a_message_in_the_open_session() {
   let world = World::new();
-  let tmux = Tmux::new(
-    &world.env,
-    Some(std::path::PathBuf::from(
-      world.env.get("TOOLU_EPIC_TMUX_SOCKET").unwrap(),
-    )),
-  );
+  let tmux = world.tmux();
   tmux.create_session("toolu-notify", &world.repo).unwrap();
   let notify = Call::Notify {
     title: "attention".to_owned(),
