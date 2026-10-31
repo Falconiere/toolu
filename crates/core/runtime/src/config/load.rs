@@ -94,6 +94,21 @@ impl LoadedConfig {
   pub fn take_warnings(&self) -> Vec<String> {
     self.warnings.take()
   }
+
+  /// A second owner of the same config and warnings.
+  ///
+  /// One hook walk loads config once and hands each gate its own copy, so
+  /// [`Self::take_warnings`] on one gate does not empty the others.
+  #[must_use]
+  pub fn duplicate(&self) -> Self {
+    Self {
+      data: self.data.clone(),
+      invalid: self.invalid.clone(),
+      files: self.files.clone(),
+      host: self.host,
+      warnings: RefCell::new(self.warnings.borrow().clone()),
+    }
+  }
 }
 
 /// The two config files for `roots`, the project one found from `cwd`.

@@ -113,6 +113,8 @@ pub(crate) fn walk_with_view<'a>(
     Option<(&RefCell<QualityBatch>, usize)>,
   ),
 ) -> ModuleResult {
+  // One memo per path walk. The next event or edit path must not see it.
+  let _event_memo = crate::gates::EventMemoGuard::enter();
   let ctx = view.rule_context(payload, session);
   let event = host_event(&view.event);
   let mut state = WalkState::new(session.phase, session.host);
