@@ -1,6 +1,6 @@
 {
   "name": "code-review",
-  "version": "8.7.0",
+  "version": "8.8.0",
   "hookProtocol": 2,
   "description": "Native code review of the committed push diff with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
   "author": {
