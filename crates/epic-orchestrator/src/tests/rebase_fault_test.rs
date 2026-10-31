@@ -34,13 +34,14 @@ fn delayed_push(inspect_available: bool) -> (Repo, Rebased) {
       repo.origin.display()
     )
   };
+  // The hook has to start before the client deadline, and still be asleep when it fires.
   hook(
     &repo.origin.join("hooks/post-receive"),
-    &format!("#!/bin/sh\n{break_inspection}sleep 6\n"),
+    &format!("#!/bin/sh\n{break_inspection}sleep 45\n"),
   );
   let runtime_env = env(&repo);
   let target = repo.target();
-  let runner = Git::with_timeout(&repo.work, &runtime_env, Duration::from_secs(2));
+  let runner = Git::with_timeout(&repo.work, &runtime_env, Duration::from_secs(20));
   let result = replay(&runner, &target);
   (repo, result)
 }
