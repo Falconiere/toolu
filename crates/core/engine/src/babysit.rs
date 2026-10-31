@@ -2,6 +2,7 @@
 //! epic engine runs it, and `crates/cli` hands the engine pr-babysit's
 //! implementation, so neither plugin crate depends on the other.
 
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
 
 use serde_json::Value;
@@ -48,6 +49,17 @@ pub struct TickReport {
   /// The text to send the worker, with [`TickDecision::Act`] or
   /// [`TickDecision::Escalate`].
   pub prompt: Option<String>,
+  /// [`state_digest`] of the state file bytes this tick wrote, when it wrote
+  /// them, so a later read can tell whether anyone has written since.
+  pub state_digest: Option<u64>,
+}
+
+/// The digest of a babysit state file's bytes that a tick reports and the
+/// engine compares a later read against; stable within one process.
+pub fn state_digest(bytes: &[u8]) -> u64 {
+  let mut hasher = DefaultHasher::new();
+  bytes.hash(&mut hasher);
+  hasher.finish()
 }
 
 /// The GraphQL budget observed by one babysit tick.

@@ -73,6 +73,10 @@ pub(crate) struct Watch {
   /// so a restarted engine collects first.
   #[serde(skip)]
   pub babysit: Option<crate::babysit_fresh::Collected>,
+  /// Array paths whose last fresh reply was a full page with no next link: a
+  /// new item can land on a page the saved links never fetch. In memory only.
+  #[serde(skip)]
+  pub full_tails: std::collections::BTreeSet<String>,
 }
 
 impl Watch {
@@ -89,6 +93,7 @@ impl Watch {
       head_sha: String::new(),
       base_ref: String::new(),
       babysit: None,
+      full_tails: std::collections::BTreeSet::new(),
     }
   }
 

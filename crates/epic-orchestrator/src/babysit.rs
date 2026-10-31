@@ -4,7 +4,7 @@
 
 use serde_json::Value;
 use toolu_engine::LinkError;
-use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickRequest};
+use toolu_engine::babysit::{BabysitTick, GraphQlUsage, TickDecision, TickReport, TickRequest};
 
 use crate::journal::Record;
 use crate::model::{Step, World};
@@ -51,6 +51,11 @@ pub(crate) struct Checked {
   pub next: Next,
   /// Separate GraphQL budget observation.
   pub graphql: Option<GraphQlUsage>,
+  /// Nothing GitHub was still computing (`mergeable_unknown`) shaped the
+  /// decision, so a quiet REST probe may reuse it.
+  pub settled: bool,
+  /// The digest of the state file bytes the tick wrote.
+  pub state_digest: Option<u64>,
   /// Rate limit returned by the tick, with no GraphQL result document.
   pub throttle: Option<Throttle>,
 }
@@ -74,34 +79,7 @@ pub fn next(tick: &dyn BabysitTick, request: &TickRequest) -> Next {
 pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
   let slot = format!("{}#{}", request.repo, request.number);
   match tick.tick(request) {
-    Ok(report) => Checked {
-      next: if report
-        .result
-        .get("reasons")
-        .and_then(Value::as_array)
-        .is_some_and(|reasons| reasons.iter().any(|reason| reason["code"] == "pr_merged"))
-      {
-        Next::Merged
-      } else {
-        match report.decision {
-          TickDecision::KeepGoing => Next::KeepGoing,
-          TickDecision::Success => Next::MergeQueue,
-          TickDecision::Escalate => match report.prompt {
-            Some(prompt) => Next::Escalate {
-              note: format!("babysit escalated {slot}"),
-              prompt,
-            },
-            None => Next::Attention(format!("babysit escalated {slot}")),
-          },
-          TickDecision::Act => match report.prompt {
-            Some(text) => Next::Prompt(text),
-            None => Next::Attention(format!("babysit needs the worker on {slot}")),
-          },
-        }
-      },
-      graphql: report.graphql,
-      throttle: None,
-    },
+    Ok(report) => decided(report, &slot),
     Err(LinkError::RateLimited {
       retry_after,
       remaining,
@@ -109,6 +87,8 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
     }) => Checked {
       next: Next::Attention(format!("babysit tick for {slot} was rate limited")),
       graphql: None,
+      settled: false,
+      state_digest: None,
       throttle: Some(Throttle {
         retry_after,
         remaining,
@@ -118,8 +98,48 @@ pub(crate) fn check(tick: &dyn BabysitTick, request: &TickRequest) -> Checked {
     Err(err) => Checked {
       next: Next::Attention(format!("babysit tick for {slot} failed: {err}")),
       graphql: None,
+      settled: false,
+      state_digest: None,
       throttle: None,
     },
+  }
+}
+
+/// A completed tick's decision for `slot`.
+fn decided(report: TickReport, slot: &str) -> Checked {
+  let reason = |code: &str| {
+    report
+      .result
+      .get("reasons")
+      .and_then(Value::as_array)
+      .is_some_and(|reasons| reasons.iter().any(|reason| reason["code"] == code))
+  };
+  let (merged, settled) = (reason("pr_merged"), !reason("mergeable_unknown"));
+  let next = if merged {
+    Next::Merged
+  } else {
+    match report.decision {
+      TickDecision::KeepGoing => Next::KeepGoing,
+      TickDecision::Success => Next::MergeQueue,
+      TickDecision::Escalate => match report.prompt {
+        Some(prompt) => Next::Escalate {
+          note: format!("babysit escalated {slot}"),
+          prompt,
+        },
+        None => Next::Attention(format!("babysit escalated {slot}")),
+      },
+      TickDecision::Act => match report.prompt {
+        Some(text) => Next::Prompt(text),
+        None => Next::Attention(format!("babysit needs the worker on {slot}")),
+      },
+    }
+  };
+  Checked {
+    next,
+    graphql: report.graphql,
+    settled,
+    state_digest: report.state_digest,
+    throttle: None,
   }
 }
 

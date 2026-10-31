@@ -66,6 +66,7 @@ impl BabysitTick for FullTick {
         reset_at: reply.cost.rate.reset,
       }),
       prompt: None,
+      state_digest: None,
     })
   }
 }

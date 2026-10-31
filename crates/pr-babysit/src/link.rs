@@ -166,6 +166,7 @@ pub(crate) fn tick(
     result: ticked.result,
     graphql: ticked.graphql,
     prompt,
+    state_digest: Some(ticked.state_digest),
   })
 }
 

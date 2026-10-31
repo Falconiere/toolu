@@ -116,3 +116,26 @@ fn a_failed_client_build_is_not_kept_and_the_next_tick_retries() {
   tick.tick(&request).expect("tick with gh");
   assert_eq!(runs(&log), 1);
 }
+
+#[test]
+fn a_failed_collection_drops_the_kept_client_so_the_token_is_read_again() {
+  let dir = TempDir::new().expect("temp dir");
+  let log = logging_gh(dir.path()).expect("gh script");
+  let fixture = Fixture::start().expect("fixture");
+  serve(&fixture).expect("routes");
+  let (tick, request) = engine_tick(dir.path(), &fixture);
+  tick.tick(&request).expect("first tick");
+  assert_eq!(runs(&log), 1);
+  let forbidden = vec![
+    Reply::new(403, r#"{"message":"Resource not accessible"}"#),
+    Reply::new(200, head()),
+  ];
+  fixture.sequence(HEAD_PATH, forbidden).expect("403 route");
+  assert!(tick.tick(&request).is_err(), "a rescoped token answers 403");
+  tick.tick(&request).expect("tick after 403");
+  assert_eq!(
+    runs(&log),
+    2,
+    "the failure dropped the client, so gh ran again"
+  );
+}

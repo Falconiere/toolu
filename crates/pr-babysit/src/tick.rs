@@ -58,6 +58,8 @@ pub(crate) struct Ticked {
   pub(crate) result: Value,
   /// The GraphQL budget a collection spent; `None` for a recorded snapshot.
   pub(crate) graphql: Option<GraphQlUsage>,
+  /// The digest of the state file bytes this tick wrote.
+  pub(crate) state_digest: u64,
 }
 
 /// Run one check.
@@ -105,11 +107,13 @@ pub(crate) fn tick(request: &Request<'_>, source: Source<'_>, env: &Env) -> Resu
   schedule::apply(&mut reduced, now, request.scheduled);
   let raw = raw.unwrap_or_else(|| format!("{snapshot}\n"));
   write_text(&snapshot_out, &raw, "snapshot_out")?;
-  write_json(request.state_file, &reduced.state, "state")?;
+  let state = format!("{}\n", reduced.state);
+  write_text(request.state_file, &state, "state")?;
   write_json(&result_out, &reduced.result, "result")?;
   Ok(Ticked {
     result: reduced.result,
     graphql,
+    state_digest: toolu_engine::babysit::state_digest(state.as_bytes()),
   })
 }
 
@@ -218,16 +222,29 @@ fn github(
   let collected = match kept {
     None => collect::collect(&build()?, &request)?,
     Some(slot) => {
-      // Concurrent ticks share one client; the lock is held only to fetch or
-      // build it, never across the collection's network reads.
-      let client = {
-        let mut kept = slot.lock().unwrap_or_else(PoisonError::into_inner);
-        match kept.as_ref() {
-          Some(client) => Arc::clone(client),
-          None => Arc::clone(kept.insert(Arc::new(build()?))),
-        }
+      // Concurrent ticks share one client. The lock is never held while the
+      // token is read or the collection runs.
+      let lock = || slot.lock().unwrap_or_else(PoisonError::into_inner);
+      let shared = lock().clone();
+      let client = if let Some(client) = shared {
+        client
+      } else {
+        let made = Arc::new(build()?);
+        Arc::clone(lock().get_or_insert(made))
       };
-      collect::collect(&client, &request)?
+      let collected = collect::collect(&client, &request);
+      if collected.is_err() {
+        // A failed read may be a changed or rescoped token that did not
+        // answer 401; the next tick builds a client and reads it again.
+        let mut shared = lock();
+        if shared
+          .as_ref()
+          .is_some_and(|other| Arc::ptr_eq(other, &client))
+        {
+          *shared = None;
+        }
+      }
+      collected?
     }
   };
   Ok((collected.snapshot, None, Some(collected.graphql)))

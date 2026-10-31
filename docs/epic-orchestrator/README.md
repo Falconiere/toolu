@@ -116,11 +116,19 @@ rate limit fails graph construction rather than silently dropping blockers.
 Each PR check first sends conditional REST requests for the PR, its checks and
 statuses, its comments and its reviews, following saved next-page links. On a
 scheduled check where every one of them answers `304`, the engine may reuse the
-last pr-babysit collection instead of collecting again. Four more conditions must hold. That
-collection ended in keep-going while the issue was in `babysit`. The issue is
-still in `babysit`, never `ready`, and has not left it since. The
-babysit state file is byte-identical. The collection is less than 15 minutes
-old. A worker report or another immediate check always collects. GitHub shows
+last pr-babysit collection instead of collecting again. More conditions must
+hold:
+
+- That collection ended in keep-going while the issue was in `babysit`, and
+  GitHub was not still computing mergeability (`mergeable_unknown`).
+- The issue is still in `babysit`, never `ready`, and its phase has not changed
+  since.
+- No comment or review list ended on a full page of 100 with no next link,
+  since a new item there would sit on a page the saved links never fetch.
+- The babysit state file still holds the bytes that collection wrote.
+- The collection is less than 15 minutes old.
+
+A worker report or another immediate check always collects. GitHub shows
 review-thread resolution only through GraphQL, so a thread resolved in the UI
 is seen at most 15 minutes late. A skipped check decides nothing, so it never
 queues a merge. Its `github-check` journal row carries `"babysit":"skipped"`

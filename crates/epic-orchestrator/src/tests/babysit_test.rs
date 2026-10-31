@@ -16,6 +16,7 @@ impl BabysitTick for Answer {
       result: json!({ "slot": format!("{}#{}", request.repo, request.number) }),
       graphql: None,
       prompt: None,
+      state_digest: None,
     })
   }
 }
@@ -54,6 +55,7 @@ impl BabysitTick for Escalated {
       result: json!({}),
       graphql: None,
       prompt: Some("pr-babysit: merged".into()),
+      state_digest: None,
     })
   }
 }

@@ -1,18 +1,19 @@
 //! When a scheduled check may skip pr-babysit's collection (#761). A pull
-//! request watch remembers its last collection that settled at keep-going.
-//! A later check reuses that outcome only when it is scheduled, every REST
-//! probe answered `304`, the issue is in babysit (never ready), the babysit
-//! state file is byte-identical, and less than [`REFRESH_MS`] has passed.
-//! A skip decides nothing, so it can never queue a merge.
+//! request watch remembers its last collection that settled at keep-going in
+//! babysit, with nothing GitHub was still computing. A later check reuses that
+//! outcome only when it is scheduled, every REST probe answered `304` and no
+//! array ended on a full page, the issue is still in the same babysit phase
+//! (never ready), the babysit state file still holds the bytes that tick
+//! wrote, and less than [`REFRESH_MS`] has passed. A skip decides nothing, so
+//! it can never queue a merge.
 
-use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::Path;
 use std::time::Duration;
 
-use toolu_engine::babysit::{BabysitTick, TickRequest};
+use toolu_engine::babysit::{BabysitTick, TickRequest, state_digest};
 
 use crate::babysit::{self, Checked, Next};
-use crate::model::World;
+use crate::model::{Issue, World};
 use crate::paths::Paths;
 use crate::watch::{CHECK_MS, Kind};
 
@@ -26,8 +27,10 @@ pub(crate) const REFRESH_MS: u64 = 5 * CHECK_MS;
 pub(crate) struct Collected {
   /// The engine time of the collection, in Unix milliseconds.
   pub at_ms: u64,
-  /// The hash of the babysit state file's bytes right after it.
-  pub state_hash: u64,
+  /// The digest of the babysit state file bytes that collection wrote.
+  pub state_digest: u64,
+  /// The issue's `phase_at_ms` then; any phase change since collects.
+  pub phase_at_ms: u64,
 }
 
 /// What one check did about babysit.
@@ -71,17 +74,18 @@ pub(crate) fn run(
     return Babysit::Skipped { at_ms: memo.at_ms };
   }
   let checked = babysit::check(tick, &request);
-  // Only a keep-going collection made in babysit is reused, so a phase change
-  // (ready back to babysit, say) always collects first.
-  // shortcut: a worker write landing between the tick and this read joins the
-  // memo; REFRESH_MS bounds the delay, and the worker's report forces a check.
-  let memo = (checked.next == Next::KeepGoing && babysitting(world, watch_key))
-    .then(|| state_hash(&request.state_file))
-    .flatten()
-    .map(|state_hash| Collected {
-      at_ms: world.now_ms,
-      state_hash,
-    });
+  // Only a settled keep-going collection made in babysit is reused, compared
+  // against the bytes that tick wrote rather than a later read of the file.
+  let memo = match (babysitting(world, watch_key), checked.state_digest) {
+    (Some(issue), Some(state_digest)) if checked.next == Next::KeepGoing && checked.settled => {
+      Some(Collected {
+        at_ms: world.now_ms,
+        state_digest,
+        phase_at_ms: issue.phase_at_ms,
+      })
+    }
+    _ => None,
+  };
   remember(world, watch_key, memo);
   Babysit::Checked(checked)
 }
@@ -92,31 +96,27 @@ fn remember(world: &mut World, watch_key: &str, memo: Option<Collected>) {
   }
 }
 
-/// Whether `watch_key`'s issue is in the babysit phase.
-fn babysitting(world: &World, watch_key: &str) -> bool {
+/// `watch_key`'s issue, when it is in the babysit phase.
+fn babysitting<'a>(world: &'a World, watch_key: &str) -> Option<&'a Issue> {
   crate::watch::issue_of(world, watch_key)
     .and_then(|key| world.issues.get(key))
-    .is_some_and(|issue| issue.phase == "babysit")
+    .filter(|issue| issue.phase == "babysit")
 }
 
 /// The memo a quiet check of `watch_key` may reuse.
 fn reusable(world: &World, watch_key: &str, state_file: &Path) -> Option<Collected> {
-  let memo = world.watches.get(watch_key)?.babysit?;
+  let watch = world.watches.get(watch_key)?;
+  let memo = watch.babysit?;
   let recent = world
     .now_ms
     .checked_sub(memo.at_ms)
     .is_some_and(|age| age < REFRESH_MS);
+  let same_phase =
+    babysitting(world, watch_key).is_some_and(|issue| issue.phase_at_ms == memo.phase_at_ms);
   // The file is read only once the cheap checks pass.
-  let unchanged = || state_hash(state_file) == Some(memo.state_hash);
-  (recent && babysitting(world, watch_key) && unchanged()).then_some(memo)
-}
-
-/// The hash of `path`'s bytes; `None` when it cannot be read.
-fn state_hash(path: &Path) -> Option<u64> {
-  let bytes = std::fs::read(path).ok()?;
-  let mut hasher = DefaultHasher::new();
-  bytes.hash(&mut hasher);
-  Some(hasher.finish())
+  let unchanged =
+    || std::fs::read(state_file).is_ok_and(|bytes| state_digest(&bytes) == memo.state_digest);
+  (recent && same_phase && watch.full_tails.is_empty() && unchanged()).then_some(memo)
 }
 
 /// The babysit request of `watch_key`'s pull request, while its issue waits

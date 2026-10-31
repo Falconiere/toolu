@@ -7,6 +7,9 @@ use toolu_github::{Client, Error, RateLimit, Rest};
 
 use crate::watch::{Kind, Watch};
 
+/// Items per page the array probes ask for (`per_page=100`).
+const PAGE_ITEMS: usize = 100;
+
 /// A GitHub change that the resident state thread can consume.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Change {
@@ -247,16 +250,29 @@ fn page(
         }
       }
       let next = next_link(&fresh.headers);
-      match &next {
-        Some(link) => {
-          watch.page_links.insert(current.to_owned(), link.clone());
-        }
-        None => {
-          watch.page_links.remove(current);
-        }
-      }
+      remember_links(watch, current, &body, next.as_ref());
       Ok((Some(body), next))
     }
+  }
+}
+
+/// Keep `current`'s next-page link, and whether it ended an array on a full page.
+fn remember_links(watch: &mut Watch, current: &str, body: &Value, next: Option<&String>) {
+  match next {
+    Some(link) => {
+      watch.page_links.insert(current.to_owned(), link.clone());
+    }
+    None => {
+      watch.page_links.remove(current);
+    }
+  }
+  let full = body
+    .as_array()
+    .is_some_and(|items| items.len() >= PAGE_ITEMS);
+  if full && next.is_none() {
+    watch.full_tails.insert(current.to_owned());
+  } else {
+    watch.full_tails.remove(current);
   }
 }
 

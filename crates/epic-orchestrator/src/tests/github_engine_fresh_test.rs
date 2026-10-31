@@ -232,3 +232,43 @@ fn a_stint_outside_babysit_drops_the_memo() {
     "back in babysit"
   );
 }
+
+/// An engine whose first check collected `body` with `comments`.
+fn first_check(
+  fixture: &Fixture,
+  body: String,
+  comments: &Value,
+) -> (tempfile::TempDir, Engine, GitHubTick) {
+  rest(fixture, comments, true);
+  fixture
+    .route("/graphql", Reply::new(200, body))
+    .expect("GraphQL route");
+  let (temp, mut engine, _) = engine(fixture);
+  let tick = babysit(fixture);
+  engine.github_tick(&tick);
+  (temp, engine, tick)
+}
+
+#[test]
+fn a_keep_going_while_mergeability_is_unknown_is_not_reused() {
+  let fixture = Fixture::start().expect("fixture");
+  let (body, comments) = pending();
+  let mut unknown: Value = serde_json::from_str(&body).expect("GraphQL");
+  unknown["data"]["repository"]["pullRequest"]["mergeable"] = json!("UNKNOWN");
+  let (_temp, mut engine, tick) = first_check(&fixture, unknown.to_string(), &comments);
+  assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
+  assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
+}
+
+#[test]
+fn a_full_last_page_of_comments_is_never_trusted_to_be_complete() {
+  let fixture = Fixture::start().expect("fixture");
+  let (body, _) = pending();
+  let comment = json!({"id": 1, "body": "noted", "user": {"login": "worker", "type": "User"},
+    "created_at": "2026-10-11T10:00:00Z", "updated_at": "2026-10-11T10:00:00Z",
+    "html_url": "https://github.com/o/r/pull/1#issuecomment-1"});
+  let comments = Value::Array(vec![comment; 100]);
+  let (_temp, mut engine, tick) = first_check(&fixture, body, &comments);
+  assert!(!engine.world.watches["pr:o/r#1"].full_tails.is_empty());
+  assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
+}

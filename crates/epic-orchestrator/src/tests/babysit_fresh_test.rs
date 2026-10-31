@@ -1,6 +1,8 @@
 use std::path::{Path, PathBuf};
 
-use super::{Collected, REFRESH_MS, request, reusable, state_hash};
+use toolu_engine::babysit::state_digest;
+
+use super::{Collected, REFRESH_MS, request, reusable};
 use crate::model::{Issue, World};
 use crate::paths::Paths;
 use crate::watch::{CHECK_MS, Kind, Watch};
@@ -20,9 +22,10 @@ fn watched(state: &Path) -> World {
     number: 1,
   };
   let mut watch = Watch::new(kind, 0);
-  watch.babysit = state_hash(state).map(|state_hash| Collected {
+  watch.babysit = std::fs::read(state).ok().map(|bytes| Collected {
     at_ms: 0,
-    state_hash,
+    state_digest: state_digest(&bytes),
+    phase_at_ms: 0,
   });
   world.watches.insert(KEY.into(), watch);
   world
@@ -70,9 +73,27 @@ fn ready_a_changed_or_missing_state_file_or_no_memo_collect() {
   assert!(reusable(&world, KEY, &state).is_none(), "edited state");
   std::fs::remove_file(&state).expect("remove");
   assert!(reusable(&world, KEY, &state).is_none(), "absent state");
-  assert_eq!(state_hash(&state), None);
   let fresh = watched(&state);
   assert!(fresh.watches[KEY].babysit.is_none(), "no state, no memo");
+}
+
+#[test]
+fn a_phase_change_or_a_full_last_page_since_the_collection_collects() {
+  let dir = tempfile::tempdir().expect("temp");
+  let state = state_file(dir.path());
+  let mut world = watched(&state);
+  world.now_ms = CHECK_MS;
+  assert!(reusable(&world, KEY, &state).is_some());
+  world.issues.get_mut("one").expect("issue").phase_at_ms = 1;
+  assert!(
+    reusable(&world, KEY, &state).is_none(),
+    "left and re-entered babysit"
+  );
+  world.issues.get_mut("one").expect("issue").phase_at_ms = 0;
+  let tail = "/repos/o/r/issues/1/comments?per_page=100".to_owned();
+  let watch = world.watches.get_mut(KEY).expect("watch");
+  watch.full_tails.insert(tail);
+  assert!(reusable(&world, KEY, &state).is_none(), "a full last page");
 }
 
 #[test]
