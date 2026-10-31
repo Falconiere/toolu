@@ -32,6 +32,21 @@ fn closed_abandoned_and_merged_issues_never_launch() {
 }
 
 #[test]
+fn an_issue_closed_in_the_tracker_never_launches() {
+  let mut world = world(&[("a", 1, 0), ("b", 1, 0)], 2);
+  let graph = world
+    .epics
+    .get_mut("e")
+    .and_then(|epic| epic.graph.as_mut())
+    .expect("graph");
+  "closed".clone_into(&mut graph.issues[0].state);
+  refill(&mut world);
+  assert_eq!(batch(&world), ["b"]);
+  assert_eq!(armed(&world), ["b"]);
+  assert!(!ready(&world, &world.issues["a"]));
+}
+
+#[test]
 fn a_batch_launches_one_member_at_a_time() {
   let mut world = world(&[("a", 2, 0), ("b", 1, 0)], 2);
   refill(&mut world);
