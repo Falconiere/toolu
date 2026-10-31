@@ -113,10 +113,12 @@ rate limit fails graph construction rather than silently dropping blockers.
 
 ## Quiet babysit checks
 
-Each PR check first sends six conditional REST requests. On a scheduled check
-where all six answer `304`, the engine may reuse the last pr-babysit
-collection instead of collecting again. Four more conditions must hold. That
-collection ended in keep-going. The issue is in `babysit`, never `ready`. The
+Each PR check first sends conditional REST requests for the PR, its checks and
+statuses, its comments and its reviews, following saved next-page links. On a
+scheduled check where every one of them answers `304`, the engine may reuse the
+last pr-babysit collection instead of collecting again. Four more conditions must hold. That
+collection ended in keep-going while the issue was in `babysit`. The issue is
+still in `babysit`, never `ready`, and has not left it since. The
 babysit state file is byte-identical. The collection is less than 15 minutes
 old. A worker report or another immediate check always collects. GitHub shows
 review-thread resolution only through GraphQL, so a thread resolved in the UI

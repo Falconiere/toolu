@@ -8,7 +8,7 @@ use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
 
 use crate::babysit;
-use crate::babysit_fresh;
+use crate::babysit_fresh::{self, Babysit};
 use crate::github_probe::{self, Change, Report};
 use crate::journal::Record;
 use crate::logic::push_attention;
@@ -106,33 +106,33 @@ fn note_report(
 ) -> bool {
   let rest_rate = report.rate.clone();
   let rest_points = report.rest_points;
-  let quiet = cause == Cause::Scheduled && report.fresh == 0 && report.changes.is_empty();
+  let quiet = cause == Cause::Scheduled && report.fresh == 0;
   for change in report.changes {
     note_change(world, change);
   }
-  let (checked, skipped) = babysit_fresh::run(world, key, quiet, checks.babysit, checks.paths);
+  let babysit = babysit_fresh::run(world, key, quiet, checks.babysit, checks.paths);
   world.rest_points = world.rest_points.saturating_add(rest_points);
   if let Some(rate) = &rest_rate {
     world.rest_rate = Some(rate.clone());
   }
-  let retry_after = observe_graphql(world, checked.as_ref());
-  let graphql = checked.as_ref().and_then(|result| result.graphql);
+  let retry_after = observe_graphql(world, babysit.checked());
+  let graphql = babysit.checked().and_then(|result| result.graphql);
   let note = json!({
     "cause": cause_name(cause),
     "restFresh": report.fresh,
     "restNotModified": report.not_modified,
     "restPoints": rest_points,
     "restRate": rest_rate,
-    "graphqlTick": u8::from(checked.is_some()),
+    "graphqlTick": u8::from(babysit.checked().is_some()),
     "graphqlPoints": graphql.map(|usage| usage.points),
     "graphqlRemaining": world.graphql_remaining,
     "graphqlResetAt": world.graphql_reset_at,
     "graphqlRetryAfter": retry_after.map(|wait| wait.as_secs()),
   });
   let mut note = with_watch(world, key, note);
-  babysit_outcome(&mut note, checked.as_ref(), skipped);
+  babysit_outcome(&mut note, &babysit);
   journal(world, key, "github-check", &note.to_string());
-  if let Some(checked) = checked {
+  if let Babysit::Checked(checked) = babysit {
     crate::babysit_next::apply(world, key, checked.next);
   }
   if let Some(crate::watch::Kind::Pr { key: issue, .. }) =
@@ -144,16 +144,19 @@ fn note_report(
 }
 
 /// Add the babysit decision, or the skipped collection's time, to `note`.
-fn babysit_outcome(note: &mut Value, checked: Option<&babysit::Checked>, skipped: Option<u64>) {
+fn babysit_outcome(note: &mut Value, babysit: &Babysit) {
   let Some(map) = note.as_object_mut() else {
     return;
   };
-  if let Some(checked) = checked {
-    map.insert("next".to_owned(), json!(checked.next.name()));
-  }
-  if let Some(at_ms) = skipped {
-    map.insert("babysit".to_owned(), json!("skipped"));
-    map.insert("babysitCollectedAt".to_owned(), json!(at_ms));
+  match babysit {
+    Babysit::Idle => {}
+    Babysit::Checked(checked) => {
+      map.insert("next".to_owned(), json!(checked.next.name()));
+    }
+    Babysit::Skipped { at_ms } => {
+      map.insert("babysit".to_owned(), json!("skipped"));
+      map.insert("babysitCollectedAt".to_owned(), json!(at_ms));
+    }
   }
 }
 

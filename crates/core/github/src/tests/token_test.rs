@@ -125,3 +125,15 @@ fn a_spawn_callback_failure_is_its_reason() {
     "lease lost"
   );
 }
+
+#[test]
+fn a_long_lived_client_redacts_only_its_newest_tokens() {
+  let mut tokens = Tokens::new(token("tok-0"));
+  for n in 1..=20 {
+    let sent = tokens.current();
+    assert!(tokens.refresh(&sent, token(&format!("tok-{n}"))));
+  }
+  assert_eq!(tokens.current().expose(), "tok-20");
+  assert_eq!(tokens.redact("tok-20 tok-5"), "<redacted> <redacted>");
+  assert_eq!(tokens.redact("tok-4 tok-0"), "tok-4 tok-0");
+}

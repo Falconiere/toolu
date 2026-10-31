@@ -198,3 +198,37 @@ fn a_rate_limited_tick_clears_the_memo_so_the_slot_after_the_hold_collects() {
   assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
   assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
 }
+
+#[test]
+fn a_keep_going_collection_made_while_ready_is_not_reused_back_in_babysit() {
+  let fixture = Fixture::start().expect("fixture");
+  let (_temp, mut engine, tick, comments) = settled(&fixture);
+  engine.world.issues.get_mut("one").expect("issue").phase = "ready".into();
+  assert!(
+    quiet_slot(&mut engine, &fixture, &tick, &comments, 1),
+    "ready collects"
+  );
+  assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
+  engine.world.issues.get_mut("one").expect("issue").phase = "babysit".into();
+  assert!(
+    quiet_slot(&mut engine, &fixture, &tick, &comments, 2),
+    "back in babysit"
+  );
+}
+
+#[test]
+fn a_stint_outside_babysit_drops_the_memo() {
+  let fixture = Fixture::start().expect("fixture");
+  let (_temp, mut engine, tick, comments) = settled(&fixture);
+  engine.world.issues.get_mut("one").expect("issue").phase = "pr-open".into();
+  assert!(
+    !quiet_slot(&mut engine, &fixture, &tick, &comments, 1),
+    "pr-open never collects"
+  );
+  assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
+  engine.world.issues.get_mut("one").expect("issue").phase = "babysit".into();
+  assert!(
+    quiet_slot(&mut engine, &fixture, &tick, &comments, 2),
+    "back in babysit"
+  );
+}

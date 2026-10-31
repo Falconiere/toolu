@@ -135,6 +135,9 @@ fn run_error(err: &RunError) -> String {
   }
 }
 
+/// The most tokens a client remembers for redaction, newest kept.
+const SEEN_MAX: usize = 16;
+
 /// The current token and every token read before it, for redaction.
 #[derive(Debug)]
 pub(crate) struct Tokens {
@@ -165,6 +168,10 @@ impl Tokens {
     }
     if !self.seen.contains(&fresh) {
       self.seen.push(fresh.clone());
+      // A long-lived client keeps only the newest tokens for redaction.
+      if self.seen.len() > SEEN_MAX {
+        self.seen.remove(0);
+      }
     }
     self.current = fresh;
     true

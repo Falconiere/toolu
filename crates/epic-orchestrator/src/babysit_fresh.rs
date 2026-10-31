@@ -30,49 +30,84 @@ pub(crate) struct Collected {
   pub state_hash: u64,
 }
 
+/// What one check did about babysit.
+pub(crate) enum Babysit {
+  /// The watch's issue is not waiting on babysit.
+  Idle,
+  /// The collection was skipped, reusing the one made at `at_ms`.
+  Skipped {
+    /// The engine time of the reused collection.
+    at_ms: u64,
+  },
+  /// The tick ran.
+  Checked(Checked),
+}
+
+impl Babysit {
+  /// The tick's result, when it ran.
+  pub(crate) fn checked(&self) -> Option<&Checked> {
+    match self {
+      Self::Checked(checked) => Some(checked),
+      Self::Idle | Self::Skipped { .. } => None,
+    }
+  }
+}
+
 /// Run `watch_key`'s babysit tick unless its memo is reusable. `quiet` is a
-/// scheduled check whose REST probe was all `304` with no change. Returns the
-/// tick's result, or the reused collection time of a skip; neither when the
-/// issue is not waiting on babysit.
+/// scheduled check whose REST probe answered `304` everywhere.
 pub(crate) fn run(
   world: &mut World,
   watch_key: &str,
   quiet: bool,
   tick: &dyn BabysitTick,
   paths: &Paths,
-) -> (Option<Checked>, Option<u64>) {
+) -> Babysit {
   let Some(request) = request(world, watch_key, paths) else {
-    return (None, None);
+    // A memo never outlives a stint outside babysit or ready.
+    remember(world, watch_key, None);
+    return Babysit::Idle;
   };
   if quiet && let Some(memo) = reusable(world, watch_key, &request.state_file) {
-    return (None, Some(memo.at_ms));
+    return Babysit::Skipped { at_ms: memo.at_ms };
   }
   let checked = babysit::check(tick, &request);
+  // Only a keep-going collection made in babysit is reused, so a phase change
+  // (ready back to babysit, say) always collects first.
   // shortcut: a worker write landing between the tick and this read joins the
   // memo; REFRESH_MS bounds the delay, and the worker's report forces a check.
-  let memo = (checked.next == Next::KeepGoing)
+  let memo = (checked.next == Next::KeepGoing && babysitting(world, watch_key))
     .then(|| state_hash(&request.state_file))
     .flatten()
     .map(|state_hash| Collected {
       at_ms: world.now_ms,
       state_hash,
     });
+  remember(world, watch_key, memo);
+  Babysit::Checked(checked)
+}
+
+fn remember(world: &mut World, watch_key: &str, memo: Option<Collected>) {
   if let Some(watch) = world.watches.get_mut(watch_key) {
     watch.babysit = memo;
   }
-  (Some(checked), None)
+}
+
+/// Whether `watch_key`'s issue is in the babysit phase.
+fn babysitting(world: &World, watch_key: &str) -> bool {
+  crate::watch::issue_of(world, watch_key)
+    .and_then(|key| world.issues.get(key))
+    .is_some_and(|issue| issue.phase == "babysit")
 }
 
 /// The memo a quiet check of `watch_key` may reuse.
 fn reusable(world: &World, watch_key: &str, state_file: &Path) -> Option<Collected> {
   let memo = world.watches.get(watch_key)?.babysit?;
-  let issue = crate::watch::issue_of(world, watch_key).and_then(|key| world.issues.get(key))?;
   let recent = world
     .now_ms
     .checked_sub(memo.at_ms)
     .is_some_and(|age| age < REFRESH_MS);
   let unchanged = state_hash(state_file) == Some(memo.state_hash);
-  (recent && issue.phase == "babysit" && unchanged).then_some(memo)
+  (recent && babysitting(world, watch_key) && unchanged).then_some(memo)
 }
 
 /// The hash of `path`'s bytes; `None` when it cannot be read.

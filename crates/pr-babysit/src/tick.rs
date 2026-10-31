@@ -31,6 +31,7 @@ pub(crate) enum Source<'a> {
     /// Items per page.
     page_size: u64,
     /// Keeps the built client for later ticks; `None` builds one per tick.
+    /// `config` and the environment are read only when a client is built.
     client: Option<&'a Mutex<Option<Client>>>,
   },
 }
