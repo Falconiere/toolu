@@ -20,6 +20,30 @@ fn a_session_is_created_listed_and_killed() {
 }
 
 #[test]
+fn dropping_the_world_stops_its_server_and_shells() {
+  let world = World::new();
+  world
+    .client
+    .create_session("toolu-drop", &world.repo)
+    .unwrap();
+  let pane = world.client.first_pane("toolu-drop").unwrap();
+  let shell = world.client.pane_pid(&pane).unwrap();
+  drop(world);
+  let alive = || {
+    std::process::Command::new("kill")
+      .args(["-0", &shell.to_string()])
+      .status()
+      .is_ok_and(|status| status.success())
+  };
+  // The server hangs up its panes on exit; give the shell a moment to go.
+  let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
+  while alive() && std::time::Instant::now() < deadline {
+    std::thread::sleep(std::time::Duration::from_millis(50));
+  }
+  assert!(!alive(), "shell {shell} outlived its world");
+}
+
+#[test]
 fn creating_an_existing_session_fails() {
   let world = World::new();
   let client = &world.client;

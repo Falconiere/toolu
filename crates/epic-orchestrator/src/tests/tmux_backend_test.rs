@@ -73,6 +73,17 @@ impl World {
   }
 }
 
+impl Drop for World {
+  /// Removing the scratch directory alone leaves the server running forever.
+  fn drop(&mut self) {
+    let socket = self
+      .env
+      .get("TOOLU_EPIC_TMUX_SOCKET")
+      .map(std::path::PathBuf::from);
+    let _no_server = Tmux::new(&self.env, socket).kill_server();
+  }
+}
+
 fn json(text: &str) -> Value {
   serde_json::from_str(text).unwrap_or_else(|err| panic!("not JSON: {text}: {err}"))
 }

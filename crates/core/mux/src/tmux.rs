@@ -115,6 +115,14 @@ impl Tmux {
     self.run(&["kill-session", "-t", name]).map(|_| ())
   }
 
+  /// Kill this socket's server and every session on it.
+  ///
+  /// # Errors
+  /// No server runs on the socket, or tmux fails.
+  pub fn kill_server(&self) -> Result<(), TmuxError> {
+    self.run(&["kill-server"]).map(|_| ())
+  }
+
   /// Every session name, one per line.
   ///
   /// # Errors

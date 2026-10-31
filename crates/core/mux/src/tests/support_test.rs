@@ -44,6 +44,13 @@ impl World {
   }
 }
 
+impl Drop for World {
+  /// Removing the scratch directory alone leaves the server running forever.
+  fn drop(&mut self) {
+    let _no_server = self.client.kill_server();
+  }
+}
+
 fn run_git(cwd: &Path, args: &[&str]) {
   let mut command = vec![
     "git".to_owned(),
