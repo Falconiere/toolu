@@ -115,11 +115,18 @@ impl Tmux {
     self.run(&["kill-session", "-t", name]).map(|_| ())
   }
 
-  /// Kill this socket's server and every session on it.
+  /// Kill this client's own socket's server and every session on it.
   ///
   /// # Errors
-  /// No server runs on the socket, or tmux fails.
+  /// The client is on the default socket (the user's server, never killed),
+  /// no server runs on the socket, or tmux fails.
   pub fn kill_server(&self) -> Result<(), TmuxError> {
+    if self.socket.is_none() {
+      return Err(TmuxError::new(
+        "default_socket",
+        "refusing to kill the default tmux server",
+      ));
+    }
     self.run(&["kill-server"]).map(|_| ())
   }
 
