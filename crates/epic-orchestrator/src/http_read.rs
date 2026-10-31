@@ -47,24 +47,30 @@ pub(crate) fn finite_response(
   if let Some(response) = engine_route(context, path, query, request, secrets) {
     return response;
   }
-  let fleet = &context.fleet;
-  if let Some(response) =
-    crate::http_fleet::response(fleet, &context.world, &context.paths, secrets, path)
-  {
+  fleet_or_status(context, path, secrets)
+}
+
+fn fleet_or_status(context: &Context, path: &str, secrets: &Secrets) -> Response {
+  if let Some(response) = crate::http_fleet::response(
+    &context.fleet,
+    &context.world,
+    &context.paths,
+    secrets,
+    path,
+  ) {
     return response;
   }
-  let world = match context.world.lock() {
-    Ok(world) => world.clone(),
-    Err(_err) => return Response::error(500, "status_unavailable"),
+  let Ok(world) = context.world.lock() else {
+    return Response::error(500, "status_unavailable");
   };
-  let document = status_api::route(
+  let uptime_ms = u64::try_from(context.started.elapsed().as_millis()).unwrap_or(u64::MAX);
+  json_response(status_api::route(
     &world,
     &context.paths,
     path,
-    u64::try_from(context.started.elapsed().as_millis()).unwrap_or(u64::MAX),
+    uptime_ms,
     secrets,
-  );
-  json_response(document)
+  ))
 }
 
 /// Routes served from this engine's own caches and journal.

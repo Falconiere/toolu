@@ -1,5 +1,8 @@
 use std::io::Read as _;
 use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::Ordering;
+use std::thread;
+use std::time::Duration;
 
 use super::{OverviewCache, Response, send, stream_headers};
 use crate::model::World;
@@ -7,16 +10,24 @@ use crate::paths::Paths;
 use toolu_runtime::config::secrets::Secrets;
 
 #[test]
-fn overview_cache_refreshes_when_world_sequence_changes() {
+fn overview_cache_follows_the_world_generation() {
   let root = tempfile::tempdir().expect("resource root");
   let paths = Paths::at(root.path());
   let cache = OverviewCache::new();
   let mut world = World::new(0);
   let first = cache.response(&world, &paths, &Secrets::none());
   assert!(String::from_utf8_lossy(&first.body).contains("\"journal_seq\":0"));
+  thread::sleep(Duration::from_millis(150));
+  let again = cache.response(&world, &paths, &Secrets::none());
+  assert_eq!(again.body, first.body);
+  assert_eq!(cache.serializations.load(Ordering::Relaxed), 1);
   world.seq = 7;
+  let stale = cache.response(&world, &paths, &Secrets::none());
+  assert_eq!(stale.body, first.body);
+  world.generation = world.generation.wrapping_add(1);
   let second = cache.response(&world, &paths, &Secrets::none());
   assert!(String::from_utf8_lossy(&second.body).contains("\"journal_seq\":7"));
+  assert_eq!(cache.serializations.load(Ordering::Relaxed), 2);
 }
 
 #[test]
