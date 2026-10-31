@@ -1,0 +1,4 @@
+workload: same as baseline (40 files, 'pub fn run', Effort::High packages(), release, 5 samples)
+platform: Darwin arm64 git version 2.54.0 (Apple Git-157)
+greps_per_5_runs=5 us=[1458031, 1453808, 1471813, 1498215, 1462730]
+git grep per run: 1 (200 -> 5 over 5 runs)

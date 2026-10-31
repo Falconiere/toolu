@@ -15,7 +15,7 @@ const ISOLATED: [(&str, &str); 3] = [
 
 /// `main` holds `base`; `feature` commits `change` on top. Each entry is a path
 /// and its whole text.
-fn repo(base: &[(&str, String)], change: &[(&str, String)]) -> tempfile::TempDir {
+pub(super) fn repo(base: &[(&str, String)], change: &[(&str, String)]) -> tempfile::TempDir {
   let dir = tempfile::tempdir().unwrap();
   let run = |args: &[&str]| {
     let status = Command::new("git")
@@ -45,7 +45,7 @@ fn repo(base: &[(&str, String)], change: &[(&str, String)]) -> tempfile::TempDir
   dir
 }
 
-fn env() -> Env {
+pub(super) fn env() -> Env {
   ISOLATED
     .iter()
     .fold(Env::process(), |env, (name, value)| env.with(name, value))
@@ -204,7 +204,7 @@ fn a_secret_on_an_unchanged_line_is_masked_in_the_source() {
   assert!(source.ends_with("fn a() { b() }\n"), "{source}");
 }
 
-const LEVELS: &str = "/// The level of `name`.\npub fn parse_level(name: &str) -> u8 {\n    match name {\n        \"warn\" => 3,\n        _ => 2,\n    }\n}\n";
+pub(super) const LEVELS: &str = "/// The level of `name`.\npub fn parse_level(name: &str) -> u8 {\n    match name {\n        \"warn\" => 3,\n        _ => 2,\n    }\n}\n";
 const REPORT: &str = "use crate::levels::parse_level;\n\npub fn label(name: &str) -> &'static str {\n    LABELS[parse_level(name) as usize]\n}\n";
 
 #[test]
