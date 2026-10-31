@@ -3,7 +3,7 @@ fn the_second_record_is_the_page_after_the_first_sequence() {
   let root = tempfile::tempdir().unwrap();
   let dir = root.path().join("tail");
   let lock = root.path().join("held");
-  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_500_000_000);
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_500_000_001);
   let row = crate::journal::Record::new("action", "read", "k", "t", "n");
   let first = crate::journal::append(&dir, &lock, &row, at).unwrap();
   crate::journal::append(&dir, &lock, &row, at).unwrap();
