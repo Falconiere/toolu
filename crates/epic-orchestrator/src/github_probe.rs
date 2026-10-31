@@ -201,15 +201,31 @@ fn pages(
   let mut next = Some(path.to_owned());
   let mut first = None;
   let mut visited = BTreeSet::new();
+  let mut full_end = None;
   while let Some(current) = next.take() {
     if !visited.insert(current.clone()) || visited.len() > 1000 {
       return Err(Error::Decode("GitHub pagination did not terminate".into()));
     }
     let (body, following) = page(client, watch, report, &current, array)?;
+    // Whether a fresh last page was full; `None` when it answered 304.
+    full_end = body.as_ref().filter(|_| following.is_none()).map(|body| {
+      body
+        .as_array()
+        .is_some_and(|items| items.len() >= PAGE_ITEMS)
+    });
     if first.is_none() {
       first = body;
     }
     next = following;
+  }
+  match full_end {
+    Some(true) => {
+      watch.full_tails.insert(path.to_owned());
+    }
+    Some(false) => {
+      watch.full_tails.remove(path);
+    }
+    None => {}
   }
   Ok(first)
 }
@@ -250,14 +266,14 @@ fn page(
         }
       }
       let next = next_link(&fresh.headers);
-      remember_links(watch, current, &body, next.as_ref());
+      remember_link(watch, current, next.as_ref());
       Ok((Some(body), next))
     }
   }
 }
 
-/// Keep `current`'s next-page link, and whether it ended an array on a full page.
-fn remember_links(watch: &mut Watch, current: &str, body: &Value, next: Option<&String>) {
+/// Keep `current`'s next-page link.
+fn remember_link(watch: &mut Watch, current: &str, next: Option<&String>) {
   match next {
     Some(link) => {
       watch.page_links.insert(current.to_owned(), link.clone());
@@ -265,14 +281,6 @@ fn remember_links(watch: &mut Watch, current: &str, body: &Value, next: Option<&
     None => {
       watch.page_links.remove(current);
     }
-  }
-  let full = body
-    .as_array()
-    .is_some_and(|items| items.len() >= PAGE_ITEMS);
-  if full && next.is_none() {
-    watch.full_tails.insert(current.to_owned());
-  } else {
-    watch.full_tails.remove(current);
   }
 }
 

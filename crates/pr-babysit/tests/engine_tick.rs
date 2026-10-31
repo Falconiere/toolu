@@ -163,3 +163,24 @@ fn a_rate_limited_collection_keeps_the_shared_client() {
     "a rate limit is no reason to read the token again"
   );
 }
+
+#[test]
+fn a_missing_resource_keeps_the_shared_client() {
+  let dir = TempDir::new().expect("temp dir");
+  let log = logging_gh(dir.path()).expect("gh script");
+  let fixture = Fixture::start().expect("fixture");
+  serve(&fixture).expect("routes");
+  let (tick, request) = engine_tick(dir.path(), &fixture);
+  tick.tick(&request).expect("first tick");
+  let missing = vec![
+    Reply::new(404, r#"{"message":"Not Found"}"#),
+    Reply::new(200, head()),
+  ];
+  fixture.sequence(HEAD_PATH, missing).expect("404 route");
+  assert!(
+    tick.tick(&request).is_err(),
+    "the missing PR fails the tick"
+  );
+  tick.tick(&request).expect("tick after the 404");
+  assert_eq!(runs(&log), 1, "a 404 is no token problem");
+}

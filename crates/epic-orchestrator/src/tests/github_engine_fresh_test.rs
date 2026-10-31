@@ -267,10 +267,20 @@ fn a_full_last_page_of_comments_is_never_trusted_to_be_complete() {
   let comment = json!({"id": 1, "body": "noted", "user": {"login": "worker", "type": "User"},
     "created_at": "2026-10-11T10:00:00Z", "updated_at": "2026-10-11T10:00:00Z",
     "html_url": "https://github.com/o/r/pull/1#issuecomment-1"});
-  let comments = Value::Array(vec![comment; 100]);
-  let (_temp, mut engine, tick) = first_check(&fixture, body, &comments);
+  let full = Value::Array(vec![comment.clone(); 100]);
+  let (_temp, mut engine, tick) = first_check(&fixture, body, &full);
   assert!(!engine.world.watches["pr:o/r#1"].full_tails.is_empty());
-  assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
+  assert!(quiet_slot(&mut engine, &fixture, &tick, &full, 1));
+  // The list shrinks: a fresh, shorter last page clears the mark.
+  let short = Value::Array(vec![comment]);
+  rest(&fixture, &short, true);
+  engine.world.now_ms = 2 * SLOT_MS;
+  engine.github_tick(&tick);
+  assert!(engine.world.watches["pr:o/r#1"].full_tails.is_empty());
+  assert!(
+    !quiet_slot(&mut engine, &fixture, &tick, &short, 3),
+    "quiet again"
+  );
 }
 
 #[test]
@@ -281,6 +291,15 @@ fn a_base_move_drops_the_memos_of_that_repositorys_pull_requests() {
     repo: "o/r".into(),
     branch: "main".into(),
   };
+  let elsewhere = crate::github_probe::Change::BaseMoved {
+    repo: "o/r".into(),
+    branch: "release".into(),
+  };
+  super::note_change(&mut engine.world, elsewhere);
+  assert!(
+    engine.world.watches["pr:o/r#1"].babysit.is_some(),
+    "another base"
+  );
   super::note_change(&mut engine.world, moved);
   assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
   assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));

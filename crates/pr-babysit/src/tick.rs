@@ -250,11 +250,12 @@ fn github(
   Ok((collected.snapshot, None, Some(collected.graphql)))
 }
 
-/// A refusal that a changed or rescoped token can cause; rate limits, outages
-/// and malformed replies keep the shared client.
+/// A refusal that a changed or rescoped token can cause (`401`, `403`); rate
+/// limits, outages, missing resources and malformed replies keep the client.
 fn token_suspect(failure: &Failure) -> bool {
   let class = failure.extra.get("class").and_then(Value::as_str);
-  matches!(class, Some("unauthorized" | "permanent" | "graphql"))
+  let status = failure.extra.get("status").and_then(Value::as_u64);
+  class == Some("unauthorized") || (class == Some("permanent") && status == Some(403))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

@@ -73,9 +73,10 @@ pub(crate) struct Watch {
   /// so a restarted engine collects first.
   #[serde(skip)]
   pub babysit: Option<crate::babysit_fresh::Collected>,
-  /// Array paths whose last fresh reply was a full page with no next link: a
-  /// new item can land on a page the saved links never fetch. Kept with the
-  /// `etags` it qualifies, so a restart cannot forget it.
+  /// First-page paths of lists whose last page, when last fetched fresh, was
+  /// full with no next link: a new item can land on a page the saved links
+  /// never fetch. Kept with the `etags` it qualifies, so a restart cannot
+  /// forget it; a fresh, shorter last page clears it.
   #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
   pub full_tails: std::collections::BTreeSet<String>,
 }

@@ -246,7 +246,9 @@ pub(crate) fn note_change(world: &mut World, change: Change) {
     Change::BaseMoved { repo, branch } => {
       // A moved base can change mergeability with no PR ETag moving.
       for watch in world.watches.values_mut() {
-        if matches!(&watch.kind, crate::watch::Kind::Pr { repo: watched, .. } if *watched == repo) {
+        let same_repo =
+          matches!(&watch.kind, crate::watch::Kind::Pr { repo: watched, .. } if *watched == repo);
+        if same_repo && watch.base_ref == branch {
           watch.babysit = None;
         }
       }

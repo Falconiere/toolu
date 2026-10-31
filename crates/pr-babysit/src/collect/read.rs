@@ -151,6 +151,9 @@ pub(crate) fn failure(source: &str, err: &Error) -> Failure {
     .with("source", source)
     .with("class", class)
     .with("lastMessage", err.to_string());
+  if let Error::Status { status, .. } = err {
+    failure = failure.with("status", json!(status));
+  }
   if let Error::RateLimited {
     rate, retry_after, ..
   } = err

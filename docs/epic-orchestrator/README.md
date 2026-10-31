@@ -126,7 +126,10 @@ hold:
 - No comment or review list ended on a full page of 100 with no next link,
   since a new item there would sit on a page the saved links never fetch.
 - The babysit state file still holds the bytes that collection wrote.
-- No base-branch move has been seen for the repository since.
+- No move of the PR's base branch has been seen since. The engine watches a
+  base branch only while one of its PRs is `ready`, and a merge the engine
+  makes forces an immediate check, so an outside push to a base with no ready
+  PR is seen within the 15-minute bound.
 - The collection is less than 15 minutes old.
 
 A worker report or another immediate check always collects. GitHub shows
