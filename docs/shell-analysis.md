@@ -4,7 +4,7 @@
 
 ## API
 
-`write_targets` lives in its own module, `toolu_shell::writes`. Everything else below comes from the crate root and `toolu_shell::git` and `toolu_shell::rules`. The engine parses a `shell/pre` event once and hands the analysis to every gate.
+`write_targets` lives in its own module, `toolu_shell::writes`. Everything else below comes from the crate root and `toolu_shell::git` and `toolu_shell::rules`. The engine parses a `shell/pre` event once per path walk and reuses that analysis for every gate in the walk (#759). The next hook event, the next path of a multi-file patch, and a changed host, working directory, or repository parse and load config again. Each gate still receives the loader's warnings, and an invalid envelope still fails closed. bash-commands and protected-files still skip parsing when their lists are empty.
 
 | Export | Answers |
 |---|---|
@@ -104,7 +104,7 @@ The bash oracle test, which sourced the unmodified `detect.sh` and re-derived ev
 
 ## The Rust implementation: `toolu-shell`
 
-`crates/core/shell` ([#416](https://github.com/Falconiere/toolu/issues/416)) ported the TypeScript analyzer for the Rust hooks of epic #402, and #440 removed the original. The per-event cache belongs to the engine (#418). `push_target_root` and `push_target_branch` spawn git and stay with the detect port; `crates/core/shell/tests/fixture_cases.rs` replays them over real repositories from the crate's answers.
+`crates/core/shell` ([#416](https://github.com/Falconiere/toolu/issues/416)) ported the TypeScript analyzer for the Rust hooks of epic #402, and #440 removed the original. The per-walk cache lives in the engine (`crates/core/engine/src/gates/event_memo.rs`, #759). `push_target_root` and `push_target_branch` spawn git and stay with the detect port; `crates/core/shell/tests/fixture_cases.rs` replays them over real repositories from the crate's answers.
 
 **Parser.** The crate uses tree-sitter 0.24.7 with tree-sitter-bash 0.23.3. `brush-parser`, the issue's first choice, fails `deny.toml` in every release: it brings syn 2 beside the workspace's syn 3, duplicate darling and hashbrown versions, and the Zlib-licensed `foldhash`. Every tree-sitter from 0.25 to 0.27 build-depends on `serde_json` with `preserve_order`. In this workspace that reaches the same `foldhash` through `indexmap` and `hashbrown`. 0.24.7 is the last release without it, and tree-sitter-bash 0.23.3 is the last grammar it can load (ABI 14).
 

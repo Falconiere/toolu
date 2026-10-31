@@ -74,7 +74,7 @@ use toolu_protocol::event::HostEvent;
 use toolu_protocol::normalized::NormalizedEvent;
 use toolu_protocol::text::Text;
 use toolu_runtime::config::gate_mode::{GateMode, gate_decision, gate_mode};
-use toolu_runtime::config::load::{LoadedConfig, load};
+use toolu_runtime::config::load::LoadedConfig;
 use toolu_runtime::config::settings::settings_dir;
 use toolu_runtime::host::roots::Roots;
 use toolu_runtime::registry::rule::RuleContext;
@@ -87,9 +87,14 @@ pub(crate) fn is_shell_tool(event: &NormalizedEvent) -> bool {
     .is_some_and(|tool| matches!(tool.name.as_str(), "Bash" | "Shell"))
 }
 
+mod event_memo;
+pub(crate) use event_memo::EventMemoGuard;
+
 /// The analysis of the command the payload reports, as the bash modules read it.
+///
+/// Inside an [`EventMemoGuard`], the same command is parsed once.
 pub(crate) fn command_analysis(ctx: &RuleContext<'_>) -> ShellAnalysis {
-  toolu_shell::analyze(&tool_exit::tool_command(ctx.raw))
+  event_memo::memoized_analysis(&tool_exit::tool_command(ctx.raw))
 }
 
 /// The settings directory seen by a built-in, including explicit plugin-root fallback.
@@ -99,9 +104,11 @@ pub(crate) fn gate_settings_dir(ctx: &RuleContext<'_>) -> Option<PathBuf> {
 }
 
 /// Load config as the TypeScript gate modules do, leaving warnings with the dispatcher.
+///
+/// Inside an [`EventMemoGuard`], the same host, cwd, and config files load once.
+/// Each caller gets its own warnings.
 pub(crate) fn gate_config(ctx: &RuleContext<'_>) -> LoadedConfig {
-  let roots = Roots::new(ctx.env.clone(), Some(ctx.host));
-  load(&roots, ctx.cwd)
+  event_memo::memoized_config(ctx)
 }
 
 /// An edit tool's string-valued `file_path` or Muse `path`.
