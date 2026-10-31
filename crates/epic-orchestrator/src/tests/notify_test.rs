@@ -17,7 +17,7 @@ use crate::server::{Engine, Fault};
 
 const CANARY: &str = "canary-status-token-450";
 
-fn env(home: &Path, url: Option<&str>) -> Env {
+pub(super) fn env(home: &Path, url: Option<&str>) -> Env {
   let mut env = Env::from_pairs([
     ("HOME", home.display().to_string()),
     ("TOOLU_EPIC_STATUS_TOKEN", CANARY.to_owned()),
@@ -28,7 +28,7 @@ fn env(home: &Path, url: Option<&str>) -> Env {
   env
 }
 
-fn settings(env: Env, fixture: &Fixture) -> Settings {
+pub(super) fn settings(env: Env, fixture: &Fixture) -> Settings {
   let env = env.with("HTTPS_PROXY", &fixture.proxy_url());
   Settings {
     backoff: Duration::from_millis(20),
@@ -38,13 +38,13 @@ fn settings(env: Env, fixture: &Fixture) -> Settings {
   }
 }
 
-fn notice(note: &str) -> Notice {
+pub(super) fn notice(note: &str) -> Notice {
   let mut world = World::new(0);
   let token = crate::attention::raise(&mut world, "needs-human", "a", note);
   build(&world, &token, false, Some("http://127.0.0.1:7717/")).expect("notice")
 }
 
-fn outcome(paths: &Paths, names: &[&str]) -> Record {
+pub(super) fn outcome(paths: &Paths, names: &[&str]) -> Record {
   let start = Instant::now();
   while start.elapsed() < Duration::from_secs(20) {
     let rows = journal::tail(&paths.journal_dir(), SystemTime::now()).expect("tail");
@@ -60,7 +60,7 @@ fn outcome(paths: &Paths, names: &[&str]) -> Record {
 }
 
 /// Send one notice to a notifier posting to the fixture's `/hook`, until it is journaled.
-fn post_once(root: &Path, fixture: &Fixture) -> Paths {
+pub(super) fn post_once(root: &Path, fixture: &Fixture) -> Paths {
   let paths = Paths::at(root);
   let url = fixture.url("/hook");
   let notifier = Notifier::spawn(settings(env(root, Some(&url)), fixture), paths.clone());
@@ -127,6 +127,7 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
   let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
   assert_eq!(row.note, "channel=url attempts=1 status=404");
+  assert_eq!(fixture.requests().expect("requests").len(), 1);
   let other = tempfile::tempdir().expect("temp");
   let paths = Paths::at(other.path());
   let bad = env(other.path(), Some("ftp://hooks.example/x"));
@@ -134,6 +135,7 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
   notifier.tx.try_send(notice("which?")).expect("send");
   let row = outcome(&paths, &["notify", "notify-failed"]);
   assert_eq!(row.note, "channel=url attempts=0 status=refused");
+  assert_eq!(fixture.requests().expect("requests").len(), 1);
 }
 
 #[test]

@@ -259,3 +259,7 @@ fn record(paths: &Paths, notice: &Notice, ok: bool, note: &str) {
 #[cfg(test)]
 #[path = "tests/notify_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/notify_post_contract_test.rs"]
+mod post_contract_tests;

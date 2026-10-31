@@ -180,7 +180,10 @@ restart through the journal.
 A new item shows a herdr notification (`epic.attention.herdr`, default on) and,
 when `epic.attention.enabled` is true and `secrets.json` has a `notify_url`,
 POSTs a JSON body with `text` to that URL: up to five attempts, retrying
-timeouts, 429 and 5xx. An open item is announced again after
+timeouts, transport errors, 429 and 5xx. Delivery is best-effort and a retry
+can duplicate a notice already accepted by the receiver; see the
+[notification POST contract](../../docs/epic-orchestrator/notification-post.md).
+An open item is announced again after
 `epic.attention.remind_after_minutes` (default 30), then hourly. Every delivery
 is journaled as `notify`, `notify-failed` or `notify-dropped`.
 
