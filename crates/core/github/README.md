@@ -22,8 +22,8 @@ snapshot as its whole environment and a 10-second deadline. `gh` itself honours
   together all retry with the new token.
 - The token is never written to disk. `Client`'s `Debug` shows only the API URL
   and the retry policy.
-- The 16 tokens the client has used most recently are redacted from error
-  messages taken from a response.
+- Every token the client has read is redacted from error messages taken from a
+  response.
 
 ## Calls
 

@@ -226,3 +226,22 @@ fn every_scheduled_check_moves_the_next_slot_exactly_one_interval_on() {
   assert_eq!(watch.take_due(slot - 1), Some(Cause::Immediate));
   assert_eq!(watch.next_at_ms, slot, "an extra check keeps the slot");
 }
+
+#[test]
+fn full_tails_survive_a_restart_with_the_etags_they_qualify_and_stay_off_old_snapshots() {
+  let mut watch = Watch::new(pr(), 0);
+  let plain = serde_json::to_value(&watch).expect("serialize");
+  assert!(
+    plain.get("fullTails").is_none(),
+    "old snapshots keep their shape"
+  );
+  let tail = "/repos/Falconiere/toolu/issues/501/comments?per_page=100".to_owned();
+  watch.full_tails.insert(tail.clone());
+  let saved = serde_json::to_vec(&watch).expect("serialize");
+  let restored: Watch = serde_json::from_slice(&saved).expect("deserialize");
+  assert!(restored.full_tails.contains(&tail));
+  assert!(
+    restored.babysit.is_none(),
+    "the memo itself stays in memory"
+  );
+}

@@ -126,6 +126,7 @@ hold:
 - No comment or review list ended on a full page of 100 with no next link,
   since a new item there would sit on a page the saved links never fetch.
 - The babysit state file still holds the bytes that collection wrote.
+- No base-branch move has been seen for the repository since.
 - The collection is less than 15 minutes old.
 
 A worker report or another immediate check always collects. GitHub shows

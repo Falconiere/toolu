@@ -244,6 +244,12 @@ pub(crate) fn note_change(world: &mut World, change: Change) {
       push_attention(world, "pr-closed", &key, "pull request closed");
     }
     Change::BaseMoved { repo, branch } => {
+      // A moved base can change mergeability with no PR ETag moving.
+      for watch in world.watches.values_mut() {
+        if matches!(&watch.kind, crate::watch::Kind::Pr { repo: watched, .. } if *watched == repo) {
+          watch.babysit = None;
+        }
+      }
       let note = format!("{repo}@{branch}");
       journal(world, &note, "github-base-moved", "");
       if let Some(head) = crate::queue::head(world, &repo) {

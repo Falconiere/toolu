@@ -18,7 +18,7 @@ use crate::error::{Failure, Result};
 use crate::lock::SlotLock;
 use crate::reduce::{Paths, reduce};
 use crate::schedule;
-use crate::state::{sibling, write_json, write_text};
+use crate::state::{json_text, sibling, write_json, write_text};
 
 /// Where the snapshot comes from.
 pub(crate) enum Source<'a> {
@@ -107,7 +107,7 @@ pub(crate) fn tick(request: &Request<'_>, source: Source<'_>, env: &Env) -> Resu
   schedule::apply(&mut reduced, now, request.scheduled);
   let raw = raw.unwrap_or_else(|| format!("{snapshot}\n"));
   write_text(&snapshot_out, &raw, "snapshot_out")?;
-  let state = format!("{}\n", reduced.state);
+  let state = json_text(&reduced.state);
   write_text(request.state_file, &state, "state")?;
   write_json(&result_out, &reduced.result, "result")?;
   Ok(Ticked {
@@ -233,8 +233,8 @@ fn github(
         Arc::clone(lock().get_or_insert(made))
       };
       let collected = collect::collect(&client, &request);
-      if collected.is_err() {
-        // A failed read may be a changed or rescoped token that did not
+      if collected.as_ref().is_err_and(token_suspect) {
+        // A refused read may be a changed or rescoped token that did not
         // answer 401; the next tick builds a client and reads it again.
         let mut shared = lock();
         if shared
@@ -248,6 +248,13 @@ fn github(
     }
   };
   Ok((collected.snapshot, None, Some(collected.graphql)))
+}
+
+/// A refusal that a changed or rescoped token can cause; rate limits, outages
+/// and malformed replies keep the shared client.
+fn token_suspect(failure: &Failure) -> bool {
+  let class = failure.extra.get("class").and_then(Value::as_str);
+  matches!(class, Some("unauthorized" | "permanent" | "graphql"))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

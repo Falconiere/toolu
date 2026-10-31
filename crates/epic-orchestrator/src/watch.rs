@@ -74,8 +74,9 @@ pub(crate) struct Watch {
   #[serde(skip)]
   pub babysit: Option<crate::babysit_fresh::Collected>,
   /// Array paths whose last fresh reply was a full page with no next link: a
-  /// new item can land on a page the saved links never fetch. In memory only.
-  #[serde(skip)]
+  /// new item can land on a page the saved links never fetch. Kept with the
+  /// `etags` it qualifies, so a restart cannot forget it.
+  #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
   pub full_tails: std::collections::BTreeSet<String>,
 }
 

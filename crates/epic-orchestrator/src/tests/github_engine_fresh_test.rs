@@ -272,3 +272,16 @@ fn a_full_last_page_of_comments_is_never_trusted_to_be_complete() {
   assert!(!engine.world.watches["pr:o/r#1"].full_tails.is_empty());
   assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
 }
+
+#[test]
+fn a_base_move_drops_the_memos_of_that_repositorys_pull_requests() {
+  let fixture = Fixture::start().expect("fixture");
+  let (_temp, mut engine, tick, comments) = settled(&fixture);
+  let moved = crate::github_probe::Change::BaseMoved {
+    repo: "o/r".into(),
+    branch: "main".into(),
+  };
+  super::note_change(&mut engine.world, moved);
+  assert!(engine.world.watches["pr:o/r#1"].babysit.is_none());
+  assert!(quiet_slot(&mut engine, &fixture, &tick, &comments, 1));
+}

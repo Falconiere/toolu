@@ -13,7 +13,7 @@ use std::time::Duration;
 use toolu_engine::babysit::{BabysitTick, TickRequest, state_digest};
 
 use crate::babysit::{self, Checked, Next};
-use crate::model::{Issue, World};
+use crate::model::World;
 use crate::paths::Paths;
 use crate::watch::{CHECK_MS, Kind};
 
@@ -65,23 +65,25 @@ pub(crate) fn run(
   tick: &dyn BabysitTick,
   paths: &Paths,
 ) -> Babysit {
-  let Some(request) = request(world, watch_key, paths) else {
+  let Some((request, babysit_since)) = request(world, watch_key, paths) else {
     // A memo never outlives a stint outside babysit or ready.
     remember(world, watch_key, None);
     return Babysit::Idle;
   };
-  if quiet && let Some(memo) = reusable(world, watch_key, &request.state_file) {
+  if quiet && let Some(memo) = reusable(world, watch_key, babysit_since, &request.state_file) {
     return Babysit::Skipped { at_ms: memo.at_ms };
   }
   let checked = babysit::check(tick, &request);
   // Only a settled keep-going collection made in babysit is reused, compared
   // against the bytes that tick wrote rather than a later read of the file.
-  let memo = match (babysitting(world, watch_key), checked.state_digest) {
-    (Some(issue), Some(state_digest)) if checked.next == Next::KeepGoing && checked.settled => {
+  let memo = match (babysit_since, checked.state_digest) {
+    (Some(phase_at_ms), Some(state_digest))
+      if checked.next == Next::KeepGoing && checked.settled =>
+    {
       Some(Collected {
         at_ms: world.now_ms,
         state_digest,
-        phase_at_ms: issue.phase_at_ms,
+        phase_at_ms,
       })
     }
     _ => None,
@@ -96,32 +98,30 @@ fn remember(world: &mut World, watch_key: &str, memo: Option<Collected>) {
   }
 }
 
-/// `watch_key`'s issue, when it is in the babysit phase.
-fn babysitting<'a>(world: &'a World, watch_key: &str) -> Option<&'a Issue> {
-  crate::watch::issue_of(world, watch_key)
-    .and_then(|key| world.issues.get(key))
-    .filter(|issue| issue.phase == "babysit")
-}
-
-/// The memo a quiet check of `watch_key` may reuse.
-fn reusable(world: &World, watch_key: &str, state_file: &Path) -> Option<Collected> {
+/// The memo a quiet check of `watch_key` may reuse; `babysit_since` is the
+/// issue's `phase_at_ms` while it is in babysit.
+fn reusable(
+  world: &World,
+  watch_key: &str,
+  babysit_since: Option<u64>,
+  state_file: &Path,
+) -> Option<Collected> {
   let watch = world.watches.get(watch_key)?;
   let memo = watch.babysit?;
   let recent = world
     .now_ms
     .checked_sub(memo.at_ms)
     .is_some_and(|age| age < REFRESH_MS);
-  let same_phase =
-    babysitting(world, watch_key).is_some_and(|issue| issue.phase_at_ms == memo.phase_at_ms);
+  let same_phase = babysit_since == Some(memo.phase_at_ms);
   // The file is read only once the cheap checks pass.
   let unchanged =
     || std::fs::read(state_file).is_ok_and(|bytes| state_digest(&bytes) == memo.state_digest);
   (recent && same_phase && watch.full_tails.is_empty() && unchanged()).then_some(memo)
 }
 
-/// The babysit request of `watch_key`'s pull request, while its issue waits
-/// in babysit or ready.
-fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest> {
+/// The babysit request of `watch_key`'s pull request while its issue waits in
+/// babysit or ready, with the issue's `phase_at_ms` when it is in babysit.
+fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<(TickRequest, Option<u64>)> {
   let watch = world.watches.get(watch_key)?;
   let Kind::Pr { key, repo, number } = &watch.kind else {
     return None;
@@ -132,7 +132,8 @@ fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest>
   {
     return None;
   }
-  Some(TickRequest {
+  let babysit_since = (issue.phase == "babysit").then_some(issue.phase_at_ms);
+  let request = TickRequest {
     repo: repo.clone(),
     number: *number,
     state_file: paths
@@ -142,7 +143,8 @@ fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest>
     now: Some(toolu_state::time::iso_seconds(
       std::time::UNIX_EPOCH + Duration::from_millis(world.now_ms),
     )),
-  })
+  };
+  Some((request, babysit_since))
 }
 
 #[cfg(test)]
