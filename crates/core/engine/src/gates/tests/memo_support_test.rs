@@ -9,16 +9,16 @@ use toolu_runtime::env::Env;
 use toolu_runtime::registry::rule::RuleContext;
 
 pub(super) fn reset_counts() {
-  super::super::PARSES.with(|count| count.set(0));
-  super::super::LOADS.with(|count| count.set(0));
+  super::PARSES.with(|count| count.set(0));
+  super::LOADS.with(|count| count.set(0));
 }
 
 pub(super) fn analysis_parses() -> usize {
-  super::super::PARSES.with(Cell::get)
+  super::PARSES.with(Cell::get)
 }
 
 pub(super) fn config_loads() -> usize {
-  super::super::LOADS.with(Cell::get)
+  super::LOADS.with(Cell::get)
 }
 
 fn text(value: &str) -> Text {

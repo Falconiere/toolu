@@ -145,6 +145,10 @@ fn note_load() {
 }
 
 #[cfg(test)]
+#[path = "tests/memo_support_test.rs"]
+mod support;
+
+#[cfg(test)]
 #[path = "tests/event_memo_test.rs"]
 mod tests;
 

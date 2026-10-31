@@ -1,6 +1,3 @@
-#[path = "memo_support_test.rs"]
-mod support;
-
 use std::path::Path;
 
 use serde_json::{Map, Value};
@@ -22,13 +19,13 @@ use super::super::push_review::PUSH_REVIEW;
 use super::super::push_waiver::PUSH_WAIVER;
 use super::super::quality_gate::QUALITY_GATE;
 use super::EventMemoGuard;
+use super::support::{
+  analysis_parses, bash_session, bash_tool, command_raw, config_loads, context, reset_counts, shell,
+};
 use crate::builtins::PRE_TOOL;
 use crate::dispatch::{DEFAULT_MODULE_TIMEOUT, DispatchOptions, dispatch_pre_tool};
 use crate::docs_review::RULE;
 use crate::gate::Gate;
-use support::{
-  analysis_parses, bash_session, bash_tool, command_raw, config_loads, context, reset_counts, shell,
-};
 
 fn tool_post(command: &str) -> (NormalizedEvent, Map<String, Value>) {
   let event = NormalizedEvent::ToolPost {

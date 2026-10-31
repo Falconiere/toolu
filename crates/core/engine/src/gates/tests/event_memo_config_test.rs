@@ -1,6 +1,3 @@
-#[path = "memo_support_test.rs"]
-mod support;
-
 use toolu_protocol::host::Host;
 use toolu_runtime::config::gate_mode::GateMode;
 use toolu_runtime::env::Env;
@@ -12,9 +9,9 @@ use super::super::push_review::PUSH_REVIEW;
 use super::super::quality_gate::QUALITY_GATE;
 use super::super::{command_analysis, gate_config, pre_mode};
 use super::EventMemoGuard;
+use super::support::{analysis_parses, config_loads, context, reset_counts, shell};
 use crate::gate::Gate;
 use crate::ledger::context::test_repo::Repo;
-use support::{analysis_parses, config_loads, context, reset_counts, shell};
 
 #[test]
 fn invalid_config_is_loaded_once_and_each_push_gate_keeps_the_warning() {
