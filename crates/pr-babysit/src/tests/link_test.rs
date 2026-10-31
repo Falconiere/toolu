@@ -168,7 +168,10 @@ fn counting_gh(dir: &std::path::Path) -> std::path::PathBuf {
   use std::os::unix::fs::PermissionsExt as _;
   let runs = dir.join("runs");
   let gh = dir.join("gh");
-  let script = format!("#!/bin/sh\necho run >> '{}'\necho \"tok-$$\"\n", runs.display());
+  let script = format!(
+    "#!/bin/sh\necho run >> '{}'\necho \"tok-$$\"\n",
+    runs.display()
+  );
   std::fs::write(&gh, script).unwrap();
   std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755)).unwrap();
   runs
