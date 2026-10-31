@@ -69,6 +69,10 @@ pub(crate) struct Watch {
   /// Last observed PR base branch.
   #[serde(default)]
   pub base_ref: String,
+  /// The last babysit collection that settled at keep-going; in memory only,
+  /// so a restarted engine collects first.
+  #[serde(skip)]
+  pub babysit: Option<crate::babysit_fresh::Collected>,
 }
 
 impl Watch {
@@ -84,6 +88,7 @@ impl Watch {
       page_links: BTreeMap::new(),
       head_sha: String::new(),
       base_ref: String::new(),
+      babysit: None,
     }
   }
 

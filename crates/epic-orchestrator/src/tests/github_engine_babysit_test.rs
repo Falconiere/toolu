@@ -11,7 +11,7 @@ use crate::journal::Record;
 use crate::model::{Action, Step, fresh};
 use crate::server::Engine;
 
-const SLOT_MS: u64 = 180_000;
+pub(super) const SLOT_MS: u64 = 180_000;
 
 fn verdict(name: &str) -> String {
   let file = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -20,13 +20,13 @@ fn verdict(name: &str) -> String {
   std::fs::read_to_string(file).expect("verdict fixture")
 }
 
-fn bot_comment(name: &str, updated: &str) -> Value {
+pub(super) fn bot_comment(name: &str, updated: &str) -> Value {
   json!([{"id": 555, "body": verdict(name), "user": {"login": "github-actions", "type": "Bot"},
           "created_at": "2026-10-11T10:00:00Z", "updated_at": updated,
           "html_url": "https://github.com/o/r/pull/1#issuecomment-555"}])
 }
 
-fn ci_thread(resolved: bool) -> Value {
+pub(super) fn ci_thread(resolved: bool) -> Value {
   let comment = json!({"id": "PRRC_1", "databaseId": 101, "body": "**medium**: off by one",
     "author": {"login": "github-actions", "__typename": "Bot"},
     "createdAt": "2026-10-11T10:00:00Z", "url": "https://github.com/o/r/pull/1#r101"});
@@ -35,7 +35,7 @@ fn ci_thread(resolved: bool) -> Value {
 }
 
 /// One reply that answers both the PR query and the threads query.
-fn graphql(conclusion: &str, threads: &[Value]) -> String {
+pub(super) fn graphql(conclusion: &str, threads: &[Value]) -> String {
   let check = json!({"__typename": "CheckRun", "name": "test", "status": "COMPLETED",
     "conclusion": conclusion, "detailsUrl": "https://ci.example/1",
     "startedAt": "2026-10-11T09:00:00Z", "completedAt": "2026-10-11T09:10:00Z",
@@ -64,7 +64,7 @@ fn serve(fixture: &Fixture, graphql_body: String, comments: &Value) {
 }
 
 /// pr-babysit's own tick, reading the fixture's API.
-fn babysit(fixture: &Fixture) -> GitHubTick {
+pub(super) fn babysit(fixture: &Fixture) -> GitHubTick {
   let mut config = Config::scheduled();
   config.api_url = fixture.url("");
   config.http.test_root_ca_der = Some(fixture.root_ca_der().to_vec());
@@ -75,7 +75,7 @@ fn babysit(fixture: &Fixture) -> GitHubTick {
   GitHubTick::new(config, env)
 }
 
-fn journal(engine: &Engine) -> Vec<&Record> {
+pub(super) fn journal(engine: &Engine) -> Vec<&Record> {
   let rows = engine.world.outbox.iter().filter_map(|step| match step {
     Step::Journal(row) => Some(row),
     Step::Call { .. }
@@ -87,7 +87,7 @@ fn journal(engine: &Engine) -> Vec<&Record> {
   rows.collect()
 }
 
-fn prompts(engine: &Engine) -> Vec<&Record> {
+pub(super) fn prompts(engine: &Engine) -> Vec<&Record> {
   journal(engine)
     .into_iter()
     .filter(|row| row.kind == "prompt")

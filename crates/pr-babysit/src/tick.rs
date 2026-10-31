@@ -194,31 +194,40 @@ fn snapshot(request: &Request<'_>, source: Source<'_>, env: &Env) -> Result<Read
     Source::GitHub {
       config,
       page_size,
-      client: kept,
-    } => {
-      let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
-      let request = collect::Request {
-        repo: request.repo,
-        number: request.number,
-        page_size,
-        now: request.now,
-      };
-      let collected = match kept {
-        None => collect::collect(&build()?, &request)?,
-        Some(slot) => {
-          let mut slot = slot.lock().unwrap_or_else(PoisonError::into_inner);
-          let client = match slot.take() {
-            Some(client) => client,
-            None => build()?,
-          };
-          let collected = collect::collect(&client, &request);
-          *slot = Some(client);
-          collected?
-        }
-      };
-      Ok((collected.snapshot, None, Some(collected.graphql)))
-    }
+      client,
+    } => github(request, config, page_size, client, env),
   }
+}
+
+/// Collect `request` from GitHub, through the kept client when there is a slot.
+fn github(
+  request: &Request<'_>,
+  config: Config,
+  page_size: u64,
+  kept: Option<&Mutex<Option<Client>>>,
+  env: &Env,
+) -> Result<Read> {
+  let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
+  let request = collect::Request {
+    repo: request.repo,
+    number: request.number,
+    page_size,
+    now: request.now,
+  };
+  let collected = match kept {
+    None => collect::collect(&build()?, &request)?,
+    Some(slot) => {
+      let mut slot = slot.lock().unwrap_or_else(PoisonError::into_inner);
+      let client = match slot.take() {
+        Some(client) => client,
+        None => build()?,
+      };
+      let collected = collect::collect(&client, &request);
+      *slot = Some(client);
+      collected?
+    }
+  };
+  Ok((collected.snapshot, None, Some(collected.graphql)))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

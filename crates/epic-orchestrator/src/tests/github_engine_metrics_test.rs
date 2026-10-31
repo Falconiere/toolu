@@ -76,3 +76,25 @@ fn a_waiting_pr_costs_no_prompt_and_its_green_verdict_is_acted_on_at_once() {
     ("fail".to_owned(), 1.into())
   );
 }
+
+#[test]
+fn skipped_collections_spend_no_graphql_points_and_decide_nothing() {
+  let fixture = Fixture::start().expect("fixture");
+  let (_temp, mut engine, tick, comments) = super::fresh_tests::settled(&fixture);
+  let per_collection = engine.world.graphql_points;
+  assert!(per_collection > 0);
+  for slot in 1..6 {
+    let collected = super::fresh_tests::quiet_slot(&mut engine, &fixture, &tick, &comments, slot);
+    assert_eq!(collected, slot == 5, "slot {slot}");
+  }
+  assert_eq!(engine.world.graphql_points, 2 * per_collection);
+  engine.pump().expect("pump");
+  let query = Query {
+    epic: None,
+    since_ms: None,
+    now_ms: epoch_millis(SystemTime::now()),
+  };
+  let doc = metrics::document(&engine.paths.journal_dir(), &query).expect("metrics");
+  assert_eq!(doc["prompts"]["decided_checks"], 2, "slots 0 and 5");
+  assert_eq!(doc["github"]["graphql_points"], 2 * per_collection);
+}
