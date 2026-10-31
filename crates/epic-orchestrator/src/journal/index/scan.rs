@@ -106,6 +106,10 @@ fn stem_of(path: &Path) -> Result<String, String> {
     .ok_or_else(|| format!("journal name {}", path.display()))
 }
 
+#[cfg(test)]
+#[path = "tests/scan_test.rs"]
+mod tests;
+
 fn read_rest(file: &mut File, buf: &mut Vec<u8>) -> Result<(), String> {
   let mut chunk = [0u8; 256];
   loop {

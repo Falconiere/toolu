@@ -103,6 +103,10 @@ fn read_record(
   Ok(parsed(&read_line(&mut file)?))
 }
 
+#[cfg(test)]
+#[path = "tests/read_test.rs"]
+mod tests;
+
 fn read_line(file: &mut File) -> Result<Vec<u8>, String> {
   let mut buf = Vec::new();
   let mut chunk = [0u8; 256];

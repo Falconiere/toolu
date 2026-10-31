@@ -48,6 +48,10 @@ pub(super) fn write_line(
   })
 }
 
+#[cfg(test)]
+#[path = "tests/write_test.rs"]
+mod tests;
+
 fn line_text(record: &Record) -> Result<String, String> {
   let line = json!({
     "seq": record.seq,
