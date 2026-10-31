@@ -1,5 +1,6 @@
 //! Remote fixer worktrees and explicit committed transfers.
 
+use std::path::Path;
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -32,6 +33,28 @@ pub(super) fn transfer<'a>(
     .map_err(|error| fail(&error))?
     .ok_or_else(|| Failure::new("state_malformed", "missing remote target"))?;
   Ok(Transfer { target, env, run })
+}
+
+pub(super) fn canonical_remote_path(transport: &Transfer<'_>, path: &str) -> Result<String> {
+  let path = Path::new(path);
+  let parent = path
+    .parent()
+    .and_then(Path::to_str)
+    .ok_or_else(|| Failure::new("state_malformed", "invalid remote worktree path"))?;
+  let name = path
+    .file_name()
+    .and_then(|name| name.to_str())
+    .ok_or_else(|| Failure::new("state_malformed", "invalid remote worktree path"))?;
+  let resolved = transport
+    .exec(&["realpath", parent], &[])
+    .map_err(|error| fail(&error))?;
+  let resolved = std::str::from_utf8(&resolved)
+    .map_err(|error| Failure::new("remote_error", error.to_string()))?;
+  let resolved = Path::new(resolved.trim_end_matches(['\r', '\n']));
+  if !resolved.is_absolute() {
+    return Err(Failure::new("remote_error", "invalid remote realpath"));
+  }
+  Ok(resolved.join(name).display().to_string())
 }
 
 impl Dispatcher<'_> {

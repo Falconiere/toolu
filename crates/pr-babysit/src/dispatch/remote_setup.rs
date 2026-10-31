@@ -8,7 +8,7 @@ use toolu_mux::hc::remote::{self, Target, Transfer};
 
 use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command};
-use super::remote::{fail, field, transfer};
+use super::remote::{canonical_remote_path, fail, field, transfer};
 use super::start::Start;
 use super::worktree::clean_or_fail;
 use crate::error::{Failure, Result};
@@ -203,12 +203,14 @@ fn remote_path(transport: &Transfer<'_>) -> Result<String> {
     .ok_or_else(|| Failure::new("remote_error", "invalid remote worktree path"))
 }
 
-fn registered(list: &str, path: &str, head: &str) -> Result<bool> {
+fn registered(list: &str, path: &str, canonical: &str, head: &str) -> Result<bool> {
+  let saved = format!("worktree {path}");
+  let canonical = format!("worktree {canonical}");
   for block in list.split("\0\0") {
     let fields: Vec<&str> = block.split('\0').collect();
     if fields
       .iter()
-      .any(|field| *field == format!("worktree {path}"))
+      .any(|field| *field == saved || *field == canonical)
     {
       if !fields.iter().any(|field| *field == format!("HEAD {head}"))
         || !fields.contains(&"detached")
@@ -225,10 +227,11 @@ fn registered(list: &str, path: &str, head: &str) -> Result<bool> {
 }
 
 fn ensure_worktree(transport: &Transfer<'_>, path: &str, head: &str) -> Result<()> {
+  let canonical = canonical_remote_path(transport, path)?;
   let list = transport
     .git(&["worktree", "list", "--porcelain", "-z"])
     .map_err(|error| fail(&error))?;
-  if !registered(&list, path, head)? {
+  if !registered(&list, path, &canonical, head)? {
     transport
       .git(&["worktree", "add", "--detach", path, head])
       .map_err(|error| fail(&error))?;
@@ -236,7 +239,7 @@ fn ensure_worktree(transport: &Transfer<'_>, path: &str, head: &str) -> Result<(
   let list = transport
     .git(&["worktree", "list", "--porcelain", "-z"])
     .map_err(|error| fail(&error))?;
-  if !registered(&list, path, head)? {
+  if !registered(&list, path, &canonical, head)? {
     return Err(Failure::new(
       "remote_error",
       "remote worktree was not registered",
