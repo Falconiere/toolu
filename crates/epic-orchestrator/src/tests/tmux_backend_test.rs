@@ -81,7 +81,13 @@ impl World {
 impl Drop for World {
   /// Removing the scratch directory alone leaves the server running forever.
   fn drop(&mut self) {
-    let _no_server = self.tmux().kill_server();
+    // No socket file: no server ever started; "no server": it already exited.
+    if self.socket.exists()
+      && let Err(err) = self.tmux().kill_server()
+      && !err.message.contains("no server running")
+    {
+      eprintln!("tmux test server left running: {err:?}");
+    }
   }
 }
 

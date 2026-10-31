@@ -15,6 +15,7 @@ pub(crate) struct World {
   _dir: tempfile::TempDir,
   pub(crate) client: Tmux,
   pub(crate) repo: PathBuf,
+  socket: PathBuf,
 }
 
 impl World {
@@ -22,13 +23,14 @@ impl World {
     let dir = tempfile::tempdir().unwrap();
     let socket = dir.path().join("tmux.sock");
     let env = Env::from_pairs([("PATH", PATH)]);
-    let client = Tmux::new(&env, Some(socket));
+    let client = Tmux::new(&env, Some(socket.clone()));
     let repo = dir.path().join("repo");
     std::fs::create_dir(&repo).unwrap();
     World {
       _dir: dir,
       client,
       repo,
+      socket,
     }
   }
 
@@ -47,7 +49,13 @@ impl World {
 impl Drop for World {
   /// Removing the scratch directory alone leaves the server running forever.
   fn drop(&mut self) {
-    let _no_server = self.client.kill_server();
+    // No socket file: no server ever started; "no server": it already exited.
+    if self.socket.exists()
+      && let Err(err) = self.client.kill_server()
+      && !err.message.contains("no server running")
+    {
+      eprintln!("tmux test server left running: {err:?}");
+    }
   }
 }
 
