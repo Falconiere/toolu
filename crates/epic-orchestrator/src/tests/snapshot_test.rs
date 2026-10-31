@@ -171,9 +171,9 @@ fn a_graph_issue_done_in_the_tracker_is_marked_and_a_reopen_clears_it() {
   });
   std::fs::write(tmp.path().join("registry.json"), registry.to_string()).expect("registry");
   let mut world = load(&Paths::at(tmp.path()), std::time::SystemTime::now()).expect("load");
-  assert!(world.issues["a"].tracker_done);
+  assert_eq!(world.issues["a"].graph_status, "done");
   assert!(!crate::refill::ready(&world, &world.issues["a"]));
   std::fs::write(epic.join("graph.json"), graph("ready")).expect("graph");
   super::reload_epic(&mut world, "one").expect("reload");
-  assert!(!world.issues["a"].tracker_done);
+  assert_eq!(world.issues["a"].graph_status, "ready");
 }

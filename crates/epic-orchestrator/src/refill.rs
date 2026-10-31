@@ -30,7 +30,7 @@ pub(crate) fn ready(world: &World, issue: &Issue) -> bool {
     .iter()
     .all(|blocker| world.issues.get(blocker).is_some_and(done));
   issue.stage.is_empty()
-    && !issue.tracker_done
+    && issue.graph_status != "done"
     && issue.pending.is_none()
     && issue.hold.is_none()
     && issue.deferred.is_none()
