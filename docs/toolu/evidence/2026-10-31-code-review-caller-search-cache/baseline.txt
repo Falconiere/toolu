@@ -1,0 +1,4 @@
+workload: 40 files each with 'pub fn run' changed + 1 caller file, Effort::High packages(), release build, 5 samples
+platform: Darwin arm64 git version 2.54.0 (Apple Git-157)
+greps_per_5_runs=200 us=[2922420, 2951468, 2912571, 2862390, 2845635]
+git grep per run: 40

@@ -13,7 +13,7 @@ use std::path::Path;
 use serde::Serialize;
 use toolu_runtime::env::Env;
 
-use super::context::callers;
+use super::context::Callers;
 use super::mask::Mask;
 use super::window::windows;
 use crate::budget::{BLOB_MAX_BYTES, Budget};
@@ -67,6 +67,7 @@ pub(crate) fn packages(
     .iter()
     .flat_map(|chunk| chunk.files.iter().copied())
     .collect();
+  let mut callers = Callers::new(budget.context_bytes);
   let clean = |text: String| mask.apply(&redact_text(&text));
   let packages = shaped
     .files
@@ -81,15 +82,7 @@ pub(crate) fn packages(
       let context = text
         .as_deref()
         .filter(|_| budget.context_bytes > 0)
-        .and_then(|text| {
-          callers(
-            (env, root),
-            shaped,
-            (file, text),
-            budget.context_bytes,
-            &mut notes,
-          )
-        });
+        .and_then(|text| callers.of((env, root), shaped, (file, text), &mut notes));
       let source = text.and_then(|text| surrounding(file, text, budget, &mut used, &mut notes));
       Package {
         path: file.path.clone(),
@@ -172,3 +165,7 @@ fn surrounding<'a>(
 #[cfg(test)]
 #[path = "tests/source_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/callers_test.rs"]
+mod callers_tests;

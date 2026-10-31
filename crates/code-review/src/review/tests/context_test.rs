@@ -1,4 +1,6 @@
-use super::enclosing;
+use regex::Regex;
+
+use super::{DEFINITION, enclosing};
 use crate::contract::Side;
 use crate::shape::{ChangedLine, FileKind, ShapedFile};
 
@@ -20,22 +22,23 @@ fn file(added: &[u32]) -> ShapedFile {
   }
 }
 
+fn pattern() -> Regex {
+  Regex::new(DEFINITION).unwrap()
+}
+
 const TEXT: &str = "import os\n\ndef first(a):\n    return a\n\nclass Second:\n    def third(self):\n        return 1\n";
 
 #[test]
 fn each_change_names_the_nearest_definition_at_or_above_it() {
-  let mut notes = Vec::new();
-  let names = enclosing(&file(&[4, 6, 8]), TEXT, &mut notes);
+  let names = enclosing(&pattern(), &file(&[4, 6, 8]), TEXT);
   let found: Vec<(&str, u32)> = names
     .iter()
     .map(|(name, line)| (name.as_str(), *line))
     .collect();
   assert_eq!(found, [("Second", 6), ("first", 3), ("third", 7)]);
-  assert!(notes.is_empty(), "{notes:?}");
 }
 
 #[test]
 fn a_change_above_every_definition_names_nothing() {
-  let mut notes = Vec::new();
-  assert!(enclosing(&file(&[1]), TEXT, &mut notes).is_empty());
+  assert!(enclosing(&pattern(), &file(&[1]), TEXT).is_empty());
 }
