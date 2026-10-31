@@ -5,7 +5,8 @@ worktrees, parallel workers on Claude Code, Codex, Cursor Agent, or Muse Code
 (delivery-flow from brainstorm through PR and babysit) routed by Jev
 complexity, a merge gate with GitHub auto-merge, rate-limit and progress
 guardrails, and cleanup. See the plugin README for trackers, hosts, and
-guardrails.
+guardrails. The [attention notification POST contract](notification-post.md)
+records retry, duplicate, and loss behavior for the optional URL destination.
 
 ## Install
 
