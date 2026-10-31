@@ -7,6 +7,9 @@ use toolu_github::{Client, Error, RateLimit, Rest};
 
 use crate::watch::{Kind, Watch};
 
+/// Items per page every probe asks for; a full last page has this many.
+const PAGE_ITEMS: usize = 100;
+
 /// A GitHub change that the resident state thread can consume.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum Change {
@@ -60,7 +63,7 @@ fn probe_into(client: &Client, watch: &mut Watch, report: &mut Report) -> Result
     Kind::Base { repo, branch } => base(client, watch, report, repo, branch)?,
     Kind::Epic { key, repo, number } => {
       let root = root(repo)?;
-      let path = format!("{root}/issues/{number}/sub_issues?per_page=100");
+      let path = format!("{root}/issues/{number}/sub_issues?per_page={PAGE_ITEMS}");
       let _pages = pages(client, watch, report, &path, true)?;
       if report.fresh > 0 {
         report
@@ -86,6 +89,12 @@ fn pr(client: &Client, watch: &mut Watch, report: &mut Report, kind: &Kind) -> R
   let Kind::Pr { key, repo, number } = kind else {
     return Err(Error::Config("expected a pull request watch".into()));
   };
+  if !watch.tails_known {
+    // Saved before full tails were tracked: fetch every list fresh once.
+    watch.etags.clear();
+    watch.page_links.clear();
+    watch.tails_known = true;
+  }
   let root = root(repo)?;
   let path = format!("{root}/pulls/{number}");
   let before = report.fresh;
@@ -97,15 +106,15 @@ fn pr(client: &Client, watch: &mut Watch, report: &mut Report, kind: &Kind) -> R
     return Err(Error::Decode("PR has no cached head SHA".into()));
   }
   for path in [
-    format!("{root}/commits/{head}/check-runs?per_page=100"),
+    format!("{root}/commits/{head}/check-runs?per_page={PAGE_ITEMS}"),
     format!("{root}/commits/{head}/status"),
   ] {
     let _reply = pages(client, watch, report, &path, false)?;
   }
   for path in [
-    format!("{root}/issues/{number}/comments?per_page=100"),
-    format!("{root}/pulls/{number}/comments?per_page=100"),
-    format!("{root}/pulls/{number}/reviews?per_page=100"),
+    format!("{root}/issues/{number}/comments?per_page={PAGE_ITEMS}"),
+    format!("{root}/pulls/{number}/comments?per_page={PAGE_ITEMS}"),
+    format!("{root}/pulls/{number}/reviews?per_page={PAGE_ITEMS}"),
   ] {
     let _reply = pages(client, watch, report, &path, true)?;
   }
@@ -198,15 +207,31 @@ fn pages(
   let mut next = Some(path.to_owned());
   let mut first = None;
   let mut visited = BTreeSet::new();
+  let mut full_end = None;
   while let Some(current) = next.take() {
     if !visited.insert(current.clone()) || visited.len() > 1000 {
       return Err(Error::Decode("GitHub pagination did not terminate".into()));
     }
     let (body, following) = page(client, watch, report, &current, array)?;
+    // Whether a fresh last page was full; `None` when it answered 304.
+    full_end = body.as_ref().filter(|_| following.is_none()).map(|body| {
+      body
+        .as_array()
+        .is_some_and(|items| items.len() >= PAGE_ITEMS)
+    });
     if first.is_none() {
       first = body;
     }
     next = following;
+  }
+  match full_end {
+    Some(true) => {
+      watch.full_tails.insert(path.to_owned());
+    }
+    Some(false) => {
+      watch.full_tails.remove(path);
+    }
+    None => {}
   }
   Ok(first)
 }
@@ -247,15 +272,20 @@ fn page(
         }
       }
       let next = next_link(&fresh.headers);
-      match &next {
-        Some(link) => {
-          watch.page_links.insert(current.to_owned(), link.clone());
-        }
-        None => {
-          watch.page_links.remove(current);
-        }
-      }
+      remember_link(watch, current, next.as_ref());
       Ok((Some(body), next))
+    }
+  }
+}
+
+/// Keep `current`'s next-page link.
+fn remember_link(watch: &mut Watch, current: &str, next: Option<&String>) {
+  match next {
+    Some(link) => {
+      watch.page_links.insert(current.to_owned(), link.clone());
+    }
+    None => {
+      watch.page_links.remove(current);
     }
   }
 }

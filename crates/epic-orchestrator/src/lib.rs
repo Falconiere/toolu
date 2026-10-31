@@ -9,6 +9,7 @@ mod attention;
 mod attention_ops;
 /// Cross-plugin babysit integration for the resident engine.
 pub mod babysit;
+mod babysit_fresh;
 mod babysit_next;
 mod checkpoint;
 mod cleanup;

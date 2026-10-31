@@ -4,6 +4,7 @@
 //! `pr.lastError` on the previous state and changes nothing else.
 
 use std::path::Path;
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{Value, json};
@@ -17,7 +18,7 @@ use crate::error::{Failure, Result};
 use crate::lock::SlotLock;
 use crate::reduce::{Paths, reduce};
 use crate::schedule;
-use crate::state::{sibling, write_json, write_text};
+use crate::state::{json_text, sibling, write_json, write_text};
 
 /// Where the snapshot comes from.
 pub(crate) enum Source<'a> {
@@ -29,6 +30,9 @@ pub(crate) enum Source<'a> {
     config: Config,
     /// Items per page.
     page_size: u64,
+    /// Keeps the built client for later ticks; `None` builds one per tick.
+    /// `config` and the environment are read only when a client is built.
+    client: Option<&'a Mutex<Option<Arc<Client>>>>,
   },
 }
 
@@ -54,6 +58,8 @@ pub(crate) struct Ticked {
   pub(crate) result: Value,
   /// The GraphQL budget a collection spent; `None` for a recorded snapshot.
   pub(crate) graphql: Option<GraphQlUsage>,
+  /// The digest of the state file bytes this tick wrote.
+  pub(crate) state_digest: u64,
 }
 
 /// Run one check.
@@ -101,11 +107,13 @@ pub(crate) fn tick(request: &Request<'_>, source: Source<'_>, env: &Env) -> Resu
   schedule::apply(&mut reduced, now, request.scheduled);
   let raw = raw.unwrap_or_else(|| format!("{snapshot}\n"));
   write_text(&snapshot_out, &raw, "snapshot_out")?;
-  write_json(request.state_file, &reduced.state, "state")?;
+  let state = json_text(&reduced.state);
+  write_text(request.state_file, &state, "state")?;
   write_json(&result_out, &reduced.result, "result")?;
   Ok(Ticked {
     result: reduced.result,
     graphql,
+    state_digest: toolu_engine::babysit::state_digest(state.as_bytes()),
   })
 }
 
@@ -188,18 +196,70 @@ fn snapshot(request: &Request<'_>, source: Source<'_>, env: &Env) -> Result<Read
       }
       Ok((snapshot, Some(raw), None))
     }
-    Source::GitHub { config, page_size } => {
-      let client = Client::new(config, env).map_err(|err| collect::failure("client", &err))?;
-      let request = collect::Request {
-        repo: request.repo,
-        number: request.number,
-        page_size,
-        now: request.now,
-      };
-      let collected = collect::collect(&client, &request)?;
-      Ok((collected.snapshot, None, Some(collected.graphql)))
-    }
+    Source::GitHub {
+      config,
+      page_size,
+      client,
+    } => github(request, config, page_size, client, env),
   }
+}
+
+/// Collect `request` from GitHub, through the kept client when there is a slot.
+fn github(
+  request: &Request<'_>,
+  config: Config,
+  page_size: u64,
+  kept: Option<&Mutex<Option<Arc<Client>>>>,
+  env: &Env,
+) -> Result<Read> {
+  let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
+  let request = collect::Request {
+    repo: request.repo,
+    number: request.number,
+    page_size,
+    now: request.now,
+  };
+  let collected = match kept {
+    None => collect::collect(&build()?, &request)?,
+    Some(slot) => {
+      // Concurrent ticks share one client. The lock is never held while the
+      // token is read or the collection runs.
+      let lock = || slot.lock().unwrap_or_else(PoisonError::into_inner);
+      let shared = lock().clone();
+      let client = if let Some(client) = shared {
+        client
+      } else {
+        let made = Arc::new(build()?);
+        Arc::clone(lock().get_or_insert(made))
+      };
+      let collected = collect::collect(&client, &request);
+      if collected.as_ref().is_err_and(token_suspect) {
+        // A refused read may be a changed or rescoped token that did not
+        // answer 401; the next tick builds a client and reads it again.
+        let mut shared = lock();
+        if shared
+          .as_ref()
+          .is_some_and(|other| Arc::ptr_eq(other, &client))
+        {
+          *shared = None;
+        }
+      }
+      collected?
+    }
+  };
+  Ok((collected.snapshot, None, Some(collected.graphql)))
+}
+
+/// A refusal that a changed or rescoped token can cause: `401`, `403`, `404`
+/// (a private repository the token no longer sees) or a GraphQL error such as
+/// `FORBIDDEN`. Rate limits, outages and malformed replies keep the client.
+/// While such a refusal persists each check reads the token again, as every
+/// check did before the client was kept.
+fn token_suspect(failure: &Failure) -> bool {
+  let class = failure.extra.get("class").and_then(Value::as_str);
+  let status = failure.extra.get("status").and_then(Value::as_u64);
+  matches!(class, Some("unauthorized" | "graphql"))
+    || (class == Some("permanent") && matches!(status, Some(403 | 404)))
 }
 
 pub(crate) fn valid(snapshot: &Value) -> Result<()> {

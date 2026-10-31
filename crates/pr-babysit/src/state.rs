@@ -126,7 +126,12 @@ pub(crate) fn target(state: &Value) -> (&str, u64, Value) {
 
 /// Write `value` and a newline to `path` atomically.
 pub(crate) fn write_json(path: &Path, value: &Value, source: &str) -> Result<()> {
-  write_text(path, &format!("{value}\n"), source)
+  write_text(path, &json_text(value), source)
+}
+
+/// `value` as the text [`write_json`] writes.
+pub(crate) fn json_text(value: &Value) -> String {
+  format!("{value}\n")
 }
 
 /// Write `text` to `path` atomically.

@@ -3,11 +3,12 @@
 use std::time::Duration;
 
 use serde_json::{Value, json};
-use toolu_engine::babysit::{BabysitTick, TickRequest};
+use toolu_engine::babysit::BabysitTick;
 use toolu_github::{Client, Config, Error};
 use toolu_runtime::env::Env;
 
 use crate::babysit;
+use crate::babysit_fresh::{self, Babysit};
 use crate::github_probe::{self, Change, Report};
 use crate::journal::Record;
 use crate::logic::push_attention;
@@ -105,35 +106,33 @@ fn note_report(
 ) -> bool {
   let rest_rate = report.rate.clone();
   let rest_points = report.rest_points;
+  let quiet = cause == Cause::Scheduled && report.fresh == 0;
   for change in report.changes {
     note_change(world, change);
   }
-  let checked = babysit_request(world, key, checks.paths)
-    .map(|request| babysit::check(checks.babysit, &request));
+  let babysit = babysit_fresh::run(world, key, quiet, checks.babysit, checks.paths);
   world.rest_points = world.rest_points.saturating_add(rest_points);
   if let Some(rate) = &rest_rate {
     world.rest_rate = Some(rate.clone());
   }
-  let retry_after = observe_graphql(world, checked.as_ref());
-  let graphql = checked.as_ref().and_then(|result| result.graphql);
+  let retry_after = observe_graphql(world, babysit.checked());
+  let graphql = babysit.checked().and_then(|result| result.graphql);
   let note = json!({
     "cause": cause_name(cause),
     "restFresh": report.fresh,
     "restNotModified": report.not_modified,
     "restPoints": rest_points,
     "restRate": rest_rate,
-    "graphqlTick": u8::from(checked.is_some()),
+    "graphqlTick": u8::from(babysit.checked().is_some()),
     "graphqlPoints": graphql.map(|usage| usage.points),
     "graphqlRemaining": world.graphql_remaining,
     "graphqlResetAt": world.graphql_reset_at,
     "graphqlRetryAfter": retry_after.map(|wait| wait.as_secs()),
   });
   let mut note = with_watch(world, key, note);
-  if let (Some(map), Some(checked)) = (note.as_object_mut(), checked.as_ref()) {
-    map.insert("next".to_owned(), json!(checked.next.name()));
-  }
+  babysit_outcome(&mut note, &babysit);
   journal(world, key, "github-check", &note.to_string());
-  if let Some(checked) = checked {
+  if let Babysit::Checked(checked) = babysit {
     crate::babysit_next::apply(world, key, checked.next);
   }
   if let Some(crate::watch::Kind::Pr { key: issue, .. }) =
@@ -142,6 +141,23 @@ fn note_report(
     crate::logic::arm_merge(world, &issue);
   }
   retry_after.is_some()
+}
+
+/// Add the babysit decision, or the skipped collection's time, to `note`.
+fn babysit_outcome(note: &mut Value, babysit: &Babysit) {
+  let Some(map) = note.as_object_mut() else {
+    return;
+  };
+  match babysit {
+    Babysit::Idle => {}
+    Babysit::Checked(checked) => {
+      map.insert("next".to_owned(), json!(checked.next.name()));
+    }
+    Babysit::Skipped { at_ms } => {
+      map.insert("babysit".to_owned(), json!("skipped"));
+      map.insert("babysitCollectedAt".to_owned(), json!(at_ms));
+    }
+  }
 }
 
 fn observe_graphql(world: &mut World, checked: Option<&babysit::Checked>) -> Option<Duration> {
@@ -164,30 +180,6 @@ fn observe_graphql(world: &mut World, checked: Option<&babysit::Checked>) -> Opt
       .max(world.now_ms.saturating_add(millis));
   }
   retry_after
-}
-
-fn babysit_request(world: &World, watch_key: &str, paths: &Paths) -> Option<TickRequest> {
-  let watch = world.watches.get(watch_key)?;
-  let crate::watch::Kind::Pr { key, repo, number } = &watch.kind else {
-    return None;
-  };
-  let issue = world.issues.get(key)?;
-  if !matches!(issue.phase.as_str(), "babysit" | "ready")
-    || matches!(issue.stage.as_str(), "cleaning" | "closed" | "merged")
-  {
-    return None;
-  }
-  Some(TickRequest {
-    repo: repo.clone(),
-    number: *number,
-    state_file: paths
-      .root
-      .join("babysit")
-      .join(format!("{}-{number}.json", repo.replace('/', "__"))),
-    now: Some(toolu_state::time::iso_seconds(
-      std::time::UNIX_EPOCH + Duration::from_millis(world.now_ms),
-    )),
-  })
 }
 
 fn note_error(world: &mut World, key: &str, cause: Cause, err: &Error, report: &Report) {
@@ -252,6 +244,14 @@ pub(crate) fn note_change(world: &mut World, change: Change) {
       push_attention(world, "pr-closed", &key, "pull request closed");
     }
     Change::BaseMoved { repo, branch } => {
+      // A moved base can change mergeability with no PR ETag moving.
+      for watch in world.watches.values_mut() {
+        let same_repo =
+          matches!(&watch.kind, crate::watch::Kind::Pr { repo: watched, .. } if *watched == repo);
+        if same_repo && watch.base_ref == branch {
+          watch.babysit = None;
+        }
+      }
       let note = format!("{repo}@{branch}");
       journal(world, &note, "github-base-moved", "");
       if let Some(head) = crate::queue::head(world, &repo) {
@@ -307,6 +307,14 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/github_engine_babysit_test.rs"]
 mod babysit_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_fresh_test.rs"]
+mod fresh_tests;
+
+#[cfg(test)]
+#[path = "tests/github_engine_quiet_test.rs"]
+mod quiet_tests;
 
 #[cfg(test)]
 #[path = "tests/github_engine_epic_test.rs"]

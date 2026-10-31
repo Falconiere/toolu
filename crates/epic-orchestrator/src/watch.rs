@@ -69,6 +69,20 @@ pub(crate) struct Watch {
   /// Last observed PR base branch.
   #[serde(default)]
   pub base_ref: String,
+  /// The last babysit collection that settled at keep-going; in memory only,
+  /// so a restarted engine collects first.
+  #[serde(skip)]
+  pub babysit: Option<crate::babysit_fresh::Collected>,
+  /// First-page paths of lists whose last page, when last fetched fresh, was
+  /// full with no next link: a new item can land on a page the saved links
+  /// never fetch. Kept with the `etags` it qualifies, so a restart cannot
+  /// forget it; a fresh, shorter last page clears it.
+  #[serde(default, skip_serializing_if = "std::collections::BTreeSet::is_empty")]
+  pub full_tails: std::collections::BTreeSet<String>,
+  /// `full_tails` was learned from fresh pages. A watch saved before it existed
+  /// loads `false`, and its next probe drops its `ETag`s to learn it.
+  #[serde(default)]
+  pub tails_known: bool,
 }
 
 impl Watch {
@@ -84,6 +98,9 @@ impl Watch {
       page_links: BTreeMap::new(),
       head_sha: String::new(),
       base_ref: String::new(),
+      babysit: None,
+      full_tails: std::collections::BTreeSet::new(),
+      tails_known: true,
     }
   }
 

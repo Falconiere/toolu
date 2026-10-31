@@ -24,7 +24,12 @@ codex plugin add pr-babysit@toolu
 ## Helper Commands
 
 One `toolu babysit` command set, called the same way on Claude Code and Codex
-(only the `--state-file` path differs). Contract:
+(only the `--state-file` path differs). The epic engine runs the same tick
+through one kept GitHub client, so a watched PR no longer runs `gh auth token`
+on every check. The client reads the token again after a `401`. A `401`, `403` or `404`
+refusal, or a GraphQL error, makes the next check build a new one; a rate
+limit or an outage keeps it. `toolu babysit tick`
+and `wait` still build a new client for each check. Contract:
 `plugins/pr-babysit/skills/babysit/references/helper.md`.
 
 | Command | Purpose |

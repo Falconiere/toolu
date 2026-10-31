@@ -111,6 +111,34 @@ that child once for the missing details. Task-list children reuse their initial
 issue GET. Dependency and closing-PR requests still run for every child; an API
 rate limit fails graph construction rather than silently dropping blockers.
 
+## Quiet babysit checks
+
+Each PR check first sends conditional REST requests for the PR, its checks and
+statuses, its comments and its reviews, following saved next-page links. On a
+scheduled check where every one of them answers `304`, the engine may reuse the
+last pr-babysit collection instead of collecting again. More conditions must
+hold:
+
+- That collection ended in keep-going while the issue was in `babysit`, and
+  GitHub was not still computing mergeability (`mergeable_unknown`).
+- The issue is still in `babysit`, never `ready`, and its phase has not changed
+  since.
+- No comment or review list ended on a full page of 100 with no next link,
+  since a new item there would sit on a page the saved links never fetch.
+- The babysit state file still holds the bytes that collection wrote.
+- No move of the PR's base branch has been seen since. The engine watches a
+  base branch only while one of its PRs is `ready`, and a merge the engine
+  makes forces an immediate check, so an outside push to a base with no ready
+  PR is seen within the 15-minute bound.
+- The collection is less than 15 minutes old.
+
+A worker report or another immediate check always collects. GitHub shows
+review-thread resolution only through GraphQL, so a thread resolved in the UI
+is seen at most 15 minutes late. A skipped check decides nothing, so it never
+queues a merge. Its `github-check` journal row carries `"babysit":"skipped"`
+and `babysitCollectedAt`, and it is not counted as a decided check. The memo
+lives in memory, so after a restart the engine collects first.
+
 ## Uncertain merges
 
 The merge queue sends one PUT pinned to the verified PR head. If GitHub times

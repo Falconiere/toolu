@@ -23,6 +23,7 @@ impl BabysitTick for Fixed {
       result: json!({ "slot": format!("{}#{}", request.repo, request.number) }),
       graphql: None,
       prompt: None,
+      state_digest: None,
     })
   }
 }
@@ -56,4 +57,14 @@ fn a_shared_tick_runs_on_another_thread() {
     .join()
     .expect("thread");
   assert_eq!(decision, Ok(TickDecision::KeepGoing));
+}
+
+#[test]
+fn a_state_digest_tells_bytes_apart_and_repeats_for_the_same_bytes() {
+  let state = br#"{"version":2}"#;
+  assert_eq!(super::state_digest(state), super::state_digest(state));
+  assert_ne!(
+    super::state_digest(state),
+    super::state_digest(b"{\"version\":3}")
+  );
 }

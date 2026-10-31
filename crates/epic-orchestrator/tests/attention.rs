@@ -24,6 +24,7 @@ impl BabysitTick for GithubTick {
         result: Value::Null,
         graphql: None,
         prompt: None,
+        state_digest: None,
       })
       .map_err(|err| LinkError::Failed(err.to_string()))
   }

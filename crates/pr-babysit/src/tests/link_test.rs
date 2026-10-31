@@ -134,6 +134,7 @@ fn a_scheduled_tick_reads_github_once_and_reports_decision_and_cost() {
   let source = Source::GitHub {
     config: recorded::config(&fixture),
     page_size: 2,
+    client: None,
   };
   let report = tick(&request, source, &recorded::env(&fixture)).unwrap();
   assert_eq!(
@@ -148,6 +149,12 @@ fn a_scheduled_tick_reads_github_once_and_reports_decision_and_cost() {
       .is_some_and(|text| text.starts_with("pr-babysit: Falconiere/toolu#115 needs you (escalate"))
   );
   assert!(report.graphql.is_some_and(|usage| usage.points > 0));
+  let written = std::fs::read(&request.state_file).unwrap();
+  assert_eq!(
+    report.state_digest,
+    Some(toolu_engine::babysit::state_digest(&written)),
+    "the digest is of the exact bytes the tick wrote"
+  );
 }
 
 #[test]
