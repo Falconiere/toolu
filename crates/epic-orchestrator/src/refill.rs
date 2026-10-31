@@ -22,17 +22,6 @@ pub(crate) fn done(issue: &Issue) -> bool {
   matches!(issue.stage.as_str(), "merged" | "abandoned")
 }
 
-/// Whether the epic's graph shows `issue`'s tracker item closed. A sub-issue
-/// closed before this run has no stage, yet it must never launch.
-fn tracker_closed(world: &World, issue: &Issue) -> bool {
-  world
-    .epics
-    .get(&issue.epic)
-    .and_then(|epic| epic.graph.as_ref())
-    .and_then(|graph| graph.issues.iter().find(|item| item.key == issue.key))
-    .is_some_and(|item| item.state == "closed")
-}
-
 /// Whether `issue` may join a batch: never launched, open in the tracker,
 /// unblocked, not held, deferred, paused or waiting out a retry.
 pub(crate) fn ready(world: &World, issue: &Issue) -> bool {
@@ -41,7 +30,7 @@ pub(crate) fn ready(world: &World, issue: &Issue) -> bool {
     .iter()
     .all(|blocker| world.issues.get(blocker).is_some_and(done));
   issue.stage.is_empty()
-    && !tracker_closed(world, issue)
+    && !issue.tracker_done
     && issue.pending.is_none()
     && issue.hold.is_none()
     && issue.deferred.is_none()
@@ -266,7 +255,8 @@ pub(crate) fn refill(world: &mut World) {
     .into_iter()
     .collect();
   for epic in epics {
-    if world.paused.contains(&epic) || launching(world, &epic) || rearm(world, &epic) {
+    let closed = world.epics.get(&epic).is_some_and(|found| found.closed);
+    if closed || world.paused.contains(&epic) || launching(world, &epic) || rearm(world, &epic) {
       continue;
     }
     if let Some(key) = next_member(world, &epic) {

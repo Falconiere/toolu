@@ -176,6 +176,7 @@ fn load_issue(
   let status = read_value(&status_path)?;
   let issue = ensure_issue(world, key, epic, &state_dir);
   issue.blockers = crate::epics::blocker_keys(graph, &strings(item.get("open_blockers")));
+  issue.tracker_done = item.get("status").and_then(Value::as_str) == Some("done");
   overlay_record(issue, &issue_doc);
   if let Some(stage) = issue_doc.get("stage").and_then(Value::as_str) {
     stages.insert(key.to_owned(), stage.to_owned());

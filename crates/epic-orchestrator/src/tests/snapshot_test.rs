@@ -157,3 +157,23 @@ fn a_refresh_drops_an_issue_that_left_the_graph_and_frees_its_slot() {
   });
   assert!(dropped);
 }
+
+#[test]
+fn a_graph_issue_done_in_the_tracker_is_marked_and_a_reopen_clears_it() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let epic = tmp.path().join("epic");
+  std::fs::create_dir_all(epic.join("issues")).expect("issues");
+  let graph = |status: &str| json!({"issues": [{"key": "a", "status": status}]}).to_string();
+  std::fs::write(epic.join("graph.json"), graph("done")).expect("graph");
+  let registry = json!({
+    "version": 1,
+    "epics": [{"key": "one", "state_dir": epic.display().to_string()}]
+  });
+  std::fs::write(tmp.path().join("registry.json"), registry.to_string()).expect("registry");
+  let mut world = load(&Paths::at(tmp.path()), std::time::SystemTime::now()).expect("load");
+  assert!(world.issues["a"].tracker_done);
+  assert!(!crate::refill::ready(&world, &world.issues["a"]));
+  std::fs::write(epic.join("graph.json"), graph("ready")).expect("graph");
+  super::reload_epic(&mut world, "one").expect("reload");
+  assert!(!world.issues["a"].tracker_done);
+}

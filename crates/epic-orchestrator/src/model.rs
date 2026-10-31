@@ -202,6 +202,9 @@ pub(crate) struct Issue {
   pub relaunch: Option<String>,
   /// What the engine saw of the tracker item after the merge.
   pub tracker_seen: Seen,
+  /// The epic graph shows the issue `done` in the tracker (closed there,
+  /// perhaps before this run); refill never launches it.
+  pub tracker_done: bool,
   /// Its place in the merge queue and its rebase rounds.
   pub queue: crate::queue_fields::QueueState,
   /// The last message sent to the worker with no attention item open.
@@ -429,6 +432,7 @@ impl Issue {
       retry_at_ms: 0,
       relaunch: None,
       tracker_seen: Seen::Open,
+      tracker_done: false,
       queue: crate::queue_fields::QueueState::default(),
       direction: None,
     }
