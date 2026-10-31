@@ -38,7 +38,7 @@ fn a_snapshot_tracks_whether_the_agent_works_and_an_unlisted_one_does_not() {
 
 fn herdr_events(engine: &Engine) -> usize {
   let page = crate::status_events::page(
-    &engine.paths.journal_dir(),
+    &engine.paths,
     0,
     500,
     &toolu_runtime::config::secrets::Secrets::none(),
