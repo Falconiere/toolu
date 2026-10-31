@@ -15,6 +15,7 @@ fn notify_sends_once_when_the_receiver_acknowledges_immediately() {
     .expect("route");
   let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(row.name, "notify");
   assert_eq!(row.note, "channel=url attempts=1 status=200");
   assert_eq!(fixture.requests().expect("requests").len(), 1);
 }
@@ -31,6 +32,7 @@ fn notify_repeats_a_committed_post_when_its_response_is_lost() {
     .expect("sequence");
   let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(row.name, "notify");
   assert_eq!(row.note, "channel=url attempts=2 status=200");
   let requests = fixture.requests().expect("requests");
   assert_eq!(requests.len(), 2);
@@ -61,6 +63,7 @@ fn notify_retries_after_a_post_commit_response_timeout() {
   let notifier = Notifier::spawn(configured, paths.clone());
   notifier.tx.try_send(notice("which?")).expect("send");
   let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(row.name, "notify");
   assert_eq!(row.note, "channel=url attempts=2 status=200");
   let requests = fixture.requests().expect("requests");
   assert_eq!(requests.len(), 2);

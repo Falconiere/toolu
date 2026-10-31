@@ -1,12 +1,12 @@
 # Attention notification POST contract
 
-Epic attention notices may go to herdr desktop notifications and to a configured HTTP(S) URL. Set `epic.attention.enabled` and `notify_url` in the user-only `secrets.json`, or set `TOOLU_EPIC_NOTIFY_URL`, to enable the URL destination. Herdr delivery is a separate, single-attempt channel. An absent URL sends no POST.
+Epic attention notices may go to herdr desktop notifications and to a configured HTTP(S) URL. Set `epic.attention.enabled` to enable URL delivery, then supply `notify_url` in the user-only `secrets.json` or `TOOLU_EPIC_NOTIFY_URL` in the environment. Herdr delivery is a separate, single-attempt channel. An absent URL sends no POST.
 
 ## Request and acknowledgment
 
-The URL destination receives a JSON `POST` with `content-type: application/json`. The body has `text`, `kind`, `key`, `epic`, `state`, `note`, `age_seconds`, `reminder`, `issue`, and `dashboard`. Secrets are redacted from the body. There is no authentication header, delivery ID, or receiver deduplication handshake. A URL may carry its own secret; protect it as a credential.
+The URL destination receives a JSON `POST` with `content-type: application/json`. The body has `text`, `kind`, `key`, `epic`, `state`, `note`, `age_seconds`, `reminder`, `issue`, and `dashboard`. Secrets are redacted from the body. There is no authentication header, delivery ID, or receiver deduplication handshake. A URL may carry its own secret; protect it as a credential and use HTTPS outside loopback.
 
-One attempt has a 10-second whole-request deadline and follows no redirects. A 2xx or 3xx response stops retries and is recorded as `notify`; it only establishes that the sender received that HTTP response, not that the receiver durably committed an external effect. A 4xx response other than 429 stops after one attempt and is recorded as `notify-failed`. A timeout, transport error, 429, or 5xx causes up to five attempts total, separated by 1, 2, 4, and 8 seconds. After the last failed attempt, the journal records `notify-failed`. The outcome note is `channel=url attempts=N status=S`; the status is the final HTTP code, `timeout`, `transport`, or `refused` for an unusable URL or client setup before sending.
+One attempt has a 10-second whole-request deadline and follows no redirects. A 2xx or 3xx response stops retries and is recorded as `notify`; it only establishes that the sender received that HTTP response, not that the receiver durably committed an external effect. A 4xx response other than 429 stops after one attempt and is recorded as `notify-failed`. A timeout, transport error, 429, or 5xx causes up to five attempts total, separated by 1, 2, 4, and 8 seconds. After the last failed attempt, the journal records `notify-failed`. The outcome note is `channel=url attempts=N status=S`; the status is the final HTTP code, `timeout`, `transport`, `refused` for an unusable URL or client setup before sending, or `secrets` when the secret source cannot be loaded.
 
 ## Duplicate and loss behavior
 
@@ -16,11 +16,12 @@ This is not a global at-least-once delivery guarantee: the in-memory queue holds
 
 ## Observed fault matrix
 
-The owning crate's tests use a real loopback TLS receiver and CONNECT proxy. They assert request counts and journal outcomes; a recorded request followed by a dropped or late response represents receiver commit with a lost acknowledgment.
+The owning crate's tests use a real loopback TLS receiver and CONNECT proxy. They assert request counts and journal outcomes; recording a request before dropping or delaying its response models a committed receiver effect with a lost acknowledgment.
 
 | Receiver situation | Received POSTs | Sender result |
 | --- | ---: | --- |
 | Invalid URL before send | 0 | `notify-failed`, `attempts=0 status=refused` |
+| Invalid secrets before send | 0 | `notify-failed`, `attempts=0 status=secrets` |
 | Immediate 404 | 1 | `notify-failed`, `attempts=1 status=404` |
 | Immediate 200 | 1 | `notify`, `attempts=1 status=200` |
 | Record first POST, drop response, then 200 | 2 identical bodies | `notify`, `attempts=2 status=200` |

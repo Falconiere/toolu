@@ -178,7 +178,8 @@ and the dashboard list every live item with its state and age. Items survive a
 restart through the journal.
 
 A new item shows a herdr notification (`epic.attention.herdr`, default on) and,
-when `epic.attention.enabled` is true and `secrets.json` has a `notify_url`,
+when `epic.attention.enabled` is true and `notify_url` is set in `secrets.json`
+or `TOOLU_EPIC_NOTIFY_URL`,
 POSTs a JSON body with `text` to that URL: up to five attempts, retrying
 timeouts, transport errors, 429 and 5xx. Delivery is best-effort and a retry
 can duplicate a notice already accepted by the receiver; see the

@@ -126,6 +126,7 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
     .expect("route");
   let paths = post_once(tmp.path(), &fixture);
   let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(row.name, "notify-failed");
   assert_eq!(row.note, "channel=url attempts=1 status=404");
   assert_eq!(fixture.requests().expect("requests").len(), 1);
   let other = tempfile::tempdir().expect("temp");
@@ -134,6 +135,7 @@ fn notify_fails_at_once_on_a_client_error_and_refuses_a_bad_url() {
   let notifier = Notifier::spawn(settings(bad, &fixture), paths.clone());
   notifier.tx.try_send(notice("which?")).expect("send");
   let row = outcome(&paths, &["notify", "notify-failed"]);
+  assert_eq!(row.name, "notify-failed");
   assert_eq!(row.note, "channel=url attempts=0 status=refused");
   assert_eq!(fixture.requests().expect("requests").len(), 1);
 }
