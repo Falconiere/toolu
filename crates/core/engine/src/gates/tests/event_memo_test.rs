@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use std::path::Path;
-use std::time::Instant;
 
 use serde_json::{Map, Value, json};
 use toolu_protocol::decision::Decision;
@@ -375,52 +374,4 @@ fn post_tool_gates_and_docs_review_share_within_their_event() {
   let _review = RULE.run(&event, &ctx);
   COMMIT_GATE.run(&event, &ctx).expect("commit");
   assert_eq!(analysis_parses(), 1);
-}
-
-#[test]
-fn release_memo_timings() {
-  const SAMPLES: u32 = 40;
-  if std::env::var_os("TOOLU_MEMO_TIMING").is_none() {
-    return;
-  }
-  let dir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(dir.path().join("toolu.config.json"), "{\"version\":2}\n").expect("config");
-  let home = dir.path().to_str().expect("utf8");
-  let env = Env::from_pairs([("HOME", home), ("TOOLU_CONFIG_DIR", home)]);
-  let command = "echo 'a b' > out.txt && printf '%s' x";
-  let (event, raw) = shell(command);
-  let ctx = context(&env, dir.path(), &raw, Some(dir.path()), Host::Claude);
-  let uncached = Instant::now();
-  for _ in 0..SAMPLES {
-    let _decisions = run_pre(&event, &ctx);
-  }
-  let uncached = uncached.elapsed();
-  let cached = Instant::now();
-  for _ in 0..SAMPLES {
-    let _guard = EventMemoGuard::enter();
-    let _decisions = run_pre(&event, &ctx);
-  }
-  let cached = cached.elapsed();
-  let loads_uncached = Instant::now();
-  for _ in 0..SAMPLES {
-    let _loaded = gate_config(&ctx);
-  }
-  let loads_uncached = loads_uncached.elapsed();
-  let loads_cached = Instant::now();
-  {
-    let _guard = EventMemoGuard::enter();
-    for _ in 0..SAMPLES {
-      let _loaded = gate_config(&ctx);
-    }
-  }
-  let loads_cached = loads_cached.elapsed();
-  eprintln!(
-    "platform={} arch={} samples={SAMPLES} analysis_uncached_us={} analysis_cached_us={} config_uncached_us={} config_cached_us={}",
-    std::env::consts::OS,
-    std::env::consts::ARCH,
-    uncached.as_micros(),
-    cached.as_micros(),
-    loads_uncached.as_micros(),
-    loads_cached.as_micros()
-  );
 }
