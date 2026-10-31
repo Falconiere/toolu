@@ -45,7 +45,7 @@ impl World {
   fn git_repo(&self) {
     std::fs::write(self.repo.join("file.txt"), "hello\n").unwrap();
     let steps: &[&[&str]] = &[
-      &["init", "-q"],
+      &["init", "-q", "-b", "main"],
       &["config", "user.email", "test@example.com"],
       &["config", "user.name", "Test"],
       &["add", "file.txt"],

@@ -57,6 +57,18 @@ jobs:
         run: |
           npm install -g @ast-grep/cli@0.50.0
           npm ci --ignore-scripts
+      # The gate's real hc integration tests need herdr-core, at tests.yml's pin.
+      - name: Install pinned herdr-core
+        run: |
+          set -euo pipefail
+          sha=e9dbabdead0ce0ce3de51b6f54cc9549efedbb41b2f8448b6932ab0d1442343e
+          curl -fsSL "https://releases.herdr.dev/core/0.1.14/herdr-core-linux-x86_64.tar.gz" -o "$RUNNER_TEMP/hc.tar.gz"
+          echo "$sha  $RUNNER_TEMP/hc.tar.gz" | shasum -a 256 -c -
+          mkdir -p "$RUNNER_TEMP/hc-bin"
+          tar -xzf "$RUNNER_TEMP/hc.tar.gz" -C "$RUNNER_TEMP/hc-bin"
+          ln -s herdr-core "$RUNNER_TEMP/hc-bin/hc"
+          "$RUNNER_TEMP/hc-bin/hc" --version
+          echo "$RUNNER_TEMP/hc-bin" >> "$GITHUB_PATH"
       - name: Verify tag and versions
         env:
           TAG: ${{ inputs.tag }}
