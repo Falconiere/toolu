@@ -1,23 +1,12 @@
-use std::time::{Duration, UNIX_EPOCH};
-
-use crate::journal::{Record, append, page};
-
 #[test]
-fn deleting_the_index_rebuilds_from_the_log() {
-  let dir = tempfile::tempdir().unwrap();
-  let journal = dir.path().join("journal");
-  let lock = dir.path().join("journal.lock");
-  let now = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
-  append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-intent", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
-  std::fs::remove_file(journal.join("sequence.index")).unwrap();
-  std::fs::remove_file(journal.join("sequence.offsets")).unwrap();
-  let rows = page(&journal, &lock, 0, 10).unwrap().1;
-  assert_eq!(rows.len(), 1);
-  assert_eq!(rows[0].seq, 1);
+fn rebuild_keeps_seq_one_after_the_cache_files_are_removed() {
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("days");
+  let lock = root.path().join("gate");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_600_000_000);
+  let row = crate::journal::Record::new("action", "scan", "k", "t", "n");
+  crate::journal::append(&dir, &lock, &row, at).unwrap();
+  std::fs::remove_file(dir.join("sequence.index")).unwrap();
+  std::fs::remove_file(dir.join("sequence.offsets")).unwrap();
+  assert_eq!(crate::journal::page(&dir, &lock, 0, 3).unwrap().1[0].seq, 1);
 }

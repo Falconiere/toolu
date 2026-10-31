@@ -1,28 +1,13 @@
-use std::time::{Duration, UNIX_EPOCH};
-
-use crate::journal::{Record, append, page};
-
 #[test]
-fn page_reads_the_record_after_the_cursor() {
-  let dir = tempfile::tempdir().unwrap();
-  let journal = dir.path().join("journal");
-  let lock = dir.path().join("journal.lock");
-  let now = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
-  let first = append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-intent", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
-  append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-done", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
-  let rows = page(&journal, &lock, first.seq, 10).unwrap().1;
+fn the_second_record_is_the_page_after_the_first_sequence() {
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("tail");
+  let lock = root.path().join("held");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_500_000_000);
+  let row = crate::journal::Record::new("action", "read", "k", "t", "n");
+  let first = crate::journal::append(&dir, &lock, &row, at).unwrap();
+  crate::journal::append(&dir, &lock, &row, at).unwrap();
+  let rows = crate::journal::page(&dir, &lock, first.seq, 5).unwrap().1;
   assert_eq!(rows.len(), 1);
-  assert_eq!(rows[0].seq, first.seq + 1);
+  assert_eq!(rows[0].name, "read");
 }

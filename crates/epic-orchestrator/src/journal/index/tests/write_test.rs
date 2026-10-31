@@ -1,21 +1,12 @@
-use std::time::{Duration, UNIX_EPOCH};
-
-use crate::journal::{Record, append, file_for};
-
 #[test]
-fn a_synced_line_ends_with_a_newline() {
-  let dir = tempfile::tempdir().unwrap();
-  let journal = dir.path().join("journal");
-  let lock = dir.path().join("journal.lock");
-  let now = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
-  let stored = append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-intent", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
-  let text = std::fs::read_to_string(file_for(&journal, now)).unwrap();
-  assert!(text.ends_with('\n'));
+fn the_synced_record_is_a_single_terminated_line() {
+  let root = tempfile::tempdir().unwrap();
+  let dir = root.path().join("out");
+  let lock = root.path().join("mu");
+  let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_400_000_000);
+  let row = crate::journal::Record::new("action", "write", "k", "t", "n");
+  let stored = crate::journal::append(&dir, &lock, &row, at).unwrap();
+  let text = std::fs::read_to_string(crate::journal::file_for(&dir, at)).unwrap();
+  assert_eq!(text.chars().filter(|ch| *ch == '\n').count(), 1);
   assert!(text.contains(&format!("\"seq\":{}", stored.seq)));
 }

@@ -24,43 +24,61 @@ fn plant(dir: &Path, lock: &Path, days: u64) -> Vec<u64> {
     .collect()
 }
 
-fn oracle(dir: &Path) -> Vec<u64> {
-  let mut seqs = Vec::new();
+fn json_rows(dir: &Path) -> Vec<serde_json::Value> {
+  let mut rows = Vec::new();
   for entry in std::fs::read_dir(dir).unwrap() {
     let path = entry.unwrap().path();
     if path.extension().is_none_or(|ext| ext != "jsonl") {
       continue;
     }
     for line in std::fs::read_to_string(&path).unwrap().lines() {
-      let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-        continue;
-      };
-      if let Some(seq) = value.get("seq").and_then(serde_json::Value::as_u64) {
-        seqs.push(seq);
+      if let Ok(value) = serde_json::from_str(line) {
+        rows.push(value);
       }
     }
   }
+  rows
+}
+
+fn oracle(dir: &Path) -> Vec<u64> {
+  let mut seqs = json_rows(dir)
+    .iter()
+    .filter_map(|row| row.get("seq").and_then(serde_json::Value::as_u64))
+    .collect::<Vec<_>>();
   seqs.sort_unstable();
   seqs
 }
 
-fn notes(dir: &Path) -> Vec<String> {
-  let mut out = Vec::new();
-  for entry in std::fs::read_dir(dir).unwrap() {
-    let path = entry.unwrap().path();
-    if path.extension().is_none_or(|ext| ext != "jsonl") {
-      continue;
-    }
-    for line in std::fs::read_to_string(&path).unwrap().lines() {
-      let Ok(value) = serde_json::from_str::<serde_json::Value>(line) else {
-        continue;
-      };
-      if let Some(note) = value.get("note").and_then(serde_json::Value::as_str) {
-        out.push(note.to_owned());
-      }
-    }
-  }
-  out
+fn pair(
+  dir: &tempfile::TempDir,
+) -> (
+  std::path::PathBuf,
+  std::path::PathBuf,
+  std::time::SystemTime,
+) {
+  (
+    dir.path().join("journal"),
+    dir.path().join("journal.lock"),
+    UNIX_EPOCH + Duration::from_secs(1_700_000_000),
+  )
+}
+
+fn plant_one(
+  dir: &tempfile::TempDir,
+) -> (
+  std::path::PathBuf,
+  std::path::PathBuf,
+  std::time::SystemTime,
+) {
+  let (journal, lock, now) = pair(dir);
+  append(
+    &journal,
+    &lock,
+    &Record::new("action", "merge-intent", "k", "t", "n"),
+    now,
+  )
+  .unwrap();
+  (journal, lock, now)
 }
 
 fn jsonl_bytes(dir: &Path) -> u64 {
@@ -160,24 +178,15 @@ fn two_writers_restart_and_rollover_do_not_reuse_sequences() {
   assert_eq!(seqs.len(), 17);
   assert!(seqs.windows(2).all(|pair| pair[0] < pair[1]));
   assert_eq!(seqs.last().copied(), Some(stored.seq));
-  let found = notes(&journal);
-  assert_eq!(found.iter().filter(|note| *note == "left").count(), 8);
-  assert_eq!(found.iter().filter(|note| *note == "right").count(), 8);
+  let found = json_rows(&journal);
+  let n = |name: &str| found.iter().filter(|row| row["note"] == name).count();
+  assert_eq!((n("left"), n("right")), (8, 8));
 }
 
 #[test]
 fn synced_line_is_recovered_and_a_torn_tail_is_not_committed() {
   let dir = tempfile::tempdir().unwrap();
-  let journal = dir.path().join("journal");
-  let lock = dir.path().join("journal.lock");
-  let now = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
-  append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-intent", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
+  let (journal, lock, now) = plant_one(&dir);
   let path = file_for(&journal, now);
   let mut file = std::fs::OpenOptions::new()
     .append(true)
@@ -209,16 +218,7 @@ fn synced_line_is_recovered_and_a_torn_tail_is_not_committed() {
 #[test]
 fn unreadable_journal_file_returns_an_error() {
   let dir = tempfile::tempdir().unwrap();
-  let journal = dir.path().join("journal");
-  let lock = dir.path().join("journal.lock");
-  let now = UNIX_EPOCH + Duration::from_secs(1_700_000_000);
-  append(
-    &journal,
-    &lock,
-    &Record::new("action", "merge-intent", "k", "t", "n"),
-    now,
-  )
-  .unwrap();
+  let (journal, lock, now) = plant_one(&dir);
   let path = file_for(&journal, now);
   std::fs::remove_file(journal.join("sequence.index")).unwrap();
   let mut perms = std::fs::metadata(&path).unwrap().permissions();
