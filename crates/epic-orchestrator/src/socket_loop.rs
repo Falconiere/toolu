@@ -280,3 +280,7 @@ fn tick(
 #[cfg(test)]
 #[path = "tests/socket_loop_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/socket_publish_test.rs"]
+mod publish_tests;
