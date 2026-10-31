@@ -80,7 +80,7 @@ fn the_image_pins_match_the_release_workflow_and_toolchain() {
       "the Dockerfile lacks {pin}"
     );
   }
-  // Tests run the real npx (the golden `bunx` shim), jq and gh, as on the CI runner image.
+  // Tests run the real npx (the golden `bunx` shim), jq, gh and tmux, as on the CI runner image.
   // A named volume takes its owner from the image path it first mounts over.
   for (_, path) in CACHES {
     assert!(
@@ -90,7 +90,7 @@ fn the_image_pins_match_the_release_workflow_and_toolchain() {
   }
   for tool in [
     "/usr/local/bin/npx",
-    "--no-install-recommends jq gh",
+    "--no-install-recommends jq gh tmux",
     "npm config --global set update-notifier false",
   ] {
     assert!(DOCKERFILE.contains(tool), "the image lacks {tool}");

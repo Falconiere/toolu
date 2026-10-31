@@ -24,7 +24,8 @@ pub(crate) const CACHES: [(&str, &str); 3] = [
 ];
 
 /// The `verify` job's tools at `release-native.yml`'s pins (a test keeps them equal), plus
-/// the runner-image tools the tests run for real: `npx` (the golden `bunx` shim), `jq`, `gh`.
+/// the runner-image tools the tests run for real: `npx` (the golden `bunx` shim), `jq`, `gh`, `tmux`,
+/// and `hc` at `tests.yml`'s herdr-core pin, beside `herdr-core`, which `hc machine add` looks for.
 /// npm's update notifier is off: its registry request in every `npx` stalled past the
 /// hooks' 10 s jscpd timeout during the suite.
 /// Non-root uid 501 and `/src` avoid the permission and `/work` traps of a root gate.
@@ -34,13 +35,22 @@ FROM rust:${TOOLCHAIN}-trixie
 ARG TOOLCHAIN
 COPY --from=node /usr/local/bin/node /usr/local/bin/node
 COPY --from=node /usr/local/lib/node_modules /usr/local/lib/node_modules
-RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh && rm -rf /var/lib/apt/lists/* \
+RUN apt-get update -qq && apt-get install -y --no-install-recommends jq gh tmux && rm -rf /var/lib/apt/lists/* \
  && ln -s ../lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
  && ln -s ../lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
  && npm config --global set update-notifier false \
  && rustup toolchain install "$TOOLCHAIN" --profile minimal -c rustfmt,clippy,llvm-tools \
  && cargo install --locked cargo-deny@0.20.2 cargo-machete@0.9.2 cargo-llvm-cov@0.9.1 cargo-nextest@0.9.146 \
  && npm install -g @ast-grep/cli@0.50.0 \
+ && case "$(uname -m)" in \
+      x86_64) target=linux-x86_64; sha=e9dbabdead0ce0ce3de51b6f54cc9549efedbb41b2f8448b6932ab0d1442343e ;; \
+      aarch64) target=linux-aarch64; sha=19cef6a2e52f14c22c4b6f3fdaf1a462d2dafc78e8b03fabbfad5b063477a370 ;; \
+      *) echo "unsupported hc target" >&2; exit 1 ;; \
+    esac \
+ && curl -fsSL "https://releases.herdr.dev/core/0.1.14/herdr-core-$target.tar.gz" -o /tmp/hc.tar.gz \
+ && echo "$sha  /tmp/hc.tar.gz" | sha256sum -c - \
+ && tar -xzf /tmp/hc.tar.gz -C /usr/local/bin herdr-core && rm /tmp/hc.tar.gz \
+ && ln -s herdr-core /usr/local/bin/hc && hc --version \
  && useradd -m -u 501 dev \
  && git config --system user.name dev && git config --system user.email dev@toolu.invalid \
  && mkdir -p /src/target /usr/local/cargo/registry /usr/local/cargo/git \
@@ -270,3 +280,7 @@ pub(crate) fn with_input(
 #[cfg(test)]
 #[path = "tests/deploy_gate_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/deploy_gate_hc_test.rs"]
+mod hc_tests;

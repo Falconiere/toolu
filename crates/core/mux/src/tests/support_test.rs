@@ -37,7 +37,7 @@ impl World {
   /// A git repository with one committed file on `main`.
   pub(crate) fn git_repo(&self) {
     let repo = &self.repo;
-    run_git(repo, &["init", "-q"]);
+    run_git(repo, &["init", "-q", "-b", "main"]);
     run_git(repo, &["config", "user.email", "test@example.com"]);
     run_git(repo, &["config", "user.name", "Test"]);
     std::fs::write(repo.join("file.txt"), "hello\n").unwrap();
