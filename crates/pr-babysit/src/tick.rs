@@ -4,6 +4,7 @@
 //! `pr.lastError` on the previous state and changes nothing else.
 
 use std::path::Path;
+use std::sync::{Mutex, PoisonError};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{Value, json};
@@ -29,6 +30,8 @@ pub(crate) enum Source<'a> {
     config: Config,
     /// Items per page.
     page_size: u64,
+    /// Keeps the built client for later ticks; `None` builds one per tick.
+    client: Option<&'a Mutex<Option<Client>>>,
   },
 }
 
@@ -188,15 +191,31 @@ fn snapshot(request: &Request<'_>, source: Source<'_>, env: &Env) -> Result<Read
       }
       Ok((snapshot, Some(raw), None))
     }
-    Source::GitHub { config, page_size } => {
-      let client = Client::new(config, env).map_err(|err| collect::failure("client", &err))?;
+    Source::GitHub {
+      config,
+      page_size,
+      client: kept,
+    } => {
+      let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
       let request = collect::Request {
         repo: request.repo,
         number: request.number,
         page_size,
         now: request.now,
       };
-      let collected = collect::collect(&client, &request)?;
+      let collected = match kept {
+        None => collect::collect(&build()?, &request)?,
+        Some(slot) => {
+          let mut slot = slot.lock().unwrap_or_else(PoisonError::into_inner);
+          let client = match slot.take() {
+            Some(client) => client,
+            None => build()?,
+          };
+          let collected = collect::collect(&client, &request);
+          *slot = Some(client);
+          collected?
+        }
+      };
       Ok((collected.snapshot, None, Some(collected.graphql)))
     }
   }

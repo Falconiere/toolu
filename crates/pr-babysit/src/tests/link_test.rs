@@ -134,6 +134,7 @@ fn a_scheduled_tick_reads_github_once_and_reports_decision_and_cost() {
   let source = Source::GitHub {
     config: recorded::config(&fixture),
     page_size: 2,
+    client: None,
   };
   let report = tick(&request, source, &recorded::env(&fixture)).unwrap();
   assert_eq!(
@@ -159,4 +160,84 @@ fn a_github_tick_without_a_token_fails_for_the_engine() {
   request.state_file = dir.path().join("s.json");
   let failed = tick.tick(&request).unwrap_err();
   assert!(matches!(failed, LinkError::Failed(message) if message.starts_with("gh_unavailable")));
+}
+
+/// A `gh` on `dir` that prints a new token on each run and appends one line
+/// per run to `dir/runs`.
+fn counting_gh(dir: &std::path::Path) -> std::path::PathBuf {
+  use std::os::unix::fs::PermissionsExt as _;
+  let runs = dir.join("runs");
+  let gh = dir.join("gh");
+  let script = format!("#!/bin/sh\necho run >> '{}'\necho \"tok-$$\"\n", runs.display());
+  std::fs::write(&gh, script).unwrap();
+  std::fs::set_permissions(&gh, std::fs::Permissions::from_mode(0o755)).unwrap();
+  runs
+}
+
+fn gh_runs(runs: &std::path::Path) -> usize {
+  std::fs::read_to_string(runs).map_or(0, |text| text.lines().count())
+}
+
+#[test]
+fn an_engine_tick_resolves_the_token_once_and_again_only_after_a_401() {
+  let dir = TempDir::new().unwrap();
+  let runs = counting_gh(dir.path());
+  let fixture = Fixture::start().unwrap();
+  let checks = [recorded::check_run("rust", "IN_PROGRESS", None)];
+  let verdict = crate::fixture::text("verdicts/in-progress.txt");
+  recorded::serve_open(&fixture, &checks, &verdict, "2026-10-11T12:00:00Z");
+  let path = dir.path().display().to_string();
+  let env = toolu_runtime::env::Env::from_pairs([
+    ("PATH", path.as_str()),
+    ("HTTPS_PROXY", &fixture.proxy_url()),
+  ]);
+  let tick = super::GitHubTick::new(recorded::config(&fixture), env);
+  let request = TickRequest {
+    repo: "Falconiere/toolu".into(),
+    number: 115,
+    state_file: dir.path().join("falconiere-toolu-115.json"),
+    now: Some("2026-10-11T12:00:00Z".into()),
+  };
+  for _ in 0..3 {
+    tick.tick(&request).unwrap();
+  }
+  assert_eq!(gh_runs(&runs), 1, "one token resolution for three ticks");
+  let head = json!({"head": {"sha": recorded::OPEN_SHA}}).to_string();
+  fixture
+    .sequence(
+      &format!("{}/pulls/115", recorded::ROOT),
+      vec![
+        toolu_http_test_support::Reply::new(401, "{}"),
+        toolu_http_test_support::Reply::new(200, head),
+      ],
+    )
+    .unwrap();
+  tick.tick(&request).unwrap();
+  assert_eq!(gh_runs(&runs), 2, "a 401 re-reads the token once");
+}
+
+#[test]
+fn a_failed_client_build_is_not_kept_and_the_next_tick_retries() {
+  let dir = TempDir::new().unwrap();
+  let fixture = Fixture::start().unwrap();
+  let checks = [recorded::check_run("rust", "IN_PROGRESS", None)];
+  let verdict = crate::fixture::text("verdicts/in-progress.txt");
+  recorded::serve_open(&fixture, &checks, &verdict, "2026-10-11T12:00:00Z");
+  let path = dir.path().display().to_string();
+  let env = toolu_runtime::env::Env::from_pairs([
+    ("PATH", path.as_str()),
+    ("HTTPS_PROXY", &fixture.proxy_url()),
+  ]);
+  let tick = super::GitHubTick::new(recorded::config(&fixture), env);
+  let request = TickRequest {
+    repo: "Falconiere/toolu".into(),
+    number: 115,
+    state_file: dir.path().join("falconiere-toolu-115.json"),
+    now: Some("2026-10-11T12:00:00Z".into()),
+  };
+  let failed = tick.tick(&request).unwrap_err();
+  assert!(matches!(failed, LinkError::Failed(message) if message.starts_with("gh_unavailable")));
+  let runs = counting_gh(dir.path());
+  tick.tick(&request).unwrap();
+  assert_eq!(gh_runs(&runs), 1);
 }
