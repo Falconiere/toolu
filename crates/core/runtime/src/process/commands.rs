@@ -89,6 +89,8 @@ fn command_v(env: &Env) -> Result<Option<PathBuf>, String> {
   let mut shell = Spec::new(["/bin/sh", "-c", "command -v toolu"]);
   shell.timeout = PROBE_TIMEOUT;
   shell.max_output_bytes = 4096;
+  // A descendant holding an inherited pipe keeps the group wait until the deadline.
+  shell.wait = Wait::Child;
   shell.env = Some(env.clone());
   let found = run(&shell).map_err(|error| format!("cannot start non-login shell: {error:?}"))?;
   if found.exit_code != 0 || found.timed_out || found.truncated {
