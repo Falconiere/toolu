@@ -136,4 +136,10 @@ fn a_long_lived_client_redacts_only_its_newest_tokens() {
   assert_eq!(tokens.current().expose(), "tok-20");
   assert_eq!(tokens.redact("tok-20 tok-5"), "<redacted> <redacted>");
   assert_eq!(tokens.redact("tok-4 tok-0"), "tok-4 tok-0");
+  // tok-5 is in use again, so it outlives the newer tok-6 when tok-21 arrives.
+  let sent = tokens.current();
+  assert!(tokens.refresh(&sent, token("tok-5")));
+  let sent = tokens.current();
+  assert!(tokens.refresh(&sent, token("tok-21")));
+  assert_eq!(tokens.redact("tok-5 tok-6"), "<redacted> tok-6");
 }

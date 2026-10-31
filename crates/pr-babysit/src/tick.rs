@@ -4,7 +4,7 @@
 //! `pr.lastError` on the previous state and changes nothing else.
 
 use std::path::Path;
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::UNIX_EPOCH;
 
 use serde_json::{Value, json};
@@ -32,7 +32,7 @@ pub(crate) enum Source<'a> {
     page_size: u64,
     /// Keeps the built client for later ticks; `None` builds one per tick.
     /// `config` and the environment are read only when a client is built.
-    client: Option<&'a Mutex<Option<Client>>>,
+    client: Option<&'a Mutex<Option<Arc<Client>>>>,
   },
 }
 
@@ -205,7 +205,7 @@ fn github(
   request: &Request<'_>,
   config: Config,
   page_size: u64,
-  kept: Option<&Mutex<Option<Client>>>,
+  kept: Option<&Mutex<Option<Arc<Client>>>>,
   env: &Env,
 ) -> Result<Read> {
   let build = || Client::new(config, env).map_err(|err| collect::failure("client", &err));
@@ -218,15 +218,16 @@ fn github(
   let collected = match kept {
     None => collect::collect(&build()?, &request)?,
     Some(slot) => {
-      // The lock is not held across the collection's network reads.
-      let kept = slot.lock().unwrap_or_else(PoisonError::into_inner).take();
-      let client = match kept {
-        Some(client) => client,
-        None => build()?,
+      // Concurrent ticks share one client; the lock is held only to fetch or
+      // build it, never across the collection's network reads.
+      let client = {
+        let mut kept = slot.lock().unwrap_or_else(PoisonError::into_inner);
+        match kept.as_ref() {
+          Some(client) => Arc::clone(client),
+          None => Arc::clone(kept.insert(Arc::new(build()?))),
+        }
       };
-      let collected = collect::collect(&client, &request);
-      *slot.lock().unwrap_or_else(PoisonError::into_inner) = Some(client);
-      collected?
+      collect::collect(&client, &request)?
     }
   };
   Ok((collected.snapshot, None, Some(collected.graphql)))

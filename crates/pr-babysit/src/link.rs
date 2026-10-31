@@ -3,7 +3,7 @@
 //! work by id and location only, never by reviewer prose.
 
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 
 use serde_json::Value;
@@ -25,7 +25,7 @@ const PROMPT_ITEMS: usize = 10;
 pub struct GitHubTick {
   config: toolu_github::Config,
   env: Env,
-  client: Mutex<Option<toolu_github::Client>>,
+  client: Mutex<Option<Arc<toolu_github::Client>>>,
 }
 
 impl GitHubTick {

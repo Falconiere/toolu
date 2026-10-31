@@ -106,8 +106,9 @@ fn reusable(world: &World, watch_key: &str, state_file: &Path) -> Option<Collect
     .now_ms
     .checked_sub(memo.at_ms)
     .is_some_and(|age| age < REFRESH_MS);
-  let unchanged = state_hash(state_file) == Some(memo.state_hash);
-  (recent && babysitting(world, watch_key) && unchanged).then_some(memo)
+  // The file is read only once the cheap checks pass.
+  let unchanged = || state_hash(state_file) == Some(memo.state_hash);
+  (recent && babysitting(world, watch_key) && unchanged()).then_some(memo)
 }
 
 /// The hash of `path`'s bytes; `None` when it cannot be read.
