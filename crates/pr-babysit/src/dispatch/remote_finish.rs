@@ -2,7 +2,7 @@
 
 use super::dispatcher::Dispatcher;
 use super::herdr::{argv, command};
-use super::remote::{fail, field, transfer};
+use super::remote::{canonical_remote_path, fail, field, transfer};
 use crate::error::{Failure, Result};
 use serde_json::{Value, json};
 use std::time::Duration;
@@ -19,6 +19,7 @@ pub(super) fn verify_remote_result(
   verify_reported_commit(transport, remote, data, commit)
 }
 
+/// Require the reported commit to match remote HEAD and descend from the dispatched base.
 pub(super) fn verify_reported_commit(
   transport: &Transfer<'_>,
   remote: &Value,
@@ -152,11 +153,14 @@ fn registered(transport: &Transfer<'_>, path: &str) -> Result<bool> {
   let listed = transport
     .git(&["worktree", "list", "--porcelain", "-z"])
     .map_err(|error| fail(&error))?;
-  Ok(
-    listed
-      .split('\0')
-      .any(|line| line == format!("worktree {path}")),
-  )
+  if listed
+    .split('\0')
+    .any(|line| line == format!("worktree {path}"))
+  {
+    return Ok(true);
+  }
+  let expected = format!("worktree {}", canonical_remote_path(transport, path)?);
+  Ok(listed.split('\0').any(|line| line == expected))
 }
 
 fn absent(transport: &Transfer<'_>, path: &str) -> Result<()> {

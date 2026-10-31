@@ -4,12 +4,19 @@ use super::*;
 fn recovered_worktree_requires_exact_path_commit_and_detached_state() {
   let head = "a".repeat(40);
   let listing = format!("worktree /remote/tree\0HEAD {head}\0detached\0\0");
-  assert_eq!(registered(&listing, "/remote/tree", &head), Ok(true));
-  assert_eq!(registered(&listing, "/remote/other", &head), Ok(false));
-  assert!(registered(&listing, "/remote/tree", &"b".repeat(40)).is_err());
+  assert_eq!(
+    registered(&listing, "/remote/tree", "/remote/tree", &head),
+    Ok(true)
+  );
+  assert_eq!(
+    registered(&listing, "/remote/other", "/remote/other", &head),
+    Ok(false)
+  );
+  assert!(registered(&listing, "/remote/tree", "/remote/tree", &"b".repeat(40)).is_err());
   assert!(
     registered(
       &listing.replace("detached", "branch refs/heads/main"),
+      "/remote/tree",
       "/remote/tree",
       &head
     )
@@ -67,5 +74,17 @@ fn real_git_porcelain_identifies_a_detached_worktree() {
     &sb.repo,
     &["worktree", "list", "--porcelain", "-z"],
   );
-  assert_eq!(registered(&listing, shown, &head), Ok(true));
+  let canonical = std::fs::canonicalize(shown).unwrap();
+  let canonical = canonical.to_str().unwrap();
+  assert_eq!(registered(&listing, shown, canonical, &head), Ok(true));
+  assert!(registered(&listing, shown, canonical, &"b".repeat(40)).is_err());
+  assert!(
+    registered(
+      &listing.replace("detached", "branch refs/heads/main"),
+      shown,
+      canonical,
+      &head
+    )
+    .is_err()
+  );
 }

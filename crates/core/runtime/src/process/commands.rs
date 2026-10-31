@@ -1,6 +1,7 @@
 //! The fixed commands other modules run: `git rev-parse --show-toplevel` for
 //! the project root and `codex plugin list --json` for the Codex plugins.
 
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
@@ -127,7 +128,7 @@ fn protocol_is_native(env: &Env, path: &Path) -> Result<bool, String> {
   let program = path
     .to_str()
     .ok_or_else(|| "non-login shell returned a non-UTF-8 toolu path".to_owned())?;
-  let mut probe = Spec::new([program, "--hook-protocol"]);
+  let mut probe = Spec::new(probe_argv(program));
   probe.timeout = PROBE_TIMEOUT;
   probe.wait = Wait::Child;
   probe.max_output_bytes = 32;
@@ -142,6 +143,42 @@ fn protocol_is_native(env: &Env, path: &Path) -> Result<bool, String> {
         .parse::<u32>()
         .is_ok_and(|version| version > 0),
   )
+}
+
+/// Kernel shebang exec of `#!/bin/sh` from a temp file can sit in dyld until
+/// this probe's deadline. Spawn the interpreter the kernel would have.
+fn probe_argv(program: &str) -> Vec<String> {
+  let mut argv = shebang_prefix(program);
+  argv.push(program.to_owned());
+  argv.push("--hook-protocol".to_owned());
+  argv
+}
+
+fn shebang_prefix(program: &str) -> Vec<String> {
+  let Some(line) = shebang_line(program) else {
+    return Vec::new();
+  };
+  let rest = line.trim_start_matches("#!").trim_start();
+  let (interp, extra) = rest.split_once(char::is_whitespace).unwrap_or((rest, ""));
+  if interp.is_empty() {
+    return Vec::new();
+  }
+  let mut argv = vec![interp.to_owned()];
+  let extra = extra.trim();
+  if !extra.is_empty() {
+    argv.push(extra.to_owned());
+  }
+  argv
+}
+
+fn shebang_line(program: &str) -> Option<String> {
+  let mut file = std::fs::File::open(program).ok()?;
+  let mut buf = [0u8; 128];
+  let n = file.read(&mut buf).ok()?;
+  let bytes = buf.get(..n)?;
+  let end = bytes.iter().position(|byte| *byte == b'\n')?;
+  let line = std::str::from_utf8(bytes.get(..end)?).ok()?;
+  line.starts_with("#!").then(|| line.to_owned())
 }
 
 #[cfg(test)]

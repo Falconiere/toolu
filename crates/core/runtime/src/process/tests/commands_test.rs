@@ -76,3 +76,20 @@ fn the_codex_listing_is_its_stdout_on_success_only() {
 fn the_native_toolu_probe_waits_one_second() {
   assert_eq!(super::PROBE_TIMEOUT, std::time::Duration::from_secs(1));
 }
+
+#[test]
+fn a_background_sleeper_does_not_hide_a_protocol_print() {
+  let dir = tempfile::tempdir().unwrap();
+  let bin = dir.path().join("toolu");
+  std::fs::write(&bin, "#!/bin/sh\n/bin/sleep 3 &\nprintf '1\\n'\n").unwrap();
+  std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let env = Env::from_pairs([("PATH", format!("{}:/usr/bin:/bin", dir.path().display()))]);
+  let started = std::time::Instant::now();
+  let found = super::shell_toolu(&env).unwrap();
+  let elapsed = started.elapsed();
+  assert!(elapsed < std::time::Duration::from_secs(2), "{elapsed:?}");
+  assert!(
+    matches!(found, super::ShellToolu::Native(_)),
+    "elapsed {elapsed:?}"
+  );
+}
