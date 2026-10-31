@@ -10,8 +10,25 @@ fn root() -> PathBuf {
   Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 
+fn python() -> &'static str {
+  static CHOSEN: std::sync::OnceLock<String> = std::sync::OnceLock::new();
+  CHOSEN
+    .get_or_init(|| {
+      for name in ["python3.13", "python3.12", "python3.11", "python3"] {
+        let Ok(output) = Command::new(name).arg("-c").arg("import tomllib").output() else {
+          continue;
+        };
+        if output.status.success() {
+          return name.to_owned();
+        }
+      }
+      "python3".to_owned()
+    })
+    .as_str()
+}
+
 fn script(args: &[&str]) -> io::Result<Output> {
-  Command::new("python3")
+  Command::new(python())
     .arg(".github/scripts/release_native.py")
     .args(args)
     .current_dir(root())
