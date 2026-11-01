@@ -49,8 +49,21 @@ fn an_applied_close_journals_epic_closed_and_raises_epic_complete_once() {
     world.epics["e"]
       .pending
       .as_ref()
-      .map(|pending| pending.phase),
-    Some(2)
+      .map(|pending| (pending.phase, pending.follow)),
+    Some((2, Some(Action::Gc)))
+  );
+  let done = crate::refresh::commit_journal(
+    &mut world,
+    &crate::journal::Record::new("action", "close-done", "e", "t", "applied"),
+  );
+  assert_eq!(done, []);
+  assert_eq!(
+    world.epics["e"]
+      .pending
+      .as_ref()
+      .map(|pending| (pending.action, pending.phase)),
+    Some((Action::Gc, 0)),
+    "the sweep follows the close"
   );
   let kinds: Vec<&str> = world
     .attention

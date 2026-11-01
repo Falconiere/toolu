@@ -38,6 +38,7 @@ mod epic_close;
 #[cfg(test)]
 #[path = "tests/epic_creator_rig_test.rs"]
 mod epic_creator_rig;
+mod epic_gc;
 mod epics;
 mod executor;
 mod finish;

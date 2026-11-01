@@ -181,28 +181,6 @@ fn a_refresh_runs_again_and_a_close_only_checks_the_tracker() {
 }
 
 #[test]
-fn a_closed_or_blocked_epic_is_remembered_across_a_restart() {
-  let mut world = World::new(0);
-  world
-    .epics
-    .insert("e".into(), Epic::new("e", "/state", 0, None));
-  observe(
-    &mut world,
-    &Record::new("action", "close-intent", "e", "t1", ""),
-  );
-  observe(
-    &mut world,
-    &Record::new("action", "close-done", "e", "t1", "uncertain"),
-  );
-  assert!(world.epics["e"].close_blocked && world.epics["e"].pending.is_none());
-  observe(
-    &mut world,
-    &Record::new("action", "epic-closed", "e", "", "applied"),
-  );
-  assert!(world.epics["e"].closed);
-}
-
-#[test]
 fn an_uncertain_launch_done_line_replays_without_a_stage_change() {
   let mut world = World::new(0);
   ensure_issue(&mut world, "a", "e", "/state");

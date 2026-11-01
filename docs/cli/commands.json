@@ -423,6 +423,44 @@
       "placeholder": false
     },
     {
+      "about": "Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply",
+      "aliases": [],
+      "args": [],
+      "commands": [],
+      "flags": [
+        {
+          "global": false,
+          "help": "Remove merged worktrees, branches, snapshots and old job logs; stop idle VMs",
+          "hidden": false,
+          "long": "apply",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": false,
+          "valueName": null
+        },
+        {
+          "global": false,
+          "help": "A checkout to sweep, besides this one and those the epic records name",
+          "hidden": false,
+          "long": "repo",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": true,
+          "valueName": "PATH"
+        }
+      ],
+      "hidden": false,
+      "longAbout": null,
+      "name": "gc",
+      "owner": "toolu",
+      "path": [
+        "gc"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Read, change and validate toolu.config.json",
       "aliases": [],
       "args": [],
@@ -5257,6 +5295,34 @@
           "path": [
             "sandbox",
             "shell"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Report the clones of checkouts that no longer exist; --apply removes them",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Remove the orphan clones with their caches",
+              "hidden": false,
+              "long": "apply",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "prune",
+          "owner": "sandbox",
+          "path": [
+            "sandbox",
+            "prune"
           ],
           "placeholder": false
         },

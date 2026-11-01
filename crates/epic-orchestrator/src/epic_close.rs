@@ -2,7 +2,9 @@
 //! sub-issue done and no issue occupies a slot; it posts the summary, closes
 //! the epic, journals `epic-closed` and raises `epic-complete`. A close
 //! recovered after a restart resumes through the durable comment receipt.
-//! A persistently failed close is blocked until explicitly rerun.
+//! A persistently failed close is blocked until explicitly rerun. A close
+//! that applied is followed by `Action::Gc`, which reclaims the epic's machine
+//! resources (`epic_gc`).
 
 use serde_json::Value;
 
@@ -53,6 +55,7 @@ fn closed(world: &mut World, epic: &str, outcome: &str) -> Vec<Step> {
     if let Some(pending) = found.pending.as_mut() {
       pending.phase = 2;
       pending.recovered = false;
+      pending.follow = Some(Action::Gc);
     }
   }
   world

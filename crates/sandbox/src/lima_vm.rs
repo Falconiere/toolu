@@ -1,4 +1,4 @@
-//! The Lima backend's VM verbs: `status`, `start`, `stop` and `delete`.
+//! The Lima backend's VM verbs: `status`, `start`, `stop`, `delete` and `prune`.
 
 use toolu_protocol::exit::Exit;
 
@@ -66,6 +66,47 @@ impl Lima<'_> {
     query(&lima_argv::delete(&self.program, self.name()))?;
     self.state.forget();
     Ok(self.vm("delete", "absent", true, "the VM and its disk are deleted"))
+  }
+
+  /// The orphan clones on the VM's disk, removed with `apply`; a stopped VM is
+  /// reported as such and not booted.
+  pub(super) fn prune(&self, apply: bool) -> Result<Step, Failure> {
+    let state = match self.instance()? {
+      Some(instance) if instance.status == Status::Running => "running",
+      Some(instance) => {
+        let state = instance.status.name();
+        return Ok(Step::Report(crate::prune::report(
+          self.context,
+          state,
+          apply,
+          (&[], &[]),
+        )));
+      }
+      None => {
+        return Ok(Step::Report(crate::prune::report(
+          self.context,
+          "absent",
+          apply,
+          (&[], &[]),
+        )));
+      }
+    };
+    let run = |argv: &[String]| {
+      query(&lima_argv::shell(
+        &self.program,
+        self.name(),
+        std::path::Path::new("/"),
+        argv,
+      ))
+    };
+    let cache = std::path::Path::new(crate::provision::GUEST_CACHE);
+    let (removed, kept) = crate::prune::prune_with(run, cache, apply)?;
+    Ok(Step::Report(crate::prune::report(
+      self.context,
+      state,
+      apply,
+      (&removed, &kept),
+    )))
   }
 
   pub(super) fn vm(&self, verb: &str, state: &str, changed: bool, message: &str) -> Step {

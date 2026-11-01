@@ -87,6 +87,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_hub::doctor::run,
   ),
   verb(
+    "gc",
+    toolu_hub::PLUGIN,
+    toolu_hub::gc::command,
+    toolu_hub::gc::run,
+  ),
+  verb(
     "config",
     toolu_hub::PLUGIN,
     toolu_hub::config::command,

@@ -49,6 +49,11 @@ pub(crate) fn command() -> Command {
         ),
     )
     .subcommand(Command::new("shell").about("Open a login shell in the sandbox at this directory"))
+    .subcommand(
+      Command::new("prune")
+        .about("Report the clones of checkouts that no longer exist; --apply removes them")
+        .arg(flag("apply", "Remove the orphan clones with their caches")),
+    )
 }
 
 /// The command a `run` was given.

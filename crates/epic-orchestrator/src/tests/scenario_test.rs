@@ -55,6 +55,10 @@ fn assert_closed(scenario: &Scenario, engine: &Engine) {
     journal.iter().any(|row| row.name == "epic-closed"),
     "{journal:?}"
   );
+  assert!(
+    journal.iter().any(|row| row.name == "gc-swept"),
+    "the close is followed by a sweep: {journal:?}"
+  );
   assert!(journal.iter().all(|row| row.name != "wait"));
   let kinds: Vec<&str> = engine
     .world
