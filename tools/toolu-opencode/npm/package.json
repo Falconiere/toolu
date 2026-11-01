@@ -1,6 +1,6 @@
 {
   "name": "@toolu/opencode",
-  "version": "8.8.0",
+  "version": "8.9.0",
   "description": "Deprecated. Install the native toolu binary, then run toolu plugins install --host opencode.",
   "keywords": [
     "toolu",

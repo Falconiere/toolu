@@ -1,6 +1,6 @@
 {
   "name": "toolu-review",
-  "version": "8.8.0",
+  "version": "8.9.0",
   "hookProtocol": 2,
   "description": "Evidence-backed review of committed changes for actionable defects, with complete-coverage push-review state. Standalone native-review fallback.",
   "skills": "./skills/",

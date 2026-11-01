@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "ts-quality",
   "displayName": "ts-quality",
-  "version": "8.8.0",
+  "version": "8.9.0",
   "description": "TypeScript PostToolUse quality checks registered into the toolu hook engine.",
   "compat": {
     "source": "native",

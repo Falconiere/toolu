@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "sandbox",
   "displayName": "sandbox",
-  "version": "8.8.0",
+  "version": "8.9.0",
   "description": "A Linux sandbox for builds, gates and agent CLIs: a Lima VM on macOS that mounts only the project, this machine on Linux. `toolu sandbox setup` provisions the toolchain, and `toolu sandbox run` runs any command there at the same path. Standalone, no dependencies.",
   "compat": {
     "source": "native",
