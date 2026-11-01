@@ -14,6 +14,7 @@ use crate::cli;
 use crate::clone::clone_argv;
 use crate::context::Context;
 use crate::facts::Os;
+use crate::lima_process::query;
 use crate::present;
 use crate::project::slug;
 use crate::step::{Failure, Launch, Step};
@@ -60,6 +61,7 @@ pub(crate) fn step(verb: &str, args: &ArgMatches, context: &Context) -> Result<S
       &format!("the host backend has no VM to {verb}; commands run on this machine"),
     ))),
     "run" => launch(context, &cli::argv(args), cli::set(args, "clone")).map(Step::Launch),
+    "prune" => prune(context, cli::set(args, "apply")),
     "shell" => Ok(Step::Launch(Launch {
       argv: vec![
         context.env.get("SHELL").unwrap_or("/bin/sh").to_owned(),
@@ -108,6 +110,18 @@ fn launch(context: &Context, command: &[String], clone: bool) -> Result<Launch, 
     argv: clone_argv(root, &dst, &rel, command),
     cwd: project.cwd.clone(),
   })
+}
+
+/// The orphan clones under this machine's cache, removed with `apply`.
+fn prune(context: &Context, apply: bool) -> Result<Step, Failure> {
+  let cache = cache_root(&context.env);
+  let (removed, kept) = crate::prune::prune_with(query, &cache, apply)?;
+  Ok(Step::Report(crate::prune::report(
+    context,
+    STATE,
+    apply,
+    (&removed, &kept),
+  )))
 }
 
 /// `$XDG_CACHE_HOME/toolu-sandbox`, or `~/.cache/toolu-sandbox`.

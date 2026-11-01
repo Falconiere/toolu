@@ -200,6 +200,20 @@ fn a_closed_or_blocked_epic_is_remembered_across_a_restart() {
     &Record::new("action", "epic-closed", "e", "", "applied"),
   );
   assert!(world.epics["e"].closed);
+  observe(
+    &mut world,
+    &Record::new("action", "gc-intent", "e", "t2", ""),
+  );
+  assert_eq!(
+    world.epics["e"]
+      .pending
+      .as_ref()
+      .map(|pending| (pending.action, pending.recovered)),
+    Some((Action::Gc, true)),
+    "an interrupted sweep runs again"
+  );
+  observe(&mut world, &Record::new("action", "gc-done", "e", "t2", ""));
+  assert!(world.epics["e"].pending.is_none());
 }
 
 #[test]

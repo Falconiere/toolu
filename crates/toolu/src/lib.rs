@@ -18,6 +18,8 @@ pub mod config;
 pub mod debug;
 /// `toolu doctor`.
 pub mod doctor;
+/// `toolu gc`.
+pub mod gc;
 /// Explicit Herdr App desktop control.
 pub mod herdr_app;
 /// `toolu ledger`.

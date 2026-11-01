@@ -1,5 +1,6 @@
 //! The epic-level effects: refresh rebuilds `graph.json` from the tracker,
-//! close posts the summary and closes the epic once. A recovered close uses
+//! close posts the summary and closes the epic once, and gc sweeps the closed
+//! epic's machine resources (`toolu_engine::gc`). A recovered close uses
 //! the durable comment intent to resume without a second comment.
 
 use std::path::PathBuf;
@@ -49,6 +50,7 @@ pub(crate) fn run(action: Action, input: &EpicJob) -> Value {
   let result = match action {
     Action::Close => close(input),
     Action::Refresh => refresh(input),
+    Action::Gc => Ok(gc(input)),
     Action::Merge
     | Action::Cleanup
     | Action::Launch
@@ -89,6 +91,28 @@ fn close(input: &EpicJob) -> Result<Value, String> {
   let metrics = crate::metrics::closing(&input.paths, &input.state_dir, now);
   let result = close_epic(&graph, tracker.as_ref(), metrics.as_deref())?;
   Ok(json!({"outcome": "applied", "result": result}))
+}
+
+/// Sweep the epic's checkouts (its records' and the configured roots), its
+/// state directory and the resource root; the VMs through this binary.
+fn gc(input: &EpicJob) -> Value {
+  let mut repos = repo_roots(&input.env);
+  repos.extend(herdr_roots(&input.paths, &input.env));
+  // shortcut: the sandbox and VM steps run only when the engine is the
+  // `toolu` binary itself, so a test binary hosting the engine never touches
+  // a developer's VM; upgrade if the engine ever ships under another name.
+  let toolu = toolu_runtime::invocation::current_exe()
+    .filter(|exe| exe.file_name().is_some_and(|name| name == "toolu"));
+  let request = toolu_engine::gc::Request {
+    repos,
+    state_dirs: vec![input.state_dir.clone()],
+    resource_root: input.paths.root.clone(),
+    toolu,
+    apply: true,
+    all_branches: false,
+    env: input.env.clone(),
+  };
+  json!({"outcome": "applied", "swept": toolu_engine::gc::sweep(&request)})
 }
 
 #[cfg(test)]

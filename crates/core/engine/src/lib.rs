@@ -36,6 +36,7 @@ pub mod dispatch;
 pub mod docs_review;
 pub mod gate;
 mod gates;
+pub mod gc;
 pub mod ledger;
 /// Run only the MCP blocker for the standalone hook.
 pub mod mcp_hook;

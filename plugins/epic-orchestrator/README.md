@@ -117,7 +117,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | --- | --- |
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
 | `start <state-dir> [--safe] [--no-jev]` | Register that epic directory, record the two flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic. |
-| `cleanup [--dry-run]` | Unregister locally complete or closed epics and confirmed missing state directories. Return removed/proposed and retained entries with reasons; keep active, pending, incomplete or uncertain state. Preserve files, history, worktrees, branches and tracker issues. Local machine only; no age threshold or tracker requests. |
+| `cleanup [--dry-run]` | Unregister locally complete or closed epics and confirmed missing state directories. Return removed/proposed and retained entries with reasons; keep active, pending, incomplete or uncertain state. Preserve files, history, worktrees, branches and tracker issues. Local machine only; no age threshold or tracker requests. Machine resources are `toolu gc`'s job (below). |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `status --fleet` | This machine and every peer engine in `epic.peers` as the `/api/v1/fleet` document: per-machine state (`ok`, `unreachable`, `unauthorized`, `version-mismatch`), last seen, in-flight issues and hosts, and a summary. Peers are fetched by this command, never by the engine. |
 | `pause` / `resume [epic]` | Hold or release effects. Reports still update snapshots. |
@@ -138,6 +138,10 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | `jira issue get <key>` | Print one Jira issue as JSON. |
 | `probe --check-evidence` | Validate the committed host-lifecycle evidence. |
 | `queue [<epic>]` | Print each repository's merge queue in merge order (`--json` for the document). |
+
+### Machine cleanup: `toolu gc`
+
+After it closes an epic, the engine runs the sweep `toolu gc --apply` performs by hand, scoped to that epic: it removes toolu-made worktrees whose branch is merged (or whose remote branch is gone) and clean, deletes local branches merged into the origin default branch, drops the `refs/epic-wip/<key>` snapshots of merged issues with no leftover files, prunes job logs past retention, prunes the sandbox's orphan clones, and stops the Lima sandbox and the Colima `toolu-gate` profile when no worker holds a lease. The outcome is one `gc-swept` journal line; a failed sweep never blocks the epic. `toolu gc` without `--apply` reports the same decisions for every repository the epic records name, plus the current one, and lists records still marked busy whose worktree is gone with the `toolu epic finish --abandon` command that settles them.
 
 The engine runs launch, cleanup, checkpoint, the merge queue, the `STATUS?`
 prompt, graph refresh and epic close in process; `TOOLU_EPIC_SCRIPTS`, a test

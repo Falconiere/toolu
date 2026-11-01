@@ -267,20 +267,31 @@ fn take_follow(world: &mut World, key: &str) -> Option<Action> {
 
 fn chain(stage: &mut String, pending: &Pending) -> Option<Action> {
   match pending.action {
-    Action::Merge => {
-      "cleaning".clone_into(stage);
-      Some(Action::Cleanup)
-    }
-    Action::Cleanup => {
-      "merged".clone_into(stage);
-      None
-    }
-    Action::Launch => {
-      "running".clone_into(stage);
-      None
-    }
-    Action::Checkpoint => pending.follow,
-    Action::Reconcile | Action::Prompt | Action::Refresh | Action::Close => None,
+    Action::Merge => "cleaning".clone_into(stage),
+    Action::Cleanup => "merged".clone_into(stage),
+    Action::Launch => "running".clone_into(stage),
+    Action::Checkpoint
+    | Action::Reconcile
+    | Action::Prompt
+    | Action::Refresh
+    | Action::Close
+    | Action::Gc => {}
+  }
+  follow_of(pending)
+}
+
+/// What runs once `pending` is done: a merge's cleanup, or the follow a
+/// checkpoint or an applied close carried. Issue and epic actions share it.
+pub(crate) fn follow_of(pending: &Pending) -> Option<Action> {
+  match pending.action {
+    Action::Merge => Some(Action::Cleanup),
+    Action::Checkpoint | Action::Close => pending.follow,
+    Action::Cleanup
+    | Action::Launch
+    | Action::Reconcile
+    | Action::Prompt
+    | Action::Refresh
+    | Action::Gc => None,
   }
 }
 

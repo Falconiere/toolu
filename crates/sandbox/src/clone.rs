@@ -3,7 +3,8 @@
 //! refs (so a gate finds `origin/main`), every staged and unstaged change, and the
 //! untracked files git does not ignore. Ignored build output (`target/`,
 //! `node_modules/`) stays in the clone between runs, and results never flow
-//! back to the checkout. One run at a time holds the clone's lock.
+//! back to the checkout. One run at a time holds the clone's lock. `<dst>.src`
+//! names the checkout, so `prune` can tell an orphan clone from a live one.
 
 use std::path::Path;
 
@@ -12,6 +13,7 @@ use std::path::Path;
 pub(crate) const CLONE: &str = r#"src=$1 dst=$2 rel=$3
 shift 3
 mkdir -p "$dst"
+printf '%s\n' "$src" >"$dst.src"
 if command -v flock >/dev/null 2>&1; then
   exec 9>"$dst.lock"
   flock -n 9 || { echo 'toolu-sandbox: waiting for another run in this clone' >&2; flock 9; }

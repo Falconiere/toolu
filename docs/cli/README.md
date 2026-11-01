@@ -19,6 +19,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`debug`](debug.md) | `plugins/toolu` | available | Count or summarize logs, stacks and failing tests |
 | [`setup`](setup.md) | `plugins/toolu` | available | Preview, install or remove toolu's agent profiles |
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
+| [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
 | [`herdr-app`](herdr-app.md) | `plugins/toolu` | available | Show a worker in an already running Herdr App |
@@ -60,6 +61,7 @@ Commands:
   debug           Count or summarize logs, stacks and failing tests
   setup           Preview, install or remove toolu's agent profiles
   doctor          Report binary, config, plugin and tool health
+  gc              Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status
   herdr-app       Show a worker in an already running Herdr App

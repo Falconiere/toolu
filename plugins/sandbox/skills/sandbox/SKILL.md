@@ -45,7 +45,9 @@ toolu sandbox shell
   unstaged and untracked changes and `origin/*`. Use it for the gate, for
   `npm ci` (never run `npm ci` without it: it would put Linux binaries in the
   host's `node_modules`) and for host-smoke. Nothing flows back to the
-  checkout; the clone keeps its `target/` between runs.
+  checkout; the clone keeps its `target/` between runs. `toolu sandbox prune`
+  lists the clones of checkouts that no longer exist, and `--apply` removes
+  them with their caches (`toolu gc --apply` does this too).
 - For a faster incremental link, opt into mold:
   `toolu sandbox run -- env RUSTFLAGS=-Clink-arg=-fuse-ld=mold cargo build`.
 

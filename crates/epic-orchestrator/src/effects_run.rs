@@ -50,7 +50,7 @@ pub(crate) fn job(engine: &Engine, call: &Call) -> Job {
       paths: engine.paths.clone(),
       reach: engine.reach.clone(),
     }),
-    Action::Refresh | Action::Close => Box::new(|| "failed: no such epic".to_owned()),
+    Action::Refresh | Action::Close | Action::Gc => Box::new(|| "failed: no such epic".to_owned()),
     // Worker prompts go through `attention_ops::send_prompt`, never a call.
     Action::Prompt => Box::new(|| "failed: a prompt is no effect".to_owned()),
     Action::Merge | Action::Reconcile if engine.scripts.is_none() => {

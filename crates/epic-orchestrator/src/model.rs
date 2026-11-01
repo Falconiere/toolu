@@ -51,6 +51,8 @@ pub(crate) enum Action {
   Refresh,
   /// Post the summary and close a complete epic (epic-level).
   Close,
+  /// Reclaim machine resources after a closed epic (epic-level).
+  Gc,
 }
 
 impl Action {
@@ -65,6 +67,7 @@ impl Action {
       Self::Prompt => "prompt",
       Self::Refresh => "refresh",
       Self::Close => "close",
+      Self::Gc => "gc",
     }
   }
 }

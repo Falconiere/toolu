@@ -24,6 +24,7 @@ mod mounts;
 mod present;
 mod project;
 mod provision;
+mod prune;
 mod settings;
 mod state;
 mod step;

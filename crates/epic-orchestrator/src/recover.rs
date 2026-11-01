@@ -55,10 +55,12 @@ fn observe_epic(world: &mut World, record: &Record) {
   };
   match record.name.as_str() {
     "epic-closed" => epic.closed = true,
-    "refresh-intent" | "close-intent" => {
+    "refresh-intent" | "close-intent" | "gc-intent" => {
       let action = action_of(&record.name).unwrap_or(Action::Refresh);
       epic.pending = Some(recovered(action, &record.token));
     }
+    // A sweep is idempotent: an interrupted one runs again after the restart.
+    "gc-done" => epic.pending = None,
     "refresh-done" | "close-done" => {
       epic.pending = None;
       if matches!(record.note.as_str(), "failed" | "uncertain") {
@@ -80,6 +82,7 @@ fn action_of(name: &str) -> Option<Action> {
     "checkpoint" => Some(Action::Checkpoint),
     "refresh" => Some(Action::Refresh),
     "close" => Some(Action::Close),
+    "gc" => Some(Action::Gc),
     _ => None,
   }
 }
@@ -112,10 +115,12 @@ pub(crate) fn reconcile_stages(world: &mut World) {
   let now = world.now_ms;
   for epic in world.epics.values_mut() {
     if let Some(pending) = epic.pending.as_mut()
-      && pending.action == Action::Refresh
+      && matches!(pending.action, Action::Refresh | Action::Gc)
     {
       pending.recovered = false;
-      epic.refresh_at_ms = now;
+      if pending.action == Action::Refresh {
+        epic.refresh_at_ms = now;
+      }
     }
   }
 }
@@ -136,7 +141,7 @@ fn resume_action(world: &mut World, key: &str) {
     Action::Launch if stage.is_empty() => resume(world, key, 1),
     Action::Launch => resume(world, key, 2),
     Action::Cleanup | Action::Checkpoint | Action::Refresh => resume(world, key, 1),
-    Action::Merge | Action::Reconcile | Action::Prompt | Action::Close => {}
+    Action::Merge | Action::Reconcile | Action::Prompt | Action::Close | Action::Gc => {}
   }
 }
 

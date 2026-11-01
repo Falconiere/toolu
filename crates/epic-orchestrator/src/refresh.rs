@@ -10,7 +10,7 @@ use serde_json::{Value, json};
 
 use crate::journal::Record;
 use crate::logic::{push_attention, token};
-use crate::model::{Action, Seen, Step, World, fresh};
+use crate::model::{Action, Pending, Seen, Step, World, fresh};
 use crate::watch::CHECK_MS;
 
 /// Failures in a row that raise `refresh-failed`.
@@ -50,7 +50,7 @@ pub(crate) fn poll(world: &mut World) {
 pub(crate) fn epic_record(name: &str) -> bool {
   matches!(
     name,
-    "refresh-intent" | "refresh-done" | "close-intent" | "close-done"
+    "refresh-intent" | "refresh-done" | "close-intent" | "close-done" | "gc-intent" | "gc-done"
   )
 }
 
@@ -109,20 +109,25 @@ pub(crate) fn commit_journal(world: &mut World, record: &Record) -> Vec<Step> {
     }
     return Vec::new();
   }
-  let action = finish(world, &record.key);
-  if action == Some(Action::Refresh) {
+  let finished = finish(world, &record.key);
+  if let Some(next) = finished.as_ref().and_then(crate::logic::follow_of) {
+    let token = crate::logic::token(world);
+    if let Some(found) = world.epics.get_mut(&record.key) {
+      found.pending = Some(fresh(next, token));
+    }
+  }
+  if finished.map(|pending| pending.action) == Some(Action::Refresh) {
     crate::epic_close::arm(world, &record.key);
   }
   world.outbox.drain(..).collect()
 }
 
-/// End `epic`'s action and return which one it was.
-pub(crate) fn finish(world: &mut World, epic: &str) -> Option<Action> {
+/// End `epic`'s action and return it, with what follows it.
+pub(crate) fn finish(world: &mut World, epic: &str) -> Option<Pending> {
   world
     .epics
     .get_mut(epic)
     .and_then(|found| found.pending.take())
-    .map(|pending| pending.action)
 }
 
 /// The epic action's effect returned `outcome`.
@@ -136,6 +141,9 @@ pub(crate) fn commit(world: &mut World, epic: &str, outcome: &str) -> Vec<Step> 
     .map(|pending| pending.action);
   if action == Some(Action::Close) {
     return crate::epic_close::commit(world, epic, &doc);
+  }
+  if action == Some(Action::Gc) {
+    return crate::epic_gc::commit(world, epic, &doc);
   }
   if action != Some(Action::Refresh) {
     return Vec::new();

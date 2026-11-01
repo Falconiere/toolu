@@ -56,6 +56,7 @@ pub(crate) fn step(verb: &str, args: &ArgMatches, context: &Context) -> Result<S
     "delete" => lima.delete(),
     "run" => lima.launch(&cli::argv(args), cli::set(args, "clone")),
     "shell" => lima.launch(&["bash".to_owned(), "--login".to_owned()], false),
+    "prune" => lima.prune(cli::set(args, "apply")),
     other => Err(Failure::new(
       Exit::Usage,
       format!("`{other}` is not a sandbox verb"),
