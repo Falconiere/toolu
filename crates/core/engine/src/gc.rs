@@ -188,9 +188,9 @@ pub(crate) fn git_ok(env: &Env, root: &Path, args: &[&str]) -> bool {
 }
 
 #[cfg(test)]
-#[path = "gc/tests/support.rs"]
-pub(crate) mod support;
+#[path = "tests/gc_support_test.rs"]
+mod support;
 
 #[cfg(test)]
-#[path = "gc/tests/gc_test.rs"]
+#[path = "tests/gc_test.rs"]
 mod tests;

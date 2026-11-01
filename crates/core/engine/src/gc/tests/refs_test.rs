@@ -1,6 +1,6 @@
 use super::super::repos::records;
-use super::super::support::{Repo, git};
 use super::{keep_reason, sweep};
+use crate::gc::support::{Repo, git};
 
 #[test]
 fn snapshots_of_finished_issues_go_and_the_rest_stay_with_a_reason() {

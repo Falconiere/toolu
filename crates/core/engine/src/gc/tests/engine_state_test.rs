@@ -1,6 +1,6 @@
 use super::super::repos::records;
-use super::super::support::Repo;
 use super::{stale, sweep};
+use crate::gc::support::Repo;
 
 #[test]
 fn busy_records_whose_worktree_is_gone_are_reported_with_their_fix() {

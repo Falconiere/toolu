@@ -2,7 +2,7 @@ use std::path::Path;
 
 use serde_json::Value;
 
-use super::super::support::{Repo, git};
+use crate::gc::support::{Repo, git};
 use std::collections::BTreeSet;
 
 use super::{default_branch, open_paths, owned, parse, sweep};

@@ -97,7 +97,7 @@ Every action is a `toolu epic` verb (reference: [`docs/cli/epic.md`](../cli/epic
 | `gate`    | Assess/merge PR; `--auto` arms GitHub auto-merge; `--admin` only for protection-only blocks  |
 | `finish`  | Snapshot, then tear down agent/worktree after merge; a live engine is told, never relaunches |
 | `cleanup` | Unregister locally finished epics or missing state directories; preserve files and Git state |
-| `close`   | Post the summary and close the epic in its tracker                                           |
+| `close`   | Post the summary and close the epic in its tracker; the engine then runs the `toolu gc` sweep |
 | `release` | Release a coupling hold so the issue launches next                                           |
 | `report`  | Worker phase reporter                                                                        |
 | `wait`    | The orchestrator's next judgment from the resident engine                                    |
@@ -197,6 +197,16 @@ tracker issues stay in place. Repeating cleanup is harmless. It runs through
 the resident engine when one owns the state, or takes its ownership lock
 without starting workers. It affects this machine only; run it separately on
 peers. To remove abandoned unfinished work, finish it explicitly first.
+
+## Machine cleanup after close
+
+After the engine closes an epic it runs the `toolu gc --apply` sweep scoped
+to that epic (worktrees, local branches, `refs/epic-wip/<key>` snapshots, job
+logs and idle sandbox VMs) and journals one `gc-swept` row with the summary,
+or `failed: <note>`. A failed sweep never blocks the epic. The sweep is
+journaled as `gc-intent` and `gc-done`; a restart between them runs it again,
+which is safe to repeat. Run `toolu gc` without `--apply` to preview. Registry
+cleanup above is separate and never removes worktrees or branches.
 
 ## Finish recovery
 

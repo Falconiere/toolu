@@ -205,3 +205,7 @@ fn merge_pending(issue: &crate::model::Issue) -> bool {
 #[cfg(test)]
 #[path = "tests/recover_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/recover_epic_test.rs"]
+mod epic_tests;

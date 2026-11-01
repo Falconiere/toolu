@@ -1,6 +1,6 @@
 use super::super::repos::records;
-use super::super::support::{Repo, git};
 use super::sweep;
+use crate::gc::support::{Repo, git};
 
 #[test]
 fn merged_branches_go_and_checked_out_or_unmerged_ones_stay() {

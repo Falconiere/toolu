@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
-use super::super::support::Repo;
 use super::{discover, records, state_dirs_under};
+use crate::gc::support::Repo;
 
 #[test]
 fn records_read_checkouts_and_discover_keeps_existing_git_roots_once() {

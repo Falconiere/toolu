@@ -1,5 +1,5 @@
-use super::super::support::Repo;
 use super::{colima, docker, idle, sandbox};
+use crate::gc::support::Repo;
 
 #[test]
 fn vms_are_skipped_without_their_programs_and_kept_while_a_lease_is_held() {

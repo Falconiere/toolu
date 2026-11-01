@@ -67,7 +67,7 @@ fn the_text_report_names_each_decision_and_hides_foreign_worktrees() {
       "branches": {"removed": ["feat/a"], "kept": [{"name": "busy", "reason": "checked out"}]},
       "wip_refs": {"removed": ["refs/epic-wip/a"], "kept": []}
     }, {"root": "/lone", "skipped": "no refs/remotes/origin/main"}],
-    "sandbox": {"action": "would-stop", "reason": "no lease is held", "clones": {"removed": [{"slug": "x"}], "kept": []}},
+    "sandbox": {"action": "would-stop", "reason": "no lease is held", "clones": {"removed": [{"slug": "x"}], "kept": [], "error": "no VM"}},
     "colima": {"toolu-gate": "stopped"},
     "docker": {"dangling": 2},
     "engine": {"job_logs": 5, "job_logs_removed": 0, "stale_records": [{"key": "k", "stage": "running", "fix": "toolu epic finish --abandon /s k"}]}
@@ -87,6 +87,7 @@ fn the_text_report_names_each_decision_and_hides_foreign_worktrees() {
   assert!(text.contains(&"  skipped: no refs/remotes/origin/main".to_owned()));
   assert!(text.contains(&"sandbox: would-stop no lease is held".to_owned()));
   assert!(text.contains(&"  clones: 1 orphan, 0 kept".to_owned()));
+  assert!(text.contains(&"  clones error: no VM".to_owned()));
   assert!(text.contains(&"docker: 2 dangling images".to_owned()));
   assert!(text.contains(&"stale record k (running): toolu epic finish --abandon /s k".to_owned()));
 }

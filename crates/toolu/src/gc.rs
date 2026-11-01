@@ -159,7 +159,22 @@ fn repo_lines(repo: &Value) -> Vec<String> {
   if refs + kept > 0 {
     out.push(format!("  wip refs: {refs} to remove, {kept} kept"));
   }
+  for section in ["branches", "wip_refs"] {
+    out.extend(note(
+      repo,
+      &format!("/{section}/skipped"),
+      &format!("{section} skipped"),
+    ));
+  }
   out
+}
+
+/// `"  <label>: <text>"` when `pointer` names a string in `report`.
+fn note(report: &Value, pointer: &str, label: &str) -> Option<String> {
+  report
+    .pointer(pointer)
+    .and_then(Value::as_str)
+    .map(|why| format!("  {label}: {why}"))
 }
 
 fn len(value: Option<&Value>) -> usize {
@@ -185,6 +200,7 @@ fn sandbox_lines(report: &Value) -> Vec<String> {
   if removed + kept > 0 {
     out.push(format!("  clones: {removed} orphan, {kept} kept"));
   }
+  out.extend(note(report, "/sandbox/clones/error", "clones error"));
   out.push(
     format!(
       "colima toolu-gate: {} {}",
@@ -200,6 +216,8 @@ fn sandbox_lines(report: &Value) -> Vec<String> {
       .map_or(String::new(), |n| format!(", {n} removed"));
     out.push(format!("docker: {dangling} dangling images{removed}"));
   }
+  out.extend(note(report, "/docker/error", "docker error"));
+  out.extend(note(report, "/docker/skipped", "docker skipped"));
   out
 }
 
@@ -215,6 +233,7 @@ fn engine_lines(report: &Value) -> Vec<String> {
     count("job_logs"),
     count("job_logs_removed")
   )];
+  out.extend(note(report, "/engine/job_logs_error", "job logs error"));
   let rows = report
     .pointer("/engine/stale_records")
     .and_then(Value::as_array);
