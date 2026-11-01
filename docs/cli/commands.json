@@ -1196,6 +1196,68 @@
       "placeholder": false
     },
     {
+      "about": "Turn an idea into a GitHub epic the epic engine can run (a Markdown-only plugin)",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Run a hook entry; hooks.json calls it (internal)",
+          "aliases": [],
+          "args": [
+            {
+              "help": "The hook entry, as its plugin's hooks.json names it",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "The host event it is registered under; absent counts as enforcing",
+              "hidden": false,
+              "long": "event",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "EVENT"
+            },
+            {
+              "global": false,
+              "help": "The calling plugin's root, for the version-skew check",
+              "hidden": false,
+              "long": "plugin-root",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": "DIR"
+            }
+          ],
+          "hidden": true,
+          "longAbout": null,
+          "name": "hook",
+          "owner": "epic-creator",
+          "path": [
+            "epic-creator",
+            "hook"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": "epic-creator is a Markdown-only plugin: it has no verbs. Its skill thinks an idea through, splits it into one-PR sub-issues with cited decisions and runnable acceptance checks, and after one confirmation creates the GitHub epic, its native sub-issues and their dependencies.\n\nRun it as /epic-creator:epic-creator in Claude Code or $epic-creator:epic-creator in Codex, then run the epic with epic-orchestrator.",
+      "name": "epic-creator",
+      "owner": "epic-creator",
+      "path": [
+        "epic-creator"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Pre-push code review state for the native push-review gate",
       "aliases": [
         "toolu-review"

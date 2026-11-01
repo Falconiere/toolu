@@ -125,9 +125,8 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
       | "statusline" | "babysit" | "epic" | "sandbox" | "git-better" | "plugins" | "herdr-app" => {
         continue;
       }
-      "brainstorm" | "delivery-flow" | "ts-quality" | "rust-quality" | "python-quality" => {
-        (vec!["--json", name.as_str()], "guide")
-      }
+      "brainstorm" | "delivery-flow" | "epic-creator" | "ts-quality" | "rust-quality"
+      | "python-quality" => (vec!["--json", name.as_str()], "guide"),
       _ => (vec!["--json", name.as_str(), "planned"], "planned"),
     };
     let output = toolu(&args).unwrap();

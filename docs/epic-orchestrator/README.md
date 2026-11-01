@@ -7,6 +7,8 @@ complexity, a merge gate with GitHub auto-merge, rate-limit and progress
 guardrails, and cleanup. See the plugin README for trackers, hosts, and
 guardrails. The [attention notification POST contract](notification-post.md)
 records retry, duplicate, and loss behavior for the optional URL destination.
+To write a new GitHub epic in the shape this engine reads, use the
+[`epic-creator`](../../plugins/epic-creator/README.md) plugin.
 
 ## Install
 

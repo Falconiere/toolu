@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "name": "epic-creator",
+  "displayName": "epic-creator",
+  "version": "8.8.0",
+  "description": "Turn an idea into a GitHub epic the epic-orchestrator engine can run: brainstorm it, split it into one-PR sub-issues with cited decisions and runnable checks, confirm once, then create the epic, native sub-issues and dependencies.",
+  "compat": {
+    "source": "native",
+    "manifestDir": ".muse-plugin"
+  },
+  "capabilities": {
+    "skills": [
+      {
+        "id": "epic-creator",
+        "path": "skills/epic-creator/SKILL.md"
+      }
+    ],
+    "commands": [],
+    "hooks": [],
+    "mcpServers": [],
+    "reminders": []
+  }
+}

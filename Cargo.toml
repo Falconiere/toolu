@@ -27,6 +27,7 @@ members = [
   "crates/ast-grep",
   "crates/brainstorm",
   "crates/delivery-flow",
+  "crates/epic-creator",
   "crates/documentation-gate",
   "crates/toolu-review",
   "crates/jev",

@@ -141,7 +141,7 @@ toolu plugins install --host codex
 After they are installed, review and trust the hooks in `/hooks` before they run.
 <!-- /install-everything:codex -->
 
-> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. Quality plugins, `pr-babysit`, `documentation-gate`, and `git-better` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
+> **Note** — `delivery-flow` depends on `toolu`, `toolu-review`, `pr-babysit`, and `brainstorm`; `epic-orchestrator` uses `delivery-flow`. `epic-creator` depends on `brainstorm`. Quality plugins, `pr-babysit`, `documentation-gate`, and `git-better` depend on `toolu`. The `push-review` gate is **reviewer-agnostic**: the built-in `/code-review` skill satisfies it, as does the `toolu-review:review` skill.
 
 > **Deprecation:** comemory host integration now lives in
 > [Falconiere/comemory](https://github.com/Falconiere/comemory). First obtain a
@@ -168,6 +168,7 @@ Codex discovers the same canonical workflows as namespaced skills:
 - `$statusline:status`
 - `$brainstorm:brainstorm` to think a change through without delivering it
 - `$delivery-flow:delivery-flow` for checked delivery
+- `$epic-creator:epic-creator` to turn an idea into a GitHub epic the epic engine can run
 - `$pr-babysit:babysit`
 - `$documentation-gate:sync` for a routed documentation review
 - `$git-better:git-better` to write semantic commits and branch names
@@ -202,6 +203,7 @@ plugins.
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
 | Workflow | **`epic-orchestrator`** | Drive a GitHub, Jira, or Linear epic to merged PRs via herdr workers on any host, dependency waves, and a merge gate with auto-merge. |
+| Workflow | **`epic-creator`** | Turn an idea into a GitHub epic the engine can run: one-PR sub-issues with cited decisions and runnable checks, created after one confirmation. |
 | Workflow | **`git-better`** | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs. |
 | Environment | **`sandbox`** | A Linux place for builds, gates and agent CLIs: `toolu sandbox run` on a Lima VM that mounts only the project (macOS) or this machine (Linux). |
 | Status | **`statusline`** | Persistent Claude statusline plus an explicit Codex repository/gate status report. |
@@ -275,6 +277,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `
     ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
     ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references
+    ├── epic-creator/           # epic-creator skill + issue body and GitHub write references
     ├── documentation-gate/    # routed documentation worker and review gate
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     ├── toolu-review/            # toolu-review:review skill + push-review state writer

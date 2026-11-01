@@ -158,6 +158,27 @@ pub(super) fn details(gh: &Gh, sub: &SubIssue) -> Result<TrackedIssue, String> {
   })
 }
 
+/// The issues a body's "blocked by" or "depends on" text names, in order,
+/// without duplicates or `own`.
+///
+/// # Errors
+/// The pattern fails to compile.
+pub(super) fn text_blocker_refs(body: &str, repo: &str, own: &str) -> Result<Vec<String>, String> {
+  let lines = RegexBuilder::new(r"\b(?:blocked by|depends on)\b[^\n]*")
+    .case_insensitive(true)
+    .build()
+    .map_err(|err| err.to_string())?;
+  let mut refs = Vec::new();
+  for found in lines.find_iter(body) {
+    for reference in refs_in(found.as_str(), repo)? {
+      if reference != own && !refs.contains(&reference) {
+        refs.push(reference);
+      }
+    }
+  }
+  Ok(refs)
+}
+
 fn text_blockers(
   gh: &Gh,
   body: &str,
@@ -165,19 +186,13 @@ fn text_blockers(
   own: &str,
   blockers: &mut BTreeMap<String, String>,
 ) -> Result<(), String> {
-  let lines = RegexBuilder::new(r"\b(?:blocked by|depends on)\b[^\n]*")
-    .case_insensitive(true)
-    .build()
-    .map_err(|err| err.to_string())?;
-  for found in lines.find_iter(body) {
-    for reference in refs_in(found.as_str(), repo)? {
-      if blockers.contains_key(&reference) || reference == own {
-        continue;
-      }
-      let issue = parse_ref(&reference, None)?;
-      let item: Value = gh.get(&issue_path(&issue))?;
-      blockers.insert(reference, text(&item, "state"));
+  for reference in text_blocker_refs(body, repo, own)? {
+    if blockers.contains_key(&reference) {
+      continue;
     }
+    let issue = parse_ref(&reference, None)?;
+    let item: Value = gh.get(&issue_path(&issue))?;
+    blockers.insert(reference, text(&item, "state"));
   }
   Ok(())
 }
@@ -222,3 +237,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/github_fetch_reuse_test.rs"]
 mod reuse_tests;
+
+#[cfg(test)]
+#[path = "tests/epic_creator_bodies_test.rs"]
+mod epic_creator_tests;

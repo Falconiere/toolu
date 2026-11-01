@@ -1,0 +1,13 @@
+{
+  "name": "epic-creator",
+  "version": "8.8.0",
+  "hookProtocol": 2,
+  "description": "Turn an idea into a GitHub epic the epic-orchestrator engine can run: brainstorm it, split it into one-PR sub-issues with cited decisions and runnable checks, confirm once, then create the epic, native sub-issues and dependencies.",
+  "skills": "./skills/",
+  "dependencies": [
+    {
+      "name": "brainstorm",
+      "marketplace": "toolu"
+    }
+  ]
+}
