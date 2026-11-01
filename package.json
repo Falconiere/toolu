@@ -2,7 +2,7 @@
   "name": "toolu-workspace",
   "private": true,
   "type": "module",
-  "version": "8.8.0",
+  "version": "8.9.0",
   "description": "Engineering discipline for coding agents. The version anchor for release-please and pinned web gate tools.",
   "license": "MIT",
   "devDependencies": {

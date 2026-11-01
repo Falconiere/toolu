@@ -6,6 +6,13 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.9.0](https://github.com/Falconiere/toolu/compare/v8.8.0...v8.9.0) (2026-11-01)
+
+
+### Features
+
+* **epic-creator:** turn an idea into a GitHub epic the engine can run ([#823](https://github.com/Falconiere/toolu/issues/823)) ([768a03f](https://github.com/Falconiere/toolu/commit/768a03f15069fed08c927db57b1e03d9aa4494c4))
+
 ## [8.8.0](https://github.com/Falconiere/toolu/compare/v8.7.0...v8.8.0) (2026-10-31)
 
 
