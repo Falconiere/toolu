@@ -1,7 +1,7 @@
 # GitHub writes
 
 Run these only after the user confirmed the draft. Write each body to a file
-in one scratch directory first (`mktemp -d`), then pass it with `-F body=@…`
+in the skill's scratch directory `$DIR` first, then pass it with `-F body=@…`
 so no body goes through shell quoting. Make one call at a time: GitHub
 applies secondary rate limits to fast creation.
 
@@ -38,10 +38,11 @@ does not list it: `gh label create epic --repo "$REPO" --color 3E4B9E`.
 ## When a call fails
 
 Stop at the first failure. Do not repeat a create: a lost response may have
-committed it, and a second POST makes a duplicate issue. Look before any retry:
+committed it, and a second POST makes a duplicate issue. Look before any retry,
+with the live REST listing: search results lag behind a fresh create.
 
 ```bash
-gh issue list --repo "$REPO" --state open --search "<exact title> in:title" --json number,title
+gh api "repos/$REPO/issues?state=all&sort=created&direction=desc&per_page=30" --jq '.[] | "\(.number) \(.title)"'
 gh api "repos/$REPO/issues/$EPIC/sub_issues" --jq '.[].number'
 gh api "repos/$REPO/issues/$CHILD/dependencies/blocked_by" --jq '.[].number'
 ```

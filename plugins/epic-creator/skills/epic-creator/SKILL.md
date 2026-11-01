@@ -13,7 +13,7 @@ edits code, commits or starts the engine.
 ## Inputs
 
 `<idea>`: free text, or a path to a brainstorm or spec file. Options:
-`--repo owner/name` (default: the checkout's GitHub repository); `--dry-run`
+`--repo owner/name` (must be the checkout's own GitHub repository); `--dry-run`
 drafts and stops before any write. Jira or Linear: say they are not supported
 yet and stop.
 
@@ -30,14 +30,18 @@ Stop with the fix for the first failure:
 
 ```bash
 gh auth status
-gh repo view "$REPO" --json nameWithOwner,defaultBranchRef --jq '.nameWithOwner + " " + .defaultBranchRef.name'
+gh repo view --json nameWithOwner,defaultBranchRef --jq '.nameWithOwner + " " + .defaultBranchRef.name'
 git fetch origin
 git rev-parse --short "origin/$BASE"
 ```
 
-The last line is the **base commit**. Every citation and every `Base:` line
+The second line prints the checkout's repository and default branch: set
+`REPO` and `BASE` from it. A `--repo` that differs from it stops the run:
+citations must come from the target's own checkout, so run there. The last
+line is the **base commit**, `SHA`. Every citation and every `Base:` line
 refers to it; read code there (`git show "$SHA:<path>"`) when the checkout
-differs.
+differs. Make one scratch directory, `DIR=$(mktemp -d)`, for bodies and the
+graph.
 
 ## 2. Think
 

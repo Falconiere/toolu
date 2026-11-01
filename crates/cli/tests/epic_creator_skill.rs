@@ -22,11 +22,12 @@ fn body(text: &str) -> Res<&str> {
     .ok_or_else(|| "no front matter".to_owned())
 }
 
-/// Where `## <title>` starts in `text`.
-fn at(text: &str, title: &str) -> Res<usize> {
-  text
-    .find(&format!("\n## {title}"))
-    .ok_or_else(|| format!("no section {title}"))
+/// The text of the `## <title>` section, up to the next `## `.
+fn section<'a>(text: &'a str, title: &str) -> Res<&'a str> {
+  let (_, rest) = text
+    .split_once(&format!("\n## {title}"))
+    .ok_or_else(|| format!("no section {title}"))?;
+  Ok(rest.split("\n## ").next().unwrap_or(rest))
 }
 
 #[test]
@@ -39,17 +40,13 @@ fn the_skill_body_is_under_150_lines() {
 #[test]
 fn the_skill_confirms_once_before_it_creates_anything() {
   let text = shipped("SKILL.md").unwrap();
-  let (confirm, create) = (
-    at(&text, "4. Confirm").unwrap(),
-    at(&text, "5. Create").unwrap(),
-  );
-  assert!(confirm < create);
-  let section = &text[confirm..create];
+  let (before, after) = text.split_once("\n## 5. Create").unwrap();
+  let section = section(before, "4. Confirm").unwrap();
   assert!(
     section.contains("--dry-run") && section.contains("nothing written"),
     "{section}"
   );
-  assert!(text[create..].contains("references/github-writes.md"));
+  assert!(after.contains("references/github-writes.md"));
 }
 
 #[test]
@@ -67,7 +64,7 @@ fn writes_use_the_native_link_and_dependency_endpoints_and_never_repeat_a_create
 #[test]
 fn the_skill_proves_the_epic_with_the_engine_reader_and_router() {
   let text = shipped("SKILL.md").unwrap();
-  let prove = &text[at(&text, "6. Prove").unwrap()..];
+  let prove = section(&text, "6. Prove").unwrap();
   assert!(prove.contains("toolu --json epic graph"), "{prove}");
   assert!(prove.contains("toolu epic route --graph"), "{prove}");
   assert!(prove.contains("--dry-run"), "{prove}");
