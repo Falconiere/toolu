@@ -2,20 +2,7 @@
 //! only `## Relationships` may create a dependency edge.
 
 use super::text_blocker_refs;
-
-const BODIES: &str = include_str!(
-  "../../../../../plugins/epic-creator/skills/epic-creator/references/issue-bodies.md"
-);
-
-/// The first `markdown` fence after `heading`.
-fn fence<'a>(heading: &str) -> Result<&'a str, String> {
-  BODIES
-    .split_once(&format!("\n{heading}\n"))
-    .and_then(|(_, rest)| rest.split_once("```markdown\n"))
-    .and_then(|(_, rest)| rest.split_once("\n```"))
-    .map(|(body, _)| body)
-    .ok_or_else(|| format!("no markdown fence under {heading}"))
-}
+use crate::epic_creator_rig::fence;
 
 #[test]
 fn epic_creator_example_sub_issue_has_exactly_its_relationships_edge() {

@@ -39,12 +39,14 @@ does not list it: `gh label create epic --repo "$REPO" --color 3E4B9E`.
 
 Stop at the first failure. Do not repeat a create: a lost response may have
 committed it, and a second POST makes a duplicate issue. Look before any retry,
-with the live REST listing: search results lag behind a fresh create.
+with live REST listings: search results lag behind a fresh create. The first
+lists your newest issues; the others page through every link and dependency.
 
 ```bash
-gh api "repos/$REPO/issues?state=all&sort=created&direction=desc&per_page=30" --jq '.[] | "\(.number) \(.title)"'
-gh api "repos/$REPO/issues/$EPIC/sub_issues" --jq '.[].number'
-gh api "repos/$REPO/issues/$CHILD/dependencies/blocked_by" --jq '.[].number'
+LOGIN=$(gh api user --jq .login)
+gh api "repos/$REPO/issues?state=all&creator=$LOGIN&sort=created&direction=desc&per_page=100" --jq '.[] | "\(.number) \(.title)"'
+gh api --paginate "repos/$REPO/issues/$EPIC/sub_issues?per_page=100" --jq '.[].number'
+gh api --paginate "repos/$REPO/issues/$CHILD/dependencies/blocked_by?per_page=100" --jq '.[].number'
 ```
 
 Then report three lists: issues created (number and title), links missing, and

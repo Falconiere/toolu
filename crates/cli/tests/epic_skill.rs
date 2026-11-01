@@ -4,6 +4,11 @@
 
 use std::path::Path;
 
+#[path = "helpers/skill_text.rs"]
+mod skill_text;
+
+use skill_text::{body, section};
+
 /// A fallible helper result; the error says what was missing.
 type Res<T> = Result<T, String>;
 
@@ -15,22 +20,6 @@ fn shipped(rel: &str) -> Res<String> {
 
 fn skill() -> Res<String> {
   shipped("skills/epic-orchestrator/SKILL.md")
-}
-
-/// The skill after its front matter.
-fn body(text: &str) -> Res<&str> {
-  text
-    .splitn(3, "---\n")
-    .nth(2)
-    .ok_or_else(|| "no front matter".to_owned())
-}
-
-/// The text of the `## <title>` section, up to the next `## `.
-fn section<'a>(text: &'a str, title: &str) -> Res<&'a str> {
-  let (_, rest) = text
-    .split_once(&format!("\n## {title}"))
-    .ok_or_else(|| format!("no section {title}"))?;
-  Ok(rest.split("\n## ").next().unwrap_or(rest))
 }
 
 #[test]

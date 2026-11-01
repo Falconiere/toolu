@@ -39,7 +39,7 @@ wording → docs → gate.
     "title": "Issue body references with a filled example; reader and tier tests run the real code on it",
     "ac_refs": ["AC-1", "AC-2"],
     "depends_on": ["reader-extract"],
-    "paths": ["plugins/epic-creator/skills/epic-creator/references/issue-bodies.md", "crates/epic-orchestrator/src/tracker/github_fetch.rs", "crates/epic-orchestrator/src/tracker/tests/epic_creator_bodies_test.rs", "crates/epic-orchestrator/src/route/tier.rs", "crates/epic-orchestrator/src/route/tests/epic_creator_tier_test.rs"],
+    "paths": ["plugins/epic-creator/skills/epic-creator/references/issue-bodies.md", "crates/epic-orchestrator/src/tracker/github_fetch.rs", "crates/epic-orchestrator/src/tracker/tests/epic_creator_bodies_test.rs", "crates/epic-orchestrator/src/route/tier.rs", "crates/epic-orchestrator/src/route/tests/epic_creator_tier_test.rs", "crates/epic-orchestrator/src/tests/epic_creator_rig_test.rs", "crates/epic-orchestrator/src/lib.rs"],
     "input": "the shipped filled example sub-issue and epic template from issue-bodies.md; boundary: own reference and a prose issue mention",
     "check": "cargo test -p toolu-epic-orchestrator --lib epic_creator",
     "model": "inherit"
@@ -58,9 +58,9 @@ wording → docs → gate.
     "title": "SKILL.md, github-writes reference, description budget and skill contract test",
     "ac_refs": ["AC-5", "AC-6"],
     "depends_on": ["bodies", "crate-and-registration"],
-    "paths": ["plugins/epic-creator/skills/epic-creator", "crates/cli/tests/epic_creator_skill.rs", "crates/xtask/src/context_budget/budgets.rs", "tooling/conventions/markdown-cli.json"],
+    "paths": ["plugins/epic-creator/skills/epic-creator", "crates/cli/tests/epic_creator_skill.rs", "crates/cli/tests/epic_skill.rs", "crates/cli/tests/helpers/skill_text.rs", "crates/xtask/src/context_budget/budgets.rs", "tooling/conventions/markdown-cli.json"],
     "input": "the shipped SKILL.md and references",
-    "check": "cargo test -p toolu-cli --test epic_creator_skill && cargo xtask context-budget && cargo xtask check-markdown-cli",
+    "check": "cargo test -p toolu-cli --test epic_creator_skill --test epic_skill && cargo xtask context-budget && cargo xtask check-markdown-cli",
     "model": "inherit"
   },
   {
@@ -117,3 +117,4 @@ run code-review, fix all findings, commit, push and merge.
 ## Deviations
 
 - `crate-and-registration`: the check used `--lib`; xtask has only a binary target, so it runs `--bin xtask`.
+- PR #823 review (built-in code-review, high): the body limit is now under 1200 characters with no 3000 exception, because the router marks any longer body `complex`. The proof routes with `--no-jev` and accepts real fan-out children as `complex`. Link checks use `git cat-file -e "$SHA:<path>"`. Native links and dependencies are fixed with the write calls, not `gh issue edit`. Brainstorm's local record is allowed. Lost-create listings filter by creator and page through every link. The shared test parsing moved into `epic_creator_rig` and `helpers/skill_text.rs`. The spec and brainstorm records keep their original 1500 figure as history.

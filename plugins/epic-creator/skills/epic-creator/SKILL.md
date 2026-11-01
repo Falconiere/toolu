@@ -22,7 +22,9 @@ yet and stop.
 After the user confirms the draft, this skill may create in the target
 repository the `epic` label when missing, the epic, its children, their
 sub-issue links and their dependencies, and fix issues this run created.
-Nothing else: no edits to other issues, no code, no commits, no engine.
+Brainstorm may write its local record under `docs/toolu/brainstorms/`; nothing
+is committed. Nothing else: no edits to other issues, no code, no commits, no
+engine.
 
 ## 1. Preflight
 
@@ -62,11 +64,14 @@ child under its rules. While drafting:
 
 Check every body before showing it, and fix rather than explain:
 
-- under 1500 characters (3000 only for an interface shape); the epic under 4000;
+- a child under 1200 characters, the epic under 4000;
 - fewer than six `- [ ]` boxes;
-- no other issue named, and no "blocked by" or "depends on", outside `## Relationships`;
-- every linked file passes `git ls-files --error-unmatch <path>`;
+- no "blocked by" or "depends on" outside `## Relationships`, and no `#N` task lines in the epic;
+- every linked file passes `git cat-file -e "$SHA:<path>"`;
 - every `path:line` exists at the base commit.
+
+A child that blocks three or more others routes as `complex` whatever its body
+says. Keep it when the fan-out is real, and say so in the table.
 
 ## 4. Confirm
 
@@ -87,13 +92,16 @@ Read the epic back through the engine's own reader and router:
 
 ```bash
 toolu --json epic graph "$REPO#$EPIC" --dry-run > "$DIR/graph.json"
-toolu epic route --graph "$DIR/graph.json" --dry-run --issue "$REPO#$CHILD"
+toolu epic route --graph "$DIR/graph.json" --dry-run --no-jev --issue "$REPO#$CHILD"
 ```
 
-Repeat `--issue` once per child. The epic is ready when the graph lists every
-child, each child's `blockers` match the drafted edges, `cycle` is empty, and
-no child routes above `standard`. Fix a mismatch on the issues this run created
-(`gh issue edit`) and prove again.
+Repeat `--issue` once per child. `--no-jev` keeps the check on the body shape;
+the engine may still score with Jev when it runs. The epic is ready when the
+graph lists every child, each child's `blockers` match the drafted edges and
+`cycle` is empty. A child above `standard` that the confirmed table did not
+mark as fan-out is a body to shorten. Fix a body with `gh issue edit`; add a
+missing link or dependency with the calls in GitHub writes. Removing a link or
+dependency needs the user's approval. Then prove again.
 
 ## Report
 

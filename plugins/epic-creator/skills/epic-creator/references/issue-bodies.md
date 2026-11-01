@@ -1,8 +1,8 @@
 # Issue bodies
 
 A sub-issue body is the prompt an unattended worker re-reads on every turn.
-Its first 1500 characters are also what the engine routes on: a longer body or
-six task boxes route the issue to a bigger model. Write what the worker needs
+It is also what the engine routes on: a body over 1200 characters or with six
+task boxes routes as `complex`, to a bigger model. Write what the worker needs
 to build the right thing, and nothing else.
 
 ## Rules
@@ -14,15 +14,15 @@ to build the right thing, and nothing else.
    brainstorm record.
 3. **One check per criterion.** Each acceptance criterion names the command or
    test that proves it on a real input. At most five; more means split.
-4. **Front-load and stay small.** Keep the order below. Aim under 1500
-   characters; go up to 3000 only for an interface shape. Do not repeat the
-   title or add a "Part of" header: the parent link carries both.
-5. **Other issues only under Relationships.** The reader treats "blocked by"
-   or "depends on" anywhere in a line as a dependency, so name no other issue
-   elsewhere.
+4. **Front-load and stay small.** Keep the order below and stay under 1200
+   characters. An interface too large for that goes in the epic once. Do not
+   repeat the title or add a "Part of" header: the parent link carries both.
+5. **Dependencies only under Relationships.** On any line, the reader takes
+   every issue named after "blocked by" or "depends on" as a dependency, so use
+   those phrases nowhere else.
 6. **Links resolve.** Link a repository file only when
-   `git ls-files --error-unmatch <path>` succeeds on the base branch;
-   otherwise state the fact inline or drop it.
+   `git cat-file -e "$SHA:<path>"` succeeds at the base commit; otherwise
+   state the fact inline or drop it.
 7. **One module each.** A child reads as Standard: one module, existing
    patterns, clear criteria. Split anything bigger along a dependency instead
    of adding caveats.
@@ -77,7 +77,8 @@ Follow `AGENTS.md` (or `CLAUDE.md`) and the quality documents it links.
 - <boundary>
 ```
 
-No task list: the native sub-issues carry the children.
+No task list: the native sub-issues carry the children. When native links are
+missing, the reader takes every `- [ ] #N` line of the epic as a child.
 
 ## Example sub-issue
 
