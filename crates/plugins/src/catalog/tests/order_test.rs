@@ -49,6 +49,7 @@ fn delivery_flow_and_epic_orchestrator_close_their_dependencies() {
       "delivery-flow"
     ]
   );
+  assert_eq!(order(&["epic-creator"]), ["brainstorm", "epic-creator"]);
   assert_eq!(
     order(&["epic-orchestrator"]),
     [

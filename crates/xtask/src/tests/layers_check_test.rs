@@ -24,7 +24,7 @@ fn the_repository_has_no_violation() {
     "{:?}",
     report.violations
   );
-  assert_eq!(report.crates, 30);
+  assert_eq!(report.crates, 31);
 }
 
 #[test]

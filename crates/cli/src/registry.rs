@@ -147,6 +147,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_delivery_flow::run,
   ),
   verb(
+    "epic-creator",
+    toolu_epic_creator::PLUGIN,
+    toolu_epic_creator::command,
+    toolu_epic_creator::run,
+  ),
+  verb(
     "review",
     toolu_review::PLUGIN,
     toolu_review::command,

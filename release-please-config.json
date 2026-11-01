@@ -115,6 +115,21 @@
         },
         {
           "type": "json",
+          "path": "plugins/epic-creator/.claude-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/epic-creator/.codex-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
+          "path": "plugins/epic-creator/.muse-plugin/plugin.json",
+          "jsonpath": "$.version"
+        },
+        {
+          "type": "json",
           "path": "plugins/epic-orchestrator/.claude-plugin/plugin.json",
           "jsonpath": "$.version"
         },

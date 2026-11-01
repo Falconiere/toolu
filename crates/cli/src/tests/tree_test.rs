@@ -32,6 +32,7 @@ fn every_namespace_is_a_top_level_command() {
       "ast-grep",
       "brainstorm",
       "delivery-flow",
+      "epic-creator",
       "review",
       "code-review",
       "docs",

@@ -19,6 +19,7 @@ toolu-brainstorm = { path = "../brainstorm" }
 toolu-code-review = { path = "../code-review" }
 toolu-delivery-flow = { path = "../delivery-flow" }
 toolu-documentation-gate = { path = "../documentation-gate" }
+toolu-epic-creator = { path = "../epic-creator" }
 toolu-engine = { path = "../core/engine" }
 toolu-epic-orchestrator = { path = "../epic-orchestrator" }
 toolu-hub = { path = "../toolu" }

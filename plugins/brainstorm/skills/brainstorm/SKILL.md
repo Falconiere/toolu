@@ -15,8 +15,9 @@ Default-and-proceed is the baseline: do not turn routine work into an interview.
   `/delivery-flow:delivery-flow` or `$delivery-flow:delivery-flow` to build it).
   Standalone brainstorm never edits code, commits, or starts delivery; the user
   decides what happens next.
-- **Delivery** — delivery-flow invoked this skill as its first phase. Record the
-  outcome, evidence, risks, and decisions, then hand off to `spec` in the same
+- **Delivery** — a calling skill (delivery-flow, epic-creator) invoked this skill
+  as its first phase. Record the outcome, evidence, risks, and decisions, then
+  hand off to the caller's next phase (`spec` for delivery-flow) in the same
   turn without waiting for confirmation.
 
 ## Triage
@@ -59,8 +60,8 @@ question.
 - **Material defaults/non-goal:** the chosen boundary and what stays out.
 - **Repository evidence:** the recalled decision or best matching hit.
 - **Risk:** the remaining compatibility, behavior, or delivery risk.
-- **Handoff:** the next step — `spec` in Delivery mode, a suggested command in
-  Standalone mode.
+- **Handoff:** the next step — the caller's next phase in Delivery mode, a
+  suggested command in Standalone mode.
 
 ## Full path
 
@@ -80,6 +81,7 @@ never overwrite an existing file — add a `-2` suffix instead.
 
 ## Handoff
 
-In Delivery mode, hand off to `spec` after resolving material choices; carry
-forward real-data tests, concise docs, and user-facing documentation updates.
+In Delivery mode, hand off to the caller's next phase after resolving
+material choices. For delivery-flow that is `spec`; carry forward real-data
+tests, concise docs, and user-facing documentation updates.
 In Standalone mode, stop after the capsule.

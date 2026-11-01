@@ -29,6 +29,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`ast-grep`](ast-grep.md) | `plugins/ast-grep` | available | Structural code search and rewrite with ast-grep |
 | [`brainstorm`](brainstorm.md) | `plugins/brainstorm` | available | Think a change through before building (a Markdown-only plugin) |
 | [`delivery-flow`](delivery-flow.md) | `plugins/delivery-flow` | available | Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin) |
+| [`epic-creator`](epic-creator.md) | `plugins/epic-creator` | available | Turn an idea into a GitHub epic the epic engine can run (a Markdown-only plugin) |
 | [`review`](review.md) | `plugins/toolu-review` | available | Pre-push code review state for the native push-review gate |
 | [`code-review`](code-review.md) | `plugins/code-review` | available | Native review of the push diff: anchored findings, coverage and a computed verdict |
 | [`docs`](docs.md) | `plugins/documentation-gate` | available | Inspect and record documentation reviews |
@@ -69,6 +70,7 @@ Commands:
   ast-grep        Structural code search and rewrite with ast-grep
   brainstorm      Think a change through before building (a Markdown-only plugin)
   delivery-flow   Deliver a task end to end, from brainstorm to a babysat PR (a Markdown-only plugin)
+  epic-creator    Turn an idea into a GitHub epic the epic engine can run (a Markdown-only plugin)
   review          Pre-push code review state for the native push-review gate [alias: toolu-review]
   code-review     Native review of the push diff: anchored findings, coverage and a computed verdict
   docs            Inspect and record documentation reviews [alias: documentation-gate]

@@ -124,6 +124,18 @@
       ]
     },
     {
+      "name": "epic-creator",
+      "source": "./plugins/epic-creator",
+      "description": "Turn an idea into a GitHub epic the epic-orchestrator engine can run: brainstorm it, split it into one-PR sub-issues with cited decisions and runnable checks, confirm once, then create the epic, native sub-issues and dependencies.",
+      "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
+      "category": "productivity",
+      "keywords": ["epic", "planning", "github", "issues", "skills"],
+      "license": "MIT",
+      "dependencies": [
+        { "name": "brainstorm", "marketplace": "toolu" }
+      ]
+    },
+    {
       "name": "documentation-gate",
       "source": "./plugins/documentation-gate",
       "description": "Keep documentation accurate with a Jev-routed editing sub-agent and native review records.",

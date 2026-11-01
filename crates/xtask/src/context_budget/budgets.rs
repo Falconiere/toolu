@@ -83,6 +83,12 @@ pub(super) const SKILLS: &[Skill] = &[
     phrases: &["implement and deliver", "real-data execution", "PR"],
   },
   Skill {
+    name: "epic-creator",
+    path: "plugins/epic-creator/skills/epic-creator/SKILL.md",
+    budget: 60,
+    phrases: &["create an epic", "break this into issues"],
+  },
+  Skill {
     name: "brainstorm",
     path: "plugins/brainstorm/skills/brainstorm/SKILL.md",
     budget: 50,

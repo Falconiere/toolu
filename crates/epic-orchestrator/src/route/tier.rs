@@ -60,3 +60,7 @@ pub(crate) fn tier_from_score(score: f64) -> usize {
 #[cfg(test)]
 #[path = "tests/tier_test.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "tests/epic_creator_tier_test.rs"]
+mod epic_creator_tests;

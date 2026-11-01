@@ -35,6 +35,9 @@ mod effects_queue;
 mod effects_run;
 mod engine_usage;
 mod epic_close;
+#[cfg(test)]
+#[path = "tests/epic_creator_rig_test.rs"]
+mod epic_creator_rig;
 mod epics;
 mod executor;
 mod finish;
