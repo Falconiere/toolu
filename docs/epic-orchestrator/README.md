@@ -201,9 +201,12 @@ peers. To remove abandoned unfinished work, finish it explicitly first.
 ## Machine cleanup after close
 
 After the engine closes an epic it runs the `toolu gc --apply` sweep scoped
-to that epic (worktrees, local branches, `refs/epic-wip/<key>` snapshots, job
-logs and idle sandbox VMs) and journals one `gc-swept` row with the summary,
-or `failed: <note>`. A failed sweep never blocks the epic. The sweep is
+to that epic: toolu-made worktrees whose branch is merged into the origin
+default branch and clean (a squash-merged branch is not an ancestor, so its
+worktree stays listed for a human), the epic's own worker branches once
+merged, `refs/epic-wip/<key>` snapshots of finished issues, job logs past
+retention, and idle sandbox VMs. It journals one `gc-swept` row with the
+summary, or `failed: <note>`. A failed sweep never blocks the epic. The sweep is
 journaled as `gc-intent` and `gc-done`; a restart between them runs it again,
 which is safe to repeat. Run `toolu gc` without `--apply` to preview. Registry
 cleanup above is separate and never removes worktrees or branches.
