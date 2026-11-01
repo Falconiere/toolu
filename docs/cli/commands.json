@@ -4119,7 +4119,7 @@
           "placeholder": false
         },
         {
-          "about": "Run a command under the worktree's resource lease",
+          "about": "Run a command under the worktree's resource lease, waiting up to 30 min for admission",
           "aliases": [],
           "args": [
             {
@@ -4130,7 +4130,19 @@
             }
           ],
           "commands": [],
-          "flags": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Refuse at once when capacity or pressure holds instead of waiting",
+              "hidden": false,
+              "long": "no-wait",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
           "hidden": false,
           "longAbout": null,
           "name": "job",

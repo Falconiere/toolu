@@ -2,12 +2,14 @@
 //! (`ledger-check.test.ts`), with values `ledger-check.ts` computes.
 
 use std::path::Path;
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime};
 
 use toolu_runtime::env::Env;
+use toolu_runtime::json::ordered::Ordered;
 
 use super::{CheckRun, TIMEOUT_EXIT, evidence_of, parse_timeout, run_check, step_evidence};
 use crate::resources::binding::bind_worktree;
+use crate::resources::leases::{LeaseKind, LeaseRequest, acquire_lease, release_lease};
 
 fn run(dir: &Path, check: &str, timeout: &str) -> (i32, String) {
   let path = std::env::var("PATH").unwrap();
@@ -155,4 +157,72 @@ fn a_timed_out_step_encodes_its_reason_and_tail_again() {
   let long = step_evidence(TIMEOUT_EXIT, &[b'z'; 3000], "7");
   assert_eq!(long.len(), 2000);
   assert!(long.starts_with("timed out after 7s"));
+}
+
+fn bound_project(root: &Path) -> (std::path::PathBuf, std::path::PathBuf) {
+  let project = root.join("project");
+  std::fs::create_dir(&project).unwrap();
+  assert_eq!(run(&project, "git init -q", "0").0, 0);
+  let home = root.join("resources");
+  std::fs::create_dir(&home).unwrap();
+  std::fs::write(home.join("policy.json"), r#"{"maxJobs":1}"#).unwrap();
+  bind_worktree(&home, &project, "issue-421", "/epics/402").unwrap();
+  (project, home)
+}
+
+fn hold(home: &Path) -> String {
+  let occupied = LeaseRequest {
+    kind: LeaseKind::Job,
+    key: "occupied".to_owned(),
+    state_dir: "other".to_owned(),
+    host: None,
+    host_cap: None,
+    epic_cap: None,
+    worktree: None,
+  };
+  let lease = acquire_lease(home, &occupied, SystemTime::now()).unwrap();
+  let Some(Ordered::String(token)) = lease.get("token") else {
+    panic!("lease without a token: {lease:?}");
+  };
+  token.clone()
+}
+
+fn waiting_run(project: &Path, wait: &str) -> CheckRun {
+  let path = std::env::var("PATH").unwrap();
+  CheckRun {
+    check: "printf ok".to_owned(),
+    cwd: project.to_path_buf(),
+    env: Env::from_pairs([("PATH", path.as_str()), ("PLAN_LEDGER_JOB_WAIT", wait)]),
+    out_file: project.join("out.txt"),
+    timeout: "60".to_owned(),
+  }
+}
+
+#[test]
+fn a_managed_check_waits_for_its_job_slot_as_plan_ledger_job_wait_allows() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = std::fs::canonicalize(dir.path()).unwrap();
+  let (project, home) = bound_project(&root);
+  let token = hold(&home);
+  let releasing = home.clone();
+  let release = std::thread::spawn(move || {
+    std::thread::sleep(Duration::from_millis(300));
+    release_lease(&releasing, &token).unwrap();
+  });
+  let admitted = waiting_run(&project, "5");
+  assert_eq!(run_check(&admitted).unwrap(), 0);
+  release.join().unwrap();
+  assert_eq!(std::fs::read_to_string(admitted.out_file).unwrap(), "ok");
+  hold(&home);
+  let refused = run_check(&waiting_run(&project, "0")).unwrap_err();
+  assert_eq!(refused, "job capacity exhausted (1)");
+  let unparsable = waiting_run(&project, "soon");
+  let began = Instant::now();
+  let handle = std::thread::spawn(move || run_check(&unparsable));
+  std::thread::sleep(Duration::from_millis(200));
+  assert!(
+    !handle.is_finished(),
+    "an unparsable wait fell back to refusing at once"
+  );
+  assert!(began.elapsed() < Duration::from_secs(5));
 }

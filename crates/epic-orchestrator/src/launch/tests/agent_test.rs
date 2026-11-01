@@ -24,7 +24,27 @@ fn plan(pane: &str, worktree: &str) -> AgentPlan {
     session_id: None,
     session_started_after: None,
     shell_wait: Duration::from_secs(2),
+    settings: None,
   }
+}
+
+#[test]
+fn a_claude_start_passes_the_settings_file_the_attempt_wrote() {
+  let rig = Rig::new();
+  let mut ctx = rig.ctx();
+  let mut log = Vec::new();
+  let dry = AgentPlan {
+    dry: true,
+    settings: Some("/state/claude-settings.json".into()),
+    ..plan("<root-pane>", "/wt")
+  };
+  ensure_agent(&mut ctx.herdr, &dry, &mut log, Duration::from_secs(5)).expect("dry");
+  assert_eq!(
+    log,
+    [
+      "herdr agent start k-1 --kind claude --pane '<root-pane>' --timeout 90000 -- --dangerously-skip-permissions -n k-1 --settings /state/claude-settings.json"
+    ]
+  );
 }
 
 #[test]

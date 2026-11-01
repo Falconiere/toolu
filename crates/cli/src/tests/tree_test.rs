@@ -22,6 +22,7 @@ fn every_namespace_is_a_top_level_command() {
       "debug",
       "setup",
       "doctor",
+      "gc",
       "config",
       "status",
       "herdr-app",

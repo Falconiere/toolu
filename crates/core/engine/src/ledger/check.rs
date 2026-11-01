@@ -3,7 +3,8 @@
 //! file, stdout and stderr interleaved into one file. `PLAN_LEDGER_STEP_TIMEOUT`
 //! bounds it: past the deadline the group gets SIGTERM, then SIGKILL after a
 //! grace period, and the step exits 124 as GNU `timeout` reports it. In a
-//! worktree bound to a resource home the check runs under a machine job lease.
+//! worktree bound to a resource home the check runs under a machine job lease,
+//! waiting for admission up to `PLAN_LEDGER_JOB_WAIT` seconds (default 30 min).
 
 use std::path::PathBuf;
 use std::time::Duration;
@@ -16,7 +17,7 @@ use toolu_runtime::process::{Output, Spec};
 
 use super::jq::string;
 use crate::resources::binding::{ResourceBinding, resource_binding};
-use crate::resources::jobs::run_managed_job;
+use crate::resources::jobs::{JOB_WAIT_BOUND, JOB_WAIT_POLL, JobWait, run_managed_job_waiting};
 
 /// The exit code of a check stopped at its deadline.
 pub const TIMEOUT_EXIT: i32 = 124;
@@ -108,6 +109,20 @@ pub fn run_check(run: &CheckRun) -> Result<i32, String> {
   }
 }
 
+/// The managed check's admission wait: `PLAN_LEDGER_JOB_WAIT` seconds in the
+/// check environment (the step timeout's grammar; `0` refuses at once; absent
+/// or unparsable: 30 min), retried every twentieth of the bound within
+/// 50 ms and 30 s.
+fn job_wait(env: &Env) -> JobWait<'static> {
+  let bound = env
+    .get("PLAN_LEDGER_JOB_WAIT")
+    .and_then(parse_timeout)
+    .and_then(|seconds| Duration::try_from_secs_f64(seconds).ok())
+    .unwrap_or(JOB_WAIT_BOUND);
+  let poll = (bound / 20).clamp(Duration::from_millis(50), JOB_WAIT_POLL);
+  JobWait::silent(bound, poll)
+}
+
 fn managed(run: &CheckRun, binding: &ResourceBinding, seconds: f64) -> Result<i32, String> {
   std::fs::write(&run.out_file, "").map_err(|err| err.to_string())?;
   let mut spec = Spec::new(Vec::<String>::new());
@@ -122,7 +137,7 @@ fn managed(run: &CheckRun, binding: &ResourceBinding, seconds: f64) -> Result<i3
     &run.check,
   ]
   .map(str::to_owned);
-  let result: Output = run_managed_job(&argv, binding, &spec)?;
+  let result: Output = run_managed_job_waiting(&argv, binding, &spec, &mut job_wait(&run.env))?;
   let note = if result.truncated {
     TRUNCATED_OUTPUT_NOTE
   } else {

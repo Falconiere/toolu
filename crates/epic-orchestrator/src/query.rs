@@ -15,12 +15,13 @@ use crate::client::exchange_retry;
 use crate::control::{ensure, registry_nonempty};
 use crate::disk::{read_value, write_status, write_value};
 use crate::hc_report::report_token;
-use crate::job::run_job;
+use crate::job::run_job_with;
 use crate::lock::live;
 use crate::model::World;
 use crate::paths::Paths;
 use crate::status::document;
 use crate::verbs::{failed, json_out, text};
+use toolu_engine::resources::jobs::{JOB_WAIT_BOUND, JOB_WAIT_POLL};
 
 /// `toolu epic status [EPIC | --fleet]`.
 pub(crate) fn status_command() -> Command {
@@ -273,7 +274,12 @@ pub(crate) fn job(matches: &ArgMatches) -> Outcome {
   if argv.is_empty() {
     return failed("toolu epic job", "a command is required");
   }
-  run_job(&argv, &cwd)
+  let bound = if matches.get_flag("no-wait") {
+    std::time::Duration::ZERO
+  } else {
+    JOB_WAIT_BOUND
+  };
+  run_job_with(&argv, &cwd, bound, JOB_WAIT_POLL)
 }
 
 /// Resolve a status file to its issue key and state directory.

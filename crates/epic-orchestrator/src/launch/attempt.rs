@@ -17,6 +17,31 @@ use super::session::capture_session;
 use super::worktree::{Place, Worktree, ensure_worktree};
 use super::{Ctx, LaunchOpts};
 use crate::graph::{Graph, GraphIssue};
+use crate::hosts::HostKind;
+
+/// What a Claude worker's `--settings` file holds: Bash timeouts long enough
+/// for one blocking `toolu epic job` call (15 min default, 90 min ceiling).
+const CLAUDE_SETTINGS: &str =
+  "{\"env\":{\"BASH_DEFAULT_TIMEOUT_MS\":\"900000\",\"BASH_MAX_TIMEOUT_MS\":\"5400000\"}}\n";
+
+/// The Claude settings file under `state`, rewritten on every live launch so
+/// its content follows the binary; only its path on a dry run. `None` for
+/// other hosts.
+///
+/// # Errors
+/// The file cannot be written.
+fn claude_settings(kind: HostKind, state: &Path, dry: bool) -> Result<Option<String>, Failure> {
+  if kind != HostKind::Claude {
+    return Ok(None);
+  }
+  let path = state.join("claude-settings.json");
+  if !dry {
+    std::fs::create_dir_all(state)
+      .and_then(|()| std::fs::write(&path, CLAUDE_SETTINGS))
+      .map_err(|err| Failure::unknown(format!("{}: {err}", path.display())))?;
+  }
+  Ok(Some(path.display().to_string()))
+}
 
 /// The attempt's inputs and what it has done so far.
 pub(super) struct Attempt<'g> {
@@ -208,7 +233,9 @@ impl<'g> Attempt<'g> {
     wt: &Worktree,
     ctx: &mut Ctx<'_>,
   ) -> Result<AgentStart, Failure> {
+    let settings = claude_settings(self.host.kind, self.state(), self.opts.dry_run)?;
     let plan = AgentPlan {
+      settings,
       key: self.issue.key.clone(),
       pane: wt.pane_id.clone(),
       dry: self.opts.dry_run,

@@ -31,6 +31,7 @@ Before the first step run `toolu ledger preflight` — it refuses to start unles
 ## Rules
 
 - **Global gate** — do NOT move to the next step while any error/warning/test failure stands, even in unrelated files.
+- **Gate cadence** — per step, run the step's own `check` and crate- or package-scoped tests; run the full quality gate once before the release-readiness audit and once after each fix round, never per step. In an epic worktree run it as one blocking `toolu epic job -- <command> <args...>` call, which waits for admission and prints a failed command's last log lines; never sleep and retry around it or tail its log file.
 - **Delegate to stay compact** — push exploration, large reads, and parallelizable work to subagents; keep the main context lean.
 - **Delegate at the step's tier** — `status` prints `model=<alias>` for the next step when the plan declared one; hand that step to a subagent on that model (`toolu:quick-task` / `toolu:implementer` / `toolu:architect`, or an explicit `model:`). No declared tier, or a step that turns out harder than planned? Fall back to [model-routing.md](model-routing.md) and escalate one tier rather than retrying the same tier.
 - **No scope creep** — do only what the plan calls for. New needs go back to `plan` (and `plan-review`), not into this step.

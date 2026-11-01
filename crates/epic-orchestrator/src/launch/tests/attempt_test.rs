@@ -189,3 +189,42 @@ fn a_busy_pane_whose_lease_cannot_be_released_stays_uncertain() {
   );
   assert_eq!(record["lifecycle_outcome"], "not-started");
 }
+
+#[test]
+fn a_claude_launch_writes_its_settings_file_and_a_dry_run_only_names_it() {
+  let rig = Rig::new();
+  let mut flags = opts();
+  flags.dry_run = true;
+  let issue = find_issue(&rig.graph, "comemory-255")
+    .expect("issue")
+    .clone();
+  let dry = launch_issue(&rig.graph, &issue, &flags, &mut rig.ctx()).expect("dry");
+  let settings = rig.state().join("claude-settings.json");
+  let start = dry["commands"]
+    .as_array()
+    .expect("commands")
+    .iter()
+    .filter_map(serde_json::Value::as_str)
+    .find(|line| line.starts_with("herdr agent start comemory-255 --kind claude"))
+    .expect("start line")
+    .to_owned();
+  assert!(
+    start.ends_with(&format!("--settings {}", settings.display())),
+    "{start}"
+  );
+  assert!(!settings.exists(), "a dry run wrote the settings file");
+  assert_eq!(
+    super::claude_settings(crate::hosts::HostKind::Claude, &rig.state(), false)
+      .expect("written")
+      .as_deref(),
+    Some(settings.display().to_string().as_str())
+  );
+  assert_eq!(
+    std::fs::read_to_string(&settings).expect("settings"),
+    "{\"env\":{\"BASH_DEFAULT_TIMEOUT_MS\":\"900000\",\"BASH_MAX_TIMEOUT_MS\":\"5400000\"}}\n"
+  );
+  assert_eq!(
+    super::claude_settings(crate::hosts::HostKind::Codex, &rig.state(), false).expect("codex"),
+    None
+  );
+}

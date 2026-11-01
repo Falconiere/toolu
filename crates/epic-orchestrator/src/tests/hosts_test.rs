@@ -39,6 +39,7 @@ fn agent_args_match_every_captured_combination() {
       permission_mode: text(&opts["permissionMode"]).unwrap_or_default(),
       resume: opts["resume"].as_bool().unwrap_or(false),
       session_id: text(&opts["sessionId"]),
+      settings: text(&opts["settings"]),
     };
     let expected: Vec<String> = serde_json::from_value(case["argv"].clone()).expect("argv");
     assert_eq!(

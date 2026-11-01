@@ -301,10 +301,16 @@ resource root reads this file, so the override reaches the orchestrator and
 every worker.
 
 Launch writes a resource binding in the worktree's Git directory. Plan-ledger
-checks acquire job capacity automatically. Run other expensive tests through
-`toolu epic job -- <command> <args...>` from that worktree.
-Admission refusal means wait for capacity and retry the same mandatory check.
-A job runs for at most one hour so it cannot hold a shared slot forever; on
+checks acquire job capacity automatically and wait for it up to
+`PLAN_LEDGER_JOB_WAIT` seconds (default 1800; `0` refuses at once). Run other
+expensive tests through `toolu epic job -- <command> <args...>` from that
+worktree: it waits up to 30 min for admission (`--no-wait` refuses at once),
+journals each attempt and refusal, and prints the command's stdout whole when
+it is 40 lines or fewer, else its last 40 lines and the `full log` path; a
+failed command prints the last 80 lines of its merged log and that path.
+Claude Code workers launch with `--settings <state>/claude-settings.json`,
+which raises their Bash timeouts (15 min default, 90 min ceiling) so one call
+covers a gate. A job runs for at most one hour so it cannot hold a shared slot forever; on
 timeout its process group is stopped and `toolu epic job` exits 124.
 Process groups retain their lease until background descendants exit. A crashed
 job owner is reconciled only after its recorded group is gone; agent ownership
