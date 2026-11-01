@@ -240,7 +240,8 @@ fn acquire_waiting(
         Err(format!("{err}; waited {}s", waited.as_secs()))
       };
     }
-    std::thread::sleep(wait.poll);
+    // A zero poll with a bound would spin on the lease store and the journal.
+    std::thread::sleep(wait.poll.max(Duration::from_millis(50)));
   }
 }
 

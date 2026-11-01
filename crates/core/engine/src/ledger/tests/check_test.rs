@@ -216,13 +216,12 @@ fn a_managed_check_waits_for_its_job_slot_as_plan_ledger_job_wait_allows() {
   hold(&home);
   let refused = run_check(&waiting_run(&project, "0")).unwrap_err();
   assert_eq!(refused, "job capacity exhausted (1)");
-  let unparsable = waiting_run(&project, "soon");
-  let began = Instant::now();
-  let handle = std::thread::spawn(move || run_check(&unparsable));
-  std::thread::sleep(Duration::from_millis(200));
-  assert!(
-    !handle.is_finished(),
-    "an unparsable wait fell back to refusing at once"
+  let unparsable = super::job_wait(&waiting_run(&project, "soon").env);
+  assert_eq!(unparsable.bound, super::JOB_WAIT_BOUND);
+  assert_eq!(unparsable.poll, super::JOB_WAIT_POLL);
+  let short = super::job_wait(&waiting_run(&project, "5").env);
+  assert_eq!(
+    (short.bound, short.poll),
+    (Duration::from_secs(5), Duration::from_millis(250))
   );
-  assert!(began.elapsed() < Duration::from_secs(5));
 }

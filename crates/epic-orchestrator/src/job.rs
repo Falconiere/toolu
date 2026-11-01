@@ -44,7 +44,9 @@ pub(crate) fn run_job_with(
   let mut notes: Vec<String> = Vec::new();
   let mut observe = |admission: Admission<'_>| {
     let note = match admission {
-      Admission::Attempt => admit(&binding, argv).err(),
+      Admission::Attempt => admit(&binding, argv)
+        .err()
+        .map(|journal| format!("job not journaled: {journal}")),
       Admission::Refused(reason) => journal_refusal(&binding, reason),
     };
     notes.extend(note);
@@ -62,20 +64,27 @@ pub(crate) fn run_job_with(
 }
 
 /// The verb's outcome: bounded stdout, the failure tail, or the runner's
-/// error with the last journal note.
+/// error with the last journal note. Anything but a final refusal clears the
+/// waiting marker.
 fn outcome(
   binding: &ResourceBinding,
   argv: &[String],
   result: Result<toolu_runtime::process::Output, String>,
   note: Option<&String>,
 ) -> Outcome {
+  let refused = result.as_ref().is_err_and(|err| {
+    err.starts_with("resource hold:") || err.starts_with("job capacity exhausted")
+  });
+  if !refused {
+    waiting_jobs::clear(binding);
+  }
   match result {
-    Ok(output) if output.exit_code == 0 => {
-      waiting_jobs::clear(binding);
-      Outcome::data(bounded_stdout(binding, argv, &output.stdout))
-    }
+    Ok(output) if output.exit_code == 0 => Outcome {
+      exit: Exit::Success,
+      stdout: Some(bounded_stdout(binding, argv, &output.stdout)),
+      stderr: note.cloned(),
+    },
     Ok(output) => {
-      waiting_jobs::clear(binding);
       let tail = log_tail(binding, argv, FAIL_TAIL);
       Outcome::failed(
         Exit::Failure,
@@ -132,6 +141,9 @@ fn log_path(binding: &ResourceBinding, argv: &[String]) -> String {
 }
 
 /// The newest log of this key written for `argv`.
+// shortcut: two concurrent jobs of one worktree with the same argv (needs
+// maxJobs above 1) can swap tails; thread the lease token through the runner
+// if that ever matters.
 fn newest_log(binding: &ResourceBinding, argv: &[String]) -> Result<job_logs::Entry, String> {
   let label = argv.join(" ");
   job_logs::list(&binding.root, &binding.key)?

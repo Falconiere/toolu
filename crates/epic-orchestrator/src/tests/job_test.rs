@@ -191,3 +191,50 @@ fn a_long_success_keeps_its_last_forty_lines_and_a_short_one_prints_whole() {
   );
   assert!(!stdout.contains("full log"), "{stdout}");
 }
+
+#[test]
+fn a_job_whose_attempt_cannot_be_journaled_still_runs_and_says_so() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let (work, root) = bound(tmp.path(), "i-3");
+  std::fs::write(Paths::at(&root).journal_dir(), "not a directory").expect("block");
+  let ran = run(&["printf", "ok"], &work);
+  assert_eq!(ran.exit, Exit::Success, "{ran:?}");
+  assert_eq!(ran.stdout.as_deref(), Some("ok"));
+  assert!(
+    ran
+      .stderr
+      .as_deref()
+      .is_some_and(|note| note.starts_with("job not journaled: ")),
+    "{ran:?}"
+  );
+}
+
+#[test]
+fn a_run_failure_after_a_wait_clears_the_waiting_marker() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let (work, root) = bound(tmp.path(), "i-5");
+  let token = hold(&root);
+  std::fs::create_dir_all(root.join("jobs")).expect("jobs");
+  std::fs::write(root.join("jobs/logs"), "not a directory").expect("block logs");
+  let releasing = root.clone();
+  let release = std::thread::spawn(move || {
+    std::thread::sleep(Duration::from_millis(300));
+    release_lease(&releasing, &token).expect("release");
+  });
+  let failed = run_job_with(
+    &["true".to_owned()],
+    &work,
+    Duration::from_secs(5),
+    Duration::from_millis(50),
+  );
+  release.join().expect("release thread");
+  assert_eq!(failed.exit, Exit::Failure, "{failed:?}");
+  assert!(
+    failed
+      .stderr
+      .as_deref()
+      .is_some_and(|m| m.contains("jobs/logs")),
+    "{failed:?}"
+  );
+  assert!(!root.join("waiting-jobs/i-5.json").exists());
+}
