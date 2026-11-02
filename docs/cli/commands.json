@@ -2535,7 +2535,7 @@
             },
             {
               "global": false,
-              "help": "Call OpenRouter and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
+              "help": "Call the Jev-selected host CLI and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
               "hidden": false,
               "long": "live",
               "possibleValues": [],

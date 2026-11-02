@@ -91,10 +91,14 @@ fn file(
     max_tokens: ctx.budget.max_tokens,
   };
   let (client, deadline) = (ctx.client, ctx.deadline);
-  let completion = match ctx
-    .ledger
-    .complete(Stage::Recheck, client, &request, deadline)
-  {
+  let send = super::calls::Outbound {
+    stage: Stage::Recheck,
+    client,
+    request: &request,
+    deadline,
+    host: ctx.host.as_ref(),
+  };
+  let completion = match ctx.ledger.complete(&send) {
     Ok(completion) => completion,
     Err(err) => {
       ctx.notes.push(format!(

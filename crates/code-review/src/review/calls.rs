@@ -9,6 +9,7 @@ use serde_json::json;
 use toolu_jev_client::{Jev, OPENROUTER_MODEL, Questions, Reply, State, parse_reply, request_body};
 use toolu_openrouter::{Client, Completion, StructuredRequest};
 
+use super::host::{HostPlan, run};
 use super::replayed::{REPLAY_MISS, REPLAYED, Replay, replay_failure, restored};
 use crate::contract::{Cost, Usage};
 
@@ -75,12 +76,26 @@ pub struct Record<'a> {
 /// Receives every exchange of a run.
 pub(crate) type Recorder<'a> = &'a dyn Fn(&Record<'_>);
 
+/// One outbound structured call: where it goes and what it carries.
+pub(crate) struct Outbound<'a, 'q, 'r> {
+  /// The stage making the call.
+  pub(crate) stage: Stage,
+  /// The `OpenRouter` fallback client.
+  pub(crate) client: &'a Client,
+  /// The structured request.
+  pub(crate) request: &'r StructuredRequest<'q>,
+  /// The call's wall deadline.
+  pub(crate) deadline: Instant,
+  /// The Jev-selected host transport, when live and available.
+  pub(crate) host: Option<&'a HostPlan>,
+}
+
 /// The calls of one run.
 pub(crate) struct Ledger<'a> {
   pub(crate) calls: Vec<Call>,
   recorder: Option<Recorder<'a>>,
-  replay: Option<Replay<'a>>,
-  live_on_miss: bool,
+  pub(crate) replay: Option<Replay<'a>>,
+  pub(crate) live_on_miss: bool,
 }
 
 impl<'a> Ledger<'a> {
@@ -140,22 +155,27 @@ impl<'a> Ledger<'a> {
     result
   }
 
-  /// Send a structured request before `deadline`, recording the call.
+  /// Send a structured request before `deadline`, recording the call. With a
+  /// host plan the host CLI is tried first; any failure but a deadline falls
+  /// back to `OpenRouter`, and the failed attempt stays in the usage log.
   pub(crate) fn complete(
     &mut self,
-    stage: Stage,
-    client: &Client,
-    request: &StructuredRequest<'_>,
-    deadline: Instant,
+    send: &Outbound<'_, '_, '_>,
   ) -> Result<Completion, toolu_openrouter::Error> {
-    if let Some(replay) = self.replay {
-      let body = replay(stage, &sent(request, client.model()));
-      if body.is_some() || !self.live_on_miss {
-        return self.replayed_complete(body, stage, client);
+    if send.host.is_none()
+      && let Some(done) = self.replayed(send)
+    {
+      return done;
+    }
+    if let Some(plan) = send.host {
+      match run::complete_via_host(self, send.stage, plan, send.request, send.deadline) {
+        Ok(done) => return Ok(done),
+        Err(toolu_openrouter::Error::Timeout) => return Err(toolu_openrouter::Error::Timeout),
+        Err(_) => {}
       }
     }
     let started = Instant::now();
-    let result = client.complete_structured(request, deadline);
+    let result = send.client.complete_structured(send.request, send.deadline);
     let call = match &result {
       Ok(done) => Call {
         provider: done.provider.clone(),
@@ -163,10 +183,10 @@ impl<'a> Ledger<'a> {
         tokens_in: done.usage.prompt_tokens,
         tokens_out: done.usage.completion_tokens,
         cost_usd: done.usage.cost_usd,
-        ..call(stage, &done.model, "ok")
+        ..call(send.stage, &done.model, "ok")
       },
       Err(err) => {
-        let failed = call(stage, client.model(), &err.to_string());
+        let failed = call(send.stage, send.client.model(), &err.to_string());
         match err.usage() {
           Some((usage, model)) => Call {
             model: model.to_owned(),
@@ -181,11 +201,60 @@ impl<'a> Ledger<'a> {
     };
     self.push(call, started, || {
       let response = result.as_ref().map_or_else(|_| String::new(), received);
-      (sent(request, client.model()), response)
+      (sent(send.request, send.client.model()), response)
     });
     result
   }
 
+  /// The replayed `OpenRouter` answer, when the store holds the request or a
+  /// miss must fail closed: `None` sends live instead.
+  fn replayed(
+    &mut self,
+    send: &Outbound<'_, '_, '_>,
+  ) -> Option<Result<Completion, toolu_openrouter::Error>> {
+    let replay = self.replay?;
+    let body = replay(send.stage, &sent(send.request, send.client.model()));
+    (body.is_some() || !self.live_on_miss)
+      .then(|| self.replayed_complete(body, send.stage, send.client))
+  }
+
+  /// Log `call`; the recorder, when there is one, gets the `exchange` texts.
+  pub(crate) fn push(
+    &mut self,
+    mut call: Call,
+    started: Instant,
+    exchange: impl FnOnce() -> (String, String),
+  ) {
+    call.millis = elapsed(started);
+    if let Some(recorder) = self.recorder {
+      let (request, response) = exchange();
+      recorder(&Record {
+        stage: call.stage,
+        request: &request,
+        response: &response,
+      });
+    }
+    self.calls.push(call);
+  }
+
+  /// Tokens and reported costs summed over every call; the cost is unknown only
+  /// when no call reported one.
+  pub(crate) fn usage(&self, model: Option<String>) -> Usage {
+    let reported: Vec<f64> = self.calls.iter().filter_map(|call| call.cost_usd).collect();
+    Usage {
+      tokens_in: self.calls.iter().map(|call| call.tokens_in).sum(),
+      tokens_out: self.calls.iter().map(|call| call.tokens_out).sum(),
+      cost_usd: (!reported.is_empty())
+        .then(|| reported.iter().sum())
+        .and_then(Cost::usd),
+      model,
+      calls: self.calls.clone(),
+    }
+  }
+}
+
+/// Replayed answers: no request is sent and nothing is charged.
+impl Ledger<'_> {
   /// Answer a Jev question from its replayed `body`, `None` for a miss: no request is sent and nothing is charged.
   fn replayed_jev(
     &mut self,
@@ -246,40 +315,6 @@ impl<'a> Ledger<'a> {
     });
     result
   }
-
-  /// Log `call`; the recorder, when there is one, gets the `exchange` texts.
-  fn push(
-    &mut self,
-    mut call: Call,
-    started: Instant,
-    exchange: impl FnOnce() -> (String, String),
-  ) {
-    call.millis = elapsed(started);
-    if let Some(recorder) = self.recorder {
-      let (request, response) = exchange();
-      recorder(&Record {
-        stage: call.stage,
-        request: &request,
-        response: &response,
-      });
-    }
-    self.calls.push(call);
-  }
-
-  /// Tokens and reported costs summed over every call; the cost is unknown only
-  /// when no call reported one.
-  pub(crate) fn usage(&self, model: Option<String>) -> Usage {
-    let reported: Vec<f64> = self.calls.iter().filter_map(|call| call.cost_usd).collect();
-    Usage {
-      tokens_in: self.calls.iter().map(|call| call.tokens_in).sum(),
-      tokens_out: self.calls.iter().map(|call| call.tokens_out).sum(),
-      cost_usd: (!reported.is_empty())
-        .then(|| reported.iter().sum())
-        .and_then(Cost::usd),
-      model,
-      calls: self.calls.clone(),
-    }
-  }
 }
 
 /// Whole milliseconds since `started`.
@@ -288,7 +323,7 @@ fn elapsed(started: Instant) -> u64 {
 }
 
 /// A call that used nothing yet; the caller fills in what it observed.
-fn call(stage: Stage, model: &str, outcome: &str) -> Call {
+pub(crate) fn call(stage: Stage, model: &str, outcome: &str) -> Call {
   Call {
     stage,
     model: model.to_owned(),

@@ -8,6 +8,7 @@ mod calls;
 mod chunks;
 mod context;
 mod effort;
+mod host;
 mod judge;
 pub(crate) mod mask;
 mod options;
@@ -41,9 +42,6 @@ use source::Package;
 
 /// The key both the review model and Jev use.
 const KEY_VAR: &str = "OPENROUTER_API_KEY";
-/// The effort selector's own wall deadline.
-const SELECTOR_DEADLINE: Duration = Duration::from_secs(60);
-
 /// How Jev assessed a model finding; the report carries it on each one.
 pub use crate::contract::Assessment;
 
@@ -140,6 +138,7 @@ pub(crate) struct Ctx<'a, 'r> {
   pub(crate) budget: &'static Budget,
   pub(crate) mask: &'a Mask,
   pub(crate) memory: &'a Memory,
+  pub(crate) host: Option<host::HostPlan>,
 }
 
 /// Review `input`. Enablement and the key are checked before anything is sent.
@@ -163,16 +162,15 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
   let deadline = options
     .review_deadline
     .unwrap_or(Duration::from_secs(budget.deadline_secs));
+  let plan = host::select_host(env, input, options, &jev, &mut ledger);
   let call = chunks::Call {
     client: &client,
     schema: &schema,
     level: effort.level,
     deadline,
+    host: plan.clone(),
   };
-  let reviews = chunks::review(input, &packages, &mask, &call, &mut ledger);
-  if let Some(err) = reviews.error(input.shaped.chunks.len(), &ledger, client.model()) {
-    return Err(err);
-  }
+  let reviews = review_chunks(&call, input, &packages, &mask, &mut ledger)?;
   notes.extend(reviews.notes);
   let judge_deadline = options
     .judge_deadline
@@ -186,6 +184,7 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     budget,
     mask: &mask,
     memory: input.memory,
+    host: plan,
   };
   let partial = (effort, reviews.unreviewed);
   Ok(finish(
@@ -195,6 +194,22 @@ pub fn run(env: &Env, input: &Input<'_>, options: &Options<'_>) -> Result<Review
     !options.skip_judge,
     ctx,
   ))
+}
+
+/// Review every chunk on the call's transport, or fail the run when no
+/// chunk was reviewed.
+fn review_chunks(
+  call: &chunks::Call<'_>,
+  input: &Input<'_>,
+  packages: &[Package],
+  mask: &Mask,
+  ledger: &mut Ledger<'_>,
+) -> Result<chunks::Reviews, RunError> {
+  let reviews = chunks::review(input, packages, mask, call, ledger);
+  if let Some(err) = reviews.error(input.shaped.chunks.len(), ledger, call.client.model()) {
+    return Err(err);
+  }
+  Ok(reviews)
 }
 
 /// The mask and the review schema; failing either sends nothing.
@@ -318,7 +333,7 @@ fn select(
         Stage::Selector,
         jev,
         (&state, &Questions::single("effort", question)),
-        Instant::now() + SELECTOR_DEADLINE,
+        Instant::now() + host::SELECTOR_DEADLINE,
       )
       .map_err(|err| calls::jev_failure(&err))?;
     match reply.answers.first() {

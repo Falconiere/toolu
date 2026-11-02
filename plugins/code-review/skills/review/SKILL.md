@@ -19,7 +19,8 @@ verdict, validated findings, coverage, recap and usage. The native command
 reads the diff; read source to investigate findings or perform fallback.
 
 Native review requires exported `OPENROUTER_API_KEY` and network access; Muse
-must forward the key. `codeReview.enabled: false` or invalid configuration
+must forward the key. Review calls run on a Jev-selected host CLI with
+OpenRouter as fallback. `codeReview.enabled: false` or invalid configuration
 disables requests (project settings win). Never modify settings or credentials
 to force review.
 

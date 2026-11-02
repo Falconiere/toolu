@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 use serde_json::Value;
 use toolu_openrouter::{Client, Message};
 
-use super::calls::{Ledger, Stage};
+use super::calls::{Ledger, Outbound, Stage};
 use super::mask::Mask;
 use super::prompt::{self, Prefix};
 use super::source::Package;
@@ -24,6 +24,7 @@ pub(crate) struct Call<'a> {
   pub(crate) schema: &'a Value,
   pub(crate) level: Effort,
   pub(crate) deadline: Duration,
+  pub(crate) host: Option<super::host::HostPlan>,
 }
 
 /// The review calls' combined result.
@@ -146,12 +147,13 @@ fn send(
   ledger: &mut Ledger<'_>,
 ) {
   let request = model::request(messages, call.schema, call.level);
-  match ledger.complete(
-    Stage::Review,
-    call.client,
-    &request,
-    Instant::now() + call.deadline,
-  ) {
+  match ledger.complete(&Outbound {
+    stage: Stage::Review,
+    client: call.client,
+    request: &request,
+    deadline: Instant::now() + call.deadline,
+    host: call.host.as_ref(),
+  }) {
     Ok(completion) => match model::parse(&completion) {
       Ok(output) => {
         if output.partial {
