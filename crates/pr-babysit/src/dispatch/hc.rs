@@ -20,6 +20,9 @@ fn failure(error: &hc::Error) -> Failure {
 impl Dispatcher<'_> {
   /// Resolve hc while preserving the recorded worktree backend.
   pub(super) fn hc_backend(&self) -> bool {
+    if self.state.get("relayEnabled") == Some(&Value::Bool(true)) {
+      return true;
+    }
     if let Some(backend) = self.worktree_field("multiplexer") {
       return backend == "herdr-app";
     }

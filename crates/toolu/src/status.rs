@@ -79,7 +79,16 @@ fn document_with(roots: &Roots, dir: &Path, found: &repo::Repo) -> Value {
     "gate": gate::read(gate_path.as_deref()),
     "push_review": push_review,
     "waivers": waivers,
+    "delegation": delegation(roots.env()),
   })
+}
+
+fn delegation(env: &toolu_runtime::env::Env) -> Value {
+  let root = toolu_mux::relay::config::root(env);
+  match toolu_mux::relay::config::load(&root) {
+    Ok(config) => json!({"relay":config.relay,"machines":config.machines.len()}),
+    Err(error) => json!({"error":error}),
+  }
 }
 
 /// One JSON line under `--json`, the rails table at a terminal, else pretty JSON.

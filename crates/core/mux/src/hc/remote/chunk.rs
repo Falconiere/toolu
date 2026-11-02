@@ -6,6 +6,16 @@ use std::path::Path;
 const CHUNK: usize = 4 * 1024 * 1024;
 
 impl Transfer<'_> {
+  /// Upload an immutable, recoverable run-scoped file and return its path.
+  ///
+  /// # Errors
+  /// The run is invalid, existing bytes conflict, or transport fails.
+  pub fn upload_file(&self, name: &str, bytes: &[u8]) -> Result<String, Error> {
+    self.ensure_run()?;
+    self.put_bundle(name, bytes)?;
+    self.path(name)
+  }
+
   fn bundle_dir(&self, name: &str) -> Result<(String, String), Error> {
     let path = self.path(name)?;
     let dir = Path::new(&path)

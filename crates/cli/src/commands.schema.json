@@ -1193,6 +1193,38 @@
         "waivers"
       ],
       "properties": {
+        "delegation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "relay": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "machines": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "error": {
+              "type": "string"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "relay",
+                "machines"
+              ]
+            },
+            {
+              "required": [
+                "error"
+              ]
+            }
+          ]
+        },
         "namespace": { "const": "status" },
         "host": { "type": "string" },
         "cwd": { "type": "string" },

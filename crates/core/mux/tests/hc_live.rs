@@ -249,6 +249,9 @@ fn remote_get_by_name_and_address_keeps_machine_qualification() {
   client.kill_owned(target, "remote").unwrap();
 }
 
+#[path = "helpers/hc_file_test.rs"]
+mod file_test;
+
 #[test]
 fn interrupted_remote_export_resumes_from_partial_bundle() {
   let fixture = Fixture::new().unwrap();

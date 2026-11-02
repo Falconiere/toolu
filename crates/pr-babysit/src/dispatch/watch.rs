@@ -159,7 +159,9 @@ impl Dispatcher<'_> {
   }
 
   fn relaunch(&mut self, seq: u64, group: &Value) -> Result<()> {
-    self.stop_fixer(group);
+    if self.state.get("relayEnabled") != Some(&Value::Bool(true)) {
+      self.stop_fixer(group);
+    }
     let items_file = self
       .fixer_field("itemsFile")
       .and_then(Value::as_str)
@@ -215,6 +217,9 @@ impl Dispatcher<'_> {
       .and_then(Value::as_array)
       .map_or(0, Vec::len);
     let count = u64::try_from(count).unwrap_or(u64::MAX);
+    if self.state.get("relayEnabled") == Some(&Value::Bool(true)) {
+      return self.step_relay(seq, count, remaining, &group);
+    }
     if self.hc_backend() && text(&group, "status") == "launching" {
       if group.get("hcName").and_then(Value::as_str).is_none() {
         self.relaunch(seq, &group)?;
@@ -232,10 +237,14 @@ impl Dispatcher<'_> {
       return Ok(true);
     }
     *fresh = false;
+    self.wait_group(seq, count, remaining, &group)
+  }
+
+  fn wait_group(&mut self, seq: u64, count: u64, remaining: u64, group: &Value) -> Result<bool> {
     let waited = if self.hc_backend() {
-      self.wait_hc(&group, remaining)?
+      self.wait_hc(group, remaining)?
     } else {
-      self.waited(text(&group, "agent"), remaining)?
+      self.waited(text(group, "agent"), remaining)?
     };
     let Some(status) = waited else {
       return Ok(false);
@@ -248,6 +257,14 @@ impl Dispatcher<'_> {
     }
     self.settle_group(seq)?;
     self.next(seq, count)
+  }
+
+  fn step_relay(&mut self, seq: u64, count: u64, remaining: u64, group: &Value) -> Result<bool> {
+    if matches!(text(group, "status"), "pending" | "launching") {
+      self.relaunch(seq, group)?;
+      return Ok(true);
+    }
+    self.poll_relay(seq, count, remaining)
   }
 
   /// Follows the round for up to `timeout` seconds; the status document.

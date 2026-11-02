@@ -87,6 +87,24 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_hub::doctor::run,
   ),
   verb(
+    "machines",
+    toolu_hub::PLUGIN,
+    toolu_hub::delegation::operations_command,
+    toolu_hub::delegation::machines_run,
+  ),
+  verb(
+    "relay",
+    toolu_hub::PLUGIN,
+    toolu_hub::delegation::relay_command,
+    toolu_hub::delegation::relay_run,
+  ),
+  verb(
+    "delegate",
+    toolu_hub::PLUGIN,
+    toolu_hub::delegation::delegate_command,
+    toolu_hub::delegation::delegate_run,
+  ),
+  verb(
     "gc",
     toolu_hub::PLUGIN,
     toolu_hub::gc::command,

@@ -152,16 +152,31 @@ impl Dispatcher<'_> {
     })?;
     Ok(copy)
   }
+}
 
+impl Dispatcher<'_> {
   fn remote_target<'a>(
     &self,
     start: &Start<'a>,
+    relay: bool,
   ) -> Result<Option<toolu_mux::hc::remote::Target<'a>>> {
     if [start.base, start.branch]
       .iter()
       .any(|name| name.starts_with('-'))
     {
       return Err(Failure::usage("--base and --branch must not start with -"));
+    }
+    if relay {
+      let repo = start.remote_repo.or(start.machine.map(|_| "/"));
+      toolu_mux::hc::remote::Target::new(start.machine, repo)
+        .map_err(|error| Failure::usage(error.message))?;
+      if self.remote().is_some() {
+        return Err(Failure::new(
+          "remote_mismatch",
+          "finish the saved remote round before switching to relay",
+        ));
+      }
+      return Ok(None);
     }
     let target = toolu_mux::hc::remote::Target::new(start.machine, start.remote_repo)
       .map_err(|error| Failure::usage(error.message))?;
@@ -184,8 +199,10 @@ impl Dispatcher<'_> {
   /// # Errors
   /// Plan, config, herdr and git failures, each before the step it guards.
   pub(crate) fn start(&mut self, start: &Start<'_>) -> Result<Value> {
-    let target = self.remote_target(start)?;
     let (plan, items) = self.checked(start)?;
+    let relay = self.relay_enabled()?;
+    let target = self.remote_target(start, relay)?;
+    self.configure_relay(start.machine, relay)?;
     let groups = plan
       .get("groups")
       .and_then(Value::as_array)
@@ -196,26 +213,7 @@ impl Dispatcher<'_> {
                      run this round inline";
       return Err(Failure::new("herdr_unavailable", message));
     }
-    let (root, base) = (start.repo_root, start.base);
-    let fetch = argv(&["git", "-C", root, "fetch", "--quiet", "origin", base]);
-    self.git(
-      &fetch,
-      "git_error",
-      format!("git fetch origin {base} failed in {root}"),
-    )?;
-    let mut worktree = if self.remote().is_some() {
-      self.resume_remote_worktree(start)?
-    } else {
-      self.worktree(root, start.branch)?
-    };
-    if let Some(target) = target {
-      self.setup_remote(target.machine, target.repo, &groups, start.base)?;
-      worktree = self
-        .state
-        .get("herdrWorktree")
-        .cloned()
-        .unwrap_or(Value::Null);
-    }
+    let worktree = self.prepare_worktree(start, &groups, target.filter(|_| !relay))?;
     let round = crate::json::round(&items).unwrap_or(1);
     let context = self.context(start, &worktree, round, groups.len());
     let items_file = self.copy_items(start)?;
@@ -233,6 +231,35 @@ impl Dispatcher<'_> {
       return Ok(json!({"dryRun": true, "commands": self.commands, "brief": brief}));
     }
     Ok(self.status())
+  }
+
+  fn prepare_worktree(
+    &mut self,
+    start: &Start<'_>,
+    groups: &[Value],
+    target: Option<toolu_mux::hc::remote::Target<'_>>,
+  ) -> Result<Value> {
+    let (root, base) = (start.repo_root, start.base);
+    let fetch = argv(&["git", "-C", root, "fetch", "--quiet", "origin", base]);
+    self.git(
+      &fetch,
+      "git_error",
+      format!("git fetch origin {base} failed in {root}"),
+    )?;
+    let mut worktree = if self.remote().is_some() {
+      self.resume_remote_worktree(start)?
+    } else {
+      self.worktree(root, start.branch)?
+    };
+    if let Some(target) = target {
+      self.setup_remote(target.machine, target.repo, groups, start.base)?;
+      worktree = self
+        .state
+        .get("herdrWorktree")
+        .cloned()
+        .unwrap_or(Value::Null);
+    }
+    Ok(worktree)
   }
 }
 

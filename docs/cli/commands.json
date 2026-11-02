@@ -369,10 +369,200 @@
       "placeholder": false
     },
     {
-      "about": "Preview, install or remove toolu's agent profiles",
+      "about": "Configure agent profiles, workers and the delegation relay",
       "aliases": [],
       "args": [],
       "commands": [
+        {
+          "about": "Register existing Herdr workers",
+          "aliases": [],
+          "args": [],
+          "commands": [
+            {
+              "about": "List saved workers",
+              "aliases": [],
+              "args": [],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "list",
+              "owner": "toolu",
+              "path": [
+                "setup",
+                "machines",
+                "list"
+              ],
+              "placeholder": false
+            },
+            {
+              "about": "Register or update a worker",
+              "aliases": [],
+              "args": [
+                {
+                  "help": "",
+                  "multiple": false,
+                  "name": "NAME",
+                  "required": true
+                }
+              ],
+              "commands": [],
+              "flags": [
+                {
+                  "global": false,
+                  "help": "Absolute worker workspace root",
+                  "hidden": false,
+                  "long": "root",
+                  "possibleValues": [],
+                  "required": true,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": null
+                },
+                {
+                  "global": false,
+                  "help": "",
+                  "hidden": false,
+                  "long": "agent",
+                  "possibleValues": [
+                    "claude",
+                    "codex",
+                    "muse",
+                    "cursor",
+                    "opencode"
+                  ],
+                  "required": true,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": null
+                },
+                {
+                  "global": false,
+                  "help": "",
+                  "hidden": false,
+                  "long": "capacity",
+                  "possibleValues": [],
+                  "required": false,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": null
+                }
+              ],
+              "hidden": false,
+              "longAbout": null,
+              "name": "register",
+              "owner": "toolu",
+              "path": [
+                "setup",
+                "machines",
+                "register"
+              ],
+              "placeholder": false
+            },
+            {
+              "about": "Remove an idle worker",
+              "aliases": [],
+              "args": [
+                {
+                  "help": "",
+                  "multiple": false,
+                  "name": "NAME",
+                  "required": true
+                }
+              ],
+              "commands": [],
+              "flags": [],
+              "hidden": false,
+              "longAbout": null,
+              "name": "remove",
+              "owner": "toolu",
+              "path": [
+                "setup",
+                "machines",
+                "remove"
+              ],
+              "placeholder": false
+            },
+            {
+              "about": "Save explicit repository setup argv recipes",
+              "aliases": [],
+              "args": [],
+              "commands": [],
+              "flags": [
+                {
+                  "global": false,
+                  "help": "",
+                  "hidden": false,
+                  "long": "origin",
+                  "possibleValues": [],
+                  "required": true,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": null
+                },
+                {
+                  "global": false,
+                  "help": "JSON array of argv arrays; [] removes the recipe",
+                  "hidden": false,
+                  "long": "file",
+                  "possibleValues": [],
+                  "required": true,
+                  "short": null,
+                  "takesValue": true,
+                  "valueName": null
+                }
+              ],
+              "hidden": false,
+              "longAbout": null,
+              "name": "recipe",
+              "owner": "toolu",
+              "path": [
+                "setup",
+                "machines",
+                "recipe"
+              ],
+              "placeholder": false
+            }
+          ],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "machines",
+          "owner": "toolu",
+          "path": [
+            "setup",
+            "machines"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Select and prepare the always-on relay",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "machine",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "relay",
+          "owner": "toolu",
+          "path": [
+            "setup",
+            "relay"
+          ],
+          "placeholder": false
+        },
         {
           "about": "Preview, install or remove Codex agent profiles",
           "aliases": [],
@@ -419,6 +609,477 @@
       "owner": "toolu",
       "path": [
         "doctor"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Inspect readiness and drain workers",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Show configuration and authoritative assignments",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "toolu",
+          "path": [
+            "machines",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Change worker admission",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "drain",
+          "owner": "toolu",
+          "path": [
+            "machines",
+            "drain"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Change worker admission",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "NAME",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "resume",
+          "owner": "toolu",
+          "path": [
+            "machines",
+            "resume"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "machines",
+      "owner": "toolu",
+      "path": [
+        "machines"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Inspect and recover the delegation relay",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Show the relay and durable assignments",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "toolu",
+          "path": [
+            "relay",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Reconcile the relay and restart its service",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "recover",
+          "owner": "toolu",
+          "path": [
+            "relay",
+            "recover"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Run the durable scheduler on its designated relay",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "serve",
+          "owner": "toolu",
+          "path": [
+            "relay",
+            "serve"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Authenticated Herdr RPC receiver",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": true,
+          "longAbout": null,
+          "name": "receive",
+          "owner": "toolu",
+          "path": [
+            "relay",
+            "receive"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "relay",
+      "owner": "toolu",
+      "path": [
+        "relay"
+      ],
+      "placeholder": false
+    },
+    {
+      "about": "Submit committed work to registered machines",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Persist and submit a task",
+          "aliases": [],
+          "args": [
+            {
+              "help": "Agent flags after --",
+              "multiple": true,
+              "name": "ARGS",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "Caller-generated durable submission key",
+              "hidden": false,
+              "long": "key",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Path to the task brief",
+              "hidden": false,
+              "long": "brief",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "agent",
+              "possibleValues": [
+                "claude",
+                "codex",
+                "muse",
+                "cursor",
+                "opencode"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "machine",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "group",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "submit",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "submit"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Inspect, retry delivery or cancel a submitted task",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Inspect, retry delivery or cancel a submitted task",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "cancel",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "cancel"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Inspect, retry delivery or cancel a submitted task",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "retry",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "retry"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Import a verified result under a private Git ref",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "results",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "results"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Write an attempt-bound worker outcome",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "file",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "attempt",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "base",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "commit",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "Worker repository; defaults to current directory",
+              "hidden": false,
+              "long": "repo",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "status",
+              "possibleValues": [
+                "done",
+                "failed"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "note",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "report",
+          "owner": "toolu",
+          "path": [
+            "delegate",
+            "report"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [],
+      "hidden": false,
+      "longAbout": null,
+      "name": "delegate",
+      "owner": "toolu",
+      "path": [
+        "delegate"
       ],
       "placeholder": false
     },

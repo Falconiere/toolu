@@ -1,9 +1,18 @@
 ---
 name: setup
-description: Use when installing, previewing, updating, backing up, or removing toolu's custom Codex agent profiles.
+description: Use when setting up toolu agent profiles, registered worker machines, or the delegation relay.
 ---
 
 # Set up toolu agents
+
+For machine and relay setup, register existing Herdr machines with `toolu setup
+machines register`, then select the always-on relay with `toolu setup relay
+--machine <name>`. Install the requested agent on each worker and use
+machine-local repository credentials. Toolu uses a matching worker binary or
+stages the relay binary privately on compatible platforms. Inspect `toolu
+machines status` and each command's `--help` for its options. If relay
+selection is interrupted, repeat setup with the same destination; a retired
+controller must refresh the successor named by the error before registry edits.
 
 `toolu setup agents` manages `quick-task`, `deep-explore`, `research-agent`, `implementer`, `test-author`, and `architect`.
 

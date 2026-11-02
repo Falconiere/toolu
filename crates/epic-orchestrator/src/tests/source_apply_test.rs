@@ -189,3 +189,16 @@ fn missing_hc_terminal_does_not_automatically_relaunch() {
       .any(|item| item.key == "a" && item.kind == "needs-human")
   );
 }
+
+#[test]
+fn relay_workers_are_not_declared_missing_by_local_snapshots() {
+  let fix = fixture(true).expect("fixture");
+  let mut engine = Engine::open(fix.engine_paths, None, Fault::None).expect("open");
+  let issue = engine.world.issues.get_mut("a").expect("issue");
+  issue.stage = "running".into();
+  issue.agent = "relay:request".into();
+  let env = Env::from_pairs([("HOME", "/tmp")]);
+  apply(&mut engine, &env, Fact::Snapshot(json!({"agents":[]}))).expect("snapshot");
+  assert!(engine.world.issues["a"].pending.is_none());
+  assert_eq!(engine.world.issues["a"].launches, 0);
+}

@@ -100,6 +100,13 @@ impl Dispatcher<'_> {
       Some(group) => group.clone(),
       None => self.group(launch.seq)?,
     };
+    if self.state.get("relayEnabled") == Some(&Value::Bool(true)) && !self.dry {
+      return self.launch_relay(launch, &group);
+    }
+    self.launch_local(launch, &group)
+  }
+
+  fn launch_local(&mut self, launch: &Launch<'_>, group: &Value) -> Result<String> {
     let seq = launch.seq;
     let round = self.round(launch.context);
     let agent = agent_name(text(&self.state, "slot").unwrap_or_default(), round, seq);
@@ -116,9 +123,9 @@ impl Dispatcher<'_> {
       .as_ref()
       .and_then(|data| text(data, "report"))
       .map_or(report.as_path(), Path::new);
-    let rendered = self.brief(launch, &group, report_path, remote.as_ref())?;
-    let host = Fixer::parse(text(&group, "host").unwrap_or_default())?;
-    let (model, effort) = (text(&group, "model"), text(&group, "effort"));
+    let rendered = self.brief(launch, group, report_path, remote.as_ref())?;
+    let host = Fixer::parse(text(group, "host").unwrap_or_default())?;
+    let (model, effort) = (text(group, "model"), text(group, "effort"));
     let args = host.args(&agent, model, effort, launch.unattended)?;
     let brief_path = self.brief_target(remote.as_ref(), &rendered, &brief)?;
     self.record_launch(seq, &agent, (&brief, &report), &rendered)?;

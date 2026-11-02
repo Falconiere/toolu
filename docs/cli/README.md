@@ -17,8 +17,11 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`hook`](hook.md) | `plugins/toolu` | available | Run a hook entry; hooks.json calls it (internal) |
 | [`ledger`](ledger.md) | `plugins/toolu` | available | The plan ledger, verdicts and push waivers |
 | [`debug`](debug.md) | `plugins/toolu` | available | Count or summarize logs, stacks and failing tests |
-| [`setup`](setup.md) | `plugins/toolu` | available | Preview, install or remove toolu's agent profiles |
+| [`setup`](setup.md) | `plugins/toolu` | available | Configure agent profiles, workers and the delegation relay |
 | [`doctor`](doctor.md) | `plugins/toolu` | available | Report binary, config, plugin and tool health |
+| [`machines`](machines.md) | `plugins/toolu` | available | Inspect readiness and drain workers |
+| [`relay`](relay.md) | `plugins/toolu` | available | Inspect and recover the delegation relay |
+| [`delegate`](delegate.md) | `plugins/toolu` | available | Submit committed work to registered machines |
 | [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
@@ -59,8 +62,11 @@ Commands:
   hook            Run a hook entry; hooks.json calls it (internal)
   ledger          The plan ledger, verdicts and push waivers
   debug           Count or summarize logs, stacks and failing tests
-  setup           Preview, install or remove toolu's agent profiles
+  setup           Configure agent profiles, workers and the delegation relay
   doctor          Report binary, config, plugin and tool health
+  machines        Inspect readiness and drain workers
+  relay           Inspect and recover the delegation relay
+  delegate        Submit committed work to registered machines
   gc              Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status

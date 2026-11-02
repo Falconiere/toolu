@@ -28,6 +28,9 @@ impl Dispatcher<'_> {
       .iter()
       .find(|group| matches!(text(group, "status"), "running" | "launching" | "blocked"));
     if let Some(active) = active.filter(|_| !self.dry) {
+      if self.state.get("relayEnabled") == Some(&Value::Bool(true)) {
+        return self.cancel_relay(active);
+      }
       if self.hc_backend() {
         self.stop_hc(active)?;
       } else {

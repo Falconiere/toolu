@@ -65,7 +65,7 @@ pub(super) fn tear_down(
   } else {
     owned_workload(Path::new(&worktree), None)?
   };
-  let address = stop(ctx, record)?;
+  let address = stop_attempt(ctx, record)?;
   if absent {
     return finish_absent(
       ctx,
@@ -82,6 +82,27 @@ pub(super) fn tear_down(
     ownership.as_ref(),
     (worktree, address, owned),
   )
+}
+
+fn stop_attempt(ctx: &Ctx<'_>, record: &Record) -> Result<String, String> {
+  if record.get("relay_enabled") == Some(&Value::Bool(true))
+    && record.get("controller_review") != Some(&Value::Bool(true))
+  {
+    let request: toolu_mux::relay::store::Submission = serde_json::from_value(
+      record
+        .get("relay_request")
+        .cloned()
+        .ok_or("missing relay request")?,
+    )
+    .map_err(|e| e.to_string())?;
+    let task = toolu_mux::relay::client::cancel(ctx.env, &request.key)?;
+    if !matches!(task.phase.as_str(), "cancelled" | "done" | "failed") {
+      return Err("still exiting: relay cancellation is pending".into());
+    }
+    Ok(format!("relay:{}", request.key))
+  } else {
+    stop(ctx, record)
+  }
 }
 
 fn finish_absent(
