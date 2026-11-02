@@ -21,6 +21,10 @@ pub(super) fn setup_machines(matches: &ArgMatches, env: &Env) -> Result<Value, S
         draining: false,
       };
       change(env, |cfg, tasks| {
+        let mut machine = machine;
+        if let Some(saved) = cfg.machines.get(&machine.name) {
+          machine.draining = saved.draining;
+        }
         if tasks
           .iter()
           .any(|t| occupied(t) && t.machine.as_ref() == Some(&machine.name))

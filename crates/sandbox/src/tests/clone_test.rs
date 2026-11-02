@@ -111,6 +111,7 @@ fn a_clone_carries_head_changes_untracked_files_and_remotes_then_resets() {
 }
 
 #[test]
+#[cfg(target_os = "linux")]
 fn clone_lock_does_not_escape_into_background_children() {
   let dir = tempfile::tempdir().unwrap();
   let src = dir.path().join("src");
@@ -135,4 +136,128 @@ fn clone_lock_does_not_escape_into_background_children() {
     .unwrap();
   let _ = Command::new("kill").arg(pid.trim()).status();
   assert!(available.success(), "background child retained clone lock");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn clone_command_receives_stdin_while_lock_is_held() {
+  use std::io::Write as _;
+  let dir = tempfile::tempdir().unwrap();
+  let src = dir.path().join("src");
+  std::fs::create_dir_all(&src).unwrap();
+  git(&src, &["init", "-q"]).unwrap();
+  std::fs::write(src.join("input"), "input\n").unwrap();
+  git(&src, &["add", "input"]).unwrap();
+  git(&src, &["commit", "-q", "-m", "input"]).unwrap();
+  let argv = clone_argv(
+    &src,
+    &dir.path().join("clone"),
+    Path::new(""),
+    &words(&["cat"]),
+  );
+  let mut child = Command::new(&argv[0])
+    .args(&argv[1..])
+    .stdin(std::process::Stdio::piped())
+    .stdout(std::process::Stdio::piped())
+    .spawn()
+    .unwrap();
+  child.stdin.take().unwrap().write_all(b"payload\n").unwrap();
+  let output = child.wait_with_output().unwrap();
+  assert!(output.status.success());
+  assert_eq!(output.stdout, b"payload\n");
+}
+
+#[test]
+#[cfg(target_os = "linux")]
+fn termination_stops_the_command_group_before_releasing_the_clone_lock() {
+  let dir = tempfile::tempdir().unwrap();
+  let src = dir.path().join("src");
+  std::fs::create_dir_all(&src).unwrap();
+  git(&src, &["init", "-q"]).unwrap();
+  std::fs::write(src.join("input"), "input\n").unwrap();
+  git(&src, &["add", "input"]).unwrap();
+  git(&src, &["commit", "-q", "-m", "input"]).unwrap();
+  let dst = dir.path().join("clone");
+  let mut parent = spawn_process_group(&src, &dst).unwrap();
+  wait_for_command(&dst.join("command.pid")).unwrap();
+  let command = std::fs::read_to_string(dst.join("command.pid")).unwrap();
+  let descendant = std::fs::read_to_string(dst.join("descendant.pid")).unwrap();
+  assert!(
+    Command::new("kill")
+      .args(["-TERM", &parent.id().to_string()])
+      .status()
+      .unwrap()
+      .success()
+  );
+  let status = parent.wait().unwrap();
+  let alive: Vec<bool> = [&command, &descendant]
+    .iter()
+    .map(|pid| process_alive(pid).unwrap())
+    .collect();
+  let available = Command::new("flock")
+    .args([
+      "-n",
+      dir.path().join("clone.lock").to_str().unwrap(),
+      "true",
+    ])
+    .status()
+    .unwrap()
+    .success();
+  for pid in [&command, &descendant] {
+    let _ = Command::new("kill").args(["-KILL", pid.trim()]).status();
+  }
+  assert!(!status.success());
+  assert_eq!(
+    alive,
+    [false, false],
+    "command group survived parent termination"
+  );
+  assert!(available, "clone lock was not released after termination");
+}
+
+#[cfg(target_os = "linux")]
+fn spawn_process_group(src: &Path, dst: &Path) -> std::io::Result<std::process::Child> {
+  let argv = clone_argv(
+    src,
+    dst,
+    Path::new(""),
+    &words(&[
+      "sh",
+      "-c",
+      "sleep 30 & echo $! > descendant.pid; echo $$ > command.pid; wait",
+    ]),
+  );
+  let (program, tail) = argv
+    .split_first()
+    .ok_or_else(|| std::io::Error::other("missing command"))?;
+  Command::new(program)
+    .args(tail)
+    .stdout(std::process::Stdio::null())
+    .stderr(std::process::Stdio::null())
+    .spawn()
+}
+
+#[cfg(target_os = "linux")]
+fn wait_for_command(path: &Path) -> Result<(), &'static str> {
+  let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+  while !path.exists() {
+    if std::time::Instant::now() >= deadline {
+      return Err("command did not start");
+    }
+    std::thread::sleep(std::time::Duration::from_millis(20));
+  }
+  Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn process_alive(pid: &str) -> std::io::Result<bool> {
+  let output = Command::new("ps")
+    .args(["-p", pid.trim(), "-o", "stat="])
+    .output()?;
+  Ok(
+    output.status.success()
+      && !String::from_utf8_lossy(&output.stdout)
+        .trim()
+        .starts_with('Z'),
+  )
 }

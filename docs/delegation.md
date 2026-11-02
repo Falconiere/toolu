@@ -24,7 +24,8 @@ toolu machines status
 ```
 
 Registration is global to the user's configuration, not the current repository.
-The directory is `TOOLU_CONFIG_DIR/delegation` when that variable is set;
+The global `--config-dir` option takes precedence. Otherwise, the directory is
+`TOOLU_CONFIG_DIR/delegation` when that variable is set;
 otherwise it is `$XDG_CONFIG_HOME/toolu/delegation`, or
 `$HOME/.config/toolu/delegation` when `XDG_CONFIG_HOME` is unset. The relay
 keeps its own authoritative state. Configuration changes made through these
@@ -87,12 +88,15 @@ service, while setup completes or refreshes the authority selection.
 Commit all intended input first. The repository must have an `origin` remote;
 the brief is a local text file. Choose a unique durable key before submission
 and keep it for retries. Reusing a key with different input conflicts with its
-existing receipt. The caller saves the submission and its relay destination
-before delivery, so retry the same request with the same key after an uncertain
-response.
+existing receipt. Input bundles are limited to 512 MiB and briefs to 1 MiB.
+The caller saves the submission and its relay destination
+before delivery. After an uncertain response, retry the saved request and
+bundle with `toolu delegate retry <key>`; this uses the original destination
+and does not require the original checkout or brief to remain unchanged.
 
 ```sh
 toolu delegate submit --key task-001 --repo /path/to/repo --brief /path/to/brief.txt --agent codex
+toolu delegate retry task-001
 toolu delegate status task-001
 toolu delegate results task-001 --repo /path/to/repo
 toolu delegate cancel task-001
@@ -104,14 +108,21 @@ support the requested agent, have free capacity, and not be draining. The relay
 selects the lowest occupied-to-capacity ratio, with machine name as the tie
 breaker. A task stays queued when no worker is eligible.
 
-A failed preparation puts that worker on a persisted cooldown. Unpinned retries
-can use another eligible worker; pinned work waits for its worker's cooldown.
+A preparation failure known to precede launch returns the task to the queue and
+puts that worker on a persisted cooldown. Unpinned retries can use another
+eligible worker; pinned work waits for its worker's cooldown. Preparation with
+an uncertain setup side effect stays held for inspection instead of being retried.
 `machines status` shows `preparation_cooldown_until` and excludes those slots
 from availability until the deadline passes.
 
 With a relay configured, `toolu babysit dispatch-fix start --machine <name>`
 also pins a fixer to a registered worker; its root comes from the registration.
 Without a relay, the legacy `--machine` and `--remote-repo` flags remain paired.
+New epic worker launches also use the configured relay. Their implementation
+brief includes the issue and epic descriptions and closed blocker references;
+after a successful report, the controller imports the committed result and
+continues the local review and delivery workflow. Existing launch records retain
+their previously selected backend.
 
 Results imports a verified commit into a private `refs/toolu-transfer/.../snapshot`
 ref in the specified repository; it does not merge or push it. The repository
