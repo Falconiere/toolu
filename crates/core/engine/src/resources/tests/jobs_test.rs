@@ -3,9 +3,10 @@
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant, SystemTime};
 
+use toolu_runtime::json::ordered::Ordered;
 use toolu_runtime::process::Spec;
 
-use super::run_managed_job;
+use super::{Admission, JobWait, run_managed_job, run_managed_job_waiting};
 use crate::ledger::jq::is_str;
 use crate::resources::binding::ResourceBinding;
 use crate::resources::leases::{LeaseKind, LeaseRequest, acquire_lease, release_lease};
@@ -220,4 +221,72 @@ fn a_timed_out_job_reports_it_and_frees_its_lease() {
   let output = run_managed_job(&argv(&["sleep", "30"]), &owned, &bounded).unwrap();
   assert!(output.timed_out);
   assert_eq!(active_jobs(&root), 0);
+}
+
+fn occupied() -> LeaseRequest {
+  LeaseRequest {
+    kind: LeaseKind::Job,
+    key: "occupied".to_owned(),
+    state_dir: "other".to_owned(),
+    host: None,
+    host_cap: None,
+    epic_cap: None,
+    worktree: None,
+  }
+}
+
+#[test]
+fn a_waiting_job_is_admitted_once_the_slot_frees_and_its_observer_hears_each_step() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let owned = binding(&root, dir.path());
+  let lease = acquire_lease(&root, &occupied(), SystemTime::now()).unwrap();
+  let Some(Ordered::String(token)) = lease.get("token") else {
+    panic!("lease without a token: {lease:?}");
+  };
+  let token = token.clone();
+  let releasing = root.clone();
+  let release = std::thread::spawn(move || {
+    std::thread::sleep(Duration::from_millis(300));
+    release_lease(&releasing, &token).unwrap();
+  });
+  let mut seen: Vec<String> = Vec::new();
+  let mut observe = |admission: Admission<'_>| {
+    seen.push(match admission {
+      Admission::Attempt => "attempt".to_owned(),
+      Admission::Refused(reason) => format!("refused:{reason}"),
+    });
+  };
+  let mut wait = JobWait {
+    bound: Duration::from_secs(5),
+    poll: Duration::from_millis(50),
+    observe: Some(&mut observe),
+  };
+  let output =
+    run_managed_job_waiting(&argv(&["printf", "ok"]), &owned, &spec(), &mut wait).unwrap();
+  release.join().unwrap();
+  assert_eq!(output.stdout, "ok");
+  assert_eq!(seen[..2], ["attempt", "refused:capacity"]);
+  assert_eq!(seen.last().map(String::as_str), Some("attempt"));
+  assert!(seen.len() >= 3, "{seen:?}");
+  assert_eq!(active_jobs(&root), 0);
+}
+
+#[test]
+fn a_bound_that_passes_while_the_slot_is_held_returns_the_last_refusal_with_the_wait() {
+  let dir = tempfile::tempdir().unwrap();
+  let root = dir.path().join("resources");
+  let owned = binding(&root, dir.path());
+  acquire_lease(&root, &occupied(), SystemTime::now()).unwrap();
+  let marker = dir.path().join("started");
+  let script = format!("echo started > '{}'", marker.display());
+  let mut wait = JobWait::silent(Duration::from_millis(100), Duration::from_millis(50));
+  let refused = run_managed_job_waiting(&argv(&["sh", "-c", &script]), &owned, &spec(), &mut wait)
+    .map(|out| out.exit_code)
+    .unwrap_err();
+  assert!(
+    refused.starts_with("job capacity exhausted (1); waited "),
+    "{refused}"
+  );
+  assert!(!marker.exists());
 }

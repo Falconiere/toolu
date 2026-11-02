@@ -39,6 +39,14 @@ pub struct Entry {
   updated: SystemTime,
 }
 
+impl Entry {
+  /// The physical log file.
+  #[must_use]
+  pub fn path(&self) -> &Path {
+    &self.path
+  }
+}
+
 /// A bounded read from a log's logical byte stream.
 pub struct Chunk {
   /// Bytes in this page.

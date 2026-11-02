@@ -1106,6 +1106,47 @@
           }
         ]
       }
+    },
+    {
+      "kind": "args",
+      "host": "claude",
+      "name": "args claude settings=/state/claude-settings.json",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null,
+        "settings": "/state/claude-settings.json"
+      },
+      "argv": [
+        "--dangerously-skip-permissions",
+        "-n",
+        "pb-3fa2c1-r1g1",
+        "--settings",
+        "/state/claude-settings.json"
+      ]
+    },
+    {
+      "kind": "args",
+      "host": "codex",
+      "name": "args codex settings=/state/claude-settings.json ignored",
+      "opts": {
+        "key": "pb-3fa2c1-r1g1",
+        "model": null,
+        "effort": null,
+        "bypass": true,
+        "permissionMode": "auto",
+        "resume": false,
+        "sessionId": null,
+        "settings": "/state/claude-settings.json"
+      },
+      "argv": [
+        "--no-daemon",
+        "--dangerously-bypass-approvals-and-sandbox"
+      ]
     }
   ]
 }

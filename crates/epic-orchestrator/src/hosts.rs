@@ -4,7 +4,7 @@
 //! skill. Every argument must be shell-safe: herdr types the command into the
 //! pane's interactive shell.
 
-use regex::{Regex, RegexBuilder};
+use regex::RegexBuilder;
 
 /// The four worker hosts.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -88,6 +88,8 @@ pub(crate) struct AgentOpts {
   pub resume: bool,
   /// The captured session to resume exactly.
   pub session_id: Option<String>,
+  /// The settings file a Claude launch wrote, passed as `--settings`.
+  pub settings: Option<String>,
 }
 
 fn words(items: &[&str]) -> Vec<String> {
@@ -144,6 +146,15 @@ fn resume_args(kind: HostKind, opts: &AgentOpts) -> (Vec<String>, Vec<String>) {
   }
 }
 
+/// Whether the pane shell passes `arg` through unchanged: no space, quote,
+/// tilde, glob or non-ASCII letter.
+pub(crate) fn pane_safe(arg: &str) -> bool {
+  !arg.is_empty()
+    && arg
+      .chars()
+      .all(|letter| letter.is_ascii_alphanumeric() || "_./:=,@%+#-".contains(letter))
+}
+
 /// The argv after `--` in `herdr agent start` for `kind`.
 ///
 /// # Errors
@@ -164,9 +175,11 @@ pub(crate) fn agent_args(kind: HostKind, opts: &AgentOpts) -> Result<Vec<String>
   if let Some(effort) = opts.effort.as_deref() {
     args.extend(effort_args(kind, effort));
   }
+  if let (HostKind::Claude, Some(settings)) = (kind, opts.settings.as_deref()) {
+    args.extend(["--settings".to_owned(), settings.to_owned()]);
+  }
   args.extend(tail);
-  let safe = Regex::new(r"^[A-Za-z0-9_./:=,@%+#-]+$").map_err(|err| err.to_string())?;
-  if let Some(bad) = args.iter().find(|arg| !safe.is_match(arg)) {
+  if let Some(bad) = args.iter().find(|arg| !pane_safe(arg)) {
     return Err(format!(
       "{} arg the pane shell would mangle: {bad}",
       kind.name()

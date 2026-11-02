@@ -9,7 +9,7 @@ use std::path::Path;
 use std::sync::mpsc::{self, RecvTimeoutError, Sender};
 use std::sync::{Arc, Mutex, PoisonError};
 use std::thread::JoinHandle;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use toolu_runtime::json::ordered::Ordered;
 use toolu_runtime::process::guard::GroupGuard;
@@ -149,8 +149,106 @@ fn leased_log(
   }
 }
 
+/// What the runner tells its caller about admission.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Admission<'a> {
+  /// A lease is about to be requested.
+  Attempt,
+  /// The request was refused for `capacity` or `pressure`; the runner retries
+  /// after its poll while its bound allows.
+  Refused(&'a str),
+}
+
+/// How long a job waits for admission, how often it retries, and who hears it.
+pub struct JobWait<'a> {
+  /// The longest wait before the last refusal is returned; zero refuses at once.
+  pub bound: Duration,
+  /// The pause between attempts.
+  pub poll: Duration,
+  /// Hears every attempt and refusal.
+  pub observe: Option<&'a mut dyn FnMut(Admission<'_>)>,
+}
+
+/// The default bound of a waiting job.
+pub const JOB_WAIT_BOUND: Duration = Duration::from_mins(30);
+/// The default pause between attempts: the pressure sample age.
+pub const JOB_WAIT_POLL: Duration = Duration::from_secs(30);
+
+impl JobWait<'static> {
+  /// Refuse at once, telling nobody.
+  #[must_use]
+  pub fn none() -> Self {
+    JobWait {
+      bound: Duration::ZERO,
+      poll: Duration::ZERO,
+      observe: None,
+    }
+  }
+
+  /// Wait up to `bound`, retrying every `poll`, telling nobody.
+  #[must_use]
+  pub fn silent(bound: Duration, poll: Duration) -> Self {
+    JobWait {
+      bound,
+      poll,
+      observe: None,
+    }
+  }
+}
+
+impl JobWait<'_> {
+  fn tell(&mut self, admission: Admission<'_>) {
+    if let Some(observe) = self.observe.as_mut() {
+      observe(admission);
+    }
+  }
+}
+
+/// The short reason (`pressure` or `capacity`) of a retryable refusal in a
+/// runner error, or `None` for any other error.
+#[must_use]
+pub fn refusal(err: &str) -> Option<&'static str> {
+  if err.starts_with("resource hold:") {
+    Some("pressure")
+  } else if err.starts_with("job capacity exhausted") {
+    Some("capacity")
+  } else {
+    None
+  }
+}
+
+/// The lease, after as many refusals as `wait` allows.
+fn acquire_waiting(
+  root: &Path,
+  request: &LeaseRequest,
+  wait: &mut JobWait<'_>,
+) -> Result<Ordered, String> {
+  let began = Instant::now();
+  loop {
+    wait.tell(Admission::Attempt);
+    let err = match acquire_lease(root, request, SystemTime::now()) {
+      Ok(lease) => return Ok(lease),
+      Err(err) => err,
+    };
+    let Some(reason) = refusal(&err) else {
+      return Err(err);
+    };
+    wait.tell(Admission::Refused(reason));
+    let waited = began.elapsed();
+    if waited.saturating_add(wait.poll) >= wait.bound {
+      return if wait.bound.is_zero() {
+        Err(err)
+      } else {
+        Err(format!("{err}; waited {}s", waited.as_secs()))
+      };
+    }
+    // A zero poll with a bound would spin on the lease store and the journal.
+    std::thread::sleep(wait.poll.max(Duration::from_millis(50)));
+  }
+}
+
 /// `runManagedJob(argv, binding, opts)`: `argv` under a job lease on the
-/// binding's resource home.
+/// binding's resource home, refusing at once when the machine is full.
 ///
 /// # Errors
 /// A refused admission (`job capacity exhausted (1)`, `resource hold: …`), a
@@ -159,6 +257,21 @@ pub fn run_managed_job(
   argv: &[String],
   binding: &ResourceBinding,
   spec: &Spec,
+) -> Result<Output, String> {
+  run_managed_job_waiting(argv, binding, spec, &mut JobWait::none())
+}
+
+/// `argv` under a job lease, waiting for admission as `wait` allows.
+///
+/// # Errors
+/// The last refusal once the bound passes (`job capacity exhausted (1); waited
+/// 1800s`), a non-retryable admission error, a run failure, the last
+/// heartbeat's failure, or a failed release.
+pub fn run_managed_job_waiting(
+  argv: &[String],
+  binding: &ResourceBinding,
+  spec: &Spec,
+  wait: &mut JobWait<'_>,
 ) -> Result<Output, String> {
   let root = binding.root.as_path();
   let request = LeaseRequest {
@@ -170,7 +283,7 @@ pub fn run_managed_job(
     epic_cap: None,
     worktree: Some(binding.worktree.display().to_string()),
   };
-  let lease = acquire_lease(root, &request, SystemTime::now())?;
+  let lease = acquire_waiting(root, &request, wait)?;
   let token = lease_token(&lease)?;
   let log = leased_log(binding, &token, argv)?;
   let failures = Failures::default();

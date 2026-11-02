@@ -30,6 +30,15 @@ fn every_placeholder_is_filled_with_toolu_epic_commands() {
   );
   assert!(text.contains("| `toolu epic report <phase> --status-file /state/status/comemory-255.json`, adding `--pr N` or `--note \"...\"` where a step asks |"));
   assert!(text.contains("`toolu epic job -- <command> <args...>`"));
+  for phrase in [
+    "one blocking call",
+    "never sleep and\nretry",
+    "write_stdin",
+    "full log",
+  ] {
+    assert!(text.contains(phrase), "{phrase}");
+  }
+  assert!(!text.contains("wait and retry"));
   assert!(!text.contains("bun") && !text.contains("scripts/"));
   for phase in [
     "report brainstorm",

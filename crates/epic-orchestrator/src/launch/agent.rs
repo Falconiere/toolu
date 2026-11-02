@@ -53,6 +53,8 @@ pub(crate) struct AgentPlan {
   pub session_started_after: Option<u64>,
   /// How long `agent start` is retried while the pane's shell is not ready.
   pub shell_wait: Duration,
+  /// The Claude settings file the attempt wrote, passed as `--settings`.
+  pub settings: Option<String>,
 }
 
 /// The first and the longest pause between `agent start` retries.
@@ -182,6 +184,7 @@ fn start_call(plan: &AgentPlan, resume: bool) -> Result<(Call, Vec<String>), Fai
     permission_mode: plan.permission_mode.clone(),
     resume,
     session_id: plan.session_id.clone(),
+    settings: plan.settings.clone(),
   };
   let args = agent_args(kind, &opts).map_err(Failure::refusal)?;
   let start = Call::Start {

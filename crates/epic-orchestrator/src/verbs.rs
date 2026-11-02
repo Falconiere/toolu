@@ -271,7 +271,11 @@ fn report_command() -> Command {
 
 fn job_command() -> Command {
   Command::new("job")
-    .about("Run a command under the worktree's resource lease")
+    .about("Run a command under the worktree's resource lease, waiting up to 30 min for admission")
+    .arg(flag(
+      "no-wait",
+      "Refuse at once when capacity or pressure holds instead of waiting",
+    ))
     .arg(
       Arg::new("argv")
         .value_name("ARGV")

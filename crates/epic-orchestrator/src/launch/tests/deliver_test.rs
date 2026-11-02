@@ -47,6 +47,11 @@ fn a_dry_resume_prompts_with_the_captured_session() {
     .clone();
   let result = launch_issue(&rig.graph, &issue, &flags, &mut rig.ctx()).expect("dry resume");
   assert_eq!(result["resume"], true);
+  let settings = rig
+    .state()
+    .join("claude-settings.json")
+    .display()
+    .to_string();
   assert_eq!(
     result["agent_args"],
     serde_json::json!([
@@ -56,7 +61,9 @@ fn a_dry_resume_prompts_with_the_captured_session() {
       "-n",
       "comemory-255",
       "--model",
-      "opus"
+      "opus",
+      "--settings",
+      settings
     ])
   );
   assert!(result["prompt"].as_str().is_some_and(|prompt| {

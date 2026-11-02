@@ -28,7 +28,7 @@ Commands:
   wait      Wait for a judgment, or return when the limit passes
   report    Record a worker phase
   notify    Notify the orchestrator, or one sibling issue
-  job       Run a command under the worktree's resource lease
+  job       Run a command under the worktree's resource lease, waiting up to 30 min for admission
   service   Install the user service unit
   token     Manage the status bearer token
   hosts     Pause or resume an agent host
@@ -301,7 +301,7 @@ Options:
 ## `toolu epic job`
 
 ```text
-Run a command under the worktree's resource lease
+Run a command under the worktree's resource lease, waiting up to 30 min for admission
 
 Usage: toolu epic job [OPTIONS] <ARGV>...
 
@@ -310,6 +310,7 @@ Arguments:
 
 Options:
       --json              Print exactly one JSON document on stdout
+      --no-wait           Refuse at once when capacity or pressure holds instead of waiting
   -q, --quiet             Drop the diagnostics of a successful run
       --host <HOST>       The host to act for, instead of the detected one [possible values: claude, codex, cursor, hermes, muse, opencode]
       --config-dir <DIR>  Read the toolu config from DIR instead of the host's default
