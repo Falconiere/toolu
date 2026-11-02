@@ -6,7 +6,7 @@ use std::time::{Duration, SystemTime};
 
 use toolu_engine::resources::binding::{ResourceBinding, resource_binding};
 use toolu_engine::resources::job_logs;
-use toolu_engine::resources::jobs::{Admission, JobWait, run_managed_job_waiting};
+use toolu_engine::resources::jobs::{Admission, JobWait, refusal, run_managed_job_waiting};
 use toolu_protocol::exit::Exit;
 use toolu_runtime::cli::Outcome;
 use toolu_runtime::process::Spec;
@@ -72,9 +72,7 @@ fn outcome(
   result: Result<toolu_runtime::process::Output, String>,
   note: Option<&String>,
 ) -> Outcome {
-  let refused = result.as_ref().is_err_and(|err| {
-    err.starts_with("resource hold:") || err.starts_with("job capacity exhausted")
-  });
+  let refused = result.as_ref().is_err_and(|err| refusal(err).is_some());
   if !refused {
     waiting_jobs::clear(binding);
   }
@@ -108,7 +106,7 @@ fn outcome(
 /// `stdout` whole when it is `OK_TAIL` lines or fewer, else its last
 /// `OK_TAIL` lines and where the rest is.
 fn bounded_stdout(binding: &ResourceBinding, argv: &[String], stdout: &str) -> String {
-  if stdout.lines().count() <= OK_TAIL {
+  if stdout.lines().nth(OK_TAIL).is_none() {
     return stdout.to_owned();
   }
   format!(
@@ -118,15 +116,25 @@ fn bounded_stdout(binding: &ResourceBinding, argv: &[String], stdout: &str) -> S
   )
 }
 
-/// The last `lines` of the merged log, then where the whole log is.
+/// The last `lines` of the merged log, then where the whole log is. The read
+/// starts mid-line when the log is longer than `TAIL_BYTES`, so that leading
+/// fragment is dropped.
 fn log_tail(binding: &ResourceBinding, argv: &[String], lines: usize) -> String {
   match newest_log(binding, argv) {
     Ok(entry) => match job_logs::read(&entry, None, TAIL_BYTES) {
-      Ok(chunk) => format!(
-        "{}full log: {}",
-        last_lines(&String::from_utf8_lossy(&chunk.bytes), lines),
-        entry.path().display()
-      ),
+      Ok(chunk) => {
+        let text = String::from_utf8_lossy(&chunk.bytes);
+        let whole = if chunk.offset == 0 {
+          text.as_ref()
+        } else {
+          text.split_once('\n').map_or("", |(_, rest)| rest)
+        };
+        format!(
+          "{}full log: {}",
+          last_lines(whole, lines),
+          entry.path().display()
+        )
+      }
       Err(err) => format!("full log: unavailable ({err})"),
     },
     Err(err) => format!("full log: unavailable ({err})"),

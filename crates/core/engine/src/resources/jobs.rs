@@ -204,8 +204,10 @@ impl JobWait<'_> {
   }
 }
 
-/// The short reason of a retryable refusal, or `None` for any other error.
-fn refusal(err: &str) -> Option<&'static str> {
+/// The short reason (`pressure` or `capacity`) of a retryable refusal in a
+/// runner error, or `None` for any other error.
+#[must_use]
+pub fn refusal(err: &str) -> Option<&'static str> {
   if err.starts_with("resource hold:") {
     Some("pressure")
   } else if err.starts_with("job capacity exhausted") {

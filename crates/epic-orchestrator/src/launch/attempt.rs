@@ -7,6 +7,7 @@ use std::time::{Duration, UNIX_EPOCH};
 
 use serde_json::{Value, json};
 use toolu_engine::resources::leases::release_lease;
+use toolu_runtime::atomic::replace_atomic;
 
 use super::admission::{Owner, Reserve, launch_reservation, persist_attempt};
 use super::agent::{AgentPlan, AgentStart, Resolved, ensure_agent};
@@ -17,30 +18,43 @@ use super::session::capture_session;
 use super::worktree::{Place, Worktree, ensure_worktree};
 use super::{Ctx, LaunchOpts};
 use crate::graph::{Graph, GraphIssue};
-use crate::hosts::HostKind;
+use crate::hosts::{HostKind, pane_safe};
 
 /// What a Claude worker's `--settings` file holds: Bash timeouts long enough
 /// for one blocking `toolu epic job` call (15 min default, 90 min ceiling).
 const CLAUDE_SETTINGS: &str =
   "{\"env\":{\"BASH_DEFAULT_TIMEOUT_MS\":\"900000\",\"BASH_MAX_TIMEOUT_MS\":\"5400000\"}}\n";
 
-/// The Claude settings file under `state`, rewritten on every live launch so
-/// its content follows the binary; only its path on a dry run. `None` for
-/// other hosts.
+/// The Claude settings file under `state`, replaced atomically on every live
+/// launch so its content follows the binary and a concurrent launch never
+/// reads a torn file; only its path on a dry run. `None` for other hosts, and
+/// `None` with a line in `log` when the pane shell would mangle the path: the
+/// launch then goes without the flag, as before the file existed.
 ///
 /// # Errors
 /// The file cannot be written.
-fn claude_settings(kind: HostKind, state: &Path, dry: bool) -> Result<Option<String>, Failure> {
+fn claude_settings(
+  kind: HostKind,
+  state: &Path,
+  dry: bool,
+  log: &mut Vec<String>,
+) -> Result<Option<String>, Failure> {
   if kind != HostKind::Claude {
     return Ok(None);
   }
   let path = state.join("claude-settings.json");
-  if !dry {
-    std::fs::create_dir_all(state)
-      .and_then(|()| std::fs::write(&path, CLAUDE_SETTINGS))
-      .map_err(|err| Failure::unknown(format!("{}: {err}", path.display())))?;
+  let shown = path.display().to_string();
+  if !pane_safe(&shown) {
+    log.push(format!(
+      "claude settings skipped: the pane shell would mangle {shown}"
+    ));
+    return Ok(None);
   }
-  Ok(Some(path.display().to_string()))
+  if !dry {
+    replace_atomic(&path, CLAUDE_SETTINGS)
+      .map_err(|err| Failure::unknown(format!("{shown}: {err}")))?;
+  }
+  Ok(Some(shown))
 }
 
 /// The attempt's inputs and what it has done so far.
@@ -233,7 +247,8 @@ impl<'g> Attempt<'g> {
     wt: &Worktree,
     ctx: &mut Ctx<'_>,
   ) -> Result<AgentStart, Failure> {
-    let settings = claude_settings(self.host.kind, self.state(), self.opts.dry_run)?;
+    let state = Path::new(&self.graph.state_dir);
+    let settings = claude_settings(self.host.kind, state, self.opts.dry_run, &mut self.log)?;
     let plan = AgentPlan {
       settings,
       key: self.issue.key.clone(),

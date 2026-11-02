@@ -214,9 +214,14 @@ fn a_claude_launch_writes_its_settings_file_and_a_dry_run_only_names_it() {
   );
   assert!(!settings.exists(), "a dry run wrote the settings file");
   assert_eq!(
-    super::claude_settings(crate::hosts::HostKind::Claude, &rig.state(), false)
-      .expect("written")
-      .as_deref(),
+    super::claude_settings(
+      crate::hosts::HostKind::Claude,
+      &rig.state(),
+      false,
+      &mut Vec::new()
+    )
+    .expect("written")
+    .as_deref(),
     Some(settings.display().to_string().as_str())
   );
   assert_eq!(
@@ -224,7 +229,29 @@ fn a_claude_launch_writes_its_settings_file_and_a_dry_run_only_names_it() {
     "{\"env\":{\"BASH_DEFAULT_TIMEOUT_MS\":\"900000\",\"BASH_MAX_TIMEOUT_MS\":\"5400000\"}}\n"
   );
   assert_eq!(
-    super::claude_settings(crate::hosts::HostKind::Codex, &rig.state(), false).expect("codex"),
+    super::claude_settings(
+      crate::hosts::HostKind::Codex,
+      &rig.state(),
+      false,
+      &mut Vec::new()
+    )
+    .expect("codex"),
     None
+  );
+}
+
+#[test]
+fn a_state_path_the_pane_shell_would_mangle_launches_without_settings_and_says_so() {
+  let tmp = tempfile::tempdir().expect("temp");
+  let state = tmp.path().join("epic state");
+  let mut log = Vec::new();
+  let settings = super::claude_settings(crate::hosts::HostKind::Claude, &state, false, &mut log)
+    .expect("skipped");
+  assert_eq!(settings, None);
+  assert!(!state.join("claude-settings.json").exists());
+  assert_eq!(log.len(), 1, "{log:?}");
+  assert!(
+    log[0].starts_with("claude settings skipped: the pane shell would mangle "),
+    "{log:?}"
   );
 }
