@@ -16,6 +16,8 @@ pub mod agent_tier;
 pub mod config;
 /// `toolu debug`.
 pub mod debug;
+/// Global worker registry and durable relay delegation.
+pub mod delegation;
 /// `toolu doctor`.
 pub mod doctor;
 /// `toolu gc`.

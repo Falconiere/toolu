@@ -19,7 +19,9 @@ impl Attempt<'_> {
     if text(record, "terminal_name").is_none() {
       self.hc_initialize(record, ctx)?;
     }
-    self.hc_remote_prepare(record, ctx)?;
+    if record.get("relay_enabled") != Some(&Value::Bool(true)) {
+      self.hc_remote_prepare(record, ctx)?;
+    }
     let checkout = text(record, "checkout").unwrap_or("").to_owned();
     let path = text(record, "worktree").unwrap_or("").to_owned();
     let revision = text(record, "expected_base").unwrap_or("").to_owned();

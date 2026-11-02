@@ -32,7 +32,7 @@ if [ -s "$list" ]; then
 fi
 rm -f "$list"
 cd "$dst/$rel"
-exec "$@"
+"$@" 9>&-
 "#;
 
 /// The argv that runs `command` in a clone of `src` at `dst`, from `rel` inside it.

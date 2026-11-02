@@ -59,6 +59,9 @@ fn stall_due(world: &World, key: &str) -> Option<bool> {
 /// `(since, limit, already nudged)` when the phase has a stall deadline.
 fn stall_clock(world: &World, key: &str) -> Option<(u64, u64, bool)> {
   let issue = world.issues.get(key)?;
+  if issue.agent.starts_with("relay:") {
+    return None;
+  }
   if issue.phase.is_empty() || issue.phase == "ready" || judgment(&issue.phase) {
     return None;
   }
@@ -106,7 +109,10 @@ fn arm_checkpoint(world: &mut World) {
 fn next_checkpoint(world: &World) -> Option<String> {
   world.issues.values().find_map(|issue| {
     let tree = issue.worktree.as_deref().unwrap_or("");
-    let due = issue.stage == "running" && !tree.is_empty() && !world.checkpointed.contains(tree);
+    let due = issue.stage == "running"
+      && !issue.agent.starts_with("relay:")
+      && !tree.is_empty()
+      && !world.checkpointed.contains(tree);
     due.then(|| issue.key.clone())
   })
 }

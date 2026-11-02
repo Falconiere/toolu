@@ -23,6 +23,7 @@ pub(crate) mod names;
 pub(crate) mod outcome;
 /// Validate fixer route plans.
 pub(crate) mod plan;
+mod relay;
 /// Transfer bound remote fixer results.
 pub(crate) mod remote;
 /// Verify and retire remote worktrees.

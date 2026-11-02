@@ -10,6 +10,7 @@ use toolu_runtime::env::Env;
 use toolu_runtime::process::{Spec, run};
 
 mod mirror;
+mod relay;
 mod review;
 
 /// Read and import a remote result while holding the issue launch lock.
@@ -28,6 +29,9 @@ fn execute_locked(state: &Path, key: &str, env: &Env) -> Result<Option<Value>, S
     || text(&record, "stage") != Some("running")
   {
     return Err("remote result issue ownership or stage changed".into());
+  }
+  if record.get("relay_enabled") == Some(&Value::Bool(true)) {
+    return relay::result(&path, &mut record, env);
   }
   if text(&record, "hc_session")
     .is_some_and(|session| session != env.get("HC_SESSION").unwrap_or("default"))

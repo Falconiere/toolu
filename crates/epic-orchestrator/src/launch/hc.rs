@@ -100,7 +100,7 @@ pub(super) fn local_worktree(
   .map(|_| ())
 }
 
-fn host_argv(run: &Attempt<'_>) -> Result<Vec<String>, Failure> {
+pub(super) fn host_argv(run: &Attempt<'_>) -> Result<Vec<String>, Failure> {
   let binary = if run.host.kind == HostKind::Cursor {
     "cursor-agent"
   } else {
@@ -126,6 +126,9 @@ fn host_argv(run: &Attempt<'_>) -> Result<Vec<String>, Failure> {
 
 impl Attempt<'_> {
   pub(super) fn hc_go(&mut self, record: &mut Record, ctx: &mut Ctx<'_>) -> Result<Value, Failure> {
+    if record.get("relay_enabled") == Some(&Value::Bool(true)) && !self.opts.dry_run {
+      return self.relay_go(record, ctx);
+    }
     let command = host_argv(self)?;
     if self.opts.dry_run {
       return Ok(

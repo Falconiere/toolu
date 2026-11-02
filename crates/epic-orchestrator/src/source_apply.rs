@@ -50,12 +50,9 @@ fn apply_snapshot(engine: &mut Engine, body: &Value) -> Result<(), String> {
   let rows = body.get("agents").and_then(Value::as_array);
   let keys: Vec<String> = engine.world.issues.keys().cloned().collect();
   for key in &keys {
-    if engine
-      .world
-      .issues
-      .get(key)
-      .is_some_and(|issue| issue.agent.starts_with("hc:") == hc)
-    {
+    if engine.world.issues.get(key).is_some_and(|issue| {
+      !issue.agent.starts_with("relay:") && issue.agent.starts_with("hc:") == hc
+    }) {
       bind_or_gone(engine, key, rows);
     }
   }
@@ -250,7 +247,11 @@ fn outage(engine: &mut Engine, hc: bool) -> Result<(), String> {
     .world
     .issues
     .iter()
-    .find(|(_, issue)| issue.stage == "running" && !issue.agent.starts_with("hc:"))
+    .find(|(_, issue)| {
+      issue.stage == "running"
+        && !issue.agent.starts_with("hc:")
+        && !issue.agent.starts_with("relay:")
+    })
     .map(|(key, _)| key.clone());
   note_herdr(&mut engine.world, false);
   let now = engine.world.now_ms;
@@ -258,7 +259,7 @@ fn outage(engine: &mut Engine, hc: bool) -> Result<(), String> {
     .world
     .issues
     .values_mut()
-    .filter(|issue| !issue.agent.starts_with("hc:"))
+    .filter(|issue| !issue.agent.starts_with("hc:") && !issue.agent.starts_with("relay:"))
   {
     issue.set_agent_status("unknown", now);
   }

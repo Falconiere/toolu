@@ -109,3 +109,30 @@ fn a_clone_carries_head_changes_untracked_files_and_remotes_then_resets() {
   assert_eq!(code, 3, "{out}");
   assert_eq!(out, "two\nbuilt\n");
 }
+
+#[test]
+fn clone_lock_does_not_escape_into_background_children() {
+  let dir = tempfile::tempdir().unwrap();
+  let src = dir.path().join("src");
+  std::fs::create_dir_all(&src).unwrap();
+  git(&src, &["init", "-q"]).unwrap();
+  std::fs::write(src.join("input"), "input\n").unwrap();
+  git(&src, &["add", "input"]).unwrap();
+  git(&src, &["commit", "-q", "-m", "input"]).unwrap();
+  let dst = dir.path().join("clone");
+  let (code, out) = in_clone(
+    &src,
+    &dst,
+    "",
+    "sleep 30 >/dev/null 2>&1 & echo $! > daemon.pid; if flock -n ../clone.lock true; then exit 7; fi",
+  );
+  assert_eq!(code, 0, "{out}");
+  let pid = std::fs::read_to_string(dst.join("daemon.pid")).unwrap();
+  let lock = dir.path().join("clone.lock");
+  let available = Command::new("flock")
+    .args(["-n", lock.to_str().unwrap(), "true"])
+    .status()
+    .unwrap();
+  let _ = Command::new("kill").arg(pid.trim()).status();
+  assert!(available.success(), "background child retained clone lock");
+}

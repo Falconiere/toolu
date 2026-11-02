@@ -162,7 +162,7 @@ fn dispatch_fix() -> Command {
         ))
         .arg(required("branch", "The PR branch"))
         .arg(required("base", "The PR's base branch"))
-        .arg(value("machine", "Configured hc machine").requires("remote-repo"))
+        .arg(value("machine", "Configured hc machine"))
         .arg(value("remote-repo", "Absolute remote checkout path").requires("machine"))
         .arg(dry()),
     )

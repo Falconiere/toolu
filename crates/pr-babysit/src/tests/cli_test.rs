@@ -117,7 +117,8 @@ fn remote_target_and_report_identity_are_paired() {
     "--base",
     "main",
   ];
-  assert!(parse(&[&start[..], &["--machine", "vm"]].concat()).is_err());
+  assert!(parse(&[&start[..], &["--machine", "vm"]].concat()).is_ok());
+  assert!(parse(&[&start[..], &["--remote-repo", "/r"]].concat()).is_err());
   assert!(parse(&[&start[..], &["--machine", "vm", "--remote-repo", "/r"]].concat()).is_ok());
   assert!(parse(&["fixer-report", "r", "done", "--run-id", "run"]).is_err());
 }

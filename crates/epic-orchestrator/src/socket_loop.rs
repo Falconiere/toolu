@@ -68,7 +68,12 @@ pub(crate) fn state_loop(
   let mut next_tick = Instant::now() + TICK;
   let mut stopping = false;
   let mut hc_running = std::collections::BTreeSet::new();
+  let mut next_relay_poll = Instant::now();
   loop {
+    if !stopping && Instant::now() >= next_relay_poll {
+      poll_relay_results(engine, &mut hc_running, context.sender);
+      next_relay_poll = Instant::now() + TICK;
+    }
     publish(context.shared, context.changed, engine)?;
     if stopping && engine.running.is_none() && hc_running.is_empty() {
       return Ok(());
@@ -82,15 +87,7 @@ pub(crate) fn state_loop(
         stopping |= request_line(engine, &request, &reply, &mut waiters, context)?;
       }
       Ok(Msg::Effect { call, outcome }) => {
-        engine.dirty = true;
-        engine.refresh_clock();
-        if engine.effect_done(&call, &outcome)? == Stop::Fault {
-          return Err("fault".to_owned());
-        }
-        // Best effort: the replies were already sent, so a wait-reply the
-        // journal cannot record must not stop the engine (as in
-        // `notify::record`).
-        let _replies = satisfy(engine, &mut waiters);
+        effect_done(engine, &call, &outcome, &mut waiters)?;
       }
       Ok(Msg::HcResult { key, result }) => {
         engine.dirty = true;
@@ -106,6 +103,44 @@ pub(crate) fn state_loop(
         on_timeout(engine, &mut waiters, &mut next_tick, context.babysit)?;
       }
       Err(RecvTimeoutError::Disconnected) => return Ok(()),
+    }
+  }
+}
+
+fn effect_done(
+  engine: &mut Engine,
+  call: &Call,
+  outcome: &str,
+  waiters: &mut Vec<Waiter>,
+) -> Result<(), String> {
+  engine.dirty = true;
+  engine.refresh_clock();
+  if engine.effect_done(call, outcome)? == Stop::Fault {
+    return Err("fault".to_owned());
+  }
+  // Wait-reply failures cannot stop the engine after replies were sent.
+  let _replies = satisfy(engine, waiters);
+  Ok(())
+}
+
+fn poll_relay_results(
+  engine: &Engine,
+  running: &mut std::collections::BTreeSet<String>,
+  sender: &Sender<Msg>,
+) {
+  for issue in engine
+    .world
+    .issues
+    .values()
+    .filter(|issue| issue.stage == "running")
+  {
+    let path = crate::snapshot::issue_path(&issue.state_dir, &issue.key);
+    let relay = crate::launch::record::load_launch_record(&path).is_ok_and(|record| {
+      record.get("relay_enabled") == Some(&Value::Bool(true))
+        && record.get("remote_report_seen").is_none()
+    });
+    if relay && running.insert(issue.key.clone()) {
+      spawn_hc_result(engine, &issue.key, sender);
     }
   }
 }

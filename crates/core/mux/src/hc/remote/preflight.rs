@@ -8,6 +8,20 @@ impl Transfer<'_> {
   /// # Errors
   /// A dependency is absent, versions differ, or the checkout origin differs.
   pub fn preflight(&self, origin: &str, toolu_version: &str, host: &str) -> Result<(), Error> {
+    self.preflight_with(origin, toolu_version, host, "toolu")
+  }
+
+  /// Verify checkout and host with the selected Toolu executable.
+  ///
+  /// # Errors
+  /// A dependency is absent, versions differ, or the checkout origin differs.
+  pub fn preflight_with(
+    &self,
+    origin: &str,
+    toolu_version: &str,
+    host: &str,
+    toolu: &str,
+  ) -> Result<(), Error> {
     self.check()?;
     if !matches!(host, "claude" | "codex" | "muse" | "cursor" | "opencode") {
       return Err(Error::new("invalid_host", "unsupported host"));
@@ -17,14 +31,14 @@ impl Transfer<'_> {
     if self.git(&["remote", "get-url", "origin"])? != origin {
       return Err(Error::new("identity_mismatch", "remote origin differs"));
     }
-    if text(self.exec(&["toolu", "--version"], &[])?)? != toolu_version {
+    if text(self.exec(&[toolu, "--version"], &[])?)? != toolu_version {
       return Err(Error::new(
         "version_mismatch",
         "remote Toolu version differs",
       ));
     }
-    let epic = text(self.exec(&["toolu", "epic", "report", "--help"], &[])?)?;
-    let fixer = text(self.exec(&["toolu", "babysit", "fixer-report", "--help"], &[])?)?;
+    let epic = text(self.exec(&[toolu, "epic", "report", "--help"], &[])?)?;
+    let fixer = text(self.exec(&[toolu, "babysit", "fixer-report", "--help"], &[])?)?;
     reports(&epic, &fixer)?;
     let binary = if host == "cursor" {
       "cursor-agent"

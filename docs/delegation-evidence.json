@@ -1,0 +1,82 @@
+{
+  "observed_at": "2026-11-02T16:21:15.146194+00:00",
+  "controller_disconnected": true,
+  "controller_disconnection_observation": "Both submissions accepted; isolated controller hc server stopped before either task ran its commands. Relay continued launching workers on macmini and macbook.",
+  "relay_restarted": true,
+  "relay_restart_observation": "Owned relay service killed and recovered with both task attempt/terminal identities unchanged. First recovery exposed a dead-owner lock bug, fixed and regression-tested before successful recovery.",
+  "tasks": [
+    {
+      "key": "physical-book",
+      "physical_host": "macbook",
+      "machine": "book-smoke",
+      "hostname": "192.168.1.3",
+      "phase": "done",
+      "attempt_before": "161c52ea-22cc-4ef1-b969-e979816434fe",
+      "attempt_after": "161c52ea-22cc-4ef1-b969-e979816434fe",
+      "terminal_before": "book-smoke/t1",
+      "terminal_after": "book-smoke/t1",
+      "observed_attempts": [
+        "161c52ea-22cc-4ef1-b969-e979816434fe"
+      ],
+      "observed_terminals": [
+        "book-smoke/t1"
+      ],
+      "result": "c8624a5c53d9744d49f90ff4f9980f191ac33733",
+      "imported_result": "c8624a5c53d9744d49f90ff4f9980f191ac33733",
+      "result_ref": "refs/toolu-transfer/161c52ea-22cc-4ef1-b969-e979816434fe/snapshot",
+      "content_verified": true,
+      "repeated_import_identical": true
+    },
+    {
+      "key": "physical-mini",
+      "physical_host": "macmini",
+      "machine": "macmini",
+      "hostname": "macmini",
+      "phase": "done",
+      "attempt_before": "5f3dfaca-40ba-45b5-8adf-a30efa516d06",
+      "attempt_after": "5f3dfaca-40ba-45b5-8adf-a30efa516d06",
+      "terminal_before": "macmini/t22",
+      "terminal_after": "macmini/t22",
+      "observed_attempts": [
+        "5f3dfaca-40ba-45b5-8adf-a30efa516d06"
+      ],
+      "observed_terminals": [
+        "macmini/t22"
+      ],
+      "result": "ad85d01a2552cec968968332c30a9acc67afd203",
+      "imported_result": "ad85d01a2552cec968968332c30a9acc67afd203",
+      "result_ref": "refs/toolu-transfer/5f3dfaca-40ba-45b5-8adf-a30efa516d06/snapshot",
+      "content_verified": true,
+      "repeated_import_identical": true
+    }
+  ],
+  "terminal_inventory": [
+    {
+      "address": "book-smoke/t1",
+      "owner": "161c52ea-22cc-4ef1-b969-e979816434fe",
+      "state": "finished",
+      "name": "td-161c52ea22cc4ef1b969e97981"
+    },
+    {
+      "address": "macmini/t22",
+      "owner": "5f3dfaca-40ba-45b5-8adf-a30efa516d06",
+      "state": "finished",
+      "name": "td-5f3dfaca40ba45b58adfa30efa"
+    }
+  ],
+  "runtime_corrections": [
+    "Accepted trust dialogs only in the synthetic one-file repositories created for this smoke run.",
+    "Detected reporter PATH mismatch on macbook; worker completed the existing commit report using the verified absolute binary. New worker preparation now persists an absolute reporter path.",
+    "No worker replacement or duplicate attempt was started during recovery."
+  ],
+  "scope": "Real Codex CLIs and Herdr on two separate connected Macs; all repositories, relay config and task worktrees were scratch-owned. No push, PR, review or merge by workers.",
+  "reporter_regression": {
+    "attempt": "671ad943-ed76-423c-bba5-64546803361a",
+    "machine": "book-smoke",
+    "phase": "done",
+    "result": "fe075102a213c948a7606c72092afa7e9a0dcd53",
+    "terminal": "book-smoke/t2",
+    "worker_binary": "/tmp/toolu-relay-smoke-z2bmjHE9/toolu",
+    "key": "physical-book-absolute"
+  }
+}
