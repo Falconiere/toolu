@@ -7,6 +7,8 @@ pub mod config;
 /// Serialized worker scheduling and recovery.
 pub mod driver;
 mod durable;
+/// Durable project-scoped conversations, independent of task admission.
+pub mod peers;
 /// Replace native relay/controller state only after syncing its data and directory.
 pub use durable::write as write_state;
 /// Authenticated Herdr request receiver.

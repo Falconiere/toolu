@@ -32,6 +32,8 @@ pub mod lifecycle;
 pub mod mcp_hook;
 /// `toolu opencode`: the `OpenCode` plugin shim's bridge and catalog.
 pub mod opencode;
+/// Peer session messaging.
+pub mod peers;
 /// `toolu setup`.
 pub mod setup;
 /// `toolu status`.

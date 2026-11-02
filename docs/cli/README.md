@@ -22,6 +22,7 @@ Data goes to stdout and diagnostics to stderr; with `--json`, stdout is exactly 
 | [`machines`](machines.md) | `plugins/toolu` | available | Inspect readiness and drain workers |
 | [`relay`](relay.md) | `plugins/toolu` | available | Inspect and recover the delegation relay |
 | [`delegate`](delegate.md) | `plugins/toolu` | available | Submit committed work to registered machines |
+| [`peers`](peers.md) | `plugins/toolu` | available | Communicate with peer agent sessions |
 | [`gc`](gc.md) | `plugins/toolu` | available | Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply |
 | [`config`](config.md) | `plugins/toolu` | available | Read, change and validate toolu.config.json |
 | [`status`](status.md) | `plugins/toolu` | available | Show the repository, gate and push-review status |
@@ -67,6 +68,7 @@ Commands:
   machines        Inspect readiness and drain workers
   relay           Inspect and recover the delegation relay
   delegate        Submit committed work to registered machines
+  peers           Communicate with peer agent sessions
   gc              Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply
   config          Read, change and validate toolu.config.json
   status          Show the repository, gate and push-review status

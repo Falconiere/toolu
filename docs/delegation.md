@@ -1,5 +1,9 @@
 # Delegation across machines
 
+For project-scoped questions, replies and receipt tracking between agent sessions,
+see [peer conversations](peers.md). Messaging uses this relay without occupying
+task slots.
+
 Toolu can queue committed work on registered Herdr machines. An always-on
 relay owns the queue and continues scheduling while the submitting controller is
 offline. The controller and relay need `hc` connectivity to the configured

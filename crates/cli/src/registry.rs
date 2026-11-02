@@ -105,6 +105,12 @@ pub(crate) const NAMESPACES: &[Namespace] = &[
     toolu_hub::delegation::delegate_run,
   ),
   verb(
+    "peers",
+    toolu_hub::PLUGIN,
+    toolu_hub::peers::command,
+    toolu_hub::peers::run,
+  ),
+  verb(
     "gc",
     toolu_hub::PLUGIN,
     toolu_hub::gc::command,

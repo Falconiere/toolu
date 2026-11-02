@@ -25,6 +25,7 @@ fn every_namespace_is_a_top_level_command() {
       "machines",
       "relay",
       "delegate",
+      "peers",
       "gc",
       "config",
       "status",

@@ -1087,6 +1087,325 @@ source: crates/cli/tests/helpers/schema.rs
       "placeholder": false
     },
     {
+      "about": "Communicate with peer agent sessions",
+      "aliases": [],
+      "args": [],
+      "commands": [
+        {
+          "about": "Enroll a fresh session in an authorized group",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "group",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "machine",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "agent",
+              "possibleValues": [
+                "claude",
+                "codex",
+                "muse",
+                "cursor",
+                "opencode"
+              ],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "key-file",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "join",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "join"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Persist a message and attempt inbox delivery",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "to",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "generation",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "text",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "send",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "send"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Reply to an incoming message in its conversation",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "text",
+              "possibleValues": [],
+              "required": true,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "id",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "reply",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "reply"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Read a page of messages without acknowledging them",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "after",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": true,
+              "valueName": null
+            },
+            {
+              "global": false,
+              "help": "",
+              "hidden": false,
+              "long": "unread",
+              "possibleValues": [],
+              "required": false,
+              "short": null,
+              "takesValue": false,
+              "valueName": null
+            }
+          ],
+          "hidden": false,
+          "longAbout": null,
+          "name": "inbox",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "inbox"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Recover queued sends and inspect receipts",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": false
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "status",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "status"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Explicitly acknowledge an incoming message",
+          "aliases": [],
+          "args": [
+            {
+              "help": "",
+              "multiple": false,
+              "name": "KEY",
+              "required": true
+            }
+          ],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "ack",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "ack"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Discover active members of this group",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "list",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "list"
+          ],
+          "placeholder": false
+        },
+        {
+          "about": "Retire this session without deleting messages",
+          "aliases": [],
+          "args": [],
+          "commands": [],
+          "flags": [],
+          "hidden": false,
+          "longAbout": null,
+          "name": "leave",
+          "owner": "toolu",
+          "path": [
+            "peers",
+            "leave"
+          ],
+          "placeholder": false
+        }
+      ],
+      "flags": [
+        {
+          "global": false,
+          "help": "Saved peer identity; defaults to TOOLU_PEERS_SESSION",
+          "hidden": false,
+          "long": "session",
+          "possibleValues": [],
+          "required": false,
+          "short": null,
+          "takesValue": true,
+          "valueName": null
+        }
+      ],
+      "hidden": false,
+      "longAbout": null,
+      "name": "peers",
+      "owner": "toolu",
+      "path": [
+        "peers"
+      ],
+      "placeholder": false
+    },
+    {
       "about": "Reclaim what finished epics, gates and sandboxes leave behind; a report unless --apply",
       "aliases": [],
       "args": [],

@@ -58,7 +58,8 @@ fn reply(input: &PromptInput<'_>, host: Host, config: &LoadedConfig) -> Option<S
   }
   let lower = ascii_lower(&prompt);
   match prompt_gate(&lower) {
-    PromptGate::Skip => None,
+    PromptGate::Skip => crate::peers::notice::notice(input.env, host, input.payload, "prompt")
+      .map(|notice| hint_json(host, &notice)),
     PromptGate::Block => Some(block_json()),
     PromptGate::Hint => Some(hint_json(
       host,
@@ -102,6 +103,9 @@ fn additional_context(
     && let Some(hint) = failing_gate_hint(&state)
   {
     parts.push(hint);
+  }
+  if let Some(notice) = crate::peers::notice::notice(input.env, host, input.payload, "prompt") {
+    parts.push(notice);
   }
   parts.join(" | ")
 }

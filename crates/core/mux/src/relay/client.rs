@@ -19,6 +19,14 @@ const LIMIT: usize = 512 * 1024 * 1024;
 /// # Errors
 /// Configuration, transport, or remote request failure.
 pub fn call(env: &Env, request: &Value) -> Result<Value, String> {
+  call_timeout(env, request, Duration::from_secs(130))
+}
+
+/// Send one JSON request with a bounded transport timeout.
+///
+/// # Errors
+/// Configuration, transport, or remote request failure.
+pub(super) fn call_timeout(env: &Env, request: &Value, timeout: Duration) -> Result<Value, String> {
   let config = config::load(&config::root(env))?;
   let relay = env
     .get("TOOLU_RELAY_TARGET")
@@ -34,7 +42,7 @@ pub fn call(env: &Env, request: &Value) -> Result<Value, String> {
   ]);
   spec.env = Some(env.clone());
   spec.stdin = input;
-  spec.timeout = Duration::from_secs(130);
+  spec.timeout = timeout;
   spec.max_output_bytes = 8 * 1024 * 1024 + 1;
   let out = run(&spec).map_err(|e| format!("{e:?}"))?;
   if out.timed_out || out.truncated || out.stdout_bytes.len() > 8 * 1024 * 1024 {

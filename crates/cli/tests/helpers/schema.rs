@@ -123,7 +123,7 @@ fn every_namespace_s_json_run_is_its_own_valid_document() {
       "hook" | "commands" | "completions" | "doctor" | "gc" | "ledger" | "debug" | "config"
       | "status" | "setup" | "opencode" | "jev" | "review" | "code-review" | "docs"
       | "ast-grep" | "statusline" | "babysit" | "epic" | "sandbox" | "git-better" | "plugins"
-      | "herdr-app" | "machines" | "relay" | "delegate" => {
+      | "herdr-app" | "machines" | "relay" | "delegate" | "peers" => {
         continue;
       }
       "brainstorm" | "delivery-flow" | "epic-creator" | "ts-quality" | "rust-quality"
