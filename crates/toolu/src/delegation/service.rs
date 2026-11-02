@@ -73,6 +73,11 @@ pub(super) fn serve(env: &Env) -> Result<Value, String> {
 }
 
 fn service_loop(env: &Env, root: &std::path::Path) -> Result<Value, String> {
+  let peer_root = root.to_path_buf();
+  let peer_env = env.clone();
+  let _peer_notices = std::thread::spawn(move || {
+    toolu_mux::relay::peers::wake::serve(&peer_root, &peer_env);
+  });
   while root.join("authority.json").is_file() {
     toolu_mux::relay::rpc::check_authority(root)?;
     let result = toolu_mux::relay::driver::tick(root, env);

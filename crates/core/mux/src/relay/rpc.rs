@@ -29,7 +29,7 @@ pub fn receive(root: &Path, env: &Env, input: &str) -> Result<Value, String> {
     .ok_or("missing operation")?;
   if matches!(
     op,
-    "config" | "enroll" | "retire" | "chunk" | "submit" | "cancel" | "tick"
+    "config" | "enroll" | "retire" | "chunk" | "submit" | "cancel" | "tick" | "peers"
   ) {
     super::durable::ensure_dir(root)?;
     let options = LockOptions {
@@ -37,7 +37,11 @@ pub fn receive(root: &Path, env: &Env, input: &str) -> Result<Value, String> {
       ..LockOptions::default()
     };
     return with_lock_strict(&root.join("rpc"), options, || {
-      dispatch(root, env, op, &value)
+      if op == "peers" {
+        Ok(super::peers::receive(root, &value))
+      } else {
+        dispatch(root, env, op, &value)
+      }
     })?;
   }
   dispatch(root, env, op, &value)

@@ -1,0 +1,98 @@
+{
+  "verified_at_utc": "2026-11-02T20:29:09.141583+00:00",
+  "base_commit": "13ffd0423a08afcb829df7f98f82c3357ac44da4",
+  "protocol_version": 1,
+  "transport": "Existing authenticated Herdr transport and native multi-machine relay",
+  "physical_hosts": {
+    "controller": "macmini",
+    "relay_and_remote_peer": "192.168.1.3",
+    "distinct_physical_machines": true
+  },
+  "checks": {
+    "discovery": true,
+    "question_reply": true,
+    "explicit_ack": true,
+    "relay_restart": true,
+    "no_duplicate_inbox": true,
+    "offline_reconnection": true,
+    "live_codex_muse_question_reply_ack": true,
+    "fresh_nested_ack_receipt": true
+  },
+  "conversation": {
+    "question_key": "ac39ead8-b17c-42b5-a0e6-1bfbb17fec7c/real-muse-question",
+    "reply_key": "f82143cb-a765-48c4-b790-d421d0785654/ed913ef4-0678-439f-93cc-df862b95f421",
+    "reply_text": "PEER_HOST_OK",
+    "question_acknowledged": true,
+    "reply_acknowledged": true
+  },
+  "coding_hosts": {
+    "codex": {
+      "version": "0.166.0",
+      "machine": "mini",
+      "profile": "Isolated CODEX_HOME with existing authentication",
+      "model": "gpt-5.6-luna",
+      "session": "f82143cb-a765-48c4-b790-d421d0785654",
+      "live_question_reply_ack": true,
+      "notification": "Native startup runtime hook observed; explicit peer registration and inbox checks used",
+      "automatic_wake": "Not claimed for this explicit registration"
+    },
+    "muse": {
+      "version": "1.4.14",
+      "machine": "book",
+      "profile": "Isolated XDG config/data/state with the current Muse account linked into its config root",
+      "model": "muse-spark-1.3",
+      "session": "ac39ead8-b17c-42b5-a0e6-1bfbb17fec7c",
+      "live_question_reply_ack": true,
+      "notification": "Explicit registration and inbox checks used",
+      "automatic_wake": "Not claimed for this explicit registration"
+    },
+    "claude": {
+      "version": "2.1.316",
+      "startup_hook": "Observed with reviewed checkout plugin in isolated profile",
+      "live_conversation": "Isolated credential-file attempt rejected with revoked OAuth token; no account settings changed"
+    },
+    "opencode": {
+      "profile": "Private standalone configuration",
+      "live_conversation": "Attempt reached provider authentication and returned HTTP 401; no account settings changed"
+    },
+    "cursor": {
+      "live_conversation": "Not run in an isolated profile"
+    }
+  },
+  "recovery": {
+    "relay_restart": "Killed only the scratch-owned toolu-relay terminal, recovered it through toolu relay recover, and preserved inbox contents",
+    "sender_outage": "Removed hc from the sender process PATH, observed a queued durable outbox entry, then restored transport and retried the original envelope through a fresh native CLI process",
+    "lost_receipts": "Isolated real-Herdr CLI test reset only the saved delivery receipt and retried the original message; recipient inbox stayed at one entry",
+    "ack_refresh": "Runtime inconsistency between top-level and nested acknowledgment receipts reproduced, fixed and regression-tested; final live receipts agree"
+  },
+  "safety": {
+    "wake": "Deterministic tests verify immutable terminal incarnation, foreground process identity, ownership, idle-only eligibility, real process ancestry, durable wake intent and no blind retry",
+    "busy_blocked_unknown": "Retain inbox entries for explicit checks or supported hooks",
+    "isolation": "Fresh group and private configurations; no epic or delegated task controlled the conversation",
+    "task_compatibility": "Real-Herdr messaging tests compare task/configuration snapshots unchanged by messaging; full existing suite passed"
+  },
+  "validation": {
+    "full_gate": "cargo xtask gate",
+    "gate_result": "passed",
+    "workspace_tests_passed": 5150,
+    "mux_coverage_floor_percent": 85,
+    "coverage_floor_result": "passed",
+    "gate_elapsed_seconds": 433.1,
+    "source_sync": "All 3710 implementation and documentation files SHA-256 matched between the checkout and Linux verification clone; this final evidence receipt was excluded",
+    "focused_mux_peer_tests_passed": 24,
+    "gate_log_sha256": "01528609d7679a65cbe184e3273c5fda3e0bff532ff8ac3dd116bdcaebc0183b",
+    "post_gate_documentation_review": "Clarified non-whitespace printable key bytes and startup-versus-prompt notice contents; implementation unchanged; cargo xtask check-markdown-cli and git diff --check passed"
+  },
+  "interventions": [
+    "Repeated the final gate after a GitHub advisory-database fetch timed out in an existing gate fixture; source and gate policy stayed unchanged",
+    "Approved trust only for synthetic scratch repositories",
+    "Used absolute checkout binaries because login-shell PATH resolved an older installed toolu",
+    "Linked the existing Muse login into the isolated XDG config; used an available Muse model from its native catalog",
+    "Live explicit peer registrations used manual inbox-check prompts; automatic live wake delivery is not certified by this run"
+  ],
+  "limits": [
+    "Live conversations verified for Codex and Muse; other host results are recorded separately",
+    "Automatic wake tested at its validation and persistence boundaries, with no claim of live wake support for every host",
+    "No push, global binary installation, public discovery, attachments or A2A interoperability"
+  ]
+}
