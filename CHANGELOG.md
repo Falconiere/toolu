@@ -6,6 +6,15 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.11.0](https://github.com/Falconiere/toolu/compare/v8.10.0...v8.11.0) (2026-11-02)
+
+
+### Features
+
+* **code-review:** review through host CLI sub-agents selected by Jev ([#830](https://github.com/Falconiere/toolu/issues/830)) ([d383eaa](https://github.com/Falconiere/toolu/commit/d383eaa70ff93e98a9649bed25109be6cce680c4))
+* **delegation:** add durable multi-machine relay ([13ffd04](https://github.com/Falconiere/toolu/commit/13ffd0423a08afcb829df7f98f82c3357ac44da4))
+* **peers:** add durable cross-machine agent conversations ([3d0f5f4](https://github.com/Falconiere/toolu/commit/3d0f5f4d568047ec962c12cd42df3e605ec7cbcc))
+
 ## [8.10.0](https://github.com/Falconiere/toolu/compare/v8.9.0...v8.10.0) (2026-11-02)
 
 
