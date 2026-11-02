@@ -44,6 +44,8 @@ The dirty-worktree check excludes only this plugin's review state and valid untr
 
 Replay is the default. Without `--live` every model call is answered from recorded responses in `--replay-dir` (default `<cases>/replay`), nothing is sent and no key is needed; a request with no recording fails that case closed and the run is unverified. `--live` calls the Jev-selected host CLI and Jev for real, records every exchange into the replay directory, and needs enabled review configuration (the default) plus `TYPESAFE_API_KEY`. When disabled, invalid or missing the key it exits 69, unverified, before any request. Exit 0 means expectations were satisfied, 2 means they were missed, and 69 means unverified, which is not a pass.
 
+To replay older recordings made with a custom `OPENROUTER_MODEL`, set that same value in the replay environment. It is used to find the historical recording, not for live review calls.
+
 ### Quality bar
 
 Fewer findings or fewer tokens alone is not better. A review is judged by expectation outcomes: defects caught, false positives raised and unclassified findings. A finding that matches no expectation is reported as unclassified; it is neither credited nor silently dropped. Compare arms and effort levels on those outcomes first, and read tokens per finding only as a cost beside them.

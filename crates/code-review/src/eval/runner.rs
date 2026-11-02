@@ -79,22 +79,26 @@ fn lookup<'a>(
     let (Mode::Replay(store) | Mode::Live(Some(store))) = plan.mode else {
       return None;
     };
-    // Historical eval recordings used OpenRouter model IDs; never use them for live calls.
-    let legacy = request
-      .replace(
-        "\"model\":\"jev-latest\"",
-        "\"model\":\"typesafe/jev-1.13\"",
-      )
-      .replace(
-        "\"model\":\"host\"",
-        "\"model\":\"deepseek/deepseek-v4-pro-0813\"",
-      );
     let result = store.read(stage, request).and_then(|body| {
-      if body.is_none() && matches!(plan.mode, Mode::Replay(_)) && legacy != request {
-        store.read(stage, &legacy)
-      } else {
-        Ok(body)
+      if body.is_none() && matches!(plan.mode, Mode::Replay(_)) {
+        // Historical recordings used the configured OpenRouter model in their key.
+        let model = plan
+          .env
+          .get("OPENROUTER_MODEL")
+          .filter(|value| !value.is_empty())
+          .unwrap_or(toolu_openrouter::DEFAULT_MODEL);
+        let legacy = request
+          .replace(
+            "\"model\":\"jev-latest\"",
+            "\"model\":\"typesafe/jev-1.13\"",
+          )
+          .replace(
+            "\"model\":\"host\"",
+            &format!("\"model\":{}", serde_json::json!(model)),
+          );
+        return store.read(stage, &legacy);
       }
+      Ok(body)
     });
     match result {
       Ok(Some(body)) => Some(body),

@@ -22,8 +22,9 @@ reasons.
 3. **We pass what we ship.** The gate runs the rust-quality plugin's own rules
    over every crate file (`toolu rust-quality check crates`) at the same limits an
    agent sees after each edit, and toolu's quality gate refuses a commit while
-   that post-edit check fails. Linked worktrees are checked too, with quality
-   state recorded under the edited file's own worktree.
+   that post-edit check fails in the main checkout. The commit gate allows
+   linked worktrees; the pre-push hook runs the full gate for Rust changes,
+   and CI selects checks by changed paths.
 4. **No exemptions.** No per-path override, ignore list or suppression
    attribute. The data loaders reject unknown keys, and
    `crates/xtask/tests/no_exemptions.rs` fails on a `skip`, `ignore`,

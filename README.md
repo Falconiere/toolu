@@ -24,7 +24,7 @@ Your AI coding agent is a superb pair-programmer, but left alone it optimizes fo
 
 toolu moves those rules out of your head and into the tool:
 
-- **Hooks enforce on every edit** — a post-edit quality gate checks each file the agent touches and **blocks the session from moving on while any error, warning, or test failure exists** — even in unrelated files.
+- **Hooks check edits** — installed language-quality plugins check supported files after edits. A failing quality gate blocks commits and pushes in the main checkout under the default preset.
 - **Skills enforce a process** — one delivery-flow skill with write/review checkpoints before execution, so design happens before code and review happens before delivery.
 - **A registry keeps it modular** — drop in a domain plugin (Rust rules, TypeScript rules, structural search) and its hook modules register themselves into the core engine, fail-closed, with zero wiring.
 
@@ -67,7 +67,7 @@ The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality`
 </td></tr>
 </table>
 
-The default `balanced` preset blocks further work while the quality gate is red. Fix the reported failures to clear it. Gate delivery is configurable through [gate modes](docs/config.md#gate-modes-gates); the `strict` preset also blocks on missing review and documentation evidence.
+In the main checkout, the default `balanced` preset blocks commits and pushes while the quality gate is red. Fix the reported failures to clear it. Gate delivery is configurable through [gate modes](docs/config.md#gate-modes-gates); the `strict` preset also blocks on missing review and documentation evidence.
 
 ## Install
 
