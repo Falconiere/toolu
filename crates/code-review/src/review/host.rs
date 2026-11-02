@@ -1,8 +1,8 @@
-//! Review through host CLI sub-agents instead of `OpenRouter`.
+//! Review through host CLI sub-agents.
 //!
 //! Jev picks the host, the model, and the effort; every choice has a
-//! deterministic fallback, and any transport failure falls back to the
-//! `OpenRouter` client. Prompts never travel in argv: `claude` and `codex`
+//! deterministic fallback. A failed host call fails the review.
+//! Prompts never travel in argv: `claude` and `codex`
 //! read them from stdin, `muse` from a prompt file, and the argv-only hosts
 //! refuse oversized prompts.
 
@@ -92,9 +92,8 @@ pub(crate) fn delivery(host: Host) -> Delivery {
 }
 
 /// The pinned non-default model, when the spike verified one. Model catalogs
-/// drift, so entries here are re-pinned by hand; a stale id fails the spawn
-/// and the run falls back to `OpenRouter`.
-// shortcut: refresh from `cursor-agent --list-models` / `opencode models` when a run falls back on an unknown model id.
+/// drift, so entries here are re-pinned by hand; a stale id can fail the review.
+// shortcut: refresh from `cursor-agent --list-models` / `opencode models` when a model id fails.
 pub(crate) fn premium_model(host: Host) -> Option<&'static str> {
   match host {
     Host::Cursor => Some("claude-opus-5-thinking-high"),
@@ -118,6 +117,7 @@ pub(crate) struct Argv<'a> {
   pub(crate) host: Host,
   pub(crate) model: &'a str,
   pub(crate) schema_file: &'a str,
+  pub(crate) schema_json: &'a str,
   pub(crate) prompt: &'a str,
   pub(crate) prompt_file: Option<&'a str>,
 }
@@ -159,7 +159,7 @@ fn flags(spec: &Argv<'_>) -> Result<Vec<String>, String> {
   match host {
     Host::Claude => {
       args.extend(["-p".into(), "--output-format".into(), "json".into()]);
-      args.extend(["--json-schema".into(), spec.schema_file.into()]);
+      args.extend(["--json-schema".into(), spec.schema_json.into()]);
     }
     Host::Codex => {
       args.extend([
@@ -281,7 +281,7 @@ pub(crate) fn prompt_text(messages: &[toolu_openrouter::Message<'_>]) -> String 
 /// The effort selector's own wall deadline.
 pub(crate) const SELECTOR_DEADLINE: std::time::Duration = std::time::Duration::from_secs(60);
 
-/// The Jev-selected host transport, or `None` for `OpenRouter` only. Replayed
+/// The Jev-selected host transport, or `None` when unavailable. Replayed
 /// runs never spawn a CLI, and neither do runs with nothing to review; without
 /// an available CLI there is nothing to select.
 pub(crate) fn select_host(

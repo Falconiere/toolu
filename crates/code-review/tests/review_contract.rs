@@ -3,6 +3,8 @@
 //! an outage, an oversized evidence package or an expired deadline keeps the
 //! baseline findings.
 
+#[path = "helpers/host.rs"]
+mod host;
 #[path = "helpers/judge.rs"]
 mod judge;
 #[path = "helpers/rig.rs"]
@@ -13,7 +15,7 @@ mod tools;
 use std::cell::RefCell;
 
 use judge::{GUARD, choices, rig};
-use rig::{JEV, KEY, REVIEW, completion, finding, findings};
+use rig::{JEV, KEY, completion, finding, findings};
 use serde_json::json;
 use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::Cost;
@@ -36,10 +38,12 @@ fn judged_run() -> Result<(Reviewed, Recorded), String> {
     finding("src/lib.rs", "low", "claim three", None),
   ];
   let fail = |err: toolu_http_test_support::Error| err.to_string();
-  rig
-    .fixture
-    .route(REVIEW, Reply::new(200, findings(&model)))
-    .map_err(fail)?;
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&model)).ok_or("invalid fixture")?,
+  )
+  .map_err(|err| err.to_string())?;
   let jev = choices(&[
     ("f0", "supported", 0.9),
     ("f1", "contradicted", 0.9),
@@ -52,11 +56,11 @@ fn judged_run() -> Result<(Reviewed, Recorded), String> {
     {"id": "f1", "decision": "dismiss", "explanation": why, "evidence_quotes": [GUARD]},
     {"id": "f2", "decision": "dismiss", "explanation": why, "evidence_quotes": ["if items.len() == 0"]}
   ]});
-  let recheck = vec![Reply::new(200, completion(&rechecks))];
-  rig
-    .fixture
-    .sequence_when(REVIEW, "code_review_recheck", recheck)
-    .map_err(fail)?;
+  recheck_response(
+    &rig,
+    &content(&completion(&rechecks)).ok_or("invalid fixture")?,
+  )
+  .map_err(|err| err.to_string())?;
   let records = RefCell::new(Vec::new());
   let recorder = |record: &Record<'_>| {
     let entry = (
@@ -101,14 +105,14 @@ fn every_call_is_summed_logged_and_recorded_without_the_key_or_source() {
   let stages: Vec<Stage> = reviewed.calls.iter().map(|call| call.stage).collect();
   assert_eq!(stages, [Stage::Review, Stage::Judge, Stage::Recheck]);
   let usage = &reviewed.usage;
-  assert_eq!((usage.tokens_in, usage.tokens_out), (230, 83));
-  assert_eq!(usage.cost_usd, Cost::usd(0.022));
+  assert_eq!((usage.tokens_in, usage.tokens_out), (30, 3));
+  assert_eq!(usage.cost_usd, Cost::usd(0.002));
   assert_eq!(records.len(), 3);
   let clean = |(_, request, response): &(Stage, String, String)| {
     !request.contains(KEY) && !response.contains(KEY)
   };
   assert!(records.iter().all(clean));
-  assert!(records[1].1.contains("typesafe/jev-1.13") && records[1].2.contains("\"answers\""));
+  assert!(records[1].1.contains("jev-latest") && records[1].2.contains("\"answers\""));
   let log = serde_json::to_string(&reviewed.calls).unwrap();
   assert!(!log.contains(KEY) && !log.contains("items.len()"), "{log}");
 }
@@ -116,16 +120,12 @@ fn every_call_is_summed_logged_and_recorded_without_the_key_or_source() {
 #[test]
 fn a_jev_outage_keeps_the_baseline_and_sends_no_recheck() {
   let rig = rig().unwrap();
-  rig
-    .fixture
-    .route(
-      REVIEW,
-      Reply::new(
-        200,
-        findings(&[finding("src/lib.rs", "high", "claim", None)]),
-      ),
-    )
-    .unwrap();
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&[finding("src/lib.rs", "high", "claim", None)])).unwrap(),
+  )
+  .unwrap();
   rig.fixture.route(JEV, Reply::new(500, "down")).unwrap();
   let reviewed = rig
     .run(&Memory::default(), Some(Effort::High), &rig.options())
@@ -139,7 +139,12 @@ fn a_jev_outage_keeps_the_baseline_and_sends_no_recheck() {
     reviewed.notes
   );
   assert_eq!(rig.bodies(JEV).len(), 3, "three attempts");
-  assert_eq!(rig.bodies(REVIEW).len(), 1, "no recheck");
+  assert!(
+    !reviewed
+      .calls
+      .iter()
+      .any(|call| call.stage == Stage::Recheck)
+  );
 }
 
 /// One open, one resolved and one dismissed prior finding, and the dismissal.
@@ -175,25 +180,31 @@ fn memory_sends_open_findings_and_dismissals_and_skips_re_raised_ones() {
     finding("src/lib.rs", "high", "re-raised", Some("p-open")),
     finding("src/lib.rs", "high", "fresh", None),
   ];
-  rig
-    .fixture
-    .route(REVIEW, Reply::new(200, findings(&model)))
-    .unwrap();
+  host::host(
+    rig.bin.path(),
+    "codex",
+    &content(&findings(&model)).unwrap(),
+  )
+  .unwrap();
   let contradicted = choices(&[("f1", "contradicted", 0.9)]);
   rig
     .fixture
     .route(JEV, Reply::new(200, contradicted))
     .unwrap();
   let keep = json!({"rechecks": [{"id": "f1", "decision": "keep", "explanation": "", "evidence_quotes": []}]});
-  let recheck = vec![Reply::new(200, completion(&keep))];
-  rig
-    .fixture
-    .sequence_when(REVIEW, "code_review_recheck", recheck)
-    .unwrap();
-  let reviewed = rig
-    .run(&memory(), Some(Effort::Medium), &rig.options())
-    .unwrap();
-  let review = rig.bodies(REVIEW);
+  recheck_response(&rig, &content(&completion(&keep)).unwrap()).unwrap();
+  let entries = RefCell::new(Vec::new());
+  let recorder = |record: &Record<'_>| {
+    if matches!(record.stage, Stage::Review | Stage::Recheck) {
+      entries.borrow_mut().push(record.request.to_owned());
+    }
+  };
+  let options = Options {
+    recorder: Some(&recorder),
+    ..rig.options()
+  };
+  let reviewed = rig.run(&memory(), Some(Effort::Medium), &options).unwrap();
+  let review = entries.into_inner();
   assert!(review[0].contains("prior claim p-open") && review[0].contains("guarded by the caller"));
   assert!(!review[0].contains("prior claim p-done"));
   assert!(review[0].contains("prior_id"), "the rules ask for prior_id");
@@ -218,7 +229,10 @@ fn a_host_cli_reviews_the_chunk_with_no_network() {
   let codex = bin.path().join("codex");
   std::fs::write(&codex, format!("#!/bin/sh\nprintf '%s' '{content}'")).unwrap();
   std::fs::set_permissions(&codex, std::fs::Permissions::from_mode(0o755)).unwrap();
-  let env = rig.env().with("PATH", &bin.path().to_string_lossy());
+  let env = rig
+    .env()
+    .with("TYPESAFE_API_KEY", KEY)
+    .with("PATH", &bin.path().to_string_lossy());
   let settings = Settings {
     enabled: true,
     ..Settings::default()
@@ -254,4 +268,31 @@ fn a_host_cli_reviews_the_chunk_with_no_network() {
     rig.fixture.requests().unwrap().is_empty(),
     "nothing was sent"
   );
+}
+
+fn content(body: &str) -> Option<String> {
+  let doc: serde_json::Value = serde_json::from_str(body).ok()?;
+  Some(
+    doc
+      .get("choices")?
+      .get(0)?
+      .get("message")?
+      .get("content")?
+      .as_str()?
+      .to_owned(),
+  )
+}
+
+fn recheck_response(rig: &rig::Rig, response: &str) -> std::io::Result<()> {
+  let bin = rig.bin.path();
+  std::fs::write(bin.join("recheck.json"), response)?;
+  let quote =
+    |path: &std::path::Path| format!("'{}'", path.to_string_lossy().replace('\'', "'\\''"));
+  let prompt = quote(&bin.join("prompt.txt"));
+  let review = quote(&bin.join("response.json"));
+  let recheck = quote(&bin.join("recheck.json"));
+  let script = format!(
+    "#!/bin/sh\n/bin/cat > {prompt}\nif /bin/grep -q 'You recheck code review findings' {prompt}; then /bin/cat {recheck}; else /bin/cat {review}; fi\n"
+  );
+  std::fs::write(bin.join("codex"), script)
 }

@@ -12,6 +12,9 @@ mod tools;
 #[path = "helpers/replay_fail.rs"]
 mod replay_fail;
 
+#[path = "helpers/host.rs"]
+mod host;
+
 use std::path::{Path, PathBuf};
 
 use toolu_code_review::contract::{Finding, Omitted, Severity, Side};

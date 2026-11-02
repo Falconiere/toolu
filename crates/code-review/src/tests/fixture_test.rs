@@ -2,7 +2,8 @@ use std::path::Path;
 use std::process::Command;
 
 use serde_json::json;
-use toolu_http_test_support::{Fixture, Reply};
+use std::os::unix::fs::PermissionsExt;
+use toolu_http_test_support::Fixture;
 use toolu_protocol::host::Host;
 use toolu_runtime::cli::Ctx;
 use toolu_runtime::env::Env;
@@ -48,7 +49,7 @@ pub(super) fn repo() -> tempfile::TempDir {
 /// A PATH of the system tools plus links to the git and ast-grep the process
 /// PATH resolves, under `state`. Their own directories stay out: a host CLI
 /// beside them (codex sits with ast-grep in Homebrew's bin) would be selected
-/// to review instead of the fixture's `OpenRouter`.
+/// to review instead of the fixture's host executable.
 fn tools_path(state: &Path) -> String {
   let bin = state.join("bin");
   std::fs::create_dir_all(&bin).unwrap();
@@ -75,12 +76,12 @@ pub(super) fn env(root: &Path, state: &Path, fixture: &Fixture) -> Env {
   Env::process()
     .with("TOOLU_PROJECT_DIR", &root.to_string_lossy())
     .with("STATE_DIR", &state.to_string_lossy())
-    .with("OPENROUTER_API_KEY", "private-sentinel-669")
+    .with("TYPESAFE_API_KEY", "private-sentinel-669")
     .with("HTTPS_PROXY", &fixture.proxy_url())
     .with("NO_PROXY", "")
     .with("GIT_CONFIG_NOSYSTEM", "1")
     .with("GIT_CONFIG_GLOBAL", "/dev/null")
-    .with("PATH", &tools_path(state))
+    .with("PATH", &format!("{}:{}", state.display(), tools_path(state)))
 }
 
 pub(super) fn options(fixture: &Fixture) -> Options<'static> {
@@ -96,55 +97,43 @@ pub(super) fn options(fixture: &Fixture) -> Options<'static> {
       pause: std::time::Duration::from_millis(10),
       test_root_ca_der: ca,
     }),
+    skip_judge: true,
     ..Options::default()
   }
 }
 
-pub(super) fn body(findings: &serde_json::Value) -> String {
-  body_doc(&json!({"findings":findings}))
-}
-
-pub(super) fn body_doc(doc: &serde_json::Value) -> String {
-  json!({"model":"deepseek/deepseek-v4-pro-0813","provider":"Parasail",
-    "provider_quantization":"fp8",
-    "choices":[{"message":{"content":doc.to_string()},"finish_reason":"stop"}],
-    "usage":{"prompt_tokens":100,"completion_tokens":20,"cost":0.01}})
-  .to_string()
+pub(super) fn host(state: &Path, response: &str) {
+  let path = state.join("codex");
+  std::fs::write(&path, format!("#!/bin/sh\nprintf '%s' '{response}'\n")).unwrap();
+  std::fs::set_permissions(path, std::fs::Permissions::from_mode(0o755)).unwrap();
 }
 
 pub(super) fn clean_case() -> (tempfile::TempDir, tempfile::TempDir, Fixture) {
   let repo = repo();
   let state = tempfile::tempdir().unwrap();
   let fixture = Fixture::start().unwrap();
-  fixture
-    .route(
-      "/api/v1/chat/completions",
-      Reply::new(200, body(&json!([]))),
-    )
-    .unwrap();
+  host(state.path(), &json!({"findings": []}).to_string());
   (repo, state, fixture)
 }
 
 pub(super) fn finding_case(approved: bool) -> (tempfile::TempDir, tempfile::TempDir, Fixture) {
   let repo = repo();
   let state = tempfile::tempdir().unwrap();
-  let fixture = finding_fixture(approved);
+  let fixture = finding_fixture(state.path(), approved);
   (repo, state, fixture)
 }
 
-fn finding_fixture(approved: bool) -> Fixture {
+fn finding_fixture(state: &Path, approved: bool) -> Fixture {
   let fixture = Fixture::start().unwrap();
   let finding = json!({"path":"src.txt","line":1,"end_line":1,"side":"new",
     "severity":"high","category":"correctness","claim":"the new value breaks callers",
     "quote":"new","suggestion":null,"prior_id":null});
   let response = if approved {
-    body_doc(&json!({"verdict":"approved","findings":[finding]}))
+    json!({"verdict":"approved","findings":[finding]})
   } else {
-    body(&json!([finding]))
+    json!({"findings":[finding]})
   };
-  fixture
-    .route("/api/v1/chat/completions", Reply::new(200, response))
-    .unwrap();
+  host(state, &response.to_string());
   fixture
 }
 
@@ -171,7 +160,7 @@ pub(super) fn invoke(env: &Env, options: &Options<'_>) -> crate::contract::Repor
 }
 
 pub(super) fn review_with_finding(root: &Path, state: &Path) -> Env {
-  let fixture = finding_fixture(false);
+  let fixture = finding_fixture(state, false);
   let env = env(root, state, &fixture);
   let report = invoke(
     &env,

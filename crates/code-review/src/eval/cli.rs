@@ -1,6 +1,6 @@
 //! `toolu code-review eval`: the explicit paired-comparison entry. Without `--live`
 //! every call is answered from the replay store and nothing is sent, so no key is
-//! needed; `--live` requires the enabled review configuration and `OPENROUTER_API_KEY`, and
+//! needed; `--live` requires the enabled review configuration and `TYPESAFE_API_KEY`, and
 //! without them exits 69 unverified before any request.
 
 use std::path::{Path, PathBuf};
@@ -54,7 +54,7 @@ pub(crate) fn command() -> Command {
         .long("live")
         .action(ArgAction::SetTrue)
         .help(
-          "Call the Jev-selected host CLI and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
+          "Call the Jev-selected host CLI and Jev for real (enabled by default; needs TYPESAFE_API_KEY) and record every exchange; without it nothing is sent",
         ),
     )
     .arg(
@@ -89,9 +89,9 @@ fn live_blocked(env: &Env, ctx: &Ctx) -> Option<String> {
     );
   }
   env
-    .get("OPENROUTER_API_KEY")
+    .get("TYPESAFE_API_KEY")
     .is_none_or(|key| key.trim().is_empty())
-    .then(|| "OPENROUTER_API_KEY is missing".to_owned())
+    .then(|| "TYPESAFE_API_KEY is missing".to_owned())
 }
 
 fn selected<'a>(verb: &'a ArgMatches, name: &str) -> Option<&'a str> {

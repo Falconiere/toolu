@@ -4,12 +4,12 @@
 
 ### Engineering discipline, wired into your AI coding agent.
 
-AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce an adaptive design-to-delivery workflow, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code and Codex**.
+AI writes code fast — then skips the parts that keep a codebase alive: oversized files, swallowed errors, mock-only tests, undocumented exports, unreviewed pushes. **toolu** bakes that discipline back in — as hooks that gate every edit, skills that enforce an adaptive design-to-delivery workflow, and a plugin registry so language-specific rules ride along automatically. Runs on **Claude Code, Codex, Muse Code, Cursor, and OpenCode V2**.
 
 [![Release](https://img.shields.io/github/v/release/Falconiere/toolu?sort=semver&color=d97757)](https://github.com/Falconiere/toolu/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 [![Tests](https://img.shields.io/badge/tests-Rust%20suite-brightgreen)](#testing)
-[![Hosts](https://img.shields.io/badge/hosts-Claude%20Code%20%7C%20Codex-d97757)](#install)
+[![Hosts](https://img.shields.io/badge/hosts-Claude%20%7C%20Codex%20%7C%20Muse%20%7C%20Cursor%20%7C%20OpenCode-d97757)](#install)
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-blueviolet)](#contributing)
 
 [Why](#why) · [The quality gate](#the-quality-gate) · [Install](#install) · [What's inside](#whats-inside) · [Delivery workflow](#delivery-workflow) · [Architecture](#architecture) · [Configuration](#configuration)
@@ -67,7 +67,7 @@ The headline feature. When `rust-quality`, `ts-quality`, and/or `python-quality`
 </td></tr>
 </table>
 
-The rule isn't "warn and move on" — it's a hard gate: **no new task while the gate is red.** Found a real problem? Fix it in code. (There's no "disable this check" escape hatch by design.)
+The default `balanced` preset blocks further work while the quality gate is red. Fix the reported failures to clear it. Gate delivery is configurable through [gate modes](docs/config.md#gate-modes-gates); the `strict` preset also blocks on missing review and documentation evidence.
 
 ## Install
 
@@ -84,10 +84,12 @@ checksum before it writes anything. Upgrade, uninstall, a pinned version,
 rollback and installing from a fork: **[docs/install.md](docs/install.md)**.
 The npm package `@toolu/plugins` is deprecated and does not install toolu.
 
-toolu supports Claude Code, Codex and Muse Code. Codex support covers
+toolu supports Claude Code, Codex, Muse Code, Cursor, and OpenCode V2. Codex support covers
 the CLI, IDE extension, and ChatGPT desktop Codex on macOS and Linux. Muse Code
 is installed through `toolu plugins install --host muse`; see
 [docs/install.md](docs/install.md#on-muse) for the install, approve and verify steps.
+Cursor is installed through `toolu plugins install --host cursor`; see
+[the installer guide](docs/cli/installer.md#cursor).
 OpenCode V2 is installed through `toolu plugins install --host opencode`; see
 [docs/opencode.md](docs/opencode.md).
 
@@ -95,8 +97,9 @@ OpenCode V2 is installed through `toolu plugins install --host opencode`; see
 
 ### The plugin installer
 
-`toolu plugins` installs the plugins: it drives each host's own plugin CLI in
-catalog dependency order.
+`toolu plugins` installs plugins in catalog dependency order. It drives the
+Claude Code, Codex and Muse plugin CLIs, and installs local plugin directories
+for Cursor and OpenCode.
 
 ```bash
 toolu plugins install              # everything, core first
@@ -106,7 +109,7 @@ toolu plugins remove jev --yes
 toolu plugins update               # every host with toolu plugins, no prompt
 ```
 
-Claude Code, Codex and Muse are the supported hosts. Full grammar, exit codes, and
+Full grammar, host support, exit codes, and
 the `.toolu/plugins.json` selection file:
 **[docs/cli/installer.md](docs/cli/installer.md)**.
 
@@ -172,7 +175,7 @@ Codex discovers the same canonical workflows as namespaced skills:
 - `$pr-babysit:babysit`
 - `$documentation-gate:sync` for a routed documentation review
 - `$git-better:git-better` to write semantic commits and branch names
-- `$toolu:setup` to preview, install, update, back up, or remove the five bundled Codex agent profiles
+- `$toolu:setup` to preview, install, update, back up, or remove the six bundled Codex agent profiles
 
 Codex requires explicit hash-based trust before plugin hooks execute. Review and
 trust the installed hooks through Codex's `/hooks` interface after installation;
@@ -182,8 +185,8 @@ in this release. Custom agent profiles are installed locally under
 
 ## What's inside
 
-Sixteen plugins, one marketplace. Every plugin ships synchronized Claude and
-Codex manifests, and release-please holds all of them — plus the workspace
+Seventeen plugins, one marketplace. Every plugin ships synchronized Claude,
+Codex and Muse manifests, and release-please holds all of them — plus the workspace
 packages and the root — at one version matching the git tag, so a plugin's
 version is always the repository's. Install the core alone, or add the domain
 plugins.
@@ -198,7 +201,7 @@ plugins.
 | Knowledge | **`jev`** | Typed judgments from TypeSafe's Jev model — probabilities, choices, and scores a script can branch on. |
 | Workflow | **`documentation-gate`** | Jev-routed editing worker and committed-diff documentation review. |
 | Workflow | **`toolu-review`** | Pre-push review matching CI `code-review@v8` (Jev-enabled) and writing review attestations. |
-| Workflow | **`code-review`** | Native local review of the push diff (OpenRouter + Jev, epic #660); today the `toolu code-review run` contract, failing closed until the pipeline lands. |
+| Workflow | **`code-review`** | Native review of the committed push diff through host CLIs and direct TypeSafe Jev, with anchored findings, coverage, and push-review state. |
 | Workflow | **`brainstorm`** | Evidence-backed design triage, alternatives, and a recommended approach — standalone, and phase 1 of delivery-flow. |
 | Workflow | **`delivery-flow`** | One public skill for brainstorm through PR and babysit, with private phase guidance. |
 | Workflow | **`pr-babysit`** | Strict PR clearance through Claude cron or a durable Codex goal with isolated worktrees. |
@@ -210,7 +213,7 @@ plugins.
 
 Beyond the plugins, the core (`toolu`) also ships:
 
-- **\`push-review\` gate** — blocks \`git push\` on a feature branch until the diff has been run through an accepted reviewer (the built-in \`/code-review xhigh --fix\` skill or the \`toolu-review:review\` skill), with a round cap (5 rewrites against an unchanged diff) that escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
+- **`push-review` gate** — checks `git push` on a feature branch for current review state from an accepted reviewer, including `code-review:review` and `toolu-review:review`. The default mode advises; `strict` or `gates.pushReview.mode: block` blocks. A round cap (5 rewrites against an unchanged diff) escalates instead of looping forever. The state file lives under the pushed repo's own root, so `git -C <worktree> push` is gated on the worktree's branch and diff.
 - **docs-sync backstop** — checks documentation on push using the configured gate mode. With `documentation-gate` active, it requires a current committed-diff worker review; otherwise it uses the legacy documentation-surface check. See [config](docs/config.md#documentation-sync-with-documentation-gate).
 - **Commit workflows** — Claude exposes `/commit` and `/review-and-commit`; Codex exposes `$toolu:commit` and `$toolu:review-and-commit`. Both read the same canonical workflow files, preventing host drift.
 - **Model routing** — delegated work is tiered by its *class*, not its phrasing. Claude defaults to Haiku/Sonnet/Opus aliases; Codex defaults to Luna/medium for mechanical work, Terra/medium for exploration and implementation, Terra/high for review, and Sol/high for synthesis and architecture. Both mappings are configurable in [config](docs/config.md#model-routing-models).
@@ -274,14 +277,14 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `
     ├── rust-quality/           # Rust PostToolUse quality checks, a native rule manifest
     ├── ts-quality/             # TypeScript PostToolUse quality checks, a native rule manifest
     ├── python-quality/         # Python PostToolUse quality checks, a native rule manifest
-    ├── statusline/             # optional gate-aware statusline + SessionStart symlink hook
+    ├── statusline/             # native Claude statusline + explicit repository status skill
     ├── brainstorm/             # brainstorm skill + design question bank
     ├── delivery-flow/          # one public skill, private phase references
     ├── epic-creator/           # epic-creator skill + issue body and GitHub write references
     ├── documentation-gate/    # routed documentation worker and review gate
     ├── pr-babysit/             # Claude command + Codex skill + strict shared workflow
     ├── toolu-review/            # toolu-review:review skill + push-review state writer
-    ├── code-review/             # native code-review plugin manifests (skill lands with #669)
+    ├── code-review/             # native review pipeline, review skill and command
     ├── sandbox/                 # toolu sandbox: a Linux VM (Lima) or the host for builds and agent CLIs
     ├── git-better/              # semantic-git rule: semantic commit messages and branch names
     └── epic-orchestrator/       # resident epic engine, merge queue and tracker verbs
@@ -291,7 +294,7 @@ At `SessionStart`, `ts-quality`, `python-quality`, `rust-quality`, `ast-grep`, `
 
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers without uninstalling anything.
+Configure hook behavior and MCP access without uninstalling plugins.
 Claude uses `~/.claude/toolu.config.json` and `<repo>/.claude/toolu.config.json`;
 Codex uses `${CODEX_HOME:-~/.codex}/toolu.config.json` and
 `<repo>/.codex/toolu.config.json`. `TOOLU_CONFIG_DIR` and
@@ -301,7 +304,7 @@ file required.
 ```json
 {
   "version": 1,
-  "skills": { "comemory": false }
+  "hooks": { "user-prompt-submit": false }
 }
 ```
 
@@ -309,12 +312,12 @@ Quality-gate thresholds (file/function/impl line limits) are configurable per pr
 
 ## Testing
 
-The hook engine and language gates are covered by Rust tests that spawn the real `toolu` binary, all run in CI on every push. Install smoke tests use temporary host configuration roots:
+The hook engine and language gates are covered by Rust tests that spawn the real `toolu` binary. CI selects checks from the changed paths; see [testing](docs/testing.md). Live host smoke tests use temporary host configuration roots:
 
 ```sh
 cargo xtask gate                    # the quality gate
 cargo test --workspace             # every Rust test
-cargo xtask host-smoke --host both  # macOS live check of both hosts
+cargo xtask host-smoke --host both  # live Claude, Codex and Muse check (macOS or Linux)
 ```
 
 ## Contributing
@@ -329,6 +332,9 @@ PRs and issues welcome.
 ## Releases
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please) — you do **not** bump versions or tag by hand. The repo ships as **one version**: `toolu` and every plugin share the same `vX.Y.Z`.
+
+When GitHub Actions is unavailable, the explicit `/deploy` workflow publishes the
+version release-please already set; see the [native release runbook](docs/releases/native.md).
 
 - Merge Conventional Commits to `main`. release-please maintains one batched **Release PR** for the whole repo. **Any** path counts — a `feat` in `tooling/` or `.github/` releases just like one under `plugins/`.
 - `feat` / `fix` / `feat!` (or `BREAKING CHANGE`) drive minor / patch / major bumps; `chore` / `docs` / `ci` / `refactor` ship no release.

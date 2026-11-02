@@ -6,7 +6,7 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 
 | # | Plugin | Type | Depends On | Quick Summary |
 |:--:|--------|------|:----------:|---------------|
-| 1 | [**toolu**](../toolu/README.md) | Core | — | Hook engine for Claude Code and Codex (Muse in progress), push-review gate, and agent routing |
+| 1 | [**toolu**](../toolu/README.md) | Core | — | Native hook engine for Claude Code, Codex, Muse, Cursor and OpenCode, push-review gate, and agent routing |
 | 2 | [**ast-grep**](../ast-grep/README.md) | Code Intel | — | Structural code search & rewrite (tree-sitter AST patterns) |
 | 3 | [**toolu-review**](../toolu-review/README.md) | Workflow | — | Pre-push review mirroring CI `code-review@v8` (Jev-enabled) |
 | 4 | [**delivery-flow**](../../plugins/delivery-flow/README.md) | Workflow | `toolu`, `toolu-review`, `pr-babysit`, `brainstorm` | One skill for brainstorm through checked PR delivery |
@@ -18,10 +18,11 @@ Each page covers what the plugin does, how to install it, its hooks/skills/comma
 | 10 | [**ts-quality**](../ts-quality/README.md) | Quality Gate | `toolu` | TypeScript post-edit quality checks (size, imports, type guards) |
 | 11 | [**jev**](../jev/README.md) | Knowledge | — | Typed judgments from TypeSafe's Jev — probability, choice, and score answers code can branch on |
 | 12 | [**brainstorm**](../../plugins/brainstorm/README.md) | Workflow | — | Evidence-backed design triage and a recommended approach; standalone and delivery-flow phase 1 |
-| 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native local review of the push diff with OpenRouter and Jev (epic #660); `toolu code-review run` fails closed until the pipeline lands |
+| 13 | [**code-review**](../../plugins/code-review/README.md) | Workflow | — | Native committed-diff review through host CLIs and direct TypeSafe Jev, anchored findings and push-review state |
 | 14 | [**sandbox**](../../plugins/sandbox/README.md) | Environment | — | A Linux place for builds, gates and agent CLIs: a Lima VM on macOS, the host on Linux; `toolu sandbox run` runs a command there |
 | 15 | [**git-better**](../../plugins/git-better/README.md) | Workflow | `toolu` | Semantic branches and commits agents can read: scoped Conventional Commit subjects with an `Intent:` trailer and `<type>/<ref>-<slug>` branch names, checked before git runs |
 | 16 | [**epic-creator**](../../plugins/epic-creator/README.md) | Workflow | `brainstorm` | Turn an idea into a GitHub epic the engine can run: one-PR sub-issues with cited decisions and runnable checks, created after one confirmation |
+| 17 | [**documentation-gate**](../../plugins/documentation-gate/README.md) | Workflow | `toolu` | Route an editing worker and record documentation review for the committed diff |
 
 ## Architecture Overview
 
@@ -31,7 +32,9 @@ toolu core (hook dispatcher + registry)
   ├── rust-quality    ──→ PostToolUse checks on Rust files
   ├── ts-quality      ──→ PostToolUse checks on TS files
   ├── python-quality  ──→ PostToolUse checks on Python files
-  └── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
+  ├── ast-grep        ──→ PreToolUse Grep→ast-grep nudge + PostToolUse byte-savings
+  ├── documentation-gate → Committed-diff documentation review gate
+  └── git-better      ──→ Semantic commit/branch checks + commit notes
 ```
 
 Standalone plugins (no `toolu` dependency) work independently via their own skills and commands. `delivery-flow` installs its declared dependencies through Claude Code or the toolu CLI; native Codex plugin installs require adding those dependencies explicitly.
@@ -43,8 +46,9 @@ Hook entries and registry contributions run the native `toolu` binary through th
 All plugins share the same host-native config: `~/.claude/toolu.config.json`
 and `<repo>/.claude/toolu.config.json` on Claude Code, or
 `${CODEX_HOME:-~/.codex}/toolu.config.json` and
-`<repo>/.codex/toolu.config.json` on Codex. Toggle skills, hooks, or MCP
-servers without uninstalling:
+`<repo>/.codex/toolu.config.json` on Codex. Muse, Cursor and OpenCode roots
+are listed in [config locations](../config.md#locations). Configure hook
+behavior and MCP access without uninstalling:
 
 ```json
 {

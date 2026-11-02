@@ -1,5 +1,5 @@
 //! The replay transport of the eval runner, end to end: a live run against a
-//! loopback origin records its exchange; a replay run with no key and no route to
+//! host subprocess and loopback Jev origin record their exchanges; a replay with no key and no route to
 //! any origin answers the same request from the store at no charge; and a request
 //! the store lacks fails the arm closed as unverified.
 
@@ -20,8 +20,7 @@ use toolu_runtime::env::Env;
 
 use super::{case, golden};
 
-pub(super) const REVIEW: &str = "/api/v1/chat/completions";
-pub(super) const JEV: &str = "/api/v1/systemone";
+pub(super) const JEV: &str = "/v1/systemone";
 const KEY: &str = "private-sentinel-670";
 
 /// The environment of a run without a key, with the tools linked under `dir`.
@@ -37,10 +36,8 @@ pub(super) fn answer() -> String {
     "quote": "let start = items.len() - count;", "suggestion": null, "prior_id": null
   }]});
   json!({
-    "model": "deepseek/deepseek-v4-pro-0813",
-    "provider": "Parasail",
-    "choices": [{"message": {"content": content.to_string()}, "finish_reason": "stop"}],
-    "usage": {"prompt_tokens": 100, "completion_tokens": 40, "cost": 0.01}
+    "type": "result", "is_error": false, "result": content.to_string(),
+    "usage": {"input_tokens": 100, "output_tokens": 40}, "total_cost_usd": 0.01
   })
   .to_string()
 }
@@ -94,7 +91,7 @@ fn a_replay_miss_fails_the_arm_closed_naming_the_missing_request() {
 /// Jev's verdict on the one finding: supported.
 fn judgment() -> String {
   json!({
-    "model": "typesafe/jev-1.13",
+    "model": "jev-latest",
     "usage": {"input_tokens": 30, "output_tokens": 3, "cost": 0.002},
     "answers": {"f0": {"type": "choice", "choice": "supported",
       "probabilities": {"supported": 0.9, "contradicted": 0.05, "insufficient": 0.05},
@@ -106,11 +103,7 @@ fn judgment() -> String {
 fn endpoints(origin: &Fixture) -> (toolu_openrouter::Config, Option<toolu_jev_client::Config>) {
   let root = Some(origin.root_ca_der().to_vec());
   (
-    toolu_openrouter::Config {
-      endpoint: origin.url(REVIEW),
-      pause: Duration::from_millis(10),
-      test_root_ca_der: root.clone(),
-    },
+    toolu_openrouter::Config::default(),
     Some(toolu_jev_client::Config {
       endpoint: origin.url(JEV),
       pause: Duration::from_millis(10),
@@ -119,16 +112,25 @@ fn endpoints(origin: &Fixture) -> (toolu_openrouter::Config, Option<toolu_jev_cl
   )
 }
 
-/// A live run of both arms against the loopback origin, recording into `store`.
+/// Both arms through a host subprocess and loopback Jev, recording into `store`.
 pub(super) fn record(
   fixtures: &Fixtures,
   origin: &Fixture,
   store: &Path,
   tools: &Path,
 ) -> Result<CaseReport, String> {
-  let env = keyless(tools)?
-    .with("OPENROUTER_API_KEY", KEY)
-    .with("OPENROUTER_MODEL", "")
+  let host = tempfile::tempdir().map_err(|error| error.to_string())?;
+  super::host::host(host.path(), "claude", &answer()).map_err(|error| error.to_string())?;
+  let base_env = keyless(tools)?;
+  let path = format!(
+    "{}:{}",
+    host.path().display(),
+    base_env.get("PATH").unwrap_or("")
+  );
+  let env = base_env
+    .with("PATH", &path)
+    .with("TOOLU_HOST_OVERRIDE", "claude")
+    .with("TYPESAFE_API_KEY", KEY)
     .with("JEV_TIMEOUT", "5")
     .with("HTTPS_PROXY", &origin.proxy_url())
     .with("NO_PROXY", "");
@@ -227,9 +229,6 @@ fn a_live_run_bills_and_records_each_distinct_request_once() {
   let fixtures = golden().expect("fixture");
   let origin = Fixture::start().expect("loopback");
   origin
-    .route(REVIEW, Reply::new(200, answer()))
-    .expect("route");
-  origin
     .route(JEV, Reply::new(200, judgment()))
     .expect("route");
   let store = tempfile::tempdir().expect("fs");
@@ -247,18 +246,16 @@ fn a_live_run_bills_and_records_each_distinct_request_once() {
   assert_eq!(names.len(), 2, "{names:?}");
   assert!(names.iter().any(|name| name.starts_with("judge-")));
   assert!(names.iter().any(|name| name.starts_with("review-")));
-  // One review request (baseline) and one judgment (enhanced): no duplicate billing.
+  // Only the judgment uses HTTP; review runs through the host subprocess.
   let sent = origin.requests().expect("requests");
-  assert_eq!(sent.len(), 2, "{} requests", sent.len());
+  assert_eq!(sent.len(), 1, "{} requests", sent.len());
+  assert_eq!(sent[0].path, JEV);
 }
 
 #[test]
 fn a_replayed_call_costs_nothing_and_matches_what_the_live_call_found() {
   let fixtures = golden().expect("fixture");
   let origin = Fixture::start().expect("loopback");
-  origin
-    .route(REVIEW, Reply::new(200, answer()))
-    .expect("route");
   origin
     .route(JEV, Reply::new(200, judgment()))
     .expect("route");

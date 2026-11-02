@@ -3,7 +3,7 @@
 Epic #402 rewrites toolu in Rust, mostly by agents working in parallel. The bar
 below existed before the first product crate (#455), because a gate added after
 the code exists turns into a list of exemptions. The rule table and the
-commands are in [AGENTS.md](../AGENTS.md#rust-conventions); this page gives the
+commands are in [AGENTS.md](../AGENTS.md#work-in-this-repository); this page gives the
 reasons.
 
 ## Principles
@@ -22,9 +22,8 @@ reasons.
 3. **We pass what we ship.** The gate runs the rust-quality plugin's own rules
    over every crate file (`toolu rust-quality check crates`) at the same limits an
    agent sees after each edit, and toolu's quality gate refuses a commit while
-   that post-edit check fails (in a main checkout; a linked worktree keeps its
-   quality state on the main checkout, so there `lefthook.yml` and CI hold the
-   line).
+   that post-edit check fails. Linked worktrees are checked too, with quality
+   state recorded under the edited file's own worktree.
 4. **No exemptions.** No per-path override, ignore list or suppression
    attribute. The data loaders reject unknown keys, and
    `crates/xtask/tests/no_exemptions.rs` fails on a `skip`, `ignore`,
@@ -36,7 +35,7 @@ reasons.
 6. **Same gate everywhere.** `cargo xtask gate` is the `rust` CI job on
    Linux, the `lefthook.yml` pre-push hook, and what an agent runs locally.
    macOS runs the clippy and tests steps plus the shell-latency and
-   launcher checks (`rust-macos`), not the full gate.
+   launcher checks (the `rust (macos-14)` matrix leg), not the full gate.
 
 ## Why these limits
 

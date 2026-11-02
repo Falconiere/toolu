@@ -71,6 +71,6 @@ toolu jev ask questions.json -s STATE
 
 - Need a pattern: read Setup + the matching section in
   [problem-solving](references/problem-solving.md), not all examples.
-- Need transport limits/errors: [wrapper reference](../../README.md#wrapper-reference).
+- Need transport limits/errors: [CLI reference](../../README.md#cli-reference).
 - Designing new question formats: check relevant [live docs](https://docs.typesafe.ai/llms.txt).
 - Evaluation only: [record and scenarios](evals/README.md).

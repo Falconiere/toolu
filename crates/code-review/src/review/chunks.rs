@@ -6,7 +6,7 @@
 use std::time::{Duration, Instant};
 
 use serde_json::Value;
-use toolu_openrouter::{Client, Message};
+use toolu_openrouter::Message;
 
 use super::calls::{Ledger, Outbound, Stage};
 use super::mask::Mask;
@@ -20,7 +20,6 @@ use crate::shape::ShapedFile;
 
 /// How each review call is made.
 pub(crate) struct Call<'a> {
-  pub(crate) client: &'a Client,
   pub(crate) schema: &'a Value,
   pub(crate) level: Effort,
   pub(crate) deadline: Duration,
@@ -149,7 +148,6 @@ fn send(
   let request = model::request(messages, call.schema, call.level);
   match ledger.complete(&Outbound {
     stage: Stage::Review,
-    client: call.client,
     request: &request,
     deadline: Instant::now() + call.deadline,
     host: call.host.as_ref(),
@@ -167,7 +165,14 @@ fn send(
       Err(_) => reviews.fail(paths, "unusable structured review", false),
     },
     Err(toolu_openrouter::Error::Timeout) => reviews.fail(paths, "deadline", true),
-    Err(err) => reviews.fail(paths, &err.to_string(), false),
+    Err(err) => {
+      let reason = ledger
+        .calls
+        .last()
+        .filter(|call| call.stage == Stage::Review)
+        .map_or_else(|| err.to_string(), |call| call.outcome.clone());
+      reviews.fail(paths, &reason, false);
+    }
   }
 }
 

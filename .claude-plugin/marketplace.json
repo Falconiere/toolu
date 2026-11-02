@@ -183,7 +183,7 @@
     {
       "name": "code-review",
       "source": "./plugins/code-review",
-      "description": "Native code review of branch and uncommitted changes with OpenRouter and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
+      "description": "Native code review of branch and uncommitted changes with host CLIs and Jev. Produces anchored findings, a compact verdict, review memory, and gate-compatible push state.",
       "author": { "name": "Falconiere Barbosa", "email": "hello@falconiere.io" },
       "category": "productivity",
       "keywords": ["code-review", "review", "openrouter", "jev"],

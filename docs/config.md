@@ -12,6 +12,9 @@ disable what you do not want.
   `<repo>/.codex/toolu.config.json`.
 - Muse: `${XDG_CONFIG_HOME:-~/.config}/muse/toolu.config.json` and
   `<repo>/.agents/toolu.config.json` (`MUSE_CONFIG_DIR` overrides the user root).
+- Cursor: `~/.cursor/toolu.config.json` and `<repo>/.cursor/toolu.config.json`.
+- OpenCode: `${XDG_CONFIG_HOME:-~/.config}/opencode/toolu.config.json` and
+  `<repo>/.opencode/toolu.config.json`.
 - `TOOLU_CONFIG_DIR`, `TOOLU_PROJECT_DIR`, and
   `TOOLU_PROJECT_CONFIG_DIRNAME` are explicit cross-host overrides.
 - `TOOLU_USER_CONFIG_DIR` names the directory of the user-level file when it
@@ -107,6 +110,14 @@ See `plugins/toolu/settings/toolu.config.example.json` for a fully-populated exa
 ### Documentation sync with documentation-gate
 
 When the `documentation-gate` plugin is selected, its registered native rule replaces the legacy docs-surface check. `documentation-gate:sync` routes a separate editing worker through Jev and records coverage of the committed branch diff. Missing or stale review follows the effective `docsSync` gate mode (`block`, `ask`, `advise`, or `off`); the hook makes no model call. The rule and ledger load the target repository’s configuration when evaluating that repository, including for static `git -C PATH` pushes. A lone plain push whose commits are already in the base branch passes in any form. Without the active registration the legacy check remains. The plugin requires the `toolu` dispatcher. See [documentation-gate](../plugins/documentation-gate/README.md).
+
+`toolu docs inspect` also returns `documentation_files`, mapping committed
+documentation paths to Git blob IDs, including unchanged guides. Reports require
+impact accounting for every path in `documentation_coverage`, as well as changed
+file coverage. Planning records under `docs/toolu/{plans,brainstorms,specs,decisions}/`
+and `docsSync.surfaceExcludes` are excluded from this inventory. Missing document
+coverage or changed document blobs invalidate the report even if the source diff
+is unchanged. Older reports without the inventory require a new review.
 
 ### Semantic branches and commits with git-better
 
@@ -562,8 +573,10 @@ the babysit slot state) and is skipped while cooling.
 ### Native code review (`codeReview`)
 
 `toolu code-review run` is enabled by default. With an exported
-`OPENROUTER_API_KEY`, it reviews branch and uncommitted changes using host CLIs
-or OpenRouter without a per-repository opt-in. Set `"codeReview": {"enabled": false}` in user or project
+`TYPESAFE_API_KEY`, it reviews branch and uncommitted changes through an authenticated
+host CLI selected by Jev. Jev judgments use the TypeSafe endpoint. If no host is
+available or the host call fails, the review fails. No per-repository opt-in is required.
+Set `"codeReview": {"enabled": false}` in user or project
 `toolu.config.json` to opt out; project settings take precedence. Disabled or
 invalid configuration makes no request and exits 69 with
 `error.kind: "not-enabled"` and a reason. Malformed JSON, invalid envelopes,
@@ -573,7 +586,7 @@ disable review; genuinely missing files use the defaults.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `enabled` | `true` | User or project: allow the review to call OpenRouter (the review model and Jev over OpenRouter's System One endpoint, with the same key). |
+| `enabled` | `true` | User or project: allow host CLI review and direct TypeSafe Jev judgments. `TYPESAFE_API_KEY` and an authenticated host CLI are required. |
 | `effort` | `auto` | User or project. `auto` lets Jev pick `small`, `medium`, `high` or `xhigh` from shape metadata, floored to `high` for secrets, CI workflows, gate policy, credential or security paths, and diffs over 1,000 changed lines; `--effort` wins over this setting. An unknown value is ignored with a note. |
 
 What leaves the machine: the base-ref conventions and prompt override, the
@@ -684,7 +697,7 @@ Skills, hooks, Claude agents, and Claude commands are loaded from plugin
 manifests at session start, so config does not remove those files from host
 discovery. Codex command equivalents are ordinary plugin skills. Codex custom
 agents are intentionally separate: `$toolu:setup` previews and installs the
-five bundled TOML profiles under `${CODEX_HOME:-~/.codex}/agents`, refusing
+six bundled TOML profiles under `${CODEX_HOME:-~/.codex}/agents`, refusing
 unmanaged conflicts and preserving timestamped backups.
 
 ## comemory migration

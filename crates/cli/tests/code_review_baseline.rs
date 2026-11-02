@@ -18,6 +18,7 @@ fn replay() -> Result<Value, String> {
     .env("TOOLU_PROJECT_DIR", project.path())
     .env("TOOLU_CONFIG_DIR", project.path())
     .env_remove("OPENROUTER_API_KEY")
+    .env_remove("TYPESAFE_API_KEY")
     .env_remove("TOOLU_USER_CONFIG_DIR")
     .args([
       "--json",

@@ -26,9 +26,9 @@ entry is `(review): worktree has uncommitted changes` and it has no operational
 error, return the local result without fallback. Commit and re-review only when
 authorized and push approval is needed. Other incomplete coverage still uses fallback.
 
-Native review requires exported `OPENROUTER_API_KEY` and network access; Muse
-must forward the key. Review calls run on a Jev-selected host CLI with
-OpenRouter as fallback. `codeReview.enabled: false` or invalid configuration
+Native review requires exported `TYPESAFE_API_KEY` and network access; Muse
+must forward the key. Review calls run on an authenticated Jev-selected host CLI;
+Jev uses the TypeSafe endpoint. `codeReview.enabled: false` or invalid configuration
 disables requests (project settings win). Never modify settings or credentials
 to force review.
 

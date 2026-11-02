@@ -1,7 +1,7 @@
 //! The effort settings an eval run covers: every production level, plus `none`, the
 //! known-weak baseline calibration compares them against. `none` is not a production
 //! level: it never reaches `--effort` of `run`, it only selects the lowest level's
-//! budget with the Jev judge off (the OpenRouter client has no reasoning-off mode).
+//! budget with the Jev judge off (the host review has no reasoning-off mode).
 
 use serde::Serialize;
 

@@ -6,8 +6,8 @@ use std::time::Instant;
 
 use serde::Serialize;
 use serde_json::json;
-use toolu_jev_client::{Jev, OPENROUTER_MODEL, Questions, Reply, State, parse_reply, request_body};
-use toolu_openrouter::{Client, Completion, StructuredRequest};
+use toolu_jev_client::{DEFAULT_MODEL, Jev, Questions, Reply, State, parse_reply, request_body};
+use toolu_openrouter::{Completion, StructuredRequest};
 
 use super::host::{HostPlan, run};
 use super::replayed::{REPLAY_MISS, REPLAYED, Replay, replay_failure, restored};
@@ -80,8 +80,6 @@ pub(crate) type Recorder<'a> = &'a dyn Fn(&Record<'_>);
 pub(crate) struct Outbound<'a, 'q, 'r> {
   /// The stage making the call.
   pub(crate) stage: Stage,
-  /// The `OpenRouter` fallback client.
-  pub(crate) client: &'a Client,
   /// The structured request.
   pub(crate) request: &'r StructuredRequest<'q>,
   /// The call's wall deadline.
@@ -129,13 +127,13 @@ impl<'a> Ledger<'a> {
     deadline: Instant,
   ) -> Result<Reply, toolu_jev_client::Error> {
     if let Some(replay) = self.replay {
-      let body = replay(step, &request_body(state, OPENROUTER_MODEL, questions));
+      let body = replay(step, &request_body(state, DEFAULT_MODEL, questions));
       if body.is_some() || !self.live_on_miss {
         return self.replayed_jev(body, step, questions);
       }
     }
     let started = Instant::now();
-    let result = jev.ask_until(state, OPENROUTER_MODEL, questions, deadline);
+    let result = jev.ask_until(state, DEFAULT_MODEL, questions, deadline);
     let call = match &result {
       Ok(reply) => Call {
         tokens_in: reply.usage.input_tokens,
@@ -143,79 +141,45 @@ impl<'a> Ledger<'a> {
         cost_usd: reply.usage.cost_usd,
         ..call(step, &reply.model, "ok")
       },
-      Err(err) => call(step, OPENROUTER_MODEL, &jev_failure(err)),
+      Err(err) => call(step, DEFAULT_MODEL, &jev_failure(err)),
     };
     self.push(call, started, || {
       let response = result.as_ref().map_or("", |reply| reply.body.as_str());
       (
-        request_body(state, OPENROUTER_MODEL, questions),
+        request_body(state, DEFAULT_MODEL, questions),
         response.to_owned(),
       )
     });
     result
   }
 
-  /// Send a structured request before `deadline`, recording the call. With a
-  /// host plan the host CLI is tried first; any failure but a deadline falls
-  /// back to `OpenRouter`, and the failed attempt stays in the usage log.
+  /// Send a structured request to the host CLI before `deadline`, or replay it.
   pub(crate) fn complete(
     &mut self,
     send: &Outbound<'_, '_, '_>,
   ) -> Result<Completion, toolu_openrouter::Error> {
-    if send.host.is_none()
-      && let Some(done) = self.replayed(send)
-    {
+    if let Some(done) = self.replayed(send) {
       return done;
     }
     if let Some(plan) = send.host {
-      match run::complete_via_host(self, send.stage, plan, send.request, send.deadline) {
-        Ok(done) => return Ok(done),
-        Err(toolu_openrouter::Error::Timeout) => return Err(toolu_openrouter::Error::Timeout),
-        Err(_) => {}
-      }
+      run::complete_via_host(self, send.stage, plan, send.request, send.deadline)
+    } else {
+      self
+        .calls
+        .push(call(send.stage, "host", "no host CLI available"));
+      Err(toolu_openrouter::Error::InvalidResponse)
     }
-    let started = Instant::now();
-    let result = send.client.complete_structured(send.request, send.deadline);
-    let call = match &result {
-      Ok(done) => Call {
-        provider: done.provider.clone(),
-        quantization: done.quantization.clone(),
-        tokens_in: done.usage.prompt_tokens,
-        tokens_out: done.usage.completion_tokens,
-        cost_usd: done.usage.cost_usd,
-        ..call(send.stage, &done.model, "ok")
-      },
-      Err(err) => {
-        let failed = call(send.stage, send.client.model(), &err.to_string());
-        match err.usage() {
-          Some((usage, model)) => Call {
-            model: model.to_owned(),
-            tokens_in: usage.prompt_tokens,
-            tokens_out: usage.completion_tokens,
-            cost_usd: usage.cost_usd,
-            ..failed
-          },
-          None => failed,
-        }
-      }
-    };
-    self.push(call, started, || {
-      let response = result.as_ref().map_or_else(|_| String::new(), received);
-      (sent(send.request, send.client.model()), response)
-    });
-    result
   }
 
-  /// The replayed `OpenRouter` answer, when the store holds the request or a
+  /// The replayed answer, when the store holds the request or a
   /// miss must fail closed: `None` sends live instead.
   fn replayed(
     &mut self,
     send: &Outbound<'_, '_, '_>,
   ) -> Option<Result<Completion, toolu_openrouter::Error>> {
     let replay = self.replay?;
-    let body = replay(send.stage, &sent(send.request, send.client.model()));
-    (body.is_some() || !self.live_on_miss)
-      .then(|| self.replayed_complete(body, send.stage, send.client))
+    let body = replay(send.stage, &sent(send.request, "host"));
+    (body.is_some() || !self.live_on_miss).then(|| self.replayed_complete(body, send.stage))
   }
 
   /// Log `call`; the recorder, when there is one, gets the `exchange` texts.
@@ -276,7 +240,7 @@ impl Ledger<'_> {
         cost_usd: Some(0.0),
         ..call(step, &answer.model, REPLAYED)
       },
-      Err(err) => call(step, OPENROUTER_MODEL, &jev_failure(err)),
+      Err(err) => call(step, DEFAULT_MODEL, &jev_failure(err)),
     };
     self.calls.push(Call {
       millis: elapsed(started),
@@ -291,7 +255,6 @@ impl Ledger<'_> {
     &mut self,
     body: Option<String>,
     stage: Stage,
-    client: &Client,
   ) -> Result<Completion, toolu_openrouter::Error> {
     let started = Instant::now();
     let result = match body {
@@ -307,7 +270,7 @@ impl Ledger<'_> {
         cost_usd: done.usage.cost_usd,
         ..call(stage, &done.model, REPLAYED)
       },
-      Err(err) => call(stage, client.model(), &replay_failure(err)),
+      Err(err) => call(stage, "host", &replay_failure(err)),
     };
     self.calls.push(Call {
       millis: elapsed(started),
@@ -338,9 +301,8 @@ pub(crate) fn call(stage: Stage, model: &str, outcome: &str) -> Call {
 }
 
 /// A structured request's model, messages and settings, as the recorder sees them;
-/// the model is part of the replay key, so `OPENROUTER_MODEL` never replays another
-/// model's answers.
-fn sent(request: &StructuredRequest<'_>, model: &str) -> String {
+/// the model is part of the replay key.
+pub(super) fn sent(request: &StructuredRequest<'_>, model: &str) -> String {
   let messages: Vec<_> = request
     .messages
     .iter()
@@ -352,7 +314,7 @@ fn sent(request: &StructuredRequest<'_>, model: &str) -> String {
 }
 
 /// A completion as JSON, as the recorder sees it.
-fn received(done: &Completion) -> String {
+pub(super) fn received(done: &Completion) -> String {
   let usage = &done.usage;
   json!({"content": done.content, "finish_reason": done.finish_reason,
     "model": done.model, "provider": done.provider, "provider_quantization": done.quantization,

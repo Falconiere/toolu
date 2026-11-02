@@ -1,18 +1,21 @@
 # toolu — Core Plugin
 
-**Type:** Core | **Version:** 4.5.0 | **Optional companion:** `code-simplifier`
+**Type:** Core | **Optional companion:** `code-simplifier`
 
-The registry-driven hook engine, the `push-review` gate, and the `deep-explore` agent. **The one required plugin** — all domain plugins register into it.
+The native registry-driven hook engine, review gates, workflow skills and agent profiles. Quality plugins register their rules into this core; standalone plugins can run without it. See the [plugin index](../plugins/index.md) for dependencies.
 
 ## Install
 
-```text
-# Add prerequisite marketplaces first
-/plugin marketplace add anthropics/claude-plugins-official
-/plugin marketplace add Falconiere/toolu
+Install the [native binary](../install.md), then the core plugin:
 
-/plugin install toolu@toolu
+```bash
+toolu plugins install toolu
 ```
+
+Use `--host claude|codex|muse|cursor|opencode` to select a host. See the
+[installer guide](../cli/installer.md) for hook trust and approval steps.
+The optional `code-simplifier` companion comes from the
+`anthropics/claude-plugins-official` marketplace.
 
 ## What It Provides
 
@@ -38,7 +41,7 @@ Key rules:
 - **Bound every delegation.** One answerable question, a stated return shape, and if it goes quiet: check once, then take the work back inline and say so. Never block on a subagent.
 
 The arithmetic, and the cases where delegation loses, are in [`references/delegation-cost.md`](../../plugins/toolu/skills/orchestrator/references/delegation-cost.md).
-- **Model tiers**: Haiku for mechanical, Sonnet for exploration, Frontier for hard reasoning.
+- **Model tiers**: Claude uses Haiku/Sonnet/Opus aliases; Codex uses Luna, Terra and Sol profiles by work class. See [model routing](../config.md#model-routing-models).
 
 ### 3. Deep-Research Skill
 
@@ -52,10 +55,10 @@ The `deep-research` skill is a standalone knowledge workflow: it picks guiding q
 
 ### 4. Hook Engine & Registry
 
-The core dispatcher runs `PreToolUse`, `PostToolUse`, and `SessionStart` hooks. Domain plugins contribute check modules at `SessionStart` via `register.sh` scripts, and the core executes those modules only while the owning plugin is installed — **fail-closed**. Ported plugins register one bundled ESM module per event through `@toolu/core/registry`, which the core imports in-process; see [docs/registry.md](../registry.md).
+The native dispatcher handles pre-tool, post-tool and lifecycle events. First-party plugins register JSON manifests at SessionStart to enable rules compiled into `toolu`; third-party registry modules are executables. Legacy JavaScript modules are skipped with a startup warning. Generated launchers run the installed binary on each host; see [runtime](../runtime.md) and [registry](../registry.md).
 
 ```text
-# Every file edit triggers PostToolUse checks from rust-quality / ts-quality
+# Supported file edits trigger checks from installed language-quality plugins
 # Every git push triggers the push-review gate
 # SessionStart assembles registry modules from installed plugins
 ```
@@ -66,26 +69,25 @@ Advises on `git push` on a feature branch until the diff has been run through an
 
 ```text
 # The check fails (and advises, by default) unless:
-#  - toolu-review:review skill reviewed the diff (CI-bot mirror)
-#  - /code-review xhigh --fix ran and recorded clean state
+#  - an accepted reviewer recorded passing state for the current diff
+#    (for example code-review:review or toolu-review:review)
 
 # Max 5 rounds against an UNCHANGED diff — escalates instead of looping
 # forever; a changed diff restarts the count at 1
 
 # `git -C <worktree> push` is gated too: the hook resolves the target repo
 # from the command and reads that repo's own branch, diff, and state file
-# at <target root>/.claude/tmp/push-review/<branch-slug>.json
+# under that host's project-state root
 ```
 
 ### 6. Docs-Sync Backstop
 
-An **advisory** (never a block) on `git push` when code changes but no documentation surface does:
-
-```text
-# Push changes some .ts files but no README, docs/, or SKILL.md → nudge:
-# "Code changed but docs didn't — consider updating documentation."
-# Silenced by writing an attestation to .claude/tmp/docs-sync/<branch>.json
-```
+With `documentation-gate` active, a push requires a current worker review of the
+committed diff. Run `documentation-gate:sync` to route an editing worker and
+record that review. Without the plugin, the legacy check looks for documentation
+surfaces when code changes. Missing evidence follows the configured `docsSync`
+mode: advisory under `balanced`, blocking under `strict`, or an explicit override.
+See [documentation sync](../config.md#documentation-sync-with-documentation-gate).
 
 ### 7. Slash Commands
 
@@ -120,8 +122,7 @@ An **advisory** (never a block) on `git push` when code changes but no documenta
 A specialized subagent for structural codebase exploration via ast-grep:
 
 ```text
-# The agent runs on Sonnet — exploration is a bounded subtask that
-# doesn't need the expensive frontier model
+# Claude uses Sonnet; the bundled Codex profile uses Terra / medium
 
 # Triggered by the orchestrator skill for "where/how is X done across the code"
 # Uses ast-grep for structural patterns, Grep for exact literals, Glob for paths
@@ -130,32 +131,36 @@ A specialized subagent for structural codebase exploration via ast-grep:
 ## Architecture
 
 ```
-toolu core
-├── hooks/
-│   ├── pre-tools/mod.sh        ← bash PreToolUse dispatcher (parity baseline)
-│   │   ├── modules/push-review.sh
-│   │   ├── modules/docs-sync.sh
-│   │   └── modules/plan-ledger.sh
-│   ├── post-tools/modules/gate-status.sh
-│   ├── session-end.sh
-│   ├── src/                    ← TypeScript entries: session-start, user-prompt-submit, pre-compact,
-│   │                              pre-tools (ported modules native from @toolu/core/gates), mcp-tools (mcp__)
-│   └── dist/                   ← committed Bun bundles hooks.json launches
-├── skills/                     ← orchestrator, debug, research, command skills
-├── agents/                     ← deep-explore, research-agent
-├── commands/                   ← commit, review-and-commit
+crates/
+├── cli/                        ← command registry and hook fast path
+├── core/protocol/              ← host payloads and generated launchers
+├── core/engine/                ← dispatcher, registry, gates and quality runner
+└── toolu/                      ← core plugin commands and lifecycle hooks
+plugins/toolu/
+├── hooks/hooks.json            ← generated Claude/Codex/Cursor hook entries
+├── hooks/muse/                 ← generated Muse native resolvers
+├── skills/                     ← orchestrator, debug, research and command skills
+├── agents/                     ← six shared agent definitions
+├── assets/agents/              ← six Codex TOML profiles
+├── commands/                   ← thin command entries
+├── workflows/                  ← shared workflow bodies
 └── settings/                   ← reusable settings fragments
 ```
 
+OpenCode's installer generates a `server.js` shim in each installed plugin;
+it forwards events to the native bridge. Core commands also provide
+[multi-machine delegation](../delegation.md), [peer conversations](../peers.md)
+and [garbage collection](../cli/gc.md).
+
 ## Configuration
 
-Toggle individual skills, hooks, or MCP servers via `~/.claude/toolu.config.json`:
+Configure hook behavior and MCP access through host-native user and project
+files, such as `~/.claude/toolu.config.json` on Claude Code:
 
 ```json
 {
   "version": 1,
-  "skills": { "comemory": false },
-  "hooks":  { "session-end": true },
+  "hooks":  { "user-prompt-submit": false },
   "mcp":    { "figma": false },
   "docsSync": {
     "surfaces": ["README.md", "docs/*.md"],
@@ -169,8 +174,12 @@ Defaults are opt-out — no file required. See [`docs/config.md`](../config.md) 
 
 ## Testing
 
-The hook engine and language gates are covered by **997 bats tests** across 103 suites. Run:
+The hook engine and language gates are covered by Rust tests using the real
+binary, temporary repositories and shared fixtures. From the repository root:
 
 ```bash
-bats -r plugins
+cargo test --workspace
+cargo xtask gate
 ```
+
+See [testing](../testing.md) for prerequisites, focused checks and live host smoke tests.

@@ -1,6 +1,6 @@
 # Runtime contract
 
-Every toolu hook, skill command and agent command runs the installed native `toolu` binary. There is no other runtime: Bun is not used or needed on Claude Code, Codex or Muse (#440). Installation, targets, version skew and binary resolution are in [install.md](install.md).
+Every toolu hook, skill command and agent command runs the installed native `toolu` binary. Claude Code, Codex, Muse and Cursor need no Bun runtime for toolu. OpenCode requires a generated JavaScript shim that forwards events to the native binary; see [OpenCode](opencode.md). Installation, targets, version skew and binary resolution are in [install.md](install.md).
 
 > **Install once.** Install `toolu` with the get.toolu.sh installer or Homebrew before you enable a toolu plugin:
 >

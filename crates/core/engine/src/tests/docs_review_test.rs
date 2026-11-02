@@ -49,6 +49,10 @@ pub(super) fn report(roots: &Roots, repo: &Path) -> Value {
     {"path":"README.md","disposition":"updated","note":"Updated the guide","docs":["README.md"]},
     {"path":"code.rs","disposition":"accurate","note":"Guide describes behavior","docs":["README.md"]}
   ]);
+  report["documentation_coverage"] = json!([
+    {"path":"README.md","disposition":"updated","note":"Updated guide","sources":["README.md", "code.rs"]},
+    {"path":"GUIDE.md","disposition":"not-needed","note":"Unrelated guide","sources":[]}
+  ]);
   report["checks"] = json!(["Checked guide against implementation"]);
   report["findings"] = json!([]);
   report

@@ -16,6 +16,7 @@ fn invocation(
     host,
     model,
     schema_file: "/tmp/schema.json",
+    schema_json: r#"{"type":"object"}"#,
     prompt,
     prompt_file,
   })
@@ -107,4 +108,26 @@ fn a_failing_cli_is_a_transport_failure() {
   };
   let err = run_review(&plan, "{}", "hi", std::time::Duration::from_secs(10)).unwrap_err();
   assert!(matches!(err, HostError::Failed(_)), "{err:?}");
+}
+
+#[test]
+fn nonzero_exit_cannot_approve_even_with_valid_output() {
+  let (_dir, bin) = fake_cli(
+    "codex",
+    "#!/bin/sh\nprintf '%s' '{\"findings\":[]}'\nexit 1",
+  );
+  let plan = HostPlan {
+    host: Host::Codex,
+    model: "default".into(),
+    bin,
+  };
+  let error = run_review(&plan, "{}", "hi", std::time::Duration::from_secs(10)).unwrap_err();
+  assert!(matches!(error, HostError::Failed(_)));
+}
+
+#[test]
+fn claude_receives_inline_json_schema() {
+  let args = invocation("claude", Host::Claude, "default", "hi", None).unwrap();
+  let schema_flag = args.iter().position(|arg| arg == "--json-schema").unwrap();
+  assert_eq!(args[schema_flag + 1], r#"{"type":"object"}"#);
 }

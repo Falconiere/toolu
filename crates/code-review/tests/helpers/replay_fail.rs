@@ -4,15 +4,12 @@ use toolu_code_review::eval::{Arm, ArmChoice, Mode, Plan, Setting, Store, Verdic
 use toolu_http_test_support::{Fixture, Reply};
 
 use super::golden;
-use super::replay::{JEV, REVIEW, answer, keyless, record};
+use super::replay::{JEV, keyless, record};
 
 #[test]
 fn a_failed_judge_call_makes_the_enhanced_arm_unverified_not_a_pass() {
   let fixtures = golden().expect("fixture");
   let origin = Fixture::start().expect("loopback");
-  origin
-    .route(REVIEW, Reply::new(200, answer()))
-    .expect("route");
   origin
     .route(JEV, Reply::new(500, "down".to_owned()))
     .expect("route");

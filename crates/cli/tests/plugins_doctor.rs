@@ -92,7 +92,7 @@ fn doctor_json_reports_namespace_and_warns_on_empty_inventory() {
 }
 
 #[test]
-fn doctor_warns_when_code_review_lacks_openrouter_key() {
+fn doctor_warns_when_code_review_lacks_typesafe_key() {
   let sb = Sb::new().unwrap();
   sb.stub(
     "claude",
@@ -113,7 +113,13 @@ fn doctor_warns_when_code_review_lacks_openrouter_key() {
   assert!(
     secrets
       .iter()
-      .any(|finding| { finding["name"] == "OPENROUTER_API_KEY" && finding["status"] == "warn" }),
+      .any(|finding| { finding["name"] == "TYPESAFE_API_KEY" && finding["status"] == "warn" }),
+    "{doc}"
+  );
+  assert!(
+    !secrets
+      .iter()
+      .any(|finding| finding["name"] == "OPENROUTER_API_KEY"),
     "{doc}"
   );
 }

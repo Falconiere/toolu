@@ -102,7 +102,7 @@ fn a_failed_run_reports_its_kind_and_keeps_its_usage() {
   let cases = [
     (RunError::NotEnabled, "not-enabled"),
     (
-      RunError::Unconfigured("OPENROUTER_API_KEY is missing".into()),
+      RunError::Unconfigured("TYPESAFE_API_KEY is missing".into()),
       "unconfigured",
     ),
     (
@@ -257,4 +257,24 @@ fn jev_off_selects_the_detected_host_without_asking() {
   assert_eq!(plan.model, "default");
   assert_eq!(plan.bin, case.bin.path().join("codex"));
   assert_eq!(case.ledger.calls, Vec::new());
+}
+
+#[test]
+fn empty_review_without_a_host_fails_closed() {
+  let mut case = select_case(false, false);
+  case.shaped.chunks.clear();
+  let env = case.env.clone().with("TYPESAFE_API_KEY", "test-key");
+  let input = Input {
+    root: case.root.path(),
+    shaped: &case.shaped,
+    rules: &case.rules,
+    prepass: &case.prepass,
+    memory: &case.memory,
+    settings: &case.settings,
+    flag: None,
+  };
+  let result = super::run(&env, &input, &Options::default());
+  assert!(
+    matches!(result, Err(RunError::Outage { message, .. }) if message.contains("no host CLI"))
+  );
 }

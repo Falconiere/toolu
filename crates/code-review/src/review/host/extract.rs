@@ -41,13 +41,22 @@ fn extract_claude(stdout: &str) -> Result<Extracted, String> {
     return Err(describe(&doc));
   }
   let text = doc
-    .get("result")
-    .and_then(serde_json::Value::as_str)
+    .get("structured_output")
+    .filter(|value| !value.is_null())
+    .map(serde_json::Value::to_string)
+    .or_else(|| {
+      doc
+        .get("result")
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+    })
     .ok_or_else(|| "claude printed no result".to_owned())?;
   let usage = doc.get("usage");
   Ok(Extracted {
-    text: text.to_owned(),
-    tokens_in: usage_tokens(usage, "input_tokens"),
+    text,
+    tokens_in: usage_tokens(usage, "input_tokens")
+      .saturating_add(usage_tokens(usage, "cache_creation_input_tokens"))
+      .saturating_add(usage_tokens(usage, "cache_read_input_tokens")),
     tokens_out: usage_tokens(usage, "output_tokens"),
     cost_usd: doc
       .get("total_cost_usd")

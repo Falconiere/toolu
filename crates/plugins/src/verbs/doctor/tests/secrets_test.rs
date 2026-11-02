@@ -21,6 +21,7 @@ fn missing_env_keys_warn_once_per_variable() {
     "jev".to_owned(),
     "statusline".to_owned(),
     "code-review".to_owned(),
+    "documentation-gate".to_owned(),
   ]);
   let findings = check(&roots, roots.env(), &installed);
   let keys: Vec<_> = findings
@@ -29,13 +30,32 @@ fn missing_env_keys_warn_once_per_variable() {
     .filter_map(|finding| finding.name.as_deref())
     .collect();
   assert!(keys.contains(&"TYPESAFE_API_KEY"));
-  assert!(keys.contains(&"OPENROUTER_API_KEY"));
+  assert!(!keys.contains(&"OPENROUTER_API_KEY"));
   assert_eq!(
     keys
       .iter()
       .filter(|key| **key == "TYPESAFE_API_KEY")
       .count(),
     1
+  );
+  let warning = findings
+    .iter()
+    .find(|finding| finding.name.as_deref() == Some("TYPESAFE_API_KEY"))
+    .unwrap();
+  assert!(warning.summary.contains("code-review"), "{warning:?}");
+  assert!(
+    warning.summary.contains("documentation-gate"),
+    "{warning:?}"
+  );
+  let env = Env::from_pairs([
+    ("HOME", home.path().display().to_string()),
+    ("TYPESAFE_API_KEY", "test-key".to_owned()),
+  ]);
+  let with_key = check(&roots, &env, &installed);
+  assert!(
+    !with_key
+      .iter()
+      .any(|finding| finding.scope == Scope::Secrets && finding.status == Level::Warn)
   );
   assert!(NEEDS.iter().any(|need| need.plugin == "jev"));
 }

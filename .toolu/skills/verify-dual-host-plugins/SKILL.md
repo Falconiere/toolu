@@ -85,6 +85,11 @@ startup behavior in Codex, Claude Code, or Muse.
   Prefer silent success when a hook has no portable output or decision to emit.
 - Offline fixtures prove transport behavior, not live inference quality. Report
   unavailable credentials explicitly; do not read keys from `.env`.
+- When changing a host CLI transport, check its installed help and run the real
+  CLI with a small structured response before final verification. Match schema
+  delivery and the actual output envelope; then exercise the checkout command
+  end to end with retired provider credentials removed. Subprocess fixtures can
+  pass while accepting arguments the real host rejects.
 - Hook and command environments can differ. Check credentials by presence in the
   command environment before reporting them missing, and never print their value.
   Exercise hook commands with an empty `PATH`: the launcher resolves `toolu`

@@ -1,10 +1,10 @@
 # Testing
 
-Every test is a Rust test, run by `cargo test --workspace` (and by the gate's `tests` step, under `cargo llvm-cov nextest`, and its `coverage` step). There is no TypeScript or Bun test suite since #440. The quality gate is `cargo xtask gate`; the rules a test must follow are in [AGENTS.md](../AGENTS.md#rust-conventions) and [rust-quality-bar.md](rust-quality-bar.md).
+The native workspace tests run through `cargo test --workspace` (and through the gate's `tests` step, under `cargo llvm-cov nextest`, followed by its `coverage` step). The `web` gate runs dashboard JavaScript tests with `node --test`. Release helpers also have Python unittests under `.github/scripts`, run by Linux CI and `cargo xtask deploy-gate`. There is no TypeScript or Bun test suite since #440. The quality gate is `cargo xtask gate`; the rules a test must follow are in [AGENTS.md](../AGENTS.md#work-in-this-repository) and [rust-quality-bar.md](rust-quality-bar.md).
 
 The gate's coverage build uses line-table debug information, disables incremental compilation, and keeps 256 codegen units. Its required workspace cleanup discards incremental state before every run, so writing that state wastes work. Line tables retain backtrace file names and line numbers, but omit debugger variable information. These settings apply only to the gate's coverage build; ordinary `cargo test`, development builds, and release builds keep their profiles. Coverage cleanup, instrumentation, and thresholds are unchanged.
 
-CI runs that gate in the `rust` job. A docs-only change runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. The plugin also runs on macOS: `rust-macos` runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
+CI runs that gate in the Linux leg of the `rust` matrix job. The `docs` job runs `cargo xtask gate --only context-budget --only ci-paths` and `cargo xtask check-markdown-cli`. Other jobs depend on overlapping path groups in [`.github/ci-paths.json`](../.github/ci-paths.json): for example, `docs/cli/**` also selects Rust checks and plugin Markdown also selects hook benchmarks. The macOS `rust (macos-14)` leg runs clippy, tests and the launcher, and `hook-bench (macos-latest)` reports hook resources.
 
 ## Real, not mocked
 

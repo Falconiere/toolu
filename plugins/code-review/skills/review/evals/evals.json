@@ -34,7 +34,7 @@
     {
       "id": 2,
       "name": "native-disabled",
-      "prompt": "Simulated result: project codeReview.enabled=false; OPENROUTER_API_KEY is absent. Review the committed diff.",
+      "prompt": "Simulated result: project codeReview.enabled=false; TYPESAFE_API_KEY is absent. Review the committed diff.",
       "targets": [
         "plugins/code-review/skills/review/SKILL.md"
       ],
