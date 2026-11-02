@@ -6,6 +6,14 @@
 
 * **epic-orchestrator:** read Jira epics through built-in REST and give workers an issue command. Jira credentials now come only from environment variables; jira-cli config and keyring fallbacks were dropped.
 
+## [8.10.0](https://github.com/Falconiere/toolu/compare/v8.9.0...v8.10.0) (2026-11-02)
+
+
+### Features
+
+* **epic:** wait for job admission and print a bounded log tail ([#826](https://github.com/Falconiere/toolu/issues/826)) ([2600f55](https://github.com/Falconiere/toolu/commit/2600f5595c6792e024238623549bd7a93b8126b4))
+* **gc:** reclaim what finished epics, gates and sandboxes leave behind ([#825](https://github.com/Falconiere/toolu/issues/825)) ([e42d6ce](https://github.com/Falconiere/toolu/commit/e42d6ceaff5bc26ca4b0d5914c378c9bc9ac00b7))
+
 ## [8.9.0](https://github.com/Falconiere/toolu/compare/v8.8.0...v8.9.0) (2026-11-01)
 
 

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "name": "toolu-review",
   "displayName": "toolu-review",
-  "version": "8.9.0",
+  "version": "8.10.0",
   "description": "Evidence-backed review of committed changes for actionable defects, with complete-coverage push-review state. Standalone native-review fallback.",
   "compat": {
     "source": "native",
