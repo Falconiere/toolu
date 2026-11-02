@@ -80,7 +80,8 @@
     "gate_elapsed_seconds": 433.1,
     "source_sync": "All 3710 implementation and documentation files SHA-256 matched between the checkout and Linux verification clone; this final evidence receipt was excluded",
     "focused_mux_peer_tests_passed": 24,
-    "gate_log_sha256": "01528609d7679a65cbe184e3273c5fda3e0bff532ff8ac3dd116bdcaebc0183b"
+    "gate_log_sha256": "01528609d7679a65cbe184e3273c5fda3e0bff532ff8ac3dd116bdcaebc0183b",
+    "post_gate_documentation_review": "Clarified non-whitespace printable key bytes and startup-versus-prompt notice contents; implementation unchanged; cargo xtask check-markdown-cli and git diff --check passed"
   },
   "interventions": [
     "Repeated the final gate after a GitHub advisory-database fetch timed out in an existing gate fixture; source and gate policy stayed unchanged",

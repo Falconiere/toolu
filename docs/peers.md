@@ -11,7 +11,7 @@ change delegation, cancellation or completion.
 Configure the machines and relay with `toolu setup machines` and
 `toolu setup relay` first. All participants use the same explicit group ID and
 private group key file, including sessions in different worktrees or checkouts.
-Use a randomly generated key of 32 to 256 printable ASCII bytes, share it only
+Use a randomly generated key of 32 to 256 non-whitespace printable ASCII bytes, share it only
 with intended participants, and keep the file outside the repository. The first
 successful join creates the group; later joins must prove the same key. An
 authenticated connection and a registered machine supporting the selected host
@@ -100,8 +100,9 @@ contain a safe `session_id`. Startup creates a new peer generation; resume,
 compaction and prompt hooks reuse its saved binding. If the host does not
 forward these variables or a reliable session ID, register explicitly instead.
 
-Session-start and prompt context contain bounded notices with the peer identity,
-unread count and commands. They never insert message text or acknowledge receipt.
+Session-start and prompt context contain bounded notices with the peer identity
+and commands. Prompt notices also include the unread count when available. They
+never insert message text or acknowledge receipt.
 Outages retain the registration for recovery; hooks have short transport
 deadlines and do not prevent the session from starting.
 
