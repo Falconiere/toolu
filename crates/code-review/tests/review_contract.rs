@@ -17,7 +17,8 @@ use toolu_code_review::budget::Effort;
 use toolu_code_review::contract::Cost;
 use toolu_code_review::contract::Severity;
 use toolu_code_review::memory::{Dismissal, Memory, PriorFinding, Status};
-use toolu_code_review::review::{Assessment, Options, Record, Reviewed, Stage};
+use toolu_code_review::review::{Assessment, Input, Options, Record, Reviewed, Stage};
+use toolu_code_review::settings::Settings;
 use toolu_http_test_support::Reply;
 
 type Recorded = Vec<(Stage, String, String)>;
@@ -199,4 +200,56 @@ fn memory_sends_open_findings_and_dismissals_and_skips_re_raised_ones() {
   assert!(jev[0].contains("fresh") && !jev[0].contains("re-raised"));
   assert_eq!(reviewed.findings[0].assessment, Assessment::NotJudged);
   assert_eq!(reviewed.findings[1].assessment, Assessment::Contradicted);
+}
+
+/// A fake `codex` on PATH serves findings with no network: the review runs on
+/// the host CLI, the usage log names it, and the loopback origin hears nothing.
+#[test]
+fn a_host_cli_reviews_the_chunk_with_no_network() {
+  use std::os::unix::fs::PermissionsExt as _;
+  let rig = judge::rig().unwrap();
+  let content = json!({"findings": [{
+    "path": "src/lib.rs", "line": 3, "end_line": 3, "side": "new", "severity": "high",
+    "category": "correctness", "claim": "the index can underflow",
+    "quote": "Some(items[items.len() - 1])", "suggestion": null, "prior_id": null}]});
+  let bin = tempfile::tempdir().unwrap();
+  let codex = bin.path().join("codex");
+  std::fs::write(&codex, format!("#!/bin/sh\nprintf '%s' '{content}'")).unwrap();
+  std::fs::set_permissions(&codex, std::fs::Permissions::from_mode(0o755)).unwrap();
+  let env = rig.env().with("PATH", &bin.path().to_string_lossy());
+  let settings = Settings {
+    enabled: true,
+    ..Settings::default()
+  };
+  let input = Input {
+    root: rig.repo.path(),
+    shaped: &rig.shaped,
+    rules: &rig.rules,
+    prepass: &rig.prepass,
+    memory: &Memory::default(),
+    settings: &settings,
+    flag: Some(Effort::Medium),
+  };
+  let options = Options {
+    skip_judge: true,
+    ..rig.options()
+  };
+  let reviewed = toolu_code_review::review::run(&env, &input, &options).unwrap();
+  assert_eq!(reviewed.findings.len(), 1);
+  assert_eq!(reviewed.findings[0].finding.path, "src/lib.rs");
+  let call = reviewed
+    .calls
+    .iter()
+    .find(|call| call.stage == Stage::Review)
+    .unwrap();
+  assert_eq!(call.provider.as_deref(), Some("codex"));
+  assert_eq!(
+    (reviewed.usage.tokens_in, reviewed.usage.tokens_out),
+    (0, 0),
+    "a host CLI reports no tokens"
+  );
+  assert!(
+    rig.fixture.requests().unwrap().is_empty(),
+    "nothing was sent"
+  );
 }

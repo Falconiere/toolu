@@ -54,7 +54,7 @@ pub(crate) fn command() -> Command {
         .long("live")
         .action(ArgAction::SetTrue)
         .help(
-          "Call OpenRouter and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
+          "Call the Jev-selected host CLI and Jev for real (enabled by default; needs OPENROUTER_API_KEY) and record every exchange; without it nothing is sent",
         ),
     )
     .arg(
