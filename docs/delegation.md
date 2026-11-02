@@ -118,7 +118,7 @@ from availability until the deadline passes.
 With a relay configured, `toolu babysit dispatch-fix start --machine <name>`
 also pins a fixer to a registered worker; its root comes from the registration.
 Without a relay, the legacy `--machine` and `--remote-repo` flags remain paired.
-New epic worker launches also use the configured relay. Their implementation
+New non-dry-run epic worker launches also use the configured relay. Their implementation
 brief includes the issue and epic descriptions and closed blocker references;
 after a successful report, the controller imports the committed result and
 continues the local review and delivery workflow. Existing launch records retain
@@ -154,8 +154,10 @@ toolu relay recover
 The worker list shows HC's observed connection state, occupied and available
 slots, drain state, registered agents, and persisted preparation errors. A
 connection alone does not prove readiness: Toolu, the agent and applicable build
-prerequisites are checked again before launch. If HC cannot be queried, the
-registry and assignments remain visible with unknown connections and an error.
+prerequisites are checked again before launch. If the relay cannot query its HC
+machine list, its registry and assignments remain visible with unknown connections
+and an error. If the controller cannot reach the relay, status instead retains
+the local configuration and reports the remote error.
 `recover` reconciles the owned service terminal and starts it if needed.
 `toolu relay serve` runs the scheduler on the designated relay and is normally
 started by setup or recovery. Keep the relay machine available for new work;

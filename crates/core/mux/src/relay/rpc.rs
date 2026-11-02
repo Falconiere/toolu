@@ -44,10 +44,13 @@ pub fn receive(root: &Path, env: &Env, input: &str) -> Result<Value, String> {
 }
 
 fn dispatch(root: &Path, env: &Env, op: &str, value: &Value) -> Result<Value, String> {
-  if matches!(op, "chunk" | "submit" | "tick") {
+  if op == "tick" {
     authority::require(root)?;
   }
   let store = Store::new(root);
+  if let Some(result) = chunks::when_required(root, &store, op, value) {
+    return result;
+  }
   match op {
     "authority" => {
       authority::require(root)?;

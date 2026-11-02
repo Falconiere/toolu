@@ -52,16 +52,7 @@ fn active_machine_removal_is_refused_but_draining_is_allowed() {
   setup_machines(&args, &env).unwrap();
   let root = config::root(&env);
   let store = Store::new(&root);
-  let request = Submission {
-    key: "test".into(),
-    origin: "origin".into(),
-    base: "a".repeat(40),
-    brief: "work".into(),
-    agent: "codex".into(),
-    argv: vec!["codex".into()],
-    machine: None,
-    group: None,
-  };
+  let request = submission("test");
   store.submit(request, b"input").unwrap();
   store
     .reserve("test", &config::load(&root).unwrap(), 0)
@@ -75,4 +66,17 @@ fn active_machine_removal_is_refused_but_draining_is_allowed() {
     .unwrap();
   machine_operation(&args, &env).unwrap();
   assert!(config::load(&root).unwrap().machines["worker"].draining);
+}
+
+pub(super) fn submission(key: &str) -> Submission {
+  Submission {
+    key: key.into(),
+    origin: "origin".into(),
+    base: "a".repeat(40),
+    brief: "work".into(),
+    agent: "codex".into(),
+    argv: vec!["codex".into()],
+    machine: None,
+    group: None,
+  }
 }

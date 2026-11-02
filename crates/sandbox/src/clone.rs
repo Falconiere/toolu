@@ -32,29 +32,7 @@ if [ -s "$list" ]; then
 fi
 rm -f "$list"
 cd "$dst/$rel"
-if ! command -v setsid >/dev/null 2>&1; then
-  if command -v flock >/dev/null 2>&1; then
-    echo 'toolu-sandbox: setsid is required to protect the clone lock' >&2
-    exit 1
-  fi
-  "$@" 9>&-
-  exit $?
-fi
-terminate() {
-  trap '' TERM INT HUP
-  child=${child:-$(jobs -pr)}
-  if [ -n "$child" ]; then
-    kill -KILL -- "-$child" 2>/dev/null || :
-    wait "$child" 2>/dev/null || :
-  fi
-  exit "$1"
-}
-trap 'terminate 143' TERM
-trap 'terminate 130' INT
-trap 'terminate 129' HUP
-setsid -- "$@" 9>&- <&0 &
-child=$!
-wait "$child"
+exec "$@"
 "#;
 
 /// The argv that runs `command` in a clone of `src` at `dst`, from `rel` inside it.

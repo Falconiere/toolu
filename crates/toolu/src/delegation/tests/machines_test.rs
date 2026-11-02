@@ -58,16 +58,7 @@ fn repeating_registration_preserves_drain_for_idle_and_occupied_workers() {
     .unwrap();
   machine_operation(&resume, &env).unwrap();
   let store = Store::new(&root);
-  let request = super::super::Submission {
-    key: "task".into(),
-    origin: "origin".into(),
-    base: "a".repeat(40),
-    brief: "work".into(),
-    agent: "codex".into(),
-    argv: vec!["codex".into()],
-    machine: None,
-    group: None,
-  };
+  let request = super::super::tests::submission("task");
   store.submit(request, b"input").unwrap();
   store
     .reserve("task", &config::load(&root).unwrap(), 0)

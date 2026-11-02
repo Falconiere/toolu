@@ -35,7 +35,8 @@ the [recorded receipt](../../../docs/delegation-evidence.json) illustrates its e
 - Respect trust prompts for real code. The recorded run accepted trust only for
   the synthetic one-file fixtures; do not generalize that approval.
 - Clean up only owned relay terminals and isolated cores; preserve the user's
-  existing cores, credentials, worktrees and unrelated tasks.
+  existing cores, credentials, worktrees and unrelated tasks. Stop the isolated
+  controller before worker cores so its connections cannot restart them.
 
 ## Verification
 

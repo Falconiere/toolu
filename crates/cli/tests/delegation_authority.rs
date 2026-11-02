@@ -162,6 +162,37 @@ fn queued_submission_is_idempotent_and_cancel_receipt_survives_migration() {
       "cancelled"
     );
   }
+  let replay = ok(fixture.cli("a", &["delegate", "retry", "queued"]).unwrap()).unwrap();
+  let receipt: Value = serde_json::from_slice(&replay.stdout).unwrap();
+  assert_eq!(receipt["phase"], "cancelled");
+  assert_eq!(receipt["request"], first["request"]);
+  retired_retry_rejects_conflicts(&fixture, &first).unwrap();
+}
+
+fn retired_retry_rejects_conflicts(fixture: &Fixture, first: &Value) -> Result<(), String> {
+  let root = fixture.node_config("alpha");
+  let root = root.parent().ok_or("missing relay root")?;
+  let store = toolu_mux::relay::store::Store::new(root);
+  let bytes = store.input("queued")?;
+  let mut request = first.get("request").ok_or("missing request")?.clone();
+  *request.get_mut("brief").ok_or("missing brief")? = json!("different");
+  let cases = [
+    json!({"op":"chunk", "key":"unknown", "index":0, "bytes":[1]}),
+    json!({"op":"chunk", "key":"queued", "index":0, "bytes":[1]}),
+    json!({"op":"submit", "request":request, "chunks":bytes.len().div_ceil(256 * 1024), "size":bytes.len()}),
+  ];
+  for case in cases {
+    if fixture.rpc("alpha", &case)?.status.success() {
+      return Err("conflicting retry accepted".into());
+    }
+  }
+  if root.join("inbox/unknown").exists()
+    || fixture.authority_path("alpha").exists()
+    || store.load("queued")?.phase != "cancelled"
+  {
+    return Err("retired replay changed relay state".into());
+  }
+  Ok(())
 }
 
 #[test]
