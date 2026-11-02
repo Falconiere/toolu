@@ -1,6 +1,6 @@
 {
   "name": "git-better",
-  "version": "8.9.0",
+  "version": "8.10.0",
   "hookProtocol": 2,
   "description": "Semantic branches and commits agents can read: scoped Conventional Commit subjects with an Intent trailer and <type>/<ref>-<slug> branch names, checked before git runs.",
   "author": {
