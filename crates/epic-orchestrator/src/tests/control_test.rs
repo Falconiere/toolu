@@ -148,12 +148,19 @@ fn start_leaves_a_live_engine_in_place() {
   let outcome = start(&verb(&["epic", "start", &epic.display().to_string()]), &env);
   assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
   assert!(paths.registry().is_file());
-  let settings = |safe: bool, no_jev: bool| crate::epics::LaunchSettings { safe, no_jev };
+  let settings = |safe: bool, no_jev: bool| crate::epics::LaunchSettings {
+    safe,
+    no_jev,
+    no_babysit: false,
+  };
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));
   let dir = epic.display().to_string();
   let outcome = start(&verb(&["epic", "start", &dir, "--safe", "--no-jev"]), &env);
   assert_eq!(outcome.exit, Exit::Success, "{outcome:?}");
   assert_eq!(crate::epics::launch_settings(&epic), settings(true, true));
+  let local = start(&verb(&["epic", "start", &dir, "--no-babysit"]), &env);
+  assert_eq!(local.exit, Exit::Success, "{local:?}");
+  assert!(crate::epics::launch_settings(&epic).no_babysit);
   let again = start(&verb(&["epic", "start", &dir]), &env);
   assert_eq!(again.exit, Exit::Success, "{again:?}");
   assert_eq!(crate::epics::launch_settings(&epic), settings(false, false));

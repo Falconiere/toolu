@@ -174,6 +174,9 @@ pub(crate) struct LaunchSettings {
   /// Route and check coupling by heuristics only, sending nothing to Jev
   /// (`--no-jev`).
   pub no_jev: bool,
+  /// Never run pr-babysit; merge on the worker's green local gate instead of
+  /// CI checks (`--no-babysit`, for repositories without CI).
+  pub no_babysit: bool,
 }
 
 fn settings_path(state_dir: &Path) -> std::path::PathBuf {
@@ -188,14 +191,19 @@ pub(crate) fn write_launch_settings(
   state_dir: &Path,
   settings: LaunchSettings,
 ) -> Result<(), String> {
-  let doc = json!({"safe": settings.safe, "no_jev": settings.no_jev});
+  let doc = json!({
+    "safe": settings.safe,
+    "no_jev": settings.no_jev,
+    "no_babysit": settings.no_babysit,
+  });
   crate::disk::write_value(&settings_path(state_dir), &doc)
 }
 
-/// The epic's launch settings. Without a file both are off; a file that
+/// The epic's launch settings. Without a file all are off; a file that
 /// cannot be read or is blank, or a setting that is not `true` or `false`,
-/// turns that setting on, so a damaged file never drops prompts or sends text
-/// to Jev.
+/// turns `safe` and `no_jev` on, so a damaged file never drops prompts or
+/// sends text to Jev. `no_babysit` needs an explicit `true`: a damaged file
+/// keeps CI and babysit, never merges on local evidence alone.
 pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
   let path = settings_path(state_dir);
   // Only a file that is certainly absent means the defaults; a state dir that
@@ -212,6 +220,7 @@ pub(crate) fn launch_settings(state_dir: &Path) -> LaunchSettings {
   LaunchSettings {
     safe: flag("safe"),
     no_jev: flag("no_jev"),
+    no_babysit: doc.get("no_babysit") == Some(&Value::Bool(true)),
   }
 }
 

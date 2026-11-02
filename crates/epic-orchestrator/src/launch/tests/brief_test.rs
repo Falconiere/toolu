@@ -11,7 +11,11 @@ fn paths() -> BriefPaths {
 
 fn brief(graph: &Graph, wanted: &str, kind: HostKind) -> String {
   let issue = graph.find(wanted).expect("issue");
-  let host = BriefHost { kind, safe: false };
+  let host = BriefHost {
+    kind,
+    safe: false,
+    no_babysit: false,
+  };
   render_brief(graph, issue, &paths(), "main", host).expect("brief")
 }
 
@@ -99,6 +103,7 @@ fn a_safe_worker_s_brief_says_its_approval_prompts_are_on() {
   let host = BriefHost {
     kind: HostKind::Codex,
     safe: true,
+    no_babysit: false,
   };
   let safe = render_brief(&graph, issue, &paths(), "main", host).expect("brief");
   assert!(safe.contains("Approval prompts are on and a human may refuse a tool call"));
@@ -129,4 +134,39 @@ fn the_worker_stops_after_reporting_babysit_and_waits_for_the_engine() {
       "{kind:?}"
     );
   }
+}
+
+#[test]
+fn a_no_babysit_brief_names_the_local_gate_and_no_babysit_command() {
+  let graph = graph_248();
+  let issue = graph.find("Falconiere/comemory#255").expect("issue");
+  for kind in crate::hosts::HOST_KINDS {
+    let host = BriefHost {
+      kind,
+      safe: false,
+      no_babysit: true,
+    };
+    let text = render_brief(&graph, issue, &paths(), "main", host).expect("brief");
+    let flat = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+      !text.contains("{{") && !text.contains("pr-babysit"),
+      "{kind:?}"
+    );
+    assert!(!text.contains("toolu babysit") && !text.contains("tick result"));
+    assert!(flat.contains("`report babysit --pr <number>` instead and stop"));
+    assert!(flat.contains("Do not start babysit, a cron or a polling loop."));
+    assert!(flat.contains("plan ledger is fresh-green on the pushed head"));
+    assert!(text.contains("the PR contains `origin/main`"));
+    assert!(text.contains("after a rebase), and open the PR."));
+    assert!(!text.contains("When prompted") && !text.contains("every 3"));
+  }
+  let tmp = tempfile::tempdir().expect("temp");
+  let settings = crate::epics::LaunchSettings {
+    no_babysit: true,
+    ..crate::epics::LaunchSettings::default()
+  };
+  crate::epics::write_launch_settings(tmp.path(), settings).expect("settings");
+  let at = BriefHost::at(HostKind::Claude, true, tmp.path());
+  assert!(at.no_babysit && at.safe);
+  assert!(!BriefHost::at(HostKind::Claude, false, Path::new("/nowhere")).no_babysit);
 }

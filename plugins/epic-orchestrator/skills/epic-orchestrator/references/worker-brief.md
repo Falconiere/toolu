@@ -13,6 +13,9 @@ survive):
 - HOST: the worker's host kind.
 - APPROVALS, QUESTIONS: what the worker is told about approval prompts and
   questions in its pane, which `--safe` changes.
+- PR_AUTH, WATCH, PROMPTED, TICK_MESSAGE: the babysit authorization, what
+  follows the babysit report, Pipeline step 5 and its message line; under
+  `--no-babysit` (no CI) they name the local gate the engine merges on instead.
 The launch tests fail if any placeholder goes unfilled for a host or tracker. -->
 
 # Epic worker brief — {{ISSUE_REF}}
@@ -36,7 +39,7 @@ screen; it only reads the status you report. Work autonomously end to end.
 
 The user authorized this epic run. For this issue you may: edit code in this
 worktree, commit, rebase onto `origin/{{BASE}}`, push `{{BRANCH}}` (including
-`--force-with-lease` after a rebase), open the PR, and run {{BABYSIT}}.
+`--force-with-lease` after a rebase){{PR_AUTH}}.
 Invoking {{DELIVERY}} also supplies delivery authorization; do not
 stop to ask for it. {{APPROVALS}} You may **not** merge, push to `{{BASE}}`,
 touch other branches or worktrees, or edit other issues.
@@ -75,17 +78,8 @@ directly.
    `report pr-open --pr <number>`.
 4. **Babysit.** When the skill reaches its {{BABYSIT}} handoff, run
    `report babysit --pr <number>` instead and stop; stay idle. Do not start
-   {{BABYSIT}}, a cron or a polling loop. The engine checks your PR every 3
-   minutes and prompts you only when something needs you.
-5. **When prompted.** A tick result starts with
-   `pr-babysit: <repo>#<n> needs you (...)` and lists the items. Act on them
-   with the `toolu babysit` commands it names (reply, resolve, record; the
-   {{BABYSIT}} skill's references explain each), fix and push, run
-   `report babysit --pr <number>` again, and stop. When CI is green, every
-   thread is resolved and the bot verdict is clean, the engine marks the issue
-   `ready`, queues it and merges it; you report nothing. Your session stays
-   idle until the issue is merged and cleaned up.
-
+   {{BABYSIT}}, a cron or a polling loop. {{WATCH}}
+{{PROMPTED}}
 ## Never lose progress
 
 This worktree is bound to shared machine resources. Plan-ledger checks acquire
@@ -117,8 +111,7 @@ the branch recoverable:
 
 ## Messages from the orchestrator
 
-- **A tick result** — see Pipeline step 5.
-- **`REBASE`** — main moved and your branch conflicts with it. The engine
+{{TICK_MESSAGE}}- **`REBASE`** — main moved and your branch conflicts with it. The engine
   rebases clean branches itself, so this arrives only for a conflict.
   `report rebasing`; `git fetch origin && git rebase origin/{{BASE}}`; resolve
   conflicts so both sides' intent survives (read the other change, don't just

@@ -113,6 +113,13 @@ fn a_fix_verdict_returns_to_babysit_and_disarms_what_the_engine_armed() {
     world.issues["a"].pending.is_none(),
     "the step already disarmed"
   );
+  assert!(!names(&steps).iter().any(|name| name.starts_with("prompt:")));
+  let mut world = self::world();
+  let local =
+    json!({"outcome": "fix", "reasons": ["2 unresolved review threads"], "local_gate": true});
+  let names = names(&commit(&mut world, "a", &local.to_string()).expect("fix"));
+  assert!(names.iter().any(|name| name
+    == "prompt:The merge gate needs you: [\"2 unresolved review threads\"]. Fix and push, then `toolu epic report babysit --pr <n>` again."), "{names:?}");
 }
 
 #[test]

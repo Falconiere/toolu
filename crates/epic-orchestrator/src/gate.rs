@@ -13,6 +13,8 @@ use toolu_engine::resources::lock::acquire_lock;
 pub(crate) mod assess;
 /// Auto-merge policy.
 pub(crate) mod auto;
+/// The no-CI merge policy.
+pub(crate) mod local;
 /// Pinned merge writes.
 pub(crate) mod merge;
 mod settle;
@@ -67,6 +69,10 @@ pub(crate) fn run_gate(opts: &GateOpts, at: &Settle<'_>) -> Result<Value, String
     number: found.number,
   };
   let (mut result, facts) = assess::assess(at.gh, &pr)?;
+  let local = local_policy(opts);
+  if let Some(local) = &local {
+    local::apply(&mut result, local, at.env);
+  }
   let verdict = result
     .get("verdict")
     .and_then(Value::as_str)
@@ -91,7 +97,10 @@ pub(crate) fn run_gate(opts: &GateOpts, at: &Settle<'_>) -> Result<Value, String
     };
     result.extend(merge::do_merge(at.gh, &target));
   }
-  apply_auto(opts, at, (&pr, &facts, &head), &mut result)?;
+  // Auto-merge waits on checks that never come under the local gate.
+  if local.is_none() {
+    apply_auto(opts, at, (&pr, &facts, &head), &mut result)?;
+  }
   settle_merged(opts, at, &verdict, &mut result)?;
   // The merge and settlement already happened: a record that cannot be
   // written is reported with the result, not instead of it.
@@ -101,6 +110,19 @@ pub(crate) fn run_gate(opts: &GateOpts, at: &Settle<'_>) -> Result<Value, String
     result.insert("record_error".to_owned(), json!(err));
   }
   Ok(Value::Object(result))
+}
+
+/// The local gate of `--state-dir`'s epic for `--key`'s record, when its
+/// start said `--no-babysit`.
+fn local_policy(opts: &GateOpts) -> Option<local::LocalGate> {
+  let (dir, key) = (opts.state_dir.as_deref()?, opts.key.as_deref()?);
+  let record =
+    crate::disk::read_value(&dir.join("issues").join(format!("{key}.json"))).unwrap_or(Value::Null);
+  let none = local::LocalGate {
+    worktree: None,
+    host: None,
+  };
+  local::policy(dir, &record, &none)
 }
 
 /// Close and tick the delivered issue once its PR merged.

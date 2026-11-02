@@ -143,18 +143,18 @@ fn start_command() -> Command {
         .required(true)
         .help("The epic state directory"),
     )
-    .arg(
-      Arg::new("safe")
-        .long("safe")
-        .action(ArgAction::SetTrue)
-        .help("Keep approval prompts on in this epic's workers, until a start without it"),
-    )
-    .arg(
-      Arg::new("no-jev")
-        .long("no-jev")
-        .action(ArgAction::SetTrue)
-        .help("Route and check coupling by heuristics only, until a start without it"),
-    )
+    .arg(flag(
+      "safe",
+      "Keep approval prompts on in this epic's workers, until a start without it",
+    ))
+    .arg(flag(
+      "no-jev",
+      "Route and check coupling by heuristics only, until a start without it",
+    ))
+    .arg(flag(
+      "no-babysit",
+      "No CI: never run pr-babysit and merge on the worker's green local gate, until a start without it",
+    ))
 }
 
 fn queue_command() -> Command {

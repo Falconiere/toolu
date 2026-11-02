@@ -121,6 +121,7 @@ fn reusable(
 
 /// The babysit request of `watch_key`'s pull request while its issue waits in
 /// babysit or ready, with the issue's `phase_at_ms` when it is in babysit.
+/// An epic started with `--no-babysit` (#832) never has one.
 fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<(TickRequest, Option<u64>)> {
   let watch = world.watches.get(watch_key)?;
   let Kind::Pr { key, repo, number } = &watch.kind else {
@@ -129,6 +130,7 @@ fn request(world: &World, watch_key: &str, paths: &Paths) -> Option<(TickRequest
   let issue = world.issues.get(key)?;
   if !matches!(issue.phase.as_str(), "babysit" | "ready")
     || matches!(issue.stage.as_str(), "cleaning" | "closed" | "merged")
+    || crate::epics::launch_settings(Path::new(&issue.state_dir)).no_babysit
   {
     return None;
   }

@@ -69,6 +69,7 @@ fn a_manual_launch_in_a_safe_epic_keeps_approval_prompts_on() {
   let settings = crate::epics::LaunchSettings {
     safe: true,
     no_jev: false,
+    no_babysit: false,
   };
   crate::epics::write_launch_settings(&tmp.path().join("state"), settings).expect("settings");
   let safe = run(tmp.path(), &line, false).stdout.expect("text");

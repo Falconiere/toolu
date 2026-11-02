@@ -19,6 +19,8 @@ fn judgment_phase(phase: &str) -> bool {
 
 /// Record a worker report and return the snapshots and journal lines to write.
 pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
+  let local = local_ready(report);
+  let report = local.as_ref().unwrap_or(report);
   let changed = phase_changed(world, report);
   crate::attention::close_key(world, &report.key);
   let now_ms = world.now_ms;
@@ -62,6 +64,17 @@ pub(crate) fn apply_report(world: &mut World, report: &Report) -> Vec<Step> {
   }
   steps.extend(world.outbox.drain(..));
   steps
+}
+
+/// Under `--no-babysit` (#832) nothing ticks a babysit report to `ready`, so
+/// the report itself is one: the merge queue gates the PR on the local gate.
+fn local_ready(report: &Report) -> Option<Report> {
+  let no_babysit = report.phase == "babysit"
+    && crate::epics::launch_settings(std::path::Path::new(&report.state_dir)).no_babysit;
+  no_babysit.then(|| Report {
+    phase: "ready".to_owned(),
+    ..report.clone()
+  })
 }
 
 /// A worker that reports is running, whether the engine launched it, a human

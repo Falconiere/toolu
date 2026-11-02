@@ -51,11 +51,7 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
     "busy" => journal(world, "action", "rebase-skipped", key, &note),
     "rebase-uncertain" => held_rebase(world, key, &note),
     "handoff" => handoff(world, key, &note),
-    "fix" => {
-      set_armed(world, key, false);
-      let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
-      leave(world, key, "babysit", &reasons);
-    }
+    "fix" => fix(world, key, &doc),
     "closed" => closed(world, key),
     "uncertain" | "refused" => held(world, key, &outcome, &note),
     _ => {}
@@ -64,6 +60,20 @@ pub(crate) fn commit(world: &mut World, key: &str, doc: &str) -> Result<Vec<Step
     release_held(world, key);
   }
   Ok(world.outbox.drain(..).collect())
+}
+
+/// Failing checks, open threads or a draft: back to babysit. Without babysit
+/// (#832) no tick tells the worker, so the gate's reasons prompt it.
+fn fix(world: &mut World, key: &str, doc: &Value) {
+  set_armed(world, key, false);
+  let reasons = doc.get("reasons").map(Value::to_string).unwrap_or_default();
+  leave(world, key, "babysit", &reasons);
+  if doc.get("local_gate") == Some(&Value::Bool(true)) {
+    let text = format!(
+      "The merge gate needs you: {reasons}. Fix and push, then `toolu epic report babysit --pr <n>` again."
+    );
+    crate::babysit::prompt(world, key, "gate", text, None);
+  }
 }
 
 /// A conflict (or an unsafe worktree): the worker rebases, prompted once.

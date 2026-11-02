@@ -116,7 +116,7 @@ The resident engine is `toolu epic engine` (foreground). `--ensure` starts it on
 | Verb | What it does |
 | --- | --- |
 | `engine [--replace] [--ensure]` | Resident process. One lock per resource root. |
-| `start <state-dir> [--safe] [--no-jev]` | Register that epic directory, record the two flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic. |
+| `start <state-dir> [--safe] [--no-jev] [--no-babysit]` | Register that epic directory, record the three flags in its `launch.json` (a start without a flag turns it off), and ensure the engine. `--safe` keeps host approval prompts on for its launches; `--no-jev` keeps routing and the coupling check heuristic; `--no-babysit` is the no-CI merge policy under [Merging](#merging). |
 | `cleanup [--dry-run]` | Unregister locally complete or closed epics and confirmed missing state directories. Return removed/proposed and retained entries with reasons; keep active, pending, incomplete or uncertain state. Preserve files, history, worktrees, branches and tracker issues. Local machine only; no age threshold or tracker requests. Machine resources are `toolu gc`'s job (below). |
 | `status [epic]` | `engine`, `paused`, `epics`, `issues`, `attention`, GitHub budgets and PR check deadlines as one JSON document. |
 | `status --fleet` | This machine and every peer engine in `epic.peers` as the `/api/v1/fleet` document: per-machine state (`ok`, `unreachable`, `unauthorized`, `version-mismatch`), last seen, in-flight issues and hosts, and a summary. Peers are fetched by this command, never by the engine. |
@@ -364,6 +364,32 @@ When only checks are pending it arms GitHub auto-merge pinned to the verified
 head, and disarms it whenever the PR needs a rebase or fix. The engine's
 180-second PR check sees a merge, from the gate or from auto-merge, and cleans
 up the issue.
+
+### No CI: `--no-babysit`
+
+A repository whose workflows are off never reports checks, so pr-babysit
+escalates every tick and the gate waits forever. `toolu epic start
+<state-dir> --no-babysit` records the no-CI merge policy in `launch.json`
+until a start without it (a damaged file keeps babysit on). Under it:
+
+- The engine runs no pr-babysit tick and sends no `pr-babysit:` prompt for the
+  epic's PRs; the REST probe still watches each PR for merges and base moves.
+- The brief drops the pr-babysit skill and its tick step. The worker's handoff
+  stays `toolu epic report babysit --pr N`, after which it idles; the engine
+  records that report as `ready` and queues the PR.
+- The gate (`toolu epic gate --pr N --state-dir <dir> --key <key>` and the
+  engine's queue step) swaps required checks for the worker's local gate: the
+  worktree in the issue's launch record sits at the PR head and its plan
+  ledger passes the plan gate the push hook runs (every step fresh-green
+  against the current diff). A `wait` names what is missing (`local gate: no
+  plan ledger for this change`, `local gate: steps not fresh-green: s3:
+  stale`, `local gate: worktree at 1a2b3c4, pull request head 5d6e7f8`).
+  Conflicts, a PR behind its base, unresolved threads and a draft still return
+  `rebase` or `fix`; a `fix` prompts the idle worker with its reasons, since
+  no babysit tick will. GitHub still computing mergeability still waits.
+  Nothing arms auto-merge.
+- On `merge` the engine merges pinned to that head, ticks the epic checklist,
+  closes the sub-issue and tears the worktree down, as it does when CI is green.
 
 ## Guardrails
 

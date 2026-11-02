@@ -14,6 +14,7 @@ fn input(fixture: &Fixture, mode: Mode) -> StepJob {
     mode,
     worktree: None,
     lease: None,
+    local: None,
     env: Env::from_pairs([("PATH", "/usr/bin:/bin")]),
     reach: reach(fixture, FAST),
     trace: None,
